@@ -50,7 +50,7 @@ This ensures CI stays green even when C++ has compatibility issues with experime
 The xtask automatically configures the correct library paths:
 
 - **Linux**: Sets `LD_LIBRARY_PATH`
-- **macOS**: Sets `DYLD_LIBRARY_PATH`  
+- **macOS**: Sets `DYLD_LIBRARY_PATH`
 - **Windows**: Updates `PATH`
 
 ### GGUF Format Compatibility
@@ -164,10 +164,10 @@ env:
 steps:
   - name: Build C++ (static)
     run: cargo xtask fetch-cpp --force
-    
+
   - name: Generate fixtures
     run: cargo xtask gen-mini-gguf
-    
+
   - name: Cross-validation
     run: cargo xtask crossval --model tests/models/mini.gguf
     continue-on-error: true  # Don't fail CI
@@ -192,7 +192,7 @@ steps:
 # Rust metadata
 cargo run -p bitnet-cli -- inspect model.gguf
 
-# C++ metadata  
+# C++ metadata
 ~/.cache/bitnet_cpp/build/bin/llama-gguf -l model.gguf
 ```
 

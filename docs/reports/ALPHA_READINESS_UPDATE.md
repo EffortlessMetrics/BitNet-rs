@@ -1,6 +1,6 @@
 # BitNet.rs Alpha Readiness Status Report - UPDATED
 
-**Date**: 2025-08-23  
+**Date**: 2025-08-23
 **Assessment**: **CODE READY, MODELS NEEDED** ⚠️
 
 ## Executive Summary
@@ -14,7 +14,7 @@ BitNet.rs has successfully resolved the critical blockers preventing alpha statu
 - **Fixed**: Now immediately fails with clear error message
 - **Location**: `crates/bitnet-models/src/formats/gguf/loader.rs:273-281`
 
-### 2. Model Inspection Command  
+### 2. Model Inspection Command
 - **Previous**: Scripts tried to use non-existent `info --model` command
 - **Fixed**: New `inspect` subcommand provides lightweight metadata extraction
 - **Location**: `crates/bitnet-cli/src/main.rs:1034-1139`

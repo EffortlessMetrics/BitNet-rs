@@ -10,7 +10,7 @@ def append_jsonl(path, obj):
     """
     Append an object to a JSONL file.
     Creates parent directories if needed.
-    
+
     Args:
         path: Path to the JSONL file
         obj: Object to serialize and append
@@ -24,10 +24,10 @@ def append_jsonl(path, obj):
 def load_jsonl(path):
     """
     Load all objects from a JSONL file.
-    
+
     Args:
         path: Path to the JSONL file
-        
+
     Returns:
         List of deserialized objects
     """

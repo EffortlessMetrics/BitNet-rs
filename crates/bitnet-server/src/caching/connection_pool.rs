@@ -89,7 +89,7 @@ impl ConnectionPool {
     pub async fn acquire_connection(&self, client_ip: String) -> Result<Option<String>> {
         // Try to acquire a permit from the semaphore
         let permit = self.connection_semaphore.try_acquire();
-        
+
         match permit {
             Ok(_permit) => {
                 // Create a new connection
@@ -120,7 +120,7 @@ impl ConnectionPool {
 
                 // Don't drop the permit - it will be released when connection is closed
                 std::mem::forget(_permit);
-                
+
                 Ok(Some(connection_id))
             }
             Err(_) => {
@@ -146,11 +146,11 @@ impl ConnectionPool {
                 let mut stats = self.statistics.write().await;
                 stats.active_connections = stats.active_connections.saturating_sub(1);
                 stats.connection_utilization = stats.active_connections as f64 / self.config.connection_pool_size as f64;
-                
+
                 // Update average connection duration
                 let total_duration = stats.average_connection_duration_seconds * (stats.total_connections - 1) as f64;
                 stats.average_connection_duration_seconds = (total_duration + duration.as_secs_f64()) / stats.total_connections as f64;
-                
+
                 // Update average requests per connection
                 if stats.total_connections > 0 {
                     stats.average_requests_per_connection = stats.total_requests as f64 / stats.total_connections as f64;
@@ -167,11 +167,11 @@ impl ConnectionPool {
     /// Update connection activity
     pub async fn update_connection_activity(&self, connection_id: &str) -> Result<()> {
         let mut connections = self.connections.write().await;
-        
+
         if let Some(connection) = connections.get_mut(connection_id) {
             connection.last_activity = Instant::now();
             connection.request_count += 1;
-            
+
             // Update statistics
             {
                 let mut stats = self.statistics.write().await;
@@ -206,14 +206,14 @@ impl ConnectionPool {
 
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(60)); // Check every minute
-            
+
             loop {
                 interval.tick().await;
-                
+
                 let now = Instant::now();
                 let timeout_duration = Duration::from_secs(300); // 5 minute timeout
                 let mut timed_out_connections = Vec::new();
-                
+
                 // Find timed out connections
                 {
                     let connections_read = connections.read().await;
@@ -224,14 +224,14 @@ impl ConnectionPool {
                         }
                     }
                 }
-                
+
                 // Remove timed out connections
                 for connection_id in timed_out_connections {
                     let connection = {
                         let mut connections_write = connections.write().await;
                         connections_write.remove(&connection_id)
                     };
-                    
+
                     if connection.is_some() {
                         // Update statistics
                         {
@@ -240,12 +240,12 @@ impl ConnectionPool {
                             stats.connection_timeouts += 1;
                             stats.connection_utilization = stats.active_connections as f64 / 100.0; // Assuming pool size of 100
                         }
-                        
+
                         // Release semaphore permit
                         semaphore.add_permits(1);
                     }
                 }
-                
+
                 // Update idle connections count
                 {
                     let connections_read = connections.read().await;
@@ -255,7 +255,7 @@ impl ConnectionPool {
                             now.duration_since(conn.last_activity) > Duration::from_secs(30)
                         })
                         .count();
-                    
+
                     let mut stats = statistics.write().await;
                     stats.idle_connections = idle_count;
                 }
@@ -266,7 +266,7 @@ impl ConnectionPool {
     /// Get connection pool statistics
     pub async fn get_statistics(&self) -> ConnectionStatistics {
         let mut stats = self.statistics.read().await.clone();
-        
+
         // Update current connection counts
         let connections = self.connections.read().await;
         stats.total_connections = connections.len();
@@ -279,9 +279,9 @@ impl ConnectionPool {
                 Instant::now().duration_since(conn.last_activity) > Duration::from_secs(30)
             })
             .count();
-        
+
         stats.connection_utilization = stats.active_connections as f64 / self.config.connection_pool_size as f64;
-        
+
         stats
     }
 
@@ -289,7 +289,7 @@ impl ConnectionPool {
     pub async fn get_connection_details(&self) -> HashMap<String, ConnectionDetails> {
         let connections = self.connections.read().await;
         let mut details = HashMap::new();
-        
+
         for (id, connection) in connections.iter() {
             let detail = ConnectionDetails {
                 id: connection.id.clone(),
@@ -303,14 +303,14 @@ impl ConnectionPool {
             };
             details.insert(id.clone(), detail);
         }
-        
+
         details
     }
 
     /// Shutdown the connection pool
     pub async fn shutdown(&self) -> Result<()> {
         println!("Shutting down connection pool");
-        
+
         // Close all active connections
         let connection_ids: Vec<String> = {
             let connections = self.connections.read().await;

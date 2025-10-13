@@ -96,7 +96,7 @@ rg "#\[cfg\(any\(feature = \"gpu\", feature = \"cuda\"\)\)\]" crates/bitnet-kern
 
 **Build Script Compliance** (build.rs:10-12):
 ```rust
-let gpu = env::var_os("CARGO_FEATURE_GPU").is_some() 
+let gpu = env::var_os("CARGO_FEATURE_GPU").is_some()
     || env::var_os("CARGO_FEATURE_CUDA").is_some();
 ```
 ✅ Unified GPU detection in build.rs combining both feature flags
@@ -125,12 +125,12 @@ rg "^pub " crates/bitnet-kernels/src/device_features.rs
 1. `pub fn gpu_compiled() -> bool` (line 40)
    - Compile-time detection using cfg! macro
    - Zero runtime cost (inlined)
-   
+
 2. `pub fn gpu_available_runtime() -> bool` (lines 76, 91)
    - Runtime detection with CUDA availability check
    - BITNET_GPU_FAKE environment variable support
    - Dual implementation (GPU-enabled + CPU-only stub)
-   
+
 3. `pub fn device_capability_summary() -> String` (line 117)
    - Diagnostic information for developers
    - Human-readable output with emoji indicators

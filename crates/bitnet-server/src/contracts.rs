@@ -44,16 +44,16 @@ impl ApiVersion {
 pub enum ContractError {
     #[error("Breaking change detected: {0}")]
     BreakingChange(String),
-    
+
     #[error("Schema validation failed: {0}")]
     SchemaValidation(String),
-    
+
     #[error("Version incompatible: expected {expected}, got {actual}")]
     VersionMismatch { expected: String, actual: String },
-    
+
     #[error("Required field missing: {0}")]
     MissingField(String),
-    
+
     #[error("Type mismatch: expected {expected}, got {actual}")]
     TypeMismatch { expected: String, actual: String },
 }
@@ -74,14 +74,14 @@ impl ContractValidator {
 
     fn load_schemas() -> HashMap<String, Value> {
         let mut schemas = HashMap::new();
-        
+
         // Load inference contract
         let inference_schema = include_str!("../../../api-contracts/v1/inference.json");
         schemas.insert(
             "inference".to_string(),
             serde_json::from_str(inference_schema).expect("Invalid inference schema"),
         );
-        
+
         schemas
     }
 
@@ -94,21 +94,21 @@ impl ContractValidator {
         // Get the appropriate schema
         let schema = self.schemas.get("inference")
             .ok_or_else(|| ContractError::SchemaValidation("Schema not found".into()))?;
-        
+
         // Extract the endpoint definition
         let endpoints = schema.get("endpoints")
             .ok_or_else(|| ContractError::SchemaValidation("No endpoints defined".into()))?;
-        
+
         let endpoint_def = endpoints.get(endpoint)
             .ok_or_else(|| ContractError::SchemaValidation(format!("Unknown endpoint: {}", endpoint)))?;
-        
+
         // Validate against the request schema
         if let Some(post_def) = endpoint_def.get("POST") {
             if let Some(request_schema) = post_def.get("request") {
                 self.validate_against_schema(request, request_schema)?;
             }
         }
-        
+
         Ok(())
     }
 
@@ -120,20 +120,20 @@ impl ContractValidator {
     ) -> Result<(), ContractError> {
         let schema = self.schemas.get("inference")
             .ok_or_else(|| ContractError::SchemaValidation("Schema not found".into()))?;
-        
+
         let endpoints = schema.get("endpoints")
             .ok_or_else(|| ContractError::SchemaValidation("No endpoints defined".into()))?;
-        
+
         let endpoint_def = endpoints.get(endpoint)
             .ok_or_else(|| ContractError::SchemaValidation(format!("Unknown endpoint: {}", endpoint)))?;
-        
+
         // Validate against the response schema
         if let Some(method_def) = endpoint_def.get("POST").or(endpoint_def.get("GET")) {
             if let Some(response_schema) = method_def.get("response") {
                 self.validate_against_schema(response, response_schema)?;
             }
         }
-        
+
         Ok(())
     }
 
@@ -147,12 +147,12 @@ impl ContractValidator {
             let resolved = self.resolve_ref(ref_path)?;
             return self.validate_against_schema(data, &resolved);
         }
-        
+
         // Validate type
         if let Some(type_str) = schema.get("type").and_then(|v| v.as_str()) {
             self.validate_type(data, type_str)?;
         }
-        
+
         // Validate object properties
         if let Some(properties) = schema.get("properties").and_then(|v| v.as_object()) {
             let data_obj = data.as_object()
@@ -160,19 +160,19 @@ impl ContractValidator {
                     expected: "object".to_string(),
                     actual: format!("{:?}", data),
                 })?;
-            
+
             // Check required fields
             if let Some(required) = schema.get("required").and_then(|v| v.as_array()) {
                 for req_field in required {
                     let field_name = req_field.as_str()
                         .ok_or_else(|| ContractError::SchemaValidation("Invalid required field".into()))?;
-                    
+
                     if !data_obj.contains_key(field_name) {
                         return Err(ContractError::MissingField(field_name.to_string()));
                     }
                 }
             }
-            
+
             // Validate each property
             for (key, prop_schema) in properties {
                 if let Some(value) = data_obj.get(key) {
@@ -180,7 +180,7 @@ impl ContractValidator {
                 }
             }
         }
-        
+
         // Validate array items
         if let Some(items_schema) = schema.get("items") {
             let data_array = data.as_array()
@@ -188,12 +188,12 @@ impl ContractValidator {
                     expected: "array".to_string(),
                     actual: format!("{:?}", data),
                 })?;
-            
+
             for item in data_array {
                 self.validate_against_schema(item, items_schema)?;
             }
         }
-        
+
         // Validate enum values
         if let Some(enum_values) = schema.get("enum").and_then(|v| v.as_array()) {
             let mut valid = false;
@@ -209,7 +209,7 @@ impl ContractValidator {
                 ));
             }
         }
-        
+
         Ok(())
     }
 
@@ -224,14 +224,14 @@ impl ContractValidator {
             "null" => data.is_null(),
             _ => return Err(ContractError::SchemaValidation(format!("Unknown type: {}", expected_type))),
         };
-        
+
         if !valid {
             return Err(ContractError::TypeMismatch {
                 expected: expected_type.to_string(),
                 actual: format!("{:?}", data),
             });
         }
-        
+
         Ok(())
     }
 
@@ -241,16 +241,16 @@ impl ContractValidator {
         if parts.len() < 3 || parts[0] != "#" {
             return Err(ContractError::SchemaValidation(format!("Invalid reference: {}", ref_path)));
         }
-        
+
         let schema = self.schemas.get("inference")
             .ok_or_else(|| ContractError::SchemaValidation("Schema not found".into()))?;
-        
+
         let mut current = schema;
         for part in &parts[1..] {
             current = current.get(part)
                 .ok_or_else(|| ContractError::SchemaValidation(format!("Reference not found: {}", ref_path)))?;
         }
-        
+
         Ok(current.clone())
     }
 }
@@ -258,14 +258,14 @@ impl ContractValidator {
 /// Middleware for contract validation
 pub fn validate_contract_middleware() -> impl Fn(&Value, &Value) -> Result<(), ContractError> {
     let validator = ContractValidator::new();
-    
+
     move |request: &Value, response: &Value| {
         // Validate request
         if let Some(endpoint) = request.get("endpoint").and_then(|v| v.as_str()) {
             validator.validate_request(endpoint, request)?;
             validator.validate_response(endpoint, response)?;
         }
-        
+
         Ok(())
     }
 }
@@ -280,7 +280,7 @@ mod tests {
         let v1 = ApiVersion { major: 1, minor: 0, patch: 0, pre_release: None };
         let v1_1 = ApiVersion { major: 1, minor: 1, patch: 0, pre_release: None };
         let v2 = ApiVersion { major: 2, minor: 0, patch: 0, pre_release: None };
-        
+
         assert!(v1.is_compatible_with(&v1_1));
         assert!(!v1.is_compatible_with(&v2));
     }
@@ -288,13 +288,13 @@ mod tests {
     #[test]
     fn test_validate_inference_request() {
         let validator = ContractValidator::new();
-        
+
         let valid_request = json!({
             "prompt": "Hello, world!",
             "max_tokens": 100,
             "temperature": 0.7
         });
-        
+
         // This should validate successfully
         validator.validate_against_schema(
             &valid_request,
@@ -313,11 +313,11 @@ mod tests {
     #[test]
     fn test_missing_required_field() {
         let validator = ContractValidator::new();
-        
+
         let invalid_request = json!({
             "max_tokens": 100
         });
-        
+
         let result = validator.validate_against_schema(
             &invalid_request,
             &json!({
@@ -329,7 +329,7 @@ mod tests {
                 }
             })
         );
-        
+
         assert!(matches!(result, Err(ContractError::MissingField(_))));
     }
 }

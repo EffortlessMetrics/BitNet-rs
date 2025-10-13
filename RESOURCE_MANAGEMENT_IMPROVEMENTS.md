@@ -16,7 +16,7 @@ This document summarizes the comprehensive improvements made to address reviewer
 - **Solution**: Implemented hybrid approach combining both simulated and actual system resource monitoring
 - **Result**: Tests now provide both deterministic behavior and real-world validation
 
-### 3. **Platform-Specific Path Issues** 
+### 3. **Platform-Specific Path Issues**
 - **Issue**: Tests may fail on different platforms due to path handling
 - **Solution**: Added robust cross-platform path handling with multiple fallback directories
 - **Result**: Tests work reliably across Windows, macOS, Linux, and containerized environments
@@ -83,7 +83,7 @@ let file = File::create(&file_path).await?;
 // Multi-path fallback with comprehensive error handling
 let test_dirs = [
     "tests/temp/file_handles",
-    "/tmp/bitnet_test/file_handles", 
+    "/tmp/bitnet_test/file_handles",
     "target/test_temp/file_handles",
     "./temp/file_handles",
 ];
@@ -224,14 +224,14 @@ match File::create(&file_path).await {
     Err(e) => {
         creation_errors += 1;
         tracing::warn!("Failed to create file {}: {}", i, e);
-        
+
         // If we fail early, it might be a permission or system limit issue
         if i < 5 {
             return Err(TestError::execution(format!(
                 "Early file creation failure suggests system issue: {}", e
             )));
         }
-        
+
         // Stop trying after too many failures
         if creation_errors > 5 {
             tracing::warn!("Too many creation errors, stopping at {} files", i);
@@ -246,12 +246,12 @@ match File::create(&file_path).await {
 **Added comprehensive logging for debugging**:
 ```rust
 tracing::info!(
-    "Starting memory leak test: {} allocations of {} bytes each", 
+    "Starting memory leak test: {} allocations of {} bytes each",
     num_allocations, allocation_size
 );
 
 tracing::info!(
-    "Memory delta: {} bytes, threshold: {} bytes, allocated count: {}", 
+    "Memory delta: {} bytes, threshold: {} bytes, allocated count: {}",
     memory_delta, leak_threshold, allocated_count
 );
 
@@ -271,7 +271,7 @@ tracing::info!(
 ### Cross-Platform Compatibility
 - ✅ Windows: Enhanced memory tracking via Win32 API
 - ✅ macOS: Enhanced memory tracking via getrusage()
-- ✅ Linux: Enhanced memory tracking via /proc/self/status  
+- ✅ Linux: Enhanced memory tracking via /proc/self/status
 - ✅ Other platforms: Graceful fallback to simulated tracking
 
 ### Test Coverage Expansion

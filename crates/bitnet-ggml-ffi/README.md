@@ -9,7 +9,7 @@ The C components of this crate compile with both GCC and Clang. Continuous integ
 ### Supported Compilers
 
 - **GCC**: Tested with `gcc` and `g++`
-- **Clang**: Tested with `clang` and `clang++` 
+- **Clang**: Tested with `clang` and `clang++`
 
 ### Compiler Selection
 
@@ -34,4 +34,3 @@ The GGML header includes compiler-specific deprecation warnings that work with b
 - **MSVC**: Uses `__declspec(deprecated(hint))` with `_MSC_VER` detection
 
 This ensures deprecation warnings are properly displayed across all supported compiler toolchains.
-

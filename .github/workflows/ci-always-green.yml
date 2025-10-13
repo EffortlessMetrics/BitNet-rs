@@ -22,12 +22,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Cache cargo dependencies
         uses: actions/cache@v4
         with:
@@ -38,44 +38,44 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      
+
       - name: Build (CPU features)
         run: cargo build --workspace --no-default-features --features cpu
-      
+
       - name: Clippy
         run: cargo clippy --workspace --no-default-features --features cpu -- -D warnings
-      
+
       - name: Format check
         run: cargo fmt --all -- --check
-      
+
       - name: Unit tests
         run: cargo test --workspace --no-default-features --features cpu
-      
+
       - name: Benchmark compilation
         run: cargo bench --workspace --no-default-features --features cpu --no-run
-      
+
       - name: Inference tests (with tokio)
         run: cargo test -p bitnet-inference --no-default-features --features cpu,rt-tokio
 
   generate-mini-gguf:
     name: Generate Test Fixtures
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Generate minimal GGUF v3
         run: |
           cargo run -p xtask -- gen-mini-gguf --output tests/models/mini_v3.gguf --version 3
           echo "Generated minimal GGUF v3 for testing"
-      
+
       - name: Generate minimal GGUF v2
         run: |
           cargo run -p xtask -- gen-mini-gguf --output tests/models/mini_v2.gguf --version 2
           echo "Generated minimal GGUF v2 for testing"
-      
+
       - name: Upload test fixtures
         uses: actions/upload-artifact@v4
         with:
@@ -88,35 +88,35 @@ jobs:
     runs-on: ubuntu-latest
     needs: generate-mini-gguf
     continue-on-error: true  # Don't fail the workflow if this job fails
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Download test fixtures
         uses: actions/download-artifact@v4
         with:
           name: test-fixtures
           path: tests/models
-      
+
       - name: Setup C++ (cached)
         run: |
           # Try to fetch C++ implementation, but don't fail if it doesn't work
           cargo run -p xtask -- fetch-cpp --tag main || echo "⚠️ C++ fetch failed, continuing..."
-      
+
       - name: Run cross-validation with soft-fail
         env:
           CROSSVAL_ALLOW_CPP_FAIL: "1"
           CROSSVAL_GGUF: tests/models/mini_v3.gguf
         run: |
           echo "Running cross-validation with soft-fail enabled..."
-          
+
           # First validate Rust can load the model
           cargo run -p xtask -- crossval --model tests/models/mini_v3.gguf || {
             exit_code=$?
             echo "Cross-validation exited with code: $exit_code"
-            
+
             # Check if it was a soft-fail (C++ incompatibility)
             if [[ $exit_code -eq 0 ]]; then
               echo "✅ Soft-fail: Rust validated, C++ had compatibility issues (expected)"
@@ -125,7 +125,7 @@ jobs:
               exit $exit_code
             fi
           }
-      
+
       - name: Generate cross-validation report
         if: always()
         run: |
@@ -155,14 +155,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-test, generate-mini-gguf, crossval-soft-fail]
     if: always()
-    
+
     steps:
       - name: Generate summary
         run: |
           {
             echo "## 🎯 CI Status: Always Green"
             echo ""
-            
+
             # Check build-test status
             if [[ "${{ needs.build-test.result }}" == "success" ]]; then
               echo "### ✅ Core Tests"
@@ -176,9 +176,9 @@ jobs:
               echo "### ⚠️ Core Tests"
               echo "Some tests may have issues - check logs"
             fi
-            
+
             echo ""
-            
+
             # Check cross-validation status
             echo "### 🔍 Cross-Validation"
             if [[ "${{ needs.crossval-soft-fail.result }}" == "success" ]]; then
@@ -187,13 +187,13 @@ jobs:
               echo "- Status: ⚠️ Soft-fail (C++ compatibility issues)"
               echo "- Note: This is expected for experimental models"
             fi
-            
+
             echo ""
             echo "### 📝 Configuration"
             echo "- **Soft-fail enabled**: CROSSVAL_ALLOW_CPP_FAIL=1"
             echo "- **Purpose**: Prevent C++ compatibility issues from blocking CI"
             echo "- **Result**: CI remains green while still validating Rust implementation"
-            
+
             echo ""
             echo "### 🚀 Next Steps"
             echo "1. All core functionality validated ✅"

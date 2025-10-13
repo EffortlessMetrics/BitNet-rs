@@ -19,26 +19,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = BitNetConfig::default();
     let model = BitNetModel::new(config.clone(), Device::Cpu);
     let model = Arc::new(model) as Arc<dyn Model>;
-    
+
     println!("Creating tokenizer...");
     let tokenizer = MockTokenizer::new();
-    
+
     println!("Encoding prompt...");
     let tokens = tokenizer.encode("Hello world", true)?;
     println!("Tokens: {:?}", tokens);
-    
+
     println!("Running inference...");
     let embeddings = model.embed(&tokens)?;
     println!("Embeddings shape: {:?}", embeddings.shape());
-    
+
     // Simple forward pass
     let mut cache: Box<dyn std::any::Any> = Box::new(());
     let hidden = model.forward(&embeddings, cache.as_mut())?;
     println!("Hidden shape: {:?}", hidden.shape());
-    
+
     let logits = model.logits(&hidden)?;
     println!("Logits shape: {:?}", logits.shape());
-    
+
     println!("Test successful!");
     Ok(())
 }

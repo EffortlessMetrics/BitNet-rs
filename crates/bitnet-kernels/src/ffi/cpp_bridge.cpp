@@ -1,6 +1,6 @@
 /**
  * C++ bridge implementation for BitNet kernel FFI
- * 
+ *
  * This file provides C-compatible wrappers around existing C++ kernel
  * implementations, enabling safe interop with Rust during the migration period.
  */
@@ -35,7 +35,7 @@ int bitnet_cpp_init() {
     try {
         // Initialize any global state needed by C++ kernels
         last_error.clear();
-        
+
 #ifdef HAVE_GGML_BITNET_H
         // Initialize GGML BitNet if available
         // This would call actual initialization functions
@@ -72,7 +72,7 @@ int bitnet_cpp_is_available() {
  */
 int bitnet_cpp_matmul_i2s(
     const int8_t* a,
-    const uint8_t* b, 
+    const uint8_t* b,
     float* c,
     int m,
     int n,
@@ -83,7 +83,7 @@ int bitnet_cpp_matmul_i2s(
             set_last_error("Null pointer passed to matmul_i2s");
             return -1;
         }
-        
+
         if (m <= 0 || n <= 0 || k <= 0) {
             set_last_error("Invalid matrix dimensions");
             return -1;
@@ -93,7 +93,7 @@ int bitnet_cpp_matmul_i2s(
         // Call actual BitNet matrix multiplication
         // This is a placeholder - actual implementation would call
         // the appropriate GGML BitNet function
-        
+
         // For now, implement a simple fallback
         for (int i = 0; i < m; i++) {
             for (int j = 0; j < n; j++) {
@@ -104,7 +104,7 @@ int bitnet_cpp_matmul_i2s(
                 c[i * n + j] = sum;
             }
         }
-        
+
         return 0;
 #else
         set_last_error("BitNet C++ matmul not available");
@@ -138,12 +138,12 @@ int bitnet_cpp_quantize(
             set_last_error("Null pointer passed to quantize");
             return -1;
         }
-        
+
         if (input_len <= 0 || output_len <= 0 || scales_len <= 0) {
             set_last_error("Invalid buffer lengths");
             return -1;
         }
-        
+
         if (qtype < 0 || qtype > 2) {
             set_last_error("Invalid quantization type");
             return -1;
@@ -166,36 +166,36 @@ int bitnet_cpp_quantize(
         // Fallback implementation for testing
         const int block_size = (qtype == 2) ? 128 : (qtype == 1) ? 64 : 32;
         const int num_blocks = (input_len + block_size - 1) / block_size;
-        
+
         if (scales_len < num_blocks) {
             set_last_error("Scales buffer too small");
             return -1;
         }
-        
+
         if (output_len < input_len / 4) {
             set_last_error("Output buffer too small");
             return -1;
         }
-        
+
         // Simple quantization implementation
         for (int block_idx = 0; block_idx < num_blocks; block_idx++) {
             int start = block_idx * block_size;
             int end = std::min(start + block_size, input_len);
-            
+
             // Find max absolute value in block
             float max_val = 0.0f;
             for (int i = start; i < end; i++) {
                 max_val = std::max(max_val, std::abs(input[i]));
             }
-            
+
             float scale = (max_val > 1e-8f) ? max_val / 1.5f : 1.0f;
             scales[block_idx] = scale;
-            
+
             // Quantize block
             for (int i = start; i < end; i++) {
                 float normalized = input[i] / scale;
                 uint8_t quantized;
-                
+
                 if (normalized > 0.5f) {
                     quantized = 1;
                 } else if (normalized < -0.5f) {
@@ -203,17 +203,17 @@ int bitnet_cpp_quantize(
                 } else {
                     quantized = 0;
                 }
-                
+
                 // Pack into output (2 bits per value)
                 int byte_idx = i / 4;
                 int bit_offset = (i % 4) * 2;
-                
+
                 if (byte_idx < output_len) {
                     output[byte_idx] |= quantized << bit_offset;
                 }
             }
         }
-        
+
         return 0;
 #endif
     } catch (const std::exception& e) {
@@ -287,7 +287,7 @@ const char* bitnet_cpp_get_last_error() {
 void bitnet_cpp_cleanup() {
     try {
         last_error.clear();
-        
+
 #ifdef HAVE_GGML_BITNET_H
         // Clean up any global state
 #endif

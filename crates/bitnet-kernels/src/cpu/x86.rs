@@ -691,7 +691,7 @@ mod tests {
                 *item = ((i % 5) as i8) - 2; // Values from -2 to 2
             }
             for (i, item) in b.iter_mut().enumerate() {
-                *item = (i % 3) as u8; // Values from 0 to 2  
+                *item = (i % 3) as u8; // Values from 0 to 2
             }
 
             let mut c_avx2 = vec![0.0f32; m * n];

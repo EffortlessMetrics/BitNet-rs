@@ -12,7 +12,7 @@ class BitNetDebugTools {
         this.memorySnapshots = [];
         this.inferenceMetrics = [];
         this.wasmModule = null;
-        
+
         // Initialize debug panel if in development mode
         if (this.isDevelopmentMode()) {
             this.initDebugPanel();
@@ -25,19 +25,19 @@ class BitNetDebugTools {
     enable() {
         this.isEnabled = true;
         console.log('🔧 BitNet WASM Debug Tools enabled');
-        
+
         // Inject debug styles
         this.injectDebugStyles();
-        
+
         // Show debug panel
         const panel = document.getElementById('bitnet-debug-panel');
         if (panel) {
             panel.style.display = 'block';
         }
-        
+
         // Start memory monitoring
         this.startMemoryMonitoring();
-        
+
         return this;
     }
 
@@ -47,16 +47,16 @@ class BitNetDebugTools {
     disable() {
         this.isEnabled = false;
         console.log('🔧 BitNet WASM Debug Tools disabled');
-        
+
         // Hide debug panel
         const panel = document.getElementById('bitnet-debug-panel');
         if (panel) {
             panel.style.display = 'none';
         }
-        
+
         // Stop memory monitoring
         this.stopMemoryMonitoring();
-        
+
         return this;
     }
 
@@ -74,7 +74,7 @@ class BitNetDebugTools {
      */
     log(message, level = 'debug', data = null) {
         if (!this.isEnabled) return;
-        
+
         const timestamp = new Date().toISOString();
         const logEntry = {
             timestamp,
@@ -82,18 +82,18 @@ class BitNetDebugTools {
             message,
             data
         };
-        
+
         this.logs.push(logEntry);
-        
+
         // Keep only last 1000 logs
         if (this.logs.length > 1000) {
             this.logs.shift();
         }
-        
+
         // Console output with styling
         const style = this.getLogStyle(level);
         console.log(`%c[BitNet WASM ${level.toUpperCase()}] ${message}`, style, data || '');
-        
+
         // Update debug panel
         this.updateDebugPanel();
     }
@@ -103,11 +103,11 @@ class BitNetDebugTools {
      */
     startPerformanceMark(name) {
         if (!this.isEnabled) return;
-        
+
         const startTime = performance.now();
         this.performanceMarks.set(name, { startTime, endTime: null });
         this.log(`Performance mark started: ${name}`, 'perf');
-        
+
         return this;
     }
 
@@ -116,23 +116,23 @@ class BitNetDebugTools {
      */
     endPerformanceMark(name) {
         if (!this.isEnabled) return;
-        
+
         const mark = this.performanceMarks.get(name);
         if (!mark) {
             this.log(`Performance mark not found: ${name}`, 'warn');
             return this;
         }
-        
+
         const endTime = performance.now();
         mark.endTime = endTime;
         mark.duration = endTime - mark.startTime;
-        
+
         this.log(`Performance mark completed: ${name} (${mark.duration.toFixed(2)}ms)`, 'perf', {
             duration: mark.duration,
             startTime: mark.startTime,
             endTime: mark.endTime
         });
-        
+
         return this;
     }
 
@@ -141,7 +141,7 @@ class BitNetDebugTools {
      */
     takeMemorySnapshot(label = 'snapshot') {
         if (!this.isEnabled) return;
-        
+
         const snapshot = {
             timestamp: Date.now(),
             label,
@@ -150,10 +150,10 @@ class BitNetDebugTools {
             jsHeapLimit: performance.memory ? performance.memory.jsHeapSizeLimit : 0,
             wasmMemory: this.getWasmMemoryUsage()
         };
-        
+
         this.memorySnapshots.push(snapshot);
         this.log(`Memory snapshot taken: ${label}`, 'memory', snapshot);
-        
+
         return snapshot;
     }
 
@@ -162,15 +162,15 @@ class BitNetDebugTools {
      */
     recordInferenceMetrics(metrics) {
         if (!this.isEnabled) return;
-        
+
         const record = {
             timestamp: Date.now(),
             ...metrics
         };
-        
+
         this.inferenceMetrics.push(record);
         this.log('Inference metrics recorded', 'metrics', record);
-        
+
         return this;
     }
 
@@ -179,14 +179,14 @@ class BitNetDebugTools {
      */
     analyzePerformance() {
         if (!this.isEnabled) return null;
-        
+
         const analysis = {
             slowestOperations: this.getSlowestOperations(),
             memoryTrends: this.analyzeMemoryTrends(),
             inferenceStats: this.getInferenceStats(),
             recommendations: []
         };
-        
+
         // Generate recommendations
         if (analysis.slowestOperations.length > 0) {
             const slowest = analysis.slowestOperations[0];
@@ -194,11 +194,11 @@ class BitNetDebugTools {
                 analysis.recommendations.push(`Consider optimizing ${slowest.name} - taking ${slowest.duration.toFixed(0)}ms`);
             }
         }
-        
+
         if (analysis.memoryTrends.peakUsage > 500 * 1024 * 1024) {
             analysis.recommendations.push('High memory usage detected - consider enabling progressive loading');
         }
-        
+
         this.log('Performance analysis completed', 'analysis', analysis);
         return analysis;
     }
@@ -216,7 +216,7 @@ class BitNetDebugTools {
             platformInfo: this.getPlatformInfo(),
             analysis: this.analyzePerformance()
         };
-        
+
         const blob = new Blob([JSON.stringify(debugData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -224,7 +224,7 @@ class BitNetDebugTools {
         a.download = `bitnet-debug-${Date.now()}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        
+
         this.log('Debug data exported', 'info');
         return debugData;
     }
@@ -234,39 +234,39 @@ class BitNetDebugTools {
      */
     visualizeMemoryUsage() {
         if (!this.isEnabled || this.memorySnapshots.length < 2) return;
-        
+
         const canvas = document.getElementById('bitnet-memory-chart');
         if (!canvas) return;
-        
+
         const ctx = canvas.getContext('2d');
         const width = canvas.width;
         const height = canvas.height;
-        
+
         // Clear canvas
         ctx.clearRect(0, 0, width, height);
-        
+
         // Draw memory usage chart
         const maxMemory = Math.max(...this.memorySnapshots.map(s => s.jsHeapUsed + s.wasmMemory));
         const minTime = this.memorySnapshots[0].timestamp;
         const maxTime = this.memorySnapshots[this.memorySnapshots.length - 1].timestamp;
-        
+
         ctx.strokeStyle = '#007bff';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        
+
         this.memorySnapshots.forEach((snapshot, index) => {
             const x = (snapshot.timestamp - minTime) / (maxTime - minTime) * width;
             const y = height - (snapshot.jsHeapUsed + snapshot.wasmMemory) / maxMemory * height;
-            
+
             if (index === 0) {
                 ctx.moveTo(x, y);
             } else {
                 ctx.lineTo(x, y);
             }
         });
-        
+
         ctx.stroke();
-        
+
         // Draw labels
         ctx.fillStyle = '#333';
         ctx.font = '12px monospace';
@@ -279,32 +279,32 @@ class BitNetDebugTools {
      */
     profileWasmCalls(functionName, originalFunction) {
         if (!this.isEnabled) return originalFunction;
-        
+
         return (...args) => {
             const startTime = performance.now();
             this.log(`WASM call started: ${functionName}`, 'wasm', { args });
-            
+
             try {
                 const result = originalFunction.apply(this, args);
                 const endTime = performance.now();
                 const duration = endTime - startTime;
-                
+
                 this.log(`WASM call completed: ${functionName} (${duration.toFixed(2)}ms)`, 'wasm', {
                     duration,
                     success: true,
                     result: typeof result
                 });
-                
+
                 return result;
             } catch (error) {
                 const endTime = performance.now();
                 const duration = endTime - startTime;
-                
+
                 this.log(`WASM call failed: ${functionName} (${duration.toFixed(2)}ms)`, 'error', {
                     duration,
                     error: error.message
                 });
-                
+
                 throw error;
             }
         };
@@ -313,8 +313,8 @@ class BitNetDebugTools {
     // Private methods
 
     isDevelopmentMode() {
-        return location.hostname === 'localhost' || 
-               location.hostname === '127.0.0.1' || 
+        return location.hostname === 'localhost' ||
+               location.hostname === '127.0.0.1' ||
                location.search.includes('debug=true');
     }
 
@@ -353,7 +353,7 @@ class BitNetDebugTools {
                 <button onclick="bitnetDebug.takeMemorySnapshot()">Memory Snapshot</button>
             </div>
         `;
-        
+
         document.body.appendChild(panel);
     }
 
@@ -374,7 +374,7 @@ class BitNetDebugTools {
                 font-size: 12px;
                 display: none;
             }
-            
+
             .debug-header {
                 display: flex;
                 justify-content: space-between;
@@ -384,25 +384,25 @@ class BitNetDebugTools {
                 border-bottom: 1px solid #ddd;
                 border-radius: 8px 8px 0 0;
             }
-            
+
             .debug-header h3 {
                 margin: 0;
                 font-size: 14px;
             }
-            
+
             .debug-header button {
                 background: none;
                 border: none;
                 font-size: 18px;
                 cursor: pointer;
             }
-            
+
             .debug-tabs {
                 display: flex;
                 background: #f8f9fa;
                 border-bottom: 1px solid #ddd;
             }
-            
+
             .tab-btn {
                 flex: 1;
                 padding: 8px;
@@ -411,61 +411,61 @@ class BitNetDebugTools {
                 cursor: pointer;
                 font-size: 11px;
             }
-            
+
             .tab-btn.active {
                 background: white;
                 border-bottom: 2px solid #007bff;
             }
-            
+
             .debug-content {
                 height: 280px;
                 overflow: hidden;
             }
-            
+
             .debug-tab {
                 height: 100%;
                 padding: 10px;
                 overflow-y: auto;
                 display: none;
             }
-            
+
             .debug-tab.active {
                 display: block;
             }
-            
+
             .debug-logs-container {
                 font-size: 10px;
                 line-height: 1.4;
             }
-            
+
             .log-entry {
                 margin-bottom: 5px;
                 padding: 2px 5px;
                 border-radius: 3px;
             }
-            
+
             .log-entry.error {
                 background: #ffe6e6;
                 color: #d63384;
             }
-            
+
             .log-entry.warn {
                 background: #fff3cd;
                 color: #856404;
             }
-            
+
             .log-entry.info {
                 background: #d1ecf1;
                 color: #0c5460;
             }
-            
+
             .debug-actions {
                 padding: 10px;
                 border-top: 1px solid #ddd;
                 display: flex;
                 gap: 5px;
             }
-            
+
             .debug-actions button {
                 flex: 1;
                 padding: 5px;
@@ -475,14 +475,14 @@ class BitNetDebugTools {
                 cursor: pointer;
                 font-size: 10px;
             }
-            
+
             #bitnet-memory-chart {
                 border: 1px solid #ddd;
                 width: 100%;
                 height: 150px;
             }
         `;
-        
+
         const styleSheet = document.createElement('style');
         styleSheet.textContent = styles;
         document.head.appendChild(styleSheet);
@@ -496,11 +496,11 @@ class BitNetDebugTools {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        
+
         // Show selected tab
         document.getElementById(`debug-${tabName}`).classList.add('active');
         event.target.classList.add('active');
-        
+
         // Update content based on tab
         if (tabName === 'memory') {
             this.visualizeMemoryUsage();
@@ -510,7 +510,7 @@ class BitNetDebugTools {
     updateDebugPanel() {
         const logsContainer = document.querySelector('.debug-logs-container');
         if (!logsContainer) return;
-        
+
         // Show last 50 logs
         const recentLogs = this.logs.slice(-50);
         logsContainer.innerHTML = recentLogs.map(log => `
@@ -519,7 +519,7 @@ class BitNetDebugTools {
                 <span class="message">${log.message}</span>
             </div>
         `).join('');
-        
+
         // Auto-scroll to bottom
         logsContainer.scrollTop = logsContainer.scrollHeight;
     }
@@ -566,12 +566,12 @@ class BitNetDebugTools {
 
     analyzeMemoryTrends() {
         if (this.memorySnapshots.length < 2) return null;
-        
+
         const totalUsages = this.memorySnapshots.map(s => s.jsHeapUsed + s.wasmMemory);
         const peakUsage = Math.max(...totalUsages);
         const averageUsage = totalUsages.reduce((a, b) => a + b, 0) / totalUsages.length;
         const trend = totalUsages[totalUsages.length - 1] - totalUsages[0];
-        
+
         return {
             peakUsage,
             averageUsage,
@@ -582,10 +582,10 @@ class BitNetDebugTools {
 
     getInferenceStats() {
         if (this.inferenceMetrics.length === 0) return null;
-        
+
         const latencies = this.inferenceMetrics.map(m => m.latency).filter(l => l);
         const throughputs = this.inferenceMetrics.map(m => m.throughput).filter(t => t);
-        
+
         return {
             totalInferences: this.inferenceMetrics.length,
             averageLatency: latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0,
@@ -611,7 +611,7 @@ class BitNetDebugTools {
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
         if (!gl) return null;
-        
+
         return {
             vendor: gl.getParameter(gl.VENDOR),
             renderer: gl.getParameter(gl.RENDERER),

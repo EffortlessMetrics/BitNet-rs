@@ -1,8 +1,8 @@
 // BitNet WASM Browser Integration Example
-import init, { 
-    WasmBitNetModel, 
-    WasmModelConfig, 
-    WasmInference, 
+import init, {
+    WasmBitNetModel,
+    WasmModelConfig,
+    WasmInference,
     WasmGenerationConfig,
     WasmBenchmarkSuite,
     Logger,
@@ -44,7 +44,7 @@ async function initApp() {
         updateProgress(100);
 
         Logger.info('BitNet WASM application initialized');
-        
+
         // Hide progress bar after a delay
         setTimeout(() => {
             document.getElementById('progress').parentElement.style.display = 'none';
@@ -72,17 +72,17 @@ function updateProgress(percent) {
 // Detect platform features
 async function detectPlatformFeatures() {
     const features = FeatureDetection.get_feature_support();
-    
-    document.getElementById('platform-simd').textContent = 
+
+    document.getElementById('platform-simd').textContent =
         features.simd ? 'Supported' : 'Not Supported';
-    
+
     // Get device info
     const memory = navigator.deviceMemory || 'Unknown';
     const cores = navigator.hardwareConcurrency || 'Unknown';
-    
+
     document.getElementById('platform-memory').textContent = memory;
     document.getElementById('platform-cores').textContent = cores;
-    
+
     Logger.info(`Platform features detected - SIMD: ${features.simd}, Memory: ${memory}GB, Cores: ${cores}`);
 }
 
@@ -90,7 +90,7 @@ async function detectPlatformFeatures() {
 async function loadModel() {
     const fileInput = document.getElementById('model-file');
     const file = fileInput.files[0];
-    
+
     if (!file) {
         updateStatus('Please select a model file', 'error');
         return;
@@ -155,17 +155,17 @@ async function generateText() {
 
         // Generate text
         const result = await inference.generate_async(prompt, config);
-        
+
         const endTime = performance.now();
         const generationTime = endTime - startTime;
 
         // Update output
         document.getElementById('output').textContent = result;
-        
+
         // Update stats
         document.getElementById('generation-time').textContent = `${generationTime.toFixed(0)}ms`;
         document.getElementById('memory-usage').textContent = MemoryUtils.format_bytes(model.get_memory_usage());
-        
+
         // Estimate tokens per second (rough approximation)
         const estimatedTokens = result.split(' ').length;
         const tokensPerSec = (estimatedTokens / (generationTime / 1000)).toFixed(1);
@@ -215,7 +215,7 @@ async function startStreaming() {
         // Process stream
         while (streamingActive) {
             const result = await iterator.next();
-            
+
             if (result.done) {
                 break;
             }
@@ -273,10 +273,10 @@ function clearStreaming() {
 function initWorker() {
     try {
         worker = new Worker('worker.js');
-        
+
         worker.onmessage = function(e) {
             const { type, data, error } = e.data;
-            
+
             switch (type) {
                 case 'initialized':
                     document.getElementById('worker-indicator').classList.add('active');
@@ -285,12 +285,12 @@ function initWorker() {
                     document.getElementById('terminate-worker').disabled = false;
                     Logger.info('Web Worker initialized successfully');
                     break;
-                    
+
                 case 'generation_complete':
                     document.getElementById('worker-output').textContent = data;
                     updateStatus('Worker generation completed!', 'success');
                     break;
-                    
+
                 case 'error':
                     updateStatus(`Worker error: ${error}`, 'error');
                     Logger.error(`Worker error: ${error}`);
@@ -305,7 +305,7 @@ function initWorker() {
 
         // Initialize worker
         worker.postMessage({ type: 'init' });
-        
+
     } catch (error) {
         updateStatus(`Worker creation failed: ${error.message}`, 'error');
         Logger.error(`Worker creation error: ${error}`);
@@ -326,8 +326,8 @@ function workerGenerate() {
     }
 
     updateStatus('Generating in worker...', 'loading');
-    worker.postMessage({ 
-        type: 'generate', 
+    worker.postMessage({
+        type: 'generate',
         prompt: prompt,
         config: createGenerationConfig()
     });
@@ -338,12 +338,12 @@ function terminateWorker() {
     if (worker) {
         worker.terminate();
         worker = null;
-        
+
         document.getElementById('worker-indicator').classList.remove('active');
         document.getElementById('worker-status-text').textContent = 'Worker terminated';
         document.getElementById('worker-generate').disabled = true;
         document.getElementById('terminate-worker').disabled = true;
-        
+
         Logger.info('Web Worker terminated');
     }
 }
@@ -360,13 +360,13 @@ async function runBenchmarks() {
         showBenchmarkProgress(true);
 
         const results = await benchmarkSuite.run_all_benchmarks();
-        
+
         // Display results
         document.getElementById('benchmark-output').textContent = JSON.stringify(results, null, 2);
-        
+
         // Update platform stats
         if (results.platform_info) {
-            document.getElementById('platform-gflops').textContent = 
+            document.getElementById('platform-gflops').textContent =
                 results.platform_info.estimated_gflops.toFixed(2);
         }
 
@@ -450,15 +450,15 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
-    
+
     // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    
+
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
-    
+
     // Add active class to selected tab
     event.target.classList.add('active');
 }
@@ -466,7 +466,7 @@ function switchTab(tabName) {
 // Settings management
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('bitnet-wasm-settings') || '{}');
-    
+
     if (settings.maxTokens) document.getElementById('max-tokens').value = settings.maxTokens;
     if (settings.temperature) {
         document.getElementById('temperature').value = settings.temperature;
@@ -490,7 +490,7 @@ function saveSettings() {
         memoryLimit: document.getElementById('memory-limit').value,
         chunkSize: document.getElementById('chunk-size').value
     };
-    
+
     localStorage.setItem('bitnet-wasm-settings', JSON.stringify(settings));
     updateStatus('Settings saved!', 'success');
 }
@@ -514,7 +514,7 @@ function exportSettings() {
 function importSettings() {
     const file = document.getElementById('import-settings').files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
         try {

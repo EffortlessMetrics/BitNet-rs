@@ -31,8 +31,8 @@ export OMP_NUM_THREADS=1
 export GGML_NUM_THREADS=1
 
 # Check prerequisites
-need() { 
-    command -v "$1" >/dev/null || { 
+need() {
+    command -v "$1" >/dev/null || {
         echo "❌ $1 is required but not installed"
         exit $EXIT_GENERAL_ERROR
     }
@@ -162,9 +162,9 @@ fi
 # Validate strict JSON output
 if [ "$MODE" = "PR" ]; then
     # PR mode: require embedded SentencePiece
-    if ! jq -e '.counts.unmapped==0 and 
-                (.counts.n_kv|tonumber)>0 and 
-                (.counts.n_tensors|tonumber)>0 and 
+    if ! jq -e '.counts.unmapped==0 and
+                (.counts.n_kv|tonumber)>0 and
+                (.counts.n_tensors|tonumber)>0 and
                 .tokenizer.type=="sentencepiece"' "$STRICT_JSON" >/dev/null; then
         echo "❌ Strict validation failed (PR mode requires embedded tokenizer)"
         jq '.' "$STRICT_JSON"
@@ -172,8 +172,8 @@ if [ "$MODE" = "PR" ]; then
     fi
 else
     # Nightly mode: external tokenizer OK
-    if ! jq -e '.counts.unmapped==0 and 
-                (.counts.n_kv|tonumber)>0 and 
+    if ! jq -e '.counts.unmapped==0 and
+                (.counts.n_kv|tonumber)>0 and
                 (.counts.n_tensors|tonumber)>0' "$STRICT_JSON" >/dev/null; then
         echo "❌ Strict validation failed"
         jq '.' "$STRICT_JSON"
@@ -203,11 +203,11 @@ for prompt in "${prompts[@]}"; do
         --bos
         --json-out "$TOK_JSON"
     )
-    
+
     if [ "$MODE" = "NIGHTLY" ]; then
         TOK_ARGS+=(--tokenizer "$TOKENIZER_PATH")
     fi
-    
+
     if "$RS_BIN" "${TOK_ARGS[@]}" >/dev/null 2>&1; then
         ids=$(jq -c '.tokens.ids' "$TOK_JSON" 2>/dev/null || echo "[]")
         if [[ "$ids" != "[]" ]] && [[ "$ids" != "null" ]]; then
@@ -321,9 +321,9 @@ if [ -f ci/baseline.json ]; then
     if [ "$MODE" = "NIGHTLY" ]; then
         MODEL_KEY="bitnet_i2s_cpu"
     fi
-    
+
     base_tps=$(jq -r --arg key "$MODEL_KEY" '.cpu[$key].tok_s // 0' ci/baseline.json)
-    
+
     if [[ "$base_tps" != "0" ]]; then
         threshold=$(awk -v b="$base_tps" 'BEGIN{print 0.95 * b}')
         if ! awk -v c="$tokps" -v t="$threshold" 'BEGIN{exit !(c >= t)}'; then
@@ -332,15 +332,15 @@ if [ -f ci/baseline.json ]; then
         fi
         echo "✓ Performance ratio: $tokps / $base_tps baseline"
     fi
-    
+
     # Check RSS if time command available
     if [ -n "$TIME_CMD" ] && grep -q "Maximum resident set size" "$TIME_OUTPUT" 2>/dev/null; then
         rss_kb=$(awk '/Maximum resident set size/{print $6}' "$TIME_OUTPUT")
         rss_mb=$((rss_kb / 1024))
         echo "Memory RSS: ${rss_mb}MB"
-        
+
         base_rss=$(jq -r --arg key "$MODEL_KEY" '.cpu[$key].rss_mb // 0' ci/baseline.json)
-        
+
         if [[ "$base_rss" != "0" ]]; then
             threshold=$(awk -v b="$base_rss" 'BEGIN{print int(1.03 * b)}')
             if (( rss_mb > threshold )); then

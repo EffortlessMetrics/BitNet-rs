@@ -8,7 +8,7 @@ The performance tracking infrastructure includes:
 
 - **Real-time metrics collection**: Tracks latency, throughput, memory usage
 - **Detailed timing breakdown**: Separate tracking for tokenization, forward pass, sampling
-- **Cache performance monitoring**: Hit rates and memory efficiency tracking  
+- **Cache performance monitoring**: Hit rates and memory efficiency tracking
 - **Device memory tracking**: Comprehensive host and GPU memory monitoring
 - **Environment-based configuration**: Support for deterministic testing and optimization
 - **Validation and error handling**: Ensures metrics integrity and proper error reporting
@@ -119,19 +119,19 @@ let result = quantizer.quantize(&input, QuantizationType::I2S)?;
 // Get comprehensive device statistics
 if let Some(stats) = quantizer.get_stats() {
     // Memory usage information
-    println!("Host Memory: {} MB used / {} MB total", 
+    println!("Host Memory: {} MB used / {} MB total",
         stats.memory_used_bytes / (1024 * 1024),
         stats.memory_total_bytes / (1024 * 1024)
     );
-    
+
     // Operation counts and performance
     println!("Operations: {} GPU, {} CPU, {} fallbacks",
         stats.gpu_operations, stats.cpu_operations, stats.fallback_count);
-        
+
     println!("Performance: {:.2} ms total quantization, {:.2} ms total matmul",
         stats.performance.total_quantization_time_ms,
         stats.performance.total_matmul_time_ms);
-    
+
     // Memory efficiency metrics
     if let Some(efficiency) = stats.memory_efficiency() {
         println!("Memory Efficiency: {:.1}%", efficiency * 100.0);
@@ -156,7 +156,7 @@ The memory tracking functionality relies on two key dependencies:
   - Provides accurate current process physical memory usage
   - Minimal overhead suitable for real-time tracking
   - Works on Windows, macOS, and Linux
-  
+
 - **`sysinfo`**: System information and monitoring
   - Provides total system memory information
   - Optimized memory refresh to avoid unnecessary system calls
@@ -219,7 +219,7 @@ let system_metrics = SystemMetrics::new();
 
 // Metrics available through Prometheus endpoints:
 // - system_cpu_usage_percent
-// - system_memory_usage_percent  
+// - system_memory_usage_percent
 // - system_disk_usage_percent
 // - system_network_bytes_received_total
 // - system_network_bytes_sent_total
@@ -271,12 +271,12 @@ let app_metrics = engine.get_performance_metrics().await?;
 let system_stats = collector.get_system_stats().await?;
 
 if app_metrics.tokens_per_second < 50.0 && system_stats.cpu_usage > 90.0 {
-    warn!("Low throughput may be due to CPU saturation: {:.1}% CPU usage", 
+    warn!("Low throughput may be due to CPU saturation: {:.1}% CPU usage",
           system_stats.cpu_usage);
 }
 
 if system_stats.memory_usage > 95.0 {
-    warn!("High memory pressure detected: {:.1}% memory usage", 
+    warn!("High memory pressure detected: {:.1}% memory usage",
           system_stats.memory_usage);
 }
 ```
@@ -326,25 +326,25 @@ use bitnet_common::Device;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
-    
+
     // Generate text with tracking
     let result = engine.generate("Explain quantum computing").await?;
-    
+
     // Get performance insights
     let metrics = engine.get_performance_metrics().await?;
-    
+
     println!("Generated {} tokens", metrics.tokens_generated);
     println!("Throughput: {:.2} tokens/sec", metrics.tokens_per_second);
     println!("Total latency: {}ms", metrics.total_latency_ms);
-    
+
     if let Some(first_token_ms) = metrics.first_token_latency_ms {
         println!("Time to first token: {}ms", first_token_ms);
     }
-    
+
     if let Some(hit_rate) = metrics.cache_hit_rate {
         println!("Cache hit rate: {:.1}%", hit_rate * 100.0);
     }
-    
+
     Ok(())
 }
 ```
@@ -361,32 +361,32 @@ async fn benchmark_performance(engine: &InferenceEngine) -> anyhow::Result<()> {
         "Explain machine learning",
         "Describe quantum physics",
     ];
-    
+
     // Reset tracking for clean benchmark
     engine.reset_performance_tracking()?;
-    
+
     let benchmark_start = Instant::now();
-    
+
     for (i, prompt) in prompts.iter().enumerate() {
         let config = GenerationConfig::default()
             .with_max_tokens(100)
             .with_temperature(0.7);
-            
+
         let _result = engine.generate_with_config(prompt, &config).await?;
-        
+
         let current_metrics = engine.get_performance_metrics().await?;
         println!("Prompt {}: {:.2} tokens/sec", i + 1, current_metrics.tokens_per_second);
     }
-    
+
     let total_duration = benchmark_start.elapsed();
     let final_metrics = engine.get_performance_metrics().await?;
-    
+
     println!("\nBenchmark Results:");
     println!("Total time: {:.2}s", total_duration.as_secs_f64());
     println!("Total tokens: {}", final_metrics.tokens_generated);
     println!("Average throughput: {:.2} tokens/sec", final_metrics.tokens_per_second);
     println!("Efficiency ratio: {:.4} tokens/ms", final_metrics.efficiency_ratio());
-    
+
     Ok(())
 }
 ```
@@ -408,27 +408,27 @@ cargo test --no-default-features --package bitnet-inference --features integrati
 #[tokio::test]
 async fn test_deterministic_performance() {
     use std::env;
-    
+
     // Ensure deterministic environment
     unsafe {
         env::set_var("BITNET_DETERMINISTIC", "1");
         env::set_var("BITNET_SEED", "42");
     }
-    
+
     let mut engine = create_test_engine().await;
     engine.apply_env_performance_config()?;
-    
+
     // Multiple runs should produce identical metrics
     let config = GenerationConfig::default().with_max_tokens(10);
-    
+
     let result1 = engine.generate_with_config("test prompt", &config).await?;
     engine.reset_performance_tracking()?;
-    
+
     let result2 = engine.generate_with_config("test prompt", &config).await?;
-    
+
     // Results should be identical in deterministic mode
     assert_eq!(result1, result2);
-    
+
     // Clean up
     unsafe {
         env::remove_var("BITNET_DETERMINISTIC");
@@ -445,7 +445,7 @@ use bitnet_inference::engine::PerformanceMetrics;
 fn analyze_performance(metrics: &PerformanceMetrics) {
     println!("Performance Analysis:");
     println!("===================");
-    
+
     // Throughput analysis
     if metrics.tokens_per_second > 100.0 {
         println!("✅ Excellent throughput: {:.1} tokens/sec", metrics.tokens_per_second);
@@ -454,7 +454,7 @@ fn analyze_performance(metrics: &PerformanceMetrics) {
     } else {
         println!("❌ Low throughput: {:.1} tokens/sec", metrics.tokens_per_second);
     }
-    
+
     // Latency analysis
     if let Some(first_token_ms) = metrics.first_token_latency_ms {
         if first_token_ms < 100 {
@@ -463,7 +463,7 @@ fn analyze_performance(metrics: &PerformanceMetrics) {
             println!("⚠️  Slow first token: {}ms", first_token_ms);
         }
     }
-    
+
     // Cache efficiency
     if let Some(hit_rate) = metrics.cache_hit_rate {
         if hit_rate > 0.8 {
@@ -474,13 +474,13 @@ fn analyze_performance(metrics: &PerformanceMetrics) {
             println!("❌ Poor cache efficiency: {:.1}%", hit_rate * 100.0);
         }
     }
-    
+
     // Memory usage
     if let Some(memory_bytes) = metrics.memory_usage_bytes {
         let memory_mb = memory_bytes as f64 / 1024.0 / 1024.0;
         println!("Memory usage: {:.1} MB", memory_mb);
     }
-    
+
     // Component breakdown
     println!("\nTiming Breakdown:");
     if let Some(encode_ms) = metrics.tokenizer_encode_time_ms {
@@ -565,12 +565,12 @@ let mut interval = tokio::time::interval(Duration::from_secs(30));
 
 loop {
     interval.tick().await;
-    
+
     let metrics = engine.get_performance_metrics().await?;
     if metrics.tokens_per_second < 50.0 {
         warn!("Low throughput detected: {:.1} tokens/sec", metrics.tokens_per_second);
     }
-    
+
     if let Some(hit_rate) = metrics.cache_hit_rate {
         if hit_rate < 0.7 {
             warn!("Low cache hit rate: {:.1}%", hit_rate * 100.0);
@@ -585,20 +585,20 @@ loop {
 #[tokio::test]
 async fn test_performance_regression() {
     let engine = create_test_engine().await;
-    
+
     // Expected baseline performance
     const MIN_TOKENS_PER_SECOND: f64 = 50.0;
     const MIN_CACHE_HIT_RATE: f64 = 0.7;
-    
+
     let config = GenerationConfig::default().with_max_tokens(100);
     let _result = engine.generate_with_config("test prompt", &config).await?;
-    
+
     let metrics = engine.get_performance_metrics().await?;
-    
+
     assert!(metrics.tokens_per_second >= MIN_TOKENS_PER_SECOND,
-        "Performance regression: {:.1} < {:.1} tokens/sec", 
+        "Performance regression: {:.1} < {:.1} tokens/sec",
         metrics.tokens_per_second, MIN_TOKENS_PER_SECOND);
-        
+
     if let Some(hit_rate) = metrics.cache_hit_rate {
         assert!(hit_rate >= MIN_CACHE_HIT_RATE,
             "Cache efficiency regression: {:.1}% < {:.1}%",
@@ -612,23 +612,23 @@ async fn test_performance_regression() {
 ```rust
 async fn monitor_resources(engine: &InferenceEngine) -> anyhow::Result<()> {
     let metrics = engine.get_performance_metrics().await?;
-    
+
     // Memory usage alerts
     if let Some(memory_bytes) = metrics.memory_usage_bytes {
         const MAX_MEMORY_MB: f64 = 1024.0; // 1GB
         let memory_mb = memory_bytes as f64 / 1024.0 / 1024.0;
-        
+
         if memory_mb > MAX_MEMORY_MB {
             warn!("High memory usage: {:.1} MB > {:.1} MB", memory_mb, MAX_MEMORY_MB);
         }
     }
-    
+
     // Efficiency monitoring
     let efficiency = metrics.efficiency_ratio();
     if efficiency < 0.05 { // Less than 0.05 tokens/ms
         warn!("Low efficiency: {:.4} tokens/ms", efficiency);
     }
-    
+
     Ok(())
 }
 ```
@@ -638,7 +638,7 @@ async fn monitor_resources(engine: &InferenceEngine) -> anyhow::Result<()> {
 The performance tracking infrastructure integrates seamlessly with existing BitNet.rs components:
 
 - **Inference Engine**: Automatic tracking during generation
-- **Streaming API**: Performance metrics for streaming operations  
+- **Streaming API**: Performance metrics for streaming operations
 - **CLI Tools**: Performance reporting in command-line interfaces
 - **Server**: HTTP API endpoints for performance monitoring
 - **Testing**: Deterministic performance validation

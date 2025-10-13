@@ -12,16 +12,16 @@ This guide shows how to migrate existing code from llama.cpp to BitNet.rs. The m
 
 int main() {
     llama_backend_init(false);
-    
+
     struct llama_model_params params = llama_model_default_params();
     params.n_gpu_layers = 32;
-    
+
     llama_model* model = llama_load_model_from_file("model.gguf", params);
     if (!model) {
         printf("Failed to load model\n");
         return 1;
     }
-    
+
     // ... rest of your code
 }
 ```
@@ -32,16 +32,16 @@ int main() {
 
 int main() {
     llama_backend_init(false);
-    
+
     struct llama_model_params params = llama_model_default_params();
     params.n_gpu_layers = 32;
-    
+
     llama_model* model = llama_load_model_from_file("model.gguf", params);
     if (!model) {
         printf("Failed to load model\n");
         return 1;
     }
-    
+
     // ... rest of your code (UNCHANGED!)
 }
 ```

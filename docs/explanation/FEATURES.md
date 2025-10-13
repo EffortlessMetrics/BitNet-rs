@@ -22,8 +22,8 @@ cargo build --no-default-features --features full
 ## Core Features
 
 ### `cpu`
-**Purpose:** Enable CPU inference with optimized kernels  
-**Dependencies:** None (pure Rust)  
+**Purpose:** Enable CPU inference with optimized kernels
+**Dependencies:** None (pure Rust)
 **When to use:** For CPU-only deployments without GPU requirements
 
 ```bash
@@ -37,8 +37,8 @@ Enables:
 - Automatic CPU feature detection
 
 ### `gpu`
-**Purpose:** Enable advanced GPU acceleration with device-aware quantization  
-**Dependencies:** CUDA toolkit 11.0+, cudarc crate  
+**Purpose:** Enable advanced GPU acceleration with device-aware quantization
+**Dependencies:** CUDA toolkit 11.0+, cudarc crate
 **When to use:** For GPU-accelerated inference with automatic CPU fallback
 
 ```bash
@@ -75,8 +75,8 @@ cargo build --no-default-features --features cuda
 - Planned for removal in a future release; prefer `gpu` in new code.
 
 ### `ffi`
-**Purpose:** Enable C++ FFI bridge for cross-validation  
-**Dependencies:** cc, bindgen, C++ compiler  
+**Purpose:** Enable C++ FFI bridge for cross-validation
+**Dependencies:** cc, bindgen, C++ compiler
 **When to use:** For comparing against original C++ implementation
 
 ```bash
@@ -93,13 +93,13 @@ Note: Requires building or linking the C++ BitNet library.
 ## SIMD Features
 
 ### `avx2`
-**Purpose:** Enable x86_64 AVX2 SIMD optimizations  
-**Dependencies:** x86_64 CPU with AVX2 support  
+**Purpose:** Enable x86_64 AVX2 SIMD optimizations
+**Dependencies:** x86_64 CPU with AVX2 support
 **When to use:** Automatically detected on compatible CPUs
 
 ### `avx512`
-**Purpose:** Enable x86_64 AVX-512 SIMD optimizations  
-**Dependencies:** x86_64 CPU with AVX-512F and AVX-512BW support  
+**Purpose:** Enable x86_64 AVX-512 SIMD optimizations
+**Dependencies:** x86_64 CPU with AVX-512F and AVX-512BW support
 **When to use:** For Intel server/workstation CPUs (Skylake-X, Ice Lake, and newer)
 
 ```bash
@@ -119,15 +119,15 @@ Requirements:
 - Automatic runtime detection - no manual configuration needed
 
 ### `neon`
-**Purpose:** Enable ARM NEON SIMD optimizations  
-**Dependencies:** ARM64/AArch64 CPU  
+**Purpose:** Enable ARM NEON SIMD optimizations
+**Dependencies:** ARM64/AArch64 CPU
 **When to use:** For ARM-based systems (Apple Silicon, ARM servers)
 
 ## Development Features
 
 ### `crossval`
-**Purpose:** Enable cross-validation against C++ implementation  
-**Dependencies:** `ffi` feature, C++ BitNet implementation  
+**Purpose:** Enable cross-validation against C++ implementation
+**Dependencies:** `ffi` feature, C++ BitNet implementation
 **When to use:** For validating Rust implementation correctness
 
 ```bash
@@ -135,8 +135,8 @@ cargo test --no-default-features --features "cpu,ffi,crossval"
 ```
 
 ### `full`
-**Purpose:** Enable all features for maximum functionality  
-**Dependencies:** All of the above  
+**Purpose:** Enable all features for maximum functionality
+**Dependencies:** All of the above
 **When to use:** For development and testing
 
 ```bash
@@ -208,7 +208,7 @@ This ensures:
 ## Troubleshooting
 
 ### Issue: Build fails with undefined references
-**Cause:** FFI enabled without C++ library  
+**Cause:** FFI enabled without C++ library
 **Solution:** Either disable FFI or build the C++ library:
 ```bash
 # Option 1: Disable FFI
@@ -220,7 +220,7 @@ cargo build --no-default-features --features "cpu,ffi"
 ```
 
 ### Issue: CUDA features not working
-**Cause:** CUDA toolkit not installed or not in PATH  
+**Cause:** CUDA toolkit not installed or not in PATH
 **Solution:** Install CUDA toolkit and set environment:
 ```bash
 export PATH=/usr/local/cuda/bin:$PATH
@@ -228,14 +228,14 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ```
 
 ### Issue: Features seem to be ignored
-**Cause:** Default features interfering  
+**Cause:** Default features interfering
 **Solution:** Always use `--no-default-features`:
 ```bash
 cargo build --no-default-features --features cpu
 ```
 
 ### Issue: Unexpected dependencies pulled in
-**Cause:** Feature unification in workspace  
+**Cause:** Feature unification in workspace
 **Solution:** Ensure `resolver = "2"` in workspace Cargo.toml
 
 ## Platform Support Matrix
@@ -248,10 +248,10 @@ cargo build --no-default-features --features cpu
 | macOS ARM64 | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅** |
 | Windows x86_64 | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ | ✅ |
 
-✅ Supported  
-❌ Not supported  
-⚠️ Experimental  
-\* CUDA on ARM64 requires NVIDIA Jetson or similar  
+✅ Supported
+❌ Not supported
+⚠️ Experimental
+\* CUDA on ARM64 requires NVIDIA Jetson or similar
 \*\* Device-aware on macOS falls back to optimized CPU kernels
 
 ## Device-Aware Quantization Features

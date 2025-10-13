@@ -32,7 +32,7 @@ Production-grade improvements to the BitNet-rs cross-validation system that make
 ### 5. Cross-Platform Environment Setup
 - Automatic library path configuration:
   - Linux: LD_LIBRARY_PATH
-  - macOS: DYLD_LIBRARY_PATH  
+  - macOS: DYLD_LIBRARY_PATH
   - Windows: PATH
 - Static C++ builds to avoid runtime library issues
 - Deterministic test environment (single-threaded, fixed seeds)
@@ -43,7 +43,7 @@ Production-grade improvements to the BitNet-rs cross-validation system that make
 - Covers GGUF errors, tensor errors, assertions
 - Soft-fail mechanism with `CROSSVAL_ALLOW_CPP_FAIL=1`
 
-### 7. Strong Test Invariants  
+### 7. Strong Test Invariants
 - Validates mini GGUF fixtures parse correctly
 - Verifies alignment: `file_size % 32 == 0`
 - Verifies 0-tensor files: `data_offset == file_size`

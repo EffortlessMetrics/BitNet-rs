@@ -86,7 +86,7 @@ Quickly create test files from templates:
 # Linux/macOS
 ./scripts/create-test-template.sh my_feature_test
 
-# Windows PowerShell  
+# Windows PowerShell
 .\scripts\create-test-template.ps1 my_feature_test
 ```
 

@@ -85,8 +85,8 @@ const K_CHUNK_SIZE: usize = 64;
 
 // Vectorized computation using 512-bit registers
 unsafe fn matmul_avx512_block(
-    a: &[i8], 
-    b: &[u8], 
+    a: &[i8],
+    b: &[u8],
     c: &mut [f32],
     m: usize, n: usize, k: usize
 ) -> Result<()> {
@@ -102,7 +102,7 @@ unsafe fn matmul_avx512_block(
 // Vectorized quantization with no scalar inner loops
 unsafe fn quantize_tl2_avx512(
     input: &[f32],
-    output: &mut [u8], 
+    output: &mut [u8],
     scales: &mut [f32]
 ) -> Result<()> {
     // Load 16 floats at once using _mm512_loadu_ps
@@ -336,7 +336,7 @@ BitNet.rs includes comprehensive 2D convolution support integrated with the CPU 
 // Full-precision convolution
 pub fn conv2d(
     input: &[f32],           // NCHW format input
-    weight: &[f32],          // OIHW format weights  
+    weight: &[f32],          // OIHW format weights
     bias: Option<&[f32]>,    // Optional bias per output channel
     output: &mut [f32],      // Output buffer
     params: Conv2DParams,    // Stride, padding, dilation
@@ -363,7 +363,7 @@ pub fn conv2d_quantized(
 The convolution implementation supports BitNet.rs quantization schemes:
 
 - **I2S Quantization**: 2-bit signed quantization with values [-2, -1, 1, 2], packed 4 values per byte
-- **TL1 Quantization**: Table lookup with linear mapping from [0, 255] to [-1, 1]  
+- **TL1 Quantization**: Table lookup with linear mapping from [0, 255] to [-1, 1]
 - **TL2 Quantization**: Advanced table lookup with non-linear mapping for enhanced precision
 
 #### Memory Layout and Optimization
@@ -410,7 +410,7 @@ Convolution operations include comprehensive testing:
 Planned improvements to the CPU kernel architecture:
 
 1. **AVX-512 VNNI Support**: For Intel Cascade Lake and newer
-2. **ARM SVE Support**: For ARM Neoverse and future cores  
+2. **ARM SVE Support**: For ARM Neoverse and future cores
 3. **Dynamic Frequency Scaling**: Automatic thermal management
 4. **Micro-architectural Tuning**: CPU model-specific optimizations
 5. **Hybrid Scheduling**: Intelligent work distribution on big.LITTLE architectures

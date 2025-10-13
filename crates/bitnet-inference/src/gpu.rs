@@ -78,7 +78,7 @@ impl GpuMemoryManager {
     pub fn new(device_id: usize, enable_pooling: bool) -> Result<Self> {
         // Query GPU memory (placeholder implementation)
         let total_memory = 8 * 1024 * 1024 * 1024; // 8GB placeholder
-        
+
         Ok(Self {
             device_id,
             total_memory,
@@ -87,7 +87,7 @@ impl GpuMemoryManager {
             enable_memory_pooling: enable_pooling,
         })
     }
-    
+
     /// Allocate GPU memory
     pub fn allocate(&mut self, size: usize) -> Result<usize> {
         if self.enable_memory_pooling {
@@ -96,7 +96,7 @@ impl GpuMemoryManager {
             self.allocate_direct(size)
         }
     }
-    
+
     /// Deallocate GPU memory
     pub fn deallocate(&mut self, ptr: usize, size: usize) -> Result<()> {
         if self.enable_memory_pooling {
@@ -105,7 +105,7 @@ impl GpuMemoryManager {
             self.deallocate_direct(ptr, size)
         }
     }
-    
+
     /// Get memory statistics
     pub fn memory_stats(&self) -> GpuMemoryStats {
         GpuMemoryStats {
@@ -116,23 +116,23 @@ impl GpuMemoryManager {
             pool_count: self.memory_pools.len(),
         }
     }
-    
+
     fn allocate_from_pool(&mut self, size: usize) -> Result<usize> {
         // Simplified pool allocation
         self.allocated_memory += size;
         Ok(self.allocated_memory - size)
     }
-    
+
     fn allocate_direct(&mut self, size: usize) -> Result<usize> {
         self.allocated_memory += size;
         Ok(self.allocated_memory - size)
     }
-    
+
     fn deallocate_to_pool(&mut self, _ptr: usize, size: usize) -> Result<()> {
         self.allocated_memory = self.allocated_memory.saturating_sub(size);
         Ok(())
     }
-    
+
     fn deallocate_direct(&mut self, _ptr: usize, size: usize) -> Result<()> {
         self.allocated_memory = self.allocated_memory.saturating_sub(size);
         Ok(())
@@ -154,23 +154,23 @@ impl GpuBackend {
     pub fn new() -> Result<Self> {
         Self::with_config(GpuPerformanceConfig::default())
     }
-    
+
     /// Create GPU backend for specific device
     pub fn with_device(device_id: usize) -> Result<Self> {
         let mut config = GpuPerformanceConfig::default();
         config.device_id = device_id;
         Self::with_config(config)
     }
-    
+
     /// Create GPU backend with custom configuration
     pub fn with_config(config: GpuPerformanceConfig) -> Result<Self> {
         let device_id = config.device_id;
         let device = Device::new_cuda(device_id)
             .map_err(|e| BitNetError::Validation(e.to_string()))?;
-        
+
         let kernel_provider = bitnet_kernels::select_gpu_kernel(device_id)?;
         let memory_manager = GpuMemoryManager::new(device_id, true)?;
-        
+
         Ok(Self {
             kernel_provider,
             device,
@@ -179,23 +179,23 @@ impl GpuBackend {
             performance_config: config,
         })
     }
-    
+
     /// Get performance configuration
     pub fn performance_config(&self) -> &GpuPerformanceConfig {
         &self.performance_config
     }
-    
+
     /// Get memory statistics
     pub fn memory_stats(&self) -> GpuMemoryStats {
         self.memory_manager.memory_stats()
     }
-    
+
     /// Check if mixed precision is supported
     pub fn supports_mixed_precision(&self) -> bool {
         // Would check actual GPU capabilities
         self.performance_config.enable_mixed_precision
     }
-    
+
     /// Check if tensor cores are available
     pub fn supports_tensor_cores(&self) -> bool {
         // Would check actual GPU capabilities (Volta+)
@@ -207,38 +207,38 @@ impl Backend for GpuBackend {
     fn name(&self) -> &'static str {
         "GPU-CUDA"
     }
-    
+
     fn is_available(&self) -> bool {
         // Check if CUDA is available and device exists
         Device::new_cuda(self.device_id).is_ok() && self.kernel_provider.is_available()
     }
-    
+
     fn tokenize(&self, text: &str) -> Result<Vec<u32>> {
         // Placeholder implementation - in practice would use a proper tokenizer
         Ok(text.chars().map(|c| c as u32).collect())
     }
-    
+
     fn detokenize(&self, tokens: &[u32]) -> Result<String> {
         // Placeholder implementation - in practice would use a proper tokenizer
         Ok(tokens.iter().map(|&t| char::from(t as u8)).collect())
     }
-    
+
     fn tokens_to_tensor(&self, tokens: &[u32]) -> Result<BitNetTensor> {
         BitNetTensor::from_slice(tokens, &[tokens.len()], &self.device)
     }
-    
+
     fn is_eos_token(&self, token: u32) -> bool {
         token == 2 // Placeholder EOS token ID
     }
-    
+
     fn clone_backend(&self) -> Box<dyn Backend> {
         Box::new(Self::with_config(self.performance_config.clone()).unwrap())
     }
-    
+
     fn kernel_provider(&self) -> &dyn KernelProvider {
         self.kernel_provider.as_ref()
     }
-    
+
     fn device_info(&self) -> DeviceInfo {
         let memory_stats = self.memory_stats();
         DeviceInfo {
@@ -309,18 +309,18 @@ impl GpuInferenceEngine {
         config: GpuInferenceConfig,
     ) -> Result<Self> {
         let model_config = model.config().clone();
-        
+
         // Create GPU-optimized KV cache
         let cache = KVCache::new(&model_config, config.max_sequence_length)?;
-        
+
         // Migrate cache to GPU
         let mut cache = cache;
         cache.migrate_to_backend(&backend)?;
-        
+
         // Create sampling strategy
         let sampling_config = crate::SamplingConfig::default();
         let sampling = SamplingStrategy::new(sampling_config)?;
-        
+
         Ok(Self {
             model: Arc::new(RwLock::new(model)),
             backend,
@@ -330,7 +330,7 @@ impl GpuInferenceEngine {
             config,
         })
     }
-    
+
     /// Generate tokens with GPU acceleration
     pub fn generate_tokens_gpu(
         &self,
@@ -340,76 +340,76 @@ impl GpuInferenceEngine {
         let start_time = Instant::now();
         let mut generated_tokens = Vec::new();
         let mut current_tokens = input_tokens.to_vec();
-        
+
         // Reset cache
         {
             let mut cache = self.cache.lock().unwrap();
             cache.reset();
         }
-        
+
         for step in 0..generation_config.max_new_tokens {
             // Check sequence length limit
             if current_tokens.len() >= self.config.max_sequence_length {
                 break;
             }
-            
+
             // Prepare input tensor on GPU
             let input_tensor = self.backend.tokens_to_tensor(&current_tokens)?;
-            
+
             // Forward pass with GPU acceleration
             let logits = self.forward_gpu(&input_tensor, step)?;
-            
+
             // Sample next token
             let next_token = {
                 let mut sampling = self.sampling.lock().unwrap();
                 sampling.sample(&logits, &current_tokens, step, generation_config)?
             };
-            
+
             // Check for EOS token
             if self.backend.is_eos_token(next_token) {
                 break;
             }
-            
+
             generated_tokens.push(next_token);
             current_tokens.push(next_token);
         }
-        
+
         // Update metrics
         {
             let mut metrics = self.metrics.lock().unwrap();
             let elapsed = start_time.elapsed();
             metrics.base_metrics.latency_ms = elapsed.as_millis() as f64;
-            metrics.base_metrics.tokens_per_second = 
+            metrics.base_metrics.tokens_per_second =
                 generated_tokens.len() as f64 / elapsed.as_secs_f64();
-            
+
             // Update GPU-specific metrics
             let memory_stats = self.backend.memory_stats();
             metrics.memory_utilization = memory_stats.utilization;
             metrics.gpu_utilization = 0.85; // Placeholder
         }
-        
+
         Ok(generated_tokens)
     }
-    
+
     /// Forward pass with GPU optimizations
     fn forward_gpu(&self, input: &BitNetTensor, _step: usize) -> Result<BitNetTensor> {
         let compute_start = Instant::now();
-        
+
         // This is a simplified synchronous version
         // In a full async implementation, we would use model.read().await
-        
+
         // For now, create a placeholder result
         let result = BitNetTensor::zeros(&[1, 32000], candle_core::DType::F32, &self.backend.device)?;
-        
+
         // Update compute time metrics
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.compute_time_ms = compute_start.elapsed().as_millis() as f64;
         }
-        
+
         Ok(result)
     }
-    
+
     /// Mixed precision forward pass
     fn forward_mixed_precision(
         &self,
@@ -421,7 +421,7 @@ impl GpuInferenceEngine {
         // For now, use the standard forward pass
         model.forward(input)
     }
-    
+
     /// Process batch with GPU parallelism
     pub fn process_batch_gpu(
         &self,
@@ -431,46 +431,46 @@ impl GpuInferenceEngine {
             // Single request - no batching needed
             return Ok(vec![self.generate_tokens_gpu(&requests[0].0, &requests[0].1)?]);
         }
-        
+
         // GPU batch processing
         let batch_start = Instant::now();
-        
+
         // For now, process sequentially (full batching would require more complex implementation)
         let results: Result<Vec<_>> = requests
             .iter()
             .map(|(tokens, config)| self.generate_tokens_gpu(tokens, config))
             .collect();
-        
+
         // Update batch processing metrics
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.kernel_launch_overhead_ms = batch_start.elapsed().as_millis() as f64;
         }
-        
+
         results
     }
-    
+
     /// Get GPU-specific performance metrics
     pub fn gpu_metrics(&self) -> GpuPerformanceMetrics {
         self.metrics.lock().unwrap().clone()
     }
-    
+
     /// Get base performance metrics
     pub fn metrics(&self) -> PerformanceMetrics {
         self.metrics.lock().unwrap().base_metrics.clone()
     }
-    
+
     /// Reset metrics
     pub fn reset_metrics(&self) {
         let mut metrics = self.metrics.lock().unwrap();
         *metrics = GpuPerformanceMetrics::default();
     }
-    
+
     /// Get configuration
     pub fn config(&self) -> &GpuInferenceConfig {
         &self.config
     }
-    
+
     /// Update configuration
     pub fn update_config(&mut self, config: GpuInferenceConfig) -> Result<()> {
         // Resize cache if needed
@@ -478,11 +478,11 @@ impl GpuInferenceEngine {
             let mut cache = self.cache.lock().unwrap();
             cache.resize(config.max_sequence_length)?;
         }
-        
+
         self.config = config;
         Ok(())
     }
-    
+
     /// Generate tokens asynchronously
     pub async fn generate_tokens_async(
         &self,
@@ -492,12 +492,12 @@ impl GpuInferenceEngine {
         let input_tokens = input_tokens.to_vec();
         let generation_config = generation_config.clone();
         let engine = self.clone_for_async();
-        
+
         tokio::task::spawn_blocking(move || {
             engine.generate_tokens_gpu(&input_tokens, &generation_config)
         }).await.map_err(|e| bitnet_common::BitNetError::Validation(e.to_string()))?
     }
-    
+
     /// Create streaming generation asynchronously
     pub async fn generate_stream_async(
         &self,
@@ -513,19 +513,19 @@ impl GpuInferenceEngine {
             stream_config,
         ).await
     }
-    
+
     /// Process batch asynchronously
     pub async fn process_batch_async(
         &self,
         requests: Vec<(Vec<u32>, GenerationConfig)>,
     ) -> Result<Vec<Vec<u32>>> {
         let engine = self.clone_for_async();
-        
+
         tokio::task::spawn_blocking(move || {
             engine.process_batch_gpu(&requests)
         }).await.map_err(|e| bitnet_common::BitNetError::Validation(e.to_string()))?
     }
-    
+
     /// Clone engine for async operations (simplified)
     fn clone_for_async(&self) -> Self {
         // This is a simplified clone - in practice would need proper cloning
@@ -545,15 +545,15 @@ impl GpuInferenceEngine {
             config: self.config.clone(),
         }
     }
-    
+
     /// Benchmark GPU performance
     pub fn benchmark(&self, sequence_lengths: &[usize], batch_sizes: &[usize]) -> Result<BenchmarkResults> {
         let mut results = BenchmarkResults::new();
-        
+
         for &seq_len in sequence_lengths {
             for &batch_size in batch_sizes {
                 let benchmark_start = Instant::now();
-                
+
                 // Create dummy requests
                 let requests: Vec<_> = (0..batch_size)
                     .map(|_| {
@@ -565,17 +565,17 @@ impl GpuInferenceEngine {
                         (tokens, config)
                     })
                     .collect();
-                
+
                 // Process batch
                 let _results = self.process_batch_gpu(&requests)?;
-                
+
                 let elapsed = benchmark_start.elapsed();
                 let throughput = (batch_size * 10) as f64 / elapsed.as_secs_f64(); // tokens/sec
-                
+
                 results.add_result(seq_len, batch_size, throughput, elapsed.as_millis() as f64);
             }
         }
-        
+
         Ok(results)
     }
 }
@@ -600,7 +600,7 @@ impl BenchmarkResults {
             results: Vec::new(),
         }
     }
-    
+
     pub fn add_result(&mut self, seq_len: usize, batch_size: usize, throughput: f64, latency: f64) {
         self.results.push(BenchmarkResult {
             sequence_length: seq_len,
@@ -609,13 +609,13 @@ impl BenchmarkResults {
             latency_ms: latency,
         });
     }
-    
+
     pub fn best_throughput(&self) -> Option<&BenchmarkResult> {
         self.results.iter().max_by(|a, b| {
             a.throughput_tokens_per_sec.partial_cmp(&b.throughput_tokens_per_sec).unwrap()
         })
     }
-    
+
     pub fn lowest_latency(&self) -> Option<&BenchmarkResult> {
         self.results.iter().min_by(|a, b| {
             a.latency_ms.partial_cmp(&b.latency_ms).unwrap()
@@ -626,7 +626,7 @@ impl BenchmarkResults {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_gpu_backend_creation() {
         // This test will only pass if CUDA is available
@@ -635,7 +635,7 @@ mod tests {
             assert!(backend.is_available());
         }
     }
-    
+
     #[test]
     fn test_gpu_performance_config() {
         let config = GpuPerformanceConfig {
@@ -647,37 +647,37 @@ mod tests {
             max_batch_size: 8,
             stream_count: 2,
         };
-        
+
         assert_eq!(config.device_id, 0);
         assert!(config.enable_mixed_precision);
         assert!(!config.enable_tensor_cores);
         assert_eq!(config.memory_pool_size_mb, 512);
     }
-    
+
     #[test]
     fn test_gpu_memory_manager() {
         let mut manager = GpuMemoryManager::new(0, true).unwrap();
-        
+
         let ptr = manager.allocate(1024).unwrap();
         assert!(ptr > 0);
-        
+
         let stats = manager.memory_stats();
         assert_eq!(stats.allocated_memory, 1024);
-        
+
         manager.deallocate(ptr, 1024).unwrap();
         let stats = manager.memory_stats();
         assert_eq!(stats.allocated_memory, 0);
     }
-    
+
     #[test]
     fn test_benchmark_results() {
         let mut results = BenchmarkResults::new();
         results.add_result(512, 4, 1000.0, 50.0);
         results.add_result(1024, 8, 1500.0, 75.0);
-        
+
         let best = results.best_throughput().unwrap();
         assert_eq!(best.throughput_tokens_per_sec, 1500.0);
-        
+
         let fastest = results.lowest_latency().unwrap();
         assert_eq!(fastest.latency_ms, 50.0);
     }

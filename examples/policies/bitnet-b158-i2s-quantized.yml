@@ -1,0 +1,237 @@
+# BitNet b1.58 I2_S Quantized - Validation Policy
+# =================================================
+#
+# This policy defines validation rules for BitNet b1.58 models quantized with
+# I2_S (2-bit signed) quantization scheme. I2_S quantization affects weight
+# distributions differently than F16, requiring looser validation envelopes.
+#
+# **Use this policy for:**
+# - BitNet b1.58 models with I2_S quantization
+# - Models with general.file_type != 1 (quantized, not F16) in GGUF
+# - Post-training quantized models from llama.cpp or similar tools
+#
+# **Architecture:** BitNet b1.58 (1-bit weight compression)
+# **Quantization:** I2_S (2-bit signed, production quantization)
+# **Target Use:** Validation gates for quantized model exports
+#
+# **Important:** I2_S quantization creates legitimate low RMS values in
+# attention norms (~0.01-0.02). This is NOT corruption - it's expected behavior.
+#
+# See: crates/bitnet-cli/src/ln_rules.rs::rules_bitnet_b158_i2s()
+
+version: 1
+
+rules:
+  bitnet-b1.58:i2_s:
+    name: "BitNet b1.58 I2_S Quantized"
+
+    # LayerNorm Gamma Weight Validation
+    # ==================================
+    # I2_S quantization creates VERY LOW RMS values in some norm layers,
+    # particularly attention norms. These thresholds are intentionally loose
+    # to accommodate legitimate quantization artifacts while still catching
+    # catastrophic corruption.
+
+    ln:
+      # Attention LayerNorm: Legitimately low RMS after I2_S (~0.01-0.02)
+      # This is the MOST AFFECTED norm type in I2_S quantization
+      - pattern: "attn_norm\\.weight$"
+        min: 0.01
+        max: 2.0
+        description: |
+          Attention LayerNorm weights after I2_S quantization.
+
+          Many attn_norm weights sit at RMS ~0.01-0.02 legitimately after I2_S.
+          This is NOT corruption - it's expected behavior of I2_S quantization
+          when applied to small gamma values.
+
+          Min threshold 0.01 accommodates this artifact while catching true
+          corruption (RMS < 0.01 would indicate catastrophic failure).
+
+      # FFN LayerNorm: More resilient to I2_S, but still affected
+      # Use moderate threshold to catch obvious corruption
+      - pattern: "ffn_norm\\.weight$"
+        min: 0.50
+        max: 2.0
+        description: |
+          FFN LayerNorm weights after I2_S quantization.
+
+          FFN norms are more resilient to I2_S quantization than attention norms,
+          but still experience some RMS reduction. Min threshold 0.50 provides
+          reasonable gate against corruption while allowing quantization effects.
+
+      # Final LayerNorm: Should remain close to 1.0 even after I2_S
+      # This norm is critical for output stability
+      - pattern: "final_(layer)?norm\\.weight$"
+        min: 0.50
+        max: 2.0
+        description: |
+          Final LayerNorm before output projection.
+
+          This norm should maintain RMS close to 1.0 even after I2_S quantization.
+          Values below 0.50 suggest either:
+            - LayerNorm was quantized (SHOULD NEVER HAPPEN)
+            - Export corruption (regenerate GGUF)
+
+      # Generic norm pattern: Conservative fallback
+      # Catches any norm type not matched above
+      - pattern: ".*norm\\.weight$"
+        min: 0.25
+        max: 2.0
+        description: |
+          Fallback pattern for any norm weight not matched above.
+
+          Conservative min threshold 0.25 accommodates I2_S quantization artifacts
+          across various norm types while catching severe corruption.
+
+          If RMS < 0.25 for non-attention norms, investigate:
+            - Was LayerNorm accidentally quantized?
+            - Are I2_S scales computed correctly?
+            - Is the GGUF metadata accurate (file_type field)?
+
+    # Projection Weight RMS Validation
+    # =================================
+    # I2_S quantization reduces projection weight RMS significantly compared to F16.
+    # After dequantization, weights tend to be small but non-zero.
+
+    proj_weight_rms_min: 0.002
+    proj_weight_rms_max: 0.20
+
+    notes: |
+      Projection weight RMS after I2_S dequantization is typically MUCH smaller
+      than F16 exports. Observed range: 0.005-0.15 (versus 0.01-0.25 for F16).
+
+      Lower bound 0.002 catches completely corrupted projections (all zeros).
+      Upper bound 0.20 provides safety margin while catching inverted scales
+      or wrong quantization type (which would produce RMS >> 1.0).
+
+      **Important:** Small projection RMS is EXPECTED in I2_S models. Do NOT
+      confuse this with corruption - it's how I2_S quantization works.
+
+# ==============================================================================
+# Understanding I2_S Quantization Artifacts
+# ==============================================================================
+#
+# I2_S quantization creates LEGITIMATE low RMS values in certain weight tensors:
+#
+# 1. **Attention Norms (attn_norm.weight):**
+#    - F16 export: RMS ~0.5-1.0
+#    - I2_S quantized: RMS ~0.01-0.02
+#    - This is EXPECTED behavior, not corruption
+#
+# 2. **Projection Weights (Q/K/V/O/gate/up/down):**
+#    - F16 export: RMS ~0.01-0.25
+#    - I2_S quantized: RMS ~0.005-0.15
+#    - Dequantization produces small values by design
+#
+# 3. **FFN Norms (ffn_norm.weight):**
+#    - F16 export: RMS ~0.05-0.10
+#    - I2_S quantized: RMS ~0.05-0.20
+#    - More resilient than attention norms
+#
+# **When to worry:**
+# - RMS < 0.01 for attention norms (catastrophic failure)
+# - RMS < 0.50 for final_norm (LayerNorm was quantized)
+# - RMS > 2.0 for any norm (wrong quantization or inverted scales)
+# - RMS > 0.20 for projections (inverted I2_S scales)
+#
+# ==============================================================================
+# Usage Examples
+# ==============================================================================
+#
+# 1. Validate an I2_S quantized model:
+#    cargo run -p bitnet-cli -- inspect --ln-stats \
+#      --policy examples/policies/bitnet-b158-i2s-quantized.yml \
+#      --policy-key bitnet-b1.58:i2_s \
+#      path/to/model-i2s.gguf
+#
+# 2. Auto-detect during model loading:
+#    # Policy is automatically selected when:
+#    # - general.architecture contains "bitnet" or "b1.58"
+#    # - general.file_type != 1 (quantized, not F16)
+#    RUST_LOG=info cargo run -p bitnet-cli -- run --model model-i2s.gguf
+#
+# 3. Compare F16 vs I2_S RMS statistics:
+#    cargo run -p bitnet-cli -- inspect --ln-stats model-f16.gguf > f16-stats.txt
+#    cargo run -p bitnet-cli -- inspect --ln-stats model-i2s.gguf > i2s-stats.txt
+#    diff f16-stats.txt i2s-stats.txt
+#    # Expected: I2_S shows lower RMS across attention norms
+#
+# ==============================================================================
+# Troubleshooting
+# ==============================================================================
+#
+# Symptom: "attn_norm.weight RMS=0.018 [SUSPICIOUS] (gate: auto, i2s_mode)"
+# Cause: This is EXPECTED for I2_S quantization - not corruption
+# Solution: NO ACTION NEEDED - this is legitimate I2_S behavior
+#
+# Symptom: "ffn_norm.weight RMS=0.005 [SUSPICIOUS]"
+# Cause: Unusually low RMS even for I2_S - possible corruption
+# Solution: Verify GGUF export settings, consider regenerating with st2gguf
+#
+# Symptom: "final_norm.weight RMS=0.02 [SUSPICIOUS]"
+# Cause: Final norm should NOT be this low even in I2_S
+# Solution: LayerNorm was likely quantized (should always be FP16/FP32)
+#           Regenerate GGUF with --skip-layernorm-quantization
+#
+# Symptom: "Projection weight RMS=150.0 [OUT OF RANGE]"
+# Cause: I2_S scales are inverted or quantization type is wrong
+# Solution: Check export configuration, verify metadata (file_type field)
+#           May need I2S_DEQUANT_OVERRIDE correction (see correction-policy-sample.yml)
+#
+# ==============================================================================
+# Comparison with F16 Policy
+# ==============================================================================
+#
+# Key differences from bitnet-b158-f16-clean.yml:
+#
+# | Layer Type          | F16 Min | I2_S Min | Notes                              |
+# |---------------------|---------|----------|------------------------------------|
+# | attn_norm           | 0.50    | 0.01     | I2_S dramatically reduces RMS      |
+# | ffn_norm            | 0.05    | 0.50     | I2_S more conservative for FFN     |
+# | final_norm          | 0.50    | 0.50     | Should not be quantized in either  |
+# | Generic norm        | 0.50    | 0.25     | I2_S allows lower for flexibility  |
+# | Projection RMS min  | 0.01    | 0.002    | I2_S dequant produces smaller RMS  |
+# | Projection RMS max  | 0.40    | 0.20     | I2_S should never exceed 0.20      |
+#
+# ==============================================================================
+# Related Policies
+# ==============================================================================
+#
+# - bitnet-b158-f16-clean.yml: For unquantized F16 BitNet models
+# - llama-generic.yml: For LLaMA-style RMSNorm architectures
+# - custom-model-example.yml: Template for creating new policies
+#
+# ==============================================================================
+# Migration from F16 to I2_S
+# ==============================================================================
+#
+# If you're quantizing an F16 model to I2_S:
+#
+# 1. **Export clean F16 first:**
+#    cargo run -p bitnet-st2gguf -- \
+#      --input model.safetensors \
+#      --output model-f16.gguf \
+#      --validation-policy examples/policies/bitnet-b158-f16-clean.yml
+#
+# 2. **Validate F16 export:**
+#    cargo run -p bitnet-cli -- inspect --ln-stats model-f16.gguf
+#    # Should show RMS ~0.5-1.0 for most norms
+#
+# 3. **Quantize to I2_S:**
+#    # (External tool - e.g., llama.cpp quantization)
+#    ./quantize model-f16.gguf model-i2s.gguf i2_s --skip-layernorm
+#
+# 4. **Validate I2_S export:**
+#    cargo run -p bitnet-cli -- inspect --ln-stats \
+#      --policy examples/policies/bitnet-b158-i2s-quantized.yml \
+#      model-i2s.gguf
+#    # Should show LOWER RMS for attn_norm (~0.01-0.02) - this is expected
+#
+# 5. **Compare inference outputs:**
+#    export BITNET_DETERMINISTIC=1 BITNET_SEED=42
+#    cargo run -p bitnet-cli -- run --model model-f16.gguf > f16-output.txt
+#    cargo run -p bitnet-cli -- run --model model-i2s.gguf > i2s-output.txt
+#    # Outputs should be SIMILAR (not identical due to quantization)
+#
+# ==============================================================================

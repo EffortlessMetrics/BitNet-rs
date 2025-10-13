@@ -40,10 +40,10 @@ record_result() {
     local check_name="$1"
     local status="$2"
     local message="$3"
-    
+
     audit_results+=("$check_name:$status:$message")
     total_checks=$((total_checks + 1))
-    
+
     if [[ "$status" == "FAIL" ]]; then
         failed_checks=$((failed_checks + 1))
         print_error "$check_name: $message"
@@ -57,7 +57,7 @@ record_result() {
 # 1. Dependency Security Audit
 audit_dependencies() {
     print_status "Auditing dependencies for known vulnerabilities..."
-    
+
     if command -v cargo-audit &> /dev/null; then
         if cargo audit --json > audit_report.json 2>/dev/null; then
             local vuln_count=$(jq '.vulnerabilities.count' audit_report.json 2>/dev/null || echo "0")
@@ -78,27 +78,27 @@ audit_dependencies() {
 # 2. Unsafe Code Analysis
 audit_unsafe_code() {
     print_status "Analyzing unsafe code usage..."
-    
+
     local unsafe_count=0
     local undocumented_unsafe=0
-    
+
     # Find all unsafe blocks
     while IFS= read -r -d '' file; do
         if grep -q "unsafe" "$file"; then
             local file_unsafe_count=$(grep -c "unsafe" "$file")
             unsafe_count=$((unsafe_count + file_unsafe_count))
-            
+
             # Check for undocumented unsafe blocks
             local undoc_count=$(grep -A5 -B5 "unsafe" "$file" | grep -c "unsafe" || true)
             local doc_count=$(grep -A5 -B5 "unsafe" "$file" | grep -c "// SAFETY:" || true)
-            
+
             if [[ $doc_count -lt $undoc_count ]]; then
                 undocumented_unsafe=$((undocumented_unsafe + undoc_count - doc_count))
                 print_warning "Undocumented unsafe code in: $file"
             fi
         fi
     done < <(find src crates -name "*.rs" -print0 2>/dev/null)
-    
+
     if [[ $unsafe_count -eq 0 ]]; then
         record_result "Unsafe Code" "PASS" "No unsafe code found"
     elif [[ $undocumented_unsafe -eq 0 ]]; then
@@ -111,9 +111,9 @@ audit_unsafe_code() {
 # 3. Input Validation Analysis
 audit_input_validation() {
     print_status "Checking input validation practices..."
-    
+
     local validation_issues=0
-    
+
     # Check for potential buffer overflow patterns
     local buffer_patterns=("from_raw_parts" "slice::from_raw_parts" "Vec::from_raw_parts")
     for pattern in "${buffer_patterns[@]}"; do
@@ -122,7 +122,7 @@ audit_input_validation() {
             print_warning "Found potentially unsafe buffer operation: $pattern"
         fi
     done
-    
+
     # Check for unchecked arithmetic
     local arithmetic_patterns=("unchecked_add" "unchecked_sub" "unchecked_mul")
     for pattern in "${arithmetic_patterns[@]}"; do
@@ -131,7 +131,7 @@ audit_input_validation() {
             print_warning "Found unchecked arithmetic: $pattern"
         fi
     done
-    
+
     if [[ $validation_issues -eq 0 ]]; then
         record_result "Input Validation" "PASS" "No obvious input validation issues found"
     else
@@ -142,9 +142,9 @@ audit_input_validation() {
 # 4. Memory Safety Analysis
 audit_memory_safety() {
     print_status "Analyzing memory safety patterns..."
-    
+
     local memory_issues=0
-    
+
     # Check for manual memory management
     local memory_patterns=("Box::from_raw" "Box::into_raw" "forget" "transmute")
     for pattern in "${memory_patterns[@]}"; do
@@ -154,13 +154,13 @@ audit_memory_safety() {
             print_warning "Found manual memory management: $pattern ($count occurrences)"
         fi
     done
-    
+
     # Check for potential use-after-free patterns
     if grep -r "drop.*raw" src crates --include="*.rs" >/dev/null 2>&1; then
         memory_issues=$((memory_issues + 1))
         print_warning "Found potential use-after-free pattern"
     fi
-    
+
     if [[ $memory_issues -eq 0 ]]; then
         record_result "Memory Safety" "PASS" "No obvious memory safety issues found"
     else
@@ -171,9 +171,9 @@ audit_memory_safety() {
 # 5. Cryptographic Security (if applicable)
 audit_cryptography() {
     print_status "Checking cryptographic practices..."
-    
+
     local crypto_issues=0
-    
+
     # Check for weak random number generation
     if grep -r "rand::random" src crates --include="*.rs" >/dev/null 2>&1; then
         if ! grep -r "ChaCha" src crates --include="*.rs" >/dev/null 2>&1; then
@@ -181,7 +181,7 @@ audit_cryptography() {
             print_warning "Using potentially weak random number generation"
         fi
     fi
-    
+
     # Check for hardcoded secrets (basic patterns)
     local secret_patterns=("password.*=" "secret.*=" "key.*=" "token.*=")
     for pattern in "${secret_patterns[@]}"; do
@@ -190,7 +190,7 @@ audit_cryptography() {
             print_warning "Potential hardcoded secret found: $pattern"
         fi
     done
-    
+
     if [[ $crypto_issues -eq 0 ]]; then
         record_result "Cryptography" "PASS" "No obvious cryptographic issues found"
     else
@@ -201,21 +201,21 @@ audit_cryptography() {
 # 6. Supply Chain Security
 audit_supply_chain() {
     print_status "Checking supply chain security..."
-    
+
     local supply_chain_issues=0
-    
+
     # Check for git dependencies (potential supply chain risk)
     if grep -r "git.*=" Cargo.toml crates/*/Cargo.toml 2>/dev/null; then
         supply_chain_issues=$((supply_chain_issues + 1))
         print_warning "Git dependencies found (potential supply chain risk)"
     fi
-    
+
     # Check for path dependencies outside workspace
     if grep -r "path.*=.*\.\." Cargo.toml crates/*/Cargo.toml 2>/dev/null; then
         supply_chain_issues=$((supply_chain_issues + 1))
         print_warning "External path dependencies found"
     fi
-    
+
     # Check for license compliance
     if command -v cargo-deny &> /dev/null; then
         if ! cargo deny check licenses >/dev/null 2>&1; then
@@ -225,7 +225,7 @@ audit_supply_chain() {
     else
         print_warning "cargo-deny not installed, skipping license check"
     fi
-    
+
     if [[ $supply_chain_issues -eq 0 ]]; then
         record_result "Supply Chain" "PASS" "No supply chain security issues found"
     else
@@ -236,9 +236,9 @@ audit_supply_chain() {
 # 7. Information Disclosure
 audit_information_disclosure() {
     print_status "Checking for information disclosure risks..."
-    
+
     local disclosure_issues=0
-    
+
     # Check for debug prints in release code
     local debug_patterns=("println!" "eprintln!" "dbg!" "print!")
     for pattern in "${debug_patterns[@]}"; do
@@ -248,13 +248,13 @@ audit_information_disclosure() {
             print_warning "Many debug prints found: $pattern ($count occurrences)"
         fi
     done
-    
+
     # Check for potential path traversal
     if grep -r "\.\./\.\." src crates --include="*.rs" >/dev/null 2>&1; then
         disclosure_issues=$((disclosure_issues + 1))
         print_warning "Potential path traversal pattern found"
     fi
-    
+
     if [[ $disclosure_issues -eq 0 ]]; then
         record_result "Information Disclosure" "PASS" "No information disclosure risks found"
     else
@@ -265,9 +265,9 @@ audit_information_disclosure() {
 # 8. Fuzzing Readiness
 audit_fuzzing_readiness() {
     print_status "Checking fuzzing readiness..."
-    
+
     local fuzzing_score=0
-    
+
     # Check for fuzz targets
     if [[ -d "fuzz" ]] && [[ -n "$(ls -A fuzz 2>/dev/null)" ]]; then
         fuzzing_score=$((fuzzing_score + 1))
@@ -275,7 +275,7 @@ audit_fuzzing_readiness() {
     else
         print_warning "No fuzz targets found"
     fi
-    
+
     # Check for property-based tests
     if grep -r "proptest" Cargo.toml crates/*/Cargo.toml >/dev/null 2>&1; then
         fuzzing_score=$((fuzzing_score + 1))
@@ -283,7 +283,7 @@ audit_fuzzing_readiness() {
     else
         print_warning "No property-based testing found"
     fi
-    
+
     if [[ $fuzzing_score -ge 1 ]]; then
         record_result "Fuzzing Readiness" "PASS" "Some fuzzing infrastructure present"
     else
@@ -294,9 +294,9 @@ audit_fuzzing_readiness() {
 # Generate security report
 generate_security_report() {
     print_status "Generating security audit report..."
-    
+
     local report_file="security_audit_report.md"
-    
+
     cat > "$report_file" << EOF
 # BitNet.rs Security Audit Report
 
@@ -311,26 +311,26 @@ Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 ## Detailed Results
 
 EOF
-    
+
     for result in "${audit_results[@]}"; do
         local check_name=$(echo "$result" | cut -d: -f1)
         local status=$(echo "$result" | cut -d: -f2)
         local message=$(echo "$result" | cut -d: -f3-)
-        
+
         local status_emoji="✅"
         if [[ "$status" == "WARN" ]]; then
             status_emoji="⚠️"
         elif [[ "$status" == "FAIL" ]]; then
             status_emoji="❌"
         fi
-        
+
         echo "### $status_emoji $check_name" >> "$report_file"
         echo "" >> "$report_file"
         echo "**Status**: $status" >> "$report_file"
         echo "**Details**: $message" >> "$report_file"
         echo "" >> "$report_file"
     done
-    
+
     cat >> "$report_file" << EOF
 
 ## Recommendations
@@ -349,14 +349,14 @@ EOF
 - Manual code review patterns
 
 EOF
-    
+
     print_success "Security audit report generated: $report_file"
 }
 
 # Main execution
 main() {
     print_status "Starting comprehensive security audit..."
-    
+
     # Run all audit checks
     audit_dependencies
     audit_unsafe_code
@@ -366,17 +366,17 @@ main() {
     audit_supply_chain
     audit_information_disclosure
     audit_fuzzing_readiness
-    
+
     # Generate report
     generate_security_report
-    
+
     # Summary
     echo ""
     echo "🔒 Security Audit Summary"
     echo "========================"
     echo "Total checks: $total_checks"
     echo "Issues found: $failed_checks"
-    
+
     if [[ $failed_checks -eq 0 ]]; then
         print_success "🎉 Security audit completed with no critical issues!"
         return 0

@@ -6,7 +6,7 @@
 ///
 /// Task 16: Create comparison test cases
 /// - Define standard comparison test scenarios ✓
-/// - Add various model sizes and formats for testing ✓  
+/// - Add various model sizes and formats for testing ✓
 /// - Create edge case prompts and inputs ✓
 /// - Implement performance benchmark scenarios ✓
 /// - Add regression test cases for known issues ✓

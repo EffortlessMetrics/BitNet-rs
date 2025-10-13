@@ -45,7 +45,7 @@ The `bitnet-py` crate is intentionally **NOT** included in the workspace's `defa
 ```toml
 default-members = [
     "crates/bitnet-common",
-    "crates/bitnet-models", 
+    "crates/bitnet-models",
     "crates/bitnet-tokenizers",
     "crates/bitnet-quantization",
     "crates/bitnet-kernels",

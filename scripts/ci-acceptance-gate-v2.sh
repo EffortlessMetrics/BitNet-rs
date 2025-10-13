@@ -21,8 +21,8 @@ readonly EXIT_DETERMINISM_FAIL=11
 readonly EXIT_FFI_FAIL=12
 
 # Check required dependencies
-need() { 
-    command -v "$1" >/dev/null || { 
+need() {
+    command -v "$1" >/dev/null || {
         echo "❌ $1 required but not found"
         exit $EXIT_MISSING_DEPS
     }
@@ -298,7 +298,7 @@ PROMPTS=(
 PASS_COUNT=0
 for prompt in "${PROMPTS[@]}"; do
     TOKEN_JSON=$(mktemp)
-    
+
     TOKEN_CMD=(
         "$BITNET_BIN" tokenize
         --model "$MODEL_PATH"
@@ -306,12 +306,12 @@ for prompt in "${PROMPTS[@]}"; do
         --bos
         --json-out "$TOKEN_JSON"
     )
-    
+
     # Add allow-mock for models without embedded tokenizer
     if [[ "$REQUIRE_EMBEDDED_TOKENIZER" != "true" ]]; then
         TOKEN_CMD+=(--allow-mock)
     fi
-    
+
     if "${TOKEN_CMD[@]}" >/dev/null 2>&1; then
         if jq -e '.tokens.ids | length > 0' "$TOKEN_JSON" >/dev/null 2>&1; then
             ((PASS_COUNT++))
@@ -347,22 +347,22 @@ if [[ -n "$TIME_CMD" ]]; then
     # Build full command with time prefix
     PERF_CMD=( $TIME_CMD )
     PERF_CMD+=( "$BITNET_BIN" run --model "$MODEL_PATH" )
-    
+
     if [[ -n "${TOKENIZER_PATH:-}" ]]; then
         PERF_CMD+=( --tokenizer "$TOKENIZER_PATH" )
     fi
-    
+
     PERF_CMD+=(
         --prompt "Performance test"
         --max-new-tokens 128
         --temperature 0
         --json-out "$PERF_JSON"
     )
-    
+
     if [[ "$REQUIRE_EMBEDDED_TOKENIZER" != "true" ]]; then
         PERF_CMD+=(--allow-mock)
     fi
-    
+
     if ! "${PERF_CMD[@]}" >"$TIME_OUTPUT" 2>&1; then
         echo "⚠️  Performance test failed to complete"
         rm -f "$PERF_JSON" "$TIME_OUTPUT"
@@ -386,14 +386,14 @@ fi
 if [[ -f "$PERF_JSON" ]]; then
     TOKENS_PER_SEC=$(jq -r '.throughput.tokens_per_second // 0' "$PERF_JSON")
     DECODED_TOKENS=$(jq -r '.throughput.decoded_tokens // 0' "$PERF_JSON")
-    
+
     # Validate minimum performance
     if ! awk -v tps="$TOKENS_PER_SEC" 'BEGIN{exit !(tps >= 1.0)}'; then
         echo "❌ Performance too low: $TOKENS_PER_SEC tok/s < 1.0 minimum"
         rm -f "$PERF_JSON" "$TIME_OUTPUT"
         exit $EXIT_PERF_FAIL
     fi
-    
+
     # Check against baseline if available (using nested cpu/gpu structure)
     BASELINE_FILE="ci/baseline.json"
     if [[ -f "$BASELINE_FILE" ]]; then
@@ -404,7 +404,7 @@ if [[ -f "$PERF_JSON" ]]; then
             KEY="${MODEL_KEY:-tinyllama_q2k_cpu}"
             BASE_TS=$(read_cpu_baseline "$KEY" "tok_s")
             BASE_RSS=$(read_cpu_baseline "$KEY" "rss_mb")
-        
+
         if [[ "$BASE_TS" != "0" ]]; then
             THRESHOLD=$(awk -v b="$BASE_TS" 'BEGIN{printf "%.2f", b * 0.95}')
             if ! awk -v c="$TOKENS_PER_SEC" -v t="$THRESHOLD" 'BEGIN{exit !(c >= t)}'; then
@@ -415,14 +415,14 @@ if [[ -f "$PERF_JSON" ]]; then
         fi
         fi  # end of baseline structure check
     fi
-    
+
     echo "✅ Performance: $TOKENS_PER_SEC tok/s (decoded: $DECODED_TOKENS tokens)"
-    
+
     # Check memory if available
     if [[ -f "$TIME_OUTPUT" ]] && grep -q "Maximum resident set size" "$TIME_OUTPUT"; then
         RSS_KB=$(awk '/Maximum resident set size/{print $6}' "$TIME_OUTPUT")
         RSS_MB=$((RSS_KB / 1024))
-        
+
         # Check against baseline if available
         if [[ -f "$BASELINE_FILE" ]] && [[ "$BASE_RSS" != "0" ]]; then
             THRESHOLD=$(awk -v b="$BASE_RSS" 'BEGIN{printf "%d", b * 1.03}')
@@ -432,7 +432,7 @@ if [[ -f "$PERF_JSON" ]]; then
                 exit $EXIT_MEM_FAIL
             fi
         fi
-        
+
         echo "   Memory: ${RSS_MB}MB RSS"
     fi
 else
@@ -464,7 +464,7 @@ SUCCESS=true
 for output in "$DET1" "$DET2"; do
     DET_RUN=("${DET_CMD[@]}")
     DET_RUN+=(--json-out "$output")
-    
+
     if ! "${DET_RUN[@]}" >/dev/null 2>&1; then
         SUCCESS=false
         break
@@ -475,7 +475,7 @@ if [[ "$SUCCESS" == "true" ]]; then
     # Compare token outputs
     TOKENS1=$(jq -c '.tokens.ids // []' "$DET1" 2>/dev/null || echo "[]")
     TOKENS2=$(jq -c '.tokens.ids // []' "$DET2" 2>/dev/null || echo "[]")
-    
+
     if [[ "$TOKENS1" == "$TOKENS2" && "$TOKENS1" != "[]" ]]; then
         echo "✅ Deterministic output verified"
     else
@@ -499,14 +499,14 @@ FFI_OUTPUT=$(mktemp)
 if cargo build -p bitnet-ffi --release \
         --no-default-features --features cpu \
         --message-format=json > "$FFI_OUTPUT" 2>&1; then
-    
+
     # Extract FFI library path
     FFI_LIB=$(
         jq -r 'select(.target.kind[]=="cdylib" and .target.name=="bitnet_ffi") | .filenames[]' "$FFI_OUTPUT" \
         | grep -E '\.(so|dylib|dll)$' \
         | head -1
     )
-    
+
     if [[ -f "$FFI_LIB" ]]; then
         echo "✅ FFI library built: $(basename "$FFI_LIB")"
     else
@@ -568,7 +568,7 @@ if [[ -f "scripts/json-schema-gate.sh" ]]; then
     JSONS_TO_CHECK=()
     [[ -f "${STRICT_JSON:-}" ]] && JSONS_TO_CHECK+=("$STRICT_JSON")
     [[ -f "${PERF_JSON:-}" ]] && JSONS_TO_CHECK+=("$PERF_JSON")
-    
+
     if [[ ${#JSONS_TO_CHECK[@]} -gt 0 ]]; then
         if scripts/json-schema-gate.sh "${JSONS_TO_CHECK[@]}"; then
             echo "✅ JSON schema gates passed"

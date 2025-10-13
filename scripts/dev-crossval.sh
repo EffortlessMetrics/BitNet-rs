@@ -101,28 +101,28 @@ done
 main() {
     log_info "🦀 BitNet.rs Cross-Validation Development Setup"
     echo
-    
+
     # Check prerequisites
     log_info "Checking prerequisites..."
-    
+
     if ! command -v cargo >/dev/null 2>&1; then
         log_error "Cargo is not installed. Please install Rust first."
         exit 1
     fi
-    
+
     if ! command -v git >/dev/null 2>&1; then
         log_error "Git is not installed."
         exit 1
     fi
-    
+
     # Check if we're in the right directory
     if [[ ! -f "Cargo.toml" ]] || [[ ! -d "crates" ]]; then
         log_error "This script must be run from the BitNet.rs repository root."
         exit 1
     fi
-    
+
     log_success "Prerequisites check passed"
-    
+
     # Generate test fixtures
     log_info "Generating test fixtures..."
     if cargo xtask gen-fixtures --size small --output crossval/fixtures/; then
@@ -131,21 +131,21 @@ main() {
         log_error "Failed to generate test fixtures"
         exit 1
     fi
-    
+
     # If fixtures-only mode, exit here
     if [[ "$FIXTURES_ONLY" == "true" ]]; then
         log_success "✅ Test fixtures generated successfully!"
         exit 0
     fi
-    
+
     # Set up BitNet.cpp cache (unless disabled)
     if [[ "$NO_CACHE" != "true" ]]; then
         log_info "Setting up BitNet.cpp cache..."
-        
+
         if [[ "$FORCE" == "true" ]]; then
             export FORCE_REBUILD=true
         fi
-        
+
         if [[ -f "ci/use-bitnet-cpp-cache.sh" ]]; then
             chmod +x ci/use-bitnet-cpp-cache.sh
             if ./ci/use-bitnet-cpp-cache.sh; then
@@ -159,11 +159,11 @@ main() {
     else
         log_info "Skipping cache setup (--no-cache specified)"
     fi
-    
+
     # Build with crossval features
     log_info "Building Rust implementation with cross-validation features..."
     start_time=$(date +%s)
-    
+
     if cargo build --features crossval --release; then
         end_time=$(date +%s)
         build_time=$((end_time - start_time))
@@ -172,11 +172,11 @@ main() {
         log_error "Build failed"
         exit 1
     fi
-    
+
     # Run basic tests (unless quick mode)
     if [[ "$QUICK" != "true" ]]; then
         log_info "Running basic cross-validation tests..."
-        
+
         if cargo test --package crossval --features crossval --release -- --nocapture quick_test; then
             log_success "Basic tests passed"
         else
@@ -185,24 +185,24 @@ main() {
     else
         log_info "Skipping comprehensive tests (--quick mode)"
     fi
-    
+
     # Set up IDE configuration
     setup_ide_config
-    
+
     # Show usage instructions
     show_usage_instructions
-    
+
     log_success "🎉 Cross-validation development environment ready!"
 }
 
 # Set up IDE configuration to prevent accidental crossval activation
 setup_ide_config() {
     log_info "Setting up IDE configuration..."
-    
+
     # VS Code settings
     if [[ -d ".vscode" ]] || [[ "$1" == "--force-vscode" ]]; then
         mkdir -p .vscode
-        
+
         cat > .vscode/settings.json << 'EOF'
 {
     "rust-analyzer.cargo.features": [],
@@ -238,7 +238,7 @@ setup_ide_config() {
     }
 }
 EOF
-        
+
         # VS Code tasks for cross-validation
         cat > .vscode/tasks.json << 'EOF'
 {
@@ -335,10 +335,10 @@ EOF
     ]
 }
 EOF
-        
+
         log_success "VS Code configuration updated"
     fi
-    
+
     # Create .cargo/config.toml to disable crossval by default
     mkdir -p .cargo
     cat > .cargo/config.toml << 'EOF'
@@ -363,7 +363,7 @@ rustflags = ["-C", "target-cpu=native"]
 # Prevent accidental crossval activation
 CARGO_FEATURE_CROSSVAL = { value = "", force = false }
 EOF
-    
+
     log_success "Cargo configuration updated"
 }
 

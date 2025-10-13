@@ -9,4 +9,3 @@ missing or a model path is invalid.
 class Model:  # pragma: no cover - stub used only for import-time behavior
     def __init__(self, *args, **kwargs):
         raise FileNotFoundError("Model not found")
-

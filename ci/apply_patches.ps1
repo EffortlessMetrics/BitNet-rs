@@ -75,7 +75,7 @@ try {
     foreach ($PatchFile in ($PatchFiles | Sort-Object Name)) {
         $PatchName = $PatchFile.Name
         Write-Info "Applying patch: $PatchName"
-        
+
         # Check if patch has upstream issue reference
         $PatchContent = Get-Content $PatchFile.FullName -Raw
         if (-not ($PatchContent -match "issue|Issue")) {
@@ -84,7 +84,7 @@ try {
             $FailedCount++
             continue
         }
-        
+
         # Try to apply the patch
         $CheckResult = git apply --check $PatchFile.FullName 2>&1
         if ($LASTEXITCODE -eq 0) {

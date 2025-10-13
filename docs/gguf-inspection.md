@@ -25,7 +25,7 @@ let mut model_info = inspect_model("model.gguf")?;
 
 // Access raw metadata (backward compatible)
 let kv_specs = model_info.kv_specs();           // All key-value metadata
-let quant_hints = model_info.quantization_hints(); // Quantization-related metadata  
+let quant_hints = model_info.quantization_hints(); // Quantization-related metadata
 let tensors = model_info.tensor_summaries();    // Enhanced tensor summaries with categorization
 
 // Access enhanced categorized metadata

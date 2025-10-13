@@ -26,11 +26,11 @@ Mutation testing BLOCKED due to baseline test failures. Cannot assess mutation c
 1. **test_compression_ratio_calculation** (Line 241)
    - **Error**: `Practical compression ratio should be <= 8x`
    - **Impact**: Compression ratio validation failing - indicates quantization arithmetic issue
-   
+
 2. **test_round_trip_quantization_accuracy** (Line 287)
    - **Error**: `Round-trip error should be reasonable`
    - **Impact**: Quantization/dequantization round-trip accuracy validation failure
-   
+
 3. **test_tl2_quantization_x86_correctness** (Line 79)
    - **Error**: `assertion 'left == right' failed: left: TL1, right: TL2`
    - **Impact**: Device-aware quantizer returning wrong quantization type (TL1 instead of TL2)

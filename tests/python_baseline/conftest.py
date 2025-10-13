@@ -88,7 +88,7 @@ def device(cuda_available):
 
 class TestDataGenerator:
     """Generate test data with known properties for validation."""
-    
+
     @staticmethod
     def generate_quantization_test_data(shape: Tuple[int, int], seed: int = 42) -> torch.Tensor:
         """Generate test data specifically for quantization testing."""
@@ -102,7 +102,7 @@ class TestDataGenerator:
         data[1, 1] = -1e-8  # Very small negative
         data[2, 0] = 0.0  # Exact zero
         return data
-    
+
     @staticmethod
     def generate_inference_test_data(batch_size: int, seq_len: int, vocab_size: int, seed: int = 42) -> Dict[str, torch.Tensor]:
         """Generate test data for inference testing."""

@@ -229,7 +229,7 @@ volumes:
     driver: local
   bitnet-gpu-cache:
     driver: local
-  
+
   # Monitoring data
   prometheus-data:
     driver: local
@@ -237,7 +237,7 @@ volumes:
     driver: local
   loki-data:
     driver: local
-  
+
   # Infrastructure data
   redis-data:
     driver: local

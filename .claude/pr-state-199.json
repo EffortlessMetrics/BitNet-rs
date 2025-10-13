@@ -18,7 +18,7 @@
   },
   "quality_gates": {
     "build_cpu": "PASSED",
-    "build_gpu": "PASSED", 
+    "build_gpu": "PASSED",
     "tests": "PASSED",
     "clippy": "PASSED",
     "fmt": "PASSED"

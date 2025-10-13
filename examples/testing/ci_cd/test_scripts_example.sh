@@ -38,53 +38,53 @@ log_error() {
 # Setup test environment
 setup_test_environment() {
     log_info "Setting up test environment..."
-    
+
     # Create directories
     mkdir -p "$TEST_RESULTS_DIR" "$TEST_CACHE_DIR"
-    
+
     # Set environment variables
     export BITNET_TEST_CACHE="$TEST_CACHE_DIR"
     export BITNET_LOG_LEVEL="${BITNET_LOG_LEVEL:-info}"
     export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
     export CARGO_TERM_COLOR="${CARGO_TERM_COLOR:-always}"
-    
+
     # Check if config file exists
     if [[ ! -f "$CONFIG_FILE" ]]; then
         log_warning "Config file not found at $CONFIG_FILE, using defaults"
         CONFIG_FILE=""
     fi
-    
+
     log_success "Test environment setup complete"
 }
 
 # Clean test environment
 cleanup_test_environment() {
     log_info "Cleaning up test environment..."
-    
+
     # Clean old test results (keep last 5 runs)
     if [[ -d "$TEST_RESULTS_DIR" ]]; then
         find "$TEST_RESULTS_DIR" -type d -name "run-*" | sort -r | tail -n +6 | xargs rm -rf
     fi
-    
+
     # Clean old cache files (older than 7 days)
     if [[ -d "$TEST_CACHE_DIR" ]]; then
         find "$TEST_CACHE_DIR" -type f -mtime +7 -delete
     fi
-    
+
     log_success "Cleanup complete"
 }
 
 # Run unit tests
 run_unit_tests() {
     log_info "Running unit tests..."
-    
+
     local test_args=("--lib" "--all-features" "--workspace")
     local output_file="$TEST_RESULTS_DIR/unit-tests.json"
-    
+
     if [[ -n "$CONFIG_FILE" ]]; then
         test_args+=("--config" "$CONFIG_FILE")
     fi
-    
+
     # Run tests with coverage if tarpaulin is available
     if command -v cargo-tarpaulin >/dev/null 2>&1; then
         log_info "Running unit tests with coverage..."
@@ -103,16 +103,16 @@ run_unit_tests() {
             --format json > "$output_file" \
             || { log_error "Unit tests failed"; return 1; }
     fi
-    
+
     log_success "Unit tests completed"
 }
 
 # Run integration tests
 run_integration_tests() {
     log_info "Running integration tests..."
-    
+
     local output_file="$TEST_RESULTS_DIR/integration-tests.json"
-    
+
     cargo test \
         --test integration_tests \
         --test workflow_integration_tests \
@@ -120,75 +120,75 @@ run_integration_tests() {
         --features integration-tests \
         --format json > "$output_file" \
         || { log_error "Integration tests failed"; return 1; }
-    
+
     log_success "Integration tests completed"
 }
 
 # Run cross-validation tests
 run_cross_validation_tests() {
     log_info "Running cross-validation tests..."
-    
+
     # Check if C++ BitNet binary is available
     local cpp_binary="${BITNET_CPP_BINARY:-bitnet}"
     if ! command -v "$cpp_binary" >/dev/null 2>&1; then
         log_warning "C++ BitNet binary not found, skipping cross-validation tests"
         return 0
     fi
-    
+
     local output_file="$TEST_RESULTS_DIR/cross-validation-tests.json"
-    
+
     BITNET_CPP_BINARY="$cpp_binary" cargo test \
         --test cross_validation_tests \
         --features cross-validation \
         --format json > "$output_file" \
         || { log_error "Cross-validation tests failed"; return 1; }
-    
+
     log_success "Cross-validation tests completed"
 }
 
 # Run performance benchmarks
 run_performance_benchmarks() {
     log_info "Running performance benchmarks..."
-    
+
     if ! command -v cargo-criterion >/dev/null 2>&1; then
         log_warning "cargo-criterion not available, skipping performance benchmarks"
         return 0
     fi
-    
+
     local output_file="$TEST_RESULTS_DIR/benchmarks.json"
-    
+
     cargo criterion \
         --bench inference \
         --bench kernels \
         --message-format json > "$output_file" \
         || { log_error "Performance benchmarks failed"; return 1; }
-    
+
     log_success "Performance benchmarks completed"
 }
 
 # Generate test report
 generate_test_report() {
     log_info "Generating test report..."
-    
+
     local report_script="$PROJECT_ROOT/scripts/generate_test_report.py"
     if [[ ! -f "$report_script" ]]; then
         log_warning "Test report script not found, skipping report generation"
         return 0
     fi
-    
+
     python3 "$report_script" \
         --input-dir "$TEST_RESULTS_DIR" \
         --output-dir "$TEST_RESULTS_DIR/report" \
         --format html \
         || { log_error "Test report generation failed"; return 1; }
-    
+
     log_success "Test report generated at $TEST_RESULTS_DIR/report/index.html"
 }
 
 # Run specific test category
 run_test_category() {
     local category="$1"
-    
+
     case "$category" in
         "unit")
             run_unit_tests
@@ -219,44 +219,44 @@ run_test_category() {
 # Run comprehensive test suite
 run_comprehensive_tests() {
     log_info "Running comprehensive test suite..."
-    
+
     local start_time=$(date +%s)
     local run_id="run-$(date +%Y%m%d-%H%M%S)"
     local run_dir="$TEST_RESULTS_DIR/$run_id"
-    
+
     # Create run directory
     mkdir -p "$run_dir"
     export TEST_RESULTS_DIR="$run_dir"
-    
+
     # Run all test categories
     local failed_tests=()
-    
+
     if ! run_unit_tests; then
         failed_tests+=("unit")
     fi
-    
+
     if ! run_integration_tests; then
         failed_tests+=("integration")
     fi
-    
+
     if ! run_cross_validation_tests; then
         failed_tests+=("cross-validation")
     fi
-    
+
     if ! run_performance_benchmarks; then
         failed_tests+=("performance")
     fi
-    
+
     # Generate report
     generate_test_report
-    
+
     # Calculate duration
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
-    
+
     # Summary
     log_info "Test suite completed in ${duration}s"
-    
+
     if [[ ${#failed_tests[@]} -eq 0 ]]; then
         log_success "All tests passed!"
         return 0
@@ -269,14 +269,14 @@ run_comprehensive_tests() {
 # Check test dependencies
 check_dependencies() {
     log_info "Checking test dependencies..."
-    
+
     local missing_deps=()
-    
+
     # Check Rust toolchain
     if ! command -v cargo >/dev/null 2>&1; then
         missing_deps+=("cargo")
     fi
-    
+
     # Check optional tools
     local optional_tools=("cargo-tarpaulin" "cargo-nextest" "cargo-criterion")
     for tool in "${optional_tools[@]}"; do
@@ -284,96 +284,96 @@ check_dependencies() {
             log_warning "Optional tool not found: $tool"
         fi
     done
-    
+
     # Check Python for reporting
     if ! command -v python3 >/dev/null 2>&1; then
         log_warning "Python3 not found, test reporting may not work"
     fi
-    
+
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
         log_error "Missing required dependencies: ${missing_deps[*]}"
         return 1
     fi
-    
+
     log_success "All required dependencies found"
 }
 
 # Install test dependencies
 install_dependencies() {
     log_info "Installing test dependencies..."
-    
+
     # Install Rust testing tools
     cargo install cargo-tarpaulin cargo-nextest cargo-criterion --locked
-    
+
     # Install Python dependencies
     if command -v pip3 >/dev/null 2>&1; then
         pip3 install jinja2 matplotlib seaborn pandas
     fi
-    
+
     log_success "Dependencies installed"
 }
 
 # Watch mode for continuous testing
 watch_tests() {
     log_info "Starting watch mode for continuous testing..."
-    
+
     if ! command -v cargo-watch >/dev/null 2>&1; then
         log_error "cargo-watch not found. Install with: cargo install cargo-watch"
         return 1
     fi
-    
+
     cargo watch -x "test --lib" -x "test --test integration_tests"
 }
 
 # Docker-based testing
 run_docker_tests() {
     log_info "Running tests in Docker container..."
-    
+
     local dockerfile="$PROJECT_ROOT/examples/testing/ci_cd/docker_testing_example.dockerfile"
     if [[ ! -f "$dockerfile" ]]; then
         log_error "Docker file not found: $dockerfile"
         return 1
     fi
-    
+
     # Build test image
     docker build -f "$dockerfile" -t bitnet-rs-test "$PROJECT_ROOT"
-    
+
     # Run tests in container
     docker run --rm \
         -v "$TEST_RESULTS_DIR:/app/test-results" \
         -v "$TEST_CACHE_DIR:/app/test-cache" \
         bitnet-rs-test
-    
+
     log_success "Docker tests completed"
 }
 
 # Memory profiling
 run_memory_profiling() {
     log_info "Running memory profiling tests..."
-    
+
     if ! command -v valgrind >/dev/null 2>&1; then
         log_warning "Valgrind not found, skipping memory profiling"
         return 0
     fi
-    
+
     # Run tests under valgrind
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="valgrind --tool=memcheck --leak-check=full" \
         cargo test --target x86_64-unknown-linux-gnu
-    
+
     log_success "Memory profiling completed"
 }
 
 # Security audit
 run_security_audit() {
     log_info "Running security audit..."
-    
+
     if ! command -v cargo-audit >/dev/null 2>&1; then
         log_warning "cargo-audit not found, installing..."
         cargo install cargo-audit --locked
     fi
-    
+
     cargo audit
-    
+
     log_success "Security audit completed"
 }
 
@@ -389,18 +389,18 @@ Commands:
     cleanup                 Clean test environment
     check-deps             Check test dependencies
     install-deps           Install test dependencies
-    
+
     unit                   Run unit tests
     integration            Run integration tests
     crossval               Run cross-validation tests
     performance            Run performance benchmarks
     all                    Run all test categories
-    
+
     comprehensive          Run comprehensive test suite
     report                 Generate test report
     watch                  Run tests in watch mode
     docker                 Run tests in Docker
-    
+
     memory-profile         Run memory profiling tests
     security-audit         Run security audit
 
@@ -429,7 +429,7 @@ EOF
 # Main function
 main() {
     local command="${1:-help}"
-    
+
     # Parse options
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -464,7 +464,7 @@ main() {
                 ;;
         esac
     done
-    
+
     # Execute command
     case "$command" in
         "setup")

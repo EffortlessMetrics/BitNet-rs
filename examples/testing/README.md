@@ -173,7 +173,7 @@ Comprehensive performance testing using Criterion:
 ```rust
 pub fn benchmark_inference_throughput(c: &mut Criterion) {
     let mut group = c.benchmark_group("inference_throughput");
-    
+
     for length in [10, 50, 100, 200, 500] {
         let input = "word ".repeat(length);
         group.throughput(Throughput::Elements(length as u64));

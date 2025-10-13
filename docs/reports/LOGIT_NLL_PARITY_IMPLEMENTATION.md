@@ -77,7 +77,7 @@ More robust than simple token matching as it captures belief-level agreement.
 - Threshold: τ ≥ 0.60 (configurable via `TAU_MIN`)
 - Self-consistency mode when no reference model available
 
-#### NLL Parity Test  
+#### NLL Parity Test
 - Compares teacher-forcing NLL on test corpus
 - Threshold: |Δ NLL| ≤ 0.01 (configurable via `DELTA_NLL_MAX`)
 - Direct probability accuracy check
@@ -177,7 +177,7 @@ target/release/bitnet eval \
     TAU_MIN=0.60 PROP_EXAMPLES=10 \
     ./scripts/logit-parity.sh
 
-- name: NLL Parity  
+- name: NLL Parity
   run: |
     MODEL_PATH=${{ env.MODEL }} \
     TOKENIZER=${{ env.TOKENIZER }} \
@@ -200,7 +200,7 @@ target/release/bitnet eval \
 
 ✅ All components implemented and integrated:
 - Engine logits tap
-- CLI logits dumping  
+- CLI logits dumping
 - Model teacher-forcing forward
 - Eval subcommand
 - Kendall's tau metric

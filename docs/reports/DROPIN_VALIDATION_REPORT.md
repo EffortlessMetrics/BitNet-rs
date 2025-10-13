@@ -25,7 +25,7 @@ Invalid model format: String length 7521981564355109234 exceeds maximum 1048576 
 - **Rust**: ❌ Failed with string length error
 - **C++**: ✅ Loaded successfully
 
-#### After Fix  
+#### After Fix
 - **Rust**: ✅ Successfully loads and validates the model
 - **C++**: ✅ Continues to work as before
 

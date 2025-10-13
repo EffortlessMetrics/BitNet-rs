@@ -181,11 +181,11 @@ def format_change(change_percent: float) -> tuple[str, str]:
 def generate_html_report(comparison_data: dict) -> str:
     """Generate HTML performance report."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
-    
+
     # Determine overall status
     status_class = "passed" if comparison_data['passed'] else "failed"
     status_text = "PASSED" if comparison_data['passed'] else "FAILED"
-    
+
     # Generate alert section
     if comparison_data['passed']:
         alert_section = '''
@@ -196,16 +196,16 @@ def generate_html_report(comparison_data: dict) -> str:
     else:
         alert_section = f'''
         <div class="alert alert-danger">
-            <strong>❌ Performance validation failed!</strong> 
+            <strong>❌ Performance validation failed!</strong>
             {len(comparison_data['regressions'])} performance regression(s) detected.
         </div>
         '''
-    
+
     # Count different status types
     status_counts = {'regression': 0, 'improvement': 0, 'maintained': 0, 'new': 0, 'removed': 0}
     for benchmark_data in comparison_data['summary'].values():
         status_counts[benchmark_data['status']] += 1
-    
+
     # Generate regressions section
     regressions_section = ""
     if comparison_data['regressions']:
@@ -238,7 +238,7 @@ def generate_html_report(comparison_data: dict) -> str:
             </table>
         </div>
         '''
-    
+
     # Generate improvements section
     improvements_section = ""
     if comparison_data['improvements']:
@@ -271,7 +271,7 @@ def generate_html_report(comparison_data: dict) -> str:
             </table>
         </div>
         '''
-    
+
     # Generate benchmark rows
     benchmark_rows = ""
     for benchmark, data in comparison_data['summary'].items():
@@ -282,10 +282,10 @@ def generate_html_report(comparison_data: dict) -> str:
             'new': '🆕',
             'removed': '🗑️'
         }
-        
+
         status_icon = status_icons.get(data['status'], '❓')
         status_text = f"{status_icon} {data['status'].title()}"
-        
+
         if data.get('change_percent') is not None:
             change_text, change_class = format_change(data['change_percent'])
             baseline_text = format_duration(data['baseline'])
@@ -295,7 +295,7 @@ def generate_html_report(comparison_data: dict) -> str:
             change_class = "change-neutral"
             baseline_text = format_duration(data.get('baseline', 0)) if data.get('baseline') else "N/A"
             current_text = format_duration(data.get('current', 0)) if data.get('current') else "N/A"
-        
+
         benchmark_rows += f'''
             <tr>
                 <td><strong>{benchmark}</strong></td>
@@ -305,7 +305,7 @@ def generate_html_report(comparison_data: dict) -> str:
                 <td class="{change_class}">{change_text}</td>
             </tr>
         '''
-    
+
     # Fill in the template
     return HTML_TEMPLATE.format(
         timestamp=timestamp,
@@ -326,9 +326,9 @@ def main():
     parser = argparse.ArgumentParser(description='Generate HTML performance report')
     parser.add_argument('comparison_file', type=Path, help='Performance comparison JSON file')
     parser.add_argument('--output', type=Path, required=True, help='Output HTML file')
-    
+
     args = parser.parse_args()
-    
+
     # Load comparison data
     try:
         with open(args.comparison_file, 'r') as f:
@@ -336,10 +336,10 @@ def main():
     except Exception as e:
         print(f"Error loading comparison file: {e}")
         return 1
-    
+
     # Generate HTML report
     html_content = generate_html_report(comparison_data)
-    
+
     # Write to output file
     try:
         with open(args.output, 'w') as f:
@@ -348,7 +348,7 @@ def main():
     except Exception as e:
         print(f"Error writing output file: {e}")
         return 1
-    
+
     return 0
 
 

@@ -35,7 +35,7 @@ This comprehensive guide helps you migrate from the original BitNet C++ implemen
 ### Migration Timeline
 
 - **Simple projects**: 2-4 hours
-- **Medium projects**: 1-2 days  
+- **Medium projects**: 1-2 days
 - **Complex projects**: 1-2 weeks
 - **Enterprise deployments**: 2-4 weeks
 
@@ -456,11 +456,11 @@ cargo bench --no-default-features --features "cpu,crossval"
 void test_generation() {
     BitNetModel* model = bitnet_load_model("test_model.gguf");
     assert(model != nullptr);
-    
+
     char* result = bitnet_generate(model, "test", 10, 0.7f);
     assert(result != nullptr);
     assert(strlen(result) > 0);
-    
+
     bitnet_free_string(result);
     bitnet_free_model(model);
 }
@@ -477,16 +477,16 @@ mod tests {
     fn test_generation() -> Result<()> {
         let model = BitNetModel::load("test_model.gguf", &Device::Cpu)?;
         let mut engine = InferenceEngine::new(model)?;
-        
+
         let config = GenerationConfig {
             max_tokens: 10,
             temperature: 0.7,
             ..Default::default()
         };
-        
+
         let result = engine.generate("test", &config)?;
         assert!(!result.is_empty());
-        
+
         Ok(())
     }
 }
@@ -547,16 +547,16 @@ async fn generate_handler(
         temperature: request.temperature.unwrap_or(0.7),
         ..Default::default()
     };
-    
+
     let result = ENGINE.generate(&request.prompt, &config).await?;
-    
+
     Ok(ResponseJson(GenerateResponse { text: result }))
 }
 
 #[tokio::main]
 async fn main() {
     let app = Router::new().route("/generate", post(generate_handler));
-    
+
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
         .serve(app.into_make_service())
         .await

@@ -36,7 +36,7 @@ log() { echo -e "${BLUE}${INFO}${NC} $*"; }
 success() { echo -e "${GREEN}${CHECK}${NC} $*"; }
 error() { echo -e "${RED}${CROSS}${NC} $*" >&2; }
 warning() { echo -e "${YELLOW}${WARNING}${NC} $*"; }
-header() { 
+header() {
     echo
     echo -e "${MAGENTA}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BOLD}$*${NC}"
@@ -66,7 +66,7 @@ command_exists() {
 # Detect GPU backend
 detect_gpu() {
     local gpu_type="none"
-    
+
     if command_exists nvidia-smi && nvidia-smi &>/dev/null; then
         gpu_type="cuda"
         local cuda_version=$(nvcc --version 2>/dev/null | grep -oP 'release \K[0-9.]+' | head -1)
@@ -81,7 +81,7 @@ detect_gpu() {
         gpu_type="cpu"
         warning "No GPU detected, using CPU backend"
     fi
-    
+
     echo "$gpu_type"
 }
 
@@ -92,7 +92,7 @@ ensure_rust() {
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
         source "$HOME/.cargo/env"
     fi
-    
+
     # Ensure we have the right version
     rustup toolchain install 1.89.0
     rustup default stable
@@ -102,13 +102,13 @@ ensure_rust() {
 # Install system dependencies
 install_dependencies() {
     header "Checking System Dependencies"
-    
+
     case "$OS" in
         linux)
             if command_exists apt-get; then
                 log "Detected Debian/Ubuntu"
                 local deps="build-essential cmake pkg-config libssl-dev"
-                
+
                 # Check if deps are installed
                 local missing=""
                 for dep in $deps; do
@@ -116,7 +116,7 @@ install_dependencies() {
                         missing="$missing $dep"
                     fi
                 done
-                
+
                 if [[ -n "$missing" ]]; then
                     log "Installing missing dependencies:$missing"
                     sudo apt-get update && sudo apt-get install -y $missing
@@ -137,7 +137,7 @@ install_dependencies() {
             brew install cmake
             ;;
     esac
-    
+
     success "Dependencies ready"
 }
 
@@ -146,9 +146,9 @@ setup_python() {
     if [[ "${SKIP_PYTHON:-0}" == "1" ]]; then
         return
     fi
-    
+
     header "Setting up Python Environment"
-    
+
     if command_exists python3; then
         if [[ ! -d "venv" ]]; then
             python3 -m venv venv
@@ -165,7 +165,7 @@ setup_python() {
 # Download models
 download_models() {
     header "Downloading Models"
-    
+
     if [[ -f "models/bitnet/ggml-model-i2_s.gguf" ]]; then
         log "Model already downloaded"
     else
@@ -179,23 +179,23 @@ download_models() {
 build_project() {
     local gpu_backend=$(detect_gpu)
     local features="cpu"
-    
+
     if [[ "$gpu_backend" != "cpu" ]] && [[ "$gpu_backend" != "none" ]]; then
         features="gpu"
     fi
-    
+
     header "Building BitNet-rs (${features} backend)"
-    
+
     # Clean build if requested
     if [[ "${CLEAN:-0}" == "1" ]]; then
         log "Cleaning previous build..."
         cargo clean
     fi
-    
+
     # Build with progress
     log "Building with features: ${features}"
     cargo build --release --no-default-features --features "$features"
-    
+
     success "Build complete"
 }
 
@@ -203,29 +203,29 @@ build_project() {
 run_tests() {
     local gpu_backend=$(detect_gpu)
     local features="cpu"
-    
+
     if [[ "$gpu_backend" != "cpu" ]] && [[ "$gpu_backend" != "none" ]]; then
         features="gpu"
     fi
-    
+
     header "Running Tests"
-    
+
     # Quick tests first
     log "Running unit tests..."
     cargo test --workspace --no-default-features --features "$features" --lib
-    
+
     # Integration tests if requested
     if [[ "${FULL_TEST:-0}" == "1" ]]; then
         log "Running integration tests..."
         cargo test --workspace --no-default-features --features "$features"
-        
+
         # GPU smoke test if available
         if [[ "$features" == "gpu" ]]; then
             log "Running GPU smoke tests..."
             cargo run -p xtask -- gpu-smoke || warning "GPU smoke test skipped"
         fi
     fi
-    
+
     success "Tests passed"
 }
 
@@ -241,7 +241,7 @@ run_benchmarks() {
 # Setup development environment
 setup_dev() {
     header "Setting up Development Environment"
-    
+
     # Git hooks
     if [[ -d ".git" ]]; then
         log "Installing git hooks..."
@@ -258,7 +258,7 @@ cargo clippy --all-targets -- -D warnings || {
 EOF
         chmod +x .git/hooks/pre-commit
     fi
-    
+
     # VS Code settings
     if [[ ! -f ".vscode/settings.json" ]]; then
         mkdir -p .vscode
@@ -270,34 +270,34 @@ EOF
 }
 EOF
     fi
-    
+
     success "Development environment ready"
 }
 
 # Deploy for production
 deploy_production() {
     header "Production Deployment"
-    
+
     # Build optimized binary
     log "Building optimized release..."
     RUSTFLAGS="-C target-cpu=native -C lto=fat -C embed-bitcode=yes" \
         cargo build --release --no-default-features --features cpu
-    
+
     # Create deployment directory
     local deploy_dir="deploy/$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$deploy_dir"
-    
+
     # Copy artifacts
     cp target/release/bitnet "$deploy_dir/"
     cp -r models "$deploy_dir/" 2>/dev/null || true
-    
+
     # Create run script
     cat > "$deploy_dir/run.sh" << 'EOF'
 #!/bin/bash
 ./bitnet "$@"
 EOF
     chmod +x "$deploy_dir/run.sh"
-    
+
     # Create systemd service if on Linux
     if [[ "$OS" == "linux" ]]; then
         cat > "$deploy_dir/bitnet.service" << EOF
@@ -317,7 +317,7 @@ WantedBy=multi-user.target
 EOF
         log "Systemd service file created: $deploy_dir/bitnet.service"
     fi
-    
+
     success "Deployed to: $deploy_dir"
 }
 
@@ -342,28 +342,28 @@ show_menu() {
 # Quick start - the true one-click experience
 quick_start() {
     header "${ROCKET} Quick Start - One Click Deploy ${ROCKET}"
-    
+
     # Parallel execution where possible
     log "Detecting environment..."
     detect_gpu > /tmp/gpu_type &
-    
+
     ensure_rust
     install_dependencies
-    
+
     # Download models in background
     download_models &
     local download_pid=$!
-    
+
     # Build while downloading
     build_project
-    
+
     # Wait for download if still running
     wait $download_pid 2>/dev/null
-    
+
     # Quick test
     log "Running smoke test..."
     cargo test --package bitnet-inference --lib --no-default-features --features cpu
-    
+
     echo
     success "${BOLD}BitNet-rs is ready to use!${NC}"
     echo
@@ -377,7 +377,7 @@ quick_start() {
 # Full installation
 full_install() {
     header "Full Installation"
-    
+
     ensure_rust
     install_dependencies
     setup_python
@@ -385,31 +385,31 @@ full_install() {
     build_project
     run_tests
     setup_dev
-    
+
     success "Full installation complete!"
 }
 
 # Update everything
 update_all() {
     header "Updating Everything"
-    
+
     # Update repo
     if [[ -d ".git" ]]; then
         log "Updating repository..."
         git pull --rebase
     fi
-    
+
     # Update Rust
     log "Updating Rust..."
     rustup update
-    
+
     # Update dependencies
     log "Updating dependencies..."
     cargo update
-    
+
     # Rebuild
     build_project
-    
+
     success "Everything updated!"
 }
 

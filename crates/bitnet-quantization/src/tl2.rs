@@ -52,7 +52,7 @@ impl Default for TL2Config {
 pub struct VectorizedLookupTable {
     /// Forward lookup table aligned for SIMD access
     forward: Vec<i8>,
-    /// Reverse lookup table aligned for SIMD access  
+    /// Reverse lookup table aligned for SIMD access
     reverse: Vec<f32>,
     /// Scale factor
     scale: f32,

@@ -1,6 +1,6 @@
 /*
  * llama.cpp Compatible C API for BitNet.rs
- * 
+ *
  * This header provides a drop-in replacement for llama.cpp's C API.
  * Simply replace #include "llama.h" with #include "llama_compat.h"
  * and link against libbitnet_ffi instead of libllama.
@@ -26,47 +26,47 @@ struct llama_model_params {
     int32_t n_gpu_layers;          // Number of layers to offload to GPU
     int32_t main_gpu;              // Main GPU device id
     const float* tensor_split;     // Tensor split across multiple GPUs
-    
+
     // Progress callback
     bool (*progress_callback)(float progress, void* ctx);
     void* progress_callback_user_data;
-    
+
     // Override key-value pairs
     const void* kv_overrides;
-    
+
     bool vocab_only;               // Load only vocabulary
     bool use_mmap;                 // Use memory mapping
     bool use_mlock;                // Lock model in RAM
 };
 
-// Context parameters - matches llama_context_params  
+// Context parameters - matches llama_context_params
 struct llama_context_params {
     uint32_t seed;                 // RNG seed
     uint32_t n_ctx;                // Text context size
     uint32_t n_batch;              // Batch size for prompt processing
     uint32_t n_threads;            // Number of threads
     uint32_t n_threads_batch;      // Number of threads for batch processing
-    
+
     // RoPE parameters
     int32_t rope_scaling_type;
     float rope_freq_base;
     float rope_freq_scale;
-    
+
     // YaRN parameters
     float yarn_ext_factor;
     float yarn_attn_factor;
     float yarn_beta_fast;
     float yarn_beta_slow;
     uint32_t yarn_orig_ctx;
-    
+
     // Callback for eval
     bool (*cb_eval)(void* ctx, bool ask);
     void* cb_eval_user_data;
-    
+
     // KV cache type
     int32_t type_k;
     int32_t type_v;
-    
+
     // Options
     bool logits_all;               // Return logits for all tokens
     bool embedding;                // Embedding mode
@@ -116,7 +116,7 @@ int32_t llama_token_to_piece(
 
 // Special tokens
 int32_t llama_token_bos(const llama_model* model);  // Beginning of sentence
-int32_t llama_token_eos(const llama_model* model);  // End of sentence  
+int32_t llama_token_eos(const llama_model* model);  // End of sentence
 int32_t llama_token_nl(const llama_model* model);   // Newline
 int32_t llama_token_prefix(const llama_model* model); // Prefix
 int32_t llama_token_middle(const llama_model* model); // Middle

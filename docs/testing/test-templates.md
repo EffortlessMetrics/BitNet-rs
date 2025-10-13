@@ -17,10 +17,10 @@ mod tests {
     async fn test_function_name_success() {
         // Arrange
         let input = setup_test_input();
-        
+
         // Act
         let result = function_under_test(input).await;
-        
+
         // Assert
         assert!(result.is_ok());
         let output = result.unwrap();
@@ -31,10 +31,10 @@ mod tests {
     async fn test_function_name_error_condition() {
         // Arrange
         let invalid_input = setup_invalid_input();
-        
+
         // Act
         let result = function_under_test(invalid_input).await;
-        
+
         // Assert
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -75,14 +75,14 @@ proptest! {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let result = function_under_test(&input).await;
-            
+
             // Property: function should never panic and always return valid result
             prop_assert!(result.is_ok());
-            
+
             let output = result.unwrap();
             // Property: output length should be reasonable
             prop_assert!(output.len() <= input.len() * 2);
-            
+
             // Property: output should contain some part of input
             prop_assert!(output.contains(&input) || input.contains(&output));
         });
@@ -102,7 +102,7 @@ async fn test_multiple_scenarios() {
             expected: "expected1",
         },
         TestCase {
-            name: "scenario_2", 
+            name: "scenario_2",
             input: "input2",
             expected: "expected2",
         },
@@ -140,33 +140,33 @@ async fn test_complete_workflow() {
     // Setup
     let temp_dir = TestUtilities::create_temp_dir("workflow_test").await.unwrap();
     let config = TestConfig::default();
-    
+
     // Step 1: Initialize system
     let system = initialize_system(&config).await
         .expect("System initialization should succeed");
-    
+
     // Step 2: Load test data
     let test_data_path = temp_dir.join("test_data.json");
     TestUtilities::write_test_file(&test_data_path, TEST_DATA_JSON).await.unwrap();
-    
+
     let data = system.load_data(&test_data_path).await
         .expect("Data loading should succeed");
-    
+
     // Step 3: Process data
     let result = system.process_data(data).await
         .expect("Data processing should succeed");
-    
+
     // Step 4: Validate results
     assert!(!result.is_empty(), "Result should not be empty");
     assert!(result.len() > 0, "Result should contain processed items");
-    
+
     // Step 5: Verify side effects
     let output_file = temp_dir.join("output.json");
     assert!(output_file.exists(), "Output file should be created");
-    
+
     let output_content = TestUtilities::read_test_file(&output_file).await.unwrap();
     assert!(!output_content.is_empty(), "Output file should not be empty");
-    
+
     // Cleanup happens automatically when temp_dir is dropped
 }
 
@@ -190,31 +190,31 @@ async fn test_component_interaction() {
     // Setup components
     let component_a = ComponentA::new().await.unwrap();
     let component_b = ComponentB::new().await.unwrap();
-    
+
     // Test data flow: A -> B
     let input_data = create_test_data();
-    
+
     // Component A processes input
     let intermediate_result = component_a.process(input_data).await
         .expect("Component A should process successfully");
-    
+
     // Validate intermediate result
     assert!(intermediate_result.is_valid(), "Intermediate result should be valid");
-    
+
     // Component B processes A's output
     let final_result = component_b.process(intermediate_result).await
         .expect("Component B should process successfully");
-    
+
     // Validate final result
     assert!(final_result.is_complete(), "Final result should be complete");
     assert_eq!(final_result.status(), ProcessingStatus::Success);
-    
+
     // Test error propagation: A fails -> B handles gracefully
     let invalid_input = create_invalid_data();
     let error_result = component_a.process(invalid_input).await;
-    
+
     assert!(error_result.is_err(), "Component A should fail with invalid input");
-    
+
     // Component B should handle the error gracefully
     let error_handling_result = component_b.handle_error(error_result.unwrap_err()).await;
     assert!(error_handling_result.is_ok(), "Component B should handle errors gracefully");
@@ -232,31 +232,31 @@ use bitnet_tests::common::TestUtilities;
 #[tokio::test]
 async fn test_performance_requirements() {
     let test_data = create_performance_test_data();
-    
+
     // Warm up
     for _ in 0..3 {
         let _ = function_under_test(&test_data).await;
     }
-    
+
     // Measure performance
     let start = Instant::now();
     let result = function_under_test(&test_data).await;
     let duration = start.elapsed();
-    
+
     // Verify correctness
     assert!(result.is_ok(), "Function should succeed");
-    
+
     // Verify performance requirements
-    assert!(duration < Duration::from_millis(100), 
+    assert!(duration < Duration::from_millis(100),
            "Function should complete within 100ms, took {:?}", duration);
-    
+
     // Measure memory usage
     let memory_before = TestUtilities::get_memory_usage();
     let _result = function_under_test(&test_data).await;
     let memory_after = TestUtilities::get_memory_usage();
     let memory_used = memory_after.saturating_sub(memory_before);
-    
-    assert!(memory_used < 10 * 1024 * 1024, 
+
+    assert!(memory_used < 10 * 1024 * 1024,
            "Function should use less than 10MB, used {} bytes", memory_used);
 }
 
@@ -280,7 +280,7 @@ use std::time::{Duration, Instant};
 async fn test_performance_comparison() {
     let test_data = create_test_data();
     let iterations = 100;
-    
+
     // Benchmark old implementation
     let mut old_times = Vec::new();
     for _ in 0..iterations {
@@ -288,7 +288,7 @@ async fn test_performance_comparison() {
         let _result = old_implementation(&test_data).await;
         old_times.push(start.elapsed());
     }
-    
+
     // Benchmark new implementation
     let mut new_times = Vec::new();
     for _ in 0..iterations {
@@ -296,19 +296,19 @@ async fn test_performance_comparison() {
         let _result = new_implementation(&test_data).await;
         new_times.push(start.elapsed());
     }
-    
+
     // Calculate statistics
     let old_avg = old_times.iter().sum::<Duration>() / old_times.len() as u32;
     let new_avg = new_times.iter().sum::<Duration>() / new_times.len() as u32;
-    
+
     let improvement_ratio = old_avg.as_secs_f64() / new_avg.as_secs_f64();
-    
+
     println!("Old implementation average: {:?}", old_avg);
     println!("New implementation average: {:?}", new_avg);
     println!("Improvement ratio: {:.2}x", improvement_ratio);
-    
+
     // Assert performance improvement
-    assert!(improvement_ratio >= 1.1, 
+    assert!(improvement_ratio >= 1.1,
            "New implementation should be at least 10% faster, got {:.2}x", improvement_ratio);
 }
 ```
@@ -341,12 +341,12 @@ async fn test_error_scenarios() {
     for scenario in error_scenarios {
         let input = (scenario.setup)();
         let result = function_under_test(input).await;
-        
+
         assert!(result.is_err(), "Scenario '{}' should fail", scenario.name);
-        
+
         let error = result.unwrap_err();
-        assert!(matches!(error, scenario.expected_error), 
-               "Scenario '{}' should produce {:?}, got {:?}", 
+        assert!(matches!(error, scenario.expected_error),
+               "Scenario '{}' should produce {:?}, got {:?}",
                scenario.name, scenario.expected_error, error);
     }
 }
@@ -364,21 +364,21 @@ struct ErrorScenario<F> {
 #[tokio::test]
 async fn test_error_recovery() {
     let mut system = System::new().await.unwrap();
-    
+
     // Simulate failure
     system.inject_failure(FailureType::NetworkError).await;
-    
+
     // Attempt operation (should fail)
     let result = system.perform_operation().await;
     assert!(result.is_err(), "Operation should fail with injected failure");
-    
+
     // Clear failure and retry
     system.clear_failures().await;
-    
+
     // Operation should now succeed
     let result = system.perform_operation().await;
     assert!(result.is_ok(), "Operation should succeed after recovery");
-    
+
     // Verify system state is consistent
     assert!(system.is_healthy().await, "System should be healthy after recovery");
 }
@@ -401,17 +401,17 @@ impl MockService {
     fn new() -> Self {
         Self::default()
     }
-    
+
     fn expect_call(&self, method: &str) -> &Self {
         self.calls.lock().unwrap().push(method.to_string());
         self
     }
-    
+
     fn return_response(&self, response: Result<String, ServiceError>) -> &Self {
         self.responses.lock().unwrap().push(response);
         self
     }
-    
+
     fn verify_calls(&self, expected: &[&str]) {
         let calls = self.calls.lock().unwrap();
         assert_eq!(calls.len(), expected.len(), "Wrong number of calls");
@@ -425,7 +425,7 @@ impl MockService {
 impl ServiceTrait for MockService {
     async fn method_a(&self, input: &str) -> Result<String, ServiceError> {
         self.calls.lock().unwrap().push(format!("method_a({})", input));
-        
+
         let mut responses = self.responses.lock().unwrap();
         if let Some(response) = responses.pop() {
             response
@@ -439,14 +439,14 @@ impl ServiceTrait for MockService {
 async fn test_with_mock() {
     let mock_service = MockService::new();
     mock_service.return_response(Ok("expected_response".to_string()));
-    
+
     let system = System::new(Box::new(mock_service.clone()));
-    
+
     let result = system.process("test_input").await;
-    
+
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "expected_response");
-    
+
     mock_service.verify_calls(&["method_a(test_input)"]);
 }
 ```
@@ -463,21 +463,21 @@ use bitnet_tests::common::TestUtilities;
 async fn test_file_operations() {
     let temp_dir = TempDir::new().unwrap();
     let file_path = temp_dir.path().join("test_file.txt");
-    
+
     // Test file creation
     let content = b"test file content";
     TestUtilities::write_test_file(&file_path, content).await.unwrap();
-    
+
     assert!(file_path.exists(), "File should be created");
-    
+
     // Test file reading
     let read_content = TestUtilities::read_test_file(&file_path).await.unwrap();
     assert_eq!(read_content, content, "File content should match");
-    
+
     // Test file verification
     let is_valid = TestUtilities::verify_file(&file_path, Some(content.len() as u64)).await.unwrap();
     assert!(is_valid, "File should be valid");
-    
+
     // Cleanup happens automatically when temp_dir is dropped
 }
 ```
@@ -488,29 +488,29 @@ async fn test_file_operations() {
 #[tokio::test]
 async fn test_memory_management() {
     let initial_memory = TestUtilities::get_memory_usage();
-    
+
     // Allocate resources
     let large_data = create_large_test_data();
     let peak_memory = TestUtilities::get_peak_memory_usage();
-    
+
     // Process data
     let result = process_large_data(large_data).await;
     assert!(result.is_ok(), "Processing should succeed");
-    
+
     // Drop large data
     drop(result);
-    
+
     // Allow garbage collection
     tokio::task::yield_now().await;
-    
+
     // Check memory usage returned to reasonable level
     let final_memory = TestUtilities::get_memory_usage();
     let memory_increase = final_memory.saturating_sub(initial_memory);
-    
-    assert!(memory_increase < 100 * 1024 * 1024, 
-           "Memory usage should not increase by more than 100MB, increased by {} bytes", 
+
+    assert!(memory_increase < 100 * 1024 * 1024,
+           "Memory usage should not increase by more than 100MB, increased by {} bytes",
            memory_increase);
-    
+
     assert!(peak_memory > initial_memory, "Peak memory should be higher than initial");
 }
 

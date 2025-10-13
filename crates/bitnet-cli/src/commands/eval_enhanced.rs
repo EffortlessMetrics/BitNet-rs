@@ -15,23 +15,23 @@ pub struct EnhancedEvalResults {
     pub perplexity: f64,
     pub timing_ms: EvalTiming,
     pub tokens_per_second: f64,
-    
+
     // Optional fields
     #[serde(skip_serializing_if = "Option::is_none")]
     pub logits_dump: Option<Vec<LogitStep>>,
-    
+
     // Complete metadata
     pub metadata: EvalMetadata,
-    
+
     // Scoring policy
     pub scoring_policy: ScoringPolicy,
-    
+
     // Tokenizer information
     pub tokenizer: TokenizerInfo,
-    
+
     // Model format and configuration
     pub model_info: ModelInfo,
-    
+
     // Totals for comprehensive tracking
     pub totals: EvalTotals,
 }
@@ -134,7 +134,7 @@ impl EnhancedEvalResults {
                 .map(|h| h.to_string_lossy().to_string())
                 .unwrap_or_else(|_| "unknown".to_string()),
         };
-        
+
         // Get environment info
         let environment = EnvironmentInfo {
             bitnet_deterministic: std::env::var("BITNET_DETERMINISTIC")
@@ -150,13 +150,13 @@ impl EnhancedEvalResults {
                 .unwrap_or(1),
             cuda_device: std::env::var("CUDA_VISIBLE_DEVICES").ok(),
         };
-        
+
         // Get version information
         let bitnet_version = env!("CARGO_PKG_VERSION").to_string();
         let rust_version = rustc_version::version()
             .map(|v| v.to_string())
             .unwrap_or_else(|_| "unknown".to_string());
-        
+
         // Build metadata
         let metadata = EvalMetadata {
             timestamp: chrono::Utc::now().to_rfc3339(),
@@ -171,7 +171,7 @@ impl EnhancedEvalResults {
             rust_version,
             command_line: std::env::args().collect(),
         };
-        
+
         // Create enhanced results
         Ok(Self {
             model_path: basic.model_path.clone(),
@@ -234,7 +234,7 @@ fn get_cpu_info() -> String {
             })
             .unwrap_or_else(|| "unknown".to_string())
     }
-    
+
     #[cfg(not(target_os = "linux"))]
     {
         "unknown".to_string()
@@ -248,7 +248,7 @@ fn is_wsl2() -> bool {
             .map(|content| content.to_lowercase().contains("microsoft"))
             .unwrap_or(false)
     }
-    
+
     #[cfg(not(target_os = "linux"))]
     {
         false

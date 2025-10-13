@@ -9,7 +9,7 @@
 //!
 //! Requirements covered:
 //! - 2.1: Validate all public functions and methods
-//! - 2.2: Validate all error paths and edge cases  
+//! - 2.2: Validate all error paths and edge cases
 //! - Performance validation for kernel implementations
 
 use bitnet_common::{BitNetError, KernelError, QuantizationType};

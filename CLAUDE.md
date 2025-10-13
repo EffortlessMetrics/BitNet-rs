@@ -20,15 +20,16 @@ cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 cargo run -p xtask -- download-model
 cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Test"
 
+# Model validation (3-stage: LayerNorm, projection, linguistic sanity)
+./scripts/validate_gguf.sh <model.gguf> <tokenizer.json>  # Full validation pipeline
+cargo run -p bitnet-cli --features cpu,full-cli -- inspect --ln-stats --gate auto <model.gguf>
+
 # Model export and validation (clean GGUF with F16 LayerNorm)
-just model-clean <model_dir> <tokenizer.json>        # Export + validate
-just model-validate <model.gguf> <tokenizer.json>    # Validate existing
-just model-inspect-ln <model.gguf>                   # Check LayerNorm stats
+./scripts/export_clean_gguf.sh <model_dir> <tokenizer.json> <output_dir>  # Export + validate
 
 # SafeTensors to GGUF converter (Rust st2gguf - preferred)
-just st2gguf-convert <input> <output>                # Convert with LayerNorm enforcement
-cargo run -p bitnet-st2gguf -- --help                # See all options
-st2gguf --input model.safetensors --output model.gguf --strict  # Strict validation
+cargo run -p bitnet-st2gguf -- --input model.safetensors --output model.gguf --strict
+cargo run --release -p bitnet-st2gguf -- --help      # See all options
 ```
 
 ## Core Architecture
@@ -87,10 +88,12 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 - `docs/development/validation-framework.md`: Quality assurance
 - `docs/development/xtask.md`: Developer tooling
 - `docs/howto/export-clean-gguf.md`: Clean GGUF export and validation
+- `docs/howto/validate-models.md`: Complete validation workflow guide
 
 ### Architecture
 - `docs/architecture-overview.md`: System design and components
 - `docs/reference/quantization-support.md`: Quantization algorithms
+- `docs/reference/validation-gates.md`: Validation system technical reference
 - `docs/gpu-kernel-architecture.md`: CUDA kernel design
 - `docs/tokenizer-architecture.md`: Universal tokenizer system
 
@@ -123,6 +126,39 @@ cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 cargo run -p bitnet-cli -- compat-check model.gguf
 ```
 
+### Model Validation Workflow
+```bash
+# 1. Validate existing GGUF (3-stage: LayerNorm, projection, linguistic sanity)
+./scripts/validate_gguf.sh models/model.gguf models/tokenizer.json
+
+# 2. Inspect LayerNorm and projection statistics (architecture-aware)
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate auto models/model.gguf
+
+# 3. Strict mode (fail on warnings - for CI/CD)
+BITNET_STRICT_MODE=1 \
+  cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate auto models/model.gguf
+
+# 4. Custom validation policy
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate policy \
+  --policy examples/policies/custom-model.yml \
+  --policy-key my-model:f16 \
+  models/model.gguf
+
+# 5. Export clean GGUF from SafeTensors (F16 with LayerNorm preservation)
+./scripts/export_clean_gguf.sh \
+  models/safetensors-checkpoint \
+  models/tokenizer.json \
+  models/clean
+
+# Then validate the exported model
+./scripts/validate_gguf.sh models/clean/clean-f16.gguf models/tokenizer.json
+```
+
+**See also:** `docs/howto/validate-models.md` for complete validation guide.
+
 ### Troubleshooting
 - FFI linker errors: Use `--no-default-features --features cpu` or `cargo xtask fetch-cpp`
 - CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH
@@ -131,20 +167,31 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 - Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use `BITNET_GPU_FAKE` for testing
 - Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]` pattern
 - LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your GGUF has quantized LN weights (should be FP16/FP32)
-  - **RMS-based validation**: Validator checks LayerNorm gamma RMS (root mean square) in envelope [0.5, 2.0] around expected ≈1.0
+  - **RMS-based validation**: Validator checks LayerNorm gamma RMS (root mean square) with architecture-aware envelopes
   - **Proper fix**: Regenerate GGUF with LayerNorm weights in float format (not quantized)
-  - **Diagnosis**: Use `cargo run -p bitnet-cli -- inspect --ln-stats model.gguf` to examine LayerNorm statistics
+  - **Diagnosis**: Use `cargo run -p bitnet-cli --features cpu,full-cli -- inspect --ln-stats --gate auto model.gguf`
+  - **Validation modes**: `none` (skip), `auto` (architecture detection), `policy` (custom rules)
   - **Temporary workaround**: Policy-driven corrections for known-bad models (see `docs/explanation/correction-policy.md`)
     - Requires both `BITNET_CORRECTION_POLICY=/path/to/policy.yml` and `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`
     - CI blocks correction flags - use only for fingerprinted known-bad models
-  - **Strict mode**: `BITNET_STRICT_MODE=1` will fail immediately on suspicious LN weights
+  - **Strict mode**: `BITNET_STRICT_MODE=1` will fail immediately on suspicious LN weights (exit code 8)
+  - **See also**: `docs/howto/validate-models.md` for complete troubleshooting guide
 
 ## Environment Variables
+
+### Inference Configuration
 - `BITNET_DETERMINISTIC=1 BITNET_SEED=42`: Reproducible inference
 - `BITNET_GGUF`: Model path override for cross-validation and inference (auto-discovers `models/` if not set)
 - `RAYON_NUM_THREADS=1`: Single-threaded determinism
 - `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing (Issue #439)
-- `BITNET_STRICT_MODE=1`: Enable strict validation including LayerNorm gamma RMS statistics (fails on suspicious weights)
+
+### Validation Configuration
+- `BITNET_STRICT_MODE=1`: Enable strict validation (fails on LayerNorm/projection warnings, exit code 8)
+- `BITNET_VALIDATION_GATE=none|auto|policy`: Validation mode (default: `auto`)
+- `BITNET_VALIDATION_POLICY=/path/to/policy.yml`: Policy file for custom validation rules
+- `BITNET_VALIDATION_POLICY_KEY=arch:variant`: Policy key for rules lookup
+
+### Correction Configuration (Development Only)
 - `BITNET_CORRECTION_POLICY=/path/to/policy.yml`: Policy file for model-specific corrections (requires `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`)
 - `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`: Enable runtime corrections for known-bad models (CI blocks this flag)
 

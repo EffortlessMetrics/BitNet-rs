@@ -13,7 +13,7 @@ impl GpuMemoryManager {
     pub fn new(device_id: usize, enable_pooling: bool) -> Result<Self> {
         // Query GPU memory (placeholder implementation)
         let total_memory = 8 * 1024 * 1024 * 1024; // 8GB placeholder
-        
+
         Ok(Self {
             device_id,
             total_memory,
@@ -38,7 +38,7 @@ impl GpuMemoryManager {
         let total_memory = cuda::device_total_memory(device_id)?;
         #[cfg(not(feature = "cuda"))]
         let total_memory = 8 * 1024 * 1024 * 1024; // Fallback for non-CUDA builds
-        
+
         Ok(Self {
             device_id,
             total_memory,

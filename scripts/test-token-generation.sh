@@ -33,7 +33,7 @@ strings target/rust_output.txt | grep -A 2 "Generating:" || echo "No generation 
 if [ -f "$CPP_BIN" ]; then
     echo ""
     echo "2. Testing C++ implementation..."
-    
+
     # Try to run C++ with same settings
     if timeout 10 "$CPP_BIN" \
         -m "$MODEL" \
@@ -42,7 +42,7 @@ if [ -f "$CPP_BIN" ]; then
         --temp 0.0 \
         --seed 42 \
         --no-display-prompt 2>&1 | tee target/cpp_output.txt; then
-        
+
         echo "C++ output:"
         cat target/cpp_output.txt
     else

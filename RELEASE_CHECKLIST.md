@@ -197,12 +197,12 @@ For critical security or functionality fixes:
 
 **Release Manager**: _________________ **Date**: _________________
 
-**Final Sign-off**: 
+**Final Sign-off**:
 - [ ] All checklist items completed
 - [ ] Release approved by maintainers
 - [ ] Ready for production use
 
 ---
 
-**Notes**: 
+**Notes**:
 _Use this space for release-specific notes, issues encountered, or process improvements for next time._

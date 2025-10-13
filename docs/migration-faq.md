@@ -33,7 +33,7 @@ Most users can migrate in a few hours with our automated tools and guides.
 **A:** Yes! BitNet.rs supports all standard model formats:
 
 - ✅ **GGUF** - Full compatibility
-- ✅ **SafeTensors** - Full compatibility  
+- ✅ **SafeTensors** - Full compatibility
 - ✅ **HuggingFace** - Direct loading from Hub
 - ✅ **Custom formats** - Via conversion tools
 

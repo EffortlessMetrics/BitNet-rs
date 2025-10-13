@@ -155,7 +155,7 @@ export DOCKER_BUILDKIT=1
 # Build CPU version
 docker build --target runtime -t bitnet:cpu .
 
-# Build GPU version  
+# Build GPU version
 docker build --target runtime-gpu -t bitnet:gpu .
 
 # Use docker-compose (BuildKit enabled automatically)

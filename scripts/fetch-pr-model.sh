@@ -28,7 +28,7 @@ mkdir -p "$MODEL_DIR"
 # Check if model already exists with correct checksum
 if [ -f "$MODEL_PATH" ]; then
     echo "✓ Model already exists at $MODEL_PATH"
-    
+
     # Verify checksum
     if command -v sha256sum >/dev/null 2>&1; then
         ACTUAL_SHA256=$(sha256sum "$MODEL_PATH" | cut -d' ' -f1)
@@ -62,7 +62,7 @@ echo "Downloading model..."
 DOWNLOAD_SUCCESS=false
 for attempt in 1 2 3; do
     echo "Download attempt $attempt/3..."
-    
+
     if command -v aria2c >/dev/null 2>&1; then
         # aria2c is fastest and most reliable
         aria2c -x 4 -s 4 --retry-wait=3 --max-tries=3 -o "$MODEL_PATH" "$MODEL_URL" && DOWNLOAD_SUCCESS=true && break
@@ -74,7 +74,7 @@ for attempt in 1 2 3; do
         echo "❌ No download tool found. Please install aria2c, wget, or curl."
         exit 1
     fi
-    
+
     echo "⚠ Download failed, retrying..."
     sleep 5
 done
@@ -145,9 +145,9 @@ if cargo run -q -p bitnet-cli -- run \
     --temperature 0 \
     --strict-tokenizer \
     --json-out "$TEST_JSON" 2>/dev/null; then
-    
+
     TOKENIZER_TYPE=$(jq -r '.tokenizer.type // "none"' "$TEST_JSON" 2>/dev/null)
-    
+
     if [[ "$TOKENIZER_TYPE" == "sentencepiece" ]] || [[ "$TOKENIZER_TYPE" == "embedded" ]]; then
         echo "✓ Embedded tokenizer confirmed: $TOKENIZER_TYPE"
     else

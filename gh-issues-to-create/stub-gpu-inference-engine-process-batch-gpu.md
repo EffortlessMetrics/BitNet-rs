@@ -16,22 +16,22 @@ The `GpuInferenceEngine::process_batch_gpu` function in `crates/bitnet-inference
             // Single request - no batching needed
             return Ok(vec![self.generate_tokens_gpu(&requests[0].0, &requests[0].1)?]);
         }
-        
+
         // GPU batch processing
         let batch_start = Instant::now();
-        
+
         // For now, process sequentially (full batching would require more complex implementation)
         let results: Result<Vec<_>> = requests
             .iter()
             .map(|(tokens, config)| self.generate_tokens_gpu(tokens, config))
             .collect();
-        
+
         // Update batch processing metrics
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.kernel_launch_overhead_ms = batch_start.elapsed().as_millis() as f64;
         }
-        
+
         results
     }
 ```

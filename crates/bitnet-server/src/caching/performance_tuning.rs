@@ -104,7 +104,7 @@ impl PerformanceTuner {
     /// Record a performance sample
     pub fn record_sample(&mut self, sample: PerformanceSample) {
         self.performance_history.push_back(sample);
-        
+
         // Keep only the last 1000 samples
         if self.performance_history.len() > 1000 {
             self.performance_history.pop_front();
@@ -146,10 +146,10 @@ impl PerformanceTuner {
             self.statistics.successful_optimizations += 1;
             self.statistics.recommendations_applied += applied_recommendations.len() as u64;
         }
-        
-        self.statistics.optimization_success_rate = 
+
+        self.statistics.optimization_success_rate =
             self.statistics.successful_optimizations as f64 / self.statistics.total_optimizations as f64;
-        
+
         self.statistics.last_optimization_time = Some(
             chrono::Utc::now().to_rfc3339()
         );
@@ -384,7 +384,7 @@ impl PerformanceTuner {
             let resource_score = (1.0 - ((latest_sample.cpu_usage + latest_sample.memory_usage) / 200.0).min(1.0)) * 10.0;
 
             let current_score = rps_score + latency_score + error_score + cache_score + resource_score;
-            
+
             self.statistics.current_performance_score = current_score;
             self.statistics.peak_performance_score = self.statistics.peak_performance_score.max(current_score);
         }

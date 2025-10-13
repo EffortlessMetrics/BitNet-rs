@@ -44,13 +44,13 @@ fn basic_tokenizer_example() -> Result<()> {
 fn load_huggingface_tokenizer(model_name: &str) -> Result<Tokenizer> {
     // In a real implementation, this would download from HuggingFace Hub
     // For this example, we'll create a simple tokenizer
-    
+
     println!("Loading tokenizer for model: {}", model_name);
-    
+
     // Create a basic tokenizer (in practice, load from HuggingFace)
     let tokenizer = Tokenizer::from_pretrained(model_name, None)
         .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {}", e))?;
-    
+
     Ok(tokenizer)
 }
 
@@ -75,7 +75,7 @@ impl BitNetTokenizer for HuggingFaceTokenizerWrapper {
         // For backwards compatibility, use add_special for the HF tokenizer
         let encoding = self.tokenizer.encode(text, add_special)
             .map_err(|e| anyhow::anyhow!("Encoding failed: {}", e))?;
-        
+
         Ok(encoding.get_ids().to_vec())
     }
 
@@ -96,7 +96,7 @@ impl BitNetTokenizer for HuggingFaceTokenizerWrapper {
     fn pad_token_id(&self) -> Option<u32> {
         self.tokenizer.token_to_id("<|pad|>")
     }
-    
+
     fn token_to_piece(&self, token: u32) -> Option<String> {
         self.tokenizer.id_to_token(token)
     }
@@ -178,14 +178,14 @@ fn inference_pipeline_example() -> Result<()> {
     println!("\nStreaming generation:");
     let mut stream = engine.generate_stream(prompt);
     let mut full_response = String::new();
-    
+
     // Simulate streaming (in practice, this would be async)
     for i in 0..5 {
         let token_text = format!(" token_{}", i);
         full_response.push_str(&token_text);
         println!("Stream chunk {}: \"{}\"", i + 1, token_text);
     }
-    
+
     println!("Complete streamed response: \"{}{}\"", prompt, full_response);
 
     Ok(())
@@ -225,9 +225,9 @@ impl bitnet_models::Model for MockBitNetModel {
         // Mock forward pass - return random logits
         let batch_size = input.shape()[0];
         let vocab_size = 50257; // GPT-2 vocab size
-        
+
         let logits = vec![0.1f32; batch_size * vocab_size];
-        
+
         Ok(Box::new(MockTensor {
             data: logits,
             shape: vec![batch_size, vocab_size],
@@ -328,14 +328,14 @@ mod tests {
     fn test_tokenizer_wrapper() -> Result<()> {
         // This test would require a real tokenizer file
         // For now, we'll test the wrapper structure
-        
+
         // Create a mock tokenizer for testing
         let tokenizer = Tokenizer::new(tokenizers::models::bpe::BPE::default());
         let wrapper = HuggingFaceTokenizerWrapper::new(tokenizer);
-        
+
         // Test basic interface
         assert!(wrapper.vocab_size() > 0);
-        
+
         Ok(())
     }
 

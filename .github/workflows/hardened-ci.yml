@@ -21,21 +21,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.3
-      
+
       - name: Install Rust 1.89.0
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.89.0
           components: rustfmt, clippy
-      
+
       - name: Check MSRV
         run: |
           cargo +1.89.0 check --locked --workspace --no-default-features --features cpu
           cargo +1.89.0 test --locked --workspace --no-default-features --features cpu
-      
+
       - name: Print sccache stats
         run: sccache --show-stats || true
 
@@ -45,29 +45,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.3
-      
+
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      
+
       - name: Install cargo-nextest
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest
-      
+
       - name: Build
         run: cargo build --locked --workspace --no-default-features --features cpu
-      
+
       - name: Test with nextest
         run: cargo nextest run --locked --workspace --no-default-features --features cpu
-      
+
       - name: Doctests (regular cargo test)
         run: cargo test --doc --locked --workspace --no-default-features --features cpu
-      
+
       - name: Print sccache stats
         run: sccache --show-stats || true
 
@@ -77,21 +77,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install cargo-deny
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-deny
-      
+
       - name: Check advisories
         run: cargo deny check advisories
-      
+
       - name: Check bans
         run: cargo deny check bans
-      
+
       - name: Check licenses
         run: cargo deny check licenses
-      
+
       - name: Check sources
         run: cargo deny check sources
 
@@ -101,18 +101,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.3
-      
+
       - name: Install nightly Rust
         uses: dtolnay/rust-toolchain@nightly
-      
+
       - name: Check minimal versions
         run: |
           cargo +nightly update -Z minimal-versions
           cargo +nightly check --locked --workspace --no-default-features --features cpu
-      
+
       - name: Print sccache stats
         run: sccache --show-stats || true
 
@@ -122,15 +122,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      
+
       - name: Check formatting
         run: cargo fmt --all -- --check
-      
+
       - name: Clippy
         run: cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
 
@@ -141,21 +141,21 @@ jobs:
     if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'gpu')
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.3
-      
+
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: GPU Preflight
         run: cargo xtask gpu-preflight --require
-      
+
       - name: Build with GPU
         run: cargo build --locked --workspace --no-default-features --features gpu
-      
+
       - name: GPU Smoke Tests
         run: cargo xtask gpu-smoke
-      
+
       - name: Print sccache stats
         run: sccache --show-stats || true

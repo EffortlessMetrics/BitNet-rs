@@ -19,8 +19,8 @@ def s_whitespace():
 def s_noise():
     """Generate Unicode noise (excluding invalid categories)."""
     return st.text(
-        alphabet=st.characters(blacklist_categories=("Cs", "Cc", "Cf")), 
-        min_size=0, 
+        alphabet=st.characters(blacklist_categories=("Cs", "Cc", "Cf")),
+        min_size=0,
         max_size=60
     )
 
@@ -109,10 +109,10 @@ def s_wrap(content):
     ws_after = st.text(alphabet=" \t\n", min_size=0, max_size=10)
     punct_before = st.text(alphabet=PUNCT, min_size=0, max_size=5)
     punct_after = st.text(alphabet=PUNCT, min_size=0, max_size=5)
-    
+
     return st.tuples(
-        ws_before, punct_before, 
-        content, 
+        ws_before, punct_before,
+        content,
         punct_after, ws_after
     ).map(lambda t: "".join(t))
 
@@ -136,7 +136,7 @@ def s_length_varied():
     short = st.text(string.ascii_letters + string.digits, min_size=1, max_size=10)
     medium = st.text(string.printable, min_size=50, max_size=200)
     long = st.text(string.printable, min_size=500, max_size=1000)
-    
+
     return st.one_of(short, medium, long)
 
 
@@ -152,21 +152,21 @@ def prompt_strategy():
         s_math_task(),
         s_instruction_task(),
     )
-    
+
     # Optional modifiers
     lang_prefix = st.one_of(st.just(""), s_lang())
     noise_suffix = st.one_of(st.just(""), s_noise())
-    
+
     # Combine with wrapping
     normal_prompt = st.tuples(lang_prefix, base_task, noise_suffix).map(
         lambda t: " ".join(x for x in t if x)
     )
-    
+
     # Mix in edge cases and unicode stress tests
     edge_prompt = s_edge_cases()
     unicode_prompt = s_adversarial_unicode()
     length_prompt = s_length_varied()
-    
+
     # Weighted combination (70% normal, 30% edge/adversarial)
     return st.one_of(
         normal_prompt,
@@ -189,7 +189,7 @@ def reproducible_prompt_set(seed: int = 42, count: int = 100):
     """
     random.seed(seed)
     prompts = []
-    
+
     # Ensure diversity
     categories = [
         s_json_task(),
@@ -199,10 +199,10 @@ def reproducible_prompt_set(seed: int = 42, count: int = 100):
         s_edge_cases(),
         s_adversarial_unicode(),
     ]
-    
+
     for i in range(count):
         cat = categories[i % len(categories)]
         prompt = cat.example()
         prompts.append(prompt)
-    
+
     return prompts

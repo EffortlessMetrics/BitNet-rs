@@ -57,13 +57,13 @@ BITNET_KEYS = {
 
 class GGUFWriter:
     """GGUF file writer for BitNet models"""
-    
+
     def __init__(self, path: Path, arch: str = "bitnet"):
         self.path = path
         self.arch = arch
         self.metadata: Dict[str, Any] = {}
         self.tensors: List[Tuple[str, np.ndarray]] = []
-        
+
     def add_metadata(self, key: str, value: Any, value_type: Optional[int] = None):
         """Add metadata entry"""
         if value_type is None:
@@ -81,13 +81,13 @@ class GGUFWriter:
                 value_type = GGUF_TYPE_STRING
             else:
                 raise ValueError(f"Cannot auto-detect type for {type(value)}")
-                
+
         self.metadata[key] = (value, value_type)
-        
+
     def add_tensor(self, name: str, tensor: np.ndarray):
         """Add tensor to be written"""
         self.tensors.append((name, tensor))
-        
+
     def write(self):
         """Write GGUF file"""
         with open(self.path, "wb") as f:
@@ -96,17 +96,17 @@ class GGUFWriter:
             f.write(struct.pack("<I", GGUF_VERSION))
             f.write(struct.pack("<Q", len(self.tensors)))  # tensor count
             f.write(struct.pack("<Q", len(self.metadata)))  # metadata count
-            
+
             # Write metadata
             for key, (value, vtype) in self.metadata.items():
                 # Write key
                 key_bytes = key.encode("utf-8")
                 f.write(struct.pack("<Q", len(key_bytes)))
                 f.write(key_bytes)
-                
+
                 # Write value type
                 f.write(struct.pack("<I", vtype))
-                
+
                 # Write value
                 if vtype == GGUF_TYPE_UINT32:
                     f.write(struct.pack("<I", value))
@@ -122,47 +122,47 @@ class GGUFWriter:
                     f.write(struct.pack("<?", value))
                 else:
                     raise ValueError(f"Unsupported value type: {vtype}")
-                    
+
             # Align to 32 bytes for tensor data
             pos = f.tell()
             align_pad = (GGUF_DEFAULT_ALIGNMENT - (pos % GGUF_DEFAULT_ALIGNMENT)) % GGUF_DEFAULT_ALIGNMENT
             f.write(b"\x00" * align_pad)
-            
+
             # Write tensor info
             for name, tensor in self.tensors:
                 # Name
                 name_bytes = name.encode("utf-8")
                 f.write(struct.pack("<Q", len(name_bytes)))
                 f.write(name_bytes)
-                
+
                 # Number of dimensions
                 f.write(struct.pack("<I", len(tensor.shape)))
-                
+
                 # Shape
                 for dim in tensor.shape:
                     f.write(struct.pack("<Q", dim))
-                    
+
                 # Data type (F32 = 0 for now, can extend for quantized)
                 f.write(struct.pack("<I", 0))
-                
+
                 # Offset (will be calculated later)
                 f.write(struct.pack("<Q", 0))
-                
+
             # Write tensor data
             tensor_data_start = f.tell()
             for name, tensor in self.tensors:
                 # Ensure F32
                 if tensor.dtype != np.float32:
                     tensor = tensor.astype(np.float32)
-                    
+
                 # Align tensor data
                 pos = f.tell()
                 align_pad = (GGUF_DEFAULT_ALIGNMENT - (pos % GGUF_DEFAULT_ALIGNMENT)) % GGUF_DEFAULT_ALIGNMENT
                 f.write(b"\x00" * align_pad)
-                
+
                 # Write tensor
                 tensor.tofile(f)
-                
+
             print(f"Wrote {len(self.tensors)} tensors to {self.path}")
 
 
@@ -172,7 +172,7 @@ def load_config(model_dir: Path) -> Dict[str, Any]:
     if not config_path.exists():
         print(f"Warning: No config.json found in {model_dir}")
         return {}
-        
+
     with open(config_path) as f:
         return json.load(f)
 
@@ -184,13 +184,13 @@ def convert_safetensors_to_gguf(
     tokenizer_path: Optional[Path] = None,
 ) -> None:
     """Convert SafeTensors model to GGUF format"""
-    
+
     print(f"Loading SafeTensors from {input_path}")
     tensors = safetensors.torch.load_file(str(input_path))
-    
+
     # Create GGUF writer
     writer = GGUFWriter(output_path)
-    
+
     # Add metadata from config
     if config:
         # Architecture info
@@ -206,12 +206,12 @@ def convert_safetensors_to_gguf(
             writer.add_metadata(BITNET_KEYS["vocab_size"], config["vocab_size"])
         if "max_position_embeddings" in config:
             writer.add_metadata(BITNET_KEYS["context_length"], config["max_position_embeddings"])
-            
+
     # Add BitNet specific metadata
     writer.add_metadata(BITNET_KEYS["quantization"], "i2s")  # Default to i2s
     writer.add_metadata(BITNET_KEYS["weight_scale"], 1.0)
     writer.add_metadata("general.file_type", 1)  # F32
-    
+
     # Convert and add tensors
     for name, tensor in tensors.items():
         # Convert tensor to numpy
@@ -219,18 +219,18 @@ def convert_safetensors_to_gguf(
             np_tensor = tensor.numpy()
         else:
             np_tensor = tensor.cpu().numpy() if hasattr(tensor, "cpu") else np.array(tensor)
-            
+
         # Rename tensors to GGUF conventions if needed
         gguf_name = name
         # Example mappings (extend as needed):
         # "model.layers.0.self_attn.q_proj.weight" -> "blk.0.attn_q.weight"
-        
+
         writer.add_tensor(gguf_name, np_tensor)
-        
+
     # Write the GGUF file
     writer.write()
     print(f"Successfully converted to {output_path}")
-    
+
     # Write metadata JSON for validation
     meta_path = output_path.with_suffix(".meta.json")
     with open(meta_path, "w") as f:
@@ -252,7 +252,7 @@ def main():
     parser.add_argument("--tokenizer", type=Path, help="Tokenizer file to embed")
     parser.add_argument("--config", type=Path, help="Model config.json file")
     args = parser.parse_args()
-    
+
     # Load config
     config = None
     if args.config and args.config.exists():
@@ -267,7 +267,7 @@ def main():
             sys.exit(1)
         args.input = st_files[0]
         print(f"Using SafeTensors file: {args.input}")
-        
+
     # Convert
     convert_safetensors_to_gguf(
         args.input,

@@ -36,16 +36,16 @@ print(f"Offset after header: {offset}")
 for i in range(min(5, metadata_count)):  # Just first 5 for debugging
     print(f"\n--- Metadata entry {i} ---")
     print(f"Offset before key: {offset}")
-    
+
     # Read key
     key, offset = read_string(data, offset)
     print(f"Key: {key.decode('utf-8', errors='replace')}")
-    
+
     # Read value type
     value_type = struct.unpack('B', data[offset:offset+1])[0]
     offset += 1
     print(f"Value type: {value_type}")
-    
+
     # Skip value parsing for now, just advance offset based on type
     if value_type == 8:  # String
         val, offset = read_string(data, offset)
@@ -67,7 +67,7 @@ for i in range(min(5, metadata_count)):  # Just first 5 for debugging
     else:
         print(f"Skipping value type {value_type}")
         break
-    
+
     # Apply alignment after value
     old_offset = offset
     offset = align_up(offset, 32)

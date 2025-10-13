@@ -1,0 +1,335 @@
+================================================================================
+BitNet.rs Validation Policy Examples - Complete Summary
+================================================================================
+
+Created: 2025-10-13
+Location: /home/steven/code/Rust/BitNet-rs/examples/policies/
+
+================================================================================
+Files Created (7 total, ~100KB)
+================================================================================
+
+Documentation Files:
+-------------------
+1. README.md (21K)
+   - Comprehensive policy system documentation
+   - Policy file structure and usage
+   - Three validation gate modes (none, auto, policy)
+   - Step-by-step custom policy creation guide
+   - Common issues and troubleshooting
+   - Best practices and CI/CD integration
+   - Environment variables reference
+
+2. QUICK_START.md (9.2K)
+   - 60-second quick start guide
+   - Three-step validation process
+   - Common scenarios with solutions
+   - Environment variable quick setup
+   - CI/CD integration examples
+   - FAQ section
+
+3. POLICY_COMPARISON.md (12K)
+   - Visual policy selection flowchart
+   - Threshold comparison table
+   - Use case matrix with commands
+   - Auto-detection logic explanation
+   - Common validation scenarios
+   - Troubleshooting decision tree
+
+Policy Files (Production-Ready):
+--------------------------------
+4. bitnet-b158-f16-clean.yml (6.3K)
+   - BitNet b1.58 F16 (unquantized) validation policy
+   - Based on ln_rules.rs::rules_bitnet_b158_f16()
+   - LayerNorm patterns:
+     * ffn_layernorm: [0.05, 2.0]
+     * post_attention_layernorm: [0.25, 2.0]
+     * input_layernorm: [0.35, 2.0]
+     * final_norm: [0.50, 2.0]
+   - Projection RMS: [0.01, 0.40]
+   - Use for: Clean F16 exports from st2gguf
+
+5. bitnet-b158-i2s-quantized.yml (11K)
+   - BitNet b1.58 I2_S quantized validation policy
+   - Based on ln_rules.rs::rules_bitnet_b158_i2s()
+   - LayerNorm patterns:
+     * attn_norm: [0.01, 2.0] (very permissive for I2_S)
+     * ffn_norm: [0.50, 2.0]
+     * final_norm: [0.50, 2.0]
+     * generic: [0.25, 2.0]
+   - Projection RMS: [0.002, 0.20]
+   - Use for: I2_S quantized BitNet models
+
+6. llama-generic.yml (10K)
+   - LLaMA-style RMSNorm validation policy
+   - Based on ln_rules.rs::rules_generic()
+   - LayerNorm patterns:
+     * All norms: [0.80, 1.20] (conservative)
+   - Projection RMS: null (no validation)
+   - Use for: LLaMA, Mistral, generic RMSNorm models
+
+Templates:
+----------
+7. custom-model-example.yml (18K)
+   - Comprehensive template for custom policies
+   - Includes:
+     * Validation rules section with examples
+     * Correction policies section (optional)
+     * Detailed comments and explanations
+     * Multiple policy variant examples
+     * Step-by-step creation workflow
+     * LN_GAMMA_RESCALE_RMS correction example
+     * I2S_DEQUANT_OVERRIDE correction example
+   - Use for: Creating policies for new architectures
+
+================================================================================
+Key Features
+================================================================================
+
+Policy Structure:
+-----------------
+✓ YAML format matching ln_rules.rs implementation
+✓ Regex patterns for tensor name matching
+✓ Per-layer-type RMS thresholds
+✓ Optional projection weight validation
+✓ Optional correction policies (fingerprint-based)
+
+Validation Modes:
+-----------------
+1. none   - No validation (debugging only)
+2. auto   - Auto-select policy from GGUF metadata (recommended)
+3. policy - Explicit policy file and key
+
+Architecture Coverage:
+----------------------
+✓ BitNet b1.58 F16 clean exports (st2gguf)
+✓ BitNet b1.58 I2_S quantized models
+✓ LLaMA/Mistral/generic RMSNorm
+✓ Custom architectures (via template)
+
+Documentation Features:
+-----------------------
+✓ Comprehensive comments in all YAML files
+✓ Real-world examples and command snippets
+✓ Troubleshooting guides with diagnostics
+✓ Best practices and anti-patterns
+✓ CI/CD integration examples
+✓ Visual flowcharts and tables
+✓ Quick start and detailed reference
+
+================================================================================
+Usage Patterns
+================================================================================
+
+1. Quick Validation (Auto-Detect Policy):
+   $ cargo run -p bitnet-cli -- inspect --ln-stats --gate auto model.gguf
+
+2. Explicit Policy:
+   $ cargo run -p bitnet-cli -- inspect --ln-stats \
+       --policy examples/policies/bitnet-b158-f16-clean.yml \
+       --policy-key bitnet-b1.58:f16 \
+       model.gguf
+
+3. Create Custom Policy:
+   $ cp examples/policies/custom-model-example.yml my-policy.yml
+   $ cargo run -p bitnet-cli -- inspect --ln-stats my-model.gguf > stats.txt
+   # Edit my-policy.yml based on stats.txt measurements
+   $ cargo run -p bitnet-cli -- inspect --ln-stats \
+       --policy my-policy.yml --policy-key my-model:f16 my-model.gguf
+
+4. Inference with Validation:
+   $ export BITNET_VALIDATION_GATE=auto
+   $ cargo run -p bitnet-cli --no-default-features --features cpu -- run \
+       --model model.gguf --prompt "Test"
+
+5. CI/CD Strict Validation:
+   $ export BITNET_STRICT_MODE=1 BITNET_VALIDATION_GATE=auto
+   $ cargo run -p bitnet-cli -- inspect --ln-stats model.gguf
+   $ [ $? -eq 0 ] || exit 1  # Fail CI on validation errors
+
+================================================================================
+Policy Comparison
+================================================================================
+
+LayerNorm Gamma RMS Thresholds:
+--------------------------------
+| Layer Type           | LLaMA  | BitNet-F16 | BitNet-I2_S | Notes              |
+|----------------------|--------|------------|-------------|--------------------|
+| attn_norm            | [0.8,  | [0.5,      | [0.01,      | I2_S very low      |
+|                      |  1.2]  |  2.0]      |  2.0]       | (~0.01-0.02)       |
+| ffn_norm             | [0.8,  | [0.05,     | [0.50,      | BitNet arch low    |
+|                      |  1.2]  |  2.0]      |  2.0]       |                    |
+| post_attn_layernorm  | [0.8,  | [0.25,     | N/A         | BitNet-specific    |
+|                      |  1.2]  |  2.0]      |             |                    |
+| input_layernorm      | [0.8,  | [0.35,     | N/A         | BitNet-specific    |
+|                      |  1.2]  |  2.0]      |             |                    |
+| final_norm           | [0.8,  | [0.50,     | [0.50,      | Critical layer     |
+|                      |  1.2]  |  2.0]      |  2.0]       |                    |
+| Generic fallback     | [0.8,  | [0.50,     | [0.25,      | Catch-all          |
+|                      |  1.2]  |  2.0]      |  2.0]       |                    |
+
+Projection Weight RMS:
+----------------------
+| Policy              | Min RMS | Max RMS | Notes                              |
+|---------------------|---------|---------|------------------------------------|
+| LLaMA-Generic       | null    | null    | No validation (arch-dependent)     |
+| BitNet-F16          | 0.01    | 0.40    | F16 projections (typical 0.01-0.25)|
+| BitNet-I2_S         | 0.002   | 0.20    | I2_S dequant smaller RMS           |
+
+================================================================================
+Reference Implementation
+================================================================================
+
+These policies are based on the Rust implementation in:
+  crates/bitnet-cli/src/ln_rules.rs
+
+Functions:
+  - rules_bitnet_b158_f16() → bitnet-b158-f16-clean.yml
+  - rules_bitnet_b158_i2s() → bitnet-b158-i2s-quantized.yml
+  - rules_generic()         → llama-generic.yml
+  - detect_rules()          → auto-detection logic
+
+Policy format matches the YAML schema expected by:
+  - load_policy() function in ln_rules.rs
+  - YamlRule and YamlRuleset structs
+
+================================================================================
+Testing and Validation
+================================================================================
+
+These policies have been:
+✓ Structured to match ln_rules.rs implementation
+✓ Documented with comprehensive comments
+✓ Provided with usage examples
+✓ Explained with troubleshooting guides
+✓ Integrated with CI/CD patterns
+
+Users should test policies by:
+1. Inspecting model with --ln-stats --verbose
+2. Comparing measured RMS with policy thresholds
+3. Validating inference output quality
+4. Testing across multiple model checkpoints
+
+================================================================================
+Integration Points
+================================================================================
+
+Policy files integrate with:
+
+1. bitnet-cli inspect command:
+   - --gate {none|auto|policy}
+   - --policy <path> --policy-key <key>
+   - --ln-stats --verbose
+
+2. Environment variables:
+   - BITNET_VALIDATION_GATE
+   - BITNET_VALIDATION_POLICY
+   - BITNET_VALIDATION_POLICY_KEY
+   - BITNET_STRICT_MODE
+
+3. Model loading:
+   - Auto-validation during GGUF load
+   - Policy selection based on metadata
+   - Validation receipts in logs
+
+4. CI/CD workflows:
+   - Pre-commit model validation
+   - Export pipeline validation
+   - Quality gate enforcement
+
+================================================================================
+Related Documentation
+================================================================================
+
+Repository Documentation:
+-------------------------
+- docs/explanation/correction-policy.md
+  Detailed correction policy system documentation
+
+- docs/howto/export-clean-gguf.md
+  Clean GGUF export workflow and validation
+
+- CLAUDE.md (root)
+  Quick reference for LayerNorm troubleshooting
+
+- correction-policy-sample.yml (root)
+  Sample correction policy with examples
+
+Rust Implementation:
+--------------------
+- crates/bitnet-cli/src/ln_rules.rs
+  Validation rules implementation
+
+- crates/bitnet-cli/src/commands/inspect.rs
+  Inspect command integration
+
+================================================================================
+Future Extensions
+================================================================================
+
+Potential additions to examples/policies/:
+
+1. More architecture-specific policies:
+   - phi-2.yml, phi-3.yml
+   - gemma.yml
+   - qwen.yml
+   - custom-bitnet-variants.yml
+
+2. Quantization-specific policies:
+   - bitnet-b158-q4_0.yml
+   - bitnet-b158-q8_0.yml
+
+3. Fine-tuning-aware policies:
+   - bitnet-b158-lora.yml
+   - bitnet-b158-qlora.yml
+
+4. Additional documentation:
+   - MIGRATION_GUIDE.md (from no-validation to policy-based)
+   - POLICY_DEVELOPMENT.md (advanced policy creation)
+   - CORRECTION_COOKBOOK.md (common correction patterns)
+
+================================================================================
+Maintenance
+================================================================================
+
+When updating policies:
+
+1. Keep in sync with ln_rules.rs implementation
+2. Test against multiple model variants
+3. Document changes in commit messages
+4. Update comparison tables in docs
+5. Add usage examples for new patterns
+
+When adding new policies:
+
+1. Follow custom-model-example.yml structure
+2. Include comprehensive comments
+3. Provide usage examples
+4. Add to README.md comparison table
+5. Test with real models
+
+================================================================================
+Support and Contribution
+================================================================================
+
+Issues with policies:
+1. Run --ln-stats --verbose to diagnose
+2. Check GGUF metadata (architecture, file_type)
+3. Compare with similar models
+4. Open GitHub issue with inspection output
+
+Contributing new policies:
+1. Test thoroughly across model variants
+2. Document assumptions and thresholds
+3. Include usage examples
+4. Validate in CI pipeline
+5. Update README.md and POLICY_COMPARISON.md
+
+================================================================================
+License
+================================================================================
+
+All policy files in this directory are provided under the same license as
+BitNet.rs: MIT OR Apache-2.0
+
+================================================================================

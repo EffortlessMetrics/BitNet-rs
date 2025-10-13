@@ -69,7 +69,7 @@ cargo test --no-default-features --features cpu -p bitnet-quantization test_i2s_
 ```bash
 # Compare SIMD vs scalar implementations
 cargo bench --no-default-features --features cpu -p bitnet-quantization simd_vs_scalar
-# Run comprehensive compatibility tests  
+# Run comprehensive compatibility tests
 cargo test --no-default-features --features cpu -p bitnet-quantization test_simd_performance_baseline
 ```
 
@@ -314,7 +314,7 @@ let mut buffer = Vec::with_capacity(1024);
 while let Some(token_result) = stream.next().await {
     let token = token_result?;
     buffer.push(token);
-    
+
     // Flush buffer periodically
     if buffer.len() >= 10 {
         let text = buffer.join("");
@@ -411,16 +411,16 @@ use sysinfo::{System, SystemExt};
 fn monitor_memory_usage() {
     let mut system = System::new_all();
     system.refresh_memory();
-    
+
     let used_memory = system.used_memory();
     let total_memory = system.total_memory();
     let usage_percent = (used_memory as f64 / total_memory as f64) * 100.0;
-    
-    println!("Memory usage: {:.1}% ({} MB / {} MB)", 
-             usage_percent, 
+
+    println!("Memory usage: {:.1}% ({} MB / {} MB)",
+             usage_percent,
              used_memory / 1024 / 1024,
              total_memory / 1024 / 1024);
-    
+
     if usage_percent > 80.0 {
         eprintln!("Warning: High memory usage detected!");
     }
@@ -446,7 +446,7 @@ async fn process_batch_concurrent(
             engine.generate(&prompt).await
         })
     });
-    
+
     let results = join_all(tasks).await;
     results.into_iter().collect::<Result<Vec<_>, _>>()?
         .into_iter().collect::<Result<Vec<_>, _>>()
@@ -507,23 +507,23 @@ impl WorkStealingScheduler {
     fn schedule_task(&self, task: Task) {
         self.global_queue.push(task);
     }
-    
+
     fn worker_loop(&self, worker_id: usize) {
         let worker = &self.workers[worker_id];
-        
+
         loop {
             // Try to get task from local queue
             if let Some(task) = worker.pop() {
                 task.execute();
                 continue;
             }
-            
+
             // Try to steal from global queue
             if let Some(task) = self.global_queue.steal() {
                 task.execute();
                 continue;
             }
-            
+
             // Try to steal from other workers
             for stealer in &self.stealers {
                 if let Some(task) = stealer.steal() {
@@ -531,7 +531,7 @@ impl WorkStealingScheduler {
                     break;
                 }
             }
-            
+
             // No work available, yield
             std::thread::yield_now();
         }
@@ -603,11 +603,11 @@ impl PerformanceMetrics {
             memory_usage: register_gauge!("memory_usage_bytes", "Memory usage")?,
         })
     }
-    
+
     fn record_request(&self, duration: Duration, tokens: usize) {
         self.requests_total.inc();
         self.request_duration.observe(duration.as_secs_f64());
-        
+
         let tokens_per_sec = tokens as f64 / duration.as_secs_f64();
         self.tokens_per_second.set(tokens_per_sec);
     }
@@ -631,7 +631,7 @@ async fn health_check(engine: &InferenceEngine) -> HealthStatus {
     let start = Instant::now();
     let test_result = engine.generate("test").await;
     let latency = start.elapsed();
-    
+
     HealthStatus {
         status: if test_result.is_ok() { "healthy" } else { "unhealthy" }.to_string(),
         latency_p50: get_latency_percentile(0.5),
@@ -655,7 +655,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 fn bench_inference_latency(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let engine = rt.block_on(create_test_engine()).unwrap();
-    
+
     c.bench_function("inference_latency", |b| {
         b.to_async(&rt).iter(|| async {
             let result = engine.generate(black_box("Hello, world!")).await;
@@ -674,17 +674,17 @@ criterion_main!(benches);
 fn bench_throughput(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let engine = rt.block_on(create_test_engine()).unwrap();
-    
+
     let prompts: Vec<String> = (0..100)
         .map(|i| format!("Test prompt {}", i))
         .collect();
-    
+
     c.bench_function("throughput_100_requests", |b| {
         b.to_async(&rt).iter(|| async {
             let tasks = prompts.iter().map(|prompt| {
                 engine.generate(black_box(prompt))
             });
-            
+
             let results = futures_util::future::join_all(tasks).await;
             black_box(results)
         })
@@ -700,15 +700,15 @@ fn bench_memory_usage(c: &mut Criterion) {
         b.iter_custom(|iters| {
             let start_memory = get_memory_usage();
             let start_time = Instant::now();
-            
+
             for _ in 0..iters {
                 let engine = create_test_engine_sync();
                 black_box(engine);
             }
-            
+
             let end_memory = get_memory_usage();
             let duration = start_time.elapsed();
-            
+
             println!("Memory delta: {} MB", (end_memory - start_memory) / 1024 / 1024);
             duration
         })
@@ -723,27 +723,27 @@ fn bench_memory_usage(c: &mut Criterion) {
 #[tokio::test]
 async fn test_performance_regression() {
     let engine = create_test_engine().await.unwrap();
-    
+
     // Baseline performance (update these values after verified improvements)
     const EXPECTED_LATENCY_MS: u64 = 100;
     const EXPECTED_THROUGHPUT_TPS: f64 = 10.0;
-    
+
     // Measure current performance
     let start = Instant::now();
     let response = engine.generate("Performance test prompt").await.unwrap();
     let latency = start.elapsed();
-    
+
     let tokens = response.split_whitespace().count();
     let throughput = tokens as f64 / latency.as_secs_f64();
-    
+
     // Assert performance hasn't regressed
     assert!(
         latency.as_millis() <= EXPECTED_LATENCY_MS as u128,
-        "Latency regression: {}ms > {}ms", 
-        latency.as_millis(), 
+        "Latency regression: {}ms > {}ms",
+        latency.as_millis(),
         EXPECTED_LATENCY_MS
     );
-    
+
     assert!(
         throughput >= EXPECTED_THROUGHPUT_TPS,
         "Throughput regression: {:.2} < {:.2} tokens/sec",

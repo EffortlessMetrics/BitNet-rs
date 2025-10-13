@@ -113,7 +113,7 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 
 **Responsibilities:**
 - Automated comparison testing
-- Performance benchmarking  
+- Performance benchmarking
 - Numerical accuracy validation
 - Compatibility verification
 
@@ -127,10 +127,10 @@ This design document outlines the comprehensive restructuring of the BitNet repo
 fn token_equivalence_small_prompt() {
     let model = fixtures::mini_model(); // 20 kB GGUF stub
     let prompt = "Rust and C++ walk into a bar…";
-    
+
     let rust_out = bitnet_rs::generate(&model, prompt);
     let cpp_out = bitnet_cpp::generate(&model, prompt); // via FFI
-    
+
     assert_eq!(rust_out.tokens, cpp_out.tokens); // exact match
 }
 
@@ -138,11 +138,11 @@ fn token_equivalence_small_prompt() {
 #[cfg(feature = "crossval")]
 fn criterion_benchmark(c: &mut Criterion) {
     let model = fixtures::standard_model();
-    
+
     c.bench_function("rust_inference", |b| {
         b.iter(|| bitnet_rs::generate(&model, "test prompt"))
     });
-    
+
     c.bench_function("cpp_inference", |b| {
         b.iter(|| bitnet_cpp::generate(&model, "test prompt"))
     });

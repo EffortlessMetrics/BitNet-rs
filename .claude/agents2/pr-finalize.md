@@ -200,9 +200,9 @@ Your final output **MUST** include this format based on outcome:
 ### Successful Merge
 
 ```text
-## 🎯 Next Steps for Orchestrator  
+## 🎯 Next Steps for Orchestrator
 
-**Finalization Status**: MERGE_SUCCESSFUL ✅  
+**Finalization Status**: MERGE_SUCCESSFUL ✅
 **Recommended Agent**: `pr-doc-finalizer`
 
 **Merge Details**:
@@ -215,7 +215,7 @@ Your final output **MUST** include this format based on outcome:
 **Documentation Context for Next Agent**:
 
 - Changed Files: [List of modified files with impact]
-- API Changes: [Public API modifications requiring doc updates]  
+- API Changes: [Public API modifications requiring doc updates]
 - Breaking Changes: [Any breaking changes requiring migration docs]
 - Performance Impact: [Benchmark results if applicable]
 

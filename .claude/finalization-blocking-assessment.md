@@ -2,10 +2,10 @@
 
 ## Status: BLOCKED - MERGE CANNOT PROCEED ❌
 
-**Date**: 2025-09-02  
-**PR #102**: "Add units module with MB to bytes conversion constant and integrate into testing utilities"  
-**Author**: EffortlessSteven  
-**Size**: 318,197+ additions across 300+ files  
+**Date**: 2025-09-02
+**PR #102**: "Add units module with MB to bytes conversion constant and integrate into testing utilities"
+**Author**: EffortlessSteven
+**Size**: 318,197+ additions across 300+ files
 
 ## Critical Blocking Issues
 
@@ -16,7 +16,7 @@
 - **Impact**: Cannot perform automated merge without extensive manual conflict resolution
 
 ### 2. Overwhelming Scale and Scope 📊
-- **File Changes**: 300+ files (exceeds GitHub diff limit)  
+- **File Changes**: 300+ files (exceeds GitHub diff limit)
 - **Line Changes**: 318,197+ additions
 - **Merge Base**: `c82b5e667482d19bac0ba3817661ff8b30317fec` (August 16th)
 - **Main Branch Divergence**: 100+ commits ahead with major features
@@ -27,7 +27,7 @@
 - **Main Branch**: New `gpu` feature with backward-compatible `cuda` alias
 - **Impact**: Compilation failures, test configuration mismatches
 
-#### CUDA Kernel Implementation Divergence  
+#### CUDA Kernel Implementation Divergence
 - **PR Branch**: Basic kernel implementation with atomics
 - **Main Branch**: CPU-compatible deterministic kernels with parity validation
 - **Impact**: Quantization accuracy differences, test failures
@@ -48,7 +48,7 @@ Major subsystems have evolved incompatibly:
 
 ### High-Impact Conflicts
 ```
-crates/bitnet-kernels/src/gpu/cuda.rs: 
+crates/bitnet-kernels/src/gpu/cuda.rs:
   - Function signatures changed (quantization API)
   - Device info structure evolved
   - Memory management completely rewritten
@@ -59,7 +59,7 @@ crates/bitnet-kernels/src/gpu/kernels/bitnet_kernels.cu:
   - Incompatible kernel interfaces
 
 CLAUDE.md:
-  - Feature documentation conflicts 
+  - Feature documentation conflicts
   - Build command differences
   - Updated troubleshooting steps
 ```
@@ -80,12 +80,12 @@ This PR cannot be safely merged in its current state. The conflicts are too exte
 #### Option A: Scope Reduction (Recommended)
 1. **Create focused PRs** from the useful changes in this branch:
    - Units module and constants (if still needed)
-   - Memory optimization fixes (if still valid)  
+   - Memory optimization fixes (if still valid)
    - Specific clippy/formatting fixes
 2. **Abandon this mega-PR** and close it
 3. **Rebase against current main** for each focused change
 
-#### Option B: Complete Rebuild  
+#### Option B: Complete Rebuild
 1. **Extract the 5-10 most critical changes** from this PR
 2. **Create new branch** from current main
 3. **Manually cherry-pick and adapt** each change individually

@@ -77,27 +77,27 @@ pub fn load_model_with_config(path: &Path, config: Config) -> Result<Model, Erro
 impl Model {
     /// Create a new model with the given configuration
     pub fn new(config: Config) -> Result<Self, Error>
-    
+
     /// Run forward pass on input tensors
     pub fn forward(&self, input: &Tensor) -> Result<Tensor, Error>
-    
+
     /// Generate text from a prompt
     pub fn generate(
         &self,
         prompt: &str,
         params: GenerationParams,
     ) -> Result<String, Error>
-    
+
     /// Stream generation tokens
     pub fn generate_stream(
         &self,
         prompt: &str,
         params: GenerationParams,
     ) -> impl Stream<Item = Result<Token, Error>>
-    
+
     /// Get model configuration
     pub fn config(&self) -> &Config
-    
+
     /// Get model device (CPU/CUDA)
     pub fn device(&self) -> Device
 }
@@ -145,19 +145,19 @@ pub struct InferenceEngine {
 impl InferenceEngine {
     /// Create a new inference engine
     pub fn new(model: Model) -> Result<Self, Error>
-    
+
     /// Process a single request
     pub async fn infer(
         &self,
         request: InferenceRequest,
     ) -> Result<InferenceResponse, Error>
-    
+
     /// Process a batch of requests
     pub async fn infer_batch(
         &self,
         requests: Vec<InferenceRequest>,
     ) -> Result<Vec<InferenceResponse>, Error>
-    
+
     /// Get engine metrics
     pub fn metrics(&self) -> EngineMetrics
 }
@@ -230,16 +230,16 @@ pub struct Tokenizer {
 impl Tokenizer {
     /// Load tokenizer from file
     pub fn from_file(path: &Path) -> Result<Self, Error>
-    
+
     /// Encode text to token IDs
     pub fn encode(&self, text: &str) -> Result<Vec<u32>, Error>
-    
+
     /// Decode token IDs to text
     pub fn decode(&self, tokens: &[u32]) -> Result<String, Error>
-    
+
     /// Get vocabulary size
     pub fn vocab_size(&self) -> usize
-    
+
     /// Get special tokens
     pub fn special_tokens(&self) -> &SpecialTokens
 }

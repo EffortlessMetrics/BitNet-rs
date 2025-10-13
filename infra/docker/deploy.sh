@@ -80,25 +80,25 @@ EOF
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check Docker
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed. Please install Docker first."
         exit 1
     fi
-    
+
     # Check Docker Compose
     if ! command -v docker-compose &> /dev/null; then
         log_error "Docker Compose is not installed. Please install Docker Compose first."
         exit 1
     fi
-    
+
     # Check if Docker daemon is running
     if ! docker info &> /dev/null; then
         log_error "Docker daemon is not running. Please start Docker first."
         exit 1
     fi
-    
+
     log_success "Prerequisites check passed"
 }
 
@@ -106,20 +106,20 @@ check_prerequisites() {
 setup_directories() {
     local models_dir="${BITNET_MODELS_DIR:-${SCRIPT_DIR}/models}"
     local config_dir="${BITNET_CONFIG_DIR:-${SCRIPT_DIR}/config}"
-    
+
     log_info "Setting up directories..."
-    
+
     # Create directories if they don't exist
     mkdir -p "$models_dir"
     mkdir -p "$config_dir"
     mkdir -p "${SCRIPT_DIR}/logs"
-    
+
     # Check if model files exist
     if [ ! "$(ls -A "$models_dir" 2>/dev/null)" ]; then
         log_warning "No model files found in $models_dir"
         log_info "Please place your GGUF model files in the models directory"
     fi
-    
+
     # Create default configuration if it doesn't exist
     if [ ! -f "$config_dir/server.toml" ]; then
         log_info "Creating default server configuration..."
@@ -156,24 +156,24 @@ EOF
 # Build Docker images
 build_images() {
     log_info "Building Docker images..."
-    
+
     cd "$SCRIPT_DIR"
-    
+
     # Build primary Rust image
     docker build -f Dockerfile.rust-primary -t bitnet-rs:latest "$PROJECT_ROOT"
-    
+
     # Build GPU image if requested
     if [[ "$1" == *"gpu"* ]]; then
         log_info "Building GPU-enabled image..."
         docker build -f Dockerfile.rust-gpu -t bitnet-rs:gpu "$PROJECT_ROOT"
     fi
-    
+
     # Build legacy image for cross-validation if requested
     if [[ "$1" == *"crossval"* ]]; then
         log_info "Building legacy cross-validation image..."
         docker build -f Dockerfile.legacy-crossval -t bitnet-legacy:crossval "$PROJECT_ROOT"
     fi
-    
+
     log_success "Docker images built successfully"
 }
 
@@ -181,15 +181,15 @@ build_images() {
 deploy_production() {
     local profile="${1:-}"
     local no_monitoring="${2:-false}"
-    
+
     log_info "Deploying BitNet.rs production environment..."
-    
+
     cd "$SCRIPT_DIR"
-    
+
     # Set environment variables
     export GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin123}"
     export COMPOSE_PROJECT_NAME="bitnet-rs"
-    
+
     # Deploy services
     if [ "$no_monitoring" = "true" ]; then
         docker-compose -f "$DOCKER_COMPOSE_FILE" up -d bitnet-server nginx redis
@@ -200,14 +200,14 @@ deploy_production() {
             docker-compose -f "$DOCKER_COMPOSE_FILE" up -d
         fi
     fi
-    
+
     # Wait for services to be ready
     log_info "Waiting for services to be ready..."
     sleep 30
-    
+
     # Check service health
     check_service_health
-    
+
     log_success "BitNet.rs production environment deployed successfully"
     show_service_urls
 }
@@ -215,32 +215,32 @@ deploy_production() {
 # Deploy GPU environment
 deploy_gpu() {
     log_info "Deploying BitNet.rs with GPU support..."
-    
+
     # Check for NVIDIA Docker runtime
     if ! docker info | grep -q nvidia; then
         log_warning "NVIDIA Docker runtime not detected. GPU features may not work."
     fi
-    
+
     cd "$SCRIPT_DIR"
     export COMPOSE_PROJECT_NAME="bitnet-rs-gpu"
-    
+
     docker-compose -f "$DOCKER_COMPOSE_FILE" --profile gpu up -d
-    
+
     log_success "BitNet.rs GPU environment deployed successfully"
 }
 
 # Deploy cross-validation environment
 deploy_crossval() {
     log_info "Deploying cross-validation environment..."
-    
+
     cd "$SCRIPT_DIR"
     export COMPOSE_PROJECT_NAME="bitnet-crossval"
-    
+
     docker-compose -f "$CROSSVAL_COMPOSE_FILE" up -d
-    
+
     log_info "Running cross-validation tests..."
     docker-compose -f "$CROSSVAL_COMPOSE_FILE" up crossval-runner benchmark-runner
-    
+
     log_success "Cross-validation environment deployed successfully"
     log_info "Results available at http://localhost:8082"
 }
@@ -249,20 +249,20 @@ deploy_crossval() {
 check_service_health() {
     local max_attempts=30
     local attempt=1
-    
+
     log_info "Checking service health..."
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -f -s http://localhost:8080/health > /dev/null; then
             log_success "BitNet server is healthy"
             return 0
         fi
-        
+
         log_info "Attempt $attempt/$max_attempts: Waiting for BitNet server..."
         sleep 5
         ((attempt++))
     done
-    
+
     log_error "BitNet server health check failed after $max_attempts attempts"
     return 1
 }
@@ -286,7 +286,7 @@ show_status() {
 show_logs() {
     local service="${1:-}"
     cd "$SCRIPT_DIR"
-    
+
     if [ -n "$service" ]; then
         docker-compose -f "$DOCKER_COMPOSE_FILE" logs -f "$service"
     else
@@ -298,10 +298,10 @@ show_logs() {
 stop_services() {
     log_info "Stopping BitNet.rs services..."
     cd "$SCRIPT_DIR"
-    
+
     docker-compose -f "$DOCKER_COMPOSE_FILE" down
     docker-compose -f "$CROSSVAL_COMPOSE_FILE" down 2>/dev/null || true
-    
+
     log_success "Services stopped"
 }
 
@@ -317,17 +317,17 @@ restart_services() {
 cleanup() {
     log_warning "This will remove all containers, volumes, and data. Are you sure? (y/N)"
     read -r response
-    
+
     if [[ "$response" =~ ^[Yy]$ ]]; then
         log_info "Cleaning up BitNet.rs deployment..."
         cd "$SCRIPT_DIR"
-        
+
         docker-compose -f "$DOCKER_COMPOSE_FILE" down -v --remove-orphans
         docker-compose -f "$CROSSVAL_COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
-        
+
         # Remove images
         docker rmi bitnet-rs:latest bitnet-rs:gpu bitnet-legacy:crossval 2>/dev/null || true
-        
+
         log_success "Cleanup completed"
     else
         log_info "Cleanup cancelled"
@@ -337,17 +337,17 @@ cleanup() {
 # Update services
 update_services() {
     log_info "Updating BitNet.rs services..."
-    
+
     # Pull latest images
     cd "$SCRIPT_DIR"
     docker-compose -f "$DOCKER_COMPOSE_FILE" pull
-    
+
     # Rebuild custom images
     build_images
-    
+
     # Restart services
     restart_services
-    
+
     log_success "Services updated successfully"
 }
 
@@ -357,7 +357,7 @@ main() {
     local profile=""
     local env="prod"
     local no_monitoring="false"
-    
+
     # Parse arguments
     shift || true
     while [[ $# -gt 0 ]]; do
@@ -383,7 +383,7 @@ main() {
                 ;;
         esac
     done
-    
+
     # Execute command
     case $command in
         deploy)

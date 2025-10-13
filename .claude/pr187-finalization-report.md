@@ -64,7 +64,7 @@ pub struct TimingMetrics {
 }
 
 pub struct ThroughputMetrics {
-    pub prefill: f64,  // ← New field  
+    pub prefill: f64,  // ← New field
     pub decode: f64,
     pub e2e: f64,
 }
@@ -145,7 +145,7 @@ unsafe {
 
 ### Pre-Merge Checklist
 - ✅ All validation gates passed
-- ✅ Code quality standards met  
+- ✅ Code quality standards met
 - ✅ No breaking changes introduced
 - ✅ Performance improvements validated
 - ✅ Safety requirements satisfied

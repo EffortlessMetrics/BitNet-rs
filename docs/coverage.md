@@ -27,7 +27,7 @@ The project includes convenient cargo aliases:
 ```bash
 # Coverage collection
 cargo cov          # XML + LCOV output
-cargo cov-html      # HTML output only  
+cargo cov-html      # HTML output only
 cargo cov-all       # All formats
 
 # Testing
@@ -89,7 +89,7 @@ workflow_dispatch:
 
 The following crates are excluded from coverage:
 - `bitnet-sys` - FFI bindings
-- `crossval` - Cross-validation utilities  
+- `crossval` - Cross-validation utilities
 - `xtask` - Build utilities
 - `bitnet-cli` - CLI application
 
@@ -122,7 +122,7 @@ Coverage artifacts are uploaded on every CI run:
 
 ### Available Downloads
 - `coverage-unit-tests` - Unit test coverage
-- `coverage-integration-tests` - Integration test coverage  
+- `coverage-integration-tests` - Integration test coverage
 - `coverage-combined-coverage` - Complete analysis
 - `coverage-summary` - Comprehensive summary
 

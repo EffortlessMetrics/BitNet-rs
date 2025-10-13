@@ -76,20 +76,20 @@ impl HtmlReporter {
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
             background-color: #f5f5f5;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -98,24 +98,24 @@ impl HtmlReporter {
             margin-bottom: 2rem;
             text-align: center;
         }
-        
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 0.5rem;
         }
-        
+
         .header .subtitle {
             font-size: 1.1rem;
             opacity: 0.9;
         }
-        
+
         .summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
-        
+
         .summary-card {
             background: white;
             padding: 1.5rem;
@@ -123,17 +123,17 @@ impl HtmlReporter {
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
         }
-        
+
         .summary-card h3 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
         }
-        
+
         .summary-card.passed h3 { color: #28a745; }
         .summary-card.failed h3 { color: #dc3545; }
         .summary-card.skipped h3 { color: #ffc107; }
         .summary-card.total h3 { color: #6c757d; }
-        
+
         .test-suite {
             background: white;
             margin-bottom: 1.5rem;
@@ -141,7 +141,7 @@ impl HtmlReporter {
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             overflow: hidden;
         }
-        
+
         .suite-header {
             background: #f8f9fa;
             padding: 1rem 1.5rem;
@@ -151,40 +151,40 @@ impl HtmlReporter {
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .suite-header:hover {
             background: #e9ecef;
         }
-        
+
         .suite-title {
             font-size: 1.2rem;
             font-weight: 600;
         }
-        
+
         .suite-stats {
             display: flex;
             gap: 1rem;
             font-size: 0.9rem;
         }
-        
+
         .stat {
             padding: 0.2rem 0.5rem;
             border-radius: 4px;
             font-weight: 500;
         }
-        
+
         .stat.passed { background: #d4edda; color: #155724; }
         .stat.failed { background: #f8d7da; color: #721c24; }
         .stat.skipped { background: #fff3cd; color: #856404; }
-        
+
         .test-cases {
             display: none;
         }
-        
+
         .test-cases.expanded {
             display: block;
         }
-        
+
         .test-case {
             padding: 1rem 1.5rem;
             border-bottom: 1px solid #f1f3f4;
@@ -192,22 +192,22 @@ impl HtmlReporter {
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .test-case:last-child {
             border-bottom: none;
         }
-        
+
         .test-name {
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 0.9rem;
         }
-        
+
         .test-status {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-        
+
         .status-badge {
             padding: 0.2rem 0.6rem;
             border-radius: 12px;
@@ -215,27 +215,27 @@ impl HtmlReporter {
             font-weight: 500;
             text-transform: uppercase;
         }
-        
+
         .status-badge.passed {
             background: #d4edda;
             color: #155724;
         }
-        
+
         .status-badge.failed {
             background: #f8d7da;
             color: #721c24;
         }
-        
+
         .status-badge.skipped {
             background: #fff3cd;
             color: #856404;
         }
-        
+
         .duration {
             font-size: 0.8rem;
             color: #6c757d;
         }
-        
+
         .error-details {
             background: #f8f9fa;
             padding: 1rem;
@@ -246,11 +246,11 @@ impl HtmlReporter {
             white-space: pre-wrap;
             display: none;
         }
-        
+
         .error-details.expanded {
             display: block;
         }
-        
+
         .charts {
             background: white;
             padding: 2rem;
@@ -258,40 +258,40 @@ impl HtmlReporter {
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
-        
+
         .chart-container {
             height: 300px;
             margin: 1rem 0;
         }
-        
+
         .footer {
             text-align: center;
             padding: 2rem;
             color: #6c757d;
             font-size: 0.9rem;
         }
-        
+
         .toggle-icon {
             transition: transform 0.2s;
         }
-        
+
         .toggle-icon.expanded {
             transform: rotate(90deg);
         }
-        
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
             }
-            
+
             .header h1 {
                 font-size: 2rem;
             }
-            
+
             .summary {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
+
             .suite-stats {
                 flex-direction: column;
                 gap: 0.5rem;
@@ -312,12 +312,12 @@ impl HtmlReporter {
                 header.addEventListener('click', function() {
                     const testCases = this.nextElementSibling;
                     const icon = this.querySelector('.toggle-icon');
-                    
+
                     testCases.classList.toggle('expanded');
                     icon.classList.toggle('expanded');
                 });
             });
-            
+
             // Toggle error details
             document.querySelectorAll('.test-case').forEach(testCase => {
                 testCase.addEventListener('click', function() {
@@ -327,21 +327,21 @@ impl HtmlReporter {
                     }
                 });
             });
-            
+
             // Filter functionality
             const filterButtons = document.querySelectorAll('.filter-btn');
             filterButtons.forEach(btn => {
                 btn.addEventListener('click', function() {
                     const filter = this.dataset.filter;
-                    
+
                     // Update active button
                     filterButtons.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    
+
                     // Filter test cases
                     document.querySelectorAll('.test-case').forEach(testCase => {
                         const status = testCase.querySelector('.status-badge').textContent.toLowerCase();
-                        
+
                         if (filter === 'all' || status === filter) {
                             testCase.style.display = 'flex';
                         } else {

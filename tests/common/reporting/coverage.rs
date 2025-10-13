@@ -21,19 +21,19 @@ use tokio::fs;
 pub enum CoverageError {
     #[error("Tarpaulin execution failed: {0}")]
     TarpaulinError(String),
-    
+
     #[error("Coverage data parsing failed: {0}")]
     ParseError(String),
-    
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
-    
+
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::Error),
-    
+
     #[error("Coverage threshold not met: {actual:.2}% < {threshold:.2}%")]
     ThresholdError { actual: f64, threshold: f64 },
-    
+
     #[error("Trend analysis failed: {0}")]
     TrendError(String),
 }

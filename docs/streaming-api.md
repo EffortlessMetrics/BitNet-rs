@@ -33,7 +33,7 @@ while let Some(result) = stream.next().await {
         Ok(stream_response) => {
             // Access generated text
             print!("{}", stream_response.text);
-            
+
             // Access token IDs (new in v0.1.0)
             for &token_id in &stream_response.token_ids {
                 eprintln!("[DEBUG] Token ID: {}", token_id);
@@ -56,8 +56,8 @@ cargo run -p bitnet-server -- --port 8080 --model model.gguf
 curl -X POST http://localhost:8080/v1/stream \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt": "Explain quantum computing", 
-    "max_tokens": 100, 
+    "prompt": "Explain quantum computing",
+    "max_tokens": 100,
     "temperature": 0.7,
     "detailed_errors": true
   }' \

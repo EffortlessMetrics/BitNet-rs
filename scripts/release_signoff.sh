@@ -101,10 +101,10 @@ if ls bench/results/*.json > /dev/null 2>&1; then
         name=$(basename "$json")
         check "Valid JSON: $name" \
             "jq empty < '$json'"
-        
+
         check "Has platform stamp: $name" \
             "jq -e '.platform' '$json' > /dev/null"
-        
+
         check "Has WSL2 flag: $name" \
             "jq -e '.wsl2 != null' '$json' > /dev/null"
     done
@@ -174,14 +174,14 @@ else
             echo "  - $failure"
         done
     fi
-    
+
     if [ ${#WARNINGS[@]} -gt 0 ]; then
         echo -e "${YELLOW}⚠️  WARNINGS (${#WARNINGS[@]}):${NC}"
         for warning in "${WARNINGS[@]}"; do
             echo "  - $warning"
         done
     fi
-    
+
     echo
     echo -e "${RED}Release blocked. Fix failures before proceeding.${NC}"
     exit 1

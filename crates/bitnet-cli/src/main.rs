@@ -15,6 +15,8 @@ use tracing::{error, info};
 mod commands;
 mod config;
 mod exit;
+#[cfg(feature = "full-cli")]
+mod ln_rules;
 mod sampling;
 mod score;
 
@@ -77,19 +79,19 @@ and serving with support for multiple quantization formats and hardware accelera
 Examples:
   # Run inference with a model
   bitnet inference --model model.gguf --prompt "Hello, world!"
-  
+
   # Interactive mode
   bitnet inference --model model.gguf --interactive
-  
+
   # Batch processing
   bitnet inference --model model.gguf --input-file prompts.txt
-  
+
   # Convert model formats
   bitnet convert --input model.safetensors --output model.gguf
-  
+
   # Benchmark performance
   bitnet benchmark --model model.gguf --device cuda
-  
+
   # Start inference server
   bitnet serve --model model.gguf --port 8080
 

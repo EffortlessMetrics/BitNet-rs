@@ -1,8 +1,8 @@
 # ✅ Check Run: generative:gate:clippy
 
-**Status**: PASS  
-**Agent**: generative-diff-reviewer  
-**Issue**: #439 GPU feature-gate hardening  
+**Status**: PASS
+**Agent**: generative-diff-reviewer
+**Issue**: #439 GPU feature-gate hardening
 **Timestamp**: 2025-10-11T00:00:00Z
 
 ## Summary

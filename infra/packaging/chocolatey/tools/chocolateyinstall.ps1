@@ -8,7 +8,7 @@ $version = $env:ChocolateyPackageVersion
 
 # Determine architecture
 $arch = if ([Environment]::Is64BitOperatingSystem) {
-    if ([Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") -eq "ARM64" -or 
+    if ([Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") -eq "ARM64" -or
         [Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE") -eq "ARM64") {
         "aarch64"
     } else {
@@ -40,7 +40,7 @@ foreach ($binary in $binaries) {
     if (Test-Path $binaryPath) {
         # Create shim
         Install-BinFile -Name ($binary -replace '\.exe$', '') -Path $binaryPath
-        
+
         Write-Host "Installed $binary" -ForegroundColor Green
     } else {
         Write-Warning "Binary not found: $binary"
@@ -54,7 +54,7 @@ try {
         $version = & $cliPath --version 2>&1
         Write-Host "BitNet.rs CLI installed successfully: $version" -ForegroundColor Green
     }
-    
+
     $serverPath = Join-Path $toolsDir 'bitnet-server.exe'
     if (Test-Path $serverPath) {
         $version = & $serverPath --version 2>&1

@@ -14,31 +14,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Node (for wasm tests)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      
+
       - name: Build WASM crate
         env:
           RUSTFLAGS: --cfg=getrandom_backend="wasm_js"
         run: cargo build --locked -p bitnet-wasm --target wasm32-unknown-unknown
-      
+
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      
+
       - name: Run WASM smoke tests (Node)
         working-directory: crates/bitnet-wasm
         env:
           RUSTFLAGS: --cfg=getrandom_backend="wasm_js"
         run: wasm-pack test --node
-      
+
       - name: Build with wasm-pack
         run: |
           cd crates/bitnet-wasm
@@ -51,18 +51,18 @@ jobs:
         python-version: ["3.8", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install maturin
         run: pip install maturin
-      
+
       - name: Build Python bindings
         run: |
           cd crates/bitnet-py
@@ -73,14 +73,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Build FFI crate
         run: cargo build -p bitnet-ffi --release
         continue-on-error: true  # Allow failures for now
-      
+
       - name: Generate C headers
         run: |
           cargo install cbindgen

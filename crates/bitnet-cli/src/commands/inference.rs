@@ -24,7 +24,7 @@
 //! ## Performance Metrics
 //! The enhanced implementation provides detailed performance metrics:
 //! - `prefill_tps`: Prompt processing throughput (tokens/second)
-//! - `decode_tps`: New token generation throughput (tokens/second)  
+//! - `decode_tps`: New token generation throughput (tokens/second)
 //! - `e2e_tps`: End-to-end throughput including all phases
 //! - Timing breakdown for tokenization, prefill, decode, and total
 //!
@@ -60,7 +60,7 @@ use tracing::{debug, error, info, warn};
 use bitnet_inference::{InferenceEngine, SamplingConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
-use candle_core::{Device, backend::BackendDevice};
+use candle_core::Device;
 
 use crate::config::CliConfig;
 

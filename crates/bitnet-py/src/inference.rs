@@ -312,7 +312,7 @@ impl PyInferenceEngine {
 /// from consumption:
 ///
 /// - **Producer**: Background task generates tokens and enqueues them
-/// - **Consumer**: Python iterator polls the queue for available tokens  
+/// - **Consumer**: Python iterator polls the queue for available tokens
 /// - **Backpressure**: Queue size limits prevent unbounded memory growth
 /// - **Cancellation**: Cancellation signals are propagated to the producer
 ///

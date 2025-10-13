@@ -257,7 +257,7 @@ ldd legacy/bitnet.cpp/build/bitnet_cpp  # Check dependencies
 ```rust
 if let Some(mismatch) = &result.accuracy_result.first_mismatch {
     println!("Mismatch at position {}", mismatch.position);
-    println!("Rust token: {} ({})", mismatch.rust_token, 
+    println!("Rust token: {} ({})", mismatch.rust_token,
              tokenizer.decode(&[mismatch.rust_token]));
     println!("C++ token: {} ({})", mismatch.cpp_token,
              tokenizer.decode(&[mismatch.cpp_token]));

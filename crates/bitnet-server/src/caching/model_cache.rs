@@ -101,13 +101,13 @@ impl ModelCache {
                 // Update access information
                 model.last_accessed = Instant::now();
                 model.access_count += 1;
-                
+
                 // Update access order
                 self.update_access_order(model_id).await;
-                
+
                 stats.cache_hits += 1;
                 stats.hit_rate = stats.cache_hits as f64 / stats.total_requests as f64;
-                
+
                 return Ok(Some(model.clone()));
             }
         }
@@ -130,7 +130,7 @@ impl ModelCache {
         for model_id in model_ids {
             if let Some(model) = self.load_model(model_id).await? {
                 self.insert_model(model).await?;
-                
+
                 let mut stats = self.statistics.write().await;
                 stats.pre_warmed_models += 1;
             }
@@ -196,7 +196,7 @@ impl ModelCache {
 
         if let Some(model_id) = model_to_evict {
             self.remove_model(&model_id).await?;
-            
+
             let mut stats = self.statistics.write().await;
             stats.evictions += 1;
         }
@@ -240,10 +240,10 @@ impl ModelCache {
     /// Update access order for a model
     async fn update_access_order(&self, model_id: &str) {
         let mut access_order = self.access_order.write().await;
-        
+
         // Remove the model from its current position
         access_order.retain(|id| id != model_id);
-        
+
         // Add it to the end (most recently used)
         access_order.push(model_id.to_string());
     }
@@ -251,10 +251,10 @@ impl ModelCache {
     /// Load a model (placeholder implementation)
     async fn load_model(&self, model_id: &str) -> Result<Option<CachedModel>> {
         let start_time = Instant::now();
-        
+
         // Simulate model loading time
         tokio::time::sleep(Duration::from_millis(100)).await;
-        
+
         // Create a mock model
         let model_data = vec![0u8; 1024 * 1024]; // 1MB mock model
         let model = CachedModel {
@@ -294,13 +294,13 @@ impl ModelCache {
         let ttl = Duration::from_secs(self.config.model_cache_ttl);
 
         let mut interval = tokio::time::interval(Duration::from_secs(300)); // Check every 5 minutes
-        
+
         loop {
             interval.tick().await;
-            
+
             let now = Instant::now();
             let mut expired_models = Vec::new();
-            
+
             // Find expired models
             {
                 let cache_read = cache.read().await;
@@ -310,7 +310,7 @@ impl ModelCache {
                     }
                 }
             }
-            
+
             // Remove expired models
             for model_id in expired_models {
                 let model_size = {
@@ -321,19 +321,19 @@ impl ModelCache {
                         continue;
                     }
                 };
-                
+
                 // Remove from access order
                 {
                     let mut access_order_write = access_order.write().await;
                     access_order_write.retain(|id| id != &model_id);
                 }
-                
+
                 // Update total size
                 {
                     let mut total_size = total_size_bytes.write().await;
                     *total_size = total_size.saturating_sub(model_size);
                 }
-                
+
                 // Update statistics
                 {
                     let mut stats = statistics.write().await;
@@ -353,18 +353,18 @@ impl ModelCache {
     /// Shutdown the model cache
     pub async fn shutdown(&self) -> Result<()> {
         println!("Shutting down model cache");
-        
+
         // Clear all cached models
         {
             let mut cache = self.cache.write().await;
             cache.clear();
         }
-        
+
         {
             let mut access_order = self.access_order.write().await;
             access_order.clear();
         }
-        
+
         {
             let mut total_size = self.total_size_bytes.write().await;
             *total_size = 0;

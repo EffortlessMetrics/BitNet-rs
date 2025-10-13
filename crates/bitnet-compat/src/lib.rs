@@ -19,7 +19,7 @@
 //! let issues = GgufCompatibilityFixer::diagnose("model.gguf")?;
 //! if !issues.is_empty() {
 //!     println!("Found {} compatibility issues", issues.len());
-//!     
+//!
 //!     // Export a fixed version
 //!     GgufCompatibilityFixer::export_fixed("model.gguf", "model_fixed.gguf")?;
 //! }

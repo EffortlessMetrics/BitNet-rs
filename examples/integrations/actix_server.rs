@@ -127,7 +127,7 @@ enum AppError {
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         let request_id = uuid::Uuid::new_v4().to_string();
-        
+
         let (status, code) = match self {
             AppError::InferenceError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "INFERENCE_ERROR"),
             AppError::ModelError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "MODEL_ERROR"),
@@ -159,7 +159,7 @@ async fn main() -> Result<()> {
 
     // Initialize application state
     let app_state = initialize_app_state().await?;
-    
+
     // Start the HTTP server
     HttpServer::new(move || {
         App::new()
@@ -197,40 +197,40 @@ async fn initialize_app_state() -> Result<AppState> {
 
     // Load configuration
     let config = BitNetConfig::default();
-    
+
     // Determine device
     let device = if cfg!(feature = "cuda") && is_cuda_available() {
         Device::Cuda(0)
     } else {
         Device::Cpu
     };
-    
+
     info!("Using device: {:?}", device);
 
     // Load model (in practice, load from file)
     let model_path = std::env::var("BITNET_MODEL_PATH")
         .unwrap_or_else(|_| "models/bitnet-1.58b.gguf".to_string());
-    
+
     info!("Loading model from: {}", model_path);
     let model = load_model(&model_path, &device).await?;
 
     // Load tokenizer
     let tokenizer_name = std::env::var("BITNET_TOKENIZER")
         .unwrap_or_else(|_| "gpt2".to_string());
-    
+
     info!("Loading tokenizer: {}", tokenizer_name);
     let tokenizer = TokenizerBuilder::from_pretrained(&tokenizer_name)?;
 
     // Create inference engine
     let inference_engine = InferenceEngine::new(model, tokenizer, device)?;
-    
+
     // Load API keys from environment
     let api_keys = std::env::var("BITNET_API_KEYS")
         .unwrap_or_else(|_| "demo-key-123,test-key-456".to_string())
         .split(',')
         .map(|s| s.trim().to_string())
         .collect();
-    
+
     info!("Application state initialized successfully");
 
     Ok(AppState {
@@ -248,7 +248,7 @@ async fn auth_validator(
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let app_state = req.app_data::<web::Data<AppState>>().unwrap();
-    
+
     if app_state.api_keys.contains(&credentials.token().to_string()) {
         // Update authenticated request stats
         if let Ok(mut stats) = app_state.stats.try_write() {
@@ -288,7 +288,7 @@ async fn generate_handler(
 ) -> ActixResult<HttpResponse, AppError> {
     let start_time = Instant::now();
     let request_id = uuid::Uuid::new_v4().to_string();
-    
+
     // Update stats
     {
         let mut stats = app_state.stats.write().await;
@@ -380,7 +380,7 @@ async fn generate_stream_handler(
     let stream = async_stream::stream! {
         let mut engine = app_state.inference_engine.write().await;
         let mut token_stream = engine.generate_stream_with_config(&request.prompt, &gen_config);
-        
+
         let mut token_count = 0;
         while let Some(token_result) = token_stream.next().await {
             match token_result {
@@ -393,7 +393,7 @@ async fn generate_stream_handler(
                         error: None,
                         request_id: request_id.clone(),
                     };
-                    
+
                     let json_str = serde_json::to_string(&chunk).unwrap();
                     yield Ok::<_, AppError>(Bytes::from(format!("data: {}\n\n", json_str)));
                 }
@@ -405,14 +405,14 @@ async fn generate_stream_handler(
                         error: Some(e.to_string()),
                         request_id: request_id.clone(),
                     };
-                    
+
                     let json_str = serde_json::to_string(&error_chunk).unwrap();
                     yield Ok(Bytes::from(format!("data: {}\n\n", json_str)));
                     break;
                 }
             }
         }
-        
+
         // Send completion chunk
         let done_chunk = StreamChunk {
             token: None,
@@ -421,7 +421,7 @@ async fn generate_stream_handler(
             error: None,
             request_id: request_id.clone(),
         };
-        
+
         let json_str = serde_json::to_string(&done_chunk).unwrap();
         yield Ok(Bytes::from(format!("data: {}\n\n", json_str)));
     };
@@ -584,10 +584,10 @@ curl http://localhost:3000/api/health
 /// Load model (mock implementation for example)
 async fn load_model(path: &str, device: &Device) -> Result<Box<dyn Model>> {
     info!("Loading model from: {}", path);
-    
+
     // In practice, this would load a real model
     tokio::time::sleep(Duration::from_millis(100)).await; // Simulate loading time
-    
+
     Ok(Box::new(MockModel::new()))
 }
 
@@ -731,7 +731,7 @@ mod tests {
         fn pad_token_id(&self) -> Option<u32> {
             None
         }
-        
+
         fn token_to_piece(&self, token: u32) -> Option<String> {
             Some(format!("<token_{}>", token))
         }

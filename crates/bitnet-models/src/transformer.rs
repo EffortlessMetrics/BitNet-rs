@@ -144,7 +144,7 @@ impl RotaryEmbedding {
             // Get cos/sin for the position
             let cos = self.cos.narrow(0, position, seq_len)?
                 .unsqueeze(0)?  // Add batch dim
-                .unsqueeze(1)?  // Add heads dim  
+                .unsqueeze(1)?  // Add heads dim
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
             let sin = self
                 .sin

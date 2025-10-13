@@ -145,9 +145,9 @@ for suggestion in error.recovery_suggestions() {
 
 // Get step-by-step troubleshooting
 for step in error.troubleshooting_steps() {
-    println!("Step {}: {} - {}", 
-             step.step_number, 
-             step.title, 
+    println!("Step {}: {} - {}",
+             step.step_number,
+             step.title,
              step.estimated_time);
 }
 

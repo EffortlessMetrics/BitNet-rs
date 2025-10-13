@@ -155,7 +155,7 @@ use bitnet_tests::prelude::*;
 // OLD (will fail)
 fn process(items: &Vec<String>) { ... }
 
-// NEW (correct)  
+// NEW (correct)
 fn process(items: &[String]) { ... }
 ```
 

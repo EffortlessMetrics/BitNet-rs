@@ -17,10 +17,10 @@ tokenizer.ggml.model = "gpt2"
 **Error Message**:
 ```
 llm_load_vocab: missing pre-tokenizer type, using: 'default'
-llm_load_vocab: ************************************        
-llm_load_vocab: GENERATION QUALITY WILL BE DEGRADED!        
-llm_load_vocab: CONSIDER REGENERATING THE MODEL             
-llm_load_vocab: ************************************  
+llm_load_vocab: ************************************
+llm_load_vocab: GENERATION QUALITY WILL BE DEGRADED!
+llm_load_vocab: CONSIDER REGENERATING THE MODEL
+llm_load_vocab: ************************************
 ```
 
 **Impact**: The C++ implementation doesn't know how to properly pre-process text before tokenization because the pre-tokenizer type is not specified in the model metadata.

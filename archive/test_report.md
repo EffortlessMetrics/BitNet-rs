@@ -9,7 +9,7 @@ All unit tests across workspace crates passed successfully.
 
 ### Key Crates Tested:
 - `bitnet-common`: Core types and configuration
-- `bitnet-kernels`: SIMD optimized compute kernels  
+- `bitnet-kernels`: SIMD optimized compute kernels
 - `bitnet-quantization`: Quantization algorithms
 - `bitnet-inference`: Inference engine
 - `bitnet-models`: Model loading and formats

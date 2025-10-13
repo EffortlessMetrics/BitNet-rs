@@ -105,7 +105,7 @@ pip install bitnet-py --no-binary bitnet-py
 ```
 Error: tensor 'tok_embeddings.weight' offset 12345 not aligned to 32
 Error: tensor 'lm_head.weight' dims mismatch
-Error: data section not aligned to 32  
+Error: data section not aligned to 32
 Error: Model error: Tensor alignment validation failed
 ```
 
@@ -166,7 +166,7 @@ stat model.gguf  # Check file size and permissions
 **What BitNet.rs Validates (Enhanced in PR #210):**
 - **Tensor Offset Alignment**: All tensor offsets must align to `general.alignment` (typically 32 bytes)
 - **Data Section Alignment**: The tensor data section must be properly aligned
-- **Metadata Consistency**: The n_dims field must match the actual dimensions array length  
+- **Metadata Consistency**: The n_dims field must match the actual dimensions array length
 - **Memory Bounds**: Prevents out-of-bounds access with detailed tensor information
 - **Robust Error Messages**: Clear error messages with tensor names and offset values
 
@@ -322,7 +322,7 @@ cargo test --no-default-features --workspace --no-default-features --features cp
 
 **Common IQ2_S Issues:**
 - **Old models**: Models quantized before v0.1.0 may use 66-byte blocks instead of 82-byte
-- **Zero mapping**: Models with [-2,-1,0,1] mapping instead of [-2,-1,1,2] 
+- **Zero mapping**: Models with [-2,-1,0,1] mapping instead of [-2,-1,1,2]
 - **FFI dependency**: IQ2_S requires `iq2s-ffi` feature for GGML compatibility
 - **Block alignment**: Ensure tensor data aligns with 82-byte block boundaries
 
@@ -614,7 +614,7 @@ Async runtime panic: Cannot start a runtime from within a runtime
 
 **Root Causes:**
 - Unbounded channel usage leading to memory exhaustion
-- Job counter increment/decrement mismatches causing desynchronization  
+- Job counter increment/decrement mismatches causing desynchronization
 - Improper worker thread cleanup during shutdown
 - Multiple async runtime initialization conflicts
 - Thread pool resource contention

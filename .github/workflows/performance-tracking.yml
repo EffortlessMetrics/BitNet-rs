@@ -52,7 +52,7 @@ jobs:
           - platform: macos-aarch64
             os: macos-latest  # M1 Mac
             target: aarch64-apple-darwin
-    
+
     # Skip platforms based on filter
     if: |
       github.event.inputs.platform_filter == 'all' ||
@@ -140,7 +140,7 @@ jobs:
     - name: Collect system information
       run: |
         echo "Collecting system information..."
-        
+
         cat > benchmarks-new/results/system-info.json << EOF
         {
           "platform": "${{ matrix.platform }}",
@@ -161,20 +161,20 @@ jobs:
     - name: Parse benchmark results
       run: |
         echo "Parsing benchmark results..."
-        
+
         # Create a Python script to parse results
         cat > parse_results.py << 'EOF'
         import json
         import re
         import sys
         from pathlib import Path
-        
+
         def parse_rust_benchmarks(results_file):
             """Parse Rust benchmark results from Criterion JSON output"""
             try:
                 with open(results_file, 'r') as f:
                     data = json.load(f)
-                
+
                 results = {}
                 for benchmark in data.get('benchmarks', []):
                     name = benchmark.get('name', '')
@@ -187,49 +187,49 @@ jobs:
                             results['latency_p95_ms'] = benchmark.get('mean', {}).get('estimate', 0) / 1000000
                         elif 'p99' in name.lower():
                             results['latency_p99_ms'] = benchmark.get('mean', {}).get('estimate', 0) / 1000000
-                
+
                 return results
             except Exception as e:
                 print(f"Error parsing Rust benchmarks: {e}")
                 return {}
-        
+
         def parse_crossval_results(results_file):
             """Parse cross-validation results from text output"""
             try:
                 with open(results_file, 'r') as f:
                     content = f.read()
-                
+
                 results = {}
-                
+
                 # Extract performance metrics using regex
                 throughput_match = re.search(r'Rust throughput: ([\d.]+) tokens/sec', content)
                 if throughput_match:
                     results['rust_throughput'] = float(throughput_match.group(1))
-                
+
                 cpp_throughput_match = re.search(r'C\+\+ throughput: ([\d.]+) tokens/sec', content)
                 if cpp_throughput_match:
                     results['cpp_throughput'] = float(cpp_throughput_match.group(1))
-                
+
                 memory_match = re.search(r'Rust memory: ([\d.]+) MB', content)
                 if memory_match:
                     results['rust_memory_mb'] = float(memory_match.group(1))
-                
+
                 accuracy_match = re.search(r'Accuracy score: ([\d.]+)', content)
                 if accuracy_match:
                     results['accuracy_score'] = float(accuracy_match.group(1))
-                
+
                 return results
             except Exception as e:
                 print(f"Error parsing crossval results: {e}")
                 return {}
-        
+
         # Parse results
         rust_results = parse_rust_benchmarks('benchmarks-new/results/rust-results.json')
         crossval_results = {}
-        
+
         if Path('benchmarks-new/results/crossval-results.txt').exists():
             crossval_results = parse_crossval_results('benchmarks-new/results/crossval-results.txt')
-        
+
         # Combine results
         combined_results = {
             'rust_implementation': rust_results,
@@ -237,14 +237,14 @@ jobs:
             'timestamp': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
             'platform': '${{ matrix.platform }}'
         }
-        
+
         # Save parsed results
         with open('benchmarks-new/results/parsed-results.json', 'w') as f:
             json.dump(combined_results, f, indent=2)
-        
+
         print("Benchmark results parsed successfully")
         EOF
-        
+
         python3 parse_results.py
 
     - name: Detect performance regressions
@@ -388,46 +388,46 @@ EOF
       if: github.event.inputs.update_baselines == 'true'
       run: |
         echo "Updating baseline performance numbers..."
-        
+
         # This would update the baselines.json file with new results
         # For now, we'll create a PR with the suggested updates
-        
+
         cat > update-baselines.py << 'EOF'
         import json
         from pathlib import Path
-        
+
         # Load current baselines
         with open('crossval/baselines.json', 'r') as f:
             baselines = json.load(f)
-        
+
         # Load new results
         with open('benchmarks-new/results/parsed-results.json', 'r') as f:
             new_results = json.load(f)
-        
+
         platform = '${{ matrix.platform }}'
-        
+
         # Update baseline for this platform
         if 'baselines' not in baselines:
             baselines['baselines'] = {}
-        
+
         if platform not in baselines['baselines']:
             baselines['baselines'][platform] = {}
-        
+
         # Update Rust implementation baseline
         rust_results = new_results.get('rust_implementation', {})
         if rust_results:
             baselines['baselines'][platform]['rust_implementation'] = rust_results
-        
+
         # Update metadata
         baselines['last_updated'] = new_results.get('timestamp')
-        
+
         # Save updated baselines
         with open('crossval/baselines-updated.json', 'w') as f:
             json.dump(baselines, f, indent=2)
-        
+
         print(f"Updated baselines for {platform}")
         EOF
-        
+
         python3 update-baselines.py
 
   # Aggregate results and create summary
@@ -436,7 +436,7 @@ EOF
     needs: performance-benchmark
     if: always()
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -449,25 +449,25 @@ EOF
     - name: Generate comprehensive summary
       run: |
         echo "Generating comprehensive performance summary..."
-        
+
         cat > performance-summary.md << 'EOF'
         # 🚀 BitNet.rs Performance Summary
-        
+
         **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         **Commit**: ${{ github.sha }}
         **Trigger**: ${{ github.event_name }}
-        
+
         ## Platform Results
-        
+
         EOF
-        
+
         # Process results from each platform
         for platform_dir in all-results/benchmark-results-*; do
           if [[ -d "$platform_dir" ]]; then
             platform=$(basename "$platform_dir" | sed 's/benchmark-results-//')
             echo "### $platform" >> performance-summary.md
             echo "" >> performance-summary.md
-            
+
             if [[ -f "$platform_dir/comparison-results.json" ]]; then
               python3 -c "
         import json
@@ -477,7 +477,7 @@ EOF
                 data = json.load(f)
             status = data.get('comparison', {}).get('status', 'unknown')
             alerts = data.get('comparison', {}).get('alerts', [])
-            
+
             print(f'**Status**: {status.upper()}')
             if alerts:
                 print('')
@@ -489,18 +489,18 @@ EOF
             else
               echo "**Status**: NO DATA" >> performance-summary.md
             fi
-            
+
             echo "" >> performance-summary.md
           fi
         done
-        
+
         echo "## Key Insights" >> performance-summary.md
         echo "" >> performance-summary.md
         echo "- 🦀 **Rust Implementation**: Primary focus with memory safety and performance" >> performance-summary.md
         echo "- ⚡ **Performance**: Typically 15-30% faster than C++ legacy" >> performance-summary.md
         echo "- 🛡️ **Reliability**: Zero memory-related crashes in production" >> performance-summary.md
         echo "- 📊 **Monitoring**: Continuous performance tracking and regression detection" >> performance-summary.md
-        
+
         echo "" >> performance-summary.md
         echo "---" >> performance-summary.md
         echo "*Summary generated by Performance Baseline Tracking workflow*" >> performance-summary.md
@@ -511,27 +511,27 @@ EOF
       with:
         script: |
           const fs = require('fs');
-          
+
           let summaryContent = '';
           try {
             summaryContent = fs.readFileSync('performance-summary.md', 'utf8');
           } catch (error) {
             summaryContent = 'Performance tracking completed.';
           }
-          
+
           const issueTitle = `📊 Daily Performance Tracking - ${new Date().toISOString().split('T')[0]}`;
           const issueBody = `${summaryContent}
-          
+
           ## Actions Required
-          
+
           - [ ] Review any performance regressions
           - [ ] Investigate critical alerts
           - [ ] Update baselines if needed
           - [ ] Consider optimization opportunities
-          
+
           ---
           *This issue was automatically created by the daily performance tracking workflow.*`;
-          
+
           await github.rest.issues.create({
             owner: context.repo.owner,
             repo: context.repo.repo,

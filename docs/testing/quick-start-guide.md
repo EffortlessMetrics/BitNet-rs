@@ -21,10 +21,10 @@ use bitnet_tests::prelude::*;
 async fn test_basic_functionality() {
     // Arrange - Set up test data
     let input = "Hello, BitNet!";
-    
+
     // Act - Perform the operation
     let result = process_input(input).await;
-    
+
     // Assert - Verify the result
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "Processed: Hello, BitNet!");
@@ -54,15 +54,15 @@ use bitnet_tests::common::TestUtilities;
 async fn test_with_temporary_data() {
     // Create temporary directory
     let temp_dir = TestUtilities::create_temp_dir("my_test").await.unwrap();
-    
+
     // Create test file
     let test_file = temp_dir.join("test_data.txt");
     TestUtilities::write_test_file(&test_file, b"test content").await.unwrap();
-    
+
     // Your test logic here
     let content = TestUtilities::read_test_file(&test_file).await.unwrap();
     assert_eq!(content, b"test content");
-    
+
     // Cleanup happens automatically when temp_dir goes out of scope
 }
 ```
@@ -73,7 +73,7 @@ async fn test_with_temporary_data() {
 #[tokio::test]
 async fn test_error_handling() {
     let result = risky_operation().await;
-    
+
     assert!(result.is_err());
     match result.unwrap_err() {
         MyError::InvalidInput(msg) => {
@@ -109,7 +109,7 @@ async fn test_with_timeout() {
         },
         Duration::from_secs(1), // 1 second timeout
     ).await;
-    
+
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "completed");
 }

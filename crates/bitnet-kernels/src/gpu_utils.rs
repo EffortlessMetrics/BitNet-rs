@@ -175,7 +175,7 @@ fn preflight_help_message() -> &'static str {
     - AMD GPUs: Install ROCm from https://rocm.docs.amd.com
     - Apple Silicon: Metal support is built-in on macOS
     - Other GPUs: WebGPU backend provides compatibility
-    
+
     Set CUDA_HOME or ROCM_PATH environment variables after installation."
 }
 

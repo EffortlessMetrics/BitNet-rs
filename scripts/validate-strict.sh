@@ -49,12 +49,12 @@ echo "4. Testing strict mode execution..."
 MODEL_PATH="${BITNET_GGUF:-}"
 if [ -n "$MODEL_PATH" ] && [ -f "$MODEL_PATH" ]; then
     echo "   Using model: $MODEL_PATH"
-    
+
     # Set deterministic execution
     export RAYON_NUM_THREADS=1
     export BITNET_DETERMINISTIC=1
     export BITNET_SEED=42
-    
+
     # Run with strict modes
     if ./target/release/bitnet run \
         --model "$MODEL_PATH" \
@@ -65,19 +65,19 @@ if [ -n "$MODEL_PATH" ] && [ -f "$MODEL_PATH" ]; then
         --strict-tokenizer \
         --json-out /tmp/strict_test.json \
         >/dev/null 2>&1; then
-        
+
         echo -e "${GREEN}✓${NC} Strict mode execution successful"
-        
+
         # Check JSON output
         if [ -f /tmp/strict_test.json ]; then
             UNMAPPED=$(jq -r '.counts.unmapped' /tmp/strict_test.json 2>/dev/null || echo "?")
             N_TENSORS=$(jq -r '.counts.n_tensors' /tmp/strict_test.json 2>/dev/null || echo "?")
             TOK_TYPE=$(jq -r '.tokenizer.type' /tmp/strict_test.json 2>/dev/null || echo "?")
-            
+
             echo "   - Unmapped tensors: $UNMAPPED"
             echo "   - Total tensors: $N_TENSORS"
             echo "   - Tokenizer type: $TOK_TYPE"
-            
+
             if [ "$UNMAPPED" = "0" ]; then
                 echo -e "${GREEN}✓${NC} Zero unmapped tensors (strict mode verified)"
             else
@@ -107,7 +107,7 @@ echo "=== Validation Summary ==="
 echo ""
 echo "Core validation checks:"
 echo "- Build: ✓"
-echo "- Mapper: ✓" 
+echo "- Mapper: ✓"
 echo "- Strict mode: Requires model + tokenizer"
 echo "- A/B comparison: Use scripts/ab-smoke.sh"
 echo ""

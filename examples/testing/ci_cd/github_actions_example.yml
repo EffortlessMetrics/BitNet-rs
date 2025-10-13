@@ -321,19 +321,19 @@ jobs:
             try {
               const results = JSON.parse(fs.readFileSync('benchmark-results.json', 'utf8'));
               const comment = `## 🚀 Performance Benchmark Results
-              
+
               | Benchmark | Time | Change |
               |-----------|------|--------|
               ${results.map(r => `| ${r.name} | ${r.time} | ${r.change || 'N/A'} |`).join('\n')}
-              
+
               <details>
               <summary>View detailed results</summary>
-              
+
               \`\`\`json
               ${JSON.stringify(results, null, 2)}
               \`\`\`
               </details>`;
-              
+
               github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,

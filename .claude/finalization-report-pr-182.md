@@ -3,7 +3,7 @@
 ## Validation Summary ✅ APPROVED FOR MERGE
 
 **PR Title**: Implement streaming inference using futures
-**PR Number**: #182  
+**PR Number**: #182
 **Branch**: `codex/analyze-bitnet-cli-crate-for-issues`
 **Author**: Steven Zimmerman (@EffortlessSteven)
 **Commit SHA**: 5b3d1c5f986889830a3607eb0a2cd251b6e99465
@@ -34,7 +34,7 @@ This PR implements real streaming inference functionality in the BitNet CLI, tra
 
 ### ✅ Technical Implementation
 - **Async Streaming**: Real GenerationStream implementation using futures
-- **NaN Handling**: Robust sorting with `.unwrap_or(std::cmp::Ordering::Equal)`  
+- **NaN Handling**: Robust sorting with `.unwrap_or(std::cmp::Ordering::Equal)`
 - **Error Handling**: Proper error propagation and timeout handling
 - **Performance**: Real prefill execution via `engine.eval_ids()` for accurate metrics
 

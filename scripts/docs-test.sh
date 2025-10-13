@@ -34,7 +34,7 @@ for crate_dir in crates/*/; do
     if [[ -f "$crate_dir/Cargo.toml" ]]; then
         crate_name=$(basename "$crate_dir")
         print_status "Testing documentation for $crate_name..."
-        
+
         cd "$crate_dir"
         RUSTDOCFLAGS="--cfg docsrs" cargo doc --all-features --no-deps
         cd - > /dev/null

@@ -5,7 +5,7 @@ This directory contains comprehensive examples for deploying BitNet.rs on major 
 ## Directory Structure
 
 - **aws/** - Amazon Web Services deployment examples
-- **gcp/** - Google Cloud Platform deployment examples  
+- **gcp/** - Google Cloud Platform deployment examples
 - **azure/** - Microsoft Azure deployment examples
 - **docker/** - Docker containerization examples
 - **kubernetes/** - Kubernetes deployment manifests

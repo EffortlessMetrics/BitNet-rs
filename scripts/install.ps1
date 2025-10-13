@@ -104,7 +104,7 @@ if ($ServerOnly) {
 # Detect platform and architecture
 function Get-Platform {
     $arch = $env:PROCESSOR_ARCHITECTURE
-    
+
     switch ($arch) {
         "AMD64" { return "x86_64-pc-windows-msvc" }
         "ARM64" { return "aarch64-pc-windows-msvc" }
@@ -119,11 +119,11 @@ function Get-Platform {
 function Get-LatestVersion {
     $apiUrl = "$GitHubAPI/releases/latest"
     $headers = @{}
-    
+
     if ($env:GITHUB_TOKEN) {
         $headers["Authorization"] = "token $env:GITHUB_TOKEN"
     }
-    
+
     try {
         $response = Invoke-RestMethod -Uri $apiUrl -Headers $headers
         return $response.tag_name
@@ -137,7 +137,7 @@ function Get-LatestVersion {
 # Download and extract binary
 function Install-BitNet {
     $platform = Get-Platform
-    
+
     if ($Version -eq "latest") {
         $version = Get-LatestVersion
         if (-not $version) {
@@ -148,16 +148,16 @@ function Install-BitNet {
     else {
         $version = $Version
     }
-    
+
     Write-Info "Installing BitNet.rs $version for $platform"
-    
+
     # Construct download URL
     $filename = "bitnet-$platform.zip"
     $downloadUrl = "https://github.com/$Repo/releases/download/$version/$filename"
     $downloadPath = Join-Path $TempDir $filename
-    
+
     Write-Info "Downloading from: $downloadUrl"
-    
+
     # Download
     try {
         Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath -UseBasicParsing
@@ -166,13 +166,13 @@ function Install-BitNet {
         Write-Error "Download failed: $_"
         exit 1
     }
-    
+
     # Verify download
     if (-not (Test-Path $downloadPath)) {
         Write-Error "Download failed: $filename not found"
         exit 1
     }
-    
+
     # Extract
     Write-Info "Extracting binaries..."
     $extractPath = Join-Path $TempDir "extracted"
@@ -183,19 +183,19 @@ function Install-BitNet {
         Write-Error "Extraction failed: $_"
         exit 1
     }
-    
+
     # Create installation directory
     if (-not (Test-Path $InstallDir)) {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     }
-    
+
     # Install binaries
     $installedCount = 0
-    
+
     if ($InstallCli) {
         $cliSource = Join-Path $extractPath "bitnet-cli.exe"
         $cliTarget = Join-Path $InstallDir "bitnet-cli.exe"
-        
+
         if (Test-Path $cliSource) {
             if ($Force -or -not (Test-Path $cliTarget)) {
                 Copy-Item -Path $cliSource -Destination $cliTarget -Force
@@ -207,11 +207,11 @@ function Install-BitNet {
             }
         }
     }
-    
+
     if ($InstallServer) {
         $serverSource = Join-Path $extractPath "bitnet-server.exe"
         $serverTarget = Join-Path $InstallDir "bitnet-server.exe"
-        
+
         if (Test-Path $serverSource) {
             if ($Force -or -not (Test-Path $serverTarget)) {
                 Copy-Item -Path $serverSource -Destination $serverTarget -Force
@@ -223,7 +223,7 @@ function Install-BitNet {
             }
         }
     }
-    
+
     if ($installedCount -eq 0) {
         Write-Warning "No binaries were installed"
         exit 1
@@ -234,7 +234,7 @@ function Install-BitNet {
 function Test-PathVariable {
     $pathDirs = $env:PATH -split ';'
     $normalizedInstallDir = [System.IO.Path]::GetFullPath($InstallDir)
-    
+
     $inPath = $false
     foreach ($dir in $pathDirs) {
         if ($dir -and ([System.IO.Path]::GetFullPath($dir) -eq $normalizedInstallDir)) {
@@ -242,7 +242,7 @@ function Test-PathVariable {
             break
         }
     }
-    
+
     if (-not $inPath) {
         Write-Warning "Installation directory $InstallDir is not in your PATH"
         Write-Info "Add it to your PATH using one of these methods:"
@@ -255,7 +255,7 @@ function Test-PathVariable {
 # Verify installation
 function Test-Installation {
     $verified = 0
-    
+
     if ($InstallCli) {
         $cliPath = Join-Path $InstallDir "bitnet-cli.exe"
         if (Test-Path $cliPath) {
@@ -275,7 +275,7 @@ function Test-Installation {
             }
         }
     }
-    
+
     if ($InstallServer) {
         $serverPath = Join-Path $InstallDir "bitnet-server.exe"
         if (Test-Path $serverPath) {
@@ -295,7 +295,7 @@ function Test-Installation {
             }
         }
     }
-    
+
     return $verified -gt 0
 }
 
@@ -303,21 +303,21 @@ function Test-Installation {
 function Main {
     Write-Info "🦀 BitNet.rs Installation Script for Windows"
     Write-Info "Installing to: $InstallDir"
-    
+
     # Check prerequisites
     if (-not (Get-Command Expand-Archive -ErrorAction SilentlyContinue)) {
         Write-Error "PowerShell 5.0 or later is required for Expand-Archive"
         exit 1
     }
-    
+
     # Perform installation
     try {
         Install-BitNet
-        
+
         # Verify installation
         if (Test-Installation) {
             Write-Success "🎉 BitNet.rs installation completed successfully!"
-            
+
             # Show usage examples
             Write-Host ""
             Write-Info "Quick start examples:"
@@ -327,10 +327,10 @@ function Main {
             if ($InstallServer) {
                 Write-Host "  $InstallDir\bitnet-server.exe --port 8080"
             }
-            
+
             # Check PATH
             Test-PathVariable
-            
+
             Write-Host ""
             Write-Info "For documentation and examples, visit:"
             Write-Info "  https://github.com/$Repo"

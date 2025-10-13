@@ -106,14 +106,14 @@ async fn main() -> Result<()> {
 
     // Load model and create inference engine
     let app_state = initialize_app_state().await?;
-    
+
     // Build the router with all endpoints
     let app = create_router(app_state);
 
     // Start the server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     info!("Server listening on http://0.0.0.0:3000");
-    
+
     axum::serve(listener, app).await?;
 
     Ok(())
@@ -125,33 +125,33 @@ async fn initialize_app_state() -> Result<AppState> {
 
     // Load configuration
     let config = BitNetConfig::default();
-    
+
     // Determine device
     let device = if cfg!(feature = "cuda") && is_cuda_available() {
         Device::Cuda(0)
     } else {
         Device::Cpu
     };
-    
+
     info!("Using device: {:?}", device);
 
     // Load model (in practice, load from file)
     let model_path = std::env::var("BITNET_MODEL_PATH")
         .unwrap_or_else(|_| "models/bitnet-1.58b.gguf".to_string());
-    
+
     info!("Loading model from: {}", model_path);
     let model = load_model(&model_path, &device).await?;
 
     // Load tokenizer
     let tokenizer_name = std::env::var("BITNET_TOKENIZER")
         .unwrap_or_else(|_| "gpt2".to_string());
-    
+
     info!("Loading tokenizer: {}", tokenizer_name);
     let tokenizer = TokenizerBuilder::from_pretrained(&tokenizer_name)?;
 
     // Create inference engine
     let inference_engine = InferenceEngine::new(model, tokenizer, device)?;
-    
+
     info!("Application state initialized successfully");
 
     Ok(AppState {
@@ -170,14 +170,14 @@ fn create_router(state: AppState) -> Router {
         .route("/health", get(health_handler))
         .route("/stats", get(stats_handler))
         .route("/model/info", get(model_info_handler))
-        
+
         // Utility routes
         .route("/", get(root_handler))
         .route("/docs", get(docs_handler))
-        
+
         // Add state
         .with_state(state)
-        
+
         // Add middleware
         .layer(
             ServiceBuilder::new()
@@ -209,7 +209,7 @@ async fn generate_handler(
     Json(request): Json<GenerateRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let start_time = Instant::now();
-    
+
     // Update stats
     {
         let mut stats = state.stats.write().await;
@@ -283,7 +283,7 @@ async fn generate_stream_handler(
     let stream = async_stream::stream! {
         let mut engine = state.inference_engine.write().await;
         let mut token_stream = engine.generate_stream_with_config(&request.prompt, &gen_config);
-        
+
         let mut token_count = 0;
         while let Some(token_result) = token_stream.next().await {
             match token_result {
@@ -310,7 +310,7 @@ async fn generate_stream_handler(
                 }
             }
         }
-        
+
         // Send completion event
         let done_event = Event::default()
             .json_data(serde_json::json!({
@@ -417,10 +417,10 @@ curl -X POST http://localhost:3000/generate \
 /// Load model (mock implementation for example)
 async fn load_model(path: &str, device: &Device) -> Result<Box<dyn Model>> {
     info!("Loading model from: {}", path);
-    
+
     // In practice, this would load a real model
     tokio::time::sleep(Duration::from_millis(100)).await; // Simulate loading time
-    
+
     Ok(Box::new(MockModel::new()))
 }
 
@@ -584,7 +584,7 @@ mod tests {
         fn pad_token_id(&self) -> Option<u32> {
             None
         }
-        
+
         fn token_to_piece(&self, token: u32) -> Option<String> {
             Some(format!("<token_{}>", token))
         }

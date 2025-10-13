@@ -115,7 +115,7 @@ Created extensive tests covering:
 
 Implemented standalone test (`fixture_test/`) that validates:
 - ✅ Automatic cleanup based on age
-- ✅ Error handling for missing files  
+- ✅ Error handling for missing files
 - ✅ Concurrent operations support
 - ✅ File size tracking and management
 - ✅ Proper resource cleanup

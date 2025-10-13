@@ -17,8 +17,8 @@ export OMP_NUM_THREADS=1
 export GGML_NUM_THREADS=1
 
 # Check prerequisites
-need() { 
-    command -v "$1" >/dev/null || { 
+need() {
+    command -v "$1" >/dev/null || {
         echo "❌ $1 is required but not installed"
         exit $EXIT_GENERAL_ERROR
     }
@@ -98,17 +98,17 @@ measure_model() {
     local model_path="$2"
     local tokenizer_path="${3:-}"
     local description="$4"
-    
+
     echo ""
     echo "━━━ Measuring: $description ━━━"
-    
+
     # Check model exists
     if [ ! -f "$model_path" ]; then
         echo "⚠ Model not found: $model_path"
         echo "  Skipping $model_key baseline"
         return 1
     fi
-    
+
     # Build command args
     local -a RUN_ARGS=(
         run
@@ -118,26 +118,26 @@ measure_model() {
         --temperature 0
         --json-out /tmp/perf_measure.json
     )
-    
+
     if [ -n "$tokenizer_path" ] && [ -f "$tokenizer_path" ]; then
         RUN_ARGS+=(--tokenizer "$tokenizer_path")
     fi
-    
+
     # Warm-up run
     echo "Warm-up run..."
     "$RS_BIN" "${RUN_ARGS[@]}" >/dev/null 2>&1
-    
+
     # Measurement runs (take median of 3)
     local tokens_per_second_values=()
     local rss_mb=0
-    
+
     for run in 1 2 3; do
         echo "Measurement run $run/3..."
-        
+
         if [ -n "$TIME_CMD" ]; then
             # Run with memory profiling
             $TIME_CMD "$RS_BIN" "${RUN_ARGS[@]}" 2>/tmp/time_output.txt >/dev/null
-            
+
             # Extract RSS if available
             if grep -q "Maximum resident set size" /tmp/time_output.txt; then
                 local rss_kb=$(awk '/Maximum resident set size/{print $6}' /tmp/time_output.txt)
@@ -147,21 +147,21 @@ measure_model() {
             # Run without memory profiling
             "$RS_BIN" "${RUN_ARGS[@]}" >/dev/null 2>&1
         fi
-        
+
         # Extract performance metrics
         if [ -f /tmp/perf_measure.json ]; then
             local tps=$(jq -r '.throughput.tokens_per_second // 0' /tmp/perf_measure.json)
             tokens_per_second_values+=("$tps")
         fi
     done
-    
+
     # Calculate median tokens/sec (sort and take middle value)
     IFS=$'\n' sorted=($(sort -n <<<"${tokens_per_second_values[*]}"))
     local median_tps="${sorted[1]}"
-    
+
     # Get model size
     local model_size_mb=$(du -m "$model_path" | cut -f1)
-    
+
     # Output JSON fragment
     cat <<EOF
     "$model_key": {
@@ -175,9 +175,9 @@ measure_model() {
         "deterministic": true
     }
 EOF
-    
+
     echo "✓ Measured: ${median_tps} tokens/sec, RSS: ${rss_mb}MB"
-    
+
     return 0
 }
 
@@ -197,7 +197,7 @@ if [[ "$UPDATE_MODEL" == "tinyllama" ]] || [[ "$UPDATE_MODEL" == "all" ]]; then
         "models/tinyllama-q2.gguf" \
         "" \
         "TinyLlama 1.1B Q2_K with embedded SentencePiece tokenizer"; then
-        
+
         ADDED_ENTRIES=true
     fi
 fi
@@ -214,7 +214,7 @@ if [[ "$UPDATE_MODEL" == "bitnet" ]] || [[ "$UPDATE_MODEL" == "all" ]]; then
         "models/bitnet/ggml-model-i2_s.gguf" \
         "models/bitnet/tokenizer.model" \
         "Microsoft BitNet 1.58b 2B I2_S with external tokenizer"; then
-        
+
         ADDED_ENTRIES=true
     fi
 fi

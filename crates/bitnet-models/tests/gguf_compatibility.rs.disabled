@@ -1,5 +1,5 @@
 //! GGUF Compatibility Contract Tests
-//! 
+//!
 //! These tests ensure our GGUF compatibility fixes never regress
 //! and that we continue to handle broken models that llama.cpp can't.
 
@@ -39,7 +39,7 @@ fn test_diagnose_missing_metadata() {
             vec!["Missing tokenizer.ggml.byte_fallback"],
         ),
     ];
-    
+
     // Would test with actual GGUF files
     // For now, verify the diagnostic logic exists
 }
@@ -53,14 +53,14 @@ fn test_fix_gpt2_metadata() {
         // Missing: tokenizer.ggml.pre - causes llama.cpp failure!
         ("general.vocab_size".to_string(), "128256"),
     ]);
-    
+
     // After fix, should have:
     let expected_fixes = vec![
         "tokenizer.ggml.pre = gpt2",
         "tokenizer.ggml.add_space_prefix = true",
         "tokenizer.ggml.byte_fallback = false",
     ];
-    
+
     // Verify fixes are applied correctly
 }
 
@@ -76,7 +76,7 @@ fn test_special_token_inference() {
         ("[CLS]", 101),  // BERT style
         ("[SEP]", 102),  // BERT style
     ];
-    
+
     // Should correctly identify and add missing special tokens
 }
 
@@ -92,7 +92,7 @@ fn test_microsoft_bitnet_model_fix() {
         // - tokenizer.ggml.add_space_prefix
         // - tokenizer.ggml.byte_fallback
     ]);
-    
+
     // Our fixer should handle this
     // After fix, model should work with both BitNet.rs AND llama.cpp
 }
@@ -116,7 +116,7 @@ fn test_dont_break_working_models() {
         ("tokenizer.ggml.bos_token_id", "50256"),
         ("tokenizer.ggml.eos_token_id", "50256"),
     ]);
-    
+
     // Should report no issues
     // Should not modify anything
 }
@@ -127,7 +127,7 @@ fn test_vocab_size_consistency() {
     // Test detection of mismatched vocab sizes
     let metadata_size = 50257;
     let actual_entries = 50000;  // Mismatch!
-    
+
     // Should detect and report this issue
 }
 
@@ -139,7 +139,7 @@ fn test_fix_priority() {
     // 2. Special token IDs (IMPORTANT - affects generation)
     // 3. add_space_prefix (MODERATE - affects tokenization)
     // 4. byte_fallback (LOW - edge case handling)
-    
+
     // Verify fixes are applied in correct order
 }
 

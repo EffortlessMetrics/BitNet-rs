@@ -46,11 +46,11 @@ echo "Step 4: Testing with actual BitNet model..."
 MODEL="models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
 if [ -f "$MODEL" ]; then
     export CROSSVAL_GGUF="$MODEL"
-    
+
     # First test Rust alone
     echo "Testing Rust implementation..."
     cargo test -p bitnet-models --no-default-features --features cpu -- gguf 2>&1 | grep -E "test result:" || echo "Rust tests status unknown"
-    
+
     # Then test cross-validation
     echo ""
     echo "Testing cross-validation..."
@@ -58,7 +58,7 @@ if [ -f "$MODEL" ]; then
         EXIT_CODE=$?
         echo ""
         echo "=== Diagnosis ==="
-        
+
         if [ $EXIT_CODE -eq 127 ]; then
             echo "❌ Library loading issue detected"
             echo ""

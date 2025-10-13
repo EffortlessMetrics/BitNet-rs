@@ -77,7 +77,7 @@ for search_dir in \
     "$BITNET_CPP_DIR/build/3rdparty/llama.cpp/src" \
     "$BITNET_CPP_DIR/build/3rdparty/llama.cpp" \
     "$BITNET_CPP_DIR/build/lib"; do
-    
+
     if [[ -f "$search_dir/libllama.so" ]]; then
         LLAMA_LIB="$search_dir"
         break
@@ -91,7 +91,7 @@ for search_dir in \
     "$BITNET_CPP_DIR/build/3rdparty/llama.cpp/ggml/src" \
     "$BITNET_CPP_DIR/build/3rdparty/llama.cpp/ggml" \
     "$BITNET_CPP_DIR/build/lib"; do
-    
+
     if [[ -f "$search_dir/libggml.so" ]] || [[ -f "$search_dir/libggml.dylib" ]]; then
         GGML_LIB="$search_dir"
         break

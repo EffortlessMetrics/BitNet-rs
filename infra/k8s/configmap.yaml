@@ -11,32 +11,32 @@ data:
     [model]
     path = "/app/models"
     format = "auto"
-    
+
     [inference]
     max_tokens = 2048
     temperature = 0.7
     top_k = 50
     top_p = 0.9
-    
+
     [server]
     host = "0.0.0.0"
     port = 8080
     workers = 4
-    
+
     [monitoring]
     metrics_enabled = true
     metrics_port = 9090
     health_check_enabled = true
-    
+
     [logging]
     level = "info"
     format = "json"
-    
+
   prometheus.yml: |
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
-    
+
     scrape_configs:
       - job_name: 'bitnet'
         static_configs:

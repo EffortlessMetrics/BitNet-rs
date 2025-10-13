@@ -118,7 +118,7 @@ impl RequestBatcher {
         model: String,
     ) -> Result<BatchedResponse> {
         let (response_sender, response_receiver) = tokio::sync::oneshot::channel();
-        
+
         let request = BatchedRequest {
             id: Uuid::new_v4().to_string(),
             prompt,
@@ -159,13 +159,13 @@ impl RequestBatcher {
         // Start batch formation task
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_millis(config.batch_timeout_ms));
-            
+
             loop {
                 interval.tick().await;
-                
+
                 // Form batches from the queue
                 let batch = Self::form_batch(&request_queue, &config).await;
-                
+
                 if let Some(batch) = batch {
                     // Update statistics
                     {
@@ -175,7 +175,7 @@ impl RequestBatcher {
                         stats.average_batch_size = (total_batch_size + batch.requests.len() as f64) / stats.total_batches as f64;
                         stats.queue_depth = request_queue.read().await.len();
                     }
-                    
+
                     // Send batch for processing
                     if batch_sender.send(batch).is_err() {
                         break;
@@ -198,7 +198,7 @@ impl RequestBatcher {
                 while let Some(batch) = batch_receiver.recv().await {
                     let permit = processing_semaphore.acquire().await.unwrap();
                     let statistics = statistics.clone();
-                    
+
                     tokio::spawn(async move {
                         let _permit = permit; // Keep permit until task completes
                         Self::process_batch(batch, statistics).await;
@@ -214,7 +214,7 @@ impl RequestBatcher {
         config: &CachingConfig,
     ) -> Option<RequestBatch> {
         let mut queue = request_queue.write().await;
-        
+
         if queue.is_empty() {
             return None;
         }
@@ -222,7 +222,7 @@ impl RequestBatcher {
         let mut batch_requests = Vec::new();
         let mut target_model = None;
         let now = Instant::now();
-        
+
         // Group requests by model and respect timeout
         while let Some(request) = queue.front() {
             // Check if request has timed out
@@ -270,17 +270,17 @@ impl RequestBatcher {
     async fn process_batch(batch: RequestBatch, statistics: Arc<RwLock<BatchingStatistics>>) {
         let start_time = Instant::now();
         let batch_size = batch.requests.len();
-        
+
         // Simulate batch processing (in real implementation, this would call the inference engine)
         let processing_time = Duration::from_millis(50 + (batch_size as u64 * 10)); // Simulate processing time
         tokio::time::sleep(processing_time).await;
-        
+
         let processing_time_ms = start_time.elapsed().as_millis() as u64;
-        
+
         // Send responses to all requests in the batch
         for request in batch.requests {
             let wait_time_ms = start_time.duration_since(request.timestamp).as_millis() as u64;
-            
+
             let response = BatchedResponse {
                 request_id: request.id,
                 text: format!("Generated response for: {}", request.prompt),
@@ -288,9 +288,9 @@ impl RequestBatcher {
                 processing_time_ms,
                 batch_size,
             };
-            
+
             let _ = request.response_sender.send(response);
-            
+
             // Update wait time statistics
             {
                 let mut stats = statistics.write().await;
@@ -298,16 +298,16 @@ impl RequestBatcher {
                 stats.average_wait_time_ms = (total_wait_time + wait_time_ms as f64) / stats.total_requests as f64;
             }
         }
-        
+
         // Update processing time statistics
         {
             let mut stats = statistics.write().await;
             let total_processing_time = stats.average_processing_time_ms * (stats.total_batches - 1) as f64;
             stats.average_processing_time_ms = (total_processing_time + processing_time_ms as f64) / stats.total_batches as f64;
-            
+
             // Calculate batching efficiency (higher is better)
             stats.batching_efficiency = stats.average_batch_size / batch_size as f64;
-            
+
             // Calculate throughput
             if stats.average_processing_time_ms > 0.0 {
                 stats.throughput_requests_per_second = (stats.average_batch_size * 1000.0) / stats.average_processing_time_ms;
@@ -325,7 +325,7 @@ impl RequestBatcher {
     /// Shutdown the request batcher
     pub async fn shutdown(&self) -> Result<()> {
         println!("Shutting down request batcher");
-        
+
         // Process remaining requests in queue
         let remaining_requests: Vec<BatchedRequest> = {
             let mut queue = self.request_queue.write().await;

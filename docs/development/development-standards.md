@@ -81,7 +81,7 @@ The following patterns are explicitly banned to maintain API stability:
    // BAD
    }
    /// Documentation
-   
+
    // GOOD
    } // Documentation
    ```

@@ -19,7 +19,7 @@ HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
 - Ensures BitNet and HuggingFace tokenize identically
 - Validates BOS/EOS handling, normalization, merges
 
-### 2. **Greedy Argmax Invariant** ✅  
+### 2. **Greedy Argmax Invariant** ✅
 - Verifies greedy decoding always picks argmax
 - Uses `--assert-greedy` flag for runtime enforcement
 

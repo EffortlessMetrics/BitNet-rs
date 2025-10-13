@@ -9,7 +9,7 @@
 //!
 //! - **Real-time metrics collection**: Tracks latency, throughput, memory usage
 //! - **Detailed timing breakdown**: Separate tracking for tokenization, forward pass, sampling
-//! - **Cache performance monitoring**: Hit rates and memory efficiency tracking  
+//! - **Cache performance monitoring**: Hit rates and memory efficiency tracking
 //! - **Environment-based configuration**: Support for deterministic testing and optimization
 //! - **Validation and error handling**: Ensures metrics integrity and proper error reporting
 //!

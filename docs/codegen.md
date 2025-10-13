@@ -31,7 +31,7 @@ python utils/codegen_tl2.py --model bitnet_b1_58-large --BM 256,128,256 --BK 96,
 
 For TL1, we cut weight into M / BM weights, each weight shape is (BM, K). Then we cut weight into K / BK weights, each weight shape is (BM, BK). As for (BM, BK) weight, we cut it the same way into (bm, compute_num / bm) compute blocks, and finish computing in it.
 
-Thus, we need to make sure 
+Thus, we need to make sure
 - M % BM == 0
 - K % BK == 0
 - BM % bm == 0

@@ -94,7 +94,7 @@ pub fn remap_gguf_weights(tensors: &HashMap<String, Tensor>) -> Result<HashMap<S
 
 /// Normalize exporter name drift to our canonical names.
 /// Known drifts:
-///  - attn_sub_norm <-> attention_sub_norm  
+///  - attn_sub_norm <-> attention_sub_norm
 ///  - ffn_sub_norm  <-> mlp_sub_layernorm
 fn normalize_name(name: &str) -> Cow<'_, str> {
     if name.contains("attention_sub_norm") {

@@ -180,9 +180,9 @@ try {
 # Check for TODO/FIXME comments in release-critical code
 Write-Status "Checking for TODO/FIXME comments..."
 try {
-    $todoFiles = Get-ChildItem -Path "src", "crates" -Recurse -Filter "*.rs" | 
+    $todoFiles = Get-ChildItem -Path "src", "crates" -Recurse -Filter "*.rs" |
                  Where-Object { (Get-Content $_.FullName -Raw) -match "TODO|FIXME" }
-    
+
     if ($todoFiles.Count -gt 0) {
         Write-Warning "Found $($todoFiles.Count) files with TODO/FIXME comments"
         foreach ($file in $todoFiles) {
@@ -207,7 +207,7 @@ foreach ($crateDir in $crateDirectories) {
     if (Test-Path $cargoToml) {
         $crateName = Split-Path $crateDir -Leaf
         Write-Status "Checking metadata for $crateName..."
-        
+
         $content = Get-Content $cargoToml -Raw
         foreach ($field in $requiredFields) {
             if (-not ($content -match "^$field\s*=" -or $content -match "^$field\.workspace\s*=")) {

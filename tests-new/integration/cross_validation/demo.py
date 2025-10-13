@@ -27,7 +27,7 @@ def demo_token_comparison():
     """Demonstrate token-level comparison capabilities."""
     print("🔍 Token-Level Comparison Demo")
     print("=" * 40)
-    
+
     config = {
         "min_token_match_ratio": 0.95,
         "max_token_differences": 3,
@@ -36,9 +36,9 @@ def demo_token_comparison():
         "min_logits_close_ratio": 0.99,
         "max_logits_abs_diff": 0.1,
     }
-    
+
     comparator = TokenLevelComparator(config)
-    
+
     # Test cases
     test_cases = [
         {
@@ -60,7 +60,7 @@ def demo_token_comparison():
             "expected": False
         }
     ]
-    
+
     for test in test_cases:
         match, details = comparator.compare_token_sequences(test["seq1"], test["seq2"])
         status = "✅" if match == test["expected"] else "❌"
@@ -73,9 +73,9 @@ def demo_performance_analysis():
     """Demonstrate performance analysis capabilities."""
     print("⚡ Performance Analysis Demo")
     print("=" * 40)
-    
+
     analyzer = PerformanceAnalyzer(regression_threshold=5.0)
-    
+
     # Simulate performance results
     test_results = [
         {"name": "model_forward_small", "python_time": 2.0, "rust_time": 1.0},
@@ -83,7 +83,7 @@ def demo_performance_analysis():
         {"name": "inference_basic", "python_time": 3.0, "rust_time": 3.2},  # Slight regression
         {"name": "model_forward_large", "python_time": 10.0, "rust_time": 4.0},
     ]
-    
+
     analyses = []
     for result in test_results:
         analysis = analyzer.analyze_performance(
@@ -91,13 +91,13 @@ def demo_performance_analysis():
         )
         analysis["test_name"] = result["name"]
         analyses.append(analysis)
-        
+
         status_emoji = {
             "improvement": "🚀",
-            "acceptable": "✅", 
+            "acceptable": "✅",
             "regression": "⚠️"
         }
-        
+
         emoji = status_emoji.get(analysis["performance_status"], "❓")
         print(f"{emoji} {result['name']}")
         print(f"   Speedup: {analysis['speedup']:.2f}x")
@@ -105,7 +105,7 @@ def demo_performance_analysis():
         if analysis["regression_percent"] != 0:
             print(f"   Regression: {analysis['regression_percent']:.1f}%")
         print()
-    
+
     # Generate summary
     summary = analyzer.generate_performance_summary(analyses)
     print("📊 Performance Summary:")
@@ -120,23 +120,23 @@ def demo_edge_case_generation():
     """Demonstrate edge case generation."""
     print("🎯 Edge Case Generation Demo")
     print("=" * 40)
-    
+
     # Generate edge cases
     edge_inputs = EdgeCaseGenerator.generate_edge_case_inputs()
     stress_configs = EdgeCaseGenerator.generate_stress_test_configs()
     numerical_cases = EdgeCaseGenerator.generate_numerical_edge_cases()
-    
+
     print(f"Generated {len(edge_inputs)} edge case inputs:")
     for case in edge_inputs[:3]:  # Show first 3
         print(f"   • {case['name']}: {case['description']}")
     print(f"   ... and {len(edge_inputs) - 3} more")
     print()
-    
+
     print(f"Generated {len(stress_configs)} stress test configurations:")
     for config in stress_configs:
         print(f"   • {config['name']}: {config['description']}")
     print()
-    
+
     print(f"Generated {len(numerical_cases)} numerical edge cases:")
     for case in numerical_cases[:3]:  # Show first 3
         print(f"   • {case['name']}: {case['description']}")
@@ -147,14 +147,14 @@ def demo_test_case_generation():
     """Demonstrate comprehensive test case generation."""
     print("🧪 Test Case Generation Demo")
     print("=" * 40)
-    
+
     # Generate different types of tests
     basic_tests = TestCaseGenerator.generate_model_forward_tests()
     quantization_tests = TestCaseGenerator.generate_quantization_tests()
     inference_tests = TestCaseGenerator.generate_inference_tests()
     edge_tests = TestCaseGenerator.generate_edge_case_tests()
     stress_tests = TestCaseGenerator.generate_stress_tests()
-    
+
     print("Test Case Generation Summary:")
     print(f"   Basic model tests: {len(basic_tests)}")
     print(f"   Quantization tests: {len(quantization_tests)}")
@@ -162,7 +162,7 @@ def demo_test_case_generation():
     print(f"   Edge case tests: {len(edge_tests)}")
     print(f"   Stress tests: {len(stress_tests)}")
     print()
-    
+
     # Show example test case
     example_test = basic_tests[0]
     print("Example Test Case:")
@@ -175,7 +175,7 @@ def demo_validation_result():
     """Demonstrate validation result structure."""
     print("📋 Validation Result Demo")
     print("=" * 40)
-    
+
     # Create a mock validation result
     result = ValidationResult(
         test_name="model_forward_small",
@@ -193,7 +193,7 @@ def demo_validation_result():
         execution_times={"python": 2.0, "rust": 0.95},
         error_messages=[]
     )
-    
+
     print("Example Validation Result:")
     print(f"   Test: {result.test_name}")
     print(f"   Overall success: {result.overall_success}")
@@ -208,7 +208,7 @@ def demo_configuration():
     """Demonstrate configuration options."""
     print("⚙️  Configuration Demo")
     print("=" * 40)
-    
+
     config = ValidationConfig(
         numerical_tolerance={
             "rtol": 1e-4,
@@ -226,7 +226,7 @@ def demo_configuration():
         timeout_seconds=300,
         max_retries=3,
     )
-    
+
     print("Default Configuration:")
     print("   Numerical Tolerances:")
     for key, value in config.numerical_tolerance.items():
@@ -243,14 +243,14 @@ def main():
     print("🎉 BitNet Cross-Language Validation Framework Demo")
     print("=" * 60)
     print()
-    
+
     demo_token_comparison()
     demo_performance_analysis()
     demo_edge_case_generation()
     demo_test_case_generation()
     demo_validation_result()
     demo_configuration()
-    
+
     print("✨ Demo Complete!")
     print()
     print("This framework provides:")

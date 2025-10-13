@@ -92,7 +92,7 @@ impl TestCase for StreamCancellationTest {
         for i in 0..3 {
             debug!("Cancellation test iteration {}", i + 1);
             let mut stream = cancellation_engine.generate_stream("Mid-generation cancellation");
-            
+
             // Consume a few chunks
             let mut consumed = 0;
             while consumed < 2 {
@@ -121,7 +121,7 @@ impl TestCase for StreamCancellationTest {
         let timeout_result = tokio::time::timeout(timeout_duration, async move {
             let mut timeout_chunks = 0;
             let mut stream = timeout_stream;
-            
+
             while let Some(result) = stream.next().await {
                 if let Ok(_) = result {
                     timeout_chunks += 1;
@@ -146,7 +146,7 @@ impl TestCase for StreamCancellationTest {
         // Test resource cleanup after cancellation
         debug!("Testing resource cleanup");
         let cleanup_stats = cancellation_engine.get_stats().await;
-        debug!("Post-cancellation stats: cache_size={}, usage={:.2}%", 
+        debug!("Post-cancellation stats: cache_size={}, usage={:.2}%",
                cleanup_stats.cache_size, cleanup_stats.cache_usage);
 
         // Verify engine still works after cancellations
@@ -232,12 +232,12 @@ impl TestCase for StreamErrorHandlingTest {
 
         // Test different error types
         debug!("Testing different error scenarios");
-        
+
         // Tokenization error test
         let bad_tokenizer = Arc::new(ErrorTokenizer::new());
         let tokenizer_error_engine = InferenceEngine::new(
-            Arc::new(MockModel::new()), 
-            bad_tokenizer, 
+            Arc::new(MockModel::new()),
+            bad_tokenizer,
             device
         ).map_err(|e| TestError::execution(format!("Failed to create tokenizer error engine: {}", e)))?;
 
@@ -257,7 +257,7 @@ impl TestCase for StreamErrorHandlingTest {
             }
         }
 
-        // Model forward error test  
+        // Model forward error test
         error_model.set_error_mode(true);
         let mut forward_stream = engine.generate_stream("Forward error test");
         let mut forward_errors = 0;
@@ -265,7 +265,7 @@ impl TestCase for StreamErrorHandlingTest {
         while let Some(result) = forward_stream.next().await {
             match result {
                 Ok(_) => {
-                    break; // Unexpected success  
+                    break; // Unexpected success
                 }
                 Err(e) => {
                     debug!("Forward error: {}", e);
@@ -325,7 +325,7 @@ impl TestCase for StreamMemoryLeakTest {
 
         // Get initial memory stats
         let initial_stats = engine.get_stats().await;
-        debug!("Initial memory stats: cache_size={}, usage={:.2}%", 
+        debug!("Initial memory stats: cache_size={}, usage={:.2}%",
                initial_stats.cache_size, initial_stats.cache_usage);
 
         // Create and drop many streams
@@ -335,24 +335,24 @@ impl TestCase for StreamMemoryLeakTest {
 
         for i in 0..stream_iterations {
             debug!("Memory test iteration {}", i + 1);
-            
+
             // Create stream
             let mut stream = engine.generate_stream(&format!("Memory test {}", i + 1));
-            
+
             // Consume a few tokens
             for _ in 0..3 {
                 if let Some(Ok(_)) = stream.next().await {
                     // Token consumed
                 }
             }
-            
+
             // Stream dropped here
-            
+
             // Measure memory
             let stats = engine.get_stats().await;
             memory_measurements.push(stats.cache_usage);
             debug!("Iteration {} memory usage: {:.2}%", i + 1, stats.cache_usage);
-            
+
             // Small delay to allow cleanup
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
@@ -365,11 +365,11 @@ impl TestCase for StreamMemoryLeakTest {
         for i in 0..concurrent_count {
             let engine_clone = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
                 .map_err(|e| TestError::execution(format!("Failed to create concurrent engine: {}", e)))?;
-            
+
             let handle = tokio::spawn(async move {
                 let mut stream = engine_clone.generate_stream(&format!("Concurrent {}", i + 1));
                 let mut chunks = 0;
-                
+
                 while chunks < 3 {
                     if let Some(Ok(_)) = stream.next().await {
                         chunks += 1;
@@ -377,10 +377,10 @@ impl TestCase for StreamMemoryLeakTest {
                         break;
                     }
                 }
-                
+
                 engine_clone.get_stats().await.cache_usage
             });
-            
+
             concurrent_handles.push(handle);
         }
 
@@ -394,7 +394,7 @@ impl TestCase for StreamMemoryLeakTest {
 
         // Final memory check
         let final_stats = engine.get_stats().await;
-        debug!("Final memory stats: cache_size={}, usage={:.2}%", 
+        debug!("Final memory stats: cache_size={}, usage={:.2}%",
                final_stats.cache_size, final_stats.cache_usage);
 
         // Calculate memory metrics
@@ -463,22 +463,22 @@ impl TestCase for StreamBackpressureHandlingTest {
         let mut stream = engine.generate_stream("Backpressure test");
         let mut tokens_received = 0;
         let mut backpressure_detected = false;
-        
+
         let start_consume = Instant::now();
         while let Some(result) = stream.next().await {
             match result {
                 Ok(_token) => {
                     tokens_received += 1;
-                    
+
                     // Simulate slow consumer
                     tokio::time::sleep(Duration::from_millis(100)).await;
-                    
+
                     // Check if generation is being throttled (backpressure)
                     let elapsed = start_consume.elapsed();
                     if elapsed > Duration::from_millis(500) && tokens_received < 10 {
                         backpressure_detected = true;
                     }
-                    
+
                     if tokens_received >= 5 {
                         break;
                     }
@@ -495,7 +495,7 @@ impl TestCase for StreamBackpressureHandlingTest {
         let fast_stream = engine.generate_stream("High throughput test");
         let mut fast_tokens = 0;
         let fast_start = Instant::now();
-        
+
         let mut fast_stream = fast_stream;
         while let Some(result) = fast_stream.next().await {
             if let Ok(_) = result {
@@ -506,21 +506,21 @@ impl TestCase for StreamBackpressureHandlingTest {
             }
         }
         let fast_duration = fast_start.elapsed();
-        
+
         // Test concurrent streams with backpressure
         debug!("Testing concurrent streams with different consumption rates");
         let concurrent_count = 3;
         let mut handles = Vec::new();
-        
+
         for i in 0..concurrent_count {
             let test_engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
                 .map_err(|e| TestError::execution(format!("Failed to create concurrent engine: {}", e)))?;
-            
+
             let delay = Duration::from_millis(50 * (i + 1)); // Different consumption rates
             let handle = tokio::spawn(async move {
                 let mut stream = test_engine.generate_stream(&format!("Concurrent {}", i + 1));
                 let mut count = 0;
-                
+
                 while count < 3 {
                     if let Some(Ok(_)) = stream.next().await {
                         count += 1;
@@ -533,7 +533,7 @@ impl TestCase for StreamBackpressureHandlingTest {
             });
             handles.push(handle);
         }
-        
+
         let concurrent_results: Vec<usize> = futures_util::future::join_all(handles)
             .await
             .into_iter()
@@ -592,20 +592,20 @@ impl TestCase for StreamConcurrencyTest {
             InferenceEngine::new(model.clone(), tokenizer.clone(), device)
                 .map_err(|e| TestError::execution(format!("Failed to create shared engine: {}", e)))?
         ));
-        
+
         let concurrent_count = 5;
         let mut handles = Vec::new();
-        
+
         for i in 0..concurrent_count {
             let engine_ref = shared_engine.clone();
             let prompt = format!("Concurrent test {}", i + 1);
-            
+
             let handle = tokio::spawn(async move {
                 let engine_guard = engine_ref.read().await;
                 let mut stream = engine_guard.generate_stream(&prompt);
                 let mut token_count = 0;
                 let start = Instant::now();
-                
+
                 while let Some(result) = stream.next().await {
                     match result {
                         Ok(_token) => {
@@ -620,13 +620,13 @@ impl TestCase for StreamConcurrencyTest {
                         }
                     }
                 }
-                
+
                 (i + 1, token_count, start.elapsed())
             });
-            
+
             handles.push(handle);
         }
-        
+
         let results: Vec<(usize, usize, Duration)> = futures_util::future::join_all(handles)
             .await
             .into_iter()
@@ -637,19 +637,19 @@ impl TestCase for StreamConcurrencyTest {
         debug!("Testing concurrent streams with independent engines");
         let independent_count = 3;
         let mut independent_handles = Vec::new();
-        
+
         for i in 0..independent_count {
             let engine_model = model.clone();
             let engine_tokenizer = tokenizer.clone();
-            
+
             let handle = tokio::spawn(async move {
                 let independent_engine = InferenceEngine::new(engine_model, engine_tokenizer, device)
                     .map_err(|e| format!("Failed to create independent engine {}: {}", i + 1, e))?;
-                    
+
                 let mut stream = independent_engine.generate_stream(&format!("Independent {}", i + 1));
                 let mut token_count = 0;
                 let start = Instant::now();
-                
+
                 while let Some(result) = stream.next().await {
                     if let Ok(_) = result {
                         token_count += 1;
@@ -658,13 +658,13 @@ impl TestCase for StreamConcurrencyTest {
                         }
                     }
                 }
-                
+
                 Ok::<(usize, usize, Duration), String>((i + 1, token_count, start.elapsed()))
             });
-            
+
             independent_handles.push(handle);
         }
-        
+
         let independent_results: Vec<(usize, usize, Duration)> = futures_util::future::join_all(independent_handles)
             .await
             .into_iter()
@@ -675,28 +675,28 @@ impl TestCase for StreamConcurrencyTest {
         debug!("Testing race conditions with rapid stream creation/destruction");
         let race_count = 10;
         let mut race_handles = Vec::new();
-        
+
         for i in 0..race_count {
             let race_model = model.clone();
             let race_tokenizer = tokenizer.clone();
-            
+
             let handle = tokio::spawn(async move {
                 let race_engine = InferenceEngine::new(race_model, race_tokenizer, device)?;
-                
+
                 // Create and immediately start consuming stream
                 let mut stream = race_engine.generate_stream(&format!("Race {}", i + 1));
-                
+
                 // Consume only first token then drop
                 if let Some(Ok(_)) = stream.next().await {
                     return Ok(1);
                 }
-                
+
                 Ok::<usize, anyhow::Error>(0)
             });
-            
+
             race_handles.push(handle);
         }
-        
+
         let race_results: Vec<usize> = futures_util::future::join_all(race_handles)
             .await
             .into_iter()
@@ -704,24 +704,24 @@ impl TestCase for StreamConcurrencyTest {
             .collect();
 
         let duration = start_time.elapsed();
-        
+
         // Calculate metrics
         let total_shared_tokens: usize = results.iter().map(|(_, tokens, _)| tokens).sum();
         let avg_shared_duration = if results.is_empty() { Duration::ZERO } else {
             Duration::from_nanos(
-                results.iter().map(|(_, _, dur)| dur.as_nanos()).sum::<u128>() 
+                results.iter().map(|(_, _, dur)| dur.as_nanos()).sum::<u128>()
                 / results.len() as u128
             )
         };
-        
+
         let total_independent_tokens: usize = independent_results.iter().map(|(_, tokens, _)| tokens).sum();
         let avg_independent_duration = if independent_results.is_empty() { Duration::ZERO } else {
             Duration::from_nanos(
-                independent_results.iter().map(|(_, _, dur)| dur.as_nanos()).sum::<u128>() 
+                independent_results.iter().map(|(_, _, dur)| dur.as_nanos()).sum::<u128>()
                 / independent_results.len() as u128
             )
         };
-        
+
         let race_success_count = race_results.iter().sum::<usize>();
 
         Ok(TestMetrics {
@@ -776,19 +776,19 @@ impl TestCase for StreamTimeoutTest {
 
         // Test stream timeout scenarios
         debug!("Testing stream timeout scenarios");
-        
+
         // Test generation timeout
         let mut generation_timeouts = 0;
         let mut generation_successes = 0;
-        
+
         for i in 0..3 {
             debug!("Timeout test iteration {}", i + 1);
             let timeout_duration = Duration::from_millis(200);
-            
+
             let stream_future = async {
                 let mut stream = engine.generate_stream(&format!("Timeout test {}", i + 1));
                 let mut tokens = 0;
-                
+
                 while let Some(result) = stream.next().await {
                     match result {
                         Ok(_) => {
@@ -804,7 +804,7 @@ impl TestCase for StreamTimeoutTest {
                 }
                 tokens
             };
-            
+
             match tokio::time::timeout(timeout_duration, stream_future).await {
                 Ok(token_count) => {
                     debug!("Stream {} completed with {} tokens", i + 1, token_count);
@@ -819,23 +819,23 @@ impl TestCase for StreamTimeoutTest {
 
         // Test different timeout scenarios
         debug!("Testing different timeout scenarios");
-        
+
         // Fast timeout (should timeout immediately)
         let fast_timeout = Duration::from_millis(1);
         let fast_timeout_result = tokio::time::timeout(fast_timeout, async {
             let mut stream = engine.generate_stream("Fast timeout test");
             stream.next().await
         }).await;
-        
+
         let fast_timeout_occurred = fast_timeout_result.is_err();
-        
+
         // Generous timeout (should complete)
         let generous_timeout = Duration::from_secs(5);
         let mut generous_tokens = 0;
         let generous_timeout_result = tokio::time::timeout(generous_timeout, async {
             let mut stream = engine.generate_stream("Generous timeout test");
             let mut count = 0;
-            
+
             while count < 2 { // Only generate a few tokens
                 if let Some(Ok(_)) = stream.next().await {
                     count += 1;
@@ -843,7 +843,7 @@ impl TestCase for StreamTimeoutTest {
             }
             count
         }).await;
-        
+
         match generous_timeout_result {
             Ok(count) => generous_tokens = count,
             Err(_) => warn!("Generous timeout unexpectedly failed"),
@@ -853,17 +853,17 @@ impl TestCase for StreamTimeoutTest {
         debug!("Testing cancellation vs timeout scenarios");
         let mut cancellation_tests = 0;
         let mut cancellation_successes = 0;
-        
+
         for i in 0..2 {
             let cancel_engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
                 .map_err(|e| TestError::execution(format!("Failed to create cancel engine: {}", e)))?;
-            
+
             let stream_with_cancel = cancel_engine.generate_stream(&format!("Cancel test {}", i + 1));
-            
+
             let cancel_future = async move {
                 let mut stream = stream_with_cancel;
                 let mut count = 0;
-                
+
                 // Start consuming but cancel quickly
                 tokio::select! {
                     _ = async {
@@ -878,10 +878,10 @@ impl TestCase for StreamTimeoutTest {
                         // Timeout reached, stream should be cancelled
                     }
                 }
-                
+
                 count
             };
-            
+
             match tokio::time::timeout(Duration::from_millis(300), cancel_future).await {
                 Ok(count) => {
                     debug!("Cancellation test {} completed with {} tokens", i + 1, count);
@@ -944,15 +944,15 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
             .map_err(|e| TestError::execution(format!("Failed to create engine: {}", e)))?;
 
         debug!("Testing configuration edge cases");
-        
+
         // Test with extreme temperature values
         let mut extreme_temp_tests = 0;
         let mut extreme_temp_successes = 0;
-        
+
         let extreme_temperatures = vec![0.0, 0.001, 5.0, 10.0];
         for temp in extreme_temperatures {
             debug!("Testing extreme temperature: {}", temp);
-            
+
             // Create config with custom streaming parameters
             let streaming_config = bitnet_inference::streaming::StreamingConfig {
                 buffer_size: 1,
@@ -961,8 +961,8 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
                 token_timeout_ms: 1000,
                 cancellable: true,
             };
-            
-            match engine.generate_stream_with_config(&format!("Extreme temp {} test", temp), 
+
+            match engine.generate_stream_with_config(&format!("Extreme temp {} test", temp),
                 &GenerationConfig {
                     temperature: temp,
                     max_new_tokens: 3,
@@ -988,17 +988,17 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
             }
             extreme_temp_tests += 1;
         }
-        
+
         // Test with extreme top_k values
         debug!("Testing extreme top_k values");
         let mut extreme_topk_tests = 0;
         let mut extreme_topk_successes = 0;
-        
+
         let extreme_topks = vec![1, 2, 1000, 50000];
         for top_k in extreme_topks {
             debug!("Testing extreme top_k: {}", top_k);
-            
-            match engine.generate_stream_with_config(&format!("Extreme top_k {} test", top_k), 
+
+            match engine.generate_stream_with_config(&format!("Extreme top_k {} test", top_k),
                 &GenerationConfig {
                     top_k,
                     max_new_tokens: 2,
@@ -1015,17 +1015,17 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
             }
             extreme_topk_tests += 1;
         }
-        
+
         // Test with edge case max_new_tokens
         debug!("Testing edge case max_new_tokens");
         let mut max_tokens_tests = 0;
         let mut max_tokens_successes = 0;
-        
+
         let edge_case_tokens = vec![0, 1, 2, 1000];
         for max_tokens in edge_case_tokens {
             debug!("Testing max_new_tokens: {}", max_tokens);
-            
-            match engine.generate_stream_with_config(&format!("Max tokens {} test", max_tokens), 
+
+            match engine.generate_stream_with_config(&format!("Max tokens {} test", max_tokens),
                 &GenerationConfig {
                     max_new_tokens: max_tokens,
                     ..Default::default()
@@ -1036,16 +1036,16 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
                         if let Ok(_) = result {
                             actual_tokens += 1;
                             if actual_tokens > max_tokens {
-                                warn!("Generated more tokens ({}) than requested ({})", 
+                                warn!("Generated more tokens ({}) than requested ({})",
                                       actual_tokens, max_tokens);
                                 break;
                             }
                         }
                     }
-                    
-                    debug!("Max tokens {} test: requested={}, actual={}", 
+
+                    debug!("Max tokens {} test: requested={}, actual={}",
                            max_tokens, max_tokens, actual_tokens);
-                    
+
                     // For max_tokens=0, we should get no tokens
                     if max_tokens == 0 && actual_tokens == 0 {
                         max_tokens_successes += 1;
@@ -1065,12 +1065,12 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
             }
             max_tokens_tests += 1;
         }
-        
+
         // Test with empty/invalid prompts
         debug!("Testing edge case prompts");
         let mut prompt_tests = 0;
         let mut prompt_successes = 0;
-        
+
         let edge_case_prompts = vec![
             "",
             " ",
@@ -1078,10 +1078,10 @@ impl TestCase for StreamConfigurationEdgeCasesTest {
             "\t",
             "x".repeat(1000),
         ];
-        
+
         for prompt in edge_case_prompts {
             debug!("Testing prompt: '{}...'", &prompt[..10.min(prompt.len())]);
-            
+
             match engine.generate_stream(&prompt) {
                 Ok(mut stream) => {
                     // Just try to get one token
@@ -1152,17 +1152,17 @@ impl TestCase for StreamIntegrationTest {
         // Test complete workflow: engine creation -> streaming -> stats -> cleanup
         let engine = InferenceEngine::new(model.clone(), tokenizer.clone(), device)
             .map_err(|e| TestError::execution(format!("Failed to create engine: {}", e)))?;
-        
+
         // Get initial stats
         let initial_stats = engine.get_stats().await;
-        debug!("Initial stats: cache_size={}, usage={:.2}%", 
+        debug!("Initial stats: cache_size={}, usage={:.2}%",
                initial_stats.cache_size, initial_stats.cache_usage);
-        
+
         // Test normal streaming workflow
         debug!("Testing normal streaming workflow");
         let mut workflow_stream = engine.generate_stream("Integration test prompt");
         let mut workflow_tokens = Vec::new();
-        
+
         while let Some(result) = workflow_stream.next().await {
             match result {
                 Ok(token) => {
@@ -1177,20 +1177,20 @@ impl TestCase for StreamIntegrationTest {
                 }
             }
         }
-        
+
         // Test stats after generation
         let post_generation_stats = engine.get_stats().await;
-        debug!("Post-generation stats: cache_size={}, usage={:.2}%", 
+        debug!("Post-generation stats: cache_size={}, usage={:.2}%",
                post_generation_stats.cache_size, post_generation_stats.cache_usage);
-        
+
         // Test multiple streams in sequence
         debug!("Testing sequential streaming");
         let mut sequential_results = Vec::new();
-        
+
         for i in 0..3 {
             let mut seq_stream = engine.generate_stream(&format!("Sequential test {}", i + 1));
             let mut seq_tokens = 0;
-            
+
             while let Some(result) = seq_stream.next().await {
                 if let Ok(_) = result {
                     seq_tokens += 1;
@@ -1201,22 +1201,22 @@ impl TestCase for StreamIntegrationTest {
             }
             sequential_results.push(seq_tokens);
         }
-        
+
         // Test cache behavior
         debug!("Testing cache behavior");
         let pre_clear_stats = engine.get_stats().await;
-        
+
         // Clear cache
         engine.clear_cache().await;
-        
+
         let post_clear_stats = engine.get_stats().await;
-        debug!("Post-clear stats: cache_size={}, usage={:.2}%", 
+        debug!("Post-clear stats: cache_size={}, usage={:.2}%",
                post_clear_stats.cache_size, post_clear_stats.cache_usage);
-        
+
         // Test generation after cache clear
         let mut post_clear_stream = engine.generate_stream("Post-clear test");
         let mut post_clear_tokens = 0;
-        
+
         while let Some(result) = post_clear_stream.next().await {
             if let Ok(_) = result {
                 post_clear_tokens += 1;
@@ -1225,17 +1225,17 @@ impl TestCase for StreamIntegrationTest {
                 }
             }
         }
-        
+
         // Test error handling integration
         debug!("Testing error handling integration");
         let error_model = Arc::new(ErrorProneModel::new());
         let error_engine = InferenceEngine::new(error_model, tokenizer.clone(), device)
             .map_err(|e| TestError::execution(format!("Failed to create error engine: {}", e)))?;
-        
+
         let mut error_stream = error_engine.generate_stream("Error integration test");
         let mut error_tokens = 0;
         let mut errors_encountered = 0;
-        
+
         // Allow for some errors but expect eventual success
         for _ in 0..10 {
             match error_stream.next().await {
@@ -1252,12 +1252,12 @@ impl TestCase for StreamIntegrationTest {
                 None => break,
             }
         }
-        
+
         // Test streaming with configuration variations
         debug!("Testing configuration variations");
         let mut config_tests = 0;
         let mut config_successes = 0;
-        
+
         let configs = vec![
             GenerationConfig {
                 temperature: 0.1,
@@ -1272,7 +1272,7 @@ impl TestCase for StreamIntegrationTest {
                 ..Default::default()
             },
         ];
-        
+
         for (i, config) in configs.into_iter().enumerate() {
             match engine.generate_stream_with_config(&format!("Config test {}", i + 1), &config) {
                 Ok(mut stream) => {
@@ -1286,14 +1286,14 @@ impl TestCase for StreamIntegrationTest {
             }
             config_tests += 1;
         }
-        
+
         // Final stats
         let final_stats = engine.get_stats().await;
-        debug!("Final stats: cache_size={}, usage={:.2}%", 
+        debug!("Final stats: cache_size={}, usage={:.2}%",
                final_stats.cache_size, final_stats.cache_usage);
 
         let duration = start_time.elapsed();
-        
+
         let total_sequential_tokens: usize = sequential_results.iter().sum();
 
         Ok(TestMetrics {
@@ -1400,12 +1400,12 @@ impl Model for ErrorProneModel {
         _cache: &mut dyn std::any::Any,
     ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
         let count = self.forward_calls.fetch_add(1, Ordering::Relaxed);
-        
+
         // Simulate intermittent errors
         if count % 3 == 2 {
             return Err(anyhow::anyhow!("Simulated forward error").into());
         }
-        
+
         Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
     }
 
@@ -1569,14 +1569,14 @@ impl Model for TimeoutProneModel {
         _cache: &mut dyn std::any::Any,
     ) -> bitnet_common::Result<bitnet_common::ConcreteTensor> {
         let count = self.forward_calls.fetch_add(1, Ordering::Relaxed);
-        
+
         // Simulate occasional long delays
         if count % 4 == 3 {
             std::thread::sleep(Duration::from_millis(500));
         } else {
             std::thread::sleep(Duration::from_millis(10));
         }
-        
+
         Ok(bitnet_common::ConcreteTensor::mock(vec![1, 50257]))
     }
 

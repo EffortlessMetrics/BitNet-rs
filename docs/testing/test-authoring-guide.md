@@ -50,21 +50,21 @@ tests/
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     mod model_loading {
         use super::*;
-        
+
         #[tokio::test]
         async fn test_load_valid_model_succeeds() {
             // Test implementation
         }
-        
+
         #[tokio::test]
         async fn test_load_invalid_model_fails() {
             // Test implementation
         }
     }
-    
+
     mod inference {
         use super::*;
         // More tests...
@@ -86,13 +86,13 @@ async fn test_model_loading_success() {
     let config = TestConfig::default();
     let harness = TestHarness::new(config);
     let fixtures = FixtureManager::new();
-    
+
     let model_path = fixtures.get_model_fixture("small_test_model").await
         .expect("Failed to get test model");
-    
+
     // Act
     let result = BitNetModel::from_file(&model_path).await;
-    
+
     // Assert
     assert!(result.is_ok(), "Model loading should succeed");
     let model = result.unwrap();
@@ -104,10 +104,10 @@ async fn test_model_loading_success() {
 async fn test_model_loading_invalid_path() {
     // Arrange
     let invalid_path = Path::new("/nonexistent/model.gguf");
-    
+
     // Act
     let result = BitNetModel::from_file(invalid_path).await;
-    
+
     // Assert
     assert!(result.is_err(), "Loading nonexistent model should fail");
     match result.unwrap_err() {
@@ -126,9 +126,9 @@ async fn test_model_loading_invalid_path() {
 async fn test_async_inference() {
     let model = setup_test_model().await;
     let tokens = vec![1, 2, 3, 4, 5];
-    
+
     let result = model.generate_from_tokens(&tokens, &InferenceConfig::default()).await;
-    
+
     assert!(result.is_ok());
     let output = result.unwrap();
     assert!(!output.tokens.is_empty());
@@ -147,10 +147,10 @@ proptest! {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let tokenizer = setup_test_tokenizer().await;
-            
+
             let tokens = tokenizer.encode(&text).await.unwrap();
             let decoded = tokenizer.decode(&tokens).await.unwrap();
-            
+
             // Roundtrip should preserve semantic content
             prop_assert!(!tokens.is_empty() || text.is_empty());
             prop_assert!(decoded.len() <= text.len() * 2); // Reasonable bound
@@ -166,9 +166,9 @@ proptest! {
 async fn test_inference_with_empty_tokens() {
     let model = setup_test_model().await;
     let empty_tokens = vec![];
-    
+
     let result = model.generate_from_tokens(&empty_tokens, &InferenceConfig::default()).await;
-    
+
     assert!(result.is_err());
     match result.unwrap_err() {
         InferenceError::EmptyInput => {
@@ -183,9 +183,9 @@ async fn test_model_loading_corrupted_file() {
     let fixtures = FixtureManager::new();
     let corrupted_path = fixtures.create_corrupted_model_fixture().await
         .expect("Failed to create corrupted fixture");
-    
+
     let result = BitNetModel::from_file(&corrupted_path).await;
-    
+
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), ModelError::CorruptedFile(_)));
 }
@@ -201,7 +201,7 @@ use crate::common::{TestHarness, WorkflowTestCase};
 #[tokio::test]
 async fn test_complete_inference_workflow() {
     let harness = TestHarness::new(TestConfig::default());
-    
+
     let test_case = WorkflowTestCase {
         name: "complete_inference_workflow",
         model_name: "small_test_model",
@@ -209,19 +209,19 @@ async fn test_complete_inference_workflow() {
         expected_min_tokens: 5,
         expected_max_tokens: 20,
     };
-    
+
     let result = harness.run_workflow_test(test_case).await;
-    
+
     assert!(result.is_ok());
     let workflow_result = result.unwrap();
-    
+
     // Validate each step
     assert!(workflow_result.model_loaded);
     assert!(workflow_result.tokenization_successful);
     assert!(workflow_result.inference_successful);
     assert!(workflow_result.output_tokens.len() >= 5);
     assert!(workflow_result.output_tokens.len() <= 20);
-    
+
     // Validate performance
     assert!(workflow_result.total_duration < Duration::from_secs(10));
     assert!(workflow_result.peak_memory < 1024 * 1024 * 1024); // 1GB limit
@@ -235,17 +235,17 @@ async fn test_complete_inference_workflow() {
 async fn test_model_tokenizer_integration() {
     let model = setup_test_model().await;
     let tokenizer = model.tokenizer();
-    
+
     let test_text = "The quick brown fox jumps over the lazy dog.";
-    
+
     // Test tokenization
     let tokens = tokenizer.encode(test_text).await
         .expect("Tokenization should succeed");
-    
+
     // Test that model can process these tokens
     let inference_result = model.generate_from_tokens(&tokens, &InferenceConfig::default()).await
         .expect("Inference should succeed");
-    
+
     // Validate integration
     assert!(!tokens.is_empty());
     assert!(!inference_result.tokens.is_empty());
@@ -267,9 +267,9 @@ async fn test_inference_accuracy_comparison() {
         max_probability_divergence: 0.1,
         max_performance_regression: 2.0,
     };
-    
+
     let mut suite = CrossValidationSuite::new(tolerance);
-    
+
     let test_cases = vec![
         ComparisonTestCase {
             name: "simple_generation",
@@ -282,19 +282,19 @@ async fn test_inference_accuracy_comparison() {
             config: InferenceConfig::default(),
         },
     ];
-    
+
     suite.add_test_cases(test_cases);
-    
+
     let model_path = fixtures.get_model_fixture("comparison_model").await
         .expect("Failed to get comparison model");
-    
+
     let result = suite.run_comparison(&model_path).await
         .expect("Comparison should complete");
-    
+
     // Validate results
     assert!(result.summary.overall_accuracy >= 0.95);
     assert!(result.summary.performance_ratio <= 2.0);
-    
+
     for test_result in &result.test_results {
         assert!(test_result.accuracy_result.passes_tolerance);
     }
@@ -307,7 +307,7 @@ async fn test_inference_accuracy_comparison() {
 #[tokio::test]
 async fn test_performance_comparison() {
     let mut suite = CrossValidationSuite::new(ComparisonTolerance::default());
-    
+
     let performance_test = ComparisonTestCase {
         name: "performance_benchmark",
         input: "Generate a story about artificial intelligence.",
@@ -317,22 +317,22 @@ async fn test_performance_comparison() {
             ..Default::default()
         },
     };
-    
+
     suite.add_test_case(performance_test);
-    
+
     let model_path = fixtures.get_model_fixture("performance_model").await
         .expect("Failed to get performance model");
-    
+
     let result = suite.run_comparison(&model_path).await
         .expect("Performance comparison should complete");
-    
+
     // Validate performance metrics
     let perf_comparison = &result.test_results[0].performance_comparison;
-    
+
     // Rust should be competitive with C++
-    assert!(perf_comparison.throughput_ratio <= 2.0, 
+    assert!(perf_comparison.throughput_ratio <= 2.0,
            "Rust should not be more than 2x slower than C++");
-    
+
     // Memory usage should be reasonable
     assert!(perf_comparison.memory_ratio <= 1.5,
            "Rust should not use more than 1.5x memory of C++");
@@ -384,7 +384,7 @@ async fn test_model_inference() {
 async fn test_tokenization_output() {
     let tokenizer = setup_tokenizer().await;
     let tokens = tokenizer.encode("Hello world").await.unwrap();
-    
+
     assert_eq!(tokens.len(), 2, "Should tokenize 'Hello world' into 2 tokens");
     assert!(tokens[0] > 0, "First token should be positive");
     assert!(tokens[1] > 0, "Second token should be positive");
@@ -396,7 +396,7 @@ async fn test_tokenization_output() {
 async fn test_tokenization_output() {
     let tokenizer = setup_tokenizer().await;
     let tokens = tokenizer.encode("Hello world").await.unwrap();
-    
+
     assert!(tokens.len() > 0); // Too vague
     assert!(tokens.iter().all(|&t| t > 0)); // Not descriptive
 }
@@ -409,9 +409,9 @@ async fn test_tokenization_output() {
 #[tokio::test]
 async fn test_invalid_model_format() {
     let invalid_path = create_invalid_model_file().await;
-    
+
     let result = BitNetModel::from_file(&invalid_path).await;
-    
+
     assert!(result.is_err());
     match result.unwrap_err() {
         ModelError::InvalidFormat { format, expected } => {
@@ -439,14 +439,14 @@ async fn test_invalid_model_format() {
 async fn test_with_temporary_files() {
     let temp_dir = tempfile::tempdir().unwrap();
     let model_path = temp_dir.path().join("test_model.gguf");
-    
+
     // Create test file
     create_test_model_file(&model_path).await;
-    
+
     // Run test
     let result = BitNetModel::from_file(&model_path).await;
     assert!(result.is_ok());
-    
+
     // Cleanup happens automatically when temp_dir is dropped
 }
 
@@ -461,7 +461,7 @@ impl TestResource {
         let temp_dir = tempfile::tempdir().unwrap();
         let model_path = temp_dir.path().join("test_model.gguf");
         create_test_model_file(&model_path).await;
-        
+
         Self {
             _temp_dir: temp_dir,
             model_path,
@@ -477,22 +477,22 @@ impl TestResource {
 async fn test_inference_performance() {
     let model = setup_performance_model().await;
     let tokens = vec![1, 2, 3, 4, 5];
-    
+
     let start = Instant::now();
     let result = model.generate_from_tokens(&tokens, &InferenceConfig::default()).await;
     let duration = start.elapsed();
-    
+
     assert!(result.is_ok());
-    assert!(duration < Duration::from_millis(100), 
+    assert!(duration < Duration::from_millis(100),
            "Inference should complete within 100ms, took {:?}", duration);
-    
+
     // Test memory usage
     let memory_before = get_memory_usage();
     let _result = model.generate_from_tokens(&tokens, &InferenceConfig::default()).await;
     let memory_after = get_memory_usage();
     let memory_used = memory_after - memory_before;
-    
-    assert!(memory_used < 100 * 1024 * 1024, 
+
+    assert!(memory_used < 100 * 1024 * 1024,
            "Should use less than 100MB, used {}MB", memory_used / 1024 / 1024);
 }
 ```
@@ -507,7 +507,7 @@ async fn setup_test_model() -> BitNetModel {
     let fixtures = FixtureManager::new();
     let model_path = fixtures.get_model_fixture("default_test_model").await
         .expect("Failed to get test model");
-    
+
     BitNetModel::from_file(&model_path).await
         .expect("Failed to load test model")
 }
@@ -516,7 +516,7 @@ async fn setup_test_model() -> BitNetModel {
 async fn test_model_with_different_configs(config: InferenceConfig) {
     let model = setup_test_model().await;
     let tokens = vec![1, 2, 3];
-    
+
     let result = model.generate_from_tokens(&tokens, &config).await;
     assert!(result.is_ok());
 }
@@ -530,7 +530,7 @@ async fn test_various_inference_configs() {
         InferenceConfig { max_tokens: 10, ..Default::default() },
         InferenceConfig { max_tokens: 100, ..Default::default() },
     ];
-    
+
     for config in configs {
         test_model_with_different_configs(config).await;
     }
@@ -553,7 +553,7 @@ impl Tokenizer for MockTokenizer {
         self.encode_calls.lock().unwrap().push(text.to_string());
         Ok(text.chars().map(|c| c as u32).collect())
     }
-    
+
     async fn decode(&self, tokens: &[u32]) -> Result<String, TokenizerError> {
         self.decode_calls.lock().unwrap().push(tokens.to_vec());
         Ok(tokens.iter().map(|&t| t as u8 as char).collect())
@@ -564,10 +564,10 @@ impl Tokenizer for MockTokenizer {
 async fn test_with_mock_tokenizer() {
     let mock_tokenizer = MockTokenizer::default();
     let model = BitNetModel::with_tokenizer(Box::new(mock_tokenizer.clone()));
-    
+
     let result = model.process_text("test").await;
     assert!(result.is_ok());
-    
+
     // Verify mock was called correctly
     let encode_calls = mock_tokenizer.encode_calls.lock().unwrap();
     assert_eq!(encode_calls.len(), 1);

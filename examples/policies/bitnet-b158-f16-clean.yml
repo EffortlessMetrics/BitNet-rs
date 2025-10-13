@@ -1,0 +1,158 @@
+# BitNet b1.58 F16 Clean Export - Validation Policy
+# ==================================================
+#
+# This policy defines validation rules for BitNet b1.58 models exported with
+# F16 precision (unquantized). These rules are based on empirical analysis of
+# clean F16 exports from st2gguf converter.
+#
+# **Use this policy for:**
+# - BitNet b1.58 models exported with st2gguf (F16 output)
+# - Models with general.file_type = 1 (F16) in GGUF metadata
+# - Clean exports where LayerNorm weights were NOT quantized
+#
+# **Architecture:** BitNet b1.58 (1-bit weight compression)
+# **Precision:** F16 (float16)
+# **Target Use:** Validation gates for clean model exports
+#
+# See: crates/bitnet-cli/src/ln_rules.rs::rules_bitnet_b158_f16()
+
+version: 1
+
+rules:
+  bitnet-b1.58:f16:
+    name: "BitNet b1.58 F16 Clean Export"
+
+    # LayerNorm Gamma Weight Validation
+    # ==================================
+    # These thresholds define acceptable RMS (root mean square) ranges for
+    # LayerNorm gamma weights. Each pattern matches specific layer types with
+    # their empirically observed RMS distributions.
+
+    ln:
+      # FFN LayerNorm: Often has legitimately low RMS (~0.05-0.10)
+      # This is architectural - FFN norms can have small gamma values in BitNet
+      - pattern: "ffn_layernorm\\.weight$"
+        min: 0.05
+        max: 2.0
+        description: |
+          FFN (feed-forward network) LayerNorm weights.
+          BitNet FFN norms often have small gamma RMS (~0.05-0.10) due to
+          architectural design. This is NOT a quantization artifact.
+
+      # Post-Attention LayerNorm: Typically 0.25-1.0
+      # This norm follows the attention mechanism and shows moderate RMS
+      - pattern: "post_attention_layernorm\\.weight$"
+        min: 0.25
+        max: 2.0
+        description: |
+          Post-attention LayerNorm weights.
+          Applied after attention mechanism, typically RMS ~0.25-1.0.
+          Values below 0.25 may indicate quantization corruption.
+
+      # Input LayerNorm: Typically 0.35-1.0
+      # This is the first norm in each transformer block
+      - pattern: "input_layernorm\\.weight$"
+        min: 0.35
+        max: 2.0
+        description: |
+          Input LayerNorm weights (first norm in transformer block).
+          Typical RMS range: 0.35-1.0.
+          Values below 0.35 suggest quantization or export issues.
+
+      # Final LayerNorm: Should be close to 1.0 (0.5-2.0 envelope)
+      # This is the last norm before the output projection
+      - pattern: "final_(layer)?norm\\.weight$"
+        min: 0.50
+        max: 2.0
+        description: |
+          Final LayerNorm before output projection.
+          Should have RMS close to 1.0 (standard initialization).
+          Wide envelope [0.5, 2.0] accommodates fine-tuned models.
+
+      # Generic attention/FFN/RMS norm patterns
+      # Catch-all for various norm naming conventions
+      - pattern: "(attn|ffn|rms).*norm\\.weight$"
+        min: 0.50
+        max: 2.0
+        description: |
+          Generic norm patterns (attention, FFN, RMS).
+          Conservative envelope [0.5, 2.0] for norms not matched above.
+
+      # Fallback: Any remaining norm weights
+      # Last resort pattern for unusual naming conventions
+      - pattern: ".*norm\\.weight$"
+        min: 0.50
+        max: 2.0
+        description: |
+          Fallback pattern for any norm weight not matched above.
+          If RMS falls outside [0.5, 2.0], likely a quantization issue.
+
+    # Projection Weight RMS Validation
+    # =================================
+    # Projection layers (Q, K, V, O, gate, up, down) should have small but
+    # non-zero RMS values in F16 exports. These bounds are empirically derived
+    # from clean BitNet exports.
+
+    proj_weight_rms_min: 0.01
+    proj_weight_rms_max: 0.40
+
+    notes: |
+      Projection weight RMS in clean F16 exports typically ranges 0.01-0.25.
+      Upper bound 0.40 provides safety margin for fine-tuned or unusual models.
+
+      Projections include:
+        - Attention: Q, K, V, O (query, key, value, output)
+        - FFN: gate, up, down (feed-forward network)
+
+      If RMS exceeds 0.40, check for:
+        - Incorrect quantization (should be F16, not I2_S)
+        - Export issues (inverted scales, wrong metadata)
+        - Non-standard architecture (may need custom policy)
+
+# ==============================================================================
+# Usage Examples
+# ==============================================================================
+#
+# 1. Validate a clean F16 export:
+#    cargo run -p bitnet-cli -- inspect --ln-stats \
+#      --policy examples/policies/bitnet-b158-f16-clean.yml \
+#      --policy-key bitnet-b1.58:f16 \
+#      path/to/model-f16.gguf
+#
+# 2. Use with st2gguf converter validation:
+#    cargo run -p bitnet-st2gguf -- \
+#      --input model.safetensors \
+#      --output model-f16.gguf \
+#      --validation-policy examples/policies/bitnet-b158-f16-clean.yml
+#
+# 3. Auto-detect during model loading:
+#    # Policy is automatically selected when:
+#    # - general.architecture contains "bitnet" or "b1.58"
+#    # - general.file_type = 1 (F16)
+#    RUST_LOG=info cargo run -p bitnet-cli -- run --model model-f16.gguf
+#
+# ==============================================================================
+# Troubleshooting
+# ==============================================================================
+#
+# Symptom: "ffn_layernorm.weight RMS=0.08 [SUSPICIOUS]"
+# Cause: Low FFN norm RMS is EXPECTED in BitNet architecture
+# Solution: This is NOT an error - FFN norms legitimately have low RMS
+#
+# Symptom: "input_layernorm.weight RMS=0.02 [SUSPICIOUS]"
+# Cause: LayerNorm was quantized to I2_S (should be F16)
+# Solution: Regenerate GGUF with --skip-layernorm-quantization or use st2gguf
+#
+# Symptom: "Projection weight RMS=50.0 [OUT OF RANGE]"
+# Cause: Inverted I2_S scales or wrong quantization type
+# Solution: Check export settings, verify file_type=1 in GGUF metadata
+#
+# ==============================================================================
+# Related Policies
+# ==============================================================================
+#
+# - bitnet-b158-i2s-quantized.yml: For I2_S quantized BitNet models
+# - llama-generic.yml: For LLaMA-style RMSNorm architectures
+# - custom-model-example.yml: Template for creating new policies
+#
+# ==============================================================================

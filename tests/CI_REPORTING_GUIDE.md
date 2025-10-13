@@ -237,17 +237,17 @@ use bitnet_tests::ci_reporting::{CINotificationManager, NotificationConfig, CICo
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load test results
     let test_results = load_test_results().await?;
-    
+
     // Create CI context
     let ci_context = CIContext::from_env();
-    
+
     // Configure notifications
     let config = NotificationConfig::default();
     let manager = CINotificationManager::new(config)?;
-    
+
     // Process results and send notifications
     manager.process_test_results(&test_results, &ci_context).await?;
-    
+
     Ok(())
 }
 ```
@@ -261,23 +261,23 @@ use bitnet_tests::trend_reporting::{TrendReporter, TrendConfig};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = TrendConfig::default();
     let reporter = TrendReporter::new("./trend-data".into(), config);
-    
+
     // Load current test results
     let current_results = load_current_results().await?;
-    
+
     // Detect regressions
     let regressions = reporter.detect_regressions(&current_results, 30).await?;
-    
+
     if !regressions.is_empty() {
         println!("⚠️ Performance regressions detected:");
         for regression in &regressions {
-            println!("  - {}: {:.1}% slower", 
-                regression.test_name, 
+            println!("  - {}: {:.1}% slower",
+                regression.test_name,
                 regression.regression_percent);
         }
         std::process::exit(1);
     }
-    
+
     Ok(())
 }
 ```

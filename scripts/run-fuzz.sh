@@ -28,12 +28,12 @@ TARGETS=(
 run_fuzz_target() {
     local target=$1
     local duration=${2:-60}  # Default 60 seconds
-    
+
     echo "Running fuzz target: $target for ${duration}s"
-    
+
     # Create artifacts directory
     mkdir -p "fuzz/artifacts/$target"
-    
+
     # Run the fuzzer
     timeout ${duration}s cargo fuzz run $target -- -max_total_time=${duration} || {
         local exit_code=$?
@@ -44,7 +44,7 @@ run_fuzz_target() {
             return $exit_code
         fi
     }
-    
+
     # Check for crashes
     if [ -d "fuzz/artifacts/$target" ] && [ "$(ls -A fuzz/artifacts/$target)" ]; then
         echo "⚠️  Crashes found for $target:"
@@ -101,14 +101,14 @@ if [ -n "$TARGET" ]; then
 else
     echo "Running all fuzz targets for ${DURATION}s each..."
     failed_targets=()
-    
+
     for target in "${TARGETS[@]}"; do
         if ! run_fuzz_target "$target" "$DURATION"; then
             failed_targets+=("$target")
         fi
         echo ""
     done
-    
+
     # Summary
     echo "=== Fuzzing Summary ==="
     if [ ${#failed_targets[@]} -eq 0 ]; then

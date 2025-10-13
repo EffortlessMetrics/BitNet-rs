@@ -177,7 +177,7 @@ volumes:
     driver: local
   crossval-legacy-logs:
     driver: local
-  
+
   # Monitoring data
   crossval-prometheus-data:
     driver: local
@@ -198,10 +198,10 @@ networks:
 x-scripts:
   run-crossval: &run-crossval
     docker-compose -f docker-compose.crossval.yml up crossval-runner benchmark-runner
-  
+
   view-results: &view-results
     echo "Cross-validation results available at http://localhost:8082"
     echo "Grafana dashboard available at http://localhost:3001 (admin/crossval123)"
-  
+
   cleanup: &cleanup
     docker-compose -f docker-compose.crossval.yml down -v

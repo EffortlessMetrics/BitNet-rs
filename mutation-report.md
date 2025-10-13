@@ -30,7 +30,7 @@ Only viable mutants (those that compile) should count:
 ### 2. Low Kill Rate
 Only 3/17 viable mutants were caught, indicating:
 - **Weak assertions** in existing tests
-- **Missing edge case validation** 
+- **Missing edge case validation**
 - **Insufficient coverage** of mathematical operations
 
 ## High-Impact Survivors (Timeouts)
@@ -38,7 +38,7 @@ Only 3/17 viable mutants were caught, indicating:
 ### Arithmetic Operator Mutations (Critical)
 **Location**: `i2s.rs:57-60` (I2SLayout::with_block_size)
 - `* → +`: Mutation survived (timeout)
-- `* → /`: Mutation survived (timeout)  
+- `* → /`: Mutation survived (timeout)
 - `+ → -`: Mutation survived (timeout)
 - `+ → *`: Mutation survived (timeout)
 
@@ -97,7 +97,7 @@ Only 3/17 viable mutants were caught, indicating:
 **Justification:**
 - Score (18%) is far below 70% threshold
 - 14 timeout mutations suggest **input-space blind spots**
-- Timeouts indicate **missing boundary validation** 
+- Timeouts indicate **missing boundary validation**
 - Arithmetic mutations on layout calculations need **fuzzing**
 - GPU/CPU code paths need **differential testing**
 
@@ -116,7 +116,7 @@ Total mutation testing time: 7m 17s (within GitHub Actions 10min window)
 
 1. **fuzz-tester**: Generate test cases for:
    - Block size boundary conditions
-   - Arithmetic operation edge cases  
+   - Arithmetic operation edge cases
    - Device selection fuzzing
    - GPU/CPU differential inputs
 

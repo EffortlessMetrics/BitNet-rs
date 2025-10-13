@@ -92,19 +92,19 @@ set_version() {
 # List available versions from upstream
 list_versions() {
     log_info "Fetching available versions from upstream..."
-    
+
     # Create temporary directory for listing
     local temp_dir=$(mktemp -d)
     trap "rm -rf $temp_dir" EXIT
-    
+
     # Clone just to get tags
     git clone --bare --filter=blob:none "$BITNET_CPP_REPO" "$temp_dir/repo.git" >/dev/null 2>&1
-    
+
     cd "$temp_dir/repo.git"
-    
+
     log_info "Available versions:"
     git tag --sort=-version:refname | head -20
-    
+
     log_info ""
     log_info "Latest release:"
     git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || echo "No semantic version tags found"
@@ -114,18 +114,18 @@ list_versions() {
 get_latest_version() {
     local temp_dir=$(mktemp -d)
     trap "rm -rf $temp_dir" EXIT
-    
+
     git clone --bare --filter=blob:none "$BITNET_CPP_REPO" "$temp_dir/repo.git" >/dev/null 2>&1
     cd "$temp_dir/repo.git"
-    
+
     # Try to find latest semantic version tag
     local latest=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-    
+
     if [[ -z "$latest" ]]; then
         # Fall back to any tag
         latest=$(git tag --sort=-version:refname | head -1)
     fi
-    
+
     echo "$latest"
 }
 
@@ -134,10 +134,10 @@ version_exists() {
     local version="$1"
     local temp_dir=$(mktemp -d)
     trap "rm -rf $temp_dir" EXIT
-    
+
     git clone --bare --filter=blob:none "$BITNET_CPP_REPO" "$temp_dir/repo.git" >/dev/null 2>&1
     cd "$temp_dir/repo.git"
-    
+
     git tag | grep -q "^$version$"
 }
 
@@ -146,26 +146,26 @@ update_version() {
     local new_version="$1"
     local force="$2"
     local skip_confirm="$3"
-    
+
     local current_version=$(get_current_version)
-    
+
     log_info "Current version: $current_version"
     log_info "Target version: $new_version"
-    
+
     # Check if version exists
     if ! version_exists "$new_version"; then
         log_error "Version '$new_version' does not exist upstream"
         log_info "Run '$0 list' to see available versions"
         exit 1
     fi
-    
+
     # Check if already current
     if [[ "$current_version" == "$new_version" && "$force" != "true" ]]; then
         log_info "Already on version $new_version"
         log_info "Use --force to update anyway"
         exit 0
     fi
-    
+
     # Confirm update
     if [[ "$skip_confirm" != "true" ]]; then
         echo -n "Update from $current_version to $new_version? [y/N] "
@@ -175,24 +175,24 @@ update_version() {
             exit 0
         fi
     fi
-    
+
     # Update version file
     set_version "$new_version"
-    
+
     # Clean existing cache to force re-download
     if [[ -d "$CACHE_DIR" ]]; then
         log_info "Cleaning existing cache..."
         rm -rf "$CACHE_DIR"
     fi
-    
+
     # Fetch new version
     log_info "Fetching new version..."
     BITNET_CPP_TAG="$new_version" "$SCRIPT_DIR/fetch_bitnet_cpp.sh"
-    
+
     # Generate new checksums
     log_info "Generating checksums for new version..."
     generate_checksums
-    
+
     log_info "Successfully updated to version $new_version"
     log_warn "Remember to test cross-validation with the new version:"
     log_warn "  cargo test --features crossval"
@@ -202,10 +202,10 @@ update_version() {
 check_updates() {
     local current_version=$(get_current_version)
     local latest_version=$(get_latest_version)
-    
+
     log_info "Current version: $current_version"
     log_info "Latest version: $latest_version"
-    
+
     if [[ "$current_version" == "$latest_version" ]]; then
         log_info "✓ Up to date"
         return 0
@@ -219,23 +219,23 @@ check_updates() {
 # Validate current version and checksums
 validate_version() {
     local current_version=$(get_current_version)
-    
+
     log_info "Validating version: $current_version"
-    
+
     # Check if cache exists
     if [[ ! -d "$CACHE_DIR" ]]; then
         log_error "Cache directory not found: $CACHE_DIR"
         log_info "Run '$SCRIPT_DIR/fetch_bitnet_cpp.sh' to download"
         return 1
     fi
-    
+
     # Check git tag in cache
     cd "$CACHE_DIR"
     if [[ ! -d ".git" ]]; then
         log_error "Cache is not a git repository"
         return 1
     fi
-    
+
     local actual_version=$(git describe --tags --exact-match 2>/dev/null || echo "unknown")
     if [[ "$actual_version" != "$current_version" ]]; then
         log_error "Version mismatch:"
@@ -243,13 +243,13 @@ validate_version() {
         log_error "  Actual: $actual_version"
         return 1
     fi
-    
+
     log_info "✓ Version matches: $current_version"
-    
+
     # Validate checksums if available
     if [[ -f "$CHECKSUM_FILE" && -s "$CHECKSUM_FILE" ]]; then
         log_info "Validating checksums..."
-        
+
         if command -v sha256sum >/dev/null 2>&1; then
             if sha256sum -c "$CHECKSUM_FILE" >/dev/null 2>&1; then
                 log_info "✓ Checksums valid"
@@ -270,7 +270,7 @@ validate_version() {
     else
         log_warn "No checksums available for validation"
     fi
-    
+
     log_info "✓ Validation passed"
     return 0
 }
@@ -278,24 +278,24 @@ validate_version() {
 # Generate checksums for current version
 generate_checksums() {
     log_info "Generating checksums..."
-    
+
     if [[ ! -d "$CACHE_DIR" ]]; then
         log_error "Cache directory not found: $CACHE_DIR"
         log_info "Run '$SCRIPT_DIR/fetch_bitnet_cpp.sh' first"
         return 1
     fi
-    
+
     cd "$CACHE_DIR"
-    
+
     # Generate checksums for key files
     local temp_checksums=$(mktemp)
-    
+
     # Find important files to checksum
     find . -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "CMakeLists.txt" | \
         sort | \
         xargs sha256sum > "$temp_checksums" 2>/dev/null || \
         xargs shasum -a 256 > "$temp_checksums" 2>/dev/null
-    
+
     if [[ -s "$temp_checksums" ]]; then
         # Add header to checksum file
         cat > "$CHECKSUM_FILE" << EOF
@@ -306,7 +306,7 @@ generate_checksums() {
 EOF
         cat "$temp_checksums" >> "$CHECKSUM_FILE"
         rm "$temp_checksums"
-        
+
         local checksum_count=$(grep -v '^#' "$CHECKSUM_FILE" | wc -l)
         log_info "Generated checksums for $checksum_count files"
         log_info "Checksums saved to: $CHECKSUM_FILE"

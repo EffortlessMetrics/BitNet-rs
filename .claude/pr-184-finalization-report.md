@@ -1,12 +1,12 @@
 # PR #184 Finalization Report: Handle NaN logits safely in sampling
 
 ## Overview
-**PR Title**: Handle NaN logits safely in sampling  
-**PR Number**: #184  
-**Author**: @EffortlessSteven  
-**Branch**: `codex/fix-nan-handling-in-sampling.rs`  
-**Base Branch**: `main`  
-**Validation Date**: September 7, 2025  
+**PR Title**: Handle NaN logits safely in sampling
+**PR Number**: #184
+**Author**: @EffortlessSteven
+**Branch**: `codex/fix-nan-handling-in-sampling.rs`
+**Base Branch**: `main`
+**Validation Date**: September 7, 2025
 
 ## Summary of Changes
 
@@ -47,7 +47,7 @@ This PR implements comprehensive NaN handling improvements in the BitNet.rs samp
 
 Three new tests specifically validate NaN handling:
 - `test_top_k_filter_with_nan`: Validates NaN filtering in top-k sampling
-- `test_top_p_filter_with_nan`: Validates NaN filtering in top-p sampling  
+- `test_top_p_filter_with_nan`: Validates NaN filtering in top-p sampling
 - `test_sample_with_nan_logits`: Validates complete sampling pipeline with NaN inputs
 
 ## Technical Analysis
@@ -84,7 +84,7 @@ The NaN handling improvements directly enhance the robustness of streaming infer
 ### Merge Justification
 
 1. **Quality Standards Met**: All validation gates passed
-2. **Critical Improvement**: Addresses potential runtime crashes 
+2. **Critical Improvement**: Addresses potential runtime crashes
 3. **Production Ready**: Comprehensive test coverage
 4. **No Breaking Changes**: Safe for immediate deployment
 
@@ -117,6 +117,6 @@ The NaN handling improvements directly enhance the robustness of streaming infer
 
 ---
 
-**Final Status**: ✅ **READY FOR MERGE**  
-**Validation Complete**: September 7, 2025  
+**Final Status**: ✅ **READY FOR MERGE**
+**Validation Complete**: September 7, 2025
 **Next Action**: Execute merge with comprehensive validation report

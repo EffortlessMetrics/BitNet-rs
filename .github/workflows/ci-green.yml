@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Cache cargo dependencies
         uses: actions/cache@v4
         with:
@@ -29,13 +29,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      
+
       - name: Build (no native)
         run: cargo build --workspace --exclude bitnet-sys --exclude bitnet-py
-      
+
       - name: Test (CPU only)
         run: cargo test --workspace --exclude bitnet-sys --exclude bitnet-py --features cpu
-      
+
       - name: Run minimal inference (dummy)
         run: |
           cargo run --example infer | tee infer.out
@@ -51,7 +51,7 @@ jobs:
             cat infer.out
             echo '```'
           } >> $GITHUB_STEP_SUMMARY
-      
+
       - name: Run minimal inference (real, if GGUF present)
         continue-on-error: true
         env:
@@ -71,14 +71,14 @@ jobs:
           else
             echo "No GGUF model found, skipping real weight test"
           fi
-      
+
       - name: Model download (JSON mode)
         run: |
           # Download model with JSON output for CI parsing
           cargo run -p xtask -- download-model --json --retries 4 \
             --id microsoft/bitnet-b1.58-2B-4T-gguf \
             --file ggml-model-i2_s.gguf | tee events.jsonl || true
-          
+
           # Generate step summary if download succeeded
           if [ -f events.jsonl ]; then
             {
@@ -95,10 +95,10 @@ jobs:
               echo '```'
             } >> $GITHUB_STEP_SUMMARY
           fi
-      
+
       - name: Clippy check
         run: cargo clippy --workspace --exclude bitnet-sys --exclude bitnet-py --all-targets --features cpu -- -D warnings
-      
+
       - name: Format check
         run: cargo fmt --all -- --check
 

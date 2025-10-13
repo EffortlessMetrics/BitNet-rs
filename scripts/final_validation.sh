@@ -28,7 +28,7 @@ record_result() {
     local test_name="$1"
     local status="$2"
     local details="${3:-}"
-    
+
     if [ "$status" = "PASS" ]; then
         echo -e "${GREEN}✅ ${test_name}${NC}"
         VALIDATION_RESULTS+=("✅ ${test_name}")
@@ -70,7 +70,7 @@ if "${SCRIPT_DIR}/validate_format_parity.sh" >/tmp/parity.log 2>&1; then
         FP32_NLL=$(jq -r '.results.fp32_vs_fp32.nll_diff.mean // 999' "$PARITY_JSON")
         QUANT_TAU=$(jq -r '.results.quant_vs_fp32.kendall_tau_b.median // 0' "$PARITY_JSON")
         QUANT_NLL=$(jq -r '.results.quant_vs_fp32.nll_diff.mean // 999' "$PARITY_JSON")
-        
+
         # Check FP32 thresholds
         if awk "BEGIN {exit !($FP32_TAU >= 0.95)}" && \
            awk "BEGIN {exit !(($FP32_NLL < 0 ? -$FP32_NLL : $FP32_NLL) <= 0.01)}"; then
@@ -78,7 +78,7 @@ if "${SCRIPT_DIR}/validate_format_parity.sh" >/tmp/parity.log 2>&1; then
         else
             record_result "FP32↔FP32 parity" "FAIL" "τ-b=${FP32_TAU} (need ≥0.95), ΔNLL=${FP32_NLL} (need ≤0.01)"
         fi
-        
+
         # Check Quant thresholds
         if awk "BEGIN {exit !($QUANT_TAU >= 0.60)}" && \
            awk "BEGIN {exit !(($QUANT_NLL < 0 ? -$QUANT_NLL : $QUANT_NLL) <= 0.02)}"; then
@@ -104,7 +104,7 @@ GGUF_PERF=$(ls -t bench/results/*-gguf.json 2>/dev/null | head -1)
 if [ -f "$ST_PERF" ] && [ -f "$GGUF_PERF" ]; then
     record_result "SafeTensors perf JSON" "PASS" "$(basename "$ST_PERF")"
     record_result "GGUF perf JSON" "PASS" "$(basename "$GGUF_PERF")"
-    
+
     # Verify provenance fields
     for json in "$ST_PERF" "$GGUF_PERF"; do
         if jq -e '.git_commit and .model_hash and .schema_version' "$json" >/dev/null; then
@@ -124,7 +124,7 @@ echo "──────────────────────"
 if [ -f "$ST_PERF" ] && [ -f "$GGUF_PERF" ]; then
     # Regenerate and compare
     python3 "${SCRIPT_DIR}/render_perf_md.py" "$ST_PERF" "$GGUF_PERF" > /tmp/perf_check.md 2>/dev/null
-    
+
     if [ -f docs/PERF_COMPARISON.md ]; then
         if diff -q <(grep -v "Generated from" docs/PERF_COMPARISON.md) \
                    <(grep -v "Generated from" /tmp/perf_check.md) >/dev/null; then

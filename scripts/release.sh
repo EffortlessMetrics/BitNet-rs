@@ -130,7 +130,7 @@ get_current_version() {
 calculate_next_version() {
     local current_version="$1"
     local release_type="$2"
-    
+
     # Parse current version
     local major minor patch pre
     if [[ "$current_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-(.+))?$ ]]; then
@@ -142,7 +142,7 @@ calculate_next_version() {
         print_error "Invalid current version format: $current_version"
         exit 1
     fi
-    
+
     # Calculate next version
     case "$release_type" in
         major)
@@ -176,19 +176,19 @@ calculate_next_version() {
 # Validate git repository state
 validate_git_state() {
     print_status "Validating git repository state..."
-    
+
     # Check if we're in a git repository
     if ! git rev-parse --git-dir >/dev/null 2>&1; then
         print_error "Not in a git repository"
         exit 1
     fi
-    
+
     # Check for uncommitted changes
     if ! git diff-index --quiet HEAD --; then
         print_error "Uncommitted changes detected. Please commit or stash them."
         exit 1
     fi
-    
+
     # Check if we're on main/master branch
     local current_branch=$(git branch --show-current)
     if [[ "$current_branch" != "main" && "$current_branch" != "master" ]]; then
@@ -199,19 +199,19 @@ validate_git_state() {
             exit 1
         fi
     fi
-    
+
     # Check if we're up to date with remote
     if git remote get-url origin >/dev/null 2>&1; then
         git fetch origin
         local local_commit=$(git rev-parse HEAD)
         local remote_commit=$(git rev-parse origin/"$current_branch" 2>/dev/null || echo "")
-        
+
         if [[ -n "$remote_commit" && "$local_commit" != "$remote_commit" ]]; then
             print_error "Local branch is not up to date with remote"
             exit 1
         fi
     fi
-    
+
     print_success "Git repository state is valid"
 }
 
@@ -221,51 +221,51 @@ run_validation() {
         print_warning "Skipping pre-release validation"
         return
     fi
-    
+
     print_status "Running pre-release validation..."
-    
+
     # Run quality checks
     if [[ -x "scripts/quality-check.sh" ]]; then
         ./scripts/quality-check.sh
     else
         print_warning "Quality check script not found or not executable"
     fi
-    
+
     # Run security audit
     if [[ -x "scripts/security-audit.sh" ]]; then
         ./scripts/security-audit.sh
     else
         print_warning "Security audit script not found or not executable"
     fi
-    
+
     # Run documentation validation
     if [[ -x "scripts/docs-validation.sh" ]]; then
         ./scripts/docs-validation.sh
     else
         print_warning "Documentation validation script not found or not executable"
     fi
-    
+
     print_success "Pre-release validation completed"
 }
 
 # Update version in all Cargo.toml files
 update_version() {
     local new_version="$1"
-    
+
     print_status "Updating version to $new_version..."
-    
+
     # Update workspace Cargo.toml
     sed -i.bak "s/^version = \".*\"/version = \"$new_version\"/" Cargo.toml
-    
+
     # Update all crate Cargo.toml files
     find crates -name Cargo.toml -exec sed -i.bak "s/^version = \".*\"/version = \"$new_version\"/" {} \;
-    
+
     # Update version references in dependencies
     find . -name Cargo.toml -exec sed -i.bak "s/bitnet-[a-z-]* = { path = \"[^\"]*\", version = \"[^\"]*\"/bitnet-&, version = \"$new_version\"/g" {} \;
-    
+
     # Clean up backup files
     find . -name "*.bak" -delete
-    
+
     print_success "Version updated to $new_version"
 }
 
@@ -273,9 +273,9 @@ update_version() {
 update_changelog() {
     local new_version="$1"
     local release_date=$(date +%Y-%m-%d)
-    
+
     print_status "Updating CHANGELOG.md..."
-    
+
     if [[ -f "CHANGELOG.md" ]]; then
         # Replace [Unreleased] with version and date
         sed -i.bak "s/## \[Unreleased\]/## [Unreleased]\n\n## [$new_version] - $release_date/" CHANGELOG.md
@@ -290,61 +290,61 @@ update_changelog() {
 create_git_tag() {
     local version="$1"
     local tag="v$version"
-    
+
     print_status "Creating git tag $tag..."
-    
+
     if $DRY_RUN; then
         print_status "DRY RUN: Would create tag $tag"
         return
     fi
-    
+
     # Commit version changes
     git add .
     git commit -m "chore: bump version to $version"
-    
+
     # Create annotated tag
     git tag -a "$tag" -m "Release $version"
-    
+
     print_success "Git tag $tag created"
 }
 
 # Build release artifacts
 build_artifacts() {
     local version="$1"
-    
+
     print_status "Building release artifacts..."
-    
+
     if $DRY_RUN; then
         print_status "DRY RUN: Would build release artifacts"
         return
     fi
-    
+
     # Build release binaries
     cargo build --release --all-features
-    
+
     # Run tests if not skipped
     if [[ "$SKIP_TESTS" != "true" ]]; then
         cargo test --release --all-features
     fi
-    
+
     # Create release directory
     local release_dir="release-$version"
     mkdir -p "$release_dir"
-    
+
     # Copy binaries
     cp target/release/bitnet "$release_dir/" 2>/dev/null || true
     cp target/release/server "$release_dir/bitnet-server" 2>/dev/null || true
-    
+
     # Copy documentation
     cp README.md CHANGELOG.md "$release_dir/"
     cp LICENSE* "$release_dir/" 2>/dev/null || true
-    
+
     # Create archive
     tar czf "$release_dir.tar.gz" "$release_dir"
-    
+
     # Generate checksums
     sha256sum "$release_dir.tar.gz" > "$release_dir.tar.gz.sha256"
-    
+
     print_success "Release artifacts built: $release_dir.tar.gz"
 }
 
@@ -352,18 +352,18 @@ build_artifacts() {
 push_release() {
     local version="$1"
     local tag="v$version"
-    
+
     if $DRY_RUN; then
         print_status "DRY RUN: Would push tag $tag to trigger release"
         return
     fi
-    
+
     print_status "Pushing tag $tag to trigger automated release..."
-    
+
     # Push commits and tags
     git push origin HEAD
     git push origin "$tag"
-    
+
     print_success "Tag pushed. Automated release pipeline should start shortly."
     print_status "Monitor the release at: https://github.com/microsoft/BitNet/actions"
 }
@@ -371,26 +371,26 @@ push_release() {
 # Main release function
 main() {
     parse_args "$@"
-    
+
     print_status "Starting release process..."
-    
+
     # Determine version
     local current_version=$(get_current_version)
     local target_version
-    
+
     if [[ -n "$VERSION" ]]; then
         target_version="$VERSION"
     else
         target_version=$(calculate_next_version "$current_version" "$RELEASE_TYPE")
     fi
-    
+
     print_status "Current version: $current_version"
     print_status "Target version: $target_version"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         print_warning "DRY RUN MODE - No changes will be made"
     fi
-    
+
     # Confirm release
     if [[ "$DRY_RUN" != "true" ]]; then
         echo
@@ -401,22 +401,22 @@ main() {
             exit 0
         fi
     fi
-    
+
     # Execute release steps
     validate_git_state
     run_validation
-    
+
     if [[ "$DRY_RUN" != "true" ]]; then
         update_version "$target_version"
         update_changelog "$target_version"
     fi
-    
+
     create_git_tag "$target_version"
     build_artifacts "$target_version"
     push_release "$target_version"
-    
+
     print_success "🎉 Release $target_version completed successfully!"
-    
+
     if [[ "$DRY_RUN" != "true" ]]; then
         echo
         print_status "Next steps:"

@@ -61,7 +61,7 @@ FAILED=0
 for i in "${!PROMPTS[@]}"; do
     PROMPT="${PROMPTS[$i]}"
     echo -n "Test $((i+1)): "
-    
+
     # Run twice with same seed
     if [ -f "$TOKENIZER" ]; then
         CMD="target/release/bitnet run \
@@ -83,14 +83,14 @@ for i in "${!PROMPTS[@]}"; do
             --deterministic \
             --json-out /tmp/run1.json 2>/dev/null"
     fi
-    
+
     # First run
     eval $CMD
     cp /tmp/run1.json /tmp/run1_backup.json
-    
+
     # Second run
     eval ${CMD/run1.json/run2.json}
-    
+
     # Compare outputs
     if python3 -c "
 import json
@@ -162,7 +162,7 @@ echo ""
 echo "==============================================="
 if [ $FAILED -eq 0 ]; then
     echo -e "${GREEN}✓ All determinism tests passed!${NC}"
-    
+
     # Show sample performance metrics
     echo ""
     echo "Sample metrics from last run:"

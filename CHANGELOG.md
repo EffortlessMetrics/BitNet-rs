@@ -83,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Robust error handling with `.unwrap_or(std::cmp::Ordering::Equal)` for NaN-resilient sorting operations
 - **Device-Aware GPU Quantization Support**:
   - Enhanced I2S, TL1, and TL2 quantizers with automatic GPU acceleration
-  - Device-aware dequantization with intelligent CPU fallback  
+  - Device-aware dequantization with intelligent CPU fallback
   - GPU memory optimization and mixed precision support
   - Comprehensive GPU vs CPU validation tests with configurable tolerance
   - Proper feature gating with `#[cfg(feature = "gpu")]` for CPU-only builds
@@ -179,7 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory Safety and Environment Variable Handling** ([#181](https://github.com/EffortlessSteven/BitNet-rs/pull/181)):
   - Enhanced BitNetTensor with proper device tracking and memory leak prevention
   - Replaced unsafe `Box::leak()` with safe `OnceLock<Vec<f32>>` caching for host data
-  - Safe type conversion using `bytemuck::cast_slice` instead of manual transmutation  
+  - Safe type conversion using `bytemuck::cast_slice` instead of manual transmutation
   - Removed redundant `DeviceType` enum in favor of unified `Device` enum
   - Rust 2024 compliance: marked environment variable manipulations as `unsafe`
   - Improved Clone trait implementation for BitNetTensor with proper data handling
@@ -219,7 +219,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved fallback handling in universal tokenizer with SpmTokenizer typo fixes
 - **GPU Kernel Refactoring** (PR #108):
   - **CUDA Implementation**: Enhanced cudarc 0.17 API compatibility with performance tracking and error handling
-  - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, leak detection, and device_id() access method  
+  - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, leak detection, and device_id() access method
   - **Mixed Precision Infrastructure**: Added PrecisionMode support for FP16/BF16 operations on modern GPUs
   - **Comprehensive Validation**: GpuValidator with numerical accuracy, performance benchmarking, and memory health checks
   - **FFI Bridge Improvements**: Enhanced C++ kernel integration with feature gating and performance comparison tools
@@ -286,7 +286,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory Safety and Environment Variable Handling** ([#181](https://github.com/EffortlessSteven/BitNet-rs/pull/181)):
   - Enhanced BitNetTensor with proper device tracking and memory leak prevention
   - Replaced unsafe `Box::leak()` with safe `OnceLock<Vec<f32>>` caching for host data
-  - Safe type conversion using `bytemuck::cast_slice` instead of manual transmutation  
+  - Safe type conversion using `bytemuck::cast_slice` instead of manual transmutation
   - Removed redundant `DeviceType` enum in favor of unified `Device` enum
   - Rust 2024 compliance: marked environment variable manipulations as `unsafe`
   - Improved Clone trait implementation for BitNetTensor with proper data handling
@@ -326,7 +326,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved fallback handling in universal tokenizer with SpmTokenizer typo fixes
 - **GPU Kernel Refactoring** (PR #108):
   - **CUDA Implementation**: Enhanced cudarc 0.17 API compatibility with performance tracking and error handling
-  - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, leak detection, and device_id() access method  
+  - **Memory Management**: Implemented OptimizedMemoryPool with device-specific allocation, caching, leak detection, and device_id() access method
   - **Mixed Precision Infrastructure**: Added PrecisionMode support for FP16/BF16 operations on modern GPUs
   - **Comprehensive Validation**: GpuValidator with numerical accuracy, performance benchmarking, and memory health checks
   - **FFI Bridge Improvements**: Enhanced C++ kernel integration with feature gating and performance comparison tools

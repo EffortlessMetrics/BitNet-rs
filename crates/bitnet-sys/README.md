@@ -68,7 +68,7 @@ fn example() -> Result<(), Box<dyn std::error::Error>> {
 
     // Clean up global resources
     cleanup()?;
-    
+
     println!("Generated {} tokens", tokens.len());
     Ok(())
 }

@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.versions.outputs.versions }}
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -37,16 +37,16 @@ jobs:
       run: |
         # Get the pinned version from ci/fetch_bitnet_cpp.sh
         PINNED_VERSION=$(grep -o 'BITNET_CPP_TAG="[^"]*"' ci/fetch_bitnet_cpp.sh | cut -d'"' -f2 || echo "main")
-        
+
         # Get latest release version
         LATEST_VERSION=$(curl -s https://api.github.com/repos/microsoft/BitNet/releases/latest | jq -r '.tag_name // "main"')
-        
+
         # Manual override from workflow input
         MANUAL_VERSION="${{ github.event.inputs.bitnet_cpp_tag }}"
-        
+
         # Create version list (remove duplicates)
         VERSIONS=$(echo -e "$PINNED_VERSION\n$LATEST_VERSION\n$MANUAL_VERSION" | grep -v "^$" | sort -u | jq -R . | jq -s .)
-        
+
         echo "Versions to cache: $VERSIONS"
         echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
 
@@ -59,7 +59,7 @@ jobs:
       matrix:
         version: ${{ fromJson(needs.determine-versions.outputs.versions) }}
         platform: [linux/amd64, linux/arm64]
-    
+
     permissions:
       contents: read
       packages: write
@@ -92,14 +92,14 @@ jobs:
         # Create deterministic cache key based on version and platform
         VERSION="${{ matrix.version }}"
         PLATFORM="${{ steps.platform.outputs.arch }}"
-        
+
         # Get commit SHA for the version (if it's a tag)
         if [[ "$VERSION" != "main" && "$VERSION" != "latest" ]]; then
           COMMIT_SHA=$(curl -s "https://api.github.com/repos/microsoft/BitNet/git/refs/tags/$VERSION" | jq -r '.object.sha // "unknown"')
         else
           COMMIT_SHA=$(curl -s "https://api.github.com/repos/microsoft/BitNet/commits/main" | jq -r '.sha // "unknown"')
         fi
-        
+
         CACHE_KEY="${VERSION}-${COMMIT_SHA:0:8}-${PLATFORM}"
         echo "key=$CACHE_KEY" >> $GITHUB_OUTPUT
         echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
@@ -108,7 +108,7 @@ jobs:
       id: cache-check
       run: |
         IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.cache-key.outputs.key }}"
-        
+
         # Check if image already exists
         if docker manifest inspect "$IMAGE_TAG" >/dev/null 2>&1; then
           echo "exists=true" >> $GITHUB_OUTPUT
@@ -148,18 +148,18 @@ jobs:
       if: steps.cache-check.outputs.exists == 'false' || github.event.inputs.force_rebuild == 'true'
       run: |
         IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.cache-key.outputs.key }}"
-        
+
         # Test that the cached libraries work
         docker run --rm --platform=${{ matrix.platform }} "$IMAGE_TAG" /bin/bash -c "
           echo 'Testing cached BitNet.cpp libraries...'
           ls -la /opt/bitnet_cpp/
           ls -la /opt/bitnet_cpp/lib/
           ls -la /opt/bitnet_cpp/include/
-          
+
           # Test that we can link against the libraries
           echo 'int main() { return 0; }' > test.cpp
           g++ -I/opt/bitnet_cpp/include -L/opt/bitnet_cpp/lib test.cpp -o test || echo 'Link test failed (expected for minimal test)'
-          
+
           echo 'Cache test completed successfully'
         "
 
@@ -168,7 +168,7 @@ jobs:
     needs: [determine-versions, build-cache]
     runs-on: ubuntu-latest
     if: always()
-    
+
     permissions:
       contents: read
       packages: write
@@ -185,7 +185,7 @@ jobs:
       run: |
         # Keep only the last 10 cache images per platform to save storage
         echo "Cleaning up old cache images..."
-        
+
         # This would require GitHub CLI or API calls to list and delete old images
         # For now, we'll rely on GitHub's automatic cleanup policies
         echo "Cleanup will be handled by GitHub's retention policies"
@@ -195,7 +195,7 @@ jobs:
     needs: [determine-versions, build-cache]
     runs-on: ubuntu-latest
     if: success()
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -206,7 +206,7 @@ jobs:
       run: |
         # Update ci/cache-config.json with latest cache information
         mkdir -p ci
-        
+
         cat > ci/cache-config.json << EOF
         {
           "last_updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -217,7 +217,7 @@ jobs:
           "description": "Pre-built BitNet.cpp libraries for faster CI builds"
         }
         EOF
-        
+
         echo "Updated cache configuration:"
         cat ci/cache-config.json
 
@@ -225,7 +225,7 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        
+
         if git diff --quiet ci/cache-config.json; then
           echo "No changes to cache configuration"
         else

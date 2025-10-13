@@ -15,11 +15,11 @@ class BitnetRs < Formula
     # Build CLI and server binaries
     system "cargo", "install", "--locked", "--root", prefix, "--path", "crates/bitnet-cli"
     system "cargo", "install", "--locked", "--root", prefix, "--path", "crates/bitnet-server"
-    
+
     # Install shell completions
     generate_completions_from_executable(bin/"bitnet-cli", "completion")
     generate_completions_from_executable(bin/"bitnet-server", "completion")
-    
+
     # Install man pages (if available)
     if (buildpath/"docs/man").exist?
       man1.install Dir["docs/man/*.1"]
@@ -29,10 +29,10 @@ class BitnetRs < Formula
   test do
     # Test CLI version
     assert_match version.to_s, shell_output("#{bin}/bitnet-cli --version")
-    
+
     # Test server version
     assert_match version.to_s, shell_output("#{bin}/bitnet-server --version")
-    
+
     # Test basic functionality
     system bin/"bitnet-cli", "test"
   end

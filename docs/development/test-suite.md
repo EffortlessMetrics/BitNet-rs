@@ -232,7 +232,7 @@ BITNET_SEED=42 cargo test --no-default-features -p bitnet-cli test_seeded_genera
 #### Mock Infrastructure Features
 
 - **Mock Model Implementation**: Complete model interface with configurable responses
-- **Mock Tokenizer**: Testing-compatible tokenizer with predictable behavior  
+- **Mock Tokenizer**: Testing-compatible tokenizer with predictable behavior
 - **Arc<dyn Tokenizer> Support**: Enhanced tokenizer architecture using `TokenizerBuilder::from_file()`
 - **Performance Metrics Validation**: Structured testing of timing and throughput metrics
 - **Safe Environment Handling**: Proper unsafe block usage for environment variable operations
@@ -282,7 +282,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 #### Performance Test Categories
 
 1. **Performance Metrics Tests**: Validate metric computation, validation, and accuracy
-2. **Performance Tracker Tests**: Test state management and metrics aggregation  
+2. **Performance Tracker Tests**: Test state management and metrics aggregation
 3. **Environment Variable Tests**: Validate configuration through environment variables
 4. **Integration Tests**: End-to-end performance tracking with InferenceEngine
 5. **Platform-Specific Tests**: Memory tracking and CPU kernel selection monitoring

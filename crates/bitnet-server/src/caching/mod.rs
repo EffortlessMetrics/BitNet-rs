@@ -174,7 +174,7 @@ impl CachingSystem {
     /// Shutdown the caching system gracefully
     pub async fn shutdown(&self) -> Result<()> {
         println!("Shutting down caching system");
-        
+
         // Shutdown components in reverse order
         self.request_batcher.shutdown().await?;
         self.kv_cache_manager.shutdown().await?;

@@ -18,7 +18,7 @@
 
 ### bitnet-common (All tests passing)
 - **Unit tests**: 10/10 passing
-- **Comprehensive tests**: 16/16 passing  
+- **Comprehensive tests**: 16/16 passing
 - **Config tests**: 22/22 passing
 - **Error tests**: 16/16 passing
 - **Integration tests**: 10/10 passing
@@ -64,7 +64,7 @@
 ### Test Framework (bitnet-tests) ✅ FIXED
 - **Previously**: 85+ compilation errors
 - **Now**: All compilation errors resolved
-- **Features**: 
+- **Features**:
   - Feature-gated configuration system
   - Fixture management with conditional compilation
   - CI-friendly reporting (JSON, HTML, Markdown, JUnit)
@@ -73,12 +73,12 @@
 
 ## Summary
 
-**Working**: 
+**Working**:
 - 200/201 core library tests passing (1 ignored)
 - Test framework (bitnet-tests) now compiles and runs
 - IQ2_S quantization with dual backends
 
-**Not Working**: 
+**Not Working**:
 - Inference layer (trait compatibility issues)
 - Cross-validation (requires C++ BitNet)
 

@@ -31,13 +31,13 @@ log_debug() {
 print_banner() {
     echo -e "${BLUE}"
     cat << 'EOF'
-    ____  _ _   _   _      _     
-   |  _ \(_) | | \ | |    | |    
-   | |_) |_| |_|  \| | ___| |_ _ __ ___ 
+    ____  _ _   _   _      _
+   |  _ \(_) | | \ | |    | |
+   | |_) |_| |_|  \| | ___| |_ _ __ ___
    |  _ <| | __| . ` |/ _ \ __| '__/ __|
    | |_) | | |_| |\  |  __/ |_| |  \__ \
    |____/|_|\__|_| \_|\___|\__|_|  |___/
-   
+
    Production-Ready Rust Implementation
    Development Environment Setup
 EOF
@@ -52,7 +52,7 @@ command_exists() {
 # Check system requirements
 check_system() {
     log_info "Checking system requirements..."
-    
+
     # Check OS
     case "$(uname -s)" in
         Linux*)     OS="Linux";;
@@ -60,30 +60,30 @@ check_system() {
         CYGWIN*|MINGW*|MSYS*) OS="Windows";;
         *)          OS="Unknown";;
     esac
-    
+
     log_info "Operating System: $OS"
-    
+
     # Check architecture
     ARCH=$(uname -m)
     log_info "Architecture: $ARCH"
-    
+
     # Check if we're in the right directory
     if [[ ! -f "Cargo.toml" ]] || ! grep -q "bitnet" Cargo.toml; then
         log_error "This script must be run from the BitNet.rs repository root"
         exit 1
     fi
-    
+
     log_info "✅ System check passed"
 }
 
 # Install Rust toolchain
 install_rust() {
     log_info "Setting up Rust toolchain..."
-    
+
     if command_exists rustc; then
         RUST_VERSION=$(rustc --version | cut -d' ' -f2)
         log_info "Rust already installed: $RUST_VERSION"
-        
+
         # Check if version is recent enough
         REQUIRED_VERSION="1.89.0"
         if [[ "$(printf '%s\n' "$REQUIRED_VERSION" "$RUST_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]]; then
@@ -96,11 +96,11 @@ install_rust() {
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         source "$HOME/.cargo/env"
     fi
-    
+
     # Install required components
     log_info "Installing Rust components..."
     rustup component add rustfmt clippy llvm-tools-preview
-    
+
     # Install useful targets
     log_info "Installing additional targets..."
     case "$OS" in
@@ -121,14 +121,14 @@ install_rust() {
             rustup target add x86_64-pc-windows-gnu
             ;;
     esac
-    
+
     log_info "✅ Rust toolchain setup complete"
 }
 
 # Install development tools
 install_dev_tools() {
     log_info "Installing development tools..."
-    
+
     # Essential cargo tools
     local tools=(
         "cargo-audit"           # Security auditing
@@ -141,7 +141,7 @@ install_dev_tools() {
         "cargo-watch"           # File watching
         "cargo-edit"            # Cargo.toml editing
     )
-    
+
     for tool in "${tools[@]}"; do
         if ! command_exists "$tool"; then
             log_info "Installing $tool..."
@@ -150,7 +150,7 @@ install_dev_tools() {
             log_debug "$tool already installed"
         fi
     done
-    
+
     # Cross-compilation tool (optional)
     if [[ "$OS" == "Linux" ]]; then
         if ! command_exists cross; then
@@ -158,21 +158,21 @@ install_dev_tools() {
             cargo install cross --git https://github.com/cross-rs/cross
         fi
     fi
-    
+
     log_info "✅ Development tools installed"
 }
 
 # Install system dependencies
 install_system_deps() {
     log_info "Installing system dependencies..."
-    
+
     case "$OS" in
         Linux)
             if command_exists apt; then
                 log_info "Installing dependencies with apt..."
                 sudo apt update
                 sudo apt install -y build-essential pkg-config libssl-dev
-                
+
                 # Optional: GPU support
                 if lspci | grep -i nvidia >/dev/null; then
                     log_info "NVIDIA GPU detected, consider installing CUDA toolkit"
@@ -206,14 +206,14 @@ install_system_deps() {
             log_warn "Some dependencies may need manual installation"
             ;;
     esac
-    
+
     log_info "✅ System dependencies setup complete"
 }
 
 # Setup development configuration
 setup_dev_config() {
     log_info "Setting up development configuration..."
-    
+
     # Create .cargo/config.toml if it doesn't exist
     if [[ ! -f ".cargo/config.toml" ]]; then
         log_info "Creating .cargo/config.toml..."
@@ -266,12 +266,12 @@ EOF
     else
         log_debug ".cargo/config.toml already exists"
     fi
-    
+
     # Setup git hooks (optional)
     if [[ -d ".git" ]]; then
         log_info "Setting up git hooks..."
         mkdir -p .git/hooks
-        
+
         # Pre-commit hook
         cat > .git/hooks/pre-commit << 'EOF'
 #!/bin/bash
@@ -304,18 +304,18 @@ EOF
         chmod +x .git/hooks/pre-commit
         log_info "Git pre-commit hook installed"
     fi
-    
+
     log_info "✅ Development configuration complete"
 }
 
 # Setup IDE configuration
 setup_ide_config() {
     log_info "Setting up IDE configuration..."
-    
+
     # VS Code settings
     if [[ ! -d ".vscode" ]]; then
         mkdir -p .vscode
-        
+
         # Settings
         cat > .vscode/settings.json << 'EOF'
 {
@@ -337,7 +337,7 @@ setup_ide_config() {
     "rust-analyzer.lens.debug.enable": true
 }
 EOF
-        
+
         # Extensions recommendations
         cat > .vscode/extensions.json << 'EOF'
 {
@@ -351,7 +351,7 @@ EOF
     ]
 }
 EOF
-        
+
         # Tasks
         cat > .vscode/tasks.json << 'EOF'
 {
@@ -400,28 +400,28 @@ EOF
     ]
 }
 EOF
-        
+
         log_info "VS Code configuration created"
     else
         log_debug "VS Code configuration already exists"
     fi
-    
+
     log_info "✅ IDE configuration complete"
 }
 
 # Verify installation
 verify_setup() {
     log_info "Verifying development environment..."
-    
+
     # Check Rust installation
     if ! command_exists rustc; then
         log_error "Rust not found in PATH"
         return 1
     fi
-    
+
     local rust_version=$(rustc --version)
     log_info "Rust version: $rust_version"
-    
+
     # Check cargo tools
     local tools=("cargo-audit" "cargo-deny" "cargo-clippy" "cargo-fmt")
     for tool in "${tools[@]}"; do
@@ -431,7 +431,7 @@ verify_setup() {
             log_warn "❌ $tool not available"
         fi
     done
-    
+
     # Test basic build
     log_info "Testing basic build..."
     if cargo check --workspace --features cpu; then
@@ -440,7 +440,7 @@ verify_setup() {
         log_error "❌ Basic build failed"
         return 1
     fi
-    
+
     # Test formatting
     log_info "Testing code formatting..."
     if cargo fmt --all -- --check; then
@@ -448,7 +448,7 @@ verify_setup() {
     else
         log_warn "❌ Code formatting issues (run 'cargo fmt --all' to fix)"
     fi
-    
+
     # Test clippy
     log_info "Testing clippy..."
     if cargo clippy --workspace --all-targets --features cpu -- -D warnings; then
@@ -456,7 +456,7 @@ verify_setup() {
     else
         log_warn "❌ Clippy issues found"
     fi
-    
+
     log_info "✅ Development environment verification complete"
 }
 
@@ -544,33 +544,33 @@ done
 # Main execution
 main() {
     print_banner
-    
+
     check_system
-    
+
     if [[ "$SKIP_RUST" != true ]]; then
         install_rust
     fi
-    
+
     if [[ "$SKIP_TOOLS" != true ]]; then
         install_dev_tools
     fi
-    
+
     if [[ "$SKIP_SYSTEM" != true ]]; then
         install_system_deps
     fi
-    
+
     if [[ "$SKIP_CONFIG" != true ]]; then
         setup_dev_config
     fi
-    
+
     if [[ "$SKIP_IDE" != true ]]; then
         setup_ide_config
     fi
-    
+
     if [[ "$SKIP_VERIFY" != true ]]; then
         verify_setup
     fi
-    
+
     log_info ""
     log_info "🎉 BitNet.rs development environment setup complete!"
     log_info ""

@@ -33,7 +33,7 @@ js-sys = { workspace = true }
 web-sys = { workspace = true, features = [
     "console",
     "Window",
-    "Navigator", 
+    "Navigator",
     "Performance",
     "PerformanceTiming"
 ] }
@@ -80,4 +80,3 @@ wasm-kernels = ["dep:bitnet-kernels"]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.53"
-

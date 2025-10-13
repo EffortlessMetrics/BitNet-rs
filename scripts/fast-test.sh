@@ -61,9 +61,9 @@ mkdir -p tests/cache
 run_tests_with_timeout() {
     local test_args="$1"
     local timeout_seconds=$((TARGET_TIME_MINUTES * 60))
-    
+
     log_info "Running tests with ${timeout_seconds}s timeout: cargo test ${test_args}"
-    
+
     if timeout ${timeout_seconds}s cargo test ${test_args}; then
         return 0
     else
@@ -81,71 +81,71 @@ run_tests_with_timeout() {
 # Function to get test list and estimate execution time
 estimate_test_time() {
     log_info "Analyzing test suite..."
-    
+
     # Get list of all tests
     local test_list=$(cargo test --workspace --no-run --message-format=json 2>/dev/null | \
         jq -r 'select(.reason == "compiler-artifact" and .target.kind[] == "test") | .executable' 2>/dev/null || true)
-    
+
     if [ -z "$test_list" ]; then
         log_warn "Could not analyze test suite, proceeding with default configuration"
         return 0
     fi
-    
+
     local test_count=$(echo "$test_list" | wc -l)
     log_info "Found ${test_count} test executables"
-    
+
     # Estimate based on historical data or defaults
     local estimated_time_per_test=5
     local total_estimated_time=$((test_count * estimated_time_per_test))
     local parallel_estimated_time=$((total_estimated_time / MAX_PARALLEL))
-    
+
     log_info "Estimated execution time: ${parallel_estimated_time}s (${total_estimated_time}s sequential)"
-    
+
     if [ ${parallel_estimated_time} -gt $((TARGET_TIME_MINUTES * 60)) ]; then
         log_warn "Estimated time exceeds target, enabling aggressive optimizations"
         return 1
     fi
-    
+
     return 0
 }
 
 # Function to run optimized test selection
 run_optimized_tests() {
     local test_args=""
-    
+
     # Base test arguments for speed
     test_args="--workspace"
     test_args="${test_args} --test-threads=${MAX_PARALLEL}"
-    
+
     if [ "${AGGRESSIVE_MODE}" = "true" ]; then
         # Skip documentation tests for speed
         test_args="${test_args} --lib --bins"
-        
+
         # Skip slow integration tests if needed
         if [ "${SKIP_SLOW_TESTS}" = "true" ]; then
             test_args="${test_args} --exclude=crossval"
             log_info "Skipping slow cross-validation tests"
         fi
     fi
-    
+
     # Add timeout per test
     test_args="${test_args} -- --test-timeout=60"
-    
+
     run_tests_with_timeout "${test_args}"
 }
 
 # Function to run incremental tests (only changed code)
 run_incremental_tests() {
     log_info "Attempting incremental test execution..."
-    
+
     # Check if we can determine changed files
     if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
         local changed_files=$(git diff --name-only HEAD~1 2>/dev/null || git diff --name-only --cached 2>/dev/null || true)
-        
+
         if [ -n "$changed_files" ]; then
             log_info "Detected changes in:"
             echo "$changed_files" | sed 's/^/  - /'
-            
+
             # Run tests for changed crates only
             local changed_crates=""
             for file in $changed_files; do
@@ -156,7 +156,7 @@ run_incremental_tests() {
                     fi
                 fi
             done
-            
+
             if [ -n "$changed_crates" ]; then
                 log_info "Running tests for changed crates: ${changed_crates}"
                 run_tests_with_timeout "${changed_crates} --test-threads=${MAX_PARALLEL}"
@@ -164,7 +164,7 @@ run_incremental_tests() {
             fi
         fi
     fi
-    
+
     log_info "Could not determine incremental changes, running full test suite"
     return 1
 }
@@ -172,15 +172,15 @@ run_incremental_tests() {
 # Function to run fast unit tests only
 run_fast_unit_tests() {
     log_info "Running fast unit tests only..."
-    
+
     local test_args="--workspace --lib --test-threads=${MAX_PARALLEL}"
-    
+
     # Exclude known slow crates
     test_args="${test_args} --exclude=crossval --exclude=bitnet-sys"
-    
+
     # Run with shorter timeout
     test_args="${test_args} -- --test-timeout=30"
-    
+
     run_tests_with_timeout "${test_args}"
 }
 
@@ -191,9 +191,9 @@ cleanup_and_report() {
     local duration=$((end_time - START_TIME))
     local duration_minutes=$((duration / 60))
     local duration_seconds=$((duration % 60))
-    
+
     log_info "Test execution completed in ${duration_minutes}m ${duration_seconds}s"
-    
+
     if [ ${exit_code} -eq 0 ]; then
         if [ ${duration} -le $((TARGET_TIME_MINUTES * 60)) ]; then
             log_success "✅ Tests completed successfully within ${TARGET_TIME_MINUTES} minute target!"
@@ -203,7 +203,7 @@ cleanup_and_report() {
     else
         log_error "❌ Tests failed with exit code ${exit_code}"
     fi
-    
+
     # Generate simple report
     cat > test-execution-report.txt << EOF
 # Test Execution Report
@@ -225,9 +225,9 @@ cleanup_and_report() {
 
 Generated at: $(date)
 EOF
-    
+
     log_info "Report saved to test-execution-report.txt"
-    
+
     exit ${exit_code}
 }
 
@@ -242,7 +242,7 @@ main() {
         run_optimized_tests
     else
         log_warn "Estimated time exceeds target, trying optimizations..."
-        
+
         # Try incremental tests first
         if [ "${ENABLE_CACHING}" = "true" ] && run_incremental_tests; then
             log_success "Incremental tests completed successfully"

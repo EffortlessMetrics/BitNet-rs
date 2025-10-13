@@ -115,10 +115,10 @@ done
 # Detect platform and architecture
 detect_platform() {
     local os arch
-    
+
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
     arch=$(uname -m)
-    
+
     case "$os" in
         linux*)
             case "$arch" in
@@ -161,11 +161,11 @@ detect_platform() {
 get_latest_version() {
     local api_url="$GITHUB_API/releases/latest"
     local auth_header=""
-    
+
     if [[ -n "${GITHUB_TOKEN:-}" ]]; then
         auth_header="Authorization: token $GITHUB_TOKEN"
     fi
-    
+
     if command -v curl >/dev/null 2>&1; then
         if [[ -n "$auth_header" ]]; then
             curl -s -H "$auth_header" "$api_url" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
@@ -187,9 +187,9 @@ get_latest_version() {
 # Download and extract binary
 download_and_install() {
     local platform version download_url filename
-    
+
     platform=$(detect_platform)
-    
+
     if [[ "$VERSION" == "latest" ]]; then
         version=$(get_latest_version)
         if [[ -z "$version" ]]; then
@@ -199,15 +199,15 @@ download_and_install() {
     else
         version="$VERSION"
     fi
-    
+
     log_info "Installing BitNet.rs $version for $platform"
-    
+
     # Construct download URL
     filename="bitnet-${platform}.tar.gz"
     download_url="https://github.com/$REPO/releases/download/$version/$filename"
-    
+
     log_info "Downloading from: $download_url"
-    
+
     # Download
     cd "$TEMP_DIR"
     if command -v curl >/dev/null 2>&1; then
@@ -218,23 +218,23 @@ download_and_install() {
         log_error "Neither curl nor wget is available"
         exit 1
     fi
-    
+
     # Verify download
     if [[ ! -f "$filename" ]]; then
         log_error "Download failed: $filename not found"
         exit 1
     fi
-    
+
     # Extract
     log_info "Extracting binaries..."
     tar -xzf "$filename"
-    
+
     # Create installation directory
     mkdir -p "$INSTALL_DIR"
-    
+
     # Install binaries
     local installed_count=0
-    
+
     if [[ "$INSTALL_CLI" == "true" ]] && [[ -f "bitnet-cli" ]]; then
         if [[ "$FORCE" == "true" ]] || [[ ! -f "$INSTALL_DIR/bitnet-cli" ]]; then
             cp bitnet-cli "$INSTALL_DIR/"
@@ -245,7 +245,7 @@ download_and_install() {
             log_warning "bitnet-cli already exists (use --force to overwrite)"
         fi
     fi
-    
+
     if [[ "$INSTALL_SERVER" == "true" ]] && [[ -f "bitnet-server" ]]; then
         if [[ "$FORCE" == "true" ]] || [[ ! -f "$INSTALL_DIR/bitnet-server" ]]; then
             cp bitnet-server "$INSTALL_DIR/"
@@ -256,7 +256,7 @@ download_and_install() {
             log_warning "bitnet-server already exists (use --force to overwrite)"
         fi
     fi
-    
+
     if [[ $installed_count -eq 0 ]]; then
         log_warning "No binaries were installed"
         exit 1
@@ -269,7 +269,7 @@ check_path() {
         log_warning "Installation directory $INSTALL_DIR is not in your PATH"
         log_info "Add it to your PATH by adding this line to your shell profile:"
         log_info "  export PATH=\"$INSTALL_DIR:\$PATH\""
-        
+
         # Suggest specific shell profile files
         if [[ -n "${BASH_VERSION:-}" ]]; then
             log_info "For bash, add to ~/.bashrc or ~/.bash_profile"
@@ -282,7 +282,7 @@ check_path() {
 # Verify installation
 verify_installation() {
     local verified=0
-    
+
     if [[ "$INSTALL_CLI" == "true" ]] && [[ -x "$INSTALL_DIR/bitnet-cli" ]]; then
         log_info "Verifying bitnet-cli installation..."
         if "$INSTALL_DIR/bitnet-cli" --version >/dev/null 2>&1; then
@@ -292,7 +292,7 @@ verify_installation() {
             log_error "bitnet-cli verification failed"
         fi
     fi
-    
+
     if [[ "$INSTALL_SERVER" == "true" ]] && [[ -x "$INSTALL_DIR/bitnet-server" ]]; then
         log_info "Verifying bitnet-server installation..."
         if "$INSTALL_DIR/bitnet-server" --version >/dev/null 2>&1; then
@@ -302,7 +302,7 @@ verify_installation() {
             log_error "bitnet-server verification failed"
         fi
     fi
-    
+
     return $((verified > 0 ? 0 : 1))
 }
 
@@ -310,25 +310,25 @@ verify_installation() {
 main() {
     log_info "🦀 BitNet.rs Installation Script"
     log_info "Installing to: $INSTALL_DIR"
-    
+
     # Check prerequisites
     if ! command -v tar >/dev/null 2>&1; then
         log_error "tar is required but not installed"
         exit 1
     fi
-    
+
     if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
         log_error "Either curl or wget is required but neither is installed"
         exit 1
     fi
-    
+
     # Perform installation
     download_and_install
-    
+
     # Verify installation
     if verify_installation; then
         log_success "🎉 BitNet.rs installation completed successfully!"
-        
+
         # Show usage examples
         echo
         log_info "Quick start examples:"
@@ -338,10 +338,10 @@ main() {
         if [[ "$INSTALL_SERVER" == "true" ]]; then
             echo "  $INSTALL_DIR/bitnet-server --port 8080"
         fi
-        
+
         # Check PATH
         check_path
-        
+
         echo
         log_info "For documentation and examples, visit:"
         log_info "  https://github.com/$REPO"

@@ -20,7 +20,7 @@ except Exception:  # Fallback when running as a script or in tests
 
 class Llama:
     """Drop-in replacement for llama_cpp.Llama"""
-    
+
     def __init__(
         self,
         model_path: str,
@@ -46,7 +46,7 @@ class Llama:
         **kwargs
     ):
         """Initialize BitNet model with llama-cpp-python compatible parameters"""
-        
+
         # Store parameters
         self.model_path = model_path
         self.n_ctx = n_ctx
@@ -54,10 +54,10 @@ class Llama:
         self.n_threads = n_threads or 1
         self.n_gpu_layers = n_gpu_layers
         self.verbose = verbose
-        
+
         # Create BitNet model
         self._model = bitnet_py.Model(model_path)
-        
+
         # Initialize context
         self._context = self._model.create_context(
             max_tokens=n_ctx,
@@ -65,11 +65,11 @@ class Llama:
             n_threads=self.n_threads,
             seed=seed if seed >= 0 else None,
         )
-        
+
         # Cache for last evaluation
         self._last_tokens = []
         self._last_logits = None
-        
+
     def tokenize(
         self,
         text: Union[str, bytes],
@@ -77,23 +77,23 @@ class Llama:
         special: bool = True,
     ) -> List[int]:
         """Tokenize text, compatible with llama_cpp.tokenize"""
-        
+
         if isinstance(text, bytes):
             text = text.decode('utf-8')
-        
+
         tokens = self._model.tokenize(text, add_bos=add_bos, special=special)
         return tokens
-    
+
     def detokenize(
         self,
         tokens: List[int],
         skip_special_tokens: bool = True,
     ) -> bytes:
         """Detokenize tokens to bytes, compatible with llama_cpp"""
-        
+
         text = self._model.detokenize(tokens)
         return text.encode('utf-8')
-    
+
     def eval(
         self,
         tokens: List[int],
@@ -101,16 +101,16 @@ class Llama:
         n_threads: Optional[int] = None,
     ) -> int:
         """Evaluate tokens, compatible with llama_cpp.eval"""
-        
+
         # Store tokens for later
         self._last_tokens = tokens
-        
+
         # Run evaluation
         logits = self._context.eval(tokens, n_past=n_past)
         self._last_logits = logits
-        
+
         return 0  # Success
-    
+
     def sample(
         self,
         top_k: int = 40,
@@ -128,10 +128,10 @@ class Llama:
         logit_bias: Optional[Dict[int, float]] = None,
     ) -> int:
         """Sample next token, compatible with llama_cpp.sample"""
-        
+
         if self._last_logits is None:
             raise RuntimeError("No logits available. Call eval() first.")
-        
+
         # Sample from logits
         token = self._context.sample(
             self._last_logits,
@@ -140,9 +140,9 @@ class Llama:
             temperature=temperature,
             repeat_penalty=repeat_penalty,
         )
-        
+
         return token
-    
+
     def generate(
         self,
         tokens: List[int],
@@ -162,10 +162,10 @@ class Llama:
         stopping_criteria: Optional[Any] = None,
     ):
         """Generate tokens, compatible with llama_cpp.generate"""
-        
+
         # Eval initial tokens
         self.eval(tokens)
-        
+
         # Generate loop
         while True:
             # Sample next token
@@ -175,17 +175,17 @@ class Llama:
                 temperature=temperature,
                 repeat_penalty=repeat_penalty,
             )
-            
+
             # Check stopping criteria
             if stopping_criteria and stopping_criteria([token]):
                 break
-            
+
             # Yield token
             yield token
-            
+
             # Eval new token for next iteration
             self.eval([token])
-    
+
     def __call__(
         self,
         prompt: str,
@@ -208,10 +208,10 @@ class Llama:
         **kwargs
     ) -> Dict[str, Any]:
         """High-level generate interface, compatible with llama_cpp"""
-        
+
         # Tokenize prompt
         tokens = self.tokenize(prompt)
-        
+
         # Generate
         generated_tokens = []
         for token in self.generate(
@@ -222,22 +222,22 @@ class Llama:
             repeat_penalty=repeat_penalty,
         ):
             generated_tokens.append(token)
-            
+
             # Check max tokens
             if len(generated_tokens) >= max_tokens:
                 break
-            
+
             # Check stop sequences
             if stop:
                 text = self.detokenize(generated_tokens).decode('utf-8')
                 stop_list = [stop] if isinstance(stop, str) else stop
                 if any(s in text for s in stop_list):
                     break
-        
+
         # Detokenize result
         result_tokens = tokens + generated_tokens if echo else generated_tokens
         result_text = self.detokenize(result_tokens).decode('utf-8')
-        
+
         # Return in llama-cpp format
         return {
             "id": "bitnet-" + str(hash(prompt)),
@@ -256,17 +256,17 @@ class Llama:
                 "total_tokens": len(tokens) + len(generated_tokens),
             }
         }
-    
+
     def create_embedding(
         self,
         input: Union[str, List[str]],
         model: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create embeddings, compatible with llama_cpp.create_embedding"""
-        
+
         if isinstance(input, str):
             input = [input]
-        
+
         embeddings = []
         for text in input:
             tokens = self.tokenize(text)
@@ -274,7 +274,7 @@ class Llama:
             # Get embeddings from context
             embedding = self._context.get_embeddings()
             embeddings.append(embedding)
-        
+
         return {
             "object": "list",
             "data": [
@@ -291,21 +291,21 @@ class Llama:
                 "total_tokens": sum(len(self.tokenize(t)) for t in input),
             }
         }
-    
+
     def create_completion(
         self,
         prompt: Union[str, List[str]],
         **kwargs
     ) -> Dict[str, Any]:
         """Create completion, compatible with llama_cpp.create_completion"""
-        
+
         if isinstance(prompt, list):
             # Batch processing
             completions = []
             for p in prompt:
                 result = self(p, **kwargs)
                 completions.extend(result["choices"])
-            
+
             return {
                 "id": "bitnet-batch",
                 "object": "text_completion",
@@ -320,31 +320,31 @@ class Llama:
             }
         else:
             return self(prompt, **kwargs)
-    
+
     def reset(self) -> None:
         """Reset the model state"""
         self._context.reset()
         self._last_tokens = []
         self._last_logits = None
-    
+
     def set_cache(self, cache: Any) -> None:
         """Set KV cache state"""
         self._context.set_cache(cache)
-    
+
     def get_cache(self) -> Any:
         """Get KV cache state"""
         return self._context.get_cache()
-    
+
     @property
     def n_vocab(self) -> int:
         """Get vocabulary size"""
         return self._model.vocab_size()
-    
+
     @property
     def n_ctx(self) -> int:
         """Get context size"""
         return self._context.max_tokens
-    
+
     @property
     def n_embd(self) -> int:
         """Get embedding size"""
@@ -366,10 +366,10 @@ class LlamaCache:
     def __init__(self, capacity: int = 512):
         self.capacity = capacity
         self.data = {}
-    
+
     def __getstate__(self):
         return self.data
-    
+
     def __setstate__(self, state):
         self.data = state
 

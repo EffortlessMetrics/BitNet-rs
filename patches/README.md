@@ -7,7 +7,7 @@ This directory contains minimal patches applied to external dependencies, primar
 **Our patch policy prioritizes upstream fixes over local patches:**
 
 1. **Prefer upstream fixes**: Always try to fix issues upstream first
-2. **Minimal patches**: Keep patches as small and focused as possible  
+2. **Minimal patches**: Keep patches as small and focused as possible
 3. **Required metadata**: All patches must include upstream issue links
 4. **Regular review**: Patches are reviewed weekly for cleanup opportunities
 5. **Temporary nature**: Most patches should be temporary until upstream fixes
@@ -211,7 +211,7 @@ Our patch policy aims to:
 +// TODO: Fix this properly
 +
  #include "tensor.h"
- 
+
  // Large, unfocused changes that could be upstreamed
 ```
 

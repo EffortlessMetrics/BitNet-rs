@@ -2648,7 +2648,7 @@ fn crossval_cmd(
 }
 
 /// Validate that the Rust implementation can load the model
-/// Returns GGUF metadata for enhanced reporting  
+/// Returns GGUF metadata for enhanced reporting
 fn validate_rust_model_loading(model_path: &Path) -> Result<(u32, u64, u64, u64)> {
     // Use the real GGUF reader from bitnet-models
     println!("   Validating with real GGUF reader...");

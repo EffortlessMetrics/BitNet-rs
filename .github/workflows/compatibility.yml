@@ -159,7 +159,7 @@ jobs:
         run: |
           # Build BitNet CLI
           cargo build -p bitnet-cli --release --no-default-features --features cpu
-          
+
           # Run smoke test if model and tokenizer available
           if [ -f "models/test-model.gguf" ] && [ -f "models/tokenizer.json" ]; then
             BITNET_BIN=target/release/bitnet \

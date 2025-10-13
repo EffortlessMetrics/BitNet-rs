@@ -15,7 +15,7 @@ The integration tests cover the following complete workflows:
 
 #### 1. Complete Inference Workflow (`test_complete_inference_workflow`)
 - **Purpose**: Tests the complete end-to-end inference pipeline from prompt to generated text
-- **Coverage**: 
+- **Coverage**:
   - Model initialization and configuration
   - Tokenizer integration
   - Inference engine creation

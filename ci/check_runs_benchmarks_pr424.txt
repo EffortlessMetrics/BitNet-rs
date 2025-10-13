@@ -54,7 +54,7 @@ Inference performance validated. Latency <10ms for standard tensors. Dequantizat
 
 ---
 
-Note: Check Runs creation via API may require additional permissions. 
+Note: Check Runs creation via API may require additional permissions.
 Ledger evidence available at:
 - /home/steven/code/Rust/BitNet-rs/ci/ledger_benchmarks_gate.md
 - /home/steven/code/Rust/BitNet-rs/ci/ledger_final_gates_pr424.md

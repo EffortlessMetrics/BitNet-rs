@@ -115,7 +115,7 @@ async fn main() -> Result<()> {
 
     // Initialize application state
     let app_state = initialize_app_state().await?;
-    
+
     // Create the API routes
     let api = create_api_routes(app_state);
 
@@ -129,7 +129,7 @@ async fn main() -> Result<()> {
         .recover(handle_rejection);
 
     info!("Server starting on http://0.0.0.0:3000");
-    
+
     // Start the server
     warp::serve(routes)
         .run(([0, 0, 0, 0], 3000))
@@ -144,33 +144,33 @@ async fn initialize_app_state() -> Result<AppState> {
 
     // Load configuration
     let config = BitNetConfig::default();
-    
+
     // Determine device
     let device = if cfg!(feature = "cuda") && is_cuda_available() {
         Device::Cuda(0)
     } else {
         Device::Cpu
     };
-    
+
     info!("Using device: {:?}", device);
 
     // Load model (in practice, load from file)
     let model_path = std::env::var("BITNET_MODEL_PATH")
         .unwrap_or_else(|_| "models/bitnet-1.58b.gguf".to_string());
-    
+
     info!("Loading model from: {}", model_path);
     let model = load_model(&model_path, &device).await?;
 
     // Load tokenizer
     let tokenizer_name = std::env::var("BITNET_TOKENIZER")
         .unwrap_or_else(|_| "gpt2".to_string());
-    
+
     info!("Loading tokenizer: {}", tokenizer_name);
     let tokenizer = TokenizerBuilder::from_pretrained(&tokenizer_name)?;
 
     // Create inference engine
     let inference_engine = InferenceEngine::new(model, tokenizer, device)?;
-    
+
     info!("Application state initialized successfully");
 
     Ok(AppState {
@@ -206,7 +206,7 @@ fn create_api_routes(
 
     // API routes
     let api = warp::path("api");
-    
+
     // Generate endpoint
     let generate = api
         .and(warp::path("generate"))
@@ -273,7 +273,7 @@ async fn generate_handler(
     state: AppState,
 ) -> Result<impl Reply, Rejection> {
     let start_time = Instant::now();
-    
+
     // Update stats
     {
         let mut stats = state.stats.write().await;
@@ -353,7 +353,7 @@ async fn generate_stream_handler(
     let stream = async_stream::stream! {
         let mut engine = state.inference_engine.write().await;
         let mut token_stream = engine.generate_stream_with_config(&request.prompt, &gen_config);
-        
+
         let mut token_count = 0;
         while let Some(token_result) = token_stream.next().await {
             match token_result {
@@ -365,7 +365,7 @@ async fn generate_stream_handler(
                         token_count: Some(token_count),
                         error: None,
                     };
-                    
+
                     let json_str = serde_json::to_string(&chunk).unwrap();
                     yield Ok::<_, warp::Error>(format!("data: {}\n\n", json_str));
                 }
@@ -376,14 +376,14 @@ async fn generate_stream_handler(
                         token_count: Some(token_count),
                         error: Some(e.to_string()),
                     };
-                    
+
                     let json_str = serde_json::to_string(&error_chunk).unwrap();
                     yield Ok(format!("data: {}\n\n", json_str));
                     break;
                 }
             }
         }
-        
+
         // Send completion chunk
         let done_chunk = StreamChunk {
             token: None,
@@ -391,7 +391,7 @@ async fn generate_stream_handler(
             token_count: Some(token_count),
             error: None,
         };
-        
+
         let json_str = serde_json::to_string(&done_chunk).unwrap();
         yield Ok(format!("data: {}\n\n", json_str));
     };
@@ -561,10 +561,10 @@ async fn handle_rejection(err: Rejection) -> Result<impl Reply, std::convert::In
 /// Load model (mock implementation for example)
 async fn load_model(path: &str, device: &Device) -> Result<Box<dyn Model>> {
     info!("Loading model from: {}", path);
-    
+
     // In practice, this would load a real model
     tokio::time::sleep(Duration::from_millis(100)).await; // Simulate loading time
-    
+
     Ok(Box::new(MockModel::new()))
 }
 
@@ -733,7 +733,7 @@ mod tests {
         fn pad_token_id(&self) -> Option<u32> {
             None
         }
-        
+
         fn token_to_piece(&self, token: u32) -> Option<String> {
             Some(format!("<token_{}>", token))
         }

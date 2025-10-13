@@ -219,15 +219,15 @@ fn run_cross_validation() -> Result<(), Box<dyn std::error::Error>> {
         max_tokens: 100,
         benchmark: true,
     };
-    
+
     let validator = CrossValidator::new(config);
-    
+
     // Load a test fixture
     let fixture = bitnet_crossval::fixtures::TestFixture::load("minimal_test")?;
-    
+
     // Run validation
     let results = validator.validate_fixture(&fixture)?;
-    
+
     for result in results {
         if result.tokens_match {
             println!("✅ Tokens match for prompt: '{}'", result.prompt);
@@ -235,7 +235,7 @@ fn run_cross_validation() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Token mismatch for prompt: '{}'", result.prompt);
         }
     }
-    
+
     Ok(())
 }
 
@@ -255,10 +255,10 @@ use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "crossval")]
 fn benchmark_inference(c: &mut Criterion) {
     use bitnet_crossval::cpp_bindings::CppModel;
-    
+
     let model = CppModel::load("fixtures/test_model.gguf")
         .expect("Failed to load model");
-    
+
     c.bench_function("cpp_inference", |b| {
         b.iter(|| {
             model.generate("Hello, world!", 50)
@@ -286,7 +286,7 @@ fn main() {
 #[cfg(feature = "crossval")]
 mod cross_validation {
     use bitnet_crossval::*;
-    
+
     pub fn validate_model(model_path: &str) -> Result<bool> {
         // Cross-validation logic here
         Ok(true)
@@ -350,7 +350,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run tests
         run: cargo test --no-default-features --workspace --no-default-features --features cpu
-  
+
   # Optional cross-validation (slower)
   crossval:
     runs-on: ubuntu-latest

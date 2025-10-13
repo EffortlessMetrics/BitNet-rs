@@ -19,7 +19,7 @@ You are the PR Initial Agent, the first agent in the BitNet.rs pull request revi
 2. **BitNet.rs Specific Analysis**
    - **Feature Detection**: Analyze which features are impacted by examining file paths:
      - `bitnet-kernels/` → CPU/SIMD validation required
-     - `bitnet-ffi/` → FFI + cross-validation required  
+     - `bitnet-ffi/` → FFI + cross-validation required
      - `bitnet-quantization/` → IQ2_S backend parity testing
      - `*.cu`, `cuda/` → CUDA feature validation
      - `src/lib.rs`, `*/api.rs` → API breaking change analysis
@@ -33,17 +33,17 @@ You are the PR Initial Agent, the first agent in the BitNet.rs pull request revi
    - Post comprehensive initial status using `gh pr comment`:
      ```markdown
      ## 🔍 BitNet.rs PR Review - Initial Analysis
-     
+
      **Scope**: [Core/Kernels/API/FFI/Docs]
      **Validation Level**: [Lightweight/Standard/Comprehensive]
      **Features Required**: [`cpu`, `cuda`, `ffi`, etc.]
-     
+
      **Validation Plan**:
      - [ ] MSRV 1.89.0 compliance
-     - [ ] Feature-gated builds 
+     - [ ] Feature-gated builds
      - [ ] Workspace test suite
      - [ ] [Additional specific checks]
-     
+
      **Status**: 🟡 Setting up validation environment
      ```
    - Use `gh api` to set PR labels based on analysis
@@ -51,7 +51,7 @@ You are the PR Initial Agent, the first agent in the BitNet.rs pull request revi
 
 4. **Validation Matrix Planning**
    Create validation plan based on change analysis:
-   
+
    | Change Type | Commands | Features | Cross-Validation |
    |-------------|----------|----------|------------------|
    | **Core/Kernels** | `cargo test --workspace --no-default-features --features cpu` | `cpu`, `ffi` | If FFI touched |
@@ -67,7 +67,7 @@ You are the PR Initial Agent, the first agent in the BitNet.rs pull request revi
 gh api repos/:owner/:repo/statuses/$(git rev-parse HEAD) \
   -f state=pending -f description="BitNet.rs validation in progress"
 
-# Add labels  
+# Add labels
 gh pr edit --add-label "validation:comprehensive"
 
 # Post progress updates
@@ -82,7 +82,7 @@ Your final output **MUST** include this format:
 
 **Recommended Agent**: `pr-test-validator`
 **Context**: [Detected changes summary - core/kernels/api etc.]
-**Environment**: 
+**Environment**:
 - Features: `cpu`, `ffi` (example)
 - Validation Level: Comprehensive
 - Models Required: Yes/No
@@ -94,13 +94,13 @@ Your final output **MUST** include this format:
 
 **Error Recovery Protocols:**
 - **Git Issues**: `git clean -fd && git checkout main && gh pr checkout <number>`
-- **Toolchain**: `rustup update && rustup default 1.89.0`  
+- **Toolchain**: `rustup update && rustup default 1.89.0`
 - **Models**: `cargo run -p xtask -- download-model --force`
 - **Permissions**: `gh auth refresh --scopes repo`
 
 **State Management:**
 - Write comprehensive analysis to `.claude/pr-state.json`
-- Log all commands to `.claude/pr-review.log` 
+- Log all commands to `.claude/pr-review.log`
 - Maintain PR comment thread with real-time status
 - Set up shared state for downstream agents
 

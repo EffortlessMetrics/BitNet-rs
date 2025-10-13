@@ -18,24 +18,24 @@ fi
 test_model() {
     local model_path="$1"
     local expected_quant="$2"
-    
+
     if [ ! -f "$model_path" ]; then
         echo "⚠ Model not found: $model_path (skipping)"
         return
     fi
-    
+
     echo "Testing $model_path..."
-    
+
     # Run inspect to get quantization type
     local quant=$(RUST_LOG=error ./target/release/bitnet inspect --model "$model_path" --json 2>/dev/null | jq -r '.quantization // "unknown"')
-    
+
     if [ "$quant" = "$expected_quant" ]; then
         echo "✓ Detected quantization: $quant"
     else
         echo "✗ Expected $expected_quant, got $quant"
         return 1
     fi
-    
+
     # Try a simple generation
     echo "  Running inference test..."
     if timeout 10 RUST_LOG=error BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
@@ -44,7 +44,7 @@ test_model() {
     else
         echo "  ✗ Inference failed or timed out"
     fi
-    
+
     echo
 }
 

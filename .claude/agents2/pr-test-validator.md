@@ -15,13 +15,13 @@ Your core responsibilities:
      ```bash
      # Core CPU validation
      cargo build --release --no-default-features --features cpu
-     
-     # CUDA validation (if applicable)  
+
+     # CUDA validation (if applicable)
      cargo build --release --no-default-features --features cuda
-     
+
      # IQ2_S quantization with FFI
-     cargo build --release --no-default-features --features "cpu,iq2s-ffi" 
-     
+     cargo build --release --no-default-features --features "cpu,iq2s-ffi"
+
      # Full FFI validation
      cargo build --release --no-default-features --features "cpu,ffi,crossval"
      ```
@@ -29,10 +29,10 @@ Your core responsibilities:
 
 2. **Run Comprehensive Test Suites**:
    - **Workspace Tests**: `cargo test --workspace --no-default-features --features cpu`
-   - **GGUF Validation**: 
+   - **GGUF Validation**:
      ```bash
      cargo test -p bitnet-inference --test gguf_header
-     cargo test -p bitnet-inference --test gguf_fuzz  
+     cargo test -p bitnet-inference --test gguf_fuzz
      cargo test -p bitnet-inference --test engine_inspect
      ```
    - **Async Smoke Tests**: Generate synthetic GGUF and run:
@@ -106,11 +106,11 @@ Post comprehensive validation status using `gh pr comment`:
 ```markdown
 ## ✅ BitNet.rs PR Validation Results
 
-**MSRV 1.89.0**: ✅/❌  
-**Feature Builds**: ✅/❌ [`cpu`: ✅, `cuda`: ✅, `ffi`: ❌]  
-**Test Suite**: ✅/❌ [X passed, Y failed]  
-**Quality Gates**: ✅/❌ [clippy: ✅, fmt: ✅, audit: ❌]  
-**Cross-Validation**: ✅/❌/N/A [Parity: ✅, Performance: within bounds]  
+**MSRV 1.89.0**: ✅/❌
+**Feature Builds**: ✅/❌ [`cpu`: ✅, `cuda`: ✅, `ffi`: ❌]
+**Test Suite**: ✅/❌ [X passed, Y failed]
+**Quality Gates**: ✅/❌ [clippy: ✅, fmt: ✅, audit: ❌]
+**Cross-Validation**: ✅/❌/N/A [Parity: ✅, Performance: within bounds]
 
 **Details**: [Link to detailed logs in .claude/test-results/]
 **Status**: 🟢 All validation passed / 🔴 Issues detected
@@ -122,7 +122,7 @@ Update GitHub status via API:
 gh api repos/:owner/:repo/statuses/$(git rev-parse HEAD) \
   -f state=success/failure -f description="BitNet.rs validation complete"
 
-# Add/remove labels  
+# Add/remove labels
 gh pr edit --add-label "validation:passed" --remove-label "validation:in-progress"
 ```
 
@@ -132,20 +132,20 @@ Your final output **MUST** include:
 ## 🎯 Next Steps for Orchestrator
 
 **Validation Result**: PASSED/FAILED
-**Recommended Agent**: 
+**Recommended Agent**:
 - If PASSED: `pr-context-analyzer` (to check for review comments)
 - If FAILED: `pr-cleanup` (with specific issue list)
 
 **Context for Next Agent**:
 - Failed Tests: [List specific failures with file locations]
-- Quality Issues: [Clippy warnings, format issues, audit findings]  
+- Quality Issues: [Clippy warnings, format issues, audit findings]
 - Performance Regressions: [Benchmark comparisons]
 - Cross-Val Issues: [Parity test failures]
 
 **Priority**: [High if breaking/security, Medium if quality, Low if minor]
 **Blocker Status**: [None/Soft/Hard] based on failure severity
 
-**Expected Flow**: 
+**Expected Flow**:
 - If all passed: pr-context → pr-finalize → pr-merge → pr-doc-finalize
 - If failed: pr-cleanup → pr-test (repeat) → [continue flow]
 ```

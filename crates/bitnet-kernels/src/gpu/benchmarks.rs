@@ -78,7 +78,7 @@ impl GpuBenchmark {
 
         for &(m, n, k) in &self.config.matrix_sizes {
             log::info!("Benchmarking matrix size {}x{}x{}", m, n, k);
-            
+
             let result = self.benchmark_matrix_size(cuda_kernel, m, n, k)?;
             results.push(result);
         }
@@ -168,7 +168,7 @@ impl GpuBenchmark {
         let passed = max_error < self.config.tolerance as f64;
 
         if !passed {
-            log::warn!("Numerical validation failed: max_error={:.6}, avg_error={:.6}, tolerance={:.6}", 
+            log::warn!("Numerical validation failed: max_error={:.6}, avg_error={:.6}, tolerance={:.6}",
                       max_error, avg_error, self.config.tolerance);
         }
 
@@ -178,13 +178,13 @@ impl GpuBenchmark {
     /// Print benchmark results in a formatted table
     pub fn print_results(&self, results: &[BenchmarkResult]) {
         println!("\n=== GPU Kernel Benchmark Results ===");
-        println!("{:<15} {:<12} {:<12} {:<10} {:<12} {:<12} {:<10} {:<8}", 
+        println!("{:<15} {:<12} {:<12} {:<10} {:<12} {:<12} {:<10} {:<8}",
                  "Matrix Size", "GPU (ms)", "CPU (ms)", "Speedup", "GPU GFLOPS", "CPU GFLOPS", "Max Error", "Pass");
         println!("{}", "-".repeat(100));
 
         for result in results {
             let (m, n, k) = result.matrix_size;
-            println!("{:<15} {:<12.3} {:<12.3} {:<10.2}x {:<12.2} {:<12.2} {:<10.2e} {:<8}", 
+            println!("{:<15} {:<12.3} {:<12.3} {:<10.2}x {:<12.2} {:<12.2} {:<10.2e} {:<8}",
                      format!("{}x{}x{}", m, n, k),
                      result.gpu_time_ms,
                      result.cpu_time_ms,
@@ -251,8 +251,8 @@ impl GpuBenchmark {
 
                 let speedup = cpu_time / gpu_time;
 
-                println!("{:<10} {:<8} {:<12.3} {:<12.3} {:<10.2}x", 
-                         size, 
+                println!("{:<10} {:<8} {:<12.3} {:<12.3} {:<10.2}x",
+                         size,
                          format!("{:?}", qtype),
                          gpu_time,
                          cpu_time,
@@ -278,10 +278,10 @@ mod tests {
         };
 
         let benchmark = GpuBenchmark::new(config);
-        
+
         if let Ok(results) = benchmark.run_benchmarks() {
             benchmark.print_results(&results);
-            
+
             // Verify all tests passed
             for result in &results {
                 if result.passed_correctness {
@@ -297,7 +297,7 @@ mod tests {
     fn test_quantization_benchmark() {
         let config = BenchmarkConfig::default();
         let benchmark = GpuBenchmark::new(config);
-        
+
         // This test will pass even if CUDA is not available
         let _ = benchmark.benchmark_quantization();
     }

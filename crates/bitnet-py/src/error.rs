@@ -20,11 +20,11 @@ impl PyBitNetError {
             error_type: error_type.unwrap_or_else(|| "BitNetError".to_string()),
         }
     }
-    
+
     fn __str__(&self) -> String {
         format!("{}: {}", self.error_type, self.message)
     }
-    
+
     fn __repr__(&self) -> String {
         format!("{}('{}')", self.error_type, self.message)
     }

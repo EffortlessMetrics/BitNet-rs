@@ -12,6 +12,7 @@ members = [
   "crates/bitnet-server",
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
+  "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
   "crates/bitnet-ffi",
   "crates/bitnet-py",
   "crates/bitnet-wasm",
@@ -138,6 +139,7 @@ wasm = []   # Handled by bitnet-wasm crate
 # Server and CLI (not included in main crate)
 cli = []    # Handled by bitnet-cli crate
 server = [] # Handled by bitnet-server crate
+full-cli = [] # Full CLI with all subcommands (forwarded to bitnet-cli)
 
 # Quantization features
 iq2s-ffi = ["bitnet-models/iq2s-ffi", "dep:bitnet_ggml_ffi"] # Enable IQ2_S quantization via GGML FFI

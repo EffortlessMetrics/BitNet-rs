@@ -167,19 +167,19 @@ Use wrapper functions for complex migrations:
 class BitNetCompatibility {
 private:
     BitNetModel* rust_model;
-    
+
 public:
     BitNetCompatibility(const char* model_path) {
         rust_model = bitnet_model_load(model_path);
     }
-    
+
     std::string generate(const std::string& prompt, int max_tokens = 100) {
         char* result = bitnet_generate(rust_model, prompt.c_str(), max_tokens, 0.7f);
         std::string output(result);
         bitnet_free_string(result);
         return output;
     }
-    
+
     ~BitNetCompatibility() {
         bitnet_model_free(rust_model);
     }

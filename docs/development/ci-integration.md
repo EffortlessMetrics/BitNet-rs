@@ -21,14 +21,14 @@ graph TD
     B --> F[Cache Optimization]
     B --> G[Cross-Validation]
     B --> H[Performance Benchmarks]
-    
+
     C --> I[Summary & Reporting]
     D --> I
     E --> I
     F --> I
     G --> I
     H --> I
-    
+
     I --> J[Status Checks]
     I --> K[PR Comments]
     I --> L[Artifact Collection]
@@ -90,7 +90,7 @@ graph TD
 
 ### Manual Triggers
 - **Workflow Dispatch**: Manual execution with configurable parameters
-- **PR Labels**: 
+- **PR Labels**:
   - `crossval`: Triggers cross-validation tests
   - `testing-framework`: Forces full testing framework execution
 
@@ -100,7 +100,7 @@ graph TD
 The CI integration creates detailed status checks for each component:
 
 - `bitnet-rs/unit-tests`: Unit test results
-- `bitnet-rs/integration-tests`: Integration test results  
+- `bitnet-rs/integration-tests`: Integration test results
 - `bitnet-rs/coverage`: Coverage analysis results
 - `bitnet-rs/cross-validation`: Rust/C++ parity validation
 - `bitnet-rs/performance`: Performance benchmark results

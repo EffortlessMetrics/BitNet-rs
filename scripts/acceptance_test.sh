@@ -71,7 +71,7 @@ FAILED=0
 # 1. Model introspection (both formats)
 run_introspection() {
     log_step "1. Model Introspection (format, tokenizer, scoring policy)"
-    
+
     # SafeTensors
     SAFETENSORS_MODEL=""
     SAFETENSORS_TOKENIZER=""
@@ -126,20 +126,20 @@ run_introspection() {
 # 2. Format parity validation
 run_parity() {
     log_step "2. Format Parity (tokenizer + τ-b + TF NLL)"
-    
+
     if "$SCRIPT_DIR/validate_format_parity.sh" > "$OUTPUT_DIR/parity.log" 2>&1; then
         # Check the parity results
         if [ -f "/tmp/parity_results.json" ]; then
             cp /tmp/parity_results.json "$OUTPUT_DIR/parity_results.json"
-            
+
             # Extract key metrics
             TAU=$(jq -r '.tau_b.median // 0' "$OUTPUT_DIR/parity_results.json")
             NLL_DELTA=$(jq -r '.nll.delta_mean // 999' "$OUTPUT_DIR/parity_results.json")
             PASS=$(jq -r '.pass // false' "$OUTPUT_DIR/parity_results.json")
-            
+
             echo "  Median τ-b: $TAU"
             echo "  |Δ mean_nll|: $NLL_DELTA"
-            
+
             if [ "$PASS" = "true" ]; then
                 log_pass "Format parity validation"
             else
@@ -160,20 +160,20 @@ run_parity() {
 # 3. Performance measurements
 run_performance() {
     log_step "3. Performance Measurements → JSON → Markdown"
-    
+
     if "$SCRIPT_DIR/measure_perf_json.sh" > "$OUTPUT_DIR/perf.log" 2>&1; then
         # Check for generated JSONs
         PERF_JSONS=$(ls bench/results/*-{safetensors,gguf}.json 2>/dev/null | wc -l)
-        
+
         if [ "$PERF_JSONS" -ge 2 ]; then
             log_pass "Performance JSONs generated ($PERF_JSONS files)"
-            
+
             # Render markdown
             python3 "$SCRIPT_DIR/render_perf_md.py" \
                 bench/results/*-safetensors.json \
                 bench/results/*-gguf.json \
                 > "$OUTPUT_DIR/PERF_COMPARISON.md" 2>&1
-            
+
             if [ $? -eq 0 ]; then
                 log_pass "Performance markdown rendered"
                 echo "  Report: $OUTPUT_DIR/PERF_COMPARISON.md"
@@ -195,7 +195,7 @@ run_performance() {
 # 4. CI validation checks
 run_ci_checks() {
     log_step "4. CI Validation Checks"
-    
+
     # Check for mock features (ignore CI guards)
     echo -n "  Checking for mock features... "
     MOCK_HITS=$(
@@ -212,7 +212,7 @@ run_ci_checks() {
     else
         log_pass "No mock features"
     fi
-    
+
     # Check GGUF changes
     echo -n "  Checking GGUF validation requirement... "
     GGUF_CHANGED=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.gguf$' || true)
@@ -226,7 +226,7 @@ run_ci_checks() {
     else
         log_info "No GGUF changes to validate"
     fi
-    
+
     # Check perf docs vs JSON
     echo -n "  Checking perf docs match JSON... "
     PERF_MD_CHANGED=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '^docs/PERF_.*\.md$' || true)
@@ -247,7 +247,7 @@ run_ci_checks() {
 # Generate summary
 generate_summary() {
     log_step "5. Generating Summary"
-    
+
     # Build summary via jq -n to avoid heredoc boolean issues under set -u
     jq -n \
       --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -284,7 +284,7 @@ generate_summary() {
       failed_checks: $failed,
       pass: $pass
     }' > "$OUTPUT_DIR/acceptance_summary.json"
-    
+
     log_pass "Summary generated: $OUTPUT_DIR/acceptance_summary.json"
 }
 
@@ -297,14 +297,14 @@ main() {
     log_info "Output directory: $OUTPUT_DIR"
     log_info "Models: $MODEL_BASE"
     echo ""
-    
+
     # Run all tests
     run_introspection
     run_parity
     run_performance
     run_ci_checks
     generate_summary
-    
+
     # Final status
     echo "====================================================="
     if [ $FAILED -eq 0 ]; then

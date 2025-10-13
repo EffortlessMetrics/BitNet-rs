@@ -183,7 +183,7 @@ bitnet score --model model.gguf --file test.txt --json-out results.json
 
 **Device Selection:**
 - `cpu` - Force CPU computation
-- `cuda` / `gpu` - Force CUDA GPU (fails if unavailable) 
+- `cuda` / `gpu` - Force CUDA GPU (fails if unavailable)
 - `metal` - Force Metal GPU (not currently supported)
 - `auto` - Try CUDA, fallback to CPU (recommended)
 
@@ -199,7 +199,7 @@ Machine learning is a subset of artificial intelligence.
 ```json
 {
   "type": "score",
-  "model": "model.gguf", 
+  "model": "model.gguf",
   "dataset": "test.txt",
   "tokens": 1234,
   "mean_nll": 2.345,

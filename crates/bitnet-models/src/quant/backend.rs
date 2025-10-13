@@ -12,7 +12,7 @@
 //! ```
 //!
 //! Or from the root workspace:
-//! ```bash  
+//! ```bash
 //! cargo build --no-default-features --features iq2s-ffi
 //! ```
 //!

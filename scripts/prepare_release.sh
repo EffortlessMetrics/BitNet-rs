@@ -115,7 +115,7 @@ for json in bench/results/*.json; do
             else
                 schema="bench/schema/perf.schema.json"
             fi
-            
+
             if command -v ajv > /dev/null 2>&1; then
                 run_cmd "Validating $name" \
                     ajv validate -s "$schema" -d "$json"
@@ -138,15 +138,15 @@ run_cmd "Creating artifacts directory" mkdir -p "$ARTIFACTS_DIR"
 if [ "$DRY_RUN" = false ]; then
     # Performance data
     cp -r bench/results "$ARTIFACTS_DIR/performance" 2>/dev/null || true
-    
+
     # Validation results
     cp artifacts/*.json "$ARTIFACTS_DIR/" 2>/dev/null || true
     cp artifacts/*.log "$ARTIFACTS_DIR/" 2>/dev/null || true
-    
+
     # Documentation
     cp docs/PERF_COMPARISON.md "$ARTIFACTS_DIR/" 2>/dev/null || true
     cp docs/PRODUCTION_READINESS.md "$ARTIFACTS_DIR/" 2>/dev/null || true
-    
+
     # Create manifest
     cat > "$ARTIFACTS_DIR/MANIFEST.json" <<EOF
 {
@@ -163,11 +163,11 @@ if [ "$DRY_RUN" = false ]; then
     }
 }
 EOF
-    
+
     # Compress artifacts
     run_cmd "Compressing artifacts" \
         tar -czf "bitnet-rs-v${VERSION}-artifacts.tar.gz" "$ARTIFACTS_DIR"
-    
+
     echo "  Artifacts saved to: bitnet-rs-v${VERSION}-artifacts.tar.gz"
 else
     echo "  [DRY RUN] Would create release artifacts"
@@ -188,7 +188,7 @@ if [ "$DRY_RUN" = false ]; then
             fi
         fi
     done
-    
+
     # Update lock file
     run_cmd "Updating Cargo.lock" cargo update --workspace
 else

@@ -54,7 +54,7 @@ BitNet-rs supports multiple GPU backends:
 ### Prerequisites
 
 1. **Windows 11** or **Windows 10** (version 21H2 or later)
-2. **WSL2** (not WSL1) 
+2. **WSL2** (not WSL1)
 3. **NVIDIA GPU** with recent Windows driver
 
 ### Step 1: Verify WSL2
@@ -191,7 +191,7 @@ cargo xtask gpu-preflight
 # Should output something like:
 # 🔍 GPU Preflight Check
 # ═════════════════════
-# 
+#
 # Available GPU backends: CUDA 12.3
 ```
 

@@ -181,11 +181,11 @@ validation:
   steps:
     - name: Tokenizer Parity
       run: scripts/test-tokenizer-parity.py --smoke
-    
+
     - name: Logit Parity
       run: |
         PROP_EXAMPLES=10 TAU_MIN=0.60 scripts/logit-parity.sh
-    
+
     - name: NLL Parity
       run: |
         DELTA_NLL_MAX=2e-2 scripts/nll-parity.sh
@@ -236,7 +236,7 @@ import json
 def replay(artifact_path, row_idx):
     with open(artifact_path) as f:
         row = json.loads(f.readlines()[row_idx])
-    
+
     # Re-run both implementations with row["prompt"], row["seed"]
     # Compare tau-b and NLL
     # Print detailed diff for debugging

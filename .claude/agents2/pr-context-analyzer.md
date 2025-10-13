@@ -23,8 +23,8 @@ You are the PR Context Analyzer, an expert at comprehensive pull request analysi
      ```bash
      # Check API surface changes
      git diff origin/main...HEAD -- '**/src/lib.rs' '**/api.rs' '**/*.rs' | grep -E '^\+.*pub '
-     
-     # MSRV compatibility check  
+
+     # MSRV compatibility check
      rustup run 1.89.0 cargo check --workspace --no-default-features --features cpu
      ```
    - **Quantization Impact**: Analyze I2_S vs IQ2_S implementation consistency
@@ -35,11 +35,11 @@ You are the PR Context Analyzer, an expert at comprehensive pull request analysi
    - Generate detailed technical responses using `gh pr comment`:
      ```markdown
      ## Technical Analysis Response
-     
+
      **@reviewer-username**: Regarding your comment on performance implications:
-     
+
      **Analysis**: [Detailed technical analysis]
-     **Benchmarks**: [Performance impact data]  
+     **Benchmarks**: [Performance impact data]
      **Alternatives**: [Alternative implementation approaches]
      **Recommendation**: [Specific implementation suggestion]
      ```
@@ -53,7 +53,7 @@ You are the PR Context Analyzer, an expert at comprehensive pull request analysi
      ```bash
      # Check for new unsafe code
      git diff origin/main...HEAD | grep -E '^\+.*unsafe'
-     
+
      # Security audit
      cargo audit --deny warnings
      ```
@@ -64,7 +64,7 @@ You are the PR Context Analyzer, an expert at comprehensive pull request analysi
 # Fetch all review data
 gh api repos/:owner/:repo/pulls/:number --jq '{comments: .comments, review_comments: .review_comments, requested_reviewers: .requested_reviewers}'
 
-# Post technical responses  
+# Post technical responses
 gh pr comment --body "$(cat .claude/technical-response.md)"
 
 # Request specific reviewers
@@ -91,9 +91,9 @@ Your final output **MUST** include:
 ## 🎯 Next Steps for Orchestrator
 
 **Context Analysis Result**: [APPROVED/NEEDS_WORK/CLARIFICATION_PENDING]
-**Recommended Agent**: 
+**Recommended Agent**:
 - If APPROVED: `pr-finalize`
-- If NEEDS_WORK: `pr-cleanup` 
+- If NEEDS_WORK: `pr-cleanup`
 - If CLARIFICATION_PENDING: Continue monitoring this agent
 
 **Key Findings**:
@@ -109,7 +109,7 @@ Your final output **MUST** include:
 **Priority**: [High/Medium/Low] based on issue severity
 **Estimated Resolution**: [Simple/Complex] for pr-cleanup planning
 
-**Expected Flow**: 
+**Expected Flow**:
 - If approved: pr-finalize → pr-merge → pr-doc-finalize
 - If needs work: pr-cleanup → pr-test → pr-context (loop) → pr-finalize
 ```

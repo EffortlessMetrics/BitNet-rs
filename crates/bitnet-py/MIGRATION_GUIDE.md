@@ -161,7 +161,7 @@ async def stream_generate(prompt: str):
     async def generate_stream():
         async for token in engine.generate_stream(prompt):
             yield f"data: {token}\n\n"
-    
+
     return StreamingResponse(generate_stream(), media_type="text/plain")
 ```
 
@@ -182,7 +182,7 @@ engine = bitnet.SimpleInference(model, tokenizer)
 def generate():
     data = request.get_json()
     prompt = data.get("prompt", "")
-    
+
     result = engine.generate(prompt)
     return jsonify({"response": result})
 
@@ -190,10 +190,10 @@ def generate():
 def batch_generate():
     data = request.get_json()
     prompts = data.get("prompts", [])
-    
+
     processor = bitnet.BatchProcessor(model, tokenizer)
     results = processor.process_batch(prompts)
-    
+
     return jsonify({"responses": results})
 ```
 
@@ -211,27 +211,27 @@ def load_model():
 
 def main():
     st.title("BitNet Text Generation")
-    
+
     engine = load_model()
-    
+
     prompt = st.text_area("Enter your prompt:")
-    
+
     if st.button("Generate"):
         with st.spinner("Generating..."):
             result = engine.generate(prompt)
             st.write(result)
-    
+
     # Streaming example
     if st.button("Generate (Streaming)"):
         placeholder = st.empty()
         full_response = ""
-        
+
         async def stream():
             nonlocal full_response
             async for token in engine.generate_stream(prompt):
                 full_response += token
                 placeholder.write(full_response)
-        
+
         asyncio.run(stream())
 
 if __name__ == "__main__":
@@ -347,15 +347,15 @@ import bitnet_py as bitnet
 
 class HybridInference:
     """Hybrid inference engine supporting gradual migration."""
-    
+
     def __init__(self, rollout_percentage: float = 0.0):
         self.rollout_percentage = rollout_percentage
-        
+
         # Load bitnet_py
         self.new_model = bitnet.load_model("model.gguf")
         self.new_tokenizer = bitnet.create_tokenizer("tokenizer.model")
         self.new_engine = bitnet.SimpleInference(self.new_model, self.new_tokenizer)
-        
+
         # Load original (if available)
         try:
             import model as fast_orig
@@ -363,18 +363,18 @@ class HybridInference:
             # Initialize original implementation
         except ImportError:
             self.original_available = False
-    
+
     def generate(self, prompt: str, force_new: bool = False) -> dict:
         """Generate text with automatic routing."""
-        
+
         use_new = force_new or (random.random() < self.rollout_percentage)
-        
+
         if use_new or not self.original_available:
             # Use bitnet_py
             start_time = time.time()
             result = self.new_engine.generate(prompt)
             generation_time = time.time() - start_time
-            
+
             return {
                 "response": result,
                 "implementation": "bitnet_py",
@@ -387,39 +387,39 @@ class HybridInference:
             # Original implementation code here
             result = "Original implementation result"
             generation_time = time.time() - start_time
-            
+
             return {
                 "response": result,
                 "implementation": "original",
                 "generation_time": generation_time,
                 "tokens_per_second": len(result.split()) / generation_time
             }
-    
+
     def compare_implementations(self, prompt: str) -> dict:
         """Compare both implementations side-by-side."""
-        
+
         results = {}
-        
+
         # Test bitnet_py
         results["bitnet_py"] = self.generate(prompt, force_new=True)
-        
+
         # Test original (if available)
         if self.original_available:
             old_rollout = self.rollout_percentage
             self.rollout_percentage = 0.0  # Force original
             results["original"] = self.generate(prompt)
             self.rollout_percentage = old_rollout
-        
+
         # Calculate comparison metrics
         if "original" in results:
             new_tps = results["bitnet_py"]["tokens_per_second"]
             old_tps = results["original"]["tokens_per_second"]
-            
+
             results["comparison"] = {
                 "speedup": new_tps / old_tps if old_tps > 0 else float('inf'),
                 "time_improvement": (results["original"]["generation_time"] - results["bitnet_py"]["generation_time"]) / results["original"]["generation_time"] * 100
             }
-        
+
         return results
 
 # Usage example
@@ -439,7 +439,7 @@ print(f"Speedup: {comparison.get('comparison', {}).get('speedup', 'N/A')}x")
 ```python
 class MigrationMonitor:
     """Monitor migration progress and performance."""
-    
+
     def __init__(self):
         self.metrics = {
             "requests_total": 0,
@@ -450,17 +450,17 @@ class MigrationMonitor:
             "avg_time_new": 0.0,
             "avg_time_original": 0.0
         }
-    
+
     def record_request(self, implementation: str, success: bool, time_taken: float):
         """Record request metrics."""
         self.metrics["requests_total"] += 1
-        
+
         if implementation == "bitnet_py":
             self.metrics["requests_new"] += 1
             if not success:
                 self.metrics["errors_new"] += 1
             self.metrics["avg_time_new"] = (
-                (self.metrics["avg_time_new"] * (self.metrics["requests_new"] - 1) + time_taken) 
+                (self.metrics["avg_time_new"] * (self.metrics["requests_new"] - 1) + time_taken)
                 / self.metrics["requests_new"]
             )
         else:
@@ -468,25 +468,25 @@ class MigrationMonitor:
             if not success:
                 self.metrics["errors_original"] += 1
             self.metrics["avg_time_original"] = (
-                (self.metrics["avg_time_original"] * (self.metrics["requests_original"] - 1) + time_taken) 
+                (self.metrics["avg_time_original"] * (self.metrics["requests_original"] - 1) + time_taken)
                 / self.metrics["requests_original"]
             )
-    
+
     def get_migration_status(self) -> dict:
         """Get current migration status."""
         total = self.metrics["requests_total"]
         if total == 0:
             return {"status": "No requests processed"}
-        
+
         new_percentage = (self.metrics["requests_new"] / total) * 100
         error_rate_new = (self.metrics["errors_new"] / max(1, self.metrics["requests_new"])) * 100
         error_rate_original = (self.metrics["errors_original"] / max(1, self.metrics["requests_original"])) * 100
-        
+
         speedup = (
-            self.metrics["avg_time_original"] / self.metrics["avg_time_new"] 
+            self.metrics["avg_time_original"] / self.metrics["avg_time_new"]
             if self.metrics["avg_time_new"] > 0 else 0
         )
-        
+
         return {
             "migration_percentage": new_percentage,
             "total_requests": total,
@@ -495,7 +495,7 @@ class MigrationMonitor:
             "performance_speedup": speedup,
             "recommendation": self._get_recommendation(new_percentage, error_rate_new, speedup)
         }
-    
+
     def _get_recommendation(self, migration_pct: float, error_rate: float, speedup: float) -> str:
         """Get migration recommendation based on metrics."""
         if error_rate > 5.0:
@@ -521,10 +521,10 @@ def handle_request(prompt: str):
     except Exception as e:
         success = False
         result = {"error": str(e), "implementation": "unknown"}
-    
+
     time_taken = time.time() - start_time
     monitor.record_request(result.get("implementation", "unknown"), success, time_taken)
-    
+
     return result
 
 # Check migration status

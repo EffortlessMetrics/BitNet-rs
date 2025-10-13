@@ -15,7 +15,7 @@ As of PR #166, xtask integrates with BitNet.rs GPU detection utilities to provid
 
 ### Mock GPU Testing
 ```bash
-# Test download with mocked GPU environments  
+# Test download with mocked GPU environments
 BITNET_GPU_FAKE="cuda" cargo xtask download-model --dry-run
 BITNET_GPU_FAKE="rocm,metal" cargo xtask crossval --dry-run
 BITNET_GPU_FAKE="" cargo xtask full-crossval  # No GPU scenario

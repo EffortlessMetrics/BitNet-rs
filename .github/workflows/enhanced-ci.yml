@@ -35,7 +35,7 @@ jobs:
     name: Build Test (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.allow_failure || false }}
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -46,19 +46,19 @@ jobs:
             target: x86_64-unknown-linux-gnu
             build_mode: "ci"
             features: "cpu"
-            
+
           - name: "macOS (Latest)"
             os: macos-latest
             target: x86_64-apple-darwin
             build_mode: "ci"
             features: "cpu"
-            
+
           - name: "Windows (Latest)"
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            build_mode: "ci" 
+            build_mode: "ci"
             features: "cpu"
-            
+
           # Secondary tier - can fail
           - name: "Linux (Minimal)"
             os: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
             build_mode: "minimal"
             features: "cpu"
             fallback: true
-            
+
           - name: "Restricted Environment"
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -75,7 +75,7 @@ jobs:
             fallback: true
             restricted: true
             allow_failure: true
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -106,10 +106,10 @@ jobs:
         run: |
           echo "Installing basic dependencies..."
           sudo apt-get update
-          
+
           # Essential dependencies
           sudo apt-get install -y build-essential
-          
+
           # Optional dependencies with fallback handling
           if [[ "${{ matrix.restricted }}" != "true" ]]; then
             # Try to install optional dependencies
@@ -135,7 +135,7 @@ jobs:
             brew install llvm || echo "LLVM installation failed, will use fallbacks"
           fi
 
-      - name: Install system dependencies (Windows)  
+      - name: Install system dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
           echo "Windows dependencies will be handled by build script"
@@ -147,23 +147,23 @@ jobs:
         run: |
           # Make the script executable
           chmod +x scripts/build-with-fallbacks.sh
-          
+
           # Determine build arguments
           BUILD_ARGS=()
           BUILD_ARGS+=("--mode" "${{ matrix.build_mode || 'ci' }}")
-          
+
           if [[ -n "${{ matrix.features }}" ]]; then
             BUILD_ARGS+=("--features" "${{ matrix.features }}")
           fi
-          
+
           if [[ "${{ matrix.fallback }}" == "true" ]] || [[ "${{ github.event.inputs.enable_fallbacks }}" == "true" ]]; then
             BUILD_ARGS+=("--fallback")
           fi
-          
+
           if [[ "${{ matrix.restricted }}" == "true" ]]; then
             BUILD_ARGS+=("--skip-python" "--skip-ffi")
           fi
-          
+
           echo "Running enhanced build with: ${BUILD_ARGS[*]}"
           ./scripts/build-with-fallbacks.sh "${BUILD_ARGS[@]}"
 
@@ -172,7 +172,7 @@ jobs:
         shell: bash
         run: |
           echo "Testing binary execution..."
-          
+
           # Test CLI binary if it exists
           if [[ -f "target/debug/bitnet-cli" ]] || [[ -f "target/debug/bitnet-cli.exe" ]]; then
             echo "Testing bitnet-cli..."
@@ -181,7 +181,7 @@ jobs:
           else
             echo "bitnet-cli binary not found (may be expected in minimal builds)"
           fi
-          
+
           # Test server binary if it exists
           if [[ -f "target/debug/bitnet-server" ]] || [[ -f "target/debug/bitnet-server.exe" ]]; then
             echo "Testing bitnet-server..."
@@ -204,7 +204,7 @@ jobs:
   dependency-resilience:
     name: Dependency Resilience Test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -232,7 +232,7 @@ jobs:
         run: |
           # Remove C++ tools to simulate missing dependencies
           sudo apt-get remove -y build-essential cmake clang || true
-          echo "Testing build without C++ tools..."  
+          echo "Testing build without C++ tools..."
           ./scripts/build-with-fallbacks.sh --mode ci --skip-ffi
 
   # Infrastructure validation
@@ -241,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-matrix]
     if: always()
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -254,11 +254,11 @@ jobs:
       - name: Validate infrastructure improvements
         run: |
           echo "Validating infrastructure improvements..."
-          
+
           # Check that at least some builds succeeded
           SUCCESS_COUNT=0
           TOTAL_COUNT=0
-          
+
           if [[ -d "build-reports" ]]; then
             for report_dir in build-reports/build-report-*; do
               if [[ -d "$report_dir" ]]; then
@@ -271,27 +271,27 @@ jobs:
               fi
             done
           fi
-          
+
           echo "Build success rate: $SUCCESS_COUNT/$TOTAL_COUNT"
-          
+
           # Check for key improvements
           echo ""
           echo "🔍 Infrastructure improvement validation:"
-          
+
           # Check if fallback mechanisms are working
           if find build-reports -name "*.md" -exec grep -l "Fallback Mode: Enabled" {} \; | head -1 > /dev/null; then
             echo "✅ Fallback mechanisms are working"
           else
             echo "❌ Fallback mechanisms not detected"
           fi
-          
+
           # Check if dependency handling is improved
           if find build-reports -name "*.md" -exec grep -l "Dependency check completed" {} \; | head -1 > /dev/null; then
             echo "✅ Enhanced dependency checking is working"
           else
             echo "❌ Enhanced dependency checking not detected"
           fi
-          
+
           # Require at least 60% success rate
           if [[ $TOTAL_COUNT -gt 0 ]]; then
             SUCCESS_RATE=$(( (SUCCESS_COUNT * 100) / TOTAL_COUNT ))
@@ -309,36 +309,36 @@ jobs:
         run: |
           cat > infrastructure-summary.md << 'EOF'
           # 🛠️ Infrastructure Enhancement Summary
-          
+
           **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           **Trigger**: ${{ github.event_name }}
-          
+
           ## Key Improvements Validated
-          
-          ✅ **Enhanced libclang detection** - Improved bindgen reliability  
-          ✅ **Python binding fallbacks** - Graceful degradation for missing dependencies  
-          ✅ **FFI build robustness** - Better error handling for C++ components  
-          ✅ **Cross-validation path resolution** - Smart model discovery  
-          ✅ **Fallback build modes** - Multiple build strategies for different environments  
-          ✅ **CI resilience** - Better handling of restricted environments  
-          
+
+          ✅ **Enhanced libclang detection** - Improved bindgen reliability
+          ✅ **Python binding fallbacks** - Graceful degradation for missing dependencies
+          ✅ **FFI build robustness** - Better error handling for C++ components
+          ✅ **Cross-validation path resolution** - Smart model discovery
+          ✅ **Fallback build modes** - Multiple build strategies for different environments
+          ✅ **CI resilience** - Better handling of restricted environments
+
           ## Build Infrastructure Status
-          
+
           - **Primary builds**: All critical platforms tested
-          - **Fallback mechanisms**: Validated across multiple scenarios  
+          - **Fallback mechanisms**: Validated across multiple scenarios
           - **Dependency handling**: Improved detection and graceful failures
           - **Error reporting**: Enhanced troubleshooting information
           - **CI robustness**: Better handling of missing dependencies
-          
+
           ## Ready for Production
-          
+
           The infrastructure improvements provide:
           - Reliable builds across different environments
           - Graceful degradation when dependencies are missing
           - Better error messages for troubleshooting
           - Fallback mechanisms for restricted environments
           - Enhanced cross-validation reliability
-          
+
           ---
           *Generated by Enhanced CI infrastructure validation*
           EOF

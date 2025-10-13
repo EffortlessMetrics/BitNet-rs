@@ -293,13 +293,13 @@ jobs:
           for suite in "${test_suites[@]}"; do
             echo "### $suite" >> integration-test-summary.md
             echo "" >> integration-test-summary.md
-            
+
             if [[ "${{ needs.integration-tests.result }}" == "success" ]]; then
               echo "- ✅ **Status**: All tests passed" >> integration-test-summary.md
             else
               echo "- ❌ **Status**: Some tests failed" >> integration-test-summary.md
             fi
-            
+
             echo "- 🖥️ **Platforms**: Ubuntu, Windows, macOS" >> integration-test-summary.md
             echo "- 📊 **Artifacts**: Available for debugging" >> integration-test-summary.md
             echo "" >> integration-test-summary.md
@@ -333,7 +333,7 @@ jobs:
             echo "" >> integration-test-summary.md
             echo "## Available Artifacts" >> integration-test-summary.md
             echo "" >> integration-test-summary.md
-            
+
             artifact_count=$(find artifacts -name "integration-artifacts-*" -type d | wc -l)
             echo "- **Total Artifact Sets**: $artifact_count" >> integration-test-summary.md
             echo "- **Retention**: 30 days" >> integration-test-summary.md

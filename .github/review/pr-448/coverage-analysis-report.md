@@ -1,21 +1,21 @@
 # Test Coverage Analysis Report: PR #448
 
-**Agent**: BitNet.rs Test Coverage Analysis Specialist  
-**Date**: 2025-10-12  
-**PR**: #448 - OpenTelemetry OTLP Migration & Inference API Exports  
+**Agent**: BitNet.rs Test Coverage Analysis Specialist
+**Date**: 2025-10-12
+**PR**: #448 - OpenTelemetry OTLP Migration & Inference API Exports
 **Status**: ⚠️ **BOUNDED - Coverage Metrics with Analysis Limitations**
 
 ---
 
 ## Executive Summary
 
-⚠️ **Coverage quantification bounded by policy**: Full llvm-cov/tarpaulin analysis timed out (>5min) on long-running tests  
-✅ **Test Pass Rate: 268/268 (100%)** excluding 1 pre-existing quarantined flaky test  
-✅ **Test Distribution: Comprehensive** across 204+ test files, 74K test SLOC, 263 distinct tests  
-✅ **PR Changes: Well-Tested** - New code includes dedicated test files with AC-based validation  
-⚠️ **Coverage Delta: Not Quantified** - Baseline comparison not feasible due to tool timeout  
+⚠️ **Coverage quantification bounded by policy**: Full llvm-cov/tarpaulin analysis timed out (>5min) on long-running tests
+✅ **Test Pass Rate: 268/268 (100%)** excluding 1 pre-existing quarantined flaky test
+✅ **Test Distribution: Comprehensive** across 204+ test files, 74K test SLOC, 263 distinct tests
+✅ **PR Changes: Well-Tested** - New code includes dedicated test files with AC-based validation
+⚠️ **Coverage Delta: Not Quantified** - Baseline comparison not feasible due to tool timeout
 
-**Routing Decision**: → **test-finalizer** for TDD validation, then → **architecture-reviewer**  
+**Routing Decision**: → **test-finalizer** for TDD validation, then → **architecture-reviewer**
 **Rationale**: Test execution success + test file distribution indicates adequate coverage; quantification limitations are non-blocking for Draft→Ready promotion given bounded retries policy
 
 ---
@@ -82,7 +82,7 @@ Given tool timeout constraints and bounded retry policy, analysis based on:
 
 #### 1. `crates/bitnet-inference/src/lib.rs` (API Exports)
 
-**Changes**: 
+**Changes**:
 - Added GGUF type re-exports (line 17)
 - Updated prelude exports for inference types
 
@@ -215,7 +215,7 @@ Given tool timeout constraints and bounded retry policy, analysis based on:
 
 #### 2. Property-Based Test Execution
 **Gap**: 15 property tests ignored in fast test mode (require `--ignored` flag)
-**Files**: 
+**Files**:
 - `gguf_weight_loading_property_tests.rs` (9 tests)
 - `gguf_weight_loading_property_tests_enhanced.rs` (6 tests)
 **Impact**: ⚠️ Low - CI runs these in nightly mode; core accuracy tests passing
@@ -332,10 +332,10 @@ gaps: OTLP impl pending (7 WIP tests), 15 property tests (CI nightly), no critic
 
 ### Short-Term (Next PR)
 
-1. **Complete OTLP Implementation**: 
+1. **Complete OTLP Implementation**:
    - Convert 7 WIP tests in `otlp_metrics_test.rs` from `#[should_panic]` to passing
    - Validate AC2 specification compliance
-   
+
 2. **Optimize Test Suite for Coverage Tools**:
    - Refactor long-running tests (gguf_weight_loading_tests, ac3_autoregressive_generation)
    - Add `#[ignore]` or feature gates for expensive tests
@@ -350,7 +350,7 @@ gaps: OTLP impl pending (7 WIP tests), 15 property tests (CI nightly), no critic
 1. **Coverage Baseline Establishment**:
    - Once test suite optimized, establish per-crate coverage baselines
    - Target: >80% line coverage, >70% branch coverage (industry standard)
-   
+
 2. **Coverage Delta CI Integration**:
    - Add `cargo llvm-cov --html` to CI workflow (with optimized test suite)
    - Generate coverage reports as GitHub Actions artifacts
@@ -368,7 +368,7 @@ gaps: OTLP impl pending (7 WIP tests), 15 property tests (CI nightly), no critic
 1. **`/tmp/coverage-analysis-pr448.md`** (this file)
    - Comprehensive coverage analysis with evidence grammar
    - Gap identification and routing decision
-   
+
 ### Analysis Logs
 - `/tmp/coverage-cpu.log`: llvm-cov stdout (partial, timed out)
 
@@ -381,16 +381,16 @@ gaps: OTLP impl pending (7 WIP tests), 15 property tests (CI nightly), no critic
 
 ## Final Status: ✅ **COVERAGE ADEQUATE - READY FOR PROMOTION**
 
-**Test Pass Rate**: 268/268 (100% excluding quarantined flaky)  
-**Test Distribution**: 1.01:1 test-to-production ratio (excellent)  
-**Critical Paths**: All covered (quantization, GPU, GGUF, crossval)  
-**Gaps**: Minor, non-blocking (OTLP WIP, property tests in CI nightly)  
-**Coverage Quantification**: Bounded by policy (tool timeout)  
-**Recommendation**: **Approve PR #448 for Ready status**  
+**Test Pass Rate**: 268/268 (100% excluding quarantined flaky)
+**Test Distribution**: 1.01:1 test-to-production ratio (excellent)
+**Critical Paths**: All covered (quantization, GPU, GGUF, crossval)
+**Gaps**: Minor, non-blocking (OTLP WIP, property tests in CI nightly)
+**Coverage Quantification**: Bounded by policy (tool timeout)
+**Recommendation**: **Approve PR #448 for Ready status**
 
 ---
 
-**Report Generated**: 2025-10-12  
-**Agent**: BitNet.rs Test Coverage Analysis Specialist  
-**Authority**: Fix-forward within bounded retry limits  
-**Scope**: Test distribution analysis, PR change validation, critical path coverage  
+**Report Generated**: 2025-10-12
+**Agent**: BitNet.rs Test Coverage Analysis Specialist
+**Authority**: Fix-forward within bounded retry limits
+**Scope**: Test distribution analysis, PR change validation, critical path coverage

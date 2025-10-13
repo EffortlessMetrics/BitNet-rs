@@ -70,13 +70,13 @@ impl TestHarness {
     pub async fn run_test_suite<T: TestSuite>(&self, suite: T) -> TestSuiteResult {
         let start_time = Instant::now();
         let mut results = Vec::new();
-        
+
         for test_case in suite.test_cases() {
             let _permit = self.semaphore.acquire().await.unwrap();
             let result = self.run_single_test(test_case).await;
             results.push(result);
         }
-        
+
         TestSuiteResult {
             suite_name: suite.name().to_string(),
             total_duration: start_time.elapsed(),
@@ -87,7 +87,7 @@ impl TestHarness {
 
     async fn run_single_test(&self, test_case: Box<dyn TestCase>) -> TestResult {
         let start_time = Instant::now();
-        
+
         // Setup phase
         let setup_result = test_case.setup(&self.fixtures).await;
         if let Err(e) = setup_result {
@@ -193,7 +193,7 @@ impl FixtureManager {
         let cache_dir = std::env::var("BITNET_TEST_CACHE")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("tests/cache"));
-        
+
         Self {
             cache_dir,
             fixtures: HashMap::new(),
@@ -218,19 +218,19 @@ impl FixtureManager {
             .ok_or_else(|| FixtureError::UnknownFixture(name.to_string()))?;
 
         let target_path = self.cache_dir.join(&download_info.filename);
-        
+
         // Create cache directory if it doesn't exist
         fs::create_dir_all(&self.cache_dir).await?;
 
         // Download file
         let response = reqwest::get(&download_info.url).await?;
         let bytes = response.bytes().await?;
-        
+
         // Verify checksum
         let mut hasher = Sha256::new();
         hasher.update(&bytes);
         let hash = format!("{:x}", hasher.finalize());
-        
+
         if hash != download_info.checksum {
             return Err(FixtureError::ChecksumMismatch {
                 expected: download_info.checksum.clone(),
@@ -240,7 +240,7 @@ impl FixtureManager {
 
         // Write to cache
         fs::write(&target_path, bytes).await?;
-        
+
         Ok(target_path)
     }
 
@@ -254,7 +254,7 @@ impl FixtureManager {
 
     pub async fn cleanup_old_fixtures(&self, max_age: Duration) -> Result<(), FixtureError> {
         let cutoff = SystemTime::now() - max_age;
-        
+
         let mut entries = fs::read_dir(&self.cache_dir).await?;
         while let Some(entry) = entries.next_entry().await? {
             let metadata = entry.metadata().await?;
@@ -264,7 +264,7 @@ impl FixtureManager {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
@@ -320,42 +320,42 @@ impl RustImplementation {
 impl BitNetImplementation for RustImplementation {
     async fn load_model(&mut self, model_path: &Path) -> Result<(), ImplementationError> {
         let start = Instant::now();
-        
+
         let model = bitnet::BitNetModel::from_file(model_path).await
             .map_err(|e| ImplementationError::ModelLoadError(e.to_string()))?;
-        
+
         self.model = Some(model);
         self.metrics.model_load_time = start.elapsed();
-        
+
         Ok(())
     }
 
     async fn tokenize(&self, text: &str) -> Result<Vec<u32>, ImplementationError> {
         let model = self.model.as_ref()
             .ok_or(ImplementationError::ModelNotLoaded)?;
-        
+
         let tokens = model.tokenize(text).await
             .map_err(|e| ImplementationError::TokenizationError(e.to_string()))?;
-        
+
         Ok(tokens)
     }
 
     async fn inference(&self, tokens: &[u32], config: &InferenceConfig) -> Result<InferenceResult, ImplementationError> {
         let model = self.model.as_ref()
             .ok_or(ImplementationError::ModelNotLoaded)?;
-        
+
         let start = Instant::now();
         let start_memory = get_memory_usage();
-        
+
         let result = model.generate_from_tokens(tokens, config).await
             .map_err(|e| ImplementationError::InferenceError(e.to_string()))?;
-        
+
         let duration = start.elapsed();
         let peak_memory = get_peak_memory_usage();
-        
+
         self.metrics.inference_time = duration;
         self.metrics.peak_memory = peak_memory;
-        
+
         Ok(InferenceResult {
             tokens: result.tokens,
             probabilities: result.probabilities,
@@ -471,7 +471,7 @@ impl CrossValidationSuite {
             });
 
         // Compare probability distributions if available
-        let probability_similarity = if let (Some(rust_probs), Some(cpp_probs)) = 
+        let probability_similarity = if let (Some(rust_probs), Some(cpp_probs)) =
             (&rust_result.probabilities, &cpp_result.probabilities) {
             self.calculate_probability_similarity(rust_probs, cpp_probs)
         } else {
@@ -583,19 +583,19 @@ use thiserror::Error;
 pub enum TestError {
     #[error("Test setup failed: {0}")]
     SetupError(String),
-    
+
     #[error("Test execution failed: {0}")]
     ExecutionError(String),
-    
+
     #[error("Test timeout after {timeout:?}")]
     TimeoutError { timeout: Duration },
-    
+
     #[error("Assertion failed: {message}")]
     AssertionError { message: String },
-    
+
     #[error("Fixture error: {0}")]
     FixtureError(#[from] FixtureError),
-    
+
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
 }
@@ -604,13 +604,13 @@ pub enum TestError {
 pub enum FixtureError {
     #[error("Unknown fixture: {0}")]
     UnknownFixture(String),
-    
+
     #[error("Download failed: {0}")]
     DownloadError(String),
-    
+
     #[error("Checksum mismatch: expected {expected}, got {actual}")]
     ChecksumMismatch { expected: String, actual: String },
-    
+
     #[error("Cache error: {0}")]
     CacheError(String),
 }
@@ -619,10 +619,10 @@ pub enum FixtureError {
 pub enum ComparisonError {
     #[error("Implementation error: {0}")]
     ImplementationError(#[from] ImplementationError),
-    
+
     #[error("Accuracy comparison failed: {0}")]
     AccuracyError(String),
-    
+
     #[error("Performance comparison failed: {0}")]
     PerformanceError(String),
 }
@@ -631,13 +631,13 @@ pub enum ComparisonError {
 pub enum ImplementationError {
     #[error("Model not loaded")]
     ModelNotLoaded,
-    
+
     #[error("Model load error: {0}")]
     ModelLoadError(String),
-    
+
     #[error("Tokenization error: {0}")]
     TokenizationError(String),
-    
+
     #[error("Inference error: {0}")]
     InferenceError(String),
 }

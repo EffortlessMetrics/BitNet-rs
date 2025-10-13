@@ -16,7 +16,7 @@ class BitNetError(Exception):
     """Base exception class for BitNet errors."""
     message: str
     error_type: str
-    
+
     def __init__(self, message: str, error_type: Optional[str] = None) -> None: ...
 
 class ModelArgs:
@@ -30,7 +30,7 @@ class ModelArgs:
     norm_eps: float
     rope_theta: float
     use_kernel: bool
-    
+
     def __init__(
         self,
         dim: int = 2560,
@@ -43,10 +43,10 @@ class ModelArgs:
         rope_theta: float = 500000.0,
         use_kernel: bool = False,
     ) -> None: ...
-    
+
     @classmethod
     def from_dict(cls, dict: Dict[str, Any]) -> Self: ...
-    
+
     def to_dict(self) -> Dict[str, Any]: ...
 
 class GenArgs:
@@ -59,7 +59,7 @@ class GenArgs:
     top_p: float
     top_k: Optional[int]
     repetition_penalty: float
-    
+
     def __init__(
         self,
         gen_length: int = 32,
@@ -84,7 +84,7 @@ class InferenceConfig:
     seed: Optional[int]
     pad_token_id: Optional[int]
     eos_token_id: Optional[int]
-    
+
     def __init__(
         self,
         max_length: int = 2048,
@@ -103,7 +103,7 @@ class Message:
     """Message for chat formatting."""
     role: str
     content: str
-    
+
     def __init__(self, role: str, content: str) -> None: ...
 
 class Stats:
@@ -114,7 +114,7 @@ class Stats:
     prefill_time: float
     decode_time: float
     memory_used: float
-    
+
     def __init__(self) -> None: ...
     def show(self) -> str: ...
 
@@ -126,9 +126,9 @@ class Tokenizer:
     eot_id: int
     pad_id: int
     special_tokens: Dict[str, int]
-    
+
     def __init__(self, model_path: str) -> None: ...
-    
+
     def encode(
         self,
         text: str,
@@ -137,15 +137,15 @@ class Tokenizer:
         allowed_special: Optional[Any] = None,
         disallowed_special: Optional[Any] = None,
     ) -> List[int]: ...
-    
+
     def decode(self, tokens: List[int]) -> str: ...
 
 class ChatFormat:
     """Chat format wrapper for dialog-based interactions."""
     eot_id: int
-    
+
     def __init__(self, tokenizer: Tokenizer) -> None: ...
-    
+
     def decode(self, tokens: List[int]) -> str: ...
     def encode_header(self, message: Message) -> List[int]: ...
     def encode_message(
@@ -164,14 +164,14 @@ class BitNetModel:
     device: str
     dtype: str
     model_path: str
-    
+
     def __init__(
         self,
         model_args: ModelArgs,
         device: str = "cpu",
         dtype: str = "bfloat16",
     ) -> None: ...
-    
+
     @classmethod
     def from_pretrained(
         cls,
@@ -180,13 +180,13 @@ class BitNetModel:
         device: str = "cpu",
         dtype: str = "bfloat16",
     ) -> Self: ...
-    
+
     @classmethod
     def from_gguf(cls, model_path: str, device: Optional[str] = None) -> Self: ...
-    
+
     @classmethod
     def from_safetensors(cls, model_path: str, device: Optional[str] = None) -> Self: ...
-    
+
     def forward(
         self,
         token_values: NDArray[np.int32],
@@ -195,14 +195,14 @@ class BitNetModel:
         cache: Optional[List[Any]] = None,
         kv_padding: Optional[int] = None,
     ) -> NDArray[np.float32]: ...
-    
+
     def forward_with_attn_bias(
         self,
         token_values: NDArray[np.int32],
         attn_bias: Any,
         cache: List[Any],
     ) -> NDArray[np.float32]: ...
-    
+
     def to(self, device: str) -> None: ...
     def eval(self) -> None: ...
     def train(self, mode: Optional[bool] = None) -> None: ...
@@ -213,7 +213,7 @@ class InferenceEngine:
     gen_args: GenArgs
     device: str
     tokenizer: Tokenizer
-    
+
     def __init__(
         self,
         prefill_model: BitNetModel,
@@ -222,7 +222,7 @@ class InferenceEngine:
         gen_args: GenArgs,
         device: Optional[str] = None,
     ) -> None: ...
-    
+
     @classmethod
     def build(
         cls,
@@ -233,32 +233,32 @@ class InferenceEngine:
         num_layers: int = 13,
         use_full_vocab: bool = False,
     ) -> Self: ...
-    
+
     def generate_all(
         self,
         prompts: List[List[int]],
         use_cuda_graphs: bool = True,
         use_sampling: Optional[bool] = None,
     ) -> Tuple[Stats, List[List[int]]]: ...
-    
+
     def generate(self, prompt: str) -> str: ...
-    
+
     async def generate_stream(self, prompt: str) -> str: ...
-    
+
     def compile_prefill(self) -> None: ...
     def compile_generate(self) -> None: ...
 
 class SimpleInference:
     """Simple inference engine for basic use cases."""
     config: InferenceConfig
-    
+
     def __init__(
         self,
         model: BitNetModel,
         tokenizer: Tokenizer,
         config: Optional[InferenceConfig] = None,
     ) -> None: ...
-    
+
     def generate(self, prompt: str) -> str: ...
     async def generate_stream(self, prompt: str) -> str: ...
 

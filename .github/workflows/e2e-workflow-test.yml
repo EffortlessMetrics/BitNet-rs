@@ -160,7 +160,7 @@ jobs:
           for workflow in "${main_workflows[@]}"; do
             if [[ -f ".github/workflows/$workflow" ]]; then
               echo "✅ $workflow exists"
-              
+
               # Check for push/PR triggers
               if grep -q "on:" ".github/workflows/$workflow"; then
                 echo "  ✅ Has trigger configuration"
@@ -224,7 +224,7 @@ jobs:
           # Check K8s manifests
           if [[ -d "k8s" ]]; then
             echo "✅ Kubernetes manifests directory exists"
-            
+
             for manifest in k8s/*.yaml; do
               if [[ -f "$manifest" ]]; then
                 echo "Checking $manifest..."
@@ -237,7 +237,7 @@ jobs:
           # Check Helm charts
           if [[ -d "helm/bitnet" ]]; then
             echo "✅ Helm chart exists"
-            
+
             # Validate Helm chart
             if command -v helm >/dev/null 2>&1; then
               helm lint helm/bitnet || echo "❌ Helm chart has issues"
@@ -260,7 +260,7 @@ jobs:
           # Check Grafana dashboards
           if [[ -d "monitoring/grafana/dashboards" ]]; then
             echo "✅ Grafana dashboards exist"
-            
+
             for dashboard in monitoring/grafana/dashboards/*.json; do
               if [[ -f "$dashboard" ]]; then
                 echo "Checking $dashboard..."
@@ -302,7 +302,7 @@ jobs:
           if [[ -f "scripts/install.sh" ]]; then
             echo "✅ Unix installation script exists"
             bash -n scripts/install.sh || echo "❌ Unix script has syntax errors"
-            
+
             # Test help functionality
             bash scripts/install.sh --help || echo "❌ Unix script help failed"
           fi
