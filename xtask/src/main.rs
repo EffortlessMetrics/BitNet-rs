@@ -4978,4 +4978,40 @@ mod tests {
 
         // Would test that download retries after 2 seconds
     }
+
+    #[test]
+    fn test_is_gpu_kernel_id() {
+        // Positive cases: all GPU kernel patterns
+        let gpu_kernels = [
+            "gemm_fp16",
+            "gemm_bf16_m16n16",
+            "wmma_m16n16k16",
+            "cublas_gemm",
+            "cutlass_gemm_sm80",
+            "cuda_kernel_dispatch",
+            "tl1_gpu_pack",
+            "tl2_gpu_exec",
+            "i2s_quantize",
+            "i2s_dequantize",
+        ];
+        for kernel in &gpu_kernels {
+            assert!(is_gpu_kernel_id(kernel), "{} should be recognized as GPU kernel", kernel);
+        }
+
+        // Negative cases: CPU kernels and other non-GPU identifiers
+        let non_gpu_kernels = [
+            "i2s_cpu_quantize",
+            "i2s_cpu_dequantize",
+            "i2s_cpu_forward",
+            "avx2_matmul",
+            "avx512_gemm",
+            "neon_quantize",
+            "rope_apply",
+            "softmax_scalar",
+            "layernorm_f32",
+        ];
+        for kernel in &non_gpu_kernels {
+            assert!(!is_gpu_kernel_id(kernel), "{} must not be recognized as GPU kernel", kernel);
+        }
+    }
 }
