@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use bitnet_common::BitNetError;
 use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
+use bitnet_models::names::is_layernorm_weight;
 use candle_core::{DType, Tensor};
 use clap::Args;
 use memmap2::Mmap;
@@ -38,38 +39,20 @@ impl InspectCommand {
         }
     }
 
-    /// Check if a tensor name is a LayerNorm weight
-    fn is_layernorm_weight(name: &str) -> bool {
-        // LLaMA/HF-style names
-        name.ends_with(".attention_norm.weight")
-            || name.ends_with(".ffn_norm.weight")
-            || name.ends_with(".input_layernorm.weight")
-            || name.ends_with(".post_attention_layernorm.weight")
-            // Microsoft BitNet-style names
-            || name.ends_with(".attn_norm.weight")
-            || name.ends_with(".ffn_norm.weight")
-            // Root-level norms
-            || name.ends_with(".final_norm.weight")
-            || name == "final_norm.weight"
-            // Generic catch-all (last, most permissive)
-            || name.ends_with(".norm.weight")
-    }
-
     /// Check LayerNorm gamma statistics
     async fn check_ln_gamma_stats(&self) -> Result<()> {
-        // Compute model SHA256
-        let file = File::open(&self.model)
-            .with_context(|| format!("Failed to open model: {}", self.model.display()))?;
-
-        let mut hasher = Sha256::new();
-        std::io::copy(&mut std::io::BufReader::new(&file), &mut hasher)?;
-        let hash = hasher.finalize();
-        let model_sha256 = format!("{:x}", hash);
-
-        // Memory-map the file for tensor reading
+        // Open once, mmap once, hash from slice
         let file = File::open(&self.model)
             .with_context(|| format!("Failed to open model: {}", self.model.display()))?;
         let mmap = unsafe { Mmap::map(&file)? };
+
+        // Compute SHA256 from mmap
+        let mut hasher = Sha256::new();
+        hasher.update(&mmap);
+        let hash = hasher.finalize();
+        let model_sha256 = format!("{:x}", hash);
+
+        // Create reader from existing mmap
         let reader = GgufReader::new(&mmap)?;
 
         let tensor_count = reader.tensor_count() as usize;
@@ -84,7 +67,7 @@ impl InspectCommand {
             let info = reader.get_tensor_info(i)?;
 
             // Check if this is a LayerNorm gamma tensor
-            if !Self::is_layernorm_weight(&info.name) {
+            if !is_layernorm_weight(&info.name) {
                 continue;
             }
 

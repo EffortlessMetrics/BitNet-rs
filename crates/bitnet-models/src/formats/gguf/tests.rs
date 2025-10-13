@@ -2,36 +2,15 @@
 
 use super::*;
 use crate::loader::FormatLoader;
+use crate::names::is_layernorm_weight;
 use std::io::Write;
 use tempfile::NamedTempFile;
 
-/// RAII guard for safe environment variable management in tests
-struct EnvGuard {
-    key: &'static str,
-    prev: Option<String>,
+// Use shared EnvGuard from workspace test support
+mod env_guard {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/support/env_guard.rs"));
 }
-
-impl EnvGuard {
-    fn set(key: &'static str, val: &str) -> Self {
-        let prev = std::env::var(key).ok();
-        unsafe {
-            std::env::set_var(key, val);
-        }
-        Self { key, prev }
-    }
-}
-
-impl Drop for EnvGuard {
-    fn drop(&mut self) {
-        unsafe {
-            if let Some(v) = &self.prev {
-                std::env::set_var(self.key, v);
-            } else {
-                std::env::remove_var(self.key);
-            }
-        }
-    }
-}
+use env_guard::EnvGuard;
 
 /// Helper to build valid GGUF bytes for testing
 fn build_gguf_bytes(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
@@ -971,8 +950,6 @@ fn test_gguf_memory_exhaustion_protection() {
 
 #[test]
 fn test_ln_name_matching() {
-    use super::loader::GgufLoader;
-
     let positives = [
         "layers.0.attention_norm.weight",
         "layers.0.ffn_norm.weight",
@@ -983,10 +960,10 @@ fn test_ln_name_matching() {
         "blk.0.attn_norm.weight",
     ];
     for n in positives {
-        assert!(GgufLoader::is_layernorm_weight(n), "should match {}", n);
+        assert!(is_layernorm_weight(n), "should match {}", n);
     }
-    assert!(!GgufLoader::is_layernorm_weight("layers.0.attention_norm.bias"));
-    assert!(!GgufLoader::is_layernorm_weight("layers.0.q_proj.weight"));
+    assert!(!is_layernorm_weight("layers.0.attention_norm.bias"));
+    assert!(!is_layernorm_weight("layers.0.q_proj.weight"));
 }
 
 #[test]

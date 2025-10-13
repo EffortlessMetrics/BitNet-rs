@@ -2,6 +2,7 @@
 
 use super::{GgufReader, GgufTensorType, GgufTensors};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
+use crate::names::{is_layernorm_weight, is_projection_weight};
 use crate::{BitNetModel, Model};
 use bitnet_common::{
     BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
@@ -14,45 +15,6 @@ use tracing::{debug, info};
 pub struct GgufLoader;
 
 impl GgufLoader {
-    #[inline]
-    fn is_projection_weight(name: &str) -> bool {
-        // Linear projections (attn + ffn) that should be [out,in] in memory
-        // LLaMA/HF-style names
-        name.ends_with(".q_proj.weight")
-            || name.ends_with(".k_proj.weight")
-            || name.ends_with(".v_proj.weight")
-            || name.ends_with(".o_proj.weight")
-            || name.ends_with(".gate_proj.weight")
-            || name.ends_with(".up_proj.weight")
-            || name.ends_with(".down_proj.weight")
-            // BitNet-style names
-            || name.ends_with(".attn_q.weight")
-            || name.ends_with(".attn_k.weight")
-            || name.ends_with(".attn_v.weight")
-            || name.ends_with(".attn_output.weight")
-            || name.ends_with(".ffn_gate.weight")
-            || name.ends_with(".ffn_up.weight")
-            || name.ends_with(".ffn_down.weight")
-    }
-
-    /// PATCH 2: Helper to identify LayerNorm weights that should NEVER be quantized
-    #[inline]
-    pub(crate) fn is_layernorm_weight(name: &str) -> bool {
-        // LLaMA/HF-style names
-        name.ends_with(".attention_norm.weight")
-            || name.ends_with(".ffn_norm.weight")
-            || name.ends_with(".input_layernorm.weight")
-            || name.ends_with(".post_attention_layernorm.weight")
-            // Microsoft BitNet-style names
-            || name.ends_with(".attn_norm.weight")
-            || name.ends_with(".ffn_norm.weight")
-            // Root-level norms
-            || name.ends_with(".final_norm.weight")
-            || name == "final_norm.weight"
-            // Generic catch-all (last, most permissive)
-            || name.ends_with(".norm.weight")
-    }
-
     /// Helper to parse environment variables as truthy boolean values.
     /// Accepts: "1", "true", "yes", "on" (case-insensitive).
     #[inline]
@@ -80,7 +42,7 @@ impl GgufLoader {
         // All projection weights are stored/consumed as [out,in] in our kernels.
         // GGUF frequently provides them as [in,out]. Normalize here once.
         // Use name-only gating since model dims vary across architectures.
-        Self::is_projection_weight(name) && shape.len() == 2
+        is_projection_weight(name) && shape.len() == 2
     }
 
     /// Helper to fetch an unsigned integer by trying a list of keys
@@ -402,7 +364,7 @@ impl GgufLoader {
         w: Tensor,
         policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
     ) -> Result<(Tensor, Option<CorrectionRecord>)> {
-        if !Self::is_layernorm_weight(name) {
+        if !is_layernorm_weight(name) {
             return Ok((w, None));
         }
 
@@ -1319,7 +1281,7 @@ impl GgufLoader {
                 use crate::quant::i2s::{self, I2SDequantCfg};
 
                 // PATCH 2: LayerNorm weights should NEVER be quantized - skip I2_S path
-                if Self::is_layernorm_weight(&info.name) {
+                if is_layernorm_weight(&info.name) {
                     return Err(BitNetError::Validation(format!(
                         "LayerNorm weight '{}' should not be quantized with I2_S. \
                         This indicates a corrupted GGUF file. LayerNorm weights must be FP16/FP32.",
@@ -1333,7 +1295,7 @@ impl GgufLoader {
                 let cfg = I2SDequantCfg { inv, k };
 
                 // Log projection weight RMS after dequant for diagnosis
-                let is_proj = Self::is_projection_weight(&info.name);
+                let is_proj = is_projection_weight(&info.name);
 
                 // Check for embedding transposition
                 if Self::is_embedding_tensor(&info.name)
@@ -1487,7 +1449,7 @@ impl GgufLoader {
                     };
 
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
-                    if Self::is_layernorm_weight(&info.name) {
+                    if is_layernorm_weight(&info.name) {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
                         let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
                             &info.name,
@@ -1497,7 +1459,7 @@ impl GgufLoader {
                         Ok((rescaled, correction))
                     } else {
                         // Log projection RMS for F32 projections
-                        if Self::is_projection_weight(&info.name)
+                        if is_projection_weight(&info.name)
                             && let Ok(rms) = Self::rms_f32(&tensor)
                         {
                             info!(
@@ -1544,7 +1506,7 @@ impl GgufLoader {
                     };
 
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
-                    if Self::is_layernorm_weight(&info.name) {
+                    if is_layernorm_weight(&info.name) {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
                         let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
                             &info.name,
@@ -1554,7 +1516,7 @@ impl GgufLoader {
                         Ok((rescaled, correction))
                     } else {
                         // Log projection RMS for F16→F32 projections
-                        if Self::is_projection_weight(&info.name)
+                        if is_projection_weight(&info.name)
                             && let Ok(rms) = Self::rms_f32(&tensor)
                         {
                             info!(

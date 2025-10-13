@@ -37,8 +37,5 @@ safetensors.workspace = true
 bytemuck.workspace = true
 half = "2.6.0"
 
-# Pattern matching for LayerNorm detection
-regex = "1.11.2"
-
 [dev-dependencies]
 tempfile.workspace = true
