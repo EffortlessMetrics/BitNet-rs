@@ -6,6 +6,8 @@
 //!
 //! # Usage
 //!
+//! ## Installed binary
+//!
 //! ```bash
 //! # Convert a SafeTensors file
 //! st2gguf --input model.safetensors --output model.gguf
@@ -19,6 +21,12 @@
 //!
 //! # Enable strict validation (fail if LN tensors aren't F16)
 //! st2gguf --input model.safetensors --output model.gguf --strict
+//! ```
+//!
+//! ## Via cargo
+//!
+//! ```bash
+//! cargo run -p bitnet-st2gguf -- --input model.safetensors --output model.gguf
 //! ```
 //!
 //! # Features

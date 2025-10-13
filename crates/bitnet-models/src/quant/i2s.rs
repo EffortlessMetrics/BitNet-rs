@@ -10,6 +10,11 @@ use anyhow::{Result, bail};
 use half::f16;
 use tracing::{debug, warn};
 
+// Conservative safety clamps for per-block dequant scaling.
+// See INFERENCE_DIAGNOSIS.md for the rationale and envelopes validated on BitNet 2B-4T.
+const I2S_SCALE_MIN: f32 = 1e-3;
+const I2S_SCALE_MAX: f32 = 1e3;
+
 /// Per-tensor I2_S dequantization configuration
 #[derive(Debug, Clone, Copy)]
 pub struct I2SDequantCfg {
@@ -82,10 +87,10 @@ fn i2s_dequant_block(
 
     s *= k;
 
-    // PATCH 6: Tighter clamp as immediate fix for scale issues
-    // TODO: Replace with per-tensor mode detection (sample first N blocks,
-    // detect if scales are direct or inverted, cache the mode per tensor)
-    s = s.clamp(1e-3, 1e3); // Tighter range
+    // Conservative safety clamp to handle scale anomalies (1e-3 to 1e3 envelope).
+    // Future: per-tensor mode detection could sample first N blocks to detect
+    // if scales are direct or inverted, then cache the mode per tensor.
+    s = s.clamp(I2S_SCALE_MIN, I2S_SCALE_MAX);
 
     // Debug: log scale values for first few blocks to understand GGUF format
     static SCALE_LOGGED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
@@ -158,8 +163,8 @@ fn i2s_dequant_block_with_cfg(
 
     s *= cfg.k;
 
-    // Tighter clamp (same as env-based version)
-    s = s.clamp(1e-6, 1e6);
+    // Conservative safety clamp (policy-aligned)
+    s = s.clamp(I2S_SCALE_MIN, I2S_SCALE_MAX);
 
     // Pre-compute scaled lookup table for better cache locality
     let scaled_lut = [s * lut[0], s * lut[1], s * lut[2], s * lut[3]];

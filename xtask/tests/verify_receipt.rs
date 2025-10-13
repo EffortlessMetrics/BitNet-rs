@@ -5,7 +5,14 @@
 //! Validates that GPU backend receipts contain evidence of actual GPU kernel
 //! execution to prevent silent CPU fallback and dishonest performance reporting.
 
+use serial_test::serial;
 use std::path::PathBuf;
+
+// Shared RAII guard for env vars (already in the repo)
+mod env_guard {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../tests/support/env_guard.rs"));
+}
+use env_guard::EnvGuard;
 
 /// Helper to find workspace root by walking up to .git directory
 fn workspace_root() -> PathBuf {
@@ -168,10 +175,9 @@ mod corrections_validation_tests {
 
     /// Test that receipts with corrections fail in normal CI
     #[test]
+    #[serial]
     fn test_receipt_with_corrections_fails_in_ci() {
-        unsafe {
-            std::env::remove_var("BITNET_ALLOW_CORRECTIONS");
-        }
+        let _guard = EnvGuard::remove("BITNET_ALLOW_CORRECTIONS");
 
         let receipt = Receipt {
             backend: "cpu".to_string(),
@@ -203,10 +209,9 @@ mod corrections_validation_tests {
 
     /// Test that receipts with corrections pass when BITNET_ALLOW_CORRECTIONS is set
     #[test]
+    #[serial]
     fn test_receipt_with_corrections_passes_in_canary() {
-        unsafe {
-            std::env::set_var("BITNET_ALLOW_CORRECTIONS", "1");
-        }
+        let _guard = EnvGuard::set("BITNET_ALLOW_CORRECTIONS", "1");
 
         let receipt = Receipt {
             backend: "cpu".to_string(),
@@ -230,18 +235,14 @@ mod corrections_validation_tests {
             "Receipt with corrections should pass when BITNET_ALLOW_CORRECTIONS=1: {:?}",
             result.err()
         );
-
-        unsafe {
-            std::env::remove_var("BITNET_ALLOW_CORRECTIONS");
-        }
+        // EnvGuard restores on drop - no manual cleanup needed
     }
 
     /// Test that error message shows correction details
     #[test]
+    #[serial]
     fn test_corrections_error_shows_details() {
-        unsafe {
-            std::env::remove_var("BITNET_ALLOW_CORRECTIONS");
-        }
+        let _guard = EnvGuard::remove("BITNET_ALLOW_CORRECTIONS");
 
         let receipt = Receipt {
             backend: "cpu".to_string(),

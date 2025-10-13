@@ -404,6 +404,7 @@ mod tests {
     mod env_guard {
         include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/support/env_guard.rs"));
     }
+    use env_guard::EnvGuard;
 
     /// AC5: Tests TokenizerFallbackChain initialization and configuration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system

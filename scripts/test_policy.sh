@@ -4,7 +4,7 @@
 set -euo pipefail
 
 export BITNET_CORRECTION_POLICY=./correction-policy.yml
-export BITNET_FIX_LN_SCALE=1
+# BITNET_FIX_LN_SCALE is deprecated - policy-driven corrections are the only supported path
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 export RAYON_NUM_THREADS=1

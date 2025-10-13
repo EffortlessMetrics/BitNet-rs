@@ -712,11 +712,15 @@ impl FormatLoader for GgufLoader {
 
         let mmap = if config.use_mmap { Some(MmapFile::open(path)?) } else { None };
 
-        let data = if let Some(ref mmap) = mmap {
+        // Keep buffer alive if not using mmap
+        let mut _owned: Option<Vec<u8>> = None;
+        let data: &[u8] = if let Some(ref mmap) = mmap {
             mmap.as_slice()
         } else {
             // Read entire file into memory
-            &std::fs::read(path).map_err(BitNetError::Io)?
+            let buf = std::fs::read(path).map_err(BitNetError::Io)?;
+            _owned = Some(buf);
+            _owned.as_ref().unwrap().as_slice()
         };
 
         let reader = GgufReader::new(data)?;
