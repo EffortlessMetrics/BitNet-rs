@@ -3,7 +3,7 @@
 //! This module provides a GGUF v3 writer that creates GGUF files from tensor data.
 //! It ensures proper alignment, metadata handling, and LayerNorm preservation.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use std::fs::File;
 use std::io::{BufWriter, Seek, Write};
 use std::path::Path;
@@ -236,7 +236,13 @@ impl GgufWriter {
             writer.write_all(&vec![0u8; pad])?;
             pos = data_offset;
         }
-        debug_assert_eq!(pos, data_offset, "writer must be at data_offset");
+        if pos != data_offset {
+            return Err(anyhow!(
+                "internal invariant: writer not at data_offset (got {}, expected {})",
+                pos,
+                data_offset
+            ));
+        }
 
         // ── Write tensor data with per-tensor alignment ─────────────────────
         let mut rel = 0u64;

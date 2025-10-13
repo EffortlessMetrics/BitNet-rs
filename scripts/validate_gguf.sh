@@ -85,10 +85,18 @@ This model is NOT clean and should not be used in production.
 Please re-export with LayerNorm weights in float format." 11
 fi
 
-# Check for healthy RMS values (should see "rms=1.xxx" or "rms=0.xxx" close to 1.0)
-HEALTHY_COUNT=$(grep -E "rms=[0-9]\.[0-9]+" "$LN_TMP" | \
-  awk -F'rms=' '{print $2}' | awk '{print $1}' | \
-  awk '$1 >= 0.5 && $1 <= 2.0' | wc -l || echo "0")
+# Count the number of LayerNorm layers with RMS in the healthy range [0.5, 2.0].
+# This extracts the numeric value after 'rms=' on each matching line and tallies those in range.
+HEALTHY_COUNT=$(
+  awk -F'rms=' '
+    /rms=[0-9]+\.[0-9]+/ {
+      split($2, a, " ");
+      rms=a[1]+0;
+      if (rms >= 0.5 && rms <= 2.0) count++;
+    }
+    END { print count+0 }
+  ' "$LN_TMP"
+)
 
 if [[ $HEALTHY_COUNT -lt 1 ]]; then
   warn "No healthy LayerNorm RMS values found (expected ≈1.0)"

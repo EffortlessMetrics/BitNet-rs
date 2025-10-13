@@ -51,7 +51,16 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use writer::{GgufWriter, MetadataValue, TensorDType, TensorEntry};
 
-/// Minimal set we require in strict mode
+/// Minimal set we require in strict mode.
+///
+/// Keys and rationale:
+/// - `general.architecture`: identifies model family ("bitnet-b1.58") so loaders select correct schema
+/// - `bitnet.hidden_size`: H; shapes for projections/embeddings depend on this
+/// - `bitnet.num_layers`: number of transformer blocks; cross-checks tensor counts
+/// - `bitnet.num_heads`: full attention heads; used to validate Q/K/V shapes
+/// - `bitnet.vocab_size`: tokenizer alignment and LM head dimensions
+/// - `bitnet.context_length`: max sequence length; ROPE tables and validation
+/// - `general.file_type`: type tag (e.g. 1 = F16) for downstream tooling
 const REQUIRED_KEYS: &[&str] = &[
     "general.architecture",
     "bitnet.hidden_size",

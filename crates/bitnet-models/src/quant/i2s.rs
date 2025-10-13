@@ -96,8 +96,9 @@ fn i2s_dequant_block(
     static SCALE_LOGGED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     if SCALE_LOGGED.load(std::sync::atomic::Ordering::Relaxed) < 5 {
         SCALE_LOGGED.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        eprintln!(
-            "[I2S_DEBUG] scale_fp16={:.6e}, abs={:.6e}, inv={}, k={}, final_s={:.6e}",
+        tracing::debug!(
+            target: "bitnet_models::i2s",
+            "I2S scale: scale_fp16={:.6e}, abs={:.6e}, inv={}, k={}, final_s={:.6e}",
             scale_fp16,
             scale_fp16.abs(),
             inv_scale,

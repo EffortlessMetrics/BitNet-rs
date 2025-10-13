@@ -12,6 +12,7 @@ use std::path::PathBuf;
 mod env_guard {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../tests/support/env_guard.rs"));
 }
+use bitnet_common::CorrectionRecord;
 use env_guard::EnvGuard;
 
 /// Helper to find workspace root by walking up to .git directory
@@ -23,22 +24,6 @@ fn workspace_root() -> PathBuf {
         }
     }
     path
-}
-
-/// Model correction record (LayerNorm rescaling, etc.)
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-struct CorrectionRecord {
-    layer: String,
-    correction_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rms_before: Option<f32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rms_after: Option<f32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    factor: Option<f32>,
-    policy_fingerprint: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    metadata: Option<serde_json::Value>,
 }
 
 /// Receipt structure matching bitnet-inference Receipt

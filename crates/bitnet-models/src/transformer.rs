@@ -382,22 +382,26 @@ impl MultiHeadAttention {
 
         // Log scores range after mask for layer 0 (user's diagnostic request)
         if std::env::var("BITNET_DEBUG_ATTN_SCALE").is_ok() {
-            static LAYER_LOGGED: std::sync::atomic::AtomicBool =
-                std::sync::atomic::AtomicBool::new(false);
-            if !LAYER_LOGGED.swap(true, std::sync::atomic::Ordering::Relaxed)
-                && let Ok(flat) = scores_f32.flatten_all()
-                && let Ok(vals) = flat.to_vec1::<f32>()
-                && let (Some(&min_val), Some(&max_val)) = (
-                    vals.iter().filter(|v| v.is_finite()).min_by(|a, b| a.partial_cmp(b).unwrap()),
-                    vals.iter().filter(|v| v.is_finite()).max_by(|a, b| a.partial_cmp(b).unwrap()),
-                )
-            {
-                tracing::info!(
-                    "Layer 0 scores post-mask range: min={:.6}, max={:.6}",
-                    min_val,
-                    max_val
-                );
-            }
+            static LAYER_LOGGED: std::sync::Once = std::sync::Once::new();
+            LAYER_LOGGED.call_once(|| {
+                if let Ok(flat) = scores_f32.flatten_all()
+                    && let Ok(vals) = flat.to_vec1::<f32>()
+                    && let (Some(&min_val), Some(&max_val)) = (
+                        vals.iter()
+                            .filter(|v| v.is_finite())
+                            .min_by(|a, b| a.partial_cmp(b).unwrap()),
+                        vals.iter()
+                            .filter(|v| v.is_finite())
+                            .max_by(|a, b| a.partial_cmp(b).unwrap()),
+                    )
+                {
+                    tracing::info!(
+                        "Layer 0 scores post-mask range: min={:.6}, max={:.6}",
+                        min_val,
+                        max_val
+                    );
+                }
+            });
         }
 
         // PATCH 4: Softmax path verification
