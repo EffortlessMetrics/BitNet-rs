@@ -18,6 +18,30 @@ The export process produces "clean" GGUF files that:
 
 ---
 
+## Required Metadata (Strict Mode)
+
+When using `st2gguf --strict` or validating with `BITNET_STRICT_MODE=1`, the following metadata keys are **required** in the GGUF file:
+
+| Metadata Key | Description | Example Value |
+|--------------|-------------|---------------|
+| `general.architecture` | Model architecture type | `"bitnet-b1.58"` |
+| `bitnet.hidden_size` | Hidden dimension size | `2560` |
+| `bitnet.num_layers` | Number of transformer layers | `30` |
+| `bitnet.num_heads` | Number of attention heads | `20` |
+| `bitnet.vocab_size` | Vocabulary size | `128256` |
+| `bitnet.context_length` | Maximum context length | `4096` |
+| `general.file_type` | File type indicator (1=F16) | `1` |
+
+These keys are automatically extracted from `config.json` during conversion. If your export fails strict validation with "missing required metadata key", ensure your `config.json` contains the corresponding fields:
+- `model_type` → `general.architecture`
+- `hidden_size` → `bitnet.hidden_size`
+- `num_hidden_layers` → `bitnet.num_layers`
+- `num_attention_heads` → `bitnet.num_heads`
+- `vocab_size` → `bitnet.vocab_size`
+- `max_position_embeddings` → `bitnet.context_length`
+
+---
+
 ## Prerequisites
 
 ### Software Requirements

@@ -782,6 +782,7 @@ dependencies = [
  "console 0.16.1",
  "half",
  "indicatif",
+ "memmap2",
  "safetensors 0.6.2",
  "serde",
  "serde_json",

@@ -38,4 +38,6 @@ bytemuck.workspace = true
 half = "2.6.0"
 
 [dev-dependencies]
+bitnet-models = { path = "../bitnet-models" }
 tempfile.workspace = true
+memmap2.workspace = true

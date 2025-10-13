@@ -32,15 +32,27 @@
 mod layernorm;
 mod writer;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, bail, ensure};
 use clap::Parser;
 use half::f16;
 use safetensors::SafeTensors;
 use serde_json::{Value as Json, json};
+use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use writer::{GgufWriter, MetadataValue, TensorDType, TensorEntry};
+
+/// Minimal set we require in strict mode
+const REQUIRED_KEYS: &[&str] = &[
+    "general.architecture",
+    "bitnet.hidden_size",
+    "bitnet.num_layers",
+    "bitnet.num_heads",
+    "bitnet.vocab_size",
+    "bitnet.context_length",
+    "general.file_type",
+];
 
 /// SafeTensors to GGUF converter with LayerNorm preservation
 #[derive(Parser, Debug)]
@@ -182,6 +194,23 @@ struct ConversionResult {
     metadata_entries: usize,
 }
 
+/// Validate that required metadata is present (strict mode)
+fn validate_required_metadata_strict(metadata: &[(String, MetadataValue)]) -> Result<()> {
+    // Build a set of metadata keys for efficient lookup
+    let keys: HashMap<&str, ()> = metadata.iter().map(|(k, _)| (k.as_str(), ())).collect();
+
+    // Check each required key
+    for &required in REQUIRED_KEYS {
+        ensure!(
+            keys.contains_key(required),
+            "strict mode: missing required metadata key `{}`",
+            required
+        );
+    }
+
+    Ok(())
+}
+
 /// Convert SafeTensors to GGUF format
 fn convert_safetensors_to_gguf(
     input_path: &Path,
@@ -212,6 +241,13 @@ fn convert_safetensors_to_gguf(
         add_minimal_metadata(&mut writer);
         3 // bitnet.quantization_type, bitnet.weight_scale, general.file_type
     };
+
+    // Strict mode: validate required metadata before proceeding
+    if strict {
+        validate_required_metadata_strict(&writer.metadata)
+            .context("strict metadata validation failed")?;
+        tracing::info!("Strict metadata validation passed");
+    }
 
     // Convert tensors
     tracing::info!("Converting tensors...");
