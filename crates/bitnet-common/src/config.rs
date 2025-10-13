@@ -35,6 +35,10 @@ pub struct ModelConfig {
     pub max_position_embeddings: usize,
     pub rope_theta: Option<f32>,
     pub rope_scaling: Option<RopeScaling>,
+    /// RMSNorm epsilon for numerical stability
+    pub rms_norm_eps: Option<f32>,
+    /// Tokenizer configuration
+    pub tokenizer: TokenizerConfig,
 }
 
 impl Default for ModelConfig {
@@ -51,6 +55,8 @@ impl Default for ModelConfig {
             max_position_embeddings: 2048,
             rope_theta: None,
             rope_scaling: None,
+            rms_norm_eps: None,
+            tokenizer: TokenizerConfig::default(),
         }
     }
 }
@@ -71,6 +77,20 @@ pub struct RopeScaling {
     pub factor: f32,
 }
 
+/// Tokenizer configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct TokenizerConfig {
+    /// Beginning of sequence token ID
+    pub bos_id: Option<i32>,
+    /// End of sequence token ID
+    pub eos_id: Option<i32>,
+    /// Unknown token ID
+    pub unk_id: Option<i32>,
+    /// Padding token ID
+    pub pad_id: Option<i32>,
+}
+
 /// Inference configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -82,6 +102,12 @@ pub struct InferenceConfig {
     pub top_p: Option<f32>,
     pub repetition_penalty: f32,
     pub seed: Option<u64>,
+    /// Add BOS token at start of prompt (from tokenizer config)
+    pub add_bos: bool,
+    /// Append EOS token at end of generation (from tokenizer config)
+    pub append_eos: bool,
+    /// Mask padding tokens in attention (from tokenizer config)
+    pub mask_pad: bool,
 }
 
 impl Default for InferenceConfig {
@@ -94,6 +120,9 @@ impl Default for InferenceConfig {
             top_p: Some(0.9),
             repetition_penalty: 1.1,
             seed: None,
+            add_bos: true,
+            append_eos: false,
+            mask_pad: true,
         }
     }
 }

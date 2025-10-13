@@ -127,6 +127,8 @@ BitNet.rs is organized as a Rust workspace:
 ### Key Guides
 
 - [Tokenizer Discovery](docs/reference/tokenizer-discovery-api.md) - Automatic tokenizer resolution
+- [Export Clean GGUF](docs/howto/export-clean-gguf.md) - SafeTensors to GGUF with F16 LayerNorm preservation
+- [Model Baselines](docs/baselines/README.md) - Validated model fingerprints and performance metrics
 - [GPU Setup](docs/GPU_SETUP.md) - CUDA configuration
 - [Performance](docs/performance-benchmarking.md) - Optimization and benchmarking
 - [Migration](docs/migration-guide.md) - From C++/Python implementations

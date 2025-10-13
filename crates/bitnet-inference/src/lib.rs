@@ -47,6 +47,8 @@ pub use receipts::{
     AccuracyMetric, AccuracyTestResults, CrossValidation, DeterminismTestResults, InferenceReceipt,
     KVCacheTestResults, ModelInfo, PerformanceBaseline, RECEIPT_SCHEMA_VERSION, TestResults,
 };
+// Re-export CorrectionRecord from bitnet-common for convenience
+pub use bitnet_common::CorrectionRecord;
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};
 

@@ -119,6 +119,14 @@ impl RotaryEmbedding {
         let sin = Tensor::from_vec(sin_vals, &[max_seq_len, dim / 2], device)?;
         let cos = Tensor::from_vec(cos_vals, &[max_seq_len, dim / 2], device)?;
 
+        // Log ROPE initialization parameters
+        tracing::info!(
+            "ROPE initialized: base={}, rope_dims={}, max_seq_len={}",
+            theta,
+            dim,
+            max_seq_len
+        );
+
         Ok(Self { sin, cos })
     }
 
@@ -230,7 +238,11 @@ impl MultiHeadAttention {
     pub fn forward(&self, x: &Tensor, kv_cache: Option<&mut LayerKVCache>) -> Result<Tensor> {
         let (batch_size, seq_len, _) = x.dims3()?;
 
-        // Project to Q, K, V
+        // PATCH 3: Project to Q, K, V separately (NOT fused QKV)
+        // This is the correct implementation - separate projections ensure proper shape handling
+        // Q: [B, T, hidden] -> [B, T, n_heads * head_dim] -> [B, n_heads, T, head_dim]
+        // K: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
+        // V: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
         let q = self
             .q_proj
             .forward(x)?
@@ -254,9 +266,48 @@ impl MultiHeadAttention {
         dbg_stats("K", &k)?;
         dbg_stats("V", &v)?;
 
+        // GQA diagnostic: log Q/K/V dimensions and norms (once per run)
+        if std::env::var("BITNET_DEBUG_GQA").is_ok() {
+            static GQA_LOGGED: std::sync::Once = std::sync::Once::new();
+            GQA_LOGGED.call_once(|| {
+                let q_dims = q.dims();
+                let k_dims = k.dims();
+                let v_dims = v.dims();
+                if let (Ok(q_mean), Ok(k_mean), Ok(v_mean)) = (
+                    q.mean_all().and_then(|m| m.to_scalar::<f32>()),
+                    k.mean_all().and_then(|m| m.to_scalar::<f32>()),
+                    v.mean_all().and_then(|m| m.to_scalar::<f32>()),
+                ) {
+                    tracing::info!(
+                        "GQA shapes - Q: {:?} (mean {:.3}), K: {:?} (mean {:.3}), V: {:?} (mean {:.3})",
+                        q_dims, q_mean, k_dims, k_mean, v_dims, v_mean
+                    );
+                    tracing::info!(
+                        "GQA config - n_heads={}, n_kv_heads={}, head_dim={}, group_size={}",
+                        self.n_heads, self.n_kv_heads, self.head_dim, self.group_size
+                    );
+                }
+            });
+        }
+
         // Apply rotary embeddings if available (need to handle different K/V head counts)
         let (q, k) = if let Some(rope) = &self.rope {
             let position = kv_cache.as_ref().map(|c| c.seq_len).unwrap_or(0);
+
+            // Log ROPE application details (once)
+            if std::env::var("BITNET_DEBUG_ROPE").is_ok() {
+                static ROPE_LOGGED: std::sync::Once = std::sync::Once::new();
+                ROPE_LOGGED.call_once(|| {
+                    tracing::info!(
+                        "ROPE applied: position={}, q_shape={:?}, k_shape={:?}, head_dim={}",
+                        position,
+                        q.dims(),
+                        k.dims(),
+                        self.head_dim
+                    );
+                });
+            }
+
             let q_rot = rope.apply(&q, position)?;
             let k_rot = rope.apply(&k, position)?;
             (q_rot, k_rot)
@@ -288,30 +339,89 @@ impl MultiHeadAttention {
             .repeat(&[1, 1, self.group_size, 1, 1])?    // [B, HKV, group, Tk, D]
             .reshape(&[batch_size, self.n_heads, t_k, self.head_dim])?; // [B, Hq, Tk, D]
 
-        // Scaled dot-product attention
-        let scale = (self.head_dim as f32).sqrt();
+        // Scaled dot-product attention with explicit fp32 handling
+        // For head_dim=128, scale = 1/sqrt(128) ≈ 0.0883883
+        let scale_factor = (self.head_dim as f32).sqrt().recip();
+
+        // Log scale computation once
+        if std::env::var("BITNET_DEBUG_ATTN_SCALE").is_ok() {
+            static SCALE_LOGGED: std::sync::Once = std::sync::Once::new();
+            SCALE_LOGGED.call_once(|| {
+                tracing::info!(
+                    "Attention scale: head_dim={}, scale_factor=1/sqrt({})={:.7}",
+                    self.head_dim,
+                    self.head_dim,
+                    scale_factor
+                );
+            });
+        }
+
         let scores = q.matmul(&k_expanded.transpose(2, 3)?)?;
-        let scores = scores.affine((1.0 / scale) as f64, 0.0)?;
+
+        // Convert to fp32 for numerically stable computation
+        let scores_f32 = scores.to_dtype(DType::F32)?;
+
+        // Scale in fp32
+        let scores_f32 = scores_f32.affine(scale_factor as f64, 0.0)?;
 
         // Debug scores before mask
-        dbg_stats("scores pre-mask", &scores)?;
-        dbg_finite("scores pre-mask", &scores)?;
+        dbg_stats("scores pre-mask", &scores_f32)?;
+        dbg_finite("scores pre-mask", &scores_f32)?;
 
         // Apply causal mask so queries cannot attend to future positions.
         // When using a KV cache, k includes past tokens, so the mask must
         // account for the total key length.
         let total_len = k_expanded.dims()[2];
-        let mask = self
-            .create_causal_mask(seq_len, total_len, scores.device())?
-            .unsqueeze(0)? // Add batch dim
-            .unsqueeze(0)?; // Add heads dim
-        let scores = scores.broadcast_add(&mask)?;
+        // PATCH 5: create_causal_mask now returns [1, 1, Tq, Tk] directly - no need for unsqueeze
+        let mask = self.create_causal_mask(seq_len, total_len, scores_f32.device())?;
+        let scores_f32 = scores_f32.broadcast_add(&mask)?;
 
-        // Debug scores after mask
-        dbg_stats("scores post-mask", &scores)?;
-        dbg_finite("scores post-mask", &scores)?;
+        // Debug scores after mask and before softmax (critical diagnostics)
+        dbg_stats("scores post-mask", &scores_f32)?;
+        dbg_finite("scores post-mask", &scores_f32)?;
 
-        let attn_weights = candle_nn::ops::softmax(&scores, 3)?;
+        // Log scores range after mask for layer 0 (user's diagnostic request)
+        if std::env::var("BITNET_DEBUG_ATTN_SCALE").is_ok() {
+            static LAYER_LOGGED: std::sync::Once = std::sync::Once::new();
+            LAYER_LOGGED.call_once(|| {
+                if let Ok(flat) = scores_f32.flatten_all()
+                    && let Ok(vals) = flat.to_vec1::<f32>()
+                    && let (Some(&min_val), Some(&max_val)) = (
+                        vals.iter()
+                            .filter(|v| v.is_finite())
+                            .min_by(|a, b| a.partial_cmp(b).unwrap()),
+                        vals.iter()
+                            .filter(|v| v.is_finite())
+                            .max_by(|a, b| a.partial_cmp(b).unwrap()),
+                    )
+                {
+                    tracing::info!(
+                        "Layer 0 scores post-mask range: min={:.6}, max={:.6}",
+                        min_val,
+                        max_val
+                    );
+                }
+            });
+        }
+
+        // PATCH 4: Softmax path verification
+        // Apply max-subtraction for numerical stability before softmax
+        // Compute row-wise max and subtract for stability (explicit max-subtraction)
+        // VERIFIED: axis=3 is correct for [B, H, Tq, Tk] layout - normalizes across keys (Tk)
+        let row_max = scores_f32.max_keepdim(3)?;
+        let scores_stabilized = scores_f32.broadcast_sub(&row_max)?;
+
+        // Log that max-subtraction ran (user's diagnostic request)
+        if std::env::var("BITNET_DEBUG_ATTN_SCALE").is_ok() {
+            static MAX_SUB_LOGGED: std::sync::Once = std::sync::Once::new();
+            MAX_SUB_LOGGED.call_once(|| {
+                tracing::info!("Attention: max-subtraction applied for numerical stability");
+            });
+        }
+
+        // Apply softmax (exp then normalize)
+        // VERIFIED: axis=3 is correct - softmax over keys (Tk dimension) in [B, H, Tq, Tk]
+        let attn_weights = candle_nn::ops::softmax(&scores_stabilized, 3)?;
 
         // Debug attention weights and row sums
         dbg_stats("attn softmax", &attn_weights)?;
@@ -334,6 +444,7 @@ impl MultiHeadAttention {
         Ok(self.o_proj.forward(&attn_output)?)
     }
 
+    /// PATCH 5: Create causal mask with [1, 1, Tq, Tk] shape
     fn create_causal_mask(&self, q_len: usize, k_len: usize, device: &Device) -> Result<Tensor> {
         // Past tokens are stored in the KV cache and increase k_len.
         // For each query position i, disallow attention to key positions
@@ -346,7 +457,8 @@ impl MultiHeadAttention {
                 mask_vec[i * k_len + j] = f32::NEG_INFINITY;
             }
         }
-        Ok(Tensor::from_vec(mask_vec, &[q_len, k_len], device)?)
+        // Create [1, 1, q_len, k_len] shape directly for broadcast compatibility
+        Tensor::from_vec(mask_vec, &[1, 1, q_len, k_len], device).map_err(BitNetError::from)
     }
 }
 
@@ -379,10 +491,47 @@ impl FeedForward {
 
     pub fn forward(&self, x: &Tensor) -> Result<Tensor> {
         let gate = self.gate_proj.forward(x)?;
+
+        // MLP gating diagnostics (point 3 of user's plan)
+        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+            && let Ok(u_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+        {
+            tracing::debug!("MLP ||u|| (gate_proj): {:.6e}", u_norm);
+        }
+
         let gate = candle_nn::ops::silu(&gate)?;
+
+        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+            && let Ok(silu_norm) = gate.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+        {
+            tracing::debug!("MLP ||silu(u)||: {:.6e}", silu_norm);
+        }
+
         let up = self.up_proj.forward(x)?;
+
+        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+            && let Ok(v_norm) = up.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+        {
+            tracing::debug!("MLP ||v|| (up_proj): {:.6e}", v_norm);
+        }
+
         let hidden = gate.mul(&up)?;
-        Ok(self.down_proj.forward(&hidden)?)
+
+        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+            && let Ok(prod_norm) = hidden.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+        {
+            tracing::debug!("MLP ||silu(u) * v||: {:.6e}", prod_norm);
+        }
+
+        let output = self.down_proj.forward(&hidden)?;
+
+        if std::env::var("BITNET_DEBUG_MLP").is_ok()
+            && let Ok(out_norm) = output.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
+        {
+            tracing::debug!("MLP ||W2 * (...)||: {:.6e}", out_norm);
+        }
+
+        Ok(output)
     }
 }
 
@@ -397,7 +546,10 @@ pub struct TransformerBlock {
 impl TransformerBlock {
     pub fn new(config: &BitNetConfig, vb: VarBuilder) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
-        let eps = 1e-5;
+        // PATCH 1: Use RMSNorm epsilon from config header for ALL norms (per-layer + final)
+        let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
+
+        tracing::debug!("TransformerBlock using RMSNorm eps={} (from header)", eps);
 
         Ok(Self {
             attention: MultiHeadAttention::new(config, vb.pp("attention"))?,
@@ -424,7 +576,50 @@ impl TransformerBlock {
 
         // Pre-norm attention
         let residual = x;
+
+        // RMSNorm diagnostics (Layer 0 only) - attention norm
+        // User's diagnostic: log mean(x^2) and rms = sqrt(mean(x^2) + eps) before/after norm
+        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+            static ATTN_NORM_LOGGED: std::sync::Once = std::sync::Once::new();
+            ATTN_NORM_LOGGED.call_once(|| {
+                if let Ok(mean_sq) =
+                    x.sqr().and_then(|s| s.mean_all()).and_then(|m| m.to_scalar::<f32>())
+                {
+                    // Note: RMSNorm formula is: rms = sqrt(mean(x^2) + eps), y = (x / rms) * weight
+                    // The actual eps value is in the LayerNorm (handled by candle)
+                    let rms_approx = mean_sq.sqrt(); // Approximate (actual includes eps inside sqrt)
+                    tracing::info!(
+                        "RMSNorm (attn, layer 0) - input mean(x^2): {:.6e}, approx_rms: {:.6e}",
+                        mean_sq,
+                        rms_approx
+                    );
+                    if !rms_approx.is_finite() {
+                        tracing::warn!("⚠️  RMSNorm (attn) - input has non-finite values!");
+                    }
+                }
+            });
+        }
+
         let x = self.attention_norm.forward(x)?;
+
+        // Check norm output
+        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+            static ATTN_NORM_OUT_LOGGED: std::sync::Once = std::sync::Once::new();
+            ATTN_NORM_OUT_LOGGED.call_once(|| {
+                if let Ok(norm_out) = x
+                    .sqr()
+                    .and_then(|s| s.mean_all())
+                    .and_then(|m| m.sqrt())
+                    .and_then(|r| r.to_scalar::<f32>())
+                {
+                    tracing::info!("RMSNorm (attn, layer 0) - output L2 norm: {:.6e}", norm_out);
+                    if !norm_out.is_finite() {
+                        tracing::warn!("⚠️  RMSNorm (attn) - output is non-finite!");
+                    }
+                }
+            });
+        }
+
         let x = self.attention.forward(&x, kv_cache)?;
         let x = (x + residual)?;
 
@@ -436,7 +631,47 @@ impl TransformerBlock {
 
         // Pre-norm FFN
         let residual = &x;
+
+        // RMSNorm diagnostics (Layer 0 only) - FFN norm
+        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+            static FFN_NORM_LOGGED: std::sync::Once = std::sync::Once::new();
+            FFN_NORM_LOGGED.call_once(|| {
+                if let Ok(mean_sq) =
+                    x.sqr().and_then(|s| s.mean_all()).and_then(|m| m.to_scalar::<f32>())
+                {
+                    let rms_approx = mean_sq.sqrt();
+                    tracing::info!(
+                        "RMSNorm (ffn, layer 0) - input mean(x^2): {:.6e}, approx_rms: {:.6e}",
+                        mean_sq,
+                        rms_approx
+                    );
+                    if !rms_approx.is_finite() {
+                        tracing::warn!("⚠️  RMSNorm (ffn) - input has non-finite values!");
+                    }
+                }
+            });
+        }
+
         let x = self.ffn_norm.forward(&x)?;
+
+        // Check norm output
+        if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
+            static FFN_NORM_OUT_LOGGED: std::sync::Once = std::sync::Once::new();
+            FFN_NORM_OUT_LOGGED.call_once(|| {
+                if let Ok(norm_out) = x
+                    .sqr()
+                    .and_then(|s| s.mean_all())
+                    .and_then(|m| m.sqrt())
+                    .and_then(|r| r.to_scalar::<f32>())
+                {
+                    tracing::info!("RMSNorm (ffn, layer 0) - output L2 norm: {:.6e}", norm_out);
+                    if !norm_out.is_finite() {
+                        tracing::warn!("⚠️  RMSNorm (ffn) - output is non-finite!");
+                    }
+                }
+            });
+        }
+
         let x = self.feed_forward.forward(&x)?;
         let x = (x + residual)?;
 
@@ -587,7 +822,11 @@ impl TransformerModel {
             layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)))?);
         }
 
-        let norm = layer_norm_with_optional_bias(hidden_size, 1e-5, vb.pp("final_norm"))?;
+        // Use RMSNorm epsilon from config header (CRITICAL: must match per-layer norms)
+        let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
+        tracing::info!("Final norm using RMSNorm eps={} (from header)", eps);
+
+        let norm = layer_norm_with_optional_bias(hidden_size, eps, vb.pp("final_norm"))?;
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
@@ -627,29 +866,22 @@ impl TransformerModel {
         };
 
         // PATCH 2: Optimize tied weights by pre-transposing embeddings once at load
-        let (embed_transposed, embed_tied_weight) = if embed_transposed {
-            // Already transposed from flag
-            (true, None)
-        } else if lm_head.is_none() {
+        // NOTE: embed_tokens.embeddings() ALWAYS returns [V,H] (Candle's internal format)
+        // regardless of how they were stored in GGUF. We need [H,V] for tied weights.
+        let (embed_transposed, embed_tied_weight) = if lm_head.is_none() {
             // No dedicated lm_head, we'll use tied weights - pre-transpose for efficiency
             let embed_weight = embed_tokens.embeddings();
-            if embed_weight.dims() == [vocab_size, hidden_size] {
-                // Embeddings are [V, H], transpose to [H, V] to avoid per-step transpose
-                tracing::info!(
-                    "Pre-transposing tied embeddings [V,H] -> [H,V] to avoid per-step transpose"
-                );
-                let transposed_weight = embed_weight.transpose(0, 1)?; // [H, V]
-                (false, Some(transposed_weight)) // Keep original flag, but cache transposed weight
-            } else {
-                // Embeddings already in [H, V] format or unexpected shape
-                tracing::warn!(
-                    "Embeddings have unexpected shape: {:?}, expected [vocab={}, hidden={}]",
-                    embed_weight.dims(),
-                    vocab_size,
-                    hidden_size
-                );
-                (embed_transposed, None)
-            }
+            tracing::info!(
+                "Embedding matrix from Candle: {:?} (always [V,H] internally)",
+                embed_weight.dims()
+            );
+
+            // Always transpose [V,H] -> [H,V] for tied weights, regardless of embed_transposed flag
+            // The embed_transposed flag tells us how GGUF stored it, but Candle normalizes to [V,H]
+            tracing::info!("Pre-transposing tied embeddings [V,H] -> [H,V] for logits computation");
+            let transposed_weight = embed_weight.transpose(0, 1)?; // [H, V]
+            tracing::info!("Transposed weight shape: {:?}", transposed_weight.dims());
+            (embed_transposed, Some(transposed_weight)) // Cache transposed weight
         } else {
             // Dedicated lm_head exists, no need to optimize embeddings
             (embed_transposed, None)
@@ -799,7 +1031,7 @@ impl TransformerModel {
                         tracing::info!("LM head tied to input embeddings");
                     });
 
-                    if self.embed_transposed {
+                    let result = if self.embed_transposed {
                         // Embeddings are [hidden, vocab]
                         let embeddings = self.embed_tokens.embeddings();
                         hidden.matmul(embeddings)? // [B, V]
@@ -811,7 +1043,39 @@ impl TransformerModel {
                         let embeddings = self.embed_tokens.embeddings();
                         let w = embeddings.transpose(0, 1)?; // [H, V]
                         hidden.matmul(&w)? // [B, V]
+                    };
+
+                    // Debug: sanity check tied embeddings orientation (runs once)
+                    if std::env::var("BITNET_DEBUG_LOGITS").is_ok() {
+                        static SANITY_LOGGED: std::sync::Once = std::sync::Once::new();
+                        SANITY_LOGGED.call_once(|| {
+                            if let Ok(mean_val) = result.mean_all().and_then(|m| m.to_scalar::<f32>())
+                                && let Ok(std_val) = result.broadcast_sub(&result.mean_all().unwrap())
+                                    .and_then(|d| d.sqr())
+                                    .and_then(|s| s.mean_all())
+                                    .and_then(|v| v.sqrt())
+                                    .and_then(|s| s.to_scalar::<f32>())
+                            {
+                                tracing::info!("tied logits sanity check - mean/std: {:.4}/{:.4}", mean_val, std_val);
+
+                                // Float sanity check: compare with non-quantized path
+                                if let Ok(emb) = self.embed_tokens.embeddings().transpose(0, 1)
+                                    && let Ok(ref_logits) = hidden.matmul(&emb)
+                                    && let Ok(ref_mean) = ref_logits.mean_all().and_then(|m| m.to_scalar::<f32>())
+                                    && let Ok(ref_std) = ref_logits.broadcast_sub(&ref_logits.mean_all().unwrap())
+                                        .and_then(|d| d.sqr())
+                                        .and_then(|s| s.mean_all())
+                                        .and_then(|v| v.sqrt())
+                                        .and_then(|s| s.to_scalar::<f32>())
+                                {
+                                    tracing::info!("float ref logits - mean/std: {:.4}/{:.4}", ref_mean, ref_std);
+                                    tracing::info!("correlation check: quantized vs float stats should be similar");
+                                }
+                            }
+                        });
                     }
+
+                    result
                 };
 
                 // Debug logits std

@@ -768,6 +768,8 @@ mod metadata_tests {
             vocab_size: 32000,
             context_length: 2048,
             quantization: Some(QuantizationType::I2S),
+            fingerprint: None,
+            corrections_applied: None,
         };
 
         assert_eq!(metadata.name, "test_model");

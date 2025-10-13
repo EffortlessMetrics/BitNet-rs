@@ -1,0 +1,26 @@
+version: 1
+models:
+  - fingerprint: "sha256-4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+    notes: "BitNet model with corrupted LayerNorm weights (mean=0.017689 instead of ~1.0)"
+    corrections:
+      # Rescale LayerNorm gamma weights to fix corruption (56x too small)
+      - type: LN_GAMMA_RESCALE_RMS
+        target_rms: 1.0
+        clamp: [0.01, 100.0]
+      # Override I2_S dequantization for attention projections (kept for reference, but not needed)
+      - type: I2S_DEQUANT_OVERRIDE
+        tensors:
+          # LLaMA/HF-style names
+          - "q_proj.weight"
+          - "k_proj.weight"
+          - "v_proj.weight"
+          # Microsoft BitNet-style names
+          - "wq.weight"
+          - "wk.weight"
+          - "wv.weight"
+          # Alternative naming patterns
+          - "attn_q.weight"
+          - "attn_k.weight"
+          - "attn_v.weight"
+        inv: false
+        k: 1.0

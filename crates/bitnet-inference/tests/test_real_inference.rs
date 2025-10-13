@@ -146,6 +146,8 @@ fn create_test_bitnet_config() -> BitNetConfig {
             max_position_embeddings: 1024,
             rope_theta: Some(10000.0),
             rope_scaling: None,
+            rms_norm_eps: None,
+            tokenizer: bitnet_common::TokenizerConfig::default(),
         },
         quantization: Default::default(),
         inference: Default::default(),

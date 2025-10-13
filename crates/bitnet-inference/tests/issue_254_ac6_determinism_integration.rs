@@ -8,22 +8,24 @@
 
 #![cfg(feature = "cpu")]
 
+mod support;
+use support::EnvGuard;
+
 use anyhow::Result;
 use bitnet_common::Device;
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
-use serial_test::serial;
 
 /// AC:6.1 - Two complete inference runs produce identical token sequences
 /// Validates full determinism from prompt to generated tokens
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     // Set deterministic environment
-    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
-    unsafe { std::env::set_var("BITNET_SEED", "42") };
-    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
+    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
+    let _g2 = EnvGuard::set("BITNET_SEED", "42");
+    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
 
     let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
@@ -55,10 +57,6 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     // Verify not trivial
     assert!(tokens1.len() > 10, "AC6: Generation too short to validate");
 
-    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
-    unsafe { std::env::remove_var("BITNET_SEED") };
-    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
-
     println!("AC6.1: Deterministic inference test - PENDING IMPLEMENTATION");
     Ok(())
 }
@@ -66,11 +64,11 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 /// AC:6.2 - Determinism across multiple runs (5 iterations)
 /// Validates consistency over multiple generation cycles
 #[tokio::test]
-#[serial]
+#[serial_test::serial]
 async fn test_ac6_determinism_multiple_runs() -> Result<()> {
-    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
-    unsafe { std::env::set_var("BITNET_SEED", "42") };
-    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
+    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
+    let _g2 = EnvGuard::set("BITNET_SEED", "42");
+    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
 
     let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
@@ -101,10 +99,6 @@ async fn test_ac6_determinism_multiple_runs() -> Result<()> {
         assert_eq!(results[0], results[i], "AC6: Run {} differs from run 0", i);
     }
 
-    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
-    unsafe { std::env::remove_var("BITNET_SEED") };
-    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
-
     println!("AC6.2: Multiple runs determinism test - PENDING IMPLEMENTATION");
     Ok(())
 }
@@ -124,6 +118,8 @@ fn create_test_model() -> Result<BitNetModel> {
         max_position_embeddings: 1024,
         rope_theta: Some(10000.0),
         rope_scaling: None,
+        rms_norm_eps: None,
+        tokenizer: bitnet_common::TokenizerConfig::default(),
     };
     let config = BitNetConfig { model: model_config, ..Default::default() };
     Ok(BitNetModel::new(config, Device::Cpu))

@@ -375,12 +375,15 @@ impl GgufValue {
                 }
 
                 // Calculate memory requirements to prevent integer overflow
+                // For string arrays, we use a reasonable average (256 bytes) instead of max_string_length
+                // to avoid false positives on large vocabularies (e.g., 128K tokens)
+                // Individual strings are still validated against max_string_length during parsing
                 let element_size = match array_type {
-                    0 | 1 => 1,                    // U8, I8
-                    2 | 3 => 2,                    // U16, I16
-                    4..=6 => 4,                    // U32, I32, F32
-                    7 => 1,                        // Bool
-                    8 => limits.max_string_length, // String (worst case)
+                    0 | 1 => 1, // U8, I8
+                    2 | 3 => 2, // U16, I16
+                    4..=6 => 4, // U32, I32, F32
+                    7 => 1,     // Bool
+                    8 => 256,   // String (reasonable average for tokenizer vocab)
                     _ => {
                         return Err(BitNetError::Security(SecurityError::MalformedData {
                             reason: format!("Invalid array element type: {}", array_type),

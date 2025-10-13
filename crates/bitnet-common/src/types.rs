@@ -123,6 +123,29 @@ impl Default for GenerationConfig {
     }
 }
 
+/// Model correction record (LayerNorm rescaling, I2_S dequant, etc.)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CorrectionRecord {
+    /// Layer/tensor name (e.g., "model.layers.0.input_layernorm.weight")
+    pub layer: String,
+    /// Correction type (e.g., "ln_gamma_rescale_rms", "i2s_dequant_inversion")
+    pub correction_type: String,
+    /// RMS value before correction (for LayerNorm corrections)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rms_before: Option<f32>,
+    /// RMS value after correction (for LayerNorm corrections)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rms_after: Option<f32>,
+    /// Scaling factor applied (for LayerNorm corrections)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub factor: Option<f32>,
+    /// Policy fingerprint (e.g., "BITNET_FIX_LN_SCALE=1", "policy.yml:sha256:abc123")
+    pub policy_fingerprint: String,
+    /// Additional correction metadata (JSON-serializable)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+}
+
 /// Model metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMetadata {
@@ -132,6 +155,12 @@ pub struct ModelMetadata {
     pub vocab_size: usize,
     pub context_length: usize,
     pub quantization: Option<QuantizationType>,
+    /// SHA256 fingerprint of the model file (format: "sha256-<hex>")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fingerprint: Option<String>,
+    /// Applied corrections (if any)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub corrections_applied: Option<Vec<CorrectionRecord>>,
 }
 
 /// Performance metrics

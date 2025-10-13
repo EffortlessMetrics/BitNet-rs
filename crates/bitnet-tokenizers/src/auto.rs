@@ -8,6 +8,7 @@ pub fn load_auto(
     explicit: Option<&Path>,
 ) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     if let Some(p) = explicit {
+        tracing::info!("Using tokenizer: {}", p.display());
         let boxed_tok = crate::load_tokenizer(p)?;
         return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
     }
@@ -16,7 +17,7 @@ pub fn load_auto(
     if model_path.extension().and_then(|s| s.to_str()) == Some("gguf")
         && let Ok(tok) = crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(model_path)
     {
-        tracing::debug!("tokenizer: loaded from GGUF");
+        tracing::info!("Using tokenizer: embedded in GGUF");
         return Ok(Arc::new(tok));
     }
 
@@ -24,11 +25,13 @@ pub fn load_auto(
     if let Some(dir) = model_path.parent() {
         let json = dir.join("tokenizer.json");
         if json.exists() {
+            tracing::info!("Using tokenizer: {} (auto-detected)", json.display());
             let boxed_tok = crate::load_tokenizer(&json)?;
             return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
         }
         let spm = dir.join("tokenizer.model");
         if spm.exists() {
+            tracing::info!("Using tokenizer: {} (auto-detected)", spm.display());
             let boxed_tok = crate::load_tokenizer(&spm)?;
             return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
         }

@@ -45,6 +45,7 @@ jobs:
           - bitnet-kernels
           - bitnet-inference
           - bitnet-tokenizers
+          - bitnet-st2gguf
         include:
           - os: ubuntu-latest
             features: "cpu,avx2"

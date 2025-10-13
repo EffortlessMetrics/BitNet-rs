@@ -102,7 +102,7 @@ async fn test_ac10_device_selection_error_recovery() -> Result<()> {
     let model = create_test_model()?;
 
     // Try to use non-existent GPU
-    let result = InferenceEngine::new(Arc::clone(&model), Device::Gpu(99));
+    let result = InferenceEngine::new(Arc::clone(&model), Device::Cuda(99));
 
     match result {
         Err(e) => {
@@ -116,7 +116,7 @@ async fn test_ac10_device_selection_error_recovery() -> Result<()> {
     }
 
     // Test automatic fallback to CPU
-    let fallback_result = InferenceEngine::new_with_fallback(Arc::clone(&model), Device::Gpu(99));
+    let fallback_result = InferenceEngine::new_with_fallback(Arc::clone(&model), Device::Cuda(99));
     assert!(fallback_result.is_ok(), "Should succeed with CPU fallback");
 
     // TODO: Replace with actual device error handling implementation

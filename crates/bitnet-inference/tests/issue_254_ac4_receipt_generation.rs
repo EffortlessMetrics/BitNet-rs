@@ -8,6 +8,9 @@
 
 #![cfg(feature = "cpu")]
 
+mod support;
+use support::EnvGuard;
+
 use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -17,6 +20,7 @@ use std::path::Path;
 /// Validates receipt schema and required fields
 #[ignore] // Issue #254: TDD placeholder - Receipt generation unimplemented
 #[tokio::test]
+#[serial_test::serial]
 async fn test_ac4_receipt_generation_real_path() -> Result<()> {
     // TODO: Create InferenceReceipt struct when API is available
     let receipt =
@@ -30,11 +34,12 @@ async fn test_ac4_receipt_generation_real_path() -> Result<()> {
         "AC4: kernels should include i2s_gemv"
     );
 
-    // Verify deterministic flag
-    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
-    let deterministic_receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
-    assert!(deterministic_receipt.deterministic, "AC4: deterministic should be true");
-    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
+    // Verify deterministic flag with guard for automatic cleanup
+    {
+        let _guard = EnvGuard::set("BITNET_DETERMINISTIC", "1");
+        let deterministic_receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
+        assert!(deterministic_receipt.deterministic, "AC4: deterministic should be true");
+    }
 
     println!("AC4.1: Receipt generation test - PENDING IMPLEMENTATION");
     Ok(())
@@ -89,10 +94,11 @@ async fn test_ac4_save_receipt_to_file() -> Result<()> {
 /// AC:4.4 - Receipt includes environment variables
 /// Validates environment section in receipt
 #[tokio::test]
+#[serial_test::serial]
 async fn test_ac4_receipt_environment_variables() -> Result<()> {
-    unsafe { std::env::set_var("BITNET_DETERMINISTIC", "1") };
-    unsafe { std::env::set_var("BITNET_SEED", "42") };
-    unsafe { std::env::set_var("RAYON_NUM_THREADS", "1") };
+    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
+    let _g2 = EnvGuard::set("BITNET_SEED", "42");
+    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
 
     let receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
 
@@ -107,10 +113,6 @@ async fn test_ac4_receipt_environment_variables() -> Result<()> {
         Some(&"42".to_string()),
         "AC4: Environment should include BITNET_SEED"
     );
-
-    unsafe { std::env::remove_var("BITNET_DETERMINISTIC") };
-    unsafe { std::env::remove_var("BITNET_SEED") };
-    unsafe { std::env::remove_var("RAYON_NUM_THREADS") };
 
     println!("AC4.4: Environment variables test - PENDING IMPLEMENTATION");
     Ok(())

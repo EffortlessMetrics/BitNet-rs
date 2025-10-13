@@ -5,7 +5,15 @@
 //! Validates that GPU backend receipts contain evidence of actual GPU kernel
 //! execution to prevent silent CPU fallback and dishonest performance reporting.
 
+use serial_test::serial;
 use std::path::PathBuf;
+
+// Shared RAII guard for env vars (already in the repo)
+mod env_guard {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../tests/support/env_guard.rs"));
+}
+use bitnet_common::CorrectionRecord;
+use env_guard::EnvGuard;
 
 /// Helper to find workspace root by walking up to .git directory
 fn workspace_root() -> PathBuf {
@@ -29,6 +37,8 @@ struct Receipt {
     tokens_per_second: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     latency_ms: Option<f64>,
+    #[serde(default)]
+    corrections: Vec<CorrectionRecord>,
 }
 
 /// GPU kernel naming convention prefixes (AC6)
@@ -87,6 +97,175 @@ fn verify_gpu_receipt(receipt: &Receipt) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Validate receipt corrections for CI gating
+///
+/// In normal CI (not canary jobs), receipts must NOT contain any corrections.
+/// This ensures production builds use properly prepared models, not runtime workarounds.
+///
+/// Set BITNET_ALLOW_CORRECTIONS=1 to disable this check in canary/dev environments.
+fn verify_corrections_in_ci(receipt: &Receipt) -> anyhow::Result<()> {
+    use anyhow::ensure;
+
+    // Allow corrections in canary/dev builds
+    if std::env::var("BITNET_ALLOW_CORRECTIONS").is_ok() {
+        return Ok(());
+    }
+
+    // In normal CI, reject any receipts with corrections
+    ensure!(
+        receipt.corrections.is_empty(),
+        "Receipt contains {} correction(s) but BITNET_ALLOW_CORRECTIONS is not set.\n\
+         Corrections detected:\n{}\n\n\
+         Production CI must use properly prepared models without runtime corrections.\n\
+         To allow corrections in canary/dev builds, set BITNET_ALLOW_CORRECTIONS=1.\n\
+         To fix properly: regenerate GGUF with float LayerNorm weights (not quantized).",
+        receipt.corrections.len(),
+        receipt
+            .corrections
+            .iter()
+            .map(|c| format!(
+                "  - {}: {} (RMS {:.5}→{:.5}, factor={:.3}, policy={})",
+                c.layer,
+                c.correction_type,
+                c.rms_before.unwrap_or(0.0),
+                c.rms_after.unwrap_or(0.0),
+                c.factor.unwrap_or(1.0),
+                c.policy_fingerprint
+            ))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod corrections_validation_tests {
+    use super::*;
+
+    /// Test that receipts without corrections pass validation
+    #[test]
+    fn test_receipt_no_corrections_passes() {
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        assert!(result.is_ok(), "Receipt without corrections should pass: {:?}", result.err());
+    }
+
+    /// Test that receipts with corrections fail in normal CI
+    #[test]
+    #[serial]
+    fn test_receipt_with_corrections_fails_in_ci() {
+        let _guard = EnvGuard::remove("BITNET_ALLOW_CORRECTIONS");
+
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![CorrectionRecord {
+                layer: "model.layers.0.input_layernorm.weight".to_string(),
+                correction_type: "ln_gamma_rescale_rms".to_string(),
+                rms_before: Some(0.5),
+                rms_after: Some(1.0),
+                factor: Some(2.0),
+                policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                metadata: None,
+            }],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        assert!(result.is_err(), "Receipt with corrections should fail in normal CI");
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("correction(s)"), "Error should mention corrections: {}", err_msg);
+        assert!(
+            err_msg.contains("BITNET_ALLOW_CORRECTIONS"),
+            "Error should mention BITNET_ALLOW_CORRECTIONS: {}",
+            err_msg
+        );
+    }
+
+    /// Test that receipts with corrections pass when BITNET_ALLOW_CORRECTIONS is set
+    #[test]
+    #[serial]
+    fn test_receipt_with_corrections_passes_in_canary() {
+        let _guard = EnvGuard::set("BITNET_ALLOW_CORRECTIONS", "1");
+
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![CorrectionRecord {
+                layer: "model.layers.0.input_layernorm.weight".to_string(),
+                correction_type: "ln_gamma_rescale_rms".to_string(),
+                rms_before: Some(0.5),
+                rms_after: Some(1.0),
+                factor: Some(2.0),
+                policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                metadata: None,
+            }],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        assert!(
+            result.is_ok(),
+            "Receipt with corrections should pass when BITNET_ALLOW_CORRECTIONS=1: {:?}",
+            result.err()
+        );
+        // EnvGuard restores on drop - no manual cleanup needed
+    }
+
+    /// Test that error message shows correction details
+    #[test]
+    #[serial]
+    fn test_corrections_error_shows_details() {
+        let _guard = EnvGuard::remove("BITNET_ALLOW_CORRECTIONS");
+
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![
+                CorrectionRecord {
+                    layer: "layer1.norm.weight".to_string(),
+                    correction_type: "ln_gamma_rescale_rms".to_string(),
+                    rms_before: Some(0.5),
+                    rms_after: Some(1.0),
+                    factor: Some(2.0),
+                    policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                    metadata: None,
+                },
+                CorrectionRecord {
+                    layer: "layer2.norm.weight".to_string(),
+                    correction_type: "ln_gamma_rescale_rms".to_string(),
+                    rms_before: Some(0.75),
+                    rms_after: Some(1.0),
+                    factor: Some(1.33),
+                    policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                    metadata: None,
+                },
+            ],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        let err_msg = result.unwrap_err().to_string();
+
+        // Check that both layers are mentioned
+        assert!(err_msg.contains("layer1.norm.weight"), "Error should mention layer1: {}", err_msg);
+        assert!(err_msg.contains("layer2.norm.weight"), "Error should mention layer2: {}", err_msg);
+        assert!(err_msg.contains("RMS"), "Error should show RMS values: {}", err_msg);
+    }
+}
+
 #[cfg(test)]
 mod receipt_validation_tests {
     use super::*;
@@ -101,6 +280,7 @@ mod receipt_validation_tests {
             kernels: vec!["i2s_cpu_quantize".to_string(), "avx2_matmul".to_string()],
             tokens_per_second: Some(12.3),
             latency_ms: Some(81.2),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -128,6 +308,7 @@ mod receipt_validation_tests {
             kernels: vec!["gemm_fp16".to_string()],
             tokens_per_second: Some(87.5),
             latency_ms: Some(11.4),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -151,6 +332,7 @@ mod receipt_validation_tests {
             kernels: vec!["avx2_matmul".to_string(), "i2s_cpu_quantize".to_string()],
             tokens_per_second: Some(15.2),
             latency_ms: Some(66.7),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -174,6 +356,7 @@ mod receipt_validation_tests {
             kernels: vec![],
             tokens_per_second: Some(0.0),
             latency_ms: Some(0.0),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -211,6 +394,7 @@ mod kernel_prefix_tests {
                 kernels: vec![kernel.to_string()],
                 tokens_per_second: Some(87.5),
                 latency_ms: Some(11.4),
+                corrections: vec![],
             };
 
             let result = verify_gpu_receipt(&receipt);
@@ -246,6 +430,7 @@ mod kernel_prefix_tests {
                 kernels: vec![cpu_kernel.to_string()],
                 tokens_per_second: Some(12.0),
                 latency_ms: Some(80.0),
+                corrections: vec![],
             };
 
             let result = verify_gpu_receipt(&receipt);
@@ -372,6 +557,7 @@ mod performance_validation {
             kernels: vec!["gemm_fp16".to_string()], // Has GPU kernel but...
             tokens_per_second: Some(8.5),           // ...suspiciously low performance (CPU-like)
             latency_ms: Some(117.0),
+            corrections: vec![],
         };
 
         // Basic validation passes (has GPU kernel)
@@ -402,6 +588,7 @@ mod performance_validation {
             kernels: vec!["tl1_gpu_pack".to_string(), "gemm_fp16".to_string()],
             tokens_per_second: Some(87.5), // Within 50-100 tok/s GPU baseline
             latency_ms: Some(11.4),
+            corrections: vec![],
         };
 
         assert!(verify_gpu_receipt(&gpu_baseline).is_ok());
@@ -436,6 +623,7 @@ mod performance_validation {
             ],
             tokens_per_second: Some(45.5),
             latency_ms: Some(22.0),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&mixed_receipt);

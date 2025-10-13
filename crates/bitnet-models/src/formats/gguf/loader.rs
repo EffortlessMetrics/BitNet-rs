@@ -2,8 +2,11 @@
 
 use super::{GgufReader, GgufTensorType, GgufTensors};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
+use crate::names::{is_layernorm_weight, is_projection_weight};
 use crate::{BitNetModel, Model};
-use bitnet_common::{BitNetConfig, BitNetError, Device, ModelError, ModelMetadata, Result};
+use bitnet_common::{
+    BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
+};
 use candle_core::{DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};
@@ -12,16 +15,26 @@ use tracing::{debug, info};
 pub struct GgufLoader;
 
 impl GgufLoader {
+    /// Helper to parse environment variables as truthy boolean values.
+    /// Accepts: "1", "true", "yes", "on" (case-insensitive).
     #[inline]
-    fn is_projection_weight(name: &str) -> bool {
-        // Linear projections (attn + ffn) that should be [out,in] in memory
-        name.ends_with(".q_proj.weight")
-            || name.ends_with(".k_proj.weight")
-            || name.ends_with(".v_proj.weight")
-            || name.ends_with(".o_proj.weight")
-            || name.ends_with(".gate_proj.weight")
-            || name.ends_with(".up_proj.weight")
-            || name.ends_with(".down_proj.weight")
+    fn env_truthy(key: &str) -> bool {
+        std::env::var(key)
+            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false)
+    }
+
+    /// Compute RMS (root mean square) of a tensor in F32.
+    /// RMS = sqrt(mean(x^2))
+    fn rms_f32(t: &Tensor) -> Result<f32> {
+        let mean_sq = t
+            .sqr()
+            .map_err(|e| BitNetError::Validation(e.to_string()))?
+            .mean_all()
+            .map_err(|e| BitNetError::Validation(e.to_string()))?
+            .to_scalar::<f32>()
+            .map_err(|e| BitNetError::Validation(e.to_string()))?;
+        Ok(mean_sq.sqrt())
     }
 
     #[inline]
@@ -29,7 +42,7 @@ impl GgufLoader {
         // All projection weights are stored/consumed as [out,in] in our kernels.
         // GGUF frequently provides them as [in,out]. Normalize here once.
         // Use name-only gating since model dims vary across architectures.
-        Self::is_projection_weight(name) && shape.len() == 2
+        is_projection_weight(name) && shape.len() == 2
     }
 
     /// Helper to fetch an unsigned integer by trying a list of keys
@@ -42,6 +55,26 @@ impl GgufLoader {
                 && v >= 0
             {
                 return Some(v as u32);
+            }
+        }
+        None
+    }
+
+    /// Helper to fetch a float by trying a list of keys
+    fn get_f32_any(reader: &GgufReader, keys: &[&str]) -> Option<f32> {
+        for k in keys {
+            if let Some(v) = reader.get_f32_metadata(k) {
+                return Some(v);
+            }
+        }
+        None
+    }
+
+    /// Helper to fetch a boolean by trying a list of keys
+    fn get_bool_any(reader: &GgufReader, keys: &[&str]) -> Option<bool> {
+        for k in keys {
+            if let Some(v) = reader.get_bool_metadata(k) {
+                return Some(v);
             }
         }
         None
@@ -248,6 +281,356 @@ impl GgufLoader {
             )),
         }
     }
+
+    /// Validate LayerNorm gamma statistics to catch quantization artifacts.
+    ///
+    /// LayerNorm gamma RMS should be near 1.0 (acceptable envelope: [0.5, 2.0]).
+    /// If stats are suspicious, fail in strict mode or warn otherwise.
+    ///
+    /// Set BITNET_STRICT_MODE=1 to fail on invalid LN gamma.
+    pub(crate) fn check_ln_gamma_stats(name: &str, w: &Tensor) -> Result<()> {
+        use bitnet_common::SecurityError;
+
+        // Convert to FP32 for reliable statistics
+        let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
+        let rms = Self::rms_f32(&w32)?;
+
+        // Acceptable envelope for γ RMS
+        let ok = (0.5..=2.0).contains(&rms) && rms.is_finite();
+
+        if !ok {
+            let msg =
+                format!("LayerNorm gamma '{}' suspicious: rms={:.5} (expected ≈1.0)", name, rms);
+
+            // In strict mode, fail immediately
+            if Self::env_truthy("BITNET_STRICT_MODE") {
+                return Err(BitNetError::Security(SecurityError::MalformedData { reason: msg }));
+            } else {
+                tracing::warn!("{} (continuing: non-strict mode)", msg);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Select LayerNorm rescale configuration from policy
+    ///
+    /// Priority order:
+    /// 1. Explicit policy override from BITNET_CORRECTION_POLICY
+    /// 2. Environment-based fallback (BITNET_FIX_LN_SCALE=1)
+    /// 3. None (no correction)
+    ///
+    /// Returns: Option<(target_rms, clamp)>
+    #[inline]
+    fn select_ln_rescale_cfg(
+        policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
+    ) -> Option<(f32, [f32; 2])> {
+        use crate::correction_policy::CorrectionAction;
+
+        // Step 1: Check policy override
+        if let Some(plan) = policy_plan {
+            for action in &plan.actions {
+                if let CorrectionAction::LnGammaRescaleRms { target_rms, clamp } = action {
+                    tracing::info!(
+                        "POLICY: LayerNorm rescale config: target_rms={}, clamp={:?} (fingerprint={})",
+                        target_rms,
+                        clamp,
+                        plan.fingerprint
+                    );
+                    return Some((*target_rms, *clamp));
+                }
+            }
+        }
+
+        // Step 2: Environment-based fallback
+        if Self::env_truthy("BITNET_FIX_LN_SCALE") {
+            tracing::info!("ENV: LayerNorm rescale enabled via BITNET_FIX_LN_SCALE=1");
+            return Some((1.0, [1e-2, 1e2]));
+        }
+
+        None
+    }
+
+    /// Policy-aware LayerNorm gamma rescaling
+    ///
+    /// This is a temporary workaround for GGUF files with quantized LayerNorm weights.
+    /// Rescales LN gamma RMS to target value (typically ~1.0).
+    ///
+    /// **Remove this once GGUF is regenerated with proper float LayerNorm weights.**
+    ///
+    /// Returns: (rescaled_tensor, optional_correction_record)
+    fn maybe_rescale_ln_gamma_with_policy(
+        name: &str,
+        w: Tensor,
+        policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
+    ) -> Result<(Tensor, Option<CorrectionRecord>)> {
+        if !is_layernorm_weight(name) {
+            return Ok((w, None));
+        }
+
+        // Never apply corrections in strict mode
+        if Self::env_truthy("BITNET_STRICT_MODE") {
+            return Ok((w, None));
+        }
+
+        // Check if correction is configured (policy or env)
+        let cfg = Self::select_ln_rescale_cfg(policy_plan);
+        if cfg.is_none() {
+            return Ok((w, None));
+        }
+
+        let (target_rms, clamp) = cfg.unwrap();
+
+        // Convert to FP32 for statistics
+        let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
+        let rms_before = Self::rms_f32(&w32)?;
+
+        // If already close to target, skip rescaling
+        if (rms_before - target_rms).abs() < 1e-3 {
+            tracing::debug!(
+                "LayerNorm '{}' already close to target RMS ({:.5} ≈ {:.5}), skipping rescale",
+                name,
+                rms_before,
+                target_rms
+            );
+            return Ok((w, None));
+        }
+
+        // Calculate rescale factor with clamping for safety
+        let mut factor = target_rms / (rms_before + 1e-12);
+        factor = factor.clamp(clamp[0], clamp[1]);
+
+        tracing::warn!(
+            "CORRECTION: rescaling '{}' gamma RMS {:.5}→{:.5} (factor {:.3}). \
+             Remove when GGUF is fixed.",
+            name,
+            rms_before,
+            target_rms,
+            factor
+        );
+
+        // Apply affine transformation: x' = factor * x
+        let rescaled =
+            w32.affine(factor as f64, 0.0).map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+        // Calculate RMS after rescaling
+        let rms_after = Self::rms_f32(&rescaled)?;
+
+        // Convert back to original dtype
+        let result =
+            rescaled.to_dtype(w.dtype()).map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+        // Determine policy fingerprint source
+        let policy_fp = if let Some(plan) = policy_plan {
+            format!("policy:{}", plan.fingerprint)
+        } else {
+            "BITNET_FIX_LN_SCALE=1".to_string()
+        };
+
+        // Create correction record
+        let metadata = serde_json::json!({
+            "target_rms": target_rms,
+            "clamp": clamp,
+            "source": if policy_plan.is_some() { "policy" } else { "env" },
+        });
+
+        let correction = CorrectionRecord {
+            layer: name.to_string(),
+            correction_type: "ln_gamma_rescale_rms".to_string(),
+            rms_before: Some(rms_before),
+            rms_after: Some(rms_after),
+            factor: Some(factor),
+            policy_fingerprint: policy_fp,
+            metadata: Some(metadata),
+        };
+
+        Ok((result, Some(correction)))
+    }
+
+    /// Legacy environment-based LayerNorm rescaling (deprecated, kept for compatibility)
+    ///
+    /// **Prefer `maybe_rescale_ln_gamma_with_policy` for new code.**
+    #[allow(dead_code)]
+    fn maybe_rescale_ln_gamma(name: &str, w: Tensor) -> Result<(Tensor, Option<CorrectionRecord>)> {
+        Self::maybe_rescale_ln_gamma_with_policy(name, w, None)
+    }
+
+    /// Collect I2_S block scales from raw tensor data (best-effort heuristic)
+    ///
+    /// I2_S blocks typically start with an f16 scale. This function samples those scales
+    /// to build a histogram for heuristic inversion detection.
+    ///
+    /// Returns None if the data doesn't match expected I2_S block layout.
+    fn i2s_collect_scales(raw: &[u8], block_bytes: usize) -> Option<Vec<f32>> {
+        if block_bytes == 0 || raw.len() < 2 {
+            return None;
+        }
+
+        let num_blocks = raw.len() / block_bytes;
+        if num_blocks == 0 {
+            return None;
+        }
+
+        let mut scales = Vec::with_capacity(num_blocks);
+        for block_idx in 0..num_blocks {
+            let offset = block_idx * block_bytes;
+            if offset + 2 > raw.len() {
+                break;
+            }
+
+            // Read f16 scale (little-endian) at start of block
+            let scale_bits = u16::from_le_bytes([raw[offset], raw[offset + 1]]);
+            let scale = half::f16::from_bits(scale_bits).to_f32();
+            scales.push(scale);
+        }
+
+        if scales.is_empty() { None } else { Some(scales) }
+    }
+
+    /// Generate histogram summary string for scale distribution
+    fn scale_histogram(scales: &[f32]) -> String {
+        let mut counts = [0usize; 8];
+        for &scale in scales {
+            let abs_scale = scale.abs();
+            let bucket = match abs_scale {
+                s if s < 1e-6 => 0,
+                s if s < 1e-4 => 1,
+                s if s < 1e-3 => 2,
+                s if s < 1e-2 => 3,
+                s if s < 1e-1 => 4,
+                s if s < 1e0 => 5,
+                s if s < 1e1 => 6,
+                _ => 7,
+            };
+            counts[bucket] += 1;
+        }
+
+        format!(
+            "<1e-6:{} <1e-4:{} <1e-3:{} <1e-2:{} <1e-1:{} <1e0:{} <1e1:{} >=1e1:{}",
+            counts[0], counts[1], counts[2], counts[3], counts[4], counts[5], counts[6], counts[7]
+        )
+    }
+
+    /// Check if a tensor name matches any pattern in the list
+    fn tensor_matches_patterns(tensor_name: &str, patterns: &[String]) -> bool {
+        patterns.iter().any(|pattern| tensor_name.ends_with(pattern))
+    }
+
+    /// Select I2_S dequantization config (inv, k) for a specific tensor
+    ///
+    /// Priority order:
+    /// 1. Explicit policy override from BITNET_CORRECTION_POLICY
+    /// 2. Heuristic detection (if BITNET_ALLOW_RUNTIME_CORRECTIONS=1)
+    /// 3. Default (inv=false, k=1.0)
+    ///
+    /// Returns: (inv, k, Option<CorrectionRecord>)
+    fn select_i2s_config(
+        tensor_name: &str,
+        raw_data: Option<&[u8]>,
+        policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
+    ) -> (bool, f32, Option<CorrectionRecord>) {
+        use crate::correction_policy::CorrectionAction;
+
+        // Step 1: Check policy override
+        if let Some(plan) = policy_plan {
+            for action in &plan.actions {
+                if let CorrectionAction::I2SDequantOverride { tensors, inv, k } = action
+                    && Self::tensor_matches_patterns(tensor_name, tensors)
+                {
+                    tracing::warn!(
+                        "POLICY: I2_S override for '{}': inv={}, k={} (fingerprint={})",
+                        tensor_name,
+                        inv,
+                        k,
+                        plan.fingerprint
+                    );
+
+                    let metadata = serde_json::json!({
+                        "i2s_inv_before": false,
+                        "i2s_inv_after": *inv,
+                        "i2s_k_before": 1.0,
+                        "i2s_k_after": *k,
+                        "source": "policy",
+                        "policy_fingerprint": plan.fingerprint,
+                    });
+
+                    let record = CorrectionRecord {
+                        layer: tensor_name.to_string(),
+                        correction_type: "i2s_dequant_override".to_string(),
+                        rms_before: None,
+                        rms_after: None,
+                        factor: Some(*k),
+                        policy_fingerprint: format!("policy:{}", plan.fingerprint),
+                        metadata: Some(metadata),
+                    };
+
+                    return (*inv, *k, Some(record));
+                }
+            }
+        }
+
+        // Step 2: Heuristic detection (if enabled)
+        if Self::env_truthy("BITNET_ALLOW_RUNTIME_CORRECTIONS")
+            && let Some(data) = raw_data
+        {
+            // Try common I2_S block sizes (66 bytes = 256 weights + scale is most common)
+            for block_size in [66usize, 82, 64] {
+                if let Some(scales) = Self::i2s_collect_scales(data, block_size) {
+                    if scales.is_empty() {
+                        continue;
+                    }
+
+                    // Calculate percentage of tiny scales (<1e-4)
+                    let tiny_count = scales.iter().filter(|s| s.abs() < 1e-4).count();
+                    let tiny_fraction = tiny_count as f32 / scales.len() as f32;
+
+                    tracing::debug!(
+                        "I2_S scale analysis for '{}': {} (tiny={:.1}%)",
+                        tensor_name,
+                        Self::scale_histogram(&scales),
+                        tiny_fraction * 100.0
+                    );
+
+                    // Heuristic: if ≥75% of scales are tiny, assume inversion
+                    if tiny_fraction >= 0.75 {
+                        tracing::warn!(
+                            "HEURISTIC: '{}' scales look inverted ({:.0}% tiny); using inv=true",
+                            tensor_name,
+                            tiny_fraction * 100.0
+                        );
+
+                        let metadata = serde_json::json!({
+                            "i2s_inv_before": false,
+                            "i2s_inv_after": true,
+                            "i2s_k_before": 1.0,
+                            "i2s_k_after": 1.0,
+                            "source": "heuristic",
+                            "tiny_fraction": tiny_fraction,
+                            "scale_histogram": Self::scale_histogram(&scales),
+                        });
+
+                        let record = CorrectionRecord {
+                            layer: tensor_name.to_string(),
+                            correction_type: "i2s_dequant_heuristic".to_string(),
+                            rms_before: None,
+                            rms_after: None,
+                            factor: Some(1.0),
+                            policy_fingerprint: "heuristic".to_string(),
+                            metadata: Some(metadata),
+                        };
+
+                        return (true, 1.0, Some(record));
+                    }
+
+                    // Successfully analyzed scales; no need to try other block sizes
+                    break;
+                }
+            }
+        }
+
+        // Step 3: Default (no correction)
+        (false, 1.0, None)
+    }
 }
 
 impl GgufLoader {}
@@ -293,6 +676,10 @@ impl FormatLoader for GgufLoader {
         // Validate the file structure
         reader.validate()?;
 
+        // Compute GGUF fingerprint for policy matching
+        let fingerprint = crate::fingerprint::compute_gguf_fingerprint(mmap.as_slice());
+        debug!("Model fingerprint: {}", fingerprint);
+
         let metadata = ModelMetadata {
             name: reader.get_string_metadata("general.name").unwrap_or_else(|| {
                 path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown").to_string()
@@ -312,6 +699,8 @@ impl FormatLoader for GgufLoader {
                 .or_else(|| reader.get_u32_metadata("llama.rope.dimension_count"))
                 .unwrap_or(2048) as usize,
             quantization: reader.get_quantization_type(),
+            fingerprint: Some(fingerprint),
+            corrections_applied: None, // Not available during lightweight metadata extraction
         };
 
         debug!("Extracted GGUF metadata: {:?}", metadata);
@@ -323,11 +712,15 @@ impl FormatLoader for GgufLoader {
 
         let mmap = if config.use_mmap { Some(MmapFile::open(path)?) } else { None };
 
-        let data = if let Some(ref mmap) = mmap {
+        // Keep buffer alive if not using mmap
+        let mut _owned: Option<Vec<u8>> = None;
+        let data: &[u8] = if let Some(ref mmap) = mmap {
             mmap.as_slice()
         } else {
             // Read entire file into memory
-            &std::fs::read(path).map_err(BitNetError::Io)?
+            let buf = std::fs::read(path).map_err(BitNetError::Io)?;
+            _owned = Some(buf);
+            _owned.as_ref().unwrap().as_slice()
         };
 
         let reader = GgufReader::new(data)?;
@@ -340,6 +733,10 @@ impl FormatLoader for GgufLoader {
         // Validate file structure
         reader.validate()?;
 
+        // Compute GGUF fingerprint for policy matching
+        let fingerprint = crate::fingerprint::compute_gguf_fingerprint(data);
+        tracing::info!("Model fingerprint: {}", fingerprint);
+
         // Extract model configuration
         let model_config = self.extract_config(&reader)?;
 
@@ -347,8 +744,8 @@ impl FormatLoader for GgufLoader {
             callback(0.5, "Loading tensors...");
         }
 
-        // Load tensors
-        let tensors = self.load_tensors(&reader, device, config)?;
+        // Load tensors with fingerprint for policy matching
+        let tensors = self.load_tensors(&reader, device, config, &fingerprint)?;
 
         if let Some(callback) = &config.progress_callback {
             callback(0.9, "Initializing model...");
@@ -436,15 +833,26 @@ impl GgufLoader {
     }
 
     /// Helper to create a transposed I2_S tensor (for attention projections)
+    #[allow(dead_code)]
     fn create_transposed_i2s_tensor(
         data: &[u8],
         dims: &[usize],
         device: &candle_core::Device,
     ) -> Result<Tensor> {
+        use crate::quant::i2s::I2SDequantCfg;
+        Self::create_transposed_i2s_tensor_with_cfg(data, dims, device, I2SDequantCfg::default())
+    }
+
+    fn create_transposed_i2s_tensor_with_cfg(
+        data: &[u8],
+        dims: &[usize],
+        device: &candle_core::Device,
+        cfg: crate::quant::i2s::I2SDequantCfg,
+    ) -> Result<Tensor> {
         use crate::quant::i2s;
 
-        // First dequantize to F32 with original layout
-        let f32_data = i2s::dequantize_to_f32(data, dims).map_err(|e| {
+        // First dequantize to F32 with config
+        let f32_data = i2s::dequantize_to_f32_with_cfg(data, dims, cfg).map_err(|e| {
             BitNetError::Validation(format!(
                 "I2_S dequantization failed for tensor with shape {:?}: {}",
                 dims, e
@@ -470,11 +878,16 @@ impl GgufLoader {
         let mut config = BitNetConfig::default();
 
         // Extract model configuration from GGUF metadata
-        if let Some(vocab_size) = reader.get_u32_metadata("llama.vocab_size") {
+        if let Some(vocab_size) = Self::get_u32_any(
+            reader,
+            &["llama.vocab_size", "bitnet-b1.58.vocab_size", "tokenizer.ggml.tokens"],
+        ) {
             config.model.vocab_size = vocab_size as usize;
         }
 
-        if let Some(num_layers) = reader.get_u32_metadata("llama.block_count") {
+        if let Some(num_layers) =
+            Self::get_u32_any(reader, &["llama.block_count", "bitnet-b1.58.block_count", "n_layer"])
+        {
             config.model.num_layers = num_layers as usize;
         }
 
@@ -488,9 +901,10 @@ impl GgufLoader {
         }
 
         // 1) hidden_size: try metadata, else infer from embeddings
-        if let Some(h) =
-            Self::get_u32_any(reader, &["llama.embedding_length", "n_embd", "hidden_size"])
-        {
+        if let Some(h) = Self::get_u32_any(
+            reader,
+            &["llama.embedding_length", "bitnet-b1.58.embedding_length", "n_embd", "hidden_size"],
+        ) {
             config.model.hidden_size = h as usize;
         }
         if (config.model.hidden_size == 0
@@ -501,9 +915,16 @@ impl GgufLoader {
         }
 
         // 2) num_heads: broaden key set (MS 2B commonly has "n_head")
+        // Include bitnet-b1.58 specific keys which are architecture-prefixed
         if let Some(h) = Self::get_u32_any(
             reader,
-            &["llama.attention.head_count", "n_head", "attn.n_heads", "num_attention_heads"],
+            &[
+                "llama.attention.head_count",
+                "bitnet-b1.58.attention.head_count", // BitNet 2B models
+                "n_head",
+                "attn.n_heads",
+                "num_attention_heads",
+            ],
         ) {
             config.model.num_heads = h as usize;
         }
@@ -511,12 +932,13 @@ impl GgufLoader {
         // 3) num_key_value_heads:
         //    a) metadata if present
         let kv_keys = [
+            "llama.attention.head_count_kv",
+            "bitnet-b1.58.attention.head_count_kv", // BitNet 2B models
             "n_head_kv",
             "n_kv_heads",
             "attn.n_kv_heads",
             "attn_n_kv_heads",
             "num_key_value_heads",
-            "llama.attention.head_count_kv",
         ];
         config.model.num_key_value_heads =
             Self::get_u32_any(reader, &kv_keys).map(|v| v as usize).unwrap_or(0);
@@ -547,7 +969,10 @@ impl GgufLoader {
         }
 
         // 4) intermediate_size: try metadata, else infer from feed-forward tensors
-        if let Some(intermediate_size) = reader.get_u32_metadata("llama.feed_forward_length") {
+        if let Some(intermediate_size) = Self::get_u32_any(
+            reader,
+            &["llama.feed_forward_length", "bitnet-b1.58.feed_forward_length", "n_ff"],
+        ) {
             config.model.intermediate_size = intermediate_size as usize;
         }
         // If no metadata or if it seems wrong (based on tensor shapes), infer from tensors
@@ -559,8 +984,123 @@ impl GgufLoader {
             config.model.intermediate_size = inferred_size;
         }
 
-        if let Some(context_length) = reader.get_u32_metadata("llama.context_length") {
+        if let Some(context_length) =
+            Self::get_u32_any(reader, &["llama.context_length", "bitnet-b1.58.context_length"])
+        {
             config.model.max_position_embeddings = context_length as usize;
+        }
+
+        // Read ROPE parameters from header
+        // Note: GGUF uses "rope.freq_base" while config uses "rope_theta" (same meaning)
+        if let Some(rope_base) = reader
+            .get_f32_metadata("bitnet-b1.58.rope.freq_base")
+            .or_else(|| reader.get_f32_metadata("llama.rope.freq_base"))
+            .or_else(|| reader.get_f32_metadata("rope.freq_base"))
+        {
+            config.model.rope_theta = Some(rope_base);
+            tracing::info!("ROPE freq_base from header: {}", rope_base);
+        }
+
+        // Read RMSNorm epsilon
+        if let Some(eps) = Self::get_f32_any(
+            reader,
+            &[
+                "bitnet-b1.58.attention.layer_norm_rms_epsilon",
+                "llama.attention.layer_norm_rms_epsilon",
+                "llama.attention.layer_norm_epsilon",
+                "general.layer_norm_epsilon",
+            ],
+        ) {
+            config.model.rms_norm_eps = Some(eps);
+            tracing::info!("RMSNorm epsilon from header: {}", eps);
+        }
+
+        // Read tokenizer special token IDs
+        if let Some(bos) = Self::get_u32_any(
+            reader,
+            &[
+                "bitnet-b1.58.tokenizer.bos_token_id",
+                "llama.tokenizer.bos_token_id",
+                "tokenizer.ggml.bos_token_id",
+                "general.bos_token_id",
+            ],
+        ) {
+            config.model.tokenizer.bos_id = Some(bos as i32);
+            tracing::info!("BOS token ID from header: {}", bos);
+        }
+
+        if let Some(eos) = Self::get_u32_any(
+            reader,
+            &[
+                "bitnet-b1.58.tokenizer.eos_token_id",
+                "llama.tokenizer.eos_token_id",
+                "tokenizer.ggml.eos_token_id",
+                "general.eos_token_id",
+            ],
+        ) {
+            config.model.tokenizer.eos_id = Some(eos as i32);
+            tracing::info!("EOS token ID from header: {}", eos);
+        }
+
+        if let Some(unk) = Self::get_u32_any(
+            reader,
+            &[
+                "bitnet-b1.58.tokenizer.unknown_token_id",
+                "llama.tokenizer.unknown_token_id",
+                "tokenizer.ggml.unknown_token_id",
+                "general.unknown_token_id",
+            ],
+        ) {
+            config.model.tokenizer.unk_id = Some(unk as i32);
+            tracing::info!("UNK token ID from header: {}", unk);
+        }
+
+        if let Some(pad) = Self::get_u32_any(
+            reader,
+            &[
+                "bitnet-b1.58.tokenizer.padding_token_id",
+                "llama.tokenizer.padding_token_id",
+                "tokenizer.ggml.padding_token_id",
+                "general.padding_token_id",
+            ],
+        ) {
+            config.model.tokenizer.pad_id = Some(pad as i32);
+            tracing::info!("PAD token ID from header: {}", pad);
+        }
+
+        // Read tokenizer behavior flags
+        if let Some(add_bos) = Self::get_bool_any(
+            reader,
+            &[
+                "bitnet-b1.58.tokenizer.add_bos",
+                "tokenizer.ggml.add_bos_token",
+                "tokenizer.ggml.add_bos",
+                "general.add_bos",
+            ],
+        ) {
+            config.inference.add_bos = add_bos;
+            tracing::info!("add_bos from header: {}", add_bos);
+        }
+
+        if let Some(append_eos) = Self::get_bool_any(
+            reader,
+            &[
+                "bitnet-b1.58.tokenizer.append_eos",
+                "tokenizer.ggml.add_eos_token",
+                "tokenizer.ggml.append_eos",
+                "general.append_eos",
+            ],
+        ) {
+            config.inference.append_eos = append_eos;
+            tracing::info!("append_eos from header: {}", append_eos);
+        }
+
+        if let Some(mask_pad) = Self::get_bool_any(
+            reader,
+            &["bitnet-b1.58.tokenizer.mask_pad", "tokenizer.ggml.mask_pad", "general.mask_pad"],
+        ) {
+            config.inference.mask_pad = mask_pad;
+            tracing::info!("mask_pad from header: {}", mask_pad);
         }
 
         // Log final model configuration
@@ -594,11 +1134,37 @@ impl GgufLoader {
         reader: &GgufReader,
         device: &Device,
         config: &LoadConfig,
+        fingerprint: &str,
     ) -> Result<GgufTensors> {
         let tensor_count = reader.tensor_count() as usize;
         let mut tensors = GgufTensors::new();
 
         info!("Loading {} tensors", tensor_count);
+
+        // Load correction policy if BITNET_CORRECTION_POLICY is set
+        let policy = if let Ok(policy_path) = std::env::var("BITNET_CORRECTION_POLICY") {
+            match crate::correction_policy::CorrectionPolicy::load_from_file(std::path::Path::new(
+                &policy_path,
+            )) {
+                Ok(p) => {
+                    p.validate()?;
+                    info!("Loaded correction policy from: {}", policy_path);
+                    Some(p)
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to load correction policy from {}: {}", policy_path, e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        // Find plan for this model (if policy exists and fingerprint matches)
+        let policy_plan =
+            if let Some(ref pol) = policy { pol.find_plan(fingerprint) } else { None };
+
+        let mut corrections = Vec::new();
 
         for i in 0..tensor_count {
             if let Some(callback) = &config.progress_callback {
@@ -614,21 +1180,60 @@ impl GgufLoader {
                 tensor_info.name, tensor_info.shape, tensor_info.tensor_type
             );
 
-            // Convert to Candle tensor
-            let candle_tensor = self.create_candle_tensor(tensor_info, tensor_data, device)?;
+            // Convert to Candle tensor (now with policy plan)
+            let (candle_tensor, correction_opt) = self.create_candle_tensor_with_policy(
+                tensor_info,
+                tensor_data,
+                device,
+                policy_plan.as_ref(),
+            )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
+
+            // Collect correction records
+            if let Some(corr) = correction_opt {
+                corrections.push(corr);
+            }
         }
 
-        info!("Successfully loaded {} tensors", tensors.len());
+        // Log correction summary and complete metadata
+        if !corrections.is_empty() {
+            info!("Applied {} corrections during model load", corrections.len());
+            for corr in &corrections {
+                info!(
+                    "  CORRECTION: layer='{}' type='{}' fingerprint='{}'",
+                    corr.layer, corr.correction_type, corr.policy_fingerprint
+                );
+            }
+
+            // Log complete metadata summary for receipts
+            info!(
+                "Model corrections applied: fingerprint={}, corrections_count={}",
+                fingerprint,
+                corrections.len()
+            );
+
+            // Log individual correction details in debug
+            if tracing::enabled!(tracing::Level::DEBUG) {
+                for corr in &corrections {
+                    if let Some(ref metadata) = corr.metadata {
+                        debug!("  Correction metadata: {}", metadata);
+                    }
+                }
+            }
+        }
+
+        info!("Successfully loaded {} tensors with fingerprint: {}", tensors.len(), fingerprint);
         Ok(tensors)
     }
 
-    fn create_candle_tensor(
+    /// Create a Candle tensor from GGUF tensor info, optionally applying policy-driven corrections
+    fn create_candle_tensor_with_policy(
         &self,
         info: &crate::formats::gguf::TensorInfo,
         data: &[u8],
         device: &Device,
-    ) -> Result<Tensor> {
+        policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
+    ) -> Result<(Tensor, Option<CorrectionRecord>)> {
         let dtype = match info.tensor_type {
             GgufTensorType::F32 => DType::F32,
             GgufTensorType::F16 => DType::F16,
@@ -660,7 +1265,7 @@ impl GgufLoader {
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
                 let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                return Ok(tensor);
+                return Ok((tensor, None));
             }
 
             // For IQ2_S without FFI support, fail with clear message
@@ -677,21 +1282,39 @@ impl GgufLoader {
 
             // Handle I2_S quantization with native Rust dequantization
             if matches!(info.tensor_type, GgufTensorType::I2_S) {
-                use crate::quant::i2s;
+                use crate::quant::i2s::{self, I2SDequantCfg};
+
+                // PATCH 2: LayerNorm weights should NEVER be quantized - skip I2_S path
+                if is_layernorm_weight(&info.name) {
+                    return Err(BitNetError::Validation(format!(
+                        "LayerNorm weight '{}' should not be quantized with I2_S. \
+                        This indicates a corrupted GGUF file. LayerNorm weights must be FP16/FP32.",
+                        info.name
+                    )));
+                }
+
+                // Select per-tensor I2_S config (policy → heuristic → default)
+                let (inv, k, correction_opt) =
+                    Self::select_i2s_config(&info.name, Some(data), policy_plan);
+                let cfg = I2SDequantCfg { inv, k };
+
+                // Log projection weight RMS after dequant for diagnosis
+                let is_proj = is_projection_weight(&info.name);
 
                 // Check for embedding transposition
                 if Self::is_embedding_tensor(&info.name)
                     && Self::embedding_is_transposed(&info.shape)
                 {
                     info!("Embedding appears transposed ({:?}) -> decoding transposed", info.shape);
-                    let f32_data = i2s::dequantize_to_f32_transposed(data, &info.shape)
-                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+                    let f32_data =
+                        i2s::dequantize_to_f32_transposed_with_cfg(data, &info.shape, cfg)
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?;
 
                     // Now dims become [vocab, hidden]
                     let (rows, cols) = (info.shape[1], info.shape[0]);
                     let tensor = Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                    return Ok(tensor);
+                    return Ok((tensor, correction_opt));
                 } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
                     // Projection tensors need transposition for linear layer compatibility
                     debug!(
@@ -700,11 +1323,31 @@ impl GgufLoader {
                         info.shape,
                         [info.shape[1], info.shape[0]]
                     );
-                    return Self::create_transposed_i2s_tensor(data, &info.shape, &candle_device);
+                    let tensor = Self::create_transposed_i2s_tensor_with_cfg(
+                        data,
+                        &info.shape,
+                        &candle_device,
+                        cfg,
+                    )?;
+
+                    // Log projection RMS for diagnosis
+                    if is_proj && let Ok(rms) = Self::rms_f32(&tensor) {
+                        info!(
+                            "PROJ load: '{}' dtype=I2_S->F32 shape={:?} rms={:.6} (inv={} k={})",
+                            info.name,
+                            tensor.dims(),
+                            rms,
+                            inv,
+                            k
+                        );
+                    }
+
+                    return Ok((tensor, correction_opt));
                 } else {
-                    // Normal I2_S dequantization
-                    let mut f32_data = i2s::dequantize_to_f32(data, &info.shape)
+                    // Normal I2_S dequantization with config
+                    let mut f32_data = i2s::dequantize_to_f32_with_cfg(data, &info.shape, cfg)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
                     // Transpose once to [out,in] if this is a projection weight
                     let (mut rows, mut cols) = (info.shape[0], info.shape[1]);
                     let mut want_shape = info.shape.clone();
@@ -730,7 +1373,20 @@ impl GgufLoader {
                     let tensor =
                         Tensor::from_slice(&f32_data, want_shape.as_slice(), &candle_device)
                             .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                    return Ok(tensor);
+
+                    // Log projection RMS for diagnosis
+                    if is_proj && let Ok(rms) = Self::rms_f32(&tensor) {
+                        info!(
+                            "PROJ load: '{}' dtype=I2_S->F32 shape={:?} rms={:.6} (inv={} k={})",
+                            info.name,
+                            tensor.dims(),
+                            rms,
+                            inv,
+                            k
+                        );
+                    }
+
+                    return Ok((tensor, correction_opt));
                 }
             }
 
@@ -738,13 +1394,37 @@ impl GgufLoader {
             // (would need specific dequantizers for Q4_0, Q8_0, etc.)
             let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
                 .map_err(|e| BitNetError::Validation(e.to_string()))?;
-            Ok(tensor)
+            Ok((tensor, None))
         } else {
             // For regular tensors, interpret the bytes according to the data type
             match dtype {
                 DType::F32 => {
+                    // PATCH 2: Log layer-0 attention_norm.weight stats for verification
+                    if info.name == "layers.0.attention_norm.weight"
+                        || info.name == "blk.0.attn_norm.weight"
+                    {
+                        let float_data = bytemuck::cast_slice::<u8, f32>(data);
+                        if !float_data.is_empty() {
+                            let sum: f64 = float_data.iter().map(|&x| x as f64).sum();
+                            let mean = sum / float_data.len() as f64;
+                            let variance: f64 = float_data
+                                .iter()
+                                .map(|&x| {
+                                    let diff = x as f64 - mean;
+                                    diff * diff
+                                })
+                                .sum::<f64>()
+                                / float_data.len() as f64;
+                            let std = variance.sqrt();
+                            info!(
+                                "LayerNorm layer-0 attention_norm.weight: mean={:.6}, std={:.6} (should be ~1.0, small std)",
+                                mean, std
+                            );
+                        }
+                    }
+
                     // Check for embedding transposition
-                    if Self::is_embedding_tensor(&info.name)
+                    let tensor = if Self::is_embedding_tensor(&info.name)
                         && Self::embedding_is_transposed(&info.shape)
                     {
                         info!(
@@ -755,7 +1435,7 @@ impl GgufLoader {
                         // Now dims become [vocab, hidden]
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
-                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?
                     } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
                         // Apply unified transpose logic for F32 projection weights
                         debug!(
@@ -765,16 +1445,40 @@ impl GgufLoader {
                         let f32_data = Self::transpose_f32_to_f32(data, &info.shape)?;
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
-                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?
                     } else {
                         let float_data = bytemuck::cast_slice::<u8, f32>(data);
                         Tensor::from_slice(float_data, info.shape.as_slice(), &candle_device)
-                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?
+                    };
+
+                    // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
+                    if is_layernorm_weight(&info.name) {
+                        Self::check_ln_gamma_stats(&info.name, &tensor)?;
+                        let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
+                            &info.name,
+                            tensor,
+                            policy_plan,
+                        )?;
+                        Ok((rescaled, correction))
+                    } else {
+                        // Log projection RMS for F32 projections
+                        if is_projection_weight(&info.name)
+                            && let Ok(rms) = Self::rms_f32(&tensor)
+                        {
+                            info!(
+                                "PROJ load: '{}' dtype=F32 shape={:?} rms={:.6}",
+                                info.name,
+                                tensor.dims(),
+                                rms
+                            );
+                        }
+                        Ok((tensor, None))
                     }
                 }
                 DType::F16 => {
                     // Check for embedding transposition
-                    if Self::is_embedding_tensor(&info.name)
+                    let tensor = if Self::is_embedding_tensor(&info.name)
                         && Self::embedding_is_transposed(&info.shape)
                     {
                         info!(
@@ -785,7 +1489,7 @@ impl GgufLoader {
                         // Now dims become [vocab, hidden]
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
-                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?
                     } else if Self::maybe_transpose_to_out_in(&info.shape, &info.name) {
                         // Apply unified transpose logic for F16 projection weights
                         debug!(
@@ -795,14 +1499,38 @@ impl GgufLoader {
                         let f32_data = Self::transpose_f16_to_f32(data, &info.shape)?;
                         let (rows, cols) = (info.shape[1], info.shape[0]);
                         Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
-                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?
                     } else {
                         // For now, convert F16 data to F32 for compatibility
                         let half_data = bytemuck::cast_slice::<u8, u16>(data);
                         let float_data: Vec<f32> =
                             half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect();
                         Tensor::from_slice(&float_data, info.shape.as_slice(), &candle_device)
-                            .map_err(|e| BitNetError::Validation(e.to_string()))
+                            .map_err(|e| BitNetError::Validation(e.to_string()))?
+                    };
+
+                    // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
+                    if is_layernorm_weight(&info.name) {
+                        Self::check_ln_gamma_stats(&info.name, &tensor)?;
+                        let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
+                            &info.name,
+                            tensor,
+                            policy_plan,
+                        )?;
+                        Ok((rescaled, correction))
+                    } else {
+                        // Log projection RMS for F16→F32 projections
+                        if is_projection_weight(&info.name)
+                            && let Ok(rms) = Self::rms_f32(&tensor)
+                        {
+                            info!(
+                                "PROJ load: '{}' dtype=F16->F32 shape={:?} rms={:.6}",
+                                info.name,
+                                tensor.dims(),
+                                rms
+                            );
+                        }
+                        Ok((tensor, None))
                     }
                 }
                 _ => Err(BitNetError::Model(ModelError::InvalidFormat {

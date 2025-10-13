@@ -399,6 +399,13 @@ impl FallbackError {
 mod tests {
     use super::*;
 
+    // Use shared EnvGuard from workspace test support
+    #[allow(dead_code)]
+    mod env_guard {
+        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/support/env_guard.rs"));
+    }
+    use env_guard::EnvGuard;
+
     /// AC5: Tests TokenizerFallbackChain initialization and configuration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system
     #[test]
@@ -471,10 +478,11 @@ mod tests {
     /// AC5: Tests strict mode behavior - no mock fallbacks
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system
     #[tokio::test]
+    #[serial_test::serial]
     #[cfg(feature = "cpu")]
     async fn test_strict_mode_behavior() {
-        // Set strict mode
-        unsafe { std::env::set_var("BITNET_STRICT_TOKENIZERS", "1") };
+        // Set strict mode with guard for automatic cleanup
+        let _guard = EnvGuard::set("BITNET_STRICT_TOKENIZERS", "1");
 
         let strategies = vec![
             FallbackStrategy::ColocatedFiles,
@@ -489,10 +497,6 @@ mod tests {
 
         // Should fail in strict mode without real tokenizer
         // assert!(result.is_err(), "Should fail in strict mode without real tokenizer");
-
-        unsafe {
-            std::env::remove_var("BITNET_STRICT_TOKENIZERS");
-        }
 
         // Strict mode test scaffolding - requires discovery implementation
         println!("✅ AC5: Strict mode test scaffolding completed");

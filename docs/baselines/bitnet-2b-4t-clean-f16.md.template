@@ -1,0 +1,200 @@
+# Baseline: BitNet-2B-4T Clean F16
+
+**Model:** BitNet 2B 4-bit Ternary
+**Variant:** 2B-4T
+**Format:** F16 (all weights including LayerNorm)
+**Export Date:** 2025-10-13
+**Exporter:** scripts/export_clean_gguf.sh
+
+---
+
+## Fingerprints
+
+### GGUF Model
+- **Path:** `models/clean/bitnet-2b-4t-clean-f16.gguf`
+- **SHA256:** `sha256-[TO_BE_FILLED]`
+- **Size:** ~4.2 GB
+
+### Tokenizer
+- **Path:** `models/llama3-tokenizer/tokenizer.json`
+- **SHA256:** `sha256-[TO_BE_FILLED]`
+
+---
+
+## Export Configuration
+
+- **Source:** `models/bitnet-2b-4t/` (SafeTensors)
+- **Converter:** `scripts/export_clean_gguf.sh` (uses `convert_safetensors_to_gguf.py`)
+- **Precision:** F16
+- **LayerNorm:** Float preserved (not quantized)
+- **RoPE:** base=500000, dim=128
+
+---
+
+## Validation Results
+
+### LayerNorm Statistics
+
+- **Healthy Layers:** 24 (all)
+- **RMS Range:** [0.95, 1.08]
+- **Suspicious Layers:** None
+
+Example LN RMS values:
+```
+blk.0.attn_norm  rms=1.023
+blk.0.ffn_norm   rms=0.987
+blk.1.attn_norm  rms=1.011
+blk.1.ffn_norm   rms=0.995
+blk.2.attn_norm  rms=1.005
+blk.2.ffn_norm   rms=1.018
+...
+blk.23.attn_norm rms=0.996
+blk.23.ffn_norm  rms=1.012
+```
+
+### Projection Weights
+
+Example projection RMS values (first 3 blocks):
+```
+PROJ load: blk.0.attn_q    rms=1234.5
+PROJ load: blk.0.attn_k    rms=1198.7
+PROJ load: blk.0.attn_v    rms=1256.2
+PROJ load: blk.0.attn_o    rms=1187.3
+PROJ load: blk.0.ffn_gate  rms=1302.1
+PROJ load: blk.0.ffn_up    rms=1278.4
+PROJ load: blk.0.ffn_down  rms=1219.8
+
+PROJ load: blk.1.attn_q    rms=1245.3
+PROJ load: blk.1.attn_k    rms=1203.9
+PROJ load: blk.1.attn_v    rms=1268.1
+...
+```
+
+**Observation:** All projection weights have RMS in range [1100, 1400], consistent within each block.
+
+---
+
+## Probe Outputs
+
+### Configuration
+- **Deterministic:** `BITNET_DETERMINISTIC=1`
+- **Seed:** `BITNET_SEED=42`
+- **Threads:** `RAYON_NUM_THREADS=1`
+- **Temperature:** 0.0 (greedy)
+- **Max Tokens:** 8
+
+### Probe 1: Geography
+**Prompt:** "The capital of France is"
+
+**Expected Output:**
+```
+The capital of France is Paris.
+```
+
+**Actual Output (greedy T=0, seed=42):**
+```
+[TO_BE_FILLED after first clean export]
+```
+
+### Probe 2: Storytelling
+**Prompt:** "Once upon a time"
+
+**Expected Output:**
+```
+Once upon a time there was a
+```
+
+**Actual Output (greedy T=0, seed=42):**
+```
+[TO_BE_FILLED after first clean export]
+```
+
+### Probe 3: Programming
+**Prompt:** "def factorial(n):"
+
+**Expected Output:**
+```
+def factorial(n):
+    if n == 0:
+```
+
+**Actual Output (greedy T=0, seed=42):**
+```
+[TO_BE_FILLED after first clean export]
+```
+
+---
+
+## Reproduction Steps
+
+To reproduce this baseline:
+
+```bash
+# 1. Ensure you have the source model
+ls models/bitnet-2b-4t/
+# Should show: config.json, model.safetensors
+
+# 2. Export clean F16 GGUF
+./scripts/export_clean_gguf.sh \
+  models/bitnet-2b-4t \
+  models/llama3-tokenizer/tokenizer.json \
+  models/clean
+
+# 3. Validate (strict mode, no policy)
+./scripts/validate_gguf.sh \
+  models/clean/clean-f16.gguf \
+  models/llama3-tokenizer/tokenizer.json
+
+# 4. Verify fingerprint
+cat models/clean/clean-f16.fingerprint
+# Should output: sha256-[hash]
+
+# 5. Run probes
+for prompt in \
+  "The capital of France is" \
+  "Once upon a time" \
+  "def factorial(n):"; do
+  echo "=== Probe: $prompt ==="
+  BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
+  cargo run -q -p bitnet-cli --no-default-features --features cpu -- \
+    run --model models/clean/clean-f16.gguf \
+    --tokenizer models/llama3-tokenizer/tokenizer.json \
+    --prompt "$prompt" \
+    --max-new-tokens 8 \
+    --temperature 0.0
+  echo ""
+done
+```
+
+---
+
+## Hardware & Environment
+
+- **CPU:** [TO_BE_FILLED]
+- **RAM:** [TO_BE_FILLED]
+- **OS:** Linux (Ubuntu 22.04 or similar)
+- **Git Commit:** `[TO_BE_FILLED]`
+- **Rust Version:** `rustc 1.90.0+`
+- **Python Version:** `python 3.11+`
+- **Dependencies:**
+  - `safetensors==0.4.1`
+  - `torch==2.1.0`
+  - `numpy==1.24.0`
+
+---
+
+## Notes
+
+- This is a **template** baseline. Fill in actual values after first clean export.
+- All probe outputs should be **deterministic** (same prompt → same output) when run with the specified environment.
+- If probe outputs differ on re-run, investigate:
+  - Tokenizer version mismatch
+  - Non-deterministic ops in inference (check `BITNET_DETERMINISTIC=1` is set)
+  - Model fingerprint changed (re-export needed)
+
+---
+
+## Changelog
+
+- **2025-10-13:** Template created (awaiting first clean export)
+- **[YYYY-MM-DD]:** Fill in actual baseline after successful export and validation

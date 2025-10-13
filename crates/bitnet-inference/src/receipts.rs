@@ -14,6 +14,7 @@
 //! - `performance_baseline`: Performance metrics
 
 use anyhow::{Result, anyhow};
+use bitnet_common::CorrectionRecord;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,6 +40,10 @@ pub struct ModelInfo {
     pub num_key_value_heads: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vocab_size: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effective_correction_digest: Option<String>,
 }
 
 /// Test execution results
@@ -174,6 +179,10 @@ pub struct InferenceReceipt {
     /// Cross-validation results (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cross_validation: Option<CrossValidation>,
+
+    /// Model corrections applied (LayerNorm rescaling, etc.)
+    /// Empty if no corrections applied
+    pub corrections: Vec<CorrectionRecord>,
 }
 
 impl InferenceReceipt {
@@ -213,6 +222,7 @@ impl InferenceReceipt {
             test_results: TestResults::default(),
             performance_baseline: PerformanceBaseline::default(),
             cross_validation: None,
+            corrections: Vec::new(),
         })
     }
 
@@ -360,6 +370,17 @@ impl InferenceReceipt {
         self.cross_validation = Some(cross_val);
         self
     }
+
+    /// Builder for corrections
+    pub fn with_corrections(mut self, corrections: Vec<CorrectionRecord>) -> Self {
+        self.corrections = corrections;
+        self
+    }
+
+    /// Add a single correction record
+    pub fn add_correction(&mut self, correction: CorrectionRecord) {
+        self.corrections.push(correction);
+    }
 }
 
 #[cfg(test)]
@@ -419,6 +440,84 @@ mod tests {
 
         receipt.test_results.failed = 1;
         assert!(receipt.validate().is_err());
+    }
+
+    #[test]
+    fn test_receipt_with_corrections() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+
+        // Add a correction record
+        let correction = CorrectionRecord {
+            layer: "model.layers.0.input_layernorm.weight".to_string(),
+            correction_type: "ln_gamma_rescale_rms".to_string(),
+            rms_before: Some(0.5),
+            rms_after: Some(1.0),
+            factor: Some(2.0),
+            policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+            metadata: None,
+        };
+        receipt.add_correction(correction.clone());
+
+        // Verify correction is present
+        assert_eq!(receipt.corrections.len(), 1);
+        assert_eq!(receipt.corrections[0].layer, "model.layers.0.input_layernorm.weight");
+        assert_eq!(receipt.corrections[0].correction_type, "ln_gamma_rescale_rms");
+        assert_eq!(receipt.corrections[0].rms_before, Some(0.5));
+        assert_eq!(receipt.corrections[0].rms_after, Some(1.0));
+        assert_eq!(receipt.corrections[0].factor, Some(2.0));
+        assert_eq!(receipt.corrections[0].policy_fingerprint, "BITNET_FIX_LN_SCALE=1");
+    }
+
+    #[test]
+    fn test_receipt_empty_corrections_by_default() {
+        let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        assert!(receipt.corrections.is_empty(), "Corrections should be empty by default");
+    }
+
+    #[test]
+    fn test_receipt_serialization_with_corrections() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+
+        let correction = CorrectionRecord {
+            layer: "test.layer".to_string(),
+            correction_type: "ln_gamma_rescale_rms".to_string(),
+            rms_before: Some(0.75),
+            rms_after: Some(1.0),
+            factor: Some(1.33),
+            policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+            metadata: None,
+        };
+        receipt.add_correction(correction);
+
+        // Serialize to JSON
+        let json = serde_json::to_string_pretty(&receipt).unwrap();
+
+        // Verify JSON contains corrections
+        assert!(json.contains("corrections"));
+        assert!(json.contains("test.layer"));
+        assert!(json.contains("ln_gamma_rescale_rms"));
+        assert!(json.contains("BITNET_FIX_LN_SCALE=1"));
+
+        // Deserialize and verify
+        let deserialized: InferenceReceipt = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.corrections.len(), 1);
+        assert_eq!(deserialized.corrections[0].layer, "test.layer");
+    }
+
+    #[test]
+    fn test_receipt_with_model_metadata() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+
+        // Add model SHA256 and correction digest
+        receipt.model_info.sha256 = Some("abc123def456".to_string());
+        receipt.model_info.effective_correction_digest = Some("digest789".to_string());
+
+        // Serialize and verify
+        let json = serde_json::to_string_pretty(&receipt).unwrap();
+        assert!(json.contains("sha256"));
+        assert!(json.contains("abc123def456"));
+        assert!(json.contains("effective_correction_digest"));
+        assert!(json.contains("digest789"));
     }
 
     /// Test that environment variable collection returns non-empty HashMap with valid content

@@ -2,8 +2,15 @@
 
 use super::*;
 use crate::loader::FormatLoader;
+use crate::names::is_layernorm_weight;
 use std::io::Write;
 use tempfile::NamedTempFile;
+
+// Use shared EnvGuard from workspace test support
+mod env_guard {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/support/env_guard.rs"));
+}
+use env_guard::EnvGuard;
 
 /// Helper to build valid GGUF bytes for testing
 fn build_gguf_bytes(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {
@@ -939,4 +946,71 @@ fn test_gguf_memory_exhaustion_protection() {
         assert!(keys.len() <= 100, "Should not iterate beyond reasonable bounds");
     }
     // Expected failure is acceptable
+}
+
+#[test]
+fn test_ln_name_matching() {
+    let positives = [
+        "layers.0.attention_norm.weight",
+        "layers.0.ffn_norm.weight",
+        "final_norm.weight",
+        "layers.0.input_layernorm.weight",
+        "layers.0.post_attention_layernorm.weight",
+        "model.layers.0.attention_norm.weight",
+        "blk.0.attn_norm.weight",
+    ];
+    for n in positives {
+        assert!(is_layernorm_weight(n), "should match {}", n);
+    }
+    assert!(!is_layernorm_weight("layers.0.attention_norm.bias"));
+    assert!(!is_layernorm_weight("layers.0.q_proj.weight"));
+}
+
+#[test]
+#[serial_test::serial]
+fn test_ln_gamma_validator_envelope() {
+    use super::loader::GgufLoader;
+    use candle_core::Tensor;
+
+    // Helper to create test tensors with specific RMS
+    fn tensor_with_rms(rms_target: f32, size: usize) -> Tensor {
+        let data: Vec<f32> = (0..size).map(|i| (i as f32 / size as f32) * rms_target).collect();
+        Tensor::from_vec(data, &[size], &candle_core::Device::Cpu).unwrap()
+    }
+
+    // Test 1: Valid RMS should pass in non-strict mode (no BITNET_STRICT_MODE set)
+    {
+        let valid_tensor = tensor_with_rms(1.0, 100);
+        let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &valid_tensor);
+        assert!(result.is_ok(), "Valid RMS should pass");
+    }
+
+    // Test 2: Invalid RMS should warn in non-strict mode but pass
+    {
+        let invalid_tensor = tensor_with_rms(0.01, 100);
+        let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &invalid_tensor);
+        assert!(result.is_ok(), "Invalid RMS should warn but pass in non-strict mode");
+    }
+
+    // Test 3: Invalid RMS should fail in strict mode
+    {
+        let _guard = EnvGuard::set("BITNET_STRICT_MODE", "1");
+        let invalid_tensor = tensor_with_rms(0.01, 100);
+        let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &invalid_tensor);
+        assert!(result.is_err(), "Invalid RMS should fail in strict mode");
+    }
+
+    // Test 4: Edge of envelope (0.5) should pass
+    {
+        let edge_low_tensor = tensor_with_rms(0.5, 100);
+        let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &edge_low_tensor);
+        assert!(result.is_ok(), "RMS at lower boundary should pass");
+    }
+
+    // Test 5: Edge of envelope (2.0) should pass
+    {
+        let edge_high_tensor = tensor_with_rms(2.0, 100);
+        let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &edge_high_tensor);
+        assert!(result.is_ok(), "RMS at upper boundary should pass");
+    }
 }

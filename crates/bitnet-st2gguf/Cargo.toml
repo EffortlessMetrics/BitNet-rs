@@ -1,0 +1,43 @@
+[package]
+name = "bitnet-st2gguf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "SafeTensors to GGUF converter for BitNet models with LayerNorm preservation"
+
+[[bin]]
+name = "st2gguf"
+path = "src/main.rs"
+
+[dependencies]
+# BitNet.rs internal crates
+bitnet-common = { path = "../bitnet-common" }
+bitnet-models = { path = "../bitnet-models" }
+
+# Core dependencies
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# CLI
+clap.workspace = true
+console.workspace = true
+indicatif.workspace = true
+
+# Tensor operations
+safetensors.workspace = true
+bytemuck.workspace = true
+half = "2.6.0"
+
+[dev-dependencies]
+bitnet-models = { path = "../bitnet-models" }
+tempfile.workspace = true
+memmap2.workspace = true

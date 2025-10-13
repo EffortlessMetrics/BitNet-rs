@@ -1,0 +1,270 @@
+name: Build & Validate Clean GGUF
+
+# This workflow exports and validates clean GGUF models with F16 LayerNorm weights.
+# It ensures models pass strict validation without any policy corrections.
+#
+# The workflow can be triggered manually with custom model paths or runs automatically
+# on changes to export/validation scripts.
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_dir:
+        description: "Path or HF repo id for the model (SafeTensors or HF format)"
+        required: true
+        default: "models/bitnet-2b-4t"
+      tokenizer_json:
+        description: "Path to tokenizer.json"
+        required: true
+        default: "models/llama3-tokenizer/tokenizer.json"
+      out_dir:
+        description: "Output directory for GGUF"
+        required: true
+        default: "models/clean"
+      validate_only:
+        description: "Skip export, only validate existing GGUF"
+        required: false
+        type: boolean
+        default: false
+
+  push:
+    paths:
+      - 'scripts/export_clean_gguf.sh'
+      - 'scripts/validate_gguf.sh'
+      - 'scripts/convert_safetensors_to_gguf.py'
+      - '.github/workflows/gguf_build_and_validate.yml'
+    branches:
+      - main
+
+  pull_request:
+    paths:
+      - 'scripts/export_clean_gguf.sh'
+      - 'scripts/validate_gguf.sh'
+      - 'scripts/convert_safetensors_to_gguf.py'
+      - '.github/workflows/gguf_build_and_validate.yml'
+
+env:
+  # Ensure no policy corrections are used (strict validation)
+  BITNET_STRICT_MODE: "1"
+  # Deterministic inference for reproducibility
+  BITNET_DETERMINISTIC: "1"
+  BITNET_SEED: "42"
+  RAYON_NUM_THREADS: "1"
+
+jobs:
+  build-validate:
+    name: Export & Validate Clean GGUF
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install safetensors torch numpy
+          # Add jq for JSON processing in scripts
+          sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache key includes workflow to avoid conflicts
+          shared-key: "gguf-validation"
+
+      - name: Build bitnet-cli (CPU features only)
+        run: |
+          cargo build -p bitnet-cli --no-default-features --features cpu --release
+
+      - name: Download model (if needed)
+        if: ${{ github.event.inputs.validate_only != 'true' }}
+        run: |
+          # If model_dir doesn't exist locally, try to download from HF
+          if [[ ! -d "${{ github.event.inputs.model_dir || 'models/bitnet-2b-4t' }}" ]]; then
+            echo "Model directory not found locally - would download from HF"
+            echo "For now, skipping automatic download (requires HF credentials)"
+            echo "Please ensure model is available in repository or provide custom path"
+            exit 1
+          fi
+
+      - name: Export clean GGUF (F16)
+        if: ${{ github.event.inputs.validate_only != 'true' }}
+        run: |
+          chmod +x scripts/export_clean_gguf.sh
+          ./scripts/export_clean_gguf.sh \
+            "${{ github.event.inputs.model_dir || 'models/bitnet-2b-4t' }}" \
+            "${{ github.event.inputs.tokenizer_json || 'models/llama3-tokenizer/tokenizer.json' }}" \
+            "${{ github.event.inputs.out_dir || 'models/clean' }}"
+
+      - name: Validate GGUF (strict mode, no policy)
+        run: |
+          chmod +x scripts/validate_gguf.sh
+
+          # Determine GGUF path based on whether we exported or validating existing
+          if [[ "${{ github.event.inputs.validate_only }}" == "true" ]]; then
+            GGUF_PATH="${{ github.event.inputs.model_dir || 'models/bitnet-2b-4t' }}"
+            # Assume the GGUF is the model_dir itself if validate_only
+            if [[ -f "$GGUF_PATH" ]]; then
+              GGUF_FILE="$GGUF_PATH"
+            else
+              GGUF_FILE=$(find "$GGUF_PATH" -name "*.gguf" | head -1)
+            fi
+          else
+            GGUF_FILE="${{ github.event.inputs.out_dir || 'models/clean' }}/clean-f16.gguf"
+          fi
+
+          echo "Validating: $GGUF_FILE"
+
+          ./scripts/validate_gguf.sh \
+            "$GGUF_FILE" \
+            "${{ github.event.inputs.tokenizer_json || 'models/llama3-tokenizer/tokenizer.json' }}"
+
+      - name: Check for policy violations
+        run: |
+          # Ensure NO policy environment variables were set during validation
+          if [[ -n "${BITNET_CORRECTION_POLICY:-}" ]] || \
+             [[ -n "${BITNET_ALLOW_RUNTIME_CORRECTIONS:-}" ]] || \
+             [[ -n "${BITNET_FIX_LN_SCALE:-}" ]]; then
+            echo "❌ ERROR: Policy environment variables detected!"
+            echo "Clean GGUF validation must run WITHOUT policy corrections."
+            echo "Detected:"
+            echo "  BITNET_CORRECTION_POLICY=${BITNET_CORRECTION_POLICY:-}"
+            echo "  BITNET_ALLOW_RUNTIME_CORRECTIONS=${BITNET_ALLOW_RUNTIME_CORRECTIONS:-}"
+            echo "  BITNET_FIX_LN_SCALE=${BITNET_FIX_LN_SCALE:-}"
+            exit 1
+          fi
+          echo "✅ No policy corrections were used (as expected)"
+
+      - name: Generate validation report
+        if: always()
+        run: |
+          OUT_DIR="${{ github.event.inputs.out_dir || 'models/clean' }}"
+          REPORT="$OUT_DIR/validation-report.md"
+
+          cat > "$REPORT" <<EOF
+          # Clean GGUF Validation Report
+
+          **Workflow Run:** ${{ github.run_id }}
+          **Trigger:** ${{ github.event_name }}
+          **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## Configuration
+
+          - **Model Directory:** \`${{ github.event.inputs.model_dir || 'models/bitnet-2b-4t' }}\`
+          - **Tokenizer:** \`${{ github.event.inputs.tokenizer_json || 'models/llama3-tokenizer/tokenizer.json' }}\`
+          - **Output Directory:** \`${{ github.event.inputs.out_dir || 'models/clean' }}\`
+          - **Validation Mode:** \`${{ github.event.inputs.validate_only == 'true' && 'Validate Only' || 'Export + Validate' }}\`
+
+          ## Environment
+
+          - **Strict Mode:** \`BITNET_STRICT_MODE=1\`
+          - **Deterministic:** \`BITNET_DETERMINISTIC=1\` (seed=42)
+          - **Policy Corrections:** Disabled (as required for clean models)
+
+          ## Artifacts
+
+          EOF
+
+          if [[ -f "$OUT_DIR/clean-f16.gguf" ]]; then
+            echo "- ✅ GGUF Model: \`$OUT_DIR/clean-f16.gguf\`" >> "$REPORT"
+          fi
+
+          if [[ -f "$OUT_DIR/clean-f16.fingerprint" ]]; then
+            FP=$(cat "$OUT_DIR/clean-f16.fingerprint")
+            echo "- ✅ Fingerprint: \`$FP\`" >> "$REPORT"
+          fi
+
+          if [[ -f "$OUT_DIR/clean-f16.meta.json" ]]; then
+            echo "- ✅ Metadata: \`$OUT_DIR/clean-f16.meta.json\`" >> "$REPORT"
+          fi
+
+          echo "" >> "$REPORT"
+          echo "## Validation Status" >> "$REPORT"
+          echo "" >> "$REPORT"
+          echo "See workflow logs for detailed validation output." >> "$REPORT"
+
+          cat "$REPORT"
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clean-gguf-artifacts
+          path: |
+            ${{ github.event.inputs.out_dir || 'models/clean' }}/*.gguf
+            ${{ github.event.inputs.out_dir || 'models/clean' }}/*.fingerprint
+            ${{ github.event.inputs.out_dir || 'models/clean' }}/*.meta.json
+            ${{ github.event.inputs.out_dir || 'models/clean' }}/validation-report.md
+          retention-days: 30
+
+      - name: Archive logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-logs
+          path: |
+            target/release/bitnet-cli
+          retention-days: 7
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## GGUF Build & Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ **Status:** PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The clean GGUF model passed all validation checks:" >> $GITHUB_STEP_SUMMARY
+            echo "- LayerNorm weights are healthy (RMS ≈ 1.0)" >> $GITHUB_STEP_SUMMARY
+            echo "- Projection weights loaded successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- Greedy inference produces linguistic output" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status:** FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Validation checks did not pass. Please review the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- GGUF model, fingerprint, and metadata are available as workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Download artifacts to use the validated model locally" >> $GITHUB_STEP_SUMMARY
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: build-validate
+    if: always()
+
+    steps:
+      - name: Check validation result
+        run: |
+          if [[ "${{ needs.build-validate.result }}" != "success" ]]; then
+            echo "❌ GGUF validation failed"
+            echo ""
+            echo "The clean GGUF model did not pass validation checks."
+            echo "This likely indicates:"
+            echo "  - LayerNorm weights are quantized (should be F16/F32)"
+            echo "  - Export script needs adjustment"
+            echo "  - Tokenizer mismatch"
+            echo ""
+            echo "Review the build-validate job logs for details."
+            exit 1
+          fi
+
+          echo "✅ GGUF validation passed - model is clean and production-ready"
