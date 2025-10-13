@@ -63,11 +63,11 @@ function Invoke-FastFeedback {
         [string]$TestMode,
         [string]$Description
     )
-    
+
     Write-Host ""
     Write-Status "Running fast feedback in $TestMode mode: $Description"
     Write-Host "----------------------------------------"
-    
+
     # Build the demo binary if it doesn't exist
     if (-not (Test-Path "target/debug/fast_feedback_demo.exe")) {
         Write-Status "Building fast feedback demo binary..."
@@ -77,7 +77,7 @@ function Invoke-FastFeedback {
             return
         }
     }
-    
+
     # Run the demo
     try {
         cargo run --bin fast_feedback_demo -- $TestMode

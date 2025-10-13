@@ -10,20 +10,20 @@
   "validation_results": {
     "quality_gates": {
       "formatting": "PASS",
-      "clippy": "PASS", 
+      "clippy": "PASS",
       "security_audit": "PASS_WITH_WARNINGS",
       "build_matrix": "PASS"
     },
     "test_results": {
       "cli_tests": "8/8 PASS",
       "inference_tests": "36/36 PASS",
-      "quantization_tests": "15/15 PASS", 
+      "quantization_tests": "15/15 PASS",
       "kernel_tests": "21/21 PASS",
       "total_tests": "107/107 PASS"
     },
     "new_test_coverage": [
       "test_top_k_filter_with_nan",
-      "test_top_p_filter_with_nan", 
+      "test_top_p_filter_with_nan",
       "test_sample_with_nan_logits"
     ],
     "performance_impact": "minimal_overhead",

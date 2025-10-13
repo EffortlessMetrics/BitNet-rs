@@ -51,7 +51,7 @@ Summary [0.410s] 89 tests run: 89 passed, 3 skipped
 
 **Rationale:**
 - Single commit by single author
-- Focused feature implementation 
+- Focused feature implementation
 - Clean commit message
 - No complex merge history
 - Preserves commit linearity

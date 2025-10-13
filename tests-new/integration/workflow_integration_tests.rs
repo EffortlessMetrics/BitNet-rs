@@ -6,7 +6,7 @@
 //!
 //! These tests implement task 17 from the testing framework implementation spec:
 //! - Create end-to-end inference workflow tests
-//! - Add model loading and initialization integration tests  
+//! - Add model loading and initialization integration tests
 //! - Implement tokenization to inference pipeline tests
 
 #![cfg(feature = "integration-tests")]

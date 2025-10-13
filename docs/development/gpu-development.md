@@ -24,7 +24,7 @@ println!("{}", gpu_info.summary());
 
 // Available backends:
 println!("CUDA: {}", gpu_info.cuda);
-println!("Metal: {}", gpu_info.metal); 
+println!("Metal: {}", gpu_info.metal);
 println!("ROCm: {}", gpu_info.rocm);
 println!("WebGPU: {}", gpu_info.wgpu);
 
@@ -80,7 +80,7 @@ The GPU detection system includes comprehensive mock testing capabilities:
 ```bash
 # Test scenarios without actual GPU hardware
 export BITNET_GPU_FAKE="cuda"        # Mock CUDA-only
-export BITNET_GPU_FAKE="metal"       # Mock Metal-only  
+export BITNET_GPU_FAKE="metal"       # Mock Metal-only
 export BITNET_GPU_FAKE="cuda,rocm"   # Mock multiple backends
 export BITNET_GPU_FAKE=""            # Mock no GPU available
 
@@ -287,15 +287,15 @@ let result = quantizer.quantize(&input, QuantizationType::I2S)?;
 
 // Get comprehensive device statistics including memory usage
 if let Some(stats) = quantizer.get_stats() {
-    println!("Memory Usage: {:.1} MB / {:.1} MB ({:.1}%)", 
+    println!("Memory Usage: {:.1} MB / {:.1} MB ({:.1}%)",
         stats.memory_used_bytes as f64 / (1024.0 * 1024.0),
         stats.memory_total_bytes as f64 / (1024.0 * 1024.0),
         (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0
     );
-    
+
     println!("Operations: {} GPU, {} CPU, {} fallbacks",
         stats.gpu_operations, stats.cpu_operations, stats.fallback_count);
-    
+
     // Check memory efficiency
     if let Some(efficiency) = stats.memory_efficiency() {
         println!("Memory Efficiency: {:.2}%", efficiency * 100.0);
@@ -405,8 +405,8 @@ use bitnet_kernels::gpu::cuda::{list_cuda_devices, CudaKernel};
 // Query all available CUDA devices
 let devices = list_cuda_devices()?;
 for device in devices {
-    println!("Device {}: {} (CC {}.{})", 
-        device.device_id, device.name, 
+    println!("Device {}: {} (CC {}.{})",
+        device.device_id, device.name,
         device.compute_capability.0, device.compute_capability.1);
     println!("  Memory: {:.1} GB", device.total_memory as f64 / 1e9);
     println!("  FP16: {}, BF16: {}", device.supports_fp16, device.supports_bf16);
@@ -778,9 +778,9 @@ for _ in 0..10 {
 
 // Analyze performance
 let metrics = kernel.metrics();
-println!("Average FP16 time: {:.2}ms", 
+println!("Average FP16 time: {:.2}ms",
     metrics.fp16_execution_time.as_secs_f64() * 1000.0 / metrics.total_operations as f64);
-println!("Memory efficiency: {:.1}%", 
+println!("Memory efficiency: {:.1}%",
     (kernel.current_memory_usage() as f64 / kernel.peak_memory_usage() as f64) * 100.0);
 ```
 
@@ -795,7 +795,7 @@ println!("Peak GPU memory: {} MB", kernel.peak_memory_usage() / (1024 * 1024));
 let metrics = kernel.metrics();
 println!("Host to device transfers: {}", metrics.memory_transfers_h2d);
 println!("Device to host transfers: {}", metrics.memory_transfers_d2h);
-println!("Total bytes transferred: {} MB", 
+println!("Total bytes transferred: {} MB",
     (metrics.bytes_transferred_h2d + metrics.bytes_transferred_d2h) / (1024 * 1024));
 ```
 
@@ -853,7 +853,7 @@ let kernel = CudaKernel::new_with_device(0)?;
 
 // Access CUDA context for advanced memory operations
 let context = kernel.context();
-println!("CUDA context access enabled for device {}", 
+println!("CUDA context access enabled for device {}",
     kernel.device_info().device_id);
 
 // Access CUDA module for loading custom kernels
@@ -900,7 +900,7 @@ PR #199 is the first in a planned GPU infrastructure enhancement sequence:
 
 #### **Phase 1: Foundation (PR #199) ✅**
 - Expose CUDA context and module through public accessors
-- Remove dead_code allowances from GPU infrastructure fields  
+- Remove dead_code allowances from GPU infrastructure fields
 - Integrate optimal launch parameters in matrix multiplication operations
 - Enable foundation for custom kernel loading and advanced GPU operations
 
@@ -923,7 +923,7 @@ PR #199 is the first in a planned GPU infrastructure enhancement sequence:
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_kernel_creation
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_optimal_launch_params
 
-# Phase 2 (PR #202): Advanced management testing  
+# Phase 2 (PR #202): Advanced management testing
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_custom_kernel_loading
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_advanced_memory_pools
 
@@ -977,7 +977,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 # Test matrix for different hardware scenarios
 SCENARIOS=(
   "no-gpu:cpu-only"
-  "gpu-low-mem:4gb-gpu" 
+  "gpu-low-mem:4gb-gpu"
   "gpu-mid-mem:8gb-16gb-gpu"
   "gpu-high-mem:16gb-plus-gpu"
   "multi-gpu:multiple-devices"
@@ -986,7 +986,7 @@ SCENARIOS=(
 # Compute capability matrix
 CC_TARGETS=(
   "6.0:maxwell-pascal"
-  "7.0:volta" 
+  "7.0:volta"
   "8.0:ampere"
   "9.0:hopper"
 )
@@ -1026,13 +1026,13 @@ Based on lessons learned from PR #102, follow these guidelines for GPU/CUDA deve
    ```bash
    # Step 1: Implement core CUDA functionality (small PR)
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu --test gpu_smoke
-   
-   # Step 2: Add device querying (focused PR) 
+
+   # Step 2: Add device querying (focused PR)
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_device_info_query
-   
+
    # Step 3: Enhance quantization with device awareness (focused PR)
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
-   
+
    # Step 4: Integration testing (final PR)
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu --test gpu_quantization --ignored
    ```
@@ -1086,7 +1086,7 @@ if let Some(stats) = quantizer.get_stats() {
     println!("Device stats: {}", stats.summary());
     println!("Memory used: {:.2} MB", stats.memory_used_bytes as f64 / (1024.0 * 1024.0));
     println!("Memory total: {:.2} MB", stats.memory_total_bytes as f64 / (1024.0 * 1024.0));
-    println!("Memory usage: {:.1}%", 
+    println!("Memory usage: {:.1}%",
         (stats.memory_used_bytes as f64 / stats.memory_total_bytes as f64) * 100.0);
 }
 ```
@@ -1108,7 +1108,7 @@ let quantizer = DeviceAwareQuantizer::new(Device::Cpu)?;
 println!("Active kernel: {}", quantizer.active_provider());
 
 // Expected outputs:
-// - x86_64 with AVX2: "AVX2Kernel"  
+// - x86_64 with AVX2: "AVX2Kernel"
 // - aarch64 with NEON: "NeonKernel"
 // - Fallback systems: "FallbackKernel"
 ```
@@ -1253,10 +1253,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test mixed precision kernel initialization
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
-   
+
    # Check device capabilities
    cargo run --example gpu_validation --no-default-features --features gpu | grep -E "FP16|BF16"
-   
+
    # Test with specific device
    CUDA_VISIBLE_DEVICES=0 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
    ```
@@ -1266,10 +1266,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    # Check compute capability requirements
    # FP16 requires CC 6.1+, BF16 requires CC 8.0+
    nvidia-smi --query-gpu=compute_cap --format=csv,noheader
-   
+
    # Test precision detection logic
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
-   
+
    # Verify PTX kernel compilation
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_ptx_compilation
    ```
@@ -1278,10 +1278,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test FP16 vs FP32 accuracy
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_fp16_accuracy --ignored
-   
+
    # Test BF16 vs FP32 accuracy
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_bf16_accuracy --ignored
-   
+
    # Check numerical precision simulation
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_conversion_utilities
    ```
@@ -1290,10 +1290,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Benchmark precision modes
    cargo bench --no-default-features -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
-   
+
    # Check Tensor Core utilization (CC 7.0+)
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_tensor_core_acceleration --ignored
-   
+
    # Monitor GPU memory efficiency
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_metrics_tracking
    ```
@@ -1302,10 +1302,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test GPU memory tracking
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_memory_management --ignored
-   
+
    # Check for memory leaks
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_memory_cleanup --ignored
-   
+
    # Monitor memory transfer efficiency
    nvidia-smi dmon -s puc -d 1  # Monitor during mixed precision operations
    ```
@@ -1314,10 +1314,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Check CUDA toolkit compatibility
    nvcc --version
-   
+
    # Test PTX compilation manually
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_loading
-   
+
    # Enable CUDA compilation debugging
    RUST_LOG=debug cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
    ```
@@ -1336,10 +1336,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test GPU detection manually
    cargo test --no-default-features --features cpu -p bitnet-kernels --no-default-features test_gpu_info_summary
-   
+
    # Check system tools availability
    which nvidia-smi rocm-smi
-   
+
    # Test with mock environment
    BITNET_GPU_FAKE="cuda" cargo run -p xtask -- download-model --dry-run
    ```
@@ -1348,7 +1348,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Verify system detection (using existing GPU validation example)
    cargo run --example gpu_validation --no-default-features --features gpu
-   
+
    # Override detection for testing
    export BITNET_GPU_FAKE="cuda,metal"
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_gpu_info_mocked_scenarios
@@ -1359,11 +1359,11 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    # Check CUDA toolkit installation
    nvcc --version
    which nvcc
-   
-   # Check ROCm installation  
+
+   # Check ROCm installation
    rocm-smi --version
    which rocm-smi
-   
+
    # Test GPU detection functionality
    cargo test --no-default-features --features cpu -p bitnet-kernels --no-default-features test_gpu_info_summary
    ```
@@ -1372,10 +1372,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Install missing NVIDIA tools
    sudo apt-get install nvidia-utils-* nvidia-cuda-toolkit
-   
+
    # Install missing AMD tools
    sudo apt-get install rocm-smi-lib rocm-dev
-   
+
    # Verify installation
    nvidia-smi --query-gpu=gpu_name --format=csv,noheader
    rocm-smi --showid
@@ -1387,10 +1387,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Check NVIDIA driver version
    nvidia-smi
-   
+
    # Check CUDA runtime version
    nvcc --version
-   
+
    # Verify cudarc compatibility
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_kernel_creation
    ```
@@ -1399,16 +1399,16 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Monitor GPU memory usage
    nvidia-smi -l 1  # Update every second
-   
+
    # Test memory allocation patterns
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_memory_management --ignored
-   
+
    # Check for memory leaks
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_memory_cleanup --ignored
-   
+
    # Test host memory tracking and comprehensive device statistics
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
-   
+
    # Test performance tracking with memory integration
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
    ```
@@ -1417,7 +1417,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Query device compute capability
    cargo run --example gpu_validation --no-default-features --features gpu | grep "compute capability"
-   
+
    # Test operations on different compute capabilities
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_device_capability_validation
    ```
@@ -1428,10 +1428,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test comprehensive GPU performance monitoring
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
-   
+
    # Validate performance metrics collection
    cargo test --no-default-features -p bitnet-inference --no-default-features --features integration-tests test_engine_performance_tracking_integration
-   
+
    # Test memory usage tracking with device-aware execution
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_memory_tracking
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_performance_tracking
@@ -1441,10 +1441,10 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Run comprehensive performance comparison
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy --ignored
-   
+
    # Profile GPU kernel execution
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_numerical_accuracy --ignored
-   
+
    # GPU memory leak detection and performance benchmarking
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_memory_management
    ```
@@ -1453,7 +1453,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test platform-specific CPU kernel selection with performance monitoring
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_cpu_provider_creation
-   
+
    # Test architecture-specific feature detection
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_x86_64_feature_detection  # x86_64 only
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_aarch64_feature_detection  # aarch64 only
@@ -1465,7 +1465,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test memory access patterns
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_memory_access_patterns --ignored
-   
+
    # Validate optimized memory layouts
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_memory_optimization --ignored
    ```
@@ -1476,7 +1476,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test CPU fallback when GPU unavailable
    CUDA_VISIBLE_DEVICES="" cargo test --no-default-features --workspace --no-default-features --features gpu
-   
+
    # Test partial GPU failure handling
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_quantization_fallback --ignored
    ```
@@ -1485,7 +1485,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Test device selection
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_multi_gpu_selection --ignored
-   
+
    # Test concurrent operations
    cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_concurrent_gpu_operations --ignored
    ```
@@ -1517,7 +1517,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Enable CUDA-specific logging
    RUST_LOG=bitnet_kernels::gpu=debug cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu
-   
+
    # Enable cudarc internal logging
    CUDA_LOG_LEVEL=debug cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu
    ```
@@ -1526,7 +1526,7 @@ BitNet.rs now provides comprehensive memory debugging capabilities with stack tr
    ```bash
    # Profile GPU operations
    nsys profile cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_performance --ignored
-   
+
    # Monitor GPU utilization
    nvidia-smi dmon -s puc -d 1
    ```
@@ -1597,7 +1597,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 # Test FP16 matrix multiplication accuracy
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_fp16_accuracy --ignored
 
-# Test BF16 matrix multiplication accuracy 
+# Test BF16 matrix multiplication accuracy
 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_bf16_accuracy --ignored
 
 # Mixed precision performance benchmarks

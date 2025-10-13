@@ -25,32 +25,32 @@ The `cpu_optimizations::parallel_attention` function in `crates/bitnet-inference
                 if head_idx >= num_heads {
                     return Ok(());
                 }
-                
+
                 let q_offset = head_idx * seq_len * head_dim;
                 let k_offset = head_idx * seq_len * head_dim;
                 let v_offset = head_idx * seq_len * head_dim;
-                
+
                 // Compute attention scores for this head
                 for i in 0..seq_len {
                     for j in 0..seq_len {
                         let mut score = 0.0f32;
                         for d in 0..head_dim {
-                            score += query[q_offset + i * head_dim + d] 
+                            score += query[q_offset + i * head_dim + d]
                                    * key[k_offset + j * head_dim + d];
                         }
-                        
+
                         // Apply softmax and compute weighted sum (simplified)
                         let weight = score.exp(); // Simplified softmax
                         for d in 0..head_dim {
-                            head_output[i * head_dim + d] += 
+                            head_output[i * head_dim + d] +=
                                 weight * value[v_offset + j * head_dim + d];
                         }
                     }
                 }
-                
+
                 Ok(())
             })?;
-        
+
         Ok(())
     }
 ```

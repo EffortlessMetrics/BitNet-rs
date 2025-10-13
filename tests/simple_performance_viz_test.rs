@@ -172,20 +172,20 @@ impl SimplePerformanceDashboard {
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
             background-color: #f8f9fa;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -194,24 +194,24 @@ impl SimplePerformanceDashboard {
             margin-bottom: 2rem;
             text-align: center;
         }
-        
+
         .header h1 {
             font-size: 2.5rem;
             margin-bottom: 0.5rem;
         }
-        
+
         .header .subtitle {
             font-size: 1.1rem;
             opacity: 0.9;
         }
-        
+
         .summary-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
-        
+
         .summary-card {
             background: white;
             padding: 1.5rem;
@@ -219,17 +219,17 @@ impl SimplePerformanceDashboard {
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             text-align: center;
         }
-        
+
         .summary-card h3 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
             font-weight: 700;
         }
-        
+
         .summary-card.improvement h3 { color: #27ae60; }
         .summary-card.regression h3 { color: #e74c3c; }
         .summary-card.neutral h3 { color: #95a5a6; }
-        
+
         .chart-section {
             background: white;
             padding: 2rem;
@@ -237,25 +237,25 @@ impl SimplePerformanceDashboard {
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
-        
+
         .chart-section h2 {
             margin-bottom: 1.5rem;
             color: #2c3e50;
         }
-        
+
         .chart-container {
             position: relative;
             height: 400px;
             margin: 1rem 0;
         }
-        
+
         .chart-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 2rem;
             margin: 2rem 0;
         }
-        
+
         .data-table {
             background: white;
             padding: 2rem;
@@ -263,30 +263,30 @@ impl SimplePerformanceDashboard {
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }
-        
+
         .performance-table {
             width: 100%;
             border-collapse: collapse;
             margin: 1rem 0;
         }
-        
+
         .performance-table th,
         .performance-table td {
             padding: 0.75rem;
             text-align: left;
             border-bottom: 1px solid #dee2e6;
         }
-        
+
         .performance-table th {
             background: #f8f9fa;
             font-weight: 600;
             color: #495057;
         }
-        
+
         .performance-table tr:hover {
             background: #f8f9fa;
         }
-        
+
         .regression-alert {
             background: #f8d7da;
             border: 1px solid #f5c6cb;
@@ -295,7 +295,7 @@ impl SimplePerformanceDashboard {
             border-radius: 8px;
             margin: 1rem 0;
         }
-        
+
         .improvement-highlight {
             background: #d4edda;
             border: 1px solid #c3e6cb;
@@ -473,12 +473,12 @@ impl SimplePerformanceDashboard {
     <script>
         // Performance data
         const performanceData = {};
-        
+
         // Initialize charts
         document.addEventListener('DOMContentLoaded', function() {{
             initializeCharts();
         }});
-        
+
         function initializeCharts() {{
             // Throughput comparison chart
             const throughputCtx = document.getElementById('throughputChart').getContext('2d');
@@ -510,7 +510,7 @@ impl SimplePerformanceDashboard {
                     }}
                 }}
             }});
-            
+
             // Memory usage chart
             const memoryCtx = document.getElementById('memoryChart').getContext('2d');
             new Chart(memoryCtx, {{
@@ -541,7 +541,7 @@ impl SimplePerformanceDashboard {
                     }}
                 }}
             }});
-            
+
             // Performance improvement chart
             const improvementCtx = document.getElementById('improvementChart').getContext('2d');
             new Chart(improvementCtx, {{
@@ -574,7 +574,7 @@ impl SimplePerformanceDashboard {
                     }}
                 }}
             }});
-            
+
             // Duration comparison chart
             const durationCtx = document.getElementById('durationChart').getContext('2d');
             new Chart(durationCtx, {{

@@ -69,7 +69,7 @@ PR #210 introduces enhanced tensor alignment validation in the GGUF minimal pars
 
 **Successful Builds:**
 - ✅ CPU features: Full workspace compilation successful
-- ✅ GPU features: Full workspace with CUDA support successful  
+- ✅ GPU features: Full workspace with CUDA support successful
 - ✅ CPU + IQ2S-FFI: GGML integration successful
 - ❌ CPU + FFI: Expected failure (missing libclang for C++ FFI)
 

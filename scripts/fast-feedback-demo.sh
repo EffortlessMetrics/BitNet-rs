@@ -57,17 +57,17 @@ echo "  RUST_LOG=info"
 run_fast_feedback() {
     local mode=$1
     local description=$2
-    
+
     echo ""
     print_status "Running fast feedback in $mode mode: $description"
     echo "----------------------------------------"
-    
+
     # Build the demo binary if it doesn't exist
     if [ ! -f "target/debug/fast_feedback_demo" ]; then
         print_status "Building fast feedback demo binary..."
         cargo build --bin fast_feedback_demo
     fi
-    
+
     # Run the demo
     if cargo run --bin fast_feedback_demo -- "$mode"; then
         print_success "Fast feedback completed successfully in $mode mode"

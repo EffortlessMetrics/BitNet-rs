@@ -863,28 +863,28 @@ Configuration for model loading and behavior.
 pub struct ModelConfig {
     /// Device to run the model on
     pub device: Device,
-    
+
     /// Data type for model weights
     pub dtype: DType,
-    
+
     /// Maximum sequence length
     pub max_seq_len: usize,
-    
+
     /// Vocabulary size
     pub vocab_size: usize,
-    
+
     /// Number of attention heads
     pub num_heads: usize,
-    
+
     /// Hidden dimension size
     pub hidden_size: usize,
-    
+
     /// Number of layers
     pub num_layers: usize,
-    
+
     /// Quantization configuration
     pub quantization: QuantizationConfig,
-    
+
     /// KV cache configuration
     pub kv_cache: KVCacheConfig,
 }
@@ -915,31 +915,31 @@ Configuration for text generation with enhanced robustness (NaN-safe sampling in
 pub struct GenerationConfig {
     /// Maximum number of new tokens to generate
     pub max_new_tokens: u32,
-    
+
     /// Sampling temperature (0.0 = deterministic)
     /// Note: NaN values automatically sanitized to prevent crashes
     pub temperature: f32,
-    
+
     /// Top-p (nucleus) sampling threshold
     /// Note: Enhanced NaN-safe filtering with graceful degradation
     pub top_p: f32,
-    
-    /// Top-k sampling limit  
+
+    /// Top-k sampling limit
     /// Note: Robust sorting with NaN-safe comparisons
     pub top_k: u32,
-    
+
     /// Repetition penalty
     pub repetition_penalty: f32,
-    
+
     /// Stop sequences
     pub stop_sequences: Vec<String>,
-    
+
     /// Random seed for reproducible generation
     pub seed: Option<u64>,
-    
+
     /// Whether to skip special tokens in output
     pub skip_special_tokens: bool,
-    
+
     /// Whether to stream output
     pub stream: bool,
 }
@@ -975,36 +975,36 @@ pub struct CudaKernel {
 impl CudaKernel {
     /// Create a new CUDA kernel provider
     pub fn new() -> Result<Self>;
-    
+
     /// Create a new CUDA kernel provider with specific device
     pub fn new_with_device(device_id: usize) -> Result<Self>;
-    
+
     /// Get device information and capabilities
     pub fn device_info(&self) -> &CudaDeviceInfo;
-    
+
     /// Get access to the CUDA context for advanced operations (New in PR #199)
     /// Enables custom kernel loading and advanced GPU memory management
     pub fn context(&self) -> Arc<CudaContext>;
-    
+
     /// Get access to the CUDA module for loading additional kernels (New in PR #199)
     /// Allows loading of custom PTX kernels for specialized operations
     pub fn module(&self) -> Arc<CudaModule>;
-    
+
     /// Synchronize all CUDA streams
     pub fn synchronize_all(&self) -> Result<()>;
-    
+
     /// Get memory usage statistics
     pub fn memory_stats(&self) -> (usize, usize);
-    
+
     /// Get performance statistics
     pub fn performance_stats(&self) -> PerformanceStats;
-    
+
     /// Reset performance statistics for benchmarking
     pub fn reset_performance_stats(&self);
-    
+
     /// Batch matrix multiplication for multiple concurrent requests
     pub fn batch_matmul_i2s(&self, batches: &mut [BatchOperation<'_>]) -> Result<()>;
-    
+
     /// Calculate optimal launch parameters based on device capabilities (Enhanced in PR #199)
     /// Now used internally for device-aware optimization instead of hardcoded values
     fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize);
@@ -1031,7 +1031,7 @@ let custom_kernel = module.load_function("my_custom_kernel")?;
 
 // Use device-aware launch parameter optimization
 let device_info = kernel.device_info();
-println!("Using device: {} with {} SMs", 
+println!("Using device: {} with {} SMs",
     device_info.name, device_info.multiprocessor_count);
 ```
 
@@ -1064,13 +1064,13 @@ pub enum Device {
 impl Device {
     /// Get available devices
     pub fn available_devices() -> Vec<Device>;
-    
+
     /// Check if device is available
     pub fn is_available(&self) -> bool;
-    
+
     /// Get device memory info
     pub fn memory_info(&self) -> Result<DeviceMemoryInfo, BitNetError>;
-    
+
     /// Get device capabilities
     pub fn capabilities(&self) -> DeviceCapabilities;
 }
@@ -1130,13 +1130,13 @@ pub struct DeviceStats {
 impl DeviceStats {
     /// Get average quantization time per operation
     pub fn avg_quantization_time_ms(&self) -> f64;
-    
+
     /// Get average matrix multiplication time per operation
     pub fn avg_matmul_time_ms(&self) -> f64;
-    
+
     /// Check if GPU is effectively being used (>80% efficiency)
     pub fn is_gpu_effective(&self) -> bool;
-    
+
     /// Get human-readable summary with memory usage
     pub fn summary(&self) -> String;
 }
@@ -1154,16 +1154,16 @@ use bitnet_kernels::device_aware::DeviceAwareQuantizer;
 impl DeviceAwareQuantizer {
     /// Create a new device-aware quantizer for the specified device
     pub fn new(device: Device) -> Result<Self>;
-    
+
     /// Get the currently active provider name
     pub fn active_provider(&self) -> &'static str;
-    
+
     /// Check if GPU acceleration is currently active
     pub fn is_gpu_active(&self) -> bool;
-    
+
     /// Get device information
     pub fn device(&self) -> Device;
-    
+
     /// Perform quantization with automatic fallback
     pub fn quantize(
         &self,
@@ -1172,7 +1172,7 @@ impl DeviceAwareQuantizer {
         scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()>;
-    
+
     /// Matrix multiplication with device awareness
     pub fn matmul_i2s(
         &self,
@@ -1183,13 +1183,13 @@ impl DeviceAwareQuantizer {
         n: usize,
         k: usize,
     ) -> Result<()>;
-    
+
     /// Force fallback to CPU (for testing or reliability)
     pub fn force_cpu_fallback(&mut self);
-    
+
     /// Get comprehensive performance statistics with memory tracking
     pub fn get_stats(&self) -> Option<DeviceStats>;
-    
+
     /// Reset performance statistics (useful for benchmarking)
     pub fn reset_stats(&self);
 }
@@ -1205,10 +1205,10 @@ use bitnet_kernels::device_aware::DeviceAwareQuantizerFactory;
 impl DeviceAwareQuantizerFactory {
     /// Create the best quantizer for the given device preference
     pub fn create_best(preferred_device: Option<Device>) -> Result<DeviceAwareQuantizer>;
-    
+
     /// Create a quantizer with automatic GPU detection
     pub fn auto_detect() -> Result<DeviceAwareQuantizer>;
-    
+
     /// List available devices
     pub fn list_available_devices() -> Vec<Device>;
 }
@@ -1234,7 +1234,7 @@ quantizer.quantize(&input, &mut output, &mut scales, QuantizationType::I2S)?;
 if let Some(stats) = quantizer.get_stats() {
     println!("Device stats: {}", stats.summary());
     println!("GPU efficiency: {:.1}%", stats.gpu_efficiency * 100.0);
-    println!("Memory usage: {:.1} MB / {:.1} MB", 
+    println!("Memory usage: {:.1} MB / {:.1} MB",
         stats.memory_used_bytes as f64 / (1024.0 * 1024.0),
         stats.memory_total_bytes as f64 / (1024.0 * 1024.0));
 }
@@ -1251,13 +1251,13 @@ Configuration for model quantization.
 pub struct QuantizationConfig {
     /// Quantization type
     pub qtype: QuantizationType,
-    
+
     /// Block size for quantization
     pub block_size: usize,
-    
+
     /// Whether to use dynamic quantization
     pub dynamic: bool,
-    
+
     /// Calibration dataset size
     pub calibration_size: Option<usize>,
 }
@@ -1306,10 +1306,10 @@ Configuration parameters for 2D convolution operations.
 pub struct Conv2DParams {
     /// Stride along (height, width)
     pub stride: (usize, usize),
-    
+
     /// Padding along (height, width)
     pub padding: (usize, usize),
-    
+
     /// Dilation along (height, width)
     pub dilation: (usize, usize),
 }
@@ -1433,7 +1433,7 @@ impl InferenceEngine {
         tokenizer: Arc<dyn Tokenizer>,
         device: Device,
     ) -> Result<Self, BitNetError>;
-    
+
     /// Create with custom configuration
     pub fn with_config(
         model: Arc<dyn Model>,
@@ -1441,21 +1441,21 @@ impl InferenceEngine {
         device: Device,
         config: InferenceConfig,
     ) -> Result<Self, BitNetError>;
-    
+
     /// Run inference on token IDs
     pub async fn forward(
         &self,
         input_ids: &[u32],
         attention_mask: Option<&[bool]>,
     ) -> Result<Tensor, BitNetError>;
-    
+
     /// Generate next token probabilities
     pub async fn next_token_logits(
         &self,
         input_ids: &[u32],
         temperature: f32,
     ) -> Result<Vec<f32>, BitNetError>;
-    
+
     /// Sample next token from logits
     pub fn sample_token(
         &self,
@@ -1468,16 +1468,16 @@ impl InferenceEngine {
 pub struct InferenceConfig {
     /// Maximum batch size
     pub max_batch_size: usize,
-    
+
     /// KV cache size
     pub kv_cache_size: usize,
-    
+
     /// Maximum concurrent requests
     pub max_concurrent_requests: usize,
-    
+
     /// Request timeout
     pub request_timeout: Duration,
-    
+
     /// Whether to use mixed precision
     pub use_mixed_precision: bool,
 }
@@ -1506,19 +1506,19 @@ impl Sampler {
         repetition_penalty: f32,
         seed: Option<u64>,
     ) -> Self;
-    
+
     /// Sample next token from logits with NaN safety
     /// - Automatically sanitizes NaN logits to negative infinity
     /// - Prevents crashes from numerical edge cases
     /// - Maintains deterministic behavior with proper fallback logic
     pub fn sample(&mut self, logits: &[f32], generated_tokens: &[u32]) -> u32;
-    
+
     /// Apply top-k filtering with NaN awareness
     /// - Filters out NaN values before processing
     /// - Uses safe partial_cmp() with fallback ordering
     /// - Maintains stable sorting for reproducible results
     fn top_k_filter(&self, logits: Vec<f32>) -> Vec<f32>;
-    
+
     /// Apply top-p (nucleus) filtering with NaN safety
     /// - Sanitizes NaN values to negative infinity
     /// - Handles cumulative probability calculation safely
@@ -2180,19 +2180,19 @@ Information about a loaded model.
 pub struct ModelInfo {
     /// Model name
     pub name: String,
-    
+
     /// Model architecture
     pub architecture: String,
-    
+
     /// Parameter count
     pub num_parameters: u64,
-    
+
     /// Model size in bytes
     pub model_size: u64,
-    
+
     /// Quantization info
     pub quantization: QuantizationInfo,
-    
+
     /// Supported features
     pub features: Vec<String>,
 }
@@ -2212,34 +2212,34 @@ pub struct QuantizationInfo {
 pub struct PerformanceMetrics {
     /// Backend type (CPU/GPU)
     pub backend_type: String,
-    
+
     /// Total tokens generated
     pub tokens_generated: u64,
-    
+
     /// Tokens per second throughput
     pub tokens_per_second: f64,
-    
+
     /// Total inference latency (ms)
     pub total_latency_ms: u64,
-    
+
     /// First token latency (ms) - critical for streaming
     pub first_token_latency_ms: Option<u64>,
-    
+
     /// Average per-token latency (ms)
     pub average_token_latency_ms: Option<u64>,
-    
+
     /// Cache hit rate (0.0-1.0)
     pub cache_hit_rate: Option<f64>,
-    
+
     /// Memory usage (bytes)
     pub memory_usage_bytes: Option<u64>,
-    
+
     /// Component timing breakdown
     pub tokenizer_encode_time_ms: Option<u64>,
     pub tokenizer_decode_time_ms: Option<u64>,
     pub forward_pass_time_ms: Option<u64>,
     pub sampling_time_ms: Option<u64>,
-    
+
     /// Error count and rates
     pub error_count: u64,
     pub error_rate: f64,
@@ -2248,7 +2248,7 @@ pub struct PerformanceMetrics {
 impl PerformanceMetrics {
     /// Validate metrics for consistency
     pub fn validate(&self) -> Result<(), String>;
-    
+
     /// Calculate efficiency ratio (tokens per millisecond)
     pub fn efficiency_ratio(&self) -> f64;
 }
@@ -2261,19 +2261,19 @@ pub struct PerformanceTracker {
 impl PerformanceTracker {
     /// Create new performance tracker
     pub fn new() -> Self;
-    
+
     /// Record inference operation
     pub fn record_inference(&mut self, tokens: u64, duration_ms: u64);
-    
+
     /// Record cache hit
     pub fn record_cache_hit(&mut self);
-    
+
     /// Record cache miss
     pub fn record_cache_miss(&mut self);
-    
+
     /// Get cache hit rate
     pub fn get_cache_hit_rate(&self) -> Option<f64>;
-    
+
     /// Get average tokens per second
     pub fn get_average_tokens_per_second(&self) -> f64;
 }
@@ -2281,10 +2281,10 @@ impl PerformanceTracker {
 impl InferenceEngine {
     /// Get comprehensive performance metrics
     pub async fn get_performance_metrics(&self) -> Result<PerformanceMetrics, anyhow::Error>;
-    
+
     /// Reset performance tracking for clean benchmarking
     pub fn reset_performance_tracking(&self) -> Result<(), anyhow::Error>;
-    
+
     /// Apply environment variable performance configuration
     pub async fn apply_env_performance_config(&mut self) -> Result<(), anyhow::Error>;
 }
@@ -2295,7 +2295,7 @@ impl InferenceEngine {
 Performance behavior can be controlled via environment variables:
 
 - `BITNET_DETERMINISTIC=1`: Enable deterministic execution mode
-- `BITNET_SEED=<number>`: Set random seed for reproducible results  
+- `BITNET_SEED=<number>`: Set random seed for reproducible results
 - `BITNET_BATCH_SIZE=<number>`: Configure inference batch size
 - `BITNET_MEMORY_LIMIT=<size>`: Set memory usage limits
 - `BITNET_NUM_THREADS=<number>`: Control inference thread count
@@ -2329,16 +2329,16 @@ use bitnet::{BitNetModel, GenerationConfig};
 #[tokio::main]
 async fn main() -> bitnet::Result<()> {
     let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
-    
+
     let config = GenerationConfig {
         max_new_tokens: 50,
         temperature: 0.8,
         ..Default::default()
     };
-    
+
     let output = model.generate("The future of AI is", &config).await?;
     println!("Generated: {}", output);
-    
+
     Ok(())
 }
 ```
@@ -2353,16 +2353,16 @@ use futures_util::StreamExt;
 async fn main() -> bitnet::Result<()> {
     let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
     let config = GenerationConfig::default();
-    
+
     let mut stream = model.generate_stream("Tell me about Rust:", &config);
-    
+
     while let Some(result) = stream.next().await {
         match result {
             Ok(token) => print!("{}", token),
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -2378,16 +2378,16 @@ async fn main() -> bitnet::Result<()> {
         device: Device::Cuda(0), // Use first GPU
         ..Default::default()
     };
-    
+
     let model = BitNetModel::from_pretrained_with_config(
         "microsoft/bitnet-b1_58-large",
         &config,
     ).await?;
-    
+
     // Model will run on GPU 0
     let output = model.generate("Hello", &Default::default()).await?;
     println!("{}", output);
-    
+
     Ok(())
 }
 ```

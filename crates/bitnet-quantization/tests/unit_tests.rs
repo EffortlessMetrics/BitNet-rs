@@ -3,7 +3,7 @@
 //!
 //! This test suite covers:
 //! - Quantization algorithms and accuracy
-//! - Quantization parameter validation  
+//! - Quantization parameter validation
 //! - Quantization performance and memory tests
 //! - Quantization format compatibility tests
 //! - Edge cases and error conditions

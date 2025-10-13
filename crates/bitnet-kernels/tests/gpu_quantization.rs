@@ -346,7 +346,7 @@ fn test_gpu_memory_management() -> Result<()> {
 }
 
 #[test]
-#[ignore] // Only run with --ignored flag when CUDA is available  
+#[ignore] // Only run with --ignored flag when CUDA is available
 fn test_concurrent_gpu_operations() -> Result<()> {
     if !is_cuda_available() {
         println!("Skipping concurrent GPU test - CUDA not available");

@@ -172,7 +172,7 @@ HF_MODEL_ID=compatible-model TAU_MIN=0.60 \
 PARITY_FAILURE_LOG=failures.jsonl \
   ./scripts/logit-parity.sh
 
-# NLL parity (|Δ| ≤ 0.01)  
+# NLL parity (|Δ| ≤ 0.01)
 MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
 HF_MODEL_ID=compatible-model DELTA_NLL_MAX=0.01 \
 PARITY_FAILURE_LOG=failures.jsonl \
@@ -207,7 +207,7 @@ PARITY_FAILURE_LOG=failures.jsonl \
 The framework now implements a three-layer validation pyramid:
 
 1. **Surface Parity**: Text matches (weak, easy to game)
-2. **Belief Parity**: Median Kendall's τ ≥ 0.60 (strong, hard to game)  
+2. **Belief Parity**: Median Kendall's τ ≥ 0.60 (strong, hard to game)
 3. **Probability Parity**: |Δ mean NLL| ≤ 0.01 (strongest, catches subtle bugs)
 
 Together, these gates make it extremely difficult to pass tests without correct implementation while avoiding false positives from harmless variations.

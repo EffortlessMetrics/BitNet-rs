@@ -102,17 +102,17 @@ use std::time::Duration;
 
 fn benchmark_model_loading(c: &mut Criterion) {
     let mut group = c.benchmark_group("model_loading");
-    
+
     // Configure benchmark parameters
     group.warm_up_time(Duration::from_secs(3));
     group.measurement_time(Duration::from_secs(10));
     group.sample_size(50);
-    
+
     let model_sizes = vec!["small", "medium", "large"];
-    
+
     for size in model_sizes {
         let model_path = format!("fixtures/{}_model.gguf", size);
-        
+
         group.bench_with_input(
             BenchmarkId::new("load_model", size),
             &model_path,
@@ -125,7 +125,7 @@ fn benchmark_model_loading(c: &mut Criterion) {
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -134,15 +134,15 @@ fn benchmark_tokenization(c: &mut Criterion) {
     let model = rt.block_on(async {
         BitNetModel::from_file("fixtures/small_model.gguf").await.unwrap()
     });
-    
+
     let mut group = c.benchmark_group("tokenization");
-    
+
     let test_inputs = vec![
         ("short", "Hello world"),
         ("medium", "The quick brown fox jumps over the lazy dog. ".repeat(10)),
         ("long", "Lorem ipsum dolor sit amet. ".repeat(100)),
     ];
-    
+
     for (name, input) in test_inputs {
         group.bench_with_input(
             BenchmarkId::new("tokenize", name),
@@ -156,7 +156,7 @@ fn benchmark_tokenization(c: &mut Criterion) {
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -165,19 +165,19 @@ fn benchmark_inference(c: &mut Criterion) {
     let model = rt.block_on(async {
         BitNetModel::from_file("fixtures/small_model.gguf").await.unwrap()
     });
-    
+
     let mut group = c.benchmark_group("inference");
     group.throughput(criterion::Throughput::Elements(1)); // 1 inference per iteration
-    
+
     let test_cases = vec![
         ("greedy", InferenceConfig { temperature: 0.0, max_tokens: 50, ..Default::default() }),
         ("sampling", InferenceConfig { temperature: 0.7, max_tokens: 50, ..Default::default() }),
         ("creative", InferenceConfig { temperature: 1.0, top_p: 0.9, max_tokens: 50, ..Default::default() }),
     ];
-    
+
     for (name, config) in test_cases {
         let tokens = vec![1, 2, 3, 4, 5]; // Simple input tokens
-        
+
         group.bench_with_input(
             BenchmarkId::new("generate", name),
             &(tokens.clone(), config.clone()),
@@ -193,7 +193,7 @@ fn benchmark_inference(c: &mut Criterion) {
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -219,7 +219,7 @@ unsafe impl GlobalAlloc for TrackingAllocator {
         if !ptr.is_null() {
             let size = layout.size();
             let current = ALLOCATED.fetch_add(size, Ordering::Relaxed) + size;
-            
+
             // Update peak if necessary
             let mut peak = PEAK_ALLOCATED.load(Ordering::Relaxed);
             while current > peak {
@@ -243,29 +243,29 @@ static ALLOCATOR: TrackingAllocator = TrackingAllocator;
 
 fn benchmark_memory_usage(c: &mut Criterion) {
     let mut group = c.benchmark_group("memory_usage");
-    
+
     group.bench_function("model_loading_memory", |b| {
         b.iter_custom(|iters| {
             let start = std::time::Instant::now();
-            
+
             for _ in 0..iters {
                 // Reset memory tracking
                 ALLOCATED.store(0, Ordering::Relaxed);
                 PEAK_ALLOCATED.store(0, Ordering::Relaxed);
-                
+
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 let _model = rt.block_on(async {
                     BitNetModel::from_file("fixtures/small_model.gguf").await.unwrap()
                 });
-                
+
                 let peak_memory = PEAK_ALLOCATED.load(Ordering::Relaxed);
                 println!("Peak memory usage: {} MB", peak_memory / 1024 / 1024);
             }
-            
+
             start.elapsed()
         });
     });
-    
+
     group.finish();
 }
 ```
@@ -281,13 +281,13 @@ use tokio::time::Instant;
 fn benchmark_complete_workflow(c: &mut Criterion) {
     let mut group = c.benchmark_group("complete_workflow");
     group.sample_size(20); // Fewer samples for longer tests
-    
+
     let scenarios = vec![
         ("chat_response", "Hello, how can I help you today?", 50),
         ("code_generation", "Write a function to calculate fibonacci numbers", 200),
         ("story_generation", "Once upon a time in a distant galaxy", 300),
     ];
-    
+
     for (name, prompt, max_tokens) in scenarios {
         group.bench_with_input(
             BenchmarkId::new("workflow", name),
@@ -296,40 +296,40 @@ fn benchmark_complete_workflow(c: &mut Criterion) {
                 b.to_async(tokio::runtime::Runtime::new().unwrap())
                     .iter_custom(|iters| async move {
                         let start = Instant::now();
-                        
+
                         for _ in 0..iters {
                             // Complete workflow: load model, tokenize, generate, decode
                             let model = BitNetModel::from_file("fixtures/medium_model.gguf")
                                 .await.unwrap();
-                            
+
                             let tokens = model.tokenize(prompt).await.unwrap();
-                            
+
                             let config = InferenceConfig {
                                 max_tokens: *max_tokens,
                                 temperature: 0.7,
                                 ..Default::default()
                             };
-                            
+
                             let result = model.generate_from_tokens(&tokens, &config)
                                 .await.unwrap();
-                            
+
                             let _output = model.decode(&result.tokens).await.unwrap();
                         }
-                        
+
                         start.elapsed()
                     });
             },
         );
     }
-    
+
     group.finish();
 }
 
 fn benchmark_concurrent_inference(c: &mut Criterion) {
     let mut group = c.benchmark_group("concurrent_inference");
-    
+
     let concurrency_levels = vec![1, 2, 4, 8];
-    
+
     for concurrency in concurrency_levels {
         group.bench_with_input(
             BenchmarkId::new("concurrent", concurrency),
@@ -338,13 +338,13 @@ fn benchmark_concurrent_inference(c: &mut Criterion) {
                 b.to_async(tokio::runtime::Runtime::new().unwrap())
                     .iter_custom(|iters| async move {
                         let start = Instant::now();
-                        
+
                         for _ in 0..iters {
                             let model = std::sync::Arc::new(
                                 BitNetModel::from_file("fixtures/small_model.gguf")
                                     .await.unwrap()
                             );
-                            
+
                             let tasks: Vec<_> = (0..concurrency)
                                 .map(|i| {
                                     let model = model.clone();
@@ -360,16 +360,16 @@ fn benchmark_concurrent_inference(c: &mut Criterion) {
                                     })
                                 })
                                 .collect();
-                            
+
                             futures::future::join_all(tasks).await;
                         }
-                        
+
                         start.elapsed()
                     });
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -425,7 +425,7 @@ impl PerformanceProfiler {
             memory_measurements: HashMap::new(),
         }
     }
-    
+
     pub fn time_operation<F, R>(&mut self, name: &str, operation: F) -> R
     where
         F: FnOnce() -> R,
@@ -433,15 +433,15 @@ impl PerformanceProfiler {
         let start = Instant::now();
         let result = operation();
         let duration = start.elapsed();
-        
+
         self.measurements
             .entry(name.to_string())
             .or_insert_with(Vec::new)
             .push(duration);
-        
+
         result
     }
-    
+
     pub async fn time_async_operation<F, Fut, R>(&mut self, name: &str, operation: F) -> R
     where
         F: FnOnce() -> Fut,
@@ -450,31 +450,31 @@ impl PerformanceProfiler {
         let start = Instant::now();
         let result = operation().await;
         let duration = start.elapsed();
-        
+
         self.measurements
             .entry(name.to_string())
             .or_insert_with(Vec::new)
             .push(duration);
-        
+
         result
     }
-    
+
     pub fn record_memory_usage(&mut self, name: &str, bytes: usize) {
         self.memory_measurements
             .entry(name.to_string())
             .or_insert_with(Vec::new)
             .push(bytes);
     }
-    
+
     pub fn generate_report(&self) -> PerformanceReport {
         let mut operations = Vec::new();
-        
+
         for (name, durations) in &self.measurements {
             let total: Duration = durations.iter().sum();
             let avg = total / durations.len() as u32;
             let min = *durations.iter().min().unwrap();
             let max = *durations.iter().max().unwrap();
-            
+
             operations.push(OperationStats {
                 name: name.clone(),
                 count: durations.len(),
@@ -484,7 +484,7 @@ impl PerformanceProfiler {
                 max_time: max,
             });
         }
-        
+
         PerformanceReport { operations }
     }
 }
@@ -508,22 +508,22 @@ pub struct OperationStats {
 #[tokio::test]
 async fn test_with_profiling() {
     let mut profiler = PerformanceProfiler::new();
-    
+
     let model = profiler.time_async_operation("model_loading", || async {
         BitNetModel::from_file("fixtures/test_model.gguf").await.unwrap()
     }).await;
-    
+
     let tokens = profiler.time_async_operation("tokenization", || async {
         model.tokenize("Hello world").await.unwrap()
     }).await;
-    
+
     let _result = profiler.time_async_operation("inference", || async {
         model.generate_from_tokens(&tokens, &InferenceConfig::default()).await.unwrap()
     }).await;
-    
+
     let report = profiler.generate_report();
     println!("{:#?}", report);
-    
+
     // Assert performance requirements
     for op in &report.operations {
         match op.name.as_str() {
@@ -581,32 +581,32 @@ impl PerformanceBaseline {
             benchmarks: HashMap::new(),
         }
     }
-    
+
     pub fn add_benchmark(&mut self, benchmark: BenchmarkBaseline) {
         self.benchmarks.insert(benchmark.name.clone(), benchmark);
     }
-    
+
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(self)?;
         fs::write(path, json)?;
         Ok(())
     }
-    
+
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let json = fs::read_to_string(path)?;
         let baseline = serde_json::from_str(&json)?;
         Ok(baseline)
     }
-    
+
     pub fn compare_with(&self, other: &PerformanceBaseline) -> ComparisonReport {
         let mut comparisons = Vec::new();
-        
+
         for (name, current) in &self.benchmarks {
             if let Some(baseline) = other.benchmarks.get(name) {
                 let time_ratio = current.average_time_ns as f64 / baseline.average_time_ns as f64;
                 let throughput_ratio = current.throughput_ops_per_sec / baseline.throughput_ops_per_sec;
                 let memory_ratio = current.memory_usage_bytes as f64 / baseline.memory_usage_bytes as f64;
-                
+
                 comparisons.push(BenchmarkComparison {
                     name: name.clone(),
                     time_ratio,
@@ -616,7 +616,7 @@ impl PerformanceBaseline {
                 });
             }
         }
-        
+
         ComparisonReport {
             current_version: self.version.clone(),
             baseline_version: other.version.clone(),
@@ -709,15 +709,15 @@ echo "Baseline updated: $BASELINE_FILE"
 #[tokio::test]
 async fn test_performance_regression() {
     let current_results = run_performance_suite().await;
-    
+
     // Load baseline
     let baseline_path = "benchmarks/baselines/current_baseline.json";
     let baseline = PerformanceBaseline::load_from_file(baseline_path)
         .expect("Failed to load performance baseline");
-    
+
     // Compare results
     let comparison = current_results.compare_with(&baseline);
-    
+
     // Check for regressions
     let mut regressions = Vec::new();
     for comp in &comparison.comparisons {
@@ -725,7 +725,7 @@ async fn test_performance_regression() {
             regressions.push(comp);
         }
     }
-    
+
     if !regressions.is_empty() {
         let mut error_msg = String::from("Performance regressions detected:\n");
         for regression in &regressions {
@@ -738,13 +738,13 @@ async fn test_performance_regression() {
         }
         panic!("{}", error_msg);
     }
-    
+
     println!("All performance benchmarks within acceptable ranges");
 }
 
 async fn run_performance_suite() -> PerformanceBaseline {
     let mut baseline = PerformanceBaseline::new("current".to_string());
-    
+
     // Model loading benchmark
     let model_loading_time = benchmark_model_loading().await;
     baseline.add_benchmark(BenchmarkBaseline {
@@ -754,7 +754,7 @@ async fn run_performance_suite() -> PerformanceBaseline {
         memory_usage_bytes: get_peak_memory_usage(),
         samples: 10,
     });
-    
+
     // Inference benchmark
     let inference_time = benchmark_inference().await;
     baseline.add_benchmark(BenchmarkBaseline {
@@ -764,7 +764,7 @@ async fn run_performance_suite() -> PerformanceBaseline {
         memory_usage_bytes: get_peak_memory_usage(),
         samples: 100,
     });
-    
+
     baseline
 }
 ```
@@ -786,21 +786,21 @@ on:
 jobs:
   performance:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Setup Rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         override: true
-    
+
     - name: Install benchmarking tools
       run: |
         cargo install cargo-criterion
         cargo install flamegraph
-    
+
     - name: Cache benchmarks
       uses: actions/cache@v3
       with:
@@ -808,16 +808,16 @@ jobs:
           target/criterion
           benchmarks/baselines
         key: performance-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-    
+
     - name: Run performance benchmarks
       run: |
         cargo bench --no-default-features --features cpu --bench performance_suite
         cargo test --no-default-features --features cpu --test performance_regression_tests
-    
+
     - name: Generate performance report
       run: |
         cargo run --bin generate_performance_report
-    
+
     - name: Upload performance artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -825,7 +825,7 @@ jobs:
         path: |
           target/criterion/
           target/performance-reports/
-    
+
     - name: Comment PR with performance results
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v6
@@ -851,48 +851,48 @@ use std::time::Instant;
 #[tokio::test]
 async fn identify_bottlenecks() {
     let mut profiler = PerformanceProfiler::new();
-    
+
     // Profile each component separately
     let model = profiler.time_async_operation("model_loading", || async {
         BitNetModel::from_file("fixtures/large_model.gguf").await.unwrap()
     }).await;
-    
+
     let input_text = "Generate a comprehensive analysis of machine learning trends";
-    
+
     let tokens = profiler.time_async_operation("tokenization", || async {
         model.tokenize(input_text).await.unwrap()
     }).await;
-    
+
     // Profile different inference configurations
     let configs = vec![
         ("greedy", InferenceConfig { temperature: 0.0, max_tokens: 100, ..Default::default() }),
         ("sampling", InferenceConfig { temperature: 0.7, max_tokens: 100, ..Default::default() }),
         ("nucleus", InferenceConfig { temperature: 0.8, top_p: 0.9, max_tokens: 100, ..Default::default() }),
     ];
-    
+
     for (name, config) in configs {
         profiler.time_async_operation(&format!("inference_{}", name), || async {
             model.generate_from_tokens(&tokens, &config).await.unwrap()
         }).await;
     }
-    
+
     // Analyze results
     let report = profiler.generate_report();
-    
+
     // Find the slowest operations
     let mut operations = report.operations;
     operations.sort_by(|a, b| b.average_time.cmp(&a.average_time));
-    
+
     println!("Performance bottlenecks (slowest first):");
     for (i, op) in operations.iter().take(5).enumerate() {
         println!("{}. {}: {:?} (avg)", i + 1, op.name, op.average_time);
     }
-    
+
     // Set performance targets
     for op in &operations {
         match op.name.as_str() {
             "model_loading" => {
-                assert!(op.average_time < Duration::from_secs(10), 
+                assert!(op.average_time < Duration::from_secs(10),
                        "Model loading too slow: {:?}", op.average_time);
             }
             "tokenization" => {
@@ -915,36 +915,36 @@ async fn identify_bottlenecks() {
 #[tokio::test]
 async fn test_memory_optimization() {
     let memory_tracker = MemoryTracker::new();
-    
+
     // Test memory usage patterns
     let baseline_memory = memory_tracker.current_usage();
-    
+
     {
         let model = BitNetModel::from_file("fixtures/medium_model.gguf").await.unwrap();
         let model_memory = memory_tracker.current_usage() - baseline_memory;
-        
+
         println!("Model memory usage: {} MB", model_memory / 1024 / 1024);
         assert!(model_memory < 2 * 1024 * 1024 * 1024, "Model uses too much memory"); // 2GB limit
-        
+
         // Test inference memory usage
         let inference_baseline = memory_tracker.current_usage();
-        
+
         let tokens = model.tokenize("Test input for memory analysis").await.unwrap();
         let _result = model.generate_from_tokens(&tokens, &InferenceConfig {
             max_tokens: 100,
             ..Default::default()
         }).await.unwrap();
-        
+
         let inference_memory = memory_tracker.current_usage() - inference_baseline;
         println!("Inference memory overhead: {} MB", inference_memory / 1024 / 1024);
         assert!(inference_memory < 500 * 1024 * 1024, "Inference uses too much additional memory"); // 500MB limit
     }
-    
+
     // Test memory cleanup
     tokio::time::sleep(Duration::from_millis(100)).await; // Allow cleanup
     let final_memory = memory_tracker.current_usage();
     let memory_leak = final_memory - baseline_memory;
-    
+
     println!("Potential memory leak: {} MB", memory_leak / 1024 / 1024);
     assert!(memory_leak < 10 * 1024 * 1024, "Significant memory leak detected"); // 10MB tolerance
 }
@@ -960,7 +960,7 @@ use std::fs;
 
 pub fn generate_performance_dashboard(results: &[PerformanceBaseline]) -> Result<(), Box<dyn std::error::Error>> {
     let mut chart_data = Vec::new();
-    
+
     for result in results {
         for (name, benchmark) in &result.benchmarks {
             chart_data.push(json!({
@@ -973,12 +973,12 @@ pub fn generate_performance_dashboard(results: &[PerformanceBaseline]) -> Result
             }));
         }
     }
-    
+
     let html_template = include_str!("templates/performance_dashboard.html");
     let html_content = html_template.replace("{{CHART_DATA}}", &serde_json::to_string(&chart_data)?);
-    
+
     fs::write("target/performance-reports/dashboard.html", html_content)?;
-    
+
     println!("Performance dashboard generated: target/performance-reports/dashboard.html");
     Ok(())
 }

@@ -8,6 +8,7 @@
 //! Supports auto-detection from GGUF metadata and extensible YAML policies.
 
 use anyhow::{Result, anyhow};
+use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
 
@@ -37,22 +38,32 @@ impl Ruleset {
             }
         }
         // No match => best-effort generic envelope
-        rms >= 0.50 && rms <= 2.0
+        (0.50..=2.0).contains(&rms)
     }
 
     /// Check if projection weight RMS is within acceptable envelope
     pub fn check_proj_rms(&self, rms: f32) -> bool {
-        match (self.proj_weight_rms_min, self.proj_weight_rms_max) {
-            (Some(min), Some(max)) => rms >= min && rms <= max,
-            _ => true, // no opinion
+        // Enforce each bound independently (single-sided envelopes work)
+        if let Some(min) = self.proj_weight_rms_min
+            && rms < min
+        {
+            return false;
         }
+        if let Some(max) = self.proj_weight_rms_max
+            && rms > max
+        {
+            return false;
+        }
+        true
     }
 }
 
 // ---------- Built-in rulesets ----------
 
+// Keep this only for built-ins (never called on user input).
 fn re(s: &str) -> Regex {
-    Regex::new(s).unwrap()
+    // Built-ins are trusted. If this ever panics in dev, it needs fixing.
+    Regex::new(s).expect("internal built-in regex must compile")
 }
 
 /// BitNet b1.58, **F16** export (st2gguf output)
@@ -62,52 +73,58 @@ fn re(s: &str) -> Regex {
 /// - post_attention_layernorm: typically 0.25-1.0
 /// - input_layernorm: typically 0.35-1.0
 /// - final_norm: should be close to 1.0 (0.5-2.0 envelope)
+static BITNET_B158_F16: Lazy<Ruleset> = Lazy::new(|| Ruleset {
+    ln: vec![
+        Threshold { pattern: re(r"ffn_layernorm\.weight$"), min: 0.05, max: 2.0 },
+        Threshold { pattern: re(r"post_attention_layernorm\.weight$"), min: 0.25, max: 2.0 },
+        Threshold { pattern: re(r"input_layernorm\.weight$"), min: 0.35, max: 2.0 },
+        Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
+        Threshold { pattern: re(r"(attn|ffn|rms).*norm\.weight$"), min: 0.50, max: 2.0 },
+        Threshold { pattern: re(r".*norm\.weight$"), min: 0.50, max: 2.0 },
+    ],
+    // Weight RMS envelope for projections in F16 (empirical ~0.01..0.25)
+    proj_weight_rms_min: Some(0.01),
+    proj_weight_rms_max: Some(0.40),
+    name: "bitnet-b1.58:f16".into(),
+});
+
 pub fn rules_bitnet_b158_f16() -> Ruleset {
-    Ruleset {
-        ln: vec![
-            Threshold { pattern: re(r"ffn_layernorm\.weight$"), min: 0.05, max: 2.0 },
-            Threshold { pattern: re(r"post_attention_layernorm\.weight$"), min: 0.25, max: 2.0 },
-            Threshold { pattern: re(r"input_layernorm\.weight$"), min: 0.35, max: 2.0 },
-            Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
-            Threshold { pattern: re(r"(attn|ffn|rms).*norm\.weight$"), min: 0.50, max: 2.0 },
-            Threshold { pattern: re(r".*norm\.weight$"), min: 0.50, max: 2.0 },
-        ],
-        // Weight RMS envelope for projections in F16 (empirical ~0.01..0.25)
-        proj_weight_rms_min: Some(0.01),
-        proj_weight_rms_max: Some(0.40),
-        name: "bitnet-b1.58:f16".into(),
-    }
+    BITNET_B158_F16.clone()
 }
 
 /// BitNet b1.58, **I2_S** quantized GGUF (e.g., `ggml-model-i2_s.gguf`)
 ///
 /// Many attn_norm weights sit ≈ 0.01..0.02 legitimately after I2_S quantization.
 /// So we loosen the LN gate significantly.
+static BITNET_B158_I2S: Lazy<Ruleset> = Lazy::new(|| Ruleset {
+    ln: vec![
+        Threshold { pattern: re(r"attn_norm\.weight$"), min: 0.01, max: 2.0 },
+        Threshold { pattern: re(r"ffn_norm\.weight$"), min: 0.50, max: 2.0 },
+        Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
+        Threshold { pattern: re(r".*norm\.weight$"), min: 0.25, max: 2.0 },
+    ],
+    // Weight RMS after I2_S dequant tends to be small but non-zero
+    proj_weight_rms_min: Some(0.002),
+    proj_weight_rms_max: Some(0.20),
+    name: "bitnet-b1.58:i2_s".into(),
+});
+
 pub fn rules_bitnet_b158_i2s() -> Ruleset {
-    Ruleset {
-        ln: vec![
-            Threshold { pattern: re(r"attn_norm\.weight$"), min: 0.01, max: 2.0 },
-            Threshold { pattern: re(r"ffn_norm\.weight$"), min: 0.50, max: 2.0 },
-            Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
-            Threshold { pattern: re(r".*norm\.weight$"), min: 0.25, max: 2.0 },
-        ],
-        // Weight RMS after I2_S dequant tends to be small but non-zero
-        proj_weight_rms_min: Some(0.002),
-        proj_weight_rms_max: Some(0.20),
-        name: "bitnet-b1.58:i2_s".into(),
-    }
+    BITNET_B158_I2S.clone()
 }
 
 /// Generic (LLaMA-ish/RMSNorm) fallback
 ///
 /// Assumes standard RMSNorm with gamma weights near 1.0
+static GENERIC: Lazy<Ruleset> = Lazy::new(|| Ruleset {
+    ln: vec![Threshold { pattern: re(r".*norm\.weight$"), min: 0.80, max: 1.20 }],
+    proj_weight_rms_min: None,
+    proj_weight_rms_max: None,
+    name: "generic".into(),
+});
+
 pub fn rules_generic() -> Ruleset {
-    Ruleset {
-        ln: vec![Threshold { pattern: re(r".*norm\.weight$"), min: 0.80, max: 1.20 }],
-        proj_weight_rms_min: None,
-        proj_weight_rms_max: None,
-        name: "generic".into(),
-    }
+    GENERIC.clone()
 }
 
 // ---------- Auto-detection ----------
@@ -160,15 +177,33 @@ struct Policy {
 /// * `key` - Key in the policy file (e.g., "bitnet-b1.58:f16")
 pub fn load_policy(path: &std::path::Path, key: &str) -> Result<Ruleset> {
     let text = std::fs::read_to_string(path)?;
-    let pol: Policy = serde_yaml::from_str(&text)?;
-    let rs = pol.rules.get(key).ok_or_else(|| anyhow!("policy key not found: {}", key))?;
+    let pol: Policy = serde_yaml::from_str(&text)
+        .map_err(|e| anyhow!("invalid policy yaml '{}': {}", path.display(), e))?;
+    let rs = pol
+        .rules
+        .get(key)
+        .ok_or_else(|| anyhow!("policy key '{}' not found in {}", key, path.display()))?;
+
+    // Compile user-provided regex patterns with proper error handling
+    let compiled_ln: Vec<Threshold> = rs
+        .ln
+        .iter()
+        .map(|r| {
+            Regex::new(&r.pattern)
+                .map(|pattern| Threshold { pattern, min: r.min, max: r.max })
+                .map_err(|e| {
+                    anyhow!(
+                        "invalid regex pattern in policy for key '{}': '{}' -> {}",
+                        key,
+                        r.pattern,
+                        e
+                    )
+                })
+        })
+        .collect::<Result<_>>()?;
 
     Ok(Ruleset {
-        ln: rs
-            .ln
-            .iter()
-            .map(|r| Threshold { pattern: re(&r.pattern), min: r.min, max: r.max })
-            .collect(),
+        ln: compiled_ln,
         proj_weight_rms_min: rs.proj_weight_rms_min,
         proj_weight_rms_max: rs.proj_weight_rms_max,
         name: rs.name.clone().unwrap_or_else(|| format!("policy:{}", key)),

@@ -55,13 +55,13 @@ use bitnet::{BitNetModel, ModelConfig, InferenceConfig};
 let config = ModelConfig {
     // Use memory mapping for large models
     use_mmap: true,
-    
+
     // Optimize for memory bandwidth
     memory_pool_size: 1024 * 1024 * 1024, // 1GB pool
-    
+
     // Enable prefetching
     prefetch_layers: true,
-    
+
     ..Default::default()
 };
 ```
@@ -87,7 +87,7 @@ For Intel CPUs with AVX-512 support (Skylake-X, Ice Lake, Tiger Lake and newer):
 
 ```bash
 # Build with AVX-512 support
-cargo build --no-default-features --release --no-default-features --features "cpu" 
+cargo build --no-default-features --release --no-default-features --features "cpu"
 # Note: AVX-512 is automatically detected at runtime
 
 # Verify AVX-512 detection
@@ -96,7 +96,7 @@ cargo run --example kernel_selection --no-default-features --features cpu
 
 **AVX-512 Performance Tips:**
 - **Thermal Management**: AVX-512 can cause CPU frequency throttling on some systems
-- **Power Configuration**: Ensure adequate cooling and power delivery  
+- **Power Configuration**: Ensure adequate cooling and power delivery
 - **Workload Size**: AVX-512 benefits are most pronounced with larger matrix operations
 - **Memory Bandwidth**: Ensure sufficient memory bandwidth to feed AVX-512 units
 
@@ -136,16 +136,16 @@ use bitnet::{BitNetModel, ModelConfig, Device};
 
 let config = ModelConfig {
     device: Device::Cuda(0),
-    
+
     // Enable mixed precision
     use_mixed_precision: true,
-    
+
     // Optimize memory usage
     gpu_memory_fraction: 0.8,
-    
+
     // Enable tensor cores (if available)
     use_tensor_cores: true,
-    
+
     ..Default::default()
 };
 ```
@@ -183,13 +183,13 @@ use bitnet::{BitNetModel, ModelConfig};
 let config = ModelConfig {
     // Use gradient checkpointing to save memory
     gradient_checkpointing: true,
-    
+
     // Optimize KV cache size
     kv_cache_size: 2048, // Adjust based on sequence length needs
-    
+
     // Enable memory defragmentation
     enable_memory_defrag: true,
-    
+
     ..Default::default()
 };
 ```
@@ -206,13 +206,13 @@ let devices = vec![Device::Cuda(0), Device::Cuda(1)];
 
 let config = ModelConfig {
     devices: devices,
-    
+
     // Enable model parallelism
     model_parallel: true,
-    
+
     // Pipeline parallelism for large models
     pipeline_parallel_size: 2,
-    
+
     ..Default::default()
 };
 ```
@@ -257,13 +257,13 @@ use bitnet::{BitNetModel, ModelConfig};
 let config = ModelConfig {
     // Set based on your typical input length
     max_seq_len: 2048, // Don't over-allocate
-    
+
     // Enable dynamic sequence length
     dynamic_seq_len: true,
-    
+
     // Optimize attention computation
     attention_optimization: true,
-    
+
     ..Default::default()
 };
 ```
@@ -350,16 +350,16 @@ use bitnet::{BitNetModel, KVCacheConfig};
 let kv_config = KVCacheConfig {
     // Size based on typical sequence lengths
     max_size: 2048,
-    
+
     // Enable compression
     compression: true,
-    
+
     // Use memory pooling
     use_memory_pool: true,
-    
+
     // Eviction strategy
     eviction_strategy: EvictionStrategy::LRU,
-    
+
     ..Default::default()
 };
 ```
@@ -391,13 +391,13 @@ use bitnet::{BitNetModel, BatchConfig};
 
 let batch_config = BatchConfig {
     max_batch_size: 16,
-    
+
     // Pad sequences to same length
     padding_strategy: PaddingStrategy::Longest,
-    
+
     // Sort by length for efficiency
     sort_by_length: true,
-    
+
     ..Default::default()
 };
 
@@ -414,16 +414,16 @@ use bitnet::{BitNetModel, DynamicBatchConfig};
 let dynamic_config = DynamicBatchConfig {
     // Maximum wait time for batching
     max_wait_time: Duration::from_millis(50),
-    
+
     // Target batch size
     target_batch_size: 8,
-    
+
     // Maximum batch size
     max_batch_size: 32,
-    
+
     // Enable continuous batching
     continuous_batching: true,
-    
+
     ..Default::default()
 };
 ```
@@ -473,7 +473,7 @@ use serde_json;
 async fn main() -> Result<()> {
     let model = BitNetModel::from_file("model.gguf").await?;
     let mut engine = InferenceEngine::new(model, tokenizer, device)?;
-    
+
     // Configure generation with performance metrics enabled
     let config = GenerationConfig {
         max_new_tokens: 100,
@@ -481,16 +481,16 @@ async fn main() -> Result<()> {
         enable_metrics: true,
         ..Default::default()
     };
-    
+
     // Explicit prefill for cache warming and latency measurement
     let prompt_tokens = tokenizer.encode("Hello, world!", true, true)?;
     let prefill_start = std::time::Instant::now();
     engine.prefill(&prompt_tokens).await?;
     let prefill_time = prefill_start.elapsed();
-    
+
     // Run inference with detailed performance tracking
     let response = engine.generate_with_config("Hello, world!", &config).await?;
-    
+
     // Access structured performance metrics
     if let Some(metrics) = response.metrics {
         // Detailed timing breakdown
@@ -498,17 +498,17 @@ async fn main() -> Result<()> {
         println!("Prefill time: {:.2}ms", metrics.timing.prefill);
         println!("Decode time: {:.2}ms", metrics.timing.decode);
         println!("Total time: {:.2}ms", metrics.timing.total);
-        
+
         // Throughput measurements
         println!("Prefill throughput: {:.2} tokens/sec", metrics.throughput.prefill);
         println!("Decode throughput: {:.2} tokens/sec", metrics.throughput.decode);
         println!("End-to-end throughput: {:.2} tokens/sec", metrics.throughput.e2e);
-        
+
         // Export metrics for analysis
         let json_metrics = serde_json::to_string_pretty(&metrics)?;
         std::fs::write("performance_metrics.json", json_metrics)?;
     }
-    
+
     Ok(())
 }
 ```
@@ -544,7 +544,7 @@ bitnet run --model model.gguf \
 The structured metrics include:
 
 - **TimingMetrics**: `tokenize`, `prefill`, `decode`, `total` (all in milliseconds)
-- **ThroughputMetrics**: `prefill`, `decode`, `e2e` (all in tokens per second)  
+- **ThroughputMetrics**: `prefill`, `decode`, `e2e` (all in tokens per second)
 - **TokenCounts**: `prompt_tokens`, `generated_tokens`, `total_tokens`
 - **ModelInfo**: `path`, `quantization`, `device`, `parameters`, `vocab_size`
 - **Memory Usage**: Optional memory consumption tracking

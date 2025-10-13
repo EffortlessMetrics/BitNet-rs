@@ -52,7 +52,7 @@ This benchmark suite provides:
 class LegacyBenchmark {
 private:
     std::unique_ptr<bitnet::Model> model;
-    
+
 public:
     struct BenchmarkResult {
         double avg_latency_ms;
@@ -60,39 +60,39 @@ public:
         size_t peak_memory_mb;
         double cpu_utilization;
     };
-    
+
     LegacyBenchmark(const std::string& model_path) {
         auto start = std::chrono::high_resolution_clock::now();
         model = std::make_unique<bitnet::Model>(model_path);
         auto end = std::chrono::high_resolution_clock::now();
-        
+
         auto load_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         std::cout << "C++ Model load time: " << load_time.count() << "ms" << std::endl;
     }
-    
+
     BenchmarkResult benchmark_single_inference(const std::vector<std::string>& prompts) {
         std::vector<double> latencies;
         size_t total_tokens = 0;
         auto overall_start = std::chrono::high_resolution_clock::now();
-        
+
         for (const auto& prompt : prompts) {
             auto start = std::chrono::high_resolution_clock::now();
-            
+
             auto result = model->generate(prompt, 100);
-            
+
             auto end = std::chrono::high_resolution_clock::now();
             auto latency = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            
+
             latencies.push_back(latency.count() / 1000.0);  // Convert to ms
             total_tokens += result.token_count;
         }
-        
+
         auto overall_end = std::chrono::high_resolution_clock::now();
         auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(overall_end - overall_start);
-        
+
         double avg_latency = std::accumulate(latencies.begin(), latencies.end(), 0.0) / latencies.size();
         double throughput = (total_tokens * 1000.0) / total_time.count();  // tokens/sec
-        
+
         return BenchmarkResult{
             .avg_latency_ms = avg_latency,
             .throughput_tokens_per_sec = throughput,
@@ -100,38 +100,38 @@ public:
             .cpu_utilization = get_cpu_utilization()
         };
     }
-    
+
     BenchmarkResult benchmark_batch_inference(const std::vector<std::string>& prompts) {
         auto start = std::chrono::high_resolution_clock::now();
-        
+
         std::vector<std::thread> threads;
         std::vector<bitnet::GenerationResult> results(prompts.size());
         std::mutex results_mutex;
-        
+
         // Process batches with thread pool (limited concurrency due to mutex)
         for (size_t i = 0; i < prompts.size(); ++i) {
             threads.emplace_back([this, &prompts, &results, &results_mutex, i]() {
                 auto result = model->generate(prompts[i], 50);
-                
+
                 std::lock_guard<std::mutex> lock(results_mutex);
                 results[i] = result;
             });
         }
-        
+
         for (auto& thread : threads) {
             thread.join();
         }
-        
+
         auto end = std::chrono::high_resolution_clock::now();
         auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-        
+
         size_t total_tokens = 0;
         for (const auto& result : results) {
             total_tokens += result.token_count;
         }
-        
+
         double throughput = (total_tokens * 1000.0) / total_time.count();
-        
+
         return BenchmarkResult{
             .avg_latency_ms = total_time.count() / static_cast<double>(prompts.size()),
             .throughput_tokens_per_sec = throughput,
@@ -139,13 +139,13 @@ public:
             .cpu_utilization = get_cpu_utilization()
         };
     }
-    
+
 private:
     size_t get_peak_memory_usage() {
         // Simplified memory measurement
         return 3200;  // MB - typical C++ implementation
     }
-    
+
     double get_cpu_utilization() {
         // Simplified CPU measurement
         return 85.0;  // % - typical C++ utilization
@@ -160,25 +160,25 @@ int main() {
         "Machine learning model optimization",
         "Concurrent processing in modern systems"
     };
-    
+
     LegacyBenchmark benchmark("/models/bitnet_b1_58-3B.gguf");
-    
+
     std::cout << "\n=== C++ Legacy Benchmark Results ===" << std::endl;
-    
+
     auto single_result = benchmark.benchmark_single_inference(test_prompts);
     std::cout << "Single Inference:" << std::endl;
     std::cout << "  Avg Latency: " << single_result.avg_latency_ms << "ms" << std::endl;
     std::cout << "  Throughput: " << single_result.throughput_tokens_per_sec << " tok/s" << std::endl;
     std::cout << "  Peak Memory: " << single_result.peak_memory_mb << "MB" << std::endl;
     std::cout << "  CPU Usage: " << single_result.cpu_utilization << "%" << std::endl;
-    
+
     auto batch_result = benchmark.benchmark_batch_inference(test_prompts);
     std::cout << "\nBatch Inference:" << std::endl;
     std::cout << "  Avg Latency: " << batch_result.avg_latency_ms << "ms" << std::endl;
     std::cout << "  Throughput: " << batch_result.throughput_tokens_per_sec << " tok/s" << std::endl;
     std::cout << "  Peak Memory: " << batch_result.peak_memory_mb << "MB" << std::endl;
     std::cout << "  CPU Usage: " << batch_result.cpu_utilization << "%" << std::endl;
-    
+
     return 0;
 }
 ```
@@ -214,46 +214,46 @@ impl RustBenchmark {
         let start = Instant::now();
         let model = Arc::new(Model::load(model_path).await?);
         let load_time = start.elapsed();
-        
+
         println!("Rust Model load time: {}ms", load_time.as_millis());
-        
+
         Ok(Self {
             model,
             system: System::new_all(),
         })
     }
-    
+
     pub async fn benchmark_single_inference(&mut self, prompts: &[String]) -> BenchmarkResult {
         let mut latencies = Vec::new();
         let mut total_tokens = 0;
         let overall_start = Instant::now();
-        
+
         let config = GenerationConfig {
             max_tokens: 100,
             temperature: 0.7,
             top_p: 0.9,
             ..Default::default()
         };
-        
+
         for prompt in prompts {
             let start = Instant::now();
-            
+
             let result = self.model.generate_async(prompt, config.clone()).await
                 .expect("Generation failed");
-            
+
             let latency = start.elapsed();
             latencies.push(latency.as_secs_f64() * 1000.0);  // Convert to ms
             total_tokens += result.token_count;
         }
-        
+
         let total_time = overall_start.elapsed();
         let throughput = total_tokens as f64 / total_time.as_secs_f64();
-        
+
         // Calculate percentiles
         latencies.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let p95_idx = (latencies.len() as f64 * 0.95) as usize;
         let p99_idx = (latencies.len() as f64 * 0.99) as usize;
-        
+
         BenchmarkResult {
             avg_latency_ms: latencies.iter().sum::<f64>() / latencies.len() as f64,
             throughput_tokens_per_sec: throughput,
@@ -263,23 +263,23 @@ impl RustBenchmark {
             p99_latency_ms: latencies[p99_idx.min(latencies.len() - 1)],
         }
     }
-    
+
     pub async fn benchmark_batch_inference(&mut self, prompts: &[String]) -> BenchmarkResult {
         let start = Instant::now();
         let mut join_set = JoinSet::new();
-        
+
         let config = GenerationConfig {
             max_tokens: 50,
             temperature: 0.7,
             ..Default::default()
         };
-        
+
         // Spawn concurrent tasks (true parallelism with async)
         for prompt in prompts {
             let model = Arc::clone(&self.model);
             let prompt = prompt.clone();
             let config = config.clone();
-            
+
             join_set.spawn(async move {
                 let task_start = Instant::now();
                 let result = model.generate_async(&prompt, config).await
@@ -288,24 +288,24 @@ impl RustBenchmark {
                 (result.token_count, latency)
             });
         }
-        
+
         let mut total_tokens = 0;
         let mut latencies = Vec::new();
-        
+
         while let Some(result) = join_set.join_next().await {
             let (token_count, latency) = result.expect("Task failed");
             total_tokens += token_count;
             latencies.push(latency);
         }
-        
+
         let total_time = start.elapsed();
         let throughput = total_tokens as f64 / total_time.as_secs_f64();
-        
+
         // Calculate percentiles
         latencies.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let p95_idx = (latencies.len() as f64 * 0.95) as usize;
         let p99_idx = (latencies.len() as f64 * 0.99) as usize;
-        
+
         BenchmarkResult {
             avg_latency_ms: latencies.iter().sum::<f64>() / latencies.len() as f64,
             throughput_tokens_per_sec: throughput,
@@ -315,25 +315,25 @@ impl RustBenchmark {
             p99_latency_ms: latencies[p99_idx.min(latencies.len() - 1)],
         }
     }
-    
+
     pub async fn benchmark_streaming_inference(&mut self, prompts: &[String]) -> BenchmarkResult {
         let mut latencies = Vec::new();
         let mut total_tokens = 0;
         let overall_start = Instant::now();
-        
+
         let config = GenerationConfig {
             max_tokens: 100,
             temperature: 0.7,
             ..Default::default()
         };
-        
+
         for prompt in prompts {
             let start = Instant::now();
             let mut token_count = 0;
-            
+
             let mut stream = self.model.generate_stream(prompt, config.clone()).await
                 .expect("Streaming failed");
-            
+
             while let Some(chunk) = stream.next().await {
                 match chunk {
                     Ok(chunk) => {
@@ -348,20 +348,20 @@ impl RustBenchmark {
                     }
                 }
             }
-            
+
             let latency = start.elapsed();
             latencies.push(latency.as_secs_f64() * 1000.0);
             total_tokens += token_count;
         }
-        
+
         let total_time = overall_start.elapsed();
         let throughput = total_tokens as f64 / total_time.as_secs_f64();
-        
+
         // Calculate percentiles
         latencies.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let p95_idx = (latencies.len() as f64 * 0.95) as usize;
         let p99_idx = (latencies.len() as f64 * 0.99) as usize;
-        
+
         BenchmarkResult {
             avg_latency_ms: latencies.iter().sum::<f64>() / latencies.len() as f64,
             throughput_tokens_per_sec: throughput,
@@ -371,7 +371,7 @@ impl RustBenchmark {
             p99_latency_ms: latencies[p99_idx.min(latencies.len() - 1)],
         }
     }
-    
+
     fn get_peak_memory_usage(&mut self) -> u64 {
         self.system.refresh_all();
         if let Some(process) = self.system.processes_by_name("benchmark").next() {
@@ -380,7 +380,7 @@ impl RustBenchmark {
             2100  // Typical Rust implementation memory usage
         }
     }
-    
+
     fn get_cpu_utilization(&mut self) -> f64 {
         self.system.refresh_all();
         if let Some(process) = self.system.processes_by_name("benchmark").next() {
@@ -400,11 +400,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Machine learning model optimization".to_string(),
         "Concurrent processing in modern systems".to_string(),
     ];
-    
+
     let mut benchmark = RustBenchmark::new("/models/bitnet_b1_58-3B.gguf").await?;
-    
+
     println!("\n=== BitNet.rs Benchmark Results ===");
-    
+
     let single_result = benchmark.benchmark_single_inference(&test_prompts).await;
     println!("Single Inference:");
     println!("  Avg Latency: {:.2}ms", single_result.avg_latency_ms);
@@ -413,7 +413,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Throughput: {:.1} tok/s", single_result.throughput_tokens_per_sec);
     println!("  Peak Memory: {}MB", single_result.peak_memory_mb);
     println!("  CPU Usage: {:.1}%", single_result.cpu_utilization);
-    
+
     let batch_result = benchmark.benchmark_batch_inference(&test_prompts).await;
     println!("\nBatch Inference:");
     println!("  Avg Latency: {:.2}ms", batch_result.avg_latency_ms);
@@ -422,7 +422,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Throughput: {:.1} tok/s", batch_result.throughput_tokens_per_sec);
     println!("  Peak Memory: {}MB", batch_result.peak_memory_mb);
     println!("  CPU Usage: {:.1}%", batch_result.cpu_utilization);
-    
+
     let streaming_result = benchmark.benchmark_streaming_inference(&test_prompts).await;
     println!("\nStreaming Inference:");
     println!("  Avg Latency: {:.2}ms", streaming_result.avg_latency_ms);
@@ -431,7 +431,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Throughput: {:.1} tok/s", streaming_result.throughput_tokens_per_sec);
     println!("  Peak Memory: {}MB", streaming_result.peak_memory_mb);
     println!("  CPU Usage: {:.1}%", streaming_result.cpu_utilization);
-    
+
     Ok(())
 }
 ```
@@ -483,20 +483,20 @@ struct ImprovementMetrics {
 
 async fn run_comprehensive_comparison() -> Result<ComparisonReport, Box<dyn std::error::Error>> {
     println!("Running comprehensive performance comparison...");
-    
+
     // Run C++ benchmarks
     println!("Running C++ legacy benchmarks...");
     let cpp_output = Command::new("./before/cpp_benchmark")
         .output()
         .expect("Failed to run C++ benchmark");
-    
+
     // Run Rust benchmarks
     println!("Running Rust benchmarks...");
     let rust_output = Command::new("cargo")
         .args(&["run", "--release", "--bin", "benchmark"])
         .output()
         .expect("Failed to run Rust benchmark");
-    
+
     // Parse results (simplified - in practice, you'd parse the actual output)
     let cpp_results = ImplementationResults {
         single_inference: BenchmarkMetrics {
@@ -520,7 +520,7 @@ async fn run_comprehensive_comparison() -> Result<ComparisonReport, Box<dyn std:
         binary_size_mb: 45.2,
         build_time_seconds: 320,
     };
-    
+
     let rust_results = ImplementationResults {
         single_inference: BenchmarkMetrics {
             avg_latency_ms: 75.2,
@@ -550,7 +550,7 @@ async fn run_comprehensive_comparison() -> Result<ComparisonReport, Box<dyn std:
         binary_size_mb: 12.1,
         build_time_seconds: 30,
     };
-    
+
     // Calculate improvements
     let improvements = ImprovementMetrics {
         latency_improvement: cpp_results.single_inference.avg_latency_ms / rust_results.single_inference.avg_latency_ms,
@@ -559,7 +559,7 @@ async fn run_comprehensive_comparison() -> Result<ComparisonReport, Box<dyn std:
         build_time_improvement: cpp_results.build_time_seconds as f64 / rust_results.build_time_seconds as f64,
         binary_size_reduction: ((cpp_results.binary_size_mb - rust_results.binary_size_mb) / cpp_results.binary_size_mb) * 100.0,
     };
-    
+
     let recommendations = vec![
         "Migrate to BitNet.rs for 2.4x faster inference".to_string(),
         "Use async batch processing for 8.2x throughput improvement".to_string(),
@@ -568,7 +568,7 @@ async fn run_comprehensive_comparison() -> Result<ComparisonReport, Box<dyn std:
         "Improve build times by 10.7x with Cargo".to_string(),
         "Reduce binary size by 73% with Rust optimizations".to_string(),
     ];
-    
+
     Ok(ComparisonReport {
         cpp_results,
         rust_results,
@@ -637,7 +637,7 @@ The migration to BitNet.rs provides substantial performance improvements while a
         report.improvements.binary_size_reduction,
         report.cpp_results.binary_size_mb,
         report.rust_results.binary_size_mb,
-        
+
         // Table data
         report.cpp_results.single_inference.avg_latency_ms,
         report.rust_results.single_inference.avg_latency_ms,
@@ -651,7 +651,7 @@ The migration to BitNet.rs provides substantial performance improvements while a
         report.cpp_results.single_inference.cpu_utilization,
         report.rust_results.single_inference.cpu_utilization,
         report.cpp_results.single_inference.cpu_utilization - report.rust_results.single_inference.cpu_utilization,
-        
+
         // Batch data
         report.cpp_results.batch_inference.avg_latency_ms,
         report.rust_results.batch_inference.avg_latency_ms,
@@ -662,13 +662,13 @@ The migration to BitNet.rs provides substantial performance improvements while a
         report.cpp_results.batch_inference.peak_memory_mb,
         report.rust_results.batch_inference.peak_memory_mb,
         ((report.cpp_results.batch_inference.peak_memory_mb as f64 - report.rust_results.batch_inference.peak_memory_mb as f64) / report.cpp_results.batch_inference.peak_memory_mb as f64) * 100.0,
-        
+
         // Streaming data
         report.rust_results.streaming_inference.as_ref().unwrap().avg_latency_ms,
         report.rust_results.streaming_inference.as_ref().unwrap().throughput_tokens_per_sec,
         report.rust_results.single_inference.p95_latency_ms.unwrap(),
         report.rust_results.single_inference.p99_latency_ms.unwrap(),
-        
+
         // Recommendations
         report.recommendations.iter().map(|r| format!("- {}", r)).collect::<Vec<_>>().join("\n")
     )
@@ -678,18 +678,18 @@ The migration to BitNet.rs provides substantial performance improvements while a
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let report = run_comprehensive_comparison().await?;
     let report_content = generate_report(&report);
-    
+
     // Save report
     fs::write("performance_comparison_report.md", report_content)?;
-    
+
     // Save raw data as JSON
     let json_report = serde_json::to_string_pretty(&report)?;
     fs::write("performance_data.json", json_report)?;
-    
+
     println!("Performance comparison complete!");
     println!("Report saved to: performance_comparison_report.md");
     println!("Raw data saved to: performance_data.json");
-    
+
     Ok(())
 }
 ```

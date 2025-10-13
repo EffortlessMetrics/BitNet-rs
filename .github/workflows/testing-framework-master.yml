@@ -280,7 +280,7 @@ jobs:
             echo "" >> testing-framework-summary.md
             echo "## Available Artifacts" >> testing-framework-summary.md
             echo "" >> testing-framework-summary.md
-            
+
             artifact_count=$(find workflow-artifacts -type d -name "*" | wc -l)
             echo "- **Total Artifacts**: $artifact_count artifact sets" >> testing-framework-summary.md
             echo "- **Retention**: 30-90 days depending on type" >> testing-framework-summary.md
@@ -381,7 +381,7 @@ jobs:
 
             if (fs.existsSync('testing-framework-summary.md')) {
               const summary = fs.readFileSync('testing-framework-summary.md', 'utf8');
-              
+
               // Add header for PR comment
               const prComment = `<!-- BitNet.rs Testing Framework Summary -->
             ${summary}
@@ -395,12 +395,12 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
               });
-              
-              const botComment = comments.data.find(comment => 
-                comment.user.type === 'Bot' && 
+
+              const botComment = comments.data.find(comment =>
+                comment.user.type === 'Bot' &&
                 comment.body.includes('<!-- BitNet.rs Testing Framework Summary -->')
               );
-              
+
               if (botComment) {
                 // Update existing comment
                 await github.rest.issues.updateComment({

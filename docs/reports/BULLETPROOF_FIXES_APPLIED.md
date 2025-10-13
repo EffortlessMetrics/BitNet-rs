@@ -98,7 +98,7 @@ These fixes ensure:
 With these fixes, the following thresholds are achievable:
 
 - **FP32 vs FP32**: |Δ mean_nll| ≤ 1e-2
-- **Quant vs FP32**: |Δ mean_nll| ≤ 2e-2  
+- **Quant vs FP32**: |Δ mean_nll| ≤ 2e-2
 - **Median τ-b**: ≥ 0.60 over first N steps
 - **Informative steps**: ≥ 8 with intersection ≥ 3
 
@@ -113,7 +113,7 @@ TAU_TIE_EPS=1e-6 TAU_MIN=0.60 TAU_STEPS=24 LOGIT_TOPK=10 \
 MODEL_PATH=... TOKENIZER=... HF_MODEL_ID=... \
 pytest crossval/props/test_logit_parity.py -v
 
-# Run NLL parity test  
+# Run NLL parity test
 DELTA_NLL_MAX=1e-2 MODEL_PATH=... TOKENIZER=... HF_MODEL_ID=... \
 PPL_FILE=crossval/data/ppl_smoke.txt \
 pytest crossval/props/test_nll_parity.py -v

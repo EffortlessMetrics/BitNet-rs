@@ -118,13 +118,13 @@ jobs:
             os: ubuntu-latest
             features: "cpu,neon"
             cross: true
-          
+
           # Windows targets
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             features: "cpu,avx2"
             cross: false
-          
+
           # macOS targets
           - target: x86_64-apple-darwin
             os: macos-latest
@@ -167,26 +167,26 @@ jobs:
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
           TARGET="${{ matrix.target }}"
-          
+
           # Determine binary extension
           if [[ "$TARGET" == *"windows"* ]]; then
             BINARY_EXT=".exe"
           else
             BINARY_EXT=""
           fi
-          
+
           # Create archive directory
           ARCHIVE_DIR="bitnet-${VERSION}-${TARGET}"
           mkdir -p "$ARCHIVE_DIR"
-          
+
           # Copy binary
           cp "target/${TARGET}/release/bitnet${BINARY_EXT}" "$ARCHIVE_DIR/"
-          
+
           # Copy additional files
           cp README.md "$ARCHIVE_DIR/"
           cp CHANGELOG.md "$ARCHIVE_DIR/"
           cp LICENSE* "$ARCHIVE_DIR/" 2>/dev/null || true
-          
+
           # Create archive
           if [[ "$TARGET" == *"windows"* ]]; then
             7z a "${ARCHIVE_DIR}.zip" "$ARCHIVE_DIR"
@@ -283,11 +283,11 @@ jobs:
           VERSION="${{ needs.validate.outputs.version }}"
           ARCHIVE_DIR="bitnet-wasm-${VERSION}"
           mkdir -p "$ARCHIVE_DIR"
-          
+
           cp -r crates/bitnet-wasm/pkg "$ARCHIVE_DIR/web"
           cp -r crates/bitnet-wasm/pkg-nodejs "$ARCHIVE_DIR/nodejs"
           cp README.md "$ARCHIVE_DIR/"
-          
+
           tar czf "${ARCHIVE_DIR}.tar.gz" "$ARCHIVE_DIR"
           sha256sum "${ARCHIVE_DIR}.tar.gz" > "${ARCHIVE_DIR}.tar.gz.sha256"
 
@@ -370,7 +370,7 @@ jobs:
           VERSION="${{ needs.validate.outputs.version }}"
           echo "# BitNet.rs ${VERSION}" > release-notes.md
           echo "" >> release-notes.md
-          
+
           # Extract changelog for this version
           if [[ -f "CHANGELOG.md" ]]; then
             sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 >> release-notes.md
@@ -379,7 +379,7 @@ jobs:
             echo "" >> release-notes.md
             echo "This release focuses on the Rust implementation as the primary, actively maintained version." >> release-notes.md
           fi
-          
+
           echo "" >> release-notes.md
           echo "## Assets" >> release-notes.md
           echo "" >> release-notes.md
@@ -387,13 +387,13 @@ jobs:
           ls release-assets/*.tar.gz release-assets/*.zip 2>/dev/null | while read file; do
             echo "- $(basename "$file")" >> release-notes.md
           done
-          
+
           echo "" >> release-notes.md
           echo "### Python Wheels" >> release-notes.md
           ls release-assets/*.whl 2>/dev/null | while read file; do
             echo "- $(basename "$file")" >> release-notes.md
           done
-          
+
           echo "" >> release-notes.md
           echo "### WebAssembly" >> release-notes.md
           ls release-assets/bitnet-wasm-*.tar.gz 2>/dev/null | while read file; do
@@ -447,20 +447,20 @@ jobs:
             "crates/bitnet-cli"
             "."  # Main crate
           )
-          
+
           for crate in "${CRATES[@]}"; do
             echo "Publishing $crate..."
             cd "$crate"
-            
+
             # Dry run first
             cargo publish --dry-run
-            
+
             # Actual publish
             cargo publish --no-verify
-            
+
             # Wait for crates.io to process
             sleep 30
-            
+
             cd - >/dev/null
           done
 
@@ -522,11 +522,11 @@ jobs:
         run: |
           # Extract the archive
           tar xzf bitnet-wasm-*.tar.gz
-          
+
           # Publish web package
           cd bitnet-wasm-*/web
           npm publish
-          
+
           # Publish Node.js package
           cd ../nodejs
           npm publish
@@ -548,29 +548,29 @@ jobs:
             const version = '${{ needs.validate.outputs.version }}';
             const issueBody = `
             # Post-release tasks for v${version}
-            
+
             This issue tracks post-release tasks that need to be completed:
-            
+
             ## Documentation Updates
             - [ ] Update documentation website
             - [ ] Update API documentation
             - [ ] Update migration guides
-            
+
             ## Community
             - [ ] Announce release on social media
             - [ ] Update project website
             - [ ] Notify relevant communities
-            
+
             ## Monitoring
             - [ ] Monitor download statistics
             - [ ] Monitor for issues and bug reports
             - [ ] Check CI/CD pipeline health
-            
+
             ## Next Release
             - [ ] Plan next release milestones
             - [ ] Update project roadmap
             `;
-            
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,

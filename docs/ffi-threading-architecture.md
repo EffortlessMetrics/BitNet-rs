@@ -88,7 +88,7 @@ pub struct ThreadManager {
 impl ThreadManager {
     pub fn initialize(&self) -> Result<(), BitNetCError> {
         let mut pool = self.thread_pool.write()?;
-        
+
         if pool.is_none() {
             let config = ThreadPoolConfig {
                 num_threads: self.num_threads.load(Ordering::SeqCst),
@@ -97,7 +97,7 @@ impl ThreadManager {
             };
             *pool = Some(ThreadPool::with_config(config)?);
         }
-        
+
         Ok(())
     }
 }
@@ -109,13 +109,13 @@ impl ThreadManager {
 pub struct ThreadPoolConfig {
     /// Number of worker threads
     pub num_threads: usize,
-    
+
     /// Maximum queue size (prevents resource exhaustion)
     pub max_queue_size: usize,
-    
+
     /// Thread stack size in bytes
     pub stack_size: Option<usize>,
-    
+
     /// Thread name prefix for debugging
     pub thread_name_prefix: String,
 }
@@ -188,7 +188,7 @@ let _guard = JobTracker::new(&counter);
 ```rust
 let config = ThreadPoolConfig {
     num_threads: num_cpus::get(),  // Scale with CPU cores
-    max_queue_size: 1000,         // Prevent memory exhaustion  
+    max_queue_size: 1000,         // Prevent memory exhaustion
     stack_size: Some(2 * 1024 * 1024), // 2MB for complex operations
     thread_name_prefix: "bitnet-ffi".to_string(),
 };
@@ -252,7 +252,7 @@ cargo test --no-default-features --features cpu -p bitnet-ffi test_threading_err
 **Problem:** Memory exhaustion from unbounded queues
 **Solution:** Always use bounded channels with appropriate limits
 
-### 2. Job Counter Desynchronization  
+### 2. Job Counter Desynchronization
 
 **Problem:** Increment/decrement mismatches
 **Solution:** Use RAII patterns for automatic cleanup
@@ -280,7 +280,7 @@ cargo test --no-default-features --features cpu -p bitnet-ffi test_threading_err
 // CPU-bound workloads
 num_threads: num_cpus::get()
 
-// I/O-bound workloads  
+// I/O-bound workloads
 num_threads: num_cpus::get() * 2
 
 // Custom sizing based on profiling
@@ -307,7 +307,7 @@ stack_size: None
 // Large models or deep recursion
 stack_size: Some(4 * 1024 * 1024) // 4MB
 
-// Memory-constrained environments  
+// Memory-constrained environments
 stack_size: Some(512 * 1024) // 512KB
 ```
 
@@ -328,7 +328,7 @@ sender.send(job)?;
 
 ### After (Robust)
 ```rust
-// Bounded channel  
+// Bounded channel
 let (sender, receiver) = sync_channel(max_queue_size);
 
 // RAII job tracking
@@ -344,7 +344,7 @@ if self.sender.send(job).is_err() {
 The enhanced FFI threading architecture provides:
 
 - **Deadlock Prevention**: Through proper drop ordering and bounded resources
-- **Resource Control**: Via configurable limits and RAII patterns  
+- **Resource Control**: Via configurable limits and RAII patterns
 - **Async Compatibility**: With smart runtime detection
 - **Comprehensive Testing**: Ensuring reliability in production
 

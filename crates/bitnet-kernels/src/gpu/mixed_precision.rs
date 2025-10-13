@@ -29,7 +29,7 @@ pub struct MixedPrecisionMetrics {
     pub total_operations: u64,
     /// Total execution time for FP16 operations
     pub fp16_execution_time: Duration,
-    /// Total execution time for BF16 operations  
+    /// Total execution time for BF16 operations
     pub bf16_execution_time: Duration,
     /// Total execution time for FP32 operations
     pub fp32_execution_time: Duration,
@@ -561,7 +561,7 @@ impl MixedPrecisionKernel {
         Ok(())
     }
 
-    /// Matrix multiplication with BF16 precision  
+    /// Matrix multiplication with BF16 precision
     pub fn matmul_bf16(
         &mut self,
         a: &[f32],

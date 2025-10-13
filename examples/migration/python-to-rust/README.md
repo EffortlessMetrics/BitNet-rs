@@ -23,24 +23,24 @@ import time
 class BitNetInference:
     def __init__(self, model_path):
         self.model = bitnet_python.load_model(model_path)
-        
+
     def generate(self, prompt, max_tokens=100):
         start_time = time.time()
         tokens = self.model.tokenize(prompt)
         output_tokens = []
-        
+
         for _ in range(max_tokens):
             logits = self.model.forward(tokens)
             next_token = np.argmax(logits[-1])
             output_tokens.append(next_token)
             tokens.append(next_token)
-            
+
             if next_token == self.model.eos_token:
                 break
-                
+
         result = self.model.detokenize(output_tokens)
         inference_time = time.time() - start_time
-        
+
         return {
             'text': result,
             'tokens': len(output_tokens),
@@ -70,10 +70,10 @@ class BitNetInference:
     def __init__(self, model_path: str):
         # BitNet.rs handles model loading more efficiently
         self.model = bitnet_py.Model.load(model_path)
-        
+
     def generate(self, prompt: str, max_tokens: int = 100) -> Dict[str, any]:
         start_time = time.time()
-        
+
         # BitNet.rs provides streaming generation
         result = self.model.generate(
             prompt=prompt,
@@ -81,9 +81,9 @@ class BitNetInference:
             temperature=0.7,
             top_p=0.9
         )
-        
+
         inference_time = time.time() - start_time
-        
+
         return {
             'text': result.text,
             'tokens': result.token_count,
@@ -91,7 +91,7 @@ class BitNetInference:
             'tokens_per_second': result.token_count / inference_time,
             'finish_reason': result.finish_reason
         }
-    
+
     def generate_stream(self, prompt: str, max_tokens: int = 100):
         """Streaming generation for real-time applications"""
         for chunk in self.model.generate_stream(
@@ -108,19 +108,19 @@ class BitNetInference:
 if __name__ == "__main__":
     try:
         model = BitNetInference("model.gguf")
-        
+
         # Batch generation
         result = model.generate("The future of AI is")
         print(f"Generated: {result['text']}")
         print(f"Speed: {result['tokens_per_second']:.1f} tok/s")
-        
+
         # Streaming generation
         print("\nStreaming generation:")
         for chunk in model.generate_stream("Rust programming is"):
             if chunk['text']:
                 print(chunk['text'], end='', flush=True)
         print()
-        
+
     except bitnet_py.ModelError as e:
         print(f"Model error: {e}")
     except Exception as e:
@@ -140,20 +140,20 @@ def benchmark_inference(model_class, model_path, prompts, runs=5):
     model = model_class(model_path)
     times = []
     token_counts = []
-    
+
     for _ in range(runs):
         for prompt in prompts:
             start = time.time()
             result = model.generate(prompt, max_tokens=50)
             end = time.time()
-            
+
             times.append(end - start)
             token_counts.append(result['tokens'])
-    
+
     avg_time = statistics.mean(times)
     total_tokens = sum(token_counts)
     tokens_per_second = total_tokens / sum(times)
-    
+
     return {
         'avg_time': avg_time,
         'tokens_per_second': tokens_per_second,
@@ -167,17 +167,17 @@ if __name__ == "__main__":
         "Machine learning models",
         "High performance computing"
     ]
-    
+
     print("Benchmarking Python implementations...")
-    
+
     # Benchmark old implementation
     old_results = benchmark_inference(OldInference, "model.gguf", prompts)
     print(f"Legacy Python: {old_results['tokens_per_second']:.1f} tok/s")
-    
+
     # Benchmark new implementation
     new_results = benchmark_inference(NewInference, "model.gguf", prompts)
     print(f"BitNet.rs Python: {new_results['tokens_per_second']:.1f} tok/s")
-    
+
     # Calculate improvement
     improvement = new_results['tokens_per_second'] / old_results['tokens_per_second']
     print(f"Performance improvement: {improvement:.1f}x faster")

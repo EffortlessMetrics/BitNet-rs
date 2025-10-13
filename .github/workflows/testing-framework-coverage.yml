@@ -194,7 +194,7 @@ jobs:
 
           for crate in "${crates[@]}"; do
             echo "Generating coverage for $crate..."
-            
+
             cargo llvm-cov report \
               --package "$crate" \
               --features "${{ matrix.features }}" \
@@ -218,10 +218,10 @@ jobs:
               """Parse LCOV file and extract coverage metrics."""
               if not Path(lcov_path).exists():
                   return None
-                  
+
               with open(lcov_path, 'r') as f:
                   content = f.read()
-              
+
               # Extract metrics
               lines_found = re.findall(r'LF:(\d+)', content)
               lines_hit = re.findall(r'LH:(\d+)', content)
@@ -229,18 +229,18 @@ jobs:
               functions_hit = re.findall(r'FNH:(\d+)', content)
               branches_found = re.findall(r'BRF:(\d+)', content)
               branches_hit = re.findall(r'BRH:(\d+)', content)
-              
+
               total_lines_found = sum(int(x) for x in lines_found)
               total_lines_hit = sum(int(x) for x in lines_hit)
               total_functions_found = sum(int(x) for x in functions_found)
               total_functions_hit = sum(int(x) for x in functions_hit)
               total_branches_found = sum(int(x) for x in branches_found)
               total_branches_hit = sum(int(x) for x in branches_hit)
-              
+
               line_coverage = (total_lines_hit / total_lines_found * 100) if total_lines_found > 0 else 0
               function_coverage = (total_functions_hit / total_functions_found * 100) if total_functions_found > 0 else 0
               branch_coverage = (total_branches_hit / total_branches_found * 100) if total_branches_found > 0 else 0
-              
+
               return {
                   'line_coverage': line_coverage,
                   'function_coverage': function_coverage,
@@ -256,7 +256,7 @@ jobs:
           def main():
               coverage_type = "${{ matrix.coverage_type }}"
               threshold = float("${{ env.COVERAGE_THRESHOLD }}")
-              
+
               # Analyze main coverage file
               if coverage_type == "combined-coverage":
                   main_file = "coverage/combined.lcov"
@@ -266,26 +266,26 @@ jobs:
                   main_file = "coverage/integration-tests.lcov"
               else:
                   main_file = None
-              
+
               results = {}
-              
+
               if main_file and Path(main_file).exists():
                   results['main'] = parse_lcov_file(main_file)
-              
+
               # Analyze per-crate coverage
-              crates = ["bitnet-common", "bitnet-models", "bitnet-quantization", 
+              crates = ["bitnet-common", "bitnet-models", "bitnet-quantization",
                        "bitnet-kernels", "bitnet-inference", "bitnet-tokenizers"]
-              
+
               results['crates'] = {}
               for crate in crates:
                   crate_file = f"coverage/crate-{crate}.lcov"
                   if Path(crate_file).exists():
                       results['crates'][crate] = parse_lcov_file(crate_file)
-              
+
               # Generate report
               with open('coverage/analysis.json', 'w') as f:
                   json.dump(results, f, indent=2)
-              
+
               # Check thresholds
               failed_crates = []
               if results.get('main'):
@@ -296,14 +296,14 @@ jobs:
                       sys.exit(1)
                   else:
                       print(f"✅ Main coverage meets threshold: {main_coverage:.2f}% >= {threshold}%")
-              
+
               for crate, metrics in results.get('crates', {}).items():
                   if metrics:
                       crate_coverage = metrics['line_coverage']
                       print(f"{crate} coverage: {crate_coverage:.2f}%")
                       if crate_coverage < threshold:
                           failed_crates.append(crate)
-              
+
               if failed_crates:
                   print(f"❌ Crates below threshold: {', '.join(failed_crates)}")
                   sys.exit(1)
@@ -353,7 +353,7 @@ jobs:
               print(f"")
               print(f"| Crate | Line Coverage | Function Coverage | Branch Coverage |")
               print(f"|-------|---------------|-------------------|-----------------|")
-              
+
               for crate, metrics in data['crates'].items():
                   if metrics:
                       line_cov = metrics['line_coverage']
@@ -459,7 +459,7 @@ jobs:
             echo "" >> coverage-summary.md
             echo "## Available Artifacts" >> coverage-summary.md
             echo "" >> coverage-summary.md
-            
+
             artifact_count=$(find artifacts -name "coverage-*" -type d | wc -l)
             echo "- **Total Coverage Reports**: $artifact_count" >> coverage-summary.md
             echo "- **Retention**: 30 days" >> coverage-summary.md

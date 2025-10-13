@@ -14,23 +14,23 @@ pub struct InfoCommand {
     /// Path to the model file
     #[arg(short, long, value_name = "PATH")]
     pub model: PathBuf,
-    
+
     /// Path to tokenizer (optional, will use embedded if available)
     #[arg(short, long, value_name = "PATH")]
     pub tokenizer: Option<PathBuf>,
-    
+
     /// Model format override (auto, gguf, safetensors)
     #[arg(long, default_value = "auto")]
     pub model_format: String,
-    
+
     /// Output format (text or json)
     #[arg(long, default_value = "text")]
     pub output_format: String,
-    
+
     /// Show scoring policy details
     #[arg(long)]
     pub show_policy: bool,
-    
+
     /// Show ignored tensors
     #[arg(long)]
     pub show_ignored: bool,
@@ -39,26 +39,26 @@ pub struct InfoCommand {
 impl InfoCommand {
     pub async fn run(self) -> Result<()> {
         info!("Loading model information from: {}", self.model.display());
-        
+
         // Parse format override
         let format_override = parse_model_format(&self.model_format)
             .context("Invalid model format")?;
-        
+
         // Create loader
         let mut loader = ModelLoader::new(&self.model);
-        
+
         if let Some(tok_path) = &self.tokenizer {
             loader = loader.with_tokenizer(tok_path);
         }
-        
+
         if let Some(fmt) = format_override {
             loader = loader.with_format(fmt);
         }
-        
+
         // Load model and get metadata
         let (_model, _tokenizer, metadata) = loader.load()
             .context("Failed to load model")?;
-        
+
         // Output based on format
         match self.output_format.as_str() {
             "json" => {
@@ -97,7 +97,7 @@ impl InfoCommand {
                 println!("Format: {} ({})", metadata.format.name(), metadata.format_source);
                 println!("Tokenizer: {}", metadata.tokenizer_source);
                 println!();
-                
+
                 println!("Model Configuration");
                 println!("------------------");
                 println!("Vocab Size: {}", metadata.model_config.vocab_size);
@@ -106,12 +106,12 @@ impl InfoCommand {
                 println!("Attention Heads: {}", metadata.model_config.num_heads);
                 println!("Context Length: {}", metadata.model_config.context_length);
                 println!();
-                
+
                 println!("Loading Statistics");
                 println!("-----------------");
                 println!("Tensors Loaded: {}", metadata.tensors_loaded);
                 println!("Ignored Tensors: {}", metadata.ignored_tensors.len());
-                
+
                 if self.show_policy {
                     println!();
                     println!("Scoring Policy");
@@ -120,7 +120,7 @@ impl InfoCommand {
                     println!("Append EOS: {}", metadata.scoring_policy.append_eos);
                     println!("Mask Padding: {}", metadata.scoring_policy.mask_pad);
                 }
-                
+
                 if self.show_ignored && !metadata.ignored_tensors.is_empty() {
                     println!();
                     println!("Ignored Tensors");
@@ -134,7 +134,7 @@ impl InfoCommand {
                 }
             }
         }
-        
+
         Ok(())
     }
 }

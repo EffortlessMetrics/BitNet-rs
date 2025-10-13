@@ -30,14 +30,14 @@ measure_inference() {
     local model_path="$1"
     local format="$2"
     local tokenizer="$3"
-    
+
     # Set deterministic mode for reproducibility
     export BITNET_DETERMINISTIC=1
     export BITNET_SEED=42
     export RAYON_NUM_THREADS="${THREADS:-$(nproc)}"
-    
+
     local output_file="/tmp/perf_${format}_$$.json"
-    
+
     # Run benchmark
     "$BITNET_BIN" benchmark \
         --model "$model_path" \
@@ -50,7 +50,7 @@ measure_inference() {
         echo "{}"
         return 1
     }
-    
+
     cat "$output_file"
     rm -f "$output_file"
 }
@@ -60,10 +60,10 @@ measure_memory() {
     local model_path="$1"
     local format="$2"
     local tokenizer="$3"
-    
+
     # Use time command to measure peak RSS
     local time_output="/tmp/time_${format}_$$.txt"
-    
+
     /usr/bin/time -f "%M" \
         "$BITNET_BIN" run \
         --model "$model_path" \
@@ -77,7 +77,7 @@ measure_memory() {
         echo "0"
         return 1
     }
-    
+
     local rss_kb=$(cat "$time_output")
     rm -f "$time_output"
     echo "$rss_kb"
@@ -87,10 +87,10 @@ measure_memory() {
 measure_load_time() {
     local model_path="$1"
     local format="$2"
-    
+
     # Measure time to load and run minimal inference
     local start=$(date +%s%N)
-    
+
     "$BITNET_BIN" run \
         --model "$model_path" \
         --model-format "$format" \
@@ -101,11 +101,11 @@ measure_load_time() {
         echo "0"
         return 1
     }
-    
+
     local end=$(date +%s%N)
     local elapsed_ns=$((end - start))
     local elapsed_ms=$((elapsed_ns / 1000000))
-    
+
     echo "$elapsed_ms"
 }
 
@@ -114,33 +114,33 @@ measure_format() {
     local format="$1"
     local model_path="$2"
     local tokenizer="$3"
-    
+
     log_info "Measuring $format performance..."
-    
+
     # Get benchmark results
     local bench_json=$(measure_inference "$model_path" "$format" "$tokenizer")
-    
+
     # Extract metrics or use defaults
     local tps_mean=0
     local tps_std=0
     local ft_ms_mean=0
     local ft_ms_std=0
-    
+
     if [ -n "$bench_json" ] && [ "$bench_json" != "{}" ]; then
         tps_mean=$(echo "$bench_json" | jq -r '.throughput.mean_tps // 0')
         tps_std=$(echo "$bench_json" | jq -r '.throughput.std_tps // 0')
         ft_ms_mean=$(echo "$bench_json" | jq -r '.latency.first_token_ms // 0')
         ft_ms_std=$(echo "$bench_json" | jq -r '.latency.first_token_std // 0')
     fi
-    
+
     # Measure memory
     local rss_kb=$(measure_memory "$model_path" "$format" "$tokenizer")
     local rss_mb=$((rss_kb / 1024))
-    
+
     # Measure load time
     local load_ms=$(measure_load_time "$model_path" "$format")
     local load_s=$(echo "scale=3; $load_ms / 1000" | bc)
-    
+
     # Create JSON object
     cat <<EOF
 {
@@ -165,19 +165,19 @@ calc_improvement() {
     local bitnet_val="$1"
     local baseline_val="$2"
     local invert="${3:-false}"  # true for metrics where lower is better
-    
+
     if [ "$(echo "$baseline_val == 0" | bc)" -eq 1 ]; then
         echo "0"
         return
     fi
-    
+
     local diff=$(echo "scale=4; ($bitnet_val - $baseline_val) / $baseline_val * 100" | bc)
-    
+
     if [ "$invert" = "true" ]; then
         # For latency/memory, negative is improvement
         diff=$(echo "scale=4; -1 * $diff" | bc)
     fi
-    
+
     echo "$diff"
 }
 
@@ -188,37 +188,37 @@ main() {
     log_info "Date: ${DATE}"
     log_info "Model: ${MODEL_ID}"
     echo
-    
+
     # Setup paths
     local st_model="${MODELS_DIR}/${MODEL_ID}/safetensors/model.safetensors"
     local gguf_model="${MODELS_DIR}/${MODEL_ID}/gguf/model.gguf"
     local tokenizer="${MODELS_DIR}/${MODEL_ID}/safetensors/tokenizer.json"
-    
+
     # Check models exist
     if [ ! -f "$st_model" ] && [ ! -f "$gguf_model" ]; then
         log_info "No models found. Run setup_model_storage.sh first."
         exit 1
     fi
-    
+
     # Measure SafeTensors performance
     local st_perf="{}"
     if [ -f "$st_model" ]; then
         st_perf=$(measure_format "safetensors" "$st_model" "$tokenizer")
     fi
-    
+
     # Measure GGUF performance
     local gguf_perf="{}"
     if [ -f "$gguf_model" ]; then
         gguf_perf=$(measure_format "gguf" "$gguf_model" "$tokenizer")
     fi
-    
+
     # Use GGUF as primary, SafeTensors as baseline
     # (or vice versa depending on your preference)
     local primary_perf="$gguf_perf"
     local baseline_perf="$st_perf"
     local primary_name="gguf"
     local baseline_name="safetensors"
-    
+
     # If no GGUF, use SafeTensors as primary
     if [ "$gguf_perf" = "{}" ] && [ "$st_perf" != "{}" ]; then
         primary_perf="$st_perf"
@@ -226,41 +226,41 @@ main() {
         primary_name="safetensors"
         baseline_name="none"
     fi
-    
+
     # Extract metrics
     local p_tps=$(echo "$primary_perf" | jq -r '.tps_median // 0')
     local p_ft=$(echo "$primary_perf" | jq -r '.ft_ms_median // 0')
     local p_rss=$(echo "$primary_perf" | jq -r '.rss_kb_median // 0')
     local p_load=$(echo "$primary_perf" | jq -r '.load_s_median // 0')
-    
+
     local b_tps=$(echo "$baseline_perf" | jq -r '.tps_median // 0')
     local b_ft=$(echo "$baseline_perf" | jq -r '.ft_ms_median // 0')
     local b_rss=$(echo "$baseline_perf" | jq -r '.rss_kb_median // 0')
     local b_load=$(echo "$baseline_perf" | jq -r '.load_s_median // 0')
-    
+
     # Calculate improvements
     local tps_imp=0
     local ft_imp=0
     local rss_imp=0
     local load_imp=0
-    
+
     if [ "$baseline_perf" != "{}" ]; then
         tps_imp=$(calc_improvement "$p_tps" "$b_tps" "false")
         ft_imp=$(calc_improvement "$p_ft" "$b_ft" "true")
         rss_imp=$(calc_improvement "$p_rss" "$b_rss" "true")
         load_imp=$(calc_improvement "$p_load" "$b_load" "true")
     fi
-    
+
     # Create output directory
     mkdir -p "$OUTPUT_DIR"
-    
+
     # Generate final JSON with WSL2 detection and provenance
     local wsl2_flag=$(detect_wsl2 && echo "true" || echo "false")
     local platform_name="${PLATFORM}-${ARCH}"
     if [ "$wsl2_flag" = "true" ]; then
         platform_name="${platform_name}-WSL2"
     fi
-    
+
     # Add git commit and model hash for provenance
     local git_commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     local git_dirty=$([ -n "$(git status --porcelain 2>/dev/null)" ] && echo "true" || echo "false")
@@ -270,7 +270,7 @@ main() {
     elif [ -f "$st_model" ]; then
         model_hash=$(sha256sum "$st_model" | cut -d' ' -f1 | head -c 16)
     fi
-    
+
     local output_file="${OUTPUT_DIR}/${PLATFORM}-${DATE}.json"
     cat > "$output_file" <<EOF
 {
@@ -304,9 +304,9 @@ main() {
     }
 }
 EOF
-    
+
     log_info "Performance data saved to: $output_file"
-    
+
     # Print summary
     echo
     log_info "Performance Summary:"
@@ -315,7 +315,7 @@ EOF
     echo "  First token: ${p_ft} ms"
     echo "  Memory: $((p_rss / 1024)) MB"
     echo "  Load time: ${p_load} s"
-    
+
     if [ "$baseline_perf" != "{}" ]; then
         echo
         echo "  vs $baseline_name:"

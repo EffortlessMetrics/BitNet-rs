@@ -45,7 +45,7 @@ run_with_status() {
     local description=$1
     shift
     echo -n "Running: $description... "
-    
+
     if "$@" >/dev/null 2>&1; then
         echo -e "${GREEN}✅${NC}"
         return 0
@@ -194,7 +194,7 @@ if [[ -f "$CACHE_DIR/metadata.json" ]]; then
     echo "==============="
     cat "$CACHE_DIR/metadata.json" | python3 -m json.tool 2>/dev/null || cat "$CACHE_DIR/metadata.json"
     echo
-    
+
     # Calculate cache efficiency
     echo "Cache Efficiency Metrics:"
     echo "========================"

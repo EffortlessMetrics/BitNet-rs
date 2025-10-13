@@ -57,12 +57,12 @@ pause() {
 intro() {
     clear
     header "BitNet.rs Dual-Format Validation Demo"
-    
+
     # Show platform info
     print_platform_banner
     detect_wsl2 || true
     echo
-    
+
     echo "Welcome to the BitNet.rs stakeholder demo!"
     echo
     echo "This 5-minute demonstration will showcase:"
@@ -73,74 +73,74 @@ intro() {
     echo
     info "All results are reproducible with deterministic execution"
     info "Binary: $BITNET_BIN"
-    
+
     pause
 }
 
 demo_format_detection() {
     header "1. Format Detection & Model Introspection"
-    
+
     step "Checking SafeTensors model..."
-    
+
     local st_model="models/${MODEL_ID}/safetensors/model.safetensors"
     local st_tokenizer="models/${MODEL_ID}/safetensors/tokenizer.json"
-    
+
     if [ -f "$st_model" ]; then
         $BITNET_BIN info \
             --model "$st_model" \
             --tokenizer "$st_tokenizer" \
             --show-policy \
             --json | jq '{format, tokenizer_source, scoring_policy}' | tee "${DEMO_DIR}/safetensors_info.json"
-        
+
         success "SafeTensors format detected with embedded tokenizer"
     else
         info "SafeTensors model not found - skipping"
     fi
-    
+
     echo
     step "Checking GGUF model..."
-    
+
     local gguf_model="models/${MODEL_ID}/gguf/model.gguf"
-    
+
     if [ -f "$gguf_model" ]; then
         $BITNET_BIN info \
             --model "$gguf_model" \
             --show-policy \
             --json | jq '{format, tokenizer_source, scoring_policy}' | tee "${DEMO_DIR}/gguf_info.json"
-        
+
         success "GGUF format detected with embedded metadata"
     else
         info "GGUF model not found - skipping"
     fi
-    
+
     pause
 }
 
 demo_parity_validation() {
     header "2. Format Parity Validation"
-    
+
     step "Running comprehensive parity checks..."
     echo
-    
+
     # Create simple test
     echo "The quick brown fox jumps over the lazy dog." > "${DEMO_DIR}/test.txt"
-    
+
     # Run validation (simplified for demo)
     info "Testing tokenizer equivalence..."
     sleep 1
     success "Tokenizers produce identical output"
-    
+
     info "Testing logit correlation (τ-b)..."
     sleep 1
     success "Logit correlation: τ-b = 0.982 (threshold ≥ 0.95)"
-    
+
     info "Testing perplexity parity..."
     sleep 1
     success "NLL delta: 0.0043 (threshold ≤ 0.01)"
-    
+
     echo
     step "Generating parity report..."
-    
+
     cat > "${DEMO_DIR}/parity_summary.json" <<EOF
 {
   "timestamp": "$(date -u +%FT%TZ)",
@@ -166,28 +166,28 @@ demo_parity_validation() {
   }
 }
 EOF
-    
+
     jq . "${DEMO_DIR}/parity_summary.json"
-    
+
     success "All parity checks passed!"
-    
+
     pause
 }
 
 demo_performance() {
     header "3. Measured Performance Metrics"
-    
+
     step "Running performance benchmarks..."
     echo
-    
+
     # Generate realistic performance data
     local platform=$(get_platform_name)
-    
+
     info "Platform: $platform"
     info "Deterministic mode: BITNET_DETERMINISTIC=1"
     info "Threads: RAYON_NUM_THREADS=1"
     echo
-    
+
     # Simulate measurements
     echo -n "Measuring SafeTensors performance"
     for i in {1..5}; do
@@ -195,17 +195,17 @@ demo_performance() {
         sleep 0.5
     done
     echo " done"
-    
+
     echo -n "Measuring GGUF performance"
     for i in {1..5}; do
         echo -n "."
         sleep 0.5
     done
     echo " done"
-    
+
     echo
     step "Performance Results:"
-    
+
     cat > "${DEMO_DIR}/perf_comparison.md" <<EOF
 
 | Metric | SafeTensors | GGUF | Ratio |
@@ -215,40 +215,40 @@ demo_performance() {
 | Memory (MB) | 2,048 | 1,956 | 0.95x |
 
 EOF
-    
+
     cat "${DEMO_DIR}/perf_comparison.md"
-    
+
     success "Performance measured from actual inference runs"
     info "Results saved to bench/results/*.json"
-    
+
     pause
 }
 
 demo_failure_triage() {
     header "4. Rapid Failure Triage"
-    
+
     step "Demonstrating failure replay capability..."
     echo
-    
+
     # Create mock failure for demonstration
     cat > "${DEMO_DIR}/parity_failures.jsonl" <<EOF
 {"prompt": "Test prompt", "expected_logits": [1.2, 0.8, -0.5], "actual_logits": [1.1, 0.9, -0.4], "tau_b": 0.89}
 EOF
-    
+
     info "Example failure detected (τ-b = 0.89 < 0.95)"
     echo
-    
+
     step "Replay command for debugging:"
     echo
     echo "  python3 scripts/replay_parity.py ${DEMO_DIR}/parity_failures.jsonl"
     echo
-    
+
     info "This allows rapid iteration on specific failure cases"
-    
+
     # Show Methods & Environment box
     echo
     step "All results include Methods & Environment metadata:"
-    
+
     cat <<EOF
 
 **Platform:** Linux 6.6.87 WSL2 x86_64
@@ -257,15 +257,15 @@ EOF
 **Timestamp:** $(date -u +%FT%TZ)
 
 EOF
-    
+
     success "Complete audit trail for reproducibility"
-    
+
     pause
 }
 
 summary() {
     header "Demo Summary"
-    
+
     echo "✅ Key Capabilities Demonstrated:"
     echo
     echo "  1. ${GREEN}Format Detection${NC}"
@@ -287,13 +287,13 @@ summary() {
     echo "     • Comprehensive audit trails"
     echo "     • Deterministic reproduction"
     echo
-    
+
     info "All results saved to: ${DEMO_DIR}/"
     echo
-    
+
     echo -e "${BOLD}${GREEN}BitNet.rs dual-format support is production-ready!${NC}"
     echo
-    
+
     # Generate final report
     cat > "${DEMO_DIR}/demo_report.json" <<EOF
 {
@@ -313,7 +313,7 @@ summary() {
   }
 }
 EOF
-    
+
     success "Demo report saved to ${DEMO_DIR}/demo_report.json"
 }
 
@@ -322,14 +322,14 @@ main() {
     # Setup
     setup_deterministic_env
     BITNET_BIN=$(find_bitnet_binary)
-    
+
     # Check if binary exists
     if [ ! -x "$BITNET_BIN" ]; then
         echo -e "${RED}Error: BitNet binary not found${NC}"
         echo "Please build with: cargo build --release --no-default-features --features cpu"
         exit 1
     fi
-    
+
     # Run demo sections
     intro
     demo_format_detection

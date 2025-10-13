@@ -10,6 +10,10 @@ keywords.workspace = true
 categories.workspace = true
 description = "Command-line interface for BitNet inference"
 
+[lib]
+name = "bitnet_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "bitnet"
 path = "src/main.rs"
@@ -34,6 +38,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_yaml = "0.9"
 toml.workspace = true
 regex = "1"
+once_cell = "1.21.3"
 console.workspace = true
 humantime.workspace = true
 humansize.workspace = true
@@ -52,6 +57,7 @@ half = "2.4.1"
 [dev-dependencies]
 assert_cmd = "2.0.17"
 predicates = "3.1.3"
+tempfile = "3"
 
 [features]
 default = ["cpu", "full-cli"]

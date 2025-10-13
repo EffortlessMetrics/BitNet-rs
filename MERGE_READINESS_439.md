@@ -248,16 +248,16 @@ The GitHub Actions failures are **EXPECTED** and **NOT BLOCKING** for Generative
    ```
    tests: cargo test --lib --workspace --no-default-features --features cpu
           → 421/421 pass (0 failures, 7 ignored)
-   
+
    clippy: cargo clippy --workspace --lib --no-default-features --features cpu -- -D warnings
           → 0 warnings (clean)
-   
+
    format: cargo fmt --all --check
           → clean (no formatting violations)
-   
+
    features: cargo check --workspace --no-default-features (cpu/gpu/none)
             → all pass
-   
+
    security: cargo audit
             → 0 vulnerabilities (821 advisories checked, 717 deps scanned)
    ```

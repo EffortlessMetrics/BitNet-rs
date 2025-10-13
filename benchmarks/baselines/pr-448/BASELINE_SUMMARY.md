@@ -113,7 +113,7 @@ cargo bench --no-default-features --features cpu,bench -- --baseline pr-448
 - ✅ Baseline established: Stored in `benchmarks/baselines/pr-448/`
 - ✅ No performance regressions detected in quantization path
 
-**Recommendation**: 
+**Recommendation**:
 - Approve PR #448 with baseline established
 - No performance blocking issues detected
 - OTLP migration validated as low-risk observability change

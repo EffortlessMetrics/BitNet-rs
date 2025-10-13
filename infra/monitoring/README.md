@@ -290,7 +290,7 @@ helm install bitnet ./helm/bitnet --set monitoring.enabled=true
 
 ### Phase 3: Legacy Deprecation
 1. **Disable legacy alerts** (keep for reference)
-2. **Archive old dashboards** 
+2. **Archive old dashboards**
 3. **Remove legacy monitoring** components
 
 ## Support and Maintenance

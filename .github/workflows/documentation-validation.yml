@@ -79,28 +79,28 @@ jobs:
     - name: Test code examples in documentation
       run: |
         echo "Testing code examples in documentation..."
-        
+
         # Extract and test Rust code blocks from README.md
         python3 << 'EOF'
         import re
         import subprocess
         import tempfile
         import os
-        
+
         def extract_rust_code_blocks(file_path):
             """Extract Rust code blocks from markdown file"""
             with open(file_path, 'r') as f:
                 content = f.read()
-            
+
             # Find Rust code blocks
             pattern = r'```rust\n(.*?)\n```'
             matches = re.findall(pattern, content, re.DOTALL)
             return matches
-        
+
         def test_rust_code(code, test_name):
             """Test a Rust code snippet"""
             print(f"Testing {test_name}...")
-            
+
             # Create temporary Cargo project
             with tempfile.TemporaryDirectory() as temp_dir:
                 # Create Cargo.toml
@@ -108,27 +108,27 @@ jobs:
         name = "doc_test"
         version = "0.1.0"
         edition = "2024"
-        
+
         [dependencies]
         bitnet = {{ path = "{os.getcwd()}" }}
         """
-                
+
                 with open(os.path.join(temp_dir, 'Cargo.toml'), 'w') as f:
                     f.write(cargo_toml)
-                
+
                 # Create src directory and main.rs
                 src_dir = os.path.join(temp_dir, 'src')
                 os.makedirs(src_dir)
-                
+
                 with open(os.path.join(src_dir, 'main.rs'), 'w') as f:
                     f.write(f"fn main() {{\n{code}\n}}")
-                
+
                 # Try to compile
-                result = subprocess.run(['cargo', 'check'], 
-                                      cwd=temp_dir, 
-                                      capture_output=True, 
+                result = subprocess.run(['cargo', 'check'],
+                                      cwd=temp_dir,
+                                      capture_output=True,
                                       text=True)
-                
+
                 if result.returncode == 0:
                     print(f"  ✅ {test_name} compiles successfully")
                     return True
@@ -136,18 +136,18 @@ jobs:
                     print(f"  ❌ {test_name} failed to compile:")
                     print(f"     {result.stderr}")
                     return False
-        
+
         # Test README examples
         readme_blocks = extract_rust_code_blocks('README.md')
         success_count = 0
         total_count = len(readme_blocks)
-        
+
         for i, code in enumerate(readme_blocks):
             if test_rust_code(code, f"README example {i+1}"):
                 success_count += 1
-        
+
         print(f"README examples: {success_count}/{total_count} passed")
-        
+
         # Test INSTALLATION examples
         if os.path.exists('INSTALLATION.md'):
             install_blocks = extract_rust_code_blocks('INSTALLATION.md')
@@ -155,22 +155,22 @@ jobs:
                 if test_rust_code(code, f"INSTALLATION example {i+1}"):
                     success_count += 1
                 total_count += 1
-        
+
         print(f"Total examples: {success_count}/{total_count} passed")
         EOF
 
     - name: Test migration guide scenarios
       run: |
         echo "Testing migration guide scenarios..."
-        
+
         # Test that migration examples work
         if [[ -f "crates/bitnet-py/MIGRATION_GUIDE.md" ]]; then
           echo "Testing Python migration examples..."
-          
+
           # Extract Python code examples and verify they're valid
           grep -A 10 -B 2 "```python" crates/bitnet-py/MIGRATION_GUIDE.md || echo "No Python examples found"
         fi
-        
+
         # Test C++ to Rust migration examples
         if [[ -f "docs/migration/cpp-to-rust.md" ]]; then
           echo "Testing C++ to Rust migration examples..."
@@ -180,17 +180,17 @@ jobs:
     - name: Validate API documentation
       run: |
         echo "Validating API documentation..."
-        
+
         # Build documentation
         cargo doc --workspace --all-features --no-deps
-        
+
         # Check for documentation warnings
         cargo doc --workspace --all-features --no-deps 2>&1 | tee doc_warnings.txt
-        
+
         # Count warnings
         warning_count=$(grep -c "warning:" doc_warnings.txt || echo "0")
         echo "Documentation warnings: $warning_count"
-        
+
         if [[ $warning_count -gt 10 ]]; then
           echo "❌ Too many documentation warnings ($warning_count)"
           exit 1
@@ -201,25 +201,25 @@ jobs:
     - name: Test doctests
       run: |
         echo "Running doctests..."
-        
+
         # Run doctests for all crates
         cargo test --workspace --doc --all-features
 
     - name: Validate installation instructions
       run: |
         echo "Validating installation instructions..."
-        
+
         # Test that installation scripts exist and are executable
         if [[ -f "scripts/install.sh" ]]; then
           echo "✅ Unix installation script exists"
           bash -n scripts/install.sh || echo "❌ Unix script has syntax errors"
         fi
-        
+
         if [[ -f "scripts/install.ps1" ]]; then
           echo "✅ Windows installation script exists"
           # PowerShell syntax check would go here
         fi
-        
+
         # Test that package configurations are valid
         if [[ -f "packaging/homebrew/bitnet-rs.rb" ]]; then
           echo "✅ Homebrew formula exists"
@@ -229,14 +229,14 @@ jobs:
     - name: Check documentation completeness
       run: |
         echo "Checking documentation completeness..."
-        
+
         # Check that all public APIs are documented
         missing_docs=$(cargo doc --workspace --all-features 2>&1 | grep "missing documentation" | wc -l)
         echo "Missing documentation items: $missing_docs"
-        
+
         # Check that examples exist for main crates
         main_crates=("bitnet-cli" "bitnet-server" "bitnet-inference")
-        
+
         for crate in "${main_crates[@]}"; do
           if [[ -d "examples" ]]; then
             example_count=$(find examples -name "*$crate*" | wc -l)
@@ -252,38 +252,38 @@ jobs:
       run: |
         cat > documentation-report.md << 'EOF'
         # 📚 Documentation Validation Report
-        
+
         **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         **Trigger**: ${{ github.event_name }}
-        
+
         ## Validation Results
-        
+
         ### Markdown Syntax
         - Linting completed with markdownlint
-        
+
         ### Link Validation
         - All documentation links checked
-        
+
         ### Code Examples
         - README examples tested
         - Installation examples validated
         - Migration scenarios verified
-        
+
         ### API Documentation
         - Doctests executed successfully
         - Documentation coverage checked
-        
+
         ### Installation Instructions
         - Installation scripts validated
         - Package configurations checked
-        
+
         ## Key Findings
-        
+
         - 📖 **Documentation Quality**: High standard maintained
         - 🔗 **Link Integrity**: All links functional
         - 💻 **Code Examples**: Working and up-to-date
         - 🚀 **Installation**: Clear and comprehensive
-        
+
         ---
         *Report generated by Documentation Validation workflow*
         EOF

@@ -45,7 +45,7 @@ Currency: $100.00 €50.50 £75.25 ¥1000 ₹500
 Fractions: ½ ⅓ ¼ ⅕ ⅙ ⅐ ⅛ ⅑ ⅒
 Arrows: → ← ↑ ↓ ↔ ↕ ⇒ ⇐ ⇑ ⇓ ⇔ ⇕
 Box drawing: ┌─┬─┐ │ │ │ ├─┼─┤ │ │ │ └─┴─┘
-Control chars: 
+Control chars:
 Whitespace:   　
 Zero-width: ​‌‍
 Long word: Pneumonoultramicroscopicsilicovolcanoconiosis

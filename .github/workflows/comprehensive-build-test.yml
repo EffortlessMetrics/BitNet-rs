@@ -90,7 +90,7 @@ jobs:
 
     # Skip tier 3 platforms unless explicitly requested
     if: |
-      matrix.tier <= 2 || 
+      matrix.tier <= 2 ||
       github.event.inputs.test_all_platforms == 'true' ||
       github.event_name == 'schedule'
 
@@ -438,7 +438,7 @@ jobs:
               if [[ -d "$report_dir" ]]; then
                 target=$(basename "$report_dir" | sed 's/build-report-//')
                 total_count=$((total_count + 1))
-                
+
                 if [[ "${{ needs.rust-build-matrix.result }}" == "success" ]]; then
                   echo "- ✅ **$target**: Build successful" >> build-test-summary.md
                   success_count=$((success_count + 1))

@@ -75,23 +75,23 @@ impl ModelLoader {
             format_override: None,
         }
     }
-    
+
     /// Set tokenizer path
     pub fn with_tokenizer(mut self, path: impl AsRef<Path>) -> Self {
         self.tokenizer_path = Some(path.as_ref().to_path_buf());
         self
     }
-    
+
     /// Override format detection
     pub fn with_format(mut self, format: ModelFormat) -> Self {
         self.format_override = Some(format);
         self
     }
-    
+
     /// Load model with comprehensive tracing
     pub fn load(&self) -> Result<(Arc<dyn Model>, Arc<dyn Tokenizer>, LoaderMetadata)> {
         info!("Loading model from: {}", self.model_path.display());
-        
+
         // Detect or use override format
         let (format, format_source) = if let Some(fmt) = self.format_override {
             info!("Using format override: {}", fmt.name());
@@ -103,13 +103,13 @@ impl ModelLoader {
             info!("Auto-detected format: {} from path/header", detected.name());
             (detected, "auto_detection".to_string())
         };
-        
+
         // Load model based on format
         let (model, tokenizer, tokenizer_source, ignored_tensors) = match format {
             ModelFormat::Gguf => self.load_gguf()?,
             ModelFormat::SafeTensors => self.load_safetensors()?,
         };
-        
+
         // Extract model configuration
         let config = model.config();
         let model_config = ModelConfigInfo {
@@ -119,13 +119,13 @@ impl ModelLoader {
             num_heads: config.num_attention_heads,
             context_length: config.max_position_embeddings,
         };
-        
+
         // Determine scoring policy
         let scoring_policy = self.determine_scoring_policy(&model, &tokenizer);
-        
+
         // Count loaded tensors
         let tensors_loaded = model.tensors().len();
-        
+
         // Create metadata
         let metadata = LoaderMetadata {
             format,
@@ -136,7 +136,7 @@ impl ModelLoader {
             ignored_tensors,
             model_config,
         };
-        
+
         // Log decision trace
         info!(
             format = %metadata.format.name(),
@@ -146,7 +146,7 @@ impl ModelLoader {
             ignored = metadata.ignored_tensors.len(),
             "Model loaded successfully"
         );
-        
+
         if !metadata.ignored_tensors.is_empty() {
             warn!("Ignored {} tensors during loading:", metadata.ignored_tensors.len());
             for tensor in &metadata.ignored_tensors[..5.min(metadata.ignored_tensors.len())] {
@@ -156,22 +156,22 @@ impl ModelLoader {
                 warn!("  ... and {} more", metadata.ignored_tensors.len() - 5);
             }
         }
-        
+
         Ok((model, tokenizer, metadata))
     }
-    
+
     fn load_gguf(&self) -> Result<(Arc<dyn Model>, Arc<dyn Tokenizer>, String, Vec<String>)> {
         debug!("Loading GGUF model");
-        
+
         // Early header validation before heavy allocations
         let model_info = inspect_model(&self.model_path)
             .map_err(|e| anyhow!("GGUF header validation failed: {}", e))?;
-        
+
         // Get file size for trace ID
         let file_size = std::fs::metadata(&self.model_path)
             .map(|m| m.len())
             .unwrap_or(0);
-        
+
         info!(
             "GGUF header validated: version={}, tensors={}, kvs={}, size_bytes={}",
             model_info.version(),
@@ -179,7 +179,7 @@ impl ModelLoader {
             model_info.n_kv(),
             file_size
         );
-        
+
         // Warn about suspicious counts
         if model_info.n_tensors() > 10_000_000 || model_info.n_kv() > 10_000_000 {
             warn!(
@@ -188,11 +188,11 @@ impl ModelLoader {
                 "Suspicious GGUF counts detected - file may be corrupted"
             );
         }
-        
+
         let loader = gguf::GgufLoader::new(&self.model_path)?;
         let model = loader.load_model()?;
         let ignored = loader.get_ignored_tensors();
-        
+
         // Check for embedded tokenizer
         let (tokenizer, source) = if loader.has_embedded_tokenizer() {
             debug!("Using embedded GGUF tokenizer");
@@ -205,57 +205,57 @@ impl ModelLoader {
         } else {
             return Err(anyhow!("No tokenizer found (not embedded, no external path)"));
         };
-        
+
         Ok((Arc::new(model), Arc::new(tokenizer), source, ignored))
     }
-    
+
     fn load_safetensors(&self) -> Result<(Arc<dyn Model>, Arc<dyn Tokenizer>, String, Vec<String>)> {
         debug!("Loading SafeTensors model");
-        
+
         let loader = safetensors::SafeTensorsLoader::new(&self.model_path)?;
         let model = loader.load_model()?;
         let ignored = loader.get_ignored_tensors();
-        
+
         // SafeTensors always requires external tokenizer
         let path = self.tokenizer_path.as_ref()
             .ok_or_else(|| anyhow!("SafeTensors requires external tokenizer path"))?;
-        
+
         debug!("Loading external tokenizer from: {}", path.display());
         let tokenizer = self.load_external_tokenizer(path)?;
-        
+
         Ok((Arc::new(model), Arc::new(tokenizer), "external-json".to_string(), ignored))
     }
-    
+
     fn load_external_tokenizer(&self, path: &Path) -> Result<Box<dyn Tokenizer>> {
         // Load tokenizer.json or HF tokenizer format
         bitnet_tokenizers::load_tokenizer(path)
             .context("Failed to load external tokenizer")
     }
-    
+
     fn determine_scoring_policy(&self, model: &Arc<dyn Model>, tokenizer: &Arc<dyn Tokenizer>) -> ScoringPolicy {
         // Determine based on model type and tokenizer config
         let config = model.config();
-        
+
         // Default policy with some model-specific overrides
         let mut policy = ScoringPolicy::default();
-        
+
         // Check for special tokens in tokenizer
         if let Some(bos) = tokenizer.bos_token_id() {
             debug!("Tokenizer has BOS token: {}", bos);
             policy.add_bos = true;
         }
-        
+
         if let Some(eos) = tokenizer.eos_token_id() {
             debug!("Tokenizer has EOS token: {}", eos);
             // Generally don't append EOS for perplexity evaluation
             policy.append_eos = false;
         }
-        
+
         // Model-specific overrides
         if config.model_type.contains("gpt2") {
             policy.add_bos = false;  // GPT-2 doesn't use BOS
         }
-        
+
         policy
     }
 }

@@ -56,7 +56,7 @@ def run_cpp_benchmark(args):
         except Exception as e:
             print(f"  C++ error: {e}")
             return None
-    
+
     return {
         "mean": statistics.mean(times),
         "stdev": statistics.stdev(times) if len(times) > 1 else 0,
@@ -198,18 +198,18 @@ def main():
     if not args.skip_rust:
         print("\nRunning Rust implementation benchmark...")
         rust_results = run_rust_benchmark(args)
-    
+
     print("\n" + "=" * 60)
     print("RESULTS")
     print("=" * 60)
-    
+
     if cpp_results:
         print(f"\nC++ Implementation (BitNet.cpp):")
         print(f"  Mean time:   {cpp_results['mean']:.3f}s")
         print(f"  Std dev:     {cpp_results['stdev']:.3f}s")
         print(f"  Min time:    {cpp_results['min']:.3f}s")
         print(f"  Max time:    {cpp_results['max']:.3f}s")
-    
+
     if rust_results:
         print(f"\nRust Implementation (BitNet.rs):")
         print(f"  Mean time:   {rust_results['mean']:.3f}s")
@@ -225,7 +225,7 @@ def main():
             correctness = rust_results['response_correctness']
             status_emoji = {"correct": "✓", "generated": "~", "incorrect": "✗", "unknown": "?"}
             print(f"  Correctness: {status_emoji.get(correctness, '?')} {correctness}")
-    
+
     # Analysis and comparison
     speedup = None
     improvement = None

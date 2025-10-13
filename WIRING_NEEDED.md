@@ -89,24 +89,24 @@ fn generate_rust(&self, prompt: &str) -> Result<Vec<u32>> {
     // Load model and tokenizer
     let model = BitNetModel::load_gguf(&self.model_path)?;
     let tokenizer = UniversalTokenizer::from_file(&self.tokenizer_path)?;
-    
+
     // Create engine
     let engine = InferenceEngine::new(
         Arc::new(model),
         Arc::new(tokenizer),
         Device::Cpu
     )?;
-    
+
     // Generate tokens
     let config = GenerationConfig {
         max_new_tokens: 100,
         ..Default::default()
     };
-    
+
     // Use the REAL engine
     let output = tokio::runtime::Runtime::new()?
         .block_on(engine.generate_with_config(prompt, &config))?;
-    
+
     // Return token IDs
     tokenizer.encode(&output, false, false)
 }

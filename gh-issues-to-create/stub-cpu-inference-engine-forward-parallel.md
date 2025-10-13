@@ -11,11 +11,11 @@ The `CpuInferenceEngine::forward_parallel` function in `crates/bitnet-inference/
     fn forward_parallel(&self, input: &BitNetTensor, _step: usize) -> Result<BitNetTensor> {
         // This is a simplified synchronous version
         // In a full async implementation, we would use model.read().await
-        
+
         // For now, create a placeholder result
         // In practice, this would require async model access
         let result = BitNetTensor::zeros(&[1, 32000], candle_core::DType::F32, &candle_core::Device::Cpu)?;
-        
+
         Ok(result)
     }
 ```

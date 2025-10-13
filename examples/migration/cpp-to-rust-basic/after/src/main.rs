@@ -48,12 +48,12 @@ impl BitNetModel {
     pub fn load<P: AsRef<Path>>(model_path: P, _device: &Device) -> Result<Self> {
         let path = model_path.as_ref().to_string_lossy().to_string();
         println!("Loading model: {}", path);
-        
+
         // Simulate model loading validation
         if !model_path.as_ref().exists() && path != "model.gguf" {
             anyhow::bail!("Model file not found: {}", path);
         }
-        
+
         Ok(BitNetModel { path })
     }
 }
@@ -63,17 +63,17 @@ impl InferenceEngine {
         println!("✅ Model loaded successfully");
         Ok(InferenceEngine { model })
     }
-    
+
     pub fn generate(&mut self, prompt: &str, config: &GenerationConfig) -> Result<String> {
         println!("Generating with prompt: '{}'", prompt);
         println!("Max tokens: {}, Temperature: {}", config.max_tokens, config.temperature);
-        
+
         // Simulate generation - in real implementation this would call actual BitNet.rs
         let response = format!(
             "This is a generated response from the Rust implementation for prompt: '{}'",
             prompt
         );
-        
+
         Ok(response)
     }
 }
@@ -82,35 +82,35 @@ impl InferenceEngine {
 async fn main() -> Result<()> {
     println!("BitNet Rust Example - Basic Usage");
     println!("==================================");
-    
+
     // Load model with proper error handling
     let model_path = "model.gguf";
     let model = BitNetModel::load(model_path, &Device::Cpu)
         .with_context(|| format!("Failed to load model from {}", model_path))?;
-    
+
     // Create inference engine
     let mut engine = InferenceEngine::new(model)
         .context("Failed to create inference engine")?;
-    
+
     // Test prompts
     let prompts = vec![
         "Hello, world!",
         "Explain quantum computing in simple terms.",
         "Write a short story about a robot learning to paint.",
     ];
-    
+
     // Generation configuration
     let config = GenerationConfig {
         max_tokens: 100,
         temperature: 0.7,
         ..Default::default()
     };
-    
+
     // Process each prompt
     for (i, prompt) in prompts.iter().enumerate() {
         println!("\nPrompt {}: {}", i + 1, prompt);
         print!("Response: ");
-        
+
         // Generate response with proper error handling
         match engine.generate(prompt, &config) {
             Ok(result) => {
@@ -122,14 +122,14 @@ async fn main() -> Result<()> {
             }
         }
     }
-    
+
     println!("\n✅ Example completed successfully");
     Ok(())
 }
 
 /**
  * Improvements in this Rust implementation:
- * 
+ *
  * 1. ✅ Automatic memory management - no manual free() calls needed
  * 2. ✅ RAII - resources automatically cleaned up when dropped
  * 3. ✅ Result-based error handling with context
@@ -140,7 +140,7 @@ async fn main() -> Result<()> {
  * 8. ✅ Thread-safe error handling
  * 9. ✅ Async support for concurrent operations
  * 10. ✅ Rich ecosystem integration
- * 
+ *
  * Performance benefits:
  * - 2-5x faster inference
  * - 30-50% less memory usage
@@ -152,43 +152,43 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_model_loading() {
         let model = BitNetModel::load("model.gguf", &Device::Cpu);
         assert!(model.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_generation() {
         let model = BitNetModel::load("model.gguf", &Device::Cpu).unwrap();
         let mut engine = InferenceEngine::new(model).unwrap();
-        
+
         let config = GenerationConfig::default();
         let result = engine.generate("test prompt", &config);
-        
+
         assert!(result.is_ok());
         assert!(!result.unwrap().is_empty());
     }
-    
+
     #[tokio::test]
     async fn test_error_handling() {
         let result = BitNetModel::load("nonexistent.gguf", &Device::Cpu);
         assert!(result.is_err());
     }
-    
+
     #[tokio::test]
     async fn test_custom_config() {
         let model = BitNetModel::load("model.gguf", &Device::Cpu).unwrap();
         let mut engine = InferenceEngine::new(model).unwrap();
-        
+
         let config = GenerationConfig {
             max_tokens: 50,
             temperature: 0.8,
             top_p: 0.95,
             top_k: 30,
         };
-        
+
         let result = engine.generate("test prompt", &config);
         assert!(result.is_ok());
     }

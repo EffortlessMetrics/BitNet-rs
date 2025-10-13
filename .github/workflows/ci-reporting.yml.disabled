@@ -121,19 +121,19 @@ jobs:
             const commentFile = 'ci-reports/pr-comment.md';
             if (fs.existsSync(commentFile)) {
               const body = fs.readFileSync(commentFile, 'utf8');
-              
+
               // Find existing comment
               const comments = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
               });
-              
-              const botComment = comments.data.find(comment => 
-                comment.user.type === 'Bot' && 
+
+              const botComment = comments.data.find(comment =>
+                comment.user.type === 'Bot' &&
                 comment.body.includes('<!-- BitNet.rs Test Results -->')
               );
-              
+
               if (botComment) {
                 // Update existing comment
                 await github.rest.issues.updateComment({
@@ -164,7 +164,7 @@ jobs:
             const statusFile = 'ci-reports/status-checks.json';
             if (fs.existsSync(statusFile)) {
               const statusChecks = JSON.parse(fs.readFileSync(statusFile, 'utf8'));
-              
+
               for (const check of statusChecks) {
                 await github.rest.repos.createCommitStatus({
                   owner: context.repo.owner,
@@ -225,7 +225,7 @@ jobs:
             const regressionFile = 'regression-report.json';
             if (fs.existsSync(regressionFile)) {
               const regressions = JSON.parse(fs.readFileSync(regressionFile, 'utf8'));
-              
+
               if (regressions.length > 0) {
                 // Create status check for performance regression
                 await github.rest.repos.createCommitStatus({
@@ -236,17 +236,17 @@ jobs:
                   description: `${regressions.length} performance regressions detected`,
                   context: 'bitnet-rs/performance'
                 });
-                
+
                 // Create issue comment for PR
                 if (context.payload.pull_request) {
                   let body = '## ⚠️ Performance Regressions Detected\n\n';
                   body += '| Test | Regression | Baseline | Current |\n';
                   body += '|------|------------|----------|----------|\n';
-                  
+
                   for (const reg of regressions) {
                     body += `| ${reg.test_name} | +${reg.regression_percent.toFixed(1)}% | ${reg.baseline_duration}ms | ${reg.current_duration}ms |\n`;
                   }
-                  
+
                   await github.rest.issues.createComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,

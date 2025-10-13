@@ -22,7 +22,7 @@ cargo +nightly miri setup
 # List of crates to test with Miri (focusing on those with unsafe code)
 CRATES=(
     "bitnet-common"
-    "bitnet-kernels" 
+    "bitnet-kernels"
     "bitnet-quantization"
     "bitnet-models"
 )
@@ -33,10 +33,10 @@ failed_crates=()
 
 for crate in "${CRATES[@]}"; do
     echo "Testing $crate with Miri..."
-    
+
     if [ -d "crates/$crate" ]; then
         cd "crates/$crate"
-        
+
         # Run Miri tests
         if cargo +nightly miri test; then
             echo "✅ Miri tests passed for $crate"
@@ -44,12 +44,12 @@ for crate in "${CRATES[@]}"; do
             echo "❌ Miri tests failed for $crate"
             failed_crates+=("$crate")
         fi
-        
+
         cd ../..
     else
         echo "⚠️  Crate directory not found: crates/$crate"
     fi
-    
+
     echo ""
 done
 

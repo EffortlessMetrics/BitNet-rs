@@ -170,7 +170,7 @@ vagrant/
 
 # PREVENT SPECIFIC PAST ISSUES:
 # - Build artifacts in fixture directories (PR #92)
-# - Massive JSON test fixtures (PR #103)  
+# - Massive JSON test fixtures (PR #103)
 # - Vendored GGML C code without .gitignore (PR #101)
 # - Branch merge artifacts (PR #104)
 

@@ -107,11 +107,11 @@ use bitnet::{BitNetModel, GenerationConfig};
 async fn main() -> bitnet::Result<()> {
     // Load model
     let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
-    
+
     // Generate text
     let output = model.generate("Hello, world!", &GenerationConfig::default()).await?;
     println!("Generated: {}", output);
-    
+
     Ok(())
 }
 ```

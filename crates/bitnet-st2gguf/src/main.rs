@@ -61,8 +61,9 @@ use writer::{GgufWriter, MetadataValue, TensorDType, TensorEntry};
 /// - `bitnet.vocab_size`: tokenizer alignment and LM head dimensions
 /// - `bitnet.context_length`: max sequence length; ROPE tables and validation
 /// - `general.file_type`: type tag (e.g. 1 = F16) for downstream tooling
+///
+/// Note: `general.name` is written if possible, but not required for strict mode.
 const REQUIRED_KEYS: &[&str] = &[
-    "general.name",
     "general.architecture",
     "bitnet.hidden_size",
     "bitnet.num_layers",
@@ -97,6 +98,10 @@ struct Args {
     /// Optional tokenizer path (for parity, not embedded in GGUF)
     #[arg(short, long)]
     tokenizer: Option<PathBuf>,
+
+    /// Override GGUF general.architecture (e.g., "bitnet-b1.58")
+    #[arg(long)]
+    arch: Option<String>,
 
     /// Enable strict validation
     ///
@@ -139,8 +144,13 @@ fn main() -> Result<()> {
     }
 
     // Convert SafeTensors to GGUF
-    let conversion_result =
-        convert_safetensors_to_gguf(&safetensors_path, &args.output, config.as_ref(), args.strict)?;
+    let conversion_result = convert_safetensors_to_gguf(
+        &safetensors_path,
+        &args.output,
+        config.as_ref(),
+        args.arch.as_deref(),
+        args.strict,
+    )?;
 
     // Write sidecar metadata
     write_sidecar_metadata(&args.output, &safetensors_path, &conversion_result)?;
@@ -234,6 +244,7 @@ fn convert_safetensors_to_gguf(
     input_path: &Path,
     output_path: &Path,
     config: Option<&Json>,
+    arch_override: Option<&str>,
     strict: bool,
 ) -> Result<ConversionResult> {
     // Load SafeTensors file
@@ -253,7 +264,7 @@ fn convert_safetensors_to_gguf(
 
     // Extract and add metadata from config.json
     let metadata_count = if let Some(cfg) = config {
-        add_metadata_from_config(&mut writer, cfg)?
+        add_metadata_from_config(&mut writer, cfg, arch_override, input_path)?
     } else {
         tracing::warn!("No config.json found - using minimal metadata");
         add_minimal_metadata(&mut writer);
@@ -326,19 +337,32 @@ fn convert_safetensors_to_gguf(
 }
 
 /// Add metadata from config.json
-fn add_metadata_from_config(writer: &mut GgufWriter, config: &Json) -> Result<usize> {
+fn add_metadata_from_config(
+    writer: &mut GgufWriter,
+    config: &Json,
+    arch_override: Option<&str>,
+    input_path: &Path,
+) -> Result<usize> {
     let mut count = 0;
 
     // Extract standard metadata
     if let Some(obj) = config.as_object() {
-        // Model name (required for loaders)
+        // (1) Model name (optional, best-effort)
         if let Some(name) = obj.get("_name_or_path").and_then(|v| v.as_str()) {
             writer.add_metadata("general.name", MetadataValue::String(name.to_string()));
             count += 1;
+        } else {
+            // Fallback: file stem or "unknown"
+            let stem = input_path.file_stem().and_then(|s| s.to_str()).unwrap_or("unknown");
+            writer.add_metadata("general.name", MetadataValue::String(stem.to_string()));
+            count += 1;
         }
 
-        // Model architecture
-        if let Some(model_type) = obj.get("model_type").and_then(|v| v.as_str()) {
+        // (2) Architecture
+        if let Some(arch) = arch_override {
+            writer.add_metadata("general.architecture", MetadataValue::String(arch.to_string()));
+            count += 1;
+        } else if let Some(model_type) = obj.get("model_type").and_then(|v| v.as_str()) {
             writer.add_metadata(
                 "general.architecture",
                 MetadataValue::String(model_type.to_string()),

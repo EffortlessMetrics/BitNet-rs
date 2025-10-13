@@ -64,7 +64,7 @@ cargo test --no-default-features --workspace --features crossval
 - Use the shared `ENV_LOCK` + `env_guard()` in any test touching `std::env`.
 - Use `BYTES_PER_KB`, `BYTES_PER_MB`, or `BYTES_PER_GB` for all unit→bytes conversions.
   (These are **binary** units: 1 KB = 1024 B, 1 MB = 1024 KB, 1 GB = 1024 MB.)
-- Import units via `bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB}`; 
+- Import units via `bitnet_tests::units::{BYTES_PER_KB, BYTES_PER_MB, BYTES_PER_GB}`;
   avoid `bitnet_tests::common::units::*`.
 - Prefer typed env helpers (`env_u64`, `env_usize`, `env_duration_secs`) and a
   case‑insensitive `env_bool`.

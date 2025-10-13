@@ -43,19 +43,19 @@ struct BitNetMetrics {
     requests_total: Counter,
     request_duration: Histogram,
     active_requests: Gauge,
-    
+
     // Model metrics
     tokens_generated_total: Counter,
     model_load_duration: Histogram,
     model_memory_usage: Gauge,
-    
+
     // Error metrics
     errors_total: Counter,
-    
+
     // Performance metrics
     inference_latency: Histogram,
     throughput_tokens_per_second: Gauge,
-    
+
     // System metrics
     cpu_usage: Gauge,
     memory_usage: Gauge,
@@ -135,15 +135,15 @@ struct ObservableBitNetService {
 impl ObservableBitNetService {
     async fn new() -> Result<Self> {
         let metrics = BitNetMetrics::new()?;
-        
+
         // Load model with timing
         let load_start = Instant::now();
         let engine = Self::load_model_with_tracing().await?;
         let load_duration = load_start.elapsed();
-        
+
         metrics.model_load_duration.observe(load_duration.as_secs_f64());
         metrics.model_memory_usage.set(estimate_model_memory_usage());
-        
+
         info!(
             duration_ms = load_duration.as_millis(),
             "Model loaded successfully"
@@ -161,7 +161,7 @@ impl ObservableBitNetService {
         let _timer = self.metrics.request_duration.start_timer();
         self.metrics.requests_total.inc();
         self.metrics.active_requests.inc();
-        
+
         // Create a span for this request
         let span = tracing::info_span!(
             "generate_text",
@@ -169,20 +169,20 @@ impl ObservableBitNetService {
             max_tokens = config.max_new_tokens,
             temperature = config.temperature,
         );
-        
+
         let result = async move {
             let start_time = Instant::now();
-            
+
             debug!("Starting text generation");
             trace!(prompt = %prompt, "Input prompt");
-            
+
             // Perform inference with detailed tracing
             let generated_text = {
                 let mut engine = self.engine.write().await;
-                
+
                 // Add custom attributes to the span
                 span.record("model_device", format!("{:?}", Device::Cpu));
-                
+
                 engine.generate_with_config(prompt, config)
                     .map_err(|e| {
                         self.metrics.errors_total.inc();
@@ -190,35 +190,35 @@ impl ObservableBitNetService {
                         e
                     })?
             };
-            
+
             let duration = start_time.elapsed();
             let tokens_generated = generated_text.split_whitespace().count() as u64;
-            
+
             // Update metrics
             self.metrics.inference_latency.observe(duration.as_secs_f64());
             self.metrics.tokens_generated_total.inc_by(tokens_generated);
-            
+
             // Calculate throughput
             let tokens_per_second = tokens_generated as f64 / duration.as_secs_f64();
             self.metrics.throughput_tokens_per_second.set(tokens_per_second);
-            
+
             // Add more span attributes
             span.record("tokens_generated", tokens_generated);
             span.record("duration_ms", duration.as_millis());
             span.record("tokens_per_second", tokens_per_second);
-            
+
             info!(
                 tokens_generated = tokens_generated,
                 duration_ms = duration.as_millis(),
                 tokens_per_second = tokens_per_second,
                 "Text generation completed"
             );
-            
+
             trace!(generated_text = %generated_text, "Generated text");
-            
+
             Ok(generated_text)
         }.instrument(span).await;
-        
+
         self.metrics.active_requests.dec();
         result
     }
@@ -226,27 +226,27 @@ impl ObservableBitNetService {
     #[instrument]
     async fn load_model_with_tracing() -> Result<InferenceEngine> {
         info!("Loading BitNet model with tracing");
-        
+
         // Simulate model loading with detailed tracing
         let model_path = std::env::var("BITNET_MODEL_PATH")
             .unwrap_or_else(|_| "models/bitnet-1.58b.gguf".to_string());
-        
+
         debug!(model_path = %model_path, "Loading model from path");
-        
+
         // Load model (mock implementation)
         let model = load_mock_model().await?;
-        
+
         // Load tokenizer
         let tokenizer_name = "gpt2";
         debug!(tokenizer = %tokenizer_name, "Loading tokenizer");
         let tokenizer = TokenizerBuilder::from_pretrained(tokenizer_name)?;
-        
+
         // Create inference engine
         let device = Device::Cpu;
         debug!(device = ?device, "Creating inference engine");
-        
+
         let engine = InferenceEngine::new(model, tokenizer, device)?;
-        
+
         info!("Model and inference engine loaded successfully");
         Ok(engine)
     }
@@ -308,12 +308,12 @@ async fn initialize_observability() -> Result<()> {
 async fn main() -> Result<()> {
     // Initialize observability stack
     initialize_observability().await?;
-    
+
     info!("Starting BitNet observability example");
 
     // Create observable service
     let service = ObservableBitNetService::new().await?;
-    
+
     // Start system metrics collection
     let metrics_service = service.clone();
     tokio::spawn(async move {
@@ -339,7 +339,7 @@ async fn main() -> Result<()> {
 
     // Shutdown tracing
     global::shutdown_tracer_provider();
-    
+
     Ok(())
 }
 
@@ -357,10 +357,10 @@ async fn run_inference_examples(service: &ObservableBitNetService) -> Result<()>
 
     for (i, (prompt, config)) in examples.iter().enumerate() {
         let span = tracing::info_span!("example_request", request_id = i);
-        
+
         let result = async {
             info!(prompt = %prompt, "Running example request");
-            
+
             match service.generate_text(prompt, config).await {
                 Ok(generated) => {
                     info!(
@@ -373,7 +373,7 @@ async fn run_inference_examples(service: &ObservableBitNetService) -> Result<()>
                     error!(error = %e, "Example request failed");
                 }
             }
-            
+
             // Add some delay between requests
             tokio::time::sleep(Duration::from_millis(500)).await;
         }.instrument(span).await;
@@ -399,10 +399,10 @@ async fn simulate_error_scenarios(service: &ObservableBitNetService) -> Result<(
 
     for (prompt, scenario) in error_scenarios {
         let span = tracing::warn_span!("error_scenario", scenario = scenario);
-        
+
         let _result = async {
             warn!(scenario = scenario, "Testing error scenario");
-            
+
             let config = GenerationConfig::default();
             if let Err(e) = service.generate_text(prompt, &config).await {
                 warn!(error = %e, scenario = scenario, "Expected error occurred");
@@ -571,12 +571,12 @@ mod tests {
     #[tokio::test]
     async fn test_metrics_creation() {
         let metrics = BitNetMetrics::new().unwrap();
-        
+
         // Test that metrics can be updated
         metrics.requests_total.inc();
         metrics.tokens_generated_total.inc_by(10);
         metrics.active_requests.set(5.0);
-        
+
         // Verify metrics are working
         assert!(metrics.requests_total.get() > 0.0);
         assert!(metrics.tokens_generated_total.get() > 0.0);

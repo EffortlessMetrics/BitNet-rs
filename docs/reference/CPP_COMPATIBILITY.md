@@ -165,7 +165,7 @@ cargo test --no-default-features -p bitnet-crossval --features crossval
 env:
   # Enable soft-fail for C++ compatibility issues
   CROSSVAL_ALLOW_CPP_FAIL: "1"
-  
+
   # Set library paths
   LD_LIBRARY_PATH: "$HOME/.cache/bitnet_cpp/build/3rdparty/llama.cpp/src:$HOME/.cache/bitnet_cpp/build/3rdparty/llama.cpp/ggml/src"
 ```

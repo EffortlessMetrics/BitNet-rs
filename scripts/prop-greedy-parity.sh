@@ -105,7 +105,7 @@ echo ""
 echo "================================================"
 if [ "${TEST_RESULT:-0}" -eq 0 ]; then
     echo -e "${GREEN}✓ All property tests passed!${NC}"
-    
+
     # Show summary of artifacts if any
     if [ -d "$PROP_ARTIFACTS_DIR" ] && [ "$(ls -A "$PROP_ARTIFACTS_DIR")" ]; then
         echo ""
@@ -117,7 +117,7 @@ else
     echo -e "${RED}✗ Some property tests failed${NC}"
     echo ""
     echo "Debug artifacts saved in: $PROP_ARTIFACTS_DIR"
-    
+
     # Show most recent failure
     if [ -d "$PROP_ARTIFACTS_DIR" ] && [ "$(ls -A "$PROP_ARTIFACTS_DIR")" ]; then
         LATEST=$(ls -t "$PROP_ARTIFACTS_DIR"/*.json 2>/dev/null | head -1)
@@ -139,6 +139,6 @@ with open('$LATEST') as f:
 "
         fi
     fi
-    
+
     exit 1
 fi

@@ -128,7 +128,7 @@ impl EndToEndValidator {
     pub fn new(config: ValidationConfig) -> Self {
         Self { config }
     }
-    
+
     /// Run comprehensive validation
     pub async fn validate_comprehensive(
         &self,
@@ -137,38 +137,38 @@ impl EndToEndValidator {
         let mut test_results = Vec::new();
         let mut all_rust_metrics = Vec::new();
         let mut all_python_metrics = Vec::new();
-        
+
         // Run tests for each prompt
         for (i, prompt) in self.config.test_prompts.iter().enumerate() {
             let test_name = format!("test_{}", i);
             println!("Running test: {} with prompt: {}", test_name, prompt);
-            
+
             let test_result = self.run_single_test(
                 &test_name,
                 prompt,
                 rust_engine,
             ).await?;
-            
+
             all_rust_metrics.push(test_result.rust_metrics.clone());
             all_python_metrics.push(test_result.python_metrics.clone());
             test_results.push(test_result);
         }
-        
+
         // Calculate performance comparison
         let performance_comparison = self.calculate_performance_comparison(
             &all_rust_metrics,
             &all_python_metrics,
         );
-        
+
         // Calculate accuracy metrics
         let accuracy_metrics = self.calculate_accuracy_metrics(&test_results);
-        
+
         // Generate summary
         let summary = self.generate_summary(&test_results, &performance_comparison);
-        
+
         // Determine overall pass/fail
         let overall_passed = self.determine_overall_result(&test_results, &performance_comparison, &accuracy_metrics);
-        
+
         Ok(ValidationResults {
             overall_passed,
             test_results,
@@ -177,7 +177,7 @@ impl EndToEndValidator {
             summary,
         })
     }
-    
+
     /// Run a single validation test
     async fn run_single_test(
         &self,
@@ -186,11 +186,11 @@ impl EndToEndValidator {
         rust_engine: &mut dyn InferenceEngine,
     ) -> Result<TestResult> {
         let mut errors = Vec::new();
-        
+
         // Generate with Rust engine
         let _rust_start = Instant::now();
         let generation_config = GenerationConfig::default();
-        
+
         let rust_output = match rust_engine.generate(prompt, &generation_config) {
             Ok(output) => output,
             Err(e) => {
@@ -198,18 +198,18 @@ impl EndToEndValidator {
                 String::new()
             }
         };
-        
+
         let rust_metrics = rust_engine.metrics().clone();
-        
+
         // Generate with Python baseline
         let python_result = self.run_python_baseline(prompt).await?;
-        
+
         // Calculate token accuracy
         let token_accuracy = self.calculate_token_accuracy(&rust_output, &python_result.output);
-        
+
         // Determine if test passed
         let passed = token_accuracy >= self.config.tolerance.token_accuracy && errors.is_empty();
-        
+
         Ok(TestResult {
             test_name: test_name.to_string(),
             prompt: prompt.to_string(),
@@ -222,7 +222,7 @@ impl EndToEndValidator {
             errors,
         })
     }
-    
+
     /// Run Python baseline for comparison
     async fn run_python_baseline(&self, prompt: &str) -> Result<PythonResult> {
         let output = Command::new("python")
@@ -236,17 +236,17 @@ impl EndToEndValidator {
             .map_err(|e| bitnet_common::BitNetError::Validation(
                 format!("Failed to run Python baseline: {}", e)
             ))?;
-        
+
         if !output.status.success() {
             return Err(bitnet_common::BitNetError::Validation(
                 format!("Python baseline failed: {}", String::from_utf8_lossy(&output.stderr))
             ));
         }
-        
+
         let output_str = String::from_utf8_lossy(&output.stdout);
         self.parse_python_output(&output_str)
     }
-    
+
     /// Parse Python output and metrics
     fn parse_python_output(&self, output: &str) -> Result<PythonResult> {
         // Parse JSON output from Python script
@@ -255,53 +255,53 @@ impl EndToEndValidator {
             .map_err(|e| bitnet_common::BitNetError::Validation(
                 format!("Failed to parse Python output: {}", e)
             ))?;
-        
+
         let output_text = parsed["output"].as_str()
             .ok_or_else(|| bitnet_common::BitNetError::Validation(
                 "Missing output in Python response".to_string()
             ))?;
-        
+
         let metrics_obj = &parsed["metrics"];
         let metrics = PythonMetrics {
             tokens_per_second: metrics_obj["tokens_per_second"].as_f64().unwrap_or(0.0),
             latency_ms: metrics_obj["latency_ms"].as_f64().unwrap_or(0.0),
             memory_usage_mb: metrics_obj["memory_usage_mb"].as_f64().unwrap_or(0.0),
         };
-        
+
         Ok(PythonResult {
             output: output_text.to_string(),
             metrics,
         })
     }
-    
+
     /// Calculate token-level accuracy between outputs
     fn calculate_token_accuracy(&self, rust_output: &str, python_output: &str) -> f64 {
         let rust_tokens: Vec<&str> = rust_output.split_whitespace().collect();
         let python_tokens: Vec<&str> = python_output.split_whitespace().collect();
-        
+
         if rust_tokens.is_empty() && python_tokens.is_empty() {
             return 1.0;
         }
-        
+
         if rust_tokens.is_empty() || python_tokens.is_empty() {
             return 0.0;
         }
-        
+
         let max_len = rust_tokens.len().max(python_tokens.len());
         let mut matches = 0;
-        
+
         for i in 0..max_len {
             let rust_token = rust_tokens.get(i).unwrap_or(&"");
             let python_token = python_tokens.get(i).unwrap_or(&"");
-            
+
             if rust_token == python_token {
                 matches += 1;
             }
         }
-        
+
         matches as f64 / max_len as f64
     }
-    
+
     /// Calculate performance comparison metrics
     fn calculate_performance_comparison(
         &self,
@@ -311,27 +311,27 @@ impl EndToEndValidator {
         let avg_rust_tps: f64 = rust_metrics.iter()
             .map(|m| m.tokens_per_second)
             .sum::<f64>() / rust_metrics.len() as f64;
-        
+
         let avg_python_tps: f64 = python_metrics.iter()
             .map(|m| m.tokens_per_second)
             .sum::<f64>() / python_metrics.len() as f64;
-        
+
         let avg_rust_latency: f64 = rust_metrics.iter()
             .map(|m| m.latency_ms)
             .sum::<f64>() / rust_metrics.len() as f64;
-        
+
         let avg_python_latency: f64 = python_metrics.iter()
             .map(|m| m.latency_ms)
             .sum::<f64>() / python_metrics.len() as f64;
-        
+
         let avg_rust_memory: f64 = rust_metrics.iter()
             .map(|m| m.memory_usage_mb)
             .sum::<f64>() / rust_metrics.len() as f64;
-        
+
         let avg_python_memory: f64 = python_metrics.iter()
             .map(|m| m.memory_usage_mb)
             .sum::<f64>() / python_metrics.len() as f64;
-        
+
         PerformanceComparison {
             speedup_factor: if avg_python_tps > 0.0 { avg_rust_tps / avg_python_tps } else { 0.0 },
             memory_efficiency: if avg_python_memory > 0.0 { avg_python_memory / avg_rust_memory } else { 1.0 },
@@ -339,11 +339,11 @@ impl EndToEndValidator {
             throughput_improvement: if avg_python_tps > 0.0 { avg_rust_tps / avg_python_tps } else { 1.0 },
         }
     }
-    
+
     /// Calculate accuracy metrics
     fn calculate_accuracy_metrics(&self, test_results: &[TestResult]) -> AccuracyMetrics {
         let total_tests = test_results.len();
-        
+
         if total_tests == 0 {
             return AccuracyMetrics {
                 average_token_accuracy: 0.0,
@@ -352,24 +352,24 @@ impl EndToEndValidator {
                 numerical_precision_errors: 0,
             };
         }
-        
+
         let average_token_accuracy = test_results.iter()
             .map(|r| r.token_accuracy)
             .sum::<f64>() / total_tests as f64;
-        
+
         let exact_matches = test_results.iter()
             .filter(|r| r.rust_output == r.python_output)
             .count();
-        
+
         let exact_match_rate = exact_matches as f64 / total_tests as f64;
-        
+
         // Placeholder for semantic similarity (would use embeddings in practice)
         let semantic_similarity = average_token_accuracy * 0.9;
-        
+
         let numerical_precision_errors = test_results.iter()
             .map(|r| r.errors.len())
             .sum();
-        
+
         AccuracyMetrics {
             average_token_accuracy,
             exact_match_rate,
@@ -377,7 +377,7 @@ impl EndToEndValidator {
             numerical_precision_errors,
         }
     }
-    
+
     /// Generate validation summary
     fn generate_summary(
         &self,
@@ -387,12 +387,12 @@ impl EndToEndValidator {
         let total_tests = test_results.len();
         let passed_tests = test_results.iter().filter(|r| r.passed).count();
         let failed_tests = total_tests - passed_tests;
-        
+
         let mut performance_improvements = HashMap::new();
         performance_improvements.insert("speedup_factor".to_string(), performance_comparison.speedup_factor);
         performance_improvements.insert("memory_efficiency".to_string(), performance_comparison.memory_efficiency);
         performance_improvements.insert("latency_improvement".to_string(), performance_comparison.latency_improvement);
-        
+
         let mut regression_issues = Vec::new();
         if performance_comparison.speedup_factor < self.config.performance_thresholds.min_speedup_factor {
             regression_issues.push(format!(
@@ -401,7 +401,7 @@ impl EndToEndValidator {
                 self.config.performance_thresholds.min_speedup_factor
             ));
         }
-        
+
         let mut recommendations = Vec::new();
         if failed_tests > 0 {
             recommendations.push(format!("Investigate {} failed tests for accuracy issues", failed_tests));
@@ -409,7 +409,7 @@ impl EndToEndValidator {
         if performance_comparison.speedup_factor < 2.0 {
             recommendations.push("Consider optimizing performance for better speedup".to_string());
         }
-        
+
         ValidationSummary {
             total_tests,
             passed_tests,
@@ -419,7 +419,7 @@ impl EndToEndValidator {
             recommendations,
         }
     }
-    
+
     /// Determine overall validation result
     fn determine_overall_result(
         &self,
@@ -431,21 +431,21 @@ impl EndToEndValidator {
         if accuracy_metrics.average_token_accuracy < self.config.tolerance.token_accuracy {
             return false;
         }
-        
+
         // Check performance requirements
         if performance_comparison.speedup_factor < self.config.performance_thresholds.min_speedup_factor {
             return false;
         }
-        
+
         // Check individual test results
         let passed_rate = test_results.iter().filter(|r| r.passed).count() as f64 / test_results.len() as f64;
         if passed_rate < 0.9 { // Require 90% pass rate
             return false;
         }
-        
+
         true
     }
-    
+
     /// Save validation results to file
     pub fn save_results(&self, results: &ValidationResults) -> Result<()> {
         let output_path = Path::new(&self.config.output_dir).join("validation_results.json");
@@ -453,30 +453,30 @@ impl EndToEndValidator {
             .map_err(|e| bitnet_common::BitNetError::Validation(
                 format!("Failed to serialize results: {}", e)
             ))?;
-        
+
         std::fs::write(&output_path, json)
             .map_err(|e| bitnet_common::BitNetError::Validation(
                 format!("Failed to write results: {}", e)
             ))?;
-        
+
         println!("Validation results saved to: {}", output_path.display());
         Ok(())
     }
-    
+
     /// Generate HTML report
     pub fn generate_html_report(&self, results: &ValidationResults) -> Result<()> {
         let html_content = self.create_html_report(results);
         let output_path = Path::new(&self.config.output_dir).join("validation_report.html");
-        
+
         std::fs::write(&output_path, html_content)
             .map_err(|e| bitnet_common::BitNetError::Validation(
                 format!("Failed to write HTML report: {}", e)
             ))?;
-        
+
         println!("HTML report generated: {}", output_path.display());
         Ok(())
     }
-    
+
     /// Create HTML report content
     fn create_html_report(&self, results: &ValidationResults) -> String {
         format!(
@@ -501,7 +501,7 @@ impl EndToEndValidator {
         <h1>BitNet Rust Validation Report</h1>
         <p>Overall Result: {}</p>
     </div>
-    
+
     <div class="summary">
         <h2>Summary</h2>
         <p>Total Tests: {}</p>
@@ -510,7 +510,7 @@ impl EndToEndValidator {
         <p>Average Token Accuracy: {:.2}%</p>
         <p>Speedup Factor: {:.2}x</p>
     </div>
-    
+
     <div class="metrics">
         <div class="metric">
             <h3>Performance</h3>
@@ -525,10 +525,10 @@ impl EndToEndValidator {
             <p>Semantic Similarity: {:.2}%</p>
         </div>
     </div>
-    
+
     <h2>Test Results</h2>
     {}
-    
+
     <h2>Recommendations</h2>
     <ul>
         {}
@@ -588,28 +588,28 @@ impl StressTester {
     pub fn new(config: ValidationConfig) -> Self {
         Self { config }
     }
-    
+
     /// Run stress tests with large models and long sequences
     pub async fn run_stress_tests(
         &self,
         engine: &mut dyn InferenceEngine,
     ) -> Result<StressTestResults> {
         let mut results = Vec::new();
-        
+
         // Test with increasing sequence lengths
         let sequence_lengths = vec![512, 1024, 2048, 4096];
         for seq_len in sequence_lengths {
             let result = self.test_sequence_length(engine, seq_len).await?;
             results.push(result);
         }
-        
+
         // Test with concurrent requests
         let concurrent_result = self.test_concurrent_requests(engine, 10).await?;
         results.push(concurrent_result);
-        
+
         Ok(StressTestResults { results })
     }
-    
+
     async fn test_sequence_length(
         &self,
         engine: &mut dyn InferenceEngine,
@@ -620,11 +620,11 @@ impl StressTester {
             max_new_tokens: seq_len,
             ..Default::default()
         };
-        
+
         let start = Instant::now();
         let result = engine.generate(&prompt, &config);
         let duration = start.elapsed();
-        
+
         Ok(StressTestResult {
             test_name: format!("sequence_length_{}", seq_len),
             duration,
@@ -633,7 +633,7 @@ impl StressTester {
             metrics: engine.metrics().clone(),
         })
     }
-    
+
     async fn test_concurrent_requests(
         &self,
         _engine: &mut dyn InferenceEngine,
@@ -669,7 +669,7 @@ pub struct StressTestResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_validation_config_creation() {
         let config = ValidationConfig {
@@ -680,11 +680,11 @@ mod tests {
             performance_thresholds: PerformanceThresholds::default(),
             output_dir: "output".to_string(),
         };
-        
+
         assert_eq!(config.test_prompts.len(), 1);
         assert_eq!(config.tolerance.token_accuracy, 0.95);
     }
-    
+
     #[test]
     fn test_token_accuracy_calculation() {
         let validator = EndToEndValidator::new(ValidationConfig {
@@ -695,20 +695,20 @@ mod tests {
             performance_thresholds: PerformanceThresholds::default(),
             output_dir: "output".to_string(),
         });
-        
+
         // Perfect match
         let accuracy = validator.calculate_token_accuracy("hello world", "hello world");
         assert_eq!(accuracy, 1.0);
-        
+
         // Partial match
         let accuracy = validator.calculate_token_accuracy("hello world", "hello there");
         assert_eq!(accuracy, 0.5);
-        
+
         // No match
         let accuracy = validator.calculate_token_accuracy("hello", "goodbye");
         assert_eq!(accuracy, 0.0);
     }
-    
+
     #[test]
     fn test_performance_comparison() {
         let validator = EndToEndValidator::new(ValidationConfig {
@@ -719,22 +719,22 @@ mod tests {
             performance_thresholds: PerformanceThresholds::default(),
             output_dir: "output".to_string(),
         });
-        
+
         let rust_metrics = vec![PerformanceMetrics {
             tokens_per_second: 100.0,
             latency_ms: 50.0,
             memory_usage_mb: 1000.0,
             gpu_utilization: None,
         }];
-        
+
         let python_metrics = vec![PythonMetrics {
             tokens_per_second: 50.0,
             latency_ms: 100.0,
             memory_usage_mb: 2000.0,
         }];
-        
+
         let comparison = validator.calculate_performance_comparison(&rust_metrics, &python_metrics);
-        
+
         assert_eq!(comparison.speedup_factor, 2.0);
         assert_eq!(comparison.memory_efficiency, 2.0);
         assert_eq!(comparison.latency_improvement, 2.0);

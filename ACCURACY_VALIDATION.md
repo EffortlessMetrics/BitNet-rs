@@ -74,7 +74,7 @@ This report validates BitNet.rs against bitnet.cpp for accuracy, performance, an
 1. **Tokenizer Integration**: Currently using mock tokenizer
    - Real tokenizer loading implemented but not connected
    - Vocab extraction from GGUF needs wiring
-2. **Performance Optimization**: 
+2. **Performance Optimization**:
    - Token generation speed needs optimization
    - SIMD kernels need benchmarking with real workloads
 3. **Quality Validation**:

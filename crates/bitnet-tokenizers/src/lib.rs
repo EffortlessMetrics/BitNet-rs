@@ -93,7 +93,7 @@ pub trait Tokenizer: Send + Sync {
         None
     }
 
-    /// Legacy PAD token ID getter - returns None by default  
+    /// Legacy PAD token ID getter - returns None by default
     fn pad_token_id(&self) -> Option<u32> {
         None
     }

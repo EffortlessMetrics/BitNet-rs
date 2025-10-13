@@ -1,9 +1,9 @@
 # PR #185 Final Validation Report
 ## Track device memory usage in stats
 
-**Validation Date**: 2025-09-06  
-**PR Branch**: `codex/modify-device-memory-usage-reporting`  
-**PR Author**: @EffortlessSteven  
+**Validation Date**: 2025-09-06
+**PR Branch**: `codex/modify-device-memory-usage-reporting`
+**PR Author**: @EffortlessSteven
 **Validation Environment**: Isolated git worktree at `/tmp/bitnet-validate-spZe`
 
 ## Summary
@@ -101,7 +101,7 @@ feat(kernels): implement device memory tracking in DeviceStats (#185)
 Add functional memory usage reporting for both CPU and GPU devices:
 
 - Replace TODO placeholders with actual memory tracking
-- CPU memory via sysinfo::System for host memory usage  
+- CPU memory via sysinfo::System for host memory usage
 - GPU memory via CUDA cuMemGetInfo_v2 for device memory
 - Add comprehensive test coverage for memory reporting
 - Maintain backward compatibility and proper feature gating

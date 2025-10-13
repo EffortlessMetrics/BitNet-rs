@@ -238,7 +238,7 @@ fn convert_config(legacy_path: &Path, output_path: &Path) -> Result<(), Box<dyn 
     // Read legacy JSON config
     let legacy_content = fs::read_to_string(legacy_path)?;
     let legacy_config: LegacyConfig = serde_json::from_str(&legacy_content)?;
-    
+
     // Convert to new format with enhancements
     let bitnet_config = BitNetConfig {
         model: ModelConfig {
@@ -302,15 +302,15 @@ fn convert_config(legacy_path: &Path, output_path: &Path) -> Result<(), Box<dyn 
             jaeger_endpoint: "http://localhost:14268".to_string(),
         },
     };
-    
+
     // Write new TOML config
     let toml_content = toml::to_string_pretty(&bitnet_config)?;
     fs::write(output_path, toml_content)?;
-    
+
     println!("Configuration migrated successfully!");
     println!("Legacy config: {}", legacy_path.display());
     println!("New config: {}", output_path.display());
-    
+
     Ok(())
 }
 
@@ -320,10 +320,10 @@ fn main() {
         eprintln!("Usage: {} <legacy_config.json> <output_config.toml>", args[0]);
         std::process::exit(1);
     }
-    
+
     let legacy_path = Path::new(&args[1]);
     let output_path = Path::new(&args[2]);
-    
+
     if let Err(e) = convert_config(legacy_path, output_path) {
         eprintln!("Error converting config: {}", e);
         std::process::exit(1);

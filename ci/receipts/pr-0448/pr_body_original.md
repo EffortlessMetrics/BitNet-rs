@@ -146,4 +146,3 @@ export OTEL_SERVICE_NAME=bitnet-server
 **Why:** Branch is 1 commit behind (8a413dd: ci/receipts finalization) but has zero conflicts; missing commit affects only documentation; rebase can safely defer to pre-merge; semantic commit validation needed
 **Next:** Route to hygiene-finalizer for semantic commit validation and breaking change detection
 <!-- decision:end -->
-

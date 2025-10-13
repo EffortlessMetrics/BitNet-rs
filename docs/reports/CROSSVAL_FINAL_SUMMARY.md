@@ -75,11 +75,11 @@ cargo xtask full-crossval
 
 ## What This Solves
 
-✅ **CI stays green** even when C++ has issues  
-✅ **Instant testing** without model downloads  
-✅ **Reproducible** across all environments  
-✅ **Self-documenting** via JSON reports  
-✅ **Future-proof** with backpatching and invariants  
+✅ **CI stays green** even when C++ has issues
+✅ **Instant testing** without model downloads
+✅ **Reproducible** across all environments
+✅ **Self-documenting** via JSON reports
+✅ **Future-proof** with backpatching and invariants
 
 ## Files Changed
 

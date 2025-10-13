@@ -101,7 +101,9 @@ fn main() -> Result<()> {
         })
         .collect::<Result<_>>()?;
 
-    args.output.parent().map(|p| fs::create_dir_all(p).ok()).unwrap_or(None);
+    if let Some(parent) = args.output.parent() {
+        fs::create_dir_all(parent)?;
+    }
 
     // Attach minimal metadata
     let mut meta = HashMap::new();

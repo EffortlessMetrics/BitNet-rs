@@ -311,13 +311,7 @@ st-tools-build:
 inspect-auto model_gguf:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Resolve model path
-    MODEL="{{model_gguf}}"
-    if [[ ! -f "$MODEL" ]]; then
-        if [[ -f "models/{{model_gguf}}" ]]; then
-            MODEL="models/{{model_gguf}}"
-        fi
-    fi
+    MODEL=$(./scripts/resolve_model_path.sh "{{model_gguf}}")
     cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- \
         inspect --ln-stats --gate auto "$MODEL"
 
@@ -325,13 +319,7 @@ inspect-auto model_gguf:
 inspect-policy model_gguf policy_yml policy_key:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Resolve model path
-    MODEL="{{model_gguf}}"
-    if [[ ! -f "$MODEL" ]]; then
-        if [[ -f "models/{{model_gguf}}" ]]; then
-            MODEL="models/{{model_gguf}}"
-        fi
-    fi
+    MODEL=$(./scripts/resolve_model_path.sh "{{model_gguf}}")
     cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- \
         inspect --ln-stats --gate policy \
         --policy "{{policy_yml}}" \
@@ -342,13 +330,7 @@ inspect-policy model_gguf policy_yml policy_key:
 gates-auto model_gguf:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Resolve model path
-    MODEL="{{model_gguf}}"
-    if [[ ! -f "$MODEL" ]]; then
-        if [[ -f "models/{{model_gguf}}" ]]; then
-            MODEL="models/{{model_gguf}}"
-        fi
-    fi
+    MODEL=$(./scripts/resolve_model_path.sh "{{model_gguf}}")
     BITNET_STRICT_MODE=1 \
     ./target/release/bitnet inspect --ln-stats --gate auto "$MODEL"
 
@@ -356,13 +338,7 @@ gates-auto model_gguf:
 gates-policy model_gguf policy_yml policy_key:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Resolve model path
-    MODEL="{{model_gguf}}"
-    if [[ ! -f "$MODEL" ]]; then
-        if [[ -f "models/{{model_gguf}}" ]]; then
-            MODEL="models/{{model_gguf}}"
-        fi
-    fi
+    MODEL=$(./scripts/resolve_model_path.sh "{{model_gguf}}")
     BITNET_STRICT_MODE=1 \
     ./target/release/bitnet inspect --ln-stats \
         --gate policy --policy "{{policy_yml}}" --policy-key "{{policy_key}}" "$MODEL"
@@ -403,12 +379,6 @@ info:
 compat-check model_gguf:
     #!/usr/bin/env bash
     set -euo pipefail
-    # Resolve model path
-    MODEL="{{model_gguf}}"
-    if [[ ! -f "$MODEL" ]]; then
-        if [[ -f "models/{{model_gguf}}" ]]; then
-            MODEL="models/{{model_gguf}}"
-        fi
-    fi
+    MODEL=$(./scripts/resolve_model_path.sh "{{model_gguf}}")
     cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
         compat-check "$MODEL" --show-kv --kv-limit 20

@@ -32,10 +32,10 @@ This PR refactors the `dump_logit_steps` handling in the BitNet CLI to eliminate
 ## Technical Changes
 
 ### Files Modified
-1. **crates/bitnet-cli/src/main.rs**: 
-   - Refactored greedy assertion logic from unsafe `dump_logit_steps.is_some() && dump_logit_steps.unwrap()` 
+1. **crates/bitnet-cli/src/main.rs**:
+   - Refactored greedy assertion logic from unsafe `dump_logit_steps.is_some() && dump_logit_steps.unwrap()`
    - To safe `dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)`
-   
+
 2. **crates/bitnet-cli/tests/dump_logit_steps.rs** (NEW):
    - Added regression test `greedy_check_skipped_without_dump_logit_steps()`
    - Validates that greedy check is properly bypassed when `dump_logit_steps` is None
@@ -54,7 +54,7 @@ This PR refactors the `dump_logit_steps` handling in the BitNet CLI to eliminate
 - Single author contribution with focused scope
 - 3 commits all related to the same safety improvement:
   1. "Test None dump_logit_steps path" (3b9766d)
-  2. "Refine dump_logit_steps checks" (887b60d) 
+  2. "Refine dump_logit_steps checks" (887b60d)
   3. "Eliminate redundant cast in i2s conversion" (6803674)
 - Clean, atomic change that can be squashed into single commit
 - No collaborative history to preserve

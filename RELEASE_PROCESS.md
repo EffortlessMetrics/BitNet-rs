@@ -22,7 +22,7 @@ print_platform_banner
 You're ready to ship when:
 
 1. **Acceptance Tests**: `ALL ACCEPTANCE TESTS PASSED`
-2. **Format Parity**: 
+2. **Format Parity**:
    - FP32↔FP32: τ-b ≥ 0.95, |ΔNLL| ≤ 1e-2
    - Quant↔FP32: τ-b ≥ 0.60, |ΔNLL| ≤ 2e-2
 3. **Performance JSONs**: Both SafeTensors and GGUF exist with provenance
@@ -92,7 +92,7 @@ BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 ./your_test.sh
 Every JSON artifact includes:
 - `schema_version`: 1
 - `git_commit`: Short SHA
-- `git_dirty`: Clean/dirty flag  
+- `git_dirty`: Clean/dirty flag
 - `model_hash`: First 16 chars of SHA256
 - `cli_args`: Exact command used
 - `wsl2`: Platform awareness flag

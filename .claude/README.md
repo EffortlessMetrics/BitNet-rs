@@ -50,13 +50,13 @@ Analysis   Validation Analysis   Resolution  Preparation              Finalizati
 
 1. **PR Created** → Invoke `pr-initial`
    - Analyzes changes and scope
-   - Sets up validation environment  
+   - Sets up validation environment
    - Posts initial status with review plan
    - **Guides orchestrator**: "Next: invoke pr-test with [context]"
 
 2. **Testing Phase** → `pr-test` (may loop)
    - Runs comprehensive validation suite
-   - **If passing**: "Next: invoke pr-context" 
+   - **If passing**: "Next: invoke pr-context"
    - **If failing**: "Next: invoke pr-cleanup with [issues]"
    - **If partial**: "Continue with pr-test [subset]"
 
@@ -165,7 +165,7 @@ All PRs must pass:
 Each agent can be customized by editing its markdown file:
 
 1. **Tools Available**: Modify tool permissions and capabilities
-2. **Responsibilities**: Adjust scope and focus areas  
+2. **Responsibilities**: Adjust scope and focus areas
 3. **Commands**: Update BitNet.rs specific tooling commands
 4. **Decision Matrix**: Modify flow logic and criteria
 5. **Success Criteria**: Adjust quality gates and requirements

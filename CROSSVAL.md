@@ -10,7 +10,7 @@ cargo xtask full-crossval  # Downloads model, fetches C++, runs tests
 
 # Or run individual steps:
 cargo xtask download-model  # Download BitNet GGUF model (resumable, HF_TOKEN support)
-cargo xtask fetch-cpp       # Fetch and build C++ implementation  
+cargo xtask fetch-cpp       # Fetch and build C++ implementation
 cargo xtask crossval        # Run tests (auto-discovers model)
 
 # Legacy script approach (still works)
@@ -240,7 +240,7 @@ For GitHub Actions:
     echo "BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp" >> $GITHUB_ENV
     echo "OMP_NUM_THREADS=1" >> $GITHUB_ENV
     echo "GGML_NUM_THREADS=1" >> $GITHUB_ENV
-    
+
 - name: Run parity tests
   run: |
     cargo test --features crossval -p bitnet-crossval --release \

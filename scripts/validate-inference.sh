@@ -30,18 +30,18 @@ run_inference_test() {
     local prompt="$1"
     local test_name="$2"
     local output_file="$OUTPUT_DIR/${test_name}_${TIMESTAMP}.txt"
-    
+
     echo -e "${YELLOW}Testing: $test_name${NC}"
     echo "Prompt: $prompt"
-    
+
     # Run with deterministic settings
     export BITNET_DETERMINISTIC=1
     export BITNET_SEED=42
     export RAYON_NUM_THREADS=1
-    
+
     # Time the inference
     start_time=$(date +%s%N)
-    
+
     # Run the CLI with allow-mock for testing
     if cargo run -p bitnet-cli --release --no-default-features --features cpu -- \
         run --model "$MODEL_PATH" \
@@ -50,18 +50,18 @@ run_inference_test() {
         --temperature 0.0 \
         --seed 42 \
         --allow-mock > "$output_file" 2>&1; then
-        
+
         end_time=$(date +%s%N)
         duration=$((($end_time - $start_time) / 1000000)) # Convert to ms
-        
+
         echo -e "${GREEN}✓ Success${NC} (${duration}ms)"
-        
+
         # Extract generated text (if available)
         if grep -q "Generating:" "$output_file"; then
             echo "Output preview:"
             grep -A 5 "Generating:" "$output_file" | head -10
         fi
-        
+
         return 0
     else
         echo -e "${RED}✗ Failed${NC}"
@@ -75,15 +75,15 @@ run_inference_test() {
 benchmark_inference() {
     echo -e "\n${BLUE}Running Performance Benchmarks${NC}"
     echo "================================"
-    
+
     local tokens_per_test=100
     local num_runs=3
-    
+
     for i in $(seq 1 $num_runs); do
         echo -e "\n${YELLOW}Benchmark Run $i/$num_runs${NC}"
-        
+
         start_time=$(date +%s%N)
-        
+
         cargo run -p bitnet-cli --release --no-default-features --features cpu -- \
             run --model "$MODEL_PATH" \
             --prompt "Once upon a time" \
@@ -91,14 +91,14 @@ benchmark_inference() {
             --temperature 0.0 \
             --seed 42 \
             --allow-mock > "$OUTPUT_DIR/bench_${i}.txt" 2>&1
-        
+
         end_time=$(date +%s%N)
         duration_ms=$((($end_time - $start_time) / 1000000))
         tokens_per_sec=$(echo "scale=2; $tokens_per_test * 1000 / $duration_ms" | bc)
-        
+
         echo "Duration: ${duration_ms}ms"
         echo "Throughput: ${tokens_per_sec} tokens/sec"
-        
+
         # Save to report
         echo "{\"run\": $i, \"duration_ms\": $duration_ms, \"tokens_per_sec\": $tokens_per_sec}" >> "$OUTPUT_DIR/bench_results.jsonl"
     done
@@ -108,7 +108,7 @@ benchmark_inference() {
 test_response_quality() {
     echo -e "\n${BLUE}Testing Response Quality${NC}"
     echo "========================="
-    
+
     # Test various prompt types
     local prompts=(
         "What is 2+2?"
@@ -117,7 +117,7 @@ test_response_quality() {
         "Translate 'hello' to Spanish:"
         "Complete this sentence: The quick brown fox"
     )
-    
+
     local names=(
         "math"
         "factual"
@@ -125,17 +125,17 @@ test_response_quality() {
         "translation"
         "completion"
     )
-    
+
     local success_count=0
     local total_count=${#prompts[@]}
-    
+
     for i in "${!prompts[@]}"; do
         if run_inference_test "${prompts[$i]}" "${names[$i]}"; then
             ((success_count++))
         fi
         echo ""
     done
-    
+
     echo -e "${BLUE}Quality Test Results:${NC} $success_count/$total_count passed"
 }
 
@@ -143,21 +143,21 @@ test_response_quality() {
 measure_memory_usage() {
     echo -e "\n${BLUE}Measuring Memory Usage${NC}"
     echo "======================"
-    
+
     # Get baseline memory
     baseline_mem=$(free -m | grep Mem | awk '{print $3}')
     echo "Baseline memory: ${baseline_mem}MB"
-    
+
     # Run inference and monitor memory
     cargo run -p bitnet-cli --release --no-default-features --features cpu -- \
         run --model "$MODEL_PATH" \
         --prompt "Test memory usage" \
         --max-new-tokens 20 \
         --allow-mock > /dev/null 2>&1 &
-    
+
     local pid=$!
     local peak_mem=$baseline_mem
-    
+
     while kill -0 $pid 2>/dev/null; do
         current_mem=$(free -m | grep Mem | awk '{print $3}')
         if [ $current_mem -gt $peak_mem ]; then
@@ -165,9 +165,9 @@ measure_memory_usage() {
         fi
         sleep 0.1
     done
-    
+
     wait $pid
-    
+
     mem_used=$((peak_mem - baseline_mem))
     echo "Peak memory usage: ${peak_mem}MB"
     echo "Memory used by inference: ${mem_used}MB"
@@ -177,12 +177,12 @@ measure_memory_usage() {
 compare_with_cpp() {
     echo -e "\n${BLUE}Comparing with C++ Implementation${NC}"
     echo "===================================="
-    
+
     local cpp_binary="$HOME/.cache/bitnet_cpp/build/bin/llama-cli"
-    
+
     if [ -f "$cpp_binary" ]; then
         echo "C++ binary found, running comparison..."
-        
+
         # Test if C++ can load the model
         if timeout 10 "$cpp_binary" -m "$MODEL_PATH" -p "test" -n 5 --no-display-prompt 2>/dev/null; then
             echo -e "${GREEN}✓ C++ inference successful${NC}"
@@ -198,17 +198,17 @@ compare_with_cpp() {
 generate_report() {
     echo -e "\n${BLUE}Generating Validation Report${NC}"
     echo "============================"
-    
+
     # Calculate average benchmark results
     if [ -f "$OUTPUT_DIR/bench_results.jsonl" ]; then
         avg_tokens_per_sec=$(awk -F'[:,}]' '/tokens_per_sec/ {sum+=$6; count++} END {printf "%.2f", sum/count}' "$OUTPUT_DIR/bench_results.jsonl")
     else
         avg_tokens_per_sec="N/A"
     fi
-    
+
     # Count successful tests
     success_count=$(ls "$OUTPUT_DIR"/*_${TIMESTAMP}.txt 2>/dev/null | wc -l)
-    
+
     # Generate report
     cat > "$REPORT_FILE" <<EOF
 {
@@ -221,9 +221,9 @@ generate_report() {
     "notes": "BitNet.rs successfully performs inference with deterministic outputs"
 }
 EOF
-    
+
     echo -e "${GREEN}Report saved to: $REPORT_FILE${NC}"
-    
+
     # Display summary
     echo ""
     echo -e "${BLUE}========================================${NC}"
@@ -237,20 +237,20 @@ main() {
     echo "Model: $MODEL_PATH"
     echo "Output directory: $OUTPUT_DIR"
     echo ""
-    
+
     # Check if model exists
     if [ ! -f "$MODEL_PATH" ]; then
         echo -e "${RED}Error: Model file not found: $MODEL_PATH${NC}"
         exit 1
     fi
-    
+
     # Run validation suite
     test_response_quality
     benchmark_inference
     measure_memory_usage
     compare_with_cpp
     generate_report
-    
+
     echo ""
     echo -e "${GREEN}✅ Inference validation complete!${NC}"
 }

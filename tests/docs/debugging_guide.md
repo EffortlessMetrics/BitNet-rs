@@ -268,12 +268,12 @@ use tests::common::debug_integration::{create_debug_harness, debug_config_from_e
 async fn my_test_with_debugging() {
     let test_config = TestConfig::default();
     let debug_config = debug_config_from_env();
-    
+
     let debug_harness = create_debug_harness(test_config, Some(debug_config)).await?;
     let debugger = debug_harness.debugger();
-    
+
     // Your test code here
-    
+
     // Generate debug report
     let report = debugger.generate_debug_report().await?;
     debugger.save_debug_report(&report).await?;

@@ -127,15 +127,15 @@ import sys
 try:
     with open('licenses.json', 'r') as f:
         licenses = json.load(f)
-    
+
     for dep in sorted(licenses, key=lambda x: x['name']):
         name = dep['name']
         version = dep['version']
         license_name = dep.get('license', 'Unknown')
         repository = dep.get('repository', 'N/A')
-        
+
         print(f"| {name} | {version} | {license_name} | {repository} |")
-        
+
 except Exception as e:
     print(f"Error processing licenses.json: {e}", file=sys.stderr)
     sys.exit(1)

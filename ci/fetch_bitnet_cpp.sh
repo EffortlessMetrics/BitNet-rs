@@ -90,10 +90,10 @@ if [[ "${PRINT_SETUP_ONLY:-0}" -eq 1 ]]; then
         LD_VAR="LD_LIBRARY_PATH"
         LIB_EXT="so"
     fi
-    
+
     BUILD_DIR="$CACHE_DIR/build"
     LIB_PATHS="$BUILD_DIR/3rdparty/llama.cpp/src:$BUILD_DIR/3rdparty/llama.cpp/ggml/src"
-    
+
     log_info ""
     log_info "================================================================"
     log_info "BitNet C++ setup instructions:"
@@ -122,7 +122,7 @@ if [[ -d "$CACHE_DIR/build" ]] && [[ $FORCE -eq 0 ]] && [[ $CLEAN -eq 0 ]]; then
     else
         LIB_CHECK="$CACHE_DIR/build/3rdparty/llama.cpp/src/libllama.so"
     fi
-    
+
     if [[ -f "$LIB_CHECK" ]]; then
         log_info "BitNet C++ already built at $CACHE_DIR"
         log_info "Use --force to rebuild or --clean for clean rebuild"
@@ -144,7 +144,7 @@ else
     cd "$CACHE_DIR"
     CURRENT_REV=$(git rev-parse HEAD)
     TARGET_REV=$(git rev-parse "$REV" 2>/dev/null || echo "$REV")
-    
+
     if [[ "$CURRENT_REV" != "$TARGET_REV" ]] || [[ $FORCE -eq 1 ]]; then
         log_info "Updating to revision: $REV"
         git fetch --tags origin
@@ -181,14 +181,14 @@ if [[ ! -f "$CACHE_DIR/include/bitnet-lut-kernels.h" ]] && [[ -d "$CACHE_DIR/inc
                 break
             fi
         done
-        
+
         if [[ -n "$PRESET_KERNEL" ]]; then
             log_warn "bitnet-lut-kernels.h missing, copying from preset: $PRESET_KERNEL"
             mkdir -p "$CACHE_DIR/include"
             cp "$PRESET_KERNEL" "$CACHE_DIR/include/bitnet-lut-kernels.h"
         fi
     fi
-    
+
     # If still missing and needed, just warn but continue
     if [[ ! -f "$CACHE_DIR/include/bitnet-lut-kernels.h" ]]; then
         log_warn "bitnet-lut-kernels.h not found. Build may succeed without it."

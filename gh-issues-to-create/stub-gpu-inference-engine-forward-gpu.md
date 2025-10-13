@@ -10,19 +10,19 @@ The `GpuInferenceEngine::forward_gpu` function in `crates/bitnet-inference/src/g
 ```rust
     fn forward_gpu(&self, input: &BitNetTensor, _step: usize) -> Result<BitNetTensor> {
         let compute_start = Instant::now();
-        
+
         // This is a simplified synchronous version
         // In a full async implementation, we would use model.read().await
-        
+
         // For now, create a placeholder result
         let result = BitNetTensor::zeros(&[1, 32000], candle_core::DType::F32, &self.backend.device)?;
-        
+
         // Update compute time metrics
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.compute_time_ms = compute_start.elapsed().as_millis() as f64;
         }
-        
+
         Ok(result)
     }
 ```
@@ -36,16 +36,16 @@ The `GpuInferenceEngine::forward_gpu` function should be implemented to perform 
 ```rust
     fn forward_gpu(&self, input: &BitNetTensor, _step: usize) -> Result<BitNetTensor> {
         let compute_start = Instant::now();
-        
+
         let model = self.model.blocking_read(); // Assuming a blocking read for simplicity
         let output = model.forward(input)?;
-        
+
         // Update compute time metrics
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.compute_time_ms = compute_start.elapsed().as_millis() as f64;
         }
-        
+
         Ok(output)
     }
 ```

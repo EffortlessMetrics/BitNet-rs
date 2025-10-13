@@ -98,17 +98,17 @@ function Invoke-TestsWithTimeout {
         [string]$TestArgs,
         [int]$TimeoutSeconds
     )
-    
+
     Write-Info "Running tests with ${TimeoutSeconds}s timeout: cargo test $TestArgs"
-    
+
     $job = Start-Job -ScriptBlock {
         param($args, $env_vars)
-        
+
         # Set environment variables in job
         foreach ($var in $env_vars.GetEnumerator()) {
             Set-Item -Path "env:$($var.Key)" -Value $var.Value
         }
-        
+
         # Run cargo test
         $process = Start-Process -FilePath "cargo" -ArgumentList $args -NoNewWindow -Wait -PassThru
         return $process.ExitCode
@@ -123,10 +123,10 @@ function Invoke-TestsWithTimeout {
         RUST_BACKTRACE = $env:RUST_BACKTRACE
         CARGO_TERM_QUIET = $env:CARGO_TERM_QUIET
     }
-    
+
     # Wait for job with timeout
     $completed = Wait-Job -Job $job -Timeout $TimeoutSeconds
-    
+
     if ($completed) {
         $result = Receive-Job -Job $job
         Remove-Job -Job $job
@@ -142,59 +142,59 @@ function Invoke-TestsWithTimeout {
 # Function to estimate test execution time
 function Get-TestTimeEstimate {
     Write-Info "Analyzing test suite..."
-    
+
     try {
         # Get list of test executables
-        $testList = cargo test --workspace --no-run --message-format=json 2>$null | 
-                   ConvertFrom-Json | 
+        $testList = cargo test --workspace --no-run --message-format=json 2>$null |
+                   ConvertFrom-Json |
                    Where-Object { $_.reason -eq "compiler-artifact" -and $_.target.kind -contains "test" } |
                    Select-Object -ExpandProperty executable
-        
+
         if ($testList) {
             $testCount = $testList.Count
             Write-Info "Found $testCount test executables"
-            
+
             # Estimate based on historical data or defaults
             $estimatedTimePerTest = 5  # seconds
             $totalEstimatedTime = $testCount * $estimatedTimePerTest
             $parallelEstimatedTime = [math]::Ceiling($totalEstimatedTime / $MaxParallel)
-            
+
             Write-Info "Estimated execution time: ${parallelEstimatedTime}s (${totalEstimatedTime}s sequential)"
-            
+
             return $parallelEstimatedTime -le ($TargetMinutes * 60)
         }
     } catch {
         Write-Warning "Could not analyze test suite: $($_.Exception.Message)"
     }
-    
+
     return $true  # Assume we can run within time if analysis fails
 }
 
 # Function to run optimized test selection
 function Invoke-OptimizedTests {
     $testArgs = @("test", "--workspace", "--test-threads=$MaxParallel")
-    
+
     if ($Aggressive) {
         # Skip documentation tests for speed
         $testArgs += @("--lib", "--bins")
-        
+
         # Skip slow integration tests if needed
         if ($SkipSlow) {
             $testArgs += "--exclude=crossval"
             Write-Info "Skipping slow cross-validation tests"
         }
     }
-    
+
     # Add categories filter if specified
     if ($Categories.Count -gt 0) {
         foreach ($category in $Categories) {
             $testArgs += "--package=bitnet-$category"
         }
     }
-    
+
     # Add timeout per test
     $testArgs += @("--", "--test-timeout=60")
-    
+
     $timeoutSeconds = $TargetMinutes * 60
     return Invoke-TestsWithTimeout ($testArgs -join " ") $timeoutSeconds
 }
@@ -202,7 +202,7 @@ function Invoke-OptimizedTests {
 # Function to run incremental tests (only changed code)
 function Invoke-IncrementalTests {
     Write-Info "Attempting incremental test execution..."
-    
+
     try {
         # Check if we can determine changed files using git
         if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -210,11 +210,11 @@ function Invoke-IncrementalTests {
             if (-not $changedFiles) {
                 $changedFiles = git diff --name-only --cached 2>$null
             }
-            
+
             if ($changedFiles) {
                 Write-Info "Detected changes in:"
                 $changedFiles | ForEach-Object { Write-Info "  - $_" }
-                
+
                 # Run tests for changed crates only
                 $changedCrates = @()
                 foreach ($file in $changedFiles) {
@@ -225,7 +225,7 @@ function Invoke-IncrementalTests {
                         }
                     }
                 }
-                
+
                 if ($changedCrates.Count -gt 0) {
                     Write-Info "Running tests for changed crates: $($changedCrates -join ', ')"
                     $testArgs = @("test") + ($changedCrates | ForEach-Object { "-p", $_ }) + @("--test-threads=$MaxParallel")
@@ -237,7 +237,7 @@ function Invoke-IncrementalTests {
     } catch {
         Write-Warning "Could not determine incremental changes: $($_.Exception.Message)"
     }
-    
+
     Write-Info "Could not determine incremental changes, running full test suite"
     return $null
 }
@@ -245,18 +245,18 @@ function Invoke-IncrementalTests {
 # Function to run fast unit tests only
 function Invoke-FastUnitTests {
     Write-Info "Running fast unit tests only..."
-    
+
     $testArgs = @(
-        "test", 
-        "--workspace", 
-        "--lib", 
+        "test",
+        "--workspace",
+        "--lib",
         "--test-threads=$MaxParallel",
         "--exclude=crossval",
         "--exclude=bitnet-sys",
         "--",
         "--test-timeout=30"
     )
-    
+
     $timeoutSeconds = $TargetMinutes * 60
     return Invoke-TestsWithTimeout ($testArgs -join " ") $timeoutSeconds
 }
@@ -264,14 +264,14 @@ function Invoke-FastUnitTests {
 # Function to cleanup and report
 function Write-FinalReport {
     param([int]$ExitCode)
-    
+
     $endTime = Get-Date
     $duration = $endTime - $StartTime
     $durationMinutes = [math]::Floor($duration.TotalMinutes)
     $durationSeconds = [math]::Floor($duration.TotalSeconds % 60)
-    
+
     Write-Info "Test execution completed in ${durationMinutes}m ${durationSeconds}s"
-    
+
     if ($ExitCode -eq 0) {
         if ($duration.TotalMinutes -le $TargetMinutes) {
             Write-Success "Tests completed successfully within $TargetMinutes minute target!"
@@ -281,7 +281,7 @@ function Write-FinalReport {
     } else {
         Write-Error "Tests failed with exit code $ExitCode"
     }
-    
+
     # Generate simple report
     $reportContent = @"
 # Test Execution Report
@@ -304,7 +304,7 @@ function Write-FinalReport {
 
 Generated at: $(Get-Date)
 "@
-    
+
     $reportContent | Out-File -FilePath "test-execution-report.txt" -Encoding UTF8
     Write-Info "Report saved to test-execution-report.txt"
 }
@@ -315,40 +315,40 @@ try {
     if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
         throw "cargo not found in PATH"
     }
-    
+
     if (-not (Test-Path "Cargo.toml")) {
         throw "Cargo.toml not found - not in a Rust workspace"
     }
-    
+
     # Determine execution strategy
     $exitCode = $null
-    
+
     if (Get-TestTimeEstimate) {
         Write-Info "Estimated time is within target, running optimized test suite"
         $exitCode = Invoke-OptimizedTests
     } else {
         Write-Warning "Estimated time exceeds target, trying optimizations..."
-        
+
         # Try incremental tests first
         if ($EnableCaching -and -not $NoIncremental) {
             $exitCode = Invoke-IncrementalTests
         }
-        
+
         # Fall back to fast unit tests if incremental didn't work
         if ($null -eq $exitCode) {
             Write-Info "Falling back to fast unit tests only"
             $exitCode = Invoke-FastUnitTests
         }
     }
-    
+
     # Handle null exit code (shouldn't happen, but just in case)
     if ($null -eq $exitCode) {
         $exitCode = 1
     }
-    
+
     Write-FinalReport $exitCode
     exit $exitCode
-    
+
 } catch {
     Write-Error "Script execution failed: $($_.Exception.Message)"
     Write-FinalReport 1

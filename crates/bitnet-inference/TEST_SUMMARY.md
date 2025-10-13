@@ -31,7 +31,7 @@ Successfully implemented comprehensive unit tests for the bitnet-inference crate
 #### 3. Streaming Inference and Batch Processing Tests ✅
 - **StreamingConfig Testing**: Buffer size and flush interval validation
 - **SamplingConfig Testing**: Temperature, top-k, top-p, repetition penalty
-- **SamplingStrategy Testing**: 
+- **SamplingStrategy Testing**:
   - Reproducibility with seeds
   - Different temperature settings
   - Edge cases (empty logits, single token, zero temperature)

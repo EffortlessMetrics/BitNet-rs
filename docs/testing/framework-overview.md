@@ -126,11 +126,11 @@ graph TD
     F --> G[Generate Reports]
     G --> H[Cleanup Resources]
     H --> I[Test Complete]
-    
+
     E --> E1[Unit Tests]
     E --> E2[Integration Tests]
     E --> E3[Cross-Validation]
-    
+
     E1 --> F
     E2 --> F
     E3 --> F

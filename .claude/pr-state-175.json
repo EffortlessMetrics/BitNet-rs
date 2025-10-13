@@ -8,7 +8,7 @@
   "validation_results": {
     "format_check": "PASS",
     "clippy_check": "PASS",
-    "build_check": "PASS", 
+    "build_check": "PASS",
     "feature_compatibility": "PASS",
     "python_syntax": "PASS",
     "integration_tests": "PARTIAL"
@@ -20,7 +20,7 @@
       "description": "Updated from abi3-py38 to abi3-py312 for Python 3.12 compatibility"
     },
     {
-      "file": "crates/bitnet-py/python/bitnet_py/migration.py", 
+      "file": "crates/bitnet-py/python/bitnet_py/migration.py",
       "type": "Code quality improvement",
       "description": "Removed unused imports and improved test implementation"
     },
@@ -31,7 +31,7 @@
     },
     {
       "file": "crates/bitnet-py/build.rs",
-      "type": "Build system improvement", 
+      "type": "Build system improvement",
       "description": "Simplified and improved Python linking configuration"
     }
   ],

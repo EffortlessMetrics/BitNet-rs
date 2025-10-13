@@ -79,8 +79,15 @@ impl InspectCommand {
         let file_type = reader.get_u32_metadata("general.file_type").unwrap_or(0);
         debug!("File type: {}", file_type);
 
+        // Compute strict_mode once (DRY)
+        let strict_mode = std::env::var("BITNET_STRICT_MODE")
+            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .unwrap_or(false);
+
+        // Gate selection with explicit validation
         let rules: Ruleset = match self.gate.as_str() {
             "none" => crate::ln_rules::rules_generic(),
+            "auto" => detect_rules(arch, file_type),
             "policy" => {
                 let pol = self
                     .policy
@@ -89,7 +96,12 @@ impl InspectCommand {
                 let key = self.policy_key.as_deref().unwrap_or(arch);
                 load_policy(pol, key)?
             }
-            _ => detect_rules(arch, file_type),
+            other => {
+                return Err(anyhow::anyhow!(
+                    "Invalid gate mode '{}'. Must be one of: none, auto, policy.",
+                    other
+                ));
+            }
         };
 
         tracing::info!(
@@ -106,94 +118,79 @@ impl InspectCommand {
         let mut ln_bad_count = 0;
         let mut ln_total_count = 0;
 
-        // 2) Scan all tensors for LayerNorm weights
-        for i in 0..tensor_count {
-            let info = reader.get_tensor_info(i)?;
-
-            // Check if this is a LayerNorm gamma tensor
-            let is_ln = is_layernorm_weight(&info.name);
-            if !is_ln {
-                continue;
-            }
-
-            debug!("Processing LayerNorm tensor: {} (type: {:?})", info.name, info.tensor_type);
-            ln_total_count += 1;
-
-            // Load tensor data and compute RMS
-            let tensor_data = reader.get_tensor_data(i)?;
-            let tensor = Self::decode_tensor(
-                &info.name,
-                &info.shape,
-                info.tensor_type,
-                tensor_data,
-                TensorKind::LayerNorm,
-            )?;
-
-            // Compute RMS
-            let rms = Self::compute_rms(&tensor)?;
-
-            // Check if RMS is in acceptable envelope using architecture-aware rules
-            let is_ok = rules.check_ln(&info.name, rms);
-
-            if !is_ok {
-                ln_bad_count += 1;
-            }
-
-            ln_stats.push(TensorStat {
-                name: info.name.clone(),
-                rms,
-                is_ok,
-                kind: TensorKind::LayerNorm,
-            });
-        }
-
-        // 3) Scan for projection weights and validate RMS
         let mut proj_stats = Vec::new();
         let mut proj_bad_count = 0;
         let mut proj_total_count = 0;
 
+        // 2) Single-pass scan: route to LayerNorm or Projection validation
         for i in 0..tensor_count {
             let info = reader.get_tensor_info(i)?;
 
-            if !is_projection_weight(&info.name) {
-                continue;
+            // Route by tensor type
+            if is_layernorm_weight(&info.name) {
+                debug!("Processing LayerNorm tensor: {} (type: {:?})", info.name, info.tensor_type);
+                ln_total_count += 1;
+
+                // Load tensor data and compute RMS
+                let tensor_data = reader.get_tensor_data(i)?;
+                let tensor = Self::decode_tensor(
+                    &info.name,
+                    &info.shape,
+                    info.tensor_type,
+                    tensor_data,
+                    TensorKind::LayerNorm,
+                )?;
+
+                let rms = Self::compute_rms(&tensor)?;
+                let is_ok = rules.check_ln(&info.name, rms);
+
+                if !is_ok {
+                    ln_bad_count += 1;
+                }
+
+                ln_stats.push(TensorStat {
+                    name: info.name.clone(),
+                    rms,
+                    is_ok,
+                    kind: TensorKind::LayerNorm,
+                });
+            } else if is_projection_weight(&info.name) {
+                // Only validate RMS for float tensors (F32/F16)
+                // Quantized projection weights (I2_S, etc.) are expected and don't need RMS validation
+                if !matches!(info.tensor_type, GgufTensorType::F32 | GgufTensorType::F16) {
+                    debug!(
+                        "Skipping RMS validation for quantized projection tensor: {} (type: {:?})",
+                        info.name, info.tensor_type
+                    );
+                    continue;
+                }
+
+                proj_total_count += 1;
+
+                // Load tensor data and compute RMS
+                let tensor_data = reader.get_tensor_data(i)?;
+                let tensor = Self::decode_tensor(
+                    &info.name,
+                    &info.shape,
+                    info.tensor_type,
+                    tensor_data,
+                    TensorKind::Projection,
+                )?;
+
+                let rms = Self::compute_rms(&tensor)?;
+                let is_ok = rules.check_proj_rms(rms);
+
+                if !is_ok {
+                    proj_bad_count += 1;
+                }
+
+                proj_stats.push(TensorStat {
+                    name: info.name.clone(),
+                    rms,
+                    is_ok,
+                    kind: TensorKind::Projection,
+                });
             }
-
-            // Only validate RMS for float tensors (F32/F16)
-            // Quantized projection weights (I2_S, etc.) are expected and don't need RMS validation
-            if !matches!(info.tensor_type, GgufTensorType::F32 | GgufTensorType::F16) {
-                debug!(
-                    "Skipping RMS validation for quantized projection tensor: {} (type: {:?})",
-                    info.name, info.tensor_type
-                );
-                continue;
-            }
-
-            proj_total_count += 1;
-
-            // Load tensor data and compute RMS
-            let tensor_data = reader.get_tensor_data(i)?;
-            let tensor = Self::decode_tensor(
-                &info.name,
-                &info.shape,
-                info.tensor_type,
-                tensor_data,
-                TensorKind::Projection,
-            )?;
-
-            let rms = Self::compute_rms(&tensor)?;
-            let is_ok = rules.check_proj_rms(rms);
-
-            if !is_ok {
-                proj_bad_count += 1;
-            }
-
-            proj_stats.push(TensorStat {
-                name: info.name.clone(),
-                rms,
-                is_ok,
-                kind: TensorKind::Projection,
-            });
         }
 
         // Combine stats for output
@@ -210,6 +207,7 @@ impl InspectCommand {
                 proj_bad_count,
                 proj_total_count,
                 &rules.name,
+                strict_mode,
             )?;
         } else {
             self.output_text(
@@ -220,14 +218,11 @@ impl InspectCommand {
                 proj_bad_count,
                 proj_total_count,
                 &rules.name,
+                strict_mode,
             )?;
         }
 
         // Determine exit code based on strict mode
-        let strict_mode = std::env::var("BITNET_STRICT_MODE")
-            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
-            .unwrap_or(false);
-
         let total_bad = ln_bad_count + proj_bad_count;
 
         if total_bad > 0 && strict_mode {
@@ -301,6 +296,7 @@ impl InspectCommand {
     }
 
     /// Output results as JSON
+    #[allow(clippy::too_many_arguments)]
     fn output_json(
         &self,
         model_sha256: &str,
@@ -310,12 +306,9 @@ impl InspectCommand {
         proj_bad_count: usize,
         proj_total_count: usize,
         ruleset_name: &str,
+        strict_mode: bool,
     ) -> Result<()> {
         use serde_json::json;
-
-        let strict_mode = std::env::var("BITNET_STRICT_MODE")
-            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
-            .unwrap_or(false);
 
         let tensors: Vec<_> = stats
             .iter()
@@ -359,6 +352,7 @@ impl InspectCommand {
     }
 
     /// Output results as human-readable text
+    #[allow(clippy::too_many_arguments)]
     fn output_text(
         &self,
         model_sha256: &str,
@@ -368,6 +362,7 @@ impl InspectCommand {
         proj_bad_count: usize,
         proj_total_count: usize,
         ruleset_name: &str,
+        strict_mode: bool,
     ) -> Result<()> {
         println!("model_sha256: {}", model_sha256);
         println!("ruleset: {}", ruleset_name);
@@ -389,10 +384,6 @@ impl InspectCommand {
         }
 
         println!();
-
-        let strict_mode = std::env::var("BITNET_STRICT_MODE")
-            .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
-            .unwrap_or(false);
 
         let total_bad = ln_bad_count + proj_bad_count;
 

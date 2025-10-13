@@ -71,7 +71,7 @@ The cross-validation framework successfully:
 ### Integration Tests ✅
 BitNet.rs passed all internal tests:
 - ✅ SIMD kernel selection
-- ✅ Model loading pipeline  
+- ✅ Model loading pipeline
 - ✅ Quantization consistency
 - ✅ Round-trip accuracy
 - ✅ Performance benchmarks

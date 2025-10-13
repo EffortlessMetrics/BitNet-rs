@@ -52,7 +52,7 @@ Cross-validation ensures bit-exact compatibility between implementations:
 fn test_token_equivalence() {
     let rust_tokens = bitnet_rs::generate(&model, prompt);
     let cpp_tokens = bitnet_cpp::generate(&model, prompt);
-    
+
     // Verify exact token match
     assert_eq!(rust_tokens, cpp_tokens);
 }
@@ -72,11 +72,11 @@ Comprehensive performance comparison across multiple dimensions:
 // Example performance benchmark
 fn benchmark_inference(c: &mut Criterion) {
     let model = load_test_model();
-    
+
     c.bench_function("rust_inference", |b| {
         b.iter(|| bitnet_rs::generate(&model, "test prompt"))
     });
-    
+
     c.bench_function("cpp_inference", |b| {
         b.iter(|| bitnet_cpp::generate(&model, "test prompt"))
     });
@@ -101,7 +101,7 @@ fn test_api_compatibility() {
     // Test that Rust API produces same results as C++ API
     let rust_result = bitnet_rs::Model::load("test.gguf")?.generate("test");
     let cpp_result = bitnet_cpp_api::load_model("test.gguf").generate("test");
-    
+
     assert_eq!(rust_result, cpp_result);
 }
 ```
@@ -120,11 +120,11 @@ fn test_api_compatibility() {
    ```bash
    # Ubuntu/Debian
    sudo apt install clang cmake build-essential
-   
+
    # macOS
    xcode-select --install
    brew install cmake
-   
+
    # Windows
    # Install Visual Studio with C++ tools and CMake
    ```
@@ -133,7 +133,7 @@ fn test_api_compatibility() {
    ```bash
    # Automatic setup
    ./ci/fetch_bitnet_cpp.sh
-   
+
    # Or manual setup
    export BITNET_CPP_PATH=/path/to/bitnet.cpp
    ```

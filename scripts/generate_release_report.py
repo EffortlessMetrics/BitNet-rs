@@ -227,11 +227,11 @@ def load_json_file(file_path: Path) -> Dict[str, Any]:
         return {}
 
 
-def generate_summary_cards(coverage_data: Dict, performance_data: Dict, 
+def generate_summary_cards(coverage_data: Dict, performance_data: Dict,
                           security_data: Dict) -> str:
     """Generate summary cards HTML."""
     cards = []
-    
+
     # Coverage card
     coverage_percentage = 0.0
     if 'files' in coverage_data:
@@ -246,7 +246,7 @@ def generate_summary_cards(coverage_data: Dict, performance_data: Dict,
                             covered_lines += 1
         if total_lines > 0:
             coverage_percentage = (covered_lines / total_lines) * 100
-    
+
     coverage_status = "passed" if coverage_percentage >= 85.0 else "failed"
     cards.append(f'''
         <div class="summary-card {coverage_status}">
@@ -255,7 +255,7 @@ def generate_summary_cards(coverage_data: Dict, performance_data: Dict,
             <p>Target: ≥85%</p>
         </div>
     ''')
-    
+
     # Performance card
     regressions = performance_data.get('regressions', [])
     performance_status = "passed" if len(regressions) == 0 else "failed"
@@ -266,10 +266,10 @@ def generate_summary_cards(coverage_data: Dict, performance_data: Dict,
             <p>Regressions detected</p>
         </div>
     ''')
-    
+
     # Security card
     vulnerabilities = security_data.get('vulnerabilities', [])
-    high_critical = [v for v in vulnerabilities 
+    high_critical = [v for v in vulnerabilities
                     if v.get('advisory', {}).get('severity', '').lower() in ['high', 'critical']]
     security_status = "passed" if len(high_critical) == 0 else "failed"
     cards.append(f'''
@@ -279,7 +279,7 @@ def generate_summary_cards(coverage_data: Dict, performance_data: Dict,
             <p>High/Critical vulnerabilities</p>
         </div>
     ''')
-    
+
     # Overall status card
     overall_passed = coverage_status == "passed" and performance_status == "passed" and security_status == "passed"
     overall_status = "passed" if overall_passed else "failed"
@@ -290,15 +290,15 @@ def generate_summary_cards(coverage_data: Dict, performance_data: Dict,
             <p>Release validation</p>
         </div>
     ''')
-    
+
     return ''.join(cards)
 
 
-def generate_quality_gates_section(coverage_data: Dict, performance_data: Dict, 
+def generate_quality_gates_section(coverage_data: Dict, performance_data: Dict,
                                  security_data: Dict) -> str:
     """Generate quality gates section HTML."""
     gates = []
-    
+
     # Coverage gate
     coverage_percentage = 0.0
     if 'files' in coverage_data:
@@ -313,7 +313,7 @@ def generate_quality_gates_section(coverage_data: Dict, performance_data: Dict,
                             covered_lines += 1
         if total_lines > 0:
             coverage_percentage = (covered_lines / total_lines) * 100
-    
+
     coverage_passed = coverage_percentage >= 85.0
     coverage_icon = "✅" if coverage_passed else "❌"
     gates.append(f'''
@@ -326,7 +326,7 @@ def generate_quality_gates_section(coverage_data: Dict, performance_data: Dict,
             </div>
         </div>
     ''')
-    
+
     # Performance gate
     regressions = performance_data.get('regressions', [])
     performance_passed = len(regressions) == 0
@@ -341,10 +341,10 @@ def generate_quality_gates_section(coverage_data: Dict, performance_data: Dict,
             </div>
         </div>
     ''')
-    
+
     # Security gate
     vulnerabilities = security_data.get('vulnerabilities', [])
-    high_critical = [v for v in vulnerabilities 
+    high_critical = [v for v in vulnerabilities
                     if v.get('advisory', {}).get('severity', '').lower() in ['high', 'critical']]
     security_passed = len(high_critical) == 0
     security_icon = "✅" if security_passed else "❌"
@@ -358,7 +358,7 @@ def generate_quality_gates_section(coverage_data: Dict, performance_data: Dict,
             </div>
         </div>
     ''')
-    
+
     return ''.join(gates)
 
 
@@ -366,7 +366,7 @@ def generate_coverage_section(coverage_data: Dict) -> str:
     """Generate coverage details section."""
     if not coverage_data:
         return ""
-    
+
     return f'''
     <div class="section">
         <div class="section-header">
@@ -383,12 +383,12 @@ def generate_performance_section(performance_data: Dict) -> str:
     """Generate performance details section."""
     if not performance_data:
         return ""
-    
+
     regressions = performance_data.get('regressions', [])
     improvements = performance_data.get('improvements', [])
-    
+
     content = []
-    
+
     if regressions:
         content.append("<h4>Performance Regressions</h4>")
         content.append('<table class="details-table">')
@@ -404,7 +404,7 @@ def generate_performance_section(performance_data: Dict) -> str:
                 </tr>
             ''')
         content.append('</tbody></table>')
-    
+
     if improvements:
         content.append("<h4>Performance Improvements</h4>")
         content.append('<table class="details-table">')
@@ -420,10 +420,10 @@ def generate_performance_section(performance_data: Dict) -> str:
                 </tr>
             ''')
         content.append('</tbody></table>')
-    
+
     if not content:
         content.append("<p>No performance data available.</p>")
-    
+
     return f'''
     <div class="section">
         <div class="section-header">
@@ -440,9 +440,9 @@ def generate_security_section(security_data: Dict) -> str:
     """Generate security details section."""
     if not security_data:
         return ""
-    
+
     vulnerabilities = security_data.get('vulnerabilities', [])
-    
+
     if not vulnerabilities:
         return f'''
         <div class="section">
@@ -454,17 +454,17 @@ def generate_security_section(security_data: Dict) -> str:
             </div>
         </div>
         '''
-    
+
     content = []
     content.append('<table class="details-table">')
     content.append('<thead><tr><th>Package</th><th>Vulnerability</th><th>Severity</th><th>Description</th></tr></thead>')
     content.append('<tbody>')
-    
+
     for vuln in vulnerabilities[:20]:  # Limit to first 20
         advisory = vuln.get('advisory', {})
         severity = advisory.get('severity', 'Unknown')
         severity_class = 'failed' if severity.lower() in ['high', 'critical'] else 'passed'
-        
+
         content.append(f'''
             <tr>
                 <td>{vuln.get('package', {}).get('name', 'Unknown')}</td>
@@ -473,9 +473,9 @@ def generate_security_section(security_data: Dict) -> str:
                 <td>{advisory.get('title', 'No description')[:100]}...</td>
             </tr>
         ''')
-    
+
     content.append('</tbody></table>')
-    
+
     return f'''
     <div class="section">
         <div class="section-header">
@@ -496,14 +496,14 @@ def main():
     parser.add_argument('--performance-report', type=Path, help='Performance report JSON file')
     parser.add_argument('--security-report', type=Path, help='Security report JSON file')
     parser.add_argument('--output', type=Path, required=True, help='Output HTML file')
-    
+
     args = parser.parse_args()
-    
+
     # Load data files
     coverage_data = load_json_file(args.coverage_report) if args.coverage_report else {}
     performance_data = load_json_file(args.performance_report) if args.performance_report else {}
     security_data = load_json_file(args.security_report) if args.security_report else {}
-    
+
     # Determine overall status
     coverage_percentage = 0.0
     if 'files' in coverage_data:
@@ -518,19 +518,19 @@ def main():
                             covered_lines += 1
         if total_lines > 0:
             coverage_percentage = (covered_lines / total_lines) * 100
-    
+
     regressions = performance_data.get('regressions', [])
     vulnerabilities = security_data.get('vulnerabilities', [])
-    high_critical = [v for v in vulnerabilities 
+    high_critical = [v for v in vulnerabilities
                     if v.get('advisory', {}).get('severity', '').lower() in ['high', 'critical']]
-    
-    overall_passed = (coverage_percentage >= 85.0 and 
-                     len(regressions) == 0 and 
+
+    overall_passed = (coverage_percentage >= 85.0 and
+                     len(regressions) == 0 and
                      len(high_critical) == 0)
-    
+
     overall_status_class = "badge-success" if overall_passed else "badge-danger"
     overall_status_text = "PASSED" if overall_passed else "FAILED"
-    
+
     # Generate alert section
     if overall_passed:
         alert_section = '''
@@ -544,7 +544,7 @@ def main():
             <strong>❌ Release validation failed!</strong> One or more quality gates have failed.
         </div>
         '''
-    
+
     # Generate HTML content
     html_content = HTML_TEMPLATE.format(
         version=args.version,
@@ -559,7 +559,7 @@ def main():
         security_section=generate_security_section(security_data),
         baseline_version=args.baseline
     )
-    
+
     # Write to output file
     try:
         with open(args.output, 'w') as f:
@@ -568,7 +568,7 @@ def main():
     except Exception as e:
         print(f"Error writing output file: {e}")
         return 1
-    
+
     return 0
 
 

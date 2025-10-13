@@ -19,71 +19,71 @@ graph TB
         WASM[bitnet-wasm]
         Server[bitnet-server]
     end
-    
+
     subgraph "Core Inference Layer"
         IE[bitnet-inference]
         TOK[bitnet-tokenizers]
     end
-    
+
     subgraph "Model Layer"
         MOD[bitnet-models]
         QUANT[bitnet-quantization]
     end
-    
+
     subgraph "Compute Layer"
         KERN[bitnet-kernels]
         CPU[CPU Kernels: AVX2/NEON]
         GPU[GPU Kernels: CUDA/cudarc]
         FALL[Fallback Kernels]
     end
-    
+
     subgraph "Foundation"
         COMMON[bitnet-common]
     end
-    
+
     subgraph "External Formats"
         GGUF[GGUF Files]
         ST[SafeTensors]
         HF[HuggingFace]
     end
-    
+
     CLI --> IE
     CAPI --> IE
     PyAPI --> IE
     WASM --> IE
-    
+
     IE --> MOD
     IE --> QUANT
     MOD --> KERN
     QUANT --> KERN
-    
+
     KERN --> CPU
     KERN --> GPU
     KERN --> FALL
-    
+
     MOD --> GGUF
     MOD --> ST
     MOD --> HF
-    
+
     CPU --> COMMON
     GPU --> COMMON
     FALL --> COMMON
     Server --> IE
-    
+
     IE --> MOD
     IE --> TOK
     IE --> KERN
-    
+
     MOD --> QUANT
     MOD --> COMMON
-    
+
     QUANT --> KERN
     QUANT --> COMMON
-    
+
     KERN --> COMMON
-    
+
     TOK --> COMMON
-    
+
     MOD --> GGUF
     MOD --> ST
     MOD --> HF
@@ -251,7 +251,7 @@ bitnet-rs/
 [workspace]
 members = [
     "crates/bitnet-common",
-    "crates/bitnet-models", 
+    "crates/bitnet-models",
     "crates/bitnet-quantization",
     "crates/bitnet-kernels",
     "crates/bitnet-inference",
@@ -279,7 +279,7 @@ default = ["cpu-fallback"]
 cpu-fallback = []            # Basic CPU kernels
 cpu-optimized = ["avx2", "neon"]  # Optimized SIMD kernels
 avx2 = []                    # x86 AVX2 support
-avx512 = []                  # x86 AVX-512 support  
+avx512 = []                  # x86 AVX-512 support
 neon = []                    # ARM NEON support
 cuda = ["cudarc"]            # CUDA GPU support
 metal = ["metal-rs"]         # Metal GPU support (future)
@@ -304,7 +304,7 @@ embedded = []                # no_std support
 [features]
 default = ["cpu"]
 cpu = ["bitnet-inference/cpu"]
-gpu = ["bitnet-inference/gpu"] 
+gpu = ["bitnet-inference/gpu"]
 wasm = ["bitnet-wasm"]
 python = ["bitnet-py"]
 server = ["bitnet-server"]
@@ -363,7 +363,7 @@ use bitnet_common::{BitNetConfig, BitNetError, Tensor};
 
 pub trait Model: Send + Sync {
     type Config: ModelConfig;
-    
+
     fn config(&self) -> &Self::Config;
     fn forward(&self, input: &dyn Tensor, cache: &mut KVCache) -> Result<Box<dyn Tensor>>;
     fn generate(&self, tokens: &[u32], config: &GenerationConfig) -> Result<Vec<u32>>;
@@ -452,7 +452,7 @@ impl KernelManager {
         let mut providers: Vec<Box<dyn KernelProvider>> = vec![
             Box::new(FallbackKernel),
         ];
-        
+
         #[cfg(target_arch = "x86_64")]
         {
             if is_x86_feature_detected!("avx2") {
@@ -462,27 +462,27 @@ impl KernelManager {
                 providers.push(Box::new(Avx512Kernel));
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         {
             if std::arch::is_aarch64_feature_detected!("neon") {
                 providers.push(Box::new(NeonKernel));
             }
         }
-        
+
         #[cfg(feature = "cuda")]
         {
             if let Ok(cuda_kernel) = CudaKernel::new() {
                 providers.push(Box::new(cuda_kernel));
             }
         }
-        
+
         Self {
             providers,
             selected: None,
         }
     }
-    
+
     pub fn select_best(&mut self) -> Result<&dyn KernelProvider> {
         // Select the best available kernel
         for (i, provider) in self.providers.iter().enumerate() {
@@ -527,7 +527,7 @@ impl InferenceEngine {
     ) -> Result<Self> {
         let mut kernels = KernelManager::new();
         kernels.select_best()?;
-        
+
         Ok(Self {
             model,
             tokenizer,
@@ -536,13 +536,13 @@ impl InferenceEngine {
             config: InferenceConfig::default(),
         })
     }
-    
+
     pub fn generate(&mut self, prompt: &str) -> Result<String> {
         let tokens = self.tokenizer.encode(prompt, false)?;
         let generated = self.generate_tokens(&tokens, &self.config)?;
         Ok(self.tokenizer.decode(&generated, true)?)
     }
-    
+
     pub fn generate_stream(&mut self, prompt: &str) -> impl Stream<Item = Result<String>> {
         GenerationStream::new(self, prompt)
     }
@@ -607,7 +607,7 @@ impl TokenizerBuilder {
 // Core model traits and implementations
 pub trait Model: Send + Sync {
     type Config: ModelConfig;
-    
+
     fn config(&self) -> &Self::Config;
     fn forward(&self, input: &Tensor, cache: &mut KVCache) -> Result<Tensor>;
     fn generate(&self, tokens: &[u32], config: &GenerationConfig) -> Result<Vec<u32>>;
@@ -623,14 +623,14 @@ pub struct BitNetModel {
 
 impl Model for BitNetModel {
     type Config = BitNetConfig;
-    
+
     fn forward(&self, input: &Tensor, cache: &mut KVCache) -> Result<Tensor> {
         let mut hidden = self.embeddings.forward(input)?;
-        
+
         for (i, layer) in self.layers.iter().enumerate() {
             hidden = layer.forward(hidden, &mut cache.layers[i])?;
         }
-        
+
         self.output.forward(hidden)
     }
 }
@@ -650,15 +650,15 @@ impl ModelLoader {
             _ => self.detect_and_load(path),
         }
     }
-    
+
     fn load_gguf<P: AsRef<Path>>(&self, path: P) -> Result<Box<dyn Model>> {
         let file = std::fs::File::open(path)?;
         let mmap = unsafe { memmap2::Mmap::map(&file)? };
         let reader = GgufReader::new(&mmap)?;
-        
+
         let config = BitNetConfig::from_gguf(&reader)?;
         let tensors = self.load_tensors_from_gguf(&reader, &config)?;
-        
+
         Ok(Box::new(BitNetModel::from_tensors(config, tensors)?))
     }
 }
@@ -701,13 +701,13 @@ impl Quantize for Tensor {
 #[cfg(target_arch = "aarch64")]
 fn quantize_tl1(tensor: &Tensor) -> Result<QuantizedTensor> {
     use crate::kernels::arm::tl1_quantize;
-    
+
     let data = tensor.as_slice::<f32>()?;
     let scale = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-    
+
     let mut quantized = vec![0u8; data.len() / 4]; // 2 bits per weight
     let mut scales = vec![scale];
-    
+
     unsafe {
         tl1_quantize(
             data.as_ptr(),
@@ -716,7 +716,7 @@ fn quantize_tl1(tensor: &Tensor) -> Result<QuantizedTensor> {
             data.len(),
         );
     }
-    
+
     Ok(QuantizedTensor {
         data: quantized,
         scales,
@@ -750,34 +750,34 @@ impl InferenceEngine {
             config: InferenceConfig::default(),
         }
     }
-    
+
     pub fn generate(&mut self, prompt: &str) -> Result<String> {
         let tokens = self.tokenizer.encode(prompt, false)?;
         let generated = self.generate_tokens(&tokens, &self.config)?;
         Ok(self.tokenizer.decode(&generated, true)?)
     }
-    
+
     pub fn generate_stream(&mut self, prompt: &str) -> impl Stream<Item = Result<String>> {
         let tokens = self.tokenizer.encode(prompt, false).unwrap();
         GenerationStream::new(self, tokens)
     }
-    
+
     fn generate_tokens(&mut self, input: &[u32], config: &GenerationConfig) -> Result<Vec<u32>> {
         let mut cache = KVCache::new(self.model.config(), config.max_length);
         let mut tokens = input.to_vec();
-        
+
         for _ in 0..config.max_new_tokens {
             let input_tensor = Tensor::from_slice(&tokens, &[tokens.len()], &self.device)?;
             let logits = self.model.forward(&input_tensor, &mut cache)?;
-            
+
             let next_token = self.sample_token(&logits, config)?;
             tokens.push(next_token);
-            
+
             if next_token == self.tokenizer.eos_token_id() {
                 break;
             }
         }
-        
+
         Ok(tokens[input.len()..].to_vec())
     }
 }
@@ -793,24 +793,24 @@ pub struct GenerationStream<'a> {
 
 impl<'a> Stream for GenerationStream<'a> {
     type Item = Result<String>;
-    
+
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.position >= self.config.max_new_tokens {
             return Poll::Ready(None);
         }
-        
+
         // Generate next token
         let input_tensor = Tensor::from_slice(&self.tokens, &[self.tokens.len()], &self.engine.device)?;
         let logits = self.engine.model.forward(&input_tensor, &mut self.cache)?;
         let next_token = self.engine.sample_token(&logits, &self.config)?;
-        
+
         self.tokens.push(next_token);
         self.position += 1;
-        
+
         if next_token == self.engine.tokenizer.eos_token_id() {
             return Poll::Ready(None);
         }
-        
+
         let decoded = self.engine.tokenizer.decode(&[next_token], false)?;
         Poll::Ready(Some(Ok(decoded)))
     }
@@ -827,16 +827,16 @@ pub mod kernels {
     pub mod cpu {
         use std::arch::x86_64::*;
         use std::arch::aarch64::*;
-        
+
         pub trait CpuKernel {
             fn matmul_i2s(&self, a: &[i8], b: &[u8], c: &mut [f32], m: usize, n: usize, k: usize);
             fn quantize_tl1(&self, input: &[f32], output: &mut [u8], scales: &mut [f32]);
         }
-        
+
         pub struct AvxKernel;
         pub struct NeonKernel;
         pub struct FallbackKernel;
-        
+
         #[cfg(target_arch = "x86_64")]
         impl CpuKernel for AvxKernel {
             #[target_feature(enable = "avx2")]
@@ -845,25 +845,25 @@ pub mod kernels {
                 for i in (0..m).step_by(8) {
                     for j in (0..n).step_by(8) {
                         let mut acc = _mm256_setzero_ps();
-                        
+
                         for l in (0..k).step_by(32) {
                             let a_vec = _mm256_loadu_si256(a.as_ptr().add(i * k + l) as *const __m256i);
                             let b_vec = _mm256_loadu_si256(b.as_ptr().add(l * n + j) as *const __m256i);
-                            
+
                             // Unpack and multiply
                             let prod = _mm256_maddubs_epi16(a_vec, b_vec);
                             let prod_32 = _mm256_madd_epi16(prod, _mm256_set1_epi16(1));
                             let prod_f32 = _mm256_cvtepi32_ps(prod_32);
-                            
+
                             acc = _mm256_add_ps(acc, prod_f32);
                         }
-                        
+
                         _mm256_storeu_ps(c.as_mut_ptr().add(i * n + j), acc);
                     }
                 }
             }
         }
-        
+
         #[cfg(target_arch = "aarch64")]
         impl CpuKernel for NeonKernel {
             #[target_feature(enable = "neon")]
@@ -872,25 +872,25 @@ pub mod kernels {
                 for i in (0..m).step_by(4) {
                     for j in (0..n).step_by(4) {
                         let mut acc = vdupq_n_f32(0.0);
-                        
+
                         for l in (0..k).step_by(16) {
                             let a_vec = vld1q_s8(a.as_ptr().add(i * k + l));
                             let b_vec = vld1q_u8(b.as_ptr().add(l * n + j));
-                            
+
                             // Convert and multiply
                             let a_i16 = vmovl_s8(vget_low_s8(a_vec));
                             let b_i16 = vmovl_u8(vget_low_u8(b_vec));
                             let prod = vmull_s16(vget_low_s16(a_i16), vget_low_s16(b_i16));
-                            
+
                             acc = vaddq_f32(acc, vcvtq_f32_s32(prod));
                         }
-                        
+
                         vst1q_f32(c.as_mut_ptr().add(i * n + j), acc);
                     }
                 }
             }
         }
-        
+
         // Runtime kernel selection
         pub fn select_kernel() -> Box<dyn CpuKernel> {
             #[cfg(target_arch = "x86_64")]
@@ -926,36 +926,36 @@ pub mod kernels {
 pub mod gpu {
     use cudarc::prelude::*;
     use std::sync::Arc;
-    
+
     pub struct GpuKernel {
         device: Arc<CudaDevice>,
         module: CudaModule,
         streams: Vec<CudaStream>,
     }
-    
+
     impl GpuKernel {
         pub fn new() -> Result<Self> {
             let device = CudaDevice::new(0)?;
-            
+
             // Compile CUDA kernels at runtime
             let ptx = compile_ptx_with_opts(
                 include_str!("kernels/bitnet.cu"),
                 PtxJitOptions::default(),
             )?;
-            
+
             let module = device.load_ptx(ptx, "bitnet", &["bitnet_matmul", "bitnet_quantize"])?;
-            
+
             let streams = (0..4)
                 .map(|_| device.fork_default_stream())
                 .collect::<Result<Vec<_>, _>>()?;
-            
+
             Ok(Self {
                 device,
                 module,
                 streams,
             })
         }
-        
+
         pub fn matmul_i2s(
             &self,
             a: &CudaSlice<i8>,
@@ -967,13 +967,13 @@ pub mod gpu {
         ) -> Result<()> {
             let func = self.module.get_func("bitnet_matmul")?;
             let stream = &self.streams[0];
-            
+
             let config = LaunchConfig {
                 grid_dim: ((m + 15) / 16, (n + 15) / 16, 1),
                 block_dim: (16, 16, 1),
                 shared_mem_bytes: 0,
             };
-            
+
             unsafe {
                 func.launch_on_stream(
                     stream,
@@ -981,11 +981,11 @@ pub mod gpu {
                     (a, b, c, m as i32, n as i32, k as i32),
                 )?;
             }
-            
+
             stream.synchronize()?;
             Ok(())
         }
-        
+
         pub fn quantize_tl1(
             &self,
             input: &CudaSlice<f32>,
@@ -994,13 +994,13 @@ pub mod gpu {
         ) -> Result<()> {
             let func = self.module.get_func("bitnet_quantize")?;
             let stream = &self.streams[1];
-            
+
             let config = LaunchConfig {
                 grid_dim: ((input.len() + 255) / 256, 1, 1),
                 block_dim: (256, 1, 1),
                 shared_mem_bytes: 1024,
             };
-            
+
             unsafe {
                 func.launch_on_stream(
                     stream,
@@ -1008,7 +1008,7 @@ pub mod gpu {
                     (input, output, scales, input.len() as i32),
                 )?;
             }
-            
+
             stream.synchronize()?;
             Ok(())
         }
@@ -1029,10 +1029,10 @@ use clap::{Parser, Subcommand};
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
-    
+
     #[arg(long, global = true)]
     pub config: Option<PathBuf>,
-    
+
     #[arg(long, global = true)]
     pub log_level: Option<String>,
 }
@@ -1044,66 +1044,66 @@ pub enum Commands {
         /// Path to the model file
         #[arg(short, long)]
         model: PathBuf,
-        
+
         /// Input prompt
         #[arg(short, long)]
         prompt: String,
-        
+
         /// Maximum number of tokens to generate
         #[arg(short, long, default_value = "128")]
         max_tokens: usize,
-        
+
         /// Temperature for sampling
         #[arg(long, default_value = "0.8")]
         temperature: f32,
-        
+
         /// Enable streaming output
         #[arg(long)]
         stream: bool,
-        
+
         /// Use GPU acceleration
         #[arg(long)]
         gpu: bool,
     },
-    
+
     /// Convert model between formats
     Convert {
         /// Input model path
         #[arg(short, long)]
         input: PathBuf,
-        
+
         /// Output model path
         #[arg(short, long)]
         output: PathBuf,
-        
+
         /// Target quantization type
         #[arg(short, long)]
         quantization: Option<String>,
-        
+
         /// Output format (gguf, safetensors)
         #[arg(long, default_value = "gguf")]
         format: String,
     },
-    
+
     /// Run performance benchmarks
     Benchmark {
         /// Path to the model file
         #[arg(short, long)]
         model: PathBuf,
-        
+
         /// Number of tokens to generate
         #[arg(short, long, default_value = "512")]
         tokens: usize,
-        
+
         /// Number of benchmark iterations
         #[arg(long, default_value = "10")]
         iterations: usize,
-        
+
         /// Batch sizes to test
         #[arg(long, default_values = &["1", "4", "8"])]
         batch_sizes: Vec<usize>,
     },
-    
+
     /// Download and manage models
     Model {
         #[command(subcommand)]
@@ -1115,17 +1115,17 @@ pub enum Commands {
 pub enum ModelCommands {
     /// List available models
     List,
-    
+
     /// Download a model
     Download {
         /// Model identifier (e.g., microsoft/BitNet-b1.58-2B-4T)
         model: String,
-        
+
         /// Output directory
         #[arg(short, long, default_value = "models")]
         output: PathBuf,
     },
-    
+
     /// Verify model integrity
     Verify {
         /// Path to model file
@@ -1143,19 +1143,19 @@ pub mod wasm {
     use wasm_bindgen::prelude::*;
     use js_sys::{Promise, Uint8Array};
     use web_sys::console;
-    
+
     // Set up panic hook for better error reporting
     #[wasm_bindgen(start)]
     pub fn main() {
         console_error_panic_hook::set_once();
     }
-    
+
     #[wasm_bindgen]
     pub struct WasmBitNetModel {
         inner: BitNetModel,
         tokenizer: Arc<Tokenizer>,
     }
-    
+
     #[wasm_bindgen]
     impl WasmBitNetModel {
         #[wasm_bindgen(constructor)]
@@ -1163,18 +1163,18 @@ pub mod wasm {
             let loader = ModelLoader::new(Device::Cpu, DType::F32);
             let model = loader.load_from_bytes(model_bytes)
                 .map_err(|e| JsValue::from_str(&e.to_string()))?;
-            
+
             let tokenizer = Arc::new(
                 Tokenizer::from_bytes(include_bytes!("../assets/tokenizer.json"))
                     .map_err(|e| JsValue::from_str(&e.to_string()))?
             );
-            
+
             Ok(WasmBitNetModel {
                 inner: model,
                 tokenizer,
             })
         }
-        
+
         #[wasm_bindgen]
         pub fn generate(&mut self, prompt: &str, max_tokens: usize) -> Result<String, JsValue> {
             let mut engine = InferenceEngine::new(
@@ -1182,42 +1182,42 @@ pub mod wasm {
                 self.tokenizer.clone(),
                 Device::Cpu,
             );
-            
+
             let config = GenerationConfig {
                 max_new_tokens: max_tokens,
                 ..Default::default()
             };
-            
+
             engine.generate(prompt)
                 .map_err(|e| JsValue::from_str(&e.to_string()))
         }
-        
+
         #[wasm_bindgen]
         pub fn generate_stream(&mut self, prompt: &str, max_tokens: usize) -> Result<js_sys::AsyncIterator, JsValue> {
             // Implementation for streaming generation in WASM
             let stream = self.create_generation_stream(prompt, max_tokens)?;
             Ok(stream.into())
         }
-        
+
         // Memory-optimized inference for WASM constraints
         #[wasm_bindgen]
         pub fn set_memory_limit(&mut self, limit_mb: usize) {
             // Configure memory limits for browser environments
         }
-        
+
         #[wasm_bindgen]
         pub fn get_memory_usage(&self) -> usize {
             // Return current memory usage in bytes
             0 // Placeholder
         }
     }
-    
+
     // Utility functions for WASM deployment
     #[wasm_bindgen]
     pub fn init_logging() {
         console_log::init_with_level(log::Level::Info).unwrap();
     }
-    
+
     #[wasm_bindgen]
     pub fn get_version() -> String {
         env!("CARGO_PKG_VERSION").to_string()
@@ -1230,12 +1230,12 @@ pub mod embedded {
     extern crate alloc;
     use alloc::{vec::Vec, string::String, boxed::Box};
     use core::mem::MaybeUninit;
-    
+
     pub struct EmbeddedInferenceEngine {
         model: BitNetModel,
         // Minimal state for embedded deployment
     }
-    
+
     impl EmbeddedInferenceEngine {
         pub fn new_in_place(
             buffer: &mut [MaybeUninit<u8>],
@@ -1244,7 +1244,7 @@ pub mod embedded {
             // Zero-allocation model loading for embedded systems
             todo!("Implement embedded model loading")
         }
-        
+
         pub fn generate_bounded(
             &mut self,
             prompt: &str,
@@ -1294,18 +1294,18 @@ pub extern "C" fn bitnet_model_load(path: *const c_char) -> *mut BitNetModel {
     if path.is_null() {
         return ptr::null_mut();
     }
-    
+
     let path_str = match unsafe { CStr::from_ptr(path) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
-    
+
     let loader = ModelLoader::new(Device::Cpu, DType::F32);
     let model = match loader.load(path_str) {
         Ok(m) => m,
         Err(_) => return ptr::null_mut(),
     };
-    
+
     Box::into_raw(Box::new(BitNetModel { inner: model }))
 }
 
@@ -1318,19 +1318,19 @@ pub extern "C" fn bitnet_inference(
     if model.is_null() || prompt.is_null() {
         return ptr::null_mut();
     }
-    
+
     let model = unsafe { &mut *model };
     let prompt_str = match unsafe { CStr::from_ptr(prompt) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
-    
+
     let config = if config.is_null() {
         BitNetConfig::default()
     } else {
         unsafe { *config }
     };
-    
+
     // Create inference engine and generate
     let tokenizer = Arc::new(Tokenizer::from_pretrained("gpt2", None).unwrap());
     let mut engine = InferenceEngine::new(
@@ -1339,12 +1339,12 @@ pub extern "C" fn bitnet_inference(
         tokenizer,
         Device::Cpu,
     );
-    
+
     let result = match engine.generate(prompt_str) {
         Ok(text) => text,
         Err(_) => return ptr::null_mut(),
     };
-    
+
     match CString::new(result) {
         Ok(c_string) => c_string.into_raw(),
         Err(_) => ptr::null_mut(),
@@ -1438,24 +1438,24 @@ impl BitNetConfig {
         config.validate()?;
         Ok(config)
     }
-    
+
     pub fn validate(&self) -> Result<()> {
         if self.model.vocab_size == 0 {
             return Err(anyhow::anyhow!("vocab_size must be greater than 0"));
         }
-        
+
         if self.model.num_layers == 0 {
             return Err(anyhow::anyhow!("num_layers must be greater than 0"));
         }
-        
+
         if self.inference.temperature < 0.0 {
             return Err(anyhow::anyhow!("temperature must be non-negative"));
         }
-        
+
         if self.inference.top_p <= 0.0 || self.inference.top_p > 1.0 {
             return Err(anyhow::anyhow!("top_p must be in (0, 1]"));
         }
-        
+
         Ok(())
     }
 }
@@ -1477,29 +1477,29 @@ impl Tensor {
         let tensor = CandleTensor::from_vec(data, shape, device)?;
         Ok(Self { inner: tensor })
     }
-    
+
     pub fn zeros(shape: &[usize], dtype: DType, device: &Device) -> Result<Self> {
         let tensor = CandleTensor::zeros(shape, dtype, device)?;
         Ok(Self { inner: tensor })
     }
-    
+
     pub fn shape(&self) -> &[usize] {
         self.inner.shape().dims()
     }
-    
+
     pub fn dtype(&self) -> DType {
         self.inner.dtype()
     }
-    
+
     pub fn device(&self) -> &Device {
         self.inner.device()
     }
-    
+
     pub fn matmul(&self, other: &Self) -> Result<Self> {
         let result = self.inner.matmul(&other.inner)?;
         Ok(Self { inner: result })
     }
-    
+
     pub fn quantize(&self, qtype: QuantizationType) -> Result<QuantizedTensor> {
         match qtype {
             QuantizationType::I2S => self.quantize_i2s(),
@@ -1507,11 +1507,11 @@ impl Tensor {
             QuantizationType::TL2 => self.quantize_tl2(),
         }
     }
-    
+
     fn quantize_i2s(&self) -> Result<QuantizedTensor> {
         let data = self.inner.to_vec1::<f32>()?;
         let scale = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-        
+
         let mut quantized = Vec::with_capacity(data.len() / 4);
         for chunk in data.chunks(4) {
             let mut packed = 0u8;
@@ -1527,7 +1527,7 @@ impl Tensor {
             }
             quantized.push(packed);
         }
-        
+
         Ok(QuantizedTensor {
             data: quantized,
             scales: vec![scale],
@@ -1553,29 +1553,29 @@ pub enum BitNetError {
         #[from]
         source: ModelLoadError,
     },
-    
+
     #[error("Inference failed: {message}")]
     Inference { message: String },
-    
+
     #[error("Quantization error: {qtype:?} - {message}")]
     Quantization {
         qtype: QuantizationType,
         message: String,
     },
-    
+
     #[error("Kernel execution failed: {kernel} - {message}")]
     Kernel { kernel: String, message: String },
-    
+
     #[error("Configuration error: {message}")]
     Config { message: String },
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("CUDA error: {0}")]
     #[cfg(feature = "cuda")]
     Cuda(#[from] cudarc::driver::DriverError),
-    
+
     #[error("Tokenization error: {0}")]
     Tokenizer(#[from] tokenizers::Error),
 }
@@ -1584,13 +1584,13 @@ pub enum BitNetError {
 pub enum ModelLoadError {
     #[error("Unsupported model format: {format}")]
     UnsupportedFormat { format: String },
-    
+
     #[error("Invalid model file: {path} - {reason}")]
     InvalidFile { path: String, reason: String },
-    
+
     #[error("Missing required tensor: {name}")]
     MissingTensor { name: String },
-    
+
     #[error("Tensor shape mismatch: expected {expected:?}, got {actual:?}")]
     ShapeMismatch {
         expected: Vec<usize>,
@@ -1608,7 +1608,7 @@ impl BitNetError {
             other => other,
         }
     }
-    
+
     pub fn is_recoverable(&self) -> bool {
         matches!(
             self,
@@ -1632,7 +1632,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use approx::assert_relative_eq;
-    
+
     // Property-based quantization testing
     proptest! {
         #[test]
@@ -1640,20 +1640,20 @@ mod tests {
             weights in prop::collection::vec(-1.0f32..1.0f32, 100..1000)
         ) {
             let tensor = Tensor::from_vec(weights.clone(), &[weights.len()], &Device::Cpu)?;
-            
+
             for qtype in [QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
                 let quantized = tensor.quantize(qtype)?;
                 let dequantized = quantized.dequantize()?;
                 let dequant_data = dequantized.to_vec1::<f32>()?;
-                
+
                 // Check that the scale is preserved
                 let original_scale = weights.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
                 let recovered_scale = dequant_data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
-                
+
                 assert_relative_eq!(original_scale, recovered_scale, epsilon = 0.01);
             }
         }
-        
+
         #[test]
         fn kernel_matmul_correctness(
             m in 1usize..64,
@@ -1662,66 +1662,66 @@ mod tests {
         ) {
             let a = (0..m*k).map(|i| (i % 256) as i8 - 128).collect::<Vec<_>>();
             let b = (0..k*n).map(|i| (i % 256) as u8).collect::<Vec<_>>();
-            
+
             let mut c_reference = vec![0.0f32; m * n];
             let mut c_optimized = vec![0.0f32; m * n];
-            
+
             // Reference implementation
             reference_matmul(&a, &b, &mut c_reference, m, n, k);
-            
+
             // Optimized kernel
             let kernel = kernels::cpu::select_kernel();
             kernel.matmul_i2s(&a, &b, &mut c_optimized, m, n, k);
-            
+
             // Compare results
             for (ref_val, opt_val) in c_reference.iter().zip(c_optimized.iter()) {
                 assert_relative_eq!(ref_val, opt_val, epsilon = 1e-5);
             }
         }
     }
-    
+
     // Cross-validation with Python implementation
     #[test]
     fn python_parity_inference() {
         let model_path = "tests/fixtures/test_model.gguf";
         let prompt = "Hello, world!";
-        
+
         // Rust inference
         let loader = ModelLoader::new(Device::Cpu, DType::F32);
         let model = loader.load(model_path).unwrap();
         let tokenizer = Arc::new(Tokenizer::from_pretrained("gpt2", None).unwrap());
         let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu);
         let rust_result = engine.generate(prompt).unwrap();
-        
+
         // Python inference (via subprocess)
         let python_result = run_python_inference(model_path, prompt).unwrap();
-        
+
         // Compare token sequences
         let rust_tokens = engine.tokenizer.encode(&rust_result, false).unwrap();
         let python_tokens = engine.tokenizer.encode(&python_result, false).unwrap();
-        
+
         assert_eq!(rust_tokens, python_tokens, "Token sequences should match");
     }
-    
+
     // Performance regression testing
     #[test]
     fn performance_regression() {
         let model_path = "tests/fixtures/benchmark_model.gguf";
         let prompt = "The quick brown fox";
-        
+
         let loader = ModelLoader::new(Device::Cpu, DType::F32);
         let model = loader.load(model_path).unwrap();
         let tokenizer = Arc::new(Tokenizer::from_pretrained("gpt2", None).unwrap());
         let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu);
-        
+
         let start = std::time::Instant::now();
         let _result = engine.generate(prompt).unwrap();
         let duration = start.elapsed();
-        
+
         // Load baseline performance from file
         let baseline = load_baseline_performance("cpu_inference").unwrap();
         let regression_threshold = baseline * 1.1; // 10% regression threshold
-        
+
         assert!(
             duration <= regression_threshold,
             "Performance regression detected: {:?} > {:?}",
@@ -1734,7 +1734,7 @@ mod tests {
 // Integration testing utilities
 fn run_python_inference(model_path: &str, prompt: &str) -> Result<String> {
     use std::process::Command;
-    
+
     let output = Command::new("python")
         .args(&[
             "tests/python_reference.py",
@@ -1742,13 +1742,13 @@ fn run_python_inference(model_path: &str, prompt: &str) -> Result<String> {
             "--prompt", prompt,
         ])
         .output()?;
-    
+
     if !output.status.success() {
         return Err(BitNetError::Inference {
             message: String::from_utf8_lossy(&output.stderr).to_string(),
         });
     }
-    
+
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 ```
@@ -1764,9 +1764,9 @@ fn benchmark_inference(c: &mut Criterion) {
     let loader = ModelLoader::new(Device::Cpu, DType::F32);
     let model = loader.load(model_path).unwrap();
     let tokenizer = Arc::new(Tokenizer::from_pretrained("gpt2", None).unwrap());
-    
+
     let mut group = c.benchmark_group("inference");
-    
+
     for tokens in [128, 256, 512, 1024].iter() {
         group.bench_with_input(
             BenchmarkId::new("cpu", tokens),
@@ -1777,7 +1777,7 @@ fn benchmark_inference(c: &mut Criterion) {
                     tokenizer.clone(),
                     Device::Cpu,
                 );
-                
+
                 b.iter(|| {
                     engine.generate_tokens(
                         black_box(&[1, 2, 3, 4]), // dummy input
@@ -1790,7 +1790,7 @@ fn benchmark_inference(c: &mut Criterion) {
             },
         );
     }
-    
+
     #[cfg(feature = "cuda")]
     {
         for tokens in [128, 256, 512, 1024].iter() {
@@ -1803,7 +1803,7 @@ fn benchmark_inference(c: &mut Criterion) {
                         tokenizer.clone(),
                         Device::new_cuda(0).unwrap(),
                     );
-                    
+
                     b.iter(|| {
                         engine.generate_tokens(
                             black_box(&[1, 2, 3, 4]),
@@ -1817,24 +1817,24 @@ fn benchmark_inference(c: &mut Criterion) {
             );
         }
     }
-    
+
     group.finish();
 }
 
 fn benchmark_kernels(c: &mut Criterion) {
     let mut group = c.benchmark_group("kernels");
-    
+
     let kernel = kernels::cpu::select_kernel();
-    
+
     for size in [64, 128, 256, 512].iter() {
         let m = *size;
         let n = *size;
         let k = *size;
-        
+
         let a = vec![1i8; m * k];
         let b = vec![1u8; k * n];
         let mut c = vec![0.0f32; m * n];
-        
+
         group.bench_with_input(
             BenchmarkId::new("matmul_i2s", size),
             size,
@@ -1850,7 +1850,7 @@ fn benchmark_kernels(c: &mut Criterion) {
             },
         );
     }
-    
+
     group.finish();
 }
 
@@ -1859,7 +1859,7 @@ criterion_main!(benches);
 ```
 
 This comprehensive design provides a solid foundation for the BitNet.cpp to Rust migration, incorporating all the production-quality requirements while maintaining the incremental migration strategy. The design emphasizes safety, performance, and maintainability while ensuring compatibility with existing systems through FFI and API layers.
-## 
+##
 Performance Strategy and Optimization Roadmap
 
 ### Current Performance Foundation

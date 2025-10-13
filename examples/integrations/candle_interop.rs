@@ -41,7 +41,7 @@ fn candle_to_bitnet_tensor(candle_tensor: &CandleTensor) -> Result<Box<dyn Tenso
     // Extract data from Candle tensor
     let data = candle_tensor.to_vec1::<f32>()?;
     let shape = candle_tensor.shape().dims().to_vec();
-    
+
     // Create BitNet tensor wrapper
     Ok(Box::new(BitNetTensorWrapper {
         data,
@@ -54,7 +54,7 @@ fn candle_to_bitnet_tensor(candle_tensor: &CandleTensor) -> Result<Box<dyn Tenso
 fn bitnet_to_candle_tensor(bitnet_tensor: &dyn Tensor, device: &Device) -> Result<CandleTensor> {
     let data = bitnet_tensor.as_slice::<f32>()?;
     let shape = bitnet_tensor.shape();
-    
+
     CandleTensor::from_slice(data, shape, device)
 }
 
@@ -92,11 +92,11 @@ impl Tensor for BitNetTensorWrapper {
 fn process_with_bitnet(tensor: Box<dyn Tensor>) -> Result<Box<dyn Tensor>> {
     // Example processing - in practice, this would use BitNet quantization/inference
     println!("Processing tensor with BitNet operations...");
-    
+
     // Simulate some processing
     let shape = tensor.shape().to_vec();
     let processed_data = vec![1.0f32; shape.iter().product()];
-    
+
     Ok(Box::new(BitNetTensorWrapper {
         data: processed_data,
         shape,
@@ -114,13 +114,13 @@ fn hybrid_inference_pipeline() -> Result<()> {
     println!("1. Preprocessing input with Candle...");
     let input_text = "Hello, world!";
     let token_ids = vec![15496, 11, 995, 0]; // Example token IDs
-    
+
     let input_tensor = CandleTensor::from_slice(
         &token_ids,
         (1, token_ids.len()),
         &device
     )?;
-    
+
     // Apply Candle preprocessing (normalization, etc.)
     let normalized = input_tensor.to_dtype(DType::F32)? / 1000.0;
     println!("Preprocessed tensor shape: {:?}", normalized.shape());
@@ -140,7 +140,7 @@ fn hybrid_inference_pipeline() -> Result<()> {
     // Step 5: Postprocess with Candle
     let final_result = candle_result.softmax(1)?;
     println!("Final result shape: {:?}", final_result.shape());
-    
+
     // Extract top predictions
     let probabilities = final_result.to_vec2::<f32>()?;
     println!("Top predictions: {:?}", &probabilities[0][..5]);
@@ -152,12 +152,12 @@ fn hybrid_inference_pipeline() -> Result<()> {
 fn simulate_bitnet_inference(input: Box<dyn Tensor>) -> Result<Box<dyn Tensor>> {
     let shape = input.shape();
     println!("Running inference on tensor with shape: {:?}", shape);
-    
+
     // Simulate model output (vocabulary size = 50257 for GPT-2)
     let vocab_size = 50257;
     let batch_size = shape[0];
     let output_shape = vec![batch_size, vocab_size];
-    
+
     // Generate random logits for demonstration
     use rand::Rng;
     let mut rng = rand::thread_rng();
@@ -220,13 +220,13 @@ mod tests {
     fn test_tensor_conversion() -> Result<()> {
         let device = Device::Cpu;
         let candle_tensor = CandleTensor::zeros((2, 3), DType::F32, &device)?;
-        
+
         let bitnet_tensor = candle_to_bitnet_tensor(&candle_tensor)?;
         assert_eq!(bitnet_tensor.shape(), &[2, 3]);
-        
+
         let converted_back = bitnet_to_candle_tensor(&*bitnet_tensor, &device)?;
         assert_eq!(converted_back.shape().dims(), &[2, 3]);
-        
+
         Ok(())
     }
 
@@ -234,11 +234,11 @@ mod tests {
     fn test_device_compatibility() -> Result<()> {
         let device = Device::Cpu;
         let tensor = CandleTensor::ones((1, 4), DType::F32, &device)?;
-        
+
         let bitnet_tensor = candle_to_bitnet_tensor(&tensor)?;
         // Verify device compatibility
         assert_eq!(bitnet_tensor.device(), &bitnet_common::Device::Cpu);
-        
+
         Ok(())
     }
 }

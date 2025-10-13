@@ -39,17 +39,17 @@ log_error() {
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed or not in PATH"
         exit 1
     fi
-    
+
     if ! docker buildx version &> /dev/null; then
         log_error "Docker Buildx is not available"
         exit 1
     fi
-    
+
     # Check if buildx builder exists
     if ! docker buildx ls | grep -q "bitnet-builder"; then
         log_info "Creating buildx builder..."
@@ -58,96 +58,96 @@ check_prerequisites() {
     else
         docker buildx use bitnet-builder
     fi
-    
+
     log_success "Prerequisites check passed"
 }
 
 # Build CPU image
 build_cpu_image() {
     log_info "Building CPU image..."
-    
+
     local image_name="${REGISTRY}/bitnet:cpu-${TAG}"
     local build_cmd="docker buildx build"
-    
+
     build_cmd+=" --platform ${PLATFORM}"
     build_cmd+=" --file docker/Dockerfile.cpu"
     build_cmd+=" --tag ${image_name}"
     build_cmd+=" --target runtime"
-    
+
     # Add build arguments
     if [[ -n "${BUILD_ARGS}" ]]; then
         build_cmd+=" ${BUILD_ARGS}"
     fi
-    
+
     # Add cache options
     build_cmd+=" --cache-from type=local,src=/tmp/.buildx-cache"
     build_cmd+=" --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max"
-    
+
     if [[ "${PUSH}" == "true" ]]; then
         build_cmd+=" --push"
     else
         build_cmd+=" --load"
     fi
-    
+
     build_cmd+=" ."
-    
+
     log_info "Executing: ${build_cmd}"
     eval "${build_cmd}"
-    
+
     # Move cache
     if [[ -d "/tmp/.buildx-cache-new" ]]; then
         rm -rf /tmp/.buildx-cache
         mv /tmp/.buildx-cache-new /tmp/.buildx-cache
     fi
-    
+
     log_success "CPU image built successfully: ${image_name}"
 }
 
 # Build GPU image
 build_gpu_image() {
     log_info "Building GPU image..."
-    
+
     local image_name="${REGISTRY}/bitnet:gpu-${TAG}"
     local build_cmd="docker buildx build"
-    
+
     build_cmd+=" --platform linux/amd64"  # GPU images are x86_64 only
     build_cmd+=" --file docker/Dockerfile.gpu"
     build_cmd+=" --tag ${image_name}"
     build_cmd+=" --target runtime"
-    
+
     # Add build arguments
     if [[ -n "${BUILD_ARGS}" ]]; then
         build_cmd+=" ${BUILD_ARGS}"
     fi
-    
+
     # Add cache options
     build_cmd+=" --cache-from type=local,src=/tmp/.buildx-cache-gpu"
     build_cmd+=" --cache-to type=local,dest=/tmp/.buildx-cache-gpu-new,mode=max"
-    
+
     if [[ "${PUSH}" == "true" ]]; then
         build_cmd+=" --push"
     else
         build_cmd+=" --load"
     fi
-    
+
     build_cmd+=" ."
-    
+
     log_info "Executing: ${build_cmd}"
     eval "${build_cmd}"
-    
+
     # Move cache
     if [[ -d "/tmp/.buildx-cache-gpu-new" ]]; then
         rm -rf /tmp/.buildx-cache-gpu
         mv /tmp/.buildx-cache-gpu-new /tmp/.buildx-cache-gpu
     fi
-    
+
     log_success "GPU image built successfully: ${image_name}"
 }
 
 # Test images
 test_images() {
     log_info "Testing built images..."
-    
+
     # Test CPU image
     local cpu_image="${REGISTRY}/bitnet:cpu-${TAG}"
     if docker image inspect "${cpu_image}" &> /dev/null; then
@@ -159,7 +159,7 @@ test_images() {
             return 1
         fi
     fi
-    
+
     # Test GPU image (only if NVIDIA runtime is available)
     local gpu_image="${REGISTRY}/bitnet:gpu-${TAG}"
     if docker image inspect "${gpu_image}" &> /dev/null; then
@@ -175,13 +175,13 @@ test_images() {
 # Clean up build cache
 cleanup() {
     log_info "Cleaning up build cache..."
-    
+
     # Remove old cache directories
     rm -rf /tmp/.buildx-cache-old /tmp/.buildx-cache-gpu-old
-    
+
     # Prune build cache
     docker buildx prune -f
-    
+
     log_success "Cleanup completed"
 }
 
@@ -192,25 +192,25 @@ main() {
     log_info "Tag: ${TAG}"
     log_info "Platform: ${PLATFORM}"
     log_info "Push: ${PUSH}"
-    
+
     check_prerequisites
-    
+
     # Build images based on arguments
     if [[ $# -eq 0 ]] || [[ "$*" == *"cpu"* ]]; then
         build_cpu_image
     fi
-    
+
     if [[ $# -eq 0 ]] || [[ "$*" == *"gpu"* ]]; then
         build_gpu_image
     fi
-    
+
     # Test images if not pushing
     if [[ "${PUSH}" != "true" ]]; then
         test_images
     fi
-    
+
     log_success "Build process completed successfully!"
-    
+
     # Show built images
     log_info "Built images:"
     docker images | grep "${REGISTRY}/bitnet" | grep "${TAG}"

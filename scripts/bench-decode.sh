@@ -32,7 +32,7 @@ run_bench() {
     local prompt="$1"
     local max_tokens="$2"
     local output_json="$(mktemp)"
-    
+
     "$BITNET_BIN" run \
         --model "$MODEL_PATH" \
         --tokenizer "$TOKENIZER" \
@@ -43,11 +43,11 @@ run_bench() {
         --threads "$THREADS" \
         --json-out "$output_json" \
         >/dev/null 2>&1
-    
+
     # Extract tokens per second
     local tps=$(jq -r '.throughput.tokens_per_second' "$output_json")
     local first_ms=$(jq -r '.latency.cmd_to_first_ms' "$output_json")
-    
+
     rm -f "$output_json"
     echo "$tps $first_ms"
 }
@@ -71,13 +71,13 @@ FIRST_TOKEN_MS=()
 for ((i=0; i<BENCH_PROMPTS && i<${#PROMPTS[@]}; i++)); do
     prompt="${PROMPTS[$i]}"
     echo -n "  Prompt $((i+1))/$BENCH_PROMPTS: "
-    
+
     # Run benchmark
     read tps first_ms <<< $(run_bench "$prompt" "$MAX_NEW_TOKENS")
-    
+
     TPS_VALUES+=("$tps")
     FIRST_TOKEN_MS+=("$first_ms")
-    
+
     echo "${tps} tok/s (first token: ${first_ms}ms)"
 done
 
@@ -86,19 +86,19 @@ calculate_stats() {
     local -a values=("$@")
     local sum=0
     local count=${#values[@]}
-    
+
     # Sort for median
     IFS=$'\n' sorted=($(sort -g <<<"${values[*]}"))
     unset IFS
-    
+
     # Sum for mean
     for v in "${values[@]}"; do
         sum=$(echo "$sum + $v" | bc -l)
     done
-    
+
     # Mean
     local mean=$(echo "scale=2; $sum / $count" | bc -l)
-    
+
     # Median
     local median
     if (( count % 2 == 0 )); then
@@ -108,7 +108,7 @@ calculate_stats() {
     else
         median=${sorted[$((count/2))]}
     fi
-    
+
     echo "$mean $median"
 }
 
@@ -152,16 +152,16 @@ echo "    Results written to: $BENCH_JSON"
 if [[ -n "$BENCH_BASELINE" && -f "$BENCH_BASELINE" ]]; then
     echo
     echo "==> Comparison with baseline:"
-    
+
     baseline_tps=$(jq -r '.results.throughput.median_tps' "$BENCH_BASELINE")
-    
+
     # Calculate percentage change
     pct_change=$(echo "scale=1; (($median_tps - $baseline_tps) / $baseline_tps) * 100" | bc -l)
-    
+
     echo "    Baseline: ${baseline_tps} tok/s"
     echo "    Current:  ${median_tps} tok/s"
     echo "    Change:   ${pct_change}%"
-    
+
     # Fail if regression > 10%
     if (( $(echo "$pct_change < -10" | bc -l) )); then
         echo "    ❌ Performance regression detected (>${10}% slower)"

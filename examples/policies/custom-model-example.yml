@@ -218,9 +218,9 @@ models:
       # Override I2_S dequantization for specific tensors
       - type: I2S_DEQUANT_OVERRIDE
         tensors:
-          - "blk\\.[0-9]+\\.attn_q\\.weight"    # Regex patterns
-          - "blk\\.[0-9]+\\.attn_k\\.weight"
-          - "blk\\.[0-9]+\\.attn_v\\.weight"
+          - "blk\\.[0-9]+\\.attn_q\\.weight$"    # Regex patterns (anchored)
+          - "blk\\.[0-9]+\\.attn_k\\.weight$"
+          - "blk\\.[0-9]+\\.attn_v\\.weight$"
         inv: false   # Do NOT invert scales (they are correct as-is)
         k: 1.0       # Multiplicative factor (typically 1.0)
 
@@ -251,9 +251,9 @@ models:
       # Second: Override I2_S for attention
       - type: I2S_DEQUANT_OVERRIDE
         tensors:
-          - "blk\\.[0-9]+\\.attn_q\\.weight"
-          - "blk\\.[0-9]+\\.attn_k\\.weight"
-          - "blk\\.[0-9]+\\.attn_v\\.weight"
+          - "blk\\.[0-9]+\\.attn_q\\.weight$"
+          - "blk\\.[0-9]+\\.attn_k\\.weight$"
+          - "blk\\.[0-9]+\\.attn_v\\.weight$"
         inv: false
         k: 1.0
 

@@ -620,7 +620,7 @@ th end-to-end validation
 
   1. **15 Testing Scenarios Supported**:
      - Unit, Integration, EndToEnd, Performance, CrossValidation
-     - Regression, Smoke, Stress, Security, Compatibility  
+     - Regression, Smoke, Stress, Security, Compatibility
      - Development, ContinuousIntegration, ReleaseValidation, Debug, Minimal
 
   2. **Environment-Aware Configuration**:

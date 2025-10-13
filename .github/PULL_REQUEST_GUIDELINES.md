@@ -23,7 +23,7 @@ PR size is calculated as: `additions + deletions = total changes`
 
 **Examples:**
 - Adding 200 lines to a new file = 200 changes ✅ Small
-- Modifying 50 lines (25 additions, 25 deletions) = 50 changes ✅ Tiny  
+- Modifying 50 lines (25 additions, 25 deletions) = 50 changes ✅ Tiny
 - Refactoring 1,000 lines (500 additions, 500 deletions) = 1,000 changes ✅ Medium
 
 ## Common Causes of Oversized PRs
@@ -71,7 +71,7 @@ PR size is calculated as: `additions + deletions = total changes`
 
 **✅ Good PR Examples:**
 - `feat(kernels): add AVX-512 quantization` (~200 lines)
-- `fix(cli): handle GGUF parsing errors` (~50 lines)  
+- `fix(cli): handle GGUF parsing errors` (~50 lines)
 - `docs: update GPU setup guide` (~100 lines)
 - `test(inference): add streaming token tests` (~150 lines)
 
@@ -84,7 +84,7 @@ PR size is calculated as: `additions + deletions = total changes`
 
 #### bitnet-kernels
 - **New kernel**: 100-300 lines per algorithm
-- **SIMD optimization**: 50-150 lines per architecture  
+- **SIMD optimization**: 50-150 lines per architecture
 - **GPU kernels**: 200-500 lines including tests
 
 #### bitnet-inference
@@ -124,7 +124,7 @@ The following patterns trigger warnings:
 
 # Large data files
 **/*.gguf
-**/*.safetensors  
+**/*.safetensors
 **/*.bin (>1MB)
 
 # Test fixture bloat
@@ -149,7 +149,7 @@ thirdparty/
    ```
 
 2. **Check for artifacts**
-   ```bash  
+   ```bash
    find . -name "target" -type d
    find . -name "*.gguf" -size +1M
    git ls-files | grep -E "\.(bin|so|dll|dylib)$"
@@ -166,10 +166,10 @@ thirdparty/
    ```bash
    # Check what's actually changed
    git diff --name-status origin/main
-   
+
    # Look for unexpected files
    git diff --name-only origin/main | sort
-   
+
    # Check file sizes
    git diff --name-only origin/main | xargs ls -lh
    ```
@@ -184,9 +184,9 @@ thirdparty/
    ```bash
    # Create focused branches
    git checkout -b feature/core-functionality
-   git checkout -b feature/documentation  
+   git checkout -b feature/documentation
    git checkout -b feature/tests
-   
+
    # Cherry-pick specific commits
    git cherry-pick <commit-hash>
    ```
@@ -199,7 +199,7 @@ thirdparty/
 
 2. **Logical Boundaries**
    - Core implementation
-   - Tests for implementation  
+   - Tests for implementation
    - Documentation updates
    - Examples and demos
 
@@ -235,10 +235,10 @@ thirdparty/
    ```bash
    # Save current work
    git branch emergency-backup
-   
+
    # Start fresh focused branch
    git checkout -b feature/focused-implementation main
-   
+
    # Cherry-pick only core changes
    git cherry-pick -n <core-commit>
    git add <only-core-files>
@@ -250,7 +250,7 @@ thirdparty/
 This guideline was established after resolving massive PRs #92, #101, #103, and #104, which grew to 300k+ lines due to:
 
 - **Build artifacts** in `fixture_test/target/` (PR #92)
-- **Vendored GGML C code** without proper `.gitignore` (PR #101)  
+- **Vendored GGML C code** without proper `.gitignore` (PR #101)
 - **Huge JSON test fixtures** and scope creep (PR #103)
 - **Branch merge issues** accumulating unrelated changes (PR #104)
 

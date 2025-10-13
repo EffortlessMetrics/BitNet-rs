@@ -30,7 +30,7 @@ const MODEL_PATTERNS = [
 // Install event - cache static files
 self.addEventListener('install', event => {
     console.log('BitNet WASM Service Worker installing...');
-    
+
     event.waitUntil(
         Promise.all([
             // Cache static files
@@ -38,7 +38,7 @@ self.addEventListener('install', event => {
                 console.log('Caching static files...');
                 return cache.addAll(STATIC_FILES);
             }),
-            
+
             // Initialize model cache
             caches.open(MODEL_CACHE_NAME).then(cache => {
                 console.log('Model cache initialized');
@@ -57,13 +57,13 @@ self.addEventListener('install', event => {
 // Activate event - clean up old caches
 self.addEventListener('activate', event => {
     console.log('BitNet WASM Service Worker activating...');
-    
+
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
                     // Delete old caches
-                    if (cacheName !== STATIC_CACHE_NAME && 
+                    if (cacheName !== STATIC_CACHE_NAME &&
                         cacheName !== MODEL_CACHE_NAME &&
                         cacheName.startsWith('bitnet-wasm-')) {
                         console.log('Deleting old cache:', cacheName);
@@ -82,7 +82,7 @@ self.addEventListener('activate', event => {
 // Fetch event - serve cached content and cache new content
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
-    
+
     // Handle different types of requests
     if (isStaticFile(url.pathname)) {
         event.respondWith(handleStaticFile(event.request));
@@ -101,28 +101,28 @@ async function handleStaticFile(request) {
     try {
         const cache = await caches.open(STATIC_CACHE_NAME);
         const cachedResponse = await cache.match(request);
-        
+
         if (cachedResponse) {
             console.log('Serving static file from cache:', request.url);
             return cachedResponse;
         }
-        
+
         // Fetch from network and cache
         const networkResponse = await fetch(request);
         if (networkResponse.ok) {
             cache.put(request, networkResponse.clone());
         }
-        
+
         return networkResponse;
-        
+
     } catch (error) {
         console.error('Error handling static file:', error);
-        
+
         // Return offline fallback if available
         if (request.url.endsWith('.html')) {
             return caches.match('/offline.html') || new Response('Offline', { status: 503 });
         }
-        
+
         return new Response('Network Error', { status: 503 });
     }
 }
@@ -132,24 +132,24 @@ async function handleModelFile(request) {
     try {
         const cache = await caches.open(MODEL_CACHE_NAME);
         const cachedResponse = await cache.match(request);
-        
+
         if (cachedResponse) {
             console.log('Serving model from cache:', request.url);
             return cachedResponse;
         }
-        
+
         // Fetch from network
         const networkResponse = await fetch(request);
-        
+
         if (networkResponse.ok) {
             // Check model size before caching
             const contentLength = networkResponse.headers.get('content-length');
             const modelSize = contentLength ? parseInt(contentLength) : 0;
-            
+
             // Only cache models smaller than 500MB
             if (modelSize > 0 && modelSize < 500 * 1024 * 1024) {
                 console.log(`Caching model (${formatBytes(modelSize)}):`, request.url);
-                
+
                 // Ensure we don't exceed storage quota
                 await manageModelCacheSize(cache, modelSize);
                 cache.put(request, networkResponse.clone());
@@ -157,9 +157,9 @@ async function handleModelFile(request) {
                 console.log('Model too large to cache:', request.url);
             }
         }
-        
+
         return networkResponse;
-        
+
     } catch (error) {
         console.error('Error handling model file:', error);
         return new Response('Model Loading Error', { status: 503 });
@@ -171,26 +171,26 @@ async function handleAPIRequest(request) {
     try {
         // Try network first
         const networkResponse = await fetch(request);
-        
+
         if (networkResponse.ok) {
             // Cache successful API responses for offline use
             const cache = await caches.open(CACHE_NAME);
             cache.put(request, networkResponse.clone());
         }
-        
+
         return networkResponse;
-        
+
     } catch (error) {
         console.log('Network failed, trying cache for API request:', request.url);
-        
+
         // Fallback to cache
         const cache = await caches.open(CACHE_NAME);
         const cachedResponse = await cache.match(request);
-        
+
         if (cachedResponse) {
             return cachedResponse;
         }
-        
+
         // Return offline response
         return new Response(JSON.stringify({
             error: 'Offline',
@@ -211,11 +211,11 @@ async function handleDefault(request) {
         // Try cache as fallback
         const cache = await caches.open(CACHE_NAME);
         const cachedResponse = await cache.match(request);
-        
+
         if (cachedResponse) {
             return cachedResponse;
         }
-        
+
         return new Response('Offline', { status: 503 });
     }
 }
@@ -226,7 +226,7 @@ async function manageModelCacheSize(cache, newModelSize) {
         // Get current cache size
         const cacheKeys = await cache.keys();
         let totalSize = 0;
-        
+
         for (const request of cacheKeys) {
             const response = await cache.match(request);
             if (response) {
@@ -236,26 +236,26 @@ async function manageModelCacheSize(cache, newModelSize) {
                 }
             }
         }
-        
+
         // Maximum cache size: 1GB
         const maxCacheSize = 1024 * 1024 * 1024;
-        
+
         // If adding new model would exceed limit, remove oldest models
         if (totalSize + newModelSize > maxCacheSize) {
             console.log('Model cache size limit reached, cleaning up...');
-            
+
             // Sort by last accessed time (simplified - in practice you'd track this)
             const sortedKeys = cacheKeys.sort((a, b) => {
                 // Simple heuristic: sort by URL (older models likely have different naming)
                 return a.url.localeCompare(b.url);
             });
-            
+
             // Remove oldest models until we have enough space
             for (const request of sortedKeys) {
                 if (totalSize + newModelSize <= maxCacheSize) {
                     break;
                 }
-                
+
                 const response = await cache.match(request);
                 if (response) {
                     const size = response.headers.get('content-length');
@@ -267,7 +267,7 @@ async function manageModelCacheSize(cache, newModelSize) {
                 }
             }
         }
-        
+
     } catch (error) {
         console.error('Error managing model cache size:', error);
     }
@@ -289,7 +289,7 @@ function isModelFile(pathname) {
 }
 
 function isAPIRequest(pathname) {
-    return pathname.startsWith('/api/') || 
+    return pathname.startsWith('/api/') ||
            pathname.includes('inference') ||
            pathname.includes('generate');
 }
@@ -313,15 +313,15 @@ self.addEventListener('sync', event => {
 async function preloadPopularModels() {
     try {
         console.log('Background sync: Preloading popular models...');
-        
+
         // List of popular small models to preload
         const popularModels = [
             '/models/bitnet-small-1b.gguf',
             '/models/bitnet-chat-3b.gguf'
         ];
-        
+
         const cache = await caches.open(MODEL_CACHE_NAME);
-        
+
         for (const modelUrl of popularModels) {
             try {
                 const cachedResponse = await cache.match(modelUrl);
@@ -337,7 +337,7 @@ async function preloadPopularModels() {
                 console.log('Failed to preload model:', modelUrl, error);
             }
         }
-        
+
     } catch (error) {
         console.error('Background model preloading failed:', error);
     }
@@ -347,7 +347,7 @@ async function preloadPopularModels() {
 self.addEventListener('push', event => {
     if (event.data) {
         const data = event.data.json();
-        
+
         if (data.type === 'model-update') {
             event.waitUntil(handleModelUpdate(data));
         }
@@ -358,7 +358,7 @@ self.addEventListener('push', event => {
 async function handleModelUpdate(data) {
     try {
         console.log('Received model update notification:', data);
-        
+
         // Show notification to user
         await self.registration.showNotification('BitNet Model Update', {
             body: `New model available: ${data.modelName}`,
@@ -376,7 +376,7 @@ async function handleModelUpdate(data) {
             ],
             data: data
         });
-        
+
     } catch (error) {
         console.error('Error handling model update:', error);
     }
@@ -385,7 +385,7 @@ async function handleModelUpdate(data) {
 // Handle notification clicks
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    
+
     if (event.action === 'download') {
         // Open app and start model download
         event.waitUntil(
@@ -403,24 +403,24 @@ self.addEventListener('notificationclick', event => {
 // Handle messages from main thread
 self.addEventListener('message', event => {
     const { type, data } = event.data;
-    
+
     switch (type) {
         case 'CACHE_MODEL':
             event.waitUntil(cacheModel(data.url, data.data));
             break;
-            
+
         case 'GET_CACHE_SIZE':
             event.waitUntil(getCacheSize().then(size => {
                 event.ports[0].postMessage({ type: 'CACHE_SIZE', size });
             }));
             break;
-            
+
         case 'CLEAR_MODEL_CACHE':
             event.waitUntil(clearModelCache().then(() => {
                 event.ports[0].postMessage({ type: 'CACHE_CLEARED' });
             }));
             break;
-            
+
         default:
             console.log('Unknown message type:', type);
     }
@@ -436,10 +436,10 @@ async function cacheModel(url, modelData) {
                 'Content-Length': modelData.byteLength.toString()
             }
         });
-        
+
         await cache.put(url, response);
         console.log('Model cached manually:', url);
-        
+
     } catch (error) {
         console.error('Error caching model:', error);
     }
@@ -450,12 +450,12 @@ async function getCacheSize() {
     try {
         const cacheNames = await caches.keys();
         let totalSize = 0;
-        
+
         for (const cacheName of cacheNames) {
             if (cacheName.startsWith('bitnet-wasm-')) {
                 const cache = await caches.open(cacheName);
                 const keys = await cache.keys();
-                
+
                 for (const request of keys) {
                     const response = await cache.match(request);
                     if (response) {
@@ -467,9 +467,9 @@ async function getCacheSize() {
                 }
             }
         }
-        
+
         return totalSize;
-        
+
     } catch (error) {
         console.error('Error calculating cache size:', error);
         return 0;
@@ -481,13 +481,13 @@ async function clearModelCache() {
     try {
         const cache = await caches.open(MODEL_CACHE_NAME);
         const keys = await cache.keys();
-        
+
         for (const request of keys) {
             await cache.delete(request);
         }
-        
+
         console.log('Model cache cleared');
-        
+
     } catch (error) {
         console.error('Error clearing model cache:', error);
     }

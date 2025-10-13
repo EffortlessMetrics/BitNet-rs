@@ -115,34 +115,34 @@ async def main():
     model = bitnet.load_model("model.gguf")
     tokenizer = bitnet.create_tokenizer("tokenizer.model")
     engine = bitnet.SimpleInference(model, tokenizer)
-    
+
     # Basic streaming generation
     stream = engine.generate_stream("Tell me about AI")
     for token in stream:
         print(token, end="", flush=True)
-    
+
     # Advanced streaming with timeout and cancellation
     async def stream_with_timeout():
         stream = engine.generate_stream("Long story prompt")
         tokens = []
-        
+
         async def collect_tokens():
             for token in stream:
                 tokens.append(token)
                 print(token, end="", flush=True)
                 await asyncio.sleep(0.01)  # Simulate processing
-                
+
                 if len(tokens) >= 20:  # Cancel after 20 tokens
                     stream.cancel()
                     break
-        
+
         try:
             await asyncio.wait_for(collect_tokens(), timeout=10.0)
             print(f"\n✓ Generated {len(tokens)} tokens")
         except asyncio.TimeoutError:
             print("\n⚠ Generation timed out")
             stream.cancel()
-    
+
     await stream_with_timeout()
 
 asyncio.run(main())
@@ -154,22 +154,22 @@ asyncio.run(main())
 async def concurrent_streaming():
     prompts = ["AI is", "The future of", "Technology will"]
     semaphore = asyncio.Semaphore(3)  # Limit concurrent streams
-    
+
     async def stream_prompt(prompt):
         async with semaphore:
             stream = engine.generate_stream(prompt)
             tokens = []
-            
+
             for token in stream:
                 tokens.append(token)
                 if len(tokens) >= 15:  # Limit per stream
                     break
-            
+
             return {"prompt": prompt, "tokens": len(tokens)}
-    
+
     tasks = [stream_prompt(p) for p in prompts]
     results = await asyncio.gather(*tasks)
-    
+
     for result in results:
         print(f"'{result['prompt']}' -> {result['tokens']} tokens")
 
@@ -343,7 +343,7 @@ The Rust implementation provides significant performance improvements:
    ```python
    # Old
    import model as fast
-   
+
    # New
    import bitnet_py as fast
    ```
@@ -354,7 +354,7 @@ The Rust implementation provides significant performance improvements:
    ```python
    # Enable GPU if available
    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-   
+
    # Use optimized kernels
    model_args.use_kernel = True
    ```
@@ -390,7 +390,7 @@ See the `examples/` directory for comprehensive examples:
 # Verify Python 3.12+ is active
 python --version  # Should show 3.12+
 
-# Install development dependencies  
+# Install development dependencies
 pip install maturin pytest pytest-asyncio black mypy
 
 # Build in development mode with PyO3 ABI3-py312 support
@@ -439,7 +439,7 @@ pytest tests/ --cov=bitnet_py --cov-report=html
    # Check file exists and format
    import os
    assert os.path.exists(model_path), f"Model not found: {model_path}"
-   
+
    # Try different formats
    model = bitnet.load_model(model_path, model_format="auto")
    ```
@@ -448,7 +448,7 @@ pytest tests/ --cov=bitnet_py --cov-report=html
    ```python
    # Reduce batch size
    gen_args.gen_bsz = 1
-   
+
    # Use CPU if GPU memory is insufficient
    device = "cpu"
    ```
@@ -457,7 +457,7 @@ pytest tests/ --cov=bitnet_py --cov-report=html
    ```python
    # Enable optimized kernels
    model_args.use_kernel = True
-   
+
    # Check system info
    info = bitnet.get_system_info()
    print(f"CPU features: {info['cpu_features']}")

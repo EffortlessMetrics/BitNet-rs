@@ -15,4 +15,3 @@ void bitnet_dequantize_row_iq2_s(const void *src, float *dst, int64_t n) {
 size_t bitnet_quantize_iq2_s(const float *src, void *dst, int64_t nrow, int64_t n_per_row) {
     return quantize_iq2_s(src, dst, nrow, n_per_row, NULL);
 }
-

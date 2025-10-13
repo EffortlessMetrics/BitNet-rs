@@ -1,6 +1,6 @@
 /**
  * BitNet.rs C Compatibility Demo
- * 
+ *
  * This example shows that llama.cpp code works unchanged with BitNet.rs.
  * Compile with: gcc c_compatibility_demo.c -lbitnet_ffi -o demo
  */
@@ -17,15 +17,15 @@ int main(int argc, char** argv) {
     }
 
     const char* model_path = argv[1];
-    
+
     printf("===========================================\n");
     printf("BitNet.rs - llama.cpp Compatible C Demo\n");
     printf("===========================================\n\n");
-    
+
     // Initialize backend (compatible with llama.cpp)
     printf("Initializing backend...\n");
     llama_backend_init(false);
-    
+
     // Set up model parameters (exact same as llama.cpp)
     struct llama_model_params model_params = {
         .n_gpu_layers = 0,  // CPU only for demo
@@ -38,20 +38,20 @@ int main(int argc, char** argv) {
         .use_mmap = true,
         .use_mlock = false,
     };
-    
+
     // Load model (exact same as llama.cpp)
     printf("Loading model: %s\n", model_path);
     llama_model* model = llama_load_model_from_file(model_path, model_params);
-    
+
     if (!model) {
         fprintf(stderr, "❌ Failed to load model\n");
         fprintf(stderr, "   Note: BitNet.rs can load models that llama.cpp can't!\n");
         return 1;
     }
-    
+
     printf("✅ Model loaded successfully!\n");
     printf("   Vocab size: %d\n", llama_n_vocab(model));
-    
+
     // Create context (exact same as llama.cpp)
     struct llama_context_params ctx_params = {
         .seed = 42,
@@ -75,23 +75,23 @@ int main(int argc, char** argv) {
         .embedding = false,
         .offload_kqv = false,
     };
-    
+
     printf("\nCreating context...\n");
     llama_context* ctx = llama_new_context_with_model(model, ctx_params);
-    
+
     if (!ctx) {
         fprintf(stderr, "❌ Failed to create context\n");
         llama_free_model(model);
         return 1;
     }
-    
+
     printf("✅ Context created successfully!\n");
     printf("   Context size: %d\n", llama_n_ctx(ctx));
-    
+
     // Tokenize text (exact same as llama.cpp)
     const char* prompt = "The capital of France is";
     printf("\nTokenizing: \"%s\"\n", prompt);
-    
+
     int32_t tokens[256];
     int n_tokens = llama_tokenize(
         model,
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
         true,   // add_bos
         false   // special
     );
-    
+
     if (n_tokens < 0) {
         // BitNet.rs provides better error codes
         switch (n_tokens) {
@@ -126,32 +126,32 @@ int main(int argc, char** argv) {
         llama_free_model(model);
         return 1;
     }
-    
+
     printf("✅ Tokenized into %d tokens: ", n_tokens);
     for (int i = 0; i < n_tokens && i < 10; i++) {
         printf("%d ", tokens[i]);
     }
     if (n_tokens > 10) printf("...");
     printf("\n");
-    
+
     // Evaluate tokens (exact same as llama.cpp)
     printf("\nEvaluating tokens...\n");
     int eval_result = llama_eval(ctx, tokens, n_tokens, 0, 4);
-    
+
     if (eval_result != 0) {
         fprintf(stderr, "❌ Evaluation failed\n");
         llama_free(ctx);
         llama_free_model(model);
         return 1;
     }
-    
+
     printf("✅ Evaluation successful!\n");
-    
+
     // Get logits (exact same as llama.cpp)
     float* logits = llama_get_logits(ctx);
     if (logits) {
         printf("✅ Got logits for %d vocabulary items\n", llama_n_vocab(model));
-        
+
         // Find top token
         int top_token = 0;
         float top_score = logits[0];
@@ -161,16 +161,16 @@ int main(int argc, char** argv) {
                 top_token = i;
             }
         }
-        
+
         printf("   Top predicted token: %d (score: %.3f)\n", top_token, top_score);
     }
-    
+
     // Clean up (exact same as llama.cpp)
     printf("\nCleaning up...\n");
     llama_free(ctx);
     llama_free_model(model);
     llama_backend_free();
-    
+
     printf("\n===========================================\n");
     printf("✅ Demo completed successfully!\n");
     printf("\nBitNet.rs advantages demonstrated:\n");
@@ -183,6 +183,6 @@ int main(int argc, char** argv) {
     printf("  -#include \"llama.h\"\n");
     printf("  +#include \"llama_compat.h\"\n");
     printf("===========================================\n");
-    
+
     return 0;
 }

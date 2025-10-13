@@ -40,14 +40,14 @@ def quantize_tensor(data, qtype):
 
 if __name__ == "__main__":
     command = sys.argv[1]
-    
+
     if command == "inference":
         model_path = sys.argv[2]
         prompt = sys.argv[3]
         config = json.loads(sys.argv[4])
         result = run_inference(model_path, prompt, config)
         print(json.dumps(result))
-    
+
     elif command == "quantize":
         data = json.loads(sys.argv[2])
         qtype = sys.argv[3]

@@ -8,7 +8,7 @@
   "blocking_issue": "merge_conflicts",
   "conflicted_files": [
     "crates/bitnet-cli/src/commands/inference.rs",
-    "crates/bitnet-inference/src/engine.rs", 
+    "crates/bitnet-inference/src/engine.rs",
     "README.md",
     "CLAUDE.md",
     "docs/test-suite.md",
@@ -16,7 +16,7 @@
   ],
   "validation_summary": {
     "format_check": "passed",
-    "compilation": "passed", 
+    "compilation": "passed",
     "tests_passed": 66,
     "tests_failed": 0,
     "cross_validation": "not_required",
@@ -25,7 +25,7 @@
   "next_steps": [
     "Manual conflict resolution required",
     "Rebase PR branch onto current main",
-    "Resolve conflicts preserving prefill functionality", 
+    "Resolve conflicts preserving prefill functionality",
     "Re-run validation after conflict resolution"
   ],
   "finalized_at": "2025-09-08T00:23:47Z",

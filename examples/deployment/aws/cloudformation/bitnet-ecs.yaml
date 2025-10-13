@@ -6,17 +6,17 @@ Parameters:
     Type: AWS::EC2::VPC::Id
     Description: VPC ID for the deployment
     Default: vpc-12345678
-  
+
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Subnet IDs for the deployment
     Default: subnet-12345678,subnet-87654321
-  
+
   ImageUri:
     Type: String
     Description: ECR image URI for BitNet.rs
     Default: 123456789012.dkr.ecr.us-west-2.amazonaws.com/bitnet-rs:latest
-  
+
   DesiredCount:
     Type: Number
     Description: Desired number of tasks
@@ -238,7 +238,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:GetObject
-                Resource: 
+                Resource:
                   - arn:aws:s3:::bitnet-models/*
         - PolicyName: CloudWatchMetrics
           PolicyDocument:

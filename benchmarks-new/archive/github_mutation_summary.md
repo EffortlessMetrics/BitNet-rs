@@ -3,7 +3,7 @@ Creating GitHub check run for mutation testing validation...
 ## GitHub Check Run Configuration
 
 **Check Name**: `review:gate:mutation`
-**Status**: ⚠️ **FAILURE** 
+**Status**: ⚠️ **FAILURE**
 **Conclusion**: `failure`
 **Summary**: `score: ~67% (<80%); survivors: ~30-40; hot: bitnet-quantization/i2s.rs:74, bitnet-models/loader.rs:67`
 

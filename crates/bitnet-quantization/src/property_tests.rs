@@ -38,30 +38,30 @@ mod tests {
             let tensor = MockTensor::from_vec(data.clone());
             let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
             let dequantized = quantized.dequantize().unwrap();
-            
+
             // Check that the dequantized values are close to original
             let original_slice = tensor.as_slice::<f32>().unwrap();
             let dequant_slice = dequantized.as_slice::<f32>().unwrap();
-            
+
             for (orig, dequant) in original_slice.iter().zip(dequant_slice.iter()) {
                 if orig.is_finite() && dequant.is_finite() {
                     let relative_error = (orig - dequant).abs() / orig.abs().max(1e-6);
-                    prop_assert!(relative_error < 0.1, 
+                    prop_assert!(relative_error < 0.1,
                         "Relative error too large: {} vs {}", orig, dequant);
                 }
             }
         }
     }
-}   
+}
  proptest! {
         #[test]
         fn test_quantization_deterministic(data in quantization_deterministic_property()) {
             let tensor = MockTensor::from_vec(data);
-            
+
             // Quantize the same data twice
             let quantized1 = tensor.quantize(QuantizationType::I2S).unwrap();
             let quantized2 = tensor.quantize(QuantizationType::I2S).unwrap();
-            
+
             // Results should be identical
             prop_assert_eq!(quantized1.data, quantized2.data);
             prop_assert_eq!(quantized1.scales, quantized2.scales);
@@ -71,10 +71,10 @@ mod tests {
         fn test_quantization_preserves_shape(data in quantization_roundtrip_property()) {
             let original_shape = vec![data.len()];
             let tensor = MockTensor::from_vec_with_shape(data, original_shape.clone());
-            
+
             let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
             prop_assert_eq!(quantized.shape, original_shape);
-            
+
             let dequantized = quantized.dequantize().unwrap();
             prop_assert_eq!(dequantized.shape(), &original_shape[..]);
         }
@@ -82,10 +82,10 @@ mod tests {
         #[test]
         fn test_quantization_handles_edge_cases(data in quantization_edge_cases_property()) {
             let tensor = MockTensor::from_vec(data);
-            
+
             // Quantization should not panic on edge cases
             let result = tensor.quantize(QuantizationType::I2S);
-            
+
             // Either succeeds or fails gracefully
             match result {
                 Ok(quantized) => {
@@ -101,12 +101,12 @@ mod tests {
         #[test]
         fn test_tl1_quantization_properties(data in quantization_roundtrip_property()) {
             let tensor = MockTensor::from_vec(data.clone());
-            
+
             if let Ok(quantized) = tensor.quantize(QuantizationType::TL1) {
                 // TL1 should use lookup tables efficiently
-                prop_assert!(quantized.data.len() <= data.len() / 2, 
+                prop_assert!(quantized.data.len() <= data.len() / 2,
                     "TL1 quantization should compress data");
-                
+
                 // Scales should be reasonable
                 for scale in &quantized.scales {
                     prop_assert!(scale.is_finite() && *scale >= 0.0,
@@ -118,12 +118,12 @@ mod tests {
         #[test]
         fn test_tl2_quantization_properties(data in quantization_roundtrip_property()) {
             let tensor = MockTensor::from_vec(data.clone());
-            
+
             if let Ok(quantized) = tensor.quantize(QuantizationType::TL2) {
                 // TL2 should also compress data
                 prop_assert!(quantized.data.len() <= data.len() / 2,
                     "TL2 quantization should compress data");
-                
+
                 // Check that quantization type is preserved
                 prop_assert_eq!(quantized.qtype, QuantizationType::TL2);
             }
@@ -138,7 +138,7 @@ mod tests {
         let tensor = MockTensor::from_vec(zeros);
         let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
         let dequantized = quantized.dequantize().unwrap();
-        
+
         for value in dequantized.as_slice::<f32>().unwrap() {
             assert!((value.abs() < 1e-6), "Zero values should remain close to zero");
         }
@@ -156,14 +156,14 @@ mod tests {
     fn test_quantization_memory_efficiency() {
         let large_data: Vec<f32> = (0..10000).map(|i| (i as f32) * 0.001).collect();
         let tensor = MockTensor::from_vec(large_data.clone());
-        
+
         let quantized = tensor.quantize(QuantizationType::I2S).unwrap();
-        
+
         // I2S should use 2 bits per weight, so roughly 4x compression
         let original_bytes = large_data.len() * 4; // f32 = 4 bytes
         let quantized_bytes = quantized.data.len() + quantized.scales.len() * 4;
-        
-        assert!(quantized_bytes < original_bytes / 2, 
+
+        assert!(quantized_bytes < original_bytes / 2,
             "Quantization should significantly reduce memory usage");
     }
 }

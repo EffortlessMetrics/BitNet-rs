@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "timestamp": "2025-08-23T02:07:30Z",
-  "platform": "linux-x86_64-WSL2", 
+  "platform": "linux-x86_64-WSL2",
   "wsl2": true,
   "git_commit": "ff99267",
   "git_dirty": true,

@@ -132,7 +132,7 @@ for crate_dir in . crates/*/; do
     if [[ -f "$crate_dir/Cargo.toml" ]]; then
         crate_name=$(basename "$crate_dir")
         print_status "Checking metadata for $crate_name..."
-        
+
         for field in "${REQUIRED_FIELDS[@]}"; do
             if ! grep -q "^$field\s*=" "$crate_dir/Cargo.toml" && ! grep -q "^$field\.workspace\s*=" "$crate_dir/Cargo.toml"; then
                 print_error "Missing $field in $crate_dir/Cargo.toml"

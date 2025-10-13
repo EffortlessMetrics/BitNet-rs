@@ -10,14 +10,14 @@
 - Throughput: 684.32K elem/s
 - Performance improvement: +21.9% vs baseline
 
-### TL1 Quantization (1024 elements)  
+### TL1 Quantization (1024 elements)
 - Time: 971.53 µs (median)
 - Throughput: 1.0540M elem/s
 - Performance improvement: +25.2% vs baseline
 
 ### TL2 Quantization (1024 elements)
 - Time: 297.69 µs (median)
-- Throughput: 3.4398M elem/s  
+- Throughput: 3.4398M elem/s
 - Performance improvement: +23.4% vs baseline
 
 ### I2S Dequantization (4096 elements)
@@ -59,7 +59,7 @@
 
 ### Quantization Performance (CPU)
 - I2S: 684K elem/s quantize, 1.6M elem/s dequantize
-- TL1: 1.05M elem/s quantize, 1.98M elem/s dequantize  
+- TL1: 1.05M elem/s quantize, 1.98M elem/s dequantize
 - TL2: 3.44M elem/s quantize, 5.06M elem/s dequantize (FASTEST)
 
 ### GPU Acceleration (I2S only)

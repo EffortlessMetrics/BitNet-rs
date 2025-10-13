@@ -3,7 +3,7 @@
   "title": "BitNet Inference API v1",
   "version": "1.0.0",
   "description": "Contract for BitNet inference API endpoints and data structures",
-  
+
   "definitions": {
     "ModelConfig": {
       "type": "object",
@@ -43,7 +43,7 @@
         }
       }
     },
-    
+
     "InferenceRequest": {
       "type": "object",
       "required": ["prompt"],
@@ -87,7 +87,7 @@
         }
       }
     },
-    
+
     "InferenceResponse": {
       "type": "object",
       "required": ["id", "choices", "usage", "model", "created"],
@@ -115,7 +115,7 @@
         }
       }
     },
-    
+
     "Choice": {
       "type": "object",
       "required": ["index", "text", "finish_reason"],
@@ -136,7 +136,7 @@
         }
       }
     },
-    
+
     "Usage": {
       "type": "object",
       "required": ["prompt_tokens", "completion_tokens", "total_tokens"],
@@ -155,7 +155,7 @@
         }
       }
     },
-    
+
     "StreamChunk": {
       "type": "object",
       "required": ["id", "choices", "created"],
@@ -190,7 +190,7 @@
         }
       }
     },
-    
+
     "Error": {
       "type": "object",
       "required": ["code", "message"],
@@ -215,7 +215,7 @@
       }
     }
   },
-  
+
   "endpoints": {
     "/v1/models": {
       "GET": {

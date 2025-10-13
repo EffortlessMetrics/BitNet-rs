@@ -59,33 +59,33 @@ fi
 test_target_features() {
     local target=$1
     local features=$2
-    
+
     print_status "Testing $target with features: $features"
-    
+
     # Skip GPU features for cross-compilation
     if [[ "$features" == *"gpu"* ]]; then
         print_warning "Skipping GPU features for cross-compilation"
         return 0
     fi
-    
+
     # Skip NEON on non-ARM targets
     if [[ "$features" == *"neon"* && "$target" != *"aarch64"* ]]; then
         print_warning "Skipping NEON features on non-ARM target"
         return 0
     fi
-    
+
     # Skip AVX on non-x86 targets
     if [[ "$features" == *"avx"* && "$target" != *"x86_64"* ]]; then
         print_warning "Skipping AVX features on non-x86 target"
         return 0
     fi
-    
+
     # Use cross for cross-compilation, cargo for native
     local build_cmd="cross"
     if [[ "$target" == "$(rustc -vV | grep host | cut -d' ' -f2)" ]]; then
         build_cmd="cargo"
     fi
-    
+
     # Test compilation
     if $build_cmd build --target "$target" --features "$features" --workspace; then
         print_success "✓ $target ($features) - Build successful"
@@ -104,7 +104,7 @@ print_status "Starting cross-platform compatibility tests..."
 
 for target in "${TARGETS[@]}"; do
     print_status "Testing target: $target"
-    
+
     # Check if target is installed
     if ! rustup target list --installed | grep -q "$target"; then
         print_status "Installing target: $target"
@@ -113,15 +113,15 @@ for target in "${TARGETS[@]}"; do
             continue
         }
     fi
-    
+
     for features in "${FEATURE_SETS[@]}"; do
         total_tests=$((total_tests + 1))
-        
+
         if ! test_target_features "$target" "$features"; then
             failed_tests=$((failed_tests + 1))
         fi
     done
-    
+
     echo ""
 done
 

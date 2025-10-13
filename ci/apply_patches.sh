@@ -79,10 +79,10 @@ for patch_file in "$PATCHES_DIR"/*.patch; do
     if [[ ! -f "$patch_file" ]]; then
         continue
     fi
-    
+
     patch_name=$(basename "$patch_file")
     log_info "Applying patch: $patch_name"
-    
+
     # Check if patch has upstream issue reference
     if ! grep -q "issue" "$patch_file" && ! grep -q "Issue" "$patch_file"; then
         log_error "Patch $patch_name does not reference an upstream issue"
@@ -90,7 +90,7 @@ for patch_file in "$PATCHES_DIR"/*.patch; do
         FAILED_COUNT=$((FAILED_COUNT + 1))
         continue
     fi
-    
+
     # Try to apply the patch
     if git apply --check "$patch_file" 2>/dev/null; then
         git apply "$patch_file"
@@ -100,7 +100,7 @@ for patch_file in "$PATCHES_DIR"/*.patch; do
         log_error "Failed to apply patch: $patch_name"
         log_error "Patch may be outdated or conflict with current C++ version"
         FAILED_COUNT=$((FAILED_COUNT + 1))
-        
+
         # Show what failed
         echo "Patch application error:"
         git apply "$patch_file" 2>&1 || true

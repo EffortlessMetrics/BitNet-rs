@@ -50,13 +50,13 @@ log_info() {
 # Test 1: Environment & Determinism
 test_environment() {
     log_test "1. Environment & Determinism"
-    
+
     print_platform_banner
     detect_wsl2 || true
-    
+
     # Find BitNet binary using common function
     local BIN=$(find_bitnet_binary)
-    
+
     # Check bitnet version
     if $BIN --version > /dev/null 2>&1; then
         VERSION=$($BIN --version)
@@ -72,18 +72,18 @@ test_environment() {
 # Test 2: Model Introspection
 test_model_introspection() {
     log_test "2. Model Introspection (format detection/policy)"
-    
+
     local safetensors_model="${MODELS_DIR}/${MODEL_ID}/safetensors/model.safetensors"
     local safetensors_tokenizer="${MODELS_DIR}/${MODEL_ID}/safetensors/tokenizer.json"
     local gguf_model="${MODELS_DIR}/${MODEL_ID}/gguf/model.gguf"
-    
+
     # Test SafeTensors introspection
     if [ -f "$safetensors_model" ]; then
         local st_info=$($BITNET_BIN info \
             --model "$safetensors_model" \
             --tokenizer "$safetensors_tokenizer" \
             --json 2>/dev/null)
-        
+
         if echo "$st_info" | jq -e '.format == "safetensors"' > /dev/null; then
             log_info "SafeTensors format detected correctly"
             echo "$st_info" | jq . > "${OUTPUT_DIR}/safetensors_info.json"
@@ -92,13 +92,13 @@ test_model_introspection() {
             return 1
         fi
     fi
-    
+
     # Test GGUF introspection
     if [ -f "$gguf_model" ]; then
         local gguf_info=$($BITNET_BIN info \
             --model "$gguf_model" \
             --json 2>/dev/null)
-        
+
         if echo "$gguf_info" | jq -e '.format == "gguf"' > /dev/null; then
             log_info "GGUF format detected correctly"
             echo "$gguf_info" | jq . > "${OUTPUT_DIR}/gguf_info.json"
@@ -107,20 +107,20 @@ test_model_introspection() {
             return 1
         fi
     fi
-    
+
     log_pass "Model introspection"
 }
 
 # Test 3: Tokenizer Parity
 test_tokenizer_parity() {
     log_test "3. Tokenizer Parity Battery"
-    
+
     local battery_file="${SCRIPT_DIR}/tokenizer_battery.txt"
     if [ ! -f "$battery_file" ]; then
         log_fail "Tokenizer battery file not found: $battery_file"
         return 1
     fi
-    
+
     # Run parity validation
     if "${SCRIPT_DIR}/validate_format_parity.sh" > "${OUTPUT_DIR}/tokenizer_parity.log" 2>&1; then
         log_pass "Tokenizer parity"
@@ -133,17 +133,17 @@ test_tokenizer_parity() {
 # Test 4: Logit Parity
 test_logit_parity() {
     log_test "4. Logit Parity (τ-b correlation)"
-    
+
     local safetensors_model="${MODELS_DIR}/${MODEL_ID}/safetensors/model.safetensors"
     local safetensors_tokenizer="${MODELS_DIR}/${MODEL_ID}/safetensors/tokenizer.json"
-    
+
     # FP32↔FP32 test
     PROP_EXAMPLES=12 TAU_STEPS=24 LOGIT_TOPK=10 TAU_MIN=0.95 \
         MODEL_PATH="$safetensors_model" \
         TOKENIZER="$safetensors_tokenizer" \
         HF_MODEL_ID="$HF_MODEL_ID" \
         "${SCRIPT_DIR}/logit-parity.sh" > "${OUTPUT_DIR}/logit_parity.log" 2>&1
-    
+
     local exit_code=$?
     if [ $exit_code -eq 0 ]; then
         log_pass "Logit parity (τ-b ≥ 0.95)"
@@ -156,17 +156,17 @@ test_logit_parity() {
 # Test 5: NLL Parity
 test_nll_parity() {
     log_test "5. Teacher-forcing NLL Parity"
-    
+
     local safetensors_model="${MODELS_DIR}/${MODEL_ID}/safetensors/model.safetensors"
     local safetensors_tokenizer="${MODELS_DIR}/${MODEL_ID}/safetensors/tokenizer.json"
     local ppl_file="crossval/data/ppl_smoke.txt"
-    
+
     if [ ! -f "$ppl_file" ]; then
         log_info "Creating sample perplexity test file"
         mkdir -p crossval/data
         echo "The quick brown fox jumps over the lazy dog." > "$ppl_file"
     fi
-    
+
     # HF vs SafeTensors
     DELTA_NLL_MAX=1e-2 \
         MODEL_PATH="$safetensors_model" \
@@ -174,7 +174,7 @@ test_nll_parity() {
         HF_MODEL_ID="$HF_MODEL_ID" \
         PPL_FILE="$ppl_file" \
         "${SCRIPT_DIR}/nll-parity.sh" > "${OUTPUT_DIR}/nll_parity.log" 2>&1
-    
+
     local exit_code=$?
     if [ $exit_code -eq 0 ]; then
         log_pass "NLL parity (|Δ mean_nll| ≤ 1e-2)"
@@ -187,17 +187,17 @@ test_nll_parity() {
 # Test 6: Performance Measurements
 test_performance() {
     log_test "6. Performance Measurements"
-    
+
     # Run performance measurements
     if "${SCRIPT_DIR}/measure_perf_json.sh" > "${OUTPUT_DIR}/perf_measurement.log" 2>&1; then
         # Check if JSON files were created
         local platform=$(get_platform_name)
         local st_json="bench/results/${platform}-safetensors.json"
         local gguf_json="bench/results/${platform}-gguf.json"
-        
+
         if [ -f "$st_json" ] && [ -f "$gguf_json" ]; then
             log_pass "Performance measurements generated"
-            
+
             # Render markdown
             if command -v python3 >/dev/null 2>&1; then
                 python3 "${SCRIPT_DIR}/render_perf_md.py" "$st_json" > "docs/PERF_${platform}_ST.md" 2>/dev/null
@@ -221,16 +221,16 @@ print_summary() {
     echo "         REALITY-PROOF CHECKLIST RESULTS"
     echo "============================================"
     echo
-    
+
     local total_tests=$((${#PASSED_TESTS[@]} + ${#FAILED_TESTS[@]}))
     local passed=${#PASSED_TESTS[@]}
     local failed=${#FAILED_TESTS[@]}
-    
+
     echo -e "${GREEN}Passed:${NC} $passed/$total_tests"
     for test in "${PASSED_TESTS[@]}"; do
         echo -e "  ${GREEN}✓${NC} $test"
     done
-    
+
     if [ $failed -gt 0 ]; then
         echo
         echo -e "${RED}Failed:${NC} $failed/$total_tests"
@@ -238,10 +238,10 @@ print_summary() {
             echo -e "  ${RED}✗${NC} $test"
         done
     fi
-    
+
     echo
     echo "Results saved to: ${OUTPUT_DIR}/"
-    
+
     # Generate summary JSON
     cat > "${OUTPUT_DIR}/summary.json" <<EOF
 {
@@ -259,7 +259,7 @@ print_summary() {
   }
 }
 EOF
-    
+
     if [ $failed -eq 0 ]; then
         echo -e "${GREEN}✅ All reality-proof checks passed!${NC}"
         echo ""
@@ -292,7 +292,7 @@ main() {
     log_info "Platform: $(get_platform_name)"
     log_info "Output directory: ${OUTPUT_DIR}"
     echo
-    
+
     # Run all tests
     test_environment
     test_model_introspection
@@ -300,7 +300,7 @@ main() {
     test_logit_parity
     test_nll_parity
     test_performance
-    
+
     # Print summary
     print_summary
 }

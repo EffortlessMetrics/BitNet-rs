@@ -4,7 +4,7 @@ This document provides an analysis of the BitNet.rs project, comparing its state
 
 **Related Documentation:**
 - [README.md](README.md) - Updated to reflect current status
-- [PERFORMANCE_COMPARISON.md](PERFORMANCE_COMPARISON.md) - Honest assessment of benchmarking status  
+- [PERFORMANCE_COMPARISON.md](PERFORMANCE_COMPARISON.md) - Honest assessment of benchmarking status
 - [VALIDATION.md](VALIDATION.md) - Validation framework documentation
 - [benchmark_comparison.py](benchmark_comparison.py) - Benchmarking script requiring fixes
 - [benchmark_results.json](benchmark_results.json) - Current benchmark results (incomplete)

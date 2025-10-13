@@ -121,7 +121,7 @@ pip install fastapi uvicorn streamlit ipywidgets
 
 ### Model Files Not Found
 **Problem:** `FileNotFoundError` when loading models
-**Solution:** 
+**Solution:**
 - Update `MODEL_PATH` and `TOKENIZER_PATH` variables
 - Ensure files exist and are accessible
 - Check file permissions

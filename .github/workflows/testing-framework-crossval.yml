@@ -417,7 +417,7 @@ jobs:
             echo "" >> crossval-summary.md
             echo "## Available Artifacts" >> crossval-summary.md
             echo "" >> crossval-summary.md
-            
+
             artifact_count=$(find artifacts -name "crossval-artifacts-*" -type d | wc -l)
             echo "- **Total Artifact Sets**: $artifact_count" >> crossval-summary.md
             echo "- **Retention**: 30 days" >> crossval-summary.md

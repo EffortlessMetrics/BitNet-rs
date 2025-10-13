@@ -29,12 +29,12 @@ def demonstrate_api_compatibility():
     """Demonstrate API compatibility between original and new implementation."""
     print("API Compatibility Demonstration")
     print("=" * 40)
-    
+
     # Show how the same code works with both implementations
     print("\n1. Original API pattern:")
     print("""
     import model as fast
-    
+
     # Create generation arguments
     gen_args = fast.GenArgs(
         gen_length=128,
@@ -42,24 +42,24 @@ def demonstrate_api_compatibility():
         top_p=0.9,
         use_sampling=True,
     )
-    
+
     # Build FastGen engine
     g = fast.FastGen.build(
         ckpt_dir="path/to/checkpoint",
         gen_args=gen_args,
         device="cuda:0",
     )
-    
+
     # Generate responses
     prompts = ["Hello", "How are you?"]
     tokens = [g.tokenizer.encode(p, bos=False, eos=False) for p in prompts]
     stats, results = g.generate_all(tokens, use_cuda_graphs=True)
     """)
-    
+
     print("\n2. New API (identical code, just change import):")
     print("""
     import bitnet_py as fast  # Only change needed!
-    
+
     # Everything else remains exactly the same
     gen_args = fast.GenArgs(
         gen_length=128,
@@ -67,30 +67,30 @@ def demonstrate_api_compatibility():
         top_p=0.9,
         use_sampling=True,
     )
-    
+
     g = fast.FastGen.build(
         ckpt_dir="path/to/checkpoint",
         gen_args=gen_args,
         device="cuda:0",
     )
-    
+
     prompts = ["Hello", "How are you?"]
     tokens = [g.tokenizer.encode(p, bos=False, eos=False) for p in prompts]
     stats, results = g.generate_all(tokens, use_cuda_graphs=True)
     """)
-    
+
     print("\n3. Enhanced API (optional improvements):")
     print("""
     import bitnet_py as bitnet
-    
+
     # Simplified model loading
     model = bitnet.load_model("model.gguf", device="cuda:0")
     tokenizer = bitnet.create_tokenizer("tokenizer.model")
-    
+
     # Simple inference
     engine = bitnet.SimpleInference(model, tokenizer)
     result = engine.generate("Hello, world!")
-    
+
     # Or async streaming
     async def stream_example():
         response = await engine.generate_stream("Tell me about AI")
@@ -112,7 +112,7 @@ from pathlib import Path
 def main():
     # Original BitNet code pattern
     print("Loading BitNet model...")
-    
+
     # Create model arguments
     model_args = fast.ModelArgs(
         dim=2560,
@@ -122,7 +122,7 @@ def main():
         vocab_size=128256,
         use_kernel=True,
     )
-    
+
     # Create generation arguments
     gen_args = fast.GenArgs(
         gen_length=128,
@@ -132,7 +132,7 @@ def main():
         temperature=0.8,
         top_p=0.9,
     )
-    
+
     # Build FastGen engine
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     g = fast.FastGen.build(
@@ -140,19 +140,19 @@ def main():
         gen_args=gen_args,
         device=device,
     )
-    
+
     # Test prompts
     prompts = [
         "Hello, my name is",
         "The future of AI is",
         "In the year 2024,",
     ]
-    
+
     print("Generating responses...")
-    
+
     # Encode prompts
     tokens = [g.tokenizer.encode(prompt, bos=False, eos=False) for prompt in prompts]
-    
+
     # Generate responses
     start_time = time.time()
     stats, results = g.generate_all(
@@ -161,59 +161,59 @@ def main():
         use_sampling=gen_args.use_sampling,
     )
     generation_time = time.time() - start_time
-    
+
     # Display results
     for i, prompt in enumerate(prompts):
         print(f"> {prompt}")
         answer = g.tokenizer.decode(results[i])
         print(answer)
         print("-" * 40)
-    
+
     # Show statistics
     print(f"Generation time: {generation_time:.2f} seconds")
     print(f"Stats: {stats.show()}")
-    
+
     # Test chat format
     chat_tokenizer = fast.ChatFormat(g.tokenizer)
     dialog = [
         fast.Message(role="user", content="What is AI?"),
     ]
-    
+
     dialog_tokens = chat_tokenizer.encode_dialog_prompt(dialog, completion=True)
     stats, dialog_results = g.generate_all([dialog_tokens], use_cuda_graphs=False)
-    
+
     dialog_response = chat_tokenizer.decode(dialog_results[0])
     print(f"Chat response: {dialog_response}")
 
 if __name__ == "__main__":
     main()
 '''
-    
+
     return sample_code
 
 def demonstrate_migration_process():
     """Demonstrate the complete migration process."""
     print("\nMigration Process Demonstration")
     print("=" * 40)
-    
+
     # Create sample original code
     sample_dir = "sample_original_project"
     migrated_dir = "sample_migrated_project"
-    
+
     # Clean up any existing directories
     import shutil
     for dir_path in [sample_dir, migrated_dir]:
         if os.path.exists(dir_path):
             shutil.rmtree(dir_path)
-    
+
     # Create sample project structure
     os.makedirs(sample_dir, exist_ok=True)
-    
+
     # Write sample original code
     sample_code = create_sample_original_code()
     with open(os.path.join(sample_dir, "main.py"), 'w') as f:
         f.write(sample_code)
-    
+
     # Create a config file
     config = {
         "model": {
@@ -234,51 +234,51 @@ def demonstrate_migration_process():
         "model_path": "models/checkpoint",
         "tokenizer_path": "tokenizer.model",
     }
-    
+
     with open(os.path.join(sample_dir, "config.json"), 'w') as f:
         json.dump(config, f, indent=2)
-    
+
     # Create requirements.txt
     with open(os.path.join(sample_dir, "requirements.txt"), 'w') as f:
         f.write("torch>=2.0.0\nxformers>=0.0.20\nnumpy>=1.19.0\n")
-    
+
     print(f"Created sample project: {sample_dir}")
-    
+
     # Analyze the original code
     print("\nAnalyzing original code...")
     helper = MigrationHelper()
     analysis = helper.analyze_existing_code(os.path.join(sample_dir, "main.py"))
-    
+
     print(f"Analysis results:")
     print(f"  Compatible: {analysis['compatible']}")
     print(f"  Imports found: {len(analysis['imports'])}")
     print(f"  Issues: {len(analysis['issues'])}")
     print(f"  Suggestions: {len(analysis['suggestions'])}")
-    
+
     if analysis['suggestions']:
         print("\nSuggestions:")
         for suggestion in analysis['suggestions'][:3]:  # Show first 3
             print(f"  - {suggestion}")
-    
+
     # Perform migration
     print(f"\nMigrating project to {migrated_dir}...")
-    
+
     test_prompts = [
         "Hello, my name is",
         "The capital of France is",
         "Artificial intelligence is",
     ]
-    
+
     success = migrate_project(
         sample_dir,
         migrated_dir,
         test_prompts=test_prompts,
         create_backup=False,  # Skip backup for demo
     )
-    
+
     if success:
         print("Migration completed successfully!")
-        
+
         # Show migrated files
         print(f"\nMigrated project structure:")
         for root, dirs, files in os.walk(migrated_dir):
@@ -288,7 +288,7 @@ def demonstrate_migration_process():
             subindent = ' ' * 2 * (level + 1)
             for file in files:
                 print(f"{subindent}{file}")
-        
+
         # Show the migrated main.py (first 20 lines)
         print(f"\nMigrated main.py (first 20 lines):")
         with open(os.path.join(migrated_dir, "main.py"), 'r') as f:
@@ -297,7 +297,7 @@ def demonstrate_migration_process():
                 print(f"{i:2d}: {line.rstrip()}")
             if len(lines) > 20:
                 print(f"... ({len(lines) - 20} more lines)")
-        
+
         # Show migration report summary
         report_path = os.path.join(migrated_dir, "MIGRATION_REPORT.md")
         if os.path.exists(report_path):
@@ -312,10 +312,10 @@ def demonstrate_migration_process():
                         summary_end = summary_start + 500
                     summary = content[summary_start:summary_end]
                     print(summary)
-    
+
     else:
         print("Migration failed!")
-    
+
     # Clean up demo files
     print(f"\nCleaning up demo files...")
     for dir_path in [sample_dir, migrated_dir]:
@@ -327,7 +327,7 @@ def show_performance_comparison():
     """Show expected performance improvements."""
     print("\nPerformance Comparison")
     print("=" * 40)
-    
+
     # Simulated performance data (based on typical improvements)
     comparison_data = {
         "metrics": {
@@ -371,7 +371,7 @@ def show_performance_comparison():
             ]
         }
     }
-    
+
     print("Performance Metrics:")
     print("-" * 20)
     for metric, data in comparison_data["metrics"].items():
@@ -380,13 +380,13 @@ def show_performance_comparison():
         print(f"  bitnet_py: {data['bitnet_py']}")
         print(f"  Improvement: {data['improvement']}")
         print()
-    
+
     print("Feature Comparison:")
     print("-" * 20)
     print("Original Implementation:")
     for feature in comparison_data["features"]["original"]:
         print(f"  - {feature}")
-    
+
     print("\nbitnet_py Implementation:")
     for feature in comparison_data["features"]["bitnet_py"]:
         print(f"  + {feature}")
@@ -395,7 +395,7 @@ def show_migration_checklist():
     """Show a comprehensive migration checklist."""
     print("\nMigration Checklist")
     print("=" * 40)
-    
+
     checklist = [
         ("Pre-Migration", [
             "Backup your existing project",
@@ -446,7 +446,7 @@ def show_migration_checklist():
             "Plan rollback strategy if needed"
         ])
     ]
-    
+
     for section, items in checklist:
         print(f"\n{section}:")
         for item in items:
@@ -455,7 +455,7 @@ def show_migration_checklist():
 def main():
     print("BitNet Python to bitnet_py Migration Example")
     print("=" * 50)
-    
+
     if len(sys.argv) > 1 and sys.argv[1] == "--full-demo":
         # Run full demonstration including file creation
         demonstrate_api_compatibility()
@@ -467,29 +467,29 @@ def main():
         demonstrate_api_compatibility()
         show_performance_comparison()
         show_migration_checklist()
-        
+
         print("\n" + "=" * 50)
         print("Migration Tools Available:")
         print("=" * 50)
-        
+
         print("\n1. Analyze existing code:")
         print("   python -m bitnet_py.migration analyze your_file.py")
-        
+
         print("\n2. Migrate entire project:")
         print("   python -m bitnet_py.migration migrate old_project/ new_project/")
-        
+
         print("\n3. Check original installation:")
         print("   python -m bitnet_py.migration check")
-        
+
         print("\n4. Run full demonstration:")
         print("   python migration_example.py --full-demo")
-        
+
         print("\nFor detailed migration assistance, see:")
         print("- Migration utilities: bitnet_py.migration module")
         print("- API documentation: bitnet_py package docstrings")
         print("- Examples: examples/ directory")
         print("- Performance benchmarks: bitnet_py.benchmark_inference()")
-    
+
     print("\nMigration example completed!")
     return 0
 

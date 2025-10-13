@@ -24,7 +24,7 @@
 //! ## Performance Metrics
 //! The enhanced implementation provides detailed performance metrics:
 //! - `prefill_tps`: Prompt processing throughput (tokens/second)
-//! - `decode_tps`: New token generation throughput (tokens/second)  
+//! - `decode_tps`: New token generation throughput (tokens/second)
 //! - `e2e_tps`: End-to-end throughput including all phases
 //! - Timing breakdown for tokenization, prefill, decode, and total
 //!

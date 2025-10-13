@@ -11,7 +11,7 @@
   "validation_worktree": "/tmp/bitnet-validate-sL8M",
   "quality_gates": {
     "format_check": "PASSED",
-    "clippy_check": "PASSED", 
+    "clippy_check": "PASSED",
     "unit_tests": "PASSED",
     "regression_tests": "PASSED",
     "verification_script": "PASSED"

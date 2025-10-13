@@ -3,7 +3,7 @@
 ///
 /// This test verifies that all components of the logging infrastructure work together:
 /// - Structured logging with configurable levels
-/// - Test execution tracing and debugging support  
+/// - Test execution tracing and debugging support
 /// - Error reporting with context and stack traces
 /// - Performance monitoring and metrics collection
 /// - Artifact collection for failed tests

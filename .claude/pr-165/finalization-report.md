@@ -24,7 +24,7 @@ Successfully validated PR #165: "Add skeleton conv2d kernel and reference test s
 ### Technical Details
 - **Branch**: codex/fix-convolution-logic-and-update-tests
 - **Commit**: 40dc79c - Skeleton conv2d implementation and placeholder tests
-- **Files Changed**: 
+- **Files Changed**:
   - `crates/bitnet-kernels/src/convolution.rs` (new)
   - `crates/bitnet-kernels/tests/conv2d_tests.rs` (new)
   - `crates/bitnet-kernels/src/lib.rs` (module exposure)

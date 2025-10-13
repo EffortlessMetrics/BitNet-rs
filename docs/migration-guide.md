@@ -251,7 +251,7 @@ use anyhow::Result;
 async fn main() -> Result<()> {
     // Load model
     let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
-    
+
     // Configure generation
     let config = GenerationConfig {
         max_new_tokens: 100,
@@ -259,11 +259,11 @@ async fn main() -> Result<()> {
         top_p: 0.9,
         ..Default::default()
     };
-    
+
     // Generate text
     let output = model.generate("Hello, world!", &config).await?;
     println!("Generated: {}", output);
-    
+
     Ok(())
 }
 ```
@@ -279,16 +279,16 @@ use anyhow::Result;
 async fn main() -> Result<()> {
     let model = BitNetModel::from_pretrained("microsoft/bitnet-b1_58-large").await?;
     let config = GenerationConfig::default();
-    
+
     let mut stream = model.generate_stream("Tell me a story", &config);
-    
+
     while let Some(result) = stream.next().await {
         match result {
             Ok(token) => print!("{}", token),
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    
+
     Ok(())
 }
 ```
@@ -479,7 +479,7 @@ class HybridBitNet:
         self.new_model = bitnet.BitNetModel.from_pretrained("model")
         self.use_rust_for_inference = True
         self.use_rust_for_streaming = False  # Migrate later
-    
+
     def generate(self, prompt, **kwargs):
         if self.use_rust_for_inference:
             return self.new_model.generate(prompt, **kwargs)

@@ -93,17 +93,17 @@ use bitnet::prelude::*;
 async fn main() -> Result<()> {
     // Load model with GPU backend
     let model = BitNetModel::from_file("model.gguf").await?;
-    
+
     let engine = InferenceEngine::builder()
         .model(model)
         .backend(Backend::Cuda { device_id: 0 })  // Use GPU 0
         .build()?;
-    
+
     let response = engine.generate(
-        "Explain GPU acceleration", 
+        "Explain GPU acceleration",
         GenerationConfig::default()
     ).await?;
-    
+
     println!("GPU Generated: {}", response.text);
     Ok(())
 }
@@ -151,7 +151,7 @@ let buffer = pool.allocate(1024 * 1024)?; // 1MB buffer
 let stats = pool.stats();
 println!("Current usage: {} MB", stats.current_usage / (1024 * 1024));
 println!("Peak usage: {} MB", stats.peak_usage / (1024 * 1024));
-println!("Cache hit rate: {:.1}%", 
+println!("Cache hit rate: {:.1}%",
     stats.cache_hits as f64 / (stats.cache_hits + stats.cache_misses) as f64 * 100.0);
 ```
 
@@ -228,7 +228,7 @@ Run comprehensive GPU validation tests:
 # Run numerical accuracy validation
 cargo test --no-default-features --features gpu gpu_numerical_accuracy
 
-# Run performance benchmarks  
+# Run performance benchmarks
 cargo test --no-default-features --features gpu gpu_performance_benchmark
 
 # Run memory leak detection
@@ -316,7 +316,7 @@ error: ptx compilation failed
 # Profile GPU kernels
 nsight-compute --target-processes all cargo run --example gpu_benchmark
 
-# Memory profiling  
+# Memory profiling
 nsight-systems --trace=cuda cargo test --no-default-features --features cpu gpu_memory_test
 ```
 
@@ -381,7 +381,7 @@ let memory_result = validator.check_memory_health()?;
 
 // Alert if memory efficiency is low
 if memory_result.efficiency_score < 0.7 {
-    log::warn!("GPU memory efficiency low: {:.1}%", 
+    log::warn!("GPU memory efficiency low: {:.1}%",
               memory_result.efficiency_score * 100.0);
 }
 
@@ -394,7 +394,7 @@ if memory_result.leaks_detected {
 ## Best Practices
 
 1. **Always validate GPU setup** before production deployment
-2. **Monitor GPU memory usage** to prevent OOM errors  
+2. **Monitor GPU memory usage** to prevent OOM errors
 3. **Use mixed precision** on supported hardware for better performance
 4. **Profile regularly** to identify bottlenecks
 5. **Test GPU failover** to CPU backend for reliability

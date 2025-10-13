@@ -10,7 +10,7 @@
   "author": "Steven Zimmerman",
   "files_changed": [
     "crates/bitnet-cli/Cargo.toml",
-    "crates/bitnet-cli/src/commands/inference.rs", 
+    "crates/bitnet-cli/src/commands/inference.rs",
     "crates/bitnet-cli/src/sampling.rs",
     "crates/bitnet-cli/tests/cli_smoke.rs"
   ],
@@ -18,7 +18,7 @@
   "validation_date": "2025-09-06T22:11:00Z",
   "quality_gates": {
     "format_check": "passed",
-    "clippy": "passed", 
+    "clippy": "passed",
     "tests": "passed",
     "build": "passed"
   },

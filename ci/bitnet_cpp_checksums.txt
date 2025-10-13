@@ -1,6 +1,6 @@
 # SHA256 checksums for BitNet C++ implementation
 # This file contains checksums for key files to verify integrity
-# 
+#
 # NOTE: Since we're using the 'main' branch of Microsoft BitNet repository,
 # checksums will change with each update. For production use, consider
 # pinning to a specific commit and updating checksums accordingly.

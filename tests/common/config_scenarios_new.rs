@@ -56,7 +56,7 @@ impl ScenarioConfigManager {
         self.register_debug_scenario();
         self.register_minimal_scenario();
     }
-    
+
     fn register_unit_scenario(&mut self) {
         #[cfg(feature = "fixtures")]
         let config = FastConfigBuilder::with_profile(SpeedProfile::Fast)
@@ -68,13 +68,13 @@ impl ScenarioConfigManager {
             .crossval(false)
             .formats(vec![ReportFormat::Json, ReportFormat::Html])
             .build();
-            
+
         #[cfg(not(feature = "fixtures"))]
         let config = create_unit_config();
-        
+
         self.scenario_overrides.insert(TestingScenario::Unit, config);
     }
-    
+
     fn register_integration_scenario(&mut self) {
         #[cfg(feature = "fixtures")]
         let config = FastConfigBuilder::with_profile(SpeedProfile::Balanced)
@@ -86,13 +86,13 @@ impl ScenarioConfigManager {
             .crossval(false)
             .formats(vec![ReportFormat::Html, ReportFormat::Json, ReportFormat::Junit])
             .build();
-            
+
         #[cfg(not(feature = "fixtures"))]
         let config = create_integration_config();
-        
+
         self.scenario_overrides.insert(TestingScenario::Integration, config);
     }
-    
+
     fn register_e2e_scenario(&mut self) {
         #[cfg(feature = "fixtures")]
         let mut config = FastConfigBuilder::with_profile(SpeedProfile::Thorough)
@@ -109,17 +109,17 @@ impl ScenarioConfigManager {
                 ReportFormat::Markdown,
             ])
             .build();
-            
+
         #[cfg(not(feature = "fixtures"))]
         let mut config = create_e2e_config();
-        
+
         // Override to include additional reporting
         config.reporting.include_logs = true;
         config.reporting.include_artifacts = true;
-        
+
         self.scenario_overrides.insert(TestingScenario::EndToEnd, config);
     }
-    
+
     fn register_performance_scenario(&mut self) {
         #[cfg(feature = "fixtures")]
         let config = FastConfigBuilder::with_profile(SpeedProfile::Thorough)
@@ -131,13 +131,13 @@ impl ScenarioConfigManager {
             .crossval(false)
             .formats(vec![ReportFormat::Html, ReportFormat::Json, ReportFormat::Markdown])
             .build();
-            
+
         #[cfg(not(feature = "fixtures"))]
         let config = create_perf_config();
-        
+
         self.scenario_overrides.insert(TestingScenario::Performance, config);
     }
-    
+
     fn register_crossval_scenario(&mut self) {
         let mut config = TestConfig::default();
         config.max_parallel_tests = 1;
@@ -154,10 +154,10 @@ impl ScenarioConfigManager {
             numerical_tolerance: 1e-6,
         };
         config.reporting.formats = vec![ReportFormat::Html, ReportFormat::Json, ReportFormat::Markdown];
-        
+
         self.scenario_overrides.insert(TestingScenario::CrossValidation, config);
     }
-    
+
     fn register_smoke_scenario(&mut self) {
         #[cfg(feature = "fixtures")]
         let config = FastConfigBuilder::with_profile(SpeedProfile::Lightning)
@@ -169,13 +169,13 @@ impl ScenarioConfigManager {
             .crossval(false)
             .formats(vec![ReportFormat::Json])
             .build();
-            
+
         #[cfg(not(feature = "fixtures"))]
         let config = create_smoke_config();
-        
+
         self.scenario_overrides.insert(TestingScenario::Smoke, config);
     }
-    
+
     fn register_dev_scenario(&mut self) {
         #[cfg(feature = "fixtures")]
         let config = FastConfigBuilder::with_profile(SpeedProfile::Fast)
@@ -187,7 +187,7 @@ impl ScenarioConfigManager {
             .crossval(false)
             .formats(vec![ReportFormat::Html])
             .build();
-            
+
         #[cfg(not(feature = "fixtures"))]
         let config = TestConfig {
             max_parallel_tests: num_cpus::get(),
@@ -202,10 +202,10 @@ impl ScenarioConfigManager {
             },
             ..Default::default()
         };
-        
+
         self.scenario_overrides.insert(TestingScenario::Development, config);
     }
-    
+
     fn register_debug_scenario(&mut self) {
         let mut config = TestConfig::default();
         config.max_parallel_tests = 1;
@@ -213,10 +213,10 @@ impl ScenarioConfigManager {
         config.log_level = "trace".to_string();
         config.reporting.include_artifacts = true;
         config.reporting.formats = vec![ReportFormat::Html, ReportFormat::Json];
-        
+
         self.scenario_overrides.insert(TestingScenario::Debug, config);
     }
-    
+
     fn register_minimal_scenario(&mut self) {
         #[cfg(feature = "fixtures")]
         let config = FastConfigBuilder::with_profile(SpeedProfile::Lightning)
@@ -228,7 +228,7 @@ impl ScenarioConfigManager {
             .crossval(false)
             .formats(vec![ReportFormat::Json])
             .build();
-            
+
         #[cfg(not(feature = "fixtures"))]
         let config = TestConfig {
             max_parallel_tests: 1,
@@ -243,9 +243,9 @@ impl ScenarioConfigManager {
             },
             ..Default::default()
         };
-        
+
         self.scenario_overrides.insert(TestingScenario::Minimal, config);
     }
-    
+
     // Copy rest of implementation from original file...
 }

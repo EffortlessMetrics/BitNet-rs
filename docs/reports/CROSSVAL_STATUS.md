@@ -24,7 +24,7 @@
 
 ### C++ Implementation (llama.cpp)
 - **Working**: ✅ Fully functional
-- **Performance**: 
+- **Performance**:
   - 1 thread: ~13-15 tokens/sec
   - 8 threads: ~17-21 tokens/sec
   - Model loads correctly, inference produces coherent text

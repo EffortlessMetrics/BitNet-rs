@@ -221,20 +221,20 @@ impl PerformanceVisualizer {
             padding: 0;
             box-sizing: border-box;
         }}
-        
+
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: #333;
             background-color: #f8f9fa;
         }}
-        
+
         .container {{
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }}
-        
+
         .dashboard-header {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -243,24 +243,24 @@ impl PerformanceVisualizer {
             margin-bottom: 2rem;
             text-align: center;
         }}
-        
+
         .dashboard-header h1 {{
             font-size: 2.5rem;
             margin-bottom: 0.5rem;
         }}
-        
+
         .dashboard-header .subtitle {{
             font-size: 1.1rem;
             opacity: 0.9;
         }}
-        
+
         .summary-cards {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
         }}
-        
+
         .summary-card {{
             background: white;
             padding: 1.5rem;
@@ -269,29 +269,29 @@ impl PerformanceVisualizer {
             text-align: center;
             transition: transform 0.2s, box-shadow 0.2s;
         }}
-        
+
         .summary-card:hover {{
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(0,0,0,0.15);
         }}
-        
+
         .summary-card h3 {{
             font-size: 2.2rem;
             margin-bottom: 0.5rem;
             font-weight: 700;
         }}
-        
+
         .summary-card.improvement h3 {{ color: {improvement_color}; }}
         .summary-card.regression h3 {{ color: {regression_color}; }}
         .summary-card.neutral h3 {{ color: {neutral_color}; }}
-        
+
         .summary-card .metric-label {{
             font-size: 0.9rem;
             color: #6c757d;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }}
-        
+
         .summary-card .metric-change {{
             font-size: 0.8rem;
             margin-top: 0.5rem;
@@ -299,17 +299,17 @@ impl PerformanceVisualizer {
             border-radius: 12px;
             font-weight: 500;
         }}
-        
+
         .metric-change.positive {{
             background: #d4edda;
             color: #155724;
         }}
-        
+
         .metric-change.negative {{
             background: #f8d7da;
             color: #721c24;
         }}
-        
+
         .chart-section {{
             background: white;
             padding: 2rem;
@@ -317,27 +317,27 @@ impl PerformanceVisualizer {
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }}
-        
+
         .chart-section h2 {{
             margin-bottom: 1.5rem;
             color: #2c3e50;
             border-bottom: 2px solid #ecf0f1;
             padding-bottom: 0.5rem;
         }}
-        
+
         .chart-container {{
             position: relative;
             height: {chart_height}px;
             margin: 1rem 0;
         }}
-        
+
         .chart-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 2rem;
             margin: 2rem 0;
         }}
-        
+
         .regression-alert {{
             background: #f8d7da;
             border: 1px solid #f5c6cb;
@@ -346,11 +346,11 @@ impl PerformanceVisualizer {
             border-radius: 8px;
             margin: 1rem 0;
         }}
-        
+
         .regression-alert h4 {{
             margin-bottom: 0.5rem;
         }}
-        
+
         .trend-indicator {{
             display: inline-flex;
             align-items: center;
@@ -360,27 +360,27 @@ impl PerformanceVisualizer {
             font-size: 0.8rem;
             font-weight: 500;
         }}
-        
+
         .trend-indicator.improving {{
             background: #d4edda;
             color: #155724;
         }}
-        
+
         .trend-indicator.degrading {{
             background: #f8d7da;
             color: #721c24;
         }}
-        
+
         .trend-indicator.stable {{
             background: #d1ecf1;
             color: #0c5460;
         }}
-        
+
         .trend-indicator.volatile {{
             background: #fff3cd;
             color: #856404;
         }}
-        
+
         .controls-panel {{
             background: white;
             padding: 1.5rem;
@@ -388,24 +388,24 @@ impl PerformanceVisualizer {
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
         }}
-        
+
         .controls-panel h3 {{
             margin-bottom: 1rem;
             color: #2c3e50;
         }}
-        
+
         .control-group {{
             display: flex;
             gap: 1rem;
             align-items: center;
             margin-bottom: 1rem;
         }}
-        
+
         .control-group label {{
             font-weight: 500;
             min-width: 120px;
         }}
-        
+
         .control-group select,
         .control-group input {{
             padding: 0.5rem;
@@ -413,7 +413,7 @@ impl PerformanceVisualizer {
             border-radius: 4px;
             font-size: 0.9rem;
         }}
-        
+
         .btn {{
             padding: 0.5rem 1rem;
             border: none;
@@ -423,56 +423,56 @@ impl PerformanceVisualizer {
             font-weight: 500;
             transition: background-color 0.2s;
         }}
-        
+
         .btn-primary {{
             background: #007bff;
             color: white;
         }}
-        
+
         .btn-primary:hover {{
             background: #0056b3;
         }}
-        
+
         .performance-table {{
             width: 100%;
             border-collapse: collapse;
             margin: 1rem 0;
         }}
-        
+
         .performance-table th,
         .performance-table td {{
             padding: 0.75rem;
             text-align: left;
             border-bottom: 1px solid #dee2e6;
         }}
-        
+
         .performance-table th {{
             background: #f8f9fa;
             font-weight: 600;
             color: #495057;
         }}
-        
+
         .performance-table tr:hover {{
             background: #f8f9fa;
         }}
-        
+
         @media (max-width: 768px) {{
             .container {{
                 padding: 10px;
             }}
-            
+
             .dashboard-header h1 {{
                 font-size: 2rem;
             }}
-            
+
             .summary-cards {{
                 grid-template-columns: repeat(2, 1fr);
             }}
-            
+
             .chart-grid {{
                 grid-template-columns: 1fr;
             }}
-            
+
             .control-group {{
                 flex-direction: column;
                 align-items: flex-start;
@@ -826,16 +826,16 @@ impl PerformanceVisualizer {
     <script>
         // Performance data
         const performanceData = {};
-        
+
         // Chart instances
         let charts = {{}};
-        
+
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {{
             initializeCharts();
             setupEventListeners();
         }});
-        
+
         function initializeCharts() {{
             // Throughput comparison chart
             const throughputCtx = document.getElementById('throughputChart').getContext('2d');
@@ -877,7 +877,7 @@ impl PerformanceVisualizer {
                     }}
                 }}
             }});
-            
+
             // Memory usage chart
             const memoryCtx = document.getElementById('memoryChart').getContext('2d');
             charts.memory = new Chart(memoryCtx, {{
@@ -918,7 +918,7 @@ impl PerformanceVisualizer {
                     }}
                 }}
             }});
-            
+
             // Duration comparison chart
             const durationCtx = document.getElementById('durationChart').getContext('2d');
             charts.duration = new Chart(durationCtx, {{
@@ -959,7 +959,7 @@ impl PerformanceVisualizer {
                     }}
                 }}
             }});
-            
+
             // Performance improvement chart
             const improvementCtx = document.getElementById('improvementChart').getContext('2d');
             charts.improvement = new Chart(improvementCtx, {{
@@ -1003,35 +1003,35 @@ impl PerformanceVisualizer {
                 }}
             }});
         }}
-        
+
         function setupEventListeners() {{
             document.getElementById('timeRange').addEventListener('change', updateTimeRange);
             document.getElementById('metricFilter').addEventListener('change', updateMetricFilter);
         }}
-        
+
         function updateTimeRange() {{
             const range = document.getElementById('timeRange').value;
             // Filter data based on time range and update charts
             console.log('Updating time range to:', range);
         }}
-        
+
         function updateMetricFilter() {{
             const filter = document.getElementById('metricFilter').value;
             // Filter metrics and update charts
             console.log('Updating metric filter to:', filter);
         }}
-        
+
         function updateRegressionThreshold() {{
             const threshold = document.getElementById('regressionThreshold').value;
             // Update regression detection threshold
             console.log('Updating regression threshold to:', threshold);
         }}
-        
+
         function refreshDashboard() {{
             // Refresh dashboard data
             location.reload();
         }}
-        
+
         function exportData() {{
             // Export performance data as JSON
             const dataStr = JSON.stringify(performanceData, null, 2);

@@ -76,7 +76,7 @@ impl CudaKernel {
 **Key Features Implemented**:
 - **MixedPrecisionKernel**: Device-aware mixed precision operations with automatic fallback
 - **Native CUDA Kernels**: Custom PTX kernels for FP16/BF16 operations with Tensor Core support
-- **Performance Monitoring**: Comprehensive metrics tracking for each precision mode  
+- **Performance Monitoring**: Comprehensive metrics tracking for each precision mode
 - **Memory Management**: GPU memory allocation tracking and leak detection
 - **Precision Conversion**: Efficient FP32↔FP16↔BF16 conversion utilities
 
@@ -351,7 +351,7 @@ let cfg = LaunchConfig {
 fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, usize) {
     let max_threads = self.device_info.max_threads_per_block as usize;
     let max_shared_mem = self.device_info.max_shared_memory_per_block;
-    
+
     // Find largest block size that fits in shared memory and thread limits
     let mut block_size = 16;
     while block_size <= 32 {
@@ -362,10 +362,10 @@ fn calculate_optimal_launch_params(&self, m: usize, n: usize) -> (usize, usize, 
         }
         block_size *= 2;
     }
-    
+
     let grid_x = m.div_ceil(block_size);
     let grid_y = n.div_ceil(block_size);
-    
+
     (block_size, grid_x, grid_y)
 }
 ```
@@ -404,9 +404,9 @@ pub fn allocate(&mut self, size: usize) -> Result<Vec<u8>> {
         self.stats.cache_hits += 1;
         return Ok(buffer);
     }
-    
+
     self.stats.cache_misses += 1;
-    
+
     // Allocate new buffer
     let buffer = vec![0u8; size];
     self.track_allocation(&buffer, size)?;
@@ -432,14 +432,14 @@ pub fn analyze_access_pattern(access_indices: &[usize]) -> AccessPattern {
     if access_indices.windows(2).all(|w| w[1] == w[0] + 1) {
         return AccessPattern::Sequential;
     }
-    
+
     // Detect strided access
     if let Some(&stride) = access_indices.windows(2).map(|w| w[1] - w[0]).next() {
         if access_indices.windows(2).all(|w| w[1] - w[0] == stride) {
             return AccessPattern::Strided { stride };
         }
     }
-    
+
     AccessPattern::Random
 }
 ```
@@ -461,18 +461,18 @@ pub struct MixedPrecisionKernel {
     ctx: Arc<CudaContext>,                 // CUDA context for operations
     stream: Arc<CudaStream>,               // CUDA stream for async operations
     module: Arc<CudaModule>,               // PTX module with kernels
-    
+
     // Precision-specific kernel functions
     matmul_fp16_function: Option<CudaFunction>,
     matmul_bf16_function: Option<CudaFunction>,
     tensor_core_function: Option<CudaFunction>,
-    
-    // Conversion kernel functions  
+
+    // Conversion kernel functions
     convert_fp32_to_fp16_function: Option<CudaFunction>,
     convert_fp32_to_bf16_function: Option<CudaFunction>,
     convert_fp16_to_fp32_function: Option<CudaFunction>,
     convert_bf16_to_fp32_function: Option<CudaFunction>,
-    
+
     // Performance and resource tracking
     metrics: MixedPrecisionMetrics,
     memory_tracker: MemoryTracker,
@@ -502,7 +502,7 @@ pub fn detect_best_precision(device_info: &CudaDeviceInfo) -> PrecisionMode {
     }
     // Use FP16 for Pascal and newer that support it
     else if device_info.supports_fp16 {
-        PrecisionMode::FP16  
+        PrecisionMode::FP16
     }
     // Fallback to FP32 for older architectures
     else {
@@ -531,7 +531,7 @@ extern "C" __global__ void bitnet_matmul_tensor_core(
     #endif
 }
 
-// BF16 matrix multiplication (CC 8.0+)  
+// BF16 matrix multiplication (CC 8.0+)
 extern "C" __global__ void bitnet_matmul_bf16(
     const __nv_bfloat16* A, const __nv_bfloat16* B, __nv_bfloat16* C,
     int M, int N, int K
@@ -549,14 +549,14 @@ impl MixedPrecisionKernel {
         // Compile mixed precision PTX kernels
         let ptx = compile_ptx(include_str!("kernels/mixed_precision_kernels.cu"))?;
         let module = ctx.load_module(ptx)?;
-        
+
         // Load kernels based on device capabilities
         let matmul_fp16_function = if device_info.supports_fp16 {
             module.load_function("bitnet_matmul_fp16").ok()
         } else {
             None
         };
-        
+
         let tensor_core_function = if device_info.compute_capability.0 >= 7 {
             module.load_function("bitnet_matmul_tensor_core").ok()
         } else {
@@ -609,7 +609,7 @@ pub struct MemoryTracker {
 **Automatic Fallback Strategy**:
 ```rust
 impl MixedPrecisionKernel {
-    pub fn matmul_auto(&mut self, a: &[f32], b: &[f32], c: &mut [f32], 
+    pub fn matmul_auto(&mut self, a: &[f32], b: &[f32], c: &mut [f32],
                        m: usize, n: usize, k: usize) -> Result<()> {
         match self.effective_precision() {
             PrecisionMode::FP32 => self.matmul_fp32(a, b, c, m, n, k),
@@ -625,7 +625,7 @@ impl MixedPrecisionKernel {
 
 **Comprehensive Error Scenarios**:
 - **Unsupported Hardware**: Automatic fallback to FP32
-- **PTX Compilation Failure**: Clear error messages with troubleshooting guidance  
+- **PTX Compilation Failure**: Clear error messages with troubleshooting guidance
 - **Memory Allocation Failure**: Resource cleanup and error propagation
 - **Kernel Execution Failure**: Device reset and CPU fallback
 - **Numerical Accuracy Issues**: Validation against reference implementation
@@ -745,15 +745,15 @@ pub fn batch_matmul_i2s(&self, batches: &mut [BatchMatmulParams<'_>]) -> Result<
     if batches.is_empty() {
         return Ok(());
     }
-    
+
     // Sort by size for better memory locality
     batches.sort_by_key(|(_, _, _, m, n, k)| (*m, *n, *k));
-    
+
     // Process batches to maximize GPU utilization
     for (a, b, c, m, n, k) in batches.iter_mut() {
         self.launch_matmul(a, b, c, *m, *n, *k)?;
     }
-    
+
     Ok(())
 }
 ```

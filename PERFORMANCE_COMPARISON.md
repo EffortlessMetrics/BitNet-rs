@@ -27,7 +27,7 @@ BitNet.rs has proven design advantages:
 #### ❌ **Unverified: Runtime Performance Claims**
 The following claims require proper benchmarking:
 - Inference throughput comparisons
-- Latency measurements  
+- Latency measurements
 - Memory usage during inference
 - Model loading times
 

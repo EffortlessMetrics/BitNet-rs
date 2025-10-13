@@ -15,4 +15,3 @@ through a foreign function interface. To enable this integration:
 
 When these prerequisites are not met, the test framework falls back to a
 lightweight stub so tests can still compile and run without the C++ library.
-

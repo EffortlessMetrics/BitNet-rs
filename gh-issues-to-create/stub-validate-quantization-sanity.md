@@ -58,7 +58,7 @@ The `validate_quantization_sanity` function should be implemented to perform act
             eprintln!("Model uses quantization type: {:?}", q_type);
 
             // Example: Pick a small quantized tensor (this would need actual model access)
-            // let test_tensor = self.model.get_some_quantized_tensor()?; 
+            // let test_tensor = self.model.get_some_quantized_tensor()?;
 
             // Simulate dequantization for now
             let cpu_dequant_result = vec![0.1, 0.2, 0.3]; // Simulate CPU dequantization

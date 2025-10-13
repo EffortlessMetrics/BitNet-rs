@@ -329,7 +329,7 @@ impl MemoryLayoutOptimizer {
     ///     AccessPattern::Sequential
     /// );
     ///
-    /// // Forward strided pattern  
+    /// // Forward strided pattern
     /// let strided = vec![0, 2, 4, 6];
     /// if let AccessPattern::Strided { stride } =
     ///     MemoryLayoutOptimizer::analyze_access_pattern(&strided) {

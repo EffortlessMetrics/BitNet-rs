@@ -122,13 +122,13 @@ The following table lists all dependencies and their licenses:
 if (Test-Path "licenses.json") {
     $licenses = Get-Content "licenses.json" | ConvertFrom-Json
     $sortedLicenses = $licenses | Sort-Object name
-    
+
     foreach ($dep in $sortedLicenses) {
         $name = $dep.name
         $version = $dep.version
         $license = if ($dep.license) { $dep.license } else { "Unknown" }
         $repository = if ($dep.repository) { $dep.repository } else { "N/A" }
-        
+
         $content += "| $name | $version | $license | $repository |`n"
     }
 }

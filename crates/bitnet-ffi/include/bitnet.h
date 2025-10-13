@@ -1,11 +1,11 @@
 /**
  * @file bitnet.h
  * @brief BitNet C API - Drop-in replacement for BitNet C++ bindings
- * 
+ *
  * This header provides a comprehensive C API that serves as a drop-in replacement
  * for the existing BitNet C++ bindings. It maintains exact signature compatibility
  * while providing enhanced error handling, thread safety, and performance monitoring.
- * 
+ *
  * @version 0.1.0
  * @author BitNet Contributors
  */
@@ -163,19 +163,19 @@ const char* bitnet_version(void);
 
 /**
  * @brief Initialize the BitNet library
- * 
+ *
  * Must be called before any other BitNet functions. Thread-safe and can be
  * called multiple times safely.
- * 
+ *
  * @return BITNET_SUCCESS on success, error code on failure
  */
 int bitnet_init(void);
 
 /**
  * @brief Cleanup and shutdown the BitNet library
- * 
+ *
  * Should be called when the library is no longer needed. Thread-safe.
- * 
+ *
  * @return BITNET_SUCCESS on success, error code on failure
  */
 int bitnet_cleanup(void);
@@ -186,7 +186,7 @@ int bitnet_cleanup(void);
 
 /**
  * @brief Load a model from file (exact signature compatibility)
- * 
+ *
  * @param path Null-terminated string containing the path to the model file
  * @return Model ID (>= 0) on success, negative error code on failure
  */
@@ -194,7 +194,7 @@ int bitnet_model_load(const char* path);
 
 /**
  * @brief Load a model with configuration
- * 
+ *
  * @param path Null-terminated string containing the path to the model file
  * @param config Pointer to model configuration structure
  * @return Model ID (>= 0) on success, negative error code on failure
@@ -203,7 +203,7 @@ int bitnet_model_load_with_config(const char* path, const bitnet_config_t* confi
 
 /**
  * @brief Free a loaded model (exact signature compatibility)
- * 
+ *
  * @param model_id Model ID returned by bitnet_model_load()
  * @return BITNET_SUCCESS on success, error code on failure
  */
@@ -211,7 +211,7 @@ int bitnet_model_free(int model_id);
 
 /**
  * @brief Check if a model is loaded
- * 
+ *
  * @param model_id Model ID to check
  * @return 1 if loaded, 0 if not loaded, negative error code on failure
  */
@@ -219,7 +219,7 @@ int bitnet_model_is_loaded(int model_id);
 
 /**
  * @brief Get model information
- * 
+ *
  * @param model_id Model ID
  * @param info Pointer to structure to fill with model information
  * @return BITNET_SUCCESS on success, error code on failure
@@ -232,7 +232,7 @@ int bitnet_model_get_info(int model_id, bitnet_model_t* info);
 
 /**
  * @brief Run inference (exact signature compatibility)
- * 
+ *
  * @param model_id Model ID returned by bitnet_model_load()
  * @param prompt Null-terminated input prompt string
  * @param output Buffer to store generated text (null-terminated)
@@ -244,7 +244,7 @@ int bitnet_inference(int model_id, const char* prompt, char* output, size_t max_
 
 /**
  * @brief Run inference with configuration
- * 
+ *
  * @param model_id Model ID returned by bitnet_model_load()
  * @param prompt Null-terminated input prompt string
  * @param config Pointer to inference configuration structure
@@ -253,7 +253,7 @@ int bitnet_inference(int model_id, const char* prompt, char* output, size_t max_
  * @return Number of characters written (excluding null terminator) on success,
  *         negative error code on failure
  */
-int bitnet_inference_with_config(int model_id, const char* prompt, 
+int bitnet_inference_with_config(int model_id, const char* prompt,
                                  const bitnet_inference_config_t* config,
                                  char* output, size_t max_len);
 
@@ -263,7 +263,7 @@ int bitnet_inference_with_config(int model_id, const char* prompt,
 
 /**
  * @brief Get the last error message
- * 
+ *
  * @return Pointer to null-terminated error message, or NULL if no error occurred
  */
 const char* bitnet_get_last_error(void);
@@ -279,7 +279,7 @@ void bitnet_clear_last_error(void);
 
 /**
  * @brief Set the number of threads for CPU inference
- * 
+ *
  * @param num_threads Number of threads to use (0 for auto-detection)
  * @return BITNET_SUCCESS on success, error code on failure
  */
@@ -287,14 +287,14 @@ int bitnet_set_num_threads(uint32_t num_threads);
 
 /**
  * @brief Get the current number of threads
- * 
+ *
  * @return Number of threads currently in use
  */
 uint32_t bitnet_get_num_threads(void);
 
 /**
  * @brief Enable or disable GPU acceleration
- * 
+ *
  * @param enable 1 to enable GPU, 0 to disable
  * @return BITNET_SUCCESS on success, error code on failure
  */
@@ -302,7 +302,7 @@ int bitnet_set_gpu_enabled(int enable);
 
 /**
  * @brief Check if GPU acceleration is available
- * 
+ *
  * @return 1 if GPU is available, 0 if not available
  */
 int bitnet_is_gpu_available(void);
@@ -313,7 +313,7 @@ int bitnet_is_gpu_available(void);
 
 /**
  * @brief Get performance metrics for a model
- * 
+ *
  * @param model_id Model ID
  * @param metrics Pointer to structure to fill with performance metrics
  * @return BITNET_SUCCESS on success, error code on failure
@@ -322,7 +322,7 @@ int bitnet_get_performance_metrics(int model_id, bitnet_performance_metrics_t* m
 
 /**
  * @brief Reset performance metrics for a model
- * 
+ *
  * @param model_id Model ID
  * @return BITNET_SUCCESS on success, error code on failure
  */
@@ -334,7 +334,7 @@ int bitnet_reset_performance_metrics(int model_id);
 
 /**
  * @brief Start batch inference for multiple prompts
- * 
+ *
  * @param model_id Model ID
  * @param prompts Array of null-terminated prompt strings
  * @param num_prompts Number of prompts in the array
@@ -349,7 +349,7 @@ int bitnet_batch_inference(int model_id, const char** prompts, size_t num_prompt
 
 /**
  * @brief Start streaming inference
- * 
+ *
  * @param model_id Model ID
  * @param prompt Input prompt
  * @param config Inference configuration
@@ -362,7 +362,7 @@ int bitnet_start_streaming(int model_id, const char* prompt,
 
 /**
  * @brief Stop streaming inference
- * 
+ *
  * @param stream_id Stream ID returned by bitnet_start_streaming()
  * @return BITNET_SUCCESS on success, error code on failure
  */
@@ -370,7 +370,7 @@ int bitnet_stop_streaming(int stream_id);
 
 /**
  * @brief Get next token from stream
- * 
+ *
  * @param stream_id Stream ID
  * @param token Buffer to store the token
  * @param max_len Maximum length of token buffer
@@ -384,7 +384,7 @@ int bitnet_stream_next_token(int stream_id, char* token, size_t max_len);
 
 /**
  * @brief Set memory limit for the library
- * 
+ *
  * @param limit_bytes Memory limit in bytes (0 for no limit)
  * @return BITNET_SUCCESS on success, error code on failure
  */
@@ -392,14 +392,14 @@ int bitnet_set_memory_limit(uint64_t limit_bytes);
 
 /**
  * @brief Get current memory usage
- * 
+ *
  * @return Current memory usage in bytes
  */
 uint64_t bitnet_get_memory_usage(void);
 
 /**
  * @brief Perform garbage collection
- * 
+ *
  * @return BITNET_SUCCESS on success, error code on failure
  */
 int bitnet_garbage_collect(void);

@@ -142,7 +142,7 @@ impl MemoryPool {
     /// Deallocate memory back to the pool
     pub fn deallocate(&mut self, block: MemoryBlock) {
         self.used_memory = self.used_memory.saturating_sub(block.size);
-        
+
         let free_block = MemoryBlock {
             offset: block.offset,
             size: block.size,
@@ -157,13 +157,13 @@ impl MemoryPool {
     /// Merge adjacent free blocks
     fn merge_adjacent_blocks(&mut self) {
         self.available_blocks.sort_by_key(|block| block.offset);
-        
+
         let mut i = 0;
         while i < self.available_blocks.len().saturating_sub(1) {
             let current = &self.available_blocks[i];
             let next = &self.available_blocks[i + 1];
-            
-            if !current.in_use && !next.in_use && 
+
+            if !current.in_use && !next.in_use &&
                current.offset + current.size == next.offset {
                 // Merge the blocks
                 let merged_block = MemoryBlock {
@@ -171,7 +171,7 @@ impl MemoryPool {
                     size: current.size + next.size,
                     in_use: false,
                 };
-                
+
                 self.available_blocks[i] = merged_block;
                 self.available_blocks.remove(i + 1);
             } else {
@@ -194,7 +194,7 @@ impl MemoryPool {
         let free_blocks = self.available_blocks.iter()
             .filter(|block| !block.in_use)
             .count();
-        
+
         if free_blocks <= 1 {
             0.0
         } else {
@@ -220,7 +220,7 @@ impl KVCacheManager {
     /// Get or create a KV cache for a session
     pub async fn get_or_create_cache(&self, session_id: &str, context_length: usize) -> Result<Option<KVCacheEntry>> {
         let mut stats = self.statistics.write().await;
-        
+
         // Check if cache exists
         {
             let cache = self.cache.read().await;
@@ -285,7 +285,7 @@ impl KVCacheManager {
         } else {
             // No memory available - try to evict some entries
             self.evict_lru_entries(total_size).await?;
-            
+
             // Try allocation again
             let memory_block = {
                 let mut pool = self.memory_pool.write().await;
@@ -304,12 +304,12 @@ impl KVCacheManager {
     /// Update cache with new tokens
     pub async fn update_cache(&self, session_id: &str, key_data: &[f32], value_data: &[f32]) -> Result<()> {
         let mut cache = self.cache.write().await;
-        
+
         if let Some(entry) = cache.get_mut(session_id) {
             // Update the cache data (simplified - in reality would append new tokens)
             entry.last_accessed = Instant::now();
             entry.token_count += 1;
-            
+
             // In a real implementation, we would append the new key/value data
             // For now, we'll just simulate the update
         }
@@ -320,18 +320,18 @@ impl KVCacheManager {
     /// Evict least recently used entries to free memory
     async fn evict_lru_entries(&self, required_size: usize) -> Result<()> {
         let mut entries_to_evict = Vec::new();
-        
+
         // Find LRU entries
         {
             let cache = self.cache.read().await;
             let mut entries: Vec<_> = cache.values().collect();
             entries.sort_by_key(|entry| entry.last_accessed);
-            
+
             let mut freed_size = 0;
             for entry in entries {
                 entries_to_evict.push(entry.session_id.clone());
                 freed_size += entry.size_bytes;
-                
+
                 if freed_size >= required_size {
                     break;
                 }
@@ -360,7 +360,7 @@ impl KVCacheManager {
                 size: entry.size_bytes,
                 in_use: true,
             };
-            
+
             {
                 let mut pool = self.memory_pool.write().await;
                 pool.deallocate(memory_block);
@@ -371,7 +371,7 @@ impl KVCacheManager {
                 let mut stats = self.statistics.write().await;
                 stats.total_sessions = stats.total_sessions.saturating_sub(1);
                 stats.evictions += 1;
-                
+
                 let pool = self.memory_pool.read().await;
                 stats.used_memory_mb = pool.used_memory as f64 / (1024.0 * 1024.0);
                 stats.memory_utilization = pool.utilization();
@@ -389,10 +389,10 @@ impl KVCacheManager {
         let statistics = self.statistics.clone();
 
         let mut interval = tokio::time::interval(Duration::from_secs(60)); // Optimize every minute
-        
+
         loop {
             interval.tick().await;
-            
+
             // Clean up expired sessions
             let now = Instant::now();
             let expired_sessions: Vec<String> = {
@@ -411,9 +411,9 @@ impl KVCacheManager {
                         size: entry.size_bytes,
                         in_use: true,
                     };
-                    
+
                     memory_pool.write().await.deallocate(memory_block);
-                    
+
                     // Update statistics
                     let mut stats = statistics.write().await;
                     stats.total_sessions = stats.total_sessions.saturating_sub(1);
@@ -428,7 +428,7 @@ impl KVCacheManager {
                 stats.used_memory_mb = pool.used_memory as f64 / (1024.0 * 1024.0);
                 stats.memory_utilization = pool.utilization();
                 stats.memory_pool_efficiency = 1.0 - pool.fragmentation();
-                
+
                 // Calculate average session length
                 let cache_read = cache.read().await;
                 if !cache_read.is_empty() {
@@ -447,7 +447,7 @@ impl KVCacheManager {
     /// Shutdown the KV cache manager
     pub async fn shutdown(&self) -> Result<()> {
         println!("Shutting down KV cache manager");
-        
+
         // Clear all cache entries
         {
             let mut cache = self.cache.write().await;

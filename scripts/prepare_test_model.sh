@@ -57,21 +57,21 @@ echo -e "\nChecking for cached models in: $HF_CACHE"
 # Try to locate models from cache
 if [[ -f "$HF_CACHE/model.safetensors" && -f "$HF_CACHE/tokenizer.json" ]]; then
     echo -e "${GREEN}✓${NC} Found cached SafeTensors model"
-    
+
     mkdir -p "$MODEL_DIR"
-    
+
     # Copy tokenizer
     if [[ ! -f "$MODEL_DIR/tokenizer.json" ]]; then
         cp "$HF_CACHE/tokenizer.json" "$MODEL_DIR/tokenizer.json"
         echo -e "${GREEN}✓${NC} Copied tokenizer to $MODEL_DIR/"
     fi
-    
+
     # Copy or link SafeTensors
     if [[ ! -f "$MODEL_DIR/model.safetensors" ]]; then
         ln -sf "$HF_CACHE/model.safetensors" "$MODEL_DIR/model.safetensors"
         echo -e "${GREEN}✓${NC} Linked SafeTensors model"
     fi
-    
+
     # Convert to GGUF if converter exists and GGUF is missing
     if [[ -z "$GGUF" ]]; then
         if [[ -x scripts/convert_safetensors_to_gguf_validated.py ]]; then
@@ -86,16 +86,16 @@ if [[ -f "$HF_CACHE/model.safetensors" && -f "$HF_CACHE/tokenizer.json" ]]; then
             echo "  To enable conversion, ensure scripts/convert_safetensors_to_gguf_validated.py exists"
         fi
     fi
-    
+
     echo -e "\n${GREEN}✓${NC} Test models prepared in: $MODEL_DIR"
     ls -la "$MODEL_DIR"
-    
+
 elif [[ -n "${BITNET_GGUF:-}" && -f "$BITNET_GGUF" ]]; then
     # Use environment-provided GGUF
     echo -e "${GREEN}✓${NC} Using BITNET_GGUF: $BITNET_GGUF"
     mkdir -p "$MODEL_DIR"
     ln -sf "$BITNET_GGUF" "$MODEL_DIR/model.gguf"
-    
+
 else
     echo -e "\n${RED}No models found!${NC}"
     echo ""

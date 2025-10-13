@@ -74,17 +74,17 @@ High-performance BitNet inference library with Python bindings.
 
 Example usage:
     import bitnet_py as bitnet
-    
+
     # Load a model
     model = bitnet.load_model("path/to/model.gguf")
-    
+
     # Create inference engine
     engine = bitnet.InferenceEngine(model, device="cpu")
-    
+
     # Generate text
     result = engine.generate("Hello, world!", max_tokens=100)
     print(result)
-    
+
     # Streaming generation
     for token in engine.generate_stream("Once upon a time"):
         print(token, end="", flush=True)

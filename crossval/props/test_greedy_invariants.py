@@ -27,25 +27,25 @@ def test_greedy_argmax_invariant(prompt, seed):
     """
     if not MODEL_PATH or not TOKENIZER:
         return  # Skip if not configured
-    
+
     runner = BitNetRunner(BITNET_BIN, MODEL_PATH, TOKENIZER, threads=1)
-    
+
     # Run with greedy and capture logits
     result = runner.run(
-        prompt, 
-        max_new_tokens=32, 
-        seed=seed, 
+        prompt,
+        max_new_tokens=32,
+        seed=seed,
         greedy=True,
-        dump_logits_steps=32, 
+        dump_logits_steps=32,
         topk=1  # Only need the top token
     )
-    
+
     # Check that chosen_id == argmax for each step
     violations = []
     for step in result.meta.get("logits_dump", []):
         topk = step.get("topk", [])
         chosen = step.get("chosen_id")
-        
+
         if topk and chosen is not None:
             argmax_id = topk[0][0] if isinstance(topk[0], tuple) else topk[0]
             if chosen != argmax_id:
@@ -54,10 +54,10 @@ def test_greedy_argmax_invariant(prompt, seed):
                     "chosen": chosen,
                     "argmax": argmax_id
                 })
-    
+
     if violations:
         note(f"Greedy argmax violations: {violations}")
-    
+
     assert not violations, (
         f"Greedy decoding did not select argmax at {len(violations)} steps\n"
         f"First violation: {violations[0] if violations else None}"
@@ -76,9 +76,9 @@ def test_teacher_forcing_consistency(prompt, seed):
     """
     if not MODEL_PATH or not TOKENIZER:
         return  # Skip if not configured
-    
+
     runner = BitNetRunner(BITNET_BIN, MODEL_PATH, TOKENIZER, threads=1)
-    
+
     # 1) Run greedy to get a path
     greedy = runner.run(
         prompt,
@@ -88,14 +88,14 @@ def test_teacher_forcing_consistency(prompt, seed):
         dump_logits_steps=16,
         topk=1
     )
-    
+
     # Extract the full token path (need to tokenize prompt + chosen ids)
     chosen = [s["chosen_id"] for s in greedy.meta.get("logits_dump", [])[:16]
               if s.get("chosen_id") is not None]
-    
+
     if len(chosen) < 2:
         assume(False)  # Skip trivial cases
-    
+
     # Tokenize prompt and prepend BOS if defined
     tok = runner.tokenizer()
     bos = tok.bos_token_id
@@ -104,7 +104,7 @@ def test_teacher_forcing_consistency(prompt, seed):
 
     # 2) Teacher-force on the same path
     tf_result = runner.run_teacher_force(full_path, steps=len(full_path)-1, topk=1)
-    
+
     # 3) Check that argmax at each step matches the original chosen_id
     mismatches = []
     for i, tf_step in enumerate(tf_result):
@@ -118,10 +118,10 @@ def test_teacher_forcing_consistency(prompt, seed):
                         "expected": expected,
                         "argmax": argmax
                     })
-    
+
     if mismatches:
         note(f"Teacher-forcing mismatches: {mismatches}")
-    
+
     assert not mismatches, (
         f"Teacher-forcing did not reproduce greedy path\n"
         f"{len(mismatches)} mismatches found\n"

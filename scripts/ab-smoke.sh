@@ -58,7 +58,7 @@ FAILED=0
 for prompt in "${PROMPTS[@]}"; do
     echo "Testing prompt: \"$prompt\""
     echo "----------------------------------------"
-    
+
     # Run Rust implementation with strict mode
     echo -n "  Running BitNet.rs... "
     if $RS_BIN run \
@@ -75,8 +75,8 @@ for prompt in "${PROMPTS[@]}"; do
         ((FAILED++))
         continue
     fi
-    
-    # Run C++ implementation  
+
+    # Run C++ implementation
     echo -n "  Running bitnet.cpp... "
     if $CPP_BIN \
         -m "$MODEL" \
@@ -93,7 +93,7 @@ for prompt in "${PROMPTS[@]}"; do
         ((FAILED++))
         continue
     fi
-    
+
     # Extract token IDs from Rust output
     if [ -f /tmp/rs_output.json ]; then
         RS_IDS=$(jq -c '.ids' /tmp/rs_output.json 2>/dev/null || echo "[]")
@@ -102,10 +102,10 @@ for prompt in "${PROMPTS[@]}"; do
         RS_IDS="[]"
         RS_TEXT=""
     fi
-    
+
     # Get C++ text output
     CPP_TEXT=$(cat /tmp/cpp_output.txt | tr -d '\n')
-    
+
     # Tokenize C++ output to get IDs
     if [ -n "$TOK" ]; then
         echo -n "  Tokenizing C++ output... "
@@ -119,17 +119,17 @@ for prompt in "${PROMPTS[@]}"; do
     else
         CPP_IDS="[]"
     fi
-    
+
     # Compare outputs
     echo "  Results:"
     echo "    Rust text:  \"${RS_TEXT:0:80}...\""
     echo "    C++ text:   \"${CPP_TEXT:0:80}...\""
-    
+
     # Compare token IDs if available
     if [ -n "$TOK" ] && [ "$CPP_IDS" != "[]" ]; then
         echo "    Rust IDs:   $RS_IDS"
         echo "    C++ IDs:    $CPP_IDS"
-        
+
         if [ "$RS_IDS" = "$CPP_IDS" ]; then
             echo "  ✅ PASS: Token IDs match exactly"
             ((PASSED++))

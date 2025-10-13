@@ -105,7 +105,7 @@ We guarantee to load:
 BitNet.rs includes a comprehensive FFI bridge for gradual migration from C++ implementations:
 
 - **Quantization Bridge**: Complete support for I2S, TL1, and TL2 quantization via C++ kernels
-- **Performance Validation**: Built-in tools for comparing FFI vs Rust quantization accuracy and performance  
+- **Performance Validation**: Built-in tools for comparing FFI vs Rust quantization accuracy and performance
 - **Migration Path**: Systematic approach enabling kernel-by-kernel replacement without functionality loss
 - **Safety Guarantees**: Safe Rust wrappers with proper error handling and memory management
 - **Feature Gated**: Optional `--features ffi` flag with graceful fallback when unavailable

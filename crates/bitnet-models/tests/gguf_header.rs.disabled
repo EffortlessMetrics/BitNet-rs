@@ -5,64 +5,64 @@ use bitnet_models::formats::gguf::GgufReader;
 /// Helper to create a minimal GGUF v3 standard header with alignment and data_offset
 fn create_v3_standard_header() -> Vec<u8> {
     let mut data = Vec::new();
-    
+
     // Magic
     data.extend_from_slice(b"GGUF");
-    
+
     // Version (u32 LE)
     data.extend_from_slice(&3u32.to_le_bytes());
-    
+
     // Tensor count (u64 LE)
     data.extend_from_slice(&10u64.to_le_bytes());
-    
+
     // Metadata KV count (u64 LE)
     data.extend_from_slice(&5u64.to_le_bytes());
-    
+
     // Alignment (u32 LE) - v3 specific
     data.extend_from_slice(&32u32.to_le_bytes());
-    
+
     // Data offset (u64 LE) - v3 specific
     data.extend_from_slice(&1024u64.to_le_bytes());
-    
+
     data
 }
 
 /// Helper to create a GGUF v3 early variant header (missing alignment/data_offset)
 fn create_v3_early_variant_header() -> Vec<u8> {
     let mut data = Vec::new();
-    
+
     // Magic
     data.extend_from_slice(b"GGUF");
-    
+
     // Version (u32 LE)
     data.extend_from_slice(&3u32.to_le_bytes());
-    
+
     // Tensor count (u64 LE)
     data.extend_from_slice(&10u64.to_le_bytes());
-    
+
     // Metadata KV count (u64 LE)
     data.extend_from_slice(&5u64.to_le_bytes());
-    
+
     // First KV pair starts here (no alignment/data_offset)
     // String length for key "general.name" (u64 LE)
     data.extend_from_slice(&12u64.to_le_bytes());
-    
+
     // Key string
     data.extend_from_slice(b"general.name");
-    
+
     // Add some padding to make it look more realistic
     data.extend_from_slice(&[0u8; 100]);
-    
+
     data
 }
 
 #[test]
 fn parse_v3_standard_header() {
     let mut data = create_v3_standard_header();
-    
+
     // Add empty metadata and tensor sections to make it valid
     // (GgufReader validates the entire structure)
-    
+
     // We can't easily test just the header with GgufReader,
     // but we can verify it loads without crashing
     match GgufReader::new(&data) {
@@ -83,7 +83,7 @@ fn parse_v3_standard_header() {
 #[test]
 fn parse_v3_early_variant_header() {
     let data = create_v3_early_variant_header();
-    
+
     // The early variant detection happens during header parsing
     // We can verify by checking the warning is logged
     // For now, just verify it doesn't crash
@@ -103,22 +103,22 @@ fn parse_v3_early_variant_header() {
 #[test]
 fn parse_v2_header() {
     let mut data = Vec::new();
-    
+
     // Magic
     data.extend_from_slice(b"GGUF");
-    
+
     // Version (u32 LE)
     data.extend_from_slice(&2u32.to_le_bytes());
-    
+
     // Tensor count (u64 LE)
     data.extend_from_slice(&8u64.to_le_bytes());
-    
+
     // Metadata KV count (u64 LE)
     data.extend_from_slice(&3u64.to_le_bytes());
-    
+
     // Add some dummy data to prevent immediate EOF
     data.extend_from_slice(&[0u8; 100]);
-    
+
     match GgufReader::new(&data) {
         Ok(reader) => {
             assert_eq!(reader.version(), 2, "Version should be 2");
@@ -137,12 +137,12 @@ fn reject_invalid_magic() {
     data.extend_from_slice(b"NOPE");
     data.extend_from_slice(&3u32.to_le_bytes());
     data.extend_from_slice(&[0u8; 100]);
-    
+
     let result = GgufReader::new(&data);
-    
+
     assert!(result.is_err(), "Should reject invalid magic");
     let err_msg = result.unwrap_err().to_string();
-    assert!(err_msg.contains("GGUF") || err_msg.contains("magic"), 
+    assert!(err_msg.contains("GGUF") || err_msg.contains("magic"),
             "Error should mention GGUF or magic: {}", err_msg);
 }
 

@@ -36,10 +36,10 @@ else
     echo "  Model: $MODEL_PATH"
     echo "  Tokenizer: ${TOKENIZER:-<will use embedded>}"
     echo "  HF Model: ${HF_MODEL_ID:-<not set>}"
-    
+
     # Create artifacts directory
     mkdir -p artifacts
-    
+
     # Run validation with reasonable defaults for quick testing
     PROP_EXAMPLES="${PROP_EXAMPLES:-3}" \
     TAU_STEPS="${TAU_STEPS:-8}" \

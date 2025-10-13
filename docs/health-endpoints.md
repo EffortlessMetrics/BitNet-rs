@@ -7,7 +7,7 @@ The BitNet server provides health check endpoints for monitoring and load balanc
 ### `/health`
 Returns overall system health status.
 
-### `/health/live`  
+### `/health/live`
 Basic liveness check - returns 200 OK if the server is running.
 
 ### `/health/ready`
@@ -68,7 +68,7 @@ curl -i http://localhost:3000/health/ready
   "status": "healthy",
   "checks": {
     "memory": "healthy",
-    "model": "healthy", 
+    "model": "healthy",
     "gpu": "degraded"
   }
 }

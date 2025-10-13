@@ -28,19 +28,19 @@ jobs:
     name: GPU Tests
     runs-on: [self-hosted, linux, gpu]
     timeout-minutes: 30
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.89.0
           components: rustfmt, clippy
-      
+
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.5
-      
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -52,7 +52,7 @@ jobs:
           restore-keys: |
             cargo-${{ runner.os }}-gpu-
             cargo-${{ runner.os }}-
-      
+
       - name: GPU Preflight
         run: |
           cargo xtask gpu-preflight
@@ -60,10 +60,10 @@ jobs:
           nvidia-smi --query-gpu=driver_version --format=csv,noheader || true
           nvcc --version || true
         continue-on-error: true
-      
+
       - name: Build (GPU)
         run: cargo build --locked --workspace --no-default-features --features gpu
-      
+
       - name: GPU Smoke Test
         run: |
           cargo xtask gpu-smoke
@@ -71,15 +71,15 @@ jobs:
             --no-default-features --features cuda -- --nocapture
         env:
           BITNET_CI_SKIP_GPU: ${{ env.CI_SKIP_GPU }}
-      
+
       - name: Run GPU Tests
         run: cargo test --locked --workspace --no-default-features --features gpu
         if: success()
-      
+
       - name: GPU Parity Tests (Optional)
         run: cargo xtask gpu-parity || true
         continue-on-error: true
-      
+
       - name: Upload GPU Diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

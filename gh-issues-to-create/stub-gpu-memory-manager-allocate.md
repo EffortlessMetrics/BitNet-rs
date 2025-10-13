@@ -15,7 +15,7 @@ The `allocate_from_pool` and `allocate_direct` functions in `GpuMemoryManager` i
         self.allocated_memory += size;
         Ok(self.allocated_memory - size)
     }
-    
+
     fn allocate_direct(&mut self, size: usize) -> Result<usize> {
         self.allocated_memory += size;
         Ok(self.allocated_memory - size)
@@ -37,7 +37,7 @@ The `GpuMemoryManager::allocate_from_pool` and `allocate_direct` functions shoul
         self.allocated_memory += size;
         Ok(ptr)
     }
-    
+
     fn allocate_direct(&mut self, size: usize) -> Result<usize> {
         let ptr = cuda::alloc_gpu_memory(size)?;
         self.allocated_memory += size;

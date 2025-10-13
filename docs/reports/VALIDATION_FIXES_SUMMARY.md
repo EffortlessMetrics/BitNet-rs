@@ -8,7 +8,7 @@ Applied surgical fixes to make the logit-parity and NLL validation framework bul
 ### 1. Score-Aware Kendall's Tau-b (crossval/props/metrics.py)
 **Added:** `kendalls_tau_b_scored()` function
 - Uses logit scores (not just token IDs) to detect ties
-- Critical for quantized models where many logits may be identical  
+- Critical for quantized models where many logits may be identical
 - Epsilon-based tie detection (default 1e-6)
 - Properly handles the concordant/discordant/tie counting
 
@@ -20,7 +20,7 @@ Applied surgical fixes to make the logit-parity and NLL validation framework bul
 ### 3. Full Thread Control in Python Runners (crossval/props/run_model.py)
 Both `run()` and `run_teacher_force()` methods now set:
 - `BITNET_DETERMINISTIC=1`
-- `RAYON_NUM_THREADS=1`  
+- `RAYON_NUM_THREADS=1`
 - `OMP_NUM_THREADS=1`
 - `MKL_NUM_THREADS=1`
 - `BLAS_NUM_THREADS=1`
@@ -38,7 +38,7 @@ struct NllStats {
 }
 ```
 
-### 2. Deterministic Top-K Sorting  
+### 2. Deterministic Top-K Sorting
 Sort by `(-logit, token_id)` for reproducible tie-breaking:
 ```rust
 idx.sort_by(|&a, &b| {
@@ -78,7 +78,7 @@ tokens_per_second = total_tokens as f64 / elapsed.as_secs_f64();
 
 After these fixes, the validation should reliably pass:
 - **Tokenizer parity**: Exact match
-- **Greedy invariant**: `chosen_id == argmax(logits)` at each step  
+- **Greedy invariant**: `chosen_id == argmax(logits)` at each step
 - **Logit parity**: Median τ-b ≥ 0.75 (with ≥8 informative steps)
 - **NLL parity**: |Δ mean_nll| ≤ 0.05
 

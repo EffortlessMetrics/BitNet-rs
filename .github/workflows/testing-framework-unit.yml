@@ -205,10 +205,10 @@ jobs:
           if [[ -s lcov_files.txt ]]; then
             # Merge all coverage files
             lcov $(cat lcov_files.txt | sed 's/^/--add-tracefile /' | tr '\n' ' ') --output-file merged-coverage.lcov
-            
+
             # Generate HTML report
             genhtml merged-coverage.lcov --output-directory merged-coverage-html
-            
+
             echo "Coverage reports merged successfully"
           else
             echo "No coverage files found"

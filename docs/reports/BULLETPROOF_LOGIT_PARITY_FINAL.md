@@ -5,7 +5,7 @@
 We've successfully implemented a **truly bulletproof** validation framework for BitNet.rs that makes it extremely difficult to pass tests without correct implementation while avoiding false positives. The framework implements a robust three-layer pyramid:
 
 1. **Surface parity** (text comparison)
-2. **Belief parity** (Kendall's τ-b on logits)  
+2. **Belief parity** (Kendall's τ-b on logits)
 3. **Probability parity** (teacher-forcing NLL)
 
 ## Critical Improvements Implemented
@@ -95,7 +95,7 @@ logits = runner.run_teacher_force(
 )
 ```
 
-### HF Runner  
+### HF Runner
 ```python
 # Single forward pass (fast)
 logits = hf_runner.run_teacher_force(
@@ -164,7 +164,7 @@ pytest crossval/props/test_greedy_invariants.py -v
 - Debugging required manual reproduction
 - Tokenizer mismatches went undetected
 
-### After  
+### After
 - **Belief parity**: Models must rank tokens similarly
 - **Likelihood parity**: Models must assign similar probabilities
 - **Reproducible**: Every failure has a JSONL artifact

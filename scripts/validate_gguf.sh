@@ -36,6 +36,9 @@ section() {
 MODEL="${1:?Usage: $0 <model.gguf> <tokenizer.json>}"
 TOK="${2:?Usage: $0 <model.gguf> <tokenizer.json>}"
 
+# Cargo CLI features (single source of truth)
+FEATURES="--no-default-features --features cpu,full-cli"
+
 # Validate inputs
 [[ -f "$MODEL" ]] || error "Model not found: $MODEL"
 [[ -f "$TOK" ]] || error "Tokenizer not found: $TOK"
@@ -46,9 +49,9 @@ if ! command -v cargo >/dev/null 2>&1; then
 fi
 
 # Build CLI if needed (quietly)
-if ! cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- --version >/dev/null 2>&1; then
+if ! cargo run -q -p bitnet-cli $FEATURES -- --version >/dev/null 2>&1; then
   info "Building bitnet-cli..."
-  cargo build -q -p bitnet-cli --no-default-features --features cpu,full-cli || error "Failed to build bitnet-cli"
+  cargo build -q -p bitnet-cli $FEATURES || error "Failed to build bitnet-cli"
 fi
 
 # Exit code tracking
@@ -71,7 +74,7 @@ info "Using architecture-aware validation rules (auto-detection)"
 
 set +e
 BITNET_STRICT_MODE=1 \
-  cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  cargo run -q -p bitnet-cli $FEATURES -- \
   inspect --ln-stats --gate auto "$MODEL"
 LN_RC=$?
 set -e
@@ -93,7 +96,7 @@ info "Expected: Q/K/V/O and FFN weights should have RMS ~ O(10³)"
 PROJ_TMP=$(mktemp)
 set +e
 RUST_LOG=info \
-  cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  cargo run -q -p bitnet-cli $FEATURES -- \
   run --model "$MODEL" --tokenizer "$TOK" \
   --prompt "Warmup." --max-new-tokens 1 --temperature 0.0 \
   2>&1 | tee "$PROJ_TMP"
@@ -133,7 +136,7 @@ set +e
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
 RAYON_NUM_THREADS=1 \
-  cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  cargo run -q -p bitnet-cli $FEATURES -- \
   run --model "$MODEL" --tokenizer "$TOK" \
   --prompt "The capital of France is" \
   --max-new-tokens 8 \

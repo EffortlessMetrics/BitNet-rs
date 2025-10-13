@@ -29,7 +29,7 @@ Following the successful merge of PR #187 "Call engine prefill during batch infe
 **Location**: `/home/steven/code/Rust/BitNet-rs/docs/performance-tuning.md`
 **Status**: Already up-to-date with comprehensive prefill monitoring examples
 **Content Validated**:
-- Section 2 "Enhanced Performance Metrics and Prefill Monitoring" 
+- Section 2 "Enhanced Performance Metrics and Prefill Monitoring"
 - Complete code examples showing explicit `engine.prefill()` usage
 - CLI performance monitoring commands with structured metrics
 - JSON export functionality documentation
@@ -217,8 +217,8 @@ The documentation for PR #187 prefill functionality has been comprehensively upd
 
 ---
 
-*Report Generated*: 2025-09-07  
-*BitNet.rs Version*: Post-PR #187 merge  
-*Documentation Agent*: pr-doc-finalizer  
-*Total Files Updated*: 6  
+*Report Generated*: 2025-09-07
+*BitNet.rs Version*: Post-PR #187 merge
+*Documentation Agent*: pr-doc-finalizer
+*Total Files Updated*: 6
 *New Files Created*: 2

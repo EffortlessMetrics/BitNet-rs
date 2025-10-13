@@ -446,19 +446,19 @@ pub struct TestSummary {
 pub enum TestError {
     #[error("Test setup failed: {0}")]
     SetupError(String),
-    
+
     #[error("Test execution failed: {0}")]
     ExecutionError(String),
-    
+
     #[error("Assertion failed: expected {expected}, got {actual}")]
     AssertionError { expected: String, actual: String },
-    
+
     #[error("Performance regression: {metric} degraded by {percentage}%")]
     PerformanceRegression { metric: String, percentage: f64 },
-    
+
     #[error("Cross-validation failed: accuracy {accuracy} below threshold {threshold}")]
     CrossValidationError { accuracy: f64, threshold: f64 },
-    
+
     #[error("Timeout: test exceeded {timeout:?}")]
     TimeoutError { timeout: Duration },
 }

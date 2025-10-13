@@ -16,15 +16,15 @@ jobs:
   download-model:
     name: Download Model (Reproducible)
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      
+
       - name: Cache Cargo registry
         uses: actions/cache@v3
         with:
@@ -34,7 +34,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      
+
       - name: Cache downloaded models
         uses: actions/cache@v3
         with:
@@ -42,7 +42,7 @@ jobs:
           key: ${{ runner.os }}-models-${{ hashFiles('xtask/src/main.rs') }}
           restore-keys: |
             ${{ runner.os }}-models-
-      
+
       - name: Download BitNet model (quiet, reproducible)
         run: |
           cargo xtask download-model \
@@ -52,7 +52,7 @@ jobs:
             --no-progress
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      
+
       - name: Verify download with SHA256
         run: |
           cargo xtask download-model \
@@ -60,25 +60,25 @@ jobs:
             --file ggml-model-i2_s.gguf \
             --sha256 <INSERT_KNOWN_SHA256_HERE> \
             --no-progress
-      
+
       - name: List downloaded models
         run: ls -la models/
-  
+
   full-crossval:
     name: Full Cross-Validation Pipeline
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake build-essential
-      
+
       - name: Cache all artifacts
         uses: actions/cache@v3
         with:
@@ -90,22 +90,22 @@ jobs:
           key: ${{ runner.os }}-full-${{ hashFiles('**/Cargo.lock', 'xtask/**') }}
           restore-keys: |
             ${{ runner.os }}-full-
-      
+
       - name: Run full cross-validation
         run: cargo xtask full-crossval
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-  
+
   test-with-mirror:
     name: Test with Mirror Repository
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Download from mirror (example)
         run: |
           cargo xtask download-model \
@@ -118,18 +118,18 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HTTPS_PROXY: ${{ vars.CORPORATE_PROXY }}
         continue-on-error: true  # Since this is an example
-  
+
   cleanup:
     name: Clean Caches (Manual Trigger)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Clean all caches
         run: |
           # Non-interactive mode for CI

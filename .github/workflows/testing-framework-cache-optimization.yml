@@ -325,13 +325,13 @@ jobs:
 
             if (fs.existsSync('optimization-analysis.md')) {
               const analysis = fs.readFileSync('optimization-analysis.md', 'utf8');
-              
+
               // Truncate if too long for GitHub comment
               const maxLength = 65000;
-              const content = analysis.length > maxLength 
+              const content = analysis.length > maxLength
                 ? analysis.substring(0, maxLength) + '\n\n... (truncated)'
                 : analysis;
-              
+
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
@@ -358,7 +358,7 @@ jobs:
               per_page: 100
             });
 
-            const testCaches = caches.data.actions_caches.filter(cache => 
+            const testCaches = caches.data.actions_caches.filter(cache =>
               cache.key.startsWith('bitnet-test-') || cache.key.startsWith('bitnet-fixtures-')
             );
 

@@ -30,21 +30,21 @@ echo "GGUF Version: $VERSION"
 
 if [ "$VERSION" -eq 3 ]; then
     echo "  ⚠️  GGUF v3 detected - may have compatibility issues with older C++"
-    
+
     # Check tensor count (v3 uses 64-bit)
     TENSOR_COUNT=$(hexdump -s 8 -n 8 -e '1/8 "%llu"' "$MODEL")
     echo "  Tensor count: $TENSOR_COUNT"
-    
+
     # Check metadata count
     METADATA_COUNT=$(hexdump -s 16 -n 8 -e '1/8 "%llu"' "$MODEL")
     echo "  Metadata KV count: $METADATA_COUNT"
 else
     echo "  GGUF v$VERSION"
-    
+
     # v2 uses 32-bit counts
     TENSOR_COUNT=$(hexdump -s 8 -n 4 -e '1/4 "%u"' "$MODEL")
     echo "  Tensor count: $TENSOR_COUNT"
-    
+
     METADATA_COUNT=$(hexdump -s 12 -n 4 -e '1/4 "%u"' "$MODEL")
     echo "  Metadata KV count: $METADATA_COUNT"
 fi
@@ -85,23 +85,23 @@ else
     echo "❌ Model load failed (exit code: $EXIT_CODE)"
     echo "Error output:"
     echo "$OUTPUT" | grep -E "error|fail|Error|FAIL|llama_" | head -20
-    
+
     echo ""
     echo "=== Potential Issues ==="
-    
+
     # Check for common issues
     if echo "$OUTPUT" | grep -q "unsupported tensor"; then
         echo "• Unsupported tensor format or quantization"
     fi
-    
+
     if echo "$OUTPUT" | grep -q "invalid magic"; then
         echo "• Invalid GGUF magic or version"
     fi
-    
+
     if echo "$OUTPUT" | grep -q "failed to open"; then
         echo "• File access issue"
     fi
-    
+
     if [ "$VERSION" -eq 3 ]; then
         echo "• GGUF v3 may require newer C++ implementation"
         echo "  Current C++ may only support v2"

@@ -115,7 +115,7 @@ impl ComparisonHtmlReporter {
         format!(
             r#"<section id="executive" class="tab-content active">
                 <h2>📊 Executive Summary</h2>
-                
+
                 <div class="summary-overview">
                     <div class="status-card">
                         <h3>Overall Status</h3>
@@ -136,7 +136,7 @@ impl ComparisonHtmlReporter {
                         <h3>🚨 Critical Issues</h3>
                         {critical_issues}
                     </div>
-                    
+
                     <div class="section-card">
                         <h3>🏆 Achievements</h3>
                         {achievements}
@@ -170,7 +170,7 @@ impl ComparisonHtmlReporter {
         format!(
             r#"<section id="accuracy" class="tab-content">
                 <h2>🎯 Accuracy Analysis</h2>
-                
+
                 <div class="overview-stats">
                     <div class="stat-card">
                         <h3>Overall Accuracy</h3>
@@ -233,7 +233,7 @@ impl ComparisonHtmlReporter {
         format!(
             r#"<section id="performance" class="tab-content">
                 <h2>⚡ Performance Analysis</h2>
-                
+
                 {performance_overview}
 
                 <div class="test-cases-section">
@@ -276,7 +276,7 @@ impl ComparisonHtmlReporter {
         format!(
             r#"<section id="regression" class="tab-content">
                 <h2>📈 Regression Analysis</h2>
-                
+
                 {regression_summary}
 
                 <div class="regressions-section">
@@ -284,7 +284,7 @@ impl ComparisonHtmlReporter {
                         <h3>Accuracy Regressions</h3>
                         {accuracy_regressions}
                     </div>
-                    
+
                     <div class="regression-category">
                         <h3>Performance Regressions</h3>
                         {performance_regressions}
@@ -830,14 +830,14 @@ function showTab(tabName) {
     // Hide all tab contents
     const contents = document.querySelectorAll('.tab-content');
     contents.forEach(content => content.classList.remove('active'));
-    
+
     // Remove active class from all buttons
     const buttons = document.querySelectorAll('.tab-button');
     buttons.forEach(button => button.classList.remove('active'));
-    
+
     // Show selected tab content
     document.getElementById(tabName).classList.add('active');
-    
+
     // Add active class to clicked button
     event.target.classList.add('active');
 }
@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.toggle('expanded');
         });
     });
-    
+
     // Add tooltips for technical terms
     const tooltipElements = document.querySelectorAll('[data-tooltip]');
     tooltipElements.forEach(element => {
@@ -911,7 +911,7 @@ function showTooltip(event) {
     tooltip.className = 'tooltip';
     tooltip.textContent = event.target.getAttribute('data-tooltip');
     document.body.appendChild(tooltip);
-    
+
     const rect = event.target.getBoundingClientRect();
     tooltip.style.left = rect.left + 'px';
     tooltip.style.top = (rect.top - tooltip.offsetHeight - 5) + 'px';

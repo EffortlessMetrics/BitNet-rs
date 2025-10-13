@@ -86,7 +86,7 @@ fi
 
 if [[ $failed -eq 0 ]]; then
     echo "✅ PASS: Performance within acceptable bounds"
-    
+
     # Optionally update baseline if significant improvement
     if (( $(echo "$tps_change > 20" | bc -l) )); then
         echo

@@ -14,7 +14,7 @@ The `deallocate_to_pool` and `deallocate_direct` functions in `GpuMemoryManager`
         self.allocated_memory = self.allocated_memory.saturating_sub(size);
         Ok(())
     }
-    
+
     fn deallocate_direct(&mut self, _ptr: usize, size: usize) -> Result<()> {
         self.allocated_memory = self.allocated_memory.saturating_sub(size);
         Ok(())
@@ -35,7 +35,7 @@ The `GpuMemoryManager::deallocate_to_pool` and `deallocate_direct` functions sho
         self.allocated_memory = self.allocated_memory.saturating_sub(size);
         Ok(())
     }
-    
+
     fn deallocate_direct(&mut self, ptr: usize, size: usize) -> Result<()> {
         cuda::free_gpu_memory(ptr)?;
         self.allocated_memory = self.allocated_memory.saturating_sub(size);

@@ -16,34 +16,34 @@ use std::process::Command;
 pub enum BreakingChangeType {
     /// Public item removed
     ItemRemoved { path: String },
-    
+
     /// Function signature changed
-    SignatureChanged { 
+    SignatureChanged {
         path: String,
         old: String,
         new: String,
     },
-    
+
     /// Type definition changed
     TypeChanged {
         path: String,
         old: String,
         new: String,
     },
-    
+
     /// Trait requirements changed
     TraitChanged {
         path: String,
         change: String,
     },
-    
+
     /// Enum variant removed or changed
     EnumVariantChanged {
         enum_path: String,
         variant: String,
         change: String,
     },
-    
+
     /// Module structure changed
     ModuleRestructured {
         old_path: String,
@@ -78,21 +78,21 @@ impl BreakingChangeDetector {
     /// Run breaking change detection
     pub fn detect(&self) -> Result<CompatibilityReport> {
         println!("🔍 Detecting breaking changes...");
-        
+
         // Use cargo-semver-checks for thorough analysis
         let mut breaking_changes = Vec::new();
-        
+
         // Run cargo semver-checks
         let semver_result = self.run_semver_checks()?;
         breaking_changes.extend(semver_result);
-        
+
         // Additional custom checks
         let custom_checks = self.run_custom_checks()?;
         breaking_changes.extend(custom_checks);
-        
+
         // Determine version bump needed
         let suggested_version = self.suggest_version_bump(&breaking_changes)?;
-        
+
         Ok(CompatibilityReport {
             version: self.get_current_version()?,
             baseline_version: self.get_baseline_version()?,
@@ -110,10 +110,10 @@ impl BreakingChangeDetector {
             "--manifest-path", self.current_path.join("Cargo.toml").to_str().unwrap(),
             "--json",
         ]);
-        
+
         let output = cmd.output()
             .context("Failed to run cargo-semver-checks")?;
-        
+
         if !output.status.success() {
             // Parse the JSON output for breaking changes
             let json_str = String::from_utf8_lossy(&output.stdout);
@@ -125,7 +125,7 @@ impl BreakingChangeDetector {
 
     fn parse_semver_output(&self, json_str: &str) -> Result<Vec<BreakingChangeType>> {
         let mut changes = Vec::new();
-        
+
         // Parse cargo-semver-checks JSON output
         if let Ok(report) = serde_json::from_str::<serde_json::Value>(json_str) {
             if let Some(breaking) = report.get("breaking").and_then(|v| v.as_array()) {
@@ -136,14 +136,14 @@ impl BreakingChangeDetector {
                 }
             }
         }
-        
+
         Ok(changes)
     }
 
     fn convert_semver_change(&self, item: &serde_json::Value) -> Option<BreakingChangeType> {
         let kind = item.get("kind")?.as_str()?;
         let path = item.get("path")?.as_str()?;
-        
+
         match kind {
             "function_signature_changed" => {
                 Some(BreakingChangeType::SignatureChanged {
@@ -170,34 +170,34 @@ impl BreakingChangeDetector {
 
     fn run_custom_checks(&self) -> Result<Vec<BreakingChangeType>> {
         let mut changes = Vec::new();
-        
+
         // Check for FFI compatibility
         changes.extend(self.check_ffi_compatibility()?);
-        
+
         // Check for config file format changes
         changes.extend(self.check_config_compatibility()?);
-        
+
         // Check for protocol/wire format changes
         changes.extend(self.check_protocol_compatibility()?);
-        
+
         Ok(changes)
     }
 
     fn check_ffi_compatibility(&self) -> Result<Vec<BreakingChangeType>> {
         let mut changes = Vec::new();
-        
+
         // Check C header files for changes
         let baseline_header = self.baseline_path.join("include/bitnet.h");
         let current_header = self.current_path.join("include/bitnet.h");
-        
+
         if baseline_header.exists() && current_header.exists() {
             let baseline_content = fs::read_to_string(&baseline_header)?;
             let current_content = fs::read_to_string(&current_header)?;
-            
+
             // Parse and compare function signatures
             let baseline_sigs = Self::extract_c_signatures(&baseline_content);
             let current_sigs = Self::extract_c_signatures(&current_content);
-            
+
             for (name, sig) in &baseline_sigs {
                 if !current_sigs.contains_key(name) {
                     changes.push(BreakingChangeType::ItemRemoved {
@@ -212,13 +212,13 @@ impl BreakingChangeDetector {
                 }
             }
         }
-        
+
         Ok(changes)
     }
 
     fn extract_c_signatures(content: &str) -> HashMap<String, String> {
         let mut signatures = HashMap::new();
-        
+
         // Simple regex-based extraction (could be improved with proper C parser)
         for line in content.lines() {
             if line.contains("BITNET_API") || line.contains("extern") {
@@ -227,7 +227,7 @@ impl BreakingChangeDetector {
                 }
             }
         }
-        
+
         signatures
     }
 
@@ -254,15 +254,15 @@ impl BreakingChangeDetector {
     fn suggest_version_bump(&self, changes: &[BreakingChangeType]) -> Result<String> {
         let current = self.get_current_version()?;
         let parts: Vec<&str> = current.split('.').collect();
-        
+
         if parts.len() != 3 {
             return Err(anyhow!("Invalid version format: {}", current));
         }
-        
+
         let major: u32 = parts[0].parse()?;
         let minor: u32 = parts[1].parse()?;
         let patch: u32 = parts[2].parse()?;
-        
+
         if !changes.is_empty() {
             // Breaking changes require major version bump
             Ok(format!("{}.0.0", major + 1))
@@ -275,7 +275,7 @@ impl BreakingChangeDetector {
     fn get_current_version(&self) -> Result<String> {
         let cargo_toml = fs::read_to_string(self.current_path.join("Cargo.toml"))?;
         let manifest: toml::Value = toml::from_str(&cargo_toml)?;
-        
+
         manifest
             .get("package")
             .and_then(|p| p.get("version"))
@@ -287,7 +287,7 @@ impl BreakingChangeDetector {
     fn get_baseline_version(&self) -> Result<String> {
         let cargo_toml = fs::read_to_string(self.baseline_path.join("Cargo.toml"))?;
         let manifest: toml::Value = toml::from_str(&cargo_toml)?;
-        
+
         manifest
             .get("package")
             .and_then(|p| p.get("version"))
@@ -303,15 +303,15 @@ pub fn detect_breaking_changes(baseline: &Path, current: &Path) -> Result<()> {
         baseline.to_path_buf(),
         current.to_path_buf(),
     );
-    
+
     let report = detector.detect()?;
-    
+
     // Print report
     println!("\n📊 API Compatibility Report");
     println!("  Current version: {}", report.version);
     println!("  Baseline version: {}", report.baseline_version);
     println!("  Compatible: {}", if report.compatible { "✅ Yes" } else { "❌ No" });
-    
+
     if !report.breaking_changes.is_empty() {
         println!("\n⚠️  Breaking Changes Detected:");
         for change in &report.breaking_changes {
@@ -334,21 +334,21 @@ pub fn detect_breaking_changes(baseline: &Path, current: &Path) -> Result<()> {
                 }
             }
         }
-        
+
         println!("\n💡 Suggested version: {}", report.suggested_version);
         println!("   (Current version {} requires major bump due to breaking changes)", report.version);
     }
-    
+
     // Write report to file
     let report_json = serde_json::to_string_pretty(&report)?;
     fs::write("api-compatibility-report.json", report_json)?;
-    
+
     if !report.compatible {
         return Err(anyhow!(
             "Breaking changes detected! Suggested version: {}",
             report.suggested_version
         ));
     }
-    
+
     Ok(())
 }

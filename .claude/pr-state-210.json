@@ -17,7 +17,7 @@
   },
   "key_changes": [
     "Enhanced tensor alignment validation in gguf_min.rs",
-    "Added n_dims consistency checks", 
+    "Added n_dims consistency checks",
     "Added offset alignment validation against general.alignment",
     "Added data section alignment validation",
     "Improved error messages for debugging",

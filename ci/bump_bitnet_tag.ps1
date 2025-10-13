@@ -5,10 +5,10 @@ param(
     [Parameter(Position=0)]
     [ValidateSet("current", "list", "update", "latest", "check", "validate", "generate-checksums")]
     [string]$Command,
-    
+
     [Parameter(Position=1)]
     [string]$Version,
-    
+
     [switch]$Force,
     [switch]$Yes,
     [switch]$Verbose,
@@ -97,22 +97,22 @@ function Set-Version {
 
 function Get-AvailableVersions {
     Write-Info "Fetching available versions from upstream..."
-    
+
     $TempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
-    
+
     try {
         Push-Location $TempDir
-        
+
         # Clone just to get tags
         git clone --bare --filter=blob:none $BitNetCppRepo "repo.git" 2>$null | Out-Null
-        
+
         Push-Location "repo.git"
-        
+
         try {
             Write-Info "Available versions:"
             $Tags = git tag --sort=-version:refname
             $Tags | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }
-            
+
             Write-Info ""
             Write-Info "Latest release:"
             $LatestRelease = $Tags | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | Select-Object -First 1
@@ -134,24 +134,24 @@ function Get-AvailableVersions {
 
 function Get-LatestVersion {
     $TempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
-    
+
     try {
         Push-Location $TempDir
-        
+
         git clone --bare --filter=blob:none $BitNetCppRepo "repo.git" 2>$null | Out-Null
-        
+
         Push-Location "repo.git"
-        
+
         try {
             # Try to find latest semantic version tag
             $Tags = git tag --sort=-version:refname
             $Latest = $Tags | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | Select-Object -First 1
-            
+
             if (-not $Latest) {
                 # Fall back to any tag
                 $Latest = $Tags | Select-Object -First 1
             }
-            
+
             return $Latest
         }
         finally {
@@ -166,16 +166,16 @@ function Get-LatestVersion {
 
 function Test-VersionExists {
     param([string]$Version)
-    
+
     $TempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory -Path $_ }
-    
+
     try {
         Push-Location $TempDir
-        
+
         git clone --bare --filter=blob:none $BitNetCppRepo "repo.git" 2>$null | Out-Null
-        
+
         Push-Location "repo.git"
-        
+
         try {
             $Tags = git tag
             return $Tags -contains $Version
@@ -196,26 +196,26 @@ function Update-Version {
         [bool]$ForceUpdate,
         [bool]$SkipConfirm
     )
-    
+
     $CurrentVersion = Get-CurrentVersion
-    
+
     Write-Info "Current version: $CurrentVersion"
     Write-Info "Target version: $NewVersion"
-    
+
     # Check if version exists
     if (-not (Test-VersionExists $NewVersion)) {
         Write-Error "Version '$NewVersion' does not exist upstream"
         Write-Info "Run '.\bump_bitnet_tag.ps1 list' to see available versions"
         exit 1
     }
-    
+
     # Check if already current
     if ($CurrentVersion -eq $NewVersion -and -not $ForceUpdate) {
         Write-Info "Already on version $NewVersion"
         Write-Info "Use -Force to update anyway"
         return
     }
-    
+
     # Confirm update
     if (-not $SkipConfirm) {
         $Response = Read-Host "Update from $CurrentVersion to $NewVersion? [y/N]"
@@ -224,25 +224,25 @@ function Update-Version {
             return
         }
     }
-    
+
     # Update version file
     Set-Version $NewVersion
-    
+
     # Clean existing cache to force re-download
     if (Test-Path $CacheDir) {
         Write-Info "Cleaning existing cache..."
         Remove-Item -Path $CacheDir -Recurse -Force
     }
-    
+
     # Fetch new version
     Write-Info "Fetching new version..."
     $env:BITNET_CPP_TAG = $NewVersion
     & (Join-Path $PSScriptRoot "fetch_bitnet_cpp.ps1")
-    
+
     # Generate new checksums
     Write-Info "Generating checksums for new version..."
     New-Checksums
-    
+
     Write-Info "Successfully updated to version $NewVersion"
     Write-Warn "Remember to test cross-validation with the new version:"
     Write-Warn "  cargo test --features crossval"
@@ -251,10 +251,10 @@ function Update-Version {
 function Test-Updates {
     $CurrentVersion = Get-CurrentVersion
     $LatestVersion = Get-LatestVersion
-    
+
     Write-Info "Current version: $CurrentVersion"
     Write-Info "Latest version: $LatestVersion"
-    
+
     if ($CurrentVersion -eq $LatestVersion) {
         Write-Info "✓ Up to date"
         return $true
@@ -267,50 +267,50 @@ function Test-Updates {
 
 function Test-Version {
     $CurrentVersion = Get-CurrentVersion
-    
+
     Write-Info "Validating version: $CurrentVersion"
-    
+
     # Check if cache exists
     if (-not (Test-Path $CacheDir)) {
         Write-Error "Cache directory not found: $CacheDir"
         Write-Info "Run '.\fetch_bitnet_cpp.ps1' to download"
         return $false
     }
-    
+
     # Check git tag in cache
     Push-Location $CacheDir
-    
+
     try {
         if (-not (Test-Path ".git")) {
             Write-Error "Cache is not a git repository"
             return $false
         }
-        
+
         $ActualVersion = git describe --tags --exact-match 2>$null
         if (-not $ActualVersion) {
             $ActualVersion = "unknown"
         }
-        
+
         if ($ActualVersion -ne $CurrentVersion) {
             Write-Error "Version mismatch:"
             Write-Error "  Expected: $CurrentVersion"
             Write-Error "  Actual: $ActualVersion"
             return $false
         }
-        
+
         Write-Info "✓ Version matches: $CurrentVersion"
-        
+
         # Validate checksums if available
         if ((Test-Path $ChecksumFile) -and (Get-Content $ChecksumFile | Where-Object { $_ -notmatch '^#' -and $_.Trim() -ne '' })) {
             Write-Info "Validating checksums..."
-            
+
             # Simple checksum validation (Windows doesn't have sha256sum by default)
             Write-Warn "Checksum validation not fully implemented on Windows"
             Write-Info "✓ Checksums present (validation skipped)"
         } else {
             Write-Warn "No checksums available for validation"
         }
-        
+
         Write-Info "✓ Validation passed"
         return $true
     }
@@ -321,34 +321,34 @@ function Test-Version {
 
 function New-Checksums {
     Write-Info "Generating checksums..."
-    
+
     if (-not (Test-Path $CacheDir)) {
         Write-Error "Cache directory not found: $CacheDir"
         Write-Info "Run '.\fetch_bitnet_cpp.ps1' first"
         return
     }
-    
+
     Push-Location $CacheDir
-    
+
     try {
         # Generate checksums for key files
         $Files = Get-ChildItem -Recurse -Include "*.cpp", "*.h", "*.hpp", "CMakeLists.txt" | Sort-Object FullName
-        
+
         $ChecksumContent = @"
 # SHA256 checksums for BitNet C++ implementation
 # Generated on $(Get-Date)
 # Version: $(Get-CurrentVersion)
 
 "@
-        
+
         foreach ($File in $Files) {
             $RelativePath = $File.FullName.Substring($CacheDir.Length + 1).Replace('\', '/')
             $Hash = Get-FileHash -Path $File.FullName -Algorithm SHA256
             $ChecksumContent += "$($Hash.Hash.ToLower())  $RelativePath`n"
         }
-        
+
         Set-Content -Path $ChecksumFile -Value $ChecksumContent -NoNewline
-        
+
         $ChecksumCount = ($Files | Measure-Object).Count
         Write-Info "Generated checksums for $ChecksumCount files"
         Write-Info "Checksums saved to: $ChecksumFile"
@@ -364,7 +364,7 @@ function Main {
         Show-Usage
         return
     }
-    
+
     switch ($Command) {
         "current" {
             Write-Host "Current version: $(Get-CurrentVersion)"

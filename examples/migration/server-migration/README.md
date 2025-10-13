@@ -27,81 +27,81 @@ private:
     bitnet::Model model;
     std::mutex model_mutex;
     httplib::Server server;
-    
+
 public:
     BitNetServer(const std::string& model_path) {
         model.load(model_path);
         setup_routes();
     }
-    
+
     void setup_routes() {
         // Health check endpoint
         server.Get("/health", [](const httplib::Request&, httplib::Response& res) {
             Json::Value response;
             response["status"] = "healthy";
             response["timestamp"] = std::time(nullptr);
-            
+
             res.set_content(response.toStyledString(), "application/json");
         });
-        
+
         // Generation endpoint
         server.Post("/generate", [this](const httplib::Request& req, httplib::Response& res) {
             Json::Value request_json;
             Json::Reader reader;
-            
+
             if (!reader.parse(req.body, request_json)) {
                 res.status = 400;
                 res.set_content("{\"error\": \"Invalid JSON\"}", "application/json");
                 return;
             }
-            
+
             std::string prompt = request_json["prompt"].asString();
             int max_tokens = request_json.get("max_tokens", 100).asInt();
-            
+
             // Thread-safe model access
             std::lock_guard<std::mutex> lock(model_mutex);
-            
+
             auto start = std::chrono::high_resolution_clock::now();
             std::string result = model.generate(prompt, max_tokens);
             auto end = std::chrono::high_resolution_clock::now();
-            
+
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            
+
             Json::Value response;
             response["text"] = result;
             response["prompt"] = prompt;
             response["max_tokens"] = max_tokens;
             response["generation_time_ms"] = duration.count();
-            
+
             res.set_content(response.toStyledString(), "application/json");
         });
-        
+
         // Batch generation endpoint
         server.Post("/batch", [this](const httplib::Request& req, httplib::Response& res) {
             Json::Value request_json;
             Json::Reader reader;
-            
+
             if (!reader.parse(req.body, request_json)) {
                 res.status = 400;
                 res.set_content("{\"error\": \"Invalid JSON\"}", "application/json");
                 return;
             }
-            
+
             Json::Value prompts = request_json["prompts"];
             Json::Value results(Json::arrayValue);
-            
+
             for (const auto& prompt_val : prompts) {
                 std::lock_guard<std::mutex> lock(model_mutex);
                 std::string result = model.generate(prompt_val.asString(), 50);
                 results.append(result);
             }
-            
+
             Json::Value response;
             response["results"] = results;
             res.set_content(response.toStyledString(), "application/json");
         });
     }
-    
+
     void run(const std::string& host, int port) {
         std::cout << "Starting server on " << host << ":" << port << std::endl;
         server.listen(host.c_str(), port);
@@ -130,9 +130,9 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(JSONCPP jsoncpp)
 
 add_executable(bitnet_server server.cpp)
-target_link_libraries(bitnet_server 
-    bitnet 
-    httplib 
+target_link_libraries(bitnet_server
+    bitnet
+    httplib
     ${JSONCPP_LIBRARIES}
     pthread
 )
@@ -232,15 +232,15 @@ async fn health_check(State(state): State<AppState>) -> Result<ResponseJson<Heal
         let model = state.model.read().await;
         model.is_loaded()
     };
-    
+
     let uptime = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    
+
     // Get memory usage (simplified)
     let memory_usage_mb = get_memory_usage_mb();
-    
+
     Ok(ResponseJson(HealthResponse {
         status: "healthy".to_string(),
         timestamp: uptime,
@@ -257,37 +257,37 @@ async fn generate(
     Json(request): Json<GenerateRequest>,
 ) -> Result<ResponseJson<GenerateResponse>, StatusCode> {
     let start_time = Instant::now();
-    
+
     // Update metrics
     state.metrics.requests_total.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    
+
     let config = GenerationConfig {
         max_tokens: request.max_tokens.unwrap_or(100),
         temperature: request.temperature.unwrap_or(0.7),
         top_p: request.top_p.unwrap_or(0.9),
         ..Default::default()
     };
-    
+
     // Async model access with read lock
     let result = {
         let model = state.model.read().await;
         model.generate_async(&request.prompt, config).await
     };
-    
+
     match result {
         Ok(generation_result) => {
             let generation_time = start_time.elapsed();
             let generation_time_ms = generation_time.as_millis() as u64;
-            
+
             // Update metrics
             state.metrics.generation_time_total.fetch_add(
-                generation_time_ms, 
+                generation_time_ms,
                 std::sync::atomic::Ordering::Relaxed
             );
-            
-            let tokens_per_second = generation_result.token_count as f64 
+
+            let tokens_per_second = generation_result.token_count as f64
                 / generation_time.as_secs_f64();
-            
+
             info!(
                 prompt_length = request.prompt.len(),
                 tokens_generated = generation_result.token_count,
@@ -295,7 +295,7 @@ async fn generate(
                 tokens_per_second = tokens_per_second,
                 "Generation completed"
             );
-            
+
             Ok(ResponseJson(GenerateResponse {
                 text: generation_result.text,
                 prompt: request.prompt,
@@ -321,50 +321,50 @@ async fn batch_generate(
 ) -> Result<ResponseJson<BatchResponse>, StatusCode> {
     let start_time = Instant::now();
     let batch_size = request.prompts.len();
-    
+
     if batch_size == 0 {
         return Err(StatusCode::BAD_REQUEST);
     }
-    
+
     if batch_size > 10 {  // Limit batch size
         return Err(StatusCode::PAYLOAD_TOO_LARGE);
     }
-    
+
     let config = GenerationConfig {
         max_tokens: request.max_tokens.unwrap_or(50),
         temperature: request.temperature.unwrap_or(0.7),
         ..Default::default()
     };
-    
+
     // Process batch concurrently
     let mut tasks = Vec::new();
-    
+
     for prompt in request.prompts {
         let model = Arc::clone(&state.model);
         let config = config.clone();
         let metrics = Arc::clone(&state.metrics);
-        
+
         let task = tokio::spawn(async move {
             let generation_start = Instant::now();
-            
+
             let result = {
                 let model = model.read().await;
                 model.generate_async(&prompt, config).await
             };
-            
+
             match result {
                 Ok(generation_result) => {
                     let generation_time = generation_start.elapsed();
                     let generation_time_ms = generation_time.as_millis() as u64;
-                    
+
                     metrics.generation_time_total.fetch_add(
                         generation_time_ms,
                         std::sync::atomic::Ordering::Relaxed
                     );
-                    
-                    let tokens_per_second = generation_result.token_count as f64 
+
+                    let tokens_per_second = generation_result.token_count as f64
                         / generation_time.as_secs_f64();
-                    
+
                     Ok(GenerateResponse {
                         text: generation_result.text,
                         prompt,
@@ -381,10 +381,10 @@ async fn batch_generate(
                 }
             }
         });
-        
+
         tasks.push(task);
     }
-    
+
     // Wait for all tasks to complete
     let mut results = Vec::new();
     for task in tasks {
@@ -394,20 +394,20 @@ async fn batch_generate(
             Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
-    
+
     let total_time = start_time.elapsed();
-    
+
     state.metrics.requests_total.fetch_add(
         batch_size as u64,
         std::sync::atomic::Ordering::Relaxed
     );
-    
+
     info!(
         batch_size = batch_size,
         total_time_ms = total_time.as_millis(),
         "Batch generation completed"
     );
-    
+
     Ok(ResponseJson(BatchResponse {
         results,
         total_time_ms: total_time.as_millis() as u64,
@@ -420,13 +420,13 @@ async fn metrics(State(state): State<AppState>) -> ResponseJson<MetricsResponse>
     let requests_total = state.metrics.requests_total.load(std::sync::atomic::Ordering::Relaxed);
     let generation_time_total = state.metrics.generation_time_total.load(std::sync::atomic::Ordering::Relaxed);
     let errors_total = state.metrics.errors_total.load(std::sync::atomic::Ordering::Relaxed);
-    
+
     let average_generation_time = if requests_total > 0 {
         generation_time_total as f64 / requests_total as f64
     } else {
         0.0
     };
-    
+
     ResponseJson(MetricsResponse {
         requests_total,
         generation_time_total_ms: generation_time_total,
@@ -450,18 +450,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_level(true)
         .json()
         .init();
-    
+
     // Load model
     info!("Loading BitNet model...");
     let model = Model::load("/models/bitnet_b1_58-3B.gguf").await?;
     info!("Model loaded successfully");
-    
+
     // Create shared state
     let state = AppState {
         model: Arc::new(RwLock::new(model)),
         metrics: Arc::new(Metrics::default()),
     };
-    
+
     // Build router with middleware
     let app = Router::new()
         .route("/health", get(health_check))
@@ -475,13 +475,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .layer(TimeoutLayer::new(Duration::from_secs(30)))
         )
         .with_state(state);
-    
+
     // Start server
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
     info!("Server starting on http://0.0.0.0:8080");
-    
+
     axum::serve(listener, app).await?;
-    
+
     Ok(())
 }
 ```
@@ -547,7 +547,7 @@ use tokio::runtime::Runtime;
 
 fn benchmark_server_performance(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    
+
     c.bench_function("cpp_server_single_request", |b| {
         b.iter(|| {
             // Simulate C++ server request (blocking)
@@ -555,7 +555,7 @@ fn benchmark_server_performance(c: &mut Criterion) {
             black_box("Generated text from C++")
         })
     });
-    
+
     c.bench_function("rust_server_single_request", |b| {
         b.to_async(&rt).iter(|| async {
             // Simulate Rust async server request
@@ -563,7 +563,7 @@ fn benchmark_server_performance(c: &mut Criterion) {
             black_box("Generated text from Rust")
         })
     });
-    
+
     c.bench_function("cpp_server_batch_requests", |b| {
         b.iter(|| {
             // Simulate C++ server batch (sequential)
@@ -573,7 +573,7 @@ fn benchmark_server_performance(c: &mut Criterion) {
             black_box("Batch completed")
         })
     });
-    
+
     c.bench_function("rust_server_batch_requests", |b| {
         b.to_async(&rt).iter(|| async {
             // Simulate Rust async server batch (concurrent)
@@ -583,7 +583,7 @@ fn benchmark_server_performance(c: &mut Criterion) {
                     "Generated text"
                 })
             }).collect();
-            
+
             for task in tasks {
                 task.await.unwrap();
             }

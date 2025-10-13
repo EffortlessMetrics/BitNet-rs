@@ -126,28 +126,28 @@ graph TD
     A[Trigger Event] --> B[Master Workflow]
     B --> C[Workflow Planning]
     C --> D{Determine Execution Plan}
-    
+
     D --> E[Core Workflows]
     E --> E1[Unit Tests]
     E --> E2[Integration Tests]
     E --> E3[Coverage Collection]
     E --> E4[Cache Optimization]
-    
+
     D --> F[Optional Workflows]
     F --> F1[Cross-Validation]
     F --> F2[Performance Benchmarks]
-    
+
     E1 --> G[Summary & Reporting]
     E2 --> G
     E3 --> G
     E4 --> G
     F1 --> G
     F2 --> G
-    
+
     G --> H[Status Checks]
     G --> I[PR Comments]
     G --> J[Artifact Collection]
-    
+
     H --> K[GitHub Integration]
     I --> K
     J --> K

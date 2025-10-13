@@ -203,7 +203,7 @@ if result.passed {
     if let Some(count) = result.metrics.get("unmapped_count").and_then(|v| v.as_u64()) {
         println!("✗ {} unmapped tensors detected", count);
     }
-    
+
     if let Some(tensors) = result.metrics.get("unmapped_tensors") {
         println!("Unmapped tensor names: {:?}", tensors);
     }
@@ -246,9 +246,9 @@ async fn test_custom_scenario() {
         max_probability_divergence: 0.05,
         max_performance_regression: 1.5,
     };
-    
+
     let mut suite = CrossValidationSuite::new(tolerance);
-    
+
     // Add custom test case
     let test_case = ComparisonTestCase {
         name: "custom_scenario",
@@ -261,23 +261,23 @@ async fn test_custom_scenario() {
             ..Default::default()
         },
     };
-    
+
     suite.add_test_case(test_case);
-    
+
     // Load model and run comparison
     let fixtures = FixtureManager::new();
     let model_path = fixtures.get_model_fixture("your_model").await?;
-    
+
     let result = suite.run_comparison(&model_path).await?;
-    
+
     // Custom validation
     assert!(result.summary.overall_accuracy >= 0.99);
     assert!(result.summary.performance_ratio <= 1.5);
-    
+
     // Detailed analysis
     for test_result in &result.test_results {
         if let Some(mismatch) = &test_result.accuracy_result.first_mismatch {
-            println!("First mismatch at position {}: Rust={}, C++={}", 
+            println!("First mismatch at position {}: Rust={}, C++={}",
                     mismatch.position, mismatch.rust_token, mismatch.cpp_token);
         }
     }
@@ -293,10 +293,10 @@ Run comparisons across multiple models:
 async fn test_multiple_models() {
     let models = vec![
         "small_test_model",
-        "medium_test_model", 
+        "medium_test_model",
         "large_test_model",
     ];
-    
+
     let test_cases = vec![
         ComparisonTestCase {
             name: "standard_generation",
@@ -313,24 +313,24 @@ async fn test_multiple_models() {
             },
         },
     ];
-    
+
     let fixtures = FixtureManager::new();
     let mut all_results = Vec::new();
-    
+
     for model_name in models {
         let model_path = fixtures.get_model_fixture(model_name).await?;
-        
+
         let mut suite = CrossValidationSuite::new(ComparisonTolerance::default());
         suite.add_test_cases(test_cases.clone());
-        
+
         let result = suite.run_comparison(&model_path).await?;
         all_results.push((model_name, result));
     }
-    
+
     // Analyze results across models
     for (model_name, result) in &all_results {
-        println!("Model {}: Accuracy={:.3}, Performance Ratio={:.2}", 
-                model_name, 
+        println!("Model {}: Accuracy={:.3}, Performance Ratio={:.2}",
+                model_name,
                 result.summary.overall_accuracy,
                 result.summary.performance_ratio);
     }
@@ -346,7 +346,7 @@ Enable detailed performance profiling:
 async fn test_performance_profiling() {
     let mut suite = CrossValidationSuite::new(ComparisonTolerance::default());
     suite.enable_profiling(true);
-    
+
     let test_case = ComparisonTestCase {
         name: "performance_test",
         input: "Generate a detailed explanation of machine learning",
@@ -355,35 +355,35 @@ async fn test_performance_profiling() {
             ..Default::default()
         },
     };
-    
+
     suite.add_test_case(test_case);
-    
+
     let fixtures = FixtureManager::new();
     let model_path = fixtures.get_model_fixture("performance_model").await?;
-    
+
     let result = suite.run_comparison(&model_path).await?;
-    
+
     // Analyze performance metrics
     let rust_metrics = &result.rust_metrics;
     let cpp_metrics = &result.cpp_metrics;
-    
+
     println!("Rust Performance:");
     println!("  Model Load Time: {:?}", rust_metrics.model_load_time);
     println!("  Inference Time: {:?}", rust_metrics.inference_time);
     println!("  Peak Memory: {} MB", rust_metrics.peak_memory / 1024 / 1024);
     println!("  Tokens/sec: {:.2}", rust_metrics.tokens_per_second);
-    
+
     println!("C++ Performance:");
     println!("  Model Load Time: {:?}", cpp_metrics.model_load_time);
     println!("  Inference Time: {:?}", cpp_metrics.inference_time);
     println!("  Peak Memory: {} MB", cpp_metrics.peak_memory / 1024 / 1024);
     println!("  Tokens/sec: {:.2}", cpp_metrics.tokens_per_second);
-    
+
     // Performance assertions
     assert!(rust_metrics.tokens_per_second > 0.0);
     assert!(cpp_metrics.tokens_per_second > 0.0);
-    
-    let performance_ratio = rust_metrics.inference_time.as_secs_f64() / 
+
+    let performance_ratio = rust_metrics.inference_time.as_secs_f64() /
                            cpp_metrics.inference_time.as_secs_f64();
     assert!(performance_ratio <= 2.0, "Rust should not be more than 2x slower");
 }
@@ -506,42 +506,42 @@ on: [push, pull_request]
 jobs:
   crossval:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: recursive
-    
+
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake build-essential
-    
+
     - name: Setup Rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         override: true
-    
+
     - name: Build C++ implementation
       run: |
         cd legacy/bitnet.cpp
         mkdir build && cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
         make -j$(nproc)
-    
+
     - name: Cache test fixtures
       uses: actions/cache@v3
       with:
         path: tests/cache
         key: crossval-fixtures-${{ hashFiles('tests/fixtures.toml') }}
-    
+
     - name: Run cross-validation tests
       run: cargo test --no-default-features --test crossval_tests --no-default-features --features cpu
       env:
         BITNET_CPP_BINARY: legacy/bitnet.cpp/build/bitnet_cpp
         RUST_LOG: info
-    
+
     - name: Upload test reports
       uses: actions/upload-artifact@v3
       if: always()
@@ -564,14 +564,14 @@ on:
 jobs:
   comprehensive-crossval:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         model: [small, medium, large]
-        
+
     steps:
     # ... setup steps ...
-    
+
     - name: Run comprehensive cross-validation
       run: |
         cargo test --no-default-features --test crossval_tests test_comprehensive_${{ matrix.model }} --no-default-features --features cpu
@@ -579,7 +579,7 @@ jobs:
         CROSSVAL_MODEL: ${{ matrix.model }}_test_model
         CROSSVAL_MIN_ACCURACY: "0.99"
         RUST_LOG: debug
-    
+
     - name: Report regressions
       if: failure()
       uses: actions/github-script@v6

@@ -251,22 +251,22 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.9, "3.10", "3.11"]
-    
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Install dependencies
       run: |
         pip install -r tests/python_baseline/requirements.txt
-    
+
     - name: Run tests
       run: |
         python tests/python_baseline/run_tests.py --all --coverage
-    
+
     - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:
@@ -296,7 +296,7 @@ jobs:
    ```bash
    # Check CUDA availability
    python -c "import torch; print(torch.cuda.is_available())"
-   
+
    # Skip GPU tests if CUDA unavailable
    pytest tests/python_baseline/ -m "not gpu"
    ```
@@ -305,7 +305,7 @@ jobs:
    ```bash
    # Reduce test parallelism
    python tests/python_baseline/run_tests.py --all --parallel 1
-   
+
    # Skip memory-intensive tests
    pytest tests/python_baseline/ -m "not slow"
    ```

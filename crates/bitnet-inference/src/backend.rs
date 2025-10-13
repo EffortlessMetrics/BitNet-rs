@@ -9,28 +9,28 @@ use bitnet_kernels::KernelProvider;
 pub trait Backend: Send + Sync {
     /// Get backend name
     fn name(&self) -> &'static str;
-    
+
     /// Check if backend is available
     fn is_available(&self) -> bool;
-    
+
     /// Tokenize text input
     fn tokenize(&self, text: &str) -> Result<Vec<u32>>;
-    
+
     /// Detokenize tokens to text
     fn detokenize(&self, tokens: &[u32]) -> Result<String>;
-    
+
     /// Convert tokens to tensor
     fn tokens_to_tensor(&self, tokens: &[u32]) -> Result<BitNetTensor>;
-    
+
     /// Check if token is EOS token
     fn is_eos_token(&self, token: u32) -> bool;
-    
+
     /// Clone the backend (for use in streaming)
     fn clone_backend(&self) -> Box<dyn Backend>;
-    
+
     /// Get kernel provider
     fn kernel_provider(&self) -> &dyn KernelProvider;
-    
+
     /// Get device information
     fn device_info(&self) -> DeviceInfo;
 }
@@ -70,7 +70,7 @@ fn select_auto_backend() -> Result<Box<dyn Backend>> {
             return Ok(Box::new(gpu_backend));
         }
     }
-    
+
     Ok(Box::new(crate::cpu::CpuBackend::new()?))
 }
 
@@ -86,13 +86,13 @@ fn select_gpu_backend_only() -> Result<Box<dyn Backend>> {
         .map_err(|_| InferenceError::GenerationFailed {
             reason: "GPU backend not available".to_string()
         })?;
-    
+
     if !gpu_backend.is_available() {
         return Err(InferenceError::GenerationFailed {
             reason: "GPU backend not available".to_string()
         }.into());
     }
-    
+
     Ok(Box::new(gpu_backend))
 }
 
@@ -107,12 +107,12 @@ impl BackendRegistry {
             backends: Vec::new(),
         }
     }
-    
+
     /// Register a backend
     pub fn register(&mut self, backend: Box<dyn Backend>) {
         self.backends.push(backend);
     }
-    
+
     /// Get all available backends
     pub fn available_backends(&self) -> Vec<&dyn Backend> {
         self.backends
@@ -121,7 +121,7 @@ impl BackendRegistry {
             .map(|b| b.as_ref())
             .collect()
     }
-    
+
     /// Get backend by name
     pub fn get_backend(&self, name: &str) -> Option<&dyn Backend> {
         self.backends
@@ -129,7 +129,7 @@ impl BackendRegistry {
             .find(|b| b.name() == name)
             .map(|b| b.as_ref())
     }
-    
+
     /// Select best backend based on preference
     pub fn select_backend(&self, preference: BackendPreference) -> Result<&dyn Backend> {
         match preference {
@@ -183,17 +183,17 @@ impl BackendRegistry {
 impl Default for BackendRegistry {
     fn default() -> Self {
         let mut registry = Self::new();
-        
+
         // Register CPU backend
         if let Ok(cpu_backend) = crate::cpu::CpuBackend::new() {
             registry.register(Box::new(cpu_backend));
         }
-        
+
         // Register GPU backend if available
         if let Ok(gpu_backend) = crate::gpu::GpuBackend::new() {
             registry.register(Box::new(gpu_backend));
         }
-        
+
         registry
     }
 }
@@ -201,17 +201,17 @@ impl Default for BackendRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_backend_registry() {
         let registry = BackendRegistry::default();
         let available = registry.available_backends();
-        
+
         // Should have at least CPU backend
         assert!(!available.is_empty());
         assert!(available.iter().any(|b| b.name().contains("CPU")));
     }
-    
+
     #[test]
     fn test_backend_selection() {
         let config = InferenceConfig::default();

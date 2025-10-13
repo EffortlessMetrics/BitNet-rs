@@ -127,7 +127,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["./scripts/run_comprehensive_tests.sh"]
 
 # Example usage commands (as comments for documentation)
-# 
+#
 # Build the testing image:
 # docker build -f examples/testing/ci_cd/docker_testing_example.dockerfile -t bitnet-rs-test .
 #
