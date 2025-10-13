@@ -275,3 +275,140 @@ st2gguf-install:
     @echo "Installing st2gguf to cargo bin..."
     cargo install --path crates/bitnet-st2gguf --force
     @echo "✅ Installed: st2gguf (run with 'st2gguf --help')"
+
+# ============================================================================
+# SafeTensors Tools (bitnet-st-tools)
+# ============================================================================
+
+# Merge SafeTensors shards with LayerNorm preservation (F16)
+st-merge-ln-f16 input output:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔗 Merging SafeTensors shards with LayerNorm preservation..."
+    cargo run --release -p bitnet-st-tools --bin st-merge-ln-f16 -- \
+        "{{input}}" "{{output}}"
+
+# Inspect LayerNorm tensors in SafeTensors file
+st-ln-inspect safetensors_file:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Inspecting LayerNorm tensors in SafeTensors..."
+    cargo run --release -p bitnet-st-tools --bin st-ln-inspect -- \
+        "{{safetensors_file}}"
+
+# Build st-tools binaries in release mode
+st-tools-build:
+    @echo "Building st-tools..."
+    cargo build --release -p bitnet-st-tools
+    @echo "✅ Built: target/release/st-ln-inspect"
+    @echo "✅ Built: target/release/st-merge-ln-f16"
+
+# ============================================================================
+# Advanced Inspection (with policy and gate control)
+# ============================================================================
+
+# Run inspect with auto gate detection (architecture-aware rules)
+inspect-auto model_gguf:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Resolve model path
+    MODEL="{{model_gguf}}"
+    if [[ ! -f "$MODEL" ]]; then
+        if [[ -f "models/{{model_gguf}}" ]]; then
+            MODEL="models/{{model_gguf}}"
+        fi
+    fi
+    cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+        inspect --ln-stats --gate auto "$MODEL"
+
+# Run inspect with custom policy file
+inspect-policy model_gguf policy_yml policy_key:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Resolve model path
+    MODEL="{{model_gguf}}"
+    if [[ ! -f "$MODEL" ]]; then
+        if [[ -f "models/{{model_gguf}}" ]]; then
+            MODEL="models/{{model_gguf}}"
+        fi
+    fi
+    cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+        inspect --ln-stats --gate policy \
+        --policy "{{policy_yml}}" \
+        --policy-key "{{policy_key}}" \
+        "$MODEL"
+
+# Quick validation gate check with auto ruleset (strict mode)
+gates-auto model_gguf:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Resolve model path
+    MODEL="{{model_gguf}}"
+    if [[ ! -f "$MODEL" ]]; then
+        if [[ -f "models/{{model_gguf}}" ]]; then
+            MODEL="models/{{model_gguf}}"
+        fi
+    fi
+    BITNET_STRICT_MODE=1 \
+    ./target/release/bitnet inspect --ln-stats --gate auto "$MODEL"
+
+# Quick validation gate check with policy file (strict mode)
+gates-policy model_gguf policy_yml policy_key:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Resolve model path
+    MODEL="{{model_gguf}}"
+    if [[ ! -f "$MODEL" ]]; then
+        if [[ -f "models/{{model_gguf}}" ]]; then
+            MODEL="models/{{model_gguf}}"
+        fi
+    fi
+    BITNET_STRICT_MODE=1 \
+    ./target/release/bitnet inspect --ln-stats \
+        --gate policy --policy "{{policy_yml}}" --policy-key "{{policy_key}}" "$MODEL"
+
+# ============================================================================
+# Build Recipes
+# ============================================================================
+
+# Build all components (CLI, st2gguf, st-tools)
+build-all: build-cli st2gguf-build st-tools-build
+    @echo "✅ All components built"
+
+# Build bitnet-cli with full features (CPU inference + all subcommands)
+build-cli:
+    @echo "🔨 Building bitnet-cli with full features..."
+    cargo build --release -p bitnet-cli --no-default-features --features cpu,full-cli
+    @echo "✅ Built: target/release/bitnet"
+
+# Build bitnet-cli with GPU support
+build-cli-gpu:
+    @echo "🔨 Building bitnet-cli with GPU support..."
+    cargo build --release -p bitnet-cli --no-default-features --features gpu,full-cli
+    @echo "✅ Built: target/release/bitnet (GPU)"
+
+# ============================================================================
+# Utility Recipes
+# ============================================================================
+
+# Show bitnet-cli version and features
+version:
+    cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- --version
+
+# Show system information
+info:
+    cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- info
+
+# Check GGUF file compatibility
+compat-check model_gguf:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Resolve model path
+    MODEL="{{model_gguf}}"
+    if [[ ! -f "$MODEL" ]]; then
+        if [[ -f "models/{{model_gguf}}" ]]; then
+            MODEL="models/{{model_gguf}}"
+        fi
+    fi
+    cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+        compat-check "$MODEL" --show-kv --kv-limit 20

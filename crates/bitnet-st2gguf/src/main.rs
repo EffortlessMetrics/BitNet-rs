@@ -62,6 +62,7 @@ use writer::{GgufWriter, MetadataValue, TensorDType, TensorEntry};
 /// - `bitnet.context_length`: max sequence length; ROPE tables and validation
 /// - `general.file_type`: type tag (e.g. 1 = F16) for downstream tooling
 const REQUIRED_KEYS: &[&str] = &[
+    "general.name",
     "general.architecture",
     "bitnet.hidden_size",
     "bitnet.num_layers",
@@ -330,6 +331,12 @@ fn add_metadata_from_config(writer: &mut GgufWriter, config: &Json) -> Result<us
 
     // Extract standard metadata
     if let Some(obj) = config.as_object() {
+        // Model name (required for loaders)
+        if let Some(name) = obj.get("_name_or_path").and_then(|v| v.as_str()) {
+            writer.add_metadata("general.name", MetadataValue::String(name.to_string()));
+            count += 1;
+        }
+
         // Model architecture
         if let Some(model_type) = obj.get("model_type").and_then(|v| v.as_str()) {
             writer.add_metadata(

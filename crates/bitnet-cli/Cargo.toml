@@ -31,7 +31,9 @@ tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 indicatif = { workspace = true, features = ["tokio"] }
 serde_json.workspace = true
 serde = { workspace = true, features = ["derive"] }
+serde_yaml = "0.9"
 toml.workspace = true
+regex = "1"
 console.workspace = true
 humantime.workspace = true
 humansize.workspace = true
@@ -52,7 +54,7 @@ assert_cmd = "2.0.17"
 predicates = "3.1.3"
 
 [features]
-default = ["cpu"]
+default = ["cpu", "full-cli"]
 cpu = ["bitnet-inference/cpu"]
 gpu = ["bitnet-inference/gpu"]
 # IQ2_S support via GGML FFI

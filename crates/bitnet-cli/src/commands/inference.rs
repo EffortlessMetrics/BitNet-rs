@@ -60,7 +60,7 @@ use tracing::{debug, error, info, warn};
 use bitnet_inference::{InferenceEngine, SamplingConfig};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
-use candle_core::{Device, backend::BackendDevice};
+use candle_core::Device;
 
 use crate::config::CliConfig;
 

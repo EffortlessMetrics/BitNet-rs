@@ -15,6 +15,8 @@ use tracing::{error, info};
 mod commands;
 mod config;
 mod exit;
+#[cfg(feature = "full-cli")]
+mod ln_rules;
 mod sampling;
 mod score;
 

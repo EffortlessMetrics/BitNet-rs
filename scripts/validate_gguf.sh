@@ -46,72 +46,46 @@ if ! command -v cargo >/dev/null 2>&1; then
 fi
 
 # Build CLI if needed (quietly)
-if ! cargo run -q -p bitnet-cli --no-default-features --features cpu -- --version >/dev/null 2>&1; then
+if ! cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- --version >/dev/null 2>&1; then
   info "Building bitnet-cli..."
-  cargo build -q -p bitnet-cli --no-default-features --features cpu || error "Failed to build bitnet-cli"
+  cargo build -q -p bitnet-cli --no-default-features --features cpu,full-cli || error "Failed to build bitnet-cli"
 fi
 
 # Exit code tracking
 EXIT_CODE=0
 
 # ============================================================================
-# 1. LayerNorm Statistics Check
+# 1. LayerNorm and Projection Weight Statistics Check
 # ============================================================================
-section "1/3: LayerNorm Statistics Check (Strict Mode)"
+section "1/3: LayerNorm and Projection Weight Statistics Check (Strict Mode)"
 
-info "Checking LayerNorm RMS values (must be ~1.0)..."
+info "Checking LayerNorm and projection weight RMS values..."
 info "Running with BITNET_STRICT_MODE=1 (no corrections allowed)"
+info "Using architecture-aware validation rules (auto-detection)"
 
-LN_TMP=$(mktemp)
+# The CLI now handles pattern-aware validation internally with architecture-specific rules:
+#  - BitNet b1.58 F16: Different envelopes for FFN LN, post-attn LN, input LN, final norms
+#  - BitNet b1.58 I2_S: Adjusted envelopes for quantized models
+#  - Projection weights: RMS envelope validation based on format
+# See crates/bitnet-cli/src/ln_rules.rs for ruleset details
+
 set +e
 BITNET_STRICT_MODE=1 \
-  cargo run -q -p bitnet-cli --no-default-features --features cpu -- \
-  inspect --ln-stats "$MODEL" 2>&1 | tee "$LN_TMP"
+  cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate auto "$MODEL"
 LN_RC=$?
 set -e
 
 if [[ $LN_RC -ne 0 ]]; then
-  error "LayerNorm inspection failed under strict mode (exit code: $LN_RC)" 10
-fi
-
-# Parse and validate LN statistics
-# Look for suspicious patterns: RMS very far from 1.0 (< 0.5 or > 2.0)
-if grep -E -q "SUSPICIOUS|suspicious|rms=.*0\.[0-9]{3}[^0-9]" "$LN_TMP"; then
-  warn "Suspicious LayerNorm statistics detected!"
-  echo ""
-  grep -E "SUSPICIOUS|suspicious|rms=" "$LN_TMP" || true
-  error "Model has suspicious LayerNorm weights (quantized or corrupted).
-This model is NOT clean and should not be used in production.
-Please re-export with LayerNorm weights in float format." 11
-fi
-
-# Count the number of LayerNorm layers with RMS in the healthy range [0.5, 2.0].
-# This extracts the numeric value after 'rms=' on each matching line and tallies those in range.
-HEALTHY_COUNT=$(
-  awk -F'rms=' '
-    /rms=[0-9]+\.[0-9]+/ {
-      split($2, a, " ");
-      rms=a[1]+0;
-      if (rms >= 0.5 && rms <= 2.0) count++;
-    }
-    END { print count+0 }
-  ' "$LN_TMP"
-)
-
-if [[ $HEALTHY_COUNT -lt 1 ]]; then
-  warn "No healthy LayerNorm RMS values found (expected ≈1.0)"
-  echo "This might indicate quantized or missing LayerNorm weights."
-  EXIT_CODE=12
+  error "LayerNorm/Projection validation failed under strict mode (exit code: $LN_RC)" 10
 else
-  info "✅ Found $HEALTHY_COUNT healthy LayerNorm layers (RMS in [0.5, 2.0])"
+  info "✅ LayerNorm and projection weight statistics passed (architecture-aware rules)"
 fi
 
-rm -f "$LN_TMP"
-
 # ============================================================================
-# 2. Projection Weight RMS Check
+# 2. Projection Weight RMS Check (via model loading)
 # ============================================================================
-section "2/3: Projection Weight RMS Check"
+section "2/3: Projection Weight RMS Check (via model loading)"
 
 info "Loading model and checking projection weight statistics..."
 info "Expected: Q/K/V/O and FFN weights should have RMS ~ O(10³)"
@@ -119,7 +93,7 @@ info "Expected: Q/K/V/O and FFN weights should have RMS ~ O(10³)"
 PROJ_TMP=$(mktemp)
 set +e
 RUST_LOG=info \
-  cargo run -q -p bitnet-cli --no-default-features --features cpu -- \
+  cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- \
   run --model "$MODEL" --tokenizer "$TOK" \
   --prompt "Warmup." --max-new-tokens 1 --temperature 0.0 \
   2>&1 | tee "$PROJ_TMP"
@@ -159,7 +133,7 @@ set +e
 BITNET_DETERMINISTIC=1 \
 BITNET_SEED=42 \
 RAYON_NUM_THREADS=1 \
-  cargo run -q -p bitnet-cli --no-default-features --features cpu -- \
+  cargo run -q -p bitnet-cli --no-default-features --features cpu,full-cli -- \
   run --model "$MODEL" --tokenizer "$TOK" \
   --prompt "The capital of France is" \
   --max-new-tokens 8 \
@@ -201,7 +175,7 @@ if [[ $EXIT_CODE -eq 0 ]]; then
   info "✅✅✅ ALL VALIDATION CHECKS PASSED ✅✅✅"
   echo ""
   echo "This model is clean and production-ready:"
-  echo "  ✓ LayerNorm weights are healthy (RMS ≈ 1.0)"
+  echo "  ✓ LayerNorm weights are healthy (architecture-aware RMS validation)"
   echo "  ✓ Projection weights loaded successfully"
   echo "  ✓ Greedy inference produces linguistic output"
   echo ""

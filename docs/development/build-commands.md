@@ -7,16 +7,19 @@ This document provides comprehensive build and development commands for BitNet.r
 ### Basic Builds
 ```bash
 # Build with CPU support (no default features)
-cargo build --no-default-features --release --no-default-features --features cpu
+cargo build --no-default-features --release --features cpu
 
 # Build with GPU support and device-aware quantization
-cargo build --no-default-features --release --no-default-features --features gpu
+cargo build --no-default-features --release --features gpu
 
 # Build with IQ2_S quantization support (requires GGML FFI)
-cargo build --no-default-features --release --no-default-features --features "cpu,iq2s-ffi"
+cargo build --no-default-features --release --features "cpu,iq2s-ffi"
 
 # Build with FFI quantization bridge support (requires C++ library)
-cargo build --no-default-features --release --no-default-features --features "cpu,ffi"
+cargo build --no-default-features --release --features "cpu,ffi"
+
+# Build CLI with full validation features (includes inspect command)
+cargo build --no-default-features --release -p bitnet-cli --features cpu,full-cli
 ```
 
 ### WebAssembly Builds
@@ -176,6 +179,41 @@ cargo run -p xtask --features inference -- infer --model models/bitnet/model.ggu
 cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "The capital of France is" --tokenizer models/bitnet/tokenizer.model  # SPM tokenizer
 cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Hello world" --allow-mock --format json
 cargo run -p xtask --features inference -- infer --model models/bitnet/model.gguf --prompt "Test prompt" --max-new-tokens 64 --temperature 0.7 --gpu
+```
+
+### Model Validation
+```bash
+# Build CLI with validation features
+cargo build --no-default-features -p bitnet-cli --features cpu,full-cli
+
+# Inspect LayerNorm and projection weight statistics (architecture-aware validation)
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate auto models/model.gguf
+
+# Validate with custom policy
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate policy \
+  --policy examples/policies/custom.yml \
+  --policy-key my-model:f16 \
+  models/model.gguf
+
+# JSON output for CI integration
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate auto --json models/model.gguf > validation.json
+
+# Strict mode (fail on validation warnings)
+BITNET_STRICT_MODE=1 \
+  cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
+  inspect --ln-stats --gate auto models/model.gguf
+
+# Full 3-stage validation (LayerNorm, projection, linguistic sanity)
+./scripts/validate_gguf.sh models/model.gguf models/tokenizer.json
+
+# Export clean GGUF from SafeTensors with LayerNorm preservation
+./scripts/export_clean_gguf.sh \
+  models/safetensors-checkpoint \
+  models/tokenizer.json \
+  models/clean
 ```
 
 ## Fast Recipes
