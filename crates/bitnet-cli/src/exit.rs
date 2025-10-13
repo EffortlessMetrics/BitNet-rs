@@ -13,6 +13,9 @@ pub const EXIT_NLL_TOO_HIGH: i32 = 5;
 pub const EXIT_TAU_TOO_LOW: i32 = 6;
 #[allow(dead_code)]
 pub const EXIT_ARGMAX_MISMATCH: i32 = 7;
+// LayerNorm validation exit code
+#[allow(dead_code)]
+pub const EXIT_LN_SUSPICIOUS: i32 = 8;
 #[allow(dead_code)]
 pub const EXIT_PERF_FAIL: i32 = 9;
 #[allow(dead_code)]

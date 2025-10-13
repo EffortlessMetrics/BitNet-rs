@@ -11,6 +11,7 @@ members = [
   "crates/bitnet-tokenizers",
   "crates/bitnet-server",
   "crates/bitnet-cli",
+  "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-ffi",
   "crates/bitnet-py",
   "crates/bitnet-wasm",
@@ -23,7 +24,7 @@ members = [
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
-default-members = ["crates/bitnet-common", "crates/bitnet-models", "crates/bitnet-tokenizers", "crates/bitnet-quantization", "crates/bitnet-kernels", "crates/bitnet-inference", "crates/bitnet-cli", "crates/bitnet-server"]
+default-members = ["crates/bitnet-common", "crates/bitnet-models", "crates/bitnet-tokenizers", "crates/bitnet-quantization", "crates/bitnet-kernels", "crates/bitnet-inference", "crates/bitnet-cli", "crates/bitnet-server", "crates/bitnet-st2gguf"]
 
 [package]
 authors = ["BitNet Contributors <bitnet@microsoft.com>"]

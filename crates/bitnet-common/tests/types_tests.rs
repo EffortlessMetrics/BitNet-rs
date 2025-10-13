@@ -129,6 +129,8 @@ fn test_model_metadata_serialization() {
         vocab_size: 32000,
         context_length: 2048,
         quantization: Some(QuantizationType::TL1),
+        fingerprint: None,
+        corrections_applied: None,
     };
 
     let json = serde_json::to_string(&metadata).unwrap();
@@ -151,6 +153,8 @@ fn test_model_metadata_optional_quantization() {
         vocab_size: 50000,
         context_length: 4096,
         quantization: None,
+        fingerprint: None,
+        corrections_applied: None,
     };
 
     let json = serde_json::to_string(&metadata).unwrap();
@@ -263,6 +267,8 @@ proptest! {
             vocab_size,
             context_length,
             quantization,
+            fingerprint: None,
+            corrections_applied: None,
         };
 
         let json = serde_json::to_string(&metadata).unwrap();

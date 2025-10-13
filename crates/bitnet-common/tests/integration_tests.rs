@@ -52,6 +52,8 @@ fn test_serialization_with_all_types() {
             max_position_embeddings: 4096,
             rope_theta: Some(10000.0),
             rope_scaling: None,
+            rms_norm_eps: None,
+            tokenizer: TokenizerConfig::default(),
         },
         inference: InferenceConfig {
             max_length: 4096,
@@ -61,6 +63,9 @@ fn test_serialization_with_all_types() {
             top_p: Some(0.95),
             repetition_penalty: 1.1,
             seed: Some(42),
+            add_bos: true,
+            append_eos: false,
+            mask_pad: true,
         },
         quantization: QuantizationConfig {
             quantization_type: QuantizationType::TL2,
@@ -195,6 +200,8 @@ fn test_model_metadata_integration() {
         vocab_size: config.model.vocab_size,
         context_length: config.inference.max_length,
         quantization: Some(config.quantization.quantization_type),
+        fingerprint: None,
+        corrections_applied: None,
     };
 
     assert_eq!(metadata.vocab_size, 50000);
@@ -217,6 +224,9 @@ fn test_generation_config_integration() {
         top_p: Some(0.95),
         repetition_penalty: 1.2,
         seed: Some(42),
+        add_bos: true,
+        append_eos: false,
+        mask_pad: true,
     };
 
     let generation_config = GenerationConfig {
@@ -271,6 +281,8 @@ fn test_thread_safety() {
         vocab_size: 32000,
         context_length: 2048,
         quantization: Some(QuantizationType::I2S),
+        fingerprint: None,
+        corrections_applied: None,
     });
 
     let handles: Vec<_> = (0..4)

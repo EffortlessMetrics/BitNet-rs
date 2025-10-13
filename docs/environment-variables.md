@@ -10,7 +10,41 @@ This document describes all environment variables used throughout BitNet.rs for 
 - `HF_TOKEN`: Hugging Face token for private repos
 - `BITNET_DETERMINISTIC`: Enable deterministic mode for testing
 - `BITNET_SEED`: Set seed for reproducible runs
-- `BITNET_STRICT_MODE`: Prevent mock inference fallbacks ("1" enables strict mode for production)
+- `BITNET_STRICT_MODE`: Prevent mock inference fallbacks and validate LayerNorm gamma statistics ("1" enables strict mode for production)
+  - Prevents all mock inference paths
+  - Validates LayerNorm gamma weights have mean ≈ 1.0
+  - Fails immediately on suspicious LayerNorm statistics (mean outside [0.5, 2.0])
+  - In non-strict mode (default), issues warnings but continues
+
+### Model Validation and Correction Policy
+- `BITNET_CORRECTION_POLICY`: Path to YAML policy file defining model-specific corrections
+  - **Value**: Absolute or relative path to policy YAML file (e.g., `/path/to/policy.yml`)
+  - **Purpose**: Enable runtime corrections for known-bad models with fingerprinted, auditable fixes
+  - **Format**: YAML file specifying model fingerprints and correction parameters
+  - **Usage**:
+    ```bash
+    # Enable policy-driven corrections
+    export BITNET_CORRECTION_POLICY=/path/to/correction-policy.yml
+    export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
+    cargo run -p bitnet-cli -- run --model model.gguf
+    ```
+  - **Important**: Both `BITNET_CORRECTION_POLICY` and `BITNET_ALLOW_RUNTIME_CORRECTIONS` must be set
+
+- `BITNET_ALLOW_RUNTIME_CORRECTIONS`: Enable runtime corrections (must be used with BITNET_CORRECTION_POLICY)
+  - **Value**: "1" to enable (disabled by default)
+  - **Purpose**: Safety gate preventing accidental application of corrections
+  - **Warning**: CI blocks correction flags - runtime corrections are for known-bad models only
+  - **Proper fix**: Always prefer regenerating GGUF with LayerNorm weights in FP16/FP32 (not quantized)
+  - **Usage**:
+    ```bash
+    # Inspect model statistics first
+    cargo run -p bitnet-cli -- inspect --ln-stats model.gguf
+
+    # Apply corrections if needed (temporary workaround)
+    export BITNET_CORRECTION_POLICY=./model-corrections.yml
+    export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
+    cargo run -p bitnet-cli -- run --model model.gguf
+    ```
 
 ### Performance and Parallelism
 - `RAYON_NUM_THREADS`: Control CPU parallelism

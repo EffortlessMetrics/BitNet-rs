@@ -151,6 +151,8 @@ impl FormatLoader for SafeTensorsLoader {
             vocab_size,
             context_length,
             quantization: None, // SafeTensors typically stores unquantized weights
+            fingerprint: None,
+            corrections_applied: None,
         };
 
         debug!("Extracted SafeTensors metadata: {:?}", metadata);

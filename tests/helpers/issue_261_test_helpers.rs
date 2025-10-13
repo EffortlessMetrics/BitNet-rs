@@ -326,12 +326,19 @@ impl DeterministicConfig {
         Self { original_env }
     }
 
-    /// Restore original environment
+    /// Restore original environment (deprecated - use Drop impl)
+    #[deprecated(note = "Automatic cleanup via Drop is preferred")]
     pub fn restore(self) {
-        for (var, value) in self.original_env {
+        drop(self);
+    }
+}
+
+impl Drop for DeterministicTestConfig {
+    fn drop(&mut self) {
+        for (var, value) in &self.original_env {
             match value {
-                Some(v) => unsafe { std::env::set_var(&var, v) },
-                None => unsafe { std::env::remove_var(&var) },
+                Some(v) => unsafe { std::env::set_var(var, v) },
+                None => unsafe { std::env::remove_var(var) },
             }
         }
     }
@@ -365,12 +372,19 @@ impl StrictModeConfig {
         Self { original_env }
     }
 
-    /// Restore original environment
+    /// Restore original environment (deprecated - use Drop impl)
+    #[deprecated(note = "Automatic cleanup via Drop is preferred")]
     pub fn restore(self) {
-        for (var, value) in self.original_env {
+        drop(self);
+    }
+}
+
+impl Drop for StrictModeConfig {
+    fn drop(&mut self) {
+        for (var, value) in &self.original_env {
             match value {
-                Some(v) => unsafe { std::env::set_var(&var, v) },
-                None => unsafe { std::env::remove_var(&var) },
+                Some(v) => unsafe { std::env::set_var(var, v) },
+                None => unsafe { std::env::remove_var(var) },
             }
         }
     }

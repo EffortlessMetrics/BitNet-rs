@@ -18,6 +18,17 @@ fn workspace_root() -> PathBuf {
     path
 }
 
+/// Model correction record (LayerNorm rescaling, etc.)
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct CorrectionRecord {
+    layer: String,
+    correction_type: String,
+    rms_before: f32,
+    rms_after: f32,
+    factor: f32,
+    policy_fingerprint: String,
+}
+
 /// Receipt structure matching bitnet-inference Receipt
 ///
 /// Tests specification: docs/explanation/issue-439-spec.md#receipt-validation-architecture
@@ -29,6 +40,8 @@ struct Receipt {
     tokens_per_second: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     latency_ms: Option<f64>,
+    #[serde(default)]
+    corrections: Vec<CorrectionRecord>,
 }
 
 /// GPU kernel naming convention prefixes (AC6)
@@ -85,6 +98,177 @@ fn verify_gpu_receipt(receipt: &Receipt) -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+/// Validate receipt corrections for CI gating
+///
+/// In normal CI (not canary jobs), receipts must NOT contain any corrections.
+/// This ensures production builds use properly prepared models, not runtime workarounds.
+///
+/// Set BITNET_ALLOW_CORRECTIONS=1 to disable this check in canary/dev environments.
+fn verify_corrections_in_ci(receipt: &Receipt) -> anyhow::Result<()> {
+    use anyhow::ensure;
+
+    // Allow corrections in canary/dev builds
+    if std::env::var("BITNET_ALLOW_CORRECTIONS").is_ok() {
+        return Ok(());
+    }
+
+    // In normal CI, reject any receipts with corrections
+    ensure!(
+        receipt.corrections.is_empty(),
+        "Receipt contains {} correction(s) but BITNET_ALLOW_CORRECTIONS is not set.\n\
+         Corrections detected:\n{}\n\n\
+         Production CI must use properly prepared models without runtime corrections.\n\
+         To allow corrections in canary/dev builds, set BITNET_ALLOW_CORRECTIONS=1.\n\
+         To fix properly: regenerate GGUF with float LayerNorm weights (not quantized).",
+        receipt.corrections.len(),
+        receipt
+            .corrections
+            .iter()
+            .map(|c| format!(
+                "  - {}: {} (RMS {:.5}→{:.5}, factor={:.3}, policy={})",
+                c.layer,
+                c.correction_type,
+                c.rms_before,
+                c.rms_after,
+                c.factor,
+                c.policy_fingerprint
+            ))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod corrections_validation_tests {
+    use super::*;
+
+    /// Test that receipts without corrections pass validation
+    #[test]
+    fn test_receipt_no_corrections_passes() {
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        assert!(result.is_ok(), "Receipt without corrections should pass: {:?}", result.err());
+    }
+
+    /// Test that receipts with corrections fail in normal CI
+    #[test]
+    fn test_receipt_with_corrections_fails_in_ci() {
+        unsafe {
+            std::env::remove_var("BITNET_ALLOW_CORRECTIONS");
+        }
+
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![CorrectionRecord {
+                layer: "model.layers.0.input_layernorm.weight".to_string(),
+                correction_type: "ln_gamma_rescale_rms".to_string(),
+                rms_before: 0.5,
+                rms_after: 1.0,
+                factor: 2.0,
+                policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+            }],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        assert!(result.is_err(), "Receipt with corrections should fail in normal CI");
+
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("correction(s)"), "Error should mention corrections: {}", err_msg);
+        assert!(
+            err_msg.contains("BITNET_ALLOW_CORRECTIONS"),
+            "Error should mention BITNET_ALLOW_CORRECTIONS: {}",
+            err_msg
+        );
+    }
+
+    /// Test that receipts with corrections pass when BITNET_ALLOW_CORRECTIONS is set
+    #[test]
+    fn test_receipt_with_corrections_passes_in_canary() {
+        unsafe {
+            std::env::set_var("BITNET_ALLOW_CORRECTIONS", "1");
+        }
+
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![CorrectionRecord {
+                layer: "model.layers.0.input_layernorm.weight".to_string(),
+                correction_type: "ln_gamma_rescale_rms".to_string(),
+                rms_before: 0.5,
+                rms_after: 1.0,
+                factor: 2.0,
+                policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+            }],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        assert!(
+            result.is_ok(),
+            "Receipt with corrections should pass when BITNET_ALLOW_CORRECTIONS=1: {:?}",
+            result.err()
+        );
+
+        unsafe {
+            std::env::remove_var("BITNET_ALLOW_CORRECTIONS");
+        }
+    }
+
+    /// Test that error message shows correction details
+    #[test]
+    fn test_corrections_error_shows_details() {
+        unsafe {
+            std::env::remove_var("BITNET_ALLOW_CORRECTIONS");
+        }
+
+        let receipt = Receipt {
+            backend: "cpu".to_string(),
+            kernels: vec!["i2s_gemv".to_string()],
+            tokens_per_second: Some(15.0),
+            latency_ms: Some(66.0),
+            corrections: vec![
+                CorrectionRecord {
+                    layer: "layer1.norm.weight".to_string(),
+                    correction_type: "ln_gamma_rescale_rms".to_string(),
+                    rms_before: 0.5,
+                    rms_after: 1.0,
+                    factor: 2.0,
+                    policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                },
+                CorrectionRecord {
+                    layer: "layer2.norm.weight".to_string(),
+                    correction_type: "ln_gamma_rescale_rms".to_string(),
+                    rms_before: 0.75,
+                    rms_after: 1.0,
+                    factor: 1.33,
+                    policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                },
+            ],
+        };
+
+        let result = verify_corrections_in_ci(&receipt);
+        let err_msg = result.unwrap_err().to_string();
+
+        // Check that both layers are mentioned
+        assert!(err_msg.contains("layer1.norm.weight"), "Error should mention layer1: {}", err_msg);
+        assert!(err_msg.contains("layer2.norm.weight"), "Error should mention layer2: {}", err_msg);
+        assert!(err_msg.contains("RMS"), "Error should show RMS values: {}", err_msg);
+    }
 }
 
 #[cfg(test)]

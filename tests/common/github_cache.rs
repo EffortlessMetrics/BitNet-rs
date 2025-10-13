@@ -1,4 +1,5 @@
 use super::cache::{CacheConfig, TestCache};
+use super::env::EnvGuard;
 use super::errors::{TestError, TestOpResult as TestResultCompat};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
@@ -545,6 +546,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_github_actions_detection() {
         let temp_dir = TempDir::new().unwrap();
         let workspace_root = temp_dir.path().to_path_buf();
@@ -554,10 +556,11 @@ mod tests {
         // Should be false in test environment
         assert!(!cache_manager.is_github_actions());
 
-        // Set environment variable
-        unsafe { std::env::set_var("GITHUB_ACTIONS", "true"); }
-        assert!(cache_manager.is_github_actions());
-        unsafe { std::env::remove_var("GITHUB_ACTIONS"); }
+        // Set environment variable with guard for automatic cleanup
+        {
+            let _guard = EnvGuard::set("GITHUB_ACTIONS", "true");
+            assert!(cache_manager.is_github_actions());
+        }
     }
 
     #[tokio::test]

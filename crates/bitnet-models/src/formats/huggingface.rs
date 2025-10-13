@@ -73,6 +73,8 @@ impl FormatLoader for HuggingFaceLoader {
             vocab_size,
             context_length,
             quantization: None,
+            fingerprint: None,
+            corrections_applied: None,
         };
 
         debug!("Extracted HuggingFace metadata: {:?}", metadata);

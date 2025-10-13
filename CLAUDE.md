@@ -19,6 +19,16 @@ cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 # Development workflow
 cargo run -p xtask -- download-model
 cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Test"
+
+# Model export and validation (clean GGUF with F16 LayerNorm)
+just model-clean <model_dir> <tokenizer.json>        # Export + validate
+just model-validate <model.gguf> <tokenizer.json>    # Validate existing
+just model-inspect-ln <model.gguf>                   # Check LayerNorm stats
+
+# SafeTensors to GGUF converter (Rust st2gguf - preferred)
+just st2gguf-convert <input> <output>                # Convert with LayerNorm enforcement
+cargo run -p bitnet-st2gguf -- --help                # See all options
+st2gguf --input model.safetensors --output model.gguf --strict  # Strict validation
 ```
 
 ## Core Architecture
@@ -36,6 +46,8 @@ cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Test"
 - `bitnet-kernels`: SIMD/CUDA compute kernels
 - `bitnet-models`: GGUF/SafeTensors model loading
 - `bitnet-tokenizers`: Universal tokenizer with auto-discovery
+- `bitnet-st2gguf`: SafeTensors to GGUF converter with LayerNorm preservation
+- `bitnet-cli`: Command-line interface and utilities
 - `crossval`: C++ reference validation framework
 
 ## Key Configurations
@@ -74,6 +86,7 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 - `docs/development/test-suite.md`: Testing framework
 - `docs/development/validation-framework.md`: Quality assurance
 - `docs/development/xtask.md`: Developer tooling
+- `docs/howto/export-clean-gguf.md`: Clean GGUF export and validation
 
 ### Architecture
 - `docs/architecture-overview.md`: System design and components
@@ -86,6 +99,7 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 - `docs/health-endpoints.md`: Monitoring and observability
 - `docs/GPU_SETUP.md`: GPU configuration
 - `docs/environment-variables.md`: Runtime configuration
+- `docs/baselines/`: Model baselines and fingerprints
 
 ## Common Workflows
 
@@ -116,12 +130,23 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 - GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and runtime availability
 - Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use `BITNET_GPU_FAKE` for testing
 - Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]` pattern
+- LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your GGUF has quantized LN weights (should be FP16/FP32)
+  - **RMS-based validation**: Validator checks LayerNorm gamma RMS (root mean square) in envelope [0.5, 2.0] around expected ≈1.0
+  - **Proper fix**: Regenerate GGUF with LayerNorm weights in float format (not quantized)
+  - **Diagnosis**: Use `cargo run -p bitnet-cli -- inspect --ln-stats model.gguf` to examine LayerNorm statistics
+  - **Temporary workaround**: Policy-driven corrections for known-bad models (see `docs/explanation/correction-policy.md`)
+    - Requires both `BITNET_CORRECTION_POLICY=/path/to/policy.yml` and `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`
+    - CI blocks correction flags - use only for fingerprinted known-bad models
+  - **Strict mode**: `BITNET_STRICT_MODE=1` will fail immediately on suspicious LN weights
 
 ## Environment Variables
 - `BITNET_DETERMINISTIC=1 BITNET_SEED=42`: Reproducible inference
 - `BITNET_GGUF`: Model path override for cross-validation and inference (auto-discovers `models/` if not set)
 - `RAYON_NUM_THREADS=1`: Single-threaded determinism
 - `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing (Issue #439)
+- `BITNET_STRICT_MODE=1`: Enable strict validation including LayerNorm gamma RMS statistics (fails on suspicious weights)
+- `BITNET_CORRECTION_POLICY=/path/to/policy.yml`: Policy file for model-specific corrections (requires `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`)
+- `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`: Enable runtime corrections for known-bad models (CI blocks this flag)
 
 ## Repository Contracts
 - **Always specify features**: `--no-default-features --features cpu|gpu`

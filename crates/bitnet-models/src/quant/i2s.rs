@@ -10,9 +10,24 @@ use anyhow::{Result, bail};
 use half::f16;
 use tracing::{debug, warn};
 
+/// Per-tensor I2_S dequantization configuration
+#[derive(Debug, Clone, Copy)]
+pub struct I2SDequantCfg {
+    /// Invert scale (use 1/scale instead of scale)
+    pub inv: bool,
+    /// Multiplicative scale factor (typically 1.0)
+    pub k: f32,
+}
+
+impl Default for I2SDequantCfg {
+    fn default() -> Self {
+        Self { inv: false, k: 1.0 }
+    }
+}
+
 /// I2_S mapping options for debugging scale issues
 #[derive(Clone, Copy, Debug)]
-enum I2SMapping {
+pub enum I2SMapping {
     Sym, // {-2, -1, +1, +2} - symmetric without zero
     #[allow(dead_code)]
     Zp, // {-1, 0, +1, +2} - zero-point mapping
@@ -31,11 +46,15 @@ fn i2s_lut(mapping: I2SMapping) -> [f32; 4] {
 
 #[inline]
 fn i2s_env() -> (I2SMapping, bool, f32) {
-    // Hard-coded winning configuration that fixes scale explosion:
-    // - Symmetric LUT {-2, -1, +1, +2} avoids quantization failures
-    // - Scale factor K=0.5 reduces activation magnitude
-    // - No inverse scale (inv=false) maintains stable gradients
-    (I2SMapping::Sym, false, 0.5)
+    // I2_S dequantization configuration:
+    // - Symmetric LUT {-2, -1, +1, +2} for 2-bit signed quantization
+    // - NO inversion (inv=false) - GGUF stores scales directly, not reciprocals
+    // - Scale factor K=1.0 with abs() to handle occasional negative scales
+    //
+    // Analysis showed GGUF stores direct scales (not reciprocals).
+    // Some blocks have tiny scales (1e-4) or negative scales (corruption?),
+    // which we handle with abs() + clamping in dequant_block.
+    (I2SMapping::Sym, false, 1.0)
 }
 
 #[inline]
@@ -48,12 +67,99 @@ fn i2s_dequant_block(
     inv_scale: bool,
     k: f32,
 ) {
-    // Pre-compute scale factor
-    let mut s = f16::from_bits(scale_bits).to_f32();
+    // Pre-compute scale factor with robustness against corruption
+    let scale_fp16 = f16::from_bits(scale_bits).to_f32();
+    let mut s = scale_fp16.abs(); // Handle negative scales (corruption)
+
     if inv_scale {
-        s = 1.0 / s;
+        // Avoid division by zero or tiny denominators
+        if s < 1e-8 {
+            s = 1.0; // Default to identity if scale is corrupted
+        } else {
+            s = 1.0 / s;
+        }
     }
+
     s *= k;
+
+    // PATCH 6: Tighter clamp as immediate fix for scale issues
+    // TODO: Replace with per-tensor mode detection (sample first N blocks,
+    // detect if scales are direct or inverted, cache the mode per tensor)
+    s = s.clamp(1e-3, 1e3); // Tighter range
+
+    // Debug: log scale values for first few blocks to understand GGUF format
+    static SCALE_LOGGED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    if SCALE_LOGGED.load(std::sync::atomic::Ordering::Relaxed) < 5 {
+        SCALE_LOGGED.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        eprintln!(
+            "[I2S_DEBUG] scale_fp16={:.6e}, abs={:.6e}, inv={}, k={}, final_s={:.6e}",
+            scale_fp16,
+            scale_fp16.abs(),
+            inv_scale,
+            k,
+            s
+        );
+    }
+
+    // Pre-compute scaled lookup table for better cache locality
+    let scaled_lut = [s * lut[0], s * lut[1], s * lut[2], s * lut[3]];
+
+    // Process 4 elements at a time for better performance
+    let chunks = n / 4;
+    let remainder = n % 4;
+
+    for chunk in 0..chunks {
+        let byte_idx = chunk;
+        let b = qbits[byte_idx];
+        let base_idx = chunk * 4;
+
+        // Extract all 4 2-bit codes from the byte at once
+        dst[base_idx] = scaled_lut[(b & 0b11) as usize];
+        dst[base_idx + 1] = scaled_lut[((b >> 2) & 0b11) as usize];
+        dst[base_idx + 2] = scaled_lut[((b >> 4) & 0b11) as usize];
+        dst[base_idx + 3] = scaled_lut[((b >> 6) & 0b11) as usize];
+    }
+
+    // Handle remaining elements
+    if remainder > 0 {
+        let byte_idx = chunks;
+        let b = qbits[byte_idx];
+        let base_idx = chunks * 4;
+
+        for i in 0..remainder {
+            let code = ((b >> (i * 2)) & 0b11) as usize;
+            dst[base_idx + i] = scaled_lut[code];
+        }
+    }
+}
+
+/// Dequantize one block with explicit configuration (inv, k) instead of env
+#[inline]
+fn i2s_dequant_block_with_cfg(
+    dst: &mut [f32],
+    qbits: &[u8],
+    n: usize,
+    scale_bits: u16,
+    lut: &[f32; 4],
+    cfg: I2SDequantCfg,
+) {
+    // Pre-compute scale factor with robustness against corruption
+    let scale_fp16 = f16::from_bits(scale_bits).to_f32();
+    let mut s = scale_fp16.abs(); // Handle negative scales (corruption)
+
+    if cfg.inv {
+        // Avoid division by zero or tiny denominators
+        if s < 1e-8 {
+            s = 1.0; // Default to identity if scale is corrupted
+        } else {
+            s = 1.0 / s;
+        }
+    }
+
+    s *= cfg.k;
+
+    // Tighter clamp (same as env-based version)
+    s = s.clamp(1e-6, 1e6);
 
     // Pre-compute scaled lookup table for better cache locality
     let scaled_lut = [s * lut[0], s * lut[1], s * lut[2], s * lut[3]];
@@ -472,6 +578,323 @@ fn dequantize_partial_blocks_transposed(
     Ok(out)
 }
 
+/// Dequantize I2_S tensor with explicit configuration (inv, k)
+///
+/// This is the config-aware version that allows per-tensor control
+/// of scale inversion and multiplicative factor.
+pub fn dequantize_to_f32_with_cfg(
+    bytes: &[u8],
+    shape: &[usize],
+    cfg: I2SDequantCfg,
+) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let mut block = I2S_DEFAULT_BLOCK;
+    let default_expected = expected_bytes(rows, cols, block);
+
+    if bytes.len() != default_expected {
+        if let Some(b) = infer_block_size(bytes.len(), rows, cols) {
+            block = b;
+        } else {
+            // Partial data fallback
+            let qbits = block.div_ceil(4);
+            let per_block = qbits + 2;
+            let available_blocks = bytes.len() / per_block;
+            debug!(
+                "I2_S: byte length mismatch (got {}, expected {}), processing {} blocks then zero-fill",
+                bytes.len(),
+                default_expected,
+                available_blocks
+            );
+            return dequantize_partial_blocks_with_cfg(bytes, shape, block, available_blocks, cfg);
+        }
+    }
+
+    dequantize_to_f32_with_block_and_cfg(bytes, shape, block, cfg)
+}
+
+fn dequantize_to_f32_with_block_and_cfg(
+    bytes: &[u8],
+    shape: &[usize],
+    block: usize,
+    cfg: I2SDequantCfg,
+) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let blocks_per_row = cols.div_ceil(block);
+    let qbits = block.div_ceil(4);
+    let per_block = qbits + 2;
+
+    if bytes.len() != rows * blocks_per_row * per_block {
+        bail!("I2_S: internal size mismatch for block={}", block);
+    }
+
+    let mut out = Vec::with_capacity(rows * cols);
+    out.resize(rows * cols, 0.0f32);
+    let mut off = 0usize;
+    let lut = i2s_lut(I2SMapping::Sym);
+
+    for r in 0..rows {
+        let row_base = r
+            .checked_mul(cols)
+            .ok_or_else(|| anyhow::anyhow!("I2_S: row base calculation overflow at row {}", r))?;
+
+        let mut c = 0usize;
+        for _ in 0..blocks_per_row {
+            let n = (cols.saturating_sub(c)).min(block);
+            if n == 0 {
+                break;
+            }
+
+            let qbits_len = n.saturating_add(3).saturating_div(4);
+
+            if off.saturating_add(qbits_len).saturating_add(2) > bytes.len() {
+                bail!("I2_S: buffer bounds exceeded at offset {}", off);
+            }
+
+            let qslice = &bytes[off..off + qbits_len];
+            off += qbits_len;
+
+            if off + 2 > bytes.len() {
+                bail!("I2_S: insufficient data for scale at offset {}", off);
+            }
+
+            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+            off += 2;
+
+            let out_start = row_base.saturating_add(c);
+            let out_end = out_start.saturating_add(n);
+
+            if out_end > out.len() {
+                bail!("I2_S: output bounds exceeded: {}..{} > {}", out_start, out_end, out.len());
+            }
+
+            i2s_dequant_block_with_cfg(
+                &mut out[out_start..out_end],
+                qslice,
+                n,
+                scale_bits,
+                &lut,
+                cfg,
+            );
+
+            c = c.saturating_add(n);
+            if c >= cols {
+                break;
+            }
+        }
+    }
+    Ok(out)
+}
+
+fn dequantize_partial_blocks_with_cfg(
+    bytes: &[u8],
+    shape: &[usize],
+    block: usize,
+    available_blocks: usize,
+    cfg: I2SDequantCfg,
+) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let blocks_per_row = cols.div_ceil(block);
+
+    let output_size = rows
+        .checked_mul(cols)
+        .ok_or_else(|| anyhow::anyhow!("I2_S: partial output size overflow"))?;
+
+    let mut out = vec![0f32; output_size];
+    let mut off = 0usize;
+    let mut processed = 0usize;
+    let lut = i2s_lut(I2SMapping::Sym);
+
+    'rows: for r in 0..rows {
+        let row_base = r.checked_mul(cols).ok_or_else(|| {
+            anyhow::anyhow!("I2_S: partial row base calculation overflow at row {}", r)
+        })?;
+
+        let mut c = 0usize;
+        for _ in 0..blocks_per_row {
+            if processed == available_blocks {
+                break 'rows;
+            }
+
+            let n = (cols.saturating_sub(c)).min(block);
+            if n == 0 {
+                break;
+            }
+
+            let qbits_len = n.saturating_add(3).saturating_div(4);
+            if off.saturating_add(qbits_len).saturating_add(2) > bytes.len() {
+                break 'rows;
+            }
+
+            let qslice = &bytes[off..off + qbits_len];
+            off += qbits_len;
+
+            if off + 2 > bytes.len() {
+                break 'rows;
+            }
+
+            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+            off += 2;
+
+            let out_start = row_base.saturating_add(c);
+            let out_end = out_start.saturating_add(n);
+
+            if out_end > out.len() {
+                break 'rows;
+            }
+
+            i2s_dequant_block_with_cfg(
+                &mut out[out_start..out_end],
+                qslice,
+                n,
+                scale_bits,
+                &lut,
+                cfg,
+            );
+
+            c = c.saturating_add(n);
+            if c >= cols {
+                break;
+            }
+
+            processed = processed.saturating_add(1);
+        }
+    }
+    Ok(out)
+}
+
+/// Dequantize I2_S directly into transposed layout with explicit configuration
+///
+/// Input logical shape = [rows, cols]; output shape = [cols, rows].
+pub fn dequantize_to_f32_transposed_with_cfg(
+    bytes: &[u8],
+    shape: &[usize],
+    cfg: I2SDequantCfg,
+) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let mut block = infer_block_size(bytes.len(), rows, cols).unwrap_or(I2S_DEFAULT_BLOCK);
+
+    let default_expected = expected_bytes(rows, cols, block);
+    if bytes.len() != default_expected {
+        if let Some(b) = infer_block_size(bytes.len(), rows, cols) {
+            block = b;
+        } else {
+            // Partial fallback
+            let qbits = block.div_ceil(4);
+            let per_block = qbits + 2;
+            let available_blocks = bytes.len() / per_block;
+            warn!(
+                "I2_S: byte length mismatch (got {}, expected {}), processing {} blocks then zero-fill (transposed)",
+                bytes.len(),
+                default_expected,
+                available_blocks
+            );
+            return dequantize_partial_blocks_transposed_with_cfg(
+                bytes,
+                shape,
+                block,
+                available_blocks,
+                cfg,
+            );
+        }
+    }
+
+    // Normal path: direct transposed dequant
+    let blocks_per_row = cols.div_ceil(block);
+
+    let output_size = rows
+        .checked_mul(cols)
+        .ok_or_else(|| anyhow::anyhow!("I2_S: transposed output size overflow"))?;
+
+    if output_size > 100_000_000 {
+        bail!("I2_S: transposed output tensor too large: {} elements", output_size);
+    }
+
+    let mut out = vec![0f32; output_size]; // output logical shape [cols, rows]
+    let mut off = 0usize;
+    let lut = i2s_lut(I2SMapping::Sym);
+    let mut row_scratch = vec![0f32; block];
+
+    for r in 0..rows {
+        let mut c = 0usize;
+        for _ in 0..blocks_per_row {
+            let n = (cols - c).min(block);
+            let qbits_len = n.div_ceil(4);
+            let qslice = &bytes[off..off + qbits_len];
+            off += qbits_len;
+
+            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+            off += 2;
+
+            // Dequant into temporary scratch, then transpose
+            i2s_dequant_block_with_cfg(&mut row_scratch[..n], qslice, n, scale_bits, &lut, cfg);
+
+            // Write transposed: input (r, c+i) -> output (c+i, r)
+            for i in 0..n {
+                out[(c + i) * rows + r] = row_scratch[i];
+            }
+            c += n;
+        }
+    }
+    Ok(out)
+}
+
+fn dequantize_partial_blocks_transposed_with_cfg(
+    bytes: &[u8],
+    shape: &[usize],
+    block: usize,
+    available_blocks: usize,
+    cfg: I2SDequantCfg,
+) -> Result<Vec<f32>> {
+    let (rows, cols) = rows_cols(shape)?;
+    let blocks_per_row = cols.div_ceil(block);
+    let qbits = block.div_ceil(4);
+    let per_block = qbits + 2;
+
+    let output_size = rows
+        .checked_mul(cols)
+        .ok_or_else(|| anyhow::anyhow!("I2_S: transposed partial output size overflow"))?;
+
+    if output_size > 100_000_000 {
+        bail!("I2_S: transposed output tensor too large: {} elements", output_size);
+    }
+
+    let mut out = vec![0f32; output_size]; // transposed output
+    let mut off = 0usize;
+    let mut processed = 0usize;
+    let lut = i2s_lut(I2SMapping::Sym);
+    let mut row_scratch = vec![0f32; block];
+
+    'rows: for r in 0..rows {
+        let mut c = 0usize;
+        for _ in 0..blocks_per_row {
+            if processed == available_blocks {
+                break 'rows;
+            }
+            let n = (cols - c).min(block);
+            if off + per_block > bytes.len() {
+                break 'rows;
+            }
+
+            let qbits_len = n.div_ceil(4);
+            let qslice = &bytes[off..off + qbits_len];
+            off += qbits_len;
+
+            let scale_bits = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
+            off += 2;
+
+            // Dequant into temporary scratch, then transpose
+            i2s_dequant_block_with_cfg(&mut row_scratch[..n], qslice, n, scale_bits, &lut, cfg);
+            for i in 0..n {
+                out[(c + i) * rows + r] = row_scratch[i];
+            }
+            c += n;
+            processed += 1;
+        }
+    }
+    // remainder stays zero
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -491,16 +914,16 @@ mod tests {
     }
 
     #[test]
-    fn i2s_lut_mapping_sym_k05() {
-        // This test assumes we've hard-coded (I2SMapping::Sym, inv=false, k=0.5).
-        // Codes [0,1,2,3] should map to [-2,-1,+1,+2] * (scale*k).
+    fn i2s_lut_mapping_sym_k1() {
+        // Current implementation uses (I2SMapping::Sym, inv=false, k=1.0)
+        // Codes [0,1,2,3] should map to [-2,-1,+1,+2] * (scale*k)
         let (mapping, inv, k) = i2s_env();
         assert!(matches!(mapping, I2SMapping::Sym));
         assert!(!inv);
-        assert!((k - 0.5).abs() < 1e-6);
+        assert!((k - 1.0).abs() < 1e-6, "Expected k=1.0, got k={}", k);
 
-        // Use a known scale (f16) = 2.0  => effective s = 2.0 * 0.5 = 1.0
-        let scale_bits = f16::from_f32(2.0).to_bits();
+        // Use a known scale (f16) = 1.0  => effective s = 1.0 * 1.0 = 1.0
+        let scale_bits = f16::from_f32(1.0).to_bits();
         let codes = [0u8, 1, 2, 3]; // 4 values -> 1 byte
         let qbits = pack_codes(&codes);
         let lut = i2s_lut(mapping);
@@ -508,7 +931,7 @@ mod tests {
         let mut dst = [0f32; 4];
         i2s_dequant_block(&mut dst, &qbits, 4, scale_bits, &lut, inv, k);
 
-        // Sym LUT {-2,-1,+1,+2}, s=1.0 => [-2.0, -1.0, 1.0, 2.0]
+        // Sym LUT {-2,-1,+1,+2}, scale=1.0, k=1.0 => [-2.0, -1.0, 1.0, 2.0]
         let expected = [-2.0f32, -1.0, 1.0, 2.0];
         for (a, b) in dst.iter().zip(expected.iter()) {
             assert!((a - b).abs() < 1e-6, "got {a}, want {b}");
@@ -581,24 +1004,32 @@ mod tests {
         let codes = [0u8, 1, 2, 3];
         let qbits = pack_codes(&codes);
 
-        // Test with zero scale (edge case)
+        // Test with zero scale (edge case) - robust implementation clamps to prevent issues
         let zero_scale = f16::from_f32(0.0).to_bits();
         let mut dst = [0f32; 4];
         let lut = i2s_lut(mapping);
         i2s_dequant_block(&mut dst, &qbits, 4, zero_scale, &lut, inv, k);
+        // PATCH 6: With tighter clamping (s.clamp(1e-3, 1e3)), zero scale produces small values
+        // The clamp floor is 1e-3, so max output is 1e-3 * 2.0 (max LUT value) = 2e-3
         for &val in &dst {
-            assert_eq!(val, 0.0, "Zero scale should produce zero outputs");
+            assert!(
+                val.abs() <= 2.0 * 1e-3 + 1e-6,
+                "Zero scale should produce small outputs (clamped to 1e-3), got {}",
+                val
+            );
         }
 
-        // Test with infinity scale (extreme value)
+        // Test with infinity scale (extreme value) - robust implementation clamps to prevent inf propagation
         let inf_scale = f16::from_f32(f32::INFINITY).to_bits();
         let mut dst = [0f32; 4];
         let lut = i2s_lut(mapping);
         i2s_dequant_block(&mut dst, &qbits, 4, inf_scale, &lut, inv, k);
+        // PATCH 6: With tighter clamping (s.clamp(1e-3, 1e3)), infinity is clamped to 1e3
         for &val in &dst {
             assert!(
-                val.is_infinite() || val.is_nan(),
-                "Infinite scale should produce infinite/NaN outputs"
+                val.is_finite() && val.abs() <= 1e3 * 2.0, // LUT max is 2.0
+                "Infinite scale should be clamped to finite values (clamped to 1e3), got {}",
+                val
             );
         }
 

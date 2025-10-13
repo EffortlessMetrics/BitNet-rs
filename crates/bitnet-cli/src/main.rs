@@ -62,7 +62,7 @@ fn bitnet_version() -> &'static str {
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
-use commands::{ConvertCommand, InferenceCommand, ServeCommand};
+use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
 
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
@@ -279,16 +279,9 @@ enum Commands {
     /// Show system information
     Info,
 
-    /// Inspect model metadata without loading tensors
-    Inspect {
-        /// Model file path  
-        #[arg(long)]
-        model: std::path::PathBuf,
-
-        /// Output format as JSON
-        #[arg(long, default_value_t = false)]
-        json: bool,
-    },
+    #[cfg(feature = "full-cli")]
+    /// Inspect model metadata and diagnostics
+    Inspect(InspectCommand),
 
     /// Check GGUF file compatibility using header validation
     CompatCheck {
@@ -418,7 +411,8 @@ async fn main() -> Result<()> {
         Some(Commands::Score(args)) => score::run_score(&args).await,
         Some(Commands::Config { action }) => handle_config_command(action, &config).await,
         Some(Commands::Info) => show_system_info().await,
-        Some(Commands::Inspect { model, json }) => handle_inspect_command(model, json).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
             handle_compat_check_command(path, json, strict, show_kv, kv_limit).await
         }
