@@ -481,10 +481,11 @@ mod tests {
         let correction = CorrectionRecord {
             layer: "test.layer".to_string(),
             correction_type: "ln_gamma_rescale_rms".to_string(),
-            rms_before: 0.75,
-            rms_after: 1.0,
-            factor: 1.33,
+            rms_before: Some(0.75),
+            rms_after: Some(1.0),
+            factor: Some(1.33),
             policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+            metadata: None,
         };
         receipt.add_correction(correction);
 

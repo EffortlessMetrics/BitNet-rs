@@ -333,7 +333,7 @@ impl DeterministicConfig {
     }
 }
 
-impl Drop for DeterministicTestConfig {
+impl Drop for DeterministicConfig {
     fn drop(&mut self) {
         for (var, value) in &self.original_env {
             match value {

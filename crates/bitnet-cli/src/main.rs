@@ -1141,6 +1141,7 @@ async fn show_system_info() -> Result<()> {
 }
 
 /// Inspect model metadata without loading full tensors
+#[allow(dead_code)]
 async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> Result<()> {
     use bitnet_models::GgufReader;
     use bitnet_models::formats::ModelFormat;

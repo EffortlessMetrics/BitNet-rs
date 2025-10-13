@@ -400,12 +400,14 @@ mod tests {
     use super::*;
 
     /// RAII guard for safe environment variable management in tests
+    #[allow(dead_code)]
     struct EnvGuard {
         key: &'static str,
         prev: Option<String>,
     }
 
     impl EnvGuard {
+        #[allow(dead_code)]
         fn set(key: &'static str, val: &str) -> Self {
             let prev = std::env::var(key).ok();
             unsafe {

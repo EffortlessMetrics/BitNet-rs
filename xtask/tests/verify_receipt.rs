@@ -23,10 +23,15 @@ fn workspace_root() -> PathBuf {
 struct CorrectionRecord {
     layer: String,
     correction_type: String,
-    rms_before: f32,
-    rms_after: f32,
-    factor: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rms_before: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rms_after: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    factor: Option<f32>,
     policy_fingerprint: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    metadata: Option<serde_json::Value>,
 }
 
 /// Receipt structure matching bitnet-inference Receipt
@@ -130,9 +135,9 @@ fn verify_corrections_in_ci(receipt: &Receipt) -> anyhow::Result<()> {
                 "  - {}: {} (RMS {:.5}→{:.5}, factor={:.3}, policy={})",
                 c.layer,
                 c.correction_type,
-                c.rms_before,
-                c.rms_after,
-                c.factor,
+                c.rms_before.unwrap_or(0.0),
+                c.rms_after.unwrap_or(0.0),
+                c.factor.unwrap_or(1.0),
                 c.policy_fingerprint
             ))
             .collect::<Vec<_>>()
@@ -176,10 +181,11 @@ mod corrections_validation_tests {
             corrections: vec![CorrectionRecord {
                 layer: "model.layers.0.input_layernorm.weight".to_string(),
                 correction_type: "ln_gamma_rescale_rms".to_string(),
-                rms_before: 0.5,
-                rms_after: 1.0,
-                factor: 2.0,
+                rms_before: Some(0.5),
+                rms_after: Some(1.0),
+                factor: Some(2.0),
                 policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                metadata: None,
             }],
         };
 
@@ -210,10 +216,11 @@ mod corrections_validation_tests {
             corrections: vec![CorrectionRecord {
                 layer: "model.layers.0.input_layernorm.weight".to_string(),
                 correction_type: "ln_gamma_rescale_rms".to_string(),
-                rms_before: 0.5,
-                rms_after: 1.0,
-                factor: 2.0,
+                rms_before: Some(0.5),
+                rms_after: Some(1.0),
+                factor: Some(2.0),
                 policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                metadata: None,
             }],
         };
 
@@ -245,18 +252,20 @@ mod corrections_validation_tests {
                 CorrectionRecord {
                     layer: "layer1.norm.weight".to_string(),
                     correction_type: "ln_gamma_rescale_rms".to_string(),
-                    rms_before: 0.5,
-                    rms_after: 1.0,
-                    factor: 2.0,
+                    rms_before: Some(0.5),
+                    rms_after: Some(1.0),
+                    factor: Some(2.0),
                     policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                    metadata: None,
                 },
                 CorrectionRecord {
                     layer: "layer2.norm.weight".to_string(),
                     correction_type: "ln_gamma_rescale_rms".to_string(),
-                    rms_before: 0.75,
-                    rms_after: 1.0,
-                    factor: 1.33,
+                    rms_before: Some(0.75),
+                    rms_after: Some(1.0),
+                    factor: Some(1.33),
                     policy_fingerprint: "BITNET_FIX_LN_SCALE=1".to_string(),
+                    metadata: None,
                 },
             ],
         };
@@ -285,6 +294,7 @@ mod receipt_validation_tests {
             kernels: vec!["i2s_cpu_quantize".to_string(), "avx2_matmul".to_string()],
             tokens_per_second: Some(12.3),
             latency_ms: Some(81.2),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -312,6 +322,7 @@ mod receipt_validation_tests {
             kernels: vec!["gemm_fp16".to_string()],
             tokens_per_second: Some(87.5),
             latency_ms: Some(11.4),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -335,6 +346,7 @@ mod receipt_validation_tests {
             kernels: vec!["avx2_matmul".to_string(), "i2s_cpu_quantize".to_string()],
             tokens_per_second: Some(15.2),
             latency_ms: Some(66.7),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -358,6 +370,7 @@ mod receipt_validation_tests {
             kernels: vec![],
             tokens_per_second: Some(0.0),
             latency_ms: Some(0.0),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&receipt);
@@ -395,6 +408,7 @@ mod kernel_prefix_tests {
                 kernels: vec![kernel.to_string()],
                 tokens_per_second: Some(87.5),
                 latency_ms: Some(11.4),
+                corrections: vec![],
             };
 
             let result = verify_gpu_receipt(&receipt);
@@ -430,6 +444,7 @@ mod kernel_prefix_tests {
                 kernels: vec![cpu_kernel.to_string()],
                 tokens_per_second: Some(12.0),
                 latency_ms: Some(80.0),
+                corrections: vec![],
             };
 
             let result = verify_gpu_receipt(&receipt);
@@ -556,6 +571,7 @@ mod performance_validation {
             kernels: vec!["gemm_fp16".to_string()], // Has GPU kernel but...
             tokens_per_second: Some(8.5),           // ...suspiciously low performance (CPU-like)
             latency_ms: Some(117.0),
+            corrections: vec![],
         };
 
         // Basic validation passes (has GPU kernel)
@@ -586,6 +602,7 @@ mod performance_validation {
             kernels: vec!["tl1_gpu_pack".to_string(), "gemm_fp16".to_string()],
             tokens_per_second: Some(87.5), // Within 50-100 tok/s GPU baseline
             latency_ms: Some(11.4),
+            corrections: vec![],
         };
 
         assert!(verify_gpu_receipt(&gpu_baseline).is_ok());
@@ -620,6 +637,7 @@ mod performance_validation {
             ],
             tokens_per_second: Some(45.5),
             latency_ms: Some(22.0),
+            corrections: vec![],
         };
 
         let result = verify_gpu_receipt(&mixed_receipt);
