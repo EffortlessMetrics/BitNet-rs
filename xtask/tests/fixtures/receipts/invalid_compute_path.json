@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-13T12:00:00Z",
+  "compute_path": "mock",
+  "backend": "cpu",
+  "kernels": [
+    "mock_gemv",
+    "mock_kernel"
+  ],
+  "deterministic": true,
+  "environment": {
+    "RUST_VERSION": "1.90.0",
+    "BITNET_VERSION": "0.5.3",
+    "OS": "linux-x86_64"
+  },
+  "model_info": {},
+  "test_results": {
+    "total_tests": 0,
+    "passed": 0,
+    "failed": 0
+  },
+  "performance_baseline": {},
+  "corrections": []
+}

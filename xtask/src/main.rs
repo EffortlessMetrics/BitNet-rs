@@ -2,6 +2,7 @@ use anyhow::{Context, Result, anyhow, bail};
 use bitnet_common::Device;
 use bitnet_kernels::gpu_utils::get_gpu_info;
 use clap::{Parser, Subcommand};
+use console::style;
 use fs2::FileExt;
 use fs2::available_space;
 use httpdate::parse_http_date;
@@ -615,6 +616,26 @@ enum Cmd {
         #[arg(short, long, default_value_t = false)]
         verbose: bool,
     },
+
+    /// Verify inference receipt against strict quality gates
+    ///
+    /// Validates that a receipt JSON file (typically ci/inference.json) meets
+    /// the following requirements:
+    /// - Schema version compatibility (supports 1.0.0 and 1.0)
+    /// - compute_path == "real" (not "mock")
+    /// - kernels[] is non-empty
+    /// - (Optional) GPU backend requires GPU kernel evidence
+    ///
+    /// This command is the keystone for enforceable CPU MVP gates,
+    /// ensuring receipts provide honest evidence of actual compute.
+    VerifyReceipt {
+        /// Path to receipt JSON (default: ci/inference.json)
+        #[arg(long, default_value = "ci/inference.json")]
+        path: PathBuf,
+        /// Require at least one GPU kernel (for GPU backend validation)
+        #[arg(long, default_value_t = false)]
+        require_gpu_kernels: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -815,6 +836,9 @@ fn real_main() -> Result<()> {
             fail_on_regression,
             verbose,
         ),
+        Cmd::VerifyReceipt { path, require_gpu_kernels } => {
+            verify_receipt_cmd(&path, require_gpu_kernels)
+        }
     }
 }
 
@@ -3944,6 +3968,106 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
     // Exit with error if strict mode and there are errors
     if strict && !report.errors.is_empty() {
         bail!("verification failed: {} error(s)", report.errors.len());
+    }
+
+    Ok(())
+}
+
+/// Verify inference receipt against strict quality gates
+///
+/// Validates that a receipt JSON file meets the requirements for honest
+/// inference evidence, ensuring receipts cannot claim GPU compute without
+/// actual GPU kernel execution.
+///
+/// # Requirements
+/// - Schema version compatibility (supports "1.0.0" and "1.0")
+/// - compute_path == "real" (not "mock")
+/// - kernels[] is non-empty
+/// - GPU backend requires at least one GPU kernel (if --require-gpu-kernels)
+///
+/// # Exit Codes
+/// - 0: Receipt valid
+/// - 1: Receipt invalid or missing
+fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
+    println!("{}", style("🔍 Verifying inference receipt…").bold());
+
+    // Read and parse receipt
+    let contents = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read receipt: {}", path.display()))?;
+
+    let receipt: Value = serde_json::from_str(&contents)
+        .with_context(|| format!("Invalid JSON in receipt: {}", path.display()))?;
+
+    // Check schema version
+    let schema_version = receipt
+        .get("schema_version")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("Receipt missing 'schema_version' field"))?;
+
+    if schema_version != "1.0.0" && schema_version != "1.0" {
+        bail!("Unsupported schema_version '{}' (expected '1.0.0' or '1.0')", schema_version);
+    }
+
+    // Check compute_path
+    let compute_path = receipt
+        .get("compute_path")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("Receipt missing 'compute_path' field"))?;
+
+    if compute_path != "real" {
+        bail!("compute_path must be 'real' (got '{}') — mock inference not allowed", compute_path);
+    }
+
+    // Check kernels array
+    let kernels = receipt
+        .get("kernels")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| anyhow!("Receipt missing 'kernels' array"))?;
+
+    if kernels.is_empty() {
+        bail!("Receipt has empty kernels[] — requires at least one real kernel");
+    }
+
+    // GPU kernel validation (if requested)
+    if require_gpu_kernels {
+        let gpu_kernel_prefixes = ["gemm_", "wmma_", "cuda_", "i2s_gpu_", "tl1_gpu_", "tl2_gpu_"];
+
+        let has_gpu_kernel = kernels.iter().filter_map(|v| v.as_str()).any(|kernel_id| {
+            gpu_kernel_prefixes.iter().any(|prefix| kernel_id.starts_with(prefix))
+        });
+
+        if !has_gpu_kernel {
+            bail!(
+                "GPU kernel verification requested, but no GPU kernels found in kernels[].\n\
+                 Expected kernel prefixes: {}\n\
+                 Actual kernels: {:?}\n\n\
+                 This likely indicates silent CPU fallback. Verify:\n\
+                 1. GPU feature compiled: cargo build --features gpu\n\
+                 2. CUDA runtime available: nvidia-smi\n\
+                 3. Device selection: Device::Cuda(0) passed to inference",
+                gpu_kernel_prefixes.join(", "),
+                kernels
+            );
+        }
+    }
+
+    // Success
+    println!("{}", style("✅ Receipt verification passed").green().bold());
+    println!("   Schema: {}", schema_version);
+    println!("   Compute path: {}", compute_path);
+    println!("   Kernels: {} executed", kernels.len());
+
+    if let Some(backend) = receipt.get("backend").and_then(|v| v.as_str()) {
+        println!("   Backend: {}", backend);
+    }
+
+    if let Some(env) = receipt.get("environment").and_then(|v| v.as_object()) {
+        if let Some(bitnet_ver) = env.get("BITNET_VERSION").and_then(|v| v.as_str()) {
+            println!("   BitNet version: {}", bitnet_ver);
+        }
+        if let Some(os) = env.get("OS").and_then(|v| v.as_str()) {
+            println!("   OS: {}", os);
+        }
     }
 
     Ok(())
