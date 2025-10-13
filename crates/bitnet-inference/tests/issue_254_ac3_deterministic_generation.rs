@@ -301,6 +301,8 @@ fn create_test_model() -> Result<BitNetModel> {
         max_position_embeddings: 1024,
         rope_theta: Some(10000.0),
         rope_scaling: None,
+        rms_norm_eps: None,
+        tokenizer: bitnet_common::config::TokenizerConfig::default(),
     };
 
     let config = BitNetConfig { model: model_config, ..Default::default() };

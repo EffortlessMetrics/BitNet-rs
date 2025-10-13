@@ -2,7 +2,9 @@
 //!
 //! This test suite validates the LayerNorm gamma diagnostics functionality.
 
+#[cfg(feature = "full-cli")]
 use assert_cmd::Command;
+#[cfg(feature = "full-cli")]
 use predicates::prelude::*;
 
 #[cfg(feature = "full-cli")]
