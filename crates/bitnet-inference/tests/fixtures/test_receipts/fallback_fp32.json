@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.1.0",
+  "timestamp": "2025-10-14T03:00:00.000000000+00:00",
+  "compute_path": "real",
+  "backend": "cuda",
+  "deterministic": false,
+  "tokens_requested": 16,
+  "tokens_generated": 16,
+  "tokens_per_second": 35.0,
+  "kernels": [
+    "dequant_i2s",
+    "fp32_matmul",
+    "cuda_sync"
+  ],
+  "kernel_path": "fp32_fallback",
+  "quantization": {
+    "types_used": [],
+    "fallback_count": 16,
+    "device_aware_selection": false
+  },
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "BITNET_STRICT_MODE": "0",
+    "OS": "linux-x86_64"
+  },
+  "model": {
+    "path": "tests/models/mini.gguf",
+    "architecture": "bitnet",
+    "quantization_type": "I2S"
+  }
+}

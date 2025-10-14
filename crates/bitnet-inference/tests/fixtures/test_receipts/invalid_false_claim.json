@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.1.0",
+  "timestamp": "2025-10-14T04:00:00.000000000+00:00",
+  "compute_path": "real",
+  "backend": "cuda",
+  "tokens_generated": 16,
+  "tokens_per_second": 85.0,
+  "kernels": [
+    "dequant_i2s",
+    "fp32_matmul",
+    "fallback_gemm"
+  ],
+  "kernel_path": "native_quantized",
+  "quantization": {
+    "types_used": ["I2S"],
+    "fallback_count": 0,
+    "device_aware_selection": true
+  },
+  "environment": {
+    "BITNET_VERSION": "0.1.0"
+  },
+  "model": {
+    "path": "tests/models/mini.gguf"
+  }
+}

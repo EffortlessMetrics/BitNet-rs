@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.1.0",
+  "timestamp": "2025-10-14T02:15:42.123456789+00:00",
+  "compute_path": "real",
+  "backend": "cuda",
+  "deterministic": true,
+  "tokens_requested": 16,
+  "tokens_generated": 16,
+  "tokens_per_second": 87.5,
+  "kernels": [
+    "gemm_fp16",
+    "i2s_gpu_quantize",
+    "i2s_gpu_pack",
+    "wmma_matmul",
+    "cuda_sync"
+  ],
+  "kernel_path": "native_quantized",
+  "quantization": {
+    "types_used": ["I2S"],
+    "fallback_count": 0,
+    "device_aware_selection": true
+  },
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "BITNET_STRICT_MODE": "1",
+    "BITNET_DETERMINISTIC": "1",
+    "BITNET_SEED": "42",
+    "OS": "linux-x86_64"
+  },
+  "model": {
+    "path": "tests/models/mini.gguf",
+    "architecture": "bitnet",
+    "quantization_type": "I2S"
+  }
+}
