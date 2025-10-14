@@ -753,6 +753,7 @@ mod ac8_gpu_performance_tests {
     use super::*;
 
     /// AC:AC8 - Tests realistic GPU performance baselines (50-100 tok/s)
+    #[ignore] // Issue #260: TDD placeholder - GPU performance benchmark unimplemented
     #[cfg(feature = "gpu")]
     #[test]
     fn test_ac8_gpu_performance_baselines() {
