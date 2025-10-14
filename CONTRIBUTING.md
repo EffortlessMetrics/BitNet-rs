@@ -117,23 +117,40 @@ cargo test --workspace --no-default-features --features gpu
 
 ### Before Submitting
 
-1. **Format and Lint**
+1. **Run Local Quality Gates** (Recommended)
+   ```bash
+   # Comprehensive quality gates: fmt → clippy → tests → (bench) → verify-receipt
+   ./scripts/local_gates.sh
+   ```
+
+   Or run individual checks:
+
+2. **Format and Lint**
    ```bash
    cargo fmt --all
    cargo clippy --all-targets --all-features -- -D warnings
    ```
 
-2. **Run Full Test Suite**
+3. **Run Full Test Suite**
    ```bash
    ./scripts/test-all.sh
    ```
 
-3. **Update Documentation**
+4. **Verify Inference Receipt** (if you have ci/inference.json)
+   ```bash
+   # Verify CPU receipt
+   cargo run -p xtask -- verify-receipt --path ci/inference.json
+
+   # Verify GPU receipt (requires GPU kernels)
+   cargo run -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
+   ```
+
+5. **Update Documentation**
    ```bash
    cargo doc --workspace --no-default-features --features cpu --no-deps
    ```
 
-4. **Cross-validate Changes**
+6. **Cross-validate Changes** (optional, for inference changes)
    ```bash
    cargo run -p xtask -- full-crossval
    ```

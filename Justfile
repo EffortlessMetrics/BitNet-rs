@@ -148,6 +148,18 @@ ci-cpu:
     cargo test --workspace --no-default-features --features cpu --lib --exclude bitnet-py
     @echo "✅ All CPU CI checks passed!"
 
+# Verify inference receipt (ci/inference.json)
+verify-receipt PATH="ci/inference.json":
+    cargo run -p xtask -- verify-receipt --path {{PATH}}
+
+# Verify GPU receipt (requires GPU kernels)
+verify-receipt-gpu PATH="ci/inference.json":
+    cargo run -p xtask -- verify-receipt --path {{PATH}} --require-gpu-kernels
+
+# Run local quality gates (fmt → clippy → tests → bench → verify-receipt)
+local-gates:
+    @./scripts/local_gates.sh
+
 # CI simulation - run all checks locally (CUDA)
 ci-cuda TAG="main" ARCHS="80;86":
     cargo run -p xtask -- fetch-cpp --tag {{TAG}} --backend cuda --cmake-flags "-DCMAKE_CUDA_ARCHITECTURES={{ARCHS}}"

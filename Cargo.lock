@@ -1352,6 +1352,7 @@ dependencies = [
  "encode_unicode",
  "libc",
  "once_cell",
+ "unicode-width 0.2.1",
  "windows-sys 0.59.0",
 ]
 
@@ -7907,6 +7908,7 @@ dependencies = [
  "bitnet-tokenizers",
  "chrono",
  "clap",
+ "console 0.15.11",
  "ctrlc",
  "dirs 6.0.0",
  "fs2",
@@ -7915,7 +7917,9 @@ dependencies = [
  "httpdate",
  "indicatif",
  "isatty",
+ "once_cell",
  "predicates",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

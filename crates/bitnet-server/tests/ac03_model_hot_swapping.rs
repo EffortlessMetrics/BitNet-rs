@@ -334,8 +334,10 @@ mod cross_validation_hot_swap_tests {
         // This validates accuracy requirements are maintained
 
         // Set deterministic environment for cross-validation
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
-        std::env::set_var("BITNET_SEED", "42");
+        unsafe {
+            std::env::set_var("BITNET_DETERMINISTIC", "1");
+            std::env::set_var("BITNET_SEED", "42");
+        }
 
         let crossval_model_request = json!({
             "model_path": "/test/models/bitnet-2b-crossval.gguf",

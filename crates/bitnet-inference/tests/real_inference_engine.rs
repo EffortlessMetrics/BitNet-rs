@@ -6,7 +6,9 @@
 //! This module contains comprehensive test scaffolding for real BitNet model inference,
 //! performance metrics collection, and cross-validation framework integration.
 
-#[cfg(all(feature = "inference", any()))] // any() = false, code disabled
+#![cfg(any())] // Disabled: ProductionInferenceEngine not yet implemented
+
+#[cfg(all(feature = "inference", feature = "crossval"))]
 use std::env;
 #[allow(unused_imports)]
 use std::path::Path;
@@ -17,14 +19,16 @@ use std::time::Instant;
 
 // Note: All tests in this file are disabled until production API types are available
 // NOTE: Requires ProductionInferenceEngine, InferenceMetrics, and related types
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 #[allow(unused_imports)]
 use bitnet_inference::GenerationConfig;
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))]
+// Disabled: ProductionInferenceEngine not yet implemented
 use bitnet_models::BitNetModel;
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))]
+// Disabled: ProductionInferenceEngine not yet implemented
 use bitnet_tokenizers::UniversalTokenizer;
 
 /// Test configuration for inference engine tests
@@ -75,7 +79,7 @@ impl InferenceTestConfig {
 /// Test inference engine real model integration
 /// Validates complete inference pipeline with real models and performance metrics
 #[test]
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn test_inference_engine_real_model_integration() {
     // AC:3
     let config = InferenceTestConfig::from_env();
@@ -131,7 +135,7 @@ fn test_inference_engine_real_model_integration() {
 /// Test performance metrics collection framework
 /// Validates comprehensive performance monitoring and metrics collection
 #[test]
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn test_performance_metrics_collection_framework() {
     // AC:3
     let config = InferenceTestConfig::from_env();
@@ -220,7 +224,7 @@ fn test_performance_metrics_collection_framework() {
 /// Test explicit prefill operation with cache warming and timing
 /// Validates dedicated prefill functionality for cache optimization
 #[test]
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn test_explicit_prefill_operation_with_timing() {
     // AC:3
     let config = InferenceTestConfig::from_env();
@@ -294,7 +298,7 @@ fn test_explicit_prefill_operation_with_timing() {
 /// Test batch inference with performance optimization
 /// Validates efficient batch processing with real models
 #[test]
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn test_batch_inference_performance_optimization() {
     // AC:3
     let config = InferenceTestConfig::from_env();
@@ -444,7 +448,7 @@ fn test_cpp_inference_cross_validation() {
 /// Test perplexity calculation validation against reference
 /// Validates perplexity calculations match C++ reference implementation
 #[test]
-#[cfg(all(feature = "inference", feature = "crossval"))]
+#[cfg(all(feature = "inference", feature = "crossval", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn test_perplexity_calculation_cross_validation() {
     // AC:8
     let config = InferenceTestConfig::from_env();
@@ -503,7 +507,7 @@ fn test_perplexity_calculation_cross_validation() {
 /// Test device-aware inference execution with automatic fallback
 /// Validates GPU acceleration with transparent CPU fallback
 #[test]
-#[cfg(all(feature = "inference", feature = "gpu"))]
+#[cfg(all(feature = "inference", feature = "gpu", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn test_device_aware_inference_with_fallback() {
     // AC:3
     let config = InferenceTestConfig::from_env();
@@ -577,13 +581,13 @@ fn test_device_aware_inference_with_fallback() {
 // Helper Functions (Initially will not compile - drive implementation)
 // ==============================================================================
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn load_real_model(model_path: &Path) -> Result<BitNetModel, Box<dyn std::error::Error>> {
     // TODO: Implement real model loading integration
     unimplemented!("Real model loading integration needs implementation")
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn create_or_load_tokenizer(
     _model: &BitNetModel,
     _tokenizer_path: Option<&PathBuf>,
@@ -592,31 +596,31 @@ fn create_or_load_tokenizer(
     unimplemented!("Tokenizer creation/loading needs implementation")
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn validate_timing_metrics(_metrics: &()) {
     // NOTE: Implement timing metrics validation when InferenceMetrics is available
     unimplemented!("Timing metrics validation needs implementation")
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn validate_throughput_metrics(_metrics: &()) {
     // NOTE: Throughput metrics validation when InferenceMetrics is available
     unimplemented!("Throughput metrics validation needs implementation")
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn validate_memory_metrics(_metrics: &()) {
     // NOTE: Memory metrics validation when InferenceMetrics is available
     unimplemented!("Memory metrics validation needs implementation")
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn calculate_performance_statistics(_metrics: &[()]) -> () {
     // NOTE: Performance statistics calculation when types are available
     unimplemented!("Performance statistics calculation needs implementation")
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 fn create_cold_engine(model_path: &Path) -> Result<ProductionInferenceEngine, InferenceError> {
     // TODO: Implement cold engine creation
     unimplemented!("Cold engine creation needs implementation")
@@ -624,25 +628,25 @@ fn create_cold_engine(model_path: &Path) -> Result<ProductionInferenceEngine, In
 
 #[cfg(all(feature = "inference", feature = "crossval"))]
 fn run_cpp_reference_inference(
-    cpp_dir: &str,
-    model_path: &Path,
-    prompt: &str,
+    _cpp_dir: &str,
+    _model_path: &Path,
+    _prompt: &str,
 ) -> Result<CppInferenceResult, Box<dyn std::error::Error>> {
     // TODO: Implement C++ reference inference execution
     unimplemented!("C++ reference inference execution needs implementation")
 }
 
 #[cfg(all(feature = "inference", feature = "crossval"))]
-fn compare_token_sequences(rust_tokens: &[u32], cpp_tokens: &[u32]) -> TokenComparison {
+fn compare_token_sequences(_rust_tokens: &[u32], _cpp_tokens: &[u32]) -> TokenComparison {
     // TODO: Implement token sequence comparison
     unimplemented!("Token sequence comparison needs implementation")
 }
 
 #[cfg(all(feature = "inference", feature = "crossval"))]
 fn compare_numerical_accuracy(
-    rust_logits: &[f32],
-    cpp_logits: &[f32],
-    tolerance: f32,
+    _rust_logits: &[f32],
+    _cpp_logits: &[f32],
+    _tolerance: f32,
 ) -> NumericalComparison {
     // TODO: Implement numerical accuracy comparison
     unimplemented!("Numerical accuracy comparison needs implementation")
@@ -650,8 +654,8 @@ fn compare_numerical_accuracy(
 
 #[cfg(all(feature = "inference", feature = "crossval"))]
 fn compare_performance_metrics(
-    rust_metrics: &InferenceMetrics,
-    cpp_metrics: &CppMetrics,
+    _rust_metrics: &InferenceMetrics,
+    _cpp_metrics: &CppMetrics,
 ) -> PerformanceComparison {
     // TODO: Implement performance metrics comparison
     unimplemented!("Performance metrics comparison needs implementation")
@@ -659,28 +663,28 @@ fn compare_performance_metrics(
 
 #[cfg(all(feature = "inference", feature = "crossval"))]
 fn calculate_cpp_reference_perplexity(
-    cpp_dir: &str,
-    model_path: &Path,
-    corpus: &str,
+    _cpp_dir: &str,
+    _model_path: &Path,
+    _corpus: &str,
 ) -> Result<PerplexityResult, Box<dyn std::error::Error>> {
     // TODO: Implement C++ reference perplexity calculation
     unimplemented!("C++ reference perplexity calculation needs implementation")
 }
 
 // Type definitions that will be implemented
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 struct PerformanceStatistics {
     mean_throughput: f64,
     throughput_std_dev: f64,
     mean_latency: Duration,
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 struct DeviceInfo {
     device_type: String,
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 struct PerplexityResult {
     value: f64,
     token_count: usize,
@@ -718,14 +722,14 @@ struct PerformanceComparison {
     speedup_ratio: f64,
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 impl Default for EngineConfig {
     fn default() -> Self {
         unimplemented!("EngineConfig default implementation needed")
     }
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(feature = "inference", any()))] // Disabled: ProductionInferenceEngine not yet implemented
 impl EngineConfig {
     fn with_prefill_optimization() -> Self {
         unimplemented!("EngineConfig prefill optimization needed")

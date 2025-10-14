@@ -23,6 +23,9 @@ use std::path::Path;
 /// Schema version for receipt format
 pub const RECEIPT_SCHEMA_VERSION: &str = "1.0.0";
 
+/// Alias for schema version (for consistency)
+pub const RECEIPT_SCHEMA: &str = RECEIPT_SCHEMA_VERSION;
+
 /// Model information in receipt
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ModelInfo {
@@ -248,6 +251,17 @@ impl InferenceReceipt {
 
         // System info
         env_vars.insert("RUST_VERSION".to_string(), rustc_version_runtime::version().to_string());
+        env_vars.insert("BITNET_VERSION".to_string(), env!("CARGO_PKG_VERSION").to_string());
+        env_vars.insert(
+            "OS".to_string(),
+            format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
+        );
+
+        // Add CPU and GPU fingerprints (best-effort)
+        env_vars.insert("CPU_BRAND".to_string(), detect_cpu_brand());
+        if let Some(gpu_info) = detect_gpu_info() {
+            env_vars.insert("GPU_INFO".to_string(), gpu_info);
+        }
 
         env_vars
     }
@@ -381,6 +395,45 @@ impl InferenceReceipt {
     pub fn add_correction(&mut self, correction: CorrectionRecord) {
         self.corrections.push(correction);
     }
+}
+
+/// Detect CPU brand string (best-effort).
+/// Linux: reads `/proc/cpuinfo` model name; otherwise returns arch.
+fn detect_cpu_brand() -> String {
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(content) = std::fs::read_to_string("/proc/cpuinfo") {
+            for line in content.lines() {
+                if line.starts_with("model name")
+                    && let Some(brand) = line.split(':').nth(1)
+                {
+                    return brand.trim().to_string();
+                }
+            }
+        }
+    }
+    std::env::consts::ARCH.to_string()
+}
+
+/// Detect GPU information (best-effort)
+///
+/// Uses bitnet-kernels GPU utilities to detect available GPUs.
+/// Returns GPU name and compute capability if available.
+fn detect_gpu_info() -> Option<String> {
+    #[cfg(feature = "gpu")]
+    {
+        use bitnet_kernels::gpu;
+        // Try to get first CUDA device info if available
+        if let Ok(devices) = gpu::list_cuda_devices()
+            && let Some(device) = devices.first()
+        {
+            return Some(format!(
+                "{} (CC: {}.{})",
+                device.name, device.compute_capability.0, device.compute_capability.1
+            ));
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -543,7 +596,12 @@ mod tests {
 
             // Validate actual content - keys should be recognizable environment variables
             assert!(
-                key.starts_with("BITNET_") || key.starts_with("RAYON_") || key == "RUST_VERSION",
+                key.starts_with("BITNET_")
+                    || key.starts_with("RAYON_")
+                    || key == "RUST_VERSION"
+                    || key == "OS"
+                    || key == "CPU_BRAND"
+                    || key == "GPU_INFO",
                 "Key '{}' should be a valid BitNet/Rayon/Rust environment variable",
                 key
             );
@@ -570,6 +628,9 @@ mod tests {
             rust_version.contains('.'),
             "RUST_VERSION should be a valid version string with dots"
         );
+
+        assert!(vars.contains_key("BITNET_VERSION"), "Should always contain BITNET_VERSION");
+        assert!(vars.contains_key("OS"), "Should always contain OS");
 
         // Clean up test environment variables
         // SAFETY: This is test cleanup code running in isolation.

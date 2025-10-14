@@ -5,6 +5,8 @@
 //! compile a lightweight stub so the rest of the test framework can build
 //! without the C++ dependency.
 
+#![allow(unused_imports)] // Imports are conditionally used based on cpp-ffi feature
+
 use crate::cross_validation::cpp_implementation::{
     BitNetCppHandle, CppInferenceConfig, CppInferenceResult, CppModelInfo, CppPerformanceMetrics,
 };

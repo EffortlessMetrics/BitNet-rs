@@ -3,7 +3,8 @@
 use bitnet_common::{BitNetConfig, Device};
 use bitnet_inference::engine::InferenceEngine;
 use bitnet_models::{BitNetModel, Model};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 use std::sync::Arc;
 
 fn benchmark_inference(c: &mut Criterion) {

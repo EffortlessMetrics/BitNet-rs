@@ -655,15 +655,13 @@ mod device_routing_tests {
         let mut gpu_requests = 0;
         let mut total_throughput = 0.0;
 
-        for result in results {
-            if let Ok((_, device_used, _, throughput)) = result {
-                match device_used.as_str() {
-                    "cpu" => cpu_requests += 1,
-                    device if device.starts_with("cuda:") => gpu_requests += 1,
-                    _ => {}
-                }
-                total_throughput += throughput;
+        for (_, device_used, _, throughput) in results.into_iter().flatten() {
+            match device_used.as_str() {
+                "cpu" => cpu_requests += 1,
+                device if device.starts_with("cuda:") => gpu_requests += 1,
+                _ => {}
             }
+            total_throughput += throughput;
         }
 
         // Validate load balancing effectiveness
@@ -674,7 +672,7 @@ mod device_routing_tests {
 
         let load_balance_ratio = (cpu_requests as f64) / (gpu_requests as f64);
         assert!(
-            load_balance_ratio >= 0.3 && load_balance_ratio <= 3.0,
+            (0.3..=3.0).contains(&load_balance_ratio),
             "Load balancing should not be heavily skewed: CPU {} / GPU {} = {:.2}",
             cpu_requests,
             gpu_requests,

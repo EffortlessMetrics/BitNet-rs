@@ -1,7 +1,7 @@
 #![cfg(feature = "integration-tests")]
 #[cfg(test)]
 mod resource_management_tests {
-    use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+    use bitnet_tests::units::BYTES_PER_MB;
     use std::time::Duration;
 
     // Simple test to verify resource management functionality

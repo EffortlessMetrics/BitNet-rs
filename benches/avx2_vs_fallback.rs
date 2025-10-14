@@ -2,7 +2,8 @@
 
 use bitnet_kernels::KernelProvider;
 use bitnet_kernels::cpu::{fallback::FallbackKernel, x86::Avx2Kernel};
-use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 
 fn matmul_performance(c: &mut Criterion) {
     // Test different matrix sizes to evaluate performance characteristics
@@ -22,11 +23,11 @@ fn matmul_performance(c: &mut Criterion) {
         let mut a = vec![0i8; m * k];
         let mut b = vec![0u8; k * n];
 
-        for i in 0..m * k {
-            a[i] = ((i % 127) as i8).wrapping_sub(64);
+        for (i, val) in a.iter_mut().enumerate() {
+            *val = ((i % 127) as i8).wrapping_sub(64);
         }
-        for i in 0..k * n {
-            b[i] = (i % 256) as u8;
+        for (i, val) in b.iter_mut().enumerate() {
+            *val = (i % 256) as u8;
         }
 
         // Benchmark fallback kernel

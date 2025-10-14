@@ -1,8 +1,9 @@
 #![cfg(feature = "bench")]
 
 use bitnet_common::QuantizationType;
-use bitnet_kernels::{KernelManager, KernelProvider};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use bitnet_kernels::KernelManager;
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 
 fn benchmark_kernels(c: &mut Criterion) {
     let mut manager = KernelManager::new();
