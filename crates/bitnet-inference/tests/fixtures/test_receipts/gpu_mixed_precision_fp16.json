@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.1.0",
+  "timestamp": "2025-10-14T06:00:00.000000000+00:00",
+  "compute_path": "real",
+  "backend": "cuda",
+  "deterministic": false,
+  "tokens_requested": 16,
+  "tokens_generated": 16,
+  "tokens_per_second": 127.5,
+  "kernels": [
+    "gemm_fp16",
+    "i2s_gpu_quantize",
+    "i2s_gpu_pack",
+    "wmma_matmul",
+    "cuda_sync"
+  ],
+  "kernel_path": "native_quantized",
+  "quantization": {
+    "types_used": ["I2S"],
+    "fallback_count": 0,
+    "device_aware_selection": true,
+    "precision": "FP16"
+  },
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "BITNET_STRICT_MODE": "1",
+    "OS": "linux-x86_64",
+    "CUDA_VERSION": "12.0",
+    "GPU_NAME": "NVIDIA RTX 3090",
+    "COMPUTE_CAPABILITY": "8.6"
+  },
+  "model": {
+    "path": "tests/models/mini.gguf",
+    "architecture": "bitnet",
+    "quantization_type": "I2S"
+  },
+  "performance": {
+    "kernel_times_ms": {
+      "gemm_fp16": 5.2,
+      "i2s_gpu_quantize": 1.3,
+      "i2s_gpu_pack": 0.8,
+      "wmma_matmul": 3.7,
+      "cuda_sync": 0.1
+    },
+    "total_inference_time_ms": 125.4,
+    "memory_usage_mb": 2048
+  }
+}

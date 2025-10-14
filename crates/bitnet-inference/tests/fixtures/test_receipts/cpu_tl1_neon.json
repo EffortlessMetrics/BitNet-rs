@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.1.0",
+  "timestamp": "2025-10-14T06:30:00.000000000+00:00",
+  "compute_path": "real",
+  "backend": "cpu",
+  "deterministic": true,
+  "tokens_requested": 16,
+  "tokens_generated": 16,
+  "tokens_per_second": 38.7,
+  "kernels": [
+    "tl1_neon_pack",
+    "tl1_neon_matmul",
+    "i2s_gemv"
+  ],
+  "kernel_path": "native_quantized",
+  "quantization": {
+    "types_used": ["TL1", "I2S"],
+    "fallback_count": 0,
+    "device_aware_selection": true
+  },
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "BITNET_STRICT_MODE": "1",
+    "BITNET_DETERMINISTIC": "1",
+    "BITNET_SEED": "42",
+    "OS": "linux-aarch64",
+    "CPU_FEATURES": "neon,asimd",
+    "CPU_ARCH": "ARM Cortex-A72"
+  },
+  "model": {
+    "path": "tests/models/mini_tl1.gguf",
+    "architecture": "bitnet",
+    "quantization_type": "TL1"
+  },
+  "performance": {
+    "kernel_times_ms": {
+      "tl1_neon_pack": 8.3,
+      "tl1_neon_matmul": 105.2,
+      "i2s_gemv": 18.7
+    },
+    "total_inference_time_ms": 413.2,
+    "memory_usage_mb": 512
+  },
+  "notes": "TL1 ARM NEON table lookup inference (Issue #453 AC1, AC3)"
+}
