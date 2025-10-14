@@ -96,7 +96,7 @@ fn test_error_handling() {
     assert!(error_ptr.is_null());
 
     // Test error after invalid operation
-    let result = bitnet_model_load(ptr::null());
+    let result = unsafe { bitnet_model_load(ptr::null()) };
     assert!(result < 0);
 
     let error_ptr = bitnet_get_last_error();
@@ -120,12 +120,12 @@ fn test_model_loading_invalid_cases() {
     bitnet_init();
 
     // Test null path
-    let result = bitnet_model_load(ptr::null());
+    let result = unsafe { bitnet_model_load(ptr::null()) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test non-existent file
     let nonexistent_path = CString::new("/nonexistent/path/model.gguf").unwrap();
-    let result = bitnet_model_load(nonexistent_path.as_ptr());
+    let result = unsafe { bitnet_model_load(nonexistent_path.as_ptr()) };
     assert!(result < 0); // Should be an error
 
     // Test invalid model ID operations
@@ -147,7 +147,7 @@ fn test_model_lifecycle() {
     // Note: This test uses a dummy model file, so loading will likely fail
     // In a real implementation, we'd use a valid model file
     let model_path_cstr = fixture.model_path_cstr();
-    let model_id = bitnet_model_load(model_path_cstr.as_ptr());
+    let model_id = unsafe { bitnet_model_load(model_path_cstr.as_ptr()) };
 
     if model_id >= 0 {
         // Model loaded successfully
@@ -156,7 +156,7 @@ fn test_model_lifecycle() {
 
         // Test model info
         let mut model_info = BitNetCModel::default();
-        let result = bitnet_model_get_info(model_id, &mut model_info);
+        let result = unsafe { bitnet_model_get_info(model_id, &mut model_info) };
         if result == BITNET_SUCCESS {
             assert!(model_info.vocab_size > 0);
             assert!(model_info.hidden_size > 0);
@@ -185,20 +185,24 @@ fn test_inference_invalid_cases() {
 
     // Test invalid model ID
     let prompt = CString::new("test prompt").unwrap();
-    let result =
-        bitnet_inference(-1, prompt.as_ptr(), output.as_mut_ptr() as *mut c_char, output.len());
+    let result = unsafe {
+        bitnet_inference(-1, prompt.as_ptr(), output.as_mut_ptr() as *mut c_char, output.len())
+    };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test null prompt
-    let result = bitnet_inference(0, ptr::null(), output.as_mut_ptr() as *mut c_char, output.len());
+    let result = unsafe {
+        bitnet_inference(0, ptr::null(), output.as_mut_ptr() as *mut c_char, output.len())
+    };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test null output
-    let result = bitnet_inference(0, prompt.as_ptr(), ptr::null_mut(), output.len());
+    let result = unsafe { bitnet_inference(0, prompt.as_ptr(), ptr::null_mut(), output.len()) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test zero max_len
-    let result = bitnet_inference(0, prompt.as_ptr(), output.as_mut_ptr() as *mut c_char, 0);
+    let result =
+        unsafe { bitnet_inference(0, prompt.as_ptr(), output.as_mut_ptr() as *mut c_char, 0) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     bitnet_cleanup();
@@ -276,36 +280,42 @@ fn test_batch_inference_invalid_cases() {
     let config = BitNetCInferenceConfig::default();
 
     // Test invalid model ID
-    let result = bitnet_batch_inference(
-        -1,
-        prompt_ptrs.as_ptr(),
-        2,
-        &config,
-        output_ptrs.as_ptr() as *mut *mut c_char,
-        max_lens.as_ptr(),
-    );
+    let result = unsafe {
+        bitnet_batch_inference(
+            -1,
+            prompt_ptrs.as_ptr(),
+            2,
+            &config,
+            output_ptrs.as_ptr() as *mut *mut c_char,
+            max_lens.as_ptr(),
+        )
+    };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test null prompts
-    let result = bitnet_batch_inference(
-        0,
-        ptr::null(),
-        2,
-        &config,
-        output_ptrs.as_ptr() as *mut *mut c_char,
-        max_lens.as_ptr(),
-    );
+    let result = unsafe {
+        bitnet_batch_inference(
+            0,
+            ptr::null(),
+            2,
+            &config,
+            output_ptrs.as_ptr() as *mut *mut c_char,
+            max_lens.as_ptr(),
+        )
+    };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test zero num_prompts
-    let result = bitnet_batch_inference(
-        0,
-        prompt_ptrs.as_ptr(),
-        0,
-        &config,
-        output_ptrs.as_ptr() as *mut *mut c_char,
-        max_lens.as_ptr(),
-    );
+    let result = unsafe {
+        bitnet_batch_inference(
+            0,
+            prompt_ptrs.as_ptr(),
+            0,
+            &config,
+            output_ptrs.as_ptr() as *mut *mut c_char,
+            max_lens.as_ptr(),
+        )
+    };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     bitnet_cleanup();
@@ -320,11 +330,11 @@ fn test_streaming_invalid_cases() {
     let stream_config = BitNetCStreamConfig::default();
 
     // Test invalid model ID
-    let result = bitnet_start_streaming(-1, prompt.as_ptr(), &config, &stream_config);
+    let result = unsafe { bitnet_start_streaming(-1, prompt.as_ptr(), &config, &stream_config) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test null prompt
-    let result = bitnet_start_streaming(0, ptr::null(), &config, &stream_config);
+    let result = unsafe { bitnet_start_streaming(0, ptr::null(), &config, &stream_config) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test invalid stream operations
@@ -332,7 +342,8 @@ fn test_streaming_invalid_cases() {
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     let mut token = [0u8; 256];
-    let result = bitnet_stream_next_token(-1, token.as_mut_ptr() as *mut c_char, token.len());
+    let result =
+        unsafe { bitnet_stream_next_token(-1, token.as_mut_ptr() as *mut c_char, token.len()) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     bitnet_cleanup();
@@ -345,11 +356,11 @@ fn test_performance_metrics() {
     let mut metrics = BitNetCPerformanceMetrics::default();
 
     // Test invalid model ID
-    let result = bitnet_get_performance_metrics(-1, &mut metrics);
+    let result = unsafe { bitnet_get_performance_metrics(-1, &mut metrics) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test null metrics pointer
-    let result = bitnet_get_performance_metrics(0, ptr::null_mut());
+    let result = unsafe { bitnet_get_performance_metrics(0, ptr::null_mut()) };
     assert_eq!(result, BITNET_ERROR_INVALID_ARGUMENT);
 
     // Test reset with invalid model ID
@@ -377,28 +388,26 @@ fn test_thread_safety() {
 
             // Perform various operations concurrently
             for i in 0..OPERATIONS_PER_THREAD {
-                unsafe {
-                    // Test version queries (should be thread-safe)
-                    let _version = bitnet_version();
-                    let _abi_version = bitnet_abi_version();
+                // Test version queries (should be thread-safe)
+                let _version = bitnet_version();
+                let _abi_version = bitnet_abi_version();
 
-                    // Test thread count operations
-                    let _threads = bitnet_get_num_threads();
+                // Test thread count operations
+                let _threads = bitnet_get_num_threads();
 
-                    // Test memory operations
-                    let _usage = bitnet_get_memory_usage();
+                // Test memory operations
+                let _usage = bitnet_get_memory_usage();
 
-                    // Test GPU availability
-                    let _gpu_available = bitnet_is_gpu_available();
+                // Test GPU availability
+                let _gpu_available = bitnet_is_gpu_available();
 
-                    // Test error handling
-                    bitnet_clear_last_error();
-                    let _error = bitnet_get_last_error();
+                // Test error handling
+                bitnet_clear_last_error();
+                let _error = bitnet_get_last_error();
 
-                    // Introduce some variety based on thread ID and iteration
-                    if (thread_id + i) % 10 == 0 {
-                        let _result = bitnet_garbage_collect();
-                    }
+                // Introduce some variety based on thread ID and iteration
+                if (thread_id + i) % 10 == 0 {
+                    let _result = bitnet_garbage_collect();
                 }
             }
         });
@@ -427,7 +436,7 @@ fn test_memory_leak_detection() {
         let _gpu_available = bitnet_is_gpu_available();
 
         // Test error generation and clearing
-        let _result = bitnet_model_load(ptr::null());
+        let _result = unsafe { bitnet_model_load(ptr::null()) };
         bitnet_clear_last_error();
     }
 
@@ -449,24 +458,28 @@ fn test_configuration_validation() {
     bitnet_init();
 
     // Test valid configuration
-    let mut config = BitNetCInferenceConfig::default();
-    config.temperature = 0.8;
-    config.max_new_tokens = 100;
-    config.top_k = 50;
-    config.top_p = 0.9;
+    let config = BitNetCInferenceConfig {
+        temperature: 0.8,
+        max_new_tokens: 100,
+        top_k: 50,
+        top_p: 0.9,
+        ..Default::default()
+    };
 
     // Configuration validation is done internally, so we test indirectly
     // by trying to use the configuration
     let prompt = CString::new("test").unwrap();
     let mut output = [0u8; 256];
 
-    let result = bitnet_inference_with_config(
-        0, // Invalid model ID, but should fail on model ID, not config
-        prompt.as_ptr(),
-        &config,
-        output.as_mut_ptr() as *mut c_char,
-        output.len(),
-    );
+    let result = unsafe {
+        bitnet_inference_with_config(
+            0, // Invalid model ID, but should fail on model ID, not config
+            prompt.as_ptr(),
+            &config,
+            output.as_mut_ptr() as *mut c_char,
+            output.len(),
+        )
+    };
 
     // Should fail due to invalid model ID, not invalid config
     assert_eq!(result, BITNET_ERROR_INVALID_MODEL_ID);
@@ -528,7 +541,7 @@ fn test_string_handling() {
     assert!(!version_str.is_empty());
 
     // Test error message handling
-    let _result = bitnet_model_load(ptr::null()); // Generate an error
+    let _result = unsafe { bitnet_model_load(ptr::null()) }; // Generate an error
     let error_ptr = bitnet_get_last_error();
     assert!(!error_ptr.is_null());
 
@@ -553,19 +566,21 @@ fn test_complete_workflow_simulation() {
 
     // Attempt to load model (will fail with dummy file, but tests the flow)
     let model_path_cstr = fixture.model_path_cstr();
-    let model_id = bitnet_model_load(model_path_cstr.as_ptr());
+    let model_id = unsafe { bitnet_model_load(model_path_cstr.as_ptr()) };
 
     if model_id >= 0 {
         // If model loaded successfully, test inference
         let prompt = CString::new("Hello, world!").unwrap();
         let mut output = [0u8; 1024];
 
-        let result = bitnet_inference(
-            model_id,
-            prompt.as_ptr(),
-            output.as_mut_ptr() as *mut c_char,
-            output.len(),
-        );
+        let result = unsafe {
+            bitnet_inference(
+                model_id,
+                prompt.as_ptr(),
+                output.as_mut_ptr() as *mut c_char,
+                output.len(),
+            )
+        };
 
         if result >= 0 {
             // Check that output is null-terminated
@@ -576,7 +591,7 @@ fn test_complete_workflow_simulation() {
 
         // Test performance metrics
         let mut metrics = BitNetCPerformanceMetrics::default();
-        let result = bitnet_get_performance_metrics(model_id, &mut metrics);
+        let result = unsafe { bitnet_get_performance_metrics(model_id, &mut metrics) };
         if result == BITNET_SUCCESS {
             // Metrics should have reasonable values
             assert!(metrics.tokens_per_second >= 0.0);

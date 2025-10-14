@@ -510,7 +510,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let tiny = dir.path().join("tiny-model.gguf");
         let tiny_file = File::create(&tiny).unwrap();
-        tiny_file.set_len(1 * 1024 * 1024).unwrap();
+        tiny_file.set_len(1024 * 1024).unwrap();
         let small = dir.path().join("small-model.gguf");
         let small_file = File::create(&small).unwrap();
         small_file.set_len(110 * 1024 * 1024).unwrap();

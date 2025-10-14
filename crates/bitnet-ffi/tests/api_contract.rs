@@ -18,13 +18,15 @@ use bitnet_ffi::*;
 #[test]
 fn test_api_functions_exist() {
     // These function pointers verify the signatures match exactly
-    let _load: extern "C" fn(*const c_char, llama_model_params) -> *mut llama_model =
+    let _load: unsafe extern "C" fn(*const c_char, llama_model_params) -> *mut llama_model =
         llama_load_model_from_file;
-    let _free_model: extern "C" fn(*mut llama_model) = llama_free_model;
-    let _new_context: extern "C" fn(*mut llama_model, llama_context_params) -> *mut llama_context =
-        llama_new_context_with_model;
-    let _free_context: extern "C" fn(*mut llama_context) = llama_free;
-    let _tokenize: extern "C" fn(
+    let _free_model: unsafe extern "C" fn(*mut llama_model) = llama_free_model;
+    let _new_context: unsafe extern "C" fn(
+        *mut llama_model,
+        llama_context_params,
+    ) -> *mut llama_context = llama_new_context_with_model;
+    let _free_context: unsafe extern "C" fn(*mut llama_context) = llama_free;
+    let _tokenize: unsafe extern "C" fn(
         *const llama_model,
         *const c_char,
         c_int,
@@ -33,11 +35,16 @@ fn test_api_functions_exist() {
         bool,
         bool,
     ) -> c_int = llama_tokenize;
-    let _eval: extern "C" fn(*mut llama_context, *const c_int, c_int, c_int, c_int) -> c_int =
-        llama_eval;
-    let _get_logits: extern "C" fn(*mut llama_context) -> *mut f32 = llama_get_logits;
-    let _n_vocab: extern "C" fn(*const llama_model) -> c_int = llama_n_vocab;
-    let _n_ctx: extern "C" fn(*const llama_context) -> c_int = llama_n_ctx;
+    let _eval: unsafe extern "C" fn(
+        *mut llama_context,
+        *const c_int,
+        c_int,
+        c_int,
+        c_int,
+    ) -> c_int = llama_eval;
+    let _get_logits: unsafe extern "C" fn(*mut llama_context) -> *mut f32 = llama_get_logits;
+    let _n_vocab: unsafe extern "C" fn(*const llama_model) -> c_int = llama_n_vocab;
+    let _n_ctx: unsafe extern "C" fn(*const llama_context) -> c_int = llama_n_ctx;
 }
 
 /// Test struct layout compatibility
