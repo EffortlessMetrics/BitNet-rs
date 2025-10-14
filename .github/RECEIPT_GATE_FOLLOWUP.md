@@ -5,41 +5,41 @@ This document outlines the follow-up work needed to complete the CPU MVP with fu
 ## Status
 
 ✅ **Implemented** (Current PR):
-- PR #452 hardening: GPU_KERNEL_EXAMPLES constant, single source of truth
-- `xtask write-receipt`: Stub command that writes valid receipts
-- `xtask verify-receipt`: Full verification with schema checks and GPU kernel detection
-- CI workflow: `.github/workflows/model-gates.yml` for receipt verification
-- Local gates: `scripts/local_gates.sh` updated to use write-receipt
-- Documentation: CLAUDE.md updated with receipt commands
+- PR #452: KernelRecorder infrastructure integrated into bitnet-inference
+- PR #452: InferenceEngine records kernel execution via optional KernelRecorder
+- PR #452: `xtask benchmark` writes production receipts with measured TPS and real kernel IDs
+- PR #452: `xtask verify-receipt` validates receipt schema and honest compute gates
+- PR #452: CI workflow enforces receipt verification via `.github/workflows/model-gates.yml`
+- PR #452: Documentation updated (CLAUDE.md, docs/explanation/receipt-validation.md)
+- ✅ Issue #1: Replace write-receipt stub with real benchmark (COMPLETE)
 
 ⏳ **Pending** (Follow-up issues):
 
 ---
 
-## Issue 1: Replace write-receipt stub with real benchmark
+## Issue 1: Replace write-receipt stub with real benchmark ✅ COMPLETE
 
 **Title**: `[Tooling] Enhance benchmark command to write receipts`
+
+**Status**: ✅ **IMPLEMENTED** in PR #452
 
 **Description**:
 Replace the `write-receipt` stub with real measurement by enhancing the existing `xtask benchmark` command to write receipts in the verified format.
 
-**Acceptance Criteria**:
-- `cargo run -p xtask -- benchmark --model <path> --tokens 128` produces `ci/inference.json`
-- Receipt contains:
-  - Real measured `tokens_per_second` (not placeholder 15.0)
-  - Actual `kernels[]` from execution (not stub list)
-  - All existing schema v1.0 fields (schema_version, compute_path, environment, etc.)
-- Receipt passes `xtask verify-receipt` validation
-- CI workflow updated to use `benchmark` instead of `write-receipt`
-- Local gates script updated to use `benchmark`
+**Implementation Summary**:
+- ✅ KernelRecorder infrastructure added to `bitnet-inference`
+- ✅ InferenceEngine records kernel IDs via optional KernelRecorder
+- ✅ `xtask benchmark` writes production receipts with measured TPS and real kernel IDs
+- ✅ Receipt schema v1.0.0 with all required fields
+- ✅ CI workflow updated to use `benchmark` instead of `write-receipt`
+- ✅ `write-receipt` stub command removed
 
-**Why**:
-Unblocks the gate from stub to production-ready receipt generation.
-
-**Files to Change**:
-- `xtask/src/main.rs`: Enhance existing `benchmark_cmd` function
-- `.github/workflows/model-gates.yml`: Replace `write-receipt` with `benchmark`
-- `scripts/local_gates.sh`: Replace `write-receipt` with `benchmark`
+**Files Modified**:
+- `crates/bitnet-inference/src/kernel_recorder.rs` (NEW)
+- `crates/bitnet-inference/src/engine.rs`
+- `xtask/src/main.rs`
+- `.github/workflows/model-gates.yml`
+- `CLAUDE.md`, `docs/explanation/receipt-validation.md`
 
 ---
 

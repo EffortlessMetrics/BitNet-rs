@@ -1,6 +1,6 @@
 # Receipt Validation and GPU Honesty Checking
 
-**Status**: Draft
+**Status**: Implemented (PR #452)
 **Related Issue**: #439 (GPU feature-gate hardening)
 **Audience**: BitNet.rs developers implementing performance validation
 **Type**: Explanation (Diátaxis)
@@ -8,6 +8,47 @@
 ## Overview
 
 Receipt validation ensures that performance receipts accurately reflect actual device usage. This prevents "GPU on paper, CPU in reality" scenarios where performance baselines become misleading due to silent CPU fallback.
+
+## Implementation Status (PR #452)
+
+**Current Implementation:**
+- ✅ KernelRecorder infrastructure integrated into `bitnet-inference` crate
+- ✅ InferenceEngine records kernel execution via optional KernelRecorder
+- ✅ `xtask benchmark` writes production receipts with measured TPS and real kernel IDs
+- ✅ `xtask verify-receipt` validates receipt schema and honest compute gates
+- ✅ CI workflow enforces receipt verification via `.github/workflows/model-gates.yml`
+
+**Usage:**
+```bash
+# Run benchmark and generate receipt (automatically writes ci/inference.json)
+cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128
+
+# Verify the generated receipt
+cargo run -p xtask -- verify-receipt --path ci/inference.json
+```
+
+**Receipt Schema (v1.0.0):**
+```json
+{
+  "schema_version": "1.0.0",
+  "timestamp": "<RFC3339>",
+  "compute_path": "real",
+  "backend": "cpu|cuda",
+  "deterministic": true,
+  "tokens_requested": 128,
+  "tokens_generated": <actual>,
+  "tokens_per_second": <measured>,
+  "kernels": ["kernel_id_1", "kernel_id_2", ...],
+  "environment": {
+    "BITNET_VERSION": "<version>",
+    "OS": "<os-arch>",
+    "RUST_VERSION": "<rustc-version>"
+  },
+  "model": {"path": "<model-path>"}
+}
+```
+
+The remaining sections of this document provide architectural context and design rationale.
 
 ## Problem Statement
 

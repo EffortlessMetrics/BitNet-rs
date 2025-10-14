@@ -28,9 +28,15 @@ cargo run -p bitnet-cli --features cpu,full-cli -- inspect --ln-stats --gate aut
 ./scripts/export_clean_gguf.sh <model_dir> <tokenizer.json> <output_dir>  # Export + validate
 
 # Inference receipt verification (honest compute gates)
-cargo run -p xtask -- write-receipt              # Write stub receipt to ci/inference.json
+cargo run -p xtask -- benchmark --model <model.gguf> --tokens 128  # Run benchmark, writes ci/inference.json
 cargo run -p xtask -- verify-receipt             # Verify receipt against quality gates
-# Note: write-receipt is a temporary stub. In follow-up, `benchmark` will write real receipts.
+cargo run -p xtask -- verify-receipt --require-gpu-kernels  # Explicitly require GPU kernels
+# The benchmark command automatically writes production receipts with measured TPS and real kernel IDs.
+# Receipt verification includes:
+#   - Schema validation (v1.0.0)
+#   - compute_path == "real" (no mock inference)
+#   - Kernel ID hygiene (no empty strings, length ≤ 128, count ≤ 10K)
+#   - Auto-GPU enforcement: backend="cuda" requires GPU kernels automatically
 
 # SafeTensors to GGUF converter (Rust st2gguf - preferred)
 cargo run -p bitnet-st2gguf -- --input model.safetensors --output model.gguf --strict

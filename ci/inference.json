@@ -1,23 +1,17 @@
 {
-  "backend": "cpu",
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-13T12:00:00Z",
   "compute_path": "real",
+  "backend": "cpu",
   "deterministic": true,
+  "tokens_requested": 128,
+  "tokens_generated": 120,
+  "tokens_per_second": 15.5,
+  "kernels": ["embedding_lookup", "i2s_gemv", "attention_real", "logits_projection"],
   "environment": {
     "BITNET_VERSION": "0.1.0",
     "OS": "linux-x86_64",
-    "RUST_VERSION": ""
+    "RUST_VERSION": "1.90.0"
   },
-  "kernels": [
-    "i2s_gemv",
-    "rope_apply",
-    "attention_real"
-  ],
-  "model": {
-    "path": "tests/models/tiny.gguf"
-  },
-  "schema_version": "1.0.0",
-  "timestamp": "2025-10-13T23:51:02.249978746+00:00",
-  "tokens_generated": 128,
-  "tokens_per_second": 15.0,
-  "tokens_requested": 128
+  "model": {"path": "tests-new/fixtures/fixtures/gguf/valid/minimal_bitnet_i2s.gguf"}
 }

@@ -422,9 +422,15 @@ fn detect_cpu_brand() -> String {
 fn detect_gpu_info() -> Option<String> {
     #[cfg(feature = "gpu")]
     {
-        use bitnet_kernels::gpu_utils;
-        if let Ok(gpu_info) = gpu_utils::get_gpu_info() {
-            return Some(format!("{} (CC: {})", gpu_info.name, gpu_info.compute_capability));
+        use bitnet_kernels::gpu;
+        // Try to get first CUDA device info if available
+        if let Ok(devices) = gpu::list_cuda_devices()
+            && let Some(device) = devices.first()
+        {
+            return Some(format!(
+                "{} (CC: {}.{})",
+                device.name, device.compute_capability.0, device.compute_capability.1
+            ));
         }
     }
     None

@@ -9,6 +9,7 @@ pub mod config;
 pub mod engine;
 pub mod generation;
 pub mod gguf;
+pub mod kernel_recorder;
 pub mod layers;
 pub mod production_engine; // always available (sync parser)
 pub mod receipts; // AC4: Inference receipt generation
@@ -35,6 +36,7 @@ pub use engine::{InferenceEngine, InferenceResult};
 pub use generation::{
     AutoregressiveGenerator, GenConfig, SampleConfig, SamplingStrategy as GenSamplingStrategy,
 };
+pub use kernel_recorder::KernelRecorder;
 pub use layers::{BitNetAttention, QuantizedLinear};
 pub use parity::{
     eval_logits_incremental, eval_logits_once, get_model_config, get_model_vocab_size,

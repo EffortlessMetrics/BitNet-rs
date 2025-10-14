@@ -1,11 +1,9 @@
 name: Model Gates (CPU Receipt Verification)
 
 # This workflow enforces honest compute by requiring valid inference receipts.
-# It produces a receipt via `xtask write-receipt` and verifies it with `xtask verify-receipt`.
-# This is the keystone for enforceable CPU MVP gates.
-#
-# Temporary: Uses write-receipt stub until the real benchmark command writes receipts.
-# Follow-up: Enhance `xtask benchmark` to write receipts in the verified format.
+# It produces a receipt via `xtask benchmark` with measured TPS and real kernel IDs,
+# then verifies it with `xtask verify-receipt`. This is the keystone for enforceable
+# CPU MVP gates with production-ready receipt generation.
 
 on:
   pull_request:
@@ -65,15 +63,14 @@ jobs:
           echo "🔨 Building bitnet-cli with CPU features..."
           cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cli
 
-      - name: Write receipt (stub)
+      - name: Run benchmark and write receipt
         run: |
-          echo "🧪 Writing stub receipt (ci/inference.json)..."
+          echo "🧪 Running benchmark and writing receipt (ci/inference.json)..."
           echo ""
-          echo "Note: This is a temporary stub. In a follow-up, the 'benchmark'"
-          echo "      command will be enhanced to write real receipts with measured"
-          echo "      tokens/sec and actual kernel IDs."
+          echo "This runs a tiny deterministic inference benchmark (128 tokens)"
+          echo "and writes a receipt with measured tokens/sec and real kernel IDs."
           echo ""
-          cargo run -p xtask -- write-receipt --model tests/models/tiny.gguf --tokens 128 --deterministic
+          cargo run -p xtask -- benchmark --model tests/models/mini.gguf --tokens 128
 
       - name: Display receipt
         run: |
@@ -117,22 +114,24 @@ jobs:
 
           ✅ Schema version compatibility (1.0.0 or 1.0)
           ✅ compute_path == "real" (not "mock")
-          ✅ kernels[] is non-empty
+          ✅ kernels[] is non-empty with valid kernel IDs
+          ✅ kernels[] hygiene: no empty strings, length ≤ 128 chars, count ≤ 10,000
+          ✅ GPU backend auto-enforces GPU kernel presence (when backend="cuda")
           ✅ All kernel entries are strings
 
           ### Status
 
           See workflow logs for detailed verification output and receipt contents.
 
-          ### Next Steps
+          ### Production Receipt Generation
 
-          In a follow-up, the `benchmark` command will be enhanced to:
-          1. Run actual inference measurements
-          2. Capture real tokens/sec throughput
-          3. Record actual kernel IDs from execution
-          4. Write receipts in this verified format
+          The `benchmark` command now writes production-ready receipts with:
+          1. Measured tokens/sec throughput from actual inference
+          2. Real kernel IDs captured during execution
+          3. Deterministic configuration for reproducibility
+          4. Complete environment metadata for traceability
 
-          This will replace the current stub with production-ready receipt generation.
+          This provides honest compute evidence for all BitNet.rs inference operations.
           EOF
 
           cat cpu-receipt-gate-report.md
