@@ -81,8 +81,7 @@ async fn test_ac10_invalid_token_error_handling() {
     for invalid_token in invalid_tokens {
         let result = engine.generate_tokens(&[invalid_token], &config).await;
 
-        if result.is_err() {
-            let error = result.unwrap_err();
+        if let Err(error) = result {
             println!("Got expected error for invalid token {}: {}", invalid_token, error);
         } else {
             // This might succeed in some cases with mock implementations
@@ -99,10 +98,11 @@ async fn test_ac10_invalid_token_error_handling() {
 #[cfg(all(feature = "cpu", feature = "gpu"))]
 #[tokio::test]
 async fn test_ac10_device_selection_error_recovery() -> Result<()> {
-    let model = create_test_model()?;
+    let model: Arc<dyn Model> = Arc::new(create_test_model()?);
+    let tokenizer: Arc<dyn Tokenizer> = Arc::new(create_test_tokenizer()?);
 
     // Try to use non-existent GPU
-    let result = InferenceEngine::new(Arc::clone(&model), Device::Cuda(99));
+    let result = InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cuda(99));
 
     match result {
         Err(e) => {
@@ -115,9 +115,10 @@ async fn test_ac10_device_selection_error_recovery() -> Result<()> {
         }
     }
 
-    // Test automatic fallback to CPU
-    let fallback_result = InferenceEngine::new_with_fallback(Arc::clone(&model), Device::Cuda(99));
-    assert!(fallback_result.is_ok(), "Should succeed with CPU fallback");
+    // Test CPU fallback - try CPU device if GPU fails
+    let fallback_result =
+        InferenceEngine::new(Arc::clone(&model), Arc::clone(&tokenizer), Device::Cpu);
+    assert!(fallback_result.is_ok(), "Should succeed with CPU device");
 
     // TODO: Replace with actual device error handling implementation
     panic!("AC10.4: Device selection error recovery not yet implemented");

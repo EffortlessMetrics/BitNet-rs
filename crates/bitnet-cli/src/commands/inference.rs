@@ -578,7 +578,7 @@ impl InferenceCommand {
                 {
                     if candle_core::utils::cuda_is_available() {
                         info!("Using CUDA device");
-                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
+                        Ok(Device::Cuda(candle_core::CudaDevice::new_with_stream(0)?))
                     } else {
                         anyhow::bail!("CUDA requested but no GPU available");
                     }
@@ -593,7 +593,7 @@ impl InferenceCommand {
                 {
                     if candle_core::utils::cuda_is_available() {
                         info!("Auto-select: CUDA");
-                        Ok(Device::Cuda(candle_core::CudaDevice::new(0)?))
+                        Ok(Device::Cuda(candle_core::CudaDevice::new_with_stream(0)?))
                     } else {
                         info!("Auto-select: CPU (no GPU available)");
                         Ok(Device::Cpu)

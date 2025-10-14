@@ -24,7 +24,7 @@ fn test_ac5_full_engine_feature_compiles() {
     // - Create ProductionInferenceEngine
     // - Execute inference and validate results
 
-    assert!(true, "full-engine feature compilation successful");
+    // Compilation successful - test passes
 }
 
 /// AC:5 - Test EngineConfig default works
@@ -46,7 +46,7 @@ fn test_ac5_engine_config_default_works() {
     // assert!(config.enable_performance_monitoring);
     // assert_eq!(config.max_inference_time_seconds, 300);
 
-    assert!(true, "EngineConfig default compilation stub");
+    // Compilation successful - test passes
 }
 
 /// AC:5 - Test ProductionInferenceEngine::new compiles
@@ -78,7 +78,7 @@ fn test_ac5_production_inference_engine_new_compiles() {
     // //     Device::Cpu,
     // // )?;
 
-    assert!(true, "ProductionInferenceEngine::new compilation stub");
+    // Compilation successful - test passes
 }
 
 /// AC:5 - Test inference execution stub
@@ -114,7 +114,7 @@ fn test_ac5_inference_execution_stub() {
     // assert!(!result.tokens.is_empty());
     // assert!(result.duration_ms > 0);
 
-    assert!(true, "Inference execution compilation stub");
+    // Compilation successful - test passes
 }
 
 /// AC:5 - Test performance monitoring stub
@@ -142,7 +142,7 @@ fn test_ac5_performance_monitoring_stub() {
     // assert!(metrics.total_tokens_generated > 0);
     // assert!(metrics.average_latency_ms > 0.0);
 
-    assert!(true, "Performance monitoring compilation stub");
+    // Compilation successful - test passes
 }
 
 /// AC:5 - Test prefill strategy configuration stub
@@ -177,7 +177,7 @@ fn test_ac5_prefill_strategy_configuration_stub() {
     //     ..Default::default()
     // };
 
-    assert!(true, "Prefill strategy configuration compilation stub");
+    // Compilation successful - test passes
 }
 
 /// AC:5 - Test batch processing stub
@@ -205,7 +205,7 @@ fn test_ac5_batch_processing_stub() {
     //     assert!(!result.tokens.is_empty());
     // }
 
-    assert!(true, "Batch processing compilation stub");
+    // Compilation successful - test passes
 }
 
 /// AC:5 - Test error handling stub
@@ -232,5 +232,5 @@ fn test_ac5_error_handling_stub() {
     // let result = engine.generate("very long prompt...", 1000);
     // assert!(result.is_err());
 
-    assert!(true, "Error handling compilation stub");
+    // Compilation successful - test passes
 }
