@@ -8,6 +8,13 @@
 
 use anyhow::Result;
 
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
+use bitnet_common::Device;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
+use bitnet_inference::InferenceEngine;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
+use std::sync::Arc;
+
 /// AC8.1: Mock vs Real Inference Path Detection Test
 /// Tests feature spec: issue-248-spec.md#ac8
 /// Validates real implementations replace mock placeholders

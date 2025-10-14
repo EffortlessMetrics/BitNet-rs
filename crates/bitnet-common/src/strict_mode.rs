@@ -107,38 +107,51 @@ impl StrictModeConfig {
 
     /// Validate performance metrics for suspicious values
     pub fn validate_performance_metrics(&self, metrics: &PerformanceMetrics) -> Result<()> {
-        if self.enabled && self.validate_performance {
-            if metrics.computation_type == ComputationType::Mock {
-                return Err(BitNetError::StrictMode(
-                    "Strict mode: Mock computation detected in performance metrics".to_string(),
-                ));
-            }
-
-            if metrics.tokens_per_second > 150.0 {
-                return Err(BitNetError::StrictMode(format!(
-                    "Strict mode: Suspicious performance detected: {:.2} tok/s",
-                    metrics.tokens_per_second
-                )));
-            }
+        if !self.enabled || !self.validate_performance {
+            return Ok(());
         }
+
+        // Check for mock computation
+        if metrics.computation_type == ComputationType::Mock {
+            return Err(BitNetError::StrictMode(
+                "Strict mode: Mock computation detected in performance metrics".to_string(),
+            ));
+        }
+
+        // Suspiciously high performance threshold (CPU baseline: ~20-40 tok/s, GPU: ~100-120 tok/s)
+        const SUSPICIOUS_TPS_THRESHOLD: f64 = 150.0;
+        if metrics.tokens_per_second > SUSPICIOUS_TPS_THRESHOLD {
+            return Err(BitNetError::StrictMode(format!(
+                "Strict mode: Suspicious performance detected: {:.2} tok/s (threshold: {:.0})",
+                metrics.tokens_per_second, SUSPICIOUS_TPS_THRESHOLD
+            )));
+        }
+
         Ok(())
     }
 
     /// Validate quantization fallback is not used in strict mode
+    ///
+    /// # Arguments
+    /// * `quantization_type` - The quantization type being used
+    /// * `device` - The device where computation would occur
+    /// * `layer_dimensions` - Layer shape for diagnostics [in_features, out_features]
+    /// * `fallback_reason` - Human-readable reason for fallback
     pub fn validate_quantization_fallback(
         &self,
-        qtype: crate::QuantizationType,
+        quantization_type: crate::QuantizationType,
         device: crate::Device,
-        layer_dims: &[usize],
-        reason: &str,
+        layer_dimensions: &[usize],
+        fallback_reason: &str,
     ) -> Result<()> {
-        if self.enabled && self.enforce_quantized_inference {
-            return Err(BitNetError::StrictMode(format!(
-                "Strict mode: FP32 fallback rejected - qtype={:?}, device={:?}, layer_dims={:?}, reason={}",
-                qtype, device, layer_dims, reason
-            )));
+        if !self.enabled || !self.enforce_quantized_inference {
+            return Ok(());
         }
-        Ok(())
+
+        Err(BitNetError::StrictMode(format!(
+            "Strict mode: FP32 fallback rejected - qtype={:?}, device={:?}, layer_dims={:?}, reason={}",
+            quantization_type, device, layer_dimensions, fallback_reason
+        )))
     }
 }
 

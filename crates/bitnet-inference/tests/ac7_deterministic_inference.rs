@@ -7,9 +7,14 @@
 //! enabling reproducible evaluation and testing with BITNET_DETERMINISTIC=1 and BITNET_SEED=42.
 
 use anyhow::Result;
-use bitnet_common::{BitNetConfig, ConcreteTensor};
+
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
+use bitnet_common::{BitNetConfig, ConcreteTensor, Tensor};
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use bitnet_models::bitnet::Model;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use bitnet_tokenizers::Tokenizer;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use std::sync::Arc;
 
 /// AC7.1: Deterministic Inference with Fixed Seed Test
