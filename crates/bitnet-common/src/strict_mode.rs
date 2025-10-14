@@ -16,6 +16,7 @@ pub struct StrictModeConfig {
     pub enabled: bool,
     pub fail_on_mock: bool,
     pub require_quantization: bool,
+    pub enforce_quantized_inference: bool,
     pub validate_performance: bool,
     pub ci_enhanced_mode: bool,
     pub log_all_validations: bool,
@@ -33,6 +34,7 @@ impl StrictModeConfig {
             enabled,
             fail_on_mock: enabled,
             require_quantization: enabled,
+            enforce_quantized_inference: enabled,
             validate_performance: enabled,
             ci_enhanced_mode: false,
             log_all_validations: false,
@@ -52,6 +54,9 @@ impl StrictModeConfig {
                 .map(|v| v == "1")
                 .unwrap_or(base_enabled),
             require_quantization: env::var("BITNET_STRICT_REQUIRE_QUANTIZATION")
+                .map(|v| v == "1")
+                .unwrap_or(base_enabled),
+            enforce_quantized_inference: env::var("BITNET_STRICT_REQUIRE_QUANTIZATION")
                 .map(|v| v == "1")
                 .unwrap_or(base_enabled),
             validate_performance: env::var("BITNET_STRICT_VALIDATE_PERFORMANCE")
@@ -118,6 +123,23 @@ impl StrictModeConfig {
         }
         Ok(())
     }
+
+    /// Validate quantization fallback is not used in strict mode
+    pub fn validate_quantization_fallback(
+        &self,
+        qtype: crate::QuantizationType,
+        device: crate::Device,
+        layer_dims: &[usize],
+        reason: &str,
+    ) -> Result<()> {
+        if self.enabled && self.enforce_quantized_inference {
+            return Err(BitNetError::StrictMode(format!(
+                "Strict mode: FP32 fallback rejected - qtype={:?}, device={:?}, layer_dims={:?}, reason={}",
+                qtype, device, layer_dims, reason
+            )));
+        }
+        Ok(())
+    }
 }
 
 /// Strict mode enforcer for cross-crate consistency
@@ -174,6 +196,17 @@ impl StrictModeEnforcer {
     /// Validate performance metrics
     pub fn validate_performance_metrics(&self, metrics: &PerformanceMetrics) -> Result<()> {
         self.config.validate_performance_metrics(metrics)
+    }
+
+    /// Validate quantization fallback
+    pub fn validate_quantization_fallback(
+        &self,
+        qtype: crate::QuantizationType,
+        device: crate::Device,
+        layer_dims: &[usize],
+        reason: &str,
+    ) -> Result<()> {
+        self.config.validate_quantization_fallback(qtype, device, layer_dims, reason)
     }
 }
 

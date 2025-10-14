@@ -4042,6 +4042,65 @@ fn is_gpu_kernel_id(id: &str) -> bool {
     GPU_KERNEL_PATTERNS.iter().any(|re| re.is_match(id))
 }
 
+/// Check if a kernel ID represents a quantized kernel (not FP32 fallback)
+fn is_quantized_kernel_id(id: &str) -> bool {
+    // Quantized kernel patterns (I2S, TL1, TL2)
+    let quantized_patterns = [
+        "i2s_",      // I2S quantization kernels
+        "tl1_",      // TL1 table lookup kernels
+        "tl2_",      // TL2 table lookup kernels
+        "gemm_i2s_", // GPU GEMM with I2S
+        "wmma_i2s_", // Tensor Core with I2S
+        "quantize_", // Quantization operations
+    ];
+
+    quantized_patterns.iter().any(|pattern| id.contains(pattern))
+}
+
+/// Check if a kernel ID represents a fallback kernel (FP32 dequantization)
+fn is_fallback_kernel_id(id: &str) -> bool {
+    // Fallback patterns indicating FP32 dequantization
+    let fallback_patterns = [
+        "dequant",    // Dequantization operations
+        "fp32_",      // Explicit FP32 kernels
+        "fallback_",  // Explicitly marked fallback
+        "matmul_f32", // FP32 matrix multiplication
+    ];
+
+    fallback_patterns.iter().any(|pattern| id.contains(pattern))
+}
+
+/// Verify receipt quantization claims match actual kernel IDs
+fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
+    // Get compute_path (should be "real" for quantized computation)
+    let compute_path = receipt.get("compute_path").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+    // Get kernel IDs
+    let kernels = receipt
+        .get("kernels")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| anyhow!("Receipt missing 'kernels' array"))?;
+
+    let kernel_ids: Vec<&str> = kernels.iter().filter_map(|v| v.as_str()).collect();
+
+    // If claiming "real" (quantized) computation, verify kernels match
+    if compute_path == "real" {
+        let has_quantized = kernel_ids.iter().any(|id| is_quantized_kernel_id(id));
+        let has_fallback = kernel_ids.iter().any(|id| is_fallback_kernel_id(id));
+
+        if !has_quantized && has_fallback {
+            bail!(
+                "Receipt claims quantized computation (compute_path='real') but only fallback kernels found.\n\
+                 Fallback kernels: {:?}\n\
+                 This indicates silent FP32 fallback - not true quantized inference.",
+                kernel_ids.iter().filter(|id| is_fallback_kernel_id(id)).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    Ok(())
+}
+
 /// Write real inference receipt from benchmark results
 ///
 /// This writes production receipts with actual measured data
@@ -4211,6 +4270,9 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
             );
         }
     }
+
+    // AC6: Quantization verification - ensure claims match actual kernels
+    verify_quantization_claims(&receipt)?;
 
     // Success
     println!("{}", style("✅ Receipt verification passed").green().bold());
