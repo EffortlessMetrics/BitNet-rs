@@ -37,7 +37,7 @@ impl JunitReporter {
                 encoding: Some("UTF-8"),
                 standalone: None,
             })
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         // Calculate totals
         let total_tests: usize = results.iter().map(|r| r.summary.total_tests).sum();
@@ -58,7 +58,7 @@ impl JunitReporter {
                     .attr("time", &format!("{:.3}", total_time))
                     .attr("timestamp", &chrono::Utc::now().to_rfc3339()),
             )
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         // Write each test suite
         for suite in results {
@@ -66,9 +66,12 @@ impl JunitReporter {
         }
 
         // End testsuites element
-        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
+        writer
+            .write(XmlEvent::end_element())
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
-        String::from_utf8(output).map_err(|e| ReportError::XmlError(e.to_string()))
+        String::from_utf8(output)
+            .map_err(|e: std::string::FromUtf8Error| ReportError::XmlError(e.to_string()))
     }
 
     /// Write a single test suite to XML
@@ -89,12 +92,12 @@ impl JunitReporter {
                     .attr("time", &format!("{:.3}", suite.total_duration.as_secs_f64()))
                     .attr("timestamp", &chrono::Utc::now().to_rfc3339()),
             )
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         // Write properties if needed
         writer
             .write(XmlEvent::start_element("properties"))
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         writer
             .write(
@@ -102,12 +105,14 @@ impl JunitReporter {
                     .attr("name", "success_rate")
                     .attr("value", &format!("{:.2}", suite.summary.success_rate)),
             )
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
-        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
+        writer
+            .write(XmlEvent::end_element())
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         writer
             .write(XmlEvent::end_element()) // properties
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         // Write each test case
         for test in &suite.test_results {
@@ -118,7 +123,7 @@ impl JunitReporter {
         if self.include_system_out {
             writer
                 .write(XmlEvent::start_element("system-out"))
-                .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
             writer
                 .write(XmlEvent::cdata(&format!(
                     "Test suite: {}\nTotal duration: {:?}\nSuccess rate: {:.2}%",
@@ -126,24 +131,28 @@ impl JunitReporter {
                     suite.total_duration,
                     suite.summary.success_rate * 100.0
                 )))
-                .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
             writer
                 .write(XmlEvent::end_element())
-                .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
         }
 
         if self.include_system_err {
             writer
                 .write(XmlEvent::start_element("system-err"))
-                .map_err(|e| ReportError::XmlError(e.to_string()))?;
-            writer.write(XmlEvent::cdata("")).map_err(|e| ReportError::XmlError(e.to_string()))?;
+                .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
+            writer
+                .write(XmlEvent::cdata(""))
+                .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
             writer
                 .write(XmlEvent::end_element())
-                .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
         }
 
         // End testsuite element
-        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
+        writer
+            .write(XmlEvent::end_element())
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         Ok(())
     }
@@ -165,7 +174,7 @@ impl JunitReporter {
                     .attr("name", name)
                     .attr("time", &format!("{:.3}", test.duration.as_secs_f64())),
             )
-            .map_err(|e| ReportError::XmlError(e.to_string()))?;
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         // Handle different test statuses
         match test.status {
@@ -183,25 +192,25 @@ impl JunitReporter {
                             )
                             .attr("type", "AssertionError"),
                     )
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
                 if let Some(error) = &test.error {
                     writer
                         .write(XmlEvent::cdata(&format!("{:#?}", error)))
-                        .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                        .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
                 }
 
                 writer
                     .write(XmlEvent::end_element()) // failure
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
             }
             TestStatus::Skipped => {
                 writer
                     .write(XmlEvent::start_element("skipped").attr("message", "Test was skipped"))
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
                 writer
                     .write(XmlEvent::end_element()) // skipped
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
             }
             TestStatus::Timeout => {
                 writer
@@ -210,10 +219,10 @@ impl JunitReporter {
                             .attr("message", "Test timed out")
                             .attr("type", "TimeoutError"),
                     )
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
                 writer
                     .write(XmlEvent::end_element()) // error
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
             }
             TestStatus::Passed => {
                 // No additional elements needed for passed tests
@@ -225,15 +234,17 @@ impl JunitReporter {
                             .attr("message", "Test is still running")
                             .attr("type", "RunningError"),
                     )
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
                 writer
                     .write(XmlEvent::end_element()) // error
-                    .map_err(|e| ReportError::XmlError(e.to_string()))?;
+                    .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
             }
         }
 
         // End testcase element
-        writer.write(XmlEvent::end_element()).map_err(|e| ReportError::XmlError(e.to_string()))?;
+        writer
+            .write(XmlEvent::end_element())
+            .map_err(|e: xml::writer::Error| ReportError::XmlError(e.to_string()))?;
 
         Ok(())
     }

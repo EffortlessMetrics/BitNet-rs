@@ -7,8 +7,6 @@ use bitnet_server::monitoring::MonitoringConfig;
 #[cfg(all(feature = "examples", feature = "server"))]
 use bitnet_server::{BitNetServer, ServerConfig};
 #[cfg(all(feature = "examples", feature = "server"))]
-use reqwest;
-#[cfg(all(feature = "examples", feature = "server"))]
 use serde_json::json;
 #[cfg(all(feature = "examples", feature = "server"))]
 use std::time::Duration;

@@ -10,7 +10,6 @@ use bitnet_tests::trend_reporting::{TestRunMetadata, TrendConfig, TrendReporter}
 use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::TempDir;
-use tokio;
 
 #[tokio::test]
 async fn test_ci_notification_manager_creation() {

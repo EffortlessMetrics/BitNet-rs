@@ -6,8 +6,9 @@
 //! for I2S, TL1, and TL2 quantization methods.
 
 use bitnet_common::{BitNetTensor, Device};
-use bitnet_quantization::{I2SQuantizer, QuantizerTrait, TL1Quantizer, TL2Quantizer};
-use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
+use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
+use std::hint::black_box;
 
 fn generate_test_data(size: usize) -> Vec<f32> {
     (0..size).map(|i| ((i as f32 / size as f32) * 2.0 - 1.0) * 0.95).collect()
