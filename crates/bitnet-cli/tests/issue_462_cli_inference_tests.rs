@@ -77,6 +77,12 @@ mod test_utils {
     }
 
     /// Run CLI command with deterministic settings
+    ///
+    /// # Arguments
+    /// * `model_path` - Path to GGUF model file
+    /// * `prompt` - Input prompt text
+    /// * `max_tokens` - Maximum number of tokens to generate
+    /// * `temperature` - Sampling temperature (0.0 = greedy)
     pub fn run_cli_deterministic(
         model_path: &PathBuf,
         prompt: &str,
@@ -144,12 +150,15 @@ fn test_ac2_cli_inference_question_answering() -> Result<()> {
     // Validate command succeeded (no error messages)
     assert!(
         !output.to_lowercase().contains("error") && !output.to_lowercase().contains("failed"),
-        "CLI output should not contain errors, got: {}",
+        "CLI should complete without errors, but output contained error keywords: {}",
         output
     );
 
     // Validate some text was generated
-    assert!(!output.trim().is_empty(), "CLI should generate some output");
+    assert!(
+        !output.trim().is_empty(),
+        "CLI should generate non-empty output (question answering workflow)"
+    );
 
     // The fact that we got here means:
     // 1. CLI loaded the model successfully
@@ -194,7 +203,11 @@ fn test_ac2_cli_priming_loop() -> Result<()> {
     let output = test_utils::run_cli_deterministic(&model_path, prompt, 4, 0.0)?;
 
     // Validate generation succeeded (implies priming worked)
-    assert!(!output.to_lowercase().contains("error"), "CLI should complete without errors");
+    assert!(
+        !output.to_lowercase().contains("error"),
+        "CLI should complete multi-token priming without errors, got: {}",
+        output
+    );
 
     // The fact that generation succeeded with a multi-token prompt means:
     // 1. Tokenizer processed the full prompt
@@ -243,7 +256,8 @@ fn test_ac2_cli_decode_loop_sampling() -> Result<()> {
     // Validate no errors
     assert!(
         !output1.to_lowercase().contains("error"),
-        "Greedy sampling should complete without errors"
+        "Greedy sampling should complete without errors, got: {}",
+        output1
     );
 
     // The fact that generation succeeded means:
@@ -291,7 +305,7 @@ fn test_ac2_cli_streaming_output() -> Result<()> {
     );
 
     // Validate output was produced
-    assert!(!output.trim().is_empty(), "CLI should produce output");
+    assert!(!output.trim().is_empty(), "CLI should produce non-empty streaming output");
 
     // The fact that we got output means:
     // 1. CLI didn't hang or timeout

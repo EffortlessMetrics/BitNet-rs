@@ -105,8 +105,10 @@ mod test_utils {
     /// - RAYON_NUM_THREADS=1
     ///
     /// # Safety
-    /// Uses unsafe set_var which is safe in single-threaded test contexts
+    /// Uses unsafe set_var which is safe in single-threaded test contexts.
+    /// Tests must not be run in parallel when using this function.
     pub fn enable_deterministic_mode() {
+        #[allow(unused_unsafe)]
         unsafe {
             std::env::set_var("BITNET_DETERMINISTIC", "1");
             std::env::set_var("BITNET_SEED", "42");
@@ -117,8 +119,10 @@ mod test_utils {
     /// Enable strict mode (no FP32 staging)
     ///
     /// # Safety
-    /// Uses unsafe set_var which is safe in single-threaded test contexts
+    /// Uses unsafe set_var which is safe in single-threaded test contexts.
+    /// Tests must not be run in parallel when using this function.
     pub fn enable_strict_mode() {
+        #[allow(unused_unsafe)]
         unsafe {
             std::env::set_var("BITNET_STRICT_MODE", "1");
         }
@@ -207,7 +211,10 @@ async fn test_ac1_cpu_forward_bos_nonzero_logits() -> Result<()> {
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
 
     // Validate that tokens were generated (implies logits were non-zero)
-    assert!(!generated_tokens.is_empty(), "Should generate at least one token");
+    assert!(
+        !generated_tokens.is_empty(),
+        "Expected at least one generated token (BOS → forward pass → logits → sampling)"
+    );
 
     // If we got here, the forward pass worked and produced valid logits
     // The fact that we got a token ID means:
@@ -293,15 +300,22 @@ async fn test_ac1_greedy_decode_16_tokens() -> Result<()> {
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
 
     // Validate generated tokens
-    assert!(!generated_tokens.is_empty(), "Should generate at least one token");
-    assert!(generated_tokens.len() <= 16, "Should generate at most 16 tokens");
+    assert!(
+        !generated_tokens.is_empty(),
+        "Expected at least one generated token from 16-token greedy decode"
+    );
+    assert!(
+        generated_tokens.len() <= 16,
+        "Generated {} tokens, expected at most 16 (max_new_tokens limit)",
+        generated_tokens.len()
+    );
 
     // All tokens should be within vocab range
     let vocab_size = tokenizer.vocab_size();
     for &token_id in &generated_tokens {
         assert!(
             (token_id as usize) < vocab_size,
-            "Token ID {} exceeds vocab size {}",
+            "Token ID {} exceeds vocab size {} (invalid token from forward pass)",
             token_id,
             vocab_size
         );
@@ -387,7 +401,10 @@ async fn test_ac1_quantized_linear_strict_mode() -> Result<()> {
 
     // If we reached here without panicking, strict mode validation passed
     // (The engine would have panicked if FP32 fallback was used in strict mode)
-    assert!(!generated_tokens.is_empty(), "Should generate at least one token in strict mode");
+    assert!(
+        !generated_tokens.is_empty(),
+        "Expected at least one token in strict mode (quantized-only path enforcement)"
+    );
 
     Ok(())
 }
@@ -470,7 +487,10 @@ async fn test_ac1_kv_cache_update_retrieval() -> Result<()> {
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
 
     // Validate that tokens were generated (implies cache was working)
-    assert!(!generated_tokens.is_empty(), "Should generate at least one token (KV cache working)");
+    assert!(
+        !generated_tokens.is_empty(),
+        "Expected at least one token (KV cache population and retrieval working)"
+    );
 
     // The fact that generation succeeded means:
     // 1. KV cache was populated during prefill

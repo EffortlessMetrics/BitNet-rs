@@ -124,17 +124,17 @@ fn test_ac3_receipt_cpu_kernel_honesty_positive() -> Result<()> {
     // );
 
     // Verify receipt file was created
-    assert!(receipt_path.exists(), "Receipt should be created");
+    assert!(receipt_path.exists(), "Receipt file should be created at {}", receipt_path.display());
 
     let contents = fs::read_to_string(&receipt_path)?;
     let receipt: serde_json::Value = serde_json::from_str(&contents)?;
 
     // Verify CPU backend with quantized kernels
-    assert_eq!(receipt["backend"], "cpu");
+    assert_eq!(receipt["backend"], "cpu", "Receipt should have CPU backend for positive test");
     let kernels = receipt["kernels"].as_array().unwrap();
     let has_i2s = kernels.iter().any(|k| k.as_str().unwrap().starts_with("i2s_"));
     let has_tl1 = kernels.iter().any(|k| k.as_str().unwrap().starts_with("tl1_"));
-    assert!(has_i2s || has_tl1, "Should have CPU quantized kernels");
+    assert!(has_i2s || has_tl1, "Receipt should contain CPU quantized kernels (i2s_* or tl1_*)");
 
     // Cleanup
     if receipt_path.exists() {
@@ -179,19 +179,22 @@ fn test_ac3_receipt_cpu_kernel_honesty_negative() -> Result<()> {
     // );
 
     // Verify receipt file was created
-    assert!(receipt_path.exists(), "Receipt should be created");
+    assert!(receipt_path.exists(), "Receipt file should be created at {}", receipt_path.display());
 
     let contents = fs::read_to_string(&receipt_path)?;
     let receipt: serde_json::Value = serde_json::from_str(&contents)?;
 
     // Verify CPU backend without quantized kernels (negative test)
-    assert_eq!(receipt["backend"], "cpu");
+    assert_eq!(receipt["backend"], "cpu", "Receipt should have CPU backend for negative test");
     let kernels = receipt["kernels"].as_array().unwrap();
     let has_quantized = kernels.iter().any(|k| {
         let s = k.as_str().unwrap();
         s.starts_with("i2s_") || s.starts_with("tl1_") || s.starts_with("tl2_")
     });
-    assert!(!has_quantized, "Should NOT have quantized kernels (negative test)");
+    assert!(
+        !has_quantized,
+        "Receipt should NOT have quantized kernels (negative test - validation should fail)"
+    );
 
     // Cleanup
     if receipt_path.exists() {
@@ -235,19 +238,19 @@ fn test_ac3_receipt_cpu_fp32_fallback() -> Result<()> {
     // );
 
     // Verify receipt file was created
-    assert!(receipt_path.exists(), "Receipt should be created");
+    assert!(receipt_path.exists(), "Receipt file should be created at {}", receipt_path.display());
 
     let contents = fs::read_to_string(&receipt_path)?;
     let receipt: serde_json::Value = serde_json::from_str(&contents)?;
 
     // Verify CPU backend with FP32 fallback patterns
-    assert_eq!(receipt["backend"], "cpu");
+    assert_eq!(receipt["backend"], "cpu", "Receipt should have CPU backend for FP32 fallback test");
     let kernels = receipt["kernels"].as_array().unwrap();
     let has_fallback = kernels.iter().any(|k| {
         let s = k.as_str().unwrap();
         s.contains("fp32") || s.contains("fallback") || s.contains("dequant")
     });
-    assert!(has_fallback, "Should have fallback patterns");
+    assert!(has_fallback, "Receipt should contain FP32 fallback patterns (excluded kernels)");
 
     // Cleanup
     if receipt_path.exists() {
@@ -292,13 +295,16 @@ fn test_ac3_receipt_gpu_cpu_kernel_mismatch() -> Result<()> {
     // );
 
     // Verify receipt file was created
-    assert!(receipt_path.exists(), "Receipt should be created");
+    assert!(receipt_path.exists(), "Receipt file should be created at {}", receipt_path.display());
 
     let contents = fs::read_to_string(&receipt_path)?;
     let receipt: serde_json::Value = serde_json::from_str(&contents)?;
 
     // Verify GPU backend with CPU kernels (mismatch detection)
-    assert_eq!(receipt["backend"], "cuda");
+    assert_eq!(
+        receipt["backend"], "cuda",
+        "Receipt should have CUDA backend for GPU/CPU mismatch test"
+    );
     let kernels = receipt["kernels"].as_array().unwrap();
     let has_cpu_kernel = kernels.iter().any(|k| {
         let s = k.as_str().unwrap();
@@ -308,7 +314,10 @@ fn test_ac3_receipt_gpu_cpu_kernel_mismatch() -> Result<()> {
             && !s.starts_with("i2s_quantize")
             && !s.starts_with("i2s_dequantize")
     });
-    assert!(has_cpu_kernel, "Should have CPU kernels with CUDA backend");
+    assert!(
+        has_cpu_kernel,
+        "Receipt should contain CPU kernels with CUDA backend (silent fallback detection)"
+    );
 
     // Cleanup
     if receipt_path.exists() {
