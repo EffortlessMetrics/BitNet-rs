@@ -45,13 +45,7 @@ mod test_utils {
         let model_file = std::fs::read_dir(&models_dir)
             .context("Failed to read models/ directory")?
             .filter_map(|entry| entry.ok())
-            .find(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    == Some("gguf")
-            })
+            .find(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("gguf"))
             .ok_or_else(|| anyhow::anyhow!("No .gguf files found in models/ directory"))?;
 
         Ok(model_file.path())
@@ -66,18 +60,12 @@ mod test_utils {
             .ok_or_else(|| anyhow::anyhow!("Failed to find workspace root"))?;
 
         // Try debug build first, then release
-        let debug_binary = workspace_root
-            .join("target")
-            .join("debug")
-            .join("bitnet-cli");
+        let debug_binary = workspace_root.join("target").join("debug").join("bitnet-cli");
         if debug_binary.exists() {
             return Ok(debug_binary);
         }
 
-        let release_binary = workspace_root
-            .join("target")
-            .join("release")
-            .join("bitnet-cli");
+        let release_binary = workspace_root.join("target").join("release").join("bitnet-cli");
         if release_binary.exists() {
             return Ok(release_binary);
         }
@@ -118,8 +106,7 @@ mod test_utils {
             anyhow::bail!("CLI command failed:\n{}", stderr);
         }
 
-        let stdout = String::from_utf8(output.stdout)
-            .context("CLI output is not valid UTF-8")?;
+        let stdout = String::from_utf8(output.stdout).context("CLI output is not valid UTF-8")?;
 
         Ok(stdout)
     }

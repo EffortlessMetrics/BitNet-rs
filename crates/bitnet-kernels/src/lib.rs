@@ -13,6 +13,7 @@ pub mod ffi;
 pub mod gpu;
 pub mod gpu_utils;
 mod stubs;
+pub mod tl_lut;
 
 /// Kernel provider trait
 pub trait KernelProvider: Send + Sync {

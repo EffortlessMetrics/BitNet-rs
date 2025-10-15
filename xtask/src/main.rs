@@ -4042,6 +4042,36 @@ fn is_gpu_kernel_id(id: &str) -> bool {
     GPU_KERNEL_PATTERNS.iter().any(|re| re.is_match(id))
 }
 
+/// Check if a kernel ID represents a CPU quantized kernel
+///
+/// CPU quantized kernels execute I2S/TL1/TL2 quantization directly on CPU
+/// without falling back to FP32 computation.
+///
+/// Uses `starts_with` matching (not `contains`) to avoid false positives
+/// like "gpu_i2s_fallback" being classified as CPU kernel.
+///
+/// # Examples
+/// ```ignore
+/// assert!(is_cpu_quantized_kernel("i2s_gemv"));
+/// assert!(is_cpu_quantized_kernel("tl1_matmul"));
+/// assert!(is_cpu_quantized_kernel("tl2_lookup_neon"));
+/// assert!(!is_cpu_quantized_kernel("rope_apply"));       // not quantized
+/// assert!(!is_cpu_quantized_kernel("i2s_gpu_gemm"));     // GPU kernel
+/// assert!(!is_cpu_quantized_kernel("dequant_i2s_fp32")); // fallback
+/// ```
+fn is_cpu_quantized_kernel(kernel_id: &str) -> bool {
+    // CPU quantized kernel prefixes (strict `starts_with` matching)
+    const CPU_QUANT_PREFIXES: &[&str] = &[
+        "i2s_", // I2S 2-bit signed quantization kernels
+        "tl1_", // TL1 table lookup (4-bit) kernels
+        "tl2_", // TL2 table lookup (8-bit) kernels
+    ];
+
+    CPU_QUANT_PREFIXES.iter().any(|prefix| kernel_id.starts_with(prefix))
+        && !is_gpu_kernel_id(kernel_id) // Exclude GPU variants like "i2s_quantize"
+        && !is_fallback_kernel_id(kernel_id) // Exclude fallback like "i2s_dequant_fp32"
+}
+
 /// Check if a kernel ID represents a quantized kernel (not FP32 fallback)
 ///
 /// Quantized kernels use 1-bit or table-lookup quantization formats (I2S, TL1, TL2)
@@ -4306,6 +4336,41 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
                 GPU_KERNEL_EXAMPLES.join(", "),
                 kernels
             );
+        }
+    }
+
+    // CPU backend validation - ensure CPU backend uses quantized kernels
+    if backend.eq_ignore_ascii_case("cpu") {
+        let cpu_quant_count = kernel_ids.iter().filter(|id| is_cpu_quantized_kernel(id)).count();
+        let fallback_count = kernel_ids.iter().filter(|id| is_fallback_kernel_id(id)).count();
+
+        if cpu_quant_count == 0 {
+            let error_detail = if fallback_count > 0 {
+                format!(
+                    "CPU backend verification failed: no quantized kernels found, {} fallback patterns detected.\n\
+                     Fallback kernels: {:?}\n\n\
+                     Expected CPU quantized kernels (examples): i2s_*, tl1_*, tl2_*\n\
+                     Actual kernels: {:?}\n\n\
+                     This indicates FP32 fallback path. Ensure:\n\
+                     1) Build with quantization: cargo build --features cpu\n\
+                     2) Quantization layers enabled in model\n\
+                     3) QuantizedLinear used (not standard Linear)",
+                    fallback_count,
+                    kernel_ids.iter().filter(|id| is_fallback_kernel_id(id)).collect::<Vec<_>>(),
+                    kernels
+                )
+            } else {
+                format!(
+                    "CPU backend verification failed: no quantized kernels found.\n\
+                     Expected CPU quantized kernels (examples): i2s_*, tl1_*, tl2_*\n\
+                     Actual kernels: {:?}\n\n\
+                     This indicates no quantization path. Ensure:\n\
+                     1) Build with quantization: cargo build --features cpu\n\
+                     2) Quantization layers enabled in model",
+                    kernels
+                )
+            };
+            bail!(error_detail);
         }
     }
 

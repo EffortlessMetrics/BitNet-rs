@@ -60,13 +60,7 @@ mod test_utils {
         let model_file = std::fs::read_dir(&models_dir)
             .context("Failed to read models/ directory")?
             .filter_map(|entry| entry.ok())
-            .find(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    == Some("gguf")
-            })
+            .find(|entry| entry.path().extension().and_then(|ext| ext.to_str()) == Some("gguf"))
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "No .gguf files found in models/ directory.\n\
