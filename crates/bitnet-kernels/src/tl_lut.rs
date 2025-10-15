@@ -1,9 +1,20 @@
 //! Table Lookup (TL) LUT index calculation helper
 //!
 //! This module provides safe bounds-checked LUT index calculation for TL1/TL2 quantization kernels.
-//! The index formula is: block_idx * block_bytes + (elem_in_block / 8)
 //!
-//! # Safety
+//! # Bit-Packing Layout
+//! TL quantization uses bit-packed storage where **8 elements fit in 1 byte**.
+//! The LUT backing buffer is byte-addressed, but elements are sub-byte precision.
+//!
+//! # Index Formula
+//! ```text
+//! lut_index = block_idx * block_bytes + (elem_in_block / 8)
+//! ```
+//!
+//! The division by 8 maps element indices to byte offsets in the bit-packed LUT.
+//!
+//! # Safety Guarantees
+//! - Validates elems_per_block > 0 (non-empty blocks)
 //! - Validates elem_in_block < elems_per_block (bounds check)
 //! - Uses checked arithmetic to prevent overflow
 //! - Validates final index < lut_len
@@ -12,32 +23,48 @@ use bitnet_common::{BitNetError, KernelError, Result};
 
 /// Calculate LUT index with bounds checking for TL quantization kernels
 ///
+/// This function handles bit-packed TL quantization where 8 elements are stored per byte.
+/// The element index is divided by 8 to obtain the byte offset within a block.
+///
 /// # Arguments
 /// * `block_idx` - Block index in the quantized tensor
 /// * `elem_in_block` - Element index within the block (0..elems_per_block)
 /// * `block_bytes` - Number of bytes per block in the LUT
-/// * `elems_per_block` - Number of elements per block
-/// * `lut_len` - Total length of the LUT array
+/// * `elems_per_block` - Number of elements per block (must be > 0)
+/// * `lut_len` - Total length of the LUT array in bytes
 ///
 /// # Returns
-/// * `Ok(usize)` - Valid LUT index
-/// * `Err(BitNetError)` - If bounds check fails or overflow occurs
+/// * `Ok(usize)` - Valid LUT byte index
+/// * `Err(BitNetError)` - If validation fails or overflow occurs
 ///
 /// # Formula
 /// ```text
-/// lut_index = block_idx * block_bytes + (elem_in_block / 8)
+/// byte_offset = elem_in_block / 8  (integer division for bit-packing)
+/// lut_index = block_idx * block_bytes + byte_offset
 /// ```
+///
+/// # Element-to-Byte Mapping
+/// Elements 0-7 → byte offset 0
+/// Elements 8-15 → byte offset 1
+/// Elements 16-23 → byte offset 2, etc.
 ///
 /// # Examples
 /// ```
 /// use bitnet_kernels::tl_lut::lut_index;
 ///
-/// // Valid index calculation
+/// // First 8 elements (0-7) map to byte 0
 /// let idx = lut_index(0, 0, 32, 128, 256).unwrap();
 /// assert_eq!(idx, 0);
+/// let idx = lut_index(0, 7, 32, 128, 256).unwrap();
+/// assert_eq!(idx, 0);
 ///
+/// // Elements 8-15 map to byte 1
+/// let idx = lut_index(0, 8, 32, 128, 256).unwrap();
+/// assert_eq!(idx, 1);
+///
+/// // Second block, element 8
 /// let idx = lut_index(1, 8, 32, 128, 256).unwrap();
-/// assert_eq!(idx, 33); // 1 * 32 + (8 / 8) = 32 + 1 = 33
+/// assert_eq!(idx, 33); // 1 * 32 + (8 / 8) = 32 + 1
 ///
 /// // Bounds check failure
 /// let result = lut_index(0, 128, 32, 128, 256);
@@ -50,6 +77,13 @@ pub fn lut_index(
     elems_per_block: usize,
     lut_len: usize,
 ) -> Result<usize> {
+    // Validate non-empty blocks
+    if elems_per_block == 0 {
+        return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+            reason: "elems_per_block must be > 0 (non-empty blocks required)".to_string(),
+        }));
+    }
+
     // Bounds check: elem_in_block must be < elems_per_block
     if elem_in_block >= elems_per_block {
         return Err(BitNetError::Kernel(KernelError::InvalidArguments {
@@ -122,6 +156,14 @@ mod tests {
         // elem_in_block == elems_per_block should fail
         let result = lut_index(0, 128, 32, 128, 256);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_elems_per_block_validation() {
+        // elems_per_block == 0 should fail
+        let result = lut_index(0, 0, 32, 0, 256);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("elems_per_block must be > 0"));
     }
 
     #[test]
