@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cpu",
+  "kernels": [
+    "matmul_f32",
+    "dequantize_f32",
+    "fallback_linear",
+    "fp32_attention",
+    "fp32_layer_norm"
+  ],
+  "metadata": {
+    "model": "tiny-bitnet.gguf",
+    "tokens_generated": 16,
+    "throughput_tps": 3.2,
+    "warning": "fp32_fallback_detected",
+    "quantization": "none"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "tl1": {
+    "block_size": 128,
+    "elems_per_block": 64,
+    "lut_entries": 256,
+    "lut_file": "tl1_lut.bin",
+    "lut_size_bytes": 1024,
+    "quantization_bits": 8,
+    "value_range": [-1.008, 1.0],
+    "description": "TL1 single-byte lookup table for 8-bit quantization"
+  },
+  "tl2": {
+    "block_size": 256,
+    "elems_per_block": 128,
+    "lut_entries": 65536,
+    "lut_file": "tl2_lut.bin",
+    "lut_size_bytes": 262144,
+    "quantization_bits": 16,
+    "value_range": [-1.108, 1.1],
+    "description": "TL2 two-byte lookup table for 16-bit quantization with asymmetric weighting"
+  },
+  "test_cases": {
+    "tl1_simple": {
+      "input_bytes": [0, 127, 128, 255],
+      "expected_values": [-1.008, 1.0, -1.0, -0.008]
+    },
+    "tl2_simple": {
+      "input_bytes": [[0, 0], [127, 0], [128, 0], [255, 255]],
+      "expected_values": [-1.008, 1.0, -1.0, -0.216]
+    }
+  }
+}

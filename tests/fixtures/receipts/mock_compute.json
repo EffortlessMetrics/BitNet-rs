@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "mock",
+  "backend": "cpu",
+  "kernels": [
+    "mock_kernel",
+    "fake_quantize",
+    "test_stub"
+  ],
+  "metadata": {
+    "model": "tiny-bitnet.gguf",
+    "tokens_generated": 16,
+    "throughput_tps": 999.9,
+    "warning": "mock_compute_path_not_production"
+  }
+}
