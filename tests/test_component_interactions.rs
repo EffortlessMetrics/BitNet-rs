@@ -4,9 +4,8 @@
 //! This test file validates the component interaction test implementation
 //! without depending on the existing test infrastructure that has compilation issues.
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 // Mock implementations for testing component interactions
 

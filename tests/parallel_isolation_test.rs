@@ -3,10 +3,8 @@
 // This test validates that the test framework can run tests in parallel
 // while maintaining proper isolation between test executions
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
-use tempfile;
 use tokio::sync::{RwLock, Semaphore};
 use tokio::time::timeout;
 

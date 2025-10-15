@@ -1,6 +1,4 @@
 #![cfg(feature = "integration-tests")]
-#[cfg(test)]
-use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
 
 mod resource_management_tests {
     use std::sync::Arc;
@@ -70,7 +68,7 @@ mod resource_management_tests {
         // Check for memory leaks (allow for some variance)
         let leak_threshold = 5 * BYTES_PER_MB; // 5MB threshold (generous for test)
         assert!(
-            memory_delta < leak_threshold,
+            memory_delta < leak_threshold.try_into().unwrap(),
             "Memory leak detected: {} bytes not released (threshold: {} bytes)",
             memory_delta,
             leak_threshold
@@ -163,7 +161,7 @@ mod resource_management_tests {
         let max_allocations = 20; // 100MB total
 
         for i in 0..max_allocations {
-            match std::panic::catch_unwind(|| vec![0u8; allocation_size]) {
+            match std::panic::catch_unwind(|| vec![0u8; allocation_size as usize]) {
                 Ok(data) => {
                     allocations.push(data);
                 }
@@ -235,7 +233,7 @@ mod resource_management_tests {
 
         // Simulate workload
         let mut workload_data = Vec::new();
-        for i in 0..10 {
+        for _ in 0..10 {
             let data = vec![0u8; 2 * BYTES_PER_MB]; // 2MB allocation
             workload_data.push(data);
             sleep(Duration::from_millis(100)).await;

@@ -5,9 +5,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
-use tempfile;
 use tokio::sync::{RwLock, Semaphore};
-use tokio::time::{sleep, timeout};
+use tokio::time::timeout;
 
 /// Simple test result
 #[derive(Debug, Clone)]
@@ -134,10 +133,6 @@ impl<T: TestCase> AsyncTestWrapper<T> {
             Err(e) => Err(format!("Task execution failed: {}", e)),
         }
     }
-
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
 }
 
 /// Test case that verifies isolation
@@ -239,24 +234,24 @@ impl TestCase for IsolationTestCase {
 
 /// Parallel test harness with proper isolation
 pub struct ParallelTestHarness {
-    max_parallel: usize,
+    _max_parallel: usize,
     test_timeout: Duration,
     semaphore: Arc<Semaphore>,
     stats: Arc<RwLock<TestStats>>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct TestStats {
-    total_tests: usize,
-    passed_tests: usize,
-    failed_tests: usize,
-    total_duration: Duration,
+pub(crate) struct TestStats {
+    pub(crate) total_tests: usize,
+    pub(crate) passed_tests: usize,
+    pub(crate) failed_tests: usize,
+    pub(crate) total_duration: Duration,
 }
 
 impl ParallelTestHarness {
     pub fn new(max_parallel: usize, test_timeout: Duration) -> Self {
         Self {
-            max_parallel,
+            _max_parallel: max_parallel,
             test_timeout,
             semaphore: Arc::new(Semaphore::new(max_parallel)),
             stats: Arc::new(RwLock::new(TestStats::default())),

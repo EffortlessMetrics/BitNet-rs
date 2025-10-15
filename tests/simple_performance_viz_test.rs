@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime};
 use tempfile::TempDir;
 
 // Import the canonical MB constant from the test harness crate
-use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+use bitnet_tests::units::BYTES_PER_MB;
 
 // Simple test structures to avoid dependency issues
 #[derive(Debug, Clone)]
