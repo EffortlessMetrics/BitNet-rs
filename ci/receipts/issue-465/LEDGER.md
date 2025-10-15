@@ -2,9 +2,9 @@
 
 **Issue**: #465 CPU Path Followup
 **Flow**: Generative
-**Status**: Specification Phase Complete
+**Status**: Test Infrastructure Phase Complete
 **Created**: 2025-10-15T19:00:00Z
-**Last Updated**: 2025-10-15T19:03:29Z
+**Last Updated**: 2025-10-15T22:00:00Z
 
 ---
 
@@ -13,7 +13,7 @@
 | Gate | Status | Timestamp | Evidence | Receipt |
 |------|--------|-----------|----------|---------|
 | `generative:gate:spec` | ✅ **PASS** | 2025-10-15T19:03:29Z | Specifications finalized: 12 ACs, 4 ADRs, API contracts validated; Neural network alignment confirmed | [spec-gate-validation.json](spec-gate-validation.json) |
-| `generative:gate:test` | ⏳ PENDING | - | Awaiting test scaffolding | - |
+| `generative:gate:tests` | ✅ **PASS** | 2025-10-15T22:00:00Z | Test infrastructure complete: 12 tests, 18 fixtures, TDD red phase validated; AC coverage: 12/12 (100%) | [TEST-VALIDATION-REPORT.md](TEST-VALIDATION-REPORT.md) |
 | `generative:gate:impl` | ⏳ PENDING | - | Awaiting implementation | - |
 | `generative:gate:refine` | ⏳ PENDING | - | Awaiting refinement | - |
 | `generative:gate:quality` | ⏳ PENDING | - | Awaiting quality validation | - |
@@ -77,35 +77,42 @@
 | 2025-10-15T19:30:00Z | spec-creator | Specification creation | Created implementation spec (2,486 lines) + 4 ADRs (930 lines) |
 | 2025-10-15T19:30:00Z | spec-creator | Schema validation | PASS: All 12 ACs testable, dependencies satisfied, blockers mitigated |
 | 2025-10-15T19:03:29Z | spec-finalizer | Specification finalized and committed | Commit `df7fe09` on branch `feat/issue-465-cpu-path-followup` |
+| 2025-10-15T21:15:00Z | test-creator | Test scaffolding creation | Created 4 test files with 12 tests, 18 fixtures for all ACs |
+| 2025-10-15T22:00:00Z | test-finalizer | Test infrastructure validated | All 12 tests failing correctly (TDD red phase); AC coverage: 12/12 (100%); Fix-forward: AC9 test refined |
 
 ---
 
 ## Decision
 
-**State**: Specification Phase Complete
-**Next**: Microloop 3 - Test Scaffolding
+**State**: Test Infrastructure Phase Complete
+**Next**: Microloop 4 - Implementation
 
-**Routing**: `FINALIZE → test-creator`
+**Routing**: `FINALIZE → impl-creator`
 
-**Rationale**: All acceptance criteria specifications validated and committed with comprehensive neural network context, API contract alignment, and BitNet.rs architectural patterns. Ready for TDD implementation with feature-gated tests.
+**Rationale**: All 12 tests properly structured and failing correctly (TDD red phase). Test infrastructure ready for implementation with 100% AC coverage, 18 realistic fixtures, and proper BitNet.rs neural network patterns.
 
 **Evidence**:
-- ✅ 12 acceptance criteria with testable success metrics
-- ✅ 4 architecture decision records with clear rationale
-- ✅ Neural network requirements validated (I2_S quantization, transformer pipeline, honest compute)
-- ✅ API contracts aligned with existing patterns (xtask commands, receipt validation)
-- ✅ Dependencies satisfied (PR #435/464 merged, models available)
-- ✅ Conventional commit with proper formatting and context
+- ✅ 12 tests across 4 test files (all compiling, failing correctly)
+- ✅ 18 fixtures with realistic BitNet.rs data (I2_S kernels, receipt schema v1.0.0)
+- ✅ AC coverage: 12/12 (100%)
+- ✅ TDD red phase validated: All tests fail with descriptive panic messages
+- ✅ Fix-forward applied: AC9 test refined (xtask/CLI exceptions)
+- ✅ Neural network context: I2_S quantization, transformer pipeline, honest compute
+- ✅ Compilation: Clean (0 errors, expected helper warnings only)
 
-**Next Steps for test-creator**:
-1. Create test scaffolding for 4 work streams (Documentation, Baselines, CI, Release QA)
-2. Generate test fixtures for receipt validation (CPU baseline, schema compliance)
-3. Implement test harness for deterministic baseline verification
-4. Validate feature flag standardization patterns
-5. Create smoke tests for CI gate enforcement
+**Next Steps for impl-creator**:
+1. Implement AC1: Add README quickstart block (10-line CPU workflow)
+2. Implement AC2: Add README receipts documentation with xtask commands
+3. Implement AC3: Generate CPU baseline receipt (deterministic, I2_S kernels)
+4. Implement AC4: Verify baseline against receipt schema with xtask
+5. Implement AC5: Configure branch protection (manual GitHub settings)
+6. Implement AC8: Close mock-inference issue with baseline reference
+7. Implement AC11: Run pre-tag verification workflow
+8. Implement AC12: Create v0.1.0-mvp tag with baseline in release notes
 
-**Quality Gates Ready**:
-- Schema validation: PASS (no blocking issues)
-- Traceability: PASS (Story → Schema → Tests → Code)
-- Neural network alignment: PASS (I2_S quantization, transformer components)
-- API contract validation: PASS (xtask commands, receipt schema)
+**Quality Gates Passing**:
+- Test scaffolding: PASS (12 tests, 18 fixtures)
+- TDD red phase: PASS (all tests failing correctly)
+- AC coverage: PASS (12/12, 100%)
+- Neural network alignment: PASS (I2_S kernels, transformer patterns, receipt validation)
+- BitNet.rs patterns: PASS (feature flags, deterministic config, honest compute)
