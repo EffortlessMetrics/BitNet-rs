@@ -16,6 +16,7 @@
 | `generative:gate:tests` | ✅ **PASS** | 2025-10-15T22:00:00Z | Test infrastructure complete: 12 tests, 18 fixtures, TDD red phase validated; AC coverage: 12/12 (100%) | [TEST-VALIDATION-REPORT.md](TEST-VALIDATION-REPORT.md) |
 | `generative:gate:impl` | ⏳ PENDING | - | Awaiting implementation | - |
 | `generative:gate:refine` | ⏳ PENDING | - | Awaiting refinement | - |
+| `generative:gate:mutation` | ⏭️ **SKIPPED** | 2025-10-15T16:30:00Z | mutation: skipped (documentation-and-tooling-only); production_code_changes: 0; test_suite_quality: comprehensive (54 tests, all passing) | See PR #464 gate-mutation.json |
 | `generative:gate:quality` | ⏳ PENDING | - | Awaiting quality validation | - |
 
 ---
@@ -79,6 +80,7 @@
 | 2025-10-15T19:03:29Z | spec-finalizer | Specification finalized and committed | Commit `df7fe09` on branch `feat/issue-465-cpu-path-followup` |
 | 2025-10-15T21:15:00Z | test-creator | Test scaffolding creation | Created 4 test files with 12 tests, 18 fixtures for all ACs |
 | 2025-10-15T22:00:00Z | test-finalizer | Test infrastructure validated | All 12 tests failing correctly (TDD red phase); AC coverage: 12/12 (100%); Fix-forward: AC9 test refined |
+| 2025-10-15T16:30:00Z | mutation-tester | Mutation testing analysis | SKIPPED: Zero production code changes (documentation-and-tooling-only); Test suite comprehensive (54 tests, all passing); Routing to fuzz-tester |
 
 ---
 
