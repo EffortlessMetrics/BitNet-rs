@@ -187,8 +187,45 @@ For more details on feature flags and build configuration, see [CLAUDE.md](../..
 - **Performance Tracking**: Benchmark results and regression detection
 - **Mock Infrastructure**: Comprehensive mock model and tokenizer implementations for testing
 - **Enhanced Performance Testing**: Structured metrics collection with prefill timing validation
+- **Mutation Testing**: Enterprise-grade mutation testing with 80%+ kill rates for critical components
 
 ## Testing Strategy
+
+### Mutation Testing
+
+BitNet.rs uses mutation testing to validate test suite effectiveness and ensure critical code paths are properly covered.
+
+#### Recent Achievements (Issue #462)
+
+| Component | Mutation Score | Mutants Killed | Status |
+|-----------|---------------|----------------|--------|
+| **TL LUT Helper** | **100%** | 6/6 | ✅ Enterprise-grade |
+| **Receipt Validation** | **88%** | 14/16 | ✅ Enterprise-grade |
+| **Overall (Issue #462)** | **91%** | 20/22 | ✅ Exceeds 80% threshold |
+
+**TL LUT Helper (`bitnet_kernels::tl_lut`):**
+- 100% mutation score (6/6 mutants killed)
+- All boundary conditions and overflow checks validated
+- Checked arithmetic paths fully exercised
+
+**Receipt CPU Validation (`xtask::verify_receipt`):**
+- 88% mutation score (14/16 mutants killed)
+- Quantized kernel detection thoroughly tested
+- Fallback pattern matching validated
+- Silent CPU fallback detection confirmed
+
+**Testing Commands:**
+```bash
+# Run mutation-tested components
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu tl_lut
+cargo test --no-default-features -p xtask test_receipt_cpu_validation
+
+# View mutation testing reports
+cat ci/receipts/pr-0462/T3.5-mutation-testing-report.md
+cat ci/receipts/pr-0462/generative-gate-mutation-check-run.md
+```
+
+**See also:** `ci/receipts/pr-0462/` for detailed mutation testing reports and analysis.
 
 ### Core Testing Framework
 - **Unit tests**: Each crate has comprehensive tests

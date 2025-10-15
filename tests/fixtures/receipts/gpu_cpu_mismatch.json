@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cuda",
+  "kernels": [
+    "i2s_quantize_simd_avx2",
+    "tl1_lookup_vectorized",
+    "layer_norm_f32"
+  ],
+  "metadata": {
+    "model": "tiny-bitnet.gguf",
+    "tokens_generated": 16,
+    "error": "backend_kernel_mismatch",
+    "expected_backend": "cuda",
+    "actual_kernels": "cpu"
+  }
+}

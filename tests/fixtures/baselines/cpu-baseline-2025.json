@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cpu",
+  "kernels": [
+    "i2s_quantize_simd_avx2",
+    "i2s_dequantize_block_cpu",
+    "tl1_lookup_vectorized",
+    "layer_norm_f32",
+    "attention_qk_matmul",
+    "rope_embedding_apply",
+    "softmax_inplace_cpu",
+    "linear_projection_i2s"
+  ],
+  "metadata": {
+    "model": "ggml-model-i2_s.gguf",
+    "model_size_mb": 1132.44,
+    "quantization": "i2s",
+    "tokens_generated": 128,
+    "throughput_tps": 11.2,
+    "latency_ms_per_token": 89.3,
+    "simd_features": ["avx2"],
+    "rayon_threads": 1,
+    "timestamp": "2025-01-15T00:00:00Z",
+    "deterministic": true,
+    "seed": 42,
+    "baseline_type": "cpu_i2s_quantized",
+    "note": "Baseline receipt for CPU forward pass with I2S quantization - to be generated after Issue #462 implementation"
+  },
+  "validation": {
+    "compute_path_verified": true,
+    "kernels_count": 8,
+    "cpu_quantized_kernels": [
+      "i2s_quantize_simd_avx2",
+      "i2s_dequantize_block_cpu",
+      "tl1_lookup_vectorized",
+      "linear_projection_i2s"
+    ],
+    "no_fp32_fallback": true,
+    "backend_kernel_match": true
+  }
+}

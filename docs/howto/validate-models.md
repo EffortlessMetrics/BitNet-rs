@@ -872,6 +872,81 @@ CONVERTER=rust STRICT=1 \
 
 ---
 
+## Receipt Validation
+
+### CPU Receipt Validation
+
+Receipts generated during CPU inference must contain CPU quantized kernels to ensure honest computation claims.
+
+**Valid CPU Kernel Patterns:**
+- **I2S**: `i2s_gemv`, `i2s_matmul_*`, `quantized_matmul_i2s`
+- **TL1** (ARM NEON): `tl1_neon_*`, `tl1_lookup_*`
+- **TL2** (x86 AVX): `tl2_avx_*`, `tl2_avx512_*`
+
+**Rejected Fallback Patterns:**
+- **Dequantization**: `dequant_*`, `dequant_i2s_to_fp32`
+- **FP32 Computation**: `fp32_matmul`, `fp32_gemm`
+- **Generic Fallback**: `fallback_*`, `scalar_*`
+- **Mock/Test**: `mock_*`, `test_stub`
+
+**Validation Commands:**
+
+```bash
+# Run benchmark and generate receipt
+cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+
+# Verify receipt contains CPU quantized kernels
+cargo run -p xtask -- verify-receipt ci/inference.json
+
+# The validator checks:
+# - backend="cpu" requires CPU quantized kernel IDs
+# - Rejects dequant_*, fp32_*, fallback_* patterns
+# - Uses starts_with matching (not contains) to prevent false positives
+# - Detects silent CPU fallback when backend claims GPU but uses CPU kernels
+```
+
+**Example Valid CPU Receipt:**
+
+```json
+{
+  "schema_version": "1.0.0",
+  "backend": "cpu",
+  "compute_path": "real",
+  "kernels": [
+    "i2s_gemv",
+    "tl1_neon_matmul",
+    "quantized_matmul_i2s"
+  ],
+  "tokens_per_second": 18.5,
+  "tokens_generated": 128
+}
+```
+
+**Example Invalid CPU Receipt (Fallback Detected):**
+
+```json
+{
+  "schema_version": "1.0.0",
+  "backend": "cpu",
+  "compute_path": "real",
+  "kernels": [
+    "dequant_i2s_to_fp32",  // ❌ Dequantization fallback
+    "fp32_matmul"            // ❌ FP32 computation
+  ],
+  "tokens_per_second": 18.5,
+  "tokens_generated": 128
+}
+```
+
+**Exit Codes:**
+
+| Code | Description |
+|------|-------------|
+| `0` | Receipt validation passed |
+| `1` | Receipt validation failed (fallback kernels detected) |
+
+**See also:** Issue #462 for receipt CPU validation implementation (88% mutation testing score).
+
 ## Environment Variables
 
 ### Validation Configuration

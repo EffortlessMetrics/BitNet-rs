@@ -1,0 +1,58 @@
+{
+  "test_cases": [
+    {
+      "name": "simple_arithmetic",
+      "prompt": "Q: What is 2+2? A:",
+      "expected_contains": ["4"],
+      "max_tokens": 16,
+      "temperature": 0.0,
+      "description": "Basic arithmetic reasoning test"
+    },
+    {
+      "name": "simple_greeting",
+      "prompt": "Hello, my name is",
+      "expected_pattern": "[A-Z][a-z]+",
+      "max_tokens": 8,
+      "temperature": 0.0,
+      "description": "Name completion test"
+    },
+    {
+      "name": "deterministic_test",
+      "prompt": "The capital of France is",
+      "expected_contains": ["Paris"],
+      "max_tokens": 4,
+      "temperature": 0.0,
+      "description": "Factual knowledge test"
+    },
+    {
+      "name": "short_completion",
+      "prompt": "Once upon a time",
+      "expected_min_tokens": 8,
+      "max_tokens": 32,
+      "temperature": 0.0,
+      "description": "Story continuation test"
+    },
+    {
+      "name": "code_completion",
+      "prompt": "def fibonacci(n):",
+      "expected_pattern": "(return|if|else|for|while)",
+      "max_tokens": 64,
+      "temperature": 0.0,
+      "description": "Code generation test"
+    }
+  ],
+  "deterministic_config": {
+    "environment": {
+      "BITNET_DETERMINISTIC": "1",
+      "BITNET_SEED": "42",
+      "RAYON_NUM_THREADS": "1"
+    },
+    "expected_reproducibility": "exact_token_match"
+  },
+  "validation_rules": {
+    "min_tokens": 1,
+    "max_tokens": 128,
+    "temperature_range": [0.0, 1.0],
+    "expected_patterns_format": "regex"
+  }
+}

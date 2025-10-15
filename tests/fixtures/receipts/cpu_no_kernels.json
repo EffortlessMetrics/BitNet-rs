@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cpu",
+  "kernels": [],
+  "metadata": {
+    "model": "tiny-bitnet.gguf",
+    "tokens_generated": 0,
+    "error": "no_kernels_executed"
+  }
+}

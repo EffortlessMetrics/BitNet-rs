@@ -7,6 +7,7 @@ This document describes the quantization formats and device-aware acceleration s
 BitNet-rs supports multiple quantization formats with advanced device-aware acceleration:
 
 ### I2_S - Native Rust Implementation (Production Ready - Issue #261)
+
 - Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
 - Device-aware quantization with CUDA kernel acceleration and CPU SIMD optimization
 - **Accuracy**: ≥99.8% correlation with FP32 reference (production requirement, validated in AC3)
@@ -17,6 +18,7 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - **QLinear Layer Integration**: Replaces standard Linear layers in transformer architecture (Issue #261 - AC5)
 
 ### TL1 - Table Lookup Quantization (ARM Optimized - Issue #261)
+
 - Table lookup quantization optimized for ARM NEON architecture
 - **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
 - **Performance**: 12-18 tok/s on ARM NEON (realistic baseline from AC7)
@@ -24,8 +26,10 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - Memory-efficient lookup tables (16-256 entries, cache-friendly)
 - Parallel processing with configurable block sizes
 - **Real Computation**: Direct table lookup matmul without FP32 staging (Issue #261)
+- **Safe LUT Index Calculation**: Uses `bitnet_kernels::tl_lut::lut_index()` with checked arithmetic and overflow protection
 
 ### TL2 - Advanced Table Lookup (x86 Optimized - Issue #261)
+
 - Advanced table lookup quantization optimized for x86 AVX2/AVX-512
 - **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
 - **Performance**: 10-15 tok/s on x86 AVX (realistic baseline from AC7)
@@ -33,12 +37,84 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - Enhanced vectorized operations (256-4096 entry tables) for large tensor processing
 - CPU feature detection with graceful fallback to scalar implementation
 - **Real Computation**: Direct table lookup matmul without FP32 staging (Issue #261)
+- **Safe LUT Index Calculation**: Uses `bitnet_kernels::tl_lut::lut_index()` with checked arithmetic and overflow protection
 
 ### IQ2_S - GGML-Compatible
+
 - GGML-compatible quantization with 82-byte block layout and 4-level [-2,-1,1,2] mapping
 
 ### Standard Formats (Planned)
+
 - Q4_0, Q5_0, Q8_0, etc. (planned for future releases)
+
+## Table Lookup (TL) Helper API
+
+The `bitnet_kernels::tl_lut` module provides safe, bounds-checked index calculation for TL1/TL2 quantization kernels.
+
+### `lut_index` Function
+
+Calculate validated index into table lookup buffer with overflow protection.
+
+**Signature:**
+
+```rust
+pub fn lut_index(
+    block_idx: usize,
+    elem_in_block: usize,
+    block_bytes: usize,
+    elems_per_block: usize,
+    lut_len: usize,
+) -> Result<usize>
+```
+
+- **Parameters:**
+
+- `block_idx`: Block index in quantized buffer
+- `elem_in_block`: Element position within block (0..elems_per_block)
+- `block_bytes`: Size of each block in bytes
+- `elems_per_block`: Number of elements per quantized block
+- `lut_len`: Total length of LUT buffer (for bounds checking)
+
+**Returns:** Validated LUT index or error if overflow/out-of-bounds
+
+- **Safety Guarantees:**
+
+- Validates `elem_in_block < elems_per_block` (bounds check)
+- Uses checked arithmetic to prevent integer overflow
+- Validates final index `< lut_len` before returning
+- 100% mutation testing coverage (6/6 mutants killed, Issue #462)
+
+**Example Usage:**
+
+```rust
+use bitnet_kernels::tl_lut::lut_index;
+
+// Calculate LUT index for block 0, element 0
+let idx = lut_index(0, 0, 32, 128, 1024)?;
+assert_eq!(idx, 0);
+
+// Calculate LUT index for block 1, element 8
+// Formula: 1 * 32 + (8 / 8) = 32 + 1 = 33
+let idx = lut_index(1, 8, 32, 128, 1024)?;
+assert_eq!(idx, 33);
+
+// Bounds check prevents out-of-range access
+let result = lut_index(0, 128, 32, 128, 1024);
+#assert!(result.is_err()); // elem_in_block >= elems_per_block
+#```
+
+**Testing Commands:**
+```bash
+# Run TL LUT helper tests
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu tl_lut
+
+# Specific test cases
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_lut_index_basic
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_lut_index_overflow_detection
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_lut_index_boundary_validation
+```
+
+**See also:** Issue #462 for TL LUT helper implementation and mutation testing results.
 
 ## Device-Aware Operations
 
@@ -66,13 +142,15 @@ The FFI bridge enables gradual migration from C++ to Rust while maintaining func
 
 BitNet.rs provides native CUDA mixed precision support for enhanced GPU performance:
 
-### Supported Precision Modes
+- ### Supported Precision Modes
+
 - **FP32**: Full precision (reference implementation)
 - **FP16**: Half-precision floating point with Tensor Core acceleration (compute capability 6.1+)
 - **BF16**: Brain floating point format for modern architectures (compute capability 8.0+)
 - **Auto**: Automatic precision selection based on device capabilities
 
-### Device-Aware Precision Selection
+- ### Device-Aware Precision Selection
+
 - **Automatic Detection**: Hardware capability detection determines optimal precision
 - **Device ID Tracking**: GPU kernels expose device ID for multi-GPU debugging scenarios (PR #201)
 - **Capability Querying**: Direct access to FP16/BF16 support via `supports_fp16()` and `supports_bf16()` methods (PR #201)
@@ -81,7 +159,8 @@ BitNet.rs provides native CUDA mixed precision support for enhanced GPU performa
 - **Memory Tracking**: GPU memory allocation and deallocation monitoring
 - **Tensor Core Optimization**: Leverages WMMA API for maximum performance (CC 7.0+)
 
-### Mixed Precision Features
+- ### Mixed Precision Features
+
 - **Native CUDA Kernels**: Custom PTX kernels optimized for each precision mode
 - **Matrix Multiplication**: Optimized matmul operations with device-specific launch parameters
 - **Precision Conversion**: Efficient FP32↔FP16↔BF16 conversion utilities
@@ -91,6 +170,7 @@ BitNet.rs provides native CUDA mixed precision support for enhanced GPU performa
 ## Testing Commands
 
 ### Device-Aware Quantization Testing
+
 ```bash
 # Test device-aware quantization with strict mode (prevents mock fallbacks)
 BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
@@ -106,6 +186,7 @@ cargo test --no-default-features -p bitnet-quantization --no-default-features --
 ```
 
 ### Mixed Precision Testing
+
 ```bash
 # Test mixed precision with strict mode (no mock GPU fallbacks)
 BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
@@ -124,6 +205,7 @@ BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-def
 ```
 
 ### FFI Quantization Testing
+
 ```bash
 # FFI quantization bridge validation with strict mode
 BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
@@ -139,6 +221,7 @@ BITNET_GGUF="path/to/model.gguf" BITNET_STRICT_MODE=1 cargo run -p xtask -- cros
 ```
 
 ### SIMD Testing
+
 ```bash
 # SIMD kernel validation and performance testing
 cargo test --no-default-features -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
@@ -232,11 +315,14 @@ Strict mode validates performance metrics against realistic baselines:
 
 ## Strict Quantization Guards (Issue #453)
 
-BitNet.rs provides comprehensive strict quantization guards to prevent silent FP32 fallback in quantized layers. This three-tier validation strategy ensures production-grade quantized inference with honest performance claims.
+BitNet.rs provides comprehensive strict quantization guards to prevent silent FP32 fallback in quantized layers.
+
+This three-tier validation strategy ensures production-grade quantized inference with honest performance claims.
 
 ### Three-Tier Validation Strategy
 
-**Tier 1: Debug Assertions (Development)**
+#### Tier 1: Debug Assertions (Development)
+
 - **Purpose:** Catch FP32 fallback immediately during development
 - **Scope:** Debug builds only (`#[cfg(debug_assertions)]`)
 - **Behavior:** Panic with detailed error message
@@ -250,7 +336,8 @@ cargo test --no-default-features --features cpu -p bitnet-inference
 # thread 'test' panicked at 'fallback to FP32 in debug mode: layer=blk.0.attn_q, qtype=I2S, reason=kernel_unavailable'
 ```
 
-**Tier 2: Strict Mode Enforcement (Production)**
+#### Tier 2: Strict Mode Enforcement (Production)
+
 - **Purpose:** Reject FP32 fallback in production deployments
 - **Scope:** Release builds with `BITNET_STRICT_MODE=1`
 - **Behavior:** Return `Err(BitNetError::StrictMode(...))`
@@ -269,7 +356,8 @@ cargo run --release -p bitnet-cli --no-default-features --features cpu -- \
 # Otherwise: Succeeds with guaranteed quantized computation
 ```
 
-**Tier 3: Receipt Validation (Verification)**
+#### Tier 3: Receipt Validation (Verification)
+
 - **Purpose:** Validate receipts accurately reflect computation path
 - **Scope:** Post-inference verification (`xtask verify-receipt`)
 - **Behavior:** Exit code 1 if receipt claims don't match kernel IDs
@@ -324,7 +412,7 @@ export BITNET_CI_ENHANCED_STRICT=1
 
 Strict mode errors provide actionable context for debugging:
 
-```
+```text
 Error: Strict mode: FP32 fallback rejected - qtype=I2S, device=Cuda(0), layer_dims=[2048, 2048], reason=kernel_unavailable
        ^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^   ^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
        (1)           (2)                     (3)        (4)          (5)                 (6)
@@ -378,9 +466,7 @@ cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
 cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
 ```
 
-### Strict Mode API Usage
-
-**Programmatic Usage:**
+### Programmatic Usage
 
 ```rust
 use bitnet_common::strict_mode::{StrictModeConfig, StrictModeEnforcer};
@@ -536,6 +622,7 @@ Receipts generated with strict mode include additional validation fields:
 ```
 
 For more information, see:
+
 - **Tutorial:** [Getting Started with Strict Mode](../tutorials/strict-mode-quantization-validation.md) - Learning-oriented introduction
 - **How-To:** [Running Strict Mode Validation Workflows](../how-to/strict-mode-validation-workflows.md) - Problem-oriented workflows
 - **How-To:** [Verifying Receipt Honesty](../how-to/receipt-verification.md) - Receipt validation guide
