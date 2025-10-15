@@ -25,7 +25,7 @@
 | format | pass | cargo fmt --all --check: clean (0 violations); 74 files validated |
 | diff-review | pass | Pre-publication validation: 0 debug artifacts, 7/7 semantic commits, 43/43 tests pass, 100% quality score |
 | prep | pass | Branch prepared: 9 commits rebased (0 conflicts); format: pass; clippy: 0 warnings; build: cpu ok; tests: 43/43 Issue #462 tests pass; pushed to remote with --force-with-lease |
-| publication | pass | PR created: URL: https://github.com/EffortlessMetrics/BitNet-rs/pull/464; labels: enhancement,documentation; Issue #462 linked via "Closes #462" |
+| publication | fail | PR created but sync incomplete: local HEAD 62f6e94 is 3 commits ahead of remote 45f27ad (receipt commits not pushed) |
 
 ---
 
@@ -85,15 +85,22 @@
     - GitHub-native receipts created (publication check run)
     - All quality gates reflected in PR description
     - 9 commits, 85 files changed (+18,567, -143)
+14. **pr-finalizer** → Publication verification FAILED:
+    - Verification failure: local/remote synchronization mismatch
+    - Local HEAD (62f6e94) is 3 commits ahead of remote PR HEAD (45f27ad)
+    - Receipt commits created locally but not pushed to remote
+    - Unpushed commits: 40bd7d3, 5599ab6, 62f6e94 (receipt finalization)
+    - Routing back to pr-publisher to complete push operation
+    - Receipt: ci/receipts/pr-464/publication-verification-failure.md
 
 ---
 
 ## Decision
 
-**State:** pr-published
-**Why:** PR #464 successfully created and published. 9 commits (all semantic), 85 files changed (+18,567, -143), 0 clippy warnings,
-43/43 tests pass, 91% mutation score. Labels applied (enhancement, documentation), Issue #462 linked, PR Ledger created.
-**Next:** FINALIZE → merge-readiness (verify PR publication receipts and GitHub-native validation)
+**State:** publication-failed-sync-mismatch
+**Why:** PR #464 created on GitHub but local/remote synchronization incomplete. Local HEAD (62f6e94) is 3 commits ahead of remote PR HEAD (45f27ad).
+Receipt commits (40bd7d3, 5599ab6, 62f6e94) created locally but not pushed to remote. PR exists but is out of sync with local development.
+**Next:** NEXT → pr-publisher (complete push operation: git push origin feat/cpu-forward-inference)
 
 ---
 

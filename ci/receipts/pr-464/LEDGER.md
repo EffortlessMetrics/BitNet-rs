@@ -40,7 +40,7 @@
 | format | pass | cargo fmt --all --check: clean (0 violations); 74 files validated |
 | diff-review | pass | Pre-publication validation: 0 debug artifacts, 9/9 semantic commits, 43/43 tests pass, 100% quality score |
 | prep | pass | Branch prepared: 9 commits rebased (0 conflicts); format: pass; clippy: 0 warnings; build: cpu ok; tests: 43/43 pass |
-| publication | pass | PR created: URL: https://github.com/EffortlessMetrics/BitNet-rs/pull/464; labels: enhancement,documentation; Issue #462 linked |
+| publication | fail | PR created but local/remote out of sync: local HEAD 62f6e94 is 3 commits ahead of remote 45f27ad (receipt commits not pushed) |
 
 ---
 
@@ -98,15 +98,23 @@
     - Issue #462 linked via "Closes #462"
     - Issue Ledger migrated to PR Ledger
     - GitHub-native receipts created
+14. **pr-finalizer** → Publication verification FAILED:
+    - Local HEAD (62f6e94) is 3 commits ahead of remote PR HEAD (45f27ad)
+    - Receipt commits created locally but not pushed to remote
+    - Unpushed commits:
+      - 62f6e94: chore(receipts): create PR #464 publication receipts
+      - 5599ab6: chore(receipts): add PR description and PR-level ledger; tidy issue ledger formatting
+      - 40bd7d3: chore(receipts): finalize Issue #462 ledger and prep receipts
+    - Routing back to pr-publisher to complete push operation
 
 ---
 
 ## Decision
 
-**State:** published
-**Why:** PR #464 successfully created and published with comprehensive description, proper labels, and Issue #462 linkage.
-All quality gates passed (91% mutation score, 43/43 tests, 0 clippy warnings). Ready for code review.
-**Next:** FINALIZE → merge-readiness (verify PR publication receipts and GitHub-native validation)
+**State:** publication-failed-sync-mismatch
+**Why:** PR #464 created on GitHub but local/remote synchronization incomplete. Local HEAD (62f6e94) is 3 commits ahead of remote PR HEAD (45f27ad).
+Receipt commits (40bd7d3, 5599ab6, 62f6e94) created locally but not pushed to remote. PR exists but is out of sync.
+**Next:** NEXT → pr-publisher (complete push operation: git push origin feat/cpu-forward-inference)
 
 ---
 
