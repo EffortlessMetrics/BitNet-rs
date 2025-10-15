@@ -121,18 +121,21 @@
 ## Quality Gates Evidence
 
 ### Format ✅
+
 ```bash
 cargo fmt --all --check
 # Result: Clean (no warnings)
 ```
 
 ### Clippy ✅
+
 ```bash
 cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings
 # Result: 0 warnings
 ```
 
 ### Tests ✅
+
 ```bash
 # Issue #462 specific tests: 20/20 passing
 cargo test -p bitnet-inference --test issue_462_cpu_forward_tests --no-default-features --features cpu
@@ -146,6 +149,7 @@ cargo test -p bitnet-kernels --no-default-features --features cpu --lib
 ```
 
 ### Build ✅
+
 ```bash
 cargo build --workspace --no-default-features --features cpu
 # Result: Success (5.08s)
@@ -158,11 +162,13 @@ cargo build --workspace --no-default-features --features cpu
 ### Code Quality Improvements (Commit 1532127)
 
 **Files Modified:**
+
 - `crates/bitnet-inference/tests/issue_462_cpu_forward_tests.rs` (4 assertions enhanced)
 - `crates/bitnet-cli/tests/issue_462_cli_inference_tests.rs` (4 assertions enhanced + param docs)
 - `xtask/tests/issue_462_receipt_validation_tests.rs` (4 assertions enhanced)
 
 **Changes:**
+
 - Enhanced 12 test assertion messages with debugging context
 - Added parameter documentation to `run_cli_deterministic()`
 - Improved safety documentation for `enable_deterministic_mode()`
@@ -170,13 +176,15 @@ cargo build --workspace --no-default-features --features cpu
 - All receipt assertions now include file paths and expected patterns
 
 **Production Code:**
+
 - `crates/bitnet-kernels/src/tl_lut.rs` - No changes needed (already excellent)
-  - Complete module/function docs with examples
-  - Comprehensive error handling with anyhow::Result
-  - Checked arithmetic throughout
-  - No unwrap()/expect() calls
+- Complete module/function docs with examples
+- Comprehensive error handling with anyhow::Result
+- Checked arithmetic throughout
+- No unwrap()/expect() calls
 
 **Quality Gates (Post-Refactoring):**
+
 - Format: ✅ cargo fmt --all --check (clean)
 - Clippy: ✅ 0 warnings (workspace with --features cpu)
 - Tests: ✅ 20/20 passing (no regressions)
@@ -189,6 +197,7 @@ cargo build --workspace --no-default-features --features cpu
 **Phase:** Quality Gates Microloop → Test Hardening
 **Agent:** test-hardener
 **Tasks:**
+
 1. Semantic equivalence validation (run tests with model)
 2. Mutation testing baseline establishment (cargo mutants on tl_lut.rs)
 3. Test coverage analysis and gap identification
