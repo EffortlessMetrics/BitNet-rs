@@ -1,4 +1,5 @@
 # Issue #462 Ledger - CPU Forward Pass with Real Inference
+
 **Flow:** Generative
 **Status:** Implementation Complete → Quality Gates Microloop
 **Branch:** feat/cpu-forward-inference
@@ -23,6 +24,7 @@
 | quality-finalizer | pass | All gates validated; enterprise-grade reliability (91% mutation score); ready for documentation |
 | format | pass | cargo fmt --all --check: clean (0 violations); 74 files validated |
 | diff-review | pass | Pre-publication validation: 0 debug artifacts, 7/7 semantic commits, 43/43 tests pass, 100% quality score |
+| prep | pass | Branch prepared: 8 commits rebased (0 conflicts); format: pass; clippy: 0 warnings; build: cpu ok; tests: 23/23 Issue #462 tests pass; pushed to remote with --force-with-lease |
 
 ---
 
@@ -65,20 +67,30 @@
     - Commits: 7/7 follow semantic conventions
     - Tests: 43/43 passing (TL LUT 11/11, Receipt 12/12, CPU forward 4/4, Hardened 16/16)
     - Quality score: 100% (production-ready)
+12. **branch-preparer** → Branch prepared for PR publication:
+    - Documentation: docs(api) commit added (commit 45f27ad)
+    - Rebase status: 8 commits ahead of main, 0 behind (no conflicts)
+    - Quality gates: format pass, clippy 0 warnings, build CPU ok
+    - Issue #462 tests: 23/23 pass (TL LUT 11/11, Receipt 12/12)
+    - Remote sync: pushed with --force-with-lease
+    - Feature validation: skipped (missing-tool validate-features.sh)
+    - Doc tests: 5/5 pass (workspace)
 
 ---
 
 ## Decision
 
-**State:** ready
-**Why:** Pre-publication validation complete. Format clean, clippy 0 warnings, 43/43 tests pass, 0 debug artifacts, 7/7 semantic commits. Diff is production-ready.
-**Next:** FINALIZE → prep-finalizer (ready for PR preparation)
+**State:** ready-for-pr
+**Why:** Branch preparation complete. 8 commits prepared (including docs), 0 rebase conflicts, format pass, clippy 0 warnings, build CPU ok,
+23/23 Issue #462 tests pass, pushed to remote. Ready for GitHub PR creation.
+**Next:** FINALIZE → pr-publisher (create GitHub Pull Request targeting Issue #462)
 
 ---
 
 ## Implementation Summary
 
 ### Commits
+
 - `b2f66d6`: test(cpu): TDD scaffolding for CPU forward pass (#462)
 - `942cfb5`: feat(cpu): complete CPU forward pass implementation (#462)
 - `3329360`: feat(cpu): TL LUT + receipt validation (partial) (#462)
@@ -86,6 +98,7 @@
 - `1532127`: refactor(cpu): improve test code quality for Issue #462
 
 ### Files Changed (Implementation)
+
 - `crates/bitnet-inference/tests/issue_462_cpu_forward_tests.rs` (AC1: CPU forward pass)
 - `crates/bitnet-cli/tests/issue_462_cli_inference_tests.rs` (AC2: CLI inference)
 - `xtask/tests/issue_462_receipt_validation_tests.rs` (AC3: Receipt validation)
@@ -95,6 +108,7 @@
 - `crates/bitnet-kernels/src/lib.rs` (AC4: Export tl_lut module)
 
 ### Test Coverage
+
 | AC | Priority | Tests | Status |
 |----|----------|-------|--------|
 | AC1: CPU Forward Pass | P0 | 4/4 | ✅ Pass |
