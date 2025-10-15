@@ -8,8 +8,10 @@
 //! - AC5: Branch protection configuration with Model Gates (CPU)
 //! - AC6: Smoke test validating CI blocks mocked receipts
 
+mod issue_465_test_utils;
+
 use anyhow::{Context, Result};
-use serde_json::Value;
+use issue_465_test_utils::{configure_deterministic_env, create_test_receipt, workspace_root};
 use std::fs;
 use std::path::Path;
 
@@ -26,11 +28,10 @@ use std::path::Path;
 #[ignore = "Requires GitHub API access for branch protection verification"]
 fn test_ac5_branch_protection_configured() -> Result<()> {
     // AC5: Branch protection validation
-
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let root = workspace_root();
 
     // Verify model-gates.yml workflow exists
-    let workflow_path = workspace_root.join(".github/workflows/model-gates.yml");
+    let workflow_path = root.join(".github/workflows/model-gates.yml");
 
     assert!(workflow_path.exists(), "Model Gates workflow not found: {:?}", workflow_path);
 
@@ -108,185 +109,352 @@ fn test_ac5_branch_protection_configured() -> Result<()> {
 #[test]
 fn test_ac6_mocked_receipt_rejected() -> Result<()> {
     // AC6: Smoke test validation
+    configure_deterministic_env();
 
-    // Configure deterministic environment (unsafe required in Rust 1.90+)
-    unsafe {
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
-        std::env::set_var("RAYON_NUM_THREADS", "1");
-        std::env::set_var("BITNET_SEED", "42");
-    }
-
-    let _workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-
-    // Create temporary test directory
+    // Create temporary test directory for test fixtures
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
-    // Create mocked receipt (should fail verification)
-    let mocked_receipt = serde_json::json!({
-        "version": "1.0.0",
-        "compute_path": "mocked",
-        "kernels": [],
-        "performance": {
-            "tokens_per_sec": 15.3
-        },
-        "success": true
-    });
-
-    let mocked_receipt_path = temp_dir.path().join("mocked-receipt.json");
-    fs::write(&mocked_receipt_path, serde_json::to_string_pretty(&mocked_receipt)?)
-        .context("Failed to write mocked receipt")?;
-
-    // Verify mocked receipt fails schema validation
-    let validation_result = verify_receipt_honest_compute(&mocked_receipt_path);
-
-    assert!(validation_result.is_err(), "Mocked receipt passed verification (should fail)");
-
-    // Create receipt with empty kernels (should fail)
-    let empty_kernels_receipt = serde_json::json!({
-        "version": "1.0.0",
-        "compute_path": "real",
-        "kernels": [],
-        "performance": {
-            "tokens_per_sec": 15.3
-        },
-        "success": true
-    });
-
-    let empty_kernels_path = temp_dir.path().join("empty-kernels-receipt.json");
-    fs::write(&empty_kernels_path, serde_json::to_string_pretty(&empty_kernels_receipt)?)
-        .context("Failed to write empty kernels receipt")?;
-
-    // Verify empty kernels receipt fails validation
-    let validation_result = verify_receipt_honest_compute(&empty_kernels_path);
-
-    assert!(validation_result.is_err(), "Empty kernels receipt passed verification (should fail)");
-
-    // Create receipt with invalid kernel IDs (should fail)
-    let invalid_kernels_receipt = serde_json::json!({
-        "version": "1.0.0",
-        "compute_path": "real",
-        "kernels": ["", "a".repeat(129)],
-        "performance": {
-            "tokens_per_sec": 15.3
-        },
-        "success": true
-    });
-
-    let invalid_kernels_path = temp_dir.path().join("invalid-kernels-receipt.json");
-    fs::write(&invalid_kernels_path, serde_json::to_string_pretty(&invalid_kernels_receipt)?)
-        .context("Failed to write invalid kernels receipt")?;
-
-    // Verify invalid kernels receipt fails validation
-    let validation_result = verify_receipt_honest_compute(&invalid_kernels_path);
+    // Test Case 1: Mocked receipt should fail
+    let mocked_receipt = create_test_receipt("mocked", vec![]);
+    let mocked_path = temp_dir.path().join("mocked-receipt.json");
+    write_test_receipt(&mocked_path, &mocked_receipt)?;
 
     assert!(
-        validation_result.is_err(),
-        "Invalid kernels receipt passed verification (should fail)"
+        issue_465_test_utils::verify_receipt_schema(&mocked_path).is_err(),
+        "Mocked receipt (compute_path='mocked') should fail verification but passed"
     );
 
-    // Create valid receipt (should pass)
-    let valid_receipt = serde_json::json!({
-        "version": "1.0.0",
-        "compute_path": "real",
-        "kernels": ["i2s_cpu_quantized_matmul", "tl1_lut_dequant_forward"],
-        "performance": {
-            "tokens_per_sec": 15.3
-        },
-        "success": true
-    });
+    // Test Case 2: Empty kernels should fail
+    let empty_kernels_receipt = create_test_receipt("real", vec![]);
+    let empty_path = temp_dir.path().join("empty-kernels.json");
+    write_test_receipt(&empty_path, &empty_kernels_receipt)?;
 
-    let valid_receipt_path = temp_dir.path().join("valid-receipt.json");
-    fs::write(&valid_receipt_path, serde_json::to_string_pretty(&valid_receipt)?)
-        .context("Failed to write valid receipt")?;
+    assert!(
+        issue_465_test_utils::verify_receipt_schema(&empty_path).is_err(),
+        "Receipt with empty kernels array should fail verification but passed"
+    );
 
-    // Verify valid receipt passes validation
-    let validation_result = verify_receipt_honest_compute(&valid_receipt_path);
+    // Test Case 3: Invalid kernel IDs should fail
+    let invalid_kernels = vec!["".to_string(), "a".repeat(129)];
+    let invalid_receipt = create_test_receipt("real", invalid_kernels);
+    let invalid_path = temp_dir.path().join("invalid-kernels.json");
+    write_test_receipt(&invalid_path, &invalid_receipt)?;
 
-    assert!(validation_result.is_ok(), "Valid receipt failed verification (should pass)");
+    assert!(
+        issue_465_test_utils::verify_receipt_schema(&invalid_path).is_err(),
+        "Receipt with invalid kernel IDs (empty string or >128 chars) should fail verification but passed"
+    );
+
+    // Test Case 4: Valid receipt should pass
+    let valid_kernels =
+        vec!["i2s_cpu_quantized_matmul".to_string(), "tl1_lut_dequant_forward".to_string()];
+    let valid_receipt = create_test_receipt("real", valid_kernels);
+    let valid_path = temp_dir.path().join("valid-receipt.json");
+    write_test_receipt(&valid_path, &valid_receipt)?;
+
+    issue_465_test_utils::verify_receipt_schema(&valid_path)
+        .context("Valid receipt with real compute_path and proper kernels should pass verification but failed")?;
 
     // Evidence tag for validation
-    println!("// AC6: Smoke test validated");
-    println!("// Mocked receipt: REJECTED ✓");
-    println!("// Empty kernels: REJECTED ✓");
-    println!("// Invalid kernels: REJECTED ✓");
-    println!("// Valid receipt: ACCEPTED ✓");
+    println!("// AC6: Smoke test validated - CI properly blocks invalid receipts");
+    println!("//   ✓ Mocked receipt (compute_path='mocked'): REJECTED");
+    println!("//   ✓ Empty kernels: REJECTED");
+    println!("//   ✓ Invalid kernel IDs: REJECTED");
+    println!("//   ✓ Valid receipt: ACCEPTED");
 
     Ok(())
 }
 
-/// Helper function to verify receipt honest compute requirements
-fn verify_receipt_honest_compute(path: &Path) -> Result<()> {
-    let content = fs::read_to_string(path).context("Failed to read receipt file")?;
+/// Write test receipt to file
+fn write_test_receipt(path: &Path, receipt: &serde_json::Value) -> Result<()> {
+    fs::write(path, serde_json::to_string_pretty(receipt)?)
+        .with_context(|| format!("Failed to write test receipt to {}", path.display()))
+}
 
-    let receipt: Value = serde_json::from_str(&content).context("Failed to parse receipt JSON")?;
+/// Comprehensive test: Kernel ID hygiene - type safety
+///
+/// This test validates that kernel IDs are always strings, never other types.
+#[test]
+fn test_comprehensive_kernel_id_type_safety() -> Result<()> {
+    configure_deterministic_env();
 
-    // Validate compute_path is "real"
-    let compute_path =
-        receipt["compute_path"].as_str().context("compute_path field missing or not a string")?;
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
-    if compute_path != "real" {
-        anyhow::bail!("Receipt has invalid compute_path: {} (expected 'real')", compute_path);
+    // Test kernel IDs with non-string types
+    let test_cases = vec![
+        (
+            serde_json::json!({"version": "1.0.0", "compute_path": "real", "kernels": [123], "performance": {"tokens_per_sec": 10.0}}),
+            "numeric-kernel-id.json",
+        ),
+        (
+            serde_json::json!({"version": "1.0.0", "compute_path": "real", "kernels": [true], "performance": {"tokens_per_sec": 10.0}}),
+            "boolean-kernel-id.json",
+        ),
+        (
+            serde_json::json!({"version": "1.0.0", "compute_path": "real", "kernels": [null], "performance": {"tokens_per_sec": 10.0}}),
+            "null-kernel-id.json",
+        ),
+        (
+            serde_json::json!({"version": "1.0.0", "compute_path": "real", "kernels": [{"nested": "object"}], "performance": {"tokens_per_sec": 10.0}}),
+            "object-kernel-id.json",
+        ),
+    ];
+
+    for (receipt, filename) in test_cases {
+        let receipt_path = temp_dir.path().join(filename);
+        write_test_receipt(&receipt_path, &receipt)?;
+
+        assert!(
+            issue_465_test_utils::verify_receipt_schema(&receipt_path).is_err(),
+            "Receipt {} with non-string kernel ID should be rejected",
+            filename
+        );
     }
 
-    // Validate non-empty kernels array
-    let kernels = receipt["kernels"].as_array().context("kernels field missing or not an array")?;
+    println!("// Comprehensive test passed: Kernel ID type safety enforced");
+    Ok(())
+}
 
-    if kernels.is_empty() {
-        anyhow::bail!("Receipt has empty kernels array (honest compute requires kernel IDs)");
+/// Comprehensive test: Multiple invalid receipt patterns
+///
+/// This test validates comprehensive receipt validation across multiple failure modes.
+#[test]
+fn test_comprehensive_multiple_invalid_patterns() -> Result<()> {
+    configure_deterministic_env();
+
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    let invalid_patterns = vec![
+        // Empty string kernel IDs
+        (
+            create_test_receipt("real", vec!["".to_string()]),
+            "empty-string-kernel.json",
+            "empty string kernel ID",
+        ),
+        // Mixed valid and invalid kernels
+        (
+            create_test_receipt("real", vec!["valid_kernel".to_string(), "".to_string()]),
+            "mixed-kernels.json",
+            "mixed valid/invalid kernels",
+        ),
+        // Whitespace-only kernel IDs
+        (
+            create_test_receipt("real", vec!["   ".to_string()]),
+            "whitespace-kernel.json",
+            "whitespace-only kernel ID",
+        ),
+        // Special characters in excessive length
+        (
+            create_test_receipt("real", vec!["k".repeat(129)]),
+            "excessive-length.json",
+            "excessive length kernel ID",
+        ),
+    ];
+
+    for (receipt, filename, description) in invalid_patterns {
+        let receipt_path = temp_dir.path().join(filename);
+        write_test_receipt(&receipt_path, &receipt)?;
+
+        assert!(
+            issue_465_test_utils::verify_receipt_schema(&receipt_path).is_err(),
+            "Receipt with {} should be rejected",
+            description
+        );
     }
 
-    // Validate kernel ID hygiene
-    for kernel in kernels {
-        let kernel_id = kernel.as_str().context("kernel ID is not a string")?;
+    println!("// Comprehensive test passed: Multiple invalid patterns detected");
+    Ok(())
+}
 
-        if kernel_id.is_empty() {
-            anyhow::bail!("Receipt contains empty kernel ID");
+/// Comprehensive test: CI workflow file structure validation
+///
+/// This test validates that CI workflow files have proper structure.
+#[test]
+fn test_comprehensive_ci_workflow_structure() -> Result<()> {
+    let root = workspace_root();
+    let workflows_dir = root.join(".github/workflows");
+
+    if !workflows_dir.exists() {
+        println!("// Note: No .github/workflows directory found");
+        return Ok(());
+    }
+
+    // Check for model-gates workflow
+    let model_gates_path = workflows_dir.join("model-gates.yml");
+    if model_gates_path.exists() {
+        let content =
+            fs::read_to_string(&model_gates_path).context("Failed to read model-gates.yml")?;
+
+        // Validate workflow structure
+        let required_elements = vec![
+            ("name:", "workflow name"),
+            ("on:", "trigger configuration"),
+            ("jobs:", "job definitions"),
+            ("runs-on:", "runner specification"),
+        ];
+
+        for (pattern, description) in required_elements {
+            assert!(
+                content.contains(pattern),
+                "Model Gates workflow missing {}: {}",
+                description,
+                pattern
+            );
         }
 
-        if kernel_id.len() > 128 {
-            anyhow::bail!("Kernel ID exceeds 128 characters: {}", kernel_id);
-        }
-    }
-
-    if kernels.len() > 10_000 {
-        anyhow::bail!("Kernel count exceeds 10,000: {}", kernels.len());
+        println!("// Comprehensive test passed: CI workflow structure validated");
+    } else {
+        println!("// Note: model-gates.yml not found (may be named differently)");
     }
 
     Ok(())
 }
 
-#[cfg(test)]
-mod test_helpers {
-    use super::*;
+/// Comprehensive test: Kernel hygiene with realistic patterns
+///
+/// This test validates kernel ID hygiene with patterns from real CPU/GPU kernels.
+#[test]
+fn test_comprehensive_kernel_hygiene_realistic_patterns() -> Result<()> {
+    configure_deterministic_env();
 
-    /// Test helper to create test receipt with specified compute path
-    #[allow(dead_code)]
-    pub fn create_test_receipt(compute_path: &str, kernels: Vec<String>) -> Value {
-        serde_json::json!({
-            "version": "1.0.0",
-            "compute_path": compute_path,
-            "kernels": kernels,
-            "performance": {
-                "tokens_per_sec": 15.3
-            },
-            "success": true
-        })
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test realistic CPU kernel patterns
+    let cpu_kernels = vec![
+        "i2s_cpu_quantized_matmul".to_string(),
+        "tl1_lut_dequant_forward".to_string(),
+        "tl2_lut_backward".to_string(),
+        "cpu_attention_qkvo".to_string(),
+        "quantized_matmul_impl".to_string(),
+    ];
+
+    let cpu_receipt = create_test_receipt("real", cpu_kernels);
+    let cpu_path = temp_dir.path().join("cpu-kernels.json");
+    write_test_receipt(&cpu_path, &cpu_receipt)?;
+
+    issue_465_test_utils::verify_receipt_schema(&cpu_path)
+        .context("Valid CPU kernel pattern should pass")?;
+
+    // Test realistic GPU kernel patterns (should also be valid structure)
+    let gpu_kernels = vec![
+        "gemm_gpu_fp16".to_string(),
+        "cuda_i2s_quantize".to_string(),
+        "gpu_attention_flash".to_string(),
+    ];
+
+    let gpu_receipt = create_test_receipt("real", gpu_kernels);
+    let gpu_path = temp_dir.path().join("gpu-kernels.json");
+    write_test_receipt(&gpu_path, &gpu_receipt)?;
+
+    issue_465_test_utils::verify_receipt_schema(&gpu_path)
+        .context("Valid GPU kernel pattern should pass")?;
+
+    println!("// Comprehensive test passed: Realistic kernel patterns validated");
+    Ok(())
+}
+
+/// Comprehensive test: Receipt schema version compatibility
+///
+/// This test validates backward compatibility with different schema versions.
+#[test]
+fn test_comprehensive_schema_version_compatibility() -> Result<()> {
+    configure_deterministic_env();
+
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test both accepted schema versions
+    let valid_versions = vec!["1.0.0", "1.0"];
+
+    for version in valid_versions {
+        let mut receipt = create_test_receipt("real", vec!["test_kernel".to_string()]);
+        receipt["version"] = serde_json::json!(version);
+
+        let receipt_path =
+            temp_dir.path().join(format!("version-{}.json", version.replace('.', "_")));
+        write_test_receipt(&receipt_path, &receipt)?;
+
+        issue_465_test_utils::verify_receipt_schema(&receipt_path)
+            .with_context(|| format!("Schema version {} should be accepted", version))?;
     }
 
-    /// Test helper to verify workflow configuration
-    #[allow(dead_code)]
-    pub fn verify_workflow_config(workflow_path: &Path) -> Result<()> {
-        let content = fs::read_to_string(workflow_path)?;
+    println!("// Comprehensive test passed: Schema version compatibility validated");
+    Ok(())
+}
 
-        // Check for required sections
-        let required_sections = vec!["jobs:", "verify-receipt", "BITNET_DETERMINISTIC"];
+/// Comprehensive test: Compute path validation strictness
+///
+/// This test validates that only "real" compute paths are accepted.
+#[test]
+fn test_comprehensive_compute_path_strictness() -> Result<()> {
+    configure_deterministic_env();
 
-        for section in &required_sections {
-            if !content.contains(section) {
-                anyhow::bail!("Workflow missing required section: {}", section);
-            }
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test invalid compute paths
+    let invalid_paths = vec![
+        "mocked",
+        "mock",
+        "fake",
+        "simulated",
+        "test",
+        "",
+        "Real", // Case-sensitive
+        "REAL",
+    ];
+
+    for compute_path in invalid_paths {
+        let mut receipt = create_test_receipt("real", vec!["test_kernel".to_string()]);
+        receipt["compute_path"] = serde_json::json!(compute_path);
+
+        let receipt_path = temp_dir.path().join(format!("compute-path-{}.json", compute_path));
+        write_test_receipt(&receipt_path, &receipt)?;
+
+        assert!(
+            issue_465_test_utils::verify_receipt_schema(&receipt_path).is_err(),
+            "Compute path '{}' should be rejected",
+            compute_path
+        );
+    }
+
+    println!("// Comprehensive test passed: Compute path strictness enforced");
+    Ok(())
+}
+
+/// Comprehensive test: Performance metrics edge cases
+///
+/// This test validates edge cases in performance metric validation.
+#[test]
+fn test_comprehensive_performance_edge_cases() -> Result<()> {
+    configure_deterministic_env();
+
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test edge case performance values
+    let test_cases = vec![
+        (0.0, true, "zero-performance.json", "zero performance (valid for initialization)"),
+        (0.1, true, "minimal-performance.json", "minimal viable performance"),
+        (50.0, true, "high-performance.json", "high CPU performance"),
+        (-0.1, false, "negative-performance.json", "negative performance"),
+        (f64::INFINITY, false, "infinite-performance.json", "infinite performance"),
+        (f64::NAN, false, "nan-performance.json", "NaN performance"),
+    ];
+
+    for (perf_value, should_pass, filename, description) in test_cases {
+        let mut receipt = create_test_receipt("real", vec!["test_kernel".to_string()]);
+        receipt["performance"]["tokens_per_sec"] = serde_json::json!(perf_value);
+
+        let receipt_path = temp_dir.path().join(filename);
+        write_test_receipt(&receipt_path, &receipt)?;
+
+        let result = issue_465_test_utils::verify_receipt_schema(&receipt_path);
+
+        if should_pass {
+            result.with_context(|| format!("Receipt with {} should pass", description))?;
+        } else {
+            assert!(result.is_err(), "Receipt with {} should be rejected", description);
         }
-
-        Ok(())
     }
+
+    println!("// Comprehensive test passed: Performance edge cases validated");
+    Ok(())
 }

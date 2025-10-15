@@ -8,27 +8,14 @@
 //! - AC3: CPU baseline generation with deterministic receipt
 //! - AC4: Baseline verification against quality gates
 
+mod issue_465_test_utils;
+
 use anyhow::{Context, Result};
-use serde_json::Value;
+use issue_465_test_utils::{
+    configure_deterministic_env, create_test_receipt, find_cpu_baseline, has_cpu_kernel_ids,
+    verify_receipt_schema,
+};
 use std::fs;
-use std::path::Path;
-
-/// Receipt schema structure for validation
-#[derive(Debug, serde::Deserialize)]
-struct Receipt {
-    #[serde(alias = "version")]
-    schema_version: String,
-    compute_path: String,
-    kernels: Vec<String>,
-    #[serde(alias = "throughput_tokens_per_sec")]
-    tokens_per_second: f64,
-    #[serde(default = "default_success")]
-    success: bool,
-}
-
-fn default_success() -> bool {
-    true
-}
 
 /// Tests feature spec: issue-465-implementation-spec.md#ac3-generate-pinned-cpu-baseline
 ///
@@ -40,128 +27,42 @@ fn default_success() -> bool {
 #[test]
 fn test_ac3_cpu_baseline_generated() -> Result<()> {
     // AC3: CPU baseline generation validation
+    configure_deterministic_env();
 
-    // Configure deterministic environment (unsafe required in Rust 1.90+)
-    unsafe {
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
-        std::env::set_var("RAYON_NUM_THREADS", "1");
-        std::env::set_var("BITNET_SEED", "42");
-    }
+    // Find CPU baseline using shared utility
+    let baseline_path = find_cpu_baseline().context(
+        "AC3 implementation missing: CPU baseline not found in docs/baselines/. \
+        Run `cargo run -p xtask -- benchmark --model models/*.gguf --tokens 128` to generate.",
+    )?;
 
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Failed to get workspace root from CARGO_MANIFEST_DIR");
-    let baselines_dir = workspace_root.join("docs/baselines");
-
-    assert!(baselines_dir.exists(), "Baselines directory not found: {:?}", baselines_dir);
-
-    // Look for CPU baseline with date stamp pattern (YYYYMMDD-cpu.json)
-    let mut cpu_baseline_found = false;
-    let mut cpu_baseline_path = None;
-
-    if let Ok(entries) = fs::read_dir(&baselines_dir) {
-        for entry in entries.flatten() {
-            let file_name = entry.file_name();
-            let name = file_name.to_string_lossy();
-
-            if name.ends_with("-cpu.json") && name.len() >= 13 {
-                cpu_baseline_found = true;
-                cpu_baseline_path = Some(entry.path());
-                break;
-            }
-        }
-    }
-
-    if !cpu_baseline_found {
-        // FIXME: This test fails because implementation is missing
-        // Expected: CPU baseline at docs/baselines/YYYYMMDD-cpu.json
-        // Actual: No CPU baseline found
-        panic!("AC3 implementation missing: CPU baseline not found in docs/baselines/");
-    }
-
-    let baseline_path = cpu_baseline_path.unwrap();
     println!("Found CPU baseline: {:?}", baseline_path);
 
-    // Validate receipt schema
+    // Validate receipt schema using shared utility
+    verify_receipt_schema(&baseline_path).context("CPU baseline failed schema validation")?;
+
+    // Parse receipt for detailed validation
     let receipt_content =
         fs::read_to_string(&baseline_path).context("Failed to read CPU baseline receipt")?;
 
-    let receipt: Receipt =
+    let receipt: issue_465_test_utils::Receipt =
         serde_json::from_str(&receipt_content).context("Failed to parse CPU baseline receipt")?;
 
-    // Validate schema version
+    // Validate CPU-specific kernel IDs
     assert!(
-        receipt.schema_version == "1.0.0" || receipt.schema_version == "1.0",
-        "Invalid receipt version: {}",
-        receipt.schema_version
+        has_cpu_kernel_ids(&receipt.kernels),
+        "CPU baseline missing CPU kernel IDs (expected i2s_*, tl1_*, tl2_*, cpu_*, quantized_matmul prefixes). \
+        Found kernels: {:?}",
+        receipt.kernels
     );
 
-    // Validate compute path (must be "real" for honest compute)
-    assert_eq!(
-        receipt.compute_path, "real",
-        "CPU baseline has invalid compute_path: {}",
-        receipt.compute_path
-    );
-
-    // Validate non-empty kernels array
-    assert!(!receipt.kernels.is_empty(), "CPU baseline has empty kernels array");
-
-    // Validate CPU kernel IDs (should include i2s_, tl1_, tl2_ prefixes)
-    let cpu_kernel_prefixes = vec!["i2s_", "tl1_", "tl2_", "cpu_", "quantized_matmul"];
-    let mut has_cpu_kernels = false;
-
-    for kernel_id in &receipt.kernels {
-        for prefix in &cpu_kernel_prefixes {
-            if kernel_id.contains(prefix) {
-                has_cpu_kernels = true;
-                break;
-            }
-        }
-        if has_cpu_kernels {
-            break;
-        }
-    }
-
-    assert!(
-        has_cpu_kernels,
-        "CPU baseline missing CPU kernel IDs (expected i2s_*, tl1_*, tl2_* prefixes)"
-    );
-
-    // Validate kernel ID hygiene
-    for kernel_id in &receipt.kernels {
-        assert!(!kernel_id.is_empty(), "CPU baseline contains empty kernel ID");
-
-        assert!(
-            kernel_id.len() <= 128,
-            "CPU baseline kernel ID exceeds 128 characters: {}",
-            kernel_id
-        );
-    }
-
-    assert!(
-        receipt.kernels.len() <= 10_000,
-        "CPU baseline kernel count exceeds 10,000: {}",
-        receipt.kernels.len()
-    );
-
-    // Validate performance metrics (allow 0.0 for initial baseline)
-    // Note: 0.0 may occur due to timing precision in short benchmarks
-    assert!(
-        receipt.tokens_per_second >= 0.0,
-        "CPU baseline has invalid tokens_per_sec: {}",
-        receipt.tokens_per_second
-    );
-
-    // Validate success flag
-    assert!(receipt.success, "CPU baseline has success=false");
-
-    // Neural Network Context: Verify realistic CPU performance (10-20 tok/s for I2_S)
+    // Neural Network Context: Verify realistic CPU performance (10-20 tok/s for I2_S quantization)
     // Allow 0.1-50 tok/s range to accommodate short benchmarks and warm-up effects
-    if receipt.tokens_per_second > 0.0 {
+    if receipt.tokens_per_sec > 0.0 {
         assert!(
-            receipt.tokens_per_second >= 0.1 && receipt.tokens_per_second <= 50.0,
-            "CPU baseline performance outside realistic range (0.1-50 tok/s): {} tok/s",
-            receipt.tokens_per_second
+            receipt.tokens_per_sec >= 0.1 && receipt.tokens_per_sec <= 50.0,
+            "CPU baseline performance outside realistic range (0.1-50 tok/s for I2_S): {:.2} tok/s. \
+            This may indicate timing issues or incorrect kernel selection.",
+            receipt.tokens_per_sec
         );
     }
 
@@ -171,7 +72,7 @@ fn test_ac3_cpu_baseline_generated() -> Result<()> {
         "// Receipt: compute_path={}, kernels={}, tps={:.2}",
         receipt.compute_path,
         receipt.kernels.len(),
-        receipt.tokens_per_second
+        receipt.tokens_per_sec
     );
 
     Ok(())
@@ -187,44 +88,15 @@ fn test_ac3_cpu_baseline_generated() -> Result<()> {
 #[test]
 fn test_ac4_baseline_verification_passes() -> Result<()> {
     // AC4: Baseline verification validation
+    configure_deterministic_env();
 
-    // Configure deterministic environment (unsafe required in Rust 1.90+)
-    unsafe {
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
-        std::env::set_var("RAYON_NUM_THREADS", "1");
-        std::env::set_var("BITNET_SEED", "42");
-    }
+    // Find CPU baseline using shared utility
+    let baseline_path = find_cpu_baseline().context(
+        "AC4 implementation missing: CPU baseline not found for verification. \
+        Run `cargo run -p xtask -- benchmark --model models/*.gguf --tokens 128` to generate.",
+    )?;
 
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("Failed to get workspace root from CARGO_MANIFEST_DIR");
-    let baselines_dir = workspace_root.join("docs/baselines");
-
-    // Find CPU baseline
-    let mut cpu_baseline_path = None;
-
-    if let Ok(entries) = fs::read_dir(&baselines_dir) {
-        for entry in entries.flatten() {
-            let file_name = entry.file_name();
-            let name = file_name.to_string_lossy();
-
-            if name.ends_with("-cpu.json") && name.len() >= 13 {
-                cpu_baseline_path = Some(entry.path());
-                break;
-            }
-        }
-    }
-
-    if cpu_baseline_path.is_none() {
-        // FIXME: This test fails because implementation is missing
-        // Expected: CPU baseline exists for verification
-        // Actual: No CPU baseline found
-        panic!("AC4 implementation missing: CPU baseline not found for verification");
-    }
-
-    let baseline_path = cpu_baseline_path.unwrap();
-
-    // Verify receipt schema (detailed validation)
+    // Verify receipt schema using shared utility
     verify_receipt_schema(&baseline_path).context("CPU baseline failed schema validation")?;
 
     // Evidence tag for validation
@@ -234,127 +106,333 @@ fn test_ac4_baseline_verification_passes() -> Result<()> {
     Ok(())
 }
 
-/// Helper function to verify receipt schema
-fn verify_receipt_schema(path: &Path) -> Result<()> {
-    let content = fs::read_to_string(path).context("Failed to read receipt file")?;
+/// Edge case: Test that empty kernel arrays are properly rejected
+///
+/// This test validates kernel hygiene enforcement - receipts with empty kernel
+/// arrays should fail validation as they indicate no real computation occurred.
+#[test]
+fn test_edge_case_empty_kernels_rejected() -> Result<()> {
+    configure_deterministic_env();
 
-    let receipt: Value = serde_json::from_str(&content).context("Failed to parse receipt JSON")?;
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+    let receipt = create_test_receipt("real", vec![]);
+    let receipt_path = temp_dir.path().join("empty-kernels.json");
+    fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)
+        .context("Failed to write test receipt")?;
 
-    // Validate required fields (support both old and new schema)
-    let required_fields = vec!["compute_path", "kernels"];
+    // Verify that empty kernels are rejected
+    assert!(
+        verify_receipt_schema(&receipt_path).is_err(),
+        "Receipt with empty kernels should be rejected"
+    );
 
-    for field in &required_fields {
-        assert!(receipt.get(field).is_some(), "Receipt missing required field: {}", field);
-    }
-
-    // Validate version format (support both "version" and "schema_version")
-    let version = receipt
-        .get("schema_version")
-        .or_else(|| receipt.get("version"))
-        .and_then(|v| v.as_str())
-        .context("receipt missing version field")?;
-
-    assert!(version == "1.0.0" || version == "1.0", "Invalid receipt version: {}", version);
-
-    // Validate compute_path
-    let compute_path =
-        receipt["compute_path"].as_str().context("compute_path field is not a string")?;
-
-    assert_eq!(compute_path, "real", "Invalid compute_path: {}", compute_path);
-
-    // Validate kernels array
-    let kernels = receipt["kernels"].as_array().context("kernels field is not an array")?;
-
-    assert!(!kernels.is_empty(), "Receipt has empty kernels array");
-
-    // Validate kernel hygiene
-    for kernel in kernels {
-        let kernel_id = kernel.as_str().context("kernel ID is not a string")?;
-
-        assert!(!kernel_id.is_empty(), "Receipt contains empty kernel ID");
-
-        assert!(kernel_id.len() <= 128, "Kernel ID exceeds 128 characters: {}", kernel_id);
-    }
-
-    assert!(kernels.len() <= 10_000, "Kernel count exceeds 10,000: {}", kernels.len());
-
-    // Validate performance metrics (support both old and new schema)
-    let tokens_per_sec = if let Some(performance) = receipt.get("performance") {
-        // Old schema: performance.tokens_per_sec
-        performance
-            .as_object()
-            .and_then(|p| p.get("tokens_per_sec"))
-            .and_then(|t| t.as_f64())
-            .context("performance.tokens_per_sec is not a number")?
-    } else if let Some(tps) = receipt.get("tokens_per_second") {
-        // New schema: tokens_per_second
-        tps.as_f64().context("tokens_per_second is not a number")?
-    } else if let Some(tps) = receipt.get("throughput_tokens_per_sec") {
-        // Alternative schema: throughput_tokens_per_sec
-        tps.as_f64().context("throughput_tokens_per_sec is not a number")?
-    } else {
-        return Err(anyhow::anyhow!("Receipt missing performance metrics"));
-    };
-
-    assert!(tokens_per_sec >= 0.0, "Invalid tokens_per_sec: {}", tokens_per_sec);
-
-    // Validate success flag (optional field, defaults to true if missing)
-    if let Some(success_field) = receipt.get("success") {
-        let success = success_field.as_bool().context("success field is not a boolean")?;
-        assert!(success, "Receipt has success=false");
-    }
-
+    println!("// Edge case validated: Empty kernels properly rejected");
     Ok(())
 }
 
-/// Helper function to verify kernel IDs are CPU-specific
-#[allow(dead_code)]
-fn verify_kernel_ids(receipt: &Receipt) -> bool {
-    let cpu_kernel_prefixes = vec!["i2s_", "tl1_", "tl2_", "cpu_", "quantized_matmul"];
+/// Edge case: Test that invalid schema versions are rejected
+///
+/// This test validates strict schema version checking - only v1.0.0 and v1.0
+/// should be accepted.
+#[test]
+fn test_edge_case_invalid_schema_versions() -> Result<()> {
+    configure_deterministic_env();
 
-    for kernel_id in &receipt.kernels {
-        for prefix in &cpu_kernel_prefixes {
-            if kernel_id.contains(prefix) {
-                return true;
-            }
-        }
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test various invalid versions
+    let invalid_versions = vec!["2.0.0", "0.9.0", "1.1.0", "", "invalid"];
+
+    for version in invalid_versions {
+        let mut receipt = create_test_receipt("real", vec!["test_kernel".to_string()]);
+        receipt["version"] = serde_json::json!(version);
+
+        let receipt_path = temp_dir.path().join(format!("version-{}.json", version));
+        fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)
+            .context("Failed to write test receipt")?;
+
+        assert!(
+            verify_receipt_schema(&receipt_path).is_err(),
+            "Invalid schema version '{}' should be rejected",
+            version
+        );
     }
 
-    false
+    println!("// Edge case validated: Invalid schema versions properly rejected");
+    Ok(())
 }
 
-#[cfg(test)]
-mod test_helpers {
-    use super::*;
+/// Edge case: Test that malformed JSON receipts are handled gracefully
+///
+/// This test validates robust error handling for corrupted receipt files.
+#[test]
+fn test_edge_case_malformed_json() -> Result<()> {
+    configure_deterministic_env();
 
-    /// Test helper to create mock receipt for testing
-    #[allow(dead_code)]
-    pub fn create_mock_receipt(compute_path: &str, kernel_count: usize) -> Receipt {
-        Receipt {
-            schema_version: "1.0.0".to_string(),
-            compute_path: compute_path.to_string(),
-            kernels: (0..kernel_count).map(|i| format!("i2s_cpu_kernel_{}", i)).collect(),
-            tokens_per_second: 15.3,
-            success: true,
-        }
-    }
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
-    /// Test helper to validate receipt structure
-    #[allow(dead_code)]
-    pub fn validate_receipt_structure(receipt: &Receipt) -> Result<()> {
+    // Test various malformed JSON scenarios
+    let malformed_cases = vec![
+        ("", "empty-file.json"),
+        ("{", "incomplete-object.json"),
+        ("{\"version\": }", "missing-value.json"),
+        ("not json at all", "invalid-syntax.json"),
+        (
+            "{\"version\": \"1.0.0\", \"compute_path\": \"real\", \"kernels\": [}",
+            "incomplete-array.json",
+        ),
+    ];
+
+    for (content, filename) in malformed_cases {
+        let receipt_path = temp_dir.path().join(filename);
+        fs::write(&receipt_path, content).context("Failed to write malformed receipt")?;
+
         assert!(
-            receipt.schema_version == "1.0.0" || receipt.schema_version == "1.0",
-            "Invalid version"
+            verify_receipt_schema(&receipt_path).is_err(),
+            "Malformed JSON in {} should be rejected",
+            filename
         );
-
-        assert_eq!(receipt.compute_path, "real", "Invalid compute_path");
-
-        assert!(!receipt.kernels.is_empty(), "Empty kernels array");
-
-        assert!(receipt.tokens_per_second >= 0.0, "Invalid tokens_per_sec");
-
-        assert!(receipt.success, "Success flag is false");
-
-        Ok(())
     }
+
+    println!("// Edge case validated: Malformed JSON properly rejected");
+    Ok(())
+}
+
+/// Edge case: Test that missing required fields are detected
+///
+/// This test validates that all required receipt fields are enforced.
+#[test]
+fn test_edge_case_missing_required_fields() -> Result<()> {
+    configure_deterministic_env();
+
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test missing each required field
+    let test_cases = vec![
+        (
+            serde_json::json!({
+                "compute_path": "real",
+                "kernels": ["test_kernel"],
+                "performance": {"tokens_per_sec": 10.0}
+            }),
+            "missing-version.json",
+        ),
+        (
+            serde_json::json!({
+                "version": "1.0.0",
+                "kernels": ["test_kernel"],
+                "performance": {"tokens_per_sec": 10.0}
+            }),
+            "missing-compute-path.json",
+        ),
+        (
+            serde_json::json!({
+                "version": "1.0.0",
+                "compute_path": "real",
+                "performance": {"tokens_per_sec": 10.0}
+            }),
+            "missing-kernels.json",
+        ),
+        (
+            serde_json::json!({
+                "version": "1.0.0",
+                "compute_path": "real",
+                "kernels": ["test_kernel"]
+            }),
+            "missing-performance.json",
+        ),
+    ];
+
+    for (receipt, filename) in test_cases {
+        let receipt_path = temp_dir.path().join(filename);
+        fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)
+            .context("Failed to write test receipt")?;
+
+        assert!(
+            verify_receipt_schema(&receipt_path).is_err(),
+            "Receipt {} with missing required field should be rejected",
+            filename
+        );
+    }
+
+    println!("// Edge case validated: Missing required fields properly detected");
+    Ok(())
+}
+
+/// Edge case: Test performance bounds validation
+///
+/// This test validates that performance metrics are within realistic bounds
+/// for CPU inference with I2_S quantization.
+#[test]
+fn test_edge_case_performance_bounds() -> Result<()> {
+    configure_deterministic_env();
+
+    let baseline_path = find_cpu_baseline().context("CPU baseline not found")?;
+    let receipt_content = fs::read_to_string(&baseline_path)?;
+    let receipt: issue_465_test_utils::Receipt = serde_json::from_str(&receipt_content)?;
+
+    // Validate performance is within realistic bounds (0.1-50 tok/s for CPU I2_S)
+    // Allow zero for initialization benchmarks
+    assert!(
+        receipt.tokens_per_sec >= 0.0 && receipt.tokens_per_sec <= 50.0,
+        "Performance {} tok/s outside realistic CPU bounds (0-50)",
+        receipt.tokens_per_sec
+    );
+
+    // If non-zero, should be at least minimal viable performance
+    if receipt.tokens_per_sec > 0.0 {
+        assert!(
+            receipt.tokens_per_sec >= 0.1,
+            "Non-zero performance {} tok/s below minimal viable threshold (0.1)",
+            receipt.tokens_per_sec
+        );
+    }
+
+    println!(
+        "// Edge case validated: Performance bounds checked ({:.2} tok/s)",
+        receipt.tokens_per_sec
+    );
+    Ok(())
+}
+
+/// Edge case: Test kernel ID hygiene - length constraints
+///
+/// This test validates that kernel IDs respect the 128 character limit.
+#[test]
+fn test_edge_case_kernel_id_length_constraints() -> Result<()> {
+    configure_deterministic_env();
+
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test kernel ID that's too long (>128 chars)
+    let long_kernel_id = "k".repeat(129);
+    let receipt = create_test_receipt("real", vec![long_kernel_id]);
+    let receipt_path = temp_dir.path().join("long-kernel-id.json");
+    fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)
+        .context("Failed to write test receipt")?;
+
+    assert!(
+        verify_receipt_schema(&receipt_path).is_err(),
+        "Kernel ID exceeding 128 characters should be rejected"
+    );
+
+    // Test kernel ID at exactly 128 chars (should pass)
+    let max_length_kernel = "k".repeat(128);
+    let valid_receipt = create_test_receipt("real", vec![max_length_kernel]);
+    let valid_path = temp_dir.path().join("max-length-kernel.json");
+    fs::write(&valid_path, serde_json::to_string_pretty(&valid_receipt)?)
+        .context("Failed to write test receipt")?;
+
+    verify_receipt_schema(&valid_path)
+        .context("Valid kernel ID at 128 characters should be accepted")?;
+
+    println!("// Edge case validated: Kernel ID length constraints enforced");
+    Ok(())
+}
+
+/// Edge case: Test kernel count limits
+///
+/// This test validates that kernel counts respect the 10,000 limit.
+#[test]
+fn test_edge_case_kernel_count_limits() -> Result<()> {
+    configure_deterministic_env();
+
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Test kernel count exceeding limit (>10,000)
+    // Note: We'll test with a smaller number for performance but document the limit
+    let excessive_kernels: Vec<String> = (0..10_001).map(|i| format!("kernel_{}", i)).collect();
+    let receipt = create_test_receipt("real", excessive_kernels);
+    let receipt_path = temp_dir.path().join("excessive-kernels.json");
+    fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)
+        .context("Failed to write test receipt")?;
+
+    assert!(
+        verify_receipt_schema(&receipt_path).is_err(),
+        "Kernel count exceeding 10,000 should be rejected"
+    );
+
+    println!("// Edge case validated: Kernel count limits enforced");
+    Ok(())
+}
+
+/// Edge case: Test deterministic configuration validation
+///
+/// This test validates that deterministic environment variables are properly configured.
+#[test]
+fn test_edge_case_deterministic_configuration() -> Result<()> {
+    configure_deterministic_env();
+
+    // Verify deterministic environment is configured
+    assert_eq!(
+        std::env::var("BITNET_DETERMINISTIC").unwrap_or_default(),
+        "1",
+        "BITNET_DETERMINISTIC should be set to 1"
+    );
+    assert_eq!(
+        std::env::var("BITNET_SEED").unwrap_or_default(),
+        "42",
+        "BITNET_SEED should be set to 42"
+    );
+    assert_eq!(
+        std::env::var("RAYON_NUM_THREADS").unwrap_or_default(),
+        "1",
+        "RAYON_NUM_THREADS should be set to 1"
+    );
+
+    println!("// Edge case validated: Deterministic configuration properly set");
+    Ok(())
+}
+
+/// Edge case: Test negative performance values are rejected
+///
+/// This test validates that negative performance metrics are rejected.
+#[test]
+fn test_edge_case_negative_performance() -> Result<()> {
+    configure_deterministic_env();
+
+    let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
+
+    // Create receipt with negative performance
+    let mut receipt = create_test_receipt("real", vec!["test_kernel".to_string()]);
+    receipt["performance"]["tokens_per_sec"] = serde_json::json!(-1.0);
+
+    let receipt_path = temp_dir.path().join("negative-performance.json");
+    fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)
+        .context("Failed to write test receipt")?;
+
+    assert!(
+        verify_receipt_schema(&receipt_path).is_err(),
+        "Receipt with negative performance should be rejected"
+    );
+
+    println!("// Edge case validated: Negative performance properly rejected");
+    Ok(())
+}
+
+/// Edge case: Test boundary token counts
+///
+/// This test validates that various token count configurations are handled correctly.
+#[test]
+fn test_edge_case_boundary_token_counts() -> Result<()> {
+    configure_deterministic_env();
+
+    let baseline_path = find_cpu_baseline().context("CPU baseline not found")?;
+    let receipt_content = fs::read_to_string(&baseline_path)?;
+    let receipt: serde_json::Value = serde_json::from_str(&receipt_content)?;
+
+    // Check if token_count field exists and validate it
+    if let Some(token_count) = receipt.get("token_count").and_then(|v| v.as_u64()) {
+        assert!(token_count > 0, "Token count should be positive if present");
+        assert!(
+            token_count <= 10_000,
+            "Token count {} exceeds reasonable limit for baseline",
+            token_count
+        );
+        println!("// Edge case validated: Token count {} within bounds", token_count);
+    } else {
+        println!("// Edge case note: Token count field not present in receipt");
+    }
+
+    Ok(())
 }
