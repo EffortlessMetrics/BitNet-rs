@@ -236,6 +236,187 @@ fn test_ac4_lut_index_formula() -> Result<()> {
 }
 
 // ============================================================================
+// Edge Case Tests: Additional Boundary Conditions
+// ============================================================================
+
+/// Edge case: Zero block_bytes (valid - idx = elem_offset only)
+///
+/// Tests that block_bytes=0 works correctly (base_offset always 0)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_ac4_lut_index_zero_block_bytes() -> Result<()> {
+    use bitnet_kernels::tl_lut::lut_index;
+
+    // With block_bytes=0, base_offset is always 0, idx = elem_in_block / 8
+    assert_eq!(lut_index(0, 0, 0, 128, 256)?, 0, "block_bytes=0: elem 0 → idx 0");
+    assert_eq!(lut_index(0, 8, 0, 128, 256)?, 1, "block_bytes=0: elem 8 → idx 1");
+    assert_eq!(
+        lut_index(100, 16, 0, 128, 256)?,
+        2,
+        "block_bytes=0: block_idx ignored, elem 16 → idx 2"
+    );
+
+    // Even with large block_idx, result only depends on elem_in_block
+    assert_eq!(lut_index(1000, 64, 0, 128, 256)?, 8, "block_bytes=0: elem 64 → idx 8");
+
+    Ok(())
+}
+
+/// Edge case: Maximum valid element in block (boundary test)
+///
+/// Tests elem_in_block = elems_per_block - 1 (last valid element)
+#[test]
+#[cfg(feature = "cpu")]
+fn test_ac4_lut_index_max_valid_element() -> Result<()> {
+    use bitnet_kernels::tl_lut::lut_index;
+
+    // TL1: elems_per_block = 128, last valid elem = 127
+    let result = lut_index(0, 127, 16, 128, 256)?;
+    assert_eq!(result, 15, "TL1: Last elem 127 → offset 127/8 = 15");
+
+    // TL2: elems_per_block = 256, last valid elem = 255
+    let result = lut_index(0, 255, 32, 256, 512)?;
+    assert_eq!(result, 31, "TL2: Last elem 255 → offset 255/8 = 31");
+
+    // With block_idx > 0
+    let result = lut_index(2, 127, 16, 128, 256)?;
+    assert_eq!(result, 47, "TL1 block 2: 2*16 + 127/8 = 32 + 15 = 47");
+
+    Ok(())
+}
+
+/// Edge case: LUT boundary (idx = lut_len - 1, valid)
+///
+/// Tests that index exactly at lut_len-1 is accepted
+#[test]
+#[cfg(feature = "cpu")]
+fn test_ac4_lut_index_exact_lut_boundary() -> Result<()> {
+    use bitnet_kernels::tl_lut::lut_index;
+
+    // Calculate parameters for idx = lut_len - 1
+    // For lut_len=256, block_bytes=16: idx = 255 requires block_idx * 16 + elem_offset = 255
+    // block_idx=15, elem_offset=15 → 15*16 + 15 = 240 + 15 = 255
+    let result = lut_index(15, 120, 16, 128, 256)?;
+    assert_eq!(result, 255, "idx = lut_len - 1 should be valid: 15*16 + 120/8 = 255");
+
+    // Now test idx = lut_len (should fail)
+    let result = lut_index(16, 0, 16, 128, 256);
+    assert!(result.is_err(), "idx = lut_len (256) should fail: 16*16 = 256 >= 256");
+
+    Ok(())
+}
+
+/// Edge case: Division by 8 rounding behavior
+///
+/// Tests that elem_in_block values 0-7 → offset 0, 8-15 → offset 1, etc.
+#[test]
+#[cfg(feature = "cpu")]
+fn test_ac4_lut_index_division_rounding() -> Result<()> {
+    use bitnet_kernels::tl_lut::lut_index;
+
+    // All elem_in_block values 0-7 should give same offset (0)
+    for elem in 0..8 {
+        assert_eq!(
+            lut_index(0, elem, 32, 128, 256)?,
+            0,
+            "elem_in_block {} should give offset 0 (division truncates)",
+            elem
+        );
+    }
+
+    // All elem_in_block values 8-15 should give offset 1
+    for elem in 8..16 {
+        assert_eq!(
+            lut_index(0, elem, 32, 128, 256)?,
+            1,
+            "elem_in_block {} should give offset 1",
+            elem
+        );
+    }
+
+    // All elem_in_block values 120-127 should give offset 15
+    for elem in 120..128 {
+        assert_eq!(
+            lut_index(0, elem, 32, 128, 256)?,
+            15,
+            "elem_in_block {} should give offset 15",
+            elem
+        );
+    }
+
+    Ok(())
+}
+
+/// Edge case: Overflow in elem_offset addition
+///
+/// Tests overflow detection in base_offset + elem_offset calculation
+#[test]
+#[cfg(feature = "cpu")]
+fn test_ac4_lut_index_elem_offset_overflow() -> Result<()> {
+    use bitnet_kernels::tl_lut::lut_index;
+
+    // Construct scenario where base_offset + elem_offset overflows
+    // base_offset = (usize::MAX - 10), elem_offset = 64/8 = 8
+    // Result: (usize::MAX - 10) + 8 = usize::MAX - 2 (valid if lut_len is large enough)
+    // To trigger overflow, use elem_offset that exceeds remaining capacity
+
+    // Use block_bytes=1 for precise control
+    // block_idx = usize::MAX - 5, block_bytes = 1 → base_offset = usize::MAX - 5
+    // elem_in_block = 64 → elem_offset = 8
+    // Result: (usize::MAX - 5) + 8 would overflow
+    let result = lut_index(usize::MAX - 5, 64, 1, 128, usize::MAX);
+    assert!(result.is_err(), "Expected overflow in base_offset + elem_offset");
+
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("Overflow") || err_msg.contains("exceeds LUT length"),
+        "Error should mention overflow or exceeding LUT length, got: {}",
+        err_msg
+    );
+
+    Ok(())
+}
+
+// ============================================================================
+// Mutation Testing Preparation: Formula Validation Tests
+// ============================================================================
+
+/// Mutation killer: Verify exact formula at multiple points
+///
+/// This test will catch mutations like:
+/// - block_idx * block_bytes → block_idx + block_bytes
+/// - elem_in_block / 8 → elem_in_block / 7
+/// - base_offset + elem_offset → base_offset - elem_offset
+#[test]
+#[cfg(feature = "cpu")]
+fn test_ac4_lut_index_formula_exact_values() -> Result<()> {
+    use bitnet_kernels::tl_lut::lut_index;
+
+    // Test points where formula changes would be detected
+    let test_cases = [
+        (0, 0, 16, 128, 256, 0),    // block_idx * 16 + 0/8 = 0
+        (1, 0, 16, 128, 256, 16),   // 1 * 16 + 0 = 16
+        (2, 0, 16, 128, 256, 32),   // 2 * 16 + 0 = 32
+        (0, 8, 16, 128, 256, 1),    // 0 * 16 + 8/8 = 1
+        (0, 16, 16, 128, 256, 2),   // 0 * 16 + 16/8 = 2
+        (1, 8, 16, 128, 256, 17),   // 1 * 16 + 8/8 = 17
+        (3, 24, 16, 128, 256, 51),  // 3 * 16 + 24/8 = 48 + 3 = 51
+        (5, 64, 32, 256, 512, 168), // 5 * 32 + 64/8 = 160 + 8 = 168
+    ];
+
+    for (block_idx, elem_in_block, block_bytes, elems_per_block, lut_len, expected) in test_cases {
+        let actual = lut_index(block_idx, elem_in_block, block_bytes, elems_per_block, lut_len)?;
+        assert_eq!(
+            actual, expected,
+            "Formula mismatch: lut_index({}, {}, {}, {}, {}) = {}, expected {}",
+            block_idx, elem_in_block, block_bytes, elems_per_block, lut_len, actual, expected
+        );
+    }
+
+    Ok(())
+}
+
+// ============================================================================
 // Performance Test: LUT Index Helper Overhead
 // ============================================================================
 

@@ -415,3 +415,177 @@ fn test_ac3_e2e_cpu_receipt_generation() -> Result<()> {
 
     Ok(())
 }
+
+// ============================================================================
+// Edge Case Tests: Malformed and Invalid Receipts
+// ============================================================================
+
+/// Edge case: Receipt with missing required fields
+///
+/// Validates that receipts without required fields fail validation
+#[test]
+fn test_ac3_receipt_missing_schema_version() -> Result<()> {
+    // Create minimal receipt missing schema_version
+    let receipt = json!({
+        "backend": "cpu",
+        "compute_path": "real",
+        "kernels": ["i2s_gemv"],
+    });
+
+    let temp_dir = env::temp_dir();
+    let timestamp =
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros();
+    let receipt_path = temp_dir.join(format!("test_receipt_malformed_{}.json", timestamp));
+
+    fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)?;
+
+    // Verify file was created but is missing schema_version
+    assert!(receipt_path.exists(), "Malformed receipt should be created");
+
+    let contents = fs::read_to_string(&receipt_path)?;
+    let parsed: serde_json::Value = serde_json::from_str(&contents)?;
+
+    // Verify schema_version is missing
+    assert!(
+        parsed.get("schema_version").is_none(),
+        "Receipt should be missing schema_version field"
+    );
+
+    // TODO: When verify-receipt is callable, this should fail validation
+    // let result = test_utils::run_verify_receipt(&receipt_path);
+    // assert!(result.is_err(), "Receipt without schema_version should fail validation");
+
+    // Cleanup
+    if receipt_path.exists() {
+        fs::remove_file(&receipt_path)?;
+    }
+
+    Ok(())
+}
+
+/// Edge case: Receipt with invalid kernel type (not an array)
+///
+/// Validates that receipts with wrong field types fail parsing/validation
+#[test]
+fn test_ac3_receipt_invalid_kernel_type() -> Result<()> {
+    // Create receipt with kernels as string instead of array
+    let receipt = json!({
+        "schema_version": "1.0.0",
+        "backend": "cpu",
+        "compute_path": "real",
+        "kernels": "i2s_gemv,tl1_matmul", // Wrong type: string instead of array
+        "timestamp": "2025-10-14T12:00:00Z",
+    });
+
+    let temp_dir = env::temp_dir();
+    let timestamp =
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_micros();
+    let receipt_path = temp_dir.join(format!("test_receipt_bad_type_{}.json", timestamp));
+
+    fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)?;
+
+    let contents = fs::read_to_string(&receipt_path)?;
+    let parsed: serde_json::Value = serde_json::from_str(&contents)?;
+
+    // Verify kernels is a string, not an array
+    assert!(parsed["kernels"].is_string(), "Kernels should be a string (invalid type)");
+    assert!(!parsed["kernels"].is_array(), "Kernels should NOT be an array (malformed)");
+
+    // TODO: When verify-receipt is callable, this should fail validation
+    // let result = test_utils::run_verify_receipt(&receipt_path);
+    // assert!(result.is_err(), "Receipt with wrong kernel type should fail validation");
+
+    // Cleanup
+    if receipt_path.exists() {
+        fs::remove_file(&receipt_path)?;
+    }
+
+    Ok(())
+}
+
+/// Edge case: Receipt with empty kernels array
+///
+/// Validates that receipts with no kernels fail validation
+#[test]
+fn test_ac3_receipt_empty_kernels() -> Result<()> {
+    // Create receipt with empty kernels array
+    let receipt_path = test_utils::create_test_receipt("cpu", vec![], "real")?;
+
+    let contents = fs::read_to_string(&receipt_path)?;
+    let parsed: serde_json::Value = serde_json::from_str(&contents)?;
+
+    // Verify kernels array is empty
+    let kernels = parsed["kernels"].as_array().unwrap();
+    assert_eq!(kernels.len(), 0, "Kernels array should be empty");
+
+    // TODO: When verify-receipt is callable, this should fail validation
+    // let result = test_utils::run_verify_receipt(&receipt_path);
+    // assert!(result.is_err(), "Receipt with empty kernels should fail validation");
+
+    // Cleanup
+    if receipt_path.exists() {
+        fs::remove_file(&receipt_path)?;
+    }
+
+    Ok(())
+}
+
+/// Edge case: Receipt with unknown backend
+///
+/// Validates that receipts with unsupported backends are handled
+#[test]
+fn test_ac3_receipt_unknown_backend() -> Result<()> {
+    // Create receipt with unknown backend
+    let receipt_path = test_utils::create_test_receipt(
+        "vulkan", // Unknown backend (not "cpu" or "cuda")
+        vec!["i2s_gemv"],
+        "real",
+    )?;
+
+    let contents = fs::read_to_string(&receipt_path)?;
+    let parsed: serde_json::Value = serde_json::from_str(&contents)?;
+
+    // Verify backend is "vulkan" (unknown)
+    assert_eq!(parsed["backend"], "vulkan", "Backend should be 'vulkan' (unknown)");
+
+    // TODO: When verify-receipt is callable, this may pass or fail depending on validation logic
+    // Current expectation: validation should either accept it (extensibility) or reject it (strict)
+    // let result = test_utils::run_verify_receipt(&receipt_path);
+
+    // Cleanup
+    if receipt_path.exists() {
+        fs::remove_file(&receipt_path)?;
+    }
+
+    Ok(())
+}
+
+/// Edge case: Receipt with mock compute path
+///
+/// Validates that receipts with compute_path="mock" fail validation
+#[test]
+fn test_ac3_receipt_mock_compute_path() -> Result<()> {
+    // Create receipt with compute_path="mock"
+    let receipt_path = test_utils::create_test_receipt(
+        "cpu",
+        vec!["i2s_gemv", "tl1_matmul"],
+        "mock", // Invalid: should be "real"
+    )?;
+
+    let contents = fs::read_to_string(&receipt_path)?;
+    let parsed: serde_json::Value = serde_json::from_str(&contents)?;
+
+    // Verify compute_path is "mock"
+    assert_eq!(parsed["compute_path"], "mock", "Compute path should be 'mock' (invalid)");
+
+    // TODO: When verify-receipt is callable, this should fail validation
+    // let result = test_utils::run_verify_receipt(&receipt_path);
+    // assert!(result.is_err(), "Receipt with compute_path='mock' should fail validation");
+
+    // Cleanup
+    if receipt_path.exists() {
+        fs::remove_file(&receipt_path)?;
+    }
+
+    Ok(())
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-15T12:00:00Z",
+  "compute_path": "real",
+  "backend": "cuda",
+  "kernels": [
+    "i2s_gemv",
+    "tl1_matmul",
+    "rope_apply"
+  ],
+  "deterministic": true,
+  "environment": {
+    "BITNET_VERSION": "0.5.3",
+    "OS": "linux-x86_64",
+    "RUST_VERSION": "1.90.0",
+    "GPU_INFO": "NVIDIA GeForce RTX 4090 (CC: 8.9)"
+  },
+  "performance_baseline": {
+    "tokens_generated": 128,
+    "tokens_per_second": 87.5
+  }
+}

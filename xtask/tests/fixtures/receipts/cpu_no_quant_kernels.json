@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-15T12:00:00Z",
+  "compute_path": "real",
+  "backend": "cpu",
+  "kernels": [
+    "rope_apply",
+    "softmax_cpu",
+    "attention_real"
+  ],
+  "deterministic": true,
+  "environment": {
+    "BITNET_VERSION": "0.5.3",
+    "OS": "linux-x86_64",
+    "RUST_VERSION": "1.90.0"
+  },
+  "performance_baseline": {
+    "tokens_generated": 128,
+    "tokens_per_second": 15.5
+  }
+}
