@@ -7,9 +7,14 @@
 //! enabling reproducible evaluation and testing with BITNET_DETERMINISTIC=1 and BITNET_SEED=42.
 
 use anyhow::Result;
+
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use bitnet_common::{BitNetConfig, ConcreteTensor, Tensor};
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use bitnet_models::bitnet::Model;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use bitnet_tokenizers::Tokenizer;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use std::sync::Arc;
 
 /// AC7.1: Deterministic Inference with Fixed Seed Test
@@ -94,11 +99,13 @@ async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
 // Helper functions
 
 /// Mock deterministic model for AC7 testing
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct MockDeterministicModel {
     config: BitNetConfig,
 }
 
+#[allow(dead_code)]
 impl MockDeterministicModel {
     fn new() -> Self {
         Self { config: BitNetConfig::default() }
@@ -170,11 +177,13 @@ impl Model for MockDeterministicModel {
 }
 
 /// Mock deterministic tokenizer for AC7 testing
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct MockDeterministicTokenizer {
     vocab_size: usize,
 }
 
+#[allow(dead_code)]
 impl MockDeterministicTokenizer {
     fn new() -> Self {
         Self { vocab_size: 1000 }
@@ -228,10 +237,12 @@ impl Tokenizer for MockDeterministicTokenizer {
     }
 }
 
+#[allow(dead_code)]
 fn create_test_model() -> Result<Arc<dyn bitnet_models::bitnet::Model>> {
     Ok(Arc::new(MockDeterministicModel::new()))
 }
 
+#[allow(dead_code)]
 fn create_test_tokenizer() -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
     Ok(Arc::new(MockDeterministicTokenizer::new()))
 }

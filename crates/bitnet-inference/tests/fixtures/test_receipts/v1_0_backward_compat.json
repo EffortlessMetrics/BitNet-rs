@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-14T01:33:28.076791999+00:00",
+  "compute_path": "real",
+  "backend": "cuda",
+  "deterministic": true,
+  "tokens_requested": 128,
+  "tokens_generated": 128,
+  "tokens_per_second": 87.5,
+  "kernels": [
+    "gemm_fp16",
+    "i2s_gpu_quantize"
+  ],
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "OS": "linux-x86_64"
+  },
+  "model": {
+    "path": "tests/models/mini.gguf"
+  }
+}

@@ -149,12 +149,12 @@ pub struct QuantizedLinear {
     /// Quantization infrastructure
     #[allow(dead_code)]
     quantizer: Arc<DeviceAwareQuantizer>,
-    qtype: QuantizationType,
+    pub(crate) qtype: QuantizationType,
 
     /// Layer metadata
     in_features: usize,
     out_features: usize,
-    device: Device,
+    pub(crate) device: Device,
 
     /// Performance optimization
     workspace: Option<BitNetTensor>,
@@ -254,6 +254,32 @@ impl QuantizedLinear {
         Ok(layer)
     }
 
+    /// Check if this layer has a native quantized kernel available (no FP32 fallback)
+    pub fn has_native_quantized_kernel(&self) -> bool {
+        // Check kernel availability based on quantization type and device
+        match (self.device, self.qtype) {
+            // CPU I2S always has native kernels via optimized paths
+            (Device::Cpu, QuantizationType::I2S) => true,
+
+            // TL1/TL2 require kernel manager support
+            (Device::Cpu, QuantizationType::TL1) | (Device::Cpu, QuantizationType::TL2) => {
+                self.kernel_manager.select_best().is_ok()
+            }
+
+            // GPU kernels require explicit kernel availability
+            #[cfg(feature = "gpu")]
+            (Device::Cuda(_), _) => self.kernel_manager.select_best().is_ok(),
+
+            // Default: assume no native kernel
+            _ => false,
+        }
+    }
+
+    /// Check if this layer would fall back to FP32 dequantization
+    pub fn is_fallback_path(&self) -> bool {
+        !self.has_native_quantized_kernel()
+    }
+
     /// Forward pass with quantized matrix multiplication
     /// Input: [batch_size, seq_len, in_features]
     /// Output: [batch_size, seq_len, out_features]
@@ -262,6 +288,28 @@ impl QuantizedLinear {
 
         let input_shape = input.shape();
         self.validate_input_dimensions(input_shape)?;
+
+        // AC1: Debug assertions - panic in debug mode if fallback would occur
+        #[cfg(debug_assertions)]
+        {
+            if self.is_fallback_path() {
+                panic!(
+                    "fallback to FP32 in debug mode: layer={}x{}, qtype={:?}, device={:?}, reason=kernel_unavailable",
+                    self.in_features, self.out_features, self.qtype, self.device
+                );
+            }
+        }
+
+        // AC3: Strict mode validation - return error if fallback would occur
+        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
+        if self.is_fallback_path() {
+            strict_mode.validate_quantization_fallback(
+                self.qtype,
+                self.device,
+                &[self.in_features, self.out_features],
+                "kernel_unavailable",
+            )?;
+        }
 
         // Perform quantized matrix multiplication based on type
         let output = match self.qtype {

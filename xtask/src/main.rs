@@ -4042,6 +4042,103 @@ fn is_gpu_kernel_id(id: &str) -> bool {
     GPU_KERNEL_PATTERNS.iter().any(|re| re.is_match(id))
 }
 
+/// Check if a kernel ID represents a quantized kernel (not FP32 fallback)
+///
+/// Quantized kernels use 1-bit or table-lookup quantization formats (I2S, TL1, TL2)
+/// and perform computation directly on quantized representations without FP32 dequantization.
+///
+/// # Examples
+/// ```ignore
+/// assert!(is_quantized_kernel_id("i2s_matmul_cpu"));
+/// assert!(is_quantized_kernel_id("tl1_lookup_neon"));
+/// assert!(is_quantized_kernel_id("gemm_i2s_gpu"));
+/// assert!(!is_quantized_kernel_id("dequant_fp32"));
+/// ```
+fn is_quantized_kernel_id(kernel_id: &str) -> bool {
+    // Quantized kernel patterns (I2S, TL1, TL2) - order matters for prefix matching
+    const QUANTIZED_PATTERNS: &[&str] = &[
+        "i2s_",      // I2S 2-bit signed quantization kernels
+        "tl1_",      // TL1 table lookup (4-bit) kernels
+        "tl2_",      // TL2 table lookup (8-bit) kernels
+        "gemm_i2s_", // GPU GEMM with native I2S support
+        "wmma_i2s_", // Tensor Core operations with I2S
+        "quantize_", // Quantization-specific operations
+    ];
+
+    QUANTIZED_PATTERNS.iter().any(|pattern| kernel_id.contains(pattern))
+}
+
+/// Check if a kernel ID represents a fallback kernel (FP32 dequantization)
+///
+/// Fallback kernels dequantize weights to FP32 before computation, indicating
+/// that native quantized kernels are unavailable for the current configuration.
+///
+/// # Examples
+/// ```ignore
+/// assert!(is_fallback_kernel_id("dequant_fp32"));
+/// assert!(is_fallback_kernel_id("fp32_matmul"));
+/// assert!(is_fallback_kernel_id("fallback_compute"));
+/// assert!(!is_fallback_kernel_id("i2s_matmul"));
+/// ```
+fn is_fallback_kernel_id(kernel_id: &str) -> bool {
+    // Fallback patterns indicating FP32 dequantization path
+    const FALLBACK_PATTERNS: &[&str] = &[
+        "dequant",    // Weight dequantization to FP32
+        "fp32_",      // Explicit FP32 compute kernels
+        "fallback_",  // Explicitly marked fallback paths
+        "matmul_f32", // FP32 matrix multiplication (non-quantized)
+    ];
+
+    FALLBACK_PATTERNS.iter().any(|pattern| kernel_id.contains(pattern))
+}
+
+/// Verify receipt quantization claims match actual kernel IDs
+///
+/// Ensures that receipts claiming "real" quantized computation have evidence
+/// of native quantized kernel execution, not just FP32 fallback paths.
+///
+/// # Validation Rules
+/// - compute_path="real" requires at least one quantized kernel
+/// - Fails if only fallback (FP32 dequant) kernels are present
+/// - Allows mixed quantized + fallback (for hybrid approaches)
+fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
+    // Extract compute path from receipt
+    let compute_path = receipt.get("compute_path").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+    // Extract and validate kernel IDs
+    let kernels = receipt
+        .get("kernels")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| anyhow!("Receipt missing 'kernels' array"))?;
+
+    let kernel_ids: Vec<&str> = kernels.iter().filter_map(|v| v.as_str()).collect();
+
+    // Validate quantization claims only for "real" compute path
+    if compute_path != "real" {
+        return Ok(()); // No validation needed for non-quantized paths
+    }
+
+    // Check for quantized and fallback kernel presence
+    let has_quantized_kernel = kernel_ids.iter().any(|&id| is_quantized_kernel_id(id));
+    let has_fallback_kernel = kernel_ids.iter().any(|&id| is_fallback_kernel_id(id));
+
+    // Fail if claiming quantized but only fallback kernels present
+    if !has_quantized_kernel && has_fallback_kernel {
+        let fallback_kernels: Vec<&&str> =
+            kernel_ids.iter().filter(|&&id| is_fallback_kernel_id(id)).collect();
+
+        bail!(
+            "Receipt claims quantized computation (compute_path='real') but only FP32 fallback kernels found.\n\
+             Fallback kernels detected: {:?}\n\
+             Expected: At least one quantized kernel (i2s_*, tl1_*, tl2_*, gemm_i2s_*)\n\
+             This indicates silent FP32 fallback without native quantized inference.",
+            fallback_kernels
+        );
+    }
+
+    Ok(())
+}
+
 /// Write real inference receipt from benchmark results
 ///
 /// This writes production receipts with actual measured data
@@ -4211,6 +4308,9 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
             );
         }
     }
+
+    // AC6: Quantization verification - ensure claims match actual kernels
+    verify_quantization_claims(&receipt)?;
 
     // Success
     println!("{}", style("✅ Receipt verification passed").green().bold());

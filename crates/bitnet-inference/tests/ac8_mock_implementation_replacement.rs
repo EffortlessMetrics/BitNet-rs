@@ -7,8 +7,12 @@
 //! and examples with real neural network computation while preserving API compatibility.
 
 use anyhow::Result;
+
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use bitnet_common::Device;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use bitnet_inference::InferenceEngine;
+#[allow(unused_imports)] // Used conditionally in cfg-gated tests
 use std::sync::Arc;
 
 /// AC8.1: Mock vs Real Inference Path Detection Test
@@ -55,10 +59,12 @@ use bitnet_common::{BitNetConfig, BitNetError, ConcreteTensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 
+#[allow(dead_code)]
 struct MockModel {
     config: BitNetConfig,
 }
 
+#[allow(dead_code)]
 impl MockModel {
     fn new() -> Self {
         Self { config: BitNetConfig::default() }
@@ -90,10 +96,12 @@ impl Model for MockModel {
     }
 }
 
+#[allow(dead_code)]
 struct MockTokenizer {
     vocab_size: usize,
 }
 
+#[allow(dead_code)]
 impl MockTokenizer {
     fn new() -> Self {
         Self { vocab_size: 50257 }
@@ -131,18 +139,22 @@ impl Tokenizer for MockTokenizer {
     }
 }
 
+#[allow(dead_code)]
 struct MockDetector;
 
+#[allow(dead_code)]
 impl MockDetector {
     fn new() -> Self {
         Self
     }
 }
 
+#[allow(dead_code)]
 fn create_test_model() -> MockModel {
     MockModel::new()
 }
 
+#[allow(dead_code)]
 fn create_test_tokenizer() -> MockTokenizer {
     MockTokenizer::new()
 }

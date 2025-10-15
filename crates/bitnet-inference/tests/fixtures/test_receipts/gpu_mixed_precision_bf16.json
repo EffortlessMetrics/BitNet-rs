@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.1.0",
+  "timestamp": "2025-10-14T06:15:00.000000000+00:00",
+  "compute_path": "real",
+  "backend": "cuda",
+  "deterministic": false,
+  "tokens_requested": 16,
+  "tokens_generated": 16,
+  "tokens_per_second": 135.2,
+  "kernels": [
+    "gemm_bf16",
+    "i2s_gpu_quantize",
+    "i2s_gpu_matmul",
+    "wmma_bf16",
+    "cuda_sync"
+  ],
+  "kernel_path": "native_quantized",
+  "quantization": {
+    "types_used": ["I2S"],
+    "fallback_count": 0,
+    "device_aware_selection": true,
+    "precision": "BF16"
+  },
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "BITNET_STRICT_MODE": "1",
+    "OS": "linux-x86_64",
+    "CUDA_VERSION": "12.0",
+    "GPU_NAME": "NVIDIA A100-SXM4-40GB",
+    "COMPUTE_CAPABILITY": "8.0"
+  },
+  "model": {
+    "path": "tests/models/mini.gguf",
+    "architecture": "bitnet",
+    "quantization_type": "I2S"
+  },
+  "performance": {
+    "kernel_times_ms": {
+      "gemm_bf16": 4.8,
+      "i2s_gpu_quantize": 1.1,
+      "i2s_gpu_matmul": 3.2,
+      "wmma_bf16": 3.4,
+      "cuda_sync": 0.1
+    },
+    "total_inference_time_ms": 118.3,
+    "memory_usage_mb": 4096
+  },
+  "notes": "BF16 Tensor Core inference on Ampere 8.0+ (Issue #453 AC5)"
+}

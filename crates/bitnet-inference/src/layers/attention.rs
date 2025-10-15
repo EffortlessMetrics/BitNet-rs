@@ -432,6 +432,24 @@ impl BitNetAttention {
         })
     }
 
+    /// Validate that all projections have native quantized kernels (AC2 & AC4)
+    fn validate_projections_quantized(&self) -> Result<()> {
+        let projections =
+            [("Q", &self.q_proj), ("K", &self.k_proj), ("V", &self.v_proj), ("O", &self.o_proj)];
+
+        for (name, proj) in &projections {
+            if !proj.has_native_quantized_kernel() {
+                return Err(bitnet_common::BitNetError::StrictMode(format!(
+                    "Strict mode: {} projection would fall back to FP32 - qtype={:?}, device={:?}",
+                    name, proj.qtype, proj.device
+                ))
+                .into());
+            }
+        }
+
+        Ok(())
+    }
+
     /// Forward pass with optional KV-cache
     pub async fn forward(
         &self,
@@ -441,6 +459,29 @@ impl BitNetAttention {
         kv_cache: Option<&mut KVCache>,
         layer_idx: usize,
     ) -> Result<BitNetTensor> {
+        // AC2: Debug assertions for projection quantization
+        #[cfg(debug_assertions)]
+        {
+            if self.q_proj.is_fallback_path() {
+                panic!("Q projection would fall back to FP32 in debug mode");
+            }
+            if self.k_proj.is_fallback_path() {
+                panic!("K projection would fall back to FP32 in debug mode");
+            }
+            if self.v_proj.is_fallback_path() {
+                panic!("V projection would fall back to FP32 in debug mode");
+            }
+            if self.o_proj.is_fallback_path() {
+                panic!("O projection would fall back to FP32 in debug mode");
+            }
+        }
+
+        // AC4: Strict mode validation for all projections
+        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
+        if strict_mode.get_config().enforce_quantized_inference {
+            self.validate_projections_quantized()?;
+        }
+
         let (batch_size, seq_len, _) = self.get_input_dimensions(hidden_states)?;
 
         // Compute query, key, value projections

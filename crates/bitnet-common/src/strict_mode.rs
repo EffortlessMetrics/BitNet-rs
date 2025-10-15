@@ -16,6 +16,7 @@ pub struct StrictModeConfig {
     pub enabled: bool,
     pub fail_on_mock: bool,
     pub require_quantization: bool,
+    pub enforce_quantized_inference: bool,
     pub validate_performance: bool,
     pub ci_enhanced_mode: bool,
     pub log_all_validations: bool,
@@ -33,6 +34,7 @@ impl StrictModeConfig {
             enabled,
             fail_on_mock: enabled,
             require_quantization: enabled,
+            enforce_quantized_inference: enabled,
             validate_performance: enabled,
             ci_enhanced_mode: false,
             log_all_validations: false,
@@ -52,6 +54,9 @@ impl StrictModeConfig {
                 .map(|v| v == "1")
                 .unwrap_or(base_enabled),
             require_quantization: env::var("BITNET_STRICT_REQUIRE_QUANTIZATION")
+                .map(|v| v == "1")
+                .unwrap_or(base_enabled),
+            enforce_quantized_inference: env::var("BITNET_STRICT_REQUIRE_QUANTIZATION")
                 .map(|v| v == "1")
                 .unwrap_or(base_enabled),
             validate_performance: env::var("BITNET_STRICT_VALIDATE_PERFORMANCE")
@@ -102,21 +107,51 @@ impl StrictModeConfig {
 
     /// Validate performance metrics for suspicious values
     pub fn validate_performance_metrics(&self, metrics: &PerformanceMetrics) -> Result<()> {
-        if self.enabled && self.validate_performance {
-            if metrics.computation_type == ComputationType::Mock {
-                return Err(BitNetError::StrictMode(
-                    "Strict mode: Mock computation detected in performance metrics".to_string(),
-                ));
-            }
-
-            if metrics.tokens_per_second > 150.0 {
-                return Err(BitNetError::StrictMode(format!(
-                    "Strict mode: Suspicious performance detected: {:.2} tok/s",
-                    metrics.tokens_per_second
-                )));
-            }
+        if !self.enabled || !self.validate_performance {
+            return Ok(());
         }
+
+        // Check for mock computation
+        if metrics.computation_type == ComputationType::Mock {
+            return Err(BitNetError::StrictMode(
+                "Strict mode: Mock computation detected in performance metrics".to_string(),
+            ));
+        }
+
+        // Suspiciously high performance threshold (CPU baseline: ~20-40 tok/s, GPU: ~100-120 tok/s)
+        const SUSPICIOUS_TPS_THRESHOLD: f64 = 150.0;
+        if metrics.tokens_per_second > SUSPICIOUS_TPS_THRESHOLD {
+            return Err(BitNetError::StrictMode(format!(
+                "Strict mode: Suspicious performance detected: {:.2} tok/s (threshold: {:.0})",
+                metrics.tokens_per_second, SUSPICIOUS_TPS_THRESHOLD
+            )));
+        }
+
         Ok(())
+    }
+
+    /// Validate quantization fallback is not used in strict mode
+    ///
+    /// # Arguments
+    /// * `quantization_type` - The quantization type being used
+    /// * `device` - The device where computation would occur
+    /// * `layer_dimensions` - Layer shape for diagnostics [in_features, out_features]
+    /// * `fallback_reason` - Human-readable reason for fallback
+    pub fn validate_quantization_fallback(
+        &self,
+        quantization_type: crate::QuantizationType,
+        device: crate::Device,
+        layer_dimensions: &[usize],
+        fallback_reason: &str,
+    ) -> Result<()> {
+        if !self.enabled || !self.enforce_quantized_inference {
+            return Ok(());
+        }
+
+        Err(BitNetError::StrictMode(format!(
+            "Strict mode: FP32 fallback rejected - qtype={:?}, device={:?}, layer_dims={:?}, reason={}",
+            quantization_type, device, layer_dimensions, fallback_reason
+        )))
     }
 }
 
@@ -174,6 +209,17 @@ impl StrictModeEnforcer {
     /// Validate performance metrics
     pub fn validate_performance_metrics(&self, metrics: &PerformanceMetrics) -> Result<()> {
         self.config.validate_performance_metrics(metrics)
+    }
+
+    /// Validate quantization fallback
+    pub fn validate_quantization_fallback(
+        &self,
+        qtype: crate::QuantizationType,
+        device: crate::Device,
+        layer_dims: &[usize],
+        reason: &str,
+    ) -> Result<()> {
+        self.config.validate_quantization_fallback(qtype, device, layer_dims, reason)
     }
 }
 

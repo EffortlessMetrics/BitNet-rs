@@ -77,36 +77,88 @@ This document describes all environment variables used throughout BitNet.rs for 
 
 ## Strict Testing Mode Variables
 
-These variables prevent "Potemkin passes" (false positives) in performance and integration tests by eliminating mock inference paths:
+These variables prevent "Potemkin passes" (false positives) in performance and integration tests by eliminating mock inference paths and ensuring honest quantized computation:
 
-### Primary Strict Mode (Issue #261 Implementation)
-- `BITNET_STRICT_MODE=1`: **Primary strict mode** - Prevents ALL mock inference fallbacks, essential for production deployment and accurate performance measurement
-  - Enables `fail_on_mock`, `require_quantization`, and `validate_performance` checks
-  - Fails fast when mock computation paths are detected
+### Primary Strict Mode (Issue #453 - Three-Tier Validation)
+- `BITNET_STRICT_MODE=1`: **Primary strict mode** - Prevents ALL mock inference fallbacks and FP32 quantization fallbacks, essential for production deployment and accurate performance measurement
+  - **Tier 1 (Development):** Debug assertions catch fallbacks in debug builds (panics immediately)
+  - **Tier 2 (Production):** Strict mode returns `Err(BitNetError::StrictMode(...))` in release builds
+  - **Tier 3 (Verification):** Receipt validation ensures honest computation claims
+  - Enables `fail_on_mock`, `require_quantization`, `enforce_quantized_inference`, and `validate_performance` checks
+  - Fails fast when mock computation or FP32 fallback is detected
   - Validates performance metrics to reject suspicious values (>150 tok/s flagged as potentially mock)
   - Required for production deployments to ensure real quantized inference
+  - **Usage:**
+    ```bash
+    # Production inference with strict mode
+    BITNET_STRICT_MODE=1 \
+    cargo run --release -p bitnet-cli --no-default-features --features cpu -- \
+      infer --model model.gguf --prompt "Test" --max-tokens 16
 
-### Detailed Strict Mode Controls (Issue #261 - Granular Configuration)
+    # If FP32 fallback would occur:
+    # Error: Strict mode: FP32 fallback rejected - qtype=I2S, device=Cpu, layer_dims=[2048, 2048], reason=kernel_unavailable
+    ```
+
+### Detailed Strict Mode Controls (Issue #453 - Granular Configuration)
+
 - `BITNET_STRICT_FAIL_ON_MOCK=1`: Fail immediately when mock computation is detected in inference pipeline
   - Activated automatically when `BITNET_STRICT_MODE=1`
   - Can be enabled independently for targeted testing
   - Validates all tensor operations and kernel calls for mock usage
+  - **Usage:**
+    ```bash
+    # Fail on mock detection only
+    BITNET_STRICT_FAIL_ON_MOCK=1 \
+    cargo test -p bitnet-inference test_inference_real_computation
+    ```
 
-- `BITNET_STRICT_REQUIRE_QUANTIZATION=1`: Require real quantization kernels (I2S/TL1/TL2) to be available and used
+- `BITNET_STRICT_REQUIRE_QUANTIZATION=1`: Require real quantization kernels (I2S/TL1/TL2) to be available and used **(Issue #453 - AC3)**
   - Activated automatically when `BITNET_STRICT_MODE=1`
-  - Prevents fallback to FP32 computation when quantization expected
+  - Prevents fallback to FP32 dequantization staging when quantization expected
   - Validates device-aware quantization kernel selection
+  - Rejects FP32 fallback in `QuantizedLinear::forward` with detailed error
+  - Error includes: quantization type, device, layer dimensions, fallback reason
+  - **Usage:**
+    ```bash
+    # Require quantization kernels only
+    BITNET_STRICT_REQUIRE_QUANTIZATION=1 \
+    cargo test -p bitnet-quantization test_quantization_kernel_integration
 
-- `BITNET_STRICT_VALIDATE_PERFORMANCE=1`: Validate performance metrics for realistic values
+    # If kernel unavailable:
+    # Error: Strict mode: FP32 fallback rejected - qtype=I2S, device=Cpu,
+    #        layer_dims=[2048, 2048], reason=kernel_unavailable
+    ```
+
+- `BITNET_STRICT_VALIDATE_PERFORMANCE=1`: Validate performance metrics for realistic values **(Issue #453 - AC6)**
   - Activated automatically when `BITNET_STRICT_MODE=1`
   - Rejects performance metrics from mock computation paths
   - Flags unrealistic throughput (>150 tok/s) as suspicious
+  - Validates `tokens_per_second` against baseline thresholds
+  - **Usage:**
+    ```bash
+    # Validate performance metrics only
+    BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
+    cargo run -p xtask -- benchmark --model model.gguf --tokens 128
 
-- `BITNET_CI_ENHANCED_STRICT=1`: Enhanced strict mode for CI environments (Issue #261 - AC6)
+    # Then verify receipt
+    cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
+    ```
+
+- `BITNET_CI_ENHANCED_STRICT=1`: Enhanced strict mode for CI environments **(Issue #453 - AC6)**
   - Activates when both `CI` environment variable and this flag are set
   - Enables `ci_enhanced_mode`, `log_all_validations`, and `fail_fast_on_any_mock`
   - Provides comprehensive logging for CI pipeline debugging
   - Ensures production-grade validation in automated testing
+  - **Usage:**
+    ```yaml
+    # .github/workflows/strict-mode-ci.yml
+    - name: Run strict mode tests
+      env:
+        CI: "1"
+        BITNET_CI_ENHANCED_STRICT: "1"
+        BITNET_STRICT_MODE: "1"
+      run: cargo test --workspace --no-default-features --features cpu
+    ```
 
 ### Legacy Strict Mode Variables
 - `BITNET_STRICT_TOKENIZERS=1`: Forbid mock tokenizer fallbacks in perf/integration tests (includes SPM tokenizer fallbacks)

@@ -320,6 +320,196 @@ Planned features for future releases:
 - `onnx`: ONNX model format support
 - `tflite`: TensorFlow Lite support
 
+## Strict Mode
+
+**Feature:** `BITNET_STRICT_MODE` environment variable
+**Purpose:** Prevent silent FP32 fallbacks in quantized inference and ensure honest performance claims
+**Since:** BitNet.rs v0.1.0 (Issue #453)
+
+### Rationale
+
+**Problem:** Quantized neural network inference can silently fall back to FP32 dequantization when native quantized kernels are unavailable. This produces correct results but misleading performance metrics:
+
+```
+Expected: I2S quantized GPU inference → 80 tok/s
+Reality:  FP32 CPU fallback → 12 tok/s (claimed as "quantized")
+Impact:   Production deployment expects 80 tok/s, gets 12 tok/s
+```
+
+**Solution:** Strict mode implements three-tier validation to detect and prevent silent fallbacks:
+
+1. **Tier 1 (Development):** Debug assertions panic immediately on fallback detection
+2. **Tier 2 (Production):** Strict mode returns `Err(BitNetError::StrictMode(...))` instead of falling back
+3. **Tier 3 (Verification):** Receipt validation ensures claims match evidence
+
+### Design Goals
+
+1. **Honest Receipts:** Performance claims backed by actual computation paths
+2. **Early Detection:** Catch fallbacks during development (debug assertions)
+3. **Production Safety:** Prevent silent degradation in production deployments
+4. **Audit Trail:** Receipt validation provides post-inference verification
+5. **Zero Overhead:** <1% performance impact in release builds
+
+### Use Cases
+
+**Development (Tier 1):**
+```bash
+# Debug builds catch fallbacks immediately
+cargo test --no-default-features --features cpu -p bitnet-inference
+
+# If fallback occurs:
+# thread 'test' panicked at 'fallback to FP32 in debug mode: layer=blk.0.attn_q, qtype=I2S, reason=kernel_unavailable'
+```
+
+**Production (Tier 2):**
+```bash
+# Strict mode prevents silent fallbacks
+BITNET_STRICT_MODE=1 \
+cargo run --release -p bitnet-cli --no-default-features --features cpu -- \
+  infer --model model.gguf --prompt "Test" --max-tokens 16
+
+# If kernel unavailable: Fails with detailed error
+# Otherwise: Succeeds with guaranteed quantized computation
+```
+
+**Verification (Tier 3):**
+```bash
+# Verify receipts match claims
+cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
+
+# Validates:
+# - compute_path="real" has quantized kernel IDs
+# - GPU claims use GPU kernels (not CPU fallback)
+# - Performance metrics are realistic (not suspicious)
+```
+
+### Three-Tier Validation Strategy
+
+**Tier 1: Debug Assertions**
+- **When:** Compile-time (debug builds only)
+- **Where:** `QuantizedLinear::forward`, `BitNetAttention::compute_qkv_projections`
+- **Behavior:** Panic with detailed message
+- **Overhead:** Zero in release builds (compiled out)
+- **Purpose:** Catch issues during development
+
+**Tier 2: Strict Mode Enforcement**
+- **When:** Runtime (release builds with `BITNET_STRICT_MODE=1`)
+- **Where:** Quantization fallback paths in inference layers
+- **Behavior:** Return `Err(BitNetError::StrictMode(...))`
+- **Overhead:** <1% (single boolean check per forward pass)
+- **Purpose:** Prevent silent fallbacks in production
+
+**Tier 3: Receipt Validation**
+- **When:** Post-inference (offline verification)
+- **Where:** `xtask verify-receipt` command
+- **Behavior:** Exit code 1 if claims don't match evidence
+- **Overhead:** Zero (verification happens after inference)
+- **Purpose:** Audit trail for performance baselines
+
+### Configuration
+
+**Primary Strict Mode:**
+```bash
+export BITNET_STRICT_MODE=1  # Enables all checks
+```
+
+**Granular Controls:**
+```bash
+export BITNET_STRICT_FAIL_ON_MOCK=1              # Fail on mock computation
+export BITNET_STRICT_REQUIRE_QUANTIZATION=1     # Require real quantization kernels
+export BITNET_STRICT_VALIDATE_PERFORMANCE=1     # Validate performance metrics
+export BITNET_CI_ENHANCED_STRICT=1              # CI enhanced logging
+```
+
+### Error Messages
+
+Strict mode errors provide actionable debugging context:
+
+```
+Error: Strict mode: FP32 fallback rejected - qtype=I2S, device=Cuda(0), layer_dims=[2048, 2048], reason=kernel_unavailable
+```
+
+**Error includes:**
+- Quantization type that was attempted (I2S, TL1, TL2)
+- Device where inference was attempted (CPU, GPU)
+- Layer dimensions (for debugging model architecture)
+- Specific reason for fallback (kernel_unavailable, device_mismatch, gpu_oom, etc.)
+
+### Receipt Honesty Validation
+
+Strict mode extends to receipt verification, ensuring performance claims are backed by evidence:
+
+**Quantized Kernel Patterns:**
+- **GPU:** `gemm_*`, `i2s_gpu_*`, `wmma_*`
+- **CPU (I2S):** `i2s_gemv`, `quantized_matmul_i2s`
+- **CPU (TL1/ARM):** `tl1_neon_*`, `tl1_lookup_*`
+- **CPU (TL2/x86):** `tl2_avx_*`, `tl2_avx512_*`
+
+**Fallback Kernel Patterns:**
+- **Dequantization:** `dequant_*`
+- **FP32 Computation:** `fp32_matmul`, `fp32_gemm`
+- **Generic Fallback:** `fallback_*`, `scalar_*`
+- **Mock/Test:** `mock_*`, `test_stub`
+
+**Validation:**
+```bash
+# Verify quantized kernels used
+cargo run -p xtask -- verify-receipt --require-quantized-kernels ci/inference.json
+
+# Verify GPU kernels for GPU claims
+cargo run -p xtask -- verify-receipt --require-gpu-kernels ci/inference.json
+
+# Validate performance metrics
+cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
+```
+
+### Integration with Deterministic Inference
+
+Combine strict mode with deterministic inference for maximum reproducibility:
+
+```bash
+export BITNET_STRICT_MODE=1
+export BITNET_DETERMINISTIC=1
+export BITNET_SEED=42
+export RAYON_NUM_THREADS=1
+
+cargo run -p bitnet-cli --no-default-features --features cpu -- \
+  infer --model model.gguf --prompt "Test" --max-tokens 16 --seed 42
+
+# Outputs will be:
+# 1. Identical across runs (deterministic)
+# 2. Using real quantized kernels (strict mode)
+# 3. Verified via receipt (honest computation)
+```
+
+### Related Documentation
+
+- **Tutorial:** [Getting Started with Strict Mode](../tutorials/strict-mode-quantization-validation.md)
+- **How-To:** [Running Strict Mode Validation Workflows](../how-to/strict-mode-validation-workflows.md)
+- **How-To:** [Verifying Receipt Honesty](../how-to/receipt-verification.md)
+- **Reference:** [Quantization Support - Strict Mode](../reference/quantization-support.md#strict-quantization-guards)
+- **Reference:** [Environment Variables - Strict Mode](../environment-variables.md#strict-mode-variables)
+- **Reference:** [Validation Gates - Receipt Honesty](../reference/validation-gates.md#receipt-honesty-validation)
+- **Explanation:** [Strict Quantization Guards Specification](./strict-quantization-guards.md)
+
+### Trade-offs
+
+**Benefits:**
+- Honest performance baselines (no false claims)
+- Early detection of fallback scenarios (debug assertions)
+- Production safety (strict mode enforcement)
+- Audit trail (receipt validation)
+- Minimal overhead (<1% in release builds)
+
+**Costs:**
+- Requires explicit feature flags (`--features cpu|gpu`)
+- May fail in environments without proper kernel support
+- CI pipelines need updated workflows
+- Development must handle strict mode errors
+
+**Recommendation:** Enable strict mode in production deployments and CI/CD pipelines. Disable only when explicitly testing fallback behavior.
+
 ## Contributing
 
 When adding new features:
@@ -329,3 +519,4 @@ When adding new features:
 3. Gate code with `#[cfg(feature = "name")]`
 4. Add tests for feature-gated code
 5. Update CI to test new feature
+6. If adding runtime guards, consider strict mode integration

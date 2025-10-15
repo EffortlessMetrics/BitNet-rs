@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.1.0",
+  "timestamp": "2025-10-14T06:45:00.000000000+00:00",
+  "compute_path": "real",
+  "backend": "cpu",
+  "deterministic": true,
+  "tokens_requested": 16,
+  "tokens_generated": 16,
+  "tokens_per_second": 52.8,
+  "kernels": [
+    "tl2_avx512_pack",
+    "tl2_avx_matmul",
+    "quantized_matmul_i2s"
+  ],
+  "kernel_path": "native_quantized",
+  "quantization": {
+    "types_used": ["TL2", "I2S"],
+    "fallback_count": 0,
+    "device_aware_selection": true
+  },
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "BITNET_STRICT_MODE": "1",
+    "BITNET_DETERMINISTIC": "1",
+    "BITNET_SEED": "42",
+    "OS": "linux-x86_64",
+    "CPU_FEATURES": "avx2,avx512f,avx512bw,avx512vl,fma",
+    "CPU_MODEL": "Intel Xeon Platinum 8280"
+  },
+  "model": {
+    "path": "tests/models/mini_tl2.gguf",
+    "architecture": "bitnet",
+    "quantization_type": "TL2"
+  },
+  "performance": {
+    "kernel_times_ms": {
+      "tl2_avx512_pack": 5.7,
+      "tl2_avx_matmul": 78.3,
+      "quantized_matmul_i2s": 15.2
+    },
+    "total_inference_time_ms": 302.8,
+    "memory_usage_mb": 768
+  },
+  "notes": "TL2 x86 AVX-512 table lookup inference (Issue #453 AC1, AC3)"
+}
