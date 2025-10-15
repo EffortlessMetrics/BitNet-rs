@@ -1,0 +1,316 @@
+{
+  "gate": "fixtures",
+  "status": "pass",
+  "timestamp": "2025-10-15T15:20:00Z",
+  "flow": "generative",
+  "context": {
+    "issue": "465",
+    "branch": "feat/issue-465-cpu-path-followup",
+    "spec": "docs/explanation/issue-465-implementation-spec.md"
+  },
+  "summary": "Comprehensive test fixtures created for Issue #465 test infrastructure",
+  "evidence": {
+    "fixtures_created": 18,
+    "lines_added": 1297,
+    "json_fixtures": 9,
+    "markdown_docs": 4,
+    "audit_files": 3,
+    "scripts": 1,
+    "directories": 3
+  },
+  "validation": {
+    "json_syntax": {
+      "status": "pass",
+      "validated": 9,
+      "failed": 0,
+      "details": "All JSON fixtures validated with jq"
+    },
+    "test_compilation": {
+      "status": "pass",
+      "tests_compiled": 4,
+      "details": "All test files compile successfully with expected scaffolding panics"
+    },
+    "script_validation": {
+      "status": "pass",
+      "executable": true,
+      "error_handling": true,
+      "details": "pre-tag-verification.sh has proper permissions and error handling"
+    },
+    "neural_network_context": {
+      "status": "pass",
+      "kernel_count": 11,
+      "performance": "15.3 tok/s",
+      "quantization": "i2s",
+      "details": "Realistic BitNet.rs kernel IDs and CPU performance baseline"
+    },
+    "receipt_schema": {
+      "status": "pass",
+      "version": "1.0.0",
+      "required_fields": [
+        "schema_version",
+        "compute_path",
+        "backend",
+        "model",
+        "quantization",
+        "tokens_generated",
+        "throughput_tokens_per_sec",
+        "success",
+        "kernels",
+        "timestamp"
+      ],
+      "details": "All receipt fixtures v1.0.0 compliant"
+    }
+  },
+  "acceptance_criteria": {
+    "ac1_readme_quickstart": {
+      "status": "fixtures_ready",
+      "fixture": "readme-templates/quickstart-section.md",
+      "description": "10-line CPU quickstart template"
+    },
+    "ac2_readme_receipts": {
+      "status": "fixtures_ready",
+      "fixtures": [
+        "readme-templates/receipts-section.md",
+        "readme-templates/environment-vars-table.md"
+      ],
+      "description": "Comprehensive receipts documentation templates"
+    },
+    "ac3_cpu_baseline": {
+      "status": "fixtures_ready",
+      "fixture": "cpu-baseline-valid.json",
+      "description": "Valid CPU baseline receipt with I2_S quantization"
+    },
+    "ac4_baseline_verification": {
+      "status": "fixtures_ready",
+      "fixture": "cpu-baseline-valid.json",
+      "description": "Valid receipt for verification testing"
+    },
+    "ac5_branch_protection": {
+      "status": "fixtures_ready",
+      "fixture": "branch-protection-response.json",
+      "description": "GitHub branch protection settings mock"
+    },
+    "ac6_smoke_test": {
+      "status": "fixtures_ready",
+      "fixtures": [
+        "cpu-baseline-mocked.json",
+        "cpu-baseline-invalid-empty-kernels.json",
+        "cpu-baseline-invalid-compute-path.json",
+        "cpu-baseline-invalid-kernel-hygiene.json"
+      ],
+      "description": "Mocked and invalid receipts for negative testing"
+    },
+    "ac7_pr_435_merge": {
+      "status": "fixtures_ready",
+      "fixture": "pr-435-merge-data.json",
+      "description": "PR #435 merge status mock"
+    },
+    "ac8_issue_closure": {
+      "status": "fixtures_ready",
+      "fixture": "issue-closure-data.json",
+      "description": "Mock-inference issue closure mock"
+    },
+    "ac9_feature_flags": {
+      "status": "fixtures_ready",
+      "fixtures": [
+        "doc-audit/legacy-commands.txt",
+        "doc-audit/standardized-commands.txt"
+      ],
+      "description": "Feature flag standardization audit data"
+    },
+    "ac10_performance_claims": {
+      "status": "fixtures_ready",
+      "fixture": "doc-audit/unsupported-claims.txt",
+      "description": "Legacy performance claims audit patterns"
+    },
+    "ac11_pre_tag_verification": {
+      "status": "fixtures_ready",
+      "fixture": "pre-tag-verification.sh",
+      "description": "Executable 6-step pre-tag verification script"
+    },
+    "ac12_tag_creation": {
+      "status": "fixtures_ready",
+      "fixture": "tag-v0.1.0-mvp-data.json",
+      "description": "v0.1.0-mvp tag data with baseline reference"
+    }
+  },
+  "fixtures": {
+    "receipt_fixtures": {
+      "valid": {
+        "file": "cpu-baseline-valid.json",
+        "kernels": 11,
+        "performance": "15.3 tok/s",
+        "schema": "1.0.0",
+        "purpose": "Valid CPU baseline receipt (AC3, AC4)"
+      },
+      "invalid": [
+        {
+          "file": "cpu-baseline-mocked.json",
+          "issue": "compute_path: mocked",
+          "purpose": "Mocked receipt rejection (AC6)"
+        },
+        {
+          "file": "cpu-baseline-invalid-empty-kernels.json",
+          "issue": "empty kernels array",
+          "purpose": "Kernel hygiene violation (AC6)"
+        },
+        {
+          "file": "cpu-baseline-invalid-compute-path.json",
+          "issue": "compute_path: fake",
+          "purpose": "Invalid compute_path (AC6)"
+        },
+        {
+          "file": "cpu-baseline-invalid-kernel-hygiene.json",
+          "issue": "empty string and >128 char kernel IDs",
+          "purpose": "Kernel hygiene violations (AC6)"
+        }
+      ]
+    },
+    "readme_templates": {
+      "quickstart": {
+        "file": "readme-templates/quickstart-section.md",
+        "lines": 22,
+        "purpose": "10-line CPU quickstart (AC1)"
+      },
+      "receipts": {
+        "file": "readme-templates/receipts-section.md",
+        "lines": 64,
+        "purpose": "Comprehensive receipts documentation (AC2)"
+      },
+      "environment_vars": {
+        "file": "readme-templates/environment-vars-table.md",
+        "lines": 44,
+        "purpose": "Environment variables reference (AC2)"
+      }
+    },
+    "documentation_audit": {
+      "legacy_commands": {
+        "file": "doc-audit/legacy-commands.txt",
+        "lines": 42,
+        "purpose": "Legacy cargo patterns audit (AC9)"
+      },
+      "standardized_commands": {
+        "file": "doc-audit/standardized-commands.txt",
+        "lines": 40,
+        "purpose": "Feature-aware command patterns (AC9)"
+      },
+      "unsupported_claims": {
+        "file": "doc-audit/unsupported-claims.txt",
+        "lines": 46,
+        "purpose": "Performance claims audit patterns (AC10)"
+      }
+    },
+    "github_api_mocks": {
+      "branch_protection": {
+        "file": "branch-protection-response.json",
+        "size_bytes": 1088,
+        "purpose": "Branch protection settings (AC5)"
+      },
+      "pr_435": {
+        "file": "pr-435-merge-data.json",
+        "size_bytes": 1876,
+        "purpose": "PR #435 merge status (AC7)"
+      },
+      "issue_closure": {
+        "file": "issue-closure-data.json",
+        "size_bytes": 1742,
+        "purpose": "Mock-inference issue closure (AC8)"
+      },
+      "tag_v0_1_0_mvp": {
+        "file": "tag-v0.1.0-mvp-data.json",
+        "size_bytes": 1589,
+        "purpose": "v0.1.0-mvp tag data (AC12)"
+      }
+    },
+    "pre_tag_verification": {
+      "file": "pre-tag-verification.sh",
+      "lines": 132,
+      "executable": true,
+      "steps": 6,
+      "purpose": "Pre-tag quality gates (AC11)"
+    },
+    "documentation": {
+      "fixture_index": {
+        "file": "FIXTURE_INDEX.md",
+        "lines": 346,
+        "sections": 60,
+        "purpose": "Comprehensive fixture documentation"
+      },
+      "validation_report": {
+        "file": "VALIDATION_REPORT.md",
+        "lines": 270,
+        "purpose": "Fixture validation evidence"
+      }
+    }
+  },
+  "neural_network_context": {
+    "quantization": {
+      "type": "i2s",
+      "kernels": [
+        "i2s_cpu_quantized_matmul",
+        "i2s_cpu_quant_block_128"
+      ],
+      "description": "Production 2-bit signed quantization"
+    },
+    "table_lookup": {
+      "kernels": [
+        "tl1_lut_dequant_forward",
+        "tl2_lut_dequant_forward"
+      ],
+      "description": "Device-aware TL1/TL2 dequantization"
+    },
+    "transformer_pipeline": {
+      "attention": [
+        "attention_kv_cache_update",
+        "cpu_rope_embedding",
+        "cpu_softmax"
+      ],
+      "ffn": [
+        "ffn_forward",
+        "cpu_vector_add"
+      ],
+      "normalization": [
+        "layernorm_forward",
+        "cpu_rmsnorm"
+      ]
+    },
+    "performance_baseline": {
+      "throughput": "15.3 tok/s",
+      "latency": "65.4 ms",
+      "model": "2B I2_S",
+      "hardware": "AVX2 CPU",
+      "deterministic": true
+    }
+  },
+  "bitnet_rs_standards": {
+    "feature_flags": {
+      "pattern": "--no-default-features --features cpu|gpu",
+      "examples": 10
+    },
+    "deterministic_config": {
+      "BITNET_DETERMINISTIC": "1",
+      "RAYON_NUM_THREADS": "1",
+      "BITNET_SEED": "42"
+    },
+    "workspace_paths": {
+      "baselines": "docs/baselines/",
+      "receipts": "ci/",
+      "fixtures": "tests/fixtures/",
+      "models": "models/"
+    },
+    "receipt_schema": "v1.0.0"
+  },
+  "commit": {
+    "sha": "38d6fda",
+    "message": "feat(tests): add comprehensive fixtures for Issue #465 test infrastructure",
+    "files_changed": 18,
+    "insertions": 1297,
+    "deletions": 0,
+    "pre_commit_checks": "pass"
+  },
+  "routing": {
+    "current_gate": "fixtures",
+    "next_gate": "tests-finalizer",
+    "reason": "All fixtures created and validated, ready for test integration validation"
+  }
+}
