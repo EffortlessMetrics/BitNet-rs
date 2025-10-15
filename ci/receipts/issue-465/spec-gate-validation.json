@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "gate": "generative:gate:spec",
+  "issue": 465,
+  "title": "CPU Path Followup",
+  "timestamp": "2025-10-15T19:30:00Z",
+  "status": "pass",
+  "validation": {
+    "ledger_structure": {
+      "gates_section": true,
+      "trace_section": true,
+      "hoplog_section": true,
+      "decision_section": true
+    },
+    "acceptance_criteria": {
+      "total": 12,
+      "testable": 12,
+      "non_overlapping": true,
+      "evidence_tags": true
+    },
+    "dependencies": {
+      "pr_435": "merged (2025-10-09T13:36:49Z)",
+      "pr_464": "merged (2025-10-15T12:39:51Z)",
+      "test_model": "available (tests/models/mini.gguf)",
+      "production_model": "available (models/microsoft-bitnet-b1.58-2B-4T-gguf/)",
+      "xtask_commands": "implemented (benchmark, verify-receipt)"
+    },
+    "blockers": {
+      "branch_protection": {
+        "severity": "medium",
+        "status": "documented",
+        "mitigation": "Manual admin configuration steps provided in AC5"
+      }
+    },
+    "ambiguities_resolved": {
+      "model_selection": "Production 2B model recommended (realistic baseline)",
+      "branch_protection": "Manual admin configuration documented",
+      "performance_baseline": "10-20 tok/s CPU (I2_S) with ±5% tolerance"
+    },
+    "traceability": {
+      "story_to_schema": true,
+      "schema_to_tests": true,
+      "tests_to_code": true,
+      "neural_network_requirements": true
+    }
+  },
+  "evidence": "Issue Ledger validated; ACs: 12/12 testable; Story → Schema → Tests → Code: traceable; Dependencies satisfied (PR #435/464 merged); Blockers mitigated (admin access documented); Ready for spec creation",
+  "routing": {
+    "decision": "FINALIZE → spec-creator",
+    "reason": "All acceptance criteria validated as testable with clear success metrics; dependencies satisfied; ambiguities resolved; Issue Ledger complete with required sections; ready for Microloop 2 (Spec Work)"
+  },
+  "bitnet_specific": {
+    "feature_flags": "All commands use --no-default-features --features cpu|gpu pattern",
+    "quantization": "I2_S quantization with 10-20 tok/s CPU performance target",
+    "receipt_validation": "Honest compute enforcement with real kernel IDs",
+    "workspace_alignment": "Documentation, baselines, CI gates, release QA work streams",
+    "neural_network_validation": "Cross-validation against Microsoft BitNet C++ reference (<5% variance)"
+  }
+}
