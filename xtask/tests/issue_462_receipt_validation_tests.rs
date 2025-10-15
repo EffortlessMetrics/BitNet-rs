@@ -53,6 +53,7 @@ mod test_utils {
     /// Run verify-receipt command (requires xtask binary)
     ///
     /// Returns: (exit_code, stdout, stderr)
+    #[allow(dead_code)]
     pub fn run_verify_receipt(_receipt_path: &PathBuf) -> Result<(i32, String, String)> {
         // TODO: This requires calling xtask::verify_receipt_cmd directly
         // or building xtask binary and executing it
