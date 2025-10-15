@@ -50,6 +50,7 @@
 | baseline-update | pass | inference: CPU forward baseline documented; quantization: >99% accuracy; tests: 43/43 pass |
 | cleanup | pass | branch cleaned: feat/cpu-forward-inference deleted; workspace verified; artifacts archived |
 | **generative:gate:spec (Issue #465)** | **pass** | **13 specs validated, 0 blocking issues, 1 optional enhancement (schema version field name consistency)** |
+| **generative:gate:benchmarks (Issue #465)** | **pass** | **baseline established (reuse existing); file: docs/baselines/20251015-cpu.json; schema: v1.0.0; compute_path: real; kernels: 7 CPU IDs; validation: passing** |
 
 ---
 
@@ -144,20 +145,29 @@
     - Neural network contracts: ✅ PASS (I2_S ≥99.8%, TL1/TL2 ≥99.6% properly specified)
     - Blocking issues: 0 (1 optional enhancement: schema version field name consistency)
     - Routing: FINALIZE → spec-finalizer (specifications implementation-ready)
+19. **generative-benchmarks-gate (Issue #465)** → Baseline validation COMPLETE:
+    - Baseline file: docs/baselines/20251015-cpu.json (existing, from AC3)
+    - Schema validation: ✅ PASS (v1.0.0, compute_path="real", 7 CPU kernels)
+    - Production code changes: 0 (documentation and tooling only)
+    - New benchmarks: Not needed (no performance-critical code added)
+    - Receipt verification: ✅ PASS (cargo run -p xtask -- verify-receipt)
+    - Baseline standards: ✅ MET (reuse existing baseline per Generative flow policy)
+    - Evidence format: Standardized (file path, schema, compute path, kernel count)
+    - Routing: FINALIZE → quality-finalizer (baseline validated, ready for quality gates)
 
 ---
 
 ## Decision
 
-**State:** MERGED → FINALIZED
-**Why:** PR #464 successfully merged to main via squash merge (commit 1f7dbd0). All post-merge gates passed:
-- Merge validation: workspace builds cleanly (CPU 3.61s), security clean (0 CVEs), merge commit verified on main
-- Baseline update: CPU forward baseline documented, quantization >99% accuracy, 43/43 tests pass
-- Cleanup: branch feat/cpu-forward-inference deleted from remote, workspace verified, artifacts archived to ci/receipts/pr-464/
-- Issue #462 auto-closed at 2025-10-15T12:39:53Z
+**State:** IN-PROGRESS (Issue #465 Generative Flow)
+**Why:** Issue #465 benchmarks gate PASSED. Baseline validation complete:
+- Existing baseline (docs/baselines/20251015-cpu.json) validated and reused
+- Schema v1.0.0, compute_path="real", 7 CPU kernel IDs confirmed
+- Zero production code changes → no new benchmarks needed (per Generative flow policy)
+- Receipt verification passing (cargo run -p xtask -- verify-receipt)
 
-Total integration: 16/16 gates PASS (13 pre-merge generative + 3 post-merge integrative). Enterprise-grade quality: 91% mutation score, 100% quality score, 1043/1043 workspace tests pass.
-**Next:** FINALIZE (integrative flow successfully completed; no further action required)
+Issue #465 progress: 2/8 gates PASS (spec, benchmarks). Documentation and tooling only - baseline reuse appropriate.
+**Next:** FINALIZE → quality-finalizer (complete Microloop 5: Quality Gates for Issue #465)
 
 ---
 

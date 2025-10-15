@@ -346,9 +346,7 @@ fn test_edge_case_baseline_reference_resolution() -> Result<()> {
     let entries = fs::read_dir(&baselines_dir)?;
     let baseline_files: Vec<_> = entries
         .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path().extension().and_then(|ext| ext.to_str()).map_or(false, |ext| ext == "json")
-        })
+        .filter(|e| e.path().extension().and_then(|ext| ext.to_str()) == Some("json"))
         .collect();
 
     if baseline_files.is_empty() {
@@ -384,7 +382,7 @@ fn test_edge_case_ci_status_requirements() -> Result<()> {
             e.path()
                 .extension()
                 .and_then(|ext| ext.to_str())
-                .map_or(false, |ext| ext == "yml" || ext == "yaml")
+                .is_some_and(|ext| ext == "yml" || ext == "yaml")
         })
         .collect();
 
@@ -421,7 +419,7 @@ fn test_edge_case_release_artifacts() -> Result<()> {
     assert!(readme.exists(), "README.md required for releases");
 
     // Check for LICENSE (required for releases)
-    let license_files = vec![
+    let license_files = [
         root.join("LICENSE"),
         root.join("LICENSE.md"),
         root.join("LICENSE-MIT"),

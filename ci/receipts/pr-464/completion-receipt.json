@@ -1,0 +1,189 @@
+{
+  "receipt_type": "pr-merge-finalization",
+  "schema_version": "1.0.0",
+  "pr_number": 464,
+  "issue_number": 462,
+  "timestamp": "2025-10-15T12:47:00Z",
+  "flow": "generative → integrative",
+  "final_state": "FINALIZED",
+
+  "merge_details": {
+    "merge_commit": "1f7dbd0e0209ef012c20d8a8c6b45d53d9e321a2",
+    "merged_at": "2025-10-15T12:39:51Z",
+    "merge_method": "squash",
+    "commits_squashed": 16,
+    "branch_name": "feat/cpu-forward-inference",
+    "branch_deleted": true,
+    "base_branch": "main"
+  },
+
+  "verification": {
+    "pr_state": "MERGED",
+    "pr_closed": true,
+    "issue_closed": true,
+    "issue_closed_at": "2025-10-15T12:39:53Z",
+    "merge_commit_verified": true,
+    "branch_deleted_verified": true,
+    "workspace_synced": true
+  },
+
+  "gates_summary": {
+    "total_gates": 16,
+    "passed": 16,
+    "failed": 0,
+    "generative_gates": 13,
+    "integrative_gates": 3,
+    "categories": {
+      "specification": {"spec": "pass"},
+      "implementation": {"impl": "pass", "clippy": "pass", "tests": "pass", "build": "pass", "features": "pass"},
+      "quality": {"mutation": "pass", "benchmarks": "pass", "quality-finalizer": "pass", "format": "pass", "diff-review": "pass"},
+      "publication": {"prep": "pass", "publication": "pass", "freshness": "pass"},
+      "integration": {"merge-validation": "pass", "baseline-update": "pass", "cleanup": "pass"}
+    }
+  },
+
+  "quality_metrics": {
+    "mutation_score": "91%",
+    "mutation_threshold": "80%",
+    "quality_score": "100%",
+    "test_pass_rate": "100%",
+    "workspace_tests": {
+      "total": 1043,
+      "passed": 1043,
+      "failed": 0
+    },
+    "issue_tests": {
+      "total": 43,
+      "passed": 43,
+      "failed": 0,
+      "breakdown": {
+        "ac1_cpu_forward": "4/4",
+        "ac2_cli_inference": "4/4",
+        "ac3_receipt_validation": "12/12",
+        "ac4_tl_lut_helper": "11/11",
+        "hardened_integration": "16/16"
+      }
+    },
+    "mutation_detail": {
+      "tl_lut": "100%",
+      "receipt_validation": "88%",
+      "overall": "91%"
+    }
+  },
+
+  "security_posture": {
+    "cargo_audit": "clean",
+    "cve_count": 0,
+    "unsafe_blocks_new": 0,
+    "advisories_loaded": 822,
+    "vulnerabilities_found": 0
+  },
+
+  "workspace_validation": {
+    "cpu_build": {
+      "status": "ok",
+      "duration": "3.61s",
+      "profile": "dev"
+    },
+    "format_check": "clean",
+    "clippy_warnings": 0,
+    "local_synced": true,
+    "merge_conflicts": "none"
+  },
+
+  "bitnet_standards": {
+    "quantization_accuracy": {
+      "i2s": ">99%",
+      "tl1": ">99%",
+      "tl2": ">99%",
+      "validated": true
+    },
+    "security": {
+      "cves": 0,
+      "unsafe_blocks": 0,
+      "audit_clean": true
+    },
+    "documentation": {
+      "test_documentation": "43/43",
+      "api_references": "complete",
+      "changelog": "updated"
+    },
+    "performance": {
+      "cpu_forward_baseline": "established",
+      "tl_lut_bounds_checking": "safe",
+      "receipt_validation": "strict"
+    },
+    "compliance": "full"
+  },
+
+  "file_statistics": {
+    "total_changed": 100,
+    "additions": 20637,
+    "deletions": 183,
+    "net_change": "+20,454 lines"
+  },
+
+  "artifacts": {
+    "archived": true,
+    "location": "ci/receipts/pr-464/",
+    "files": [
+      "LEDGER.md",
+      "architecture-review-progress.md",
+      "architecture-review-report.md",
+      "freshness-progress-comment.md",
+      "generative-gate-publication-check-run.md",
+      "publication-verification-failure.md",
+      "review-freshness-check.md",
+      "gate-merge-validation.json",
+      "gate-baseline-update.json",
+      "gate-cleanup.json",
+      "completion-receipt.json"
+    ]
+  },
+
+  "github_integration": {
+    "check_runs_created": [
+      "integrative:gate:merge-validation",
+      "integrative:gate:baseline-update",
+      "integrative:gate:cleanup"
+    ],
+    "labels_applied": [
+      "enhancement",
+      "documentation",
+      "state:merged"
+    ],
+    "ledger_updated": true,
+    "ledger_comment_id": 3405215442
+  },
+
+  "timeline": {
+    "pr_created": "2025-10-15",
+    "first_commit": "1f75fd5",
+    "final_commit": "1f7dbd0",
+    "merge_executed": "2025-10-15T12:39:51Z",
+    "issue_closed": "2025-10-15T12:39:53Z",
+    "finalization_completed": "2025-10-15T12:47:00Z",
+    "total_duration": "~8 minutes (merge to finalization)"
+  },
+
+  "completion_status": {
+    "state": "GOOD COMPLETE",
+    "integrative_flow": "successfully completed",
+    "next_action": "none (finalized)",
+    "verified_by": "pr-merge-finalizer",
+    "certification": "All gates passed, workspace validated, artifacts archived, BitNet.rs standards met"
+  },
+
+  "evidence_summary": {
+    "merge_validation": "gh pr view 464: state=MERGED; git log origin/main: commit 1f7dbd0 present; cargo build cpu: ok (3.61s); cargo audit: clean (0 CVEs)",
+    "baseline_update": "cargo test issue_462: 43/43 pass; mutation: 91%; quantization: >99% accuracy (pre-merge validated)",
+    "cleanup": "gh api branches/feat/cpu-forward-inference: 404 (deleted); git pull origin main: synced; artifacts: 11 files archived"
+  },
+
+  "ledger_state": {
+    "file": "ci/receipts/pr-464/LEDGER.md",
+    "maintained_by": "pr-merge-finalizer",
+    "last_updated": "2025-10-15T12:47:00Z",
+    "final_decision": "MERGED → FINALIZED"
+  }
+}
