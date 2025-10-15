@@ -48,7 +48,9 @@ fn test_ac3_cpu_baseline_generated() -> Result<()> {
         std::env::set_var("BITNET_SEED", "42");
     }
 
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Failed to get workspace root from CARGO_MANIFEST_DIR");
     let baselines_dir = workspace_root.join("docs/baselines");
 
     assert!(baselines_dir.exists(), "Baselines directory not found: {:?}", baselines_dir);
@@ -193,7 +195,9 @@ fn test_ac4_baseline_verification_passes() -> Result<()> {
         std::env::set_var("BITNET_SEED", "42");
     }
 
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Failed to get workspace root from CARGO_MANIFEST_DIR");
     let baselines_dir = workspace_root.join("docs/baselines");
 
     // Find CPU baseline
@@ -304,6 +308,7 @@ fn verify_receipt_schema(path: &Path) -> Result<()> {
 }
 
 /// Helper function to verify kernel IDs are CPU-specific
+#[allow(dead_code)]
 fn verify_kernel_ids(receipt: &Receipt) -> bool {
     let cpu_kernel_prefixes = vec!["i2s_", "tl1_", "tl2_", "cpu_", "quantized_matmul"];
 
@@ -323,6 +328,7 @@ mod test_helpers {
     use super::*;
 
     /// Test helper to create mock receipt for testing
+    #[allow(dead_code)]
     pub fn create_mock_receipt(compute_path: &str, kernel_count: usize) -> Receipt {
         Receipt {
             schema_version: "1.0.0".to_string(),
@@ -334,6 +340,7 @@ mod test_helpers {
     }
 
     /// Test helper to validate receipt structure
+    #[allow(dead_code)]
     pub fn validate_receipt_structure(receipt: &Receipt) -> Result<()> {
         assert!(
             receipt.schema_version == "1.0.0" || receipt.schema_version == "1.0",
