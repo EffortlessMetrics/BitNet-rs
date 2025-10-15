@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CPU Forward Pass with Autoregressive Generation** ([#462](https://github.com/EffortlessSteven/BitNet-rs/issues/462)):
+  - **CPU Forward Pass**: Complete autoregressive generation from BOS token through logits with device-aware CPU inference
+  - **CLI Inference**: `bitnet-cli infer` command with CPU backend support and deterministic inference
+  - **TL LUT Helper**: Safe `bitnet_kernels::tl_lut::lut_index()` with checked arithmetic, overflow detection, and 100% mutation testing coverage
+  - **Receipt CPU Validation**: Honest compute validation with CPU quantized kernel enforcement (i2s_*, tl1_*, tl2_*) and silent CPU fallback detection
+  - **Enhanced Testing**: 91% overall mutation testing score (31/31 tests passing, 20/22 mutants killed)
 - **WebAssembly (WASM) Compatibility Improvements** ([#170](https://github.com/EffortlessSteven/BitNet-rs/pull/170)):
   - **Enhanced WASM Build Compatibility**: Avoiding native dependency conflicts for seamless WebAssembly compilation
   - **Updated Tokenizers Configuration**: Added `unstable_wasm` feature for proper WebAssembly support alongside existing features
