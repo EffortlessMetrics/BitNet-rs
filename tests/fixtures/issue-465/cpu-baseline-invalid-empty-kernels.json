@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cpu",
+  "model": "microsoft/bitnet-b1.58-2B-4T-gguf",
+  "quantization": "i2s",
+  "tokens_generated": 128,
+  "throughput_tokens_per_sec": 15.3,
+  "success": true,
+  "kernels": [],
+  "timestamp": "2025-10-15T12:00:00Z",
+  "note": "INVALID: Empty kernels array with compute_path='real' should fail verification"
+}

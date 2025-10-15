@@ -1,0 +1,40 @@
+# Standardized Feature-Aware Commands (AC9)
+#
+# All cargo commands should follow these standardized patterns with explicit feature flags.
+
+# Build Commands
+cargo build --no-default-features --features cpu
+cargo build --no-default-features --features gpu
+cargo build --release --no-default-features --features cpu
+
+# Test Commands
+cargo test --workspace --no-default-features --features cpu
+cargo test --workspace --no-default-features --features gpu
+cargo test -p bitnet-kernels --no-default-features --features cpu
+
+# Run Commands
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect model.gguf
+cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+cargo run -p bitnet-st2gguf -- --input model.safetensors --output model.gguf
+
+# Quality Commands (OK without feature flags)
+cargo fmt --all
+cargo fmt --all --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo doc --no-deps --workspace
+
+# Cross-Validation (feature-gated)
+cargo test -p bitnet-models --no-default-features --features crossval
+cargo run -p xtask -- crossval
+
+# GPU Development
+cargo build --no-default-features --features gpu
+cargo test --workspace --no-default-features --features gpu
+cargo run -p xtask -- preflight  # Check GPU compilation and runtime
+
+# Important Notes:
+# - Default features are EMPTY in BitNet.rs
+# - Always use --no-default-features except for xtask commands
+# - CPU/GPU feature selection is mutually exclusive in most crates
+# - Use unified GPU predicate: #[cfg(any(feature = "gpu", feature = "cuda"))]
+# - xtask commands handle feature detection automatically

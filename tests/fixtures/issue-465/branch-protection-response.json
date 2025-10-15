@@ -1,0 +1,38 @@
+{
+  "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/branches/main/protection",
+  "required_status_checks": {
+    "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/branches/main/protection/required_status_checks",
+    "strict": true,
+    "contexts": [
+      "Model Gates (CPU) / cpu-receipt-gate",
+      "Model Gates (CPU) / gate-summary",
+      "CI / format-check",
+      "CI / clippy-cpu",
+      "CI / test-cpu"
+    ],
+    "contexts_url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/branches/main/protection/required_status_checks/contexts"
+  },
+  "required_pull_request_reviews": {
+    "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/branches/main/protection/required_pull_request_reviews",
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": false,
+    "required_approving_review_count": 1
+  },
+  "required_signatures": {
+    "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/branches/main/protection/required_signatures",
+    "enabled": false
+  },
+  "enforce_admins": {
+    "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/branches/main/protection/enforce_admins",
+    "enabled": true
+  },
+  "required_linear_history": {
+    "enabled": false
+  },
+  "allow_force_pushes": {
+    "enabled": false
+  },
+  "allow_deletions": {
+    "enabled": false
+  }
+}
