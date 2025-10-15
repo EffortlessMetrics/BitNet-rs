@@ -134,13 +134,15 @@ mod tests {
 
     #[test]
     fn test_overflow_detection() {
-        // Test overflow in base offset calculation
-        let result = lut_index(usize::MAX, 32, 0, 128, usize::MAX);
-        assert!(result.is_err());
+        // Test overflow in base offset calculation (block_idx * block_bytes)
+        let result = lut_index(usize::MAX, 0, 32, 128, usize::MAX);
+        assert!(result.is_err(), "Expected overflow in base offset calculation");
 
-        // Test overflow in final addition
-        let result = lut_index(usize::MAX / 32, 0, 32, 128, usize::MAX);
-        assert!(result.is_err());
+        // Test overflow in final addition (base_offset + elem_offset)
+        // Use block_bytes=1 for precise control: base_offset = (usize::MAX - 5) * 1 = usize::MAX - 5
+        // elem_offset = 64 / 8 = 8, so idx = (usize::MAX - 5) + 8 overflows
+        let result = lut_index(usize::MAX - 5, 64, 1, 128, usize::MAX);
+        assert!(result.is_err(), "Expected overflow in final index calculation");
     }
 
     #[test]
