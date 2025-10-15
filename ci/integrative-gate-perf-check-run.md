@@ -22,7 +22,7 @@
 // quantized_linear.rs:304-312
 let strict_mode = StrictModeEnforcer::new(); // OnceLock cache
 if self.is_fallback_path() {
-    strict_mode.validate_quantization_fallback(...)?; 
+    strict_mode.validate_quantization_fallback(...)?;
 }
 ```
 

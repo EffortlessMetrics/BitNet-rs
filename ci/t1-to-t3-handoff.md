@@ -1,11 +1,11 @@
 # T1 → T3 Handoff: PR #452 Receipt Verification
 
-**From Agent**: integrative-fast-triage-gate  
-**To Agent**: integrative-test-runner  
-**PR**: #452 "feat(xtask): add verify-receipt gate (schema v1.0, strict checks)"  
-**Branch**: `feat/xtask-verify-receipt`  
-**Commit**: `1cc3969364795085daf6d9028b33e185db63127b`  
-**Timestamp**: 2025-10-14  
+**From Agent**: integrative-fast-triage-gate
+**To Agent**: integrative-test-runner
+**PR**: #452 "feat(xtask): add verify-receipt gate (schema v1.0, strict checks)"
+**Branch**: `feat/xtask-verify-receipt`
+**Commit**: `1cc3969364795085daf6d9028b33e185db63127b`
+**Timestamp**: 2025-10-14
 
 ---
 

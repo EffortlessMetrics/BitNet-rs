@@ -16,7 +16,7 @@
 
 **Validation Scope:**
 - Feature spec: `docs/explanation/strict-quantization-guards.md` (916 lines)
-- API contracts: `docs/reference/strict-mode-api.md` (1,150 lines)  
+- API contracts: `docs/reference/strict-mode-api.md` (1,150 lines)
 - Four ADRs in `docs/explanation/architecture/` (1,371 lines)
 - Reference documentation: 5 key files validated
 
@@ -99,7 +99,7 @@ pub struct StrictModeConfig {
 - Performance: CPU 10-20 tok/s, GPU 50-100 tok/s
 
 ### TL1 - Table Lookup Quantization (ARM)
-- Accuracy: ≥99.6% correlation with FP32 reference  
+- Accuracy: ≥99.6% correlation with FP32 reference
 - Performance: 12-18 tok/s on ARM NEON
 
 ### TL2 - Advanced Table Lookup (x86)

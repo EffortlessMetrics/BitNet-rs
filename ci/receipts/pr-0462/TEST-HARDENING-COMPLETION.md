@@ -198,7 +198,7 @@ if backend.eq_ignore_ascii_case("cpu") {
     let cpu_quant_count = kernel_ids.iter()
         .filter(|id| is_cpu_quantized_kernel(id))
         .count();
-    
+
     if cpu_quant_count == 0 {
         bail!("no quantized kernels found");
     }
@@ -212,7 +212,7 @@ let must_require_gpu = backend.eq_ignore_ascii_case("cuda");
 if require_gpu_kernels || must_require_gpu {
     let has_gpu_kernel = kernel_ids.iter()
         .any(|id| is_gpu_kernel_id(id));
-    
+
     if !has_gpu_kernel {
         bail!("no GPU kernels found");
     }
@@ -271,7 +271,7 @@ fn test_cpu_no_quant_kernels_fails() {
         "--path",
         fixture_path("cpu_no_quant_kernels").to_str().unwrap(),
     ]);
-    
+
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("no quantized kernels found"));
