@@ -2,9 +2,10 @@
 
 **Issue**: #465 CPU Path Followup
 **Flow**: Generative
-**Status**: Ready for Publication
+**Status**: PUBLISHED → PR #466
 **Created**: 2025-10-15T19:00:00Z
-**Last Updated**: 2025-10-15T23:55:00Z
+**Last Updated**: 2025-10-16T00:15:00Z
+**PR URL**: https://github.com/EffortlessMetrics/BitNet-rs/pull/466
 
 ---
 
@@ -22,6 +23,7 @@
 | `generative:gate:docs` | ✅ **PASS** | 2025-10-15T23:30:00Z | Documentation finalized: cargo doc clean build; doctests 18/18 (100%); Diátaxis 4/4; feature flags 17/17 (100%); env vars 5/5 (100%); neural network context complete (I2_S, kernels, transformer, receipts); spec 2,486 lines + 4 ADRs (930 lines); baseline docs validated | [DOCS-FINALIZATION-REPORT.md](DOCS-FINALIZATION-REPORT.md) \| [gate-docs.json](gate-docs.json) |
 | `generative:gate:quality` | ⏳ PENDING | - | Awaiting quality validation | - |
 | `generative:gate:prep` | ✅ **PASS** | 2025-10-15T23:55:00Z | Final pre-publication validation complete: All quality gates passing (format, clippy cpu/gpu, build cpu/gpu, tests 43/43 Issue #465 + 1396/1397 workspace, docs 16/16 doctests, security 0/727 vulnerabilities); CPU baseline verified (schema v1.0.0, 8 kernels, compute_path="real"); 12 conventional commits; Branch publication-ready | [gate-prep-final.json](gate-prep-final.json) \| [PREP-FINALIZATION-REPORT.md](PREP-FINALIZATION-REPORT.md) |
+| `generative:gate:publication` | ✅ **PASS** | 2025-10-16T00:10:00Z | PR #466 created successfully; URL: https://github.com/EffortlessMetrics/BitNet-rs/pull/466; labels applied: documentation,flow:generative,state:ready; Issue #465 → PR #466 Ledger migration complete | [../pr-466/LEDGER.md](../pr-466/LEDGER.md) |
 
 ---
 
@@ -91,17 +93,18 @@
 | 2025-10-15T23:30:00Z | docs-finalizer | Documentation finalization | PASS: cargo doc clean build (26 files); doctests 18/18 (100%); Diátaxis 4/4 aligned; feature flags 17/17 (100%); env vars 5/5 (100%); neural network context complete (I2_S, kernels, transformer, receipts); links 100% validated; no fix-forward required; Routing to pr-preparer |
 | 2025-10-15T23:45:00Z | pr-preparer | Branch preparation and validation | PASS: Rebase clean (12 commits, conventional prefixes); format ✅; clippy cpu/gpu ✅; build cpu/gpu ✅; tests 1396/1397 ✅ (1 pre-existing async test); baseline verified (v1.0.0, 7 kernels); Ready for diff review; Routing to diff-reviewer |
 | 2025-10-15T23:55:00Z | prep-finalizer | Final pre-publication validation | PASS: All quality gates green (7/7 required + 2/4 hardening); Issue #465 tests 43/43 (100%); workspace tests 1396/1397 (99.9%); doc tests 16/16 (100%); security audit 0/727 vulnerabilities; CPU baseline verified (schema v1.0.0, 8 real kernel IDs, compute_path="real"); 12 conventional commits; Branch publication-ready; Routing to pr-publisher |
+| 2025-10-16T00:10:00Z | pr-publisher | PR creation and publication | SUCCESS: PR #466 created (https://github.com/EffortlessMetrics/BitNet-rs/pull/466); labels applied (documentation,flow:generative,state:ready); Issue #465 → PR #466 Ledger migration complete; comprehensive neural network evidence included (I2_S, 8 CPU kernels, compute_path="real"); Routing to merge-readiness |
 
 ---
 
 ## Decision
 
-**State**: Ready for Publication
-**Next**: PR Publisher
+**State**: PUBLISHED
+**Next**: Merge Readiness Assessment
 
-**Routing**: `FINALIZE → pr-publisher`
+**Routing**: `NEXT → merge-readiness`
 
-**Rationale**: Final pre-publication validation complete. All BitNet.rs generative flow quality gates passing. Branch is publication-ready with comprehensive neural network validation and GitHub-native receipts.
+**Rationale**: PR #466 successfully published with comprehensive BitNet.rs neural network evidence. All quality gates passing (7/7 required + 2/4 hardening). Ready for CI validation and merge readiness assessment.
 
 **Evidence**:
 - ✅ All required gates: spec, format, clippy, tests, build, features, docs (7/7 PASS)
@@ -123,12 +126,20 @@
 - Performance: 11.2 tok/s (2B model, CPU, deterministic)
 - Receipt schema: v1.0.0 (stability commitment for v0.1.0-mvp)
 
-**Next Steps for pr-publisher**:
-1. Create GitHub PR for Issue #465
-2. Use prepared PR description template
-3. Apply labels: documentation, release, v0.1.0-mvp
-4. Link to Issue #465 and dependencies (PR #435, PR #464)
-5. Mark ready for merge after CI validation
+**Publication Complete**:
+1. ✅ GitHub PR created for Issue #465 (PR #466)
+2. ✅ Comprehensive PR description with neural network evidence
+3. ✅ Labels applied: documentation, flow:generative, state:ready
+4. ✅ Issue #465 linked via "Fixes #465"
+5. ✅ Dependencies referenced (PR #435, PR #464)
+6. ⏳ Awaiting CI validation
+
+**Next Steps for merge-readiness**:
+1. Monitor CI validation (Model Gates CPU workflow)
+2. Verify all GitHub Actions pass
+3. Assess Draft PR readiness for review pickup
+4. Update state labels as needed
+5. Prepare for final v0.1.0-mvp tag creation
 
 **Quality Gates Summary**:
 - Required gates: 7/7 PASS
