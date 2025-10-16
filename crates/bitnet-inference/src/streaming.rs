@@ -211,7 +211,8 @@ impl GenerationStream {
         debug!("Starting streaming generation for prompt");
 
         // Tokenize input with comprehensive error handling
-        let input_tokens = tokenizer.encode(&prompt, true, true).with_context(|| {
+        // Use config.add_bos to respect template BOS policy (llama3-chat has embedded BOS)
+        let input_tokens = tokenizer.encode(&prompt, config.add_bos, false).with_context(|| {
             format!(
                 "Failed to tokenize input prompt of length {}. \
                      The prompt may contain unsupported characters or exceed \

@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
 
+use bitnet_inference::prompt_template::{ChatRole, ChatTurn};
 use bitnet_inference::{InferenceEngine, TemplateType};
 
 use super::inference::InferenceCommand;
@@ -24,11 +25,10 @@ struct ChatMetrics {
     num_exchanges: usize,
 }
 
-/// Copy receipt from ci/inference.json to timestamped file in the specified directory
-fn copy_receipt_if_present(dir: &Path) -> Result<Option<PathBuf>> {
+/// Copy receipt from effective receipt path to timestamped file in the specified directory
+fn copy_receipt_if_present(src: &Path, dir: &Path) -> Result<Option<PathBuf>> {
     use std::fs;
 
-    let src = Path::new("ci").join("inference.json");
     if !src.exists() {
         return Ok(None);
     }
@@ -36,7 +36,7 @@ fn copy_receipt_if_present(dir: &Path) -> Result<Option<PathBuf>> {
     fs::create_dir_all(dir)?;
     let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
     let dst = dir.join(format!("chat-{}.json", ts));
-    fs::copy(&src, &dst)?;
+    fs::copy(src, &dst)?;
     Ok(Some(dst))
 }
 
@@ -70,16 +70,17 @@ impl InferenceCommand {
         // Load model and tokenizer
         let (mut engine, _tokenizer) = self.load_model_and_tokenizer(config).await?;
 
-        // Resolve prompt template using same logic as `run` subcommand
-        let template_type = self.resolve_template_type()?;
+        // Resolve prompt template with Llama3Chat as default for chat mode (better UX)
+        let template_type: TemplateType =
+            self.resolve_template_type_with_default(TemplateType::Llama3Chat)?;
 
         println!("{}", style("Chat ready!").bold().green());
         println!("Template: {}", style(format!("{:?}", template_type)).dim());
         println!("Commands: /help, /clear, /metrics, /exit");
         println!();
 
-        // Conversation history: (user_msg, assistant_msg)
-        let mut conversation_history: Vec<(String, String)> = Vec::new();
+        // Conversation history: typed chat turns
+        let mut conversation_history: Vec<ChatTurn> = Vec::new();
         let mut metrics = ChatMetrics::default();
 
         // Create generation config
@@ -134,9 +135,13 @@ impl InferenceCommand {
                         _ => {}
                     }
 
-                    // Format prompt with conversation history
-                    let formatted_prompt =
-                        self.format_chat_turn(&template_type, &conversation_history, line)?;
+                    // Format prompt with conversation history using library render_chat()
+                    // Build current turn history (all previous + current user input)
+                    let mut current_history = conversation_history.clone();
+                    current_history.push(ChatTurn::new(ChatRole::User, line));
+
+                    let formatted_prompt = template_type
+                        .render_chat(&current_history, self.system_prompt.as_deref())?;
 
                     if self.verbose {
                         debug!("Formatted prompt:\n{}", formatted_prompt);
@@ -169,12 +174,23 @@ impl InferenceCommand {
                             // Update metrics
                             metrics.add_exchange(token_count, elapsed_ms);
 
-                            // Add to conversation history
-                            conversation_history.push((line.to_string(), response_text));
+                            // Add to conversation history: user turn and assistant turn
+                            conversation_history.push(ChatTurn::new(ChatRole::User, line));
+                            conversation_history
+                                .push(ChatTurn::new(ChatRole::Assistant, &response_text));
+
+                            // Enforce chat_history_limit if specified
+                            if let Some(limit) = self.chat_history_limit
+                                && conversation_history.len() > limit
+                            {
+                                let excess = conversation_history.len() - limit;
+                                conversation_history.drain(0..excess);
+                            }
 
                             // Copy receipt if directory specified
                             if let Some(dir) = &self.emit_receipt_dir {
-                                match copy_receipt_if_present(dir) {
+                                let receipt_src = self.effective_receipt_path();
+                                match copy_receipt_if_present(receipt_src, dir) {
                                     Ok(Some(path)) => {
                                         debug!("Receipt saved: {}", path.display());
                                     }
@@ -260,72 +276,6 @@ impl InferenceCommand {
         }
 
         Ok((full_response, token_count))
-    }
-
-    /// Format a chat turn with conversation history using the template
-    fn format_chat_turn(
-        &self,
-        template: &TemplateType,
-        history: &[(String, String)],
-        current_input: &str,
-    ) -> Result<String> {
-        // Build conversation context
-        let mut full_context = String::new();
-
-        // For chat templates, we need to format the entire conversation
-        match template {
-            TemplateType::Llama3Chat => {
-                // LLaMA-3 chat format
-                full_context.push_str("<|begin_of_text|>");
-
-                // Add system prompt if provided
-                if let Some(system_prompt) = &self.system_prompt {
-                    full_context.push_str("<|start_header_id|>system<|end_header_id|>\n\n");
-                    full_context.push_str(system_prompt);
-                    full_context.push_str("<|eot_id|>");
-                }
-
-                // Add conversation history
-                for (user_msg, assistant_msg) in history {
-                    full_context.push_str("<|start_header_id|>user<|end_header_id|>\n\n");
-                    full_context.push_str(user_msg);
-                    full_context.push_str("<|eot_id|>");
-                    full_context.push_str("<|start_header_id|>assistant<|end_header_id|>\n\n");
-                    full_context.push_str(assistant_msg);
-                    full_context.push_str("<|eot_id|>");
-                }
-
-                // Add current turn
-                full_context.push_str("<|start_header_id|>user<|end_header_id|>\n\n");
-                full_context.push_str(current_input);
-                full_context.push_str("<|eot_id|>");
-                full_context.push_str("<|start_header_id|>assistant<|end_header_id|>\n\n");
-            }
-            TemplateType::Instruct => {
-                // Instruct format
-                if let Some(system_prompt) = &self.system_prompt {
-                    full_context.push_str(&format!("System: {}\n\n", system_prompt));
-                }
-
-                for (user_msg, assistant_msg) in history {
-                    full_context.push_str(&format!("Q: {}\nA: {}\n\n", user_msg, assistant_msg));
-                }
-
-                full_context.push_str(&format!("Q: {}\nA:", current_input));
-            }
-            TemplateType::Raw => {
-                // Raw format - simple concatenation
-                for (user_msg, assistant_msg) in history {
-                    full_context.push_str(user_msg);
-                    full_context.push('\n');
-                    full_context.push_str(assistant_msg);
-                    full_context.push('\n');
-                }
-                full_context.push_str(current_input);
-            }
-        }
-
-        Ok(full_context)
     }
 
     /// Show chat-specific help

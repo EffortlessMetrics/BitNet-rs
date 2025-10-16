@@ -91,7 +91,7 @@ Examples:
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
 #[command(after_help = format!(
-    "CLI Interface Version: {}\nFor documentation, see: https://docs.rs/bitnet\nFor issues and feedback: https://github.com/anthropics/claude-code/issues",
+    "CLI Interface Version: {}\nDocs: https://docs.rs/bitnet\nIssues: https://github.com/EffortlessMetrics/BitNet-rs/issues",
     INTERFACE_VERSION
 ))]
 struct Cli {

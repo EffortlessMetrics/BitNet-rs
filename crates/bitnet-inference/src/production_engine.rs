@@ -393,8 +393,9 @@ impl ProductionInferenceEngine {
         info!("Starting text generation with production tracking");
 
         // Tokenization phase
+        // Use config.add_bos to respect template BOS policy (llama3-chat has embedded BOS)
         let encode_start = Instant::now();
-        let input_tokens = self.tokenizer.encode(prompt, true, false).map_err(|e| {
+        let input_tokens = self.tokenizer.encode(prompt, config.add_bos, false).map_err(|e| {
             bitnet_common::BitNetError::Inference(InferenceError::TokenizationFailed {
                 reason: e.to_string(),
             })

@@ -57,7 +57,7 @@ use std::{
 use tokio::fs;
 use tracing::{debug, error, info, warn};
 
-use bitnet_inference::{InferenceEngine, SamplingConfig, TemplateType};
+use bitnet_inference::{InferenceEngine, KernelRecorder, SamplingConfig, TemplateType};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::Device;
@@ -183,8 +183,8 @@ pub struct InferenceCommand {
     #[arg(long, value_name = "TEMPLATE")]
     pub chat_template: Option<String>,
 
-    /// Prompt template: raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
-    #[arg(long, value_name = "TEMPLATE", default_value = "raw")]
+    /// Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+    #[arg(long, value_name = "TEMPLATE", default_value = "auto")]
     pub prompt_template: String,
 
     /// Path to tokenizer.json (HF) or tokenizer.model (SPM)
@@ -227,6 +227,17 @@ pub struct InferenceCommand {
     /// Directory to emit per-turn receipts in chat mode
     #[arg(long, value_name = "DIR")]
     pub emit_receipt_dir: Option<PathBuf>,
+
+    /// Path for the primary inference receipt (default: ci/inference.json)
+    #[arg(long, value_name = "PATH")]
+    pub receipt_path: Option<PathBuf>,
+}
+
+impl InferenceCommand {
+    /// Get the effective receipt path (user-provided or default)
+    pub(super) fn effective_receipt_path(&self) -> &Path {
+        self.receipt_path.as_deref().unwrap_or(Path::new("ci/inference.json"))
+    }
 }
 
 /// Inference result for JSON output
@@ -385,6 +396,7 @@ impl PrefillEngine for InferenceEngine {
             logits_tap_steps: 0,
             logits_topk: 10,
             logits_cb: None,
+            add_bos: false, // Pre-tokenized, BOS already handled
         };
         Box::pin(async move {
             // Use explicit InferenceEngine method to avoid recursion
@@ -584,12 +596,14 @@ impl InferenceCommand {
         // Validate model configuration
         self.validate_model_config(model.config())?;
 
-        // Create inference engine
+        // Create inference engine with kernel recorder for receipt generation
         let model_arc: Arc<dyn bitnet_models::Model> = model.into();
         let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone();
         let bn_device = bitnet_common::Device::from(&device);
+        let recorder = KernelRecorder::new();
         let engine = InferenceEngine::new(model_arc, tokenizer_arc, bn_device)
-            .context("Failed to create inference engine")?;
+            .context("Failed to create inference engine")?
+            .with_recorder(recorder);
 
         pb.finish_with_message(style("✓ Model loaded successfully").green().to_string());
 
@@ -751,6 +765,7 @@ impl InferenceCommand {
             logits_tap_steps: 0,
             logits_topk: self.logits_topk,
             logits_cb: None,
+            add_bos: self.should_add_bos(), // Template-aware BOS policy
         }
     }
 
@@ -827,11 +842,11 @@ impl InferenceCommand {
         Ok(collected)
     }
 
-    /// Write inference receipt to ci/inference.json
+    /// Write inference receipt to configurable path (default: ci/inference.json)
     /// This provides honest compute evidence for quality gates.
     pub(super) async fn write_receipt(
         &self,
-        _engine: &InferenceEngine,
+        engine: &InferenceEngine,
         tokens_generated: usize,
     ) -> Result<()> {
         use chrono::Utc;
@@ -850,12 +865,17 @@ impl InferenceCommand {
             .unwrap_or_default();
 
         // Build receipt JSON (matching xtask format)
-        // TODO: Capture actual kernel IDs from engine telemetry
-        let kernels = vec![
-            "embedding_lookup".to_string(),
-            "prefill_forward".to_string(),
-            "i2s_gemv".to_string(),
-        ];
+        // Capture actual kernel IDs from engine telemetry
+        let kernels = if let Some(recorder) = engine.kernel_recorder() {
+            recorder.snapshot()
+        } else {
+            // Fallback to placeholder kernels if no recorder attached
+            vec![
+                "embedding_lookup".to_string(),
+                "prefill_forward".to_string(),
+                "i2s_gemv".to_string(),
+            ]
+        };
 
         let receipt = serde_json::json!({
             "schema_version": "1.0.0",
@@ -875,10 +895,20 @@ impl InferenceCommand {
             }
         });
 
-        fs::create_dir_all("ci")?;
-        fs::write("ci/inference.json", serde_json::to_vec_pretty(&receipt)?)?;
+        // Use configurable receipt path (default: ci/inference.json for gate compatibility)
+        let receipt_path = self.effective_receipt_path();
 
-        debug!("Receipt written to ci/inference.json ({} tokens)", tokens_generated);
+        // Create parent directory if needed
+        if let Some(parent) = receipt_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Atomic write: tmp → rename to prevent partial copies during chat
+        let tmp_path = receipt_path.with_extension("json.tmp");
+        fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)?;
+        fs::rename(&tmp_path, receipt_path)?;
+
+        debug!("Receipt written to {} ({} tokens)", receipt_path.display(), tokens_generated);
         Ok(())
     }
 
@@ -1199,9 +1229,8 @@ impl InferenceCommand {
 
     /// Apply prompt template to format user input
     fn apply_prompt_template(&self, user_text: &str) -> Result<String> {
-        // Parse template type
-        let template_type: TemplateType =
-            self.prompt_template.parse().context("Invalid prompt template")?;
+        // Resolve template type with auto-detection support
+        let template_type = self.resolve_template_type()?;
 
         // Always log template selection at info level for visibility
         info!("Using prompt template: {:?}", template_type);
@@ -1223,7 +1252,7 @@ impl InferenceCommand {
 
         // Add template default stop sequences if none specified
         if stops.is_empty()
-            && let Ok(template_type) = self.prompt_template.parse::<TemplateType>()
+            && let Ok(template_type) = self.resolve_template_type()
         {
             stops.extend(template_type.default_stop_sequences());
         }
@@ -1237,8 +1266,8 @@ impl InferenceCommand {
             return false;
         }
 
-        // Check template preference
-        if let Ok(template_type) = self.prompt_template.parse::<TemplateType>() {
+        // Check template preference with auto-detection
+        if let Ok(template_type) = self.resolve_template_type() {
             template_type.should_add_bos()
         } else {
             true // Default to adding BOS
@@ -1417,11 +1446,70 @@ impl InferenceCommand {
         println!("  Ctrl+D    - New session");
     }
 
-    /// Parse template type from command arguments.
+    /// Parse template type from command arguments with auto-detection support.
     /// Available for chat mode enhancements.
-    #[allow(dead_code)]
     pub(super) fn resolve_template_type(&self) -> Result<TemplateType> {
-        self.prompt_template.parse().context("Invalid prompt template")
+        self.resolve_template_type_with_default(TemplateType::Instruct)
+    }
+
+    /// Resolve template type with custom default for auto-detection.
+    /// Used by chat mode to default to Llama3Chat for better UX.
+    pub(super) fn resolve_template_type_with_default(
+        &self,
+        auto_default: TemplateType,
+    ) -> Result<TemplateType> {
+        if self.prompt_template.eq_ignore_ascii_case("auto") {
+            // Auto-detection: Try to infer from model/tokenizer paths
+            let detected = self.auto_detect_template();
+
+            // For chat subcommand, prefer Llama3Chat over Raw for better UX
+            if matches!(detected, TemplateType::Raw) {
+                info!(
+                    "Auto-detection returned Raw, using {:?} for better chat experience",
+                    auto_default
+                );
+                Ok(auto_default)
+            } else {
+                info!("Auto-detected prompt template: {:?}", detected);
+                Ok(detected)
+            }
+        } else {
+            // Explicit template specified
+            self.prompt_template.parse().context("Invalid prompt template")
+        }
+    }
+
+    /// Auto-detect template type from model/tokenizer paths and metadata.
+    /// Priority: model path hints → tokenizer path hints → fallback to Instruct
+    fn auto_detect_template(&self) -> TemplateType {
+        // Check model path for hints
+        if let Some(model_path) = &self.model {
+            let path_str = model_path.to_string_lossy().to_lowercase();
+
+            if path_str.contains("llama") && path_str.contains("3") {
+                return TemplateType::Llama3Chat;
+            }
+
+            if path_str.contains("instruct") || path_str.contains("chat") {
+                return TemplateType::Instruct;
+            }
+        }
+
+        // Check tokenizer path for hints
+        if let Some(tok_path) = &self.tokenizer {
+            let path_str = tok_path.to_string_lossy().to_lowercase();
+
+            if path_str.contains("llama") && path_str.contains("3") {
+                return TemplateType::Llama3Chat;
+            }
+
+            if path_str.contains("instruct") {
+                return TemplateType::Instruct;
+            }
+        }
+
+        // Fallback: Instruct is safer than Raw for most models
+        TemplateType::Instruct
     }
 }
 
@@ -1604,6 +1692,7 @@ mod tests {
             logits_topk: 10,
             chat_history_limit: None,
             emit_receipt_dir: None,
+            receipt_path: None,
         };
 
         let gen_config = GenerationConfig {

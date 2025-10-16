@@ -69,6 +69,7 @@ fn create_generation_config(
         logits_tap_steps: 0,
         logits_topk: 0,
         logits_cb: None,
+        add_bos: false,
     }
 }
 
@@ -582,6 +583,7 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
         logits_tap_steps: 0,
         logits_topk: 0,
         logits_cb: None,
+        add_bos: false,
     };
 
     let result_with_early_stop =

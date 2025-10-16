@@ -32,29 +32,29 @@ fn detect_template(
     subcommand: &str,
 ) -> TemplateType {
     // Priority 1: GGUF chat_template metadata
-    if let Some(gguf) = gguf_metadata {
-        if let Some(template) = &gguf.chat_template {
-            // Detect LLaMA-3 special tokens
-            if template.contains("<|start_header_id|>") && template.contains("<|eot_id|>") {
-                return TemplateType::Llama3Chat;
-            }
-            // Detect generic instruct pattern
-            if template.contains("{% for message in messages %}") {
-                return TemplateType::Instruct;
-            }
+    if let Some(gguf) = gguf_metadata
+        && let Some(template) = &gguf.chat_template
+    {
+        // Detect LLaMA-3 special tokens
+        if template.contains("<|start_header_id|>") && template.contains("<|eot_id|>") {
+            return TemplateType::Llama3Chat;
+        }
+        // Detect generic instruct pattern
+        if template.contains("{% for message in messages %}") {
+            return TemplateType::Instruct;
         }
     }
 
     // Priority 2: Tokenizer family name heuristics
-    if let Some(tokenizer) = tokenizer_metadata {
-        if let Some(name) = &tokenizer.family_name {
-            let lower = name.to_ascii_lowercase();
-            if lower.contains("llama3") || lower.contains("llama-3") {
-                return TemplateType::Llama3Chat;
-            }
-            if lower.contains("instruct") || lower.contains("mistral") {
-                return TemplateType::Instruct;
-            }
+    if let Some(tokenizer) = tokenizer_metadata
+        && let Some(name) = &tokenizer.family_name
+    {
+        let lower = name.to_ascii_lowercase();
+        if lower.contains("llama3") || lower.contains("llama-3") {
+            return TemplateType::Llama3Chat;
+        }
+        if lower.contains("instruct") || lower.contains("mistral") {
+            return TemplateType::Instruct;
         }
     }
 

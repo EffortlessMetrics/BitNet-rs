@@ -132,6 +132,36 @@ fn test_help_format_stability() -> Result<()> {
 }
 
 #[test]
+fn test_help_footer_has_docs_and_issues_links() -> Result<()> {
+    use std::process::Command;
+
+    // Verify help footer has both Docs and Issues links by running CLI --help
+    let output = Command::new("cargo")
+        .args(&[
+            "run",
+            "-p",
+            "bitnet-cli",
+            "--no-default-features",
+            "--features",
+            "cpu,full-cli",
+            "--",
+            "--help",
+        ])
+        .output()
+        .expect("Failed to execute cargo run");
+
+    let help = String::from_utf8_lossy(&output.stdout);
+
+    assert!(help.contains("Docs: https://docs.rs/bitnet"), "Help text missing Docs link");
+    assert!(
+        help.contains("Issues: https://github.com/EffortlessMetrics/BitNet-rs/issues"),
+        "Help text missing Issues link"
+    );
+
+    Ok(())
+}
+
+#[test]
 #[ignore = "Manual inspection: Run with --ignored to see current help text"]
 fn test_print_current_help_text() -> Result<()> {
     // This test is ignored by default but can be run manually to inspect help text

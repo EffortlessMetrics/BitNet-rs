@@ -64,6 +64,8 @@ pub struct GenerationConfig {
     /// Parameters: (step, topk_tokens_and_logits, chosen_token_id)
     #[serde(skip)]
     pub logits_cb: Option<LogitsCallback>,
+    /// Whether to add BOS token during tokenization (default: false for pre-formatted prompts)
+    pub add_bos: bool,
 }
 
 impl std::fmt::Debug for GenerationConfig {
@@ -81,6 +83,7 @@ impl std::fmt::Debug for GenerationConfig {
             .field("logits_tap_steps", &self.logits_tap_steps)
             .field("logits_topk", &self.logits_topk)
             .field("logits_cb", &self.logits_cb.is_some())
+            .field("add_bos", &self.add_bos)
             .finish()
     }
 }
@@ -100,6 +103,7 @@ impl Default for GenerationConfig {
             logits_tap_steps: 0,
             logits_topk: 10,
             logits_cb: None,
+            add_bos: false, // Default to false for pre-formatted prompts
         }
     }
 }

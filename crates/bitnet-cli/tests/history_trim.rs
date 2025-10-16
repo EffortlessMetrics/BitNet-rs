@@ -43,12 +43,12 @@ impl ChatHistoryManager {
     }
 
     fn enforce_limit(&mut self) {
-        if let Some(max_turns) = self.limit {
-            if self.history.len() > max_turns {
-                // Drop oldest turns (FIFO)
-                let excess = self.history.len() - max_turns;
-                self.history.drain(0..excess);
-            }
+        if let Some(max_turns) = self.limit
+            && self.history.len() > max_turns
+        {
+            // Drop oldest turns (FIFO)
+            let excess = self.history.len() - max_turns;
+            self.history.drain(0..excess);
         }
     }
 
@@ -142,13 +142,8 @@ fn test_no_limit_specified() -> Result<()> {
     let history = manager.get_history();
 
     // Verify all turns are present
-    for i in 0..20 {
-        assert_eq!(
-            history[i].user_message,
-            format!("User {}", i),
-            "Turn {} should be preserved",
-            i
-        );
+    for (i, turn) in history.iter().enumerate().take(20) {
+        assert_eq!(turn.user_message, format!("User {}", i), "Turn {} should be preserved", i);
     }
 
     Ok(())
@@ -201,13 +196,8 @@ fn test_exact_limit_no_trimming() -> Result<()> {
 
     // No turns should be dropped
     let history = manager.get_history();
-    for i in 0..5 {
-        assert_eq!(
-            history[i].user_message,
-            format!("User {}", i),
-            "Turn {} should be preserved",
-            i
-        );
+    for (i, turn) in history.iter().enumerate().take(5) {
+        assert_eq!(turn.user_message, format!("User {}", i), "Turn {} should be preserved", i);
     }
 
     Ok(())
