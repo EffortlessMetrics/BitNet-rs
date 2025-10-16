@@ -12,6 +12,7 @@ pub mod gguf;
 pub mod kernel_recorder;
 pub mod layers;
 pub mod production_engine; // always available (sync parser)
+pub mod prompt_template; // Chat and instruct format templates
 pub mod receipts; // AC4: Inference receipt generation
 
 // Re-export GGUF types for easy access
@@ -45,6 +46,7 @@ pub use production_engine::{
     GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
     ProductionInferenceEngine, ThroughputMetrics, TimingMetrics,
 };
+pub use prompt_template::{PromptTemplate, TemplateType};
 pub use receipts::{
     AccuracyMetric, AccuracyTestResults, CrossValidation, DeterminismTestResults, InferenceReceipt,
     KVCacheTestResults, ModelInfo, PerformanceBaseline, RECEIPT_SCHEMA_VERSION, TestResults,

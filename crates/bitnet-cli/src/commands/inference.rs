@@ -57,7 +57,7 @@ use std::{
 use tokio::fs;
 use tracing::{debug, error, info, warn};
 
-use bitnet_inference::{InferenceEngine, SamplingConfig};
+use bitnet_inference::{InferenceEngine, SamplingConfig, TemplateType};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::Device;
@@ -173,9 +173,13 @@ pub struct InferenceCommand {
     #[arg(long, value_name = "TEXT")]
     pub system_prompt: Option<String>,
 
-    /// Chat template to use
+    /// Chat template to use (deprecated - use --prompt-template)
     #[arg(long, value_name = "TEMPLATE")]
     pub chat_template: Option<String>,
+
+    /// Prompt template: raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+    #[arg(long, value_name = "TEMPLATE", default_value = "raw")]
+    pub prompt_template: String,
 
     /// Path to tokenizer.json (HF) or tokenizer.model (SPM)
     #[arg(long, value_name = "PATH")]
@@ -552,6 +556,9 @@ impl InferenceCommand {
 
         pb.set_message("Initializing inference engine...");
 
+        // Validate model configuration
+        self.validate_model_config(model.config())?;
+
         // Create inference engine
         let model_arc: Arc<dyn bitnet_models::Model> = model.into();
         let tokenizer_arc: Arc<dyn Tokenizer> = tokenizer.clone();
@@ -562,6 +569,58 @@ impl InferenceCommand {
         pb.finish_with_message(style("✓ Model loaded successfully").green().to_string());
 
         Ok((engine, tokenizer))
+    }
+
+    /// Validate model configuration for common issues
+    fn validate_model_config(&self, config: &bitnet_common::BitNetConfig) -> Result<()> {
+        let model = &config.model;
+
+        // Check head dimensions consistency
+        let head_dim = model.hidden_size / model.num_heads;
+        let expected_hidden = model.num_heads * head_dim;
+
+        if expected_hidden != model.hidden_size {
+            warn!(
+                "Model config warning: d_model ({}) != n_heads ({}) * head_dim ({})",
+                model.hidden_size, model.num_heads, head_dim
+            );
+        }
+
+        // Check GQA/MQA configuration
+        let kv_heads = if model.num_key_value_heads == 0 {
+            model.num_heads // Default to MHA
+        } else {
+            model.num_key_value_heads
+        };
+
+        if model.num_heads % kv_heads != 0 {
+            warn!(
+                "Model config warning: num_heads ({}) not evenly divisible by num_kv_heads ({})",
+                model.num_heads, kv_heads
+            );
+        }
+
+        // Check RoPE configuration
+        if model.rope_theta.is_none() {
+            debug!("RoPE theta not specified, will use default (typically 10000.0)");
+        } else {
+            debug!("RoPE theta: {:?}", model.rope_theta);
+        }
+
+        if let Some(scaling) = &model.rope_scaling {
+            debug!(
+                "RoPE scaling enabled: type={}, factor={}",
+                scaling.scaling_type, scaling.factor
+            );
+        }
+
+        // Informational: vocabulary size
+        debug!("Model vocabulary size: {}", model.vocab_size);
+        debug!("Model hidden size: {}", model.hidden_size);
+        debug!("Model layers: {}", model.num_layers);
+        debug!("Model heads: {} (KV heads: {})", model.num_heads, kv_heads);
+
+        Ok(())
     }
 
     /// Determine device to use
@@ -631,11 +690,14 @@ impl InferenceCommand {
         let start_time = Instant::now();
         let config = self.create_generation_config()?;
 
+        // Apply prompt template
+        let formatted_prompt = self.apply_prompt_template(prompt)?;
+
         if self.stream {
-            self.run_streaming_inference(&mut engine, prompt, &config).await?;
+            self.run_streaming_inference(&mut engine, &formatted_prompt, &config).await?;
         } else {
             let result =
-                self.run_batch_inference(&mut engine, &[prompt.to_string()], &config).await?;
+                self.run_batch_inference(&mut engine, &[formatted_prompt], &config).await?;
             self.output_results(&result).await?;
         }
 
@@ -796,10 +858,13 @@ impl InferenceCommand {
         let tokenizer = engine.tokenizer();
 
         for prompt in batch {
+            // Apply prompt template to this batch item
+            let formatted_prompt = self.apply_prompt_template(prompt)?;
+
             // 1. Tokenization Phase: Convert text to token IDs
             // This measures pure tokenization overhead separate from model operations
             let t0 = Instant::now();
-            let prompt_ids = tokenizer.encode(prompt, !self.no_bos, false)?;
+            let prompt_ids = tokenizer.encode(&formatted_prompt, self.should_add_bos(), false)?;
             let t_tok_ms = t0.elapsed().as_secs_f64() * 1e3;
 
             // 2. Prefill Phase: Warm model cache with prompt tokens
@@ -1017,6 +1082,51 @@ impl InferenceCommand {
         Ok(())
     }
 
+    /// Apply prompt template to format user input
+    fn apply_prompt_template(&self, user_text: &str) -> Result<String> {
+        // Parse template type
+        let template_type: TemplateType =
+            self.prompt_template.parse().context("Invalid prompt template")?;
+
+        // Apply template
+        let formatted = template_type.apply(user_text, self.system_prompt.as_deref());
+
+        if self.verbose {
+            debug!("Applied prompt template {:?}", template_type);
+            debug!("Formatted prompt:\n{}", formatted);
+        }
+
+        Ok(formatted)
+    }
+
+    /// Get stop sequences (from CLI args + template defaults)
+    fn get_stop_sequences(&self) -> Vec<String> {
+        let mut stops = self.stop.clone();
+
+        // Add template default stop sequences if none specified
+        if stops.is_empty() {
+            if let Ok(template_type) = self.prompt_template.parse::<TemplateType>() {
+                stops.extend(template_type.default_stop_sequences());
+            }
+        }
+
+        stops
+    }
+
+    /// Check if BOS should be added based on template
+    fn should_add_bos(&self) -> bool {
+        if self.no_bos {
+            return false;
+        }
+
+        // Check template preference
+        if let Ok(template_type) = self.prompt_template.parse::<TemplateType>() {
+            template_type.should_add_bos()
+        } else {
+            true // Default to adding BOS
+        }
+    }
+
     /// Create generation configuration
     fn create_generation_config(&self) -> Result<GenerationConfig> {
         // Apply greedy decoding if requested
@@ -1037,7 +1147,7 @@ impl InferenceCommand {
         Ok(GenerationConfig {
             max_new_tokens: self.max_tokens,
             sampling,
-            stop_sequences: self.stop.clone(),
+            stop_sequences: self.get_stop_sequences(),
             stream: self.stream,
         })
     }

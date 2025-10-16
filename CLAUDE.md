@@ -18,7 +18,15 @@ cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 
 # Development workflow
 cargo run -p xtask -- download-model
-cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Test"
+
+# Inference with prompt templates
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template instruct \
+  --prompt "What is 2+2?" \
+  --max-tokens 32 \
+  --temperature 0.7
 
 # Model validation (3-stage: LayerNorm, projection, linguistic sanity)
 ./scripts/validate_gguf.sh <model.gguf> <tokenizer.json>  # Full validation pipeline
@@ -114,6 +122,69 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 - `docs/GPU_SETUP.md`: GPU configuration
 - `docs/environment-variables.md`: Runtime configuration
 - `docs/baselines/`: Model baselines and fingerprints
+
+## Inference Usage
+
+### Prompt Templates
+
+BitNet.rs supports multiple prompt templates for optimal model behavior:
+
+```bash
+# Raw (no formatting) - for completion-style models
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template raw \
+  --prompt "2+2=" \
+  --max-tokens 16
+
+# Instruct (Q&A format) - for instruction-tuned models
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template instruct \
+  --prompt "What is the capital of France?" \
+  --max-tokens 32
+
+# LLaMA-3 chat format - for LLaMA-3 models
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template llama3-chat \
+  --system-prompt "You are a helpful assistant" \
+  --prompt "Explain photosynthesis" \
+  --max-tokens 128 \
+  --temperature 0.7 \
+  --top-p 0.95
+```
+
+### Sampling Controls
+
+```bash
+# Greedy decoding (deterministic)
+--temperature 0.0 --greedy
+
+# Nucleus sampling (creative)
+--temperature 0.7 --top-p 0.95 --top-k 50 --repetition-penalty 1.05
+
+# Deterministic inference (reproducible)
+export BITNET_DETERMINISTIC=1
+export BITNET_SEED=42
+export RAYON_NUM_THREADS=1
+cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --greedy --seed 42
+```
+
+### Stop Sequences
+
+```bash
+# Manual stop sequences
+--stop "</s>" --stop "\n\nQ:"
+
+# Template defaults (automatic based on --prompt-template)
+# - raw: no stop sequences
+# - instruct: stops on "\n\nQ:", "\n\nHuman:"
+# - llama3-chat: stops on "<|eot_id|>", "<|end_of_text|>"
+```
 
 ## Common Workflows
 
