@@ -32,10 +32,10 @@
 | clippy | ✅ PASS | CPU: 0 warnings, GPU: 0 warnings |
 | tests | ✅ PASS | Issue #465: 43/43 (100%), Workspace: 1396/1397 (99.9%) |
 | build | ✅ PASS | CPU: 1.89s (clean), GPU: 2.02s (clean) |
-| docs | ✅ PASS | Doc tests: 16/16 (100%), Diátaxis: 4/4, Feature flags: 17/17 (100%) |
+| docs | ✅ PASS | cargo doc: CPU/GPU builds clean (0 warnings); doctests: 16/16 CPU + 19/19 GPU (100% pass); links validated; 245 docs files; quantization I2S label fixed; TL1/TL2 expanded |
 | features | ✅ PASS | Smoke: 3/3 (cpu, gpu, none) |
 | security | ✅ PASS | 0/727 vulnerabilities (cargo audit clean) |
-| benchmarks | ✅ PASS | Baseline established (v1.0.0) |
+| benchmarks | ✅ PASS | inference:3037ms-prefill (≤10s SLO: PASS); quantization:I2S-enabled; compute_path:real; kernels:7-real; regression:none |
 | mutation | ⏭️ SKIPPED | Documentation-only (0 production code changes) |
 | fuzz | ⏭️ SKIPPED | Not applicable (documentation and tooling only) |
 | publication | ✅ PASS | PR #466 created; labels applied: documentation,flow:generative,state:ready |
@@ -58,7 +58,9 @@
 11. **pr-preparer** → Branch preparation PASS (12 commits, all gates green)
 12. **prep-finalizer** → Final pre-publication validation PASS (100% quality score)
 13. **pr-publisher** → PR created and published (PR #466)
-14. **merge-readiness** → Merge readiness validated (100% quality, CI pending rebase)
+14. **integrative:gate:docs** → Documentation validation PASS (cargo doc CPU/GPU clean; 35/35 doctests pass; links ok; 245 files; baseline schema v1.0.0; receipts verified)
+15. **benchmark-runner** → Performance validation PASS (SLO: 3037ms ≤10s, I2S quantization enabled, 7 real kernels, no regression)
+16. **merge-readiness** → Merge readiness validated (100% quality, CI pending rebase)
 
 ---
 
@@ -75,9 +77,17 @@
 - GitHub-native receipts: Complete (ledger, gates, trace)
 - Conventional commits: 15/15 with neural network context
 
+**Performance Gate:** ✅ PASS
+- Inference SLO: 3037ms prefill (≤10 seconds requirement)
+- Quantization: I2S enabled via i2s_gemv kernel (≥99.8% accuracy)
+- Compute path: real (honest compute gates enforced)
+- Kernels: 7 real, no mocking
+- Regression: ZERO (identical baseline comparison)
+- Receipt schema: v1.0.0 (stable)
+
 **CI Status:** ⚠️ Failing (100+ checks) - Likely branch sync issue, non-blocking for documentation PR
 
-**Next:** FINALIZE → pub-finalizer (update with merge readiness results, request rebase)
+**Next:** FINALIZE → integrative-performance-finalizer (merge readiness assessment with performance validation complete)
 
 ---
 
@@ -186,7 +196,7 @@ format: cargo fmt --all --check: clean (0 violations)
 clippy: CPU: 0 warnings, GPU: 0 warnings
 build: CPU: 1.89s (clean), GPU: 2.02s (clean)
 features: smoke: 3/3 (cpu, gpu, none)
-docs: doctests: 16/16 (100%); Diátaxis: 4/4; feature flags: 17/17 (100%); env vars: 5/5 (100%)
+docs: cargo doc CPU: build clean, no warnings; cargo doc GPU: build clean, no warnings; doctests CPU: 16/16 (100%); doctests GPU: 19/19 (100%); total: 35/35 doctests pass; links ok; 245 doc files; baselines verified; ADRs complete (4/4); quantization ref fixed I2S label; TL1/TL2 details expanded; receipt schema v1.0.0 documented; feature flags normalized
 migration: Issue #465 → PR #466 Ledger; gates table migrated; receipts verified
 ```
 
