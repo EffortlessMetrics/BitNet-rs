@@ -41,8 +41,10 @@ fn test_ac1_readme_quickstart_block_present() -> Result<()> {
 
     // Check for quickstart section header
     assert!(
-        readme_content.contains("CPU Quickstart") || readme_content.contains("10-Line"),
-        "README.md missing CPU quickstart section header"
+        readme_content.contains("CLI Quickstart")
+            || readme_content.contains("CPU Quickstart")
+            || readme_content.contains("10-Line"),
+        "README.md missing quickstart section header"
     );
 
     // Check for required workflow steps

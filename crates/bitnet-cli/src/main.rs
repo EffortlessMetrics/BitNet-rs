@@ -22,6 +22,11 @@ mod score;
 
 use exit::*;
 
+/// Build the CLI command for external use (e.g., in tests)
+pub fn build_cli() -> clap::Command {
+    Cli::command()
+}
+
 fn compiled_features() -> &'static [&'static str] {
     &[
         #[cfg(feature = "cpu")]

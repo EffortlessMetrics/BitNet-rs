@@ -13,8 +13,10 @@ use tracing::{debug, error};
 
 use bitnet_inference::prompt_template::{ChatRole, ChatTurn};
 use bitnet_inference::{InferenceEngine, TemplateType};
+use tracing::info;
 
 use super::inference::InferenceCommand;
+use super::template_util::looks_like_llama3_chat;
 use crate::config::CliConfig;
 
 /// Performance metrics for chat session
@@ -70,9 +72,33 @@ impl InferenceCommand {
         // Load model and tokenizer
         let (mut engine, _tokenizer) = self.load_model_and_tokenizer(config).await?;
 
-        // Resolve prompt template with Llama3Chat as default for chat mode (better UX)
-        let template_type: TemplateType =
-            self.resolve_template_type_with_default(TemplateType::Llama3Chat)?;
+        // Resolve prompt template with Instruct as initial default, then promote to LLaMA-3 if appropriate
+        let tt = self.resolve_template_type_with_default(TemplateType::Instruct)?;
+        let template_type = if matches!(tt, TemplateType::Raw | TemplateType::Instruct) {
+            // Try to extract metadata from model path for safer LLaMA-3 detection
+            let mut tokenizer_name: Option<String> = None;
+            let mut chat_template: Option<String> = None;
+
+            if let Some(model_path) = &self.model {
+                // Try to read GGUF metadata
+                if let Ok(mmap) = bitnet_models::loader::MmapFile::open(model_path)
+                    && let Ok(reader) = bitnet_models::GgufReader::new(mmap.as_slice())
+                {
+                    tokenizer_name = reader.get_string_metadata("general.name");
+                    // Note: tokenizer.chat_template might not be present in all GGUFs
+                    chat_template = reader.get_string_metadata("tokenizer.chat_template");
+                }
+            }
+
+            if looks_like_llama3_chat(tokenizer_name.as_deref(), chat_template.as_deref()) {
+                info!("auto-detect: promoting to LLaMA-3 chat template");
+                TemplateType::Llama3Chat
+            } else {
+                tt
+            }
+        } else {
+            tt
+        };
 
         println!("{}", style("Chat ready!").bold().green());
         println!("Template: {}", style(format!("{:?}", template_type)).dim());
@@ -246,17 +272,25 @@ impl InferenceCommand {
         prompt: &str,
         config: &super::inference::GenerationConfig,
     ) -> Result<(String, usize)> {
+        // Clear kernel recorder before each turn to track per-turn kernels
+        if let Some(recorder) = engine.kernel_recorder() {
+            recorder.clear();
+        }
+
+        // Reset canonical token counter before generation
+        engine.reset_decoded_tokens();
+
         let engine_config = self.to_engine_config(config);
         let mut stream = engine
             .generate_stream_with_config(prompt, &engine_config)
             .context("Failed to start streaming generation")?;
 
         let mut full_response = String::new();
-        let mut token_count = 0usize;
 
         while let Some(chunk) = stream.next().await {
             let chunk = chunk.context("Streaming chunk error")?;
-            token_count += chunk.token_ids.len();
+            // Increment engine's canonical token counter
+            engine.inc_decoded_tokens_by(chunk.token_ids.len());
             full_response.push_str(&chunk.text);
             print!("{}", chunk.text);
 
@@ -270,12 +304,13 @@ impl InferenceCommand {
             }
         }
 
-        // Write standard receipt to ci/inference.json
-        if let Err(e) = self.write_receipt(engine, token_count).await {
+        // Write standard receipt to ci/inference.json using engine's canonical token count
+        let tokens_generated = engine.decoded_token_count();
+        if let Err(e) = self.write_receipt(engine, tokens_generated).await {
             debug!("Failed to write receipt: {}", e);
         }
 
-        Ok((full_response, token_count))
+        Ok((full_response, tokens_generated))
     }
 
     /// Show chat-specific help

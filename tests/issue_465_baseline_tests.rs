@@ -152,7 +152,7 @@ fn test_edge_case_invalid_schema_versions() -> Result<()> {
 
     for version in invalid_versions {
         let mut receipt = create_test_receipt("real", vec!["test_kernel".to_string()]);
-        receipt["version"] = serde_json::json!(version);
+        receipt["schema_version"] = serde_json::json!(version);
 
         let receipt_path = temp_dir.path().join(format!("version-{}.json", version));
         fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)
@@ -347,8 +347,8 @@ fn test_edge_case_kernel_count_limits() -> Result<()> {
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
     // Test kernel count exceeding limit (10,000)
-    // Testing with 101 (limit+1) for performance - actual limit is 10,000
-    let excessive_kernels: Vec<String> = (0..101).map(|i| format!("kernel_{}", i)).collect();
+    // Testing with 10,001 (limit+1) to validate enforcement
+    let excessive_kernels: Vec<String> = (0..10_001).map(|i| format!("kernel_{}", i)).collect();
     let receipt = create_test_receipt("real", excessive_kernels);
     let receipt_path = temp_dir.path().join("excessive-kernels.json");
     fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)

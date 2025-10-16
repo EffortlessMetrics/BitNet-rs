@@ -122,6 +122,7 @@ impl BatchProcessor {
                 repetition_penalty: 1.1,
                 seed: None,
                 stop_sequences: vec![],
+                stop_token_ids: vec![],
                 eos_token_id: None,
                 skip_special_tokens: true,
                 logits_tap_steps: 0,

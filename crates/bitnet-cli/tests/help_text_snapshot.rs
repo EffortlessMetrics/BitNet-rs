@@ -133,24 +133,9 @@ fn test_help_format_stability() -> Result<()> {
 
 #[test]
 fn test_help_footer_has_docs_and_issues_links() -> Result<()> {
-    use std::process::Command;
-
-    // Verify help footer has both Docs and Issues links by running CLI --help
-    let output = Command::new("cargo")
-        .args(&[
-            "run",
-            "-p",
-            "bitnet-cli",
-            "--no-default-features",
-            "--features",
-            "cpu,full-cli",
-            "--",
-            "--help",
-        ])
-        .output()
-        .expect("Failed to execute cargo run");
-
-    let help = String::from_utf8_lossy(&output.stdout);
+    // Verify help footer has both Docs and Issues links using direct CLI builder
+    let mut cmd = bitnet_cli::build_cli();
+    let help = cmd.render_help().to_string();
 
     assert!(help.contains("Docs: https://docs.rs/bitnet"), "Help text missing Docs link");
     assert!(

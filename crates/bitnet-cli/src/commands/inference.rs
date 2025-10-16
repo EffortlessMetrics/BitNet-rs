@@ -390,6 +390,7 @@ impl PrefillEngine for InferenceEngine {
             top_p: config.sampling.top_p,
             repetition_penalty: config.sampling.repetition_penalty,
             stop_sequences: config.stop_sequences.clone(),
+            stop_token_ids: vec![], // Token-level stops not used in PrefillEngine path
             seed: config.sampling.seed,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -759,6 +760,7 @@ impl InferenceCommand {
             top_p: config.sampling.top_p,
             repetition_penalty: config.sampling.repetition_penalty,
             stop_sequences: config.stop_sequences.clone(),
+            stop_token_ids: vec![], // TODO: Encode stop tokens for LLaMA-3 in future PR
             seed: config.sampling.seed,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -769,6 +771,35 @@ impl InferenceCommand {
         }
     }
 
+    /// Encode stop token strings to IDs for token-level stop checking.
+    /// Called with a tokenizer to populate stop_token_ids for LLaMA-3 <|eot_id|>.
+    #[allow(dead_code)] // Will be used in chat mode enhancements
+    pub(super) fn encode_stop_tokens(
+        &self,
+        tokenizer: &dyn Tokenizer,
+        mut config: bitnet_inference::GenerationConfig,
+    ) -> bitnet_inference::GenerationConfig {
+        // Detect LLaMA-3 and encode <|eot_id|> token if present
+        if let Ok(template_type) = self.resolve_template_type()
+            && matches!(template_type, TemplateType::Llama3Chat)
+        {
+            // Try to encode <|eot_id|> as a stop token
+            if let Ok(tokens) = tokenizer.encode("<|eot_id|>", false, false) {
+                // LLaMA-3 <|eot_id|> should be a single token
+                if tokens.len() == 1 {
+                    config.stop_token_ids.push(tokens[0]);
+                    debug!("Encoded LLaMA-3 stop token <|eot_id|> as ID {}", tokens[0]);
+                }
+            }
+        }
+
+        // Sort and deduplicate for efficient binary search in streaming loop
+        config.stop_token_ids.sort_unstable();
+        config.stop_token_ids.dedup();
+
+        config
+    }
+
     /// Run streaming inference
     async fn run_streaming_inference(
         &self,
@@ -776,6 +807,14 @@ impl InferenceCommand {
         prompt: &str,
         config: &GenerationConfig,
     ) -> Result<()> {
+        // Clear kernel recorder before generation to capture only this inference
+        if let Some(recorder) = engine.kernel_recorder() {
+            recorder.clear();
+        }
+
+        // Reset canonical token counter before generation
+        engine.reset_decoded_tokens();
+
         let engine_config = self.to_engine_config(config);
         let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
@@ -783,11 +822,11 @@ impl InferenceCommand {
         io::stdout().flush()?;
 
         let start_time = Instant::now();
-        let mut token_count = 0usize;
 
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
-            token_count += chunk.token_ids.len();
+            // Increment engine's canonical token counter
+            engine.inc_decoded_tokens_by(chunk.token_ids.len());
             print!("{}", chunk.text);
             io::stdout().flush()?;
         }
@@ -796,6 +835,7 @@ impl InferenceCommand {
 
         if self.metrics {
             let elapsed = start_time.elapsed();
+            let token_count = engine.decoded_token_count();
             let tokens_per_sec = if elapsed.as_secs_f64() > 0.0 {
                 token_count as f64 / elapsed.as_secs_f64()
             } else {
@@ -820,22 +860,31 @@ impl InferenceCommand {
         prompt: &str,
         config: &GenerationConfig,
     ) -> Result<String> {
+        // Clear kernel recorder before generation to capture only this inference
+        if let Some(recorder) = engine.kernel_recorder() {
+            recorder.clear();
+        }
+
+        // Reset canonical token counter before generation
+        engine.reset_decoded_tokens();
+
         let engine_config = self.to_engine_config(config);
         let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
         let mut collected = String::new();
-        let mut token_count = 0;
 
         while let Some(chunk) = stream.next().await {
             let chunk = chunk?;
-            token_count += chunk.token_ids.len();
+            // Increment engine's canonical token counter
+            engine.inc_decoded_tokens_by(chunk.token_ids.len());
             print!("{}", chunk.text);
             io::stdout().flush()?;
             collected.push_str(&chunk.text);
         }
 
         // Emit the standard receipt used by gates/baselines
-        if let Err(e) = self.write_receipt(engine, token_count).await {
+        let tokens_generated = engine.decoded_token_count();
+        if let Err(e) = self.write_receipt(engine, tokens_generated).await {
             warn!("failed to write receipt: {e}");
         }
 
@@ -866,7 +915,7 @@ impl InferenceCommand {
 
         // Build receipt JSON (matching xtask format)
         // Capture actual kernel IDs from engine telemetry
-        let kernels = if let Some(recorder) = engine.kernel_recorder() {
+        let mut kernels = if let Some(recorder) = engine.kernel_recorder() {
             recorder.snapshot()
         } else {
             // Fallback to placeholder kernels if no recorder attached
@@ -876,6 +925,20 @@ impl InferenceCommand {
                 "i2s_gemv".to_string(),
             ]
         };
+
+        // Dedup and cap kernel list to prevent bloat in receipts
+        // We record coarse kernel classes (i2s_gemv, tl1_lut_q) not individual calls
+        kernels.sort();
+        kernels.dedup();
+        const MAX_KERNEL_CLASSES: usize = 32;
+        if kernels.len() > MAX_KERNEL_CLASSES {
+            warn!(
+                "Kernel recorder has {} classes, truncating to {} for receipt",
+                kernels.len(),
+                MAX_KERNEL_CLASSES
+            );
+            kernels.truncate(MAX_KERNEL_CLASSES);
+        }
 
         let receipt = serde_json::json!({
             "schema_version": "1.0.0",
@@ -1003,6 +1066,9 @@ impl InferenceCommand {
         let tokenizer = engine.tokenizer();
 
         for prompt in batch {
+            // Clear kernel recorder before each batch item to track per-item kernels
+            // Note: This only works with InferenceEngine, not generic PrefillEngine trait
+            // For production receipts, we aggregate kernels across the entire batch
             // Apply prompt template to this batch item
             let formatted_prompt = self.apply_prompt_template(prompt)?;
 
@@ -1486,11 +1552,15 @@ impl InferenceCommand {
         if let Some(model_path) = &self.model {
             let path_str = model_path.to_string_lossy().to_lowercase();
 
+            // Positive detection: LLaMA-3
             if path_str.contains("llama") && path_str.contains("3") {
+                info!("Auto-detected LLaMA-3 from model path");
                 return TemplateType::Llama3Chat;
             }
 
+            // Positive detection: Instruct/Chat models
             if path_str.contains("instruct") || path_str.contains("chat") {
+                info!("Auto-detected Instruct template from model path");
                 return TemplateType::Instruct;
             }
         }
@@ -1500,15 +1570,19 @@ impl InferenceCommand {
             let path_str = tok_path.to_string_lossy().to_lowercase();
 
             if path_str.contains("llama") && path_str.contains("3") {
+                info!("Auto-detected LLaMA-3 from tokenizer path");
                 return TemplateType::Llama3Chat;
             }
 
             if path_str.contains("instruct") {
+                info!("Auto-detected Instruct template from tokenizer path");
                 return TemplateType::Instruct;
             }
         }
 
         // Fallback: Instruct is safer than Raw for most models
+        // Instruct adds Q&A formatting which works well for instruction-tuned models
+        info!("No specific template detected, defaulting to Instruct (safer than Raw)");
         TemplateType::Instruct
     }
 }

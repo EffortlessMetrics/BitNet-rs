@@ -57,6 +57,8 @@ BitNet.rs supports three main inference modes:
 | **Creative Completion** | `bitnet run --model model.gguf --tokenizer tokenizer.json --prompt "Explain photosynthesis" --max-tokens 128 --temperature 0.7 --top-p 0.95` | Nucleus sampling for natural text generation |
 | **Interactive Chat** | `bitnet chat --model model.gguf --tokenizer tokenizer.json` | REPL with auto-detected templates and streaming |
 
+**Template defaults:** The CLI now defaults to `--prompt-template auto`, which detects a suitable template from GGUF/HF metadata. To preserve legacy behavior, pass `--prompt-template raw`.
+
 **Note**: Use `--no-default-features --features cpu` for CPU-only builds, or `--no-default-features --features gpu` for CUDA acceleration.
 
 **CLI Interface Version**: 1.0.0 — Use `bitnet --interface-version` to check compatibility.
@@ -83,7 +85,7 @@ Generate, verify, and pin performance baselines:
 
 ```bash
 # Receipts: run → emit → verify
-export BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1
+export BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1
 cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic
 cargo run -p xtask -- verify-receipt ci/inference.json
 mkdir -p docs/baselines && cp ci/inference.json docs/baselines/$(date +%Y%m%d)-cpu.json

@@ -134,8 +134,10 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 
 BitNet.rs supports multiple prompt templates for optimal model behavior. The CLI automatically detects the appropriate template using:
 1. **Priority 1**: GGUF `chat_template` metadata (detects LLaMA-3 special tokens and generic instruct patterns)
-2. **Priority 2**: Tokenizer family name heuristics (detects llama3, mistral, instruct patterns)
-3. **Priority 3**: Fallback to Raw template
+2. **Priority 2**: Model/tokenizer path heuristics (detects llama3, instruct, chat patterns)
+3. **Priority 3**: Fallback to Instruct template (safer than Raw for most models)
+
+**Note**: As of v0.9.x, the default auto-detection fallback changed from `raw` to `instruct` for better out-of-box experience with instruction-tuned models. Use `--prompt-template raw` if you need raw completion behavior.
 
 You can override auto-detection with `--prompt-template`:
 

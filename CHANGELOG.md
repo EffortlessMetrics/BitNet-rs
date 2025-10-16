@@ -7,7 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (Unreleased)
+### Changed
+
+- **Prompt Template Auto-Detection Default** ([PR #467](https://github.com/EffortlessMetrics/BitNet-rs/pull/467)):
+  - Changed auto-detection fallback from `raw` to `instruct` template for better out-of-box experience with instruction-tuned models
+  - Auto-detection now logs template selection at `info` level for better visibility
+  - Use `--prompt-template raw` to explicitly request raw completion behavior if needed
+- **Kernel Recorder Receipt Improvements** ([PR #467](https://github.com/EffortlessMetrics/BitNet-rs/pull/467)):
+  - Kernel recorder now resets before each inference turn to track per-turn kernel usage
+  - Receipt kernel lists are now sorted, deduplicated, and capped at 32 entries to prevent bloat
+  - Documents that receipts track coarse kernel classes (e.g., `i2s_gemv`, `tl1_lut_q`) not individual calls
+- **Weight Mapper Code Quality Improvements** ([#209](https://github.com/EffortlessSteven/BitNet-rs/pull/209)):
+  - **Enhanced Pick Helper Function**: Refactored `pick` helper in `weight_mapper.rs` to return both key and tensor, eliminating code duplication
+  - **Streamlined Tensor Alias Resolution**: Simplified embedding and lm_head tensor alias handling with improved maintainability
+  - **Code Structure Optimization**: Enhanced internal helper functions while maintaining all existing functionality and backward compatibility
+  - **Comprehensive Validation**: All 62 tests in bitnet-models package pass, ensuring no functional regressions
+- **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):
+  - Remove tool-generated metadata files (`.crates.toml`, `.crates2.json`) from version control
+  - Commit `Cargo.lock` files for reproducible builds across environments
+  - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
+
+### Added
+
+- **Token-Level Stop Sequences** ([PR #467](https://github.com/EffortlessMetrics/BitNet-rs/pull/467)):
+  - Added `stop_token_ids` field to `GenerationConfig` for fast token-level stop checking
+  - Avoids expensive string decoding for common stop tokens like LLaMA-3's `<|eot_id|>`
+  - Falls back to string-based stop sequence matching for compatibility
+- **Enhanced CLI Help Text Testing** ([PR #467](https://github.com/EffortlessMetrics/BitNet-rs/pull/467)):
+  - Help footer tests now use direct CLI builder instead of subprocess for faster, more reliable testing
+  - Exposed `build_cli()` function in `bitnet-cli` for external test use
 
 - **CPU Forward Pass with Autoregressive Generation** ([#462](https://github.com/EffortlessSteven/BitNet-rs/issues/462)):
   - **CPU Forward Pass**: Complete autoregressive generation from BOS token through logits with device-aware CPU inference
@@ -156,19 +184,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - JSON output includes metadata when `--show-kv` is used
   - Safety limits to prevent excessive memory usage
 
-### Changed (Unreleased)
-
-- **Weight Mapper Code Quality Improvements** ([#209](https://github.com/EffortlessSteven/BitNet-rs/pull/209)):
-  - **Enhanced Pick Helper Function**: Refactored `pick` helper in `weight_mapper.rs` to return both key and tensor, eliminating code duplication
-  - **Streamlined Tensor Alias Resolution**: Simplified embedding and lm_head tensor alias handling with improved maintainability
-  - **Code Structure Optimization**: Enhanced internal helper functions while maintaining all existing functionality and backward compatibility
-  - **Comprehensive Validation**: All 62 tests in bitnet-models package pass, ensuring no functional regressions
-- **Cargo Configuration Cleanup** ([#113](https://github.com/EffortlessSteven/BitNet-rs/pull/113)):
-  - Remove tool-generated metadata files (`.crates.toml`, `.crates2.json`) from version control
-  - Commit `Cargo.lock` files for reproducible builds across environments
-  - Standardize GPU feature aliases in cargo config to use `gpu` instead of `cuda`
-
-### Fixed (Unreleased)
+### Fixed
 
 - **Code Quality and Security Improvements**:
   - Fixed critical PyO3 security vulnerability (RUSTSEC-2025-0020)
@@ -219,7 +235,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced error handling for device query failures
   - Enhanced test coverage for device information validation
 
-### Enhanced (Unreleased)
+### Enhanced
 
 - **Weight Mapper Model Compatibility Validation** ([#144](https://github.com/EffortlessSteven/BitNet-rs/pull/144)):
   - Enhanced `validate_model_compatibility()` to use weight mapper for GGUF tensor validation

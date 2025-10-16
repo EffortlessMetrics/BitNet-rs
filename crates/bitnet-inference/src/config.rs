@@ -50,6 +50,9 @@ pub struct GenerationConfig {
     pub repetition_penalty: f32,
     /// Stop sequences to end generation
     pub stop_sequences: Vec<String>,
+    /// Token IDs that trigger immediate stop (checked before string matching)
+    /// Useful for LLaMA-3 <|eot_id|> and other special tokens
+    pub stop_token_ids: Vec<u32>,
     /// Random seed for reproducible generation
     pub seed: Option<u64>,
     /// Whether to skip special tokens in output
@@ -77,6 +80,7 @@ impl std::fmt::Debug for GenerationConfig {
             .field("top_p", &self.top_p)
             .field("repetition_penalty", &self.repetition_penalty)
             .field("stop_sequences", &self.stop_sequences)
+            .field("stop_token_ids", &self.stop_token_ids)
             .field("seed", &self.seed)
             .field("skip_special_tokens", &self.skip_special_tokens)
             .field("eos_token_id", &self.eos_token_id)
@@ -97,6 +101,7 @@ impl Default for GenerationConfig {
             top_p: 0.9,
             repetition_penalty: 1.0,
             stop_sequences: vec![],
+            stop_token_ids: vec![],
             seed: None,
             skip_special_tokens: true,
             eos_token_id: None,
