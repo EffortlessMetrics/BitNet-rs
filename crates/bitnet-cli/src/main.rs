@@ -36,6 +36,9 @@ fn compiled_features() -> &'static [&'static str] {
     ]
 }
 
+/// CLI interface version (SemVer for CLI surface compatibility)
+const INTERFACE_VERSION: &str = "1.0.0";
+
 fn bitnet_version() -> &'static str {
     use std::sync::OnceLock;
     static VERSION_STRING: OnceLock<String> = OnceLock::new();
@@ -87,6 +90,10 @@ Examples:
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
+#[command(after_help = format!(
+    "CLI Interface Version: {}\nFor documentation, see: https://docs.rs/bitnet\nFor issues and feedback: https://github.com/anthropics/claude-code/issues",
+    INTERFACE_VERSION
+))]
 struct Cli {
     /// Configuration file path
     #[arg(short, long, value_name = "PATH", global = true)]
@@ -115,6 +122,10 @@ struct Cli {
     /// Write the effective configuration to a file and exit
     #[arg(long, value_name = "PATH")]
     save_config: Option<std::path::PathBuf>,
+
+    /// Print CLI interface version and exit
+    #[arg(long)]
+    interface_version: bool,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -326,6 +337,12 @@ async fn main() -> Result<()> {
     // Handle shell completions
     if let Some(shell) = cli.completions {
         generate_completions(shell);
+        return Ok(());
+    }
+
+    // Handle interface version flag
+    if cli.interface_version {
+        println!("{}", INTERFACE_VERSION);
         return Ok(());
     }
 

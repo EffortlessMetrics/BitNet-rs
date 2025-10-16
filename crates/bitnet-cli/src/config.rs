@@ -170,13 +170,14 @@ impl CliConfig {
 }
 
 /// Configuration builder for command-line usage
+#[derive(Default)]
 pub struct ConfigBuilder {
     config: CliConfig,
 }
 
 impl ConfigBuilder {
     pub fn new() -> Self {
-        Self { config: CliConfig::default() }
+        Self::default()
     }
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {

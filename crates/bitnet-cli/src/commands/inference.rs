@@ -1102,6 +1102,9 @@ impl InferenceCommand {
         let template_type: TemplateType =
             self.prompt_template.parse().context("Invalid prompt template")?;
 
+        // Always log template selection at info level for visibility
+        info!("Using prompt template: {:?}", template_type);
+
         // Apply template
         let formatted = template_type.apply(user_text, self.system_prompt.as_deref());
 

@@ -1,0 +1,80 @@
+BitNet CLI Help Text Baseline
+==============================
+Generated: 2025-10-16
+CLI Interface Version: 1.0.0
+Purpose: Golden snapshot for detecting accidental CLI interface changes
+
+========== CURRENT HELP TEXT ==========
+
+Test CLI wrapper for generating help text
+
+Usage: bitnet-cli [OPTIONS]
+
+Options:
+  -m, --model <PATH>                  Path to the model file
+      --model-format <FORMAT>         Model format (auto, gguf, safetensors) [default: auto]
+  -p, --prompt <TEXT>                 Input prompt (if not provided, interactive mode is used)
+      --input-file <PATH>             Input file containing prompts (one per line)
+  -o, --output <PATH>                 Output file for results
+  -d, --device <DEVICE>               Device to use for inference (cpu, cuda, auto)
+  -q, --quantization <TYPE>           Quantization type (i2s, tl1, tl2, auto)
+      --max-tokens <N>                Maximum number of tokens to generate (aliases: --max-new-tokens, --n-predict) [default: 512] [aliases: --max-new-tokens, --n-predict]
+      --temperature <TEMP>            Temperature for sampling (0.0 = greedy, higher = more random) [default: 0.7]
+      --top-k <K>                     Top-k sampling parameter
+      --top-p <P>                     Top-p (nucleus) sampling parameter
+      --repetition-penalty <PENALTY>  Repetition penalty [default: 1.1]
+      --seed <SEED>                   Random seed for reproducible generation
+      --greedy                        Enable greedy decoding (temperature=0, top_p=1, top_k=0)
+      --deterministic                 Force deterministic execution (single-threaded, deterministic ops)
+      --threads <N>                   Number of threads to use (default: all cores)
+      --stream                        Enable streaming output
+      --batch-size <SIZE>             Batch size for processing multiple prompts [default: 1]
+      --workers <N>                   Number of parallel workers for batch processing
+  -i, --interactive                   Enable interactive mode
+      --metrics                       Show performance metrics
+  -v, --verbose                       Enable verbose output
+      --format <FORMAT>               Output format (text, json, jsonl) [default: text]
+      --system-prompt <TEXT>          System prompt for chat models
+      --chat-template <TEMPLATE>      Chat template to use (deprecated - use --prompt-template)
+      --prompt-template <TEMPLATE>    Prompt template: raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format) [default: raw]
+      --tokenizer <PATH>              Path to tokenizer.json (HF) or tokenizer.model (SPM)
+      --no-bos                        Disable BOS insertion
+      --no-eos                        Disable EOS insertion
+      --stop <SEQ>                    Stop sequences (aliases: --stop-sequence, --stop_sequences) [aliases: --stop-sequence, --stop_sequences]
+      --timeout <SECONDS>             Timeout for inference (in seconds)
+      --dump-logits <N>               Dump top-k logits for first N decode steps (for testing)
+      --logits-topk <K>               Number of top logits to dump per step [default: 10]
+  -h, --help                          Print help
+
+========================================
+
+## Key CLI Flags Verified
+
+✅ **Flag Aliases**:
+- `--max-tokens` with aliases `--max-new-tokens`, `--n-predict`
+- `--stop` with aliases `--stop-sequence`, `--stop_sequences`
+
+✅ **Critical Flags**:
+- `--model`, `--prompt`, `--max-tokens`, `--temperature`
+- `--top-k`, `--top-p`, `--stop`, `--prompt-template`
+- `--tokenizer`, `--system-prompt`, `--greedy`, `--deterministic`
+- `--seed`, `--stream`, `--metrics`
+
+✅ **Template System**:
+- Prompt template flag present with description of types
+- Mentions raw, instruct, llama3-chat templates
+
+## Change Detection
+
+Any changes to this help text should be:
+1. **Intentional** - New flags or renamed flags must be documented
+2. **Backward Compatible** - Existing flags must remain or have aliases
+3. **Documented** - Changes must update CHANGELOG.md and release notes
+
+## Usage
+
+To verify help text hasn't changed accidentally:
+```bash
+cargo test -p bitnet-cli --test help_text_snapshot test_print_current_help_text -- --ignored --nocapture > /tmp/current-help.txt
+diff docs/cli-help-baseline.txt /tmp/current-help.txt
+```
