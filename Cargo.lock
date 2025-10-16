@@ -463,6 +463,7 @@ dependencies = [
  "criterion",
  "dirs 6.0.0",
  "half",
+ "humantime",
  "rand",
  "scopeguard",
  "serde",

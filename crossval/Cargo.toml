@@ -38,6 +38,7 @@ bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", features = ["spm"] }
 bitnet-ggml-ffi = { path = "../crates/bitnet-ggml-ffi" }
 scopeguard = "1.2.0"
 dirs = "6.0.0"
+humantime = "2.1.0"
 
 [dev-dependencies]
 criterion = { version = "0.7.0", features = ["html_reports"] }
@@ -70,6 +71,11 @@ required-features = ["ffi"]
 name = "iq2s_validation"
 path = "tests/iq2s_validation.rs"
 required-features = ["iq2s-ffi"]
+
+[[test]]
+name = "parity_bitnetcpp"
+path = "tests/parity_bitnetcpp.rs"
+required-features = ["crossval", "integration-tests"]
 
 [build-dependencies]
 bindgen = { version = "0.72.1", optional = true }
