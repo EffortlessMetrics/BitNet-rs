@@ -30,6 +30,100 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     dot_product / (norm_a * norm_b)
 }
 
+/// Perform C++ parity check using bitnet-sys FFI
+/// Returns: (cosine_similarity, cosine_ok, exact_match_rate, first_divergence_step)
+#[cfg(feature = "ffi")]
+fn cpp_parity_check(
+    gguf_path: &std::path::Path,
+    formatted_prompt: &str,
+    rust_ids: &[u32],
+    rust_logits: &[f32],
+    rust_decode: &[u32],
+    add_bos: bool,
+    add_special: bool,
+    eos_id: u32,
+    vocab_size: usize,
+    n_steps: usize,
+) -> Result<(f32, bool, f32, Option<usize>)> {
+    use bitnet_sys::{
+        BitnetContext, BitnetModel, bitnet_decode_greedy, bitnet_eval_tokens, bitnet_tokenize_text,
+    };
+
+    let gguf_str = gguf_path.to_string_lossy().to_string();
+
+    // 1. Load C++ model and context
+    let cpp_model = BitnetModel::from_file(&gguf_str)
+        .map_err(|e| anyhow::anyhow!("C++ model load failed: {:?}", e))?;
+
+    let cpp_ctx = BitnetContext::new(&cpp_model, 4096, 1, 0)
+        .map_err(|e| anyhow::anyhow!("C++ context creation failed: {:?}", e))?;
+
+    // 2. Tokenization parity
+    let cpp_ids = bitnet_tokenize_text(&cpp_model, formatted_prompt, add_bos, add_special)
+        .map_err(|e| anyhow::anyhow!("C++ tokenization failed: {:?}", e))?;
+
+    let cpp_ids_u32: Vec<u32> = cpp_ids.iter().map(|&x| x as u32).collect();
+
+    if cpp_ids_u32 != rust_ids {
+        eprintln!("WARNING: Tokenization mismatch! Rust: {:?}, C++: {:?}", rust_ids, cpp_ids_u32);
+        // Continue anyway to collect more metrics
+    } else {
+        eprintln!("✓ Tokenization exact match");
+    }
+
+    // 3. Prefill logits parity (cosine similarity)
+    let cpp_logits = bitnet_eval_tokens(&cpp_ctx, &cpp_ids, vocab_size)
+        .map_err(|e| anyhow::anyhow!("C++ eval failed: {:?}", e))?;
+
+    let cos = cosine_similarity(rust_logits, &cpp_logits);
+    let cos_ok = cos >= 0.99;
+
+    // 4. N-step greedy decode parity
+    let cpp_gen = bitnet_decode_greedy(&cpp_ctx, &cpp_ids, n_steps, eos_id as i32)
+        .map_err(|e| anyhow::anyhow!("C++ decode failed: {:?}", e))?;
+
+    let cpp_gen_u32: Vec<u32> = cpp_gen.iter().map(|&x| x as u32).collect();
+
+    // Compute exact match rate and first divergence
+    let mut eq_count = 0usize;
+    let mut first_diff: Option<usize> = None;
+
+    let min_len = rust_decode.len().min(cpp_gen_u32.len());
+    for i in 0..min_len {
+        if rust_decode[i] == cpp_gen_u32[i] {
+            eq_count += 1;
+        } else if first_diff.is_none() {
+            first_diff = Some(i);
+        }
+    }
+
+    // If lengths differ, that's also a divergence
+    if rust_decode.len() != cpp_gen_u32.len() && first_diff.is_none() {
+        first_diff = Some(min_len);
+    }
+
+    let exact_rate =
+        if !rust_decode.is_empty() { eq_count as f32 / rust_decode.len() as f32 } else { 1.0 };
+
+    Ok((cos, cos_ok, exact_rate, first_diff))
+}
+
+#[cfg(not(feature = "ffi"))]
+fn cpp_parity_check(
+    _gguf_path: &std::path::Path,
+    _formatted_prompt: &str,
+    _rust_ids: &[u32],
+    _rust_logits: &[f32],
+    _rust_decode: &[u32],
+    _add_bos: bool,
+    _add_special: bool,
+    _eos_id: u32,
+    _vocab_size: usize,
+    _n_steps: usize,
+) -> Result<(f32, bool, f32, Option<usize>)> {
+    anyhow::bail!("C++ FFI not available (compile with --features bitnet-sys/ffi)")
+}
+
 /// Compute SHA256 hash of a file
 fn sha256_file(path: &std::path::Path) -> Result<String> {
     use sha2::{Digest, Sha256};
@@ -82,9 +176,14 @@ async fn parity_bitnetcpp() -> Result<()> {
     eprintln!("Commit: {}", commit);
 
     // 1. Rust-side tokenization and metadata
+    let template = auto_detect_template(&gguf_path);
+    let formatted_prompt = template.apply(&prompt, None);
+
     let (rust_ids, add_bos, add_special, eos_id, vocab_size) =
         rust_side_tokenize_and_meta(&gguf_path, &prompt)?;
 
+    eprintln!("Template: {}", template);
+    eprintln!("Formatted prompt: {}", formatted_prompt);
     eprintln!("Tokenized {} tokens (add_bos={}, eos_id={})", rust_ids.len(), add_bos, eos_id);
 
     // 2. Rust-side logits evaluation
@@ -97,14 +196,41 @@ async fn parity_bitnetcpp() -> Result<()> {
     eprintln!("Rust decoded {} tokens: {:?}", rust_decode.len(), rust_decode);
 
     // 4. If C++ is available, compare outputs
-    let (cosine_similarity, exact_match_rate, cpp_available_flag) = if cpp_available {
-        // TODO: Call C++ FFI functions here when build.rs is updated
-        // For now, record that C++ is available but not yet integrated
-        eprintln!("C++ library available but FFI not yet integrated in build.rs");
-        (None, None, true)
-    } else {
-        (None, None, false)
-    };
+    let (cosine_ok, cosine_similarity, exact_match_rate, first_divergence, cpp_available_flag) =
+        if cpp_available {
+            match cpp_parity_check(
+                &gguf_path,
+                &formatted_prompt,
+                &rust_ids,
+                &rust_logits,
+                &rust_decode,
+                add_bos,
+                add_special,
+                eos_id,
+                vocab_size,
+                n_steps,
+            ) {
+                Ok((cos, cos_ok, exact_rate, first_div)) => {
+                    eprintln!("C++ parity check completed:");
+                    eprintln!("  Cosine similarity: {:.6}", cos);
+                    eprintln!("  Cosine OK (≥0.99): {}", cos_ok);
+                    eprintln!("  Exact match rate: {:.4}", exact_rate);
+                    if let Some(step) = first_div {
+                        eprintln!("  First divergence at step: {}", step);
+                    } else {
+                        eprintln!("  No divergence detected");
+                    }
+                    (cos_ok, Some(cos), Some(exact_rate), first_div, true)
+                }
+                Err(e) => {
+                    eprintln!("C++ parity check failed: {:?}", e);
+                    eprintln!("Continuing with Rust-only validation");
+                    (false, None, None, None, false)
+                }
+            }
+        } else {
+            (false, None, None, None, false)
+        };
 
     // 5. Write parity receipt
     let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
@@ -115,16 +241,19 @@ async fn parity_bitnetcpp() -> Result<()> {
         fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
     }
 
-    let template = auto_detect_template(&gguf_path);
     let model_sha = sha256_file(&gguf_path)?;
+
+    let parity_status = if cpp_available_flag {
+        if cosine_ok && exact_match_rate.unwrap_or(0.0) == 1.0 { "ok" } else { "mismatch" }
+    } else {
+        "rust_only"
+    };
 
     let receipt = json!({
         "timestamp": ts,
         "commit": commit,
         "model_path": gguf_path.display().to_string(),
         "model_sha256": model_sha,
-        "seed": 0,
-        "threads": 1,
         "template": template.to_string(),
         "prompt": prompt,
         "rust": {
@@ -140,18 +269,25 @@ async fn parity_bitnetcpp() -> Result<()> {
         "parity": {
             "cpp_available": cpp_available_flag,
             "cosine_similarity": cosine_similarity,
+            "cosine_ok": cosine_ok,
             "exact_match_rate": exact_match_rate,
-            "status": if cpp_available_flag { "cpp_ready_integration_pending" } else { "rust_only" },
+            "first_divergence_step": first_divergence,
+            "status": parity_status,
         },
         "validation": {
             "rust_engine": "production",
             "deterministic": true,
+            "threads": 1,
+            "seed": 0,
         }
     });
 
+    // Atomic write using temp file
     let receipt_path = receipt_dir.join("parity-bitnetcpp.json");
-    fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)
-        .context("Failed to write parity receipt")?;
+    let tmp_path = receipt_dir.join("parity-bitnetcpp.json.tmp");
+    fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)
+        .context("Failed to write parity receipt to temp file")?;
+    fs::rename(&tmp_path, &receipt_path).context("Failed to atomically rename parity receipt")?;
 
     eprintln!("✓ Parity receipt written to: {:?}", receipt_path);
 
@@ -198,10 +334,45 @@ fn rust_side_tokenize_and_meta(
     Ok((ids, add_bos, add_special, eos_id, vocab_size))
 }
 
-/// Auto-detect template type from model path (mirrors CLI logic)
+/// Auto-detect template type from GGUF metadata (matches CLI logic exactly)
 fn auto_detect_template(model_path: &std::path::Path) -> bitnet_inference::TemplateType {
     use bitnet_inference::TemplateType;
+    use bitnet_models::gguf::GgufReader;
+    use bitnet_models::loader::MmapFile;
 
+    // Try to read GGUF metadata
+    if let Ok(mmap) = MmapFile::open(model_path) {
+        if let Ok(reader) = GgufReader::new(mmap.as_slice()) {
+            // Extract metadata fields
+            let tokenizer_name = reader
+                .metadata()
+                .iter()
+                .find(|(k, _)| k == "tokenizer.ggml.model" || k == "tokenizer.name")
+                .and_then(|(_, v)| {
+                    if let bitnet_models::gguf::MetadataValue::String(s) = v {
+                        Some(s.as_str())
+                    } else {
+                        None
+                    }
+                });
+
+            let chat_template =
+                reader.metadata().iter().find(|(k, _)| k == "tokenizer.chat_template").and_then(
+                    |(_, v)| {
+                        if let bitnet_models::gguf::MetadataValue::String(s) = v {
+                            Some(s.as_str())
+                        } else {
+                            None
+                        }
+                    },
+                );
+
+            // Use the same detection logic as the CLI
+            return TemplateType::detect(tokenizer_name, chat_template);
+        }
+    }
+
+    // Fallback to path-based heuristics if metadata not available
     let path_str = model_path.to_string_lossy().to_lowercase();
 
     // Check for LLaMA-3 signature

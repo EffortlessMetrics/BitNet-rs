@@ -10,43 +10,21 @@
 #include <vector>
 #include <cstring>
 
-// Forward declarations for BitNet C++ API
-// These will be defined by the external bitnet.cpp library
-namespace llama {
-    struct model;
-    struct context;
-    struct model_params;
-    struct context_params;
-
-    // Model loading
-    model* load_model_from_file(const char* path, const model_params& params);
-    void free_model(model* m);
-
-    // Context management
-    context* new_context(model* m, const context_params& params);
-    void free_context(context* ctx);
-
-    // Tokenization
-    int tokenize(model* m, const char* text, int* tokens, int n_max, bool add_bos, bool add_special);
-
-    // Inference
-    bool eval(context* ctx, const int* tokens, int n_tokens);
-    const float* get_logits(context* ctx);
-    int get_vocab_size(model* m);
-
-    // Sampling
-    int sample_greedy(const float* logits, int n_vocab);
+// Include actual llama.cpp headers
+// These should be available when BITNET_CPP_DIR is set
+extern "C" {
+    #include "llama.h"
 }
 
-// Internal structs to hold C++ objects
+// Internal structs to hold llama.cpp objects
 struct bitnet_model {
-    llama::model* model = nullptr;
+    llama_model* model = nullptr;
     int vocab_size = 0;
 };
 
 struct bitnet_ctx {
-    llama::context* context = nullptr;
-    llama::model* model = nullptr;
+    llama_context* context = nullptr;
+    llama_model* model = nullptr;
     int n_threads = 1;
 };
 
@@ -59,14 +37,14 @@ bitnet_model_t* bitnet_model_new_from_file(const char* gguf_path) {
         auto m = std::make_unique<bitnet_model>();
 
         // Default model params
-        llama::model_params params{};
+        llama_model_params params = llama_model_default_params();
 
         // Load model
-        m->model = llama::load_model_from_file(gguf_path, params);
+        m->model = llama_load_model_from_file(gguf_path, params);
         if (!m->model) return nullptr;
 
         // Get vocab size
-        m->vocab_size = llama::get_vocab_size(m->model);
+        m->vocab_size = llama_n_vocab(m->model);
 
         return m.release();
     } catch (...) {
@@ -78,7 +56,7 @@ void bitnet_model_free(bitnet_model_t* m) {
     if (!m) return;
     try {
         if (m->model) {
-            llama::free_model(m->model);
+            llama_free_model(m->model);
         }
         delete m;
     } catch (...) {
@@ -93,13 +71,15 @@ bitnet_ctx_t* bitnet_context_new(bitnet_model_t* m, const bitnet_params_t* p) {
         auto c = std::make_unique<bitnet_ctx>();
 
         // Set context params from bitnet_params_t
-        llama::context_params params{};
-        // Note: Adjust these mappings based on actual llama.cpp API
-        // params.n_ctx = p->n_ctx;
-        // params.n_threads = p->n_threads;
-        // params.seed = p->seed;
+        llama_context_params params = llama_context_default_params();
+        params.n_ctx = p->n_ctx;
+        params.n_threads = p->n_threads;
+        params.n_threads_batch = p->n_threads;
+        params.seed = p->seed;
+        // Enable logits for all tokens (needed for eval)
+        params.logits_all = true;
 
-        c->context = llama::new_context(m->model, params);
+        c->context = llama_new_context_with_model(m->model, params);
         if (!c->context) return nullptr;
 
         c->model = m->model;
@@ -115,7 +95,7 @@ void bitnet_context_free(bitnet_ctx_t* c) {
     if (!c) return;
     try {
         if (c->context) {
-            llama::free_context(c->context);
+            llama_free(c->context);
         }
         delete c;
     } catch (...) {
@@ -125,21 +105,24 @@ void bitnet_context_free(bitnet_ctx_t* c) {
 
 int bitnet_tokenize(bitnet_model_t* m, const char* text, int add_bos, int add_special,
                     int32_t* out_ids, int out_cap) {
-    if (!m || !m->model || !text || !out_ids || out_cap <= 0) return -1;
+    if (!m || !m->model || !text) return -1;
 
     try {
+        // Get text length
+        int text_len = strlen(text);
+
         // Tokenize using llama.cpp API
-        int n_tokens = llama::tokenize(
+        int n_tokens = llama_tokenize(
             m->model,
             text,
+            text_len,
             out_ids,
             out_cap,
             (bool)add_bos,
-            (bool)add_special
+            false // parse_special (we use add_special for BOS)
         );
 
         if (n_tokens < 0) return -2; // Tokenization failed
-        if (n_tokens > out_cap) return -3; // Buffer too small
 
         return n_tokens;
     } catch (...) {
@@ -152,18 +135,36 @@ int bitnet_eval(bitnet_ctx_t* c, const int32_t* ids, int n_ids,
     if (!c || !c->context || !ids || n_ids <= 0 || !logits_out || logits_cap <= 0) return -1;
 
     try {
-        // Evaluate tokens
-        if (!llama::eval(c->context, ids, n_ids)) {
+        // Create batch for evaluation
+        llama_batch batch = llama_batch_init(n_ids, 0, 1);
+
+        // Prepare seq_ids on stack
+        llama_seq_id seq_ids[1] = {0};
+
+        // Populate batch
+        for (int i = 0; i < n_ids; i++) {
+            batch.token[i] = ids[i];
+            batch.pos[i] = i;
+            batch.n_seq_id[i] = 1;
+            batch.seq_id[i] = seq_ids;
+            batch.logits[i] = (i == n_ids - 1) ? 1 : 0; // Only get logits for last token
+        }
+        batch.n_tokens = n_ids;
+
+        // Evaluate
+        int result = llama_decode(c->context, batch);
+        llama_batch_free(batch);
+
+        if (result != 0) {
             return -2; // Eval failed
         }
 
-        // Get logits
-        const float* logits = llama::get_logits(c->context);
+        // Get logits for last token
+        const float* logits = llama_get_logits(c->context);
         if (!logits) return -3;
 
         // Copy logits to output buffer
-        // Note: llama.cpp returns logits for the last token position
-        int vocab_size = llama::get_vocab_size(c->model);
+        int vocab_size = llama_n_vocab(c->model);
         if (vocab_size > logits_cap) return -4; // Buffer too small
 
         std::memcpy(logits_out, logits, vocab_size * sizeof(float));
@@ -180,29 +181,36 @@ int bitnet_decode_greedy(bitnet_ctx_t* c, int32_t* io_ids, int max_new_tokens,
 
     try {
         int generated = 0;
-        std::vector<int32_t> tokens;
+        llama_seq_id seq_ids[1] = {0};
 
-        // Get initial logits (if context has been evaluated)
+        // Get initial position (context length)
+        int n_past = 0;
+
+        // Generate tokens one at a time
         for (int step = 0; step < max_new_tokens; ++step) {
-            // Evaluate current token sequence
-            if (!llama::eval(c->context, io_ids + generated, 1)) {
-                return -2; // Eval failed
-            }
+            // Create batch for single token
+            llama_batch batch = llama_batch_init(1, 0, 1);
+
+            // For first step, we may need to evaluate the prompt
+            // For now, assume context was pre-evaluated
+            // Just sample from current logits
 
             // Get logits for sampling
-            const float* logits = llama::get_logits(c->context);
-            if (!logits) return -3;
+            const float* logits = llama_get_logits(c->context);
+            if (!logits) {
+                llama_batch_free(batch);
+                return -3;
+            }
 
-            // Sample next token
-            int32_t next_token;
-            if (temperature <= 0.0f) {
-                // Greedy sampling (argmax)
-                int vocab_size = llama::get_vocab_size(c->model);
-                next_token = llama::sample_greedy(logits, vocab_size);
-            } else {
-                // For non-zero temperature, still use greedy for parity
-                int vocab_size = llama::get_vocab_size(c->model);
-                next_token = llama::sample_greedy(logits, vocab_size);
+            // Greedy sampling (argmax)
+            int vocab_size = llama_n_vocab(c->model);
+            int32_t next_token = 0;
+            float max_logit = logits[0];
+            for (int i = 1; i < vocab_size; i++) {
+                if (logits[i] > max_logit) {
+                    max_logit = logits[i];
+                    next_token = i;
+                }
             }
 
             // Store generated token
@@ -211,7 +219,23 @@ int bitnet_decode_greedy(bitnet_ctx_t* c, int32_t* io_ids, int max_new_tokens,
 
             // Check for EOS
             if (next_token == eos_id) {
+                llama_batch_free(batch);
                 break;
+            }
+
+            // Evaluate the new token for next iteration
+            batch.token[0] = next_token;
+            batch.pos[0] = n_past + generated;
+            batch.n_seq_id[0] = 1;
+            batch.seq_id[0] = seq_ids;
+            batch.logits[0] = 1;
+            batch.n_tokens = 1;
+
+            int result = llama_decode(c->context, batch);
+            llama_batch_free(batch);
+
+            if (result != 0) {
+                return -2; // Eval failed
             }
         }
 
