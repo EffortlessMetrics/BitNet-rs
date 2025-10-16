@@ -46,7 +46,7 @@ pub use production_engine::{
     GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,
     ProductionInferenceEngine, ThroughputMetrics, TimingMetrics,
 };
-pub use prompt_template::{PromptTemplate, TemplateType};
+pub use prompt_template::{ChatRole, ChatTurn, PromptTemplate, TemplateType};
 pub use receipts::{
     AccuracyMetric, AccuracyTestResults, CrossValidation, DeterminismTestResults, InferenceReceipt,
     KVCacheTestResults, ModelInfo, PerformanceBaseline, RECEIPT_SCHEMA_VERSION, TestResults,
