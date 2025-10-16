@@ -107,6 +107,34 @@ cargo build --features crossval -p bitnet-crossval --release
 
 ## Running Tests
 
+### BitNet.cpp Parity Harness
+
+The comprehensive parity harness validates Rust implementation against Microsoft's BitNet C++ reference:
+
+```bash
+# Set environment variables
+export CROSSVAL_GGUF=/path/to/model.gguf
+export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp
+
+# Run parity test (with C++ comparison)
+cargo test -p crossval --features crossval,integration-tests parity_bitnetcpp -- --nocapture
+
+# Rust-only mode (skips C++ comparison if BITNET_CPP_DIR not set)
+unset BITNET_CPP_DIR
+cargo test -p crossval --features crossval,integration-tests parity_bitnetcpp -- --nocapture
+
+# Custom prompt for testing
+export CROSSVAL_PROMPT="Explain quantum entanglement in simple terms."
+cargo test -p crossval --features crossval,integration-tests parity_bitnetcpp -- --nocapture
+```
+
+**Receipt Output**: The parity test writes a JSON receipt to `docs/baselines/YYYY-MM-DD/parity-bitnetcpp.json` containing:
+- Model SHA256 fingerprint
+- Tokenization metadata (BOS/EOT/vocab size)
+- Rust inference outputs (logits, decoded tokens)
+- C++ parity metrics (cosine similarity, exact match rate) when available
+- Validation flags (deterministic execution, production engine)
+
 ### All Parity Tests
 
 ```bash
@@ -197,6 +225,22 @@ find $HOME/.cache/bitnet_cpp/build -name "*.so" -o -name "*.dylib"
 # - libggml.so / libggml.dylib
 ```
 
+### Parity Harness Issues
+
+**C++ Shim Compilation Errors:**
+- Ensure `BITNET_CPP_DIR` points to a complete BitNet C++ build directory
+- Check that `$BITNET_CPP_DIR/include` and `$BITNET_CPP_DIR/3rdparty/llama.cpp/include` exist
+- Verify C++17 compiler is available (`g++ --version` or `clang++ --version`)
+
+**Platform-Specific Linker Issues:**
+- **Linux**: Ensure `libstdc++`, `libdl`, `libpthread` are available
+- **macOS**: Ensure Xcode Command Line Tools installed for `libc++`
+- **Runtime library path**: The build uses RPATH; if you still get "library not found", check `LD_LIBRARY_PATH` (Linux) or `DYLD_LIBRARY_PATH` (macOS)
+
+**Parity Test Skipping:**
+- If test skips with "CROSSVAL_GGUF not set", export the model path
+- If test skips with "C++ library available but FFI not yet integrated", this is expected until C++ comparison is fully wired
+
 ### Parity Failures
 
 If tests show differences:
@@ -215,6 +259,10 @@ RUST_BACKTRACE=1 cargo test --features crossval -p bitnet-crossval \
 # Check just tokenization
 cargo test --features crossval -p bitnet-crossval \
   test_tokenization_parity -- --nocapture
+
+# Run parity harness with debug output
+RUST_BACKTRACE=1 cargo test -p crossval --features crossval,integration-tests \
+  parity_bitnetcpp -- --nocapture
 ```
 
 ### Clean Rebuild

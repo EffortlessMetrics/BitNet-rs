@@ -30,6 +30,27 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     dot_product / (norm_a * norm_b)
 }
 
+/// Compute SHA256 hash of a file
+fn sha256_file(path: &std::path::Path) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+
+    let mut file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open file for hashing: {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 1 << 20]; // 1MB buffer
+
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 #[tokio::test]
 async fn parity_bitnetcpp() -> Result<()> {
     // Check if CROSSVAL_GGUF is set; skip if not
@@ -95,11 +116,13 @@ async fn parity_bitnetcpp() -> Result<()> {
     }
 
     let template = auto_detect_template(&gguf_path);
+    let model_sha = sha256_file(&gguf_path)?;
+
     let receipt = json!({
         "timestamp": ts,
         "commit": commit,
         "model_path": gguf_path.display().to_string(),
-        "model_sha256": "<computed-at-runtime>", // TODO: Compute model hash
+        "model_sha256": model_sha,
         "seed": 0,
         "threads": 1,
         "template": template.to_string(),

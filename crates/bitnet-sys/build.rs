@@ -61,6 +61,9 @@ fn main() {
         // Link against the C++ implementation - fail on error
         link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
 
+        // Compile the C++ shim
+        compile_cpp_shim(&cpp_dir).expect("Failed to compile C++ shim");
+
         // Generate bindings - fail on error
         generate_bindings(&cpp_dir)
             .expect("Failed to generate FFI bindings from Microsoft BitNet headers");
@@ -139,6 +142,58 @@ fn link_cpp_implementation(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Err
         println!("cargo:rustc-link-lib=dylib=msvcrt");
     }
 
+    Ok(())
+}
+
+#[cfg(feature = "ffi")]
+fn compile_cpp_shim(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    use std::path::PathBuf;
+
+    let shim_cc = PathBuf::from("csrc/bitnet_c_shim.cc");
+
+    if !shim_cc.exists() {
+        return Err(format!(
+            "C++ shim source not found: {}\n\
+             Expected location: crates/bitnet-sys/csrc/bitnet_c_shim.cc",
+            shim_cc.display()
+        )
+        .into());
+    }
+
+    eprintln!("bitnet-sys: Compiling C++ shim from {}", shim_cc.display());
+
+    let build_dir = cpp_dir.join("build");
+
+    // Possible include paths for llama.cpp headers
+    let possible_include_paths = vec![
+        cpp_dir.join("3rdparty/llama.cpp/include"),
+        cpp_dir.join("3rdparty/llama.cpp/ggml/include"),
+        cpp_dir.join("include"),
+        cpp_dir.join("src"),
+        build_dir.join("3rdparty/llama.cpp/include"),
+        build_dir.join("3rdparty/llama.cpp/ggml/include"),
+        PathBuf::from("include"), // Local bitnet_c.h
+    ];
+
+    let mut builder = cc::Build::new();
+    builder
+        .cpp(true)
+        .file(&shim_cc)
+        .flag_if_supported("-std=c++17")
+        .flag_if_supported("-fPIC")
+        .warnings(false); // Suppress warnings from third-party headers
+
+    // Add all existing include paths
+    for include_path in &possible_include_paths {
+        if include_path.exists() {
+            builder.include(include_path);
+        }
+    }
+
+    // Compile the shim
+    builder.compile("bitnet_c_shim");
+
+    eprintln!("bitnet-sys: C++ shim compiled successfully");
     Ok(())
 }
 
@@ -242,5 +297,50 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     std::fs::write(&bindings_path, fixed_content)?;
 
     eprintln!("bitnet-sys: Generated C++ bindings successfully");
+    Ok(())
+}
+
+#[cfg(feature = "ffi")]
+fn compile_cpp_shim(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    // Include dirs (adjust if your headers live elsewhere)
+    let include_dir = cpp_dir.join("include");
+    let thirdparty_llama = cpp_dir.join("3rdparty").join("llama.cpp").join("include");
+
+    let mut build = cc::Build::new();
+    build
+        .cpp(true)
+        .warnings(false)
+        .flag_if_supported("-std=c++17")
+        .include("include")          // our C ABI header dir (bitnet_c.h)
+        .include(&include_dir);
+
+    if thirdparty_llama.exists() {
+        build.include(&thirdparty_llama);
+    }
+
+    // Compile our C++ shim forwarder
+    build.file("csrc/bitnet_c_shim.cc");
+
+    // Platform link flags
+    #[cfg(target_os = "linux")]
+    {
+        println!("cargo:rustc-link-lib=stdc++");
+        println!("cargo:rustc-link-lib=dl");
+        println!("cargo:rustc-link-lib=pthread");
+    }
+    #[cfg(target_os = "macos")]
+    {
+        println!("cargo:rustc-link-lib=c++");
+        // If you rely on Accelerate/vecLib, link here:
+        // println!("cargo:rustc-link-lib=framework=Accelerate");
+    }
+    #[cfg(target_os = "windows")]
+    {
+        // cc handles MSVC runtime; if you need extra libs, add them here
+        // e.g., println!("cargo:rustc-link-lib=User32");
+    }
+
+    build.compile("bitnet_c_shim");
+    eprintln!("bitnet-sys: Compiled C++ shim successfully");
     Ok(())
 }
