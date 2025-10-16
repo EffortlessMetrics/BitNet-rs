@@ -17,7 +17,10 @@
 
 **Routing:** **NEXT → pr-merge-prep** (final freshness re-check and merge preparation)
 
-**Rationale:** PR #466 fully meets all BitNet.rs neural network inference standards and integrative flow requirements. Comprehensive validation confirms zero production code changes, zero performance regressions, and complete documentation compliance. All quality gates green with comprehensive neural network evidence.
+**Rationale:** PR #466 fully meets all BitNet.rs neural network inference standards and
+integrative flow requirements. Comprehensive validation confirms zero production code changes,
+zero performance regressions, and complete documentation compliance. All quality gates green
+with comprehensive neural network evidence.
 
 ---
 
@@ -26,6 +29,7 @@
 ### All Integrative Gates: 9/9 PASS ✅
 
 <!-- gates:start -->
+
 | Gate | Status | Evidence |
 |------|--------|----------|
 | freshness | ✅ PASS | base up-to-date @1f7dbd0; 0 commits behind main |
@@ -37,6 +41,7 @@
 | policy | ✅ PASS | neural network compliance validated; I2S ≥99.8%, schema v1.0.0, honest compute |
 | throughput | ✅ PASS | 0% regression; inference: 3037ms ≤10s SLO; quantization: I2S enabled; kernels: 7 real |
 | docs | ✅ PASS | doctests: 35/35 (16 CPU + 19 GPU); cargo doc CPU/GPU clean; links validated; 245 files |
+
 <!-- gates:end -->
 
 ---
@@ -46,11 +51,13 @@
 ### I2_S Quantization Compliance ✅
 
 **Accuracy Requirements:**
+
 - Target: ≥99.8% vs FP32 reference
 - Status: ✅ VALIDATED (I2S kernel in execution path)
 - Evidence: i2s_gemv kernel present in receipt
 
 **CPU Performance Baseline:**
+
 - Model: Microsoft BitNet B1.58 (2B parameters)
 - Backend: CPU (AVX2/AVX-512/NEON)
 - Prefill: 3,037ms (1 token, deterministic)
@@ -58,6 +65,7 @@
 - Margin: 69.6% under budget
 
 **Kernel Execution (7 Real Kernels):**
+
 1. `embedding_lookup` - Token embedding retrieval
 2. `prefill_forward` - Prefill phase computation
 3. `i2s_gemv` - I2S quantized matrix-vector multiplication
@@ -69,6 +77,7 @@
 ### Cross-Validation Status ✅
 
 **Receipt Schema v1.0.0 Compliance:**
+
 - Schema version: ✅ 1.0.0 (stability commitment)
 - Compute path: ✅ `real` (honest compute gates enforced)
 - Backend: ✅ `cpu`
@@ -77,6 +86,7 @@
 - Kernel hygiene: ✅ All valid prefixes, length ≤128, count ≤10K
 
 **Rust vs C++ Parity:**
+
 - Baseline established: docs/baselines/20251015-cpu.json
 - Tolerance: ±5% (per ADR-004)
 - Cross-validation framework: Available (crossval feature)
@@ -85,17 +95,20 @@
 ### Performance SLO Compliance ✅
 
 **Inference Latency:**
+
 - Requirement: ≤10 seconds for standard BitNet models (2B-3B params)
 - Measurement: 3.037 seconds (prefill, 1 token, CPU, deterministic)
 - Status: ✅ PASS (69.6% under budget)
 
 **Quantization Accuracy:**
+
 - I2S: ≥99.8% (validated via kernel execution)
 - TL1: ≥99.6% (documented, not tested in this PR)
 - TL2: ≥99.7% (documented, not tested in this PR)
 - Status: ✅ PASS (I2S in use, meets ≥99% requirement)
 
 **Throughput Metrics:**
+
 - Tokens/sec: 0.0 (single token generation for baseline)
 - Quantization ops/sec: Not directly measured (kernel execution confirmed)
 - Regression: ✅ 0% (identical baseline comparison)
@@ -103,6 +116,7 @@
 ### GGUF Compatibility ✅
 
 **Model Validation:**
+
 - Model: microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 - Format: GGUF (ggml format metadata)
 - Quantization: I2_S (2-bit signed, per-token)
@@ -110,6 +124,7 @@
 - Metadata consistency: ✅ Valid (7 kernels executed)
 
 **Architecture Validation:**
+
 - Vocab: 128,256 tokens
 - Hidden: 2,560 dimensions
 - Heads: 20 attention heads
@@ -123,18 +138,21 @@
 ### Device-Aware Validation ✅
 
 **CPU Validation:**
+
 - Build: ✅ PASS (32.34s clean, 0 warnings)
 - Tests: ✅ PASS (CPU feature tests all pass)
 - Inference: ✅ PASS (3037ms prefill, 7 real kernels)
 - SIMD: ✅ AVAILABLE (AVX2/AVX-512/NEON detected)
 
 **GPU Validation:**
+
 - Build: ✅ PASS (GPU feature compiles clean)
 - Tests: ✅ PASS (GPU feature tests all pass)
 - Doctests: ✅ PASS (19 GPU-specific doctests)
 - Fallback: ✅ VALIDATED (CPU path working, GPU runtime not required)
 
 **Feature Gate Compliance:**
+
 - Pattern: `--no-default-features --features cpu|gpu`
 - Default features: ✅ EMPTY (BitNet.rs architecture requirement)
 - Documentation: ✅ 100% compliance (14 tests validate)
@@ -147,6 +165,7 @@
 ### Performance Regression Test: 0% Delta ✅
 
 **Baseline** (docs/baselines/20251015-cpu.json, 2025-10-15T19:41:18Z):
+
 ```json
 {
   "backend": "cpu",
@@ -163,6 +182,7 @@
 ```
 
 **Current** (ci/inference.json, 2025-10-16T05:07:45Z):
+
 ```json
 {
   "backend": "cpu",
@@ -179,6 +199,7 @@
 ```
 
 **Regression Test Results:**
+
 | Field | Baseline | Current | Delta | Status |
 |-------|----------|---------|-------|--------|
 | backend | cpu | cpu | 0% | ✅ PASS |
@@ -190,35 +211,35 @@
 | tokens_per_second | 0.0 | 0.0 | 0% | ✅ PASS |
 | **Overall** | Stable | Stable | **0%** | **✅ NO REGRESSIONS** |
 
-**Conclusion:** Identical kernel execution path, receipt structure, and performance characteristics. ZERO performance degradation detected.
+**Conclusion:** Identical kernel execution path, receipt structure, and performance
+characteristics. ZERO performance degradation detected.
 
 ### Compute Path Impact: ZERO ✅
 
 **File Analysis (148 files changed, +20,320/-180):**
+
 - Documentation: 102 files (72% of changes)
-  * README updates (AC1, AC2, AC9)
-  * Specification documents (3,416 lines)
-  * Architecture decision records (4 ADRs, 930 lines)
-  * Baseline establishment (27 lines)
-
+  - README updates (AC1, AC2, AC9)
+  - Specification documents (3,416 lines)
+  - Architecture decision records (4 ADRs, 930 lines)
+  - Baseline establishment (27 lines)
 - Test infrastructure: 35 files (25% of changes)
-  * Test fixtures (1,526 lines)
-  * Test utilities (2,174 lines)
-  * CI receipts (1,950 lines)
-
+  - Test fixtures (1,526 lines)
+  - Test utilities (2,174 lines)
+  - CI receipts (1,950 lines)
 - Configuration: 32 files (5% of changes)
-  * CI workflows
-  * GitHub templates
-  * Cargo manifests
-
+  - CI workflows
+  - GitHub templates
+  - Cargo manifests
 - **Production code changes: 5 files (0% neural network impact)**
-  * Zero modifications to inference algorithms
-  * Zero modifications to quantization kernels
-  * Zero modifications to GPU acceleration
-  * Zero modifications to memory management
-  * Only test infrastructure and documentation
+  - Zero modifications to inference algorithms
+  - Zero modifications to quantization kernels
+  - Zero modifications to GPU acceleration
+  - Zero modifications to memory management
+  - Only test infrastructure and documentation
 
 **Compute Path Components (All SAFE):**
+
 | Component | Change | Impact | Status |
 |-----------|--------|--------|--------|
 | Inference algorithm | NONE | Zero | ✅ SAFE |
@@ -257,6 +278,7 @@
 ### Security Validation: 0 CVEs ✅
 
 **Cargo Audit:**
+
 ```bash
 cargo audit
 # Result: 0/727 vulnerabilities
@@ -268,6 +290,7 @@ cargo audit
 ```
 
 **Unsafe Code Analysis:**
+
 - New unsafe blocks: 0
 - Existing unsafe blocks: Not modified
 - Memory safety: ✅ All new code safe
@@ -276,12 +299,14 @@ cargo audit
 ### Code Quality: Clean ✅
 
 **Format Validation:**
+
 ```bash
 cargo fmt --all --check
 # Result: Clean (0 violations)
 ```
 
 **Clippy Validation:**
+
 ```bash
 cargo clippy --all-targets --all-features -- -D warnings
 # CPU: 0 warnings (7 auto-fixes applied in triage)
@@ -290,6 +315,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 ```
 
 **Build Validation:**
+
 ```bash
 # CPU feature
 cargo build --workspace --no-default-features --features cpu
@@ -311,6 +337,7 @@ cargo build --workspace --no-default-features --features crossval
 ### Documentation Validation: 245 Files ✅
 
 **Documentation Build:**
+
 ```bash
 # CPU documentation
 cargo doc --workspace --no-default-features --features cpu
@@ -322,6 +349,7 @@ cargo doc --workspace --no-default-features --features gpu
 ```
 
 **Link Validation:**
+
 - Documentation files: 245 validated
 - Internal links: 89+ verified
 - External links: All accessible
@@ -329,6 +357,7 @@ cargo doc --workspace --no-default-features --features gpu
 - Baseline receipts: All files present
 
 **Standards Compliance:**
+
 - Feature flags: ✅ cpu, gpu, ffi, crossval all documented
 - Quantization: ✅ I2_S ≥99.8%, real kernel documentation
 - API: ✅ All public surfaces documented with examples
@@ -417,7 +446,8 @@ cargo doc --workspace --no-default-features --features gpu
 ### Commit Analysis: 22 Commits ✅
 
 **Recent Commits (Top 5):**
-```
+
+```text
 44b1d61d ci(receipts): add integrative:gate:docs check run for PR #466
 85c30912 docs(integrative:gate:docs): comprehensive documentation validation for PR #466
 710f067a chore(triage): fix clippy violations and feature gate errors (integrative gate)
@@ -426,6 +456,7 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 ```
 
 **Conventional Commit Compliance:**
+
 - ✅ All commits use conventional format
 - ✅ Prefixes: spec:, receipts:, test:, feat:, docs:, fix:, chore:, ci:
 - ✅ Neural network context in commit messages (CPU baseline, I2S quantization, receipt verification)
@@ -433,6 +464,7 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 - ✅ Clear progression through generative → integrative flow
 
 **Commit Quality:**
+
 - Clear, descriptive messages
 - Atomic changes (one concern per commit)
 - Proper scoping (crate/module prefixes)
@@ -469,7 +501,14 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 <!-- decision:start -->
 **State:** ✅ **ready**
 
-**Why:** All 9 required integrative gates PASS; comprehensive neural network evidence validated; inference: 3037ms ≤10s SLO (69.6% under budget); quantization: I2S ≥99.8% >99% requirement; throughput: 0% regression (identical baseline); crossval: receipt schema v1.0.0 stable; tests: 484/484 pass (100%); security: 0/727 vulnerabilities; docs: 35/35 doctests pass; format/clippy: clean; build: all features compile; honest compute: 7 real kernel IDs, compute_path="real"; GGUF: compatible (kernel execution successful); zero production code impact (documentation-only); AC coverage: 11/12 automated (91.7%); GitHub-native receipts: complete
+**Why:** All 9 required integrative gates PASS; comprehensive neural network evidence
+validated; inference: 3037ms ≤10s SLO (69.6% under budget); quantization: I2S ≥99.8% >99%
+requirement; throughput: 0% regression (identical baseline); crossval: receipt schema v1.0.0
+stable; tests: 484/484 pass (100%); security: 0/727 vulnerabilities; docs: 35/35 doctests
+pass; format/clippy: clean; build: all features compile; honest compute: 7 real kernel IDs,
+compute_path="real"; GGUF: compatible (kernel execution successful); zero production code
+impact (documentation-only); AC coverage: 11/12 automated (91.7%); GitHub-native receipts:
+complete
 
 **Next:** **NEXT → pr-merge-prep** (final freshness re-check and merge preparation)
 <!-- decision:end -->
@@ -477,6 +516,7 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 ### Rationale
 
 **All Required Gates PASS:**
+
 1. ✅ Freshness: Base up-to-date @1f7dbd0
 2. ✅ Format: 0 violations
 3. ✅ Clippy: 0 warnings (7 auto-fixes applied)
@@ -488,6 +528,7 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 9. ✅ Docs: 35/35 doctests pass
 
 **Neural Network Standards Met:**
+
 - ✅ I2S quantization: ≥99.8% accuracy (validated)
 - ✅ Inference latency: 3037ms ≤10s SLO (69.6% under budget)
 - ✅ Throughput: 0% regression (identical baseline)
@@ -497,6 +538,7 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 - ✅ Device-aware: CPU/GPU validation complete
 
 **Quality Assurance:**
+
 - ✅ Test coverage: 484/484 (100%)
 - ✅ Security posture: 0 CVEs, 0 unsafe blocks
 - ✅ Documentation: 245 files, 35 doctests, all links validated
@@ -504,6 +546,7 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 - ✅ AC coverage: 11/12 automated (91.7%)
 
 **Production Readiness:**
+
 - ✅ Zero neural network compute path modifications
 - ✅ Zero performance regressions
 - ✅ Complete GitHub-native receipts
@@ -513,17 +556,20 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 ### Next Steps
 
 **For pr-merge-prep:**
+
 1. Re-check freshness (ensure still up-to-date with main)
 2. Verify all integrative gates still green
 3. Confirm no new commits on main requiring rebase
 4. Final merge preparation and approval
 
 **For PR Author:**
+
 1. ✅ All development complete
 2. ✅ All quality gates passed
 3. ⏳ Awaiting final merge approval
 
 **For Repository:**
+
 1. Post-merge: Configure GitHub branch protection rules (AC5)
 2. Post-merge: Verify v0.1.0-mvp tag creation workflow
 3. Post-merge: Monitor baseline receipt usage in CI/CD pipelines
@@ -532,7 +578,7 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 
 ## 10. Evidence Summary (Standardized Format)
 
-```
+```text
 integrative:gate:summary = pass
 
 freshness: base up-to-date @1f7dbd0; 0 commits behind main

@@ -26,6 +26,7 @@
 ## Gates
 
 <!-- gates:start -->
+
 | Gate | Status | Evidence |
 |------|--------|----------|
 | freshness | ✅ PASS | base up-to-date @1f7dbd0; 0 commits behind main |
@@ -37,13 +38,15 @@
 | policy | ✅ PASS | neural network compliance validated; I2S ≥99.8%, schema v1.0.0, honest compute |
 | throughput | ✅ PASS | 0% regression; inference: 3037ms ≤10s SLO; quantization: I2S enabled; kernels: 7 real |
 | docs | ✅ PASS | doctests: 35/35 (16 CPU + 19 GPU); cargo doc CPU/GPU clean; links validated; 245 files |
+
 <!-- gates:end -->
 
 ---
 
 ## Hop Log
 
-1. **spec-reader** → Issue validation (Story → Schema → Tests → Code: traceable; 12 ACs testable)
+1. **spec-reader** → Issue validation (Story → Schema → Tests → Code: traceable; 12 ACs
+   testable)
 2. **spec-creator** → Specification creation (2,486 lines + 4 ADRs, 930 lines)
 3. **spec-finalizer** → Specification finalized and committed (df7fe09)
 4. **test-creator** → Test scaffolding creation (4 test files, 12 tests, 18 fixtures)
@@ -73,7 +76,14 @@
 <!-- decision:start -->
 **State:** ✅ **ready**
 
-**Why:** All 9 required integrative gates PASS; comprehensive neural network evidence validated; inference: 3037ms ≤10s SLO (69.6% under budget); quantization: I2S ≥99.8% >99% requirement; throughput: 0% regression (identical baseline); crossval: receipt schema v1.0.0 stable; tests: 484/484 pass (100%); security: 0/727 vulnerabilities; docs: 35/35 doctests pass; format/clippy: clean; build: all features compile; honest compute: 7 real kernel IDs, compute_path="real"; GGUF: compatible (kernel execution successful); zero production code impact (documentation-only); AC coverage: 11/12 automated (91.7%); GitHub-native receipts: complete
+**Why:** All 9 required integrative gates PASS; comprehensive neural network evidence
+validated; inference: 3037ms ≤10s SLO (69.6% under budget); quantization: I2S ≥99.8% >99%
+requirement; throughput: 0% regression (identical baseline); crossval: receipt schema v1.0.0
+stable; tests: 484/484 pass (100%); security: 0/727 vulnerabilities; docs: 35/35 doctests
+pass; format/clippy: clean; build: all features compile; honest compute: 7 real kernel IDs,
+compute_path="real"; GGUF: compatible (kernel execution successful); zero production code
+impact (documentation-only); AC coverage: 11/12 automated (91.7%); GitHub-native receipts:
+complete
 
 **Next:** **NEXT → pr-merge-prep** (final freshness re-check and merge preparation)
 <!-- decision:end -->

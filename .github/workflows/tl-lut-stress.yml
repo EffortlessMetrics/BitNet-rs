@@ -1,0 +1,43 @@
+name: TL LUT Stress (deterministic)
+
+on:
+  pull_request:
+    paths:
+      - "crates/bitnet-kernels/**"
+      - "crates/bitnet-quantization/**"
+      - ".github/workflows/tl-lut-stress.yml"
+
+jobs:
+  tl-lut:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.89.0
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-tl-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-tl-
+
+      - name: Run TL stress tests
+        run: |
+          cargo test -p bitnet-kernels --no-default-features --features cpu \
+            --test fuzz_tl_lut_stress -- --test-threads=1
+
+      - name: Run quantization stress tests
+        run: |
+          cargo test -p bitnet-quantization --no-default-features --features cpu \
+            --lib tl -- --test-threads=1

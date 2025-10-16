@@ -86,14 +86,14 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 tempfile = "3.23.0"
 thiserror = "2.0.17"
-tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
+tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread", "fs", "io-util"] }
 toml = "0.9.8"
 # API snapshot testing
 insta = { version = "1.43.2", features = ["yaml", "json"] }
 num_cpus = "1.17.0"
 tracing-subscriber = { version = "0.3.20", features = ["fmt", "env-filter"] }
 # For test error handling construction
-reqwest = { version = "0.12.23", default-features = false }
+reqwest = { version = "0.12.24", default-features = false }
 # Additional dependencies used by root-level tests
 anyhow = "1.0.100"
 byteorder = "1.5.0"
@@ -195,7 +195,7 @@ tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
 # Async runtime
 futures = "0.3.31"
-tokio = { version = "1.47.1", features = ["full"] }
+tokio = { version = "1.48.0", features = ["full"] }
 
 # Performance and SIMD
 bytemuck = { version = "1.24.0", features = ["derive"] }
@@ -211,8 +211,8 @@ memmap2 = "0.9.8"
 safetensors = "0.6.2"
 
 # CLI and configuration
-clap = { version = "4.5.48", features = ["derive", "env"] }
-clap_complete = "4.5.58"
+clap = { version = "4.5.49", features = ["derive", "env"] }
+clap_complete = "4.5.59"
 console = "0.16.1"
 crossterm = "0.29.0"
 dirs = "6.0.0"
@@ -236,7 +236,7 @@ opentelemetry-otlp = { version = "0.31.0", default-features = false, features = 
 opentelemetry-stdout = { version = "0.31.0", default-features = false }
 opentelemetry_sdk = { version = "0.31.0", features = ["trace", "metrics", "rt-tokio"] }
 prometheus = "0.14.0"
-tonic = "0.12"
+tonic = "0.14.2"
 tracing-appender = "0.2.3"
 tracing-opentelemetry = "0.32.0"
 uuid = { version = "1.18.1", features = ["v4"] }
@@ -258,11 +258,11 @@ serial_test = "3.2.0"
 temp-env = "0.3.6"
 
 # HTTP client for examples
-reqwest = { version = "0.12.23", features = ["json"] }
+reqwest = { version = "0.12.24", features = ["json"] }
 
 # Code quality
 bindgen = "0.72.1"
-cc = "1.2.40"
+cc = "1.2.41"
 
 # Build-time information
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -326,4 +326,4 @@ keywords = [
   "inference",        # Model inference
   "bitnet",           # BitNet specific
 ]
-msrv = "1.90.0"
+msrv = "1.89.0"
