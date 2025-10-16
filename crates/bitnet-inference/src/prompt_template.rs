@@ -31,7 +31,51 @@ impl std::str::FromStr for TemplateType {
     }
 }
 
+impl std::fmt::Display for TemplateType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Raw => write!(f, "raw"),
+            Self::Instruct => write!(f, "instruct"),
+            Self::Llama3Chat => write!(f, "llama3-chat"),
+        }
+    }
+}
+
 impl TemplateType {
+    /// Detect template type from GGUF metadata and tokenizer hints.
+    ///
+    /// Priority order:
+    /// 1. GGUF chat_template metadata (if present)
+    /// 2. Tokenizer family name heuristics
+    /// 3. Fallback to Raw
+    pub fn detect(tokenizer_name: Option<&str>, chat_template_jinja: Option<&str>) -> Self {
+        // Priority 1: GGUF chat_template metadata
+        if let Some(jinja) = chat_template_jinja {
+            // LLaMA-3 signature
+            if jinja.contains("<|start_header_id|>") && jinja.contains("<|eot_id|>") {
+                return Self::Llama3Chat;
+            }
+            // Generic instruct template
+            if jinja.contains("{% for message in messages %}") {
+                return Self::Instruct;
+            }
+        }
+
+        // Priority 2: Tokenizer family name heuristics
+        if let Some(name) = tokenizer_name {
+            let lower = name.to_ascii_lowercase();
+            if lower.contains("llama3") || lower.contains("llama-3") {
+                return Self::Llama3Chat;
+            }
+            if lower.contains("instruct") || lower.contains("mistral") {
+                return Self::Instruct;
+            }
+        }
+
+        // Priority 3: Fallback
+        Self::Raw
+    }
+
     /// Apply the template to a user prompt
     pub fn apply(&self, user_text: &str, system_prompt: Option<&str>) -> String {
         match self {

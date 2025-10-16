@@ -105,8 +105,14 @@ pub struct InferenceCommand {
     #[arg(short, long, value_name = "TYPE")]
     pub quantization: Option<String>,
 
-    /// Maximum number of tokens to generate
-    #[arg(long, default_value = "512", value_name = "N")]
+    /// Maximum number of tokens to generate (aliases: --max-new-tokens, --n-predict)
+    #[arg(
+        long = "max-tokens",
+        visible_alias = "max-new-tokens",
+        visible_alias = "n-predict",
+        default_value = "512",
+        value_name = "N"
+    )]
     pub max_tokens: usize,
 
     /// Temperature for sampling (0.0 = greedy, higher = more random)
@@ -193,8 +199,13 @@ pub struct InferenceCommand {
     #[arg(long, default_value_t = false)]
     pub no_eos: bool,
 
-    /// Stop sequences
-    #[arg(long, value_name = "SEQ")]
+    /// Stop sequences (aliases: --stop-sequence, --stop_sequences)
+    #[arg(
+        long = "stop",
+        visible_alias = "stop-sequence",
+        visible_alias = "stop_sequences",
+        value_name = "SEQ"
+    )]
     pub stop: Vec<String>,
 
     /// Timeout for inference (in seconds)
@@ -410,7 +421,7 @@ impl InferenceCommand {
     }
 
     /// Setup environment for deterministic execution
-    fn setup_environment(&self) -> Result<()> {
+    pub(super) fn setup_environment(&self) -> Result<()> {
         // Set thread count if specified
         if let Some(threads) = self.threads {
             unsafe {
@@ -451,7 +462,7 @@ impl InferenceCommand {
     }
 
     /// Setup logging based on configuration
-    fn setup_logging(&self, config: &CliConfig) -> Result<()> {
+    pub(super) fn setup_logging(&self, config: &CliConfig) -> Result<()> {
         let level = if self.verbose { "debug" } else { &config.logging.level };
 
         let filter = tracing_subscriber::EnvFilter::try_from_default_env()
@@ -521,7 +532,7 @@ impl InferenceCommand {
     }
 
     /// Load model and tokenizer
-    async fn load_model_and_tokenizer(
+    pub(super) async fn load_model_and_tokenizer(
         &self,
         config: &CliConfig,
     ) -> Result<(InferenceEngine, Arc<dyn bitnet_tokenizers::Tokenizer>)> {
@@ -593,7 +604,7 @@ impl InferenceCommand {
             model.num_key_value_heads
         };
 
-        if model.num_heads % kv_heads != 0 {
+        if !model.num_heads.is_multiple_of(kv_heads) {
             warn!(
                 "Model config warning: num_heads ({}) not evenly divisible by num_kv_heads ({})",
                 model.num_heads, kv_heads
@@ -709,7 +720,10 @@ impl InferenceCommand {
     }
 
     /// Convert CLI GenerationConfig to engine GenerationConfig
-    fn to_engine_config(&self, config: &GenerationConfig) -> bitnet_inference::GenerationConfig {
+    pub(super) fn to_engine_config(
+        &self,
+        config: &GenerationConfig,
+    ) -> bitnet_inference::GenerationConfig {
         bitnet_inference::GenerationConfig {
             max_new_tokens: config.max_new_tokens as u32,
             temperature: config.sampling.temperature,
@@ -1104,10 +1118,10 @@ impl InferenceCommand {
         let mut stops = self.stop.clone();
 
         // Add template default stop sequences if none specified
-        if stops.is_empty() {
-            if let Ok(template_type) = self.prompt_template.parse::<TemplateType>() {
-                stops.extend(template_type.default_stop_sequences());
-            }
+        if stops.is_empty()
+            && let Ok(template_type) = self.prompt_template.parse::<TemplateType>()
+        {
+            stops.extend(template_type.default_stop_sequences());
         }
 
         stops
@@ -1128,7 +1142,7 @@ impl InferenceCommand {
     }
 
     /// Create generation configuration
-    fn create_generation_config(&self) -> Result<GenerationConfig> {
+    pub(super) fn create_generation_config(&self) -> Result<GenerationConfig> {
         // Apply greedy decoding if requested
         let (temperature, top_k, top_p, repetition_penalty) = if self.greedy {
             (0.0, 0, 1.0, 1.0) // Force greedy: no sampling, no penalties
@@ -1422,7 +1436,10 @@ mod tests {
         let tokenizer = Arc::new(BasicTokenizer::new());
         let flag = Arc::new(AtomicBool::new(false));
         let mut engine = MockEngine { tokenizer, called: flag.clone() };
-        let cmd = InferenceCommand::default();
+        let cmd = InferenceCommand {
+            prompt_template: "raw".into(), // Override default to avoid parse error
+            ..Default::default()
+        };
         let config = GenerationConfig {
             max_new_tokens: 1,
             sampling: SamplingConfig::default(),
@@ -1465,6 +1482,7 @@ mod tests {
             verbose: false,
             format: "text".into(),
             system_prompt: None,
+            prompt_template: "raw".into(),
             chat_template: None,
             tokenizer: None,
             no_bos: false,

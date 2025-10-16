@@ -2,6 +2,7 @@
 
 #[cfg(feature = "cli-bench")]
 pub mod benchmark;
+pub mod chat;
 pub mod convert;
 #[allow(dead_code)]
 pub mod eval;

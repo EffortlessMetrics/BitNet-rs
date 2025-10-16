@@ -28,6 +28,11 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --max-tokens 32 \
   --temperature 0.7
 
+# Interactive chat (auto-detects prompt template)
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json
+
 # Model validation (3-stage: LayerNorm, projection, linguistic sanity)
 ./scripts/validate_gguf.sh <model.gguf> <tokenizer.json>  # Full validation pipeline
 cargo run -p bitnet-cli --features cpu,full-cli -- inspect --ln-stats --gate auto <model.gguf>
@@ -125,11 +130,23 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 
 ## Inference Usage
 
-### Prompt Templates
+### Prompt Templates and Auto-Detection
 
-BitNet.rs supports multiple prompt templates for optimal model behavior:
+BitNet.rs supports multiple prompt templates for optimal model behavior. The CLI automatically detects the appropriate template using:
+1. **Priority 1**: GGUF `chat_template` metadata (detects LLaMA-3 special tokens and generic instruct patterns)
+2. **Priority 2**: Tokenizer family name heuristics (detects llama3, mistral, instruct patterns)
+3. **Priority 3**: Fallback to Raw template
+
+You can override auto-detection with `--prompt-template`:
 
 ```bash
+# Auto-detect template (recommended - uses GGUF metadata and tokenizer hints)
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "What is the capital of France?" \
+  --max-tokens 32
+
 # Raw (no formatting) - for completion-style models
 cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/model.gguf \
@@ -156,6 +173,24 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --max-tokens 128 \
   --temperature 0.7 \
   --top-p 0.95
+```
+
+### Flag Aliases
+
+BitNet.rs CLI supports convenient aliases for common flags to improve compatibility with other tools:
+
+```bash
+# --max-tokens (primary) with backward-compatible aliases
+# All three forms are equivalent:
+--max-tokens 32              # Primary flag
+--max-new-tokens 32          # Alias (common in other tools)
+--n-predict 32               # Alias (GGML compatibility)
+
+# --stop (primary) with backward-compatible aliases
+# All three forms are equivalent:
+--stop "</s>"                # Primary flag
+--stop-sequence "</s>"       # Alias
+--stop_sequences "</s>"      # Alias
 ```
 
 ### Sampling Controls
@@ -186,7 +221,49 @@ cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --greedy --see
 # - llama3-chat: stops on "<|eot_id|>", "<|end_of_text|>"
 ```
 
+### Interactive Chat
+
+BitNet.rs provides an interactive chat mode with REPL and built-in commands. The CLI auto-detects the appropriate chat template and displays streaming responses:
+
+```bash
+# Interactive chat with auto-template detection
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json
+
+# Chat with specific template override
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template llama3-chat
+
+# Chat with custom sampling parameters
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --temperature 0.7 --top-p 0.95
+```
+
+**Available chat commands:**
+- `/help` - Show available commands
+- `/clear` - Clear conversation history
+- `/metrics` - Display performance metrics
+- `/exit` or `/quit` - Exit chat mode (also Ctrl+C)
+
 ## Common Workflows
+
+### Inference
+
+```bash
+# Generate text using `run` or its alias `generate`
+bitnet run --model model.gguf --prompt "Hello world" --max-tokens 32
+bitnet generate --model model.gguf --prompt "Hello world" --max-tokens 32  # Same as above
+
+# Interactive chat (auto-detects template)
+bitnet chat --model model.gguf --tokenizer tokenizer.json
+```
+
+**Note**: The `generate` subcommand is an alias for `run`, providing semantic clarity when using the CLI directly.
 
 ### Development
 ```bash
@@ -248,6 +325,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 - GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and runtime availability
 - Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use `BITNET_GPU_FAKE` for testing
 - Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]` pattern
+- Template auto-detection: If the wrong template is detected, override with `--prompt-template` (raw/instruct/llama3-chat). Check GGUF metadata with `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection priority issues.
 - LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your GGUF has quantized LN weights (should be FP16/FP32)
   - **RMS-based validation**: Validator checks LayerNorm gamma RMS (root mean square) with architecture-aware envelopes
   - **Proper fix**: Regenerate GGUF with LayerNorm weights in float format (not quantized)
