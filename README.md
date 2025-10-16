@@ -47,22 +47,37 @@ cargo run -p xtask -- download-model
 BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Hello"
 ```
 
-### 10-Line CPU Quickstart
+### CLI Quickstart
 
-Get started with deterministic BitNet.rs CPU inference:
+BitNet.rs supports three main inference modes:
+
+| Use Case | Command Example | Description |
+|----------|----------------|-------------|
+| **Deterministic Q&A** | `bitnet run --model model.gguf --tokenizer tokenizer.json --prompt "What is 2+2?" --max-tokens 16 --temperature 0.0` | Reproducible answers with greedy decoding |
+| **Creative Completion** | `bitnet run --model model.gguf --tokenizer tokenizer.json --prompt "Explain photosynthesis" --max-tokens 128 --temperature 0.7 --top-p 0.95` | Nucleus sampling for natural text generation |
+| **Interactive Chat** | `bitnet chat --model model.gguf --tokenizer tokenizer.json` | REPL with auto-detected templates and streaming |
+
+**Template defaults:** The CLI now defaults to `--prompt-template auto`, which detects a suitable template from GGUF/HF metadata. To preserve legacy behavior, pass `--prompt-template raw`.
+
+**Note**: Use `--no-default-features --features cpu` for CPU-only builds, or `--no-default-features --features gpu` for CUDA acceleration.
+
+**CLI Interface Version**: 1.0.0 — Use `bitnet --interface-version` to check compatibility.
+
+#### Flag Aliases for Compatibility
+
+BitNet.rs CLI provides aliases for common flags to maintain compatibility with other tools:
 
 ```bash
-# Deterministic run (CPU) - build → run → answer
-export BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1 BITNET_SEED=42
-cargo build --release -p bitnet-cli --no-default-features --features cpu,full-cli
-target/release/bitnet run \
-  --backend cpu \
-  --model tests/models/tiny.gguf \
-  --prompt "Q: What is 2+2? A:" \
-  --max-new-tokens 16 --temperature 0.0
-```
+# These are equivalent (primary flag: --max-tokens)
+bitnet run --max-tokens 32        # Primary flag
+bitnet run --max-new-tokens 32    # Alias (common in other tools)
+bitnet run --n-predict 32         # Alias (GGML compatibility)
 
-**Expected Output:** Deterministic answer with kernel IDs proving real I2_S quantization.
+# These are equivalent (primary flag: --stop)
+bitnet run --stop "</s>"          # Primary flag
+bitnet run --stop-sequence "</s>" # Alias
+bitnet run --stop_sequences "</s>" # Alias
+```
 
 ### Receipt Verification Workflow
 
@@ -70,7 +85,7 @@ Generate, verify, and pin performance baselines:
 
 ```bash
 # Receipts: run → emit → verify
-export BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1
+export BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1
 cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic
 cargo run -p xtask -- verify-receipt ci/inference.json
 mkdir -p docs/baselines && cp ci/inference.json docs/baselines/$(date +%Y%m%d)-cpu.json
@@ -190,11 +205,13 @@ BITNET_STRICT_MODE=1 cargo run -p xtask -- verify-receipt ci/inference.json
 ### Receipt Requirements
 
 **Honest Compute:**
+
 - `compute_path` must be `"real"` (not `"mocked"`)
 - `kernels` array must be non-empty
 - Kernel IDs must be valid (non-empty, ≤128 chars, ≤10,000 count)
 
 **CI Enforcement:**
+
 - Model Gates (CPU) workflow requires valid receipts
 - Branch protection blocks PRs with mocked receipts
 - See [.github/workflows/model-gates.yml](.github/workflows/model-gates.yml)

@@ -200,12 +200,14 @@ async fn test_ac1_cpu_forward_bos_nonzero_logits() -> Result<()> {
         top_p: 1.0,
         repetition_penalty: 1.0,
         stop_sequences: vec![],
+        stop_token_ids: vec![],
         seed: Some(42),
         skip_special_tokens: true,
         eos_token_id: None,
         logits_tap_steps: 0,
         logits_topk: 10,
         logits_cb: None,
+        add_bos: false,
     };
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
@@ -289,12 +291,14 @@ async fn test_ac1_greedy_decode_16_tokens() -> Result<()> {
         top_p: 1.0,
         repetition_penalty: 1.0,
         stop_sequences: vec![],
+        stop_token_ids: vec![],
         seed: Some(42),
         skip_special_tokens: true,
         eos_token_id: None,
         logits_tap_steps: 0,
         logits_topk: 10,
         logits_cb: None,
+        add_bos: false,
     };
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
@@ -389,12 +393,14 @@ async fn test_ac1_quantized_linear_strict_mode() -> Result<()> {
         top_p: 1.0,
         repetition_penalty: 1.0,
         stop_sequences: vec![],
+        stop_token_ids: vec![],
         seed: Some(42),
         skip_special_tokens: true,
         eos_token_id: None,
         logits_tap_steps: 0,
         logits_topk: 10,
         logits_cb: None,
+        add_bos: false,
     };
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
@@ -476,12 +482,14 @@ async fn test_ac1_kv_cache_update_retrieval() -> Result<()> {
         top_p: 1.0,
         repetition_penalty: 1.0,
         stop_sequences: vec![],
+        stop_token_ids: vec![],
         seed: Some(42),
         skip_special_tokens: true,
         eos_token_id: None,
         logits_tap_steps: 0,
         logits_topk: 10,
         logits_cb: None,
+        add_bos: false,
     };
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;

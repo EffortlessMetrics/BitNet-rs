@@ -722,6 +722,8 @@ pub struct InferenceEngine {
     config: InferenceConfig,
     performance_tracker: Arc<std::sync::RwLock<PerformanceTracker>>,
     kernel_recorder: Option<KernelRecorder>,
+    /// Canonical count of decoded tokens for receipt generation
+    decoded_tokens: std::sync::atomic::AtomicUsize,
 }
 
 impl InferenceEngine {
@@ -766,6 +768,7 @@ impl InferenceEngine {
             config,
             performance_tracker: Arc::new(std::sync::RwLock::new(PerformanceTracker::new())),
             kernel_recorder: None,
+            decoded_tokens: std::sync::atomic::AtomicUsize::new(0),
         };
 
         // PATCH 5: Validate model hyperparameters during initialization
@@ -817,6 +820,21 @@ impl InferenceEngine {
         if let Some(recorder) = &self.kernel_recorder {
             recorder.record(kernel_id);
         }
+    }
+
+    /// Reset the canonical decoded token count (call before generation)
+    pub fn reset_decoded_tokens(&self) {
+        self.decoded_tokens.store(0, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Increment the canonical decoded token count (call after emitting tokens)
+    pub fn inc_decoded_tokens_by(&self, n: usize) {
+        self.decoded_tokens.fetch_add(n, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Get the canonical decoded token count (use in receipts)
+    pub fn decoded_token_count(&self) -> usize {
+        self.decoded_tokens.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Evaluate token IDs and return logits for deterministic comparison

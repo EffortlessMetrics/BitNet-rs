@@ -211,7 +211,8 @@ impl GenerationStream {
         debug!("Starting streaming generation for prompt");
 
         // Tokenize input with comprehensive error handling
-        let input_tokens = tokenizer.encode(&prompt, true, true).with_context(|| {
+        // Use config.add_bos to respect template BOS policy (llama3-chat has embedded BOS)
+        let input_tokens = tokenizer.encode(&prompt, config.add_bos, false).with_context(|| {
             format!(
                 "Failed to tokenize input prompt of length {}. \
                      The prompt may contain unsupported characters or exceed \
@@ -467,7 +468,14 @@ impl GenerationStream {
             return true;
         }
 
-        // Check for stop sequences
+        // Check token-level stops (fast path for special tokens like <|eot_id|>)
+        // This avoids expensive string decoding for common stop tokens
+        // Use binary_search since stop_token_ids is sorted in config construction
+        if config.stop_token_ids.binary_search(&token).is_ok() {
+            return true;
+        }
+
+        // Check for stop sequences (fallback to string matching)
         if !config.stop_sequences.is_empty()
             && let Ok(current_text) = tokenizer.decode(current_tokens)
         {

@@ -1,0 +1,11 @@
+# BitNet.rs Smoke Test Prompts
+# Simple prompts to verify basic inference functionality
+
+# Math question (expect numeric answer)
+2+2=
+
+# Geography question (expect "Paris")
+The capital of France is
+
+# Simple completion
+Hello, my name is

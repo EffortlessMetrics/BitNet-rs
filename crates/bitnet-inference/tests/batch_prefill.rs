@@ -122,11 +122,13 @@ impl BatchProcessor {
                 repetition_penalty: 1.1,
                 seed: None,
                 stop_sequences: vec![],
+                stop_token_ids: vec![],
                 eos_token_id: None,
                 skip_special_tokens: true,
                 logits_tap_steps: 0,
                 logits_topk: 10,
                 logits_cb: None,
+                add_bos: false,
             };
             let generated_ids = self.engine.generate_tokens(&prompt_ids, &config).await?;
             let t_generate_ms = t2.elapsed().as_secs_f64() * 1e3;

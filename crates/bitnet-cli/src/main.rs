@@ -22,6 +22,11 @@ mod score;
 
 use exit::*;
 
+/// Build the CLI command for external use (e.g., in tests)
+pub fn build_cli() -> clap::Command {
+    Cli::command()
+}
+
 fn compiled_features() -> &'static [&'static str] {
     &[
         #[cfg(feature = "cpu")]
@@ -35,6 +40,9 @@ fn compiled_features() -> &'static [&'static str] {
         "crossval",
     ]
 }
+
+/// CLI interface version (SemVer for CLI surface compatibility)
+const INTERFACE_VERSION: &str = "1.0.0";
 
 fn bitnet_version() -> &'static str {
     use std::sync::OnceLock;
@@ -70,35 +78,27 @@ use config::{CliConfig, ConfigBuilder};
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
 #[derive(Parser)]
 #[command(name = "bitnet")]
-#[command(about = "BitNet 1-bit LLM inference toolkit")]
-#[command(long_about = r#"
-BitNet is a high-performance inference framework for 1-bit Large Language Models.
-This CLI provides comprehensive tools for model inference, conversion, benchmarking,
-and serving with support for multiple quantization formats and hardware acceleration.
+#[command(about = "BitNet.rs — 1-bit neural network inference with strict receipts")]
+#[command(long_about = r#"BitNet.rs CLI — one-shot generation and chat with strict receipts
 
 Examples:
-  # Run inference with a model
-  bitnet inference --model model.gguf --prompt "Hello, world!"
+  # Deterministic Q&A (greedy)
+  bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "What is 2+2?" --max-tokens 16 --temperature 0.0
 
-  # Interactive mode
-  bitnet inference --model model.gguf --interactive
+  # Creative completion (nucleus sampling)
+  bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "Explain photosynthesis" --max-tokens 128 --temperature 0.7 --top-p 0.95
 
-  # Batch processing
-  bitnet inference --model model.gguf --input-file prompts.txt
-
-  # Convert model formats
-  bitnet convert --input model.safetensors --output model.gguf
-
-  # Benchmark performance
-  bitnet benchmark --model model.gguf --device cuda
-
-  # Start inference server
-  bitnet serve --model model.gguf --port 8080
-
-For more information, visit: https://github.com/microsoft/BitNet
+  # Interactive chat (auto-detects template)
+  bitnet chat --model model.gguf --tokenizer tokenizer.json
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
+#[command(after_help = format!(
+    "CLI Interface Version: {}\nDocs: https://docs.rs/bitnet\nIssues: https://github.com/EffortlessMetrics/BitNet-rs/issues",
+    INTERFACE_VERSION
+))]
 struct Cli {
     /// Configuration file path
     #[arg(short, long, value_name = "PATH", global = true)]
@@ -128,6 +128,10 @@ struct Cli {
     #[arg(long, value_name = "PATH")]
     save_config: Option<std::path::PathBuf>,
 
+    /// Print CLI interface version and exit
+    #[arg(long)]
+    interface_version: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -135,6 +139,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Run simple text generation
+    #[command(alias = "generate")]
     Run {
         /// Model file path
         #[arg(short, long)]
@@ -258,6 +263,10 @@ enum Commands {
     Inference(Box<InferenceCommand>),
 
     #[cfg(feature = "full-cli")]
+    /// Interactive chat mode (streaming)
+    Chat(Box<InferenceCommand>),
+
+    #[cfg(feature = "full-cli")]
     /// Convert between model formats
     #[command(alias = "conv")]
     Convert(ConvertCommand),
@@ -336,6 +345,12 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Handle interface version flag
+    if cli.interface_version {
+        println!("{}", INTERFACE_VERSION);
+        return Ok(());
+    }
+
     // Load configuration
     let config = load_configuration(&cli).await?;
 
@@ -401,6 +416,8 @@ async fn main() -> Result<()> {
         }
         #[cfg(feature = "full-cli")]
         Some(Commands::Inference(cmd)) => (*cmd).execute(&config).await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Chat(cmd)) => (*cmd).run_chat(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]

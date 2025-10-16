@@ -63,12 +63,14 @@ fn create_generation_config(
         top_p,
         repetition_penalty: 1.0,
         stop_sequences: vec![],
+        stop_token_ids: vec![],
         seed,
         skip_special_tokens: true,
         eos_token_id: Some(50256),
         logits_tap_steps: 0,
         logits_topk: 0,
         logits_cb: None,
+        add_bos: false,
     }
 }
 
@@ -577,11 +579,13 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
         eos_token_id: Some(50256),
         repetition_penalty: 1.0,
         stop_sequences: vec!["<eos>".to_string()],
+        stop_token_ids: vec![],
         seed: Some(42),
         skip_special_tokens: true,
         logits_tap_steps: 0,
         logits_topk: 0,
         logits_cb: None,
+        add_bos: false,
     };
 
     let result_with_early_stop =
