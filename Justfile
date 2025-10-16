@@ -1,5 +1,11 @@
 # BitNet.rs development commands
 
+set dotenv-load := false
+
+# Show available commands
+help:
+    @just --list
+
 # Run all pre-tag MVP validation checks
 mvp-pretag:
     cargo clippy --workspace --all-targets --no-default-features --features cpu -D warnings
@@ -35,8 +41,10 @@ gate-smoke:
 test-cpu:
     cargo test --workspace --no-default-features --features cpu
 
-# Run TL stress tests
+# Run TL correctness and stress tests
 test-tl-stress:
+    cargo test -p bitnet-kernels --no-default-features --features cpu \
+      --test tl_packed_correctness -- --test-threads=1
     cargo test -p bitnet-kernels --no-default-features --features cpu \
       --test fuzz_tl_lut_stress -- --test-threads=1
 

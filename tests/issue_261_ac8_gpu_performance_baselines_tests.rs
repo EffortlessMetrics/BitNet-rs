@@ -8,11 +8,19 @@
 
 use anyhow::Result;
 
+#[cfg(feature = "gpu")]
+use crate::common::gpu::gpu_tests_enabled;
+
 /// AC:AC8
 /// Test GPU I2S FP16 mixed precision baseline (60-100 tok/s)
 #[test]
 #[cfg(feature = "gpu")]
 fn test_gpu_i2s_fp16_baseline() -> Result<()> {
+    if !gpu_tests_enabled() {
+        eprintln!("Skipping GPU test (set BITNET_ENABLE_GPU_TESTS=1 to run)");
+        return Ok(());
+    }
+
     // Placeholder: GPU FP16 baseline not yet established
     // When implemented: should measure 60-100 tok/s with FP16 activations
 
@@ -30,6 +38,11 @@ fn test_gpu_i2s_fp16_baseline() -> Result<()> {
 #[test]
 #[cfg(feature = "gpu")]
 fn test_gpu_i2s_bf16_baseline() -> Result<()> {
+    if !gpu_tests_enabled() {
+        eprintln!("Skipping GPU test (set BITNET_ENABLE_GPU_TESTS=1 to run)");
+        return Ok(());
+    }
+
     // Placeholder: GPU BF16 baseline not yet established
     // When implemented: should measure 50-90 tok/s with BF16 activations
 
@@ -97,6 +110,11 @@ fn test_gpu_compute_capability_detection() -> Result<()> {
 #[test]
 #[cfg(feature = "gpu")]
 fn test_gpu_smoke() -> Result<()> {
+    if !gpu_tests_enabled() {
+        eprintln!("Skipping GPU test (set BITNET_ENABLE_GPU_TESTS=1 to run)");
+        return Ok(());
+    }
+
     // Placeholder: GPU smoke test not yet comprehensive
     // When implemented: should validate basic GPU functionality
 
