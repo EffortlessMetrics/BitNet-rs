@@ -1,0 +1,10 @@
+{
+  "commit": "unknown",
+  "model_path": "/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+  "note": "Parity harness infrastructure in place; awaiting bitnet-sys FFI implementation",
+  "seed": 0,
+  "status": "infrastructure_ready",
+  "template": "auto",
+  "threads": 1,
+  "timestamp": "2025-10-16T22:19:43.999517587Z"
+}

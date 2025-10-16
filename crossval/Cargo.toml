@@ -34,11 +34,13 @@ bitnet-sys = { path = "../crates/bitnet-sys", optional = true }
 # Internal crates for testing
 bitnet-inference = { path = "../crates/bitnet-inference" }
 bitnet-models = { path = "../crates/bitnet-models" }
+bitnet-common = { path = "../crates/bitnet-common" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers", features = ["spm"] }
 bitnet-ggml-ffi = { path = "../crates/bitnet-ggml-ffi" }
 scopeguard = "1.2.0"
 dirs = "6.0.0"
 humantime = "2.1.0"
+tokio = { version = "1.44.0", features = ["full"] }
 
 [dev-dependencies]
 criterion = { version = "0.7.0", features = ["html_reports"] }

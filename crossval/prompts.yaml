@@ -1,6 +1,51 @@
 version: 1
 bos: true
 max_new_tokens: 64
+
+# Stable Parity Test Prompts for BitNet Rust ↔ C++ Cross-Validation
+#
+# These prompts exercise different aspects of the inference engine:
+# - Tokenization edge cases (special tokens, formatting)
+# - Different prompt templates (raw, instruct, llama3-chat)
+# - Various output patterns (completion, chat, structured)
+
+# Primary parity prompts (for cross-validation testing)
+parity_prompts:
+  math:
+    text: "Q: 2+2? A:"
+    category: "completion"
+    expected_tokens: 5-10
+    notes: "Simple arithmetic, tests greedy decoding determinism"
+
+  paragraph:
+    text: "Explain what entropy means in thermodynamics in one paragraph."
+    category: "instruct"
+    expected_tokens: 80-120
+    notes: "Technical explanation, tests template formatting"
+
+  chat_turn:
+    text: "Hello! How are you today?"
+    category: "chat"
+    template: "llama3-chat"
+    expected_tokens: 15-30
+    notes: "Conversational greeting, tests <|eot_id|> token handling"
+
+  json_query:
+    text: "Generate a JSON object with keys 'name' and 'age'."
+    category: "structured"
+    expected_tokens: 20-40
+    notes: "Structured format, tests special char tokenization"
+
+# Default prompt used when CROSSVAL_PROMPT is not set
+default_prompt: "Q: 2+2? A:"
+
+# Parity validation thresholds
+thresholds:
+  cosine_similarity: 0.999  # Logits must match within 0.1% cosine distance
+  exact_match_rate: 0.95    # 95% of tokens must match exactly
+  max_divergence_step: 3    # First divergence must occur after step 3
+
+# Legacy benchmark prompts (kept for compatibility)
 prompts:
   - "Add 27 and 38."
   - "Print a Rust function that reverses a string."

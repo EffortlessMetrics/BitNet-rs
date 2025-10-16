@@ -453,6 +453,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bindgen",
+ "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-inference",
  "bitnet-models",
@@ -470,6 +471,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 2.0.17",
+ "tokio",
  "toml 0.9.8",
 ]
 
