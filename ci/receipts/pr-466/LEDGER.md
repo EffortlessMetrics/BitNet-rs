@@ -76,6 +76,8 @@
 21. **integrative:gate:freshness** → Freshness check PASS (base up-to-date @1f7dbd0)
 22. **integrative-summary** → Final consolidation PASS (9/9 required gates, 100% quality score,
     READY TO MERGE)
+23. **docs-remediation** → Markdown linting fixes applied (INTEGRATIVE-SUMMARY.md: 32 fixes,
+    LEDGER.md: 15 fixes, 0 violations remaining)
 
 ---
 
@@ -213,7 +215,7 @@ format: cargo fmt --all --check: clean (0 violations)
 clippy: CPU: 0 warnings, GPU: 0 warnings
 build: CPU: 1.89s (clean), GPU: 2.02s (clean)
 features: smoke: 3/3 (cpu, gpu, none)
-docs: cargo doc CPU: build clean, no warnings; cargo doc GPU: build clean, no warnings; doctests CPU: 16/16 (100%); doctests GPU: 19/19 (100%); total: 35/35 doctests pass; links ok; 245 doc files; baselines verified; ADRs complete (4/4); quantization ref fixed I2S label; TL1/TL2 details expanded; receipt schema v1.0.0 documented; feature flags normalized
+docs: cargo doc CPU: build clean, no warnings; cargo doc GPU: build clean, no warnings; doctests CPU: 16/16 (100%); doctests GPU: 19/19 (100%); total: 35/35 doctests pass; links ok; 245 doc files; baselines verified; ADRs complete (4/4); quantization ref fixed I2S label; TL1/TL2 details expanded; receipt schema v1.0.0 documented; feature flags normalized; markdown linting: INTEGRATIVE-SUMMARY.md 32 fixes, LEDGER.md 15 fixes, 0 violations
 migration: Issue #465 → PR #466 Ledger; gates table migrated; receipts verified
 ```
 
