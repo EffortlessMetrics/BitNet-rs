@@ -1,4 +1,5 @@
 # Benchmark Runner Receipt - PR #466
+
 **Agent**: benchmark-runner (Haiku 4.5)
 **Gate**: integrative:gate:benchmarks
 **Decision**: ✅ PASS
@@ -15,18 +16,22 @@ PR #466 successfully passes comprehensive performance validation. Zero neural ne
 ## Files Modified/Created by This Agent
 
 ### 1. GitHub Check Run Receipt
+
 **File**: `/ci/receipts/pr-466/gate-benchmarks.json`
 **Purpose**: Structured JSON receipt for GitHub check run integration
 **Contents**:
+
 - Check run metadata (name, head_sha, status, conclusion)
 - Performance output (title, summary, detailed text)
 - Validation metrics (SLO compliance, quantization accuracy, regression analysis)
 - Gate decision fields
 
 ### 2. Comprehensive Performance Report
+
 **File**: `/ci/receipts/pr-466/PERFORMANCE-VALIDATION-REPORT.md`
 **Purpose**: Detailed technical analysis for architecture/performance teams
 **Contents**:
+
 - Executive summary (gate passes, zero regressions)
 - Performance metrics table (inference, SLO, quantization)
 - Baseline comparison (current vs baseline, regression analysis)
@@ -40,9 +45,11 @@ PR #466 successfully passes comprehensive performance validation. Zero neural ne
 **Statistics**: 321 lines, ~9.9 KB
 
 ### 3. Gate Validation Documentation
+
 **File**: `/ci/receipts/pr-466/BENCHMARK-GATE-VALIDATION.md`
 **Purpose**: Comprehensive gate validation evidence document
 **Contents**:
+
 - Quick summary table (all checks pass)
 - Benchmark execution details (build config, benchmark command, receipt verification)
 - SLO validation (inference latency, quantization accuracy, GPU mixed precision)
@@ -55,8 +62,10 @@ PR #466 successfully passes comprehensive performance validation. Zero neural ne
 **Statistics**: 354 lines, ~11 KB
 
 ### 4. Ledger Updates
+
 **File**: `/ci/receipts/pr-466/LEDGER.md` (modified)
 **Modifications**:
+
 1. **Benchmarks gate row** (line 38):
    - Old: `benchmarks | ✅ PASS | Baseline established (v1.0.0)`
    - New: `benchmarks | ✅ PASS | inference:3037ms-prefill (≤10s SLO: PASS); quantization:I2S-enabled; compute_path:real; kernels:7-real; regression:none`
@@ -73,6 +82,7 @@ PR #466 successfully passes comprehensive performance validation. Zero neural ne
 ## Validation Scope & Method
 
 ### Benchmark Execution Sequence
+
 ```bash
 Step 1: Build workspace with CPU features
   Command: cargo build --workspace --no-default-features --features cpu --release
@@ -118,7 +128,8 @@ Step 6: SLO compliance
 ```
 
 ### Performance Metrics Collected
-```
+
+```text
 Inference Performance:
   - Prefill latency: 3,037 ms
   - Tokens generated: 1
@@ -148,6 +159,7 @@ Receipt Schema:
 ## Key Findings
 
 ### 1. Zero Neural Network Regressions
+
 - **Kernel execution path**: IDENTICAL to baseline
 - **Schema version**: STABLE (1.0.0)
 - **Performance delta**: 0% (no degradation)
@@ -155,18 +167,21 @@ Receipt Schema:
 - **Conclusion**: Documentation-only PR with zero algorithm changes
 
 ### 2. Production SLO Compliance
+
 - **Inference latency**: 3,037 ms ≤ 10,000 ms requirement
 - **Margin**: 69.6% under budget
 - **Quantization accuracy**: ≥99.8% > 99% requirement
 - **Status**: All standards met
 
 ### 3. Honest Compute Gates
+
 - **Compute path**: real (no mocking)
 - **Kernels**: 7 real, all verified
 - **Receipt schema**: v1.0.0 stable
 - **Status**: Production readiness confirmed
 
 ### 4. PR Scope Analysis
+
 - **Documentation**: 72% of changes (3,416 lines)
 - **Test infrastructure**: 25% of changes (2,174 lines)
 - **Production code**: 0% (zero modifications)
@@ -193,16 +208,19 @@ Receipt Schema:
 ## Routing & Next Steps
 
 ### Gate Decision
+
 - **Gate**: integrative:gate:benchmarks
 - **Status**: ✅ PASS
 - **Confidence**: VERY HIGH (documentation-only, zero compute impact)
 
 ### Next Agent
+
 - **Destination**: integrative-performance-finalizer
 - **Purpose**: Final merge readiness assessment
 - **Expected**: Confirmation that all integration points validated
 
 ### Merge Readiness Status
+
 - **Performance validation**: ✅ COMPLETE
 - **SLO compliance**: ✅ CONFIRMED
 - **Quantization accuracy**: ✅ CONFIRMED
@@ -214,6 +232,7 @@ Receipt Schema:
 ## Evidence Artifacts Summary
 
 ### Quantitative Evidence
+
 - Inference latency: 3,037 ms
 - SLO compliance margin: 69.6% under budget
 - Quantization accuracy: ≥99.8%
@@ -222,6 +241,7 @@ Receipt Schema:
 - Schema changes: 0
 
 ### Qualitative Evidence
+
 - Identical kernel execution path vs baseline
 - Receipt structure stable (v1.0.0)
 - Architecture validation passed
@@ -230,6 +250,7 @@ Receipt Schema:
 - Production standards met
 
 ### Documentation Confidence
+
 - Baseline comparison: COMPREHENSIVE (kernel-by-kernel analysis)
 - Performance analysis: DETAILED (metrics table with contexts)
 - Regression testing: THOROUGH (0% delta with baseline)
