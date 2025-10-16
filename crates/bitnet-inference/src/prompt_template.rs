@@ -237,16 +237,17 @@ impl TemplateType {
                 write!(out, "A: ")?;
             }
             TemplateType::Raw => {
-                // Minimal: just concatenate with system prefix
+                // Minimal: concatenate system prompt and full history
                 if let Some(sys) = system {
                     writeln!(out, "{}\n", sys)?;
                 }
 
-                // For raw mode, just take the last user message
-                if let Some(last_user) =
-                    history.iter().rev().find(|t| matches!(t.role, ChatRole::User))
-                {
-                    write!(out, "{}", last_user.text)?;
+                // Concatenate all turns with double newline separators
+                for (i, turn) in history.iter().enumerate() {
+                    if i > 0 {
+                        write!(out, "\n\n")?;
+                    }
+                    write!(out, "{}", turn.text)?;
                 }
             }
         }
@@ -474,10 +475,10 @@ mod tests {
         ];
         let s = t.render_chat(&hist, None).unwrap();
 
-        // Raw mode should just take the last user message
+        // Raw mode should concatenate full history with double newline separators
+        assert!(s.contains("First message"));
+        assert!(s.contains("First response"));
         assert!(s.contains("Second message"));
-        // Should not contain earlier messages in raw mode
-        assert!(!s.contains("First message"));
     }
 
     #[test]

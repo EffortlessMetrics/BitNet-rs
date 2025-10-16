@@ -11,7 +11,7 @@
 //! support and proper role formatting.
 
 use anyhow::Result;
-use bitnet_inference::{ChatRole, ChatTurn, TemplateType};
+use bitnet_inference::prompt_template::{ChatRole, ChatTurn, TemplateType};
 
 /// Tests feature spec: chat-repl-ux-polish.md#AC1-llama3-chat-multi-turn
 #[test]
