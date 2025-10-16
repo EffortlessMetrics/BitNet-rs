@@ -18,6 +18,7 @@ pub mod config_scenarios_simple;
 pub mod env;
 pub mod error_analysis;
 pub mod errors;
+pub mod gpu;
 pub mod harness;
 pub mod results;
 pub mod serde_time;

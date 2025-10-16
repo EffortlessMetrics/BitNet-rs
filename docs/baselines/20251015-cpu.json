@@ -1,0 +1,27 @@
+{
+  "backend": "cpu",
+  "compute_path": "real",
+  "deterministic": true,
+  "environment": {
+    "BITNET_VERSION": "0.1.0",
+    "OS": "linux-x86_64",
+    "RUST_VERSION": ""
+  },
+  "kernels": [
+    "embedding_lookup",
+    "prefill_forward",
+    "i2s_gemv",
+    "rope_apply",
+    "attention_real",
+    "decode_forward",
+    "logits_projection"
+  ],
+  "model": {
+    "path": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
+  },
+  "schema_version": "1.0.0",
+  "timestamp": "2025-10-15T19:41:18.920441642+00:00",
+  "tokens_generated": 1,
+  "tokens_per_second": 0.0,
+  "tokens_requested": 1
+}

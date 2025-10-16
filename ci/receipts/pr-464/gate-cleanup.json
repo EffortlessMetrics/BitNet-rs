@@ -1,0 +1,43 @@
+{
+  "check_run": "integrative:gate:cleanup",
+  "pr_number": 464,
+  "status": "success",
+  "timestamp": "2025-10-15T12:47:00Z",
+  "merge_commit": "1f7dbd0e0209ef012c20d8a8c6b45d53d9e321a2",
+  "cleanup": {
+    "branch": {
+      "name": "feat/cpu-forward-inference",
+      "deleted_remote": true,
+      "deleted_at": "2025-10-15T12:39:51Z",
+      "verified": true
+    },
+    "receipts": {
+      "archived": true,
+      "location": "ci/receipts/pr-464/",
+      "files_preserved": [
+        "LEDGER.md",
+        "architecture-review-progress.md",
+        "architecture-review-report.md",
+        "freshness-progress-comment.md",
+        "generative-gate-publication-check-run.md",
+        "publication-verification-failure.md",
+        "review-freshness-check.md",
+        "gate-merge-validation.json",
+        "gate-baseline-update.json",
+        "gate-cleanup.json",
+        "completion-receipt.json"
+      ]
+    },
+    "workspace": {
+      "local_synced": true,
+      "clean_state": true,
+      "build_verified": true
+    }
+  },
+  "summary": "branch cleaned: feat/cpu-forward-inference deleted from remote; workspace verified: local synced with main; test artifacts archived: ci/receipts/pr-464/",
+  "evidence": {
+    "branch_deletion": "gh api branches/feat/cpu-forward-inference: 404 Not Found",
+    "workspace_sync": "git pull origin main: Merge made by 'ort' strategy",
+    "artifacts_preserved": "ls ci/receipts/pr-464/: 11 files archived"
+  }
+}

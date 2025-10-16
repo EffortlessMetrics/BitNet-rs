@@ -433,15 +433,19 @@ impl BitNetAttention {
     }
 
     /// Validate that all projections have native quantized kernels (AC2 & AC4)
+    /// This ensures Q/K/V/O projections are using quantized inference, not FP32 fallback
     fn validate_projections_quantized(&self) -> Result<()> {
         let projections =
             [("Q", &self.q_proj), ("K", &self.k_proj), ("V", &self.v_proj), ("O", &self.o_proj)];
 
         for (name, proj) in &projections {
             if !proj.has_native_quantized_kernel() {
+                let layer_info =
+                    format!("Attention::{}_proj[{}x{}]", name, proj.in_features, proj.out_features);
                 return Err(bitnet_common::BitNetError::StrictMode(format!(
-                    "Strict mode: {} projection would fall back to FP32 - qtype={:?}, device={:?}",
-                    name, proj.qtype, proj.device
+                    "FP32 fallback rejected in strict mode - layer={}, qtype={:?}, device={:?}, reason=kernel_unavailable. \
+                     Strict mode requires all attention projections to use native quantized kernels.",
+                    layer_info, proj.qtype, proj.device
                 ))
                 .into());
             }

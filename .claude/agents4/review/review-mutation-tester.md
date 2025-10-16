@@ -1,7 +1,7 @@
 ---
 name: mutation-tester
 description: Use this agent when you need to assess test suite quality through mutation testing, identify weak spots in test coverage, and determine the most impactful mutations that survive testing in Draft→Ready PR validation for neural network inference systems. Examples: <example>Context: User has written a new quantization function with basic tests and wants to validate test strength before merging. user: "I've added tests for the new I2_S quantization algorithm, can you check if they're comprehensive enough?" assistant: "I'll use the mutation-tester agent to analyze your quantization test suite strength and identify any gaps using BitNet.rs TDD validation patterns." <commentary>The user wants to validate quantization test quality for PR promotion, so use mutation-tester to run bounded testing with cargo mutants and assess accuracy threshold coverage gaps.</commentary></example> <example>Context: CI pipeline shows high code coverage but quantization accuracy regressions are still escaping to production. user: "Our coverage is 95% but we're still seeing inference accuracy issues. What's wrong with our tests?" assistant: "Let me use the mutation-tester agent to measure actual test effectiveness beyond just coverage metrics using BitNet.rs quality gates focused on neural network correctness." <commentary>High coverage doesn't guarantee quantization test quality in TDD workflow, so use mutation-tester to identify survivors and weak accuracy assertions.</commentary></example>
-model: sonnet
+model: haiku
 color: pink
 ---
 

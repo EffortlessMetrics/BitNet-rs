@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cpu",
+  "model": "microsoft/bitnet-b1.58-2B-4T-gguf",
+  "quantization": "i2s",
+  "tokens_generated": 128,
+  "throughput_tokens_per_sec": 15.3,
+  "success": true,
+  "kernels": [
+    "",
+    "a_very_long_kernel_id_that_exceeds_128_characters_limit_and_should_fail_validation_with_proper_error_message_explaining_what_went_wrong_in_detail_for_debugging_purposes"
+  ],
+  "timestamp": "2025-10-15T12:00:00Z",
+  "note": "INVALID: Contains empty kernel ID and kernel ID exceeding 128 characters"
+}

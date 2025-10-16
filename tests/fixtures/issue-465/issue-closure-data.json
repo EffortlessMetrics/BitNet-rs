@@ -1,0 +1,66 @@
+{
+  "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/issues/420",
+  "repository_url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs",
+  "labels_url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/issues/420/labels{/name}",
+  "comments_url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/issues/420/comments",
+  "events_url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/issues/420/events",
+  "html_url": "https://github.com/EffortlessMetrics/BitNet-rs/issues/420",
+  "id": 2147483648,
+  "node_id": "I_kwDOExample",
+  "number": 420,
+  "title": "Eliminate mocked inference from production code",
+  "user": {
+    "login": "maintainer",
+    "id": 12345678,
+    "type": "User"
+  },
+  "labels": [
+    {
+      "id": 1234567890,
+      "name": "bug",
+      "color": "d73a4a"
+    },
+    {
+      "id": 1234567892,
+      "name": "cpu",
+      "color": "0e8a16"
+    },
+    {
+      "id": 1234567893,
+      "name": "priority-high",
+      "color": "b60205"
+    }
+  ],
+  "state": "closed",
+  "locked": false,
+  "assignee": null,
+  "assignees": [],
+  "milestone": {
+    "id": 9876543,
+    "number": 1,
+    "title": "v0.1.0-mvp",
+    "description": "MVP release with CPU baseline and honest compute"
+  },
+  "comments": 12,
+  "created_at": "2025-09-15T08:30:00Z",
+  "updated_at": "2025-10-09T13:40:00Z",
+  "closed_at": "2025-10-09T13:40:00Z",
+  "author_association": "OWNER",
+  "active_lock_reason": null,
+  "body": "## Problem\n\nCurrent codebase contains mocked inference paths that bypass real kernel execution. This violates honest compute principles and makes performance claims unverifiable.\n\n## Solution\n\n1. Generate CPU baseline receipt with real kernel IDs\n2. Implement receipt verification in CI (Model Gates workflow)\n3. Remove all mocked inference code paths\n4. Update documentation with receipt-verified performance\n\n## Acceptance Criteria\n\n- [x] CPU baseline generated with I2_S quantization\n- [x] Receipt schema v1.0.0 implemented\n- [x] Model Gates (CPU) workflow operational\n- [x] All mocked inference removed from production\n- [x] Documentation updated with receipt evidence\n\n## Resolution\n\nFixed in PR #435. CPU baseline established at docs/baselines/20251009-cpu.json with measured 15.3 tok/s performance.",
+  "closed_by": {
+    "login": "maintainer",
+    "id": 12345678,
+    "type": "User"
+  },
+  "reactions": {
+    "+1": 5,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 3,
+    "confused": 0,
+    "heart": 2,
+    "rocket": 1,
+    "eyes": 0
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "check_run": "integrative:gate:merge-validation",
+  "pr_number": 464,
+  "status": "success",
+  "timestamp": "2025-10-15T12:45:00Z",
+  "merge_commit": "1f7dbd0e0209ef012c20d8a8c6b45d53d9e321a2",
+  "merged_at": "2025-10-15T12:39:51Z",
+  "validation": {
+    "merge_state": {
+      "pr_state": "MERGED",
+      "pr_closed": true,
+      "branch_deleted": true,
+      "issue_closed": true,
+      "issue_closed_at": "2025-10-15T12:39:53Z"
+    },
+    "workspace": {
+      "cpu_build": "ok",
+      "build_time": "3.61s",
+      "test_status": "not_run_post_merge",
+      "format_check": "not_run_post_merge"
+    },
+    "security": {
+      "cargo_audit": "clean",
+      "unsafe_blocks": "0_new",
+      "cve_count": 0
+    },
+    "repository": {
+      "local_synced": true,
+      "merge_commit_present": true,
+      "merge_commit_head": true,
+      "conflicts": "none"
+    }
+  },
+  "summary": "workspace: CPU build ok (3.61s); security: clean (0 CVEs); merge commit: 1f7dbd0 present on main; branch deleted: feat/cpu-forward-inference; issue #462: auto-closed",
+  "evidence": {
+    "pr_verification": "gh pr view 464: state=MERGED, mergedAt=2025-10-15T12:39:51Z",
+    "issue_verification": "gh issue view 462: state=CLOSED, closedAt=2025-10-15T12:39:53Z",
+    "branch_verification": "gh api branches/feat/cpu-forward-inference: 404 Not Found (deleted)",
+    "build_verification": "cargo build --workspace --no-default-features --features cpu: Finished dev in 3.61s",
+    "audit_verification": "cargo audit: Loaded 822 advisories, 0 vulnerabilities found"
+  }
+}

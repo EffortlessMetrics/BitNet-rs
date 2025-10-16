@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cpu",
+  "model": "microsoft/bitnet-b1.58-2B-4T-gguf",
+  "model_file": "ggml-model-i2_s.gguf",
+  "model_size_bytes": 2147483648,
+  "quantization": "i2s",
+  "tokens_generated": 128,
+  "throughput_tokens_per_sec": 15.3,
+  "latency_ms": 65.4,
+  "success": true,
+  "kernels": [
+    "i2s_cpu_quantized_matmul",
+    "tl1_lut_dequant_forward",
+    "tl2_lut_dequant_forward",
+    "attention_kv_cache_update",
+    "layernorm_forward",
+    "ffn_forward",
+    "cpu_rope_embedding",
+    "cpu_softmax",
+    "i2s_cpu_quant_block_128",
+    "cpu_vector_add",
+    "cpu_rmsnorm"
+  ],
+  "environment": {
+    "deterministic": true,
+    "seed": 42,
+    "num_threads": 1
+  },
+  "system": {
+    "os": "linux",
+    "arch": "x86_64",
+    "cpu_features": ["avx2", "fma", "f16c"]
+  },
+  "timestamp": "2025-10-15T12:00:00Z"
+}

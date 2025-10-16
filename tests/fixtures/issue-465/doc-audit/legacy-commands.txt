@@ -1,0 +1,42 @@
+# Legacy Command Patterns to Audit (AC9)
+#
+# These patterns represent legacy cargo commands without explicit feature flags.
+# All instances should be replaced with feature-aware versions.
+#
+# Search pattern: cargo build|test|run without --no-default-features
+
+# Legacy build commands
+cargo build
+cargo build --release
+cargo build --all-targets
+
+# Legacy test commands
+cargo test
+cargo test --workspace
+cargo test --all-targets
+
+# Legacy run commands
+cargo run
+cargo run --release
+cargo run -p bitnet-cli
+
+# Legacy bench commands
+cargo bench
+cargo bench --all-targets
+
+# Exceptions (OK to use without feature flags):
+# - cargo fmt
+# - cargo clippy (when using --all-features)
+# - cargo doc
+# - cargo clean
+# - cargo update
+
+# Replacement Pattern:
+# OLD: cargo build
+# NEW: cargo build --no-default-features --features cpu
+
+# OLD: cargo test --workspace
+# NEW: cargo test --workspace --no-default-features --features cpu
+
+# OLD: cargo run -p bitnet-cli
+# NEW: cargo run -p bitnet-cli --no-default-features --features cpu,full-cli

@@ -1,7 +1,7 @@
 ---
 name: review-feature-validator
 description: Use this agent when you need to validate feature compatibility test results and make gate decisions based on the test matrix output. Examples: <example>Context: The user has run feature compatibility tests and needs to validate the results for a gate decision. user: "The feature tester completed with matrix results showing 15/20 combinations passed. Need to validate for the features gate." assistant: "I'll use the review-feature-validator agent to analyze the test matrix and determine the gate outcome." <commentary>Since the user needs feature test validation for gate decisions, use the review-feature-validator agent to parse results and classify compatibility.</commentary></example> <example>Context: Feature testing completed and gate validation is needed. user: "Feature compatibility testing finished - need gate decision on features" assistant: "Let me use the review-feature-validator agent to review the test results and make the gate decision." <commentary>The user needs gate validation after feature testing, so use the review-feature-validator agent to analyze results and determine pass/fail status.</commentary></example>
-model: sonnet
+model: haiku
 color: cyan
 ---
 

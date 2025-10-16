@@ -1,7 +1,7 @@
 ---
 name: github-pr-issue-researcher
 description: Use this agent when you need to research GitHub pull requests or issues in BitNet.rs neural network inference repository, gathering contextual information about quantization algorithms, GGUF models, GPU/CPU kernels, and compile comprehensive reports. Examples: <example>Context: User is reviewing a PR affecting quantization algorithms. user: "Can you look into PR #184 and tell me what quantization changes are being made?" assistant: "I'll use the github-pr-issue-researcher agent to investigate PR #184's quantization algorithm changes and compile a detailed report."</example> <example>Context: User mentions an issue about GGUF compatibility during inference discussion. user: "This GGUF loading issue seems related to #166" assistant: "Let me use the github-pr-issue-researcher agent to pull up issue #166 details and provide GGUF compatibility context."</example> <example>Context: User needs to understand neural network performance issues blocking release. user: "What's the current status of the GPU kernel performance issues?" assistant: "I'll use the github-pr-issue-researcher agent to research GPU/CPU kernel performance issues and their current status."</example>
-model: sonnet
+model: haiku
 color: green
 ---
 

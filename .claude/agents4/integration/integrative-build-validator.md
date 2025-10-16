@@ -1,7 +1,7 @@
 ---
 name: integrative-build-validator
 description: Use this agent when you need to validate build integrity across BitNet.rs's neural network feature matrix (cpu/gpu/ffi/spm/iq2s-ffi) and generate GitHub-native gate receipts. This agent validates cargo builds, feature compatibility, and BitNet.rs-specific infrastructure before tests. Examples: <example>Context: PR needs build validation across CPU/GPU feature matrix user: "Validate builds across the feature matrix for BitNet neural network changes" assistant: "I'll use the integrative-build-validator to check cargo builds across cpu/gpu/ffi combinations with BitNet.rs-specific validation" <commentary>Use this agent for BitNet.rs build matrix validation with neural network features.</commentary></example> <example>Context: Neural network quantization changes need build validation user: "Check if quantization changes break the build matrix" assistant: "I'll run integrative-build-validator to validate quantization features and FFI compatibility" <commentary>BitNet.rs quantization changes require comprehensive feature matrix validation.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

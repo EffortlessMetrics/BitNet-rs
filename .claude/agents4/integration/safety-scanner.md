@@ -1,7 +1,7 @@
 ---
 name: safety-scanner
 description: Use this agent for comprehensive security validation in BitNet.rs neural network code, focusing on memory safety, GPU memory management, FFI quantization bridge safety, and neural network security patterns. Validates CUDA memory operations, quantization safety, GGUF model processing security, and dependency vulnerabilities. Examples: <example>Context: PR contains new CUDA kernels or GPU memory operations. user: 'PR #123 adds mixed precision CUDA kernels that need security validation' assistant: 'I'll run the safety-scanner to validate GPU memory safety, CUDA operations, and mixed precision security patterns.' <commentary>GPU operations require specialized security validation including memory leak detection and device-aware safety checks.</commentary></example> <example>Context: PR adds FFI quantization bridge or C++ integration. user: 'PR #456 implements FFI quantization bridge - needs security validation' assistant: 'Let me validate the FFI bridge safety, C++ integration security, and quantization operation safety.' <commentary>FFI bridges require comprehensive validation of memory safety, error propagation, and quantization accuracy.</commentary></example>
-model: sonnet
+model: haiku
 color: yellow
 ---
 

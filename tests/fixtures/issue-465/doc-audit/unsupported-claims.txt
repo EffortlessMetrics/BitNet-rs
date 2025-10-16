@@ -1,0 +1,46 @@
+# Unsupported Performance Claims Patterns (AC10)
+#
+# These patterns represent unsupported performance claims in documentation.
+# All performance claims must reference receipt evidence or baseline data.
+
+# Unsupported specific numbers (unrealistic claims)
+200 tok/s
+500 tok/s
+1000 tok/s
+50x faster
+100x speedup
+
+# Vague performance claims without evidence
+blazing fast
+lightning speed
+ultra-fast inference
+blazingly fast
+extremely fast
+incredibly fast
+super fast
+very fast performance
+
+# Unsupported comparison claims
+faster than PyTorch
+faster than ONNX
+faster than TensorFlow
+outperforms X
+beats X by Y%
+
+# Acceptable performance claims (with evidence):
+# - "10-20 tok/s (see docs/baselines/20251015-cpu.json)"
+# - "Measured 15.3 tok/s on CPU (receipt in ci/inference.json)"
+# - "Performance baseline: docs/baselines/"
+# - "Receipt-verified throughput: X tok/s"
+
+# Replacement Pattern:
+# OLD: "BitNet.rs achieves blazing fast inference"
+# NEW: "BitNet.rs achieves 10-20 tok/s on CPU for 2B models (see docs/baselines/)"
+
+# OLD: "Ultra-fast 1000 tok/s throughput"
+# NEW: "Measured 15.3 tok/s for I2_S quantization (receipt in ci/inference.json)"
+
+# Evidence Requirements:
+# - All performance numbers must reference receipt or baseline
+# - Use "measured", "receipt-verified", or "baseline" terminology
+# - Link to specific receipt files or baselines/ directory

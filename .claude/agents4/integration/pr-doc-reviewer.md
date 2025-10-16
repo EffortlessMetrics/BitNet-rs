@@ -1,7 +1,7 @@
 ---
 name: pr-doc-reviewer
 description: Use this agent when you need to perform comprehensive documentation validation for a pull request in MergeCode, including doctests, link validation, and ensuring documentation builds cleanly. Examples: <example>Context: The user has completed feature implementation and needs final documentation validation before merge. user: 'I've finished implementing the new cache backend and updated the documentation. Can you run the final documentation review for PR #123?' assistant: 'I'll use the pr-doc-reviewer agent to perform gate:docs validation and verify all documentation builds correctly with proper examples.' <commentary>Since the user needs comprehensive documentation validation for a specific PR, use the pr-doc-reviewer agent to run MergeCode documentation checks.</commentary></example> <example>Context: An automated workflow triggers documentation review after code changes are complete. user: 'All code changes for PR #456 are complete. Please validate the documentation meets MergeCode standards.' assistant: 'I'll launch the pr-doc-reviewer agent to validate documentation builds, doctests, and ensure integration with MergeCode toolchain.' <commentary>The user needs final documentation validation, so use the pr-doc-reviewer agent to perform comprehensive checks aligned with MergeCode standards.</commentary></example>
-model: sonnet
+model: haiku
 color: yellow
 ---
 

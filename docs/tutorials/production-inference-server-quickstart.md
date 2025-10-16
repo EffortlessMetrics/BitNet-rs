@@ -29,13 +29,13 @@ Choose your deployment configuration:
 
 ```bash
 # CPU-optimized production server
-cargo build --no-default-features --release --no-default-features --features "cpu,prometheus"
+cargo build --release --no-default-features --features "cpu,prometheus"
 
 # GPU-accelerated production server (requires CUDA)
-cargo build --no-default-features --release --no-default-features --features "gpu,prometheus"
+cargo build --release --no-default-features --features "gpu,prometheus"
 
 # Full-featured server with all capabilities
-cargo build --no-default-features --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry"
+cargo build --release --no-default-features --features "cpu,gpu,prometheus,opentelemetry"
 ```
 
 ### 2. Download a BitNet Model
@@ -291,7 +291,7 @@ export BITNET_GGUF=models/bitnet/model.gguf
 cargo run -p xtask -- crossval --samples 100
 
 # Quantization accuracy validation
-cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
+cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
 
 # Feature flag validation
 cargo run -p xtask -- test-matrix --features "cpu gpu"

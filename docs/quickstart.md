@@ -19,10 +19,10 @@ cd BitNet-rs
 
 ```bash
 # CPU inference (fastest setup)
-cargo build --no-default-features --release --no-default-features --features cpu
+cargo build --release --no-default-features --features cpu
 
 # OR GPU inference (if CUDA available)
-cargo build --no-default-features --release --no-default-features --features gpu
+cargo build --release --no-default-features --features gpu
 ```
 
 ## Step 2: Download BitNet Model (1 minute)
@@ -100,11 +100,11 @@ You've successfully:
 ```bash
 # CPU build and test
 cargo build --no-default-features --features cpu
-cargo test --no-default-features --workspace --no-default-features --features cpu
+cargo test --workspace --no-default-features --features cpu
 
 # GPU build and test
 cargo build --no-default-features --features gpu
-cargo test --no-default-features --workspace --no-default-features --features gpu
+cargo test --workspace --no-default-features --features gpu
 
 # Download and verify model (automatic tokenizer discovery)
 cargo run -p xtask -- download-model

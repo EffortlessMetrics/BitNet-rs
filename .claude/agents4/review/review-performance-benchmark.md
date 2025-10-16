@@ -1,7 +1,7 @@
 ---
 name: performance-benchmark
 description: Use this agent when you need to detect performance regressions, analyze benchmark results, or validate performance changes against baselines. Examples: <example>Context: User has made changes to the string optimization system and wants to validate performance impact. user: "I've updated the Cow<str> patterns in the WAL processing. Can you check if this affects performance?" assistant: "I'll use the performance-benchmark agent to run the relevant benchmarks and analyze any performance changes." <commentary>Since the user is asking about performance impact of code changes, use the performance-benchmark agent to run benchmarks and detect any regressions.</commentary></example> <example>Context: User notices slower render times after recent changes. user: "The render pipeline seems slower after the recent chromium backend changes. Can you investigate?" assistant: "Let me use the performance-benchmark agent to analyze the render performance and identify any regressions." <commentary>User is reporting potential performance regression, so use the performance-benchmark agent to investigate and localize the issue.</commentary></example>
-model: sonnet
+model: haiku
 color: cyan
 ---
 

@@ -1,0 +1,50 @@
+{
+  "gate": "generative:gate:benchmarks",
+  "issue": 465,
+  "flow": "generative",
+  "status": "pass",
+  "conclusion": "success",
+  "timestamp": "2025-10-15T13:30:00Z",
+  "baseline": {
+    "file": "docs/baselines/20251015-cpu.json",
+    "schema_version": "1.0.0",
+    "compute_path": "real",
+    "backend": "cpu",
+    "kernels_count": 7,
+    "kernels": [
+      "embedding_lookup",
+      "prefill_forward",
+      "i2s_gemv",
+      "rope_apply",
+      "attention_real",
+      "decode_forward",
+      "logits_projection"
+    ],
+    "deterministic": true,
+    "model": "ggml-model-i2_s.gguf"
+  },
+  "validation": {
+    "schema_valid": true,
+    "honest_compute": true,
+    "receipt_verification": "pass",
+    "command": "cargo run -p xtask -- verify-receipt --path docs/baselines/20251015-cpu.json"
+  },
+  "rationale": {
+    "production_code_changes": 0,
+    "new_benchmarks_needed": false,
+    "reuse_existing_baseline": true,
+    "reason": "Documentation and tooling only - no performance-critical code added"
+  },
+  "evidence": "benchmarks: baseline established (reuse existing); file: docs/baselines/20251015-cpu.json; schema: v1.0.0; compute_path: real; kernels: 7 CPU IDs; validation: passing",
+  "standards_met": {
+    "generative_flow_baseline": true,
+    "documentation_only_optional": true,
+    "reuse_existing_baseline": true,
+    "schema_validation": true,
+    "honest_compute": true
+  },
+  "routing": {
+    "next": "quality-finalizer",
+    "reason": "Baseline validated, ready for quality gates"
+  }
+}

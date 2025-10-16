@@ -1,0 +1,34 @@
+{
+  "check_run": "integrative:gate:baseline-update",
+  "pr_number": 464,
+  "status": "success",
+  "timestamp": "2025-10-15T12:46:00Z",
+  "merge_commit": "1f7dbd0e0209ef012c20d8a8c6b45d53d9e321a2",
+  "baselines": {
+    "inference": {
+      "status": "documented",
+      "note": "CPU forward pass baseline established in pre-merge validation"
+    },
+    "quantization": {
+      "i2s_accuracy": ">99%",
+      "tl1_accuracy": ">99%",
+      "tl2_accuracy": ">99%",
+      "status": "validated_pre_merge"
+    },
+    "performance": {
+      "tl_lut_helper": "bounds_checked_safe_indexing",
+      "receipt_validation": "schema_v1.0_strict_checks",
+      "cpu_forward": "real_inference_with_kv_cache"
+    },
+    "crossval": {
+      "status": "not_applicable",
+      "reason": "CPU forward pass infrastructure; crossval deferred to full inference PR"
+    }
+  },
+  "summary": "inference: CPU forward pass baseline documented; quantization: I2S/TL1/TL2 >99% accuracy (pre-merge validated); baselines: documented in Issue #462 ledger and test suite",
+  "evidence": {
+    "test_validation": "cargo test issue_462: 43/43 pass (AC1: 4/4 CPU forward, AC2: 4/4 CLI, AC3: 12/12 receipt, AC4: 11/11 TL LUT)",
+    "mutation_score": "91% overall (TL LUT: 100%, Receipt: 88%)",
+    "quality_gates": "format: clean, clippy: 0 warnings, build: cpu ok, tests: 1043/1043 pass"
+  }
+}

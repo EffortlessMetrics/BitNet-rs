@@ -47,6 +47,39 @@ cargo run -p xtask -- download-model
 BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model path/to/model.gguf --prompt "Hello"
 ```
 
+### 10-Line CPU Quickstart
+
+Get started with deterministic BitNet.rs CPU inference:
+
+```bash
+# Deterministic run (CPU) - build → run → answer
+export BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1 BITNET_SEED=42
+cargo build --release -p bitnet-cli --no-default-features --features cpu,full-cli
+target/release/bitnet run \
+  --backend cpu \
+  --model tests/models/tiny.gguf \
+  --prompt "Q: What is 2+2? A:" \
+  --max-new-tokens 16 --temperature 0.0
+```
+
+**Expected Output:** Deterministic answer with kernel IDs proving real I2_S quantization.
+
+### Receipt Verification Workflow
+
+Generate, verify, and pin performance baselines:
+
+```bash
+# Receipts: run → emit → verify
+export BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1
+cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic
+cargo run -p xtask -- verify-receipt ci/inference.json
+mkdir -p docs/baselines && cp ci/inference.json docs/baselines/$(date +%Y%m%d)-cpu.json
+```
+
+**Expected Performance:** 10-20 tok/s on CPU for 2B I2_S models (see [docs/baselines/](docs/baselines/) for measured results).
+
+**Receipt Verification:** All inference runs generate receipts (`ci/inference.json`) with kernel IDs proving real computation. CI blocks PRs with mocked receipts.
+
 ### Rust API
 
 ```rust
@@ -104,6 +137,71 @@ async fn main() -> Result<()> {
 - **Production Mode**: `BITNET_STRICT_TOKENIZERS=1` prevents mock fallbacks
 - **Vocabulary Resolution**: 5-strategy extraction from metadata, tensors, or architecture defaults
 - **O(1) Performance**: Memory-mapped GGUF parsing, zero-copy tokenizer extraction
+
+## Receipt Verification
+
+BitNet.rs implements **honest compute** verification through production receipts. Every inference run generates a receipt with kernel IDs proving real computation.
+
+### Receipt Schema v1.0.0
+
+```json
+{
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "backend": "cpu",
+  "model": "microsoft/bitnet-b1.58-2B-4T-gguf",
+  "quantization": "i2s",
+  "tokens_generated": 128,
+  "throughput_tokens_per_sec": 15.3,
+  "success": true,
+  "kernels": [
+    "i2s_cpu_quantized_matmul",
+    "tl1_lut_dequant_forward",
+    "attention_kv_cache_update",
+    "layernorm_forward"
+  ],
+  "timestamp": "2025-10-15T12:00:00Z"
+}
+```
+
+### xtask Commands
+
+```bash
+# Generate receipt (writes ci/inference.json)
+cargo run -p xtask -- benchmark --model <model.gguf> --tokens 128
+
+# Verify receipt passes quality gates
+cargo run -p xtask -- verify-receipt ci/inference.json
+
+# Strict mode (fail on warnings)
+BITNET_STRICT_MODE=1 cargo run -p xtask -- verify-receipt ci/inference.json
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BITNET_DETERMINISTIC` | Enable deterministic inference | `0` |
+| `BITNET_SEED` | Random seed for deterministic mode | `42` |
+| `RAYON_NUM_THREADS` | Thread count (use `1` for determinism) | auto |
+| `BITNET_STRICT_MODE` | Fail on validation warnings | `0` |
+| `BITNET_GGUF` | Override model path | auto-discover `models/` |
+
+### Receipt Requirements
+
+**Honest Compute:**
+- `compute_path` must be `"real"` (not `"mocked"`)
+- `kernels` array must be non-empty
+- Kernel IDs must be valid (non-empty, ≤128 chars, ≤10,000 count)
+
+**CI Enforcement:**
+- Model Gates (CPU) workflow requires valid receipts
+- Branch protection blocks PRs with mocked receipts
+- See [.github/workflows/model-gates.yml](.github/workflows/model-gates.yml)
+
+### Baseline Receipts
+
+Reference receipts are stored in [docs/baselines/](docs/baselines/) with datestamped filenames (`YYYYMMDD-cpu.json`). These baselines establish reproducible performance benchmarks for CPU inference.
 
 ## Architecture
 

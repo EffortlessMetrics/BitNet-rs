@@ -1,7 +1,7 @@
 ---
 name: pr-merge-prep
 description: Use this agent when a pull request has passed all required checks and needs final merge readiness validation including comprehensive BitNet neural network performance verification. This agent performs the final Integrative flow checkpoint before merge approval, ensuring BitNet.rs inference SLO compliance, GPU compatibility, and production readiness.\n\nExamples:\n- <example>\n  Context: A PR has passed all gates and needs final neural network performance validation before merge.\n  user: "All gates are green for PR #123, validate merge readiness with inference SLO check"\n  assistant: "I'll run pr-merge-prep to perform final BitNet inference throughput validation, GPU compatibility testing, and comprehensive merge readiness assessment."\n  <commentary>\n  This requires BitNet-specific neural network performance analysis, quantization accuracy validation, and cross-validation against C++ reference implementation.\n  </commentary>\n</example>\n- <example>\n  Context: Development team needs comprehensive pre-merge validation for BitNet neural network changes.\n  user: "Please validate merge readiness with full BitNet performance analysis"\n  assistant: "I'll execute pr-merge-prep to run comprehensive BitNet validation including inference SLO verification, GPU/CPU compatibility testing, and quantization accuracy validation."\n  <commentary>\n  This requires BitNet-specific validation including I2S/TL1/TL2 quantization accuracy >99%, cross-validation parity, and inference ≤10s SLO compliance.\n  </commentary>\n</example>
-model: sonnet
+model: haiku
 color: pink
 ---
 

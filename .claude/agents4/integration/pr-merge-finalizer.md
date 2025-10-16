@@ -1,7 +1,7 @@
 ---
 name: pr-merge-finalizer
 description: Use this agent when a pull request has been successfully merged and you need to perform all post-merge cleanup and verification tasks. Examples: <example>Context: A PR has just been merged to main and needs final cleanup. user: 'The PR #123 was just merged, can you finalize everything?' assistant: 'I'll use the pr-merge-finalizer agent to verify the merge state and perform all cleanup tasks.' <commentary>The user is requesting post-merge finalization, so use the pr-merge-finalizer agent to handle verification and cleanup.</commentary></example> <example>Context: After a successful merge, automated cleanup is needed. user: 'Please verify the merge of PR #456 and close the linked issue' assistant: 'I'll launch the pr-merge-finalizer agent to verify the merge state, close linked issues, and perform cleanup.' <commentary>This is a post-merge finalization request, perfect for the pr-merge-finalizer agent.</commentary></example>
-model: sonnet
+model: haiku
 color: red
 ---
 

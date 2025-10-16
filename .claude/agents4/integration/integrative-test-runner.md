@@ -1,7 +1,7 @@
 ---
 name: integrative-test-runner
 description: Executes comprehensive neural network test suite for BitNet.rs workspace with CPU/GPU feature matrix, quantization accuracy validation, cross-validation against C++ reference, and performance regression testing. Gate-focused pass/fail evidence for integrative flow merge readiness.
-model: sonnet
+model: haiku
 color: yellow
 ---
 

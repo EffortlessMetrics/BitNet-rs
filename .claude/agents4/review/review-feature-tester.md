@@ -1,7 +1,7 @@
 ---
 name: review-feature-tester
 description: Use this agent when you need to test and validate feature flag combinations in the BitNet.rs project. This agent should be called after baseline builds are confirmed working and before feature validation. Examples: <example>Context: User has made changes to feature flags or added new quantization/GPU features and wants to verify compatibility matrix. user: 'I've added a new SIMD optimization feature and want to test all feature combinations' assistant: 'I'll use the review-feature-tester agent to exercise the BitNet.rs feature-flag matrix and record compatibility across CPU/GPU combinations.' <commentary>Since the user needs feature compatibility testing, use the review-feature-tester agent to run the BitNet.rs feature matrix validation.</commentary></example> <example>Context: CI pipeline needs to validate feature combinations for neural network inference before merging. user: 'Run feature compatibility tests for the current branch with GPU/CPU fallback validation' assistant: 'I'll launch the review-feature-tester agent to validate the BitNet.rs feature-flag matrix and generate compatibility reports for neural network inference.' <commentary>The user is requesting feature testing, so use the review-feature-tester agent to exercise BitNet.rs feature combinations.</commentary></example>
-model: sonnet
+model: haiku
 color: yellow
 ---
 

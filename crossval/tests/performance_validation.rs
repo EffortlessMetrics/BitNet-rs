@@ -482,13 +482,11 @@ mod performance_tests {
 
 #[cfg(not(feature = "crossval"))]
 mod no_crossval_performance_tests {
+    /// Informational test that documents crossval feature requirement
     #[test]
-    fn test_performance_validation_requires_crossval() {
-        println!("Performance validation requires crossval feature");
-        println!("To run performance validation tests, use: cargo test --features crossval");
-
-        // This test documents the requirement
-        assert!(true, "Performance validation tests are feature-gated");
+    fn crossval_feature_message() {
+        eprintln!("Performance validation is feature-gated. Run: cargo test --features crossval");
+        // No assertion; purely informational
     }
 }
 

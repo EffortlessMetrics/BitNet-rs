@@ -152,8 +152,8 @@ pub struct QuantizedLinear {
     pub(crate) qtype: QuantizationType,
 
     /// Layer metadata
-    in_features: usize,
-    out_features: usize,
+    pub(crate) in_features: usize,
+    pub(crate) out_features: usize,
     pub(crate) device: Device,
 
     /// Performance optimization
@@ -280,6 +280,23 @@ impl QuantizedLinear {
         !self.has_native_quantized_kernel()
     }
 
+    /// Reject FP32 fallback in strict mode with detailed error message
+    ///
+    /// This helper centralizes strict mode error handling to avoid duplication
+    /// and ensure consistent error messages across all quantization paths.
+    #[inline]
+    fn strict_reject_fp32_fallback(&self, reason: &str) -> Result<BitNetTensor> {
+        // Format layer name without exposing internal fields
+        let layer_name =
+            format!("QuantizedLinear[qtype={:?}, device={:?}]", self.qtype, self.device);
+        let msg = format!(
+            "FP32 fallback rejected in strict mode - layer={}, reason={}. \
+             Strict mode requires native quantized kernels.",
+            layer_name, reason
+        );
+        Err(bitnet_common::BitNetError::StrictMode(msg).into())
+    }
+
     /// Forward pass with quantized matrix multiplication
     /// Input: [batch_size, seq_len, in_features]
     /// Output: [batch_size, seq_len, out_features]
@@ -294,21 +311,17 @@ impl QuantizedLinear {
         {
             if self.is_fallback_path() {
                 panic!(
-                    "fallback to FP32 in debug mode: layer={}x{}, qtype={:?}, device={:?}, reason=kernel_unavailable",
+                    "FP32 fallback blocked in debug mode: layer=[{}x{}], qtype={:?}, device={:?}, reason=kernel_unavailable",
                     self.in_features, self.out_features, self.qtype, self.device
                 );
             }
         }
 
         // AC3: Strict mode validation - return error if fallback would occur
+        // This enforces quantized-only inference in production when BITNET_STRICT_MODE=1
         let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
-        if self.is_fallback_path() {
-            strict_mode.validate_quantization_fallback(
-                self.qtype,
-                self.device,
-                &[self.in_features, self.out_features],
-                "kernel_unavailable",
-            )?;
+        if strict_mode.get_config().enforce_quantized_inference && self.is_fallback_path() {
+            return self.strict_reject_fp32_fallback("kernel_unavailable");
         }
 
         // Perform quantized matrix multiplication based on type
@@ -633,7 +646,13 @@ impl QuantizedLinear {
             return Ok(BitNetTensor::new(output));
         }
 
-        // Fallback to dequantization only if native kernels fail
+        // Strict mode: reject FP32 fallback
+        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
+        if strict_mode.get_config().enforce_quantized_inference {
+            return self.strict_reject_fp32_fallback("kernel_unavailable");
+        }
+
+        // Fallback to dequantization only if native kernels fail (non-strict mode)
         log::warn!("TL1 native quantized kernel failed, falling back to dequantization");
         let dequantized_weights =
             self.weights.dequantize().context("Failed to dequantize TL1 weights")?;
@@ -657,7 +676,13 @@ impl QuantizedLinear {
             return Ok(BitNetTensor::new(output));
         }
 
-        // Fallback to dequantization only if native kernels fail
+        // Strict mode: reject FP32 fallback
+        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
+        if strict_mode.get_config().enforce_quantized_inference {
+            return self.strict_reject_fp32_fallback("kernel_unavailable");
+        }
+
+        // Fallback to dequantization only if native kernels fail (non-strict mode)
         log::warn!("TL2 native quantized kernel failed, falling back to dequantization");
         let dequantized_weights =
             self.weights.dequantize().context("Failed to dequantize TL2 weights")?;

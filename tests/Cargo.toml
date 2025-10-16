@@ -93,6 +93,22 @@ path = "test_reporting_minimal.rs"
 name = "test_ci_reporting_simple"
 path = "test_ci_reporting_simple.rs"
 
+[[test]]
+name = "issue_465_documentation_tests"
+path = "issue_465_documentation_tests.rs"
+
+[[test]]
+name = "issue_465_baseline_tests"
+path = "issue_465_baseline_tests.rs"
+
+[[test]]
+name = "issue_465_ci_gates_tests"
+path = "issue_465_ci_gates_tests.rs"
+
+[[test]]
+name = "issue_465_release_qa_tests"
+path = "issue_465_release_qa_tests.rs"
+
 [[example]]
 name = "reporting_example"
 path = "examples/reporting_example.rs"

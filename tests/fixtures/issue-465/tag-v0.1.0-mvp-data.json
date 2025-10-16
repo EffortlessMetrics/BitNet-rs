@@ -1,0 +1,23 @@
+{
+  "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/git/tags/abc123def456abc123def456abc123def456abc1",
+  "node_id": "T_kwDOExample",
+  "tag": "v0.1.0-mvp",
+  "sha": "abc123def456abc123def456abc123def456abc1",
+  "message": "BitNet.rs v0.1.0 MVP Release\n\nThis release establishes the CPU baseline with honest compute verification.\n\n## Key Features\n\n- CPU inference with I2_S quantization (10-20 tok/s for 2B models)\n- Receipt verification system (schema v1.0.0)\n- Model Gates (CPU) CI enforcement\n- Deterministic inference with BITNET_DETERMINISTIC=1\n\n## CPU Baseline\n\nReceipt: docs/baselines/20251015-cpu.json\nPerformance: 15.3 tok/s (I2_S, 2B model, AVX2)\nKernels: i2s_cpu_quantized_matmul, tl1_lut_dequant_forward, etc.\n\n## Verification\n\nAll inference runs generate receipts proving real computation. CI blocks PRs with mocked receipts.\n\nTo reproduce:\n```bash\nexport BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1 BITNET_SEED=42\ncargo run -p xtask -- benchmark --model models/*.gguf --tokens 128\ncargo run -p xtask -- verify-receipt ci/inference.json\n```\n\n## Breaking Changes\n\n- Default features are now EMPTY (must use --no-default-features --features cpu|gpu)\n- Removed mocked inference paths\n- Receipt schema v1.0.0 required for all inference\n\nSee CHANGELOG.md for full details.",
+  "tagger": {
+    "name": "BitNet.rs Maintainer",
+    "email": "maintainer@bitnet-rs.dev",
+    "date": "2025-10-15T18:00:00Z"
+  },
+  "object": {
+    "sha": "b7c60171234567890abcdef1234567890abcdef1",
+    "type": "commit",
+    "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/git/commits/b7c60171234567890abcdef1234567890abcdef1"
+  },
+  "verification": {
+    "verified": true,
+    "reason": "valid",
+    "signature": "-----BEGIN PGP SIGNATURE-----\n...\n-----END PGP SIGNATURE-----",
+    "payload": "..."
+  }
+}

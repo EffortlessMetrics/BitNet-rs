@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "compute_path": "fake",
+  "backend": "cpu",
+  "model": "microsoft/bitnet-b1.58-2B-4T-gguf",
+  "quantization": "i2s",
+  "tokens_generated": 128,
+  "throughput_tokens_per_sec": 15.3,
+  "success": true,
+  "kernels": [
+    "i2s_cpu_quantized_matmul",
+    "tl1_lut_dequant_forward"
+  ],
+  "timestamp": "2025-10-15T12:00:00Z",
+  "note": "INVALID: compute_path='fake' instead of 'real' should fail verification"
+}

@@ -1,7 +1,7 @@
 ---
 name: hygiene-sweeper
 description: Use this agent when you need to clean up mechanical code quality issues before deeper code review. This includes after writing new code, before submitting PRs, or when preparing code for architectural review. Examples: <example>Context: User has just implemented a new feature and wants to clean up before review. user: 'I just added the new authentication module, can you clean it up before we do a proper review?' assistant: 'I'll use the hygiene-sweeper agent to handle the mechanical cleanup first.' <commentary>The user wants mechanical cleanup before deeper review, perfect for hygiene-sweeper.</commentary></example> <example>Context: User has made changes and wants to ensure code quality. user: 'I've made some changes to the WAL validation code, let's make sure it's clean' assistant: 'Let me run the hygiene-sweeper agent to handle formatting, linting, and other mechanical improvements.' <commentary>Code changes need mechanical cleanup - use hygiene-sweeper.</commentary></example>
-model: sonnet
+model: haiku
 color: blue
 ---
 

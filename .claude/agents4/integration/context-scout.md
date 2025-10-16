@@ -1,7 +1,7 @@
 ---
 name: context-scout
 description: Use this agent when test failures occur and you need comprehensive diagnostic analysis before attempting fixes. Examples: <example>Context: User has failing tests and needs analysis before fixing. user: 'The integration tests are failing with assertion errors' assistant: 'I'll use the context-scout agent to analyze the test failures and provide diagnostic context' <commentary>Since tests are failing and need analysis, use the context-scout agent to diagnose the failures before routing to pr-cleanup for fixes.</commentary></example> <example>Context: CI pipeline shows test failures that need investigation. user: 'Can you check why the auth tests are breaking?' assistant: 'Let me use the context-scout agent to analyze the failing auth tests' <commentary>The user needs test failure analysis, so use context-scout to investigate and provide diagnostic context.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

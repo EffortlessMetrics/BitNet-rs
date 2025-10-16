@@ -1,7 +1,7 @@
 ---
 name: benchmark-runner
 description: Use this agent when you need to validate that a pull request does not introduce performance regressions by running comprehensive benchmark validation. This is typically used as part of an automated PR validation pipeline after code changes have been made. Examples: <example>Context: A pull request has been submitted with changes to core analysis engine code. user: 'Please run performance validation for PR #123' assistant: 'I'll use the benchmark-runner agent to execute comprehensive benchmarks and check for performance regressions against the baseline.' <commentary>The user is requesting performance validation for a specific PR, so use the benchmark-runner agent to run full benchmark validation.</commentary></example> <example>Context: An automated CI/CD pipeline needs to validate performance before merging. user: 'The code review passed, now we need to check performance for PR #456' assistant: 'I'll launch the benchmark-runner agent to run benchmarks and validate performance against our stored baselines.' <commentary>This is a performance validation request in the PR workflow, so use the benchmark-runner agent.</commentary></example>
-model: sonnet
+model: haiku
 color: cyan
 ---
 

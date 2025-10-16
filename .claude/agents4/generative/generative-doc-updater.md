@@ -1,7 +1,7 @@
 ---
 name: doc-updater
 description: Use this agent when you need to update Diátaxis-style documentation (tutorials, how-to guides, reference docs) to reflect newly implemented features. Examples: <example>Context: A new authentication feature has been implemented and needs documentation updates. user: 'I just added OAuth login functionality to the app' assistant: 'I'll use the doc-updater agent to update all relevant documentation to reflect the new OAuth login feature' <commentary>Since new functionality has been implemented that affects user workflows, use the doc-updater agent to ensure all Diátaxis documentation categories are updated accordingly.</commentary></example> <example>Context: API endpoints have been modified and documentation needs updating. user: 'The user profile API now supports additional fields for preferences' assistant: 'Let me use the doc-updater agent to update the documentation for the enhanced user profile API' <commentary>API changes require documentation updates across tutorials, how-to guides, and reference materials using the doc-updater agent.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

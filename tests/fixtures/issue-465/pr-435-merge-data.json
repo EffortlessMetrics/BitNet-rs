@@ -1,0 +1,70 @@
+{
+  "url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/pulls/435",
+  "id": 2147483647,
+  "node_id": "PR_kwDOExample",
+  "html_url": "https://github.com/EffortlessMetrics/BitNet-rs/pull/435",
+  "number": 435,
+  "state": "closed",
+  "locked": false,
+  "title": "Mock-elimination & baselines",
+  "user": {
+    "login": "maintainer",
+    "id": 12345678,
+    "type": "User"
+  },
+  "body": "This PR establishes CPU baseline receipts and eliminates mocked inference from the codebase.\n\n## Changes\n\n- Generate CPU baseline receipt with I2_S quantization\n- Implement receipt verification in Model Gates workflow\n- Remove mocked inference paths\n- Add baseline documentation in docs/baselines/\n\n## Testing\n\n- [x] CPU baseline generated (docs/baselines/20251009-cpu.json)\n- [x] Receipt verification passes\n- [x] Model Gates (CPU) workflow operational\n- [x] All tests pass with --no-default-features --features cpu\n\n## Evidence\n\nReceipt: docs/baselines/20251009-cpu.json\nPerformance: 15.3 tok/s (I2_S quantization, 2B model)\nKernels: i2s_cpu_quantized_matmul, tl1_lut_dequant_forward, etc.",
+  "created_at": "2025-10-01T10:00:00Z",
+  "updated_at": "2025-10-09T13:36:49Z",
+  "closed_at": "2025-10-09T13:36:49Z",
+  "merged_at": "2025-10-09T13:36:49Z",
+  "merge_commit_sha": "b7c60171234567890abcdef1234567890abcdef1",
+  "assignee": null,
+  "assignees": [],
+  "requested_reviewers": [],
+  "requested_teams": [],
+  "labels": [
+    {
+      "id": 1234567890,
+      "name": "enhancement",
+      "color": "a2eeef"
+    },
+    {
+      "id": 1234567891,
+      "name": "cpu",
+      "color": "0e8a16"
+    }
+  ],
+  "milestone": {
+    "id": 9876543,
+    "number": 1,
+    "title": "v0.1.0-mvp",
+    "description": "MVP release with CPU baseline and honest compute"
+  },
+  "draft": false,
+  "commits_url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/pulls/435/commits",
+  "review_comments_url": "https://api.github.com/repos/EffortlessMetrics/BitNet-rs/pulls/435/comments",
+  "commits": 12,
+  "additions": 450,
+  "deletions": 120,
+  "changed_files": 18,
+  "merged": true,
+  "mergeable": null,
+  "merged_by": {
+    "login": "maintainer",
+    "id": 12345678,
+    "type": "User"
+  },
+  "comments": 5,
+  "review_comments": 8,
+  "maintainer_can_modify": false,
+  "head": {
+    "label": "EffortlessMetrics:feat/mock-elimination",
+    "ref": "feat/mock-elimination",
+    "sha": "abc1234567890abcdef1234567890abcdef12345"
+  },
+  "base": {
+    "label": "EffortlessMetrics:main",
+    "ref": "main",
+    "sha": "def1234567890abcdef1234567890abcdef12345"
+  }
+}

@@ -1,7 +1,7 @@
 ---
 name: integrative-pr-intake
 description: Use this agent when a pull request is ready for integrative processing and needs initial triage setup. This agent should be triggered when: 1) A PR has been submitted and is ready for the integrative workflow, 2) You have local checkout with merge permissions, 3) The PR needs freshness validation and initial labeling. Examples: <example>Context: A new PR #123 has been submitted and needs to enter the integrative workflow. user: "PR #123 is ready for integrative processing" assistant: "I'll use the integrative-pr-intake agent to initialize the ledger and perform T0 freshness triage" <commentary>Since this is a PR ready for integrative processing, use the integrative-pr-intake agent to set up the initial workflow state.</commentary></example> <example>Context: Developer has a local checkout with merge permissions and wants to start the integrative process. user: "Initialize integrative workflow for the current PR" assistant: "I'll use the integrative-pr-intake agent to create the ledger block and set initial labels" <commentary>The user is requesting initialization of the integrative workflow, which is exactly what this agent handles.</commentary></example>
-model: sonnet
+model: haiku
 color: blue
 ---
 

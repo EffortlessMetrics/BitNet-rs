@@ -1,7 +1,7 @@
 ---
 name: generative-benchmark-runner
 description: Establishes performance baselines for BitNet.rs neural network inference during Generative flow. Executes cargo bench suites and validates quantization performance patterns. Part of Quality Gates microloop (5/8). Examples: <example>Context: I2S quantization implementation complete, need baseline establishment. user: 'Establish performance baseline for the I2S quantization in PR #218' assistant: 'I'll run cargo bench --no-default-features --features cpu to establish I2S quantization baseline and emit generative:gate:benchmarks.' <commentary>Baseline establishment for BitNet.rs quantization - use generative-benchmark-runner for cargo bench baseline recording.</commentary></example> <example>Context: GPU acceleration features implemented, need performance validation. user: 'Set performance baseline for CUDA kernels in feature branch' assistant: 'I'll execute cargo bench --no-default-features --features gpu and establish GPU acceleration baseline.' <commentary>GPU performance baseline establishment - use generative-benchmark-runner for CUDA benchmark execution.</commentary></example>
-model: sonnet
+model: haiku
 color: yellow
 ---
 

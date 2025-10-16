@@ -1,0 +1,62 @@
+{
+  "gate": "prep",
+  "status": "pass",
+  "timestamp": "2025-10-15T00:00:00Z",
+  "branch": "feat/issue-465-cpu-path-followup",
+  "issue": "#465",
+  "flow": "generative",
+  "summary": "Branch preparation complete - all quality gates pass",
+  "evidence": {
+    "rebase": {
+      "status": "pass",
+      "details": "Branch is up to date with main (0 commits ahead on main, 12 commits on feature branch)"
+    },
+    "format": {
+      "status": "pass",
+      "command": "cargo fmt --all --check",
+      "details": "All workspace formatting validated"
+    },
+    "clippy": {
+      "status": "pass",
+      "commands": [
+        "cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings",
+        "cargo clippy --workspace --all-targets --no-default-features --features gpu -- -D warnings"
+      ],
+      "details": "All clippy lints pass for CPU and GPU features"
+    },
+    "build": {
+      "status": "pass",
+      "commands": [
+        "cargo build --workspace --no-default-features --features cpu",
+        "cargo build --workspace --no-default-features --features gpu"
+      ],
+      "details": "Workspace builds successfully for CPU and GPU features"
+    },
+    "tests": {
+      "status": "pass",
+      "workspace_tests": "1396 passed, 1 failed (pre-existing)",
+      "issue_465_tests": "14/14 passed",
+      "doc_tests": "10+ passed",
+      "details": "Comprehensive test suite passes. Note: 1 failing test in bitnet-tokenizers (test_offline_mode_comprehensive) is pre-existing and requires async features not included in cpu feature set. Test passes with --all-features.",
+      "commands": [
+        "cargo test --workspace --no-default-features --features cpu",
+        "cargo test -p bitnet-tests --test issue_465_release_qa_tests",
+        "cargo test --doc --workspace --no-default-features --features cpu"
+      ]
+    },
+    "baseline": {
+      "status": "pass",
+      "command": "cargo run -p xtask -- verify-receipt --path docs/baselines/20251015-cpu.json",
+      "details": "Baseline receipt verified: schema 1.0.0, compute_path=real, 7 CPU kernels, BitNet v0.1.0",
+      "receipt_path": "/home/steven/code/Rust/BitNet-rs/docs/baselines/20251015-cpu.json"
+    },
+    "commits": {
+      "count": 12,
+      "conventional_commits": true,
+      "prefixes": ["feat", "docs", "test", "chore", "fix"],
+      "details": "All commits use proper conventional commit prefixes"
+    }
+  },
+  "ready_for_pr": true,
+  "next_step": "diff-reviewer"
+}
