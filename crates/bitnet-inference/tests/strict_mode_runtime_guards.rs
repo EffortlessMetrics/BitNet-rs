@@ -27,8 +27,6 @@ where
     let key = "BITNET_STRICT_MODE";
     let old_value = env::var(key).ok();
 
-    // Use unsafe blocks for env var manipulation
-    // This is safe in test context as tests are not run in parallel for env vars
     unsafe {
         if enabled {
             env::set_var(key, "1");
@@ -74,8 +72,8 @@ fn create_fallback_layer(
             // For TL1, we need to simulate quantization
             // This is a simplified version for testing
             let data = mock_weights.iter().map(|&x| ((x * 4.0).round() as i8) as u8).collect();
-            let scales = vec![0.25; (total_elements + 63) / 64];
-            let zero_points = Some(vec![0i32; (total_elements + 63) / 64]);
+            let scales = vec![0.25; total_elements.div_ceil(64)];
+            let zero_points = Some(vec![0i32; total_elements.div_ceil(64)]);
             QuantizedTensor {
                 data,
                 scales,
@@ -88,8 +86,8 @@ fn create_fallback_layer(
         QuantizationType::TL2 => {
             // For TL2, similar to TL1 but with different scale
             let data = mock_weights.iter().map(|&x| ((x * 8.0).round() as i8) as u8).collect();
-            let scales = vec![0.125; (total_elements + 63) / 64];
-            let zero_points = Some(vec![0i32; (total_elements + 63) / 64]);
+            let scales = vec![0.125; total_elements.div_ceil(64)];
+            let zero_points = Some(vec![0i32; total_elements.div_ceil(64)]);
             QuantizedTensor {
                 data,
                 scales,

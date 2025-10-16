@@ -57,10 +57,6 @@ pub fn workspace_root() -> PathBuf {
 /// - BITNET_DETERMINISTIC=1
 /// - RAYON_NUM_THREADS=1
 /// - BITNET_SEED=42
-///
-/// # Safety
-/// Uses `std::env::set_var` which is marked unsafe in Rust 1.90+.
-/// This is safe in test contexts where env vars are not accessed concurrently.
 pub fn configure_deterministic_env() {
     unsafe {
         std::env::set_var("BITNET_DETERMINISTIC", "1");
@@ -260,7 +256,7 @@ pub fn has_cpu_kernel_ids(kernels: &[String]) -> bool {
 /// Useful for generating test fixtures with specific compute paths and kernel configurations.
 pub fn create_test_receipt(compute_path: &str, kernels: Vec<String>) -> Value {
     serde_json::json!({
-        "version": "1.0.0",
+        "schema_version": "1.0.0",
         "compute_path": compute_path,
         "kernels": kernels,
         "performance": {

@@ -433,7 +433,7 @@ fn generate_i2s_quantized(size: usize, block_size: usize, seed: u64) -> Vec<i8> 
 
 /// Generate I2S scale factors (per-block quantization)
 fn generate_i2s_scales(size: usize, block_size: usize, seed: u64) -> Vec<f32> {
-    let num_blocks = (size + block_size - 1) / block_size;
+    let num_blocks = size.div_ceil(block_size);
     let mut rng = SimpleRng::new(seed + 1000);
     (0..num_blocks)
         .map(|_| 0.05 + 0.15 * rng.next_f32()) // Scale factors in [0.05, 0.20]
@@ -459,7 +459,7 @@ fn generate_tl1_quantized(size: usize, seed: u64) -> Vec<i8> {
 
 /// Generate TL1 scale factors
 fn generate_tl1_scales(size: usize, block_size: usize, seed: u64) -> Vec<f32> {
-    let num_blocks = (size + block_size - 1) / block_size;
+    let num_blocks = size.div_ceil(block_size);
     let mut rng = SimpleRng::new(seed + 2000);
     (0..num_blocks)
         .map(|_| 0.08 + 0.12 * rng.next_f32()) // Scale factors in [0.08, 0.20]
@@ -489,7 +489,7 @@ fn generate_tl2_quantized(size: usize, seed: u64) -> Vec<i8> {
 
 /// Generate TL2 scale factors
 fn generate_tl2_scales(size: usize, block_size: usize, seed: u64) -> Vec<f32> {
-    let num_blocks = (size + block_size - 1) / block_size;
+    let num_blocks = size.div_ceil(block_size);
     let mut rng = SimpleRng::new(seed + 3000);
     (0..num_blocks)
         .map(|_| 0.06 + 0.14 * rng.next_f32()) // Scale factors in [0.06, 0.20]

@@ -17,6 +17,11 @@ use issue_465_test_utils::{
 };
 use std::fs;
 
+/// Performance bounds for CPU baseline validation
+const MIN_VIABLE_TPS: f64 = 0.1;
+/// Maximum realistic CPU TPS for 2B I2S model (receipts govern exact values)
+const MAX_REALISTIC_CPU_TPS: f64 = 50.0;
+
 /// Tests feature spec: issue-465-implementation-spec.md#ac3-generate-pinned-cpu-baseline
 ///
 /// Validates that CPU baseline receipt exists with:
@@ -56,13 +61,15 @@ fn test_ac3_cpu_baseline_generated() -> Result<()> {
     );
 
     // Neural Network Context: Verify realistic CPU performance (10-20 tok/s for I2_S quantization)
-    // Allow 0.1-50 tok/s range to accommodate short benchmarks and warm-up effects
+    // Allow MIN_VIABLE_TPS-MAX_REALISTIC_CPU_TPS range to accommodate short benchmarks and warm-up effects
     if receipt.tokens_per_sec > 0.0 {
         assert!(
-            receipt.tokens_per_sec >= 0.1 && receipt.tokens_per_sec <= 50.0,
-            "CPU baseline performance outside realistic range (0.1-50 tok/s for I2_S): {:.2} tok/s. \
+            (MIN_VIABLE_TPS..=MAX_REALISTIC_CPU_TPS).contains(&receipt.tokens_per_sec),
+            "CPU baseline performance outside realistic range (got {}, expected {}..={}). \
             This may indicate timing issues or incorrect kernel selection.",
-            receipt.tokens_per_sec
+            receipt.tokens_per_sec,
+            MIN_VIABLE_TPS,
+            MAX_REALISTIC_CPU_TPS
         );
     }
 

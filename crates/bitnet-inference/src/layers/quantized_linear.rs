@@ -280,6 +280,23 @@ impl QuantizedLinear {
         !self.has_native_quantized_kernel()
     }
 
+    /// Reject FP32 fallback in strict mode with detailed error message
+    ///
+    /// This helper centralizes strict mode error handling to avoid duplication
+    /// and ensure consistent error messages across all quantization paths.
+    #[inline]
+    fn strict_reject_fp32_fallback(&self, reason: &str) -> Result<BitNetTensor> {
+        // Format layer name without exposing internal fields
+        let layer_name =
+            format!("QuantizedLinear[qtype={:?}, device={:?}]", self.qtype, self.device);
+        let msg = format!(
+            "FP32 fallback rejected in strict mode - layer={}, reason={}. \
+             Strict mode requires native quantized kernels.",
+            layer_name, reason
+        );
+        Err(bitnet_common::BitNetError::StrictMode(msg).into())
+    }
+
     /// Forward pass with quantized matrix multiplication
     /// Input: [batch_size, seq_len, in_features]
     /// Output: [batch_size, seq_len, out_features]
@@ -304,12 +321,7 @@ impl QuantizedLinear {
         // This enforces quantized-only inference in production when BITNET_STRICT_MODE=1
         let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
         if strict_mode.get_config().enforce_quantized_inference && self.is_fallback_path() {
-            let layer_name = format!("QuantizedLinear[{}x{}]", self.in_features, self.out_features);
-            return Err(bitnet_common::BitNetError::StrictMode(format!(
-                "FP32 fallback rejected in strict mode - layer={}, qtype={:?}, device={:?}, reason=kernel_unavailable. \
-                 Strict mode requires all layers to use native quantized kernels.",
-                layer_name, self.qtype, self.device
-            )).into());
+            return self.strict_reject_fp32_fallback("kernel_unavailable");
         }
 
         // Perform quantized matrix multiplication based on type
@@ -637,12 +649,7 @@ impl QuantizedLinear {
         // Strict mode: reject FP32 fallback
         let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
         if strict_mode.get_config().enforce_quantized_inference {
-            let layer_name = format!("QuantizedLinear[{}x{}]", self.in_features, self.out_features);
-            return Err(bitnet_common::BitNetError::StrictMode(format!(
-                "FP32 fallback rejected in TL1 layer - layer={}, qtype={:?}, device={:?}, reason=kernel_unavailable. \
-                 Strict mode requires all layers to use native quantized kernels.",
-                layer_name, self.qtype, self.device
-            )).into());
+            return self.strict_reject_fp32_fallback("kernel_unavailable");
         }
 
         // Fallback to dequantization only if native kernels fail (non-strict mode)
@@ -672,12 +679,7 @@ impl QuantizedLinear {
         // Strict mode: reject FP32 fallback
         let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
         if strict_mode.get_config().enforce_quantized_inference {
-            let layer_name = format!("QuantizedLinear[{}x{}]", self.in_features, self.out_features);
-            return Err(bitnet_common::BitNetError::StrictMode(format!(
-                "FP32 fallback rejected in TL2 layer - layer={}, qtype={:?}, device={:?}, reason=kernel_unavailable. \
-                 Strict mode requires all layers to use native quantized kernels.",
-                layer_name, self.qtype, self.device
-            )).into());
+            return self.strict_reject_fp32_fallback("kernel_unavailable");
         }
 
         // Fallback to dequantization only if native kernels fail (non-strict mode)

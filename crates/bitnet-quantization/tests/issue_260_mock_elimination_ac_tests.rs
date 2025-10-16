@@ -140,6 +140,7 @@ mod ac2_strict_mode_tests {
 
     /// AC:AC2 - Tests fail-fast behavior on missing quantization kernels
     #[test]
+    #[serial]
     fn test_ac2_strict_mode_fail_fast_missing_kernels() {
         println!("AC2: Testing fail-fast on missing quantization kernels");
 
