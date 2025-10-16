@@ -1,7 +1,7 @@
 ---
 name: review-benchmark-runner
 description: Use this agent when you need to establish or refresh performance baselines for a PR after the build is green and features are validated. This agent should be used proactively during code review workflows to ensure performance regression detection. Examples: <example>Context: User has just completed a code change that affects core parsing logic and wants to establish a performance baseline. user: "I've just optimized the tree-sitter parsing logic and want to run benchmarks to establish a baseline" assistant: "I'll use the review-benchmark-runner agent to establish the performance baseline for your parsing optimizations" <commentary>Since the user wants to establish a performance baseline after code changes, use the review-benchmark-runner agent to run comprehensive benchmarks and establish the baseline.</commentary></example> <example>Context: A PR is ready for review and automated checks have passed. user: "The build is green and all features are validated. Ready for performance baseline" assistant: "I'll launch the review-benchmark-runner agent to establish the performance baseline for this PR" <commentary>Since the build is green and features are validated, use the review-benchmark-runner agent to run benchmarks and establish the baseline before proceeding to regression detection.</commentary></example>
-model: sonnet
+model: haiku
 color: yellow
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: pr-summary-agent
 description: Use this agent when you need to consolidate all PR validation results into a final summary report and determine merge readiness for BitNet.rs neural network development. Examples: <example>Context: A PR has completed all integrative validation gates and needs a final status summary. user: 'All validation checks are complete for PR #123' assistant: 'I'll use the pr-summary-agent to consolidate all integrative:gate:* results and create the final PR summary report.' <commentary>Since all validation gates are complete, use the pr-summary-agent to analyze Check Run results, update the Single PR Ledger, and apply the appropriate state label based on the overall gate status.</commentary></example> <example>Context: Multiple integrative gates have run and BitNet.rs-specific results need to be compiled. user: 'Please generate the final PR summary for the current pull request' assistant: 'I'll launch the pr-summary-agent to analyze all integrative:gate:* results and create the comprehensive ledger update.' <commentary>The user is requesting a final PR summary, so use the pr-summary-agent to read all gate Check Runs and generate the comprehensive ledger update with BitNet.rs-specific validation.</commentary></example>
-model: sonnet
+model: haiku
 color: cyan
 ---
 

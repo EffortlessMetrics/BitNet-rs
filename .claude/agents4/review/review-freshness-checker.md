@@ -1,7 +1,7 @@
 ---
 name: review-freshness-checker
 description: Use this agent when you need to verify that a PR branch is up-to-date with its base branch and determine if a rebase is needed. Examples: <example>Context: User has opened a draft PR and wants to ensure it's current with main branch. user: "I just opened PR #123 as a draft, can you check if it needs to be rebased?" assistant: "I'll use the review-freshness-checker agent to verify if your PR branch is current with the base branch and determine if a rebase is needed."</example> <example>Context: CI pipeline automatically triggers freshness check on PR creation. user: "Draft PR created for feature/auth-improvements against main" assistant: "I'm using the review-freshness-checker agent to verify the PR branch includes the latest changes from main and check if a rebase is required."</example>
-model: sonnet
+model: haiku
 color: blue
 ---
 

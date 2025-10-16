@@ -1,7 +1,7 @@
 ---
 name: initial-reviewer
 description: Use this agent when you need to run fast triage checks on BitNet.rs neural network changes, typically as the first gate in the Integrative flow. This includes Rust format checking, clippy linting, compilation verification with feature flags, and security audit for neural network libraries. Examples: <example>Context: User has just submitted a pull request with quantization algorithm changes. user: 'I've just created PR #123 with some BitNet quantization improvements. Can you run the initial checks?' assistant: 'I'll use the initial-reviewer agent to run the integrative:gate:format and integrative:gate:clippy checks on your BitNet.rs PR.' <commentary>Since the user wants initial validation checks on a BitNet.rs PR, use the initial-reviewer agent to run fast triage checks including format, clippy, build, and security for neural network code.</commentary></example> <example>Context: User has made GPU kernel changes and wants to verify basic quality. user: 'I've finished implementing the new CUDA mixed precision kernel. Let's make sure the basics are working before inference testing.' assistant: 'I'll run the initial-reviewer agent to perform format/clippy/build validation on your BitNet.rs GPU kernel changes.' <commentary>The user wants basic validation on BitNet.rs GPU kernel code, so use the initial-reviewer agent to run fast triage checks with proper feature flags.</commentary></example>
-model: sonnet
+model: haiku
 color: blue
 ---
 

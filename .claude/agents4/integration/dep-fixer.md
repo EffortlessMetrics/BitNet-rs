@@ -1,7 +1,7 @@
 ---
 name: dep-fixer
 description: Use this agent when security vulnerabilities are detected in dependencies by security scanners, when cargo audit reports CVEs, or when you need to remediate vulnerable dependencies while maintaining stability. Examples: <example>Context: The user is creating a dependency fixing agent that should be called after security scanning finds vulnerabilities. user: "The security scanner found CVE-2023-1234 in tokio 1.20.0" assistant: "I'll use the dep-fixer agent to remediate this vulnerability" <commentary>Since a security vulnerability was detected, use the dep-fixer agent to safely update the vulnerable dependency and re-audit.</commentary></example> <example>Context: User is creating an agent to fix dependencies after audit failures. user: "cargo audit is showing 3 high severity vulnerabilities" assistant: "Let me use the dep-fixer agent to address these security issues" <commentary>Since cargo audit found vulnerabilities, use the dep-fixer agent to update affected crates and verify the fixes.</commentary></example>
-model: sonnet
+model: haiku
 color: orange
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: review-summarizer
 description: Use this agent when a pull request review process is complete and needs a final assessment with clear next steps. Examples: <example>Context: User has completed reviewing a pull request and needs a final summary with actionable recommendations. user: 'I've finished reviewing PR #123 - can you summarize the findings and tell me if it's ready to merge?' assistant: 'I'll use the review-summarizer agent to analyze the review findings and provide a final assessment with clear next steps.' <commentary>The user needs a comprehensive review summary with actionable recommendations, so use the review-summarizer agent to provide the final assessment.</commentary></example> <example>Context: A draft PR has been reviewed and needs determination of readiness status. user: 'This draft PR has been through initial review - should it be promoted or stay in draft?' assistant: 'Let me use the review-summarizer agent to assess the PR status and provide clear guidance on next steps.' <commentary>The user needs to determine if a draft PR is ready for promotion, which requires the review-summarizer's assessment capabilities.</commentary></example>
-model: sonnet
+model: haiku
 color: pink
 ---
 

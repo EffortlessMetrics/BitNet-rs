@@ -47,7 +47,7 @@ BitNet.rs provides three layers of protection against silent fallbacks:
 
 ```bash
 # Debug build automatically includes assertions
-cargo test --no-default-features --features cpu -p bitnet-inference
+cargo test -p bitnet-inference --no-default-features --features cpu
 
 # If fallback occurs, you'll see:
 # thread 'test' panicked at 'fallback to FP32 in debug mode: layer=blk.0.attn_q, qtype=I2S, reason=kernel_unavailable'

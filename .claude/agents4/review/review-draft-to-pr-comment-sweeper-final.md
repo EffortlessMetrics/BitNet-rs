@@ -1,7 +1,7 @@
 ---
 name: draft-to-pr-comment-sweeper-final
 description: Use this agent when a PR is in draft status and needs final hygiene cleanup before transitioning to ready-for-review. This agent should be called after all major code changes are complete but before the PR is marked as ready for final review. Examples: <example>Context: User has completed implementing a new feature and wants to clean up the PR before final review. user: "I've finished implementing the authentication system. The code is working but I want to make sure the PR is clean before marking it ready for review." assistant: "I'll use the draft-to-pr-comment-sweeper-final agent to perform final PR hygiene cleanup." <commentary>The user has completed their implementation and wants final cleanup, which is exactly when this agent should be used.</commentary></example> <example>Context: User has addressed major review feedback and wants to ensure all minor issues are resolved. user: "I've addressed all the major feedback from the review. Can you help me clean up any remaining minor issues and make sure the PR is ready?" assistant: "Let me use the draft-to-pr-comment-sweeper-final agent to handle final cleanup and ensure PR readiness." <commentary>This is the perfect scenario for final PR hygiene - major work is done, now need to clean up minor issues.</commentary></example>
-model: sonnet
+model: haiku
 color: cyan
 ---
 

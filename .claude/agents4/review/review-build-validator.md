@@ -1,7 +1,7 @@
 ---
 name: review-build-validator
 description: Use this agent when validating workspace build as part of required gates after freshness & hygiene have been cleared. This agent should be used in the review flow to ensure the workspace builds successfully before proceeding to feature testing. Examples: <example>Context: User has completed code changes and freshness/hygiene checks have passed. user: "The code changes are ready for build validation" assistant: "I'll use the review-build-validator agent to validate the workspace build as part of the required gates" <commentary>Since freshness & hygiene are cleared and we need to validate the build, use the review-build-validator agent to run the build validation commands.</commentary></example> <example>Context: Review flow is progressing and build validation is the next required gate. user: "Proceed with build validation" assistant: "I'm using the review-build-validator agent to validate the workspace build" <commentary>The review flow requires build validation as a gate, so use the review-build-validator agent to execute the build commands and validate success.</commentary></example>
-model: sonnet
+model: haiku
 color: pink
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: mutation-tester
 description: Use this agent when you need to assess test quality on changed crates using mutation testing as part of the gate validation tier. This agent should be used after code changes are made to evaluate whether the existing tests adequately detect mutations in the modified code. Examples: <example>Context: The user has made changes to a Rust crate and wants to validate test quality before merging. user: 'I've updated the parser module in PR #123, can you check if our tests are comprehensive enough?' assistant: 'I'll use the mutation-tester agent to run gate:mutation validation and assess test quality on your changes.' <commentary>Since the user wants to validate test quality on code changes, use the mutation-tester agent to run mutation testing.</commentary></example> <example>Context: A pull request has been submitted and needs mutation testing validation. user: 'Please run mutation testing on PR #456 to check our test coverage quality' assistant: 'I'll launch the mutation-tester agent to run the gate:mutation validation on PR #456.' <commentary>The user explicitly requested mutation testing validation, so use the mutation-tester agent.</commentary></example>
-model: sonnet
+model: haiku
 color: cyan
 ---
 

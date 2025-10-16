@@ -1,7 +1,7 @@
 ---
 name: review-docs-fixer
 description: Use this agent when BitNet.rs documentation needs editorial polish, including fixing Rust doc comments, regenerating cargo doc output, unifying neural network documentation style, and ensuring clean coherent presentation following Diátaxis framework. Examples: <example>Context: User has completed quantization algorithm documentation but cargo doc warnings appear and examples are broken. user: 'I've updated the I2S quantization docs but cargo doc shows warnings and the examples don't compile' assistant: 'I'll use the review-docs-fixer agent to fix the Rust doc comments and validate examples' <commentary>Broken doc examples and cargo doc warnings are core docs-fixer responsibilities in BitNet.rs.</commentary></example> <example>Context: Documentation has been flagged for neural network terminology inconsistencies during review. user: 'The quantization guide has inconsistent bit precision terminology and broken GGUF links' assistant: 'Let me use the review-docs-fixer agent to fix terminology and validate all documentation links' <commentary>Neural network terminology consistency and GGUF documentation accuracy are BitNet.rs-specific docs-fixer tasks.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

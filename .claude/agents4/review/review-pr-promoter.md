@@ -1,7 +1,7 @@
 ---
 name: pr-promoter
 description: Use this agent when a pull request is in Draft status and needs to be promoted to Ready for review status to hand off to the Integrative workflow. Examples: <example>Context: User has completed development work on a feature branch and wants to move the PR from draft to ready for review. user: "My PR #123 is ready to go from draft to ready for review" assistant: "I'll use the pr-promoter agent to flip the PR status and hand off to the Integrative flow" <commentary>The user wants to promote a draft PR to ready status, which is exactly what the pr-promoter agent handles.</commentary></example> <example>Context: Automated workflow needs to promote a PR after successful CI checks. user: "CI passed on PR #456, promote from draft to ready" assistant: "I'll use the pr-promoter agent to handle the status change and prepare for Integrative workflow handoff" <commentary>This is a clear case for using pr-promoter to flip the draft status and initiate the handoff process.</commentary></example>
-model: sonnet
+model: haiku
 color: red
 ---
 

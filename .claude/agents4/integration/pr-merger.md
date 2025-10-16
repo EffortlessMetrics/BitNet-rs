@@ -1,7 +1,7 @@
 ---
 name: pr-merger
 description: Use this agent when pr-summary-agent has marked a PR as merge-ready after all integration gates are satisfied. This agent executes the actual merge operation in the integrative flow. Examples: <example>Context: A maintainer has reviewed a PR and determined it's ready to merge after all approvals are in place. user: 'Please merge PR #123, it has all the required approvals' assistant: 'I'll use the pr-merger agent to safely execute the merge for PR #123' <commentary>The user is explicitly requesting a PR merge with confirmation of approvals, so use the pr-merger agent to handle the merge process with safety checks.</commentary></example> <example>Context: After a code review process is complete and all checks have passed. user: 'The PR looks good to go, please proceed with merging PR #456' assistant: 'I'll invoke the pr-merger agent to execute the merge for PR #456 with proper safety verification' <commentary>The user is requesting a merge action, so use the pr-merger agent to handle the merge with all required safety checks.</commentary></example>
-model: sonnet
+model: haiku
 color: red
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: integrative-doc-fixer
 description: Use this agent when documentation issues have been identified by the pr-doc-reviewer agent and the docs gate has failed. This agent should be called after pr-doc-reviewer has completed its analysis and found documentation problems that need to be fixed. Examples: <example>Context: The pr-doc-reviewer agent has identified broken links and outdated examples in the documentation, causing the docs gate to fail. user: "The docs gate failed with broken links in the API reference and outdated code examples in the quickstart guide" assistant: "I'll use the integrative-doc-fixer agent to address these documentation issues and get the docs gate passing" <commentary>Since documentation issues have been identified and the docs gate failed, use the integrative-doc-fixer agent to systematically fix the problems.</commentary></example> <example>Context: After a code review, the pr-doc-reviewer found that new API changes weren't reflected in the documentation. user: "pr-doc-reviewer found that the new cache backend configuration isn't documented in the CLI reference" assistant: "I'll launch the integrative-doc-fixer agent to update the documentation and ensure it reflects the new cache backend features" <commentary>Documentation is out of sync with code changes, triggering the need for the integrative-doc-fixer agent.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

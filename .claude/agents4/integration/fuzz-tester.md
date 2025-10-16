@@ -1,7 +1,7 @@
 ---
 name: fuzz-tester
 description: Use this agent when you need to perform gate-level fuzzing validation on critical neural network parsing and inference logic after code changes. This agent should be triggered as part of the BitNet.rs validation pipeline when changes are made to GGUF parsers, quantization kernels, or inference components. Examples: <example>Context: A pull request has been submitted with changes to GGUF parsing logic that needs fuzz testing validation.<br>user: "I've submitted PR #123 with changes to the GGUF parser"<br>assistant: "I'll use the fuzz-tester agent to run integrative:gate:fuzz validation and check for edge-case bugs in the GGUF parsing logic."<br><commentary>Since the user mentioned a PR with GGUF parsing changes, use the fuzz-tester agent to run fuzzing validation.</commentary></example> <example>Context: Code review process requires running fuzz tests on critical quantization kernel code.<br>user: "The I2S quantization code in PR #456 needs fuzz testing"<br>assistant: "I'll launch the fuzz-tester agent to perform time-boxed fuzzing on the critical quantization logic."<br><commentary>The user is requesting fuzz testing validation, so use the fuzz-tester agent.</commentary></example>
-model: sonnet
+model: haiku
 color: orange
 ---
 

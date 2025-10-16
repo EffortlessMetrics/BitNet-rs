@@ -1,7 +1,7 @@
 ---
 name: tests-runner
 description: Use this agent when you need to validate code correctness by running the full test suite as part of MergeCode's TDD Red-Green-Refactor workflow, especially for Draft→Ready PR validation. Examples: <example>Context: User has just implemented a new semantic analysis feature and wants to ensure it doesn't break existing functionality before marking PR as Ready. user: "I've added a new Rust parser feature to the core analysis engine. Can you run the tests to make sure everything still works before I promote this Draft PR to Ready?" assistant: "I'll use the tests-runner agent to execute the comprehensive test suite and validate TDD compliance for Draft→Ready promotion."</example> <example>Context: User is preparing for performance validation but wants to ensure the test suite validates all semantic analysis contracts first. user: "Before we start benchmarking the new graph analysis, let's make sure our test suite covers all the semantic contracts" assistant: "I'll launch the tests-runner agent to validate test coverage and TDD compliance for semantic analysis features."</example>
-model: sonnet
+model: haiku
 color: yellow
 ---
 

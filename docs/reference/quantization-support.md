@@ -106,12 +106,12 @@ let result = lut_index(0, 128, 32, 128, 1024);
 **Testing Commands:**
 ```bash
 # Run TL LUT helper tests
-cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu tl_lut
+cargo test -p bitnet-kernels --no-default-features --features cpu tl_lut
 
 # Specific test cases
-cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_lut_index_basic
-cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_lut_index_overflow_detection
-cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_lut_index_boundary_validation
+cargo test -p bitnet-kernels --no-default-features --features cpu test_lut_index_basic
+cargo test -p bitnet-kernels --no-default-features --features cpu test_lut_index_overflow_detection
+cargo test -p bitnet-kernels --no-default-features --features cpu test_lut_index_boundary_validation
 ```
 
 **See also:** Issue #462 for TL LUT helper implementation and mutation testing results.
@@ -173,48 +173,48 @@ BitNet.rs provides native CUDA mixed precision support for enhanced GPU performa
 
 ```bash
 # Test device-aware quantization with strict mode (prevents mock fallbacks)
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
+BITNET_STRICT_MODE=1 cargo test -p bitnet-quantization --no-default-features --features gpu test_dequantize_cpu_and_gpu_paths
 
 # GPU kernel validation with numerical accuracy testing
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_vs_cpu_quantization_accuracy
 
 # Enhanced GPU validation with performance metrics and error handling
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_cuda_validation_comprehensive
 
 # Validate quantization accuracy targets (I2S >99.8%, TL1/TL2 >99.6%)
-cargo test --no-default-features -p bitnet-quantization --no-default-features --features cpu test_quantization_accuracy_targets
+cargo test -p bitnet-quantization --no-default-features --features cpu test_quantization_accuracy_targets
 ```
 
 ### Mixed Precision Testing
 
 ```bash
 # Test mixed precision with strict mode (no mock GPU fallbacks)
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_kernel_creation
 
 # Test FP16/BF16 matrix multiplication accuracy against FP32 reference
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_mixed_precision_matmul_accuracy
 
 # Test precision mode validation and automatic fallback
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_mode_validation
 
 # Benchmark mixed precision performance with strict mode (realistic baselines)
-BITNET_STRICT_MODE=1 cargo bench --no-default-features -p bitnet-kernels --bench mixed_precision_bench --no-default-features --features gpu
+BITNET_STRICT_MODE=1 cargo bench -p bitnet-kernels --no-default-features --features gpu --bench mixed_precision_bench
 
 # Test device-aware precision selection and optimization
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features gpu test_precision_detection_optimization
 ```
 
 ### FFI Quantization Testing
 
 ```bash
 # FFI quantization bridge validation with strict mode
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --features ffi test_ffi_quantize_matches_rust
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features ffi test_ffi_quantize_matches_rust
 
 # FFI kernel creation and availability testing
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --features ffi test_ffi_kernel_creation
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features ffi test_ffi_kernel_creation
 
 # FFI performance comparison against C++ reference (cross-validation)
-BITNET_STRICT_MODE=1 cargo test --no-default-features -p bitnet-kernels --features ffi --release test_performance_comparison_structure
+BITNET_STRICT_MODE=1 cargo test -p bitnet-kernels --no-default-features --features ffi --release test_performance_comparison_structure
 
 # Cross-validation with C++ reference implementation
 BITNET_GGUF="path/to/model.gguf" BITNET_STRICT_MODE=1 cargo run -p xtask -- crossval
@@ -224,12 +224,12 @@ BITNET_GGUF="path/to/model.gguf" BITNET_STRICT_MODE=1 cargo run -p xtask -- cros
 
 ```bash
 # SIMD kernel validation and performance testing
-cargo test --no-default-features -p bitnet-quantization --test simd_compatibility --no-default-features --features cpu
-cargo bench --no-default-features -p bitnet-quantization --bench simd_comparison --no-default-features --features cpu
+cargo test -p bitnet-quantization --no-default-features --features cpu --test simd_compatibility
+cargo bench -p bitnet-quantization --no-default-features --features cpu --bench simd_comparison
 
 # SIMD vs scalar parity testing
-cargo test --no-default-features --features cpu -p bitnet-quantization test_i2s_simd_scalar_parity
-cargo test --no-default-features --features cpu -p bitnet-quantization test_simd_performance_baseline
+cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
+cargo test -p bitnet-quantization --no-default-features --features cpu test_simd_performance_baseline
 ```
 
 ## Strict Mode Enforcement (Issue #261 - AC2, AC6)
@@ -253,11 +253,11 @@ BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model model.gguf --prompt "Te
 ```bash
 # Fail immediately on mock detection (Issue #261 - AC2)
 BITNET_STRICT_FAIL_ON_MOCK=1 \
-cargo test -p bitnet-inference --features cpu
+cargo test -p bitnet-inference --no-default-features --features cpu
 
 # Require real quantization kernels (Issue #261 - AC3)
 BITNET_STRICT_REQUIRE_QUANTIZATION=1 \
-cargo test -p bitnet-quantization --features cpu
+cargo test -p bitnet-quantization --no-default-features --features cpu
 
 # Validate performance metrics (Issue #261 - AC6)
 BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
@@ -265,7 +265,7 @@ cargo run -p xtask -- benchmark --model model.gguf
 
 # CI enhanced strict mode (Issue #261 - AC6)
 CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
-cargo test --workspace --features cpu
+cargo test --workspace --no-default-features --features cpu
 ```
 
 ### Strict Mode API Usage
@@ -330,7 +330,7 @@ This three-tier validation strategy ensures production-grade quantized inference
 
 ```bash
 # Debug builds automatically include assertions
-cargo test --no-default-features --features cpu -p bitnet-inference
+cargo test -p bitnet-inference --no-default-features --features cpu
 
 # If fallback occurs:
 # thread 'test' panicked at 'fallback to FP32 in debug mode: layer=blk.0.attn_q, qtype=I2S, reason=kernel_unavailable'
@@ -539,17 +539,17 @@ async fn forward_i2s(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
 
 ```bash
 # AC1: Debug assertions in QuantizedLinear::forward
-cargo test --no-default-features --features cpu -p bitnet-inference \
+cargo test -p bitnet-inference --no-default-features --features cpu \
   test_ac1_debug_assert_i2s_fallback -- --nocapture
 
 # AC3: Strict mode rejects FP32 fallback
 BITNET_STRICT_MODE=1 \
-cargo test --no-default-features --features cpu -p bitnet-inference \
+cargo test -p bitnet-inference --no-default-features --features cpu \
   test_ac3_strict_mode_rejects_fallback -- --nocapture
 
 # AC5: 16-token decode in strict mode
 BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 \
-cargo test --no-default-features --features cpu -p bitnet-inference \
+cargo test -p bitnet-inference --no-default-features --features cpu \
   test_ac5_16_token_decode_cpu_strict_mode --test strict_quantization_test
 
 # AC6: Receipt validation for quantized computation claims

@@ -1,7 +1,7 @@
 ---
 name: review-link-checker
 description: Use this agent when validating internal/external links and anchors in documentation after the review-docs-reviewer has completed its analysis. This agent should be triggered as part of the documentation review flow to ensure all links are functional and properly formatted. Examples: <example>Context: User has completed initial documentation review and needs to validate all links before finalizing. user: "The docs have been reviewed for content, now I need to check all the links" assistant: "I'll use the review-link-checker agent to validate all internal/external links and anchors in the documentation" <commentary>Since the user needs link validation after content review, use the review-link-checker agent to run comprehensive link checking.</commentary></example> <example>Context: Documentation update workflow where link validation is required before merge. user: "Run the link checker on the updated documentation" assistant: "I'll launch the review-link-checker agent to validate all links and anchors in the documentation" <commentary>Direct request for link checking, use the review-link-checker agent to perform comprehensive validation.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

@@ -594,7 +594,7 @@ cargo run -p xtask -- crossval
 CI=1 \
 BITNET_CI_ENHANCED_STRICT=1 \
 BITNET_STRICT_MODE=1 \
-cargo test --workspace --features cpu
+cargo test --workspace --no-default-features --features cpu
 ```
 
 ### Performance Validation Thresholds
@@ -622,13 +622,13 @@ cargo test -p bitnet-common test_strict_mode_ci_enhanced
 
 # Integration tests for real quantization (AC3)
 BITNET_STRICT_MODE=1 \
-cargo test -p bitnet-quantization test_i2s_simd_scalar_parity
+cargo test -p bitnet-quantization --no-default-features --features cpu test_i2s_simd_scalar_parity
 
 # Performance validation tests (AC7, AC8)
 BITNET_STRICT_MODE=1 \
-cargo test -p bitnet-kernels test_cpu_performance_baselines
+cargo test -p bitnet-kernels --no-default-features --features cpu test_cpu_performance_baselines
 BITNET_STRICT_MODE=1 \
-cargo test -p bitnet-kernels test_gpu_performance_baselines --features gpu
+cargo test -p bitnet-kernels --no-default-features --features gpu test_gpu_performance_baselines
 
 # CI mock rejection tests (AC6)
 CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \

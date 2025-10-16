@@ -1,7 +1,7 @@
 ---
 name: review-intake
 description: Use this agent when a Draft PR has been submitted and needs initial intake processing to make it assessable for the review pipeline. This includes adding appropriate labels, performing compilation checks, validating documentation links, and routing to the next stage. Examples: <example>Context: A developer has just opened a Draft PR for a new feature implementation. user: "I've opened a Draft PR for the authentication module refactor - can you help get it ready for review?" assistant: "I'll use the review-intake agent to process your Draft PR through the intake stage, adding the necessary labels, checking compilation, and validating documentation links."</example> <example>Context: A Draft PR has been created but lacks proper metadata and documentation links. user: "The Draft PR #123 is ready for initial processing" assistant: "I'll launch the review-intake agent to handle the intake process for PR #123, ensuring it has proper labels, compiles correctly, and has all required documentation links."</example>
-model: sonnet
+model: haiku
 color: green
 ---
 

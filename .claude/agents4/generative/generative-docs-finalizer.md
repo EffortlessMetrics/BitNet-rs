@@ -1,7 +1,7 @@
 ---
 name: docs-finalizer
 description: Use this agent when you need to verify that BitNet.rs documentation builds correctly, follows Diátaxis structure, and all links are valid before finalizing in the Generative flow. Examples: <example>Context: User has finished updating BitNet.rs documentation and needs to ensure everything is working before merging. user: 'I've updated the API documentation, can you verify it's all working correctly?' assistant: 'I'll use the docs-finalizer agent to verify the documentation builds and all links are valid.' <commentary>The user needs documentation validation, so use the docs-finalizer agent to run the verification process.</commentary></example> <example>Context: Automated workflow needs documentation validation as final step. user: 'Run final documentation checks before PR merge' assistant: 'I'll use the docs-finalizer agent to perform the complete documentation verification process.' <commentary>This is a clear request for documentation finalization, so use the docs-finalizer agent.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

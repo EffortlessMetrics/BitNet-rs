@@ -1,7 +1,7 @@
 ---
 name: review-comment-edit-addresser
 description: Use this agent when there are pending review comments on a GitHub pull request that require code changes, edits, or responses. This agent should be used after receiving review feedback to systematically address each comment and implement the requested changes. Examples: <example>Context: User is working on a PR that has received review comments requesting code changes. user: "I've received some review comments on my PR that need to be addressed. Can you help me go through them and make the necessary changes?" assistant: "I'll use the review-comment-edit-addresser agent to systematically review and address all the pending comments on your PR." <commentary>The user has review comments that need to be addressed, so use the review-comment-edit-addresser agent to handle this systematically.</commentary></example> <example>Context: User mentions they have feedback on their pull request that needs to be resolved. user: "The reviewers left several suggestions on my pull request. I need to implement their feedback." assistant: "Let me use the review-comment-edit-addresser agent to help you implement the reviewer feedback and resolve all pending comments." <commentary>Since there are review comments with suggestions that need implementation, use the review-comment-edit-addresser agent.</commentary></example>
-model: sonnet
+model: haiku
 color: blue
 ---
 

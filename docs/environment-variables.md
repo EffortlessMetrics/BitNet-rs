@@ -247,11 +247,11 @@ BITNET_STRICT_MODE=1 cargo run -p xtask -- infer \
 ```bash
 # Fail immediately on mock detection
 BITNET_STRICT_FAIL_ON_MOCK=1 \
-cargo test -p bitnet-inference --features cpu test_inference_real_computation
+cargo test -p bitnet-inference --no-default-features --features cpu test_inference_real_computation
 
 # Require real quantization kernels (I2S/TL1/TL2)
 BITNET_STRICT_REQUIRE_QUANTIZATION=1 \
-cargo test -p bitnet-quantization --features cpu test_quantization_kernel_integration
+cargo test -p bitnet-quantization --no-default-features --features cpu test_quantization_kernel_integration
 
 # Validate performance metrics for realistic values
 BITNET_STRICT_VALIDATE_PERFORMANCE=1 \
@@ -259,7 +259,7 @@ cargo run -p xtask -- benchmark --model model.gguf --tokens 128
 
 # CI enhanced strict mode (comprehensive validation)
 CI=1 BITNET_CI_ENHANCED_STRICT=1 BITNET_STRICT_MODE=1 \
-cargo test --workspace --features cpu
+cargo test --workspace --no-default-features --features cpu
 ```
 
 ### Performance Testing with Strict Mode

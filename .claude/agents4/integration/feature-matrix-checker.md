@@ -1,7 +1,7 @@
 ---
 name: feature-matrix-checker
 description: Use this agent when you need to validate feature flag compatibility and neural network quantization stability across BitNet.rs's Rust workspace. This agent validates feature combinations, quantization configurations, and maintains gate evidence for comprehensive matrix testing. Examples: <example>Context: User has completed code changes affecting multiple quantization backends and needs feature matrix validation. user: 'I've finished implementing the new GPU quantization features, can you validate all feature combinations?' assistant: 'I'll use the feature-matrix-checker agent to validate feature flag combinations across all quantization backends and generate gate evidence for matrix compatibility.' <commentary>The user needs feature matrix validation which requires checking quantization combinations and feature compatibility, so use the feature-matrix-checker agent.</commentary></example> <example>Context: PR affects multiple workspace crates and requires comprehensive feature validation. assistant: 'Running feature matrix validation to check quantization stability and feature flag compatibility across the workspace' <commentary>Feature matrix validation is needed to verify quantization configurations and feature combinations work correctly.</commentary></example>
-model: sonnet
+model: haiku
 color: green
 ---
 

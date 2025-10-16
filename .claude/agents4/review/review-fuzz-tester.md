@@ -1,7 +1,7 @@
 ---
 name: fuzz-tester
 description: Use this agent when you need to stress-test BitNet.rs code with fuzzing to expose crashes, panics, or invariant violations in neural network inference, quantization, and GGUF processing. This agent should be used after implementing new functionality, before security reviews, or when investigating potential robustness issues. Examples: <example>Context: User has just implemented new quantization algorithms and wants to ensure they're robust. user: 'I just added I2S quantization support. Can you fuzz test it to make sure it handles edge cases and malformed tensors safely?' assistant: 'I'll use the fuzz-tester agent to stress test your quantization implementation with various tensor shapes, data patterns, and edge cases to ensure robustness.' <commentary>Since the user wants to test robustness of new quantization code, use the fuzz-tester agent to run bounded fuzzing and identify potential crashes or numerical instabilities.</commentary></example> <example>Context: User is preparing for a security review and wants to ensure GGUF parsing stability. user: 'We're about to do a security audit. Can you run some fuzz testing on our GGUF parsing code first?' assistant: 'I'll use the fuzz-tester agent to perform comprehensive fuzz testing on the GGUF parsing components with malformed files and edge cases before your security audit.' <commentary>Since this is preparation for security review, use the fuzz-tester agent to identify and minimize any reproducible crashes in model file processing.</commentary></example>
-model: sonnet
+model: haiku
 color: yellow
 ---
 

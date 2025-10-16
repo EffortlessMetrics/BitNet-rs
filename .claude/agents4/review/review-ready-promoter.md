@@ -1,7 +1,7 @@
 ---
 name: review-ready-promoter
 description: Use this agent when a draft PR has passed all BitNet.rs quality gates and needs promotion to Ready for Review status using GitHub-native workflows. Examples: <example>Context: A draft PR has passed all required quality gates (freshness, format, clippy, tests, build, docs) with no unresolved quarantined tests and proper API classification. user: "All promotion criteria met for PR #123, promote to ready" assistant: "I'll use the review-ready-promoter agent to promote this PR to ready status with proper BitNet.rs validation and receipts" </example> <example>Context: A BitNet.rs PR has passed TDD validation, cross-validation tests, and quantization accuracy requirements. user: "PR #456 meets all BitNet.rs quality standards, promote to ready" assistant: "Using the review-ready-promoter agent to transition to ready status with comprehensive BitNet.rs validation logging" </example>
-model: sonnet
+model: haiku
 color: pink
 ---
 

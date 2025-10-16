@@ -49,24 +49,34 @@ BITNET_STRICT_MODE=1 cargo run -p xtask -- infer --model path/to/model.gguf --pr
 
 ### 10-Line CPU Quickstart
 
-Get started with BitNet.rs CPU inference in under 10 lines:
+Get started with deterministic BitNet.rs CPU inference:
 
 ```bash
-# 1. Build with explicit CPU features
-cargo build --no-default-features --features cpu
-
-# 2. Download a BitNet model
-cargo run -p xtask -- download-model
-
-# 3. Run deterministic inference (128 tokens)
+# Deterministic run (CPU) - build → run → answer
 export BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1 BITNET_SEED=42
-cargo run -p xtask -- benchmark --model models/*.gguf --tokens 128
-
-# 4. Verify honest compute receipt
-cargo run -p xtask -- verify-receipt ci/inference.json
+cargo build --release -p bitnet-cli --no-default-features --features cpu,full-cli
+target/release/bitnet run \
+  --backend cpu \
+  --model tests/models/tiny.gguf \
+  --prompt "Q: What is 2+2? A:" \
+  --max-new-tokens 16 --temperature 0.0
 ```
 
-**Expected Performance:** 10-20 tok/s on CPU for 2B I2_S models (see [baselines/](docs/baselines/) for measured results).
+**Expected Output:** Deterministic answer with kernel IDs proving real I2_S quantization.
+
+### Receipt Verification Workflow
+
+Generate, verify, and pin performance baselines:
+
+```bash
+# Receipts: run → emit → verify
+export BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1
+cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic
+cargo run -p xtask -- verify-receipt ci/inference.json
+mkdir -p docs/baselines && cp ci/inference.json docs/baselines/$(date +%Y%m%d)-cpu.json
+```
+
+**Expected Performance:** 10-20 tok/s on CPU for 2B I2_S models (see [docs/baselines/](docs/baselines/) for measured results).
 
 **Receipt Verification:** All inference runs generate receipts (`ci/inference.json`) with kernel IDs proving real computation. CI blocks PRs with mocked receipts.
 

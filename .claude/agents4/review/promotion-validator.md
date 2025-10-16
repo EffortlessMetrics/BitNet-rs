@@ -1,7 +1,7 @@
 ---
 name: promotion-validator
 description: Use this agent when you need to validate that all required gates are passing before promoting a pull request to ready status. This agent should be triggered when checking promotion readiness or before advancing to the ready-promoter stage. Examples: <example>Context: User is preparing to promote a PR that has completed development work. user: "Can we promote PR #123 to ready? All the work is done." assistant: "I'll use the promotion-validator agent to verify all required gates are passing before promotion." <commentary>Since the user wants to promote a PR to ready status, use the promotion-validator agent to check all required gates and provide a sanity check.</commentary></example> <example>Context: Automated workflow checking if a PR is ready for promotion after CI completion. user: "CI has finished running on PR #456. Check if we can move to ready status." assistant: "Let me use the promotion-validator agent to validate all promotion gates are green." <commentary>The CI completion triggers a promotion readiness check, so use the promotion-validator agent to verify all gates.</commentary></example>
-model: sonnet
+model: haiku
 color: pink
 ---
 

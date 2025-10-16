@@ -1,7 +1,7 @@
 ---
 name: review-pr-sync-and-cleanup
 description: Use this agent when completing the final stage of the draft-to-PR review workflow to ensure commits are fully merged and synced into the PR branch, the GitHub PR is up to date, and final comments and analysis are posted. Examples: <example>Context: User has completed code review and wants to finalize the PR workflow. user: "I've finished reviewing the changes and want to make sure everything is synced up and the PR is ready" assistant: "I'll use the review-pr-sync-and-cleanup agent to ensure all commits are merged, the GitHub PR is current, and final analysis is posted" <commentary>Since the user wants to complete the PR review workflow, use the review-pr-sync-and-cleanup agent to handle the final synchronization and cleanup tasks.</commentary></example> <example>Context: User mentions they need to finalize a PR after making review changes. user: "The review is done, can you make sure the PR branch is synced and all the final comments are posted?" assistant: "I'll use the review-pr-sync-and-cleanup agent to handle the final PR synchronization and cleanup" <commentary>The user is requesting final PR synchronization and cleanup, which is exactly what this agent handles.</commentary></example>
-model: sonnet
+model: haiku
 color: blue
 ---
 
