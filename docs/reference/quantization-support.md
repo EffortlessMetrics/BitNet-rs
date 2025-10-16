@@ -6,22 +6,22 @@ This document describes the quantization formats and device-aware acceleration s
 
 BitNet-rs supports multiple quantization formats with advanced device-aware acceleration:
 
-### I2_S - Native Rust Implementation (Production Ready - Issue #261)
+### I2S - Native Rust Implementation (Production Ready - Issue #261)
 
 - Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
-- Device-aware quantization with CUDA kernel acceleration and CPU SIMD optimization
+- Device-aware quantization with CUDA kernel acceleration (feature-gated) and CPU SIMD optimization
 - **Accuracy**: ≥99.8% correlation with FP32 reference (production requirement, validated in AC3)
-- **Performance**: CPU 10-20 tok/s (architecture-dependent: AVX-512 > AVX2 > NEON), GPU 50-100 tok/s with mixed precision
+- **Performance** (receipt-driven, hardware-dependent): Typical ranges CPU 10-25 tok/s, GPU 50-100 tok/s. See [docs/baselines/](../../baselines/) for measured results.
 - 2-bit signed quantization with optimized bit-packing (4 values per byte)
 - **Strict Mode**: Use `BITNET_STRICT_MODE=1` to prevent mock fallbacks and ensure real quantized computation
 - **Real Computation**: Native quantized GEMV kernel eliminates FP32 dequantization staging (Issue #261 - AC3)
-- **QLinear Layer Integration**: Replaces standard Linear layers in transformer architecture (Issue #261 - AC5)
+- **QuantizedLinear Integration**: Replaces standard Linear layers in transformer architecture (Issue #261 - AC5)
 
 ### TL1 - Table Lookup Quantization (ARM Optimized - Issue #261)
 
-- Table lookup quantization optimized for ARM NEON architecture
+- Table lookup quantization optimized for ARM NEON architecture (4-bit, 2 elements per byte with nibble packing)
 - **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
-- **Performance**: 12-18 tok/s on ARM NEON (realistic baseline from AC7)
+- **Performance** (receipt-driven): Typical range 12-18 tok/s on ARM NEON. Verify with receipts and baselines.
 - **Device-Aware Selection**: Automatic ARM NEON vectorization with scalar fallback
 - Memory-efficient lookup tables (16-256 entries, cache-friendly)
 - Parallel processing with configurable block sizes
@@ -30,9 +30,9 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 
 ### TL2 - Advanced Table Lookup (x86 Optimized - Issue #261)
 
-- Advanced table lookup quantization optimized for x86 AVX2/AVX-512
+- Advanced table lookup quantization optimized for x86 AVX2/AVX-512 (8-bit, 1 element per byte)
 - **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
-- **Performance**: 10-15 tok/s on x86 AVX (realistic baseline from AC7)
+- **Performance** (receipt-driven): Typical range 10-15 tok/s on x86 AVX. Verify with receipts and baselines.
 - **SIMD Optimization**: AVX2 (32-byte) and AVX-512 (64-byte) vectorization
 - Enhanced vectorized operations (256-4096 entry tables) for large tensor processing
 - CPU feature detection with graceful fallback to scalar implementation
