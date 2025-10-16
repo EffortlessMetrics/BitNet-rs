@@ -6,8 +6,9 @@ use anyhow::{Context, Result};
 use console::style;
 use futures::StreamExt;
 use humantime::format_duration;
-use std::io::{self, Write};
-use std::time::Instant;
+use std::io::{self, IsTerminal, Write};
+use std::path::{Path, PathBuf};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
 
 use bitnet_inference::{InferenceEngine, TemplateType};
@@ -21,6 +22,22 @@ struct ChatMetrics {
     total_tokens_generated: usize,
     total_time_ms: u64,
     num_exchanges: usize,
+}
+
+/// Copy receipt from ci/inference.json to timestamped file in the specified directory
+fn copy_receipt_if_present(dir: &Path) -> Result<Option<PathBuf>> {
+    use std::fs;
+
+    let src = Path::new("ci").join("inference.json");
+    if !src.exists() {
+        return Ok(None);
+    }
+
+    fs::create_dir_all(dir)?;
+    let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
+    let dst = dir.join(format!("chat-{}.json", ts));
+    fs::copy(&src, &dst)?;
+    Ok(Some(dst))
 }
 
 impl ChatMetrics {
@@ -53,9 +70,8 @@ impl InferenceCommand {
         // Load model and tokenizer
         let (mut engine, _tokenizer) = self.load_model_and_tokenizer(config).await?;
 
-        // Parse prompt template
-        let template_type: TemplateType =
-            self.prompt_template.parse().context("Invalid prompt template")?;
+        // Resolve prompt template using same logic as `run` subcommand
+        let template_type = self.resolve_template_type()?;
 
         println!("{}", style("Chat ready!").bold().green());
         println!("Template: {}", style(format!("{:?}", template_type)).dim());
@@ -69,9 +85,24 @@ impl InferenceCommand {
         // Create generation config
         let gen_config = self.create_generation_config()?;
 
+        // Detect if output is a TTY (for emoji/color support)
+        let is_tty = io::stdout().is_terminal();
+
         loop {
-            print!("{} ", style("you>").green().bold());
-            io::stdout().flush()?;
+            // Use fancy prompts for TTY, plain for pipes/redirects
+            if is_tty {
+                print!("{} ", style("you>").green().bold());
+            } else {
+                print!("you> ");
+            }
+
+            // Handle BrokenPipe gracefully
+            if let Err(e) = io::stdout().flush() {
+                if e.kind() == io::ErrorKind::BrokenPipe {
+                    return Ok(());
+                }
+                return Err(e.into());
+            }
 
             let mut input = String::new();
             match io::stdin().read_line(&mut input) {
@@ -113,8 +144,19 @@ impl InferenceCommand {
 
                     // Run streaming inference
                     let start_time = Instant::now();
-                    print!("{} ", style("assistant>").blue().bold());
-                    io::stdout().flush()?;
+                    if is_tty {
+                        print!("{} ", style("assistant>").blue().bold());
+                    } else {
+                        print!("assistant> ");
+                    }
+
+                    // Handle BrokenPipe gracefully
+                    if let Err(e) = io::stdout().flush() {
+                        if e.kind() == io::ErrorKind::BrokenPipe {
+                            return Ok(());
+                        }
+                        return Err(e.into());
+                    }
 
                     match self.run_chat_inference(&mut engine, &formatted_prompt, &gen_config).await
                     {
@@ -129,6 +171,21 @@ impl InferenceCommand {
 
                             // Add to conversation history
                             conversation_history.push((line.to_string(), response_text));
+
+                            // Copy receipt if directory specified
+                            if let Some(dir) = &self.emit_receipt_dir {
+                                match copy_receipt_if_present(dir) {
+                                    Ok(Some(path)) => {
+                                        debug!("Receipt saved: {}", path.display());
+                                    }
+                                    Ok(None) => {
+                                        debug!("No receipt found to copy");
+                                    }
+                                    Err(e) => {
+                                        debug!("Failed to copy receipt: {}", e);
+                                    }
+                                }
+                            }
 
                             // Show timing if metrics enabled
                             if self.metrics {
@@ -186,7 +243,20 @@ impl InferenceCommand {
             token_count += chunk.token_ids.len();
             full_response.push_str(&chunk.text);
             print!("{}", chunk.text);
-            io::stdout().flush()?;
+
+            // Handle BrokenPipe gracefully during streaming
+            if let Err(e) = io::stdout().flush() {
+                if e.kind() == io::ErrorKind::BrokenPipe {
+                    debug!("BrokenPipe during streaming - client disconnected");
+                    break;
+                }
+                return Err(e.into());
+            }
+        }
+
+        // Write standard receipt to ci/inference.json
+        if let Err(e) = self.write_receipt(engine, token_count).await {
+            debug!("Failed to write receipt: {}", e);
         }
 
         Ok((full_response, token_count))

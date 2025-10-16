@@ -6,6 +6,38 @@
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
+/// Role in a chat conversation
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ChatRole {
+    System,
+    User,
+    Assistant,
+}
+
+impl ChatRole {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ChatRole::System => "system",
+            ChatRole::User => "user",
+            ChatRole::Assistant => "assistant",
+        }
+    }
+}
+
+/// A single turn in a chat conversation
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ChatTurn {
+    pub role: ChatRole,
+    pub text: String,
+}
+
+impl ChatTurn {
+    pub fn new(role: ChatRole, text: impl Into<String>) -> Self {
+        Self { role, text: text.into() }
+    }
+}
+
 /// Supported prompt template types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -150,6 +182,76 @@ impl TemplateType {
             Self::Raw | Self::Instruct => true,
             Self::Llama3Chat => false, // Template includes <|begin_of_text|>
         }
+    }
+
+    /// Render a chat history (system + turns) into a single prompt string.
+    /// This method formats multi-turn conversations with proper role markers.
+    pub fn render_chat(&self, history: &[ChatTurn], system: Option<&str>) -> Result<String> {
+        use std::fmt::Write as _;
+        let mut out = String::new();
+
+        match self {
+            TemplateType::Llama3Chat => {
+                // LLaMA-3 chat format with special tokens
+                out.push_str("<|begin_of_text|>");
+
+                // System prompt if provided
+                if let Some(sys) = system {
+                    write!(out, "<|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>", sys)?;
+                }
+
+                // Render conversation history
+                for turn in history {
+                    let role = turn.role.as_str();
+                    write!(
+                        out,
+                        "<|start_header_id|>{}<|end_header_id|>\n\n{}<|eot_id|>",
+                        role, turn.text
+                    )?;
+                }
+
+                // Start assistant response
+                write!(out, "<|start_header_id|>assistant<|end_header_id|>\n\n")?;
+            }
+            TemplateType::Instruct => {
+                // Simple Q&A format
+                if let Some(sys) = system {
+                    writeln!(out, "System: {}\n", sys)?;
+                }
+
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            writeln!(out, "Q: {}", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            writeln!(out, "A: {}", turn.text)?;
+                        }
+                        ChatRole::System => {
+                            // System messages already emitted above
+                        }
+                    }
+                }
+
+                // Prompt for assistant response
+                write!(out, "A: ")?;
+            }
+            TemplateType::Raw => {
+                // Minimal: just concatenate with system prefix
+                if let Some(sys) = system {
+                    writeln!(out, "{}\n", sys)?;
+                }
+
+                // For raw mode, just take the last user message
+                if let Some(last_user) =
+                    history.iter().rev().find(|t| matches!(t.role, ChatRole::User))
+                {
+                    write!(out, "{}", last_user.text)?;
+                }
+            }
+        }
+
+        Ok(out)
     }
 }
 
@@ -305,5 +407,100 @@ mod tests {
 
         template.clear_history();
         assert_eq!(template.conversation_history.len(), 0);
+    }
+
+    #[test]
+    fn test_render_chat_llama3() {
+        let t = TemplateType::Llama3Chat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi there!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let s = t.render_chat(&hist, Some("You are helpful.")).unwrap();
+
+        // Check for LLaMA-3 special tokens
+        assert!(s.contains("<|begin_of_text|>"));
+        assert!(s.contains("<|start_header_id|>system<|end_header_id|>"));
+        assert!(s.contains("You are helpful."));
+        assert!(s.contains("<|start_header_id|>user<|end_header_id|>"));
+        assert!(s.contains("Hello"));
+        assert!(s.contains("<|start_header_id|>assistant<|end_header_id|>"));
+        assert!(s.contains("Hi there!"));
+        assert!(s.contains("How are you?"));
+        assert!(s.contains("<|eot_id|>"));
+
+        // Should end with assistant header ready for generation
+        assert!(s.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
+    }
+
+    #[test]
+    fn test_render_chat_instruct() {
+        let t = TemplateType::Instruct;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "What is 2+2?"),
+            ChatTurn::new(ChatRole::Assistant, "It's 4."),
+            ChatTurn::new(ChatRole::User, "What about 3+3?"),
+        ];
+        let s = t.render_chat(&hist, None).unwrap();
+
+        // Check Q&A format
+        assert!(s.contains("Q: What is 2+2?"));
+        assert!(s.contains("A: It's 4."));
+        assert!(s.contains("Q: What about 3+3?"));
+
+        // Should end with "A: " to prompt for response
+        assert!(s.ends_with("A: "));
+    }
+
+    #[test]
+    fn test_render_chat_instruct_with_system() {
+        let t = TemplateType::Instruct;
+        let hist = vec![ChatTurn::new(ChatRole::User, "Q1")];
+        let s = t.render_chat(&hist, Some("You are a math tutor")).unwrap();
+
+        assert!(s.contains("System: You are a math tutor"));
+        assert!(s.contains("Q: Q1"));
+        assert!(s.ends_with("A: "));
+    }
+
+    #[test]
+    fn test_render_chat_raw() {
+        let t = TemplateType::Raw;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "First message"),
+            ChatTurn::new(ChatRole::Assistant, "First response"),
+            ChatTurn::new(ChatRole::User, "Second message"),
+        ];
+        let s = t.render_chat(&hist, None).unwrap();
+
+        // Raw mode should just take the last user message
+        assert!(s.contains("Second message"));
+        // Should not contain earlier messages in raw mode
+        assert!(!s.contains("First message"));
+    }
+
+    #[test]
+    fn test_render_chat_raw_with_system() {
+        let t = TemplateType::Raw;
+        let hist = vec![ChatTurn::new(ChatRole::User, "Hello")];
+        let s = t.render_chat(&hist, Some("System context")).unwrap();
+
+        assert!(s.contains("System context"));
+        assert!(s.contains("Hello"));
+    }
+
+    #[test]
+    fn test_chat_role_as_str() {
+        assert_eq!(ChatRole::System.as_str(), "system");
+        assert_eq!(ChatRole::User.as_str(), "user");
+        assert_eq!(ChatRole::Assistant.as_str(), "assistant");
+    }
+
+    #[test]
+    fn test_chat_turn_new() {
+        let turn = ChatTurn::new(ChatRole::User, "test message");
+        assert_eq!(turn.role, ChatRole::User);
+        assert_eq!(turn.text, "test message");
     }
 }
