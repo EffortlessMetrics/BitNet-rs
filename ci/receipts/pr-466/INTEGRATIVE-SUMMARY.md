@@ -258,6 +258,7 @@ characteristics. ZERO performance degradation detected.
 ### Test Coverage: 484/484 PASS (100%) ✅
 
 **Issue #465 Specific Tests:**
+
 - Total: 54/54 tests pass (100% AC coverage)
 - Baseline tests: 15/15 (AC3, AC4)
 - CI gates tests: 11/12 (AC5, AC6) - 1 ignored (AC5 manual config)
@@ -265,12 +266,14 @@ characteristics. ZERO performance degradation detected.
 - Release QA tests: 14/14 (AC7, AC8, AC11, AC12)
 
 **Workspace Tests:**
+
 - Total: 1396/1397 (99.9%)
 - Known failure: 1 pre-existing async test (unrelated to PR)
 - CPU feature: All tests pass
 - GPU feature: All tests pass
 
 **Doctests:**
+
 - CPU: 16/16 (100%)
 - GPU: 19/19 (100%)
 - Total: 35/35 doctests PASS
@@ -399,6 +402,7 @@ cargo doc --workspace --no-default-features --features gpu
 **Location:** `/home/steven/code/Rust/BitNet-rs/ci/receipts/pr-466/LEDGER.md`
 
 **Content Validation:**
+
 - ✅ Gates table: 11 gates documented (7 required + 2 hardening + 2 skipped)
 - ✅ Hop log: 16 entries (complete generative + integrative flow)
 - ✅ Decision section: Clear state, routing, and next steps
@@ -409,6 +413,7 @@ cargo doc --workspace --no-default-features --features gpu
 ### Gate Receipts: 9/9 Documented ✅
 
 **Integrative Gates (All PASS):**
+
 1. ✅ integrative:gate:freshness - Base up-to-date @1f7dbd0
 2. ✅ integrative:gate:format - 0 violations
 3. ✅ integrative:gate:clippy - 0 warnings (7 auto-fixes)
@@ -420,6 +425,7 @@ cargo doc --workspace --no-default-features --features gpu
 9. ✅ integrative:gate:docs - 35/35 doctests pass
 
 **Receipt Files:**
+
 - `/ci/receipts/pr-466/integrative-gate-docs-check-run.md` ✅
 - `/ci/receipts/pr-466/BENCHMARK-GATE-VALIDATION.md` ✅
 - `/ci/receipts/pr-466/LEDGER.md` ✅
@@ -428,12 +434,14 @@ cargo doc --workspace --no-default-features --features gpu
 ### Trace Table: Story → Schema → Tests → Code ✅
 
 **Complete Traceability:**
+
 - Story: Issue #465 (CPU Path Followup)
 - Schema: 12 Acceptance Criteria (testable)
 - Tests: 54 tests (100% AC coverage)
 - Code: 148 files (documentation, fixtures, baselines, receipts)
 
 **Validation:**
+
 - ✅ All ACs mapped to tests
 - ✅ All tests traced to specifications
 - ✅ All code changes traced to ACs
@@ -479,17 +487,20 @@ e95b86a0 chore(ci/tests): update recorded timestamps in inference.json and last_
 ### Warnings: NONE ❌
 
 **CI Validation:** ✅ RESOLVED
+
 - Previous CI failures resolved by fixes in commit 710f067a
 - All integrative gates now passing
 - Fresh CI run shows clean results
 
 **Branch Protection Requirements:**
+
 - Status: Pending manual configuration (AC5)
 - Documented: ADR-002 (Manual Branch Protection)
 - Impact: Post-merge task, not blocking review
 - Resolution: Manual GitHub branch protection setup after v0.1.0-mvp tag
 
 **Issue #465 Status:**
+
 - Status: OPEN (will auto-close on merge via "Fixes #465")
 - Impact: Expected behavior for GitHub issue linking
 - Resolution: Automatic on PR merge
@@ -670,6 +681,7 @@ cargo doc --workspace --no-default-features --features gpu
 PR #466 successfully passes all integrative validation gates and is **READY TO MERGE**.
 
 **Key Achievements:**
+
 1. ✅ 9/9 required integrative gates PASS (100% quality score)
 2. ✅ Zero neural network performance regressions (0% delta)
 3. ✅ All BitNet.rs standards met (quantization, security, docs, performance)
