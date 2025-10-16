@@ -11,6 +11,7 @@
 use anyhow::{Context, Result, anyhow};
 use bitnet_common::{BitNetTensor, Device, QuantizationType};
 use bitnet_quantization::{I2SQuantizer, QuantizedTensor, TL1Quantizer, TL2Quantizer};
+use serial_test::serial;
 use std::env;
 
 /// AC1: Compilation Error Resolution Tests
@@ -78,6 +79,7 @@ mod ac2_strict_mode_tests {
 
     /// AC:AC2 - Tests strict mode environment variable detection
     #[test]
+    #[serial]
     fn test_ac2_strict_mode_environment_variable() {
         println!("AC2: Testing BITNET_STRICT_MODE environment variable");
 

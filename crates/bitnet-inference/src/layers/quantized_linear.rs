@@ -152,8 +152,8 @@ pub struct QuantizedLinear {
     pub(crate) qtype: QuantizationType,
 
     /// Layer metadata
-    in_features: usize,
-    out_features: usize,
+    pub(crate) in_features: usize,
+    pub(crate) out_features: usize,
     pub(crate) device: Device,
 
     /// Performance optimization
@@ -294,21 +294,22 @@ impl QuantizedLinear {
         {
             if self.is_fallback_path() {
                 panic!(
-                    "fallback to FP32 in debug mode: layer={}x{}, qtype={:?}, device={:?}, reason=kernel_unavailable",
+                    "FP32 fallback blocked in debug mode: layer=[{}x{}], qtype={:?}, device={:?}, reason=kernel_unavailable",
                     self.in_features, self.out_features, self.qtype, self.device
                 );
             }
         }
 
         // AC3: Strict mode validation - return error if fallback would occur
+        // This enforces quantized-only inference in production when BITNET_STRICT_MODE=1
         let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
-        if self.is_fallback_path() {
-            strict_mode.validate_quantization_fallback(
-                self.qtype,
-                self.device,
-                &[self.in_features, self.out_features],
-                "kernel_unavailable",
-            )?;
+        if strict_mode.get_config().enforce_quantized_inference && self.is_fallback_path() {
+            let layer_name = format!("QuantizedLinear[{}x{}]", self.in_features, self.out_features);
+            return Err(bitnet_common::BitNetError::StrictMode(format!(
+                "FP32 fallback rejected in strict mode - layer={}, qtype={:?}, device={:?}, reason=kernel_unavailable. \
+                 Strict mode requires all layers to use native quantized kernels.",
+                layer_name, self.qtype, self.device
+            )).into());
         }
 
         // Perform quantized matrix multiplication based on type

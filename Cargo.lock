@@ -651,6 +651,7 @@ dependencies = [
  "proptest",
  "rayon",
  "serde",
+ "serial_test",
  "tempfile",
  "thiserror 2.0.17",
  "tracing",
