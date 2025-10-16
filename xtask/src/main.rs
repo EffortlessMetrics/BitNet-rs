@@ -641,6 +641,28 @@ enum Cmd {
         #[arg(long, default_value_t = false)]
         require_gpu_kernels: bool,
     },
+
+    /// Download and verify GGUF models listed in a lockfile
+    ///
+    /// Fetches models from URLs specified in a JSON lockfile and verifies them
+    /// against expected SHA256 hashes and byte sizes. Models are cached in
+    /// ~/.cache/bitnet/models/<sha256>/ for deterministic retrieval.
+    ///
+    /// Lockfile format:
+    /// [
+    ///   {
+    ///     "id": "model-identifier",
+    ///     "sha256": "expected-hash",
+    ///     "bytes": 12345,
+    ///     "urls": ["https://..."],
+    ///     "license": "license-name"
+    ///   }
+    /// ]
+    FetchModels {
+        /// Path to crossval-models.lock.json
+        #[arg(long)]
+        lock: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -844,6 +866,7 @@ fn real_main() -> Result<()> {
         Cmd::VerifyReceipt { path, require_gpu_kernels } => {
             verify_receipt_cmd(&path, require_gpu_kernels)
         }
+        Cmd::FetchModels { lock } => fetch_models_cmd(&lock),
     }
 }
 
@@ -4441,6 +4464,188 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Lockfile entry structure
+#[derive(Deserialize)]
+struct LockEntry {
+    id: String,
+    sha256: String,
+    bytes: u64,
+    urls: Vec<String>,
+    license: String,
+}
+
+/// Download and verify models from lockfile
+fn fetch_models_cmd(lock_path: &Path) -> Result<()> {
+    println!("{}", style("📦 Fetching models from lockfile…").bold());
+
+    // Read and parse lockfile
+    let raw = fs::read(lock_path)
+        .with_context(|| format!("Failed to read lockfile: {}", lock_path.display()))?;
+
+    let entries: Vec<LockEntry> =
+        serde_json::from_slice(&raw).context("Failed to parse lockfile JSON")?;
+
+    if entries.is_empty() {
+        bail!("Lockfile contains no models");
+    }
+
+    // Create HTTP client with sensible defaults
+    let client = Client::builder()
+        .timeout(Duration::from_secs(300))
+        .user_agent("bitnet-xtask-fetcher/1.0")
+        .build()
+        .context("Failed to create HTTP client")?;
+
+    for entry in entries {
+        // Determine cache location
+        let cache_dir = dirs::home_dir()
+            .context("Cannot determine home directory")?
+            .join(".cache/bitnet/models")
+            .join(&entry.sha256);
+
+        let dst_file = cache_dir.join("model.gguf");
+
+        // Create cache directory
+        fs::create_dir_all(&cache_dir).with_context(|| {
+            format!("Failed to create cache directory: {}", cache_dir.display())
+        })?;
+
+        // Check if model already exists and is valid
+        if dst_file.exists() {
+            match (sha256_file(&dst_file), dst_file.metadata()) {
+                (Ok(hash), Ok(meta)) if hash == entry.sha256 && meta.len() == entry.bytes => {
+                    // Model already cached and valid
+                    println!(
+                        "{}",
+                        serde_json::json!({
+                            "id": entry.id,
+                            "sha256": entry.sha256,
+                            "local": dst_file,
+                            "status": "cached"
+                        })
+                    );
+                    continue;
+                }
+                _ => {
+                    // Invalid cached file, will redownload
+                    eprintln!("⚠️  Cached model invalid, redownloading: {}", entry.id);
+                }
+            }
+        }
+
+        // Download from URLs with progress
+        let tmp_file = cache_dir.join("download.tmp");
+        let pb = ProgressBar::new(entry.bytes);
+        pb.set_style(
+            ProgressStyle::default_bar()
+                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec})")
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+
+        let mut downloaded = false;
+        for url in &entry.urls {
+            println!("Downloading {} from {}...", entry.id, url);
+
+            match download_with_progress(&client, url, &tmp_file, &pb) {
+                Ok(_) => {
+                    // Verify download
+                    match (sha256_file(&tmp_file), tmp_file.metadata()) {
+                        (Ok(hash), Ok(meta))
+                            if hash == entry.sha256 && meta.len() == entry.bytes =>
+                        {
+                            // Valid download, move to final location
+                            fs::rename(&tmp_file, &dst_file)
+                                .context("Failed to move downloaded file to cache")?;
+
+                            pb.finish_and_clear();
+                            println!(
+                                "{}",
+                                serde_json::json!({
+                                    "id": entry.id,
+                                    "sha256": entry.sha256,
+                                    "local": dst_file,
+                                    "status": "downloaded"
+                                })
+                            );
+                            downloaded = true;
+                            break;
+                        }
+                        _ => {
+                            eprintln!(
+                                "⚠️  Download verification failed for {}, trying next URL",
+                                url
+                            );
+                            let _ = fs::remove_file(&tmp_file);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("⚠️  Download failed from {}: {}", url, e);
+                    let _ = fs::remove_file(&tmp_file);
+                }
+            }
+        }
+
+        if !downloaded {
+            bail!(
+                "Failed to download and verify model: {} (tried {} URLs)",
+                entry.id,
+                entry.urls.len()
+            );
+        }
+    }
+
+    println!("{}", style("✅ All models fetched successfully").green().bold());
+    Ok(())
+}
+
+/// Download file with progress bar
+fn download_with_progress(client: &Client, url: &str, dst: &Path, pb: &ProgressBar) -> Result<()> {
+    let mut response = client.get(url).send().context("Failed to send request")?;
+
+    if !response.status().is_success() {
+        bail!("HTTP error: {}", response.status());
+    }
+
+    let mut file = fs::File::create(dst).context("Failed to create temp file")?;
+
+    pb.set_position(0);
+
+    // Use blocking read with buffer
+    let mut buf = vec![0u8; 8192];
+    loop {
+        let n = response.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        file.write_all(&buf[..n])?;
+        pb.inc(n as u64);
+    }
+
+    file.flush()?;
+    Ok(())
+}
+
+/// Compute SHA256 hash of a file
+fn sha256_file(path: &Path) -> Result<String> {
+    let mut file =
+        fs::File::open(path).with_context(|| format!("Failed to open file: {}", path.display()))?;
+
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; 1024 * 1024]; // 1MB buffer for efficient reading
+
+    loop {
+        let n = file.read(&mut buf).context("Failed to read file for hashing")?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+
+    Ok(hex::encode(hasher.finalize()))
 }
 
 /// Check if tokenizer contains LLaMA-3 chat special tokens

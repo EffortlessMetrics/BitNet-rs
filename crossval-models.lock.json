@@ -1,16 +1,11 @@
-{
-  "crossval_default": {
-    "path": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+[
+  {
+    "id": "microsoft/bitnet-b1.58-2B-4T-gguf@ggml-model-i2_s.gguf",
     "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
-    "n_vocab": 128256,
-    "tokenizer": "llama",
-    "description": "Microsoft BitNet b1.58 2B model in GGUF format for cross-validation"
-  },
-  "test_model": {
-    "path": "models/test.gguf",
-    "sha256": "placeholder",
-    "n_vocab": 50257,
-    "tokenizer": "gpt2",
-    "description": "Small test model for unit tests"
+    "bytes": 1187801280,
+    "urls": [
+      "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf"
+    ],
+    "license": "microsoft-research-license"
   }
-}
+]
