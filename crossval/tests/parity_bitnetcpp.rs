@@ -40,7 +40,7 @@ fn cpp_parity_check(
     rust_logits: &[f32],
     rust_decode: &[u32],
     add_bos: bool,
-    add_special: bool,
+    parse_special: bool,
     eos_id: u32,
     vocab_size: usize,
     n_steps: usize,
@@ -59,7 +59,7 @@ fn cpp_parity_check(
         .map_err(|e| anyhow::anyhow!("C++ context creation failed: {:?}", e))?;
 
     // 2. Tokenization parity
-    let cpp_ids = bitnet_tokenize_text(&cpp_model, formatted_prompt, add_bos, add_special)
+    let cpp_ids = bitnet_tokenize_text(&cpp_model, formatted_prompt, add_bos, parse_special)
         .map_err(|e| anyhow::anyhow!("C++ tokenization failed: {:?}", e))?;
 
     let cpp_ids_u32: Vec<u32> = cpp_ids.iter().map(|&x| x as u32).collect();
@@ -116,7 +116,7 @@ fn cpp_parity_check(
     _rust_logits: &[f32],
     _rust_decode: &[u32],
     _add_bos: bool,
-    _add_special: bool,
+    _parse_special: bool,
     _eos_id: u32,
     _vocab_size: usize,
     _n_steps: usize,
@@ -179,12 +179,18 @@ async fn parity_bitnetcpp() -> Result<()> {
     let template = auto_detect_template(&gguf_path);
     let formatted_prompt = template.apply(&prompt, None);
 
-    let (rust_ids, add_bos, add_special, eos_id, vocab_size) =
+    let (rust_ids, add_bos, parse_special, eos_id, vocab_size) =
         rust_side_tokenize_and_meta(&gguf_path, &prompt)?;
 
     eprintln!("Template: {}", template);
     eprintln!("Formatted prompt: {}", formatted_prompt);
-    eprintln!("Tokenized {} tokens (add_bos={}, eos_id={})", rust_ids.len(), add_bos, eos_id);
+    eprintln!(
+        "Tokenized {} tokens (add_bos={}, parse_special={}, eos_id={})",
+        rust_ids.len(),
+        add_bos,
+        parse_special,
+        eos_id
+    );
 
     // 2. Rust-side logits evaluation
     let rust_logits = rust_eval_last_logits(&gguf_path, &rust_ids, vocab_size).await?;
@@ -205,7 +211,7 @@ async fn parity_bitnetcpp() -> Result<()> {
                 &rust_logits,
                 &rust_decode,
                 add_bos,
-                add_special,
+                parse_special,
                 eos_id,
                 vocab_size,
                 n_steps,
@@ -234,8 +240,11 @@ async fn parity_bitnetcpp() -> Result<()> {
 
     // 5. Write parity receipt
     let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
-    let date_dir = format!("docs/baselines/{}", chrono::Local::now().format("%Y-%m-%d"));
-    let receipt_dir = PathBuf::from(&date_dir);
+    let date_str = &ts[..10]; // Extract "YYYY-MM-DD" from RFC3339 timestamp
+
+    // Anchor to workspace root via manifest directory
+    let receipt_dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines").join(date_str);
 
     if !receipt_dir.exists() {
         fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
@@ -259,7 +268,7 @@ async fn parity_bitnetcpp() -> Result<()> {
         "rust": {
             "token_count": rust_ids.len(),
             "add_bos": add_bos,
-            "add_special": add_special,
+            "parse_special": parse_special,
             "eos_id": eos_id,
             "vocab_size": vocab_size,
             "logits_dim": rust_logits.len(),
@@ -295,7 +304,7 @@ async fn parity_bitnetcpp() -> Result<()> {
 }
 
 /// Tokenize prompt with template-aware BOS/special handling
-/// Returns: (token_ids, add_bos, add_special, eos_token_id, vocab_size)
+/// Returns: (token_ids, add_bos, parse_special, eos_token_id, vocab_size)
 fn rust_side_tokenize_and_meta(
     model_path: &std::path::Path,
     prompt: &str,
@@ -312,9 +321,11 @@ fn rust_side_tokenize_and_meta(
 
     // 3) Determine BOS policy from template
     let add_bos = template.should_add_bos();
-    let add_special = false; // Consistent with CLI
 
-    // 4) Resolve EOS token ID (token-level EOT for llama3-chat, or regular EOS)
+    // 4) Determine parse_special flag (true for Llama3Chat to parse <|eot_id|> etc.)
+    let parse_special = matches!(template, TemplateType::Llama3Chat);
+
+    // 5) Resolve EOS token ID (token-level EOT for llama3-chat, or regular EOS)
     let eos_id = if matches!(template, TemplateType::Llama3Chat) {
         // For LLaMA-3, use <|eot_id|> as the stop token
         let eot_ids = tokenizer.encode("<|eot_id|>", false, true)?;
@@ -325,13 +336,15 @@ fn rust_side_tokenize_and_meta(
         tokenizer.eos_token_id().unwrap_or(2) // Common EOS fallback
     };
 
-    // 5) Format prompt using template
+    // 6) Format prompt using template
     let formatted = template.apply(prompt, None);
 
-    // 6) Encode the formatted prompt
-    let ids = tokenizer.encode(&formatted, add_bos, add_special)?;
+    // 7) Encode the formatted prompt
+    // Note: Rust tokenizer uses add_special for both BOS and parsing
+    // For consistency with C++ side, we pass add_bos for BOS insertion
+    let ids = tokenizer.encode(&formatted, add_bos, false)?;
 
-    Ok((ids, add_bos, add_special, eos_id, vocab_size))
+    Ok((ids, add_bos, parse_special, eos_id, vocab_size))
 }
 
 /// Auto-detect template type from GGUF metadata (matches CLI logic exactly)

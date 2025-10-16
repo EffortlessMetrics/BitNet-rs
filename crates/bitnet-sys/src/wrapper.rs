@@ -468,7 +468,7 @@ pub fn bitnet_tokenize_text(
     model: &BitnetModel,
     text: &str,
     add_bos: bool,
-    add_special: bool,
+    parse_special: bool,
 ) -> Result<Vec<i32>> {
     let c_text = CString::new(text)?;
 
@@ -478,7 +478,7 @@ pub fn bitnet_tokenize_text(
             model.as_ptr(),
             c_text.as_ptr(),
             add_bos as i32,
-            add_special as i32,
+            parse_special as i32,
             ptr::null_mut(),
             0,
         )
@@ -499,7 +499,7 @@ pub fn bitnet_tokenize_text(
             model.as_ptr(),
             c_text.as_ptr(),
             add_bos as i32,
-            add_special as i32,
+            parse_special as i32,
             tokens.as_mut_ptr(),
             tokens.len() as i32,
         )

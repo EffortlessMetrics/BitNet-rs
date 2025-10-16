@@ -21,7 +21,7 @@ void            bitnet_model_free(bitnet_model_t*);
 bitnet_ctx_t*   bitnet_context_new(bitnet_model_t*, const bitnet_params_t*);
 void            bitnet_context_free(bitnet_ctx_t*);
 
-int bitnet_tokenize(bitnet_model_t*, const char* text, int add_bos, int add_special,
+int bitnet_tokenize(bitnet_model_t*, const char* text, int add_bos, int parse_special,
                     int32_t* out_ids, int out_cap);
 
 int bitnet_eval(bitnet_ctx_t*, const int32_t* ids, int n_ids,

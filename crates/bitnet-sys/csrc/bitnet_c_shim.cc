@@ -103,7 +103,7 @@ void bitnet_context_free(bitnet_ctx_t* c) {
     }
 }
 
-int bitnet_tokenize(bitnet_model_t* m, const char* text, int add_bos, int add_special,
+int bitnet_tokenize(bitnet_model_t* m, const char* text, int add_bos, int parse_special,
                     int32_t* out_ids, int out_cap) {
     if (!m || !m->model || !text) return -1;
 
@@ -112,14 +112,20 @@ int bitnet_tokenize(bitnet_model_t* m, const char* text, int add_bos, int add_sp
         int text_len = strlen(text);
 
         // Tokenize using llama.cpp API
+        // Modern llama.cpp signature:
+        //   int llama_tokenize(model, text, text_len, tokens, n_max, add_special, parse_special)
+        //
+        // Parameter mapping:
+        //   BitNet add_bos → llama.cpp add_special (controls BOS insertion)
+        //   BitNet parse_special → llama.cpp parse_special (parses "<|eot_id|>" etc.)
         int n_tokens = llama_tokenize(
             m->model,
             text,
             text_len,
             out_ids,
             out_cap,
-            (bool)add_bos,
-            false // parse_special (we use add_special for BOS)
+            (bool)add_bos,        // llama.cpp add_special: controls BOS insertion
+            (bool)parse_special   // llama.cpp parse_special: parses special token strings
         );
 
         if (n_tokens < 0) return -2; // Tokenization failed
@@ -183,8 +189,8 @@ int bitnet_decode_greedy(bitnet_ctx_t* c, int32_t* io_ids, int max_new_tokens,
         int generated = 0;
         llama_seq_id seq_ids[1] = {0};
 
-        // Get initial position (context length)
-        int n_past = 0;
+        // Get initial position from KV cache (after prefill)
+        int n_past = llama_get_kv_cache_token_count(c->context);
 
         // Generate tokens one at a time
         for (int step = 0; step < max_new_tokens; ++step) {

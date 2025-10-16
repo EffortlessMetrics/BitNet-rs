@@ -4473,6 +4473,7 @@ struct LockEntry {
     sha256: String,
     bytes: u64,
     urls: Vec<String>,
+    #[allow(dead_code)]
     license: String,
 }
 
