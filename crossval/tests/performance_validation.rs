@@ -483,12 +483,12 @@ mod performance_tests {
 #[cfg(not(feature = "crossval"))]
 mod no_crossval_performance_tests {
     #[test]
+    #[allow(clippy::assertions_on_constants)]
     fn test_performance_validation_requires_crossval() {
         println!("Performance validation requires crossval feature");
         println!("To run performance validation tests, use: cargo test --features crossval");
 
-        // This test documents the requirement
-        assert!(true, "Performance validation tests are feature-gated");
+        // This test documents the requirement - feature gate prevents execution
     }
 }
 

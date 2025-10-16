@@ -55,6 +55,12 @@ pub struct ThreadManager {
     config: ThreadPoolConfig,
 }
 
+impl Default for ThreadManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ThreadManager {
     pub fn new() -> Self {
         Self { active_jobs: Arc::new(AtomicUsize::new(0)), config: ThreadPoolConfig::default() }

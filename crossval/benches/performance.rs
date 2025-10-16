@@ -293,9 +293,9 @@ fn benchmark_model_loading(c: &mut Criterion) {
 
     group.bench_function("cpp_model_load", |b| {
         b.iter(|| {
-            let model =
+            let _model =
                 CppModel::load(black_box(model_path)).expect("Model loading should succeed");
-            drop(model); // Ensure cleanup is measured
+            // Model cleanup is automatically measured as it goes out of scope
         });
     });
 
@@ -305,13 +305,12 @@ fn benchmark_model_loading(c: &mut Criterion) {
             let start = std::time::Instant::now();
 
             for _ in 0..iters {
-                let model =
+                let _model =
                     CppModel::load(black_box(model_path)).expect("Model loading should succeed");
 
                 // Simulate some work to measure peak memory
                 std::thread::sleep(Duration::from_millis(10));
-
-                drop(model);
+                // Model cleanup is automatically measured as it goes out of scope
             }
 
             start.elapsed()

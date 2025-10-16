@@ -1,5 +1,5 @@
 use super::test_cases::ModelSize;
-#[cfg(feature = "cpp")]
+#[cfg(feature = "cpp-ffi")]
 use crate::cross_validation::CppImplementation;
 use crate::cross_validation::test_cases::{
     ComparisonTestCaseRegistry, TestCaseCategory, test_suites,
@@ -92,9 +92,9 @@ impl ComparisonTestRunner {
     pub async fn new() -> TestResultCompat<Self> {
         let tolerance = ComparisonTolerance::default();
         let rust_impl = Box::new(RustImplementation::new());
-        #[cfg(feature = "cpp")]
+        #[cfg(feature = "cpp-ffi")]
         let cpp_impl = Box::new(CppImplementation::new());
-        #[cfg(not(feature = "cpp"))]
+        #[cfg(not(feature = "cpp-ffi"))]
         let cpp_impl = Box::new(RustImplementation::new());
         let suite = CrossValidationSuite::new(rust_impl, cpp_impl, tolerance);
         let test_registry = ComparisonTestCaseRegistry::new();
@@ -106,9 +106,9 @@ impl ComparisonTestRunner {
     /// Create a new test runner with custom tolerance
     pub async fn with_tolerance(tolerance: ComparisonTolerance) -> TestResultCompat<Self> {
         let rust_impl = Box::new(RustImplementation::new());
-        #[cfg(feature = "cpp")]
+        #[cfg(feature = "cpp-ffi")]
         let cpp_impl = Box::new(CppImplementation::new());
-        #[cfg(not(feature = "cpp"))]
+        #[cfg(not(feature = "cpp-ffi"))]
         let cpp_impl = Box::new(RustImplementation::new());
         let suite = CrossValidationSuite::new(rust_impl, cpp_impl, tolerance);
         let test_registry = ComparisonTestCaseRegistry::new();

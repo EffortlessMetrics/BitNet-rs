@@ -19,7 +19,7 @@ pub use comparison::{
     CrossValidationResult, CrossValidationSuite, PerformanceComparison, SingleComparisonResult,
     TokenMismatch,
 };
-#[cfg(feature = "cpp")]
+#[cfg(feature = "cpp-ffi")]
 pub use cpp_implementation::{CppImplementation, CppImplementationFactory};
 pub use rust_implementation::{RustImplementation, RustImplementationFactory};
 pub use test_cases::{ComparisonTestCaseRegistry, TestCaseCategory, test_suites};

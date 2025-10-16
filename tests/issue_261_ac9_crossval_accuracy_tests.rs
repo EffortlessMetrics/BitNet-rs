@@ -84,7 +84,7 @@ fn test_xtask_crossval_command() -> Result<()> {
     // Placeholder: xtask crossval not yet fully implemented
     // When implemented: should run cross-validation via xtask
 
-    let xtask_cmd = vec!["cargo", "run", "-p", "xtask", "--", "crossval", "--release"];
+    let xtask_cmd = ["cargo", "run", "-p", "xtask", "--", "crossval", "--release"];
 
     assert_eq!(xtask_cmd[5], "crossval", "Should run crossval subcommand");
     assert_eq!(xtask_cmd[6], "--release", "Should use release mode");
@@ -100,7 +100,7 @@ fn test_cpp_reference_availability() -> Result<()> {
     // Placeholder: C++ reference availability check not yet implemented
     // When implemented: should verify C++ reference implementation is available
 
-    let required_env_vars = vec!["BITNET_GGUF", "BITNET_DETERMINISTIC"];
+    let required_env_vars = ["BITNET_GGUF", "BITNET_DETERMINISTIC"];
 
     assert!(required_env_vars.contains(&"BITNET_GGUF"), "Should require BITNET_GGUF");
     assert!(
@@ -119,7 +119,7 @@ fn test_deterministic_inference_crossval() -> Result<()> {
     // Placeholder: Deterministic inference not yet enforced
     // When implemented: should produce identical results with BITNET_DETERMINISTIC=1
 
-    let deterministic_env = vec![("BITNET_DETERMINISTIC", "1"), ("BITNET_SEED", "42")];
+    let deterministic_env = [("BITNET_DETERMINISTIC", "1"), ("BITNET_SEED", "42")];
 
     assert_eq!(deterministic_env[0].0, "BITNET_DETERMINISTIC", "Should set deterministic mode");
     assert_eq!(deterministic_env[1].1, "42", "Should set seed to 42");
@@ -135,7 +135,7 @@ fn test_crossval_report_generation() -> Result<()> {
     // Placeholder: CrossValidationReport generation not yet complete
     // When implemented: should generate comprehensive comparison report
 
-    let report_fields = vec!["correlation", "mse", "rust_performance", "cpp_performance"];
+    let report_fields = ["correlation", "mse", "rust_performance", "cpp_performance"];
 
     assert_eq!(report_fields.len(), 4, "Report should have 4 key fields");
     assert!(report_fields.contains(&"correlation"), "Should include correlation");
@@ -200,8 +200,8 @@ fn test_crossval_numerical_precision() -> Result<()> {
     assert!(large_diff > tolerance, "Large difference should exceed tolerance");
 
     // Test floating point comparison precision
-    let fp_value1 = 0.999999999;
-    let fp_value2 = 1.000000001;
+    let fp_value1: f64 = 0.999999999;
+    let fp_value2: f64 = 1.000000001;
     let fp_diff = (fp_value1 - fp_value2).abs();
 
     assert!(fp_diff < 1e-6, "Floating point precision should be maintained");
@@ -291,8 +291,8 @@ fn test_crossval_mse_calculation() -> Result<()> {
     assert_eq!(perfect_mse, 0.0, "Perfect match should have MSE = 0");
 
     // Small error: MSE should be small
-    let small_errors = vec![0.001, -0.001, 0.0005, -0.0005];
-    let mse: f64 = small_errors.iter().map(|&e| (e * e) as f64).sum::<f64>() / 4.0;
+    let small_errors: [f64; 4] = [0.001, -0.001, 0.0005, -0.0005];
+    let mse: f64 = small_errors.iter().map(|&e| e * e).sum::<f64>() / 4.0;
 
     assert!(mse < 1e-5, "Small errors should produce MSE < 1e-5, got {}", mse);
 
@@ -339,7 +339,7 @@ fn test_crossval_performance_variance_detection() -> Result<()> {
     assert!(excessive_variance > max_variance, "Excessive variance should be detected");
 
     // Verify variance calculation
-    let measurements = vec![100.0, 102.0, 98.0, 101.0, 99.0];
+    let measurements = [100.0, 102.0, 98.0, 101.0, 99.0];
     let mean: f32 = measurements.iter().sum::<f32>() / measurements.len() as f32;
     let variance: f32 =
         measurements.iter().map(|&x| (x - mean).powi(2)).sum::<f32>() / measurements.len() as f32;
