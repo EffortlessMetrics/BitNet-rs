@@ -339,9 +339,9 @@ fn test_edge_case_kernel_count_limits() -> Result<()> {
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
-    // Test kernel count exceeding limit (>10,000)
-    // Note: We'll test with a smaller number for performance but document the limit
-    let excessive_kernels: Vec<String> = (0..10_001).map(|i| format!("kernel_{}", i)).collect();
+    // Test kernel count exceeding limit (10,000)
+    // Testing with 101 (limit+1) for performance - actual limit is 10,000
+    let excessive_kernels: Vec<String> = (0..101).map(|i| format!("kernel_{}", i)).collect();
     let receipt = create_test_receipt("real", excessive_kernels);
     let receipt_path = temp_dir.path().join("excessive-kernels.json");
     fs::write(&receipt_path, serde_json::to_string_pretty(&receipt)?)

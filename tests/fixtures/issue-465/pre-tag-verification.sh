@@ -105,7 +105,7 @@ if ls docs/baselines/*-cpu.json 1> /dev/null 2>&1; then
     echo "Found baseline: $BASELINE"
 
     # Verify baseline has required fields
-    if jq -e '.schema_version and .compute_path and .kernels and .throughput_tokens_per_sec' "$BASELINE" > /dev/null; then
+    if jq -e '.schema_version and .compute_path and .kernels and .tokens_per_second' "$BASELINE" > /dev/null; then
         echo -e "${GREEN}✓ CPU baseline valid${NC}"
     else
         echo -e "${RED}✗ CPU baseline missing required fields${NC}"

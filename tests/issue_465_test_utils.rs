@@ -59,7 +59,8 @@ pub fn workspace_root() -> PathBuf {
 /// - BITNET_SEED=42
 ///
 /// # Safety
-/// Uses unsafe `std::env::set_var` as required by Rust 1.90+ for thread-unsafe operations.
+/// Uses `std::env::set_var` which is marked unsafe in Rust 1.90+.
+/// This is safe in test contexts where env vars are not accessed concurrently.
 pub fn configure_deterministic_env() {
     unsafe {
         std::env::set_var("BITNET_DETERMINISTIC", "1");

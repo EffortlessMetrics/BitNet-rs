@@ -634,7 +634,18 @@ impl QuantizedLinear {
             return Ok(BitNetTensor::new(output));
         }
 
-        // Fallback to dequantization only if native kernels fail
+        // Strict mode: reject FP32 fallback
+        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
+        if strict_mode.get_config().enforce_quantized_inference {
+            let layer_name = format!("QuantizedLinear[{}x{}]", self.in_features, self.out_features);
+            return Err(bitnet_common::BitNetError::StrictMode(format!(
+                "FP32 fallback rejected in TL1 layer - layer={}, qtype={:?}, device={:?}, reason=kernel_unavailable. \
+                 Strict mode requires all layers to use native quantized kernels.",
+                layer_name, self.qtype, self.device
+            )).into());
+        }
+
+        // Fallback to dequantization only if native kernels fail (non-strict mode)
         log::warn!("TL1 native quantized kernel failed, falling back to dequantization");
         let dequantized_weights =
             self.weights.dequantize().context("Failed to dequantize TL1 weights")?;
@@ -658,7 +669,18 @@ impl QuantizedLinear {
             return Ok(BitNetTensor::new(output));
         }
 
-        // Fallback to dequantization only if native kernels fail
+        // Strict mode: reject FP32 fallback
+        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
+        if strict_mode.get_config().enforce_quantized_inference {
+            let layer_name = format!("QuantizedLinear[{}x{}]", self.in_features, self.out_features);
+            return Err(bitnet_common::BitNetError::StrictMode(format!(
+                "FP32 fallback rejected in TL2 layer - layer={}, qtype={:?}, device={:?}, reason=kernel_unavailable. \
+                 Strict mode requires all layers to use native quantized kernels.",
+                layer_name, self.qtype, self.device
+            )).into());
+        }
+
+        // Fallback to dequantization only if native kernels fail (non-strict mode)
         log::warn!("TL2 native quantized kernel failed, falling back to dequantization");
         let dequantized_weights =
             self.weights.dequantize().context("Failed to dequantize TL2 weights")?;

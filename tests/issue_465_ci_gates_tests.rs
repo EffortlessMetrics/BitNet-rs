@@ -430,13 +430,19 @@ fn test_comprehensive_performance_edge_cases() -> Result<()> {
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
     // Test edge case performance values
+    // Note: f64::NAN and f64::INFINITY serialize as JSON null via serde_json
     let test_cases = vec![
         (0.0, true, "zero-performance.json", "zero performance (valid for initialization)"),
         (0.1, true, "minimal-performance.json", "minimal viable performance"),
         (50.0, true, "high-performance.json", "high CPU performance"),
         (-0.1, false, "negative-performance.json", "negative performance"),
-        (f64::INFINITY, false, "infinite-performance.json", "infinite performance"),
-        (f64::NAN, false, "nan-performance.json", "NaN performance"),
+        (
+            f64::INFINITY,
+            false,
+            "infinite-performance.json",
+            "infinite performance (serializes as null)",
+        ),
+        (f64::NAN, false, "nan-performance.json", "NaN performance (serializes as null)"),
     ];
 
     for (perf_value, should_pass, filename, description) in test_cases {

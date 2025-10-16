@@ -4192,6 +4192,15 @@ fn write_inference_receipt(
     backend: &str,
     kernels: &[String],
 ) -> Result<()> {
+    // Capture actual rustc version at runtime
+    let rust_version = std::process::Command::new("rustc")
+        .arg("--version")
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| env!("CARGO_PKG_RUST_VERSION").to_string());
+
     let receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -4205,7 +4214,7 @@ fn write_inference_receipt(
         "environment": {
             "BITNET_VERSION": env!("CARGO_PKG_VERSION"),
             "OS": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH),
-            "RUST_VERSION": env!("CARGO_PKG_RUST_VERSION"),
+            "RUST_VERSION": rust_version,
         },
         "model": {
             "path": model.display().to_string()

@@ -97,7 +97,8 @@ fn benchmark_exits_17_on_failure() {
 
 #[test]
 fn verify_shows_heads_info_on_valid_model() {
-    let model_path = get_test_model_path();
+    // Prefer BITNET_GGUF, otherwise standard repo path
+    let model_path = std::env::var("BITNET_GGUF").unwrap_or_else(|_| get_test_model_path());
     let mut cmd = Command::cargo_bin("xtask").unwrap();
     cmd.args(["verify", "--model", &model_path]);
     cmd.assert().success().stdout(predicate::str::contains("heads:"));
