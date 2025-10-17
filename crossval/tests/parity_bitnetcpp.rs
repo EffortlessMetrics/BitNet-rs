@@ -3,10 +3,8 @@
 //! Validates that the Rust inference engine produces identical outputs to
 //! Microsoft's BitNet C++ implementation for deterministic inference.
 //!
-//! This test is feature-gated and skips gracefully when:
-//! - `crossval-bitnetcpp` feature is not enabled
-//! - `CROSSVAL_GGUF` environment variable is not set
-//! - BitNet C++ is not available
+//! This test is feature-gated and runs when both `crossval` and `integration-tests` are enabled.
+//! It also requires `CROSSVAL_GGUF`; when `BITNET_CPP_DIR` is not set it runs Rust-only.
 
 #![cfg(all(feature = "crossval", feature = "integration-tests"))]
 
@@ -23,6 +21,12 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
     let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
 
+    // If both vectors are zero, they are effectively equal
+    if norm_a == 0.0 && norm_b == 0.0 {
+        return 1.0;
+    }
+
+    // If only one is zero, they are completely different
     if norm_a == 0.0 || norm_b == 0.0 {
         return 0.0;
     }
@@ -180,7 +184,7 @@ async fn parity_bitnetcpp() -> Result<()> {
     let formatted_prompt = template.apply(&prompt, None);
 
     let (rust_ids, add_bos, parse_special, eos_id, vocab_size) =
-        rust_side_tokenize_and_meta(&gguf_path, &prompt)?;
+        rust_side_tokenize_and_meta(&gguf_path, &template, &formatted_prompt)?;
 
     eprintln!("Template: {}", template);
     eprintln!("Formatted prompt: {}", formatted_prompt);
@@ -240,11 +244,17 @@ async fn parity_bitnetcpp() -> Result<()> {
 
     // 5. Write parity receipt
     let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
-    let date_str = &ts[..10]; // Extract "YYYY-MM-DD" from RFC3339 timestamp
 
-    // Anchor to workspace root via manifest directory
-    let receipt_dir =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines").join(date_str);
+    // Safer than slicing fixed indices: split at 'T'
+    let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
+
+    // Allow override for CI: BASELINES_DIR=/path/to/workspace/docs/baselines
+    let base_dir = std::env::var("BASELINES_DIR")
+        .ok()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines"));
+
+    let receipt_dir = base_dir.join(date_str);
 
     if !receipt_dir.exists() {
         fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
@@ -307,7 +317,8 @@ async fn parity_bitnetcpp() -> Result<()> {
 /// Returns: (token_ids, add_bos, parse_special, eos_token_id, vocab_size)
 fn rust_side_tokenize_and_meta(
     model_path: &std::path::Path,
-    prompt: &str,
+    template: &bitnet_inference::TemplateType,
+    formatted_prompt: &str,
 ) -> Result<(Vec<u32>, bool, bool, u32, usize)> {
     use bitnet_inference::TemplateType;
     use bitnet_tokenizers::auto;
@@ -316,16 +327,13 @@ fn rust_side_tokenize_and_meta(
     let tokenizer = auto::load_auto(model_path, None)?;
     let vocab_size = tokenizer.vocab_size();
 
-    // 2) Auto-detect template (same logic as CLI)
-    let template = auto_detect_template(model_path);
-
-    // 3) Determine BOS policy from template
+    // 2) Determine BOS policy from template
     let add_bos = template.should_add_bos();
 
-    // 4) Determine parse_special flag (true for Llama3Chat to parse <|eot_id|> etc.)
+    // 3) Determine parse_special flag (true for Llama3Chat to parse <|eot_id|> etc.)
     let parse_special = matches!(template, TemplateType::Llama3Chat);
 
-    // 5) Resolve EOS token ID (token-level EOT for llama3-chat, or regular EOS)
+    // 4) Resolve EOS token ID (token-level EOT for llama3-chat, or regular EOS)
     let eos_id = if matches!(template, TemplateType::Llama3Chat) {
         // For LLaMA-3, use <|eot_id|> as the stop token
         let eot_ids = tokenizer.encode("<|eot_id|>", false, true)?;
@@ -336,13 +344,10 @@ fn rust_side_tokenize_and_meta(
         tokenizer.eos_token_id().unwrap_or(2) // Common EOS fallback
     };
 
-    // 6) Format prompt using template
-    let formatted = template.apply(prompt, None);
-
-    // 7) Encode the formatted prompt
+    // 5) Encode the formatted prompt (already formatted by caller)
     // Note: Rust tokenizer uses add_special for both BOS and parsing
     // For consistency with C++ side, we pass add_bos for BOS insertion
-    let ids = tokenizer.encode(&formatted, add_bos, false)?;
+    let ids = tokenizer.encode(formatted_prompt, add_bos, false)?;
 
     Ok((ids, add_bos, parse_special, eos_id, vocab_size))
 }

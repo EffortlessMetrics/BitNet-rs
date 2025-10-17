@@ -231,7 +231,7 @@ int bitnet_decode_greedy(bitnet_ctx_t* c, int32_t* io_ids, int max_new_tokens,
 
             // Evaluate the new token for next iteration
             batch.token[0] = next_token;
-            batch.pos[0] = n_past + generated;
+            batch.pos[0] = n_past + (generated - 1); // Correct position for the just-generated token
             batch.n_seq_id[0] = 1;
             batch.seq_id[0] = seq_ids;
             batch.logits[0] = 1;
