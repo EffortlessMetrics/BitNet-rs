@@ -5,35 +5,38 @@
 //! provides simple, synchronous evaluation.
 
 use anyhow::Result;
-use bitnet_common::{BitNetConfig, Device, Tensor};
+use bitnet_common::{Device, Tensor};
 use bitnet_models::transformer::KVCache;
 use bitnet_models::{BitNetModel, Model, load_gguf};
 use candle_core::{DType, IndexOp};
 use std::path::Path;
 
-/// Perform a single forward pass and return logits for the last token
+/// Perform a single forward pass and return logits for the last token (PRODUCTION)
 ///
-/// This function is designed for deterministic cross-validation testing.
-/// It loads a model, tokenizes input using provided token IDs (from C++),
-/// runs a forward pass, and returns the logits for the last token.
+/// This function supports all BitNet quantization formats including:
+/// - BitNet I2_S (32-element blocks with inline F16 scales)
+/// - GGML I2_S (QK256 - 256-element blocks, pure Rust kernel)
+/// - Other standard quantization formats
 ///
 /// # Arguments
 /// * `model_path` - Path to the GGUF model file
-/// * `tokens` - Token IDs (from C++ tokenizer for exact match)
+/// * `tokens` - Token IDs
 ///
 /// # Returns
 /// * Logits vector for the last token position (vocab_size elements)
+///
+/// # Errors
+/// * Fails if model file cannot be loaded or if unsupported format is detected
 pub fn eval_logits_once(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
-    // Try to load model tensors; fall back to a mock model if unavailable
+    // Load model tensors with Rust GGUF loader (fail-closed, no FFI routing)
     let (config, model) = match load_gguf(Path::new(model_path), Device::Cpu) {
         Ok((cfg, tensors)) => {
             let model = BitNetModel::from_gguf(cfg.clone(), tensors, Device::Cpu)?;
             (cfg, model)
         }
-        Err(_) => {
-            let cfg = BitNetConfig::default();
-            let model = BitNetModel::new(cfg.clone(), Device::Cpu);
-            (cfg, model)
+        Err(e) => {
+            // Propagate the error with context (fail-closed for ggml I2_S)
+            anyhow::bail!("Failed to load GGUF model: {}", e);
         }
     };
 
@@ -57,6 +60,92 @@ pub fn eval_logits_once(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     let logits = extract_last_token_logits(logits)?;
 
     Ok(logits)
+}
+
+/// Perform a single forward pass for PARITY VALIDATION ONLY (pure Rust with optional C++ comparison)
+///
+/// This function uses the pure-Rust path for all supported formats including GGML I2_S (QK256).
+/// Since QK256 support is now complete in pure Rust, there is no automatic FFI routing.
+/// For C++ parity validation, use the explicit parity harness in `crossval/`.
+///
+/// # Arguments
+/// * `model_path` - Path to the GGUF model file
+/// * `tokens` - Token IDs
+///
+/// # Returns
+/// * Logits vector for the last token position (vocab_size elements)
+pub fn eval_logits_once_for_parity(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
+    // Use the pure-Rust path for all supported formats (including QK256)
+    eval_logits_once(model_path, tokens)
+}
+
+/// Evaluate logits using C++ FFI (for ggml I2_S models - parity only)
+///
+/// DEPRECATED: Use `eval_logits_via_ffi_session` instead to prevent memory corruption.
+/// This function creates a new model/context for each call, which can cause munmap_chunk()
+/// crashes when called repeatedly in tests.
+#[deprecated(since = "0.10.0", note = "Use eval_logits_via_ffi_session instead")]
+#[allow(dead_code)]
+#[cfg(feature = "ffi")]
+fn eval_logits_via_ffi(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
+    use bitnet_sys::{
+        BitnetContext, BitnetModel, bitnet_eval_tokens, bitnet_prefill, cpp_vocab_size,
+    };
+
+    // Load model via C++ FFI
+    let cpp_model = BitnetModel::from_file(model_path)
+        .map_err(|e| anyhow::anyhow!("C++ FFI model load failed: {:?}", e))?;
+
+    // Create context (4096 max tokens, batch size 1, no threads override)
+    let cpp_ctx = BitnetContext::new(&cpp_model, 4096, 1, 0)
+        .map_err(|e| anyhow::anyhow!("C++ FFI context creation failed: {:?}", e))?;
+
+    // Get vocab size from C++
+    let vocab_size = cpp_vocab_size(&cpp_ctx)
+        .map_err(|e| anyhow::anyhow!("C++ FFI vocab_size failed: {:?}", e))?;
+
+    // Prefill the context with all tokens
+    bitnet_prefill(&cpp_ctx, tokens)
+        .map_err(|e| anyhow::anyhow!("C++ FFI prefill failed: {:?}", e))?;
+
+    // Evaluate to get logits
+    let logits = bitnet_eval_tokens(&cpp_ctx, tokens, vocab_size)
+        .map_err(|e| anyhow::anyhow!("C++ FFI eval failed: {:?}", e))?;
+
+    // Paranoia: ensure non-zero last-step logits (catches KV/logits wiring issues)
+    let sum_abs: f32 = logits.iter().map(|x| x.abs()).sum();
+    anyhow::ensure!(
+        sum_abs > 1e-6,
+        "C++ last-step logits near zero (sum_abs={:.2e}); KV/logits wiring off or weights not loaded",
+        sum_abs
+    );
+
+    // Note: Let Rust's Drop trait handle cleanup automatically
+    // Manual drop() was causing "free(): invalid pointer" errors
+    Ok(logits)
+}
+
+/// Evaluate logits using C++ FFI session (for ggml I2_S models - parity only)
+///
+/// This function uses a reusable FFI session to prevent repeated model/context
+/// allocation that causes munmap_chunk() crashes. The session is shared globally
+/// and thread-safe via Mutex.
+#[cfg(feature = "ffi")]
+fn eval_logits_via_ffi_session(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
+    use crate::ffi_session::parity_cpp_session;
+
+    // Get or initialize the global session
+    let session_mutex = parity_cpp_session(model_path)?;
+
+    // Lock the session and perform evaluation
+    let session =
+        session_mutex.lock().map_err(|e| anyhow::anyhow!("Failed to lock FFI session: {}", e))?;
+
+    // Prefill the context with all tokens
+    session.prefill(tokens)?;
+
+    // Evaluate to get logits
+    session.eval_last_logits(tokens)
 }
 
 /// Perform step-by-step generation with per-token logit comparison
@@ -140,20 +229,23 @@ mod tests {
 
     #[test]
     fn test_mock_eval() {
-        // Test with mock model (no actual GGUF file)
-        // This creates a model with default config and zero tensors
+        // Test with non-existent model file
+        // After error propagation fix, this should properly fail
         let tokens = vec![1, 2, 3, 4];
 
-        // This will use the mock loader since the file doesn't exist
-        let result = eval_logits_once("test.gguf", &tokens);
+        // This should fail since the file doesn't exist
+        let result = eval_logits_once("nonexistent_test.gguf", &tokens);
 
-        // Should succeed even without a real model file (uses mock)
-        assert!(result.is_ok());
+        // Should fail with proper error message (fail-closed behavior)
+        assert!(result.is_err(), "Non-existent model should fail to load");
 
-        if let Ok(logits) = result {
-            // Verify logits length matches default model vocab size
-            let expected = BitNetConfig::default().model.vocab_size;
-            assert_eq!(logits.len(), expected);
-        }
+        // Verify it's a proper file error, not a ggml I2_S error
+        let err = result.unwrap_err();
+        let err_str = format!("{:?}", err);
+        assert!(
+            err_str.contains("Failed to open GGUF file") || err_str.contains("No such file"),
+            "Expected file not found error, got: {}",
+            err_str
+        );
     }
 }

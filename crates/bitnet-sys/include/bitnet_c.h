@@ -29,8 +29,11 @@ int bitnet_eval(bitnet_ctx_t*, const int32_t* ids, int n_ids,
 
 int bitnet_prefill(bitnet_ctx_t*, const int32_t* ids, int n_ids);
 
-int bitnet_decode_greedy(bitnet_ctx_t*, int32_t* io_ids, int max_new_tokens,
-                         int eos_id, float temperature);
+int bitnet_vocab_size(bitnet_ctx_t* ctx);
+
+int bitnet_decode_greedy(bitnet_model_t* model, bitnet_ctx_t* ctx,
+                         int eos_id, int eot_id, int max_steps,
+                         int* out_token_ids, int out_cap);
 
 #ifdef __cplusplus
 }

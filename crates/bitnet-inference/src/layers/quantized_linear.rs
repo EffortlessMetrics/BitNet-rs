@@ -13,6 +13,9 @@ use bitnet_quantization::{Quantize, QuantizedTensor};
 use candle_core::DType;
 use std::sync::Arc;
 
+// Import QK256 kernel from bitnet-models
+use bitnet_models::quant::i2s_qk256;
+
 /// SIMD-aligned block size for I2S quantization (BitNet.rs optimization)
 const I2S_BLOCK_SIZE: usize = 82;
 /// Cache line size for optimal memory access patterns
@@ -165,6 +168,23 @@ pub struct QuantizedLinear {
     memory_pool: Option<Vec<u8>>,
     /// SIMD alignment padding
     alignment_padding: usize,
+
+    /// Optional QK256 quantized data (GGML I2_S format with QK=256)
+    /// When present, forward pass uses QK256 kernel instead of standard I2S path
+    qk256_data: Option<std::sync::OnceLock<QK256Data>>,
+}
+
+/// Storage for QK256 quantized weights (GGML I2_S format)
+#[derive(Clone, Debug)]
+struct QK256Data {
+    /// Packed quantized bytes
+    qs: Vec<u8>,
+    /// Number of rows
+    rows: usize,
+    /// Number of columns
+    cols: usize,
+    /// Bytes per row (ceil(cols/256) * 64)
+    row_stride_bytes: usize,
 }
 
 impl QuantizedLinear {
@@ -188,6 +208,7 @@ impl QuantizedLinear {
             kernel_manager: Arc::new(KernelManager::new()),
             memory_pool: None,
             alignment_padding,
+            qk256_data: None,
         };
 
         layer.optimize_memory_layout()?;
@@ -218,6 +239,7 @@ impl QuantizedLinear {
             kernel_manager: Arc::new(KernelManager::new()),
             memory_pool: None,
             alignment_padding,
+            qk256_data: None,
         };
 
         layer.optimize_memory_layout()?;
@@ -248,10 +270,91 @@ impl QuantizedLinear {
             kernel_manager: Arc::new(KernelManager::new()),
             memory_pool: None,
             alignment_padding,
+            qk256_data: None,
         };
 
         layer.optimize_memory_layout()?;
         Ok(layer)
+    }
+
+    /// Set QK256 quantized data for this layer (GGML I2_S format with QK=256)
+    ///
+    /// This method allows the model loader to provide pre-quantized QK256 weights
+    /// loaded from GGUF files. When QK256 data is set, the forward pass will use
+    /// the QK256 kernel instead of the standard I2S path.
+    ///
+    /// # Arguments
+    ///
+    /// * `qs_bytes` - Packed quantized bytes (2 bits per element)
+    /// * `rows` - Number of rows in the weight matrix
+    /// * `cols` - Number of columns in the weight matrix
+    ///
+    /// # Errors
+    ///
+    /// Returns error if:
+    /// - Dimensions don't match layer configuration
+    /// - Data size doesn't match expected packing
+    /// - QK256 data was already set (OnceLock constraint)
+    pub fn set_qk256_data(&mut self, qs_bytes: Vec<u8>, rows: usize, cols: usize) -> Result<()> {
+        // Validate dimensions match layer configuration
+        // QK256 format: weight matrix as [rows, cols] where each row is a weight vector
+        // For linear layer y = W*x:
+        //   - rows = number of output features (one row per output)
+        //   - cols = number of input features (length of each weight vector)
+        //
+        // Note: QuantizedLinear stores dimensions as:
+        //   - self.in_features = input dimension
+        //   - self.out_features = output dimension
+        if rows != self.out_features {
+            anyhow::bail!(
+                "QK256 rows mismatch: got {}, expected {} (out_features)",
+                rows,
+                self.out_features
+            );
+        }
+        if cols != self.in_features {
+            anyhow::bail!(
+                "QK256 cols mismatch: got {}, expected {} (in_features)",
+                cols,
+                self.in_features
+            );
+        }
+
+        // Calculate expected packing
+        let blocks_per_row = (cols + 255) / 256; // ceil(cols / 256)
+        let row_stride_bytes = blocks_per_row * 64; // 64 bytes per QK256 block
+        let expected_bytes = rows * row_stride_bytes;
+
+        if qs_bytes.len() != expected_bytes {
+            anyhow::bail!(
+                "QK256 data size mismatch: got {} bytes, expected {} for {}×{} matrix",
+                qs_bytes.len(),
+                expected_bytes,
+                rows,
+                cols
+            );
+        }
+
+        // Create QK256 data structure
+        let data = QK256Data { qs: qs_bytes, rows, cols, row_stride_bytes };
+
+        // Initialize OnceLock if not already present
+        let lock = self.qk256_data.get_or_insert_with(std::sync::OnceLock::new);
+
+        // Try to set the data (will fail if already set)
+        lock.set(data).map_err(|_| {
+            anyhow::anyhow!("QK256 data already set for this layer - cannot set twice")
+        })?;
+
+        tracing::debug!(
+            "Set QK256 data for layer {}×{}: {} bytes ({} blocks/row)",
+            rows,
+            cols,
+            expected_bytes,
+            blocks_per_row
+        );
+
+        Ok(())
     }
 
     /// Check if this layer has a native quantized kernel available (no FP32 fallback)
@@ -373,11 +476,24 @@ impl QuantizedLinear {
 
     /// I2S-specific forward pass implementation with optimized kernels
     async fn forward_i2s(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
-        let provider =
-            self.kernel_manager.select_best().context("Failed to select kernel provider")?;
-
         let input_candle = input.to_candle()?;
         let input_shape = input_candle.shape();
+
+        // Check for QK256 data first (GGML I2_S format with QK=256)
+        if let Some(qk256_lock) = &self.qk256_data
+            && let Some(qk256) = qk256_lock.get()
+        {
+            tracing::trace!(
+                "Using QK256 kernel for layer {}×{} (GGML I2_S format)",
+                self.out_features,
+                self.in_features
+            );
+            return self.forward_qk256(input, qk256, input_shape.dims()).await;
+        }
+
+        // Standard I2S path (32-element blocks)
+        let provider =
+            self.kernel_manager.select_best().context("Failed to select kernel provider")?;
 
         // Reshape to 2D for efficient matrix multiplication
         let input_2d = self.prepare_input_for_matmul(&input_candle)?;
@@ -391,6 +507,93 @@ impl QuantizedLinear {
 
         // Restore original tensor shape
         self.restore_output_shape(output_2d, input_shape.dims())
+    }
+
+    /// Forward pass using QK256 kernel (GGML I2_S format with QK=256)
+    ///
+    /// This method handles matrix multiplication for weights stored in the GGML I2_S
+    /// quantization format (2-bit codes with 256-element blocks). It extracts the
+    /// input data, calls the QK256 GEMV kernel, and reshapes the output to match
+    /// the original input dimensions.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - Input tensor (shape: [batch, seq, in_features] or [batch, in_features])
+    /// * `qk256` - QK256 quantized weight data
+    /// * `input_dims` - Original input dimensions for output reshaping
+    ///
+    /// # Returns
+    ///
+    /// Output tensor with shape matching input but last dimension = out_features
+    async fn forward_qk256(
+        &self,
+        input: &BitNetTensor,
+        qk256: &QK256Data,
+        input_dims: &[usize],
+    ) -> Result<BitNetTensor> {
+        // Extract input data as f32 vector
+        let input_candle = input.to_candle()?;
+        let input_flat = input_candle
+            .flatten_all()?
+            .to_dtype(candle_core::DType::F32)?
+            .to_vec1::<f32>()
+            .context("Failed to extract input data for QK256 GEMV")?;
+
+        // Calculate batch size (total number of input vectors)
+        let batch_size = if input_dims.len() > 2 {
+            input_dims[..input_dims.len() - 1].iter().product()
+        } else {
+            input_dims[0]
+        };
+
+        // Validate input dimensions
+        let in_features = input_dims[input_dims.len() - 1];
+        if in_features != self.in_features {
+            anyhow::bail!(
+                "QK256 forward: input features {} != layer in_features {}",
+                in_features,
+                self.in_features
+            );
+        }
+
+        // Allocate output buffer
+        let mut output_data = vec![0.0f32; batch_size * self.out_features];
+
+        // Process each batch row using QK256 GEMV
+        for batch_idx in 0..batch_size {
+            let input_start = batch_idx * in_features;
+            let input_end = input_start + in_features;
+            let x = &input_flat[input_start..input_end];
+
+            let output_start = batch_idx * self.out_features;
+            let y_batch = &mut output_data[output_start..output_start + self.out_features];
+
+            // Call QK256 GEMV kernel: y = W * x
+            i2s_qk256::gemv_qk256(
+                &qk256.qs,
+                x,
+                y_batch,
+                qk256.rows,
+                qk256.cols,
+                qk256.row_stride_bytes,
+            )
+            .context("QK256 GEMV failed")?;
+        }
+
+        // Reshape output to match input dimensions (but with out_features as last dim)
+        let output_shape = if input_dims.len() > 2 {
+            let mut shape = input_dims[..input_dims.len() - 1].to_vec();
+            shape.push(self.out_features);
+            shape
+        } else {
+            vec![batch_size, self.out_features]
+        };
+
+        let output_tensor =
+            candle_core::Tensor::from_vec(output_data, output_shape, input_candle.device())
+                .context("Failed to create QK256 output tensor")?;
+
+        Ok(BitNetTensor::new(output_tensor))
     }
 
     /// Prepare input tensor for matrix multiplication with optimal memory layout

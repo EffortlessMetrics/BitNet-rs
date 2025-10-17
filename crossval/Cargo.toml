@@ -9,8 +9,8 @@ publish = false
 
 [features]
 default = []
-crossval = ["dep:bindgen", "dep:cc", "dep:bitnet-sys", "bitnet-sys/ffi", "ffi"]
-ffi = ["dep:cc"]
+crossval = ["dep:bindgen", "dep:cc", "dep:bitnet-sys", "bitnet-sys/ffi", "bitnet-inference/ffi", "ffi"]
+ffi = ["dep:cc", "bitnet-inference/ffi"]
 iq2s-ffi = ["bitnet-models/iq2s-ffi", "bitnet-ggml-ffi/iq2s-ffi"]
 cpp-probe = []
 integration-tests = []

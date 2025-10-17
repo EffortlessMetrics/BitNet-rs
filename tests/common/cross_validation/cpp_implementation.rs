@@ -964,7 +964,7 @@ mod tests {
             model_load_time_ms: 1000,
             tokenization_time_ms: 50,
             inference_time_ms: 200,
-            peak_memory: 1024 * 1024, // 1MB
+            peak_memory: crate::BYTES_PER_MB, // 1MB
             tokens_per_second: 100.5,
         };
 
@@ -974,7 +974,7 @@ mod tests {
         assert_eq!(metrics.tokenization_time, Duration::from_millis(50));
         assert_eq!(metrics.inference_time, Duration::from_millis(200));
         assert_eq!(metrics.total_time, Duration::from_millis(1250));
-        assert_eq!(metrics.peak_memory, 1024 * 1024);
+        assert_eq!(metrics.peak_memory, crate::BYTES_PER_MB);
         assert_eq!(metrics.tokens_per_second, 100.5);
     }
 

@@ -389,8 +389,25 @@ impl RustTokenizer {
                         .id_to_token(*hf_id)
                         .ok_or_else(|| anyhow::anyhow!("BPE token ID {} has no piece", hf_id))?;
 
-                    let gguf_id = piece_to_id.get(piece.as_str()).ok_or_else(|| {
-                        anyhow::anyhow!("BPE piece '{}' not found in GGUF vocab", piece)
+                    // Handle space normalization: some GGUFs use 'Ġ' glyph for leading spaces
+                    // Try direct lookup first, then fallback to GPT-2 style marker if needed
+                    let candidate =
+                        if !piece_to_id.contains_key(piece.as_str()) && piece.starts_with(' ') {
+                            // Try GPT-2-style marker (Ġ = U+0120)
+                            let mut s = String::with_capacity(piece.len());
+                            s.push('\u{0120}'); // Ġ
+                            s.push_str(&piece[1..]);
+                            s
+                        } else {
+                            piece.clone()
+                        };
+
+                    let gguf_id = piece_to_id.get(candidate.as_str()).ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "BPE piece '{}' not found in GGUF vocab (tried: '{}')",
+                            piece,
+                            candidate
+                        )
                     })?;
 
                     ids.push(*gguf_id);
@@ -400,8 +417,8 @@ impl RustTokenizer {
                         // Dump first 8 tokens for debugging piece→ID remapping
                         if idx < 8 {
                             eprintln!(
-                                "tok-debug: token[{}]: hf_id={} piece='{}' gguf_id={}",
-                                idx, hf_id, piece, gguf_id
+                                "tok-debug: token[{}]: hf_id={} piece='{}' candidate='{}' gguf_id={}",
+                                idx, hf_id, piece, candidate, gguf_id
                             );
                         }
                     }

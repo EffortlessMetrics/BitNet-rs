@@ -358,6 +358,16 @@ impl<'a> GgufReader<'a> {
         })
     }
 
+    /// Get raw file data (for I2_S workaround)
+    pub fn get_raw_file_data(&self) -> &[u8] {
+        self.data
+    }
+
+    /// Get data start offset (for I2_S workaround)
+    pub fn get_data_start(&self) -> usize {
+        self.data_start
+    }
+
     /// Get I32 metadata by key
     pub fn get_i32_metadata(&self, key: &str) -> Option<i32> {
         self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
@@ -482,8 +492,8 @@ impl<'a> GgufReader<'a> {
             match tensor_info.tensor_type {
                 // Only I2_S and IQ2_S are supported BitNet quantization types
                 GgufTensorType::I2_S | GgufTensorType::IQ2_S => has_i2s = true,
-                // F32 and F16 are unquantized, so they don't set a quantization type
-                GgufTensorType::F32 | GgufTensorType::F16 => continue,
+                // F32, F16, and F64 are unquantized, so they don't set a quantization type
+                GgufTensorType::F32 | GgufTensorType::F16 | GgufTensorType::F64 => continue,
                 // All other GGUF quantization types are unsupported
                 GgufTensorType::Q4_0
                 | GgufTensorType::Q4_1
@@ -499,7 +509,7 @@ impl<'a> GgufReader<'a> {
                 | GgufTensorType::Q8_K => {
                     tracing::warn!(
                         "Unsupported GGUF quantization type {:?} in tensor '{}'. \
-                        Only I2_S, IQ2_S, and FP32/FP16 are supported by BitNet.rs. \
+                        Only I2_S, IQ2_S, and FP32/FP16/FP64 are supported by BitNet.rs. \
                         Standard GGUF quantized models are not compatible.",
                         tensor_info.tensor_type,
                         tensor_info.name

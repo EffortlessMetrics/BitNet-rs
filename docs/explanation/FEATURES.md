@@ -35,6 +35,8 @@ Enables:
 - Platform-specific SIMD optimizations (if available)
 - Multi-threaded CPU inference
 - Automatic CPU feature detection
+- QK256 (GGML I2_S) pure-Rust support for 256-element block quantization
+- BitNet native 32-element I2_S quantization
 
 ### `gpu`
 **Purpose:** Enable advanced GPU acceleration with device-aware quantization

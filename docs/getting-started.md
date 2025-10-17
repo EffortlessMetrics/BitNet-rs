@@ -28,12 +28,14 @@ cargo build --no-default-features --release --no-default-features --features cpu
 
 BitNet Rust supports several feature flags for customization:
 
-- `cpu`: Enable CPU inference with SIMD optimizations
+- `cpu`: Enable CPU inference with SIMD optimizations (includes QK256/GGML I2_S support)
 - `gpu`: Enable CUDA GPU acceleration with device-aware quantization
 - `ffi`: Enable C++ FFI bridge for cross-validation
 - `crossval`: Enable cross-validation against Microsoft BitNet C++
 
 **Important**: Default features are **empty** - always specify features explicitly.
+
+**Note on Model Support**: BitNet.rs now supports GGML I2_S format (QK256) models in pure Rust without requiring FFI or C++ dependencies. The `cpu` feature includes automatic detection and transparent kernel dispatch for both BitNet native (32-element) and GGML (256-element) I2_S quantization formats.
 
 ```bash
 # Build with CPU support

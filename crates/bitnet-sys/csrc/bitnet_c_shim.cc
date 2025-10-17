@@ -16,6 +16,13 @@ extern "C" {
     #include "llama.h"
 }
 
+// FFI Safety Contract:
+// 1. Rust owns all bitnet_model_t* and bitnet_ctx_t* pointers via Drop
+// 2. Never free model/context pointers - Rust handles cleanup
+// 3. Every llama_batch_init must have matching llama_batch_free on ALL code paths
+// 4. No static caches that retain text or out_ids pointers
+// 5. Tokenization uses two-call pattern: preflight (nullptr, 0) then actual call
+
 // Internal structs to hold llama.cpp objects
 struct bitnet_model {
     llama_model* model = nullptr;
@@ -226,74 +233,91 @@ int bitnet_prefill(bitnet_ctx_t* c, const int32_t* ids, int n_ids) {
     return rc;  // 0 = OK
 }
 
-int bitnet_decode_greedy(bitnet_ctx_t* c, int32_t* io_ids, int max_new_tokens,
-                         int eos_id, float temperature) {
-    if (!c || !c->context || !io_ids || max_new_tokens <= 0) return -1;
+// Return llama_n_vocab for the context/model
+int bitnet_vocab_size(bitnet_ctx_t* ctx) {
+    if (!ctx || !ctx->context) return -1;
+    return llama_n_vocab(ctx->model);
+}
 
-    try {
-        int generated = 0;
-        llama_seq_id seq_ids[1] = {0};
+// Greedy decode up to max_steps tokens.
+// Returns number of tokens generated, or negative error code.
+// out_token_ids must have capacity >= out_cap (typically max_steps).
+int bitnet_decode_greedy(
+    bitnet_model_t* model,
+    bitnet_ctx_t* ctx,
+    int eos_id,
+    int eot_id,          // pass -1 if not present
+    int max_steps,
+    int* out_token_ids,
+    int out_cap
+) {
+    if (!model || !ctx || !ctx->context || max_steps <= 0 || !out_token_ids || out_cap <= 0) {
+        return -1;
+    }
 
-        // Get initial position from KV cache (after prefill)
-        int n_past = llama_get_kv_cache_token_count(c->context);
+    llama_context* lctx = ctx->context;
+    const int n_vocab = llama_n_vocab(ctx->model);
 
-        // Generate tokens one at a time
-        for (int step = 0; step < max_new_tokens; ++step) {
-            // Create batch for single token
-            llama_batch batch = llama_batch_init(1, 0, 1);
+    // Start from current KV count (already includes prefill)
+    int32_t n_past = llama_get_kv_cache_token_count(lctx);
 
-            // For first step, we may need to evaluate the prompt
-            // For now, assume context was pre-evaluated
-            // Just sample from current logits
+    // Single-token batch reused each step
+    llama_batch batch = llama_batch_init(/*n_tokens_max*/ 1, /*embd*/ 0, /*kv*/ 1);
 
-            // Get logits for sampling
-            const float* logits = llama_get_logits(c->context);
-            if (!logits) {
-                llama_batch_free(batch);
-                return -3;
-            }
-
-            // Greedy sampling (argmax)
-            int vocab_size = llama_n_vocab(c->model);
-            int32_t next_token = 0;
-            float max_logit = logits[0];
-            for (int i = 1; i < vocab_size; i++) {
-                if (logits[i] > max_logit) {
-                    max_logit = logits[i];
-                    next_token = i;
-                }
-            }
-
-            // Store generated token
-            io_ids[generated] = next_token;
-            ++generated;
-
-            // Check for EOS
-            if (next_token == eos_id) {
-                llama_batch_free(batch);
-                break;
-            }
-
-            // Evaluate the new token for next iteration
-            batch.token[0] = next_token;
-            batch.pos[0] = n_past + (generated - 1); // Correct position for the just-generated token
-            batch.n_seq_id[0] = 1;
-            batch.seq_id[0] = seq_ids;
-            batch.logits[0] = 1;
-            batch.n_tokens = 1;
-
-            int result = llama_decode(c->context, batch);
+    int generated = 0;
+    for (int g = 0; g < max_steps; ++g) {
+        if (generated >= out_cap) {
+            // Don't write beyond caller's buffer
             llama_batch_free(batch);
+            return -5; // out buffer too small
+        }
 
-            if (result != 0) {
-                return -2; // Eval failed
+        // Get logits for current last position (after previous decode)
+        const float* logits = llama_get_logits(lctx);
+        if (!logits) {
+            llama_batch_free(batch);
+            return -2;
+        }
+
+        // Argmax with stable tie-break (lowest token id wins)
+        int argmax = 0;
+        float best = logits[0];
+        for (int i = 1; i < n_vocab; ++i) {
+            const float v = logits[i];
+            if (v > best || (v == best && i < argmax)) {
+                best = v;
+                argmax = i;
             }
         }
 
-        return generated;
-    } catch (...) {
-        return -6;
+        // Store generated token
+        out_token_ids[generated] = argmax;
+        generated += 1;
+
+        // Stop on eos/eot
+        if (argmax == eos_id || (eot_id >= 0 && argmax == eot_id)) {
+            llama_batch_free(batch);
+            break;
+        }
+
+        // Feed the chosen token at the next absolute position
+        batch.n_tokens = 1;
+        batch.token[0]  = (llama_token) argmax;
+        batch.pos[0]    = n_past;            // next absolute position
+        batch.n_seq_id[0] = 1;
+        batch.seq_id[0][0] = 0;
+
+        if (llama_decode(lctx, batch) != 0) {
+            llama_batch_free(batch);
+            return -3;
+        }
+
+        // Advance past this generated token
+        n_past += 1;
     }
+
+    llama_batch_free(batch);
+    return generated;
 }
 
 } // extern "C"

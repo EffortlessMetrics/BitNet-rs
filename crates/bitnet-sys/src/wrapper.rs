@@ -101,6 +101,8 @@ impl Model {
 
 impl Drop for Model {
     fn drop(&mut self) {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
         let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
         if !ptr.is_null() {
             unsafe {
@@ -313,6 +315,8 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
         let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
         if !ptr.is_null() {
             unsafe {
@@ -419,6 +423,8 @@ impl BitnetModel {
 
 impl Drop for BitnetModel {
     fn drop(&mut self) {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
         let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
         if !ptr.is_null() {
             unsafe {
@@ -458,6 +464,8 @@ impl BitnetContext {
 
 impl Drop for BitnetContext {
     fn drop(&mut self) {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
         let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
         if !ptr.is_null() {
             unsafe {
@@ -488,12 +496,24 @@ pub fn bitnet_tokenize_text(
         )
     };
 
+    // Validate preflight response
     if n_tokens < 0 {
-        return Err(CppError::LlamaError(format!("Tokenization failed with code: {}", n_tokens)));
+        return Err(CppError::LlamaError(format!(
+            "Tokenization preflight failed with code: {}",
+            n_tokens
+        )));
     }
 
     if n_tokens == 0 {
         return Ok(Vec::new());
+    }
+
+    // Sanity check - prevent excessive allocations
+    if n_tokens > 100_000 {
+        return Err(CppError::LlamaError(format!(
+            "Tokenization returned suspiciously large count: {} (possible corruption)",
+            n_tokens
+        )));
     }
 
     // Second call to get the actual tokens
@@ -508,6 +528,13 @@ pub fn bitnet_tokenize_text(
             tokens.len() as i32,
         )
     };
+
+    // Check for buffer-too-small error (-2)
+    if actual_n == -2 {
+        return Err(CppError::LlamaError(
+            "Buffer too small for tokenization (should not happen after preflight)".to_string(),
+        ));
+    }
 
     if actual_n < 0 {
         return Err(CppError::LlamaError(format!("Tokenization failed with code: {}", actual_n)));
@@ -558,10 +585,61 @@ pub fn bitnet_prefill(ctx: &BitnetContext, ids: &[i32]) -> Result<()> {
     Ok(())
 }
 
-/// Perform greedy decoding using the custom C shim
+/// Get vocabulary size from the C++ context
+pub fn cpp_vocab_size(ctx: &BitnetContext) -> Result<usize> {
+    let n = unsafe { crate::bindings::bitnet_vocab_size(ctx.as_ptr()) };
+    if n <= 0 {
+        return Err(CppError::LlamaError(format!("bitnet_vocab_size returned {}", n)));
+    }
+    Ok(n as usize)
+}
+
+/// Perform greedy decoding using the capacity-safe C shim
+/// The context must be pre-filled with `bitnet_prefill()` before calling this function.
+pub fn cpp_decode_greedy(
+    model: &BitnetModel,
+    ctx: &BitnetContext,
+    eos_id: i32,
+    eot_id: Option<i32>,
+    max_steps: usize,
+    out: &mut [i32],
+) -> Result<usize> {
+    if out.len() < max_steps {
+        return Err(CppError::LlamaError(format!(
+            "Output buffer too small: {} < {}",
+            out.len(),
+            max_steps
+        )));
+    }
+
+    let eot = eot_id.unwrap_or(-1);
+    let rc = unsafe {
+        crate::bindings::bitnet_decode_greedy(
+            model.as_ptr(),
+            ctx.as_ptr(),
+            eos_id,
+            eot,
+            max_steps as i32,
+            out.as_mut_ptr(),
+            out.len() as i32,
+        )
+    };
+
+    if rc < 0 {
+        return Err(CppError::LlamaError(format!("decode_greedy failed rc={}", rc)));
+    }
+
+    Ok(rc as usize)
+}
+
+/// Perform greedy decoding using the custom C shim (legacy wrapper)
 /// Note: `_initial_ids` parameter is unused because the context should be pre-filled
 /// with `bitnet_prefill()` before calling this function.
+///
+/// DEPRECATED: Use `cpp_decode_greedy` instead for the new capacity-safe API.
+#[deprecated(since = "0.10.0", note = "Use cpp_decode_greedy instead")]
 pub fn bitnet_decode_greedy(
+    model: &BitnetModel,
     ctx: &BitnetContext,
     _initial_ids: &[i32],
     max_new_tokens: usize,
@@ -574,20 +652,8 @@ pub fn bitnet_decode_greedy(
     // Allocate buffer for generated tokens
     let mut gen_ids = vec![0i32; max_new_tokens];
 
-    let n_generated = unsafe {
-        crate::bindings::bitnet_decode_greedy(
-            ctx.as_ptr(),
-            gen_ids.as_mut_ptr(),
-            max_new_tokens as i32,
-            eos_id,
-            0.0, // temperature (greedy)
-        )
-    };
+    let n_generated = cpp_decode_greedy(model, ctx, eos_id, None, max_new_tokens, &mut gen_ids)?;
 
-    if n_generated < 0 {
-        return Err(CppError::LlamaError(format!("Decode failed with code: {}", n_generated)));
-    }
-
-    gen_ids.truncate(n_generated as usize);
+    gen_ids.truncate(n_generated);
     Ok(gen_ids)
 }

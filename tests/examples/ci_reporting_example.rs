@@ -9,6 +9,7 @@
 
 #[cfg(all(feature = "reporting", feature = "trend"))]
 mod ci_example {
+    use bitnet_tests::BYTES_PER_MB;
     use bitnet_tests::ci_reporting::{CIContext, CINotificationManager, NotificationConfig};
     use bitnet_tests::results::{
         TestMetrics, TestResult, TestStatus, TestSuiteResult, TestSummary,
@@ -78,8 +79,8 @@ mod ci_example {
                     status: TestStatus::Passed,
                     duration: Duration::from_secs(5),
                     metrics: TestMetrics {
-                        memory_peak: Some(100 * 1024 * 1024), // 100MB
-                        memory_average: Some(50 * 1024 * 1024),
+                        memory_peak: Some(100 * BYTES_PER_MB), // 100MB
+                        memory_average: Some(50 * BYTES_PER_MB),
                         cpu_time: Some(Duration::from_secs(4)),
                         wall_time: Duration::from_secs(5),
                         assertions: 150,
@@ -118,7 +119,7 @@ mod ci_example {
                 success_rate: 50.0,
                 total_duration: Duration::from_secs(30),
                 average_duration: Duration::from_secs(3),
-                peak_memory: Some(100 * 1024 * 1024),
+                peak_memory: Some(100 * BYTES_PER_MB),
                 total_assertions: 150,
             },
             environment: HashMap::from([

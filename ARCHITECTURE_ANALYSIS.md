@@ -45,7 +45,7 @@ pub struct PromptTemplate {
    - Priority 2: Tokenizer family name heuristics
    - Priority 3: Fallback to Raw
 
-2. **Template Application**: 
+2. **Template Application**:
    - `apply()` (lines 112-118): Single-turn formatting
    - `render_chat()` (lines 189-255): **Multi-turn chat rendering** ✓ Already implemented!
      - Returns properly formatted history as String
@@ -115,17 +115,17 @@ async fn run_chat_inference(
 ) -> Result<(String, usize)> {
     // 1. Create streaming generator
     let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
-    
+
     // 2. Stream tokens to stdout and collect full_response
     while let Some(chunk) = stream.next().await {
         token_count += chunk.token_ids.len();
         full_response.push_str(&chunk.text);
         print!("{}", chunk.text);  // Direct stdout
     }
-    
+
     // 3. Write receipt to ci/inference.json (line 258)
     if let Err(e) = self.write_receipt(engine, token_count).await { ... }
-    
+
     Ok((full_response, token_count))
 }
 ```
@@ -298,14 +298,14 @@ pub(super) async fn write_receipt(
     use std::fs;
 
     let backend = self.device.as_deref().unwrap_or("cpu");
-    
+
     // Build receipt JSON
     let kernels = vec![
         "embedding_lookup".to_string(),
         "prefill_forward".to_string(),
         "i2s_gemv".to_string(),
     ];
-    
+
     let receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "timestamp": Utc::now().to_rfc3339(),
@@ -316,11 +316,11 @@ pub(super) async fn write_receipt(
         "kernels": kernels,
         // ...
     });
-    
+
     // Hardcoded path: "ci/inference.json"
     fs::create_dir_all("ci")?;
     fs::write("ci/inference.json", serde_json::to_vec_pretty(&receipt)?)?;
-    
+
     Ok(())
 }
 ```
@@ -363,7 +363,7 @@ pub fn detect(tokenizer_name: Option<&str>, chat_template_jinja: Option<&str>) -
             return Self::Instruct;
         }
     }
-    
+
     // Priority 2: Tokenizer family name heuristics
     if let Some(name) = tokenizer_name {
         let lower = name.to_ascii_lowercase();
@@ -374,7 +374,7 @@ pub fn detect(tokenizer_name: Option<&str>, chat_template_jinja: Option<&str>) -
             return Self::Instruct;
         }
     }
-    
+
     // Priority 3: Fallback
     Self::Raw
 }
@@ -395,21 +395,21 @@ pub fn detect(tokenizer_name: Option<&str>, chat_template_jinja: Option<&str>) -
    - `TemplateType::apply()` - single-turn
    - `TemplateType::render_chat()` - multi-turn ✓ (correct)
    - `InferenceCommand::format_chat_turn()` - manual duplication (WRONG)
-   
+
    **Location**: chat.rs lines 266-329 duplicates TemplateType logic
 
 2. **Conversation History Type Mismatch**
    - PromptTemplate uses `Vec<(String, String)>` tuples
    - Should use `Vec<ChatTurn>` for consistency and serialization
-   
-   **Locations**: 
+
+   **Locations**:
    - prompt_template.rs:263
    - chat.rs:82, 173, 289, 311, 319
 
 3. **Hardcoded Receipt Paths**
    - Source hardcoded: `"ci/inference.json"`
    - Write path hardcoded: `"ci/inference.json"`
-   
+
    **Locations**:
    - chat.rs:31
    - inference.rs:878
@@ -417,14 +417,14 @@ pub fn detect(tokenizer_name: Option<&str>, chat_template_jinja: Option<&str>) -
 4. **Missing GGUF Template Auto-Detection**
    - Detection logic exists but not used in CLI
    - No call to `TemplateType::detect()` from chat/inference commands
-   
+
    **Location**: No integration in chat.rs or inference.rs
 
 5. **Tokenization Coupling in Streaming**
    - Prompt passed as String to GenerationStream
    - Tokenization happens inside GenerationStream internals
    - Cannot pre-tokenize for per-turn receipts
-   
+
    **Location**: engine.rs lines 963-978
 
 ### Minor Issues
@@ -479,7 +479,7 @@ copy_receipt_if_present(emit_receipt_dir)
    - Update `PromptTemplate::conversation_history` to use `Vec<ChatTurn>`
    - Add methods to work with ChatTurn objects
    - Expose `render_chat()` as primary formatting method
-   
+
 2. **chat.rs** (REFACTOR)
    - Replace `format_chat_turn()` with call to `template.render_chat()`
    - Update history storage from `Vec<(String, String)>` to `Vec<ChatTurn>`

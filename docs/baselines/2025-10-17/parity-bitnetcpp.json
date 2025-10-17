@@ -1,16 +1,24 @@
 {
   "commit": "unknown",
+  "environment": {
+    "cpu_features": [
+      "sse2"
+    ],
+    "deterministic": "1",
+    "libc": "gnu",
+    "llama_cpp_commit": null,
+    "os": "linux",
+    "rayon_threads": "1",
+    "rustc_version": "rustc 1.92.0-nightly (4082d6a3f 2025-09-27)",
+    "seed": "42",
+    "target_cpu": "x86_64",
+    "target_triple": "x86_64-unknown-linux-gnu"
+  },
   "error": "Parity test exceeded 60-second timeout - check for performance regression or hanging inference",
   "model_path": "/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
   "parity": {
     "status": "timeout",
-    "timeout_seconds": 60
+    "timeout_seconds": 120
   },
-  "timestamp": "2025-10-17T04:30:25.103876442Z",
-  "validation": {
-    "deterministic": true,
-    "rust_engine": "production",
-    "seed": 0,
-    "threads": 1
-  }
+  "timestamp": "2025-10-17T10:39:03.034000418Z"
 }

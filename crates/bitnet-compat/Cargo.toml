@@ -10,15 +10,18 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }
 bitnet-models = { path = "../bitnet-models" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", optional = true }
 anyhow = "1.0.100"
 tracing = "0.1.41"
 serde_json = "1.0.145"
 chrono = "0.4.42"
 ggus = "0.5.1"
 sha2 = "0.10.9"
-serde = { version = "1.0.226", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 
 [dev-dependencies]
-tempfile = "3.22.0"
+tempfile = "3.23.0"
+
 [features]
 integration-tests = []
+tokenizer-probe = ["bitnet-tokenizers"]

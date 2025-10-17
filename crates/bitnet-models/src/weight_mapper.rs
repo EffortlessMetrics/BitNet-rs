@@ -6,6 +6,89 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+/// Model dimensions for tensor shape validation and transposition
+#[derive(Clone, Copy, Debug)]
+struct ModelDims {
+    hidden: usize,
+    n_head: usize,
+    n_kv_head: usize,
+    inter: usize,
+    vocab: usize,
+}
+
+impl ModelDims {
+    fn head_dim(&self) -> Result<usize> {
+        let d = self.hidden / self.n_head;
+        if d * self.n_head != self.hidden {
+            return Err(bitnet_common::BitNetError::Validation(format!(
+                "hidden_size {} not divisible by n_head {}",
+                self.hidden, self.n_head
+            )));
+        }
+        Ok(d)
+    }
+
+    fn kv_head_dim(&self) -> Result<usize> {
+        self.head_dim()
+    }
+
+    fn q_dim(&self) -> Result<usize> {
+        Ok(self.head_dim()? * self.n_head)
+    }
+
+    fn kv_dim(&self) -> Result<usize> {
+        Ok(self.kv_head_dim()? * self.n_kv_head)
+    }
+}
+
+/// Ensures tensor is [out, in] by transposing if it's [in, out].
+/// Accepts fused alternative shapes where applicable (e.g., [hidden, hidden]).
+fn ensure_matrix_or_transpose(
+    t: Tensor,
+    expected_out: usize,
+    expected_in: usize,
+    name: &str,
+) -> Result<Tensor> {
+    let shp = t.shape().dims();
+    match shp {
+        // already correct [out, in]
+        [o, i] if *o == expected_out && *i == expected_in => {
+            tracing::trace!("{}: already correct [{}, {}]", name, o, i);
+            Ok(t)
+        }
+        // transposed [in, out] - need to transpose
+        [i, o] if *i == expected_in && *o == expected_out => {
+            tracing::info!(
+                "{}: transposing from [{}, {}] to [{}, {}]",
+                name,
+                i,
+                o,
+                expected_out,
+                expected_in
+            );
+            Ok(t.t()?.contiguous()?)
+        }
+        // allow fused hidden x hidden in cases where both dims equal hidden
+        [o, i] if *o == expected_out && *i == expected_out && expected_out == expected_in => {
+            tracing::trace!("{}: fused square shape [{}, {}]", name, o, i);
+            Ok(t)
+        }
+        [i, o] if *i == expected_out && *o == expected_out && expected_out == expected_in => {
+            tracing::info!(
+                "{}: fused square shape but transposed, transposing [{}, {}]",
+                name,
+                i,
+                o
+            );
+            Ok(t.t()?.contiguous()?)
+        }
+        _ => Err(bitnet_common::BitNetError::Validation(format!(
+            "{}: unexpected matrix shape {:?}, expected [{}, {}] or its transpose",
+            name, shp, expected_out, expected_in
+        ))),
+    }
+}
+
 /// Canonical target schema:
 /// layers.{i}.attention.{q_proj|k_proj|v_proj|o_proj}.weight
 /// layers.{i}.feed_forward.{gate_proj|up_proj|down_proj}.weight
@@ -411,15 +494,193 @@ fn detect_hidden_size_from_weights(
     }
 }
 
-/// Detect vocab size and normalize embedding/lm_head tensors
+/// Helper to find tensor by trying multiple key aliases
+fn find_and_remove(tensors: &mut HashMap<String, Tensor>, keys: &[&str]) -> Option<Tensor> {
+    for k in keys {
+        if let Some(t) = tensors.remove(*k) {
+            return Some(t);
+        }
+    }
+    None
+}
+
+/// Normalize attention and FFN weights for a single layer to [out, in] layout
+fn normalize_layer_weights(
+    tensors: &mut HashMap<String, Tensor>,
+    layer_idx: usize,
+    dims: &ModelDims,
+) -> Result<()> {
+    let hidden = dims.hidden;
+    let q_dim = dims.q_dim()?;
+    let kv_dim = dims.kv_dim()?;
+
+    // Build key prefixes for this layer (try both blk.N and layers.N)
+    let blk_prefix = format!("blk.{}", layer_idx);
+    let layers_prefix = format!("layers.{}", layer_idx);
+
+    // Attention Q/K/V/O projections
+    let attn_keys = [
+        // Q projection: [q_dim, hidden] where q_dim = head_dim * n_head
+        (
+            "q_proj",
+            &[
+                format!("{}.attn_q.weight", blk_prefix),
+                format!("{}.attention.q_proj.weight", layers_prefix),
+                format!("{}.attention.wq.weight", layers_prefix),
+                format!("{}.self_attn.q_proj.weight", layers_prefix),
+            ] as &[String],
+            q_dim,
+            hidden,
+        ),
+        // K projection: [kv_dim, hidden] where kv_dim = head_dim * n_kv_head
+        (
+            "k_proj",
+            &[
+                format!("{}.attn_k.weight", blk_prefix),
+                format!("{}.attention.k_proj.weight", layers_prefix),
+                format!("{}.attention.wk.weight", layers_prefix),
+                format!("{}.self_attn.k_proj.weight", layers_prefix),
+            ],
+            kv_dim,
+            hidden,
+        ),
+        // V projection: [kv_dim, hidden]
+        (
+            "v_proj",
+            &[
+                format!("{}.attn_v.weight", blk_prefix),
+                format!("{}.attention.v_proj.weight", layers_prefix),
+                format!("{}.attention.wv.weight", layers_prefix),
+                format!("{}.self_attn.v_proj.weight", layers_prefix),
+            ],
+            kv_dim,
+            hidden,
+        ),
+        // O projection: [hidden, q_dim]
+        (
+            "o_proj",
+            &[
+                format!("{}.attn_output.weight", blk_prefix),
+                format!("{}.attn_o.weight", blk_prefix),
+                format!("{}.attention.o_proj.weight", layers_prefix),
+                format!("{}.attention.wo.weight", layers_prefix),
+                format!("{}.self_attn.o_proj.weight", layers_prefix),
+            ],
+            hidden,
+            q_dim,
+        ),
+    ];
+
+    for (name, keys, out_dim, in_dim) in attn_keys {
+        let key_strs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
+        if let Some(tensor) = find_and_remove(tensors, &key_strs) {
+            let normalized = ensure_matrix_or_transpose(
+                tensor,
+                out_dim,
+                in_dim,
+                &format!("layer{}.attention.{}", layer_idx, name),
+            )?;
+            tensors.insert(format!("layers.{}.attention.{}.weight", layer_idx, name), normalized);
+        }
+    }
+
+    // FFN gate/up/down projections
+    let ffn_keys = [
+        // gate_proj (w1): [inter, hidden]
+        (
+            "gate_proj",
+            &[
+                format!("{}.ffn_gate.weight", blk_prefix),
+                format!("{}.ffn_gate_inp.weight", blk_prefix),
+                format!("{}.feed_forward.gate_proj.weight", layers_prefix),
+                format!("{}.feed_forward.w1.weight", layers_prefix),
+                format!("{}.mlp.gate_proj.weight", layers_prefix),
+            ] as &[String],
+            dims.inter,
+            hidden,
+        ),
+        // up_proj (w3): [inter, hidden]
+        (
+            "up_proj",
+            &[
+                format!("{}.ffn_up.weight", blk_prefix),
+                format!("{}.ffn_up_proj.weight", blk_prefix),
+                format!("{}.feed_forward.up_proj.weight", layers_prefix),
+                format!("{}.feed_forward.w3.weight", layers_prefix),
+                format!("{}.mlp.up_proj.weight", layers_prefix),
+            ],
+            dims.inter,
+            hidden,
+        ),
+        // down_proj (w2): [hidden, inter]
+        (
+            "down_proj",
+            &[
+                format!("{}.ffn_down.weight", blk_prefix),
+                format!("{}.ffn_down_proj.weight", blk_prefix),
+                format!("{}.feed_forward.down_proj.weight", layers_prefix),
+                format!("{}.feed_forward.w2.weight", layers_prefix),
+                format!("{}.mlp.down_proj.weight", layers_prefix),
+            ],
+            hidden,
+            dims.inter,
+        ),
+    ];
+
+    for (name, keys, out_dim, in_dim) in ffn_keys {
+        let key_strs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
+        if let Some(tensor) = find_and_remove(tensors, &key_strs) {
+            let normalized = ensure_matrix_or_transpose(
+                tensor,
+                out_dim,
+                in_dim,
+                &format!("layer{}.ffn.{}", layer_idx, name),
+            )?;
+            tensors
+                .insert(format!("layers.{}.feed_forward.{}.weight", layer_idx, name), normalized);
+        }
+    }
+
+    Ok(())
+}
+
+/// Detect vocab size and normalize embedding/lm_head tensors, and transpose all layer weights
 /// Returns (vocab_size, actual_hidden_size)
-/// NOTE: To avoid large memory allocations, we don't transpose large tensors.
-/// Instead, we detect the orientation and handle it at inference time.
 pub fn normalize_model_tensors(
     tensors: &mut HashMap<String, Tensor>,
-    expected_hidden_size: usize,
+    config: &bitnet_common::BitNetConfig,
 ) -> Result<(usize, usize)> {
-    // 1) Locate embedding with robust aliases
+    let expected_hidden_size = config.model.hidden_size;
+
+    // Build dimensions from config
+    let dims = ModelDims {
+        hidden: config.model.hidden_size,
+        n_head: config.model.num_heads,
+        n_kv_head: if config.model.num_key_value_heads > 0 {
+            config.model.num_key_value_heads
+        } else {
+            config.model.num_heads // MHA fallback
+        },
+        inter: config.model.intermediate_size,
+        vocab: config.model.vocab_size,
+    };
+
+    tracing::info!(
+        "Model dimensions from config: hidden={}, n_head={}, n_kv_head={}, inter={}, vocab={}, num_layers={}",
+        dims.hidden,
+        dims.n_head,
+        dims.n_kv_head,
+        dims.inter,
+        dims.vocab,
+        config.model.num_layers
+    );
+
+    // 1) Normalize all layer weights to [out, in] layout
+    for layer_idx in 0..config.model.num_layers {
+        normalize_layer_weights(tensors, layer_idx, &dims)?;
+    }
+
+    // 2) Locate embedding with robust aliases
     let emb_candidates = [
         "embed_tokens.weight",
         "model.embed_tokens.weight",
@@ -428,7 +689,7 @@ pub fn normalize_model_tensors(
         "transformer.wte.weight",
     ];
 
-    let (emb_key, er, ec, emb_device) = {
+    let (emb_key, er, ec, _emb_device) = {
         let (key, emb) = pick(tensors, &emb_candidates).ok_or_else(|| {
             bitnet_common::BitNetError::Validation(
                 "embed tokens not found (tried embed_tokens/tok_embeddings/token_embd/transformer.wte)"
@@ -442,7 +703,7 @@ pub fn normalize_model_tensors(
         (key, er, ec, device)
     };
 
-    // 2) Try to detect hidden size from other model weights first
+    // 3) Try to detect hidden size from other model weights first
     let detected_hidden = detect_hidden_size_from_weights(tensors, expected_hidden_size)?;
 
     // 3) Infer vocab + orientation from the embedding shape
@@ -483,32 +744,22 @@ pub fn normalize_model_tensors(
         emb_needs_t
     );
 
-    // 3) Store embedding orientation metadata instead of transposing
+    // 3) Transpose embeddings if needed to ensure [vocab, hidden] layout
     if emb_needs_t {
-        tracing::warn!(
-            "embed_tokens is transposed [hidden={}, vocab={}] - avoiding {} MB transpose",
+        tracing::info!(
+            "Transposing embed_tokens from [hidden={}, vocab={}] to [vocab={}, hidden={}]",
             hidden_size,
             vocab_size,
-            (vocab_size * hidden_size * 4) / (1024 * 1024) // Assuming f32
+            vocab_size,
+            hidden_size
         );
-        // Store metadata about transposition instead of doing it
-        // The embedding layer will handle this at inference time
-        // For now, just log a warning and keep the tensor as-is
-        if emb_key != "embed_tokens.weight" {
-            let emb = tensors.remove(emb_key).unwrap();
-            tensors.insert("embed_tokens.weight".to_string(), emb);
-        }
-        // Add a metadata tensor to indicate transposition is needed
-        // This is a tiny 1-element tensor that signals the orientation
-        let transpose_flag = Tensor::from_slice(&[1.0f32], 1, &emb_device)?;
-        tensors.insert("embed_tokens.transposed".to_string(), transpose_flag);
+        let emb = tensors.remove(emb_key).unwrap();
+        let emb_t = emb.t()?.contiguous()?; // Transpose to [vocab, hidden] and make contiguous
+        tensors.insert("embed_tokens.weight".to_string(), emb_t);
     } else if emb_key != "embed_tokens.weight" {
         // Just rename the key if needed
         let emb = tensors.remove(emb_key).unwrap();
         tensors.insert("embed_tokens.weight".to_string(), emb);
-        // Add flag indicating no transposition needed
-        let transpose_flag = Tensor::from_slice(&[0.0f32], 1, &emb_device)?;
-        tensors.insert("embed_tokens.transposed".to_string(), transpose_flag);
     }
 
     // 4) Locate lm_head with robust aliases, normalize to [n_vocab, n_embd]

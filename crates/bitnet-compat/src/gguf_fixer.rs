@@ -58,7 +58,108 @@ impl GgufCompatibilityFixer {
             issues.push("No vocabulary found".to_string());
         }
 
+        // BitNet-specific checks for GPT-2 tokenizer
+        if tokenizer_model == "gpt2" {
+            // Check tokens array length
+            if let Some(tokens) = reader.get_string_array_metadata("tokenizer.ggml.tokens") {
+                let vocab_len = tokens.len();
+                if vocab_len < 50_000 {
+                    issues.push(format!(
+                        "Vocabulary too small: {} tokens (expected >= 50,000 for GPT-2 family)",
+                        vocab_len
+                    ));
+                }
+            } else {
+                issues.push(
+                    "Missing tokenizer.ggml.tokens array - cannot verify vocabulary".to_string(),
+                );
+            }
+
+            // Check merges array exists (try both keys)
+            let has_merges = reader.get_string_array_metadata("tokenizer.ggml.merges").is_some()
+                || reader.get_string_array_metadata("tokenizer.ggml.bpe_merges").is_some();
+
+            if !has_merges {
+                issues.push(
+                    "Missing BPE merges (tokenizer.ggml.merges or tokenizer.ggml.bpe_merges)"
+                        .to_string(),
+                );
+            } else {
+                // Log merges count for diagnostics
+                let merges_count = reader
+                    .get_string_array_metadata("tokenizer.ggml.merges")
+                    .or_else(|| reader.get_string_array_metadata("tokenizer.ggml.bpe_merges"))
+                    .map(|m| m.len())
+                    .unwrap_or(0);
+
+                if merges_count == 0 {
+                    issues.push("BPE merges array is empty".to_string());
+                } else {
+                    info!("GPT-2 tokenizer has {} BPE merges", merges_count);
+                }
+            }
+        }
+
         Ok(issues)
+    }
+
+    /// Probe tokenization with a known phrase to verify first-token correctness
+    ///
+    /// For GPT-2 family tokenizers, "What is 2+2?" should produce first token ID 3923 ("ĠWhat")
+    /// This catches common issues with piece→ID mapping and space handling.
+    #[cfg(feature = "tokenizer-probe")]
+    pub fn probe_tokenizer<P: AsRef<Path>>(path: P) -> Result<Vec<String>> {
+        use bitnet_tokenizers::RustTokenizer;
+
+        let data = fs::read(path.as_ref())?;
+        let reader = GgufReader::new(&data)?;
+        let mut warnings = Vec::new();
+
+        let tokenizer_model = reader
+            .get_string_metadata("tokenizer.ggml.model")
+            .unwrap_or_else(|| "unknown".to_string());
+
+        if tokenizer_model != "gpt2" {
+            // Skip probe for non-GPT-2 tokenizers
+            return Ok(warnings);
+        }
+
+        // Try to encode using bitnet-tokenizers
+        match RustTokenizer::from_gguf(&reader) {
+            Ok(tokenizer) => {
+                // encode(text, add_bos, parse_special)
+                match tokenizer.encode("What is 2+2?", false, false) {
+                    Ok(ids) => {
+                        if let Some(&first_id) = ids.first() {
+                            const EXPECTED_FIRST_ID: u32 = 3923; // "ĠWhat"
+                            if first_id != EXPECTED_FIRST_ID {
+                                warnings.push(format!(
+                                    "Tokenizer probe failed: first token ID is {} but expected {} for 'What'",
+                                    first_id, EXPECTED_FIRST_ID
+                                ));
+                                warnings.push(
+                                    "This suggests incorrect piece→ID mapping or space handling"
+                                        .to_string(),
+                                );
+                            } else {
+                                info!(
+                                    "✅ Tokenizer probe passed: first token ID correct ({})",
+                                    first_id
+                                );
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        warnings.push(format!("Tokenizer encode failed: {}", e));
+                    }
+                }
+            }
+            Err(e) => {
+                warnings.push(format!("Could not load tokenizer for probe: {}", e));
+            }
+        }
+
+        Ok(warnings)
     }
 
     /// Export a fixed GGUF file with missing metadata (non-destructive)
@@ -236,8 +337,9 @@ impl GgufCompatibilityFixer {
         Ok(reader.get_bool_metadata("bitnet.compat.fixed").unwrap_or(false))
     }
 
-    /// Print compatibility report
+    /// Print compatibility report with optional tokenizer probe
     pub fn print_report<P: AsRef<Path>>(path: P) -> Result<()> {
+        let path = path.as_ref();
         let issues = Self::diagnose(path)?;
 
         if issues.is_empty() {
@@ -248,6 +350,18 @@ impl GgufCompatibilityFixer {
                 println!("  - {}", issue);
             }
             println!("\nRun with --fix to auto-repair these issues");
+        }
+
+        // Optional probe validation (requires tokenizer-probe feature)
+        #[cfg(feature = "tokenizer-probe")]
+        {
+            let probe_warnings = Self::probe_tokenizer(path)?;
+            if !probe_warnings.is_empty() {
+                println!("\n⚠️  Tokenizer probe warnings:");
+                for warning in probe_warnings {
+                    println!("  - {}", warning);
+                }
+            }
         }
 
         Ok(())

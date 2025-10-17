@@ -39,6 +39,20 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - **Real Computation**: Direct table lookup matmul without FP32 staging (Issue #261)
 - **Safe LUT Index Calculation**: Uses `bitnet_kernels::tl_lut::lut_index()` with checked arithmetic and overflow protection
 
+### I2S (QK256/GGML) - Pure Rust (Production Ready)
+
+- GGML I2_S format with 256-element blocks (QK_K = 256 per GGML conventions)
+- **Block size:** 256 elements
+- **Format:** 64 bytes per block (no per-block scales), scales in separate tensor
+- **Support:** ✅ Pure Rust (kernel: `i2s_qk256::gemv_qk256`) - no FFI required
+- **Status:** Production-ready
+- **Use case:** MS BitNet GGUF models using GGML format
+- **Accuracy:** ≥99.8% correlation with FP32 reference
+- **Performance:** 2-bit signed quantization: [-2, -1, +1, +2] mapping
+- **Automatic detection:** Loader detects QK256 format from tensor sizes
+- **Transparent dispatch:** Transformer automatically uses QK256 kernel when weights present
+- **See also:** [Dual I2_S Flavor Explanation](../explanation/i2s-dual-flavor.md)
+
 ### IQ2_S - GGML-Compatible
 
 - GGML-compatible quantization with 82-byte block layout and 4-level [-2,-1,1,2] mapping

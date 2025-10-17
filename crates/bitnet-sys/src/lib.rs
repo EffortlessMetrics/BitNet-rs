@@ -185,9 +185,9 @@ pub use safe::{
 
 #[cfg(feature = "ffi")]
 pub use wrapper::{
-    BitnetContext, BitnetModel, Context, CppError, Model, Session, bitnet_decode_greedy,
-    bitnet_eval_tokens, bitnet_prefill, bitnet_tokenize_text, free_backend, get_version,
-    init_backend,
+    BitnetContext, BitnetModel, Context, CppError, Model, Session, bitnet_eval_tokens,
+    bitnet_prefill, bitnet_tokenize_text, cpp_decode_greedy, cpp_vocab_size, free_backend,
+    get_version, init_backend,
 };
 
 // Export Result types under different names to avoid conflicts

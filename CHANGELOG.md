@@ -2,6 +2,29 @@
 
 All notable changes to BitNet.rs will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **QK256 (GGML I2_S) Pure-Rust Support**: Complete end-to-end implementation of 256-element block I2_S quantization
+  - GGUF loader automatically detects and stores QK256 tensors as U8 tensors with `.qk256_qs` suffix
+  - Pure-Rust `gemv_qk256()` kernel for inference (no FFI required)
+  - Transformer-level automatic dispatch: forwards automatically use QK256 kernel when weights present
+  - Dual I2_S flavor support: BitNet native (32-elem) and GGML (256-elem/QK256) with automatic detection
+  - 17 comprehensive tests validating end-to-end functionality (unit + integration + parity)
+  - Parity harness updated to show `backend: rust, compute: rust` for pure-Rust inference
+  - Compatible with MS BitNet GGUF models using GGML format without FFI dependency
+  - Automatic format detection: loader inspects tensor sizes to identify I2_S flavor
+  - Transparent kernel dispatch: no model changes required for QK256 support
+  - New module `bitnet-models::quant::i2s_qk256` with scalar and SIMD reference kernels
+  - Documentation: architecture overview, how-to guide, and dual-flavor explanation
+
+### Status
+- ✅ Pure-Rust kernel implementation complete and tested
+- ✅ GGUF loader integration with automatic format detection
+- ✅ Transformer-level dispatch wiring complete
+- ✅ Integration tests and parity validation passing
+- ✅ Production-ready for pure-Rust inference on GGML models
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -15,13 +38,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Load tokenizers directly from GGUF metadata (SPM protobuf, BPE vocab+merges)
   - No external tokenizer files required for self-contained models
   - Auto-detection from `tokenizer.ggml.model` metadata
-- **BPE ByteLevel Prefix Space Fix** ([PR #468](https://github.com/EffortlessSteven/BitNet-rs/issues/468)):
+- **BPE ByteLevel Prefix Space Fix**:
   - Enable `add_prefix_space=true` for both BPE pre-tokenizer **and** decoder
-  - Fixes first-token parity: " What" (3923) now matches llama.cpp instead of "What" (3639)
-  - Ensures consistent tokenization across prompt positions
+  - Ensures consistent " What" tokenization with leading space marker
+  - Proper handling of GPT-2 style Ġ (U+0120) prefix markers
 - **BPE Piece-to-GGUF-ID Remapping**:
-  - Maps HuggingFace token IDs to authoritative GGUF IDs via `HashMap<String, u32>`
+  - Maps HuggingFace token IDs to authoritative GGUF vocabulary IDs via `HashMap<String, u32>`
   - Prevents ID drift from HuggingFace's internal ID assignment
+  - Uses GGUF `tokenizer.ggml.tokens` array as source of truth (index = token ID)
+  - Model-aware token IDs: BitNet GGUF has "ĠWhat" at position 3639 (not universal 3923)
 - **Receipt-Based Provenance** (crossval):
   - Tokenizer metadata: `merges_count` (BPE), `tokenizer_blob_sha256` (SPM)
   - Environment metadata: `target_cpu`, `cpu_features`, `libc`, `rayon_threads`, `seed`
@@ -45,9 +70,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **First Token Parity Mismatch**:
-  - GPT-2 BPE now produces `3923` (" What") matching llama.cpp
-  - Previous: `3639` ("What" without prefix space)
+- **BPE Token ID Mapping**:
+  - Rust tokenizer now uses GGUF vocabulary IDs instead of HuggingFace internal IDs
+  - Fixes token ID mismatches by looking up piece strings in GGUF `tokenizer.ggml.tokens` array
+  - Handles space normalization: both ` What` and `ĠWhat` forms correctly mapped
+- **FFI Memory Safety**:
+  - Hardened batch lifecycle management in C++ shim
+  - Two-call tokenization pattern (preflight + allocation)
+  - Explicit safety contract documentation for FFI boundary
 - **Deterministic Inference**:
   - Seeded runs with `BITNET_SEED` + `RAYON_NUM_THREADS=1`
   - Reproducible tokenization and generation

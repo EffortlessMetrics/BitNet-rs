@@ -1,7 +1,7 @@
 # Parity Harness Implementation - Comprehensive Exploration Report
 
-**Date**: 2025-10-16  
-**Branch**: feat/crossval-parity-harness  
+**Date**: 2025-10-16
+**Branch**: feat/crossval-parity-harness
 **Task**: PR #468 - Understand state and document APIs for implementation
 
 ## 1. Parity Harness Structure
@@ -15,7 +15,7 @@
 The test file (`parity_bitnetcpp.rs`, lines 1-291) contains:
 
 1. **Helper Function 1: `rust_side_tokenize_and_meta()`** (lines 140-176)
-   - **Signature**: 
+   - **Signature**:
      ```rust
      fn rust_side_tokenize_and_meta(
          model_path: &std::path::Path,
@@ -43,7 +43,7 @@ The test file (`parity_bitnetcpp.rs`, lines 1-291) contains:
      ```
    - **Returns**: `Vec<f32>` logits for vocabulary
    - **Implementation**:
-     - Creates `ModelLoader::new(BNDevice::Cpu)` 
+     - Creates `ModelLoader::new(BNDevice::Cpu)`
      - Loads model via `loader.load(model_path)?`
      - Wraps in `Arc<dyn bitnet_models::Model>`
      - Loads tokenizer via `bitnet_tokenizers::auto::load_auto()`
@@ -646,7 +646,7 @@ if path_str.contains("llama") && path_str.contains("3") {
 1. **Fix ModelLoader usage**: Current test imports from wrong location
    - Change: `use bitnet_inference::InferenceEngine;` pattern
    - Verify: ModelLoader in bitnet-models vs bitnet-inference
-   
+
 2. **Validate Async Pattern**:
    - Test runs `#[tokio::test]` correctly
    - All `.await` calls on async methods
@@ -661,7 +661,7 @@ if path_str.contains("llama") && path_str.contains("3") {
 1. **FFI Bindings**:
    - Generate Rust bindings from llama.h
    - Implement wrapper functions in bitnet_c_shim.cc
-   
+
 2. **C++ Comparison Logic**:
    - Call C++ functions via FFI
    - Compute cosine similarity (already implemented at line 18-31)
@@ -716,4 +716,3 @@ parity_bitnetcpp()
 │   └── Truncate at EOS
 └── Write JSON receipt to docs/baselines/
 ```
-
