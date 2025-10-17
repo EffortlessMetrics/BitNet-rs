@@ -3,6 +3,21 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/bitnet_cpp_wrapper.c");
 
+    // Export environment metadata for parity receipts
+    // Get rustc version
+    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+    if let Ok(output) = std::process::Command::new(&rustc).arg("--version").output() {
+        if let Ok(version) = String::from_utf8(output.stdout) {
+            println!("cargo:rustc-env=RUSTC_VERSION={}", version.trim());
+        }
+    } else {
+        println!("cargo:rustc-env=RUSTC_VERSION=unknown");
+    }
+
+    // Get target triple
+    let target = std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string());
+    println!("cargo:rustc-env=TARGET={}", target);
+
     // Only compile if ffi feature is enabled
     #[cfg(feature = "ffi")]
     compile_ffi();

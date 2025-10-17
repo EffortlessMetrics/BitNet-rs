@@ -98,8 +98,11 @@ impl HfTokenizer {
 
         let mut inner = tokenizers::Tokenizer::new(bpe);
         // Use byte-level pre-tokenizer/decoder similar to GPT-2
-        inner
-            .with_pre_tokenizer(Some(tokenizers::pre_tokenizers::byte_level::ByteLevel::default()));
+        // NOTE: add_prefix_space(true) is critical for BPE tokenizers to match llama.cpp behavior
+        // Without this, "What" tokenizes differently than "ĠWhat" (with leading space)
+        inner.with_pre_tokenizer(Some(
+            tokenizers::pre_tokenizers::byte_level::ByteLevel::default().add_prefix_space(true),
+        ));
         inner.with_decoder(Some(ByteLevel::default()));
 
         Ok(Self { inner, bos_id: None, eos_id: None })
