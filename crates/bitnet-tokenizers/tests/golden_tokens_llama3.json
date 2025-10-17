@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "description": "Golden tokenization test cases for LLaMA-3 chat tokenizers with special tokens. These reference outputs must match exactly to prevent tokenization drift.",
+  "tokenizer_kind": "llama3",
+  "test_cases": [
+    {
+      "text": "<|start_header_id|>user<|end_header_id|>\n\nWhat is photosynthesis?<|eot_id|>",
+      "add_bos": true,
+      "parse_special": true,
+      "expected_tokens": [128000, 128006, 882, 128007, 271, 3923, 374, 7397, 74767, 30, 128009],
+      "note": "LLaMA-3 chat format with special tokens: BOS(128000), start_header(128006), end_header(128007), EOT(128009)"
+    },
+    {
+      "text": "Explain quantum physics<|eot_id|>",
+      "add_bos": false,
+      "parse_special": true,
+      "expected_tokens": [849, 21435, 31228, 22027, 128009],
+      "note": "Simple prompt with EOT token"
+    }
+  ]
+}

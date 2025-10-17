@@ -62,6 +62,9 @@ pub struct RustTokenizer {
     spm: Option<sentencepiece::SentencePieceProcessor>,
     /// HuggingFace BPE tokenizer (when kind == Bpe)
     bpe: Option<tokenizers::Tokenizer>,
+    /// BPE piece-to-GGUF-ID remapping (for BPE only)
+    /// Maps token piece strings to their authoritative GGUF token IDs
+    bpe_piece_to_gguf_id: Option<ahash::AHashMap<String, u32>>,
     /// Beginning-of-sequence token ID
     bos_id: Option<u32>,
     /// End-of-sequence token ID
@@ -140,6 +143,7 @@ impl RustTokenizer {
                         kind,
                         spm: Some(spm),
                         bpe: None,
+                        bpe_piece_to_gguf_id: None,
                         bos_id,
                         eos_id,
                         eot_id,
@@ -155,12 +159,13 @@ impl RustTokenizer {
                 }
             }
             GgufTokKind::Bpe => {
-                let bpe = Self::load_bpe(reader)?;
+                let (bpe, piece_to_id) = Self::load_bpe(reader)?;
                 Ok(Self {
                     kind,
                     #[cfg(feature = "spm")]
                     spm: None,
                     bpe: Some(bpe),
+                    bpe_piece_to_gguf_id: Some(piece_to_id),
                     bos_id,
                     eos_id,
                     eot_id,
@@ -232,8 +237,13 @@ impl RustTokenizer {
     /// The vocabulary is converted to a HashMap for the BPE model, and a ByteLevel
     /// pre-tokenizer and decoder are added for compatibility with GPT-2 style models.
     ///
+    /// Returns a tuple of (tokenizer, piece_to_gguf_id_map) where the map is used
+    /// to remap HuggingFace token IDs to authoritative GGUF token IDs.
+    ///
     /// Returns an error if vocab or merges are missing or invalid.
-    fn load_bpe(reader: &GgufReader) -> Result<tokenizers::Tokenizer> {
+    fn load_bpe(
+        reader: &GgufReader,
+    ) -> Result<(tokenizers::Tokenizer, ahash::AHashMap<String, u32>)> {
         use ahash::AHashMap;
         use tokenizers::{
             decoders::byte_level::ByteLevel, models::bpe::BPE, pre_tokenizers::byte_level,
@@ -246,7 +256,12 @@ impl RustTokenizer {
 
         tracing::debug!("Loading BPE tokenizer with {} vocab tokens", vocab_strings.len());
 
-        // Convert to AHashMap<String, u32> indexed by position
+        // Build GGUF piece-to-ID mapping (authoritative token IDs from model)
+        let piece_to_gguf_id: AHashMap<String, u32> =
+            vocab_strings.iter().enumerate().map(|(i, tok)| (tok.clone(), i as u32)).collect();
+
+        // Convert to AHashMap<String, u32> for HuggingFace BPE builder
+        // NOTE: HuggingFace will assign its own IDs, we'll remap them in encode()
         let vocab: AHashMap<String, u32> =
             vocab_strings.into_iter().enumerate().map(|(i, tok)| (tok, i as u32)).collect();
 
@@ -287,11 +302,19 @@ impl RustTokenizer {
         // Create tokenizer with ByteLevel pre-tokenizer and decoder (GPT-2 style)
         // NOTE: add_prefix_space=true ensures first token is treated like subsequent tokens
         // (llama.cpp GPT-2 behavior: pretend there is a space before the first token)
+        //
+        // CRITICAL: Both pre-tokenizer AND decoder need add_prefix_space(true) to match llama.cpp
         let mut tokenizer = tokenizers::Tokenizer::new(bpe);
-        tokenizer.with_pre_tokenizer(Some(byte_level::ByteLevel::default().add_prefix_space(true)));
-        tokenizer.with_decoder(Some(ByteLevel::default()));
+        tokenizer.with_pre_tokenizer(Some(
+            byte_level::ByteLevel::default().add_prefix_space(true).trim_offsets(false), // Preserve byte offsets for accurate decoding
+        ));
+        tokenizer.with_decoder(Some(
+            ByteLevel::default()
+                .add_prefix_space(true) // Match pre-tokenizer configuration
+                .trim_offsets(false),
+        ));
 
-        Ok(tokenizer)
+        Ok((tokenizer, piece_to_gguf_id))
     }
 
     /// Encode text to token IDs
@@ -343,13 +366,46 @@ impl RustTokenizer {
             }
             GgufTokKind::Bpe => {
                 let bpe = self.bpe.as_ref().expect("BPE tokenizer should be present");
+                let piece_to_id = self
+                    .bpe_piece_to_gguf_id
+                    .as_ref()
+                    .expect("BPE piece-to-ID map should be present");
 
-                // Encode text using BPE
+                // Encode text using BPE (produces HuggingFace token IDs)
                 let encoding = bpe
                     .encode(text, parse_special)
                     .map_err(|e| anyhow::anyhow!("BPE encode error: {}", e))?;
 
-                let mut ids = encoding.get_ids().to_vec();
+                // Remap HuggingFace token IDs to GGUF token IDs
+                // HF assigns its own IDs, but we need the model's authoritative IDs
+                let mut ids = Vec::with_capacity(encoding.len());
+
+                #[cfg(feature = "tok-debug")]
+                eprintln!("tok-debug: BPE encoding {} HF tokens", encoding.len());
+
+                #[allow(unused_variables)] // idx only used with tok-debug feature
+                for (idx, hf_id) in encoding.get_ids().iter().enumerate() {
+                    let piece = bpe
+                        .id_to_token(*hf_id)
+                        .ok_or_else(|| anyhow::anyhow!("BPE token ID {} has no piece", hf_id))?;
+
+                    let gguf_id = piece_to_id.get(piece.as_str()).ok_or_else(|| {
+                        anyhow::anyhow!("BPE piece '{}' not found in GGUF vocab", piece)
+                    })?;
+
+                    ids.push(*gguf_id);
+
+                    #[cfg(feature = "tok-debug")]
+                    {
+                        // Dump first 8 tokens for debugging piece→ID remapping
+                        if idx < 8 {
+                            eprintln!(
+                                "tok-debug: token[{}]: hf_id={} piece='{}' gguf_id={}",
+                                idx, hf_id, piece, gguf_id
+                            );
+                        }
+                    }
+                }
 
                 // Prepend BOS if requested and not already present
                 if add_bos
@@ -537,6 +593,7 @@ mod tests {
             #[cfg(feature = "spm")]
             spm: None,
             bpe: None,
+            bpe_piece_to_gguf_id: None,
             bos_id: Some(1),
             eos_id: Some(2),
             eot_id: Some(128009),
@@ -568,6 +625,7 @@ mod tests {
             #[cfg(feature = "spm")]
             spm: None,
             bpe: None,
+            bpe_piece_to_gguf_id: None,
             bos_id: Some(10),
             eos_id: Some(11),
             eot_id: Some(12),

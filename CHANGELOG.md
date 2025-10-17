@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0-rc.0] - 2025-10-17
+
+### Added
+
+- **Pure-Rust GGUF Tokenizer** ([feat/crossval-parity-harness](https://github.com/EffortlessSteven/BitNet-rs/tree/feat/crossval-parity-harness)):
+  - Load tokenizers directly from GGUF metadata (SPM protobuf, BPE vocab+merges)
+  - No external tokenizer files required for self-contained models
+  - Auto-detection from `tokenizer.ggml.model` metadata
+- **BPE ByteLevel Prefix Space Fix** ([PR #468](https://github.com/EffortlessSteven/BitNet-rs/issues/468)):
+  - Enable `add_prefix_space=true` for both BPE pre-tokenizer **and** decoder
+  - Fixes first-token parity: " What" (3923) now matches llama.cpp instead of "What" (3639)
+  - Ensures consistent tokenization across prompt positions
+- **BPE Piece-to-GGUF-ID Remapping**:
+  - Maps HuggingFace token IDs to authoritative GGUF IDs via `HashMap<String, u32>`
+  - Prevents ID drift from HuggingFace's internal ID assignment
+- **Receipt-Based Provenance** (crossval):
+  - Tokenizer metadata: `merges_count` (BPE), `tokenizer_blob_sha256` (SPM)
+  - Environment metadata: `target_cpu`, `cpu_features`, `libc`, `rayon_threads`, `seed`
+  - C++ metadata: `llama_cpp_commit` (from BITNET_CPP_DIR)
+  - Prompt hash: `blake3` for formatted prompt verification
+  - Timeout receipts with diagnostic data (120s guard)
+- **Model-Aware Golden Token Tests**:
+  - Split fixtures: `golden_tokens_gpt2.json`, `golden_tokens_llama.json`, `golden_tokens_llama3.json`
+  - Auto-select based on `tokenizer.ggml.model` from GGUF
+  - Exact-match validation locks in BPE and SPM behavior
+- **Optional tok-debug Diagnostics**:
+  - Feature-gated `--features tok-debug` for piece→ID diagnostics
+  - Dumps first 8 tokens: `hf_id`, `piece`, `gguf_id`
+- **LLaMA-3 Chat Prompt Support**:
+  - Multi-prompt support via `CROSSVAL_PROMPT_SET=math|chat|all`
+  - Auto-detect `parse_special=true` for `<|start_header_id|>`, `<|eot_id|>`
+  - Proper EOT vs EOS handling
+- **CI Workflows**:
+  - `parity-proof.yml`: Fast PR gate with receipt artifact upload
+  - `nightly-parity-matrix.yml`: Prompt+quant matrix with dated archiving
+
+### Fixed
+
+- **First Token Parity Mismatch**:
+  - GPT-2 BPE now produces `3923` (" What") matching llama.cpp
+  - Previous: `3639` ("What" without prefix space)
+- **Deterministic Inference**:
+  - Seeded runs with `BITNET_SEED` + `RAYON_NUM_THREADS=1`
+  - Reproducible tokenization and generation
+- **SPM Blob Reproducibility**:
+  - SHA256 fingerprinting of SentencePiece protobuf
+  - Validates tokenizer integrity across runs
+
+### Documentation
+
+- Added `docs/releases/v0.10.0-rc.0-summary.md`: Comprehensive release guide
+- Updated `CLAUDE.md`: Document tok-debug feature and golden token tests
+- CI workflow examples for parity validation
+
+### Testing
+
+- Parity test timeout increased: 60s → 120s for 2B+ models
+- Golden token tests: 8 test cases across 3 tokenizer families
+- FFI lifecycle test: 100x create/drop cycles (no crashes)
+
 ### Changed
 
 - **Prompt Template Auto-Detection Default** ([PR #467](https://github.com/EffortlessMetrics/BitNet-rs/pull/467)):

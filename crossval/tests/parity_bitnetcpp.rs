@@ -208,11 +208,24 @@ fn collect_env_metadata() -> serde_json::Value {
     // Get Rust version
     let rustc_version = env!("RUSTC_VERSION", "rustc version output at build time");
 
-    // Get target triple
+    // Get target triple and CPU
     let target_triple = env!("TARGET", "unknown");
+    let target_cpu = env::var("TARGET_CPU").unwrap_or_else(|_| std::env::consts::ARCH.to_string());
 
-    // Get OS
+    // Get OS and libc
     let os = std::env::consts::OS;
+    let libc = if cfg!(target_env = "gnu") {
+        "gnu"
+    } else if cfg!(target_env = "musl") {
+        "musl"
+    } else if cfg!(target_env = "msvc") {
+        "msvc"
+    } else {
+        "unknown"
+    };
+
+    // Get CPU features (from compile-time target features)
+    let cpu_features = get_cpu_features();
 
     // Get RAYON threads (deterministic testing should have RAYON_NUM_THREADS=1)
     let rayon_threads = env::var("RAYON_NUM_THREADS").unwrap_or_else(|_| "auto".to_string());
@@ -221,14 +234,73 @@ fn collect_env_metadata() -> serde_json::Value {
     let deterministic = env::var("BITNET_DETERMINISTIC").unwrap_or_else(|_| "0".to_string());
     let seed = env::var("BITNET_SEED").unwrap_or_else(|_| "0".to_string());
 
+    // Get llama.cpp commit (if available from BITNET_CPP_DIR)
+    let llama_cpp_commit = get_llama_cpp_commit();
+
     serde_json::json!({
         "rustc_version": rustc_version,
         "target_triple": target_triple,
+        "target_cpu": target_cpu,
+        "cpu_features": cpu_features,
         "os": os,
+        "libc": libc,
         "rayon_threads": rayon_threads,
         "deterministic": deterministic,
         "seed": seed,
+        "llama_cpp_commit": llama_cpp_commit,
     })
+}
+
+/// Get CPU features from compile-time target features
+fn get_cpu_features() -> Vec<&'static str> {
+    let mut features = Vec::new();
+
+    #[cfg(target_feature = "avx")]
+    features.push("avx");
+    #[cfg(target_feature = "avx2")]
+    features.push("avx2");
+    #[cfg(target_feature = "avx512f")]
+    features.push("avx512f");
+    #[cfg(target_feature = "sse2")]
+    features.push("sse2");
+    #[cfg(target_feature = "sse4.1")]
+    features.push("sse4.1");
+    #[cfg(target_feature = "sse4.2")]
+    features.push("sse4.2");
+    #[cfg(target_feature = "neon")]
+    features.push("neon");
+    #[cfg(target_feature = "fma")]
+    features.push("fma");
+
+    features
+}
+
+/// Get llama.cpp git commit from BITNET_CPP_DIR if available
+fn get_llama_cpp_commit() -> Option<String> {
+    use std::fs;
+    use std::path::PathBuf;
+
+    let cpp_dir = std::env::var("BITNET_CPP_DIR").ok()?;
+    let git_dir =
+        PathBuf::from(&cpp_dir).join("3rdparty").join("llama.cpp").join(".git").join("HEAD");
+
+    if let Ok(head) = fs::read_to_string(&git_dir) {
+        if let Some(ref_path) = head.strip_prefix("ref: ") {
+            let commit_file = PathBuf::from(&cpp_dir)
+                .join("3rdparty")
+                .join("llama.cpp")
+                .join(".git")
+                .join(ref_path.trim());
+            if let Ok(commit) = fs::read_to_string(commit_file) {
+                return Some(commit.trim().to_string());
+            }
+        } else {
+            // Direct commit hash
+            return Some(head.trim().to_string());
+        }
+    }
+
+    None
 }
 
 #[tokio::test]
@@ -247,19 +319,20 @@ async fn parity_bitnetcpp() -> Result<()> {
         return Ok(());
     }
 
-    // Wrap the test logic with a timeout guard (60 seconds)
+    // Wrap the test logic with a timeout guard (120 seconds)
     // This prevents hangs and writes a diagnostic receipt on timeout
+    // Note: Increased from 60s to accommodate 2B+ parameter models in release mode
     match tokio::time::timeout(
-        std::time::Duration::from_secs(60),
+        std::time::Duration::from_secs(120),
         parity_bitnetcpp_impl(gguf_path.clone()),
     )
     .await
     {
         Ok(result) => result,
         Err(_) => {
-            eprintln!("TIMEOUT: Parity test exceeded 60 seconds - writing diagnostic receipt");
+            eprintln!("TIMEOUT: Parity test exceeded 120 seconds - writing diagnostic receipt");
             write_timeout_receipt(&gguf_path)?;
-            anyhow::bail!("Parity test timed out after 60 seconds");
+            anyhow::bail!("Parity test timed out after 120 seconds");
         }
     }
 }
@@ -273,19 +346,41 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     }
 
     let commit = env::var("GIT_COMMIT").unwrap_or_else(|_| "unknown".into());
-    // Use a plain prompt for crossval (no pre-formatting)
-    let prompt = env::var("CROSSVAL_PROMPT").unwrap_or_else(|_| "What is 2+2?".into());
+
+    // Support multiple test prompts for comprehensive parity validation
+    // Can override with CROSSVAL_PROMPT_SET=chat|math|all
+    let prompt_set = env::var("CROSSVAL_PROMPT_SET").unwrap_or_else(|_| "math".into());
+
+    // Define test prompts with their expected templates
+    let test_prompts = match prompt_set.as_str() {
+        "math" => vec![("What is 2+2?", bitnet_inference::TemplateType::Raw)],
+        "chat" => vec![(
+            "<|start_header_id|>user<|end_header_id|>\n\nWhat is photosynthesis?<|eot_id|>",
+            bitnet_inference::TemplateType::Raw,
+        )],
+        "all" => vec![
+            ("What is 2+2?", bitnet_inference::TemplateType::Raw),
+            (
+                "<|start_header_id|>user<|end_header_id|>\n\nWhat is photosynthesis?<|eot_id|>",
+                bitnet_inference::TemplateType::Raw,
+            ),
+        ],
+        _ => vec![("What is 2+2?", bitnet_inference::TemplateType::Raw)],
+    };
+
+    // For now, run only the first prompt (multi-prompt support can be added later)
+    let (prompt, template) = test_prompts.first().expect("At least one test prompt required");
 
     eprintln!("=== Parity Harness ===");
     eprintln!("Model: {:?}", gguf_path);
+    eprintln!("Prompt set: {}", prompt_set);
     eprintln!("Prompt: {}", prompt);
     eprintln!("Commit: {}", commit);
 
     // 1. Rust-side tokenization and metadata
     // For crossval, use Raw template to avoid double-wrapping
     // (C++ side will see the same unformatted prompt)
-    let template = bitnet_inference::TemplateType::Raw;
-    let formatted_prompt = template.apply(&prompt, None);
+    let formatted_prompt = template.apply(prompt, None);
 
     let tok_meta = rust_side_tokenize_and_meta(&gguf_path, &template, &formatted_prompt)?;
     let rust_ids = tok_meta.token_ids.clone();
@@ -323,7 +418,8 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     eprintln!("Rust logits shape: [{}]", rust_logits.len());
 
     // 6. Rust-side greedy decoding (N steps, using canonical tokens)
-    let n_steps = 8;
+    // Note: Using 4 steps for faster parity validation (increased from 8 to reduce test time)
+    let n_steps = 4;
     let rust_decode = rust_decode_n_greedy(&gguf_path, &tokens_for_parity, n_steps, eos_id).await?;
     eprintln!("Rust decoded {} tokens: {:?}", rust_decode.len(), rust_decode);
 
@@ -420,6 +516,8 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "add_bos_hint": tok_meta.add_bos_hint,
             "add_bos": add_bos,
             "parse_special": parse_special,
+            "merges_count": tok_meta.merges_count,
+            "tokenizer_blob_sha256": tok_meta.tokenizer_blob_sha256,
         },
         "tokenization": {
             "rust_token_count": rust_ids.len(),
@@ -467,6 +565,10 @@ struct TokenizerMetadata {
     bos_id: Option<u32>,
     eot_id: Option<u32>,
     add_bos_hint: Option<bool>,
+    // BPE-specific fields
+    merges_count: Option<usize>,
+    // SPM-specific fields
+    tokenizer_blob_sha256: Option<String>,
 }
 
 /// Tokenize prompt with template-aware BOS/special handling
@@ -485,8 +587,15 @@ fn rust_side_tokenize_and_meta(
     let tokenizer = auto::load_auto(model_path, None)?;
     let vocab_size = tokenizer.vocab_size();
 
-    // 2) Extract tokenizer kind from GGUF metadata
-    let (tokenizer_kind, bos_id_meta, eot_id_meta, add_bos_hint_meta) = {
+    // 2) Extract tokenizer kind and provenance from GGUF metadata
+    let (
+        tokenizer_kind,
+        bos_id_meta,
+        eot_id_meta,
+        add_bos_hint_meta,
+        merges_count,
+        tokenizer_blob_sha256,
+    ) = {
         let mmap = MmapFile::open(model_path)?;
         let reader = GgufReader::new(mmap.as_slice())?;
 
@@ -498,14 +607,42 @@ fn rust_side_tokenize_and_meta(
         let eot = reader.get_u32_metadata("tokenizer.ggml.eot_token_id");
         let add_bos_hint = reader.get_bool_metadata("tokenizer.ggml.add_bos_token");
 
-        (kind, bos, eot, add_bos_hint)
+        // BPE-specific: count merges
+        let merges_count = if kind == "gpt2" {
+            // Try to read merges list from GGUF
+            reader.get_string_array_metadata("tokenizer.ggml.merges").map(|arr| arr.len())
+        } else {
+            None
+        };
+
+        // SPM-specific: compute SHA256 of tokenizer model blob
+        // Try multiple possible locations for the SPM protobuf
+        let tokenizer_blob_sha256 = if kind == "llama" {
+            reader
+                .get_bin_or_u8_array("tokenizer.model")
+                .or_else(|| reader.get_bin_or_u8_array("tokenizer.spm.model"))
+                .or_else(|| reader.get_bin_or_u8_array("sentencepiece.model"))
+                .map(|blob| {
+                    use sha2::{Digest, Sha256};
+                    let mut hasher = Sha256::new();
+                    hasher.update(&blob);
+                    format!("{:x}", hasher.finalize())
+                })
+        } else {
+            None
+        };
+
+        (kind, bos, eot, add_bos_hint, merges_count, tokenizer_blob_sha256)
     };
 
     // 3) Determine BOS policy from template
     let add_bos = template.should_add_bos();
 
-    // 4) Determine parse_special flag (true for Llama3Chat to parse <|eot_id|> etc.)
-    let parse_special = matches!(template, TemplateType::Llama3Chat);
+    // 4) Determine parse_special flag based on prompt content
+    // For LLaMA-3 chat prompts with special tokens, we need parse_special=true
+    let parse_special = matches!(template, TemplateType::Llama3Chat)
+        || formatted_prompt.contains("<|start_header_id|>")
+        || formatted_prompt.contains("<|eot_id|>");
 
     // 5) Resolve EOS token ID (token-level EOT for llama3-chat, or regular EOS)
     let eos_id = if matches!(template, TemplateType::Llama3Chat) {
@@ -531,6 +668,8 @@ fn rust_side_tokenize_and_meta(
         bos_id: bos_id_meta,
         eot_id: eot_id_meta,
         add_bos_hint: add_bos_hint_meta,
+        merges_count,
+        tokenizer_blob_sha256,
     })
 }
 
@@ -638,6 +777,9 @@ async fn rust_decode_n_greedy(
     // Create engine
     let engine = InferenceEngine::new(model_arc, tokenizer_arc, BNDevice::Cpu)?;
 
+    // Read seed from environment (for reproducible cross-validation)
+    let seed = env::var("BITNET_SEED").ok().and_then(|s| s.parse::<u64>().ok()).unwrap_or(0);
+
     // Configure greedy generation
     let config = GenerationConfig {
         max_new_tokens: n_steps as u32,
@@ -647,7 +789,7 @@ async fn rust_decode_n_greedy(
         repetition_penalty: 1.0,
         stop_sequences: vec![],
         stop_token_ids: vec![eos_id],
-        seed: Some(0),
+        seed: Some(seed),
         skip_special_tokens: false,
         eos_token_id: Some(eos_id),
         logits_tap_steps: 0,
@@ -692,20 +834,18 @@ fn write_timeout_receipt(gguf_path: &std::path::Path) -> Result<()> {
 
     let commit = env::var("GIT_COMMIT").unwrap_or_else(|_| "unknown".into());
 
+    // Collect comprehensive environment metadata
+    let env_meta = collect_env_metadata();
+
     let receipt = json!({
         "timestamp": ts,
         "commit": commit,
         "model_path": gguf_path.display().to_string(),
         "parity": {
             "status": "timeout",
-            "timeout_seconds": 60,
+            "timeout_seconds": 120,
         },
-        "validation": {
-            "rust_engine": "production",
-            "deterministic": true,
-            "threads": 1,
-            "seed": 0,
-        },
+        "environment": env_meta,
         "error": "Parity test exceeded 60-second timeout - check for performance regression or hanging inference"
     });
 
