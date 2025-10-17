@@ -118,6 +118,7 @@ Enables:
 Requirements:
 - x86_64 CPU with AVX-512F (Foundation) and AVX-512BW (Byte and Word) instruction sets
 - Intel Skylake-X, Ice Lake, Tiger Lake, or newer architecture
+- AMD Zen 4 or newer architecture
 - Automatic runtime detection - no manual configuration needed
 
 ### `neon`
