@@ -85,6 +85,7 @@
 ### 1. Parity Proof (5 min)
 
 **Command:**
+
 ```bash
 export CROSSVAL_GGUF=/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 export RAYON_NUM_THREADS=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42
@@ -96,6 +97,7 @@ cargo test -p crossval --release \
 ```
 
 **Expected Green Signals:**
+
 - [ ] Test passes (no panic)
 - [ ] Receipt written to `docs/baselines/$(date +%F)/parity-bitnetcpp.json`
 - [ ] `status: "rust_only"` (C++ not required)
@@ -103,6 +105,7 @@ cargo test -p crossval --release \
 - [ ] No timeout (< 120s, ideally < 10s in release)
 
 **Receipt Inspection:**
+
 ```bash
 jq '{
   status: .parity.status,
@@ -115,12 +118,14 @@ jq '{
 ### 2. FFI Lifecycle (Optional, 2 min)
 
 **Command** (only if `ffi` feature is enabled):
+
 ```bash
 cargo test -p bitnet-sys --release --features ffi \
   context_lifecycle_100x -- --nocapture
 ```
 
 **Expected:**
+
 - [ ] 100 iterations complete
 - [ ] No crashes
 - [ ] No `free(): invalid pointer` errors
@@ -129,6 +134,7 @@ cargo test -p bitnet-sys --release --features ffi \
 ### 3. Golden Tokens Sanity Check (30 sec)
 
 **Command:**
+
 ```bash
 cargo test -p bitnet-tokenizers \
   --no-default-features --features spm \
@@ -136,6 +142,7 @@ cargo test -p bitnet-tokenizers \
 ```
 
 **Expected:**
+
 - [ ] All 3 families load (gpt2, llama, llama3)
 - [ ] Total 8 test cases (3+3+2)
 - [ ] Test passes
@@ -235,22 +242,25 @@ Closes #468
 ### After PR Merge
 
 1. **Create RC Tag:**
-```bash
+
+   ```bash
 git checkout main
 git pull origin main
 git tag -a v0.10.0-rc.0 -m "v0.10.0-rc.0: CPU Parity & Pure-Rust Tokenization"
 git push origin v0.10.0-rc.0
-```
+   ```
 
 2. **Monitor CI:**
-- [ ] `parity-proof.yml` passes on main
-- [ ] Receipts uploaded as artifacts
-- [ ] Nightly jobs scheduled correctly
+
+   - [ ] `parity-proof.yml` passes on main
+   - [ ] Receipts uploaded as artifacts
+   - [ ] Nightly jobs scheduled correctly
 
 3. **Announce RC:**
-- [ ] GitHub release notes
-- [ ] Discord/community channels
-- [ ] Request testing feedback
+
+   - [ ] GitHub release notes
+   - [ ] Discord/community channels
+   - [ ] Request testing feedback
 
 ### RC Testing Period (1-2 weeks)
 
@@ -262,6 +272,7 @@ git push origin v0.10.0-rc.0
 ### v0.10.0 Final
 
 When RC is stable:
+
 ```bash
 git tag -a v0.10.0 -m "v0.10.0: CPU Parity & Pure-Rust Tokenization"
 git push origin v0.10.0
@@ -272,16 +283,19 @@ git push origin v0.10.0
 ## 📊 Key Metrics Reference
 
 ### First Token Parity
+
 - **Old (broken):** `3639` ("What")
 - **New (correct):** `3923` (" What")
 - **Matches:** llama.cpp GPT-2 behavior
 
 ### Test Coverage
+
 - **Golden tokens:** 8 cases across 3 families
 - **Parity test:** < 10s (release), < 120s (timeout)
 - **FFI lifecycle:** 100x iterations
 
 ### Receipt Provenance
+
 - Tokenizer: `merges_count`, `tokenizer_blob_sha256`
 - Environment: `target_cpu`, `cpu_features`, `libc`, `rayon_threads`, `seed`
 - C++: `llama_cpp_commit`

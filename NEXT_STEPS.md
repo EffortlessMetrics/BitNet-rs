@@ -7,18 +7,21 @@ You've successfully implemented all the fixes for CPU parity and provenance. Her
 ## ✅ Completed (Ready for PR)
 
 ### 1. Pure-Rust GGUF Tokenizer
+
 - ✅ BPE ByteLevel with `add_prefix_space=true` (both pre-tokenizer and decoder)
 - ✅ Piece-to-GGUF-ID remapping via `HashMap<String, u32>`
 - ✅ SPM blob SHA256 fingerprinting
 - **File:** `crates/bitnet-tokenizers/src/gguf_loader.rs`
 
 ### 2. Model-Aware Golden Token Tests
+
 - ✅ Split fixtures: `golden_tokens_{gpt2,llama,llama3}.json`
 - ✅ Auto-select based on `tokenizer.ggml.model`
 - ✅ 8 test cases across 3 tokenizer families
 - **Files:** `crates/bitnet-tokenizers/tests/golden_tokens_*.json`
 
 ### 3. Receipt Provenance
+
 - ✅ Tokenizer metadata (merges_count, blob SHA256)
 - ✅ Environment metadata (CPU, libc, threads, seed)
 - ✅ C++ commit tracking
@@ -27,22 +30,26 @@ You've successfully implemented all the fixes for CPU parity and provenance. Her
 - **File:** `crossval/tests/parity_bitnetcpp.rs`
 
 ### 4. Debug Diagnostics
+
 - ✅ Feature-gated `tok-debug` for piece→ID dumps
 - ✅ First 8 tokens diagnostics
 - **File:** `crates/bitnet-tokenizers/Cargo.toml`
 
 ### 5. LLaMA-3 Chat Support
+
 - ✅ Multi-prompt support (`CROSSVAL_PROMPT_SET`)
 - ✅ Auto-detect `parse_special=true`
 - ✅ EOT vs EOS handling
 - **File:** `crossval/tests/parity_bitnetcpp.rs`
 
 ### 6. CI Workflows
+
 - ✅ `parity-proof.yml`: PR gate with receipt upload
 - ✅ `nightly-parity-matrix.yml`: Prompt+quant matrix
 - **Files:** `.github/workflows/parity-*.yml`
 
 ### 7. Documentation
+
 - ✅ CHANGELOG entry for v0.10.0-rc.0
 - ✅ Release summary (`docs/releases/v0.10.0-rc.0-summary.md`)
 - ✅ Compiler warnings fixed
@@ -75,6 +82,7 @@ jq '{
 ```
 
 **Expected output:**
+
 ```json
 {
   "status": "rust_only",
@@ -163,18 +171,21 @@ git push origin v0.10.0-rc.0
 ## 📊 Key Metrics
 
 ### Parity Test (Release Mode)
+
 - Tokenization: < 10ms (6 tokens)
 - Prefill logits: ~500ms (2B model)
 - 4-step decode: ~2s
 - **Total:** < 10s (120s timeout)
 
 ### Receipt Provenance
+
 - Tokenizer: `merges_count`, `tokenizer_blob_sha256`
 - Environment: `target_cpu`, `cpu_features`, `libc`, `rayon_threads`, `seed`
 - C++: `llama_cpp_commit`
 - Prompt: `blake3` hash
 
 ### Test Coverage
+
 - 8 golden token cases (3 families)
 - 100x FFI lifecycle iterations
 - Parity: math + chat prompts
