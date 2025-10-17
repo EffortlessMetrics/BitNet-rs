@@ -698,7 +698,7 @@ async fn run_simple_generation(
             }
             tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
             // Mock fallback
-            let load_result = bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cpu)
+            let load_result = bitnet_models::gguf_simple::load_gguf_full(&model_path, Device::Cpu)
                 .context("Mock loader also failed")?;
             let m = bitnet_models::BitNetModel::from_gguf(
                 load_result.config.clone(),

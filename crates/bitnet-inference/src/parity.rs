@@ -7,7 +7,7 @@
 use anyhow::Result;
 use bitnet_common::{Device, Tensor};
 use bitnet_models::transformer::KVCache;
-use bitnet_models::{BitNetModel, Model, load_gguf};
+use bitnet_models::{BitNetModel, Model, load_gguf_full};
 use candle_core::{DType, IndexOp};
 use std::path::Path;
 
@@ -29,7 +29,7 @@ use std::path::Path;
 /// * Fails if model file cannot be loaded or if unsupported format is detected
 pub fn eval_logits_once(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     // Load model tensors with Rust GGUF loader (fail-closed, no FFI routing)
-    let (config, model) = match load_gguf(Path::new(model_path), Device::Cpu) {
+    let (config, model) = match load_gguf_full(Path::new(model_path), Device::Cpu) {
         Ok(result) => {
             let model = BitNetModel::from_gguf(result.config.clone(), result.tensors, Device::Cpu)?;
             (result.config, model)
@@ -213,13 +213,13 @@ fn extract_last_token_logits(logits: bitnet_common::ConcreteTensor) -> Result<Ve
 
 /// Load model and return vocabulary size for validation
 pub fn get_model_vocab_size(model_path: &str) -> Result<usize> {
-    let result = load_gguf(Path::new(model_path), Device::Cpu)?;
+    let result = load_gguf_full(Path::new(model_path), Device::Cpu)?;
     Ok(result.config.model.vocab_size)
 }
 
 /// Load model and return configuration for validation
 pub fn get_model_config(model_path: &str) -> Result<bitnet_common::BitNetConfig> {
-    let result = load_gguf(Path::new(model_path), Device::Cpu)?;
+    let result = load_gguf_full(Path::new(model_path), Device::Cpu)?;
     Ok(result.config)
 }
 

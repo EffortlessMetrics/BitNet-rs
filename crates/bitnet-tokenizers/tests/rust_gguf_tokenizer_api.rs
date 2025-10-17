@@ -3,23 +3,30 @@
 //! These tests verify that the RustGgufTokenizer wrapper correctly
 //! integrates with the public Tokenizer trait and provides expected API.
 
+// Type aliases to simplify complex type signatures
+type RustTokenizerFactory<'a> =
+    &'a dyn Fn(&bitnet_models::GgufReader) -> anyhow::Result<bitnet_tokenizers::RustTokenizer>;
+type TokenizerFactory<'a> =
+    &'a dyn Fn(
+        &bitnet_models::GgufReader,
+    ) -> bitnet_common::Result<std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>>;
+type BosEosEotTuple = (Option<u32>, Option<u32>, Option<u32>);
+
 #[test]
 fn test_api_exports() {
     // Verify that the public API exports the expected types
     // This is a compile-time test - if it compiles, the exports are correct
 
     // Should be able to import the tokenizer types
-    use bitnet_tokenizers::{GgufTokKind, RustTokenizer, Tokenizer};
+    use bitnet_tokenizers::GgufTokKind;
 
     // Verify enum variants are accessible
     let _ = GgufTokKind::Spm;
     let _ = GgufTokKind::Bpe;
 
     // Type checks pass
-    let _: Option<&dyn Fn(&bitnet_models::GgufReader) -> anyhow::Result<RustTokenizer>> = None;
-    let _: Option<
-        &dyn Fn(&bitnet_models::GgufReader) -> bitnet_common::Result<std::sync::Arc<dyn Tokenizer>>,
-    > = None;
+    let _: Option<RustTokenizerFactory> = None;
+    let _: Option<TokenizerFactory> = None;
 }
 
 #[test]
@@ -49,8 +56,7 @@ fn test_rust_gguf_tokenizer_methods() {
         T: ?Sized,
     {
         // This would fail to compile if the methods don't exist with correct signatures
-        let _: fn(&RustGgufTokenizer) -> (Option<u32>, Option<u32>, Option<u32>) =
-            RustGgufTokenizer::bos_eos_eot;
+        let _: fn(&RustGgufTokenizer) -> BosEosEotTuple = RustGgufTokenizer::bos_eos_eot;
         let _: fn(&RustGgufTokenizer) -> Option<bool> = RustGgufTokenizer::add_bos_hint;
         let _: fn(&RustGgufTokenizer) -> bitnet_tokenizers::GgufTokKind = RustGgufTokenizer::kind;
     }

@@ -34,7 +34,7 @@ async fn test_qk256_dispatch_basic() -> Result<()> {
     // QK256 format: rows = out_features, cols = in_features
     let qk256_rows = out_features;
     let qk256_cols = in_features;
-    let blocks_per_row = (qk256_cols + 255) / 256; // ceil(cols/256)
+    let blocks_per_row = qk256_cols.div_ceil(256); // ceil(cols/256)
     let row_stride_bytes = blocks_per_row * 64; // 64 bytes per block
     let total_bytes = qk256_rows * row_stride_bytes;
     let qk256_bytes = vec![0xAAu8; total_bytes]; // 0xAA = 0b_10_10_10_10 (all codes = 2)
@@ -105,7 +105,7 @@ async fn test_qk256_with_non_aligned_dims() -> Result<()> {
     // QK256 format: rows = out_features, cols = in_features
     let qk256_rows = out_features;
     let qk256_cols = in_features;
-    let blocks_per_row = (qk256_cols + 255) / 256; // = 2
+    let blocks_per_row = qk256_cols.div_ceil(256); // = 2
     let row_stride_bytes = blocks_per_row * 64; // = 128 bytes
     let total_bytes = qk256_rows * row_stride_bytes;
     let qk256_bytes = vec![0x55u8; total_bytes]; // 0x55 = 0b_01_01_01_01 (all codes = 1 → -1.0)

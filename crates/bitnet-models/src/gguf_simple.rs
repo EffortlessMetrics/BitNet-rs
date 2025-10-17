@@ -14,7 +14,24 @@ pub struct GgufLoadResult {
     pub i2s_qk256: HashMap<String, I2SQk256NoScale>,
 }
 
-/// Load a GGUF model file with comprehensive tensor parsing
+/// Load a GGUF model file - backward compatibility shim (returns tuple)
+///
+/// This function provides backward compatibility with existing tests that expect
+/// a tuple `(BitNetConfig, HashMap<String, CandleTensor>)`.
+///
+/// # Deprecation
+/// New code should use `load_gguf_full()` which returns the full `GgufLoadResult`
+/// structure containing both regular tensors and QK256 quantized weights.
+#[deprecated(note = "Use load_gguf_full() which returns GgufLoadResult with QK256 support")]
+pub fn load_gguf(
+    path: &Path,
+    device: Device,
+) -> Result<(bitnet_common::BitNetConfig, HashMap<String, CandleTensor>)> {
+    let full = load_gguf_full(path, device)?;
+    Ok((full.config, full.tensors))
+}
+
+/// Load a GGUF model file with comprehensive tensor parsing (full result)
 ///
 /// This implementation replaces mock tensor initialization with real GGUF parsing
 /// supporting all transformer layer weights and quantization formats:
@@ -25,13 +42,15 @@ pub struct GgufLoadResult {
 /// - Device-aware tensor placement with GPU/CPU support
 /// - Memory-efficient zero-copy operations where possible
 ///
+/// Returns `GgufLoadResult` with config, regular tensors, and QK256 quantized tensors.
+///
 /// AC1: Parse/load all transformer layer weights (replacing mock initialization)
 /// AC2: Support I2_S, TL1, TL2 quantization with ≥99% accuracy vs FP32
 /// AC3: Robust tensor metadata validation (shapes, alignment, parameters)
 /// AC4: Graceful GGUF parsing error handling with descriptive messages
 /// AC6: CPU/GPU feature flag support with device-aware tensor placement
 /// AC7: Memory-efficient loading with zero-copy operations
-pub fn load_gguf(path: &Path, device: Device) -> Result<GgufLoadResult> {
+pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
     // AC4: Enhanced error handling with context + AC9: Backward compatibility fallback
     let mmap = MmapFile::open(path).map_err(|e| {
         BitNetError::Validation(format!("Failed to open GGUF file '{}': {}", path.display(), e))

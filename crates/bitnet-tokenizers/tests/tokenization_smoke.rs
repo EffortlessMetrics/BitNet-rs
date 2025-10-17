@@ -365,7 +365,7 @@ fn vocab_size_sanity() -> Result<()> {
         bitnet_tokenizers::GgufTokKind::Spm => {
             // LLaMA models typically use 32000 or 32768
             assert!(
-                vocab_size >= 1000 && vocab_size <= 200_000,
+                (1000..=200_000).contains(&vocab_size),
                 "SPM vocab size {} is outside typical range [1K, 200K]",
                 vocab_size
             );
@@ -374,7 +374,7 @@ fn vocab_size_sanity() -> Result<()> {
         bitnet_tokenizers::GgufTokKind::Bpe => {
             // GPT-2 uses 50257, GPT-J uses similar
             assert!(
-                vocab_size >= 1000 && vocab_size <= 200_000,
+                (1000..=200_000).contains(&vocab_size),
                 "BPE vocab size {} is outside typical range [1K, 200K]",
                 vocab_size
             );

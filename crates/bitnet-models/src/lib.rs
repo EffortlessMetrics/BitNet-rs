@@ -20,7 +20,9 @@ pub mod weight_mapper;
 mod transformer_tests;
 
 pub use bitnet::*;
+#[allow(deprecated)]
 pub use gguf_simple::load_gguf;
+pub use gguf_simple::load_gguf_full;
 pub use loader::*;
 pub use production_loader::*;
 

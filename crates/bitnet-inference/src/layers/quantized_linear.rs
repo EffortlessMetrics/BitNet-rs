@@ -321,7 +321,7 @@ impl QuantizedLinear {
         }
 
         // Calculate expected packing
-        let blocks_per_row = (cols + 255) / 256; // ceil(cols / 256)
+        let blocks_per_row = cols.div_ceil(256);
         let row_stride_bytes = blocks_per_row * 64; // 64 bytes per QK256 block
         let expected_bytes = rows * row_stride_bytes;
 

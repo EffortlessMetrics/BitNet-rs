@@ -23,7 +23,7 @@ fn test_i2s_flavor_detection_qk256_exact_match() {
     // Test case: rows=2048, cols=2048
     let rows = 2048;
     let cols: usize = 2048;
-    let total_elements = rows * cols;
+    let _total_elements = rows * cols;
 
     // QK256 format: blocks_per_row = ceil(cols/256), row_stride_bytes = blocks_per_row * 64
     let blocks_per_row = cols.div_ceil(QK256_BLOCK); // = 8
@@ -98,13 +98,13 @@ fn test_i2s_flavor_detection_invalid_size() {
 #[test]
 fn test_qk256_side_map_storage_convention() {
     // Test key naming convention
-    let original_keys = vec![
+    let original_keys = [
         "layers.0.attention.q_proj.weight",
         "layers.1.feed_forward.gate_proj.weight",
         "blk.0.attn_q.weight",
     ];
 
-    let expected_derived_keys = vec![
+    let expected_derived_keys = [
         "layers.0.attention.q_proj.weight.qk256_qs",
         "layers.1.feed_forward.gate_proj.weight.qk256_qs",
         "blk.0.attn_q.weight.qk256_qs",

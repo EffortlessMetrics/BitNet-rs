@@ -226,7 +226,7 @@ fn test_qk256_tail_block_edge_cases() {
         let mut output = vec![0.0f32; rows];
 
         gemv_qk256(&qs_data, &input, &mut output, rows, cols, row_stride_bytes)
-            .expect(&format!("Tail size {} should succeed", tail));
+            .unwrap_or_else(|_| panic!("Tail size {} should succeed", tail));
 
         // Expected: sum of all +1.0 weights * +1.0 inputs = cols
         let expected = cols as f32;
@@ -354,7 +354,7 @@ fn test_qk256_thread_safety() {
 
     // Wait for all threads to complete
     for (i, handle) in handles.into_iter().enumerate() {
-        handle.join().expect(&format!("Thread {} should complete", i));
+        handle.join().unwrap_or_else(|_| panic!("Thread {} should complete", i));
     }
 }
 
@@ -405,7 +405,7 @@ fn test_unpack_qk256_block_alternating_pattern() {
 
     // Each byte unpacks to [1, 2, 1, 2]
     for chunk_idx in 0..(QK256_BLOCK / 4) {
-        assert_eq!(codes[chunk_idx * 4 + 0], 1, "Code {} should be 1", chunk_idx * 4);
+        assert_eq!(codes[chunk_idx * 4], 1, "Code {} should be 1", chunk_idx * 4);
         assert_eq!(codes[chunk_idx * 4 + 1], 2, "Code {} should be 2", chunk_idx * 4 + 1);
         assert_eq!(codes[chunk_idx * 4 + 2], 1, "Code {} should be 1", chunk_idx * 4 + 2);
         assert_eq!(codes[chunk_idx * 4 + 3], 2, "Code {} should be 2", chunk_idx * 4 + 3);
@@ -441,6 +441,6 @@ fn test_gemv_qk256_row_exact_block() {
     let result = gemv_qk256_row(&qs, &input, cols);
 
     // Expected: 256 * (-1.0) * 2.0 = -512.0
-    let expected = (QK256_BLOCK as f32) * (-1.0) * 2.0;
+    let expected = -(QK256_BLOCK as f32) * 2.0;
     assert!((result - expected).abs() < 1e-3, "Expected {}, got {}", expected, result);
 }

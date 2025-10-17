@@ -81,7 +81,7 @@ async fn logits_and_greedy_smoke() {
     assert!(argmax < vocab_size, "argmax {} out of range", argmax);
 
     // The logits should have meaningful values (not all zeros)
-    assert!(best > 0.0 || best < 0.0, "all logits appear to be zero - inference not working");
+    assert!(best != 0.0, "all logits appear to be zero - inference not working");
 
     // Greedy argmax should not be 0 for a GPT-2 model (0 is typically "!" token)
     // unless the model genuinely predicts it
