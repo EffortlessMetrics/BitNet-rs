@@ -63,6 +63,34 @@ BitNet.rs supports three main inference modes:
 
 **CLI Interface Version**: 1.0.0 — Use `bitnet --interface-version` to check compatibility.
 
+### QK256 (GGML I2_S) Quick Start
+
+BitNet.rs includes pure-Rust support for GGML QK256 I2_S quantization format (256-element blocks, 64 bytes/block):
+
+```bash
+# Build with CPU support (includes QK256 kernels)
+cargo build --release --no-default-features --features cpu
+
+# Download GGML I2_S model
+cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+
+# Run inference with QK256 model
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --prompt "What is 2+2?" \
+  --max-tokens 16
+
+# Verify parity with C++ reference (requires BITNET_CPP_DIR)
+scripts/parity_smoke.sh models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+```
+
+**Supported Quantization Formats:**
+- BitNet32-F16 (32-elem blocks): ✅ Production
+- QK256 (256-elem GGML format): ✅ Pure Rust (MVP - scalar kernels)
+- QK256 SIMD (AVX2/NEON): 🚧 Post-MVP optimization
+
+For detailed QK256 usage guide, see [How to Use QK256 Models](docs/howto/use-qk256-models.md).
+
 #### Flag Aliases for Compatibility
 
 BitNet.rs CLI provides aliases for common flags to maintain compatibility with other tools:
@@ -131,10 +159,21 @@ async fn main() -> Result<()> {
 
 ### Quantization Support
 
+BitNet.rs supports multiple I2_S quantization formats with automatic detection and pure-Rust kernels:
+
+| Format | Block Size | Scales | Support Status | Use Case |
+|--------|-----------|--------|-----------------|----------|
+| **I2_S BitNet32-F16** | 32 elements | Inline F16 | ✅ Production (CPU/GPU) | Microsoft BitNet native models |
+| **I2_S QK256 (GGML)** | 256 elements | Separate tensor | ✅ Pure Rust MVP | GGML-compatible models |
+| **TL1** | 4-bit blocks | LUT entries | ⚠ ARM NEON optimized | ARM-based inference |
+| **TL2** | 8-bit blocks | LUT entries | ⚠ x86 AVX2/AVX-512 optimized | x86-based inference |
+
+**Key Features:**
 - **I2_S**: Production 2-bit signed quantization (≥99.8% accuracy vs FP32, 10-20 tok/s CPU, 50-100 tok/s GPU)
 - **TL1/TL2**: Table lookup quantization with device-aware selection (≥99.6% accuracy vs FP32)
 - **Real Computation**: Native quantized matrix multiplication eliminates mock fallbacks
 - **Strict Mode**: `BITNET_STRICT_MODE=1` ensures production-ready inference paths
+- **Automatic Detection**: Model loader identifies quantization flavor and routes to optimal kernel
 
 ### Device-Aware Computing
 

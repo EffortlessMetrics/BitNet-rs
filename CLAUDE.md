@@ -94,9 +94,42 @@ pub fn gpu_function() { /* ... */ }
 Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for runtime checks.
 
 ### Quantization Support
-- **I2_S**: Production 2-bit signed quantization (99%+ accuracy vs FP32)
-- **TL1/TL2**: Table lookup quantization with device-aware selection
+
+BitNet.rs supports multiple I2_S quantization formats with automatic flavor detection:
+
+- **I2_S BitNet32-F16**: Production 2-bit signed quantization (32-elem blocks, inline
+  F16 scales) - ✅ CPU/GPU
+- **I2_S QK256 (GGML)**: Pure Rust 2-bit signed quantization (256-elem blocks, separate
+  scales) - ✅ MVP (scalar)
+  - Automatic flavor detection from tensor size
+  - Routes to C++ via FFI for validation when `BITNET_CPP_DIR` set
+  - See: `docs/howto/use-qk256-models.md` for usage guide
+  - See: `docs/explanation/i2s-dual-flavor.md` for architecture details
+- **TL1/TL2**: Table lookup quantization with device-aware selection (ARM NEON / x86 AVX)
 - **IQ2_S**: GGML-compatible via FFI bridge
+
+**Parity Validation:**
+
+```bash
+# One-command smoke test (tests both BitNet and QK256 formats)
+scripts/parity_smoke.sh models/model.gguf
+
+# Full cross-validation with receipts
+BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
+```
+
+**Receipts show parity metrics:**
+
+```json
+{
+  "parity": {
+    "cpp_available": true,
+    "cosine_similarity": 0.9923,
+    "exact_match_rate": 1.0,
+    "status": "ok"
+  }
+}
+```
 
 ## Documentation Structure
 

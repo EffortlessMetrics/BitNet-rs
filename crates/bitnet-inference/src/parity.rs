@@ -30,9 +30,9 @@ use std::path::Path;
 pub fn eval_logits_once(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     // Load model tensors with Rust GGUF loader (fail-closed, no FFI routing)
     let (config, model) = match load_gguf(Path::new(model_path), Device::Cpu) {
-        Ok((cfg, tensors)) => {
-            let model = BitNetModel::from_gguf(cfg.clone(), tensors, Device::Cpu)?;
-            (cfg, model)
+        Ok(result) => {
+            let model = BitNetModel::from_gguf(result.config.clone(), result.tensors, Device::Cpu)?;
+            (result.config, model)
         }
         Err(e) => {
             // Propagate the error with context (fail-closed for ggml I2_S)
@@ -213,14 +213,14 @@ fn extract_last_token_logits(logits: bitnet_common::ConcreteTensor) -> Result<Ve
 
 /// Load model and return vocabulary size for validation
 pub fn get_model_vocab_size(model_path: &str) -> Result<usize> {
-    let (config, _) = load_gguf(Path::new(model_path), Device::Cpu)?;
-    Ok(config.model.vocab_size)
+    let result = load_gguf(Path::new(model_path), Device::Cpu)?;
+    Ok(result.config.model.vocab_size)
 }
 
 /// Load model and return configuration for validation
 pub fn get_model_config(model_path: &str) -> Result<bitnet_common::BitNetConfig> {
-    let (config, _) = load_gguf(Path::new(model_path), Device::Cpu)?;
-    Ok(config)
+    let result = load_gguf(Path::new(model_path), Device::Cpu)?;
+    Ok(result.config)
 }
 
 #[cfg(test)]

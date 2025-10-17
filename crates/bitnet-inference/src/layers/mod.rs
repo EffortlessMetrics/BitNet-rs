@@ -7,5 +7,8 @@
 pub mod attention;
 pub mod quantized_linear;
 
+#[cfg(test)]
+mod quantized_linear_tests;
+
 pub use attention::BitNetAttention;
 pub use quantized_linear::QuantizedLinear;

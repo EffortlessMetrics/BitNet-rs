@@ -1338,14 +1338,194 @@ cargo run -p xtask -- verify-receipt --validate-performance ci/inference.json
 | Receipt schema types | `crates/bitnet-inference/src/receipts.rs` |
 | Test fixtures | `crates/bitnet-inference/tests/strict_quantization_test.rs` |
 
+## Parity Validation (Dual I2_S Flavor Support)
+
+BitNet.rs validates correctness through systematic comparison with C++ reference implementation.
+
+### Parity Validation Architecture
+
+**Parity Harness Components:**
+
+```
+┌────────────────────────────────────────────────────────────┐
+│              Parity Validation System                      │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────┐      ┌──────────────┐     ┌──────────┐  │
+│  │ Load Model   │─────▶│ Detect I2S   │────▶│ Route to │  │
+│  │ (Rust)       │      │ Flavor       │     │ Kernel   │  │
+│  └──────────────┘      └──────────────┘     └──────────┘  │
+│        │                      │                     │       │
+│   Rust Tokenizer        BitNet32F16         Rust/FFI      │
+│   Auto-discovery        or QK256NoScale     Selection      │
+│                                                   │         │
+│                                            ┌────▼─────┐   │
+│                                            │ Compute   │   │
+│                                            │ Logits    │   │
+│                                            └────┬─────┘   │
+│                                                 │          │
+│                                          ┌──────▼─────┐   │
+│                                          │ Calculate  │   │
+│                                          │ Parity     │   │
+│                                          │ Metrics    │   │
+│                                          └────┬─────┘   │
+│                                               │         │
+│                                        ┌──────▼─────┐   │
+│                                        │ Receipt    │   │
+│                                        │ Generation │   │
+│                                        └────────────┘   │
+│                                                         │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Parity Receipt Schema v1.1.0
+
+```json
+{
+  "schema_version": "1.1.0",
+  "validation": {
+    "backend": "rust | cpp_ffi",
+    "crossval_source": "rust | cpp_ffi",
+    "i2s_flavor_detected": "BitNet32F16 | GgmlQk256NoScale | mixed",
+    "scale_tensor_present": true,
+    "tokenizer": "rust",
+    "compute": "rust | cpp_ffi"
+  },
+  "parity": {
+    "cpp_available": true,
+    "cosine_similarity": 0.9923,
+    "exact_match_rate": 1.0,
+    "max_logit_diff": 0.0001234,
+    "status": "ok"
+  },
+  "compute_path": "real",
+  "kernels": [
+    "i2s_qk256_scalar",
+    "quantized_matmul_i2s",
+    "attention_kv_cache_update"
+  ],
+  "tensors": [
+    {
+      "name": "layers.0.attention.q_proj.weight",
+      "qtype": "I2_S",
+      "flavor": "GgmlQk256NoScale",
+      "blocks": 256,
+      "block_size": 256,
+      "has_scales": true,
+      "kernel_id": "i2s_qk256_scalar"
+    }
+  ],
+  "timestamp": "2025-10-17T12:00:00Z"
+}
+```
+
+### Parity Metrics Validation
+
+| Metric | Target | Meaning | Command |
+|--------|--------|---------|---------|
+| **Cosine Similarity** | ≥ 0.99 | Logit vector alignment | `cargo run -p xtask -- crossval --metric cosine` |
+| **Exact Match Rate** | = 1.0 | Greedy decode token match (N=4) | `cargo run -p xtask -- crossval --metric exact-match` |
+| **Max Logit Diff** | < 1e-4 | Largest per-token divergence | `cargo run -p xtask -- crossval --metric max-diff` |
+| **Runtime Latency** | < 110% of C++ | Relative performance | `cargo run -p xtask -- crossval --metric latency` |
+
+### Parity Validation Commands
+
+**One-Command Smoke Test:**
+
+```bash
+# Validates both BitNet32F16 and QK256 formats
+scripts/parity_smoke.sh models/model.gguf
+
+# Expected output:
+# ✓ Rust tokenizer parity: PASS
+# ✓ BitNet32F16 logits: PASS (cosine=0.9999)
+# ✓ QK256 logits: PASS (cosine=0.9923)
+# ✓ Greedy decode match: 100% (4/4 tokens)
+```
+
+**Full Cross-Validation with Receipts:**
+
+```bash
+# Set C++ reference path for FFI validation
+export BITNET_CPP_DIR=/path/to/BitNet.cpp
+
+# Run cross-validation with deterministic mode
+export BITNET_DETERMINISTIC=1
+export BITNET_SEED=42
+export RAYON_NUM_THREADS=1
+
+# Cross-validate with receipt generation
+cargo run -p xtask -- crossval --model models/model.gguf --tokens 128
+
+# Verify receipt metrics
+cargo run -p xtask -- verify-receipt ci/inference.json
+```
+
+**Per-Flavor Validation:**
+
+```bash
+# Test BitNet32F16 format
+cargo test -p bitnet-models --no-default-features --features "cpu,crossval" \
+  test_i2s_bitnet32_parity -- --nocapture
+
+# Test QK256 format
+cargo test -p bitnet-models --no-default-features --features "cpu,crossval" \
+  test_i2s_qk256_parity -- --nocapture
+```
+
+### Flavor Detection Impact on Parity
+
+**BitNet32F16 (Existing Format):**
+- Block size: 32 elements
+- Scales: Inline F16 (2 bytes per block)
+- Parity: Direct comparison with C++ BitNet implementation
+- Status: Mature (100% parity, <5% latency variance)
+
+**QK256 (GGML Format - MVP):**
+- Block size: 256 elements (QK_K)
+- Scales: Separate F32 tensor
+- Parity: FFI session routes to C++ for Phase 1 validation
+- Status: MVP (scalar kernels), parity ≥ 0.99 cosine similarity
+- Kernel IDs: `i2s_qk256_scalar` (Phase 1), `i2s_qk256_avx2`/`i2s_qk256_neon` (Phase 2)
+
+**Mixed Flavor Models:**
+- Receipts track detected flavors (`"i2s_flavor_detected": "mixed"`)
+- Each tensor mapped to appropriate kernel
+- Parity calculated per-flavor then aggregated
+
+### Production vs Validation Paths
+
+**Production Code** (default builds):
+- Fail-closed on unsupported flavors
+- No FFI routing (100% Rust)
+- Strict mode prevents FP32 fallback
+
+**Parity Validation** (with `BITNET_CPP_DIR` set):
+- Routes ggml I2_S to C++ FFI when Rust kernel unavailable
+- Tokenizer always Rust (for determinism)
+- Enables incremental validation before Phase 2 completion
+
+### Exit Codes
+
+| Code | Condition | Meaning |
+|------|-----------|---------|
+| 0 | Parity metrics pass | All flavors validated successfully |
+| 1 | Cosine < 0.99 | Logit divergence exceeds threshold |
+| 2 | Exact match < 100% | Greedy decode tokens diverged |
+| 4 | Latency > 110% of C++ | Performance regression detected |
+| 8 | Flavor detection failed | I2_S format not recognized |
+
 ## Related Documentation
 
 - **Tutorial:** [Getting Started with Strict Mode](../tutorials/strict-mode-quantization-validation.md) - Learning-oriented introduction
 - **How-To:** [Running Strict Mode Validation Workflows](../how-to/strict-mode-validation-workflows.md) - Problem-oriented workflows
 - **How-To:** [Verifying Receipt Honesty](../how-to/receipt-verification.md) - Detailed receipt validation guide
+- **How-To:** [Use QK256 Models](../howto/use-qk256-models.md) - QK256 GGML format usage guide
 - **Reference:** [Quantization Support](./quantization-support.md#strict-quantization-guards) - Strict mode technical details
+- **Reference:** [Quantization Support - I2S QK256](./quantization-support.md#i2s-qk256ggml---pure-rust-production-ready) - QK256 format specification
 - **Reference:** [Environment Variables](../environment-variables.md#strict-mode-variables) - Complete variable documentation
 - **Explanation:** [Strict Quantization Guards Specification](../explanation/strict-quantization-guards.md) - Complete feature specification
+- **Explanation:** [I2_S Dual-Flavor Architecture](../explanation/i2s-dual-flavor.md) - Detailed dual-flavor design
 - **[Validation Workflow Guide](../howto/validate-models.md)**: User-facing validation documentation
 - **[Export Clean GGUF Guide](../howto/export-clean-gguf.md)**: How to create clean models
 - **[Correction Policy Documentation](../explanation/correction-policy.md)**: Runtime correction system

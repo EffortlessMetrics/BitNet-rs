@@ -31,10 +31,7 @@ pub struct GgufLoadResult {
 /// AC4: Graceful GGUF parsing error handling with descriptive messages
 /// AC6: CPU/GPU feature flag support with device-aware tensor placement
 /// AC7: Memory-efficient loading with zero-copy operations
-pub fn load_gguf(
-    path: &Path,
-    device: Device,
-) -> Result<(bitnet_common::BitNetConfig, HashMap<String, CandleTensor>)> {
+pub fn load_gguf(path: &Path, device: Device) -> Result<GgufLoadResult> {
     // AC4: Enhanced error handling with context + AC9: Backward compatibility fallback
     let mmap = MmapFile::open(path).map_err(|e| {
         BitNetError::Validation(format!("Failed to open GGUF file '{}': {}", path.display(), e))
@@ -113,10 +110,7 @@ pub fn load_gguf(
 /// - Invalid tensor shapes
 /// - Unsupported quantization formats
 /// - Device placement failures
-fn load_gguf_enhanced(
-    gguf_reader: &GgufReader,
-    device: Device,
-) -> Result<(bitnet_common::BitNetConfig, HashMap<String, CandleTensor>)> {
+fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLoadResult> {
     let cdevice = match device {
         Device::Cpu => CDevice::Cpu,
         Device::Cuda(id) => match CDevice::new_cuda(id) {
@@ -153,36 +147,82 @@ fn load_gguf_enhanced(
     // validate_tensor_completeness(&tensor_infos, &config)?;
 
     let mut tensor_map = HashMap::with_capacity(tensor_count);
+    let mut i2s_qk256_map = HashMap::new();
 
     // Load tensors with comprehensive parsing
     for i in 0..tensor_count {
         let info = gguf_reader.get_tensor_info(i)?;
 
         // AC7: Memory-efficient loading with proper error context
-        let tensor = load_tensor_from_gguf(gguf_reader, i, info, &cdevice).map_err(|e| {
-            BitNetError::Validation(format!("Failed to load tensor '{}': {}", info.name, e))
-        })?;
+        match load_tensor_from_gguf(gguf_reader, i, info, &cdevice) {
+            Ok(Some(tensor)) => {
+                // Regular tensor - store in tensors map
+                tensor_map.insert(info.name.clone(), tensor);
+            }
+            Ok(None) => {
+                // QK256 tensor was handled by load_tensor_from_gguf
+                // Check if it was added to the side map (will be added below)
+            }
+            Err(e) => {
+                return Err(BitNetError::Validation(format!(
+                    "Failed to load tensor '{}': {}",
+                    info.name, e
+                )));
+            }
+        }
+    }
 
-        // Check if this is a QK256 U8 tensor (stored with derived key)
-        // QK256 tensors are U8 with 2D shape where dim[1] is a multiple of 64
-        let is_qk256 = tensor.dtype() == DType::U8
-            && tensor.dims().len() == 2
-            && tensor.dims()[1] % 64 == 0
-            && info.tensor_type == GgufTensorType::I2_S;
+    // Second pass: Extract QK256 tensors from the raw GGUF data
+    // This is necessary because we need the full context to construct I2SQk256NoScale
+    for i in 0..tensor_count {
+        let info = gguf_reader.get_tensor_info(i)?;
 
-        if is_qk256 {
-            // Store under derived key for QK256 format
-            let qk_key = format!("{}.qk256_qs", info.name);
-            tracing::debug!(
-                "Storing QK256 tensor under derived key: '{}' (shape: {:?})",
-                qk_key,
-                tensor.dims()
-            );
-            tensor_map.insert(qk_key, tensor);
-            // Note: Do NOT insert under original key - linear layer will detect QK256 by derived key
-        } else {
-            // Regular tensor - store under original key
-            tensor_map.insert(info.name.clone(), tensor);
+        // Detect QK256 format by size calculation
+        if info.tensor_type == GgufTensorType::I2_S {
+            let total_elements: usize = info.shape.iter().product();
+            let available_bytes = info.size as usize;
+
+            // Calculate expected sizes
+            let blocks_256 = total_elements.div_ceil(256);
+            let expected_qk256 = blocks_256 * 64;
+
+            const TOLERANCE: usize = 128;
+
+            if available_bytes.abs_diff(expected_qk256) <= TOLERANCE {
+                // This is QK256 format - extract raw bytes and create I2SQk256NoScale
+                let (rows, cols) = if info.shape.len() == 2 {
+                    (info.shape[0], info.shape[1])
+                } else if info.shape.len() == 1 {
+                    (1, info.shape[0])
+                } else {
+                    continue; // Skip non-1D/2D tensors
+                };
+
+                // Get raw tensor data
+                let tensor_data = gguf_reader.get_tensor_data(i).map_err(|e| {
+                    BitNetError::Validation(format!(
+                        "Failed to get raw data for QK256 tensor '{}': {}",
+                        info.name, e
+                    ))
+                })?;
+
+                // Create I2SQk256NoScale structure
+                match I2SQk256NoScale::new(rows, cols, tensor_data.to_vec()) {
+                    Ok(qk256_tensor) => {
+                        tracing::info!(
+                            "Loaded QK256 I2_S tensor '{}' ({}×{}, {} blocks)",
+                            info.name,
+                            rows,
+                            cols,
+                            blocks_256
+                        );
+                        i2s_qk256_map.insert(info.name.clone(), qk256_tensor);
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to create QK256 tensor for '{}': {}", info.name, e);
+                    }
+                }
+            }
         }
     }
 
@@ -193,7 +233,7 @@ fn load_gguf_enhanced(
     // AC9: Maintain backward compatibility - ensure all expected tensors exist
     ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
 
-    Ok((config, tensor_map))
+    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: i2s_qk256_map })
 }
 
 /// Minimal GGUF loading for backward compatibility with existing mock infrastructure
@@ -216,10 +256,7 @@ fn load_gguf_enhanced(
 /// - Legacy compatibility during development
 /// - Fallback when enhanced parsing fails
 /// - Test infrastructure with mock files
-fn load_gguf_minimal(
-    path: &Path,
-    device: Device,
-) -> Result<(bitnet_common::BitNetConfig, HashMap<String, CandleTensor>)> {
+fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
     // Try the existing minimal GGUF parser, but handle mock files gracefully
     let two = match crate::gguf_min::load_two(path) {
         Ok(two_tensors) => two_tensors,
@@ -364,7 +401,7 @@ fn load_gguf_minimal(
     );
 
     tracing::info!("Loaded model using minimal GGUF parser with {} tensors", tensor_map.len());
-    Ok((config, tensor_map))
+    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
 }
 
 /// Extract BitNet configuration from GGUF metadata
@@ -726,12 +763,15 @@ fn cast_scales_to_f32(
 }
 
 /// Load individual tensor from GGUF with quantization support
+///
+/// Returns `Ok(Some(tensor))` for regular tensors, `Ok(None)` for QK256 tensors that should be
+/// stored separately in the i2s_qk256 map.
 fn load_tensor_from_gguf(
     reader: &GgufReader,
     tensor_index: usize,
     info: &crate::formats::gguf::TensorInfo,
     device: &CDevice,
-) -> Result<CandleTensor> {
+) -> Result<Option<CandleTensor>> {
     // AC7: Memory-efficient tensor loading
     let tensor_data = reader
         .get_tensor_data(tensor_index)
@@ -748,6 +788,7 @@ fn load_tensor_from_gguf(
                 .collect();
 
             CandleTensor::from_vec(data_f32, shape.as_slice(), device)
+                .map(Some)
                 .map_err(|e| BitNetError::Validation(format!("Failed to create F32 tensor: {}", e)))
         }
 
@@ -763,6 +804,7 @@ fn load_tensor_from_gguf(
                 .collect();
 
             CandleTensor::from_vec(data_f32, shape.as_slice(), device)
+                .map(Some)
                 .map_err(|e| BitNetError::Validation(format!("Failed to create F16 tensor: {}", e)))
         }
 
@@ -780,6 +822,7 @@ fn load_tensor_from_gguf(
                 .collect();
 
             CandleTensor::from_vec(data_f32, shape.as_slice(), device)
+                .map(Some)
                 .map_err(|e| BitNetError::Validation(format!("Failed to create F64 tensor: {}", e)))
         }
 
@@ -807,56 +850,15 @@ fn load_tensor_from_gguf(
 
             // Detect format by available bytes
             if available.abs_diff(ggml_need) <= tolerance {
-                // This is ggml I2_S (QK_K=256) - store as U8 tensor for pure-Rust QK256 kernel
+                // This is ggml I2_S (QK_K=256) - will be stored separately in i2s_qk256 map
                 tracing::info!(
-                    "I2_S '{}': GGML/llama.cpp format detected (QK_K=256, 64B/block). Storing as U8 tensor for QK256 kernel.",
+                    "I2_S '{}': GGML/llama.cpp format detected (QK_K=256, 64B/block). Will be stored in i2s_qk256 map.",
                     info.name
                 );
 
-                // Calculate dimensions for QK256 storage
-                // Shape is typically [rows, cols] for weight matrices
-                let (rows, cols) = if info.shape.len() == 2 {
-                    (info.shape[0], info.shape[1])
-                } else if info.shape.len() == 1 {
-                    // 1D tensor - treat as single row
-                    (1, info.shape[0])
-                } else {
-                    return Err(BitNetError::Validation(format!(
-                        "I2_S '{}': QK256 format requires 1D or 2D tensor, got shape {:?}",
-                        info.name, info.shape
-                    )));
-                };
-
-                let blocks_per_row = cols.div_ceil(256); // ceil(cols/256)
-                let row_stride_bytes = blocks_per_row * 64;
-                let needed_bytes = rows * row_stride_bytes;
-
-                // Validate we have enough data
-                if available < needed_bytes {
-                    return Err(BitNetError::Validation(format!(
-                        "I2_S '{}': QK256 insufficient data: {}B available < {}B needed for {}×{} matrix",
-                        info.name, available, needed_bytes, rows, cols
-                    )));
-                }
-
-                // Create U8 tensor [rows, row_stride_bytes]
-                // Take only the needed bytes (may have padding at end)
-                let qs_u8 = CandleTensor::from_vec(
-                    tensor_data[..needed_bytes].to_vec(),
-                    &[rows, row_stride_bytes],
-                    device,
-                )?
-                .to_dtype(DType::U8)?;
-
-                tracing::debug!(
-                    "I2_S '{}': Created QK256 U8 tensor with shape [{}, {}] ({} bytes)",
-                    info.name,
-                    rows,
-                    row_stride_bytes,
-                    needed_bytes
-                );
-
-                return Ok(qs_u8);
+                // Return None to signal this should not be added to regular tensor map
+                // The second pass in load_gguf_enhanced will handle creating I2SQk256NoScale
+                return Ok(None);
             }
 
             // Not ggml format - must be BitNet I2_S with 32-element blocks
@@ -994,7 +996,7 @@ fn load_tensor_from_gguf(
                 BitNetError::Validation(format!("I2_S to_vec failed '{}': {}", info.name, e))
             })?;
 
-            CandleTensor::from_vec(f32_data, info.shape.as_slice(), device).map_err(|e| {
+            CandleTensor::from_vec(f32_data, info.shape.as_slice(), device).map(Some).map_err(|e| {
                 BitNetError::Validation(format!("I2_S -> Candle failed '{}': {}", info.name, e))
             })
         }
@@ -1010,6 +1012,7 @@ fn load_tensor_from_gguf(
                 &quantizer,
                 device,
             )
+            .map(Some)
         }
 
         GgufTensorType::Q8_0
@@ -1029,6 +1032,7 @@ fn load_tensor_from_gguf(
                 &quantizer,
                 device,
             )
+            .map(Some)
         }
 
         _ => Err(BitNetError::Validation(format!(
@@ -1242,9 +1246,7 @@ fn ensure_backward_compatibility(
 
 /// Create a default mock tensor layout for test compatibility
 /// This handles completely invalid mock files used in test infrastructure
-fn create_mock_tensor_layout(
-    device: Device,
-) -> Result<(bitnet_common::BitNetConfig, HashMap<String, CandleTensor>)> {
+fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
     let config = bitnet_common::BitNetConfig::default();
     let num_layers = config.model.num_layers;
     let intermediate_size = config.model.intermediate_size;
@@ -1375,5 +1377,5 @@ fn create_mock_tensor_layout(
         "Created mock tensor layout with {} tensors for test compatibility",
         tensor_map.len()
     );
-    Ok((config, tensor_map))
+    Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: HashMap::new() })
 }
