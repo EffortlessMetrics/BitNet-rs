@@ -250,10 +250,11 @@ impl RustTokenizer {
         let vocab: AHashMap<String, u32> =
             vocab_strings.into_iter().enumerate().map(|(i, tok)| (tok, i as u32)).collect();
 
-        // Load merge rules array from metadata
+        // Load merge rules array from metadata (try multiple possible keys)
         let merges_strings = reader
-            .get_string_array_metadata("tokenizer.ggml.bpe_merges")
-            .context("Missing tokenizer.ggml.bpe_merges metadata - required for BPE tokenizer")?;
+            .get_string_array_metadata("tokenizer.ggml.merges")
+            .or_else(|| reader.get_string_array_metadata("tokenizer.ggml.bpe_merges"))
+            .context("Missing tokenizer.ggml.merges or tokenizer.ggml.bpe_merges metadata - required for BPE tokenizer")?;
 
         tracing::debug!("Loading BPE tokenizer with {} merge rules", merges_strings.len());
 
@@ -284,8 +285,10 @@ impl RustTokenizer {
             .context("BPE tokenizer construction failed - vocab or merges may be invalid")?;
 
         // Create tokenizer with ByteLevel pre-tokenizer and decoder (GPT-2 style)
+        // NOTE: add_prefix_space=true ensures first token is treated like subsequent tokens
+        // (llama.cpp GPT-2 behavior: pretend there is a space before the first token)
         let mut tokenizer = tokenizers::Tokenizer::new(bpe);
-        tokenizer.with_pre_tokenizer(Some(byte_level::ByteLevel::default()));
+        tokenizer.with_pre_tokenizer(Some(byte_level::ByteLevel::default().add_prefix_space(true)));
         tokenizer.with_decoder(Some(ByteLevel::default()));
 
         Ok(tokenizer)
@@ -414,6 +417,104 @@ impl RustTokenizer {
     /// Get hint for whether to add BOS by default
     pub fn add_bos_hint(&self) -> Option<bool> {
         self.add_bos_hint
+    }
+}
+
+// Implement the Tokenizer trait for RustTokenizer
+impl crate::Tokenizer for RustTokenizer {
+    fn encode(
+        &self,
+        text: &str,
+        add_bos: bool,
+        add_special: bool,
+    ) -> bitnet_common::Result<Vec<u32>> {
+        // Use the existing encode method with parse_special parameter
+        self.encode(text, add_bos, add_special).map_err(|e| {
+            bitnet_common::BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: e.to_string(),
+            })
+        })
+    }
+
+    fn decode(&self, tokens: &[u32]) -> bitnet_common::Result<String> {
+        match self.kind {
+            GgufTokKind::Spm => {
+                #[cfg(feature = "spm")]
+                {
+                    let spm = self.spm.as_ref().expect("SPM tokenizer should be present");
+
+                    // Decode using SentencePiece (decode_piece_ids handles special tokens)
+                    spm.decode_piece_ids(tokens).map_err(|e| {
+                        bitnet_common::BitNetError::Model(
+                            bitnet_common::ModelError::LoadingFailed {
+                                reason: format!("SentencePiece decode error: {}", e),
+                            },
+                        )
+                    })
+                }
+                #[cfg(not(feature = "spm"))]
+                {
+                    Err(bitnet_common::BitNetError::Model(
+                        bitnet_common::ModelError::LoadingFailed {
+                            reason: "SPM tokenizer loaded but `spm` feature is not enabled"
+                                .to_string(),
+                        },
+                    ))
+                }
+            }
+            GgufTokKind::Bpe => {
+                let bpe = self.bpe.as_ref().expect("BPE tokenizer should be present");
+
+                // Decode using BPE tokenizer
+                bpe.decode(tokens, true).map_err(|e| {
+                    bitnet_common::BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                        reason: format!("BPE decode error: {}", e),
+                    })
+                })
+            }
+        }
+    }
+
+    fn vocab_size(&self) -> usize {
+        match self.kind {
+            GgufTokKind::Spm => {
+                #[cfg(feature = "spm")]
+                {
+                    self.spm.as_ref().map_or(0, |spm| spm.len())
+                }
+                #[cfg(not(feature = "spm"))]
+                {
+                    0
+                }
+            }
+            GgufTokKind::Bpe => self.bpe.as_ref().map_or(0, |bpe| bpe.get_vocab_size(true)),
+        }
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        match self.kind {
+            GgufTokKind::Spm => {
+                #[cfg(feature = "spm")]
+                {
+                    self.spm.as_ref().and_then(|spm| spm.decode_piece_ids(&[token]).ok())
+                }
+                #[cfg(not(feature = "spm"))]
+                {
+                    None
+                }
+            }
+            GgufTokKind::Bpe => {
+                self.bpe.as_ref().and_then(|bpe| bpe.id_to_token(token).map(|s| s.to_string()))
+            }
+        }
+    }
+
+    fn bos_token_id(&self) -> Option<u32> {
+        self.bos_id
+    }
+
+    fn eos_token_id(&self) -> Option<u32> {
+        self.eos_id
     }
 }
 

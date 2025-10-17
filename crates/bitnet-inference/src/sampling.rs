@@ -276,11 +276,23 @@ impl SamplingStrategy {
 }
 
 /// Greedy sampling (always pick most likely token)
+///
+/// On ties (equal logits), chooses the lowest token ID for deterministic behavior
+/// matching llama.cpp greedy decode.
 pub fn greedy_sample(logits: &[f32]) -> Result<u32> {
     logits
         .iter()
         .enumerate()
-        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+        .max_by(|(idx_a, a), (idx_b, b)| {
+            // First compare logits
+            match a.partial_cmp(b).unwrap() {
+                std::cmp::Ordering::Equal => {
+                    // On tie, prefer lower token ID
+                    idx_b.cmp(idx_a) // Reverse: lower idx is "greater" priority
+                }
+                other => other,
+            }
+        })
         .map(|(idx, _)| idx as u32)
         .context("Empty logits for greedy sampling")
 }

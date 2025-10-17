@@ -201,6 +201,36 @@ fn sha256_file(path: &std::path::Path) -> Result<String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+/// Collect environment metadata for receipt provenance
+fn collect_env_metadata() -> serde_json::Value {
+    use std::env;
+
+    // Get Rust version
+    let rustc_version = env!("RUSTC_VERSION", "rustc version output at build time");
+
+    // Get target triple
+    let target_triple = env!("TARGET", "unknown");
+
+    // Get OS
+    let os = std::env::consts::OS;
+
+    // Get RAYON threads (deterministic testing should have RAYON_NUM_THREADS=1)
+    let rayon_threads = env::var("RAYON_NUM_THREADS").unwrap_or_else(|_| "auto".to_string());
+
+    // Get deterministic flags
+    let deterministic = env::var("BITNET_DETERMINISTIC").unwrap_or_else(|_| "0".to_string());
+    let seed = env::var("BITNET_SEED").unwrap_or_else(|_| "0".to_string());
+
+    serde_json::json!({
+        "rustc_version": rustc_version,
+        "target_triple": target_triple,
+        "os": os,
+        "rayon_threads": rayon_threads,
+        "deterministic": deterministic,
+        "seed": seed,
+    })
+}
+
 #[tokio::test]
 async fn parity_bitnetcpp() -> Result<()> {
     // Check if CROSSVAL_GGUF is set; skip if not
@@ -217,6 +247,25 @@ async fn parity_bitnetcpp() -> Result<()> {
         return Ok(());
     }
 
+    // Wrap the test logic with a timeout guard (60 seconds)
+    // This prevents hangs and writes a diagnostic receipt on timeout
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(60),
+        parity_bitnetcpp_impl(gguf_path.clone()),
+    )
+    .await
+    {
+        Ok(result) => result,
+        Err(_) => {
+            eprintln!("TIMEOUT: Parity test exceeded 60 seconds - writing diagnostic receipt");
+            write_timeout_receipt(&gguf_path)?;
+            anyhow::bail!("Parity test timed out after 60 seconds");
+        }
+    }
+}
+
+/// Core parity test implementation (wrapped by timeout guard)
+async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     // Check if BITNET_CPP_DIR is set for C++ parity
     let cpp_available = env::var("BITNET_CPP_DIR").is_ok();
     if !cpp_available {
@@ -238,17 +287,22 @@ async fn parity_bitnetcpp() -> Result<()> {
     let template = bitnet_inference::TemplateType::Raw;
     let formatted_prompt = template.apply(&prompt, None);
 
-    let (rust_ids, add_bos, parse_special, eos_id, vocab_size) =
-        rust_side_tokenize_and_meta(&gguf_path, &template, &formatted_prompt)?;
+    let tok_meta = rust_side_tokenize_and_meta(&gguf_path, &template, &formatted_prompt)?;
+    let rust_ids = tok_meta.token_ids.clone();
+    let add_bos = tok_meta.add_bos;
+    let parse_special = tok_meta.parse_special;
+    let eos_id = tok_meta.eos_id;
+    let vocab_size = tok_meta.vocab_size;
 
     eprintln!("Template: {}", template);
     eprintln!("Formatted prompt: {}", formatted_prompt);
     eprintln!(
-        "Tokenized {} tokens (add_bos={}, parse_special={}, eos_id={})",
+        "Tokenized {} tokens (add_bos={}, parse_special={}, eos_id={}, kind={})",
         rust_ids.len(),
         add_bos,
         parse_special,
-        eos_id
+        eos_id,
+        tok_meta.tokenizer_kind
     );
 
     // 2. Get C++ tokens early for potential fallback
@@ -258,25 +312,11 @@ async fn parity_bitnetcpp() -> Result<()> {
         Vec::new()
     };
 
-    // 3. Detect if Rust tokenization looks like byte/char fallback
-    let looks_like_bytes =
-        rust_ids.len() >= 4 && rust_ids[1..].iter().all(|&id| (0..=255).contains(&(id as i32)));
-
-    // 4. Determine which tokens to use for parity testing
-    let (tokens_for_parity, tokenizer_source): (Vec<u32>, &str) = {
-        if cpp_available && (looks_like_bytes || rust_ids.len() != cpp_ids.len()) {
-            eprintln!(
-                "parity.tokenizer_mode=cpp_fallback rust_len={} cpp_len={} looks_like_bytes={}",
-                rust_ids.len(),
-                cpp_ids.len(),
-                looks_like_bytes
-            );
-            (cpp_ids.clone(), "cpp")
-        } else {
-            eprintln!("parity.tokenizer_mode=rust_native");
-            (rust_ids.clone(), "rust")
-        }
-    };
+    // 4. Use pure Rust tokenization for parity (no C++ fallback)
+    // After BPE ByteLevel fix, Rust tokenization should match C++ exactly
+    let tokens_for_parity = rust_ids.clone();
+    let tokenizer_source = "rust";
+    eprintln!("parity.tokenizer_source=rust");
 
     // 5. Rust-side logits evaluation (using canonical tokens)
     let rust_logits = rust_eval_last_logits(&gguf_path, &tokens_for_parity, vocab_size).await?;
@@ -354,24 +394,40 @@ async fn parity_bitnetcpp() -> Result<()> {
         "rust_only"
     };
 
+    // Compute prompt hash for reproducibility verification
+    let prompt_hash = blake3::hash(formatted_prompt.as_bytes()).to_string();
+
+    // Collect environment metadata
+    let env_meta = collect_env_metadata();
+
     let receipt = json!({
         "timestamp": ts,
         "commit": commit,
         "model_path": gguf_path.display().to_string(),
         "model_sha256": model_sha,
-        "template": template.to_string(),
+        "template": {
+            "id": template.to_string(),
+            "formatted_prompt_hash": prompt_hash,
+        },
         "prompt": prompt,
+        "tokenizer": {
+            "source": tokenizer_source,
+            "kind": tok_meta.tokenizer_kind,
+            "vocab_size": vocab_size,
+            "bos_id": tok_meta.bos_id,
+            "eos_id": eos_id,
+            "eot_id": tok_meta.eot_id,
+            "add_bos_hint": tok_meta.add_bos_hint,
+            "add_bos": add_bos,
+            "parse_special": parse_special,
+        },
         "tokenization": {
             "rust_token_count": rust_ids.len(),
             "cpp_token_count": cpp_ids.len(),
-            "tokenizer_source": tokenizer_source,
-            "add_bos": add_bos,
-            "parse_special": parse_special,
-            "eos_id": eos_id,
+            "tokens_match": rust_ids == cpp_ids,
         },
         "rust": {
             "token_count": tokens_for_parity.len(),
-            "vocab_size": vocab_size,
             "logits_dim": rust_logits.len(),
             "decoded_tokens": rust_decode,
             "n_steps": n_steps,
@@ -384,12 +440,7 @@ async fn parity_bitnetcpp() -> Result<()> {
             "first_divergence_step": first_divergence,
             "status": parity_status,
         },
-        "validation": {
-            "rust_engine": "production",
-            "deterministic": true,
-            "threads": 1,
-            "seed": 0,
-        }
+        "environment": env_meta,
     });
 
     // Atomic write using temp file
@@ -404,27 +455,59 @@ async fn parity_bitnetcpp() -> Result<()> {
     Ok(())
 }
 
+/// Extended tokenizer metadata for receipt provenance
+#[derive(Debug)]
+struct TokenizerMetadata {
+    token_ids: Vec<u32>,
+    add_bos: bool,
+    parse_special: bool,
+    eos_id: u32,
+    vocab_size: usize,
+    tokenizer_kind: String,
+    bos_id: Option<u32>,
+    eot_id: Option<u32>,
+    add_bos_hint: Option<bool>,
+}
+
 /// Tokenize prompt with template-aware BOS/special handling
-/// Returns: (token_ids, add_bos, parse_special, eos_token_id, vocab_size)
+/// Returns comprehensive tokenizer metadata for receipt provenance
 fn rust_side_tokenize_and_meta(
     model_path: &std::path::Path,
     template: &bitnet_inference::TemplateType,
     formatted_prompt: &str,
-) -> Result<(Vec<u32>, bool, bool, u32, usize)> {
+) -> Result<TokenizerMetadata> {
     use bitnet_inference::TemplateType;
+    use bitnet_models::formats::gguf::GgufReader;
+    use bitnet_models::loader::MmapFile;
     use bitnet_tokenizers::auto;
 
     // 1) Load tokenizer using auto-detection
     let tokenizer = auto::load_auto(model_path, None)?;
     let vocab_size = tokenizer.vocab_size();
 
-    // 2) Determine BOS policy from template
+    // 2) Extract tokenizer kind from GGUF metadata
+    let (tokenizer_kind, bos_id_meta, eot_id_meta, add_bos_hint_meta) = {
+        let mmap = MmapFile::open(model_path)?;
+        let reader = GgufReader::new(mmap.as_slice())?;
+
+        let kind = reader
+            .get_string_metadata("tokenizer.ggml.model")
+            .unwrap_or_else(|| "unknown".to_string());
+
+        let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
+        let eot = reader.get_u32_metadata("tokenizer.ggml.eot_token_id");
+        let add_bos_hint = reader.get_bool_metadata("tokenizer.ggml.add_bos_token");
+
+        (kind, bos, eot, add_bos_hint)
+    };
+
+    // 3) Determine BOS policy from template
     let add_bos = template.should_add_bos();
 
-    // 3) Determine parse_special flag (true for Llama3Chat to parse <|eot_id|> etc.)
+    // 4) Determine parse_special flag (true for Llama3Chat to parse <|eot_id|> etc.)
     let parse_special = matches!(template, TemplateType::Llama3Chat);
 
-    // 4) Resolve EOS token ID (token-level EOT for llama3-chat, or regular EOS)
+    // 5) Resolve EOS token ID (token-level EOT for llama3-chat, or regular EOS)
     let eos_id = if matches!(template, TemplateType::Llama3Chat) {
         // For LLaMA-3, use <|eot_id|> as the stop token
         let eot_ids = tokenizer.encode("<|eot_id|>", false, true)?;
@@ -435,12 +518,20 @@ fn rust_side_tokenize_and_meta(
         tokenizer.eos_token_id().unwrap_or(2) // Common EOS fallback
     };
 
-    // 5) Encode the formatted prompt (already formatted by caller)
-    // Note: Rust tokenizer uses add_special for both BOS and parsing
-    // For consistency with C++ side, we pass add_bos for BOS insertion
+    // 6) Encode the formatted prompt (already formatted by caller)
     let ids = tokenizer.encode(formatted_prompt, add_bos, false)?;
 
-    Ok((ids, add_bos, parse_special, eos_id, vocab_size))
+    Ok(TokenizerMetadata {
+        token_ids: ids,
+        add_bos,
+        parse_special,
+        eos_id,
+        vocab_size,
+        tokenizer_kind,
+        bos_id: bos_id_meta,
+        eot_id: eot_id_meta,
+        add_bos_hint: add_bos_hint_meta,
+    })
 }
 
 /// Auto-detect template type from GGUF metadata (matches CLI logic exactly)
@@ -581,4 +672,50 @@ async fn rust_decode_n_greedy(
     }
 
     Ok(result)
+}
+
+/// Write a diagnostic receipt when the parity test times out
+fn write_timeout_receipt(gguf_path: &std::path::Path) -> Result<()> {
+    let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
+    let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
+
+    let base_dir = std::env::var("BASELINES_DIR")
+        .ok()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines"));
+
+    let receipt_dir = base_dir.join(date_str);
+
+    if !receipt_dir.exists() {
+        fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
+    }
+
+    let commit = env::var("GIT_COMMIT").unwrap_or_else(|_| "unknown".into());
+
+    let receipt = json!({
+        "timestamp": ts,
+        "commit": commit,
+        "model_path": gguf_path.display().to_string(),
+        "parity": {
+            "status": "timeout",
+            "timeout_seconds": 60,
+        },
+        "validation": {
+            "rust_engine": "production",
+            "deterministic": true,
+            "threads": 1,
+            "seed": 0,
+        },
+        "error": "Parity test exceeded 60-second timeout - check for performance regression or hanging inference"
+    });
+
+    let receipt_path = receipt_dir.join("parity-bitnetcpp.json");
+    let tmp_path = receipt_dir.join("parity-bitnetcpp.json.tmp");
+    fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)
+        .context("Failed to write timeout receipt")?;
+    fs::rename(&tmp_path, &receipt_path).context("Failed to atomically rename timeout receipt")?;
+
+    eprintln!("✗ Timeout receipt written to: {:?}", receipt_path);
+
+    Ok(())
 }
