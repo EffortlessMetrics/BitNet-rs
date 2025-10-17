@@ -5,6 +5,7 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 ## Quick Reference
 
 ### Essential Commands
+
 ```bash
 # Build (default features are EMPTY - always specify features)
 cargo build --no-default-features --features cpu     # CPU inference
@@ -59,12 +60,14 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 ## Core Architecture
 
 ### Design Principles
+
 1. **Feature-Gated**: Default features are **EMPTY** - always specify `--features cpu|gpu`
 2. **Zero-Copy**: Memory-mapped models, efficient lifetime management
 3. **Device-Aware**: Automatic GPU/CPU selection with graceful fallback
 4. **Cross-Validated**: Systematic comparison with C++ reference
 
 ### Key Crates
+
 - `bitnet` (root): Main library with unified API
 - `bitnet-inference`: Autoregressive generation engine
 - `bitnet-quantization`: 1-bit quantization (I2_S, TL1, TL2)
@@ -80,6 +83,7 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 ### MSRV: 1.90.0 (Rust 2024 edition)
 
 ### Feature Flags
+
 - `cpu`: SIMD-optimized CPU inference (AVX2/AVX-512/NEON)
 - `gpu`: CUDA acceleration with mixed precision (FP16/BF16)
 - `cuda`: Backward-compatible alias for `gpu` (temporary - prefer `gpu` in new code)
@@ -87,10 +91,12 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 - `crossval`: Cross-validation against Microsoft BitNet C++
 
 **Important**: Always use unified GPU predicate in code:
+
 ```rust
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn gpu_function() { /* ... */ }
 ```
+
 Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for runtime checks.
 
 ### Quantization Support
@@ -134,11 +140,13 @@ BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
 ## Documentation Structure
 
 ### Getting Started
+
 - `docs/quickstart.md`: 5-minute setup guide
 - `docs/getting-started.md`: Comprehensive introduction
 - `docs/explanation/FEATURES.md`: Feature flag documentation
 
 ### Development
+
 - `docs/development/build-commands.md`: Comprehensive build reference
 - `docs/development/gpu-development.md`: CUDA development guide
 - `docs/development/test-suite.md`: Testing framework
@@ -148,6 +156,7 @@ BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
 - `docs/howto/validate-models.md`: Complete validation workflow guide
 
 ### Architecture
+
 - `docs/architecture-overview.md`: System design and components
 - `docs/reference/quantization-support.md`: Quantization algorithms
 - `docs/reference/validation-gates.md`: Validation system technical reference
@@ -155,6 +164,7 @@ BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
 - `docs/tokenizer-architecture.md`: Universal tokenizer system
 
 ### Operations
+
 - `docs/performance-benchmarking.md`: Performance testing
 - `docs/health-endpoints.md`: Monitoring and observability
 - `docs/GPU_SETUP.md`: GPU configuration
@@ -165,12 +175,18 @@ BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
 
 ### Prompt Templates and Auto-Detection
 
-BitNet.rs supports multiple prompt templates for optimal model behavior. The CLI automatically detects the appropriate template using:
-1. **Priority 1**: GGUF `chat_template` metadata (detects LLaMA-3 special tokens and generic instruct patterns)
-2. **Priority 2**: Model/tokenizer path heuristics (detects llama3, instruct, chat patterns)
+BitNet.rs supports multiple prompt templates for optimal model behavior. The CLI
+automatically detects the appropriate template using:
+
+1. **Priority 1**: GGUF `chat_template` metadata (detects LLaMA-3 special tokens and
+   generic instruct patterns)
+2. **Priority 2**: Model/tokenizer path heuristics (detects llama3, instruct, chat
+   patterns)
 3. **Priority 3**: Fallback to Instruct template (safer than Raw for most models)
 
-**Note**: As of v0.9.x, the default auto-detection fallback changed from `raw` to `instruct` for better out-of-box experience with instruction-tuned models. Use `--prompt-template raw` if you need raw completion behavior.
+**Note**: As of v0.9.x, the default auto-detection fallback changed from `raw` to
+`instruct` for better out-of-box experience with instruction-tuned models. Use
+`--prompt-template raw` if you need raw completion behavior.
 
 You can override auto-detection with `--prompt-template`:
 
@@ -258,7 +274,8 @@ cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --greedy --see
 
 ### Interactive Chat
 
-BitNet.rs provides an interactive chat mode with REPL and built-in commands. The CLI auto-detects the appropriate chat template and displays streaming responses:
+BitNet.rs provides an interactive chat mode with REPL and built-in commands. The CLI
+auto-detects the appropriate chat template and displays streaming responses:
 
 ```bash
 # Interactive chat with auto-template detection
@@ -280,6 +297,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
 ```
 
 **Available chat commands:**
+
 - `/help` - Show available commands
 - `/clear` - Clear conversation history
 - `/metrics` - Display performance metrics
@@ -300,7 +318,8 @@ bitnet chat --model model.gguf --tokenizer tokenizer.json
 
 **Note**: The `generate` subcommand is an alias for `run`, providing semantic clarity when using the CLI directly.
 
-### Development
+### Development Workflow
+
 ```bash
 # Standard development cycle
 cargo test --workspace --no-default-features --features cpu
@@ -321,6 +340,7 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 ```
 
 ### Model Validation Workflow
+
 ```bash
 # 1. Validate existing GGUF (3-stage: LayerNorm, projection, linguistic sanity)
 ./scripts/validate_gguf.sh models/model.gguf models/tokenizer.json
@@ -354,43 +374,69 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 **See also:** `docs/howto/validate-models.md` for complete validation guide.
 
 ### Troubleshooting
-- FFI linker errors: Use `--no-default-features --features cpu` or `cargo xtask fetch-cpp`
+
+- FFI linker errors: Use `--no-default-features --features cpu` or
+  `cargo xtask fetch-cpp`
 - CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH
 - Model validation: `cargo run -p bitnet-cli -- compat-check model.gguf`
-- GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and runtime availability
-- Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use `BITNET_GPU_FAKE` for testing
-- Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]` pattern
-- Template auto-detection: If the wrong template is detected, override with `--prompt-template` (raw/instruct/llama3-chat). Check GGUF metadata with `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection priority issues.
-- LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your GGUF has quantized LN weights (should be FP16/FP32)
-  - **RMS-based validation**: Validator checks LayerNorm gamma RMS (root mean square) with architecture-aware envelopes
-  - **Proper fix**: Regenerate GGUF with LayerNorm weights in float format (not quantized)
-  - **Diagnosis**: Use `cargo run -p bitnet-cli --features cpu,full-cli -- inspect --ln-stats --gate auto model.gguf`
-  - **Validation modes**: `none` (skip), `auto` (architecture detection), `policy` (custom rules)
-  - **Temporary workaround**: Policy-driven corrections for known-bad models (see `docs/explanation/correction-policy.md`)
-    - Requires both `BITNET_CORRECTION_POLICY=/path/to/policy.yml` and `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`
+- GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and
+  runtime availability
+- Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use
+  `BITNET_GPU_FAKE` for testing
+- Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]`
+  pattern
+- Template auto-detection: If the wrong template is detected, override with
+  `--prompt-template` (raw/instruct/llama3-chat). Check GGUF metadata with
+  `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection
+  priority issues.
+- LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your
+  GGUF has quantized LN weights (should be FP16/FP32)
+  - **RMS-based validation**: Validator checks LayerNorm gamma RMS (root mean square)
+    with architecture-aware envelopes
+  - **Proper fix**: Regenerate GGUF with LayerNorm weights in float format (not
+    quantized)
+  - **Diagnosis**: Use `cargo run -p bitnet-cli --features cpu,full-cli -- inspect
+    --ln-stats --gate auto model.gguf`
+  - **Validation modes**: `none` (skip), `auto` (architecture detection), `policy`
+    (custom rules)
+  - **Temporary workaround**: Policy-driven corrections for known-bad models (see
+    `docs/explanation/correction-policy.md`)
+    - Requires both `BITNET_CORRECTION_POLICY=/path/to/policy.yml` and
+      `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`
     - CI blocks correction flags - use only for fingerprinted known-bad models
-  - **Strict mode**: `BITNET_STRICT_MODE=1` will fail immediately on suspicious LN weights (exit code 8)
+  - **Strict mode**: `BITNET_STRICT_MODE=1` will fail immediately on suspicious LN
+    weights (exit code 8)
   - **See also**: `docs/howto/validate-models.md` for complete troubleshooting guide
 
 ## Environment Variables
 
 ### Inference Configuration
+
 - `BITNET_DETERMINISTIC=1 BITNET_SEED=42`: Reproducible inference
-- `BITNET_GGUF`: Model path override for cross-validation and inference (auto-discovers `models/` if not set)
+- `BITNET_GGUF`: Model path override for cross-validation and inference (auto-discovers
+  `models/` if not set)
 - `RAYON_NUM_THREADS=1`: Single-threaded determinism
-- `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing (Issue #439)
+- `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing
+  (Issue #439)
 
 ### Validation Configuration
-- `BITNET_STRICT_MODE=1`: Enable strict validation (fails on LayerNorm/projection warnings, exit code 8)
+
+- `BITNET_STRICT_MODE=1`: Enable strict validation (fails on LayerNorm/projection
+  warnings, exit code 8)
 - `BITNET_VALIDATION_GATE=none|auto|policy`: Validation mode (default: `auto`)
-- `BITNET_VALIDATION_POLICY=/path/to/policy.yml`: Policy file for custom validation rules
+- `BITNET_VALIDATION_POLICY=/path/to/policy.yml`: Policy file for custom validation
+  rules
 - `BITNET_VALIDATION_POLICY_KEY=arch:variant`: Policy key for rules lookup
 
 ### Correction Configuration (Development Only)
-- `BITNET_CORRECTION_POLICY=/path/to/policy.yml`: Policy file for model-specific corrections (requires `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`)
-- `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`: Enable runtime corrections for known-bad models (CI blocks this flag)
+
+- `BITNET_CORRECTION_POLICY=/path/to/policy.yml`: Policy file for model-specific
+  corrections (requires `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`)
+- `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`: Enable runtime corrections for known-bad models
+  (CI blocks this flag)
 
 ## Repository Contracts
+
 - **Always specify features**: `--no-default-features --features cpu|gpu`
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
