@@ -27,6 +27,8 @@ int bitnet_tokenize(bitnet_model_t*, const char* text, int add_bos, int parse_sp
 int bitnet_eval(bitnet_ctx_t*, const int32_t* ids, int n_ids,
                 float* logits_out, int logits_cap);
 
+int bitnet_prefill(bitnet_ctx_t*, const int32_t* ids, int n_ids);
+
 int bitnet_decode_greedy(bitnet_ctx_t*, int32_t* io_ids, int max_new_tokens,
                          int eos_id, float temperature);
 

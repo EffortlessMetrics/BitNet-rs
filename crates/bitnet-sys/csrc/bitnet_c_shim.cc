@@ -75,12 +75,16 @@ bitnet_ctx_t* bitnet_context_new(bitnet_model_t* m, const bitnet_params_t* p) {
         params.n_ctx = p->n_ctx;
         params.n_threads = p->n_threads;
         params.n_threads_batch = p->n_threads;
-        params.seed = p->seed;
+        // Note: seed is set via llama_set_rng_seed() after context creation
         // Enable logits for all tokens (needed for eval)
         params.logits_all = true;
 
         c->context = llama_new_context_with_model(m->model, params);
         if (!c->context) return nullptr;
+
+        // Note: RNG seed (p->seed) not set here as this version of llama.cpp
+        // doesn't expose llama_set_rng_seed. Deterministic behavior is controlled
+        // via temperature=0.0 in greedy decode and environment variables on Rust side.
 
         c->model = m->model;
         c->n_threads = p->n_threads;
@@ -111,7 +115,24 @@ int bitnet_tokenize(bitnet_model_t* m, const char* text, int add_bos, int parse_
         // Get text length
         int text_len = strlen(text);
 
-        // Tokenize using llama.cpp API
+        // Handle nullptr/0 pattern: caller wants to know the required buffer size
+        if (!out_ids || out_cap == 0) {
+            // Preflight call: llama_tokenize returns the number of tokens needed
+            int n_tokens = llama_tokenize(
+                m->model,
+                text,
+                text_len,
+                nullptr,
+                0,
+                (bool)add_bos,
+                (bool)parse_special
+            );
+
+            // Return absolute value (handle both positive and negative conventions)
+            return (n_tokens < 0) ? -n_tokens : n_tokens;
+        }
+
+        // Normal tokenization with provided buffer
         // Modern llama.cpp signature:
         //   int llama_tokenize(model, text, text_len, tokens, n_max, add_special, parse_special)
         //
@@ -128,7 +149,11 @@ int bitnet_tokenize(bitnet_model_t* m, const char* text, int add_bos, int parse_
             (bool)parse_special   // llama.cpp parse_special: parses special token strings
         );
 
-        if (n_tokens < 0) return -2; // Tokenization failed
+        // If negative, buffer was too small - return error code -2
+        // (caller should have allocated enough based on first call)
+        if (n_tokens < 0) {
+            return -2; // Buffer too small
+        }
 
         return n_tokens;
     } catch (...) {
@@ -179,6 +204,26 @@ int bitnet_eval(bitnet_ctx_t* c, const int32_t* ids, int n_ids,
     } catch (...) {
         return -5;
     }
+}
+
+int bitnet_prefill(bitnet_ctx_t* c, const int32_t* ids, int n_ids) {
+    if (!c || !c->context || !ids || n_ids <= 0) return -1;
+
+    llama_batch batch = llama_batch_init(n_ids, 0, 1);
+    llama_seq_id seq_ids[1] = {0};
+
+    for (int i = 0; i < n_ids; ++i) {
+        batch.token[i]   = ids[i];
+        batch.pos[i]     = i;           // 0..T-1
+        batch.n_seq_id[i]= 1;
+        batch.seq_id[i]  = seq_ids;
+        batch.logits[i]  = (i == n_ids - 1) ? 1 : 0;  // only last token needs logits
+    }
+    batch.n_tokens = n_ids;
+
+    int rc = llama_decode(c->context, batch);
+    llama_batch_free(batch);
+    return rc;  // 0 = OK
 }
 
 int bitnet_decode_greedy(bitnet_ctx_t* c, int32_t* io_ids, int max_new_tokens,

@@ -101,9 +101,10 @@ impl Model {
 
 impl Drop for Model {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
             unsafe {
-                llama_free_model(self.ptr);
+                llama_free_model(ptr);
             }
         }
     }
@@ -312,9 +313,10 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
             unsafe {
-                llama_free(self.ptr);
+                llama_free(ptr);
             }
         }
     }
@@ -417,9 +419,10 @@ impl BitnetModel {
 
 impl Drop for BitnetModel {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
             unsafe {
-                crate::bindings::bitnet_model_free(self.ptr);
+                crate::bindings::bitnet_model_free(ptr);
             }
         }
     }
@@ -455,9 +458,10 @@ impl BitnetContext {
 
 impl Drop for BitnetContext {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
             unsafe {
-                crate::bindings::bitnet_context_free(self.ptr);
+                crate::bindings::bitnet_context_free(ptr);
             }
         }
     }
@@ -538,10 +542,28 @@ pub fn bitnet_eval_tokens(ctx: &BitnetContext, ids: &[i32], vocab_size: usize) -
     Ok(logits)
 }
 
+/// Prefill the context with prompt tokens (primes KV cache and sets n_past)
+pub fn bitnet_prefill(ctx: &BitnetContext, ids: &[i32]) -> Result<()> {
+    if ids.is_empty() {
+        return Err(CppError::LlamaError("Cannot prefill with empty token sequence".to_string()));
+    }
+
+    let rc =
+        unsafe { crate::bindings::bitnet_prefill(ctx.as_ptr(), ids.as_ptr(), ids.len() as i32) };
+
+    if rc != 0 {
+        return Err(CppError::LlamaError(format!("prefill failed rc={}", rc)));
+    }
+
+    Ok(())
+}
+
 /// Perform greedy decoding using the custom C shim
+/// Note: `_initial_ids` parameter is unused because the context should be pre-filled
+/// with `bitnet_prefill()` before calling this function.
 pub fn bitnet_decode_greedy(
     ctx: &BitnetContext,
-    initial_ids: &[i32],
+    _initial_ids: &[i32],
     max_new_tokens: usize,
     eos_id: i32,
 ) -> Result<Vec<i32>> {

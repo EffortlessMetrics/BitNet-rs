@@ -589,8 +589,32 @@ impl InferenceCommand {
 
         pb.set_message("Loading tokenizer...");
 
+        // Open GGUF file and create reader for tokenizer loading (if GGUF format)
+        // Store both mmap and reader to ensure proper lifetime management
+        let _mmap_holder;
+        let gguf_reader = if model_path.extension().and_then(|s| s.to_str()) == Some("gguf") {
+            match bitnet_models::loader::MmapFile::open(model_path) {
+                Ok(mmap) => {
+                    _mmap_holder = mmap;
+                    match bitnet_models::GgufReader::new(_mmap_holder.as_slice()) {
+                        Ok(reader) => Some(reader),
+                        Err(e) => {
+                            debug!("Failed to create GGUF reader: {}", e);
+                            None
+                        }
+                    }
+                }
+                Err(e) => {
+                    debug!("Failed to mmap GGUF file: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         // Load tokenizer (try to infer from model or use default)
-        let tokenizer = self.load_tokenizer(model_path).await?;
+        let tokenizer = self.load_tokenizer(model_path, gguf_reader.as_ref()).await?;
 
         pb.set_message("Initializing inference engine...");
 
@@ -712,10 +736,19 @@ impl InferenceCommand {
     async fn load_tokenizer(
         &self,
         model_path: &Path,
+        reader: Option<&bitnet_models::GgufReader<'_>>,
     ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
-        // Use the unified auto-loader for consistent behavior
-        let tokenizer = bitnet_tokenizers::auto::load_auto(model_path, self.tokenizer.as_deref())?;
+        // Try RustGgufTokenizer from GGUF metadata (pure Rust, preferred)
+        if let Some(reader) = reader {
+            if let Ok(tokenizer) = bitnet_tokenizers::RustGgufTokenizer::from_gguf(reader) {
+                debug!("Successfully loaded pure-Rust tokenizer from GGUF metadata");
+                return Ok(Arc::new(tokenizer));
+            }
+            warn!("Failed to load pure-Rust tokenizer from GGUF, falling back to auto-detection");
+        }
 
+        // Fall back to existing auto-loader for external files
+        let tokenizer = bitnet_tokenizers::auto::load_auto(model_path, self.tokenizer.as_deref())?;
         debug!("Successfully loaded tokenizer using auto-detection");
         Ok(tokenizer)
     }
@@ -1075,7 +1108,11 @@ impl InferenceCommand {
             // 1. Tokenization Phase: Convert text to token IDs
             // This measures pure tokenization overhead separate from model operations
             let t0 = Instant::now();
-            let prompt_ids = tokenizer.encode(&formatted_prompt, self.should_add_bos(), false)?;
+            // Use template-aware parse_special parameter for LLaMA-3 chat special tokens
+            let parse_special =
+                self.resolve_template_type().map(|t| t.parse_special()).unwrap_or(false);
+            let prompt_ids =
+                tokenizer.encode(&formatted_prompt, self.should_add_bos(), parse_special)?;
             let t_tok_ms = t0.elapsed().as_secs_f64() * 1e3;
 
             // 2. Prefill Phase: Warm model cache with prompt tokens

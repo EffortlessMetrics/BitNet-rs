@@ -1,0 +1,41 @@
+{
+  "commit": "unknown",
+  "model_path": "/home/steven/.cache/bitnet/models/4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162/model.gguf",
+  "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+  "parity": {
+    "cosine_ok": false,
+    "cosine_similarity": null,
+    "cpp_available": true,
+    "exact_match_rate": null,
+    "first_divergence_step": null,
+    "status": "mismatch"
+  },
+  "prompt": "Q: 2+2? A:",
+  "rust": {
+    "add_bos": true,
+    "decoded_tokens": [
+      0,
+      67938,
+      67938,
+      67938,
+      67938,
+      67938,
+      67938,
+      67938
+    ],
+    "eos_id": 128001,
+    "logits_dim": 128256,
+    "n_steps": 8,
+    "parse_special": false,
+    "token_count": 17,
+    "vocab_size": 128256
+  },
+  "template": "instruct",
+  "timestamp": "2025-10-17T01:10:05.750947333Z",
+  "validation": {
+    "deterministic": true,
+    "rust_engine": "production",
+    "seed": 0,
+    "threads": 1
+  }
+}

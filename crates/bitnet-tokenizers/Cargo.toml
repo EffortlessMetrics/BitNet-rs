@@ -36,6 +36,8 @@ inference = []
 downloads = ["reqwest", "futures-util"]
 cpu = []
 gpu = []
+crossval = []
+ffi_tokenizer = []
 
 [dependencies.sentencepiece]
 version = "0.12.0"

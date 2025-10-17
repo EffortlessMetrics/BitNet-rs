@@ -34,6 +34,36 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     dot_product / (norm_a * norm_b)
 }
 
+/// Helper function to tokenize using C++ FFI
+#[cfg(feature = "ffi")]
+fn cpp_tokenize(
+    gguf_path: &std::path::Path,
+    formatted_prompt: &str,
+    add_bos: bool,
+    parse_special: bool,
+) -> Result<Vec<u32>> {
+    use bitnet_sys::{BitnetModel, bitnet_tokenize_text};
+
+    let gguf_str = gguf_path.to_string_lossy().to_string();
+    let cpp_model = BitnetModel::from_file(&gguf_str)
+        .map_err(|e| anyhow::anyhow!("C++ model load failed: {:?}", e))?;
+
+    let cpp_ids = bitnet_tokenize_text(&cpp_model, formatted_prompt, add_bos, parse_special)
+        .map_err(|e| anyhow::anyhow!("C++ tokenization failed: {:?}", e))?;
+
+    Ok(cpp_ids.iter().map(|&x| x as u32).collect())
+}
+
+#[cfg(not(feature = "ffi"))]
+fn cpp_tokenize(
+    _gguf_path: &std::path::Path,
+    _formatted_prompt: &str,
+    _add_bos: bool,
+    _parse_special: bool,
+) -> Result<Vec<u32>> {
+    anyhow::bail!("C++ FFI not available (compile with --features bitnet-sys/ffi)")
+}
+
 /// Perform C++ parity check using bitnet-sys FFI
 /// Returns: (cosine_similarity, cosine_ok, exact_match_rate, first_divergence_step)
 #[cfg(feature = "ffi")]
@@ -41,16 +71,18 @@ fn cpp_parity_check(
     gguf_path: &std::path::Path,
     formatted_prompt: &str,
     rust_ids: &[u32],
+    cpp_ids: &[u32],
+    tokens_for_parity: &[u32],
     rust_logits: &[f32],
     rust_decode: &[u32],
-    add_bos: bool,
-    parse_special: bool,
+    _add_bos: bool,
+    _parse_special: bool,
     eos_id: u32,
     vocab_size: usize,
     n_steps: usize,
 ) -> Result<(f32, bool, f32, Option<usize>)> {
     use bitnet_sys::{
-        BitnetContext, BitnetModel, bitnet_decode_greedy, bitnet_eval_tokens, bitnet_tokenize_text,
+        BitnetContext, BitnetModel, bitnet_decode_greedy, bitnet_eval_tokens, bitnet_prefill,
     };
 
     let gguf_str = gguf_path.to_string_lossy().to_string();
@@ -62,28 +94,46 @@ fn cpp_parity_check(
     let cpp_ctx = BitnetContext::new(&cpp_model, 4096, 1, 0)
         .map_err(|e| anyhow::anyhow!("C++ context creation failed: {:?}", e))?;
 
-    // 2. Tokenization parity
-    let cpp_ids = bitnet_tokenize_text(&cpp_model, formatted_prompt, add_bos, parse_special)
-        .map_err(|e| anyhow::anyhow!("C++ tokenization failed: {:?}", e))?;
+    // 2. Token ID forensics
+    let prompt_hash = blake3::hash(formatted_prompt.as_bytes());
+    eprintln!("parity.prompt_hash={}", prompt_hash);
 
-    let cpp_ids_u32: Vec<u32> = cpp_ids.iter().map(|&x| x as u32).collect();
+    let head = 16.min(rust_ids.len()).min(cpp_ids.len());
+    let tail = 16.min(rust_ids.len()).min(cpp_ids.len());
 
-    if cpp_ids_u32 != rust_ids {
-        eprintln!("WARNING: Tokenization mismatch! Rust: {:?}, C++: {:?}", rust_ids, cpp_ids_u32);
+    eprintln!("parity.rust.head={:?}", &rust_ids[..head]);
+    eprintln!("parity.cpp.head ={:?}", &cpp_ids[..head]);
+
+    if rust_ids.len() >= tail && cpp_ids.len() >= tail {
+        eprintln!("parity.rust.tail={:?}", &rust_ids[rust_ids.len() - tail..]);
+        eprintln!("parity.cpp.tail ={:?}", &cpp_ids[cpp_ids.len() - tail..]);
+    }
+
+    if cpp_ids != rust_ids {
+        eprintln!(
+            "WARNING: Tokenization mismatch! Rust len: {}, C++ len: {}",
+            rust_ids.len(),
+            cpp_ids.len()
+        );
         // Continue anyway to collect more metrics
     } else {
         eprintln!("✓ Tokenization exact match");
     }
 
-    // 3. Prefill logits parity (cosine similarity)
-    let cpp_logits = bitnet_eval_tokens(&cpp_ctx, &cpp_ids, vocab_size)
+    // 3. Prefill C++ context with parity tokens (primes KV cache; sets n_past)
+    let cpp_ids_i32: Vec<i32> = tokens_for_parity.iter().map(|&x| x as i32).collect();
+    bitnet_prefill(&cpp_ctx, &cpp_ids_i32)
+        .map_err(|e| anyhow::anyhow!("C++ prefill failed: {:?}", e))?;
+
+    // 4. Prefill logits parity (cosine similarity)
+    let cpp_logits = bitnet_eval_tokens(&cpp_ctx, &cpp_ids_i32, vocab_size)
         .map_err(|e| anyhow::anyhow!("C++ eval failed: {:?}", e))?;
 
     let cos = cosine_similarity(rust_logits, &cpp_logits);
     let cos_ok = cos >= 0.99;
 
-    // 4. N-step greedy decode parity
-    let cpp_gen = bitnet_decode_greedy(&cpp_ctx, &cpp_ids, n_steps, eos_id as i32)
+    // 5. N-step greedy decode parity
+    let cpp_gen = bitnet_decode_greedy(&cpp_ctx, &cpp_ids_i32, n_steps, eos_id as i32)
         .map_err(|e| anyhow::anyhow!("C++ decode failed: {:?}", e))?;
 
     let cpp_gen_u32: Vec<u32> = cpp_gen.iter().map(|&x| x as u32).collect();
@@ -117,6 +167,8 @@ fn cpp_parity_check(
     _gguf_path: &std::path::Path,
     _formatted_prompt: &str,
     _rust_ids: &[u32],
+    _cpp_ids: &[u32],
+    _tokens_for_parity: &[u32],
     _rust_logits: &[f32],
     _rust_decode: &[u32],
     _add_bos: bool,
@@ -172,7 +224,8 @@ async fn parity_bitnetcpp() -> Result<()> {
     }
 
     let commit = env::var("GIT_COMMIT").unwrap_or_else(|_| "unknown".into());
-    let prompt = env::var("CROSSVAL_PROMPT").unwrap_or_else(|_| "Q: 2+2? A:".into());
+    // Use a plain prompt for crossval (no pre-formatting)
+    let prompt = env::var("CROSSVAL_PROMPT").unwrap_or_else(|_| "What is 2+2?".into());
 
     eprintln!("=== Parity Harness ===");
     eprintln!("Model: {:?}", gguf_path);
@@ -180,7 +233,9 @@ async fn parity_bitnetcpp() -> Result<()> {
     eprintln!("Commit: {}", commit);
 
     // 1. Rust-side tokenization and metadata
-    let template = auto_detect_template(&gguf_path);
+    // For crossval, use Raw template to avoid double-wrapping
+    // (C++ side will see the same unformatted prompt)
+    let template = bitnet_inference::TemplateType::Raw;
     let formatted_prompt = template.apply(&prompt, None);
 
     let (rust_ids, add_bos, parse_special, eos_id, vocab_size) =
@@ -196,22 +251,51 @@ async fn parity_bitnetcpp() -> Result<()> {
         eos_id
     );
 
-    // 2. Rust-side logits evaluation
-    let rust_logits = rust_eval_last_logits(&gguf_path, &rust_ids, vocab_size).await?;
+    // 2. Get C++ tokens early for potential fallback
+    let cpp_ids = if cpp_available {
+        cpp_tokenize(&gguf_path, &formatted_prompt, add_bos, parse_special)?
+    } else {
+        Vec::new()
+    };
+
+    // 3. Detect if Rust tokenization looks like byte/char fallback
+    let looks_like_bytes =
+        rust_ids.len() >= 4 && rust_ids[1..].iter().all(|&id| (0..=255).contains(&(id as i32)));
+
+    // 4. Determine which tokens to use for parity testing
+    let (tokens_for_parity, tokenizer_source): (Vec<u32>, &str) = {
+        if cpp_available && (looks_like_bytes || rust_ids.len() != cpp_ids.len()) {
+            eprintln!(
+                "parity.tokenizer_mode=cpp_fallback rust_len={} cpp_len={} looks_like_bytes={}",
+                rust_ids.len(),
+                cpp_ids.len(),
+                looks_like_bytes
+            );
+            (cpp_ids.clone(), "cpp")
+        } else {
+            eprintln!("parity.tokenizer_mode=rust_native");
+            (rust_ids.clone(), "rust")
+        }
+    };
+
+    // 5. Rust-side logits evaluation (using canonical tokens)
+    let rust_logits = rust_eval_last_logits(&gguf_path, &tokens_for_parity, vocab_size).await?;
     eprintln!("Rust logits shape: [{}]", rust_logits.len());
 
-    // 3. Rust-side greedy decoding (N steps)
+    // 6. Rust-side greedy decoding (N steps, using canonical tokens)
     let n_steps = 8;
-    let rust_decode = rust_decode_n_greedy(&gguf_path, &rust_ids, n_steps, eos_id).await?;
+    let rust_decode = rust_decode_n_greedy(&gguf_path, &tokens_for_parity, n_steps, eos_id).await?;
     eprintln!("Rust decoded {} tokens: {:?}", rust_decode.len(), rust_decode);
 
-    // 4. If C++ is available, compare outputs
-    let (cosine_ok, cosine_similarity, exact_match_rate, first_divergence, cpp_available_flag) =
+    // 7. If C++ is available, compare outputs
+    let (cosine_ok, cosine_similarity, exact_match_rate, first_divergence, cpp_loaded) =
         if cpp_available {
             match cpp_parity_check(
                 &gguf_path,
                 &formatted_prompt,
                 &rust_ids,
+                &cpp_ids,
+                &tokens_for_parity,
                 &rust_logits,
                 &rust_decode,
                 add_bos,
@@ -235,7 +319,7 @@ async fn parity_bitnetcpp() -> Result<()> {
                 Err(e) => {
                     eprintln!("C++ parity check failed: {:?}", e);
                     eprintln!("Continuing with Rust-only validation");
-                    (false, None, None, None, false)
+                    (false, None, None, None, true) // C++ was loaded but check failed
                 }
             }
         } else {
@@ -262,9 +346,11 @@ async fn parity_bitnetcpp() -> Result<()> {
 
     let model_sha = sha256_file(&gguf_path)?;
 
-    let parity_status = if cpp_available_flag {
+    let parity_status = if cpp_loaded {
+        // C++ was loaded - check if outputs match
         if cosine_ok && exact_match_rate.unwrap_or(0.0) == 1.0 { "ok" } else { "mismatch" }
     } else {
+        // C++ not available
         "rust_only"
     };
 
@@ -275,18 +361,23 @@ async fn parity_bitnetcpp() -> Result<()> {
         "model_sha256": model_sha,
         "template": template.to_string(),
         "prompt": prompt,
-        "rust": {
-            "token_count": rust_ids.len(),
+        "tokenization": {
+            "rust_token_count": rust_ids.len(),
+            "cpp_token_count": cpp_ids.len(),
+            "tokenizer_source": tokenizer_source,
             "add_bos": add_bos,
             "parse_special": parse_special,
             "eos_id": eos_id,
+        },
+        "rust": {
+            "token_count": tokens_for_parity.len(),
             "vocab_size": vocab_size,
             "logits_dim": rust_logits.len(),
             "decoded_tokens": rust_decode,
             "n_steps": n_steps,
         },
         "parity": {
-            "cpp_available": cpp_available_flag,
+            "cpp_available": cpp_loaded,
             "cosine_similarity": cosine_similarity,
             "cosine_ok": cosine_ok,
             "exact_match_rate": exact_match_rate,
@@ -353,40 +444,24 @@ fn rust_side_tokenize_and_meta(
 }
 
 /// Auto-detect template type from GGUF metadata (matches CLI logic exactly)
+#[allow(dead_code)]
 fn auto_detect_template(model_path: &std::path::Path) -> bitnet_inference::TemplateType {
     use bitnet_inference::TemplateType;
-    use bitnet_models::gguf::GgufReader;
+    use bitnet_models::GgufReader;
     use bitnet_models::loader::MmapFile;
 
     // Try to read GGUF metadata
     if let Ok(mmap) = MmapFile::open(model_path) {
         if let Ok(reader) = GgufReader::new(mmap.as_slice()) {
-            // Extract metadata fields
+            // Extract metadata fields using convenience methods
             let tokenizer_name = reader
-                .metadata()
-                .iter()
-                .find(|(k, _)| k == "tokenizer.ggml.model" || k == "tokenizer.name")
-                .and_then(|(_, v)| {
-                    if let bitnet_models::gguf::MetadataValue::String(s) = v {
-                        Some(s.as_str())
-                    } else {
-                        None
-                    }
-                });
+                .get_string_metadata("tokenizer.ggml.model")
+                .or_else(|| reader.get_string_metadata("tokenizer.name"));
 
-            let chat_template =
-                reader.metadata().iter().find(|(k, _)| k == "tokenizer.chat_template").and_then(
-                    |(_, v)| {
-                        if let bitnet_models::gguf::MetadataValue::String(s) = v {
-                            Some(s.as_str())
-                        } else {
-                            None
-                        }
-                    },
-                );
+            let chat_template = reader.get_string_metadata("tokenizer.chat_template");
 
             // Use the same detection logic as the CLI
-            return TemplateType::detect(tokenizer_name, chat_template);
+            return TemplateType::detect(tokenizer_name.as_deref(), chat_template.as_deref());
         }
     }
 
@@ -476,11 +551,18 @@ async fn rust_decode_n_greedy(
     let config = GenerationConfig {
         max_new_tokens: n_steps as u32,
         temperature: 0.0,
-        top_k: Some(1),
-        top_p: Some(1.0),
+        top_k: 1,   // greedy: top_k=1
+        top_p: 1.0, // disabled: top_p=1.0
         repetition_penalty: 1.0,
-        seed: Some(0),
         stop_sequences: vec![],
+        stop_token_ids: vec![eos_id],
+        seed: Some(0),
+        skip_special_tokens: false,
+        eos_token_id: Some(eos_id),
+        logits_tap_steps: 0,
+        logits_topk: 0,
+        logits_cb: None,
+        add_bos: false, // prompt already has BOS if needed
     };
 
     // Generate tokens
