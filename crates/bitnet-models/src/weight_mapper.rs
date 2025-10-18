@@ -594,26 +594,22 @@ fn normalize_layer_weights(
             let is_kv_hidden_square = matches!(shape, [o, i] if (name == "k_proj" || name == "v_proj") && *o == hidden && *i == hidden);
 
             if is_kv_hidden_square {
-                tracing::warn!(
-                    "layer{}.attention.{}: accepting hidden×hidden weight {:?}; \
-                     slicing to {} heads in weight mapper (GQA: n_kv_head={}, head_dim={})",
+                let n_heads = dims.n_head;
+                let n_kv_heads = dims.n_kv_head;
+                let head_dim = hidden / n_heads;
+                let group_size = n_heads / n_kv_heads;
+
+                tracing::info!(
+                    "layer{}: Sliced {}/V [hidden,hidden] -> [kv_dim,hidden] (GQA group_size={})",
                     layer_idx,
-                    name,
-                    shape,
-                    dims.n_kv_head,
-                    dims.n_kv_head,
-                    hidden / dims.n_head
+                    if name == "k_proj" { "K" } else { "V" },
+                    group_size
                 );
 
                 // Slice heads: [hidden, hidden] -> [kv_dim, hidden]
                 // The weight is stored as [rows=hidden, cols=hidden]
                 // We need to select rows corresponding to KV heads: [kv_dim, hidden]
                 // where kv_dim = n_kv_heads * head_dim
-
-                let n_heads = dims.n_head;
-                let n_kv_heads = dims.n_kv_head;
-                let head_dim = hidden / n_heads;
-                let group_size = n_heads / n_kv_heads;
 
                 // Transpose to [hidden, hidden] if needed (tensor might be [hidden, hidden] already)
                 // We want to slice ROWS, so we need [rows, cols] = [hidden, hidden]

@@ -79,25 +79,30 @@ pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
             match result {
                 Ok(x) => Ok(x),
                 Err(e) => {
+                    let fallback_msg =
+                        if std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1") {
+                            "Failing fast due to BITNET_DISABLE_MINIMAL_LOADER=1"
+                        } else {
+                            "Falling back to minimal parser (may use 32/0 default dims)"
+                        };
+
                     tracing::warn!(
-                        "Enhanced loader failed: {}; checking BITNET_DISABLE_MINIMAL_LOADER",
-                        e
+                        "Enhanced loader failed: {}; \
+                         (have you updated GGUF reader types/size rules?) \
+                         {}",
+                        e,
+                        fallback_msg
                     );
+
                     // Fail-fast for parity/demo/CI so we surface the real issue
                     if std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1") {
-                        tracing::error!(
-                            "BITNET_DISABLE_MINIMAL_LOADER=1: failing fast instead of falling back to minimal parser"
-                        );
                         return Err(e);
                     }
+
                     // AC9: Fallback to minimal GGUF parser for backward compatibility
                     // This happens when:
                     // 1. GGUF file has unsupported quantization formats
                     // 2. GGUF file is corrupted or has invalid structure
-                    tracing::info!(
-                        "Enhanced GGUF parser failed ({}), falling back to minimal parser (limited tensor loading)",
-                        e
-                    );
                     tracing::info!(
                         "Minimal parser will load embeddings and output projection only. \
                         All other layer weights will be initialized as zeros or ones. \
@@ -238,16 +243,28 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
                     if available_bytes.abs_diff(expected_transposed)
                         < available_bytes.abs_diff(expected_as_is)
                     {
-                        tracing::debug!(
-                            "QK256 '{}': Using transposed shape [{}, {}] (data size {} closer to expected {})",
+                        let row_stride = shape_transposed.1.div_ceil(256) * 64;
+                        tracing::info!(
+                            "QK256 '{}': Chose transposed shape [{}, {}] (file_size={} vs expected={}, row_stride={} bytes = cols.div_ceil(256) * 64)",
                             info.name,
                             shape_transposed.0,
                             shape_transposed.1,
                             available_bytes,
-                            expected_transposed
+                            expected_transposed,
+                            row_stride
                         );
                         shape_transposed
                     } else {
+                        let row_stride = shape_as_is.1.div_ceil(256) * 64;
+                        tracing::info!(
+                            "QK256 '{}': Chose as-is shape [{}, {}] (file_size={} vs expected={}, row_stride={} bytes = cols.div_ceil(256) * 64)",
+                            info.name,
+                            shape_as_is.0,
+                            shape_as_is.1,
+                            available_bytes,
+                            expected_as_is,
+                            row_stride
+                        );
                         shape_as_is
                     }
                 } else if info.shape.len() == 1 {
@@ -324,6 +341,10 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
     // AC3: Final validation of loaded tensors
     // NOTE: Shape validation moved to build_transformer for fail-fast on actual usage
     // validate_tensor_shapes(&tensor_map, &config)?;
+
+    // Normalize embedding and lm_head tensors to canonical [vocab, hidden] layout
+    // This must happen HERE in the enhanced loader to prevent double transposition downstream
+    normalize_embed_and_lm_head(&mut tensor_map, &config, &cdevice)?;
 
     // AC9: Maintain backward compatibility - ensure all expected tensors exist
     ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
@@ -1291,6 +1312,134 @@ fn validate_tensor_shapes(
     }
 
     tracing::info!("All tensor shapes validated successfully");
+    Ok(())
+}
+
+/// Normalize embedding and lm_head tensors to canonical [vocab, hidden] layout
+///
+/// This function centralizes all embedding/lm_head transposition logic to prevent
+/// double transposition downstream (e.g., in weight_mapper.rs). It should be called
+/// ONCE in the enhanced loader after all tensors are loaded.
+///
+/// Canonical layouts:
+/// - embed_tokens.weight: [vocab, hidden]
+/// - lm_head.weight: [vocab, hidden] (or [hidden, vocab] with transpose flag)
+///
+/// # Arguments
+/// * `tensor_map` - Mutable tensor map to normalize in-place
+/// * `config` - Model configuration with vocab_size and hidden_size
+/// * `device` - Candle device for creating transpose flag tensors
+fn normalize_embed_and_lm_head(
+    tensor_map: &mut HashMap<String, CandleTensor>,
+    config: &bitnet_common::BitNetConfig,
+    device: &CDevice,
+) -> Result<()> {
+    let vocab_size = config.model.vocab_size;
+    let hidden_size = config.model.hidden_size;
+
+    // 1) Normalize embed_tokens.weight to [vocab, hidden]
+    let embed_candidates =
+        ["token_embd.weight", "tok_embeddings.weight", "model.embed_tokens.weight"];
+
+    let mut embed_key: Option<String> = None;
+    for candidate in &embed_candidates {
+        if tensor_map.contains_key(*candidate) {
+            embed_key = Some(candidate.to_string());
+            break;
+        }
+    }
+
+    if let Some(key) = embed_key
+        && let Some(embed) = tensor_map.remove(&key)
+    {
+        let shape = embed.shape().dims();
+        match shape {
+            [v, h] if *v == vocab_size && *h == hidden_size => {
+                // Already canonical [vocab, hidden]
+                tracing::debug!("embed_tokens already canonical: [{}, {}]", v, h);
+                tensor_map.insert("token_embd.weight".to_string(), embed);
+            }
+            [h, v] if *h == hidden_size && *v == vocab_size => {
+                // Transposed [hidden, vocab] -> transpose to [vocab, hidden]
+                tracing::info!(
+                    "Transposing embed_tokens from [hidden={}, vocab={}] to [vocab={}, hidden={}]",
+                    h,
+                    v,
+                    vocab_size,
+                    hidden_size
+                );
+                let embed_t = embed.t()?.contiguous()?;
+                tensor_map.insert("token_embd.weight".to_string(), embed_t);
+            }
+            _ => {
+                tracing::warn!(
+                    "embed_tokens has unexpected shape {:?}, expected [{}, {}] or [{}, {}]",
+                    shape,
+                    vocab_size,
+                    hidden_size,
+                    hidden_size,
+                    vocab_size
+                );
+                // Keep as-is and let downstream validation catch issues
+                tensor_map.insert("token_embd.weight".to_string(), embed);
+            }
+        }
+    }
+
+    // 2) Normalize lm_head.weight to [vocab, hidden] (or set transpose flag if [hidden, vocab])
+    let lm_candidates = ["output.weight", "lm_head.weight", "model.lm_head.weight"];
+
+    let mut lm_key: Option<String> = None;
+    for candidate in &lm_candidates {
+        if tensor_map.contains_key(*candidate) {
+            lm_key = Some(candidate.to_string());
+            break;
+        }
+    }
+
+    if let Some(key) = lm_key
+        && let Some(lm) = tensor_map.remove(&key)
+    {
+        let shape = lm.shape().dims();
+        match shape {
+            [v, h] if *v == vocab_size && *h == hidden_size => {
+                // Already canonical [vocab, hidden]
+                tracing::debug!("lm_head already canonical: [{}, {}]", v, h);
+                tensor_map.insert("output.weight".to_string(), lm);
+                // Set transpose flag to false
+                let transpose_flag = CandleTensor::from_slice(&[0.0f32], 1, device)?;
+                tensor_map.insert("lm_head.transposed".to_string(), transpose_flag);
+            }
+            [h, v] if *h == hidden_size && *v == vocab_size => {
+                // Transposed [hidden, vocab] - avoid expensive transpose by setting flag
+                tracing::info!(
+                    "lm_head is transposed [hidden={}, vocab={}] - avoiding {} MB transpose, setting flag",
+                    h,
+                    v,
+                    (vocab_size * hidden_size * 4) / (1024 * 1024)
+                );
+                tensor_map.insert("output.weight".to_string(), lm);
+                // Set transpose flag to true
+                let transpose_flag = CandleTensor::from_slice(&[1.0f32], 1, device)?;
+                tensor_map.insert("lm_head.transposed".to_string(), transpose_flag);
+            }
+            _ => {
+                tracing::warn!(
+                    "lm_head has unexpected shape {:?}, expected [{}, {}] or [{}, {}]",
+                    shape,
+                    vocab_size,
+                    hidden_size,
+                    hidden_size,
+                    vocab_size
+                );
+                // Keep as-is and let downstream validation catch issues
+                tensor_map.insert("output.weight".to_string(), lm);
+                let transpose_flag = CandleTensor::from_slice(&[0.0f32], 1, device)?;
+                tensor_map.insert("lm_head.transposed".to_string(), transpose_flag);
+            }
+        }
+    }
+
     Ok(())
 }
 
