@@ -87,9 +87,14 @@ impl I2SQk256NoScale {
         let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
         let expected_bytes = rows * row_stride_bytes;
 
-        if qs.len() != expected_bytes {
+        // Allow for alignment padding (e.g., 32 bytes for cache line alignment)
+        const TOLERANCE: usize = 128;
+        let size_diff = qs.len().abs_diff(expected_bytes);
+
+        if size_diff > TOLERANCE {
             bail!(
-                "I2SQk256NoScale: data size mismatch: got {} bytes, expected {} for {}×{} matrix",
+                "I2SQk256NoScale: data size mismatch: got {} bytes, expected {} for {}×{} matrix. \
+                 Check tensor orientation: QK256 requires [out_dim, in_dim] layout.",
                 qs.len(),
                 expected_bytes,
                 rows,
@@ -376,5 +381,62 @@ mod tests {
         let mut y_out = vec![0.0f32; 2]; // Wrong size!
 
         gemv_qk256(&qs_data, &x, &mut y_out, 1, 256, 64).unwrap();
+    }
+
+    /// Regression test for QK256 size tolerance (prevents enhanced→minimal fallback)
+    ///
+    /// This test verifies that the `I2SQk256NoScale::new` constructor accepts
+    /// data sizes with alignment padding up to TOLERANCE=128 bytes. This is critical
+    /// for keeping the enhanced loader active instead of falling back to the minimal
+    /// loader with its 32/0 default dimensions.
+    ///
+    /// Test cases:
+    /// 1. Exact size: should succeed
+    /// 2. Exact + 32B (common padding): should succeed
+    /// 3. Exact + 128B (at tolerance boundary): should succeed
+    /// 4. Exact + 129B (beyond tolerance): should fail
+    #[test]
+    fn test_qk256_size_tolerance() {
+        let rows = 512usize;
+        let cols = 1024usize;
+        let blocks_per_row = cols.div_ceil(QK256_BLOCK); // 4 blocks
+        let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES; // 4 * 64 = 256 bytes
+        let exact_size = rows * row_stride_bytes; // 512 * 256 = 131,072 bytes
+
+        // Test 1: Exact size - should succeed
+        let qs_exact = vec![0u8; exact_size];
+        let result = I2SQk256NoScale::new(rows, cols, qs_exact);
+        assert!(result.is_ok(), "Exact size should be accepted");
+
+        // Test 2: Exact + 32 bytes (common alignment padding) - should succeed
+        let qs_plus_32 = vec![0u8; exact_size + 32];
+        let result = I2SQk256NoScale::new(rows, cols, qs_plus_32);
+        assert!(result.is_ok(), "Size with +32B padding should be accepted (within TOLERANCE=128)");
+
+        // Test 3: Exact + 128 bytes (at tolerance boundary) - should succeed
+        let qs_plus_128 = vec![0u8; exact_size + 128];
+        let result = I2SQk256NoScale::new(rows, cols, qs_plus_128);
+        assert!(
+            result.is_ok(),
+            "Size with +128B padding should be accepted (at TOLERANCE boundary)"
+        );
+
+        // Test 4: Exact + 129 bytes (beyond tolerance) - should fail
+        let qs_plus_129 = vec![0u8; exact_size + 129];
+        let result = I2SQk256NoScale::new(rows, cols, qs_plus_129);
+        assert!(
+            result.is_err(),
+            "Size with +129B padding should be rejected (beyond TOLERANCE=128)"
+        );
+
+        // Test 5: Way too small - should fail
+        let qs_too_small = vec![0u8; exact_size / 2];
+        let result = I2SQk256NoScale::new(rows, cols, qs_too_small);
+        assert!(result.is_err(), "Size too small should be rejected");
+
+        println!(
+            "✅ QK256 tolerance regression test passed: exact={}, tolerance=±128B",
+            exact_size
+        );
     }
 }

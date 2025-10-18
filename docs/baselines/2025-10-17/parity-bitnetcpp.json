@@ -14,11 +14,57 @@
     "target_cpu": "x86_64",
     "target_triple": "x86_64-unknown-linux-gnu"
   },
-  "error": "Parity test exceeded 60-second timeout - check for performance regression or hanging inference",
   "model_path": "/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+  "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
   "parity": {
-    "status": "timeout",
-    "timeout_seconds": 120
+    "cosine_ok": false,
+    "cosine_similarity": null,
+    "cpp_available": false,
+    "exact_match_rate": null,
+    "first_divergence_step": null,
+    "status": "rust_only"
   },
-  "timestamp": "2025-10-17T10:39:03.034000418Z"
+  "prompt": "What is 2+2?",
+  "quant": {
+    "i2s_flavor": null
+  },
+  "rust": {
+    "decoded_tokens": [
+      30,
+      30,
+      30,
+      30
+    ],
+    "logits_dim": 128256,
+    "n_steps": 4,
+    "token_count": 8
+  },
+  "template": {
+    "formatted_prompt_hash": "ba1de16a072a62cd7244f2997ea85b4876fd5011534c0d6a954e1dfbf187579d",
+    "id": "raw"
+  },
+  "timestamp": "2025-10-17T23:49:03.729321047Z",
+  "tokenization": {
+    "cpp_token_count": 0,
+    "rust_token_count": 8,
+    "tokens_match": true
+  },
+  "tokenizer": {
+    "add_bos": true,
+    "add_bos_hint": true,
+    "bos_id": 128000,
+    "eos_id": 128001,
+    "eot_id": null,
+    "kind": "gpt2",
+    "merges_count": 280147,
+    "parse_special": false,
+    "source": "rust",
+    "tokenizer_blob_sha256": null,
+    "vocab_size": 128256
+  },
+  "validation": {
+    "backend": "rust",
+    "compute": "rust",
+    "tokenizer": "rust"
+  }
 }

@@ -214,7 +214,7 @@ fn test_causal_mask() -> anyhow::Result<()> {
     let vb = VarBuilder::zeros(DType::F32, &device);
 
     // Create attention layer
-    let attn = bitnet_models::transformer::MultiHeadAttention::new(&config, vb)?;
+    let attn = bitnet_models::transformer::MultiHeadAttention::new(&config, vb, 0)?;
 
     // Create input
     let batch = 1;
@@ -222,8 +222,9 @@ fn test_causal_mask() -> anyhow::Result<()> {
     let hidden = config.model.hidden_size;
     let x = Tensor::zeros(&[batch, seq_len, hidden], DType::F32, &device)?;
 
-    // Forward pass
-    let _ = attn.forward(&x, None)?;
+    // Forward pass (with empty raw_tensors HashMap for QK256 support)
+    let raw_tensors = std::collections::HashMap::new();
+    let _ = attn.forward(&x, None, &raw_tensors)?;
 
     // Test passes if no error
     Ok(())

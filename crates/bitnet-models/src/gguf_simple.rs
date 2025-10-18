@@ -79,6 +79,17 @@ pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
             match result {
                 Ok(x) => Ok(x),
                 Err(e) => {
+                    tracing::warn!(
+                        "Enhanced loader failed: {}; checking BITNET_DISABLE_MINIMAL_LOADER",
+                        e
+                    );
+                    // Fail-fast for parity/demo/CI so we surface the real issue
+                    if std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1") {
+                        tracing::error!(
+                            "BITNET_DISABLE_MINIMAL_LOADER=1: failing fast instead of falling back to minimal parser"
+                        );
+                        return Err(e);
+                    }
                     // AC9: Fallback to minimal GGUF parser for backward compatibility
                     // This happens when:
                     // 1. GGUF file has unsupported quantization formats
@@ -209,13 +220,55 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
 
             if available_bytes.abs_diff(expected_qk256) <= TOLERANCE {
                 // This is QK256 format - extract raw bytes and create I2SQk256NoScale
+                // GGUF stores tensors as [rows, cols] but QK256 data layout might be transposed
+                // Check if data size matches either orientation and use the correct one
                 let (rows, cols) = if info.shape.len() == 2 {
-                    (info.shape[0], info.shape[1])
+                    // Try both orientations to see which matches the data size
+                    let shape_as_is = (info.shape[0], info.shape[1]);
+                    let shape_transposed = (info.shape[1], info.shape[0]);
+
+                    // Calculate expected sizes for both orientations
+                    let blocks_as_is = shape_as_is.1.div_ceil(256);
+                    let expected_as_is = shape_as_is.0 * blocks_as_is * 64;
+
+                    let blocks_transposed = shape_transposed.1.div_ceil(256);
+                    let expected_transposed = shape_transposed.0 * blocks_transposed * 64;
+
+                    // Use whichever orientation matches the actual data size better
+                    if available_bytes.abs_diff(expected_transposed)
+                        < available_bytes.abs_diff(expected_as_is)
+                    {
+                        tracing::debug!(
+                            "QK256 '{}': Using transposed shape [{}, {}] (data size {} closer to expected {})",
+                            info.name,
+                            shape_transposed.0,
+                            shape_transposed.1,
+                            available_bytes,
+                            expected_transposed
+                        );
+                        shape_transposed
+                    } else {
+                        shape_as_is
+                    }
                 } else if info.shape.len() == 1 {
                     (1, info.shape[0])
                 } else {
                     continue; // Skip non-1D/2D tensors
                 };
+
+                // Validate shape: QK256 cannot be transposed after packing
+                // Packed 2-bit data doesn't support cheap transpose operations
+                // The GGUF shape must match the expected [out_dim, in_dim] layout
+                if rows < cols / 4 {
+                    tracing::warn!(
+                        "QK256 tensor '{}' has suspicious aspect ratio: rows={}, cols={} (rows << cols). \
+                         This may indicate transposed storage which is unsupported for packed 2-bit data. \
+                         QK256 kernels expect [out_dim, in_dim] layout with one row per output neuron.",
+                        info.name,
+                        rows,
+                        cols
+                    );
+                }
 
                 // Get raw tensor data
                 let tensor_data = gguf_reader.get_tensor_data(i).map_err(|e| {
@@ -225,20 +278,43 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
                     ))
                 })?;
 
+                let row_stride_bytes = cols.div_ceil(256) * 64; // 64 bytes per 256-element block (not /4!)
+
                 // Create I2SQk256NoScale structure
                 match I2SQk256NoScale::new(rows, cols, tensor_data.to_vec()) {
                     Ok(qk256_tensor) => {
                         tracing::info!(
-                            "Loaded QK256 I2_S tensor '{}' ({}×{}, {} blocks)",
+                            "Loaded QK256 I2_S tensor '{}': rows={}, cols={}, blocks={}, row_stride={} bytes",
                             info.name,
                             rows,
                             cols,
-                            blocks_256
+                            blocks_256,
+                            row_stride_bytes
                         );
+
+                        // Additional diagnostic for attention projections
+                        if info.name.contains("attn_k") || info.name.contains("k_proj") {
+                            tracing::debug!(
+                                "K projection '{}': Ensure rows={} matches kv_dim (not hidden_dim)",
+                                info.name,
+                                rows
+                            );
+                        } else if info.name.contains("attn_q") || info.name.contains("q_proj") {
+                            tracing::debug!(
+                                "Q projection '{}': Ensure rows={} matches q_dim (hidden_dim for MHA, head_dim×n_head for GQA)",
+                                info.name,
+                                rows
+                            );
+                        }
+
                         i2s_qk256_map.insert(info.name.clone(), qk256_tensor);
                     }
                     Err(e) => {
-                        tracing::warn!("Failed to create QK256 tensor for '{}': {}", info.name, e);
+                        return Err(BitNetError::Validation(format!(
+                            "Failed to create QK256 tensor for '{}': {}. \
+                             Check tensor orientation: QK256 requires [out_dim, in_dim] layout.",
+                            info.name, e
+                        )));
                     }
                 }
             }
@@ -251,6 +327,15 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
 
     // AC9: Maintain backward compatibility - ensure all expected tensors exist
     ensure_backward_compatibility(&mut tensor_map, &config, &cdevice)?;
+
+    tracing::debug!(
+        "Enhanced loader complete: hidden={}, n_heads={}, n_kv_heads={}, vocab={}, layers={}",
+        config.model.hidden_size,
+        config.model.num_heads,
+        config.model.num_key_value_heads,
+        config.model.vocab_size,
+        config.model.num_layers
+    );
 
     Ok(GgufLoadResult { config, tensors: tensor_map, i2s_qk256: i2s_qk256_map })
 }
@@ -426,6 +511,13 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
 /// Extract BitNet configuration from GGUF metadata
 fn extract_config_from_gguf(reader: &GgufReader) -> Result<bitnet_common::BitNetConfig> {
     let mut config = bitnet_common::BitNetConfig::default();
+
+    tracing::trace!(
+        "Extracting config from GGUF (defaults: hidden={}, n_heads={}, n_kv_heads={})",
+        config.model.hidden_size,
+        config.model.num_heads,
+        config.model.num_key_value_heads
+    );
 
     // Extract vocab size from tokenizer metadata (authoritative source)
     if let Some(tokens) = reader.get_string_array_metadata("tokenizer.ggml.tokens") {

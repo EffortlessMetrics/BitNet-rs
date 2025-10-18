@@ -296,7 +296,7 @@ let rust_logits = rust_eval_last_logits(&gguf_path, &tokens_for_parity, vocab_si
 pub fn eval_logits_once_for_parity(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     // Try pure-Rust path first
     let rust_result = eval_logits_once(model_path, tokens);
-    
+
     // If ggml I2_S error AND FFI available → route to C++
     #[cfg(feature = "ffi")]
     if is_ggml_i2s_error && std::env::var("BITNET_CPP_DIR").is_ok() {
@@ -379,7 +379,7 @@ pub enum QuantizationType {
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/tests/ggml_i2s_error_propagation.rs`
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/tests/logits_greedy_smoke.rs`
 
-**Pattern**: 
+**Pattern**:
 1. Load GGUF with real model
 2. Detect I2S variant (BitNet32 vs QK256)
 3. If QK256: validate error propagation and FFI routing
@@ -412,7 +412,7 @@ Input: [batch, seq_len, hidden] → [1, 1, 2048]
   ↓
 QuantizedLinear::forward()
   ↓
-[INTEGRATION POINT]: 
+[INTEGRATION POINT]:
   - Detect qtype == I2S
   - Select backend (Rust or FFI)
   - If Rust: call gemv_qk256_row() for each output row
@@ -426,7 +426,7 @@ Output: [batch, seq_len, out_features]
 **Status**: ✅ Ready for QK256
 
 ```
-parity_bitnetcpp() 
+parity_bitnetcpp()
   ↓
 Load GGUF → detect I2S variant
   ↓
@@ -507,7 +507,7 @@ cargo test -p crossval --features integration-tests
 ### Phase 2: Layer Integration (CURRENT)
 - [ ] Modify `QuantizedLinear::forward()` to handle QK256
 - [ ] Add backend selection for I2S variant
-- [ ] Route pure-Rust QK256 through `gemv_qk256()` 
+- [ ] Route pure-Rust QK256 through `gemv_qk256()`
 - [ ] Route FFI QK256 through C++ bindings
 - [ ] Add kernel_recorder entries for QK256 kernels
 
@@ -557,4 +557,3 @@ model.layers.0.mlp.w2.weight        [hidden, inter]
 model.layers.0.input_layernorm.weight [hidden]
 model.layers.0.post_attention_layernorm.weight [hidden]
 ```
-

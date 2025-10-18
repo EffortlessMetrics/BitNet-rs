@@ -66,6 +66,7 @@ jobs:
           RAYON_NUM_THREADS: 1
           BITNET_DETERMINISTIC: 1
           BITNET_SEED: 42
+          BITNET_DISABLE_MINIMAL_LOADER: 1  # Fail-fast: enforce enhanced loader (no 32/0 defaults)
         run: |
           cargo test -p crossval --release \
             --no-default-features \

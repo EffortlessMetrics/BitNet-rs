@@ -31,6 +31,12 @@ pub fn eval_logits_once(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     // Load model tensors with Rust GGUF loader (fail-closed, no FFI routing)
     let (config, model) = match load_gguf_full(Path::new(model_path), Device::Cpu) {
         Ok(result) => {
+            eprintln!(
+                "DEBUG parity: load_gguf_full returned config: hidden={}, n_heads={}, n_kv_heads={}",
+                result.config.model.hidden_size,
+                result.config.model.num_heads,
+                result.config.model.num_key_value_heads
+            );
             let model = BitNetModel::from_gguf(result.config.clone(), result.tensors, Device::Cpu)?;
             (result.config, model)
         }
@@ -130,6 +136,7 @@ fn eval_logits_via_ffi(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
 /// This function uses a reusable FFI session to prevent repeated model/context
 /// allocation that causes munmap_chunk() crashes. The session is shared globally
 /// and thread-safe via Mutex.
+#[allow(dead_code)]
 #[cfg(feature = "ffi")]
 fn eval_logits_via_ffi_session(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     use crate::ffi_session::parity_cpp_session;

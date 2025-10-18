@@ -291,6 +291,74 @@ cargo flamegraph --bin bitnet-cli --no-default-features --features cpu,full-cli 
   run --model <model.gguf> --prompt "Test" --max-tokens 32
 ```
 
+## Environment Variables Reference
+
+### BITNET_DISABLE_MINIMAL_LOADER
+
+**Purpose:** Enforce fail-fast behavior when enhanced GGUF loader cannot load model.
+
+**Use cases:**
+- CI/CD pipelines: Prevent silent fallback to minimal loader with incorrect defaults (32 layers, 0 kv_heads)
+- Parity validation: Ensure enhanced loader stays active for accurate cross-validation
+- Production: Fail early on model incompatibilities instead of using degraded defaults
+
+**Example:**
+
+```bash
+# Fail-fast if enhanced loader cannot load model
+export BITNET_DISABLE_MINIMAL_LOADER=1
+
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --prompt "Test" \
+  --max-tokens 16
+
+# Without this flag: falls back to minimal loader (may use 32/0 defaults)
+# With this flag: fails immediately with descriptive error message
+```
+
+**When to use:**
+- ✅ CI/CD parity tests (scripts/parity_smoke.sh)
+- ✅ Production inference (ensures correct model dimensions)
+- ✅ Debugging model loading issues (surfaces real errors)
+- ❌ Local development with experimental models (may want fallback)
+
+**Related:** See `scripts/parity_smoke.sh` for production usage pattern.
+
+### Model Loading: Enhanced vs Minimal Loader
+
+BitNet.rs has two GGUF loading paths:
+
+| Loader | Capabilities | When Used |
+|--------|-------------|-----------|
+| **Enhanced** | Full tensor parsing, QK256 support, accurate config extraction | Default (preferred) |
+| **Minimal** | Basic embedding/projection only, mock layer weights, default config values (32 layers, 0 kv_heads) | Fallback on enhanced failure |
+
+**Problem:** Silent fallback to minimal loader can cause inference errors if model dimensions differ from defaults.
+
+**Solution:** Use `BITNET_DISABLE_MINIMAL_LOADER=1` to fail-fast instead of silently degrading.
+
+### Hidden×Hidden K/V Exporter Quirk
+
+Some GGUF exporters emit K/V projections as **[hidden, hidden]** square matrices instead of the correct **[kv_dim, hidden]** shape for GQA (Grouped Query Attention) models.
+
+**Auto-fix:** BitNet.rs weight mapper automatically detects and slices these to the correct shape:
+
+- **Input:** K weight as [hidden_size, hidden_size] (e.g., 2560×2560)
+- **Output:** K weight as [kv_dim, hidden_size] (e.g., 640×2560 for n_kv_heads=5, head_dim=128)
+- **Method:** Selects first head from each GQA group
+
+**You'll see this log when the fix is applied:**
+
+```
+WARN  layer0: K projection has shape [2560, 2560] but expected [640, 2560] (GQA: n_kv_heads=5)
+INFO  Slicing K projection to [640, 2560] by selecting first head of each group
+```
+
+**No action required** - this is handled automatically. The warning is informational only.
+
+**Technical details:** See regression test `test_kv_slicing_for_gqa` in `crates/bitnet-models/src/weight_mapper.rs`.
+
 ## Related Documentation
 
 - **Reference:** [Quantization Support - QK256](../reference/quantization-support.md) - Technical specifications

@@ -37,6 +37,7 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 /// Perform C++ parity check using bitnet-sys FFI (SINGLE model instance)
 /// Returns: (cosine_similarity, cosine_ok, exact_match_rate, first_divergence_step, cpp_token_count)
 #[cfg(feature = "ffi")]
+#[allow(clippy::too_many_arguments)]
 fn cpp_parity_check(
     gguf_path: &std::path::Path,
     formatted_prompt: &str,
@@ -259,6 +260,7 @@ fn collect_env_metadata() -> serde_json::Value {
 }
 
 /// Get CPU features from compile-time target features
+#[allow(clippy::vec_init_then_push)]
 fn get_cpu_features() -> Vec<&'static str> {
     let mut features = Vec::new();
 
@@ -389,7 +391,7 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     // (C++ side will see the same unformatted prompt)
     let formatted_prompt = template.apply(prompt, None);
 
-    let tok_meta = rust_side_tokenize_and_meta(&gguf_path, &template, &formatted_prompt)?;
+    let tok_meta = rust_side_tokenize_and_meta(&gguf_path, template, &formatted_prompt)?;
     let rust_ids = tok_meta.token_ids.clone();
     let add_bos = tok_meta.add_bos;
     let parse_special = tok_meta.parse_special;
@@ -716,7 +718,7 @@ fn rust_side_tokenize_and_meta(
     let eos_id = if matches!(template, TemplateType::Llama3Chat) {
         // For LLaMA-3, use <|eot_id|> as the stop token
         let eot_ids = tokenizer.encode("<|eot_id|>", false, true)?;
-        eot_ids.get(0).copied().unwrap_or_else(|| {
+        eot_ids.first().copied().unwrap_or_else(|| {
             tokenizer.eos_token_id().unwrap_or(128009) // LLaMA-3 default <|eot_id|>
         })
     } else {
@@ -749,18 +751,18 @@ fn auto_detect_template(model_path: &std::path::Path) -> bitnet_inference::Templ
     use bitnet_models::loader::MmapFile;
 
     // Try to read GGUF metadata
-    if let Ok(mmap) = MmapFile::open(model_path) {
-        if let Ok(reader) = GgufReader::new(mmap.as_slice()) {
-            // Extract metadata fields using convenience methods
-            let tokenizer_name = reader
-                .get_string_metadata("tokenizer.ggml.model")
-                .or_else(|| reader.get_string_metadata("tokenizer.name"));
+    if let Ok(mmap) = MmapFile::open(model_path)
+        && let Ok(reader) = GgufReader::new(mmap.as_slice())
+    {
+        // Extract metadata fields using convenience methods
+        let tokenizer_name = reader
+            .get_string_metadata("tokenizer.ggml.model")
+            .or_else(|| reader.get_string_metadata("tokenizer.name"));
 
-            let chat_template = reader.get_string_metadata("tokenizer.chat_template");
+        let chat_template = reader.get_string_metadata("tokenizer.chat_template");
 
-            // Use the same detection logic as the CLI
-            return TemplateType::detect(tokenizer_name.as_deref(), chat_template.as_deref());
-        }
+        // Use the same detection logic as the CLI
+        return TemplateType::detect(tokenizer_name.as_deref(), chat_template.as_deref());
     }
 
     // Fallback to path-based heuristics if metadata not available

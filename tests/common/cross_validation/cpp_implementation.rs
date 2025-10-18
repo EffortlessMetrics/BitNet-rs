@@ -964,7 +964,7 @@ mod tests {
             model_load_time_ms: 1000,
             tokenization_time_ms: 50,
             inference_time_ms: 200,
-            peak_memory: crate::BYTES_PER_MB, // 1MB
+            peak_memory: crate::BYTES_PER_MB as u32, // 1MB
             tokens_per_second: 100.5,
         };
 

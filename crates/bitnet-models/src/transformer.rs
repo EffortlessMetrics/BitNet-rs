@@ -220,6 +220,30 @@ impl MultiHeadAttention {
         let group_size = n_heads / n_kv_heads;
         let kv_out = n_kv_heads * head_dim;
 
+        tracing::info!(
+            "layer{}: MultiHeadAttention dims: hidden={}, n_heads={}, n_kv_heads={}, head_dim={}, kv_out={}, group_size={}",
+            layer_idx,
+            hidden_size,
+            n_heads,
+            n_kv_heads,
+            head_dim,
+            kv_out,
+            group_size
+        );
+
+        tracing::info!(
+            "layer{}: About to create linear layers with: q_proj([{}, {}]), k_proj([{}, {}]), v_proj([{}, {}]), o_proj([{}, {}])",
+            layer_idx,
+            hidden_size,
+            hidden_size,
+            kv_out,
+            hidden_size,
+            kv_out,
+            hidden_size,
+            hidden_size,
+            hidden_size
+        );
+
         let q_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("q_proj"))?;
         let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
         let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
@@ -993,8 +1017,25 @@ impl KVCache {
     pub fn new(config: &BitNetConfig, batch_size: usize, device: &Device) -> Result<Self> {
         let n_layers = config.model.num_layers;
         let n_heads = config.model.num_heads;
+        let hidden_size = config.model.hidden_size;
+
+        // Validate shape assumptions before calculating dimensions
+        if !hidden_size.is_multiple_of(n_heads) {
+            return Err(BitNetError::Validation(format!(
+                "KVCache: hidden_size {} not divisible by num_heads {}",
+                hidden_size, n_heads
+            )));
+        }
+
         let n_kv_heads = config.model.num_key_value_heads.max(1).min(n_heads);
-        let head_dim = config.model.hidden_size / n_heads;
+        if !n_heads.is_multiple_of(n_kv_heads) {
+            return Err(BitNetError::Validation(format!(
+                "KVCache: num_heads {} not divisible by num_key_value_heads {}",
+                n_heads, n_kv_heads
+            )));
+        }
+
+        let head_dim = hidden_size / n_heads;
         let max_seq_len = config.model.max_position_embeddings;
 
         let mut layers = Vec::with_capacity(n_layers);

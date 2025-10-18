@@ -10,9 +10,7 @@
 //! - Test production model scenarios with real inference patterns
 
 use anyhow::Result;
-use bitnet_models::quant::i2s_qk256::{
-    I2SQk256NoScale, QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256,
-};
+use bitnet_models::quant::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256};
 
 // ==================== FP32 Reference Implementation ====================
 
@@ -244,7 +242,7 @@ fn test_qk256_accuracy_target_correlation() -> Result<()> {
     // Create realistic code distribution (based on quantization statistics)
     use rand::{Rng, SeedableRng};
     let mut rng = rand::rngs::StdRng::seed_from_u64(42);
-    let codes: Vec<u8> = (0..total_codes).map(|_| rng.gen_range(0..=3)).collect();
+    let codes: Vec<u8> = (0..total_codes).map(|_| rng.random_range(0..=3)).collect();
 
     // Pack codes
     let blocks_per_row = cols.div_ceil(QK256_BLOCK);
@@ -324,7 +322,7 @@ fn test_qk256_accuracy_target_correlation() -> Result<()> {
 #[test]
 fn test_qk256_production_attention_projection() -> Result<()> {
     // Typical attention projection: 2048 hidden × 2048 output
-    let rows = 2048;
+    let _rows = 2048;
     let cols: usize = 2048;
 
     // Create simplified weights (only test first 16 rows for speed)
@@ -401,8 +399,8 @@ fn test_qk256_batch_inference_scenario() -> Result<()> {
 
     // Create weight matrix
     let mut packed_data = vec![0u8; rows * row_stride_bytes];
-    for byte_idx in 0..packed_data.len() {
-        packed_data[byte_idx] = (byte_idx % 256) as u8;
+    for (byte_idx, byte) in packed_data.iter_mut().enumerate() {
+        *byte = (byte_idx % 256) as u8;
     }
 
     // Process each batch item

@@ -51,6 +51,7 @@ export BITNET_GGUF="$CROSSVAL_GGUF"
 export RAYON_NUM_THREADS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
+export BITNET_DISABLE_MINIMAL_LOADER=1  # Fail-fast: enforce enhanced loader (no 32/0 defaults)
 
 if [ -n "$TOKENIZER_PATH" ]; then
     export BITNET_TOKENIZER="$(realpath "$TOKENIZER_PATH")"
@@ -84,9 +85,13 @@ TEMP_LOG=$(mktemp)
 trap 'rm -f "$TEMP_LOG"' EXIT
 
 # Link check (if binary exists)
-if [ -f target/release/deps/parity_bitnetcpp-* ]; then
+# Use find to safely handle glob patterns
+if find target/release/deps -name 'parity_bitnetcpp-*' -type f -print -quit 2>/dev/null | grep -q .; then
     echo -e "${BLUE}== Link Check ==${NC}"
-    ldd target/release/deps/parity_bitnetcpp-* 2>/dev/null | grep -E 'llama|ggml' || echo "No C++ libraries linked"
+    PARITY_BIN=$(find target/release/deps -name 'parity_bitnetcpp-*' -type f -print -quit 2>/dev/null)
+    if [ -n "$PARITY_BIN" ]; then
+        ldd "$PARITY_BIN" 2>/dev/null | grep -E 'llama|ggml' || echo "No C++ libraries linked"
+    fi
     echo ""
 fi
 

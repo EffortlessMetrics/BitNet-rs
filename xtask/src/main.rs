@@ -4916,15 +4916,15 @@ struct ModelConfig {
 
 /// Load model configuration from GGUF file
 fn load_model_config(model_path: &Path) -> Result<ModelConfig> {
-    use bitnet_models::load_gguf;
+    use bitnet_models::load_gguf_full;
 
     if !model_path.exists() {
         bail!("Model file not found: {}", model_path.display());
     }
 
     // Load the GGUF file using BitNet-rs
-    let (config, _tensors) =
-        load_gguf(model_path, Device::Cpu).context("Failed to load GGUF model")?;
+    let result = load_gguf_full(model_path, Device::Cpu).context("Failed to load GGUF model")?;
+    let (config, _tensors) = (result.config, result.tensors);
 
     // Extract configuration from BitNetConfig
     let model_config = config.model;

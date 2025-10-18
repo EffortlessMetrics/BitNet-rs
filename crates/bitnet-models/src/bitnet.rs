@@ -39,6 +39,11 @@ impl BitNetModel {
         tensors: HashMap<String, CandleTensor>,
         device: Device,
     ) -> Result<Self> {
+        eprintln!(
+            "DEBUG from_gguf: Received config: hidden={}, n_heads={}, n_kv_heads={}",
+            config.model.hidden_size, config.model.num_heads, config.model.num_key_value_heads
+        );
+
         // Validate that required tensors are present
         // LM head can be tied to embeddings, so check for either output.weight or embeddings
         let has_output = tensors.contains_key("output.weight")

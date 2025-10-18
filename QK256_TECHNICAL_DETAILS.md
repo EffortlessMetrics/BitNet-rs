@@ -49,23 +49,23 @@ Input:
   x: dense input vector [in_features] = [4096]
 
 For each output row i in 0..2048:
-  
+
   1. Get row bytes from A:
      row_start = i * 1024
      row_end = (i+1) * 1024
      qs_row = &A.qs[row_start..row_end]
-  
+
   2. Compute dot product:
      acc = 0.0
      for j in 0..16:  // 16 blocks per row (4096 / 256)
        block_start = j * 64
        block = &qs_row[block_start..block_start+64]
        codes = unpack_block(block)  // 256 codes
-       
+
        for k in 0..256:
          w = code_to_f32(codes[k])
          acc += w * x[j*256 + k]
-     
+
      y[i] = acc
 
 Output: y [out_features] = [2048]
@@ -84,7 +84,7 @@ Given:
 Calculate expected bytes for each layout:
   blocks_32 = (nelems + 31) / 32
   blocks_256 = (nelems + 255) / 256
-  
+
   bitnet_inline_need = blocks_32 * 10
   split32_need = blocks_32 * 8
   ggml_qk256_need = blocks_256 * 64
@@ -94,13 +94,13 @@ Tolerance = 128 bytes (alignment padding)
 Detection priority:
   1. If matches ggml_qk256_need (±128):
      → GgmlQk256NoScale (256-block, no scales)
-  
+
   2. Else if has_scale_sibling && matches split32_need (±128):
      → Split32WithSibling (32-block, separate scales)
-  
+
   3. Else if matches bitnet_inline_need (±128):
      → BitNet32F16 (32-block, inline F16 scales)
-  
+
   4. Else:
      → Error: unsupported layout
 ```
@@ -206,12 +206,12 @@ Receipt fields:
 ```
 pub fn forward(&self, input: &Tensor) -> Result<Tensor> {
   // Current structure (hypothetical)
-  
+
   match self.qtype {
     QuantizationType::I2S => {
       // INTEGRATION POINT 1: Detect flavor
       let flavor = detect_i2s_flavor(&self.weights)?;
-      
+
       match flavor {
         I2SFlavor::BitNet32F16 => {
           // Already works - use BitNet dequantizer
@@ -243,7 +243,7 @@ pub fn forward(&self, input: &Tensor) -> Result<Tensor> {
 fn gemv_qk256_rust(&self, input: &Tensor) -> Result<Tensor> {
   let input_vec = input.flatten_all()?.to_vec1::<f32>()?;
   let mut output = vec![0.0f32; self.out_features];
-  
+
   // Call i2s_qk256::gemv_qk256()
   i2s_qk256::gemv_qk256(
     &self.weights.data,          // Raw packed bytes
@@ -253,14 +253,14 @@ fn gemv_qk256_rust(&self, input: &Tensor) -> Result<Tensor> {
     self.in_features,
     self.weight_row_stride,
   )?;
-  
+
   // Add bias if present
   if let Some(bias) = &self.bias {
     for i in 0..self.out_features {
       output[i] += bias_vec[i];
     }
   }
-  
+
   Ok(Tensor::from_vec(output, &[1, 1, self.out_features], device)?)
 }
 ```
@@ -315,16 +315,16 @@ fn qk256_forward_pass_rust() {
     row_stride_bytes: 64,
     qs: vec![0xAAu8; 64 * 64],  // All codes = 2 (→ +1.0)
   };
-  
+
   // Create layer
   let layer = QuantizedLinear::new_i2s(weights, Device::Cpu)?;
-  
+
   // Create input (256 elements)
   let input = vec![0.5f32; 256];
-  
+
   // Forward pass
   let output = layer.forward(&Tensor::from_vec(input, &[1, 256]))?;
-  
+
   // Verify: output[i] ≈ sum(input) * 1.0 = 128.0 (all codes are +1.0)
   let output_vec = output.flatten_all()?.to_vec1::<f32>()?;
   assert!(output_vec.len() == 64);
@@ -344,18 +344,18 @@ async fn qk256_parity_with_cpp() {
   if env::var("BITNET_CPP_DIR").is_err() {
     return;  // Skip if C++ not available
   }
-  
+
   // Load real QK256 model
   let gguf_path = env::var("CROSSVAL_GGUF").expect("CROSSVAL_GGUF not set");
   let tokens = vec![1, 2, 3, 4, 5];
-  
+
   // Get logits from both backends
   let rust_logits = eval_logits_once(&gguf_path, &tokens)?;
   let cpp_logits = eval_logits_once_for_parity(&gguf_path, &tokens)?;
-  
+
   // Compute cosine similarity
   let cosine = cosine_similarity(&rust_logits, &cpp_logits);
-  
+
   // Verify parity (should be very close)
   assert!(cosine >= 0.9999, "QK256 parity: cosine={}", cosine);
 }
@@ -405,7 +405,7 @@ cargo test --no-default-features --features cpu,ffi,crossval,integration-tests
 
 ### QK256 Kernel Optimization Opportunities
 
-1. **SIMD Vectorization**: 
+1. **SIMD Vectorization**:
    - Current: Scalar loop (one output per iteration)
    - Opportunity: AVX2/AVX-512 to process 8-16 rows in parallel
 
@@ -423,4 +423,3 @@ cargo test --no-default-features --features cpu,ffi,crossval,integration-tests
    - QK256 uses row-major storage (good for GEMV, bad for GEMM)
    - No transpose needed for forward pass
    - Consider cache-tiling for very large matrices
-
