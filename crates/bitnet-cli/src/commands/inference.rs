@@ -108,8 +108,7 @@ pub struct InferenceCommand {
     /// Maximum number of tokens to generate (aliases: --max-new-tokens, --n-predict)
     #[arg(
         long = "max-tokens",
-        visible_alias = "max-new-tokens",
-        visible_alias = "n-predict",
+        visible_aliases = ["max-new-tokens", "n-predict"],
         default_value = "512",
         value_name = "N"
     )]
@@ -732,7 +731,9 @@ impl InferenceCommand {
         }
     }
 
-    /// Load tokenizer
+    /// Load tokenizer with auto-discovery
+    ///
+    /// AC:ID llama3-tokenizer-api-contracts.md#cli-auto-discovery-v1
     async fn load_tokenizer(
         &self,
         model_path: &Path,
@@ -747,10 +748,19 @@ impl InferenceCommand {
             warn!("Failed to load pure-Rust tokenizer from GGUF, falling back to auto-detection");
         }
 
-        // Fall back to existing auto-loader for external files
-        let tokenizer = bitnet_tokenizers::auto::load_auto(model_path, self.tokenizer.as_deref())?;
-        debug!("Successfully loaded tokenizer using auto-detection");
-        Ok(tokenizer)
+        // Resolve tokenizer path using discovery logic
+        let tokenizer_path =
+            crate::tokenizer_discovery::resolve_tokenizer(model_path, self.tokenizer.clone())?;
+
+        debug!("Loading tokenizer from: {}", tokenizer_path.display());
+
+        // Load tokenizer from resolved path
+        let tokenizer_box = bitnet_tokenizers::loader::load_tokenizer(&tokenizer_path)?;
+        // Convert Box<dyn Tokenizer> to Arc<dyn Tokenizer>
+        // We need to use unsafe pointer conversion since there's no direct From impl
+        let raw = Box::into_raw(tokenizer_box);
+        let arc = unsafe { Arc::from_raw(raw) };
+        Ok(arc)
     }
 
     /// Run single inference

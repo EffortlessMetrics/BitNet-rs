@@ -35,6 +35,7 @@ use walkdir::WalkDir;
 
 pub mod ffi;
 mod gates;
+mod tokenizers;
 
 // RAII guard for lock file cleanup
 struct LockGuard {
@@ -248,6 +249,34 @@ enum Cmd {
         /// Request timeout in seconds
         #[arg(long, default_value_t = 1800)]
         timeout: u64,
+    },
+
+    /// Download LLaMA-3 tokenizer.json from HuggingFace
+    ///
+    /// AC:ID llama3-tokenizer-fetching-spec.md#ac1-xtask-tokenizer-subcommand
+    ///
+    /// Features:
+    /// - Official source (meta-llama/Meta-Llama-3-8B) with HF_TOKEN
+    /// - Mirror source (baseten/Meta-Llama-3-tokenizer) without authentication
+    /// - Vocab size verification (~128,256 for LLaMA-3)
+    /// - Idempotent downloads (skip if exists unless --force)
+    /// - Retry logic with exponential backoff
+    ///
+    /// Environment:
+    /// - HF_TOKEN: Required for official source (get at https://huggingface.co/settings/tokens)
+    Tokenizer {
+        /// Output directory for tokenizer.json
+        #[arg(long, default_value = "models")]
+        into: PathBuf,
+        /// Source preference: official (requires HF_TOKEN) or mirror (no auth)
+        #[arg(long, default_value = "mirror")]
+        source: String,
+        /// Force re-download if file exists
+        #[arg(long, default_value_t = false)]
+        force: bool,
+        /// Verbose output for debugging
+        #[arg(short, long)]
+        verbose: bool,
     },
 
     /// Fetch & build microsoft/BitNet C++ for cross-validation
@@ -756,6 +785,14 @@ fn real_main() -> Result<()> {
             retries,
             timeout,
         }),
+        Cmd::Tokenizer { into, source, force, verbose } => {
+            // AC:ID llama3-tokenizer-api-contracts.md#xtask-tokenizer-v1
+            let tokenizer_source = source.parse::<tokenizers::TokenizerSource>()?;
+            let output_path =
+                tokenizers::download_llama3_tokenizer(&into, tokenizer_source, force, verbose)?;
+            println!("✓ Downloaded tokenizer to: {}", output_path.display());
+            Ok(())
+        }
         Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => {
             fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo)
         }

@@ -67,10 +67,27 @@ jobs:
         run: |
           cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
+      - name: Fetch LLaMA-3 tokenizer
+        run: |
+          # Try official source first if HF_TOKEN is available, otherwise use mirror
+          if [ -n "${{ secrets.HF_TOKEN || '' }}" ]; then
+            echo "Fetching from official source (authenticated)"
+            HF_TOKEN="${{ secrets.HF_TOKEN }}" \
+              cargo run -p xtask -- tokenizer \
+              --into models/microsoft-bitnet-b1.58-2B-4T-gguf \
+              --source official
+          else
+            echo "Fetching from mirror source (no authentication required)"
+            cargo run -p xtask -- tokenizer \
+              --into models/microsoft-bitnet-b1.58-2B-4T-gguf \
+              --source mirror
+          fi
+
       - name: Run parity smoke (QK256 strict)
         run: |
           ./scripts/parity_smoke.sh \
-            models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+            models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+            models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 
       - name: Verify QK256 receipt and strict loader
         if: always()

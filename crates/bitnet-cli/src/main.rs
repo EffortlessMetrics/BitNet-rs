@@ -19,6 +19,7 @@ mod exit;
 mod ln_rules;
 mod sampling;
 mod score;
+pub mod tokenizer_discovery;
 
 use exit::*;
 
@@ -153,8 +154,8 @@ enum Commands {
         #[arg(short, long)]
         prompt: String,
 
-        /// Maximum new tokens to generate
-        #[arg(long, default_value_t = 32)]
+        /// Maximum new tokens to generate (aliases: --max-tokens, --n-predict)
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 32)]
         max_new_tokens: usize,
 
         /// Temperature for sampling (0 = greedy)

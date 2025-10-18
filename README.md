@@ -83,17 +83,32 @@ cargo build --release --no-default-features --features cpu
 # 2. Download Microsoft QK256 model
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
-# 3. Run inference with strict loader (ensures QK256 format is properly loaded)
+# 3. Fetch LLaMA-3 tokenizer (required for this model)
+# Option A: Official source (requires HF_TOKEN with LLaMA-3 license accepted)
+HF_TOKEN=your_token cargo run -p xtask -- tokenizer \
+  --into models/microsoft-bitnet-b1.58-2B-4T-gguf \
+  --source official
+
+# Option B: Mirror source (no authentication, development use)
+cargo run -p xtask -- tokenizer \
+  --into models/microsoft-bitnet-b1.58-2B-4T-gguf \
+  --source mirror
+
+# 4. Run inference with strict loader (ensures QK256 format is properly loaded)
 cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --prompt "What is 2+2?" \
   --max-tokens 16
 
-# 4. Run parity smoke test (validates against C++ reference if available)
-scripts/parity_smoke.sh models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+# 5. Run parity smoke test (validates against C++ reference if available)
+scripts/parity_smoke.sh \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
 
-**Receipt Location:** Parity validation writes receipts to `docs/baselines/<YYYY-MM-DD>/parity-bitnetcpp.json` with cosine similarity, exact match rate, and kernel IDs.
+**Receipt Location:** Parity validation writes receipts to
+`docs/baselines/<YYYY-MM-DD>/parity-bitnetcpp.json` with cosine similarity,
+exact match rate, and kernel IDs.
 
 #### I2_S Quantization Flavors
 
@@ -107,6 +122,7 @@ BitNet.rs automatically detects the I2_S quantization flavor based on tensor siz
 | **TL2** | 8-bit blocks | LUT entries | ⚠ x86 AVX2/AVX-512 optimized | x86-based inference |
 
 **Key Differences:**
+
 - **BitNet32-F16**: 32-element blocks with inline f16 scales (10 bytes/block) - optimized for BitNet models
 - **QK256 (GGML)**: 256-element blocks with separate scale tensor (64 bytes/block) - compatible with GGML ecosystem
 
@@ -132,8 +148,12 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 
 #### Learn More
 
-- **Comprehensive Guide:** [How to Use QK256 Models](docs/howto/use-qk256-models.md) - Detailed QK256 usage, troubleshooting, and advanced workflows
-- **Architecture Deep Dive:** [I2_S Dual Flavor Architecture](docs/explanation/i2s-dual-flavor.md) - Technical specifications and implementation details
+- **Comprehensive Guide:**
+  [How to Use QK256 Models](docs/howto/use-qk256-models.md) - Detailed QK256
+  usage, troubleshooting, and advanced workflows
+- **Architecture Deep Dive:**
+  [I2_S Dual Flavor Architecture](docs/explanation/i2s-dual-flavor.md) -
+  Technical specifications and implementation details
 - **Quick Start:** [5-Minute Quick Start](docs/quickstart.md) - General BitNet.rs setup guide
 
 #### Flag Aliases for Compatibility
@@ -206,7 +226,9 @@ async fn main() -> Result<()> {
 
 ### Quantization Support
 
-BitNet.rs supports multiple quantization formats with automatic detection and device-aware kernels. See [Using QK256 Models](#using-qk256-models) for detailed I2_S flavor comparison.
+BitNet.rs supports multiple quantization formats with automatic detection and
+device-aware kernels. See [Using QK256 Models](#using-qk256-models) for
+detailed I2_S flavor comparison.
 
 **Key Features:**
 
@@ -227,8 +249,14 @@ BitNet.rs supports multiple quantization formats with automatic detection and de
 
 ### Universal Tokenizer Discovery
 
-- **Automatic Detection**: Extracts tokenizers from GGUF metadata (HuggingFace JSON, SentencePiece, vocabulary arrays)
-- **Architecture Recognition**: Identifies BitNet, LLaMA-2/3, GPT-2, GPT-Neo, BERT, T5 from tensor patterns
+- **Automatic Detection**: Extracts tokenizers from GGUF metadata
+  (HuggingFace JSON, SentencePiece, vocabulary arrays)
+- **Architecture Recognition**: Identifies BitNet, LLaMA-2/3, GPT-2, GPT-Neo,
+  BERT, T5 from tensor patterns
+- **Tokenizer Fetching**: `cargo run -p xtask -- tokenizer` downloads LLaMA-3
+  tokenizers from HuggingFace (official or mirror sources)
+- **Auto-Discovery Chain**: Explicit `--tokenizer` → GGUF embedded → sibling
+  `tokenizer.json` → parent directory → fail with clear error
 - **Smart Fallbacks**: Co-located files → cache → HuggingFace Hub download → offline mode
 - **Model-Specific Wrappers**: LLaMA (32K/128K variants), GPT-2 (no BOS), BitNet (quantization-aware)
 - **Production Mode**: `BITNET_STRICT_TOKENIZERS=1` prevents mock fallbacks
@@ -265,6 +293,20 @@ inference run generates a receipt with kernel IDs proving real computation.
 ### xtask Commands
 
 ```bash
+# Download tokenizer from HuggingFace
+# Official source (requires HF_TOKEN with LLaMA-3 license)
+HF_TOKEN=your_token cargo run -p xtask -- tokenizer \
+  --into models/model-dir \
+  --source official
+
+# Mirror source (no authentication required, development use)
+cargo run -p xtask -- tokenizer \
+  --into models/model-dir \
+  --source mirror
+
+# Force re-download even if tokenizer exists
+cargo run -p xtask -- tokenizer --into models/model-dir --force
+
 # Generate receipt (writes ci/inference.json)
 cargo run -p xtask -- benchmark --model <model.gguf> --tokens 128
 

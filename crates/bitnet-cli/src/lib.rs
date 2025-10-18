@@ -7,6 +7,7 @@ pub mod commands;
 pub mod config;
 pub mod exit;
 pub mod ln_rules;
+pub mod tokenizer_discovery;
 
 /// Build the CLI command for external use (e.g., in tests)
 /// This duplicates the CLI structure from main.rs for library export

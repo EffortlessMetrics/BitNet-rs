@@ -306,7 +306,7 @@ impl GgufLoader {
             if Self::env_truthy("BITNET_STRICT_MODE") {
                 return Err(BitNetError::Security(SecurityError::MalformedData { reason: msg }));
             } else {
-                tracing::warn!("{} (continuing: non-strict mode)", msg);
+                tracing::info!("{} (continuing: non-strict mode)", msg);
             }
         }
 
@@ -1333,7 +1333,7 @@ impl GgufLoader {
 
                     // Log projection RMS for diagnosis
                     if is_proj && let Ok(rms) = Self::rms_f32(&tensor) {
-                        info!(
+                        debug!(
                             "PROJ load: '{}' dtype=I2_S->F32 shape={:?} rms={:.6} (inv={} k={})",
                             info.name,
                             tensor.dims(),
@@ -1377,7 +1377,7 @@ impl GgufLoader {
 
                     // Log projection RMS for diagnosis
                     if is_proj && let Ok(rms) = Self::rms_f32(&tensor) {
-                        info!(
+                        debug!(
                             "PROJ load: '{}' dtype=I2_S->F32 shape={:?} rms={:.6} (inv={} k={})",
                             info.name,
                             tensor.dims(),
