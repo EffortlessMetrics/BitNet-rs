@@ -167,6 +167,16 @@ pub fn unpack_qk256_block(qs64: &[u8; QK256_PACKED_BYTES], out_codes256: &mut [u
     }
 }
 
+/// Compute RMS (root mean square) of a slice
+#[inline]
+fn compute_rms(xs: &[f32]) -> f32 {
+    if xs.is_empty() {
+        return 0.0;
+    }
+    let sum_sq: f32 = xs.iter().map(|x| x * x).sum();
+    (sum_sq / (xs.len() as f32)).sqrt()
+}
+
 /// Compute dot product between one quantized QK256 row and a dense input vector
 ///
 /// # Arguments
@@ -202,7 +212,11 @@ pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     // Scratch buffer for unpacking codes (stack-allocated for scalar path)
     let mut codes = [0u8; QK256_BLOCK];
 
+    // Debug: check if BITNET_QUANT_SANITY is enabled once
+    let sanity_check = std::env::var("BITNET_QUANT_SANITY").as_deref() == Ok("1");
+
     let mut col = 0usize;
+    let mut block_idx = 0usize;
     for blk in qs_row.chunks_exact(QK256_PACKED_BYTES) {
         // Unpack 64B → 256 2-bit codes
         let blk_arr: &[u8; QK256_PACKED_BYTES] =
@@ -212,6 +226,39 @@ pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
         // Number of valid columns left in this block
         let take = QK256_BLOCK.min(cols - col);
 
+        // Probe B: QK256 block-level histogram and sanity check (only if enabled)
+        if sanity_check {
+            // Histogram of 2-bit codes
+            let mut hist = [0usize; 4];
+            for &code in codes.iter().take(take) {
+                hist[(code & 0b11) as usize] += 1;
+            }
+
+            // Dequantize block
+            let mut weights = [0.0f32; QK256_BLOCK];
+            for (j, &code) in codes.iter().enumerate().take(take) {
+                weights[j] = code_to_f32(code);
+            }
+
+            let rms = compute_rms(&weights[..take]);
+
+            // Report first block diagnostics
+            if block_idx == 0 {
+                let sample_len = take.min(16);
+                eprintln!(
+                    "qk256: hist={:?} rms_first={:.3} sample={:?}",
+                    hist,
+                    rms,
+                    &weights[..sample_len]
+                );
+            }
+
+            // Warn on suspicious RMS
+            if rms > 10.0 {
+                eprintln!("qk256: block={} rms={:.3} (suspicious scale/unpack)", block_idx, rms);
+            }
+        }
+
         // Decode codes and accumulate dot product
         for j in 0..take {
             let w = code_to_f32(codes[j]);
@@ -219,6 +266,7 @@ pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
         }
 
         col += take;
+        block_idx += 1;
         if col >= cols {
             break;
         }

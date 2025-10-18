@@ -112,7 +112,9 @@ impl FormatLoader for HuggingFaceLoader {
             }
         }
 
-        let model = BitNetModel::from_gguf(model_config, tensors, *device)?;
+        // HuggingFace loader doesn't support QK256 raw tensors yet (passes empty HashMap)
+        let raw_tensors = std::collections::HashMap::new();
+        let model = BitNetModel::from_gguf(model_config, tensors, raw_tensors, *device)?;
         Ok(Box::new(model))
     }
 }

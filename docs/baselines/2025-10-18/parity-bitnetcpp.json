@@ -27,7 +27,7 @@
   "prompt": "What is 2+2?",
   "quant": {
     "flavor": "ggml_qk256_no_scale",
-    "format": "I2S_QK256"
+    "format": "I2_S"
   },
   "rust": {
     "decoded_tokens": [
@@ -44,7 +44,7 @@
     "formatted_prompt_hash": "ba1de16a072a62cd7244f2997ea85b4876fd5011534c0d6a954e1dfbf187579d",
     "id": "raw"
   },
-  "timestamp": "2025-10-18T12:56:25.430215406Z",
+  "timestamp": "2025-10-18T14:18:42.517494774Z",
   "tokenization": {
     "cpp_token_count": 0,
     "rust_token_count": 8,

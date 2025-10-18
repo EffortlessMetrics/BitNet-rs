@@ -41,7 +41,14 @@ pub fn eval_logits_once(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
                 result.config.model.num_heads,
                 result.config.model.num_key_value_heads
             );
-            let model = BitNetModel::from_gguf(result.config.clone(), result.tensors, Device::Cpu)?;
+            // TODO: Wire up result.i2s_qk256 to raw_tensors once GGUF loader is updated
+            let raw_tensors = std::collections::HashMap::new();
+            let model = BitNetModel::from_gguf(
+                result.config.clone(),
+                result.tensors,
+                raw_tensors,
+                Device::Cpu,
+            )?;
             (result.config, model)
         }
         Err(e) => {

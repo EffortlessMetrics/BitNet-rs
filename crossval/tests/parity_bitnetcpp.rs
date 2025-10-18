@@ -586,12 +586,7 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "compute": "rust",
         },
         "quant": {
-            "format": i2s_flavor.map_or("unknown".to_string(), |s| match s {
-                "bitnet_qk32_f16" => "I2S_BitNet32F16".to_string(),
-                "split_qk32_with_sibling" => "I2S_Split32WithSibling".to_string(),
-                "ggml_qk256_no_scale" => "I2S_QK256".to_string(),
-                _ => s.to_string(),
-            }),
+            "format": "I2_S",
             "flavor": i2s_flavor.unwrap_or("unknown"),
         },
         "parity": {

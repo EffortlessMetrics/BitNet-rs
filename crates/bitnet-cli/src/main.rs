@@ -4,6 +4,7 @@
 //! Supports model loading, inference, conversion, benchmarking, and serving.
 
 use anyhow::{Context, Result};
+use bitnet_common::Tensor;
 use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
@@ -708,9 +709,12 @@ async fn run_simple_generation(
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
+            // TODO: Wire up load_result.i2s_qk256 to raw_tensors once GGUF loader is updated
+            let raw_tensors = std::collections::HashMap::new();
             let m = bitnet_models::BitNetModel::from_gguf(
                 load_result.config.clone(),
                 load_result.tensors,
+                raw_tensors,
                 Device::Cpu,
             )
             .context("Failed to build mock model")?;
@@ -846,11 +850,35 @@ async fn run_simple_generation(
         // Extract last token hidden state first to avoid 3D×2D matmul issues
         let last_hidden = extract_last_token_hidden(&h)?;
 
+        // Debug tap: hidden state RMS sanity (catches "everything is zero")
+        if std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") && step_idx == 0 {
+            let h_vec = tensor_to_vec(&last_hidden)?;
+            let hidden_rms = compute_rms(&h_vec);
+            eprintln!("hidden_rms={:.6}", hidden_rms);
+        }
+
         // Get logits from last token hidden state
         let logits = model.logits(&last_hidden)?;
 
-        // Extract logits vector (should now be 2D tensor)
+        // Extract logits vector with robust shape handling
         let logits_vec = extract_logits_2d(&logits)?;
+
+        // Debug tap: dump logits shape and top-5 on first step (BITNET_DEBUG_LOGITS=1)
+        if step_idx == 0 && std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") {
+            let logits_shape = logits.shape();
+            eprintln!(
+                "logits_shape=(rows={}, cols={})",
+                logits_shape.get(0).copied().unwrap_or(1),
+                logits_shape.get(1).copied().unwrap_or(logits_vec.len())
+            );
+            let mut idx: Vec<usize> = (0..logits_vec.len()).collect();
+            idx.sort_by(|a, b| {
+                logits_vec[*b].partial_cmp(&logits_vec[*a]).unwrap_or(std::cmp::Ordering::Equal)
+            });
+            let top = &idx[..idx.len().min(5)];
+            eprintln!("top5_idx={:?}", top);
+            eprintln!("top5_val={:?}", top.iter().map(|&i| logits_vec[i]).collect::<Vec<_>>());
+        }
 
         // Capture logits if requested
         if dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps) {
@@ -1042,7 +1070,7 @@ fn extract_last_token_hidden(
 
     match tensor {
         ConcreteTensor::BitNet(t) => {
-            let candle = t.to_candle()?;
+            let candle = t.as_candle();
             // Extract last token: [B, T, H] -> [B, H]
             let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?;
             Ok(ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(last)))
@@ -1067,7 +1095,7 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
 
     match tensor {
         ConcreteTensor::BitNet(t) => {
-            let candle = t.to_candle()?;
+            let candle = t.as_candle();
             // Extract first batch: [B, V] -> [V]
             let batch_0 = candle.i(0)?;
             let batch_0 =
@@ -1095,7 +1123,7 @@ fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
 
     match tensor {
         ConcreteTensor::BitNet(t) => {
-            let candle = t.to_candle()?;
+            let candle = t.as_candle();
             let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?.i(0)?;
             let last = if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
             Ok(last.to_vec1::<f32>()?)
@@ -1105,6 +1133,40 @@ fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
             Ok(vec![0.1; 50257])
         }
     }
+}
+
+/// Convert tensor to f32 vector for diagnostics
+fn tensor_to_vec(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
+    use bitnet_common::ConcreteTensor;
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.as_candle();
+            let candle_f32 = if candle.dtype() != DType::F32 {
+                candle.to_dtype(DType::F32)?
+            } else {
+                candle.clone()
+            };
+            // Flatten to 1D vector
+            let flattened = candle_f32.flatten_all()?;
+            Ok(flattened.to_vec1::<f32>()?)
+        }
+        ConcreteTensor::Mock(mock) => {
+            // Return mock values - use shape from tensor
+            let size: usize = mock.shape().iter().product();
+            Ok(vec![0.1; size])
+        }
+    }
+}
+
+/// Compute RMS (root mean square) of a vector
+#[inline]
+fn compute_rms(xs: &[f32]) -> f32 {
+    if xs.is_empty() {
+        return 0.0;
+    }
+    let sum_sq: f32 = xs.iter().map(|x| x * x).sum();
+    (sum_sq / (xs.len() as f32)).sqrt()
 }
 
 /// Show system information

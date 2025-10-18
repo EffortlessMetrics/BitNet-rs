@@ -946,6 +946,20 @@ pub fn detect_i2s_flavor(
 /// Container for loaded tensors
 pub type GgufTensors = std::collections::HashMap<String, candle_core::Tensor>;
 
+/// Raw quantized tensor container (for preserving 2-bit QK256 data without eager dequantization)
+#[derive(Clone)]
+pub struct RawQuantTensor {
+    pub bytes: std::sync::Arc<[u8]>,
+    pub rows: usize,
+    pub cols: usize,
+    pub block_cols: usize,       // 256 for QK256
+    pub row_stride_bytes: usize, // bytes per row in packed form
+    pub flavor: I2SFlavor,       // include GgmlQk256NoScale, Split32WithSibling, BitNet32F16
+}
+
+/// Container for raw quantized tensors
+pub type RawQuantTensors = std::collections::HashMap<String, RawQuantTensor>;
+
 // Helper functions for reading binary data
 pub fn read_u8(data: &[u8], offset: &mut usize) -> Result<u8> {
     if *offset >= data.len() {
