@@ -36,6 +36,54 @@ pub use tl2::TL2Quantizer;
 // Compatibility re-export: tests/benches historically used this path
 pub use bitnet_common::config::QuantizationConfig;
 
+// AC2: QK256 tolerance constant for tensor size validation (Issue #469)
+/// QK256 tolerance percentage for GGUF tensor size validation.
+///
+/// This constant defines the acceptable deviation between expected and actual
+/// tensor sizes for QK256 (GGML I2_S 256-element block) format.
+///
+/// **Value:** 0.001 (0.1%)
+///
+/// **Rationale:**
+/// - Accounts for GGUF metadata padding and alignment requirements
+/// - Rejects tensors with structural issues (wrong block size, corrupted data)
+/// - Typical padding: 0-128 bytes for tensors in 128KB-10MB range
+///
+/// **Usage:**
+/// - Permissive mode: Accept tensors within ±0.1% of expected size
+/// - Strict mode: Accept tensors with exact size match only (tolerance = 0)
+///
+/// **See also:**
+/// - `qk256_tolerance_bytes()` for per-tensor tolerance calculation
+/// - `docs/reference/quantization-support.md` for QK256 format details
+pub const QK256_SIZE_TOLERANCE_PERCENT: f64 = 0.001;
+
+/// Calculate tolerance bytes for QK256 tensor size validation.
+///
+/// Computes 0.1% of expected bytes with ceiling rounding for fractional bytes.
+///
+/// # Arguments
+/// * `expected_bytes` - Expected tensor size in bytes
+///
+/// # Returns
+/// Tolerance in bytes (minimum 1 byte)
+///
+/// # Examples
+/// ```
+/// use bitnet_quantization::qk256_tolerance_bytes;
+///
+/// assert_eq!(qk256_tolerance_bytes(1_000_000), 1000);  // 1 MB → 1 KB tolerance
+/// assert_eq!(qk256_tolerance_bytes(131_072), 131);     // 128 KB → 131 bytes
+/// assert_eq!(qk256_tolerance_bytes(100_000), 100);     // 100 KB → 100 bytes
+/// assert_eq!(qk256_tolerance_bytes(1_000), 1);         // 1 KB → 1 byte (minimum)
+/// assert_eq!(qk256_tolerance_bytes(500), 1);           // 0.5 bytes → 1 byte (ceiling)
+/// ```
+pub fn qk256_tolerance_bytes(expected_bytes: usize) -> usize {
+    let tolerance = (expected_bytes as f64) * QK256_SIZE_TOLERANCE_PERCENT;
+    // Ceiling rounding ensures fractional bytes round up, minimum 1 byte
+    tolerance.ceil().max(1.0) as usize
+}
+
 /// Quantization trait for tensor quantization and dequantization operations
 pub trait Quantize {
     /// Quantize a tensor using the specified quantization type

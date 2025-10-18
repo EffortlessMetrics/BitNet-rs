@@ -26,6 +26,7 @@ proptest.workspace = true
 criterion.workspace = true
 tempfile.workspace = true
 serial_test = "3.1"
+bitnet-models = { path = "../bitnet-models", features = ["cpu"] }  # AC2: For testing re-exports
 
 [features]
 default = []

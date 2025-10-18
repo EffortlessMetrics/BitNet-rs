@@ -4923,7 +4923,9 @@ fn load_model_config(model_path: &Path) -> Result<ModelConfig> {
     }
 
     // Load the GGUF file using BitNet-rs
-    let result = load_gguf_full(model_path, Device::Cpu).context("Failed to load GGUF model")?;
+    let result =
+        load_gguf_full(model_path, Device::Cpu, bitnet_models::GGUFLoaderConfig::default())
+            .context("Failed to load GGUF model")?;
     let (config, _tensors) = (result.config, result.tensors);
 
     // Extract configuration from BitNetConfig
