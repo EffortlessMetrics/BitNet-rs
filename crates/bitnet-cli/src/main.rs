@@ -491,7 +491,10 @@ fn setup_logging(config: &CliConfig, log_level_override: Option<&str>) -> Result
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(level));
 
-    let subscriber = tracing_subscriber::fmt().with_env_filter(filter).with_target(false);
+    let subscriber = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .with_writer(std::io::stderr);
 
     match config.logging.format.as_str() {
         "json" => {
@@ -715,75 +718,95 @@ async fn run_simple_generation(
         }
     };
 
-    // Load tokenizer
-    let tokenizer_path = tokenizer_path.or_else(|| {
-        // Look for common tokenizer file names
-        let base = model_path.with_extension("");
-        for ext in &["tokenizer.json", "tokenizer.model", "vocab.json"] {
-            let path = base.with_extension(ext);
-            if path.exists() {
-                return Some(path);
-            }
-        }
-        None
-    });
+    // Load tokenizer with auto-discovery
+    // Priority: explicit path → sibling tokenizer.json → parent tokenizer.json → GGUF embedded → mock
 
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
     let mut external_tokenizer = false;
 
-    let tokenizer = if let Some(path) = tokenizer_path {
-        external_tokenizer = true;
-        println!("Loading tokenizer from: {}", path.display());
-        // Try to load real tokenizer
-        match bitnet_tokenizers::load_tokenizer(&path) {
-            Ok(tok) => tok,
-            Err(e) => {
-                if strict_tokenizer {
-                    eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
-                    std::process::exit(EXIT_STRICT_TOKENIZER);
+    let tokenizer: Box<dyn Tokenizer> = {
+        // Try auto-discovery first (handles explicit, sibling, parent)
+        let discovered_path = if tokenizer_path.is_some() {
+            // Explicit path provided
+            crate::tokenizer_discovery::resolve_tokenizer(&model_path, tokenizer_path)
+        } else {
+            // Try sibling/parent discovery
+            crate::tokenizer_discovery::resolve_tokenizer(&model_path, None)
+        };
+
+        match discovered_path {
+            Ok(path) => {
+                // Found tokenizer via discovery
+                external_tokenizer = true;
+                println!("Loading tokenizer from: {}", path.display());
+
+                match bitnet_tokenizers::load_tokenizer(&path) {
+                    Ok(tok) => tok,
+                    Err(e) => {
+                        if strict_tokenizer {
+                            eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
+                            std::process::exit(EXIT_STRICT_TOKENIZER);
+                        }
+                        if !allow_mock {
+                            anyhow::bail!(
+                                "Failed to load tokenizer from {}: {e}. Use --allow-mock to use mock tokenizer.",
+                                path.display()
+                            );
+                        }
+                        println!("Warning: Using mock tokenizer due to: {e}");
+                        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+                    }
                 }
-                if !allow_mock {
-                    anyhow::bail!(
-                        "Failed to load tokenizer: {e}. Use --allow-mock to use mock tokenizer."
-                    );
-                }
-                println!("Warning: Using mock tokenizer due to: {e}");
-                Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
             }
-        }
-    } else {
-        // Try to load tokenizer from GGUF if no external tokenizer specified
-        println!("Attempting to load tokenizer from GGUF model...");
+            Err(_discovery_err) => {
+                // Discovery failed, try GGUF embedded as fallback
+                println!("No external tokenizer found, attempting to load from GGUF model...");
 
-        // Read the GGUF file to get tokenizer metadata
-        let gguf_data = std::fs::read(&model_path)
-            .context("Failed to read GGUF file for tokenizer extraction")?;
-        let reader = bitnet_models::GgufReader::new(&gguf_data)
-            .context("Failed to parse GGUF for tokenizer extraction")?;
+                // Read the GGUF file to get tokenizer metadata
+                let gguf_data = std::fs::read(&model_path)
+                    .context("Failed to read GGUF file for tokenizer extraction")?;
+                let reader = bitnet_models::GgufReader::new(&gguf_data)
+                    .context("Failed to parse GGUF for tokenizer extraction")?;
 
-        // Capture metadata counts
-        let n_tensors = reader.tensor_count() as usize;
-        let n_kv = reader.metadata_keys().len();
-        gguf_metadata = Some((n_kv, n_tensors));
+                // Capture metadata counts
+                let n_tensors = reader.tensor_count() as usize;
+                let n_kv = reader.metadata_keys().len();
+                gguf_metadata = Some((n_kv, n_tensors));
 
-        match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
-            Ok(tok) => {
-                println!("Successfully loaded SentencePiece tokenizer from GGUF");
-                tok
-            }
-            Err(e) => {
-                if strict_tokenizer {
-                    eprintln!("Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}");
-                    std::process::exit(EXIT_STRICT_TOKENIZER);
+                match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
+                    Ok(tok) => {
+                        println!("Successfully loaded SentencePiece tokenizer from GGUF");
+                        tok
+                    }
+                    Err(e) => {
+                        if strict_tokenizer {
+                            eprintln!(
+                                "Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}"
+                            );
+                            std::process::exit(EXIT_STRICT_TOKENIZER);
+                        }
+                        if !allow_mock {
+                            // Provide actionable error message
+                            let model_dir =
+                                model_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+                            anyhow::bail!(
+                                "Failed to load tokenizer from GGUF: {e}\n\
+                                 \n\
+                                 No tokenizer found. Solutions:\n\
+                                 1. Download tokenizer:\n\
+                                    cargo run -p xtask -- tokenizer --into {}\n\
+                                 2. Provide explicit tokenizer path:\n\
+                                    --tokenizer /path/to/tokenizer.json\n\
+                                 3. Use mock tokenizer for testing:\n\
+                                    --allow-mock",
+                                model_dir.display()
+                            );
+                        }
+                        println!("Warning: Using mock tokenizer due to: {e}");
+                        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+                    }
                 }
-                if !allow_mock {
-                    anyhow::bail!(
-                        "Failed to load tokenizer from GGUF: {e}. Specify --tokenizer <path> or use --allow-mock."
-                    );
-                }
-                println!("Warning: Using mock tokenizer due to: {e}");
-                Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
             }
         }
     };

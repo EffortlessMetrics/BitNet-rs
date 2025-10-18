@@ -500,6 +500,7 @@ impl InferenceCommand {
                     .json()
                     .with_env_filter(filter)
                     .with_target(false)
+                    .with_writer(std::io::stderr)
                     .with_timer(tracing_subscriber::fmt::time::uptime())
                     .init();
             }
@@ -508,6 +509,7 @@ impl InferenceCommand {
                     .compact()
                     .with_env_filter(filter)
                     .with_target(false)
+                    .with_writer(std::io::stderr)
                     .init();
             }
             _ => {
@@ -515,6 +517,7 @@ impl InferenceCommand {
                     .pretty()
                     .with_env_filter(filter)
                     .with_target(false)
+                    .with_writer(std::io::stderr)
                     .init();
             }
         }

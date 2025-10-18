@@ -845,8 +845,8 @@ pub fn detect_i2s_flavor(
     let available = info.size as usize;
 
     // Tolerance for alignment padding (conservative but tight)
-    // 8 bytes allows for reasonable alignment overhead without false positives
-    const TOLERANCE: usize = 8;
+    // GGUF alignment/padding can exceed 8 bytes - increased to 128 for compatibility
+    const TOLERANCE: usize = 128;
 
     tracing::debug!(
         "I2_S flavor detection for '{}': nelems={}, blocks32={}, blocks256={}, available={}, split_need={}, inline_need={}, qk256_need={}, has_sibling={}",

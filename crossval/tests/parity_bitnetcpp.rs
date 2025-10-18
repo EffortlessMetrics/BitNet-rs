@@ -558,6 +558,17 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "parse_special": parse_special,
             "merges_count": tok_meta.merges_count,
             "tokenizer_blob_sha256": tok_meta.tokenizer_blob_sha256,
+            // Provenance metadata for reproducibility
+            "path": env::var("BITNET_TOKENIZER")
+                .ok()
+                .map(|p| serde_json::Value::String(p))
+                .unwrap_or(serde_json::Value::Null),
+            "repo": serde_json::Value::Null,  // Filled when fetched via xtask
+            "sha256": env::var("BITNET_TOKENIZER")
+                .ok()
+                .and_then(|p| sha256_file(&PathBuf::from(p)).ok())
+                .map(|h| serde_json::Value::String(h))
+                .unwrap_or(serde_json::Value::Null),
         },
         "tokenization": {
             "rust_token_count": rust_ids.len(),
@@ -627,6 +638,7 @@ struct TokenizerMetadata {
 }
 
 /// Detect I2_S quantization flavor from GGUF model
+/// Vote across all I2_S tensors instead of bailing on first match
 fn detect_model_i2s_flavor(model_path: &std::path::Path) -> Option<&'static str> {
     use bitnet_models::formats::gguf::{GgufReader, GgufTensorType, I2SFlavor, detect_i2s_flavor};
     use bitnet_models::loader::MmapFile;
@@ -634,30 +646,46 @@ fn detect_model_i2s_flavor(model_path: &std::path::Path) -> Option<&'static str>
     let mmap = MmapFile::open(model_path).ok()?;
     let reader = GgufReader::new(mmap.as_slice()).ok()?;
 
-    // Look for I2_S tensors and detect their flavor
+    let mut c_qk256 = 0usize;
+    let mut c_split = 0usize;
+    let mut c_inline = 0usize;
+
+    // Vote across all I2_S tensors
     for i in 0..reader.tensor_count() as usize {
         let info = reader.get_tensor_info(i).ok()?;
+        if info.tensor_type != GgufTensorType::I2_S {
+            continue;
+        }
 
-        if info.tensor_type == GgufTensorType::I2_S {
-            // Calculate number of elements from shape
-            let nelems = info.shape.iter().product::<usize>();
+        let nelems = info.shape.iter().product::<usize>();
 
-            // Check if there's a scale sibling (look for .scale suffix)
-            let scale_name = format!("{}.scale", info.name);
-            let has_scale_sibling = reader.get_tensor_info_by_name(&scale_name).is_some();
+        // Check for scale sibling with multiple possible suffixes
+        let has_scale_sibling =
+            reader.get_tensor_info_by_name(&format!("{}.scale", info.name)).is_some()
+                || reader.get_tensor_info_by_name(&format!("{}.scales", info.name)).is_some();
 
-            // Detect flavor
-            if let Ok(flavor) = detect_i2s_flavor(info, has_scale_sibling, nelems) {
-                return Some(match flavor {
-                    I2SFlavor::BitNet32F16 => "bitnet_qk32_f16",
-                    I2SFlavor::Split32WithSibling => "split_qk32_with_sibling",
-                    I2SFlavor::GgmlQk256NoScale => "ggml_qk256_no_scale",
-                });
+        if let Ok(flavor) = detect_i2s_flavor(info, has_scale_sibling, nelems) {
+            match flavor {
+                I2SFlavor::GgmlQk256NoScale => c_qk256 += 1,
+                I2SFlavor::Split32WithSibling => c_split += 1,
+                I2SFlavor::BitNet32F16 => c_inline += 1,
             }
         }
     }
 
-    None
+    // Return None if no I2_S tensors found
+    if c_qk256 + c_split + c_inline == 0 {
+        return None;
+    }
+
+    // Return the winner (prefer QK256 > Split > Inline on ties)
+    if c_qk256 >= c_split && c_qk256 >= c_inline {
+        Some("ggml_qk256_no_scale")
+    } else if c_split >= c_inline {
+        Some("split_qk32_with_sibling")
+    } else {
+        Some("bitnet_qk32_f16")
+    }
 }
 
 /// Tokenize prompt with template-aware BOS/special handling

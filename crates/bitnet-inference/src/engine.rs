@@ -1172,6 +1172,17 @@ impl InferenceEngine {
                 eprintln!("======================================================");
             }
 
+            // Unconditional debug logits dump when BITNET_DEBUG_LOGITS=1
+            if std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") && step == 0 {
+                let mut idx: Vec<usize> = (0..logits.len()).collect();
+                idx.sort_by(|a, b| {
+                    logits[*b].partial_cmp(&logits[*a]).unwrap_or(std::cmp::Ordering::Equal)
+                });
+                let top = &idx[..idx.len().min(5)];
+                eprintln!("top5_idx={:?}", top);
+                eprintln!("top5_val={:?}", top.iter().map(|&i| logits[i]).collect::<Vec<_>>());
+            }
+
             // Sample next token first
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
 
@@ -1376,6 +1387,23 @@ impl InferenceEngine {
         if !model.num_heads.is_multiple_of(effective_kv_heads) {
             return Err(anyhow::anyhow!(
                 "Invalid model: num_heads ({}) not divisible by num_key_value_heads ({})",
+                model.num_heads,
+                effective_kv_heads
+            ));
+        }
+
+        // GQA wiring sanity checks
+        let kv_out = effective_kv_heads * head_dim;
+        eprintln!("GQA validation:");
+        eprintln!("  kv_heads × head_dim = {} × {} = {}", effective_kv_heads, head_dim, kv_out);
+        eprintln!(
+            "  group_size = num_heads / kv_heads = {} / {} = {}",
+            model.num_heads, effective_kv_heads, group_size
+        );
+
+        if group_size == 0 {
+            return Err(anyhow::anyhow!(
+                "Invalid GQA configuration: group_size cannot be zero (num_heads={}, kv_heads={})",
                 model.num_heads,
                 effective_kv_heads
             ));

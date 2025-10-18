@@ -79,13 +79,26 @@ pub fn download_llama3_tokenizer(
 
     // Download to temporary file (atomic operation)
     let temp_path = target_dir.join("tokenizer.json.tmp");
-    download_from_source(source, &temp_path, verbose)?;
 
-    // Verify downloaded tokenizer
-    verify_llama3_tokenizer(&temp_path)?;
+    // Ensure cleanup on error
+    let result = (|| -> Result<()> {
+        download_from_source(source, &temp_path, verbose)?;
 
-    // Atomic rename
-    fs::rename(&temp_path, &output_path).context("Failed to rename temporary file")?;
+        // Verify downloaded tokenizer
+        verify_llama3_tokenizer(&temp_path)?;
+
+        // Atomic rename
+        fs::rename(&temp_path, &output_path).context("Failed to rename temporary file")?;
+
+        Ok(())
+    })();
+
+    // Clean up temp file on error
+    if result.is_err() && temp_path.exists() {
+        let _ = fs::remove_file(&temp_path);
+    }
+
+    result?;
 
     if verbose {
         eprintln!("✓ Downloaded tokenizer to: {}", output_path.display());
@@ -199,6 +212,16 @@ fn download_once(source: TokenizerSource, dest: &Path, verbose: bool) -> Result<
     let total_size = response.content_length();
     let mut file = fs::File::create(dest).context("Failed to create temporary file")?;
 
+    // Helper to fsync file after write
+    let fsync_file = |f: fs::File| -> Result<()> {
+        #[cfg(unix)]
+        {
+            // Sync file data to disk
+            f.sync_all().context("Failed to sync file to disk")?;
+        }
+        Ok(())
+    };
+
     if verbose && is_terminal::IsTerminal::is_terminal(&std::io::stderr()) {
         if let Some(size) = total_size {
             let pb = ProgressBar::new(size);
@@ -224,15 +247,24 @@ fn download_once(source: TokenizerSource, dest: &Path, verbose: bool) -> Result<
                 pb.set_position(downloaded);
             }
             pb.finish_with_message("Download complete");
+
+            // Sync to disk before rename
+            fsync_file(file)?;
         } else {
             // No progress bar if size unknown
             let bytes = response.bytes().context("Failed to read response body")?;
             file.write_all(&bytes).context("Failed to write to file")?;
+
+            // Sync to disk before rename
+            fsync_file(file)?;
         }
     } else {
         // No progress bar
         let bytes = response.bytes().context("Failed to read response body")?;
         file.write_all(&bytes).context("Failed to write to file")?;
+
+        // Sync to disk before rename
+        fsync_file(file)?;
     }
 
     Ok(())

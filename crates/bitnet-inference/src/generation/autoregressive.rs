@@ -536,6 +536,14 @@ impl AutoregressiveGenerator {
         logits: &BitNetTensor,
         step: usize,
     ) -> Result<(usize, f32)> {
+        // Debug probe: log top-5 logits for first token only (Issue #XXX parity debugging)
+        if std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") {
+            eprintln!("DEBUG: logits probe enabled, step={}", step);
+            if step == 0 {
+                self.log_top5_logits(logits)?;
+            }
+        }
+
         // Use deterministic generation if enabled
         if let Some(ref mut det_gen) = self.deterministic_gen {
             return det_gen.sample_deterministic(logits, step).await;
@@ -919,5 +927,33 @@ impl AutoregressiveGenerator {
         }
 
         false
+    }
+
+    /// Debug helper: log top-5 logits with indices and values
+    ///
+    /// This is a surgical debug probe for diagnosing math issues in greedy generation.
+    /// Enable with `BITNET_DEBUG_LOGITS=1`.
+    fn log_top5_logits(&self, logits: &BitNetTensor) -> Result<()> {
+        // Convert logits to Vec<f32> for sorting
+        let logits_vec = logits.to_vec()?;
+
+        // Create (index, value) pairs and sort by value descending
+        let mut indexed_logits: Vec<(usize, f32)> =
+            logits_vec.iter().enumerate().map(|(i, &v)| (i, v)).collect();
+        indexed_logits.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Take top 5
+        let top5: Vec<_> = indexed_logits.iter().take(5).collect();
+
+        let top5_idx: Vec<usize> = top5.iter().map(|(i, _)| *i).collect();
+        let top5_val: Vec<f32> = top5.iter().map(|(_, v)| *v).collect();
+
+        eprintln!("top5_idx={:?}", top5_idx);
+        eprintln!("top5_val={:?}", top5_val);
+
+        // TODO: decode tokens if tokenizer is available (requires access to tokenizer)
+        // For now, just log indices and values
+
+        Ok(())
     }
 }
