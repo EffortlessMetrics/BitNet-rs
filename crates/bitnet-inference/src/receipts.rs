@@ -126,7 +126,7 @@ pub struct CacheEfficiency {
     pub tensor_cache_misses: usize,
 }
 
-/// Cross-validation metrics
+/// Cross-validation metrics (deprecated - use ParityMetadata instead)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CrossValidation {
     pub cpp_reference_available: bool,
@@ -134,6 +134,36 @@ pub struct CrossValidation {
     pub tolerance: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parity_tests_passed: Option<bool>,
+}
+
+/// Parity validation metadata (AC4)
+///
+/// Captures C++ reference comparison metrics for reproducibility and CI validation.
+///
+/// # Schema Version: 1.0.0
+///
+/// Status values:
+/// - "ok": Rust and C++ outputs match (cosine ≥ 0.99, exact_match_rate = 1.0)
+/// - "rust_only": C++ reference not available
+/// - "divergence": Outputs differ (cosine < 0.99 or exact_match_rate < 1.0)
+/// - "timeout": Parity test exceeded timeout
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParityMetadata {
+    /// C++ reference available for comparison
+    pub cpp_available: bool,
+
+    /// Cosine similarity between Rust and C++ logits (0.0 to 1.0)
+    /// Present only when cpp_available=true
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cosine_similarity: Option<f32>,
+
+    /// Exact match rate for generated tokens (0.0 to 1.0)
+    /// Present only when cpp_available=true
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exact_match_rate: Option<f32>,
+
+    /// Parity status: "ok" | "rust_only" | "divergence" | "timeout"
+    pub status: String,
 }
 
 /// Main inference receipt structure (AC4)
@@ -179,9 +209,13 @@ pub struct InferenceReceipt {
     /// Performance metrics baseline
     pub performance_baseline: PerformanceBaseline,
 
-    /// Cross-validation results (optional)
+    /// Cross-validation results (optional, deprecated - use parity instead)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cross_validation: Option<CrossValidation>,
+
+    /// Parity validation results (AC4)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parity: Option<ParityMetadata>,
 
     /// Model corrections applied (LayerNorm rescaling, etc.)
     /// Empty if no corrections applied
@@ -225,6 +259,7 @@ impl InferenceReceipt {
             test_results: TestResults::default(),
             performance_baseline: PerformanceBaseline::default(),
             cross_validation: None,
+            parity: None,
             corrections: Vec::new(),
         })
     }
@@ -382,6 +417,12 @@ impl InferenceReceipt {
     /// Builder for cross-validation
     pub fn with_cross_validation(mut self, cross_val: CrossValidation) -> Self {
         self.cross_validation = Some(cross_val);
+        self
+    }
+
+    /// Builder for parity metadata (AC4)
+    pub fn with_parity(mut self, parity: ParityMetadata) -> Self {
+        self.parity = Some(parity);
         self
     }
 

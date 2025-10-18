@@ -53,6 +53,12 @@ export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 export BITNET_DISABLE_MINIMAL_LOADER=1  # Fail-fast: enforce enhanced loader (no 32/0 defaults)
 
+# Set strict mode if environment variable is set
+if [ "${BITNET_STRICT_MODE:-0}" = "1" ]; then
+    export BITNET_STRICT_MODE=1
+    echo -e "${YELLOW}Strict mode enabled${NC}"
+fi
+
 if [ -n "$TOKENIZER_PATH" ]; then
     export BITNET_TOKENIZER="$(realpath "$TOKENIZER_PATH")"
 fi
@@ -133,7 +139,9 @@ else
 fi
 
 echo ""
-echo "Full receipt: $RECEIPT"
+# AC4: Print absolute receipt path for CI verification
+ABSOLUTE_RECEIPT=$(cd "$(dirname "$RECEIPT")" && pwd)/$(basename "$RECEIPT")
+echo "Full receipt (absolute path): $ABSOLUTE_RECEIPT"
 echo ""
 
 # Check status

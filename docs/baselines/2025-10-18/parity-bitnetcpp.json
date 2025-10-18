@@ -26,7 +26,8 @@
   },
   "prompt": "What is 2+2?",
   "quant": {
-    "i2s_flavor": null
+    "flavor": "unknown",
+    "format": "unknown"
   },
   "rust": {
     "decoded_tokens": [
@@ -43,7 +44,7 @@
     "formatted_prompt_hash": "ba1de16a072a62cd7244f2997ea85b4876fd5011534c0d6a954e1dfbf187579d",
     "id": "raw"
   },
-  "timestamp": "2025-10-18T03:25:18.171609229Z",
+  "timestamp": "2025-10-18T08:11:53.071769050Z",
   "tokenization": {
     "cpp_token_count": 0,
     "rust_token_count": 8,
@@ -63,7 +64,6 @@
     "vocab_size": 128256
   },
   "validation": {
-    "backend": "rust",
     "compute": "rust",
     "tokenizer": "rust"
   }

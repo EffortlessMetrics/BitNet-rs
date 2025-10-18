@@ -3,6 +3,11 @@
 //! Core inference engine with CPU and GPU backend support, streaming generation,
 //! comprehensive configuration options, and advanced performance tracking.
 //!
+//! ## Timeout Configuration
+//!
+//! Default timeout for inference operations (in seconds).
+//! Used by parity tests and benchmarking to prevent hangs.
+//!
 //! ## Performance Tracking
 //!
 //! The inference engine includes comprehensive performance tracking capabilities:
@@ -80,6 +85,15 @@ use crate::{
     sampling::{SamplingConfig, SamplingStrategy},
     streaming::{GenerationStream, StreamingConfig},
 };
+
+/// Default timeout for inference operations (in seconds).
+/// Used by parity tests and benchmarking to prevent hangs.
+pub const DEFAULT_INFERENCE_TIMEOUT_SECS: u64 = 120;
+
+/// Default timeout for parity validation tests (in seconds).
+/// Matches DEFAULT_INFERENCE_TIMEOUT_SECS for consistency.
+/// Can be overridden via PARITY_TEST_TIMEOUT_SECS environment variable.
+pub const DEFAULT_PARITY_TIMEOUT_SECS: u64 = DEFAULT_INFERENCE_TIMEOUT_SECS;
 
 /// Summary information about a tensor in the GGUF header
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -9,11 +9,9 @@
 #![cfg(all(feature = "crossval", feature = "integration-tests"))]
 
 use anyhow::{Context, Result};
+use bitnet_inference::engine::DEFAULT_PARITY_TIMEOUT_SECS;
 use serde_json::json;
 use std::{env, fs, path::PathBuf, time::SystemTime};
-
-/// Parity test timeout in seconds (configurable via PARITY_TEST_TIMEOUT_SECS env var)
-const DEFAULT_TIMEOUT_SECS: u64 = 120;
 
 /// Helper function to compute cosine similarity between two vectors
 #[allow(dead_code)]
@@ -337,7 +335,7 @@ async fn parity_bitnetcpp() -> Result<()> {
     let timeout_secs = std::env::var("PARITY_TEST_TIMEOUT_SECS")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(DEFAULT_TIMEOUT_SECS);
+        .unwrap_or(DEFAULT_PARITY_TIMEOUT_SECS);
 
     match tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
@@ -490,17 +488,19 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
         (false, None, None, None, false, 0)
     };
 
-    // 5. Write parity receipt
+    // 5. Write parity receipt (AC4: path resolution to workspace root)
     let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
 
     // Safer than slicing fixed indices: split at 'T'
     let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
 
-    // Allow override for CI: BASELINES_DIR=/path/to/workspace/docs/baselines
-    let base_dir = std::env::var("BASELINES_DIR")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines"));
+    // AC4: Receipt path resolution to workspace root
+    // Priority: BASELINES_DIR env var > <workspace>/docs/baselines/<YYYY-MM-DD>
+    let base_dir = std::env::var("BASELINES_DIR").ok().map(PathBuf::from).unwrap_or_else(|| {
+        // Resolve to workspace root (not relative to crate)
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        manifest_dir.join("..").join("docs").join("baselines")
+    });
 
     let receipt_dir = base_dir.join(date_str);
 
@@ -516,9 +516,10 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
         eprintln!("Detected I2_S flavor: {}", flavor);
     }
 
+    // AC4: Determine parity status using standardized values
     let parity_status = if cpp_loaded {
         // C++ was loaded - check if outputs match
-        if cosine_ok && exact_match_rate.unwrap_or(0.0) == 1.0 { "ok" } else { "mismatch" }
+        if cosine_ok && exact_match_rate.unwrap_or(0.0) == 1.0 { "ok" } else { "divergence" }
     } else {
         // C++ not available
         "rust_only"
@@ -527,7 +528,7 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     // Determine which backend was used for validation compute
     // Note: As of QK256 integration, all inference runs in pure Rust (including GGML I2_S).
     // C++ is only used for comparison in the parity harness, not for actual inference.
-    let validation_backend = "rust"; // Always Rust now - QK256 support is complete
+    let _validation_backend = "rust"; // Always Rust now - QK256 support is complete
 
     // Compute prompt hash for reproducibility verification
     let prompt_hash = blake3::hash(formatted_prompt.as_bytes()).to_string();
@@ -600,7 +601,9 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
         .context("Failed to write parity receipt to temp file")?;
     fs::rename(&tmp_path, &receipt_path).context("Failed to atomically rename parity receipt")?;
 
-    eprintln!("✓ Parity receipt written to: {:?}", receipt_path);
+    // AC4: Print absolute receipt path for verification
+    let absolute_path = receipt_path.canonicalize().unwrap_or_else(|_| receipt_path.clone());
+    eprintln!("✓ Parity receipt written to: {}", absolute_path.display());
 
     Ok(())
 }

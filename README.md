@@ -70,34 +70,71 @@ suitable template from GGUF/HF metadata. To preserve legacy behavior, pass
 
 **CLI Interface Version**: 1.0.0 — Use `bitnet --interface-version` to check compatibility.
 
-### QK256 (GGML I2_S) Quick Start
+### Using QK256 Models
 
-BitNet.rs includes pure-Rust support for GGML QK256 I2_S quantization format (256-element blocks, 64 bytes/block):
+BitNet.rs supports GGML-compatible QK256 I2_S models with pure-Rust inference (no C++ dependencies required). This section shows how to download, validate, and run inference with QK256 models.
+
+#### Quick Start
 
 ```bash
-# Build with CPU support (includes QK256 kernels)
+# 1. Build with CPU support (includes QK256 kernels)
 cargo build --release --no-default-features --features cpu
 
-# Download GGML I2_S model
+# 2. Download Microsoft QK256 model
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
-# Run inference with QK256 model
+# 3. Run inference with strict loader (ensures QK256 format is properly loaded)
 cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --prompt "What is 2+2?" \
   --max-tokens 16
 
-# Verify parity with C++ reference (requires BITNET_CPP_DIR)
+# 4. Run parity smoke test (validates against C++ reference if available)
 scripts/parity_smoke.sh models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 ```
 
-**Supported Quantization Formats:**
+**Receipt Location:** Parity validation writes receipts to `docs/baselines/<YYYY-MM-DD>/parity-bitnetcpp.json` with cosine similarity, exact match rate, and kernel IDs.
 
-- BitNet32-F16 (32-elem blocks): ✅ Production
-- QK256 (256-elem GGML format): ✅ Pure Rust (MVP - scalar kernels)
-- QK256 SIMD (AVX2/NEON): 🚧 Post-MVP optimization
+#### I2_S Quantization Flavors
 
-For detailed QK256 usage guide, see [How to Use QK256 Models](docs/howto/use-qk256-models.md).
+BitNet.rs automatically detects the I2_S quantization flavor based on tensor size:
+
+| Format | Block Size | Scales | Support Status | Use Case |
+|--------|-----------|--------|-----------------|----------|
+| **I2_S BitNet32-F16** | 32 elements | Inline F16 | 🚧 Production (CPU/GPU) | Microsoft BitNet native models |
+| **I2_S QK256 (GGML)** | 256 elements | Separate tensor | ✅ MVP (scalar), 🚧 SIMD | GGML-compatible models |
+| **TL1** | 4-bit blocks | LUT entries | ⚠ ARM NEON optimized | ARM-based inference |
+| **TL2** | 8-bit blocks | LUT entries | ⚠ x86 AVX2/AVX-512 optimized | x86-based inference |
+
+**Key Differences:**
+- **BitNet32-F16**: 32-element blocks with inline f16 scales (10 bytes/block) - optimized for BitNet models
+- **QK256 (GGML)**: 256-element blocks with separate scale tensor (64 bytes/block) - compatible with GGML ecosystem
+
+#### Deterministic Inference
+
+For reproducible results across runs (e.g., testing, validation, receipts):
+
+```bash
+# Set environment variables for deterministic inference
+export BITNET_DETERMINISTIC=1   # Enable deterministic mode
+export BITNET_SEED=42            # Fixed random seed
+export RAYON_NUM_THREADS=1       # Single-threaded execution
+
+# Run inference (output will be identical across runs)
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --prompt "What is 2+2?" \
+  --max-tokens 16 \
+  --seed 42
+```
+
+**Note:** Deterministic mode ensures reproducible token sequences and logits for validation workflows.
+
+#### Learn More
+
+- **Comprehensive Guide:** [How to Use QK256 Models](docs/howto/use-qk256-models.md) - Detailed QK256 usage, troubleshooting, and advanced workflows
+- **Architecture Deep Dive:** [I2_S Dual Flavor Architecture](docs/explanation/i2s-dual-flavor.md) - Technical specifications and implementation details
+- **Quick Start:** [5-Minute Quick Start](docs/quickstart.md) - General BitNet.rs setup guide
 
 #### Flag Aliases for Compatibility
 
@@ -169,23 +206,17 @@ async fn main() -> Result<()> {
 
 ### Quantization Support
 
-BitNet.rs supports multiple I2_S quantization formats with automatic detection and pure-Rust kernels:
-
-| Format | Block Size | Scales | Support Status | Use Case |
-|--------|-----------|--------|-----------------|----------|
-| **I2_S BitNet32-F16** | 32 elements | Inline F16 | ✅ Production (CPU/GPU) | Microsoft BitNet native models |
-| **I2_S QK256 (GGML)** | 256 elements | Separate tensor | ✅ Pure Rust MVP | GGML-compatible models |
-| **TL1** | 4-bit blocks | LUT entries | ⚠ ARM NEON optimized | ARM-based inference |
-| **TL2** | 8-bit blocks | LUT entries | ⚠ x86 AVX2/AVX-512 optimized | x86-based inference |
+BitNet.rs supports multiple quantization formats with automatic detection and device-aware kernels. See [Using QK256 Models](#using-qk256-models) for detailed I2_S flavor comparison.
 
 **Key Features:**
 
-- **I2_S**: Production 2-bit signed quantization (≥99.8% accuracy vs FP32,
-  10-20 tok/s CPU, 50-100 tok/s GPU)
+- **I2_S**: Production 2-bit signed quantization (≥99.8% accuracy vs FP32, 10-20 tok/s CPU, 50-100 tok/s GPU)
+  - **BitNet32-F16**: Native BitNet format with inline F16 scales (32-element blocks)
+  - **QK256 (GGML)**: GGML-compatible format with separate scale tensor (256-element blocks)
+  - **Automatic Flavor Detection**: Model loader identifies quantization flavor from tensor size
 - **TL1/TL2**: Table lookup quantization with device-aware selection (≥99.6% accuracy vs FP32)
 - **Real Computation**: Native quantized matrix multiplication eliminates mock fallbacks
 - **Strict Mode**: `BITNET_STRICT_MODE=1` ensures production-ready inference paths
-- **Automatic Detection**: Model loader identifies quantization flavor and routes to optimal kernel
 
 ### Device-Aware Computing
 
@@ -246,13 +277,15 @@ BITNET_STRICT_MODE=1 cargo run -p xtask -- verify-receipt ci/inference.json
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BITNET_DETERMINISTIC` | Enable deterministic inference | `0` |
-| `BITNET_SEED` | Random seed for deterministic mode | `42` |
-| `RAYON_NUM_THREADS` | Thread count (use `1` for determinism) | auto |
-| `BITNET_STRICT_MODE` | Fail on validation warnings | `0` |
-| `BITNET_GGUF` | Override model path | auto-discover `models/` |
+| Variable | Description | Default | Use Case |
+|----------|-------------|---------|----------|
+| `BITNET_DETERMINISTIC` | Enable deterministic inference | `0` | Reproducible outputs for testing/validation |
+| `BITNET_SEED` | Random seed for deterministic mode | `42` | Control randomness in inference |
+| `RAYON_NUM_THREADS` | Thread count (use `1` for determinism) | auto | Single-threaded for reproducibility |
+| `BITNET_STRICT_MODE` | Fail on validation warnings | `0` | Production deployments |
+| `BITNET_GGUF` | Override model path | auto-discover `models/` | Cross-validation workflows |
+| `BITNET_CPP_DIR` | Path to C++ reference (parity only) | unset | Parity validation with BitNet.cpp |
+| `BITNET_DISABLE_MINIMAL_LOADER` | Fail-fast on loader errors | `0` | CI/CD strict validation |
 
 ### Receipt Requirements
 
