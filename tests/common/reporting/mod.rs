@@ -11,6 +11,7 @@ pub mod formats;
 pub mod reporter;
 // pub mod templates;
 
+#[allow(unused_imports)]
 pub use reporter::{ReportingManager, TestReporter};
 
 use serde::{Deserialize, Serialize};

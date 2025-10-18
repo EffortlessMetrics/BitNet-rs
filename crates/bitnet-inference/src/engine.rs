@@ -59,7 +59,7 @@
 //! ```
 
 use anyhow::{Context, Result};
-use bitnet_common::{BitNetConfig, BitNetTensor, ConcreteTensor, Device, Tensor};
+use bitnet_common::{BitNetConfig, ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use candle_core::{DType, IndexOp};
@@ -840,29 +840,8 @@ impl InferenceEngine {
     /// Evaluate token IDs and return logits for deterministic comparison
     /// This is used for cross-validation with C++ implementation
     pub async fn eval_ids(&mut self, ids: &[u32]) -> Result<Vec<f32>> {
-        // Start timing
-        let start = std::time::Instant::now();
-
-        // Convert token IDs to ConcreteTensor
-        let device = candle_core::Device::Cpu;
-        let input_tensor = candle_core::Tensor::from_slice(ids, &[1, ids.len()], &device)?;
-        let input = ConcreteTensor::BitNet(BitNetTensor::new(input_tensor));
-
-        // Get cache for forward pass
-        let mut cache = self.cache.write().await;
-
-        // Run forward pass through model to get logits
-        let logits_tensor = self.backend.forward(&input, &mut cache).await?;
-
-        // Extract logits as f32 vector
-        let flat_logits = match logits_tensor {
-            ConcreteTensor::BitNet(ref tensor) => tensor.to_vec()?,
-            ConcreteTensor::Mock(_) => vec![0.0; 100], // Mock implementation for testing
-        };
-
-        debug!("eval_ids: processed {} tokens in {:?}", ids.len(), start.elapsed());
-
-        Ok(flat_logits)
+        // Use forward_pass which handles dtype conversion and logit extraction
+        self.forward_pass(ids).await
     }
 
     /// Generate text from a prompt

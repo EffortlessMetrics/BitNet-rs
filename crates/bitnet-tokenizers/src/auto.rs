@@ -13,12 +13,20 @@ pub fn load_auto(
         return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
     }
 
-    // Try tokenizer embedded in GGUF
-    if model_path.extension().and_then(|s| s.to_str()) == Some("gguf")
-        && let Ok(tok) = crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(model_path)
-    {
-        tracing::info!("Using tokenizer: embedded in GGUF");
-        return Ok(Arc::new(tok));
+    // Try tokenizer embedded in GGUF (using proper BPE/SPM implementation)
+    if model_path.extension().and_then(|s| s.to_str()) == Some("gguf") {
+        match load_gguf_tokenizer(model_path) {
+            Ok(tok) => {
+                tracing::info!("Using tokenizer: embedded in GGUF (BPE/SPM)");
+                return Ok(tok);
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to load tokenizer from GGUF: {}. Will try external tokenizer files.",
+                    e
+                );
+            }
+        }
     }
 
     // Try tokenizer.json / tokenizer.model in the model directory
@@ -41,4 +49,21 @@ pub fn load_auto(
     bail!(
         "No tokenizer found. Provide --tokenizer or include tokenizer.json/.model next to the GGUF."
     );
+}
+
+/// Load tokenizer from GGUF file using pure-Rust BPE/SPM implementation
+fn load_gguf_tokenizer(model_path: &Path) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
+    use bitnet_models::formats::gguf::GgufReader;
+    use bitnet_models::loader::MmapFile;
+
+    // Memory-map the GGUF file
+    let mmap = MmapFile::open(model_path)?;
+
+    // Create GGUF reader
+    let reader = GgufReader::new(mmap.as_slice())?;
+
+    // Load tokenizer from GGUF metadata (BPE or SPM)
+    let tokenizer = crate::gguf_loader::RustTokenizer::from_gguf(&reader)?;
+
+    Ok(Arc::new(tokenizer))
 }

@@ -10,13 +10,13 @@ fn benchmark_kernels(c: &mut Criterion) {
     let kernel = manager.select_best().unwrap();
 
     let a = vec![1i8; 1024];
-    let b = vec![1u8; 1024];
+    let weights = vec![1u8; 1024];
     let mut c_out = vec![0.0f32; 1024];
 
     c.bench_function("matmul_i2s", |b| {
         b.iter(|| {
             let result =
-                kernel.matmul_i2s(black_box(&a), black_box(&b), black_box(&mut c_out), 32, 32, 32);
+                kernel.matmul_i2s(black_box(&a), black_box(&weights), black_box(&mut c_out), 32, 32, 32);
             black_box(result)
         })
     });

@@ -61,6 +61,9 @@ fn main() {
         // Link against the C++ implementation - fail on error
         link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
 
+        // Compile the C++ shim
+        compile_cpp_shim(&cpp_dir).expect("Failed to compile C++ shim");
+
         // Generate bindings - fail on error
         generate_bindings(&cpp_dir)
             .expect("Failed to generate FFI bindings from Microsoft BitNet headers");
@@ -143,9 +146,68 @@ fn link_cpp_implementation(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Err
 }
 
 #[cfg(feature = "ffi")]
+fn compile_cpp_shim(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    use std::path::PathBuf;
+
+    let shim_cc = PathBuf::from("csrc/bitnet_c_shim.cc");
+
+    if !shim_cc.exists() {
+        return Err(format!(
+            "C++ shim source not found: {}\n\
+             Expected location: crates/bitnet-sys/csrc/bitnet_c_shim.cc",
+            shim_cc.display()
+        )
+        .into());
+    }
+
+    eprintln!("bitnet-sys: Compiling C++ shim from {}", shim_cc.display());
+
+    let build_dir = cpp_dir.join("build");
+
+    // Possible include paths for llama.cpp headers
+    let possible_include_paths = vec![
+        cpp_dir.join("3rdparty/llama.cpp/include"),
+        cpp_dir.join("3rdparty/llama.cpp/ggml/include"),
+        cpp_dir.join("include"),
+        cpp_dir.join("src"),
+        build_dir.join("3rdparty/llama.cpp/include"),
+        build_dir.join("3rdparty/llama.cpp/ggml/include"),
+        PathBuf::from("include"), // Local bitnet_c.h
+    ];
+
+    let mut builder = cc::Build::new();
+    builder.cpp(true).file(&shim_cc).flag_if_supported("-std=c++17").flag_if_supported("-fPIC");
+
+    // Add include paths as system includes to suppress third-party warnings
+    for include_path in &possible_include_paths {
+        if include_path.exists() {
+            // Use -isystem for third-party headers to suppress warnings
+            builder.flag(format!("-isystem{}", include_path.display()));
+        }
+    }
+
+    // Compile the shim
+    builder.compile("bitnet_c_shim");
+
+    eprintln!("bitnet-sys: C++ shim compiled successfully");
+    Ok(())
+}
+
+#[cfg(feature = "ffi")]
 fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    // We'll generate bindings from llama.h which is the main C API
-    // Try multiple possible locations for llama.h in the Microsoft BitNet repo
+    // We'll generate bindings from both our custom bitnet_c.h wrapper and llama.h
+    let bitnet_c_h = PathBuf::from("include/bitnet_c.h");
+
+    if !bitnet_c_h.exists() {
+        return Err(format!(
+            "bitnet_c.h not found at: {}\n\
+             Expected location: crates/bitnet-sys/include/bitnet_c.h",
+            bitnet_c_h.display()
+        )
+        .into());
+    }
+
+    // Try to find llama.h as well
     let possible_llama_locations = [
         cpp_dir.join("3rdparty/llama.cpp/include/llama.h"),
         cpp_dir.join("include/llama.h"),
@@ -173,16 +235,15 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         )
     })?;
 
-    // Also check for BitNet-specific headers
-    let bitnet_h = cpp_dir.join("include/ggml-bitnet.h");
-    let use_bitnet = bitnet_h.exists();
+    eprintln!(
+        "bitnet-sys: Generating bindings from {} and {}",
+        bitnet_c_h.display(),
+        llama_h.display()
+    );
 
-    eprintln!("bitnet-sys: Generating bindings from {}", llama_h.display());
-    if use_bitnet {
-        eprintln!("bitnet-sys: Also including BitNet-specific APIs from {}", bitnet_h.display());
-    }
-
-    let mut builder = bindgen::Builder::default().header(llama_h.to_string_lossy());
+    let mut builder = bindgen::Builder::default()
+        .header(bitnet_c_h.to_string_lossy())
+        .header(llama_h.to_string_lossy());
 
     // Add include paths - check which ones exist
     let possible_include_paths = [
@@ -200,6 +261,9 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     builder = builder
+        // BitNet C wrapper API
+        .allowlist_function("bitnet_.*")
+        .allowlist_type("bitnet_.*")
         // Main llama.cpp C API
         .allowlist_function("llama_.*")
         .allowlist_type("llama_.*")
@@ -214,15 +278,6 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
         .raw_line("// Auto-generated bindings - DO NOT EDIT")
         // Note: derive_copy automatically includes Clone
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
-
-    // Add BitNet-specific header if available
-    if use_bitnet {
-        builder = builder
-            .header(bitnet_h.to_string_lossy())
-            .allowlist_function("ggml_bitnet_.*")
-            .allowlist_function("ggml_qgemm_lut")
-            .allowlist_function("ggml_preprocessor");
-    }
 
     let bindings = builder.generate().map_err(|e| format!("bindgen failed: {}", e))?;
 

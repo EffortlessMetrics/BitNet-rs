@@ -8,6 +8,8 @@
 //! - AC5: Stop Sequence Aliases (--stop aliases)
 //! - Spec: docs/explanation/cli-ux-improvements-spec.md
 
+#![cfg(feature = "full-cli")]
+
 use anyhow::Result;
 use bitnet_cli::commands::InferenceCommand;
 use clap::Parser;

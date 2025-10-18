@@ -55,8 +55,7 @@ impl TestModelRegistry {
     }
 
     fn classify_size(bytes: u64) -> ModelSize {
-        const MB: u64 = 1024 * 1024;
-        let mb = bytes / MB;
+        let mb = bytes / crate::BYTES_PER_MB;
         match mb {
             0..=100 => ModelSize::Tiny,
             101..=1024 => ModelSize::Small,
@@ -510,10 +509,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let tiny = dir.path().join("tiny-model.gguf");
         let tiny_file = File::create(&tiny).unwrap();
-        tiny_file.set_len(1024 * 1024).unwrap();
+        tiny_file.set_len(crate::BYTES_PER_MB).unwrap();
         let small = dir.path().join("small-model.gguf");
         let small_file = File::create(&small).unwrap();
-        small_file.set_len(110 * 1024 * 1024).unwrap();
+        small_file.set_len(110 * crate::BYTES_PER_MB).unwrap();
 
         unsafe {
             std::env::set_var("TEST_MODEL_DIR", dir.path());

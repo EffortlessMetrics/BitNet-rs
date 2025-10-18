@@ -698,11 +698,15 @@ async fn run_simple_generation(
             }
             tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
             // Mock fallback
-            let (cfg, tensors) = bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cpu)
+            let load_result = bitnet_models::gguf_simple::load_gguf_full(&model_path, Device::Cpu)
                 .context("Mock loader also failed")?;
-            let m = bitnet_models::BitNetModel::from_gguf(cfg.clone(), tensors, Device::Cpu)
-                .context("Failed to build mock model")?;
-            (Arc::new(m) as Arc<dyn Model>, cfg)
+            let m = bitnet_models::BitNetModel::from_gguf(
+                load_result.config.clone(),
+                load_result.tensors,
+                Device::Cpu,
+            )
+            .context("Failed to build mock model")?;
+            (Arc::new(m) as Arc<dyn Model>, load_result.config)
         }
     };
 

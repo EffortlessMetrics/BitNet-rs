@@ -77,10 +77,14 @@ pub fn load_gguf(
 
 #### 3. Quantization Format Support
 
-**I2_S (2-bit Signed) - Production Recommended:**
-- Values: [-2, -1, 1, 2] with optimal accuracy
+**I2_S (2-bit Signed) - Two Flavors with Automatic Detection:**
+- **BitNet Native (32-element blocks):** Values [-2, -1, 1, 2] with 10 bytes/block format
+- **GGML QK256 (256-element blocks):** Values [-2, -1, 1, 2] with 64 bytes/block format, separate scales
+- **Automatic Detection:** Loader inspects tensor sizes to identify format
+- **Transparent Dispatch:** Forwards automatically use appropriate kernel
 - Performance: 66+ Melem/s (CPU), 200+ Melem/s (GPU)
-- Accuracy: ≥99% vs FP32 baseline
+- Accuracy: ≥99.8% vs FP32 baseline for both flavors
+- **Pure-Rust Support:** Both formats run without FFI dependency
 
 **TL1/TL2 (Table Lookup Quantization):**
 - TL1: Linear mapping optimized for ARM (NEON)

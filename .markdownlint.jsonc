@@ -1,14 +1,12 @@
 {
   "default": true,
-  "MD013": {
-    "line_length": 200,
-    "tables": false,
-    "code_blocks": false
-  },
-  "MD033": false,
+
+  // Line length: use 120; do not enforce in code blocks or tables.
+  "MD013": { "line_length": 120, "code_blocks": false, "tables": false, "headings": false },
+
+  // First line heading (release notes, CHANGELOG excerpts often violate this).
   "MD041": false,
-  "ignores": [
-    "ci/**",
-    "docs/baselines/**"
-  ]
+
+  // Trailing punctuation in headings (release titles sometimes need it).
+  "MD026": { "punctuation": ".,;:!。，；：" }
 }

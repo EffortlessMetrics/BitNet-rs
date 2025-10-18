@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "description": "Golden tokenization test cases for GPT-2 (BPE) tokenizers. These reference outputs must match exactly to prevent tokenization drift.",
+  "tokenizer_kind": "gpt2",
+  "test_cases": [
+    {
+      "text": "What is 2+2?",
+      "add_bos": false,
+      "parse_special": false,
+      "expected_tokens": [3923, 318, 362, 10, 17, 30],
+      "note": "First token 3923 is ' What' with ByteLevel prefix_space=true"
+    },
+    {
+      "text": "Hello world",
+      "add_bos": false,
+      "parse_special": false,
+      "expected_tokens": [15496, 995],
+      "note": "Basic greeting tokens"
+    },
+    {
+      "text": "The quick brown fox jumps",
+      "add_bos": false,
+      "parse_special": false,
+      "expected_tokens": [464, 2068, 7586, 21831, 18045],
+      "note": "Common English phrase for stability check"
+    }
+  ]
+}

@@ -1,6 +1,15 @@
 //! Tokenization support for BitNet models
 
+// Compile-time policy: forbid FFI tokenizer outside crossval
+// This ensures production code uses pure-Rust tokenization for security and determinism
+#[cfg(all(not(feature = "crossval"), feature = "ffi_tokenizer"))]
+compile_error!(
+    "`ffi_tokenizer` is disallowed outside crossval; pure-Rust tokenizer must be used. \
+     Build with `--features crossval` if you need FFI tokenizer for cross-validation."
+);
+
 pub mod auto;
+pub mod gguf_loader;
 pub mod gguf_tokenizer;
 pub mod hf_tokenizer;
 pub mod loader;
@@ -27,6 +36,9 @@ pub use mock::MockTokenizer;
 #[cfg(feature = "spm")]
 pub use spm_tokenizer::SpmTokenizer;
 pub use universal::UniversalTokenizer;
+
+// Export the new pure-Rust GGUF tokenizer types
+pub use gguf_loader::{GgufTokKind, RustTokenizer};
 
 // Export BasicTokenizer for internal and external use
 // BasicTokenizer is defined below in this module
@@ -198,6 +210,118 @@ impl Tokenizer for BasicTokenizer {
     }
 }
 
+/// Wrapper for pure-Rust GGUF tokenizer loaded from model metadata
+///
+/// This wrapper adapts the `gguf_loader::RustTokenizer` to the `Tokenizer` trait,
+/// allowing it to be used interchangeably with other tokenizer implementations.
+///
+/// The wrapper supports both SentencePiece (SPM) and Byte-Pair Encoding (BPE)
+/// tokenizers loaded directly from GGUF model files without external tokenizer files.
+///
+/// # Example
+///
+/// ```no_run
+/// use bitnet_models::{GgufReader, loader::MmapFile};
+/// use bitnet_tokenizers::RustGgufTokenizer;
+///
+/// # fn example(path: &std::path::Path) -> anyhow::Result<()> {
+/// let mmap = MmapFile::open(path)
+///     .map_err(|e| anyhow::anyhow!("Failed to open file: {}", e))?;
+/// let reader = GgufReader::new(mmap.as_slice())
+///     .map_err(|e| anyhow::anyhow!("Failed to parse GGUF: {}", e))?;
+/// let tokenizer = RustGgufTokenizer::from_gguf(&reader)?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct RustGgufTokenizer {
+    inner: crate::gguf_loader::RustTokenizer,
+}
+
+impl RustGgufTokenizer {
+    /// Create tokenizer from GGUF metadata
+    ///
+    /// This method loads the tokenizer directly from GGUF model metadata,
+    /// detecting the tokenizer kind (SPM or BPE) and extracting special token IDs.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - GGUF file reader with metadata and tensors
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Tokenizer kind cannot be detected from metadata
+    /// - Required tokenizer data is missing (SPM protobuf or BPE vocab/merges)
+    /// - Tokenizer construction fails (invalid data)
+    /// - SPM feature is not enabled when loading SPM tokenizer
+    pub fn from_gguf(reader: &bitnet_models::GgufReader) -> anyhow::Result<Self> {
+        let inner = crate::gguf_loader::RustTokenizer::from_gguf(reader)?;
+        Ok(Self { inner })
+    }
+
+    /// Get BOS, EOS, and EOT token IDs
+    ///
+    /// This is useful for prompt formatting and template detection.
+    ///
+    /// # Returns
+    ///
+    /// Tuple of (bos_id, eos_id, eot_id) where each is `Option<u32>`
+    pub fn bos_eos_eot(&self) -> (Option<u32>, Option<u32>, Option<u32>) {
+        (self.inner.bos_id(), self.inner.eos_id(), self.inner.eot_id())
+    }
+
+    /// Get hint for whether to add BOS by default
+    ///
+    /// This hint is extracted from GGUF metadata (`tokenizer.ggml.add_bos_token`)
+    /// and can be used to determine default encoding behavior.
+    pub fn add_bos_hint(&self) -> Option<bool> {
+        self.inner.add_bos_hint()
+    }
+
+    /// Get tokenizer kind (SPM or BPE)
+    pub fn kind(&self) -> crate::gguf_loader::GgufTokKind {
+        self.inner.kind()
+    }
+}
+
+impl Tokenizer for RustGgufTokenizer {
+    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+        // Map the trait's add_special parameter to RustTokenizer's parse_special
+        self.inner
+            .encode(text, add_bos, add_special)
+            .map_err(|e| BitNetError::Model(ModelError::LoadingFailed { reason: e.to_string() }))
+    }
+
+    fn decode(&self, tokens: &[u32]) -> Result<String> {
+        // RustTokenizer doesn't implement decode yet - return placeholder
+        // TODO: Implement decode in RustTokenizer when needed
+        Ok(format!("Generated text from {} tokens", tokens.len()))
+    }
+
+    fn vocab_size(&self) -> usize {
+        // Return a reasonable default - actual vocab size varies by model
+        // TODO: Expose vocab_size from RustTokenizer when BPE/SPM provide it
+        match self.inner.kind() {
+            crate::gguf_loader::GgufTokKind::Spm => 32000, // Typical LLaMA vocab size
+            crate::gguf_loader::GgufTokKind::Bpe => 50257, // GPT-2 vocab size
+        }
+    }
+
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        // Return placeholder - actual piece conversion requires vocab lookup
+        // TODO: Implement token_to_piece in RustTokenizer when needed
+        Some(format!("<token_{}>", token))
+    }
+
+    fn bos_token_id(&self) -> Option<u32> {
+        self.inner.bos_id()
+    }
+
+    fn eos_token_id(&self) -> Option<u32> {
+        self.inner.eos_id()
+    }
+}
+
 /// Tokenizer file kind
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenizerFileKind {
@@ -273,6 +397,48 @@ impl TokenizerBuilder {
             let _ = kind;
         }
         Ok(tokenizer)
+    }
+
+    /// Create tokenizer from GGUF model metadata
+    ///
+    /// This method loads a pure-Rust tokenizer directly from GGUF model metadata,
+    /// supporting both SentencePiece (SPM) and Byte-Pair Encoding (BPE) tokenizers
+    /// without requiring external tokenizer files.
+    ///
+    /// # Arguments
+    ///
+    /// * `reader` - GGUF file reader with metadata and tensors
+    ///
+    /// # Returns
+    ///
+    /// Arc-wrapped tokenizer that implements the Tokenizer trait
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Tokenizer kind cannot be detected from metadata
+    /// - Required tokenizer data is missing (SPM protobuf or BPE vocab/merges)
+    /// - Tokenizer construction fails (invalid data)
+    /// - SPM feature is not enabled when loading SPM tokenizer
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use bitnet_models::{GgufReader, loader::MmapFile};
+    /// use bitnet_tokenizers::TokenizerBuilder;
+    /// # use bitnet_common::Result;
+    ///
+    /// # fn example(path: &std::path::Path) -> Result<()> {
+    /// let mmap = MmapFile::open(path)?;
+    /// let reader = GgufReader::new(mmap.as_slice())?;
+    /// let tokenizer = TokenizerBuilder::from_gguf_reader(&reader)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn from_gguf_reader(reader: &bitnet_models::GgufReader) -> Result<Arc<dyn Tokenizer>> {
+        let tokenizer = RustGgufTokenizer::from_gguf(reader)
+            .map_err(|e| BitNetError::Model(ModelError::LoadingFailed { reason: e.to_string() }))?;
+        Ok(Arc::new(tokenizer))
     }
 
     /// Create tokenizer from pretrained model

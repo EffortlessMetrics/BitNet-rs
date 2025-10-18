@@ -145,7 +145,7 @@ Vulnerabilities:        0 ✅
 
 ### ✅ Quantization Accuracy
 - **I2S (2-bit signed):** >99% accuracy vs FP32 reference
-- **TL1 (Table lookup 1):** >99% accuracy vs FP32 reference  
+- **TL1 (Table lookup 1):** >99% accuracy vs FP32 reference
 - **TL2 (Table lookup 2):** >99% accuracy vs FP32 reference
 - **Validation:** Pre-merge validated, baselines documented
 

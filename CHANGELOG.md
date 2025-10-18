@@ -2,10 +2,100 @@
 
 All notable changes to BitNet.rs will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **QK256 (GGML I2_S) Pure-Rust Support**: Complete end-to-end implementation of 256-element block I2_S quantization
+  - GGUF loader automatically detects and stores QK256 tensors as U8 tensors with `.qk256_qs` suffix
+  - Pure-Rust `gemv_qk256()` kernel for inference (no FFI required)
+  - Transformer-level automatic dispatch: forwards automatically use QK256 kernel when weights present
+  - Dual I2_S flavor support: BitNet native (32-elem) and GGML (256-elem/QK256) with automatic detection
+  - 17 comprehensive tests validating end-to-end functionality (unit + integration + parity)
+  - Parity harness updated to show `backend: rust, compute: rust` for pure-Rust inference
+  - Compatible with MS BitNet GGUF models using GGML format without FFI dependency
+  - Automatic format detection: loader inspects tensor sizes to identify I2_S flavor
+  - Transparent kernel dispatch: no model changes required for QK256 support
+  - New module `bitnet-models::quant::i2s_qk256` with scalar and SIMD reference kernels
+  - Documentation: architecture overview, how-to guide, and dual-flavor explanation
+
+### Status
+- ✅ Pure-Rust kernel implementation complete and tested
+- ✅ GGUF loader integration with automatic format detection
+- ✅ Transformer-level dispatch wiring complete
+- ✅ Integration tests and parity validation passing
+- ✅ Production-ready for pure-Rust inference on GGML models
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.10.0-rc.0] - 2025-10-17
+
+### Added
+
+- **Pure-Rust GGUF Tokenizer** ([feat/crossval-parity-harness](https://github.com/EffortlessSteven/BitNet-rs/tree/feat/crossval-parity-harness)):
+  - Load tokenizers directly from GGUF metadata (SPM protobuf, BPE vocab+merges)
+  - No external tokenizer files required for self-contained models
+  - Auto-detection from `tokenizer.ggml.model` metadata
+- **BPE ByteLevel Prefix Space Fix**:
+  - Enable `add_prefix_space=true` for both BPE pre-tokenizer **and** decoder
+  - Ensures consistent " What" tokenization with leading space marker
+  - Proper handling of GPT-2 style Ġ (U+0120) prefix markers
+- **BPE Piece-to-GGUF-ID Remapping**:
+  - Maps HuggingFace token IDs to authoritative GGUF vocabulary IDs via `HashMap<String, u32>`
+  - Prevents ID drift from HuggingFace's internal ID assignment
+  - Uses GGUF `tokenizer.ggml.tokens` array as source of truth (index = token ID)
+  - Model-aware token IDs: BitNet GGUF has "ĠWhat" at position 3639 (not universal 3923)
+- **Receipt-Based Provenance** (crossval):
+  - Tokenizer metadata: `merges_count` (BPE), `tokenizer_blob_sha256` (SPM)
+  - Environment metadata: `target_cpu`, `cpu_features`, `libc`, `rayon_threads`, `seed`
+  - C++ metadata: `llama_cpp_commit` (from BITNET_CPP_DIR)
+  - Prompt hash: `blake3` for formatted prompt verification
+  - Timeout receipts with diagnostic data (120s guard)
+- **Model-Aware Golden Token Tests**:
+  - Split fixtures: `golden_tokens_gpt2.json`, `golden_tokens_llama.json`, `golden_tokens_llama3.json`
+  - Auto-select based on `tokenizer.ggml.model` from GGUF
+  - Exact-match validation locks in BPE and SPM behavior
+- **Optional tok-debug Diagnostics**:
+  - Feature-gated `--features tok-debug` for piece→ID diagnostics
+  - Dumps first 8 tokens: `hf_id`, `piece`, `gguf_id`
+- **LLaMA-3 Chat Prompt Support**:
+  - Multi-prompt support via `CROSSVAL_PROMPT_SET=math|chat|all`
+  - Auto-detect `parse_special=true` for `<|start_header_id|>`, `<|eot_id|>`
+  - Proper EOT vs EOS handling
+- **CI Workflows**:
+  - `parity-proof.yml`: Fast PR gate with receipt artifact upload
+  - `nightly-parity-matrix.yml`: Prompt+quant matrix with dated archiving
+
+### Fixed
+
+- **BPE Token ID Mapping**:
+  - Rust tokenizer now uses GGUF vocabulary IDs instead of HuggingFace internal IDs
+  - Fixes token ID mismatches by looking up piece strings in GGUF `tokenizer.ggml.tokens` array
+  - Handles space normalization: both ` What` and `ĠWhat` forms correctly mapped
+- **FFI Memory Safety**:
+  - Hardened batch lifecycle management in C++ shim
+  - Two-call tokenization pattern (preflight + allocation)
+  - Explicit safety contract documentation for FFI boundary
+- **Deterministic Inference**:
+  - Seeded runs with `BITNET_SEED` + `RAYON_NUM_THREADS=1`
+  - Reproducible tokenization and generation
+- **SPM Blob Reproducibility**:
+  - SHA256 fingerprinting of SentencePiece protobuf
+  - Validates tokenizer integrity across runs
+
+### Documentation
+
+- Added `docs/releases/v0.10.0-rc.0-summary.md`: Comprehensive release guide
+- Updated `CLAUDE.md`: Document tok-debug feature and golden token tests
+- CI workflow examples for parity validation
+
+### Testing
+
+- Parity test timeout increased: 60s → 120s for 2B+ models
+- Golden token tests: 8 test cases across 3 tokenizer families
+- FFI lifecycle test: 100x create/drop cycles (no crashes)
 
 ### Changed
 

@@ -184,6 +184,12 @@ impl TemplateType {
         }
     }
 
+    /// Check if special tokens should be parsed during encoding
+    /// LLaMA-3 chat templates contain special tokens that need to be parsed
+    pub fn parse_special(&self) -> bool {
+        matches!(self, Self::Llama3Chat)
+    }
+
     /// Render a chat history (system + turns) into a single prompt string.
     /// This method formats multi-turn conversations with proper role markers.
     pub fn render_chat(&self, history: &[ChatTurn], system: Option<&str>) -> Result<String> {
@@ -382,6 +388,13 @@ mod tests {
         assert!(TemplateType::Raw.should_add_bos());
         assert!(TemplateType::Instruct.should_add_bos());
         assert!(!TemplateType::Llama3Chat.should_add_bos()); // Has its own BOS
+    }
+
+    #[test]
+    fn test_parse_special_control() {
+        assert!(!TemplateType::Raw.parse_special());
+        assert!(!TemplateType::Instruct.parse_special());
+        assert!(TemplateType::Llama3Chat.parse_special()); // LLaMA-3 has special tokens
     }
 
     #[test]

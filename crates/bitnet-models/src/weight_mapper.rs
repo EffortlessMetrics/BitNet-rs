@@ -6,6 +6,89 @@ use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+/// Model dimensions for tensor shape validation and transposition
+#[derive(Clone, Copy, Debug)]
+struct ModelDims {
+    hidden: usize,
+    n_head: usize,
+    n_kv_head: usize,
+    inter: usize,
+    vocab: usize,
+}
+
+impl ModelDims {
+    fn head_dim(&self) -> Result<usize> {
+        let d = self.hidden / self.n_head;
+        if d * self.n_head != self.hidden {
+            return Err(bitnet_common::BitNetError::Validation(format!(
+                "hidden_size {} not divisible by n_head {}",
+                self.hidden, self.n_head
+            )));
+        }
+        Ok(d)
+    }
+
+    fn kv_head_dim(&self) -> Result<usize> {
+        self.head_dim()
+    }
+
+    fn q_dim(&self) -> Result<usize> {
+        Ok(self.head_dim()? * self.n_head)
+    }
+
+    fn kv_dim(&self) -> Result<usize> {
+        Ok(self.kv_head_dim()? * self.n_kv_head)
+    }
+}
+
+/// Ensures tensor is [out, in] by transposing if it's [in, out].
+/// Accepts fused alternative shapes where applicable (e.g., [hidden, hidden]).
+fn ensure_matrix_or_transpose(
+    t: Tensor,
+    expected_out: usize,
+    expected_in: usize,
+    name: &str,
+) -> Result<Tensor> {
+    let shp = t.shape().dims();
+    match shp {
+        // already correct [out, in]
+        [o, i] if *o == expected_out && *i == expected_in => {
+            tracing::trace!("{}: already correct [{}, {}]", name, o, i);
+            Ok(t)
+        }
+        // transposed [in, out] - need to transpose
+        [i, o] if *i == expected_in && *o == expected_out => {
+            tracing::info!(
+                "{}: transposing from [{}, {}] to [{}, {}]",
+                name,
+                i,
+                o,
+                expected_out,
+                expected_in
+            );
+            Ok(t.t()?.contiguous()?)
+        }
+        // allow fused hidden x hidden in cases where both dims equal hidden
+        [o, i] if *o == expected_out && *i == expected_out && expected_out == expected_in => {
+            tracing::trace!("{}: fused square shape [{}, {}]", name, o, i);
+            Ok(t)
+        }
+        [i, o] if *i == expected_out && *o == expected_out && expected_out == expected_in => {
+            tracing::info!(
+                "{}: fused square shape but transposed, transposing [{}, {}]",
+                name,
+                i,
+                o
+            );
+            Ok(t.t()?.contiguous()?)
+        }
+        _ => Err(bitnet_common::BitNetError::Validation(format!(
+            "{}: unexpected matrix shape {:?}, expected [{}, {}] or its transpose",
+            name, shp, expected_out, expected_in
+        ))),
+    }
+}
+
 /// Canonical target schema:
 /// layers.{i}.attention.{q_proj|k_proj|v_proj|o_proj}.weight
 /// layers.{i}.feed_forward.{gate_proj|up_proj|down_proj}.weight
@@ -411,15 +494,347 @@ fn detect_hidden_size_from_weights(
     }
 }
 
-/// Detect vocab size and normalize embedding/lm_head tensors
+/// Helper to find tensor by trying multiple key aliases
+/// Returns (matched_key, tensor) tuple for better diagnostics
+fn find_and_remove(
+    tensors: &mut HashMap<String, Tensor>,
+    keys: &[&str],
+) -> Option<(String, Tensor)> {
+    for k in keys {
+        if let Some(t) = tensors.remove(*k) {
+            return Some((k.to_string(), t));
+        }
+    }
+    None
+}
+
+/// Normalize attention and FFN weights for a single layer to [out, in] layout
+fn normalize_layer_weights(
+    tensors: &mut HashMap<String, Tensor>,
+    layer_idx: usize,
+    dims: &ModelDims,
+) -> Result<()> {
+    let hidden = dims.hidden;
+    let q_dim = dims.q_dim()?;
+    let kv_dim = dims.kv_dim()?;
+
+    // Build key prefixes for this layer (try both blk.N and layers.N)
+    let blk_prefix = format!("blk.{}", layer_idx);
+    let layers_prefix = format!("layers.{}", layer_idx);
+
+    // Attention Q/K/V/O projections
+    let attn_keys = [
+        // Q projection: [q_dim, hidden] where q_dim = head_dim * n_head
+        (
+            "q_proj",
+            &[
+                format!("{}.attn_q.weight", blk_prefix),
+                format!("{}.attention.q_proj.weight", layers_prefix),
+                format!("{}.attention.wq.weight", layers_prefix),
+                format!("{}.self_attn.q_proj.weight", layers_prefix),
+            ] as &[String],
+            q_dim,
+            hidden,
+        ),
+        // K projection: [kv_dim, hidden] where kv_dim = head_dim * n_kv_head
+        (
+            "k_proj",
+            &[
+                format!("{}.attn_k.weight", blk_prefix),
+                format!("{}.attention.k_proj.weight", layers_prefix),
+                format!("{}.attention.wk.weight", layers_prefix),
+                format!("{}.self_attn.k_proj.weight", layers_prefix),
+            ],
+            kv_dim,
+            hidden,
+        ),
+        // V projection: [kv_dim, hidden]
+        (
+            "v_proj",
+            &[
+                format!("{}.attn_v.weight", blk_prefix),
+                format!("{}.attention.v_proj.weight", layers_prefix),
+                format!("{}.attention.wv.weight", layers_prefix),
+                format!("{}.self_attn.v_proj.weight", layers_prefix),
+            ],
+            kv_dim,
+            hidden,
+        ),
+        // O projection: [hidden, q_dim]
+        (
+            "o_proj",
+            &[
+                format!("{}.attn_output.weight", blk_prefix),
+                format!("{}.attn_o.weight", blk_prefix),
+                format!("{}.attention.o_proj.weight", layers_prefix),
+                format!("{}.attention.wo.weight", layers_prefix),
+                format!("{}.self_attn.o_proj.weight", layers_prefix),
+            ],
+            hidden,
+            q_dim,
+        ),
+    ];
+
+    for (name, keys, out_dim, in_dim) in attn_keys {
+        let key_strs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
+        if let Some((matched_key, tensor)) = find_and_remove(tensors, &key_strs) {
+            tracing::debug!(
+                "layer{}.attention.{}: resolved from '{}' with shape {:?}",
+                layer_idx,
+                name,
+                matched_key,
+                tensor.shape().dims()
+            );
+
+            // Validate shape before transposition to catch wrong tensor assignments
+            let shape = tensor.shape().dims();
+
+            // Special case: allow hidden×hidden only for K/V (exporter emitted full hidden)
+            // We need to slice heads NOW in the mapper to produce correct [kv_dim, hidden] shape
+            let is_kv_hidden_square = matches!(shape, [o, i] if (name == "k_proj" || name == "v_proj") && *o == hidden && *i == hidden);
+
+            if is_kv_hidden_square {
+                let n_heads = dims.n_head;
+                let n_kv_heads = dims.n_kv_head;
+                let head_dim = hidden / n_heads;
+                let group_size = n_heads / n_kv_heads;
+
+                tracing::warn!(
+                    "layer{}: Sliced K/V [hidden,hidden] -> [kv_dim,hidden] (GQA group_size={})",
+                    layer_idx,
+                    group_size
+                );
+
+                // Slice heads: [hidden, hidden] -> [kv_dim, hidden]
+                // The weight is stored as [rows=hidden, cols=hidden]
+                // We need to select rows corresponding to KV heads: [kv_dim, hidden]
+                // where kv_dim = n_kv_heads * head_dim
+
+                // Transpose to [hidden, hidden] if needed (tensor might be [hidden, hidden] already)
+                // We want to slice ROWS, so we need [rows, cols] = [hidden, hidden]
+                let weight = if tensor.shape().dims() == [hidden, hidden] {
+                    tensor // Already correct orientation
+                } else {
+                    tensor.transpose(0, 1)? // Transpose to [hidden, hidden]
+                };
+
+                // Select the first row of each group: indices [0, group_size*head_dim, 2*group_size*head_dim, ...]
+                // Actually, we want to select ALL rows for the first n_kv_heads worth of heads
+                // Head 0: rows [0..head_dim]
+                // Head 1: rows [head_dim..2*head_dim]
+                // ...
+                // Head (group_size-1): rows [(group_size-1)*head_dim..group_size*head_dim]  <- this is the last head of first group
+                // Head group_size: rows [group_size*head_dim..(group_size+1)*head_dim]  <- first head of second group
+                // ...
+                // So for GQA, we want heads [0, group_size, 2*group_size, ...] each with head_dim rows
+                // Which means rows [0..head_dim, group_size*head_dim..(group_size+1)*head_dim, ...]
+
+                let mut row_indices = Vec::with_capacity(n_kv_heads * head_dim);
+                for kv_idx in 0..n_kv_heads {
+                    let head_idx = kv_idx * group_size; // First head of this group
+                    let row_start = head_idx * head_dim;
+                    let row_end = row_start + head_dim;
+                    for row in row_start..row_end {
+                        row_indices.push(row as i64);
+                    }
+                }
+
+                // Create index tensor and slice
+                let idx_tensor = candle_core::Tensor::new(row_indices.as_slice(), weight.device())?;
+                let sliced = weight.index_select(&idx_tensor, 0)?; // Select rows
+
+                tracing::debug!(
+                    "layer{}.attention.{}: sliced shape {:?} -> {:?}",
+                    layer_idx,
+                    name,
+                    weight.shape().dims(),
+                    sliced.shape().dims()
+                );
+
+                // Store sliced weight [kv_dim, hidden]
+                tensors.insert(format!("layers.{}.attention.{}.weight", layer_idx, name), sliced);
+            } else {
+                // Normal validation path
+                match shape {
+                    [o, i] if *o == out_dim && *i == in_dim => { /* already correct */ }
+                    [i, o] if *i == in_dim && *o == out_dim => { /* transposed, will fix */ }
+                    // Only allow square fused shapes when BOTH dims equal hidden (not just one)
+                    // This catches GQA cases where K/V have kv_dim != hidden
+                    [o, i]
+                        if *o == hidden
+                            && *i == hidden
+                            && out_dim == hidden
+                            && in_dim == hidden =>
+                    { /* fused square shape for MHA (not GQA) */ }
+                    _ => {
+                        // Dump available keys for this layer to help diagnosis
+                        tracing::error!(
+                            "layer{}: available attention keys in tensor map:",
+                            layer_idx
+                        );
+                        for k in tensors.keys().filter(|k| {
+                            k.contains(&format!("layers.{}", layer_idx))
+                                || k.contains(&format!("blk.{}", layer_idx))
+                        }) {
+                            tracing::error!(
+                                "  - {} (shape: {:?})",
+                                k,
+                                tensors.get(k).map(|t| t.shape().dims())
+                            );
+                        }
+
+                        return Err(bitnet_common::BitNetError::Validation(format!(
+                            "layer{}.attention.{}: unexpected matrix shape {:?}, expected [{}, {}] or transpose. \
+                             Resolved from key '{}'. This may indicate wrong tensor assignment. \
+                             Expected dims: out={}, in={}; q_dim={}, kv_dim={}, hidden={}",
+                            layer_idx,
+                            name,
+                            shape,
+                            out_dim,
+                            in_dim,
+                            matched_key,
+                            out_dim,
+                            in_dim,
+                            q_dim,
+                            kv_dim,
+                            hidden
+                        )));
+                    }
+                }
+
+                let normalized = ensure_matrix_or_transpose(
+                    tensor,
+                    out_dim,
+                    in_dim,
+                    &format!("layer{}.attention.{}", layer_idx, name),
+                )?;
+                tensors
+                    .insert(format!("layers.{}.attention.{}.weight", layer_idx, name), normalized);
+            }
+        }
+    }
+
+    // FFN gate/up/down projections
+    let ffn_keys = [
+        // gate_proj (w1): [inter, hidden]
+        (
+            "gate_proj",
+            &[
+                format!("{}.ffn_gate.weight", blk_prefix),
+                format!("{}.ffn_gate_inp.weight", blk_prefix),
+                format!("{}.feed_forward.gate_proj.weight", layers_prefix),
+                format!("{}.feed_forward.w1.weight", layers_prefix),
+                format!("{}.mlp.gate_proj.weight", layers_prefix),
+            ] as &[String],
+            dims.inter,
+            hidden,
+        ),
+        // up_proj (w3): [inter, hidden]
+        (
+            "up_proj",
+            &[
+                format!("{}.ffn_up.weight", blk_prefix),
+                format!("{}.ffn_up_proj.weight", blk_prefix),
+                format!("{}.feed_forward.up_proj.weight", layers_prefix),
+                format!("{}.feed_forward.w3.weight", layers_prefix),
+                format!("{}.mlp.up_proj.weight", layers_prefix),
+            ],
+            dims.inter,
+            hidden,
+        ),
+        // down_proj (w2): [hidden, inter]
+        (
+            "down_proj",
+            &[
+                format!("{}.ffn_down.weight", blk_prefix),
+                format!("{}.ffn_down_proj.weight", blk_prefix),
+                format!("{}.feed_forward.down_proj.weight", layers_prefix),
+                format!("{}.feed_forward.w2.weight", layers_prefix),
+                format!("{}.mlp.down_proj.weight", layers_prefix),
+            ],
+            hidden,
+            dims.inter,
+        ),
+    ];
+
+    for (name, keys, out_dim, in_dim) in ffn_keys {
+        let key_strs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
+        if let Some((matched_key, tensor)) = find_and_remove(tensors, &key_strs) {
+            tracing::debug!(
+                "layer{}.ffn.{}: resolved from '{}' with shape {:?}",
+                layer_idx,
+                name,
+                matched_key,
+                tensor.shape().dims()
+            );
+
+            let normalized = ensure_matrix_or_transpose(
+                tensor,
+                out_dim,
+                in_dim,
+                &format!("layer{}.ffn.{}", layer_idx, name),
+            )?;
+            tensors
+                .insert(format!("layers.{}.feed_forward.{}.weight", layer_idx, name), normalized);
+        }
+    }
+
+    Ok(())
+}
+
+/// Detect vocab size and normalize embedding/lm_head tensors, and transpose all layer weights
 /// Returns (vocab_size, actual_hidden_size)
-/// NOTE: To avoid large memory allocations, we don't transpose large tensors.
-/// Instead, we detect the orientation and handle it at inference time.
 pub fn normalize_model_tensors(
     tensors: &mut HashMap<String, Tensor>,
-    expected_hidden_size: usize,
+    config: &bitnet_common::BitNetConfig,
 ) -> Result<(usize, usize)> {
-    // 1) Locate embedding with robust aliases
+    let expected_hidden_size = config.model.hidden_size;
+
+    // Build dimensions from config
+    tracing::info!(
+        "Building ModelDims from config: hidden={}, n_head={}, num_key_value_heads={} (raw)",
+        config.model.hidden_size,
+        config.model.num_heads,
+        config.model.num_key_value_heads
+    );
+
+    let n_kv_head_resolved = if config.model.num_key_value_heads > 0 {
+        config.model.num_key_value_heads
+    } else {
+        tracing::warn!("num_key_value_heads is 0, falling back to num_heads (MHA)");
+        config.model.num_heads // MHA fallback
+    };
+
+    let dims = ModelDims {
+        hidden: config.model.hidden_size,
+        n_head: config.model.num_heads,
+        n_kv_head: n_kv_head_resolved,
+        inter: config.model.intermediate_size,
+        vocab: config.model.vocab_size,
+    };
+
+    // Calculate derived dimensions for validation
+    let head_dim = dims.head_dim()?;
+    let q_dim = dims.q_dim()?;
+    let kv_dim = dims.kv_dim()?;
+
+    tracing::info!(
+        "Model dimensions from config: hidden={}, n_head={}, n_kv_head={}, inter={}, vocab={}, num_layers={}",
+        dims.hidden,
+        dims.n_head,
+        dims.n_kv_head,
+        dims.inter,
+        dims.vocab,
+        config.model.num_layers
+    );
+    tracing::info!("Derived dimensions: head_dim={}, q_dim={}, kv_dim={}", head_dim, q_dim, kv_dim);
+
+    // 1) Normalize all layer weights to [out, in] layout
+    for layer_idx in 0..config.model.num_layers {
+        normalize_layer_weights(tensors, layer_idx, &dims)?;
+    }
+
+    // 2) Locate embedding with robust aliases
     let emb_candidates = [
         "embed_tokens.weight",
         "model.embed_tokens.weight",
@@ -428,7 +843,7 @@ pub fn normalize_model_tensors(
         "transformer.wte.weight",
     ];
 
-    let (emb_key, er, ec, emb_device) = {
+    let (emb_key, er, ec, _emb_device) = {
         let (key, emb) = pick(tensors, &emb_candidates).ok_or_else(|| {
             bitnet_common::BitNetError::Validation(
                 "embed tokens not found (tried embed_tokens/tok_embeddings/token_embd/transformer.wte)"
@@ -442,7 +857,7 @@ pub fn normalize_model_tensors(
         (key, er, ec, device)
     };
 
-    // 2) Try to detect hidden size from other model weights first
+    // 3) Try to detect hidden size from other model weights first
     let detected_hidden = detect_hidden_size_from_weights(tensors, expected_hidden_size)?;
 
     // 3) Infer vocab + orientation from the embedding shape
@@ -483,32 +898,22 @@ pub fn normalize_model_tensors(
         emb_needs_t
     );
 
-    // 3) Store embedding orientation metadata instead of transposing
+    // 3) Transpose embeddings if needed to ensure [vocab, hidden] layout
     if emb_needs_t {
-        tracing::warn!(
-            "embed_tokens is transposed [hidden={}, vocab={}] - avoiding {} MB transpose",
+        tracing::info!(
+            "Transposing embed_tokens from [hidden={}, vocab={}] to [vocab={}, hidden={}]",
             hidden_size,
             vocab_size,
-            (vocab_size * hidden_size * 4) / (1024 * 1024) // Assuming f32
+            vocab_size,
+            hidden_size
         );
-        // Store metadata about transposition instead of doing it
-        // The embedding layer will handle this at inference time
-        // For now, just log a warning and keep the tensor as-is
-        if emb_key != "embed_tokens.weight" {
-            let emb = tensors.remove(emb_key).unwrap();
-            tensors.insert("embed_tokens.weight".to_string(), emb);
-        }
-        // Add a metadata tensor to indicate transposition is needed
-        // This is a tiny 1-element tensor that signals the orientation
-        let transpose_flag = Tensor::from_slice(&[1.0f32], 1, &emb_device)?;
-        tensors.insert("embed_tokens.transposed".to_string(), transpose_flag);
+        let emb = tensors.remove(emb_key).unwrap();
+        let emb_t = emb.t()?.contiguous()?; // Transpose to [vocab, hidden] and make contiguous
+        tensors.insert("embed_tokens.weight".to_string(), emb_t);
     } else if emb_key != "embed_tokens.weight" {
         // Just rename the key if needed
         let emb = tensors.remove(emb_key).unwrap();
         tensors.insert("embed_tokens.weight".to_string(), emb);
-        // Add flag indicating no transposition needed
-        let transpose_flag = Tensor::from_slice(&[0.0f32], 1, &emb_device)?;
-        tensors.insert("embed_tokens.transposed".to_string(), transpose_flag);
     }
 
     // 4) Locate lm_head with robust aliases, normalize to [n_vocab, n_embd]
@@ -603,6 +1008,7 @@ pub fn create_var_builder(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use candle_core::{Device as CDevice, Tensor as CandleTensor};
 
     #[test]
     fn maps_blk_and_llama_variants() {
@@ -621,6 +1027,113 @@ mod tests {
         assert_eq!(
             normalize_vendor_key("layers.3.post_attention_layernorm.weight").as_deref(),
             Some("layers.3.post_attention_layernorm.weight")
+        );
+    }
+
+    /// Regression test for GQA K/V head slicing when exporter emits hidden×hidden weights
+    ///
+    /// This test verifies the fix for Issue #XXX where some exporters emit K/V projections
+    /// as [hidden, hidden] square matrices instead of [kv_dim, hidden]. The mapper should
+    /// slice these to the correct [kv_dim, hidden] shape by selecting rows corresponding
+    /// to the KV heads in a GQA configuration.
+    ///
+    /// Test case:
+    /// - hidden_size = 2560
+    /// - n_heads = 20 (head_dim = 128)
+    /// - n_kv_heads = 5 (GQA with group_size = 4)
+    /// - kv_dim = 5 * 128 = 640
+    ///
+    /// Expected behavior:
+    /// - Input K weight: [2560, 2560] (square matrix from exporter)
+    /// - Output K weight: [640, 2560] (sliced to kv_dim rows)
+    /// - Selected row ranges: [0..128, 512..640, 1024..1152, 1536..1664, 2048..2176]
+    ///   (first head of each group in GQA)
+    #[test]
+    #[allow(clippy::identity_op, clippy::erasing_op)] // Intentional for readability: [row * hidden + col]
+    fn test_kv_slicing_for_gqa() {
+        let device = CDevice::Cpu;
+        let hidden_size = 2560;
+        let n_heads = 20;
+        let n_kv_heads = 5;
+        let head_dim = 128;
+        let kv_dim = n_kv_heads * head_dim; // 640
+
+        // Create ModelDims for GQA configuration
+        let dims = ModelDims {
+            hidden: hidden_size,
+            n_head: n_heads,
+            n_kv_head: n_kv_heads,
+            inter: 10240,  // Not used in this test
+            vocab: 128000, // Not used in this test
+        };
+
+        // Create a fake [hidden, hidden] K weight tensor
+        // Fill with unique values so we can verify correct row slicing
+        let mut k_data = Vec::with_capacity(hidden_size * hidden_size);
+        for row in 0..hidden_size {
+            for col in 0..hidden_size {
+                k_data.push((row * 10000 + col) as f32);
+            }
+        }
+
+        let k_weight = CandleTensor::from_vec(k_data, &[hidden_size, hidden_size], &device)
+            .expect("Failed to create K weight tensor");
+
+        // Simulate the mapper's tensor map with the square K weight
+        let mut tensors = HashMap::new();
+        tensors.insert("blk.0.attn_k.weight".to_string(), k_weight);
+
+        // Run normalize_layer_weights which should slice the K weight
+        normalize_layer_weights(&mut tensors, 0, &dims)
+            .expect("normalize_layer_weights should succeed");
+
+        // Verify the K weight was sliced to [kv_dim, hidden]
+        let k_sliced = tensors
+            .get("layers.0.attention.k_proj.weight")
+            .expect("K weight should be present in canonical name");
+
+        let shape = k_sliced.shape().dims();
+        assert_eq!(
+            shape,
+            &[kv_dim, hidden_size],
+            "K weight should be sliced to [kv_dim={}, hidden={}], got {:?}",
+            kv_dim,
+            hidden_size,
+            shape
+        );
+
+        // Verify the selected rows match the first head of each group
+        // Expected row indices for GQA (group_size = 4):
+        // Group 0: head 0 → rows [0..128]
+        // Group 1: head 4 → rows [512..640]   (4 * 128 = 512)
+        // Group 2: head 8 → rows [1024..1152] (8 * 128 = 1024)
+        // Group 3: head 12 → rows [1536..1664] (12 * 128 = 1536)
+        // Group 4: head 16 → rows [2048..2176] (16 * 128 = 2048)
+
+        let k_vec = k_sliced
+            .flatten_all()
+            .and_then(|t| t.to_vec1::<f32>())
+            .expect("Failed to extract K weight data");
+
+        // Verify first element of each group's head
+        // Row 0, col 0: should be (0 * 10000 + 0) = 0
+        assert_eq!(k_vec[0 * hidden_size + 0], 0.0, "Group 0, head 0, row 0");
+
+        // Row 128, col 0: should be from original row 512 → (512 * 10000 + 0) = 5,120,000
+        assert_eq!(k_vec[128 * hidden_size + 0], 512.0 * 10000.0, "Group 1, head 4, row 512");
+
+        // Row 256, col 0: should be from original row 1024 → (1024 * 10000 + 0) = 10,240,000
+        assert_eq!(k_vec[256 * hidden_size + 0], 1024.0 * 10000.0, "Group 2, head 8, row 1024");
+
+        // Row 384, col 0: should be from original row 1536 → (1536 * 10000 + 0) = 15,360,000
+        assert_eq!(k_vec[384 * hidden_size + 0], 1536.0 * 10000.0, "Group 3, head 12, row 1536");
+
+        // Row 512, col 0: should be from original row 2048 → (2048 * 10000 + 0) = 20,480,000
+        assert_eq!(k_vec[512 * hidden_size + 0], 2048.0 * 10000.0, "Group 4, head 16, row 2048");
+
+        println!(
+            "✅ KV slicing regression test passed: [{}×{}] → [{}×{}]",
+            hidden_size, hidden_size, kv_dim, hidden_size
         );
     }
 }

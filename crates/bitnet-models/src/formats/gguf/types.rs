@@ -603,11 +603,12 @@ impl TensorInfo {
 }
 
 /// GGUF tensor types
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum GgufTensorType {
     F32,
     F16,
+    F64,
     Q4_0,
     Q4_1,
     Q5_0,
@@ -645,6 +646,7 @@ impl GgufTensorType {
             "q8_k" => Some(Self::Q8_K),
             "f32" => Some(Self::F32),
             "f16" => Some(Self::F16),
+            "f64" => Some(Self::F64),
             _ => None,
         }
     }
@@ -655,6 +657,7 @@ impl GgufTensorType {
             1 => Ok(Self::F16),
             2 => Ok(Self::Q4_0),
             3 => Ok(Self::Q4_1),
+            4 => Ok(Self::F64), // F64 type (rarely used)
             6 => Ok(Self::Q5_0),
             7 => Ok(Self::Q5_1),
             8 => Ok(Self::Q8_0),
@@ -677,6 +680,7 @@ impl GgufTensorType {
         match self {
             Self::F32 => 4,
             Self::F16 => 2,
+            Self::F64 => 8,
             Self::Q4_0 => 18, // 16 4-bit values + 2 bytes for scale
             Self::Q4_1 => 20, // 16 4-bit values + 4 bytes for scale and min
             Self::Q5_0 => 22, // 16 5-bit values + extras
@@ -691,16 +695,17 @@ impl GgufTensorType {
             Self::Q8_K => 256,
             Self::IQ2_S => 82, // GGML IQ2_S block size: 64 bytes + 2 scale + 8 qh + 8 scales
             Self::I2_S => {
-                // Delegate to centralized I2SLayout
-                use bitnet_quantization::I2SLayout;
-                I2SLayout::default().bytes_per_block
+                // GGML I2_S: 8 bytes packed data per block (scales stored separately or externally)
+                // 32 elements * 2 bits / 8 bits/byte = 8 bytes
+                // NOTE: Scales may be stored in separate scale tensors, not inline
+                8
             }
         }
     }
 
     /// Check if this tensor type represents quantized data
     pub fn is_quantized(&self) -> bool {
-        !matches!(self, Self::F32 | Self::F16)
+        !matches!(self, Self::F32 | Self::F16 | Self::F64)
     }
 
     /// Get the block size for quantized types
@@ -717,13 +722,225 @@ impl GgufTensorType {
             Self::Q8_K => 256,
             Self::IQ2_S => 256, // GGML IQ2_S uses 256-element blocks
             Self::I2_S => {
-                // Delegate to centralized I2SLayout
-                use bitnet_quantization::I2SLayout;
-                I2SLayout::default().block_size
+                // GGML I2_S uses 32-element blocks (32 * 2 bits = 64 bits = 8 bytes packed data)
+                // This matches BitNet's internal I2SLayout.block_size
+                32
             }
             _ => 1, // Non-quantized types
         }
     }
+}
+
+/// I2_S quantization layout detection
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum I2SLayoutKind {
+    /// GGML split layout: 32 elems per block, 8B packed data, scales in separate tensor (f32/f16/f64)
+    GgmlSplit,
+    /// Inline legacy layout: 32 elems per block, 8B packed qbits + 2B f16 scale = 10B per block
+    InlineF16,
+}
+
+impl I2SLayoutKind {
+    pub fn block_size(&self) -> usize {
+        32
+    }
+    pub fn data_bytes_per_block(&self) -> usize {
+        8
+    }
+    pub fn total_bytes_per_block(&self) -> usize {
+        match self {
+            I2SLayoutKind::GgmlSplit => 8,  // data only; scales elsewhere
+            I2SLayoutKind::InlineF16 => 10, // 8 data + 2 scale
+        }
+    }
+}
+
+/// I2_S flavor enum for comprehensive layout detection
+///
+/// Supports multiple I2_S quantization formats found in the wild:
+/// - BitNet32F16: Original BitNet format (32 elem blocks, 10 B/block with inline f16 scales)
+/// - Split32WithSibling: Research-style split format (32 elem blocks, 8 B/block + separate scale tensor)
+/// - GgmlQk256NoScale: GGML/llama.cpp format (256 elem blocks, 64 B/block, no per-block scales)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum I2SFlavor {
+    /// BitNet original format: 32 elem per block, 10 B/block (8B packed + 2B f16 scale inline)
+    BitNet32F16,
+    /// Split format with sibling scale tensor: 32 elem per block, 8 B/block (data only)
+    /// Requires separate scale tensor (f32/f16/f64) with matching block count
+    Split32WithSibling,
+    /// GGML/llama.cpp format: 256 elem per block, 64 B/block, no per-block scales
+    /// Requires native GGML kernels (not yet supported in pure Rust)
+    GgmlQk256NoScale,
+}
+
+impl I2SFlavor {
+    /// Get the number of elements per block for this flavor
+    pub fn block_size(&self) -> usize {
+        match self {
+            I2SFlavor::BitNet32F16 => 32,
+            I2SFlavor::Split32WithSibling => 32,
+            I2SFlavor::GgmlQk256NoScale => 256,
+        }
+    }
+
+    /// Get the number of bytes per block for this flavor (data portion only)
+    pub fn data_bytes_per_block(&self) -> usize {
+        match self {
+            I2SFlavor::BitNet32F16 => 8,
+            I2SFlavor::Split32WithSibling => 8,
+            I2SFlavor::GgmlQk256NoScale => 64,
+        }
+    }
+
+    /// Get the total bytes per block including inline metadata
+    pub fn total_bytes_per_block(&self) -> usize {
+        match self {
+            I2SFlavor::BitNet32F16 => 10,       // 8 data + 2 f16 scale
+            I2SFlavor::Split32WithSibling => 8, // data only (scales in sibling tensor)
+            I2SFlavor::GgmlQk256NoScale => 64,  // data only (no per-block scales)
+        }
+    }
+
+    /// Convert to legacy I2SLayoutKind for backward compatibility
+    pub fn to_layout_kind(&self) -> I2SLayoutKind {
+        match self {
+            I2SFlavor::BitNet32F16 => I2SLayoutKind::InlineF16,
+            I2SFlavor::Split32WithSibling => I2SLayoutKind::GgmlSplit,
+            I2SFlavor::GgmlQk256NoScale => I2SLayoutKind::GgmlSplit,
+        }
+    }
+}
+
+/// Detect I2_S flavor from tensor metadata and available bytes
+///
+/// # Arguments
+/// * `info` - Tensor metadata (name, shape, size)
+/// * `has_scale_sibling` - Whether a separate scale tensor was found
+/// * `nelems` - Total number of elements in the tensor
+///
+/// # Returns
+/// * `Ok(I2SFlavor)` - Detected flavor with detailed logging
+/// * `Err(BitNetError)` - If no valid flavor matches (fail-closed with diagnostic info)
+///
+/// # Detection logic
+/// 1. Calculate expected bytes for each flavor:
+///    - blocks32 = (nelems + 31) / 32
+///    - blocks256 = (nelems + 255) / 256
+///    - split_need = blocks32 * 8
+///    - inline_need = blocks32 * 10
+///    - qk256_need = blocks256 * 64
+/// 2. Match available bytes against expected (with ±64 byte tolerance for alignment)
+/// 3. Priority: Split32WithSibling (if sibling) > BitNet32F16 > GgmlQk256NoScale
+/// 4. Fail-closed with detailed error if no match
+pub fn detect_i2s_flavor(
+    info: &TensorInfo,
+    has_scale_sibling: bool,
+    nelems: usize,
+) -> Result<I2SFlavor> {
+    let blocks32 = nelems.div_ceil(32);
+    let blocks256 = nelems.div_ceil(256);
+    let split_need = blocks32 * 8;
+    let inline_need = blocks32 * 10;
+    let qk256_need = blocks256 * 64;
+    let available = info.size as usize;
+
+    // Tolerance for alignment padding (conservative but tight)
+    // 8 bytes allows for reasonable alignment overhead without false positives
+    const TOLERANCE: usize = 8;
+
+    tracing::debug!(
+        "I2_S flavor detection for '{}': nelems={}, blocks32={}, blocks256={}, available={}, split_need={}, inline_need={}, qk256_need={}, has_sibling={}",
+        info.name,
+        nelems,
+        blocks32,
+        blocks256,
+        available,
+        split_need,
+        inline_need,
+        qk256_need,
+        has_scale_sibling
+    );
+
+    // Check which layouts match (within tolerance)
+    let matches_split32 = available.abs_diff(split_need) <= TOLERANCE;
+    let matches_inline = available.abs_diff(inline_need) <= TOLERANCE;
+    let matches_qk256 = available.abs_diff(qk256_need) <= TOLERANCE;
+
+    //  Priority logic:
+    // 1. GgmlQk256NoScale (highest) - when bytes match qk256 exactly (prefer largest block size)
+    // 2. Split32WithSibling (if sibling present) - when bytes match split32
+    // 3. BitNet32F16 - when bytes match inline (most common BitNet format)
+    // 4. Split32WithSibling (without sibling, warn) - when bytes match split32 only
+
+    // Priority 1: GgmlQk256NoScale if bytes match qk256 (highest specificity - largest blocks)
+    // This is checked FIRST to ensure it takes priority over inline/split matches
+    // Note: split32 and qk256 can coincide (e.g., 512 elem: 16*8=128, 2*64=128)
+    // In ambiguous cases, prefer qk256 as it's more specific (256-element blocks)
+    if matches_qk256 {
+        tracing::warn!(
+            "I2_S '{}': detected GgmlQk256NoScale (available={}, qk256_need={}) - GGML format requires native kernels",
+            info.name,
+            available,
+            qk256_need
+        );
+        return Ok(I2SFlavor::GgmlQk256NoScale);
+    }
+
+    // Priority 2: Split32WithSibling if sibling scale tensor present and bytes match
+    if has_scale_sibling && matches_split32 {
+        tracing::info!(
+            "I2_S '{}': detected Split32WithSibling (available={}, split_need={}, has_sibling=true)",
+            info.name,
+            available,
+            split_need
+        );
+        return Ok(I2SFlavor::Split32WithSibling);
+    }
+
+    // Priority 3: BitNet32F16 (inline f16 scales) - most common BitNet format
+    if matches_inline {
+        tracing::info!(
+            "I2_S '{}': detected BitNet32F16 (available={}, inline_need={})",
+            info.name,
+            available,
+            inline_need
+        );
+        return Ok(I2SFlavor::BitNet32F16);
+    }
+
+    // Priority 4: Split32WithSibling without sibling (data-only, likely incomplete)
+    // Only if bytes match split32 (qk256 already handled above)
+    if matches_split32 {
+        tracing::warn!(
+            "I2_S '{}': bytes match split layout (available={}, split_need={}) but no scale sibling found - may be incomplete",
+            info.name,
+            available,
+            split_need
+        );
+        return Ok(I2SFlavor::Split32WithSibling);
+    }
+
+    // Fail-closed: no flavor matches
+    Err(BitNetError::Validation(format!(
+        "I2_S '{}': no valid flavor detected. Byte accounting:\n\
+         - available: {}\n\
+         - split_need (32-elem blocks, 8B/block): {} (diff: {})\n\
+         - inline_need (32-elem blocks, 10B/block): {} (diff: {})\n\
+         - qk256_need (256-elem blocks, 64B/block): {} (diff: {})\n\
+         - has_scale_sibling: {}\n\
+         - tolerance: ±{} bytes (alignment padding)\n\
+         All diffs exceed tolerance. This indicates an unsupported I2_S variant or corrupted data.",
+        info.name,
+        available,
+        split_need,
+        available.abs_diff(split_need),
+        inline_need,
+        available.abs_diff(inline_need),
+        qk256_need,
+        available.abs_diff(qk256_need),
+        has_scale_sibling,
+        TOLERANCE
+    )))
 }
 
 /// Container for loaded tensors

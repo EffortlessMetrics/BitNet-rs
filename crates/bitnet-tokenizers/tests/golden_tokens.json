@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "description": "Golden tokenization test cases for pure-Rust GGUF tokenizers. These reference outputs must match exactly to prevent tokenization drift.",
+  "test_cases": [
+    {
+      "tokenizer_kind": "bpe",
+      "model_hint": "gpt2",
+      "text": "What is 2+2?",
+      "add_bos": false,
+      "parse_special": false,
+      "expected_tokens": [3923, 318, 362, 10, 17, 30]
+    },
+    {
+      "tokenizer_kind": "bpe",
+      "model_hint": "gpt2",
+      "text": "Hello world",
+      "add_bos": false,
+      "parse_special": false,
+      "expected_tokens": [15496, 995]
+    },
+    {
+      "tokenizer_kind": "spm",
+      "model_hint": "llama",
+      "text": "What is the capital of France?",
+      "add_bos": true,
+      "parse_special": false,
+      "expected_tokens": [1, 1724, 338, 278, 7483, 310, 3444, 29973]
+    },
+    {
+      "tokenizer_kind": "spm",
+      "model_hint": "llama",
+      "text": "The quick brown fox",
+      "add_bos": true,
+      "parse_special": false,
+      "expected_tokens": [1, 450, 4996, 17354, 1701, 29916]
+    }
+  ]
+}

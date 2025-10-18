@@ -588,7 +588,7 @@ The following sed commands can fix most instances:
 # Fix cargo test -p with --features cpu
 sed -i 's/^cargo test -p \([^ ]*\) --features cpu/cargo test -p \1 --no-default-features --features cpu/' *.md docs/**/*.md
 
-# Fix cargo test -p with --features gpu  
+# Fix cargo test -p with --features gpu
 sed -i 's/^cargo test -p \([^ ]*\) --features gpu/cargo test -p \1 --no-default-features --features gpu/' *.md docs/**/*.md
 
 # Fix cargo test -p without any features

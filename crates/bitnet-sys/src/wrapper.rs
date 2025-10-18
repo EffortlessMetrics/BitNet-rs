@@ -101,9 +101,12 @@ impl Model {
 
 impl Drop for Model {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
             unsafe {
-                llama_free_model(self.ptr);
+                llama_free_model(ptr);
             }
         }
     }
@@ -312,9 +315,12 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
             unsafe {
-                llama_free(self.ptr);
+                llama_free(ptr);
             }
         }
     }
@@ -385,4 +391,269 @@ impl Session {
 
         Ok(generated)
     }
+}
+
+// ============================================================================
+// Wrappers for custom bitnet_c_shim.cc functions (for parity testing)
+// ============================================================================
+
+/// Safe wrapper for bitnet_model_t from bitnet_c_shim.cc
+pub struct BitnetModel {
+    ptr: *mut crate::bindings::bitnet_model_t,
+}
+
+impl BitnetModel {
+    /// Load a model from a GGUF file using the custom C shim
+    pub fn from_file(path: &str) -> Result<Self> {
+        let c_path = CString::new(path)?;
+        let ptr = unsafe { crate::bindings::bitnet_model_new_from_file(c_path.as_ptr()) };
+
+        if ptr.is_null() {
+            return Err(CppError::ModelLoadError(format!("Failed to load model from: {}", path)));
+        }
+
+        Ok(BitnetModel { ptr })
+    }
+
+    /// Get raw pointer for use with C API
+    pub(crate) fn as_ptr(&self) -> *mut crate::bindings::bitnet_model_t {
+        self.ptr
+    }
+}
+
+impl Drop for BitnetModel {
+    fn drop(&mut self) {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
+            unsafe {
+                crate::bindings::bitnet_model_free(ptr);
+            }
+        }
+    }
+}
+
+unsafe impl Send for BitnetModel {}
+unsafe impl Sync for BitnetModel {}
+
+/// Safe wrapper for bitnet_ctx_t from bitnet_c_shim.cc
+pub struct BitnetContext {
+    ptr: *mut crate::bindings::bitnet_ctx_t,
+}
+
+impl BitnetContext {
+    /// Create a new context with specified parameters
+    pub fn new(model: &BitnetModel, n_ctx: i32, n_threads: i32, seed: i32) -> Result<Self> {
+        let params = crate::bindings::bitnet_params_t { n_ctx, n_threads, seed, rope_freq: 1.0 };
+
+        let ptr = unsafe { crate::bindings::bitnet_context_new(model.as_ptr(), &params) };
+
+        if ptr.is_null() {
+            return Err(CppError::NullPointer);
+        }
+
+        Ok(BitnetContext { ptr })
+    }
+
+    /// Get raw pointer for use with C API
+    pub(crate) fn as_ptr(&self) -> *mut crate::bindings::bitnet_ctx_t {
+        self.ptr
+    }
+}
+
+impl Drop for BitnetContext {
+    fn drop(&mut self) {
+        // SAFETY: Use mem::replace to prevent double-free
+        // Only free if pointer is non-null and we have ownership
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        if !ptr.is_null() {
+            unsafe {
+                crate::bindings::bitnet_context_free(ptr);
+            }
+        }
+    }
+}
+
+/// Tokenize text using the custom C shim
+pub fn bitnet_tokenize_text(
+    model: &BitnetModel,
+    text: &str,
+    add_bos: bool,
+    parse_special: bool,
+) -> Result<Vec<i32>> {
+    let c_text = CString::new(text)?;
+
+    // First call to get the number of tokens (pass nullptr for out_ids)
+    let n_tokens = unsafe {
+        crate::bindings::bitnet_tokenize(
+            model.as_ptr(),
+            c_text.as_ptr(),
+            add_bos as i32,
+            parse_special as i32,
+            ptr::null_mut(),
+            0,
+        )
+    };
+
+    // Validate preflight response
+    if n_tokens < 0 {
+        return Err(CppError::LlamaError(format!(
+            "Tokenization preflight failed with code: {}",
+            n_tokens
+        )));
+    }
+
+    if n_tokens == 0 {
+        return Ok(Vec::new());
+    }
+
+    // Sanity check - prevent excessive allocations
+    if n_tokens > 100_000 {
+        return Err(CppError::LlamaError(format!(
+            "Tokenization returned suspiciously large count: {} (possible corruption)",
+            n_tokens
+        )));
+    }
+
+    // Second call to get the actual tokens
+    let mut tokens = vec![0i32; n_tokens as usize];
+    let actual_n = unsafe {
+        crate::bindings::bitnet_tokenize(
+            model.as_ptr(),
+            c_text.as_ptr(),
+            add_bos as i32,
+            parse_special as i32,
+            tokens.as_mut_ptr(),
+            tokens.len() as i32,
+        )
+    };
+
+    // Check for buffer-too-small error (-2)
+    if actual_n == -2 {
+        return Err(CppError::LlamaError(
+            "Buffer too small for tokenization (should not happen after preflight)".to_string(),
+        ));
+    }
+
+    if actual_n < 0 {
+        return Err(CppError::LlamaError(format!("Tokenization failed with code: {}", actual_n)));
+    }
+
+    tokens.truncate(actual_n as usize);
+    Ok(tokens)
+}
+
+/// Evaluate tokens and get last-position logits using the custom C shim
+pub fn bitnet_eval_tokens(ctx: &BitnetContext, ids: &[i32], vocab_size: usize) -> Result<Vec<f32>> {
+    if ids.is_empty() {
+        return Err(CppError::LlamaError("Cannot eval empty token sequence".to_string()));
+    }
+
+    let mut logits = vec![0.0f32; vocab_size];
+
+    let result = unsafe {
+        crate::bindings::bitnet_eval(
+            ctx.as_ptr(),
+            ids.as_ptr(),
+            ids.len() as i32,
+            logits.as_mut_ptr(),
+            logits.len() as i32,
+        )
+    };
+
+    if result != 0 {
+        return Err(CppError::LlamaError(format!("Eval failed with code: {}", result)));
+    }
+
+    Ok(logits)
+}
+
+/// Prefill the context with prompt tokens (primes KV cache and sets n_past)
+pub fn bitnet_prefill(ctx: &BitnetContext, ids: &[i32]) -> Result<()> {
+    if ids.is_empty() {
+        return Err(CppError::LlamaError("Cannot prefill with empty token sequence".to_string()));
+    }
+
+    let rc =
+        unsafe { crate::bindings::bitnet_prefill(ctx.as_ptr(), ids.as_ptr(), ids.len() as i32) };
+
+    if rc != 0 {
+        return Err(CppError::LlamaError(format!("prefill failed rc={}", rc)));
+    }
+
+    Ok(())
+}
+
+/// Get vocabulary size from the C++ context
+pub fn cpp_vocab_size(ctx: &BitnetContext) -> Result<usize> {
+    let n = unsafe { crate::bindings::bitnet_vocab_size(ctx.as_ptr()) };
+    if n <= 0 {
+        return Err(CppError::LlamaError(format!("bitnet_vocab_size returned {}", n)));
+    }
+    Ok(n as usize)
+}
+
+/// Perform greedy decoding using the capacity-safe C shim
+/// The context must be pre-filled with `bitnet_prefill()` before calling this function.
+pub fn cpp_decode_greedy(
+    model: &BitnetModel,
+    ctx: &BitnetContext,
+    eos_id: i32,
+    eot_id: Option<i32>,
+    max_steps: usize,
+    out: &mut [i32],
+) -> Result<usize> {
+    if out.len() < max_steps {
+        return Err(CppError::LlamaError(format!(
+            "Output buffer too small: {} < {}",
+            out.len(),
+            max_steps
+        )));
+    }
+
+    let eot = eot_id.unwrap_or(-1);
+    let rc = unsafe {
+        crate::bindings::bitnet_decode_greedy(
+            model.as_ptr(),
+            ctx.as_ptr(),
+            eos_id,
+            eot,
+            max_steps as i32,
+            out.as_mut_ptr(),
+            out.len() as i32,
+        )
+    };
+
+    if rc < 0 {
+        return Err(CppError::LlamaError(format!("decode_greedy failed rc={}", rc)));
+    }
+
+    Ok(rc as usize)
+}
+
+/// Perform greedy decoding using the custom C shim (legacy wrapper)
+/// Note: `_initial_ids` parameter is unused because the context should be pre-filled
+/// with `bitnet_prefill()` before calling this function.
+///
+/// DEPRECATED: Use `cpp_decode_greedy` instead for the new capacity-safe API.
+#[deprecated(since = "0.10.0", note = "Use cpp_decode_greedy instead")]
+pub fn bitnet_decode_greedy(
+    model: &BitnetModel,
+    ctx: &BitnetContext,
+    _initial_ids: &[i32],
+    max_new_tokens: usize,
+    eos_id: i32,
+) -> Result<Vec<i32>> {
+    if max_new_tokens == 0 {
+        return Ok(Vec::new());
+    }
+
+    // Allocate buffer for generated tokens
+    let mut gen_ids = vec![0i32; max_new_tokens];
+
+    let n_generated = cpp_decode_greedy(model, ctx, eos_id, None, max_new_tokens, &mut gen_ids)?;
+
+    gen_ids.truncate(n_generated);
+    Ok(gen_ids)
 }

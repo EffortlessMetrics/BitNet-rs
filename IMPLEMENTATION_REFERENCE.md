@@ -279,7 +279,7 @@ File: inference.rs
 ### MUST CHANGE
 1. **chat.rs**: Remove `format_chat_turn()` [lines 266-329]
    - Use `template.render_chat()` instead
-   
+
 2. **chat.rs**: Change history from tuples to `Vec<ChatTurn>` [lines 82, 173, 289-325]
 
 3. **Both files**: Parameterize receipt paths

@@ -1,0 +1,105 @@
+name: Nightly Parity Matrix
+
+# Run nightly to catch drift and regressions
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  workflow_dispatch:    # Allow manual trigger
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  nightly-parity-matrix:
+    name: Nightly Parity (${{ matrix.prompt_type }}, ${{ matrix.quant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        prompt_type: [math, chat]
+        quant: [i2_s]  # Add TL1/TL2 when available
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-nightly-parity-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache BitNet.cpp
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bitnet_cpp
+          key: ${{ runner.os }}-bitnet-cpp-nightly
+
+      - name: Fetch BitNet.cpp
+        run: cargo run -p xtask -- fetch-cpp
+
+      - name: Download test model (${{ matrix.quant }})
+        run: |
+          cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+
+      - name: Run parity test (${{ matrix.prompt_type }})
+        env:
+          CROSSVAL_GGUF: ${{ github.workspace }}/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-${{ matrix.quant }}.gguf
+          CROSSVAL_PROMPT_SET: ${{ matrix.prompt_type }}
+          RAYON_NUM_THREADS: 1
+          BITNET_DETERMINISTIC: 1
+          BITNET_SEED: 42
+          BITNET_CPP_DIR: ${{ github.workspace }}/.cache/bitnet_cpp/build
+        run: |
+          cargo test -p crossval --release \
+            --no-default-features \
+            --features crossval,integration-tests,spm \
+            parity_bitnetcpp -- --nocapture
+
+      - name: Archive dated receipts
+        if: always()
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          ARCHIVE_DIR="docs/baselines/nightly-archive/$DATE"
+          mkdir -p "$ARCHIVE_DIR"
+
+          # Copy receipt with metadata
+          RECEIPT_PATH=$(find docs/baselines -name "parity-bitnetcpp.json" -type f | head -1)
+          if [ -f "$RECEIPT_PATH" ]; then
+            cp "$RECEIPT_PATH" "$ARCHIVE_DIR/parity-${{ matrix.prompt_type }}-${{ matrix.quant }}.json"
+          fi
+
+      - name: Upload nightly receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-parity-${{ matrix.prompt_type }}-${{ matrix.quant }}-${{ github.sha }}
+          path: docs/baselines/nightly-archive/**/*.json
+          if-no-files-found: warn
+
+  # Aggregate job to report overall nightly status
+  nightly-summary:
+    name: Nightly Summary
+    runs-on: ubuntu-latest
+    needs: nightly-parity-matrix
+    if: always()
+
+    steps:
+      - name: Check matrix results
+        run: |
+          if [ "${{ needs.nightly-parity-matrix.result }}" != "success" ]; then
+            echo "❌ Some nightly parity tests failed"
+            exit 1
+          fi
+          echo "✅ All nightly parity tests passed"

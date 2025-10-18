@@ -8,6 +8,7 @@
 //! Tests are designed to fail initially (TDD Red phase) until implementation is complete.
 
 #![allow(dead_code)] // Test utilities may be used by future tests
+#![allow(deprecated)] // Uses deprecated load_gguf() for backward compatibility testing
 use anyhow::{Context, Result};
 #[cfg(feature = "cpu")]
 use bitnet_common::BitNetError;

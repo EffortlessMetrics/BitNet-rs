@@ -20,7 +20,7 @@ async fn test_resource_management_improvements() {
     assert!(initial_memory >= 0, "Memory usage should be non-negative");
 
     // Test 2: Create a small allocation to test memory delta detection
-    let test_allocation = vec![0u8; 1024 * 1024]; // 1MB allocation
+    let test_allocation = vec![0u8; bitnet_tests::BYTES_PER_MB as usize]; // 1MB allocation
 
     let peak_memory = crate::test_resource_management_comprehensive::get_memory_usage();
     println!("Peak memory usage: {} bytes", peak_memory);

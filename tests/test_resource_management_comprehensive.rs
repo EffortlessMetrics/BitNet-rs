@@ -9,12 +9,12 @@ use bitnet_tests::common::{
     harness::{TestCase, TestSuite},
     results::TestMetrics,
 };
-use bitnet_tests::units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+use bitnet_tests::units::BYTES_PER_MB;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::{Duration, Instant};
-use tokio::fs::{File, OpenOptions};
+use std::time::Duration;
+use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, RwLock, Semaphore};
 use tokio::time::{sleep, timeout};

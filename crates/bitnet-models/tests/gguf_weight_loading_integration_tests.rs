@@ -8,6 +8,7 @@
 //! - bitnet-quantization: I2S, TL1, TL2 quantization integration
 //! - bitnet-kernels: Device-aware operations and GPU acceleration
 #![allow(dead_code)] // Test utilities may be used by future tests
+#![allow(deprecated)] // Uses deprecated load_gguf() for backward compatibility testing
 //! - bitnet-inference: End-to-end inference with real weights
 
 use anyhow::{Context, Result};

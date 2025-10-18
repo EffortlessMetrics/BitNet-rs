@@ -17,6 +17,8 @@ pub mod receipts; // AC4: Inference receipt generation
 
 // Re-export GGUF types for easy access
 pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_kv_pairs};
+#[cfg(feature = "ffi")]
+pub mod ffi_session; // FFI session wrapper for validation-only parity checking
 pub mod parity;
 pub mod rt;
 pub mod runtime_utils;
@@ -40,7 +42,8 @@ pub use generation::{
 pub use kernel_recorder::KernelRecorder;
 pub use layers::{BitNetAttention, QuantizedLinear};
 pub use parity::{
-    eval_logits_incremental, eval_logits_once, get_model_config, get_model_vocab_size,
+    eval_logits_incremental, eval_logits_once, eval_logits_once_for_parity, get_model_config,
+    get_model_vocab_size,
 };
 pub use production_engine::{
     GenerationResult, PerformanceMetricsCollector, PrefillStrategy, ProductionInferenceConfig,

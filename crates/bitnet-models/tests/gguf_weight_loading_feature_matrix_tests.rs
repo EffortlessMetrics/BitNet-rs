@@ -8,6 +8,7 @@
 //! quantization variants. Tests graceful fallbacks and device compatibility.
 
 #![allow(dead_code)] // Test utilities may be used by future tests
+#![allow(deprecated)] // Uses deprecated load_gguf() for backward compatibility testing
 use anyhow::{Context, Result};
 use bitnet_common::BitNetError;
 #[allow(unused_imports)]

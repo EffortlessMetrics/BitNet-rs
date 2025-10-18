@@ -35,6 +35,8 @@ Enables:
 - Platform-specific SIMD optimizations (if available)
 - Multi-threaded CPU inference
 - Automatic CPU feature detection
+- QK256 (GGML I2_S) pure-Rust support for 256-element block quantization
+- BitNet native 32-element I2_S quantization
 
 ### `gpu`
 **Purpose:** Enable advanced GPU acceleration with device-aware quantization
@@ -116,6 +118,7 @@ Enables:
 Requirements:
 - x86_64 CPU with AVX-512F (Foundation) and AVX-512BW (Byte and Word) instruction sets
 - Intel Skylake-X, Ice Lake, Tiger Lake, or newer architecture
+- AMD Zen 4 or newer architecture
 - Automatic runtime detection - no manual configuration needed
 
 ### `neon`

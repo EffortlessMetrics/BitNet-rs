@@ -36,7 +36,7 @@ User Types in REPL
         ├─ Accumulate full_response
         └─ Count tokens
         ↓
-   write_receipt() 
+   write_receipt()
    (writes to hardcoded: "ci/inference.json")
         ↓
    copy_receipt_if_present(emit_receipt_dir)
@@ -536,4 +536,3 @@ TOKENIZATION COUPLING
 ├─ Tokenization happens internally (can't intercept)
 │  └─ Future work: tokenize before passing to stream
 ```
-

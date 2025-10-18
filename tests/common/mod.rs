@@ -57,8 +57,11 @@ pub mod parallel;
 pub mod selection;
 
 // Re-export commonly used functions
+#[allow(unused_imports)]
 pub use env::{env_bool, env_duration_secs, env_guard, env_string, env_u64, env_usize};
+#[allow(unused_imports)]
 pub use units::{BYTES_PER_GB, BYTES_PER_KB, BYTES_PER_MB};
+#[allow(unused_imports)]
 pub use utils::{format_bytes, format_duration, get_memory_usage, get_peak_memory_usage};
 
 // Cross-validation module (optional)
@@ -74,11 +77,15 @@ pub mod cross_validation;
 // pub mod integration;
 
 // Re-export commonly used types
+#[allow(unused_imports)]
 pub use config::TestConfig;
+#[allow(unused_imports)]
 pub use config_scenarios::{EnvironmentType, ScenarioConfigManager, TestingScenario};
 
 // Avoid name collisions: expose both result types clearly
+#[allow(unused_imports)]
 pub use errors::{TestError, TestOpResult};
+#[allow(unused_imports)]
 pub use results::{TestMetrics, TestResult, TestSuiteResult};
 
 // Only re-export FixtureManager when fixtures are enabled
@@ -93,6 +100,7 @@ pub mod trend_reporting;
 pub mod config_validator;
 
 #[cfg(feature = "crossval")]
+#[allow(unused_imports)]
 pub use cross_validation::{ComparisonTestRunner, CompleteValidationResult, TestSummaryStatistics};
 
 /// Current version of the testing framework
@@ -107,9 +115,11 @@ pub const DEFAULT_MAX_PARALLEL_TESTS: usize = 4;
 /// Prelude module for tests - re-exports common types for convenience
 pub mod prelude {
     // Error handling types
+    #[allow(unused_imports)]
     pub use super::errors::{TestError, TestOpResult};
 
     // Result types (ensure clear distinction from TestOpResult)
+    #[allow(unused_imports)]
     pub use super::results::{
         TestMetrics,
         TestResult, // This is TestRecord, not TestOpResult
@@ -118,6 +128,7 @@ pub mod prelude {
     };
 
     // Core test framework types
+    #[allow(unused_imports)]
     pub use super::harness::{
         FixtureCtx, // Stable fixture context type
         TestCase,
@@ -125,20 +136,26 @@ pub mod prelude {
     };
 
     // Configuration
+    #[allow(unused_imports)]
     pub use super::config::TestConfig;
 
     // Fixtures facade (provides stable API)
+    #[allow(unused_imports)]
     pub use super::fixtures_facade::Fixtures;
 
     // Tensor helpers
+    #[allow(unused_imports)]
     pub use super::tensor_helpers::ct;
+    #[allow(unused_imports)]
     pub use crate::ctv; // bring the macro into scope
 
     // CI reporting re-export when available
     #[cfg(feature = "reporting")]
+    #[allow(unused_imports)]
     pub use super::ci_reporting;
 
     // Concurrency control utilities
+    #[allow(unused_imports)]
     pub use super::concurrency_caps::{
         get_parallel_limit, init_and_get_async_limit, init_concurrency_caps,
     };

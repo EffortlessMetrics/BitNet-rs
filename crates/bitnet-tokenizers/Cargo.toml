@@ -36,6 +36,10 @@ inference = []
 downloads = ["reqwest", "futures-util"]
 cpu = []
 gpu = []
+crossval = []
+ffi_tokenizer = []
+# Debug feature: emit verbose diagnostics for tokenization (first 8 tokens, piece→ID mapping)
+tok-debug = []
 
 [dependencies.sentencepiece]
 version = "0.12.0"

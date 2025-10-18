@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "description": "Golden tokenization test cases for LLaMA (SentencePiece) tokenizers. These reference outputs must match exactly to prevent tokenization drift.",
+  "tokenizer_kind": "llama",
+  "test_cases": [
+    {
+      "text": "What is the capital of France?",
+      "add_bos": true,
+      "parse_special": false,
+      "expected_tokens": [1, 1724, 338, 278, 7483, 310, 3444, 29973],
+      "note": "Basic question with BOS token (id=1)"
+    },
+    {
+      "text": "The quick brown fox",
+      "add_bos": true,
+      "parse_special": false,
+      "expected_tokens": [1, 450, 4996, 17354, 1701, 29916],
+      "note": "Common English phrase with BOS"
+    },
+    {
+      "text": "Hello world",
+      "add_bos": false,
+      "parse_special": false,
+      "expected_tokens": [15043, 3186],
+      "note": "Basic greeting without BOS"
+    }
+  ]
+}

@@ -1237,6 +1237,7 @@ impl GgufLoader {
         let dtype = match info.tensor_type {
             GgufTensorType::F32 => DType::F32,
             GgufTensorType::F16 => DType::F16,
+            GgufTensorType::F64 => DType::F64,
             GgufTensorType::Q4_0
             | GgufTensorType::Q4_1
             | GgufTensorType::Q5_0

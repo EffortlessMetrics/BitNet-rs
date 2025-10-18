@@ -7,7 +7,7 @@
 //! implementation, covering CPU/GPU tensor placement, mixed precision support, automatic fallback
 //! mechanisms, and cross-device consistency validation.
 
-#![allow(dead_code, unused_variables, unused_imports)]
+#![allow(dead_code, unused_variables, unused_imports, deprecated)]
 
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetError, Device};
@@ -107,7 +107,7 @@ async fn test_ac6_cpu_device_tensor_placement() -> Result<()> {
 
     // Validate all tensors are placed on CPU device
     for (tensor_name, tensor) in &cpu_weights {
-        let tensor_device = tensor.device();
+        let tensor_device: &candle_core::Device = tensor.device();
         assert!(
             tensor_device.is_cpu(),
             "Tensor '{}' not placed on CPU device: {:?}",

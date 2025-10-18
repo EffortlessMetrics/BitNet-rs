@@ -194,10 +194,11 @@ pub struct MultiHeadAttention {
     v_proj: Linear,
     o_proj: Linear,
     rope: Option<RotaryEmbedding>,
+    layer_idx: usize, // Layer index for QK256 weight name generation
 }
 
 impl MultiHeadAttention {
-    pub fn new(config: &BitNetConfig, vb: VarBuilder) -> Result<Self> {
+    pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         let n_heads = config.model.num_heads;
         let head_dim = hidden_size / n_heads;
@@ -219,6 +220,30 @@ impl MultiHeadAttention {
         let group_size = n_heads / n_kv_heads;
         let kv_out = n_kv_heads * head_dim;
 
+        tracing::info!(
+            "layer{}: MultiHeadAttention dims: hidden={}, n_heads={}, n_kv_heads={}, head_dim={}, kv_out={}, group_size={}",
+            layer_idx,
+            hidden_size,
+            n_heads,
+            n_kv_heads,
+            head_dim,
+            kv_out,
+            group_size
+        );
+
+        tracing::info!(
+            "layer{}: About to create linear layers with: q_proj([{}, {}]), k_proj([{}, {}]), v_proj([{}, {}]), o_proj([{}, {}])",
+            layer_idx,
+            hidden_size,
+            hidden_size,
+            kv_out,
+            hidden_size,
+            kv_out,
+            hidden_size,
+            hidden_size,
+            hidden_size
+        );
+
         let q_proj = linear_with_optional_bias(hidden_size, hidden_size, vb.pp("q_proj"))?;
         let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
         let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
@@ -232,10 +257,26 @@ impl MultiHeadAttention {
         )
         .ok();
 
-        Ok(Self { n_heads, n_kv_heads, head_dim, group_size, q_proj, k_proj, v_proj, o_proj, rope })
+        Ok(Self {
+            n_heads,
+            n_kv_heads,
+            head_dim,
+            group_size,
+            q_proj,
+            k_proj,
+            v_proj,
+            o_proj,
+            rope,
+            layer_idx,
+        })
     }
 
-    pub fn forward(&self, x: &Tensor, kv_cache: Option<&mut LayerKVCache>) -> Result<Tensor> {
+    pub fn forward(
+        &self,
+        x: &Tensor,
+        kv_cache: Option<&mut LayerKVCache>,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+    ) -> Result<Tensor> {
         let (batch_size, seq_len, _) = x.dims3()?;
 
         // PATCH 3: Project to Q, K, V separately (NOT fused QKV)
@@ -244,20 +285,17 @@ impl MultiHeadAttention {
         // K: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
         // V: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
         let q = self
-            .q_proj
-            .forward(x)?
+            .apply_linear(x, &self.q_proj, "q_proj", raw_tensors)?
             .reshape(&[batch_size, seq_len, self.n_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, Hq, T, D]
 
         let k = self
-            .k_proj
-            .forward(x)?
+            .apply_linear(x, &self.k_proj, "k_proj", raw_tensors)?
             .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, HKV, T, D]
 
         let v = self
-            .v_proj
-            .forward(x)?
+            .apply_linear(x, &self.v_proj, "v_proj", raw_tensors)?
             .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, HKV, T, D]
 
@@ -441,7 +479,113 @@ impl MultiHeadAttention {
             self.n_heads * self.head_dim,
         ])?;
 
-        Ok(self.o_proj.forward(&attn_output)?)
+        self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)
+    }
+
+    /// Apply linear transformation with QK256 dispatch
+    fn apply_linear(
+        &self,
+        input: &Tensor,
+        linear: &Linear,
+        proj_name: &str,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+    ) -> Result<Tensor> {
+        // Generate weight name based on layer index and projection name
+        // Format: "layers.{idx}.attention.{proj_name}.weight.qk256_qs"
+        let qk256_key =
+            format!("layers.{}.attention.{}.weight.qk256_qs", self.layer_idx, proj_name);
+
+        // Check for QK256 data
+        if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
+            tracing::debug!("Using QK256 kernel for {}", qk256_key);
+            return Self::forward_qk256(input, qk256_tensor, &qk256_key);
+        }
+
+        // Fall back to standard linear
+        tracing::trace!(
+            "Using standard linear for layers.{}.attention.{}",
+            self.layer_idx,
+            proj_name
+        );
+        linear.forward(input).map_err(BitNetError::from)
+    }
+
+    /// Forward pass using QK256 kernel (static method)
+    fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
+        use crate::quant::i2s_qk256::gemv_qk256;
+
+        // Extract dimensions
+        let dims = qk256_tensor.dims();
+        if dims.len() != 2 {
+            return Err(BitNetError::Validation(format!(
+                "QK256 tensor {} has invalid shape: {:?}",
+                weight_name, dims
+            )));
+        }
+
+        let rows = dims[0];
+        let row_stride_bytes = dims[1];
+
+        // Extract bytes
+        let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
+            BitNetError::Validation(format!(
+                "Failed to extract QK256 bytes for {}: {}",
+                weight_name, e
+            ))
+        })?;
+        let mut flat_bytes = Vec::with_capacity(rows * row_stride_bytes);
+        for row in bytes_2d {
+            flat_bytes.extend_from_slice(&row);
+        }
+
+        // Get input dimensions
+        let input_dims = input.dims();
+        let rank = input_dims.len();
+
+        // Handle different input shapes: [B, T, H] or [B, H]
+        let (batch_size, seq_len, cols) = match rank {
+            3 => (input_dims[0], input_dims[1], input_dims[2]),
+            2 => (input_dims[0], 1, input_dims[1]),
+            _ => {
+                return Err(BitNetError::Validation(format!(
+                    "Unsupported input shape for QK256: {:?}",
+                    input_dims
+                )));
+            }
+        };
+
+        // Flatten to 2D [batch * seq_len, in_features]
+        let input_flat = input.reshape(&[batch_size * seq_len, cols])?;
+        let input_vec = input_flat.to_vec2::<f32>().map_err(|e| {
+            BitNetError::Validation(format!(
+                "Failed to convert input to f32 for {}: {}",
+                weight_name, e
+            ))
+        })?;
+
+        // Allocate output
+        let mut output_vec = vec![vec![0.0f32; rows]; batch_size * seq_len];
+
+        // Call QK256 kernel for each input row
+        for (i, input_row) in input_vec.iter().enumerate() {
+            gemv_qk256(&flat_bytes, input_row, &mut output_vec[i], rows, cols, row_stride_bytes)
+                .map_err(|e| {
+                    BitNetError::Validation(format!(
+                        "QK256 GEMV failed for {} at row {}: {}",
+                        weight_name, i, e
+                    ))
+                })?;
+        }
+
+        // Flatten output and reshape
+        let output_flat: Vec<f32> = output_vec.into_iter().flatten().collect();
+        let output_tensor = if rank == 3 {
+            Tensor::from_vec(output_flat, (batch_size, seq_len, rows), input.device())?
+        } else {
+            Tensor::from_vec(output_flat, (batch_size, rows), input.device())?
+        };
+
+        Ok(output_tensor)
     }
 
     /// PATCH 5: Create causal mask with [1, 1, Tq, Tk] shape
@@ -467,10 +611,11 @@ pub struct FeedForward {
     gate_proj: Linear,
     up_proj: Linear,
     down_proj: Linear,
+    layer_idx: usize, // Layer index for QK256 weight name generation
 }
 
 impl FeedForward {
-    pub fn new(config: &BitNetConfig, vb: VarBuilder) -> Result<Self> {
+    pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         let intermediate_size = config.model.intermediate_size;
 
@@ -486,11 +631,16 @@ impl FeedForward {
                 hidden_size,
                 vb.pp("down_proj"),
             )?,
+            layer_idx,
         })
     }
 
-    pub fn forward(&self, x: &Tensor) -> Result<Tensor> {
-        let gate = self.gate_proj.forward(x)?;
+    pub fn forward(
+        &self,
+        x: &Tensor,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+    ) -> Result<Tensor> {
+        let gate = self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors)?;
 
         // MLP gating diagnostics (point 3 of user's plan)
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
@@ -507,7 +657,7 @@ impl FeedForward {
             tracing::debug!("MLP ||silu(u)||: {:.6e}", silu_norm);
         }
 
-        let up = self.up_proj.forward(x)?;
+        let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(v_norm) = up.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -523,7 +673,7 @@ impl FeedForward {
             tracing::debug!("MLP ||silu(u) * v||: {:.6e}", prod_norm);
         }
 
-        let output = self.down_proj.forward(&hidden)?;
+        let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
 
         if std::env::var("BITNET_DEBUG_MLP").is_ok()
             && let Ok(out_norm) = output.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -532,6 +682,112 @@ impl FeedForward {
         }
 
         Ok(output)
+    }
+
+    /// Apply linear transformation with QK256 dispatch
+    fn apply_linear(
+        &self,
+        input: &Tensor,
+        linear: &Linear,
+        proj_name: &str,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+    ) -> Result<Tensor> {
+        // Generate weight name based on layer index and projection name
+        // Format: "layers.{idx}.feed_forward.{proj_name}.weight.qk256_qs"
+        let qk256_key =
+            format!("layers.{}.feed_forward.{}.weight.qk256_qs", self.layer_idx, proj_name);
+
+        // Check for QK256 data
+        if let Some(qk256_tensor) = raw_tensors.get(&qk256_key) {
+            tracing::debug!("Using QK256 kernel for {}", qk256_key);
+            return Self::forward_qk256(input, qk256_tensor, &qk256_key);
+        }
+
+        // Fall back to standard linear
+        tracing::trace!(
+            "Using standard linear for layers.{}.feed_forward.{}",
+            self.layer_idx,
+            proj_name
+        );
+        linear.forward(input).map_err(BitNetError::from)
+    }
+
+    /// Forward pass using QK256 kernel (static method - shared with MultiHeadAttention)
+    fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
+        use crate::quant::i2s_qk256::gemv_qk256;
+
+        // Extract dimensions
+        let dims = qk256_tensor.dims();
+        if dims.len() != 2 {
+            return Err(BitNetError::Validation(format!(
+                "QK256 tensor {} has invalid shape: {:?}",
+                weight_name, dims
+            )));
+        }
+
+        let rows = dims[0];
+        let row_stride_bytes = dims[1];
+
+        // Extract bytes
+        let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
+            BitNetError::Validation(format!(
+                "Failed to extract QK256 bytes for {}: {}",
+                weight_name, e
+            ))
+        })?;
+        let mut flat_bytes = Vec::with_capacity(rows * row_stride_bytes);
+        for row in bytes_2d {
+            flat_bytes.extend_from_slice(&row);
+        }
+
+        // Get input dimensions
+        let input_dims = input.dims();
+        let rank = input_dims.len();
+
+        // Handle different input shapes: [B, T, H] or [B, H]
+        let (batch_size, seq_len, cols) = match rank {
+            3 => (input_dims[0], input_dims[1], input_dims[2]),
+            2 => (input_dims[0], 1, input_dims[1]),
+            _ => {
+                return Err(BitNetError::Validation(format!(
+                    "Unsupported input shape for QK256: {:?}",
+                    input_dims
+                )));
+            }
+        };
+
+        // Flatten to 2D [batch * seq_len, in_features]
+        let input_flat = input.reshape(&[batch_size * seq_len, cols])?;
+        let input_vec = input_flat.to_vec2::<f32>().map_err(|e| {
+            BitNetError::Validation(format!(
+                "Failed to convert input to f32 for {}: {}",
+                weight_name, e
+            ))
+        })?;
+
+        // Allocate output
+        let mut output_vec = vec![vec![0.0f32; rows]; batch_size * seq_len];
+
+        // Call QK256 kernel for each input row
+        for (i, input_row) in input_vec.iter().enumerate() {
+            gemv_qk256(&flat_bytes, input_row, &mut output_vec[i], rows, cols, row_stride_bytes)
+                .map_err(|e| {
+                    BitNetError::Validation(format!(
+                        "QK256 GEMV failed for {} at row {}: {}",
+                        weight_name, i, e
+                    ))
+                })?;
+        }
+
+        // Flatten output and reshape
+        let output_flat: Vec<f32> = output_vec.into_iter().flatten().collect();
+        let output_tensor = if rank == 3 {
+            Tensor::from_vec(output_flat, (batch_size, seq_len, rows), input.device())?
+        } else {
+            Tensor::from_vec(output_flat, (batch_size, rows), input.device())?
+        };
+
+        Ok(output_tensor)
     }
 }
 
@@ -544,7 +800,7 @@ pub struct TransformerBlock {
 }
 
 impl TransformerBlock {
-    pub fn new(config: &BitNetConfig, vb: VarBuilder) -> Result<Self> {
+    pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
         // PATCH 1: Use RMSNorm epsilon from config header for ALL norms (per-layer + final)
         let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
@@ -552,8 +808,8 @@ impl TransformerBlock {
         tracing::debug!("TransformerBlock using RMSNorm eps={} (from header)", eps);
 
         Ok(Self {
-            attention: MultiHeadAttention::new(config, vb.pp("attention"))?,
-            feed_forward: FeedForward::new(config, vb.pp("feed_forward"))?,
+            attention: MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?,
+            feed_forward: FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?,
             attention_norm: layer_norm_with_optional_bias(
                 hidden_size,
                 eps,
@@ -567,7 +823,12 @@ impl TransformerBlock {
         })
     }
 
-    pub fn forward(&self, x: &Tensor, kv_cache: Option<&mut LayerKVCache>) -> Result<Tensor> {
+    pub fn forward(
+        &self,
+        x: &Tensor,
+        kv_cache: Option<&mut LayerKVCache>,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+    ) -> Result<Tensor> {
         // Debug input activation norms
         if std::env::var("DEBUG_ATTN").is_ok() {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
@@ -620,7 +881,7 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.attention.forward(&x, kv_cache)?;
+        let x = self.attention.forward(&x, kv_cache, raw_tensors)?;
         let x = (x + residual)?;
 
         // Debug post-attention activation norms
@@ -672,7 +933,7 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.feed_forward.forward(&x)?;
+        let x = self.feed_forward.forward(&x, raw_tensors)?;
         let x = (x + residual)?;
 
         // Debug post-FFN activation norms
@@ -756,8 +1017,25 @@ impl KVCache {
     pub fn new(config: &BitNetConfig, batch_size: usize, device: &Device) -> Result<Self> {
         let n_layers = config.model.num_layers;
         let n_heads = config.model.num_heads;
+        let hidden_size = config.model.hidden_size;
+
+        // Validate shape assumptions before calculating dimensions
+        if !hidden_size.is_multiple_of(n_heads) {
+            return Err(BitNetError::Validation(format!(
+                "KVCache: hidden_size {} not divisible by num_heads {}",
+                hidden_size, n_heads
+            )));
+        }
+
         let n_kv_heads = config.model.num_key_value_heads.max(1).min(n_heads);
-        let head_dim = config.model.hidden_size / n_heads;
+        if !n_heads.is_multiple_of(n_kv_heads) {
+            return Err(BitNetError::Validation(format!(
+                "KVCache: num_heads {} not divisible by num_key_value_heads {}",
+                n_heads, n_kv_heads
+            )));
+        }
+
+        let head_dim = hidden_size / n_heads;
         let max_seq_len = config.model.max_position_embeddings;
 
         let mut layers = Vec::with_capacity(n_layers);
@@ -791,10 +1069,19 @@ pub struct TransformerModel {
     pub lm_head_weight: Option<Tensor>, // Direct access to lm_head weight for transposed handling
     pub lm_head_transposed: bool,       // True if lm_head is stored as [hidden, vocab]
     device: Device,
+    raw_tensors: std::collections::HashMap<String, Tensor>, // Store raw tensors for QK256 dispatch
 }
 
 impl TransformerModel {
     pub fn new(config: BitNetConfig, vb: VarBuilder) -> Result<Self> {
+        Self::new_with_tensors(config, vb, std::collections::HashMap::new())
+    }
+
+    pub fn new_with_tensors(
+        config: BitNetConfig,
+        vb: VarBuilder,
+        raw_tensors: std::collections::HashMap<String, Tensor>,
+    ) -> Result<Self> {
         let device = vb.device().clone();
         let vocab_size = config.model.vocab_size;
         let hidden_size = config.model.hidden_size;
@@ -819,7 +1106,7 @@ impl TransformerModel {
 
         let mut layers = Vec::with_capacity(n_layers);
         for i in 0..n_layers {
-            layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)))?);
+            layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)), i)?);
         }
 
         // Use RMSNorm epsilon from config header (CRITICAL: must match per-layer norms)
@@ -898,6 +1185,7 @@ impl TransformerModel {
             lm_head_weight,
             lm_head_transposed,
             device,
+            raw_tensors,
         })
     }
 
@@ -992,7 +1280,7 @@ impl TransformerModel {
 
         for (i, layer) in self.layers.iter().enumerate() {
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
-            x = layer.forward(&x, layer_cache)?;
+            x = layer.forward(&x, layer_cache, &self.raw_tensors)?;
 
             // Debug layer activation norms (show all layers when debugging)
             if std::env::var("DEBUG_ATTN").is_ok()

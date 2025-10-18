@@ -39,6 +39,11 @@ impl BitNetModel {
         tensors: HashMap<String, CandleTensor>,
         device: Device,
     ) -> Result<Self> {
+        eprintln!(
+            "DEBUG from_gguf: Received config: hidden={}, n_heads={}, n_kv_heads={}",
+            config.model.hidden_size, config.model.num_heads, config.model.num_key_value_heads
+        );
+
         // Validate that required tensors are present
         // LM head can be tied to embeddings, so check for either output.weight or embeddings
         let has_output = tensors.contains_key("output.weight")
@@ -95,9 +100,8 @@ impl BitNetModel {
         // Remap tensor names to match our transformer module structure
         let mut mapped = remap_gguf_weights(tensors)?;
 
-        // Normalize embeddings and lm_head tensors, detect vocab size and hidden size
-        let (detected_vocab, detected_hidden) =
-            normalize_model_tensors(&mut mapped, config.model.hidden_size)?;
+        // Normalize embeddings, lm_head, and all layer tensors, detect vocab size and hidden size
+        let (detected_vocab, detected_hidden) = normalize_model_tensors(&mut mapped, config)?;
 
         // Update config with detected values
         let mut updated_config = config.clone();
@@ -118,8 +122,8 @@ impl BitNetModel {
             updated_config.model.hidden_size = detected_hidden;
         }
 
-        let vb = create_var_builder(mapped, DType::F32, &device)?;
-        let model = TransformerModel::new(updated_config, vb)?;
+        let vb = create_var_builder(mapped.clone(), DType::F32, &device)?;
+        let model = TransformerModel::new_with_tensors(updated_config, vb, mapped)?;
         Ok(Arc::new(model))
     }
 
@@ -168,50 +172,50 @@ impl Model for BitNetModel {
         input: &ConcreteTensor,
         cache: &mut dyn std::any::Any,
     ) -> Result<ConcreteTensor> {
-        if let Some(transformer) = &self.transformer {
-            // Get or create KV cache
-            let kv_cache = cache.downcast_mut::<KVCache>();
+        // Fail fast if transformer not initialized - prevents silent zero-logit failures
+        let transformer = self.transformer.as_ref().ok_or_else(|| {
+            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: "BitNetModel::transformer not initialized (GGUF load failed or build_transformer returned error)".to_string()
+            })
+        })?;
 
-            // Convert input to Candle tensor
-            let input_tensor = self.to_candle_tensor(input)?;
+        // Get or create KV cache
+        let kv_cache = cache.downcast_mut::<KVCache>();
 
-            // Run transformer forward pass
-            let output = transformer.forward(&input_tensor, kv_cache)?;
+        // Convert input to Candle tensor
+        let input_tensor = self.to_candle_tensor(input)?;
 
-            // Convert back to ConcreteTensor
-            Ok(self.candle_to_concrete(output))
-        } else {
-            // Fallback to mock implementation
-            let batch_size = input.shape()[0];
-            let seq_len = input.shape()[1];
-            let hidden_size = self.config.model.hidden_size;
-            Ok(ConcreteTensor::mock(vec![batch_size, seq_len, hidden_size]))
-        }
+        // Run transformer forward pass
+        let output = transformer.forward(&input_tensor, kv_cache)?;
+
+        // Convert back to ConcreteTensor
+        Ok(self.candle_to_concrete(output))
     }
 
     fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
-        if let Some(transformer) = &self.transformer {
-            let embedded = transformer.embed(tokens)?;
-            Ok(self.candle_to_concrete(embedded))
-        } else {
-            // Mock embedding
-            let seq_len = tokens.len();
-            let hidden_size = self.config.model.hidden_size;
-            Ok(ConcreteTensor::mock(vec![1, seq_len, hidden_size]))
-        }
+        // Fail fast if transformer not initialized
+        let transformer = self.transformer.as_ref().ok_or_else(|| {
+            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: "BitNetModel::transformer not initialized (cannot embed tokens)"
+                    .to_string(),
+            })
+        })?;
+
+        let embedded = transformer.embed(tokens)?;
+        Ok(self.candle_to_concrete(embedded))
     }
 
     fn logits(&self, hidden: &ConcreteTensor) -> Result<ConcreteTensor> {
-        if let Some(transformer) = &self.transformer {
-            let hidden_tensor = self.to_candle_tensor(hidden)?;
-            let logits = transformer.logits(&hidden_tensor)?;
-            Ok(self.candle_to_concrete(logits))
-        } else {
-            // Mock logits
-            let batch_size = hidden.shape()[0];
-            let seq_len = hidden.shape()[1];
-            let vocab_size = self.config.model.vocab_size;
-            Ok(ConcreteTensor::mock(vec![batch_size, seq_len, vocab_size]))
-        }
+        // Fail fast if transformer not initialized
+        let transformer = self.transformer.as_ref().ok_or_else(|| {
+            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: "BitNetModel::transformer not initialized (cannot compute logits)"
+                    .to_string(),
+            })
+        })?;
+
+        let hidden_tensor = self.to_candle_tensor(hidden)?;
+        let logits = transformer.logits(&hidden_tensor)?;
+        Ok(self.candle_to_concrete(logits))
     }
 }
