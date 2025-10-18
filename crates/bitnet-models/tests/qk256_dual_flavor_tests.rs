@@ -112,7 +112,9 @@ fn test_qk256_detection_by_size() {
 
     let file = create_test_gguf_with_i2s("test.weight", &[rows, cols], data, 26);
 
-    let result = load_gguf_full(file.path(), Device::Cpu).unwrap();
+    let result =
+        load_gguf_full(file.path(), Device::Cpu, bitnet_models::GGUFLoaderConfig::default())
+            .unwrap();
 
     // Verify QK256 tensor was detected and stored in i2s_qk256 map
     assert_eq!(result.i2s_qk256.len(), 1, "Should have one QK256 tensor");
@@ -151,7 +153,9 @@ fn test_bitnet32_still_uses_fp_path() {
 
     let file = create_test_gguf_with_i2s("test.weight", &[rows, cols], data, 26);
 
-    let result = load_gguf_full(file.path(), Device::Cpu).unwrap();
+    let result =
+        load_gguf_full(file.path(), Device::Cpu, bitnet_models::GGUFLoaderConfig::default())
+            .unwrap();
 
     // Verify BitNet-32 tensor was dequantized and stored in tensors map
     assert_eq!(result.i2s_qk256.len(), 0, "Should have no QK256 tensors");
@@ -180,7 +184,9 @@ fn test_qk256_with_non_multiple_cols() {
 
     let file = create_test_gguf_with_i2s("test.weight", &[rows, cols], data, 26);
 
-    let result = load_gguf_full(file.path(), Device::Cpu).unwrap();
+    let result =
+        load_gguf_full(file.path(), Device::Cpu, bitnet_models::GGUFLoaderConfig::default())
+            .unwrap();
 
     // Verify QK256 tensor was detected
     assert_eq!(result.i2s_qk256.len(), 1);

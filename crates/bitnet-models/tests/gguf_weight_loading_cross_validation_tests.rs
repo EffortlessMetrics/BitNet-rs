@@ -241,8 +241,12 @@ async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> 
         .context("Failed to set up cross-validation test model")?;
 
     // Load weights using Rust implementation
-    let result = bitnet_models::gguf_simple::load_gguf_full(&test_model_path, Device::Cpu)
-        .context("Failed to load GGUF weights with Rust implementation")?;
+    let result = bitnet_models::gguf_simple::load_gguf_full(
+        &test_model_path,
+        Device::Cpu,
+        bitnet_models::GGUFLoaderConfig::default(),
+    )
+    .context("Failed to load GGUF weights with Rust implementation")?;
     let (rust_config, rust_weights) = (result.config, result.tensors);
 
     // Load weights using C++ reference implementation
@@ -308,7 +312,11 @@ async fn test_ac5_inference_pipeline_cross_validation() -> Result<()> {
     let test_model_path = setup_crossval_test_model().await?;
 
     // Load model with real weights
-    let result = bitnet_models::gguf_simple::load_gguf_full(&test_model_path, Device::Cpu)?;
+    let result = bitnet_models::gguf_simple::load_gguf_full(
+        &test_model_path,
+        Device::Cpu,
+        bitnet_models::GGUFLoaderConfig::default(),
+    )?;
     let (model_config, weights) = (result.config, result.tensors);
 
     // Create inference engine with loaded weights
@@ -452,7 +460,11 @@ async fn test_ac5_deterministic_inference_validation() -> Result<()> {
             std::env::set_var("BITNET_SEED", seed.to_string());
         }
 
-        let result = bitnet_models::gguf_simple::load_gguf_full(&test_model_path, Device::Cpu)?;
+        let result = bitnet_models::gguf_simple::load_gguf_full(
+            &test_model_path,
+            Device::Cpu,
+            bitnet_models::GGUFLoaderConfig::default(),
+        )?;
         let (_, weights) = (result.config, result.tensors);
 
         // TODO: Replace with actual inference engine when available
