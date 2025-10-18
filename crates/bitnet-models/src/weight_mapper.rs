@@ -599,10 +599,9 @@ fn normalize_layer_weights(
                 let head_dim = hidden / n_heads;
                 let group_size = n_heads / n_kv_heads;
 
-                tracing::info!(
-                    "layer{}: Sliced {}/V [hidden,hidden] -> [kv_dim,hidden] (GQA group_size={})",
+                tracing::warn!(
+                    "layer{}: Sliced K/V [hidden,hidden] -> [kv_dim,hidden] (GQA group_size={})",
                     layer_idx,
-                    if name == "k_proj" { "K" } else { "V" },
                     group_size
                 );
 

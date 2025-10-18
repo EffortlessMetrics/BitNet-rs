@@ -176,17 +176,13 @@ fn compile_cpp_shim(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     let mut builder = cc::Build::new();
-    builder
-        .cpp(true)
-        .file(&shim_cc)
-        .flag_if_supported("-std=c++17")
-        .flag_if_supported("-fPIC")
-        .warnings(false); // Suppress warnings from third-party headers
+    builder.cpp(true).file(&shim_cc).flag_if_supported("-std=c++17").flag_if_supported("-fPIC");
 
-    // Add all existing include paths
+    // Add include paths as system includes to suppress third-party warnings
     for include_path in &possible_include_paths {
         if include_path.exists() {
-            builder.include(include_path);
+            // Use -isystem for third-party headers to suppress warnings
+            builder.flag(format!("-isystem{}", include_path.display()));
         }
     }
 

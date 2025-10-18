@@ -7,6 +7,9 @@ use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
 use std::collections::HashMap;
 use std::path::Path;
 
+/// QK256 size tolerance for layout detection (allows alignment padding)
+const QK256_SIZE_TOLERANCE: usize = 128;
+
 /// Result of GGUF loading with both regular tensors and QK256 quantized weights
 pub struct GgufLoadResult {
     pub config: bitnet_common::BitNetConfig,
@@ -79,24 +82,26 @@ pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
             match result {
                 Ok(x) => Ok(x),
                 Err(e) => {
-                    let fallback_msg =
-                        if std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1") {
-                            "Failing fast due to BITNET_DISABLE_MINIMAL_LOADER=1"
-                        } else {
+                    let hint = "Set BITNET_DISABLE_MINIMAL_LOADER=1 to fail-fast with the enhanced loader \
+                                (preferred for CI/parity). Unset to allow minimal loader fallback (reduced features).";
+
+                    let fail_fast =
+                        std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1");
+
+                    if fail_fast {
+                        tracing::error!("Enhanced loader failed: {}. {}", e, hint);
+                        tracing::error!(
+                            "BITNET_DISABLE_MINIMAL_LOADER=1: stopping here (no minimal fallback)."
+                        );
+                        return Err(BitNetError::Validation(format!(
+                            "{}\nHint: unset BITNET_DISABLE_MINIMAL_LOADER to try the minimal loader (reduced features).",
+                            e
+                        )));
+                    } else {
+                        tracing::warn!("Enhanced loader failed: {}. {}", e, hint);
+                        tracing::warn!(
                             "Falling back to minimal parser (may use 32/0 default dims)"
-                        };
-
-                    tracing::warn!(
-                        "Enhanced loader failed: {}; \
-                         (have you updated GGUF reader types/size rules?) \
-                         {}",
-                        e,
-                        fallback_msg
-                    );
-
-                    // Fail-fast for parity/demo/CI so we surface the real issue
-                    if std::env::var("BITNET_DISABLE_MINIMAL_LOADER").as_deref() == Ok("1") {
-                        return Err(e);
+                        );
                     }
 
                     // AC9: Fallback to minimal GGUF parser for backward compatibility
@@ -221,9 +226,7 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
             let blocks_256 = total_elements.div_ceil(256);
             let expected_qk256 = blocks_256 * 64;
 
-            const TOLERANCE: usize = 128;
-
-            if available_bytes.abs_diff(expected_qk256) <= TOLERANCE {
+            if available_bytes.abs_diff(expected_qk256) <= QK256_SIZE_TOLERANCE {
                 // This is QK256 format - extract raw bytes and create I2SQk256NoScale
                 // GGUF stores tensors as [rows, cols] but QK256 data layout might be transposed
                 // Check if data size matches either orientation and use the correct one
@@ -243,28 +246,14 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
                     if available_bytes.abs_diff(expected_transposed)
                         < available_bytes.abs_diff(expected_as_is)
                     {
-                        let row_stride = shape_transposed.1.div_ceil(256) * 64;
-                        tracing::info!(
-                            "QK256 '{}': Chose transposed shape [{}, {}] (file_size={} vs expected={}, row_stride={} bytes = cols.div_ceil(256) * 64)",
+                        tracing::debug!(
+                            "QK256 '{}': using transposed [cols, rows] → bytes match {} vs {}",
                             info.name,
-                            shape_transposed.0,
-                            shape_transposed.1,
-                            available_bytes,
                             expected_transposed,
-                            row_stride
+                            expected_as_is
                         );
                         shape_transposed
                     } else {
-                        let row_stride = shape_as_is.1.div_ceil(256) * 64;
-                        tracing::info!(
-                            "QK256 '{}': Chose as-is shape [{}, {}] (file_size={} vs expected={}, row_stride={} bytes = cols.div_ceil(256) * 64)",
-                            info.name,
-                            shape_as_is.0,
-                            shape_as_is.1,
-                            available_bytes,
-                            expected_as_is,
-                            row_stride
-                        );
                         shape_as_is
                     }
                 } else if info.shape.len() == 1 {
@@ -300,6 +289,15 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
                 // Create I2SQk256NoScale structure
                 match I2SQk256NoScale::new(rows, cols, tensor_data.to_vec()) {
                     Ok(qk256_tensor) => {
+                        tracing::debug!(
+                            "QK256 '{}': rows={}, cols={}, blocks={}, row_stride={}B, tol={}B",
+                            info.name,
+                            rows,
+                            cols,
+                            blocks_256,
+                            row_stride_bytes,
+                            QK256_SIZE_TOLERANCE
+                        );
                         tracing::info!(
                             "Loaded QK256 I2_S tensor '{}': rows={}, cols={}, blocks={}, row_stride={} bytes",
                             info.name,
@@ -978,10 +976,8 @@ fn load_tensor_from_gguf(
             let _bitnet_inline_need = blocks_32 * 10; // 32 elem/block, 10 B/block (data + F16 scales)
             let ggml_need = blocks_256 * 64; // 256 elem/block, 64 B/block (QK_K format)
 
-            let tolerance = 128; // Allow alignment padding
-
             // Detect format by available bytes
-            if available.abs_diff(ggml_need) <= tolerance {
+            if available.abs_diff(ggml_need) <= QK256_SIZE_TOLERANCE {
                 // This is ggml I2_S (QK_K=256) - will be stored separately in i2s_qk256 map
                 tracing::info!(
                     "I2_S '{}': GGML/llama.cpp format detected (QK_K=256, 64B/block). Will be stored in i2s_qk256 map.",
@@ -1032,14 +1028,19 @@ fn load_tensor_from_gguf(
             );
 
             // Validate layout matches available bytes
-            let need = if available.abs_diff(split_need) <= tolerance {
+            let need = if available.abs_diff(split_need) <= QK256_SIZE_TOLERANCE {
                 split_need
-            } else if available.abs_diff(inline_need) <= tolerance {
+            } else if available.abs_diff(inline_need) <= QK256_SIZE_TOLERANCE {
                 inline_need
             } else {
                 return Err(BitNetError::Validation(format!(
                     "I2_S '{}': available bytes {} don't match BitNet split ({} ± {}) or inline ({} ± {})",
-                    info.name, available, split_need, tolerance, inline_need, tolerance
+                    info.name,
+                    available,
+                    split_need,
+                    QK256_SIZE_TOLERANCE,
+                    inline_need,
+                    QK256_SIZE_TOLERANCE
                 )));
             };
 

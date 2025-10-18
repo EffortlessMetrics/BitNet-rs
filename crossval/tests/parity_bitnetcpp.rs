@@ -12,6 +12,9 @@ use anyhow::{Context, Result};
 use serde_json::json;
 use std::{env, fs, path::PathBuf, time::SystemTime};
 
+/// Parity test timeout in seconds (configurable via PARITY_TEST_TIMEOUT_SECS env var)
+const DEFAULT_TIMEOUT_SECS: u64 = 120;
+
 /// Helper function to compute cosine similarity between two vectors
 #[allow(dead_code)]
 fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
@@ -328,20 +331,28 @@ async fn parity_bitnetcpp() -> Result<()> {
         return Ok(());
     }
 
-    // Wrap the test logic with a timeout guard (120 seconds)
+    // Wrap the test logic with a timeout guard
     // This prevents hangs and writes a diagnostic receipt on timeout
     // Note: Increased from 60s to accommodate 2B+ parameter models in release mode
+    let timeout_secs = std::env::var("PARITY_TEST_TIMEOUT_SECS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_TIMEOUT_SECS);
+
     match tokio::time::timeout(
-        std::time::Duration::from_secs(120),
+        std::time::Duration::from_secs(timeout_secs),
         parity_bitnetcpp_impl(gguf_path.clone()),
     )
     .await
     {
         Ok(result) => result,
         Err(_) => {
-            eprintln!("TIMEOUT: Parity test exceeded 120 seconds - writing diagnostic receipt");
-            write_timeout_receipt(&gguf_path)?;
-            anyhow::bail!("Parity test timed out after 120 seconds");
+            eprintln!(
+                "TIMEOUT: Parity test exceeded {} seconds - writing diagnostic receipt",
+                timeout_secs
+            );
+            write_timeout_receipt(&gguf_path, timeout_secs)?;
+            anyhow::bail!("Parity test timed out after {} seconds", timeout_secs);
         }
     }
 }
@@ -559,12 +570,17 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "n_steps": n_steps,
         },
         "validation": {
-            "backend": validation_backend,
             "tokenizer": "rust",
-            "compute": validation_backend,
+            "compute": "rust",
         },
         "quant": {
-            "i2s_flavor": i2s_flavor,
+            "format": i2s_flavor.map_or("unknown".to_string(), |s| match s {
+                "bitnet_qk32_f16" => "I2S_BitNet32F16".to_string(),
+                "split_qk32_with_sibling" => "I2S_Split32WithSibling".to_string(),
+                "ggml_qk256_no_scale" => "I2S_QK256".to_string(),
+                _ => s.to_string(),
+            }),
+            "flavor": i2s_flavor.unwrap_or("unknown"),
         },
         "parity": {
             "cpp_available": cpp_loaded,
@@ -856,7 +872,7 @@ async fn rust_decode_n_greedy(
 }
 
 /// Write a diagnostic receipt when the parity test times out
-fn write_timeout_receipt(gguf_path: &std::path::Path) -> Result<()> {
+fn write_timeout_receipt(gguf_path: &std::path::Path, timeout_secs: u64) -> Result<()> {
     let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
     let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
 
@@ -882,10 +898,10 @@ fn write_timeout_receipt(gguf_path: &std::path::Path) -> Result<()> {
         "model_path": gguf_path.display().to_string(),
         "parity": {
             "status": "timeout",
-            "timeout_seconds": 120,
+            "timeout_seconds": timeout_secs,
         },
         "environment": env_meta,
-        "error": "Parity test exceeded 60-second timeout - check for performance regression or hanging inference"
+        "error": format!("Parity test exceeded {}-second timeout - check for performance regression or hanging inference", timeout_secs)
     });
 
     let receipt_path = receipt_dir.join("parity-bitnetcpp.json");
