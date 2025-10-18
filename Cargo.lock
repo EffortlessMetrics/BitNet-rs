@@ -770,6 +770,7 @@ dependencies = [
  "bindgen",
  "cc",
  "thiserror 2.0.17",
+ "xtask-build-helper",
 ]
 
 [[package]]
@@ -7744,6 +7745,14 @@ dependencies = [
  "toml 0.9.8",
  "walkdir",
  "which",
+ "xtask-build-helper",
+]
+
+[[package]]
+name = "xtask-build-helper"
+version = "0.1.0"
+dependencies = [
+ "cc",
 ]
 
 [[package]]

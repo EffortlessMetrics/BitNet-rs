@@ -22,9 +22,28 @@ fn help_mentions_core_subcommands() {
         .clone();
     let s = String::from_utf8(out).unwrap();
 
-    // Looser contract: presence of key verbs without snapshot churn.
-    for needle in ["serve", "infer", "score", "--model", "--config"] {
+    // Check always-available commands (not gated behind full-cli)
+    for needle in ["score", "--model", "--config"] {
         assert!(s.contains(needle), "help missing `{needle}`");
+    }
+}
+
+#[cfg(feature = "full-cli")]
+#[test]
+fn help_mentions_full_cli_subcommands() {
+    let out = Command::cargo_bin("bitnet")
+        .unwrap()
+        .arg("--help")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+
+    // Check full-cli gated commands
+    for needle in ["serve", "infer", "chat", "inspect"] {
+        assert!(s.contains(needle), "help missing full-cli command `{needle}`");
     }
 }
 

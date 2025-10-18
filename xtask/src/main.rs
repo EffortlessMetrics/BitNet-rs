@@ -33,6 +33,7 @@ use std::{
 };
 use walkdir::WalkDir;
 
+pub mod ffi;
 mod gates;
 
 // RAII guard for lock file cleanup

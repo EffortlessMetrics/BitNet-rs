@@ -164,30 +164,31 @@ fn compile_cpp_shim(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     let build_dir = cpp_dir.join("build");
 
-    // Possible include paths for llama.cpp headers
-    let possible_include_paths = vec![
+    // Local include directories (use -I, warnings visible)
+    let local_includes = vec![
+        PathBuf::from("include"), // Local bitnet_c.h
+    ];
+
+    // System include directories (use -isystem, warnings suppressed)
+    // TODO: llama.cpp API version detection
+    // These paths assume a specific llama.cpp directory structure.
+    // If llama.cpp reorganizes headers, paths may need adjustment.
+    let system_includes = vec![
         cpp_dir.join("3rdparty/llama.cpp/include"),
         cpp_dir.join("3rdparty/llama.cpp/ggml/include"),
         cpp_dir.join("include"),
         cpp_dir.join("src"),
         build_dir.join("3rdparty/llama.cpp/include"),
         build_dir.join("3rdparty/llama.cpp/ggml/include"),
-        PathBuf::from("include"), // Local bitnet_c.h
     ];
 
-    let mut builder = cc::Build::new();
-    builder.cpp(true).file(&shim_cc).flag_if_supported("-std=c++17").flag_if_supported("-fPIC");
-
-    // Add include paths as system includes to suppress third-party warnings
-    for include_path in &possible_include_paths {
-        if include_path.exists() {
-            // Use -isystem for third-party headers to suppress warnings
-            builder.flag(format!("-isystem{}", include_path.display()));
-        }
-    }
-
-    // Compile the shim
-    builder.compile("bitnet_c_shim");
+    // Use unified compile_cpp_shim from xtask-build-helper
+    xtask_build_helper::compile_cpp_shim(
+        &shim_cc,
+        "bitnet_c_shim",
+        &local_includes,
+        &system_includes,
+    )?;
 
     eprintln!("bitnet-sys: C++ shim compiled successfully");
     Ok(())

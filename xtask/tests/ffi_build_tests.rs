@@ -24,20 +24,19 @@
 #[test]
 fn test_single_compile_cpp_shim_function() {
     // AC6: Verify single compile_cpp_shim function exists
-    // FIXTURE NEEDED: Static analysis of build.rs files or build helper module
-    // Expected: Exactly one compile_cpp_shim function with signature:
-    //   pub fn compile_cpp_shim(
-    //       shim_path: &Path,
-    //       output_name: &str,
-    //       include_dirs: &[PathBuf],
-    //       system_include_dirs: &[PathBuf],
-    //   ) -> Result<(), Box<dyn std::error::Error>>
+    // The unified function is in xtask/src/ffi.rs
+    // Verify by checking that xtask::ffi::compile_cpp_shim is accessible
+    use std::path::{Path, PathBuf};
 
-    // This test will fail until implementation exists
-    panic!(
-        "AC6: compile_cpp_shim function not yet implemented. \
-         Expected: Single function in build helper module with unified hygiene settings."
-    );
+    // This will compile-fail if the function doesn't exist with the correct signature
+    #[allow(clippy::type_complexity)]
+    let _: fn(&Path, &str, &[PathBuf], &[PathBuf]) -> Result<(), Box<dyn std::error::Error>> =
+        xtask::ffi::compile_cpp_shim;
+
+    // Also verify helper functions exist
+    let _: fn() -> Vec<PathBuf> = xtask::ffi::cuda_system_includes;
+    let _: fn() -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> =
+        xtask::ffi::bitnet_cpp_system_includes;
 }
 
 /// AC6: Test -isystem flags for third-party includes
@@ -219,18 +218,15 @@ fn test_compile_cpp_shim_with_cpp_reference() {
 /// - Does not fail (best-effort path construction)
 #[test]
 fn test_cuda_system_includes_helper() {
-    // AC6: Test cuda_system_includes() helper
-    // FIXTURE NEEDED: None (unit test)
-    //
-    // Expected:
-    //   let paths = cuda_system_includes();
-    //   assert!(paths.contains(&PathBuf::from("/usr/local/cuda/include")));
-    //   assert!(!paths.is_empty());
+    use std::path::PathBuf;
 
-    panic!(
-        "AC6: cuda_system_includes helper not yet implemented. \
-         Expected: Returns standard CUDA paths, never fails."
-    );
+    let paths = xtask::ffi::cuda_system_includes();
+
+    // Verify it returns expected CUDA paths
+    assert!(paths.contains(&PathBuf::from("/usr/local/cuda/include")));
+    assert!(paths.contains(&PathBuf::from("/usr/local/cuda/targets/x86_64-linux/include")));
+    assert!(paths.contains(&PathBuf::from("/usr/local/cuda/targets/aarch64-linux/include")));
+    assert!(!paths.is_empty());
 }
 
 /// AC6: Test bitnet_cpp_system_includes helper
@@ -246,21 +242,26 @@ fn test_cuda_system_includes_helper() {
 /// - Returns Err if BITNET_CPP_DIR not set and HOME not available
 #[test]
 fn test_bitnet_cpp_system_includes_helper() {
-    // AC6: Test bitnet_cpp_system_includes() helper
-    // FIXTURE NEEDED:
-    // - Set BITNET_CPP_DIR=/path/to/mock/bitnet_cpp
-    // - Verify function returns expected paths
-    //
-    // Expected:
-    //   std::env::set_var("BITNET_CPP_DIR", "/mock/bitnet_cpp");
-    //   let paths = bitnet_cpp_system_includes().unwrap();
-    //   assert!(paths.contains(&PathBuf::from("/mock/bitnet_cpp/include")));
-    //   assert!(paths.contains(&PathBuf::from("/mock/bitnet_cpp/3rdparty/llama.cpp")));
+    use std::path::PathBuf;
 
-    panic!(
-        "AC6: bitnet_cpp_system_includes helper not yet implemented. \
-         Expected: Returns BitNet C++ paths from BITNET_CPP_DIR or HOME cache."
+    // Test with explicit BITNET_CPP_DIR
+    unsafe {
+        std::env::set_var("BITNET_CPP_DIR", "/mock/bitnet_cpp");
+    }
+    let paths = xtask::ffi::bitnet_cpp_system_includes().unwrap();
+
+    assert!(paths.contains(&PathBuf::from("/mock/bitnet_cpp/include")));
+    assert!(paths.contains(&PathBuf::from("/mock/bitnet_cpp/3rdparty/llama.cpp/include")));
+    assert!(paths.contains(&PathBuf::from("/mock/bitnet_cpp/3rdparty/llama.cpp/ggml/include")));
+    assert!(paths.contains(&PathBuf::from("/mock/bitnet_cpp/build/3rdparty/llama.cpp/include")));
+    assert!(
+        paths.contains(&PathBuf::from("/mock/bitnet_cpp/build/3rdparty/llama.cpp/ggml/include"))
     );
+
+    // Clean up
+    unsafe {
+        std::env::remove_var("BITNET_CPP_DIR");
+    }
 }
 
 /// AC6: Test compile flags include C++17, -O2, -fPIC
