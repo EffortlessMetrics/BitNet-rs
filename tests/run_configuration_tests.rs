@@ -6,14 +6,13 @@ mod integration_tests {
     use bitnet_tests::units::BYTES_PER_MB;
     use bitnet_tests::{
         config::{
-            ReportFormat, TestConfig, ci_config, dev_config, load_config_from_env,
+            TestConfig, ci_config, dev_config, load_config_from_env,
             load_config_from_file, merge_configs, minimal_config, save_config_to_file,
             validate_config,
         },
         config_validator::ConfigValidator,
         errors::{TestError, TestOpResult},
     };
-    use serde_json;
     use std::collections::HashMap;
     use std::env;
     use std::time::Duration;
@@ -72,12 +71,8 @@ mod integration_tests {
         // Verify default values
         assert_eq!(config.max_parallel_tests, 4);
         assert_eq!(config.test_timeout, Duration::from_secs(300));
-        assert!(config.capture_stdout);
-        assert!(config.capture_stderr);
-        assert_eq!(config.retry_attempts, 0);
-        assert_eq!(config.memory_limit_mb, None);
-        assert_eq!(config.report_format, ReportFormat::Json);
-        assert_eq!(config.output_dir, std::path::PathBuf::from("test-results"));
+        // Note: capture_stdout, capture_stderr, retry_attempts, memory_limit_mb,
+        // report_format, and output_dir are not fields in the current TestConfig struct
 
         println!("  Default configuration validated successfully");
         Ok(())

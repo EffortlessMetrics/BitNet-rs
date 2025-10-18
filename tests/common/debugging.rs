@@ -1044,4 +1044,5 @@ fn get_available_disk_space() -> u64 {
 }
 
 // Re-export for convenience
+#[allow(unused_imports)]
 pub use super::errors::{ErrorDebugInfo, ErrorReport, TroubleshootingStep};

@@ -3,7 +3,6 @@
 //! This test doesn't depend on the existing broken test infrastructure
 
 use std::collections::HashMap;
-use std::time::Duration;
 
 // Import only the specific modules we need
 mod ci_reporting_test {
