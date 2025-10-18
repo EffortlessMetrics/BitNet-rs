@@ -131,23 +131,8 @@ impl BitNetModel {
 
         // Remap raw_tensors keys (QK256 tensors) to match transformer structure
         // Keys like "blk.0.attn_q.weight.qk256_qs" -> "layers.0.attention.q_proj.weight.qk256_qs"
-        // The remapper doesn't handle .qk256_qs suffix, so we need to strip it, remap, then re-add
-        let mut raw_mapped = std::collections::HashMap::new();
-        for (key, tensor) in raw_tensors.iter() {
-            if let Some(base_key) = key.strip_suffix(".qk256_qs") {
-                // Create a temporary HashMap with just the base key for remapping
-                let mut temp = std::collections::HashMap::new();
-                temp.insert(base_key.to_string(), tensor.clone());
-                // Remap the base key
-                if let Ok(remapped_temp) = remap_gguf_weights(&temp) {
-                    // Get the remapped base key and re-add the .qk256_qs suffix
-                    for (remapped_key, remapped_tensor) in remapped_temp {
-                        let final_key = format!("{}.qk256_qs", remapped_key);
-                        raw_mapped.insert(final_key, remapped_tensor);
-                    }
-                }
-            }
-        }
+        // The remapper now handles .qk256_qs suffix (strips, remaps, re-appends)
+        let raw_mapped = remap_gguf_weights(raw_tensors)?;
 
         let vb = create_var_builder(mapped.clone(), DType::F32, &device)?;
         let model = TransformerModel::new_with_tensors(updated_config, vb, raw_mapped)?;

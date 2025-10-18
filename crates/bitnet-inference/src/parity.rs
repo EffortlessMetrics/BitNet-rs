@@ -41,8 +41,39 @@ pub fn eval_logits_once(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
                 result.config.model.num_heads,
                 result.config.model.num_key_value_heads
             );
-            // TODO: Wire up result.i2s_qk256 to raw_tensors once GGUF loader is updated
-            let raw_tensors = std::collections::HashMap::new();
+
+            // Convert i2s_qk256 map to raw_tensors map with key remapping
+            // QK256 tensors are stored as raw bytes in I2SQk256NoScale, we need to convert them to Candle tensors
+            // and remap GGUF keys (e.g., "blk.0.attn_q.weight") to model keys (e.g., "layers.0.attention.q_proj.weight")
+            let mut raw_tensors_unmapped = std::collections::HashMap::new();
+            for (key, qk256_tensor) in result.i2s_qk256.iter() {
+                // Create a U8 tensor from the raw bytes with shape [rows, row_stride_bytes]
+                let raw_bytes_tensor = candle_core::Tensor::from_raw_buffer(
+                    &qk256_tensor.qs,
+                    candle_core::DType::U8,
+                    &[qk256_tensor.rows, qk256_tensor.row_stride_bytes],
+                    &candle_core::Device::Cpu,
+                )
+                .map_err(|e| anyhow::anyhow!("Failed to create raw tensor for '{}': {}", key, e))?;
+
+                // Store with .qk256_qs suffix (GGUF key format)
+                let qk256_key = format!("{}.qk256_qs", key);
+                raw_tensors_unmapped.insert(qk256_key, raw_bytes_tensor);
+            }
+
+            eprintln!(
+                "DEBUG parity: Converted {} QK256 tensors to raw_tensors (pre-remap)",
+                raw_tensors_unmapped.len()
+            );
+
+            // Remap keys from GGUF format to model format
+            let raw_tensors = bitnet_models::weight_mapper::remap_gguf_weights_with_options(
+                &raw_tensors_unmapped,
+                false, // non-strict
+            )?;
+
+            eprintln!("DEBUG parity: Remapped raw_tensors keys ({} tensors)", raw_tensors.len());
+
             let model = BitNetModel::from_gguf(
                 result.config.clone(),
                 result.tensors,

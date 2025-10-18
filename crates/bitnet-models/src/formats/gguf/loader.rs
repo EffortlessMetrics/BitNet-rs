@@ -792,6 +792,65 @@ impl GgufLoader {
         name.contains("down_proj.weight")
     }
 
+    /// Determine expected QK256 tensor shape based on tensor name and model config
+    /// Returns (rows, cols) for [output_dim, input_dim] layout
+    fn expected_qk256_shape(name: &str, config: &BitNetConfig) -> Option<(usize, usize)> {
+        let hidden = config.model.hidden_size;
+        let intermediate = config.model.intermediate_size;
+        let head_dim = hidden / config.model.num_heads;
+        let kv_dim = head_dim * config.model.num_key_value_heads;
+
+        // Attention projections
+        if name.contains("attn_q") || name.contains("q_proj") {
+            Some((hidden, hidden)) // Q: [hidden, hidden]
+        } else if name.contains("attn_k") || name.contains("k_proj") {
+            Some((kv_dim, hidden)) // K: [kv_dim, hidden]
+        } else if name.contains("attn_v") || name.contains("v_proj") {
+            Some((kv_dim, hidden)) // V: [kv_dim, hidden]
+        } else if name.contains("attn_output") || name.contains("o_proj") {
+            Some((hidden, hidden)) // O: [hidden, hidden]
+        }
+        // Feed-forward projections
+        else if name.contains("ffn_gate") || name.contains("gate_proj") {
+            Some((intermediate, hidden)) // Gate: [intermediate, hidden]
+        } else if name.contains("ffn_up") || name.contains("up_proj") {
+            Some((intermediate, hidden)) // Up: [intermediate, hidden]
+        } else if name.contains("ffn_down") || name.contains("down_proj") {
+            Some((hidden, intermediate)) // Down: [hidden, intermediate]
+        } else {
+            None
+        }
+    }
+
+    /// Detect QK256 orientation based on byte count when config-based detection fails
+    fn detect_qk256_orientation_by_bytes(
+        name: &str,
+        shape_as_is: (usize, usize),
+        shape_transposed: (usize, usize),
+        available_bytes: usize,
+    ) -> (usize, usize) {
+        // Calculate expected sizes for both orientations
+        let blocks_as_is = shape_as_is.1.div_ceil(256);
+        let expected_as_is = shape_as_is.0 * blocks_as_is * 64;
+
+        let blocks_transposed = shape_transposed.1.div_ceil(256);
+        let expected_transposed = shape_transposed.0 * blocks_transposed * 64;
+
+        // Use whichever orientation matches the actual data size better
+        if available_bytes.abs_diff(expected_transposed) < available_bytes.abs_diff(expected_as_is)
+        {
+            tracing::debug!(
+                "QK256 '{}': using transposed [cols, rows] → bytes match {} vs {}",
+                name,
+                expected_transposed,
+                expected_as_is
+            );
+            shape_transposed
+        } else {
+            shape_as_is
+        }
+    }
+
     /// Heuristic: Microsoft 2B ships [hidden, vocab]; we want [vocab, hidden].
     fn embedding_is_transposed(dims: &[usize]) -> bool {
         dims.len() == 2 && dims[0] < dims[1] && dims[1] >= 32768
@@ -1143,6 +1202,9 @@ impl GgufLoader {
 
         info!("Loading {} tensors", tensor_count);
 
+        // Extract model config for QK256 orientation detection
+        let model_config = self.extract_config(reader)?;
+
         // Load correction policy if BITNET_CORRECTION_POLICY is set
         let policy = if let Ok(policy_path) = std::env::var("BITNET_CORRECTION_POLICY") {
             match crate::correction_policy::CorrectionPolicy::load_from_file(std::path::Path::new(
@@ -1188,6 +1250,7 @@ impl GgufLoader {
                     tensor_info,
                     tensor_data,
                     device,
+                    &model_config,
                     policy_plan.as_ref(),
                 )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
@@ -1246,6 +1309,7 @@ impl GgufLoader {
         info: &crate::formats::gguf::TensorInfo,
         data: &[u8],
         device: &Device,
+        model_config: &BitNetConfig,
         policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
     ) -> Result<(Tensor, Option<(String, Tensor)>, Option<CorrectionRecord>)> {
         let dtype = match info.tensor_type {
@@ -1325,9 +1389,66 @@ impl GgufLoader {
                         data.len()
                     );
 
-                    // Calculate dimensions for raw storage
-                    let rows = info.shape[0];
-                    let cols = info.shape[1];
+                    // Determine correct orientation for QK256 tensors
+                    // QK256 format requires [output_dim, input_dim] layout (one row per output feature)
+                    // GGUF may store as [input_dim, output_dim] which needs transposition
+                    let (rows, cols) = {
+                        let shape_as_is = (info.shape[0], info.shape[1]);
+                        let shape_transposed = (info.shape[1], info.shape[0]);
+
+                        // Use tensor name and config to determine expected shape
+                        let expected_shape = Self::expected_qk256_shape(&info.name, model_config);
+
+                        if let Some((expected_rows, expected_cols)) = expected_shape {
+                            // Check which orientation matches the expected shape
+                            if shape_as_is.0 == expected_rows && shape_as_is.1 == expected_cols {
+                                tracing::debug!(
+                                    "QK256 '{}': using as-is [{}, {}] (matches expected)",
+                                    info.name,
+                                    shape_as_is.0,
+                                    shape_as_is.1
+                                );
+                                shape_as_is
+                            } else if shape_transposed.0 == expected_rows
+                                && shape_transposed.1 == expected_cols
+                            {
+                                tracing::debug!(
+                                    "QK256 '{}': using transposed [{}, {}] (matches expected)",
+                                    info.name,
+                                    shape_transposed.0,
+                                    shape_transposed.1
+                                );
+                                shape_transposed
+                            } else {
+                                // Fall back to byte-based detection
+                                tracing::warn!(
+                                    "QK256 '{}': shape mismatch - expected [{}, {}], got [{}, {}] or [{}, {}]",
+                                    info.name,
+                                    expected_rows,
+                                    expected_cols,
+                                    shape_as_is.0,
+                                    shape_as_is.1,
+                                    shape_transposed.0,
+                                    shape_transposed.1
+                                );
+                                Self::detect_qk256_orientation_by_bytes(
+                                    &info.name,
+                                    shape_as_is,
+                                    shape_transposed,
+                                    data.len(),
+                                )
+                            }
+                        } else {
+                            // No expected shape - use byte-based detection
+                            Self::detect_qk256_orientation_by_bytes(
+                                &info.name,
+                                shape_as_is,
+                                shape_transposed,
+                                data.len(),
+                            )
+                        }
+                    };
+
                     let blocks_per_row = cols.div_ceil(256); // 256 elements per block
                     let row_stride_bytes = blocks_per_row * 64; // 64 bytes per 256-element block
 
