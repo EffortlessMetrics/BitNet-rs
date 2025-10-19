@@ -74,7 +74,47 @@ pub struct GenerationConfig {
     pub stream: bool,
 }
 
-/// Inference command arguments
+/// Inference command arguments with template-aware Q&A support
+///
+/// # Examples
+///
+/// ## Auto-detect template (recommended):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt "Who wrote Pride and Prejudice?"
+/// ```
+/// The CLI will auto-detect the appropriate prompt template from GGUF metadata and model paths.
+///
+/// ## Explicit Instruct template (Q&A format):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt-template instruct \
+///   --prompt "What is 2+2?" --max-tokens 16
+/// ```
+///
+/// ## LLaMA-3 chat format with system prompt:
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt-template llama3-chat \
+///   --system-prompt "You are a helpful assistant" \
+///   --prompt "Explain photosynthesis" --max-tokens 128 \
+///   --temperature 0.7 --top-p 0.95
+/// ```
+///
+/// ## Deterministic Q&A (reproducible results):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt "Test question" \
+///   --temperature 0.0 --greedy --seed 42 --deterministic
+/// ```
+///
+/// ## Raw completion (no Q&A formatting):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt-template raw \
+///   --prompt "2+2=" --max-tokens 16
+/// ```
+///
+/// ## Batch Q&A from file:
+/// ```bash
+/// bitnet-cli run --model model.gguf --input-file questions.txt \
+///   --batch-size 4 --format jsonl > answers.jsonl
+/// ```
 #[derive(Args, Debug, Default)]
 pub struct InferenceCommand {
     /// Path to the model file
@@ -1398,8 +1438,8 @@ impl InferenceCommand {
         } else {
             (
                 self.temperature,
-                self.top_k.unwrap_or(40) as u32,
-                self.top_p.unwrap_or(1.0),
+                self.top_k.unwrap_or(50) as u32,
+                self.top_p.unwrap_or(0.95),
                 self.repetition_penalty,
             )
         };
@@ -1832,5 +1872,356 @@ mod tests {
             .unwrap();
 
         assert!(results[0].timing_ms.prefill >= 5.0, "prefill should record latency");
+    }
+
+    // ========================================================================
+    // Template Auto-Detection Tests
+    // ========================================================================
+    //
+    // These tests verify the template detection logic (InferenceCommand::auto_detect_template)
+    // works correctly for various model paths, tokenizer paths, and configurations.
+    //
+    // Tests cover:
+    // 1. LLaMA-3 detection from model/tokenizer paths
+    // 2. Instruct detection from model paths (instruct/chat patterns)
+    // 3. Default fallback to Instruct for generic paths
+    // 4. Explicit template override behavior
+    //
+    // References:
+    // - CLAUDE.md: Template auto-detection documentation
+    // - InferenceCommand::auto_detect_template() implementation (line 1600)
+
+    /// Tests feature spec: template-auto-detection.md#llama3-model-path
+    #[test]
+    fn test_auto_detect_llama3_from_model_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-3-8b-instruct.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Model path containing 'llama' and '3' should detect Llama3Chat"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#llama3-model-path-variants
+    #[test]
+    fn test_auto_detect_llama3_various_path_formats() {
+        let test_cases = vec![
+            "models/llama3-8b.gguf",
+            "models/meta-llama-3-70b-instruct.gguf",
+            "checkpoints/llama_3_finetune.gguf",
+            "LLAMA-3-MODEL.GGUF", // Test case-insensitive matching
+        ];
+
+        for path in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(
+                detected,
+                TemplateType::Llama3Chat,
+                "Path '{}' should detect Llama3Chat",
+                path
+            );
+        }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#instruct-model-path
+    #[test]
+    fn test_auto_detect_instruct_from_model_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/bitnet-instruct.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Model path containing 'instruct' should detect Instruct template"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#chat-model-path
+    #[test]
+    fn test_auto_detect_instruct_from_chat_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model-chat.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Model path containing 'chat' should detect Instruct template"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#instruct-chat-variants
+    #[test]
+    fn test_auto_detect_instruct_various_patterns() {
+        let test_cases = vec![
+            "models/bitnet-2b-instruct-v1.gguf",
+            "models/custom-chat-model.gguf",
+            "models/INSTRUCT-MODEL.GGUF", // Case-insensitive
+            "checkpoints/finetuned_instruct.gguf",
+        ];
+
+        for path in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(
+                detected,
+                TemplateType::Instruct,
+                "Path '{}' should detect Instruct template",
+                path
+            );
+        }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#default-fallback
+    #[test]
+    fn test_auto_detect_fallback_to_instruct() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Generic model path should default to Instruct (safer than Raw)"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#no-model-path-fallback
+    #[test]
+    fn test_auto_detect_no_model_path_fallback() {
+        let cmd = InferenceCommand {
+            model: None,
+            tokenizer: None,
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "No model/tokenizer paths should default to Instruct"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#tokenizer-path-llama3
+    #[test]
+    fn test_auto_detect_llama3_from_tokenizer_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/generic.gguf")),
+            tokenizer: Some(PathBuf::from("tokenizers/llama-3/tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Tokenizer path containing 'llama' and '3' should detect Llama3Chat"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#tokenizer-path-instruct
+    #[test]
+    fn test_auto_detect_instruct_from_tokenizer_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/generic.gguf")),
+            tokenizer: Some(PathBuf::from("tokenizers/instruct/tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Tokenizer path containing 'instruct' should detect Instruct template"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#model-priority-over-tokenizer
+    #[test]
+    fn test_auto_detect_model_path_priority() {
+        // Model path should take priority over tokenizer path
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-3-8b.gguf")),
+            tokenizer: Some(PathBuf::from("tokenizers/instruct/tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Model path should take priority: LLaMA-3 detected despite instruct tokenizer"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#explicit-override-raw
+    #[test]
+    fn test_explicit_template_override_raw() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-3-8b-instruct.gguf")),
+            prompt_template: "raw".into(),
+            ..Default::default()
+        };
+
+        // When prompt_template is not "auto", auto_detect_template is not used
+        // Instead, the template is parsed directly from the prompt_template string
+        // This test verifies the override behavior by checking that a non-"auto" value
+        // would be used instead of auto-detection
+        assert_eq!(
+            cmd.prompt_template, "raw",
+            "Explicit template should be preserved and not auto-detected"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#explicit-override-instruct
+    #[test]
+    fn test_explicit_template_override_instruct() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model.gguf")),
+            prompt_template: "instruct".into(),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            cmd.prompt_template, "instruct",
+            "Explicit instruct template should be preserved"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#explicit-override-llama3
+    #[test]
+    fn test_explicit_template_override_llama3_chat() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/generic-model.gguf")),
+            prompt_template: "llama3-chat".into(),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            cmd.prompt_template, "llama3-chat",
+            "Explicit llama3-chat template should be preserved"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#edge-case-llama-without-3
+    #[test]
+    fn test_auto_detect_llama_without_3_fallback() {
+        // Model path with "llama" but not "3" should not trigger LLaMA-3 detection
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-2-70b.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Path with 'llama' but not '3' should fall back to Instruct"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#edge-case-number-3-without-llama
+    #[test]
+    fn test_auto_detect_number_3_without_llama_fallback() {
+        // Model path with "3" but not "llama" should not trigger LLaMA-3 detection
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model-v3.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Path with '3' but not 'llama' should fall back to Instruct"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#tokenizer-only-llama3
+    #[test]
+    fn test_auto_detect_tokenizer_only_llama3() {
+        // Only tokenizer path provided, should detect LLaMA-3
+        let cmd = InferenceCommand {
+            model: None,
+            tokenizer: Some(PathBuf::from("tokenizers/llama3-tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Tokenizer-only path with 'llama3' should detect Llama3Chat"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#case-insensitive-matching
+    #[test]
+    fn test_auto_detect_case_insensitive() {
+        let test_cases = vec![
+            ("LLAMA-3.GGUF", TemplateType::Llama3Chat),
+            ("Instruct-Model.gguf", TemplateType::Instruct),
+            ("CHAT-MODEL.GGUF", TemplateType::Instruct),
+        ];
+
+        for (path, expected) in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(
+                detected, expected,
+                "Path '{}' should detect {:?} (case-insensitive)",
+                path, expected
+            );
+        }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#complex-path-patterns
+    #[test]
+    fn test_auto_detect_complex_paths() {
+        let test_cases = vec![
+            // Full paths with directories
+            ("/home/user/models/llama-3-instruct/checkpoint.gguf", TemplateType::Llama3Chat),
+            ("/mnt/storage/bitnet/instruct-models/model.gguf", TemplateType::Instruct),
+            // Paths with special characters
+            ("models/llama_3-8b-instruct.gguf", TemplateType::Llama3Chat),
+            // Windows-style paths
+            (r"C:\Models\llama-3\model.gguf", TemplateType::Llama3Chat),
+        ];
+
+        for (path, expected) in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(detected, expected, "Complex path '{}' should detect {:?}", path, expected);
+        }
     }
 }

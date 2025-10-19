@@ -70,11 +70,63 @@ suitable template from GGUF/HF metadata. To preserve legacy behavior, pass
 
 **CLI Interface Version**: 1.0.0 — Use `bitnet --interface-version` to check compatibility.
 
+### Q&A with Instruct Template
+
+```bash
+# Auto-detect template and generate answer
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "Who wrote 'Pride and Prejudice'?" \
+  --max-tokens 128
+
+# Explicit instruct template
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template instruct \
+  --prompt "What is the capital of France?" \
+  --max-tokens 64 \
+  --temperature 0.7 --top-p 0.95
+```
+
+### LLaMA-3 Chat
+
+```bash
+# LLaMA-3 chat format with system prompt
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/llama3-model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template llama3-chat \
+  --system-prompt "You are a helpful assistant" \
+  --prompt "Explain photosynthesis" \
+  --max-tokens 128 \
+  --temperature 0.7 \
+  --top-p 0.95 \
+  --stop "<|eot_id|>"
+```
+
+### Interactive Chat
+
+```bash
+# Auto-detect template and start interactive chat
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --temperature 0.7 --top-p 0.95
+```
+
+**Note**: The CLI automatically detects the appropriate prompt template from GGUF metadata
+and model paths. You can override with `--prompt-template` (options: auto, raw, instruct,
+llama3-chat). Auto-detection defaults to `instruct` for better out-of-box Q&A performance.
+
 ### Using QK256 Models
 
-BitNet.rs supports GGML-compatible QK256 I2_S models with pure-Rust inference (no C++ dependencies required). This section shows how to download, validate, and run inference with QK256 models.
+BitNet.rs supports GGML-compatible QK256 I2_S models with pure-Rust inference (no C++
+dependencies required). This section shows how to download, validate, and run inference
+with QK256 models.
 
-#### Quick Start
+#### QK256 Setup
 
 ```bash
 # 1. Build with CPU support (includes QK256 kernels)

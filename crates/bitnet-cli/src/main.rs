@@ -141,6 +141,28 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Run simple text generation
+    ///
+    /// # Examples
+    ///
+    /// Auto-detect template for Q&A (recommended):
+    ///   bitnet run --model model.gguf --prompt "Who wrote Pride and Prejudice?"
+    ///
+    /// Instruct template (explicit Q&A format):
+    ///   bitnet run --model model.gguf --prompt-template instruct \
+    ///     --prompt "What is 2+2?" --max-tokens 16
+    ///
+    /// LLaMA-3 chat format with system prompt:
+    ///   bitnet run --model model.gguf --prompt-template llama3-chat \
+    ///     --system-prompt "You are a helpful assistant" \
+    ///     --prompt "Explain photosynthesis" --max-tokens 128
+    ///
+    /// Deterministic Q&A with greedy decoding:
+    ///   bitnet run --model model.gguf --prompt "Test question" \
+    ///     --temperature 0.0 --greedy --seed 42
+    ///
+    /// Raw completion (no Q&A formatting):
+    ///   bitnet run --model model.gguf --prompt-template raw \
+    ///     --prompt "2+2=" --max-tokens 16
     #[command(alias = "generate")]
     Run {
         /// Model file path
@@ -261,11 +283,41 @@ enum Commands {
 
     #[cfg(feature = "full-cli")]
     /// Run inference on a model
+    ///
+    /// # Examples
+    ///
+    /// Auto-detect template (recommended):
+    ///   bitnet inference --model model.gguf --prompt "Who wrote Pride and Prejudice?"
+    ///
+    /// Instruct template (Q&A format):
+    ///   bitnet inference --model model.gguf --prompt-template instruct \
+    ///     --prompt "What is 2+2?" --max-tokens 16
+    ///
+    /// LLaMA-3 chat with system prompt:
+    ///   bitnet inference --model model.gguf --prompt-template llama3-chat \
+    ///     --system-prompt "You are a helpful assistant" \
+    ///     --prompt "Explain photosynthesis" --max-tokens 128
+    ///
+    /// Batch Q&A from file:
+    ///   bitnet inference --model model.gguf --input-file questions.txt \
+    ///     --batch-size 4 --format jsonl > answers.jsonl
     #[command(alias = "infer")]
     Inference(Box<InferenceCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Interactive chat mode (streaming)
+    ///
+    /// # Examples
+    ///
+    /// Auto-detect chat template:
+    ///   bitnet chat --model model.gguf --tokenizer tokenizer.json
+    ///
+    /// LLaMA-3 chat with system prompt:
+    ///   bitnet chat --model model.gguf --prompt-template llama3-chat \
+    ///     --system-prompt "You are a helpful coding assistant"
+    ///
+    /// Creative chat with nucleus sampling:
+    ///   bitnet chat --model model.gguf --temperature 0.8 --top-p 0.95
     Chat(Box<InferenceCommand>),
 
     #[cfg(feature = "full-cli")]
@@ -868,7 +920,7 @@ async fn run_simple_generation(
             let logits_shape = logits.shape();
             eprintln!(
                 "logits_shape=(rows={}, cols={})",
-                logits_shape.get(0).copied().unwrap_or(1),
+                logits_shape.first().copied().unwrap_or(1),
                 logits_shape.get(1).copied().unwrap_or(logits_vec.len())
             );
             let mut idx: Vec<usize> = (0..logits_vec.len()).collect();
