@@ -280,7 +280,9 @@ impl InferenceCommand {
         // Reset canonical token counter before generation
         engine.reset_decoded_tokens();
 
-        let engine_config = self.to_engine_config(config);
+        // Get tokenizer for stop token ID resolution
+        let tokenizer = engine.tokenizer();
+        let engine_config = self.to_engine_config(config, Some(tokenizer.as_ref()));
         let mut stream = engine
             .generate_stream_with_config(prompt, &engine_config)
             .context("Failed to start streaming generation")?;

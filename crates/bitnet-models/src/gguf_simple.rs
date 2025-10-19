@@ -1124,7 +1124,7 @@ fn load_tensor_from_gguf(
             // Detect format by available bytes with strict/permissive validation
             if deviation <= tolerance {
                 // This is ggml I2_S (QK_K=256) - will be stored separately in i2s_qk256 map
-                tracing::info!(
+                tracing::debug!(
                     "I2_S '{}': GGML/llama.cpp format detected (QK_K=256, 64B/block). Will be stored in i2s_qk256 map.",
                     info.name
                 );

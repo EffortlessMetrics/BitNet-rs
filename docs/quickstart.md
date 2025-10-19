@@ -65,17 +65,53 @@ cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggm
 cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json --prompt "Test" --deterministic
 ```
 
-## Step 5: Benchmark Performance (1 minute)
+## Step 5: CPU Performance Optimization (Optional)
+
+For maximum inference throughput on your hardware:
 
 ```bash
-# Benchmark inference throughput with automatic tokenizer
-RUSTFLAGS="-C target-cpu=native -C opt-level=3" cargo build --no-default-features --features cpu --release -p xtask
-cargo run -p xtask -- benchmark --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 128
+# Build with native CPU optimizations (recommended for production)
+RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+  cargo build --release --no-default-features --features cpu,full-cli
+
+# Run with full CPU parallelization and reduced log noise
+RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
+  cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --prompt "Explain 1-bit quantization" --max-tokens 128 --temperature 0.7
+
+# Deterministic math sanity check (validates model correctness)
+RAYON_NUM_THREADS=1 RUST_LOG=warn \
+  cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --prompt "Answer with a single digit: 2+2=" --max-tokens 1 \
+  --temperature 0.0 --greedy
+```
+
+**Expected output from math check:** `4`
+
+**Performance Tuning:**
+- `RUSTFLAGS="-C target-cpu=native"`: Enable all CPU instructions (AVX2/AVX-512/NEON)
+- `-C opt-level=3`: Maximum optimization (aggressive inlining, vectorization)
+- `-C lto=thin`: Link-time optimization for better performance
+- `RAYON_NUM_THREADS=$(nproc)`: Use all CPU cores (production inference)
+- `RAYON_NUM_THREADS=1`: Single-threaded (deterministic results for validation)
+- `RUST_LOG=warn`: Reduce logging overhead (shows only warnings/errors)
+
+## Step 6: Benchmark Performance
+
+```bash
+# Benchmark inference throughput with CPU optimization
+RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+  cargo build --release --no-default-features --features cpu,full-cli
+RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
+  cargo run --release -p xtask -- benchmark \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 128
 ```
 
 **Expected Performance:**
 - I2_S quantization: >99% accuracy retention with real transformer computation
-- Inference speed: 20-100 tokens/second (CPU), 100-500 tokens/second (GPU)
+- Inference speed: 20-100 tokens/second (CPU, depends on RUSTFLAGS optimization), 100-500 tokens/second (GPU)
 - Memory usage: ~2GB for 2B parameter model
 - Production-ready: Real neural network inference with quantized linear layers, multi-head attention, and KV-cache optimization
 

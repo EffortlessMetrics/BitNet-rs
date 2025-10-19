@@ -175,6 +175,40 @@ impl TemplateType {
         }
     }
 
+    /// Resolve stop sequences to token IDs using the provided tokenizer
+    ///
+    /// This method converts the template's default stop sequences (like "<|eot_id|>")
+    /// to their corresponding token IDs for efficient stop detection during generation.
+    ///
+    /// Token ID-based stops are checked before string matching, making termination
+    /// faster and more reliable for models with special stop tokens.
+    ///
+    /// # Arguments
+    /// * `tokenizer` - The tokenizer to use for token ID resolution
+    ///
+    /// # Returns
+    /// A vector of token IDs that should trigger generation stop.
+    /// Returns empty if no stop sequences can be resolved or if the template has no stops.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let template = TemplateType::Llama3Chat;
+    /// let stop_ids = template.resolve_stop_token_ids(&tokenizer);
+    /// // stop_ids might contain [128009] for <|eot_id|>
+    /// ```
+    pub fn resolve_stop_token_ids(&self, tokenizer: &dyn bitnet_tokenizers::Tokenizer) -> Vec<u32> {
+        let stop_sequences = self.default_stop_sequences();
+        let mut stop_ids = Vec::new();
+
+        for seq in &stop_sequences {
+            if let Some(id) = tokenizer.token_to_id(seq) {
+                stop_ids.push(id);
+            }
+        }
+
+        stop_ids
+    }
+
     /// Check if BOS should be added for this template
     /// LLaMA-3 chat includes its own BOS token in the template
     pub fn should_add_bos(&self) -> bool {

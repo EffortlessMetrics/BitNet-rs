@@ -83,17 +83,34 @@ use config::{CliConfig, ConfigBuilder};
 #[command(about = "BitNet.rs — 1-bit neural network inference with strict receipts")]
 #[command(long_about = r#"BitNet.rs CLI — one-shot generation and chat with strict receipts
 
-Examples:
-  # Deterministic Q&A (greedy)
-  bitnet run --model model.gguf --tokenizer tokenizer.json \
-    --prompt "What is 2+2?" --max-tokens 16 --temperature 0.0
+QUICK EXAMPLES:
+
+  # Deterministic math sanity check (validates model correctness)
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "Answer with a single digit: 2+2=" --max-tokens 1 --temperature 0.0 --greedy
+
+  # General Q&A with instruct template
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "What is 2+2?" --max-tokens 16 --temperature 0.0 --greedy
 
   # Creative completion (nucleus sampling)
-  bitnet run --model model.gguf --tokenizer tokenizer.json \
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
     --prompt "Explain photosynthesis" --max-tokens 128 --temperature 0.7 --top-p 0.95
 
-  # Interactive chat (auto-detects template)
-  bitnet chat --model model.gguf --tokenizer tokenizer.json
+  # Interactive chat (auto-detects template, clean output)
+  RUST_LOG=warn bitnet chat --model model.gguf --tokenizer tokenizer.json
+
+LOGGING:
+  Set RUST_LOG=warn (default: info) to reduce log noise and focus on generated text.
+  Options: error, warn, info, debug, trace
+
+PERFORMANCE:
+  For best CPU throughput, build with:
+    RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+      cargo build --release --features cpu
+
+  Run with:
+    RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn bitnet run ...
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]

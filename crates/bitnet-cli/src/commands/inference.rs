@@ -78,6 +78,18 @@ pub struct GenerationConfig {
 ///
 /// # Examples
 ///
+/// ## Q&A mode (recommended - bundles Q&A-friendly defaults):
+/// ```bash
+/// bitnet-cli run --model model.gguf --qa --prompt "Who wrote Pride and Prejudice?"
+/// # Equivalent to: --prompt-template auto --temperature 0.7 --top-p 0.95 --top-k 50
+/// ```
+///
+/// ## Q&A mode with custom temperature:
+/// ```bash
+/// bitnet-cli run --model model.gguf --qa --temperature 0.5 \
+///   --prompt "What is the capital of France?"
+/// ```
+///
 /// ## Auto-detect template (recommended):
 /// ```bash
 /// bitnet-cli run --model model.gguf --prompt "Who wrote Pride and Prejudice?"
@@ -270,6 +282,11 @@ pub struct InferenceCommand {
     /// Path for the primary inference receipt (default: ci/inference.json)
     #[arg(long, value_name = "PATH")]
     pub receipt_path: Option<PathBuf>,
+
+    /// Q&A mode: bundle Q&A-friendly defaults (auto template, temp=0.7, top-p=0.95, top-k=50)
+    /// Individual parameters can still be overridden (e.g., --qa --temperature 0.5)
+    #[arg(long)]
+    pub qa: bool,
 }
 
 impl InferenceCommand {
@@ -429,7 +446,7 @@ impl PrefillEngine for InferenceEngine {
             top_p: config.sampling.top_p,
             repetition_penalty: config.sampling.repetition_penalty,
             stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids: vec![], // Token-level stops not used in PrefillEngine path
+            stop_token_ids: vec![], // Token-level stops not available in PrefillEngine path (no tokenizer access)
             seed: config.sampling.seed,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -835,10 +852,18 @@ impl InferenceCommand {
     }
 
     /// Convert CLI GenerationConfig to engine GenerationConfig
+    ///
+    /// If a tokenizer is provided, this method will attempt to resolve stop sequences
+    /// to token IDs for faster and more reliable stop detection (especially for LLaMA-3).
     pub(super) fn to_engine_config(
         &self,
         config: &GenerationConfig,
+        tokenizer: Option<&dyn Tokenizer>,
     ) -> bitnet_inference::GenerationConfig {
+        // Resolve stop token IDs if tokenizer is available
+        let stop_token_ids =
+            if let Some(tok) = tokenizer { self.resolve_stop_token_ids(tok) } else { vec![] };
+
         bitnet_inference::GenerationConfig {
             max_new_tokens: config.max_new_tokens as u32,
             temperature: config.sampling.temperature,
@@ -846,7 +871,7 @@ impl InferenceCommand {
             top_p: config.sampling.top_p,
             repetition_penalty: config.sampling.repetition_penalty,
             stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids: vec![], // TODO: Encode stop tokens for LLaMA-3 in future PR
+            stop_token_ids,
             seed: config.sampling.seed,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -855,35 +880,6 @@ impl InferenceCommand {
             logits_cb: None,
             add_bos: self.should_add_bos(), // Template-aware BOS policy
         }
-    }
-
-    /// Encode stop token strings to IDs for token-level stop checking.
-    /// Called with a tokenizer to populate stop_token_ids for LLaMA-3 <|eot_id|>.
-    #[allow(dead_code)] // Will be used in chat mode enhancements
-    pub(super) fn encode_stop_tokens(
-        &self,
-        tokenizer: &dyn Tokenizer,
-        mut config: bitnet_inference::GenerationConfig,
-    ) -> bitnet_inference::GenerationConfig {
-        // Detect LLaMA-3 and encode <|eot_id|> token if present
-        if let Ok(template_type) = self.resolve_template_type()
-            && matches!(template_type, TemplateType::Llama3Chat)
-        {
-            // Try to encode <|eot_id|> as a stop token
-            if let Ok(tokens) = tokenizer.encode("<|eot_id|>", false, false) {
-                // LLaMA-3 <|eot_id|> should be a single token
-                if tokens.len() == 1 {
-                    config.stop_token_ids.push(tokens[0]);
-                    debug!("Encoded LLaMA-3 stop token <|eot_id|> as ID {}", tokens[0]);
-                }
-            }
-        }
-
-        // Sort and deduplicate for efficient binary search in streaming loop
-        config.stop_token_ids.sort_unstable();
-        config.stop_token_ids.dedup();
-
-        config
     }
 
     /// Run streaming inference
@@ -901,7 +897,9 @@ impl InferenceCommand {
         // Reset canonical token counter before generation
         engine.reset_decoded_tokens();
 
-        let engine_config = self.to_engine_config(config);
+        // Get tokenizer for stop token ID resolution
+        let tokenizer = engine.tokenizer();
+        let engine_config = self.to_engine_config(config, Some(tokenizer.as_ref()));
         let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
         print!("{}", style("Generated: ").bold());
@@ -954,7 +952,9 @@ impl InferenceCommand {
         // Reset canonical token counter before generation
         engine.reset_decoded_tokens();
 
-        let engine_config = self.to_engine_config(config);
+        // Get tokenizer for stop token ID resolution
+        let tokenizer = engine.tokenizer();
+        let engine_config = self.to_engine_config(config, Some(tokenizer.as_ref()));
         let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
         let mut collected = String::new();
@@ -1430,11 +1430,36 @@ impl InferenceCommand {
         }
     }
 
+    /// Resolve stop sequences to token IDs using the template and tokenizer
+    ///
+    /// This method uses the template's default stop sequences and resolves them
+    /// to token IDs for efficient stop detection during generation.
+    fn resolve_stop_token_ids(&self, tokenizer: &dyn Tokenizer) -> Vec<u32> {
+        // Get the template type
+        let template_type = match self.resolve_template_type() {
+            Ok(t) => t,
+            Err(_) => return vec![], // No template, no token IDs
+        };
+
+        // Use the template's resolve method
+        template_type.resolve_stop_token_ids(tokenizer)
+    }
+
     /// Create generation configuration
     pub(super) fn create_generation_config(&self) -> Result<GenerationConfig> {
         // Apply greedy decoding if requested
         let (temperature, top_k, top_p, repetition_penalty) = if self.greedy {
             (0.0, 0, 1.0, 1.0) // Force greedy: no sampling, no penalties
+        } else if self.qa {
+            // Q&A mode: Apply friendly defaults, but allow individual overrides
+            // The pattern is: use explicit flag value if set, otherwise use Q&A default
+            let qa_temp = if self.temperature != 0.7 { self.temperature } else { 0.7 };
+            let qa_top_k = self.top_k.unwrap_or(50);
+            let qa_top_p = self.top_p.unwrap_or(0.95);
+            let qa_rep_penalty =
+                if self.repetition_penalty != 1.1 { self.repetition_penalty } else { 1.1 };
+
+            (qa_temp, qa_top_k as u32, qa_top_p, qa_rep_penalty)
         } else {
             (
                 self.temperature,

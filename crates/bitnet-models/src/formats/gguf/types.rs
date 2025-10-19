@@ -877,7 +877,7 @@ pub fn detect_i2s_flavor(
     // Note: split32 and qk256 can coincide (e.g., 512 elem: 16*8=128, 2*64=128)
     // In ambiguous cases, prefer qk256 as it's more specific (256-element blocks)
     if matches_qk256 {
-        tracing::warn!(
+        tracing::debug!(
             "I2_S '{}': detected GgmlQk256NoScale (available={}, qk256_need={}) - GGML format requires native kernels",
             info.name,
             available,
@@ -888,7 +888,7 @@ pub fn detect_i2s_flavor(
 
     // Priority 2: Split32WithSibling if sibling scale tensor present and bytes match
     if has_scale_sibling && matches_split32 {
-        tracing::info!(
+        tracing::debug!(
             "I2_S '{}': detected Split32WithSibling (available={}, split_need={}, has_sibling=true)",
             info.name,
             available,
@@ -899,7 +899,7 @@ pub fn detect_i2s_flavor(
 
     // Priority 3: BitNet32F16 (inline f16 scales) - most common BitNet format
     if matches_inline {
-        tracing::info!(
+        tracing::debug!(
             "I2_S '{}': detected BitNet32F16 (available={}, inline_need={})",
             info.name,
             available,

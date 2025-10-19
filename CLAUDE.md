@@ -11,6 +11,10 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 cargo build --no-default-features --features cpu     # CPU inference
 cargo build --no-default-features --features gpu     # GPU inference
 
+# Build with CPU optimization (recommended for production performance)
+RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+  cargo build --release --no-default-features --features cpu,full-cli
+
 # Test
 cargo test --workspace --no-default-features --features cpu
 
@@ -20,8 +24,8 @@ cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 # Development workflow
 cargo run -p xtask -- download-model
 
-# Inference with prompt templates
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+# Inference with prompt templates (clean output with reduced log noise)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt-template instruct \
@@ -247,18 +251,33 @@ BitNet.rs CLI supports convenient aliases for common flags to improve compatibil
 ### Sampling Controls
 
 ```bash
-# Greedy decoding (deterministic)
---temperature 0.0 --greedy
+# Greedy decoding (deterministic) - with reduced log noise
+RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" \
+  --temperature 0.0 --greedy --seed 42
 
-# Nucleus sampling (creative)
---temperature 0.7 --top-p 0.95 --top-k 50 --repetition-penalty 1.05
+# Greedy math sanity check (validates model correctness)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 --greedy
+
+# Nucleus sampling (creative) - with clean output
+RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" \
+  --temperature 0.7 --top-p 0.95 --top-k 50 --repetition-penalty 1.05
 
 # Deterministic inference (reproducible)
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 export RAYON_NUM_THREADS=1
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --greedy --seed 42
+RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --greedy --seed 42
 ```
+
+**Logging:**
+- `RUST_LOG=warn`: Suppresses debug/info logs, shows only warnings/errors (recommended for clean output)
+- `RUST_LOG=info`: Shows general information (default verbose)
+- `RUST_LOG=error`: Only shows errors (minimal output)
 
 ### Stop Sequences
 

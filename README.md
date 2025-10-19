@@ -70,18 +70,37 @@ suitable template from GGUF/HF metadata. To preserve legacy behavior, pass
 
 **CLI Interface Version**: 1.0.0 — Use `bitnet --interface-version` to check compatibility.
 
+### Deterministic Math Sanity Check
+
+For reproducible Q&A testing (validates model correctness):
+
+```bash
+# Greedy math sanity check with reduced log noise
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 \
+  --greedy
+
+# Expected output: "4"
+# Use for: deterministic validation, receipt generation, CI testing
+# Environment: RUST_LOG=warn suppresses verbose logging
+```
+
 ### Q&A with Instruct Template
 
 ```bash
-# Auto-detect template and generate answer
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+# Auto-detect template and generate answer (recommended)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt "Who wrote 'Pride and Prejudice'?" \
   --max-tokens 128
 
 # Explicit instruct template
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt-template instruct \
@@ -109,8 +128,8 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 ### Interactive Chat
 
 ```bash
-# Auto-detect template and start interactive chat
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+# Auto-detect template and start interactive chat with clean output
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --temperature 0.7 --top-p 0.95
@@ -119,6 +138,8 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
 **Note**: The CLI automatically detects the appropriate prompt template from GGUF metadata
 and model paths. You can override with `--prompt-template` (options: auto, raw, instruct,
 llama3-chat). Auto-detection defaults to `instruct` for better out-of-box Q&A performance.
+
+**Tip**: Use `RUST_LOG=warn` to reduce log noise and focus on generated text in all examples.
 
 ### Using QK256 Models
 
@@ -241,13 +262,52 @@ bitnet run --stop-sequence "</s>" # Alias
 bitnet run --stop_sequences "</s>" # Alias
 ```
 
+### CPU Performance Optimization
+
+For maximum CPU inference throughput on your hardware:
+
+```bash
+# Build with native CPU optimization (recommended for production)
+RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+  cargo build --release --no-default-features --features cpu,full-cli
+
+# Run with full CPU parallelization
+RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
+  cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "Explain photosynthesis" \
+  --max-tokens 128 \
+  --temperature 0.7 --top-p 0.95
+
+# For deterministic benchmarks (single-threaded, reproducible results)
+RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+  cargo build --release --no-default-features --features cpu,full-cli
+RAYON_NUM_THREADS=1 RUST_LOG=warn \
+  cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "Test" --max-tokens 32 --greedy
+```
+
+**Performance Tuning:**
+- `target-cpu=native`: Enable all CPU instructions available on your machine (AVX2/AVX-512/NEON)
+- `opt-level=3`: Maximum optimization (aggressive inlining, vectorization)
+- `lto=thin`: Link-time optimization for performance without excessive build time
+- `RAYON_NUM_THREADS=$(nproc)`: Use all CPU cores for parallelization
+- `RUST_LOG=warn`: Reduce logging overhead during inference
+
+**Expected Performance:** 20-100 tok/s CPU (depends on hardware, model size, optimization level).
+
 ### Receipt Verification Workflow
 
 Generate, verify, and pin performance baselines:
 
 ```bash
-# Receipts: run → emit → verify
+# Receipts: run → emit → verify (with CPU optimization)
 export BITNET_STRICT_MODE=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1
+RUSTFLAGS="-C target-cpu=native -C opt-level=3" \
+  cargo build --release --no-default-features --features cpu
 cargo run -p xtask -- benchmark --model tests/models/tiny.gguf --tokens 128 --deterministic
 cargo run -p xtask -- verify-receipt ci/inference.json
 mkdir -p docs/baselines && cp ci/inference.json docs/baselines/$(date +%Y%m%d)-cpu.json

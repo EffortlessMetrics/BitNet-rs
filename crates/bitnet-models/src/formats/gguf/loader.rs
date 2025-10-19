@@ -1301,7 +1301,7 @@ impl GgufLoader {
         }
 
         info!(
-            "Successfully loaded {} tensors ({} raw QK256) with fingerprint: {}",
+            "Successfully loaded {} tensors (detected {} QK256 tensors) with fingerprint: {}",
             tensors.len(),
             raw_tensors.len(),
             fingerprint
@@ -1388,7 +1388,7 @@ impl GgufLoader {
 
                 // If QK256, preserve raw bytes instead of dequantizing
                 if matches!(flavor, I2SFlavor::GgmlQk256NoScale) {
-                    tracing::info!(
+                    tracing::debug!(
                         "Detected QK256 tensor '{}' ({}x{}, {} bytes) - preserving raw bytes",
                         info.name,
                         info.shape[0],
