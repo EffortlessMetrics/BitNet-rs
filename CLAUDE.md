@@ -17,10 +17,16 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 
 ### Current Limitations (MVP Phase)
 
-- **QK256 Performance**: Scalar-only kernels. For quick validation, limit to `--max-new-tokens 4-16`.
-- **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical output in some configurations. This is a known model quality issue, not an inference bug.
-- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests represent TDD-style scaffolding for planned features. See **Test Status** section below.
-- **Active Blockers**: Issues #254, #260, #439, #469 affect real inference tests and cross-validation.
+- **QK256 Performance**: Scalar-only kernels. For quick validation, limit to
+  `--max-new-tokens 4-16`.
+- **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical
+  output in some configurations. This is a known model quality issue, not an
+  inference bug.
+- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests
+  represent TDD-style scaffolding for planned features. See **Test Status** section
+  below.
+- **Active Blockers**: Issues #254, #260, #439, #469 affect real inference tests and
+  cross-validation.
 
 ## Quick Reference
 
@@ -521,11 +527,13 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 
 BitNet.rs uses extensive test scaffolding during the MVP phase. This is **intentional** and follows TDD patterns:
 
-- **~548 TODO/FIXME/unimplemented markers**: Development placeholders for planned features
+- **~548 TODO/FIXME/unimplemented markers**: Development placeholders for planned
+  features
 - **~70 ignored tests** (#[ignore]): Tests scaffolded but blocked by active issues
 - **unimplemented!() helper functions**: TDD-style test infrastructure placeholders
 
-**This is normal for an MVP.** Tests are intentionally structured to guide development and prevent regressions once blockers are resolved.
+**This is normal for an MVP.** Tests are intentionally structured to guide development
+and prevent regressions once blockers are resolved.
 
 ### Test Execution
 
@@ -608,7 +616,7 @@ These test suites pass reliably:
 
 ### Test Dependencies
 
-```
+```text
 Real Inference Tests
   └─ Depends on: Issue #254 resolution (shape mismatch fix)
     └─ Depends on: Issue #260 resolution (mock elimination)
@@ -744,12 +752,13 @@ cargo run -p bitnet-cli --features cpu -- run \
 
 **Problem**: Getting garbled output from microsoft-bitnet model
 
-```
+```text
 Prompt: "What is the capital of France?"
 Output: "jjjjkkkk llll mmmm nnnn..."
 ```
 
 **Solution**: This is a known model quality limitation, not an inference engine bug:
+
 - Try alternative models
 - Use shorter, simpler prompts
 - Validate inference correctness with synthetic inputs
@@ -793,6 +802,7 @@ cargo test -p bitnet-models --no-default-features --features cpu
 ### 6. Expecting All Tests to Pass
 
 **Current State (MVP)**:
+
 - ~500+ tests with passing infrastructure
 - ~70 tests intentionally ignored (scaffolding)
 - Real inference tests blocked by #254, #260, #439, #469
@@ -803,7 +813,7 @@ cargo test -p bitnet-models --no-default-features --features cpu
 
 **Problem**: "undefined reference" to C++ functions
 
-```
+```text
 error: undefined reference to `bitnet_cpp::...`
 ```
 
