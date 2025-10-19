@@ -2,6 +2,26 @@
 
 Essential guidance for working with the BitNet.rs neural network inference codebase.
 
+## Project Status
+
+**Current Release**: v0.1.0-qna-mvp (Q&A-ready MVP)
+
+### What's Working
+
+- CPU inference with SIMD optimization (AVX2/AVX-512/NEON)
+- GPU inference with CUDA acceleration (GPU support via feature gates)
+- QK256 (GGML I2_S) MVP with scalar kernels (~0.1 tok/s for 2B models)
+- Interactive chat and Q&A workflows with prompt templates
+- Model validation and inspection tools
+- Cross-validation framework against C++ reference
+
+### Current Limitations (MVP Phase)
+
+- **QK256 Performance**: Scalar-only kernels. For quick validation, limit to `--max-new-tokens 4-16`.
+- **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical output in some configurations. This is a known model quality issue, not an inference bug.
+- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests represent TDD-style scaffolding for planned features. See **Test Status** section below.
+- **Active Blockers**: Issues #254, #260, #439, #469 affect real inference tests and cross-validation.
+
 ## Quick Reference
 
 ### Essential Commands
@@ -495,6 +515,114 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
     weights (exit code 8)
   - **See also**: `docs/howto/validate-models.md` for complete troubleshooting guide
 
+## Test Status (MVP Phase)
+
+### Overview
+
+BitNet.rs uses extensive test scaffolding during the MVP phase. This is **intentional** and follows TDD patterns:
+
+- **~548 TODO/FIXME/unimplemented markers**: Development placeholders for planned features
+- **~70 ignored tests** (#[ignore]): Tests scaffolded but blocked by active issues
+- **unimplemented!() helper functions**: TDD-style test infrastructure placeholders
+
+**This is normal for an MVP.** Tests are intentionally structured to guide development and prevent regressions once blockers are resolved.
+
+### Test Execution
+
+```bash
+# Run all enabled tests (skips #[ignore] tests)
+cargo test --workspace --no-default-features --features cpu
+
+# Run including ignored tests (will encounter blocked tests)
+cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
+
+# Run specific test category
+cargo test -p bitnet-inference --no-default-features --features cpu
+cargo test -p bitnet-quantization --no-default-features --features cpu
+cargo test -p bitnet-kernels --no-default-features --features cpu
+
+# Skip slow tests (QK256 scalar kernels)
+BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
+```
+
+### Critical Blocked Tests
+
+These tests are marked #[ignore] and blocked by active issues:
+
+1. **Issue #254** (Shape mismatch in layer-norm):
+   - Blocks: Real inference tests for multiple architectures
+   - Tests affected: bitnet-inference layer norm integration tests
+   - Status: In analysis phase
+
+2. **Issue #260** (Mock elimination not complete):
+   - Blocks: Transition from mock to real inference paths
+   - Tests affected: ~15 inference end-to-end tests
+   - Status: Awaiting refactoring
+
+3. **Issue #439** (Feature gate consistency):
+   - Blocks: GPU/CPU feature predicate unification
+   - Tests affected: Device selection tests, GPU fallback tests
+   - Status: In review (merged to main, validation ongoing)
+
+4. **Issue #469** (Tokenizer parity and FFI build hygiene):
+   - Blocks: Cross-validation tests, FFI integration tests
+   - Tests affected: ~20 cross-validation and tokenizer tests
+   - Status: Active development
+
+5. **AC9 Integration Tests**:
+   - Blocks: Complete cross-validation against C++ reference
+   - Reason: Depends on resolution of #254, #260, #469
+   - Status: Awaiting above blockers
+
+### Ignored Test Patterns
+
+Common reasons for #[ignore] markers:
+
+```rust
+// Pattern 1: Awaiting issue resolution
+#[test]
+#[ignore] // Blocked by Issue #254 - shape mismatch in layer-norm
+fn test_inference_with_shape_validation() { /* ... */ }
+
+// Pattern 2: TDD scaffolding - planned feature
+#[test]
+#[ignore] // TODO: Implement GPU mixed-precision tests after #439 resolution
+fn test_gpu_fp16_dequantize() { /* ... */ }
+
+// Pattern 3: Slow tests (performance acceptable for MVP)
+#[test]
+#[ignore] // Slow: QK256 scalar kernels (~0.1 tok/s). Run with --ignored for validation.
+fn test_qk256_full_model_inference() { /* ... */ }
+```
+
+### Working Test Categories
+
+These test suites pass reliably:
+
+- **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
+- **model loading tests**: GGUF and SafeTensors parsing
+- **tokenizer tests**: Universal tokenizer, auto-discovery (except parity tests blocked by #469)
+- **cli tests**: Command-line parsing, flag validation
+- **device feature tests**: CPU/GPU compilation detection
+- **validation tests**: LayerNorm inspection, projection statistics (when not in strict mode)
+
+### Test Dependencies
+
+```
+Real Inference Tests
+  └─ Depends on: Issue #254 resolution (shape mismatch fix)
+    └─ Depends on: Issue #260 resolution (mock elimination)
+      └─ Depends on: Issue #439 resolution (feature consistency)
+
+Cross-Validation Tests
+  └─ Depends on: Issue #469 resolution (tokenizer parity + FFI)
+    └─ Depends on: Real Inference Tests (above)
+
+GPU Mixed-Precision Tests
+  └─ Depends on: Issue #439 resolution (feature unification)
+    └─ Depends on: GPU kernel optimization (post-MVP)
+```
+
 ## Environment Variables
 
 ### Inference Configuration
@@ -522,11 +650,185 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 - `BITNET_ALLOW_RUNTIME_CORRECTIONS=1`: Enable runtime corrections for known-bad models
   (CI blocks this flag)
 
+### Test Configuration
+
+- `BITNET_SKIP_SLOW_TESTS=1`: Skip slow tests (QK256 scalar kernel tests that exceed timeout)
+- `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., blocked tests waiting for issue resolution)
+
+## Known Issues
+
+These are active issues affecting current development. See issue tracker for details and workarounds.
+
+### Issue #254: Shape Mismatch in Layer-Norm
+
+**Status**: In analysis phase
+**Impact**: Blocks real inference tests; affects multiple architectures
+
+- Root cause under investigation in shape handling during layer normalization
+- Blocks transition from mock to real inference paths
+- Workaround: Use mock inference paths for testing (temporary)
+- Tracking: See GitHub issue #254 for detailed analysis
+
+### Issue #260: Mock Elimination Not Complete
+
+**Status**: Awaiting refactoring
+**Impact**: Prevents full transition to real inference paths
+
+- Test infrastructure still contains mock inference paths
+- ~15 end-to-end tests blocked until real paths validated
+- Refactoring in progress; tracked in GitHub issue #260
+
+### Issue #439: Feature Gate Consistency
+
+**Status**: Merged to main; validation ongoing
+**Impact**: GPU/CPU feature predicate unification for device tests
+
+- Unifies `feature = "gpu"` and `feature = "cuda"` predicates
+- Device selection and fallback tests being validated
+- See PR #471 and GitHub issue #439 for details
+
+### Issue #469: Tokenizer Parity and FFI Build Hygiene
+
+**Status**: Active development
+**Impact**: Blocks cross-validation tests and FFI integration
+
+- Tokenizer behavior parity between Rust and C++ implementations
+- FFI build system hygiene and dependency management
+- Blocks ~20 cross-validation tests
+- Tracking: GitHub issue #469
+
+### Model Quality: microsoft-bitnet-b1.58-2B-4T-gguf
+
+**Status**: Known limitation
+**Symptom**: Non-sensical output in some configurations
+
+- Some models produce garbled text instead of coherent responses
+- This is a **model quality issue**, not an inference engine bug
+- Try alternative models or simpler prompts for validation
+- For testing inference correctness, use synthetic/controlled inputs
+
+## Common Pitfalls
+
+### 1. Confusing Test Scaffolding with Bugs
+
+**Problem**: Seeing unimplemented!() calls or #[ignore] tests
+
+```rust
+// This is NORMAL during MVP - it's intentional scaffolding
+#[test]
+#[ignore] // Blocked by Issue #254
+fn test_real_inference_path() {
+    unimplemented!("Waiting for shape mismatch fix")
+}
+```
+
+**Solution**: Check the blocking issue (e.g., #254). These are placeholder tests that will be enabled once issues are resolved.
+
+### 2. Expecting Production Performance from QK256 MVP
+
+**Problem**: QK256 inference very slow (~0.1 tok/s for 2B models)
+
+```bash
+# Wrong - will timeout waiting for inference
+cargo run -p bitnet-cli --features cpu -- run \
+  --model model.gguf --prompt "Long text" --max-tokens 1000
+
+# Right - quick validation with small token budget
+cargo run -p bitnet-cli --features cpu -- run \
+  --model model.gguf --prompt "What is 2+2?" --max-tokens 4
+```
+
+**Why**: QK256 MVP uses scalar-only kernels. SIMD optimization is planned for post-MVP.
+
+### 3. Model Quality Issues Aren't Inference Bugs
+
+**Problem**: Getting garbled output from microsoft-bitnet model
+
+```
+Prompt: "What is the capital of France?"
+Output: "jjjjkkkk llll mmmm nnnn..."
+```
+
+**Solution**: This is a known model quality limitation, not an inference engine bug:
+- Try alternative models
+- Use shorter, simpler prompts
+- Validate inference correctness with synthetic inputs
+- Report reproducible inference bugs separately
+
+### 4. Ignoring Feature Flags
+
+**Problem**: Getting linker errors or silent GPU fallback
+
+```bash
+# Wrong - uses default (empty) features, causes errors
+cargo build
+
+# Right - always specify features
+cargo build --no-default-features --features cpu
+cargo build --no-default-features --features gpu
+```
+
+**Why**: BitNet.rs deliberately has **empty default features** to prevent surprise dependencies. Always be explicit.
+
+### 5. Running Ignored Tests Expecting Success
+
+**Problem**: Running all tests with `--ignored` flag
+
+```bash
+# Will encounter blocked tests
+cargo test --workspace -- --ignored --include-ignored
+```
+
+**Solution**: Check blocking issue numbers in test comments. These are intentional placeholders:
+
+```bash
+# Run only non-ignored tests (recommended for CI)
+cargo test --workspace --no-default-features --features cpu
+
+# Run specific working test suites
+cargo test -p bitnet-quantization --no-default-features --features cpu
+cargo test -p bitnet-models --no-default-features --features cpu
+```
+
+### 6. Expecting All Tests to Pass
+
+**Current State (MVP)**:
+- ~500+ tests with passing infrastructure
+- ~70 tests intentionally ignored (scaffolding)
+- Real inference tests blocked by #254, #260, #439, #469
+
+**CI Status**: Only non-ignored tests run in CI. Ignored tests are tracked separately.
+
+### 7. FFI Linker Issues
+
+**Problem**: "undefined reference" to C++ functions
+
+```
+error: undefined reference to `bitnet_cpp::...`
+```
+
+**Solution**: Choose the appropriate feature set:
+
+```bash
+# Pure Rust (recommended for development)
+cargo build --no-default-features --features cpu
+
+# With FFI support (requires C++ reference setup)
+export BITNET_CPP_DIR=/path/to/bitnet.cpp
+cargo build --no-default-features --features cpu,ffi
+
+# Or just avoid FFI
+cargo build --no-default-features --features cpu
+```
+
 ## Repository Contracts
 
 - **Always specify features**: `--no-default-features --features cpu|gpu`
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
+- **Expect test scaffolding during MVP**: ~548 TODO/FIXME markers and ~70 ignored tests are intentional
+- **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
+- **Check issue tracker for blockers**: Before investigating test failures, see #254, #260, #439, #469
 
 For comprehensive documentation, see the `docs/` directory organized by audience and use case.
