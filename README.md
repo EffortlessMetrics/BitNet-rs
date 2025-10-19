@@ -115,17 +115,17 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 ### LLaMA-3 Chat
 
 ```bash
-# LLaMA-3 chat format with system prompt
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/llama3-model.gguf \
-  --tokenizer models/tokenizer.json \
+# LLaMA-3 chat format with system prompt (using Microsoft model with llama3-chat template)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt-template llama3-chat \
   --system-prompt "You are a helpful assistant" \
   --prompt "Explain photosynthesis" \
   --max-tokens 128 \
   --temperature 0.7 \
-  --top-p 0.95 \
-  --stop "<|eot_id|>"
+  --top-p 0.95
+# Note: llama3-chat template automatically stops on <|eot_id|> (token ID 128009)
 ```
 
 ### Interactive Chat
@@ -133,14 +133,18 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 ```bash
 # Auto-detect template and start interactive chat with clean output
 RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --temperature 0.7 --top-p 0.95
 ```
 
 **Note**: The CLI automatically detects the appropriate prompt template from GGUF metadata
 and model paths. You can override with `--prompt-template` (options: auto, raw, instruct,
 llama3-chat). Auto-detection defaults to `instruct` for better out-of-box Q&A performance.
+
+**Base vs Instruction-tuned Models**: Base models tend to "complete" prompts rather than "answer"
+questions. For best Q&A results, prefer instruction-tuned models or use `--prompt-template instruct`
+with concise prompts.
 
 **Tip**: Use `RUST_LOG=warn` to reduce log noise and focus on generated text in all examples.
 
@@ -253,9 +257,9 @@ bitnet run \
   --prompt "x" --temperature 0.0 --top-k 0 --top-p 1.0 --max-new-tokens 1
 ```
 
-**Note:** The QK256 MVP uses a scalar kernel; parity testing in CI uses 1-token
-inference intentionally for speed. Longer runs will be slower than bitnet.cpp
-until SIMD optimizations land.
+**Note:** The QK256 MVP uses a scalar kernel (~0.1 tok/s for 2B models); parity testing
+in CI uses 1-token inference intentionally for speed. Longer runs will be slower than
+bitnet.cpp until SIMD optimizations land. For quick validation, use `--max-new-tokens 4-16`.
 
 #### Learn More
 
