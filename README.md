@@ -213,7 +213,8 @@ BitNet.rs supports I2_S 1-bit and 2-bit quantization formats with automatic dete
 
 - **I2_S QK256 (GGML)**: GGML-compatible 2-bit format (256-element blocks)
   - Status: MVP scalar implementation (0.1 tok/s for 2B); SIMD optimizations in v0.2.0
-  - Automatic flavor detection from tensor size at load time
+  - Automatic flavor detection from tensor size with QK256 priority in close-match scenarios
+  - Detection priority: QK256 (GgmlQk256NoScale) checked first for more specific format matches
 
 - **TL1/TL2**: Table lookup quantization (planned for v0.2.0)
 

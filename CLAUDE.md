@@ -137,12 +137,15 @@ BitNet.rs supports multiple I2_S quantization formats with automatic flavor dete
   F16 scales) - ✅ CPU/GPU
 - **I2_S QK256 (GGML)**: Pure Rust 2-bit signed quantization (256-elem blocks, separate
   scales) - ✅ MVP (scalar)
-  - Automatic flavor detection from tensor size
+  - Automatic flavor detection from tensor size with QK256 priority in close-match scenarios
   - Routes to C++ via FFI for validation when `BITNET_CPP_DIR` set
   - See: `docs/howto/use-qk256-models.md` for usage guide
   - See: `docs/explanation/i2s-dual-flavor.md` for architecture details
 - **TL1/TL2**: Table lookup quantization with device-aware selection (ARM NEON / x86 AVX)
 - **IQ2_S**: GGML-compatible via FFI bridge
+
+**Flavor Detection Priority**: When tensor sizes match multiple quantization formats, the loader
+checks QK256 (GgmlQk256NoScale) first for more specific matches before falling back to other formats.
 
 **Parity Validation:**
 
@@ -213,6 +216,10 @@ automatically detects the appropriate template using:
 2. **Priority 2**: Model/tokenizer path heuristics (detects llama3, instruct, chat
    patterns)
 3. **Priority 3**: Fallback to Instruct template (safer than Raw for most models)
+
+**Auto-Detection for BitNet Base Models**: BitNet base models auto-detect to `instruct` template,
+providing better Q&A behavior out-of-box. This is more reliable than raw completion mode for
+getting coherent answers to questions.
 
 **Note**: As of v0.9.x, the default auto-detection fallback changed from `raw` to
 `instruct` for better out-of-box experience with instruction-tuned models. Use
@@ -381,7 +388,11 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 # - llama3-chat: stops on "<|eot_id|>" (auto-resolved to token ID 128009)
 #
 # Note: Template-resolved token IDs are automatically merged with manual --stop-id values
-```
+
+**Stop-Sequence Optimization**: Stop token IDs are checked first (fast), then EOS fallback, then
+string-based stops using a rolling tail window (optimized for memory and performance). The tail
+window size is bounded by the longest string stop sequence (default 64-byte window), reducing
+decoding overhead for large batches.
 
 ### Interactive Chat
 
