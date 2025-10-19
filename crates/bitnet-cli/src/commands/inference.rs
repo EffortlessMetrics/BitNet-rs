@@ -287,6 +287,11 @@ pub struct InferenceCommand {
     /// Individual parameters can still be overridden (e.g., --qa --temperature 0.5)
     #[arg(long)]
     pub qa: bool,
+
+    /// Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1)
+    /// Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features).
+    #[arg(long)]
+    pub strict_loader: bool,
 }
 
 impl InferenceCommand {
@@ -505,6 +510,14 @@ impl InferenceCommand {
 
     /// Setup environment for deterministic execution
     pub(super) fn setup_environment(&self) -> Result<()> {
+        // Enable strict loader mode if requested
+        if self.strict_loader {
+            unsafe {
+                std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+            }
+            debug!("Enabled strict loader mode (BITNET_DISABLE_MINIMAL_LOADER=1)");
+        }
+
         // Set thread count if specified
         if let Some(threads) = self.threads {
             unsafe {
@@ -621,7 +634,7 @@ impl InferenceCommand {
     pub(super) async fn load_model_and_tokenizer(
         &self,
         config: &CliConfig,
-    ) -> Result<(InferenceEngine, Arc<dyn bitnet_tokenizers::Tokenizer>)> {
+    ) -> Result<(InferenceEngine, Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>)> {
         let model_path = self
             .model
             .as_ref()
@@ -798,7 +811,7 @@ impl InferenceCommand {
         &self,
         model_path: &Path,
         reader: Option<&bitnet_models::GgufReader<'_>>,
-    ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
+    ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>> {
         // Try RustGgufTokenizer from GGUF metadata (pure Rust, preferred)
         if let Some(reader) = reader {
             if let Ok(tokenizer) = bitnet_tokenizers::RustGgufTokenizer::from_gguf(reader) {
@@ -814,20 +827,16 @@ impl InferenceCommand {
 
         debug!("Loading tokenizer from: {}", tokenizer_path.display());
 
-        // Load tokenizer from resolved path
-        let tokenizer_box = bitnet_tokenizers::loader::load_tokenizer(&tokenizer_path)?;
-        // Convert Box<dyn Tokenizer> to Arc<dyn Tokenizer>
-        // We need to use unsafe pointer conversion since there's no direct From impl
-        let raw = Box::into_raw(tokenizer_box);
-        let arc = unsafe { Arc::from_raw(raw) };
-        Ok(arc)
+        // Load tokenizer from resolved path (returns Arc directly)
+        let tokenizer = bitnet_tokenizers::loader::load_tokenizer(&tokenizer_path)?;
+        Ok(tokenizer)
     }
 
     /// Run single inference
     async fn run_single_inference(
         &self,
         mut engine: InferenceEngine,
-        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
         prompt: &str,
     ) -> Result<()> {
         let start_time = Instant::now();
@@ -1245,7 +1254,7 @@ impl InferenceCommand {
     async fn run_interactive_mode(
         &self,
         engine: InferenceEngine,
-        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
     ) -> Result<()> {
         // Temporary: keep references alive; TODO(use in REPL)
         let _keep_alive = (&engine, &tokenizer);
@@ -1347,7 +1356,7 @@ impl InferenceCommand {
     async fn run_batch_mode(
         &self,
         mut engine: InferenceEngine,
-        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
         input_file: &PathBuf,
     ) -> Result<()> {
         info!("Processing prompts from: {}", input_file.display());

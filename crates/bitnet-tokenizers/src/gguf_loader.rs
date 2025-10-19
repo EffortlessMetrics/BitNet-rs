@@ -347,11 +347,12 @@ impl RustTokenizer {
                     let mut ids: Vec<u32> = pieces.into_iter().map(|p| p.id).collect();
 
                     // Prepend BOS if requested and not already present
-                    if add_bos
-                        && let Some(bos) = self.bos_id
-                        && ids.first().copied() != Some(bos)
-                    {
-                        ids.insert(0, bos);
+                    if add_bos {
+                        if let Some(bos) = self.bos_id {
+                            if ids.first().copied() != Some(bos) {
+                                ids.insert(0, bos);
+                            }
+                        }
                     }
 
                     Ok(ids)
@@ -425,11 +426,12 @@ impl RustTokenizer {
                 }
 
                 // Prepend BOS if requested and not already present
-                if add_bos
-                    && let Some(bos) = self.bos_id
-                    && ids.first().copied() != Some(bos)
-                {
-                    ids.insert(0, bos);
+                if add_bos {
+                    if let Some(bos) = self.bos_id {
+                        if ids.first().copied() != Some(bos) {
+                            ids.insert(0, bos);
+                        }
+                    }
                 }
 
                 Ok(ids)
@@ -606,15 +608,15 @@ impl crate::Tokenizer for RustTokenizer {
                 {
                     if let Some(spm) = &self.spm {
                         // Try to encode the token and see if we get exactly one piece
-                        if let Ok(pieces) = spm.encode(token)
-                            && pieces.len() == 1
-                        {
-                            let id = pieces[0].id;
-                            // Verify it decodes back to the same token for special tokens
-                            if let Ok(decoded) = spm.decode_piece_ids(&[id])
-                                && decoded == token
-                            {
-                                return Some(id);
+                        if let Ok(pieces) = spm.encode(token) {
+                            if pieces.len() == 1 {
+                                let id = pieces[0].id;
+                                // Verify it decodes back to the same token for special tokens
+                                if let Ok(decoded) = spm.decode_piece_ids(&[id]) {
+                                    if decoded == token {
+                                        return Some(id);
+                                    }
+                                }
                             }
                         }
                     }

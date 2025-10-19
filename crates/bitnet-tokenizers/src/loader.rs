@@ -2,7 +2,7 @@
 use crate::Tokenizer;
 use anyhow::{Context, Result};
 use serde_json::Value;
-use std::{fs, path::Path};
+use std::{fs, path::Path, sync::Arc};
 
 /// Load a tokenizer from a file path
 ///
@@ -15,7 +15,7 @@ use std::{fs, path::Path};
 /// * `path` - Path to the tokenizer file
 ///
 /// # Returns
-/// A boxed tokenizer instance implementing the `Tokenizer` trait
+/// An Arc-wrapped tokenizer instance implementing the `Tokenizer` trait
 ///
 /// # Errors
 /// Returns an error if:
@@ -23,14 +23,14 @@ use std::{fs, path::Path};
 /// - The file format is unknown or invalid
 /// - The JSON structure is missing required fields
 /// - The tokenizer fails to load
-pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer + Send + Sync>> {
+pub fn load_tokenizer(path: &Path) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     // Check file extension to determine tokenizer type
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     match ext {
         "gguf" => {
             // Load tokenizer from GGUF file
-            Ok(Box::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?))
+            Ok(Arc::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?))
         }
         "json" => {
             // Validate JSON structure before loading
@@ -44,14 +44,14 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer + Send + Sync>> {
 
             let tokenizer = crate::hf_tokenizer::HfTokenizer::from_file(path)
                 .map_err(|e| anyhow::anyhow!("Failed to load HuggingFace tokenizer: {e}"))?;
-            Ok(Box::new(tokenizer))
+            Ok(Arc::new(tokenizer))
         }
         "model" => {
             // Load SentencePiece model directly
             #[cfg(feature = "spm")]
             {
                 match crate::sp_tokenizer::SpTokenizer::from_file(path) {
-                    Ok(t) => Ok(t),
+                    Ok(t) => Ok(Arc::new(t)),
                     Err(e) => anyhow::bail!("Failed to load SentencePiece model: {}", e),
                 }
             }
@@ -69,7 +69,7 @@ pub fn load_tokenizer(path: &Path) -> Result<Box<dyn Tokenizer + Send + Sync>> {
 /// Load tokenizer from GGUF metadata (using HashMap)
 pub fn load_tokenizer_from_gguf(
     metadata: &std::collections::HashMap<String, serde_json::Value>,
-) -> Result<Box<dyn Tokenizer + Send + Sync>> {
+) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     use base64::Engine;
 
     // Check if we have a SentencePiece model embedded
@@ -93,7 +93,8 @@ pub fn load_tokenizer_from_gguf(
                     .get("tokenizer.ggml.eos_token_id")
                     .and_then(|v| v.as_u64())
                     .map(|v| v as u32);
-                return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+                let tokenizer = crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?;
+                return Ok(Arc::new(tokenizer));
             }
             #[cfg(not(feature = "spm"))]
             {
@@ -112,14 +113,15 @@ pub fn load_tokenizer_from_gguf(
 /// Load tokenizer from GGUF reader
 pub fn load_tokenizer_from_gguf_reader(
     reader: &bitnet_models::GgufReader,
-) -> Result<Box<dyn Tokenizer + Send + Sync>> {
+) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     // Check if the GGUF contains an embedded tokenizer (try both binary and array formats)
     if let Some(bytes) = reader.get_bin_or_u8_array("tokenizer.ggml.model") {
         #[cfg(feature = "spm")]
         {
             let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
             let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
-            return Ok(crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?);
+            let tokenizer = crate::sp_tokenizer::SpTokenizer::from_gguf_blob(&bytes, bos, eos)?;
+            return Ok(Arc::new(tokenizer));
         }
         #[cfg(not(feature = "spm"))]
         {

@@ -1317,7 +1317,15 @@ impl InferenceEngine {
 
     /// Check if generation should stop
     fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
-        // Check for EOS token from config, fallback to tokenizer default
+        // 1) ID-based stops (fast path - O(n) check on stop_token_ids list)
+        // For LLaMA-3 and other models with token-ID stop sequences
+        if !config.stop_token_ids.is_empty() {
+            if config.stop_token_ids.iter().any(|&id| id == token) {
+                return true;
+            }
+        }
+
+        // 2) EOS token check (explicit or tokenizer default)
         let eos_token = config.eos_token_id.or_else(|| self.tokenizer.eos_token_id());
         if let Some(eos) = eos_token
             && token == eos
@@ -1325,7 +1333,8 @@ impl InferenceEngine {
             return true;
         }
 
-        // Check for stop sequences
+        // 3) String-based stop sequences (fallback - more expensive)
+        // Only decode if we have stop sequences to check
         if !config.stop_sequences.is_empty() {
             let current_text = self.tokenizer.decode(generated_tokens).unwrap_or_default();
             for stop_seq in &config.stop_sequences {

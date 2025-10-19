@@ -613,7 +613,7 @@ async fn handle_tokenize_command(
     });
 
     // Load tokenizer: prefer external, fall back to GGUF
-    let (tokenizer, is_external): (Box<dyn Tokenizer>, bool) =
+    let (tokenizer, is_external): (std::sync::Arc<dyn Tokenizer + Send + Sync>, bool) =
         if let Some(spm_path) = tokenizer_path {
             let tok = bitnet_tokenizers::load_tokenizer(&spm_path).with_context(|| {
                 format!("Failed to load external tokenizer: {}", spm_path.display())
@@ -798,7 +798,7 @@ async fn run_simple_generation(
     let mut gguf_metadata: Option<(usize, usize)> = None;
     let mut external_tokenizer = false;
 
-    let tokenizer: Box<dyn Tokenizer> = {
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = {
         // Try auto-discovery first (handles explicit, sibling, parent)
         let discovered_path = if tokenizer_path.is_some() {
             // Explicit path provided
@@ -828,7 +828,7 @@ async fn run_simple_generation(
                             );
                         }
                         println!("Warning: Using mock tokenizer due to: {e}");
-                        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                     }
                 }
             }
@@ -877,7 +877,7 @@ async fn run_simple_generation(
                             );
                         }
                         println!("Warning: Using mock tokenizer due to: {e}");
-                        Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
+                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
                     }
                 }
             }
