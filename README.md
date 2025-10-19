@@ -61,9 +61,12 @@ BitNet.rs supports three main inference modes:
 | **Creative Completion** | `bitnet run --model model.gguf --tokenizer tokenizer.json --prompt "Explain photosynthesis" --max-tokens 128 --temperature 0.7 --top-p 0.95` | Nucleus sampling for natural text generation |
 | **Interactive Chat** | `bitnet chat --model model.gguf --tokenizer tokenizer.json` | REPL with auto-detected templates and streaming |
 
-**Template defaults:** The CLI now defaults to `--prompt-template auto`, which detects a
-suitable template from GGUF/HF metadata. To preserve legacy behavior, pass
-`--prompt-template raw`.
+**Default template:** `auto` — uses `llama3-chat` if the tokenizer exposes `<|eot_id|>`,
+otherwise falls back to `instruct`. Override with `--prompt-template`.
+
+**Note**: As of v0.9.x, the default auto-detection fallback changed from `raw` to
+`instruct` for better out-of-box experience with instruction-tuned models. Use
+`--prompt-template raw` if you need raw completion behavior.
 
 **Note**: Use `--no-default-features --features cpu` for CPU-only builds, or
 `--no-default-features --features gpu` for CUDA acceleration.
@@ -94,15 +97,15 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 ```bash
 # Auto-detect template and generate answer (recommended)
 RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "Who wrote 'Pride and Prejudice'?" \
   --max-tokens 128
 
 # Explicit instruct template
 RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt-template instruct \
   --prompt "What is the capital of France?" \
   --max-tokens 64 \
