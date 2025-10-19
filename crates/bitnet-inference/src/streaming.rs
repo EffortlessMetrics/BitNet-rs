@@ -460,7 +460,14 @@ impl GenerationStream {
         config: &GenerationConfig,
         tokenizer: &Arc<dyn Tokenizer>,
     ) -> bool {
-        // Check for EOS token from config, fallback to tokenizer default
+        // 1) Check token-level stops FIRST (fast path - O(1) check)
+        // CRITICAL: Check stop_token_ids BEFORE string matching for performance
+        // For LLaMA-3 <|eot_id|> and other special tokens
+        if !config.stop_token_ids.is_empty() && config.stop_token_ids.contains(&token) {
+            return true;
+        }
+
+        // 2) Check for EOS token from config, fallback to tokenizer default
         let eos_token = config.eos_token_id.or_else(|| tokenizer.eos_token_id());
         if let Some(eos) = eos_token
             && token == eos
@@ -468,20 +475,19 @@ impl GenerationStream {
             return true;
         }
 
-        // Check token-level stops (fast path for special tokens like <|eot_id|>)
-        // This avoids expensive string decoding for common stop tokens
-        // Use binary_search since stop_token_ids is sorted in config construction
-        if config.stop_token_ids.binary_search(&token).is_ok() {
-            return true;
-        }
+        // 3) String-based stop sequences (tail window optimization - O(window_size) decode)
+        // Only decode if we have stop sequences to check
+        if !config.stop_sequences.is_empty() {
+            // Tail window optimization: only decode the last N tokens to avoid O(n²) cost
+            let window_size = config.stop_string_window.min(current_tokens.len());
+            let tail_start = current_tokens.len().saturating_sub(window_size);
+            let tail_tokens = &current_tokens[tail_start..];
 
-        // Check for stop sequences (fallback to string matching)
-        if !config.stop_sequences.is_empty()
-            && let Ok(current_text) = tokenizer.decode(current_tokens)
-        {
-            for stop_seq in &config.stop_sequences {
-                if current_text.ends_with(stop_seq) {
-                    return true;
+            if let Ok(current_text) = tokenizer.decode(tail_tokens) {
+                for stop_seq in &config.stop_sequences {
+                    if current_text.ends_with(stop_seq) {
+                        return true;
+                    }
                 }
             }
         }

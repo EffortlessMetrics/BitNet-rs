@@ -70,6 +70,7 @@ pub struct GenerationConfig {
     pub max_new_tokens: usize,
     pub sampling: SamplingConfig,
     pub stop_sequences: Vec<String>,
+    pub stop_string_window: usize,
     #[allow(dead_code)]
     pub stream: bool,
 }
@@ -262,6 +263,11 @@ pub struct InferenceCommand {
     /// Stop token IDs (numeric token IDs to stop generation)
     #[arg(long = "stop-id", value_name = "ID")]
     pub stop_id: Vec<u32>,
+
+    /// Window size for tail-based stop string matching (default: 64)
+    /// Only decode the last N tokens when checking stop sequences
+    #[arg(long, default_value = "64", value_name = "N")]
+    pub stop_string_window: usize,
 
     /// Timeout for inference (in seconds)
     #[arg(long, value_name = "SECONDS")]
@@ -463,6 +469,7 @@ impl PrefillEngine for InferenceEngine {
             logits_topk: 10,
             logits_cb: None,
             add_bos: false, // Pre-tokenized, BOS already handled
+            stop_string_window: config.stop_string_window,
         };
         Box::pin(async move {
             // Use explicit InferenceEngine method to avoid recursion
@@ -853,6 +860,7 @@ impl InferenceCommand {
             repetition_penalty: config.sampling.repetition_penalty,
             stop_sequences: config.stop_sequences.clone(),
             stop_token_ids,
+            stop_string_window: self.stop_string_window,
             seed: config.sampling.seed,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -1447,6 +1455,7 @@ impl InferenceCommand {
             max_new_tokens: self.max_tokens,
             sampling,
             stop_sequences: self.get_stop_sequences(),
+            stop_string_window: self.stop_string_window,
             stream: self.stream,
         })
     }
@@ -1644,6 +1653,15 @@ impl InferenceCommand {
                 return TemplateType::Llama3Chat;
             }
 
+            // Positive detection: BitNet base models (complete rather than answer)
+            // Prefer Instruct template for better Q&A behavior
+            if path_str.contains("microsoft-bitnet") || path_str.contains("bitnet-b1.58") {
+                info!(
+                    "Auto-detected BitNet base model from model path, using Instruct template for Q&A"
+                );
+                return TemplateType::Instruct;
+            }
+
             // Positive detection: Instruct/Chat models
             if path_str.contains("instruct") || path_str.contains("chat") {
                 info!("Auto-detected Instruct template from model path");
@@ -1803,6 +1821,7 @@ mod tests {
             max_new_tokens: 1,
             sampling: SamplingConfig::default(),
             stop_sequences: vec![],
+            stop_string_window: 64,
             stream: false,
         };
         let _ =
@@ -1848,6 +1867,7 @@ mod tests {
             no_eos: false,
             stop: Vec::new(),
             stop_id: Vec::new(),
+            stop_string_window: 64,
             timeout: None,
             dump_logits: None,
             logits_topk: 10,
@@ -1862,6 +1882,7 @@ mod tests {
             max_new_tokens: 1,
             sampling: SamplingConfig::default(),
             stop_sequences: vec![],
+            stop_string_window: 64,
             stream: false,
         };
 
@@ -2222,5 +2243,67 @@ mod tests {
             let detected = cmd.auto_detect_template();
             assert_eq!(detected, expected, "Complex path '{}' should detect {:?}", path, expected);
         }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#bitnet-base-model-detection
+    #[test]
+    fn test_auto_detect_bitnet_base_model() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from(
+                "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+            )),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Microsoft BitNet base model should prefer Instruct template for Q&A"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#bitnet-model-path-variants
+    #[test]
+    fn test_auto_detect_bitnet_various_patterns() {
+        let test_cases = vec![
+            "models/microsoft-bitnet-b1.58-2B.gguf",
+            "checkpoints/bitnet-b1.58-finetuned.gguf",
+            "models/MICROSOFT-BITNET-B1.58.GGUF", // Case-insensitive
+            "microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+        ];
+
+        for path in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(
+                detected,
+                TemplateType::Instruct,
+                "BitNet path '{}' should detect Instruct template",
+                path
+            );
+        }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#bitnet-priority-before-generic
+    #[test]
+    fn test_auto_detect_bitnet_priority() {
+        // BitNet detection should occur before generic instruct/chat detection
+        // to ensure base models get proper Q&A formatting
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/microsoft-bitnet-b1.58-2B.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "BitNet base model should be detected with Instruct template (better Q&A than Raw)"
+        );
     }
 }

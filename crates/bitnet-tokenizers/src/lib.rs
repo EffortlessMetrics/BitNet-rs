@@ -333,12 +333,13 @@ impl Tokenizer for RustGgufTokenizer {
     }
 
     fn vocab_size(&self) -> usize {
-        // Return a reasonable default - actual vocab size varies by model
-        // TODO: Expose vocab_size from RustTokenizer when BPE/SPM provide it
-        match self.inner.kind() {
-            crate::gguf_loader::GgufTokKind::Spm => 32000, // Typical LLaMA vocab size
-            crate::gguf_loader::GgufTokKind::Bpe => 50257, // GPT-2 vocab size
-        }
+        // Delegate to inner RustTokenizer
+        self.inner.vocab_size()
+    }
+
+    fn real_vocab_size(&self) -> usize {
+        // Delegate to inner RustTokenizer
+        self.inner.real_vocab_size()
     }
 
     fn token_to_piece(&self, token: u32) -> Option<String> {

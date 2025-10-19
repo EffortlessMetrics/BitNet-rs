@@ -125,7 +125,10 @@ fn load_complete_bitnet_model(path: &str) -> Result<BitNetModel> {
 
     // Create BitNetModel from loaded tensors
     // Note: i2s_qk256 contains QK256 quantized weights as raw tensors
-    let raw_tensors = load_result.i2s_qk256.into_keys().map(|k| {
+    let raw_tensors = load_result
+        .i2s_qk256
+        .into_keys()
+        .map(|k| {
             // Convert I2SQk256NoScale to Candle tensor for storage
             // This is just for the model's raw_tensors map - actual dequant happens elsewhere
             use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};

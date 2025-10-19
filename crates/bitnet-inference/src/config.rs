@@ -53,6 +53,9 @@ pub struct GenerationConfig {
     /// Token IDs that trigger immediate stop (checked before string matching)
     /// Useful for LLaMA-3 <|eot_id|> and other special tokens
     pub stop_token_ids: Vec<u32>,
+    /// Window size for tail-based string matching (default: 64)
+    /// Only decode the last N tokens when checking stop sequences to avoid O(n²) decode costs
+    pub stop_string_window: usize,
     /// Random seed for reproducible generation
     pub seed: Option<u64>,
     /// Whether to skip special tokens in output
@@ -81,6 +84,7 @@ impl std::fmt::Debug for GenerationConfig {
             .field("repetition_penalty", &self.repetition_penalty)
             .field("stop_sequences", &self.stop_sequences)
             .field("stop_token_ids", &self.stop_token_ids)
+            .field("stop_string_window", &self.stop_string_window)
             .field("seed", &self.seed)
             .field("skip_special_tokens", &self.skip_special_tokens)
             .field("eos_token_id", &self.eos_token_id)
@@ -102,6 +106,7 @@ impl Default for GenerationConfig {
             repetition_penalty: 1.0,
             stop_sequences: vec![],
             stop_token_ids: vec![],
+            stop_string_window: 64, // Default: decode only last 64 tokens for stop sequence matching
             seed: None,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -195,6 +200,12 @@ impl GenerationConfig {
     /// Set top-p
     pub fn with_top_p(mut self, top_p: f32) -> Self {
         self.top_p = top_p;
+        self
+    }
+
+    /// Set stop string window size
+    pub fn with_stop_string_window(mut self, window: usize) -> Self {
+        self.stop_string_window = window;
         self
     }
 }

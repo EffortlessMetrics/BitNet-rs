@@ -123,6 +123,7 @@ impl BatchProcessor {
                 seed: None,
                 stop_sequences: vec![],
                 stop_token_ids: vec![],
+                stop_string_window: 64,
                 eos_token_id: None,
                 skip_special_tokens: true,
                 logits_tap_steps: 0,

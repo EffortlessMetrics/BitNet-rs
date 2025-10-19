@@ -99,6 +99,7 @@ async fn logits_and_greedy_smoke() {
         repetition_penalty: 1.0,
         stop_sequences: vec![],
         stop_token_ids: vec![],
+        stop_string_window: 64,
         seed: Some(42),
         skip_special_tokens: false,
         eos_token_id: None,

@@ -223,11 +223,13 @@ BitNet.rs supports I2_S 1-bit and 2-bit quantization formats with automatic dete
 ### Device Support
 
 **CPU:**
+
 - SIMD optimizations: AVX2/AVX-512 (x86), NEON (ARM) planned
 - Auto CPU feature detection with graceful fallback
 - Parallelization via Rayon (configurable with `RAYON_NUM_THREADS`)
 
 **GPU:**
+
 - CUDA backend available (requires CUDA 12.0+ toolkit)
 - Receipt validation required; performance testing pending
 - Mixed precision (FP16/BF16) support with Tensor Cores

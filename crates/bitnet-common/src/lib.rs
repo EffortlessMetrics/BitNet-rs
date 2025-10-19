@@ -10,6 +10,7 @@ pub mod math;
 pub mod strict_mode;
 pub mod tensor;
 pub mod types;
+pub mod warn_once;
 
 pub use config::*;
 pub use error::*;
@@ -20,3 +21,4 @@ pub use strict_mode::{
 };
 pub use tensor::*;
 pub use types::*;
+pub use warn_once::warn_once_fn;

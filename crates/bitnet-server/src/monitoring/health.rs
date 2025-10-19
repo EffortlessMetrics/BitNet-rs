@@ -69,6 +69,17 @@ pub struct HealthMetrics {
     pub avg_response_time_ms: f64,
     pub memory_usage_mb: f64,
     pub tokens_per_second: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_usage_percent: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gpu_memory_mb: Option<f64>,
+}
+
+/// Internal memory information
+#[derive(Debug, Clone)]
+struct MemoryInfo {
+    used_bytes: u64,
+    total_bytes: u64,
 }
 
 /// Health checker that monitors system components
@@ -192,8 +203,17 @@ impl HealthChecker {
     async fn check_memory_health(&self) -> ComponentHealth {
         let start = Instant::now();
 
-        // Check memory usage - in production, use actual system metrics
-        let memory_usage_percent = 45.0; // Placeholder
+        // Check memory usage using actual system metrics
+        let memory_usage_percent = match self.get_memory_info().await {
+            Ok(info) => {
+                if info.total_bytes > 0 {
+                    (info.used_bytes as f64 / info.total_bytes as f64) * 100.0
+                } else {
+                    0.0
+                }
+            }
+            Err(_) => 0.0, // Default to 0% if we can't read memory
+        };
 
         let (status, message) = if memory_usage_percent > 90.0 {
             (HealthStatus::Unhealthy, format!("High memory usage: {:.1}%", memory_usage_percent))
@@ -295,15 +315,39 @@ impl HealthChecker {
     }
 
     async fn collect_health_metrics(&self) -> HealthMetrics {
-        // In production, these would be collected from actual metrics
+        // Collect actual metrics from the metrics collector
+        let memory_info =
+            self.get_memory_info().await.unwrap_or(MemoryInfo { used_bytes: 0, total_bytes: 0 });
+
+        let cpu_usage = self.get_cpu_usage().await.ok();
+
         HealthMetrics {
-            active_requests: 0,
-            total_requests: 0,
+            active_requests: 0, // TODO: Wire to actual metrics collector
+            total_requests: 0,  // TODO: Wire to actual metrics collector
             error_rate_percent: 0.0,
             avg_response_time_ms: 0.0,
-            memory_usage_mb: 0.0,
+            memory_usage_mb: (memory_info.used_bytes as f64) / (1024.0 * 1024.0),
             tokens_per_second: 0.0,
+            cpu_usage_percent: cpu_usage,
+            gpu_memory_mb: None, // TODO: Wire to GPU metrics when available
         }
+    }
+
+    async fn get_cpu_usage(&self) -> Result<f64, String> {
+        use sysinfo::System;
+        let mut sys = System::new();
+        sys.refresh_cpu_all();
+        // Small sleep to get accurate CPU measurement
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sys.refresh_cpu_all();
+        Ok(sys.global_cpu_usage() as f64)
+    }
+
+    async fn get_memory_info(&self) -> Result<MemoryInfo, String> {
+        use sysinfo::System;
+        let mut sys = System::new();
+        sys.refresh_memory();
+        Ok(MemoryInfo { used_bytes: sys.used_memory(), total_bytes: sys.total_memory() })
     }
 
     #[cfg(any(feature = "gpu", feature = "cuda"))]
