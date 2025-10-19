@@ -1145,7 +1145,13 @@ async fn run_simple_generation(
             t.push_str(&token_text);
             if t.len() > max_stop_len {
                 let cut = t.len() - max_stop_len;
-                t.drain(..cut);
+                // SAFETY: Find char boundary (compatible with MSRV 1.90.0)
+                // floor_char_boundary is 1.91.0+, so we implement manually
+                let mut safe_cut = cut;
+                while safe_cut > 0 && !t.is_char_boundary(safe_cut) {
+                    safe_cut -= 1;
+                }
+                t.drain(..safe_cut);
             }
         }
 
