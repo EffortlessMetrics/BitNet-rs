@@ -806,15 +806,21 @@ impl GgufLoader {
         // Attention projections
         if name.contains("attn_q") || name.contains("q_proj") {
             Some((hidden, hidden)) // Q: [hidden, hidden]
-        } else if name.contains("attn_k") || name.contains("k_proj")
-               || name.contains("attn_v") || name.contains("v_proj") {
+        } else if name.contains("attn_k")
+            || name.contains("k_proj")
+            || name.contains("attn_v")
+            || name.contains("v_proj")
+        {
             Some((kv_dim, hidden)) // K,V: [kv_dim, hidden]
         } else if name.contains("attn_output") || name.contains("o_proj") {
             Some((hidden, hidden)) // O: [hidden, hidden]
         }
         // Feed-forward projections
-        else if name.contains("ffn_gate") || name.contains("gate_proj")
-             || name.contains("ffn_up") || name.contains("up_proj") {
+        else if name.contains("ffn_gate")
+            || name.contains("gate_proj")
+            || name.contains("ffn_up")
+            || name.contains("up_proj")
+        {
             Some((intermediate, hidden)) // Gate,Up: [intermediate, hidden]
         } else if name.contains("ffn_down") || name.contains("down_proj") {
             Some((hidden, intermediate)) // Down: [hidden, intermediate]
