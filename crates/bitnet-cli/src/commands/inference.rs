@@ -510,12 +510,13 @@ impl InferenceCommand {
 
     /// Setup environment for deterministic execution
     pub(super) fn setup_environment(&self) -> Result<()> {
-        // Enable strict loader mode if requested
+        // Enable strict loader mode if requested (AC1: fail-fast with enhanced loader + strict tolerance)
         if self.strict_loader {
             unsafe {
                 std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+                std::env::set_var("BITNET_STRICT_MODE", "1");
             }
-            debug!("Enabled strict loader mode (BITNET_DISABLE_MINIMAL_LOADER=1)");
+            debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
         }
 
         // Set thread count if specified

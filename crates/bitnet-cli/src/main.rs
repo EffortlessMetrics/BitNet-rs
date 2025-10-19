@@ -10,7 +10,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
 use std::io;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 #[cfg(feature = "full-cli")]
 mod commands;
@@ -231,6 +231,10 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         strict_tokenizer: bool,
 
+        /// Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)
+        #[arg(long, default_value_t = false)]
+        strict_loader: bool,
+
         /// Output JSON results to file
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
@@ -450,6 +454,7 @@ async fn main() -> Result<()> {
             allow_mock,
             strict_mapping,
             strict_tokenizer,
+            strict_loader,
             json_out,
             dump_ids,
             bos,
@@ -473,6 +478,7 @@ async fn main() -> Result<()> {
                 allow_mock,
                 strict_mapping,
                 strict_tokenizer,
+                strict_loader,
                 json_out,
                 dump_ids,
                 bos,
@@ -708,6 +714,7 @@ async fn run_simple_generation(
     allow_mock: bool,
     _strict_mapping: bool,
     strict_tokenizer: bool,
+    strict_loader: bool,
     json_out: Option<std::path::PathBuf>,
     dump_ids: bool,
     bos: bool,
@@ -741,6 +748,15 @@ async fn run_simple_generation(
                 std::env::set_var("RAYON_NUM_THREADS", threads.to_string());
             }
         }
+    }
+
+    // Set strict loader mode if requested (AC1: fail-fast with enhanced loader + strict tolerance)
+    if strict_loader {
+        unsafe {
+            std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+            std::env::set_var("BITNET_STRICT_MODE", "1");
+        }
+        debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
     }
 
     // Override temperature if greedy mode

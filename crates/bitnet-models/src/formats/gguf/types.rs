@@ -844,12 +844,20 @@ pub fn detect_i2s_flavor(
     let qk256_need = blocks256 * 64;
     let available = info.size as usize;
 
-    // Tight tolerance for close matches - alignment padding rarely exceeds 8 bytes
-    // If real-world GGUFs need wider tolerance, we can adjust per-flavor
-    const TOLERANCE: usize = 8;
+    // AC2: Centralized tolerance
+    // - Strict mode: tight 8 bytes (fail-fast)
+    // - Default: size-proportional (~0.1%) using quantization helper
+    let strict = std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1");
+    let tolerance = if strict {
+        8usize
+    } else {
+        // pick a representative expected size (qk256/split) to compute tolerance bytes
+        let expected_any = core::cmp::min(split_need, qk256_need);
+        bitnet_quantization::qk256_tolerance_bytes(expected_any)
+    };
 
     tracing::debug!(
-        "I2_S flavor detection for '{}': nelems={}, blocks32={}, blocks256={}, available={}, split_need={}, inline_need={}, qk256_need={}, has_sibling={}",
+        "I2_S flavor detection for '{}': nelems={}, blocks32={}, blocks256={}, available={}, split_need={}, inline_need={}, qk256_need={}, has_sibling={}, tolerance={} (strict={})",
         info.name,
         nelems,
         blocks32,
@@ -858,7 +866,9 @@ pub fn detect_i2s_flavor(
         split_need,
         inline_need,
         qk256_need,
-        has_scale_sibling
+        has_scale_sibling,
+        tolerance,
+        strict
     );
 
     // Calculate diff for each flavor
@@ -866,9 +876,9 @@ pub fn detect_i2s_flavor(
     let diff_inline = available.abs_diff(inline_need);
     let diff_qk256 = available.abs_diff(qk256_need);
 
-    //  Priority logic with tight tolerance (8 bytes):
+    //  Priority logic with adaptive tolerance:
     // 1. Exact matches (diff == 0) - prefer larger block sizes (qk256 > inline > split32)
-    // 2. Close matches (within 8 bytes) - prefer split32 with sibling, then inline, then qk256
+    // 2. Close matches (within tolerance) - prefer split32 with sibling, then inline, then qk256
     // 3. Split32 without sibling (warn) - data-only format, possibly incomplete
 
     // Priority 1: Exact matches (diff == 0) - prefer larger block sizes
@@ -900,8 +910,8 @@ pub fn detect_i2s_flavor(
         return Ok(I2SFlavor::Split32WithSibling);
     }
 
-    // Priority 2: Close matches (within TOLERANCE=8 bytes) - prefer split32 with sibling
-    if has_scale_sibling && diff_split32 <= TOLERANCE {
+    // Priority 2: Close matches (within tolerance) - prefer split32 with sibling
+    if has_scale_sibling && diff_split32 <= tolerance {
         tracing::debug!(
             "I2_S '{}': detected Split32WithSibling (close match: available={}, split_need={}, diff={}, has_sibling=true)",
             info.name,
@@ -911,7 +921,7 @@ pub fn detect_i2s_flavor(
         );
         return Ok(I2SFlavor::Split32WithSibling);
     }
-    if diff_inline <= TOLERANCE {
+    if diff_inline <= tolerance {
         tracing::debug!(
             "I2_S '{}': detected BitNet32F16 (close match: available={}, inline_need={}, diff={})",
             info.name,
@@ -921,7 +931,7 @@ pub fn detect_i2s_flavor(
         );
         return Ok(I2SFlavor::BitNet32F16);
     }
-    if diff_qk256 <= TOLERANCE {
+    if diff_qk256 <= tolerance {
         tracing::debug!(
             "I2_S '{}': detected GgmlQk256NoScale (close match: available={}, qk256_need={}, diff={}) - GGML format",
             info.name,
@@ -933,7 +943,7 @@ pub fn detect_i2s_flavor(
     }
 
     // Priority 3: Split32 without sibling (data-only, warn about missing scales)
-    if diff_split32 <= TOLERANCE {
+    if diff_split32 <= tolerance {
         tracing::warn!(
             "I2_S '{}': bytes match split layout (close match: available={}, split_need={}, diff={}) but no scale sibling found - may be incomplete",
             info.name,
@@ -952,7 +962,7 @@ pub fn detect_i2s_flavor(
          - inline_need (32-elem blocks, 10B/block): {} (diff: {})\n\
          - qk256_need (256-elem blocks, 64B/block): {} (diff: {})\n\
          - has_scale_sibling: {}\n\
-         - tolerance: ±{} bytes (alignment padding)\n\
+         - tolerance: ±{} bytes ({})\n\
          All diffs exceed tolerance. This indicates an unsupported I2_S variant or corrupted data.",
         info.name,
         available,
@@ -963,7 +973,8 @@ pub fn detect_i2s_flavor(
         qk256_need,
         available.abs_diff(qk256_need),
         has_scale_sibling,
-        TOLERANCE
+        tolerance,
+        if strict { "strict mode" } else { "~0.1% size-proportional" }
     )))
 }
 
