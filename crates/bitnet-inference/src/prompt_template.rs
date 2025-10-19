@@ -418,6 +418,28 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_stop_token_ids() {
+        // Create a mock tokenizer that can resolve special tokens
+        use bitnet_tokenizers::MockTokenizer;
+        let tokenizer = MockTokenizer::new();
+
+        // Test that Raw template returns empty (no stops)
+        let raw_ids = TemplateType::Raw.resolve_stop_token_ids(&tokenizer);
+        assert_eq!(raw_ids, Vec::<u32>::new());
+
+        // Test that Instruct template returns empty for mock tokenizer
+        // (mock tokenizer doesn't resolve the instruct stop sequences)
+        let instruct_ids = TemplateType::Instruct.resolve_stop_token_ids(&tokenizer);
+        assert_eq!(instruct_ids, Vec::<u32>::new());
+
+        // Test that LLaMA3Chat template also returns empty for mock tokenizer
+        // In a real scenario with a real tokenizer that has <|eot_id|> in vocab,
+        // this would return the resolved token IDs
+        let llama3_ids = TemplateType::Llama3Chat.resolve_stop_token_ids(&tokenizer);
+        assert_eq!(llama3_ids, Vec::<u32>::new());
+    }
+
+    #[test]
     fn test_bos_control() {
         assert!(TemplateType::Raw.should_add_bos());
         assert!(TemplateType::Instruct.should_add_bos());

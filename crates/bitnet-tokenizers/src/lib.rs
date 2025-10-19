@@ -84,6 +84,28 @@ pub trait Tokenizer: Send + Sync {
     fn vocab_size(&self) -> usize;
     fn token_to_piece(&self, token: u32) -> Option<String>;
 
+    /// Convert a token string to its token ID
+    ///
+    /// This method is useful for resolving special tokens like `<|eot_id|>` or `<|end_of_text|>`
+    /// to their corresponding token IDs for efficient stop sequence matching during generation.
+    ///
+    /// # Arguments
+    /// * `token` - The token string to look up (e.g., "<|eot_id|>")
+    ///
+    /// # Returns
+    /// * `Some(token_id)` if the token exists in the vocabulary
+    /// * `None` if the token is not found
+    ///
+    /// # Example
+    /// ```ignore
+    /// let eot_id = tokenizer.token_to_id("<|eot_id|>")?;
+    /// ```
+    fn token_to_id(&self, _token: &str) -> Option<u32> {
+        // Default implementation returns None
+        // Specific tokenizer implementations should override this
+        None
+    }
+
     /// Real vocabulary size from tokenizer model (no padding)
     ///
     /// AC5: This is the actual number of tokens in the vocabulary,

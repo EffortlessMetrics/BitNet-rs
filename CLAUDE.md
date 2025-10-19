@@ -275,6 +275,7 @@ RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" 
 ```
 
 **Logging:**
+
 - `RUST_LOG=warn`: Suppresses debug/info logs, shows only warnings/errors (recommended for clean output)
 - `RUST_LOG=info`: Shows general information (default verbose)
 - `RUST_LOG=error`: Only shows errors (minimal output)

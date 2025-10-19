@@ -157,6 +157,12 @@ impl super::Tokenizer for HfTokenizer {
         self.inner.id_to_token(token).map(|s| s.to_string())
     }
 
+    fn token_to_id(&self, token: &str) -> Option<u32> {
+        // Use the inner tokenizer's vocab to look up the token
+        let vocab = self.inner.get_vocab(true);
+        vocab.get(token).copied()
+    }
+
     fn bos_token_id(&self) -> Option<u32> {
         self.bos_id
     }

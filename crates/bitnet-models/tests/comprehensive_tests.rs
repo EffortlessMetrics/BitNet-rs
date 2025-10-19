@@ -556,7 +556,8 @@ mod bitnet_model_tests {
         tensors.insert("token_embd.weight".to_string(), token_embd);
         tensors.insert("output.weight".to_string(), output);
 
-        let result = BitNetModel::from_gguf(config, tensors, device);
+        let raw_tensors = HashMap::new();
+        let result = BitNetModel::from_gguf(config, tensors, raw_tensors, device);
         assert!(result.is_ok());
 
         let model = result.unwrap();
@@ -573,7 +574,8 @@ mod bitnet_model_tests {
         // Create incomplete tensor set (missing required tensors)
         let tensors = HashMap::new();
 
-        let result = BitNetModel::from_gguf(config, tensors, device);
+        let raw_tensors = HashMap::new();
+        let result = BitNetModel::from_gguf(config, tensors, raw_tensors, device);
         assert!(result.is_err());
     }
 

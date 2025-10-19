@@ -582,6 +582,52 @@ impl crate::Tokenizer for RustTokenizer {
         }
     }
 
+    fn token_to_id(&self, token: &str) -> Option<u32> {
+        // First check if it's a known special token
+        if let Some(id) = self.id_for_special(token) {
+            return Some(id);
+        }
+
+        // Otherwise lookup in the vocabulary
+        match self.kind {
+            GgufTokKind::Bpe => {
+                // For BPE, use the vocab from the tokenizer
+                if let Some(bpe) = &self.bpe {
+                    let vocab = bpe.get_vocab(true);
+                    vocab.get(token).copied()
+                } else {
+                    None
+                }
+            }
+            GgufTokKind::Spm => {
+                // For SPM, we need to check if the token exists by trying to encode it
+                // and seeing if we get a single token back that decodes to the same string
+                #[cfg(feature = "spm")]
+                {
+                    if let Some(spm) = &self.spm {
+                        // Try to encode the token and see if we get exactly one piece
+                        if let Ok(pieces) = spm.encode(token)
+                            && pieces.len() == 1
+                        {
+                            let id = pieces[0].id;
+                            // Verify it decodes back to the same token for special tokens
+                            if let Ok(decoded) = spm.decode_piece_ids(&[id])
+                                && decoded == token
+                            {
+                                return Some(id);
+                            }
+                        }
+                    }
+                    None
+                }
+                #[cfg(not(feature = "spm"))]
+                {
+                    None
+                }
+            }
+        }
+    }
+
     fn bos_token_id(&self) -> Option<u32> {
         self.bos_id
     }

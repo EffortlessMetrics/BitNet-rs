@@ -73,7 +73,7 @@ pub const QK256_SIZE_TOLERANCE_PERCENT: f64 = 0.001;
 /// use bitnet_quantization::qk256_tolerance_bytes;
 ///
 /// assert_eq!(qk256_tolerance_bytes(1_000_000), 1000);  // 1 MB → 1 KB tolerance
-/// assert_eq!(qk256_tolerance_bytes(131_072), 131);     // 128 KB → 131 bytes
+/// assert_eq!(qk256_tolerance_bytes(131_072), 132);     // 128 KB → 132 bytes (ceiling)
 /// assert_eq!(qk256_tolerance_bytes(100_000), 100);     // 100 KB → 100 bytes
 /// assert_eq!(qk256_tolerance_bytes(1_000), 1);         // 1 KB → 1 byte (minimum)
 /// assert_eq!(qk256_tolerance_bytes(500), 1);           // 0.5 bytes → 1 byte (ceiling)

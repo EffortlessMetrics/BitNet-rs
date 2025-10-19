@@ -119,7 +119,8 @@ fn create_model_with_minimal_weights() -> Result<Arc<BitNetModel>> {
     );
 
     // Create model from GGUF tensors (this will use real transformer, not mock)
-    let model = BitNetModel::from_gguf(config, tensors, Device::Cpu)?;
+    let raw_tensors = HashMap::new(); // No raw tensors in this test
+    let model = BitNetModel::from_gguf(config, tensors, raw_tensors, Device::Cpu)?;
     Ok(Arc::new(model))
 }
 

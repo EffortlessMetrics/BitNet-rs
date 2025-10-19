@@ -844,9 +844,9 @@ pub fn detect_i2s_flavor(
     let qk256_need = blocks256 * 64;
     let available = info.size as usize;
 
-    // Tolerance for alignment padding (conservative but tight)
-    // GGUF alignment/padding can exceed 8 bytes - increased to 128 for compatibility
-    const TOLERANCE: usize = 128;
+    // Tight tolerance for close matches - alignment padding rarely exceeds 8 bytes
+    // If real-world GGUFs need wider tolerance, we can adjust per-flavor
+    const TOLERANCE: usize = 8;
 
     tracing::debug!(
         "I2_S flavor detection for '{}': nelems={}, blocks32={}, blocks256={}, available={}, split_need={}, inline_need={}, qk256_need={}, has_sibling={}",
@@ -861,35 +861,38 @@ pub fn detect_i2s_flavor(
         has_scale_sibling
     );
 
-    // Check which layouts match (within tolerance)
-    let matches_split32 = available.abs_diff(split_need) <= TOLERANCE;
-    let matches_inline = available.abs_diff(inline_need) <= TOLERANCE;
-    let matches_qk256 = available.abs_diff(qk256_need) <= TOLERANCE;
+    // Calculate diff for each flavor
+    let diff_split32 = available.abs_diff(split_need);
+    let diff_inline = available.abs_diff(inline_need);
+    let diff_qk256 = available.abs_diff(qk256_need);
 
-    //  Priority logic:
-    // 1. GgmlQk256NoScale (highest) - when bytes match qk256 exactly (prefer largest block size)
-    // 2. Split32WithSibling (if sibling present) - when bytes match split32
-    // 3. BitNet32F16 - when bytes match inline (most common BitNet format)
-    // 4. Split32WithSibling (without sibling, warn) - when bytes match split32 only
+    //  Priority logic with tight tolerance (8 bytes):
+    // 1. Exact matches (diff == 0) - prefer larger block sizes (qk256 > inline > split32)
+    // 2. Close matches (within 8 bytes) - prefer split32 with sibling, then inline, then qk256
+    // 3. Split32 without sibling (warn) - data-only format, possibly incomplete
 
-    // Priority 1: GgmlQk256NoScale if bytes match qk256 (highest specificity - largest blocks)
-    // This is checked FIRST to ensure it takes priority over inline/split matches
-    // Note: split32 and qk256 can coincide (e.g., 512 elem: 16*8=128, 2*64=128)
-    // In ambiguous cases, prefer qk256 as it's more specific (256-element blocks)
-    if matches_qk256 {
+    // Priority 1: Exact matches (diff == 0) - prefer larger block sizes
+    if diff_qk256 == 0 {
         tracing::debug!(
-            "I2_S '{}': detected GgmlQk256NoScale (available={}, qk256_need={}) - GGML format requires native kernels",
+            "I2_S '{}': detected GgmlQk256NoScale (exact match: available={}, qk256_need={}) - GGML format",
             info.name,
             available,
             qk256_need
         );
         return Ok(I2SFlavor::GgmlQk256NoScale);
     }
-
-    // Priority 2: Split32WithSibling if sibling scale tensor present and bytes match
-    if has_scale_sibling && matches_split32 {
+    if diff_inline == 0 {
         tracing::debug!(
-            "I2_S '{}': detected Split32WithSibling (available={}, split_need={}, has_sibling=true)",
+            "I2_S '{}': detected BitNet32F16 (exact match: available={}, inline_need={})",
+            info.name,
+            available,
+            inline_need
+        );
+        return Ok(I2SFlavor::BitNet32F16);
+    }
+    if diff_split32 == 0 && has_scale_sibling {
+        tracing::debug!(
+            "I2_S '{}': detected Split32WithSibling (exact match: available={}, split_need={}, has_sibling=true)",
             info.name,
             available,
             split_need
@@ -897,25 +900,46 @@ pub fn detect_i2s_flavor(
         return Ok(I2SFlavor::Split32WithSibling);
     }
 
-    // Priority 3: BitNet32F16 (inline f16 scales) - most common BitNet format
-    if matches_inline {
+    // Priority 2: Close matches (within TOLERANCE=8 bytes) - prefer split32 with sibling
+    if has_scale_sibling && diff_split32 <= TOLERANCE {
         tracing::debug!(
-            "I2_S '{}': detected BitNet32F16 (available={}, inline_need={})",
+            "I2_S '{}': detected Split32WithSibling (close match: available={}, split_need={}, diff={}, has_sibling=true)",
             info.name,
             available,
-            inline_need
+            split_need,
+            diff_split32
+        );
+        return Ok(I2SFlavor::Split32WithSibling);
+    }
+    if diff_inline <= TOLERANCE {
+        tracing::debug!(
+            "I2_S '{}': detected BitNet32F16 (close match: available={}, inline_need={}, diff={})",
+            info.name,
+            available,
+            inline_need,
+            diff_inline
         );
         return Ok(I2SFlavor::BitNet32F16);
     }
-
-    // Priority 4: Split32WithSibling without sibling (data-only, likely incomplete)
-    // Only if bytes match split32 (qk256 already handled above)
-    if matches_split32 {
-        tracing::warn!(
-            "I2_S '{}': bytes match split layout (available={}, split_need={}) but no scale sibling found - may be incomplete",
+    if diff_qk256 <= TOLERANCE {
+        tracing::debug!(
+            "I2_S '{}': detected GgmlQk256NoScale (close match: available={}, qk256_need={}, diff={}) - GGML format",
             info.name,
             available,
-            split_need
+            qk256_need,
+            diff_qk256
+        );
+        return Ok(I2SFlavor::GgmlQk256NoScale);
+    }
+
+    // Priority 3: Split32 without sibling (data-only, warn about missing scales)
+    if diff_split32 <= TOLERANCE {
+        tracing::warn!(
+            "I2_S '{}': bytes match split layout (close match: available={}, split_need={}, diff={}) but no scale sibling found - may be incomplete",
+            info.name,
+            available,
+            split_need,
+            diff_split32
         );
         return Ok(I2SFlavor::Split32WithSibling);
     }

@@ -291,6 +291,7 @@ RAYON_NUM_THREADS=1 RUST_LOG=warn \
 ```
 
 **Performance Tuning:**
+
 - `target-cpu=native`: Enable all CPU instructions available on your machine (AVX2/AVX-512/NEON)
 - `opt-level=3`: Maximum optimization (aggressive inlining, vectorization)
 - `lto=thin`: Link-time optimization for performance without excessive build time
