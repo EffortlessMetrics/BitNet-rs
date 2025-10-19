@@ -53,7 +53,7 @@ fn test_qk256_tolerance_bytes_calculation() {
         "AC2: 128 KB tensor → 132 bytes tolerance (ceiling)"
     );
     assert_eq!(qk256_tolerance_bytes(100_000), 100, "AC2: 100 KB tensor → 100 bytes tolerance");
-    assert_eq!(qk256_tolerance_bytes(1_000), 1, "AC2: 1 KB tensor → 1 byte tolerance (minimum)");
+    assert_eq!(qk256_tolerance_bytes(1_000), 8, "AC2: 1 KB tensor → 8 bytes tolerance (minimum)");
 }
 
 /// AC2: QK256 tolerance constant re-export in models crate
@@ -207,12 +207,12 @@ fn test_qk256_tolerance_ceiling_rounding() {
 
     use bitnet_quantization::qk256_tolerance_bytes;
 
-    assert_eq!(qk256_tolerance_bytes(500), 1, "AC2: 0.5 bytes → 1 byte (ceiling)");
-    assert_eq!(qk256_tolerance_bytes(100), 1, "AC2: 0.1 bytes → 1 byte (ceiling)");
-    assert_eq!(qk256_tolerance_bytes(1_500), 2, "AC2: 1.5 bytes → 2 bytes (ceiling)");
+    assert_eq!(qk256_tolerance_bytes(500), 8, "AC2: 0.5 bytes → 8 bytes (minimum)");
+    assert_eq!(qk256_tolerance_bytes(100), 8, "AC2: 0.1 bytes → 8 bytes (minimum)");
+    assert_eq!(qk256_tolerance_bytes(1_500), 8, "AC2: 1.5 bytes → 8 bytes (minimum)");
 
-    // Edge case: very small tensors still get at least 1 byte tolerance
-    assert_eq!(qk256_tolerance_bytes(10), 1, "AC2: Minimum tolerance is 1 byte");
+    // Edge case: very small tensors still get at least 8 bytes tolerance (alignment padding)
+    assert_eq!(qk256_tolerance_bytes(10), 8, "AC2: Minimum tolerance is 8 bytes");
 }
 
 /// AC2: QK256 tolerance used in loader validation

@@ -205,12 +205,12 @@ fn test_tolerance_calculation_for_tensor_sizes() {
     // AC1: Verify tolerance calculation (0.1% of tensor size)
     use bitnet_models::qk256_tolerance_bytes;
 
-    // Expected tolerance calculations (0.1% with ceiling rounding)
+    // Expected tolerance calculations (0.1% with ceiling rounding, minimum 8 bytes)
     assert_eq!(qk256_tolerance_bytes(100_000), 100, "AC1: 100 KB → 100 bytes");
     assert_eq!(qk256_tolerance_bytes(1_000_000), 1_000, "AC1: 1 MB → 1 KB");
     assert_eq!(qk256_tolerance_bytes(10_000_000), 10_000, "AC1: 10 MB → 10 KB");
-    assert_eq!(qk256_tolerance_bytes(1_000), 1, "AC1: 1 KB → 1 byte (minimum)");
-    assert_eq!(qk256_tolerance_bytes(500), 1, "AC1: 500 bytes → 1 byte (ceiling)");
+    assert_eq!(qk256_tolerance_bytes(1_000), 8, "AC1: 1 KB → 8 bytes (minimum)");
+    assert_eq!(qk256_tolerance_bytes(500), 8, "AC1: 500 bytes → 8 bytes (minimum)");
 }
 
 /// AC1: Strict mode rejects multiple misaligned tensors

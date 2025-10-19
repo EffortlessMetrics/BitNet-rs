@@ -192,7 +192,8 @@ automatically detects the appropriate template using:
 `instruct` for better out-of-box experience with instruction-tuned models. Use
 `--prompt-template raw` if you need raw completion behavior.
 
-**Default template:** `auto` — uses `llama3-chat` if the tokenizer exposes `<|eot_id|>`, otherwise falls back to `instruct`. Override with `--prompt-template`.
+**Default template:** `auto` — uses `llama3-chat` if the tokenizer exposes `<|eot_id|>`,
+otherwise falls back to `instruct`. Override with `--prompt-template`.
 
 ### Quick Start: Q&A with BitNet Models
 
@@ -201,8 +202,8 @@ automatically detects the appropriate template using:
 ```bash
 # One-shot Q&A (recommended for base/BitNet models)
 RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt-template instruct \
   --prompt "What is 2+2?" \
   --max-tokens 8 \

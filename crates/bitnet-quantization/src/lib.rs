@@ -66,7 +66,7 @@ pub const QK256_SIZE_TOLERANCE_PERCENT: f64 = 0.001;
 /// * `expected_bytes` - Expected tensor size in bytes
 ///
 /// # Returns
-/// Tolerance in bytes (minimum 1 byte)
+/// Tolerance in bytes (minimum 8 bytes for alignment padding)
 ///
 /// # Examples
 /// ```
@@ -75,13 +75,13 @@ pub const QK256_SIZE_TOLERANCE_PERCENT: f64 = 0.001;
 /// assert_eq!(qk256_tolerance_bytes(1_000_000), 1000);  // 1 MB → 1 KB tolerance
 /// assert_eq!(qk256_tolerance_bytes(131_072), 132);     // 128 KB → 132 bytes (ceiling)
 /// assert_eq!(qk256_tolerance_bytes(100_000), 100);     // 100 KB → 100 bytes
-/// assert_eq!(qk256_tolerance_bytes(1_000), 1);         // 1 KB → 1 byte (minimum)
-/// assert_eq!(qk256_tolerance_bytes(500), 1);           // 0.5 bytes → 1 byte (ceiling)
+/// assert_eq!(qk256_tolerance_bytes(1_000), 8);         // 1 KB → 8 bytes (minimum)
+/// assert_eq!(qk256_tolerance_bytes(20), 8);            // 20 bytes → 8 bytes (minimum)
 /// ```
 pub fn qk256_tolerance_bytes(expected_bytes: usize) -> usize {
     let tolerance = (expected_bytes as f64) * QK256_SIZE_TOLERANCE_PERCENT;
-    // Ceiling rounding ensures fractional bytes round up, minimum 1 byte
-    tolerance.ceil().max(1.0) as usize
+    // Ceiling rounding ensures fractional bytes round up, minimum 8 bytes for alignment padding
+    tolerance.ceil().max(8.0) as usize
 }
 
 /// Quantization trait for tensor quantization and dequantization operations
