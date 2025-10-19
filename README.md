@@ -357,10 +357,12 @@ BitNet.rs is organized as a Rust workspace:
 ## Language Bindings (MVP Status)
 
 Currently available:
+
 - **Rust**: Full API support via `bitnet` crate and `bitnet-cli` binary
 - **C FFI**: Bridge available in `bitnet-sys` (experimental, testing-only)
 
 Coming in v0.2.0:
+
 - Python bindings via PyO3
 - WebAssembly bindings
 - Complete C API
@@ -372,21 +374,25 @@ See [docs/explanation/FEATURES.md](docs/explanation/FEATURES.md) for detailed fe
 ### Common Issues
 
 **Model produces garbled output:**
+
 - The Microsoft BitNet B1.58 2B model has known quality issues with the training data
 - Try shorter prompts or use `--temperature 0.0 --greedy` for deterministic output
 - Better models from community contributors coming soon
 
 **QK256 inference very slow (~0.1 tok/s):**
+
 - Current implementation uses scalar kernels (MVP limitation)
 - Use `--max-tokens 4-16` for quick validation instead of long runs
 - SIMD optimizations shipping in v0.2.0
 
 **Tests hanging or failing:**
+
 - Ensure you're using `--no-default-features --features cpu|gpu`
 - Try `cargo test -p bitnet-common --lib` to test individual crates
 - Check [docs/development/test-suite.md](docs/development/test-suite.md)
 
 **GPU not being used despite CUDA installation:**
+
 - Build with `--no-default-features --features gpu`
 - Run `cargo run -p xtask -- preflight` to check GPU detection
 - See [docs/GPU_SETUP.md](docs/GPU_SETUP.md) for CUDA configuration
