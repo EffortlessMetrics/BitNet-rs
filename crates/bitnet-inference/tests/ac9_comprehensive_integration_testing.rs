@@ -12,7 +12,6 @@ use bitnet_common::{Device, Tensor};
 use bitnet_inference::InferenceEngine;
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::UniversalTokenizer;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// AC9.1: End-to-End Transformer Pipeline Integration Test
@@ -25,7 +24,8 @@ async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
     // Load complete BitNet model with all components
     // Find workspace root by looking for Cargo.toml with [workspace]
     let workspace_root = find_workspace_root().unwrap();
-    let model_path = workspace_root.join("tests-new/fixtures/fixtures/gguf/valid/small_bitnet_test.gguf");
+    let model_path =
+        workspace_root.join("tests-new/fixtures/fixtures/gguf/valid/small_bitnet_test.gguf");
     let model = load_complete_bitnet_model(model_path.to_str().unwrap())
         .context("Failed to load complete BitNet model for integration testing")?;
 
@@ -71,7 +71,8 @@ async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
 async fn test_ac9_individual_transformer_components() -> Result<()> {
     // Find workspace root by looking for Cargo.toml with [workspace]
     let workspace_root = find_workspace_root().unwrap();
-    let model_path = workspace_root.join("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf");
+    let model_path =
+        workspace_root.join("models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf");
 
     // Skip test if model not available
     if !model_path.exists() {
@@ -95,17 +96,15 @@ async fn test_ac9_individual_transformer_components() -> Result<()> {
 
 /// Find workspace root by looking upward for Cargo.toml with [workspace]
 fn find_workspace_root() -> Result<std::path::PathBuf> {
-    use std::path::PathBuf;
-
     let mut path = std::env::current_dir()?;
     loop {
         let cargo_toml = path.join("Cargo.toml");
         if cargo_toml.exists() {
             // Check if it contains [workspace]
-            if let Ok(contents) = std::fs::read_to_string(&cargo_toml) {
-                if contents.contains("[workspace]") {
-                    return Ok(path);
-                }
+            if let Ok(contents) = std::fs::read_to_string(&cargo_toml)
+                && contents.contains("[workspace]")
+            {
+                return Ok(path);
             }
         }
         if !path.pop() {
@@ -116,22 +115,17 @@ fn find_workspace_root() -> Result<std::path::PathBuf> {
 }
 
 fn load_complete_bitnet_model(path: &str) -> Result<BitNetModel> {
-    use bitnet_models::gguf_simple::{GGUFLoaderConfig, load_gguf_full};
     use bitnet_common::Device;
+    use bitnet_models::gguf_simple::{GGUFLoaderConfig, load_gguf_full};
     use std::path::Path;
 
     // Load GGUF with default configuration
-    let load_result = load_gguf_full(
-        Path::new(path),
-        Device::Cpu,
-        GGUFLoaderConfig::default(),
-    )
-    .context("Failed to load GGUF file")?;
+    let load_result = load_gguf_full(Path::new(path), Device::Cpu, GGUFLoaderConfig::default())
+        .context("Failed to load GGUF file")?;
 
     // Create BitNetModel from loaded tensors
     // Note: i2s_qk256 contains QK256 quantized weights as raw tensors
-    let raw_tensors = load_result.i2s_qk256.into_iter()
-        .map(|(k, v)| {
+    let raw_tensors = load_result.i2s_qk256.into_keys().map(|k| {
             // Convert I2SQk256NoScale to Candle tensor for storage
             // This is just for the model's raw_tensors map - actual dequant happens elsewhere
             use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
@@ -143,13 +137,9 @@ fn load_complete_bitnet_model(path: &str) -> Result<BitNetModel> {
         })
         .collect();
 
-    let model = BitNetModel::from_gguf(
-        load_result.config,
-        load_result.tensors,
-        raw_tensors,
-        Device::Cpu,
-    )
-    .context("Failed to create BitNetModel from GGUF")?;
+    let model =
+        BitNetModel::from_gguf(load_result.config, load_result.tensors, raw_tensors, Device::Cpu)
+            .context("Failed to create BitNetModel from GGUF")?;
 
     Ok(model)
 }
@@ -182,8 +172,7 @@ async fn test_embedding_layer(model: &BitNetModel) -> Result<()> {
     // Test embedding lookup for a few token IDs
     use bitnet_models::Model;
     let test_tokens = vec![0, 1, 2];
-    let embedded = model.embed(&test_tokens)
-        .context("Failed to embed test tokens")?;
+    let embedded = model.embed(&test_tokens).context("Failed to embed test tokens")?;
 
     let embedded_shape = embedded.shape();
 
@@ -200,10 +189,7 @@ async fn test_embedding_layer(model: &BitNetModel) -> Result<()> {
         // [num_tokens, hidden_size]
         (embedded_shape[0], embedded_shape[1])
     } else {
-        anyhow::bail!(
-            "Embedded output should be 2D or 3D, got shape: {:?}",
-            embedded_shape
-        );
+        anyhow::bail!("Embedded output should be 2D or 3D, got shape: {:?}", embedded_shape);
     };
 
     anyhow::ensure!(
@@ -225,12 +211,7 @@ async fn test_embedding_layer(model: &BitNetModel) -> Result<()> {
 
 async fn test_transformer_block(model: &BitNetModel) -> Result<()> {
     // Test layer 0 attention weights (Q, K, V, O projections)
-    let layer_prefixes = vec![
-        "blk.0.attn_q",
-        "blk.0.attn_k",
-        "blk.0.attn_v",
-        "blk.0.attn_output",
-    ];
+    let layer_prefixes = vec!["blk.0.attn_q", "blk.0.attn_k", "blk.0.attn_v", "blk.0.attn_output"];
 
     // Alternative naming schemes
     let alternative_names = vec![
@@ -244,7 +225,8 @@ async fn test_transformer_block(model: &BitNetModel) -> Result<()> {
     let mut found_attention = false;
     for (prefix, alt_name) in layer_prefixes.iter().zip(alternative_names.iter()) {
         let weight_name = format!("{}.weight", prefix);
-        if let Some(tensor) = model.get_tensor(&weight_name).or_else(|| model.get_tensor(alt_name)) {
+        if let Some(tensor) = model.get_tensor(&weight_name).or_else(|| model.get_tensor(alt_name))
+        {
             found_attention = true;
             let shape = tensor.shape();
             anyhow::ensure!(
@@ -264,8 +246,8 @@ async fn test_transformer_block(model: &BitNetModel) -> Result<()> {
     );
 
     // Test FFN weights (gate, up, down projections)
-    let ffn_prefixes = vec!["blk.0.ffn_gate", "blk.0.ffn_up", "blk.0.ffn_down"];
-    let alternative_ffn = vec![
+    let ffn_prefixes = ["blk.0.ffn_gate", "blk.0.ffn_up", "blk.0.ffn_down"];
+    let alternative_ffn = [
         "layers.0.mlp.gate_proj.weight",
         "layers.0.mlp.up_proj.weight",
         "layers.0.mlp.down_proj.weight",
@@ -274,7 +256,8 @@ async fn test_transformer_block(model: &BitNetModel) -> Result<()> {
     let mut found_ffn = false;
     for (prefix, alt_name) in ffn_prefixes.iter().zip(alternative_ffn.iter()) {
         let weight_name = format!("{}.weight", prefix);
-        if let Some(tensor) = model.get_tensor(&weight_name).or_else(|| model.get_tensor(alt_name)) {
+        if let Some(tensor) = model.get_tensor(&weight_name).or_else(|| model.get_tensor(alt_name))
+        {
             found_ffn = true;
             let shape = tensor.shape();
             anyhow::ensure!(
@@ -344,7 +327,7 @@ async fn test_output_projection(model: &BitNetModel) -> Result<()> {
         Ok(logits) => {
             let logits_shape = logits.shape();
             anyhow::ensure!(
-                logits_shape.len() >= 1,
+                !logits_shape.is_empty(),
                 "Logits should have at least 1 dimension, got: {:?}",
                 logits_shape
             );
