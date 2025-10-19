@@ -910,7 +910,17 @@ pub fn detect_i2s_flavor(
         return Ok(I2SFlavor::Split32WithSibling);
     }
 
-    // Priority 2: Close matches (within tolerance) - prefer split32 with sibling
+    // Priority 2: Close matches (within tolerance) - prefer QK256 for specificity
+    if diff_qk256 <= tolerance {
+        tracing::debug!(
+            "I2_S '{}': detected GgmlQk256NoScale (close match: available={}, qk256_need={}, diff={}) - GGML format",
+            info.name,
+            available,
+            qk256_need,
+            diff_qk256
+        );
+        return Ok(I2SFlavor::GgmlQk256NoScale);
+    }
     if has_scale_sibling && diff_split32 <= tolerance {
         tracing::debug!(
             "I2_S '{}': detected Split32WithSibling (close match: available={}, split_need={}, diff={}, has_sibling=true)",
@@ -930,16 +940,6 @@ pub fn detect_i2s_flavor(
             diff_inline
         );
         return Ok(I2SFlavor::BitNet32F16);
-    }
-    if diff_qk256 <= tolerance {
-        tracing::debug!(
-            "I2_S '{}': detected GgmlQk256NoScale (close match: available={}, qk256_need={}, diff={}) - GGML format",
-            info.name,
-            available,
-            qk256_need,
-            diff_qk256
-        );
-        return Ok(I2SFlavor::GgmlQk256NoScale);
     }
 
     // Priority 3: Split32 without sibling (data-only, warn about missing scales)

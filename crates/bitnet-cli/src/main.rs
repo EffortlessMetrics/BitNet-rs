@@ -1014,9 +1014,13 @@ async fn run_simple_generation(
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
 
-    // Rolling tail for fast string-stop checking
+    // Rolling tail for fast string-stop checking (only if we have string stops)
     let max_stop_len = all_stop_sequences.iter().map(|s| s.len()).max().unwrap_or(0);
-    let mut tail = String::with_capacity(max_stop_len.saturating_add(16));
+    let mut tail = if max_stop_len > 0 {
+        Some(String::with_capacity(max_stop_len.saturating_add(16)))
+    } else {
+        None
+    };
 
     // Generation loop
     for step_idx in 0..max_new_tokens {
@@ -1136,11 +1140,13 @@ async fn run_simple_generation(
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
 
-        // Maintain rolling tail (bounded to longest stop sequence)
-        tail.push_str(&token_text);
-        if tail.len() > max_stop_len {
-            let cut = tail.len() - max_stop_len;
-            tail.drain(..cut);
+        // Maintain rolling tail (if present)
+        if let Some(t) = &mut tail {
+            t.push_str(&token_text);
+            if t.len() > max_stop_len {
+                let cut = t.len() - max_stop_len;
+                t.drain(..cut);
+            }
         }
 
         // 1) Token-ID stops (includes template-resolved IDs like <|eot_id|>)
@@ -1158,10 +1164,11 @@ async fn run_simple_generation(
         }
 
         // 3) String-based stops on rolling tail (no full decode)
-        if !all_stop_sequences.is_empty()
-            && all_stop_sequences.iter().any(|pat| tail.ends_with(pat))
+        if let Some(t) = &tail
+            && !all_stop_sequences.is_empty()
+            && all_stop_sequences.iter().any(|pat| t.ends_with(pat))
         {
-            if let Some(hit) = all_stop_sequences.iter().find(|pat| tail.ends_with(*pat)) {
+            if let Some(hit) = all_stop_sequences.iter().find(|pat| t.ends_with(*pat)) {
                 debug!("Stopped on sequence: {:?}", hit);
             }
             break;
