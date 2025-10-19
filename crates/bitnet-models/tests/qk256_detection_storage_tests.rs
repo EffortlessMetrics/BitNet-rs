@@ -20,8 +20,8 @@ use anyhow::Result;
 /// 3. Validates shape is [rows, stride] with correct stride calculation
 #[test]
 fn test_qk256_detection_and_storage() -> Result<()> {
-    use std::collections::HashMap;
     use candle_core::{DType, Device, Tensor};
+    use std::collections::HashMap;
 
     // Simulate GGUF loader behavior for QK256 detection
     // Given: A fake I2_S tensor with bytes matching QK256 format
@@ -36,11 +36,7 @@ fn test_qk256_detection_and_storage() -> Result<()> {
 
     // Create U8 tensor with shape [rows, stride]
     let device = Device::Cpu;
-    let qk256_tensor = Tensor::from_vec(
-        qs_data,
-        &[rows, row_stride_bytes],
-        &device,
-    )?;
+    let qk256_tensor = Tensor::from_vec(qs_data, &[rows, row_stride_bytes], &device)?;
 
     // Simulate loader behavior: insert into raw_tensors with .qk256_qs suffix
     let mut raw_tensors = HashMap::new();
@@ -77,11 +73,7 @@ fn test_qk256_detection_and_storage() -> Result<()> {
     );
 
     // 5. Verify dtype is U8
-    assert_eq!(
-        tensor.dtype(),
-        DType::U8,
-        "QK256 tensor dtype should be U8"
-    );
+    assert_eq!(tensor.dtype(), DType::U8, "QK256 tensor dtype should be U8");
 
     // 6. Verify stride calculation: stride = ceil(cols/256) * 64
     let expected_stride = cols.div_ceil(256) * 64;
@@ -111,12 +103,12 @@ fn test_qk256_detection_various_shapes() -> Result<()> {
 
     // Test cases: (rows, cols, expected_blocks, expected_stride)
     let test_cases: Vec<(usize, usize, usize, usize)> = vec![
-        (256, 256, 1, 64),      // Exact single block
-        (512, 512, 2, 128),     // Exact double block
-        (256, 1024, 4, 256),    // Multiple blocks
-        (1, 256, 1, 64),        // Single row, single block
-        (1000, 768, 3, 192),    // Non-power-of-2 dimensions
-        (512, 300, 2, 128),     // Partial block (300 = 256 + 44)
+        (256, 256, 1, 64),   // Exact single block
+        (512, 512, 2, 128),  // Exact double block
+        (256, 1024, 4, 256), // Multiple blocks
+        (1, 256, 1, 64),     // Single row, single block
+        (1000, 768, 3, 192), // Non-power-of-2 dimensions
+        (512, 300, 2, 128),  // Partial block (300 = 256 + 44)
     ];
 
     for (rows, cols, expected_blocks, expected_stride) in test_cases {
@@ -161,8 +153,8 @@ fn test_qk256_detection_various_shapes() -> Result<()> {
 /// weight tensor types (attention, feed_forward)
 #[test]
 fn test_qk256_key_naming_convention() -> Result<()> {
-    use std::collections::HashMap;
     use candle_core::{Device, Tensor};
+    use std::collections::HashMap;
 
     let device = Device::Cpu;
 
@@ -222,7 +214,7 @@ fn test_qk256_key_naming_convention() -> Result<()> {
 /// and can be correctly unpacked
 #[test]
 fn test_qk256_storage_format_validation() -> Result<()> {
-    use bitnet_models::quant::i2s_qk256::{unpack_qk256_block, QK256_BLOCK, QK256_PACKED_BYTES};
+    use bitnet_models::quant::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES, unpack_qk256_block};
     use candle_core::{Device, Tensor};
 
     let device = Device::Cpu;
@@ -236,11 +228,7 @@ fn test_qk256_storage_format_validation() -> Result<()> {
     let qs_data = vec![0xAAu8; total_bytes];
 
     // Store as tensor
-    let qk256_tensor = Tensor::from_vec(
-        qs_data.clone(),
-        &[rows, row_stride_bytes],
-        &device,
-    )?;
+    let qk256_tensor = Tensor::from_vec(qs_data.clone(), &[rows, row_stride_bytes], &device)?;
 
     // Verify we can extract and unpack the data
     let tensor_bytes = qk256_tensor.to_vec2::<u8>()?;
@@ -256,18 +244,13 @@ fn test_qk256_storage_format_validation() -> Result<()> {
 
         // Unpack first block
         let mut codes = [0u8; QK256_BLOCK];
-        let block_bytes: &[u8; QK256_PACKED_BYTES] = row_bytes[..QK256_PACKED_BYTES]
-            .try_into()
-            .expect("Should be 64 bytes");
+        let block_bytes: &[u8; QK256_PACKED_BYTES] =
+            row_bytes[..QK256_PACKED_BYTES].try_into().expect("Should be 64 bytes");
         unpack_qk256_block(block_bytes, &mut codes);
 
         // Verify all codes are 2 (from 0xAA pattern)
         for (i, &code) in codes.iter().enumerate() {
-            assert_eq!(
-                code, 2,
-                "Row {}, code {} should be 2",
-                row_idx, i
-            );
+            assert_eq!(code, 2, "Row {}, code {} should be 2", row_idx, i);
         }
 
         println!("✅ Row {} unpacked successfully: all codes = 2", row_idx);

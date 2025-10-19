@@ -27,18 +27,16 @@ fn expected_qk256_shape(
     // Attention projections (q, k, v, o)
     if name.contains("attn_q") || name.contains("q_proj") {
         Some((hidden, hidden)) // Q: [hidden, hidden]
-    } else if name.contains("attn_k") || name.contains("k_proj") {
-        Some((kv_dim, hidden)) // K: [kv_dim, hidden]
-    } else if name.contains("attn_v") || name.contains("v_proj") {
-        Some((kv_dim, hidden)) // V: [kv_dim, hidden]
+    } else if name.contains("attn_k") || name.contains("k_proj")
+           || name.contains("attn_v") || name.contains("v_proj") {
+        Some((kv_dim, hidden)) // K,V: [kv_dim, hidden]
     } else if name.contains("attn_output") || name.contains("o_proj") {
         Some((hidden, hidden)) // O: [hidden, hidden]
     }
     // Feed-forward projections (gate/up/down)
-    else if name.contains("ffn_gate") || name.contains("gate_proj") {
-        Some((intermediate, hidden)) // Gate: [intermediate, hidden]
-    } else if name.contains("ffn_up") || name.contains("up_proj") {
-        Some((intermediate, hidden)) // Up: [intermediate, hidden]
+    else if name.contains("ffn_gate") || name.contains("gate_proj")
+         || name.contains("ffn_up") || name.contains("up_proj") {
+        Some((intermediate, hidden)) // Gate,Up: [intermediate, hidden]
     } else if name.contains("ffn_down") || name.contains("down_proj") {
         Some((hidden, intermediate)) // Down: [hidden, intermediate]
     } else {
@@ -53,10 +51,10 @@ fn detect_qk256_orientation_by_bytes(
     shape_transposed: (usize, usize),
     available_bytes: usize,
 ) -> (usize, usize) {
-    let blocks_as_is = (shape_as_is.1 + 255) / 256;
+    let blocks_as_is = shape_as_is.1.div_ceil(256);
     let expected_as_is = shape_as_is.0 * blocks_as_is * 64;
 
-    let blocks_transposed = (shape_transposed.1 + 255) / 256;
+    let blocks_transposed = shape_transposed.1.div_ceil(256);
     let expected_transposed = shape_transposed.0 * blocks_transposed * 64;
 
     if available_bytes.abs_diff(expected_transposed) < available_bytes.abs_diff(expected_as_is) {

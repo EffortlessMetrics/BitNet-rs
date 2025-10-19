@@ -159,7 +159,9 @@ bitnet run \
   --prompt "x" --temperature 0.0 --top-k 0 --top-p 1.0 --max-new-tokens 1
 ```
 
-**Note:** The QK256 MVP uses a scalar kernel; parity testing in CI uses 1-token inference intentionally for speed. Longer runs will be slower than bitnet.cpp until SIMD optimizations land.
+**Note:** The QK256 MVP uses a scalar kernel; parity testing in CI uses 1-token
+inference intentionally for speed. Longer runs will be slower than bitnet.cpp
+until SIMD optimizations land.
 
 #### Learn More
 

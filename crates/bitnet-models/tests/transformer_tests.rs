@@ -382,18 +382,11 @@ fn test_qk256_suffix_dispatch_in_transformer() -> anyhow::Result<()> {
     let qs_data = vec![0xAAu8; rows * row_stride_bytes]; // 0xAA = 0b10101010
 
     // Create U8 tensor with QK256 data [rows, stride]
-    let qk256_tensor = Tensor::from_vec(
-        qs_data,
-        &[rows, row_stride_bytes],
-        &device,
-    )?;
+    let qk256_tensor = Tensor::from_vec(qs_data, &[rows, row_stride_bytes], &device)?;
 
     // Build raw_tensors HashMap with .qk256_qs suffix
     let mut raw_tensors = HashMap::new();
-    raw_tensors.insert(
-        "layers.0.attention.q_proj.weight.qk256_qs".to_string(),
-        qk256_tensor,
-    );
+    raw_tensors.insert("layers.0.attention.q_proj.weight.qk256_qs".to_string(), qk256_tensor);
 
     // Create input tensor [batch=1, seq_len=4, hidden_size=256]
     let batch = 1;
@@ -456,11 +449,7 @@ fn test_qk256_suffix_detection_all_projections() -> anyhow::Result<()> {
     let row_stride_bytes = 64usize;
     let qs_data = vec![0xAAu8; rows * row_stride_bytes];
 
-    let qk256_tensor = Tensor::from_vec(
-        qs_data.clone(),
-        &[rows, row_stride_bytes],
-        &device,
-    )?;
+    let qk256_tensor = Tensor::from_vec(qs_data.clone(), &[rows, row_stride_bytes], &device)?;
 
     // Build raw_tensors with all attention projections
     let mut raw_tensors = HashMap::new();
@@ -476,11 +465,7 @@ fn test_qk256_suffix_detection_all_projections() -> anyhow::Result<()> {
     // Verify suffix pattern matches expected format
     for proj in &["q_proj", "k_proj", "v_proj", "o_proj"] {
         let key = format!("layers.0.attention.{}.weight.qk256_qs", proj);
-        assert!(
-            raw_tensors.contains_key(&key),
-            "Raw tensors should contain {}",
-            key
-        );
+        assert!(raw_tensors.contains_key(&key), "Raw tensors should contain {}", key);
 
         // Verify tensor has correct shape [rows, stride]
         let tensor = raw_tensors.get(&key).unwrap();

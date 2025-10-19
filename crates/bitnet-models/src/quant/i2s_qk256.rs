@@ -216,8 +216,7 @@ pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     let sanity_check = std::env::var("BITNET_QUANT_SANITY").as_deref() == Ok("1");
 
     let mut col = 0usize;
-    let mut block_idx = 0usize;
-    for blk in qs_row.chunks_exact(QK256_PACKED_BYTES) {
+    for (block_idx, blk) in qs_row.chunks_exact(QK256_PACKED_BYTES).enumerate() {
         // Unpack 64B → 256 2-bit codes
         let blk_arr: &[u8; QK256_PACKED_BYTES] =
             blk.try_into().expect("QK256: block must be 64 bytes");
@@ -266,7 +265,6 @@ pub fn gemv_qk256_row(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
         }
 
         col += take;
-        block_idx += 1;
         if col >= cols {
             break;
         }
@@ -558,22 +556,12 @@ mod tests {
         let rms = (sum_sq / QK256_BLOCK as f32).sqrt();
 
         // Verify RMS is reasonable (should be ~1.58 for uniform {-2,-1,1,2})
-        assert!(
-            rms >= 0.1 && rms <= 5.0,
-            "RMS {} should be in range [0.1, 5.0]",
-            rms
-        );
+        assert!((0.1..=5.0).contains(&rms), "RMS {} should be in range [0.1, 5.0]", rms);
 
         // Verify first 16 values contain all expected codes
         let first_16: Vec<f32> = weights[..16].to_vec();
-        assert!(
-            first_16.contains(&-2.0),
-            "First 16 values should contain -2.0"
-        );
-        assert!(
-            first_16.contains(&-1.0),
-            "First 16 values should contain -1.0"
-        );
+        assert!(first_16.contains(&-2.0), "First 16 values should contain -2.0");
+        assert!(first_16.contains(&-1.0), "First 16 values should contain -1.0");
         assert!(first_16.contains(&1.0), "First 16 values should contain 1.0");
         assert!(first_16.contains(&2.0), "First 16 values should contain 2.0");
     }
@@ -607,19 +595,12 @@ mod tests {
 
         // Verify result (allow small floating-point error)
         let abs_diff = (y_out[0] - expected).abs();
-        assert!(
-            abs_diff < 1e-4,
-            "Expected ~{}, got {}, diff={}",
-            expected,
-            y_out[0],
-            abs_diff
-        );
+        assert!(abs_diff < 1e-4, "Expected ~{}, got {}, diff={}", expected, y_out[0], abs_diff);
 
         // Reference path: dequantize and compute dot product manually
         let mut codes = [0u8; QK256_BLOCK];
-        let qs_arr: &[u8; QK256_PACKED_BYTES] = qs_data[..QK256_PACKED_BYTES]
-            .try_into()
-            .expect("Should be 64 bytes");
+        let qs_arr: &[u8; QK256_PACKED_BYTES] =
+            qs_data[..QK256_PACKED_BYTES].try_into().expect("Should be 64 bytes");
         unpack_qk256_block(qs_arr, &mut codes);
 
         let mut ref_result = 0.0f32;
@@ -646,36 +627,15 @@ mod tests {
     /// Tests feature spec: i2s-dual-flavor.md#error-handling
     /// Tests API contract: docs/reference/quantization-support.md#validation
     /// Multiple test cases that should fail with clear error messages:
-    /// 1. Mismatched row_stride_bytes vs cols
-    /// 2. Input vector shorter than cols
-    /// 3. Packed buffer too small for dimensions
-    /// 4. Invalid row_stride (not multiple of 64)
+    /// 1. Input vector shorter than cols
+    /// 2. Packed buffer too small for dimensions
+    /// 3. Output vector wrong size
+    ///
+    /// Note: Mismatched row_stride_bytes is caught by debug_assert in gemv_qk256_row
+    /// and tested separately in qk256_stride_mismatch_panics.
     #[test]
     fn qk256_negatives_dimension_checks() {
-        // Test 1: Mismatched row_stride_bytes vs cols
-        {
-            let rows = 1usize;
-            let cols = 256usize;
-            let wrong_stride = 128usize; // Should be 64 for 256 cols
-            let qs_data = vec![0u8; rows * wrong_stride];
-            let x = vec![1.0f32; cols];
-            let mut y_out = vec![0.0f32; rows];
-
-            // This should panic in debug mode due to stride mismatch
-            // In release, it will produce garbage or panic
-            // We'll test the data size check instead
-            let result = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, wrong_stride);
-            assert!(
-                result.is_err(),
-                "Should fail with mismatched row_stride_bytes"
-            );
-            assert!(
-                result.unwrap_err().to_string().contains("too short"),
-                "Error should mention data size mismatch"
-            );
-        }
-
-        // Test 2: Input vector shorter than cols
+        // Test 1: Input vector shorter than cols
         {
             let rows = 1usize;
             let cols = 256usize;
@@ -692,7 +652,7 @@ mod tests {
             );
         }
 
-        // Test 3: Packed buffer too small for dimensions
+        // Test 2: Packed buffer too small for dimensions
         {
             let rows = 2usize;
             let cols = 256usize;
@@ -709,7 +669,7 @@ mod tests {
             );
         }
 
-        // Test 4: Output vector wrong size
+        // Test 3: Output vector wrong size
         {
             let rows = 2usize;
             let cols = 256usize;
@@ -725,5 +685,25 @@ mod tests {
                 "Error should mention output length mismatch"
             );
         }
+    }
+
+    /// Test for stride mismatch (panics in debug mode via debug_assert)
+    ///
+    /// This test verifies that mismatched row_stride_bytes vs cols is caught
+    /// by the debug_assert in gemv_qk256_row. In release builds, this test
+    /// is skipped since debug_assert is disabled.
+    #[test]
+    #[should_panic(expected = "row bytes mismatch")]
+    #[cfg(debug_assertions)]
+    fn qk256_stride_mismatch_panics() {
+        let rows = 1usize;
+        let cols = 256usize;
+        let wrong_stride = 128usize; // Should be 64 for 256 cols
+        let qs_data = vec![0u8; rows * wrong_stride];
+        let x = vec![1.0f32; cols];
+        let mut y_out = vec![0.0f32; rows];
+
+        // This will panic in debug mode due to debug_assert in gemv_qk256_row
+        let _ = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, wrong_stride);
     }
 }
