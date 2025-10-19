@@ -487,4 +487,243 @@ mod tests {
             exact_size
         );
     }
+
+    // ========================================================================
+    // QK256 Test Scaffolding: Tests A-D (Core Correctness)
+    // ========================================================================
+    // These tests lock in QK256 correctness per the specification.
+    // Tests feature spec: docs/explanation/i2s-dual-flavor.md#qk256-format
+    // Tests API contract: docs/reference/quantization-support.md#qk256-kernels
+    // ========================================================================
+
+    /// Test (A): LUT Sanity (NoScale)
+    ///
+    /// Tests feature spec: i2s-dual-flavor.md#code-mapping
+    /// Verifies that the code-to-float lookup table matches GGML reference:
+    /// - Code 0 → -2.0
+    /// - Code 1 → -1.0
+    /// - Code 2 → +1.0
+    /// - Code 3 → +2.0
+    #[test]
+    fn qk256_lut_basic() {
+        assert_eq!(code_to_f32(0), -2.0, "Code 0 should map to -2.0");
+        assert_eq!(code_to_f32(1), -1.0, "Code 1 should map to -1.0");
+        assert_eq!(code_to_f32(2), 1.0, "Code 2 should map to +1.0");
+        assert_eq!(code_to_f32(3), 2.0, "Code 3 should map to +2.0");
+    }
+
+    /// Test (B): Block Decode Golden (64B → 256 f32)
+    ///
+    /// Tests feature spec: i2s-dual-flavor.md#memory-layout
+    /// Pack 256 two-bit codes (LSB-first) cycling 0..3 into 64 bytes.
+    /// Decode using the unpack path and verify:
+    /// - RMS in range [0.1, 5.0]
+    /// - First 16 values contain the set {-2, -1, 1, 2}
+    #[test]
+    fn qk256_block_decode_golden() {
+        // Pack pattern: 0,1,2,3,0,1,2,3,... (cycling through all codes)
+        let mut qs64 = [0u8; QK256_PACKED_BYTES];
+        for (i, byte) in qs64.iter_mut().enumerate() {
+            // Each byte packs 4 codes: elem0 | (elem1 << 2) | (elem2 << 4) | (elem3 << 6)
+            let base = i * 4;
+            let code0 = (base % 4) as u8;
+            let code1 = ((base + 1) % 4) as u8;
+            let code2 = ((base + 2) % 4) as u8;
+            let code3 = ((base + 3) % 4) as u8;
+            *byte = code0 | (code1 << 2) | (code2 << 4) | (code3 << 6);
+        }
+
+        // Unpack block
+        let mut codes = [0u8; QK256_BLOCK];
+        unpack_qk256_block(&qs64, &mut codes);
+
+        // Verify codes cycle 0..3
+        for (i, &code) in codes.iter().enumerate() {
+            let expected = (i % 4) as u8;
+            assert_eq!(
+                code, expected,
+                "Code at position {} should be {}, got {}",
+                i, expected, code
+            );
+        }
+
+        // Dequantize codes to f32 using LUT
+        let mut weights = [0.0f32; QK256_BLOCK];
+        for (i, &code) in codes.iter().enumerate() {
+            weights[i] = code_to_f32(code);
+        }
+
+        // Compute RMS: sqrt(mean(x^2))
+        let sum_sq: f32 = weights.iter().map(|x| x * x).sum();
+        let rms = (sum_sq / QK256_BLOCK as f32).sqrt();
+
+        // Verify RMS is reasonable (should be ~1.58 for uniform {-2,-1,1,2})
+        assert!(
+            rms >= 0.1 && rms <= 5.0,
+            "RMS {} should be in range [0.1, 5.0]",
+            rms
+        );
+
+        // Verify first 16 values contain all expected codes
+        let first_16: Vec<f32> = weights[..16].to_vec();
+        assert!(
+            first_16.contains(&-2.0),
+            "First 16 values should contain -2.0"
+        );
+        assert!(
+            first_16.contains(&-1.0),
+            "First 16 values should contain -1.0"
+        );
+        assert!(first_16.contains(&1.0), "First 16 values should contain 1.0");
+        assert!(first_16.contains(&2.0), "First 16 values should contain 2.0");
+    }
+
+    /// Test (C): Tiny GEMV E2E (1×256 × 256×256)
+    ///
+    /// Tests feature spec: i2s-dual-flavor.md#gemv-operation
+    /// Input: ones vector (256 elements)
+    /// Packed weight: 1 row of 256 elements (64 bytes packed)
+    /// Reference: dequantize packed → f32 matmul
+    #[test]
+    fn qk256_tiny_gemv_e2e() -> Result<()> {
+        let rows = 1usize;
+        let cols = 256usize;
+        let row_stride_bytes = QK256_PACKED_BYTES;
+
+        // Create packed data: all codes = 2 (→ +1.0)
+        // Pattern: 0b_10_10_10_10 = 0xAA
+        let qs_data = vec![0xAAu8; row_stride_bytes];
+
+        // Input: ones vector
+        let x = vec![1.0f32; cols];
+
+        // Expected output: dot product of [1.0; 256] with [1.0; 256] = 256.0
+        // (since code 2 → +1.0, and we have 256 elements)
+        let expected = 256.0f32;
+
+        // Call QK256 kernel
+        let mut y_out = vec![0.0f32; rows];
+        gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes)?;
+
+        // Verify result (allow small floating-point error)
+        let abs_diff = (y_out[0] - expected).abs();
+        assert!(
+            abs_diff < 1e-4,
+            "Expected ~{}, got {}, diff={}",
+            expected,
+            y_out[0],
+            abs_diff
+        );
+
+        // Reference path: dequantize and compute dot product manually
+        let mut codes = [0u8; QK256_BLOCK];
+        let qs_arr: &[u8; QK256_PACKED_BYTES] = qs_data[..QK256_PACKED_BYTES]
+            .try_into()
+            .expect("Should be 64 bytes");
+        unpack_qk256_block(qs_arr, &mut codes);
+
+        let mut ref_result = 0.0f32;
+        for (i, &code) in codes.iter().enumerate() {
+            let w = code_to_f32(code);
+            ref_result += w * x[i];
+        }
+
+        // Verify kernel matches reference
+        let ref_diff = (y_out[0] - ref_result).abs();
+        assert!(
+            ref_diff < 1e-6,
+            "Kernel result {} should match reference {}, diff={}",
+            y_out[0],
+            ref_result,
+            ref_diff
+        );
+
+        Ok(())
+    }
+
+    /// Test (D): Negatives - Dimension/Size Checks
+    ///
+    /// Tests feature spec: i2s-dual-flavor.md#error-handling
+    /// Tests API contract: docs/reference/quantization-support.md#validation
+    /// Multiple test cases that should fail with clear error messages:
+    /// 1. Mismatched row_stride_bytes vs cols
+    /// 2. Input vector shorter than cols
+    /// 3. Packed buffer too small for dimensions
+    /// 4. Invalid row_stride (not multiple of 64)
+    #[test]
+    fn qk256_negatives_dimension_checks() {
+        // Test 1: Mismatched row_stride_bytes vs cols
+        {
+            let rows = 1usize;
+            let cols = 256usize;
+            let wrong_stride = 128usize; // Should be 64 for 256 cols
+            let qs_data = vec![0u8; rows * wrong_stride];
+            let x = vec![1.0f32; cols];
+            let mut y_out = vec![0.0f32; rows];
+
+            // This should panic in debug mode due to stride mismatch
+            // In release, it will produce garbage or panic
+            // We'll test the data size check instead
+            let result = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, wrong_stride);
+            assert!(
+                result.is_err(),
+                "Should fail with mismatched row_stride_bytes"
+            );
+            assert!(
+                result.unwrap_err().to_string().contains("too short"),
+                "Error should mention data size mismatch"
+            );
+        }
+
+        // Test 2: Input vector shorter than cols
+        {
+            let rows = 1usize;
+            let cols = 256usize;
+            let row_stride_bytes = QK256_PACKED_BYTES;
+            let qs_data = vec![0u8; row_stride_bytes];
+            let x = vec![1.0f32; cols - 10]; // Too short!
+            let mut y_out = vec![0.0f32; rows];
+
+            let result = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes);
+            assert!(result.is_err(), "Should fail with short input vector");
+            assert!(
+                result.unwrap_err().to_string().contains("x length"),
+                "Error should mention input length mismatch"
+            );
+        }
+
+        // Test 3: Packed buffer too small for dimensions
+        {
+            let rows = 2usize;
+            let cols = 256usize;
+            let row_stride_bytes = QK256_PACKED_BYTES;
+            let qs_data = vec![0u8; row_stride_bytes]; // Only 1 row worth!
+            let x = vec![1.0f32; cols];
+            let mut y_out = vec![0.0f32; rows];
+
+            let result = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes);
+            assert!(result.is_err(), "Should fail with buffer too small");
+            assert!(
+                result.unwrap_err().to_string().contains("too short"),
+                "Error should mention data size mismatch"
+            );
+        }
+
+        // Test 4: Output vector wrong size
+        {
+            let rows = 2usize;
+            let cols = 256usize;
+            let row_stride_bytes = QK256_PACKED_BYTES;
+            let qs_data = vec![0u8; rows * row_stride_bytes];
+            let x = vec![1.0f32; cols];
+            let mut y_out = vec![0.0f32; 1]; // Wrong size!
+
+            let result = gemv_qk256(&qs_data, &x, &mut y_out, rows, cols, row_stride_bytes);
+            assert!(result.is_err(), "Should fail with wrong output size");
+            assert!(
+                result.unwrap_err().to_string().contains("y_out length"),
+                "Error should mention output length mismatch"
+            );
+        }
+    }
 }

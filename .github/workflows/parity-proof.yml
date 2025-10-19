@@ -123,6 +123,48 @@ jobs:
             exit 1
           fi
 
+      - name: Validate QK256 Receipt Fields
+        if: always()
+        run: |
+          RECEIPT_PATH=$(find docs/baselines -name "parity-bitnetcpp.json" -type f | head -1)
+          if [ -f "$RECEIPT_PATH" ]; then
+            # Validate quantization format and flavor
+            jq -e '
+              .quant.format == "I2_S" and
+              .quant.flavor == "ggml_qk256_no_scale" and
+              (.parity.status == "ok" or .parity.status == "rust_only")
+            ' "$RECEIPT_PATH" >/dev/null || {
+              echo "❌ Receipt validation failed: invalid quant fields or parity status"
+              exit 1
+            }
+            echo "✅ Receipt fields validated: I2_S QK256 format confirmed"
+          else
+            echo "❌ No receipt found for validation"
+            exit 1
+          fi
+
+      - name: Validate QK256 Parity Cosine (if C++ available)
+        if: always()
+        run: |
+          RECEIPT_PATH=$(find docs/baselines -name "parity-bitnetcpp.json" -type f | head -1)
+          if [ -f "$RECEIPT_PATH" ]; then
+            # Check if C++ lane is available
+            CPP_AVAILABLE=$(jq -r '.parity.cpp_available' "$RECEIPT_PATH")
+            if [ "$CPP_AVAILABLE" = "true" ]; then
+              # Verify cosine_ok is true when C++ is available
+              jq -e '.parity.cosine_ok == true' "$RECEIPT_PATH" >/dev/null || {
+                echo "❌ C++ parity available but cosine_ok is not true"
+                exit 1
+              }
+              echo "✅ C++ parity validated: cosine_ok=true"
+            else
+              echo "ℹ️  C++ lane not available, skipping cosine validation (status: rust_only)"
+            fi
+          else
+            echo "❌ No receipt found for cosine validation"
+            exit 1
+          fi
+
       - name: Upload QK256 receipt
         if: always()
         uses: actions/upload-artifact@v4

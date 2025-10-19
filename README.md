@@ -146,6 +146,21 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 
 **Note:** Deterministic mode ensures reproducible token sequences and logits for validation workflows.
 
+#### QK256 Deterministic Sanity Testing
+
+For QK256 models, you can run a deterministic 1-token sanity test:
+
+```bash
+# QK256 deterministic sanity (scalar MVP; 1 token)
+BITNET_DETERMINISTIC=1 RAYON_NUM_THREADS=1 RUST_LOG=warn \
+bitnet run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "x" --temperature 0.0 --top-k 0 --top-p 1.0 --max-new-tokens 1
+```
+
+**Note:** The QK256 MVP uses a scalar kernel; parity testing in CI uses 1-token inference intentionally for speed. Longer runs will be slower than bitnet.cpp until SIMD optimizations land.
+
 #### Learn More
 
 - **Comprehensive Guide:**
