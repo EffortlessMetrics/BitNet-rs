@@ -11,6 +11,7 @@ pub mod loader;
 pub mod minimal;
 pub mod names;
 pub mod production_loader;
+pub mod qk256_utils;
 pub mod quant;
 pub mod security;
 pub mod transformer;

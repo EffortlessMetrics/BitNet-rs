@@ -10,8 +10,44 @@
 
 use anyhow::{Context, Result};
 use bitnet_inference::engine::DEFAULT_PARITY_TIMEOUT_SECS;
+use chrono::Local;
 use serde_json::json;
 use std::{env, fs, path::PathBuf, time::SystemTime};
+
+/// Get parity test timeout in seconds from environment or default
+fn parity_timeout_secs() -> u64 {
+    env::var("PARITY_TEST_TIMEOUT_SECS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(DEFAULT_PARITY_TIMEOUT_SECS)
+}
+
+/// Resolve workspace baselines directory
+/// Priority: BASELINES_DIR env var > <workspace>/docs/baselines
+fn resolve_workspace_baselines_dir() -> PathBuf {
+    if let Ok(p) = env::var("BASELINES_DIR") {
+        return PathBuf::from(p);
+    }
+
+    // Walk up from current manifest dir to find workspace root
+    let mut cur = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    for _ in 0..5 {
+        let candidate = cur.join("docs").join("baselines");
+        if candidate.exists() {
+            return candidate;
+        }
+        cur.pop();
+    }
+
+    // Fallback: assume we're in crossval/ and go up one level
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("docs").join("baselines")
+}
+
+/// Get today's parity receipt path: <baselines>/<YYYY-MM-DD>/parity-bitnetcpp.json
+fn todays_receipt_path() -> PathBuf {
+    let date = Local::now().format("%Y-%m-%d").to_string();
+    resolve_workspace_baselines_dir().join(date).join("parity-bitnetcpp.json")
+}
 
 /// Helper function to compute cosine similarity between two vectors
 #[allow(dead_code)]
@@ -332,10 +368,7 @@ async fn parity_bitnetcpp() -> Result<()> {
     // Wrap the test logic with a timeout guard
     // This prevents hangs and writes a diagnostic receipt on timeout
     // Note: Increased from 60s to accommodate 2B+ parameter models in release mode
-    let timeout_secs = std::env::var("PARITY_TEST_TIMEOUT_SECS")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(DEFAULT_PARITY_TIMEOUT_SECS);
+    let timeout_secs = parity_timeout_secs();
 
     match tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
@@ -489,23 +522,12 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     };
 
     // 5. Write parity receipt (AC4: path resolution to workspace root)
-    let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
-
-    // Safer than slicing fixed indices: split at 'T'
-    let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
-
-    // AC4: Receipt path resolution to workspace root
-    // Priority: BASELINES_DIR env var > <workspace>/docs/baselines/<YYYY-MM-DD>
-    let base_dir = std::env::var("BASELINES_DIR").ok().map(PathBuf::from).unwrap_or_else(|| {
-        // Resolve to workspace root (not relative to crate)
-        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        manifest_dir.join("..").join("docs").join("baselines")
-    });
-
-    let receipt_dir = base_dir.join(date_str);
+    // AC4: Receipt path resolution using centralized helpers
+    let receipt_path = todays_receipt_path();
+    let receipt_dir = receipt_path.parent().expect("receipt path must have parent directory");
 
     if !receipt_dir.exists() {
-        fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
+        fs::create_dir_all(receipt_dir).context("Failed to create baselines directory")?;
     }
 
     let model_sha = sha256_file(&gguf_path)?;
@@ -595,13 +617,13 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "cosine_ok": cosine_ok,
             "exact_match_rate": exact_match_rate,
             "first_divergence_step": first_divergence,
+            "timeout_seconds": parity_timeout_secs(),
             "status": parity_status,
         },
         "environment": env_meta,
     });
 
     // Atomic write using temp file
-    let receipt_path = receipt_dir.join("parity-bitnetcpp.json");
     let tmp_path = receipt_dir.join("parity-bitnetcpp.json.tmp");
     fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)
         .context("Failed to write parity receipt to temp file")?;
@@ -900,17 +922,12 @@ async fn rust_decode_n_greedy(
 /// Write a diagnostic receipt when the parity test times out
 fn write_timeout_receipt(gguf_path: &std::path::Path, timeout_secs: u64) -> Result<()> {
     let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
-    let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
 
-    let base_dir = std::env::var("BASELINES_DIR")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines"));
-
-    let receipt_dir = base_dir.join(date_str);
+    let receipt_path = todays_receipt_path();
+    let receipt_dir = receipt_path.parent().expect("receipt path must have parent directory");
 
     if !receipt_dir.exists() {
-        fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
+        fs::create_dir_all(receipt_dir).context("Failed to create baselines directory")?;
     }
 
     let commit = env::var("GIT_COMMIT").unwrap_or_else(|_| "unknown".into());
@@ -930,7 +947,6 @@ fn write_timeout_receipt(gguf_path: &std::path::Path, timeout_secs: u64) -> Resu
         "error": format!("Parity test exceeded {}-second timeout - check for performance regression or hanging inference", timeout_secs)
     });
 
-    let receipt_path = receipt_dir.join("parity-bitnetcpp.json");
     let tmp_path = receipt_dir.join("parity-bitnetcpp.json.tmp");
     fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)
         .context("Failed to write timeout receipt")?;

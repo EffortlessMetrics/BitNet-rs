@@ -3,6 +3,7 @@
 use super::{GgufReader, GgufTensorType, GgufTensors};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::names::{is_layernorm_weight, is_projection_weight};
+use crate::qk256_utils::{detect_qk256_orientation_by_bytes, expected_qk256_shape};
 use crate::{BitNetModel, Model};
 use bitnet_common::{
     BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
@@ -795,69 +796,6 @@ impl GgufLoader {
         name.contains("down_proj.weight")
     }
 
-    /// Determine expected QK256 tensor shape based on tensor name and model config
-    /// Returns (rows, cols) for [output_dim, input_dim] layout
-    fn expected_qk256_shape(name: &str, config: &BitNetConfig) -> Option<(usize, usize)> {
-        let hidden = config.model.hidden_size;
-        let intermediate = config.model.intermediate_size;
-        let head_dim = hidden / config.model.num_heads;
-        let kv_dim = head_dim * config.model.num_key_value_heads;
-
-        // Attention projections
-        if name.contains("attn_q") || name.contains("q_proj") {
-            Some((hidden, hidden)) // Q: [hidden, hidden]
-        } else if name.contains("attn_k")
-            || name.contains("k_proj")
-            || name.contains("attn_v")
-            || name.contains("v_proj")
-        {
-            Some((kv_dim, hidden)) // K,V: [kv_dim, hidden]
-        } else if name.contains("attn_output") || name.contains("o_proj") {
-            Some((hidden, hidden)) // O: [hidden, hidden]
-        }
-        // Feed-forward projections
-        else if name.contains("ffn_gate")
-            || name.contains("gate_proj")
-            || name.contains("ffn_up")
-            || name.contains("up_proj")
-        {
-            Some((intermediate, hidden)) // Gate,Up: [intermediate, hidden]
-        } else if name.contains("ffn_down") || name.contains("down_proj") {
-            Some((hidden, intermediate)) // Down: [hidden, intermediate]
-        } else {
-            None
-        }
-    }
-
-    /// Detect QK256 orientation based on byte count when config-based detection fails
-    fn detect_qk256_orientation_by_bytes(
-        name: &str,
-        shape_as_is: (usize, usize),
-        shape_transposed: (usize, usize),
-        available_bytes: usize,
-    ) -> (usize, usize) {
-        // Calculate expected sizes for both orientations
-        let blocks_as_is = shape_as_is.1.div_ceil(256);
-        let expected_as_is = shape_as_is.0 * blocks_as_is * 64;
-
-        let blocks_transposed = shape_transposed.1.div_ceil(256);
-        let expected_transposed = shape_transposed.0 * blocks_transposed * 64;
-
-        // Use whichever orientation matches the actual data size better
-        if available_bytes.abs_diff(expected_transposed) < available_bytes.abs_diff(expected_as_is)
-        {
-            tracing::debug!(
-                "QK256 '{}': using transposed [cols, rows] → bytes match {} vs {}",
-                name,
-                expected_transposed,
-                expected_as_is
-            );
-            shape_transposed
-        } else {
-            shape_as_is
-        }
-    }
-
     /// Heuristic: Microsoft 2B ships [hidden, vocab]; we want [vocab, hidden].
     fn embedding_is_transposed(dims: &[usize]) -> bool {
         dims.len() == 2 && dims[0] < dims[1] && dims[1] >= 32768
@@ -1404,7 +1342,7 @@ impl GgufLoader {
                         let shape_transposed = (info.shape[1], info.shape[0]);
 
                         // Use tensor name and config to determine expected shape
-                        let expected_shape = Self::expected_qk256_shape(&info.name, model_config);
+                        let expected_shape = expected_qk256_shape(&info.name, model_config);
 
                         if let Some((expected_rows, expected_cols)) = expected_shape {
                             // Check which orientation matches the expected shape
@@ -1438,8 +1376,7 @@ impl GgufLoader {
                                     shape_transposed.0,
                                     shape_transposed.1
                                 );
-                                Self::detect_qk256_orientation_by_bytes(
-                                    &info.name,
+                                detect_qk256_orientation_by_bytes(
                                     shape_as_is,
                                     shape_transposed,
                                     data.len(),
@@ -1447,8 +1384,7 @@ impl GgufLoader {
                             }
                         } else {
                             // No expected shape - use byte-based detection
-                            Self::detect_qk256_orientation_by_bytes(
-                                &info.name,
+                            detect_qk256_orientation_by_bytes(
                                 shape_as_is,
                                 shape_transposed,
                                 data.len(),

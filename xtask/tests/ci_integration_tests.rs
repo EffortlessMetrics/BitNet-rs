@@ -10,10 +10,16 @@
 //! - Parity smoke test integration
 
 use anyhow::Result;
+use once_cell::sync::Lazy;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::Mutex;
 use tempfile::TempDir;
+
+/// Mutex to protect env-var manipulation in tests
+/// Prevents test races when modifying environment variables
+static ENV_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
 
 /// AC3:ci_integration:authenticated
 /// Tests CI tokenizer provisioning with HF_TOKEN (official source)
@@ -83,11 +89,12 @@ fn test_ci_with_hf_token() -> Result<()> {
 #[test]
 #[ignore] // Requires network access
 fn test_ci_without_hf_token() -> Result<()> {
+    // Lock env-var mutex to prevent test races
+    let _guard = ENV_MUTEX.lock().unwrap();
+
     // Setup: Remove HF_TOKEN to simulate public CI environment
     let original_token = std::env::var("HF_TOKEN").ok();
-    unsafe {
-        std::env::remove_var("HF_TOKEN");
-    }
+    std::env::remove_var("HF_TOKEN");
 
     let temp_dir = TempDir::new()?;
     let models_dir = temp_dir.path().join("models");
@@ -97,10 +104,9 @@ fn test_ci_without_hf_token() -> Result<()> {
     let result = run_ci_tokenizer_fetch_mirror(&models_dir);
 
     // Restore original token
-    if let Some(token) = original_token {
-        unsafe {
-            std::env::set_var("HF_TOKEN", token);
-        }
+    match original_token {
+        Some(token) => std::env::set_var("HF_TOKEN", token),
+        None => std::env::remove_var("HF_TOKEN"),
     }
 
     match result {
@@ -227,14 +233,18 @@ fn test_ci_workflow_simulation() -> Result<()> {
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
 fn test_ci_fallback_strategy() -> Result<()> {
+    // Lock env-var mutex to prevent test races
+    let _guard = ENV_MUTEX.lock().unwrap();
+
+    // Save original token for restoration
+    let original_token = std::env::var("HF_TOKEN").ok();
+
     let temp_dir = TempDir::new()?;
     let models_dir = temp_dir.path().join("models");
     fs::create_dir(&models_dir)?;
 
     // Test 1: Official source fails (no HF_TOKEN) → fallback to mirror
-    unsafe {
-        std::env::remove_var("HF_TOKEN");
-    }
+    std::env::remove_var("HF_TOKEN");
 
     let result_fallback = run_ci_with_fallback_strategy(&models_dir);
 
@@ -250,6 +260,12 @@ fn test_ci_fallback_strategy() -> Result<()> {
                 e
             );
         }
+    }
+
+    // Restore original token
+    match original_token {
+        Some(token) => std::env::set_var("HF_TOKEN", token),
+        None => std::env::remove_var("HF_TOKEN"),
     }
 
     Ok(())

@@ -571,7 +571,19 @@ impl MultiHeadAttention {
         // Calculate cols from row_stride_bytes: each 256-element block uses 64 bytes
         // So: row_stride_bytes / 64 = number of 256-element blocks
         // And: cols = (row_stride_bytes / 64) * 256
-        let cols = (row_stride_bytes / 64) * 256;
+        // Safe calculation: (bytes/64)*256 == bytes*4, with overflow check
+        debug_assert!(
+            row_stride_bytes.is_multiple_of(64),
+            "QK256 row_stride_bytes must be multiple of 64"
+        );
+        let cols = row_stride_bytes
+            .checked_mul(4) // (bytes/64)*256 == bytes*4
+            .ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "QK256: row_stride_bytes overflow computing cols (row_stride={})",
+                    row_stride_bytes
+                ))
+            })?;
 
         // Extract bytes
         let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
@@ -799,7 +811,19 @@ impl FeedForward {
         // Calculate cols from row_stride_bytes: each 256-element block uses 64 bytes
         // So: row_stride_bytes / 64 = number of 256-element blocks
         // And: cols = (row_stride_bytes / 64) * 256
-        let cols = (row_stride_bytes / 64) * 256;
+        // Safe calculation: (bytes/64)*256 == bytes*4, with overflow check
+        debug_assert!(
+            row_stride_bytes.is_multiple_of(64),
+            "QK256 row_stride_bytes must be multiple of 64"
+        );
+        let cols = row_stride_bytes
+            .checked_mul(4) // (bytes/64)*256 == bytes*4
+            .ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "QK256: row_stride_bytes overflow computing cols (row_stride={})",
+                    row_stride_bytes
+                ))
+            })?;
 
         // Extract bytes
         let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
