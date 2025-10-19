@@ -5174,9 +5174,9 @@ fn run_inference_internal(
             Some(p) => {
                 let tok = bitnet_tokenizers::loader::load_tokenizer(p)
                     .with_context(|| format!("failed to load tokenizer: {}", p.display()))?;
-                // Convert Box<dyn Tokenizer + Send + Sync> to Arc<dyn Tokenizer>
+                // load_tokenizer now returns Arc<dyn Tokenizer> directly
                 // Create a simple wrapper that implements Tokenizer
-                struct TokenizerWrapper(Box<dyn bitnet_tokenizers::Tokenizer + Send + Sync>);
+                struct TokenizerWrapper(Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>);
                 impl bitnet_tokenizers::Tokenizer for TokenizerWrapper {
                     fn encode(
                         &self,

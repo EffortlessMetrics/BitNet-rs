@@ -90,9 +90,7 @@ pub fn detect_qk256_orientation_by_bytes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitnet_common::{
-        BitNetConfig, InferenceConfig, ModelConfig, PerformanceConfig, QuantizationConfig,
-    };
+    use bitnet_common::BitNetConfig;
 
     fn test_config() -> BitNetConfig {
         let mut cfg = BitNetConfig::default();

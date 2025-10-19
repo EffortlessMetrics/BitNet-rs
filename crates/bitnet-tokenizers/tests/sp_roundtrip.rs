@@ -4,6 +4,7 @@
 #[test]
 #[ignore] // Run with cargo test -- --ignored when SPM env var is set
 fn sp_roundtrip() {
+    use bitnet_tokenizers::Tokenizer;
     use bitnet_tokenizers::sp_tokenizer::SpTokenizer;
     use std::path::Path;
 

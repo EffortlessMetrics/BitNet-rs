@@ -1892,6 +1892,7 @@ mod tests {
             emit_receipt_dir: None,
             receipt_path: None,
             qa: false,
+            strict_loader: false,
         };
 
         let gen_config = GenerationConfig {

@@ -558,6 +558,8 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     // Collect environment metadata
     let env_meta = collect_env_metadata();
 
+    let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
+
     let receipt = json!({
         "timestamp": ts,
         "commit": commit,
@@ -583,13 +585,13 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             // Provenance metadata for reproducibility
             "path": env::var("BITNET_TOKENIZER")
                 .ok()
-                .map(|p| serde_json::Value::String(p))
+                .map(serde_json::Value::String)
                 .unwrap_or(serde_json::Value::Null),
             "repo": serde_json::Value::Null,  // Filled when fetched via xtask
             "sha256": env::var("BITNET_TOKENIZER")
                 .ok()
                 .and_then(|p| sha256_file(&PathBuf::from(p)).ok())
-                .map(|h| serde_json::Value::String(h))
+                .map(serde_json::Value::String)
                 .unwrap_or(serde_json::Value::Null),
         },
         "tokenization": {

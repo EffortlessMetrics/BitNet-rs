@@ -13,11 +13,13 @@ on:
 env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
+  RUST_LOG: warn
   # Deterministic testing environment
   BITNET_DETERMINISTIC: 1
   BITNET_SEED: 42
   RAYON_NUM_THREADS: 1
   BITNET_DISABLE_MINIMAL_LOADER: 1  # AC7: Enforce enhanced loader for both flavors
+  PARITY_TEST_TIMEOUT_SECS: 60
 
 jobs:
   # AC7: QK256 parity smoke (strict mode)
@@ -137,7 +139,23 @@ jobs:
               echo "❌ Receipt validation failed: invalid quant fields or parity status"
               exit 1
             }
-            echo "✅ Receipt fields validated: I2_S QK256 format confirmed"
+
+            # Validate validation.compute and validation.tokenizer
+            jq -e '
+              .validation.compute == "rust" and
+              .validation.tokenizer == "rust"
+            ' "$RECEIPT_PATH" >/dev/null || {
+              echo "❌ Receipt validation failed: invalid compute/tokenizer fields"
+              exit 1
+            }
+
+            # Validate timeout_seconds
+            jq -e '.timeout_seconds == 60' "$RECEIPT_PATH" >/dev/null || {
+              echo "❌ Receipt validation failed: timeout_seconds != 60"
+              exit 1
+            }
+
+            echo "✅ Receipt fields validated: I2_S QK256 format confirmed with strict loader"
           else
             echo "❌ No receipt found for validation"
             exit 1

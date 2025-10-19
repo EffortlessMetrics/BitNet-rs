@@ -1319,10 +1319,8 @@ impl InferenceEngine {
     fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
         // 1) ID-based stops (fast path - O(n) check on stop_token_ids list)
         // For LLaMA-3 and other models with token-ID stop sequences
-        if !config.stop_token_ids.is_empty() {
-            if config.stop_token_ids.iter().any(|&id| id == token) {
-                return true;
-            }
+        if !config.stop_token_ids.is_empty() && config.stop_token_ids.contains(&token) {
+            return true;
         }
 
         // 2) EOS token check (explicit or tokenizer default)

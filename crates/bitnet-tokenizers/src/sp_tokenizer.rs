@@ -14,20 +14,16 @@ pub struct SpTokenizer {
 
 #[cfg(feature = "spm")]
 impl SpTokenizer {
-    pub fn from_file(path: &std::path::Path) -> Result<Box<dyn Tokenizer>> {
+    pub fn from_file(path: &std::path::Path) -> Result<Self> {
         let sp = SentencePieceProcessor::open(path).map_err(|e| {
             BitNetError::Io(std::io::Error::other(format!(
                 "Failed to load SentencePiece model: {e}"
             )))
         })?;
-        Ok(Box::new(Self { sp, bos_token_id: None, eos_token_id: None }))
+        Ok(Self { sp, bos_token_id: None, eos_token_id: None })
     }
 
-    pub fn from_gguf_blob(
-        bytes: &[u8],
-        bos: Option<u32>,
-        eos: Option<u32>,
-    ) -> Result<Box<dyn Tokenizer>> {
+    pub fn from_gguf_blob(bytes: &[u8], bos: Option<u32>, eos: Option<u32>) -> Result<Self> {
         use std::io::Write;
         let mut tmp = tempfile::NamedTempFile::new()?;
         tmp.write_all(bytes)?;
@@ -36,7 +32,7 @@ impl SpTokenizer {
                 "Failed to load SentencePiece model from GGUF: {e}"
             )))
         })?;
-        Ok(Box::new(Self { sp, bos_token_id: bos, eos_token_id: eos }))
+        Ok(Self { sp, bos_token_id: bos, eos_token_id: eos })
     }
 }
 

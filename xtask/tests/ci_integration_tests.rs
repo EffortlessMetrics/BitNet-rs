@@ -94,7 +94,9 @@ fn test_ci_without_hf_token() -> Result<()> {
 
     // Setup: Remove HF_TOKEN to simulate public CI environment
     let original_token = std::env::var("HF_TOKEN").ok();
-    std::env::remove_var("HF_TOKEN");
+    unsafe {
+        std::env::remove_var("HF_TOKEN");
+    }
 
     let temp_dir = TempDir::new()?;
     let models_dir = temp_dir.path().join("models");
@@ -104,9 +106,11 @@ fn test_ci_without_hf_token() -> Result<()> {
     let result = run_ci_tokenizer_fetch_mirror(&models_dir);
 
     // Restore original token
-    match original_token {
-        Some(token) => std::env::set_var("HF_TOKEN", token),
-        None => std::env::remove_var("HF_TOKEN"),
+    unsafe {
+        match original_token {
+            Some(token) => std::env::set_var("HF_TOKEN", token),
+            None => std::env::remove_var("HF_TOKEN"),
+        }
     }
 
     match result {
@@ -244,7 +248,9 @@ fn test_ci_fallback_strategy() -> Result<()> {
     fs::create_dir(&models_dir)?;
 
     // Test 1: Official source fails (no HF_TOKEN) → fallback to mirror
-    std::env::remove_var("HF_TOKEN");
+    unsafe {
+        std::env::remove_var("HF_TOKEN");
+    }
 
     let result_fallback = run_ci_with_fallback_strategy(&models_dir);
 
@@ -263,9 +269,11 @@ fn test_ci_fallback_strategy() -> Result<()> {
     }
 
     // Restore original token
-    match original_token {
-        Some(token) => std::env::set_var("HF_TOKEN", token),
-        None => std::env::remove_var("HF_TOKEN"),
+    unsafe {
+        match original_token {
+            Some(token) => std::env::set_var("HF_TOKEN", token),
+            None => std::env::remove_var("HF_TOKEN"),
+        }
     }
 
     Ok(())

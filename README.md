@@ -147,6 +147,24 @@ BitNet.rs supports GGML-compatible QK256 I2_S models with pure-Rust inference (n
 dependencies required). This section shows how to download, validate, and run inference
 with QK256 models.
 
+#### QK256 Quick Start (Strict Loader)
+
+```bash
+# Run with strict loader (ensures QK256 format is properly loaded)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --strict-loader \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "What is 2+2?" \
+  --max-new-tokens 16
+```
+
+**Receipt Location:** Parity validation writes receipts to
+`docs/baselines/<YYYY-MM-DD>/parity-bitnetcpp.json` (override with `BASELINES_DIR`).
+
+**Known Quirk:** Some QK256 exporters write K/V projection weights as `[hidden,hidden]`
+instead of `[kv_dim,hidden]`. BitNet.rs auto-slices to the correct shape at load (warn-once).
+
 #### QK256 Setup
 
 ```bash

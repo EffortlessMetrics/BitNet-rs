@@ -9,8 +9,7 @@ pub fn load_auto(
 ) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     if let Some(p) = explicit {
         tracing::info!("Using tokenizer: {}", p.display());
-        let boxed_tok = crate::load_tokenizer(p)?;
-        return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
+        return crate::load_tokenizer(p);
     }
 
     // Try tokenizer embedded in GGUF (using proper BPE/SPM implementation)
@@ -34,14 +33,12 @@ pub fn load_auto(
         let json = dir.join("tokenizer.json");
         if json.exists() {
             tracing::info!("Using tokenizer: {} (auto-detected)", json.display());
-            let boxed_tok = crate::load_tokenizer(&json)?;
-            return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
+            return crate::load_tokenizer(&json);
         }
         let spm = dir.join("tokenizer.model");
         if spm.exists() {
             tracing::info!("Using tokenizer: {} (auto-detected)", spm.display());
-            let boxed_tok = crate::load_tokenizer(&spm)?;
-            return Ok(Arc::from(boxed_tok) as Arc<dyn Tokenizer + Send + Sync>);
+            return crate::load_tokenizer(&spm);
         }
     }
 
