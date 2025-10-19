@@ -192,6 +192,8 @@ automatically detects the appropriate template using:
 `instruct` for better out-of-box experience with instruction-tuned models. Use
 `--prompt-template raw` if you need raw completion behavior.
 
+**Default template:** `auto` — uses `llama3-chat` if the tokenizer exposes `<|eot_id|>`, otherwise falls back to `instruct`. Override with `--prompt-template`.
+
 ### Quick Start: Q&A with BitNet Models
 
 **For one-shot Q&A and math problems**, use `--prompt-template instruct`:

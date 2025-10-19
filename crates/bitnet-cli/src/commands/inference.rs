@@ -1431,16 +1431,6 @@ impl InferenceCommand {
         // Apply greedy decoding if requested
         let (temperature, top_k, top_p, repetition_penalty) = if self.greedy {
             (0.0, 0, 1.0, 1.0) // Force greedy: no sampling, no penalties
-        } else if self.qa {
-            // Q&A mode: Apply friendly defaults, but allow individual overrides
-            // The pattern is: use explicit flag value if set, otherwise use Q&A default
-            let qa_temp = if self.temperature != 0.7 { self.temperature } else { 0.7 };
-            let qa_top_k = self.top_k.unwrap_or(50);
-            let qa_top_p = self.top_p.unwrap_or(0.95);
-            let qa_rep_penalty =
-                if self.repetition_penalty != 1.1 { self.repetition_penalty } else { 1.1 };
-
-            (qa_temp, qa_top_k as u32, qa_top_p, qa_rep_penalty)
         } else {
             (
                 self.temperature,

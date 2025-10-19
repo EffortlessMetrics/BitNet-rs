@@ -612,6 +612,7 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
         "quant": {
             "format": "I2_S",
             "flavor": i2s_flavor.unwrap_or("unknown"),
+            "i2s_flavor": serde_json::Value::Null,
         },
         "parity": {
             "cpp_available": cpp_loaded,
