@@ -982,12 +982,16 @@ async fn run_simple_generation(
         template_type, all_stop_sequences, all_stop_ids
     );
 
-    // Determine BOS policy based on template
-    let bos = if prompt_template == "auto" || !bos { template_type.should_add_bos() } else { bos };
+    // Determine BOS policy (user flag wins, else template default)
+    let bos_policy = if bos {
+        true // explicit --bos flag
+    } else {
+        template_type.should_add_bos() // template default
+    };
 
     // Tokenize formatted prompt with proper BOS policy and special token parsing
     let parse_special = template_type.parse_special();
-    let mut tokens = tokenizer.encode(&formatted_prompt, bos, parse_special)?;
+    let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
@@ -1009,6 +1013,10 @@ async fn run_simple_generation(
 
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
+
+    // Rolling tail for fast string-stop checking
+    let max_stop_len = all_stop_sequences.iter().map(|s| s.len()).max().unwrap_or(0);
+    let mut tail = String::with_capacity(max_stop_len.saturating_add(16));
 
     // Generation loop
     for step_idx in 0..max_new_tokens {
@@ -1128,13 +1136,20 @@ async fn run_simple_generation(
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
 
-        // Check for stop token IDs (includes EOS and template stops like <|eot_id|>)
+        // Maintain rolling tail (bounded to longest stop sequence)
+        tail.push_str(&token_text);
+        if tail.len() > max_stop_len {
+            let cut = tail.len() - max_stop_len;
+            tail.drain(..cut);
+        }
+
+        // 1) Token-ID stops (includes template-resolved IDs like <|eot_id|>)
         if all_stop_ids.contains(&next_token) {
             debug!("Stopped on token ID: {}", next_token);
             break;
         }
 
-        // Check for EOS as fallback
+        // 2) EOS fallback
         if let Some(eos) = tokenizer.eos_token_id()
             && next_token == eos
         {
@@ -1142,17 +1157,13 @@ async fn run_simple_generation(
             break;
         }
 
-        // Check for string-based stop sequences in generated text
-        let generated_text = tokenizer.decode(&generated_tokens)?;
-        let mut should_stop = false;
-        for stop_seq in &all_stop_sequences {
-            if generated_text.ends_with(stop_seq) {
-                debug!("Stopped on sequence: {:?}", stop_seq);
-                should_stop = true;
-                break;
+        // 3) String-based stops on rolling tail (no full decode)
+        if !all_stop_sequences.is_empty()
+            && all_stop_sequences.iter().any(|pat| tail.ends_with(pat))
+        {
+            if let Some(hit) = all_stop_sequences.iter().find(|pat| tail.ends_with(*pat)) {
+                debug!("Stopped on sequence: {:?}", hit);
             }
-        }
-        if should_stop {
             break;
         }
     }
