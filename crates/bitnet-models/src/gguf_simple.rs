@@ -1,14 +1,51 @@
 use crate::formats::gguf::{GgufReader, GgufTensorType};
 use crate::loader::MmapFile;
+use crate::qk256_utils::{detect_qk256_orientation_by_bytes, expected_qk256_shape};
 use crate::quant::i2s_qk256::I2SQk256NoScale;
 use bitnet_common::{BitNetError, Device, QuantizationType, Result};
-use bitnet_quantization::{QuantizerTrait, TL1Quantizer, TL2Quantizer};
+use bitnet_quantization::{QuantizerTrait, TL1Quantizer, TL2Quantizer, qk256_tolerance_bytes};
 use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
 use std::collections::HashMap;
 use std::path::Path;
 
 /// QK256 size tolerance for layout detection (allows alignment padding)
 const QK256_SIZE_TOLERANCE: usize = 128;
+
+/// AC1: GGUF loader configuration for strict mode validation (Issue #469)
+///
+/// Controls QK256 tensor size validation behavior during model loading.
+///
+/// # Fields
+/// * `strict_mode` - If true, reject QK256 tensors with any size deviation (>0 bytes)
+/// * `tolerance_bytes` - Tolerance in bytes for permissive mode (default: calculated via qk256_tolerance_bytes)
+///
+/// # Examples
+/// ```
+/// use bitnet_models::GGUFLoaderConfig;
+///
+/// // Strict mode: reject any deviation
+/// let strict = GGUFLoaderConfig { strict_mode: true, ..Default::default() };
+///
+/// // Permissive mode (default): accept ≤0.1% deviation
+/// let permissive = GGUFLoaderConfig::default();
+/// assert_eq!(permissive.strict_mode, false);
+/// ```
+#[derive(Debug, Clone)]
+pub struct GGUFLoaderConfig {
+    /// Enable strict validation (reject any size deviation)
+    pub strict_mode: bool,
+    /// Tolerance bytes for permissive mode (ignored if strict_mode=true)
+    pub tolerance_bytes: usize,
+}
+
+impl Default for GGUFLoaderConfig {
+    fn default() -> Self {
+        Self {
+            strict_mode: false,   // Permissive by default (backward compat)
+            tolerance_bytes: 128, // 0.1% for typical QK256 tensors
+        }
+    }
+}
 
 /// Result of GGUF loading with both regular tensors and QK256 quantized weights
 pub struct GgufLoadResult {
@@ -30,7 +67,7 @@ pub fn load_gguf(
     path: &Path,
     device: Device,
 ) -> Result<(bitnet_common::BitNetConfig, HashMap<String, CandleTensor>)> {
-    let full = load_gguf_full(path, device)?;
+    let full = load_gguf_full(path, device, GGUFLoaderConfig::default())?;
     Ok((full.config, full.tensors))
 }
 
@@ -47,13 +84,22 @@ pub fn load_gguf(
 ///
 /// Returns `GgufLoadResult` with config, regular tensors, and QK256 quantized tensors.
 ///
+/// # Arguments
+/// * `path` - Path to GGUF model file
+/// * `device` - Target device for tensor placement (CPU/GPU)
+/// * `config` - Loader configuration (strict mode, tolerance bytes)
+///
 /// AC1: Parse/load all transformer layer weights (replacing mock initialization)
 /// AC2: Support I2_S, TL1, TL2 quantization with ≥99% accuracy vs FP32
 /// AC3: Robust tensor metadata validation (shapes, alignment, parameters)
 /// AC4: Graceful GGUF parsing error handling with descriptive messages
 /// AC6: CPU/GPU feature flag support with device-aware tensor placement
 /// AC7: Memory-efficient loading with zero-copy operations
-pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
+pub fn load_gguf_full(
+    path: &Path,
+    device: Device,
+    config: GGUFLoaderConfig,
+) -> Result<GgufLoadResult> {
     // AC4: Enhanced error handling with context + AC9: Backward compatibility fallback
     let mmap = MmapFile::open(path).map_err(|e| {
         BitNetError::Validation(format!("Failed to open GGUF file '{}': {}", path.display(), e))
@@ -63,7 +109,7 @@ pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
     match GgufReader::new(mmap.as_slice()) {
         Ok(gguf_reader) => {
             tracing::info!("Using enhanced GGUF parser for comprehensive weight loading");
-            let result = load_gguf_enhanced(&gguf_reader, device);
+            let result = load_gguf_enhanced(&gguf_reader, device, &config);
 
             // Check if this is a critical error that should be propagated
             // Note: As of QK256 integration, GGML I2_S is now supported in pure Rust
@@ -140,6 +186,7 @@ pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
 /// # Arguments
 /// * `gguf_reader` - GGUF file reader with tensor metadata and data access
 /// * `device` - Target device for tensor placement (CPU/GPU)
+/// * `config` - Loader configuration (strict mode, tolerance bytes)
 ///
 /// # Returns
 /// * `Result<(BitNetConfig, HashMap<String, CandleTensor>)>` - Configuration and tensor map
@@ -150,7 +197,11 @@ pub fn load_gguf_full(path: &Path, device: Device) -> Result<GgufLoadResult> {
 /// - Invalid tensor shapes
 /// - Unsupported quantization formats
 /// - Device placement failures
-fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLoadResult> {
+fn load_gguf_enhanced(
+    gguf_reader: &GgufReader,
+    device: Device,
+    loader_config: &GGUFLoaderConfig,
+) -> Result<GgufLoadResult> {
     let cdevice = match device {
         Device::Cpu => CDevice::Cpu,
         Device::Cuda(id) => match CDevice::new_cuda(id) {
@@ -194,7 +245,7 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
         let info = gguf_reader.get_tensor_info(i)?;
 
         // AC7: Memory-efficient loading with proper error context
-        match load_tensor_from_gguf(gguf_reader, i, info, &cdevice) {
+        match load_tensor_from_gguf(gguf_reader, i, info, &cdevice, loader_config) {
             Ok(Some(tensor)) => {
                 // Regular tensor - store in tensors map
                 tensor_map.insert(info.name.clone(), tensor);
@@ -228,38 +279,64 @@ fn load_gguf_enhanced(gguf_reader: &GgufReader, device: Device) -> Result<GgufLo
 
             if available_bytes.abs_diff(expected_qk256) <= QK256_SIZE_TOLERANCE {
                 // This is QK256 format - extract raw bytes and create I2SQk256NoScale
-                // GGUF stores tensors as [rows, cols] but QK256 data layout might be transposed
-                // Check if data size matches either orientation and use the correct one
-                let (rows, cols) = if info.shape.len() == 2 {
-                    // Try both orientations to see which matches the data size
-                    let shape_as_is = (info.shape[0], info.shape[1]);
-                    let shape_transposed = (info.shape[1], info.shape[0]);
+                // Skip QK256 orientation for non-2D tensors (prevents panics/log spam)
+                if info.shape.len() != 2 {
+                    tracing::warn!(
+                        "Skipping QK256 orientation for non-2D tensor '{}' shape {:?}",
+                        info.name,
+                        info.shape
+                    );
+                    continue;
+                }
 
-                    // Calculate expected sizes for both orientations
-                    let blocks_as_is = shape_as_is.1.div_ceil(256);
-                    let expected_as_is = shape_as_is.0 * blocks_as_is * 64;
+                // Prefer config-based orientation, then fall back to byte-based detection
+                let shape_as_is = (info.shape[0], info.shape[1]);
+                let shape_transposed = (info.shape[1], info.shape[0]);
 
-                    let blocks_transposed = shape_transposed.1.div_ceil(256);
-                    let expected_transposed = shape_transposed.0 * blocks_transposed * 64;
-
-                    // Use whichever orientation matches the actual data size better
-                    if available_bytes.abs_diff(expected_transposed)
-                        < available_bytes.abs_diff(expected_as_is)
-                    {
+                // Prefer config-based orientation
+                let (rows, cols) = if let Some((exp_r, exp_c)) =
+                    expected_qk256_shape(&info.name, &config)
+                {
+                    if shape_as_is == (exp_r, exp_c) {
                         tracing::debug!(
-                            "QK256 '{}': using transposed [cols, rows] → bytes match {} vs {}",
+                            "QK256 '{}': using as-is [{}, {}] (matches expected)",
                             info.name,
-                            expected_transposed,
-                            expected_as_is
+                            exp_r,
+                            exp_c
                         );
-                        shape_transposed
+                        (exp_r, exp_c)
+                    } else if shape_transposed == (exp_r, exp_c) {
+                        tracing::debug!(
+                            "QK256 '{}': using transposed [{}, {}] (matches expected)",
+                            info.name,
+                            exp_r,
+                            exp_c
+                        );
+                        (exp_r, exp_c)
                     } else {
-                        shape_as_is
+                        tracing::warn!(
+                            "QK256 '{}': shape mismatch - expected [{}, {}], gguf [{}, {}] or [{}, {}]",
+                            info.name,
+                            exp_r,
+                            exp_c,
+                            shape_as_is.0,
+                            shape_as_is.1,
+                            shape_transposed.0,
+                            shape_transposed.1
+                        );
+                        detect_qk256_orientation_by_bytes(
+                            shape_as_is,
+                            shape_transposed,
+                            available_bytes,
+                        )
                     }
-                } else if info.shape.len() == 1 {
-                    (1, info.shape[0])
                 } else {
-                    continue; // Skip non-1D/2D tensors
+                    // Fallback to byte-based detection if we lack an expected shape
+                    detect_qk256_orientation_by_bytes(
+                        shape_as_is,
+                        shape_transposed,
+                        available_bytes,
+                    )
                 };
 
                 // Validate shape: QK256 cannot be transposed after packing
@@ -901,6 +978,7 @@ fn load_tensor_from_gguf(
     tensor_index: usize,
     info: &crate::formats::gguf::TensorInfo,
     device: &CDevice,
+    loader_config: &GGUFLoaderConfig,
 ) -> Result<Option<CandleTensor>> {
     // AC7: Memory-efficient tensor loading
     let tensor_data = reader
@@ -976,17 +1054,48 @@ fn load_tensor_from_gguf(
             let _bitnet_inline_need = blocks_32 * 10; // 32 elem/block, 10 B/block (data + F16 scales)
             let ggml_need = blocks_256 * 64; // 256 elem/block, 64 B/block (QK_K format)
 
-            // Detect format by available bytes
-            if available.abs_diff(ggml_need) <= QK256_SIZE_TOLERANCE {
+            // AC1: Calculate tolerance based on loader config (strict mode vs permissive)
+            let tolerance = if loader_config.strict_mode {
+                0 // Strict mode: reject any deviation
+            } else {
+                qk256_tolerance_bytes(ggml_need) // Permissive: use 0.1% tolerance
+            };
+
+            let deviation = available.abs_diff(ggml_need);
+            let deviation_pct = ((available as f64 - ggml_need as f64) / ggml_need as f64) * 100.0;
+
+            // Detect format by available bytes with strict/permissive validation
+            if deviation <= tolerance {
                 // This is ggml I2_S (QK_K=256) - will be stored separately in i2s_qk256 map
-                tracing::info!(
+                tracing::debug!(
                     "I2_S '{}': GGML/llama.cpp format detected (QK_K=256, 64B/block). Will be stored in i2s_qk256 map.",
                     info.name
                 );
 
+                // AC1: Log warning in permissive mode if deviation exists
+                if !loader_config.strict_mode && deviation > 0 {
+                    tracing::warn!(
+                        "QK256 size mismatch (permissive): tensor='{}', expected={}B, actual={}B, \
+                         deviation={:+.2}% (threshold={:.2}%), ACCEPTED with tolerance",
+                        info.name,
+                        ggml_need,
+                        available,
+                        deviation_pct,
+                        (tolerance as f64 / ggml_need as f64) * 100.0
+                    );
+                }
+
                 // Return None to signal this should not be added to regular tensor map
                 // The second pass in load_gguf_enhanced will handle creating I2SQk256NoScale
                 return Ok(None);
+            } else if loader_config.strict_mode && deviation > 0 {
+                // AC1: Strict mode rejects any deviation
+                return Err(BitNetError::Validation(format!(
+                    "Tensor '{}' size mismatch (strict mode): expected {} bytes (256-elem blocks), \
+                     got {} bytes ({:+.2}% deviation). Use --strict-loader to enforce exact alignment \
+                     or regenerate GGUF with clean export.",
+                    info.name, ggml_need, available, deviation_pct
+                )));
             }
 
             // Not ggml format - must be BitNet I2_S with 32-element blocks

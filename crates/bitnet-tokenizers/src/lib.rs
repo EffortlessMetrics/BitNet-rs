@@ -84,6 +84,40 @@ pub trait Tokenizer: Send + Sync {
     fn vocab_size(&self) -> usize;
     fn token_to_piece(&self, token: u32) -> Option<String>;
 
+    /// Convert a token string to its token ID
+    ///
+    /// This method is useful for resolving special tokens like `<|eot_id|>` or `<|end_of_text|>`
+    /// to their corresponding token IDs for efficient stop sequence matching during generation.
+    ///
+    /// # Arguments
+    /// * `token` - The token string to look up (e.g., "<|eot_id|>")
+    ///
+    /// # Returns
+    /// * `Some(token_id)` if the token exists in the vocabulary
+    /// * `None` if the token is not found
+    ///
+    /// # Example
+    /// ```ignore
+    /// let eot_id = tokenizer.token_to_id("<|eot_id|>")?;
+    /// ```
+    fn token_to_id(&self, _token: &str) -> Option<u32> {
+        // Default implementation returns None
+        // Specific tokenizer implementations should override this
+        None
+    }
+
+    /// Real vocabulary size from tokenizer model (no padding)
+    ///
+    /// AC5: This is the actual number of tokens in the vocabulary,
+    /// not the padded size used in GGUF for alignment (e.g., 32000 vs 32064).
+    /// Use this for cross-validation parity assertions.
+    ///
+    /// Default implementation returns `vocab_size()` (assumes no padding).
+    /// GGUF tokenizers should override this to return the real token count.
+    fn real_vocab_size(&self) -> usize {
+        self.vocab_size()
+    }
+
     // Legacy shims for backward compatibility (default implementations)
     /// Legacy encode method - calls new encode with sensible defaults
     fn encode_legacy(&self, text: &str, add_special_tokens: bool) -> Result<Vec<u32>> {

@@ -37,11 +37,17 @@ impl BitNetModel {
     pub fn from_gguf(
         config: BitNetConfig,
         tensors: HashMap<String, CandleTensor>,
+        raw_tensors: HashMap<String, CandleTensor>,
         device: Device,
     ) -> Result<Self> {
         eprintln!(
             "DEBUG from_gguf: Received config: hidden={}, n_heads={}, n_kv_heads={}",
             config.model.hidden_size, config.model.num_heads, config.model.num_key_value_heads
+        );
+        eprintln!(
+            "DEBUG from_gguf: Received {} tensors, {} raw QK256 tensors",
+            tensors.len(),
+            raw_tensors.len()
         );
 
         // Validate that required tensors are present
@@ -69,7 +75,7 @@ impl BitNetModel {
         }
 
         // Try to build transformer model; propagate errors so missing weights fail fast
-        let transformer = Self::build_transformer(&config, &tensors, &device)?;
+        let transformer = Self::build_transformer(&config, &tensors, &raw_tensors, &device)?;
 
         Ok(Self { config, device, tensors, transformer: Some(transformer) })
     }
@@ -78,6 +84,7 @@ impl BitNetModel {
     fn build_transformer(
         config: &BitNetConfig,
         tensors: &HashMap<String, CandleTensor>,
+        raw_tensors: &HashMap<String, CandleTensor>,
         device: &Device,
     ) -> Result<Arc<TransformerModel>> {
         use crate::weight_mapper::{
@@ -122,8 +129,13 @@ impl BitNetModel {
             updated_config.model.hidden_size = detected_hidden;
         }
 
+        // Remap raw_tensors keys (QK256 tensors) to match transformer structure
+        // Keys like "blk.0.attn_q.weight.qk256_qs" -> "layers.0.attention.q_proj.weight.qk256_qs"
+        // The remapper now handles .qk256_qs suffix (strips, remaps, re-appends)
+        let raw_mapped = remap_gguf_weights(raw_tensors)?;
+
         let vb = create_var_builder(mapped.clone(), DType::F32, &device)?;
-        let model = TransformerModel::new_with_tensors(updated_config, vb, mapped)?;
+        let model = TransformerModel::new_with_tensors(updated_config, vb, raw_mapped)?;
         Ok(Arc::new(model))
     }
 

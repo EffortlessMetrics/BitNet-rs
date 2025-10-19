@@ -4,12 +4,13 @@
 //! Supports model loading, inference, conversion, benchmarking, and serving.
 
 use anyhow::{Context, Result};
+use bitnet_common::Tensor;
 use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
 use std::io;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 #[cfg(feature = "full-cli")]
 mod commands;
@@ -19,6 +20,7 @@ mod exit;
 mod ln_rules;
 mod sampling;
 mod score;
+pub mod tokenizer_discovery;
 
 use exit::*;
 
@@ -81,17 +83,34 @@ use config::{CliConfig, ConfigBuilder};
 #[command(about = "BitNet.rs — 1-bit neural network inference with strict receipts")]
 #[command(long_about = r#"BitNet.rs CLI — one-shot generation and chat with strict receipts
 
-Examples:
-  # Deterministic Q&A (greedy)
-  bitnet run --model model.gguf --tokenizer tokenizer.json \
-    --prompt "What is 2+2?" --max-tokens 16 --temperature 0.0
+QUICK EXAMPLES:
+
+  # Deterministic math sanity check (validates model correctness)
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "Answer with a single digit: 2+2=" --max-tokens 1 --temperature 0.0 --greedy
+
+  # General Q&A with instruct template
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "What is 2+2?" --max-tokens 16 --temperature 0.0 --greedy
 
   # Creative completion (nucleus sampling)
-  bitnet run --model model.gguf --tokenizer tokenizer.json \
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
     --prompt "Explain photosynthesis" --max-tokens 128 --temperature 0.7 --top-p 0.95
 
-  # Interactive chat (auto-detects template)
-  bitnet chat --model model.gguf --tokenizer tokenizer.json
+  # Interactive chat (auto-detects template, clean output)
+  RUST_LOG=warn bitnet chat --model model.gguf --tokenizer tokenizer.json
+
+LOGGING:
+  Set RUST_LOG=warn (default: info) to reduce log noise and focus on generated text.
+  Options: error, warn, info, debug, trace
+
+PERFORMANCE:
+  For best CPU throughput, build with:
+    RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+      cargo build --release --features cpu
+
+  Run with:
+    RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn bitnet run ...
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
@@ -139,6 +158,28 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Run simple text generation
+    ///
+    /// # Examples
+    ///
+    /// Auto-detect template for Q&A (recommended):
+    ///   bitnet run --model model.gguf --prompt "Who wrote Pride and Prejudice?"
+    ///
+    /// Instruct template (explicit Q&A format):
+    ///   bitnet run --model model.gguf --prompt-template instruct \
+    ///     --prompt "What is 2+2?" --max-tokens 16
+    ///
+    /// LLaMA-3 chat format with system prompt:
+    ///   bitnet run --model model.gguf --prompt-template llama3-chat \
+    ///     --system-prompt "You are a helpful assistant" \
+    ///     --prompt "Explain photosynthesis" --max-tokens 128
+    ///
+    /// Deterministic Q&A with greedy decoding:
+    ///   bitnet run --model model.gguf --prompt "Test question" \
+    ///     --temperature 0.0 --greedy --seed 42
+    ///
+    /// Raw completion (no Q&A formatting):
+    ///   bitnet run --model model.gguf --prompt-template raw \
+    ///     --prompt "2+2=" --max-tokens 16
     #[command(alias = "generate")]
     Run {
         /// Model file path
@@ -153,8 +194,8 @@ enum Commands {
         #[arg(short, long)]
         prompt: String,
 
-        /// Maximum new tokens to generate
-        #[arg(long, default_value_t = 32)]
+        /// Maximum new tokens to generate (aliases: --max-tokens, --n-predict)
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 32)]
         max_new_tokens: usize,
 
         /// Temperature for sampling (0 = greedy)
@@ -190,6 +231,10 @@ enum Commands {
         #[arg(long, default_value_t = false)]
         strict_tokenizer: bool,
 
+        /// Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)
+        #[arg(long, default_value_t = false)]
+        strict_loader: bool,
+
         /// Output JSON results to file
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
@@ -213,6 +258,22 @@ enum Commands {
         /// Number of threads to use (0 = all cores)
         #[arg(long, default_value_t = 0)]
         threads: usize,
+
+        /// Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+        #[arg(long, value_name = "TEMPLATE", default_value = "auto")]
+        prompt_template: String,
+
+        /// System prompt for chat models
+        #[arg(long, value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Stop sequences (can be repeated for multiple sequences)
+        #[arg(long = "stop", value_name = "SEQ")]
+        stop: Vec<String>,
+
+        /// Stop token IDs (numeric token IDs, can be repeated)
+        #[arg(long = "stop-id", value_name = "ID")]
+        stop_id: Vec<u32>,
 
         /// Dump logit steps during generation (max steps)
         #[arg(long)]
@@ -259,11 +320,41 @@ enum Commands {
 
     #[cfg(feature = "full-cli")]
     /// Run inference on a model
+    ///
+    /// # Examples
+    ///
+    /// Auto-detect template (recommended):
+    ///   bitnet inference --model model.gguf --prompt "Who wrote Pride and Prejudice?"
+    ///
+    /// Instruct template (Q&A format):
+    ///   bitnet inference --model model.gguf --prompt-template instruct \
+    ///     --prompt "What is 2+2?" --max-tokens 16
+    ///
+    /// LLaMA-3 chat with system prompt:
+    ///   bitnet inference --model model.gguf --prompt-template llama3-chat \
+    ///     --system-prompt "You are a helpful assistant" \
+    ///     --prompt "Explain photosynthesis" --max-tokens 128
+    ///
+    /// Batch Q&A from file:
+    ///   bitnet inference --model model.gguf --input-file questions.txt \
+    ///     --batch-size 4 --format jsonl > answers.jsonl
     #[command(alias = "infer")]
     Inference(Box<InferenceCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Interactive chat mode (streaming)
+    ///
+    /// # Examples
+    ///
+    /// Auto-detect chat template:
+    ///   bitnet chat --model model.gguf --tokenizer tokenizer.json
+    ///
+    /// LLaMA-3 chat with system prompt:
+    ///   bitnet chat --model model.gguf --prompt-template llama3-chat \
+    ///     --system-prompt "You are a helpful coding assistant"
+    ///
+    /// Creative chat with nucleus sampling:
+    ///   bitnet chat --model model.gguf --temperature 0.8 --top-p 0.95
     Chat(Box<InferenceCommand>),
 
     #[cfg(feature = "full-cli")]
@@ -379,12 +470,17 @@ async fn main() -> Result<()> {
             allow_mock,
             strict_mapping,
             strict_tokenizer,
+            strict_loader,
             json_out,
             dump_ids,
             bos,
             greedy,
             deterministic,
             threads,
+            prompt_template,
+            system_prompt,
+            stop,
+            stop_id,
             dump_logit_steps,
             logits_topk,
             assert_greedy,
@@ -402,12 +498,17 @@ async fn main() -> Result<()> {
                 allow_mock,
                 strict_mapping,
                 strict_tokenizer,
+                strict_loader,
                 json_out,
                 dump_ids,
                 bos,
                 greedy,
                 deterministic,
                 threads,
+                prompt_template,
+                system_prompt,
+                stop,
+                stop_id,
                 dump_logit_steps,
                 logits_topk,
                 assert_greedy,
@@ -490,7 +591,10 @@ fn setup_logging(config: &CliConfig, log_level_override: Option<&str>) -> Result
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(level));
 
-    let subscriber = tracing_subscriber::fmt().with_env_filter(filter).with_target(false);
+    let subscriber = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_target(false)
+        .with_writer(std::io::stderr);
 
     match config.logging.format.as_str() {
         "json" => {
@@ -539,7 +643,7 @@ async fn handle_tokenize_command(
     });
 
     // Load tokenizer: prefer external, fall back to GGUF
-    let (tokenizer, is_external): (Box<dyn Tokenizer>, bool) =
+    let (tokenizer, is_external): (std::sync::Arc<dyn Tokenizer + Send + Sync>, bool) =
         if let Some(spm_path) = tokenizer_path {
             let tok = bitnet_tokenizers::load_tokenizer(&spm_path).with_context(|| {
                 format!("Failed to load external tokenizer: {}", spm_path.display())
@@ -634,12 +738,17 @@ async fn run_simple_generation(
     allow_mock: bool,
     _strict_mapping: bool,
     strict_tokenizer: bool,
+    strict_loader: bool,
     json_out: Option<std::path::PathBuf>,
     dump_ids: bool,
     bos: bool,
     greedy: bool,
     deterministic: bool,
     threads: usize,
+    prompt_template: String,
+    system_prompt: Option<String>,
+    stop: Vec<String>,
+    stop_id: Vec<u32>,
     dump_logit_steps: Option<usize>,
     logits_topk: usize,
     assert_greedy: bool,
@@ -669,8 +778,31 @@ async fn run_simple_generation(
         }
     }
 
+    // Set strict loader mode if requested (AC1: fail-fast with enhanced loader + strict tolerance)
+    if strict_loader {
+        unsafe {
+            std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+            std::env::set_var("BITNET_STRICT_MODE", "1");
+        }
+        debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
+    }
+
     // Override temperature if greedy mode
     let temperature = if greedy { 0.0 } else { temperature };
+
+    // Parse and resolve template type
+    use bitnet_inference::TemplateType;
+    let template_type: TemplateType = if prompt_template == "auto" {
+        // Auto-detect will be done after loading tokenizer
+        TemplateType::Instruct // Default fallback
+    } else {
+        prompt_template.parse().with_context(|| {
+            format!(
+                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat",
+                prompt_template
+            )
+        })?
+    };
 
     println!("Loading model from: {}", model_path.display());
 
@@ -698,11 +830,18 @@ async fn run_simple_generation(
             }
             tracing::warn!("Real loader failed: {e}. Falling back to MOCK loader (by request).");
             // Mock fallback
-            let load_result = bitnet_models::gguf_simple::load_gguf_full(&model_path, Device::Cpu)
-                .context("Mock loader also failed")?;
+            let load_result = bitnet_models::gguf_simple::load_gguf_full(
+                &model_path,
+                Device::Cpu,
+                bitnet_models::GGUFLoaderConfig::default(),
+            )
+            .context("Mock loader also failed")?;
+            // TODO: Wire up load_result.i2s_qk256 to raw_tensors once GGUF loader is updated
+            let raw_tensors = std::collections::HashMap::new();
             let m = bitnet_models::BitNetModel::from_gguf(
                 load_result.config.clone(),
                 load_result.tensors,
+                raw_tensors,
                 Device::Cpu,
             )
             .context("Failed to build mock model")?;
@@ -710,81 +849,149 @@ async fn run_simple_generation(
         }
     };
 
-    // Load tokenizer
-    let tokenizer_path = tokenizer_path.or_else(|| {
-        // Look for common tokenizer file names
-        let base = model_path.with_extension("");
-        for ext in &["tokenizer.json", "tokenizer.model", "vocab.json"] {
-            let path = base.with_extension(ext);
-            if path.exists() {
-                return Some(path);
-            }
-        }
-        None
-    });
+    // Load tokenizer with auto-discovery
+    // Priority: explicit path → sibling tokenizer.json → parent tokenizer.json → GGUF embedded → mock
 
     // Track GGUF metadata for JSON output
     let mut gguf_metadata: Option<(usize, usize)> = None;
     let mut external_tokenizer = false;
 
-    let tokenizer = if let Some(path) = tokenizer_path {
-        external_tokenizer = true;
-        println!("Loading tokenizer from: {}", path.display());
-        // Try to load real tokenizer
-        match bitnet_tokenizers::load_tokenizer(&path) {
-            Ok(tok) => tok,
-            Err(e) => {
-                if strict_tokenizer {
-                    eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
-                    std::process::exit(EXIT_STRICT_TOKENIZER);
+    let tokenizer: std::sync::Arc<dyn Tokenizer + Send + Sync> = {
+        // Try auto-discovery first (handles explicit, sibling, parent)
+        let discovered_path = if tokenizer_path.is_some() {
+            // Explicit path provided
+            crate::tokenizer_discovery::resolve_tokenizer(&model_path, tokenizer_path)
+        } else {
+            // Try sibling/parent discovery
+            crate::tokenizer_discovery::resolve_tokenizer(&model_path, None)
+        };
+
+        match discovered_path {
+            Ok(path) => {
+                // Found tokenizer via discovery
+                external_tokenizer = true;
+                println!("Loading tokenizer from: {}", path.display());
+
+                match bitnet_tokenizers::load_tokenizer(&path) {
+                    Ok(tok) => tok,
+                    Err(e) => {
+                        if strict_tokenizer {
+                            eprintln!("Strict tokenizer failed: Failed to load tokenizer: {e}");
+                            std::process::exit(EXIT_STRICT_TOKENIZER);
+                        }
+                        if !allow_mock {
+                            anyhow::bail!(
+                                "Failed to load tokenizer from {}: {e}. Use --allow-mock to use mock tokenizer.",
+                                path.display()
+                            );
+                        }
+                        println!("Warning: Using mock tokenizer due to: {e}");
+                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
+                    }
                 }
-                if !allow_mock {
-                    anyhow::bail!(
-                        "Failed to load tokenizer: {e}. Use --allow-mock to use mock tokenizer."
-                    );
-                }
-                println!("Warning: Using mock tokenizer due to: {e}");
-                Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
             }
-        }
-    } else {
-        // Try to load tokenizer from GGUF if no external tokenizer specified
-        println!("Attempting to load tokenizer from GGUF model...");
+            Err(_discovery_err) => {
+                // Discovery failed, try GGUF embedded as fallback
+                println!("No external tokenizer found, attempting to load from GGUF model...");
 
-        // Read the GGUF file to get tokenizer metadata
-        let gguf_data = std::fs::read(&model_path)
-            .context("Failed to read GGUF file for tokenizer extraction")?;
-        let reader = bitnet_models::GgufReader::new(&gguf_data)
-            .context("Failed to parse GGUF for tokenizer extraction")?;
+                // Read the GGUF file to get tokenizer metadata
+                let gguf_data = std::fs::read(&model_path)
+                    .context("Failed to read GGUF file for tokenizer extraction")?;
+                let reader = bitnet_models::GgufReader::new(&gguf_data)
+                    .context("Failed to parse GGUF for tokenizer extraction")?;
 
-        // Capture metadata counts
-        let n_tensors = reader.tensor_count() as usize;
-        let n_kv = reader.metadata_keys().len();
-        gguf_metadata = Some((n_kv, n_tensors));
+                // Capture metadata counts
+                let n_tensors = reader.tensor_count() as usize;
+                let n_kv = reader.metadata_keys().len();
+                gguf_metadata = Some((n_kv, n_tensors));
 
-        match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
-            Ok(tok) => {
-                println!("Successfully loaded SentencePiece tokenizer from GGUF");
-                tok
-            }
-            Err(e) => {
-                if strict_tokenizer {
-                    eprintln!("Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}");
-                    std::process::exit(EXIT_STRICT_TOKENIZER);
+                match bitnet_tokenizers::loader::load_tokenizer_from_gguf_reader(&reader) {
+                    Ok(tok) => {
+                        println!("Successfully loaded SentencePiece tokenizer from GGUF");
+                        tok
+                    }
+                    Err(e) => {
+                        if strict_tokenizer {
+                            eprintln!(
+                                "Strict tokenizer failed: Failed to load tokenizer from GGUF: {e}"
+                            );
+                            std::process::exit(EXIT_STRICT_TOKENIZER);
+                        }
+                        if !allow_mock {
+                            // Provide actionable error message
+                            let model_dir =
+                                model_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+                            anyhow::bail!(
+                                "Failed to load tokenizer from GGUF: {e}\n\
+                                 \n\
+                                 No tokenizer found. Solutions:\n\
+                                 1. Download tokenizer:\n\
+                                    cargo run -p xtask -- tokenizer --into {}\n\
+                                 2. Provide explicit tokenizer path:\n\
+                                    --tokenizer /path/to/tokenizer.json\n\
+                                 3. Use mock tokenizer for testing:\n\
+                                    --allow-mock",
+                                model_dir.display()
+                            );
+                        }
+                        println!("Warning: Using mock tokenizer due to: {e}");
+                        std::sync::Arc::new(bitnet_tokenizers::MockTokenizer::new())
+                    }
                 }
-                if !allow_mock {
-                    anyhow::bail!(
-                        "Failed to load tokenizer from GGUF: {e}. Specify --tokenizer <path> or use --allow-mock."
-                    );
-                }
-                println!("Warning: Using mock tokenizer due to: {e}");
-                Box::new(bitnet_tokenizers::MockTokenizer::new()) as Box<dyn Tokenizer>
             }
         }
     };
 
-    // Tokenize prompt with BOS policy
-    let mut tokens = tokenizer.encode(&prompt, bos, false)?;
+    // Auto-detect template if needed
+    let template_type = if prompt_template == "auto" {
+        // Check if tokenizer has special tokens for LLaMA-3
+        if tokenizer.token_to_id("<|eot_id|>").is_some() {
+            debug!("Auto-detected llama3-chat template (tokenizer has <|eot_id|>)");
+            TemplateType::Llama3Chat
+        } else {
+            debug!("Auto-detected instruct template (fallback)");
+            TemplateType::Instruct
+        }
+    } else {
+        template_type
+    };
+
+    // Format prompt using the template
+    let formatted_prompt = template_type.apply(&prompt, system_prompt.as_deref());
+
+    // Get template's default stop sequences and merge with manual stops
+    let template_stops = template_type.default_stop_sequences();
+    let mut all_stop_sequences = stop.clone();
+    for template_stop in template_stops {
+        if !all_stop_sequences.contains(&template_stop) {
+            all_stop_sequences.push(template_stop);
+        }
+    }
+
+    // Resolve template stop sequences to token IDs and merge with manual stop IDs
+    let template_stop_ids = template_type.resolve_stop_token_ids(tokenizer.as_ref());
+    let mut all_stop_ids = stop_id.clone();
+    for template_id in template_stop_ids {
+        if !all_stop_ids.contains(&template_id) {
+            all_stop_ids.push(template_id);
+        }
+    }
+
+    debug!(
+        "Template: {} | Stop sequences: {:?} | Stop IDs: {:?}",
+        template_type, all_stop_sequences, all_stop_ids
+    );
+
+    // Determine BOS policy (user flag wins, else template default)
+    let bos_policy = if bos {
+        true // explicit --bos flag
+    } else {
+        template_type.should_add_bos() // template default
+    };
+
+    // Tokenize formatted prompt with proper BOS policy and special token parsing
+    let parse_special = template_type.parse_special();
+    let mut tokens = tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
@@ -794,7 +1001,7 @@ async fn run_simple_generation(
     // Create sampler
     let mut sampler = Sampler::new(temperature, top_k, top_p, repetition_penalty, seed);
 
-    print!("Generating: {}", prompt);
+    print!("Generating: {}", formatted_prompt);
     std::io::Write::flush(&mut std::io::stdout())?;
 
     // Track timing
@@ -807,6 +1014,14 @@ async fn run_simple_generation(
     // Track logits dump if requested
     let mut logits_dump: Vec<LogitStep> = Vec::new();
 
+    // Rolling tail for fast string-stop checking (only if we have string stops)
+    let max_stop_len = all_stop_sequences.iter().map(|s| s.len()).max().unwrap_or(0);
+    let mut tail = if max_stop_len > 0 {
+        Some(String::with_capacity(max_stop_len.saturating_add(16)))
+    } else {
+        None
+    };
+
     // Generation loop
     for step_idx in 0..max_new_tokens {
         // Embed tokens
@@ -818,11 +1033,35 @@ async fn run_simple_generation(
         // Extract last token hidden state first to avoid 3D×2D matmul issues
         let last_hidden = extract_last_token_hidden(&h)?;
 
+        // Debug tap: hidden state RMS sanity (catches "everything is zero")
+        if std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") && step_idx == 0 {
+            let h_vec = tensor_to_vec(&last_hidden)?;
+            let hidden_rms = compute_rms(&h_vec);
+            eprintln!("hidden_rms={:.6}", hidden_rms);
+        }
+
         // Get logits from last token hidden state
         let logits = model.logits(&last_hidden)?;
 
-        // Extract logits vector (should now be 2D tensor)
+        // Extract logits vector with robust shape handling
         let logits_vec = extract_logits_2d(&logits)?;
+
+        // Debug tap: dump logits shape and top-5 on first step (BITNET_DEBUG_LOGITS=1)
+        if step_idx == 0 && std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") {
+            let logits_shape = logits.shape();
+            eprintln!(
+                "logits_shape=(rows={}, cols={})",
+                logits_shape.first().copied().unwrap_or(1),
+                logits_shape.get(1).copied().unwrap_or(logits_vec.len())
+            );
+            let mut idx: Vec<usize> = (0..logits_vec.len()).collect();
+            idx.sort_by(|a, b| {
+                logits_vec[*b].partial_cmp(&logits_vec[*a]).unwrap_or(std::cmp::Ordering::Equal)
+            });
+            let top = &idx[..idx.len().min(5)];
+            eprintln!("top5_idx={:?}", top);
+            eprintln!("top5_val={:?}", top.iter().map(|&i| logits_vec[i]).collect::<Vec<_>>());
+        }
 
         // Capture logits if requested
         if dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps) {
@@ -901,10 +1140,43 @@ async fn run_simple_generation(
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
 
-        // Check for EOS
+        // Maintain rolling tail (if present)
+        if let Some(t) = &mut tail {
+            t.push_str(&token_text);
+            if t.len() > max_stop_len {
+                let cut = t.len() - max_stop_len;
+                // SAFETY: Find char boundary (compatible with MSRV 1.90.0)
+                // floor_char_boundary is 1.91.0+, so we implement manually
+                let mut safe_cut = cut;
+                while safe_cut > 0 && !t.is_char_boundary(safe_cut) {
+                    safe_cut -= 1;
+                }
+                t.drain(..safe_cut);
+            }
+        }
+
+        // 1) Token-ID stops (includes template-resolved IDs like <|eot_id|>)
+        if all_stop_ids.contains(&next_token) {
+            debug!("Stopped on token ID: {}", next_token);
+            break;
+        }
+
+        // 2) EOS fallback
         if let Some(eos) = tokenizer.eos_token_id()
             && next_token == eos
         {
+            debug!("Stopped on EOS token");
+            break;
+        }
+
+        // 3) String-based stops on rolling tail (no full decode)
+        if let Some(t) = &tail
+            && !all_stop_sequences.is_empty()
+            && all_stop_sequences.iter().any(|pat| t.ends_with(pat))
+        {
+            if let Some(hit) = all_stop_sequences.iter().find(|pat| t.ends_with(*pat)) {
+                debug!("Stopped on sequence: {:?}", hit);
+            }
             break;
         }
     }
@@ -1014,7 +1286,7 @@ fn extract_last_token_hidden(
 
     match tensor {
         ConcreteTensor::BitNet(t) => {
-            let candle = t.to_candle()?;
+            let candle = t.as_candle();
             // Extract last token: [B, T, H] -> [B, H]
             let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?;
             Ok(ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(last)))
@@ -1039,7 +1311,7 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
 
     match tensor {
         ConcreteTensor::BitNet(t) => {
-            let candle = t.to_candle()?;
+            let candle = t.as_candle();
             // Extract first batch: [B, V] -> [V]
             let batch_0 = candle.i(0)?;
             let batch_0 =
@@ -1067,7 +1339,7 @@ fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
 
     match tensor {
         ConcreteTensor::BitNet(t) => {
-            let candle = t.to_candle()?;
+            let candle = t.as_candle();
             let last = candle.narrow(1, seq_len - 1, 1)?.squeeze(1)?.i(0)?;
             let last = if last.dtype() != DType::F32 { last.to_dtype(DType::F32)? } else { last };
             Ok(last.to_vec1::<f32>()?)
@@ -1077,6 +1349,40 @@ fn extract_logits(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
             Ok(vec![0.1; 50257])
         }
     }
+}
+
+/// Convert tensor to f32 vector for diagnostics
+fn tensor_to_vec(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>> {
+    use bitnet_common::ConcreteTensor;
+
+    match tensor {
+        ConcreteTensor::BitNet(t) => {
+            let candle = t.as_candle();
+            let candle_f32 = if candle.dtype() != DType::F32 {
+                candle.to_dtype(DType::F32)?
+            } else {
+                candle.clone()
+            };
+            // Flatten to 1D vector
+            let flattened = candle_f32.flatten_all()?;
+            Ok(flattened.to_vec1::<f32>()?)
+        }
+        ConcreteTensor::Mock(mock) => {
+            // Return mock values - use shape from tensor
+            let size: usize = mock.shape().iter().product();
+            Ok(vec![0.1; size])
+        }
+    }
+}
+
+/// Compute RMS (root mean square) of a vector
+#[inline]
+fn compute_rms(xs: &[f32]) -> f32 {
+    if xs.is_empty() {
+        return 0.0;
+    }
+    let sum_sq: f32 = xs.iter().map(|x| x * x).sum();
+    (sum_sq / (xs.len() as f32)).sqrt()
 }
 
 /// Show system information

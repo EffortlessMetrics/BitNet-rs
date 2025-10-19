@@ -28,6 +28,9 @@ fn compile_ffi() {
     use std::{env, path::Path};
 
     // Compile our C wrapper
+    // TODO: AC6 FFI build hygiene - migrate to xtask::ffi::compile_cpp_shim
+    // when actual BitNet C++ integration is implemented (currently mock).
+    // Will need to add system includes for BITNET_CPP_DIR headers.
     cc::Build::new().file("src/bitnet_cpp_wrapper.c").compile("bitnet_cpp_wrapper");
 
     let root = env::var("BITNET_CPP_DIR")

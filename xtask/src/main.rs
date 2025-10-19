@@ -33,7 +33,9 @@ use std::{
 };
 use walkdir::WalkDir;
 
+pub mod ffi;
 mod gates;
+mod tokenizers;
 
 // RAII guard for lock file cleanup
 struct LockGuard {
@@ -247,6 +249,34 @@ enum Cmd {
         /// Request timeout in seconds
         #[arg(long, default_value_t = 1800)]
         timeout: u64,
+    },
+
+    /// Download LLaMA-3 tokenizer.json from HuggingFace
+    ///
+    /// AC:ID llama3-tokenizer-fetching-spec.md#ac1-xtask-tokenizer-subcommand
+    ///
+    /// Features:
+    /// - Official source (meta-llama/Meta-Llama-3-8B) with HF_TOKEN
+    /// - Mirror source (baseten/Meta-Llama-3-tokenizer) without authentication
+    /// - Vocab size verification (~128,256 for LLaMA-3)
+    /// - Idempotent downloads (skip if exists unless --force)
+    /// - Retry logic with exponential backoff
+    ///
+    /// Environment:
+    /// - HF_TOKEN: Required for official source (get at https://huggingface.co/settings/tokens)
+    Tokenizer {
+        /// Output directory for tokenizer.json
+        #[arg(long, default_value = "models")]
+        into: PathBuf,
+        /// Source preference: official (requires HF_TOKEN) or mirror (no auth)
+        #[arg(long, default_value = "mirror")]
+        source: String,
+        /// Force re-download if file exists
+        #[arg(long, default_value_t = false)]
+        force: bool,
+        /// Verbose output for debugging
+        #[arg(short, long)]
+        verbose: bool,
     },
 
     /// Fetch & build microsoft/BitNet C++ for cross-validation
@@ -755,6 +785,14 @@ fn real_main() -> Result<()> {
             retries,
             timeout,
         }),
+        Cmd::Tokenizer { into, source, force, verbose } => {
+            // AC:ID llama3-tokenizer-api-contracts.md#xtask-tokenizer-v1
+            let tokenizer_source = source.parse::<tokenizers::TokenizerSource>()?;
+            let output_path =
+                tokenizers::download_llama3_tokenizer(&into, tokenizer_source, force, verbose)?;
+            println!("✓ Downloaded tokenizer to: {}", output_path.display());
+            Ok(())
+        }
         Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => {
             fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo)
         }
@@ -4923,7 +4961,9 @@ fn load_model_config(model_path: &Path) -> Result<ModelConfig> {
     }
 
     // Load the GGUF file using BitNet-rs
-    let result = load_gguf_full(model_path, Device::Cpu).context("Failed to load GGUF model")?;
+    let result =
+        load_gguf_full(model_path, Device::Cpu, bitnet_models::GGUFLoaderConfig::default())
+            .context("Failed to load GGUF model")?;
     let (config, _tensors) = (result.config, result.tensors);
 
     // Extract configuration from BitNetConfig
@@ -5134,9 +5174,9 @@ fn run_inference_internal(
             Some(p) => {
                 let tok = bitnet_tokenizers::loader::load_tokenizer(p)
                     .with_context(|| format!("failed to load tokenizer: {}", p.display()))?;
-                // Convert Box<dyn Tokenizer + Send + Sync> to Arc<dyn Tokenizer>
+                // load_tokenizer now returns Arc<dyn Tokenizer> directly
                 // Create a simple wrapper that implements Tokenizer
-                struct TokenizerWrapper(Box<dyn bitnet_tokenizers::Tokenizer + Send + Sync>);
+                struct TokenizerWrapper(Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>);
                 impl bitnet_tokenizers::Tokenizer for TokenizerWrapper {
                     fn encode(
                         &self,

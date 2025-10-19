@@ -3,6 +3,11 @@
 //! Core inference engine with CPU and GPU backend support, streaming generation,
 //! comprehensive configuration options, and advanced performance tracking.
 //!
+//! ## Timeout Configuration
+//!
+//! Default timeout for inference operations (in seconds).
+//! Used by parity tests and benchmarking to prevent hangs.
+//!
 //! ## Performance Tracking
 //!
 //! The inference engine includes comprehensive performance tracking capabilities:
@@ -80,6 +85,15 @@ use crate::{
     sampling::{SamplingConfig, SamplingStrategy},
     streaming::{GenerationStream, StreamingConfig},
 };
+
+/// Default timeout for inference operations (in seconds).
+/// Used by parity tests and benchmarking to prevent hangs.
+pub const DEFAULT_INFERENCE_TIMEOUT_SECS: u64 = 120;
+
+/// Default timeout for parity validation tests (in seconds).
+/// Matches DEFAULT_INFERENCE_TIMEOUT_SECS for consistency.
+/// Can be overridden via PARITY_TEST_TIMEOUT_SECS environment variable.
+pub const DEFAULT_PARITY_TIMEOUT_SECS: u64 = DEFAULT_INFERENCE_TIMEOUT_SECS;
 
 /// Summary information about a tensor in the GGUF header
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1158,6 +1172,17 @@ impl InferenceEngine {
                 eprintln!("======================================================");
             }
 
+            // Unconditional debug logits dump when BITNET_DEBUG_LOGITS=1
+            if std::env::var("BITNET_DEBUG_LOGITS").as_deref() == Ok("1") && step == 0 {
+                let mut idx: Vec<usize> = (0..logits.len()).collect();
+                idx.sort_by(|a, b| {
+                    logits[*b].partial_cmp(&logits[*a]).unwrap_or(std::cmp::Ordering::Equal)
+                });
+                let top = &idx[..idx.len().min(5)];
+                eprintln!("top5_idx={:?}", top);
+                eprintln!("top5_val={:?}", top.iter().map(|&i| logits[i]).collect::<Vec<_>>());
+            }
+
             // Sample next token first
             let next_token = sampling_strategy.sample(&logits, &current_tokens)?;
 
@@ -1292,7 +1317,13 @@ impl InferenceEngine {
 
     /// Check if generation should stop
     fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
-        // Check for EOS token from config, fallback to tokenizer default
+        // 1) ID-based stops (fast path - O(n) check on stop_token_ids list)
+        // For LLaMA-3 and other models with token-ID stop sequences
+        if !config.stop_token_ids.is_empty() && config.stop_token_ids.contains(&token) {
+            return true;
+        }
+
+        // 2) EOS token check (explicit or tokenizer default)
         let eos_token = config.eos_token_id.or_else(|| self.tokenizer.eos_token_id());
         if let Some(eos) = eos_token
             && token == eos
@@ -1300,7 +1331,8 @@ impl InferenceEngine {
             return true;
         }
 
-        // Check for stop sequences
+        // 3) String-based stop sequences (fallback - more expensive)
+        // Only decode if we have stop sequences to check
         if !config.stop_sequences.is_empty() {
             let current_text = self.tokenizer.decode(generated_tokens).unwrap_or_default();
             for stop_seq in &config.stop_sequences {
@@ -1362,6 +1394,23 @@ impl InferenceEngine {
         if !model.num_heads.is_multiple_of(effective_kv_heads) {
             return Err(anyhow::anyhow!(
                 "Invalid model: num_heads ({}) not divisible by num_key_value_heads ({})",
+                model.num_heads,
+                effective_kv_heads
+            ));
+        }
+
+        // GQA wiring sanity checks
+        let kv_out = effective_kv_heads * head_dim;
+        eprintln!("GQA validation:");
+        eprintln!("  kv_heads × head_dim = {} × {} = {}", effective_kv_heads, head_dim, kv_out);
+        eprintln!(
+            "  group_size = num_heads / kv_heads = {} / {} = {}",
+            model.num_heads, effective_kv_heads, group_size
+        );
+
+        if group_size == 0 {
+            return Err(anyhow::anyhow!(
+                "Invalid GQA configuration: group_size cannot be zero (num_heads={}, kv_heads={})",
                 model.num_heads,
                 effective_kv_heads
             ));

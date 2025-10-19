@@ -27,16 +27,22 @@ fn main() {
 
         build
             .file("csrc/ggml_quants_shim.c")
-            .file("csrc/ggml_consts.c")  // Constants extraction
-            .include("csrc")
-            .include("csrc/ggml/include")
-            .include("csrc/ggml/src")
+            .file("csrc/ggml_consts.c") // Constants extraction
+            .include("csrc") // Local includes (use -I, warnings visible)
+            // AC6: Use -isystem for vendored GGML headers (third-party code)
+            // This suppresses warnings from the vendored GGML implementation
+            // while preserving warnings from our shim code.
+            .flag("-isystemcsrc/ggml/include")
+            .flag("-isystemcsrc/ggml/src")
             // Define for IQ quantization family
             .define("GGML_USE_K_QUANTS", None)
             .define("QK_IQ2_S", "256")
             // Optimization and warnings
             .flag_if_supported("-O3")
             .flag_if_supported("-fPIC")
+            // AC6: Selective warning suppression for vendored code patterns
+            // These affect the vendored GGML code but not our local shim code
+            // (which uses -I, not -isystem)
             .flag_if_supported("-Wno-sign-compare")
             .flag_if_supported("-Wno-unused-parameter")
             .flag_if_supported("-Wno-unused-function")

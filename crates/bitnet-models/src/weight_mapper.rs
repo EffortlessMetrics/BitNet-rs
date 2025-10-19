@@ -229,15 +229,30 @@ pub fn remap_gguf_weights_with_options(
 
     // First pass: map all tensors
     for (name, tensor) in tensors {
+        // Handle raw QK256 tensor keys with .qk256_qs suffix
+        // Strip suffix -> remap base -> re-append suffix
+        let (base_name, suffix) = if let Some(base) = name.strip_suffix(".qk256_qs") {
+            (base, Some(".qk256_qs"))
+        } else {
+            (name.as_str(), None)
+        };
+
         // First normalize any known name variations
-        let normalized = normalize_name(name);
-        let new_name = if let Some(canonical) = normalize_vendor_key(&normalized) {
+        let normalized = normalize_name(base_name);
+        let new_base_name = if let Some(canonical) = normalize_vendor_key(&normalized) {
             canonical
         } else if let Some(mapped_name) = map_tensor_name(&normalized) {
             mapped_name
         } else {
             unmapped.push(name.clone());
-            name.clone()
+            base_name.to_string()
+        };
+
+        // Re-append suffix if it was present
+        let new_name = if let Some(sfx) = suffix {
+            format!("{}{}", new_base_name, sfx)
+        } else {
+            new_base_name
         };
 
         mapped.insert(new_name, tensor.clone());
@@ -1134,6 +1149,53 @@ mod tests {
         println!(
             "✅ KV slicing regression test passed: [{}×{}] → [{}×{}]",
             hidden_size, hidden_size, kv_dim, hidden_size
+        );
+    }
+
+    #[test]
+    fn test_remap_qk256_suffix() {
+        // Test that .qk256_qs suffix is preserved during remapping
+        let mut tensors = HashMap::new();
+
+        // Create a dummy tensor
+        let tensor =
+            CandleTensor::zeros(&[32, 128], candle_core::DType::U8, &CDevice::Cpu).unwrap();
+
+        // Test with a GGUF key that should be remapped
+        tensors.insert("blk.0.attn_q.weight.qk256_qs".to_string(), tensor.clone());
+
+        let mapped = remap_gguf_weights(&tensors).unwrap();
+
+        // Verify the key was remapped correctly with suffix preserved
+        assert!(
+            mapped.contains_key("layers.0.attention.q_proj.weight.qk256_qs"),
+            "Expected remapped key with .qk256_qs suffix, got keys: {:?}",
+            mapped.keys().collect::<Vec<_>>()
+        );
+
+        // Verify the base key (without suffix) is NOT present
+        assert!(
+            !mapped.contains_key("layers.0.attention.q_proj.weight"),
+            "Base key without suffix should not be present"
+        );
+    }
+
+    #[test]
+    fn test_remap_regular_key_no_suffix() {
+        // Test that regular keys without .qk256_qs work normally
+        let mut tensors = HashMap::new();
+
+        let tensor =
+            CandleTensor::zeros(&[32, 128], candle_core::DType::F32, &CDevice::Cpu).unwrap();
+        tensors.insert("blk.0.attn_q.weight".to_string(), tensor.clone());
+
+        let mapped = remap_gguf_weights(&tensors).unwrap();
+
+        // Verify the key was remapped correctly without any suffix
+        assert!(
+            mapped.contains_key("layers.0.attention.q_proj.weight"),
+            "Expected remapped key without suffix, got keys: {:?}",
+            mapped.keys().collect::<Vec<_>>()
         );
     }
 }

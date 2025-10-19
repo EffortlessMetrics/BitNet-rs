@@ -9,11 +9,45 @@
 #![cfg(all(feature = "crossval", feature = "integration-tests"))]
 
 use anyhow::{Context, Result};
+use bitnet_inference::engine::DEFAULT_PARITY_TIMEOUT_SECS;
+use chrono::Local;
 use serde_json::json;
 use std::{env, fs, path::PathBuf, time::SystemTime};
 
-/// Parity test timeout in seconds (configurable via PARITY_TEST_TIMEOUT_SECS env var)
-const DEFAULT_TIMEOUT_SECS: u64 = 120;
+/// Get parity test timeout in seconds from environment or default
+fn parity_timeout_secs() -> u64 {
+    env::var("PARITY_TEST_TIMEOUT_SECS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(DEFAULT_PARITY_TIMEOUT_SECS)
+}
+
+/// Resolve workspace baselines directory
+/// Priority: BASELINES_DIR env var > <workspace>/docs/baselines
+fn resolve_workspace_baselines_dir() -> PathBuf {
+    if let Ok(p) = env::var("BASELINES_DIR") {
+        return PathBuf::from(p);
+    }
+
+    // Walk up from current manifest dir to find workspace root
+    let mut cur = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    for _ in 0..5 {
+        let candidate = cur.join("docs").join("baselines");
+        if candidate.exists() {
+            return candidate;
+        }
+        cur.pop();
+    }
+
+    // Fallback: assume we're in crossval/ and go up one level
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("docs").join("baselines")
+}
+
+/// Get today's parity receipt path: <baselines>/<YYYY-MM-DD>/parity-bitnetcpp.json
+fn todays_receipt_path() -> PathBuf {
+    let date = Local::now().format("%Y-%m-%d").to_string();
+    resolve_workspace_baselines_dir().join(date).join("parity-bitnetcpp.json")
+}
 
 /// Helper function to compute cosine similarity between two vectors
 #[allow(dead_code)]
@@ -334,10 +368,7 @@ async fn parity_bitnetcpp() -> Result<()> {
     // Wrap the test logic with a timeout guard
     // This prevents hangs and writes a diagnostic receipt on timeout
     // Note: Increased from 60s to accommodate 2B+ parameter models in release mode
-    let timeout_secs = std::env::var("PARITY_TEST_TIMEOUT_SECS")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(DEFAULT_TIMEOUT_SECS);
+    let timeout_secs = parity_timeout_secs();
 
     match tokio::time::timeout(
         std::time::Duration::from_secs(timeout_secs),
@@ -490,22 +521,13 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
         (false, None, None, None, false, 0)
     };
 
-    // 5. Write parity receipt
-    let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
-
-    // Safer than slicing fixed indices: split at 'T'
-    let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
-
-    // Allow override for CI: BASELINES_DIR=/path/to/workspace/docs/baselines
-    let base_dir = std::env::var("BASELINES_DIR")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines"));
-
-    let receipt_dir = base_dir.join(date_str);
+    // 5. Write parity receipt (AC4: path resolution to workspace root)
+    // AC4: Receipt path resolution using centralized helpers
+    let receipt_path = todays_receipt_path();
+    let receipt_dir = receipt_path.parent().expect("receipt path must have parent directory");
 
     if !receipt_dir.exists() {
-        fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
+        fs::create_dir_all(receipt_dir).context("Failed to create baselines directory")?;
     }
 
     let model_sha = sha256_file(&gguf_path)?;
@@ -516,9 +538,10 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
         eprintln!("Detected I2_S flavor: {}", flavor);
     }
 
+    // AC4: Determine parity status using standardized values
     let parity_status = if cpp_loaded {
         // C++ was loaded - check if outputs match
-        if cosine_ok && exact_match_rate.unwrap_or(0.0) == 1.0 { "ok" } else { "mismatch" }
+        if cosine_ok && exact_match_rate.unwrap_or(0.0) == 1.0 { "ok" } else { "divergence" }
     } else {
         // C++ not available
         "rust_only"
@@ -527,13 +550,15 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
     // Determine which backend was used for validation compute
     // Note: As of QK256 integration, all inference runs in pure Rust (including GGML I2_S).
     // C++ is only used for comparison in the parity harness, not for actual inference.
-    let validation_backend = "rust"; // Always Rust now - QK256 support is complete
+    let _validation_backend = "rust"; // Always Rust now - QK256 support is complete
 
     // Compute prompt hash for reproducibility verification
     let prompt_hash = blake3::hash(formatted_prompt.as_bytes()).to_string();
 
     // Collect environment metadata
     let env_meta = collect_env_metadata();
+
+    let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
 
     let receipt = json!({
         "timestamp": ts,
@@ -557,6 +582,17 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "parse_special": parse_special,
             "merges_count": tok_meta.merges_count,
             "tokenizer_blob_sha256": tok_meta.tokenizer_blob_sha256,
+            // Provenance metadata for reproducibility
+            "path": env::var("BITNET_TOKENIZER")
+                .ok()
+                .map(serde_json::Value::String)
+                .unwrap_or(serde_json::Value::Null),
+            "repo": serde_json::Value::Null,  // Filled when fetched via xtask
+            "sha256": env::var("BITNET_TOKENIZER")
+                .ok()
+                .and_then(|p| sha256_file(&PathBuf::from(p)).ok())
+                .map(serde_json::Value::String)
+                .unwrap_or(serde_json::Value::Null),
         },
         "tokenization": {
             "rust_token_count": rust_ids.len(),
@@ -574,13 +610,9 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "compute": "rust",
         },
         "quant": {
-            "format": i2s_flavor.map_or("unknown".to_string(), |s| match s {
-                "bitnet_qk32_f16" => "I2S_BitNet32F16".to_string(),
-                "split_qk32_with_sibling" => "I2S_Split32WithSibling".to_string(),
-                "ggml_qk256_no_scale" => "I2S_QK256".to_string(),
-                _ => s.to_string(),
-            }),
+            "format": "I2_S",
             "flavor": i2s_flavor.unwrap_or("unknown"),
+            "i2s_flavor": serde_json::Value::Null,
         },
         "parity": {
             "cpp_available": cpp_loaded,
@@ -588,19 +620,21 @@ async fn parity_bitnetcpp_impl(gguf_path: PathBuf) -> Result<()> {
             "cosine_ok": cosine_ok,
             "exact_match_rate": exact_match_rate,
             "first_divergence_step": first_divergence,
+            "timeout_seconds": parity_timeout_secs(),
             "status": parity_status,
         },
         "environment": env_meta,
     });
 
     // Atomic write using temp file
-    let receipt_path = receipt_dir.join("parity-bitnetcpp.json");
     let tmp_path = receipt_dir.join("parity-bitnetcpp.json.tmp");
     fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)
         .context("Failed to write parity receipt to temp file")?;
     fs::rename(&tmp_path, &receipt_path).context("Failed to atomically rename parity receipt")?;
 
-    eprintln!("✓ Parity receipt written to: {:?}", receipt_path);
+    // AC4: Print absolute receipt path for verification
+    let absolute_path = receipt_path.canonicalize().unwrap_or_else(|_| receipt_path.clone());
+    eprintln!("✓ Parity receipt written to: {}", absolute_path.display());
 
     Ok(())
 }
@@ -624,6 +658,7 @@ struct TokenizerMetadata {
 }
 
 /// Detect I2_S quantization flavor from GGUF model
+/// Vote across all I2_S tensors instead of bailing on first match
 fn detect_model_i2s_flavor(model_path: &std::path::Path) -> Option<&'static str> {
     use bitnet_models::formats::gguf::{GgufReader, GgufTensorType, I2SFlavor, detect_i2s_flavor};
     use bitnet_models::loader::MmapFile;
@@ -631,30 +666,46 @@ fn detect_model_i2s_flavor(model_path: &std::path::Path) -> Option<&'static str>
     let mmap = MmapFile::open(model_path).ok()?;
     let reader = GgufReader::new(mmap.as_slice()).ok()?;
 
-    // Look for I2_S tensors and detect their flavor
+    let mut c_qk256 = 0usize;
+    let mut c_split = 0usize;
+    let mut c_inline = 0usize;
+
+    // Vote across all I2_S tensors
     for i in 0..reader.tensor_count() as usize {
         let info = reader.get_tensor_info(i).ok()?;
+        if info.tensor_type != GgufTensorType::I2_S {
+            continue;
+        }
 
-        if info.tensor_type == GgufTensorType::I2_S {
-            // Calculate number of elements from shape
-            let nelems = info.shape.iter().product::<usize>();
+        let nelems = info.shape.iter().product::<usize>();
 
-            // Check if there's a scale sibling (look for .scale suffix)
-            let scale_name = format!("{}.scale", info.name);
-            let has_scale_sibling = reader.get_tensor_info_by_name(&scale_name).is_some();
+        // Check for scale sibling with multiple possible suffixes
+        let has_scale_sibling =
+            reader.get_tensor_info_by_name(&format!("{}.scale", info.name)).is_some()
+                || reader.get_tensor_info_by_name(&format!("{}.scales", info.name)).is_some();
 
-            // Detect flavor
-            if let Ok(flavor) = detect_i2s_flavor(info, has_scale_sibling, nelems) {
-                return Some(match flavor {
-                    I2SFlavor::BitNet32F16 => "bitnet_qk32_f16",
-                    I2SFlavor::Split32WithSibling => "split_qk32_with_sibling",
-                    I2SFlavor::GgmlQk256NoScale => "ggml_qk256_no_scale",
-                });
+        if let Ok(flavor) = detect_i2s_flavor(info, has_scale_sibling, nelems) {
+            match flavor {
+                I2SFlavor::GgmlQk256NoScale => c_qk256 += 1,
+                I2SFlavor::Split32WithSibling => c_split += 1,
+                I2SFlavor::BitNet32F16 => c_inline += 1,
             }
         }
     }
 
-    None
+    // Return None if no I2_S tensors found
+    if c_qk256 + c_split + c_inline == 0 {
+        return None;
+    }
+
+    // Return the winner (prefer QK256 > Split > Inline on ties)
+    if c_qk256 >= c_split && c_qk256 >= c_inline {
+        Some("ggml_qk256_no_scale")
+    } else if c_split >= c_inline {
+        Some("split_qk32_with_sibling")
+    } else {
+        Some("bitnet_qk32_f16")
+    }
 }
 
 /// Tokenize prompt with template-aware BOS/special handling
@@ -874,17 +925,12 @@ async fn rust_decode_n_greedy(
 /// Write a diagnostic receipt when the parity test times out
 fn write_timeout_receipt(gguf_path: &std::path::Path, timeout_secs: u64) -> Result<()> {
     let ts = humantime::format_rfc3339(SystemTime::now()).to_string();
-    let date_str = ts.split_once('T').map(|(d, _)| d).unwrap_or("1970-01-01");
 
-    let base_dir = std::env::var("BASELINES_DIR")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/baselines"));
-
-    let receipt_dir = base_dir.join(date_str);
+    let receipt_path = todays_receipt_path();
+    let receipt_dir = receipt_path.parent().expect("receipt path must have parent directory");
 
     if !receipt_dir.exists() {
-        fs::create_dir_all(&receipt_dir).context("Failed to create baselines directory")?;
+        fs::create_dir_all(receipt_dir).context("Failed to create baselines directory")?;
     }
 
     let commit = env::var("GIT_COMMIT").unwrap_or_else(|_| "unknown".into());
@@ -904,7 +950,6 @@ fn write_timeout_receipt(gguf_path: &std::path::Path, timeout_secs: u64) -> Resu
         "error": format!("Parity test exceeded {}-second timeout - check for performance regression or hanging inference", timeout_secs)
     });
 
-    let receipt_path = receipt_dir.join("parity-bitnetcpp.json");
     let tmp_path = receipt_dir.join("parity-bitnetcpp.json.tmp");
     fs::write(&tmp_path, serde_json::to_vec_pretty(&receipt)?)
         .context("Failed to write timeout receipt")?;

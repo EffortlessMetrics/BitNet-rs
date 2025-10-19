@@ -844,12 +844,20 @@ pub fn detect_i2s_flavor(
     let qk256_need = blocks256 * 64;
     let available = info.size as usize;
 
-    // Tolerance for alignment padding (conservative but tight)
-    // 8 bytes allows for reasonable alignment overhead without false positives
-    const TOLERANCE: usize = 8;
+    // AC2: Centralized tolerance
+    // - Strict mode: tight 8 bytes (fail-fast)
+    // - Default: size-proportional (~0.1%) using quantization helper
+    let strict = std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1");
+    let tolerance = if strict {
+        8usize
+    } else {
+        // pick a representative expected size (qk256/split) to compute tolerance bytes
+        let expected_any = core::cmp::min(split_need, qk256_need);
+        bitnet_quantization::qk256_tolerance_bytes(expected_any)
+    };
 
     tracing::debug!(
-        "I2_S flavor detection for '{}': nelems={}, blocks32={}, blocks256={}, available={}, split_need={}, inline_need={}, qk256_need={}, has_sibling={}",
+        "I2_S flavor detection for '{}': nelems={}, blocks32={}, blocks256={}, available={}, split_need={}, inline_need={}, qk256_need={}, has_sibling={}, tolerance={} (strict={})",
         info.name,
         nelems,
         blocks32,
@@ -858,38 +866,43 @@ pub fn detect_i2s_flavor(
         split_need,
         inline_need,
         qk256_need,
-        has_scale_sibling
+        has_scale_sibling,
+        tolerance,
+        strict
     );
 
-    // Check which layouts match (within tolerance)
-    let matches_split32 = available.abs_diff(split_need) <= TOLERANCE;
-    let matches_inline = available.abs_diff(inline_need) <= TOLERANCE;
-    let matches_qk256 = available.abs_diff(qk256_need) <= TOLERANCE;
+    // Calculate diff for each flavor
+    let diff_split32 = available.abs_diff(split_need);
+    let diff_inline = available.abs_diff(inline_need);
+    let diff_qk256 = available.abs_diff(qk256_need);
 
-    //  Priority logic:
-    // 1. GgmlQk256NoScale (highest) - when bytes match qk256 exactly (prefer largest block size)
-    // 2. Split32WithSibling (if sibling present) - when bytes match split32
-    // 3. BitNet32F16 - when bytes match inline (most common BitNet format)
-    // 4. Split32WithSibling (without sibling, warn) - when bytes match split32 only
+    //  Priority logic with adaptive tolerance:
+    // 1. Exact matches (diff == 0) - prefer larger block sizes (qk256 > inline > split32)
+    // 2. Close matches (within tolerance) - prefer split32 with sibling, then inline, then qk256
+    // 3. Split32 without sibling (warn) - data-only format, possibly incomplete
 
-    // Priority 1: GgmlQk256NoScale if bytes match qk256 (highest specificity - largest blocks)
-    // This is checked FIRST to ensure it takes priority over inline/split matches
-    // Note: split32 and qk256 can coincide (e.g., 512 elem: 16*8=128, 2*64=128)
-    // In ambiguous cases, prefer qk256 as it's more specific (256-element blocks)
-    if matches_qk256 {
-        tracing::warn!(
-            "I2_S '{}': detected GgmlQk256NoScale (available={}, qk256_need={}) - GGML format requires native kernels",
+    // Priority 1: Exact matches (diff == 0) - prefer larger block sizes
+    if diff_qk256 == 0 {
+        tracing::debug!(
+            "I2_S '{}': detected GgmlQk256NoScale (exact match: available={}, qk256_need={}) - GGML format",
             info.name,
             available,
             qk256_need
         );
         return Ok(I2SFlavor::GgmlQk256NoScale);
     }
-
-    // Priority 2: Split32WithSibling if sibling scale tensor present and bytes match
-    if has_scale_sibling && matches_split32 {
-        tracing::info!(
-            "I2_S '{}': detected Split32WithSibling (available={}, split_need={}, has_sibling=true)",
+    if diff_inline == 0 {
+        tracing::debug!(
+            "I2_S '{}': detected BitNet32F16 (exact match: available={}, inline_need={})",
+            info.name,
+            available,
+            inline_need
+        );
+        return Ok(I2SFlavor::BitNet32F16);
+    }
+    if diff_split32 == 0 && has_scale_sibling {
+        tracing::debug!(
+            "I2_S '{}': detected Split32WithSibling (exact match: available={}, split_need={}, has_sibling=true)",
             info.name,
             available,
             split_need
@@ -897,25 +910,46 @@ pub fn detect_i2s_flavor(
         return Ok(I2SFlavor::Split32WithSibling);
     }
 
-    // Priority 3: BitNet32F16 (inline f16 scales) - most common BitNet format
-    if matches_inline {
-        tracing::info!(
-            "I2_S '{}': detected BitNet32F16 (available={}, inline_need={})",
+    // Priority 2: Close matches (within tolerance) - prefer QK256 for specificity
+    if diff_qk256 <= tolerance {
+        tracing::debug!(
+            "I2_S '{}': detected GgmlQk256NoScale (close match: available={}, qk256_need={}, diff={}) - GGML format",
             info.name,
             available,
-            inline_need
+            qk256_need,
+            diff_qk256
+        );
+        return Ok(I2SFlavor::GgmlQk256NoScale);
+    }
+    if has_scale_sibling && diff_split32 <= tolerance {
+        tracing::debug!(
+            "I2_S '{}': detected Split32WithSibling (close match: available={}, split_need={}, diff={}, has_sibling=true)",
+            info.name,
+            available,
+            split_need,
+            diff_split32
+        );
+        return Ok(I2SFlavor::Split32WithSibling);
+    }
+    if diff_inline <= tolerance {
+        tracing::debug!(
+            "I2_S '{}': detected BitNet32F16 (close match: available={}, inline_need={}, diff={})",
+            info.name,
+            available,
+            inline_need,
+            diff_inline
         );
         return Ok(I2SFlavor::BitNet32F16);
     }
 
-    // Priority 4: Split32WithSibling without sibling (data-only, likely incomplete)
-    // Only if bytes match split32 (qk256 already handled above)
-    if matches_split32 {
+    // Priority 3: Split32 without sibling (data-only, warn about missing scales)
+    if diff_split32 <= tolerance {
         tracing::warn!(
-            "I2_S '{}': bytes match split layout (available={}, split_need={}) but no scale sibling found - may be incomplete",
+            "I2_S '{}': bytes match split layout (close match: available={}, split_need={}, diff={}) but no scale sibling found - may be incomplete",
             info.name,
             available,
-            split_need
+            split_need,
+            diff_split32
         );
         return Ok(I2SFlavor::Split32WithSibling);
     }
@@ -928,7 +962,7 @@ pub fn detect_i2s_flavor(
          - inline_need (32-elem blocks, 10B/block): {} (diff: {})\n\
          - qk256_need (256-elem blocks, 64B/block): {} (diff: {})\n\
          - has_scale_sibling: {}\n\
-         - tolerance: ±{} bytes (alignment padding)\n\
+         - tolerance: ±{} bytes ({})\n\
          All diffs exceed tolerance. This indicates an unsupported I2_S variant or corrupted data.",
         info.name,
         available,
@@ -939,12 +973,27 @@ pub fn detect_i2s_flavor(
         qk256_need,
         available.abs_diff(qk256_need),
         has_scale_sibling,
-        TOLERANCE
+        tolerance,
+        if strict { "strict mode" } else { "~0.1% size-proportional" }
     )))
 }
 
 /// Container for loaded tensors
 pub type GgufTensors = std::collections::HashMap<String, candle_core::Tensor>;
+
+/// Raw quantized tensor container (for preserving 2-bit QK256 data without eager dequantization)
+#[derive(Clone)]
+pub struct RawQuantTensor {
+    pub bytes: std::sync::Arc<[u8]>,
+    pub rows: usize,
+    pub cols: usize,
+    pub block_cols: usize,       // 256 for QK256
+    pub row_stride_bytes: usize, // bytes per row in packed form
+    pub flavor: I2SFlavor,       // include GgmlQk256NoScale, Split32WithSibling, BitNet32F16
+}
+
+/// Container for raw quantized tensors
+pub type RawQuantTensors = std::collections::HashMap<String, RawQuantTensor>;
 
 // Helper functions for reading binary data
 pub fn read_u8(data: &[u8], offset: &mut usize) -> Result<u8> {

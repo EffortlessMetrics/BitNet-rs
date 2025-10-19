@@ -284,18 +284,45 @@ impl MultiHeadAttention {
         // Q: [B, T, hidden] -> [B, T, n_heads * head_dim] -> [B, n_heads, T, head_dim]
         // K: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
         // V: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
-        let q = self
-            .apply_linear(x, &self.q_proj, "q_proj", raw_tensors)?
+        let q_proj_out = self.apply_linear(x, &self.q_proj, "q_proj", raw_tensors)?;
+        let k_proj_out = self.apply_linear(x, &self.k_proj, "k_proj", raw_tensors)?;
+        let v_proj_out = self.apply_linear(x, &self.v_proj, "v_proj", raw_tensors)?;
+
+        // Probe A3: Q/K/V projection RMS (layer 0, step 0 only)
+        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.layer_idx == 0 {
+            static PROJ_LOGGED: std::sync::Once = std::sync::Once::new();
+            PROJ_LOGGED.call_once(|| {
+                let _ = (|| -> candle_core::Result<()> {
+                    let q_vec = q_proj_out.flatten_all()?.to_vec1::<f32>()?;
+                    let q_rms = (q_vec.iter().map(|x| x * x).sum::<f32>()
+                        / q_vec.len().max(1) as f32)
+                        .sqrt();
+                    let k_vec = k_proj_out.flatten_all()?.to_vec1::<f32>()?;
+                    let k_rms = (k_vec.iter().map(|x| x * x).sum::<f32>()
+                        / k_vec.len().max(1) as f32)
+                        .sqrt();
+                    let v_vec = v_proj_out.flatten_all()?.to_vec1::<f32>()?;
+                    let v_rms = (v_vec.iter().map(|x| x * x).sum::<f32>()
+                        / v_vec.len().max(1) as f32)
+                        .sqrt();
+                    eprintln!(
+                        "trace: q_proj_rms={:.6} k_proj_rms={:.6} v_proj_rms={:.6}",
+                        q_rms, k_rms, v_rms
+                    );
+                    Ok(())
+                })();
+            });
+        }
+
+        let q = q_proj_out
             .reshape(&[batch_size, seq_len, self.n_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, Hq, T, D]
 
-        let k = self
-            .apply_linear(x, &self.k_proj, "k_proj", raw_tensors)?
+        let k = k_proj_out
             .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, HKV, T, D]
 
-        let v = self
-            .apply_linear(x, &self.v_proj, "v_proj", raw_tensors)?
+        let v = v_proj_out
             .reshape(&[batch_size, seq_len, self.n_kv_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, HKV, T, D]
 
@@ -501,6 +528,21 @@ impl MultiHeadAttention {
             return Self::forward_qk256(input, qk256_tensor, &qk256_key);
         }
 
+        // Probe: Why is QK256 not found? (layer 0 only, once)
+        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.layer_idx == 0 {
+            static FALLBACK_LOGGED: std::sync::Once = std::sync::Once::new();
+            FALLBACK_LOGGED.call_once(|| {
+                eprintln!(
+                    "trace_fallback: QK256 key '{}' not found in raw_tensors ({}keys total)",
+                    qk256_key,
+                    raw_tensors.len()
+                );
+                // Show first few keys for debugging
+                let sample_keys: Vec<_> = raw_tensors.keys().take(5).collect();
+                eprintln!("trace_fallback: Sample keys: {:?}", sample_keys);
+            });
+        }
+
         // Fall back to standard linear
         tracing::trace!(
             "Using standard linear for layers.{}.attention.{}",
@@ -526,6 +568,23 @@ impl MultiHeadAttention {
         let rows = dims[0];
         let row_stride_bytes = dims[1];
 
+        // Calculate cols from row_stride_bytes: each 256-element block uses 64 bytes
+        // So: row_stride_bytes / 64 = number of 256-element blocks
+        // And: cols = (row_stride_bytes / 64) * 256
+        // Safe calculation: (bytes/64)*256 == bytes*4, with overflow check
+        debug_assert!(
+            row_stride_bytes.is_multiple_of(64),
+            "QK256 row_stride_bytes must be multiple of 64"
+        );
+        let cols = row_stride_bytes
+            .checked_mul(4) // (bytes/64)*256 == bytes*4
+            .ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "QK256: row_stride_bytes overflow computing cols (row_stride={})",
+                    row_stride_bytes
+                ))
+            })?;
+
         // Extract bytes
         let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
             BitNetError::Validation(format!(
@@ -543,7 +602,7 @@ impl MultiHeadAttention {
         let rank = input_dims.len();
 
         // Handle different input shapes: [B, T, H] or [B, H]
-        let (batch_size, seq_len, cols) = match rank {
+        let (batch_size, seq_len, input_cols) = match rank {
             3 => (input_dims[0], input_dims[1], input_dims[2]),
             2 => (input_dims[0], 1, input_dims[1]),
             _ => {
@@ -553,6 +612,14 @@ impl MultiHeadAttention {
                 )));
             }
         };
+
+        // Validate input dimensions match QK256 tensor
+        if input_cols != cols {
+            return Err(BitNetError::Validation(format!(
+                "QK256 dimension mismatch for {}: input has {} cols but QK256 tensor expects {} cols",
+                weight_name, input_cols, cols
+            )));
+        }
 
         // Flatten to 2D [batch * seq_len, in_features]
         let input_flat = input.reshape(&[batch_size * seq_len, cols])?;
@@ -565,6 +632,19 @@ impl MultiHeadAttention {
 
         // Allocate output
         let mut output_vec = vec![vec![0.0f32; rows]; batch_size * seq_len];
+
+        // Probe: Debug QK256 dimensions (layer 0 only, once)
+        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1")
+            && weight_name.contains("layers.0.")
+        {
+            static DIM_LOGGED: std::sync::Once = std::sync::Once::new();
+            DIM_LOGGED.call_once(|| {
+                eprintln!(
+                    "trace_qk256: weight={} rows={} cols={} row_stride_bytes={} qk256_shape={:?}",
+                    weight_name, rows, cols, row_stride_bytes, dims
+                );
+            });
+        }
 
         // Call QK256 kernel for each input row
         for (i, input_row) in input_vec.iter().enumerate() {
@@ -728,6 +808,23 @@ impl FeedForward {
         let rows = dims[0];
         let row_stride_bytes = dims[1];
 
+        // Calculate cols from row_stride_bytes: each 256-element block uses 64 bytes
+        // So: row_stride_bytes / 64 = number of 256-element blocks
+        // And: cols = (row_stride_bytes / 64) * 256
+        // Safe calculation: (bytes/64)*256 == bytes*4, with overflow check
+        debug_assert!(
+            row_stride_bytes.is_multiple_of(64),
+            "QK256 row_stride_bytes must be multiple of 64"
+        );
+        let cols = row_stride_bytes
+            .checked_mul(4) // (bytes/64)*256 == bytes*4
+            .ok_or_else(|| {
+                BitNetError::Validation(format!(
+                    "QK256: row_stride_bytes overflow computing cols (row_stride={})",
+                    row_stride_bytes
+                ))
+            })?;
+
         // Extract bytes
         let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
             BitNetError::Validation(format!(
@@ -745,7 +842,7 @@ impl FeedForward {
         let rank = input_dims.len();
 
         // Handle different input shapes: [B, T, H] or [B, H]
-        let (batch_size, seq_len, cols) = match rank {
+        let (batch_size, seq_len, input_cols) = match rank {
             3 => (input_dims[0], input_dims[1], input_dims[2]),
             2 => (input_dims[0], 1, input_dims[1]),
             _ => {
@@ -755,6 +852,14 @@ impl FeedForward {
                 )));
             }
         };
+
+        // Validate input dimensions match QK256 tensor
+        if input_cols != cols {
+            return Err(BitNetError::Validation(format!(
+                "QK256 dimension mismatch for {}: input has {} cols but QK256 tensor expects {} cols",
+                weight_name, input_cols, cols
+            )));
+        }
 
         // Flatten to 2D [batch * seq_len, in_features]
         let input_flat = input.reshape(&[batch_size * seq_len, cols])?;
@@ -767,6 +872,19 @@ impl FeedForward {
 
         // Allocate output
         let mut output_vec = vec![vec![0.0f32; rows]; batch_size * seq_len];
+
+        // Probe: Debug QK256 dimensions (layer 0 only, once)
+        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1")
+            && weight_name.contains("layers.0.")
+        {
+            static DIM_LOGGED: std::sync::Once = std::sync::Once::new();
+            DIM_LOGGED.call_once(|| {
+                eprintln!(
+                    "trace_qk256: weight={} rows={} cols={} row_stride_bytes={} qk256_shape={:?}",
+                    weight_name, rows, cols, row_stride_bytes, dims
+                );
+            });
+        }
 
         // Call QK256 kernel for each input row
         for (i, input_row) in input_vec.iter().enumerate() {
@@ -862,6 +980,29 @@ impl TransformerBlock {
         }
 
         let x = self.attention_norm.forward(x)?;
+
+        // Probe A2: LayerNorm gamma RMS + LN output RMS (layer 0, step 0 only)
+        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && self.attention.layer_idx == 0
+        {
+            static LN0_LOGGED: std::sync::Once = std::sync::Once::new();
+            LN0_LOGGED.call_once(|| {
+                let _ = (|| -> candle_core::Result<()> {
+                    // Get gamma (weight) from LayerNorm
+                    let gamma_vec = self.attention_norm.weight().to_vec1::<f32>()?;
+                    let g_rms = (gamma_vec.iter().map(|x| x * x).sum::<f32>()
+                        / gamma_vec.len().max(1) as f32)
+                        .sqrt();
+
+                    // Get LN output RMS
+                    let ln_vec = x.flatten_all()?.to_vec1::<f32>()?;
+                    let ln_rms = (ln_vec.iter().map(|x| x * x).sum::<f32>()
+                        / ln_vec.len().max(1) as f32)
+                        .sqrt();
+                    eprintln!("trace: ln0_gamma_rms={:.6} ln0_out_rms={:.6}", g_rms, ln_rms);
+                    Ok(())
+                })();
+            });
+        }
 
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
@@ -1244,6 +1385,21 @@ impl TransformerModel {
         let hidden = self.embed(&ids_vec)?;
         let hidden_size = self.config.model.hidden_size;
         let hidden = hidden.reshape(&[batch_size, seq_len, hidden_size])?;
+
+        // Probe A1: Embedding RMS (step 0 only)
+        if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") {
+            static EMB_LOGGED: std::sync::Once = std::sync::Once::new();
+            EMB_LOGGED.call_once(|| {
+                let _ = (|| -> candle_core::Result<()> {
+                    let emb_vec = hidden.narrow(1, 0, 1)?.flatten_all()?.to_vec1::<f32>()?;
+                    let rms = (emb_vec.iter().map(|x| x * x).sum::<f32>()
+                        / emb_vec.len().max(1) as f32)
+                        .sqrt();
+                    eprintln!("trace: emb_rms={:.6}", rms);
+                    Ok(())
+                })();
+            });
+        }
 
         // Create per-layer KV cache so that rotary/absolute positional
         // encodings use the proper positions during iterative decoding.

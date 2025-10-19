@@ -215,7 +215,8 @@ fn create_real_model_with_weights(config: &BitNetConfig) -> Result<Arc<BitNetMod
     // Final norm
     add_layernorm_weights(&mut tensors, "final_norm", hidden_size, &candle_device)?;
 
-    let model = BitNetModel::from_gguf(config.clone(), tensors, device)?;
+    let raw_tensors = HashMap::new(); // No raw tensors in this test
+    let model = BitNetModel::from_gguf(config.clone(), tensors, raw_tensors, device)?;
     Ok(Arc::new(model))
 }
 

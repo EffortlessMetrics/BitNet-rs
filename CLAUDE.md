@@ -11,6 +11,10 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 cargo build --no-default-features --features cpu     # CPU inference
 cargo build --no-default-features --features gpu     # GPU inference
 
+# Build with CPU optimization (recommended for production performance)
+RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+  cargo build --release --no-default-features --features cpu,full-cli
+
 # Test
 cargo test --workspace --no-default-features --features cpu
 
@@ -20,8 +24,8 @@ cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 # Development workflow
 cargo run -p xtask -- download-model
 
-# Inference with prompt templates
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+# Inference with prompt templates (clean output with reduced log noise)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/model.gguf \
   --tokenizer models/tokenizer.json \
   --prompt-template instruct \
@@ -188,36 +192,86 @@ automatically detects the appropriate template using:
 `instruct` for better out-of-box experience with instruction-tuned models. Use
 `--prompt-template raw` if you need raw completion behavior.
 
+**Default template:** `auto` — uses `llama3-chat` if the tokenizer exposes `<|eot_id|>`,
+otherwise falls back to `instruct`. Override with `--prompt-template`.
+
+### Quick Start: Q&A with BitNet Models
+
+**Base vs Instruction-tuned Models**: Base models tend to "complete" prompts rather than
+"answer" questions. For best Q&A results with base models, use `--prompt-template instruct`
+with concise prompts. Instruction-tuned models perform better with conversational templates.
+
+**For one-shot Q&A and math problems**, use `--prompt-template instruct`:
+
+```bash
+# One-shot Q&A (recommended for base/BitNet models)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt-template instruct \
+  --prompt "What is 2+2?" \
+  --max-tokens 8 \
+  --temperature 0.0 --greedy
+```
+
+**For conversational prompts with LLaMA-3 compatible models**, use `--prompt-template llama3-chat`:
+
+```bash
+# LLaMA-3 chat (auto-stops on <|eot_id|> token ID 128009)
+# Note: This uses the Microsoft model with llama3-chat template
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt-template llama3-chat \
+  --system-prompt "You are a helpful assistant" \
+  --prompt "What is the capital of France?" \
+  --max-tokens 32 \
+  --temperature 0.7 --top-p 0.95
+```
+
+**For explicit stop control**, use `--stop-id` to specify token IDs:
+
+```bash
+# Explicit stop token ID (e.g., LLaMA-3 <|eot_id|> = 128009)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt-template llama3-chat \
+  --prompt "Capital of France?" \
+  --stop-id 128009 \
+  --max-tokens 16
+```
+
 You can override auto-detection with `--prompt-template`:
 
 ```bash
 # Auto-detect template (recommended - uses GGUF metadata and tokenizer hints)
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is the capital of France?" \
   --max-tokens 32
 
 # Raw (no formatting) - for completion-style models
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt-template raw \
   --prompt "2+2=" \
   --max-tokens 16
 
 # Instruct (Q&A format) - for instruction-tuned models
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt-template instruct \
   --prompt "What is the capital of France?" \
   --max-tokens 32
 
-# LLaMA-3 chat format - for LLaMA-3 models
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+# LLaMA-3 chat format - for LLaMA-3 compatible models
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt-template llama3-chat \
   --system-prompt "You are a helpful assistant" \
   --prompt "Explain photosynthesis" \
@@ -247,29 +301,60 @@ BitNet.rs CLI supports convenient aliases for common flags to improve compatibil
 ### Sampling Controls
 
 ```bash
-# Greedy decoding (deterministic)
---temperature 0.0 --greedy
+# Greedy decoding (deterministic) - with reduced log noise
+RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" \
+  --temperature 0.0 --greedy --seed 42
 
-# Nucleus sampling (creative)
---temperature 0.7 --top-p 0.95 --top-k 50 --repetition-penalty 1.05
+# Greedy math sanity check (validates model correctness)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "Answer with a single digit: 2+2=" \
+  --max-tokens 1 \
+  --temperature 0.0 --greedy
+
+# Nucleus sampling (creative) - with clean output
+RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" \
+  --temperature 0.7 --top-p 0.95 --top-k 50 --repetition-penalty 1.05
 
 # Deterministic inference (reproducible)
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 export RAYON_NUM_THREADS=1
-cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --greedy --seed 42
+RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" --greedy --seed 42
 ```
+
+**Logging:**
+
+- `RUST_LOG=warn`: Suppresses debug/info logs, shows only warnings/errors (recommended for clean output)
+- `RUST_LOG=info`: Shows general information (default verbose)
+- `RUST_LOG=error`: Only shows errors (minimal output)
 
 ### Stop Sequences
 
 ```bash
-# Manual stop sequences
+# Manual stop sequences (string-based)
 --stop "</s>" --stop "\n\nQ:"
+
+# Manual stop token IDs (numeric token IDs for LLaMA-3 EOT, etc.)
+--stop-id 128009  # <|eot_id|> for LLaMA-3
+
+# Combined: manual strings + manual IDs + template defaults
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt-template llama3-chat \
+  --prompt "What is 2+2?" \
+  --stop "\n\n" \
+  --stop-id 128009 \
+  --max-tokens 32
 
 # Template defaults (automatic based on --prompt-template)
 # - raw: no stop sequences
 # - instruct: stops on "\n\nQ:", "\n\nHuman:"
-# - llama3-chat: stops on "<|eot_id|>", "<|end_of_text|>"
+# - llama3-chat: stops on "<|eot_id|>" (auto-resolved to token ID 128009)
+#
+# Note: Template-resolved token IDs are automatically merged with manual --stop-id values
 ```
 
 ### Interactive Chat
@@ -279,20 +364,20 @@ auto-detects the appropriate chat template and displays streaming responses:
 
 ```bash
 # Interactive chat with auto-template detection
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 
 # Chat with specific template override
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt-template llama3-chat
 
 # Chat with custom sampling parameters
-cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
-  --model models/model.gguf \
-  --tokenizer models/tokenizer.json \
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --temperature 0.7 --top-p 0.95
 ```
 
@@ -389,6 +474,8 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
   `--prompt-template` (raw/instruct/llama3-chat). Check GGUF metadata with
   `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection
   priority issues.
+- Slow QK256 inference: The QK256 MVP uses scalar kernels (~0.1 tok/s for 2B models).
+  For quick validation, use `--max-new-tokens 4-16`. SIMD optimizations are planned.
 - LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your
   GGUF has quantized LN weights (should be FP16/FP32)
   - **RMS-based validation**: Validator checks LayerNorm gamma RMS (root mean square)

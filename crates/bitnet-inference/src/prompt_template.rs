@@ -175,6 +175,40 @@ impl TemplateType {
         }
     }
 
+    /// Resolve stop sequences to token IDs using the provided tokenizer
+    ///
+    /// This method converts the template's default stop sequences (like "<|eot_id|>")
+    /// to their corresponding token IDs for efficient stop detection during generation.
+    ///
+    /// Token ID-based stops are checked before string matching, making termination
+    /// faster and more reliable for models with special stop tokens.
+    ///
+    /// # Arguments
+    /// * `tokenizer` - The tokenizer to use for token ID resolution
+    ///
+    /// # Returns
+    /// A vector of token IDs that should trigger generation stop.
+    /// Returns empty if no stop sequences can be resolved or if the template has no stops.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let template = TemplateType::Llama3Chat;
+    /// let stop_ids = template.resolve_stop_token_ids(&tokenizer);
+    /// // stop_ids might contain [128009] for <|eot_id|>
+    /// ```
+    pub fn resolve_stop_token_ids(&self, tokenizer: &dyn bitnet_tokenizers::Tokenizer) -> Vec<u32> {
+        let stop_sequences = self.default_stop_sequences();
+        let mut stop_ids = Vec::new();
+
+        for seq in &stop_sequences {
+            if let Some(id) = tokenizer.token_to_id(seq) {
+                stop_ids.push(id);
+            }
+        }
+
+        stop_ids
+    }
+
     /// Check if BOS should be added for this template
     /// LLaMA-3 chat includes its own BOS token in the template
     pub fn should_add_bos(&self) -> bool {
@@ -381,6 +415,63 @@ mod tests {
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
         assert!(llama3_stops.contains(&"<|eot_id|>".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_stop_token_ids() {
+        // Create a mock tokenizer that can resolve special tokens
+        use bitnet_tokenizers::MockTokenizer;
+        let tokenizer = MockTokenizer::new();
+
+        // Test that Raw template returns empty (no stops)
+        let raw_ids = TemplateType::Raw.resolve_stop_token_ids(&tokenizer);
+        assert_eq!(raw_ids, Vec::<u32>::new());
+
+        // Test that Instruct template returns empty for mock tokenizer
+        // (mock tokenizer doesn't resolve the instruct stop sequences)
+        let instruct_ids = TemplateType::Instruct.resolve_stop_token_ids(&tokenizer);
+        assert_eq!(instruct_ids, Vec::<u32>::new());
+
+        // Test that LLaMA3Chat template also returns empty for mock tokenizer
+        // In a real scenario with a real tokenizer that has <|eot_id|> in vocab,
+        // this would return the resolved token IDs
+        let llama3_ids = TemplateType::Llama3Chat.resolve_stop_token_ids(&tokenizer);
+        assert_eq!(llama3_ids, Vec::<u32>::new());
+    }
+
+    #[test]
+    fn test_template_glue_with_real_token_ids() {
+        // This test proves the complete template glue: template → stops → token IDs
+        // Given a mock tokenizer that maps <|eot_id|> → 128009 (LLaMA-3's actual EOT token ID)
+        use bitnet_tokenizers::MockTokenizer;
+
+        let tokenizer = MockTokenizer::with_special_tokens(&[
+            ("<|eot_id|>", 128009),
+            ("<|end_of_text|>", 128010),
+        ]);
+
+        // Test LLaMA3Chat template
+        let template = TemplateType::Llama3Chat;
+
+        // Assert: default_stop_sequences includes "<|eot_id|>"
+        let stops = template.default_stop_sequences();
+        assert!(stops.contains(&"<|eot_id|>".to_string()));
+        assert!(stops.contains(&"<|end_of_text|>".to_string()));
+
+        // Assert: resolve_stop_token_ids returns [128009, 128010]
+        let stop_ids = template.resolve_stop_token_ids(&tokenizer);
+        assert!(stop_ids.contains(&128009), "Expected 128009 for <|eot_id|>");
+        assert!(stop_ids.contains(&128010), "Expected 128010 for <|end_of_text|>");
+
+        // Assert: apply() wraps system_prompt + user in LLaMA-3 format
+        let formatted = template.apply("What is 2+2?", Some("You are helpful"));
+        assert!(formatted.contains("<|begin_of_text|>"));
+        assert!(formatted.contains("<|start_header_id|>system<|end_header_id|>"));
+        assert!(formatted.contains("You are helpful"));
+        assert!(formatted.contains("<|start_header_id|>user<|end_header_id|>"));
+        assert!(formatted.contains("What is 2+2?"));
+        assert!(formatted.contains("<|eot_id|>"));
+        assert!(formatted.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
     }
 
     #[test]

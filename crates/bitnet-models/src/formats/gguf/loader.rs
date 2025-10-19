@@ -3,6 +3,7 @@
 use super::{GgufReader, GgufTensorType, GgufTensors};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::names::{is_layernorm_weight, is_projection_weight};
+use crate::qk256_utils::{detect_qk256_orientation_by_bytes, expected_qk256_shape};
 use crate::{BitNetModel, Model};
 use bitnet_common::{
     BitNetConfig, BitNetError, CorrectionRecord, Device, ModelError, ModelMetadata, Result,
@@ -10,6 +11,9 @@ use bitnet_common::{
 use candle_core::{DType, Tensor};
 use std::path::Path;
 use tracing::{debug, info};
+
+/// Type alias for tensor load result with optional raw tensor and correction record
+type TensorLoadResult = Result<(Tensor, Option<(String, Tensor)>, Option<CorrectionRecord>)>;
 
 /// GGUF format loader
 pub struct GgufLoader;
@@ -306,7 +310,7 @@ impl GgufLoader {
             if Self::env_truthy("BITNET_STRICT_MODE") {
                 return Err(BitNetError::Security(SecurityError::MalformedData { reason: msg }));
             } else {
-                tracing::warn!("{} (continuing: non-strict mode)", msg);
+                tracing::info!("{} (continuing: non-strict mode)", msg);
             }
         }
 
@@ -744,15 +748,15 @@ impl FormatLoader for GgufLoader {
             callback(0.5, "Loading tensors...");
         }
 
-        // Load tensors with fingerprint for policy matching
-        let tensors = self.load_tensors(&reader, device, config, &fingerprint)?;
+        // Load tensors with fingerprint for policy matching (returns both regular and raw QK256 tensors)
+        let (tensors, raw_tensors) = self.load_tensors(&reader, device, config, &fingerprint)?;
 
         if let Some(callback) = &config.progress_callback {
             callback(0.9, "Initializing model...");
         }
 
-        // Create model instance
-        let model = BitNetModel::from_gguf(model_config, tensors, *device)?;
+        // Create model instance (pass both tensors and raw_tensors for QK256 dispatch)
+        let model = BitNetModel::from_gguf(model_config, tensors, raw_tensors, *device)?;
 
         Ok(Box::new(model))
     }
@@ -1135,11 +1139,16 @@ impl GgufLoader {
         device: &Device,
         config: &LoadConfig,
         fingerprint: &str,
-    ) -> Result<GgufTensors> {
+    ) -> Result<(GgufTensors, std::collections::HashMap<String, Tensor>)> {
         let tensor_count = reader.tensor_count() as usize;
         let mut tensors = GgufTensors::new();
+        let mut raw_tensors: std::collections::HashMap<String, Tensor> =
+            std::collections::HashMap::new();
 
         info!("Loading {} tensors", tensor_count);
+
+        // Extract model config for QK256 orientation detection
+        let model_config = self.extract_config(reader)?;
 
         // Load correction policy if BITNET_CORRECTION_POLICY is set
         let policy = if let Ok(policy_path) = std::env::var("BITNET_CORRECTION_POLICY") {
@@ -1180,14 +1189,21 @@ impl GgufLoader {
                 tensor_info.name, tensor_info.shape, tensor_info.tensor_type
             );
 
-            // Convert to Candle tensor (now with policy plan)
-            let (candle_tensor, correction_opt) = self.create_candle_tensor_with_policy(
-                tensor_info,
-                tensor_data,
-                device,
-                policy_plan.as_ref(),
-            )?;
+            // Convert to Candle tensor (now with policy plan and QK256 handling)
+            let (candle_tensor, raw_qk256_opt, correction_opt) = self
+                .create_candle_tensor_with_policy(
+                    tensor_info,
+                    tensor_data,
+                    device,
+                    &model_config,
+                    policy_plan.as_ref(),
+                )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
+
+            // Store raw QK256 tensor if present
+            if let Some((key, raw_tensor)) = raw_qk256_opt {
+                raw_tensors.insert(key, raw_tensor);
+            }
 
             // Collect correction records
             if let Some(corr) = correction_opt {
@@ -1222,18 +1238,25 @@ impl GgufLoader {
             }
         }
 
-        info!("Successfully loaded {} tensors with fingerprint: {}", tensors.len(), fingerprint);
-        Ok(tensors)
+        info!(
+            "Successfully loaded {} tensors (detected {} QK256 tensors) with fingerprint: {}",
+            tensors.len(),
+            raw_tensors.len(),
+            fingerprint
+        );
+        Ok((tensors, raw_tensors))
     }
 
     /// Create a Candle tensor from GGUF tensor info, optionally applying policy-driven corrections
+    /// Returns (tensor, raw_qk256_tensor_opt, correction_record_opt)
     fn create_candle_tensor_with_policy(
         &self,
         info: &crate::formats::gguf::TensorInfo,
         data: &[u8],
         device: &Device,
+        model_config: &BitNetConfig,
         policy_plan: Option<&crate::correction_policy::CorrectionPlan>,
-    ) -> Result<(Tensor, Option<CorrectionRecord>)> {
+    ) -> TensorLoadResult {
         let dtype = match info.tensor_type {
             GgufTensorType::F32 => DType::F32,
             GgufTensorType::F16 => DType::F16,
@@ -1266,7 +1289,7 @@ impl GgufLoader {
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
                 let tensor = Tensor::from_slice(&f32_data, info.shape.as_slice(), &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                return Ok((tensor, None));
+                return Ok((tensor, None, None));
             }
 
             // For IQ2_S without FFI support, fail with clear message
@@ -1283,6 +1306,7 @@ impl GgufLoader {
 
             // Handle I2_S quantization with native Rust dequantization
             if matches!(info.tensor_type, GgufTensorType::I2_S) {
+                use super::types::{I2SFlavor, detect_i2s_flavor};
                 use crate::quant::i2s::{self, I2SDequantCfg};
 
                 // PATCH 2: LayerNorm weights should NEVER be quantized - skip I2_S path
@@ -1294,6 +1318,110 @@ impl GgufLoader {
                     )));
                 }
 
+                // PATCH: Detect I2_S flavor to determine if this is QK256
+                let nelems = info.shape.iter().product::<usize>();
+                let has_scale_sibling = false; // QK256 has no sibling scale tensor (scales are inline or absent)
+
+                let flavor = detect_i2s_flavor(info, has_scale_sibling, nelems)?;
+
+                // If QK256, preserve raw bytes instead of dequantizing
+                if matches!(flavor, I2SFlavor::GgmlQk256NoScale) {
+                    tracing::debug!(
+                        "Detected QK256 tensor '{}' ({}x{}, {} bytes) - preserving raw bytes",
+                        info.name,
+                        info.shape[0],
+                        info.shape[1],
+                        data.len()
+                    );
+
+                    // Determine correct orientation for QK256 tensors
+                    // QK256 format requires [output_dim, input_dim] layout (one row per output feature)
+                    // GGUF may store as [input_dim, output_dim] which needs transposition
+                    let (rows, cols) = {
+                        let shape_as_is = (info.shape[0], info.shape[1]);
+                        let shape_transposed = (info.shape[1], info.shape[0]);
+
+                        // Use tensor name and config to determine expected shape
+                        let expected_shape = expected_qk256_shape(&info.name, model_config);
+
+                        if let Some((expected_rows, expected_cols)) = expected_shape {
+                            // Check which orientation matches the expected shape
+                            if shape_as_is.0 == expected_rows && shape_as_is.1 == expected_cols {
+                                tracing::debug!(
+                                    "QK256 '{}': using as-is [{}, {}] (matches expected)",
+                                    info.name,
+                                    shape_as_is.0,
+                                    shape_as_is.1
+                                );
+                                shape_as_is
+                            } else if shape_transposed.0 == expected_rows
+                                && shape_transposed.1 == expected_cols
+                            {
+                                tracing::debug!(
+                                    "QK256 '{}': using transposed [{}, {}] (matches expected)",
+                                    info.name,
+                                    shape_transposed.0,
+                                    shape_transposed.1
+                                );
+                                shape_transposed
+                            } else {
+                                // Fall back to byte-based detection
+                                tracing::warn!(
+                                    "QK256 '{}': shape mismatch - expected [{}, {}], got [{}, {}] or [{}, {}]",
+                                    info.name,
+                                    expected_rows,
+                                    expected_cols,
+                                    shape_as_is.0,
+                                    shape_as_is.1,
+                                    shape_transposed.0,
+                                    shape_transposed.1
+                                );
+                                detect_qk256_orientation_by_bytes(
+                                    shape_as_is,
+                                    shape_transposed,
+                                    data.len(),
+                                )
+                            }
+                        } else {
+                            // No expected shape - use byte-based detection
+                            detect_qk256_orientation_by_bytes(
+                                shape_as_is,
+                                shape_transposed,
+                                data.len(),
+                            )
+                        }
+                    };
+
+                    let blocks_per_row = cols.div_ceil(256); // 256 elements per block
+                    let row_stride_bytes = blocks_per_row * 64; // 64 bytes per 256-element block
+
+                    // Store raw bytes as U8 tensor [rows, row_stride_bytes]
+                    let raw_tensor = Tensor::from_raw_buffer(
+                        data,
+                        DType::U8,
+                        &[rows, row_stride_bytes],
+                        &candle_device,
+                    )
+                    .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+                    // Generate key for raw_tensors collection
+                    let qk256_key = format!("{}.qk256_qs", info.name);
+
+                    // Return placeholder f32 tensor for main collection (will not be used)
+                    // We need a valid tensor to satisfy the API, but transformer will use raw_tensors
+                    let placeholder = Tensor::zeros(&[rows, cols], DType::F32, &candle_device)
+                        .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+                    tracing::debug!(
+                        "QK256 raw tensor stored with key '{}' [shape: {:?}]",
+                        qk256_key,
+                        raw_tensor.dims()
+                    );
+
+                    return Ok((placeholder, Some((qk256_key, raw_tensor)), None));
+                }
+
+                // For other I2_S flavors (Split32, Inline), continue with dequantization
                 // Select per-tensor I2_S config (policy → heuristic → default)
                 let (inv, k, correction_opt) =
                     Self::select_i2s_config(&info.name, Some(data), policy_plan);
@@ -1315,7 +1443,7 @@ impl GgufLoader {
                     let (rows, cols) = (info.shape[1], info.shape[0]);
                     let tensor = Tensor::from_slice(&f32_data, &[rows, cols], &candle_device)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
-                    return Ok((tensor, correction_opt));
+                    return Ok((tensor, None, correction_opt));
                 } else if Self::is_projection_tensor(&info.name) && info.shape.len() == 2 {
                     // Projection tensors need transposition for linear layer compatibility
                     debug!(
@@ -1333,7 +1461,7 @@ impl GgufLoader {
 
                     // Log projection RMS for diagnosis
                     if is_proj && let Ok(rms) = Self::rms_f32(&tensor) {
-                        info!(
+                        debug!(
                             "PROJ load: '{}' dtype=I2_S->F32 shape={:?} rms={:.6} (inv={} k={})",
                             info.name,
                             tensor.dims(),
@@ -1343,7 +1471,7 @@ impl GgufLoader {
                         );
                     }
 
-                    return Ok((tensor, correction_opt));
+                    return Ok((tensor, None, correction_opt));
                 } else {
                     // Normal I2_S dequantization with config
                     let mut f32_data = i2s::dequantize_to_f32_with_cfg(data, &info.shape, cfg)
@@ -1377,7 +1505,7 @@ impl GgufLoader {
 
                     // Log projection RMS for diagnosis
                     if is_proj && let Ok(rms) = Self::rms_f32(&tensor) {
-                        info!(
+                        debug!(
                             "PROJ load: '{}' dtype=I2_S->F32 shape={:?} rms={:.6} (inv={} k={})",
                             info.name,
                             tensor.dims(),
@@ -1387,7 +1515,7 @@ impl GgufLoader {
                         );
                     }
 
-                    return Ok((tensor, correction_opt));
+                    return Ok((tensor, None, correction_opt));
                 }
             }
 
@@ -1395,7 +1523,7 @@ impl GgufLoader {
             // (would need specific dequantizers for Q4_0, Q8_0, etc.)
             let tensor = Tensor::from_raw_buffer(data, dtype, &info.shape, &candle_device)
                 .map_err(|e| BitNetError::Validation(e.to_string()))?;
-            Ok((tensor, None))
+            Ok((tensor, None, None))
         } else {
             // For regular tensors, interpret the bytes according to the data type
             match dtype {
@@ -1461,7 +1589,7 @@ impl GgufLoader {
                             tensor,
                             policy_plan,
                         )?;
-                        Ok((rescaled, correction))
+                        Ok((rescaled, None, correction))
                     } else {
                         // Log projection RMS for F32 projections
                         if is_projection_weight(&info.name)
@@ -1474,7 +1602,7 @@ impl GgufLoader {
                                 rms
                             );
                         }
-                        Ok((tensor, None))
+                        Ok((tensor, None, None))
                     }
                 }
                 DType::F16 => {
@@ -1518,7 +1646,7 @@ impl GgufLoader {
                             tensor,
                             policy_plan,
                         )?;
-                        Ok((rescaled, correction))
+                        Ok((rescaled, None, correction))
                     } else {
                         // Log projection RMS for F16→F32 projections
                         if is_projection_weight(&info.name)
@@ -1531,7 +1659,7 @@ impl GgufLoader {
                                 rms
                             );
                         }
-                        Ok((tensor, None))
+                        Ok((tensor, None, None))
                     }
                 }
                 _ => Err(BitNetError::Model(ModelError::InvalidFormat {

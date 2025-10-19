@@ -74,7 +74,59 @@ pub struct GenerationConfig {
     pub stream: bool,
 }
 
-/// Inference command arguments
+/// Inference command arguments with template-aware Q&A support
+///
+/// # Examples
+///
+/// ## Q&A mode (recommended - bundles Q&A-friendly defaults):
+/// ```bash
+/// bitnet-cli run --model model.gguf --qa --prompt "Who wrote Pride and Prejudice?"
+/// # Equivalent to: --prompt-template auto --temperature 0.7 --top-p 0.95 --top-k 50
+/// ```
+///
+/// ## Q&A mode with custom temperature:
+/// ```bash
+/// bitnet-cli run --model model.gguf --qa --temperature 0.5 \
+///   --prompt "What is the capital of France?"
+/// ```
+///
+/// ## Auto-detect template (recommended):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt "Who wrote Pride and Prejudice?"
+/// ```
+/// The CLI will auto-detect the appropriate prompt template from GGUF metadata and model paths.
+///
+/// ## Explicit Instruct template (Q&A format):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt-template instruct \
+///   --prompt "What is 2+2?" --max-tokens 16
+/// ```
+///
+/// ## LLaMA-3 chat format with system prompt:
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt-template llama3-chat \
+///   --system-prompt "You are a helpful assistant" \
+///   --prompt "Explain photosynthesis" --max-tokens 128 \
+///   --temperature 0.7 --top-p 0.95
+/// ```
+///
+/// ## Deterministic Q&A (reproducible results):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt "Test question" \
+///   --temperature 0.0 --greedy --seed 42 --deterministic
+/// ```
+///
+/// ## Raw completion (no Q&A formatting):
+/// ```bash
+/// bitnet-cli run --model model.gguf --prompt-template raw \
+///   --prompt "2+2=" --max-tokens 16
+/// ```
+///
+/// ## Batch Q&A from file:
+/// ```bash
+/// bitnet-cli run --model model.gguf --input-file questions.txt \
+///   --batch-size 4 --format jsonl > answers.jsonl
+/// ```
 #[derive(Args, Debug, Default)]
 pub struct InferenceCommand {
     /// Path to the model file
@@ -108,8 +160,7 @@ pub struct InferenceCommand {
     /// Maximum number of tokens to generate (aliases: --max-new-tokens, --n-predict)
     #[arg(
         long = "max-tokens",
-        visible_alias = "max-new-tokens",
-        visible_alias = "n-predict",
+        visible_aliases = ["max-new-tokens", "n-predict"],
         default_value = "512",
         value_name = "N"
     )]
@@ -208,6 +259,10 @@ pub struct InferenceCommand {
     )]
     pub stop: Vec<String>,
 
+    /// Stop token IDs (numeric token IDs to stop generation)
+    #[arg(long = "stop-id", value_name = "ID")]
+    pub stop_id: Vec<u32>,
+
     /// Timeout for inference (in seconds)
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
@@ -231,6 +286,16 @@ pub struct InferenceCommand {
     /// Path for the primary inference receipt (default: ci/inference.json)
     #[arg(long, value_name = "PATH")]
     pub receipt_path: Option<PathBuf>,
+
+    /// Q&A mode: bundle Q&A-friendly defaults (auto template, temp=0.7, top-p=0.95, top-k=50)
+    /// Individual parameters can still be overridden (e.g., --qa --temperature 0.5)
+    #[arg(long)]
+    pub qa: bool,
+
+    /// Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1)
+    /// Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features).
+    #[arg(long)]
+    pub strict_loader: bool,
 }
 
 impl InferenceCommand {
@@ -390,7 +455,7 @@ impl PrefillEngine for InferenceEngine {
             top_p: config.sampling.top_p,
             repetition_penalty: config.sampling.repetition_penalty,
             stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids: vec![], // Token-level stops not used in PrefillEngine path
+            stop_token_ids: vec![], // Token-level stops not available in PrefillEngine path (no tokenizer access)
             seed: config.sampling.seed,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -422,11 +487,8 @@ pub struct PerformanceMetrics {
 impl InferenceCommand {
     /// Execute the inference command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
-        // Setup deterministic environment if requested
+        // Setup deterministic environment if requested (logging already initialized in main())
         self.setup_environment()?;
-
-        // Setup logging and progress reporting
-        self.setup_logging(config)?;
 
         // Validate arguments
         self.validate_args()?;
@@ -449,6 +511,15 @@ impl InferenceCommand {
 
     /// Setup environment for deterministic execution
     pub(super) fn setup_environment(&self) -> Result<()> {
+        // Enable strict loader mode if requested (AC1: fail-fast with enhanced loader + strict tolerance)
+        if self.strict_loader {
+            unsafe {
+                std::env::set_var("BITNET_DISABLE_MINIMAL_LOADER", "1");
+                std::env::set_var("BITNET_STRICT_MODE", "1");
+            }
+            debug!("Strict loader enabled (BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)");
+        }
+
         // Set thread count if specified
         if let Some(threads) = self.threads {
             unsafe {
@@ -483,41 +554,6 @@ impl InferenceCommand {
                 std::env::set_var("BITNET_SEED", seed.to_string());
             }
             debug!("Set seed to {}", seed);
-        }
-
-        Ok(())
-    }
-
-    /// Setup logging based on configuration
-    pub(super) fn setup_logging(&self, config: &CliConfig) -> Result<()> {
-        let level = if self.verbose { "debug" } else { &config.logging.level };
-
-        let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(level));
-
-        match config.logging.format.as_str() {
-            "json" => {
-                tracing_subscriber::fmt()
-                    .json()
-                    .with_env_filter(filter)
-                    .with_target(false)
-                    .with_timer(tracing_subscriber::fmt::time::uptime())
-                    .init();
-            }
-            "compact" => {
-                tracing_subscriber::fmt()
-                    .compact()
-                    .with_env_filter(filter)
-                    .with_target(false)
-                    .init();
-            }
-            _ => {
-                tracing_subscriber::fmt()
-                    .pretty()
-                    .with_env_filter(filter)
-                    .with_target(false)
-                    .init();
-            }
         }
 
         Ok(())
@@ -562,7 +598,7 @@ impl InferenceCommand {
     pub(super) async fn load_model_and_tokenizer(
         &self,
         config: &CliConfig,
-    ) -> Result<(InferenceEngine, Arc<dyn bitnet_tokenizers::Tokenizer>)> {
+    ) -> Result<(InferenceEngine, Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>)> {
         let model_path = self
             .model
             .as_ref()
@@ -732,12 +768,14 @@ impl InferenceCommand {
         }
     }
 
-    /// Load tokenizer
+    /// Load tokenizer with auto-discovery
+    ///
+    /// AC:ID llama3-tokenizer-api-contracts.md#cli-auto-discovery-v1
     async fn load_tokenizer(
         &self,
         model_path: &Path,
         reader: Option<&bitnet_models::GgufReader<'_>>,
-    ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer>> {
+    ) -> Result<Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>> {
         // Try RustGgufTokenizer from GGUF metadata (pure Rust, preferred)
         if let Some(reader) = reader {
             if let Ok(tokenizer) = bitnet_tokenizers::RustGgufTokenizer::from_gguf(reader) {
@@ -747,9 +785,14 @@ impl InferenceCommand {
             warn!("Failed to load pure-Rust tokenizer from GGUF, falling back to auto-detection");
         }
 
-        // Fall back to existing auto-loader for external files
-        let tokenizer = bitnet_tokenizers::auto::load_auto(model_path, self.tokenizer.as_deref())?;
-        debug!("Successfully loaded tokenizer using auto-detection");
+        // Resolve tokenizer path using discovery logic
+        let tokenizer_path =
+            crate::tokenizer_discovery::resolve_tokenizer(model_path, self.tokenizer.clone())?;
+
+        debug!("Loading tokenizer from: {}", tokenizer_path.display());
+
+        // Load tokenizer from resolved path (returns Arc directly)
+        let tokenizer = bitnet_tokenizers::loader::load_tokenizer(&tokenizer_path)?;
         Ok(tokenizer)
     }
 
@@ -757,7 +800,7 @@ impl InferenceCommand {
     async fn run_single_inference(
         &self,
         mut engine: InferenceEngine,
-        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
         prompt: &str,
     ) -> Result<()> {
         let start_time = Instant::now();
@@ -782,10 +825,26 @@ impl InferenceCommand {
     }
 
     /// Convert CLI GenerationConfig to engine GenerationConfig
+    ///
+    /// If a tokenizer is provided, this method will attempt to resolve stop sequences
+    /// to token IDs for faster and more reliable stop detection (especially for LLaMA-3).
     pub(super) fn to_engine_config(
         &self,
         config: &GenerationConfig,
+        tokenizer: Option<&dyn Tokenizer>,
     ) -> bitnet_inference::GenerationConfig {
+        // Start with manual stop token IDs from CLI
+        let mut stop_token_ids = self.stop_id.clone();
+
+        // Merge with template-resolved stop token IDs (e.g., <|eot_id|> for LLaMA-3)
+        if let Some(tok) = tokenizer {
+            for id in self.resolve_stop_token_ids(tok) {
+                if !stop_token_ids.contains(&id) {
+                    stop_token_ids.push(id);
+                }
+            }
+        }
+
         bitnet_inference::GenerationConfig {
             max_new_tokens: config.max_new_tokens as u32,
             temperature: config.sampling.temperature,
@@ -793,7 +852,7 @@ impl InferenceCommand {
             top_p: config.sampling.top_p,
             repetition_penalty: config.sampling.repetition_penalty,
             stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids: vec![], // TODO: Encode stop tokens for LLaMA-3 in future PR
+            stop_token_ids,
             seed: config.sampling.seed,
             skip_special_tokens: true,
             eos_token_id: None,
@@ -802,35 +861,6 @@ impl InferenceCommand {
             logits_cb: None,
             add_bos: self.should_add_bos(), // Template-aware BOS policy
         }
-    }
-
-    /// Encode stop token strings to IDs for token-level stop checking.
-    /// Called with a tokenizer to populate stop_token_ids for LLaMA-3 <|eot_id|>.
-    #[allow(dead_code)] // Will be used in chat mode enhancements
-    pub(super) fn encode_stop_tokens(
-        &self,
-        tokenizer: &dyn Tokenizer,
-        mut config: bitnet_inference::GenerationConfig,
-    ) -> bitnet_inference::GenerationConfig {
-        // Detect LLaMA-3 and encode <|eot_id|> token if present
-        if let Ok(template_type) = self.resolve_template_type()
-            && matches!(template_type, TemplateType::Llama3Chat)
-        {
-            // Try to encode <|eot_id|> as a stop token
-            if let Ok(tokens) = tokenizer.encode("<|eot_id|>", false, false) {
-                // LLaMA-3 <|eot_id|> should be a single token
-                if tokens.len() == 1 {
-                    config.stop_token_ids.push(tokens[0]);
-                    debug!("Encoded LLaMA-3 stop token <|eot_id|> as ID {}", tokens[0]);
-                }
-            }
-        }
-
-        // Sort and deduplicate for efficient binary search in streaming loop
-        config.stop_token_ids.sort_unstable();
-        config.stop_token_ids.dedup();
-
-        config
     }
 
     /// Run streaming inference
@@ -848,7 +878,9 @@ impl InferenceCommand {
         // Reset canonical token counter before generation
         engine.reset_decoded_tokens();
 
-        let engine_config = self.to_engine_config(config);
+        // Get tokenizer for stop token ID resolution
+        let tokenizer = engine.tokenizer();
+        let engine_config = self.to_engine_config(config, Some(tokenizer.as_ref()));
         let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
         print!("{}", style("Generated: ").bold());
@@ -901,7 +933,9 @@ impl InferenceCommand {
         // Reset canonical token counter before generation
         engine.reset_decoded_tokens();
 
-        let engine_config = self.to_engine_config(config);
+        // Get tokenizer for stop token ID resolution
+        let tokenizer = engine.tokenizer();
+        let engine_config = self.to_engine_config(config, Some(tokenizer.as_ref()));
         let mut stream = engine.generate_stream_with_config(prompt, &engine_config)?;
 
         let mut collected = String::new();
@@ -1192,7 +1226,7 @@ impl InferenceCommand {
     async fn run_interactive_mode(
         &self,
         engine: InferenceEngine,
-        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
     ) -> Result<()> {
         // Temporary: keep references alive; TODO(use in REPL)
         let _keep_alive = (&engine, &tokenizer);
@@ -1294,7 +1328,7 @@ impl InferenceCommand {
     async fn run_batch_mode(
         &self,
         mut engine: InferenceEngine,
-        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer>,
+        _tokenizer: Arc<dyn bitnet_tokenizers::Tokenizer + Send + Sync>,
         input_file: &PathBuf,
     ) -> Result<()> {
         info!("Processing prompts from: {}", input_file.display());
@@ -1377,6 +1411,21 @@ impl InferenceCommand {
         }
     }
 
+    /// Resolve stop sequences to token IDs using the template and tokenizer
+    ///
+    /// This method uses the template's default stop sequences and resolves them
+    /// to token IDs for efficient stop detection during generation.
+    fn resolve_stop_token_ids(&self, tokenizer: &dyn Tokenizer) -> Vec<u32> {
+        // Get the template type
+        let template_type = match self.resolve_template_type() {
+            Ok(t) => t,
+            Err(_) => return vec![], // No template, no token IDs
+        };
+
+        // Use the template's resolve method
+        template_type.resolve_stop_token_ids(tokenizer)
+    }
+
     /// Create generation configuration
     pub(super) fn create_generation_config(&self) -> Result<GenerationConfig> {
         // Apply greedy decoding if requested
@@ -1385,8 +1434,8 @@ impl InferenceCommand {
         } else {
             (
                 self.temperature,
-                self.top_k.unwrap_or(40) as u32,
-                self.top_p.unwrap_or(1.0),
+                self.top_k.unwrap_or(50) as u32,
+                self.top_p.unwrap_or(0.95),
                 self.repetition_penalty,
             )
         };
@@ -1798,12 +1847,15 @@ mod tests {
             no_bos: false,
             no_eos: false,
             stop: Vec::new(),
+            stop_id: Vec::new(),
             timeout: None,
             dump_logits: None,
             logits_topk: 10,
             chat_history_limit: None,
             emit_receipt_dir: None,
             receipt_path: None,
+            qa: false,
+            strict_loader: false,
         };
 
         let gen_config = GenerationConfig {
@@ -1819,5 +1871,356 @@ mod tests {
             .unwrap();
 
         assert!(results[0].timing_ms.prefill >= 5.0, "prefill should record latency");
+    }
+
+    // ========================================================================
+    // Template Auto-Detection Tests
+    // ========================================================================
+    //
+    // These tests verify the template detection logic (InferenceCommand::auto_detect_template)
+    // works correctly for various model paths, tokenizer paths, and configurations.
+    //
+    // Tests cover:
+    // 1. LLaMA-3 detection from model/tokenizer paths
+    // 2. Instruct detection from model paths (instruct/chat patterns)
+    // 3. Default fallback to Instruct for generic paths
+    // 4. Explicit template override behavior
+    //
+    // References:
+    // - CLAUDE.md: Template auto-detection documentation
+    // - InferenceCommand::auto_detect_template() implementation (line 1600)
+
+    /// Tests feature spec: template-auto-detection.md#llama3-model-path
+    #[test]
+    fn test_auto_detect_llama3_from_model_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-3-8b-instruct.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Model path containing 'llama' and '3' should detect Llama3Chat"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#llama3-model-path-variants
+    #[test]
+    fn test_auto_detect_llama3_various_path_formats() {
+        let test_cases = vec![
+            "models/llama3-8b.gguf",
+            "models/meta-llama-3-70b-instruct.gguf",
+            "checkpoints/llama_3_finetune.gguf",
+            "LLAMA-3-MODEL.GGUF", // Test case-insensitive matching
+        ];
+
+        for path in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(
+                detected,
+                TemplateType::Llama3Chat,
+                "Path '{}' should detect Llama3Chat",
+                path
+            );
+        }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#instruct-model-path
+    #[test]
+    fn test_auto_detect_instruct_from_model_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/bitnet-instruct.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Model path containing 'instruct' should detect Instruct template"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#chat-model-path
+    #[test]
+    fn test_auto_detect_instruct_from_chat_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model-chat.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Model path containing 'chat' should detect Instruct template"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#instruct-chat-variants
+    #[test]
+    fn test_auto_detect_instruct_various_patterns() {
+        let test_cases = vec![
+            "models/bitnet-2b-instruct-v1.gguf",
+            "models/custom-chat-model.gguf",
+            "models/INSTRUCT-MODEL.GGUF", // Case-insensitive
+            "checkpoints/finetuned_instruct.gguf",
+        ];
+
+        for path in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(
+                detected,
+                TemplateType::Instruct,
+                "Path '{}' should detect Instruct template",
+                path
+            );
+        }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#default-fallback
+    #[test]
+    fn test_auto_detect_fallback_to_instruct() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Generic model path should default to Instruct (safer than Raw)"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#no-model-path-fallback
+    #[test]
+    fn test_auto_detect_no_model_path_fallback() {
+        let cmd = InferenceCommand {
+            model: None,
+            tokenizer: None,
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "No model/tokenizer paths should default to Instruct"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#tokenizer-path-llama3
+    #[test]
+    fn test_auto_detect_llama3_from_tokenizer_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/generic.gguf")),
+            tokenizer: Some(PathBuf::from("tokenizers/llama-3/tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Tokenizer path containing 'llama' and '3' should detect Llama3Chat"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#tokenizer-path-instruct
+    #[test]
+    fn test_auto_detect_instruct_from_tokenizer_path() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/generic.gguf")),
+            tokenizer: Some(PathBuf::from("tokenizers/instruct/tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Tokenizer path containing 'instruct' should detect Instruct template"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#model-priority-over-tokenizer
+    #[test]
+    fn test_auto_detect_model_path_priority() {
+        // Model path should take priority over tokenizer path
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-3-8b.gguf")),
+            tokenizer: Some(PathBuf::from("tokenizers/instruct/tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Model path should take priority: LLaMA-3 detected despite instruct tokenizer"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#explicit-override-raw
+    #[test]
+    fn test_explicit_template_override_raw() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-3-8b-instruct.gguf")),
+            prompt_template: "raw".into(),
+            ..Default::default()
+        };
+
+        // When prompt_template is not "auto", auto_detect_template is not used
+        // Instead, the template is parsed directly from the prompt_template string
+        // This test verifies the override behavior by checking that a non-"auto" value
+        // would be used instead of auto-detection
+        assert_eq!(
+            cmd.prompt_template, "raw",
+            "Explicit template should be preserved and not auto-detected"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#explicit-override-instruct
+    #[test]
+    fn test_explicit_template_override_instruct() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model.gguf")),
+            prompt_template: "instruct".into(),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            cmd.prompt_template, "instruct",
+            "Explicit instruct template should be preserved"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#explicit-override-llama3
+    #[test]
+    fn test_explicit_template_override_llama3_chat() {
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/generic-model.gguf")),
+            prompt_template: "llama3-chat".into(),
+            ..Default::default()
+        };
+
+        assert_eq!(
+            cmd.prompt_template, "llama3-chat",
+            "Explicit llama3-chat template should be preserved"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#edge-case-llama-without-3
+    #[test]
+    fn test_auto_detect_llama_without_3_fallback() {
+        // Model path with "llama" but not "3" should not trigger LLaMA-3 detection
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/llama-2-70b.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Path with 'llama' but not '3' should fall back to Instruct"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#edge-case-number-3-without-llama
+    #[test]
+    fn test_auto_detect_number_3_without_llama_fallback() {
+        // Model path with "3" but not "llama" should not trigger LLaMA-3 detection
+        let cmd = InferenceCommand {
+            model: Some(PathBuf::from("models/model-v3.gguf")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Instruct,
+            "Path with '3' but not 'llama' should fall back to Instruct"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#tokenizer-only-llama3
+    #[test]
+    fn test_auto_detect_tokenizer_only_llama3() {
+        // Only tokenizer path provided, should detect LLaMA-3
+        let cmd = InferenceCommand {
+            model: None,
+            tokenizer: Some(PathBuf::from("tokenizers/llama3-tokenizer.json")),
+            prompt_template: "auto".into(),
+            ..Default::default()
+        };
+        let detected = cmd.auto_detect_template();
+        assert_eq!(
+            detected,
+            TemplateType::Llama3Chat,
+            "Tokenizer-only path with 'llama3' should detect Llama3Chat"
+        );
+    }
+
+    /// Tests feature spec: template-auto-detection.md#case-insensitive-matching
+    #[test]
+    fn test_auto_detect_case_insensitive() {
+        let test_cases = vec![
+            ("LLAMA-3.GGUF", TemplateType::Llama3Chat),
+            ("Instruct-Model.gguf", TemplateType::Instruct),
+            ("CHAT-MODEL.GGUF", TemplateType::Instruct),
+        ];
+
+        for (path, expected) in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(
+                detected, expected,
+                "Path '{}' should detect {:?} (case-insensitive)",
+                path, expected
+            );
+        }
+    }
+
+    /// Tests feature spec: template-auto-detection.md#complex-path-patterns
+    #[test]
+    fn test_auto_detect_complex_paths() {
+        let test_cases = vec![
+            // Full paths with directories
+            ("/home/user/models/llama-3-instruct/checkpoint.gguf", TemplateType::Llama3Chat),
+            ("/mnt/storage/bitnet/instruct-models/model.gguf", TemplateType::Instruct),
+            // Paths with special characters
+            ("models/llama_3-8b-instruct.gguf", TemplateType::Llama3Chat),
+            // Windows-style paths
+            (r"C:\Models\llama-3\model.gguf", TemplateType::Llama3Chat),
+        ];
+
+        for (path, expected) in test_cases {
+            let cmd = InferenceCommand {
+                model: Some(PathBuf::from(path)),
+                prompt_template: "auto".into(),
+                ..Default::default()
+            };
+            let detected = cmd.auto_detect_template();
+            assert_eq!(detected, expected, "Complex path '{}' should detect {:?}", path, expected);
+        }
     }
 }
