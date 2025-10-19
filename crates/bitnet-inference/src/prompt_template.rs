@@ -440,6 +440,41 @@ mod tests {
     }
 
     #[test]
+    fn test_template_glue_with_real_token_ids() {
+        // This test proves the complete template glue: template → stops → token IDs
+        // Given a mock tokenizer that maps <|eot_id|> → 128009 (LLaMA-3's actual EOT token ID)
+        use bitnet_tokenizers::MockTokenizer;
+
+        let tokenizer = MockTokenizer::with_special_tokens(&[
+            ("<|eot_id|>", 128009),
+            ("<|end_of_text|>", 128010),
+        ]);
+
+        // Test LLaMA3Chat template
+        let template = TemplateType::Llama3Chat;
+
+        // Assert: default_stop_sequences includes "<|eot_id|>"
+        let stops = template.default_stop_sequences();
+        assert!(stops.contains(&"<|eot_id|>".to_string()));
+        assert!(stops.contains(&"<|end_of_text|>".to_string()));
+
+        // Assert: resolve_stop_token_ids returns [128009, 128010]
+        let stop_ids = template.resolve_stop_token_ids(&tokenizer);
+        assert!(stop_ids.contains(&128009), "Expected 128009 for <|eot_id|>");
+        assert!(stop_ids.contains(&128010), "Expected 128010 for <|end_of_text|>");
+
+        // Assert: apply() wraps system_prompt + user in LLaMA-3 format
+        let formatted = template.apply("What is 2+2?", Some("You are helpful"));
+        assert!(formatted.contains("<|begin_of_text|>"));
+        assert!(formatted.contains("<|start_header_id|>system<|end_header_id|>"));
+        assert!(formatted.contains("You are helpful"));
+        assert!(formatted.contains("<|start_header_id|>user<|end_header_id|>"));
+        assert!(formatted.contains("What is 2+2?"));
+        assert!(formatted.contains("<|eot_id|>"));
+        assert!(formatted.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
+    }
+
+    #[test]
     fn test_bos_control() {
         assert!(TemplateType::Raw.should_add_bos());
         assert!(TemplateType::Instruct.should_add_bos());

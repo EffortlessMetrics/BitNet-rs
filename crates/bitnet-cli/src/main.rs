@@ -259,6 +259,22 @@ enum Commands {
         #[arg(long, default_value_t = 0)]
         threads: usize,
 
+        /// Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+        #[arg(long, value_name = "TEMPLATE", default_value = "auto")]
+        prompt_template: String,
+
+        /// System prompt for chat models
+        #[arg(long, value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Stop sequences (can be repeated for multiple sequences)
+        #[arg(long = "stop", value_name = "SEQ")]
+        stop: Vec<String>,
+
+        /// Stop token IDs (numeric token IDs, can be repeated)
+        #[arg(long = "stop-id", value_name = "ID")]
+        stop_id: Vec<u32>,
+
         /// Dump logit steps during generation (max steps)
         #[arg(long)]
         dump_logit_steps: Option<usize>,
@@ -461,6 +477,10 @@ async fn main() -> Result<()> {
             greedy,
             deterministic,
             threads,
+            prompt_template,
+            system_prompt,
+            stop,
+            stop_id,
             dump_logit_steps,
             logits_topk,
             assert_greedy,
@@ -485,6 +505,10 @@ async fn main() -> Result<()> {
                 greedy,
                 deterministic,
                 threads,
+                prompt_template,
+                system_prompt,
+                stop,
+                stop_id,
                 dump_logit_steps,
                 logits_topk,
                 assert_greedy,
@@ -721,6 +745,10 @@ async fn run_simple_generation(
     greedy: bool,
     deterministic: bool,
     threads: usize,
+    prompt_template: String,
+    system_prompt: Option<String>,
+    stop: Vec<String>,
+    stop_id: Vec<u32>,
     dump_logit_steps: Option<usize>,
     logits_topk: usize,
     assert_greedy: bool,
@@ -761,6 +789,20 @@ async fn run_simple_generation(
 
     // Override temperature if greedy mode
     let temperature = if greedy { 0.0 } else { temperature };
+
+    // Parse and resolve template type
+    use bitnet_inference::TemplateType;
+    let template_type: TemplateType = if prompt_template == "auto" {
+        // Auto-detect will be done after loading tokenizer
+        TemplateType::Instruct // Default fallback
+    } else {
+        prompt_template.parse().with_context(|| {
+            format!(
+                "Invalid prompt template '{}'. Supported: raw, instruct, llama3-chat",
+                prompt_template
+            )
+        })?
+    };
 
     println!("Loading model from: {}", model_path.display());
 
@@ -900,8 +942,52 @@ async fn run_simple_generation(
         }
     };
 
-    // Tokenize prompt with BOS policy
-    let mut tokens = tokenizer.encode(&prompt, bos, false)?;
+    // Auto-detect template if needed
+    let template_type = if prompt_template == "auto" {
+        // Check if tokenizer has special tokens for LLaMA-3
+        if tokenizer.token_to_id("<|eot_id|>").is_some() {
+            debug!("Auto-detected llama3-chat template (tokenizer has <|eot_id|>)");
+            TemplateType::Llama3Chat
+        } else {
+            debug!("Auto-detected instruct template (fallback)");
+            TemplateType::Instruct
+        }
+    } else {
+        template_type
+    };
+
+    // Format prompt using the template
+    let formatted_prompt = template_type.apply(&prompt, system_prompt.as_deref());
+
+    // Get template's default stop sequences and merge with manual stops
+    let template_stops = template_type.default_stop_sequences();
+    let mut all_stop_sequences = stop.clone();
+    for template_stop in template_stops {
+        if !all_stop_sequences.contains(&template_stop) {
+            all_stop_sequences.push(template_stop);
+        }
+    }
+
+    // Resolve template stop sequences to token IDs and merge with manual stop IDs
+    let template_stop_ids = template_type.resolve_stop_token_ids(tokenizer.as_ref());
+    let mut all_stop_ids = stop_id.clone();
+    for template_id in template_stop_ids {
+        if !all_stop_ids.contains(&template_id) {
+            all_stop_ids.push(template_id);
+        }
+    }
+
+    debug!(
+        "Template: {} | Stop sequences: {:?} | Stop IDs: {:?}",
+        template_type, all_stop_sequences, all_stop_ids
+    );
+
+    // Determine BOS policy based on template
+    let bos = if prompt_template == "auto" || !bos { template_type.should_add_bos() } else { bos };
+
+    // Tokenize formatted prompt with proper BOS policy and special token parsing
+    let parse_special = template_type.parse_special();
+    let mut tokens = tokenizer.encode(&formatted_prompt, bos, parse_special)?;
     println!("Input tokens ({}): {:?}", tokens.len(), &tokens[..10.min(tokens.len())]);
 
     // Create KV cache
@@ -911,7 +997,7 @@ async fn run_simple_generation(
     // Create sampler
     let mut sampler = Sampler::new(temperature, top_k, top_p, repetition_penalty, seed);
 
-    print!("Generating: {}", prompt);
+    print!("Generating: {}", formatted_prompt);
     std::io::Write::flush(&mut std::io::stdout())?;
 
     // Track timing
@@ -1042,10 +1128,31 @@ async fn run_simple_generation(
         print!("{}", token_text);
         std::io::Write::flush(&mut std::io::stdout())?;
 
-        // Check for EOS
+        // Check for stop token IDs (includes EOS and template stops like <|eot_id|>)
+        if all_stop_ids.contains(&next_token) {
+            debug!("Stopped on token ID: {}", next_token);
+            break;
+        }
+
+        // Check for EOS as fallback
         if let Some(eos) = tokenizer.eos_token_id()
             && next_token == eos
         {
+            debug!("Stopped on EOS token");
+            break;
+        }
+
+        // Check for string-based stop sequences in generated text
+        let generated_text = tokenizer.decode(&generated_tokens)?;
+        let mut should_stop = false;
+        for stop_seq in &all_stop_sequences {
+            if generated_text.ends_with(stop_seq) {
+                debug!("Stopped on sequence: {:?}", stop_seq);
+                should_stop = true;
+                break;
+            }
+        }
+        if should_stop {
             break;
         }
     }

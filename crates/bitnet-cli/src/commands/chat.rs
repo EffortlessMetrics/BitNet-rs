@@ -61,9 +61,8 @@ impl ChatMetrics {
 impl InferenceCommand {
     /// Run interactive chat mode with REPL
     pub async fn run_chat(&self, config: &CliConfig) -> Result<()> {
-        // Setup environment and logging
+        // Setup environment (logging already initialized in main())
         self.setup_environment()?;
-        self.setup_logging(config)?;
 
         println!("{}", style("BitNet Interactive Chat").bold().cyan());
         println!("Loading model and tokenizer...");

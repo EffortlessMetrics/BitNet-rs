@@ -259,6 +259,10 @@ pub struct InferenceCommand {
     )]
     pub stop: Vec<String>,
 
+    /// Stop token IDs (numeric token IDs to stop generation)
+    #[arg(long = "stop-id", value_name = "ID")]
+    pub stop_id: Vec<u32>,
+
     /// Timeout for inference (in seconds)
     #[arg(long, value_name = "SECONDS")]
     pub timeout: Option<u64>,
@@ -483,11 +487,8 @@ pub struct PerformanceMetrics {
 impl InferenceCommand {
     /// Execute the inference command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
-        // Setup deterministic environment if requested
+        // Setup deterministic environment if requested (logging already initialized in main())
         self.setup_environment()?;
-
-        // Setup logging and progress reporting
-        self.setup_logging(config)?;
 
         // Validate arguments
         self.validate_args()?;
@@ -553,44 +554,6 @@ impl InferenceCommand {
                 std::env::set_var("BITNET_SEED", seed.to_string());
             }
             debug!("Set seed to {}", seed);
-        }
-
-        Ok(())
-    }
-
-    /// Setup logging based on configuration
-    pub(super) fn setup_logging(&self, config: &CliConfig) -> Result<()> {
-        let level = if self.verbose { "debug" } else { &config.logging.level };
-
-        let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(level));
-
-        match config.logging.format.as_str() {
-            "json" => {
-                tracing_subscriber::fmt()
-                    .json()
-                    .with_env_filter(filter)
-                    .with_target(false)
-                    .with_writer(std::io::stderr)
-                    .with_timer(tracing_subscriber::fmt::time::uptime())
-                    .init();
-            }
-            "compact" => {
-                tracing_subscriber::fmt()
-                    .compact()
-                    .with_env_filter(filter)
-                    .with_target(false)
-                    .with_writer(std::io::stderr)
-                    .init();
-            }
-            _ => {
-                tracing_subscriber::fmt()
-                    .pretty()
-                    .with_env_filter(filter)
-                    .with_target(false)
-                    .with_writer(std::io::stderr)
-                    .init();
-            }
         }
 
         Ok(())
@@ -870,9 +833,17 @@ impl InferenceCommand {
         config: &GenerationConfig,
         tokenizer: Option<&dyn Tokenizer>,
     ) -> bitnet_inference::GenerationConfig {
-        // Resolve stop token IDs if tokenizer is available
-        let stop_token_ids =
-            if let Some(tok) = tokenizer { self.resolve_stop_token_ids(tok) } else { vec![] };
+        // Start with manual stop token IDs from CLI
+        let mut stop_token_ids = self.stop_id.clone();
+
+        // Merge with template-resolved stop token IDs (e.g., <|eot_id|> for LLaMA-3)
+        if let Some(tok) = tokenizer {
+            for id in self.resolve_stop_token_ids(tok) {
+                if !stop_token_ids.contains(&id) {
+                    stop_token_ids.push(id);
+                }
+            }
+        }
 
         bitnet_inference::GenerationConfig {
             max_new_tokens: config.max_new_tokens as u32,
@@ -1886,6 +1857,7 @@ mod tests {
             no_bos: false,
             no_eos: false,
             stop: Vec::new(),
+            stop_id: Vec::new(),
             timeout: None,
             dump_logits: None,
             logits_topk: 10,

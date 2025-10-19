@@ -192,6 +192,48 @@ automatically detects the appropriate template using:
 `instruct` for better out-of-box experience with instruction-tuned models. Use
 `--prompt-template raw` if you need raw completion behavior.
 
+### Quick Start: Q&A with BitNet Models
+
+**For one-shot Q&A and math problems**, use `--prompt-template instruct`:
+
+```bash
+# One-shot Q&A (recommended for base/BitNet models)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template instruct \
+  --prompt "What is 2+2?" \
+  --max-tokens 8 \
+  --temperature 0.0 --greedy
+```
+
+**For conversational prompts with LLaMA-3 models**, use `--prompt-template llama3-chat`:
+
+```bash
+# LLaMA-3 chat (auto-stops on <|eot_id|> token ID 128009)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/llama3-model.gguf \
+  --tokenizer models/llama3-tokenizer.json \
+  --prompt-template llama3-chat \
+  --system-prompt "You are a helpful assistant" \
+  --prompt "What is the capital of France?" \
+  --max-tokens 32 \
+  --temperature 0.7 --top-p 0.95
+```
+
+**For explicit stop control**, use `--stop-id` to specify token IDs:
+
+```bash
+# Explicit stop token ID (e.g., LLaMA-3 <|eot_id|> = 128009)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template llama3-chat \
+  --prompt "Capital of France?" \
+  --stop-id 128009 \
+  --max-tokens 16
+```
+
 You can override auto-detection with `--prompt-template`:
 
 ```bash
@@ -283,13 +325,28 @@ RUST_LOG=warn cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test" 
 ### Stop Sequences
 
 ```bash
-# Manual stop sequences
+# Manual stop sequences (string-based)
 --stop "</s>" --stop "\n\nQ:"
+
+# Manual stop token IDs (numeric token IDs for LLaMA-3 EOT, etc.)
+--stop-id 128009  # <|eot_id|> for LLaMA-3
+
+# Combined: manual strings + manual IDs + template defaults
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template llama3-chat \
+  --prompt "What is 2+2?" \
+  --stop "\n\n" \
+  --stop-id 128009 \
+  --max-tokens 32
 
 # Template defaults (automatic based on --prompt-template)
 # - raw: no stop sequences
 # - instruct: stops on "\n\nQ:", "\n\nHuman:"
-# - llama3-chat: stops on "<|eot_id|>", "<|end_of_text|>"
+# - llama3-chat: stops on "<|eot_id|>" (auto-resolved to token ID 128009)
+#
+# Note: Template-resolved token IDs are automatically merged with manual --stop-id values
 ```
 
 ### Interactive Chat

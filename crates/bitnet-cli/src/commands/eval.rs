@@ -268,8 +268,7 @@ impl EvalCommand {
 
     /// Execute the evaluation command
     pub async fn execute(&self, config: &CliConfig) -> Result<()> {
-        // Setup logging
-        self.setup_logging(config)?;
+        // Note: logging already initialized in main()
 
         // Set deterministic mode if requested
         if self.deterministic {
