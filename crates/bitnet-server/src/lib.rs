@@ -29,7 +29,7 @@ use uuid::Uuid;
 
 use batch_engine::{BatchEngine, BatchRequest, RequestPriority};
 use concurrency::{ConcurrencyManager, RequestMetadata};
-pub use config::ServerConfig;
+pub use config::{DeviceConfig, ServerConfig};
 use execution_router::ExecutionRouter;
 use model_manager::ModelManager;
 use security::{SecurityValidator, configure_cors, security_headers_middleware};
@@ -177,7 +177,8 @@ impl BitNetServer {
 
         // Load default model if specified
         if let Some(model_path) = &config.server.default_model_path {
-            let device = Device::Cpu; // TODO: Make configurable
+            let device = config.server.default_device.resolve();
+            info!(device = ?device, "Loading default model on configured device");
             match model_manager
                 .load_and_activate_model(
                     model_path,
@@ -187,7 +188,7 @@ impl BitNetServer {
                 .await
             {
                 Ok(model_id) => {
-                    info!(model_id = %model_id, "Default model loaded successfully");
+                    info!(model_id = %model_id, device = ?device, "Default model loaded successfully");
                 }
                 Err(e) => {
                     warn!(error = %e, "Failed to load default model, continuing without it");

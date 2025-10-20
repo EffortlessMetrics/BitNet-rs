@@ -1,5 +1,6 @@
 //! Monitoring and observability infrastructure for BitNet server
 
+pub mod ac05_types;
 pub mod config;
 pub mod health;
 pub mod metrics;

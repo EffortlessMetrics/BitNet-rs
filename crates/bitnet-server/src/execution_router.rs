@@ -179,8 +179,16 @@ impl DeviceMonitor {
                 // Check if CUDA device is available
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
-                    // TODO: Implement CUDA device detection
-                    *device_id < 8 // Assume up to 8 GPUs for now
+                    use bitnet_kernels::device_features::gpu_available_runtime;
+
+                    // First check if GPU is available at runtime
+                    if !gpu_available_runtime() {
+                        return false;
+                    }
+
+                    // Then verify the specific device ID is valid
+                    let device_count = bitnet_kernels::gpu::cuda::cuda_device_count();
+                    *device_id < device_count
                 }
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 {
@@ -196,14 +204,28 @@ impl DeviceMonitor {
     fn get_device_memory_total(device: &Device, system: &System) -> u64 {
         match device {
             Device::Cpu => system.total_memory() / (1024 * 1024), // Convert to MB
-            Device::Cuda(_device_id) => {
+            Device::Cuda(device_id) => {
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
-                    // TODO: Get CUDA device memory
-                    8192 // Default 8GB for now
+                    use bitnet_kernels::gpu::cuda::CudaKernel;
+
+                    // Query device information to get total memory
+                    match CudaKernel::get_device_info(*device_id) {
+                        Ok(info) => (info.total_memory / (1024 * 1024)) as u64, // Convert bytes to MB
+                        Err(_) => {
+                            warn!(
+                                device_id = device_id,
+                                "Failed to query CUDA device memory, using default"
+                            );
+                            8192 // Default 8GB fallback
+                        }
+                    }
                 }
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-                0
+                {
+                    let _ = device_id;
+                    0
+                }
             }
             Device::Metal => {
                 // TODO: Get Metal device memory
@@ -216,14 +238,43 @@ impl DeviceMonitor {
     fn get_device_memory_free(device: &Device, system: &System) -> u64 {
         match device {
             Device::Cpu => system.free_memory() / (1024 * 1024), // Convert to MB
-            Device::Cuda(_device_id) => {
+            Device::Cuda(device_id) => {
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
-                    // TODO: Get CUDA device free memory
-                    4096 // Default 4GB free for now
+                    use cudarc::driver::{CudaContext, result::mem as cu_mem};
+
+                    // Query free memory using CUDA memory info API
+                    match CudaContext::new(*device_id) {
+                        Ok(_ctx) => {
+                            match unsafe { cu_mem::get_info() } {
+                                Ok((free_bytes, _total_bytes)) => {
+                                    (free_bytes / (1024 * 1024)) as u64 // Convert bytes to MB
+                                }
+                                Err(_) => {
+                                    warn!(
+                                        device_id = device_id,
+                                        "Failed to query CUDA free memory, estimating"
+                                    );
+                                    // Estimate 50% free as conservative fallback
+                                    let total_mb = Self::get_device_memory_total(device, system);
+                                    total_mb / 2
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            warn!(
+                                device_id = device_id,
+                                "Failed to create CUDA context for memory query"
+                            );
+                            4096 // Default 4GB free fallback
+                        }
+                    }
                 }
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-                0
+                {
+                    let _ = device_id;
+                    0
+                }
             }
             Device::Metal => 4096, // TODO: Get Metal device free memory
         }
@@ -233,14 +284,31 @@ impl DeviceMonitor {
     fn get_compute_capability(device: &Device) -> Option<String> {
         match device {
             Device::Cpu => None,
-            Device::Cuda(_device_id) => {
+            Device::Cuda(device_id) => {
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
-                    // TODO: Get actual compute capability
-                    Some("8.6".to_string()) // Default modern GPU capability
+                    use bitnet_kernels::gpu::cuda::CudaKernel;
+
+                    // Query device information to get compute capability
+                    match CudaKernel::get_device_info(*device_id) {
+                        Ok(info) => {
+                            let (major, minor) = info.compute_capability;
+                            Some(format!("{}.{}", major, minor))
+                        }
+                        Err(_) => {
+                            warn!(
+                                device_id = device_id,
+                                "Failed to query CUDA compute capability, using default"
+                            );
+                            Some("8.6".to_string()) // Default modern GPU capability fallback
+                        }
+                    }
                 }
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-                None
+                {
+                    let _ = device_id;
+                    None
+                }
             }
             Device::Metal => Some("Metal 3".to_string()), // TODO: Get actual Metal version
         }
