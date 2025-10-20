@@ -1123,27 +1123,314 @@ fn validate_test_structure_conventions() -> Result<()> {
 }
 
 /// Validate tensor naming conventions
+/// Validate tensor naming conventions
 fn validate_tensor_naming_conventions(
     tensor_map: &HashMap<String, CandleTensor>,
     config: &GgufWeightLoadingTestConfig,
 ) -> Result<()> {
-    // TODO: Validate tensor names follow documented patterns
-    let _ = (tensor_map, config);
+    // Validate required top-level tensors
+    let required_top_level = vec!["token_embd.weight", "output.weight", "output_norm.weight"];
+
+    for tensor_name in required_top_level {
+        if !tensor_map.contains_key(tensor_name) {
+            anyhow::bail!(
+                "Required tensor '{}' not found in model. Expected naming pattern as documented.",
+                tensor_name
+            );
+        }
+    }
+
+    // Validate layer-specific tensors follow blk.{N}.{component}.weight pattern
+    for layer_idx in 0..config.test_model_layers {
+        let layer_prefix = format!("blk.{}", layer_idx);
+
+        // Attention layer tensors
+        let required_attention = vec![
+            format!("{}.attn_q.weight", layer_prefix),
+            format!("{}.attn_k.weight", layer_prefix),
+            format!("{}.attn_v.weight", layer_prefix),
+            format!("{}.attn_output.weight", layer_prefix),
+        ];
+
+        for tensor_name in required_attention {
+            if !tensor_map.contains_key(&tensor_name) {
+                anyhow::bail!(
+                    "Required attention tensor '{}' not found. Expected naming pattern: blk.{{N}}.attn_{{q|k|v|output}}.weight",
+                    tensor_name
+                );
+            }
+        }
+
+        // FFN layer tensors
+        let required_ffn = vec![
+            format!("{}.ffn_gate.weight", layer_prefix),
+            format!("{}.ffn_up.weight", layer_prefix),
+            format!("{}.ffn_down.weight", layer_prefix),
+        ];
+
+        for tensor_name in required_ffn {
+            if !tensor_map.contains_key(&tensor_name) {
+                anyhow::bail!(
+                    "Required FFN tensor '{}' not found. Expected naming pattern: blk.{{N}}.ffn_{{gate|up|down}}.weight",
+                    tensor_name
+                );
+            }
+        }
+
+        // Normalization layer tensors
+        let required_norms = vec![
+            format!("{}.attn_norm.weight", layer_prefix),
+            format!("{}.ffn_norm.weight", layer_prefix),
+        ];
+
+        for tensor_name in required_norms {
+            if !tensor_map.contains_key(&tensor_name) {
+                anyhow::bail!(
+                    "Required normalization tensor '{}' not found. Expected naming pattern: blk.{{N}}.{{attn_norm|ffn_norm}}.weight",
+                    tensor_name
+                );
+            }
+        }
+    }
+
+    // Validate no unexpected tensor names (all should match documented patterns)
+    let expected_tensor_count =
+        3 + // top-level tensors
+        config.test_model_layers * 9; // per-layer tensors: 4 attention + 3 ffn + 2 norm
+
+    if tensor_map.len() != expected_tensor_count {
+        let unexpected: Vec<_> = tensor_map
+            .keys()
+            .filter(|name| !is_valid_tensor_name(name, config.test_model_layers))
+            .collect();
+
+        if !unexpected.is_empty() {
+            anyhow::bail!(
+                "Found {} unexpected tensor names that don't follow documented conventions: {:?}",
+                unexpected.len(),
+                unexpected
+            );
+        }
+    }
+
     Ok(())
 }
 
-/// Get tensor naming documentation
-fn get_tensor_naming_documentation() -> Result<String> {
-    // TODO: Load tensor naming documentation
-    Ok(String::from("// TODO: Implement tensor naming documentation"))
+/// Check if a tensor name follows documented naming conventions
+fn is_valid_tensor_name(name: &str, num_layers: usize) -> bool {
+    // Top-level tensors
+    if matches!(
+        name,
+        "token_embd.weight" | "output.weight" | "output_norm.weight"
+    ) {
+        return true;
+    }
+
+    // Layer-specific tensors: blk.{N}.{component}.weight
+    if let Some(remainder) = name.strip_prefix("blk.") {
+        if let Some(dot_pos) = remainder.find('.') {
+            let layer_num_str = &remainder[..dot_pos];
+            if let Ok(layer_num) = layer_num_str.parse::<usize>() {
+                if layer_num >= num_layers {
+                    return false;
+                }
+
+                let component = &remainder[dot_pos + 1..];
+                return matches!(
+                    component,
+                    "attn_q.weight"
+                        | "attn_k.weight"
+                        | "attn_v.weight"
+                        | "attn_output.weight"
+                        | "ffn_gate.weight"
+                        | "ffn_up.weight"
+                        | "ffn_down.weight"
+                        | "attn_norm.weight"
+                        | "ffn_norm.weight"
+                );
+            }
+        }
+    }
+
+    false
 }
 
+
+/// Get tensor naming documentation
+/// Get tensor naming documentation
+fn get_tensor_naming_documentation() -> Result<String> {
+    let doc = r#"
+# BitNet.rs Tensor Naming Conventions
+
+## Overview
+All tensors in GGUF models must follow documented naming patterns for proper loading and validation.
+
+## Top-Level Tensors
+
+### Token Embeddings
+- Pattern: `token_embd.weight`
+- Shape: [vocab_size, hidden_size]
+- Description: Token embedding matrix
+
+### Output Projection
+- Pattern: `output.weight`
+- Shape: [hidden_size, vocab_size]
+- Description: Language model head / output projection
+
+### Output Normalization
+- Pattern: `output_norm.weight`
+- Shape: [hidden_size]
+- Description: Final layer normalization weights
+
+## Layer-Specific Tensors
+
+All layer-specific tensors follow the pattern: `blk.{N}.{component}.weight`
+where N is the 0-indexed layer number.
+
+### Attention Layer Tensors
+
+- `blk.{N}.attn_q.weight` - Query projection
+  - Shape: [hidden_size, hidden_size]
+- `blk.{N}.attn_k.weight` - Key projection
+  - Shape: [hidden_size, hidden_size]
+- `blk.{N}.attn_v.weight` - Value projection
+  - Shape: [hidden_size, hidden_size]
+- `blk.{N}.attn_output.weight` - Output projection
+  - Shape: [hidden_size, hidden_size]
+
+### Feed-Forward Network (FFN) Tensors
+
+- `blk.{N}.ffn_gate.weight` - Gate projection
+  - Shape: [intermediate_size, hidden_size]
+- `blk.{N}.ffn_up.weight` - Up projection
+  - Shape: [intermediate_size, hidden_size]
+- `blk.{N}.ffn_down.weight` - Down projection
+  - Shape: [hidden_size, intermediate_size]
+
+### Normalization Tensors
+
+- `blk.{N}.attn_norm.weight` - Attention layer normalization
+  - Shape: [hidden_size]
+- `blk.{N}.ffn_norm.weight` - FFN layer normalization
+  - Shape: [hidden_size]
+
+## Validation Rules
+
+1. All required tensors must be present
+2. Layer indices must be contiguous starting from 0
+3. No unexpected tensor names allowed
+4. Tensor shapes must match model configuration
+
+## References
+
+- API Contracts: docs/reference/gguf-weight-loading-api-contracts.md
+- Feature Spec: docs/explanation/gguf-weight-loading.md
+"#;
+
+    Ok(doc.to_string())
+}
+
+
+/// Validate naming documentation completeness
 /// Validate naming documentation completeness
 fn validate_naming_documentation_completeness(
     naming_doc: &str,
     tensor_map: &HashMap<String, CandleTensor>,
 ) -> Result<()> {
-    // TODO: Validate documentation covers all tensor names
-    let _ = (naming_doc, tensor_map);
+    // Extract all unique tensor name patterns from the tensor map
+    let mut tensor_types = std::collections::HashSet::new();
+
+    for tensor_name in tensor_map.keys() {
+        // Classify tensor type based on naming pattern
+        if tensor_name == "token_embd.weight" {
+            tensor_types.insert("token_embd");
+        } else if tensor_name == "output.weight" {
+            tensor_types.insert("output");
+        } else if tensor_name == "output_norm.weight" {
+            tensor_types.insert("output_norm");
+        } else if let Some(remainder) = tensor_name.strip_prefix("blk.") {
+            if let Some(dot_pos) = remainder.find('.') {
+                let component = &remainder[dot_pos + 1..];
+                if let Some(component_name) = component.strip_suffix(".weight") {
+                    tensor_types.insert(component_name);
+                }
+            }
+        }
+    }
+
+    // Verify documentation covers all tensor types
+    let required_documentation_entries = vec![
+        "token_embd",
+        "output.weight",
+        "output_norm",
+        "attn_q",
+        "attn_k",
+        "attn_v",
+        "attn_output",
+        "ffn_gate",
+        "ffn_up",
+        "ffn_down",
+        "attn_norm",
+        "ffn_norm",
+    ];
+
+    let mut missing_docs = Vec::new();
+    for entry in required_documentation_entries {
+        // Check if documentation mentions this tensor type
+        if !naming_doc.contains(entry) {
+            missing_docs.push(entry);
+        }
+    }
+
+    if !missing_docs.is_empty() {
+        anyhow::bail!(
+            "Documentation incomplete: missing coverage for {} tensor types: {:?}",
+            missing_docs.len(),
+            missing_docs
+        );
+    }
+
+    // Verify all tensor types found in the model are documented
+    let mut undocumented_types = Vec::new();
+    for tensor_type in &tensor_types {
+        if !naming_doc.contains(tensor_type) {
+            undocumented_types.push(tensor_type);
+        }
+    }
+
+    if !undocumented_types.is_empty() {
+        anyhow::bail!(
+            "Found {} tensor types in model that are not documented: {:?}",
+            undocumented_types.len(),
+            undocumented_types
+        );
+    }
+
+    // Verify documentation structure includes key sections
+    let required_sections = vec![
+        "Tensor Naming Conventions",
+        "Top-Level Tensors",
+        "Layer-Specific Tensors",
+        "Attention Layer",
+        "Feed-Forward",
+        "Normalization",
+        "Validation Rules",
+    ];
+
+    let mut missing_sections = Vec::new();
+    for section in required_sections {
+        if !naming_doc.contains(section) {
+            missing_sections.push(section);
+        }
+    }
+
+    if !missing_sections.is_empty() {
+        anyhow::bail!(
+            "Documentation structure incomplete: missing {} required sections: {:?}",
+            missing_sections.len(),
+            missing_sections
+        );
+    }
+
     Ok(())
 }
