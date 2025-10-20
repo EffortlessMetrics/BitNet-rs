@@ -726,6 +726,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "sysinfo",
+ "tempfile",
  "thiserror 2.0.17",
  "tokio",
  "tokio-stream",
