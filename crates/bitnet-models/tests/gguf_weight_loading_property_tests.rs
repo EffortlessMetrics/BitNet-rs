@@ -404,7 +404,6 @@ proptest! {
     /// Property: TL2 quantization block size affects accuracy predictably
     /// AC2: Support Quantization Formats with ≥99% Accuracy
     #[test]
-    #[ignore] // Issue #159: TDD placeholder - TL2 block size scaling needed
     #[cfg(feature = "cpu")]
     fn prop_tl2_quantization_block_size_scaling(
         weight_data in arbitrary_weight_tensor(),
@@ -498,7 +497,7 @@ proptest! {
     /// Property: Memory usage scales linearly with tensor size
     /// AC7: Memory-Efficient Loading with Zero-Copy Operations
     #[test]
-    #[ignore] // Issue #159: TDD placeholder - memory usage scaling implementation needed
+
     #[cfg(feature = "cpu")]
     fn prop_memory_usage_linear_scaling(
         base_size in (64usize..1024),
