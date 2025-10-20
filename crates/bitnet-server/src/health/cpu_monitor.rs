@@ -98,11 +98,7 @@ pub async fn collect_memory_health_info() -> Result<MemoryHealthInfo, String> {
     Ok(MemoryHealthInfo {
         total_bytes,
         available_bytes,
-        utilization: if total_bytes > 0 {
-            used_bytes as f64 / total_bytes as f64
-        } else {
-            0.0
-        },
+        utilization: if total_bytes > 0 { used_bytes as f64 / total_bytes as f64 } else { 0.0 },
     })
 }
 
@@ -137,8 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn collect_memory_info_returns_valid_data() {
-        let mem_info =
-            collect_memory_health_info().await.expect("Failed to collect memory info");
+        let mem_info = collect_memory_health_info().await.expect("Failed to collect memory info");
 
         // Validate memory sizes
         assert!(mem_info.total_bytes > 0, "Total memory should be positive");

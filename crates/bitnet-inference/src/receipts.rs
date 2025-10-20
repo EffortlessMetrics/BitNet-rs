@@ -301,11 +301,28 @@ impl InferenceReceipt {
         env_vars
     }
 
+    /// Load receipt from JSON file
+    ///
+    /// # Example
+    /// ```no_run
+    /// use std::path::Path;
+    /// use bitnet_inference::receipts::InferenceReceipt;
+    ///
+    /// let receipt = InferenceReceipt::load(Path::new("ci/inference.json")).unwrap();
+    /// assert_eq!(receipt.schema_version, "1.0.0");
+    /// ```
+    pub fn load(path: &Path) -> Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        let receipt: InferenceReceipt = serde_json::from_str(&content)?;
+        Ok(receipt)
+    }
+
     /// Save receipt to JSON file
     ///
     /// # AC4 Contract
     /// - Serializes to pretty JSON
-    /// - Writes to specified path
+    /// - Creates parent directory if it doesn't exist
+    /// - Writes atomically (temp file + rename)
     /// - Typically saved to `ci/inference.json`
     ///
     /// # Example
@@ -317,8 +334,19 @@ impl InferenceReceipt {
     /// receipt.save(Path::new("ci/inference.json")).unwrap();
     /// ```
     pub fn save(&self, path: &Path) -> Result<()> {
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        // Serialize to pretty JSON
         let json = serde_json::to_string_pretty(self)?;
-        std::fs::write(path, json)?;
+
+        // Atomic write: write to temp file, then rename
+        let temp_path = path.with_extension("tmp");
+        std::fs::write(&temp_path, json)?;
+        std::fs::rename(&temp_path, path)?;
+
         Ok(())
     }
 

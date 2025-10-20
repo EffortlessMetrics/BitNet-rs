@@ -640,26 +640,214 @@ fn create_mock_model_without_tokenizer() -> BitNetModel {
 
 #[cfg(feature = "inference")]
 fn create_test_bpe_vocab() -> Vocabulary {
-    // TODO: Implement test BPE vocabulary creation
-    unimplemented!("Test BPE vocabulary creation needs implementation")
+    // Create minimal BPE vocabulary with common tokens for testing
+    // This is a simplified vocabulary suitable for unit testing
+    Vocabulary {
+        tokens: vec![
+            // Common single-character tokens
+            ("a".to_string(), 0.0),
+            ("b".to_string(), 0.0),
+            ("c".to_string(), 0.0),
+            ("d".to_string(), 0.0),
+            ("e".to_string(), 0.0),
+            ("f".to_string(), 0.0),
+            ("g".to_string(), 0.0),
+            ("h".to_string(), 0.0),
+            ("i".to_string(), 0.0),
+            ("j".to_string(), 0.0),
+            ("k".to_string(), 0.0),
+            ("l".to_string(), 0.0),
+            ("m".to_string(), 0.0),
+            ("n".to_string(), 0.0),
+            ("o".to_string(), 0.0),
+            ("p".to_string(), 0.0),
+            ("q".to_string(), 0.0),
+            ("r".to_string(), 0.0),
+            ("s".to_string(), 0.0),
+            ("t".to_string(), 0.0),
+            ("u".to_string(), 0.0),
+            ("v".to_string(), 0.0),
+            ("w".to_string(), 0.0),
+            ("x".to_string(), 0.0),
+            ("y".to_string(), 0.0),
+            ("z".to_string(), 0.0),
+            (" ".to_string(), 0.0),
+            // Common bigrams (after BPE merging)
+            ("he".to_string(), 1.0),
+            ("th".to_string(), 1.0),
+            ("in".to_string(), 1.0),
+            ("er".to_string(), 1.0),
+            ("an".to_string(), 1.0),
+            ("re".to_string(), 1.0),
+            ("on".to_string(), 1.0),
+            ("at".to_string(), 1.0),
+            ("en".to_string(), 1.0),
+            ("is".to_string(), 1.0),
+            ("or".to_string(), 1.0),
+            ("ti".to_string(), 1.0),
+            ("es".to_string(), 1.0),
+            ("st".to_string(), 1.0),
+            ("ar".to_string(), 1.0),
+            // Common trigrams
+            ("the".to_string(), 2.0),
+            ("ing".to_string(), 2.0),
+            ("and".to_string(), 2.0),
+            ("ion".to_string(), 2.0),
+            ("tio".to_string(), 2.0),
+            ("ent".to_string(), 2.0),
+            ("for".to_string(), 2.0),
+            // Common words
+            ("hello".to_string(), 3.0),
+            ("world".to_string(), 3.0),
+            ("test".to_string(), 3.0),
+            ("this".to_string(), 3.0),
+            ("that".to_string(), 3.0),
+            ("with".to_string(), 3.0),
+            ("from".to_string(), 3.0),
+            ("have".to_string(), 3.0),
+            ("more".to_string(), 3.0),
+            ("will".to_string(), 3.0),
+            ("your".to_string(), 3.0),
+            ("what".to_string(), 3.0),
+            ("when".to_string(), 3.0),
+            ("where".to_string(), 3.0),
+            // Special tokens
+            ("<unk>".to_string(), -100.0),
+            ("<s>".to_string(), -100.0),
+            ("</s>".to_string(), -100.0),
+            ("<pad>".to_string(), -100.0),
+        ],
+    }
 }
 
 #[cfg(feature = "inference")]
 fn create_test_bpe_merges() -> Vec<(String, String)> {
-    // TODO: Implement test BPE merge rules
-    unimplemented!("Test BPE merge rules creation needs implementation")
+    // Create BPE merge rules for testing
+    // These rules define how to merge character pairs into larger tokens
+    // Format: (left_token, right_token) -> merged_token
+    // The order matters - earlier merges happen first
+    vec![
+        // Single character -> bigram merges
+        ("h".to_string(), "e".to_string()), // h + e -> he
+        ("t".to_string(), "h".to_string()), // t + h -> th
+        ("i".to_string(), "n".to_string()), // i + n -> in
+        ("e".to_string(), "r".to_string()), // e + r -> er
+        ("a".to_string(), "n".to_string()), // a + n -> an
+        ("r".to_string(), "e".to_string()), // r + e -> re
+        ("o".to_string(), "n".to_string()), // o + n -> on
+        ("a".to_string(), "t".to_string()), // a + t -> at
+        ("e".to_string(), "n".to_string()), // e + n -> en
+        ("i".to_string(), "s".to_string()), // i + s -> is
+        ("o".to_string(), "r".to_string()), // o + r -> or
+        ("t".to_string(), "i".to_string()), // t + i -> ti
+        ("e".to_string(), "s".to_string()), // e + s -> es
+        ("s".to_string(), "t".to_string()), // s + t -> st
+        ("a".to_string(), "r".to_string()), // a + r -> ar
+        // Bigram -> trigram merges
+        ("th".to_string(), "e".to_string()), // th + e -> the
+        ("in".to_string(), "g".to_string()), // in + g -> ing
+        ("an".to_string(), "d".to_string()), // an + d -> and
+        ("i".to_string(), "on".to_string()), // i + on -> ion
+        ("ti".to_string(), "o".to_string()), // ti + o -> tio
+        ("en".to_string(), "t".to_string()), // en + t -> ent
+        ("f".to_string(), "or".to_string()), // f + or -> for
+        // Trigram+ -> word merges
+        ("hel".to_string(), "lo".to_string()), // hel + lo -> hello
+        ("wor".to_string(), "ld".to_string()), // wor + ld -> world
+        ("tes".to_string(), "t".to_string()),  // tes + t -> test
+        ("th".to_string(), "is".to_string()),  // th + is -> this
+        ("th".to_string(), "at".to_string()),  // th + at -> that
+        ("wi".to_string(), "th".to_string()),  // wi + th -> with
+        ("fr".to_string(), "om".to_string()),  // fr + om -> from
+        ("ha".to_string(), "ve".to_string()),  // ha + ve -> have
+        ("mo".to_string(), "re".to_string()),  // mo + re -> more
+        ("wil".to_string(), "l".to_string()),  // wil + l -> will
+        ("you".to_string(), "r".to_string()),  // you + r -> your
+        ("wh".to_string(), "at".to_string()),  // wh + at -> what
+        ("wh".to_string(), "en".to_string()),  // wh + en -> when
+        ("whe".to_string(), "re".to_string()), // whe + re -> where
+    ]
 }
 
 #[cfg(feature = "inference")]
 fn create_performance_test_tokenizer() -> UniversalTokenizer {
-    // TODO: Implement performance test tokenizer
-    unimplemented!("Performance test tokenizer creation needs implementation")
+    // Create a simple mock-based tokenizer for performance testing
+    // This uses MockTokenizer as the backend, which is fast and deterministic
+    let config = TokenizerConfig {
+        model_type: "gpt2".to_string(),
+        vocab_size: 50257,
+        pre_tokenizer: None,
+        add_bos: false,
+        add_eos: false,
+        add_space_prefix: false,
+        byte_fallback: false,
+        bos_token_id: None,
+        eos_token_id: Some(50256),
+        pad_token_id: None,
+        unk_token_id: None,
+        vocabulary: None,
+        bpe_merges: None,
+    };
+
+    // Create universal tokenizer with mock backend (fast for performance testing)
+    // Note: This will use MockTokenizer since we're requesting gpt2 type
+    UniversalTokenizer::new(config).expect("Failed to create performance test tokenizer")
 }
 
 #[cfg(feature = "inference")]
 fn generate_tokenization_test_corpus(word_count: usize) -> Vec<String> {
-    // TODO: Implement test corpus generation
-    unimplemented!("Test corpus generation needs implementation")
+    // Generate a realistic test corpus with varied text patterns
+    // This creates diverse text samples for performance and correctness testing
+
+    // Common words for generating realistic text
+    let common_words = vec![
+        "the", "be", "to", "of", "and", "a", "in", "that", "have", "I", "it", "for", "not", "on",
+        "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we",
+        "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their",
+        "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when",
+        "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into",
+        "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now",
+        "look", "only", "come", "its", "over", "think", "also", "back", "after", "use", "two",
+        "how", "our", "work", "first", "well", "way", "even", "new", "want", "because", "any",
+        "these", "give", "day", "most", "us",
+    ];
+
+    let mut corpus = Vec::new();
+    let mut word_index = 0;
+
+    // Generate sentences with varying lengths
+    while word_index < word_count {
+        // Sentence length between 5-20 words
+        let sentence_length = 5 + (word_index % 16);
+        let mut sentence_words = Vec::new();
+
+        for _ in 0..sentence_length.min(word_count - word_index) {
+            // Select word pseudo-randomly but deterministically
+            let word = common_words[word_index % common_words.len()];
+            sentence_words.push(word);
+            word_index += 1;
+
+            if word_index >= word_count {
+                break;
+            }
+        }
+
+        // Capitalize first word and add punctuation
+        if !sentence_words.is_empty() {
+            let first_word = sentence_words[0];
+            let capitalized = format!(
+                "{}{}",
+                first_word.chars().next().unwrap().to_uppercase(),
+                &first_word[1..]
+            );
+            sentence_words[0] = Box::leak(capitalized.into_boxed_str());
+
+            let sentence = format!("{}.", sentence_words.join(" "));
+            corpus.push(sentence);
+        }
+    }
+
+    corpus
 }
 
 #[cfg(feature = "inference")]
@@ -700,8 +888,13 @@ fn create_corrupted_tokenizer_file() -> PathBuf {
 
 #[cfg(feature = "inference")]
 fn cleanup_test_file(path: &PathBuf) {
-    // TODO: Implement test file cleanup
-    unimplemented!("Test file cleanup needs implementation")
+    // Clean up test files created during testing
+    // Ignores errors since the file might not exist or cleanup might not be critical
+    if path.exists() {
+        if let Err(e) = std::fs::remove_file(path) {
+            eprintln!("Warning: Failed to clean up test file {}: {}", path.display(), e);
+        }
+    }
 }
 
 #[cfg(feature = "inference")]
@@ -724,14 +917,34 @@ fn create_tokenizer_with_different_vocab() -> UniversalTokenizer {
 
 #[cfg(feature = "inference")]
 fn create_basic_test_tokenizer() -> UniversalTokenizer {
-    // TODO: Implement basic test tokenizer
-    unimplemented!("Basic test tokenizer creation needs implementation")
+    // Create a basic test tokenizer with minimal configuration
+    // Uses MockTokenizer backend for simple, fast testing
+    let config = TokenizerConfig {
+        model_type: "gpt2".to_string(),
+        vocab_size: 50257,
+        pre_tokenizer: None,
+        add_bos: false,
+        add_eos: true,
+        add_space_prefix: false,
+        byte_fallback: false,
+        bos_token_id: None,
+        eos_token_id: Some(50256),
+        pad_token_id: Some(50257),
+        unk_token_id: None,
+        vocabulary: None,
+        bpe_merges: None,
+    };
+
+    UniversalTokenizer::new(config).expect("Failed to create basic test tokenizer")
 }
 
 // Type definitions that will be implemented
 #[cfg(feature = "inference")]
 struct Vocabulary {
-    // TODO: Define vocabulary structure
+    /// List of tokens with their scores
+    /// Format: (token_string, score)
+    /// Higher scores indicate more frequent/preferred tokens
+    tokens: Vec<(String, f32)>,
 }
 
 #[cfg(feature = "inference")]

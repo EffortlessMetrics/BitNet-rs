@@ -21,9 +21,14 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 use std::process::Command;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+use std::time::Instant;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 use tokio::sync::RwLock;
 
 /// GPU metrics collected from CUDA runtime
@@ -211,6 +216,7 @@ impl GpuMetrics {
 }
 
 /// Memory sample for leak detection
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 #[derive(Debug, Clone)]
 pub struct MemorySample {
     /// Timestamp when sample was taken
@@ -257,6 +263,13 @@ pub struct GpuMemoryLeakDetector {
 }
 
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+impl Default for GpuMemoryLeakDetector {
+    fn default() -> Self {
+        Self::new(60, 10.0)
+    }
+}
+
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 impl GpuMemoryLeakDetector {
     /// Create a new GPU memory leak detector
     ///
@@ -269,11 +282,6 @@ impl GpuMemoryLeakDetector {
             max_samples,
             leak_threshold_mb_per_min,
         }
-    }
-
-    /// Create with default configuration
-    pub fn default() -> Self {
-        Self::new(60, 10.0)
     }
 
     /// Record a memory sample from current GPU metrics
@@ -325,7 +333,8 @@ impl GpuMemoryLeakDetector {
         // Calculate linear regression to estimate growth rate
         let first_sample = &samples[0];
         let last_sample = &samples[samples.len() - 1];
-        let time_span_secs = last_sample.timestamp.duration_since(first_sample.timestamp).as_secs_f64();
+        let time_span_secs =
+            last_sample.timestamp.duration_since(first_sample.timestamp).as_secs_f64();
 
         if time_span_secs < 1.0 {
             // Samples too close together
@@ -349,7 +358,8 @@ impl GpuMemoryLeakDetector {
 
         // Build memory trend (recent samples, max 10)
         let trend_start = samples.len().saturating_sub(10);
-        let memory_trend: Vec<f64> = samples[trend_start..].iter().map(|s| s.memory_used_mb).collect();
+        let memory_trend: Vec<f64> =
+            samples[trend_start..].iter().map(|s| s.memory_used_mb).collect();
 
         let warning = if leak_detected {
             Some(format!(
@@ -380,14 +390,11 @@ impl GpuMemoryLeakDetector {
 
 /// Stub implementation when GPU not compiled
 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+#[derive(Default)]
 pub struct GpuMemoryLeakDetector;
 
 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
 impl GpuMemoryLeakDetector {
-    pub fn default() -> Self {
-        Self
-    }
-
     pub async fn record_sample(&self, _metrics: &GpuMetrics) {
         // No-op for CPU-only builds
     }

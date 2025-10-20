@@ -457,22 +457,77 @@ async fn test_ac4_comprehensive_cross_validation_suite() -> Result<()> {
 // Helper functions for cross-validation test scaffolding
 
 /// Check if cross-validation environment is ready
+/// Returns true if C++ reference implementation is available (BITNET_CPP_DIR set and valid)
 fn is_crossval_environment_ready() -> bool {
-    // TODO: Replace with actual environment checks
-    // Should verify C++ reference implementation availability
-    false
+    use std::path::Path;
+
+    // Check if BITNET_CPP_DIR environment variable is set
+    let cpp_dir = match std::env::var("BITNET_CPP_DIR") {
+        Ok(dir) => dir,
+        Err(_) => return false,
+    };
+
+    // Verify the directory exists
+    let cpp_path = Path::new(&cpp_dir);
+    if !cpp_path.exists() || !cpp_path.is_dir() {
+        return false;
+    }
+
+    // Check for essential C++ reference binaries/libraries
+    // Look for typical BitNet.cpp build artifacts
+    let build_dir = cpp_path.join("build");
+    let has_build = build_dir.exists();
+
+    // Alternative: check for lib directory with shared objects
+    let lib_dir = cpp_path.join("lib");
+    let has_lib = lib_dir.exists();
+
+    has_build || has_lib
 }
 
 /// Check if GGML FFI bridge is available
+/// Returns true if FFI feature is compiled and libraries are accessible
 fn is_ggml_ffi_available() -> bool {
-    // TODO: Replace with actual FFI availability check
-    false
+    // Check if FFI feature is compiled in
+    #[cfg(feature = "ffi")]
+    {
+        // FFI feature is compiled, verify runtime availability
+        is_crossval_environment_ready()
+    }
+    #[cfg(not(feature = "ffi"))]
+    {
+        // FFI not compiled in
+        false
+    }
 }
 
 /// Load BitNet model for cross-validation testing
+/// Loads GGUF model using production loader with strict validation
 fn load_bitnet_model_for_crossval(model_path: &str) -> Result<BitNetModel> {
-    // TODO: Replace with actual model loading
-    unimplemented!("load_bitnet_model_for_crossval: Replace with real model loading")
+    use bitnet_common::Device;
+    use std::path::Path;
+
+    // Verify model file exists
+    let model_path_buf = Path::new(model_path);
+    if !model_path_buf.exists() {
+        anyhow::bail!("Model file not found: {}", model_path);
+    }
+
+    // Use CPU device for cross-validation (deterministic, no GPU variability)
+    let device = Device::Cpu;
+
+    // Load model using production loader
+    // This follows the pattern from parity_bitnetcpp.rs and production inference
+    let model = bitnet_models::load_gguf_full(model_path, device)
+        .context("Failed to load GGUF model for cross-validation")?;
+
+    // Validate model structure - ensure essential tensors are present
+    // This is a basic sanity check to ensure the model loaded correctly
+    if model.tensor_names().is_empty() {
+        anyhow::bail!("Loaded model has no tensors - invalid model structure");
+    }
+
+    Ok(model)
 }
 
 /// Run BitNet.rs inference for cross-validation

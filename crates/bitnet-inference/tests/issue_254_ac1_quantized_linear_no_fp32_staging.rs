@@ -10,7 +10,7 @@
 
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetTensor, Device, Tensor};
-use bitnet_inference::QuantizedLinear;
+use bitnet_inference::{LookupTable, QuantizedLinear};
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
 
 /// AC:1.1 - I2S quantized linear forward pass with NO FP32 staging
@@ -59,7 +59,6 @@ async fn test_ac1_i2s_quantized_linear_no_fp32_staging() -> Result<()> {
 /// AC:1.2 - TL1 quantized linear forward pass with NO FP32 staging
 /// Validates that TL1 table lookup matmul kernel is used directly
 #[tokio::test]
-#[ignore] // TODO: Update to use QuantizedLinear::new_tl1() with proper LookupTable construction
 async fn test_ac1_tl1_quantized_linear_no_fp32_staging() -> Result<()> {
     let input_shape = vec![1, 8, 64];
     let input = BitNetTensor::zeros(&input_shape, candle_core::DType::F32, &Device::Cpu)?;
@@ -70,10 +69,19 @@ async fn test_ac1_tl1_quantized_linear_no_fp32_staging() -> Result<()> {
     let quantizer = TL1Quantizer::new();
     let quantized_weights = quantizer.quantize_tensor(&weight_tensor)?;
 
-    // TODO: Construct LookupTable properly and use:
-    // let lookup_table = LookupTable::new(vec![/* TL1-specific entries */]);
-    // let linear = QuantizedLinear::new_tl1(quantized_weights, lookup_table, Device::Cpu)?;
-    let linear = QuantizedLinear::new_i2s(quantized_weights, Device::Cpu)?;
+    // Construct LookupTable for TL1 (4-bit table with 16 entries)
+    // TL1 uses 4-bit quantization, so we need 16 entries in the lookup table
+    let lookup_table = LookupTable::new(
+        (0..16)
+            .map(|i| {
+                // Map 4-bit values [0,15] to float range [-0.5, 0.5]
+                // This matches the weight data range used above
+                (i as f32 - 7.5) / 15.0
+            })
+            .collect(),
+    );
+
+    let linear = QuantizedLinear::new_tl1(quantized_weights, lookup_table, Device::Cpu)?;
 
     let output = linear.forward(&input).await?;
 
@@ -83,14 +91,13 @@ async fn test_ac1_tl1_quantized_linear_no_fp32_staging() -> Result<()> {
     let output_data = output_candle.flatten_all()?.to_vec1::<f32>()?;
     assert!(output_data.iter().all(|v| v.is_finite()), "AC1: TL1 output contains NaN/Inf values");
 
-    println!("AC1.2: TL1 quantized linear forward pass test - PENDING IMPLEMENTATION");
+    println!("AC1.2: TL1 quantized linear forward pass test - PASSED");
     Ok(())
 }
 
 /// AC:1.3 - TL2 quantized linear forward pass with NO FP32 staging
 /// Validates that TL2 table lookup matmul kernel is used directly
 #[tokio::test]
-#[ignore] // TODO: Update to use QuantizedLinear::new_tl2() with proper LookupTable construction
 async fn test_ac1_tl2_quantized_linear_no_fp32_staging() -> Result<()> {
     let input_shape = vec![1, 4, 32];
     let input = BitNetTensor::zeros(&input_shape, candle_core::DType::F32, &Device::Cpu)?;
@@ -101,10 +108,19 @@ async fn test_ac1_tl2_quantized_linear_no_fp32_staging() -> Result<()> {
     let quantizer = TL2Quantizer::new();
     let quantized_weights = quantizer.quantize_tensor(&weight_tensor)?;
 
-    // TODO: Construct LookupTable properly and use:
-    // let lookup_table = LookupTable::new(vec![/* TL2-specific entries */]);
-    // let linear = QuantizedLinear::new_tl2(quantized_weights, lookup_table, Device::Cpu)?;
-    let linear = QuantizedLinear::new_i2s(quantized_weights, Device::Cpu)?;
+    // Construct LookupTable for TL2 (8-bit table with 256 entries)
+    // TL2 uses 8-bit quantization, so we need 256 entries in the lookup table
+    let lookup_table = LookupTable::new(
+        (0..256)
+            .map(|i| {
+                // Map 8-bit values [0,255] to float range [-0.5, 0.5]
+                // This matches the weight data range used above
+                (i as f32 - 127.5) / 255.0
+            })
+            .collect(),
+    );
+
+    let linear = QuantizedLinear::new_tl2(quantized_weights, lookup_table, Device::Cpu)?;
 
     let output = linear.forward(&input).await?;
 
@@ -114,7 +130,7 @@ async fn test_ac1_tl2_quantized_linear_no_fp32_staging() -> Result<()> {
     let output_data = output_candle.flatten_all()?.to_vec1::<f32>()?;
     assert!(output_data.iter().all(|v| v.is_finite()), "AC1: TL2 output contains NaN/Inf values");
 
-    println!("AC1.3: TL2 quantized linear forward pass test - PENDING IMPLEMENTATION");
+    println!("AC1.3: TL2 quantized linear forward pass test - PASSED");
     Ok(())
 }
 

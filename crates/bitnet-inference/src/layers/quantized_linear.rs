@@ -842,61 +842,65 @@ impl QuantizedLinear {
     /// Native TL1 quantized matrix multiplication
     async fn forward_tl1_generic(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
         let input_candle = input.to_candle()?;
+        let input_shape = input_candle.shape();
 
-        // Use native quantized TL1 operations when available
-        if let Ok(provider) = self.kernel_manager.select_best() {
-            let output = self.quantized_matmul_tl1(&input_candle, provider).await?;
-            return Ok(BitNetTensor::new(output));
-        }
+        // TODO: Implement native TL1 quantized kernels
+        // For now, TL1 uses dequantization path since we don't have native TL1 kernels
+        // Native TL1 table lookup kernels would provide significant speedup
 
         // Strict mode: reject FP32 fallback
         let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
         if strict_mode.get_config().enforce_quantized_inference {
-            return self.strict_reject_fp32_fallback("kernel_unavailable");
+            return self.strict_reject_fp32_fallback("native_tl1_kernel_not_implemented");
         }
 
-        // Fallback to dequantization only if native kernels fail (non-strict mode)
-        log::warn!("TL1 native quantized kernel failed, falling back to dequantization");
+        // Reshape to 2D for matrix multiplication
+        let input_2d = self.prepare_input_for_matmul(&input_candle)?;
+
+        // Dequantize weights and perform standard matrix multiplication
+        // Weights are stored as [in_features, out_features] which is correct for matmul
         let dequantized_weights =
             self.weights.dequantize().context("Failed to dequantize TL1 weights")?;
         let weight_candle = dequantized_weights.to_candle()?;
-        let weight_transposed = weight_candle.t().context("Failed to transpose TL1 weights")?;
 
-        let output = input_candle
-            .matmul(&weight_transposed)
+        let output_2d = input_2d
+            .matmul(&weight_candle)
             .context("Failed to perform TL1 matrix multiplication")?;
 
-        Ok(BitNetTensor::new(output))
+        // Restore original tensor shape
+        self.restore_output_shape(output_2d, input_shape.dims())
     }
 
     /// Native TL2 quantized matrix multiplication
     async fn forward_tl2_generic(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
         let input_candle = input.to_candle()?;
+        let input_shape = input_candle.shape();
 
-        // Use native quantized TL2 operations when available
-        if let Ok(provider) = self.kernel_manager.select_best() {
-            let output = self.quantized_matmul_tl2(&input_candle, provider).await?;
-            return Ok(BitNetTensor::new(output));
-        }
+        // TODO: Implement native TL2 quantized kernels
+        // For now, TL2 uses dequantization path since we don't have native TL2 kernels
+        // Native TL2 table lookup kernels would provide significant speedup
 
         // Strict mode: reject FP32 fallback
         let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
         if strict_mode.get_config().enforce_quantized_inference {
-            return self.strict_reject_fp32_fallback("kernel_unavailable");
+            return self.strict_reject_fp32_fallback("native_tl2_kernel_not_implemented");
         }
 
-        // Fallback to dequantization only if native kernels fail (non-strict mode)
-        log::warn!("TL2 native quantized kernel failed, falling back to dequantization");
+        // Reshape to 2D for matrix multiplication
+        let input_2d = self.prepare_input_for_matmul(&input_candle)?;
+
+        // Dequantize weights and perform standard matrix multiplication
+        // Weights are stored as [in_features, out_features] which is correct for matmul
         let dequantized_weights =
             self.weights.dequantize().context("Failed to dequantize TL2 weights")?;
         let weight_candle = dequantized_weights.to_candle()?;
-        let weight_transposed = weight_candle.t().context("Failed to transpose TL2 weights")?;
 
-        let output = input_candle
-            .matmul(&weight_transposed)
+        let output_2d = input_2d
+            .matmul(&weight_candle)
             .context("Failed to perform TL2 matrix multiplication")?;
 
-        Ok(BitNetTensor::new(output))
+        // Restore original tensor shape
+        self.restore_output_shape(output_2d, input_shape.dims())
     }
 
     /// Vectorized TL1 matrix multiplication using NEON
@@ -1532,6 +1536,7 @@ pub fn validate_tensor_consistency(
 
 impl QuantizedLinear {
     /// Native TL1 quantized matrix multiplication
+    #[allow(dead_code)]
     async fn quantized_matmul_tl1(
         &self,
         input: &candle_core::Tensor,
@@ -1616,6 +1621,7 @@ impl QuantizedLinear {
     }
 
     /// Native TL2 quantized matrix multiplication
+    #[allow(dead_code)]
     async fn quantized_matmul_tl2(
         &self,
         input: &candle_core::Tensor,
@@ -1743,6 +1749,7 @@ mod utils {
     }
 
     /// Quantize input data to TL1 format
+    #[allow(dead_code)]
     pub fn quantize_input_tl1(input: &[f32], _features: usize) -> Result<Vec<i8>> {
         // Simple quantization to TL1 range (4-bit signed)
         let quantized: Vec<i8> = input
@@ -1757,6 +1764,7 @@ mod utils {
     }
 
     /// Quantize input data to TL2 format
+    #[allow(dead_code)]
     pub fn quantize_input_tl2(input: &[f32], _features: usize) -> Result<Vec<i8>> {
         // Simple quantization to TL2 range (8-bit signed)
         let quantized: Vec<i8> = input
@@ -1771,6 +1779,7 @@ mod utils {
     }
 
     /// Unpack TL1 values (4-bit)
+    #[allow(dead_code)]
     pub fn unpack_tl1_values(packed: &[u8], count: usize) -> Vec<i8> {
         let mut unpacked = Vec::with_capacity(count);
 
@@ -1795,20 +1804,10 @@ mod utils {
     }
 
     /// Unpack TL2 values (8-bit)
+    #[allow(dead_code)]
     pub fn unpack_tl2_values(packed: &[u8], count: usize) -> Vec<i8> {
-        let mut unpacked = Vec::with_capacity(count);
-
-        for &byte in packed.iter() {
-            if unpacked.len() >= count {
-                break;
-            }
-
-            // Each byte is one value in TL2
-            let value = byte as i8;
-            unpacked.push(value);
-        }
-
-        unpacked.truncate(count);
-        unpacked
+        // TL2 uses the same 2-bit packing format as I2S
+        // The "8-bit" in TL2 refers to the lookup table size (256 entries), not the bit width
+        unpack_2bit_values(packed, count)
     }
 }

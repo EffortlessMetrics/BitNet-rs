@@ -4,6 +4,7 @@ pub mod batch_engine;
 pub mod concurrency;
 pub mod config;
 pub mod execution_router;
+pub mod health;
 pub mod model_manager;
 pub mod monitoring;
 pub mod security;

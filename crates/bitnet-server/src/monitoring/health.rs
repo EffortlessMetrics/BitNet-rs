@@ -16,6 +16,7 @@ use tokio::sync::RwLock;
 
 use super::ac05_types::LivenessResponse;
 use super::metrics::MetricsCollector;
+use crate::health::PerformanceMetrics;
 
 /// Health check status
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -92,23 +93,30 @@ pub struct HealthChecker {
     metrics: Arc<MetricsCollector>,
     #[allow(dead_code)]
     component_checks: Arc<RwLock<HashMap<String, ComponentHealth>>>,
-    performance: Arc<crate::health::PerformanceMetrics>,
+    #[allow(dead_code)]
+    performance: Arc<PerformanceMetrics>,
     gpu_leak_detector: Arc<crate::health::GpuMemoryLeakDetector>,
 }
 
 impl HealthChecker {
     pub fn new(metrics: Arc<MetricsCollector>) -> Self {
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        let gpu_leak_detector = Arc::new(crate::health::GpuMemoryLeakDetector::default());
+
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        let gpu_leak_detector = Arc::new(crate::health::GpuMemoryLeakDetector);
+
         Self {
             start_time: Instant::now(),
             metrics,
             component_checks: Arc::new(RwLock::new(HashMap::new())),
-            performance: Arc::new(crate::health::PerformanceMetrics::new()),
-            gpu_leak_detector: Arc::new(crate::health::GpuMemoryLeakDetector::default()),
+            performance: Arc::new(PerformanceMetrics::new()),
+            gpu_leak_detector,
         }
     }
 
     /// Get the performance metrics collector
-    pub fn performance(&self) -> Arc<crate::health::PerformanceMetrics> {
+    pub fn performance(&self) -> Arc<PerformanceMetrics> {
         self.performance.clone()
     }
 

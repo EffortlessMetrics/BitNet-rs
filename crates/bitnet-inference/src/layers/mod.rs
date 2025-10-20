@@ -13,4 +13,4 @@ mod quantized_linear_tests;
 
 pub use attention::BitNetAttention;
 pub use kv_cache_validation::validate_kv_cache_dims;
-pub use quantized_linear::QuantizedLinear;
+pub use quantized_linear::{LookupTable, QuantizedLinear};

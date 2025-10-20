@@ -11,6 +11,7 @@
 
 use anyhow::Result;
 use proptest::prelude::*;
+use proptest::prop_oneof;
 
 /// Property-based test configuration
 #[derive(Debug, Clone)]
@@ -52,12 +53,117 @@ fn arbitrary_quantization_params() -> impl Strategy<Value = QuantizationTestPara
     })
 }
 
+// ============================================================================
+// Enhanced Generators with Edge Cases
+// ============================================================================
+
+/// Generate weight tensors with edge case values (NaN, Inf, very small/large)
+fn arbitrary_weight_tensor_with_edge_cases() -> impl Strategy<Value = Vec<f32>> {
+    let config = PropertyTestConfig::default();
+    prop::collection::vec(
+        prop_oneof![
+            // Normal values
+            8 => -10.0f32..10.0f32,
+            // Very small values (denormals)
+            1 => f32::MIN_POSITIVE..f32::MIN_POSITIVE * 10.0,
+            // Very large values
+            1 => (f32::MAX / 2.0)..(f32::MAX / 1.5),
+            // Values near zero
+            2 => -1e-10f32..1e-10f32,
+            // Edge values
+            1 => prop::strategy::Just(0.0f32),
+            1 => prop::strategy::Just(f32::NAN),
+            1 => prop::strategy::Just(f32::INFINITY),
+            1 => prop::strategy::Just(f32::NEG_INFINITY),
+        ],
+        config.min_tensor_size..config.max_tensor_size,
+    )
+}
+
+/// Generate random model architectures
+fn arbitrary_model_architecture() -> impl Strategy<Value = ModelArchitecture> {
+    (
+        1usize..64,                                   // num_layers
+        256usize..4096,                               // hidden_size
+        512usize..8192,                               // intermediate_size
+        4usize..32,                                   // num_heads
+        prop::bool::ANY,                              // use_bias
+        prop::sample::select(vec![32, 64, 128, 256]), // block_size
+    )
+        .prop_map(
+            |(num_layers, hidden_size, intermediate_size, num_heads, use_bias, block_size)| {
+                ModelArchitecture {
+                    num_layers,
+                    hidden_size,
+                    intermediate_size,
+                    num_heads,
+                    use_bias,
+                    block_size,
+                }
+            },
+        )
+}
+
+/// Generate block-aligned tensor shapes (multiples of block_size)
+fn arbitrary_block_aligned_shape(block_size: usize) -> impl Strategy<Value = Vec<usize>> {
+    let bs = block_size.max(1);
+    prop::collection::vec((1usize..16).prop_map(move |mult| mult * bs), 2..4)
+}
+
+/// Generate sparse weight tensors with controlled sparsity
+fn arbitrary_sparse_weight_tensor(sparsity: f32) -> impl Strategy<Value = Vec<f32>> {
+    let config = PropertyTestConfig::default();
+    prop::collection::vec(
+        prop_oneof![
+            (sparsity * 100.0) as u32 => prop::strategy::Just(0.0f32),
+            ((1.0 - sparsity) * 100.0) as u32 => -10.0f32..10.0f32,
+        ],
+        config.min_tensor_size..config.max_tensor_size,
+    )
+}
+
+/// Generate tensors with extreme dynamic ranges
+fn arbitrary_extreme_dynamic_range_tensor() -> impl Strategy<Value = Vec<f32>> {
+    let config = PropertyTestConfig::default();
+    prop::collection::vec(
+        prop_oneof![
+            5 => -1000.0f32..1000.0f32,
+            2 => -1e-6f32..1e-6f32,
+            1 => f32::MIN_POSITIVE..f32::MIN_POSITIVE * 100.0,
+            1 => (f32::MAX / 10.0)..(f32::MAX / 5.0),
+        ],
+        config.min_tensor_size..config.max_tensor_size,
+    )
+}
+
+/// Generate random scales for quantization
+fn arbitrary_scales(num_blocks: usize) -> impl Strategy<Value = Vec<f32>> {
+    prop::collection::vec(0.001f32..100.0f32, num_blocks..num_blocks + 1)
+}
+
+/// Generate random zero points
+fn arbitrary_zero_points(num_blocks: usize) -> impl Strategy<Value = Vec<i32>> {
+    prop::collection::vec(-128i32..127i32, num_blocks..num_blocks + 1)
+}
+
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 struct QuantizationTestParams {
     block_size: usize,
     scale: f32,
     offset: f32,
+}
+
+/// Model architecture for testing
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+struct ModelArchitecture {
+    num_layers: usize,
+    hidden_size: usize,
+    intermediate_size: usize,
+    num_heads: usize,
+    use_bias: bool,
+    block_size: usize,
 }
 
 // ============================================================================
@@ -467,6 +573,286 @@ proptest! {
 }
 
 // ============================================================================
+// Property Tests for Edge Cases and Numerical Stability
+// ============================================================================
+
+proptest! {
+    /// Property: Quantization handles NaN and Inf gracefully
+    /// AC2: Support Quantization Formats with ≥99% Accuracy
+    #[test]
+    #[ignore] // Issue #159: TDD placeholder - NaN/Inf handling implementation needed
+    #[cfg(feature = "cpu")]
+    fn prop_quantization_handles_nan_inf(
+        weight_data in arbitrary_weight_tensor_with_edge_cases(),
+        shape in arbitrary_tensor_shape()
+    ) {
+        if weight_data.len() != shape.iter().product::<usize>() {
+            return Ok(());
+        }
+
+        let result = test_edge_case_handling(&weight_data, &shape);
+
+        match result {
+            Ok((nan_handled, inf_handled, finite_output)) => {
+                prop_assert!(
+                    nan_handled,
+                    "NaN values should be handled without panicking"
+                );
+                prop_assert!(
+                    inf_handled,
+                    "Inf values should be handled without panicking"
+                );
+                prop_assert!(
+                    finite_output.iter().all(|&x| x.is_finite()),
+                    "Output should contain only finite values after quantization"
+                );
+            }
+            Err(err) => {
+                eprintln!("Property test correctly failing (TDD Red): Edge case handling - {}", err);
+                prop_assert!(false, "Edge case handling test will pass once implementation is complete");
+            }
+        }
+    }
+
+    /// Property: Quantization preserves distribution characteristics
+    /// AC2: Support Quantization Formats with ≥99% Accuracy
+    #[test]
+    #[ignore] // Issue #159: TDD placeholder - distribution preservation validation needed
+    #[cfg(feature = "cpu")]
+    fn prop_quantization_preserves_distribution(
+        weight_data in arbitrary_weight_tensor(),
+        shape in arbitrary_tensor_shape()
+    ) {
+        let config = PropertyTestConfig::default();
+
+        if weight_data.len() != shape.iter().product::<usize>() {
+            return Ok(());
+        }
+
+        let result = test_distribution_preservation(&weight_data, &shape);
+
+        match result {
+            Ok((mean_preserved, variance_preserved, correlation)) => {
+                prop_assert!(
+                    mean_preserved,
+                    "Quantization should preserve mean within tolerance"
+                );
+                prop_assert!(
+                    variance_preserved,
+                    "Quantization should preserve variance within tolerance"
+                );
+                prop_assert!(
+                    correlation >= config.accuracy_threshold,
+                    "Quantization correlation {:.4} below threshold {:.4}",
+                    correlation, config.accuracy_threshold
+                );
+            }
+            Err(err) => {
+                eprintln!("Property test correctly failing (TDD Red): Distribution preservation - {}", err);
+                prop_assert!(false, "Distribution preservation test will pass once implementation is complete");
+            }
+        }
+    }
+
+    /// Property: Block-aligned tensors quantize efficiently
+    /// AC2: Support Quantization Formats with ≥99% Accuracy
+    #[test]
+    #[ignore] // Issue #159: TDD placeholder - block alignment optimization needed
+    #[cfg(feature = "cpu")]
+    fn prop_block_aligned_quantization(
+        block_size in prop::sample::select(vec![32usize, 64, 128, 256]),
+        shape in arbitrary_tensor_shape()
+    ) {
+        let config = PropertyTestConfig::default();
+
+        // Create block-aligned shape
+        let aligned_shape: Vec<usize> = shape.iter()
+            .map(|&dim| ((dim + block_size - 1) / block_size) * block_size)
+            .collect();
+        let size = aligned_shape.iter().product::<usize>();
+
+        // Generate data matching the aligned shape
+        let weight_data: Vec<f32> = (0..size).map(|i| (i as f32) * 0.01).collect();
+
+        let result = test_block_aligned_efficiency(&weight_data, &aligned_shape, block_size);
+
+        match result {
+            Ok((accuracy, efficiency_gain)) => {
+                prop_assert!(
+                    accuracy >= config.accuracy_threshold,
+                    "Block-aligned accuracy {:.4} below threshold {:.4}",
+                    accuracy, config.accuracy_threshold
+                );
+                prop_assert!(
+                    efficiency_gain >= 0.0,
+                    "Block-aligned quantization should not degrade efficiency"
+                );
+            }
+            Err(err) => {
+                eprintln!("Property test correctly failing (TDD Red): Block alignment - {}", err);
+                prop_assert!(false, "Block alignment test will pass once implementation is complete");
+            }
+        }
+    }
+
+    /// Property: Extreme dynamic range handling
+    /// AC2: Support Quantization Formats with ≥99% Accuracy
+    #[test]
+    #[ignore] // Issue #159: TDD placeholder - extreme range handling implementation needed
+    #[cfg(feature = "cpu")]
+    fn prop_extreme_dynamic_range(
+        weight_data in arbitrary_extreme_dynamic_range_tensor(),
+        shape in arbitrary_tensor_shape()
+    ) {
+        if weight_data.len() != shape.iter().product::<usize>() {
+            return Ok(());
+        }
+
+        let result = test_extreme_dynamic_range_handling(&weight_data, &shape);
+
+        match result {
+            Ok((dynamic_range, accuracy, clipping_handled)) => {
+                prop_assert!(
+                    clipping_handled,
+                    "Extreme values should be clipped gracefully"
+                );
+                prop_assert!(
+                    dynamic_range.is_finite(),
+                    "Dynamic range should be finite after quantization"
+                );
+                // Lower accuracy threshold for extreme ranges
+                prop_assert!(
+                    accuracy >= 0.85,
+                    "Extreme range accuracy {:.4} below minimum 85%",
+                    accuracy
+                );
+            }
+            Err(err) => {
+                eprintln!("Property test correctly failing (TDD Red): Extreme range - {}", err);
+                prop_assert!(false, "Extreme range test will pass once implementation is complete");
+            }
+        }
+    }
+
+    /// Property: Sparse tensors maintain sparsity after quantization
+    /// AC2: Support Quantization Formats with ≥99% Accuracy
+    #[test]
+    #[ignore] // Issue #159: TDD placeholder - sparsity preservation validation needed
+    #[cfg(feature = "cpu")]
+    fn prop_sparse_tensor_handling(
+        sparsity in 0.1f32..0.9f32,
+        base_data in arbitrary_weight_tensor()
+    ) {
+        // Create sparse weight data by zeroing out elements
+        let zero_count = (base_data.len() as f32 * sparsity) as usize;
+        let mut weight_data = base_data.clone();
+        for i in 0..zero_count.min(weight_data.len()) {
+            weight_data[i] = 0.0;
+        }
+
+        // Create shape that matches size
+        let size = weight_data.len();
+        let rows = (size as f32).sqrt() as usize;
+        let cols = size / rows;
+        let shape = vec![rows, cols];
+
+        // Skip if shape doesn't match
+        if shape.iter().product::<usize>() != size {
+            return Ok(());
+        }
+
+        let result = test_sparse_tensor_preservation(&weight_data, &shape, sparsity);
+
+        match result {
+            Ok((preserved_sparsity, compression_ratio)) => {
+                let sparsity_error = (preserved_sparsity - sparsity).abs();
+                prop_assert!(
+                    sparsity_error <= 0.15,
+                    "Sparsity preservation error {:.3} too large",
+                    sparsity_error
+                );
+                prop_assert!(
+                    compression_ratio >= 1.0,
+                    "Sparse tensors should achieve compression ratio ≥ 1.0, got {:.2}",
+                    compression_ratio
+                );
+            }
+            Err(err) => {
+                eprintln!("Property test correctly failing (TDD Red): Sparse tensor - {}", err);
+                prop_assert!(false, "Sparse tensor test will pass once implementation is complete");
+            }
+        }
+    }
+
+    /// Property: Model architecture variations are supported
+    /// AC2: Support Quantization Formats with ≥99% Accuracy
+    #[test]
+    #[ignore] // Issue #159: TDD placeholder - architecture validation needed
+    #[cfg(feature = "cpu")]
+    fn prop_model_architecture_support(
+        arch in arbitrary_model_architecture()
+    ) {
+        let result = test_architecture_compatibility(&arch);
+
+        match result {
+            Ok((supported, accuracy)) => {
+                prop_assert!(
+                    supported,
+                    "Architecture should be supported: {:?}",
+                    arch
+                );
+                prop_assert!(
+                    accuracy >= 0.99,
+                    "Architecture accuracy {:.4} below threshold 99%",
+                    accuracy
+                );
+            }
+            Err(err) => {
+                eprintln!("Property test correctly failing (TDD Red): Architecture support - {}", err);
+                prop_assert!(false, "Architecture support test will pass once implementation is complete");
+            }
+        }
+    }
+
+    /// Property: Round-trip quantization with custom scales and zero points
+    /// AC2: Support Quantization Formats with ≥99% Accuracy
+    #[test]
+    #[ignore] // Issue #159: TDD placeholder - custom quantization params implementation needed
+    #[cfg(feature = "cpu")]
+    fn prop_custom_quantization_params(
+        weight_data in arbitrary_weight_tensor(),
+        shape in arbitrary_tensor_shape()
+    ) {
+        let config = PropertyTestConfig::default();
+
+        if weight_data.len() != shape.iter().product::<usize>() || weight_data.len() < 32 {
+            return Ok(());
+        }
+
+        let num_blocks = (weight_data.len() + 31) / 32;
+        // Generate simple scales and zero points inline
+        let scales: Vec<f32> = (0..num_blocks).map(|i| 0.1 + (i as f32) * 0.01).collect();
+        let zero_points: Vec<i32> = (0..num_blocks).map(|i| (i as i32) % 128).collect();
+
+        let result = test_custom_quantization_params(&weight_data, &shape, &scales, &zero_points);
+
+        match result {
+            Ok(accuracy) => {
+                prop_assert!(
+                    accuracy >= config.accuracy_threshold,
+                    "Custom param accuracy {:.4} below threshold {:.4}",
+                    accuracy, config.accuracy_threshold
+                );
+            }
+            Err(err) => {
+                eprintln!("Property test correctly failing (TDD Red): Custom params - {}", err);
+                prop_assert!(false, "Custom params test will pass once implementation is complete");
+            }
+        }
+    }
+}
+
+// ============================================================================
 // Helper Functions for Property Testing
 // ============================================================================
 
@@ -616,4 +1002,151 @@ fn calculate_dynamic_range(values: &[f32]) -> f32 {
     let min_val = values.iter().fold(f32::INFINITY, |a, &b| a.min(b));
 
     max_val - min_val
+}
+
+// ============================================================================
+// Helper Functions for Edge Case Testing
+// ============================================================================
+
+/// Test edge case handling (NaN, Inf)
+fn test_edge_case_handling(weight_data: &[f32], shape: &[usize]) -> Result<(bool, bool, Vec<f32>)> {
+    // TODO: Implement edge case handling test
+    let _ = (weight_data, shape);
+    Err(anyhow::anyhow!("Edge case handling not implemented"))
+}
+
+/// Test distribution preservation after quantization
+fn test_distribution_preservation(
+    weight_data: &[f32],
+    shape: &[usize],
+) -> Result<(bool, bool, f32)> {
+    // TODO: Implement distribution preservation test
+    // Returns (mean_preserved, variance_preserved, correlation)
+    let _ = (weight_data, shape);
+    Err(anyhow::anyhow!("Distribution preservation not implemented"))
+}
+
+/// Test block-aligned quantization efficiency
+fn test_block_aligned_efficiency(
+    weight_data: &[f32],
+    shape: &[usize],
+    block_size: usize,
+) -> Result<(f32, f32)> {
+    // TODO: Implement block alignment efficiency test
+    // Returns (accuracy, efficiency_gain)
+    let _ = (weight_data, shape, block_size);
+    Err(anyhow::anyhow!("Block alignment efficiency not implemented"))
+}
+
+/// Test extreme dynamic range handling
+fn test_extreme_dynamic_range_handling(
+    weight_data: &[f32],
+    shape: &[usize],
+) -> Result<(f32, f32, bool)> {
+    // TODO: Implement extreme range handling test
+    // Returns (dynamic_range, accuracy, clipping_handled)
+    let _ = (weight_data, shape);
+    Err(anyhow::anyhow!("Extreme dynamic range handling not implemented"))
+}
+
+/// Test sparse tensor preservation
+fn test_sparse_tensor_preservation(
+    weight_data: &[f32],
+    shape: &[usize],
+    target_sparsity: f32,
+) -> Result<(f32, f32)> {
+    // TODO: Implement sparse tensor preservation test
+    // Returns (preserved_sparsity, compression_ratio)
+    let _ = (weight_data, shape, target_sparsity);
+    Err(anyhow::anyhow!("Sparse tensor preservation not implemented"))
+}
+
+/// Test architecture compatibility
+fn test_architecture_compatibility(arch: &ModelArchitecture) -> Result<(bool, f32)> {
+    // TODO: Implement architecture compatibility test
+    // Returns (supported, accuracy)
+    let _ = arch;
+    Err(anyhow::anyhow!("Architecture compatibility not implemented"))
+}
+
+/// Test custom quantization parameters
+fn test_custom_quantization_params(
+    weight_data: &[f32],
+    shape: &[usize],
+    scales: &[f32],
+    zero_points: &[i32],
+) -> Result<f32> {
+    // TODO: Implement custom quantization parameters test
+    // Returns accuracy
+    let _ = (weight_data, shape, scales, zero_points);
+    Err(anyhow::anyhow!("Custom quantization parameters not implemented"))
+}
+
+// ============================================================================
+// Statistical Helper Functions
+// ============================================================================
+
+/// Calculate mean of f32 slice
+#[allow(dead_code)]
+fn calculate_mean(values: &[f32]) -> f32 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    let finite_values: Vec<f32> = values.iter().copied().filter(|x| x.is_finite()).collect();
+    if finite_values.is_empty() {
+        return 0.0;
+    }
+    finite_values.iter().sum::<f32>() / finite_values.len() as f32
+}
+
+/// Calculate variance of f32 slice
+#[allow(dead_code)]
+fn calculate_variance(values: &[f32]) -> f32 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    let finite_values: Vec<f32> = values.iter().copied().filter(|x| x.is_finite()).collect();
+    if finite_values.is_empty() {
+        return 0.0;
+    }
+    let mean = calculate_mean(&finite_values);
+    finite_values.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / finite_values.len() as f32
+}
+
+/// Calculate Pearson correlation coefficient
+#[allow(dead_code)]
+fn calculate_correlation(vec1: &[f32], vec2: &[f32]) -> f32 {
+    if vec1.len() != vec2.len() || vec1.is_empty() {
+        return 0.0;
+    }
+
+    let mean1 = calculate_mean(vec1);
+    let mean2 = calculate_mean(vec2);
+
+    let mut numerator = 0.0;
+    let mut sum_sq1 = 0.0;
+    let mut sum_sq2 = 0.0;
+
+    for i in 0..vec1.len() {
+        if vec1[i].is_finite() && vec2[i].is_finite() {
+            let diff1 = vec1[i] - mean1;
+            let diff2 = vec2[i] - mean2;
+            numerator += diff1 * diff2;
+            sum_sq1 += diff1 * diff1;
+            sum_sq2 += diff2 * diff2;
+        }
+    }
+
+    let denominator = (sum_sq1 * sum_sq2).sqrt();
+    if denominator > 0.0 { numerator / denominator } else { 0.0 }
+}
+
+/// Calculate sparsity ratio (proportion of zeros)
+#[allow(dead_code)]
+fn calculate_sparsity(values: &[f32]) -> f32 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    let zero_count = values.iter().filter(|&&x| x.abs() < 1e-8).count();
+    zero_count as f32 / values.len() as f32
 }

@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::env;
 use std::net::IpAddr;
 use std::path::Path;
+use std::str::FromStr;
 use std::time::Duration;
 
 use crate::batch_engine::BatchEngineConfig;
@@ -33,9 +34,10 @@ impl Default for DeviceConfig {
     }
 }
 
-impl DeviceConfig {
-    /// Parse device configuration from string
-    pub fn from_str(s: &str) -> Result<Self> {
+impl FromStr for DeviceConfig {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "auto" => Ok(DeviceConfig::Auto),
             "cpu" => Ok(DeviceConfig::Cpu),
@@ -53,7 +55,9 @@ impl DeviceConfig {
             _ => anyhow::bail!("Unknown device config: {}", s),
         }
     }
+}
 
+impl DeviceConfig {
     /// Resolve device configuration to actual device
     pub fn resolve(&self) -> Device {
         match self {
@@ -156,7 +160,7 @@ impl ConfigBuilder {
         }
 
         if let Ok(device) = env::var("BITNET_DEFAULT_DEVICE") {
-            match DeviceConfig::from_str(&device) {
+            match device.parse::<DeviceConfig>() {
                 Ok(device_config) => {
                     self.config.server.default_device = device_config;
                 }
@@ -488,6 +492,45 @@ mod tests {
         assert_eq!(config.server.host, "0.0.0.0");
         assert_eq!(config.server.port, 8080);
         assert!(config.model_manager.max_concurrent_loads > 0);
+        assert_eq!(config.server.default_device, DeviceConfig::Auto);
+    }
+
+    #[test]
+    fn test_device_config_from_str() {
+        assert_eq!("auto".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);
+        assert_eq!("cpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);
+        assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
+        assert_eq!("gpu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(1));
+        assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));
+        assert!("invalid".parse::<DeviceConfig>().is_err());
+    }
+
+    #[test]
+    fn test_device_config_resolve_cpu() {
+        let config = DeviceConfig::Cpu;
+        assert_eq!(config.resolve(), Device::Cpu);
+    }
+
+    #[test]
+    fn test_device_config_resolve_gpu() {
+        let config = DeviceConfig::Gpu(1);
+        assert_eq!(config.resolve(), Device::Cuda(1));
+    }
+
+    #[test]
+    fn test_device_config_resolve_auto() {
+        let config = DeviceConfig::Auto;
+        let device = config.resolve();
+        // Auto resolves to CPU or GPU depending on feature flags and runtime detection
+        // In CPU-only builds, it should be CPU
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        assert_eq!(device, Device::Cpu);
+        // In GPU builds, it depends on runtime GPU availability
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        {
+            // Device can be either CPU or CUDA(0) depending on GPU availability
+            assert!(device == Device::Cpu || device == Device::Cuda(0));
+        }
     }
 
     #[test]

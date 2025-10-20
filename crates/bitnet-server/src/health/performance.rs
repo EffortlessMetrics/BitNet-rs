@@ -43,10 +43,7 @@ impl Default for PerformanceMetrics {
 impl PerformanceMetrics {
     /// Create a new performance metrics collector
     pub fn new() -> Self {
-        Self {
-            samples: Arc::new(RwLock::new(Vec::new())),
-            start_time: Instant::now(),
-        }
+        Self { samples: Arc::new(RwLock::new(Vec::new())), start_time: Instant::now() }
     }
 
     /// Record a completed request
@@ -84,10 +81,7 @@ impl PerformanceMetrics {
         let now = Instant::now();
         let window_start = now - Duration::from_secs(REQUESTS_WINDOW_SECS);
 
-        let recent_count = samples
-            .iter()
-            .filter(|s| s.timestamp >= window_start)
-            .count();
+        let recent_count = samples.iter().filter(|s| s.timestamp >= window_start).count();
 
         if recent_count == 0 {
             return 0.0;
@@ -116,10 +110,7 @@ impl PerformanceMetrics {
             return 1.0; // No requests = 100% compliance
         }
 
-        let compliant_count = samples
-            .iter()
-            .filter(|s| s.duration_ms <= SLA_TARGET_MS)
-            .count();
+        let compliant_count = samples.iter().filter(|s| s.duration_ms <= SLA_TARGET_MS).count();
 
         compliant_count as f64 / samples.len() as f64
     }
