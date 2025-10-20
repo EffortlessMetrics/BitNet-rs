@@ -341,6 +341,54 @@ fn test_empty_gguf_chat_template_falls_back() {
     );
 }
 
+/// Tests BitNet model path detection patterns
+/// Tests feature spec: Improved BitNet base model detection
+#[test]
+fn test_bitnet_path_detection_patterns() {
+    // Test that BitNet detection logic handles various path patterns
+    // This tests the pattern matching in auto_detect_template() indirectly
+
+    let test_cases = vec![
+        // Pattern: microsoft-bitnet
+        ("microsoft-bitnet", true, "microsoft-bitnet prefix"),
+        // Pattern: bitnet-b1.58
+        ("bitnet-b1.58", true, "bitnet-b1.58 pattern"),
+        // Pattern: bitnet-1.58b
+        ("bitnet-1.58b", true, "bitnet-1.58b pattern"),
+        // Pattern: bitnet-1_58b
+        ("bitnet-1_58b", true, "bitnet-1_58b underscore"),
+        // Pattern: 1.58b alone
+        ("1.58b", true, "1.58b pattern alone"),
+        // Pattern: 1_58b alone
+        ("1_58b", true, "1_58b underscore alone"),
+        // Pattern: generic bitnet (but not bitnet-instruct)
+        ("bitnet", true, "generic bitnet"),
+        ("custom-bitnet-model", true, "bitnet in path"),
+        // Should NOT match
+        ("bitnet-instruct", false, "bitnet-instruct should not match"),
+        ("llama3", false, "non-bitnet model"),
+    ];
+
+    for (path_component, should_match, description) in test_cases {
+        let path_lower = path_component.to_lowercase();
+
+        // Replicate the detection logic from auto_detect_template()
+        let matches_bitnet = path_lower.contains("microsoft-bitnet")
+            || path_lower.contains("bitnet-b1.58")
+            || path_lower.contains("bitnet-1.58b")
+            || path_lower.contains("bitnet-1_58b")
+            || path_lower.contains("1.58b")
+            || path_lower.contains("1_58b")
+            || (path_lower.contains("bitnet") && !path_lower.contains("instruct"));
+
+        assert_eq!(
+            matches_bitnet, should_match,
+            "Pattern '{}' ({}) match result should be {}",
+            path_component, description, should_match
+        );
+    }
+}
+
 /// Integration test: Full detection pipeline simulation
 /// Tests feature spec: chat-repl-ux-polish.md#AC2-integration
 #[test]

@@ -1655,9 +1655,18 @@ impl InferenceCommand {
 
             // Positive detection: BitNet base models (complete rather than answer)
             // Prefer Instruct template for better Q&A behavior
-            if path_str.contains("microsoft-bitnet") || path_str.contains("bitnet-b1.58") {
+            // Patterns: microsoft-bitnet, bitnet-b1.58, bitnet-1.58b, 1_58b
+            if path_str.contains("microsoft-bitnet")
+                || path_str.contains("bitnet-b1.58")
+                || path_str.contains("bitnet-1.58b")
+                || path_str.contains("bitnet-1_58b")
+                || path_str.contains("1.58b")
+                || path_str.contains("1_58b")
+                || (path_str.contains("bitnet") && !path_str.contains("instruct"))
+            {
                 info!(
-                    "Auto-detected BitNet base model from model path, using Instruct template for Q&A"
+                    "Auto-detected BitNet base model from model path '{}', using Instruct template for Q&A",
+                    model_path.display()
                 );
                 return TemplateType::Instruct;
             }

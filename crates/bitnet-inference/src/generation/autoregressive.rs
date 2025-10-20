@@ -303,16 +303,13 @@ impl AutoregressiveGenerator {
         let mut generated = Vec::new();
 
         for step in 0..self.config.max_new_tokens {
-            if self.should_stop_generation(&current_tokens)? {
+            // Use consolidated should_stop check (includes max_length, EOS, repetition)
+            if self.should_stop(&current_tokens) {
                 break;
             }
 
             let (next_token, step_time) =
                 self.generate_next_token(&current_tokens, &forward_fn, step).await?;
-
-            if self.is_generation_complete(next_token, &current_tokens) {
-                break;
-            }
 
             current_tokens.push(next_token);
             generated.push(next_token);
@@ -333,11 +330,6 @@ impl AutoregressiveGenerator {
             self.prefetch_tensor_cache(tokens)?;
         }
         Ok(())
-    }
-
-    /// Check if generation should stop based on length constraints
-    fn should_stop_generation(&self, current_tokens: &[usize]) -> Result<bool> {
-        Ok(current_tokens.len() >= self.config.max_length)
     }
 
     /// Generate next token with adaptive optimization
@@ -361,11 +353,6 @@ impl AutoregressiveGenerator {
 
         let step_time = step_start.elapsed().as_millis() as f64;
         Ok((next_token, step_time))
-    }
-
-    /// Check if generation is complete
-    fn is_generation_complete(&self, token: usize, current_tokens: &[usize]) -> bool {
-        token == self.config.eos_token_id && current_tokens.len() >= self.config.min_length
     }
 
     /// Finalize generation and update statistics

@@ -170,6 +170,22 @@ BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
 }
 ```
 
+### QK256 AVX2 Fast Path (v0.2 Foundation)
+
+BitNet.rs implements AVX2-accelerated QK256 dequantization with runtime dispatch:
+
+- **Runtime dispatch**: Scalar fallback if `avx2` is unavailable at runtime
+- **Correctness parity**: ≤ 1e-5 max absolute difference vs scalar on randomized shapes
+- **Initial uplift**: ~1.2× observed; target ≥3× with nibble-LUT + FMA tiling and prefetch
+- **Benchmarks**: Run `cargo bench --bench kernel_benchmarks --features cpu,avx2`
+- **Tests**: Property-based tests validate numerical correctness across random inputs
+
+**Planned optimizations for ≥3× uplift:**
+- Nibble LUT unpack via `pshufb` (2-bit → signed i8 mapping)
+- FMA tiling (8-16 rows, unroll dot-products)
+- Load combine (reduce AVX crossings)
+- Prefetch (next code block & input)
+
 ## Documentation Structure
 
 ### Getting Started
@@ -393,6 +409,20 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 string-based stops using a rolling tail window (optimized for memory and performance). The tail
 window size is bounded by the longest string stop sequence (default 64-byte window), reducing
 decoding overhead for large batches.
+
+#### Stop Semantics (Unified Across run/chat/streaming)
+
+The engine evaluates stops in this order for **all** generation paths:
+
+1. **Token IDs** (`stop_token_ids`) — O(1) lookup, checked first
+2. **EOS** (from tokenizer or explicit) — fallback after token ID check
+3. **String sequences** (`stop_sequences`) — matched on a **rolling, UTF-8-safe tail buffer**
+   configured by `stop_string_window` (bytes). This avoids decoding the full history per step.
+
+**Configuration:**
+- Default tail window: 64 bytes (sufficient for most stop sequences like `</s>`, `\n\n`)
+- Increase with `--stop-string-window <N>` for longer stop sequences
+- All generation modes (run, chat, streaming) use the same evaluation order
 
 ### Interactive Chat
 

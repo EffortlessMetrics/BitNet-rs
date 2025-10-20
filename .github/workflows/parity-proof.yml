@@ -130,6 +130,24 @@ jobs:
         run: |
           RECEIPT_PATH=$(find docs/baselines -name "parity-bitnetcpp.json" -type f | head -1)
           if [ -f "$RECEIPT_PATH" ]; then
+            # Validate schema version
+            jq -e '.schema_version == "1.0.0"' "$RECEIPT_PATH" >/dev/null || {
+              echo "❌ Receipt validation failed: schema_version != 1.0.0"
+              exit 1
+            }
+
+            # Validate compute path (must be "real", not "mock")
+            jq -e '.compute_path == "real"' "$RECEIPT_PATH" >/dev/null || {
+              echo "❌ Receipt validation failed: compute_path != real"
+              exit 1
+            }
+
+            # Validate kernels presence
+            jq -e '(.kernels | length) > 0' "$RECEIPT_PATH" >/dev/null || {
+              echo "❌ Receipt validation failed: no kernels recorded"
+              exit 1
+            }
+
             # Validate quantization format and flavor
             jq -e '
               .quant.format == "I2_S" and
@@ -152,6 +170,12 @@ jobs:
             # Validate timeout_seconds
             jq -e '.timeout_seconds == 60' "$RECEIPT_PATH" >/dev/null || {
               echo "❌ Receipt validation failed: timeout_seconds != 60"
+              exit 1
+            }
+
+            # Back-compat: tolerate i2s_flavor or flavor (both valid)
+            jq -e 'has("quant") and (.quant | has("i2s_flavor") or has("flavor"))' "$RECEIPT_PATH" >/dev/null || {
+              echo "❌ Receipt validation failed: missing flavor field"
               exit 1
             }
 

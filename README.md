@@ -159,6 +159,33 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
   --greedy
 ```
 
+### Strict Receipts (CI & Local)
+
+To generate a production receipt with strict validation for CI/CD workflows:
+
+```bash
+# Deterministic & strict mode
+export BITNET_DISABLE_MINIMAL_LOADER=1
+export BITNET_DETERMINISTIC=1
+export BITNET_SEED=42
+export RAYON_NUM_THREADS=1
+export PARITY_TEST_TIMEOUT_SECS=60
+
+# Run parity smoke test
+./scripts/parity_smoke.sh \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
+
+# Receipt lands under the workspace:
+# docs/baselines/<YYYY-MM-DD>/parity-bitnetcpp.json
+
+# Inspect receipt fields
+jq '.schema_version,.compute_path,.validation,.quant,.timeout_seconds' \
+  docs/baselines/*/parity-bitnetcpp.json
+```
+
+**Note:** The LLaMA-3 chat template **auto-stops** on `<|eot_id|>` and is **auto-selected** when the tokenizer exposes it. BitNet base models default to the **instruct** template (Q&A-oriented).
+
 ### Performance Optimization
 
 Build with CPU optimizations for better throughput:
@@ -195,6 +222,31 @@ BitNet.rs CLI provides aliases for common flags to maintain compatibility with o
 --stop-sequence "</s>"     # Alias
 --stop_sequences "</s>"    # Alias
 ```
+
+### Stop Configuration (IDs First, EOS Next, Strings Last)
+
+Stop sequences are evaluated in priority order for all generation paths:
+
+```bash
+# Token IDs (fastest - checked first)
+--stop-id 128009           # LLaMA-3 <|eot_id|> token
+
+# String sequences (UTF-8-safe rolling tail window)
+--stop "</s>" --stop "\n\n"
+
+# Configure tail window size (bytes, default: 64)
+--stop-string-window 128   # Increase for longer stop sequences
+```
+
+**Stop evaluation order:**
+
+1. Token IDs (`--stop-id`) — checked first (O(1) lookup)
+2. EOS token — from tokenizer or explicit
+3. String sequences (`--stop`) — matched on rolling UTF-8-safe tail buffer
+
+**Note:** The tail window size controls how many bytes of recent output are kept for
+string matching. Increase `--stop-string-window` if you have very long stop sequences
+(default 64 bytes is sufficient for most cases).
 
 ### Rust API Usage
 

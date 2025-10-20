@@ -590,6 +590,8 @@ dependencies = [
  "log",
  "memory-stats",
  "once_cell",
+ "rand",
+ "rand_chacha",
  "rayon",
  "serde",
  "serde_json",

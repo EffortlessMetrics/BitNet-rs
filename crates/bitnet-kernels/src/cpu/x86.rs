@@ -70,6 +70,104 @@ impl KernelProvider for Avx2Kernel {
     }
 }
 
+impl Avx2Kernel {
+    /// Dequantize QK256 format data to f32 with AVX2 acceleration
+    ///
+    /// This is a public utility method for QK256 dequantization with runtime dispatch.
+    /// Falls back to scalar if AVX2 is not available.
+    ///
+    /// # Arguments
+    /// * `quantized` - Packed 2-bit data (i8 slice, length = total_elements.div_ceil(4))
+    /// * `scales` - Per-block scales (length = total_elements.div_ceil(256))
+    /// * `block_size` - Must be 256 for QK256 format
+    ///
+    /// # Returns
+    /// Vector of dequantized f32 values (length = scales.len() * 256)
+    ///
+    /// # Errors
+    /// Returns error if block_size != 256 or dimension mismatches
+    pub fn dequantize_qk256(
+        &self,
+        quantized: &[i8],
+        scales: &[f32],
+        block_size: usize,
+    ) -> Result<Vec<f32>> {
+        if block_size != 256 {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!("QK256 requires block_size=256, got {}", block_size),
+            }));
+        }
+
+        if !self.is_available() {
+            // Fall back to scalar implementation
+            return self.dequantize_qk256_scalar(quantized, scales, block_size);
+        }
+
+        // Safety: We checked AVX2 is available
+        unsafe { self.dequantize_qk256_avx2(quantized, scales, block_size) }
+    }
+
+    /// Scalar fallback for QK256 dequantization
+    fn dequantize_qk256_scalar(
+        &self,
+        quantized: &[i8],
+        scales: &[f32],
+        block_size: usize,
+    ) -> Result<Vec<f32>> {
+        const QK256: usize = 256;
+        const QK256_PACKED_BYTES: usize = 64;
+
+        if block_size != QK256 {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!("QK256 requires block_size=256, got {}", block_size),
+            }));
+        }
+
+        let total_elements = scales.len() * QK256;
+        let expected_bytes = scales.len() * QK256_PACKED_BYTES;
+
+        if quantized.len().abs_diff(expected_bytes) > 128 {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!(
+                    "QK256 size mismatch: got {} bytes, expected {} for {} blocks",
+                    quantized.len(),
+                    expected_bytes,
+                    scales.len()
+                ),
+            }));
+        }
+
+        let mut output = vec![0.0f32; total_elements];
+        const LUT: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
+
+        for (block_idx, &scale) in scales.iter().enumerate() {
+            let block_start = block_idx * QK256;
+            let packed_start = block_idx * QK256_PACKED_BYTES;
+            let packed_end = (packed_start + QK256_PACKED_BYTES).min(quantized.len());
+
+            for (i, &byte_val) in quantized[packed_start..packed_end].iter().enumerate() {
+                let byte = byte_val as u8;
+                let base = block_start + i * 4;
+
+                if base < total_elements {
+                    output[base] = LUT[(byte & 0x03) as usize] * scale;
+                }
+                if base + 1 < total_elements {
+                    output[base + 1] = LUT[((byte >> 2) & 0x03) as usize] * scale;
+                }
+                if base + 2 < total_elements {
+                    output[base + 2] = LUT[((byte >> 4) & 0x03) as usize] * scale;
+                }
+                if base + 3 < total_elements {
+                    output[base + 3] = LUT[((byte >> 6) & 0x03) as usize] * scale;
+                }
+            }
+        }
+
+        Ok(output)
+    }
+}
+
 /// AVX-512 optimized CPU kernel for x86_64
 ///
 /// Uses AVX-512BW and AVX-512F instructions for wide vector operations. This
@@ -407,6 +505,135 @@ impl Avx2Kernel {
         }
 
         Ok(())
+    }
+
+    /// AVX2-optimized QK256 dequantization (2-bit → f32 with LUT)
+    ///
+    /// Dequantizes QK256 quantized data using AVX2 SIMD instructions.
+    /// Processes 256-element blocks using LUT-based unpacking and widening.
+    ///
+    /// # Algorithm
+    /// - Unpack 64 bytes → 256 2-bit codes (scalar for correctness)
+    /// - Convert codes → f32 using SIMD LUT indexing
+    /// - Apply scales with AVX2 FMA
+    ///
+    /// # Arguments
+    /// * `quantized` - Packed 2-bit data (length = total_elements.div_ceil(4))
+    /// * `scales` - Per-block scales (length = total_elements.div_ceil(256))
+    /// * `block_size` - Must be 256 for QK256 format
+    ///
+    /// # Returns
+    /// Vector of dequantized f32 values
+    ///
+    /// # Errors
+    /// Returns error if block_size != 256 or dimension mismatches
+    #[target_feature(enable = "avx2")]
+    #[allow(unsafe_op_in_unsafe_fn)]
+    unsafe fn dequantize_qk256_avx2(
+        &self,
+        quantized: &[i8],
+        scales: &[f32],
+        block_size: usize,
+    ) -> Result<Vec<f32>> {
+        const QK256: usize = 256;
+        const QK256_PACKED_BYTES: usize = 64;
+
+        // Validate block size
+        if block_size != QK256 {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!("QK256 dequantize requires block_size=256, got {}", block_size),
+            }));
+        }
+
+        // Calculate dimensions
+        let total_elements = scales.len() * QK256;
+        let expected_bytes = scales.len() * QK256_PACKED_BYTES;
+
+        // Validate input size (allow some tolerance for alignment)
+        if quantized.len().abs_diff(expected_bytes) > 128 {
+            return Err(BitNetError::Kernel(KernelError::InvalidArguments {
+                reason: format!(
+                    "QK256 size mismatch: got {} bytes, expected {} for {} blocks",
+                    quantized.len(),
+                    expected_bytes,
+                    scales.len()
+                ),
+            }));
+        }
+
+        // Allocate output buffer
+        let mut output = vec![0.0f32; total_elements];
+
+        // Code-to-float LUT (verified against GGML reference)
+        const LUT: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
+
+        // Scratch buffer for unpacking (stack-allocated per block)
+        let mut codes = [0u8; QK256];
+
+        // Process each block
+        for (block_idx, scale) in scales.iter().enumerate() {
+            let block_start = block_idx * QK256;
+            let packed_start = block_idx * QK256_PACKED_BYTES;
+
+            // Get packed bytes for this block (handle partial last block)
+            let packed_end = (packed_start + QK256_PACKED_BYTES).min(quantized.len());
+            let packed_slice = &quantized[packed_start..packed_end];
+
+            // Convert i8 to u8 for unpacking (reinterpret as unsigned)
+            let mut packed_bytes = [0u8; QK256_PACKED_BYTES];
+            for (i, &val) in packed_slice.iter().enumerate() {
+                packed_bytes[i] = val as u8;
+            }
+
+            // Unpack 64 bytes → 256 2-bit codes (scalar for correctness)
+            for (i, &byte) in packed_bytes.iter().enumerate() {
+                let base = i * 4;
+                codes[base] = byte & 0x03;
+                codes[base + 1] = (byte >> 2) & 0x03;
+                codes[base + 2] = (byte >> 4) & 0x03;
+                codes[base + 3] = (byte >> 6) & 0x03;
+            }
+
+            // SIMD conversion: codes → f32 using LUT, then scale
+            let scale_vec = _mm256_set1_ps(*scale);
+
+            let mut elem_idx = 0;
+            // Process 8 elements at a time with AVX2
+            while elem_idx + 8 <= QK256 {
+                // Convert 8 codes to weights using LUT
+                let weights = [
+                    LUT[codes[elem_idx] as usize],
+                    LUT[codes[elem_idx + 1] as usize],
+                    LUT[codes[elem_idx + 2] as usize],
+                    LUT[codes[elem_idx + 3] as usize],
+                    LUT[codes[elem_idx + 4] as usize],
+                    LUT[codes[elem_idx + 5] as usize],
+                    LUT[codes[elem_idx + 6] as usize],
+                    LUT[codes[elem_idx + 7] as usize],
+                ];
+
+                // Load weights as AVX2 vector
+                let w_vec = _mm256_loadu_ps(weights.as_ptr());
+
+                // Apply scale: output = weights * scale
+                let scaled = _mm256_mul_ps(w_vec, scale_vec);
+
+                // Store result
+                let out_ptr = output.as_mut_ptr().add(block_start + elem_idx);
+                _mm256_storeu_ps(out_ptr, scaled);
+
+                elem_idx += 8;
+            }
+
+            // Handle tail elements (scalar path)
+            while elem_idx < QK256 && block_start + elem_idx < total_elements {
+                let w = LUT[codes[elem_idx] as usize];
+                output[block_start + elem_idx] = w * scale;
+                elem_idx += 1;
+            }
+        }
+
+        Ok(output)
     }
 
     /// AVX2 optimized TL2 quantization
@@ -782,5 +1009,207 @@ mod tests {
             }
         }
         assert!(diff_count < 10, "Too many differences in quantized output: {}/64", diff_count);
+    }
+
+    /// Test AVX2 QK256 dequantization basic correctness
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_avx2_dequantize_qk256_basic() {
+        let kernel = Avx2Kernel;
+
+        if !kernel.is_available() {
+            eprintln!("Skipping QK256 dequantize test: AVX2 not available");
+            return;
+        }
+
+        // Test with 2 blocks (512 elements total)
+        const QK256: usize = 256;
+        const QK256_PACKED_BYTES: usize = 64;
+        let num_blocks = 2;
+
+        // Create packed data: all codes = 2 (→ +1.0 with LUT)
+        // Pattern: 0b_10_10_10_10 = 0xAA
+        let quantized = vec![0xAAu8 as i8; num_blocks * QK256_PACKED_BYTES];
+
+        // Scales for each block
+        let scales = vec![2.0f32, 3.0f32];
+
+        // Dequantize
+        let result =
+            kernel.dequantize_qk256(&quantized, &scales, 256).expect("dequantize should succeed");
+
+        // Verify length
+        assert_eq!(
+            result.len(),
+            num_blocks * QK256,
+            "Output length should be {} elements",
+            num_blocks * QK256
+        );
+
+        // Verify values in first block (scale=2.0, code=2 → weight=+1.0)
+        for (i, &val) in result.iter().take(QK256).enumerate() {
+            let expected = 1.0 * 2.0; // LUT[2] * scale[0]
+            assert!(
+                (val - expected).abs() < 1e-5,
+                "Block 0 element {}: expected {}, got {}",
+                i,
+                expected,
+                val
+            );
+        }
+
+        // Verify values in second block (scale=3.0, code=2 → weight=+1.0)
+        for (i, &val) in result.iter().skip(QK256).take(QK256).enumerate() {
+            let expected = 1.0 * 3.0; // LUT[2] * scale[1]
+            assert!(
+                (val - expected).abs() < 1e-5,
+                "Block 1 element {}: expected {}, got {}",
+                i,
+                expected,
+                val
+            );
+        }
+    }
+
+    /// Test AVX2 QK256 dequantization matches scalar reference
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_avx2_dequantize_qk256_matches_scalar() {
+        let kernel = Avx2Kernel;
+
+        if !kernel.is_available() {
+            eprintln!("Skipping QK256 dequantize correctness test: AVX2 not available");
+            return;
+        }
+
+        // Test with random data (4 blocks = 1024 elements)
+        const QK256_PACKED_BYTES: usize = 64;
+        let num_blocks = 4;
+
+        use rand::{Rng, SeedableRng};
+        use rand_chacha::ChaCha8Rng;
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+
+        // Generate random quantized data
+        let mut quantized = vec![0i8; num_blocks * QK256_PACKED_BYTES];
+        for byte in quantized.iter_mut() {
+            *byte = rng.random();
+        }
+
+        // Generate random scales
+        let scales: Vec<f32> = (0..num_blocks).map(|_| rng.random_range(0.5..5.0)).collect();
+
+        // Compute AVX2 result
+        let result_avx2 = kernel
+            .dequantize_qk256(&quantized, &scales, 256)
+            .expect("AVX2 dequantize should succeed");
+
+        // Compute scalar reference
+        let result_scalar = kernel
+            .dequantize_qk256_scalar(&quantized, &scales, 256)
+            .expect("Scalar dequantize should succeed");
+
+        // Compare results
+        assert_eq!(result_avx2.len(), result_scalar.len(), "Output lengths should match");
+
+        for (i, (&avx2_val, &scalar_val)) in
+            result_avx2.iter().zip(result_scalar.iter()).enumerate()
+        {
+            let abs_diff = (avx2_val - scalar_val).abs();
+            assert!(
+                abs_diff < 1e-5,
+                "Mismatch at element {}: AVX2={}, Scalar={}, diff={}",
+                i,
+                avx2_val,
+                scalar_val,
+                abs_diff
+            );
+        }
+
+        println!("✅ AVX2 QK256 dequantize matches scalar for {} elements", result_avx2.len());
+    }
+
+    /// Test QK256 dequantization with all LUT codes
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_avx2_dequantize_qk256_all_codes() {
+        let kernel = Avx2Kernel;
+
+        if !kernel.is_available() {
+            eprintln!("Skipping QK256 all-codes test: AVX2 not available");
+            return;
+        }
+
+        const QK256_PACKED_BYTES: usize = 64;
+        const LUT: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
+
+        // Create packed data cycling through all codes (0,1,2,3,0,1,2,3,...)
+        let mut quantized = vec![0i8; QK256_PACKED_BYTES];
+        for (i, byte) in quantized.iter_mut().enumerate() {
+            let base = i * 4;
+            let code0 = (base % 4) as u8;
+            let code1 = ((base + 1) % 4) as u8;
+            let code2 = ((base + 2) % 4) as u8;
+            let code3 = ((base + 3) % 4) as u8;
+            *byte = (code0 | (code1 << 2) | (code2 << 4) | (code3 << 6)) as i8;
+        }
+
+        let scales = vec![1.5f32];
+
+        // Dequantize
+        let result =
+            kernel.dequantize_qk256(&quantized, &scales, 256).expect("dequantize should succeed");
+
+        // Verify each element matches expected LUT value * scale
+        for (i, &val) in result.iter().enumerate() {
+            let expected_code = i % 4;
+            let expected = LUT[expected_code] * 1.5;
+            assert!(
+                (val - expected).abs() < 1e-5,
+                "Element {}: expected {} (code {} → LUT[{}]={} * 1.5), got {}",
+                i,
+                expected,
+                expected_code,
+                expected_code,
+                LUT[expected_code],
+                val
+            );
+        }
+
+        println!("✅ AVX2 QK256 dequantize correctly handles all LUT codes");
+    }
+
+    /// Test QK256 dequantization error handling
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_avx2_dequantize_qk256_errors() {
+        let kernel = Avx2Kernel;
+
+        // Test 1: Wrong block size
+        {
+            let quantized = vec![0i8; 64];
+            let scales = vec![1.0f32];
+            let result = kernel.dequantize_qk256(&quantized, &scales, 128);
+            assert!(result.is_err(), "Should fail with wrong block size");
+            assert!(
+                result.unwrap_err().to_string().contains("block_size=256"),
+                "Error should mention required block size"
+            );
+        }
+
+        // Test 2: Size mismatch (both AVX2 and scalar paths validate)
+        // For 2 blocks: expected = 2 * 64 = 128 bytes
+        // Tolerance = 128 bytes, so anything outside [0, 256] fails
+        {
+            let quantized = vec![0i8; 300]; // Way too large: 300 > 128 + 128 = 256
+            let scales = vec![1.0f32, 1.0f32]; // 2 blocks
+            let result = kernel.dequantize_qk256(&quantized, &scales, 256);
+            // Both AVX2 and scalar paths should reject sizes outside tolerance
+            assert!(result.is_err(), "Should fail with size mismatch");
+            assert!(
+                result.unwrap_err().to_string().contains("size mismatch"),
+                "Error should mention size mismatch"
+            );
+        }
     }
 }

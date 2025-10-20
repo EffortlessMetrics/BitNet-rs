@@ -365,10 +365,24 @@ impl GpuInferenceEngine {
                 sampling.sample(&logits, &current_tokens, step, generation_config)?
             };
 
-            // Check for EOS token
+            // 3-tier stop check (partial - GPU backend lacks tokenizer for string checks)
+            // 1) ID-based stops (fast path - O(1) check on stop_token_ids list)
+            // CRITICAL: Check token IDs BEFORE EOS for performance and correctness
+            // For LLaMA-3 <|eot_id|> and other models with token-ID stop sequences
+            if !generation_config.stop_token_ids.is_empty() && generation_config.stop_token_ids.contains(&next_token) {
+                break;
+            }
+
+            // 2) EOS token check (explicit or backend default)
+            // NOTE: Backend is_eos_token() typically checks tokenizer's EOS token ID
             if self.backend.is_eos_token(next_token) {
                 break;
             }
+
+            // 3) String-based stop sequences - NOT IMPLEMENTED in GPU backend
+            // GPU backend lacks tokenizer access for string-based checks
+            // String-based stops are handled at higher level (InferenceEngine)
+            // TODO: Consider refactoring to pass tokenizer to backends for full 3-tier support
 
             generated_tokens.push(next_token);
             current_tokens.push(next_token);
