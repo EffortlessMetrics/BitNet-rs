@@ -10,6 +10,7 @@
 #![allow(dead_code)] // Test utilities may be used by future tests
 
 use anyhow::Result;
+use bitnet_quantization::Quantize;
 use proptest::prelude::*;
 use proptest::prop_oneof;
 
@@ -211,7 +212,6 @@ proptest! {
     /// Property: I2S quantization error bounds are consistent
     /// AC2: Support Quantization Formats with ≥99% Accuracy
     #[test]
-    #[ignore] // Issue #159: TDD placeholder - I2S error bounds implementation needed
     #[cfg(feature = "cpu")]
     fn prop_i2s_quantization_error_bounds(
         weight_data in arbitrary_weight_tensor(),
@@ -328,7 +328,6 @@ proptest! {
     /// Property: TL1 quantization preserves tensor sparsity patterns
     /// AC2: Support Quantization Formats with ≥99% Accuracy
     #[test]
-    #[ignore] // Issue #159: TDD placeholder - TL1 sparsity preservation needed
     #[cfg(feature = "cpu")]
     fn prop_tl1_quantization_sparsity_preservation(
         weight_data in arbitrary_weight_tensor(),
@@ -539,7 +538,6 @@ proptest! {
     /// Property: Zero-copy operations maintain memory efficiency
     /// AC7: Memory-Efficient Loading with Zero-Copy Operations
     #[test]
-    #[ignore] // Issue #159: TDD placeholder - zero-copy efficiency implementation needed
     #[cfg(feature = "cpu")]
     fn prop_zero_copy_memory_efficiency(
         tensor_size in (512usize..4096),
@@ -698,7 +696,6 @@ proptest! {
     /// Property: Extreme dynamic range handling
     /// AC2: Support Quantization Formats with ≥99% Accuracy
     #[test]
-    #[ignore] // Issue #159: TDD placeholder - extreme range handling implementation needed
     #[cfg(feature = "cpu")]
     fn prop_extreme_dynamic_range(
         weight_data in arbitrary_extreme_dynamic_range_tensor(),
@@ -887,9 +884,78 @@ fn test_i2s_quantization_deterministic(
 
 /// Test TL1 quantization numerical stability
 fn test_tl1_quantization_stability(weight_data: &[f32], shape: &[usize]) -> Result<(f32, f32)> {
-    // TODO: Implement TL1 stability analysis
-    let _ = (weight_data, shape);
-    Err(anyhow::anyhow!("TL1 stability analysis not implemented"))
+    use bitnet_quantization::TL1Quantizer;
+
+    // Create tensor from weight data
+    let bitnet_tensor = bitnet_quantization::utils::create_tensor_from_f32(
+        weight_data.to_vec(),
+        shape,
+        &candle_core::Device::Cpu,
+    )?;
+
+    // Quantize using TL1 (4-bit table lookup quantization)
+    let quantizer = TL1Quantizer::new();
+    let quantized = quantizer.quantize_tensor(&bitnet_tensor)?;
+
+    // Dequantize back to f32
+    let dequantized = quantized.dequantize()?;
+
+    // Extract data for validation
+    let original_data = bitnet_quantization::utils::extract_f32_data(&bitnet_tensor)?;
+    let dequantized_data = bitnet_quantization::utils::extract_f32_data(&dequantized)?;
+
+    // Ensure same length
+    if original_data.len() != dequantized_data.len() {
+        return Err(anyhow::anyhow!(
+            "Length mismatch: original={}, dequantized={}",
+            original_data.len(),
+            dequantized_data.len()
+        ));
+    }
+
+    // Filter finite values for fair comparison
+    let finite_pairs: Vec<(f32, f32)> = original_data
+        .iter()
+        .zip(dequantized_data.iter())
+        .filter(|(a, b)| a.is_finite() && b.is_finite())
+        .map(|(a, b)| (*a, *b))
+        .collect();
+
+    if finite_pairs.is_empty() {
+        return Err(anyhow::anyhow!("No finite values to compare"));
+    }
+
+    let finite_original: Vec<f32> = finite_pairs.iter().map(|(a, _)| *a).collect();
+    let finite_dequantized: Vec<f32> = finite_pairs.iter().map(|(_, b)| *b).collect();
+
+    // Calculate MSE (Mean Squared Error)
+    let mse = calculate_mse(&finite_original, &finite_dequantized);
+    let signal_power = calculate_signal_power(&finite_original);
+
+    // Calculate accuracy: 1 - (MSE / signal_power)
+    let accuracy = if signal_power > 1e-10 {
+        1.0 - (mse / signal_power)
+    } else {
+        // For near-zero signals, check if MSE is also near-zero
+        if mse < 1e-6 { 1.0 } else { 0.0 }
+    };
+
+    // Calculate stability metric (variance of errors)
+    // Errors = original - dequantized
+    let errors: Vec<f32> = finite_pairs.iter().map(|(orig, deq)| orig - deq).collect();
+
+    // Calculate mean of errors
+    let error_mean =
+        if !errors.is_empty() { errors.iter().sum::<f32>() / errors.len() as f32 } else { 0.0 };
+
+    // Calculate variance of errors (stability metric)
+    let stability_metric = if !errors.is_empty() {
+        errors.iter().map(|e| (e - error_mean).powi(2)).sum::<f32>() / errors.len() as f32
+    } else {
+        0.0
+    };
+
+    Ok((accuracy, stability_metric))
 }
 
 /// Test TL1 sparsity preservation
@@ -898,9 +964,35 @@ fn test_tl1_sparsity_preservation(
     shape: &[usize],
     target_sparsity: f32,
 ) -> Result<f32> {
-    // TODO: Implement TL1 sparsity preservation test
-    let _ = (weight_data, shape, target_sparsity);
-    Err(anyhow::anyhow!("TL1 sparsity preservation not implemented"))
+    use bitnet_quantization::TL1Quantizer;
+
+    // Create tensor from sparse weight data
+    let bitnet_tensor = bitnet_quantization::utils::create_tensor_from_f32(
+        weight_data.to_vec(),
+        shape,
+        &candle_core::Device::Cpu,
+    )?;
+
+    // Quantize using TL1
+    let quantizer = TL1Quantizer::new();
+    let quantized = quantizer.quantize_tensor(&bitnet_tensor)?;
+
+    // Dequantize back
+    let dequantized = quantizer.dequantize_tensor(&quantized)?;
+
+    // Extract dequantized data
+    let dequantized_data = bitnet_quantization::utils::extract_f32_data(&dequantized)?;
+
+    // Count zeros in output (sparsity tolerance for floating point)
+    let zero_threshold = 1e-6;
+    let zero_count = dequantized_data.iter().filter(|&&x| x.abs() < zero_threshold).count();
+    let total_count = dequantized_data.len();
+
+    // Calculate preserved sparsity
+    let preserved_sparsity =
+        if total_count == 0 { 0.0 } else { zero_count as f32 / total_count as f32 };
+
+    Ok(preserved_sparsity)
 }
 
 /// Test TL2 extreme value handling
@@ -948,9 +1040,70 @@ fn test_zero_copy_efficiency(
     weight_data: &[f32],
     alignment: usize,
 ) -> Result<(usize, usize, bool)> {
-    // TODO: Implement zero-copy efficiency test
-    let _ = (weight_data, alignment);
-    Err(anyhow::anyhow!("Zero-copy efficiency not implemented"))
+    use bitnet_models::loader::MmapFile;
+    use std::fs::File;
+    use std::io::Write;
+    use sysinfo::{MemoryRefreshKind, RefreshKind, System};
+
+    // Create a temporary file with aligned weight data
+    let temp_dir = tempfile::tempdir()?;
+    let temp_path = temp_dir.path().join("test_weights.bin");
+
+    // Write weight data as bytes (aligned)
+    let mut file = File::create(&temp_path)?;
+    let byte_data: Vec<u8> = weight_data.iter().flat_map(|f| f.to_le_bytes()).collect();
+
+    // Add padding for alignment if needed
+    let padding = (alignment - (byte_data.len() % alignment)) % alignment;
+    file.write_all(&byte_data)?;
+    file.write_all(&vec![0u8; padding])?;
+    file.sync_all()?;
+    drop(file);
+
+    // Initialize system info for memory tracking
+    let mut sys = System::new_with_specifics(
+        RefreshKind::nothing().with_memory(MemoryRefreshKind::everything()),
+    );
+
+    // Measure memory with copy-based loading
+    sys.refresh_memory();
+    let memory_before_copy = sys.used_memory();
+
+    // Simulate copy-based loading: read entire file into Vec
+    let copy_data = std::fs::read(&temp_path)?;
+    let _copy_vec = copy_data.to_vec(); // Force allocation
+
+    sys.refresh_memory();
+    let memory_after_copy = sys.used_memory();
+    let copy_memory = memory_after_copy.saturating_sub(memory_before_copy);
+
+    // Drop copy data to free memory
+    drop(_copy_vec);
+    drop(copy_data);
+
+    // Force garbage collection and wait a bit for memory to settle
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    // Measure memory with zero-copy (mmap) loading
+    sys.refresh_memory();
+    let memory_before_mmap = sys.used_memory();
+
+    // Use memory-mapped file for zero-copy access
+    let mmap_file = MmapFile::open(&temp_path)?;
+    let _mmap_slice = mmap_file.as_slice(); // Access but don't copy
+
+    sys.refresh_memory();
+    let memory_after_mmap = sys.used_memory();
+    let mmap_memory = memory_after_mmap.saturating_sub(memory_before_mmap);
+
+    // Calculate memory savings
+    let copy_saved = copy_memory > mmap_memory;
+
+    // Clean up
+    drop(mmap_file);
+    drop(temp_dir);
+
+    Ok((copy_memory as usize, mmap_memory as usize, copy_saved))
 }
 
 /// Create sparse weight data
@@ -1043,10 +1196,54 @@ fn test_extreme_dynamic_range_handling(
     weight_data: &[f32],
     shape: &[usize],
 ) -> Result<(f32, f32, bool)> {
-    // TODO: Implement extreme range handling test
-    // Returns (dynamic_range, accuracy, clipping_handled)
-    let _ = (weight_data, shape);
-    Err(anyhow::anyhow!("Extreme dynamic range handling not implemented"))
+    use bitnet_quantization::{I2SQuantizer, Quantize};
+
+    // 1. Find min/max in weight_data (extreme values)
+    let finite_values: Vec<f32> = weight_data.iter().copied().filter(|x| x.is_finite()).collect();
+
+    if finite_values.is_empty() {
+        // All values are non-finite, return minimal valid result
+        return Ok((0.0, 0.0, false));
+    }
+
+    let min_val = finite_values.iter().copied().fold(f32::INFINITY, f32::min);
+    let max_val = finite_values.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    let dynamic_range = max_val - min_val;
+
+    // 2. Quantize with I2S (handles clipping/saturation automatically)
+    let bitnet_tensor = bitnet_quantization::utils::create_tensor_from_f32(
+        weight_data.to_vec(),
+        shape,
+        &candle_core::Device::Cpu,
+    )?;
+
+    let quantizer = I2SQuantizer::new();
+    let quantized = quantizer.quantize_tensor(&bitnet_tensor)?;
+
+    // 3. Dequantize back
+    let dequantized = quantized.dequantize()?;
+    let dequantized_data = bitnet_quantization::utils::extract_f32_data(&dequantized)?;
+
+    // 4. Calculate accuracy (MSE-based)
+    let mse = calculate_mse(weight_data, &dequantized_data);
+    let signal_power = calculate_signal_power(weight_data);
+
+    let accuracy = if signal_power > 1e-10 {
+        (1.0 - (mse / signal_power)).max(0.0)
+    } else {
+        // For near-zero signals, check if dequantized is also near-zero
+        if mse < 1e-6 {
+            1.0 // Perfect match for zero signal
+        } else {
+            0.0 // Mismatch
+        }
+    };
+
+    // 5. Ensure clipping_handled = all outputs are finite
+    let clipping_handled = dequantized_data.iter().all(|x| x.is_finite());
+
+    // 6. Return (dynamic_range, accuracy, clipping_handled)
+    Ok((dynamic_range, accuracy, clipping_handled))
 }
 
 /// Test sparse tensor preservation
@@ -1055,10 +1252,57 @@ fn test_sparse_tensor_preservation(
     shape: &[usize],
     target_sparsity: f32,
 ) -> Result<(f32, f32)> {
-    // TODO: Implement sparse tensor preservation test
-    // Returns (preserved_sparsity, compression_ratio)
-    let _ = (weight_data, shape, target_sparsity);
-    Err(anyhow::anyhow!("Sparse tensor preservation not implemented"))
+    use bitnet_quantization::{I2SQuantizer, Quantize};
+
+    // 1. Count original zeros to validate input sparsity
+    let original_zero_count = weight_data.iter().filter(|&&x| x == 0.0).count();
+    let _original_sparsity = original_zero_count as f32 / weight_data.len() as f32;
+
+    // 2. Quantize using I2S
+    let bitnet_tensor = bitnet_quantization::utils::create_tensor_from_f32(
+        weight_data.to_vec(),
+        shape,
+        &candle_core::Device::Cpu,
+    )?;
+
+    let quantizer = I2SQuantizer::new();
+    let quantized = quantizer.quantize_tensor(&bitnet_tensor)?;
+
+    // 3. Dequantize back
+    let dequantized = quantized.dequantize()?;
+    let dequantized_data = bitnet_quantization::utils::extract_f32_data(&dequantized)?;
+
+    // 4. Calculate preserved sparsity (count zeros in dequantized output)
+    // For I2S quantization, zeros may not be exactly preserved, so use a small threshold
+    let threshold = 1e-5;
+    let preserved_zero_count = dequantized_data.iter().filter(|&&x| x.abs() < threshold).count();
+    let preserved_sparsity = preserved_zero_count as f32 / dequantized_data.len() as f32;
+
+    // 5. Calculate compression ratio
+    // Original size: weight_data.len() * sizeof(f32) = len * 4 bytes
+    // Quantized size: I2S uses 2 bits per weight + scale factors
+    // For I2S with block size 32: (2 bits * N) + (F16 scale per 32 elements)
+    // Scale storage: N/32 * 2 bytes (F16)
+    let original_size_bytes = weight_data.len() * 4; // f32 = 4 bytes
+    let num_weights = weight_data.len();
+    let block_size = 32; // I2S typical block size
+    let num_blocks = (num_weights + block_size - 1) / block_size;
+
+    // Quantized storage:
+    // - 2 bits per weight = num_weights * 2 / 8 bytes
+    // - F16 scale per block = num_blocks * 2 bytes
+    let quantized_weights_bytes = (num_weights * 2 + 7) / 8; // Round up
+    let quantized_scales_bytes = num_blocks * 2; // F16 = 2 bytes
+    let quantized_size_bytes = quantized_weights_bytes + quantized_scales_bytes;
+
+    let compression_ratio = if quantized_size_bytes > 0 {
+        original_size_bytes as f32 / quantized_size_bytes as f32
+    } else {
+        1.0
+    };
+
+    // 6. Return (preserved_sparsity, compression_ratio)
+    Ok((preserved_sparsity, compression_ratio))
 }
 
 /// Test architecture compatibility
@@ -1076,10 +1320,68 @@ fn test_custom_quantization_params(
     scales: &[f32],
     zero_points: &[i32],
 ) -> Result<f32> {
-    // TODO: Implement custom quantization parameters test
-    // Returns accuracy
-    let _ = (weight_data, shape, scales, zero_points);
-    Err(anyhow::anyhow!("Custom quantization parameters not implemented"))
+    // Implement custom quantization with provided scales and zero points
+    let block_size = 32;
+    let num_blocks = (weight_data.len() + block_size - 1) / block_size;
+
+    // Validate scales and zero_points match number of blocks
+    if scales.len() < num_blocks || zero_points.len() < num_blocks {
+        return Err(anyhow::anyhow!(
+            "Insufficient scales ({}) or zero_points ({}) for {} blocks",
+            scales.len(),
+            zero_points.len(),
+            num_blocks
+        ));
+    }
+
+    // Manual quantization with custom parameters
+    let mut quantized = Vec::with_capacity(weight_data.len());
+    for (block_idx, chunk) in weight_data.chunks(block_size).enumerate() {
+        let scale = scales[block_idx];
+        let zero_point = zero_points[block_idx];
+
+        for &value in chunk {
+            // Quantize to 2-bit signed [-2, 1]
+            let quant_val = if scale > 0.0 && scale.is_finite() {
+                let normalized = value / scale;
+                let shifted = normalized - zero_point as f32;
+                shifted.round().clamp(-2.0, 1.0) as i8
+            } else {
+                0i8
+            };
+            quantized.push(quant_val);
+        }
+    }
+
+    // Dequantize back to f32
+    let mut dequantized = Vec::with_capacity(weight_data.len());
+    for (block_idx, chunk) in quantized.chunks(block_size).enumerate() {
+        let scale = scales[block_idx];
+        let zero_point = zero_points[block_idx];
+
+        for &quant_val in chunk {
+            let deq = (quant_val as f32 + zero_point as f32) * scale;
+            dequantized.push(deq);
+        }
+    }
+
+    // Calculate accuracy using MSE-based metric
+    let mse =
+        weight_data.iter().zip(&dequantized).map(|(orig, deq)| (orig - deq).powi(2)).sum::<f32>()
+            / weight_data.len() as f32;
+
+    let signal_power =
+        weight_data.iter().map(|x| x.powi(2)).sum::<f32>() / weight_data.len() as f32;
+
+    // Avoid division by zero
+    let accuracy = if signal_power > 1e-10 {
+        1.0 - (mse / signal_power).min(1.0)
+    } else {
+        // For near-zero signals, check if MSE is also near zero
+        if mse < 1e-10 { 1.0 } else { 0.0 }
+    };
+
+    Ok(accuracy.max(0.0).min(1.0))
 }
 
 // ============================================================================
@@ -1149,4 +1451,38 @@ fn calculate_sparsity(values: &[f32]) -> f32 {
     }
     let zero_count = values.iter().filter(|&&x| x.abs() < 1e-8).count();
     zero_count as f32 / values.len() as f32
+}
+
+/// Calculate Mean Squared Error between two vectors
+#[allow(dead_code)]
+fn calculate_mse(original: &[f32], dequantized: &[f32]) -> f32 {
+    if original.len() != dequantized.len() || original.is_empty() {
+        return f32::MAX;
+    }
+
+    let mse: f32 = original
+        .iter()
+        .zip(dequantized.iter())
+        .filter(|(a, b)| a.is_finite() && b.is_finite())
+        .map(|(a, b)| (a - b).powi(2))
+        .sum::<f32>()
+        / original.len() as f32;
+
+    mse
+}
+
+/// Calculate signal power (variance of original signal)
+#[allow(dead_code)]
+fn calculate_signal_power(signal: &[f32]) -> f32 {
+    if signal.is_empty() {
+        return 0.0;
+    }
+
+    let finite_values: Vec<f32> = signal.iter().copied().filter(|x| x.is_finite()).collect();
+    if finite_values.is_empty() {
+        return 0.0;
+    }
+
+    let mean = calculate_mean(&finite_values);
+    finite_values.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / finite_values.len() as f32
 }
