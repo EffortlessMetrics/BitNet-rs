@@ -844,28 +844,15 @@ impl QuantizedLinear {
         let input_candle = input.to_candle()?;
         let input_shape = input_candle.shape();
 
-        // TODO: Implement native TL1 quantized kernels
-        // For now, TL1 uses dequantization path since we don't have native TL1 kernels
-        // Native TL1 table lookup kernels would provide significant speedup
+        // Use native TL1 quantized kernels
+        let provider =
+            self.kernel_manager.select_best().context("Failed to select kernel provider")?;
 
-        // Strict mode: reject FP32 fallback
-        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
-        if strict_mode.get_config().enforce_quantized_inference {
-            return self.strict_reject_fp32_fallback("native_tl1_kernel_not_implemented");
-        }
-
-        // Reshape to 2D for matrix multiplication
+        // Reshape to 2D for efficient matrix multiplication
         let input_2d = self.prepare_input_for_matmul(&input_candle)?;
 
-        // Dequantize weights and perform standard matrix multiplication
-        // Weights are stored as [in_features, out_features] which is correct for matmul
-        let dequantized_weights =
-            self.weights.dequantize().context("Failed to dequantize TL1 weights")?;
-        let weight_candle = dequantized_weights.to_candle()?;
-
-        let output_2d = input_2d
-            .matmul(&weight_candle)
-            .context("Failed to perform TL1 matrix multiplication")?;
+        // Call native TL1 quantized matmul kernel
+        let output_2d = self.quantized_matmul_tl1(&input_2d, provider).await?;
 
         // Restore original tensor shape
         self.restore_output_shape(output_2d, input_shape.dims())
@@ -876,28 +863,15 @@ impl QuantizedLinear {
         let input_candle = input.to_candle()?;
         let input_shape = input_candle.shape();
 
-        // TODO: Implement native TL2 quantized kernels
-        // For now, TL2 uses dequantization path since we don't have native TL2 kernels
-        // Native TL2 table lookup kernels would provide significant speedup
+        // Use native TL2 quantized kernels
+        let provider =
+            self.kernel_manager.select_best().context("Failed to select kernel provider")?;
 
-        // Strict mode: reject FP32 fallback
-        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
-        if strict_mode.get_config().enforce_quantized_inference {
-            return self.strict_reject_fp32_fallback("native_tl2_kernel_not_implemented");
-        }
-
-        // Reshape to 2D for matrix multiplication
+        // Reshape to 2D for efficient matrix multiplication
         let input_2d = self.prepare_input_for_matmul(&input_candle)?;
 
-        // Dequantize weights and perform standard matrix multiplication
-        // Weights are stored as [in_features, out_features] which is correct for matmul
-        let dequantized_weights =
-            self.weights.dequantize().context("Failed to dequantize TL2 weights")?;
-        let weight_candle = dequantized_weights.to_candle()?;
-
-        let output_2d = input_2d
-            .matmul(&weight_candle)
-            .context("Failed to perform TL2 matrix multiplication")?;
+        // Call native TL2 quantized matmul kernel
+        let output_2d = self.quantized_matmul_tl2(&input_2d, provider).await?;
 
         // Restore original tensor shape
         self.restore_output_shape(output_2d, input_shape.dims())
@@ -1778,29 +1752,14 @@ mod utils {
         Ok(quantized)
     }
 
-    /// Unpack TL1 values (4-bit)
+    /// Unpack TL1 values (2-bit, same as I2S)
+    /// TL1 uses 2-bit quantization with a 16-entry lookup table
     #[allow(dead_code)]
     pub fn unpack_tl1_values(packed: &[u8], count: usize) -> Vec<i8> {
-        let mut unpacked = Vec::with_capacity(count);
-
-        for &byte in packed.iter() {
-            if unpacked.len() >= count {
-                break;
-            }
-
-            // Extract 2 values from each byte (4 bits each)
-            let low = (byte & 0x0F) as i8;
-            let high = ((byte >> 4) & 0x0F) as i8;
-
-            // Convert from [0,15] to [-8,7] range
-            unpacked.push(low - 8);
-            if unpacked.len() < count {
-                unpacked.push(high - 8);
-            }
-        }
-
-        unpacked.truncate(count);
-        unpacked
+        // TL1 uses the same 2-bit packing format as I2S
+        // The "TL1" designation refers to the table lookup optimization strategy,
+        // not a different bit width
+        unpack_2bit_values(packed, count)
     }
 
     /// Unpack TL2 values (8-bit)

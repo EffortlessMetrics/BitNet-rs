@@ -1495,9 +1495,14 @@ impl InferenceEngine {
     /// Returns (processed_prompt, add_bos, add_special)
     fn prepare_prompt_for_model(&self, prompt: &str) -> Result<(String, bool, bool)> {
         // First, try to determine if this is an instruct model by checking for special tokens
-        let has_header_tokens = self.tokenizer.token_to_piece(self.tokenizer.vocab_size() as u32 - 1)
-            .map(|s| s.contains("header") || s.contains("start") || s.contains("end"))
-            .unwrap_or(false)
+        let vocab_size = self.tokenizer.vocab_size();
+        let has_header_tokens = if vocab_size > 0 {
+            self.tokenizer.token_to_piece(vocab_size.saturating_sub(1) as u32)
+                .map(|s| s.contains("header") || s.contains("start") || s.contains("end"))
+                .unwrap_or(false)
+        } else {
+            false
+        }
             ||
             // Check for LLaMA-3 style tokens by looking for common chat tokens
             (0..100).any(|i| {
