@@ -460,12 +460,10 @@ impl PrefillEngine for InferenceEngine {
             .with_top_k(config.sampling.top_k)
             .with_top_p(config.sampling.top_p)
             .with_repetition_penalty(config.sampling.repetition_penalty)
-            .with_stop_string_window(config.stop_string_window);
-        engine_config.stop_sequences = config.stop_sequences.clone();
-        // Token-level stops not available in PrefillEngine path (no tokenizer access)
-        engine_config.skip_special_tokens = true;
-        // Pre-tokenized, BOS already handled
-        engine_config.add_bos = false;
+            .with_stop_string_window(config.stop_string_window)
+            .with_stop_sequences(config.stop_sequences.clone())
+            .with_skip_special_tokens(true) // Token-level stops not available in PrefillEngine path (no tokenizer access)
+            .with_add_bos(false); // Pre-tokenized, BOS already handled
         if let Some(seed) = config.sampling.seed {
             engine_config = engine_config.with_seed(seed);
         }
@@ -857,11 +855,11 @@ impl InferenceCommand {
             .with_top_p(config.sampling.top_p)
             .with_repetition_penalty(config.sampling.repetition_penalty)
             .with_stop_token_ids(stop_token_ids)
-            .with_stop_string_window(self.stop_string_window);
-        gen_config.stop_sequences = config.stop_sequences.clone();
-        gen_config.skip_special_tokens = true;
+            .with_stop_string_window(self.stop_string_window)
+            .with_stop_sequences(config.stop_sequences.clone())
+            .with_skip_special_tokens(true)
+            .with_add_bos(self.should_add_bos()); // Template-aware BOS policy
         gen_config.logits_topk = self.logits_topk;
-        gen_config.add_bos = self.should_add_bos(); // Template-aware BOS policy
         if let Some(seed) = config.sampling.seed {
             gen_config = gen_config.with_seed(seed);
         }

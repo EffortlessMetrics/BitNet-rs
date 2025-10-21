@@ -193,10 +193,11 @@ async fn test_ac1_cpu_forward_bos_nonzero_logits() -> Result<()> {
     engine.prefill(&[bos_token_id]).await?;
 
     // Generate one token to get logits (this tests the full forward pass)
-    let mut gen_config =
-        bitnet_inference::GenerationConfig::greedy().with_max_tokens(1).with_seed(42);
-    gen_config.skip_special_tokens = true;
-    gen_config.add_bos = false;
+    let gen_config = bitnet_inference::GenerationConfig::greedy()
+        .with_max_tokens(1)
+        .with_seed(42)
+        .with_skip_special_tokens(true)
+        .with_add_bos(false);
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
 
@@ -272,10 +273,11 @@ async fn test_ac1_greedy_decode_16_tokens() -> Result<()> {
     let bos_token_id = tokenizer.bos_token_id().unwrap_or(1);
 
     // Generate 16 tokens with greedy sampling
-    let mut gen_config =
-        bitnet_inference::GenerationConfig::greedy().with_max_tokens(16).with_seed(42);
-    gen_config.skip_special_tokens = true;
-    gen_config.add_bos = false;
+    let gen_config = bitnet_inference::GenerationConfig::greedy()
+        .with_max_tokens(16)
+        .with_seed(42)
+        .with_skip_special_tokens(true)
+        .with_add_bos(false);
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
 
@@ -362,10 +364,11 @@ async fn test_ac1_quantized_linear_strict_mode() -> Result<()> {
     let bos_token_id = tokenizer.bos_token_id().unwrap_or(1);
 
     // Generate tokens with strict mode enabled (environment variable set above)
-    let mut gen_config =
-        bitnet_inference::GenerationConfig::greedy().with_max_tokens(1).with_seed(42);
-    gen_config.skip_special_tokens = true;
-    gen_config.add_bos = false;
+    let gen_config = bitnet_inference::GenerationConfig::greedy()
+        .with_max_tokens(1)
+        .with_seed(42)
+        .with_skip_special_tokens(true)
+        .with_add_bos(false);
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
 
@@ -439,10 +442,11 @@ async fn test_ac1_kv_cache_update_retrieval() -> Result<()> {
     engine.prefill(&[bos_token_id]).await?;
 
     // Generate 2 more tokens (positions 1, 2)
-    let mut gen_config =
-        bitnet_inference::GenerationConfig::greedy().with_max_tokens(2).with_seed(42);
-    gen_config.skip_special_tokens = true;
-    gen_config.add_bos = false;
+    let gen_config = bitnet_inference::GenerationConfig::greedy()
+        .with_max_tokens(2)
+        .with_seed(42)
+        .with_skip_special_tokens(true)
+        .with_add_bos(false);
 
     let generated_tokens = engine.generate_tokens(&[bos_token_id], &gen_config).await?;
 

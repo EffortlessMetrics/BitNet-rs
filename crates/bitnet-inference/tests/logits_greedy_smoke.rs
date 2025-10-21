@@ -91,9 +91,11 @@ async fn logits_and_greedy_smoke() {
 
     // Short greedy decode
     eprintln!("\nTesting greedy generation...");
-    let mut cfg = GenerationConfig::greedy().with_max_tokens(4).with_seed(42);
-    cfg.skip_special_tokens = false;
-    cfg.add_bos = false;
+    let cfg = GenerationConfig::greedy()
+        .with_max_tokens(4)
+        .with_seed(42)
+        .with_skip_special_tokens(false)
+        .with_add_bos(false);
 
     let generated = engine.generate_tokens(&ids, &cfg).await.expect("generate_tokens failed");
     eprintln!("Generated tokens: {:?}", generated);

@@ -581,11 +581,11 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
         .with_top_k(50)
         .with_top_p(0.9)
         .with_seed(42)
-        .with_stop_sequence("<eos>".to_string());
+        .with_stop_sequence("<eos>".to_string())
+        .with_skip_special_tokens(true)
+        .with_add_bos(false);
 
     early_stop_config.eos_token_id = Some(50256);
-    early_stop_config.skip_special_tokens = true;
-    early_stop_config.add_bos = false;
 
     let result_with_early_stop =
         generate_with_tokens(&inference_engine, &input_tokens, &early_stop_config).await?;
