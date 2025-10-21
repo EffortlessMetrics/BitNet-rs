@@ -28,13 +28,20 @@ mod strict_mode_config_tests {
 
     /// Tests basic strict mode environment variable parsing
     #[test]
+    #[serial]
     fn test_strict_mode_environment_variable_parsing() {
         println!("🔒 Strict Mode: Testing environment variable parsing");
+
+        // Save and restore environment variable to prevent test pollution
+        let original_value = env::var("BITNET_STRICT_MODE").ok();
 
         // Test default state (no environment variable)
         unsafe {
             env::remove_var("BITNET_STRICT_MODE");
         }
+        // Give time for environment variable to propagate
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
         let default_config = StrictModeConfig::from_env();
         assert!(!default_config.enabled, "Strict mode should be disabled by default");
         assert!(!default_config.fail_on_mock, "Mock failure should be disabled by default");
@@ -96,9 +103,12 @@ mod strict_mode_config_tests {
         let invalid_config = StrictModeConfig::from_env();
         assert!(!invalid_config.enabled, "Invalid values should default to disabled");
 
-        // Clean up
+        // Restore original environment variable state
         unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
+            match original_value {
+                Some(val) => env::set_var("BITNET_STRICT_MODE", val),
+                None => env::remove_var("BITNET_STRICT_MODE"),
+            }
         }
 
         println!("  ✅ Environment variable parsing successful");
