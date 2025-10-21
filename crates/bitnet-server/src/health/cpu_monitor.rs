@@ -91,8 +91,9 @@ pub async fn collect_memory_health_info() -> Result<MemoryHealthInfo, String> {
     let mut sys = System::new();
     sys.refresh_memory();
 
-    let total_bytes = sys.total_memory();
-    let used_bytes = sys.used_memory();
+    // sysinfo returns KiB - convert to bytes
+    let total_bytes = sys.total_memory() * 1024;
+    let used_bytes = sys.used_memory() * 1024;
     let available_bytes = total_bytes.saturating_sub(used_bytes);
 
     Ok(MemoryHealthInfo {

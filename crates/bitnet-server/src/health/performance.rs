@@ -32,7 +32,6 @@ struct RequestSample {
 pub struct PerformanceMetrics {
     samples: Arc<RwLock<Vec<RequestSample>>>,
     /// Timestamp when metrics collection started (for uptime tracking)
-    #[allow(dead_code)] // Reserved for future uptime() method
     start_time: Instant,
 }
 
@@ -125,6 +124,11 @@ impl PerformanceMetrics {
             error_rate: self.error_rate().await,
             sla_compliance: self.sla_compliance().await,
         }
+    }
+
+    /// Get uptime duration since metrics collection started
+    pub fn uptime(&self) -> Duration {
+        self.start_time.elapsed()
     }
 
     /// Get the number of samples currently tracked

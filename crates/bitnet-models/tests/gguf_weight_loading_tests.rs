@@ -1378,7 +1378,7 @@ fn validate_quantization_accuracy_i2s_impl(original: &[f32], dequantized: &[f32]
     let accuracy = 1.0 - (mse / signal_power);
 
     // Clamp to [0, 1] range
-    Ok(accuracy.max(0.0).min(1.0) as f32)
+    Ok(accuracy.clamp(0.0, 1.0) as f32)
 }
 
 /// Validate TL1 quantization accuracy
@@ -1468,7 +1468,7 @@ fn validate_quantization_accuracy_tl2(tensor: &CandleTensor) -> Result<f32> {
 
     // TL2 accuracy based on relative RMSE
     let relative_rmse = rmse / data_range;
-    let accuracy = (1.0 - relative_rmse).max(0.0).min(1.0);
+    let accuracy = (1.0 - relative_rmse).clamp(0.0, 1.0);
 
     // Log detailed metrics
     tracing::debug!(

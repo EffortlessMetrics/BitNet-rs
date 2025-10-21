@@ -240,7 +240,7 @@ async fn test_ac5_performance_targets_validation() -> Result<()> {
     );
 
     // Validate GPU speedup if GPU feature enabled and GPU available
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(feature = "gpu")]
     {
         if perf_result.gpu_tokens_per_sec > 0.0 {
             let speedup = perf_result.gpu_tokens_per_sec / perf_result.cpu_tokens_per_sec;
@@ -765,7 +765,7 @@ async fn test_performance_targets(
     let memory_usage_gb = model_size_gb * 0.5; // Estimate at 50% of model size
 
     // Measure GPU performance if GPU feature enabled
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(feature = "gpu")]
     let gpu_tokens_per_sec = {
         use bitnet_kernels::device_features;
 
@@ -805,7 +805,7 @@ async fn test_performance_targets(
         }
     };
 
-    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+    #[cfg(not(feature = "gpu"))]
     let gpu_tokens_per_sec = 0.0;
 
     Ok(PerformanceTestResult { cpu_tokens_per_sec, memory_usage_gb, gpu_tokens_per_sec })

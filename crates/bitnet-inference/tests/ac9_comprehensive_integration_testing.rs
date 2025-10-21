@@ -144,10 +144,10 @@ fn find_workspace_root() -> Result<std::path::PathBuf> {
         let cargo_toml = path.join("Cargo.toml");
         if cargo_toml.exists() {
             // Check if it contains [workspace]
-            if let Ok(contents) = std::fs::read_to_string(&cargo_toml)
-                && contents.contains("[workspace]")
-            {
-                return Ok(path);
+            if let Ok(contents) = std::fs::read_to_string(&cargo_toml) {
+                if contents.contains("[workspace]") {
+                    return Ok(path);
+                }
             }
         }
         if !path.pop() {

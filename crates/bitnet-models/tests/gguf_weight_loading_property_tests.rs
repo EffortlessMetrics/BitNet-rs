@@ -1154,7 +1154,7 @@ fn test_tl2_extreme_value_handling(weight_data: &[f32], shape: &[usize]) -> Resu
     };
 
     // Clamp accuracy to [0.0, 1.0] range
-    let accuracy = accuracy.max(0.0).min(1.0);
+    let accuracy = accuracy.clamp(0.0, 1.0);
 
     Ok((accuracy, overflow_handled))
 }
@@ -1928,7 +1928,7 @@ fn test_custom_quantization_params(
         if mse < 1e-10 { 1.0 } else { 0.0 }
     };
 
-    Ok(accuracy.max(0.0).min(1.0))
+    Ok(accuracy.clamp(0.0, 1.0))
 }
 
 // ============================================================================

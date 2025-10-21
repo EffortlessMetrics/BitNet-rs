@@ -200,10 +200,11 @@ impl DeviceMonitor {
         }
     }
 
-    /// Get total device memory
+    /// Get total device memory (in MB)
     fn get_device_memory_total(device: &Device, system: &System) -> u64 {
         match device {
-            Device::Cpu => system.total_memory() / (1024 * 1024), // Convert to MB
+            // sysinfo returns KiB - convert to MB
+            Device::Cpu => system.total_memory() / 1024, // KiB → MB
             Device::Cuda(device_id) => {
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {

@@ -95,8 +95,8 @@ pub struct HealthChecker {
     component_checks: Arc<RwLock<HashMap<String, ComponentHealth>>>,
     #[allow(dead_code)]
     performance: Arc<PerformanceMetrics>,
-    /// GPU memory leak detector (used only when gpu/cuda features are enabled)
-    #[cfg_attr(not(any(feature = "gpu", feature = "cuda")), allow(dead_code))]
+    /// GPU memory leak detector (used only when gpu features are enabled)
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
     gpu_leak_detector: Arc<crate::health::GpuMemoryLeakDetector>,
 }
 
@@ -392,7 +392,11 @@ impl HealthChecker {
         use sysinfo::System;
         let mut sys = System::new();
         sys.refresh_memory();
-        Ok(MemoryInfo { used_bytes: sys.used_memory(), total_bytes: sys.total_memory() })
+        // sysinfo returns KiB - convert to bytes
+        Ok(MemoryInfo {
+            used_bytes: sys.used_memory() * 1024,
+            total_bytes: sys.total_memory() * 1024,
+        })
     }
 
     #[cfg(any(feature = "gpu", feature = "cuda"))]
