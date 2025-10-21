@@ -31,6 +31,8 @@ struct RequestSample {
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
     samples: Arc<RwLock<Vec<RequestSample>>>,
+    /// Timestamp when metrics collection started (for uptime tracking)
+    #[allow(dead_code)] // Reserved for future uptime() method
     start_time: Instant,
 }
 

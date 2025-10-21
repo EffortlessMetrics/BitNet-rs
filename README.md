@@ -91,7 +91,7 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
    - Works best for deterministic single-token validation (e.g., math sanity checks)
    - Better models coming from community contributions
 
-3. **Test Infrastructure**
+3. **Test Infrastructure** (Updated: Issue #260 resolved ✅)
    <!-- TEST-STATUS:BEGIN -->
 **As of 2025-10-21T04:14:57Z (CPU features)**
 

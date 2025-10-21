@@ -95,6 +95,8 @@ pub struct HealthChecker {
     component_checks: Arc<RwLock<HashMap<String, ComponentHealth>>>,
     #[allow(dead_code)]
     performance: Arc<PerformanceMetrics>,
+    /// GPU memory leak detector (used only when gpu/cuda features are enabled)
+    #[cfg_attr(not(any(feature = "gpu", feature = "cuda")), allow(dead_code))]
     gpu_leak_detector: Arc<crate::health::GpuMemoryLeakDetector>,
 }
 

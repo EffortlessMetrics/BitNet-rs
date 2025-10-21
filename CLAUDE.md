@@ -22,9 +22,9 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 - **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical
   output in some configurations. This is a known model quality issue, not an
   inference bug.
-- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests
+- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~68 ignored tests
   represent TDD-style scaffolding for planned features. See **Test Status** section
-  below.
+  below. (Down from ~70 after Issue #260 completion)
 - **Active Issues**: See GitHub issue tracker for current blockers and their status. Run `just tdd-receipts` for test execution receipts.
 
 ## Quick Reference
@@ -603,11 +603,11 @@ The following tests are marked `#[ignore]` and reference specific issues. Run `j
    - `test_real_transformer_forward_pass` (bitnet-inference/tests/test_real_inference.rs)
    - **See**: GitHub issue #254 for current status and investigation details
 
-2. **Issue #260** - **2 tests**:
-   - `test_cpu_simd_kernel_integration` (bitnet-kernels/tests/issue_260_feature_gated_tests.rs)
-   - `test_tl2_avx_optimization` (bitnet-kernels/tests/issue_260_feature_gated_tests.rs)
-   - **Note**: Docs previously referenced `test_cpu_tl2_optimization_x86_avx` but actual test name is `test_tl2_avx_optimization`
-   - **See**: GitHub issue #260 for current status and implementation details
+**Resolved Issues** (tests now enabled):
+- **Issue #260** - ✅ RESOLVED: SIMD throughput validation and AVX optimization tests now passing
+  - Previously: `test_cpu_simd_kernel_integration`, `test_tl2_avx_optimization`
+  - Status: Both tests now enabled; moved to working test categories below
+  - See: `docs/explanation/issue-260-mock-elimination-completion.md` for completion details
 
 **Note**: Previous documentation referenced `test_real_vs_mock_comparison` which doesn't exist. The actual test is named `test_real_vs_mock_inference_comparison` (note "inference" in the middle).
 
@@ -631,14 +631,15 @@ fn test_real_model_loading() { /* ... */ }
 #[ignore] // Network-dependent test
 fn test_tokenizer_download() { /* ... */ }
 
-// Pattern 2: TDD scaffolds (3 tests) - See issue tracker for status
+// Pattern 2: TDD scaffolds (1 test remaining) - See issue tracker for status
 #[test]
 #[ignore] // Issue #254 - see GitHub issue for current status
 fn test_real_transformer_forward_pass() { /* ... */ }
 
-#[test]
-#[ignore] // Issue #260 - see GitHub issue for current status
-fn test_cpu_simd_kernel_integration() { /* ... */ }
+// Pattern 2a: Issue #260 tests (RESOLVED - moved to Pattern 4 below)
+// The following tests are now ENABLED and in regular test suite:
+// - test_cpu_simd_kernel_integration (SIMD throughput validation)
+// - test_tl2_avx_optimization (AVX optimization validation)
 
 // Pattern 3: Intentionally disabled by design (12 tests)
 #[test]
@@ -648,6 +649,14 @@ fn bench_avx2_dequantize() { /* ... */ }
 #[test]
 #[ignore] // Disabled due to edge case handling - focus on successful mutation killers
 fn test_mutation_edge_case() { /* ... */ }
+
+// Pattern 4: Newly enabled tests (2 tests from Issue #260 resolution)
+// These tests are now fully enabled and pass in regular test suite:
+#[test]
+fn test_cpu_simd_kernel_integration() { /* SIMD kernel validation */ }
+
+#[test]
+fn test_tl2_avx_optimization() { /* AVX optimization validation */ }
 ```
 
 **How to Enable Infrastructure-Gated Tests**:
@@ -679,16 +688,21 @@ These test suites pass reliably:
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
 - **validation tests**: LayerNorm inspection, projection statistics (when not in strict mode)
+- **SIMD kernel tests** ✅ NEW: `test_cpu_simd_kernel_integration` - SIMD throughput validation (Issue #260 resolved)
+- **AVX optimization tests** ✅ NEW: `test_tl2_avx_optimization` - AVX speedup validation (Issue #260 resolved)
 
 ### Test Dependencies
 
 **Test Blocking Analysis**: See auto-generated receipts in TEST-STATUS section above for current counts.
 
 **Referenced Issues**:
-- Issue #254: 2 tests
-- Issue #260: 2 tests
+- Issue #254: 1 test (still pending)
+- Issue #260: ✅ 0 tests (RESOLVED - both tests now passing and enabled)
 
 See individual GitHub issues for detailed status, root cause analysis, and resolution plans.
+
+**Resolved Issues**:
+- **Issue #260** (Completed 2025-10-21): SIMD throughput and AVX optimization - See `docs/explanation/issue-260-mock-elimination-completion.md`
 
 **Infrastructure-Gated Tests**: Tests requiring GPU hardware, environment variables, or network connectivity are marked `#[ignore]` with clear skip reasons in test output.
 
@@ -736,7 +750,6 @@ These are active issues affecting current development. See issue tracker for det
 For current status of all issues, see the GitHub issue tracker:
 
 - **Issue #254**: Test fixtures and RMSNorm configuration
-- **Issue #260**: Kernel implementation and feature gates
 - **Issue #439**: Feature gate consistency across GPU/CPU predicates
 - **Issue #469**: Tokenizer parity and FFI build hygiene
 
@@ -745,6 +758,10 @@ Check individual issues for:
 - Root cause analysis and investigation details
 - Workarounds and temporary mitigation strategies
 - Impact on test execution (see `just tdd-receipts` for counts)
+
+### Resolved Issues
+
+- **Issue #260** ✅ RESOLVED: Kernel implementation with SIMD throughput validation and AVX optimization. See `docs/explanation/issue-260-mock-elimination-completion.md` for completion details.
 
 ### Model Quality: microsoft-bitnet-b1.58-2B-4T-gguf
 
@@ -878,8 +895,8 @@ cargo build --no-default-features --features cpu
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
-- **Expect test scaffolding during MVP**: ~548 TODO/FIXME markers and ~70 ignored tests are intentional
+- **Expect test scaffolding during MVP**: ~548 TODO/FIXME markers and ~68 ignored tests are intentional
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
-- **Check issue tracker for blockers**: Before investigating test failures, see #254, #260, #439, #469
+- **Check issue tracker for blockers**: Before investigating test failures, see #254, #439, #469 (Issue #260 resolved)
 
 For comprehensive documentation, see the `docs/` directory organized by audience and use case.
