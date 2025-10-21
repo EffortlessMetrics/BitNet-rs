@@ -454,23 +454,21 @@ impl PrefillEngine for InferenceEngine {
         config: &'a GenerationConfig,
     ) -> BoxFuture<'a, Result<Vec<u32>>> {
         // Map CLI GenerationConfig to engine GenerationConfig
-        let engine_config = bitnet_inference::GenerationConfig {
-            max_new_tokens: config.max_new_tokens as u32,
-            temperature: config.sampling.temperature,
-            top_k: config.sampling.top_k,
-            top_p: config.sampling.top_p,
-            repetition_penalty: config.sampling.repetition_penalty,
-            stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids: vec![], // Token-level stops not available in PrefillEngine path (no tokenizer access)
-            seed: config.sampling.seed,
-            skip_special_tokens: true,
-            eos_token_id: None,
-            logits_tap_steps: 0,
-            logits_topk: 10,
-            logits_cb: None,
-            add_bos: false, // Pre-tokenized, BOS already handled
-            stop_string_window: config.stop_string_window,
-        };
+        let mut engine_config = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(config.max_new_tokens as u32)
+            .with_temperature(config.sampling.temperature)
+            .with_top_k(config.sampling.top_k)
+            .with_top_p(config.sampling.top_p)
+            .with_repetition_penalty(config.sampling.repetition_penalty)
+            .with_stop_string_window(config.stop_string_window);
+        engine_config.stop_sequences = config.stop_sequences.clone();
+        // Token-level stops not available in PrefillEngine path (no tokenizer access)
+        engine_config.skip_special_tokens = true;
+        // Pre-tokenized, BOS already handled
+        engine_config.add_bos = false;
+        if let Some(seed) = config.sampling.seed {
+            engine_config = engine_config.with_seed(seed);
+        }
         Box::pin(async move {
             // Use explicit InferenceEngine method to avoid recursion
             InferenceEngine::generate_tokens(self, tokens, &engine_config).await
@@ -852,23 +850,22 @@ impl InferenceCommand {
             }
         }
 
-        bitnet_inference::GenerationConfig {
-            max_new_tokens: config.max_new_tokens as u32,
-            temperature: config.sampling.temperature,
-            top_k: config.sampling.top_k,
-            top_p: config.sampling.top_p,
-            repetition_penalty: config.sampling.repetition_penalty,
-            stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids,
-            stop_string_window: self.stop_string_window,
-            seed: config.sampling.seed,
-            skip_special_tokens: true,
-            eos_token_id: None,
-            logits_tap_steps: 0,
-            logits_topk: self.logits_topk,
-            logits_cb: None,
-            add_bos: self.should_add_bos(), // Template-aware BOS policy
+        let mut gen_config = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(config.max_new_tokens as u32)
+            .with_temperature(config.sampling.temperature)
+            .with_top_k(config.sampling.top_k)
+            .with_top_p(config.sampling.top_p)
+            .with_repetition_penalty(config.sampling.repetition_penalty)
+            .with_stop_token_ids(stop_token_ids)
+            .with_stop_string_window(self.stop_string_window);
+        gen_config.stop_sequences = config.stop_sequences.clone();
+        gen_config.skip_special_tokens = true;
+        gen_config.logits_topk = self.logits_topk;
+        gen_config.add_bos = self.should_add_bos(); // Template-aware BOS policy
+        if let Some(seed) = config.sampling.seed {
+            gen_config = gen_config.with_seed(seed);
         }
+        gen_config
     }
 
     /// Run streaming inference

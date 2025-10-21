@@ -3,6 +3,7 @@
 //! Configuration structures for inference engine and text generation.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Type alias for logits callback function
@@ -36,6 +37,7 @@ impl Default for InferenceConfig {
 }
 
 /// Configuration for text generation
+#[non_exhaustive]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {
     /// Maximum number of new tokens to generate
@@ -53,6 +55,12 @@ pub struct GenerationConfig {
     /// Token IDs that trigger immediate stop (checked before string matching)
     /// Useful for LLaMA-3 <|eot_id|> and other special tokens
     pub stop_token_ids: Vec<u32>,
+    /// Precomputed HashSet for O(1) stop token ID lookups
+    /// This is derived from stop_token_ids and not serialized.
+    /// Use `with_stop_token_ids()` builder to set stop tokens, which automatically
+    /// maintains this internal set for O(1) lookups via `is_stop_token()`.
+    #[serde(skip)]
+    stop_token_ids_set: HashSet<u32>,
     /// Window size for tail-based string matching (default: 64)
     /// Only decode the last N tokens when checking stop sequences to avoid O(n²) decode costs
     pub stop_string_window: usize,
@@ -106,6 +114,7 @@ impl Default for GenerationConfig {
             repetition_penalty: 1.0,
             stop_sequences: vec![],
             stop_token_ids: vec![],
+            stop_token_ids_set: HashSet::new(),
             stop_string_window: 64, // Default: decode only last 64 tokens for stop sequence matching
             seed: None,
             skip_special_tokens: true,
@@ -203,10 +212,41 @@ impl GenerationConfig {
         self
     }
 
+    /// Set repetition penalty
+    pub fn with_repetition_penalty(mut self, penalty: f32) -> Self {
+        self.repetition_penalty = penalty;
+        self
+    }
+
     /// Set stop string window size
     pub fn with_stop_string_window(mut self, window: usize) -> Self {
         self.stop_string_window = window;
         self
+    }
+
+    /// Add stop token IDs and rebuild the HashSet for O(1) lookups
+    pub fn with_stop_token_ids(mut self, token_ids: Vec<u32>) -> Self {
+        self.stop_token_ids = token_ids;
+        self.rebuild_stop_token_set();
+        self
+    }
+
+    /// Add a single stop token ID
+    pub fn with_stop_token_id(mut self, token_id: u32) -> Self {
+        self.stop_token_ids.push(token_id);
+        self.stop_token_ids_set.insert(token_id);
+        self
+    }
+
+    /// Rebuild the stop token HashSet from the Vec
+    /// Call this after modifying stop_token_ids directly or after deserialization
+    pub fn rebuild_stop_token_set(&mut self) {
+        self.stop_token_ids_set = self.stop_token_ids.iter().copied().collect();
+    }
+
+    /// Check if a token ID is a stop token (O(1) using HashSet)
+    pub fn is_stop_token(&self, token_id: u32) -> bool {
+        self.stop_token_ids_set.contains(&token_id)
     }
 }
 

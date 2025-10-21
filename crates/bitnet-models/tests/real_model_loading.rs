@@ -43,11 +43,12 @@ impl ModelLoadingTestConfig {
     }
 
     #[allow(dead_code)]
-    fn skip_if_no_model(&self) {
+    fn maybe_model_path(&self) -> Option<std::path::PathBuf> {
         if self.model_path.is_none() || !self.model_path.as_ref().unwrap().exists() {
             eprintln!("Skipping real model test - set BITNET_GGUF environment variable");
-            std::process::exit(0);
+            return None;
         }
+        Some(self.model_path.clone().unwrap())
     }
 }
 
@@ -64,8 +65,9 @@ impl ModelLoadingTestConfig {
 fn test_real_gguf_model_loading_with_validation() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
-    config.skip_if_no_model();
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // Use ProductionLoadConfig with strict validation
     let loader_config = ProductionLoadConfig {
@@ -107,8 +109,9 @@ fn test_real_gguf_model_loading_with_validation() {
 fn test_enhanced_tensor_alignment_validation() {
     // AC:6
     let config = ModelLoadingTestConfig::from_env();
-    config.skip_if_no_model();
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // Load model with strict validation
     let loader = ProductionModelLoader::new_with_strict_validation();
@@ -129,8 +132,9 @@ fn test_enhanced_tensor_alignment_validation() {
 fn test_device_aware_model_optimization() {
     // AC:3
     let config = ModelLoadingTestConfig::from_env();
-    config.skip_if_no_model();
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // Load model and test device configuration
     let loader = ProductionModelLoader::new();
@@ -152,8 +156,9 @@ fn test_device_aware_model_optimization() {
 fn test_model_metadata_extraction_validation() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
-    config.skip_if_no_model();
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // Load model and validate configuration
     let loader = ProductionModelLoader::new();
@@ -186,8 +191,9 @@ fn test_model_metadata_extraction_validation() {
 fn test_model_format_validation_compatibility() {
     // AC:6
     let config = ModelLoadingTestConfig::from_env();
-    config.skip_if_no_model();
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // Load model with format validation
     let loader = ProductionModelLoader::new_with_strict_validation();
@@ -207,8 +213,9 @@ fn test_model_format_validation_compatibility() {
 fn test_memory_mapped_model_loading() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
-    config.skip_if_no_model();
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // Skip if file is too small for meaningful memory mapping test
     let file_size = model_path.metadata().expect("Should get file metadata").len();
@@ -248,8 +255,9 @@ fn test_memory_mapped_model_loading() {
 fn test_cross_platform_model_loading_consistency() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
-    config.skip_if_no_model();
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // Load model and validate cross-platform consistency
     let loader = ProductionModelLoader::new();

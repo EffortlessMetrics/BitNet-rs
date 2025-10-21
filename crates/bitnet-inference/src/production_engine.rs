@@ -530,7 +530,7 @@ impl ProductionInferenceEngine {
         info!("Warming up production inference engine");
 
         let warmup_prompt = "Hello";
-        let config = GenerationConfig { max_new_tokens: 1, temperature: 1.0, ..Default::default() };
+        let config = GenerationConfig::default().with_max_tokens(1).with_temperature(1.0);
 
         let _result = self.generate_text(warmup_prompt, config).await?;
         info!("Warmup completed successfully");

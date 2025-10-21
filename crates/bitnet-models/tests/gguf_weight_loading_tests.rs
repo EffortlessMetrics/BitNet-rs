@@ -599,10 +599,9 @@ async fn test_ac2_tl1_quantization_accuracy_cpu() -> Result<()> {
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac2_tl2_quantization_accuracy_cpu() -> Result<()> {
-    let mut config = GgufWeightLoadingTestConfig::default();
     // TL2 uses 8-bit lookup tables (256 entries), providing higher accuracy than I2S
     // Set threshold to 99.5% to validate TL2 precision advantage
-    config.accuracy_threshold = 0.995;
+    let config = GgufWeightLoadingTestConfig { accuracy_threshold: 0.995, ..Default::default() };
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
     let model_path = mock_builder.create_quantized_model(vec!["TL2"])?;
 

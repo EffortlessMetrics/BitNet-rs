@@ -135,7 +135,7 @@ If any critical component is `unhealthy`, overall status becomes `unhealthy`.
 
 Real-time system metrics include:
 
-- **Memory Usage** - Current system memory consumption in MB
+- **Memory Usage** - Current system memory consumption. `used_bytes` and `total_bytes` are **bytes**. Values originate from `sysinfo` (`used_memory` / `total_memory`, returned in **KiB**) and are converted to bytes by multiplying by 1024. For dashboards, divide by 1024² / 1024³ for MB/GB.
 - **CPU Usage** - Current CPU utilization percentage (0-100%)
 - **GPU Memory** - GPU memory usage when GPU features enabled
 - **Active Requests** - Number of in-flight inference requests

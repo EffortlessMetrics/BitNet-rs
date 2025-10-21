@@ -209,9 +209,13 @@ async fn test_ac5_performance_targets_validation() -> Result<()> {
             // QK256: Scalar kernels, lower performance baseline (MVP phase)
             (0.5, 8.0, "QK256 scalar kernels (MVP)")
         }
-        "I2S" | _ => {
+        "I2S" => {
             // I2S: SIMD optimized, higher performance baseline
             (5.0, 8.0, "I2S SIMD optimized")
+        }
+        _ => {
+            // Default to I2S baseline for unknown architectures
+            (5.0, 8.0, "I2S SIMD optimized (default)")
         }
     };
 

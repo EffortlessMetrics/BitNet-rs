@@ -1317,10 +1317,10 @@ impl InferenceEngine {
 
     /// Check if generation should stop
     fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
-        // 1) ID-based stops (fast path - O(N) over stop_token_ids; N is typically tiny ~1-3)
+        // 1) ID-based stops (fast path - O(1) using HashSet)
         // CRITICAL: Check token IDs BEFORE string matching for performance
         // For LLaMA-3 <|eot_id|> and other models with token-ID stop sequences
-        if !config.stop_token_ids.is_empty() && config.stop_token_ids.contains(&token) {
+        if config.is_stop_token(token) {
             return true;
         }
 
@@ -2076,8 +2076,7 @@ mod tests {
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
         // Configure with LLaMA-3 <|eot_id|> token ID
-        let config =
-            crate::config::GenerationConfig { stop_token_ids: vec![128009], ..Default::default() };
+        let config = crate::config::GenerationConfig::default().with_stop_token_ids(vec![128009]);
 
         let generated_tokens = vec![1, 2, 3];
 
@@ -2104,11 +2103,8 @@ mod tests {
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
         // Configure with small window and stop sequence
-        let config = crate::config::GenerationConfig {
-            stop_sequences: vec!["</s>".to_string()],
-            stop_string_window: 10, // Only decode last 10 tokens
-            ..Default::default()
-        };
+        let mut config = crate::config::GenerationConfig::default().with_stop_string_window(10); // Only decode last 10 tokens
+        config.stop_sequences = vec!["</s>".to_string()];
 
         // Generate more tokens than the window size
         let generated_tokens: Vec<u32> = (1..=100).collect();
@@ -2137,12 +2133,10 @@ mod tests {
         let engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
         // Configure with both stop token IDs and stop sequences
-        let config = crate::config::GenerationConfig {
-            stop_token_ids: vec![128009],
-            stop_sequences: vec!["</s>".to_string()],
-            stop_string_window: 64,
-            ..Default::default()
-        };
+        let mut config = crate::config::GenerationConfig::default()
+            .with_stop_token_ids(vec![128009])
+            .with_stop_string_window(64);
+        config.stop_sequences = vec!["</s>".to_string()];
 
         let generated_tokens = vec![1, 2, 3];
 

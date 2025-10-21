@@ -408,17 +408,15 @@ async fn enhanced_inference_handler(
     })?;
 
     // Create batch request
-    let mut batch_request = BatchRequest::new(
-        request.base.prompt.clone(),
-        bitnet_inference::GenerationConfig {
-            max_new_tokens: request.base.max_tokens.unwrap_or(64) as u32,
-            temperature: request.base.temperature.unwrap_or(1.0),
-            top_p: request.base.top_p.unwrap_or(0.9),
-            top_k: request.base.top_k.unwrap_or(50) as u32,
-            repetition_penalty: request.base.repetition_penalty.unwrap_or(1.0),
-            ..Default::default()
-        },
-    );
+    let mut batch_request = BatchRequest::new(request.base.prompt.clone(), {
+        let mut config = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(request.base.max_tokens.unwrap_or(64) as u32)
+            .with_temperature(request.base.temperature.unwrap_or(1.0))
+            .with_top_p(request.base.top_p.unwrap_or(0.9))
+            .with_top_k(request.base.top_k.unwrap_or(50) as u32);
+        config.repetition_penalty = request.base.repetition_penalty.unwrap_or(1.0);
+        config
+    });
 
     // Set request options
     batch_request = batch_request.with_priority(parse_priority(request.priority.as_deref()));

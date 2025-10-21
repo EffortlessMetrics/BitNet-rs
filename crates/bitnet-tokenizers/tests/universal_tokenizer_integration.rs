@@ -55,11 +55,12 @@ impl TokenizerTestConfig {
     }
 
     #[allow(dead_code)]
-    fn skip_if_no_model(&self) {
+    fn maybe_model_path(&self) -> Option<std::path::PathBuf> {
         if self.model_path.is_none() || !self.model_path.as_ref().unwrap().exists() {
             eprintln!("Skipping tokenizer test - set BITNET_GGUF environment variable");
-            std::process::exit(0);
+            return None;
         }
+        Some(self.model_path.clone().unwrap())
     }
 }
 
@@ -75,9 +76,9 @@ impl TokenizerTestConfig {
 fn test_universal_tokenizer_gguf_integration() {
     // AC:5
     let config = TokenizerTestConfig::from_env();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // TODO: This test will initially fail - drives GGUF tokenizer integration
     let model = load_bitnet_model(&model_path).expect("Model should load");

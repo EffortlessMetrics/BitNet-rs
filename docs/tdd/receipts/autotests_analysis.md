@@ -25,6 +25,14 @@
 
 The **451 hidden test functions** count was derived through systematic analysis:
 
+```bash
+# Visible tests (compile-only listing)
+cargo test --workspace --no-run -q 2>/dev/null | rg -c '^test ' -n
+
+# Hidden/scaffolded patterns (approximate signal)
+rg -n 'AC[0-9]|Scaffold|prop_' crates | wc -l
+```
+
 1. **Counted test annotations**: Used `rg "#\[test\]|#\[tokio::test\]"` to find all test function markers in `tests/` directory
 2. **Excluded visible tests**: Subtracted 48 tests from explicitly registered files (the 6 files in `[[test]]` sections)
 3. **Verified feature gates**: Checked that tests have proper `#[cfg(...)]` guards to prevent spurious compilation

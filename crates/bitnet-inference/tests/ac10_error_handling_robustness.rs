@@ -76,7 +76,7 @@ async fn test_ac10_invalid_token_error_handling() {
 
     // Test with invalid token IDs
     let invalid_tokens = vec![u32::MAX, 999999, 0xFFFFFFFF];
-    let config = GenerationConfig { max_new_tokens: 10, ..Default::default() };
+    let config = GenerationConfig::default().with_max_tokens(10);
 
     for invalid_token in invalid_tokens {
         let result = engine.generate_tokens(&[invalid_token], &config).await;

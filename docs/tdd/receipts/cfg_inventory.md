@@ -18,6 +18,19 @@ This inventory documents all conditional compilation (`#[cfg(...)]`) patterns in
 
 ---
 
+## How counts were produced
+
+```bash
+# Full cfg attribute occurrences (prod code only)
+rg -N '#\[cfg\([^\)]*\)\]' crates/*/src -n | wc -l
+
+# Unique cfg expressions (normalized)
+rg -N '#\[cfg\([^\)]*\)\]' crates/*/src -n \
+ | sd '.*#\[cfg\((.*)\)\].*' '$1' | sort -u | wc -l
+```
+
+---
+
 ## 1. Summary Statistics
 
 ### Overall Patterns

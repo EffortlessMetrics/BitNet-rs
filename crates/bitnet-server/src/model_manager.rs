@@ -335,7 +335,7 @@ impl ModelManager {
         use bitnet_inference::GenerationConfig;
 
         let test_prompt = "Hello, world!";
-        let config = GenerationConfig { max_new_tokens: 5, temperature: 1.0, ..Default::default() };
+        let config = GenerationConfig::default().with_max_tokens(5).with_temperature(1.0);
 
         let _result = engine.generate_with_config(test_prompt, &config).await?;
         info!("Model validation successful");

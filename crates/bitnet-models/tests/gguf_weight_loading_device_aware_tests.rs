@@ -89,13 +89,15 @@ pub struct DeviceTestResult {
 #[test]
 fn test_ac6_cpu_device_tensor_placement() -> Result<()> {
     // Use smaller tensor sizes for testing to avoid excessive memory usage
-    let mut config = DeviceAwareTestConfig::default();
-    config.test_tensor_sizes = vec![
-        (32, 32),   // Tiny test tensor
-        (128, 128), // Small test tensor
-        (256, 256), // Medium test tensor
-    ];
-    config.memory_limit_mb = 512; // 512MB limit for test
+    let config = DeviceAwareTestConfig {
+        test_tensor_sizes: vec![
+            (32, 32),   // Tiny test tensor
+            (128, 128), // Small test tensor
+            (256, 256), // Medium test tensor
+        ],
+        memory_limit_mb: 512, // 512MB limit for test
+        ..Default::default()
+    };
 
     // Create temp directory with proper lifetime management
     let temp_dir = tempfile::TempDir::new().context("Failed to create temp directory")?;

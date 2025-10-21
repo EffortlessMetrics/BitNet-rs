@@ -460,10 +460,10 @@ impl GenerationStream {
         config: &GenerationConfig,
         tokenizer: &Arc<dyn Tokenizer>,
     ) -> bool {
-        // 1) Check token-level stops FIRST (fast path - O(1) check)
+        // 1) Check token-level stops FIRST (fast path - O(1) using HashSet)
         // CRITICAL: Check stop_token_ids BEFORE string matching for performance
         // For LLaMA-3 <|eot_id|> and other special tokens
-        if !config.stop_token_ids.is_empty() && config.stop_token_ids.contains(&token) {
+        if config.is_stop_token(token) {
             return true;
         }
 
@@ -630,7 +630,7 @@ mod tests {
         let backend = Box::new(MockBackend);
         let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
 
-        let config = GenerationConfig { max_new_tokens: 5, ..Default::default() };
+        let config = GenerationConfig::default().with_max_tokens(5);
 
         let streaming_config = StreamingConfig::default();
 
@@ -682,11 +682,7 @@ mod tests {
         let backend = Box::new(MockBackend);
         let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
 
-        let config = GenerationConfig {
-            max_new_tokens: 5,
-            seed: Some(42), // Ensure reproducible token generation
-            ..Default::default()
-        };
+        let config = GenerationConfig::default().with_max_tokens(5).with_seed(42); // Ensure reproducible token generation
 
         let streaming_config = StreamingConfig::default();
 

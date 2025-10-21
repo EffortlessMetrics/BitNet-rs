@@ -3,9 +3,10 @@ use bitnet_inference::config::GenerationConfig;
 #[test]
 fn stop_token_ids_sorted_and_bsearchable() {
     // Simulate a config where caller sorted/deduped the ids
-    let mut cfg = GenerationConfig { stop_token_ids: vec![42, 7, 7, 10], ..Default::default() };
+    let mut cfg = GenerationConfig::default().with_stop_token_ids(vec![42, 7, 7, 10]);
     cfg.stop_token_ids.sort_unstable();
     cfg.stop_token_ids.dedup();
+    cfg.rebuild_stop_token_set(); // Rebuild set after modifying vec
 
     assert!(cfg.stop_token_ids.binary_search(&7).is_ok());
     assert!(cfg.stop_token_ids.binary_search(&10).is_ok());
@@ -19,12 +20,12 @@ fn engine_should_stop_on_token_id() {
     // This validates the complete path: config.stop_token_ids → should_stop returns true
 
     // Create a config with stop_token_ids set to [999, 128009]
-    let config = GenerationConfig { stop_token_ids: vec![999, 128009], ..Default::default() };
+    let config = GenerationConfig::default().with_stop_token_ids(vec![999, 128009]);
 
     // Mock implementation of should_stop (mimics InferenceEngine::should_stop logic)
     fn should_stop_mock(token: u32, config: &GenerationConfig) -> bool {
-        // Check stop_token_ids (mimics engine.rs:1322)
-        if !config.stop_token_ids.is_empty() && config.stop_token_ids.contains(&token) {
+        // Check stop_token_ids using O(1) HashSet (mimics engine.rs:1322)
+        if config.is_stop_token(token) {
             return true;
         }
         false

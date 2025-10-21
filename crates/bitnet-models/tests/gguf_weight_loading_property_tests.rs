@@ -1175,9 +1175,11 @@ fn test_tl2_block_size_effects(
     )?;
 
     // Configure TL2 with specified block size
-    let mut config = TL2Config::default();
-    config.block_size = block_size;
-    config.vectorized_tables = false; // Disable for consistent testing
+    let config = TL2Config {
+        block_size,
+        vectorized_tables: false, // Disable for consistent testing
+        ..Default::default()
+    };
 
     // Create quantizer with custom config
     let quantizer = TL2Quantizer::with_config(config);

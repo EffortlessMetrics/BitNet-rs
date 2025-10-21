@@ -73,14 +73,12 @@ async fn test_autoregressive_generation() -> Result<()> {
 
     let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
 
-    let gen_config = GenerationConfig {
-        max_new_tokens: 5,
-        temperature: 1.0,
-        top_k: 10,
-        top_p: 0.9,
-        seed: Some(42),
-        ..Default::default()
-    };
+    let gen_config = GenerationConfig::default()
+        .with_max_tokens(5)
+        .with_temperature(1.0)
+        .with_top_k(10)
+        .with_top_p(0.9)
+        .with_seed(42);
 
     let start_time = Instant::now();
     let result = engine.generate_with_config("Hello", &gen_config).await?;
@@ -104,12 +102,10 @@ async fn test_performance_targets() -> Result<()> {
 
     let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
 
-    let gen_config = GenerationConfig {
-        max_new_tokens: 20, // Generate enough tokens to measure throughput
-        temperature: 1.0,
-        seed: Some(42),
-        ..Default::default()
-    };
+    let gen_config = GenerationConfig::default()
+        .with_max_tokens(20) // Generate enough tokens to measure throughput
+        .with_temperature(1.0)
+        .with_seed(42);
 
     let start_time = Instant::now();
     let result = engine.generate_with_config("Performance test prompt", &gen_config).await?;

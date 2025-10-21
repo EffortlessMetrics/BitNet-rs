@@ -58,23 +58,21 @@ fn create_generation_config(
     top_p: f32,
     seed: Option<u64>,
 ) -> GenerationConfig {
-    GenerationConfig {
-        max_new_tokens,
-        temperature,
-        top_k,
-        top_p,
-        repetition_penalty: 1.0,
-        stop_sequences: vec![],
-        stop_token_ids: vec![],
-        stop_string_window: 64,
-        seed,
-        skip_special_tokens: true,
-        eos_token_id: Some(50256),
-        logits_tap_steps: 0,
-        logits_topk: 0,
-        logits_cb: None,
-        add_bos: false,
+    let mut cfg = GenerationConfig::default()
+        .with_max_tokens(max_new_tokens)
+        .with_temperature(temperature)
+        .with_top_k(top_k)
+        .with_top_p(top_p);
+
+    if let Some(seed_val) = seed {
+        cfg = cfg.with_seed(seed_val);
     }
+
+    cfg.skip_special_tokens = true;
+    cfg.eos_token_id = Some(50256);
+    cfg.add_bos = false;
+
+    cfg
 }
 
 /// Test configuration for AC3 autoregressive generation validation
@@ -577,23 +575,17 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
     let input_tokens = inference_engine.tokenizer().encode(prompt, false, false)?;
 
     // Test with early stopping enabled (using stop sequences)
-    let early_stop_config = GenerationConfig {
-        max_new_tokens: 100,
-        temperature: 1.0,
-        top_k: 50,
-        top_p: 0.9,
-        eos_token_id: Some(50256),
-        repetition_penalty: 1.0,
-        stop_sequences: vec!["<eos>".to_string()],
-        stop_token_ids: vec![],
-        stop_string_window: 64,
-        seed: Some(42),
-        skip_special_tokens: true,
-        logits_tap_steps: 0,
-        logits_topk: 0,
-        logits_cb: None,
-        add_bos: false,
-    };
+    let mut early_stop_config = GenerationConfig::default()
+        .with_max_tokens(100)
+        .with_temperature(1.0)
+        .with_top_k(50)
+        .with_top_p(0.9)
+        .with_seed(42)
+        .with_stop_sequence("<eos>".to_string());
+
+    early_stop_config.eos_token_id = Some(50256);
+    early_stop_config.skip_special_tokens = true;
+    early_stop_config.add_bos = false;
 
     let result_with_early_stop =
         generate_with_tokens(&inference_engine, &input_tokens, &early_stop_config).await?;
@@ -607,10 +599,8 @@ async fn test_ac3_early_stopping_and_eos_handling() -> Result<()> {
     }
 
     // Test with early stopping disabled (no stop sequences)
-    let no_early_stop_config = GenerationConfig {
-        stop_sequences: vec![], // No stop sequences for no early stopping
-        ..early_stop_config.clone()
-    };
+    let mut no_early_stop_config = early_stop_config.clone();
+    no_early_stop_config.stop_sequences = vec![]; // No stop sequences for no early stopping
 
     let result_no_early_stop =
         generate_with_tokens(&inference_engine, &input_tokens, &no_early_stop_config).await?;

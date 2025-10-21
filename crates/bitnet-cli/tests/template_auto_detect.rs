@@ -343,48 +343,41 @@ fn test_empty_gguf_chat_template_falls_back() {
 
 /// Tests BitNet model path detection patterns
 /// Tests feature spec: Improved BitNet base model detection
+///
+/// Behavioral test: asserts expected outcomes for various model paths
+/// NOTE: This test uses tokenizer family name as a proxy for model path detection
+/// since the current mock detect_template() doesn't support path-based hints.
+/// In production, InferenceCommand.auto_detect_template() checks model paths.
 #[test]
 fn test_bitnet_path_detection_patterns() {
-    // Test that BitNet detection logic handles various path patterns
-    // This tests the pattern matching in auto_detect_template() indirectly
+    // Test various model naming patterns via tokenizer family name
+    // Behavioral: assert outcomes, don't replicate detection logic
 
     let test_cases = vec![
-        // Pattern: microsoft-bitnet
-        ("microsoft-bitnet", true, "microsoft-bitnet prefix"),
-        // Pattern: bitnet-b1.58
-        ("bitnet-b1.58", true, "bitnet-b1.58 pattern"),
-        // Pattern: bitnet-1.58b
-        ("bitnet-1.58b", true, "bitnet-1.58b pattern"),
-        // Pattern: bitnet-1_58b
-        ("bitnet-1_58b", true, "bitnet-1_58b underscore"),
-        // Pattern: 1.58b alone
-        ("1.58b", true, "1.58b pattern alone"),
-        // Pattern: 1_58b alone
-        ("1_58b", true, "1_58b underscore alone"),
-        // Pattern: generic bitnet (but not bitnet-instruct)
-        ("bitnet", true, "generic bitnet"),
-        ("custom-bitnet-model", true, "bitnet in path"),
-        // Should NOT match
-        ("bitnet-instruct", false, "bitnet-instruct should not match"),
-        ("llama3", false, "non-bitnet model"),
+        // BitNet variants (via tokenizer family hint)
+        ("microsoft-bitnet", TemplateType::Instruct),
+        ("bitnet-b1.58", TemplateType::Instruct),
+        ("bitnet", TemplateType::Instruct),
+        // Instruct/chat explicit
+        ("phi-instruct", TemplateType::Instruct),
+        ("mistral-instruct", TemplateType::Instruct),
+        // LLaMA-3 variants
+        ("llama3", TemplateType::Llama3Chat),
+        ("llama-3-8b", TemplateType::Llama3Chat),
+        // Generic (fallback)
+        ("generic-model", TemplateType::Instruct),
     ];
 
-    for (path_component, should_match, description) in test_cases {
-        let path_lower = path_component.to_lowercase();
+    for (family_name, expected) in test_cases {
+        let tokenizer = MockTokenizerMetadata { family_name: Some(family_name.to_string()) };
 
-        // Replicate the detection logic from auto_detect_template()
-        let matches_bitnet = path_lower.contains("microsoft-bitnet")
-            || path_lower.contains("bitnet-b1.58")
-            || path_lower.contains("bitnet-1.58b")
-            || path_lower.contains("bitnet-1_58b")
-            || path_lower.contains("1.58b")
-            || path_lower.contains("1_58b")
-            || (path_lower.contains("bitnet") && !path_lower.contains("instruct"));
+        // Call detection function (behavioral, no logic mirror)
+        let result = detect_template(None, Some(&tokenizer), "run");
 
         assert_eq!(
-            matches_bitnet, should_match,
-            "Pattern '{}' ({}) match result should be {}",
-            path_component, description, should_match
+            result, expected,
+            "Tokenizer family '{}' should detect as {:?}",
+            family_name, expected
         );
     }
 }

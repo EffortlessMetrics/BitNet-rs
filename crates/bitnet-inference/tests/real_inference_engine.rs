@@ -63,11 +63,12 @@ impl InferenceTestConfig {
     }
 
     #[allow(dead_code)]
-    fn skip_if_no_model(&self) {
+    fn maybe_model_path(&self) -> Option<std::path::PathBuf> {
         if self.model_path.is_none() || !self.model_path.as_ref().unwrap().exists() {
             eprintln!("Skipping real inference test - set BITNET_GGUF environment variable");
-            std::process::exit(0);
+            return None;
         }
+        Some(self.model_path.clone().unwrap())
     }
 }
 
@@ -83,9 +84,9 @@ impl InferenceTestConfig {
 fn test_inference_engine_real_model_integration() {
     // AC:3
     let config = InferenceTestConfig::from_env();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
     let test_prompt = "The capital of France is";
 
     // TODO: This test will initially fail - drives InferenceEngine implementation
@@ -228,9 +229,9 @@ fn test_performance_metrics_collection_framework() {
 fn test_explicit_prefill_operation_with_timing() {
     // AC:3
     let config = InferenceTestConfig::from_env();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
     let test_prompt =
         "This is a longer prompt that should benefit from explicit prefill optimization";
 
@@ -259,12 +260,11 @@ fn test_explicit_prefill_operation_with_timing() {
     assert!(prefill_duration < Duration::from_secs(10), "Prefill should be reasonably fast");
 
     // Test generation after prefill
-    let generation_config = GenerationConfig {
-        max_new_tokens: 16,
-        temperature: 0.7,
-        use_cache: true,
-        deterministic: false,
-    };
+    let mut generation_config =
+        GenerationConfig::default().with_max_tokens(16).with_temperature(0.7);
+
+    generation_config.use_cache = true;
+    generation_config.deterministic = false;
 
     let generation_start = Instant::now();
     let generation_result =
@@ -302,9 +302,9 @@ fn test_explicit_prefill_operation_with_timing() {
 fn test_batch_inference_performance_optimization() {
     // AC:3
     let config = InferenceTestConfig::from_env();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
     let batch_prompts = vec![
         "The first test prompt",
         "The second test prompt",
@@ -452,9 +452,9 @@ fn test_cpp_inference_cross_validation() {
 fn test_perplexity_calculation_cross_validation() {
     // AC:8
     let config = InferenceTestConfig::from_env();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
     let test_corpus = "The quick brown fox jumps over the lazy dog. This is a test sentence for perplexity calculation.";
 
     // TODO: This test will initially fail - drives perplexity calculation implementation
@@ -511,9 +511,9 @@ fn test_perplexity_calculation_cross_validation() {
 fn test_device_aware_inference_with_fallback() {
     // AC:3
     let config = InferenceTestConfig::from_env();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
     let test_prompt = "Device-aware execution test";
 
     // TODO: This test will initially fail - drives device-aware execution
