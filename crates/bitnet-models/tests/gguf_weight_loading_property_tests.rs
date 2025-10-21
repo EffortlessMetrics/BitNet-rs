@@ -658,7 +658,7 @@ proptest! {
     ) {
         // Create block-aligned shape
         let aligned_shape: Vec<usize> = shape.iter()
-            .map(|&dim| ((dim + block_size - 1) / block_size) * block_size)
+            .map(|&dim| dim.div_ceil(block_size) * block_size)
             .collect();
         let size = aligned_shape.iter().product::<usize>();
 
@@ -858,7 +858,7 @@ proptest! {
             return Ok(());
         }
 
-        let num_blocks = (weight_data.len() + 31) / 32;
+        let num_blocks = weight_data.len().div_ceil(32);
         // Calculate proper scales from the data (max absolute value per block)
         let mut scales = Vec::with_capacity(num_blocks);
         for chunk in weight_data.chunks(32) {
@@ -1255,8 +1255,8 @@ fn test_memory_usage_scaling(
 
     // Calculate actual memory sizes in bytes
     // Vec<f32> memory = data.len() * size_of::<f32>() + Vec overhead
-    let memory1_bytes = data1.len() * std::mem::size_of::<f32>();
-    let memory2_bytes = data2.len() * std::mem::size_of::<f32>();
+    let memory1_bytes = std::mem::size_of_val(data1);
+    let memory2_bytes = std::mem::size_of_val(data2);
 
     // Allocate tensors to ensure real memory usage
     let tensor1: Vec<f32> = data1.to_vec();
@@ -1345,7 +1345,7 @@ fn test_zero_copy_efficiency(
     drop(mmap_file);
     drop(temp_dir);
 
-    Ok((copy_memory as usize, mmap_memory as usize, copy_saved))
+    Ok((copy_memory as usize, mmap_memory, copy_saved))
 }
 
 /// Create sparse weight data
@@ -1426,38 +1426,35 @@ fn test_edge_case_handling(weight_data: &[f32], shape: &[usize]) -> Result<(bool
 
     // Test I2S quantization
     let i2s_quantizer = I2SQuantizer::new();
-    if let Ok(quantized) = i2s_quantizer.quantize_tensor(&bitnet_tensor) {
-        if let Ok(dequantized) = quantized.dequantize() {
-            if let Ok(i2s_data) = bitnet_quantization::utils::extract_f32_data(&dequantized) {
-                let i2s_finite = i2s_data.iter().all(|&x| x.is_finite());
-                all_outputs_finite = all_outputs_finite && i2s_finite;
-                all_finite_outputs.extend(i2s_data);
-            }
-        }
+    if let Ok(quantized) = i2s_quantizer.quantize_tensor(&bitnet_tensor)
+        && let Ok(dequantized) = quantized.dequantize()
+        && let Ok(i2s_data) = bitnet_quantization::utils::extract_f32_data(&dequantized)
+    {
+        let i2s_finite = i2s_data.iter().all(|&x| x.is_finite());
+        all_outputs_finite = all_outputs_finite && i2s_finite;
+        all_finite_outputs.extend(i2s_data);
     }
 
     // Test TL1 quantization
     let tl1_quantizer = TL1Quantizer::new();
-    if let Ok(quantized) = tl1_quantizer.quantize_tensor(&bitnet_tensor) {
-        if let Ok(dequantized) = tl1_quantizer.dequantize_tensor(&quantized) {
-            if let Ok(tl1_data) = bitnet_quantization::utils::extract_f32_data(&dequantized) {
-                let tl1_finite = tl1_data.iter().all(|&x| x.is_finite());
-                all_outputs_finite = all_outputs_finite && tl1_finite;
-                all_finite_outputs.extend(tl1_data);
-            }
-        }
+    if let Ok(quantized) = tl1_quantizer.quantize_tensor(&bitnet_tensor)
+        && let Ok(dequantized) = tl1_quantizer.dequantize_tensor(&quantized)
+        && let Ok(tl1_data) = bitnet_quantization::utils::extract_f32_data(&dequantized)
+    {
+        let tl1_finite = tl1_data.iter().all(|&x| x.is_finite());
+        all_outputs_finite = all_outputs_finite && tl1_finite;
+        all_finite_outputs.extend(tl1_data);
     }
 
     // Test TL2 quantization
     let tl2_quantizer = TL2Quantizer::new();
-    if let Ok(quantized) = tl2_quantizer.quantize_tensor(&bitnet_tensor) {
-        if let Ok(dequantized) = tl2_quantizer.dequantize_tensor(&quantized) {
-            if let Ok(tl2_data) = bitnet_quantization::utils::extract_f32_data(&dequantized) {
-                let tl2_finite = tl2_data.iter().all(|&x| x.is_finite());
-                all_outputs_finite = all_outputs_finite && tl2_finite;
-                all_finite_outputs.extend(tl2_data);
-            }
-        }
+    if let Ok(quantized) = tl2_quantizer.quantize_tensor(&bitnet_tensor)
+        && let Ok(dequantized) = tl2_quantizer.dequantize_tensor(&quantized)
+        && let Ok(tl2_data) = bitnet_quantization::utils::extract_f32_data(&dequantized)
+    {
+        let tl2_finite = tl2_data.iter().all(|&x| x.is_finite());
+        all_outputs_finite = all_outputs_finite && tl2_finite;
+        all_finite_outputs.extend(tl2_data);
     }
 
     // 4. Return (nan_handled, inf_handled, finite_output)
@@ -1573,7 +1570,7 @@ fn test_block_aligned_efficiency(
     let quantized = quantizer.quantize_tensor(&bitnet_tensor)?;
 
     // 4. Check block alignment properties
-    let num_blocks = (total_size + block_size - 1) / block_size;
+    let num_blocks = total_size.div_ceil(block_size);
     let expected_blocks = quantized.scales.len();
 
     // Validate block count matches expected
@@ -1588,8 +1585,8 @@ fn test_block_aligned_efficiency(
     // 5. Check SIMD-friendly alignment of quantized data
     // For optimal SIMD performance, data should align to 32-byte or 64-byte boundaries
     let data_ptr = quantized.data.as_ptr() as usize;
-    let is_32_byte_aligned = (data_ptr % 32) == 0;
-    let is_64_byte_aligned = (data_ptr % 64) == 0;
+    let is_32_byte_aligned = data_ptr.is_multiple_of(32);
+    let is_64_byte_aligned = data_ptr.is_multiple_of(64);
 
     // Calculate alignment efficiency gain
     // Higher alignment = better SIMD performance potential
@@ -1604,9 +1601,9 @@ fn test_block_aligned_efficiency(
     // 6. Validate block size is SIMD-friendly (power of 2 or multiple of 32)
     let block_size_efficiency = if block_size.is_power_of_two() {
         1.0
-    } else if block_size % 32 == 0 {
+    } else if block_size.is_multiple_of(32) {
         0.9
-    } else if block_size % 16 == 0 {
+    } else if block_size.is_multiple_of(16) {
         0.7
     } else {
         0.5
@@ -1734,12 +1731,12 @@ fn test_sparse_tensor_preservation(
     let original_size_bytes = weight_data.len() * 4; // f32 = 4 bytes
     let num_weights = weight_data.len();
     let block_size = 32; // I2S typical block size
-    let num_blocks = (num_weights + block_size - 1) / block_size;
+    let num_blocks = num_weights.div_ceil(block_size);
 
     // Quantized storage:
     // - 2 bits per weight = num_weights * 2 / 8 bytes
     // - F16 scale per block = num_blocks * 2 bytes
-    let quantized_weights_bytes = (num_weights * 2 + 7) / 8; // Round up
+    let quantized_weights_bytes = (num_weights * 2).div_ceil(8); // Round up
     let quantized_scales_bytes = num_blocks * 2; // F16 = 2 bytes
     let quantized_size_bytes = quantized_weights_bytes + quantized_scales_bytes;
 
@@ -1842,24 +1839,16 @@ fn test_architecture_compatibility(arch: &ModelArchitecture) -> Result<(bool, f3
             ffn_up_data.clone(),
             &ffn_up_shape,
             &candle_core::Device::Cpu,
-        ) {
-            if let Ok(ffn_quantized) = quantizer.quantize_tensor(&ffn_tensor) {
-                if let Ok(ffn_dequantized) = ffn_quantized.dequantize() {
-                    if let Ok(ffn_deq_data) =
-                        bitnet_quantization::utils::extract_f32_data(&ffn_dequantized)
-                    {
-                        let ffn_mse = calculate_mse(&ffn_up_data, &ffn_deq_data);
-                        let ffn_power = calculate_signal_power(&ffn_up_data);
-                        let ffn_accuracy = if ffn_power > 1e-10 {
-                            (1.0 - (ffn_mse / ffn_power)).max(0.0)
-                        } else {
-                            1.0
-                        };
-                        total_accuracy += ffn_accuracy;
-                        num_tests += 1;
-                    }
-                }
-            }
+        ) && let Ok(ffn_quantized) = quantizer.quantize_tensor(&ffn_tensor)
+            && let Ok(ffn_dequantized) = ffn_quantized.dequantize()
+            && let Ok(ffn_deq_data) = bitnet_quantization::utils::extract_f32_data(&ffn_dequantized)
+        {
+            let ffn_mse = calculate_mse(&ffn_up_data, &ffn_deq_data);
+            let ffn_power = calculate_signal_power(&ffn_up_data);
+            let ffn_accuracy =
+                if ffn_power > 1e-10 { (1.0 - (ffn_mse / ffn_power)).max(0.0) } else { 1.0 };
+            total_accuracy += ffn_accuracy;
+            num_tests += 1;
         }
     }
 
@@ -1882,7 +1871,7 @@ fn test_custom_quantization_params(
 ) -> Result<f32> {
     // Implement custom quantization with provided scales and zero points
     let block_size = 32;
-    let num_blocks = (weight_data.len() + block_size - 1) / block_size;
+    let num_blocks = weight_data.len().div_ceil(block_size);
 
     // Validate scales and zero_points match number of blocks
     if scales.len() < num_blocks || zero_points.len() < num_blocks {

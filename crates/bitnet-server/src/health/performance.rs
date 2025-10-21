@@ -150,7 +150,6 @@ pub struct PerformanceIndicators {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::sleep;
 
     #[tokio::test]
     async fn test_empty_metrics_return_zero() {

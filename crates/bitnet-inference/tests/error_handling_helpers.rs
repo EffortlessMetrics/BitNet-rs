@@ -273,9 +273,6 @@ pub async fn test_out_of_vocabulary_handling(tokens: &[u32]) -> Result<()> {
 
 /// Test error handling for device unavailability (GPU fallback)
 pub async fn test_device_unavailable_handling() -> Result<()> {
-    use bitnet_common::{BitNetTensor, Device};
-    use bitnet_quantization::I2SQuantizer;
-
     // For CPU-only builds, this test should pass (no GPU expected)
     // For GPU builds, test GPU fallback to CPU
 

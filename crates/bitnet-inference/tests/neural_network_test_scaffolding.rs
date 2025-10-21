@@ -554,8 +554,8 @@ async fn test_multi_head_attention(
         let data: Vec<f32> = (0..num_elements)
             .map(|i| {
                 // Simple deterministic initialization that approximates Xavier
-                let val = ((i as f32 * 0.01) % 2.0 - 1.0) * scale;
-                val
+
+                ((i as f32 * 0.01) % 2.0 - 1.0) * scale
             })
             .collect();
         Ok(BitNetTensor::from_slice(&data, &[in_size, out_size], &Device::Cpu)?)

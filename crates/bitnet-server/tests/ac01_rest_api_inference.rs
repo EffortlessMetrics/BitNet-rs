@@ -63,12 +63,11 @@ mod cpu_inference_tests {
         assert_eq!(response["device_used"].as_str(), Some("cpu"));
 
         // Assert accuracy_metrics.quantization_accuracy >= 0.99
-        if let Some(accuracy) = response.get("accuracy_metrics") {
-            if let Some(quant_accuracy) = accuracy.get("quantization_accuracy") {
-                if let Some(val) = quant_accuracy.as_f64() {
-                    assert!(val >= 0.99, "quantization_accuracy {} is below 0.99", val);
-                }
-            }
+        if let Some(accuracy) = response.get("accuracy_metrics")
+            && let Some(quant_accuracy) = accuracy.get("quantization_accuracy")
+            && let Some(val) = quant_accuracy.as_f64()
+        {
+            assert!(val >= 0.99, "quantization_accuracy {} is below 0.99", val);
         }
 
         Ok(())
@@ -156,35 +155,30 @@ mod cpu_inference_tests {
         }
 
         // Assert quantization_used in ["i2s", "tl1", "tl2"]
-        if let Some(quant) = response.get("quantization_used") {
-            if let Some(quant_str) = quant.as_str() {
-                let valid_quants = ["i2s", "tl1", "tl2", "auto"];
-                assert!(
-                    valid_quants.contains(&quant_str),
-                    "Invalid quantization_used: {}",
-                    quant_str
-                );
-            }
+        if let Some(quant) = response.get("quantization_used")
+            && let Some(quant_str) = quant.as_str()
+        {
+            let valid_quants = ["i2s", "tl1", "tl2", "auto"];
+            assert!(valid_quants.contains(&quant_str), "Invalid quantization_used: {}", quant_str);
         }
 
         // Assert device_used matches pattern "^cpu$"
-        if let Some(device) = response.get("device_used") {
-            if let Some(device_str) = device.as_str() {
-                assert_eq!(device_str, "cpu", "device_used must be 'cpu'");
-            }
+        if let Some(device) = response.get("device_used")
+            && let Some(device_str) = device.as_str()
+        {
+            assert_eq!(device_str, "cpu", "device_used must be 'cpu'");
         }
 
         // Assert accuracy_metrics.quantization_accuracy is number 0.0-1.0
-        if let Some(accuracy) = response.get("accuracy_metrics") {
-            if let Some(quant_accuracy) = accuracy.get("quantization_accuracy") {
-                if let Some(val) = quant_accuracy.as_f64() {
-                    assert!(
-                        (0.0..=1.0).contains(&val),
-                        "quantization_accuracy {} must be between 0.0 and 1.0",
-                        val
-                    );
-                }
-            }
+        if let Some(accuracy) = response.get("accuracy_metrics")
+            && let Some(quant_accuracy) = accuracy.get("quantization_accuracy")
+            && let Some(val) = quant_accuracy.as_f64()
+        {
+            assert!(
+                (0.0..=1.0).contains(&val),
+                "quantization_accuracy {} must be between 0.0 and 1.0",
+                val
+            );
         }
 
         Ok(())
@@ -454,31 +448,31 @@ mod test_helpers {
             }
 
             // Validate optional fields if present
-            if let Some(quant) = response.get("quantization_used") {
-                if let Some(quant_str) = quant.as_str() {
-                    let valid_quants = ["i2s", "tl1", "tl2", "auto"];
-                    if !valid_quants.contains(&quant_str) {
-                        anyhow::bail!("Invalid quantization_used: {}", quant_str);
-                    }
+            if let Some(quant) = response.get("quantization_used")
+                && let Some(quant_str) = quant.as_str()
+            {
+                let valid_quants = ["i2s", "tl1", "tl2", "auto"];
+                if !valid_quants.contains(&quant_str) {
+                    anyhow::bail!("Invalid quantization_used: {}", quant_str);
                 }
             }
 
-            if let Some(device) = response.get("device_used") {
-                if !device.is_string() {
-                    anyhow::bail!("Field 'device_used' must be a string");
-                }
+            if let Some(device) = response.get("device_used")
+                && !device.is_string()
+            {
+                anyhow::bail!("Field 'device_used' must be a string");
             }
 
             // Validate accuracy_metrics structure if present
-            if let Some(accuracy) = response.get("accuracy_metrics") {
-                if let Some(quant_accuracy) = accuracy.get("quantization_accuracy") {
-                    if let Some(val) = quant_accuracy.as_f64() {
-                        if !(0.0..=1.0).contains(&val) {
-                            anyhow::bail!("quantization_accuracy must be between 0.0 and 1.0");
-                        }
-                    } else {
-                        anyhow::bail!("quantization_accuracy must be a number");
+            if let Some(accuracy) = response.get("accuracy_metrics")
+                && let Some(quant_accuracy) = accuracy.get("quantization_accuracy")
+            {
+                if let Some(val) = quant_accuracy.as_f64() {
+                    if !(0.0..=1.0).contains(&val) {
+                        anyhow::bail!("quantization_accuracy must be between 0.0 and 1.0");
                     }
+                } else {
+                    anyhow::bail!("quantization_accuracy must be a number");
                 }
             }
 

@@ -428,7 +428,7 @@ async fn test_integration_performance_pipeline_cpu() -> Result<()> {
 
     // Memory should be within 2x of expected (allows for overhead and FP32 vs quantized)
     assert!(
-        memory_ratio >= 0.5 && memory_ratio <= 2.0,
+        (0.5..=2.0).contains(&memory_ratio),
         "Memory usage {:.2} MB is outside expected range ({:.2} MB, ratio: {:.2}x) - memory efficiency issue detected",
         memory_usage_mb,
         expected_memory_mb,

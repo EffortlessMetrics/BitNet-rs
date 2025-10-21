@@ -18,20 +18,15 @@ use crate::monitoring::MonitoringConfig;
 use crate::security::SecurityConfig;
 
 /// Device configuration mode for server initialization
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum DeviceConfig {
     /// Automatically select the best available device (prefer GPU if available)
+    #[default]
     Auto,
     /// Force CPU execution
     Cpu,
     /// Force GPU execution on specific device ID
     Gpu(usize),
-}
-
-impl Default for DeviceConfig {
-    fn default() -> Self {
-        DeviceConfig::Auto
-    }
 }
 
 impl FromStr for DeviceConfig {

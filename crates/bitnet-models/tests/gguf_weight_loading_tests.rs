@@ -1363,7 +1363,7 @@ fn validate_quantization_accuracy_i2s_impl(original: &[f32], dequantized: &[f32]
         let max_error = original
             .iter()
             .zip(dequantized.iter())
-            .map(|(o, d)| ((o - d).abs()))
+            .map(|(o, d)| (o - d).abs())
             .fold(0.0f32, f32::max);
 
         return if max_error < 1e-6 {
@@ -1650,28 +1650,28 @@ fn is_valid_tensor_name(name: &str, num_layers: usize) -> bool {
     }
 
     // Layer-specific tensors: blk.{N}.{component}.weight
-    if let Some(remainder) = name.strip_prefix("blk.") {
-        if let Some(dot_pos) = remainder.find('.') {
-            let layer_num_str = &remainder[..dot_pos];
-            if let Ok(layer_num) = layer_num_str.parse::<usize>() {
-                if layer_num >= num_layers {
-                    return false;
-                }
-
-                let component = &remainder[dot_pos + 1..];
-                return matches!(
-                    component,
-                    "attn_q.weight"
-                        | "attn_k.weight"
-                        | "attn_v.weight"
-                        | "attn_output.weight"
-                        | "ffn_gate.weight"
-                        | "ffn_up.weight"
-                        | "ffn_down.weight"
-                        | "attn_norm.weight"
-                        | "ffn_norm.weight"
-                );
+    if let Some(remainder) = name.strip_prefix("blk.")
+        && let Some(dot_pos) = remainder.find('.')
+    {
+        let layer_num_str = &remainder[..dot_pos];
+        if let Ok(layer_num) = layer_num_str.parse::<usize>() {
+            if layer_num >= num_layers {
+                return false;
             }
+
+            let component = &remainder[dot_pos + 1..];
+            return matches!(
+                component,
+                "attn_q.weight"
+                    | "attn_k.weight"
+                    | "attn_v.weight"
+                    | "attn_output.weight"
+                    | "ffn_gate.weight"
+                    | "ffn_up.weight"
+                    | "ffn_down.weight"
+                    | "attn_norm.weight"
+                    | "ffn_norm.weight"
+            );
         }
     }
 
@@ -1769,12 +1769,12 @@ fn validate_naming_documentation_completeness(
             tensor_types.insert("output");
         } else if tensor_name == "output_norm.weight" {
             tensor_types.insert("output_norm");
-        } else if let Some(remainder) = tensor_name.strip_prefix("blk.") {
-            if let Some(dot_pos) = remainder.find('.') {
-                let component = &remainder[dot_pos + 1..];
-                if let Some(component_name) = component.strip_suffix(".weight") {
-                    tensor_types.insert(component_name);
-                }
+        } else if let Some(remainder) = tensor_name.strip_prefix("blk.")
+            && let Some(dot_pos) = remainder.find('.')
+        {
+            let component = &remainder[dot_pos + 1..];
+            if let Some(component_name) = component.strip_suffix(".weight") {
+                tensor_types.insert(component_name);
             }
         }
     }
