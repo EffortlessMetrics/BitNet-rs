@@ -852,7 +852,7 @@ proptest! {
         weight_data in arbitrary_weight_tensor(),
         shape in arbitrary_tensor_shape()
     ) {
-        let config = PropertyTestConfig::default();
+        let _config = PropertyTestConfig::default();
 
         if weight_data.len() != shape.iter().product::<usize>() || weight_data.len() < 32 {
             return Ok(());

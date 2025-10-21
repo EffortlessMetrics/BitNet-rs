@@ -105,19 +105,24 @@ mod strict_mode_config_tests {
     }
 
     /// Tests strict mode validation behavior
-    #[ignore] // Issue #260: TDD placeholder - Strict mode validation behavior unimplemented
     #[test]
     fn test_strict_mode_validation_behavior() {
         println!("🔒 Strict Mode: Testing validation behavior");
 
         let validation_result = || -> Result<()> {
-            // Test strict mode validation with mock inference path
+            // Test BITNET_STRICT_MODE=1 behavior: strict mode enabled
             unsafe {
                 env::set_var("BITNET_STRICT_MODE", "1");
             }
-            let strict_config = StrictModeConfig::from_env();
 
-            let mock_path = MockInferencePath {
+            let strict_config = bitnet_common::StrictModeConfig::from_env();
+            assert!(strict_config.enabled, "BITNET_STRICT_MODE=1 should enable strict mode");
+            assert!(strict_config.fail_on_mock, "Strict mode should enable fail_on_mock");
+            assert!(strict_config.require_quantization, "Strict mode should require quantization");
+            assert!(strict_config.validate_performance, "Strict mode should validate performance");
+
+            // Test strict mode validation with mock inference path (should fail)
+            let mock_path = bitnet_common::MockInferencePath {
                 description: "Fallback to mock quantization".to_string(),
                 uses_mock_computation: true,
                 fallback_reason: "Real quantization kernel unavailable".to_string(),
@@ -133,8 +138,8 @@ mod strict_mode_config_tests {
                 "Error should include path description"
             );
 
-            // Test strict mode validation with real inference path
-            let real_path = MockInferencePath {
+            // Test strict mode validation with real inference path (should pass)
+            let real_path = bitnet_common::MockInferencePath {
                 description: "I2S quantized matrix multiplication".to_string(),
                 uses_mock_computation: false,
                 fallback_reason: "".to_string(),
@@ -143,10 +148,10 @@ mod strict_mode_config_tests {
             let real_validation = strict_config.validate_inference_path(&real_path);
             assert!(real_validation.is_ok(), "Strict mode should allow real inference paths");
 
-            // Test kernel requirement validation
-            let missing_kernel_scenario = MissingKernelScenario {
-                quantization_type: QuantizationType::I2S,
-                device: Device::Cpu,
+            // Test kernel requirement validation (should fail when kernels missing)
+            let missing_kernel_scenario = bitnet_common::MissingKernelScenario {
+                quantization_type: bitnet_common::QuantizationType::I2S,
+                device: bitnet_common::Device::Cpu,
                 fallback_available: true,
             };
 
@@ -154,12 +159,13 @@ mod strict_mode_config_tests {
                 strict_config.validate_kernel_availability(&missing_kernel_scenario);
             assert!(kernel_validation.is_err(), "Strict mode should fail when kernels missing");
 
-            // Test performance validation
-            let suspicious_performance = PerformanceMetrics {
+            // Test performance validation (should fail for suspicious performance)
+            let suspicious_performance = bitnet_common::PerformanceMetrics {
                 tokens_per_second: 200.0, // Unrealistic for real computation
                 latency_ms: 5.0,
                 memory_usage_mb: 100.0,
-                computation_type: ComputationType::Mock,
+                computation_type: bitnet_common::ComputationType::Mock,
+                gpu_utilization: None,
             };
 
             let performance_validation =
@@ -169,11 +175,48 @@ mod strict_mode_config_tests {
                 "Strict mode should flag suspicious performance"
             );
 
+            // Test BITNET_STRICT_MODE=0 behavior: strict mode disabled
+            unsafe {
+                env::set_var("BITNET_STRICT_MODE", "0");
+            }
+
+            let lenient_config = bitnet_common::StrictModeConfig::from_env();
+            assert!(!lenient_config.enabled, "BITNET_STRICT_MODE=0 should disable strict mode");
+            assert!(!lenient_config.fail_on_mock, "Lenient mode should not fail on mock");
+            assert!(
+                !lenient_config.require_quantization,
+                "Lenient mode should not require quantization"
+            );
+            assert!(
+                !lenient_config.validate_performance,
+                "Lenient mode should not validate performance"
+            );
+
+            // Same mock path should now pass (no strict validation)
+            let lenient_validation = lenient_config.validate_inference_path(&mock_path);
+            assert!(lenient_validation.is_ok(), "Lenient mode should allow mock inference paths");
+
+            // Kernel missing should also pass in lenient mode
+            let lenient_kernel_validation =
+                lenient_config.validate_kernel_availability(&missing_kernel_scenario);
+            assert!(lenient_kernel_validation.is_ok(), "Lenient mode should allow missing kernels");
+
+            // Suspicious performance should pass in lenient mode
+            let lenient_performance_validation =
+                lenient_config.validate_performance_metrics(&suspicious_performance);
+            assert!(
+                lenient_performance_validation.is_ok(),
+                "Lenient mode should allow suspicious performance"
+            );
+
             unsafe {
                 env::remove_var("BITNET_STRICT_MODE");
             }
 
             println!("  ✅ Validation behavior testing successful");
+            println!("     - Strict mode (BITNET_STRICT_MODE=1): Rejects mocks ✅");
+            println!("     - Lenient mode (BITNET_STRICT_MODE=0): Allows mocks ✅");
+            println!("     - Validation toggles correctly ✅");
 
             Ok(())
         }();
@@ -182,27 +225,31 @@ mod strict_mode_config_tests {
     }
 
     /// Tests granular strict mode configuration options
-    #[ignore] // Issue #260: TDD placeholder - Granular strict mode configuration unimplemented
     #[test]
+    #[serial]
     fn test_granular_strict_mode_configuration() {
         println!("🔒 Strict Mode: Testing granular configuration");
 
+        // Clean environment before starting
+        unsafe {
+            env::remove_var("BITNET_STRICT_MODE");
+            env::remove_var("BITNET_STRICT_FAIL_ON_MOCK");
+            env::remove_var("BITNET_STRICT_REQUIRE_QUANTIZATION");
+            env::remove_var("BITNET_STRICT_VALIDATE_PERFORMANCE");
+            env::remove_var("CI");
+            env::remove_var("BITNET_CI_ENHANCED_STRICT");
+        }
+
         let granular_result = || -> Result<()> {
-            // Test individual configuration options
+            // Test 1: Full strict mode with all granular flags enabled
             unsafe {
                 env::set_var("BITNET_STRICT_MODE", "1");
-            }
-            unsafe {
                 env::set_var("BITNET_STRICT_FAIL_ON_MOCK", "1");
-            }
-            unsafe {
                 env::set_var("BITNET_STRICT_REQUIRE_QUANTIZATION", "1");
-            }
-            unsafe {
                 env::set_var("BITNET_STRICT_VALIDATE_PERFORMANCE", "1");
             }
 
-            let full_strict_config = StrictModeConfig::from_env_detailed();
+            let full_strict_config = bitnet_common::StrictModeConfig::from_env_detailed();
             assert!(full_strict_config.enabled, "Strict mode should be enabled");
             assert!(full_strict_config.fail_on_mock, "Mock failure should be enabled");
             assert!(
@@ -214,69 +261,137 @@ mod strict_mode_config_tests {
                 "Performance validation should be enabled"
             );
 
-            // Test partial strict configuration
+            // Test 2: Granular override - BITNET_STRICT_MODE=1 but BITNET_STRICT_FAIL_ON_MOCK=0
             unsafe {
                 env::set_var("BITNET_STRICT_MODE", "1");
-            }
-            unsafe {
                 env::set_var("BITNET_STRICT_FAIL_ON_MOCK", "0");
-            }
-            unsafe {
                 env::set_var("BITNET_STRICT_REQUIRE_QUANTIZATION", "1");
-            }
-            unsafe {
                 env::remove_var("BITNET_STRICT_VALIDATE_PERFORMANCE");
             }
 
-            let partial_strict_config = StrictModeConfig::from_env_detailed();
+            let partial_strict_config = bitnet_common::StrictModeConfig::from_env_detailed();
             assert!(partial_strict_config.enabled, "Strict mode should be enabled");
-            assert!(!partial_strict_config.fail_on_mock, "Mock failure should be disabled");
+            assert!(
+                !partial_strict_config.fail_on_mock,
+                "Mock failure should be disabled by granular flag"
+            );
             assert!(
                 partial_strict_config.require_quantization,
-                "Quantization requirement should be enabled"
+                "Quantization requirement should be enabled by granular flag"
             );
             assert!(
                 partial_strict_config.validate_performance,
-                "Performance validation should default to strict mode value"
+                "Performance validation should default to BITNET_STRICT_MODE value when granular flag absent"
             );
 
-            // Test CI-specific configuration
+            // Test 3: Granular flag without BITNET_STRICT_MODE
             unsafe {
-                env::set_var("CI", "true");
+                env::remove_var("BITNET_STRICT_MODE");
+                env::set_var("BITNET_STRICT_FAIL_ON_MOCK", "1");
+                env::set_var("BITNET_STRICT_REQUIRE_QUANTIZATION", "0");
             }
+
+            let granular_only_config = bitnet_common::StrictModeConfig::from_env_detailed();
+            assert!(
+                !granular_only_config.enabled,
+                "Strict mode should be disabled without BITNET_STRICT_MODE"
+            );
+            assert!(
+                granular_only_config.fail_on_mock,
+                "Granular flag should override when BITNET_STRICT_MODE=0"
+            );
+            assert!(
+                !granular_only_config.require_quantization,
+                "Granular flag should disable when set to 0"
+            );
+
+            // Test 4: Backward compatibility - BITNET_STRICT_MODE=1 enables all by default
             unsafe {
                 env::set_var("BITNET_STRICT_MODE", "1");
+                env::remove_var("BITNET_STRICT_FAIL_ON_MOCK");
+                env::remove_var("BITNET_STRICT_REQUIRE_QUANTIZATION");
+                env::remove_var("BITNET_STRICT_VALIDATE_PERFORMANCE");
             }
+
+            let backward_compat_config = bitnet_common::StrictModeConfig::from_env_detailed();
+            assert!(backward_compat_config.enabled, "Strict mode should be enabled");
+            assert!(backward_compat_config.fail_on_mock, "Should default to strict mode value");
+            assert!(
+                backward_compat_config.require_quantization,
+                "Should default to strict mode value"
+            );
+            assert!(
+                backward_compat_config.validate_performance,
+                "Should default to strict mode value"
+            );
+
+            // Test 5: CI-specific configuration
             unsafe {
+                env::set_var("CI", "true");
+                env::set_var("BITNET_STRICT_MODE", "1");
                 env::set_var("BITNET_CI_ENHANCED_STRICT", "1");
             }
 
-            let ci_config = StrictModeConfig::from_env_with_ci_enhancements();
+            let ci_config = bitnet_common::StrictModeConfig::from_env_with_ci_enhancements();
             assert!(ci_config.ci_enhanced_mode, "CI enhanced mode should be enabled");
             assert!(ci_config.log_all_validations, "CI should log all validations");
             assert!(ci_config.fail_fast_on_any_mock, "CI should fail fast on any mock usage");
 
+            // Test 6: Validate granular control with StrictModeEnforcer
+            unsafe {
+                env::set_var("BITNET_STRICT_MODE", "1");
+                env::set_var("BITNET_STRICT_FAIL_ON_MOCK", "1");
+                env::set_var("BITNET_STRICT_REQUIRE_QUANTIZATION", "0");
+            }
+
+            // Create enforcer with detailed config to use granular environment variables
+            let granular_config = bitnet_common::StrictModeConfig::from_env_detailed();
+            let enforcer =
+                bitnet_common::StrictModeEnforcer::with_config(Some(granular_config.clone()));
+            assert!(enforcer.is_enabled(), "Enforcer should detect strict mode");
+            assert!(granular_config.fail_on_mock, "fail_on_mock should be enabled");
+            assert!(
+                !granular_config.require_quantization,
+                "require_quantization should be disabled by granular flag"
+            );
+
+            // Test mock path validation - should fail because fail_on_mock=1
+            let mock_path = bitnet_common::MockInferencePath {
+                description: "Test mock path".to_string(),
+                uses_mock_computation: true,
+                fallback_reason: "Testing".to_string(),
+            };
+            let mock_validation = enforcer.validate_inference_path(&mock_path);
+            assert!(mock_validation.is_err(), "Should fail validation when fail_on_mock=1");
+
+            // Test kernel validation - should pass because require_quantization=0
+            let missing_kernel = bitnet_common::MissingKernelScenario {
+                quantization_type: bitnet_common::QuantizationType::I2S,
+                device: bitnet_common::Device::Cpu,
+                fallback_available: true,
+            };
+            let kernel_validation = enforcer.validate_kernel_availability(&missing_kernel);
+            assert!(
+                kernel_validation.is_ok(),
+                "Should pass validation when require_quantization=0"
+            );
+
             // Clean up
             unsafe {
                 env::remove_var("BITNET_STRICT_MODE");
-            }
-            unsafe {
                 env::remove_var("BITNET_STRICT_FAIL_ON_MOCK");
-            }
-            unsafe {
                 env::remove_var("BITNET_STRICT_REQUIRE_QUANTIZATION");
-            }
-            unsafe {
                 env::remove_var("BITNET_STRICT_VALIDATE_PERFORMANCE");
-            }
-            unsafe {
                 env::remove_var("CI");
-            }
-            unsafe {
                 env::remove_var("BITNET_CI_ENHANCED_STRICT");
             }
 
             println!("  ✅ Granular configuration testing successful");
+            println!("     - Full strict mode: ✅");
+            println!("     - Granular overrides: ✅");
+            println!("     - Backward compatibility: ✅");
+            println!("     - CI enhancements: ✅");
+            println!("     - StrictModeEnforcer integration: ✅");
 
             Ok(())
         }();
