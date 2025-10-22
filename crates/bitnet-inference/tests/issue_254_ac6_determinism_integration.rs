@@ -12,11 +12,11 @@ mod support;
 use support::EnvGuard;
 
 use anyhow::Result;
-use serial_test::serial;
 use bitnet_common::Device;
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
+use serial_test::serial;
 
 /// AC:6.1 - Two complete inference runs produce identical token sequences
 /// Validates full determinism from prompt to generated tokens

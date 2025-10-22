@@ -13,11 +13,11 @@ mod support;
 use support::EnvGuard;
 
 use anyhow::Result;
-use serial_test::serial;
 use bitnet_common::{Device, Tensor};
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
+use serial_test::serial;
 
 /// AC:3.1 - Deterministic generation with fixed seed produces identical sequences
 /// Validates ChaCha8Rng seeding and deterministic execution

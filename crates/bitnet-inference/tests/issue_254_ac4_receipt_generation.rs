@@ -12,8 +12,8 @@ mod support;
 use support::EnvGuard;
 
 use anyhow::Result;
-use serial_test::serial;
 use serde_json::Value;
+use serial_test::serial;
 use std::collections::HashMap;
 use std::path::Path;
 
