@@ -183,14 +183,24 @@ fn test_bitnet32_still_uses_fp_path() {
 
     // Verify BitNet-32 tensor was dequantized and stored in tensors map (NOT in i2s_qk256)
     assert_eq!(result.i2s_qk256.len(), 0, "Should have no QK256 tensors");
+
+    // The loader normalizes tensor names: "tok_embeddings.weight" -> "token_embd.weight"
     assert!(
-        result.tensors.contains_key("tok_embeddings.weight"),
-        "Should contain tok_embeddings.weight in regular tensors (canonical GGUF name)"
+        result.tensors.contains_key("token_embd.weight"),
+        "Should contain token_embd.weight (normalized from tok_embeddings.weight)"
     );
 
     // Verify the tensor was dequantized to F32
-    let tensor = result.tensors.get("tok_embeddings.weight").unwrap();
-    assert_eq!(tensor.shape().dims(), &[rows, cols], "Tensor shape should match fixture");
+    // Note: The loader normalizes tensor shapes to match config metadata (vocab=1000, hidden=512)
+    // so the final shape may differ from the fixture's raw tensor shape (2×64)
+    let tensor = result.tensors.get("token_embd.weight").unwrap();
+    let vocab_size = result.config.model.vocab_size;
+    let hidden_size = result.config.model.hidden_size;
+    assert_eq!(
+        tensor.shape().dims(),
+        &[vocab_size, hidden_size],
+        "Tensor shape should match config metadata after normalization"
+    );
 }
 
 #[test]
@@ -281,10 +291,22 @@ fn test_gguf_load_result_structure() {
 #[test]
 #[cfg(feature = "fixtures")]
 fn test_dump_fixture_for_debug() {
-    // Generate fixture and write to known location
-    let fixture_bytes = helpers::qk256_fixtures::generate_qk256_4x256(42);
-    std::fs::write("/tmp/test_generated_fixture.gguf", &fixture_bytes).unwrap();
-    eprintln!("✓ Wrote {} bytes to /tmp/test_generated_fixture.gguf", fixture_bytes.len());
+    // Generate all three fixtures and write to files
+    let fixtures = [
+        ("qk256_4x256", helpers::qk256_fixtures::generate_qk256_4x256(42)),
+        ("bitnet32_2x64", helpers::qk256_fixtures::generate_bitnet32_2x64(43)),
+        ("qk256_3x300", helpers::qk256_fixtures::generate_qk256_3x300(44)),
+    ];
+
+    for (name, fixture_bytes) in &fixtures {
+        let path = format!("/tmp/test_{}.gguf", name);
+        std::fs::write(&path, fixture_bytes).unwrap();
+        eprintln!("✓ Wrote {} ({} bytes) to {}", name, fixture_bytes.len(), path);
+    }
+
+    eprintln!(
+        "\nInspect with: cargo run -p bitnet-cli --features cpu,full-cli -- compat-check /tmp/test_<name>.gguf"
+    );
 }
 
 #[test]

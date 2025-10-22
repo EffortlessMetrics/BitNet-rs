@@ -275,8 +275,17 @@ fn load_gguf_enhanced(
             let available_bytes = info.size as usize;
 
             // Calculate expected sizes for both formats
-            let blocks_256 = total_elements.div_ceil(256);
-            let expected_qk256 = blocks_256 * 64;
+            // CRITICAL: QK256 packs by ROW, not by total elements!
+            // Each row has ceil(cols/256) blocks × 64 bytes/block
+            let (rows, cols) = if info.shape.len() == 2 {
+                (info.shape[0], info.shape[1])
+            } else {
+                // For non-2D tensors, fall back to total elements approach (shouldn't happen for weight matrices)
+                (1, total_elements)
+            };
+
+            let blocks_per_row_256 = cols.div_ceil(256);
+            let expected_qk256 = rows * blocks_per_row_256 * 64;
 
             let blocks_32 = total_elements.div_ceil(32);
             let expected_bitnet32 = blocks_32 * 10; // 8 bytes data + 2 bytes F16 scale
@@ -378,20 +387,20 @@ fn load_gguf_enhanced(
                 match I2SQk256NoScale::new(rows, cols, tensor_data.to_vec()) {
                     Ok(qk256_tensor) => {
                         tracing::debug!(
-                            "QK256 '{}': rows={}, cols={}, blocks={}, row_stride={}B, tol={}B",
+                            "QK256 '{}': rows={}, cols={}, blocks_per_row={}, row_stride={}B, tol={}B",
                             info.name,
                             rows,
                             cols,
-                            blocks_256,
+                            blocks_per_row_256,
                             row_stride_bytes,
                             QK256_SIZE_TOLERANCE
                         );
                         tracing::info!(
-                            "Loaded QK256 I2_S tensor '{}': rows={}, cols={}, blocks={}, row_stride={} bytes",
+                            "Loaded QK256 I2_S tensor '{}': rows={}, cols={}, blocks_per_row={}, row_stride={} bytes",
                             info.name,
                             rows,
                             cols,
-                            blocks_256,
+                            blocks_per_row_256,
                             row_stride_bytes
                         );
 

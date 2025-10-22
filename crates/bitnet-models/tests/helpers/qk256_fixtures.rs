@@ -229,15 +229,35 @@ fn build_gguf_fixture(
     buf[tok_offset_pos..tok_offset_pos + 8].copy_from_slice(&tok_offset_relative.to_le_bytes());
     buf.extend_from_slice(tensor_data);
 
-    // DON'T add inter-tensor padding!
-    // GGUF requires that tensor OFFSETS be aligned, but this is checked by the minimal parser.
-    // The enhanced parser calculates sizes from successive offsets, so padding would
-    // incorrectly inflate the tensor size and break format detection.
-    // For test fixtures, we rely on the enhanced parser which is more lenient.
+    // CRITICAL: Add 32-byte alignment padding between tensors for minimal parser compatibility
+    // The minimal parser (gguf_min.rs:199-204) requires all tensor offsets to be 32-byte aligned.
+    // This is strict GGUF v3 compliance. Without this padding, minimal parser rejects the fixture
+    // with "tensor offset not aligned" error.
+    //
+    // Note: This padding does NOT affect QK256 size detection because:
+    // 1. Enhanced parser calculates tensor size from type/shape, not from successive offsets
+    // 2. The padding is AFTER the first tensor data, not included in its size calculation
+    // 3. QK256 size check happens on the tensor_data slice extracted by get_tensor_data()
+    let current_pos = buf.len();
+    let padding_needed = (GGUF_ALIGNMENT - (current_pos % GGUF_ALIGNMENT)) % GGUF_ALIGNMENT;
+    if padding_needed > 0 {
+        buf.resize(current_pos + padding_needed, 0);
+    }
 
     // Write output.weight data (F16 format - 2 bytes per element)
+    // Offset must be relative to data_start AND aligned to 32 bytes
     let out_offset_absolute = buf.len() as u64;
     let out_offset_relative = out_offset_absolute - data_start;
+
+    // Verify alignment (debug assertion - should never fail with padding above)
+    debug_assert_eq!(
+        out_offset_relative % GGUF_ALIGNMENT as u64,
+        0,
+        "output.weight offset {} not aligned to {}",
+        out_offset_relative,
+        GGUF_ALIGNMENT
+    );
+
     buf[out_offset_pos..out_offset_pos + 8].copy_from_slice(&out_offset_relative.to_le_bytes());
 
     // Generate F16 data: deterministic based on seed
