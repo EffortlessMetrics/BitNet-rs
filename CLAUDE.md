@@ -11,13 +11,19 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 - CPU inference with SIMD optimization (AVX2/AVX-512/NEON)
 - GPU inference with CUDA acceleration (GPU support via feature gates)
 - QK256 (GGML I2_S) MVP with scalar kernels (~0.1 tok/s for 2B models)
+- **QK256 AVX2 Dequantization** - Foundation for v0.2 (1.2× uplift, targeting ≥3×)
 - Interactive chat and Q&A workflows with prompt templates
 - Model validation and inspection tools
 - Cross-validation framework against C++ reference
+- **GGUF Fixtures & Dual-Flavor Tests** - Complete test infrastructure (12/12 passing)
+- **EnvGuard Environment Isolation** - Robust parallel test execution with `#[serial(bitnet_env)]`
+- **Receipt Verification** - Schema v1.0.0 with 8 validation gates (25/25 tests passing)
+- **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
 
 ### Current Limitations (MVP Phase)
 
-- **QK256 Performance**: Scalar-only kernels. For quick validation, limit to
+- **QK256 Performance**: AVX2 foundation established (~1.2× uplift); targeting ≥3×
+  with nibble-LUT + FMA tiling optimizations. For quick validation, limit to
   `--max-new-tokens 4-16`.
 - **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical
   output in some configurations. This is a known model quality issue, not an
@@ -25,8 +31,8 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 - **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests
   represent TDD-style scaffolding for planned features. See **Test Status** section
   below.
-- **Active Blockers**: Issues #254, #260, #439, #469 affect real inference tests and
-  cross-validation.
+- **Active Blockers**: Issues #254, #260, #469 affect some real inference tests and
+  cross-validation. Issue #439 resolved (feature gate unification merged).
 
 ## Quick Reference
 
@@ -111,6 +117,7 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 - `bitnet-st2gguf`: SafeTensors to GGUF converter with LayerNorm preservation
 - `bitnet-cli`: Command-line interface and utilities
 - `crossval`: C++ reference validation framework
+- `tests`: Shared test infrastructure with EnvGuard for environment isolation
 
 ## Key Configurations
 
@@ -123,6 +130,7 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 - `cuda`: Backward-compatible alias for `gpu` (temporary - prefer `gpu` in new code)
 - `ffi`: C++ FFI bridge for gradual migration
 - `crossval`: Cross-validation against Microsoft BitNet C++
+- `fixtures`: Enable GGUF fixture-based integration tests (test-only feature)
 
 **Important**: Always use unified GPU predicate in code:
 
@@ -590,6 +598,9 @@ cargo test --workspace --no-default-features --features cpu
 cargo nextest run --workspace --no-default-features --features cpu
 cargo nextest run --profile ci  # CI profile: 4 threads, no retries
 
+# Run fixture-based integration tests
+cargo test -p bitnet-models --test qk256_dual_flavor_tests --features fixtures
+
 # Run including ignored tests (will encounter blocked tests)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
 cargo nextest run --workspace --no-default-features --features cpu --run-ignored all
@@ -627,9 +638,9 @@ These tests are marked #[ignore] and blocked by active issues:
    - Status: Awaiting refactoring
 
 3. **Issue #439** (Feature gate consistency):
-   - Blocks: GPU/CPU feature predicate unification
-   - Tests affected: Device selection tests, GPU fallback tests
-   - Status: In review (merged to main, validation ongoing)
+   - ✅ **RESOLVED** - Merged to main in PR #475
+   - GPU/CPU feature predicates unified
+   - All device selection and fallback tests validated
 
 4. **Issue #469** (Tokenizer parity and FFI build hygiene):
    - Blocks: Cross-validation tests, FFI integration tests
@@ -664,14 +675,18 @@ fn test_qk256_full_model_inference() { /* ... */ }
 
 ### Working Test Categories
 
-These test suites pass reliably:
+These test suites pass reliably (152+ tests passing):
 
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
+- **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
 - **tokenizer tests**: Universal tokenizer, auto-discovery (except parity tests blocked by #469)
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
 - **validation tests**: LayerNorm inspection, projection statistics (when not in strict mode)
+- **receipt verification tests**: Schema v1.0.0 with 8 gates (25/25 passing)
+- **strict mode tests**: Runtime guards and enforcement (12/12 passing)
+- **environment isolation tests**: EnvGuard parallel safety (7/7 passing)
 
 ### Test Dependencies
 
@@ -722,6 +737,24 @@ GPU Mixed-Precision Tests
 - `BITNET_SKIP_SLOW_TESTS=1`: Skip slow tests (QK256 scalar kernel tests that exceed timeout)
 - `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., blocked tests waiting for issue resolution)
 
+### Test Isolation
+
+**EnvGuard Pattern**: Use `#[serial(bitnet_env)]` for tests that mutate environment variables:
+
+```rust
+use serial_test::serial;
+use tests::helpers::env_guard::EnvGuard;
+
+#[test]
+#[serial(bitnet_env)]  // Ensures serial execution with other env-mutating tests
+fn test_determinism_with_env_flags() {
+    let _guard = EnvGuard::new("BITNET_DETERMINISTIC", "1");
+    // Test code here - env automatically restored on drop
+}
+```
+
+This prevents race conditions when tests run in parallel (e.g., with `--test-threads=4`).
+
 ## Known Issues
 
 These are active issues affecting current development. See issue tracker for details and workarounds.
@@ -747,12 +780,12 @@ These are active issues affecting current development. See issue tracker for det
 
 ### Issue #439: Feature Gate Consistency
 
-**Status**: Merged to main; validation ongoing
-**Impact**: GPU/CPU feature predicate unification for device tests
+**Status**: ✅ **RESOLVED** (PR #475)
+**Impact**: GPU/CPU feature predicate unification completed
 
-- Unifies `feature = "gpu"` and `feature = "cuda"` predicates
-- Device selection and fallback tests being validated
-- See PR #471 and GitHub issue #439 for details
+- Unified `feature = "gpu"` and `feature = "cuda"` predicates
+- All device selection and fallback tests validated
+- See PR #475 and GitHub issue #439 for details
 
 ### Issue #469: Tokenizer Parity and FFI Build Hygiene
 
@@ -862,9 +895,10 @@ cargo test -p bitnet-models --no-default-features --features cpu
 
 **Current State (MVP)**:
 
-- ~500+ tests with passing infrastructure
+- **152+ tests passing** (91 lib + 49 integration + 12 fixtures)
 - ~70 tests intentionally ignored (scaffolding)
-- Real inference tests blocked by #254, #260, #439, #469
+- Real inference tests blocked by #254, #260, #469 (Issue #439 resolved)
+- Complete test infrastructure: fixtures, receipts, strict mode, environment isolation
 
 **CI Status**: Only non-ignored tests run in CI. Ignored tests are tracked separately.
 
@@ -898,6 +932,7 @@ cargo build --no-default-features --features cpu
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
 - **Expect test scaffolding during MVP**: ~548 TODO/FIXME markers and ~70 ignored tests are intentional
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
-- **Check issue tracker for blockers**: Before investigating test failures, see #254, #260, #439, #469
+- **Use `#[serial(bitnet_env)]` for env-mutating tests**: Prevents race conditions in parallel execution
+- **Check issue tracker for blockers**: Before investigating test failures, see #254, #260, #469 (Issue #439 resolved in PR #475)
 
 For comprehensive documentation, see the `docs/` directory organized by audience and use case.
