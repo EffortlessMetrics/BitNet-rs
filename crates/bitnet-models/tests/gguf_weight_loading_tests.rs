@@ -15,6 +15,7 @@ use bitnet_common::BitNetError;
 #[cfg(any(feature = "cpu", feature = "gpu", feature = "crossval"))]
 use bitnet_common::Device;
 use candle_core::Tensor as CandleTensor;
+use serial_test::serial;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -584,6 +585,7 @@ async fn test_ac4_missing_tensor_error_handling_cpu() -> Result<()> {
 /// Tests feature spec: gguf-weight-loading.md#cross-validation-framework
 #[cfg(feature = "crossval")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_ac5_cpp_reference_cross_validation() -> Result<()> {
     // Set cross-validation environment variables
     unsafe {

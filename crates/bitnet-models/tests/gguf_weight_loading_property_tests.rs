@@ -11,6 +11,7 @@
 
 use anyhow::Result;
 use proptest::prelude::*;
+use serial_test::serial;
 
 /// Property-based test configuration
 #[derive(Debug, Clone)]
@@ -143,6 +144,7 @@ proptest! {
     /// Property: I2S quantization is deterministic with same seed
     /// AC2: Support Quantization Formats with ≥99% Accuracy
     #[test]
+    #[serial(bitnet_env)]
     #[ignore] // Issue #159: TDD placeholder - I2S deterministic implementation needed
     #[cfg(feature = "cpu")]
     fn prop_i2s_quantization_deterministic(

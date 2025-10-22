@@ -12,6 +12,7 @@
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetError, Device};
 use candle_core::Tensor as CandleTensor;
+use serial_test::serial;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -225,6 +226,7 @@ pub struct PrecisionLossAnalysis {
 /// **Policy:** Hard-fails if C++ reference is not available. Crossval must compare against C++ reference.
 #[cfg(feature = "crossval")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> {
     let config = CrossValidationTestConfig::default();
 
@@ -300,6 +302,7 @@ async fn test_ac5_comprehensive_weight_loading_cross_validation() -> Result<()> 
 /// **Policy:** Hard-fails if C++ reference is not available. Crossval must compare against C++ reference.
 #[cfg(feature = "crossval")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_ac5_inference_pipeline_cross_validation() -> Result<()> {
     let config = CrossValidationTestConfig::default();
 
@@ -389,6 +392,7 @@ async fn test_ac5_inference_pipeline_cross_validation() -> Result<()> {
 /// Tests feature spec: gguf-weight-loading.md#v3-quantization-accuracy-validation
 #[cfg(feature = "crossval")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_ac5_quantization_accuracy_cross_validation() -> Result<()> {
     let config = CrossValidationTestConfig::default();
 
@@ -449,6 +453,7 @@ async fn test_ac5_quantization_accuracy_cross_validation() -> Result<()> {
 /// Tests feature spec: gguf-weight-loading.md#v2-deterministic-validation
 #[cfg(feature = "crossval")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_ac5_deterministic_inference_validation() -> Result<()> {
     let config = CrossValidationTestConfig::default();
     let test_model_path = setup_crossval_test_model().await?;

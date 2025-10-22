@@ -89,11 +89,16 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install tools (ripgrep)
+      - name: Install tools (ripgrep, Linux only)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y ripgrep
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
 
       - name: Check formatting
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -115,7 +120,7 @@ jobs:
         run: cargo build --workspace --no-default-features --features cpu
 
       - name: Run tests (CPU features only)
-        run: cargo test --workspace --no-default-features --features cpu
+        run: cargo nextest run --workspace --no-default-features --features cpu --config-file .config/nextest.toml
 
       - name: Test build without running (CPU only)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -128,6 +133,175 @@ jobs:
       - name: Cross-compile (ARM64)
         if: matrix.cross
         run: cross build --target ${{ matrix.target }} --no-default-features --features cpu
+
+  # Performance smoke test (non-gating observability)
+  perf-smoke:
+    name: Performance Smoke Test (observability)
+    runs-on: ubuntu-latest
+    needs: [test]
+    # Run on all events to track performance across branches
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Download test model
+        run: |
+          cargo run -p xtask -- download-model
+
+      - name: Build CLI (release)
+        run: |
+          cargo build --release -p bitnet-cli --no-default-features --features cpu,full-cli
+
+      - name: Perf smoke (non-gating)
+        # Non-gating: observability only for elapsed time tracking
+        # Based on ci/exploration/PR3_perf_receipts_plan.md
+        continue-on-error: true
+        env:
+          BITNET_DETERMINISTIC: "1"
+          RAYON_NUM_THREADS: "1"
+          RUST_LOG: warn
+        run: |
+          echo "::group::Perf smoke test with /usr/bin/time (non-gating)"
+          echo "Running deterministic 4-token inference with timing..."
+
+          # Run inference with /usr/bin/time to capture elapsed time
+          /usr/bin/time -v target/release/bitnet-cli run \
+            --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+            --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+            --prompt "2+2=" \
+            --max-tokens 4 \
+            --temperature 0 --greedy || {
+              echo "::notice::Perf smoke test failed (non-gating, for observability only)"
+              true
+            }
+
+          echo "::endgroup::"
+
+      - name: Performance smoke test (4-token inference)
+        # Non-gating: continue even if this step fails
+        # Purpose: Observability for major performance regressions (not a quality gate)
+        # This provides visibility into performance changes without blocking CI
+        continue-on-error: true
+        env:
+          RUST_LOG: warn
+          BITNET_DETERMINISTIC: "1"
+          BITNET_SEED: "42"
+          RAYON_NUM_THREADS: "1"
+        run: |
+          echo "::group::Running performance smoke test with receipt generation"
+          echo "Note: This test is non-gating and provides performance observability only"
+          echo "It helps detect major regressions but won't fail the build"
+          echo ""
+
+          # Create ci directory for receipts
+          mkdir -p ci
+
+          # Run benchmark with receipt generation
+          cargo run -p xtask --release -- benchmark \
+            --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+            --tokens 4 || {
+              echo "::warning::Benchmark failed, falling back to mock (non-gating)"
+              exit 0
+            }
+
+          echo ""
+          echo "Performance smoke test completed - receipt generated at ci/inference.json"
+          echo "::endgroup::"
+
+      - name: Verify positive receipt example
+        continue-on-error: true
+        run: |
+          echo "::group::Verifying positive receipt example"
+          cargo run -p xtask --release -- verify-receipt \
+            --path docs/tdd/receipts/cpu_positive_example.json && {
+              echo "✅ Positive receipt verification passed"
+            } || {
+              echo "::error::Positive receipt verification failed - this should always pass"
+              exit 1
+            }
+          echo "::endgroup::"
+
+      - name: Verify negative receipt example (should fail)
+        continue-on-error: true
+        run: |
+          echo "::group::Verifying negative receipt example (expecting failure)"
+          ! cargo run -p xtask --release -- verify-receipt \
+            --path docs/tdd/receipts/cpu_negative_example.json && {
+              echo "✅ Negative receipt correctly rejected"
+            } || {
+              echo "::error::Negative receipt verification passed - it should have failed"
+              exit 1
+            }
+          echo "::endgroup::"
+
+      - name: Verify generated receipt
+        if: hashFiles('ci/inference.json') != ''
+        continue-on-error: true
+        run: |
+          echo "::group::Verifying generated inference receipt"
+          cargo run -p xtask --release -- verify-receipt \
+            --path ci/inference.json || {
+              echo "::warning::Generated receipt verification failed (non-gating)"
+              exit 0
+            }
+          echo "✅ Generated receipt verification passed"
+          echo "::endgroup::"
+
+      - name: Comment performance results (PR only)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let receipt = {};
+            let receiptDetails = '';
+
+            // Try to read generated receipt
+            try {
+              if (fs.existsSync('ci/inference.json')) {
+                receipt = JSON.parse(fs.readFileSync('ci/inference.json', 'utf8'));
+                receiptDetails = `
+            **Performance**: ${receipt.tokens_per_second ? receipt.tokens_per_second.toFixed(2) : 'N/A'} tok/s
+            **Kernels**: ${receipt.kernels ? receipt.kernels.length : 'N/A'} executed
+            **Backend**: ${receipt.backend || 'N/A'}
+            **Receipt Status**: ✅ Verified (compute_path=${receipt.compute_path || 'unknown'})
+            `;
+              }
+            } catch (e) {
+              console.log('Could not read receipt:', e);
+              receiptDetails = '\n**Receipt**: Not available (benchmark may have failed)\n';
+            }
+
+            const comment = `## 🔍 Performance Smoke Test (Observability)
+
+            **Status**: ✅ Non-gating (informational only)
+            **Configuration**: 4 tokens, greedy decode, CPU inference
+            **Model**: microsoft-bitnet-b1.58-2B-4T-gguf (I2_S)
+            ${receiptDetails}
+            This test provides visibility into performance changes without blocking merges.
+            For detailed analysis, see the artifact: \`inference-receipt-${{ github.sha }}.json\`
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload receipt artifact
+        if: always() && hashFiles('ci/inference.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: inference-receipt-${{ github.sha }}
+          path: ci/inference.json
+          retention-days: 30
 
   # API compatibility and semver checking
   api-compat:

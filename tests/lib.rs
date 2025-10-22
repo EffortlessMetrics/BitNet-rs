@@ -5,6 +5,7 @@
 // Re-export modules for backward compatibility with existing tests
 pub mod common;
 pub mod prelude;
+pub mod support;
 
 // Only compile integration tests when explicitly enabled.
 // This keeps crossval work unblocked.

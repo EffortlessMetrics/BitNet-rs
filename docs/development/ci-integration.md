@@ -73,6 +73,15 @@ graph TD
   - Memory usage analysis
   - Triggered by: main branch pushes, performance-related changes
 
+- **Receipt Verification** (`verify-receipts.yml`)
+  - Validates inference receipts for honest compute evidence
+  - Tests positive examples (valid receipts should pass)
+  - Tests negative examples (invalid receipts should fail)
+  - Verifies generated receipts from benchmarks
+  - Enforces compute_path == "real" (no mock inference)
+  - Validates kernel IDs and backend-kernel alignment
+  - Triggered by: PR/push to main/develop affecting inference/benchmarks
+
 #### 3. Reporting and Coordination
 - **CI Reporting** (`ci-reporting.yml`)
   - Aggregates results from all workflows
@@ -215,6 +224,17 @@ BITNET_TEST_SMART_SELECTION: true
 - **Cause**: New untested code or test removal
 - **Solution**: Add tests for new code, verify test coverage
 - **Prevention**: Enforce coverage requirements, review coverage reports
+
+#### 5. Receipt Verification Failures
+- **Cause**: Mock compute path, missing kernels, or backend-kernel mismatch
+- **Solution**:
+  - Ensure `compute_path == "real"` in generated receipts
+  - Verify kernel IDs are populated from actual execution
+  - Check backend-kernel alignment (GPU receipts need GPU kernels)
+- **Prevention**:
+  - Use `cargo run -p xtask -- benchmark` to generate valid receipts
+  - Test with example receipts: `docs/tdd/receipts/cpu_positive_example.json`
+  - Validate locally: `cargo run -p xtask -- verify-receipt --path ci/inference.json`
 
 ### Debug Information
 

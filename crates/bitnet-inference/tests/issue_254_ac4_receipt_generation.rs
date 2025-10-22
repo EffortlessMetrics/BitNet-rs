@@ -12,6 +12,7 @@ mod support;
 use support::EnvGuard;
 
 use anyhow::Result;
+use serial_test::serial;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
@@ -20,7 +21,7 @@ use std::path::Path;
 /// Validates receipt schema and required fields
 #[ignore] // Issue #254: TDD placeholder - Receipt generation unimplemented
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac4_receipt_generation_real_path() -> Result<()> {
     // TODO: Create InferenceReceipt struct when API is available
     let receipt =
@@ -36,7 +37,8 @@ async fn test_ac4_receipt_generation_real_path() -> Result<()> {
 
     // Verify deterministic flag with guard for automatic cleanup
     {
-        let _guard = EnvGuard::set("BITNET_DETERMINISTIC", "1");
+        let _guard = EnvGuard::new("BITNET_DETERMINISTIC");
+        _guard.set("1");
         let deterministic_receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
         assert!(deterministic_receipt.deterministic, "AC4: deterministic should be true");
     }
@@ -94,11 +96,14 @@ async fn test_ac4_save_receipt_to_file() -> Result<()> {
 /// AC:4.4 - Receipt includes environment variables
 /// Validates environment section in receipt
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac4_receipt_environment_variables() -> Result<()> {
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("BITNET_SEED", "42");
-    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("BITNET_SEED");
+    _g2.set("42");
+    let _g3 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g3.set("1");
 
     let receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
 

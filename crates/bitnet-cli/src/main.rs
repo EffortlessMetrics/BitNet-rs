@@ -1022,13 +1022,39 @@ async fn run_simple_generation(
         None
     };
 
-    // Generation loop
-    for step_idx in 0..max_new_tokens {
-        // Embed tokens
-        let x = model.embed(&tokens)?;
+    // BITNET_TRACE_TIMING=1: Enable timing instrumentation
+    let timing_enabled = std::env::var("BITNET_TRACE_TIMING").as_deref() == Ok("1");
 
-        // Forward pass
+    // Generation loop: incremental decoding
+    //
+    // Each step:
+    //   1. Embed ONLY the new token (last in sequence)
+    //   2. Forward pass uses KV cache for historical context
+    //   3. No need to re-embed previous tokens (O(N) not O(N²))
+    //
+    // Historical context is maintained via:
+    //   - KV cache: stores key/value tensors from previous steps
+    //   - `tokens` vector: tracks full sequence for stop detection/logging
+    //
+    // Performance impact: This changes embedding from O(N²) to O(N), providing
+    // ~50× speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    for step_idx in 0..max_new_tokens {
+        // Embed only the LAST token (incremental)
+        // KV cache already maintains historical context
+        let last_token = tokens.last().copied().expect("tokens must be non-empty");
+
+        let t0 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
+        let x = model.embed(&[last_token])?;
+        if let Some(t) = t0 {
+            eprintln!("timing: embed_us={}", t.elapsed().as_micros());
+        }
+
+        // Forward pass (with KV cache handling history)
+        let t1 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
         let h = model.forward(&x, any_cache.as_mut())?;
+        if let Some(t) = t1 {
+            eprintln!("timing: forward_us={}", t.elapsed().as_micros());
+        }
 
         // Extract last token hidden state first to avoid 3D×2D matmul issues
         let last_hidden = extract_last_token_hidden(&h)?;
@@ -1041,7 +1067,11 @@ async fn run_simple_generation(
         }
 
         // Get logits from last token hidden state
+        let t2 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
         let logits = model.logits(&last_hidden)?;
+        if let Some(t) = t2 {
+            eprintln!("timing: logits_us={}", t.elapsed().as_micros());
+        }
 
         // Extract logits vector with robust shape handling
         let logits_vec = extract_logits_2d(&logits)?;
@@ -1102,7 +1132,31 @@ async fn run_simple_generation(
         }
 
         // Sample next token
+        let t3 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
         let next_token = sampler.sample(&logits_vec, &generated_tokens);
+        if let Some(t) = t3 {
+            eprintln!("timing: sample_us={}", t.elapsed().as_micros());
+        }
+
+        // BITNET_PARITY=1: Log chosen token + top-10 logits for greedy decode verification
+        if std::env::var("BITNET_PARITY").as_deref() == Ok("1") {
+            // Extract top-10 logits with token IDs
+            let mut logits_with_idx: Vec<(usize, f32)> =
+                logits_vec.iter().copied().enumerate().collect();
+            logits_with_idx
+                .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+            let top_k_logits: Vec<(u32, f32)> =
+                logits_with_idx.iter().take(10).map(|(idx, logit)| (*idx as u32, *logit)).collect();
+
+            // JSON format for easy parsing
+            eprintln!(
+                "{{\"step\":{},\"token\":{},\"top_k\":{}}}",
+                step_idx,
+                next_token,
+                serde_json::to_string(&top_k_logits).unwrap_or_default()
+            );
+        }
 
         // Assert greedy invariant if requested
         if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)

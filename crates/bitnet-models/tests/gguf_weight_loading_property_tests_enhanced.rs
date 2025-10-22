@@ -15,6 +15,7 @@ use bitnet_quantization::{I2SQuantizer, QuantizedTensor, TL1Quantizer, TL2Quanti
 use candle_core::Tensor as CandleTensor;
 use proptest::prelude::*;
 use proptest::test_runner::TestCaseError;
+use serial_test::serial;
 use std::collections::HashMap;
 
 // Helper function for error conversion in proptests
@@ -289,6 +290,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(25))]
 
     #[test]
+    #[serial(bitnet_env)]
     #[ignore] // Issue #159: TDD placeholder - deterministic reproducibility implementation needed
     fn property_quantization_deterministic_reproducibility(
         tensor_data in prop::collection::vec(-3.0f32..3.0f32, 64..256),

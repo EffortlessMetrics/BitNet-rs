@@ -41,8 +41,12 @@ cargo build --no-default-features --features gpu     # GPU inference
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
   cargo build --release --no-default-features --features cpu,full-cli
 
-# Test
+# Test (standard cargo test)
 cargo test --workspace --no-default-features --features cpu
+
+# Test with nextest (recommended - prevents hangs with 5min timeout)
+cargo nextest run --workspace --no-default-features --features cpu
+cargo nextest run --profile ci  # Use CI profile with fixed 4 threads
 
 # Quality
 cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
@@ -582,17 +586,31 @@ and prevent regressions once blockers are resolved.
 # Run all enabled tests (skips #[ignore] tests)
 cargo test --workspace --no-default-features --features cpu
 
+# Run with nextest (recommended - 5min timeout prevents hangs)
+cargo nextest run --workspace --no-default-features --features cpu
+cargo nextest run --profile ci  # CI profile: 4 threads, no retries
+
 # Run including ignored tests (will encounter blocked tests)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
+cargo nextest run --workspace --no-default-features --features cpu --run-ignored all
 
 # Run specific test category
 cargo test -p bitnet-inference --no-default-features --features cpu
-cargo test -p bitnet-quantization --no-default-features --features cpu
-cargo test -p bitnet-kernels --no-default-features --features cpu
+cargo nextest run -p bitnet-inference --no-default-features --features cpu
 
 # Skip slow tests (QK256 scalar kernels)
 BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
+BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --no-default-features --features cpu
 ```
+
+**Nextest Benefits:**
+- **Timeout protection**: 5-minute global timeout prevents test hangs
+- **Clean output**: `success-output = "never"` reduces noise
+- **No retries**: `retries = 0` ensures tests pass consistently (no flaky tests)
+- **JUnit reports**: Automatic XML output in `target/nextest/junit.xml`
+- **Parallel execution**: Per-test isolation with configurable thread count
+
+**Nextest Configuration:** See `.config/nextest.toml` for profiles and settings.
 
 ### Critical Blocked Tests
 

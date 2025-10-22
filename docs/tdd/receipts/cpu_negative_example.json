@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "compute_path": "mock",
+  "backend": "cpu",
+  "kernels": [
+    ""
+  ],
+  "deterministic": false,
+  "environment": {
+    "RUST_VERSION": "1.90.0",
+    "BITNET_VERSION": "0.1.0",
+    "OS": "linux-x86_64",
+    "CPU_BRAND": "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz"
+  },
+  "model_info": {
+    "model_path": "models/bitnet-2b.gguf",
+    "quantization_type": "i2s"
+  },
+  "test_results": {
+    "total_tests": 5,
+    "passed": 3,
+    "failed": 2,
+    "skipped": 0
+  },
+  "performance_baseline": {
+    "tokens_generated": 10,
+    "total_time_ms": 5000,
+    "tokens_per_second": -1.0,
+    "first_token_latency_ms": 500,
+    "average_token_latency_ms": 500,
+    "memory_usage_mb": 2048
+  },
+  "corrections": []
+}

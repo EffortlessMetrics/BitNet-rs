@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "compute_path": "real",
+  "backend": "cpu",
+  "kernels": [
+    "i2s_gemv",
+    "i2s_matmul_avx2",
+    "tl1_lookup_neon",
+    "tl2_forward"
+  ],
+  "deterministic": true,
+  "environment": {
+    "BITNET_DETERMINISTIC": "1",
+    "BITNET_SEED": "42",
+    "RAYON_NUM_THREADS": "1",
+    "RUST_VERSION": "1.90.0",
+    "BITNET_VERSION": "0.1.0",
+    "OS": "linux-x86_64",
+    "CPU_BRAND": "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz"
+  },
+  "model_info": {
+    "model_path": "models/bitnet-2b.gguf",
+    "quantization_type": "i2s",
+    "layers": 24,
+    "hidden_size": 2048,
+    "num_attention_heads": 16,
+    "num_key_value_heads": 16,
+    "vocab_size": 32000
+  },
+  "test_results": {
+    "total_tests": 10,
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "accuracy_tests": {
+      "i2s_accuracy": {
+        "mse": 0.0001,
+        "tolerance": 0.001,
+        "passed": true
+      }
+    },
+    "determinism_tests": {
+      "identical_sequences": true,
+      "runs": 3,
+      "tokens_per_run": 32
+    }
+  },
+  "performance_baseline": {
+    "tokens_generated": 32,
+    "total_time_ms": 64000,
+    "tokens_per_second": 0.5,
+    "first_token_latency_ms": 2000,
+    "average_token_latency_ms": 2000,
+    "memory_usage_mb": 4096
+  },
+  "parity": {
+    "cpp_available": false,
+    "status": "rust_only"
+  },
+  "corrections": []
+}

@@ -12,6 +12,7 @@ mod support;
 use support::EnvGuard;
 
 use anyhow::Result;
+use serial_test::serial;
 use bitnet_common::Device;
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
@@ -20,12 +21,15 @@ use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 /// AC:6.1 - Two complete inference runs produce identical token sequences
 /// Validates full determinism from prompt to generated tokens
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     // Set deterministic environment
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("BITNET_SEED", "42");
-    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("BITNET_SEED");
+    _g2.set("42");
+    let _g3 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g3.set("1");
 
     let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
@@ -64,11 +68,14 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 /// AC:6.2 - Determinism across multiple runs (5 iterations)
 /// Validates consistency over multiple generation cycles
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac6_determinism_multiple_runs() -> Result<()> {
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("BITNET_SEED", "42");
-    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("BITNET_SEED");
+    _g2.set("42");
+    let _g3 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g3.set("1");
 
     let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;

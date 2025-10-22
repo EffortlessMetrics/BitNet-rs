@@ -1,0 +1,326 @@
+Gnuplot not found, using plotters backend
+Benchmarking matmul/fallback/32x32x32
+Benchmarking matmul/fallback/32x32x32: Warming up for 3.0000 s
+Benchmarking matmul/fallback/32x32x32: Collecting 100 samples in estimated 5.0085 s (283k iterations)
+Benchmarking matmul/fallback/32x32x32: Analyzing
+matmul/fallback/32x32x32
+                        time:   [17.309 µs 17.658 µs 18.115 µs]
+                        thrpt:  [1.8089 Gelem/s 1.8557 Gelem/s 1.8932 Gelem/s]
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) low mild
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+Benchmarking matmul/fallback/64x64x64
+Benchmarking matmul/fallback/64x64x64: Warming up for 3.0000 s
+Benchmarking matmul/fallback/64x64x64: Collecting 100 samples in estimated 5.4087 s (40k iterations)
+Benchmarking matmul/fallback/64x64x64: Analyzing
+matmul/fallback/64x64x64
+                        time:   [135.15 µs 137.50 µs 140.13 µs]
+                        thrpt:  [1.8707 Gelem/s 1.9065 Gelem/s 1.9396 Gelem/s]
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) low mild
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+Benchmarking matmul/fallback/128x128x128
+Benchmarking matmul/fallback/128x128x128: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 6.2s, enable flat sampling, or reduce sample count to 60.
+Benchmarking matmul/fallback/128x128x128: Collecting 100 samples in estimated 6.1642 s (5050 iterations)
+Benchmarking matmul/fallback/128x128x128: Analyzing
+matmul/fallback/128x128x128
+                        time:   [1.2066 ms 1.2182 ms 1.2311 ms]
+                        thrpt:  [1.7035 Gelem/s 1.7215 Gelem/s 1.7381 Gelem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  5 (5.00%) high mild
+  1 (1.00%) high severe
+Benchmarking matmul/fallback/256x256x256
+Benchmarking matmul/fallback/256x256x256: Warming up for 3.0000 s
+Benchmarking matmul/fallback/256x256x256: Collecting 100 samples in estimated 5.0879 s (500 iterations)
+Benchmarking matmul/fallback/256x256x256: Analyzing
+matmul/fallback/256x256x256
+                        time:   [9.9198 ms 10.040 ms 10.172 ms]
+                        thrpt:  [1.6493 Gelem/s 1.6711 Gelem/s 1.6913 Gelem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+Benchmarking matmul/fallback/512x512x512
+Benchmarking matmul/fallback/512x512x512: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 8.0s, or reduce sample count to 60.
+Benchmarking matmul/fallback/512x512x512: Collecting 100 samples in estimated 8.0034 s (100 iterations)
+Benchmarking matmul/fallback/512x512x512: Analyzing
+matmul/fallback/512x512x512
+                        time:   [81.188 ms 82.273 ms 83.468 ms]
+                        thrpt:  [1.6080 Gelem/s 1.6314 Gelem/s 1.6532 Gelem/s]
+Found 12 outliers among 100 measurements (12.00%)
+  6 (6.00%) high mild
+  6 (6.00%) high severe
+
+Benchmarking quantization/fallback-I2S/1024
+Benchmarking quantization/fallback-I2S/1024: Warming up for 3.0000 s
+Benchmarking quantization/fallback-I2S/1024: Collecting 100 samples in estimated 5.0048 s (4.0M iterations)
+Benchmarking quantization/fallback-I2S/1024: Analyzing
+quantization/fallback-I2S/1024
+                        time:   [1.2729 µs 1.3015 µs 1.3307 µs]
+                        thrpt:  [769.54 Melem/s 786.78 Melem/s 804.45 Melem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+Benchmarking quantization/fallback-I2S/4096
+Benchmarking quantization/fallback-I2S/4096: Warming up for 3.0000 s
+Benchmarking quantization/fallback-I2S/4096: Collecting 100 samples in estimated 5.0228 s (934k iterations)
+Benchmarking quantization/fallback-I2S/4096: Analyzing
+quantization/fallback-I2S/4096
+                        time:   [5.1767 µs 5.2640 µs 5.3590 µs]
+                        thrpt:  [764.32 Melem/s 778.11 Melem/s 791.24 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking quantization/fallback-I2S/16384
+Benchmarking quantization/fallback-I2S/16384: Warming up for 3.0000 s
+Benchmarking quantization/fallback-I2S/16384: Collecting 100 samples in estimated 5.0876 s (242k iterations)
+Benchmarking quantization/fallback-I2S/16384: Analyzing
+quantization/fallback-I2S/16384
+                        time:   [20.363 µs 20.724 µs 21.091 µs]
+                        thrpt:  [776.81 Melem/s 790.59 Melem/s 804.61 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+Benchmarking quantization/fallback-I2S/65536
+Benchmarking quantization/fallback-I2S/65536: Warming up for 3.0000 s
+Benchmarking quantization/fallback-I2S/65536: Collecting 100 samples in estimated 5.2140 s (66k iterations)
+Benchmarking quantization/fallback-I2S/65536: Analyzing
+quantization/fallback-I2S/65536
+                        time:   [71.117 µs 72.406 µs 73.746 µs]
+                        thrpt:  [888.67 Melem/s 905.11 Melem/s 921.52 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+Benchmarking quantization/fallback-TL1/1024
+Benchmarking quantization/fallback-TL1/1024: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL1/1024: Collecting 100 samples in estimated 5.0036 s (3.3M iterations)
+Benchmarking quantization/fallback-TL1/1024: Analyzing
+quantization/fallback-TL1/1024
+                        time:   [1.6842 µs 1.7091 µs 1.7346 µs]
+                        thrpt:  [590.35 Melem/s 599.16 Melem/s 608.00 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking quantization/fallback-TL1/4096
+Benchmarking quantization/fallback-TL1/4096: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL1/4096: Collecting 100 samples in estimated 5.0034 s (737k iterations)
+Benchmarking quantization/fallback-TL1/4096: Analyzing
+quantization/fallback-TL1/4096
+                        time:   [6.7791 µs 6.9086 µs 7.0594 µs]
+                        thrpt:  [580.22 Melem/s 592.88 Melem/s 604.21 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high severe
+Benchmarking quantization/fallback-TL1/16384
+Benchmarking quantization/fallback-TL1/16384: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL1/16384: Collecting 100 samples in estimated 5.1348 s (187k iterations)
+Benchmarking quantization/fallback-TL1/16384: Analyzing
+quantization/fallback-TL1/16384
+                        time:   [27.781 µs 28.359 µs 29.080 µs]
+                        thrpt:  [563.40 Melem/s 577.73 Melem/s 589.76 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+Benchmarking quantization/fallback-TL1/65536
+Benchmarking quantization/fallback-TL1/65536: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL1/65536: Collecting 100 samples in estimated 5.3432 s (50k iterations)
+Benchmarking quantization/fallback-TL1/65536: Analyzing
+quantization/fallback-TL1/65536
+                        time:   [106.08 µs 108.66 µs 111.64 µs]
+                        thrpt:  [587.02 Melem/s 603.10 Melem/s 617.78 Melem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+Benchmarking quantization/fallback-TL2/1024
+Benchmarking quantization/fallback-TL2/1024: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL2/1024: Collecting 100 samples in estimated 5.0003 s (2.9M iterations)
+Benchmarking quantization/fallback-TL2/1024: Analyzing
+quantization/fallback-TL2/1024
+                        time:   [1.6925 µs 1.7229 µs 1.7553 µs]
+                        thrpt:  [583.38 Melem/s 594.35 Melem/s 605.01 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+Benchmarking quantization/fallback-TL2/4096
+Benchmarking quantization/fallback-TL2/4096: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL2/4096: Collecting 100 samples in estimated 5.0037 s (742k iterations)
+Benchmarking quantization/fallback-TL2/4096: Analyzing
+quantization/fallback-TL2/4096
+                        time:   [6.6204 µs 6.7176 µs 6.8245 µs]
+                        thrpt:  [600.19 Melem/s 609.74 Melem/s 618.70 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking quantization/fallback-TL2/16384
+Benchmarking quantization/fallback-TL2/16384: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL2/16384: Collecting 100 samples in estimated 5.0623 s (187k iterations)
+Benchmarking quantization/fallback-TL2/16384: Analyzing
+quantization/fallback-TL2/16384
+                        time:   [26.326 µs 26.684 µs 27.063 µs]
+                        thrpt:  [605.40 Melem/s 614.00 Melem/s 622.36 Melem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  1 (1.00%) low mild
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+Benchmarking quantization/fallback-TL2/65536
+Benchmarking quantization/fallback-TL2/65536: Warming up for 3.0000 s
+Benchmarking quantization/fallback-TL2/65536: Collecting 100 samples in estimated 5.3427 s (50k iterations)
+Benchmarking quantization/fallback-TL2/65536: Analyzing
+quantization/fallback-TL2/65536
+                        time:   [103.74 µs 105.66 µs 107.66 µs]
+                        thrpt:  [608.72 Melem/s 620.28 Melem/s 631.72 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high severe
+
+Benchmarking kernel_selection/manager_creation
+Benchmarking kernel_selection/manager_creation: Warming up for 3.0000 s
+Benchmarking kernel_selection/manager_creation: Collecting 100 samples in estimated 5.0000 s (578M iterations)
+Benchmarking kernel_selection/manager_creation: Analyzing
+kernel_selection/manager_creation
+                        time:   [8.6179 ns 8.7407 ns 8.8861 ns]
+Found 7 outliers among 100 measurements (7.00%)
+  6 (6.00%) high mild
+  1 (1.00%) high severe
+Benchmarking kernel_selection/kernel_selection
+Benchmarking kernel_selection/kernel_selection: Warming up for 3.0000 s
+Benchmarking kernel_selection/kernel_selection: Collecting 100 samples in estimated 5.0000 s (9.0B iterations)
+Benchmarking kernel_selection/kernel_selection: Analyzing
+kernel_selection/kernel_selection
+                        time:   [551.11 ps 558.14 ps 566.66 ps]
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+
+Benchmarking memory_bandwidth/fallback_large_matmul
+Benchmarking memory_bandwidth/fallback_large_matmul: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 77.2s, or reduce sample count to 10.
+Benchmarking memory_bandwidth/fallback_large_matmul: Collecting 100 samples in estimated 77.188 s (100 iterations)
+Benchmarking memory_bandwidth/fallback_large_matmul: Analyzing
+memory_bandwidth/fallback_large_matmul
+                        time:   [773.68 ms 778.28 ms 782.75 ms]
+                        thrpt:  [7.6653 MiB/s 7.7093 MiB/s 7.7552 MiB/s]
+Found 15 outliers among 100 measurements (15.00%)
+  13 (13.00%) low mild
+  2 (2.00%) high mild
+
+Benchmarking quantization_accuracy/fallback_I2S
+Benchmarking quantization_accuracy/fallback_I2S: Warming up for 3.0000 s
+Benchmarking quantization_accuracy/fallback_I2S: Collecting 100 samples in estimated 5.0061 s (980k iterations)
+Benchmarking quantization_accuracy/fallback_I2S: Analyzing
+quantization_accuracy/fallback_I2S
+                        time:   [5.0788 µs 5.1847 µs 5.3259 µs]
+                        thrpt:  [769.07 Melem/s 790.01 Melem/s 806.49 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+Benchmarking quantization_accuracy/fallback_TL1
+Benchmarking quantization_accuracy/fallback_TL1: Warming up for 3.0000 s
+Benchmarking quantization_accuracy/fallback_TL1: Collecting 100 samples in estimated 5.0242 s (747k iterations)
+Benchmarking quantization_accuracy/fallback_TL1: Analyzing
+quantization_accuracy/fallback_TL1
+                        time:   [6.6993 µs 6.7983 µs 6.9032 µs]
+                        thrpt:  [593.35 Melem/s 602.50 Melem/s 611.40 Melem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) low mild
+  3 (3.00%) high mild
+Benchmarking quantization_accuracy/fallback_TL2
+Benchmarking quantization_accuracy/fallback_TL2: Warming up for 3.0000 s
+Benchmarking quantization_accuracy/fallback_TL2: Collecting 100 samples in estimated 5.0156 s (727k iterations)
+Benchmarking quantization_accuracy/fallback_TL2: Analyzing
+quantization_accuracy/fallback_TL2
+                        time:   [6.5748 µs 6.6849 µs 6.8020 µs]
+                        thrpt:  [602.18 Melem/s 612.73 Melem/s 622.99 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+
+Benchmarking cache_performance/cache_test/32x32x32
+Benchmarking cache_performance/cache_test/32x32x32: Warming up for 3.0000 s
+Benchmarking cache_performance/cache_test/32x32x32: Collecting 100 samples in estimated 5.0366 s (288k iterations)
+Benchmarking cache_performance/cache_test/32x32x32: Analyzing
+cache_performance/cache_test/32x32x32
+                        time:   [17.356 µs 17.623 µs 17.904 µs]
+                        thrpt:  [1.8302 Gelem/s 1.8594 Gelem/s 1.8880 Gelem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking cache_performance/cache_test/128x128x128
+Benchmarking cache_performance/cache_test/128x128x128: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 6.2s, enable flat sampling, or reduce sample count to 60.
+Benchmarking cache_performance/cache_test/128x128x128: Collecting 100 samples in estimated 6.1997 s (5050 iterations)
+Benchmarking cache_performance/cache_test/128x128x128: Analyzing
+cache_performance/cache_test/128x128x128
+                        time:   [1.1958 ms 1.2069 ms 1.2182 ms]
+                        thrpt:  [1.7215 Gelem/s 1.7376 Gelem/s 1.7537 Gelem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+Benchmarking cache_performance/cache_test/512x512x512
+Benchmarking cache_performance/cache_test/512x512x512: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 8.4s, or reduce sample count to 50.
+Benchmarking cache_performance/cache_test/512x512x512: Collecting 100 samples in estimated 8.4184 s (100 iterations)
+Benchmarking cache_performance/cache_test/512x512x512: Analyzing
+cache_performance/cache_test/512x512x512
+                        time:   [83.363 ms 84.137 ms 85.149 ms]
+                        thrpt:  [1.5763 Gelem/s 1.5952 Gelem/s 1.6100 Gelem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+Benchmarking cache_performance/cache_test/1024x1024x1024
+Benchmarking cache_performance/cache_test/1024x1024x1024: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 78.2s, or reduce sample count to 10.
+Benchmarking cache_performance/cache_test/1024x1024x1024: Collecting 100 samples in estimated 78.180 s (100 iterations)
+Benchmarking cache_performance/cache_test/1024x1024x1024: Analyzing
+cache_performance/cache_test/1024x1024x1024
+                        time:   [771.00 ms 773.21 ms 775.41 ms]
+                        thrpt:  [1.3847 Gelem/s 1.3887 Gelem/s 1.3927 Gelem/s]
+
+Benchmarking qk256_dequant/scalar/256
+Benchmarking qk256_dequant/scalar/256: Warming up for 3.0000 s
+Benchmarking qk256_dequant/scalar/256: Collecting 100 samples in estimated 5.0007 s (37M iterations)
+Benchmarking qk256_dequant/scalar/256: Analyzing
+qk256_dequant/scalar/256
+                        time:   [138.15 ns 140.54 ns 143.46 ns]
+                        thrpt:  [1.7844 Gelem/s 1.8215 Gelem/s 1.8531 Gelem/s]
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) low mild
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+Benchmarking qk256_dequant/scalar/512
+Benchmarking qk256_dequant/scalar/512: Warming up for 3.0000 s
+Benchmarking qk256_dequant/scalar/512: Collecting 100 samples in estimated 5.0000 s (17M iterations)
+Benchmarking qk256_dequant/scalar/512: Analyzing
+qk256_dequant/scalar/512
+                        time:   [290.43 ns 295.32 ns 300.80 ns]
+                        thrpt:  [1.7021 Gelem/s 1.7337 Gelem/s 1.7629 Gelem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking qk256_dequant/scalar/1024
+Benchmarking qk256_dequant/scalar/1024: Warming up for 3.0000 s
+Benchmarking qk256_dequant/scalar/1024: Collecting 100 samples in estimated 5.0019 s (9.0M iterations)
+Benchmarking qk256_dequant/scalar/1024: Analyzing
+qk256_dequant/scalar/1024
+                        time:   [541.48 ns 549.07 ns 556.97 ns]
+                        thrpt:  [1.8385 Gelem/s 1.8650 Gelem/s 1.8911 Gelem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+Benchmarking qk256_dequant/scalar/4096
+Benchmarking qk256_dequant/scalar/4096: Warming up for 3.0000 s
+Benchmarking qk256_dequant/scalar/4096: Collecting 100 samples in estimated 5.0021 s (2.3M iterations)
+Benchmarking qk256_dequant/scalar/4096: Analyzing
+qk256_dequant/scalar/4096
+                        time:   [2.0986 µs 2.1268 µs 2.1566 µs]
+                        thrpt:  [1.8993 Gelem/s 1.9259 Gelem/s 1.9518 Gelem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+Benchmarking qk256_dequant/scalar/16384
+Benchmarking qk256_dequant/scalar/16384: Warming up for 3.0000 s
+Benchmarking qk256_dequant/scalar/16384: Collecting 100 samples in estimated 5.0268 s (581k iterations)
+Benchmarking qk256_dequant/scalar/16384: Analyzing
+qk256_dequant/scalar/16384
+                        time:   [8.2847 µs 8.4048 µs 8.5389 µs]
+                        thrpt:  [1.9187 Gelem/s 1.9494 Gelem/s 1.9776 Gelem/s]
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) low mild
+  6 (6.00%) high mild
+

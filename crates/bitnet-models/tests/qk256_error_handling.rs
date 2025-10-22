@@ -89,21 +89,29 @@ fn test_i2s_qk256_no_scale_size_validation() {
     let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES; // = 128
     let expected_bytes = rows * row_stride_bytes; // = 1024
 
+    // Note: I2SQk256NoScale::new allows a tolerance of 128 bytes for alignment padding
+    const TOLERANCE: usize = 128;
+
     // Test 1: Correct size (should succeed)
     let qs_correct = vec![0u8; expected_bytes];
     let result = I2SQk256NoScale::new(rows, cols, qs_correct);
     assert!(result.is_ok(), "Correct size should succeed");
 
-    // Test 2: Too small (should fail)
-    let qs_too_small = vec![0u8; expected_bytes - 1];
+    // Test 2: Within tolerance (should succeed)
+    let qs_within_tolerance = vec![0u8; expected_bytes + TOLERANCE];
+    let result = I2SQk256NoScale::new(rows, cols, qs_within_tolerance);
+    assert!(result.is_ok(), "Size within tolerance should succeed");
+
+    // Test 3: Too small beyond tolerance (should fail)
+    let qs_too_small = vec![0u8; expected_bytes - TOLERANCE - 1];
     let result = I2SQk256NoScale::new(rows, cols, qs_too_small);
-    assert!(result.is_err(), "Too small should fail");
+    assert!(result.is_err(), "Too small beyond tolerance should fail");
     assert!(result.unwrap_err().to_string().contains("data size mismatch"));
 
-    // Test 3: Too large (should fail)
-    let qs_too_large = vec![0u8; expected_bytes + 1];
+    // Test 4: Too large beyond tolerance (should fail)
+    let qs_too_large = vec![0u8; expected_bytes + TOLERANCE + 1];
     let result = I2SQk256NoScale::new(rows, cols, qs_too_large);
-    assert!(result.is_err(), "Too large should fail");
+    assert!(result.is_err(), "Too large beyond tolerance should fail");
     assert!(result.unwrap_err().to_string().contains("data size mismatch"));
 }
 
@@ -397,16 +405,18 @@ fn test_unpack_qk256_block_all_ones() {
 /// Verify unpack_qk256_block correctly unpacks alternating patterns
 #[test]
 fn test_unpack_qk256_block_alternating_pattern() {
-    // Pattern: 0b_10_01_10_01 = 0x96
+    // Pattern: 0x96 = 0b10010110
+    // Bit extraction order: [1:0], [3:2], [5:4], [7:6]
+    // 0b10010110 unpacks to: [0b10, 0b01, 0b01, 0b10] = [2, 1, 1, 2]
     let packed = [0x96u8; QK256_PACKED_BYTES];
     let mut codes = [0u8; QK256_BLOCK];
 
     unpack_qk256_block(&packed, &mut codes);
 
-    // Each byte unpacks to [1, 2, 1, 2]
+    // Each byte unpacks to [2, 1, 1, 2] based on bit order
     for chunk_idx in 0..(QK256_BLOCK / 4) {
-        assert_eq!(codes[chunk_idx * 4], 1, "Code {} should be 1", chunk_idx * 4);
-        assert_eq!(codes[chunk_idx * 4 + 1], 2, "Code {} should be 2", chunk_idx * 4 + 1);
+        assert_eq!(codes[chunk_idx * 4], 2, "Code {} should be 2", chunk_idx * 4);
+        assert_eq!(codes[chunk_idx * 4 + 1], 1, "Code {} should be 1", chunk_idx * 4 + 1);
         assert_eq!(codes[chunk_idx * 4 + 2], 1, "Code {} should be 1", chunk_idx * 4 + 2);
         assert_eq!(codes[chunk_idx * 4 + 3], 2, "Code {} should be 2", chunk_idx * 4 + 3);
     }

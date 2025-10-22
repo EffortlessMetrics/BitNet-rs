@@ -994,7 +994,8 @@ fn test_ln_gamma_validator_envelope() {
 
     // Test 3: Invalid RMS should fail in strict mode
     {
-        let _guard = EnvGuard::set("BITNET_STRICT_MODE", "1");
+        let _guard = EnvGuard::new("BITNET_STRICT_MODE");
+        _guard.set("1");
         let invalid_tensor = tensor_with_rms(0.01, 100);
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &invalid_tensor);
         assert!(result.is_err(), "Invalid RMS should fail in strict mode");

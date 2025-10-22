@@ -12,6 +12,8 @@
 #![allow(unused_variables)]
 #![allow(clippy::redundant_closure_call)]
 
+mod helpers;
+
 use anyhow::{Result, anyhow};
 use serial_test::serial;
 use std::collections::HashMap;
@@ -27,14 +29,19 @@ mod strict_mode_config_tests {
     use super::*;
 
     /// Tests basic strict mode environment variable parsing
+    ///
+    /// Uses EnvGuard for thread-safe environment variable management with automatic cleanup.
+    /// The #[serial] attribute ensures this test runs exclusively to prevent environment
+    /// variable conflicts with other tests in the workspace.
     #[test]
+    #[serial(bitnet_env)]
     fn test_strict_mode_environment_variable_parsing() {
         println!("🔒 Strict Mode: Testing environment variable parsing");
 
         // Test default state (no environment variable)
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
+        // EnvGuard::remove ensures the variable is removed and automatically restored on drop
+        let guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+        guard.remove();
         let default_config = StrictModeConfig::from_env();
         assert!(!default_config.enabled, "Strict mode should be disabled by default");
         assert!(!default_config.fail_on_mock, "Mock failure should be disabled by default");
@@ -42,11 +49,12 @@ mod strict_mode_config_tests {
             !default_config.require_quantization,
             "Quantization requirement should be disabled by default"
         );
+        drop(guard);
 
         // Test explicit enable with "1"
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-        }
+        // EnvGuard::set ensures the variable is set and automatically restored on drop
+        let guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+        guard.set("1");
         let enabled_config = StrictModeConfig::from_env();
         assert!(enabled_config.enabled, "Strict mode should be enabled with BITNET_STRICT_MODE=1");
         assert!(enabled_config.fail_on_mock, "Mock failure should be enabled in strict mode");
@@ -54,52 +62,48 @@ mod strict_mode_config_tests {
             enabled_config.require_quantization,
             "Quantization should be required in strict mode"
         );
+        drop(guard);
 
         // Test explicit enable with "true"
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "true");
-        }
+        let guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+        guard.set("true");
         let true_config = StrictModeConfig::from_env();
         assert!(true_config.enabled, "Strict mode should be enabled with BITNET_STRICT_MODE=true");
+        drop(guard);
 
         // Test case insensitive "TRUE"
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "TRUE");
-        }
+        let guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+        guard.set("TRUE");
         let upper_config = StrictModeConfig::from_env();
         assert!(upper_config.enabled, "Strict mode should be enabled with BITNET_STRICT_MODE=TRUE");
+        drop(guard);
 
         // Test explicit disable with "0"
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "0");
-        }
+        let guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+        guard.set("0");
         let disabled_config = StrictModeConfig::from_env();
         assert!(
             !disabled_config.enabled,
             "Strict mode should be disabled with BITNET_STRICT_MODE=0"
         );
+        drop(guard);
 
         // Test explicit disable with "false"
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "false");
-        }
+        let guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+        guard.set("false");
         let false_config = StrictModeConfig::from_env();
         assert!(
             !false_config.enabled,
             "Strict mode should be disabled with BITNET_STRICT_MODE=false"
         );
+        drop(guard);
 
         // Test invalid values (should default to disabled)
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "invalid");
-        }
+        let guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+        guard.set("invalid");
         let invalid_config = StrictModeConfig::from_env();
         assert!(!invalid_config.enabled, "Invalid values should default to disabled");
-
-        // Clean up
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
+        drop(guard);
 
         println!("  ✅ Environment variable parsing successful");
     }
@@ -291,15 +295,18 @@ mod cross_crate_consistency_tests {
     use super::*;
 
     /// Tests strict mode consistency across all BitNet.rs crates
+    ///
+    /// Uses EnvGuard for thread-safe environment variable management with automatic cleanup.
+    /// The #[serial] attribute ensures this test runs exclusively to prevent environment
+    /// variable conflicts with other tests in the workspace.
     #[test]
-    #[ignore = "FLAKY: Environment variable pollution in workspace context - repro rate ~50% - passes in isolation - tracked in issue #441"]
+    #[serial(bitnet_env)]
     fn test_cross_crate_strict_mode_consistency() {
         println!("🔒 Cross-Crate: Testing strict mode consistency");
 
         let consistency_result = || -> Result<()> {
-            unsafe {
-                env::set_var("BITNET_STRICT_MODE", "1");
-            }
+            let _guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+            _guard.set("1");
 
             // Test common crate strict mode
             let common_enforcer = bitnet_common::StrictModeEnforcer::new();
@@ -361,10 +368,6 @@ mod cross_crate_consistency_tests {
             // Note: Detailed validation failure tracking will be implemented with real types
             // assert_eq!(coordination_result.validation_failures, 0, "Should have no validation failures");
 
-            unsafe {
-                env::remove_var("BITNET_STRICT_MODE");
-            }
-
             println!("  ✅ Cross-crate consistency validation successful");
             println!("     - {} crates tested", 5);
             println!("     - Configuration consistency: ✅");
@@ -378,17 +381,16 @@ mod cross_crate_consistency_tests {
 
     /// Tests strict mode configuration inheritance
     #[test]
+    #[serial(bitnet_env)]
     fn test_strict_mode_configuration_inheritance() {
         println!("🔒 Cross-Crate: Testing configuration inheritance");
 
         let inheritance_result = || -> Result<()> {
             // Test parent-child configuration inheritance
-            unsafe {
-                env::set_var("BITNET_STRICT_MODE", "1");
-            }
-            unsafe {
-                env::set_var("BITNET_STRICT_INHERITANCE", "1");
-            }
+            let _guard1 = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+            _guard1.set("1");
+            let _guard2 = helpers::env_guard::EnvGuard::new("BITNET_STRICT_INHERITANCE");
+            _guard2.set("1");
 
             let parent_config = ParentStrictConfig::from_env();
             let child_configs = [
@@ -421,9 +423,8 @@ mod cross_crate_consistency_tests {
             }
 
             // Test configuration override mechanism
-            unsafe {
-                env::set_var("BITNET_STRICT_QUANTIZATION_OVERRIDE", "1");
-            }
+            let _guard3 = helpers::env_guard::EnvGuard::new("BITNET_STRICT_QUANTIZATION_OVERRIDE");
+            _guard3.set("1");
             let override_child = ChildStrictConfig::from_parent(&parent_config, "quantization");
             assert!(
                 override_child.has_component_override,
@@ -431,23 +432,10 @@ mod cross_crate_consistency_tests {
             );
 
             // Test configuration cascade changes
-            unsafe {
-                env::set_var("BITNET_STRICT_MODE", "0");
-            }
+            _guard1.set("0");
             let updated_parent = ParentStrictConfig::from_env();
             let cascaded_child = ChildStrictConfig::from_parent(&updated_parent, "inference");
             assert!(!cascaded_child.enabled, "Child should reflect parent configuration changes");
-
-            // Clean up
-            unsafe {
-                env::remove_var("BITNET_STRICT_MODE");
-            }
-            unsafe {
-                env::remove_var("BITNET_STRICT_INHERITANCE");
-            }
-            unsafe {
-                env::remove_var("BITNET_STRICT_QUANTIZATION_OVERRIDE");
-            }
 
             println!("  ✅ Configuration inheritance testing successful");
 
@@ -459,20 +447,14 @@ mod cross_crate_consistency_tests {
 
     /// Tests strict mode in multi-threaded environments
     #[test]
+    #[serial(bitnet_env)]
     fn test_strict_mode_thread_safety() {
         println!("🔒 Cross-Crate: Testing thread safety");
 
-        // Serialize environment variable access to prevent test interference
-        let _env_guard = TEST_ENV_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap();
-
         let thread_safety_result = || -> Result<()> {
             // Ensure clean environment state
-            unsafe {
-                env::remove_var("BITNET_STRICT_MODE");
-            }
-            unsafe {
-                env::set_var("BITNET_STRICT_MODE", "1");
-            }
+            let _guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+            _guard.set("1");
 
             // Give time for environment variable to propagate
             std::thread::sleep(std::time::Duration::from_millis(10));
@@ -544,10 +526,6 @@ mod cross_crate_consistency_tests {
                 "Should maintain consistent state across threads"
             );
 
-            unsafe {
-                env::remove_var("BITNET_STRICT_MODE");
-            }
-
             println!("  ✅ Thread safety testing successful");
             println!("     - {} threads tested", results.len());
             println!("     - Race conditions: None detected");
@@ -566,15 +544,18 @@ mod mock_prevention_tests {
     use super::*;
 
     /// Tests comprehensive mock detection across computation types
+    ///
+    /// Uses EnvGuard for thread-safe environment variable management with automatic cleanup.
+    /// The #[serial] attribute ensures this test runs exclusively to prevent environment
+    /// variable conflicts with other tests in the workspace.
     #[test]
+    #[serial(bitnet_env)]
     fn test_comprehensive_mock_detection() {
         println!("🕵️  Mock Prevention: Testing comprehensive detection");
 
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-        }
-
         let detection_result = || -> Result<()> {
+            let _guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+            _guard.set("1");
             let mock_detector = ComprehensiveMockDetector::new();
 
             // Test quantization mock detection
@@ -688,25 +669,22 @@ mod mock_prevention_tests {
             Ok(())
         }();
 
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
-
         detection_result.expect("Comprehensive mock detection should work");
     }
 
     /// Tests strict mode error reporting and diagnostics
+    ///
+    /// Uses EnvGuard for thread-safe environment variable management with automatic cleanup.
+    /// The #[serial] attribute ensures this test runs exclusively to prevent environment
+    /// variable conflicts with other tests in the workspace.
     #[test]
-    #[serial]
-    #[ignore = "Flaky in workspace runs due to environment variable conflicts - passes individually"]
+    #[serial(bitnet_env)]
     fn test_strict_mode_error_reporting() {
         println!("🕵️  Mock Prevention: Testing error reporting");
 
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-        }
-
         let error_reporting_result = || -> Result<()> {
+            let _guard = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
+            _guard.set("1");
             let error_reporter = StrictModeErrorReporter::new();
 
             // Test detailed error reporting for mock detection
@@ -786,10 +764,6 @@ mod mock_prevention_tests {
 
             Ok(())
         }();
-
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
 
         error_reporting_result.expect("Error reporting should work");
     }

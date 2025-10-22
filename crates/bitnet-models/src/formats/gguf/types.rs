@@ -889,6 +889,15 @@ pub fn detect_i2s_flavor(
             available,
             qk256_need
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=GgmlQk256NoScale kernel=scalar shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::GgmlQk256NoScale);
     }
     if diff_inline == 0 {
@@ -898,6 +907,15 @@ pub fn detect_i2s_flavor(
             available,
             inline_need
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=BitNet32F16 kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::BitNet32F16);
     }
     if diff_split32 == 0 && has_scale_sibling {
@@ -907,6 +925,15 @@ pub fn detect_i2s_flavor(
             available,
             split_need
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=Split32WithSibling kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::Split32WithSibling);
     }
 
@@ -919,6 +946,15 @@ pub fn detect_i2s_flavor(
             qk256_need,
             diff_qk256
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=GgmlQk256NoScale kernel=scalar shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::GgmlQk256NoScale);
     }
     if has_scale_sibling && diff_split32 <= tolerance {
@@ -929,6 +965,15 @@ pub fn detect_i2s_flavor(
             split_need,
             diff_split32
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=Split32WithSibling kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::Split32WithSibling);
     }
     if diff_inline <= tolerance {
@@ -939,6 +984,15 @@ pub fn detect_i2s_flavor(
             inline_need,
             diff_inline
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=BitNet32F16 kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::BitNet32F16);
     }
 

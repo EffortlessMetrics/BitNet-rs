@@ -1,0 +1,193 @@
+================================================================================
+STRICT MODE TEST FAILURE ANALYSIS - TECHNICAL ARCHITECTURE DIAGRAM
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          ORIGINAL ARCHITECTURE (BROKEN)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    Test Thread A               Test Thread B               Test Thread C
+    ─────────────               ─────────────               ─────────────
+          │                           │                           │
+          │ TOCTOU RACE CONDITION     │                           │
+          │ ┌──────────────────────────┤                           │
+          │ │  with_strict_mode(true)  │                           │
+          │ │  set("BITNET_STRICT_MODE","1")                       │
+          │ ├──────────────────────────┼───────────────────────────┤
+          │                            │  new_fresh()              │
+          │                            │  read env → "1" ✓        │
+          │                            │  continue...              │
+          └──────────────────────────┬─┘                           │
+                  │                  │                             │
+          unset("BITNET_STRICT_MODE") │                             │
+          (RESTORE)                   │                    new_fresh()
+                  │                  │                      (RACE! reads "")
+                  │                  │                             │
+                  └──────────────────┼─────────────────────────────┘
+                              ✗ FAILS due to config mismatch
+
+Root Causes:
+  1. unsafe { env::set_var() } modifies global state
+  2. Parallel test execution creates TOCTOU windows
+  3. OnceLock::get_or_init(from_env) called after env restored
+  4. No test isolation mechanism
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        NEW ARCHITECTURE (FIXED)                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    Test Thread A               Test Thread B               Test Thread C
+    ─────────────               ─────────────               ─────────────
+          │                           │                           │
+          │                           │                           │
+    ┌─────▼──────────┐          ┌─────▼──────────┐          ┌─────▼──────────┐
+    │ Create Config  │          │ Create Config  │          │ Create Config  │
+    │ {enabled:true} │          │ {enabled:true} │          │ {enabled:true} │
+    └─────┬──────────┘          └─────┬──────────┘          └─────┬──────────┘
+          │                           │                           │
+    ┌─────▼──────────────────────────────────────────────────────────────────┐
+    │  with_config(Some(config))  ◄── No Environment Variables              │
+    │  - Bypasses OnceLock                                                   │
+    │  - Each test has isolated config                                       │
+    │  - No TOCTOU races                                                     │
+    └─────┬──────────────────────────────────────────────────────────────────┘
+          │                           │                           │
+    ┌─────▼──────────┐          ┌─────▼──────────┐          ┌─────▼──────────┐
+    │ validate_...   │          │ validate_...   │          │ validate_...   │
+    │ returns Err ✓  │          │ returns Err ✓  │          │ returns Err ✓  │
+    └────────────────┘          └────────────────┘          └────────────────┘
+
+Benefits:
+  ✓ Zero environment pollution
+  ✓ Thread-safe (no shared mutable state)
+  ✓ Deterministic (no timing dependencies)
+  ✓ Test isolation (each test is independent)
+  ✓ Explicit semantics (config visible in code)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    RECEIPT VALIDATION CHAIN (CONTEXT)                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Production Inference Path:
+  Model Loading
+       │
+       ▼
+  Quantization Setup
+       │
+       ▼
+  Strict Mode Runtime Guards ◄── TEST VALIDATES THIS LAYER
+       │  ├─ FP32 fallback blocked?
+       │  ├─ Mock computation blocked?
+       │  ├─ Quantization kernels required?
+       │  └─ Performance metrics validated?
+       │
+       ▼
+  Kernel Execution (CPU/GPU)
+       │
+       ▼
+  Receipt Generation
+       │  ├─ backend: "cpu" | "cuda"
+       │  ├─ kernels: [list of kernel IDs]
+       │  ├─ tokens_per_second: measured
+       │  └─ compute_path: "real" (not "mock")
+       │
+       ▼
+  Receipt Validation (post-inference)
+       │  ├─ Schema v1.0.0 valid?
+       │  ├─ compute_path == "real"?
+       │  ├─ Kernel count ≤ 10K?
+       │  ├─ Kernel IDs properly formatted?
+       │  └─ CPU-specific TPS ≤ 150?
+       │
+       ▼
+    CI Gates (strict mode enforcement)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              STRICT MODE VALIDATION LOGIC (SIMPLIFIED)                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+fn validate_quantization_fallback() {
+    // Runtime Guard at Tier 2 (Production Release Builds)
+    
+    if !self.enabled || !self.enforce_quantized_inference {
+        return Ok(());  // ◄── Non-strict mode: allow fallback
+    }
+    
+    // Strict mode: ALWAYS reject fallback
+    Err(BitNetError::StrictMode(format!(
+        "Strict mode: FP32 fallback rejected - qtype={:?}, device={:?}, 
+         layer_dims={:?}, reason={}",
+        quantization_type, device, layer_dimensions, fallback_reason
+    )))
+}
+
+Test Assertion Tree:
+  ├─ result.is_err()? ✓
+  │
+  ├─ if let Err(BitNetError::StrictMode(msg)) = result {
+  │   ├─ msg.contains("FP32 fallback")? ✓
+  │   ├─ msg.contains("128")? ✓
+  │   └─ msg.contains("256")? ✓
+  │
+  └─ ALL ASSERTIONS PASS ✓
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       FIX OPTIONS COMPARISON MATRIX                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                     │ Env Vars │ Explicit │ Thread Local │ Test Helper
+                     │ (Old)    │ Config   │              │
+─────────────────────┼──────────┼──────────┼──────────────┼──────────────
+Thread-Safe          │    ✗     │    ✓     │      ✓       │      ✓
+Deterministic        │    ✗     │    ✓     │      ~       │      ✓
+Clear Semantics      │    ✗     │    ✓     │      ✗       │      ~
+Enables Parallelism  │    ✗     │    ✓     │      ✓       │      ✓
+Complexity           │    Low   │   Low    │    Medium    │     Low
+Explicit Config      │    ✗     │    ✓     │      ✗       │      ✗
+Hidden State         │   High   │   None   │     High     │    None
+Future-Proof         │    ✗     │    ✓     │      ~       │      ✓
+─────────────────────┴──────────┴──────────┴──────────────┴──────────────
+
+RECOMMENDATION: ▶▶▶ OPTION 2: EXPLICIT CONFIG ◀◀◀
+  - Best balance of safety, clarity, and simplicity
+  - Already implemented in current codebase
+  - Zero overhead, zero hidden state
+  - Future-proof for any caching strategy
+
+
+================================================================================
+SUMMARY OF KEY POINTS
+================================================================================
+
+1. ROOT CAUSE
+   TOCTOU race condition caused by unsafe { env::set_var() } in parallel tests
+
+2. FAILING ASSERTION
+   test_strict_mode_enforcer_validates_fallback()
+   Expected: Err(BitNetError::StrictMode(...)) with proper error message
+   Got: Sometimes Ok (due to race condition) or wrong config (due to cache)
+
+3. RECEIPT CONTEXT
+   Strict mode validates that kernel_ids contain real CPU kernels, not mocks
+   Receipt proves computation actually happened (compute_path == "real")
+
+4. SOLUTION IMPLEMENTED
+   Replace with_strict_mode() → with_config(Some(config))
+   Each test creates its own config, no environment pollution
+
+5. VERIFICATION
+   ✓ Test passes with explicit config
+   ✓ Thread-safe (parallel execution safe)
+   ✓ Deterministic (consistent results)
+   ✓ No environment pollution
+   ✓ Error messages include all diagnostics
+
+6. NEXT STEPS
+   Apply same pattern to 4 other async strict mode tests
+   Make this the standard pattern for all new strict mode tests
+
+================================================================================

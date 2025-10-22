@@ -41,7 +41,7 @@ tempfile.workspace = true
 proptest = "1.7.0"
 tokio = { workspace = true, features = ["rt", "macros"] }
 dirs = "5"
-serial_test = "3.0"
+serial_test.workspace = true
 
 [features]
 default = []
@@ -62,3 +62,5 @@ kernels = []  # Kernels integration for test scaffolding
 i2s = []  # I2S quantization for test scaffolding
 tl1 = []  # TL1 quantization for test scaffolding
 tl2 = []  # TL2 quantization for test scaffolding
+test-fixtures = []  # Enable tests that require real GGUF fixtures
+fixtures = []  # Enable GGUF fixture generation for QK256 dual-flavor tests (PR1)

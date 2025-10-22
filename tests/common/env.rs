@@ -19,8 +19,10 @@ static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 /// use bitnet_tests::common::env::EnvGuard;
 ///
 /// fn my_test() {
-///     let _guard1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-///     let _guard2 = EnvGuard::set("BITNET_SEED", "42");
+///     let _guard1 = EnvGuard::new("BITNET_DETERMINISTIC");
+///     _guard1.set("1");
+///     let _guard2 = EnvGuard::new("BITNET_SEED");
+///     _guard2.set("42");
 ///     // Test code here...
 ///     // Variables automatically restored when guards drop
 /// }

@@ -381,11 +381,15 @@ impl MultiHeadAttention {
         };
 
         // Update KV cache if provided (store HKV heads, not Hq)
+        // **Performance note**: Borrow references instead of cloning after append.
+        // Candle operations accept both owned and borrowed tensors.
         let (k_ctx, v_ctx) = if let Some(cache) = kv_cache {
             cache.append(&k, &v)?;
-            (cache.k.clone(), cache.v.clone())
+            // Borrow from cache - avoids cloning full KV history
+            (&cache.k, &cache.v)
         } else {
-            (k, v)
+            // No cache: use freshly computed K/V from this step
+            (&k, &v)
         };
 
         // GQA core: expand K/V to Hq heads (repeat along head axis)
@@ -1112,6 +1116,15 @@ impl LayerKVCache {
         Ok(Self { k, v, seq_len: 0, max_seq_len, n_kv_heads })
     }
 
+    /// Append new K/V tensors to the cache
+    ///
+    /// **Performance note**: The clones on first append (lines 1130-1131) are necessary
+    /// because we accept `&Tensor` but need to store owned tensors. Candle's `Tensor::clone()`
+    /// is cheap - it only increments the Arc reference count, not a deep data copy.
+    /// Subsequent appends use `Tensor::cat` which allocates new tensors regardless.
+    ///
+    /// To eliminate these clones would require API changes to accept owned tensors,
+    /// which would complicate calling code.
     pub fn append(&mut self, k_new: &Tensor, v_new: &Tensor) -> Result<()> {
         // Expect shapes: k: [B,HKV,T_new,Hd], v: [B,HKV,T_new,Hd] where HKV = n_kv_heads
         let new_seq_len = k_new.dims()[2];
@@ -1126,7 +1139,7 @@ impl LayerKVCache {
         }
 
         if self.seq_len == 0 {
-            // First append - just store the tensors
+            // First append: clone is necessary (Arc increment only, not deep copy)
             self.k = k_new.clone();
             self.v = v_new.clone();
         } else {
@@ -1136,6 +1149,7 @@ impl LayerKVCache {
                     "KV cache overflow".to_string(),
                 )));
             }
+            // Tensor::cat allocates new tensor - no optimization possible here
             self.k = Tensor::cat(&[&self.k, k_new], 2)?;
             self.v = Tensor::cat(&[&self.v, v_new], 2)?;
         }
@@ -1413,7 +1427,7 @@ impl TransformerModel {
 
             // Run through all layers using the incremental path which applies
             // positional encoding per layer and causal masking internally.
-            let step_hidden = self.forward(&step_hidden, Some(&mut kv_cache))?;
+            let step_hidden = self.forward(step_hidden, Some(&mut kv_cache))?;
 
             // Project to vocabulary logits for this step.
             let step_logits = self.logits(&step_hidden)?;
@@ -1424,8 +1438,12 @@ impl TransformerModel {
         Ok(Tensor::cat(&logits_steps, 1)?)
     }
 
-    pub fn forward(&self, hidden: &Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
-        let mut x = hidden.clone();
+    /// Forward pass through transformer layers
+    ///
+    /// **Performance note**: Accepts ownership of `hidden` to avoid cloning on hot path.
+    /// Caller should pass owned tensor or use `.clone()` explicitly if needed.
+    pub fn forward(&self, hidden: Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
+        let mut x = hidden; // Take ownership - no clone needed!
 
         // Debug input activation norm
         if std::env::var("DEBUG_ATTN").is_ok()

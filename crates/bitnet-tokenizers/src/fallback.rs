@@ -483,7 +483,7 @@ mod tests {
     #[cfg(feature = "cpu")]
     async fn test_strict_mode_behavior() {
         // Set strict mode with guard for automatic cleanup
-        let _guard = EnvGuard::set("BITNET_STRICT_TOKENIZERS", "1");
+        let _guard = EnvGuard::new("BITNET_STRICT_TOKENIZERS").set("1");
 
         let strategies = vec![
             FallbackStrategy::ColocatedFiles,

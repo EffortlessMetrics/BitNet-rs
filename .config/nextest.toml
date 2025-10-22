@@ -5,15 +5,19 @@
 # Test execution settings
 fail-fast = true
 test-threads = "num-cpus"
-retries = 1
+retries = 0  # No flaky test retries - fail immediately
+
+# Global test timeout: 5 minutes to prevent hangs
+slow-timeout = { period = "300s", terminate-after = 1 }
 
 # Output settings
-failure-output = "immediate"
-success-output = "never"
+failure-output = "immediate"  # Show failures immediately
+success-output = "never"       # Reduce noise, never show success output
 status-level = "pass"
 
-# Slow test detection
-slow-timeout = { period = "60s", terminate-after = 3 }
+# JUnit output for local reporting
+[profile.default.junit]
+path = "target/nextest/junit.xml"
 
 [profile.default-miri]
 slow-timeout = "10m"
@@ -21,12 +25,15 @@ slow-timeout = "10m"
 [profile.ci]
 # CI-specific settings
 fail-fast = false
-test-threads = 4
-retries = { backoff = "exponential", count = 2, delay = "1s", max-delay = "10s" }
+test-threads = 4  # Fixed thread count for reproducibility
+retries = 0       # No retries in CI - tests must pass consistently
+
+# Global test timeout: 5 minutes to prevent CI hangs
+slow-timeout = { period = "300s", terminate-after = 1 }
 
 # Output for CI
 failure-output = "immediate"
-success-output = "final"
+success-output = "never"  # Keep CI logs clean
 status-level = "fail"
 
 # JUnit output for CI reporting

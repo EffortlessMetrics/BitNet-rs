@@ -13,6 +13,7 @@ mod support;
 use support::EnvGuard;
 
 use anyhow::Result;
+use serial_test::serial;
 use bitnet_common::{Device, Tensor};
 use bitnet_inference::{AutoregressiveGenerator, GenConfig};
 use bitnet_models::BitNetModel;
@@ -21,12 +22,15 @@ use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 /// AC:3.1 - Deterministic generation with fixed seed produces identical sequences
 /// Validates ChaCha8Rng seeding and deterministic execution
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     // Set deterministic environment with guards for automatic cleanup
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("BITNET_SEED", "42");
-    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("BITNET_SEED");
+    _g2.set("42");
+    let _g3 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g3.set("1");
 
     let config = GenConfig {
         max_new_tokens: 50,
@@ -72,7 +76,6 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
 /// AC:3.2 - Greedy sampling (temperature=0 or top_k=1) is deterministic
 /// Validates greedy decoding produces same result without seed
 #[tokio::test]
-#[serial_test::serial]
 async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
     let config = GenConfig {
         max_new_tokens: 20,
@@ -110,10 +113,12 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
 /// AC:3.3 - Top-k sampling with seed is reproducible
 /// Validates top-k sampling respects seed for determinism
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g2.set("1");
 
     let config = GenConfig {
         max_new_tokens: 30,
@@ -148,10 +153,12 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
 /// AC:3.4 - Top-p (nucleus) sampling with seed is reproducible
 /// Validates nucleus sampling respects seed for determinism
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g2.set("1");
 
     let config = GenConfig {
         max_new_tokens: 25,
@@ -186,10 +193,12 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
 /// AC:3.5 - Different seeds produce different outputs
 /// Validates seed actually affects generation
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g2.set("1");
 
     let _model = create_test_model()?;
     let tokenizer = create_test_tokenizer()?;
@@ -235,11 +244,14 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
 /// AC:3.6 - Determinism validation with RAYON_NUM_THREADS=1
 /// Validates single-threaded execution prevents race conditions
 #[tokio::test]
-#[serial_test::serial]
+#[serial(bitnet_env)]
 async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
-    let _g1 = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-    let _g2 = EnvGuard::set("BITNET_SEED", "42");
-    let _g3 = EnvGuard::set("RAYON_NUM_THREADS", "1");
+    let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
+    _g1.set("1");
+    let _g2 = EnvGuard::new("BITNET_SEED");
+    _g2.set("42");
+    let _g3 = EnvGuard::new("RAYON_NUM_THREADS");
+    _g3.set("1");
 
     let config = GenConfig {
         max_new_tokens: 15,
