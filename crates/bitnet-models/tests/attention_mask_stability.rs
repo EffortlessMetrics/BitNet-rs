@@ -78,9 +78,9 @@ fn test_softmax_partially_masked_row() {
     let values = softmax_f32.to_vec2::<f32>().unwrap();
 
     // All rows should be valid (no NaN)
-    for i in 0..3 {
-        for j in 0..3 {
-            assert!(!values[i][j].is_nan(), "NaN at row {}, col {}", i, j);
+    for (i, row) in values.iter().enumerate().take(3) {
+        for (j, val) in row.iter().enumerate().take(3) {
+            assert!(!val.is_nan(), "NaN at row {}, col {}", i, j);
         }
     }
 
@@ -118,9 +118,9 @@ fn test_softmax_causal_mask_pattern() {
     let values = softmax_f32.to_vec2::<f32>().unwrap();
 
     // No NaN values
-    for i in 0..3 {
-        for j in 0..3 {
-            assert!(!values[i][j].is_nan(), "NaN at row {}, col {}", i, j);
+    for (i, row) in values.iter().enumerate().take(3) {
+        for (j, val) in row.iter().enumerate().take(3) {
+            assert!(!val.is_nan(), "NaN at row {}, col {}", i, j);
         }
     }
 
@@ -159,10 +159,10 @@ fn test_large_negative_value_stability() {
     let values = softmax_f32.to_vec2::<f32>().unwrap();
 
     // All rows: first position should dominate, second should be negligible
-    for i in 0..3 {
-        assert!(!values[i][0].is_nan());
-        assert!(!values[i][1].is_nan());
-        assert!(values[i][0] > 0.99999, "Unmasked position should dominate (row {})", i);
-        assert!(values[i][1] < 1e-6, "Masked position should be negligible (row {})", i);
+    for (i, row) in values.iter().enumerate().take(3) {
+        assert!(!row[0].is_nan());
+        assert!(!row[1].is_nan());
+        assert!(row[0] > 0.99999, "Unmasked position should dominate (row {})", i);
+        assert!(row[1] < 1e-6, "Masked position should be negligible (row {})", i);
     }
 }

@@ -15,7 +15,6 @@ use bitnet_common::BitNetError;
 #[cfg(any(feature = "cpu", feature = "gpu", feature = "crossval"))]
 use bitnet_common::Device;
 use candle_core::Tensor as CandleTensor;
-use serial_test::serial;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;

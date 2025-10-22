@@ -166,8 +166,8 @@ fn test_bitnet32_still_uses_fp_path() {
 
     use std::io::Write;
 
-    let rows: usize = 2;
-    let cols: usize = 64;
+    let _rows: usize = 2;
+    let _cols: usize = 64;
 
     // Generate fixture using helpers::qk256_fixtures with deterministic seed 43
     let fixture_bytes = helpers::qk256_fixtures::generate_bitnet32_2x64(43);

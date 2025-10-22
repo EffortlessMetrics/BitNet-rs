@@ -382,7 +382,7 @@ mod deterministic_inference_tests {
             let model = loader.load::<&Path>(model_path.as_ref())?;
             let tokenizer = auto::load_auto(&model_path, None)?;
 
-            let mut engine = InferenceEngine::new(model.into(), tokenizer, BNDevice::Cpu)?;
+            let engine = InferenceEngine::new(model.into(), tokenizer, BNDevice::Cpu)?;
 
             let ids = engine.tokenizer().encode(prompt, add_bos, false)?;
             let output = engine.generate_tokens(&ids, &config).await?;

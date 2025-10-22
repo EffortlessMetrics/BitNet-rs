@@ -483,6 +483,7 @@ mod tests {
     #[cfg(feature = "cpu")]
     async fn test_strict_mode_behavior() {
         // Set strict mode with guard for automatic cleanup
+        #[allow(clippy::let_unit_value)]
         let _guard = EnvGuard::new("BITNET_STRICT_TOKENIZERS").set("1");
 
         let strategies = vec![

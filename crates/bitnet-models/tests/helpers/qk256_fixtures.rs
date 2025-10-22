@@ -141,7 +141,8 @@ pub fn generate_qk256_3x300(seed: u64) -> Vec<u8> {
 /// Creates a minimal GGUF file with TWO tensors:
 /// - tok_embeddings.weight: Uses the provided I2_S quantization data
 /// - output.weight: F16 format (realistic - output heads are usually F16/F32 for accuracy)
-/// This satisfies the minimal parser's requirement for both embedding and output layers.
+///
+///   This satisfies the minimal parser's requirement for both embedding and output layers.
 fn build_gguf_fixture(
     _tensor_name: &str, // Ignored - always uses canonical names
     rows: usize,
