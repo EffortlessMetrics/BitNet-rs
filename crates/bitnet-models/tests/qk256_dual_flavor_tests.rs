@@ -278,7 +278,6 @@ fn test_gguf_load_result_structure() {
     assert_eq!(result.i2s_qk256.len(), 0);
 }
 
-
 #[test]
 #[cfg(feature = "fixtures")]
 fn test_dump_fixture_for_debug() {
@@ -292,17 +291,13 @@ fn test_dump_fixture_for_debug() {
 #[cfg(feature = "fixtures")]
 fn test_load_fixture_from_fixed_path() {
     use std::path::Path;
-    
+
     // Fixture already written by test_dump_fixture_for_debug
     let path = Path::new("/tmp/test_generated_fixture.gguf");
     assert!(path.exists(), "Fixture should exist");
-    
-    let result = load_gguf_full(
-        path,
-        Device::Cpu,
-        bitnet_models::GGUFLoaderConfig::default(),
-    );
-    
+
+    let result = load_gguf_full(path, Device::Cpu, bitnet_models::GGUFLoaderConfig::default());
+
     match &result {
         Ok(r) => {
             eprintln!("✓ Loaded from fixed path!");
@@ -313,6 +308,6 @@ fn test_load_fixture_from_fixed_path() {
             eprintln!("✗ Failed: {:?}", e);
         }
     }
-    
+
     result.expect("Should load fixture from fixed path");
 }

@@ -321,10 +321,7 @@ fn test_non_strict_mode_skips_validation() {
     );
 
     // In non-strict mode, the validation should pass
-    assert!(
-        result.is_ok(),
-        "validate_quantization_fallback should return Ok in non-strict mode"
-    );
+    assert!(result.is_ok(), "validate_quantization_fallback should return Ok in non-strict mode");
 }
 
 /// Integration test: Verify end-to-end strict mode behavior

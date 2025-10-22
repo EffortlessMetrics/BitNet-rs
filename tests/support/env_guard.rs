@@ -127,12 +127,14 @@ impl EnvGuard {
     /// use `#[serial(bitnet_env)]` on your test to prevent races across
     /// multiple cargo test processes.
     pub fn new(key: &str) -> Self {
-        let lock = ENV_LOCK.lock().unwrap_or_else(|poisoned: std::sync::PoisonError<std::sync::MutexGuard<'_, ()>>| {
-            // If the mutex is poisoned (panic while holding lock), recover
-            // by taking the inner guard. This is safe because we just need
-            // serialization, not correctness of data protected by the lock.
-            poisoned.into_inner()
-        });
+        let lock = ENV_LOCK.lock().unwrap_or_else(
+            |poisoned: std::sync::PoisonError<std::sync::MutexGuard<'_, ()>>| {
+                // If the mutex is poisoned (panic while holding lock), recover
+                // by taking the inner guard. This is safe because we just need
+                // serialization, not correctness of data protected by the lock.
+                poisoned.into_inner()
+            },
+        );
 
         let old = env::var(key).ok();
 

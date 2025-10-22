@@ -40,8 +40,8 @@ const GGUF_ALIGNMENT: usize = 32;
 /// GGUF v3 version number
 const GGUF_VERSION: u32 = 3;
 
-/// GGUF data type for I2_S quantization (GGUF type 26)
-const GGUF_TYPE_I2S: u32 = 26;
+/// GGUF data type for I2_S quantization (GGUF type 36)
+const GGUF_TYPE_I2S: u32 = 36;
 
 /// GGUF value type: String (type 8)
 const GGUF_VALUE_TYPE_STRING: u32 = 8;
@@ -138,9 +138,10 @@ pub fn generate_qk256_3x300(seed: u64) -> Vec<u8> {
 
 /// Build a complete GGUF v3 fixture from tensor specifications
 ///
-/// Creates a minimal GGUF file with TWO tensors (tok_embeddings.weight and output.weight)
-/// to satisfy the minimal parser's requirement for both embedding and output layers.
-/// Both tensors use the same quantization data for simplicity.
+/// Creates a minimal GGUF file with TWO tensors:
+/// - tok_embeddings.weight: Uses the provided I2_S quantization data
+/// - output.weight: F16 format (realistic - output heads are usually F16/F32 for accuracy)
+/// This satisfies the minimal parser's requirement for both embedding and output layers.
 fn build_gguf_fixture(
     _tensor_name: &str, // Ignored - always uses canonical names
     rows: usize,
@@ -181,50 +182,71 @@ fn build_gguf_fixture(
     // Add intermediate_size metadata (gguf_simple.rs line 678)
     write_kv_u32(&mut buf, "bitnet-b1.58.feed_forward_length", 2048);
 
-    // Tensor 1: tok_embeddings.weight (21 chars)
+    // Tensor 1: tok_embeddings.weight
+    // GGUF v3 tensor info format (no padding after name):
+    // - name_length (u64)
+    // - name_bytes (length bytes)
+    // - n_dims (u32)
+    // - dims[n_dims] (each u64)
+    // - type (u32)
+    // - offset (u64)
     let name1 = "tok_embeddings.weight";
-    buf.extend_from_slice(&(name1.len() as u64).to_le_bytes()); // name length
-    buf.extend_from_slice(name1.as_bytes());
-    // Pad name to 8-byte boundary: (8 - (21 % 8)) % 8 = 3 bytes
-    let pad1 = (8 - (name1.len() % 8)) % 8;
-    buf.extend_from_slice(&vec![0u8; pad1]);
-    buf.extend_from_slice(&2u32.to_le_bytes()); // n_dims
-    buf.extend_from_slice(&(rows as u64).to_le_bytes());
-    buf.extend_from_slice(&(cols as u64).to_le_bytes());
-    buf.extend_from_slice(&data_type.to_le_bytes());
+    buf.extend_from_slice(&(name1.len() as u64).to_le_bytes()); // name length (u64)
+    buf.extend_from_slice(name1.as_bytes()); // name bytes (no padding!)
+    buf.extend_from_slice(&2u32.to_le_bytes()); // n_dims (u32)
+    buf.extend_from_slice(&(rows as u64).to_le_bytes()); // dim[0] (u64)
+    buf.extend_from_slice(&(cols as u64).to_le_bytes()); // dim[1] (u64)
+    buf.extend_from_slice(&data_type.to_le_bytes()); // type (u32)
 
     let tok_offset_pos = buf.len();
-    buf.extend_from_slice(&0u64.to_le_bytes()); // placeholder for offset
+    buf.extend_from_slice(&0u64.to_le_bytes()); // offset placeholder (u64)
 
-    // Tensor 2: output.weight (13 chars)
+    // Tensor 2: output.weight (F16 format - realistic for output heads)
     let name2 = "output.weight";
-    buf.extend_from_slice(&(name2.len() as u64).to_le_bytes()); // name length
-    buf.extend_from_slice(name2.as_bytes());
-    // Pad name to 8-byte boundary: (8 - (13 % 8)) % 8 = 3 bytes
-    let pad2 = (8 - (name2.len() % 8)) % 8;
-    buf.extend_from_slice(&vec![0u8; pad2]);
-    buf.extend_from_slice(&2u32.to_le_bytes()); // n_dims
-    buf.extend_from_slice(&(rows as u64).to_le_bytes());
-    buf.extend_from_slice(&(cols as u64).to_le_bytes());
-    buf.extend_from_slice(&data_type.to_le_bytes());
+    const GGUF_TYPE_F16: u32 = 1; // F16 type
+    buf.extend_from_slice(&(name2.len() as u64).to_le_bytes()); // name length (u64)
+    buf.extend_from_slice(name2.as_bytes()); // name bytes (no padding!)
+    buf.extend_from_slice(&2u32.to_le_bytes()); // n_dims (u32)
+    buf.extend_from_slice(&(rows as u64).to_le_bytes()); // dim[0] (u64)
+    buf.extend_from_slice(&(cols as u64).to_le_bytes()); // dim[1] (u64)
+    buf.extend_from_slice(&GGUF_TYPE_F16.to_le_bytes()); // type (u32) - F16!
 
     let out_offset_pos = buf.len();
-    buf.extend_from_slice(&0u64.to_le_bytes()); // placeholder for offset
+    buf.extend_from_slice(&0u64.to_le_bytes()); // offset placeholder (u64)
 
     // Alignment to 32-byte boundary before data section
     let current_len = buf.len();
     let padding = (GGUF_ALIGNMENT - (current_len % GGUF_ALIGNMENT)) % GGUF_ALIGNMENT;
     buf.resize(current_len + padding, 0);
 
-    // Write tok_embeddings data
-    let tok_offset = buf.len() as u64;
-    buf[tok_offset_pos..tok_offset_pos + 8].copy_from_slice(&tok_offset.to_le_bytes());
+    // Data section starts here (after alignment)
+    let data_start = buf.len() as u64;
+
+    // Write tok_embeddings data (I2_S quantized)
+    // IMPORTANT: Offsets are RELATIVE to data_start, not absolute file positions
+    let tok_offset_absolute = buf.len() as u64;
+    let tok_offset_relative = tok_offset_absolute - data_start; // Should be 0 for first tensor
+    buf[tok_offset_pos..tok_offset_pos + 8].copy_from_slice(&tok_offset_relative.to_le_bytes());
     buf.extend_from_slice(tensor_data);
 
-    // Write output.weight data (reuse same quantization data)
-    let out_offset = buf.len() as u64;
-    buf[out_offset_pos..out_offset_pos + 8].copy_from_slice(&out_offset.to_le_bytes());
-    buf.extend_from_slice(tensor_data);
+    // DON'T add inter-tensor padding!
+    // GGUF requires that tensor OFFSETS be aligned, but this is checked by the minimal parser.
+    // The enhanced parser calculates sizes from successive offsets, so padding would
+    // incorrectly inflate the tensor size and break format detection.
+    // For test fixtures, we rely on the enhanced parser which is more lenient.
+
+    // Write output.weight data (F16 format - 2 bytes per element)
+    let out_offset_absolute = buf.len() as u64;
+    let out_offset_relative = out_offset_absolute - data_start;
+    buf[out_offset_pos..out_offset_pos + 8].copy_from_slice(&out_offset_relative.to_le_bytes());
+
+    // Generate F16 data: deterministic based on seed
+    let num_elements = rows * cols;
+    let f16_value = half::f16::from_f32((seed % 256) as f32 / 256.0); // Value between 0.0 and ~1.0
+    let f16_bytes = f16_value.to_le_bytes();
+    for _ in 0..num_elements {
+        buf.extend_from_slice(&f16_bytes);
+    }
 
     buf
 }
