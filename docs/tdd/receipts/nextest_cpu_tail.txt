@@ -1,0 +1,6 @@
+error: invalid value 'final' for '--status-level <LEVEL>'
+  [possible values: none, fail, retry, slow, leak, pass, skip, all]
+
+  tip: a similar value exists: 'fail'
+
+For more information, try '--help'.

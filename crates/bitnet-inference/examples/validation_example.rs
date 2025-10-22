@@ -29,13 +29,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Generate text
     let prompt = "Hello, how are you?";
-    let generation_config = GenerationConfig {
-        max_new_tokens: 50,
-        temperature: 0.7,
-        top_p: 0.9,
-        top_k: 50,
-        ..Default::default()
-    };
+    let generation_config = GenerationConfig::default()
+        .with_max_tokens(50)
+        .with_temperature(0.7)
+        .with_top_p(0.9)
+        .with_top_k(50);
 
     println!("Prompt: {}", prompt);
     println!("Generating response...");

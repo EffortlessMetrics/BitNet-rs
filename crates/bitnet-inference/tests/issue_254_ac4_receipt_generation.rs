@@ -11,37 +11,102 @@
 mod support;
 use support::EnvGuard;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
 
 /// AC:4.1 - Generate inference receipt with compute_path="real"
 /// Validates receipt schema and required fields
-#[ignore] // Issue #254: TDD placeholder - Receipt generation unimplemented
 #[tokio::test]
 #[serial_test::serial]
 async fn test_ac4_receipt_generation_real_path() -> Result<()> {
-    // TODO: Create InferenceReceipt struct when API is available
-    let receipt =
-        create_mock_receipt("cpu", vec!["i2s_gemv".to_string(), "rope_apply".to_string()])?;
+    use bitnet_inference::receipts::{InferenceReceipt, RECEIPT_SCHEMA_VERSION};
 
-    // AC4: Verify receipt fields
+    // AC4.1: Generate receipt with real inference kernels
+    let kernels = vec!["i2s_gemv".to_string(), "rope_apply".to_string()];
+    let receipt = InferenceReceipt::generate("cpu", kernels.clone())?;
+
+    // AC4: Verify schema version is "1.0.0"
+    assert_eq!(
+        receipt.schema_version, RECEIPT_SCHEMA_VERSION,
+        "AC4: schema_version must be '1.0.0'"
+    );
+    assert_eq!(receipt.schema_version, "1.0.0", "AC4: schema_version must be '1.0.0'");
+
+    // AC4: Verify compute_path is "real" (not "mock")
     assert_eq!(receipt.compute_path, "real", "AC4: compute_path must be 'real'");
+
+    // AC4: Verify backend is "cpu"
     assert_eq!(receipt.backend, "cpu", "AC4: backend should be 'cpu'");
+
+    // AC4: Verify kernels list contains expected kernel IDs
     assert!(
         receipt.kernels.contains(&"i2s_gemv".to_string()),
         "AC4: kernels should include i2s_gemv"
     );
+    assert!(
+        receipt.kernels.contains(&"rope_apply".to_string()),
+        "AC4: kernels should include rope_apply"
+    );
+    assert!(!receipt.kernels.is_empty(), "AC4: kernel array must be non-empty");
 
-    // Verify deterministic flag with guard for automatic cleanup
+    // AC4: Verify timestamp is present and valid RFC3339 format
+    assert!(!receipt.timestamp.is_empty(), "AC4: timestamp must be present");
+    assert!(
+        chrono::DateTime::parse_from_rfc3339(&receipt.timestamp).is_ok(),
+        "AC4: timestamp must be valid RFC3339 format"
+    );
+
+    // AC4: Verify environment variables are captured
+    assert!(!receipt.environment.is_empty(), "AC4: environment should not be empty");
+    assert!(
+        receipt.environment.contains_key("RUST_VERSION"),
+        "AC4: environment should include RUST_VERSION"
+    );
+    assert!(
+        receipt.environment.contains_key("BITNET_VERSION"),
+        "AC4: environment should include BITNET_VERSION"
+    );
+    assert!(receipt.environment.contains_key("OS"), "AC4: environment should include OS");
+
+    // AC4: Verify deterministic flag with guard for automatic cleanup
     {
         let _guard = EnvGuard::set("BITNET_DETERMINISTIC", "1");
-        let deterministic_receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
-        assert!(deterministic_receipt.deterministic, "AC4: deterministic should be true");
+        let deterministic_receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()])?;
+        assert!(
+            deterministic_receipt.deterministic,
+            "AC4: deterministic should be true when BITNET_DETERMINISTIC=1"
+        );
+        assert!(
+            deterministic_receipt.environment.contains_key("BITNET_DETERMINISTIC"),
+            "AC4: environment should include BITNET_DETERMINISTIC when set"
+        );
     }
 
-    println!("AC4.1: Receipt generation test - PENDING IMPLEMENTATION");
+    // AC4: Verify model_info is present (may be default/empty)
+    // Schema allows optional fields, but structure must exist
+    assert!(receipt.model_info.model_path.is_none(), "AC4: model_path should be None by default");
+
+    // AC4: Verify test_results is present (may be default)
+    assert_eq!(receipt.test_results.total_tests, 0, "AC4: default test_results.total_tests is 0");
+
+    // AC4: Verify performance_baseline is present (may be default)
+    assert!(
+        receipt.performance_baseline.tokens_generated.is_none(),
+        "AC4: default performance_baseline.tokens_generated is None"
+    );
+
+    // AC4: Verify receipt validates successfully
+    receipt.validate().context("AC4: Receipt validation should pass for real compute path")?;
+
+    // AC4: Verify individual validation methods
+    receipt.validate_schema().context("AC4: Schema validation should pass")?;
+    receipt.validate_compute_path().context("AC4: Compute path validation should pass")?;
+    receipt.validate_kernel_ids().context("AC4: Kernel ID validation should pass")?;
+
+    println!("✓ AC4.1: Receipt generation test - PASSED");
     Ok(())
 }
 

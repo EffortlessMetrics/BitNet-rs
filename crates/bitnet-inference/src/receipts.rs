@@ -301,11 +301,28 @@ impl InferenceReceipt {
         env_vars
     }
 
+    /// Load receipt from JSON file
+    ///
+    /// # Example
+    /// ```no_run
+    /// use std::path::Path;
+    /// use bitnet_inference::receipts::InferenceReceipt;
+    ///
+    /// let receipt = InferenceReceipt::load(Path::new("ci/inference.json")).unwrap();
+    /// assert_eq!(receipt.schema_version, "1.0.0");
+    /// ```
+    pub fn load(path: &Path) -> Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        let receipt: InferenceReceipt = serde_json::from_str(&content)?;
+        Ok(receipt)
+    }
+
     /// Save receipt to JSON file
     ///
     /// # AC4 Contract
     /// - Serializes to pretty JSON
-    /// - Writes to specified path
+    /// - Creates parent directory if it doesn't exist
+    /// - Writes atomically (temp file + rename)
     /// - Typically saved to `ci/inference.json`
     ///
     /// # Example
@@ -317,8 +334,19 @@ impl InferenceReceipt {
     /// receipt.save(Path::new("ci/inference.json")).unwrap();
     /// ```
     pub fn save(&self, path: &Path) -> Result<()> {
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        // Serialize to pretty JSON
         let json = serde_json::to_string_pretty(self)?;
-        std::fs::write(path, json)?;
+
+        // Atomic write: write to temp file, then rename
+        let temp_path = path.with_extension("tmp");
+        std::fs::write(&temp_path, json)?;
+        std::fs::rename(&temp_path, path)?;
+
         Ok(())
     }
 
@@ -330,6 +358,7 @@ impl InferenceReceipt {
     /// - MUST have zero failed tests
     /// - MUST pass accuracy tests (if present)
     /// - MUST pass determinism tests (if deterministic mode enabled)
+    /// - MUST have valid kernel IDs (hygiene checks)
     ///
     /// # Example
     /// ```no_run
@@ -339,15 +368,14 @@ impl InferenceReceipt {
     /// assert!(receipt.validate().is_ok());
     /// ```
     pub fn validate(&self) -> Result<()> {
-        // AC9: Check compute path
-        if self.compute_path != "real" {
-            return Err(anyhow!("Invalid compute_path: {} (expected 'real')", self.compute_path));
-        }
+        // Validate schema version
+        self.validate_schema()?;
 
-        // AC9: Check for mock kernels
-        if self.kernels.iter().any(|k| k.to_lowercase().contains("mock")) {
-            return Err(anyhow!("Mock kernels detected in receipt: {:?}", self.kernels));
-        }
+        // AC9: Check compute path
+        self.validate_compute_path()?;
+
+        // AC9: Check for mock kernels and validate kernel ID hygiene
+        self.validate_kernel_ids()?;
 
         // AC9: Check test results
         if self.test_results.failed > 0 {
@@ -391,6 +419,105 @@ impl InferenceReceipt {
             && !det_tests.identical_sequences
         {
             return Err(anyhow!("Determinism test failed: sequences not identical"));
+        }
+
+        Ok(())
+    }
+
+    /// Validate schema version
+    ///
+    /// # Requirements
+    /// - Schema version must be "1.0.0"
+    ///
+    /// # Example
+    /// ```no_run
+    /// use bitnet_inference::receipts::InferenceReceipt;
+    ///
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// assert!(receipt.validate_schema().is_ok());
+    /// ```
+    pub fn validate_schema(&self) -> Result<()> {
+        if self.schema_version != "1.0.0" {
+            return Err(anyhow!(
+                "Invalid schema version: {} (expected '1.0.0')",
+                self.schema_version
+            ));
+        }
+        Ok(())
+    }
+
+    /// Validate compute path
+    ///
+    /// # Requirements
+    /// - Compute path must be "real" (not "mock")
+    ///
+    /// # Example
+    /// ```no_run
+    /// use bitnet_inference::receipts::InferenceReceipt;
+    ///
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// assert!(receipt.validate_compute_path().is_ok());
+    /// ```
+    pub fn validate_compute_path(&self) -> Result<()> {
+        if self.compute_path != "real" {
+            return Err(anyhow!("Invalid compute_path: {} (expected 'real')", self.compute_path));
+        }
+        Ok(())
+    }
+
+    /// Validate kernel IDs
+    ///
+    /// # Requirements
+    /// - Kernel array must be non-empty
+    /// - No kernel ID can be empty string
+    /// - No kernel ID can be whitespace-only
+    /// - Each kernel ID must be ≤ 128 characters
+    /// - Total kernel count must be ≤ 10,000
+    /// - No kernel ID can contain "mock" (case-insensitive)
+    ///
+    /// # Example
+    /// ```no_run
+    /// use bitnet_inference::receipts::InferenceReceipt;
+    ///
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// assert!(receipt.validate_kernel_ids().is_ok());
+    /// ```
+    pub fn validate_kernel_ids(&self) -> Result<()> {
+        // Check for non-empty kernel array
+        if self.kernels.is_empty() {
+            return Err(anyhow!("Kernel array is empty: honest compute requires kernel IDs"));
+        }
+
+        // Check total kernel count
+        if self.kernels.len() > 10_000 {
+            return Err(anyhow!("Kernel count {} exceeds 10,000 limit", self.kernels.len()));
+        }
+
+        // Validate each kernel ID
+        for (idx, kernel_id) in self.kernels.iter().enumerate() {
+            // Check for empty kernel ID
+            if kernel_id.is_empty() {
+                return Err(anyhow!("Empty kernel ID at index {}", idx));
+            }
+
+            // Check for whitespace-only kernel ID
+            if kernel_id.trim().is_empty() {
+                return Err(anyhow!("Whitespace-only kernel ID at index {}", idx));
+            }
+
+            // Check kernel ID length
+            if kernel_id.len() > 128 {
+                return Err(anyhow!(
+                    "Kernel ID at index {} exceeds 128 characters: '{}'",
+                    idx,
+                    kernel_id
+                ));
+            }
+
+            // Check for mock kernels (case-insensitive)
+            if kernel_id.to_lowercase().contains("mock") {
+                return Err(anyhow!("Mock kernel detected at index {}: '{}'", idx, kernel_id));
+            }
         }
 
         Ok(())
@@ -612,6 +739,175 @@ mod tests {
         assert!(json.contains("abc123def456"));
         assert!(json.contains("effective_correction_digest"));
         assert!(json.contains("digest789"));
+    }
+
+    /// Test validate_schema with invalid version
+    #[test]
+    fn test_validate_schema_invalid_version() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.schema_version = "2.0.0".to_string();
+
+        let result = receipt.validate_schema();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid schema version"));
+    }
+
+    /// Test validate_schema with valid version
+    #[test]
+    fn test_validate_schema_valid() {
+        let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        assert!(receipt.validate_schema().is_ok());
+    }
+
+    /// Test validate_compute_path with invalid path
+    #[test]
+    fn test_validate_compute_path_invalid() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.compute_path = "mock".to_string();
+
+        let result = receipt.validate_compute_path();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid compute_path"));
+    }
+
+    /// Test validate_compute_path with valid path
+    #[test]
+    fn test_validate_compute_path_valid() {
+        let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        assert!(receipt.validate_compute_path().is_ok());
+    }
+
+    /// Test validate_kernel_ids with empty array
+    #[test]
+    fn test_validate_kernel_ids_empty_array() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec![];
+
+        let result = receipt.validate_kernel_ids();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Kernel array is empty"));
+    }
+
+    /// Test validate_kernel_ids with empty string
+    #[test]
+    fn test_validate_kernel_ids_empty_string() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec!["".to_string()];
+
+        let result = receipt.validate_kernel_ids();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Empty kernel ID"));
+    }
+
+    /// Test validate_kernel_ids with whitespace-only string
+    #[test]
+    fn test_validate_kernel_ids_whitespace_only() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec!["   ".to_string()];
+
+        let result = receipt.validate_kernel_ids();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Whitespace-only kernel ID"));
+    }
+
+    /// Test validate_kernel_ids with excessive length
+    #[test]
+    fn test_validate_kernel_ids_excessive_length() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec!["a".repeat(129)];
+
+        let result = receipt.validate_kernel_ids();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("exceeds 128 characters"));
+    }
+
+    /// Test validate_kernel_ids at exact 128 character boundary (should pass)
+    #[test]
+    fn test_validate_kernel_ids_exact_128_chars() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec!["a".repeat(128)];
+
+        assert!(receipt.validate_kernel_ids().is_ok());
+    }
+
+    /// Test validate_kernel_ids with excessive count
+    #[test]
+    fn test_validate_kernel_ids_excessive_count() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec!["kernel".to_string(); 10_001];
+
+        let result = receipt.validate_kernel_ids();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("exceeds 10,000 limit"));
+    }
+
+    /// Test validate_kernel_ids at exact 10,000 count boundary (should pass)
+    #[test]
+    fn test_validate_kernel_ids_exact_10k_count() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec!["kernel".to_string(); 10_000];
+
+        assert!(receipt.validate_kernel_ids().is_ok());
+    }
+
+    /// Test validate_kernel_ids with mock kernel (case-insensitive)
+    #[test]
+    fn test_validate_kernel_ids_mock_kernel() {
+        let test_cases = vec!["mock_kernel", "MOCK_kernel", "kernel_mock", "kernel_MOCK_suffix"];
+
+        for kernel_id in test_cases {
+            let mut receipt =
+                InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+            receipt.kernels = vec![kernel_id.to_string()];
+
+            let result = receipt.validate_kernel_ids();
+            assert!(result.is_err(), "Kernel ID '{}' should be rejected as mock", kernel_id);
+            assert!(result.unwrap_err().to_string().contains("Mock kernel detected"));
+        }
+    }
+
+    /// Test validate_kernel_ids with mixed valid and invalid kernels
+    #[test]
+    fn test_validate_kernel_ids_mixed_kernels() {
+        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        receipt.kernels = vec!["valid_kernel".to_string(), "".to_string()];
+
+        let result = receipt.validate_kernel_ids();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Empty kernel ID at index 1"));
+    }
+
+    /// Test validate_kernel_ids with valid realistic CPU kernels
+    #[test]
+    fn test_validate_kernel_ids_valid_cpu_kernels() {
+        let receipt = InferenceReceipt::generate(
+            "cpu",
+            vec![
+                "i2s_cpu_quantized_matmul".to_string(),
+                "tl1_lut_dequant_forward".to_string(),
+                "tl2_lut_backward".to_string(),
+                "cpu_attention_qkvo".to_string(),
+            ],
+        )
+        .unwrap();
+
+        assert!(receipt.validate_kernel_ids().is_ok());
+    }
+
+    /// Test validate_kernel_ids with valid realistic GPU kernels
+    #[test]
+    fn test_validate_kernel_ids_valid_gpu_kernels() {
+        let receipt = InferenceReceipt::generate(
+            "cuda",
+            vec![
+                "gemm_gpu_fp16".to_string(),
+                "cuda_i2s_quantize".to_string(),
+                "gpu_attention_flash".to_string(),
+            ],
+        )
+        .unwrap();
+
+        assert!(receipt.validate_kernel_ids().is_ok());
     }
 
     /// Test that environment variable collection returns non-empty HashMap with valid content

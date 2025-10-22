@@ -759,7 +759,7 @@ mod error_handling_tests {
 
         let _engine = InferenceEngine::new(model, tokenizer, device).unwrap();
 
-        let invalid_config = GenerationConfig { max_new_tokens: 0, ..GenerationConfig::default() };
+        let invalid_config = GenerationConfig::default().with_max_tokens(0);
 
         // Should validate config before generation
         assert!(invalid_config.validate().is_err());

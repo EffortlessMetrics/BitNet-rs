@@ -889,7 +889,6 @@ mod tests {
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac1-tokenizerdiscovery-implementation
     #[test]
     #[cfg(feature = "cpu")]
-    #[ignore] // TODO: Re-enable after implementing TokenizerStrategy methods
     fn test_tokenizer_strategy_properties() {
         // Test strategy network requirements
         let download_info = TokenizerDownloadInfo {

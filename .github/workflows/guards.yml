@@ -37,3 +37,9 @@ jobs:
             echo "ERROR: BITNET_ALLOW_RUNTIME_CORRECTIONS must not be set in CI (corrections are for known-bad models only)"
             exit 1
           fi
+      - name: Guard bare cfg(cuda) in tests
+        run: |
+          if rg -n '#\[cfg\(cuda\)\]|cfg!\(cuda\)' --glob 'crates/**/tests/**/*.rs'; then
+            echo "ERROR: Use #[cfg(any(feature=\"gpu\", feature=\"cuda\"))] instead of bare cfg(cuda) in tests"
+            exit 1
+          fi

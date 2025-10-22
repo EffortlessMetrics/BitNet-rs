@@ -619,6 +619,9 @@ fn extract_config_from_gguf(reader: &GgufReader) -> Result<bitnet_common::BitNet
     if let Some(tokens) = reader.get_string_array_metadata("tokenizer.ggml.tokens") {
         config.model.vocab_size = tokens.len();
         tracing::debug!("Vocab size from tokenizer.ggml.tokens: {}", tokens.len());
+    } else if let Some(vocab_size) = reader.get_u32_metadata("llama.vocab_size") {
+        config.model.vocab_size = vocab_size as usize;
+        tracing::debug!("Vocab size from llama.vocab_size: {}", vocab_size);
     }
 
     // Extract hidden size - try BitNet-specific keys first, then LLaMA-style keys

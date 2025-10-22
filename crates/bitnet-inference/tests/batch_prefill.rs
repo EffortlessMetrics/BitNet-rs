@@ -114,22 +114,14 @@ impl BatchProcessor {
 
             // 3. Generate (measure)
             let t2 = std::time::Instant::now();
-            let config = GenerationConfig {
-                max_new_tokens: 2,
-                temperature: 0.7,
-                top_k: 40,
-                top_p: 0.9,
-                repetition_penalty: 1.1,
-                seed: None,
-                stop_sequences: vec![],
-                stop_token_ids: vec![],
-                eos_token_id: None,
-                skip_special_tokens: true,
-                logits_tap_steps: 0,
-                logits_topk: 10,
-                logits_cb: None,
-                add_bos: false,
-            };
+            let config = GenerationConfig::default()
+                .with_max_tokens(2)
+                .with_temperature(0.7)
+                .with_top_k(40)
+                .with_top_p(0.9)
+                .with_repetition_penalty(1.1)
+                .with_skip_special_tokens(true)
+                .with_add_bos(false);
             let generated_ids = self.engine.generate_tokens(&prompt_ids, &config).await?;
             let t_generate_ms = t2.elapsed().as_secs_f64() * 1e3;
 

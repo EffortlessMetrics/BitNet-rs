@@ -341,6 +341,47 @@ fn test_empty_gguf_chat_template_falls_back() {
     );
 }
 
+/// Tests BitNet model path detection patterns
+/// Tests feature spec: Improved BitNet base model detection
+///
+/// Behavioral test: asserts expected outcomes for various model paths
+/// NOTE: This test uses tokenizer family name as a proxy for model path detection
+/// since the current mock detect_template() doesn't support path-based hints.
+/// In production, InferenceCommand.auto_detect_template() checks model paths.
+#[test]
+fn test_bitnet_path_detection_patterns() {
+    // Test various model naming patterns via tokenizer family name
+    // Behavioral: assert outcomes, don't replicate detection logic
+
+    let test_cases = vec![
+        // BitNet variants (via tokenizer family hint)
+        ("microsoft-bitnet", TemplateType::Instruct),
+        ("bitnet-b1.58", TemplateType::Instruct),
+        ("bitnet", TemplateType::Instruct),
+        // Instruct/chat explicit
+        ("phi-instruct", TemplateType::Instruct),
+        ("mistral-instruct", TemplateType::Instruct),
+        // LLaMA-3 variants
+        ("llama3", TemplateType::Llama3Chat),
+        ("llama-3-8b", TemplateType::Llama3Chat),
+        // Generic (fallback)
+        ("generic-model", TemplateType::Instruct),
+    ];
+
+    for (family_name, expected) in test_cases {
+        let tokenizer = MockTokenizerMetadata { family_name: Some(family_name.to_string()) };
+
+        // Call detection function (behavioral, no logic mirror)
+        let result = detect_template(None, Some(&tokenizer), "run");
+
+        assert_eq!(
+            result, expected,
+            "Tokenizer family '{}' should detect as {:?}",
+            family_name, expected
+        );
+    }
+}
+
 /// Integration test: Full detection pipeline simulation
 /// Tests feature spec: chat-repl-ux-polish.md#AC2-integration
 #[test]

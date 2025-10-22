@@ -842,61 +842,39 @@ impl QuantizedLinear {
     /// Native TL1 quantized matrix multiplication
     async fn forward_tl1_generic(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
         let input_candle = input.to_candle()?;
+        let input_shape = input_candle.shape();
 
-        // Use native quantized TL1 operations when available
-        if let Ok(provider) = self.kernel_manager.select_best() {
-            let output = self.quantized_matmul_tl1(&input_candle, provider).await?;
-            return Ok(BitNetTensor::new(output));
-        }
+        // Use native TL1 quantized kernels
+        let provider =
+            self.kernel_manager.select_best().context("Failed to select kernel provider")?;
 
-        // Strict mode: reject FP32 fallback
-        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
-        if strict_mode.get_config().enforce_quantized_inference {
-            return self.strict_reject_fp32_fallback("kernel_unavailable");
-        }
+        // Reshape to 2D for efficient matrix multiplication
+        let input_2d = self.prepare_input_for_matmul(&input_candle)?;
 
-        // Fallback to dequantization only if native kernels fail (non-strict mode)
-        log::warn!("TL1 native quantized kernel failed, falling back to dequantization");
-        let dequantized_weights =
-            self.weights.dequantize().context("Failed to dequantize TL1 weights")?;
-        let weight_candle = dequantized_weights.to_candle()?;
-        let weight_transposed = weight_candle.t().context("Failed to transpose TL1 weights")?;
+        // Call native TL1 quantized matmul kernel
+        let output_2d = self.quantized_matmul_tl1(&input_2d, provider).await?;
 
-        let output = input_candle
-            .matmul(&weight_transposed)
-            .context("Failed to perform TL1 matrix multiplication")?;
-
-        Ok(BitNetTensor::new(output))
+        // Restore original tensor shape
+        self.restore_output_shape(output_2d, input_shape.dims())
     }
 
     /// Native TL2 quantized matrix multiplication
     async fn forward_tl2_generic(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
         let input_candle = input.to_candle()?;
+        let input_shape = input_candle.shape();
 
-        // Use native quantized TL2 operations when available
-        if let Ok(provider) = self.kernel_manager.select_best() {
-            let output = self.quantized_matmul_tl2(&input_candle, provider).await?;
-            return Ok(BitNetTensor::new(output));
-        }
+        // Use native TL2 quantized kernels
+        let provider =
+            self.kernel_manager.select_best().context("Failed to select kernel provider")?;
 
-        // Strict mode: reject FP32 fallback
-        let strict_mode = bitnet_common::strict_mode::StrictModeEnforcer::new();
-        if strict_mode.get_config().enforce_quantized_inference {
-            return self.strict_reject_fp32_fallback("kernel_unavailable");
-        }
+        // Reshape to 2D for efficient matrix multiplication
+        let input_2d = self.prepare_input_for_matmul(&input_candle)?;
 
-        // Fallback to dequantization only if native kernels fail (non-strict mode)
-        log::warn!("TL2 native quantized kernel failed, falling back to dequantization");
-        let dequantized_weights =
-            self.weights.dequantize().context("Failed to dequantize TL2 weights")?;
-        let weight_candle = dequantized_weights.to_candle()?;
-        let weight_transposed = weight_candle.t().context("Failed to transpose TL2 weights")?;
+        // Call native TL2 quantized matmul kernel
+        let output_2d = self.quantized_matmul_tl2(&input_2d, provider).await?;
 
-        let output = input_candle
-            .matmul(&weight_transposed)
-            .context("Failed to perform TL2 matrix multiplication")?;
-
-        Ok(BitNetTensor::new(output))
+        // Restore original tensor shape
+        self.restore_output_shape(output_2d, input_shape.dims())
     }
 
     /// Vectorized TL1 matrix multiplication using NEON
@@ -1532,6 +1510,7 @@ pub fn validate_tensor_consistency(
 
 impl QuantizedLinear {
     /// Native TL1 quantized matrix multiplication
+    #[allow(dead_code)]
     async fn quantized_matmul_tl1(
         &self,
         input: &candle_core::Tensor,
@@ -1616,6 +1595,7 @@ impl QuantizedLinear {
     }
 
     /// Native TL2 quantized matrix multiplication
+    #[allow(dead_code)]
     async fn quantized_matmul_tl2(
         &self,
         input: &candle_core::Tensor,
@@ -1743,6 +1723,7 @@ mod utils {
     }
 
     /// Quantize input data to TL1 format
+    #[allow(dead_code)]
     pub fn quantize_input_tl1(input: &[f32], _features: usize) -> Result<Vec<i8>> {
         // Simple quantization to TL1 range (4-bit signed)
         let quantized: Vec<i8> = input
@@ -1757,6 +1738,7 @@ mod utils {
     }
 
     /// Quantize input data to TL2 format
+    #[allow(dead_code)]
     pub fn quantize_input_tl2(input: &[f32], _features: usize) -> Result<Vec<i8>> {
         // Simple quantization to TL2 range (8-bit signed)
         let quantized: Vec<i8> = input
@@ -1770,45 +1752,21 @@ mod utils {
         Ok(quantized)
     }
 
-    /// Unpack TL1 values (4-bit)
+    /// Unpack TL1 values (2-bit, same as I2S)
+    /// TL1 uses 2-bit quantization with a 16-entry lookup table
+    #[allow(dead_code)]
     pub fn unpack_tl1_values(packed: &[u8], count: usize) -> Vec<i8> {
-        let mut unpacked = Vec::with_capacity(count);
-
-        for &byte in packed.iter() {
-            if unpacked.len() >= count {
-                break;
-            }
-
-            // Extract 2 values from each byte (4 bits each)
-            let low = (byte & 0x0F) as i8;
-            let high = ((byte >> 4) & 0x0F) as i8;
-
-            // Convert from [0,15] to [-8,7] range
-            unpacked.push(low - 8);
-            if unpacked.len() < count {
-                unpacked.push(high - 8);
-            }
-        }
-
-        unpacked.truncate(count);
-        unpacked
+        // TL1 uses the same 2-bit packing format as I2S
+        // The "TL1" designation refers to the table lookup optimization strategy,
+        // not a different bit width
+        unpack_2bit_values(packed, count)
     }
 
     /// Unpack TL2 values (8-bit)
+    #[allow(dead_code)]
     pub fn unpack_tl2_values(packed: &[u8], count: usize) -> Vec<i8> {
-        let mut unpacked = Vec::with_capacity(count);
-
-        for &byte in packed.iter() {
-            if unpacked.len() >= count {
-                break;
-            }
-
-            // Each byte is one value in TL2
-            let value = byte as i8;
-            unpacked.push(value);
-        }
-
-        unpacked.truncate(count);
-        unpacked
+        // TL2 uses the same 2-bit packing format as I2S
+        // The "8-bit" in TL2 refers to the lookup table size (256 entries), not the bit width
+        unpack_2bit_values(packed, count)
     }
 }

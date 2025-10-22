@@ -70,3 +70,7 @@ receipt-baseline MODEL_PATH='models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model
 clean:
     cargo clean
     rm -rf target/
+
+# Generate TDD receipts and update documentation
+tdd-receipts:
+    python3 scripts/tdd_receipts.py

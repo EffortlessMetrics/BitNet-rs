@@ -239,10 +239,24 @@ impl CpuInferenceEngine {
                 sampling.sample(&logits, &current_tokens, step, generation_config)?
             };
 
-            // Check for EOS token
+            // 3-tier stop check (partial - CPU backend lacks tokenizer for string checks)
+            // 1) ID-based stops (fast path - O(1) using HashSet)
+            // CRITICAL: Check token IDs BEFORE EOS for performance and correctness
+            // For LLaMA-3 <|eot_id|> and other models with token-ID stop sequences
+            if generation_config.is_stop_token(next_token) {
+                break;
+            }
+
+            // 2) EOS token check (explicit or backend default)
+            // NOTE: Backend is_eos_token() typically checks tokenizer's EOS token ID
             if self.backend.is_eos_token(next_token) {
                 break;
             }
+
+            // 3) String-based stop sequences - NOT IMPLEMENTED in CPU backend
+            // CPU backend lacks tokenizer access for string-based checks
+            // String-based stops are handled at higher level (InferenceEngine)
+            // TODO: Consider refactoring to pass tokenizer to backends for full 3-tier support
 
             generated_tokens.push(next_token);
             current_tokens.push(next_token);

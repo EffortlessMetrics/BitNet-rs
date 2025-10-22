@@ -14,7 +14,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
+use super::ac05_types::LivenessResponse;
 use super::metrics::MetricsCollector;
+use crate::health::PerformanceMetrics;
 
 /// Health check status
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -69,6 +71,19 @@ pub struct HealthMetrics {
     pub avg_response_time_ms: f64,
     pub memory_usage_mb: f64,
     pub tokens_per_second: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_usage_percent: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gpu_memory_mb: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gpu_memory_leak: Option<crate::health::GpuMemoryLeakStatus>,
+}
+
+/// Internal memory information
+#[derive(Debug, Clone)]
+struct MemoryInfo {
+    used_bytes: u64,
+    total_bytes: u64,
 }
 
 /// Health checker that monitors system components
@@ -78,15 +93,33 @@ pub struct HealthChecker {
     metrics: Arc<MetricsCollector>,
     #[allow(dead_code)]
     component_checks: Arc<RwLock<HashMap<String, ComponentHealth>>>,
+    #[allow(dead_code)]
+    performance: Arc<PerformanceMetrics>,
+    /// GPU memory leak detector (used only when gpu features are enabled)
+    #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
+    gpu_leak_detector: Arc<crate::health::GpuMemoryLeakDetector>,
 }
 
 impl HealthChecker {
     pub fn new(metrics: Arc<MetricsCollector>) -> Self {
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        let gpu_leak_detector = Arc::new(crate::health::GpuMemoryLeakDetector::default());
+
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        let gpu_leak_detector = Arc::new(crate::health::GpuMemoryLeakDetector);
+
         Self {
             start_time: Instant::now(),
             metrics,
             component_checks: Arc::new(RwLock::new(HashMap::new())),
+            performance: Arc::new(PerformanceMetrics::new()),
+            gpu_leak_detector,
         }
+    }
+
+    /// Get the performance metrics collector
+    pub fn performance(&self) -> Arc<PerformanceMetrics> {
+        self.performance.clone()
     }
 
     /// Perform comprehensive health check
@@ -192,8 +225,17 @@ impl HealthChecker {
     async fn check_memory_health(&self) -> ComponentHealth {
         let start = Instant::now();
 
-        // Check memory usage - in production, use actual system metrics
-        let memory_usage_percent = 45.0; // Placeholder
+        // Check memory usage using actual system metrics
+        let memory_usage_percent = match self.get_memory_info().await {
+            Ok(info) => {
+                if info.total_bytes > 0 {
+                    (info.used_bytes as f64 / info.total_bytes as f64) * 100.0
+                } else {
+                    0.0
+                }
+            }
+            Err(_) => 0.0, // Default to 0% if we can't read memory
+        };
 
         let (status, message) = if memory_usage_percent > 90.0 {
             (HealthStatus::Unhealthy, format!("High memory usage: {:.1}%", memory_usage_percent))
@@ -295,15 +337,66 @@ impl HealthChecker {
     }
 
     async fn collect_health_metrics(&self) -> HealthMetrics {
-        // In production, these would be collected from actual metrics
+        // Collect actual metrics from the metrics collector
+        let memory_info =
+            self.get_memory_info().await.unwrap_or(MemoryInfo { used_bytes: 0, total_bytes: 0 });
+
+        let cpu_usage = self.get_cpu_usage().await.ok();
+
+        // Collect GPU metrics and record sample for leak detection
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        let (gpu_memory_mb, gpu_memory_leak) = {
+            let gpu_metrics = crate::health::GpuMetrics::collect().await;
+            let gpu_mem =
+                if gpu_metrics.has_cuda_errors { None } else { Some(gpu_metrics.memory_used_mb) };
+
+            // Record sample for leak detection
+            self.gpu_leak_detector.record_sample(&gpu_metrics).await;
+
+            // Analyze for leaks
+            let leak_status = self.gpu_leak_detector.analyze().await;
+
+            (gpu_mem, Some(leak_status))
+        };
+
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        let (gpu_memory_mb, gpu_memory_leak) = (None, None);
+
+        // Collect performance indicators
+        let perf_indicators = self.performance.get_indicators().await;
+
         HealthMetrics {
-            active_requests: 0,
-            total_requests: 0,
-            error_rate_percent: 0.0,
-            avg_response_time_ms: 0.0,
-            memory_usage_mb: 0.0,
+            active_requests: 0, // TODO: Wire to actual metrics collector
+            total_requests: 0,  // TODO: Wire to actual metrics collector
+            error_rate_percent: perf_indicators.error_rate * 100.0,
+            avg_response_time_ms: perf_indicators.avg_response_time_ms,
+            memory_usage_mb: (memory_info.used_bytes as f64) / (1024.0 * 1024.0),
             tokens_per_second: 0.0,
+            cpu_usage_percent: cpu_usage,
+            gpu_memory_mb,
+            gpu_memory_leak,
         }
+    }
+
+    async fn get_cpu_usage(&self) -> Result<f64, String> {
+        use sysinfo::System;
+        let mut sys = System::new();
+        sys.refresh_cpu_all();
+        // Small sleep to get accurate CPU measurement
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        sys.refresh_cpu_all();
+        Ok(sys.global_cpu_usage() as f64)
+    }
+
+    async fn get_memory_info(&self) -> Result<MemoryInfo, String> {
+        use sysinfo::System;
+        let mut sys = System::new();
+        sys.refresh_memory();
+        // sysinfo returns KiB - convert to bytes
+        Ok(MemoryInfo {
+            used_bytes: sys.used_memory() * 1024,
+            total_bytes: sys.total_memory() * 1024,
+        })
     }
 
     #[cfg(any(feature = "gpu", feature = "cuda"))]
@@ -398,7 +491,21 @@ async fn health_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Response
 
 /// Liveness probe endpoint (Kubernetes)
 async fn liveness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Response {
-    with_no_store_headers(status_code_for(probe.check_liveness().await).into_response())
+    let health_status = probe.check_liveness().await;
+    let status_code = status_code_for(health_status);
+
+    let status_str = match health_status {
+        HealthStatus::Healthy => "healthy",
+        HealthStatus::Degraded => "degraded",
+        HealthStatus::Unhealthy => "unhealthy",
+    };
+
+    let response = LivenessResponse {
+        status: status_str.to_string(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+    };
+
+    with_no_store_headers((status_code, Json(response)).into_response())
 }
 
 /// Readiness probe endpoint (Kubernetes)

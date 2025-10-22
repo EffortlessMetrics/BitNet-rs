@@ -65,6 +65,10 @@ pub struct RustTokenizer {
     /// BPE piece-to-GGUF-ID remapping (for BPE only)
     /// Maps token piece strings to their authoritative GGUF token IDs
     bpe_piece_to_gguf_id: Option<ahash::AHashMap<String, u32>>,
+    /// Real vocabulary size from tokenizer model (no padding)
+    /// This is the actual number of tokens from tokenizer.ggml.tokens array,
+    /// not the padded size used in GGUF for alignment (e.g., 32000 vs 32064).
+    real_vocab_size: usize,
     /// Beginning-of-sequence token ID
     bos_id: Option<u32>,
     /// End-of-sequence token ID
@@ -138,12 +142,13 @@ impl RustTokenizer {
             GgufTokKind::Spm => {
                 #[cfg(feature = "spm")]
                 {
-                    let spm = Self::load_spm(reader)?;
+                    let (spm, real_vocab_size) = Self::load_spm(reader)?;
                     Ok(Self {
                         kind,
                         spm: Some(spm),
                         bpe: None,
                         bpe_piece_to_gguf_id: None,
+                        real_vocab_size,
                         bos_id,
                         eos_id,
                         eot_id,
@@ -159,13 +164,14 @@ impl RustTokenizer {
                 }
             }
             GgufTokKind::Bpe => {
-                let (bpe, piece_to_id) = Self::load_bpe(reader)?;
+                let (bpe, piece_to_id, real_vocab_size) = Self::load_bpe(reader)?;
                 Ok(Self {
                     kind,
                     #[cfg(feature = "spm")]
                     spm: None,
                     bpe: Some(bpe),
                     bpe_piece_to_gguf_id: Some(piece_to_id),
+                    real_vocab_size,
                     bos_id,
                     eos_id,
                     eot_id,
@@ -206,9 +212,12 @@ impl RustTokenizer {
     /// 2. `tokenizer.spm.model`
     /// 3. `sentencepiece.model`
     ///
+    /// Returns a tuple of (processor, real_vocab_size) where real_vocab_size is the
+    /// actual number of tokens in the SentencePiece model.
+    ///
     /// Returns an error if no protobuf is found or if deserialization fails.
     #[cfg(feature = "spm")]
-    fn load_spm(reader: &GgufReader) -> Result<sentencepiece::SentencePieceProcessor> {
+    fn load_spm(reader: &GgufReader) -> Result<(sentencepiece::SentencePieceProcessor, usize)> {
         // Try multiple locations for SPM protobuf (different GGUF exporters use different keys)
         let blob = reader
             .get_bin_or_u8_array("tokenizer.model")
@@ -221,11 +230,16 @@ impl RustTokenizer {
 
         tracing::debug!("Loading SentencePiece from {} bytes of protobuf", blob.len());
 
-        sentencepiece::SentencePieceProcessor::from_serialized_proto(&blob)
+        let spm = sentencepiece::SentencePieceProcessor::from_serialized_proto(&blob)
             .map_err(|e| anyhow::anyhow!("Failed to load SentencePiece from protobuf: {}", e))
             .context(
                 "SentencePiece deserialization failed - protobuf may be corrupted or incompatible",
-            )
+            )?;
+
+        // Get real vocab size from the loaded processor
+        let real_vocab_size = spm.len();
+
+        Ok((spm, real_vocab_size))
     }
 
     /// Load BPE tokenizer from GGUF metadata
@@ -237,13 +251,15 @@ impl RustTokenizer {
     /// The vocabulary is converted to a HashMap for the BPE model, and a ByteLevel
     /// pre-tokenizer and decoder are added for compatibility with GPT-2 style models.
     ///
-    /// Returns a tuple of (tokenizer, piece_to_gguf_id_map) where the map is used
-    /// to remap HuggingFace token IDs to authoritative GGUF token IDs.
+    /// Returns a tuple of (tokenizer, piece_to_gguf_id_map, real_vocab_size) where:
+    /// - tokenizer: the HuggingFace BPE tokenizer
+    /// - piece_to_gguf_id_map: maps token pieces to authoritative GGUF token IDs
+    /// - real_vocab_size: the actual number of tokens from tokenizer.ggml.tokens array
     ///
     /// Returns an error if vocab or merges are missing or invalid.
     fn load_bpe(
         reader: &GgufReader,
-    ) -> Result<(tokenizers::Tokenizer, ahash::AHashMap<String, u32>)> {
+    ) -> Result<(tokenizers::Tokenizer, ahash::AHashMap<String, u32>, usize)> {
         use ahash::AHashMap;
         use tokenizers::{
             decoders::byte_level::ByteLevel, models::bpe::BPE, pre_tokenizers::byte_level,
@@ -254,7 +270,10 @@ impl RustTokenizer {
             .get_string_array_metadata("tokenizer.ggml.tokens")
             .context("Missing tokenizer.ggml.tokens metadata - required for BPE tokenizer")?;
 
-        tracing::debug!("Loading BPE tokenizer with {} vocab tokens", vocab_strings.len());
+        // Store real vocab size (actual number of tokens, no padding)
+        let real_vocab_size = vocab_strings.len();
+
+        tracing::debug!("Loading BPE tokenizer with {} vocab tokens", real_vocab_size);
 
         // Build GGUF piece-to-ID mapping (authoritative token IDs from model)
         let piece_to_gguf_id: AHashMap<String, u32> =
@@ -314,7 +333,7 @@ impl RustTokenizer {
                 .trim_offsets(false),
         ));
 
-        Ok((tokenizer, piece_to_gguf_id))
+        Ok((tokenizer, piece_to_gguf_id, real_vocab_size))
     }
 
     /// Encode text to token IDs
@@ -564,6 +583,12 @@ impl crate::Tokenizer for RustTokenizer {
         }
     }
 
+    fn real_vocab_size(&self) -> usize {
+        // Return the real vocab size stored during loading
+        // This is the actual number of tokens from tokenizer.ggml.tokens array
+        self.real_vocab_size
+    }
+
     fn token_to_piece(&self, token: u32) -> Option<String> {
         match self.kind {
             GgufTokKind::Spm => {
@@ -656,6 +681,7 @@ mod tests {
             spm: None,
             bpe: None,
             bpe_piece_to_gguf_id: None,
+            real_vocab_size: 32000,
             bos_id: Some(1),
             eos_id: Some(2),
             eot_id: Some(128009),
@@ -688,6 +714,7 @@ mod tests {
             spm: None,
             bpe: None,
             bpe_piece_to_gguf_id: None,
+            real_vocab_size: 50257,
             bos_id: Some(10),
             eos_id: Some(11),
             eot_id: Some(12),
