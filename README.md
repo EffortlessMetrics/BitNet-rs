@@ -24,6 +24,29 @@ device-aware quantization, and cross-platform support.
 
 ## Quick Start
 
+### CPU Quickstart (10-Line Workflow)
+
+For reproducible CPU inference with receipt verification:
+
+```bash
+# 1. Build with explicit CPU features
+cargo build --no-default-features --features cpu
+
+# 2. Download model via xtask
+cargo run -p xtask -- download-model
+
+# 3. Run deterministic inference with receipt generation
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
+  cargo run -p xtask -- benchmark \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokens 128
+
+# 4. Verify receipt (honest compute validation)
+cargo run -p xtask -- verify-receipt
+```
+
+See [Receipt Verification](#receipt-verification) for details on receipt schema and validation gates.
+
 ### Prerequisites
 
 - **Rust 1.90.0+** (supports Rust 2024 edition)
@@ -61,6 +84,32 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
+
+#### QK256 Format (GGML I2_S, 256-element blocks)
+
+QK256 is a GGML-compatible I2_S quantization format with 256-element blocks and
+separate scale tensors. BitNet.rs automatically detects the format and routes
+to the appropriate kernels.
+
+```bash
+# Download QK256 model
+cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
+
+# Run with strict loader mode (recommended for QK256 validation)
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --strict-loader \
+  --prompt "Test" \
+  --max-tokens 16
+```
+
+**Learn More:**
+
+- [QK256 Usage Guide](docs/howto/use-qk256-models.md) - Comprehensive QK256
+  format documentation
+- [Dual I2_S Flavor Architecture](docs/explanation/i2s-dual-flavor.md) - I2_S
+  format architecture
 
 **Note:** Always specify `--no-default-features --features cpu|gpu` — default features are empty to prevent unwanted dependencies.
 
@@ -443,7 +492,7 @@ See [docs/explanation/FEATURES.md](docs/explanation/FEATURES.md) for detailed fe
 **Tests hanging or failing:**
 
 - Ensure you're using `--no-default-features --features cpu|gpu`
-- Try `cargo test -p bitnet-common --lib` to test individual crates
+- Try `cargo test -p bitnet-common --lib --no-default-features --features cpu` to test individual crates
 - Check [docs/development/test-suite.md](docs/development/test-suite.md)
 
 **GPU not being used despite CUDA installation:**

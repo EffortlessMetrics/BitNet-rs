@@ -9,10 +9,10 @@ repository = "https://github.com/microsoft/BitNet"
 [features]
 integration-tests = []
 # When enabled, we compile the GGML shim and expose IQ2_S dequantization.
-iq2s-ffi = []
+iq2s-ffi = ["dep:libc"]
 
 [build-dependencies]
 cc = "1.2.38"
 
 [dependencies]
-libc = "0.2.175"
+libc = { version = "0.2.175", optional = true }

@@ -120,22 +120,22 @@ Error: Model error: Tensor alignment validation failed
 **Validate and Diagnose Model:**
 ```bash
 # Check model compatibility and alignment
-cargo run -p bitnet-cli -- compat-check model.gguf --verbose
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- compat-check model.gguf --verbose
 
 # Detailed GGUF metadata inspection
 cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf
 
 # JSON output for programmatic analysis
-cargo run -p bitnet-cli -- compat-check model.gguf --json > model_validation.json
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- compat-check model.gguf --json > model_validation.json
 ```
 
 **Automatic Model Recovery:**
 ```bash
 # Export corrected GGUF file with proper alignment
-cargo run -p bitnet-cli -- compat-fix model.gguf fixed_model.gguf
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- compat-fix model.gguf fixed_model.gguf
 
 # Verify the fix worked
-cargo run -p bitnet-cli -- compat-check fixed_model.gguf
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- compat-check fixed_model.gguf
 
 # Check the compatibility audit stamp
 cat fixed_model.gguf.compat.json
@@ -153,7 +153,7 @@ cargo test --no-default-features -p bitnet-models --no-default-features --featur
 **Advanced Diagnostics:**
 ```bash
 # Enable debug logging for detailed alignment checking
-RUST_LOG=debug cargo run -p bitnet-cli -- compat-check model.gguf 2>&1 | grep -i align
+RUST_LOG=debug cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- compat-check model.gguf 2>&1 | grep -i align
 
 # Inspect raw GGUF structure (requires hex viewer)
 hexdump -C model.gguf | head -100
@@ -171,7 +171,7 @@ stat model.gguf  # Check file size and permissions
 - **Robust Error Messages**: Clear error messages with tensor names and offset values
 
 **Prevention:**
-- Always verify model integrity after download: `cargo run -p bitnet-cli -- compat-check model.gguf`
+- Always verify model integrity after download: `cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- compat-check model.gguf`
 - Use the official model repositories and validated downloads
 - Avoid manual editing of GGUF files without proper tools
 - Store models on reliable storage with error-correcting filesystems

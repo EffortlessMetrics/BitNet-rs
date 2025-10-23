@@ -1,3 +1,16 @@
+// ============================================================================
+// GGML Constants Extraction - FFI Bridge
+// ============================================================================
+// llama.cpp API version: See VENDORED_GGML_COMMIT for exact commit hash
+// BitNet.rs integration: AC6 FFI build hygiene consolidation (Issue #469)
+// Compatible with: BitNet C++ v0.1.0-mvp and later
+// Build date: Generated at compile time from csrc/VENDORED_GGML_COMMIT
+//
+// This shim provides stable access to GGML's internal constants for Rust.
+// The vendored GGML commit hash is embedded in the build configuration.
+// See build.rs for version detection and build-time configuration.
+// ============================================================================
+
 // GGML constants extraction for Rust
 // This provides a stable interface to GGML's internal constants
 // without Rust needing to parse or guess the layout

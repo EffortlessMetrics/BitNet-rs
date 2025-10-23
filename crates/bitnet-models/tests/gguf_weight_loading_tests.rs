@@ -370,6 +370,9 @@ async fn test_ac2_tl2_quantization_accuracy_cpu() -> Result<()> {
 /// Tests feature spec: gguf-weight-loading.md#tensor-schema-validation
 ///
 /// REFACTORED: Uses tiny QK256 fixture (4×256) for fast execution (<100ms)
+///
+/// NOTE: QK256 tensors are stored in `i2s_qk256` map, not `tensors` map.
+/// This is by design - QK256 format uses separate storage for efficient kernel dispatch.
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac3_tensor_shape_validation_cpu() -> Result<()> {
@@ -390,23 +393,27 @@ async fn test_ac3_tensor_shape_validation_cpu() -> Result<()> {
 
     match result {
         Ok(load_result) => {
-            // Validate tensor shapes in the loaded tensors map
+            // Validate tensor shapes in the loaded maps
             // Fixture has: tok_embeddings.weight [4, 256] and output.weight [4, 256]
+            // Both are I2_S QK256 format, so they should be in i2s_qk256 map
 
-            // Check tok_embeddings.weight shape
-            if let Some(tensor) = load_result.tensors.get("tok_embeddings.weight") {
-                let shape = tensor.shape().dims();
+            // Check tok_embeddings.weight shape (in i2s_qk256 map)
+            if let Some(qk256_tensor) = load_result.i2s_qk256.get("tok_embeddings.weight") {
                 assert_eq!(
-                    shape,
-                    &[4, 256],
-                    "tok_embeddings.weight should have shape [4, 256], got {:?}",
-                    shape
+                    qk256_tensor.rows, 4,
+                    "tok_embeddings.weight should have 4 rows, got {}",
+                    qk256_tensor.rows
+                );
+                assert_eq!(
+                    qk256_tensor.cols, 256,
+                    "tok_embeddings.weight should have 256 cols, got {}",
+                    qk256_tensor.cols
                 );
             } else {
-                anyhow::bail!("Missing tok_embeddings.weight in loaded tensors");
+                anyhow::bail!("Missing tok_embeddings.weight in i2s_qk256 map");
             }
 
-            // Check output.weight shape
+            // Check output.weight shape (in tensors map - F16 format per fixture)
             if let Some(tensor) = load_result.tensors.get("output.weight") {
                 let shape = tensor.shape().dims();
                 assert_eq!(
@@ -416,7 +423,7 @@ async fn test_ac3_tensor_shape_validation_cpu() -> Result<()> {
                     shape
                 );
             } else {
-                anyhow::bail!("Missing output.weight in loaded tensors");
+                anyhow::bail!("Missing output.weight in tensors map");
             }
         }
         Err(err) => {

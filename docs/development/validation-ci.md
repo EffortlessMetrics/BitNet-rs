@@ -295,7 +295,7 @@ export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
 export RAYON_NUM_THREADS=1
 
-cargo run -p bitnet-cli -- inspect --ln-stats --json \
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect --ln-stats --json \
   models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 ```
 
@@ -392,7 +392,7 @@ cargo test -p bitnet-cli --test validation_workflow \
 
 1. Regenerate model with proper LayerNorm preservation:
    ```bash
-   cargo run -p bitnet-st2gguf -- --input model.safetensors \
+   cargo run -p bitnet-st2gguf --no-default-features --features cpu -- --input model.safetensors \
      --output model.gguf --strict
    ```
 
@@ -429,10 +429,10 @@ bash -c 'if grep -r "BITNET_ALLOW_RUNTIME_CORRECTIONS" .github/workflows/*.yml |
 
 # Test model validation
 export BITNET_STRICT_MODE=1
-cargo run -p bitnet-cli -- inspect --ln-stats --json models/your-model.gguf
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect --ln-stats --json models/your-model.gguf
 
 # Check JSON output
-cargo run -p bitnet-cli -- inspect --ln-stats --json models/your-model.gguf | jq '.status'
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect --ln-stats --json models/your-model.gguf | jq '.status'
 ```
 
 ## Best Practices
@@ -446,7 +446,7 @@ cargo run -p bitnet-cli -- inspect --ln-stats --json models/your-model.gguf | jq
 2. **Test locally with strict mode**
    ```bash
    export BITNET_STRICT_MODE=1
-   cargo run -p bitnet-cli -- inspect --ln-stats your-model.gguf
+   cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- inspect --ln-stats your-model.gguf
    ```
 
 3. **Validate before committing**

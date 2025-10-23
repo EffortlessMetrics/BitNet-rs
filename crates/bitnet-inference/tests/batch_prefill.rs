@@ -216,8 +216,47 @@ async fn test_batch_prefill_timing() {
     }
 }
 
+/// Performance consistency test for batch prefill operations
+///
+/// ## Quarantine Rationale
+///
+/// This test is timing-sensitive and subject to CI load variance:
+/// - Timer resolution: Tokenization threshold (0.5ms) is near system minimum
+/// - Scheduler jitter: Prefill window (8-100ms) affected by CPU contention
+/// - Async overhead: tokio context switching adds unpredictable latency
+///
+/// ## Running This Test
+///
+/// ### Local Development (Recommended)
+/// ```bash
+/// # Ensure single-threaded, minimal system load:
+/// RUN_PERF_TESTS=1 cargo test --test batch_prefill \
+///   test_batch_prefill_performance_consistency -- --test-threads=1
+/// ```
+///
+/// ### With nextest
+/// ```bash
+/// RUN_PERF_TESTS=1 cargo nextest run -p bitnet-inference \
+///   --test batch_prefill test_batch_prefill_performance_consistency
+/// ```
+///
+/// ## Expected Behavior
+///
+/// When run on idle system with single thread:
+/// - Tokenize time: 1.0-1.5ms (1ms sleep + overhead)
+/// - Prefill time: 10-15ms (10ms sleep + overhead)
+/// - If timings exceed these by 50%+ on stable hardware, investigate system load
 #[tokio::test]
+#[ignore = "flaky in CI; run with RUN_PERF_TESTS=1 for performance validation"]
 async fn test_batch_prefill_performance_consistency() {
+    // Guard: Only run if explicitly requested via environment variable
+    // This prevents accidental execution in CI where timing is non-deterministic
+    if std::env::var("RUN_PERF_TESTS").is_err() {
+        eprintln!("⏭️  Skipping performance test; set RUN_PERF_TESTS=1 to enable");
+        eprintln!("   Recommended: RUN_PERF_TESTS=1 cargo test -- --test-threads=1");
+        return;
+    }
+
     let model = Arc::new(MockModelWithTiming::new());
     let tokenizer = Arc::new(MockTokenizerWithTiming::new());
     let engine = InferenceEngine::new(model, tokenizer, Device::Cpu).unwrap();

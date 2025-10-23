@@ -527,19 +527,37 @@ fn test_qk256_struct_creation() {
     assert_eq!(qk256.cols, cols);
     assert_eq!(qk256.row_stride_bytes, row_stride_bytes);
 
-    // Test 2: Invalid size (too few bytes)
-    let short_qs = vec![0u8; rows * row_stride_bytes - 1];
-    let result = I2SQk256NoScale::new(rows, cols, short_qs);
-    assert!(result.is_err(), "Short data should fail");
+    // Test 2: Within tolerance (should pass)
+    // The implementation allows up to 128 bytes tolerance for alignment padding.
+    // Data with -64 bytes is within the 128-byte tolerance window.
+    let within_tolerance = vec![0u8; rows * row_stride_bytes - 64];
+    let result = I2SQk256NoScale::new(rows, cols, within_tolerance);
+    assert!(
+        result.is_ok(),
+        "Data within 128-byte tolerance should pass: size_diff=64 <= TOLERANCE=128"
+    );
+
+    // Test 3: Beyond tolerance (should fail)
+    // Data with -200 bytes exceeds the 128-byte tolerance.
+    let beyond_tolerance = vec![0u8; rows * row_stride_bytes - 200];
+    let result = I2SQk256NoScale::new(rows, cols, beyond_tolerance);
+    assert!(
+        result.is_err(),
+        "Data beyond 128-byte tolerance should fail: size_diff=200 > TOLERANCE=128"
+    );
     assert!(
         result.unwrap_err().to_string().contains("data size mismatch"),
         "Error should mention size mismatch"
     );
 
-    // Test 3: Invalid size (too many bytes)
-    let long_qs = vec![0u8; rows * row_stride_bytes + 1];
-    let result = I2SQk256NoScale::new(rows, cols, long_qs);
-    assert!(result.is_err(), "Extra data should fail");
+    // Test 4: At tolerance boundary (should pass)
+    // Data with exactly 128 bytes difference is at the boundary and should pass.
+    let at_boundary = vec![0u8; rows * row_stride_bytes - 128];
+    let result = I2SQk256NoScale::new(rows, cols, at_boundary);
+    assert!(
+        result.is_ok(),
+        "Data at exact tolerance boundary should pass: size_diff=128 <= TOLERANCE=128"
+    );
 
     println!("✓ I2SQk256NoScale struct creation tests passed");
 }

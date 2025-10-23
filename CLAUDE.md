@@ -599,7 +599,7 @@ cargo nextest run --workspace --no-default-features --features cpu
 cargo nextest run --profile ci  # CI profile: 4 threads, no retries
 
 # Run fixture-based integration tests
-cargo test -p bitnet-models --test qk256_dual_flavor_tests --features fixtures
+cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features --features fixtures
 
 # Run including ignored tests (will encounter blocked tests)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
@@ -861,8 +861,8 @@ Output: "jjjjkkkk llll mmmm nnnn..."
 **Problem**: Getting linker errors or silent GPU fallback
 
 ```bash
-# Wrong - uses default (empty) features, causes errors
-cargo build
+# Wrong example (don't do this) - uses default (empty) features, causes errors
+# cargo build
 
 # Right - always specify features
 cargo build --no-default-features --features cpu
@@ -876,8 +876,8 @@ cargo build --no-default-features --features gpu
 **Problem**: Running all tests with `--ignored` flag
 
 ```bash
-# Will encounter blocked tests
-cargo test --workspace -- --ignored --include-ignored
+# Wrong example (will encounter blocked tests)
+# cargo test --workspace -- --ignored --include-ignored
 ```
 
 **Solution**: Check blocking issue numbers in test comments. These are intentional placeholders:

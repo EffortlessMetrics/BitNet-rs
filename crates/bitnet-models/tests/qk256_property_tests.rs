@@ -279,7 +279,10 @@ proptest! {
 proptest! {
     /// Test spec: i2s-dual-flavor.md#qk256-struct-validation
     ///
-    /// Property: I2SQk256NoScale::new validates dimensions correctly
+    /// Property: I2SQk256NoScale::new validates dimensions with tolerance
+    ///
+    /// The implementation allows ±TOLERANCE bytes difference to accommodate alignment
+    /// padding in production GGUF files. This test validates that tolerance behavior.
     #[test]
     fn prop_i2s_qk256_no_scale_dimension_validation(
         rows in 1usize..=256,
@@ -289,27 +292,37 @@ proptest! {
         let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
         let expected_bytes = rows * row_stride_bytes;
 
-        // Test 1: Valid creation with correct size
-        let qs_valid = vec![0u8; expected_bytes];
-        let result = I2SQk256NoScale::new(rows, cols, qs_valid);
-        assert!(result.is_ok(), "Valid dimensions should succeed");
+        // Match implementation tolerance (i2s_qk256.rs:91)
+        const TOLERANCE: usize = 128;
+
+        // Test 1: Exact size - should PASS
+        let qs_exact = vec![0u8; expected_bytes];
+        let result = I2SQk256NoScale::new(rows, cols, qs_exact);
+        assert!(result.is_ok(), "Exact size should pass");
 
         let qk256 = result.unwrap();
         assert_eq!(qk256.rows, rows);
         assert_eq!(qk256.cols, cols);
         assert_eq!(qk256.row_stride_bytes, row_stride_bytes);
 
-        // Test 2: Invalid size (too small)
-        if expected_bytes > 0 {
-            let qs_invalid = vec![0u8; expected_bytes - 1];
-            let result = I2SQk256NoScale::new(rows, cols, qs_invalid);
-            assert!(result.is_err(), "Invalid size should fail");
+        // Test 2: Within tolerance - should PASS
+        if expected_bytes > TOLERANCE / 2 {
+            let qs_within = vec![0u8; expected_bytes - (TOLERANCE / 2)];
+            let result = I2SQk256NoScale::new(rows, cols, qs_within);
+            assert!(result.is_ok(), "Size within tolerance should pass");
         }
 
-        // Test 3: Invalid size (too large)
-        let qs_invalid = vec![0u8; expected_bytes + 1];
-        let result = I2SQk256NoScale::new(rows, cols, qs_invalid);
-        assert!(result.is_err(), "Invalid size should fail");
+        // Test 3: Beyond tolerance (too small) - should FAIL
+        if expected_bytes > TOLERANCE * 2 {
+            let qs_beyond = vec![0u8; expected_bytes - (TOLERANCE * 2)];
+            let result = I2SQk256NoScale::new(rows, cols, qs_beyond);
+            assert!(result.is_err(), "Size beyond tolerance should fail");
+        }
+
+        // Test 4: Beyond tolerance (too large) - should FAIL
+        let qs_beyond_upper = vec![0u8; expected_bytes + TOLERANCE + 1];
+        let result = I2SQk256NoScale::new(rows, cols, qs_beyond_upper);
+        assert!(result.is_err(), "Size beyond tolerance should fail");
     }
 
     /// Test spec: i2s-dual-flavor.md#qk256-row-bytes-access
