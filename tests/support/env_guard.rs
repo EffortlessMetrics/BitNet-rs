@@ -127,9 +127,7 @@ impl EnvGuard {
     /// use `#[serial(bitnet_env)]` on your test to prevent races across
     /// multiple cargo test processes.
     pub fn new(key: &str) -> Self {
-        let lock = ENV_LOCK
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
         let old = env::var(key).ok();
 

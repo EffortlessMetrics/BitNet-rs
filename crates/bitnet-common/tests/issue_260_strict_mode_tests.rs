@@ -381,62 +381,97 @@ mod cross_crate_consistency_tests {
 
     /// Tests strict mode configuration inheritance
     #[test]
-    #[ignore] // Quarantined: EnvGuard deadlock with multiple simultaneous guards - needs refactor to use scoped blocks
     #[serial(bitnet_env)]
     fn test_strict_mode_configuration_inheritance() {
         println!("🔒 Cross-Crate: Testing configuration inheritance");
 
         let inheritance_result = || -> Result<()> {
             // Test parent-child configuration inheritance
-            let _guard1 = helpers::env_guard::EnvGuard::new("BITNET_STRICT_MODE");
-            _guard1.set("1");
-            let _guard2 = helpers::env_guard::EnvGuard::new("BITNET_STRICT_INHERITANCE");
-            _guard2.set("1");
+            // Set env vars using unsafe (guards cause deadlock with global ENV_LOCK)
+            // Since we use #[serial(bitnet_env)], this is safe from cross-test races
+            {
+                unsafe {
+                    env::set_var("BITNET_STRICT_MODE", "1");
+                    env::set_var("BITNET_STRICT_INHERITANCE", "1");
+                }
 
-            let parent_config = ParentStrictConfig::from_env();
-            let child_configs = [
-                ChildStrictConfig::from_parent(&parent_config, "quantization"),
-                ChildStrictConfig::from_parent(&parent_config, "inference"),
-                ChildStrictConfig::from_parent(&parent_config, "kernels"),
-            ];
+                let parent_config = ParentStrictConfig::from_env();
+                let child_configs = [
+                    ChildStrictConfig::from_parent(&parent_config, "quantization"),
+                    ChildStrictConfig::from_parent(&parent_config, "inference"),
+                    ChildStrictConfig::from_parent(&parent_config, "kernels"),
+                ];
 
-            // Verify inheritance
-            for (i, child) in child_configs.iter().enumerate() {
-                assert_eq!(
-                    child.enabled, parent_config.enabled,
-                    "Child {} should inherit enabled state",
-                    i
-                );
-                assert_eq!(
-                    child.fail_on_mock, parent_config.fail_on_mock,
-                    "Child {} should inherit fail_on_mock state",
-                    i
-                );
-
-                // Child-specific overrides should be respected
-                if child.component_name == "quantization" {
-                    // Quantization might have stricter requirements
-                    assert!(
-                        child.require_quantization >= parent_config.require_quantization,
-                        "Quantization child should have equal or stricter quantization requirements"
+                // Verify inheritance
+                for (i, child) in child_configs.iter().enumerate() {
+                    assert_eq!(
+                        child.enabled, parent_config.enabled,
+                        "Child {} should inherit enabled state",
+                        i
                     );
+                    assert_eq!(
+                        child.fail_on_mock, parent_config.fail_on_mock,
+                        "Child {} should inherit fail_on_mock state",
+                        i
+                    );
+
+                    // Child-specific overrides should be respected
+                    if child.component_name == "quantization" {
+                        // Quantization might have stricter requirements
+                        assert!(
+                            child.require_quantization >= parent_config.require_quantization,
+                            "Quantization child should have equal or stricter quantization requirements"
+                        );
+                    }
+                }
+
+                unsafe {
+                    env::remove_var("BITNET_STRICT_MODE");
+                    env::remove_var("BITNET_STRICT_INHERITANCE");
                 }
             }
 
             // Test configuration override mechanism
-            let _guard3 = helpers::env_guard::EnvGuard::new("BITNET_STRICT_QUANTIZATION_OVERRIDE");
-            _guard3.set("1");
-            let override_child = ChildStrictConfig::from_parent(&parent_config, "quantization");
-            assert!(
-                override_child.has_component_override,
-                "Quantization child should detect component override"
-            );
+            {
+                unsafe {
+                    env::set_var("BITNET_STRICT_MODE", "1");
+                    env::set_var("BITNET_STRICT_INHERITANCE", "1");
+                    env::set_var("BITNET_STRICT_QUANTIZATION_OVERRIDE", "1");
+                }
+
+                let parent_config = ParentStrictConfig::from_env();
+                let override_child = ChildStrictConfig::from_parent(&parent_config, "quantization");
+                assert!(
+                    override_child.has_component_override,
+                    "Quantization child should detect component override"
+                );
+
+                unsafe {
+                    env::remove_var("BITNET_STRICT_MODE");
+                    env::remove_var("BITNET_STRICT_INHERITANCE");
+                    env::remove_var("BITNET_STRICT_QUANTIZATION_OVERRIDE");
+                }
+            }
 
             // Test configuration cascade changes
-            _guard1.set("0");
-            let updated_parent = ParentStrictConfig::from_env();
-            let cascaded_child = ChildStrictConfig::from_parent(&updated_parent, "inference");
-            assert!(!cascaded_child.enabled, "Child should reflect parent configuration changes");
+            {
+                unsafe {
+                    env::set_var("BITNET_STRICT_MODE", "0");
+                    env::set_var("BITNET_STRICT_INHERITANCE", "1");
+                }
+
+                let updated_parent = ParentStrictConfig::from_env();
+                let cascaded_child = ChildStrictConfig::from_parent(&updated_parent, "inference");
+                assert!(
+                    !cascaded_child.enabled,
+                    "Child should reflect parent configuration changes"
+                );
+
+                unsafe {
+                    env::remove_var("BITNET_STRICT_MODE");
+                    env::remove_var("BITNET_STRICT_INHERITANCE");
+                }
+            }
 
             println!("  ✅ Configuration inheritance testing successful");
 
