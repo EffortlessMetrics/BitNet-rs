@@ -264,7 +264,7 @@ fn test_single_token_embedding_memory_efficiency() -> anyhow::Result<()> {
     let single_bytes = single_elements * std::mem::size_of::<f32>();
 
     // Expected: 1 × 1 × hidden_size elements
-    let expected_elements = 1 * 1 * hidden_size;
+    let expected_elements = hidden_size;
     assert_eq!(
         single_elements, expected_elements,
         "Single-token embedding should have {} elements",
@@ -274,7 +274,7 @@ fn test_single_token_embedding_memory_efficiency() -> anyhow::Result<()> {
     println!("✅ Single-token embedding: {} elements = {} bytes", single_elements, single_bytes);
 
     // Compare to hypothetical 100-token sequence
-    let seq_100_elements = 1 * 100 * hidden_size;
+    let seq_100_elements = 100 * hidden_size;
     let seq_100_bytes = seq_100_elements * std::mem::size_of::<f32>();
     let ratio = seq_100_bytes / single_bytes;
 
