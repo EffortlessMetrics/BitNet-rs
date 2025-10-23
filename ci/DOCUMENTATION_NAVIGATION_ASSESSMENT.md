@@ -68,23 +68,27 @@ are all indexed.
 The navigation index provides **actionable workflow guidance**:
 
 #### Phase 1: Quick Wins (30 min)
+
 - Clippy fixes (5-10 min) - 4 warnings
 - GGUF dual-map bug (3 min) - 1 test
 - Documentation examples (10-15 min) - 10-12 fixes
 - **Clear file locations, line numbers, and verification commands**
 
 #### Phase 2: Performance Quarantine (1h)
+
 - Batch prefill test (30 min)
 - Concurrent load test (30 min)
 - **Pattern precedent cited** (batch_prefill.rs lines 220-228)
 
 #### Phase 3: QK256 Numerical Fixes (4-7h)
+
 - Adaptive tolerance implementation (2-3h)
 - Dimension validation fix (1-2h)
 - Struct creation fix (1-2h)
 - **Safety analysis and formula provided**
 
 #### Phase 4: FFI Build Hygiene (2.5-3h)
+
 - -isystem flag validation (1h)
 - Warning count validation (1h)
 - Version comment validation (30min)
@@ -110,7 +114,7 @@ The navigation index provides **actionable workflow guidance**:
 
 #### Cross-Reference Gaps
 
-**Gap 1: PR Summary to Solution Documents**
+##### Gap 1: PR Summary to Solution Documents
 
 - `PR_475_FINAL_SUMMARY.md` mentions 3 failing QK256 tests BUT:
   - No direct links to `QK256_TOLERANCE_STRATEGY.md`
@@ -118,7 +122,7 @@ The navigation index provides **actionable workflow guidance**:
   - No direct links to `qk256_struct_creation_analysis.md`
   - Does reference merge checklist location
 
-**Gap 2: Solution Documents to PR Reports**
+##### Gap 2: Solution Documents to PR Reports
 
 - Solution documents reference "PR #475" or "feat/comprehensive-integration" in:
   - `00_NAVIGATION_INDEX.md` (line 565)
@@ -168,6 +172,7 @@ The navigation index provides **actionable workflow guidance**:
 **In `ci/PR_475_FINAL_SUMMARY.md`**:
 
 **Line 26-29** (Test failures section):
+
 ```markdown
 ❌ **Test Failures:** 3 additional failures discovered in QK256 integration tests:
 - `test_qk256_struct_creation` - Validation logic not catching short data
@@ -176,6 +181,7 @@ The navigation index provides **actionable workflow guidance**:
 ```
 
 **Recommended Addition**:
+
 ```markdown
 ❌ **Test Failures:** 3 additional failures discovered in QK256 integration tests:
 - `test_qk256_struct_creation` - Validation logic not catching short data
@@ -189,11 +195,13 @@ The navigation index provides **actionable workflow guidance**:
 ```
 
 **Line 386** (Merge checklist reference):
+
 ```markdown
 **Full Checklist:** `/home/steven/code/Rust/BitNet-rs/ci/PR_475_MERGE_CHECKLIST.md`
 ```
 
 **Recommended Addition**:
+
 ```markdown
 **Full Checklist:** [ci/PR_475_MERGE_CHECKLIST.md](./PR_475_MERGE_CHECKLIST.md)
 
@@ -205,6 +213,7 @@ The navigation index provides **actionable workflow guidance**:
 **In `ci/solutions/00_NAVIGATION_INDEX.md`**:
 
 **Line 564-565** (Related Issues/PRs):
+
 ```markdown
 ### Resolved
 - **Issue #439**: Feature gate consistency ✅ (PR #475)
@@ -212,6 +221,7 @@ The navigation index provides **actionable workflow guidance**:
 ```
 
 **Recommended Addition**:
+
 ```markdown
 ### Resolved
 - **Issue #439**: Feature gate consistency ✅ ([PR #475](../PR_475_FINAL_SUMMARY.md))
@@ -245,6 +255,7 @@ The navigation index provides **actionable workflow guidance**:
 **In `ci/PR_DOCUMENTATION_INDEX.md`**:
 
 **Missing Section** (should be added after line 223):
+
 ```markdown
 ---
 
@@ -284,13 +295,13 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 ```
 
 ---
-```
 
 ### Priority 3: Maintenance (Low Impact, High Value)
 
 #### 5. Add "Last Reviewed" Timestamps to Navigation Indexes
 
 **In all index files** (8 documents):
+
 - `00_NAVIGATION_INDEX.md`
 - `INDEX.md`
 - `QK256_ANALYSIS_INDEX.md`
@@ -298,6 +309,7 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 - Others
 
 **Recommended Addition** (append to footer):
+
 ```markdown
 ---
 
@@ -330,6 +342,7 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 ### Redundancy Assessment
 
 #### NOT Redundant (Hierarchy Exists)
+
 - **`00_NAVIGATION_INDEX.md`** is the **master index** (references all others)
 - **Specialized indexes** (`QK256_ANALYSIS_INDEX.md`, etc.) provide **topical deep-dives**
 - **`INDEX.md`** focuses on **clippy + concurrent load** (different scope than master)
@@ -340,20 +353,23 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 
 | File | Lines | Overlap | Recommendation |
 |------|-------|---------|----------------|
-| `GGUF_SHAPE_VALIDATION_INDEX.md` | 100 | 80% with `00_NAVIGATION_INDEX.md` | **Consider merging** into master index |
-| `QK256_PROPERTY_TEST_ANALYSIS_INDEX.md` | 100 | 70% with `QK256_ANALYSIS_INDEX.md` | **Consider merging** into QK256 master |
-| `QK256_TEST_FAILURE_ANALYSIS_INDEX.md` | 85 | 60% with `QK256_ANALYSIS_INDEX.md` | **Consider merging** into QK256 master |
+| `GGUF_SHAPE_VALIDATION_INDEX.md` | 100 | 80% with `00_NAVIGATION_INDEX.md` | Merge into master index |
+| `QK256_PROPERTY_TEST_ANALYSIS_INDEX.md` | 100 | 70% with `QK256_ANALYSIS_INDEX.md` | Merge into QK256 master |
+| `QK256_TEST_FAILURE_ANALYSIS_INDEX.md` | 85 | 60% with `QK256_ANALYSIS_INDEX.md` | Merge into QK256 master |
 
-**Rationale**: These 3 files are **small** (85-100 lines) and have **narrow scope**. Merging into parent indexes would reduce navigation overhead while preserving content.
+**Rationale**: These 3 files are **small** (85-100 lines) and have **narrow scope**.
+Merging into parent indexes would reduce navigation overhead while preserving content.
 
 #### Recommended Consolidation (Optional)
 
 **Option 1: Aggressive Consolidation** (Not Recommended)
+
 - Merge all 7 sub-indexes into `00_NAVIGATION_INDEX.md`
 - **Risk**: Creates single 1,500+ line file (harder to navigate)
 - **Benefit**: Single source of truth
 
 **Option 2: Conservative Consolidation** (Recommended)
+
 - Keep **2-tier hierarchy**:
   - **Tier 1**: `00_NAVIGATION_INDEX.md` (master)
   - **Tier 2**: 4 specialized indexes (QK256, Clippy, Batch Prefill, FFI)
@@ -363,6 +379,7 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
   - `QK256_TEST_FAILURE_ANALYSIS_INDEX.md` → Merge into `QK256_ANALYSIS_INDEX.md`
 
 **Result**:
+
 - **Before**: 8 index files
 - **After**: 5 index files (37.5% reduction)
 - **Navigation**: Clearer hierarchy (master → specialized)
@@ -373,15 +390,18 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 
 ### Current Discoverability Challenges
 
-**Challenge 1: 325 Markdown Files in ci/**
+#### Challenge 1: 325 Markdown Files in ci/
+
 - Users don't know where to start
 - No clear "start here" signposting
 
-**Challenge 2: Index Hierarchy Not Obvious**
+#### Challenge 2: Index Hierarchy Not Obvious
+
 - Multiple "INDEX.md" files confuse entry points
 - No visual hierarchy (all files appear equal)
 
-**Challenge 3: Solution Documents Lack Context**
+#### Challenge 3: Solution Documents Lack Context
+
 - Individual solution docs don't explain where they fit
 - No "you are here" navigation
 
@@ -391,7 +411,7 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 
 **Create**: `ci/README.md` (if not exists, or enhance existing)
 
-```markdown
+```text
 # BitNet.rs CI Documentation
 
 **Start Here**: This directory contains 325+ documentation files. Use this guide to navigate.
@@ -417,8 +437,10 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 - 75+ documentation files organized by PR
 - Quality gate receipts (T3-T8)
 - Exploration artifacts and sprint summaries
+```
 
 ### I want to search all documentation
+
 ```bash
 # Search all markdown files
 grep -r "search term" /path/to/BitNet-rs/ci/ --include="*.md"
@@ -427,11 +449,10 @@ grep -r "search term" /path/to/BitNet-rs/ci/ --include="*.md"
 grep -r "search term" /path/to/BitNet-rs/ci/solutions/ --include="*.md"
 ```
 
+```text
 ---
 
 ## Directory Structure
-
-```
 ci/
 ├── README.md (this file) ← START HERE
 ├── solutions/
@@ -453,24 +474,28 @@ ci/
 ## Document Types
 
 ### Solution Documents (`ci/solutions/*.md`)
+
 - **Purpose**: Fix test failures and implementation issues
 - **Audience**: Developers implementing fixes
 - **Format**: Analysis + implementation guide + verification
 - **Count**: 32+ documents (11,700+ lines)
 
 ### PR Summaries (`ci/PR_*.md`)
+
 - **Purpose**: Track PR status and merge readiness
 - **Audience**: Reviewers and project managers
 - **Format**: Executive summary + test status + recommendations
 - **Count**: 4+ PR-specific summaries
 
 ### Quality Gate Receipts (`ci/t*.md`, `ci/ledger*.md`)
+
 - **Purpose**: Document quality validation results
 - **Audience**: QA and compliance reviewers
 - **Format**: Test results + gate status + evidence
 - **Count**: 50+ gate receipts
 
 ### Exploration Documents (`ci/exploration/*.md`)
+
 - **Purpose**: Design analysis and decision rationale
 - **Audience**: Architects and technical leads
 - **Format**: Deep analysis + options + recommendations
@@ -481,18 +506,21 @@ ci/
 ## Common Tasks
 
 ### Fix a specific test failure
+
 1. Go to [ci/solutions/00_NAVIGATION_INDEX.md](./solutions/00_NAVIGATION_INDEX.md)
 2. Search for test name (Ctrl+F)
 3. Open referenced solution document
 4. Follow implementation guide
 
 ### Review PR merge status
+
 1. Open [ci/PR_475_FINAL_SUMMARY.md](./PR_475_FINAL_SUMMARY.md)
 2. Check "Test Status Breakdown" section
 3. Review "Merge Recommendation" section
 4. Follow action items if blocked
 
 ### Understand a design decision
+
 1. Go to [ci/exploration/INDEX.md](./exploration/INDEX.md)
 2. Find relevant exploration document
 3. Read "Decision Rationale" section
@@ -502,6 +530,7 @@ ci/
 ## Contributing
 
 When adding new documentation:
+
 1. **Update the master index** (`00_NAVIGATION_INDEX.md` for solutions, `PR_DOCUMENTATION_INDEX.md` for PR docs)
 2. **Add cross-references** (link to related documents)
 3. **Use consistent formatting** (see existing documents for patterns)
@@ -513,9 +542,10 @@ When adding new documentation:
 **Total Documents**: 325+ markdown files
 **Total Size**: 5+ MB
 **Maintenance**: Review quarterly or after major PR merges
-```
 
-#### Enhancement 2: Add Breadcrumb Navigation to Solution Documents
+```text
+
+### Enhancement 2: Add Breadcrumb Navigation to Solution Documents
 
 **Pattern to add to each solution document** (after title, before content):
 
@@ -546,7 +576,7 @@ When adding new documentation:
 ---
 ```
 
-#### Enhancement 3: Visual Hierarchy in File Names (Optional)
+### Enhancement 3: Visual Hierarchy in File Names (Optional)
 
 **Current Problem**: All files appear equal in directory listings.
 
@@ -581,6 +611,7 @@ ANALYSIS_SUMMARY.md            # Supporting doc
 **Criteria**: Documents >500 lines should have TOC.
 
 **Affected Documents**:
+
 - `00_NAVIGATION_INDEX.md` (627 lines) - ✅ Already has structure
 - `QK256_TOLERANCE_STRATEGY.md` (1,027 lines) - ❌ Missing TOC
 - `concurrent_load_perf_quarantine.md` (806 lines) - ❌ Missing TOC
@@ -633,15 +664,15 @@ ANALYSIS_SUMMARY.md            # Supporting doc
 
 **Total Time**: ~3-4 hours
 
-4. **Add breadcrumb navigation to solution documents** (1.5 hours)
+1. **Add breadcrumb navigation to solution documents** (1.5 hours)
    - Pattern: ci/ → solutions/ → This Document
    - 32 documents × 3 minutes each
 
-5. **Add TOC to 5 large solution documents** (1.5 hours)
+2. **Add TOC to 5 large solution documents** (1.5 hours)
    - Documents >500 lines
    - Improves scanability
 
-6. **Add "Last Reviewed" metadata to index files** (30 min)
+3. **Add "Last Reviewed" metadata to index files** (30 min)
    - 8 index files
    - Helps with maintenance scheduling
 
@@ -649,11 +680,11 @@ ANALYSIS_SUMMARY.md            # Supporting doc
 
 **Total Time**: ~4-5 hours (includes link updates)
 
-7. **Consolidate 3 small index files** (2 hours)
+1. **Consolidate 3 small index files** (2 hours)
    - Merge into parent indexes
    - Test all links
 
-8. **Update all references to consolidated files** (2 hours)
+2. **Update all references to consolidated files** (2 hours)
    - Global find-replace
    - Verify no broken links
 
@@ -721,7 +752,8 @@ ANALYSIS_SUMMARY.md            # Supporting doc
 - **After P2**: **8.9/10** (Excellent, highly discoverable)
 - **After P3**: **9.4/10** (Outstanding, best-in-class)
 
-**Assessment**: Current documentation is **comprehensive** (content: 9/10) but **discoverability** needs enhancement (navigation: 5.6/10).
+**Assessment**: Current documentation is **comprehensive** (content: 9/10) but
+**discoverability** needs enhancement (navigation: 5.6/10).
 
 ---
 
@@ -729,7 +761,9 @@ ANALYSIS_SUMMARY.md            # Supporting doc
 
 ### Summary
 
-The BitNet.rs documentation system demonstrates **exceptional depth** with 32+ comprehensive solution documents, clear workflow guides, and 97% implementation-ready solutions. However, **strategic navigation gaps** hinder discoverability across 325+ files.
+The BitNet.rs documentation system demonstrates **exceptional depth** with 32+ comprehensive solution
+documents, clear workflow guides, and 97% implementation-ready solutions. However, **strategic navigation gaps**
+hinder discoverability across 325+ files.
 
 ### Strengths
 
@@ -760,9 +794,9 @@ The BitNet.rs documentation system demonstrates **exceptional depth** with 32+ c
 
 **Estimated Time**: 3-4 hours total
 
-4. **Add breadcrumb navigation** to 32 solution documents (1.5 hours)
-5. **Add TOCs** to 5 large documents (>500 lines) (1.5 hours)
-6. **Add metadata** (Last Reviewed, Next Review) to 8 index files (30 min)
+1. **Add breadcrumb navigation** to 32 solution documents (1.5 hours)
+2. **Add TOCs** to 5 large documents (>500 lines) (1.5 hours)
+3. **Add metadata** (Last Reviewed, Next Review) to 8 index files (30 min)
 
 **Impact**: Improves navigation hierarchy and maintenance scheduling.
 
@@ -770,16 +804,19 @@ The BitNet.rs documentation system demonstrates **exceptional depth** with 32+ c
 
 **Estimated Time**: 4-5 hours total
 
-7. **Consolidate 3 small index files** (2 hours)
-8. **Update all references** to consolidated files (2 hours)
+1. **Consolidate 3 small index files** (2 hours)
+2. **Update all references** to consolidated files (2 hours)
 
 **Impact**: Reduces index file count by 37.5%, clearer hierarchy.
 
 ### Final Recommendation
 
-**Implement Priority 1 actions immediately** (2-3 hours) to unblock users. The current documentation is **excellent in content** but **good in navigation** (5.6/10). With P1 enhancements, navigation score improves to **8.0/10** (Very Good), making the documentation system **highly usable** for all audiences.
+**Implement Priority 1 actions immediately** (2-3 hours) to unblock users. The current documentation is
+**excellent in content** but **good in navigation** (5.6/10). With P1 enhancements, navigation score improves to
+**8.0/10** (Very Good), making the documentation system **highly usable** for all audiences.
 
-**Priority 2 and 3** can be deferred to next major documentation refactor or implemented incrementally as time permits.
+**Priority 2 and 3** can be deferred to next major documentation refactor or implemented incrementally as
+time permits.
 
 ---
 
@@ -831,4 +868,4 @@ The BitNet.rs documentation system demonstrates **exceptional depth** with 32+ c
 
 ---
 
-**End of Assessment**
+## End of Assessment
