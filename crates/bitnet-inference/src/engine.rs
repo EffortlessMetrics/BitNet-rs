@@ -1315,6 +1315,20 @@ impl InferenceEngine {
         }
     }
 
+    /// Check if stop sequence matches when including the candidate token
+    fn matches_with_candidate(
+        &self,
+        tail_tokens: &[u32],
+        candidate_token: u32,
+        stop_sequences: &[String],
+    ) -> bool {
+        let mut test_tokens = tail_tokens.to_vec();
+        test_tokens.push(candidate_token);
+
+        let text = self.tokenizer.decode(&test_tokens).unwrap_or_default();
+        stop_sequences.iter().any(|seq| text.ends_with(seq))
+    }
+
     /// Check if generation should stop
     fn should_stop(&self, token: u32, generated_tokens: &[u32], config: &GenerationConfig) -> bool {
         // 1) ID-based stops (fast path - O(1) check on stop_token_ids list)
@@ -1334,18 +1348,15 @@ impl InferenceEngine {
 
         // 3) String-based stop sequences (tail window optimization - O(window_size) decode)
         // Only decode if we have stop sequences to check
+        // CRITICAL FIX: Include the candidate token in the check to avoid "one token late" bug
         if !config.stop_sequences.is_empty() {
             // Tail window optimization: only decode the last N tokens to avoid O(n²) cost
-            let window_size = config.stop_string_window.min(generated_tokens.len());
-            let tail_start = generated_tokens.len().saturating_sub(window_size);
+            // Account for the candidate token in window size calculation
+            let window_size = config.stop_string_window.min(generated_tokens.len() + 1);
+            let tail_start = generated_tokens.len().saturating_sub(window_size - 1);
             let tail_tokens = &generated_tokens[tail_start..];
 
-            let current_text = self.tokenizer.decode(tail_tokens).unwrap_or_default();
-            for stop_seq in &config.stop_sequences {
-                if current_text.ends_with(stop_seq) {
-                    return true;
-                }
-            }
+            return self.matches_with_candidate(tail_tokens, token, &config.stop_sequences);
         }
 
         false

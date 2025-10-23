@@ -3,9 +3,7 @@
   "timestamp": "2025-01-15T10:30:00Z",
   "compute_path": "mock",
   "backend": "cpu",
-  "kernels": [
-    ""
-  ],
+  "kernels": [],
   "deterministic": false,
   "environment": {
     "RUST_VERSION": "1.90.0",

@@ -18,10 +18,20 @@ use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 use serial_test::serial;
 
-/// AC:6.1 - Two complete inference runs produce identical token sequences
-/// Validates full determinism from prompt to generated tokens
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore]
+// Slow: 50-token generation with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+/// AC6.1: Deterministic Inference - SLOW INTEGRATION TEST
+///
+/// **This test runs 50-token generation (100+ forward passes) and is marked #[ignore].**
+///
+/// For fast unit testing of determinism, see:
+/// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
+///
+/// Validates full determinism from prompt to generated tokens with complete inference runs.
+///
+/// Run manually: `cargo test test_ac6_deterministic_inference_identical_runs -- --ignored`
 async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     // Set deterministic environment
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
@@ -65,10 +75,20 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     Ok(())
 }
 
-/// AC:6.2 - Determinism across multiple runs (5 iterations)
-/// Validates consistency over multiple generation cycles
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore]
+// Slow: 20-token generation x5 runs with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+/// AC6.2: Determinism Multiple Runs - SLOW INTEGRATION TEST
+///
+/// **This test runs 20-token generation 5 times (200+ forward passes) and is marked #[ignore].**
+///
+/// For fast unit testing of multi-run determinism, see:
+/// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
+///
+/// Validates consistency over multiple generation cycles with full autoregressive generation.
+///
+/// Run manually: `cargo test test_ac6_determinism_multiple_runs -- --ignored`
 async fn test_ac6_determinism_multiple_runs() -> Result<()> {
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");

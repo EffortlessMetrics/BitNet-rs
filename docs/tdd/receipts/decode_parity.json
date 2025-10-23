@@ -1,5 +1,4 @@
 {
-  "receipt_version": "1.0.0",
   "purpose": "deterministic_greedy_decode_parity",
   "timestamp": "2025-10-22T07:00:50Z",
   "execution": {
@@ -20,7 +19,15 @@
   },
   "input": {
     "text": "What is 2+2?",
-    "token_ids": [3923, 374, 220, 17, 10, 17, 30],
+    "token_ids": [
+      3923,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30
+    ],
     "token_count": 7
   },
   "output": {
@@ -62,8 +69,14 @@
   "runtime_environment": {
     "rust_version": "1.90.0+",
     "optimization_level": "release",
-    "features": ["cpu", "full-cli"],
+    "features": [
+      "cpu",
+      "full-cli"
+    ],
     "simd_backend": "AVX2/AVX-512/NEON (auto-detected)",
     "platform": "linux"
-  }
+  },
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "kernels": []
 }

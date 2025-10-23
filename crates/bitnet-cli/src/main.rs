@@ -33,7 +33,7 @@ fn compiled_features() -> &'static [&'static str] {
     &[
         #[cfg(feature = "cpu")]
         "cpu",
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         "gpu",
         // Removed cuda and ffi - not declared in bitnet-cli/Cargo.toml
         #[cfg(feature = "iq2s-ffi")]
@@ -1462,21 +1462,21 @@ async fn show_system_info() -> Result<()> {
 
     // Feature information
     println!("{}", style("Features:").bold());
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         println!("  GPU support: {}", style("✓ Enabled").green());
         // Check CUDA availability
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             match candle_core::Device::cuda_if_available(0).is_ok() {
                 true => println!("  CUDA: {}", style("✓ Available").green()),
                 false => println!("  CUDA: {}", style("✗ Not available").red()),
             }
         }
-        #[cfg(not(feature = "gpu"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         println!("  CUDA: {}", style("✗ Not compiled").yellow())
     }
-    #[cfg(not(feature = "gpu"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     {
         println!("  GPU support: {}", style("✗ Disabled").red());
     }

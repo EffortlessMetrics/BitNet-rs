@@ -1567,7 +1567,7 @@ mod tests {
 
     /// Test device capability detection for tokenizer selection
     #[test]
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn test_device_capability_tokenizer_selection() {
         // Test device capability requirements for different tokenizer configurations
         let device_test_scenarios = [

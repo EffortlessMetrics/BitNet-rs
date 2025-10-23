@@ -187,11 +187,24 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
     Ok(())
 }
 
-/// AC3.2: Temperature Sampling Validation Test
+/// AC3.2: Temperature Sampling Validation Test - SLOW INTEGRATION TEST
+///
+/// **This test is marked #[ignore] because it runs 25+ full model generations.**
+///
 /// Tests feature spec: issue-248-spec.md#ac3
-/// Validates temperature scaling affects sampling diversity correctly
+/// Validates temperature scaling affects sampling diversity correctly across 5 temperature
+/// values × 5 samples each = 25 full model generation runs.
+///
+/// For fast unit testing of temperature sampling, see:
+/// - `tests/unit_tests.rs::test_sampling_with_different_temperatures()` (<1ms)
+///
+/// Run this test manually for end-to-end validation:
+/// ```bash
+/// cargo test test_ac3_temperature_sampling_validation --package bitnet-inference -- --ignored --nocapture
+/// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
+#[ignore] // Slow: 25 full model generations. Fast equivalents: tests/unit_tests.rs::test_sampling_with_different_temperatures
 async fn test_ac3_temperature_sampling_validation() -> Result<()> {
     let config = AC3TestConfig::default();
 
@@ -281,11 +294,24 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
     Ok(())
 }
 
-/// AC3.3: Top-K Sampling Validation Test
+/// AC3.3: Top-K Sampling Validation Test - SLOW INTEGRATION TEST
+///
+/// **This test is marked #[ignore] because it runs 52+ full model generations.**
+///
 /// Tests feature spec: issue-248-spec.md#ac3
-/// Validates top-k sampling restricts vocabulary to k most likely tokens
+/// Validates top-k sampling restricts vocabulary to k most likely tokens across 5 top-k
+/// values × 10 samples each + 2 determinism checks = 52 full model generation runs.
+///
+/// For fast unit testing of top-k sampling, see:
+/// - `tests/unit_tests.rs::test_sampling_with_top_k()` (<1ms)
+///
+/// Run this test manually for end-to-end validation:
+/// ```bash
+/// cargo test test_ac3_top_k_sampling_validation --package bitnet-inference -- --ignored --nocapture
+/// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
+#[ignore] // Slow: 52 full model generations. Fast equivalents: tests/unit_tests.rs::test_sampling_with_top_k
 async fn test_ac3_top_k_sampling_validation() -> Result<()> {
     let config = AC3TestConfig::default();
 
@@ -368,11 +394,24 @@ async fn test_ac3_top_k_sampling_validation() -> Result<()> {
     Ok(())
 }
 
-/// AC3.4: Nucleus (Top-P) Sampling Validation Test
+/// AC3.4: Nucleus (Top-P) Sampling Validation Test - SLOW INTEGRATION TEST
+///
+/// **This test is marked #[ignore] because it runs 76+ full model generations.**
+///
 /// Tests feature spec: issue-248-spec.md#ac3
-/// Validates nucleus sampling maintains cumulative probability threshold
+/// Validates nucleus sampling maintains cumulative probability threshold across 5 top-p
+/// values × 15 samples each + 1 restrictive test = 76 full model generation runs.
+///
+/// For fast unit testing of nucleus sampling, see:
+/// - `tests/unit_tests.rs::test_sampling_with_nucleus()` (<1ms)
+///
+/// Run this test manually for end-to-end validation:
+/// ```bash
+/// cargo test test_ac3_nucleus_sampling_validation --package bitnet-inference -- --ignored --nocapture
+/// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
+#[ignore] // Slow: 76 full model generations. Fast equivalents: tests/unit_tests.rs::test_sampling_with_nucleus
 async fn test_ac3_nucleus_sampling_validation() -> Result<()> {
     let config = AC3TestConfig::default();
 

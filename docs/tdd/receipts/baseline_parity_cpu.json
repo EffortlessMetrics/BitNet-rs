@@ -1,5 +1,4 @@
 {
-  "receipt_version": "1.0.0",
   "purpose": "cpu_baseline_establishment_deterministic_greedy",
   "timestamp": "2025-10-23T00:38:00Z",
   "flow": "generative",
@@ -131,7 +130,10 @@
     "rust_version": "1.90.0+",
     "rust_edition": "2024",
     "optimization_level": "dev (unoptimized + debuginfo)",
-    "build_features": ["cpu", "inference"],
+    "build_features": [
+      "cpu",
+      "inference"
+    ],
     "default_features": "none (empty by design)",
     "platform": "linux",
     "arch": "x86_64",
@@ -144,5 +146,8 @@
     "baseline_recorded": true,
     "ready_for_review": true,
     "next_gate": "quality-finalizer"
-  }
+  },
+  "schema_version": "1.0.0",
+  "compute_path": "real",
+  "kernels": []
 }

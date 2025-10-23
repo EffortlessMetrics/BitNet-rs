@@ -740,7 +740,7 @@ impl InferenceCommand {
                 Ok(Device::Cpu)
             }
             "cuda" => {
-                #[cfg(feature = "gpu")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     if candle_core::utils::cuda_is_available() {
                         info!("Using CUDA device");
@@ -749,13 +749,13 @@ impl InferenceCommand {
                         anyhow::bail!("CUDA requested but no GPU available");
                     }
                 }
-                #[cfg(not(feature = "gpu"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 {
                     anyhow::bail!("Binary not built with GPU support");
                 }
             }
             "auto" => {
-                #[cfg(feature = "gpu")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     if candle_core::utils::cuda_is_available() {
                         info!("Auto-select: CUDA");
@@ -765,7 +765,7 @@ impl InferenceCommand {
                         Ok(Device::Cpu)
                     }
                 }
-                #[cfg(not(feature = "gpu"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 {
                     info!("Auto-select: CPU (GPU support not compiled)");
                     Ok(Device::Cpu)

@@ -18,14 +18,14 @@ impl SafeTensorsLoader {
         match device {
             Device::Cpu => Ok(candle_core::Device::Cpu),
             Device::Cuda(id) => {
-                #[cfg(feature = "gpu")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     use candle_core::backend::BackendDevice;
                     let cuda = candle_core::CudaDevice::new(*id)
                         .map_err(|e| BitNetError::Validation(e.to_string()))?;
                     Ok(candle_core::Device::Cuda(cuda))
                 }
-                #[cfg(not(feature = "gpu"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 {
                     let _ = id; // Suppress unused variable warning
                     Err(BitNetError::Validation(

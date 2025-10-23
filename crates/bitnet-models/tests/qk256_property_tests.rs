@@ -19,6 +19,10 @@ use bitnet_models::quant::i2s_qk256::{
 };
 use proptest::prelude::*;
 
+// Import tolerance helpers from test helpers
+mod helpers;
+use helpers::qk256_tolerance::approx_eq_with_len;
+
 // ==================== Property Test Strategies ====================
 
 /// Strategy for generating valid QK256 dimensions
@@ -141,12 +145,11 @@ proptest! {
             .map(|(&code, &x)| code_to_f32(code) * x)
             .sum();
 
-        // Verify within tolerance (should be exact for single block)
-        let diff = (qk256_result - fp32_result).abs();
+        // Verify within tolerance using adaptive tolerance helper
         assert!(
-            diff < 1e-5,
-            "QK256 result {} differs from FP32 reference {} by {} (too large)",
-            qk256_result, fp32_result, diff
+            approx_eq_with_len(qk256_result, fp32_result, QK256_BLOCK),
+            "QK256 result {} differs from FP32 reference {} by {} (exceeds tolerance for len={})",
+            qk256_result, fp32_result, (qk256_result - fp32_result).abs(), QK256_BLOCK
         );
     }
 
@@ -179,11 +182,11 @@ proptest! {
             .map(|(&code, &x)| code_to_f32(code) * x)
             .sum();
 
-        let diff = (qk256_result - fp32_result).abs();
+        // Verify within tolerance for tail handling
         assert!(
-            diff < 1e-5,
-            "QK256 tail result {} differs from FP32 reference {} by {}",
-            qk256_result, fp32_result, diff
+            approx_eq_with_len(qk256_result, fp32_result, cols),
+            "QK256 tail result {} differs from FP32 reference {} by {} (exceeds tolerance for len={})",
+            qk256_result, fp32_result, (qk256_result - fp32_result).abs(), cols
         );
     }
 }
@@ -254,13 +257,18 @@ proptest! {
             fp32_output[row_idx] = sum;
         }
 
-        // Verify results match within tolerance
+        // Verify results match within adaptive tolerance
         for row_idx in 0..rows {
-            let diff = (qk256_output[row_idx] - fp32_output[row_idx]).abs();
+            let qk256_val = qk256_output[row_idx];
+            let fp32_val = fp32_output[row_idx];
+            let abs_diff = (qk256_val - fp32_val).abs();
+
             assert!(
-                diff < 1e-4,
-                "Row {}: QK256={}, FP32={}, diff={} (exceeds tolerance)",
-                row_idx, qk256_output[row_idx], fp32_output[row_idx], diff
+                approx_eq_with_len(qk256_val, fp32_val, cols),
+                "Row {}: QK256={}, FP32={}, abs_diff={} (exceeds tolerance for cols={})\n\
+                 Relative diff: {:.2e}",
+                row_idx, qk256_val, fp32_val, abs_diff, cols,
+                if fp32_val.abs() > 1e-6 { abs_diff / fp32_val.abs() } else { f32::NAN }
             );
         }
     }

@@ -453,6 +453,20 @@ impl GenerationStream {
         Ok(vec![0.1; vocab_size])
     }
 
+    /// Check if stop sequence matches when including the candidate token
+    fn matches_with_candidate(
+        tail_tokens: &[u32],
+        candidate_token: u32,
+        stop_sequences: &[String],
+        tokenizer: &Arc<dyn Tokenizer>,
+    ) -> bool {
+        let mut test_tokens = tail_tokens.to_vec();
+        test_tokens.push(candidate_token);
+
+        let text = tokenizer.decode(&test_tokens).unwrap_or_default();
+        stop_sequences.iter().any(|seq| text.ends_with(seq))
+    }
+
     /// Check if generation should stop
     fn should_stop(
         token: u32,
@@ -477,19 +491,20 @@ impl GenerationStream {
 
         // 3) String-based stop sequences (tail window optimization - O(window_size) decode)
         // Only decode if we have stop sequences to check
+        // CRITICAL FIX: Include the candidate token in the check to avoid "one token late" bug
         if !config.stop_sequences.is_empty() {
             // Tail window optimization: only decode the last N tokens to avoid O(n²) cost
-            let window_size = config.stop_string_window.min(current_tokens.len());
-            let tail_start = current_tokens.len().saturating_sub(window_size);
+            // Account for the candidate token in window size calculation
+            let window_size = config.stop_string_window.min(current_tokens.len() + 1);
+            let tail_start = current_tokens.len().saturating_sub(window_size - 1);
             let tail_tokens = &current_tokens[tail_start..];
 
-            if let Ok(current_text) = tokenizer.decode(tail_tokens) {
-                for stop_seq in &config.stop_sequences {
-                    if current_text.ends_with(stop_seq) {
-                        return true;
-                    }
-                }
-            }
+            return Self::matches_with_candidate(
+                tail_tokens,
+                token,
+                &config.stop_sequences,
+                tokenizer,
+            );
         }
 
         false

@@ -18,7 +18,7 @@ use bitnet_common::{
     BitNetError, BitNetTensor, QuantizationError, QuantizationType, Result, SecurityError,
     SecurityLimits, Tensor,
 };
-#[cfg(feature = "gpu")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 #[allow(unused_imports)]
 use bitnet_kernels::KernelProvider;
 use candle_core::Device;

@@ -41,6 +41,7 @@ integration-tests = []
 default = ["cpu"]
 cpu = ["bitnet-inference/cpu"]
 gpu = ["bitnet-inference/gpu"]
+cuda = ["gpu"]  # Backward compatibility alias for gpu
 
 [[test]]
 name = "streaming_comprehensive"

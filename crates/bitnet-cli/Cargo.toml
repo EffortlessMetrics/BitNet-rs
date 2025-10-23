@@ -63,6 +63,7 @@ tempfile = "3"
 default = ["cpu", "full-cli"]
 cpu = ["bitnet-inference/cpu"]
 gpu = ["bitnet-inference/gpu"]
+cuda = ["gpu"]  # Backward compatibility alias for gpu
 # IQ2_S support via GGML FFI
 iq2s-ffi = ["bitnet-models/iq2s-ffi", "bitnet-ggml-ffi/iq2s-ffi"]
 # Cross-validation support

@@ -3,7 +3,7 @@
 //! This module provides device-aware quantization that automatically selects
 //! the best available device (GPU vs CPU) and gracefully falls back when needed.
 
-#[cfg(feature = "gpu")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 use crate::gpu;
 use crate::{KernelProvider, cpu};
 use bitnet_common::{Device, KernelError, QuantizationType, Result};
@@ -39,7 +39,7 @@ impl DeviceAwareQuantizer {
     /// Create a new device-aware quantizer for the specified device
     pub fn new(device: Device) -> Result<Self> {
         let (primary_provider, fallback_provider) = match device {
-            #[cfg(feature = "gpu")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             Device::Cuda(device_id) => {
                 // Try to create GPU provider
                 let gpu_provider = match gpu::CudaKernel::new_with_device(device_id) {
@@ -65,7 +65,7 @@ impl DeviceAwareQuantizer {
                 let cpu_provider = Self::create_best_cpu_provider()?;
                 (gpu_provider, cpu_provider)
             }
-            #[cfg(not(feature = "gpu"))]
+            #[cfg(not(any(feature = "gpu", feature = "cuda")))]
             Device::Cuda(_device_id) => {
                 log::warn!("CUDA support not compiled, falling back to CPU");
                 let cpu_provider = Self::create_best_cpu_provider()?;
@@ -469,7 +469,7 @@ impl DeviceAwareQuantizerFactory {
     pub fn create_best(preferred_device: Option<Device>) -> Result<DeviceAwareQuantizer> {
         let device = preferred_device.unwrap_or({
             // Auto-detect best device
-            #[cfg(feature = "gpu")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             {
                 if gpu::is_cuda_available() && gpu::cuda_device_count() > 0 {
                     Device::Cuda(0)
@@ -477,7 +477,7 @@ impl DeviceAwareQuantizerFactory {
                     Device::Cpu
                 }
             }
-            #[cfg(not(feature = "gpu"))]
+            #[cfg(not(any(feature = "gpu", feature = "cuda")))]
             {
                 Device::Cpu
             }
@@ -493,7 +493,7 @@ impl DeviceAwareQuantizerFactory {
 
     /// List available devices
     pub fn list_available_devices() -> Vec<Device> {
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             let mut devices = vec![Device::Cpu];
             let cuda_count = gpu::cuda_device_count();
@@ -503,7 +503,7 @@ impl DeviceAwareQuantizerFactory {
             devices
         }
 
-        #[cfg(not(feature = "gpu"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         {
             vec![Device::Cpu]
         }
@@ -548,7 +548,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
     #[ignore] // Only run when CUDA is available
     fn test_cuda_device_aware() {
@@ -771,13 +771,13 @@ mod tests {
         let devices = DeviceAwareQuantizerFactory::list_available_devices();
         assert!(devices.contains(&Device::Cpu), "CPU should always be available");
 
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             // If GPU feature is enabled, we might have CUDA devices
             println!("GPU feature enabled, available devices: {:?}", devices);
         }
 
-        #[cfg(not(feature = "gpu"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         {
             // If GPU feature is disabled, only CPU should be available
             assert_eq!(

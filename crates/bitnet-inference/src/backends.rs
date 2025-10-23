@@ -178,7 +178,7 @@ impl GpuBackend {
     /// Check if GPU is available
     pub fn is_available() -> bool {
         // In a real implementation, this would check for GPU availability
-        cfg!(feature = "gpu")
+        cfg!(any(feature = "gpu", feature = "cuda"))
     }
 }
 

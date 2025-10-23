@@ -214,7 +214,7 @@ impl BitNetServer {
 
     /// Detect available devices for execution
     async fn detect_available_devices() -> Vec<Device> {
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         let devices = {
             let mut devices = vec![Device::Cpu]; // CPU always available
             // Try to detect CUDA devices
@@ -229,7 +229,7 @@ impl BitNetServer {
             devices
         };
 
-        #[cfg(not(feature = "gpu"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         let devices = vec![Device::Cpu]; // CPU always available
 
         info!("Detected devices: {:?}", devices);

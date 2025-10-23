@@ -19,10 +19,20 @@ use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 use serial_test::serial;
 
-/// AC:3.1 - Deterministic generation with fixed seed produces identical sequences
-/// Validates ChaCha8Rng seeding and deterministic execution
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore]
+// Slow: 50-token generation with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+/// AC3.1: Deterministic Generation - SLOW INTEGRATION TEST
+///
+/// **This test runs 50-token generation (100+ forward passes) and is marked #[ignore].**
+///
+/// For fast unit testing of determinism, see:
+/// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
+///
+/// Validates ChaCha8Rng seeding and deterministic execution with full autoregressive generation.
+///
+/// Run manually: `cargo test test_ac3_deterministic_generation_identical_sequences -- --ignored`
 async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
     // Set deterministic environment with guards for automatic cleanup
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
@@ -110,10 +120,20 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
     Ok(())
 }
 
-/// AC:3.3 - Top-k sampling with seed is reproducible
-/// Validates top-k sampling respects seed for determinism
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore]
+// Slow: 30-token generation with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+/// AC3.3: Top-k Seeded Sampling - SLOW INTEGRATION TEST
+///
+/// **This test runs 30-token generation (60+ forward passes) and is marked #[ignore].**
+///
+/// For fast unit testing of top-k determinism, see:
+/// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
+///
+/// Validates top-k sampling respects seed for determinism in full autoregressive generation.
+///
+/// Run manually: `cargo test test_ac3_top_k_sampling_seeded -- --ignored`
 async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
@@ -150,10 +170,20 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
     Ok(())
 }
 
-/// AC:3.4 - Top-p (nucleus) sampling with seed is reproducible
-/// Validates nucleus sampling respects seed for determinism
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore]
+// Slow: 25-token generation with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+/// AC3.4: Top-p Nucleus Sampling - SLOW INTEGRATION TEST
+///
+/// **This test runs 25-token generation (50+ forward passes) and is marked #[ignore].**
+///
+/// For fast unit testing of nucleus sampling determinism, see:
+/// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
+///
+/// Validates nucleus sampling respects seed for determinism in full autoregressive generation.
+///
+/// Run manually: `cargo test test_ac3_top_p_nucleus_sampling_seeded -- --ignored`
 async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
@@ -190,10 +220,20 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
     Ok(())
 }
 
-/// AC:3.5 - Different seeds produce different outputs
-/// Validates seed actually affects generation
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore]
+// Slow: 20-token generation with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+/// AC3.5: Different Seeds Produce Different Outputs - SLOW INTEGRATION TEST
+///
+/// **This test runs 20-token generation (40+ forward passes) and is marked #[ignore].**
+///
+/// For fast unit testing of seed variance, see:
+/// - `tests/deterministic_sampling_unit.rs::test_different_seeds_different_samples()` (<5ms)
+///
+/// Validates seed actually affects generation in full autoregressive generation.
+///
+/// Run manually: `cargo test test_ac3_different_seeds_different_outputs -- --ignored`
 async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
@@ -241,10 +281,20 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
     Ok(())
 }
 
-/// AC:3.6 - Determinism validation with RAYON_NUM_THREADS=1
-/// Validates single-threaded execution prevents race conditions
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore]
+// Slow: 15-token generation x3 runs with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+/// AC3.6: Rayon Single-Thread Determinism - SLOW INTEGRATION TEST
+///
+/// **This test runs 15-token generation 3 times (90+ forward passes) and is marked #[ignore].**
+///
+/// For fast unit testing of single-threaded determinism, see:
+/// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
+///
+/// Validates single-threaded execution prevents race conditions in full autoregressive generation.
+///
+/// Run manually: `cargo test test_ac3_rayon_single_thread_determinism -- --ignored`
 async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");

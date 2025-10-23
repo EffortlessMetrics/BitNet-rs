@@ -51,6 +51,7 @@ serial_test = "3.2.0"
 default = []
 cpu = ["bitnet-kernels/cpu-optimized"]
 gpu = ["bitnet-kernels/gpu"]
+cuda = ["gpu"]  # Backward compatibility alias for gpu
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
 # Runtime selection
