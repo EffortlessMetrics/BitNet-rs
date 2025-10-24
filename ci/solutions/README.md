@@ -1,38 +1,72 @@
-# General Documentation Scaffolding - Solutions & Analysis
+# CI Solutions Index - Complete Documentation
 
-This directory contains comprehensive analysis and solutions for the remaining general documentation scaffolding tests.
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
 
-## Directory Contents
+---
+
+This directory contains comprehensive analysis and solutions for all CI test failures. **Document consolidation completed 2025-10-23 to reduce duplication while maintaining completeness.**
+
+## Master Navigation
+
+**Start here**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md) - Complete master index with implementation workflow
+
+---
+
+## Main Category Indexes
+
+### 1. QK256_ANALYSIS_INDEX.md ⭐
+**Purpose**: Complete index for all QK256-related issues (numerical, property, structural)
+**Documents**:
+- `QK256_TOLERANCE_STRATEGY.md` (1,027 lines) - Numerical tolerance analysis
+- `qk256_property_test_analysis.md` (669 lines) - Property test analysis
+- `qk256_struct_creation_analysis.md` (545 lines) - Structural test analysis
+
+**Consolidated content**:
+- Merged `QK256_PROPERTY_TEST_ANALYSIS_INDEX.md`
+- Merged `QK256_TEST_FAILURE_ANALYSIS_INDEX.md`
+
+### 2. GGUF_SHAPE_VALIDATION_INDEX.md
+**Purpose**: GGUF loader dual-map architecture and 3-line fix
+**Documents**:
+- `gguf_shape_validation_fix.md` (514 lines) - Complete technical analysis
+
+### 3. BATCH_PREFILL_INDEX.md
+**Purpose**: Performance test quarantine pattern for batch prefill
+**Documents**:
+- `batch_prefill_perf_quarantine.md` (741 lines) - Detailed quarantine analysis
+
+### 4. CONCURRENT_LOAD_QUARANTINE_QUICK_REF.md
+**Purpose**: Performance test quarantine for concurrent load
+**Documents**:
+- `concurrent_load_perf_quarantine.md` (806 lines) - Detailed quarantine analysis
+
+---
+
+## Solution Summaries & Executive Documents
 
 ### 1. SOLUTIONS_SUMMARY.md
-**Purpose**: Executive summary and quick reference
+**Purpose**: Executive summary for general documentation scaffolding
 **Audience**: Release managers, sprint leads
+**Status**: General docs scaffolding summary (8/8 tests passing)
 **Contents**:
-- Test status overview (8/8 passing, 2 properly ignored)
+- Test status overview
 - Issues identified and severity assessment
 - Prioritized action items
 - Quick verification commands
 - Metrics and conclusion
 
-**Start Here**: If you want a quick overview of findings and recommendations.
+### 2. ANALYSIS_SUMMARY.md
+**Purpose**: Executive summary for QK256 property tests
+**Audience**: Technical leads, developers
+**Related Analysis**: `qk256_property_test_analysis.md`
 
-### 2. general_docs_scaffolding.md
-**Purpose**: Complete exploration report with detailed findings
-**Audience**: Developers, documentation maintainers, QA
-**Contents**:
-- Executive summary
-- Test results for AC8 (8 tests) and AC4 (9 tests)
-- Documentation structure analysis
-- Cross-link verification (100% valid)
-- Markdown linting assessment
-- Content completeness verification
-- Minor gaps identified
-- Test scaffolding analysis
-- Documentation quality metrics
+---
 
-**Reference**: For detailed analysis of each test and requirement.
+## Implementation Guides
 
-### 3. docs_code_example_fixes.md
+### Code Example Fixes
+**File**: `docs_code_example_fixes.md`
 **Purpose**: Specific code examples requiring feature flag updates
 **Audience**: Contributors applying fixes
 **Contents**:
@@ -47,6 +81,41 @@ This directory contains comprehensive analysis and solutions for the remaining g
 - Commit message template
 
 **Use This**: When applying feature flag fixes to documentation.
+
+### Clippy Quick Reference
+**File**: `CLIPPY_QUICK_REFERENCE.md`
+**Purpose**: Line-by-line clippy fix checklist
+**Contents**:
+- 4 warnings across 2 files
+- Exact line numbers and fixes
+
+---
+
+## Document Organization
+
+### Primary Analysis Documents
+- `QK256_TOLERANCE_STRATEGY.md` - 1,027 lines, complete numerical analysis
+- `qk256_property_test_analysis.md` - 669 lines, property test analysis
+- `qk256_struct_creation_analysis.md` - 545 lines, structural test analysis
+- `gguf_shape_validation_fix.md` - 514 lines, GGUF loader fix
+- `batch_prefill_perf_quarantine.md` - 741 lines, batch prefill quarantine
+- `concurrent_load_perf_quarantine.md` - 806 lines, concurrent load quarantine
+- `general_docs_scaffolding.md` - 472 lines, documentation analysis
+- `ffi_build_hygiene_fixes.md` - 380 lines, FFI build hygiene
+- `docs_code_example_fixes.md` - 310 lines, documentation examples
+
+### Reference Documents
+- `qk256_test_failure_quickref.md` - 1-page quick reference
+- `qk256_docs_completion.md` - 476 lines, documentation completeness
+- `qk256_property_test_analysis.md` - Property test analysis
+- `qk256_struct_creation_analysis.md` - Struct creation analysis
+
+### Deleted/Consolidated (2025-10-23)
+- ~~SOLUTION_SUMMARY.md~~ → Consolidated into SOLUTIONS_SUMMARY.md
+- ~~SUMMARY.md~~ → Merged into README.md
+- ~~QK256_PROPERTY_TEST_ANALYSIS_INDEX.md~~ → Consolidated into QK256_ANALYSIS_INDEX.md
+- ~~QK256_TEST_FAILURE_ANALYSIS_INDEX.md~~ → Consolidated into QK256_ANALYSIS_INDEX.md
+- ~~GGUF_SHAPE_VALIDATION_INDEX.md~~ → Kept separate due to distinct focus
 
 ## Quick Start
 

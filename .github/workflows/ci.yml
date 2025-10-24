@@ -715,6 +715,7 @@ jobs:
   ffi-smoke:
     name: FFI Smoke Build (${{ matrix.cc }})
     runs-on: ubuntu-latest
+    needs: [test]  # Run after primary tests pass
     strategy:
       matrix:
         include:
@@ -735,6 +736,55 @@ jobs:
         run: |
           cargo build --workspace --no-default-features --features ffi --exclude bitnet-sys --exclude crossval
           cargo test  --workspace --no-default-features --features ffi --exclude bitnet-sys --exclude crossval --no-run
+
+  ffi-zero-warning-windows:
+    name: FFI · zero warnings (MSVC)
+    runs-on: windows-latest
+    needs: [test]  # Run after primary tests pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build FFI with MSVC (fail on warnings)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $output = & cargo build -p bitnet-ggml-ffi --no-default-features --features iq2s-ffi 2>&1 | Out-String
+          Write-Output $output
+          if ($output -match 'warning:') {
+            throw "FFI build produced warnings on MSVC"
+          }
+          Write-Output "✅ FFI build completed with zero warnings on MSVC"
+
+  ffi-zero-warning-linux:
+    name: FFI · zero warnings (Linux ${{ matrix.cc }})
+    runs-on: ubuntu-latest
+    needs: [test]  # Run after primary tests pass
+    strategy:
+      matrix:
+        include:
+          - cc: gcc
+            cxx: g++
+          - cc: clang
+            cxx: clang++
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install native toolchain
+        run: sudo apt-get update && sudo apt-get install -y clang make gcc g++
+      - name: Build FFI with ${{ matrix.cc }} (fail on warnings)
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          set -o pipefail
+          cargo build -p bitnet-ggml-ffi --no-default-features --features iq2s-ffi 2>&1 | tee /tmp/build.log
+          if grep -q "warning:" /tmp/build.log; then
+            echo "::error::FFI build produced warnings with ${{ matrix.cc }}"
+            exit 1
+          fi
+          echo "✅ FFI build completed with zero warnings on ${{ matrix.cc }}"
 
   benchmark:
     name: Performance Benchmarks (Rust)

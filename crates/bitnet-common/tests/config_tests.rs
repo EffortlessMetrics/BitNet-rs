@@ -391,6 +391,7 @@ fn test_config_file_error_handling() {
 }
 
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_env_variable_overrides() {
     let _lock = acquire_env_lock();
 
@@ -471,6 +472,7 @@ fn test_env_variable_overrides() {
 }
 
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_env_variable_special_values() {
     let _lock = acquire_env_lock();
 
@@ -502,6 +504,7 @@ fn test_env_variable_special_values() {
 }
 
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_memory_limit_parsing() {
     let _lock = acquire_env_lock();
 
@@ -561,6 +564,7 @@ fn test_config_merging() {
 }
 
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_config_loader_precedence() {
     let _lock = acquire_env_lock();
 

@@ -8,6 +8,12 @@
 /// 3. **Dimension Handling**: Test single block (256 cols), multi-block with tail (300 cols)
 /// 4. **Numerical Validation**: Compare QK256 vs FP32 fallback within quantization tolerance
 ///
+/// ## Fixture Generation Approach
+///
+/// Tests use **in-memory tensor creation** for fast kernel validation. For GGUF loading tests,
+/// see `qk256_dual_flavor_tests.rs` (in-memory GGUF generation) or `qk256_fixture_loader_tests.rs`
+/// (disk-based fixtures from `ci/fixtures/qk256/`).
+///
 /// ## QK256 Format Recap
 ///
 /// - **Block size**: 256 elements

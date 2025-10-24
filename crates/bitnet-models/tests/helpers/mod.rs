@@ -4,6 +4,7 @@
 //! quantization testing, model loading validation, and tensor alignment validation.
 
 pub mod alignment_validator;
+pub mod fixture_loader;
 pub mod qk256_fixtures;
 pub mod qk256_tolerance;
 
@@ -21,3 +22,7 @@ pub use alignment_validator::{
 // Re-export QK256 tolerance helpers for property tests
 #[allow(unused_imports)]
 pub use qk256_tolerance::{approx_eq, approx_eq_with_len};
+
+// Re-export fixture loader utilities for disk-based fixtures
+#[allow(unused_imports)]
+pub use fixture_loader::{fixture_path, load_fixture_bytes};

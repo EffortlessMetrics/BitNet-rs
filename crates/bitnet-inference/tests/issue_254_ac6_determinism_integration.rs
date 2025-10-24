@@ -20,8 +20,8 @@ use serial_test::serial;
 
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
 // Slow: 50-token generation with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+#[ignore]
 /// AC6.1: Deterministic Inference - SLOW INTEGRATION TEST
 ///
 /// **This test runs 50-token generation (100+ forward passes) and is marked #[ignore].**
@@ -77,8 +77,8 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
 // Slow: 20-token generation x5 runs with 50,257 vocab. Fast equivalent: tests/deterministic_sampling_unit.rs
+#[ignore]
 /// AC6.2: Determinism Multiple Runs - SLOW INTEGRATION TEST
 ///
 /// **This test runs 20-token generation 5 times (200+ forward passes) and is marked #[ignore].**

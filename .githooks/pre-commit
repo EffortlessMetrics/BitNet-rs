@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook for BitNet.rs
+#
+# Enforces local quality gates before allowing commits:
+# - No bare #[ignore] attributes (must have reasons)
+# - No raw env::set_var/remove_var (must use EnvGuard + #[serial(bitnet_env)])
+#
+# To enable: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
+echo "🔍 Running BitNet.rs pre-commit checks..."
+
+# Check 1: Bare #[ignore] annotations
+echo "  Checking for bare #[ignore] markers..."
+if rg -n -P '#\[ignore\](?!\s*=)' --hidden --glob '!**/target/**' --glob '*.rs' crates tests tests-new xtask 2>/dev/null; then
+  echo -e "${RED}❌ Bare #[ignore] markers found${NC}"
+  echo ""
+  echo "BitNet.rs requires all #[ignore] attributes to include a reason using one of:"
+  echo ""
+  echo "  #[ignore = \"reason\"]"
+  echo ""
+  echo "Or a comment on the line BEFORE #[ignore]:"
+  echo ""
+  echo "  // Blocked by Issue #254 - shape mismatch"
+  echo "  #[ignore]"
+  echo ""
+  echo "  // Slow: QK256 scalar kernels (~0.1 tok/s)"
+  echo "  #[ignore]"
+  echo ""
+  echo "  // TODO: Implement after #469"
+  echo "  #[ignore]"
+  echo ""
+  echo "See: docs/development/test-suite.md#ignored-tests"
+  exit 1
+fi
+
+# Check 2: Raw env mutation (outside helpers)
+echo "  Checking for raw environment mutations..."
+if rg -n '(std::env::set_var|std::env::remove_var)\(' --glob '*.rs' --glob '!**/tests/helpers/**' --glob '!**/support/**' --glob '!**/env_guard.rs' crates tests tests-new xtask 2>/dev/null | grep -v 'EnvGuard' | grep -v '//.*set_var'; then
+  echo -e "${RED}❌ Raw environment mutations found${NC}"
+  echo ""
+  echo "BitNet.rs requires environment mutations in tests to use EnvGuard pattern:"
+  echo ""
+  echo "  use serial_test::serial;"
+  echo "  use tests::helpers::env_guard::EnvGuard;"
+  echo ""
+  echo "  #[test]"
+  echo "  #[serial(bitnet_env)]  // Ensures serial execution"
+  echo "  fn test_with_env() {"
+  echo "      let _guard = EnvGuard::new(\"BITNET_DETERMINISTIC\", \"1\");"
+  echo "      // Test code - env automatically restored on drop"
+  echo "  }"
+  echo ""
+  echo "See: docs/development/test-suite.md#environment-variable-testing"
+  exit 1
+fi
+
+echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
+exit 0

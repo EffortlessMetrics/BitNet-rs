@@ -249,7 +249,7 @@ automatically detects the appropriate template using:
 providing better Q&A behavior out-of-box. This is more reliable than raw completion mode for
 getting coherent answers to questions.
 
-**Note**: As of v0.9.x, the default auto-detection fallback changed from `raw` to
+**Note**: As of v0.1.x, the default auto-detection fallback changed from `raw` to
 `instruct` for better out-of-box experience with instruction-tuned models. Use
 `--prompt-template raw` if you need raw completion behavior.
 
@@ -896,6 +896,7 @@ cargo test -p bitnet-models --no-default-features --features cpu
 **Current State (MVP)**:
 
 - **152+ tests passing** (91 lib + 49 integration + 12 fixtures)
+  - Note: 152+ represents key test categories; total enabled tests = 1935+ (see PR #475 report)
 - ~70 tests intentionally ignored (scaffolding)
 - Real inference tests blocked by #254, #260, #469 (Issue #439 resolved)
 - Complete test infrastructure: fixtures, receipts, strict mode, environment isolation

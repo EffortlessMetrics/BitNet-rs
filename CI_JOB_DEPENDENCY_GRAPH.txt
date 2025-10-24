@@ -1,0 +1,299 @@
+================================================================================
+                  BITNET.RS CI JOB DEPENDENCY GRAPH
+================================================================================
+
+Legend:
+  [G] = GATING job (must pass for merge)
+  [O] = Observable job (non-blocking, informational)
+  [C] = Conditional job (runs under specific conditions)
+  --→ = dependency arrow
+  └──→ = parallel execution
+
+================================================================================
+                         TIER 1: PRIMARY GATE
+================================================================================
+
+  [G] test (ubuntu-latest, windows-latest, macos-latest, aarch64)
+      ├─ Formats & linting (Ubuntu x86_64 only)
+      ├─ Clippy checks
+      ├─ Banned patterns
+      ├─ Cross-compilation (aarch64)
+      └─ Nextest with .config/nextest.toml profile=ci
+
+================================================================================
+                    TIER 2: FEATURE & QUALITY GATES
+================================================================================
+
+After test passes, these 13 jobs run (9 gating + 4 non-blocking):
+
+      test ──────────────────────────┐
+                                     │
+          ┌────────────────────────────────┐
+          │                                │
+          ▼                                ▼
+      [O] feature-hack-check         [G] feature-matrix
+          (cargo-hack depth=2)           (6 feature combos)
+          (continue-on-error)            ├─ cpu
+                                         ├─ cpu,avx2
+                                         ├─ cpu,fixtures
+                                         ├─ cpu,avx2,fixtures
+                                         ├─ ffi
+                                         └─ gpu (compile-only)
+
+          │                                │
+          ├────────────┬────────────┬──────┴─────────┬──────────┐
+          │            │            │                │          │
+          ▼            ▼            ▼                ▼          ▼
+      [G]doctest- [G]guard-     [G]guard-       [G]guard-  [G]env-
+      matrix      fixture-      serial-          feature-  mutation-
+      (3 feats)   integrity     annotations      consistency guard
+
+          │            │            │                │          │
+          ├────────────┼────────────┼────────────────┼──────────┘
+          │            │            │                │
+          └────────────┼────────────┼────────────────┘
+                       │            │
+                       └────────────┼────────────────────┬────────────┐
+                                    │                    │            │
+                                    ▼                    ▼            ▼
+                                [O]guard-           [G]quality     [G]security
+                                ignore-annotations  (includes      (audit+deny)
+                                (continue-on-error) lychee,md-lint)
+
+================================================================================
+                       TIER 3: SPECIAL GATES
+================================================================================
+
+      test ──→ [G] doctest (CPU doctests)
+           └─→ [G] ffi-zero-warning-windows (MSVC, no warnings)
+
+      test ──→ [O] perf-smoke (4-token inference timing)
+               └─ Download model → Build CLI → Benchmark → Comment on PR
+
+      test ──→ [O] ffi-smoke (gcc/clang compile-only)
+
+      test ──→ [O] api-compat (PR-only, non-blocking)
+               └─ semver-checks, public-api, FFI headers, CLI help diffs
+
+================================================================================
+                   TIER 4: CROSS-VALIDATION JOBS
+================================================================================
+
+      test ──→ [C] crossval-cpu-smoke (PR or main branch)
+               ├─ Fast smoke: parity preflight + tiny checks
+               ├─ Fetch C++ (pinned to CPP_TAG)
+               └─ Download model
+
+      test ──→ [C] crossval-cpu (main branch or workflow_dispatch only)
+               ├─ Full cross-validation suite
+               └─ Upload artifacts
+
+      test ──→ [C] build-test-cuda (GPU runner, main/dispatch/schedule)
+               ├─ CUDA compilation
+               └─ GPU kernel tests
+
+      test ──→ [C] crossval-cuda (GPU runner, main/dispatch/schedule)
+               ├─ Full CUDA cross-validation
+               ├─ Compare metrics with baseline
+               └─ Upload artifacts
+
+================================================================================
+                  TIER 5: PERFORMANCE BENCHMARKS
+================================================================================
+
+      test ──→ [C][O] benchmark (main branch pushes only, non-blocking)
+                      ├─ cargo bench --all-features
+                      ├─ Criterion reports → gh-pages
+                      └─ Alert at 105% regression threshold
+
+================================================================================
+                      COMPLETE JOB EXECUTION ORDER
+================================================================================
+
+PARALLEL EXECUTION (on every PR/push):
+
+  Tier 1: [1 job]
+    1. test (ubuntu-latest, windows-latest, macos-latest, aarch64)
+       ↓ (all downstream depend on this)
+
+  Tier 2 (wait for test): [13 jobs, mostly parallel]
+    2.  feature-hack-check        [O]
+    3.  feature-matrix            [G]
+    4.  doctest-matrix            [G]
+    5.  doctest                   [G]
+    6.  guard-fixture-integrity   [G]
+    7.  guard-serial-annotations  [G]
+    8.  guard-feature-consistency [G]
+    9.  guard-ignore-annotations  [O]
+   10.  env-mutation-guard        [G]
+   11.  quality                   [G]
+   12.  security                  [G]
+   13.  api-compat                [O] (PR-only)
+
+  Tier 3 (parallel, wait for test): [4 jobs]
+   14.  ffi-smoke                 [O]
+   15.  perf-smoke                [O]
+   16.  doctest                   [G] (CPU-specific)
+   17.  ffi-zero-warning-windows  [G]
+
+  Tier 4 (conditional, wait for test):
+   18.  crossval-cpu-smoke        [C] (PR or main)
+   19.  crossval-cpu              [C] (main only)
+   20.  build-test-cuda           [C] (GPU runner)
+   21.  crossval-cuda             [C] (GPU runner)
+
+  Tier 5 (conditional, wait for test):
+   22.  benchmark                 [C][O] (main pushes only)
+
+================================================================================
+                    GATING vs NON-BLOCKING SUMMARY
+================================================================================
+
+GATING JOBS (10 total - MUST PASS for merge):
+  ✅ test
+  ✅ feature-matrix
+  ✅ doctest-matrix
+  ✅ doctest
+  ✅ guard-fixture-integrity
+  ✅ guard-serial-annotations
+  ✅ guard-feature-consistency
+  ✅ env-mutation-guard
+  ✅ quality (includes lychee link check)
+  ✅ security
+  ✅ ffi-zero-warning-windows
+
+NON-BLOCKING JOBS (11 total - informational/observability):
+  ⚠️ feature-hack-check
+  ⚠️ guard-ignore-annotations
+  ⚠️ ffi-smoke
+  ⚠️ perf-smoke
+  ⚠️ api-compat
+
+CONDITIONAL JOBS (6 total - special triggers):
+  🔷 crossval-cpu-smoke (PR or main)
+  🟦 crossval-cpu (main or dispatch)
+  🟦 build-test-cuda (GPU runner)
+  🟦 crossval-cuda (GPU runner)
+  🟦 benchmark (main pushes only)
+
+================================================================================
+                       CRITICAL LINK CHECK PATH
+================================================================================
+
+[Quality Gate] job runs this for link checking:
+
+  cargo install lychee || true
+  lychee --accept 200,429 --no-progress --offline --config .lychee.toml "**/*.md"
+
+Configuration (.lychee.toml):
+  - offline = true           (skip external URL checks)
+  - max_concurrency = 8
+  - max_retries = 2
+  - timeout = 10s
+
+Excluded paths:
+  - docs/archive/            ⚠️ EXPLICITLY EXCLUDED
+  - target/
+  - vendor/
+  - .git/
+  - node_modules/
+
+Result: docs/archive/** files are NOT checked for broken links
+
+================================================================================
+                        FEATURE MATRIX DETAIL
+================================================================================
+
+FEATURE-MATRIX job tests (6 feature combinations):
+
+  Matrix combos:
+    1. features: cpu              → nextest run --profile ci
+    2. features: cpu,avx2         → nextest run --profile ci
+    3. features: cpu,fixtures     → nextest run --profile fixtures
+    4. features: cpu,avx2,fixtures → nextest run --profile fixtures
+    5. features: ffi              → nextest run --profile ci
+    6. features: gpu              → compile-only: true (no tests)
+
+  Each builds and tests with appropriate nextest profile:
+    - ci profile:       4 threads, 300s timeout
+    - fixtures profile: 2 threads, 600s timeout (I/O contention)
+
+================================================================================
+                      NEXTEST PROFILE SUMMARY
+================================================================================
+
+All profiles in .config/nextest.toml:
+
+  default:    Full test suite
+              ├─ fail-fast: true
+              ├─ test-threads: num-cpus
+              └─ slow-timeout: 300s
+
+  ci:         CI-specific (4 threads)
+              ├─ fail-fast: false
+              ├─ test-threads: 4 (FIXED)
+              ├─ retries: 0
+              └─ slow-timeout: 300s
+
+  fixtures:   GGUF fixture tests (I/O bound)
+              ├─ fail-fast: false
+              ├─ test-threads: 2
+              ├─ retries: 0
+              └─ slow-timeout: 600s
+
+  gpu:        GPU kernel tests
+              ├─ fail-fast: false
+              ├─ test-threads: 1 (GPU memory)
+              ├─ retries: 0
+              └─ slow-timeout: 300s
+
+  doctests:   Documentation tests
+              ├─ fail-fast: false
+              ├─ test-threads: num-cpus
+              ├─ retries: 0
+              └─ slow-timeout: 120s
+
+All profiles:
+  - retries = 0 (no flaky test tolerance)
+  - success-output = "never" (clean logs)
+  - failure-output = "immediate"
+
+================================================================================
+                          KEY OBSERVATIONS
+================================================================================
+
+1. TEST SERIALIZATION
+   - test is the foundational gate
+   - All 13 Tier 2 jobs depend on it
+   - They run in PARALLEL once test passes
+
+2. LINK CHECKING
+   - Primary: lychee in quality job (offline mode)
+   - Secondary: markdown-link-check (separate workflow, non-blocking)
+   - docs/archive/ is EXCLUDED from checks
+
+3. FEATURE COVERAGE
+   - 6 feature combinations tested
+   - cpu is baseline (always tested)
+   - cpu,avx2 tests SIMD optimizations
+   - cpu,fixtures tests GGUF integration
+   - ffi tests C++ FFI bridge
+   - gpu compile-only (no GPU available in CI)
+
+4. OBSERVABILITY
+   - 5 non-blocking jobs for visibility
+   - feature-hack-check for full powerset
+   - perf-smoke for 4-token inference timing
+   - api-compat for API surface changes
+
+5. CROSS-VALIDATION
+   - cpu-smoke on PR/main (fast)
+   - cpu full on main only (expensive)
+   - GPU tests on self-hosted runners only
+
+6. NESTED DOCUMENTATION VALIDATION
+   - ci.yml: quality job with lychee (offline)
+   - documentation-validation.yml: markdown-link-check (external links)
+   - Two separate workflows, different tools, different triggers
+
+================================================================================

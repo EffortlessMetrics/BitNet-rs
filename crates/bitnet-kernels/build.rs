@@ -1,4 +1,24 @@
-use std::{env, path::Path};
+use std::{
+    env,
+    path::{Path, PathBuf},
+};
+
+/// Safe environment variable access with fallback
+fn env_var(name: &str) -> Option<String> {
+    env::var_os(name).map(|v| v.to_string_lossy().into_owned())
+}
+
+/// Get HOME directory with safe fallbacks for minimal container environments
+fn get_home_dir() -> PathBuf {
+    // Try HOME environment variable first
+    if let Some(home) = env_var("HOME") {
+        return PathBuf::from(home);
+    }
+
+    // Fallback to /tmp with warning for minimal Docker containers
+    println!("cargo:warning=HOME not set; falling back to /tmp for C++ artifact cache (build.rs)");
+    PathBuf::from("/tmp")
+}
 
 fn main() {
     // Tell rustc that `cfg(have_cpp)` is a known conditional
@@ -48,8 +68,8 @@ fn main() {
     }
 
     // Where the C++ artifacts live. Allow override via env.
-    let root = env::var("BITNET_CPP_PATH")
-        .unwrap_or_else(|_| format!("{}/.cache/bitnet_cpp", env::var("HOME").unwrap()));
+    let root = env_var("BITNET_CPP_PATH")
+        .unwrap_or_else(|| format!("{}/.cache/bitnet_cpp", get_home_dir().display()));
 
     let inc = Path::new(&root).join("include");
     let lib = Path::new(&root).join("build").join("lib");

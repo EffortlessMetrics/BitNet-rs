@@ -1,8 +1,22 @@
 # QK256 Property Test Analysis: `prop_i2s_qk256_no_scale_dimension_validation`
 
-**Analysis Date**: 2025-10-23  
-**Test File**: `crates/bitnet-models/tests/qk256_property_tests.rs:284-313`  
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
+**Analysis Date**: 2025-10-23
+**Test File**: `crates/bitnet-models/tests/qk256_property_tests.rs:284-313`
 **Status**: Pre-existing test failure (not caused by current PR)
+
+**Table of Contents**
+
+- [Executive Summary](#executive-summary)
+- [Property Being Tested](#property-being-tested)
+- [Expected vs Actual Dimensions](#expected-vs-actual-dimensions)
+- [Root Cause: Per-Block Scaling vs Fixed Tolerance](#root-cause-per-block-scaling-vs-fixed-tolerance)
+- [Fix Strategy](#fix-strategy)
+- [Implementation Checklist](#implementation-checklist)
 
 ---
 
@@ -666,4 +680,17 @@ proptest! {
 ---
 
 **Document Finalized**: 2025-10-23
+
+---
+
+## Related Documentation
+
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
+**Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
+
+**Related Solutions**:
+- [qk256_struct_creation_analysis.md](./qk256_struct_creation_analysis.md) - Same root cause in struct creation tests
+- [QK256_TOLERANCE_STRATEGY.md](./QK256_TOLERANCE_STRATEGY.md) - Numerical precision strategy for QK256 tests
+- [ffi_build_hygiene_fixes.md](./ffi_build_hygiene_fixes.md) - FFI build system hygiene improvements
 

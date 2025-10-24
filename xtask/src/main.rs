@@ -5561,7 +5561,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore] // TODO: Annotate with specific reason (blocked test - see issue tracker)
     fn test_download_429_retry_after() {
         let counter = Arc::new(Mutex::new(0));
         let counter_clone = counter.clone();

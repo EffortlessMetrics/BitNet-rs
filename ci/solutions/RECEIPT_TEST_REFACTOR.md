@@ -1,5 +1,10 @@
 # Receipt Timeout Test Refactor Analysis (Issue #254 AC4)
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## Executive Summary
 
 The test `test_ac4_receipt_environment_variables` hits a **300-second timeout** despite performing only lightweight validation. The root cause is **architectural misalignment**: receipt tests should validate data structures, not execute heavy inference pipelines.

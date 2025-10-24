@@ -1,5 +1,10 @@
 # FFI Build Hygiene Fixes
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 **Issue**: Issue #469 AC6 - FFI Build Hygiene Consolidation  
 **Status**: 3 tests failing, implementation in progress  
 **Related Work**: Issue #439 (GPU feature unification - RESOLVED in PR #475)
@@ -807,4 +812,17 @@ Note: 3 tests remain ignored awaiting full fixture implementation (not bugs).
 - **CLAUDE.md**: Project guidance - `Feature Flags` section
 - **xtask-build-helper**: FFI build helper crate - `xtask-build-helper/src/lib.rs`
 - **bitnet-ggml-ffi**: IQ2_S FFI implementation - `crates/bitnet-ggml-ffi/`
+
+---
+
+## Related Documentation
+
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
+**Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
+
+**Related Solutions**:
+- [qk256_property_test_analysis.md](./qk256_property_test_analysis.md) - Test scaffolding and validation patterns
+- [batch_prefill_perf_quarantine.md](./batch_prefill_perf_quarantine.md) - Test isolation and environment guards
+- [general_docs_scaffolding.md](./general_docs_scaffolding.md) - Documentation validation and completeness
 

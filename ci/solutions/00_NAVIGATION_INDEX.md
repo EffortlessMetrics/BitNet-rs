@@ -347,40 +347,28 @@
   - Numerical analysis overview
   - Implementation roadmap
 
-- **`GGUF_SHAPE_VALIDATION_INDEX.md`** (100 lines)
-  - GGUF loader dual-map architecture
-  - Quick fix summary
-
-- **`QK256_PROPERTY_TEST_ANALYSIS_INDEX.md`** (100 lines)
-  - Property test dimension validation
-  - Tolerance mismatch analysis
-
-- **`QK256_TEST_FAILURE_ANALYSIS_INDEX.md`** (85 lines)
-  - Structural test failure index
-  - Pre-existing issue documentation
+**Consolidated into main indexes below (see Summary Documents section)**
 
 ---
 
 ### Summary Documents (Executive)
 
-- **`SOLUTION_SUMMARY.md`** (185 lines)
-  - QK256 tolerance strategy executive summary
-  - Implementation effort: 8-11 hours
-  - Risk: LOW
+- **`SOLUTIONS_SUMMARY.md`** (192 lines)
+  - General docs scaffolding summary
+  - Test status: 8/8 passing
+  - Action items: 10-15 min fix
+  - **Consolidation Note**: Merged with `SOLUTION_SUMMARY.md` (QK256 specific) - main summary for all solutions
 
 - **`ANALYSIS_SUMMARY.md`** (331 lines)
   - QK256 property test analysis summary
   - Root cause: Pre-existing tolerance mismatch
   - Impact: Low-Medium
+  - **Consolidation Note**: Merged with `QK256_PROPERTY_TEST_ANALYSIS_INDEX.md` for single property test index
 
 - **`IMPLEMENTATION_SUMMARY.md`** (182 lines)
   - Batch prefill quarantine summary
   - Status: Ready for implementation
-
-- **`SOLUTIONS_SUMMARY.md`** (192 lines)
-  - General docs scaffolding summary
-  - Test status: 8/8 passing
-  - Action items: 10-15 min fix
+  - **Consolidation Note**: Merged into `BATCH_PREFILL_INDEX.md`
 
 ---
 
@@ -624,3 +612,31 @@ For questions or clarifications:
 **Last Updated**: 2025-10-23
 **Confidence**: HIGH (comprehensive analysis, clear fix strategies, precedent exists)
 **Next Step**: Start Phase 1 - Quick Wins (30 minutes for 16-18 issues)
+
+---
+
+## Related Documentation
+
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
+
+**Key Solution Documents**:
+- [qk256_struct_creation_analysis.md](./qk256_struct_creation_analysis.md) - QK256 structural validation
+- [qk256_property_test_analysis.md](./qk256_property_test_analysis.md) - QK256 property tests
+- [gguf_shape_validation_fix.md](./gguf_shape_validation_fix.md) - 3-line GGUF fix
+- [batch_prefill_perf_quarantine.md](./batch_prefill_perf_quarantine.md) - Performance quarantine pattern
+- [concurrent_load_perf_quarantine.md](./concurrent_load_perf_quarantine.md) - Concurrent load quarantine
+- [ffi_build_hygiene_fixes.md](./ffi_build_hygiene_fixes.md) - FFI build validation
+- [general_docs_scaffolding.md](./general_docs_scaffolding.md) - Documentation completeness
+- [QK256_TOLERANCE_STRATEGY.md](./QK256_TOLERANCE_STRATEGY.md) - Numerical tolerance strategy
+
+---
+
+**Document Metadata**
+
+- **Created:** 2025-10-23
+- **Last Reviewed:** 2025-10-23
+- **Status:** Active
+- **Next Review:** 2025-11-23
+
+---

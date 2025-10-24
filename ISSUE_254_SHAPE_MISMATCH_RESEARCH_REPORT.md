@@ -1,5 +1,10 @@
 # Issue #254 — Layer-Norm Shape Mismatch Research Report
 
+> **Note**: References to `docs/archive/reports/` point to historical archived documentation.
+> For current status, see [CLAUDE.md](CLAUDE.md) and [PR #475](PR_475_FINAL_SUCCESS_REPORT.md).
+
+
+
 **Generated:** 2025-10-19
 **Researcher:** BitNet.rs GitHub Research Specialist
 **Target:** Issue #254 blocking real inference tests due to layer-norm shape mismatch
@@ -662,8 +667,8 @@ fn layer_norm_with_optional_bias(
 
 ### Documentation
 
-- **`/home/steven/code/Rust/BitNet-rs/docs/reports/ISSUE_248_FINAL_RESOLUTION.md`**
-- **`/home/steven/code/Rust/BitNet-rs/docs/reports/FINAL_TEST_COVERAGE_ACHIEVEMENT.md`**
+- **`/home/steven/code/Rust/BitNet-rs/docs/archive/reports/ISSUE_248_FINAL_RESOLUTION.md`**
+- **`/home/steven/code/Rust/BitNet-rs/docs/archive/reports/FINAL_TEST_COVERAGE_ACHIEVEMENT.md`**
 - **`/home/steven/code/Rust/BitNet-rs/docs/how-to/deterministic-inference-setup.md`**
 - **`/home/steven/code/Rust/BitNet-rs/docs/architecture-overview.md`**
 

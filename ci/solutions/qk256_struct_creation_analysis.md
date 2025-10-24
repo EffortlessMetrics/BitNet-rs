@@ -1,5 +1,10 @@
 # QK256 Struct Creation Test Failure - Root Cause Analysis
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## Executive Summary
 
 The test `bitnet-models::qk256_integration::test_qk256_struct_creation` fails because of a **design mismatch between the implementation and test expectations**.
@@ -594,7 +599,20 @@ assert!(I2SQk256NoScale::new(rows, cols, beyond_tolerance).is_err());
 
 ---
 
-**Analysis Date**: October 23, 2025  
-**Analyzed By**: Claude (Diagnostic Agent)  
-**Branch**: feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2  
+**Analysis Date**: October 23, 2025
+**Analyzed By**: Claude (Diagnostic Agent)
+**Branch**: feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2
 **Status**: Ready for follow-up issue creation
+
+---
+
+## Related Documentation
+
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
+**Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
+
+**Related Solutions**:
+- [qk256_property_test_analysis.md](./qk256_property_test_analysis.md) - Same tolerance issue in property tests
+- [QK256_TOLERANCE_STRATEGY.md](./QK256_TOLERANCE_STRATEGY.md) - Numerical tolerance approach for GEMV tests
+- [gguf_shape_validation_fix.md](./gguf_shape_validation_fix.md) - GGUF loader validation fixes

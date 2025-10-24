@@ -1,5 +1,10 @@
 # Receipt Test Timeout Fix - Quick Reference
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## TL;DR
 
 **Problem**: `test_ac4_receipt_environment_variables` times out after 300s (should take <10ms)

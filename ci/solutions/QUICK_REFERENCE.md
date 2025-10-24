@@ -1,5 +1,10 @@
 # Quick Reference: QK256 Dual-Map Bug Fix
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## The Problem in 30 Seconds
 
 **File**: `crates/bitnet-models/tests/gguf_weight_loading_tests.rs`

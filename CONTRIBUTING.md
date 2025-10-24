@@ -330,11 +330,43 @@ fn test_model_path_override() {
 - `crates/bitnet-common/tests/issue_260_strict_mode_tests.rs` — EnvGuard usage examples
 - `crates/bitnet-models/tests/loader_strict_mode.rs` — Serial env testing patterns
 
+## Local Development Setup
+
+### Enable Pre-commit Hooks (Recommended)
+
+BitNet.rs provides Git hooks that enforce quality standards locally before commits reach CI:
+
+```bash
+# Enable pre-commit hooks
+git config core.hooksPath .githooks
+```
+
+**What the hooks check:**
+- ✅ **#[ignore] Annotation Hygiene**: Ensures all `#[ignore]` attributes include a reason
+- ⚠️ **Environment Mutation Safety**: Warns about raw `std::env::set_var()` calls (should use EnvGuard)
+
+**See**: `.githooks/README.md` for full documentation
+
+### Why Use Pre-commit Hooks?
+
+Pre-commit hooks catch issues early in your local workflow:
+- **Faster feedback** than waiting for CI (seconds vs minutes)
+- **Prevents accidental commits** of bare `#[ignore]` markers
+- **Enforces EnvGuard pattern** for environment mutations
+- **Saves CI resources** by catching issues before push
+
+**Note**: You can temporarily bypass hooks with `git commit --no-verify`, but CI will still enforce these checks.
+
 ## Pull Request Process
 
 ### Before Submitting
 
-1. **Run Local Quality Gates** (Recommended)
+1. **Enable Pre-commit Hooks** (first time only)
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+
+2. **Run Local Quality Gates** (Recommended)
    ```bash
    # Comprehensive quality gates: fmt → clippy → tests → (bench) → verify-receipt
    ./scripts/local_gates.sh
@@ -342,18 +374,18 @@ fn test_model_path_override() {
 
    Or run individual checks:
 
-2. **Format and Lint**
+3. **Format and Lint**
    ```bash
    cargo fmt --all
    cargo clippy --all-targets --all-features -- -D warnings
    ```
 
-3. **Run Full Test Suite**
+4. **Run Full Test Suite**
    ```bash
    ./scripts/test-all.sh
    ```
 
-4. **Verify Inference Receipt** (if you have ci/inference.json)
+5. **Verify Inference Receipt** (if you have ci/inference.json)
    ```bash
    # Verify CPU receipt
    cargo run -p xtask -- verify-receipt --path ci/inference.json
@@ -362,12 +394,12 @@ fn test_model_path_override() {
    cargo run -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
    ```
 
-5. **Update Documentation**
+6. **Update Documentation**
    ```bash
    cargo doc --workspace --no-default-features --features cpu --no-deps
    ```
 
-6. **Cross-validate Changes** (optional, for inference changes)
+7. **Cross-validate Changes** (optional, for inference changes)
    ```bash
    cargo run -p xtask -- full-crossval
    ```

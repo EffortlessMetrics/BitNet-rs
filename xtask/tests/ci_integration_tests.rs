@@ -10,16 +10,36 @@
 //! - Parity smoke test integration
 
 use anyhow::Result;
-use once_cell::sync::Lazy;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::Mutex;
 use tempfile::TempDir;
 
-/// Mutex to protect env-var manipulation in tests
-/// Prevents test races when modifying environment variables
-static ENV_MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+/// Simple RAII guard for environment variable cleanup
+struct EnvGuard {
+    key: String,
+    original: Option<String>,
+}
+
+impl EnvGuard {
+    fn new(key: impl Into<String>) -> Self {
+        let key = key.into();
+        let original = std::env::var(&key).ok();
+        Self { key, original }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        // SAFETY: Restoring environment state in single-threaded test context with serial execution
+        unsafe {
+            match &self.original {
+                Some(value) => std::env::set_var(&self.key, value),
+                None => std::env::remove_var(&self.key),
+            }
+        }
+    }
+}
 
 /// AC3:ci_integration:authenticated
 /// Tests CI tokenizer provisioning with HF_TOKEN (official source)
@@ -88,14 +108,11 @@ fn test_ci_with_hf_token() -> Result<()> {
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
 #[ignore] // Requires network access
+#[serial_test::serial(bitnet_env)]
 fn test_ci_without_hf_token() -> Result<()> {
-    // Lock env-var mutex to prevent test races
-    let _guard = ENV_MUTEX.lock().unwrap();
-
-    // Setup: Remove HF_TOKEN to simulate public CI environment
-    let original_token = std::env::var("HF_TOKEN").ok();
-    // SAFETY: Temporarily removing HF_TOKEN for test isolation (mutex-guarded)
-    // No other threads will observe this modification due to mutex protection
+    // Setup: Remove HF_TOKEN to simulate public CI environment with proper cleanup
+    let _guard = EnvGuard::new("HF_TOKEN");
+    // SAFETY: Removing environment variable in single-threaded test context with serial execution and EnvGuard cleanup
     unsafe {
         std::env::remove_var("HF_TOKEN");
     }
@@ -107,15 +124,7 @@ fn test_ci_without_hf_token() -> Result<()> {
     // Execute: Simulate CI workflow step for mirror source (no auth)
     let result = run_ci_tokenizer_fetch_mirror(&models_dir);
 
-    // Restore original token
-    // SAFETY: Restoring environment state after test (mutex-guarded)
-    // No other threads will observe this modification due to mutex protection
-    unsafe {
-        match original_token {
-            Some(token) => std::env::set_var("HF_TOKEN", token),
-            None => std::env::remove_var("HF_TOKEN"),
-        }
-    }
+    // EnvGuard automatically restores original token on drop
 
     match result {
         Ok(tokenizer_path) => {
@@ -240,20 +249,17 @@ fn test_ci_workflow_simulation() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_ci_fallback_strategy() -> Result<()> {
-    // Lock env-var mutex to prevent test races
-    let _guard = ENV_MUTEX.lock().unwrap();
-
-    // Save original token for restoration
-    let original_token = std::env::var("HF_TOKEN").ok();
+    // Use EnvGuard for automatic cleanup
+    let _guard = EnvGuard::new("HF_TOKEN");
 
     let temp_dir = TempDir::new()?;
     let models_dir = temp_dir.path().join("models");
     fs::create_dir(&models_dir)?;
 
     // Test 1: Official source fails (no HF_TOKEN) → fallback to mirror
-    // SAFETY: Temporarily removing HF_TOKEN to test fallback behavior (mutex-guarded)
-    // No other threads will observe this modification due to mutex protection
+    // SAFETY: Removing environment variable in single-threaded test context with serial execution and EnvGuard cleanup
     unsafe {
         std::env::remove_var("HF_TOKEN");
     }
@@ -274,15 +280,7 @@ fn test_ci_fallback_strategy() -> Result<()> {
         }
     }
 
-    // Restore original token
-    // SAFETY: Restoring environment state after test (mutex-guarded)
-    // No other threads will observe this modification due to mutex protection
-    unsafe {
-        match original_token {
-            Some(token) => std::env::set_var("HF_TOKEN", token),
-            None => std::env::remove_var("HF_TOKEN"),
-        }
-    }
+    // EnvGuard automatically restores original token on drop
 
     Ok(())
 }

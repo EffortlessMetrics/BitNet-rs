@@ -1,9 +1,23 @@
 # Batch Prefill Performance Test Quarantine Analysis
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 **Status**: Complete Analysis
 **Date**: 2025-10-23
 **Test File**: `crates/bitnet-inference/tests/batch_prefill.rs`
 **Problem**: Non-deterministic CI failures in `test_batch_prefill_performance_consistency`
+
+**Table of Contents**
+
+- [Performance Test Analysis](#1-performance-test-analysis)
+- [Flakiness Root Cause Analysis](#2-flakiness-root-cause-analysis)
+- [Quarantine Pattern Implementation](#3-quarantine-pattern-implementation)
+- [Alternative Approaches Considered](#4-alternative-approaches-considered)
+- [CI Workflow Recommendations](#5-ci-workflow-recommendations)
+- [Verification Checklist](#6-verification-checklist)
 
 ---
 
@@ -739,3 +753,16 @@ fn detect_system_load() -> Option<(f64, usize)> {
 **Last Updated**: 2025-10-23
 **Author**: Claude Code Analysis
 **Review**: Ready for implementation
+
+---
+
+## Related Documentation
+
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
+**Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
+
+**Related Solutions**:
+- [concurrent_load_perf_quarantine.md](./concurrent_load_perf_quarantine.md) - Same quarantine pattern for concurrent load tests
+- [general_docs_scaffolding.md](./general_docs_scaffolding.md) - Performance test documentation
+- [ffi_build_hygiene_fixes.md](./ffi_build_hygiene_fixes.md) - Build hygiene and test isolation patterns

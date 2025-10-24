@@ -1,6 +1,13 @@
 //! QK256 dual-flavor detection and storage tests
 //!
 //! Tests for the QK256 I2_S format detection and storage in the i2s_qk256 HashMap.
+//!
+//! ## Fixture Generation Approach
+//!
+//! Tests use **in-memory fixture generation** via `helpers::qk256_fixtures` for fast,
+//! deterministic test execution. For CI/CD environments preferring disk-based fixtures,
+//! persistent fixtures are available in `ci/fixtures/qk256/` (see `qk256_fixture_loader_tests.rs`
+//! for disk-based loading examples).
 
 use bitnet_common::Device;
 use bitnet_models::gguf_simple::{GgufLoadResult, load_gguf_full};

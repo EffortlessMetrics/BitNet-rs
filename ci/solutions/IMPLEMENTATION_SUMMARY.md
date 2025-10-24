@@ -1,5 +1,10 @@
 # Batch Prefill Performance Quarantine - Implementation Summary
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## Overview
 
 This directory contains the comprehensive analysis of flakiness in `test_batch_prefill_performance_consistency` and recommended quarantine pattern.

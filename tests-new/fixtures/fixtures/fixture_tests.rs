@@ -10,6 +10,32 @@ use std::path::Path;
 mod fixtures;
 use fixtures::*;
 
+/// Simple RAII guard for environment variable cleanup
+struct EnvGuard {
+    key: String,
+    original: Option<String>,
+}
+
+impl EnvGuard {
+    fn new(key: impl Into<String>) -> Self {
+        let key = key.into();
+        let original = std::env::var(&key).ok();
+        Self { key, original }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        // SAFETY: Restoring environment state in single-threaded test context with serial execution
+        unsafe {
+            match &self.original {
+                Some(value) => std::env::set_var(&self.key, value),
+                None => std::env::remove_var(&self.key),
+            }
+        }
+    }
+}
+
 /// Test that fixture directory structure exists
 #[test]
 fn test_fixture_directory_structure() -> Result<()> {
@@ -223,24 +249,24 @@ fn test_fixture_validation_function() -> Result<()> {
 
 /// Test environment variable support
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_environment_variable_support() -> Result<()> {
     use std::env;
 
     // Test custom fixtures directory
-    let original_dir = env::var("BITNET_FIXTURES_DIR").ok();
-
-    // Set custom directory
     let temp_dir = std::env::temp_dir().join("bitnet_test_fixtures");
-    env::set_var("BITNET_FIXTURES_DIR", &temp_dir);
 
-    let custom_fixtures_dir = get_fixtures_dir();
-    assert_eq!(custom_fixtures_dir, temp_dir, "Should use custom fixtures directory");
+    // Use scoped guard for env mutation
+    {
+        let _guard = EnvGuard::new("BITNET_FIXTURES_DIR");
+        // SAFETY: Setting environment variable in single-threaded test context with serial execution and EnvGuard cleanup
+        unsafe {
+            env::set_var("BITNET_FIXTURES_DIR", &temp_dir);
+        }
 
-    // Restore original
-    match original_dir {
-        Some(dir) => env::set_var("BITNET_FIXTURES_DIR", dir),
-        None => env::remove_var("BITNET_FIXTURES_DIR"),
-    }
+        let custom_fixtures_dir = get_fixtures_dir();
+        assert_eq!(custom_fixtures_dir, temp_dir, "Should use custom fixtures directory");
+    } // Guard drops here, restoring original value
 
     let restored_dir = get_fixtures_dir();
     assert_ne!(restored_dir, temp_dir, "Should restore original fixtures directory");

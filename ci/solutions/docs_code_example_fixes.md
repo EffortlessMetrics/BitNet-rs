@@ -1,5 +1,10 @@
 # Documentation Code Example Fixes
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## Missing Feature Flags in Code Examples
 
 This document specifies all code examples that need feature flag updates for consistency.

@@ -272,6 +272,7 @@ fn test_discover_parent_directory_tokenizer() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac2-cli-auto-discovery
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_discovery_debug_logging() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let model_path = temp_dir.path().join("model.gguf");
@@ -285,6 +286,9 @@ fn test_discovery_debug_logging() -> Result<()> {
         std::env::set_var("RUST_LOG", "debug");
     }
     let _result = resolve_tokenizer(&model_path, None);
+    unsafe {
+        std::env::remove_var("RUST_LOG");
+    }
 
     // Test scaffolding: Actual implementation should emit debug logs like:
     // "Checking GGUF embedded tokenizer..."

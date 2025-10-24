@@ -1,5 +1,10 @@
 # QK256 Property Test Failure Analysis - Complete Index
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## Overview
 
 This directory contains a **comprehensive analysis and solution** for QK256 property test failures in the BitNet.rs project. The analysis covers numerical precision issues, tolerance strategies, and implementation guidance for fixing 4 failing tests.
@@ -7,6 +12,17 @@ This directory contains a **comprehensive analysis and solution** for QK256 prop
 **Total Analysis**: 1,027 lines of detailed technical documentation  
 **Scope**: Numerical analysis, tolerance strategy, safety analysis, implementation plan  
 **Status**: COMPLETE, REVIEW-READY, IMPLEMENTATION-READY
+
+---
+
+## Document Consolidation
+
+**Consolidated Documents** (2025-10-23):
+- `QK256_PROPERTY_TEST_ANALYSIS_INDEX.md` → Merged into this index
+- `QK256_TEST_FAILURE_ANALYSIS_INDEX.md` → Merged into this index
+- `GGUF_SHAPE_VALIDATION_INDEX.md` → See separate GGUF section below
+
+These index documents have been consolidated to reduce document duplication while maintaining cross-references.
 
 ---
 
@@ -100,8 +116,8 @@ Complete module code for `bitnet-quantization/src/qk256_tolerance.rs`:
 
 ---
 
-### 2. SOLUTION_SUMMARY.md (EXECUTIVE)
-**Size**: 185 lines | **Audience**: Project managers, reviewers
+### 2. QK256 Summary (From SOLUTIONS_SUMMARY.md - QK256 section)
+**Audience**: Project managers, reviewers
 
 Quick reference summary of:
 - What was analyzed (4 failing tests)
@@ -113,6 +129,7 @@ Quick reference summary of:
 - Next steps (7 action items)
 
 **Use this for**: Executive briefing, quick review, status check
+**Note**: See SOLUTIONS_SUMMARY.md for consolidated executive summary
 
 ---
 
@@ -212,8 +229,8 @@ Two-Level Check:
 ## How to Use This Analysis
 
 ### For Implementation
-1. Start with **SOLUTION_SUMMARY.md** for overview
-2. Read **Part 3** (Proposed Tolerance Formula) for the formula
+1. Start with **SOLUTIONS_SUMMARY.md** for overview
+2. Read **Part 3** (Proposed Tolerance Formula) of `QK256_TOLERANCE_STRATEGY.md` for the formula
 3. Follow **Part 4** (Implementation Plan) for each test
 4. Use **Part 8** (Reference Implementation) for code templates
 5. Refer to **Part 5** (Safety Analysis) while implementing
@@ -272,13 +289,13 @@ Two-Level Check:
 
 | What I Need | Document | Section |
 |---|---|---|
-| Executive summary | SOLUTION_SUMMARY.md | All |
+| Executive summary | SOLUTIONS_SUMMARY.md | QK256 section |
 | The formula | QK256_TOLERANCE_STRATEGY.md | Part 3 |
 | Implementation code | QK256_TOLERANCE_STRATEGY.md | Part 8 |
 | Test implementation | QK256_TOLERANCE_STRATEGY.md | Part 4 |
 | Safety guarantees | QK256_TOLERANCE_STRATEGY.md | Part 5 |
 | Edge cases | QK256_TOLERANCE_STRATEGY.md | Part 6 |
-| Validation data | SOLUTION_SUMMARY.md | Validation section |
+| Validation data | QK256_TOLERANCE_STRATEGY.md | Part 6 |
 
 ---
 
@@ -287,16 +304,63 @@ Two-Level Check:
 | Document | Status | Lines | Completeness |
 |----------|--------|-------|--------------|
 | QK256_TOLERANCE_STRATEGY.md | ✅ COMPLETE | 1,027 | 100% (9 parts + appendices) |
-| SOLUTION_SUMMARY.md | ✅ COMPLETE | 185 | 100% (executive summary) |
-| README.md | ✅ COMPLETE | 177 | 100% (navigation guide) |
-| **Total** | **✅ COMPLETE** | **1,389** | **100%** |
+| qk256_property_test_analysis.md | ✅ COMPLETE | 669 | 100% (property test analysis) |
+| qk256_struct_creation_analysis.md | ✅ COMPLETE | 545 | 100% (struct creation analysis) |
+| **Total** | **✅ COMPLETE** | **2,241** | **100%** |
 
-**Review Status**: READY  
-**Implementation Status**: READY  
+**Review Status**: READY
+**Implementation Status**: READY
 **Confidence Level**: HIGH
 
 ---
 
-Generated: 2025-10-23  
-Analysis Depth: Very Thorough (9 parts, 1000+ lines, 4 test implementations, reference code)  
-Coverage: Numerical analysis + tolerance strategy + safety + implementation + testing
+## Consolidated Sections (2025-10-23 Consolidation)
+
+### Property Test Analysis (From QK256_PROPERTY_TEST_ANALYSIS_INDEX.md)
+
+**Test**: `prop_i2s_qk256_no_scale_dimension_validation`
+**File**: `crates/bitnet-models/tests/qk256_property_tests.rs:284-313`
+**Root Cause**: Test expects strict validation; implementation allows ±128 bytes tolerance
+**Status**: Pre-existing (PR #468, ~3-4 weeks ago)
+**Impact**: Low-Medium (structural, not numerical)
+
+See `qk256_property_test_analysis.md` (669 lines) for complete analysis including:
+- Expected vs actual dimensions with verification table
+- Historical context and pre-existing verification
+- Fix strategies (3 options, recommended Option 1)
+- Test cases for 3 dimensions (minimal, medium, large)
+
+### Structural Test Failure Analysis (From QK256_TEST_FAILURE_ANALYSIS_INDEX.md)
+
+**Test**: `test_qk256_struct_creation`
+**File**: `crates/bitnet-models/tests/qk256_integration.rs:512-545`
+**Root Cause**: Same as above - tolerance mismatch
+**Status**: Pre-existing (PR #468)
+**Impact**: None on production; developer-facing only
+
+See `qk256_struct_creation_analysis.md` (545 lines) for complete analysis including:
+- Quick reference and key facts
+- Architecture summary
+- Design rationale and why tolerance exists
+- Risk assessment for different fix strategies
+- Implementation code snippets
+
+**Related Test**: `test_qk256_size_tolerance` (currently passing) validates tolerance behavior correctly
+
+---
+
+Generated: 2025-10-23
+Analysis Depth: Very Thorough (9 parts, 1000+ lines, 4 test implementations, reference code)
+Coverage: Numerical + structural + property test analysis + safety + implementation + testing
+
+---
+
+**Document Metadata**
+
+- **Created:** 2025-10-23
+- **Consolidated:** 2025-10-23 (merged 2 index documents)
+- **Last Reviewed:** 2025-10-23
+- **Status:** Active
+- **Next Review:** 2025-11-23
+
+---

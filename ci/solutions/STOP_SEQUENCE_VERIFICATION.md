@@ -1,5 +1,10 @@
 # Stop-Sequence "One Token Late" Fix - Comprehensive Verification
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 **Document Version**: 1.0.0  
 **Date**: 2025-10-23  
 **Scope**: Complete codebase verification of stop-sequence fix  

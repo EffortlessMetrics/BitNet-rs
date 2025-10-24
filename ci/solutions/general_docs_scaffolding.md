@@ -1,5 +1,10 @@
 # General Documentation Scaffolding Tests - Exploration Report
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## Executive Summary
 
 **Status**: Comprehensive documentation scaffolding validation COMPLETE
@@ -312,3 +317,16 @@ The general documentation scaffolding is **production-ready** with only minor ga
 **Report Generated**: 2024-10-23
 **Exploration Depth**: Very Thorough (291 files analyzed, 50+ doc files reviewed)
 **Test Coverage**: 10/10 doc validation tests executed (8 passing, 2 properly ignored)
+
+---
+
+## Related Documentation
+
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
+**Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
+
+**Related Solutions**:
+- [qk256_struct_creation_analysis.md](./qk256_struct_creation_analysis.md) - QK256 documentation coverage
+- [gguf_shape_validation_fix.md](./gguf_shape_validation_fix.md) - GGUF loader documentation
+- [batch_prefill_perf_quarantine.md](./batch_prefill_perf_quarantine.md) - Performance test documentation patterns

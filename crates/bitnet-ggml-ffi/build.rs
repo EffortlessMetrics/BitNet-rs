@@ -35,17 +35,30 @@ fn main() {
             build.define("BITNET_IQ2S_DEQUANT_NEEDS_QK_MULTIPLE", None);
         }
 
+        // Platform-aware external include handling
+        let compiler = build.get_compiler();
+        let is_msvc = compiler.is_like_msvc();
+
         build
             .file("csrc/ggml_quants_shim.c")
             .file("csrc/ggml_consts.c") // Constants extraction
-            .include("csrc") // Local includes (use -I, warnings visible)
-            // AC6: Use -isystem for vendored GGML headers (third-party code)
-            // This suppresses warnings from the vendored GGML implementation
-            // while preserving warnings from our shim code.
-            .flag("-isystem")
-            .flag("csrc/ggml/include")
-            .flag("-isystem")
-            .flag("csrc/ggml/src")
+            .include("csrc"); // Local includes (use -I, warnings visible)
+
+        // AC6: Use platform-specific flags for vendored GGML headers (third-party code)
+        // This suppresses warnings from the vendored GGML implementation
+        // while preserving warnings from our shim code.
+        if is_msvc {
+            // MSVC: Use /external:I for external includes (MSVC 2019+)
+            build
+                .flag("/external:Icsrc/ggml/include")
+                .flag("/external:Icsrc/ggml/src")
+                .flag("/external:W0"); // Suppress warnings from external includes
+        } else {
+            // GCC/Clang: Use -isystem with separate path arguments
+            build.flag("-isystem").flag("csrc/ggml/include").flag("-isystem").flag("csrc/ggml/src");
+        }
+
+        build
             // Define for IQ quantization family
             .define("GGML_USE_K_QUANTS", None)
             .define("QK_IQ2_S", "256")

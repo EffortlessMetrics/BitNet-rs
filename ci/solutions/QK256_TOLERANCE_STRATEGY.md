@@ -1,5 +1,22 @@
 # QK256 Property Test Tolerance Strategy
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
+**Table of Contents**
+
+- [Executive Summary](#executive-summary)
+- [Part 1: Numerical Analysis of FMA Precision Issues](#part-1-numerical-analysis-of-fma-precision-issues)
+- [Part 2: Tolerance Strategy Comparison](#part-2-tolerance-strategy-comparison)
+- [Part 3: Proposed Adaptive Tolerance Formula](#part-3-proposed-adaptive-tolerance-formula)
+- [Part 4: Implementation Plan for Each Failing Test](#part-4-implementation-plan-for-each-failing-test)
+- [Part 5: Safety Analysis - Preventing False Negatives](#part-5-safety-analysis---preventing-false-negatives)
+- [Part 6: Testing Strategy with Edge Cases](#part-6-testing-strategy-with-edge-cases)
+
+---
+
 ## Executive Summary
 
 This document provides a comprehensive analysis of QK256 property test failures due to floating-point precision differences between scalar and AVX2 FMA implementations. It proposes an **adaptive, principled tolerance strategy** that:

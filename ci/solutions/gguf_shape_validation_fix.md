@@ -1,5 +1,21 @@
 # GGUF Shape Validation Fix: QK256 Dual-Map Architecture
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
+**Table of Contents**
+
+- [Executive Summary](#executive-summary)
+- [Architecture Overview: Dual-Map System](#architecture-overview-dual-map-system)
+- [Test Analysis: test_ac3_tensor_shape_validation_cpu](#test-analysis-test_ac3_tensor_shape_validation_cpu)
+- [Complete Fix](#complete-fix)
+- [Verification Commands](#verification-commands)
+- [Root Cause Analysis](#root-cause-analysis)
+
+---
+
 ## Executive Summary
 
 The test `test_ac3_tensor_shape_validation_cpu` in `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/tests/gguf_weight_loading_tests.rs` contains a **critical bug in tensor map access** that violates the GGUF loader's dual-map architecture.
@@ -512,3 +528,16 @@ The dual-map architecture is **intentional and correct**:
 | Wrong error message | Line 414 | Minor | Update to reference correct map |
 
 All three issues must be fixed for the test to pass.
+
+---
+
+## Related Documentation
+
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
+**Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
+
+**Related Solutions**:
+- [qk256_struct_creation_analysis.md](./qk256_struct_creation_analysis.md) - QK256 structural validation tests
+- [qk256_property_test_analysis.md](./qk256_property_test_analysis.md) - QK256 property test dimension validation
+- [general_docs_scaffolding.md](./general_docs_scaffolding.md) - Documentation completeness validation

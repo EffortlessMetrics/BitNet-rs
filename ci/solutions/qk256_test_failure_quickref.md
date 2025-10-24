@@ -1,5 +1,10 @@
 # QK256 Test Failure - Quick Reference
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 ## The Problem
 ```
 Test:        test_qk256_struct_creation (line 533)

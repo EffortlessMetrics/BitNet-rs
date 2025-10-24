@@ -116,6 +116,10 @@ path = "issue_465_ci_gates_tests.rs"
 name = "issue_465_release_qa_tests"
 path = "issue_465_release_qa_tests.rs"
 
+[[test]]
+name = "env_guard_compliance"
+path = "env_guard_compliance.rs"
+
 [[example]]
 name = "reporting_example"
 path = "examples/reporting_example.rs"

@@ -1,5 +1,10 @@
 # Cargo Feature Flag Audit Report
 
+> **Note**: References to `docs/archive/reports/` point to historical archived documentation.
+> For current status, see [CLAUDE.md](CLAUDE.md) and [PR #475](PR_475_FINAL_SUCCESS_REPORT.md).
+
+
+
 ## Executive Summary
 
 **Total Issues Found:** 205+ instances across documentation
@@ -459,7 +464,7 @@ cargo test --workspace --no-default-features --all-features
 
 ## Category 4: Cargo Run --example Commands (9 instances)
 
-### 4.1 docs/reports/ENHANCED_ERROR_HANDLING_SUMMARY.md
+### 4.1 docs/archive/reports/ENHANCED_ERROR_HANDLING_SUMMARY.md
 
 **Line 188:**
 ```bash
@@ -470,7 +475,7 @@ cargo run --example enhanced_error_demo
 cargo run --example enhanced_error_demo --no-default-features --features cpu
 ```
 
-### 4.2 docs/reports/FAST_FEEDBACK_IMPLEMENTATION_SUMMARY.md
+### 4.2 docs/archive/reports/FAST_FEEDBACK_IMPLEMENTATION_SUMMARY.md
 
 **Lines 164, 167, 170:**
 ```bash

@@ -282,8 +282,8 @@ rg -n 'BITNET_CORRECTION_POLICY' .github/workflows
 
 # Build tools
 cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cli
-cargo build -p bitnet-st2gguf --release
-cargo build -p bitnet-st-tools --release
+cargo build -p bitnet-st2gguf --release --no-default-features --features cpu
+cargo build -p bitnet-st-tools --release --no-default-features --features cpu
 
 # Run validation tests
 cargo test -p bitnet-cli --test validation_workflow \
@@ -358,8 +358,8 @@ For PR merges, the following validation jobs must pass:
 ```bash
 # Test locally
 cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cli
-cargo build -p bitnet-st2gguf --release
-cargo build -p bitnet-st-tools --release
+cargo build -p bitnet-st2gguf --release --no-default-features --features cpu
+cargo build -p bitnet-st-tools --release --no-default-features --features cpu
 
 # Check for compilation errors
 cargo check --workspace

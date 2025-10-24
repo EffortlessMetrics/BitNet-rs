@@ -1,5 +1,10 @@
 # Concurrent Load Performance Test Quarantine - Quick Reference
 
+**Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+
+---
+
 **For developers**: Use this guide to quickly apply the quarantine pattern  
 **Time to implement**: ~3-5 minutes  
 **Risk level**: Minimal (test-only change)
