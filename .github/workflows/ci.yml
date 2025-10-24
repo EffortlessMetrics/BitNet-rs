@@ -17,6 +17,11 @@ on:
   schedule:
     - cron: "0 3 * * *"  # Daily at 03:00 UTC for nightly CUDA tests
 
+# Cancel in-progress runs when a new commit is pushed to the same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -140,7 +145,7 @@ jobs:
   feature-hack-check:
     name: Feature Matrix (cargo-hack powerset)
     runs-on: ubuntu-latest
-    needs: test  # Run after primary tests pass
+    needs: [test, feature-matrix]  # Run after primary tests and curated features pass
     continue-on-error: true  # Non-blocking observability
     steps:
       - uses: actions/checkout@v4
@@ -298,6 +303,7 @@ jobs:
   # Guard: Fixture Integrity Validator
   # Validates fixture checksums, schema, and alignment
   # See: SPEC-2025-006
+  # Independent gate - runs in parallel with test
   guard-fixture-integrity:
     name: Guard - Fixture Integrity
     runs-on: ubuntu-latest
@@ -314,6 +320,7 @@ jobs:
   # Guard: Serial Annotation Validator
   # Ensures env-mutating tests have #[serial(bitnet_env)]
   # See: SPEC-2025-006
+  # Independent gate - runs in parallel with test
   guard-serial-annotations:
     name: Guard - Serial Annotations
     runs-on: ubuntu-latest
@@ -329,6 +336,7 @@ jobs:
   # Guard: Feature Gate Consistency Checker
   # Cross-checks #[cfg(feature = "...")] with defined features
   # See: SPEC-2025-006
+  # Independent gate - runs in parallel with test
   guard-feature-consistency:
     name: Guard - Feature Consistency
     runs-on: ubuntu-latest
@@ -344,10 +352,12 @@ jobs:
   # Guard: Unannotated Ignore Detector
   # Ensures all #[ignore] tests have issue references or justification
   # See: SPEC-2025-006
+  # Status: 144 total ignores, all properly annotated (122 inline comments, 22 preceding comments)
+  # Independent gate - runs in parallel with test
   guard-ignore-annotations:
     name: Guard - Ignore Annotations
     runs-on: ubuntu-latest
-    continue-on-error: true  # Non-blocking - 134 bare #[ignore] markers exist
+    # BLOCKING: All #[ignore] attributes must have justification
     steps:
       - uses: actions/checkout@v4
 
@@ -553,6 +563,7 @@ jobs:
           retention-days: 30
 
   # Environment mutation guard - ensures tests use EnvGuard pattern
+  # Independent gate - runs in parallel with test
   env-mutation-guard:
     name: Guard - No raw env mutations
     runs-on: ubuntu-latest
@@ -584,9 +595,12 @@ jobs:
           echo "✅ No raw env mutations detected - all tests use EnvGuard pattern"
 
   # API compatibility and semver checking
+  # Observer - runs after primary tests, non-blocking
   api-compat:
     name: API Compatibility Check
     runs-on: ubuntu-latest
+    needs: [test]  # Run after primary tests pass
+    continue-on-error: true  # Non-blocking observability
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
@@ -686,6 +700,7 @@ jobs:
           name: api-compatibility-report
           path: api-compatibility-report.json
 
+  # Security audit - independent gate, runs in parallel with test
   security:
     name: Security Audit
     runs-on: ubuntu-latest
@@ -751,7 +766,8 @@ jobs:
           $ErrorActionPreference = "Stop"
           $output = & cargo build -p bitnet-ggml-ffi --no-default-features --features iq2s-ffi 2>&1 | Out-String
           Write-Output $output
-          if ($output -match 'warning:') {
+          # Match MSVC-specific warning patterns: "warning:" or "warning C####"
+          if ($output -match '(?i)\bwarning([ :]| C\d{4}\b)') {
             throw "FFI build produced warnings on MSVC"
           }
           Write-Output "✅ FFI build completed with zero warnings on MSVC"
@@ -786,9 +802,12 @@ jobs:
           fi
           echo "✅ FFI build completed with zero warnings on ${{ matrix.cc }}"
 
+  # Performance benchmarks - observer, runs after primary tests on main branch only
   benchmark:
     name: Performance Benchmarks (Rust)
     runs-on: ubuntu-latest
+    needs: [test]  # Run after primary tests pass
+    continue-on-error: true  # Non-blocking observability
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -813,6 +832,7 @@ jobs:
           comment-on-alert: true
           alert-threshold: "105%" # Alert if 5% slower
 
+  # Code quality checks - gate, runs in parallel with test
   quality:
     name: Code Quality
     runs-on: ubuntu-latest

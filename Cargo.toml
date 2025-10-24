@@ -340,4 +340,4 @@ keywords = [
   "inference",        # Model inference
   "bitnet",           # BitNet specific
 ]
-msrv = "1.89.0"
+msrv = "1.90.0"

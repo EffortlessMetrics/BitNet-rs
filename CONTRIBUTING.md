@@ -17,6 +17,15 @@ Welcome to BitNet.rs! We appreciate your interest in contributing to our high-pe
 
    # Install development tools
    cargo install cargo-nextest cargo-mutants
+
+   # Install ripgrep (required for pre-commit hooks)
+   # macOS:   brew install ripgrep
+   # Ubuntu:  sudo apt-get install ripgrep
+   # Windows: choco install ripgrep
+   # Or visit: https://github.com/BurntSushi/ripgrep
+
+   # Enable pre-commit hooks (run once after cloning)
+   git config core.hooksPath .githooks
    ```
 
 3. **Run Tests**
@@ -27,6 +36,118 @@ Welcome to BitNet.rs! We appreciate your interest in contributing to our high-pe
    # Full test suite
    ./scripts/test-all.sh
    ```
+
+## Pre-Commit Hooks
+
+BitNet.rs uses local pre-commit hooks to catch quality issues before they reach CI.
+
+### Setup
+
+The hooks are enabled automatically if you followed the setup instructions above. If not:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+### Requirements
+
+- **ripgrep** (`rg` command) is required for pattern matching
+  - Install via your package manager (see setup instructions)
+  - Hooks will fail gracefully with instructions if `rg` is not found
+
+### What Hooks Check
+
+The pre-commit hook enforces two critical quality gates:
+
+#### 1. Bare `#[ignore]` Markers
+
+All ignored tests must include a justification. Valid patterns:
+
+```rust
+// ✅ Attribute style
+#[ignore = "Blocked by Issue #254 - shape mismatch"]
+fn test_something() { ... }
+
+// ✅ Inline comment
+#[ignore] // Slow: QK256 scalar kernels (~0.1 tok/s)
+fn test_slow_operation() { ... }
+
+// ✅ Preceding comment (within 2 lines)
+// Blocked by Issue #254 - shape mismatch in layer-norm
+#[ignore]
+fn test_layer_norm() { ... }
+
+// ❌ Bare ignore (rejected by hook)
+#[ignore]
+fn test_something() { ... }
+```
+
+**Valid justification patterns**:
+- `Blocked by Issue #NNN`
+- `Issue #NNN` (shorthand)
+- `Slow: <reason>`
+- `TODO: <reason>`
+- `FIXME: <reason>`
+
+#### 2. Raw Environment Mutations
+
+Tests that modify environment variables must use the `EnvGuard` pattern:
+
+```rust
+// ❌ Raw mutation (rejected by hook)
+#[test]
+fn test_deterministic() {
+    unsafe {
+        std::env::set_var("BITNET_DETERMINISTIC", "1");
+    }
+    // ...
+}
+
+// ✅ EnvGuard pattern (accepted)
+use serial_test::serial;
+use tests::support::env_guard::EnvGuard;
+
+#[test]
+#[serial(bitnet_env)]  // Ensures serial execution
+fn test_deterministic() {
+    let _guard = EnvGuard::new("BITNET_DETERMINISTIC");
+    _guard.set("1");
+    // Test code - env automatically restored on drop
+}
+```
+
+**Why**: Raw `std::env::set_var` is unsafe and can cause race conditions in parallel test execution. The `EnvGuard` pattern ensures:
+- Thread-safe mutations via global mutex
+- Process-safe execution via `#[serial(bitnet_env)]`
+- Automatic restoration of original values on scope exit
+
+### Troubleshooting
+
+**Hook is slow**:
+- Ensure ripgrep is installed (hooks check patterns in ~15k files)
+- Check disk I/O if repo is on network storage
+
+**False positives**:
+- Review the hook output - it shows which file/line failed
+- Ensure your code follows the patterns above
+- Check `docs/development/test-suite.md` for more examples
+
+**Bypass hooks temporarily** (emergency only):
+```bash
+git commit --no-verify
+```
+
+⚠️ **Warning**: Bypassing hooks may cause CI failures. Use only when certain the code is correct and hooks are misconfigured.
+
+### CI Alignment
+
+The pre-commit hooks use the **same validation scripts** as CI:
+- `.githooks/pre-commit` → `scripts/lib/ignore_check.sh`
+- CI guards → `scripts/lib/ignore_check.sh`
+
+This ensures local validation exactly matches CI, preventing surprise failures.
+
+---
 
 ## Development Workflow
 

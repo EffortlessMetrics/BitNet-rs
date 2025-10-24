@@ -23,17 +23,25 @@ exist in cross-referencing between high-level PR reports and granular solution d
 **Strengths**:
 
 - **33 solution documents** in `ci/solutions/` covering all test failures
+
 - **8 specialized index documents** providing targeted navigation
+
 - **11,700+ lines** of comprehensive technical documentation
+
 - **97% implementation-ready** solutions with clear action items
+
 - **Zero broken links** in cross-link validation (8/8 verified)
 
 **Gaps Identified**:
 
 - **Missing PR 475 final success report** (referenced but not found)
+
 - **No direct links** from PR summaries to solution documents
+
 - **No backlinks** from solution docs to PR reports
+
 - **Multiple overlapping index files** with unclear hierarchy
+
 - **325 total markdown files** create discoverability challenges
 
 ---
@@ -70,28 +78,39 @@ The navigation index provides **actionable workflow guidance**:
 #### Phase 1: Quick Wins (30 min)
 
 - Clippy fixes (5-10 min) - 4 warnings
+
 - GGUF dual-map bug (3 min) - 1 test
+
 - Documentation examples (10-15 min) - 10-12 fixes
+
 - **Clear file locations, line numbers, and verification commands**
 
 #### Phase 2: Performance Quarantine (1h)
 
 - Batch prefill test (30 min)
+
 - Concurrent load test (30 min)
+
 - **Pattern precedent cited** (batch_prefill.rs lines 220-228)
 
 #### Phase 3: QK256 Numerical Fixes (4-7h)
 
 - Adaptive tolerance implementation (2-3h)
+
 - Dimension validation fix (1-2h)
+
 - Struct creation fix (1-2h)
+
 - **Safety analysis and formula provided**
 
 #### Phase 4: FFI Build Hygiene (2.5-3h)
 
 - -isystem flag validation (1h)
+
 - Warning count validation (1h)
+
 - Version comment validation (30min)
+
 - **Scaffolding identified, implementation path clear**
 
 **Assessment**: Workflows are clear, time-bounded, and dependency-aware.
@@ -103,13 +122,17 @@ The navigation index provides **actionable workflow guidance**:
 #### Found Documents
 
 - `ci/PR_475_FINAL_SUMMARY.md` (405 lines) - Merge assessment
+
 - `ci/PR_475_ACTION_PLAN.md` (referenced)
+
 - `ci/PR_475_MERGE_CHECKLIST.md` (referenced)
+
 - `ci/PR_475_COMPREHENSIVE_VALIDATION_SUMMARY.md` (referenced)
 
 #### Missing Document
 
 - **`ci/PR_475_FINAL_SUCCESS_REPORT.md`** - Not found (may have been renamed to
+
   `PR_475_FINAL_SUMMARY.md`)
 
 #### Cross-Reference Gaps
@@ -117,6 +140,7 @@ The navigation index provides **actionable workflow guidance**:
 ##### Gap 1: PR Summary to Solution Documents
 
 - `PR_475_FINAL_SUMMARY.md` mentions 3 failing QK256 tests BUT:
+
   - No direct links to `QK256_TOLERANCE_STRATEGY.md`
   - No direct links to `qk256_property_test_analysis.md`
   - No direct links to `qk256_struct_creation_analysis.md`
@@ -125,11 +149,14 @@ The navigation index provides **actionable workflow guidance**:
 ##### Gap 2: Solution Documents to PR Reports
 
 - Solution documents reference "PR #475" or "feat/comprehensive-integration" in:
+
   - `00_NAVIGATION_INDEX.md` (line 565)
   - `ANALYSIS_SUMMARY.md` (mentions context)
   - `batch_prefill_perf_quarantine.md` (mentions PR)
   - `ffi_build_hygiene_fixes.md` (line 75)
+
 - No consistent "See also: PR_475_FINAL_SUMMARY.md" sections
+
 - No backlink pattern established
 
 ### 4. Solution Document Cross-References Back to Main Report
@@ -139,17 +166,29 @@ The navigation index provides **actionable workflow guidance**:
 #### Analysis
 
 ```bash
+
 # Found 10 solution docs mentioning PR 475:
+
 - 00_NAVIGATION_INDEX.md (lines 564-565)
+
 - ANALYSIS_SUMMARY.md
+
 - BATCH_PREFILL_INDEX.md
+
 - batch_prefill_perf_quarantine.md
+
 - ffi_build_hygiene_fixes.md (line 75)
+
 - IMPLEMENTATION_SUMMARY.md
+
 - QK256_PROPERTY_TEST_ANALYSIS_INDEX.md
+
 - qk256_property_test_analysis.md
+
 - qk256_struct_creation_analysis.md
+
 - QK256_TEST_FAILURE_ANALYSIS_INDEX.md
+
 ```
 
 **Pattern**: References exist but are **implicit** (mentioning PR number) rather than **explicit**
@@ -174,30 +213,44 @@ The navigation index provides **actionable workflow guidance**:
 **Line 26-29** (Test failures section):
 
 ```markdown
-❌ **Test Failures:** 3 additional failures discovered in QK256 integration tests:
+
+- **Test Failures:** 3 additional failures discovered in QK256 integration tests:
+
 - `test_qk256_struct_creation` - Validation logic not catching short data
+
 - `prop_gemv_qk256_matches_fp32_reference` - Property test failure
+
 - `prop_i2s_qk256_no_scale_dimension_validation` - Property test failure
+
 ```
 
 **Recommended Addition**:
 
 ```markdown
-❌ **Test Failures:** 3 additional failures discovered in QK256 integration tests:
+
+- **Test Failures:** 3 additional failures discovered in QK256 integration tests:
+
 - `test_qk256_struct_creation` - Validation logic not catching short data
+
   - **Analysis**: [ci/solutions/qk256_struct_creation_analysis.md](./solutions/qk256_struct_creation_analysis.md)
+
 - `prop_gemv_qk256_matches_fp32_reference` - Property test failure
+
   - **Solution**: [ci/solutions/QK256_TOLERANCE_STRATEGY.md](./solutions/QK256_TOLERANCE_STRATEGY.md)
+
 - `prop_i2s_qk256_no_scale_dimension_validation` - Property test failure
+
   - **Analysis**: [ci/solutions/qk256_property_test_analysis.md](./solutions/qk256_property_test_analysis.md)
 
 **For comprehensive implementation guide**: See [ci/solutions/00_NAVIGATION_INDEX.md](./solutions/00_NAVIGATION_INDEX.md)
+
 ```
 
 **Line 386** (Merge checklist reference):
 
 ```markdown
 **Full Checklist:** `/home/steven/code/Rust/BitNet-rs/ci/PR_475_MERGE_CHECKLIST.md`
+
 ```
 
 **Recommended Addition**:
@@ -206,6 +259,7 @@ The navigation index provides **actionable workflow guidance**:
 **Full Checklist:** [ci/PR_475_MERGE_CHECKLIST.md](./PR_475_MERGE_CHECKLIST.md)
 
 **Solution Index:** [ci/solutions/00_NAVIGATION_INDEX.md](./solutions/00_NAVIGATION_INDEX.md) - Complete implementation guide for all test failures
+
 ```
 
 #### 2. Navigation Index → PR Summary (1 missing link)
@@ -215,20 +269,29 @@ The navigation index provides **actionable workflow guidance**:
 **Line 564-565** (Related Issues/PRs):
 
 ```markdown
+
 ### Resolved
+
 - **Issue #439**: Feature gate consistency ✅ (PR #475)
+
 - **PR #475**: Comprehensive integration + EnvGuard + receipts + strict mode + AVX2
+
 ```
 
 **Recommended Addition**:
 
 ```markdown
+
 ### Resolved
+
 - **Issue #439**: Feature gate consistency ✅ ([PR #475](../PR_475_FINAL_SUMMARY.md))
+
 - **PR #475**: Comprehensive integration + EnvGuard + receipts + strict mode + AVX2
+
   - **Merge Assessment**: [ci/PR_475_FINAL_SUMMARY.md](../PR_475_FINAL_SUMMARY.md)
   - **Action Plan**: [ci/PR_475_ACTION_PLAN.md](../PR_475_ACTION_PLAN.md)
   - **Merge Checklist**: [ci/PR_475_MERGE_CHECKLIST.md](../PR_475_MERGE_CHECKLIST.md)
+
 ```
 
 ### Priority 2: Navigation Enhancement (Medium Impact)
@@ -246,6 +309,7 @@ The navigation index provides **actionable workflow guidance**:
 **PR Context**: [ci/PR_475_FINAL_SUMMARY.md](../PR_475_FINAL_SUMMARY.md) - Merge assessment and status
 
 ---
+
 ```
 
 **Estimated Impact**: 32 files × 5 lines = 160 lines total
@@ -264,34 +328,45 @@ The navigation index provides **actionable workflow guidance**:
 **NOTE**: PR #475 test failures and solutions are documented separately.
 
 ### Complete Solutions Index
+
 - **`ci/solutions/00_NAVIGATION_INDEX.md`** (627 lines)
+
   - 32+ comprehensive solution documents
   - 4-phase implementation workflow (8-11 hours total)
   - All 18 test failures analyzed with fix strategies
   - Quick wins (30 min), quarantine patterns (1h), numerical fixes (4-7h), FFI hygiene (2.5-3h)
 
 ### Key Solution Documents
+
 - **QK256 Tolerance Strategy**: `ci/solutions/QK256_TOLERANCE_STRATEGY.md` (1,027 lines)
+
   - Adaptive tolerance formula: `tolerance_abs = (1e-5 × sqrt(cols/256)).min(5e-4)`
   - FMA vs scalar accumulation analysis
   - Implementation-ready with safety analysis
 
 - **GGUF Dual-Map Fix**: `ci/solutions/gguf_shape_validation_fix.md` (514 lines)
+
   - 3-minute fix: Change line 401 from `.tensors` to `.i2s_qk256`
   - Complete architecture explanation
 
 - **Performance Test Quarantine**: `ci/solutions/batch_prefill_perf_quarantine.md` (741 lines)
+
   - Flakiness root cause analysis (5 timing issues)
   - Quarantine pattern with `#[ignore]` + env guard
 
 ### Quick Start
+
 ```bash
+
 # Start with navigation index for complete overview
+
 less ci/solutions/00_NAVIGATION_INDEX.md
 
 # Or jump to specific issue
+
 less ci/solutions/CLIPPY_QUICK_REFERENCE.md  # 5-10 min fix
 less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
+
 ```
 
 ---
@@ -303,9 +378,13 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 **In all index files** (8 documents):
 
 - `00_NAVIGATION_INDEX.md`
+
 - `INDEX.md`
+
 - `QK256_ANALYSIS_INDEX.md`
+
 - `BATCH_PREFILL_INDEX.md`
+
 - Others
 
 **Recommended Addition** (append to footer):
@@ -314,12 +393,17 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 ---
 
 **Document Metadata**:
+
 - **Created**: 2025-10-23
+
 - **Last Reviewed**: 2025-10-23
+
 - **Status**: Active
+
 - **Next Review**: 2025-11-23 (or next major PR merge)
 
 ---
+
 ```
 
 ---
@@ -344,7 +428,9 @@ less ci/solutions/gguf_shape_validation_fix.md  # 3 min fix
 #### NOT Redundant (Hierarchy Exists)
 
 - **`00_NAVIGATION_INDEX.md`** is the **master index** (references all others)
+
 - **Specialized indexes** (`QK256_ANALYSIS_INDEX.md`, etc.) provide **topical deep-dives**
+
 - **`INDEX.md`** focuses on **clippy + concurrent load** (different scope than master)
 
 #### Potential Consolidation Candidates
@@ -365,15 +451,20 @@ Merging into parent indexes would reduce navigation overhead while preserving co
 **Option 1: Aggressive Consolidation** (Not Recommended)
 
 - Merge all 7 sub-indexes into `00_NAVIGATION_INDEX.md`
+
 - **Risk**: Creates single 1,500+ line file (harder to navigate)
+
 - **Benefit**: Single source of truth
 
 **Option 2: Conservative Consolidation** (Recommended)
 
 - Keep **2-tier hierarchy**:
+
   - **Tier 1**: `00_NAVIGATION_INDEX.md` (master)
   - **Tier 2**: 4 specialized indexes (QK256, Clippy, Batch Prefill, FFI)
+
 - **Merge 3 small indexes** into their parent topics:
+
   - `GGUF_SHAPE_VALIDATION_INDEX.md` → Add section to `00_NAVIGATION_INDEX.md`
   - `QK256_PROPERTY_TEST_ANALYSIS_INDEX.md` → Merge into `QK256_ANALYSIS_INDEX.md`
   - `QK256_TEST_FAILURE_ANALYSIS_INDEX.md` → Merge into `QK256_ANALYSIS_INDEX.md`
@@ -381,7 +472,9 @@ Merging into parent indexes would reduce navigation overhead while preserving co
 **Result**:
 
 - **Before**: 8 index files
+
 - **After**: 5 index files (37.5% reduction)
+
 - **Navigation**: Clearer hierarchy (master → specialized)
 
 ---
@@ -393,16 +486,19 @@ Merging into parent indexes would reduce navigation overhead while preserving co
 #### Challenge 1: 325 Markdown Files in ci/
 
 - Users don't know where to start
+
 - No clear "start here" signposting
 
 #### Challenge 2: Index Hierarchy Not Obvious
 
 - Multiple "INDEX.md" files confuse entry points
+
 - No visual hierarchy (all files appear equal)
 
 #### Challenge 3: Solution Documents Lack Context
 
 - Individual solution docs don't explain where they fit
+
 - No "you are here" navigation
 
 ### Recommended Enhancements
@@ -412,6 +508,7 @@ Merging into parent indexes would reduce navigation overhead while preserving co
 **Create**: `ci/README.md` (if not exists, or enhance existing)
 
 ```text
+
 # BitNet.rs CI Documentation
 
 **Start Here**: This directory contains 325+ documentation files. Use this guide to navigate.
@@ -421,38 +518,56 @@ Merging into parent indexes would reduce navigation overhead while preserving co
 ## Quick Navigation
 
 ### I want to fix test failures
+
 👉 **[ci/solutions/00_NAVIGATION_INDEX.md](./solutions/00_NAVIGATION_INDEX.md)** - Complete solutions index
+
 - 32+ solution documents with implementation guides
+
 - 4-phase workflow (8-11 hours to fix all 18 failures)
+
 - Clear priorities: Quick wins (30 min) → Performance (1h) → Numerical (4-7h) → FFI (2.5-3h)
 
 ### I want to understand PR #475 status
+
 👉 **[ci/PR_475_FINAL_SUMMARY.md](./PR_475_FINAL_SUMMARY.md)** - Merge assessment
+
 - Test status breakdown (70+ passing, 3 failing, ~17 timeouts)
+
 - Merge recommendation (currently BLOCKED pending investigation)
+
 - Action items and next steps
 
 ### I want to review all PR documentation
+
 👉 **[ci/PR_DOCUMENTATION_INDEX.md](./PR_DOCUMENTATION_INDEX.md)** - Complete PR archive
+
 - 75+ documentation files organized by PR
+
 - Quality gate receipts (T3-T8)
+
 - Exploration artifacts and sprint summaries
+
 ```
 
 ### I want to search all documentation
 
 ```bash
+
 # Search all markdown files
+
 grep -r "search term" /path/to/BitNet-rs/ci/ --include="*.md"
 
 # Search only solution documents
+
 grep -r "search term" /path/to/BitNet-rs/ci/solutions/ --include="*.md"
+
 ```
 
 ```text
 ---
 
 ## Directory Structure
+
 ci/
 ├── README.md (this file) ← START HERE
 ├── solutions/
@@ -467,6 +582,7 @@ ci/
 ├── PR_475_FINAL_SUMMARY.md ← PR #475 merge assessment
 ├── PR_DOCUMENTATION_INDEX.md ← Complete PR archive
 └── ... (300+ other CI/quality gate documents)
+
 ```
 
 ---
@@ -476,29 +592,41 @@ ci/
 ### Solution Documents (`ci/solutions/*.md`)
 
 - **Purpose**: Fix test failures and implementation issues
+
 - **Audience**: Developers implementing fixes
+
 - **Format**: Analysis + implementation guide + verification
+
 - **Count**: 32+ documents (11,700+ lines)
 
 ### PR Summaries (`ci/PR_*.md`)
 
 - **Purpose**: Track PR status and merge readiness
+
 - **Audience**: Reviewers and project managers
+
 - **Format**: Executive summary + test status + recommendations
+
 - **Count**: 4+ PR-specific summaries
 
 ### Quality Gate Receipts (`ci/t*.md`, `ci/ledger*.md`)
 
 - **Purpose**: Document quality validation results
+
 - **Audience**: QA and compliance reviewers
+
 - **Format**: Test results + gate status + evidence
+
 - **Count**: 50+ gate receipts
 
 ### Exploration Documents (`ci/exploration/*.md`)
 
 - **Purpose**: Design analysis and decision rationale
+
 - **Audience**: Architects and technical leads
+
 - **Format**: Deep analysis + options + recommendations
+
 - **Count**: 20+ exploration documents (200KB+)
 
 ---
@@ -550,17 +678,20 @@ When adding new documentation:
 **Pattern to add to each solution document** (after title, before content):
 
 ```markdown
+
 # [Solution Document Title]
 
 **Navigation**: [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
 **Related**: [PR #475 Summary](../PR_475_FINAL_SUMMARY.md) | [Quick Reference](./CLIPPY_QUICK_REFERENCE.md)
 
 ---
+
 ```
 
 **Example** (for `QK256_TOLERANCE_STRATEGY.md`):
 
 ```markdown
+
 # QK256 Tolerance Strategy - Comprehensive Analysis
 
 **Navigation**: [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → [QK256 Index](./QK256_ANALYSIS_INDEX.md) → This Document
@@ -574,6 +705,7 @@ When adding new documentation:
 **Risk Level**: LOW (test-only change with safety analysis)
 
 ---
+
 ```
 
 ### Enhancement 3: Visual Hierarchy in File Names (Optional)
@@ -583,7 +715,9 @@ When adding new documentation:
 **Proposed Solution**: Use numeric prefixes for master indexes:
 
 ```bash
+
 # Before (alphabetical, confusing):
+
 00_NAVIGATION_INDEX.md
 ANALYSIS_SUMMARY.md
 BATCH_PREFILL_INDEX.md
@@ -591,6 +725,7 @@ INDEX.md
 QK256_ANALYSIS_INDEX.md
 
 # After (clear hierarchy):
+
 00_MASTER_NAVIGATION_INDEX.md  # Primary entry point
 10_QK256_ANALYSIS_INDEX.md     # Topic index
 20_CLIPPY_SOLUTIONS_INDEX.md   # Topic index
@@ -598,6 +733,7 @@ QK256_ANALYSIS_INDEX.md
 40_FFI_BUILD_INDEX.md          # Topic index
 ANALYSIS_SUMMARY.md            # Supporting doc
 [other files without prefixes]
+
 ```
 
 **Benefit**: Clear visual hierarchy in `ls` output.
@@ -613,30 +749,44 @@ ANALYSIS_SUMMARY.md            # Supporting doc
 **Affected Documents**:
 
 - `00_NAVIGATION_INDEX.md` (627 lines) - ✅ Already has structure
+
 - `QK256_TOLERANCE_STRATEGY.md` (1,027 lines) - ❌ Missing TOC
+
 - `concurrent_load_perf_quarantine.md` (806 lines) - ❌ Missing TOC
+
 - `batch_prefill_perf_quarantine.md` (741 lines) - ❌ Missing TOC
+
 - `qk256_property_test_analysis.md` (669 lines) - ❌ Missing TOC
 
 **Recommended TOC Pattern**:
 
 ```markdown
+
 # Document Title
 
 **Table of Contents**
+
 - [Executive Summary](#executive-summary)
+
 - [Quick Start](#quick-start)
+
 - [Detailed Analysis](#detailed-analysis)
+
   - [Root Cause](#root-cause)
   - [Solutions](#solutions)
+
 - [Implementation Guide](#implementation-guide)
+
 - [Verification](#verification)
+
 - [Related Documents](#related-documents)
 
 ---
 
 ## Executive Summary
+
 ...
+
 ```
 
 ---
@@ -748,8 +898,11 @@ ANALYSIS_SUMMARY.md            # Supporting doc
 ### Overall Score
 
 - **Current**: **5.6/10** (Good, but room for improvement)
+
 - **After P1**: **8.0/10** (Very Good, usable)
+
 - **After P2**: **8.9/10** (Excellent, highly discoverable)
+
 - **After P3**: **9.4/10** (Outstanding, best-in-class)
 
 **Assessment**: Current documentation is **comprehensive** (content: 9/10) but
@@ -825,28 +978,38 @@ time permits.
 ### Phase 1: Critical Links (2-3 hours)
 
 - [ ] Create `ci/README.md` with "START HERE" guide
+
   - [ ] Quick navigation section (3 entry points)
   - [ ] Directory structure visualization
   - [ ] Common tasks section
+
 - [ ] Update `ci/PR_475_FINAL_SUMMARY.md`
+
   - [ ] Add links to 3 QK256 solution docs (lines 26-29)
   - [ ] Add link to navigation index (line 386)
+
 - [ ] Add "Related Documentation" to 32 solution docs
+
   - [ ] Pattern: Navigation index + PR context
   - [ ] Use consistent markdown format
 
 ### Phase 2: Navigation Enhancement (3-4 hours)
 
 - [ ] Add breadcrumb navigation to 32 solution documents
+
   - [ ] Pattern: `ci/ → solutions/ → This Document`
   - [ ] Include Related links
+
 - [ ] Add TOCs to 5 large documents
+
   - [ ] `QK256_TOLERANCE_STRATEGY.md` (1,027 lines)
   - [ ] `concurrent_load_perf_quarantine.md` (806 lines)
   - [ ] `batch_prefill_perf_quarantine.md` (741 lines)
   - [ ] `qk256_property_test_analysis.md` (669 lines)
   - [ ] `gguf_shape_validation_fix.md` (514 lines)
+
 - [ ] Add metadata to 8 index files
+
   - [ ] Created date
   - [ ] Last Reviewed date
   - [ ] Next Review date (quarterly)
@@ -854,9 +1017,13 @@ time permits.
 ### Phase 3: Consolidation (4-5 hours, optional)
 
 - [ ] Merge `GGUF_SHAPE_VALIDATION_INDEX.md` into `00_NAVIGATION_INDEX.md`
+
 - [ ] Merge `QK256_PROPERTY_TEST_ANALYSIS_INDEX.md` into `QK256_ANALYSIS_INDEX.md`
+
 - [ ] Merge `QK256_TEST_FAILURE_ANALYSIS_INDEX.md` into `QK256_ANALYSIS_INDEX.md`
+
 - [ ] Update all references (global find-replace)
+
 - [ ] Test all links (verify no broken links)
 
 ---

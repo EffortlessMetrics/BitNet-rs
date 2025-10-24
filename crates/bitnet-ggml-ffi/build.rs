@@ -72,8 +72,18 @@ fn main() {
             .flag_if_supported("-Wno-unused-parameter")
             .flag_if_supported("-Wno-unused-function")
             .flag_if_supported("-Wno-unused-variable")
-            .flag_if_supported("-Wno-unused-but-set-variable")
-            .compile("bitnet_ggml_quants_shim");
+            .flag_if_supported("-Wno-unused-but-set-variable");
+
+        // AC6: Treat warnings as errors for shim code only
+        // Vendor warnings are suppressed via /external:W0 or -isystem above,
+        // so only shim code (compiled with -I) will fail on warnings.
+        if is_msvc {
+            build.flag("/WX"); // MSVC: Treat all warnings as errors
+        } else {
+            build.flag("-Werror"); // GCC/Clang: Treat all warnings as errors
+        }
+
+        build.compile("bitnet_ggml_quants_shim");
 
         println!("cargo:rerun-if-changed=csrc/ggml_quants_shim.c");
         println!("cargo:rerun-if-changed=csrc/ggml_consts.c");

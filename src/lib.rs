@@ -114,7 +114,7 @@ pub mod prelude {
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Minimum supported Rust version
-pub const MSRV: &str = "1.89.0";
+pub const MSRV: &str = "1.90.0";
 
 /// Build information
 pub mod build_info {
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_msrv() {
-        assert_eq!(MSRV, "1.89.0");
+        assert_eq!(MSRV, "1.90.0");
     }
 
     #[test]

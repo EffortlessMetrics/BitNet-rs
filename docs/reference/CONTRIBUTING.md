@@ -15,7 +15,7 @@ Thank you for your interest in contributing to BitNet.rs! This document provides
 
 ### Prerequisites
 
-- Rust 1.89.0 or later
+- Rust 1.90.0 or later (supports Rust 2024 edition)
 - Git
 - Optional: CUDA toolkit for GPU features
 - Optional: Python 3.8+ for Python bindings

@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0  # required so the base SHA is available for diffs
 
       - name: Install Rust (MSRV)
-        uses: dtolnay/rust-toolchain@1.89.0
+        uses: dtolnay/rust-toolchain@1.90.0
 
       - name: Install cargo-public-api
         run: cargo install cargo-public-api
