@@ -9,9 +9,13 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Quantization algorithms for BitNet models"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common" }
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
@@ -19,14 +23,14 @@ candle-core.workspace = true
 rayon.workspace = true
 serde.workspace = true
 tracing.workspace = true
-bitnet-kernels = { path = "../bitnet-kernels", optional = true }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
 criterion.workspace = true
 tempfile.workspace = true
 serial_test = "3.1"
-bitnet-models = { path = "../bitnet-models", features = ["cpu"] }  # AC2: For testing re-exports
+bitnet-models = { path = "../bitnet-models", version = "0.1.0", features = ["cpu"] }  # AC2: For testing re-exports
 
 [features]
 default = []

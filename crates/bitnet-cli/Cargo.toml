@@ -9,6 +9,10 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Command-line interface for BitNet inference"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
 
 [lib]
 name = "bitnet_cli"
@@ -19,12 +23,12 @@ name = "bitnet"
 path = "src/main.rs"
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common" }
-bitnet-models = { path = "../bitnet-models" }
-bitnet-inference = { path = "../bitnet-inference" }
-bitnet-quantization = { path = "../bitnet-quantization" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers" }
-bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", optional = true }
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.1.0" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
+bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.1.0", optional = true }
 candle-core.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["derive", "env", "color"] }

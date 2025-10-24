@@ -6,6 +6,7 @@ rust-version.workspace = true
 authors = ["BitNet Contributors"]
 description = "Compatibility layer for drop-in llama.cpp replacement"
 license = "MIT OR Apache-2.0"
+publish = false
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common" }

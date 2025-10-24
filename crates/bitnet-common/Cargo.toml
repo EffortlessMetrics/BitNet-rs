@@ -9,6 +9,11 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Common types, traits, and utilities for BitNet inference"
+include = [
+  "src/**",
+  "Cargo.toml",
+  "WARN_ONCE_README.md",
+]
 
 [dependencies]
 anyhow.workspace = true

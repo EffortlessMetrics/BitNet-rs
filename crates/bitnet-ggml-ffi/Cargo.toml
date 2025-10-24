@@ -1,10 +1,24 @@
 [package]
 name = "bitnet-ggml-ffi"
-version = "0.1.0"
-edition = "2024"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "GGML FFI bindings for BitNet quantization support"
-repository = "https://github.com/microsoft/BitNet"
+readme = "README.md"
+include = [
+  "src/**",
+  "Cargo.toml",
+  "build.rs",
+  "README.md",
+  "csrc/**",
+]
 
 [features]
 integration-tests = []

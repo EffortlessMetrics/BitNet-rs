@@ -9,16 +9,22 @@ license.workspace = true
 name = "bitnet-server"
 repository.workspace = true
 version.workspace = true
+include = [
+  "src/**",
+  "Cargo.toml",
+  "build.rs",
+  "HEALTH_ENDPOINTS.md",
+]
 
 [dependencies]
 anyhow.workspace = true
 async-stream = "0.3.6"
 async-trait = "0.1.89"
 axum.workspace = true
-bitnet-common = { path = "../bitnet-common" }
-bitnet-inference = { path = "../bitnet-inference" }
-bitnet-models = { path = "../bitnet-models" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.1.0" }
+bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
 chrono.workspace = true
 clap.workspace = true
 futures = "0.3.31"

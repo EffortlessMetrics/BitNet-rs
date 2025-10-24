@@ -1,10 +1,17 @@
 [package]
 name = "bitnet-py"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Python bindings for BitNet.cpp Rust implementation"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/microsoft/BitNet"
+readme = "README.md"
 
 [lib]
 name = "bitnet_py"
@@ -14,11 +21,11 @@ test = false
 bench = false
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common" }
-bitnet-models = { path = "../bitnet-models" }
-bitnet-inference = { path = "../bitnet-inference" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers" }
-bitnet-quantization = { path = "../bitnet-quantization" }
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.1.0" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
 
 pyo3 = { version = "0.26.0", features = ["extension-module", "abi3-py312"] }
 pyo3-async-runtimes = { version = "0.26.0", features = ["tokio-runtime"] }
