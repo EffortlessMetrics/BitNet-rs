@@ -1,7 +1,7 @@
 # GGUF Shape Validation Fix - Complete Index
 
 **Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
-**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUMMARY.md)
 
 ---
 

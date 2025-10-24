@@ -1,7 +1,7 @@
 # QK256 Struct Creation Test Failure - Root Cause Analysis
 
 **Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
-**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUMMARY.md)
 
 ---
 
@@ -608,7 +608,7 @@ assert!(I2SQk256NoScale::new(rows, cols, beyond_tolerance).is_err());
 
 ## Related Documentation
 
-**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUMMARY.md)
 **Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
 **Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
 

@@ -1,7 +1,7 @@
 # Receipt Timeout Test Refactor Analysis (Issue #254 AC4)
 
 **Navigation:** [ci/](../) → [solutions/](./00_NAVIGATION_INDEX.md) → This Document
-**Related:** [PR #475 Summary](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Related:** [PR #475 Summary](../PR_475_FINAL_SUMMARY.md)
 
 ---
 

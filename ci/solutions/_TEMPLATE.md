@@ -281,7 +281,7 @@ See gguf_shape_validation_fix.md lines 518-527 for standard footer
 See qk256_property_test_analysis.md lines 672-681 for related docs section
 -->
 
-**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUCCESS_REPORT.md)
+**Main Report**: [PR #475 Final Success Report](../PR_475_FINAL_SUMMARY.md)
 **Solution Navigation**: [00_NAVIGATION_INDEX.md](./00_NAVIGATION_INDEX.md)
 **Repository Guide**: [CLAUDE.md](../../CLAUDE.md)
 
