@@ -111,6 +111,12 @@ PERFORMANCE:
 
   Run with:
     RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn bitnet run ...
+
+  QK256 Models (I2_S quantization):
+    - Without AVX2: ~0.1 tok/s (scalar kernels, ~10s per token)
+    - With AVX2: ~1.2× faster (optimized kernels)
+    - For quick validation: use --max-tokens 4-16
+    - SIMD optimizations (≥3× faster) coming in v0.2.0
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
@@ -286,6 +292,10 @@ enum Commands {
         /// Assert greedy argmax invariant when dumping logits
         #[arg(long, default_value_t = false)]
         assert_greedy: bool,
+
+        /// Suppress performance warnings
+        #[arg(long, default_value_t = false)]
+        no_warnings: bool,
     },
 
     /// Tokenize text and output token IDs as JSON
@@ -484,6 +494,7 @@ async fn main() -> Result<()> {
             dump_logit_steps,
             logits_topk,
             assert_greedy,
+            no_warnings,
         }) => {
             run_simple_generation(
                 model,
@@ -512,6 +523,7 @@ async fn main() -> Result<()> {
                 dump_logit_steps,
                 logits_topk,
                 assert_greedy,
+                no_warnings,
             )
             .await
         }
@@ -723,6 +735,96 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
     Ok(())
 }
 
+/// Check if AVX2 is available at runtime
+#[cfg(target_arch = "x86_64")]
+fn has_avx2() -> bool {
+    is_x86_feature_detected!("avx2")
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+fn has_avx2() -> bool {
+    false
+}
+
+/// Check for QK256 quantization and emit performance warnings if using scalar kernels
+fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: usize) -> Result<()> {
+    use bitnet_models::GgufReader;
+
+    // Read GGUF file to check for I2_S quantization
+    let gguf_data = std::fs::read(model_path)
+        .with_context(|| format!("Failed to read model file: {}", model_path.display()))?;
+
+    let reader =
+        GgufReader::new(&gguf_data).context("Failed to parse GGUF file for quantization check")?;
+
+    // Check if the model uses I2_S quantization (which could be QK256)
+    let has_i2s = reader.tensor_names().iter().any(|name| {
+        if let Some(info) = reader.get_tensor_info_by_name(name) {
+            matches!(info.tensor_type, bitnet_models::formats::gguf::GgufTensorType::I2_S)
+        } else {
+            false
+        }
+    });
+
+    if !has_i2s {
+        // No I2_S quantization, no warning needed
+        return Ok(());
+    }
+
+    // Count I2_S tensors to check if it's a significant portion of the model
+    let i2s_count = reader
+        .tensor_names()
+        .iter()
+        .filter(|name| {
+            if let Some(info) = reader.get_tensor_info_by_name(name) {
+                matches!(info.tensor_type, bitnet_models::formats::gguf::GgufTensorType::I2_S)
+            } else {
+                false
+            }
+        })
+        .count();
+
+    // Only warn if we have a significant number of I2_S tensors (likely QK256)
+    if i2s_count < 5 {
+        return Ok(());
+    }
+
+    // Check if AVX2 is available
+    let avx2_available = has_avx2();
+
+    // If AVX2 is available, QK256 will use optimized kernels, no warning needed
+    // (This is conservative - the actual dispatch depends on runtime detection in the kernel)
+    if avx2_available {
+        // Still show a minimal note about QK256 usage
+        eprintln!("{} Using QK256 quantization with AVX2 acceleration", style("ℹ").cyan().bold());
+        return Ok(());
+    }
+
+    // Show performance warning for scalar kernels
+    eprintln!();
+    eprintln!("{}", style("⚠  WARNING: Using QK256 scalar kernels (~0.1 tok/s)").yellow().bold());
+    eprintln!();
+    eprintln!("For quick validation, use --max-tokens 4-16");
+    eprintln!("Performance: ~10 seconds per token (2B models)");
+    eprintln!();
+
+    // Estimate time for requested token count
+    let estimated_seconds = max_tokens * 10; // ~10 seconds per token
+    if estimated_seconds > 60 {
+        let minutes = estimated_seconds / 60;
+        eprintln!("Estimated time for {} tokens: ~{} minutes", max_tokens, minutes);
+    } else {
+        eprintln!("Estimated time for {} tokens: ~{} seconds", max_tokens, estimated_seconds);
+    }
+    eprintln!();
+    eprintln!("SIMD optimizations coming in v0.2.0 (≥3× faster)");
+    eprintln!();
+    eprintln!("Use --no-warnings to suppress this message");
+    eprintln!();
+
+    Ok(())
+}
+
 /// Run text generation with sampling
 #[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
@@ -752,6 +854,7 @@ async fn run_simple_generation(
     dump_logit_steps: Option<usize>,
     logits_topk: usize,
     assert_greedy: bool,
+    no_warnings: bool,
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
@@ -805,6 +908,11 @@ async fn run_simple_generation(
     };
 
     println!("Loading model from: {}", model_path.display());
+
+    // Check for QK256 scalar kernel usage and emit performance warnings
+    if !no_warnings {
+        check_and_warn_qk256_performance(&model_path, max_new_tokens)?;
+    }
 
     // Try real loader first
     use bitnet_models::loader::{LoadConfig, ModelLoader};

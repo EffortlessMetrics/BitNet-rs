@@ -108,7 +108,12 @@ impl Avx2Kernel {
     }
 
     /// Scalar fallback for QK256 dequantization
-    fn dequantize_qk256_scalar(
+    ///
+    /// # Visibility
+    /// This is exposed publicly for cross-validation tests comparing
+    /// AVX2 implementation against scalar reference.
+    #[cfg_attr(test, allow(dead_code))]
+    pub fn dequantize_qk256_scalar(
         &self,
         quantized: &[i8],
         scales: &[f32],

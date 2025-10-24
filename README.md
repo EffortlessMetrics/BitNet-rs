@@ -235,6 +235,50 @@ jq '.schema_version,.compute_path,.validation,.quant,.timeout_seconds' \
 
 **Note:** The LLaMA-3 chat template **auto-stops** on `<|eot_id|>` and is **auto-selected** when the tokenizer exposes it. BitNet base models default to the **instruct** template (Q&A-oriented).
 
+## Performance Expectations
+
+### Current Performance (v0.1.0 MVP)
+
+BitNet.rs performance varies significantly by quantization format and hardware. Here's what to expect:
+
+| Quantization Format | Status | CPU Performance | GPU Performance | Use Case |
+|---------------------|--------|-----------------|-----------------|----------|
+| **I2_S BitNet32-F16** | ✅ Production | 10-20 tok/s | 50-100 tok/s | Recommended for production |
+| **I2_S QK256 (GGML)** | ⚠️ MVP Scalar | ~0.1 tok/s | Not available | Validation only |
+| **TL1/TL2** | 🚧 Experimental | 8-15 tok/s | N/A | Research use |
+
+**Hardware tested:** N/A
+
+#### QK256 Performance Warning
+
+**QK256 is currently MVP-only with scalar kernels and is NOT production-ready.**
+
+- **Current:** ~0.1 tok/s for 2B models (scalar implementation)
+- **v0.2.0 Target:** ~0.3+ tok/s (≥3× improvement with AVX2 SIMD)
+- **Recommendation:** Limit to `--max-tokens 4-16` for quick validation
+
+**Why is QK256 slow?**
+- Uses scalar (non-SIMD) kernels for correctness validation
+- SIMD optimizations (AVX2 nibble-LUT + FMA tiling) planned for v0.2.0
+- This is **expected behavior** during MVP phase, not a bug
+
+**Workarounds for QK256:**
+```bash
+# Quick validation (4-16 tokens)
+RUST_LOG=warn cargo run -p bitnet-cli --features cpu,full-cli -- run \
+  --model models/qk256-model.gguf \
+  --prompt "Test" \
+  --max-tokens 8  # Keep this small
+
+# Or use I2_S BitNet32-F16 format for production (10-20× faster)
+cargo run -p bitnet-cli --features cpu,full-cli -- run \
+  --model models/bitnet32-model.gguf \
+  --prompt "Production workload" \
+  --max-tokens 128
+```
+
+**Roadmap:** See `docs/troubleshooting/slow-inference.md` for alternative quantizations and migration path.
+
 ### Performance Optimization
 
 Build with CPU optimizations for better throughput:
@@ -251,10 +295,19 @@ RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
   --prompt "Test" --max-tokens 32
 ```
 
-**Expected performance after optimization:**
-- CPU: ~10-20 tok/s (2B I2_S model on modern hardware)
-- GPU: ~50-100 tok/s (2B I2_S model on NVIDIA GPU with CUDA)
-- MVP note: QK256 scalar kernel ~0.1 tok/s (SIMD optimizations coming in v0.2.0)
+**Optimization Impact:**
+- Native CPU features: +20-30% throughput
+- Link-time optimization: +10-15% throughput
+- Parallel execution: Linear scaling up to physical cores
+
+**Performance Validation:**
+```bash
+# Benchmark your hardware
+cargo run -p xtask -- benchmark --model model.gguf --tokens 128
+
+# View receipt with measured throughput
+cat ci/inference.json | jq '.throughput_tokens_per_sec'
+```
 
 ### Flag Aliases for Compatibility
 

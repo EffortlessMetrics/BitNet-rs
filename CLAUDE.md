@@ -22,15 +22,22 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 
 ### Current Limitations (MVP Phase)
 
-- **QK256 Performance**: AVX2 foundation established (~1.2× uplift); targeting ≥3×
-  with nibble-LUT + FMA tiling optimizations. For quick validation, limit to
-  `--max-new-tokens 4-16`.
+- **QK256 Performance (Critical Limitation)**:
+  - **Current Status**: Scalar kernels only (~0.1 tok/s for 2B models)
+  - **Impact**: NOT suitable for production inference
+  - **Recommendation**: Limit to `--max-tokens 4-16` for validation only
+  - **Roadmap**: v0.2.0 targets ≥3× improvement with AVX2 nibble-LUT + FMA tiling
+  - **Alternative**: Use I2_S BitNet32-F16 format for 10-20× faster performance
+  - **This is expected MVP behavior, not a bug**
+
 - **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical
   output in some configurations. This is a known model quality issue, not an
   inference bug.
+
 - **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests
   represent TDD-style scaffolding for planned features. See **Test Status** section
   below.
+
 - **Active Blockers**: Issues #254, #260, #469 affect some real inference tests and
   cross-validation. Issue #439 resolved (feature gate unification merged).
 

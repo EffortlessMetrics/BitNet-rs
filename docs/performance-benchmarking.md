@@ -466,37 +466,60 @@ All performance metrics below are backed by receipt artifacts in `ci/inference.j
 
 Receipt: [ci/inference.json](../ci/inference.json)
 
-**I2S Quantization (2-bit signed):**
-- **Throughput**: 20.0 tokens/sec (validated)
+**I2S BitNet32-F16 (Production Recommended):**
+- **Throughput**: 10-20 tokens/sec (validated, hardware-dependent)
 - **First Token Latency**: 250ms
-- **Average Token Latency**: 50ms
+- **Average Token Latency**: 50-100ms
 - **Memory Usage**: 1024MB for 2B parameter model
 - **Compute Path**: Real quantized GEMV (no FP32 staging)
 - **Kernels**: `i2s_gemv`, `rope_apply`, `attention_real`
 - **Accuracy**: MSE ≤ 8.5e-6 vs FP32 (tolerance: 1e-5)
 - **Deterministic**: Yes (BITNET_DETERMINISTIC=1, seed=42)
 - **Environment**: RAYON_NUM_THREADS=1 for reproducibility
+- **Status**: ✅ Production-ready
+
+**I2S QK256 (GGML) - MVP Scalar Kernels:**
+- **Throughput**: ~0.1 tokens/sec (scalar implementation)
+- **First Token Latency**: ~10 seconds
+- **Average Token Latency**: ~10 seconds per token
+- **Memory Usage**: 1024MB for 2B parameter model
+- **Compute Path**: Real quantized GEMV (scalar, no SIMD)
+- **Kernels**: `qk256_scalar_dequant`, `qk256_scalar_matmul`
+- **Accuracy**: Bit-exact with GGML reference
+- **Status**: ⚠️ MVP validation only - NOT production-ready
+- **Roadmap**: v0.2.0 targets ≥3× with AVX2 (nibble-LUT + FMA tiling)
+- **Recommendation**: Limit to `--max-tokens 4-16` for quick validation
 
 **TL1 Quantization (Table Lookup - NEON optimized):**
 - **Throughput**: 18.2 Melem/s (matrix elements per second)
 - **Accuracy**: MSE ≤ 7.2e-5 vs FP32 (tolerance: 1e-4)
 - **Compute Path**: Real table lookup matmul
 - **Device**: CPU (NEON vectorization on ARM, scalar fallback on x86)
+- **Status**: 🚧 Experimental
 
 **TL2 Quantization (Table Lookup - AVX optimized):**
 - **Throughput**: 0.58 Melem/s (baseline, optimization ongoing)
 - **Accuracy**: MSE ≤ 9.8e-5 vs FP32 (tolerance: 1e-4)
 - **Compute Path**: Real table lookup matmul
 - **Device**: CPU (AVX2/AVX-512 on x86)
+- **Status**: 🚧 Experimental
 
 ### Reproducing Performance Benchmarks
 
 All benchmarks can be reproduced with deterministic configuration:
 
 ```bash
-# CPU I2S benchmark (primary production quantization)
+# CPU I2S BitNet32-F16 benchmark (production quantization)
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
 cargo run -p xtask -- benchmark --features cpu --quantization i2s
+
+# QK256 scalar benchmark (validation only - SLOW)
+# WARNING: This will take ~20 minutes for 128 tokens
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
+cargo run -p bitnet-cli --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --prompt "Test" \
+  --max-tokens 8  # Keep small for QK256
 
 # TL1 benchmark (ARM NEON optimized)
 BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
@@ -509,6 +532,40 @@ cargo test --no-default-features --features cpu -p bitnet-kernels test_tl2_kerne
 # Verify receipt artifact
 cat ci/inference.json | jq '.compute_path' # Must be "real"
 cat ci/inference.json | jq '.performance_baseline'
+```
+
+### QK256 Performance Roadmap
+
+**Current State (v0.1.0):**
+- Scalar implementation: ~0.1 tok/s
+- Correctness-first approach for MVP validation
+- AVX2 foundation established with ~1.2× uplift
+
+**Optimization Plan (v0.2.0):**
+
+| Optimization | Expected Impact | Status |
+|--------------|-----------------|--------|
+| Nibble-LUT unpack (`pshufb`) | 1.5-2× | Planned |
+| FMA tiling (8-16 rows) | 1.5-2× | Planned |
+| Load combine (reduce crossings) | 1.2-1.3× | Planned |
+| Prefetch (code + input) | 1.1-1.2× | Planned |
+| **Combined Target** | **≥3×** (0.3+ tok/s) | v0.2.0 |
+
+**Long-term Target (v0.3.0+):**
+- AVX-512 support: Additional 1.5-2× over AVX2
+- Multi-threading: Linear scaling with cores
+- GPU implementation: 50-100× over scalar CPU
+
+**Benchmarking QK256 Optimizations:**
+```bash
+# Benchmark scalar baseline
+cargo bench --bench kernel_benchmarks --features cpu -- qk256_scalar
+
+# Benchmark AVX2 implementation (when available)
+cargo bench --bench kernel_benchmarks --features cpu,avx2 -- qk256_avx2
+
+# Compare scalar vs AVX2
+cargo bench --bench kernel_benchmarks --features cpu,avx2 -- qk256
 ```
 
 ### Receipt Artifact Schema

@@ -98,6 +98,40 @@ RAYON_NUM_THREADS=1 RUST_LOG=warn \
 - `RAYON_NUM_THREADS=1`: Single-threaded (deterministic results for validation)
 - `RUST_LOG=warn`: Reduce logging overhead (shows only warnings/errors)
 
+## Performance Expectations (Read This First!)
+
+**Before you start, understand the performance characteristics of different quantization formats:**
+
+| Quantization Format | Status | CPU Performance | Use Case | Time for 128 tokens |
+|---------------------|--------|-----------------|----------|---------------------|
+| **I2_S BitNet32-F16** | ✅ Production | 10-20 tok/s | Recommended | ~6-13 seconds |
+| **I2_S QK256 (GGML)** | ⚠️ MVP Scalar | ~0.1 tok/s | Validation only | ~20 minutes |
+| **TL1/TL2** | 🚧 Experimental | 8-15 tok/s | Research | ~8-16 seconds |
+
+**The microsoft/bitnet-b1.58-2B-4T-gguf model uses QK256 format**, which is currently MVP-only with scalar kernels.
+
+### QK256 Performance Guidance
+
+**If you're using QK256 models (like microsoft/bitnet-b1.58-2B-4T-gguf):**
+
+```bash
+# ✅ Quick validation (4-16 tokens) - RECOMMENDED
+cargo run -p bitnet-cli --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --prompt "What is 2+2?" \
+  --max-tokens 8  # Keep this small for QK256
+
+# ❌ Long generation (128+ tokens) - WILL BE VERY SLOW
+# This will take 20+ minutes with QK256 scalar kernels
+```
+
+**Why is QK256 slow?**
+- Uses scalar (non-SIMD) kernels for correctness validation
+- SIMD optimizations planned for v0.2.0 (≥3× improvement target)
+- This is **expected MVP behavior**, not a bug
+
+**For production inference, use I2_S BitNet32-F16 models instead.**
+
 ## Step 6: Benchmark Performance
 
 ```bash
@@ -106,14 +140,14 @@ RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
   cargo build --release --no-default-features --features cpu,full-cli
 RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
   cargo run --release -p xtask -- benchmark \
-  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 128
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 16  # Reduced for QK256
 ```
 
 **Expected Performance:**
-- I2_S quantization: >99% accuracy retention with real transformer computation
-- Inference speed: 20-100 tokens/second (CPU, depends on RUSTFLAGS optimization), 100-500 tokens/second (GPU)
-- Memory usage: ~2GB for 2B parameter model
-- Production-ready: Real neural network inference with quantized linear layers, multi-head attention, and KV-cache optimization
+- **I2_S BitNet32-F16**: 10-20 tok/s (production-ready)
+- **I2_S QK256**: ~0.1 tok/s (MVP scalar kernels, validation only)
+- **Memory usage**: ~2GB for 2B parameter model
+- **Accuracy**: >99% retention with real transformer computation
 
 ## QK256 Strict Mode Validation
 

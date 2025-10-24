@@ -1,0 +1,181 @@
+--- a/crates/bitnet-kernels/src/cpu/x86.rs
++++ b/crates/bitnet-kernels/src/cpu/x86.rs
+@@ -711,34 +711,168 @@ impl Avx2Kernel {
+             // Phase 1: Vectorized unpacking via AVX2 pshufb (4× faster than scalar)
+             unpack_qk256_avx2_impl(&packed_bytes, &mut codes);
+
+-            // SIMD conversion: codes → f32 using LUT, then scale
++            // Phase 2: FMA-tiled SIMD conversion with 8-way unrolling
++            // Replaces simple _mm256_mul_ps with FMA for better instruction-level parallelism
+             let scale_vec = _mm256_set1_ps(*scale);
++            let zero = _mm256_setzero_ps();
+
+             let mut elem_idx = 0;
+-            // Process 8 elements at a time with AVX2
+-            while elem_idx + 8 <= QK256 {
+-                // Convert 8 codes to weights using LUT
+-                let weights = [
++            const TILE_SIZE: usize = 64; // 8 vectors × 8 elements for ILP
++
++            // Process in 64-element tiles (8 vectors) for better ILP and FMA utilization
++            while elem_idx + TILE_SIZE <= QK256 {
++                // Unroll 8 iterations with separate accumulators to expose parallelism
++
++                // Tile 0
++                let weights0 = [
+                     LUT[codes[elem_idx] as usize],
+                     LUT[codes[elem_idx + 1] as usize],
+                     LUT[codes[elem_idx + 2] as usize],
+                     LUT[codes[elem_idx + 3] as usize],
+                     LUT[codes[elem_idx + 4] as usize],
+                     LUT[codes[elem_idx + 5] as usize],
+                     LUT[codes[elem_idx + 6] as usize],
+                     LUT[codes[elem_idx + 7] as usize],
+                 ];
+-
+-                // Load weights as AVX2 vector
+-                let w_vec = _mm256_loadu_ps(weights.as_ptr());
+-
+-                // Apply scale: output = weights * scale
+-                let scaled = _mm256_mul_ps(w_vec, scale_vec);
+-
+-                // Store result
++                let w_vec0 = _mm256_loadu_ps(weights0.as_ptr());
++                let scaled0 = _mm256_fmadd_ps(w_vec0, scale_vec, zero);
++
++                // Tile 1
++                let weights1 = [
++                    LUT[codes[elem_idx + 8] as usize],
++                    LUT[codes[elem_idx + 9] as usize],
++                    LUT[codes[elem_idx + 10] as usize],
++                    LUT[codes[elem_idx + 11] as usize],
++                    LUT[codes[elem_idx + 12] as usize],
++                    LUT[codes[elem_idx + 13] as usize],
++                    LUT[codes[elem_idx + 14] as usize],
++                    LUT[codes[elem_idx + 15] as usize],
++                ];
++                let w_vec1 = _mm256_loadu_ps(weights1.as_ptr());
++                let scaled1 = _mm256_fmadd_ps(w_vec1, scale_vec, zero);
++
++                // Tile 2
++                let weights2 = [
++                    LUT[codes[elem_idx + 16] as usize],
++                    LUT[codes[elem_idx + 17] as usize],
++                    LUT[codes[elem_idx + 18] as usize],
++                    LUT[codes[elem_idx + 19] as usize],
++                    LUT[codes[elem_idx + 20] as usize],
++                    LUT[codes[elem_idx + 21] as usize],
++                    LUT[codes[elem_idx + 22] as usize],
++                    LUT[codes[elem_idx + 23] as usize],
++                ];
++                let w_vec2 = _mm256_loadu_ps(weights2.as_ptr());
++                let scaled2 = _mm256_fmadd_ps(w_vec2, scale_vec, zero);
++
++                // Tile 3
++                let weights3 = [
++                    LUT[codes[elem_idx + 24] as usize],
++                    LUT[codes[elem_idx + 25] as usize],
++                    LUT[codes[elem_idx + 26] as usize],
++                    LUT[codes[elem_idx + 27] as usize],
++                    LUT[codes[elem_idx + 28] as usize],
++                    LUT[codes[elem_idx + 29] as usize],
++                    LUT[codes[elem_idx + 30] as usize],
++                    LUT[codes[elem_idx + 31] as usize],
++                ];
++                let w_vec3 = _mm256_loadu_ps(weights3.as_ptr());
++                let scaled3 = _mm256_fmadd_ps(w_vec3, scale_vec, zero);
++
++                // Tile 4
++                let weights4 = [
++                    LUT[codes[elem_idx + 32] as usize],
++                    LUT[codes[elem_idx + 33] as usize],
++                    LUT[codes[elem_idx + 34] as usize],
++                    LUT[codes[elem_idx + 35] as usize],
++                    LUT[codes[elem_idx + 36] as usize],
++                    LUT[codes[elem_idx + 37] as usize],
++                    LUT[codes[elem_idx + 38] as usize],
++                    LUT[codes[elem_idx + 39] as usize],
++                ];
++                let w_vec4 = _mm256_loadu_ps(weights4.as_ptr());
++                let scaled4 = _mm256_fmadd_ps(w_vec4, scale_vec, zero);
++
++                // Tile 5
++                let weights5 = [
++                    LUT[codes[elem_idx + 40] as usize],
++                    LUT[codes[elem_idx + 41] as usize],
++                    LUT[codes[elem_idx + 42] as usize],
++                    LUT[codes[elem_idx + 43] as usize],
++                    LUT[codes[elem_idx + 44] as usize],
++                    LUT[codes[elem_idx + 45] as usize],
++                    LUT[codes[elem_idx + 46] as usize],
++                    LUT[codes[elem_idx + 47] as usize],
++                ];
++                let w_vec5 = _mm256_loadu_ps(weights5.as_ptr());
++                let scaled5 = _mm256_fmadd_ps(w_vec5, scale_vec, zero);
++
++                // Tile 6
++                let weights6 = [
++                    LUT[codes[elem_idx + 48] as usize],
++                    LUT[codes[elem_idx + 49] as usize],
++                    LUT[codes[elem_idx + 50] as usize],
++                    LUT[codes[elem_idx + 51] as usize],
++                    LUT[codes[elem_idx + 52] as usize],
++                    LUT[codes[elem_idx + 53] as usize],
++                    LUT[codes[elem_idx + 54] as usize],
++                    LUT[codes[elem_idx + 55] as usize],
++                ];
++                let w_vec6 = _mm256_loadu_ps(weights6.as_ptr());
++                let scaled6 = _mm256_fmadd_ps(w_vec6, scale_vec, zero);
++
++                // Tile 7
++                let weights7 = [
++                    LUT[codes[elem_idx + 56] as usize],
++                    LUT[codes[elem_idx + 57] as usize],
++                    LUT[codes[elem_idx + 58] as usize],
++                    LUT[codes[elem_idx + 59] as usize],
++                    LUT[codes[elem_idx + 60] as usize],
++                    LUT[codes[elem_idx + 61] as usize],
++                    LUT[codes[elem_idx + 62] as usize],
++                    LUT[codes[elem_idx + 63] as usize],
++                ];
++                let w_vec7 = _mm256_loadu_ps(weights7.as_ptr());
++                let scaled7 = _mm256_fmadd_ps(w_vec7, scale_vec, zero);
++
++                // Store all 8 tiles
+                 let out_ptr = output.as_mut_ptr().add(block_start + elem_idx);
+-                _mm256_storeu_ps(out_ptr, scaled);
++                _mm256_storeu_ps(out_ptr, scaled0);
++                _mm256_storeu_ps(out_ptr.add(8), scaled1);
++                _mm256_storeu_ps(out_ptr.add(16), scaled2);
++                _mm256_storeu_ps(out_ptr.add(24), scaled3);
++                _mm256_storeu_ps(out_ptr.add(32), scaled4);
++                _mm256_storeu_ps(out_ptr.add(40), scaled5);
++                _mm256_storeu_ps(out_ptr.add(48), scaled6);
++                _mm256_storeu_ps(out_ptr.add(56), scaled7);
+
+-                elem_idx += 8;
++                elem_idx += TILE_SIZE;
+             }
+
++            // Process remaining elements in smaller 8-element chunks with FMA
++            while elem_idx + 8 <= QK256 {
++                let weights = [
++                    LUT[codes[elem_idx] as usize],
++                    LUT[codes[elem_idx + 1] as usize],
++                    LUT[codes[elem_idx + 2] as usize],
++                    LUT[codes[elem_idx + 3] as usize],
++                    LUT[codes[elem_idx + 4] as usize],
++                    LUT[codes[elem_idx + 5] as usize],
++                    LUT[codes[elem_idx + 6] as usize],
++                    LUT[codes[elem_idx + 7] as usize],
++                ];
++                let w_vec = _mm256_loadu_ps(weights.as_ptr());
++                let scaled = _mm256_fmadd_ps(w_vec, scale_vec, zero);
++                let out_ptr = output.as_mut_ptr().add(block_start + elem_idx);
++                _mm256_storeu_ps(out_ptr, scaled);
++                elem_idx += 8;
++            }
++
+             // Handle tail elements (scalar path)
+             while elem_idx < QK256 && block_start + elem_idx < total_elements {
+                 let w = LUT[codes[elem_idx] as usize];
