@@ -134,6 +134,255 @@ jobs:
         if: matrix.cross
         run: cross build --target ${{ matrix.target }} --no-default-features --features cpu
 
+  # Feature Matrix Testing - cargo-hack powerset check
+  # Non-blocking observability for feature gate consistency
+  # See: SPEC-2025-006
+  feature-hack-check:
+    name: Feature Matrix (cargo-hack powerset)
+    runs-on: ubuntu-latest
+    needs: test  # Run after primary tests pass
+    continue-on-error: true  # Non-blocking observability
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install cargo-hack
+        run: cargo install cargo-hack --locked
+
+      - name: Check all feature combinations (depth 2)
+        run: |
+          echo "::group::cargo-hack feature powerset check"
+          cargo hack check --feature-powerset --depth 2 \
+            --workspace \
+            --exclude xtask \
+            --exclude bitnet-py \
+            --exclude bitnet-wasm \
+            --exclude fuzz
+          echo "::endgroup::"
+
+      - name: Build all feature combinations (depth 2, lib only)
+        run: |
+          echo "::group::cargo-hack feature powerset build"
+          cargo hack build --feature-powerset --depth 2 \
+            --workspace \
+            --lib \
+            --exclude xtask \
+            --exclude bitnet-py \
+            --exclude bitnet-wasm \
+            --exclude fuzz
+          echo "::endgroup::"
+
+  # Feature Matrix Testing - Curated critical feature sets
+  # Gates CI - must pass for merge
+  # See: SPEC-2025-006
+  feature-matrix:
+    name: Feature Matrix Tests (curated)
+    runs-on: ubuntu-latest
+    needs: test  # Run after primary tests pass
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - cpu
+          - cpu,avx2
+          - cpu,fixtures
+          - cpu,avx2,fixtures
+          - ffi
+        include:
+          # GPU compilation check (no runtime tests)
+          - features: gpu
+            compile-only: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+          key: feature-matrix-${{ matrix.features }}
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
+      - name: Build (${{ matrix.features }})
+        run: |
+          echo "::group::Build with features: ${{ matrix.features }}"
+          cargo build --workspace --no-default-features --features "${{ matrix.features }}"
+          echo "::endgroup::"
+
+      - name: Run tests (${{ matrix.features }})
+        if: matrix.compile-only != true
+        run: |
+          echo "::group::Test with features: ${{ matrix.features }}"
+
+          # Select nextest profile based on features
+          PROFILE="ci"
+          if [[ "${{ matrix.features }}" == *"fixtures"* ]]; then
+            PROFILE="fixtures"
+          fi
+
+          cargo nextest run --workspace \
+            --no-default-features \
+            --features "${{ matrix.features }}" \
+            --profile "$PROFILE"
+          echo "::endgroup::"
+
+      - name: Run doctests (${{ matrix.features }})
+        if: matrix.compile-only != true
+        run: |
+          echo "::group::Doctests with features: ${{ matrix.features }}"
+          cargo test --doc --workspace \
+            --no-default-features \
+            --features "${{ matrix.features }}"
+          echo "::endgroup::"
+
+  # Doctest Feature Matrix - Validate documentation examples
+  # Gates CI - must pass for merge
+  # See: SPEC-2025-006
+  doctest-matrix:
+    name: Doctests (Feature Matrix)
+    runs-on: ubuntu-latest
+    needs: test  # Run after primary tests pass
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - cpu
+          - cpu,avx2
+          - all-features
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run doctests (${{ matrix.features }})
+        run: |
+          echo "::group::Doctests with ${{ matrix.features }}"
+
+          if [[ "${{ matrix.features }}" == "all-features" ]]; then
+            cargo test --doc --workspace --all-features
+          else
+            cargo test --doc --workspace --no-default-features --features "${{ matrix.features }}"
+          fi
+
+          echo "::endgroup::"
+        # Continue on error for all-features (GPU may not be available)
+        continue-on-error: ${{ matrix.features == 'all-features' }}
+
+  # Guard: Fixture Integrity Validator
+  # Validates fixture checksums, schema, and alignment
+  # See: SPEC-2025-006
+  guard-fixture-integrity:
+    name: Guard - Fixture Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate fixture integrity
+        run: bash scripts/validate-fixtures.sh
+
+  # Guard: Serial Annotation Validator
+  # Ensures env-mutating tests have #[serial(bitnet_env)]
+  # See: SPEC-2025-006
+  guard-serial-annotations:
+    name: Guard - Serial Annotations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Check serial annotations
+        run: bash scripts/check-serial-annotations.sh
+
+  # Guard: Feature Gate Consistency Checker
+  # Cross-checks #[cfg(feature = "...")] with defined features
+  # See: SPEC-2025-006
+  guard-feature-consistency:
+    name: Guard - Feature Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Check feature gate consistency
+        run: bash scripts/check-feature-gates.sh
+
+  # Guard: Unannotated Ignore Detector
+  # Ensures all #[ignore] tests have issue references or justification
+  # See: SPEC-2025-006
+  guard-ignore-annotations:
+    name: Guard - Ignore Annotations
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking - 134 bare #[ignore] markers exist
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Check ignore annotations
+        run: bash scripts/check-ignore-annotations.sh
+
+  # Doctest validation - ensures code examples in documentation are correct
+  doctest:
+    name: Doctests (CPU)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run doctests (CPU features only)
+        run: cargo test --doc --workspace --no-default-features --features cpu
+
+      - name: Run doctests (all features)
+        # Continue on error since GPU features may not be available in CI
+        continue-on-error: true
+        run: cargo test --doc --workspace --all-features
+
   # Performance smoke test (non-gating observability)
   perf-smoke:
     name: Performance Smoke Test (observability)
@@ -302,6 +551,37 @@ jobs:
           name: inference-receipt-${{ github.sha }}
           path: ci/inference.json
           retention-days: 30
+
+  # Environment mutation guard - ensures tests use EnvGuard pattern
+  env-mutation-guard:
+    name: Guard - No raw env mutations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+
+      - name: Check for raw env mutations
+        run: |
+          offenders=$(rg -n '(std::env::set_var|std::env::remove_var)\(' crates \
+            --glob '!**/tests/support/**' \
+            --glob '!**/support/**' \
+            --glob '!**/helpers/**' \
+            --glob '!**/test_fixtures/**' \
+            --type rust || true)
+          if [ -n "$offenders" ]; then
+            echo "::error::Raw env mutation detected. Use EnvGuard + #[serial(bitnet_env)]."
+            echo ""
+            echo "Offending locations:"
+            echo "$offenders"
+            echo ""
+            echo "See tests/support/env_guard.rs for proper usage patterns."
+            exit 1
+          fi
+          echo "✅ No raw env mutations detected - all tests use EnvGuard pattern"
 
   # API compatibility and semver checking
   api-compat:
@@ -525,6 +805,16 @@ jobs:
         run: cargo doc --workspace --features cpu --no-deps --document-private-items
         env:
           RUSTDOCFLAGS: "-D warnings"
+
+      # Markdown quality checks
+      - name: Markdownlint
+        run: npx --yes markdownlint-cli "**/*.md" "!target/**" "!vendor/**"
+
+      # Link validation (offline mode for CI performance)
+      - name: Check links
+        run: |
+          cargo install lychee || true
+          lychee --accept 200,429 --no-progress --offline --config .lychee.toml "**/*.md"
 
   # Cross-validation with C++ (CPU)
   crossval-cpu:

@@ -39,3 +39,57 @@ status-level = "fail"
 # JUnit output for CI reporting
 [profile.ci.junit]
 path = "target/nextest/ci/junit.xml"
+
+# Profile for fixture-heavy tests
+[profile.fixtures]
+fail-fast = false
+test-threads = 2  # Limit I/O contention
+retries = 0
+
+# Longer timeout for GGUF loading
+slow-timeout = { period = "600s", terminate-after = 1 }
+
+# Output settings
+failure-output = "immediate"
+success-output = "never"
+status-level = "fail"
+
+# JUnit output for fixture tests
+[profile.fixtures.junit]
+path = "target/nextest/fixtures/junit.xml"
+
+# Profile for GPU kernel tests
+[profile.gpu]
+fail-fast = false
+test-threads = 1  # GPU memory constraints
+retries = 0
+
+# GPU kernel timeout
+slow-timeout = { period = "300s", terminate-after = 1 }
+
+# Output settings
+failure-output = "immediate"
+success-output = "never"
+status-level = "fail"
+
+# JUnit output for GPU tests
+[profile.gpu.junit]
+path = "target/nextest/gpu/junit.xml"
+
+# Profile for doctests
+[profile.doctests]
+fail-fast = false
+test-threads = "num-cpus"
+retries = 0
+
+# Shorter timeout for simpler doc examples
+slow-timeout = { period = "120s", terminate-after = 1 }
+
+# Output settings
+failure-output = "immediate"
+success-output = "never"
+status-level = "fail"
+
+# JUnit output for doctests
+[profile.doctests.junit]
+path = "target/nextest/doctests/junit.xml"

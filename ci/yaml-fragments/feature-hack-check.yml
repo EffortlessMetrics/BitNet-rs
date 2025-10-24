@@ -1,0 +1,46 @@
+  # Feature Matrix Testing - cargo-hack powerset check
+  # Non-blocking observability for feature gate consistency
+  # See: SPEC-2025-006
+  feature-hack-check:
+    name: Feature Matrix (cargo-hack powerset)
+    runs-on: ubuntu-latest
+    needs: test  # Run after primary tests pass
+    continue-on-error: true  # Non-blocking observability
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Install cargo-hack
+        run: cargo install cargo-hack --locked
+
+      - name: Check all feature combinations (depth 2)
+        run: |
+          echo "::group::cargo-hack feature powerset check"
+          cargo hack check --feature-powerset --depth 2 \
+            --workspace \
+            --exclude xtask \
+            --exclude bitnet-py \
+            --exclude bitnet-wasm \
+            --exclude fuzz
+          echo "::endgroup::"
+
+      - name: Build all feature combinations (depth 2, lib only)
+        run: |
+          echo "::group::cargo-hack feature powerset build"
+          cargo hack build --feature-powerset --depth 2 \
+            --workspace \
+            --lib \
+            --exclude xtask \
+            --exclude bitnet-py \
+            --exclude bitnet-wasm \
+            --exclude fuzz
+          echo "::endgroup::"
