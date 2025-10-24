@@ -3,6 +3,10 @@
 //! A comprehensive command-line interface for BitNet 1-bit LLM inference.
 //! Supports model loading, inference, conversion, benchmarking, and serving.
 
+// COMPILE-TIME FIREWALL: Prevent mock feature in production CLI
+#[cfg(feature = "mock")]
+compile_error!("The 'mock' feature must never be enabled for the CLI – tests only.");
+
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
 use candle_core::{DType, IndexOp};
@@ -437,6 +441,12 @@ enum ConfigAction {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // RUNTIME GUARD: Forbid test shims in production
+    if std::env::var_os("BITNET_GPU_FAKE").is_some() && std::env::var_os("CI").is_none() {
+        eprintln!("Error: BITNET_GPU_FAKE is test-only and not allowed outside CI.");
+        std::process::exit(8);
+    }
+
     // Parse CLI arguments
     let cli = Cli::parse();
 
