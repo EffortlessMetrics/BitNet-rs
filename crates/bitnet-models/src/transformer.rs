@@ -1507,6 +1507,16 @@ impl TransformerModel {
     pub fn forward(&self, hidden: Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
         let mut x = hidden; // Take ownership - no clone needed!
 
+        // Tracepoint 1: Embeddings (incremental path - single token)
+        // This captures the embedding for the current token being processed
+        #[cfg(feature = "trace")]
+        {
+            // For incremental path, hidden is already [B, H] (single token)
+            // Trace it directly without narrowing (unlike forward_full which has [B, T, H])
+            bitnet_trace::dump_trace("t0/embeddings", &x)
+                .map_err(BitNetError::from)?;
+        }
+
         // Debug input activation norm
         if std::env::var("DEBUG_ATTN").is_ok()
             && let Ok(norm) = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
@@ -1610,6 +1620,16 @@ impl TransformerModel {
                     && let Ok(std_val) = variance.sqrt()?.to_scalar::<f32>()
                 {
                     eprintln!("[norm] logits std: {:.6e}", std_val);
+                }
+
+                // Tracepoint 5: Logits (incremental path - single token)
+                // This captures the final logits for the current token [B, V]
+                #[cfg(feature = "trace")]
+                {
+                    // For incremental path, logits are [B, V] (single token)
+                    // Trace directly without narrowing (unlike forward_full which has [B, T, V])
+                    bitnet_trace::dump_trace("t0/logits", &logits)
+                        .map_err(BitNetError::from)?;
                 }
 
                 Ok(logits)

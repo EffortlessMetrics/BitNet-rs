@@ -22,6 +22,7 @@ pub mod cpp_bindings;
 pub mod comparison;
 
 pub mod fixtures;
+pub mod logits_compare;
 pub mod score;
 pub mod utils;
 pub mod validation;

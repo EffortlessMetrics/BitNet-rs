@@ -102,6 +102,10 @@ cargo run -p xtask -- verify-receipt --require-gpu-kernels  # Explicitly require
 # SafeTensors to GGUF converter (Rust st2gguf - preferred)
 cargo run -p bitnet-st2gguf -- --input model.safetensors --output model.gguf --strict
 cargo run --release -p bitnet-st2gguf -- --help      # See all options
+
+# Cross-validation sweep (comprehensive multi-scenario testing)
+./scripts/run_crossval_sweep.sh model.gguf tokenizer.json /tmp/crossval
+# Runs 3 scenarios (1, 2, 4 tokens), captures traces, compares Rust vs C++
 ```
 
 ## Core Architecture
@@ -504,6 +508,14 @@ cargo test -p bitnet-models --no-default-features --features crossval
 # Or use custom model path
 export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval
+
+# Comprehensive cross-validation sweep (multi-scenario with tracing)
+# Runs 3 deterministic scenarios, captures 90+ traces per scenario, compares with C++
+./scripts/run_crossval_sweep.sh \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  /tmp/crossval-sweep
+# Generates: scenario reports, trace files, logits comparison, summary.md
 
 # Model operations
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
