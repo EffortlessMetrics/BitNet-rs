@@ -202,3 +202,21 @@ tests/tests/cache/incremental/last_run.json
 # Proptest regression files (Issue #439)
 **/*.proptest-regressions
 tests/tests/cache/incremental/last_run.json
+
+# Temporary development artifacts
+.flow_state
+.lycheecache
+logs/
+tmp/
+
+# Mutation testing outputs
+mutants-*.out/
+
+# Coverage reports
+coverage/
+
+# Build reports
+clippy_report.txt
+
+# Benchmark outputs
+benchmarks-new/
