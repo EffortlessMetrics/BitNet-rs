@@ -5,7 +5,17 @@ fn main() {
 
         // Inject vendored commit into the crate's env
         let marker = Path::new("csrc/VENDORED_GGML_COMMIT");
-        let commit = fs::read_to_string(marker).unwrap_or_else(|_| "unknown".into());
+        let commit = fs::read_to_string(marker).unwrap_or_else(|e| {
+            println!(
+                "cargo:warning=Failed to read VENDORED_GGML_COMMIT marker at '{}': {}",
+                marker.display(),
+                e
+            );
+            println!(
+                "cargo:warning=Using 'unknown' as fallback. Run 'cargo xtask vendor-ggml' to fix."
+            );
+            "unknown".into()
+        });
         let commit = commit.trim().to_string();
         println!("cargo:rustc-env=BITNET_GGML_COMMIT={}", commit);
 
@@ -17,8 +27,8 @@ fn main() {
                  Or set crates/bitnet-ggml-ffi/csrc/VENDORED_GGML_COMMIT"
             );
         }
-        let ggml_quants_src =
-            fs::read_to_string("csrc/ggml/src/ggml-quants.c").expect("read ggml-quants.c");
+        let ggml_quants_src = fs::read_to_string("csrc/ggml/src/ggml-quants.c")
+            .expect("Failed to read 'csrc/ggml/src/ggml-quants.c'. Ensure GGML sources are vendored via 'cargo xtask vendor-ggml'.");
 
         let mut build = cc::Build::new();
         if ggml_quants_src.contains("assert(k % QK_IQ2_S == 0)") {
@@ -32,8 +42,10 @@ fn main() {
             // AC6: Use -isystem for vendored GGML headers (third-party code)
             // This suppresses warnings from the vendored GGML implementation
             // while preserving warnings from our shim code.
-            .flag("-isystemcsrc/ggml/include")
-            .flag("-isystemcsrc/ggml/src")
+            .flag("-isystem")
+            .flag("csrc/ggml/include")
+            .flag("-isystem")
+            .flag("csrc/ggml/src")
             // Define for IQ quantization family
             .define("GGML_USE_K_QUANTS", None)
             .define("QK_IQ2_S", "256")
