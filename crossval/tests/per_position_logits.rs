@@ -7,7 +7,7 @@
 #![cfg(feature = "integration-tests")]
 
 use anyhow::Result;
-use bitnet_crossval::logits_compare::{compare_per_position_logits, COSINE_SIMILARITY_THRESHOLD};
+use bitnet_crossval::logits_compare::{COSINE_SIMILARITY_THRESHOLD, compare_per_position_logits};
 use bitnet_inference::eval_logits_once;
 use bitnet_sys::wrapper::{self, Session as CppSession};
 
@@ -53,11 +53,7 @@ fn test_single_token_logits_parity() -> Result<()> {
     let rust_logits_last = eval_logits_once(&model_path, &tokens)?;
 
     // Compare the last-token logits
-    assert_eq!(
-        rust_logits_last.len(),
-        cpp_logits_last.len(),
-        "Logits vector length mismatch"
-    );
+    assert_eq!(rust_logits_last.len(), cpp_logits_last.len(), "Logits vector length mismatch");
 
     // Calculate differences
     let max_diff = rust_logits_last
@@ -155,11 +151,8 @@ fn test_multi_token_generation_divergence() -> Result<()> {
     println!("First divergence token: {:?}", divergence.first_divergence_token);
     println!("Max absolute diff: {:.6e}", divergence.max_absolute_diff);
 
-    for (i, (cosine_sim, l2_dist)) in divergence
-        .per_token_cosine_sim
-        .iter()
-        .zip(divergence.per_token_l2_dist.iter())
-        .enumerate()
+    for (i, (cosine_sim, l2_dist)) in
+        divergence.per_token_cosine_sim.iter().zip(divergence.per_token_l2_dist.iter()).enumerate()
     {
         println!("  Position {}: cosine_sim={:.6}, L2_dist={:.6e}", i, cosine_sim, l2_dist);
     }
@@ -250,10 +243,7 @@ fn test_prefill_decode_logits_comparison() -> Result<()> {
         prefill_divergence.per_token_cosine_sim[0] > 0.9999,
         "Prefill cosine similarity too low"
     );
-    assert!(
-        decode_divergence.per_token_cosine_sim[0] > 0.9999,
-        "Decode cosine similarity too low"
-    );
+    assert!(decode_divergence.per_token_cosine_sim[0] > 0.9999, "Decode cosine similarity too low");
 
     Ok(())
 }
@@ -274,11 +264,8 @@ fn test_logits_compare_module() {
     use bitnet_crossval::logits_compare::compare_per_position_logits;
 
     // Create identical logits for 3 positions
-    let rs_logits = vec![
-        vec![0.1, 0.2, 0.3, 0.4],
-        vec![0.5, 0.6, 0.7, 0.8],
-        vec![0.9, 1.0, 1.1, 1.2],
-    ];
+    let rs_logits =
+        vec![vec![0.1, 0.2, 0.3, 0.4], vec![0.5, 0.6, 0.7, 0.8], vec![0.9, 1.0, 1.1, 1.2]];
     let cpp_logits = rs_logits.clone();
 
     let divergence = compare_per_position_logits(&rs_logits, &cpp_logits);

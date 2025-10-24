@@ -80,11 +80,8 @@ pub fn compare_per_position_logits(
         per_token_l2_dist.push(l2_dist);
 
         // Track max absolute difference
-        let max_diff_at_pos = rs_vec
-            .iter()
-            .zip(cpp_vec.iter())
-            .map(|(r, c)| (r - c).abs())
-            .fold(0.0f32, f32::max);
+        let max_diff_at_pos =
+            rs_vec.iter().zip(cpp_vec.iter()).map(|(r, c)| (r - c).abs()).fold(0.0f32, f32::max);
 
         if max_diff_at_pos > max_absolute_diff {
             max_absolute_diff = max_diff_at_pos;
@@ -179,11 +176,7 @@ mod tests {
 
     #[test]
     fn test_compare_per_position_logits_no_divergence() {
-        let rs_logits = vec![
-            vec![0.1, 0.2, 0.3],
-            vec![0.4, 0.5, 0.6],
-            vec![0.7, 0.8, 0.9],
-        ];
+        let rs_logits = vec![vec![0.1, 0.2, 0.3], vec![0.4, 0.5, 0.6], vec![0.7, 0.8, 0.9]];
         let cpp_logits = rs_logits.clone();
 
         let divergence = compare_per_position_logits(&rs_logits, &cpp_logits);
@@ -208,8 +201,8 @@ mod tests {
     fn test_compare_per_position_logits_with_divergence() {
         let rs_logits = vec![
             vec![0.1, 0.2, 0.3],
-            vec![0.4, 0.5, 0.6],  // This will match
-            vec![0.7, 0.8, 0.9],  // This will diverge significantly
+            vec![0.4, 0.5, 0.6], // This will match
+            vec![0.7, 0.8, 0.9], // This will diverge significantly
         ];
         let mut cpp_logits = rs_logits.clone();
 
@@ -232,13 +225,10 @@ mod tests {
 
     #[test]
     fn test_compare_per_position_logits_size_mismatch() {
-        let rs_logits = vec![
-            vec![0.1, 0.2, 0.3],
-            vec![0.4, 0.5, 0.6],
-        ];
+        let rs_logits = vec![vec![0.1, 0.2, 0.3], vec![0.4, 0.5, 0.6]];
         let cpp_logits = vec![
             vec![0.1, 0.2, 0.3],
-            vec![0.4, 0.5],  // Different size
+            vec![0.4, 0.5], // Different size
         ];
 
         let divergence = compare_per_position_logits(&rs_logits, &cpp_logits);

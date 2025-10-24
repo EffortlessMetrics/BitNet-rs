@@ -1513,8 +1513,7 @@ impl TransformerModel {
         {
             // For incremental path, hidden is already [B, H] (single token)
             // Trace it directly without narrowing (unlike forward_full which has [B, T, H])
-            bitnet_trace::dump_trace("t0/embeddings", &x)
-                .map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace("t0/embeddings", &x).map_err(BitNetError::from)?;
         }
 
         // Debug input activation norm
@@ -1628,8 +1627,7 @@ impl TransformerModel {
                 {
                     // For incremental path, logits are [B, V] (single token)
                     // Trace directly without narrowing (unlike forward_full which has [B, T, V])
-                    bitnet_trace::dump_trace("t0/logits", &logits)
-                        .map_err(BitNetError::from)?;
+                    bitnet_trace::dump_trace("t0/logits", &logits).map_err(BitNetError::from)?;
                 }
 
                 Ok(logits)
