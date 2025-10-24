@@ -1,0 +1,128 @@
+{
+  "version": "1.0.0",
+  "categories": [
+    {
+      "id": "issue-blocked",
+      "priority": 100,
+      "patterns": {
+        "file": ["issue_(\\d+)_"],
+        "test_name": ["test_issue_(\\d+)"],
+        "comment": ["(?i)issue\\s*#?(\\d+)"]
+      },
+      "template": "Issue #{{issue_number}}: {{description}}",
+      "examples": [
+        "Issue #254: shape mismatch in layer-norm - needs investigation",
+        "Issue #260: TDD placeholder - quantized_matmul not yet implemented"
+      ]
+    },
+    {
+      "id": "slow",
+      "priority": 80,
+      "patterns": {
+        "test_name": ["test_\\w*(slow|perf|benchmark|integration)"],
+        "comment": ["(?i)(slow|performance|benchmark|timing)", "(\\d+)\\+?\\s*tokens?"]
+      },
+      "template": "slow: {{description}}, see {{alternative}}",
+      "examples": [
+        "slow: 50+ token generations, use fast unit tests in ci mode",
+        "slow: integration test, see faster equivalents in unit_tests.rs"
+      ]
+    },
+    {
+      "id": "requires-model",
+      "priority": 75,
+      "patterns": {
+        "test_name": ["test_\\w*(model|gguf|weight|loading|fixture)"],
+        "comment": ["BITNET_GGUF|BITNET_CPP_DIR", "\\.gguf|\\.safetensors|models/"]
+      },
+      "template": "requires: {{resource}}",
+      "examples": [
+        "requires: real GGUF model with complete metadata",
+        "requires: bitnet.cpp FFI implementation",
+        "fixture: missing test data at tests/fixtures/tokenizer.gguf"
+      ]
+    },
+    {
+      "id": "gpu",
+      "priority": 85,
+      "patterns": {
+        "file": ["gpu_\\w+\\.rs"],
+        "test_name": ["test_\\w*(gpu|cuda|device)"],
+        "feature_gate": ["#\\[cfg\\(.*feature\\s*=\\s*\"gpu\""]
+      },
+      "template": "gpu: {{requirement}}",
+      "examples": [
+        "gpu: requires CUDA toolkit installed",
+        "gpu: run with --ignored flag when CUDA available"
+      ]
+    },
+    {
+      "id": "network",
+      "priority": 70,
+      "patterns": {
+        "test_name": ["test_\\w*(download|fetch|network|api|http)"],
+        "comment": ["(?i)(huggingface|hf_token|github|api)", "async\\s+fn\\s+test"]
+      },
+      "template": "network: {{dependency}}",
+      "examples": [
+        "network: requires HuggingFace API access",
+        "network: requires internet connection and HF_TOKEN"
+      ]
+    },
+    {
+      "id": "todo",
+      "priority": 60,
+      "patterns": {
+        "comment": ["(?i)(todo|fixme|wip|placeholder)", "unimplemented!\\(\\)|todo!\\(\\)", "after\\s+#\\d+|pending|future"]
+      },
+      "template": "TODO: {{task}}",
+      "examples": [
+        "TODO: update to use QuantizedLinear::new_tl1() with proper LookupTable",
+        "TODO: implement GPU mixed-precision tests after #439 resolution"
+      ]
+    },
+    {
+      "id": "quantization",
+      "priority": 75,
+      "patterns": {
+        "test_name": ["(?i)(i2s|tl1|tl2|qk256|iq2_s)"],
+        "comment": ["(?i)(avx2|avx512|neon|simd)"],
+        "file": ["(quantization|kernels)/"]
+      },
+      "template": "quantization: {{format}} - {{reason}}",
+      "examples": [
+        "quantization: I2S SIMD consistency tests need refinement",
+        "quantization: QK256 property-based test blocked by Issue #159"
+      ]
+    },
+    {
+      "id": "parity",
+      "priority": 80,
+      "patterns": {
+        "test_name": ["test_\\w*(parity|crossval|reference|accuracy)"],
+        "comment": ["cosine|similarity|threshold|AC\\d+", "bitnet\\.cpp|llama\\.cpp|reference"]
+      },
+      "template": "parity: {{target}} - {{requirement}}",
+      "examples": [
+        "parity: TDD Red phase - AC5 accuracy thresholds not yet met (Issue #254)",
+        "parity: C++ reference comparison - requires bitnet.cpp setup"
+      ]
+    },
+    {
+      "id": "flaky",
+      "priority": 90,
+      "patterns": {
+        "comment": ["(?i)(flaky|non-deterministic|race|timeout|intermittent)", "(?i)(wsl2|macos|linux-specific|platform)"]
+      },
+      "template": "FLAKY: {{symptom}} - {{status}}",
+      "examples": [
+        "FLAKY: CUDA context cleanup issue - repro rate 10% in rapid consecutive runs",
+        "FLAKY: memory tracking platform-specific (WSL2/Linux)"
+      ]
+    }
+  ],
+  "thresholds": {
+    "max_bare_percent": 5,
+    "confidence_threshold": 70
+  }
+}
