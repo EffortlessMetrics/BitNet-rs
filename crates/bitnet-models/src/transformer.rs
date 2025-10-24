@@ -321,8 +321,7 @@ impl MultiHeadAttention {
         #[cfg(feature = "trace")]
         {
             let trace_name = format!("t0/blk{}/q_proj", self.layer_idx);
-            bitnet_trace::dump_trace(&trace_name, &q_proj_out)
-                .map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace(&trace_name, &q_proj_out).map_err(BitNetError::from)?;
         }
 
         let q = q_proj_out
@@ -507,8 +506,7 @@ impl MultiHeadAttention {
         #[cfg(feature = "trace")]
         {
             let trace_name = format!("t0/blk{}/attn_scores_softmax", self.layer_idx);
-            bitnet_trace::dump_trace(&trace_name, &attn_weights)
-                .map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace(&trace_name, &attn_weights).map_err(BitNetError::from)?;
         }
 
         // Debug attention weights and row sums
@@ -1031,8 +1029,7 @@ impl TransformerBlock {
         #[cfg(feature = "trace")]
         {
             let trace_name = format!("t0/blk{}/attn_norm", self.attention.layer_idx);
-            bitnet_trace::dump_trace(&trace_name, &x)
-                .map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace(&trace_name, &x).map_err(BitNetError::from)?;
         }
 
         // Check norm output
@@ -1481,7 +1478,10 @@ impl TransformerModel {
         // Stack logits: handle both [B,V] and [B,1,V] shapes
         let logits = if logits_steps[0].dims().len() == 2 {
             // logits are [B, V], stack them to [B, T, V]
-            let logits_2d: Vec<_> = logits_steps.iter().map(|t| t.unsqueeze(1)).collect::<std::result::Result<Vec<_>, _>>()?;
+            let logits_2d: Vec<_> = logits_steps
+                .iter()
+                .map(|t| t.unsqueeze(1))
+                .collect::<std::result::Result<Vec<_>, _>>()?;
             Tensor::cat(&logits_2d, 1)?
         } else {
             // logits are [B, 1, V], concatenate along time dimension

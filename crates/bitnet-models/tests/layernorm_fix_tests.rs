@@ -39,7 +39,7 @@
 
 use bitnet_common::Result;
 use bitnet_models::names::is_layernorm_weight;
-use candle_core::{Device, DType, Module, Tensor};
+use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, VarBuilder};
 use std::collections::HashMap;
 
@@ -127,16 +127,17 @@ fn test_layernorm_uses_mean_subtraction_not_rmsnorm() -> Result<()> {
     // Compute expected LayerNorm output manually
     let input_vec: Vec<f32> = input.flatten_all()?.to_vec1()?;
     let mean = input_vec.iter().sum::<f32>() / input_vec.len() as f32;
-    let variance = input_vec.iter()
+    let variance = input_vec
+        .iter()
         .map(|&x| {
             let diff = x - mean;
             diff * diff
         })
-        .sum::<f32>() / input_vec.len() as f32;
+        .sum::<f32>()
+        / input_vec.len() as f32;
 
-    let expected_ln: Vec<f32> = input_vec.iter()
-        .map(|&x| (x - mean) / (variance + eps as f32).sqrt())
-        .collect();
+    let expected_ln: Vec<f32> =
+        input_vec.iter().map(|&x| (x - mean) / (variance + eps as f32).sqrt()).collect();
 
     let expected_ln_tensor = Tensor::from_slice(&expected_ln, (1, hidden_size), &device)?;
 
@@ -149,7 +150,10 @@ fn test_layernorm_uses_mean_subtraction_not_rmsnorm() -> Result<()> {
         assert!(
             diff < 1e-4,
             "LayerNorm output mismatch at index {}: expected {:.6}, got {:.6}, diff {:.6}",
-            i, expected, actual, diff
+            i,
+            expected,
+            actual,
+            diff
         );
     }
 
@@ -162,7 +166,8 @@ fn test_layernorm_uses_mean_subtraction_not_rmsnorm() -> Result<()> {
     );
 
     // For comparison: compute what RMSNorm would produce (no mean subtraction)
-    let rms_norm_output: Vec<f32> = input_vec.iter()
+    let rms_norm_output: Vec<f32> = input_vec
+        .iter()
         .map(|&x| {
             let mean_sq = input_vec.iter().map(|&v| v * v).sum::<f32>() / input_vec.len() as f32;
             x / (mean_sq + eps as f32).sqrt()
@@ -179,13 +184,15 @@ fn test_layernorm_uses_mean_subtraction_not_rmsnorm() -> Result<()> {
     );
 
     // Verify LayerNorm and RMSNorm produce DIFFERENT outputs
-    let diff_norm: f32 = ln_vec.iter()
+    let diff_norm: f32 = ln_vec
+        .iter()
         .zip(rms_norm_output.iter())
         .map(|(&ln, &rms)| {
             let diff: f32 = (ln - rms).abs();
             diff
         })
-        .sum::<f32>() / ln_vec.len() as f32;
+        .sum::<f32>()
+        / ln_vec.len() as f32;
 
     assert!(
         diff_norm > 0.01,
@@ -203,7 +210,7 @@ fn test_layernorm_normalizes_over_last_dimension() -> Result<()> {
     // independently for each batch
 
     let device = Device::Cpu;
-    let batch_size = 6;  // Simulate B*T positions
+    let batch_size = 6; // Simulate B*T positions
     let hidden_size = 64;
     let eps = 1e-5;
 
@@ -236,23 +243,22 @@ fn test_layernorm_normalizes_over_last_dimension() -> Result<()> {
         let mean: f32 = row.iter().sum::<f32>() / row.len() as f32;
 
         // Compute variance for this position
-        let variance: f32 = row.iter()
+        let variance: f32 = row
+            .iter()
             .map(|&x| {
                 let diff = x - mean;
                 diff * diff
             })
-            .sum::<f32>() / row.len() as f32;
+            .sum::<f32>()
+            / row.len() as f32;
 
-        assert!(
-            mean.abs() < 1e-3,
-            "Position {} should have mean ≈ 0, got {:.6}",
-            i, mean
-        );
+        assert!(mean.abs() < 1e-3, "Position {} should have mean ≈ 0, got {:.6}", i, mean);
 
         assert!(
             (variance - 1.0).abs() < 0.1,
             "Position {} should have variance ≈ 1, got {:.6}",
-            i, variance
+            i,
+            variance
         );
     }
 
@@ -296,23 +302,22 @@ fn test_layernorm_normalizes_per_position_independently() -> Result<()> {
     // Each vector should be independently normalized (mean ≈ 0, std ≈ 1)
     for (i, vec) in output_vec.iter().enumerate() {
         let mean: f32 = vec.iter().sum::<f32>() / vec.len() as f32;
-        let variance = vec.iter()
+        let variance = vec
+            .iter()
             .map(|&x| {
                 let diff = x - mean;
                 diff * diff
             })
-            .sum::<f32>() / vec.len() as f32;
+            .sum::<f32>()
+            / vec.len() as f32;
 
-        assert!(
-            mean.abs() < 1e-3,
-            "Vector {} should have mean ≈ 0, got {:.6}",
-            i, mean
-        );
+        assert!(mean.abs() < 1e-3, "Vector {} should have mean ≈ 0, got {:.6}", i, mean);
 
         assert!(
             (variance - 1.0).abs() < 0.1,
             "Vector {} should have variance ≈ 1, got {:.6}",
-            i, variance
+            i,
+            variance
         );
     }
 
@@ -357,11 +362,7 @@ fn test_layernorm_output_differs_from_rmsnorm() -> Result<()> {
     let rms_mean = rms_vec.iter().sum::<f32>() / rms_vec.len() as f32;
 
     // LayerNorm output should have mean ≈ 0
-    assert!(
-        ln_mean.abs() < 1e-3,
-        "LayerNorm should produce zero-mean output, got {:.6}",
-        ln_mean
-    );
+    assert!(ln_mean.abs() < 1e-3, "LayerNorm should produce zero-mean output, got {:.6}", ln_mean);
 
     // RMSNorm output should NOT have mean ≈ 0 (it preserves the input mean's direction)
     assert!(
@@ -371,13 +372,15 @@ fn test_layernorm_output_differs_from_rmsnorm() -> Result<()> {
     );
 
     // The outputs should be substantially different
-    let avg_abs_diff: f32 = ln_vec.iter()
+    let avg_abs_diff: f32 = ln_vec
+        .iter()
         .zip(rms_vec.iter())
         .map(|(&ln, &rms)| {
             let diff: f32 = (ln - rms).abs();
             diff
         })
-        .sum::<f32>() / ln_vec.len() as f32;
+        .sum::<f32>()
+        / ln_vec.len() as f32;
 
     assert!(
         avg_abs_diff > 0.1,
@@ -405,9 +408,8 @@ fn test_layernorm_with_gamma_scaling() -> Result<()> {
     let eps = 1e-5;
 
     // Create input
-    let input_data: Vec<f32> = (0..hidden_size)
-        .map(|i| (i as f32 / hidden_size as f32).sin() * 2.0)
-        .collect();
+    let input_data: Vec<f32> =
+        (0..hidden_size).map(|i| (i as f32 / hidden_size as f32).sin() * 2.0).collect();
 
     let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
 
@@ -425,14 +427,17 @@ fn test_layernorm_with_gamma_scaling() -> Result<()> {
     // Manually compute expected output
     let input_vec: Vec<f32> = input.flatten_all()?.to_vec1()?;
     let mean = input_vec.iter().sum::<f32>() / input_vec.len() as f32;
-    let variance = input_vec.iter()
+    let variance = input_vec
+        .iter()
         .map(|&x| {
             let diff = x - mean;
             diff * diff
         })
-        .sum::<f32>() / input_vec.len() as f32;
+        .sum::<f32>()
+        / input_vec.len() as f32;
 
-    let expected: Vec<f32> = input_vec.iter()
+    let expected: Vec<f32> = input_vec
+        .iter()
         .zip(gamma_data.iter())
         .map(|(&x, &g)| ((x - mean) / (variance + eps as f32).sqrt()) * g)
         .collect();
@@ -445,7 +450,9 @@ fn test_layernorm_with_gamma_scaling() -> Result<()> {
         assert!(
             diff < 1e-4,
             "Gamma scaling mismatch at index {}: expected {:.6}, got {:.6}",
-            i, expected_val, actual
+            i,
+            expected_val,
+            actual
         );
     }
 
@@ -486,9 +493,8 @@ fn test_layernorm_stability_with_various_inputs() -> Result<()> {
     );
 
     // Test case 3: Mixed values with high variance
-    let mixed_data: Vec<f32> = (0..hidden_size)
-        .map(|i| if i % 2 == 0 { 100.0 } else { -100.0 })
-        .collect();
+    let mixed_data: Vec<f32> =
+        (0..hidden_size).map(|i| if i % 2 == 0 { 100.0 } else { -100.0 }).collect();
     let mixed_input = Tensor::from_slice(&mixed_data, (1, hidden_size), &device)?;
     let mixed_output = layer_norm.forward(&mixed_input)?;
     let mixed_vec: Vec<f32> = mixed_output.flatten_all()?.to_vec1()?;
@@ -499,11 +505,7 @@ fn test_layernorm_stability_with_various_inputs() -> Result<()> {
 
     // Verify normalization properties are maintained
     let mean = mixed_vec.iter().sum::<f32>() / mixed_vec.len() as f32;
-    assert!(
-        mean.abs() < 1e-3,
-        "Normalized output should have mean ≈ 0, got {:.6}",
-        mean
-    );
+    assert!(mean.abs() < 1e-3, "Normalized output should have mean ≈ 0, got {:.6}", mean);
 
     Ok(())
 }
