@@ -8,7 +8,7 @@
 # GGUF files with proper weight formats for production use.
 #
 # Usage:
-#   export BITNET_CORRECTION_POLICY=./correction-policy.yml
+#   export BITNET_CORRECTION_POLICY=./config/correction-policy.yml
 #   export BITNET_ALLOW_RUNTIME_CORRECTIONS=1  # Required for corrections to apply
 #   cargo run -p bitnet-cli --no-default-features --features cpu -- run \
 #     --model path/to/model.gguf --prompt "Test"
@@ -140,7 +140,7 @@ models:
 #          # ... parameters ...
 #
 # 4. Test:
-#    export BITNET_CORRECTION_POLICY=./correction-policy.yml
+#    export BITNET_CORRECTION_POLICY=./config/correction-policy.yml
 #    export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
 #    cargo run -p bitnet-cli -- run --model model.gguf --prompt "Test"
 #

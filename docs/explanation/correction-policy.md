@@ -183,11 +183,11 @@ Create a YAML policy file based on inspection results:
 ```bash
 # Generate policy template
 cargo run -p bitnet-cli -- inspect --ln-stats \
-  --generate-policy correction-policy.yml \
+  --generate-policy config/correction-policy.yml \
   models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 
 # Edit policy.yml as needed
-nano correction-policy.yml
+nano config/correction-policy.yml
 ```
 
 ### 3. Validate Policy
@@ -196,7 +196,7 @@ Test policy application in dry-run mode:
 
 ```bash
 # Validate policy without applying corrections
-export BITNET_CORRECTION_POLICY=./correction-policy.yml
+export BITNET_CORRECTION_POLICY=./config/correction-policy.yml
 cargo run -p bitnet-cli -- validate-policy \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --dry-run
@@ -222,7 +222,7 @@ Enable runtime corrections for inference:
 
 ```bash
 # Set environment variables
-export BITNET_CORRECTION_POLICY=./correction-policy.yml
+export BITNET_CORRECTION_POLICY=./config/correction-policy.yml
 export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42
@@ -282,7 +282,7 @@ When corrections are applied, inference receipts include additional metadata:
     "size_bytes": 2147483648
   },
   "corrections": {
-    "policy_file": "./correction-policy.yml",
+    "policy_file": "./config/correction-policy.yml",
     "policy_version": 1,
     "applied": [
       {
@@ -364,7 +364,7 @@ cargo run -p bitnet-cli -- inspect --ln-stats \
   old-model.gguf
 
 # Step 2: Apply corrections temporarily
-export BITNET_CORRECTION_POLICY=./correction-policy.yml
+export BITNET_CORRECTION_POLICY=./config/correction-policy.yml
 export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
 cargo run -p bitnet-cli -- run --model old-model.gguf \
   --output corrected-results.json
@@ -402,7 +402,7 @@ git commit -m "docs: add correction policy for microsoft-bitnet-2b-4t"
 # Include policy hash in receipts for auditability
 cargo run -p bitnet-cli -- run \
   --model model.gguf \
-  --correction-policy correction-policy.yml \
+  --correction-policy config/correction-policy.yml \
   --record-policy-hash
 ```
 
@@ -513,7 +513,7 @@ policies:
 set -euo pipefail
 
 MODEL="${1:-models/ggml-model-i2_s.gguf}"
-POLICY="${2:-./correction-policy.yml}"
+POLICY="${2:-./config/correction-policy.yml}"
 
 # Validate policy exists
 if [ ! -f "$POLICY" ]; then

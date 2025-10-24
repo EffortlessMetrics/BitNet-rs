@@ -89,7 +89,7 @@ cargo run -p bitnet-st2gguf -- \
 **Temporary workaround** (development only):
 ```bash
 # See correction-policy-sample.yml for examples
-export BITNET_CORRECTION_POLICY=./correction-policy.yml
+export BITNET_CORRECTION_POLICY=./config/correction-policy.yml
 export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
 cargo run -p bitnet-cli -- run --model model.gguf
 ```
