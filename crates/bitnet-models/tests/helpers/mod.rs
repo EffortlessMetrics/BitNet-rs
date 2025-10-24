@@ -4,6 +4,7 @@
 //! quantization testing, model loading validation, and tensor alignment validation.
 
 pub mod alignment_validator;
+pub mod env_guard;
 pub mod fixture_loader;
 pub mod qk256_fixtures;
 pub mod qk256_tolerance;

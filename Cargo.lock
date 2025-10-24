@@ -613,6 +613,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
+ "bitnet-trace",
  "bytemuck",
  "candle-core",
  "candle-nn",
@@ -857,6 +858,17 @@ dependencies = [
  "tokenizers",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "bitnet-trace"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "candle-core",
+ "serde",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

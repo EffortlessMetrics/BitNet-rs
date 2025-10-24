@@ -77,3 +77,4 @@ crossval = []
 cli-bench = []
 # build the extra subcommands only when you want them
 full-cli = ["cli-bench"]
+trace = ["bitnet-inference/trace"]  # Enable tensor activation tracing

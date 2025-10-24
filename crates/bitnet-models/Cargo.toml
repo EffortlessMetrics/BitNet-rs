@@ -18,6 +18,7 @@ include = [
 bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.1.0", optional = true }
+bitnet-trace = { path = "../bitnet-trace", version = "0.1.0", optional = true }
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
@@ -70,3 +71,4 @@ tl1 = []  # TL1 quantization for test scaffolding
 tl2 = []  # TL2 quantization for test scaffolding
 test-fixtures = []  # Enable tests that require real GGUF fixtures
 fixtures = []  # Enable GGUF fixture generation for QK256 dual-flavor tests (PR1)
+trace = ["dep:bitnet-trace"]  # Enable tensor activation tracing for cross-validation

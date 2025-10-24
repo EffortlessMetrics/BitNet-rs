@@ -68,6 +68,7 @@ full-engine = []
 integration-tests = []
 inference = []
 crossval = []
+trace = ["bitnet-models/trace"]  # Enable tensor activation tracing
 
 [[test]]
 name = "comprehensive_tests"

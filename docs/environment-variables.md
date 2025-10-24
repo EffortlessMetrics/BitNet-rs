@@ -46,6 +46,30 @@ This document describes all environment variables used throughout BitNet.rs for 
     cargo run -p bitnet-cli -- run --model model.gguf
     ```
 
+- `BITNET_RESCALE_GAMMA_ON_LOAD`: **Experimental** - Rescale LayerNorm gamma by √hidden_size during loading
+  - **Value**: "1" to enable (disabled by default)
+  - **Purpose**: Test hypothesis that bitnet.cpp rescales pre-scaled gamma weights on load
+  - **Algorithm**: For LayerNorm tensors, applies `gamma' = gamma * sqrt(hidden_size)`
+  - **Use case**: If gamma RMS ≈ 0.018 = 1/√2560, this rescales to RMS ≈ 1.0
+  - **Safety**: Disabled in strict mode (`BITNET_STRICT_MODE=1`)
+  - **Status**: Experimental feature for investigating activation magnitude discrepancies
+  - **Usage**:
+    ```bash
+    # Enable experimental gamma rescaling
+    export BITNET_RESCALE_GAMMA_ON_LOAD=1
+    cargo run -p bitnet-cli --features cpu,full-cli -- run \
+      --model model.gguf \
+      --tokenizer tokenizer.json \
+      --prompt "Test" \
+      --max-tokens 16
+
+    # Check rescaling logs (look for "EXPERIMENTAL: Rescaled" messages)
+    RUST_LOG=info BITNET_RESCALE_GAMMA_ON_LOAD=1 \
+    cargo run -p bitnet-cli --features cpu,full-cli -- run \
+      --model model.gguf --tokenizer tokenizer.json --prompt "Test"
+    ```
+  - **Important**: This is an experimental diagnostic tool, not a production fix. Always prefer regenerating GGUF with correct LayerNorm weights.
+
 ### Performance and Parallelism
 - `RAYON_NUM_THREADS`: Control CPU parallelism
 

@@ -459,6 +459,100 @@ impl GgufLoader {
         Self::maybe_rescale_ln_gamma_with_policy(name, w, None)
     }
 
+    /// Experimental: Rescale LayerNorm gamma by √hidden_size during loading
+    ///
+    /// **Hypothesis:** bitnet.cpp rescales pre-scaled gamma weights on load.
+    /// This function mimics that behavior when `BITNET_RESCALE_GAMMA_ON_LOAD=1`.
+    ///
+    /// **Algorithm:**
+    /// - Detect LayerNorm tensors (using `is_layernorm_weight`)
+    /// - Calculate: `hidden_size` = last dimension
+    /// - Apply: `gamma' = gamma * sqrt(hidden_size)`
+    ///
+    /// **Use case:** If gamma RMS ≈ 0.018 = 1/√2560, this rescales to RMS ≈ 1.0
+    ///
+    /// Returns: (rescaled_tensor, optional_correction_record)
+    fn maybe_rescale_gamma_by_sqrt_hidden(
+        name: &str,
+        w: Tensor,
+    ) -> Result<(Tensor, Option<CorrectionRecord>)> {
+        // Only apply if enabled via environment variable
+        if !Self::env_truthy("BITNET_RESCALE_GAMMA_ON_LOAD") {
+            return Ok((w, None));
+        }
+
+        // Only apply to LayerNorm weights
+        if !is_layernorm_weight(name) {
+            return Ok((w, None));
+        }
+
+        // Never apply in strict mode
+        if Self::env_truthy("BITNET_STRICT_MODE") {
+            return Ok((w, None));
+        }
+
+        // Get hidden_size from last dimension
+        let dims = w.dims();
+        if dims.is_empty() {
+            return Ok((w, None));
+        }
+        let hidden_size = dims[dims.len() - 1];
+        let scale_factor = (hidden_size as f32).sqrt();
+
+        // Convert to F32 for statistics
+        let w32 = w.to_dtype(DType::F32).map_err(|e| BitNetError::Validation(e.to_string()))?;
+        let rms_before = Self::rms_f32(&w32)?;
+
+        // Apply rescaling: gamma' = gamma * sqrt(H)
+        tracing::warn!(
+            "EXPERIMENTAL: Rescaling '{}' gamma by √{} = {:.2}× (RMS {:.6} → expected {:.6})",
+            name,
+            hidden_size,
+            scale_factor,
+            rms_before,
+            rms_before * scale_factor
+        );
+
+        let rescaled = w32
+            .affine(scale_factor as f64, 0.0)
+            .map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+        // Calculate RMS after rescaling
+        let rms_after = Self::rms_f32(&rescaled)?;
+
+        tracing::info!(
+            "EXPERIMENTAL: Rescaled '{}': RMS {:.6} → {:.6} (factor: {:.2}×)",
+            name,
+            rms_before,
+            rms_after,
+            scale_factor
+        );
+
+        // Convert back to original dtype
+        let result =
+            rescaled.to_dtype(w.dtype()).map_err(|e| BitNetError::Validation(e.to_string()))?;
+
+        // Create correction record
+        let metadata = serde_json::json!({
+            "hidden_size": hidden_size,
+            "scale_factor": scale_factor,
+            "source": "BITNET_RESCALE_GAMMA_ON_LOAD=1",
+            "experimental": true,
+        });
+
+        let correction = CorrectionRecord {
+            layer: name.to_string(),
+            correction_type: "ln_gamma_rescale_sqrt_hidden".to_string(),
+            rms_before: Some(rms_before),
+            rms_after: Some(rms_after),
+            factor: Some(scale_factor),
+            policy_fingerprint: "BITNET_RESCALE_GAMMA_ON_LOAD=1".to_string(),
+            metadata: Some(metadata),
+        };
+
+        Ok((result, Some(correction)))
+    }
+
     /// Collect I2_S block scales from raw tensor data (best-effort heuristic)
     ///
     /// I2_S blocks typically start with an f16 scale. This function samples those scales
@@ -1584,12 +1678,21 @@ impl GgufLoader {
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
                     if is_layernorm_weight(&info.name) {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
-                        let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
+
+                        // Apply policy-driven rescaling first (if configured)
+                        let (rescaled, correction1) = Self::maybe_rescale_ln_gamma_with_policy(
                             &info.name,
                             tensor,
                             policy_plan,
                         )?;
-                        Ok((rescaled, None, correction))
+
+                        // Apply experimental sqrt(hidden_size) rescaling (if enabled)
+                        let (final_tensor, correction2) =
+                            Self::maybe_rescale_gamma_by_sqrt_hidden(&info.name, rescaled)?;
+
+                        // Prefer correction2 if both are present, otherwise use correction1
+                        let final_correction = correction2.or(correction1);
+                        Ok((final_tensor, None, final_correction))
                     } else {
                         // Log projection RMS for F32 projections
                         if is_projection_weight(&info.name)
@@ -1641,12 +1744,21 @@ impl GgufLoader {
                     // PATCH 3: Validate and optionally rescale LayerNorm gamma (policy-driven)
                     if is_layernorm_weight(&info.name) {
                         Self::check_ln_gamma_stats(&info.name, &tensor)?;
-                        let (rescaled, correction) = Self::maybe_rescale_ln_gamma_with_policy(
+
+                        // Apply policy-driven rescaling first (if configured)
+                        let (rescaled, correction1) = Self::maybe_rescale_ln_gamma_with_policy(
                             &info.name,
                             tensor,
                             policy_plan,
                         )?;
-                        Ok((rescaled, None, correction))
+
+                        // Apply experimental sqrt(hidden_size) rescaling (if enabled)
+                        let (final_tensor, correction2) =
+                            Self::maybe_rescale_gamma_by_sqrt_hidden(&info.name, rescaled)?;
+
+                        // Prefer correction2 if both are present, otherwise use correction1
+                        let final_correction = correction2.or(correction1);
+                        Ok((final_tensor, None, final_correction))
                     } else {
                         // Log projection RMS for F16→F32 projections
                         if is_projection_weight(&info.name)

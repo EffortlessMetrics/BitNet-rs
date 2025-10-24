@@ -13,6 +13,7 @@ members = [
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
+  "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
   "crates/bitnet-ffi",
   "crates/bitnet-py",
   "crates/bitnet-wasm",
@@ -165,6 +166,7 @@ iq2s-ffi = ["bitnet-models/iq2s-ffi", "dep:bitnet_ggml_ffi"] # Enable IQ2_S quan
 # Cross-validation features
 cpp-ffi = []  # Link tests against BitNet.cpp library
 crossval = [] # Enable cross-validation against C++ implementation
+trace = ["bitnet-models/trace"] # Enable tensor activation tracing
 
 # Test framework features (forward to bitnet-tests)
 ffi-tests = []

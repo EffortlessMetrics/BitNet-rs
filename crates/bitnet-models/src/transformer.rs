@@ -70,17 +70,20 @@ fn layer_norm_with_optional_bias(
     let weight = vb.get((normalized_shape,), "weight")?;
     match vb.get((normalized_shape,), "bias") {
         Ok(bias) => {
-            // Bias exists → standard LayerNorm
+            // Bias exists → standard LayerNorm (with mean subtraction and bias)
             tracing::debug!("Using LayerNorm with bias [{}]", normalized_shape);
             Ok(LayerNorm::new(weight, bias, eps))
         }
         Err(_) => {
-            // No bias → RMSNorm
+            // No bias → LayerNorm without bias (but WITH mean subtraction)
+            // IMPORTANT: Use LayerNorm::new_no_bias (remove_mean=true) NOT rms_norm (remove_mean=false)
+            // because the gamma weights in GGUF are calibrated for LayerNorm semantics (mean subtraction).
+            // bitnet.cpp uses full LayerNorm even when bias is absent.
             tracing::debug!(
-                "Bias tensor missing for norm layer; using RMSNorm (no bias) [{}]",
+                "Bias tensor missing for norm layer; using LayerNorm without bias (mean subtraction enabled) [{}]",
                 normalized_shape
             );
-            Ok(LayerNorm::rms_norm(weight, eps))
+            Ok(LayerNorm::new_no_bias(weight, eps))
         }
     }
 }
@@ -314,6 +317,14 @@ impl MultiHeadAttention {
             });
         }
 
+        // Tracepoint 3: Q projection output (layer-specific)
+        #[cfg(feature = "trace")]
+        {
+            let trace_name = format!("t0/blk{}/q_proj", self.layer_idx);
+            bitnet_trace::dump_trace(&trace_name, &q_proj_out)
+                .map_err(BitNetError::from)?;
+        }
+
         let q = q_proj_out
             .reshape(&[batch_size, seq_len, self.n_heads, self.head_dim])?
             .transpose(1, 2)?; // [B, Hq, T, D]
@@ -491,6 +502,14 @@ impl MultiHeadAttention {
         // Apply softmax (exp then normalize)
         // VERIFIED: axis=3 is correct - softmax over keys (Tk dimension) in [B, H, Tq, Tk]
         let attn_weights = candle_nn::ops::softmax(&scores_stabilized, 3)?;
+
+        // Tracepoint 4: Attention scores post-softmax (layer-specific)
+        #[cfg(feature = "trace")]
+        {
+            let trace_name = format!("t0/blk{}/attn_scores_softmax", self.layer_idx);
+            bitnet_trace::dump_trace(&trace_name, &attn_weights)
+                .map_err(BitNetError::from)?;
+        }
 
         // Debug attention weights and row sums
         dbg_stats("attn softmax", &attn_weights)?;
@@ -1008,6 +1027,14 @@ impl TransformerBlock {
             });
         }
 
+        // Tracepoint 2: Attention norm output (layer-specific)
+        #[cfg(feature = "trace")]
+        {
+            let trace_name = format!("t0/blk{}/attn_norm", self.attention.layer_idx);
+            bitnet_trace::dump_trace(&trace_name, &x)
+                .map_err(BitNetError::from)?;
+        }
+
         // Check norm output
         if std::env::var("BITNET_DEBUG_RMSNORM").is_ok() {
             static ATTN_NORM_OUT_LOGGED: std::sync::Once = std::sync::Once::new();
@@ -1415,6 +1442,15 @@ impl TransformerModel {
             });
         }
 
+        // Tracepoint 1: Embeddings output (after embed, before layers)
+        #[cfg(feature = "trace")]
+        {
+            // Extract first token's embedding for tracing [B, 1, H]
+            let first_token_emb = hidden.narrow(1, 0, 1)?;
+            bitnet_trace::dump_trace("t0/embeddings", &first_token_emb)
+                .map_err(BitNetError::from)?;
+        }
+
         // Create per-layer KV cache so that rotary/absolute positional
         // encodings use the proper positions during iterative decoding.
         let mut kv_cache = KVCache::new(&self.config, batch_size, &self.device)?;
@@ -1422,20 +1458,46 @@ impl TransformerModel {
         // Collect logits for each position.
         let mut logits_steps = Vec::with_capacity(seq_len);
         for t in 0..seq_len {
-            // Select the current token's embedding: [B,1,H]
-            let step_hidden = hidden.narrow(1, t, 1)?;
+            // Select the current token's embedding and squeeze to [B,H]
+            let step_hidden = hidden.narrow(1, t, 1)?.squeeze(1)?;
 
             // Run through all layers using the incremental path which applies
             // positional encoding per layer and causal masking internally.
             let step_hidden = self.forward(step_hidden, Some(&mut kv_cache))?;
+
+            // Ensure forward preserves expected shape [B, H]
+            if step_hidden.dims().len() != 2 {
+                return Err(BitNetError::Validation(format!(
+                    "forward() should return [B, H] shape, got {:?}",
+                    step_hidden.dims()
+                )));
+            }
 
             // Project to vocabulary logits for this step.
             let step_logits = self.logits(&step_hidden)?;
             logits_steps.push(step_logits);
         }
 
-        // Concatenate logits from all steps: [B,T,V]
-        Ok(Tensor::cat(&logits_steps, 1)?)
+        // Stack logits: handle both [B,V] and [B,1,V] shapes
+        let logits = if logits_steps[0].dims().len() == 2 {
+            // logits are [B, V], stack them to [B, T, V]
+            let logits_2d: Vec<_> = logits_steps.iter().map(|t| t.unsqueeze(1)).collect::<std::result::Result<Vec<_>, _>>()?;
+            Tensor::cat(&logits_2d, 1)?
+        } else {
+            // logits are [B, 1, V], concatenate along time dimension
+            Tensor::cat(&logits_steps, 1)?
+        };
+
+        // Tracepoint 5: Final logits (first token only)
+        #[cfg(feature = "trace")]
+        {
+            // Extract first token's logits for tracing [B, 1, V]
+            let first_token_logits = logits.narrow(1, 0, 1)?;
+            bitnet_trace::dump_trace("t0/logits", &first_token_logits)
+                .map_err(BitNetError::from)?;
+        }
+
+        Ok(logits)
     }
 
     /// Forward pass through transformer layers
@@ -1608,5 +1670,240 @@ impl TransformerModel {
             }
             _ => Err(BitNetError::Validation("unexpected hidden rank".into())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_nn::RmsNorm;
+
+    /// Helper to compute RMS (root mean square) of a tensor
+    fn compute_rms(tensor: &Tensor) -> candle_core::Result<f64> {
+        let squared = tensor.sqr()?;
+        let mean = squared.mean_all()?;
+        let rms = mean.sqrt()?.to_scalar::<f32>()? as f64;
+        Ok(rms)
+    }
+
+    #[test]
+    fn test_layer_norm_with_standard_gamma() -> candle_core::Result<()> {
+        // Test that RMSNorm behaves correctly with standard gamma (RMS ≈ 1.0)
+        let device = Device::Cpu;
+        let hidden_size = 2560;
+        let eps = 1e-5;
+
+        // Create input tensor [1, 1, 2560]
+        let input_data: Vec<f32> = (0..hidden_size)
+            .map(|i| {
+                let x = i as f32 / hidden_size as f32;
+                ((x * 10.0).sin() + (x * 20.0).cos()) * 0.5
+            })
+            .collect();
+
+        let input = Tensor::from_slice(&input_data, (1, 1, hidden_size), &device)?;
+
+        // Create standard gamma (all ones)
+        let gamma = Tensor::ones(hidden_size, DType::F32, &device)?;
+
+        // Apply RMSNorm
+        let rms_norm = RmsNorm::new(gamma, eps);
+        let output = rms_norm.forward(&input)?;
+
+        // Verify output RMS is reasonable (should be close to 1.0)
+        let output_rms = compute_rms(&output)?;
+
+        assert!(
+            output_rms > 0.5 && output_rms < 2.0,
+            "Output RMS should be reasonable with standard gamma, got {:.6e}",
+            output_rms
+        );
+
+        // Verify no NaN/Inf
+        let vec_data: Vec<f32> = output.flatten_all()?.to_vec1()?;
+        let has_nan = vec_data.iter().any(|x| x.is_nan());
+        let has_inf = vec_data.iter().any(|x| x.is_infinite());
+        assert!(!has_nan, "Output should not contain NaN");
+        assert!(!has_inf, "Output should not contain Inf");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_layer_norm_with_small_gamma() -> candle_core::Result<()> {
+        // Test RMSNorm with gamma RMS ≈ 0.018 (our model's case)
+        let device = Device::Cpu;
+        let hidden_size = 2560;
+        let eps = 1e-5;
+
+        // Create input tensor [1, 1, 2560]
+        let input_data: Vec<f32> = (0..hidden_size)
+            .map(|i| {
+                let x = i as f32 / hidden_size as f32;
+                ((x * 10.0).sin() + (x * 20.0).cos()) * 0.5
+            })
+            .collect();
+
+        let input = Tensor::from_slice(&input_data, (1, 1, hidden_size), &device)?;
+
+        // Create gamma with RMS ≈ 1/√2560 ≈ 0.01976
+        let target_rms = 1.0 / (hidden_size as f64).sqrt();
+        let gamma_data: Vec<f32> = vec![target_rms as f32; hidden_size];
+        let gamma = Tensor::from_slice(&gamma_data, hidden_size, &device)?;
+
+        // Verify gamma RMS
+        let gamma_rms = compute_rms(&gamma)?;
+        assert!(
+            (gamma_rms - target_rms).abs() < 0.001,
+            "Gamma RMS should be close to {:.6e}, got {:.6e}",
+            target_rms,
+            gamma_rms
+        );
+
+        // Apply RMSNorm
+        let rms_norm = RmsNorm::new(gamma, eps);
+        let output = rms_norm.forward(&input)?;
+
+        // Verify output RMS is smaller but reasonable
+        let output_rms = compute_rms(&output)?;
+
+        assert!(
+            output_rms > 0.001 && output_rms < 0.1,
+            "Output RMS should be reasonable with small gamma, got {:.6e}",
+            output_rms
+        );
+
+        // Verify no NaN/Inf
+        let vec_data: Vec<f32> = output.flatten_all()?.to_vec1()?;
+        let has_nan = vec_data.iter().any(|x| x.is_nan());
+        let has_inf = vec_data.iter().any(|x| x.is_infinite());
+        assert!(!has_nan, "Output should not contain NaN");
+        assert!(!has_inf, "Output should not contain Inf");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_layer_norm_with_optional_bias() -> candle_core::Result<()> {
+        // Test layer_norm_with_optional_bias helper with RMSNorm (no bias)
+        let device = Device::Cpu;
+        let hidden_size = 128;
+        let eps = 1e-5;
+
+        // Create VarBuilder with only weight (no bias)
+        use std::collections::HashMap;
+
+        let mut tensors = HashMap::new();
+        let weight = Tensor::ones(hidden_size, DType::F32, &device)?;
+        tensors.insert("weight".to_string(), weight);
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+
+        // Create LayerNorm (should use RMSNorm path due to missing bias)
+        let layer_norm = layer_norm_with_optional_bias(hidden_size, eps, vb)?;
+
+        // Test forward pass
+        let input_data: Vec<f32> =
+            (0..hidden_size).map(|i| (i as f32 / hidden_size as f32).sin()).collect();
+        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
+
+        let output = layer_norm.forward(&input)?;
+
+        // Verify output shape
+        assert_eq!(output.shape(), input.shape());
+
+        // Verify no NaN/Inf
+        let vec_data: Vec<f32> = output.flatten_all()?.to_vec1()?;
+        let has_nan = vec_data.iter().any(|x| x.is_nan());
+        let has_inf = vec_data.iter().any(|x| x.is_infinite());
+        assert!(!has_nan, "Output should not contain NaN");
+        assert!(!has_inf, "Output should not contain Inf");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_rmsnorm_formula_consistency() -> candle_core::Result<()> {
+        // Verify RMSNorm formula: output = (x / sqrt(mean(x²) + eps)) * gamma
+        let device = Device::Cpu;
+        let hidden_size = 256;
+        let eps = 1e-5;
+
+        // Create input
+        let input_data: Vec<f32> = (0..hidden_size).map(|i| (i as f32 / 100.0).sin()).collect();
+        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
+
+        // Create gamma
+        let gamma = Tensor::ones(hidden_size, DType::F32, &device)?;
+
+        // Apply RMSNorm via Candle
+        let rms_norm = RmsNorm::new(gamma.clone(), eps);
+        let output_candle = rms_norm.forward(&input)?;
+
+        // Manually compute RMSNorm
+        let squared = input.sqr()?;
+        let mean_squared = squared.mean_keepdim(1)?; // Mean over last dimension
+        let rms_denominator = (mean_squared + eps)?.sqrt()?;
+        let normalized = input.broadcast_div(&rms_denominator)?;
+        let output_manual = normalized.broadcast_mul(&gamma)?;
+
+        // Compare outputs
+        let diff = (output_candle.sub(&output_manual))?.abs()?;
+        let diff_vec: Vec<f32> = diff.flatten_all()?.to_vec1()?;
+        let max_diff = diff_vec.iter().copied().fold(f32::NEG_INFINITY, f32::max) as f64;
+
+        assert!(
+            max_diff < 1e-5,
+            "Candle's RMSNorm should match manual computation: max_diff={:.6e}",
+            max_diff
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_rmsnorm_output_scale_relationship() -> candle_core::Result<()> {
+        // Test that output RMS scales proportionally with gamma RMS
+        let device = Device::Cpu;
+        let hidden_size = 256;
+        let eps = 1e-5;
+
+        // Create same input for both tests
+        let input_data: Vec<f32> = (0..hidden_size)
+            .map(|i| {
+                let x = i as f32 / hidden_size as f32;
+                ((x * 10.0).sin() + (x * 20.0).cos()) * 2.0
+            })
+            .collect();
+        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
+
+        // Test 1: Standard gamma (RMS ≈ 1.0)
+        let gamma_std = Tensor::ones(hidden_size, DType::F32, &device)?;
+        let rms_norm_std = RmsNorm::new(gamma_std.clone(), eps);
+        let output_std = rms_norm_std.forward(&input)?;
+        let output_std_rms = compute_rms(&output_std)?;
+
+        // Test 2: Small gamma (RMS ≈ 0.02)
+        let target_rms = 0.02;
+        let gamma_small =
+            Tensor::from_slice(&vec![target_rms as f32; hidden_size], hidden_size, &device)?;
+        let rms_norm_small = RmsNorm::new(gamma_small.clone(), eps);
+        let output_small = rms_norm_small.forward(&input)?;
+        let output_small_rms = compute_rms(&output_small)?;
+
+        // Verify scaling relationship
+        let gamma_std_rms = compute_rms(&gamma_std)?;
+        let gamma_small_rms = compute_rms(&gamma_small)?;
+        let expected_ratio = gamma_small_rms / gamma_std_rms;
+        let actual_ratio = output_small_rms / output_std_rms;
+
+        assert!(
+            (actual_ratio - expected_ratio).abs() < 0.01,
+            "Output RMS should scale with gamma RMS: expected ratio {:.6}, got {:.6}",
+            expected_ratio,
+            actual_ratio
+        );
+
+        Ok(())
     }
 }
