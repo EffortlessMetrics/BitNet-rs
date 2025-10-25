@@ -15,12 +15,13 @@
 //! cargo bench --features crossval
 //! ```
 
-#[cfg(feature = "crossval")]
+#[cfg(any(feature = "crossval", feature = "ffi"))]
 pub mod cpp_bindings;
 
 #[cfg(feature = "crossval")]
 pub mod comparison;
 
+pub mod backend;
 pub mod fixtures;
 pub mod logits_compare;
 pub mod score;
@@ -96,4 +97,22 @@ pub fn assert_first_logits_match(model_path: &str, prompt: &str) {
 #[cfg(not(feature = "crossval"))]
 pub fn assert_first_logits_match(_model_path: &str, _prompt: &str) {
     panic!("crossval feature required for assert_first_logits_match");
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[cfg(feature = "ffi")]
+    fn test_crossval_backend_detection_env_vars() {
+        // Verify that build.rs exports CROSSVAL_HAS_* environment variables
+        let has_bitnet = env!("CROSSVAL_HAS_BITNET");
+        let has_llama = env!("CROSSVAL_HAS_LLAMA");
+
+        println!("CROSSVAL_HAS_BITNET = {}", has_bitnet);
+        println!("CROSSVAL_HAS_LLAMA = {}", has_llama);
+
+        // Validate that the env vars are valid boolean strings
+        assert!(has_bitnet == "true" || has_bitnet == "false");
+        assert!(has_llama == "true" || has_llama == "false");
+    }
 }

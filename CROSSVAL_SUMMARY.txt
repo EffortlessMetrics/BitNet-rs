@@ -1,0 +1,288 @@
+================================================================================
+CROSSVAL-PER-TOKEN EXPLORATION - EXECUTIVE SUMMARY
+================================================================================
+
+STATUS: ✅ READY FOR IMPLEMENTATION
+
+The crossval-per-token infrastructure is 70% complete and ready for the 
+final dual-backend enhancement. This exploration identified exactly what's 
+needed to make it production-ready.
+
+================================================================================
+WHAT'S WORKING (70% COMPLETE)
+================================================================================
+
+1. Token Parity Module (COMPLETE)
+   ✅ validate_token_parity() function
+   ✅ TokenParityError with diagnostics
+   ✅ format_token_mismatch_error() for user output
+   ✅ 11 unit tests (all passing)
+   ✅ Silent success (no noise)
+   ✅ Exit code 2 on mismatch
+
+2. Integration into xtask (PARTIAL)
+   ✅ Command dispatch working (line 897-899)
+   ✅ Token parity check called (line 2963)
+   ✅ Error handling implemented
+   ❌ CLI flags missing (--backend, --prompt-template)
+   ❌ Template support not integrated
+   ❌ Tokenization hardcoded (no template application)
+
+3. Tests (PARTIAL)
+   ✅ Unit tests for token parity (11 tests, all working)
+   ✅ Mock FFI tests (working)
+   ✅ Performance tests (working)
+   ⚠️ Integration tests scaffolded but ignored (need real models)
+
+================================================================================
+WHAT'S MISSING (30% REMAINING)
+================================================================================
+
+1. CLI Flags
+   - --backend (native|cpp|both) - for backend selection
+   - --prompt-template (raw|instruct|llama3-chat) - for template choice
+   - --system-prompt (optional) - for chat templates
+
+2. Template Integration
+   - Parse template from CLI flag
+   - Call TemplateType::apply() before tokenization
+   - Pass formatted prompt and flags to tokenizers
+
+3. Backend Selection
+   - CppBackend enum to represent three modes
+   - Preflight checks for C++ library availability
+   - Conditional code paths for Native/Cpp/Both modes
+   - Error handling for missing C++ FFI
+
+================================================================================
+INTEGRATION POINTS (9 LOCATIONS)
+================================================================================
+
+IP1: Command Definition (xtask/src/main.rs, lines 405-430)
+     Add: --backend, --prompt-template, --system-prompt flags
+     Size: +12 lines, Low complexity
+
+IP2: Function Signature (xtask/src/main.rs, line 2901)
+     Add: 3 new parameters
+     Size: +3 lines, Low complexity
+
+IP3: Backend Enum (NEW, xtask/src/main.rs, ~line 36)
+     Create: CppBackend enum with three variants
+     Size: ~20 lines, Low complexity
+
+IP4: Preflight Checks (NEW, xtask/src/main.rs, start of function)
+     Add: FFI availability validation
+     Size: ~15 lines, Low complexity
+
+IP5: Template Handling (NEW, xtask/src/main.rs, after line 2920)
+     Add: Parse template, apply formatting, get tokenization flags
+     Size: ~13 lines, Medium complexity
+
+IP6: Rust Tokenization (xtask/src/main.rs, line 2921)
+     Change: Use formatted_prompt and template flags
+     Size: 1 line change, Low complexity
+
+IP7: Logits Evaluation Order (xtask/src/main.rs, lines 2933→2972)
+     Move: Rust logits evaluation AFTER parity check (not before)
+     Size: ~40 lines restructure, Medium complexity
+
+IP8: C++ Tokenization (xtask/src/main.rs, lines 2954-2957)
+     Change: Conditional - only call when C++ needed
+     Size: ~20 lines conditional, Medium complexity
+
+IP9: Logits Comparison (xtask/src/main.rs, lines 2972-3050)
+     Change: Match on backend mode to conditionally compare
+     Size: ~30 lines refactor, High complexity
+
+TOTAL: ~154 lines in xtask/src/main.rs
+
+================================================================================
+CURRENT FLOW vs REQUIRED FLOW
+================================================================================
+
+CURRENT (BROKEN):
+  1. Load tokenizer
+  2. Tokenize Rust (hardcoded: no BOS, no special)
+  3. EVALUATE RUST LOGITS ← WASTED COMPUTATION
+  4. Check FFI availability
+  5. Initialize C++
+  6. Load C++ session
+  7. Tokenize C++ (hardcoded: raw mode)
+  8. Check token parity ← TOO LATE, already computed logits
+  9. Evaluate C++ logits
+  10. Compare logits
+  11. Output results
+
+REQUIRED (FIXED):
+  1. Parse template from CLI flag
+  2. Load tokenizer
+  3. Apply template formatting
+  4. Tokenize Rust (with template flags)
+  5. [Conditional] Tokenize C++ (if backend requires it)
+  6. Validate token parity ← FAIL-FAST here
+  7. [Conditional] Evaluate Rust logits (only if needed)
+  8. [Conditional] Evaluate C++ logits (only if backend=cpp/both)
+  9. [Conditional] Compare logits (if backend=both)
+  10. Output results (different for each backend mode)
+
+================================================================================
+TEST REQUIREMENTS
+================================================================================
+
+Already Passing (11 tests):
+  • test_tokens_match
+  • test_tokens_differ_first_position
+  • test_duplicate_bos_detection
+  • test_length_mismatch
+  • test_error_message_format
+  • test_performance_under_100ms
+  • (5 more in token_parity.rs)
+
+Need to Implement (8 tests):
+  • test_backend_native_mode
+  • test_backend_cpp_mode
+  • test_backend_both_mode
+  • test_template_raw_tokenization
+  • test_template_instruct_tokenization
+  • test_template_llama3_tokenization
+  • test_backend_cpp_unavailable
+  • test_preflight_checks
+
+================================================================================
+ERROR CODES
+================================================================================
+
+Exit Code 0: Success (all modes)
+Exit Code 1: Divergence (tokens match, logits diverged)
+Exit Code 2: Token mismatch (parity check failed)
+Exit Code 3: C++ unavailable (when --backend cpp/both required)
+Exit Code 4: Template parsing error
+Other: Runtime errors (FFI, model load, etc.)
+
+================================================================================
+SUCCESS CRITERIA (12 ITEMS)
+================================================================================
+
+✓ CLI accepts --backend (native|cpp|both)
+✓ CLI accepts --prompt-template (raw|instruct|llama3-chat)
+✓ CLI accepts --system-prompt for chat templates
+✓ Tokenization uses formatted prompt with template flags
+✓ Token parity check runs BEFORE logits evaluation
+✓ Native mode evaluates Rust only (no C++ calls)
+✓ Both mode compares Rust vs C++ logits
+✓ Preflight check fails gracefully when C++ unavailable
+✓ Exit code 3 when C++ required but unavailable
+✓ All integration tests pass
+✓ No performance regression (<5% vs baseline)
+✓ CLAUDE.md updated with examples
+
+================================================================================
+ESTIMATED EFFORT
+================================================================================
+
+Implementation Time:
+  • CLI flags & enum: 30 minutes
+  • Template integration: 45 minutes
+  • Backend selection logic: 60 minutes
+  • Error handling & output: 30 minutes
+  Total: 2-3 hours
+
+Testing Time:
+  • Integration tests: 45 minutes
+  • Manual validation: 30 minutes
+  • Performance testing: 20 minutes
+  Total: ~2 hours
+
+Documentation:
+  • CLAUDE.md examples: 15 minutes
+  • This analysis: Already done!
+
+Estimated Total: 5-7 hours
+
+================================================================================
+RISKS & MITIGATIONS
+================================================================================
+
+RISK: Large refactoring of crossval_per_token_cmd()
+MITIGATION: 
+  • Break into helper functions
+  • Test each integration point independently
+  • Keep feature gates for isolation
+
+RISK: Conditional branching for 3 backend modes
+MITIGATION:
+  • Use enums + pattern matching (idiomatic Rust)
+  • Clear separation of concerns
+  • Comprehensive test coverage
+
+RISK: Performance regression
+MITIGATION:
+  • Benchmark before/after
+  • Token comparison is O(n) with early exit
+  • Logits computation unchanged
+
+================================================================================
+KEY INSIGHTS
+================================================================================
+
+1. Token parity infrastructure is 90% done
+   - Module exists, logic works, tests pass
+   - Just needs to be integrated to xtask
+
+2. Flow is backwards
+   - Currently evaluates Rust logits BEFORE checking parity
+   - Should validate tokens FIRST, then evaluate (fail-fast)
+   - This is a significant bug in current design
+
+3. Tokenization is hardcoded
+   - No way to change BOS or special token behavior
+   - Users stuck with one token sequence
+   - Template support exists elsewhere, just not wired
+
+4. Backend selection is trivial to add
+   - Just need 3 code paths (Native/Cpp/Both)
+   - Mostly copy-paste of existing logic
+   - Low risk, high value
+
+5. All dependencies already available
+   - TemplateType is public and complete
+   - Tokenizer interface is stable
+   - FFI wrapper is usable
+   - No new crate dependencies needed
+
+================================================================================
+RECOMMENDED NEXT STEPS
+================================================================================
+
+1. Review this report
+2. Check bitnet_inference::TemplateType API
+3. Create CppBackend enum
+4. Implement template parsing & application
+5. Restructure logits evaluation order
+6. Add backend conditional logic
+7. Write 8 new integration tests
+8. Manual validation with real model
+9. Performance testing
+10. Update CLAUDE.md with examples
+
+================================================================================
+FILE LOCATIONS
+================================================================================
+
+Key Files:
+  • xtask/src/main.rs (2901-3053) - crossval_per_token_cmd()
+  • crossval/src/token_parity.rs - Token validation (✅ DONE)
+  • crossval/src/logits_compare.rs - Logits comparison (✅ DONE)
+  • xtask/tests/crossval_token_parity.rs - Tests (⚠️ SCAFFOLDED)
+
+Report:
+  • CROSSVAL_EXPLORATION_REPORT.md (this file, detailed version)
+  • docs/explanation/token-parity-pregate-spec.md (specification)
+
+================================================================================
+END OF SUMMARY
+================================================================================
+
+For detailed information, see: CROSSVAL_EXPLORATION_REPORT.md
+For specification details, see: docs/explanation/token-parity-pregate-spec.md
+

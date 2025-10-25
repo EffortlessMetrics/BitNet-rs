@@ -532,12 +532,25 @@ eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
 
 # Per-token logits divergence detection (requires --features inference or crossval-all)
 # Compares Rust vs C++ logits position-by-position to find first divergence
+# Auto-detects backend from model path (bitnet.cpp for BitNet models, llama.cpp for LLaMA)
 cargo run -p xtask --features crossval-all -- crossval-per-token \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
   --max-tokens 4 \
   --cos-tol 0.999
+
+# Per-token with explicit backend selection (override auto-detection)
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --cpp-backend bitnet \
+  --prompt-template raw \
+  --prompt "Test" \
+  --max-tokens 4 \
+  --dump-ids \
+  --dump-cpp-ids \
+  --verbose
 
 # If divergence found, capture and compare traces
 cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
@@ -581,10 +594,146 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 
 **See also:** `docs/howto/validate-models.md` for complete validation guide.
 
-### Troubleshooting
+### Cross-Validation CLI Reference
+
+### crossval-per-token Command
+
+**Purpose**: Per-token parity comparison between Rust and C++ inference (find first logits divergence)
+
+**Requirements**:
+- Build flag: `--features crossval-all` (or `--features inference`)
+- C++ reference installed: `cargo run -p xtask -- fetch-cpp` or `setup-cpp-auto`
+- Environment: `BITNET_CPP_DIR` and dynamic loader path set
+
+**Flags**:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--model` | path | (required) | Path to GGUF model file |
+| `--tokenizer` | path | (required) | Path to tokenizer.json file |
+| `--prompt` | string | (required) | Input prompt for inference |
+| `--max-tokens` | integer | 4 | Maximum tokens to generate (excluding prompt) |
+| `--cos-tol` | float | 0.999 | Cosine similarity threshold (0.0-1.0); below = divergence |
+| `--format` | string | "text" | Output format: "text" or "json" |
+| `--prompt-template` | enum | "auto" | Template type: raw, instruct, llama3-chat, auto |
+| `--system-prompt` | string | (none) | System prompt for chat templates |
+| `--cpp-backend` | enum | (auto) | C++ backend selection: bitnet, llama (auto-detects from path if omitted) |
+| `--verbose` | flag | false | Show backend selection, preflight checks, diagnostics |
+| `--dump-ids` | flag | false | Dump Rust token IDs to stderr for debugging |
+| `--dump-cpp-ids` | flag | false | Dump C++ token IDs to stderr for debugging |
+
+**Backend Auto-Detection Heuristics**:
+- Path contains "bitnet" or "microsoft/bitnet" → Uses bitnet.cpp
+- Path contains "llama" → Uses llama.cpp
+- Default fallback → llama.cpp (conservative)
+- Override with `--cpp-backend bitnet|llama`
+
+**Example Usage**:
+
+```bash
+# BitNet model (auto-detects bitnet.cpp)
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "What is 2+2?" \
+  --max-tokens 4 \
+  --cos-tol 0.999 \
+  --format json
+
+# LLaMA model (auto-detects llama.cpp)
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/llama-3-8b-instruct.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "What is the capital of France?" \
+  --max-tokens 8 \
+  --cos-tol 0.995
+
+# Explicit backend + template override + debugging
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --cpp-backend llama \
+  --prompt-template raw \
+  --prompt "2+2=" \
+  --max-tokens 1 \
+  --dump-ids \
+  --dump-cpp-ids \
+  --verbose
+
+# With system prompt for chat template
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template llama3-chat \
+  --system-prompt "You are a helpful assistant" \
+  --prompt "Explain photosynthesis" \
+  --max-tokens 32
+```
+
+**Output Formats**:
+
+Text (default):
+```
+Position 0: OK (cos_sim: 0.9999, l2_dist: 0.0042)
+Position 1: OK (cos_sim: 0.9997, l2_dist: 0.0051)
+Position 2: OK (cos_sim: 0.9995, l2_dist: 0.0084)
+
+Summary: All positions parity OK
+Minimum cosine similarity: 0.99950
+Maximum L2 distance: 0.00840
+```
+
+JSON:
+```json
+{
+  "status": "ok",
+  "backend": "bitnet",
+  "divergence_token": -1,
+  "metrics": {
+    "min_cosine_similarity": 0.99999,
+    "max_l2_distance": 0.00042,
+    "mean_abs_difference": 0.00018,
+    "token_count": 4
+  }
+}
+```
+
+### setup-cpp-auto Command
+
+**Purpose**: One-command C++ reference setup (fetch, build, emit environment exports)
+
+**Flags**:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--emit` | string | "sh" | Output shell format: sh, fish, pwsh, cmd |
+
+**Example Usage**:
+
+```bash
+# Bash/Zsh
+eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+
+# Fish
+cargo run -p xtask -- setup-cpp-auto --emit=fish | source
+
+# PowerShell
+cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
+
+# Windows Command Prompt (less common, use PowerShell)
+# cargo run -p xtask -- setup-cpp-auto --emit=cmd
+```
+
+**What It Does**:
+1. Detects if bitnet.cpp is already built
+2. Downloads and builds C++ reference if needed
+3. Emits shell-specific environment variable exports
+4. Outputs: `BITNET_CPP_DIR`, `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH`/`PATH`
+
+## Troubleshooting
 
 - FFI linker errors: Use `--no-default-features --features cpu` or
-  `cargo xtask fetch-cpp`. See `docs/howto/cpp-setup.md` for complete C++ reference setup.
+  `cargo run -p xtask -- fetch-cpp`. See `docs/howto/cpp-setup.md` for complete C++ reference setup.
 - C++ cross-validation setup: See `docs/howto/cpp-setup.md` for detailed guide on setting up
   Microsoft BitNet C++ reference, libllama.so, and dynamic loader paths
 - CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH

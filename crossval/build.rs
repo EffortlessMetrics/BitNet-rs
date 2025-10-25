@@ -2,6 +2,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(have_cpp)");
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/bitnet_cpp_wrapper.c");
+    println!("cargo:rerun-if-changed=src/bitnet_cpp_wrapper.cc");
 
     // Export environment metadata for parity receipts
     // Get rustc version
@@ -27,77 +28,133 @@ fn main() {
 fn compile_ffi() {
     use std::{env, path::Path};
 
-    // Compile our C wrapper
-    // TODO: AC6 FFI build hygiene - migrate to xtask::ffi::compile_cpp_shim
-    // when actual BitNet C++ integration is implemented (currently mock).
-    // Will need to add system includes for BITNET_CPP_DIR headers.
-    cc::Build::new().file("src/bitnet_cpp_wrapper.c").compile("bitnet_cpp_wrapper");
+    // Check if BITNET_CPP_DIR is set to determine compilation mode
+    let bitnet_available = env::var("BITNET_CPP_DIR").is_ok();
 
-    let root = env::var("BITNET_CPP_DIR")
-        .or_else(|_| env::var("BITNET_CPP_PATH")) // Legacy support
-        .unwrap_or_else(|_| format!("{}/.cache/bitnet_cpp", env::var("HOME").unwrap()));
+    // Compile C++ wrapper (.cc file)
+    let cc_wrapper_path = Path::new("src/bitnet_cpp_wrapper.cc");
+    if cc_wrapper_path.exists() {
+        let mut build = cc::Build::new();
+        build.file(cc_wrapper_path).cpp(true).flag_if_supported("-std=c++17");
 
-    // Try multiple possible library locations
-    let possible_lib_dirs = [
-        Path::new(&root).join("build").join("lib"),
-        Path::new(&root).join("build"),
-        Path::new(&root).join("lib"),
-    ];
-
-    // We always have the wrapper now
-    println!("cargo:rustc-cfg=have_cpp");
-
-    // Link to the actual BitNet library if available
-    let mut found_lib_dir = None;
-    for lib_dir in &possible_lib_dirs {
-        if lib_dir.exists() {
-            found_lib_dir = Some(lib_dir);
-            break;
+        // Set compilation mode based on BITNET_CPP_DIR availability
+        if bitnet_available {
+            build.define("BITNET_AVAILABLE", None);
+            println!("cargo:warning=crossval: Compiling C++ wrapper in AVAILABLE mode");
+        } else {
+            build.define("BITNET_STUB", None);
+            println!(
+                "cargo:warning=crossval: Compiling C++ wrapper in STUB mode (set BITNET_CPP_DIR for real integration)"
+            );
         }
+
+        build.compile("bitnet_cpp_wrapper_cc");
+
+        // Emit link directive so tests can find the wrapper
+        println!("cargo:rustc-link-lib=static=bitnet_cpp_wrapper_cc");
     }
 
-    if let Some(lib) = found_lib_dir {
-        println!("cargo:rustc-link-search=native={}", lib.display());
+    // Fallback: Compile legacy C wrapper if it exists (for backward compatibility)
+    let c_wrapper_path = Path::new("src/bitnet_cpp_wrapper.c");
+    if c_wrapper_path.exists() {
+        cc::Build::new().file(c_wrapper_path).compile("bitnet_cpp_wrapper_c");
+        println!("cargo:rustc-link-lib=static=bitnet_cpp_wrapper_c");
+    }
 
-        // Look for any available libraries (more flexible naming)
-        let lib_files =
-            std::fs::read_dir(lib).unwrap_or_else(|_| panic!("Could not read lib directory"));
-        let mut found_libs = false;
+    // Build multi-tier library search paths
+    let mut possible_lib_dirs = Vec::new();
 
-        for entry in lib_files.flatten() {
-            let path = entry.path();
-            if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
-                // Look for common library patterns
-                if (name.starts_with("libbitnet")
-                    || name.starts_with("libllama")
-                    || name.starts_with("libggml"))
-                    && (path
-                        .extension()
-                        .is_some_and(|ext| ext == "so" || ext == "dylib" || ext == "a"))
+    // Priority 1: Explicit BITNET_CROSSVAL_LIBDIR
+    if let Ok(lib_dir) = env::var("BITNET_CROSSVAL_LIBDIR") {
+        possible_lib_dirs.push(Path::new(&lib_dir).to_path_buf());
+    }
+
+    // Priority 2: BITNET_CPP_DIR (if set)
+    let bitnet_root =
+        env::var("BITNET_CPP_DIR").or_else(|_| env::var("BITNET_CPP_PATH")).unwrap_or_else(|_| {
+            format!("{}/.cache/bitnet_cpp", env::var("HOME").unwrap_or_else(|_| ".".into()))
+        });
+
+    // Add potential lib directories
+    possible_lib_dirs.push(Path::new(&bitnet_root).join("build"));
+    possible_lib_dirs.push(Path::new(&bitnet_root).join("build/lib"));
+    possible_lib_dirs.push(Path::new(&bitnet_root).join("build/3rdparty/llama.cpp/src"));
+    possible_lib_dirs.push(Path::new(&bitnet_root).join("build/3rdparty/llama.cpp/ggml/src"));
+    possible_lib_dirs.push(Path::new(&bitnet_root).join("lib"));
+
+    // Track what we find
+    let mut found_bitnet = false;
+    let mut found_llama = false;
+    let mut all_found_libs = Vec::new();
+
+    // Search directories
+    for lib_dir in &possible_lib_dirs {
+        if !lib_dir.exists() {
+            continue;
+        }
+
+        println!("cargo:rustc-link-search=native={}", lib_dir.display());
+
+        // Scan for library files
+        if let Ok(entries) = std::fs::read_dir(lib_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(name) = path.file_stem().and_then(|s| s.to_str())
+                    && let Some(ext) = path.extension()
+                    && (ext == "so" || ext == "dylib" || ext == "a")
                 {
-                    let lib_name = name.strip_prefix("lib").unwrap_or(name);
-                    println!("cargo:rustc-link-lib=dylib={}", lib_name);
-                    found_libs = true;
+                    // Detect BitNet libraries
+                    if name.starts_with("libbitnet") {
+                        let lib_name = name.strip_prefix("lib").unwrap_or(name);
+                        println!("cargo:rustc-link-lib=dylib={}", lib_name);
+                        all_found_libs.push(lib_name.to_string());
+                        found_bitnet = true;
+                    }
+
+                    // Detect LLaMA/GGML libraries
+                    if name.starts_with("libllama") || name.starts_with("libggml") {
+                        let lib_name = name.strip_prefix("lib").unwrap_or(name);
+                        println!("cargo:rustc-link-lib=dylib={}", lib_name);
+                        all_found_libs.push(lib_name.to_string());
+                        found_llama = true;
+                    }
                 }
             }
         }
+    }
 
-        if found_libs {
-            println!("cargo:warning=bitnet-crossval: C++ libraries found and linked from {}", root);
+    // Emit build-time environment variables for runtime detection
+    println!("cargo:rustc-env=CROSSVAL_HAS_BITNET={}", found_bitnet);
+    println!("cargo:rustc-env=CROSSVAL_HAS_LLAMA={}", found_llama);
 
-            // Also link C++ standard library
-            #[cfg(target_os = "linux")]
-            println!("cargo:rustc-link-lib=dylib=stdc++");
-            #[cfg(target_os = "macos")]
-            println!("cargo:rustc-link-lib=dylib=c++");
-        } else {
-            println!(
-                "cargo:warning=bitnet-crossval: Using mock C wrapper (no recognized libraries found)"
-            );
-        }
-    } else {
+    // We always have the wrapper now (cfg for conditional compilation)
+    println!("cargo:rustc-cfg=have_cpp");
+
+    // Emit diagnostic messages
+    if found_bitnet && found_llama {
         println!(
-            "cargo:warning=bitnet-crossval: Using mock C wrapper (no library directories found)"
+            "cargo:warning=crossval: Both bitnet.cpp and llama.cpp libraries found (dual-backend support)"
         );
+        println!("cargo:warning=crossval: Linked libraries: {}", all_found_libs.join(", "));
+    } else if found_bitnet {
+        println!(
+            "cargo:warning=crossval: Found bitnet.cpp libraries only (BitNet parity supported)"
+        );
+        println!("cargo:warning=crossval: Linked libraries: {}", all_found_libs.join(", "));
+    } else if found_llama {
+        println!("cargo:warning=crossval: Found llama.cpp libraries only (LLaMA parity supported)");
+        println!("cargo:warning=crossval: Linked libraries: {}", all_found_libs.join(", "));
+    } else {
+        println!("cargo:warning=crossval: No C++ libraries found (crossval will use mock/stub)");
+        println!("cargo:warning=crossval: Set BITNET_CPP_DIR to enable C++ backend integration");
+    }
+
+    // Link C++ standard library if we found any libraries
+    if found_bitnet || found_llama {
+        #[cfg(target_os = "linux")]
+        println!("cargo:rustc-link-lib=dylib=stdc++");
+
+        #[cfg(target_os = "macos")]
+        println!("cargo:rustc-link-lib=dylib=c++");
     }
 }

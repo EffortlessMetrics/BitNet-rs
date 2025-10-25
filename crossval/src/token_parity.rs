@@ -25,6 +25,8 @@ use std::fmt;
 
 use console::style;
 
+use crate::backend::CppBackend;
+
 /// Error returned when token sequences don't match between Rust and C++
 #[derive(Debug, Clone)]
 pub struct TokenParityError {
@@ -36,6 +38,8 @@ pub struct TokenParityError {
     pub first_diff_index: usize,
     /// Original prompt that was tokenized
     pub prompt: String,
+    /// C++ backend used for comparison
+    pub backend: CppBackend,
 }
 
 impl fmt::Display for TokenParityError {
@@ -62,6 +66,7 @@ impl std::error::Error for TokenParityError {}
 /// - `rust_tokens`: Token sequence from Rust tokenizer
 /// - `cpp_tokens`: Token sequence from C++ tokenizer (i32 from FFI)
 /// - `prompt`: Original prompt string (used for diagnostics)
+/// - `backend`: C++ backend used for comparison (BitNet or LLaMA)
 ///
 /// ## Acceptance Criteria
 ///
@@ -71,6 +76,7 @@ impl std::error::Error for TokenParityError {}
 /// - AC4: Caller should exit with code 2 on token mismatch
 /// - AC5-AC8: Error message quality (suggestions, examples)
 /// - AC9: Silent success when tokens match
+/// - AC10: Backend-specific troubleshooting hints
 ///
 /// ## Error Handling
 ///
@@ -80,6 +86,7 @@ pub fn validate_token_parity(
     rust_tokens: &[u32],
     cpp_tokens: &[i32],
     prompt: &str,
+    backend: CppBackend,
 ) -> anyhow::Result<()> {
     // Convert C++ tokens from i32 to u32 for comparison
     // Note: C++ FFI returns i32, but token IDs are non-negative in practice
@@ -96,6 +103,7 @@ pub fn validate_token_parity(
             cpp_tokens: cpp_tokens_u32,
             first_diff_index: first_diff,
             prompt: prompt.to_string(),
+            backend,
         };
 
         // Print diagnostic error to stderr
@@ -128,34 +136,43 @@ pub fn find_first_diff(rust_tokens: &[u32], cpp_tokens: &[u32]) -> usize {
 /// ## Output Format
 ///
 /// ```text
-/// ❌ Token Sequence Mismatch
+/// ❌ Token Sequence Mismatch with C++ Backend: BitNet
 /// Fix BOS/template before comparing logits
 ///
-/// Rust tokens:
-///   [128000, 128000, 1229, 374]
+/// Rust tokens (5):
+///   [128000, 128000, 1229, 374, 2]
 ///
-/// C++ tokens:
-///   [128000, 1229, 374]
+/// C++ tokens (5):
+///   [128000, 1229, 374, 891, 2]
 ///
 /// First diff at index: 1
+/// Mismatch: Rust token=128000, C++ token=1229
 ///
-/// Suggested fixes:
-///   • Use --prompt-template raw
-///   • Add --no-bos flag (if BOS is duplicate)
-///   • Check GGUF chat_template metadata
-///   • Use --dump-ids to inspect token sequences
+/// Troubleshooting for BitNet backend:
+///   • Verify your model is BitNet-compatible (microsoft-bitnet-b1.58-2B-4T-gguf)
+///   • Check tokenizer path matches model format
+///   • Try --cpp-backend llama if this is a LLaMA model
+///   • Verify --prompt-template setting (current: auto)
+///   • Check BOS token handling with --dump-ids
 /// ```
 pub fn format_token_mismatch_error(error: &TokenParityError) -> String {
     use std::fmt::Write;
 
     let mut output = String::new();
 
-    // Header
-    writeln!(output, "\n{}", style("❌ Token Sequence Mismatch").red().bold()).unwrap();
+    // Header with backend name
+    writeln!(
+        output,
+        "\n{}",
+        style(format!("❌ Token Sequence Mismatch with C++ Backend: {}", error.backend.name()))
+            .red()
+            .bold()
+    )
+    .unwrap();
     writeln!(output, "{}", style("Fix BOS/template before comparing logits").yellow()).unwrap();
 
     // Display Rust tokens (limit to first 64 for readability)
-    writeln!(output, "\n{}:", style("Rust tokens").cyan()).unwrap();
+    writeln!(output, "\n{} ({}):", style("Rust tokens").cyan(), error.rust_tokens.len()).unwrap();
     if error.rust_tokens.len() <= 64 {
         writeln!(output, "  {:?}", error.rust_tokens).unwrap();
     } else {
@@ -163,23 +180,69 @@ pub fn format_token_mismatch_error(error: &TokenParityError) -> String {
     }
 
     // Display C++ tokens (limit to first 64 for readability)
-    writeln!(output, "\n{}:", style("C++ tokens").cyan()).unwrap();
+    writeln!(output, "\n{} ({}):", style("C++ tokens").cyan(), error.cpp_tokens.len()).unwrap();
     if error.cpp_tokens.len() <= 64 {
         writeln!(output, "  {:?}", error.cpp_tokens).unwrap();
     } else {
         writeln!(output, "  {:?}...", &error.cpp_tokens[..64]).unwrap();
     }
 
-    // First diff position
+    // First diff position with detailed mismatch
     writeln!(output, "\n{}: {}", style("First diff at index").yellow(), error.first_diff_index)
         .unwrap();
 
-    // Suggested fixes
-    writeln!(output, "\n{}:", style("Suggested fixes").green().bold()).unwrap();
-    writeln!(output, "  • Use --prompt-template raw").unwrap();
-    writeln!(output, "  • Add --no-bos flag (if BOS is duplicate)").unwrap();
+    // Show the specific tokens that differ
+    if error.first_diff_index < error.rust_tokens.len()
+        && error.first_diff_index < error.cpp_tokens.len()
+    {
+        writeln!(
+            output,
+            "{}: Rust token={}, C++ token={}",
+            style("Mismatch").yellow(),
+            error.rust_tokens[error.first_diff_index],
+            error.cpp_tokens[error.first_diff_index]
+        )
+        .unwrap();
+    }
+
+    // Backend-specific troubleshooting
+    writeln!(
+        output,
+        "\n{}:",
+        style(format!("Troubleshooting for {} backend", error.backend.name())).green().bold()
+    )
+    .unwrap();
+
+    match error.backend {
+        CppBackend::BitNet => {
+            writeln!(
+                output,
+                "  • Verify your model is BitNet-compatible (microsoft-bitnet-b1.58-2B-4T-gguf)"
+            )
+            .unwrap();
+            writeln!(output, "  • Check tokenizer path matches model format").unwrap();
+            writeln!(output, "  • Try --cpp-backend llama if this is a LLaMA model").unwrap();
+            writeln!(output, "  • Verify --prompt-template setting (current: auto)").unwrap();
+            writeln!(output, "  • Check BOS token handling with --dump-ids").unwrap();
+        }
+        CppBackend::Llama => {
+            writeln!(
+                output,
+                "  • Verify LLaMA tokenizer compatibility (llama-3, llama-2, SmolLM3)"
+            )
+            .unwrap();
+            writeln!(output, "  • Check tokenizer.json matches model architecture").unwrap();
+            writeln!(output, "  • Try --cpp-backend bitnet for BitNet models").unwrap();
+            writeln!(output, "  • Verify --prompt-template setting (current: auto)").unwrap();
+            writeln!(output, "  • Check special token handling (BOS/EOS) with --dump-ids").unwrap();
+        }
+    }
+
+    // Common troubleshooting
+    writeln!(output, "\n{}:", style("Common fixes").green().bold()).unwrap();
+    writeln!(output, "  • Use --prompt-template raw (disable template formatting)").unwrap();
+    writeln!(output, "  • Add --no-bos flag (if BOS is duplicated)").unwrap();
     writeln!(output, "  • Check GGUF chat_template metadata").unwrap();
-    writeln!(output, "  • Use --dump-ids to inspect token sequences").unwrap();
 
     // Example command with actual prompt
     writeln!(output, "\n{}:", style("Example command").cyan()).unwrap();
@@ -188,6 +251,7 @@ pub fn format_token_mismatch_error(error: &TokenParityError) -> String {
     writeln!(output, "    --tokenizer <tokenizer.json> \\").unwrap();
     writeln!(output, "    --prompt \"{}\" \\", error.prompt).unwrap();
     writeln!(output, "    --prompt-template raw \\").unwrap();
+    writeln!(output, "    --cpp-backend {} \\", error.backend.name().to_lowercase()).unwrap();
     writeln!(output, "    --max-tokens 4").unwrap();
 
     output
@@ -204,13 +268,20 @@ mod tests {
         let rust_tokens = vec![1, 2, 3];
         let cpp_tokens = vec![1_i32, 2, 4]; // Diff at position 2
 
-        let result = validate_token_parity(&rust_tokens, &cpp_tokens, "test prompt");
+        let result =
+            validate_token_parity(&rust_tokens, &cpp_tokens, "test prompt", CppBackend::BitNet);
 
         // Should fail before any logits comparison
         assert!(
             result.is_err()
                 || std::panic::catch_unwind(|| {
-                    validate_token_parity(&rust_tokens, &cpp_tokens, "test prompt").ok()
+                    validate_token_parity(
+                        &rust_tokens,
+                        &cpp_tokens,
+                        "test prompt",
+                        CppBackend::BitNet,
+                    )
+                    .ok()
                 })
                 .is_err(),
             "Expected token mismatch to be detected"
@@ -222,8 +293,8 @@ mod tests {
     #[test]
     #[ignore = "TODO: Capture stderr to validate error output format"]
     fn test_error_displays_both_sequences() {
-        let rust_tokens = vec![1, 2, 3];
-        let cpp_tokens = vec![1_i32, 2, 4];
+        let _rust_tokens = vec![1, 2, 3];
+        let _cpp_tokens = vec![1_i32, 2, 4];
 
         // TODO: Use test harness to capture stderr
         // Verify output contains both sequences
@@ -268,11 +339,12 @@ mod tests {
             cpp_tokens: vec![128000, 1229],
             first_diff_index: 1,
             prompt: "What is 2+2?".to_string(),
+            backend: CppBackend::BitNet,
         };
 
         let formatted = format_token_mismatch_error(&error);
 
-        // Verify all 4 suggestions are present
+        // Verify common suggestions are present
         assert!(formatted.contains("--prompt-template raw"), "Missing template suggestion");
         assert!(formatted.contains("--no-bos"), "Missing BOS suggestion");
         assert!(formatted.contains("chat_template metadata"), "Missing GGUF suggestion");
@@ -287,6 +359,7 @@ mod tests {
             cpp_tokens: vec![1, 3],
             first_diff_index: 1,
             prompt: "test".to_string(),
+            backend: CppBackend::Llama,
         };
 
         let formatted = format_token_mismatch_error(&error);
@@ -303,6 +376,7 @@ mod tests {
             cpp_tokens: vec![128000, 1229],
             first_diff_index: 1,
             prompt: "test".to_string(),
+            backend: CppBackend::BitNet,
         };
 
         let formatted = format_token_mismatch_error(&error);
@@ -322,6 +396,7 @@ mod tests {
             cpp_tokens: vec![128000, 1229],
             first_diff_index: 1,
             prompt: "test".to_string(),
+            backend: CppBackend::BitNet,
         };
 
         let formatted = format_token_mismatch_error(&error);
@@ -341,7 +416,8 @@ mod tests {
         let cpp_tokens = vec![128000_i32, 1229, 374];
 
         // Should succeed silently (no output, no panic)
-        let result = validate_token_parity(&rust_tokens, &cpp_tokens, "What is 2+2?");
+        let result =
+            validate_token_parity(&rust_tokens, &cpp_tokens, "What is 2+2?", CppBackend::BitNet);
 
         // This will panic due to unimplemented!() - that's expected TDD behavior
         // Once implemented, this should pass silently
@@ -366,7 +442,7 @@ mod tests {
         let start = Instant::now();
 
         // Run validation (should be very fast)
-        let _ = validate_token_parity(&rust_tokens, &cpp_tokens, "perf test");
+        let _ = validate_token_parity(&rust_tokens, &cpp_tokens, "perf test", CppBackend::Llama);
 
         let elapsed = start.elapsed();
 
@@ -387,13 +463,13 @@ mod tests {
         let cpp = vec![128000_i32, 1229, 374]; // Single BOS
 
         // Should fail with first diff at index 1
-        let result = validate_token_parity(&rust, &cpp, "What is 2+2?");
+        let result = validate_token_parity(&rust, &cpp, "What is 2+2?", CppBackend::BitNet);
 
         // Expected: exits with code 2, shows diagnostic
         assert!(
             result.is_err()
                 || std::panic::catch_unwind(|| {
-                    validate_token_parity(&rust, &cpp, "What is 2+2?").ok()
+                    validate_token_parity(&rust, &cpp, "What is 2+2?", CppBackend::BitNet).ok()
                 })
                 .is_err()
         );
@@ -407,7 +483,7 @@ mod tests {
         let cpp = vec![128000_i32, 1229, 374, 220, 17];
 
         // Should succeed silently
-        let result = validate_token_parity(&rust, &cpp, "What is 2+2?");
+        let result = validate_token_parity(&rust, &cpp, "What is 2+2?", CppBackend::Llama);
 
         match result {
             Ok(()) => {} // Expected
@@ -423,12 +499,14 @@ mod tests {
         let cpp = vec![128000_i32, 1229, 374]; // Longer
 
         // Should detect mismatch at index 2
-        let result = validate_token_parity(&rust, &cpp, "test");
+        let result = validate_token_parity(&rust, &cpp, "test", CppBackend::BitNet);
 
         assert!(
             result.is_err()
-                || std::panic::catch_unwind(|| { validate_token_parity(&rust, &cpp, "test").ok() })
-                    .is_err()
+                || std::panic::catch_unwind(|| {
+                    validate_token_parity(&rust, &cpp, "test", CppBackend::BitNet).ok()
+                })
+                .is_err()
         );
     }
 
@@ -438,7 +516,7 @@ mod tests {
         let rust: Vec<u32> = vec![];
         let cpp: Vec<i32> = vec![];
 
-        let result = validate_token_parity(&rust, &cpp, "");
+        let result = validate_token_parity(&rust, &cpp, "", CppBackend::Llama);
 
         // Should succeed (both empty)
         match result {
@@ -453,7 +531,7 @@ mod tests {
         let rust = vec![128000];
         let cpp = vec![128000_i32];
 
-        let result = validate_token_parity(&rust, &cpp, "test");
+        let result = validate_token_parity(&rust, &cpp, "test", CppBackend::BitNet);
 
         match result {
             Ok(()) => {}
@@ -465,10 +543,79 @@ mod tests {
     #[test]
     #[ignore = "TODO: Decide how to handle negative i32 tokens from C++"]
     fn test_negative_cpp_tokens() {
-        let rust = vec![1, 2, 3];
-        let cpp = vec![1_i32, -1, 3]; // Negative token ID
+        let _rust = vec![1, 2, 3];
+        let _cpp = vec![1_i32, -1, 3]; // Negative token ID
 
         // What should happen here? Error or conversion?
         unimplemented!("Need policy for negative C++ token IDs");
+    }
+
+    // AC10: Backend-specific troubleshooting hints
+    #[test]
+    fn test_backend_specific_error_messages() {
+        // Test BitNet backend error message
+        let bitnet_error = TokenParityError {
+            rust_tokens: vec![128000, 1229],
+            cpp_tokens: vec![128000, 374],
+            first_diff_index: 1,
+            prompt: "test".to_string(),
+            backend: CppBackend::BitNet,
+        };
+
+        let bitnet_formatted = format_token_mismatch_error(&bitnet_error);
+
+        // Should mention BitNet in header
+        assert!(bitnet_formatted.contains("BitNet"), "Should mention BitNet backend");
+        // Should suggest trying llama backend
+        assert!(
+            bitnet_formatted.contains("--cpp-backend llama"),
+            "Should suggest trying llama backend"
+        );
+        // Should mention BitNet-compatible models
+        assert!(
+            bitnet_formatted.contains("BitNet-compatible"),
+            "Should mention BitNet compatibility"
+        );
+
+        // Test LLaMA backend error message
+        let llama_error = TokenParityError {
+            rust_tokens: vec![128000, 1229],
+            cpp_tokens: vec![128000, 374],
+            first_diff_index: 1,
+            prompt: "test".to_string(),
+            backend: CppBackend::Llama,
+        };
+
+        let llama_formatted = format_token_mismatch_error(&llama_error);
+
+        // Should mention LLaMA in header
+        assert!(llama_formatted.contains("LLaMA"), "Should mention LLaMA backend");
+        // Should suggest trying bitnet backend
+        assert!(
+            llama_formatted.contains("--cpp-backend bitnet"),
+            "Should suggest trying bitnet backend"
+        );
+        // Should mention LLaMA tokenizer compatibility
+        assert!(llama_formatted.contains("LLaMA tokenizer"), "Should mention LLaMA tokenizer");
+    }
+
+    // Test that backend name appears in example command
+    #[test]
+    fn test_backend_in_example_command() {
+        let error = TokenParityError {
+            rust_tokens: vec![1, 2],
+            cpp_tokens: vec![1, 3],
+            first_diff_index: 1,
+            prompt: "test".to_string(),
+            backend: CppBackend::BitNet,
+        };
+
+        let formatted = format_token_mismatch_error(&error);
+
+        // Should include --cpp-backend flag with correct value
+        assert!(
+            formatted.contains("--cpp-backend bitnet"),
+            "Example command should include --cpp-backend bitnet"
+        );
     }
 }

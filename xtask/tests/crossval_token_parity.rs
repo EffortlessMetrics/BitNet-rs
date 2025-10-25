@@ -269,6 +269,8 @@ fn test_cli_integration_full_flow() {
 // Unit test: Mock FFI session for testing without C++ dependencies
 #[test]
 fn test_mock_ffi_session_token_comparison() {
+    use bitnet_crossval::backend::CppBackend;
+
     // This test uses mock data to validate token comparison logic
     // without requiring C++ FFI or real models
 
@@ -286,6 +288,7 @@ fn test_mock_ffi_session_token_comparison() {
         &rust_tokens,
         &cpp_tokens_match,
         "What is 2+2?",
+        CppBackend::BitNet,
     );
 
     match result_match {
@@ -298,6 +301,7 @@ fn test_mock_ffi_session_token_comparison() {
         &rust_tokens,
         &cpp_tokens_mismatch,
         "What is 2+2?",
+        CppBackend::BitNet,
     );
 
     // Should detect mismatch at index 1
@@ -308,6 +312,7 @@ fn test_mock_ffi_session_token_comparison() {
                     &rust_tokens,
                     &cpp_tokens_mismatch,
                     "What is 2+2?",
+                    CppBackend::BitNet,
                 )
                 .ok()
             })
@@ -319,6 +324,7 @@ fn test_mock_ffi_session_token_comparison() {
 // Performance test: Token parity check overhead
 #[test]
 fn test_token_parity_performance_overhead() {
+    use bitnet_crossval::backend::CppBackend;
     use std::time::Instant;
 
     // Generate large token sequences (1000 tokens)
@@ -332,6 +338,7 @@ fn test_token_parity_performance_overhead() {
         &rust_tokens,
         &cpp_tokens,
         "performance test prompt",
+        CppBackend::Llama,
     );
 
     let elapsed = start.elapsed();
