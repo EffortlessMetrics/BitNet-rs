@@ -15,6 +15,43 @@
 //! cargo bench --features crossval
 //! ```
 
+/// Indicates whether BitNet.cpp libraries were detected at build time
+///
+/// This constant is set by `crossval/build.rs` based on library availability.
+/// Other crates (like xtask) can query this at runtime to determine if BitNet
+/// cross-validation is supported.
+pub const HAS_BITNET: bool = const_str_eq(option_env!("CROSSVAL_HAS_BITNET"), "true");
+
+/// Indicates whether LLaMA.cpp libraries were detected at build time
+///
+/// This constant is set by `crossval/build.rs` based on library availability.
+/// Other crates (like xtask) can query this at runtime to determine if LLaMA
+/// cross-validation is supported.
+pub const HAS_LLAMA: bool = const_str_eq(option_env!("CROSSVAL_HAS_LLAMA"), "true");
+
+/// Helper function for const string comparison
+const fn const_str_eq(env_value: Option<&str>, expected: &str) -> bool {
+    match env_value {
+        Some(s) => {
+            // Compare bytes directly (stable in const context)
+            let a = s.as_bytes();
+            let b = expected.as_bytes();
+            if a.len() != b.len() {
+                return false;
+            }
+            let mut i = 0;
+            while i < a.len() {
+                if a[i] != b[i] {
+                    return false;
+                }
+                i += 1;
+            }
+            true
+        }
+        None => false,
+    }
+}
+
 #[cfg(any(feature = "crossval", feature = "ffi"))]
 pub mod cpp_bindings;
 

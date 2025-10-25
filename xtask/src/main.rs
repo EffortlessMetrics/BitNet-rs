@@ -3067,6 +3067,60 @@ fn crossval_per_token_cmd(
     positions: usize,
     metrics: &str,
 ) -> Result<()> {
+    // Early check: crossval-per-token requires FFI feature for C++ backend access
+    #[cfg(not(feature = "ffi"))]
+    {
+        return Err(anyhow::anyhow!(
+            "crossval-per-token requires C++ backend support. \
+             Build with --features crossval-all (or add ffi to your feature set)"
+        ));
+    }
+
+    #[cfg(feature = "ffi")]
+    {
+        crossval_per_token_cmd_impl(
+            model_path,
+            tokenizer_path,
+            prompt,
+            _max_tokens,
+            cos_tol,
+            format,
+            prompt_template,
+            _system_prompt,
+            cpp_backend,
+            verbose,
+            dump_ids,
+            dump_cpp_ids,
+            receipt_path,
+            ladder,
+            positions,
+            metrics,
+        )
+    }
+}
+
+/// Implementation of crossval_per_token_cmd (requires FFI feature)
+#[cfg(all(feature = "inference", feature = "ffi"))]
+#[allow(clippy::too_many_arguments)] // Command handler mirrors CLI arguments
+#[allow(unused_assignments)] // cpp_session_opt is assigned in tokenization match, used in evaluation match
+fn crossval_per_token_cmd_impl(
+    model_path: &Path,
+    tokenizer_path: &Path,
+    prompt: &str,
+    _max_tokens: usize, // Reserved for future generation mode
+    cos_tol: f32,
+    format: &str,
+    prompt_template: PromptTemplateArg,
+    _system_prompt: Option<&str>,
+    cpp_backend: Option<CppBackend>,
+    verbose: bool,
+    dump_ids: bool,
+    dump_cpp_ids: bool,
+    receipt_path: Option<&Path>,
+    ladder: &str,
+    positions: usize,
+    metrics: &str,
+) -> Result<()> {
     use bitnet_crossval::logits_compare::compare_per_position_logits;
     use bitnet_inference::parity::eval_logits_all_positions;
     use std::collections::HashSet;
@@ -3203,24 +3257,17 @@ fn crossval_per_token_cmd(
 
     let cpp_tokens: Vec<u32> = match backend {
         CppBackend::BitNet => {
-            #[cfg(feature = "ffi")]
-            {
-                // Use BitNet.cpp FFI wrappers for tokenization
-                bitnet_crossval::cpp_bindings::tokenize_bitnet(
-                    model_path,
-                    &formatted_prompt,
-                    true, // add_bos - typically true for BitNet models
-                    true, // parse_special - handle special tokens
-                )
-                .context("BitNet.cpp tokenization failed")?
-                .into_iter()
-                .map(|id| id as u32)
-                .collect()
-            }
-            #[cfg(not(feature = "ffi"))]
-            {
-                anyhow::bail!("BitNet backend requires --features ffi")
-            }
+            // Use BitNet.cpp FFI wrappers for tokenization
+            bitnet_crossval::cpp_bindings::tokenize_bitnet(
+                model_path,
+                &formatted_prompt,
+                true, // add_bos - typically true for BitNet models
+                true, // parse_special - handle special tokens
+            )
+            .context("BitNet.cpp tokenization failed")?
+            .into_iter()
+            .map(|id| id as u32)
+            .collect()
         }
         CppBackend::Llama => {
             // Use existing llama.cpp wrapper (backward-compatible path)
@@ -3308,23 +3355,16 @@ fn crossval_per_token_cmd(
     // Backend dispatch - route based on selected C++ backend
     let cpp_logits = match backend {
         CppBackend::BitNet => {
-            #[cfg(feature = "ffi")]
-            {
-                // Convert u32 tokens to i32 for BitNet.cpp API
-                let cpp_tokens_i32: Vec<i32> = cpp_tokens.iter().map(|&id| id as i32).collect();
+            // Convert u32 tokens to i32 for BitNet.cpp API
+            let cpp_tokens_i32: Vec<i32> = cpp_tokens.iter().map(|&id| id as i32).collect();
 
-                // Use BitNet.cpp FFI wrappers for evaluation
-                bitnet_crossval::cpp_bindings::eval_bitnet(
-                    model_path,
-                    &cpp_tokens_i32,
-                    2048, // n_ctx - matches typical context size
-                )
-                .context("BitNet.cpp evaluation failed")?
-            }
-            #[cfg(not(feature = "ffi"))]
-            {
-                anyhow::bail!("BitNet backend requires --features ffi")
-            }
+            // Use BitNet.cpp FFI wrappers for evaluation
+            bitnet_crossval::cpp_bindings::eval_bitnet(
+                model_path,
+                &cpp_tokens_i32,
+                2048, // n_ctx - matches typical context size
+            )
+            .context("BitNet.cpp evaluation failed")?
         }
         CppBackend::Llama => {
             // Use existing llama.cpp wrapper (backward-compatible path)

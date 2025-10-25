@@ -19,12 +19,12 @@ fn main() {
     let target = std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string());
     println!("cargo:rustc-env=TARGET={}", target);
 
-    // Only compile if ffi feature is enabled
-    #[cfg(feature = "ffi")]
+    // Compile FFI wrapper if either llama-ffi or bitnet-ffi is enabled
+    #[cfg(any(feature = "llama-ffi", feature = "bitnet-ffi"))]
     compile_ffi();
 }
 
-#[cfg(feature = "ffi")]
+#[cfg(any(feature = "llama-ffi", feature = "bitnet-ffi"))]
 fn compile_ffi() {
     use std::{env, path::Path};
 
@@ -62,8 +62,11 @@ fn compile_ffi() {
     // Priority 2: BITNET_CPP_DIR (already retrieved above for header checks)
 
     // Add potential lib directories
+    // llama.cpp standalone build puts libraries in build/bin/
+    possible_lib_dirs.push(Path::new(&bitnet_root).join("build/bin"));
     possible_lib_dirs.push(Path::new(&bitnet_root).join("build"));
     possible_lib_dirs.push(Path::new(&bitnet_root).join("build/lib"));
+    // BitNet.cpp embedded llama.cpp paths
     possible_lib_dirs.push(Path::new(&bitnet_root).join("build/3rdparty/llama.cpp/src"));
     possible_lib_dirs.push(Path::new(&bitnet_root).join("build/3rdparty/llama.cpp/ggml/src"));
     possible_lib_dirs.push(Path::new(&bitnet_root).join("lib"));
@@ -80,6 +83,14 @@ fn compile_ffi() {
         }
 
         println!("cargo:rustc-link-search=native={}", lib_dir.display());
+
+        // Add RPATH for runtime library resolution (Linux/macOS)
+        // This eliminates the need for LD_LIBRARY_PATH/DYLD_LIBRARY_PATH
+        #[cfg(target_os = "linux")]
+        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_dir.display());
+
+        #[cfg(target_os = "macos")]
+        println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_dir.display());
 
         // Scan for library files
         if let Ok(entries) = std::fs::read_dir(lib_dir) {
@@ -120,20 +131,31 @@ fn compile_ffi() {
 
         // Add include paths if available
         if bitnet_available {
-            let include_dir = Path::new(&bitnet_root).join("include");
-            if include_dir.exists() {
-                build.include(&include_dir);
+            // Standalone llama.cpp include paths (preferred)
+            let llama_standalone_include = Path::new(&bitnet_root).join("include");
+            if llama_standalone_include.exists() {
+                build.include(&llama_standalone_include);
+            }
+            let ggml_standalone_include = Path::new(&bitnet_root).join("ggml/include");
+            if ggml_standalone_include.exists() {
+                build.include(&ggml_standalone_include);
+            }
+
+            // BitNet.cpp include paths
+            let bitnet_include_dir = Path::new(&bitnet_root).join("include");
+            if bitnet_include_dir.exists() {
+                build.include(&bitnet_include_dir);
             }
             let src_dir = Path::new(&bitnet_root).join("src");
             if src_dir.exists() {
                 build.include(&src_dir);
             }
-            // Add llama.cpp include path for llama.h
+            // Add llama.cpp include path for llama.h (embedded in BitNet.cpp)
             let llama_include = Path::new(&bitnet_root).join("3rdparty/llama.cpp/include");
             if llama_include.exists() {
                 build.include(&llama_include);
             }
-            // Add ggml include path (for ggml.h dependency)
+            // Add ggml include path (for ggml.h dependency in BitNet.cpp)
             let ggml_include = Path::new(&bitnet_root).join("3rdparty/llama.cpp/ggml/include");
             if ggml_include.exists() {
                 build.include(&ggml_include);

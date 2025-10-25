@@ -8,9 +8,13 @@ use std::path::Path;
 
 /// Verify required libraries are available for selected backend
 ///
-/// Checks compile-time detection from build.rs environment variables:
-/// - CROSSVAL_HAS_BITNET: Set to "true" if libbitnet* found during build
-/// - CROSSVAL_HAS_LLAMA: Set to "true" if libllama*/libggml* found during build
+/// Checks build-time detection from the crossval crate, which exports constants:
+/// - `bitnet_crossval::HAS_BITNET`: Set to `true` if libbitnet* found during crossval build
+/// - `bitnet_crossval::HAS_LLAMA`: Set to `true` if libllama*/libggml* found during crossval build
+///
+/// These constants are determined by `crossval/build.rs` during compilation and exported
+/// as public constants in the crossval crate, allowing xtask to query library availability
+/// at runtime.
 ///
 /// # Arguments
 ///
@@ -33,16 +37,11 @@ use std::path::Path;
 /// # }
 /// ```
 pub fn preflight_backend_libs(backend: CppBackend, verbose: bool) -> Result<()> {
-    // Check compile-time detection from build.rs
+    // Check build-time detection from crossval crate
+    // These constants are set by crossval/build.rs based on library availability
     let has_libs = match backend {
-        CppBackend::BitNet => {
-            // Emitted by crossval/build.rs as CROSSVAL_HAS_BITNET=true/false
-            option_env!("CROSSVAL_HAS_BITNET").map(|v| v == "true").unwrap_or(false)
-        }
-        CppBackend::Llama => {
-            // Emitted by crossval/build.rs as CROSSVAL_HAS_LLAMA=true/false
-            option_env!("CROSSVAL_HAS_LLAMA").map(|v| v == "true").unwrap_or(false)
-        }
+        CppBackend::BitNet => bitnet_crossval::HAS_BITNET,
+        CppBackend::Llama => bitnet_crossval::HAS_LLAMA,
     };
 
     if !has_libs {
@@ -334,8 +333,8 @@ pub fn print_backend_status(verbose: bool) {
     println!("Backend Library Status:");
     println!();
 
-    // Check BitNet
-    let has_bitnet = option_env!("CROSSVAL_HAS_BITNET").map(|v| v == "true").unwrap_or(false);
+    // Check BitNet (from crossval crate constants)
+    let has_bitnet = bitnet_crossval::HAS_BITNET;
 
     if has_bitnet {
         println!("  ✓ bitnet.cpp: AVAILABLE");
@@ -351,8 +350,8 @@ pub fn print_backend_status(verbose: bool) {
 
     println!();
 
-    // Check LLaMA
-    let has_llama = option_env!("CROSSVAL_HAS_LLAMA").map(|v| v == "true").unwrap_or(false);
+    // Check LLaMA (from crossval crate constants)
+    let has_llama = bitnet_crossval::HAS_LLAMA;
 
     if has_llama {
         println!("  ✓ llama.cpp: AVAILABLE");
