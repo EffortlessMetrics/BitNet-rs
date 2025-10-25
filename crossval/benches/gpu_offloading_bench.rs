@@ -19,19 +19,25 @@
 //
 // **TDD Status**: Benchmark compiles but fails due to missing GPU layer configuration
 
-use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
-use std::path::Path;
+use criterion::{Criterion, criterion_group, criterion_main};
+
+#[allow(unused_imports)] // TDD scaffolding - used in commented implementation
+use std::hint::black_box;
 
 // NOTE: Benchmark requires FFI feature for BitnetSession
 #[cfg(feature = "ffi")]
 use crossval::cpp_bindings::BitnetSession;
 
 // Test configuration constants
+#[allow(dead_code)] // TDD scaffolding - used in unimplemented benchmarks
 const TEST_MODEL_PATH: &str = "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf";
+#[allow(dead_code)]
 const TEST_CONTEXT_SIZE: i32 = 512;
+#[allow(dead_code)]
 const TEST_SEQUENCE_LENGTH: usize = 10; // 10-token sequence for benchmarking
 
 // GPU layer configurations to benchmark
+#[allow(dead_code)]
 const GPU_LAYER_CONFIGS: &[i32] = &[
     0,  // CPU baseline
     8,  // GPU 8 layers
@@ -66,10 +72,8 @@ fn bench_gpu_speedup(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("gpu_offloading");
 
-    // Set throughput for tokens/sec calculation
-    group.throughput(Throughput::Elements(TEST_SEQUENCE_LENGTH as u64));
-
     // Generate test token sequence (simple sequence for reproducibility)
+    #[allow(unused_variables)] // TDD scaffolding - used in commented implementation
     let test_tokens: Vec<i32> = (1..=TEST_SEQUENCE_LENGTH as i32).collect();
 
     // Benchmark each GPU layer configuration
@@ -86,29 +90,25 @@ fn bench_gpu_speedup(c: &mut Criterion) {
             }
         };
 
-        group.bench_with_input(
-            BenchmarkId::from_parameter(config_name),
-            &n_gpu_layers,
-            |b, &layers| {
-                // Create session once per benchmark iteration
-                let session = BitnetSession::create(model_path, TEST_CONTEXT_SIZE, layers)
-                    .expect("Failed to create BitnetSession for benchmark");
+        group.bench_function(config_name, |b| {
+            // Create session once per benchmark iteration
+            let session = BitnetSession::create(model_path, TEST_CONTEXT_SIZE, n_gpu_layers)
+                .expect("Failed to create BitnetSession for benchmark");
 
-                b.iter(|| {
-                    // NOTE: This requires implementing eval_and_get_logits() method
-                    // For now, this is a placeholder showing the expected API
-                    unimplemented!(
-                        "eval_and_get_logits() not yet implemented - blocked by Socket 1 inference API"
-                    );
+            b.iter(|| {
+                // NOTE: This requires implementing eval_and_get_logits() method
+                // For now, this is a placeholder showing the expected API
+                unimplemented!(
+                    "eval_and_get_logits() not yet implemented - blocked by Socket 1 inference API"
+                );
 
-                    // Expected implementation:
-                    // let logits = session.eval_and_get_logits(&test_tokens, 0)
-                    //     .expect("Failed to get logits during benchmark");
-                    //
-                    // black_box(logits); // Prevent compiler optimization
-                });
-            },
-        );
+                // Expected implementation:
+                // let logits = session.eval_and_get_logits(&test_tokens, 0)
+                //     .expect("Failed to get logits during benchmark");
+                //
+                // black_box(logits); // Prevent compiler optimization
+            });
+        });
     }
 
     group.finish();

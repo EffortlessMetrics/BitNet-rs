@@ -32,7 +32,9 @@
 //
 // **TDD Status**: Tests compile but fail due to missing GPU layer configuration implementation
 
+#[allow(unused_imports)] // TDD scaffolding - used in unimplemented tests
 use serial_test::serial;
+#[allow(unused_imports)]
 use std::path::Path;
 
 // Re-export crossval types for test convenience

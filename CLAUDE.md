@@ -969,6 +969,19 @@ GPU Mixed-Precision Tests
 - `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing
   (Issue #439)
 
+### GPU Configuration
+
+- `BITNET_GPU_LAYERS`: Configure GPU layer offloading for C++ cross-validation backend
+  - `0`: CPU-only inference (default for predictability and CI compatibility)
+  - `1..N`: Offload first N transformer layers to GPU (requires CUDA runtime)
+  - `-1`: Auto-detect and offload all layers to GPU
+  - **Precedence**: Explicit API parameter > `BITNET_GPU_LAYERS` env var > default 0
+  - **Graceful fallback**: GPU unavailable → CPU (no crashes)
+  - **Example**: `BITNET_GPU_LAYERS=24 cargo run -p xtask --features crossval-all -- crossval-per-token`
+  - **Requirements**: CUDA-capable GPU (compute ≥6.0), CUDA runtime, sufficient VRAM (~100-500MB per billion params)
+  - **Note**: This applies only to C++ cross-validation backend (`BitnetSession::create`), not Rust inference
+  - **See**: `docs/explanation/cpp-wrapper-gpu-layer-config.md` for detailed specification
+
 ### Validation Configuration
 
 - `BITNET_STRICT_MODE=1`: Enable strict validation (fails on LayerNorm/projection

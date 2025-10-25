@@ -114,9 +114,9 @@ mod imp {
         // Socket 3: BitNet-Specific Inference (1-bit Optimized)
         // ====================================================================
 
-        /// Evaluate tokens using persistent context
+        /// Evaluate tokens using persistent context (with position tracking)
         fn bitnet_cpp_eval_with_context(
-            ctx: *const BitnetContext,
+            ctx: *mut BitnetContext, // Non-const for n_past update (breaking change)
             tokens: *const i32,
             n_tokens: i32,
             seq_id: i32,
@@ -127,6 +127,12 @@ mod imp {
             err: *mut c_char,
             err_len: i32,
         ) -> c_int;
+
+        /// Reset KV cache position (start new conversation)
+        fn bitnet_cpp_reset_context(ctx: *mut BitnetContext);
+
+        /// Query current KV cache position
+        fn bitnet_cpp_get_position(ctx: *const BitnetContext) -> i32;
 
         // ====================================================================
         // Socket 4: Session API (v0.3 - stubs only)
@@ -599,16 +605,82 @@ mod imp {
         ///
         /// * `model_path` - Path to GGUF model file
         /// * `n_ctx` - Context size for inference (e.g., 512, 2048)
-        /// * `n_gpu_layers` - Number of layers to offload to GPU (0=CPU-only)
+        /// * `n_gpu_layers` - Number of layers to offload to GPU:
+        ///   - `0`: CPU-only (default). Checks `BITNET_GPU_LAYERS` env var for override.
+        ///   - `1..N`: Offload first N layers to GPU (requires CUDA runtime)
+        ///   - `-1`: Offload all layers to GPU (auto-detection)
+        ///
+        /// # Environment Variables
+        ///
+        /// * `BITNET_GPU_LAYERS` - Override GPU layer count when `n_gpu_layers == 0`
+        ///   - Example: `BITNET_GPU_LAYERS=24` offloads 24 layers
+        ///   - Ignored if explicit non-zero `n_gpu_layers` provided
+        ///
+        /// # GPU Availability
+        ///
+        /// GPU offloading requires:
+        /// 1. CUDA-capable GPU (compute capability ≥ 6.0)
+        /// 2. CUDA runtime libraries (libcudart.so / cudart64_*.dll)
+        /// 3. Sufficient VRAM (estimate: ~100-500MB per billion parameters)
+        ///
+        /// If GPU unavailable or VRAM insufficient, llama.cpp gracefully falls back to CPU
+        /// with a warning message. This function never fails due to GPU unavailability.
         ///
         /// # Returns
         ///
         /// A `BitnetSession` handle on success, or `CrossvalError` on failure.
+        ///
+        /// # Examples
+        ///
+        /// ```rust,no_run
+        /// use crossval::cpp_bindings::BitnetSession;
+        ///
+        /// // CPU-only inference
+        /// let session = BitnetSession::create(
+        ///     std::path::Path::new("model.gguf"),
+        ///     512,  // n_ctx
+        ///     0     // n_gpu_layers (CPU-only)
+        /// )?;
+        ///
+        /// // GPU-accelerated (24 layers)
+        /// let session = BitnetSession::create(
+        ///     std::path::Path::new("model.gguf"),
+        ///     512,  // n_ctx
+        ///     24    // n_gpu_layers
+        /// )?;
+        ///
+        /// // GPU-accelerated (all layers)
+        /// let session = BitnetSession::create(
+        ///     std::path::Path::new("model.gguf"),
+        ///     512,  // n_ctx
+        ///     -1    // n_gpu_layers (auto-detect)
+        /// )?;
+        ///
+        /// // Environment variable override
+        /// std::env::set_var("BITNET_GPU_LAYERS", "24");
+        /// let session = BitnetSession::create(
+        ///     std::path::Path::new("model.gguf"),
+        ///     512,  // n_ctx
+        ///     0     // n_gpu_layers → becomes 24 via env var
+        /// )?;
+        /// # Ok::<(), crossval::CrossvalError>(())
+        /// ```
         pub fn create(model_path: &std::path::Path, n_ctx: i32, n_gpu_layers: i32) -> Result<Self> {
             // Early availability check
             if !matches!(option_env!("CROSSVAL_HAS_BITNET"), Some("true")) {
                 return Err(CrossvalError::CppNotAvailable);
             }
+
+            // Apply environment variable override if n_gpu_layers == 0
+            // Three-level precedence: API > BITNET_GPU_LAYERS env > default 0
+            let effective_gpu_layers = if n_gpu_layers == 0 {
+                std::env::var("BITNET_GPU_LAYERS")
+                    .ok()
+                    .and_then(|s| s.trim().parse::<i32>().ok())
+                    .unwrap_or(0)
+            } else {
+                n_gpu_layers
+            };
 
             let model_path_c = CString::new(model_path.to_str().ok_or_else(|| {
                 CrossvalError::ModelLoadError("Invalid UTF-8 in model path".to_string())
@@ -628,7 +700,7 @@ mod imp {
                     &mut ctx_ptr,
                     model_path_c.as_ptr(),
                     n_ctx,
-                    n_gpu_layers,
+                    effective_gpu_layers,
                     err_buf.as_mut_ptr() as *mut c_char,
                     err_buf.len() as i32,
                 )
@@ -749,7 +821,7 @@ mod imp {
 
         /// Evaluate tokens using persistent session (Socket 3)
         ///
-        /// Socket 3: Use BitNet-optimized 1-bit inference kernels.
+        /// Socket 3: Use BitNet-optimized 1-bit inference kernels with position tracking.
         ///
         /// # Arguments
         ///
@@ -759,19 +831,27 @@ mod imp {
         ///
         /// A 2D vector of logits where `logits[i][j]` is the logit for position `i`
         /// and vocab index `j`. Returns all-position logits (not just last token).
-        pub fn evaluate(&self, tokens: &[i32]) -> Result<Vec<Vec<f32>>> {
+        ///
+        /// # Note
+        ///
+        /// Position tracking is automatic - `n_past` is updated after successful evaluation.
+        pub fn evaluate(&mut self, tokens: &[i32]) -> Result<Vec<Vec<f32>>> {
             self.evaluate_with_seq_id(tokens, 0)
         }
 
         /// Evaluate with explicit sequence ID (for future batch processing)
         ///
-        /// Socket 3: Extended evaluation control with seq_id parameter.
+        /// Socket 3: Extended evaluation control with seq_id parameter and position tracking.
         ///
         /// # Arguments
         ///
         /// * `tokens` - Input token IDs
         /// * `seq_id` - Sequence ID for batch processing (0 for single sequence)
-        pub fn evaluate_with_seq_id(&self, tokens: &[i32], seq_id: i32) -> Result<Vec<Vec<f32>>> {
+        pub fn evaluate_with_seq_id(
+            &mut self,
+            tokens: &[i32],
+            seq_id: i32,
+        ) -> Result<Vec<Vec<f32>>> {
             if tokens.is_empty() {
                 return Err(CrossvalError::InferenceError("Empty token array".to_string()));
             }
@@ -855,6 +935,82 @@ mod imp {
             }
 
             Ok(logits_2d)
+        }
+
+        /// Reset KV cache position (start new conversation)
+        ///
+        /// Socket 1 Extension: Clears KV cache and resets position tracking.
+        ///
+        /// # Returns
+        ///
+        /// Ok(()) on success, or CrossvalError on failure.
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// # use crossval::cpp_bindings::BitnetSession;
+        /// # use std::path::Path;
+        /// let mut session = BitnetSession::create(Path::new("model.gguf"), 512, 0)?;
+        ///
+        /// // First conversation
+        /// session.evaluate(&vec![1, 2, 3, 4])?;
+        ///
+        /// // Reset for new conversation
+        /// session.reset()?;
+        ///
+        /// // Start new prompt
+        /// session.evaluate(&vec![5, 6, 7, 8])?;
+        /// # Ok::<(), crossval::CrossvalError>(())
+        /// ```
+        pub fn reset(&mut self) -> Result<()> {
+            if self.ctx.is_null() {
+                return Err(CrossvalError::InferenceError("Cannot reset NULL context".to_string()));
+            }
+
+            unsafe {
+                bitnet_cpp_reset_context(self.ctx);
+            }
+
+            Ok(())
+        }
+
+        /// Query current KV cache position
+        ///
+        /// Socket 1 Extension: Read-only query for position tracking state.
+        ///
+        /// # Returns
+        ///
+        /// Current position (number of cached tokens), or error if context is NULL.
+        ///
+        /// # Example
+        ///
+        /// ```no_run
+        /// # use crossval::cpp_bindings::BitnetSession;
+        /// # use std::path::Path;
+        /// let mut session = BitnetSession::create(Path::new("model.gguf"), 512, 0)?;
+        ///
+        /// // After evaluating tokens
+        /// session.evaluate(&vec![1, 2, 3, 4])?;
+        /// let position = session.get_position()?;
+        /// assert_eq!(position, 4);
+        /// # Ok::<(), crossval::CrossvalError>(())
+        /// ```
+        pub fn get_position(&self) -> Result<i32> {
+            if self.ctx.is_null() {
+                return Err(CrossvalError::InferenceError(
+                    "Cannot query position from NULL context".to_string(),
+                ));
+            }
+
+            let position = unsafe { bitnet_cpp_get_position(self.ctx) };
+
+            if position < 0 {
+                return Err(CrossvalError::InferenceError(
+                    "Invalid position returned from C++ wrapper".to_string(),
+                ));
+            }
+
+            Ok(position)
         }
     }
 

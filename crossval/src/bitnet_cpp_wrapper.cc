@@ -100,6 +100,13 @@ int crossval_bitnet_tokenize(
     // Pass 1: Get token count (tokens=NULL, n_tokens_max=0)
     // New API: Get vocab from model first
     const llama_vocab* vocab = llama_model_get_vocab(model);
+    if (!vocab) {
+        snprintf(err, err_len,
+                 "crossval_bitnet_tokenize: Failed to get vocab from model (check model format/compatibility)");
+        err[err_len - 1] = '\0';
+        llama_model_free(model);  // Must free model before return
+        return -1;
+    }
     int32_t text_len = static_cast<int32_t>(std::strlen(prompt));
     int32_t n_tokens = llama_tokenize(
         vocab,             // Use vocab instead of model
@@ -259,6 +266,14 @@ int crossval_bitnet_eval_with_tokens(
     // Step 3: Get vocab size for logits shape
     // New API: llama_model_get_vocab + llama_vocab_n_tokens
     const llama_vocab* vocab = llama_model_get_vocab(model);
+    if (!vocab) {
+        snprintf(err, err_len,
+                 "crossval_bitnet_eval_with_tokens: Failed to get vocab from model (check model format/compatibility)");
+        err[err_len - 1] = '\0';
+        llama_free(ctx);           // Free context first (depends on model)
+        llama_model_free(model);   // Then free model
+        return -1;
+    }
     int32_t n_vocab = llama_vocab_n_tokens(vocab);
 
     // Step 4: Set output shape
@@ -337,6 +352,7 @@ struct bitnet_context_t {
     llama_context* ctx;
     int32_t n_ctx;
     int32_t n_gpu_layers;
+    int32_t n_past;  // Manual KV cache position tracking
 #endif
 };
 
@@ -403,11 +419,14 @@ int bitnet_cpp_init_context(
     ctx->ctx = nullptr;
     ctx->n_ctx = n_ctx;
     ctx->n_gpu_layers = n_gpu_layers;
+    ctx->n_past = 0;  // Initialize position to zero (empty KV cache)
 
-    // Step 2: Load model
+    // Step 2: Load model with GPU layer configuration
     llama_model_params model_params = llama_model_default_params();
-    // Note: GPU layer offloading would be configured here
-    // model_params.n_gpu_layers = n_gpu_layers;
+
+    // GPU layer configuration (0 = CPU-only, -1 = auto-detect all, >0 = specific count)
+    // Default: CPU-only for predictability and CI compatibility
+    model_params.n_gpu_layers = n_gpu_layers;
 
     ctx->model = llama_load_model_from_file(model_path, model_params);
     if (!ctx->model) {
@@ -556,6 +575,13 @@ int bitnet_cpp_tokenize_with_context(
 
     // Get vocab from model
     const llama_vocab* vocab = llama_model_get_vocab(ctx->model);
+    if (!vocab) {
+        snprintf(err, err_len,
+                 "bitnet_cpp_tokenize_with_context: Failed to get vocab from model (check model format/compatibility)");
+        err[err_len - 1] = ' ';
+        // DO NOT free ctx->model here (persistent context owns it)
+        return -1;
+    }
     int32_t text_len = static_cast<int32_t>(std::strlen(prompt));
 
     // Pass 1: Get token count
@@ -646,7 +672,7 @@ int bitnet_cpp_tokenize_with_context(
 ///
 /// Returns: 0 on success, -1 on error
 int bitnet_cpp_eval_with_context(
-    const bitnet_context_t* ctx,
+    bitnet_context_t* ctx,  // Non-const for n_past update (breaking change)
     const int32_t* tokens,
     int32_t n_tokens,
     int32_t seq_id,
@@ -708,6 +734,13 @@ int bitnet_cpp_eval_with_context(
 
     // Get vocab size
     const llama_vocab* vocab = llama_model_get_vocab(ctx->model);
+    if (!vocab) {
+        snprintf(err, err_len,
+                 "bitnet_cpp_eval_with_context: Failed to get vocab from model (check model format/compatibility)");
+        err[err_len - 1] = ' ';
+        // DO NOT free ctx->model here (persistent context owns it)
+        return -1;
+    }
     int32_t n_vocab = llama_vocab_n_tokens(vocab);
 
     // Set output shape
@@ -729,7 +762,16 @@ int bitnet_cpp_eval_with_context(
         return -1;
     }
 
-    // Create batch with all tokens
+    // Validate position bounds BEFORE evaluation
+    if (ctx->n_past + n_tokens > ctx->n_ctx) {
+        snprintf(err, err_len,
+                 "bitnet_cpp_eval_with_context: Context overflow (n_past=%d + n_tokens=%d > max_ctx=%d)",
+                 ctx->n_past, n_tokens, ctx->n_ctx);
+        err[err_len - 1] = '\0';
+        return -1;
+    }
+
+    // Create batch with all tokens at current position
     // Note: seq_id parameter allows future batch processing support
     llama_batch batch = llama_batch_get_one(const_cast<int32_t*>(tokens), n_tokens);
 
@@ -751,7 +793,73 @@ int bitnet_cpp_eval_with_context(
         std::memcpy(&out_logits[i * n_vocab], logits_for_pos, n_vocab * sizeof(float));
     }
 
+    // Update position AFTER successful evaluation
+    ctx->n_past += n_tokens;
+
     return 0;
+
+#else
+    #error "Must define either BITNET_STUB or BITNET_AVAILABLE"
+#endif
+}
+
+/// Reset KV cache position (start new conversation)
+///
+/// Socket 1 Extension: Clears KV cache and resets position tracking for new conversations.
+///
+/// Args:
+///   ctx: Context handle to reset
+///
+/// Returns: 0 on success, -1 on error
+void bitnet_cpp_reset_context(
+    bitnet_context_t* ctx
+) {
+    if (!ctx) {
+        return;
+    }
+
+#ifdef BITNET_STUB
+    // STUB mode: Nothing to reset
+    return;
+
+#elif defined(BITNET_AVAILABLE)
+    // AVAILABLE mode: Reset position and clear KV cache
+
+    if (ctx->ctx) {
+        // Clear KV cache
+        llama_kv_cache_clear(ctx->ctx);
+    }
+
+    // Reset position to zero
+    ctx->n_past = 0;
+
+#else
+    #error "Must define either BITNET_STUB or BITNET_AVAILABLE"
+#endif
+}
+
+/// Query current KV cache position
+///
+/// Socket 1 Extension: Read-only query for current position tracking state.
+///
+/// Args:
+///   ctx: Context handle
+///
+/// Returns: Current position (number of cached tokens), or -1 if ctx is NULL
+int32_t bitnet_cpp_get_position(
+    const bitnet_context_t* ctx
+) {
+    if (!ctx) {
+        return -1;
+    }
+
+#ifdef BITNET_STUB
+    // STUB mode: No position tracking
+    return -1;
+
+#elif defined(BITNET_AVAILABLE)
+    // AVAILABLE mode: Return current position
+    return ctx->n_past;
 
 #else
     #error "Must define either BITNET_STUB or BITNET_AVAILABLE"
