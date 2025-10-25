@@ -40,6 +40,9 @@ mod gates;
 mod tokenizers;
 mod trace_diff;
 
+#[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]
+use crossval::{CppBackend, preflight_backend_libs};
+
 // RAII guard for lock file cleanup
 struct LockGuard {
     file: Option<std::fs::File>,
@@ -368,6 +371,25 @@ enum Cmd {
         cpp_dir: PathBuf,
     },
 
+    /// Check C++ backend availability for cross-validation
+    ///
+    /// Verifies that required C++ libraries are available for cross-validation.
+    /// Checks build-time detection from build.rs environment variables.
+    ///
+    /// Usage:
+    ///   cargo run -p xtask --features crossval-all -- preflight
+    ///   cargo run -p xtask --features crossval-all -- preflight --backend bitnet --verbose
+    #[cfg(any(feature = "crossval", feature = "crossval-all"))]
+    Preflight {
+        /// Backend to check (bitnet or llama). If omitted, checks both.
+        #[arg(long, value_enum)]
+        backend: Option<CppBackend>,
+
+        /// Show detailed diagnostic information
+        #[arg(long, short)]
+        verbose: bool,
+    },
+
     /// Run deterministic cross-validation tests against C++ implementation
     ///
     /// Auto-discovers GGUF models in the models/ directory if not specified.
@@ -478,6 +500,30 @@ enum Cmd {
         /// Enable verbose diagnostic output
         #[arg(long)]
         verbose: bool,
+
+        /// Dump Rust token IDs to stderr for debugging
+        #[arg(long)]
+        dump_ids: bool,
+
+        /// Dump C++ token IDs to stderr for debugging
+        #[arg(long)]
+        dump_cpp_ids: bool,
+
+        /// Write parity receipt to JSON file
+        #[arg(long)]
+        receipt: Option<PathBuf>,
+
+        /// Parity ladder mode: tokens|masks|first-logit|positions|decode
+        #[arg(long, default_value = "positions")]
+        ladder: String,
+
+        /// Number of positions to compare (for positions mode)
+        #[arg(long, default_value_t = 8)]
+        positions: usize,
+
+        /// Metrics to compute: mse,kl,topk (comma-separated)
+        #[arg(long, default_value = "mse,kl,topk")]
+        metrics: String,
     },
 
     /// Generate realistic test fixtures for unit testing
@@ -614,19 +660,6 @@ enum Cmd {
         #[arg(long, default_value = "crates/bitnet-ggml-ffi/csrc")]
         output: PathBuf,
     },
-
-    /// GPU preflight check and environment detection
-    ///
-    /// Checks for available GPU backends (CUDA, Metal, ROCm, WebGPU)
-    /// and provides actionable setup instructions if none are found.
-    ///
-    /// Exit codes:
-    /// - 0: GPU backend available
-    /// - 1: No GPU backend found (but can continue with CPU)
-    ///
-    /// Deprecated: Use `gpu-preflight` for full control. This alias is provided
-    /// for backward compatibility with Issue #439 tests.
-    Preflight,
 
     /// Check system capabilities for BitNet.rs (GPU detection, features)
     ///
@@ -934,6 +967,11 @@ fn real_main() -> Result<()> {
             trace_diff::run(&rs_dir, &cpp_dir)?;
             Ok(())
         }
+        #[cfg(any(feature = "crossval", feature = "crossval-all"))]
+        Cmd::Preflight { backend, verbose } => {
+            cpp_backend_preflight_cmd(backend, verbose)?;
+            Ok(())
+        }
         Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
             let model_path = match model {
                 Some(p) => p,
@@ -956,6 +994,12 @@ fn real_main() -> Result<()> {
             system_prompt,
             cpp_backend,
             verbose,
+            dump_ids,
+            dump_cpp_ids,
+            receipt,
+            ladder,
+            positions,
+            metrics,
         } => {
             crossval_per_token_cmd(
                 &model,
@@ -968,6 +1012,12 @@ fn real_main() -> Result<()> {
                 system_prompt.as_deref(),
                 cpp_backend,
                 verbose,
+                dump_ids,
+                dump_cpp_ids,
+                receipt.as_deref(),
+                &ladder,
+                positions,
+                &metrics,
             )?;
             Ok(())
         }
@@ -1007,7 +1057,6 @@ fn real_main() -> Result<()> {
             detect_breaking_changes_cmd(baseline.as_deref(), &current, &format)
         }
         Cmd::VendorGgml { commit, force, output } => vendor_ggml_cmd(&commit, force, &output),
-        Cmd::Preflight => preflight_cmd(),
         Cmd::GpuPreflight { require, format } => gpu_preflight_cmd(require, &format),
         Cmd::GpuSmoke { size, tolerance, skip_if_no_gpu } => {
             gpu_smoke_cmd(&size, tolerance, skip_if_no_gpu)
@@ -2501,6 +2550,33 @@ fn format_markdown_output(comparison: &BenchmarkComparison, verbose: bool) -> Re
     Ok(output)
 }
 
+/// Check C++ backend availability for cross-validation
+///
+/// Validates that required C++ libraries are available for the specified backend.
+/// If no backend is specified, checks all available backends.
+#[cfg(any(feature = "crossval", feature = "crossval-all"))]
+fn cpp_backend_preflight_cmd(backend: Option<CppBackend>, verbose: bool) -> Result<()> {
+    use crossval::{preflight_backend_libs, print_backend_status};
+
+    match backend {
+        Some(b) => {
+            // Check specific backend
+            if verbose {
+                eprintln!("Checking {} backend...", b.name());
+            }
+            preflight_backend_libs(b, verbose)?;
+            println!("✓ {} backend is available", b.name());
+        }
+        None => {
+            // Check all backends
+            println!("Checking all backends...\n");
+            print_backend_status(verbose);
+        }
+    }
+
+    Ok(())
+}
+
 fn fetch_cpp_cmd(
     tag: &str,
     force: bool,
@@ -2972,6 +3048,7 @@ fn validate_rust_model_loading(model_path: &Path) -> Result<(u32, u64, u64, u64)
 /// Per-token logits cross-validation between Rust and C++ implementations
 #[cfg(feature = "inference")]
 #[allow(clippy::too_many_arguments)] // Command handler mirrors CLI arguments
+#[allow(unused_assignments)] // cpp_session_opt is assigned in tokenization match, used in evaluation match
 fn crossval_per_token_cmd(
     model_path: &Path,
     tokenizer_path: &Path,
@@ -2983,23 +3060,72 @@ fn crossval_per_token_cmd(
     _system_prompt: Option<&str>,
     cpp_backend: Option<CppBackend>,
     verbose: bool,
+    dump_ids: bool,
+    dump_cpp_ids: bool,
+    receipt_path: Option<&Path>,
+    ladder: &str,
+    positions: usize,
+    metrics: &str,
 ) -> Result<()> {
     use bitnet_crossval::logits_compare::compare_per_position_logits;
     use bitnet_inference::parity::eval_logits_all_positions;
+    use std::collections::HashSet;
 
     // Backend selection (auto-detect if not explicit)
     let backend = cpp_backend.unwrap_or_else(|| CppBackend::from_model_path(model_path));
 
-    if verbose {
-        println!(
-            "Selected backend: {} ({})",
-            backend.name(),
-            if cpp_backend.is_some() { "explicit" } else { "auto-detected" }
+    // Validate ladder mode
+    let valid_ladder_modes = ["tokens", "masks", "first-logit", "positions", "decode"];
+    if !valid_ladder_modes.contains(&ladder) {
+        anyhow::bail!(
+            "Invalid ladder mode '{}'. Valid modes: {}",
+            ladder,
+            valid_ladder_modes.join(", ")
         );
     }
 
+    // Validate positions parameter
+    if positions == 0 {
+        anyhow::bail!("positions must be > 0");
+    }
+
+    // Parse and validate metrics
+    let metrics_set: HashSet<&str> = metrics.split(',').map(|s| s.trim()).collect();
+    let valid_metrics = ["mse", "kl", "topk"];
+    for metric in &metrics_set {
+        if !valid_metrics.contains(metric) {
+            anyhow::bail!(
+                "Invalid metric '{}'. Valid metrics: {}",
+                metric,
+                valid_metrics.join(", ")
+            );
+        }
+    }
+
+    let compute_mse = metrics_set.contains("mse");
+    let compute_kl = metrics_set.contains("kl");
+    let compute_topk = metrics_set.contains("topk");
+
+    if verbose {
+        eprintln!("═══════════════════════════════════════════════════");
+        eprintln!("Backend Selection Diagnostics");
+        eprintln!("═══════════════════════════════════════════════════");
+        eprintln!("Model path: {}", model_path.display());
+        eprintln!("Tokenizer: {}", tokenizer_path.display());
+        eprintln!("Selected backend: {}", backend.name());
+        eprintln!("Auto-detected: {}", cpp_backend.is_none());
+        eprintln!("Template: {:?}", prompt_template);
+        eprintln!("Ladder mode: {}", ladder);
+        eprintln!("Positions limit: {}", positions);
+        eprintln!(
+            "Metrics: {} (mse={}, kl={}, topk={})",
+            metrics, compute_mse, compute_kl, compute_topk
+        );
+        eprintln!("═══════════════════════════════════════════════════\n");
+    }
+
     // Preflight validation - verify required libraries are available
-    crate::crossval::preflight_backend_libs(backend, verbose)?;
+    preflight_backend_libs(backend, verbose)?;
 
     // 1. Resolve template type from CLI arg
     let template = prompt_template.to_template_type();
@@ -3028,6 +3154,9 @@ fn crossval_per_token_cmd(
     println!();
 
     // Step 1: Rust tokenization with template-aware flags
+    if verbose {
+        eprintln!("📝 Tokenizing with Rust...");
+    }
     println!("📝 Tokenizing prompt (Rust)...");
     let tokenizer = bitnet_tokenizers::loader::load_tokenizer(tokenizer_path)?;
     let tokens = tokenizer.encode(&formatted_prompt, add_bos, parse_special)?;
@@ -3036,6 +3165,20 @@ fn crossval_per_token_cmd(
     // Limit to prompt tokens only (no generation in this mode)
     let total_len = token_ids.len();
     println!("Tokens: {} (prompt)", total_len);
+
+    // Debug: dump Rust token IDs if requested (--dump-ids flag)
+    //
+    // Output format (to stderr):
+    //   🦀 Rust tokens (N total):
+    //     [token1, token2, token3, ...]
+    //
+    // This outputs to stderr to avoid polluting stdout when using --format json.
+    // Use this flag to debug tokenization differences between Rust and C++.
+    if dump_ids {
+        eprintln!("🦀 Rust tokens ({} total):", token_ids.len());
+        eprintln!("  {:?}", token_ids);
+    }
+
     println!();
 
     // Step 2: Check if C++ is available (before expensive work)
@@ -3046,6 +3189,9 @@ fn crossval_per_token_cmd(
     }
 
     // Step 3: C++ tokenization
+    if verbose {
+        eprintln!("🔧 Tokenizing with {}...", backend.name());
+    }
     println!("📝 Tokenizing prompt (C++)...");
 
     let model_path_str =
@@ -3054,15 +3200,14 @@ fn crossval_per_token_cmd(
     // Backend dispatch - route based on selected C++ backend
     // For LLaMA backend, we need to keep the session alive for evaluation
     let mut cpp_session_opt: Option<bitnet_sys::wrapper::Session> = None;
-    let _guard_opt: Option<scopeguard::ScopeGuard<(), _>> = None;
 
-    let cpp_tokens = match backend {
+    let cpp_tokens: Vec<u32> = match backend {
         CppBackend::BitNet => {
             #[cfg(feature = "ffi")]
             {
                 // Use BitNet.cpp FFI wrappers for tokenization
                 bitnet_crossval::cpp_bindings::tokenize_bitnet(
-                    model_path.as_path(),
+                    model_path,
                     &formatted_prompt,
                     true, // add_bos - typically true for BitNet models
                     true, // parse_special - handle special tokens
@@ -3082,24 +3227,47 @@ fn crossval_per_token_cmd(
             bitnet_sys::wrapper::init_backend();
             let _guard = scopeguard::guard((), |_| bitnet_sys::wrapper::free_backend());
 
-            let mut cpp_session = bitnet_sys::wrapper::Session::load_deterministic(model_path_str)?;
+            let cpp_session = bitnet_sys::wrapper::Session::load_deterministic(model_path_str)?;
 
             // Tokenize with C++ tokenizer using the same formatted prompt
             let tokens = cpp_session.tokenize(&formatted_prompt)?;
 
             // Keep session alive for later evaluation
             cpp_session_opt = Some(cpp_session);
-            tokens
+
+            // Convert i32 to u32 to match BitNet backend type
+            tokens.into_iter().map(|id| id as u32).collect()
         }
     };
     println!("Tokens: {} (C++)", cpp_tokens.len());
+
+    // Debug: dump C++ token IDs if requested (--dump-cpp-ids flag)
+    //
+    // Output format (to stderr):
+    //   🔧 C++ tokens (N total, backend: bitnet|llama):
+    //     [token1, token2, token3, ...]
+    //
+    // This outputs to stderr to avoid polluting stdout when using --format json.
+    // The backend field indicates which C++ implementation was used (bitnet.cpp or llama.cpp).
+    // Use this flag to debug tokenization differences between Rust and C++.
+    if dump_cpp_ids {
+        eprintln!("🔧 C++ tokens ({} total, backend: {}):", cpp_tokens.len(), backend.name());
+        eprintln!("  {:?}", cpp_tokens);
+    }
+
     println!();
 
     // Step 4: Token parity pre-gate (FAIL-FAST - validate sequences match before expensive logits comparison)
     // This check is moved BEFORE logits evaluation to fail fast (~50ms) instead of waiting 20-30 seconds
     // for Rust logits evaluation only to discover a token mismatch.
+    if verbose {
+        eprintln!("✓ Token parity pre-gate (fail-fast validation)...");
+    }
     println!("🔒 Validating token parity...");
     let rust_tokens_u32: Vec<u32> = token_ids.iter().map(|&id| id as u32).collect();
+
+    // Convert cpp_tokens from u32 to i32 for parity validation
+    let cpp_tokens_i32: Vec<i32> = cpp_tokens.iter().map(|&id| id as i32).collect();
 
     // Convert xtask's CppBackend to crossval's CppBackend
     let crossval_backend = match backend {
@@ -3109,7 +3277,7 @@ fn crossval_per_token_cmd(
 
     if let Err(e) = bitnet_crossval::token_parity::validate_token_parity(
         &rust_tokens_u32,
-        &cpp_tokens,
+        &cpp_tokens_i32,
         prompt,
         crossval_backend,
     ) {
@@ -3120,6 +3288,9 @@ fn crossval_per_token_cmd(
     println!();
 
     // Step 5: Get Rust logits (ONLY after parity validation passes)
+    if verbose {
+        eprintln!("🧮 Evaluating Rust logits for {} tokens...", token_ids.len());
+    }
     println!("🦀 Evaluating Rust logits for all positions...");
     let rust_logits = eval_logits_all_positions(model_path_str, &token_ids)?;
     println!(
@@ -3129,6 +3300,9 @@ fn crossval_per_token_cmd(
     );
 
     // Step 6: Get C++ logits
+    if verbose {
+        eprintln!("🔧 Evaluating C++ logits with {}...", backend.name());
+    }
     println!("🔧 Evaluating C++ logits for all positions...");
 
     // Backend dispatch - route based on selected C++ backend
@@ -3141,7 +3315,7 @@ fn crossval_per_token_cmd(
 
                 // Use BitNet.cpp FFI wrappers for evaluation
                 bitnet_crossval::cpp_bindings::eval_bitnet(
-                    model_path.as_path(),
+                    model_path,
                     &cpp_tokens_i32,
                     2048, // n_ctx - matches typical context size
                 )
@@ -3157,8 +3331,8 @@ fn crossval_per_token_cmd(
             let mut cpp_session =
                 cpp_session_opt.ok_or_else(|| anyhow::anyhow!("LLaMA session not initialized"))?;
 
-            // Evaluate all positions
-            cpp_session.context.eval(&cpp_tokens, 0)?;
+            // Evaluate all positions (convert u32 tokens to i32 for C++ API)
+            cpp_session.context.eval(&cpp_tokens_i32, 0)?;
 
             // Get all logits (requires logits_all=true in context)
             cpp_session.context.get_all_logits(cpp_tokens.len())?
@@ -3172,10 +3346,197 @@ fn crossval_per_token_cmd(
     );
     println!();
 
-    // Compare per-position
-    println!("📊 Comparing logits per position...");
-    let divergence = compare_per_position_logits(&rust_logits, &cpp_logits);
+    // Step 7: Ladder mode dispatch
+    // Currently only "positions" mode is implemented - other modes are scaffolded for future work
+    match ladder {
+        "positions" => {
+            // Limit comparison to specified number of positions
+            let effective_positions = positions.min(rust_logits.len()).min(cpp_logits.len());
 
+            if effective_positions < rust_logits.len() || effective_positions < cpp_logits.len() {
+                if verbose {
+                    eprintln!(
+                        "Limiting comparison to first {} positions (Rust: {}, C++: {})",
+                        effective_positions,
+                        rust_logits.len(),
+                        cpp_logits.len()
+                    );
+                }
+                println!("📊 Comparing first {} positions...", effective_positions);
+            } else {
+                println!("📊 Comparing logits per position...");
+            }
+
+            // Slice logits to effective positions
+            let rust_logits_slice = &rust_logits[..effective_positions];
+            let cpp_logits_slice = &cpp_logits[..effective_positions];
+
+            // Validate positions parameter doesn't exceed token count
+            if positions > effective_positions {
+                eprintln!(
+                    "Warning: --positions {} exceeds available positions {}",
+                    positions, effective_positions
+                );
+            }
+
+            let divergence = compare_per_position_logits(rust_logits_slice, cpp_logits_slice);
+
+            // Note: metrics flags are validated but not yet used in comparison
+            // Future work will integrate compute_mse, compute_kl, compute_topk
+            if verbose && (!compute_mse || !compute_kl || !compute_topk) {
+                eprintln!("Note: Selective metrics not yet implemented, using all metrics");
+            }
+
+            // Generate receipt if requested
+            if let Some(receipt_file) = receipt_path {
+                if verbose {
+                    eprintln!("📝 Generating parity receipt...");
+                }
+                generate_parity_receipt(
+                    model_path,
+                    &backend,
+                    &formatted_prompt,
+                    rust_logits_slice,
+                    cpp_logits_slice,
+                    &divergence,
+                    cos_tol,
+                    compute_mse,
+                    compute_kl,
+                    compute_topk,
+                    receipt_file,
+                )?;
+                println!("✓ Receipt written to: {}", receipt_file.display());
+            }
+
+            // Output results based on format
+            output_comparison_results(
+                &divergence,
+                format,
+                cos_tol,
+                model_path,
+                tokenizer_path,
+                prompt,
+            )?;
+        }
+        "tokens" => {
+            // TODO: Implement tokens ladder mode (compare token-by-token generation)
+            anyhow::bail!("Ladder mode 'tokens' not yet implemented");
+        }
+        "masks" => {
+            // TODO: Implement masks ladder mode (compare attention masks)
+            anyhow::bail!("Ladder mode 'masks' not yet implemented");
+        }
+        "first-logit" => {
+            // TODO: Implement first-logit ladder mode (compare only first logit position)
+            anyhow::bail!("Ladder mode 'first-logit' not yet implemented");
+        }
+        "decode" => {
+            // TODO: Implement decode ladder mode (compare decoded text outputs)
+            anyhow::bail!("Ladder mode 'decode' not yet implemented");
+        }
+        _ => {
+            // This should be unreachable due to earlier validation
+            anyhow::bail!("Unknown ladder mode: {}", ladder);
+        }
+    }
+
+    Ok(())
+}
+
+/// Generate parity receipt from logits comparison
+#[cfg(feature = "inference")]
+#[allow(clippy::too_many_arguments)] // Helper function with context parameters
+fn generate_parity_receipt(
+    model_path: &Path,
+    backend: &crossval::CppBackend,
+    formatted_prompt: &str,
+    rust_logits: &[Vec<f32>],
+    cpp_logits: &[Vec<f32>],
+    divergence: &bitnet_crossval::logits_compare::LogitsDivergence,
+    cos_tol: f32,
+    compute_mse: bool,
+    compute_kl: bool,
+    compute_topk: bool,
+    receipt_path: &Path,
+) -> Result<()> {
+    use bitnet_crossval::metrics::{kl_divergence, max_abs, mse_row, topk_agree, topk_indices};
+    use bitnet_crossval::receipt::{ParityReceipt, PositionMetrics, Thresholds};
+
+    // Create receipt with metadata
+    let mut receipt =
+        ParityReceipt::new(&model_path.display().to_string(), backend.name(), formatted_prompt);
+
+    // Set custom thresholds based on cosine tolerance
+    // Convert cosine similarity threshold to MSE-like threshold
+    let mse_threshold = (1.0 - cos_tol) * (1.0 - cos_tol); // Approximate conversion
+    receipt.set_thresholds(Thresholds { mse: mse_threshold, kl: 0.1, topk: 0.8 });
+
+    // Add position metrics
+    let n_positions = rust_logits.len().min(cpp_logits.len());
+    for pos in 0..n_positions {
+        let rust_row = &rust_logits[pos];
+        let cpp_row = &cpp_logits[pos];
+
+        // Compute per-position metrics
+        let mse = if compute_mse && rust_row.len() == cpp_row.len() {
+            mse_row(rust_row, cpp_row)
+        } else {
+            divergence.per_token_l2_dist[pos] * divergence.per_token_l2_dist[pos]
+                / rust_row.len() as f32 // Approximate MSE from L2
+        };
+
+        let max_abs_diff = if rust_row.len() == cpp_row.len() {
+            max_abs(rust_row, cpp_row)
+        } else {
+            divergence.max_absolute_diff
+        };
+
+        let kl = if compute_kl && rust_row.len() == cpp_row.len() {
+            Some(kl_divergence(rust_row, cpp_row))
+        } else {
+            None
+        };
+
+        let topk_agreement = if compute_topk && rust_row.len() == cpp_row.len() {
+            let k = 5.min(rust_row.len());
+            Some(topk_agree(rust_row, cpp_row, k))
+        } else {
+            None
+        };
+
+        // Get top-5 token IDs
+        let k = 5.min(rust_row.len());
+        let top5_rust = topk_indices(rust_row, k);
+        let top5_cpp = topk_indices(cpp_row, k);
+
+        receipt.add_position(PositionMetrics {
+            pos,
+            mse,
+            max_abs: max_abs_diff,
+            kl,
+            topk_agree: topk_agreement,
+            top5_rust,
+            top5_cpp,
+        });
+    }
+
+    // Finalize and write
+    receipt.finalize();
+    receipt.write_to_file(receipt_path)?;
+
+    Ok(())
+}
+
+/// Output comparison results in either text or JSON format
+#[cfg(feature = "inference")]
+fn output_comparison_results(
+    divergence: &bitnet_crossval::logits_compare::LogitsDivergence,
+    format: &str,
+    cos_tol: f32,
+    model_path: &Path,
+    tokenizer_path: &Path,
+    prompt: &str,
+) -> Result<()> {
     // Output results
     match format {
         "json" => {
@@ -4190,6 +4551,7 @@ fn vendor_ggml_cmd(commit: &str, force: bool, output_dir: &Path) -> Result<()> {
 ///
 /// Calls device_capability_summary() and reports GPU status.
 /// Uses BITNET_GPU_FAKE for deterministic testing.
+#[allow(dead_code)]
 fn preflight_cmd() -> Result<()> {
     println!("{}", bitnet_kernels::device_features::device_capability_summary());
 

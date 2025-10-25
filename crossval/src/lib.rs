@@ -24,6 +24,8 @@ pub mod comparison;
 pub mod backend;
 pub mod fixtures;
 pub mod logits_compare;
+pub mod metrics;
+pub mod receipt;
 pub mod score;
 pub mod token_parity;
 pub mod utils;

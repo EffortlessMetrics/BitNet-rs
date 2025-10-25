@@ -28,31 +28,21 @@ fn main() {
 fn compile_ffi() {
     use std::{env, path::Path};
 
-    // Check if BITNET_CPP_DIR is set to determine compilation mode
-    let bitnet_available = env::var("BITNET_CPP_DIR").is_ok();
+    // Check if BITNET_CPP_DIR is set and do preliminary availability check
+    let bitnet_cpp_dir_set = env::var("BITNET_CPP_DIR").is_ok();
 
-    // Compile C++ wrapper (.cc file)
-    let cc_wrapper_path = Path::new("src/bitnet_cpp_wrapper.cc");
-    if cc_wrapper_path.exists() {
-        let mut build = cc::Build::new();
-        build.file(cc_wrapper_path).cpp(true).flag_if_supported("-std=c++17");
+    // Get the bitnet root directory for header checks
+    let bitnet_root =
+        env::var("BITNET_CPP_DIR").or_else(|_| env::var("BITNET_CPP_PATH")).unwrap_or_else(|_| {
+            format!("{}/.cache/bitnet_cpp", env::var("HOME").unwrap_or_else(|_| ".".into()))
+        });
 
-        // Set compilation mode based on BITNET_CPP_DIR availability
-        if bitnet_available {
-            build.define("BITNET_AVAILABLE", None);
-            println!("cargo:warning=crossval: Compiling C++ wrapper in AVAILABLE mode");
-        } else {
-            build.define("BITNET_STUB", None);
-            println!(
-                "cargo:warning=crossval: Compiling C++ wrapper in STUB mode (set BITNET_CPP_DIR for real integration)"
-            );
-        }
+    // Check for essential header files to verify BitNet.cpp installation
+    let has_headers = Path::new(&bitnet_root).join("include").exists()
+        || Path::new(&bitnet_root).join("src").exists();
 
-        build.compile("bitnet_cpp_wrapper_cc");
-
-        // Emit link directive so tests can find the wrapper
-        println!("cargo:rustc-link-lib=static=bitnet_cpp_wrapper_cc");
-    }
+    // Preliminary availability check (will be refined after library search)
+    let preliminary_available = bitnet_cpp_dir_set && has_headers;
 
     // Fallback: Compile legacy C wrapper if it exists (for backward compatibility)
     let c_wrapper_path = Path::new("src/bitnet_cpp_wrapper.c");
@@ -69,11 +59,7 @@ fn compile_ffi() {
         possible_lib_dirs.push(Path::new(&lib_dir).to_path_buf());
     }
 
-    // Priority 2: BITNET_CPP_DIR (if set)
-    let bitnet_root =
-        env::var("BITNET_CPP_DIR").or_else(|_| env::var("BITNET_CPP_PATH")).unwrap_or_else(|_| {
-            format!("{}/.cache/bitnet_cpp", env::var("HOME").unwrap_or_else(|_| ".".into()))
-        });
+    // Priority 2: BITNET_CPP_DIR (already retrieved above for header checks)
 
     // Add potential lib directories
     possible_lib_dirs.push(Path::new(&bitnet_root).join("build"));
@@ -123,6 +109,52 @@ fn compile_ffi() {
         }
     }
 
+    // Determine if BitNet.cpp is truly available (headers + libraries)
+    let bitnet_available = preliminary_available && (found_bitnet || found_llama);
+
+    // Compile the C++ wrapper with the correct define based on actual availability
+    let cc_wrapper_path = Path::new("src/bitnet_cpp_wrapper.cc");
+    if cc_wrapper_path.exists() {
+        let mut build = cc::Build::new();
+        build.file(cc_wrapper_path).cpp(true).flag_if_supported("-std=c++17");
+
+        // Add include paths if available
+        if bitnet_available {
+            let include_dir = Path::new(&bitnet_root).join("include");
+            if include_dir.exists() {
+                build.include(&include_dir);
+            }
+            let src_dir = Path::new(&bitnet_root).join("src");
+            if src_dir.exists() {
+                build.include(&src_dir);
+            }
+            // Add llama.cpp include path for llama.h
+            let llama_include = Path::new(&bitnet_root).join("3rdparty/llama.cpp/include");
+            if llama_include.exists() {
+                build.include(&llama_include);
+            }
+            // Add ggml include path (for ggml.h dependency)
+            let ggml_include = Path::new(&bitnet_root).join("3rdparty/llama.cpp/ggml/include");
+            if ggml_include.exists() {
+                build.include(&ggml_include);
+            }
+        }
+
+        // Set the correct compilation mode based on actual library availability
+        if bitnet_available {
+            build.define("BITNET_AVAILABLE", None);
+            println!("cargo:warning=crossval: Compiling C++ wrapper in BITNET_AVAILABLE mode");
+        } else {
+            build.define("BITNET_STUB", None);
+            println!(
+                "cargo:warning=crossval: Compiling C++ wrapper in BITNET_STUB mode (no libraries found)"
+            );
+        }
+
+        build.compile("bitnet_cpp_wrapper_cc");
+        println!("cargo:rustc-link-lib=static=bitnet_cpp_wrapper_cc");
+    }
+
     // Emit build-time environment variables for runtime detection
     println!("cargo:rustc-env=CROSSVAL_HAS_BITNET={}", found_bitnet);
     println!("cargo:rustc-env=CROSSVAL_HAS_LLAMA={}", found_llama);
@@ -131,22 +163,36 @@ fn compile_ffi() {
     println!("cargo:rustc-cfg=have_cpp");
 
     // Emit diagnostic messages
-    if found_bitnet && found_llama {
-        println!(
-            "cargo:warning=crossval: Both bitnet.cpp and llama.cpp libraries found (dual-backend support)"
-        );
+    if bitnet_available {
+        if found_bitnet && found_llama {
+            println!(
+                "cargo:warning=crossval: ✓ BITNET_AVAILABLE: Both bitnet.cpp and llama.cpp libraries found"
+            );
+            println!("cargo:warning=crossval: Dual-backend cross-validation supported");
+        } else if found_bitnet {
+            println!("cargo:warning=crossval: ✓ BITNET_AVAILABLE: BitNet.cpp libraries found");
+            println!("cargo:warning=crossval: BitNet parity validation supported");
+        } else if found_llama {
+            println!("cargo:warning=crossval: ✓ BITNET_AVAILABLE: LLaMA.cpp libraries found");
+            println!("cargo:warning=crossval: LLaMA parity validation supported");
+        }
         println!("cargo:warning=crossval: Linked libraries: {}", all_found_libs.join(", "));
-    } else if found_bitnet {
-        println!(
-            "cargo:warning=crossval: Found bitnet.cpp libraries only (BitNet parity supported)"
-        );
-        println!("cargo:warning=crossval: Linked libraries: {}", all_found_libs.join(", "));
-    } else if found_llama {
-        println!("cargo:warning=crossval: Found llama.cpp libraries only (LLaMA parity supported)");
-        println!("cargo:warning=crossval: Linked libraries: {}", all_found_libs.join(", "));
+        println!("cargo:warning=crossval: Headers found in: {}", bitnet_root);
     } else {
-        println!("cargo:warning=crossval: No C++ libraries found (crossval will use mock/stub)");
-        println!("cargo:warning=crossval: Set BITNET_CPP_DIR to enable C++ backend integration");
+        println!("cargo:warning=crossval: ✗ BITNET_STUB mode: No C++ libraries found");
+        if !bitnet_cpp_dir_set {
+            println!(
+                "cargo:warning=crossval: Set BITNET_CPP_DIR to enable C++ backend integration"
+            );
+        } else if !has_headers {
+            println!(
+                "cargo:warning=crossval: BITNET_CPP_DIR set but no headers found in: {}",
+                bitnet_root
+            );
+        } else {
+            println!("cargo:warning=crossval: Headers found but no libraries detected");
+            println!("cargo:warning=crossval: Check that BitNet.cpp is built in: {}", bitnet_root);
+        }
     }
 
     // Link C++ standard library if we found any libraries

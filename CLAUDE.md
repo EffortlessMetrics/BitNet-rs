@@ -236,6 +236,7 @@ BitNet.rs implements AVX2-accelerated QK256 dequantization with runtime dispatch
 - `docs/development/xtask.md`: Developer tooling
 - `docs/howto/export-clean-gguf.md`: Clean GGUF export and validation
 - `docs/howto/validate-models.md`: Complete validation workflow guide
+- `docs/howto/cpp-setup.md`: C++ reference setup for cross-validation (BitNet.cpp + llama.cpp)
 
 ### Architecture
 
@@ -244,6 +245,7 @@ BitNet.rs implements AVX2-accelerated QK256 dequantization with runtime dispatch
 - `docs/reference/validation-gates.md`: Validation system technical reference
 - `docs/gpu-kernel-architecture.md`: CUDA kernel design
 - `docs/tokenizer-architecture.md`: Universal tokenizer system
+- `docs/explanation/dual-backend-crossval.md`: Dual-backend cross-validation architecture (BitNet.cpp + llama.cpp)
 
 ### Operations
 
@@ -638,7 +640,8 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --prompt "What is 2+2?" \
   --max-tokens 4 \
   --cos-tol 0.999 \
-  --format json
+  --format json \
+  --dump-ids --dump-cpp-ids --verbose
 
 # LLaMA model (auto-detects llama.cpp)
 cargo run -p xtask --features crossval-all -- crossval-per-token \
@@ -730,6 +733,44 @@ cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
 3. Emits shell-specific environment variable exports
 4. Outputs: `BITNET_CPP_DIR`, `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH`/`PATH`
 
+### preflight Command
+
+**Purpose**: Check C++ backend availability for cross-validation
+
+**Flags**:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--backend` | enum | (none) | Backend to check: bitnet, llama. If omitted, checks both. |
+| `--verbose` | flag | false | Show detailed diagnostic information |
+
+**Example Usage**:
+
+```bash
+# Check all backends
+cargo run -p xtask --features crossval-all -- preflight
+
+# Check specific backend
+cargo run -p xtask --features crossval-all -- preflight --backend bitnet --verbose
+cargo run -p xtask --features crossval-all -- preflight --backend llama
+
+# Should fail gracefully if libs not found
+BITNET_CPP_DIR="" cargo run -p xtask --features crossval-all -- preflight --backend bitnet
+```
+
+**Output**:
+```
+Backend Library Status:
+
+  ✓ bitnet.cpp: AVAILABLE
+    Libraries: libbitnet*
+
+  ✓ llama.cpp: AVAILABLE
+    Libraries: libllama*, libggml*
+
+Both backends available. Dual-backend cross-validation supported.
+```
+
 ## Troubleshooting
 
 - FFI linker errors: Use `--no-default-features --features cpu` or
@@ -738,8 +779,13 @@ cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
   Microsoft BitNet C++ reference, libllama.so, and dynamic loader paths
 - CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH
 - Model validation: `cargo run -p bitnet-cli -- compat-check model.gguf`
-- GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and
+- GPU detection: Run `cargo run -p xtask -- gpu-preflight` to check GPU compilation and
   runtime availability
+- C++ backend availability: Use `cargo run -p xtask --features crossval-all -- preflight --verbose`
+  to diagnose bitnet.cpp and llama.cpp library availability for cross-validation
+  - For specific backend: `--backend bitnet` or `--backend llama`
+  - See `docs/howto/cpp-setup.md` for detailed setup instructions
+  - See `docs/explanation/dual-backend-crossval.md` for architecture details
 - Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use
   `BITNET_GPU_FAKE` for testing
 - Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]`
@@ -748,6 +794,18 @@ cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
   `--prompt-template` (raw/instruct/llama3-chat). Check GGUF metadata with
   `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection
   priority issues.
+- Backend selection: Use `--cpp-backend bitnet|llama` to explicitly select C++ reference implementation
+  - Auto-detection: "bitnet" in path → bitnet.cpp, "llama" in path → llama.cpp, default → llama.cpp
+  - Override detection: `--cpp-backend bitnet` or `--cpp-backend llama`
+- Token mismatch diagnostics: Use `--dump-ids` and `--dump-cpp-ids` to compare token sequences
+  between Rust and C++ implementations
+  - Combine with `--verbose` for full diagnostic output
+  - Example: `--dump-ids --dump-cpp-ids --verbose 2>&1 | head -50`
+- Preflight checks: Run `cargo run -p xtask --features crossval-all -- preflight --verbose` to diagnose
+  C++ library availability before running cross-validation
+  - Check all backends: `preflight` (no args)
+  - Check specific backend: `preflight --backend bitnet --verbose`
+  - Verifies: library presence, linkage, and FFI availability
 - Slow QK256 inference: The QK256 MVP uses scalar kernels (~0.1 tok/s for 2B models).
   For quick validation, use `--max-new-tokens 4-16`. SIMD optimizations are planned.
 - LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your

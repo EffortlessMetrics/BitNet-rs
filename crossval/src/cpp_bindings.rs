@@ -41,8 +41,8 @@ mod imp {
             tokens_count: *mut c_int,
         ) -> c_int;
 
-        // New C++ wrapper FFI functions
-        fn bitnet_tokenize(
+        // New C++ wrapper FFI functions (crossval-prefixed to avoid symbol conflicts)
+        fn crossval_bitnet_tokenize(
             model_path: *const c_char,
             prompt: *const c_char,
             add_bos: c_int,
@@ -54,7 +54,7 @@ mod imp {
             err_len: i32,
         ) -> c_int;
 
-        fn bitnet_eval_with_tokens(
+        fn crossval_bitnet_eval_with_tokens(
             model_path: *const c_char,
             tokens: *const i32,
             n_tokens: i32,
@@ -253,7 +253,7 @@ mod imp {
 
         // Pass 1: Query size with NULL buffer pointer
         let result = unsafe {
-            bitnet_tokenize(
+            crossval_bitnet_tokenize(
                 model_path_c.as_ptr(),
                 prompt_c.as_ptr(),
                 if add_bos { 1 } else { 0 },
@@ -291,7 +291,7 @@ mod imp {
         // Pass 2: Allocate buffer and get tokens
         let mut tokens = vec![0i32; out_len as usize];
         let result = unsafe {
-            bitnet_tokenize(
+            crossval_bitnet_tokenize(
                 model_path_c.as_ptr(),
                 prompt_c.as_ptr(),
                 if add_bos { 1 } else { 0 },
@@ -393,7 +393,7 @@ mod imp {
 
         // Pass 1: Query shape with NULL buffer pointer
         let result = unsafe {
-            bitnet_eval_with_tokens(
+            crossval_bitnet_eval_with_tokens(
                 model_path_c.as_ptr(),
                 tokens.as_ptr(),
                 tokens.len() as i32,
@@ -443,7 +443,7 @@ mod imp {
 
         let mut logits_flat = vec![0.0f32; total_elements];
         let result = unsafe {
-            bitnet_eval_with_tokens(
+            crossval_bitnet_eval_with_tokens(
                 model_path_c.as_ptr(),
                 tokens.as_ptr(),
                 tokens.len() as i32,
@@ -495,7 +495,7 @@ mod imp {
 
         // Pass 1: Query size
         let result = unsafe {
-            bitnet_tokenize(
+            crossval_bitnet_tokenize(
                 model_path_c.as_ptr(),
                 prompt_c.as_ptr(),
                 if add_bos { 1 } else { 0 },
@@ -521,7 +521,7 @@ mod imp {
         // Pass 2: Get tokens
         let mut tokens = vec![0i32; out_len as usize];
         let result = unsafe {
-            bitnet_tokenize(
+            crossval_bitnet_tokenize(
                 model_path_c.as_ptr(),
                 prompt_c.as_ptr(),
                 if add_bos { 1 } else { 0 },

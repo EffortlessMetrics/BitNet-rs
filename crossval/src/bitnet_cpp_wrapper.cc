@@ -20,9 +20,8 @@
 
 // Conditional includes for AVAILABLE mode
 #ifdef BITNET_AVAILABLE
-// TODO: Add actual BitNet.cpp headers when wiring implementation
-// #include "bitnet.h"
-// #include "llama.h"
+#include "llama.h"  // From bitnet.cpp's llama.cpp
+#include <vector>   // For token and logits buffers
 #endif
 
 extern "C" {
@@ -45,7 +44,7 @@ extern "C" {
 ///   err_len: Capacity of error buffer
 ///
 /// Returns: 0 on success, -1 on error
-int bitnet_tokenize(
+int crossval_bitnet_tokenize(
     const char* model_path,
     const char* prompt,
     int add_bos,
@@ -85,50 +84,83 @@ int bitnet_tokenize(
     return -1;
 
 #elif defined(BITNET_AVAILABLE)
-    // AVAILABLE mode: implement two-pass buffer negotiation
+    // AVAILABLE mode: Two-pass buffer negotiation with BitNet.cpp
 
-    // TODO: Load model context
-    // llama_model* model = llama_load_model_from_file(model_path, ...);
-    // if (!model) {
-    //     snprintf(err, err_len, "bitnet_tokenize: failed to load model: %s", model_path);
-    //     err[err_len - 1] = '\0';
-    //     return -1;
-    // }
+    // Step 1: Load model context
+    // Note: This per-call load is inefficient; consider session API in v0.2
+    llama_model_params model_params = llama_model_default_params();
+    llama_model* model = llama_load_model_from_file(model_path, model_params);
+    if (!model) {
+        snprintf(err, err_len, "bitnet_tokenize: Failed to load model from %s", model_path);
+        err[err_len - 1] = '\0';
+        return -1;
+    }
 
-    // TODO: Tokenize with BitNet.cpp API
-    // std::vector<int32_t> tokens;
-    // int result = bitnet_tokenize_internal(model, prompt, add_bos, parse_special, tokens);
-    // if (result != 0) {
-    //     snprintf(err, err_len, "bitnet_tokenize: tokenization failed");
-    //     err[err_len - 1] = '\0';
-    //     llama_free_model(model);
-    //     return -1;
-    // }
+    // Step 2: Two-pass tokenization pattern
+    // Pass 1: Get token count (tokens=NULL, n_tokens_max=0)
+    int32_t text_len = static_cast<int32_t>(std::strlen(prompt));
+    int32_t n_tokens = llama_tokenize(
+        model,
+        prompt,
+        text_len,
+        nullptr,           // tokens=NULL for size query
+        0,                 // n_tokens_max=0 for size query
+        add_bos != 0,      // Convert C int to bool
+        parse_special != 0 // Convert C int to bool
+    );
 
-    // TODO: Implement two-pass pattern
-    // int32_t n_tokens = static_cast<int32_t>(tokens.size());
-    // *out_len = n_tokens;
-    //
-    // // Pass 1: size query
-    // if (!out_tokens) {
-    //     llama_free_model(model);
-    //     return 0;
-    // }
-    //
-    // // Pass 2: fill buffer
-    // int32_t n_copy = (n_tokens < out_capacity) ? n_tokens : out_capacity;
-    // std::memcpy(out_tokens, tokens.data(), n_copy * sizeof(int32_t));
-    // *out_len = n_copy;
-    //
-    // llama_free_model(model);
-    // return 0;
+    // llama_tokenize returns negative on error, or the required count
+    if (n_tokens < 0) {
+        n_tokens = -n_tokens;  // Get actual required count
+    }
 
-    // Placeholder: return error until wired
-    snprintf(err, err_len,
-             "bitnet_tokenize: AVAILABLE mode but not yet wired. "
-             "TODO: Wire BitNet.cpp tokenizer API.");
-    err[err_len - 1] = '\0';
-    return -1;
+    if (n_tokens == 0) {
+        snprintf(err, err_len, "bitnet_tokenize: Tokenization returned 0 tokens");
+        err[err_len - 1] = '\0';
+        llama_free_model(model);
+        return -1;
+    }
+
+    *out_len = n_tokens;
+
+    // If size query (out_tokens == NULL), return now
+    if (!out_tokens || out_capacity <= 0) {
+        llama_free_model(model);
+        return 0;
+    }
+
+    // Pass 2: Fill buffer with actual tokens
+    if (out_capacity < n_tokens) {
+        snprintf(err, err_len,
+                 "bitnet_tokenize: Buffer too small (need %d, got %d)",
+                 n_tokens, out_capacity);
+        err[err_len - 1] = '\0';
+        llama_free_model(model);
+        return -1;
+    }
+
+    int32_t result = llama_tokenize(
+        model,
+        prompt,
+        text_len,
+        out_tokens,        // Fill the output buffer
+        out_capacity,      // Max tokens we can write
+        add_bos != 0,
+        parse_special != 0
+    );
+
+    if (result < 0) {
+        snprintf(err, err_len, "bitnet_tokenize: Tokenization failed on buffer fill");
+        err[err_len - 1] = '\0';
+        llama_free_model(model);
+        return -1;
+    }
+
+    // Update out_len with actual number returned (should match n_tokens)
+    *out_len = result;
+
+    llama_free_model(model);
+    return 0;
 
 #else
     // Neither STUB nor AVAILABLE defined - compilation error expected
@@ -155,7 +187,7 @@ int bitnet_tokenize(
 ///   err_len: Capacity of error buffer
 ///
 /// Returns: 0 on success, -1 on error
-int bitnet_eval_with_tokens(
+int crossval_bitnet_eval_with_tokens(
     const char* model_path,
     const int32_t* tokens,
     int32_t n_tokens,
@@ -197,67 +229,88 @@ int bitnet_eval_with_tokens(
     return -1;
 
 #elif defined(BITNET_AVAILABLE)
-    // AVAILABLE mode: implement two-pass buffer negotiation
+    // AVAILABLE mode: Two-pass buffer negotiation with BitNet.cpp
 
-    // TODO: Load model and create context
-    // llama_model* model = llama_load_model_from_file(model_path, ...);
-    // if (!model) {
-    //     snprintf(err, err_len, "bitnet_eval_with_tokens: failed to load model: %s", model_path);
-    //     err[err_len - 1] = '\0';
-    //     return -1;
-    // }
-    //
-    // llama_context_params ctx_params = llama_context_default_params();
-    // ctx_params.n_ctx = n_ctx;
-    // llama_context* ctx = llama_new_context_with_model(model, ctx_params);
-    // if (!ctx) {
-    //     snprintf(err, err_len, "bitnet_eval_with_tokens: failed to create context");
-    //     err[err_len - 1] = '\0';
-    //     llama_free_model(model);
-    //     return -1;
-    // }
+    // Step 1: Load model
+    llama_model_params model_params = llama_model_default_params();
+    llama_model* model = llama_load_model_from_file(model_path, model_params);
+    if (!model) {
+        snprintf(err, err_len, "bitnet_eval: Failed to load model from %s", model_path);
+        err[err_len - 1] = '\0';
+        return -1;
+    }
 
-    // TODO: Evaluate tokens
-    // int result = bitnet_eval_internal(ctx, tokens, n_tokens);
-    // if (result != 0) {
-    //     snprintf(err, err_len, "bitnet_eval_with_tokens: evaluation failed");
-    //     err[err_len - 1] = '\0';
-    //     llama_free(ctx);
-    //     llama_free_model(model);
-    //     return -1;
-    // }
+    // Step 2: Create context with n_ctx and logits_all=true
+    llama_context_params ctx_params = llama_context_default_params();
+    ctx_params.n_ctx = static_cast<uint32_t>(n_ctx);
+    ctx_params.logits_all = true;  // CRITICAL: Enable all-position logits
+    llama_context* ctx = llama_new_context_with_model(model, ctx_params);
+    if (!ctx) {
+        snprintf(err, err_len, "bitnet_eval: Failed to create context (n_ctx=%d)", n_ctx);
+        err[err_len - 1] = '\0';
+        llama_free_model(model);
+        return -1;
+    }
 
-    // TODO: Get logits and shape
-    // float* logits = llama_get_logits(ctx);
-    // int32_t n_vocab = llama_n_vocab(model);
-    // int32_t rows = n_tokens;
-    // int32_t cols = n_vocab;
-    //
-    // *out_rows = rows;
-    // *out_cols = cols;
-    //
-    // // Pass 1: size query
-    // if (!out_logits) {
-    //     llama_free(ctx);
-    //     llama_free_model(model);
-    //     return 0;
-    // }
-    //
-    // // Pass 2: fill buffer
-    // int32_t total_elements = rows * cols;
-    // int32_t n_copy = (total_elements < logits_capacity) ? total_elements : logits_capacity;
-    // std::memcpy(out_logits, logits, n_copy * sizeof(float));
-    //
-    // llama_free(ctx);
-    // llama_free_model(model);
-    // return 0;
+    // Step 3: Get vocab size for logits shape
+    int32_t n_vocab = llama_n_vocab(model);
 
-    // Placeholder: return error until wired
-    snprintf(err, err_len,
-             "bitnet_eval_with_tokens: AVAILABLE mode but not yet wired. "
-             "TODO: Wire BitNet.cpp inference API.");
-    err[err_len - 1] = '\0';
-    return -1;
+    // Step 4: Set output shape
+    *out_rows = n_tokens;
+    *out_cols = n_vocab;
+
+    // Step 5: Implement two-pass pattern
+    if (!out_logits || logits_capacity <= 0) {
+        // Pass 1: Shape query only - return shape without computing logits
+        llama_free(ctx);
+        llama_free_model(model);
+        return 0;
+    }
+
+    // Pass 2: Actually compute and fill logits
+    int32_t total_elements = n_tokens * n_vocab;
+    if (logits_capacity < total_elements) {
+        snprintf(err, err_len,
+                 "bitnet_eval: Buffer too small (need %d, got %d)",
+                 total_elements, logits_capacity);
+        err[err_len - 1] = '\0';
+        llama_free(ctx);
+        llama_free_model(model);
+        return -1;
+    }
+
+    // Step 6: Create batch with all tokens and decode in one pass
+    // Cast away const for llama_batch_get_one (it doesn't modify the tokens)
+    llama_batch batch = llama_batch_get_one(const_cast<int32_t*>(tokens), n_tokens, 0, 0);
+
+    int result = llama_decode(ctx, batch);
+    if (result != 0) {
+        snprintf(err, err_len, "bitnet_eval: Batch decode failed (result=%d)", result);
+        err[err_len - 1] = '\0';
+        llama_free(ctx);
+        llama_free_model(model);
+        return -1;
+    }
+
+    // Step 7: Extract logits for all positions
+    // With logits_all=true, llama_get_logits_ith(i) returns logits for position i
+    for (int32_t i = 0; i < n_tokens; ++i) {
+        float* logits_for_pos = llama_get_logits_ith(ctx, i);
+        if (!logits_for_pos) {
+            snprintf(err, err_len, "bitnet_eval: Failed to get logits for position %d", i);
+            err[err_len - 1] = '\0';
+            llama_free(ctx);
+            llama_free_model(model);
+            return -1;
+        }
+        // Copy to row-major output buffer: out_logits[i * n_vocab : (i+1) * n_vocab]
+        std::memcpy(&out_logits[i * n_vocab], logits_for_pos, n_vocab * sizeof(float));
+    }
+
+    // Step 8: Cleanup
+    llama_free(ctx);
+    llama_free_model(model);
+    return 0;
 
 #else
     // Neither STUB nor AVAILABLE defined - compilation error expected
