@@ -129,6 +129,10 @@ path = "integration/platform_tests.rs"
 name = "backward_compat_tests"
 path = "backward_compat_tests.rs"
 
+[[test]]
+name = "test_support_tests"
+path = "test_support_tests.rs"
+
 [[example]]
 name = "reporting_example"
 path = "examples/reporting_example.rs"
@@ -216,6 +220,7 @@ bitnet-kernels = { path = "../crates/bitnet-kernels" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 bitnet-compat = { path = "../crates/bitnet-compat" }
 bitnet = { path = "../", default-features = false, features = ["cpu"] }
+bitnet-crossval = { path = "../crossval", package = "bitnet-crossval" }
 
 # Additional dependencies for fixtures
 bincode = "1.3.3"

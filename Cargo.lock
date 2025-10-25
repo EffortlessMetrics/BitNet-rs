@@ -793,6 +793,7 @@ dependencies = [
  "bitnet",
  "bitnet-common",
  "bitnet-compat",
+ "bitnet-crossval",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
