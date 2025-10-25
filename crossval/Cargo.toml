@@ -43,6 +43,7 @@ humantime = "2.3.0"
 tokio = { version = "1.48.0", features = ["full"] }
 sha2 = "0.10.9"  # For model SHA256 computation in parity receipts
 blake3 = "1.8.2"  # For prompt hashing in parity forensics
+console = "0.16.1"  # For colored error messages in token parity
 
 [dev-dependencies]
 criterion = { version = "0.7.0", features = ["html_reports"] }

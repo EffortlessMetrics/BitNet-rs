@@ -23,6 +23,8 @@
 
 use std::fmt;
 
+use console::style;
+
 /// Error returned when token sequences don't match between Rust and C++
 #[derive(Debug, Clone)]
 pub struct TokenParityError {
@@ -53,7 +55,7 @@ impl std::error::Error for TokenParityError {}
 /// ## Behavior
 ///
 /// - **Success**: Returns `Ok(())` if tokens match (silent - no output)
-/// - **Failure**: Prints diagnostic error and exits with code 2
+/// - **Failure**: Prints diagnostic error to stderr and returns `Err`
 ///
 /// ## Arguments
 ///
@@ -66,38 +68,41 @@ impl std::error::Error for TokenParityError {}
 /// - AC1: Token mismatch detected before logits evaluation
 /// - AC2: Both token sequences displayed on mismatch
 /// - AC3: First diff position identified
-/// - AC4: Exit code 2 on token mismatch
+/// - AC4: Caller should exit with code 2 on token mismatch
 /// - AC5-AC8: Error message quality (suggestions, examples)
 /// - AC9: Silent success when tokens match
 ///
-/// ## Exit Codes
+/// ## Error Handling
 ///
-/// - `0`: Tokens match (success)
-/// - `2`: Token mismatch (usage error)
+/// - Caller (typically xtask) should handle the error and exit with code 2
+/// - This design allows the function to be testable (returns Err instead of calling exit)
 pub fn validate_token_parity(
     rust_tokens: &[u32],
     cpp_tokens: &[i32],
     prompt: &str,
 ) -> anyhow::Result<()> {
     // Convert C++ tokens from i32 to u32 for comparison
-    let cpp_tokens_u32: Vec<u32> = unimplemented!(
-        "TODO: Convert cpp_tokens from i32 to u32 - blocked by test-creator → impl-creator"
-    );
+    // Note: C++ FFI returns i32, but token IDs are non-negative in practice
+    let cpp_tokens_u32: Vec<u32> = cpp_tokens.iter().map(|&id| id as u32).collect();
 
     // Compare token sequences
     if rust_tokens != cpp_tokens_u32.as_slice() {
         // Find first diff index
-        let first_diff = unimplemented!(
-            "TODO: Find first diff position - blocked by test-creator → impl-creator"
-        );
+        let first_diff = find_first_diff(rust_tokens, &cpp_tokens_u32);
 
-        // Print diagnostic error
-        unimplemented!(
-            "TODO: Print colored diagnostic with console crate - blocked by test-creator → impl-creator"
-        );
+        // Create error with diagnostic information
+        let error = TokenParityError {
+            rust_tokens: rust_tokens.to_vec(),
+            cpp_tokens: cpp_tokens_u32,
+            first_diff_index: first_diff,
+            prompt: prompt.to_string(),
+        };
 
-        // Exit with code 2 (usage error)
-        std::process::exit(2);
+        // Print diagnostic error to stderr
+        eprintln!("{}", format_token_mismatch_error(&error));
+
+        // Return error (caller should exit with code 2)
+        anyhow::bail!("Token sequence mismatch at index {}", first_diff);
     }
 
     // Silent success - no output when tokens match
@@ -109,7 +114,13 @@ pub fn validate_token_parity(
 /// Returns the index of the first differing element, or the length of the
 /// shorter sequence if one sequence is a prefix of the other.
 pub fn find_first_diff(rust_tokens: &[u32], cpp_tokens: &[u32]) -> usize {
-    unimplemented!("TODO: Implement first-diff detection - blocked by test-creator → impl-creator")
+    // Find first position where tokens differ
+    rust_tokens
+        .iter()
+        .zip(cpp_tokens.iter())
+        .position(|(r, c)| r != c)
+        // If all zipped elements match, return the length of the shorter sequence
+        .unwrap_or_else(|| rust_tokens.len().min(cpp_tokens.len()))
 }
 
 /// Formats a diagnostic error message for token mismatch
@@ -135,9 +146,51 @@ pub fn find_first_diff(rust_tokens: &[u32], cpp_tokens: &[u32]) -> usize {
 ///   • Use --dump-ids to inspect token sequences
 /// ```
 pub fn format_token_mismatch_error(error: &TokenParityError) -> String {
-    unimplemented!(
-        "TODO: Format colored error message with suggestions - blocked by test-creator → impl-creator"
-    )
+    use std::fmt::Write;
+
+    let mut output = String::new();
+
+    // Header
+    writeln!(output, "\n{}", style("❌ Token Sequence Mismatch").red().bold()).unwrap();
+    writeln!(output, "{}", style("Fix BOS/template before comparing logits").yellow()).unwrap();
+
+    // Display Rust tokens (limit to first 64 for readability)
+    writeln!(output, "\n{}:", style("Rust tokens").cyan()).unwrap();
+    if error.rust_tokens.len() <= 64 {
+        writeln!(output, "  {:?}", error.rust_tokens).unwrap();
+    } else {
+        writeln!(output, "  {:?}...", &error.rust_tokens[..64]).unwrap();
+    }
+
+    // Display C++ tokens (limit to first 64 for readability)
+    writeln!(output, "\n{}:", style("C++ tokens").cyan()).unwrap();
+    if error.cpp_tokens.len() <= 64 {
+        writeln!(output, "  {:?}", error.cpp_tokens).unwrap();
+    } else {
+        writeln!(output, "  {:?}...", &error.cpp_tokens[..64]).unwrap();
+    }
+
+    // First diff position
+    writeln!(output, "\n{}: {}", style("First diff at index").yellow(), error.first_diff_index)
+        .unwrap();
+
+    // Suggested fixes
+    writeln!(output, "\n{}:", style("Suggested fixes").green().bold()).unwrap();
+    writeln!(output, "  • Use --prompt-template raw").unwrap();
+    writeln!(output, "  • Add --no-bos flag (if BOS is duplicate)").unwrap();
+    writeln!(output, "  • Check GGUF chat_template metadata").unwrap();
+    writeln!(output, "  • Use --dump-ids to inspect token sequences").unwrap();
+
+    // Example command with actual prompt
+    writeln!(output, "\n{}:", style("Example command").cyan()).unwrap();
+    writeln!(output, "  cargo run -p xtask -- crossval-per-token \\").unwrap();
+    writeln!(output, "    --model <model.gguf> \\").unwrap();
+    writeln!(output, "    --tokenizer <tokenizer.json> \\").unwrap();
+    writeln!(output, "    --prompt \"{}\" \\", error.prompt).unwrap();
+    writeln!(output, "    --prompt-template raw \\").unwrap();
+    writeln!(output, "    --max-tokens 4").unwrap();
+
+    output
 }
 
 #[cfg(test)]

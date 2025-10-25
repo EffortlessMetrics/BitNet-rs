@@ -2956,6 +2956,18 @@ fn crossval_per_token_cmd(
     // Tokenize with C++ tokenizer
     let cpp_tokens = cpp_session.tokenize(prompt)?;
 
+    // Token parity pre-gate: validate sequences match before expensive logits comparison
+    println!("🔒 Validating token parity...");
+    let rust_tokens_u32: Vec<u32> = token_ids.iter().map(|&id| id as u32).collect();
+    if let Err(e) =
+        bitnet_crossval::token_parity::validate_token_parity(&rust_tokens_u32, &cpp_tokens, prompt)
+    {
+        eprintln!("Error: {}", e);
+        std::process::exit(2); // Exit with code 2 on token mismatch (usage error)
+    }
+    println!("✓ Token sequences match");
+    println!();
+
     // Evaluate all positions
     cpp_session.context.eval(&cpp_tokens, 0)?;
 

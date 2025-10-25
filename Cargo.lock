@@ -478,6 +478,7 @@ dependencies = [
  "blake3",
  "cc",
  "chrono",
+ "console 0.16.1",
  "criterion",
  "dirs 6.0.0",
  "half",

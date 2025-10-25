@@ -1,0 +1,233 @@
+================================================================================
+                   GQA SHAPE TRANSFORMATIONS - VISUAL GUIDE
+================================================================================
+
+SCENARIO: BitNet-2B with hidden_size=2560, n_heads=20, n_kv_heads=5
+          head_dim=128, group_size=4
+
+================================================================================
+CURRENT IMPLEMENTATION (POTENTIALLY WRONG)
+================================================================================
+
+WEIGHT MAPPER SLICING (Lines 647-655):
+────────────────────────────────────────
+
+Input: K weight from exporter
+┌────────────────────────────────────────────────┐
+│  [2560, 2560]  - All 20 heads in single matrix │
+│  row 0    ← Head 0 (128 rows)                  │
+│  row 128  ← Head 1 (128 rows)                  │
+│  row 256  ← Head 2 (128 rows)                  │
+│  row 384  ← Head 3 (128 rows)                  │
+│  row 512  ← Head 4 (128 rows)                  │
+│  ...                                           │
+│  row 2432 ← Head 19 (128 rows)                 │
+└────────────────────────────────────────────────┘
+
+Current slicing logic:
+  for kv_idx in 0..5 {
+    head_idx = kv_idx * group_size  // SPARSE!
+    // kv_idx=0: head_idx=0*4=0     → rows [0..128]
+    // kv_idx=1: head_idx=1*4=4     → rows [512..640]
+    // kv_idx=2: head_idx=2*4=8     → rows [1024..1152]
+    // kv_idx=3: head_idx=3*4=12    → rows [1536..1664]
+    // kv_idx=4: head_idx=4*4=16    → rows [2048..2176]
+  }
+
+Output: K weight after slicing
+┌───────────────────────────────────────────────────┐
+│  [640, 2560]  - Only 5 heads extracted (sparse!)  │
+│  row 0   ← Head 0  (selected)                     │
+│  row 128 ← Head 4  (selected, SPARSE)             │
+│  row 256 ← Head 8  (selected, SPARSE)             │
+│  row 384 ← Head 12 (selected, SPARSE)             │
+│  row 512 ← Head 16 (selected, SPARSE)             │
+│                                                   │
+│  ❌ HEADS 1,2,3,5,6,7,9,10,11,13,14,15,17,18,19  │
+│     ARE LOST (75% parameter loss!)               │
+└───────────────────────────────────────────────────┘
+
+GQA EXPANSION (transformer.rs lines 417-420):
+──────────────────────────────────────────────
+
+Input: K from cache [B, n_kv_heads=5, T, D=128]
+┌──────────────────────────────┐
+│  [Batch, 5, T, 128]          │
+│  Head 0 ← from head 0        │
+│  Head 4 ← from head 4        │
+│  Head 8 ← from head 8        │
+│  Head 12← from head 12       │
+│  Head 16← from head 16       │
+└──────────────────────────────┘
+
+Expansion: unsqueeze(2) → repeat → reshape
+  [B, 5, T, 128]
+  ↓
+  [B, 5, 1, T, 128]  ← unsqueeze axis 2
+  ↓
+  [B, 5, 4, T, 128]  ← repeat 4 times
+  ↓
+  [B, 20, T, 128]    ← reshape to n_heads
+
+Resulting expanded K:
+┌────────────────────────────────────────────────────┐
+│  [Batch, 20, T, 128]  - Final expanded K           │
+│  Expanded Head 0  ← from sparse Head 0  ✓          │
+│  Expanded Head 1  ← from sparse Head 0  (DUPE!)    │
+│  Expanded Head 2  ← from sparse Head 0  (DUPE!)    │
+│  Expanded Head 3  ← from sparse Head 0  (DUPE!)    │
+│  Expanded Head 4  ← from sparse Head 4  ✓          │
+│  Expanded Head 5  ← from sparse Head 4  (DUPE!)    │
+│  Expanded Head 6  ← from sparse Head 4  (DUPE!)    │
+│  Expanded Head 7  ← from sparse Head 4  (DUPE!)    │
+│  Expanded Head 8  ← from sparse Head 8  ✓          │
+│  ...                                               │
+│  Expanded Head 16 ← from sparse Head 16 ✓          │
+│  Expanded Head 17 ← from sparse Head 16 (DUPE!)    │
+│  Expanded Head 18 ← from sparse Head 16 (DUPE!)    │
+│  Expanded Head 19 ← from sparse Head 16 (DUPE!)    │
+└────────────────────────────────────────────────────┘
+
+ATTENTION COMPUTATION IMPACT:
+─────────────────────────────
+
+Group 0 (Q heads 0-3 attend to same K/V):
+  Q[0] @ K[0]^T = Q[0] @ K[0]^T  (Head 0 from sparse selection)
+  Q[1] @ K[0]^T = Q[1] @ K[0]^T  (DUPLICATE K!)
+  Q[2] @ K[0]^T = Q[2] @ K[0]^T  (DUPLICATE K!)
+  Q[3] @ K[0]^T = Q[3] @ K[0]^T  (DUPLICATE K!)
+
+Result:
+  ❌ All 4 Q heads in group see IDENTICAL K values
+  ❌ Attention scores are correlated
+  ❌ Output projection can't distinguish Q heads
+  ❌ Gibberish output!
+
+
+================================================================================
+CORRECT IMPLEMENTATION (WHAT SHOULD HAPPEN)
+================================================================================
+
+If exporter emits [2560, 2560], correct slicing:
+
+Input: K weight [2560, 2560]
+┌────────────────────────────────────────────────┐
+│  row 0    ← Head 0 (128 rows)                  │
+│  row 128  ← Head 1 (128 rows)                  │
+│  row 256  ← Head 2 (128 rows)                  │
+│  row 384  ← Head 3 (128 rows)                  │
+│  row 512  ← Head 4 (128 rows)                  │
+│  ...                                           │
+└────────────────────────────────────────────────┘
+
+SEQUENTIAL slicing (NOT sparse):
+  for head_idx in 0..n_kv_heads {
+    row_start = head_idx * head_dim
+    row_end = row_start + head_dim
+    // head_idx=0: rows [0..128]   ← Head 0
+    // head_idx=1: rows [128..256] ← Head 1
+    // head_idx=2: rows [256..384] ← Head 2
+    // head_idx=3: rows [384..512] ← Head 3
+    // head_idx=4: rows [512..640] ← Head 4
+  }
+
+Output: K weight [640, 2560]
+┌───────────────────────────────────────────┐
+│  row 0   ← Head 0 (COMPLETE)              │
+│  row 128 ← Head 1 (COMPLETE)              │
+│  row 256 ← Head 2 (COMPLETE)              │
+│  row 384 ← Head 3 (COMPLETE)              │
+│  row 512 ← Head 4 (COMPLETE)              │
+│  ✓ All 5 heads preserved with full info   │
+└───────────────────────────────────────────┘
+
+GQA Expansion produces:
+┌────────────────────────────────────────────────────┐
+│  [Batch, 20, T, 128]  - Correctly expanded K       │
+│  Expanded Head 0  ← from Head 0  ✓                 │
+│  Expanded Head 1  ← from Head 0  (correct dupe)    │
+│  Expanded Head 2  ← from Head 0  (correct dupe)    │
+│  Expanded Head 3  ← from Head 0  (correct dupe)    │
+│  Expanded Head 4  ← from Head 1  ✓                 │
+│  Expanded Head 5  ← from Head 1  (correct dupe)    │
+│  Expanded Head 6  ← from Head 1  (correct dupe)    │
+│  Expanded Head 7  ← from Head 1  (correct dupe)    │
+│  ...                                               │
+│  Expanded Head 19 ← from Head 4  (correct dupe)    │
+└────────────────────────────────────────────────────┘
+
+ATTENTION COMPUTATION (CORRECT):
+────────────────────────────────
+
+Group 0 (Q heads 0-3 attend to same K/V):
+  Q[0] @ K[0]^T ← Q head 0 vs K head 0
+  Q[1] @ K[0]^T ← Q head 1 vs K head 0  (intentional sharing)
+  Q[2] @ K[0]^T ← Q head 2 vs K head 0  (intentional sharing)
+  Q[3] @ K[0]^T ← Q head 3 vs K head 0  (intentional sharing)
+
+Result:
+  ✓ Each group shares ONE unique K head (correct)
+  ✓ Different groups see different K heads
+  ✓ Parameter efficiency through sharing (as intended in GQA)
+  ✓ Information preserved
+
+
+================================================================================
+COMPARISON: CURRENT vs CORRECT
+================================================================================
+
+Metric                  Current           Correct          Impact
+──────────────────────────────────────────────────────────────────────
+K/V weights selected    Sparse (1/group)  Sequential (all) 75% loss!
+Row indices             [0,512,1024,...]  [0,128,256,...]  Wrong groups
+Distinct K heads        5 (but sparse)    5 (complete)     vs complete
+Expansion result        Invalid dupes     Intended sharing Info loss
+Attention output        DEGENERATE        VALID            Gibberish vs coherent
+Parameter efficiency    0% (lossy)        100% (correct)   CRITICAL
+
+================================================================================
+HOW TO FIX
+================================================================================
+
+OPTION 1: REJECT MALFORMED WEIGHTS (RECOMMENDED)
+─────────────────────────────────────────────────
+
+if is_kv_hidden_square {
+    return Err(format!(
+        "K/V weight is [hidden×hidden]. Expected [{}×{}] for GQA. \
+         Either: (1) exporter bug, (2) wrong config, or \
+         (3) model is MHA not GQA. Cannot auto-fix.",
+        kv_dim, hidden
+    ));
+}
+
+OPTION 2: CORRECT SEQUENTIAL SLICING
+────────────────────────────────────
+
+if is_kv_hidden_square {
+    let mut row_indices = Vec::new();
+    // Sequential, not sparse!
+    for head_idx in 0..n_kv_heads {
+        for row in (head_idx * head_dim)..((head_idx + 1) * head_dim) {
+            row_indices.push(row as i64);
+        }
+    }
+    // ... continue with slicing ...
+}
+
+================================================================================
+DIAGNOSTIC FLAGS
+================================================================================
+
+Enable detailed logging:
+
+  BITNET_DEBUG_GQA=1          Log Q/K/V dimensions and norms
+  BITNET_TRACE_RMS=1          Trace QK256 dispatch and fallback
+  DEBUG_ATTN=1                Debug attention weights (row sums, etc.)
+  BITNET_DEBUG_ROPE=1         Log RoPE application
+  BITNET_DEBUG_ATTN_SCALE=1   Log attention scale factors and scores
+
+Example:
+  BITNET_DEBUG_GQA=1 BITNET_DEBUG_ROPE=1 cargo run -p bitnet-cli -- run \
+    --model model.gguf --prompt "test" --max-tokens 4
+
