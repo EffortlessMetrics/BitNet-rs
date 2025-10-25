@@ -68,7 +68,9 @@ fn main() {
     }
 
     // Where the C++ artifacts live. Allow override via env.
-    let root = env_var("BITNET_CPP_PATH")
+    // Check BITNET_CPP_DIR first for consistency with other build.rs files (crossval, bitnet-sys)
+    let root = env_var("BITNET_CPP_DIR")
+        .or_else(|| env_var("BITNET_CPP_PATH"))
         .unwrap_or_else(|| format!("{}/.cache/bitnet_cpp", get_home_dir().display()));
 
     let inc = Path::new(&root).join("include");

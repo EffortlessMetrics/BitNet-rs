@@ -3135,6 +3135,41 @@ fn crossval_per_token_cmd_impl(
     // Backend selection (auto-detect if not explicit)
     let backend = cpp_backend.unwrap_or_else(|| CppBackend::from_model_path(model_path));
 
+    // Runtime backend state validation: hard failure if BitNet requested but unavailable
+    #[cfg(any(
+        feature = "crossval",
+        feature = "crossval-all",
+        feature = "inference",
+        feature = "ffi"
+    ))]
+    {
+        use bitnet_crossval::BACKEND_STATE;
+        if backend == CppBackend::BitNet && BACKEND_STATE != "full" {
+            anyhow::bail!(
+                "BitNet backend requested but not available at compile time.\n\
+                 \n\
+                 Compiled backend state: {} ({})\n\
+                 Requested backend: BitNet\n\
+                 \n\
+                 To enable BitNet backend:\n\
+                   1. Install BitNet.cpp libraries:\n\
+                      {}\n\
+                   2. Rebuild xtask to detect libraries:\n\
+                      cargo clean -p xtask -p crossval\n\
+                      cargo build -p xtask --features crossval-all\n\
+                   3. Verify availability:\n\
+                      cargo run -p xtask -- preflight --backend bitnet --verbose",
+                BACKEND_STATE,
+                if BACKEND_STATE == "llama" {
+                    "llama fallback - BitNet.cpp NOT found"
+                } else {
+                    "stub mode - no libraries found"
+                },
+                backend.setup_command()
+            );
+        }
+    }
+
     // Validate ladder mode
     let valid_ladder_modes = ["tokens", "masks", "first-logit", "positions", "decode"];
     if !valid_ladder_modes.contains(&ladder) {

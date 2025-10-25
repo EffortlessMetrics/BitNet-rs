@@ -197,8 +197,7 @@ impl ParityReceipt {
         }
 
         // Determine first divergence based on MSE threshold
-        self.summary.first_divergence =
-            self.rows.iter().position(|r| r.mse > self.thresholds.mse).map(|pos| pos);
+        self.summary.first_divergence = self.rows.iter().position(|r| r.mse > self.thresholds.mse);
 
         // Update all_passed flag
         self.summary.all_passed = self.summary.first_divergence.is_none();

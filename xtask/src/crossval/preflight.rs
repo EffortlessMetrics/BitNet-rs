@@ -1,3 +1,5 @@
+#![allow(dead_code)] // TODO: Enhanced preflight functions to be integrated with main command
+
 //! Backend library preflight validation
 //!
 //! Verifies that required C++ libraries are available before running cross-validation.
@@ -5,6 +7,39 @@
 use crate::crossval::CppBackend;
 use anyhow::{Result, bail};
 use std::path::Path;
+
+// Feature-gated imports for build-time library detection
+// These constants are set by crossval/build.rs during compilation
+#[cfg(any(
+    feature = "crossval",
+    feature = "crossval-all",
+    feature = "inference",
+    feature = "ffi"
+))]
+use bitnet_crossval::{BACKEND_STATE, HAS_BITNET, HAS_LLAMA};
+
+// Fallback constants when crossval features not enabled
+#[cfg(not(any(
+    feature = "crossval",
+    feature = "crossval-all",
+    feature = "inference",
+    feature = "ffi"
+)))]
+const HAS_BITNET: bool = false;
+#[cfg(not(any(
+    feature = "crossval",
+    feature = "crossval-all",
+    feature = "inference",
+    feature = "ffi"
+)))]
+const HAS_LLAMA: bool = false;
+#[cfg(not(any(
+    feature = "crossval",
+    feature = "crossval-all",
+    feature = "inference",
+    feature = "ffi"
+)))]
+const BACKEND_STATE: &str = "none";
 
 // Visual separators for enhanced error messages
 const SEPARATOR_HEAVY: &str = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
@@ -45,9 +80,37 @@ pub fn preflight_backend_libs(backend: CppBackend, verbose: bool) -> Result<()> 
     // Check build-time detection from crossval crate
     // These constants are set by crossval/build.rs based on library availability
     let has_libs = match backend {
-        CppBackend::BitNet => bitnet_crossval::HAS_BITNET,
-        CppBackend::Llama => bitnet_crossval::HAS_LLAMA,
+        CppBackend::BitNet => HAS_BITNET,
+        CppBackend::Llama => HAS_LLAMA,
     };
+
+    // Runtime backend state validation: warn if requesting BitNet but only llama available
+    if backend == CppBackend::BitNet && BACKEND_STATE == "llama" {
+        eprintln!("{}", SEPARATOR_HEAVY);
+        eprintln!("⚠️  WARNING: BitNet backend requested but not fully available at compile time");
+        eprintln!("{}", SEPARATOR_HEAVY);
+        eprintln!();
+        eprintln!("Compiled backend state: {} (llama fallback mode)", BACKEND_STATE);
+        eprintln!("Requested backend: BitNet");
+        eprintln!();
+        eprintln!("This means:");
+        eprintln!("  • Only llama.cpp libraries were found during crossval build");
+        eprintln!("  • BitNet.cpp libraries are NOT available");
+        eprintln!("  • Cross-validation can only use llama.cpp backend");
+        eprintln!();
+        eprintln!("To enable full BitNet backend:");
+        eprintln!("  1. Install BitNet.cpp libraries:");
+        eprintln!("     {}", backend.setup_command());
+        eprintln!();
+        eprintln!("  2. Rebuild xtask to detect BitNet libraries:");
+        eprintln!("     cargo clean -p xtask -p crossval");
+        eprintln!("     cargo build -p xtask --features crossval-all");
+        eprintln!();
+        eprintln!("  3. Verify BitNet backend is now available:");
+        eprintln!("     cargo run -p xtask -- preflight --backend bitnet --verbose");
+        eprintln!("{}", SEPARATOR_HEAVY);
+        eprintln!();
+    }
 
     if !has_libs {
         if verbose {
@@ -230,7 +293,9 @@ fn print_verbose_success_diagnostics(backend: CppBackend) {
             path.display().to_string()
         };
 
-        println!("  {}. {}", idx + 1, path_desc);
+        let context_label = get_path_context_label(path);
+
+        println!("  {}. {}{}", idx + 1, path_desc, context_label);
         if path.exists() {
             println!("     ✓ {} (exists)", path.display());
             if let Some(libs) = find_libs_in_path(path, backend) {
@@ -255,6 +320,20 @@ fn print_verbose_success_diagnostics(backend: CppBackend) {
 
     // Build-Time Detection Metadata
     println!("{}", format_build_metadata(backend));
+    println!();
+
+    // Runtime Backend State Validation
+    println!("Runtime Backend State");
+    println!("{}", SEPARATOR_LIGHT);
+    println!("  Compiled backend state: {}", BACKEND_STATE);
+    match BACKEND_STATE {
+        "full" => println!("    ✓ Full BitNet backend available (BitNet.cpp + llama.cpp)"),
+        "llama" => {
+            println!("    ⚠️  Llama fallback mode (only llama.cpp, BitNet.cpp NOT available)")
+        }
+        "none" => println!("    ✗ No backend available (stub mode)"),
+        other => println!("    ? Unknown state: {}", other),
+    }
     println!();
 
     // Platform-Specific Configuration
@@ -362,7 +441,8 @@ fn print_verbose_failure_diagnostics(backend: CppBackend) {
 
     let search_paths = get_library_search_paths();
     for (idx, path) in search_paths.iter().enumerate().skip(1) {
-        println!("  {}. {}", idx + 1, path.display());
+        let context_label = get_path_context_label(path);
+        println!("  {}. {}{}", idx + 1, path.display(), context_label);
         if path.exists() {
             println!("     ✓ {} (exists)", path.display());
 
@@ -373,18 +453,17 @@ fn print_verbose_failure_diagnostics(backend: CppBackend) {
             if let Ok(entries) = std::fs::read_dir(path) {
                 let mut found_any = false;
                 for entry in entries.flatten() {
-                    if let Some(name) = entry.path().file_name().and_then(|n| n.to_str()) {
-                        if name.starts_with("lib")
-                            && (name.ends_with(".so")
-                                || name.ends_with(".dylib")
-                                || name.ends_with(".a"))
-                        {
-                            if !found_any {
-                                println!("     Other libraries found:");
-                                found_any = true;
-                            }
-                            println!("       - {}", name);
+                    if let Some(name) = entry.path().file_name().and_then(|n| n.to_str())
+                        && name.starts_with("lib")
+                        && (name.ends_with(".so")
+                            || name.ends_with(".dylib")
+                            || name.ends_with(".a"))
+                    {
+                        if !found_any {
+                            println!("     Other libraries found:");
+                            found_any = true;
                         }
+                        println!("       - {}", name);
                     }
                 }
                 if !found_any {
@@ -527,7 +606,12 @@ fn print_env_var_status(var_name: &str) {
 }
 
 /// Get library search paths (mirrors crossval/build.rs logic)
-fn get_library_search_paths() -> Vec<std::path::PathBuf> {
+///
+/// # Visibility
+///
+/// Public for testing purposes. This function mirrors the search logic in
+/// `crossval/build.rs` to allow runtime diagnostics and test validation.
+pub fn get_library_search_paths() -> Vec<std::path::PathBuf> {
     use std::env;
 
     let mut paths = Vec::new();
@@ -545,6 +629,7 @@ fn get_library_search_paths() -> Vec<std::path::PathBuf> {
 
     let root = Path::new(&bitnet_root);
     paths.push(root.join("build"));
+    paths.push(root.join("build/bin")); // Standalone llama.cpp layout
     paths.push(root.join("build/lib"));
     paths.push(root.join("build/3rdparty/llama.cpp/src"));
     paths.push(root.join("build/3rdparty/llama.cpp/ggml/src"));
@@ -563,10 +648,10 @@ fn find_libs_in_path(path: &Path, backend: CppBackend) -> Option<Vec<String>> {
             if let Some(name) = entry.path().file_stem().and_then(|s| s.to_str()) {
                 // Check if this library matches any required library
                 for &req in required {
-                    if name.starts_with(req) {
-                        if let Some(full_name) = entry.path().file_name().and_then(|n| n.to_str()) {
-                            found.push(full_name.to_string());
-                        }
+                    if name.starts_with(req)
+                        && let Some(full_name) = entry.path().file_name().and_then(|n| n.to_str())
+                    {
+                        found.push(full_name.to_string());
                     }
                 }
             }
@@ -574,6 +659,41 @@ fn find_libs_in_path(path: &Path, backend: CppBackend) -> Option<Vec<String>> {
     }
 
     if found.is_empty() { None } else { Some(found) }
+}
+
+/// Returns context label for special search paths
+///
+/// Provides user-friendly labels to clarify the purpose of different search paths:
+/// - Embedded llama.cpp dependency paths
+/// - Embedded ggml paths
+/// - Standalone llama.cpp installations
+/// - Explicit override paths
+///
+/// # Arguments
+///
+/// * `path` - The search path to label
+///
+/// # Returns
+///
+/// A static string label or empty string for standard paths that don't need context.
+///
+/// # Visibility
+///
+/// Public for testing purposes.
+pub fn get_path_context_label(path: &Path) -> &'static str {
+    let path_str = path.to_string_lossy();
+
+    if path_str.contains("3rdparty/llama.cpp/src") {
+        " (embedded llama.cpp)"
+    } else if path_str.contains("3rdparty/llama.cpp/ggml") {
+        " (embedded ggml)"
+    } else if path_str.ends_with("build/bin") {
+        " (standalone llama.cpp)"
+    } else if path_str.contains("CROSSVAL_LIBDIR") {
+        " (explicit override)"
+    } else {
+        "" // No label for standard paths
+    }
 }
 
 /// Get xtask build timestamp for staleness detection
@@ -587,6 +707,7 @@ fn find_libs_in_path(path: &Path, backend: CppBackend) -> Option<Vec<String>> {
 /// * `Some(timestamp)` - ISO 8601 formatted timestamp if available
 /// * `None` - If binary path or metadata cannot be accessed
 fn get_xtask_build_timestamp() -> Option<String> {
+    use chrono::{DateTime, Utc};
     use std::fs;
     use std::time::SystemTime;
 
@@ -597,12 +718,15 @@ fn get_xtask_build_timestamp() -> Option<String> {
             // Get modification time
             meta.modified().ok().and_then(|modified| {
                 // Convert to duration since UNIX epoch
-                modified.duration_since(SystemTime::UNIX_EPOCH).ok().map(|duration| {
-                    // Format as ISO 8601-ish timestamp (seconds since epoch for simplicity)
-                    let secs = duration.as_secs();
-                    // Convert to readable format (YYYY-MM-DD HH:MM:SS UTC approximation)
-                    // This is a simplified version - full ISO 8601 would require chrono
-                    format!("{} seconds since epoch", secs)
+                modified.duration_since(SystemTime::UNIX_EPOCH).ok().and_then(|duration| {
+                    let secs = duration.as_secs() as i64;
+                    let nanos = duration.subsec_nanos();
+
+                    // Convert to chrono DateTime for human-readable formatting
+                    DateTime::from_timestamp(secs, nanos).map(|dt: DateTime<Utc>| {
+                        // Format as ISO 8601: "YYYY-MM-DD HH:MM:SS UTC"
+                        dt.format("%Y-%m-%d %H:%M:%S UTC").to_string()
+                    })
                 })
             })
         })
@@ -621,10 +745,14 @@ fn get_xtask_build_timestamp() -> Option<String> {
 /// # Returns
 ///
 /// Formatted string with build metadata section
-fn format_build_metadata(backend: CppBackend) -> String {
+///
+/// # Visibility
+///
+/// Public for testing purposes.
+pub fn format_build_metadata(backend: CppBackend) -> String {
     let has_backend = match backend {
-        CppBackend::BitNet => bitnet_crossval::HAS_BITNET,
-        CppBackend::Llama => bitnet_crossval::HAS_LLAMA,
+        CppBackend::BitNet => HAS_BITNET,
+        CppBackend::Llama => HAS_LLAMA,
     };
 
     let backend_name = match backend {
@@ -633,14 +761,16 @@ fn format_build_metadata(backend: CppBackend) -> String {
     };
 
     let timestamp = get_xtask_build_timestamp().unwrap_or_else(|| "unknown".to_string());
+    let required_libs = backend.required_libs().join(", ");
 
     format!(
         "Build-Time Detection Metadata\n\
          {}\n\
          CROSSVAL_HAS_{} = {}\n\
+         Required libraries: {}\n\
          Last xtask build: {}\n\
          Build feature flags: crossval-all",
-        SEPARATOR_LIGHT, backend_name, has_backend, timestamp
+        SEPARATOR_LIGHT, backend_name, has_backend, required_libs, timestamp
     )
 }
 
@@ -657,7 +787,7 @@ pub fn print_backend_status(verbose: bool) {
     println!();
 
     // Check BitNet (from crossval crate constants)
-    let has_bitnet = bitnet_crossval::HAS_BITNET;
+    let has_bitnet = HAS_BITNET;
 
     if has_bitnet {
         println!("  ✓ bitnet.cpp: AVAILABLE");
@@ -674,7 +804,7 @@ pub fn print_backend_status(verbose: bool) {
     println!();
 
     // Check LLaMA (from crossval crate constants)
-    let has_llama = bitnet_crossval::HAS_LLAMA;
+    let has_llama = HAS_LLAMA;
 
     if has_llama {
         println!("  ✓ llama.cpp: AVAILABLE");

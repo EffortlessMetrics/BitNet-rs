@@ -1913,6 +1913,7 @@ mod tests {
             receipt_path: None,
             qa: false,
             strict_loader: false,
+            print_input_tokens: false,
         };
 
         let gen_config = GenerationConfig {

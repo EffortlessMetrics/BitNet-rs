@@ -298,3 +298,33 @@ All items should be checked before implementation is complete:
 **Last Updated**: October 25, 2025  
 **Next Update**: After Phase 1 implementation complete
 
+
+## C++ Wrapper KV Position Tracking
+
+**File**: `cpp-wrapper-kv-position-tracking.md`
+**Version**: 1.0.0
+**Date**: 2025-10-25
+**Status**: Ready for Implementation (v0.2)
+
+### Overview
+
+Technical specification for implementing manual KV cache position tracking in the C++ wrapper to replace the removed `llama_get_kv_cache_token_count()` API. Enables multi-turn conversation support and autoregressive generation with 10-100× performance improvement.
+
+### Key Features
+
+- Manual `n_past` position tracking in `bitnet_context_t`
+- Position validation to prevent KV cache overflow
+- Context reset API for new conversations
+- Migration path from Socket 0 (stateless) to Socket 1 (persistent)
+- Backward compatibility with existing stateless evaluation
+
+### Target Release
+
+- v0.2: Core position tracking implementation
+- v0.3: Advanced features (sliding window, multi-sequence batching)
+
+### Related Documents
+
+- `bitnet-cpp-ffi-sockets.md` - Socket 1/Socket 3 architecture
+- `dual-backend-crossval.md` - Cross-validation patterns
+- `cpp-setup.md` - C++ reference setup guide

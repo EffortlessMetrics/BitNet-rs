@@ -29,6 +29,20 @@ pub const HAS_BITNET: bool = const_str_eq(option_env!("CROSSVAL_HAS_BITNET"), "t
 /// cross-validation is supported.
 pub const HAS_LLAMA: bool = const_str_eq(option_env!("CROSSVAL_HAS_LLAMA"), "true");
 
+/// Backend state detected at compile time
+///
+/// This constant is set by `crossval/build.rs` and can be:
+/// - "full": BitNet.cpp libraries found (full BitNet backend available)
+/// - "llama": Only llama.cpp libraries found (fallback mode)
+/// - "none": No libraries found (stub mode)
+///
+/// This allows runtime code to distinguish between full BitNet backend availability
+/// and llama-only fallback mode.
+pub const BACKEND_STATE: &str = match option_env!("CROSSVAL_BACKEND_STATE") {
+    Some(state) => state,
+    None => "none",
+};
+
 /// Helper function for const string comparison
 const fn const_str_eq(env_value: Option<&str>, expected: &str) -> bool {
     match env_value {

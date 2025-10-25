@@ -4,6 +4,8 @@
 //! - bitnet.cpp: For BitNet models (microsoft/bitnet-b1.58-2B-4T-gguf)
 //! - llama.cpp: For LLaMA models (llama-3, llama-2, etc.)
 
+#![allow(dead_code)] // TODO: Backend helper methods to be used by preflight command
+
 use clap::ValueEnum;
 use std::path::Path;
 
@@ -97,11 +99,9 @@ impl CppBackend {
     /// Get setup command for this backend
     ///
     /// Returns the command users should run to set up the C++ reference.
+    /// Unified command - auto-detection handles both backends.
     pub fn setup_command(&self) -> &'static str {
-        match self {
-            Self::BitNet => "eval \"$(cargo run -p xtask -- setup-cpp-auto --bitnet --emit=sh)\"",
-            Self::Llama => "eval \"$(cargo run -p xtask -- setup-cpp-auto --emit=sh)\"",
-        }
+        "eval \"$(cargo run -p xtask -- setup-cpp-auto --emit=sh)\""
     }
 }
 

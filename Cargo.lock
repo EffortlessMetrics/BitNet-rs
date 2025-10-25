@@ -803,6 +803,7 @@ dependencies = [
  "chrono",
  "clap",
  "digest",
+ "dirs 5.0.1",
  "env_logger",
  "fastrand",
  "filetime",

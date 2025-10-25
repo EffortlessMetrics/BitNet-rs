@@ -70,7 +70,7 @@ fn find_lib_dir(build: &Path) -> Result<PathBuf> {
         if let Ok(read_dir) = fs::read_dir(dir) {
             for entry in read_dir.flatten() {
                 if let Some(name) = entry.file_name().to_str()
-                    && name.contains("llama")
+                    && (name.contains("llama") || name.contains("bitnet"))
                     && (name.ends_with(".so") || name.ends_with(".dylib") || name.ends_with(".dll"))
                 {
                     return Ok(dir.clone());
@@ -80,10 +80,11 @@ fn find_lib_dir(build: &Path) -> Result<PathBuf> {
     }
 
     // Fallback: recursive search (slower but comprehensive)
-    for entry in WalkDir::new(build).max_depth(3).into_iter().flatten() {
+    // Depth 5 needed for build/3rdparty/llama.cpp/src/libllama.so
+    for entry in WalkDir::new(build).max_depth(5).into_iter().flatten() {
         let path = entry.path();
         if let Some(name) = path.file_name().and_then(|s| s.to_str())
-            && name.contains("llama")
+            && (name.contains("llama") || name.contains("bitnet"))
             && (name.ends_with(".so") || name.ends_with(".dylib") || name.ends_with(".dll"))
             && let Some(parent) = path.parent()
         {
@@ -91,7 +92,10 @@ fn find_lib_dir(build: &Path) -> Result<PathBuf> {
         }
     }
 
-    bail!("Shared library not found under {}. Expected libllama.{{so,dylib,dll}}", build.display())
+    bail!(
+        "Shared library not found under {}. Expected libbitnet.* or libllama.{{so,dylib,dll}}",
+        build.display()
+    )
 }
 
 /// Auto-bootstrap C++ reference and emit dynamic loader exports
@@ -106,6 +110,7 @@ fn find_lib_dir(build: &Path) -> Result<PathBuf> {
 /// # Environment
 ///
 /// - `BITNET_CPP_DIR`: Override default C++ reference location
+/// - `BITNET_CPP_PATH`: Deprecated alias for `BITNET_CPP_DIR` (fallback)
 ///
 /// # Returns
 ///
@@ -115,7 +120,12 @@ fn find_lib_dir(build: &Path) -> Result<PathBuf> {
 /// - Build directory missing after fetch
 pub fn run(emit: Emit) -> Result<()> {
     let home = dirs::home_dir().context("no home directory found")?;
+
+    // Tier 1: Explicit BITNET_CPP_DIR (highest priority)
+    // Tier 2: Deprecated BITNET_CPP_PATH (fallback for backward compatibility)
+    // Tier 3: Runtime default ~/.cache/bitnet_cpp (via dirs::home_dir())
     let repo = env::var("BITNET_CPP_DIR")
+        .or_else(|_| env::var("BITNET_CPP_PATH"))
         .map(PathBuf::from)
         .unwrap_or_else(|_| home.join(".cache/bitnet_cpp"));
 
@@ -146,18 +156,56 @@ pub fn run(emit: Emit) -> Result<()> {
     // 3) Find the actual lib directory
     let lib_dir = find_lib_dir(&build)?;
 
-    // 4) Emit shell-specific dynamic loader exports
-    emit_exports(emit, &repo, &lib_dir);
+    // 4) Auto-discover BITNET_CROSSVAL_LIBDIR if not explicitly set
+    // Check multiple candidate locations in priority order
+    let crossval_libdir = env::var("BITNET_CROSSVAL_LIBDIR").ok().or_else(|| {
+        let candidates = [
+            // Priority 1: BitNet.cpp embedded llama.cpp (CMake standard)
+            repo.join("build/3rdparty/llama.cpp/build/bin"),
+            // Priority 2: llama.cpp source directory (in-tree build)
+            repo.join("build/3rdparty/llama.cpp/src"),
+            // Priority 3: Standard CMake output locations
+            repo.join("build/bin"),
+            repo.join("build/lib"),
+        ];
+
+        for candidate in &candidates {
+            if candidate.is_dir() {
+                // Verify it contains libraries
+                if let Ok(entries) = fs::read_dir(candidate) {
+                    for entry in entries.flatten() {
+                        if let Some(name) = entry.file_name().to_str()
+                            && (name.contains("llama") || name.contains("bitnet"))
+                            && (name.ends_with(".so")
+                                || name.ends_with(".dylib")
+                                || name.ends_with(".dll"))
+                        {
+                            return Some(candidate.display().to_string());
+                        }
+                    }
+                }
+            }
+        }
+        None
+    });
+
+    // 5) Emit shell-specific dynamic loader exports
+    emit_exports(emit, &repo, &lib_dir, crossval_libdir.as_deref());
 
     Ok(())
 }
 
 /// Emit environment variable exports for the specified shell
-fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path) {
+fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path, crossval_libdir: Option<&str>) {
     match emit {
         Emit::Sh => {
             // POSIX sh/bash/zsh
             println!(r#"export BITNET_CPP_DIR="{}""#, repo.display());
+
+            // Optionally emit BITNET_CROSSVAL_LIBDIR if auto-discovered
+            if let Some(libdir) = crossval_libdir {
+                println!(r#"export BITNET_CROSSVAL_LIBDIR="{}""#, libdir);
+            }
 
             #[cfg(target_os = "linux")]
             println!(r#"export LD_LIBRARY_PATH="{}:${{LD_LIBRARY_PATH:-}}""#, lib_dir.display());
@@ -178,6 +226,11 @@ fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path) {
             // fish shell
             println!(r#"set -gx BITNET_CPP_DIR "{}""#, repo.display());
 
+            // Optionally emit BITNET_CROSSVAL_LIBDIR if auto-discovered
+            if let Some(libdir) = crossval_libdir {
+                println!(r#"set -gx BITNET_CROSSVAL_LIBDIR "{}""#, libdir);
+            }
+
             #[cfg(target_os = "linux")]
             println!(r#"set -gx LD_LIBRARY_PATH "{}" $LD_LIBRARY_PATH"#, lib_dir.display());
 
@@ -193,6 +246,12 @@ fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path) {
         Emit::Pwsh => {
             // PowerShell
             println!(r#"$env:BITNET_CPP_DIR = "{}""#, repo.display());
+
+            // Optionally emit BITNET_CROSSVAL_LIBDIR if auto-discovered
+            if let Some(libdir) = crossval_libdir {
+                println!(r#"$env:BITNET_CROSSVAL_LIBDIR = "{}""#, libdir);
+            }
+
             println!(r#"$env:PATH = "{};" + $env:PATH"#, lib_dir.display());
             println!(r#"Write-Host "[bitnet] C++ ready at $env:BITNET_CPP_DIR""#);
         }
@@ -200,6 +259,12 @@ fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path) {
         Emit::Cmd => {
             // Windows cmd (batch)
             println!(r#"set BITNET_CPP_DIR={}"#, repo.display());
+
+            // Optionally emit BITNET_CROSSVAL_LIBDIR if auto-discovered
+            if let Some(libdir) = crossval_libdir {
+                println!(r#"set BITNET_CROSSVAL_LIBDIR={}"#, libdir);
+            }
+
             println!(r#"set PATH={};%PATH%"#, lib_dir.display());
             println!(r#"echo [bitnet] C++ ready at %BITNET_CPP_DIR%"#);
         }
