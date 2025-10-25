@@ -302,6 +302,10 @@ pub struct InferenceCommand {
     /// Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features).
     #[arg(long)]
     pub strict_loader: bool,
+
+    /// Print input token IDs after tokenization (debug tokenizer/template/BOS behavior)
+    #[arg(long)]
+    pub print_input_tokens: bool,
 }
 
 impl InferenceCommand {
@@ -1153,9 +1157,33 @@ impl InferenceCommand {
             // Use template-aware parse_special parameter for LLaMA-3 chat special tokens
             let parse_special =
                 self.resolve_template_type().map(|t| t.parse_special()).unwrap_or(false);
-            let prompt_ids =
-                tokenizer.encode(&formatted_prompt, self.should_add_bos(), parse_special)?;
+            let add_bos = self.should_add_bos();
+            let prompt_ids = tokenizer.encode(&formatted_prompt, add_bos, parse_special)?;
             let t_tok_ms = t0.elapsed().as_secs_f64() * 1e3;
+
+            // Debug: Print tokenization provenance and token IDs
+            if self.print_input_tokens || self.verbose {
+                let template_type = self.resolve_template_type().ok();
+                debug!(
+                    "Tokenization provenance: template={:?} add_bos={} parse_special={} ({})",
+                    template_type,
+                    add_bos,
+                    parse_special,
+                    if let Some(t) = template_type {
+                        if t.should_add_bos() {
+                            "BOS added by tokenizer"
+                        } else {
+                            "BOS injected by template"
+                        }
+                    } else {
+                        "template detection failed"
+                    }
+                );
+            }
+
+            if self.print_input_tokens {
+                println!("Input tokens ({}): {:?}", prompt_ids.len(), prompt_ids);
+            }
 
             // 2. Prefill Phase: Warm model cache with prompt tokens
             // CRITICAL: This is the new explicit prefill step that:

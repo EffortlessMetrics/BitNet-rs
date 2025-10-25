@@ -43,6 +43,9 @@ scopeguard = "1.2.0"
 [features]
 default = ["gpu"]
 inference = ["dep:bitnet-inference", "dep:bitnet", "dep:tokio", "dep:futures", "dep:bitnet-crossval", "dep:bitnet-sys"]
+crossval = ["dep:bitnet-crossval"]
+ffi = ["dep:bitnet-sys"]
+crossval-all = ["inference", "crossval", "ffi"]
 gpu = ["bitnet-kernels/gpu"]
 
 [dev-dependencies]

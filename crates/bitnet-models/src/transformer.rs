@@ -139,10 +139,10 @@ impl RotaryEmbedding {
             let (batch, n_heads, seq_len, head_dim) = x.dims4()?;
             let half_dim = head_dim / 2;
 
-            // Reshape to separate real and imaginary parts
-            let x_reshaped = x.reshape(&[batch, n_heads, seq_len, half_dim, 2])?;
-            let x0 = x_reshaped.narrow(4, 0, 1)?.squeeze(4)?;
-            let x1 = x_reshaped.narrow(4, 1, 1)?.squeeze(4)?;
+            // LLaMA RoPE uses SPLIT layout: [r0,r1,...,r_{d/2-1}, i0,i1,...,i_{d/2-1}]
+            // NOT interleaved [r0,i0,r1,i1,...]
+            let x0 = x.narrow(3, 0, half_dim)?; // First half (real)
+            let x1 = x.narrow(3, half_dim, half_dim)?; // Second half (imaginary)
 
             // Get cos/sin for the position
             let cos = self.cos.narrow(0, position, seq_len)?
@@ -159,8 +159,8 @@ impl RotaryEmbedding {
             let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
             let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
 
-            let rotated = Tensor::stack(&[x0_rot, x1_rot], 4)?
-                .reshape(&[batch, n_heads, seq_len, head_dim])?;
+            // Concatenate back in split layout [real, imag]
+            let rotated = Tensor::cat(&[x0_rot, x1_rot], 3)?;
 
             Ok(rotated)
         } else {
@@ -168,9 +168,9 @@ impl RotaryEmbedding {
             let (_batch, _seq, dim) = x.dims3()?;
             let half_dim = dim / 2;
 
-            let x_reshaped = x.reshape(&[x.dims()[0], x.dims()[1], half_dim, 2])?;
-            let x0 = x_reshaped.narrow(3, 0, 1)?.squeeze(3)?;
-            let x1 = x_reshaped.narrow(3, 1, 1)?.squeeze(3)?;
+            // LLaMA RoPE uses SPLIT layout: [r0,r1,...,i0,i1,...]
+            let x0 = x.narrow(2, 0, half_dim)?; // First half (real)
+            let x1 = x.narrow(2, half_dim, half_dim)?; // Second half (imaginary)
 
             let cos = self.cos.narrow(0, position, 1)?;
             let sin = self.sin.narrow(0, position, 1)?;
@@ -178,8 +178,8 @@ impl RotaryEmbedding {
             let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
             let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
 
-            let rotated =
-                Tensor::stack(&[x0_rot, x1_rot], 3)?.reshape(&[x.dims()[0], x.dims()[1], dim])?;
+            // Concatenate back in split layout [real, imag]
+            let rotated = Tensor::cat(&[x0_rot, x1_rot], 2)?;
 
             Ok(rotated)
         }

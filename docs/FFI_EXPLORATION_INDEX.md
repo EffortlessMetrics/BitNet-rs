@@ -1,294 +1,290 @@
-# C++ FFI Integration Exploration: Complete Documentation Index
+# C++ FFI Exploration - Complete Index
 
-This directory contains comprehensive documentation on the C++ FFI integration for cross-validation testing in BitNet.rs.
+## Overview
 
-## Quick Navigation
+Comprehensive analysis of the C++ FFI interface in bitnet-crossval for implementing direct token ID evaluation with per-position logits support.
 
-### For Sprint 1.3 Developers
-Start here: **[C_FFI_QUICK_REFERENCE.md](./C_FFI_QUICK_REFERENCE.md)** (5 minutes)
-- Common code patterns
-- Essential APIs
-- Build commands
-- Test execution
-- Debugging tips
-
-### For Detailed Understanding
-Read: **[C_FFI_INTEGRATION_ANALYSIS.md](./C_FFI_INTEGRATION_ANALYSIS.md)** (30 minutes)
-- Complete architecture overview
-- Current capabilities (what works)
-- Optional optimizations (what could be improved)
-- Implementation roadmaps (how to proceed)
-- Fallback options (backup plans)
-
-### For API Details
-Reference: **[../crossval/README_PER_POSITION_LOGITS.md](../crossval/README_PER_POSITION_LOGITS.md)** (detailed)
-- Per-position logits comparison module
-- API function signatures
-- Code examples
-- Metrics explanation
-- Test patterns
-
-## Document Overview
-
-### C_FFI_QUICK_REFERENCE.md
-- **Length**: ~250 lines
-- **Audience**: Developers working on Sprint 1.3
-- **Content**:
-  - Current capabilities summary
-  - Key file locations
-  - Essential APIs
-  - 4 common code patterns
-  - Build & test commands
-  - Performance notes
-  - Debugging checklist
-  - Known issues & workarounds
-  - Week-by-week roadmap
-
-### C_FFI_INTEGRATION_ANALYSIS.md
-- **Length**: ~650 lines
-- **Audience**: Project leads and architects
-- **Content**:
-  - Executive summary
-  - 4-tier architecture breakdown
-  - Current FFI capabilities table
-  - What already works (infrastructure present)
-  - What would improve performance (optional)
-  - Concrete implementation roadmap
-  - Code examples for common scenarios
-  - Existing test coverage (152+ tests)
-  - Blockers & known issues
-  - Conclusion & recommendations
-
-### FFI_EXPLORATION_INDEX.md (this file)
-- **Length**: ~200 lines
-- **Audience**: All developers
-- **Content**:
-  - Navigation guide
-  - Document overview
-  - Key findings summary
-  - File structure
-  - How to use this documentation
-
-## Key Findings Summary
-
-### What's Ready Now ✅
-1. **Per-Position Comparison Module** (`crossval/src/logits_compare.rs`)
-   - Cosine similarity calculation
-   - L2 Euclidean distance
-   - Max absolute difference
-   - First divergence detection
-
-2. **C++ FFI Layer** (`crates/bitnet-sys/`)
-   - Safe Rust wrappers for C++ API
-   - Context with `logits_all=true` enabled
-   - `get_logits_ith()` for per-position extraction
-   - `get_all_logits()` for bulk extraction (ALREADY IMPLEMENTED)
-
-3. **Session Management** (`crates/bitnet-inference/src/ffi_session.rs`)
-   - Global reusable FFI session
-   - Prevents memory corruption
-   - Thread-safe via Mutex
-   - Deterministic inference
-
-4. **Test Infrastructure** (`crossval/tests/`)
-   - 152+ passing parity tests
-   - Full per_position_logits.rs test suite
-   - Multi-token generation tracking
-   - Prefill vs decode comparison
-
-### What's Optional 🔧
-1. **C++ Batch Helper Function** (`bitnet_get_all_logits()`)
-   - Reduces N FFI calls to 1
-   - 10-30% performance improvement
-   - 30 lines of C++ code
-   - Not blocking for Sprint 1.3
-
-### What's Needed for Sprint 1.3 ⏱️
-1. **Week 1 (Ready Now)**:
-   - Use existing parity test infrastructure
-   - Validate single-token logits match
-   - No new code required
-
-2. **Week 2 (Choose Path)**:
-   - Path A: Add C++ batch function (30 lines, recommended)
-   - Path B: Pure Rust per-position extraction (safer alternative)
-
-3. **Week 3 (Testing)**:
-   - Run full per_position_logits.rs test suite
-   - Verify cosine similarity metrics
-   - Document divergence findings
-
-## File Structure
-
-```
-BitNet-rs/
-├── docs/
-│   ├── FFI_EXPLORATION_INDEX.md (this file)
-│   ├── C_FFI_INTEGRATION_ANALYSIS.md (comprehensive analysis)
-│   ├── C_FFI_QUICK_REFERENCE.md (quick start guide)
-│   └── ... (other documentation)
-│
-├── crates/
-│   ├── bitnet-sys/
-│   │   ├── csrc/
-│   │   │   └── bitnet_c_shim.cc (C++ wrapper)
-│   │   ├── include/
-│   │   │   └── bitnet_c.h (C API header)
-│   │   └── src/
-│   │       ├── wrapper.rs (Rust FFI wrappers) ⭐ KEY FILE
-│   │       └── lib.rs (module exports)
-│   │
-│   └── bitnet-inference/
-│       └── src/
-│           └── ffi_session.rs (session management) ⭐ KEY FILE
-│
-├── crossval/
-│   ├── src/
-│   │   ├── logits_compare.rs (comparison module) ⭐ KEY FILE
-│   │   └── lib.rs
-│   ├── tests/
-│   │   ├── per_position_logits.rs (integration tests) ⭐ KEY FILE
-│   │   └── parity.rs (parity validation tests)
-│   └── README_PER_POSITION_LOGITS.md (API docs) ⭐ KEY FILE
-```
-
-⭐ = Critical files for Sprint 1.3
-
-## How to Use This Documentation
-
-### Scenario 1: "I need to run cross-validation tests right now"
-1. Read: C_FFI_QUICK_REFERENCE.md (5 min)
-2. Copy: Code patterns from "Common Patterns" section
-3. Run: Commands from "Test Execution" section
-4. Done!
-
-### Scenario 2: "I need to understand the full architecture"
-1. Read: FFI_EXPLORATION_INDEX.md (5 min - overview)
-2. Read: C_FFI_INTEGRATION_ANALYSIS.md (30 min - details)
-3. Skim: Key files in codebase (30 min - implementation)
-4. Reference: C_FFI_QUICK_REFERENCE.md (for API lookup)
-
-### Scenario 3: "I need to add per-position logits extraction"
-1. Read: C_FFI_QUICK_REFERENCE.md Pattern #2 (1 min)
-2. Check: C_FFI_INTEGRATION_ANALYSIS.md "Immediate Implementation Path" (5 min)
-3. Decide: Path A (C++) vs Path B (Rust)
-4. Implement: ~30-60 lines of code
-5. Test: Run per_position_logits.rs tests
-
-### Scenario 4: "Something's broken with C++ FFI"
-1. Read: C_FFI_QUICK_REFERENCE.md "Debugging" section (5 min)
-2. Check: "Known Issues & Workarounds" section
-3. Reference: C_FFI_INTEGRATION_ANALYSIS.md "Blockers & Known Issues" (5 min)
-4. Try: Fallback option or workaround
-
-## Key Capabilities at a Glance
-
-| Capability | Status | Location | Effort |
-|-----------|--------|----------|--------|
-| Last-token parity testing | ✅ Ready | parity.rs | 0 |
-| Per-position logits extraction | ✅ Ready | wrapper.rs:285-293 | 0 |
-| Logits comparison (cosine sim, L2) | ✅ Ready | logits_compare.rs | 0 |
-| Memory-safe FFI sessions | ✅ Ready | ffi_session.rs | 0 |
-| Deterministic inference | ✅ Ready | bitnet_c_shim.cc:87 | 0 |
-| Per-position tests | ✅ Ready | per_position_logits.rs | 0 |
-| C++ batch helper (optional) | ❌ Missing | - | 1-2h |
-| Pure Rust per-position (fallback) | ⚠️ Designed | - | 2-3h |
-
-## Sprint 1.3 Timeline
-
-### Week 1: Validation Phase
-**Status**: Ready to start immediately
-```
-Day 1-2: Understand infrastructure (read C_FFI_QUICK_REFERENCE.md)
-Day 3-4: Run existing parity tests with --features crossval
-Day 5: Verify cosine similarity > 0.9999, document results
-```
-
-### Week 2: Implementation Phase
-**Status**: Two paths ready to go
-```
-PATH A (Recommended - C++ optimization):
-  - Add bitnet_get_all_logits() to csrc/ (30 lines, ~4h)
-  - Update Rust bindings (automatic via build.rs)
-  - Add wrapper in wrapper.rs (20 lines, ~2h)
-  - Test (2h)
-
-PATH B (Safer alternative - Pure Rust):
-  - Extend parity.rs with per-position function (~2h)
-  - Implement incremental evaluation (~3h)
-  - Test & document (~2h)
-```
-
-### Week 3: Testing & Documentation
-**Status**: Full test suite ready
-```
-Day 1-3: Run per_position_logits.rs full test suite
-Day 4: Verify all metrics and document findings
-Day 5: Update CLAUDE.md with per-position guidance
-```
-
-## Command Reference
-
-```bash
-# Initialize C++ backend
-export BITNET_CPP_DIR=/path/to/bitnet.cpp
-
-# Run parity tests
-cargo test --features crossval --test parity -- --nocapture
-
-# Run per-position tests
-export CROSSVAL_GGUF=/path/to/model.gguf
-cargo test --features crossval --test per_position_logits -- --nocapture
-
-# Check C++ availability
-cargo test --features crossval cpp_availability
-
-# Verify determinism
-export RAYON_NUM_THREADS=1
-export BITNET_DETERMINISTIC=1
-cargo test --features crossval
-```
-
-## Common Questions Answered
-
-**Q: Do I need C++ to run cross-validation?**
-A: No. C++ backend is optional. Tests skip gracefully if not available.
-
-**Q: Can I extract per-position logits without C++ changes?**
-A: Yes. Use existing `Context::get_all_logits()` function (wrapper.rs:285-293).
-
-**Q: How many logits do I get per position?**
-A: `vocab_size` logits per position. For 32K vocab, that's 32K f32 values.
-
-**Q: What's the memory overhead for per-position extraction?**
-A: `num_positions * vocab_size * 4 bytes`. For 10-token sequence with 32K vocab: ~1.3MB.
-
-**Q: How long does per-position testing take?**
-A: Typically 5-10 seconds per sequence. No FFI optimization needed for that.
-
-**Q: What if tokenization differs between Rust and C++?**
-A: Tests skip with a warning. This is Issue #469, not a blocking issue.
-
-## References
-
-- **Main analysis**: C_FFI_INTEGRATION_ANALYSIS.md
-- **Quick start**: C_FFI_QUICK_REFERENCE.md
-- **API docs**: ../crossval/README_PER_POSITION_LOGITS.md
-- **C++ shim**: ../crates/bitnet-sys/csrc/bitnet_c_shim.cc
-- **Rust wrappers**: ../crates/bitnet-sys/src/wrapper.rs
-- **Session mgmt**: ../crates/bitnet-inference/src/ffi_session.rs
-- **Comparison**: ../crossval/src/logits_compare.rs
-- **Tests**: ../crossval/tests/per_position_logits.rs
-
-## Next Steps
-
-1. **For immediate use**: Open C_FFI_QUICK_REFERENCE.md
-2. **For understanding**: Read C_FFI_INTEGRATION_ANALYSIS.md
-3. **For implementation**: Check "Immediate Implementation Path" in analysis
-4. **For debugging**: Consult "Debugging" section in quick reference
+**Status**: Complete - All research findings documented and ready for implementation.
 
 ---
 
-**Status**: All documentation complete. Infrastructure ready for Sprint 1.3.
-**Created**: October 2024
-**Last Updated**: October 24, 2024
+## Key Findings (TL;DR)
+
+### 1. Direct Token ID Interface Already Exists
+- `bitnet-sys` crate has full token ID evaluation support
+- `Session::eval_and_get_logits(&[i32])` accepts pre-tokenized sequences
+- Custom BitNet C shim provides `bitnet_eval_tokens()` for bypass
+- **No implementation required** - API is production-ready
+
+### 2. Per-Position Logits Need Minimal Work
+- `Context::get_all_logits()` exists (line 285 of wrapper.rs)
+- Just needs public wrapper in Session API
+- 5-line addition to bitnet-sys/src/wrapper.rs
+- **Effort: 1 hour**
+
+### 3. Crossval Integration Opportunity
+- crossval currently uses mock C wrapper
+- per_position_logits.rs tests already import bitnet_sys
+- Replacing mock with real Session would unify the stack
+- **Effort: 2-3 hours**
+
+---
+
+## Documentation Structure
+
+### 1. FFI_INTERFACE_ANALYSIS.md (471 lines, 16 KB)
+**Complete architectural analysis**
+
+Contents:
+- Current API analysis with full context
+- String-based vs token-based flow comparison
+- Session/Context/Model struct breakdown
+- Custom BitNet C shim API documentation
+- Per-position logits comparison methodology
+- Architecture diagram (ASCII)
+- Detailed effort assessment (3 phases)
+- Key files reference guide
+
+**When to read**: Need complete understanding of FFI architecture
+
+### 2. FFI_QUICK_REFERENCE.md (79 lines, 2.9 KB)
+**One-page cheat sheet**
+
+Contents:
+- Current state summary
+- Direct Token ID API (exists!)
+- Per-Position Logits Wrapper (what's missing)
+- Logits comparison format
+- Integration roadmap table
+- Key files (quick lookup)
+- Gotchas (4 common issues)
+- Next steps checklist
+
+**When to read**: Need quick reference during implementation
+
+### 3. FFI_FUNCTION_SIGNATURES.md (296 lines, 8 KB)
+**Exact Rust function signatures and usage**
+
+Contents:
+- Session API (public)
+- Context API (lower-level)
+- Model API (loading)
+- Custom BitNet C Shim API (with line numbers)
+- Utility functions
+- 3 usage examples with code
+- Return type breakdown
+- Function call patterns
+- Integration code snippets
+
+**When to read**: Implementing token ID wrapper functions
+
+---
+
+## Implementation Roadmap
+
+### Phase 1: Per-Position Logits (LOW EFFORT - 1 hour)
+
+**Goal**: Surface `get_all_logits()` through Session API
+
+**File**: `crates/bitnet-sys/src/wrapper.rs`
+
+**Change**: Add 5 lines to Session impl
+```rust
+pub fn eval_and_get_all_logits(&mut self, tokens: &[i32], n_past: i32) -> Result<Vec<Vec<f32>>> {
+    self.context.eval(tokens, n_past)?;
+    self.context.get_all_logits(tokens.len())
+}
+```
+
+**Test**: Update `crossval/tests/per_position_logits.rs` to use new method
+
+**Verification**: All cosine similarities should remain > 0.9999 for multi-position
+
+### Phase 2: Update Tests (LOW EFFORT - 1-2 hours)
+
+**Goal**: Make full use of per-position API in existing tests
+
+**Files**: 
+- `crossval/tests/per_position_logits.rs` - main test file
+- `crossval/src/logits_compare.rs` - comparison infrastructure (ready)
+
+**Changes**:
+1. Line 52-53: Replace single-position eval with new method
+2. Collect all positions in Vec<Vec<f32>>
+3. Pass to compare_per_position_logits()
+4. Verify multi-position divergence detection
+
+### Phase 3: Crossval Integration (MEDIUM EFFORT - 2-3 hours, OPTIONAL)
+
+**Goal**: Replace mock C wrapper with real bitnet-sys::Session
+
+**Files**:
+- `crossval/src/cpp_bindings.rs` - mock wrapper (224 lines)
+- `crossval/src/bitnet_cpp_wrapper.c` - C stub (remove)
+- `crossval/Cargo.toml` - dependencies
+
+**Changes**:
+1. Replace CppModel.handle with bitnet_sys::wrapper::Session
+2. Update generate() to use Session API
+3. Add token evaluation methods
+4. Remove bitnet_cpp_wrapper.c
+
+**Impact**: Unified FFI stack, real C++ backend for comparison
+
+---
+
+## Specific Function Signatures
+
+### Session API (Ready to use)
+
+```rust
+pub fn eval_and_get_logits(&mut self, tokens: &[i32], n_past: i32) -> Result<Vec<f32>>
+pub fn tokenize(&self, text: &str) -> Result<Vec<i32>>
+pub fn decode(&self, tokens: &[i32]) -> Result<String>
+pub fn generate_greedy(&mut self, prompt: &str, max_tokens: usize) -> Result<Vec<i32>>
+```
+
+### Context API (Existing, needs wrapping)
+
+```rust
+pub fn eval(&mut self, tokens: &[i32], n_past: i32) -> Result<()>
+pub fn get_logits(&self) -> Result<Vec<f32>>
+pub fn get_all_logits(&self, n_tokens: usize) -> Result<Vec<Vec<f32>>>  // ← KEY!
+pub fn get_logits_ith(&self, i: i32) -> Result<Vec<f32>>
+```
+
+### Custom BitNet C Shim (Optional for later)
+
+```rust
+pub fn bitnet_eval_tokens(ctx: &BitnetContext, ids: &[i32], vocab_size: usize) -> Result<Vec<f32>>
+pub fn bitnet_prefill(ctx: &BitnetContext, ids: &[i32]) -> Result<()>
+pub fn cpp_decode_greedy(..., out: &mut [i32]) -> Result<usize>
+pub fn bitnet_tokenize_text(model: &BitnetModel, text: &str, ...) -> Result<Vec<i32>>
+```
+
+---
+
+## Return Types
+
+### Token IDs
+- Input: `&[i32]` (i32 for llama.cpp compatibility)
+- Output: `Vec<i32>`
+- Conversion: `tokens.iter().map(|t| *t as u32).collect()`
+
+### Logits
+- **Single position**: `Vec<f32>` (length = vocab_size)
+- **Multiple positions**: `Vec<Vec<f32>>` (outer = positions, inner = vocab)
+- **Comparison input**: `&[Vec<f32>]` for both Rust and C++ implementations
+
+### Logits Comparison Output
+
+```rust
+pub struct LogitsDivergence {
+    pub first_divergence_token: Option<usize>,    // Which position diverged first
+    pub per_token_cosine_sim: Vec<f32>,          // Similarity per position
+    pub per_token_l2_dist: Vec<f32>,             // Distance per position
+    pub max_absolute_diff: f32,                   // Largest element-wise diff
+}
+```
+
+---
+
+## File Locations Reference
+
+### FFI Definition
+- **Main wrapper**: `/home/steven/code/Rust/BitNet-rs/crates/bitnet-sys/src/wrapper.rs` (660 lines)
+  - Session: lines 330-394
+  - Context: lines 120-327
+  - Model: lines 58-117
+  - Custom BitNet: lines 400-659
+
+- **Exports**: `/home/steven/code/Rust/BitNet-rs/crates/bitnet-sys/src/lib.rs`
+
+### Crossval Current
+- **Mock wrapper**: `crossval/src/cpp_bindings.rs` (224 lines)
+- **C stub**: `crossval/src/bitnet_cpp_wrapper.c` (64 lines)
+- **Comparison logic**: `crossval/src/logits_compare.rs`
+
+### Tests Using FFI
+- **Main test**: `crossval/tests/per_position_logits.rs` (295 lines)
+  - Already imports bitnet_sys::wrapper
+  - Uses Session::eval_and_get_logits()
+  - Could be extended to per-position
+
+- **FFI integration tests**: `crossval/tests/ffi_integration.rs`
+- **Token equivalence**: `crossval/tests/token_equivalence.rs`
+
+### Inference
+- **Rust logits**: `crates/bitnet-inference/src/parity.rs`
+  - Function: `eval_logits_once(&str, &[i32]) -> Vec<f32>`
+
+---
+
+## Common Gotchas
+
+1. **Token ID type mismatch**: bitnet-sys uses `i32`, crossval returns `u32`
+   - Fix: `tokens.iter().map(|t| *t as i32).collect()`
+
+2. **Logits return format**: Most APIs return single position only
+   - Solution: Use Context::get_all_logits() directly or add wrapper
+
+3. **Decoupled crossval**: Uses mock C wrapper, doesn't leverage bitnet-sys
+   - Opportunity: Replace with real Session
+
+4. **KV cache management**: BitNet shim may require bitnet_prefill() before eval
+   - Check: Does bitnet_eval_tokens() call prefill internally?
+
+---
+
+## Quick Implementation Checklist
+
+- [ ] Review FFI_INTERFACE_ANALYSIS.md sections 1-2 (current API)
+- [ ] Read FFI_FUNCTION_SIGNATURES.md usage examples
+- [ ] Add Session::eval_and_get_all_logits() wrapper (5 lines)
+- [ ] Update per_position_logits.rs test (collect all positions)
+- [ ] Verify multi-position comparison works
+- [ ] (Optional) Replace crossval mock with bitnet_sys::Session
+
+---
+
+## Questions & Answers
+
+**Q: Do we need to write new C++ code to accept token IDs?**
+A: No! Both Session and custom BitNet shim already accept `&[i32]` directly.
+
+**Q: What's the difference between Session and BitNet C Shim?**
+A: Session wraps llama.cpp API; BitNet shim is a custom implementation for BitNet-specific optimizations.
+
+**Q: How do we get per-position logits?**
+A: Context::get_all_logits() exists but isn't exposed. Add 5-line Session wrapper.
+
+**Q: What effort to implement token ID interface?**
+A: 1-3 hours (mostly low-effort wrapping of existing code; per-position is 1h)
+
+**Q: Is crossval currently using real C++ backend?**
+A: No, it uses a mock C wrapper. The per_position_logits.rs test imports bitnet_sys but could use it better.
+
+---
+
+## Related Documentation
+
+- `docs/FFI_TRACE_INFRASTRUCTURE.md` - FFI tracing framework
+- `docs/INFERENCE_ENGINE_LAYER_ANALYSIS.md` - Inference architecture
+- `CLAUDE.md` - Project guidelines and status
+
+---
+
+## Navigation
+
+| Need | Document | Link |
+|------|----------|------|
+| Complete understanding | FFI_INTERFACE_ANALYSIS.md | Full 471-line breakdown |
+| Quick reference | FFI_QUICK_REFERENCE.md | One-page cheat |
+| Code signatures | FFI_FUNCTION_SIGNATURES.md | With usage examples |
+| Implementation guide | This file (roadmap section) | Above |
+
+---
+
+**Last Updated**: 2025-10-25
+**Coverage**: bitnet-sys FFI, crossval integration, per-position logits API
+**Status**: Ready for Phase 1 implementation

@@ -106,6 +106,14 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 # Cross-validation sweep (comprehensive multi-scenario testing)
 ./scripts/run_crossval_sweep.sh model.gguf tokenizer.json /tmp/crossval
 # Runs 3 scenarios (1, 2, 4 tokens), captures traces, compares Rust vs C++
+
+# C++ reference auto-bootstrap (one-command setup)
+eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"  # Linux/macOS
+cargo run -p xtask -- setup-cpp-auto --emit=fish | source  # fish shell
+cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression  # PowerShell
+
+# Trace comparison (debug cross-validation divergence)
+cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
 ```
 
 ## Core Architecture
@@ -141,6 +149,8 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 - `cuda`: Backward-compatible alias for `gpu` (temporary - prefer `gpu` in new code)
 - `ffi`: C++ FFI bridge for gradual migration
 - `crossval`: Cross-validation against Microsoft BitNet C++
+- `inference`: Enable advanced inference and cross-validation commands in xtask (required for `crossval-per-token`)
+- `crossval-all`: Unified feature enabling all cross-validation functionality (`inference`, `crossval`, `ffi`) for xtask
 - `fixtures`: Enable GGUF fixture-based integration tests (test-only feature)
 
 **Important**: Always use unified GPU predicate in code:
@@ -517,6 +527,21 @@ cargo run -p xtask -- crossval
   /tmp/crossval-sweep
 # Generates: scenario reports, trace files, logits comparison, summary.md
 
+# Auto-bootstrap C++ reference (one-command setup)
+eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+
+# Per-token logits divergence detection (requires --features inference or crossval-all)
+# Compares Rust vs C++ logits position-by-position to find first divergence
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "What is 2+2?" \
+  --max-tokens 4 \
+  --cos-tol 0.999
+
+# If divergence found, capture and compare traces
+cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
+
 # Model operations
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 cargo run -p bitnet-cli -- compat-check model.gguf
@@ -559,7 +584,9 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 ### Troubleshooting
 
 - FFI linker errors: Use `--no-default-features --features cpu` or
-  `cargo xtask fetch-cpp`
+  `cargo xtask fetch-cpp`. See `docs/howto/cpp-setup.md` for complete C++ reference setup.
+- C++ cross-validation setup: See `docs/howto/cpp-setup.md` for detailed guide on setting up
+  Microsoft BitNet C++ reference, libllama.so, and dynamic loader paths
 - CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH
 - Model validation: `cargo run -p bitnet-cli -- compat-check model.gguf`
 - GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and

@@ -33,9 +33,11 @@ use std::{
 };
 use walkdir::WalkDir;
 
+mod cpp_setup_auto;
 pub mod ffi;
 mod gates;
 mod tokenizers;
+mod trace_diff;
 
 // RAII guard for lock file cleanup
 struct LockGuard {
@@ -303,6 +305,39 @@ enum Cmd {
         repo: String,
     },
 
+    /// Auto-bootstrap C++ reference and emit shell-specific dynamic loader exports
+    ///
+    /// One-command setup that:
+    /// 1. Fetches and builds C++ reference if not present (calls fetch-cpp)
+    /// 2. Verifies build directory exists
+    /// 3. Emits shell-specific environment variable exports for dynamic loader
+    ///
+    /// Usage:
+    ///   eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+    ///   cargo run -p xtask -- setup-cpp-auto --emit=fish | source
+    ///   cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
+    #[command(name = "setup-cpp-auto")]
+    SetupCppAuto {
+        /// Output shell format: sh (default) | fish | pwsh | cmd
+        #[arg(long, default_value = "sh")]
+        emit: String,
+    },
+
+    /// Compare Rust vs C++ traces and report first divergence
+    ///
+    /// Wrapper for scripts/trace_diff.py that performs Blake3 hash comparison
+    /// of trace files captured during cross-validation runs.
+    ///
+    /// Usage:
+    ///   cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
+    #[command(name = "trace-diff")]
+    TraceDiff {
+        /// Rust trace directory
+        rs_dir: PathBuf,
+        /// C++ trace directory
+        cpp_dir: PathBuf,
+    },
+
     /// Run deterministic cross-validation tests against C++ implementation
     ///
     /// Auto-discovers GGUF models in the models/ directory if not specified.
@@ -366,6 +401,7 @@ enum Cmd {
     ///     --max-tokens 4 \
     ///     --cos-tol 0.999 \
     ///     --format text
+    #[cfg(feature = "inference")]
     #[command(name = "crossval-per-token")]
     CrossvalPerToken {
         /// Path to GGUF model file
@@ -838,6 +874,15 @@ fn real_main() -> Result<()> {
         Cmd::FetchCpp { tag, force, clean, backend, cmake_flags, repo } => {
             fetch_cpp_cmd(&tag, force, clean, &backend, &cmake_flags, &repo)
         }
+        Cmd::SetupCppAuto { emit } => {
+            let emit_format = cpp_setup_auto::Emit::from(&emit);
+            cpp_setup_auto::run(emit_format)?;
+            Ok(())
+        }
+        Cmd::TraceDiff { rs_dir, cpp_dir } => {
+            trace_diff::run(&rs_dir, &cpp_dir)?;
+            Ok(())
+        }
         Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
             let model_path = match model {
                 Some(p) => p,
@@ -848,6 +893,7 @@ fn real_main() -> Result<()> {
         Cmd::FullCrossval { force, tag, backend, cmake_flags, repo } => {
             full_crossval_cmd(force, &tag, &backend, &cmake_flags, &repo)
         }
+        #[cfg(feature = "inference")]
         Cmd::CrossvalPerToken { model, tokenizer, prompt, max_tokens, cos_tol, format } => {
             crossval_per_token_cmd(&model, &tokenizer, &prompt, max_tokens, cos_tol, &format)?;
             Ok(())
@@ -2851,6 +2897,7 @@ fn validate_rust_model_loading(model_path: &Path) -> Result<(u32, u64, u64, u64)
 }
 
 /// Per-token logits cross-validation between Rust and C++ implementations
+#[cfg(feature = "inference")]
 fn crossval_per_token_cmd(
     model_path: &Path,
     tokenizer_path: &Path,
@@ -2962,6 +3009,27 @@ fn crossval_per_token_cmd(
 
             if let Some(first_div) = divergence.first_divergence_token {
                 println!("❌ First divergence at token {}", first_div);
+                println!();
+                println!("Next steps:");
+                println!("  # 1. Capture Rust trace (seq={})", first_div);
+                println!(
+                    "  BITNET_TRACE_DIR=/tmp/rs RUST_LOG=warn BITNET_DETERMINISTIC=1 BITNET_SEED=42 \\"
+                );
+                println!("    cargo run -p bitnet-cli --features cpu,trace -- run \\");
+                println!("    --model {} \\", model_path.display());
+                println!("    --tokenizer {} \\", tokenizer_path.display());
+                println!("    --prompt \"{}\" \\", prompt);
+                println!("    --max-tokens {} --greedy", first_div + 1);
+                println!();
+                println!(
+                    "  # 2. Capture C++ trace (seq={}) - see docs/howto/cpp-setup.md if not instrumented",
+                    first_div
+                );
+                println!("  BITNET_TRACE_DIR_CPP=/tmp/cpp <cpp-command-here>");
+                println!();
+                println!("  # 3. Compare traces");
+                println!("  cargo run -p xtask -- trace-diff /tmp/rs /tmp/cpp");
+                println!();
                 std::process::exit(1);
             } else {
                 println!("✅ All positions match within tolerance");
