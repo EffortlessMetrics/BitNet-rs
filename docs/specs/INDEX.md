@@ -174,7 +174,7 @@ The uncommented code in `bitnet_cpp_wrapper.cc` mentions hypothetical functions.
    - Line-by-line guidance for both FFI functions
    - Testing strategy and success criteria
 
-4. **[BitNet.cpp AVAILABLE Mode Wiring Guide](bitnet-available-wiring.md)** ⭐ NEW
+4. **[BitNet.cpp AVAILABLE Mode Wiring Guide](bitnet-available-wiring.md)** ⭐
    - **Comprehensive wiring guide for production FFI integration**
    - Required headers and library dependencies
    - Build system configuration (build.rs)
@@ -183,6 +183,22 @@ The uncommented code in `bitnet_cpp_wrapper.cc` mentions hypothetical functions.
    - Common compilation errors with fixes
    - Troubleshooting guide with diagnostics
    - Verification checklist
+
+5. **[BitNet.cpp FFI Integration Sockets](bitnet-cpp-ffi-sockets.md)** 🆕 LATEST
+   - **Technical specification for 6 missing FFI sockets**
+   - Context initialization for persistent model loading
+   - BitNet-specific tokenization and inference (optional, with llama.cpp fallback)
+   - Session API for 10-100× performance improvements
+   - dlopen loader architecture for runtime symbol resolution
+   - Graceful degradation when symbols unavailable
+   - Migration path from current per-call model loading to session API
+   - Testing strategy and performance benchmarks
+
+6. **[BitNet.cpp Session API](bitnet-session-api.md)** 📘
+   - High-level session management design
+   - Lifecycle management and resource cleanup
+   - Integration with FFI sockets
+   - Performance optimization strategies
 
 ### When to Use Which Guide
 
@@ -195,6 +211,11 @@ The uncommented code in `bitnet_cpp_wrapper.cc` mentions hypothetical functions.
 | Troubleshooting linker errors | AVAILABLE Mode Wiring Guide ⭐ |
 | Platform-specific issues | AVAILABLE Mode Wiring Guide ⭐ |
 | Symbol visibility problems | AVAILABLE Mode Wiring Guide ⭐ |
+| Designing persistent context API | FFI Integration Sockets 🆕 |
+| Runtime symbol resolution | FFI Integration Sockets 🆕 |
+| Session management architecture | Session API + FFI Integration Sockets |
+| Performance optimization (10-100×) | FFI Integration Sockets 🆕 |
+| dlopen loader implementation | FFI Integration Sockets 🆕 |
 
 ## Related Documentation
 
