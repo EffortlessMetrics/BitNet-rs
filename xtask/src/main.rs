@@ -373,8 +373,15 @@ enum Cmd {
 
     /// Check C++ backend availability for cross-validation
     ///
-    /// Verifies that required C++ libraries are available for cross-validation.
-    /// Checks build-time detection from build.rs environment variables.
+    /// Validates that required C++ libraries (libbitnet*, libllama*, libggml*)
+    /// were detected during xtask build. Library detection happens at BUILD time,
+    /// not runtime, so xtask must be rebuilt if C++ libraries are installed after
+    /// the initial build.
+    ///
+    /// Exit Codes:
+    ///   - 0: Backend available (or general status check succeeded)
+    ///   - 1: Backend unavailable (libraries not found at build time)
+    ///   - 2: Invalid arguments (unknown backend)
     ///
     /// Usage:
     ///   cargo run -p xtask --features crossval-all -- preflight
@@ -385,7 +392,7 @@ enum Cmd {
         #[arg(long, value_enum)]
         backend: Option<CppBackend>,
 
-        /// Show detailed diagnostic information
+        /// Show detailed diagnostic information (environment vars, search paths, build metadata)
         #[arg(long, short)]
         verbose: bool,
     },
@@ -2560,16 +2567,16 @@ fn cpp_backend_preflight_cmd(backend: Option<CppBackend>, verbose: bool) -> Resu
 
     match backend {
         Some(b) => {
-            // Check specific backend
-            if verbose {
-                eprintln!("Checking {} backend...", b.name());
-            }
+            // Check specific backend - exit code reflects availability
             preflight_backend_libs(b, verbose)?;
-            println!("✓ {} backend is available", b.name());
+
+            // Only print success message if not verbose (verbose already printed detailed output)
+            if !verbose {
+                println!("✓ {} backend is available", b.name());
+            }
         }
         None => {
-            // Check all backends
-            println!("Checking all backends...\n");
+            // Check all backends - always exit 0 (informational)
             print_backend_status(verbose);
         }
     }

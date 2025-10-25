@@ -354,6 +354,7 @@ fn test_token_parity_performance_overhead() {
 // Test: Verify error message formatting
 #[test]
 fn test_error_message_format() {
+    use bitnet_crossval::backend::CppBackend;
     use bitnet_crossval::token_parity::{TokenParityError, format_token_mismatch_error};
 
     let error = TokenParityError {
@@ -361,6 +362,7 @@ fn test_error_message_format() {
         cpp_tokens: vec![128000, 1229, 374],
         first_diff_index: 1,
         prompt: "What is 2+2?".to_string(),
+        backend: CppBackend::BitNet,
     };
 
     let formatted = format_token_mismatch_error(&error);
