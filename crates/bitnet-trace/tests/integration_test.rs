@@ -26,7 +26,7 @@ fn test_dump_trace_integration() {
     let tensor = Tensor::from_vec(data.clone(), (2, 2), &Device::Cpu).unwrap();
 
     // Dump trace
-    let result = dump_trace("test_layer/output", &tensor);
+    let result = dump_trace("test_layer/output", &tensor, None, None, None);
     assert!(result.is_ok(), "dump_trace should succeed");
 
     // Verify trace file exists
@@ -84,7 +84,7 @@ fn test_dump_trace_creates_directory() {
 
     // Create tensor and dump trace
     let tensor = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
-    let result = dump_trace("auto_create_dir", &tensor);
+    let result = dump_trace("auto_create_dir", &tensor, None, None, None);
 
     assert!(result.is_ok(), "Should succeed even if directory doesn't exist");
     assert!(trace_dir.exists(), "Trace directory should be created automatically");
@@ -110,8 +110,8 @@ fn test_dump_trace_different_dtypes() {
     let tensor_f64 = Tensor::randn(0f64, 1f64, (4, 8), &Device::Cpu).unwrap();
 
     // Both should succeed (f64 gets converted to f32)
-    assert!(dump_trace("dtype_f32", &tensor_f32).is_ok());
-    assert!(dump_trace("dtype_f64", &tensor_f64).is_ok());
+    assert!(dump_trace("dtype_f32", &tensor_f32, None, None, None).is_ok());
+    assert!(dump_trace("dtype_f64", &tensor_f64, None, None, None).is_ok());
 
     // Verify both trace files exist
     assert!(temp_dir.path().join("dtype_f32.trace").exists());
@@ -144,7 +144,7 @@ fn test_dump_trace_various_shapes() {
     for (i, shape) in shapes.iter().enumerate() {
         let tensor = Tensor::randn(0f32, 1f32, shape.as_slice(), &Device::Cpu).unwrap();
         let name = format!("shape_test_{}", i);
-        assert!(dump_trace(&name, &tensor).is_ok());
+        assert!(dump_trace(&name, &tensor, None, None, None).is_ok());
 
         // Read and verify shape
         let trace_file = temp_dir.path().join(format!("{}.trace", name));
@@ -167,7 +167,7 @@ fn test_dump_trace_empty_trace_dir() {
     env::set_var("BITNET_TRACE_DIR", "");
 
     let tensor = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
-    let result = dump_trace("empty_dir", &tensor);
+    let result = dump_trace("empty_dir", &tensor, None, None, None);
 
     // Should succeed silently (tracing disabled)
     assert!(result.is_ok());

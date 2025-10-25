@@ -36,10 +36,13 @@ futures = { version = "0.3.31", optional = true }
 once_cell = "1.21.3"
 regex = "1.12.2"
 xtask-build-helper = { path = "../xtask-build-helper" }
+bitnet-crossval = { path = "../crossval", default-features = false, features = ["crossval"], optional = true }
+bitnet-sys = { path = "../crates/bitnet-sys", default-features = false, features = ["ffi"], optional = true }
+scopeguard = "1.2.0"
 
 [features]
 default = ["gpu"]
-inference = ["dep:bitnet-inference", "dep:bitnet", "dep:tokio", "dep:futures"]
+inference = ["dep:bitnet-inference", "dep:bitnet", "dep:tokio", "dep:futures", "dep:bitnet-crossval", "dep:bitnet-sys"]
 gpu = ["bitnet-kernels/gpu"]
 
 [dev-dependencies]

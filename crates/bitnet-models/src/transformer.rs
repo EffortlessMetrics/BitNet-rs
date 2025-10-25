@@ -321,7 +321,14 @@ impl MultiHeadAttention {
         #[cfg(feature = "trace")]
         {
             let trace_name = format!("t0/blk{}/q_proj", self.layer_idx);
-            bitnet_trace::dump_trace(&trace_name, &q_proj_out).map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace(
+                &trace_name,
+                &q_proj_out,
+                Some(0),
+                Some(self.layer_idx as isize),
+                Some("q_proj"),
+            )
+            .map_err(BitNetError::from)?;
         }
 
         let q = q_proj_out
@@ -506,7 +513,14 @@ impl MultiHeadAttention {
         #[cfg(feature = "trace")]
         {
             let trace_name = format!("t0/blk{}/attn_scores_softmax", self.layer_idx);
-            bitnet_trace::dump_trace(&trace_name, &attn_weights).map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace(
+                &trace_name,
+                &attn_weights,
+                Some(0),
+                Some(self.layer_idx as isize),
+                Some("attn_scores_softmax"),
+            )
+            .map_err(BitNetError::from)?;
         }
 
         // Debug attention weights and row sums
@@ -1029,7 +1043,14 @@ impl TransformerBlock {
         #[cfg(feature = "trace")]
         {
             let trace_name = format!("t0/blk{}/attn_norm", self.attention.layer_idx);
-            bitnet_trace::dump_trace(&trace_name, &x).map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace(
+                &trace_name,
+                &x,
+                Some(0),
+                Some(self.attention.layer_idx as isize),
+                Some("attn_norm"),
+            )
+            .map_err(BitNetError::from)?;
         }
 
         // Check norm output
@@ -1442,10 +1463,16 @@ impl TransformerModel {
         // Tracepoint 1: Embeddings output (after embed, before layers)
         #[cfg(feature = "trace")]
         {
+            use bitnet_trace::dump_trace;
             // Extract first token's embedding for tracing [B, 1, H]
             let first_token_emb = hidden.narrow(1, 0, 1)?;
-            bitnet_trace::dump_trace("t0/embeddings", &first_token_emb)
-                .map_err(BitNetError::from)?;
+            let _ = dump_trace(
+                "embeddings",
+                &first_token_emb,
+                Some(0),            // seq=0 (prefill step)
+                Some(-1),           // layer=-1 (pre-layer operation)
+                Some("embeddings"), // stage name
+            );
         }
 
         // Create per-layer KV cache so that rotary/absolute positional
@@ -1462,6 +1489,19 @@ impl TransformerModel {
             // positional encoding per layer and causal masking internally.
             let step_hidden = self.forward(step_hidden, Some(&mut kv_cache))?;
 
+            // Tracepoint: All layers output for this position
+            #[cfg(feature = "trace")]
+            {
+                use bitnet_trace::dump_trace;
+                let _ = dump_trace(
+                    &format!("t{}_all_layers_out", t),
+                    &step_hidden,
+                    Some(t),                // seq=t (current position)
+                    Some(-2),               // layer=-2 (post-all-layers)
+                    Some("all_layers_out"), // stage name
+                );
+            }
+
             // Ensure forward preserves expected shape [B, H]
             if step_hidden.dims().len() != 2 {
                 return Err(BitNetError::Validation(format!(
@@ -1472,6 +1512,20 @@ impl TransformerModel {
 
             // Project to vocabulary logits for this step.
             let step_logits = self.logits(&step_hidden)?;
+
+            // Trace logits for this position
+            #[cfg(feature = "trace")]
+            {
+                use bitnet_trace::dump_trace;
+                let _ = dump_trace(
+                    &format!("t{}_logits", t),
+                    &step_logits,
+                    Some(t),        // seq=t (current position)
+                    Some(-1),       // layer=-1 (post-layers stage)
+                    Some("logits"), // stage name
+                );
+            }
+
             logits_steps.push(step_logits);
         }
 
@@ -1493,8 +1547,14 @@ impl TransformerModel {
         {
             // Extract first token's logits for tracing [B, 1, V]
             let first_token_logits = logits.narrow(1, 0, 1)?;
-            bitnet_trace::dump_trace("t0/logits", &first_token_logits)
-                .map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace(
+                "t0/logits",
+                &first_token_logits,
+                Some(0),
+                Some(-1),
+                Some("logits"),
+            )
+            .map_err(BitNetError::from)?;
         }
 
         Ok(logits)
@@ -1513,7 +1573,8 @@ impl TransformerModel {
         {
             // For incremental path, hidden is already [B, H] (single token)
             // Trace it directly without narrowing (unlike forward_full which has [B, T, H])
-            bitnet_trace::dump_trace("t0/embeddings", &x).map_err(BitNetError::from)?;
+            bitnet_trace::dump_trace("t0/embeddings", &x, Some(0), Some(-1), Some("embeddings"))
+                .map_err(BitNetError::from)?;
         }
 
         // Debug input activation norm
@@ -1627,7 +1688,14 @@ impl TransformerModel {
                 {
                     // For incremental path, logits are [B, V] (single token)
                     // Trace directly without narrowing (unlike forward_full which has [B, T, V])
-                    bitnet_trace::dump_trace("t0/logits", &logits).map_err(BitNetError::from)?;
+                    bitnet_trace::dump_trace(
+                        "t0/logits",
+                        &logits,
+                        Some(0),
+                        Some(-1),
+                        Some("logits"),
+                    )
+                    .map_err(BitNetError::from)?;
                 }
 
                 Ok(logits)

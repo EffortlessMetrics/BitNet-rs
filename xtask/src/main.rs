@@ -351,6 +351,48 @@ enum Cmd {
         repo: String,
     },
 
+    /// Compare Rust vs C++ logits position-by-position (find first diverging token)
+    ///
+    /// Runs deterministic inference with both Rust and C++ implementations,
+    /// comparing output logits at each token position. Reports the first position
+    /// where cosine similarity falls below the threshold, helping identify
+    /// divergence points in cross-validation workflows.
+    ///
+    /// Example:
+    ///   cargo run -p xtask -- crossval-per-token \
+    ///     --model models/model.gguf \
+    ///     --tokenizer models/tokenizer.json \
+    ///     --prompt "Hello world" \
+    ///     --max-tokens 4 \
+    ///     --cos-tol 0.999 \
+    ///     --format text
+    #[command(name = "crossval-per-token")]
+    CrossvalPerToken {
+        /// Path to GGUF model file
+        #[arg(long)]
+        model: PathBuf,
+
+        /// Path to tokenizer file
+        #[arg(long)]
+        tokenizer: PathBuf,
+
+        /// Input prompt to process
+        #[arg(long)]
+        prompt: String,
+
+        /// Maximum tokens to generate (excluding prompt)
+        #[arg(long, default_value_t = 4)]
+        max_tokens: usize,
+
+        /// Cosine similarity tolerance (0.0-1.0, where 1.0 = identical)
+        #[arg(long, default_value_t = 0.999)]
+        cos_tol: f32,
+
+        /// Output format: "text" or "json"
+        #[arg(long, default_value = "text")]
+        format: String,
+    },
+
     /// Generate realistic test fixtures for unit testing
     ///
     /// Creates GGUF-like metadata JSON and binary weight files
@@ -805,6 +847,10 @@ fn real_main() -> Result<()> {
         }
         Cmd::FullCrossval { force, tag, backend, cmake_flags, repo } => {
             full_crossval_cmd(force, &tag, &backend, &cmake_flags, &repo)
+        }
+        Cmd::CrossvalPerToken { model, tokenizer, prompt, max_tokens, cos_tol, format } => {
+            crossval_per_token_cmd(&model, &tokenizer, &prompt, max_tokens, cos_tol, &format)?;
+            Ok(())
         }
         Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),
         Cmd::GenMiniGguf { output, version } => gen_mini_gguf(&output, version),
@@ -2802,6 +2848,128 @@ fn validate_rust_model_loading(model_path: &Path) -> Result<(u32, u64, u64, u64)
         }
         Err(e) => Err(anyhow!("Failed to memory-map file: {}", e)),
     }
+}
+
+/// Per-token logits cross-validation between Rust and C++ implementations
+fn crossval_per_token_cmd(
+    model_path: &Path,
+    tokenizer_path: &Path,
+    prompt: &str,
+    _max_tokens: usize, // Reserved for future generation mode
+    cos_tol: f32,
+    format: &str,
+) -> Result<()> {
+    use bitnet_crossval::logits_compare::compare_per_position_logits;
+    use bitnet_inference::parity::eval_logits_all_positions;
+
+    println!("🔍 Per-token logits parity check");
+    println!("Model: {}", model_path.display());
+    println!("Prompt: \"{}\"", prompt);
+    println!("Cosine tolerance: {}", cos_tol);
+    println!();
+
+    // Tokenize the prompt
+    println!("📝 Tokenizing prompt...");
+    let tokenizer = bitnet_tokenizers::loader::load_tokenizer(tokenizer_path)?;
+    let tokens = tokenizer.encode(prompt, false, false)?;
+    let token_ids: Vec<i32> = tokens.iter().map(|&id| id as i32).collect();
+
+    // Limit to prompt tokens only (no generation in this mode)
+    let total_len = token_ids.len();
+    println!("Tokens: {} (prompt)", total_len);
+    println!();
+
+    // Get Rust logits
+    println!("🦀 Evaluating Rust logits for all positions...");
+    let model_path_str =
+        model_path.to_str().ok_or_else(|| anyhow::anyhow!("Invalid model path"))?;
+    let rust_logits = eval_logits_all_positions(model_path_str, &token_ids)?;
+    println!(
+        "✓ Rust: {} positions, vocab_size={}",
+        rust_logits.len(),
+        rust_logits.first().map(|v| v.len()).unwrap_or(0)
+    );
+
+    // Get C++ logits
+    println!("🔧 Evaluating C++ logits for all positions...");
+
+    // Check if C++ is available
+    if !bitnet_sys::is_available() {
+        anyhow::bail!(
+            "C++ FFI not available. Compile with --features crossval or set BITNET_CPP_DIR"
+        );
+    }
+
+    // Use C++ wrapper with proper initialization
+    bitnet_sys::wrapper::init_backend();
+    let _guard = scopeguard::guard((), |_| bitnet_sys::wrapper::free_backend());
+
+    let mut cpp_session = bitnet_sys::wrapper::Session::load_deterministic(model_path_str)?;
+
+    // Tokenize with C++ tokenizer
+    let cpp_tokens = cpp_session.tokenize(prompt)?;
+
+    // Evaluate all positions
+    cpp_session.context.eval(&cpp_tokens, 0)?;
+
+    // Get all logits (requires logits_all=true in context)
+    let cpp_logits = cpp_session.context.get_all_logits(cpp_tokens.len())?;
+
+    println!(
+        "✓ C++: {} positions, vocab_size={}",
+        cpp_logits.len(),
+        cpp_logits.first().map(|v| v.len()).unwrap_or(0)
+    );
+    println!();
+
+    // Compare per-position
+    println!("📊 Comparing logits per position...");
+    let divergence = compare_per_position_logits(&rust_logits, &cpp_logits);
+
+    // Output results
+    match format {
+        "json" => {
+            // JSON output
+            let output = serde_json::json!({
+                "first_divergence_token": divergence.first_divergence_token,
+                "per_token_cosine_sim": divergence.per_token_cosine_sim,
+                "per_token_l2_dist": divergence.per_token_l2_dist,
+                "max_absolute_diff": divergence.max_absolute_diff,
+                "threshold": cos_tol,
+                "status": if divergence.first_divergence_token.is_none() { "ok" } else { "diverged" }
+            });
+            println!("{}", serde_json::to_string_pretty(&output)?);
+        }
+        _ => {
+            // Text output
+            for (t, (&cosine, &l2)) in divergence
+                .per_token_cosine_sim
+                .iter()
+                .zip(divergence.per_token_l2_dist.iter())
+                .enumerate()
+            {
+                let ok = cosine >= cos_tol;
+                let symbol = if ok { "✓" } else { "✗" };
+                println!("{} t={} cosine={:.6} l2={:.2e}", symbol, t, cosine, l2);
+
+                if !ok && divergence.first_divergence_token == Some(t) {
+                    println!("   ↑ First divergence detected at token {}", t);
+                }
+            }
+
+            println!();
+            println!("Max absolute diff: {:.2e}", divergence.max_absolute_diff);
+
+            if let Some(first_div) = divergence.first_divergence_token {
+                println!("❌ First divergence at token {}", first_div);
+                std::process::exit(1);
+            } else {
+                println!("✅ All positions match within tolerance");
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn full_crossval_cmd(
