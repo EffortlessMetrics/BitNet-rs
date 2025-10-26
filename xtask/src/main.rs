@@ -41,7 +41,7 @@ mod tokenizers;
 mod trace_diff;
 
 #[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]
-use crossval::{CppBackend, preflight_backend_libs};
+use crossval::CppBackend;
 
 // RAII guard for lock file cleanup
 struct LockGuard {
@@ -3213,10 +3213,10 @@ fn crossval_per_token_cmd(
     // Early check: crossval-per-token requires FFI feature for C++ backend access
     #[cfg(not(feature = "ffi"))]
     {
-        return Err(anyhow::anyhow!(
+        Err(anyhow::anyhow!(
             "crossval-per-token requires C++ backend support. \
              Build with --features crossval-all (or add ffi to your feature set)"
-        ));
+        ))
     }
 
     #[cfg(feature = "ffi")]

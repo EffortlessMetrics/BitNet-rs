@@ -13,23 +13,14 @@ pub use backend::CppBackend;
 pub use preflight::preflight_backend_libs;
 
 // Export preflight_with_auto_repair for auto-repair functionality
-#[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]
-pub use preflight::preflight_with_auto_repair;
 
 // Export RepairMode and retry logic for auto-repair
-#[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]
-pub use preflight::{RepairMode, RetryConfig, attempt_repair_with_retry};
 
 // print_backend_status is only used by crossval/crossval-all commands
 #[cfg(any(feature = "crossval", feature = "crossval-all"))]
 pub use preflight::print_backend_status;
 
 // Export parity_both summary functions
-#[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]
-pub use parity_both::{
-    LaneResult, ParityBothArgs, both_passed, determine_exit_code, overall_status,
-    print_unified_summary,
-};
 
 // Export parity_both orchestration function (requires FFI)
 #[cfg(all(

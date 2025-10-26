@@ -131,6 +131,55 @@ fn has_libraries(dir: &Path) -> bool {
     false
 }
 
+/// Check if a directory contains specific required libraries
+///
+/// Returns true only if ALL required libraries are present in the directory.
+///
+/// # Arguments
+///
+/// * `dir` - Directory to check
+/// * `required_libs` - List of library base names (without lib prefix or extension)
+///
+/// # Example
+///
+/// ```ignore
+/// has_required_libraries(&path, &["llama", "ggml"]) // Checks for libllama.so AND libggml.so
+/// ```
+fn has_required_libraries(dir: &Path, required_libs: &[&str]) -> bool {
+    if !dir.is_dir() {
+        return false;
+    }
+
+    // Check that ALL required libraries are present
+    for required_lib in required_libs {
+        let mut found = false;
+
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                if let Some(name) = entry.file_name().to_str() {
+                    // Check if filename contains the library name AND has correct extension
+                    let is_library = name.contains(required_lib)
+                        && (name.ends_with(".so")
+                            || name.ends_with(".dylib")
+                            || name.ends_with(".dll"));
+
+                    if is_library {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If any required library is missing, return false
+        if !found {
+            return false;
+        }
+    }
+
+    true
+}
+
 /// Find all library directories for BitNet.cpp installation
 ///
 /// Discovers both BitNet.cpp libraries and vendored llama.cpp libraries
@@ -463,9 +512,98 @@ fn build_backend(backend: CppBackend, install_dir: &Path) -> Result<()> {
 ///
 /// Ok(()) on successful build, Err otherwise
 fn build_llama_cpp(install_dir: &Path) -> Result<()> {
-    eprintln!("[bitnet] Building llama.cpp with CMake...");
-    run_cmake_build(install_dir)?;
-    eprintln!("[bitnet] llama.cpp build succeeded");
+    eprintln!("[llama] Building llama.cpp with CMake...");
+
+    let build_dir = install_dir.join("build");
+
+    // Create build directory if it doesn't exist
+    if !build_dir.exists() {
+        fs::create_dir_all(&build_dir).context("Failed to create llama.cpp build directory")?;
+    }
+
+    // Check if cmake is available
+    let cmake_available = Command::new("cmake")
+        .arg("--version")
+        .output()
+        .map(|out| out.status.success())
+        .unwrap_or(false);
+
+    if !cmake_available {
+        bail!(
+            "CMake not found. Please install cmake:\n\
+             \n\
+             Ubuntu/Debian:  sudo apt install cmake\n\
+             macOS:          brew install cmake\n\
+             Windows:        choco install cmake"
+        );
+    }
+
+    // Configure with CMake (llama.cpp-specific flags)
+    eprintln!("[llama] Configuring with CMake...");
+    let configure_output = Command::new("cmake")
+        .arg("..")
+        .arg("-DCMAKE_BUILD_TYPE=Release")
+        .arg("-DBUILD_SHARED_LIBS=ON")
+        .current_dir(&build_dir)
+        .output()
+        .context("Failed to run cmake configuration")?;
+
+    if !configure_output.status.success() {
+        let stdout = String::from_utf8_lossy(&configure_output.stdout);
+        let stderr = String::from_utf8_lossy(&configure_output.stderr);
+
+        bail!(
+            "llama.cpp CMake configuration failed\n\
+             \n\
+             Stdout (last 50 lines):\n{}\n\
+             \n\
+             Stderr (last 50 lines):\n{}\n\
+             \n\
+             Troubleshooting:\n\
+             1. Check CMake version: cmake --version (requires ≥3.18)\n\
+             2. For CPU-only build: -DGGML_CUDA=OFF\n\
+             3. Full log: {}/CMakeFiles/CMakeOutput.log\n\
+             \n\
+             See: docs/howto/cpp-setup.md#troubleshooting-build-failures",
+            last_n_lines(&stdout, 50),
+            last_n_lines(&stderr, 50),
+            build_dir.display()
+        );
+    }
+
+    // Build with CMake
+    eprintln!("[llama] Building with CMake (parallel)...");
+    let build_output = Command::new("cmake")
+        .arg("--build")
+        .arg(".")
+        .arg("--parallel")
+        .current_dir(&build_dir)
+        .output()
+        .context("Failed to run cmake build")?;
+
+    if !build_output.status.success() {
+        let stdout = String::from_utf8_lossy(&build_output.stdout);
+        let stderr = String::from_utf8_lossy(&build_output.stderr);
+
+        bail!(
+            "llama.cpp CMake build failed\n\
+             \n\
+             Stdout (last 50 lines):\n{}\n\
+             \n\
+             Stderr (last 50 lines):\n{}\n\
+             \n\
+             Troubleshooting:\n\
+             1. Check compiler is installed: gcc --version or clang --version\n\
+             2. Check disk space: df -h\n\
+             3. Try sequential build: cmake --build . (without --parallel)\n\
+             \n\
+             See: docs/howto/cpp-setup.md#troubleshooting-build-failures",
+            last_n_lines(&stdout, 50),
+            last_n_lines(&stderr, 50)
+        );
+    }
+
+    eprintln!("[llama] llama.cpp build succeeded");
     Ok(())
 }
 
@@ -1048,6 +1186,65 @@ fn build_vendored_llama_cpp(install_dir: &Path) -> Result<()> {
     eprintln!("[bitnet] Vendored llama.cpp build succeeded");
 
     Ok(())
+}
+
+/// Find all library directories for llama.cpp installation
+///
+/// Discovers llama.cpp libraries (libllama.so and libggml.so) in priority order.
+/// Returns all directories containing BOTH required libraries.
+///
+/// # Search Tiers
+///
+/// **Tier 1 (Primary CMake outputs)**:
+/// - `build/bin` - Primary CMake output
+/// - `build/lib` - Standard CMake library location
+/// - `build` - Root build directory
+///
+/// **Tier 2 (Fallback)**:
+/// - `lib` - Root lib directory
+///
+/// # Environment Variable Override
+///
+/// - `LLAMA_CROSSVAL_LIBDIR`: Overrides all auto-discovery (takes highest priority)
+/// - `LLAMA_CPP_DIR`: Affects base install_dir for discovery
+///
+/// # Returns
+///
+/// Vector of PathBufs for directories containing BOTH libllama and libggml.
+/// Empty vector if libraries not found (caller should handle error).
+///
+/// # Required Libraries
+///
+/// Both libraries must be present:
+/// - `libllama.so` (or .dylib/.dll)
+/// - `libggml.so` (or .dylib/.dll)
+pub fn find_llama_lib_dirs(install_dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut lib_dirs = vec![];
+    let required_libs = &["llama", "ggml"];
+
+    // Priority 0: Explicit override via LLAMA_CROSSVAL_LIBDIR
+    if let Ok(explicit_libdir) = env::var("LLAMA_CROSSVAL_LIBDIR") {
+        let explicit_path = PathBuf::from(explicit_libdir);
+        if has_required_libraries(&explicit_path, required_libs) {
+            return Ok(vec![explicit_path]);
+        }
+    }
+
+    // Tier 1: Primary CMake outputs
+    let tier1_candidates =
+        [install_dir.join("build/bin"), install_dir.join("build/lib"), install_dir.join("build")];
+
+    // Tier 2: Fallback
+    let fallback = [install_dir.join("lib")];
+
+    // Search in priority order - only add directories with BOTH required libraries
+    for candidate in tier1_candidates.iter().chain(fallback.iter()) {
+        if has_required_libraries(candidate, required_libs) {
+            lib_dirs.push(candidate.clone());
+        }
+    }
+
+    Ok(lib_dirs)
 }
 
 #[cfg(test)]

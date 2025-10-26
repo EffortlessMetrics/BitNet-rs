@@ -51,15 +51,22 @@ use std::path::PathBuf;
 mod support {
     pub mod backend_helpers;
     pub mod env_guard;
+    pub mod mock_fixtures;
+    pub mod platform_utils;
 }
 
 // Test helper imports
 #[allow(unused_imports)]
-use support::backend_helpers::{
-    create_mock_backend_libs, ensure_backend_or_skip, ensure_bitnet_or_skip,
-    ensure_llama_or_skip, format_lib_name, get_lib_extension, get_loader_path_var,
-};
+use support::backend_helpers::{ensure_backend_or_skip, ensure_bitnet_or_skip, ensure_llama_or_skip};
+
+#[allow(unused_imports)]
 use support::env_guard::EnvGuard;
+
+#[allow(unused_imports)]
+use support::mock_fixtures::create_mock_backend_libs;
+
+#[allow(unused_imports)]
+use support::platform_utils::{format_lib_name, get_lib_extension, get_loader_path_var};
 
 #[allow(unused_imports)]
 use bitnet_crossval::backend::CppBackend;

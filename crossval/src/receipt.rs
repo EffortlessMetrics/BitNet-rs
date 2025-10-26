@@ -33,7 +33,47 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+/// Tokenizer source type (AC5)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC5
+///
+/// Represents where the tokenizer configuration originated from.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum TokenizerSource {
+    /// Tokenizer embedded in GGUF file
+    GgufEmbedded,
+    /// External tokenizer.json file (explicitly provided)
+    JsonFile(PathBuf),
+    /// Auto-discovered tokenizer from model directory
+    AutoDiscovered(PathBuf),
+}
+
+/// Tokenizer authority metadata for receipt reproducibility (AC4-AC6)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC4
+///
+/// This structure captures complete tokenizer provenance to ensure
+/// receipt reproducibility and enable tokenizer parity validation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenizerAuthority {
+    /// Tokenizer source: GgufEmbedded, JsonFile, or AutoDiscovered
+    pub source: TokenizerSource,
+
+    /// SHA256 hash of tokenizer.json file (if external)
+    ///
+    /// This is None for GGUF-embedded tokenizers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_hash: Option<String>,
+
+    /// SHA256 hash of effective tokenizer config (canonical representation)
+    ///
+    /// This hash is computed from the tokenizer's configuration fingerprint,
+    /// ensuring consistency across different instances.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config_hash: Option<String>,
+}
 
 /// Parity receipt - structured output for cross-validation comparison
 ///
@@ -67,6 +107,23 @@ pub struct ParityReceipt {
 
     /// Aggregate summary metrics
     pub summary: Summary,
+
+    // v2 fields (optional for backward compatibility)
+    /// Tokenizer authority metadata (v2.0.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tokenizer_authority: Option<TokenizerAuthority>,
+
+    /// Prompt template used (v2.0.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_template: Option<String>,
+
+    /// Determinism seed (v2.0.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub determinism_seed: Option<u64>,
+
+    /// Model SHA256 hash (v2.0.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_sha256: Option<String>,
 }
 
 /// Quality thresholds for parity validation
@@ -161,6 +218,10 @@ impl ParityReceipt {
                 mean_mse: 0.0,
                 mean_kl: None,
             },
+            tokenizer_authority: None,
+            prompt_template: None,
+            determinism_seed: None,
+            model_sha256: None,
         }
     }
 
@@ -172,6 +233,20 @@ impl ParityReceipt {
     /// Add a position's metrics to the receipt
     pub fn add_position(&mut self, metrics: PositionMetrics) {
         self.rows.push(metrics);
+    }
+
+    /// Set tokenizer authority metadata (AC4)
+    ///
+    /// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC4
+    pub fn set_tokenizer_authority(&mut self, authority: TokenizerAuthority) {
+        self.tokenizer_authority = Some(authority);
+    }
+
+    /// Set prompt template used (AC4)
+    ///
+    /// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC4
+    pub fn set_prompt_template(&mut self, template: String) {
+        self.prompt_template = Some(template);
     }
 
     /// Finalize the receipt by computing summary statistics
@@ -221,6 +296,65 @@ impl ParityReceipt {
         let json = self.to_json()?;
         std::fs::write(path, json)?;
         Ok(())
+    }
+}
+
+// ============================================================================
+// Tokenizer Authority Helpers (AC6)
+// ============================================================================
+
+use anyhow::Context;
+
+/// Compute SHA256 hash of tokenizer.json file (AC6)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC6
+///
+/// Returns lowercase hex-encoded SHA256 hash (64 characters)
+pub fn compute_tokenizer_file_hash(tokenizer_path: &Path) -> anyhow::Result<String> {
+    use sha2::{Digest, Sha256};
+
+    let contents = std::fs::read(tokenizer_path)
+        .with_context(|| format!("Failed to read tokenizer file: {}", tokenizer_path.display()))?;
+
+    let mut hasher = Sha256::new();
+    hasher.update(&contents);
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Compute SHA256 hash of tokenizer config (AC6)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC6
+///
+/// This computes a hash from the tokenizer's vocab size configuration.
+pub fn compute_tokenizer_config_hash(
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> anyhow::Result<String> {
+    use sha2::{Digest, Sha256};
+
+    // Create canonical representation from vocab sizes
+    let config_repr = serde_json::json!({
+        "vocab_size": tokenizer.vocab_size(),
+        "real_vocab_size": tokenizer.real_vocab_size(),
+    });
+    let canonical_json =
+        serde_json::to_string(&config_repr).context("Failed to serialize tokenizer config")?;
+
+    let mut hasher = Sha256::new();
+    hasher.update(canonical_json.as_bytes());
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Detect tokenizer source (AC5)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC5
+pub fn detect_tokenizer_source(tokenizer_path: &Path) -> TokenizerSource {
+    // Check if file exists and is named tokenizer.json
+    if tokenizer_path.exists()
+        && tokenizer_path.file_name() == Some(std::ffi::OsStr::new("tokenizer.json"))
+    {
+        TokenizerSource::JsonFile(tokenizer_path.to_path_buf())
+    } else {
+        TokenizerSource::GgufEmbedded
     }
 }
 
