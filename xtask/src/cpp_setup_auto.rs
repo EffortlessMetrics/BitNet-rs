@@ -31,8 +31,51 @@ use std::{
 };
 use walkdir::WalkDir;
 
+/// Extract last N lines from a string
+///
+/// Helper for truncating build logs to show only relevant output.
+fn last_n_lines(s: &str, n: usize) -> String {
+    s.lines().rev().take(n).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n")
+}
+
 /// GitHub URL for Microsoft BitNet repository
 const BITNET_REPO_URL: &str = "https://github.com/microsoft/BitNet";
+
+/// GitHub URL for llama.cpp repository
+const LLAMA_REPO_URL: &str = "https://github.com/ggerganov/llama.cpp";
+
+/// C++ backend selection
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CppBackend {
+    BitNet,
+    Llama,
+}
+
+impl CppBackend {
+    /// Get the display name for the backend
+    pub fn name(&self) -> &'static str {
+        match self {
+            CppBackend::BitNet => "bitnet.cpp",
+            CppBackend::Llama => "llama.cpp",
+        }
+    }
+
+    /// Get the GitHub repository URL for the backend
+    pub fn repo_url(&self) -> &'static str {
+        match self {
+            CppBackend::BitNet => BITNET_REPO_URL,
+            CppBackend::Llama => LLAMA_REPO_URL,
+        }
+    }
+
+    /// Get the default installation subdirectory name
+    pub fn install_subdir(&self) -> &'static str {
+        match self {
+            CppBackend::BitNet => "bitnet_cpp",
+            CppBackend::Llama => "llama_cpp",
+        }
+    }
+}
 
 /// Shell format for environment variable exports
 #[derive(Clone, Copy, Debug)]
@@ -150,23 +193,32 @@ pub fn find_bitnet_lib_dirs(install_dir: &Path) -> Result<Vec<PathBuf>> {
 
     Ok(lib_dirs)
 }
-/// Determine the installation directory for BitNet.cpp
+/// Determine the installation directory for a C++ backend
 ///
 /// Follows environment variable precedence:
-/// 1. BITNET_CPP_DIR (explicit override, highest priority)
-/// 2. ~/.cache/bitnet_cpp (default)
+/// 1. {BACKEND}_CPP_DIR (explicit override, highest priority)
+/// 2. ~/.cache/{backend}_cpp (default)
 ///
 /// Creates parent directories if they don't exist.
 ///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to determine installation directory for
+///
 /// # Returns
 ///
-/// PathBuf to the BitNet.cpp installation directory
-fn determine_bitnet_cpp_dir() -> Result<PathBuf> {
+/// PathBuf to the installation directory
+fn determine_install_dir(backend: CppBackend) -> Result<PathBuf> {
     let home = dirs::home_dir().context("no home directory found")?;
 
-    let install_dir = env::var("BITNET_CPP_DIR")
+    let env_var = match backend {
+        CppBackend::BitNet => "BITNET_CPP_DIR",
+        CppBackend::Llama => "LLAMA_CPP_DIR",
+    };
+
+    let install_dir = env::var(env_var)
         .map(PathBuf::from)
-        .unwrap_or_else(|_| home.join(".cache/bitnet_cpp"));
+        .unwrap_or_else(|_| home.join(".cache").join(backend.install_subdir()));
 
     // Create parent directories if they don't exist
     if let Some(parent) = install_dir.parent()
@@ -179,21 +231,35 @@ fn determine_bitnet_cpp_dir() -> Result<PathBuf> {
     Ok(install_dir)
 }
 
-/// Clone BitNet.cpp repository from GitHub
+/// Determine the installation directory for BitNet.cpp
 ///
-/// Clones with --depth=1 for faster download and --recurse-submodules
-/// to initialize the vendored llama.cpp submodule.
+/// Follows environment variable precedence:
+/// 1. BITNET_CPP_DIR (explicit override, highest priority)
+/// 2. ~/.cache/bitnet_cpp (default)
+///
+/// Creates parent directories if they don't exist.
+///
+/// # Returns
+///
+/// PathBuf to the BitNet.cpp installation directory
+fn determine_bitnet_cpp_dir() -> Result<PathBuf> {
+    determine_install_dir(CppBackend::BitNet)
+}
+
+/// Clone a C++ repository from GitHub with recursive submodules
+///
+/// Clones with --recurse-submodules to initialize all submodules recursively.
+/// This is required for BitNet.cpp (which vendors llama.cpp as a submodule).
 ///
 /// # Arguments
 ///
-/// * `install_dir` - Target directory for clone
+/// * `url` - GitHub repository URL
+/// * `dest` - Target directory for clone
 ///
 /// # Returns
 ///
 /// Ok(()) if clone succeeds, Err on network or git failures
-fn clone_bitnet_cpp(install_dir: &Path) -> Result<()> {
-    eprintln!("[bitnet] Cloning BitNet.cpp from {}...", BITNET_REPO_URL);
-
+fn clone_repository(url: &str, dest: &Path) -> Result<()> {
     // Check if git is available
     let git_check = Command::new("git")
         .arg("--version")
@@ -204,13 +270,15 @@ fn clone_bitnet_cpp(install_dir: &Path) -> Result<()> {
         bail!("git command not available");
     }
 
-    // Clone with shallow depth and submodules
+    eprintln!("[bitnet] Cloning from {}...", url);
+
+    // Clone with recursive submodule initialization
+    // Note: --depth=1 removed to avoid issues with detached HEAD state
     let output = Command::new("git")
         .arg("clone")
-        .arg("--depth=1")
         .arg("--recurse-submodules")
-        .arg(BITNET_REPO_URL)
-        .arg(install_dir)
+        .arg(url)
+        .arg(dest)
         .output()
         .context("Failed to execute git clone")?;
 
@@ -227,7 +295,22 @@ fn clone_bitnet_cpp(install_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Update existing BitNet.cpp repository
+/// Clone BitNet.cpp repository from GitHub
+///
+/// Clones with --recurse-submodules to initialize the vendored llama.cpp submodule.
+///
+/// # Arguments
+///
+/// * `install_dir` - Target directory for clone
+///
+/// # Returns
+///
+/// Ok(()) if clone succeeds, Err on network or git failures
+fn clone_bitnet_cpp(install_dir: &Path) -> Result<()> {
+    clone_repository(BITNET_REPO_URL, install_dir)
+}
+
+/// Update existing C++ repository
 ///
 /// Runs `git pull --ff-only` to update the repository and
 /// `git submodule update --init --recursive` to update submodules.
@@ -236,12 +319,12 @@ fn clone_bitnet_cpp(install_dir: &Path) -> Result<()> {
 ///
 /// # Arguments
 ///
-/// * `install_dir` - Root directory of BitNet.cpp repository
+/// * `install_dir` - Root directory of the repository
 ///
 /// # Returns
 ///
 /// Ok(()) if update succeeds or repo is already up-to-date, Err on git failures
-fn update_bitnet_cpp(install_dir: &Path) -> Result<()> {
+fn update_repository(install_dir: &Path) -> Result<()> {
     let git_dir = install_dir.join(".git");
 
     if !git_dir.exists() {
@@ -249,7 +332,7 @@ fn update_bitnet_cpp(install_dir: &Path) -> Result<()> {
         return Ok(());
     }
 
-    eprintln!("[bitnet] Updating BitNet.cpp repository...");
+    eprintln!("[bitnet] Updating repository...");
 
     // Try git pull (idempotent, fast-forward only)
     let pull_output = Command::new("git")
@@ -294,6 +377,98 @@ fn update_bitnet_cpp(install_dir: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Update existing BitNet.cpp repository
+///
+/// Wrapper for update_repository (for backward compatibility).
+///
+/// # Arguments
+///
+/// * `install_dir` - Root directory of BitNet.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) if update succeeds or repo is already up-to-date, Err on git failures
+fn update_bitnet_cpp(install_dir: &Path) -> Result<()> {
+    update_repository(install_dir)
+}
+
+/// Install or update a C++ backend and build if necessary
+///
+/// # Workflow
+///
+/// 1. Determine installation directory (env var or default)
+/// 2. If directory doesn't exist, clone from GitHub
+/// 3. If directory exists, update (git pull + submodule update)
+/// 4. Build if not already built (fast-path check)
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to install or update
+///
+/// # Returns
+///
+/// PathBuf to the installation directory
+fn install_or_update_backend(backend: CppBackend) -> Result<PathBuf> {
+    let install_dir = determine_install_dir(backend)?;
+
+    if !install_dir.exists() {
+        // Fresh installation
+        clone_repository(backend.repo_url(), &install_dir)?;
+        build_backend(backend, &install_dir)?;
+    } else {
+        // Update existing installation
+        update_repository(&install_dir)?;
+
+        // Check if build exists (fast-path)
+        let build_dir = install_dir.join("build");
+        if !build_dir.exists() || !has_libraries(&build_dir) {
+            eprintln!("[bitnet] Build artifacts not found, building...");
+            build_backend(backend, &install_dir)?;
+        } else {
+            eprintln!("[bitnet] {} already built at {}", backend.name(), install_dir.display());
+        }
+    }
+
+    Ok(install_dir)
+}
+
+/// Build a C++ backend
+///
+/// Routes to the appropriate build function based on backend type.
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to build
+/// * `install_dir` - Root directory of the repository
+///
+/// # Returns
+///
+/// Ok(()) on successful build, Err otherwise
+fn build_backend(backend: CppBackend, install_dir: &Path) -> Result<()> {
+    match backend {
+        CppBackend::BitNet => build_bitnet_cpp(install_dir),
+        CppBackend::Llama => build_llama_cpp(install_dir),
+    }
+}
+
+/// Build llama.cpp using CMake
+///
+/// llama.cpp uses CMake-only build (no setup_env.py).
+///
+/// # Arguments
+///
+/// * `install_dir` - Root directory of llama.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) on successful build, Err otherwise
+fn build_llama_cpp(install_dir: &Path) -> Result<()> {
+    eprintln!("[bitnet] Building llama.cpp with CMake...");
+    run_cmake_build(install_dir)?;
+    eprintln!("[bitnet] llama.cpp build succeeded");
+    Ok(())
+}
+
 /// Install or update BitNet.cpp and build if necessary
 ///
 /// # Workflow
@@ -307,27 +482,23 @@ fn update_bitnet_cpp(install_dir: &Path) -> Result<()> {
 ///
 /// PathBuf to the BitNet.cpp installation directory
 pub fn install_or_update_bitnet_cpp() -> Result<PathBuf> {
-    let install_dir = determine_bitnet_cpp_dir()?;
+    install_or_update_backend(CppBackend::BitNet)
+}
 
-    if !install_dir.exists() {
-        // Fresh installation
-        clone_bitnet_cpp(&install_dir)?;
-        build_bitnet_cpp(&install_dir)?;
-    } else {
-        // Update existing installation
-        update_bitnet_cpp(&install_dir)?;
-
-        // Check if build exists (fast-path)
-        let build_dir = install_dir.join("build");
-        if !build_dir.exists() || !has_libraries(&build_dir) {
-            eprintln!("[bitnet] Build artifacts not found, building...");
-            build_bitnet_cpp(&install_dir)?;
-        } else {
-            eprintln!("[bitnet] BitNet.cpp already built at {}", install_dir.display());
-        }
-    }
-
-    Ok(install_dir)
+/// Install or update llama.cpp and build if necessary
+///
+/// # Workflow
+///
+/// 1. Determine installation directory (env var or default)
+/// 2. If directory doesn't exist, clone from GitHub
+/// 3. If directory exists, update (git pull + submodule update)
+/// 4. Build if not already built (fast-path check)
+///
+/// # Returns
+///
+/// PathBuf to the llama.cpp installation directory
+pub fn install_or_update_llama_cpp() -> Result<PathBuf> {
+    install_or_update_backend(CppBackend::Llama)
 }
 
 /// Find the directory containing the shared library (libllama.so/dylib/dll)
@@ -560,6 +731,7 @@ fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path, crossval_libdir: Option
 ///
 /// Tries setup_env.py first (if present), falls back to manual CMake build.
 /// Also builds vendored llama.cpp in 3rdparty/llama.cpp/.
+/// Verifies libraries exist after build.
 ///
 /// # Arguments
 ///
@@ -567,11 +739,11 @@ fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path, crossval_libdir: Option
 ///
 /// # Returns
 ///
-/// Ok(()) on successful build, Err if both build methods fail
+/// Ok(()) on successful build and verification, Err if build fails or libraries not found
 fn build_bitnet_cpp(install_dir: &Path) -> Result<()> {
-    // Try setup_env.py first (preferred method)
+    // AC2: Build detection - Try setup_env.py first (preferred method)
     if install_dir.join("setup_env.py").exists() {
-        eprintln!("[bitnet] Building with setup_env.py...");
+        eprintln!("[bitnet] Detected setup_env.py, using as primary build method");
         match run_setup_env_py(install_dir) {
             Ok(_) => {
                 eprintln!("[bitnet] setup_env.py build succeeded");
@@ -589,53 +761,138 @@ fn build_bitnet_cpp(install_dir: &Path) -> Result<()> {
     // Build vendored llama.cpp
     build_vendored_llama_cpp(install_dir)?;
 
-    Ok(())
-}
+    // AC3: Library verification - Verify libraries were built successfully
+    eprintln!("[bitnet] Verifying built libraries...");
+    let lib_dirs = find_bitnet_lib_dirs(install_dir)?;
 
-/// Execute setup_env.py in the BitNet.cpp directory
-///
-/// # Arguments
-///
-/// * `install_dir` - Root directory of BitNet.cpp repository
-///
-/// # Returns
-///
-/// Ok(()) if setup_env.py succeeds, Err otherwise
-fn run_setup_env_py(install_dir: &Path) -> Result<()> {
-    // Find python3 executable
-    let python = if cfg!(target_os = "windows") { "python" } else { "python3" };
-
-    let output = Command::new(python)
-        .arg("setup_env.py")
-        .current_dir(install_dir)
-        .output()
-        .context("Failed to execute setup_env.py - is python3 installed?")?;
-
-    if !output.status.success() {
+    if lib_dirs.is_empty() {
         bail!(
-            "setup_env.py failed with exit code {:?}\nStdout: {}\nStderr: {}",
-            output.status.code(),
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
+            "No BitNet.cpp libraries found after build.\n\
+             \n\
+             Expected libraries:\n\
+             - libbitnet.so (or .dylib/.dll)\n\
+             - libllama.so (vendored llama.cpp)\n\
+             \n\
+             Searched directories:\n\
+             ✗ {}/build/bin (not found or empty)\n\
+             ✗ {}/build/3rdparty/llama.cpp/build/bin (not found or empty)\n\
+             \n\
+             Debugging steps:\n\
+             1. Check build logs for errors\n\
+             2. Verify CMake completed successfully\n\
+             3. Check disk space: df -h\n\
+             \n\
+             See: docs/howto/cpp-setup.md#troubleshooting-build-failures",
+            install_dir.display(),
+            install_dir.display()
         );
+    }
+
+    eprintln!(
+        "[bitnet] Library verification passed: {} director{} with libraries",
+        lib_dirs.len(),
+        if lib_dirs.len() == 1 { "y" } else { "ies" }
+    );
+
+    for (idx, dir) in lib_dirs.iter().enumerate() {
+        eprintln!("  {}. {}", idx + 1, dir.display());
     }
 
     Ok(())
 }
 
-/// Run manual CMake build as fallback
+/// Execute setup_env.py in the BitNet.cpp repository
 ///
-/// Creates build directory and runs cmake configuration and build.
+/// Runs BitNet.cpp's setup_env.py build script with proper error diagnostics.
 ///
 /// # Arguments
 ///
-/// * `install_dir` - Root directory of BitNet.cpp repository
+/// * `repo_path` - Root directory of BitNet.cpp repository
 ///
 /// # Returns
 ///
-/// Ok(()) if CMake build succeeds, Err otherwise
-fn run_cmake_build(install_dir: &Path) -> Result<()> {
-    let build_dir = install_dir.join("build");
+/// Ok(()) if setup_env.py succeeds, Err with detailed diagnostics otherwise
+///
+/// # Error Handling
+///
+/// - Python not found → BuildFailure with platform-specific installation commands
+/// - Build failure → BuildFailure with last 50 lines of stdout/stderr
+pub fn run_setup_env_py(repo_path: &Path) -> Result<()> {
+    // Find python3 executable
+    let python = if cfg!(target_os = "windows") { "python" } else { "python3" };
+
+    // Check if python is available
+    let python_available = Command::new(python)
+        .arg("--version")
+        .output()
+        .map(|out| out.status.success())
+        .unwrap_or(false);
+
+    if !python_available {
+        bail!(
+            "Python not found. Please install python3:\n\
+             \n\
+             Ubuntu/Debian:  sudo apt install python3\n\
+             macOS:          brew install python3\n\
+             Windows:        choco install python3"
+        );
+    }
+
+    eprintln!("[bitnet] Running setup_env.py...");
+
+    let output = Command::new(python)
+        .arg("setup_env.py")
+        .current_dir(repo_path)
+        .output()
+        .context("Failed to spawn setup_env.py process")?;
+
+    if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        bail!(
+            "setup_env.py failed with exit code {:?}\n\
+             \n\
+             Stdout (last 50 lines):\n{}\n\
+             \n\
+             Stderr (last 50 lines):\n{}\n\
+             \n\
+             Troubleshooting:\n\
+             1. Check CMake is installed: cmake --version\n\
+             2. Check build dependencies are available\n\
+             3. Try CMake fallback: --force with manual build\n\
+             \n\
+             See: docs/howto/cpp-setup.md#troubleshooting-build-failures",
+            output.status.code(),
+            last_n_lines(&stdout, 50),
+            last_n_lines(&stderr, 50)
+        );
+    }
+
+    eprintln!("[bitnet] setup_env.py succeeded");
+    Ok(())
+}
+
+/// Run manual CMake build as fallback
+///
+/// Creates build directory and runs cmake configuration and build with
+/// comprehensive error diagnostics.
+///
+/// # Arguments
+///
+/// * `repo_path` - Root directory of BitNet.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) if CMake build succeeds, Err with detailed diagnostics otherwise
+///
+/// # Error Handling
+///
+/// - CMake not found → BuildFailure with platform-specific installation commands
+/// - Configuration failure → BuildFailure with CMake log excerpt
+/// - Build failure → BuildFailure with last 50 lines of stdout/stderr
+pub fn run_cmake_build(repo_path: &Path) -> Result<()> {
+    let build_dir = repo_path.join("build");
 
     // Create build directory if it doesn't exist
     if !build_dir.exists() {
@@ -643,13 +900,20 @@ fn run_cmake_build(install_dir: &Path) -> Result<()> {
     }
 
     // Check if cmake is available
-    let cmake_check = Command::new("cmake")
+    let cmake_available = Command::new("cmake")
         .arg("--version")
         .output()
-        .context("Failed to find cmake - is it installed?")?;
+        .map(|out| out.status.success())
+        .unwrap_or(false);
 
-    if !cmake_check.status.success() {
-        bail!("cmake command not available");
+    if !cmake_available {
+        bail!(
+            "CMake not found. Please install cmake:\n\
+             \n\
+             Ubuntu/Debian:  sudo apt install cmake\n\
+             macOS:          brew install cmake\n\
+             Windows:        choco install cmake"
+        );
     }
 
     // Configure with CMake
@@ -662,10 +926,25 @@ fn run_cmake_build(install_dir: &Path) -> Result<()> {
         .context("Failed to run cmake configuration")?;
 
     if !configure_output.status.success() {
+        let stdout = String::from_utf8_lossy(&configure_output.stdout);
+        let stderr = String::from_utf8_lossy(&configure_output.stderr);
+
         bail!(
-            "CMake configuration failed\nStdout: {}\nStderr: {}",
-            String::from_utf8_lossy(&configure_output.stdout),
-            String::from_utf8_lossy(&configure_output.stderr)
+            "CMake configuration failed\n\
+             \n\
+             Stdout (last 50 lines):\n{}\n\
+             \n\
+             Stderr (last 50 lines):\n{}\n\
+             \n\
+             Troubleshooting:\n\
+             1. For CPU-only build: -DGGML_CUDA=OFF\n\
+             2. Check CMake version: cmake --version (requires ≥3.18)\n\
+             3. Full log: {}/CMakeFiles/CMakeOutput.log\n\
+             \n\
+             See: docs/howto/cpp-setup.md#troubleshooting-build-failures",
+            last_n_lines(&stdout, 50),
+            last_n_lines(&stderr, 50),
+            build_dir.display()
         );
     }
 
@@ -680,13 +959,28 @@ fn run_cmake_build(install_dir: &Path) -> Result<()> {
         .context("Failed to run cmake build")?;
 
     if !build_output.status.success() {
+        let stdout = String::from_utf8_lossy(&build_output.stdout);
+        let stderr = String::from_utf8_lossy(&build_output.stderr);
+
         bail!(
-            "CMake build failed\nStdout: {}\nStderr: {}",
-            String::from_utf8_lossy(&build_output.stdout),
-            String::from_utf8_lossy(&build_output.stderr)
+            "CMake build failed\n\
+             \n\
+             Stdout (last 50 lines):\n{}\n\
+             \n\
+             Stderr (last 50 lines):\n{}\n\
+             \n\
+             Troubleshooting:\n\
+             1. Check compiler is installed: gcc --version or clang --version\n\
+             2. Check disk space: df -h\n\
+             3. Try sequential build: cmake --build . (without --parallel)\n\
+             \n\
+             See: docs/howto/cpp-setup.md#troubleshooting-build-failures",
+            last_n_lines(&stdout, 50),
+            last_n_lines(&stderr, 50)
         );
     }
 
+    eprintln!("[bitnet] CMake build succeeded");
     Ok(())
 }
 

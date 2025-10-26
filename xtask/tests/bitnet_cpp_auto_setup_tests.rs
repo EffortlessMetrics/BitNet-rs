@@ -911,8 +911,8 @@ fn test_spec_ac1_backend_flag_parsing() {
 #[ignore] // Spec:AC2
 fn test_spec_ac2_clone_detection_both_backends() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let bitnet_dir = temp_dir.path().join("bitnet_cpp");
-    let llama_dir = temp_dir.path().join("llama_cpp");
+    let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
+    let _llama_dir = temp_dir.path().join("llama_cpp");
 
     // TODO: Implement clone detection for both backends
     // Expected behavior:
@@ -936,8 +936,8 @@ fn test_spec_ac2_clone_detection_both_backends() {
 #[ignore] // Spec:AC3
 fn test_spec_ac3_build_strategy_per_backend() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let bitnet_dir = temp_dir.path().join("bitnet_cpp");
-    let llama_dir = temp_dir.path().join("llama_cpp");
+    let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
+    let _llama_dir = temp_dir.path().join("llama_cpp");
 
     // TODO: Implement per-backend build strategy
     // Expected behavior:
@@ -995,8 +995,6 @@ fn test_spec_ac4_library_discovery_three_tier() {
 #[test]
 #[ignore] // Spec:AC5
 fn test_spec_ac5_rpath_embedding_validation() {
-    use xtask::build_helpers::merge_and_deduplicate;
-
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let path1 = temp_dir.path().join("lib1");
     let path2 = temp_dir.path().join("lib2");
@@ -1099,8 +1097,6 @@ fn test_spec_ac8_dual_backend_installation() {
 #[ignore] // Spec:AC9
 #[serial(bitnet_env)]
 fn test_spec_ac9_rpath_merging_strategy() {
-    use xtask::build_helpers::merge_and_deduplicate;
-
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_lib = temp_dir.path().join("bitnet_lib");
     let llama_lib = temp_dir.path().join("llama_lib");
@@ -1153,7 +1149,7 @@ fn test_spec_ac10_llama_cpp_github_url() {
 #[ignore] // Spec:AC11
 fn test_spec_ac11_llama_cpp_cmake_only() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let llama_dir = temp_dir.path().join("llama_cpp");
+    let _llama_dir = temp_dir.path().join("llama_cpp");
 
     // TODO: Implement llama.cpp CMake-only build
     // Expected behavior:
@@ -1468,8 +1464,6 @@ fn test_edge_missing_cmake_dependency() {
 #[test]
 #[ignore] // Edge case
 fn test_edge_rpath_length_limit() {
-    use xtask::build_helpers::merge_and_deduplicate;
-
     // TODO: Test RPATH length validation
     // Expected: Panic with clear error when RPATH >4096 bytes
 

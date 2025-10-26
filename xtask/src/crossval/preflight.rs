@@ -7,6 +7,7 @@
 use crate::crossval::CppBackend;
 use anyhow::{Result, bail};
 use std::path::Path;
+use std::time::Duration;
 use std::{env, process::Command};
 
 /// Error types for auto-repair functionality
@@ -33,6 +34,12 @@ pub enum RepairError {
     )]
     PermissionDenied { path: String, backend: String },
 
+    /// Unknown error (catch-all for unclassified errors)
+    #[error(
+        "Unknown error: {error}\n\nBackend: {backend}\n\nPlease report this issue with full output."
+    )]
+    Unknown { error: String, backend: String },
+
     /// setup-cpp-auto command failed
     #[error("setup-cpp-auto failed: {0}")]
     SetupFailed(String),
@@ -52,6 +59,86 @@ pub enum RepairError {
         "Repair already in progress (recursion detected)\n\nThis indicates an internal error. Please report this issue with:\n1. Full command that triggered repair\n2. Environment variables (BITNET_CPP_DIR, etc.)\n3. Output from: cargo run -p xtask -- preflight --verbose"
     )]
     RecursionDetected,
+}
+
+impl RepairError {
+    /// Classify error from stderr output
+    ///
+    /// Determines error type based on stderr content from setup-cpp-auto or cmake.
+    ///
+    /// # Arguments
+    ///
+    /// * `stderr` - Standard error output to classify
+    /// * `backend` - Backend name for error context
+    ///
+    /// # Returns
+    ///
+    /// Classified RepairError instance:
+    /// - NetworkFailure: Connection timeouts, git clone failures, DNS errors
+    /// - BuildFailure: CMake errors, compiler errors, linker failures
+    /// - PermissionDenied: EACCES, permission denied, cannot create directory
+    /// - Unknown: Unrecognized error pattern
+    pub fn classify(stderr: &str, backend: &str) -> Self {
+        let lower = stderr.to_lowercase();
+
+        // Network error patterns
+        if lower.contains("connection timeout")
+            || lower.contains("failed to clone")
+            || lower.contains("could not resolve host")
+            || lower.contains("network unreachable")
+            || lower.contains("connection refused")
+            || lower.contains("failed to connect")
+            || lower.contains("timed out")
+        {
+            return RepairError::NetworkFailure {
+                error: stderr.to_string(),
+                backend: backend.to_string(),
+            };
+        }
+
+        // Build error patterns
+        if lower.contains("cmake error")
+            || lower.contains("ninja: build stopped")
+            || lower.contains("undefined reference")
+            || lower.contains("no such file or directory")
+            || lower.contains("compilation failed")
+            || lower.contains("cannot find")
+            || lower.contains("compiler")
+        {
+            return RepairError::BuildFailure {
+                error: stderr.to_string(),
+                backend: backend.to_string(),
+            };
+        }
+
+        // Permission error patterns
+        if lower.contains("permission denied")
+            || lower.contains("eacces")
+            || lower.contains("cannot create directory")
+            || lower.contains("access is denied")
+        {
+            // Try to extract path from error message
+            let path = stderr
+                .lines()
+                .find(|line| {
+                    line.to_lowercase().contains("permission denied")
+                        || line.to_lowercase().contains("eacces")
+                })
+                .and_then(|line| {
+                    line.split_whitespace()
+                        .find(|word| word.starts_with('/') || word.starts_with("~/"))
+                })
+                .unwrap_or("~/.cache/bitnet_cpp");
+
+            return RepairError::PermissionDenied {
+                path: path.to_string(),
+                backend: backend.to_string(),
+            };
+        }
+
+        // Unknown error (catch-all)
+        RepairError::Unknown { error: stderr.to_string(), backend: backend.to_string() }
+    }
 }
 
 /// Error types for xtask rebuild operations
@@ -76,56 +163,75 @@ pub enum RebuildError {
     PermissionDenied(String),
 }
 
-/// Classify error from stderr output
+/// Exit codes for preflight command
 ///
-/// Determines error type based on stderr content from setup-cpp-auto or cmake.
+/// These codes provide semantic meaning for CI/CD integration and user diagnostics.
 ///
-/// # Arguments
+/// # Usage
 ///
-/// * `stderr` - Standard error output to classify
+/// ```ignore
+/// use xtask::crossval::preflight::PreflightExitCode;
 ///
-/// # Returns
+/// // Convert from RepairError
+/// let exit_code = PreflightExitCode::from_repair_error(&error);
 ///
-/// Error classification:
-/// - Network: Connection timeouts, git clone failures, DNS errors
-/// - Build: CMake errors, compiler errors, linker failures
-/// - Permission: EACCES, permission denied, cannot create directory
-/// - Unknown: Unrecognized error pattern
-fn classify_error(stderr: &str) -> &'static str {
-    let lower = stderr.to_lowercase();
+/// // Use in main return
+/// std::process::exit(exit_code as i32);
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i32)]
+pub enum PreflightExitCode {
+    /// Backend available (ready for cross-validation)
+    Available = 0,
 
-    // Network error patterns
-    if lower.contains("connection timeout")
-        || lower.contains("failed to clone")
-        || lower.contains("could not resolve host")
-        || lower.contains("network unreachable")
-        || lower.contains("connection refused")
-        || lower.contains("failed to connect")
-    {
-        return "network";
+    /// Backend unavailable after repair (repair disabled or failed non-retryable)
+    Unavailable = 1,
+
+    /// Invalid arguments (unknown backend name)
+    InvalidArgs = 2,
+
+    /// Auto-repair failed due to network error (after retries)
+    NetworkFailure = 3,
+
+    /// Auto-repair failed due to permission error
+    PermissionDenied = 4,
+
+    /// Auto-repair failed due to build error
+    BuildFailure = 5,
+
+    /// Recursion detected during repair (internal error)
+    RecursionDetected = 6,
+}
+
+impl PreflightExitCode {
+    /// Convert RepairError to exit code
+    ///
+    /// Maps error types to semantic exit codes for CI/CD integration.
+    ///
+    /// # Arguments
+    ///
+    /// * `err` - The repair error to classify
+    ///
+    /// # Returns
+    ///
+    /// Appropriate exit code for the error type:
+    /// - NetworkFailure → 3
+    /// - BuildFailure → 5
+    /// - PermissionDenied → 4
+    /// - RecursionDetected → 6
+    /// - Unknown/Other → 1 (generic unavailable)
+    pub fn from_repair_error(err: &RepairError) -> Self {
+        match err {
+            RepairError::NetworkFailure { .. } => PreflightExitCode::NetworkFailure,
+            RepairError::BuildFailure { .. } => PreflightExitCode::BuildFailure,
+            RepairError::PermissionDenied { .. } => PreflightExitCode::PermissionDenied,
+            RepairError::RecursionDetected => PreflightExitCode::RecursionDetected,
+            RepairError::Unknown { .. }
+            | RepairError::SetupFailed(_)
+            | RepairError::RevalidationFailed { .. }
+            | RepairError::RebuildFailed(_) => PreflightExitCode::Unavailable,
+        }
     }
-
-    // Build error patterns
-    if lower.contains("cmake error")
-        || lower.contains("ninja: build stopped")
-        || lower.contains("undefined reference")
-        || lower.contains("no such file or directory")
-        || lower.contains("compilation failed")
-        || lower.contains("cannot find")
-    {
-        return "build";
-    }
-
-    // Permission error patterns
-    if lower.contains("permission denied")
-        || lower.contains("eacces")
-        || lower.contains("cannot create directory")
-        || lower.contains("access is denied")
-    {
-        return "permission";
-    }
-
-    "unknown"
 }
 
 /// Check if an error is retryable
@@ -1056,32 +1162,22 @@ pub fn preflight_with_auto_repair(
         return preflight_backend_libs(backend, verbose);
     }
 
-    // Step 3: Attempt repair
+    // Step 3: Attempt repair with retry logic
     if verbose {
-        eprintln!("Backend '{}' not found, attempting auto-repair...", backend.name());
+        eprintln!();
+        eprintln!("Backend '{}' not found at build time", backend.name());
+        eprintln!();
+        eprintln!("Auto-repairing... (this will take 5-10 minutes on first run)");
     }
 
-    if let Err(e) = attempt_repair(backend, verbose) {
+    if let Err(e) = attempt_repair_with_retry(backend, verbose) {
         // Repair failed - show error with recovery steps
         eprintln!("\n{}", e);
         bail!("Auto-repair failed for backend '{}'", backend.name());
     }
 
-    // Step 4: Revalidation note
-    // NOTE: After rebuild, we would need to re-execute the xtask binary to see
-    // updated build-time constants. For now, we show success message and expect
-    // user to re-run preflight to verify.
-    if verbose {
-        eprintln!(
-            "✓ Backend '{}' setup complete. Rebuild xtask to detect libraries:",
-            backend.name()
-        );
-        eprintln!("  cargo clean -p xtask && cargo build -p xtask --features crossval-all");
-        eprintln!(
-            "  cargo run -p xtask -- preflight --backend {} --verbose",
-            backend.name().split('.').next().unwrap()
-        );
-    } else {
+    // Step 4: Success message (rebuild instructions shown by attempt_repair_once)
+    if !verbose {
         println!("✓ Backend '{}' setup complete (rebuild xtask to detect)", backend.name());
     }
 
@@ -1136,30 +1232,9 @@ fn attempt_repair(backend: CppBackend, verbose: bool) -> Result<(), RepairError>
 
     if !setup_result.status.success() {
         let stderr = String::from_utf8_lossy(&setup_result.stderr);
-        let error_type = classify_error(&stderr);
-        let backend_name = backend.name().to_string();
+        let backend_name = backend.name();
 
-        return Err(match error_type {
-            "network" => {
-                RepairError::NetworkFailure { error: stderr.to_string(), backend: backend_name }
-            }
-            "build" => {
-                RepairError::BuildFailure { error: stderr.to_string(), backend: backend_name }
-            }
-            "permission" => {
-                // Try to extract path from error message
-                let path = stderr
-                    .lines()
-                    .find(|line| line.contains("Permission denied"))
-                    .and_then(|line| {
-                        line.split_whitespace()
-                            .find(|word| word.starts_with('/') || word.starts_with("~/"))
-                    })
-                    .unwrap_or("~/.cache/bitnet_cpp");
-                RepairError::PermissionDenied { path: path.to_string(), backend: backend_name }
-            }
-            _ => RepairError::SetupFailed(stderr.to_string()),
-        });
+        return Err(RepairError::classify(&stderr, backend_name));
     }
 
     progress.log("REPAIR", "C++ libraries installed successfully");
@@ -1212,6 +1287,212 @@ fn rebuild_xtask_for_detection() -> Result<(), RebuildError> {
             "cargo build exited with code {:?}",
             build_status.code()
         )));
+    }
+
+    Ok(())
+}
+
+/// Repair mode for auto-repair functionality
+///
+/// Controls whether preflight should automatically provision missing C++ backends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepairMode {
+    /// Auto-repair if backend missing (default in interactive mode)
+    Auto,
+
+    /// Never auto-repair (explicit user opt-out)
+    Never,
+
+    /// Always attempt repair even if backend appears available (force refresh)
+    Always,
+}
+
+impl RepairMode {
+    /// Create RepairMode from CLI flags
+    ///
+    /// # Arguments
+    ///
+    /// * `repair` - Value from --repair flag (default true)
+    /// * `no_repair` - Value from --no-repair flag (overrides repair)
+    ///
+    /// # Returns
+    ///
+    /// RepairMode based on flags:
+    /// - `no_repair = true` → RepairMode::Never
+    /// - `repair = true && !is_ci()` → RepairMode::Auto
+    /// - `repair = true && is_ci()` → RepairMode::Never (CI safety)
+    pub fn from_cli_flags(repair: bool, no_repair: bool) -> Self {
+        if no_repair {
+            RepairMode::Never
+        } else if repair && !is_ci_environment() {
+            RepairMode::Auto
+        } else {
+            RepairMode::Never
+        }
+    }
+
+    /// Check if repair should be attempted
+    ///
+    /// # Arguments
+    ///
+    /// * `backend_available` - Whether backend is currently available
+    ///
+    /// # Returns
+    ///
+    /// `true` if repair should run, `false` otherwise
+    pub fn should_repair(self, backend_available: bool) -> bool {
+        match self {
+            RepairMode::Auto => !backend_available,
+            RepairMode::Never => false,
+            RepairMode::Always => true,
+        }
+    }
+}
+
+/// Detect if running in CI environment
+fn is_ci_environment() -> bool {
+    std::env::var("CI").is_ok()
+        || std::env::var("GITHUB_ACTIONS").is_ok()
+        || std::env::var("JENKINS_HOME").is_ok()
+        || std::env::var("GITLAB_CI").is_ok()
+}
+
+/// Retry configuration for auto-repair with exponential backoff
+#[derive(Debug, Clone)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts
+    pub max_retries: u32,
+    /// Initial backoff delay in milliseconds
+    pub initial_backoff_ms: u64,
+    /// Maximum backoff delay in milliseconds
+    pub max_backoff_ms: u64,
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        RetryConfig { max_retries: 3, initial_backoff_ms: 1000, max_backoff_ms: 16000 }
+    }
+}
+
+/// Attempt auto-repair with retry logic and exponential backoff
+///
+/// Implements the core auto-repair orchestration with:
+/// - Retry loop for transient network errors (max 3 attempts)
+/// - Exponential backoff: 1s, 2s, 4s
+/// - No retry for permanent errors (build/permission)
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to repair
+/// * `verbose` - Show detailed progress messages
+///
+/// # Returns
+///
+/// * `Ok(())` - Repair succeeded (user must rebuild xtask)
+/// * `Err(RepairError)` - Repair failed after retries
+///
+/// # Examples
+///
+/// ```ignore
+/// use xtask::crossval::preflight::{attempt_repair_with_retry, RepairMode};
+/// use xtask::crossval::CppBackend;
+///
+/// // Auto-repair BitNet backend with retries
+/// attempt_repair_with_retry(CppBackend::BitNet, true)?;
+/// ```
+pub fn attempt_repair_with_retry(backend: CppBackend, verbose: bool) -> Result<(), RepairError> {
+    let config = RetryConfig::default();
+    let mut retries = 0;
+
+    loop {
+        match attempt_repair_once(backend, verbose) {
+            Ok(()) => return Ok(()),
+            Err(e) if is_retryable_error(&e) && retries < config.max_retries => {
+                retries += 1;
+                let backoff_ms = config.initial_backoff_ms * 2_u64.pow(retries - 1);
+                let backoff_ms = backoff_ms.min(config.max_backoff_ms);
+
+                eprintln!(
+                    "[repair] Network error, retry {}/{} after {}ms...",
+                    retries, config.max_retries, backoff_ms
+                );
+
+                std::thread::sleep(Duration::from_millis(backoff_ms));
+                continue;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
+/// Attempt repair once (single attempt, no retries)
+///
+/// Core repair logic that invokes setup-cpp-auto and classifies errors.
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to repair
+/// * `verbose` - Show detailed progress messages
+///
+/// # Returns
+///
+/// * `Ok(())` - Repair succeeded
+/// * `Err(RepairError)` - Repair failed with classified error
+fn attempt_repair_once(backend: CppBackend, verbose: bool) -> Result<(), RepairError> {
+    let progress = RepairProgress::new(verbose);
+
+    // Check recursion guard
+    if env::var("BITNET_REPAIR_IN_PROGRESS").is_ok() {
+        return Err(RepairError::RecursionDetected);
+    }
+
+    // Set recursion guard
+    // SAFETY: This env var is only used as a recursion guard during auto-repair.
+    // We ensure cleanup happens even on error via the removal below.
+    unsafe {
+        env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+    }
+
+    progress.log("DETECT", &format!("Backend '{}' not found", backend.name()));
+    progress.log("REPAIR", "Invoking setup-cpp-auto... (this will take 5-10 minutes on first run)");
+
+    // Invoke setup-cpp-auto
+    let setup_result = Command::new(
+        env::current_exe()
+            .map_err(|e| RepairError::SetupFailed(format!("Failed to get current exe: {}", e)))?,
+    )
+    .args(["setup-cpp-auto", "--emit=sh"])
+    .output()
+    .map_err(|e| RepairError::SetupFailed(format!("Failed to execute setup-cpp-auto: {}", e)))?;
+
+    // Cleanup recursion guard
+    // SAFETY: We're removing the same env var we set above, restoring the environment state.
+    unsafe {
+        env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+    }
+
+    if !setup_result.status.success() {
+        let stderr = String::from_utf8_lossy(&setup_result.stderr);
+        let backend_name = backend.name();
+
+        return Err(RepairError::classify(&stderr, backend_name));
+    }
+
+    progress.log("REPAIR", "C++ libraries installed successfully");
+    progress.log("REBUILD", "Next: Rebuild xtask to detect libraries");
+
+    // Show rebuild instructions
+    if verbose {
+        eprintln!();
+        eprintln!("✓ Setup complete! Rebuilding xtask to detect libraries...");
+        eprintln!();
+        eprintln!("  cargo clean -p xtask && cargo build -p xtask --features crossval-all");
+        eprintln!();
+        eprintln!("After build completes, re-run:");
+        eprintln!(
+            "  cargo run -p xtask -- preflight --backend {} --verbose",
+            backend.name().split('.').next().unwrap()
+        );
     }
 
     Ok(())

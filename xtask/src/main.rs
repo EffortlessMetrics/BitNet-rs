@@ -3674,13 +3674,13 @@ fn parity_both_cmd(
     cos_tol: f64,
     out_dir: &Path,
     format: &str,
-    _prompt_template: PromptTemplateArg,
-    _system_prompt: Option<&str>,
+    prompt_template: PromptTemplateArg,
+    system_prompt: Option<&str>,
     auto_repair: bool,
     verbose: bool,
-    _dump_ids: bool,
-    _dump_cpp_ids: bool,
-    _metrics: &str,
+    dump_ids: bool,
+    dump_cpp_ids: bool,
+    metrics: &str,
 ) -> Result<()> {
     use crossval::parity_both;
 
@@ -3697,8 +3697,13 @@ fn parity_both_cmd(
         cos_tol,
         out_dir: out_dir.to_path_buf(),
         format: format.to_string(),
+        prompt_template,
+        system_prompt: system_prompt.map(|s| s.to_string()),
         auto_repair,
         verbose,
+        dump_ids,
+        dump_cpp_ids,
+        metrics: metrics.to_string(),
     })?;
 
     Ok(())
