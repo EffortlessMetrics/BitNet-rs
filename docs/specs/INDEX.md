@@ -217,12 +217,61 @@ The uncommented code in `bitnet_cpp_wrapper.cc` mentions hypothetical functions.
 | Performance optimization (10-100×) | FFI Integration Sockets 🆕 |
 | dlopen loader implementation | FFI Integration Sockets 🆕 |
 
+## Cross-Validation Specifications
+
+### Parity-Both Command Suite
+
+7. **[Parity-Both Command](parity-both-command.md)** 🔄
+   - **Baseline dual-lane cross-validation specification**
+   - Single command orchestration for BitNet.cpp + llama.cpp
+   - Unified receipt generation and comparative metrics
+   - Exit code semantics (0=both pass, 1=either fails)
+   - Command-line interface and workflow architecture
+
+8. **[Parity-Both Preflight & TokenizerAuthority Integration](parity-both-preflight-tokenizer-integration.md)** 🆕 COMPREHENSIVE
+   - **Complete integration specification for v2.0**
+   - Preflight integration with auto-repair and retry semantics
+   - TokenizerAuthority metadata for receipt reproducibility
+   - Exit code standardization (0=both pass, 1=one fails, 2=usage error)
+   - Dual receipt generation with shared tokenizer provenance
+   - Token parity validation as fail-fast gate
+   - Per-position metrics with configurable thresholds
+   - 10 acceptance criteria (AC1-AC10) with detailed implementation guidance
+   - 54 comprehensive tests covering all acceptance criteria
+   - API contracts and function signatures
+   - Receipt schema v2.0.0 (backward-compatible extension)
+
+9. **[Preflight Auto-Repair](preflight-auto-repair.md)** 🔧
+   - Auto-repair integration for missing C++ backends
+   - RepairMode semantics (Auto, Never, Always)
+   - Retry logic with exponential backoff
+   - setup-cpp-auto integration
+
+10. **[Preflight Repair Mode Re-exec](preflight-repair-mode-reexec.md)** 🔄
+    - Re-execution semantics after backend repair
+    - Environment variable propagation
+    - Build system integration with xtask rebuild
+
+### When to Use Which Parity-Both Guide
+
+| Task | Recommended Guide |
+|------|-------------------|
+| Understanding baseline dual-lane flow | Parity-Both Command (baseline) |
+| Complete integration implementation | Parity-Both Preflight & TokenizerAuthority Integration 🆕 |
+| Auto-repair mechanics | Preflight Auto-Repair |
+| Re-exec after repair | Preflight Repair Mode Re-exec |
+| TokenizerAuthority schema | Parity-Both Preflight & TokenizerAuthority Integration 🆕 |
+| Exit code logic (0/1/2) | Parity-Both Preflight & TokenizerAuthority Integration 🆕 |
+| Receipt schema v2.0.0 | Parity-Both Preflight & TokenizerAuthority Integration 🆕 |
+| Test coverage planning (54 tests) | Parity-Both Preflight & TokenizerAuthority Integration 🆕 |
+
 ## Related Documentation
 
 See also in parent `/docs` directory:
 - `BITNET_CPP_INTEGRATION_ANALYSIS.md` - Previous analysis
 - `C_FFI_INTEGRATION_ANALYSIS.md` - FFI strategy
 - `CROSSVAL.md` - Cross-validation framework
+- `explanation/dual-backend-crossval.md` - Dual-backend architecture
 
 ## Files to Modify
 

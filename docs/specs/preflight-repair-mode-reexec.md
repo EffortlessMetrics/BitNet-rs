@@ -2055,6 +2055,55 @@ This specification defines a comprehensive **end-to-end auto-repair workflow** f
 
 ---
 
+## References
+
+### Source Analysis
+
+This specification is derived from comprehensive codebase analysis documented in:
+
+- **Analysis Artifact**: `/tmp/preflight_repair_patterns_analysis.md`
+  - Date: 2025-10-26
+  - Focus: Preflight auto-repair architecture, rebuild/re-exec flow, and recursion guards
+  - Sections: Current architecture, repair mode state machine, rebuild + re-exec flow, error taxonomy
+
+### Code Locations
+
+- **Preflight Core**: `xtask/src/crossval/preflight.rs` (1525 lines)
+  - RepairMode enum and state machine
+  - Error classification taxonomy
+  - Rebuild and re-exec stubs
+  - Recursion guard implementation
+
+- **setup-cpp-auto**: `xtask/src/cpp_setup_auto.rs` (1418 lines)
+  - C++ backend installation orchestration
+  - Library path detection and environment export
+  - Build system integration (CMake, setup_env.py)
+
+- **AC2 Integration**: `xtask/src/crossval/preflight_ac2.rs` (224 lines)
+  - setup-cpp-auto subprocess invocation
+  - Shell export parsing and environment propagation
+
+- **Test Scaffolding**: `xtask/tests/preflight_repair_mode_tests.rs`
+  - Comprehensive TDD test scaffolding for AC1-AC14
+  - 54+ test cases organized by acceptance criterion
+  - Serial execution with environment isolation
+
+### Related Documentation
+
+- **CLAUDE.md**: Project-wide guidance, cross-validation setup, preflight usage
+- **docs/howto/cpp-setup.md**: Manual C++ reference setup guide
+- **docs/explanation/dual-backend-crossval.md**: Dual-backend architecture (BitNet.cpp + llama.cpp)
+- **docs/development/test-suite.md**: Test framework and ignored tests
+
+### Related Specifications
+
+- **preflight-auto-repair.md**: Original auto-repair design (AC1-AC7)
+- **bitnet-cpp-auto-setup-parity.md**: setup-cpp-auto implementation details
+- **test-infra-auto-repair-ci.md**: CI integration patterns
+
+---
+
 **Specification Version**: 1.0
-**Document Length**: 1150+ lines
+**Document Length**: 2060+ lines
+**Last Updated**: 2025-10-26
 **Status**: Ready for Implementation Review

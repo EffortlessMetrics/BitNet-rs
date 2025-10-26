@@ -106,15 +106,78 @@ mod ac1_repair_mode_enum_tests {
 }
 
 // ============================================================================
-// AC2: setup-cpp-auto Subprocess Invocation
+// AC2: CI Detection Logic
 // ============================================================================
 
 #[cfg(test)]
-mod ac2_setup_cpp_auto_invocation_tests {
+mod ac2_ci_detection_tests {
     use super::*;
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
-    /// AC:AC2 - setup-cpp-auto invoked with correct arguments
+    /// AC:AC2 - Detects GitHub Actions CI environment
+    #[test]
+    #[ignore] // TODO: Implement CI detection
+    #[serial(bitnet_env)]
+    fn test_ci_detection_github_actions() {
+        // Setup: Set GITHUB_ACTIONS=true
+        // Assert: is_ci_environment() returns true
+        unimplemented!("AC2: Implement GitHub Actions CI detection test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
+    /// AC:AC2 - Detects GitLab CI environment
+    #[test]
+    #[ignore] // TODO: Implement GitLab CI detection
+    #[serial(bitnet_env)]
+    fn test_ci_detection_gitlab() {
+        // Setup: Set GITLAB_CI=true
+        // Assert: is_ci_environment() returns true
+        unimplemented!("AC2: Implement GitLab CI detection test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
+    /// AC:AC2 - Detects generic CI environment variable
+    #[test]
+    #[ignore] // TODO: Implement generic CI detection
+    #[serial(bitnet_env)]
+    fn test_ci_detection_generic() {
+        // Setup: Set CI=true
+        // Assert: is_ci_environment() returns true
+        unimplemented!("AC2: Implement generic CI detection test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
+    /// AC:AC2 - Returns false for local environment
+    #[test]
+    #[ignore] // TODO: Implement local environment detection
+    fn test_ci_detection_local() {
+        // Setup: No CI environment variables set
+        // Assert: is_ci_environment() returns false
+        unimplemented!("AC2: Implement local environment detection test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
+    /// AC:AC2 - Detects CircleCI environment
+    #[test]
+    #[ignore] // TODO: Implement CircleCI detection
+    #[serial(bitnet_env)]
+    fn test_ci_detection_circleci() {
+        // Setup: Set CIRCLECI=true
+        // Assert: is_ci_environment() returns true
+        unimplemented!("AC2: Implement CircleCI detection test");
+    }
+}
+
+// ============================================================================
+// AC3: rebuild_xtask Function
+// ============================================================================
+
+#[cfg(test)]
+mod ac3_setup_cpp_auto_invocation_tests {
+    use super::*;
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
+    /// AC:AC3 - setup-cpp-auto invoked with correct arguments
     #[test]
     #[ignore] // TODO: Implement subprocess invocation
     fn test_setup_cpp_auto_invocation() {
@@ -122,11 +185,11 @@ mod ac2_setup_cpp_auto_invocation_tests {
         // Mock: Command::new() to capture invocation
         // Assert: Command invoked with ["setup-cpp-auto", "--emit=sh"]
         // Assert: Uses current_exe() as binary path
-        unimplemented!("AC2: Implement setup-cpp-auto invocation test");
+        unimplemented!("AC3: Implement setup-cpp-auto invocation test");
     }
 
-    /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
-    /// AC:AC2 - Recursion guard environment variable passed to child
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
+    /// AC:AC3 - Recursion guard environment variable passed to child
     #[test]
     #[ignore] // TODO: Implement environment variable passing
     #[serial(bitnet_env)]
@@ -134,11 +197,11 @@ mod ac2_setup_cpp_auto_invocation_tests {
         // Mock: setup-cpp-auto subprocess
         // Mock: Set BITNET_REPAIR_IN_PROGRESS=1
         // Assert: Child process has BITNET_REPAIR_IN_PROGRESS=1 in environment
-        unimplemented!("AC2: Implement recursion guard env pass test");
+        unimplemented!("AC3: Implement recursion guard env pass test");
     }
 
-    /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
-    /// AC:AC2 - Stderr captured and classified on failure
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
+    /// AC:AC3 - Stderr captured and classified on failure
     #[test]
     #[ignore] // TODO: Implement error capture logic
     fn test_setup_cpp_auto_error_capture() {
@@ -146,7 +209,29 @@ mod ac2_setup_cpp_auto_invocation_tests {
         // Mock: Stderr contains "connection timeout"
         // Assert: Error classified as NetworkFailure
         // Assert: Exit code 3 (network error)
-        unimplemented!("AC2: Implement error capture test");
+        unimplemented!("AC3: Implement error capture test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
+    /// AC:AC3 - Recursion guard cleanup after success
+    #[test]
+    #[ignore] // TODO: Implement guard cleanup
+    #[serial(bitnet_env)]
+    fn test_setup_cpp_auto_guard_cleanup_success() {
+        // Mock: setup-cpp-auto succeeds
+        // Assert: BITNET_REPAIR_IN_PROGRESS removed after completion
+        unimplemented!("AC3: Implement guard cleanup success test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
+    /// AC:AC3 - Recursion guard cleanup after failure
+    #[test]
+    #[ignore] // TODO: Implement guard cleanup on failure
+    #[serial(bitnet_env)]
+    fn test_setup_cpp_auto_guard_cleanup_failure() {
+        // Mock: setup-cpp-auto fails
+        // Assert: BITNET_REPAIR_IN_PROGRESS removed even after failure
+        unimplemented!("AC3: Implement guard cleanup failure test");
     }
 }
 
@@ -437,6 +522,98 @@ mod ac7_exit_code_tests {
 }
 
 // ============================================================================
+// AC7: Error Classification (Expanded Coverage)
+// ============================================================================
+
+#[cfg(test)]
+mod ac7_error_classification_tests {
+    use super::*;
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Network error: connection timeout
+    #[test]
+    #[ignore] // TODO: Implement error classification
+    fn test_classify_network_error_timeout() {
+        // Mock: Stderr = "connection timeout"
+        // Assert: Classified as NetworkFailure
+        // Assert: is_retryable_error() returns true
+        unimplemented!("AC7: Implement network timeout classification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Network error: DNS resolution failure
+    #[test]
+    #[ignore] // TODO: Implement DNS error classification
+    fn test_classify_network_error_dns() {
+        // Mock: Stderr = "could not resolve host"
+        // Assert: Classified as NetworkFailure
+        unimplemented!("AC7: Implement DNS error classification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Build error: CMake not found
+    #[test]
+    #[ignore] // TODO: Implement CMake error classification
+    fn test_classify_build_error_cmake_missing() {
+        // Mock: Stderr = "cmake not found"
+        // Assert: Classified as BuildFailure
+        // Assert: is_retryable_error() returns false
+        unimplemented!("AC7: Implement CMake missing classification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Build error: Compiler not found
+    #[test]
+    #[ignore] // TODO: Implement compiler error classification
+    fn test_classify_build_error_compiler_missing() {
+        // Mock: Stderr = "No CMAKE_CXX_COMPILER could be found"
+        // Assert: Classified as BuildFailure
+        unimplemented!("AC7: Implement compiler missing classification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Permission error: mkdir failure
+    #[test]
+    #[ignore] // TODO: Implement permission error classification
+    fn test_classify_permission_error_mkdir() {
+        // Mock: Stderr = "cannot create directory '/path': Permission denied"
+        // Assert: Classified as PermissionDenied
+        // Assert: Path extracted correctly
+        unimplemented!("AC7: Implement mkdir permission classification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Permission error: EACCES
+    #[test]
+    #[ignore] // TODO: Implement EACCES classification
+    fn test_classify_permission_error_eacces() {
+        // Mock: Stderr contains "EACCES"
+        // Assert: Classified as PermissionDenied
+        unimplemented!("AC7: Implement EACCES classification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Unknown error fallback
+    #[test]
+    #[ignore] // TODO: Implement unknown error classification
+    fn test_classify_unknown_error() {
+        // Mock: Stderr = "unexpected error message"
+        // Assert: Classified as Unknown
+        unimplemented!("AC7: Implement unknown error classification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
+    /// AC:AC7 - Path extraction from permission error
+    #[test]
+    #[ignore] // TODO: Implement path extraction
+    fn test_extract_path_from_permission_error() {
+        // Mock: Stderr = "permission denied: /home/user/.cache/bitnet_cpp"
+        // Assert: extract_path_from_error() returns Some("/home/user/.cache/bitnet_cpp")
+        unimplemented!("AC7: Implement path extraction test");
+    }
+}
+
+// ============================================================================
 // AC8: Clear Error Messages with Recovery Steps
 // ============================================================================
 
@@ -552,6 +729,40 @@ mod ac9_retry_logic_tests {
         // Assert: Returns immediately with BuildFailure
         unimplemented!("AC9: Implement build error no-retry test");
     }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
+    /// AC:AC9 - Permission errors not retried
+    #[test]
+    #[ignore] // TODO: Implement no-retry for permission errors
+    fn test_retry_permission_error_no_retry() {
+        // Mock: PermissionDenied error
+        // Assert: No retry attempted
+        // Assert: Returns immediately with PermissionDenied
+        unimplemented!("AC9: Implement permission error no-retry test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
+    /// AC:AC9 - Successful retry after transient failure
+    #[test]
+    #[ignore] // TODO: Implement successful retry
+    fn test_retry_success_after_transient_failure() {
+        // Mock: First attempt fails with NetworkFailure
+        // Mock: Second attempt succeeds
+        // Assert: Total attempts = 2
+        // Assert: Final result is success
+        unimplemented!("AC9: Implement successful retry test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
+    /// AC:AC9 - Retry backoff capped at max_backoff_ms
+    #[test]
+    #[ignore] // TODO: Implement backoff cap
+    fn test_retry_backoff_capped() {
+        // Mock: 10 consecutive failures (hypothetical)
+        // Assert: Backoff delays capped at 16000ms (max_backoff_ms)
+        // Assert: Never exceeds 16 seconds
+        unimplemented!("AC9: Implement backoff cap test");
+    }
 }
 
 // ============================================================================
@@ -661,6 +872,150 @@ mod ac11_transactional_rollback_tests {
         // Assert: No backup created (install_dir does not exist)
         // Assert: setup-cpp-auto proceeds directly
         unimplemented!("AC11: Implement fresh install test");
+    }
+}
+
+// ============================================================================
+// AC11: Verbose Diagnostics
+// ============================================================================
+
+#[cfg(test)]
+mod ac11_verbose_diagnostics_tests {
+    use super::*;
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
+    /// AC:AC11 - Verbose mode shows repair workflow steps
+    #[test]
+    #[ignore] // TODO: Implement verbose diagnostics
+    fn test_verbose_shows_repair_steps() {
+        // Mock: RepairMode::Auto with --verbose
+        // Capture stderr
+        // Assert: Output contains "[repair] Step 1/3: Installing C++ reference"
+        // Assert: Output contains "[repair] Step 2/3: Rebuilding xtask binary"
+        // Assert: Output contains "[repair] Step 3/3: Re-executing with updated detection"
+        unimplemented!("AC11: Implement verbose repair steps test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
+    /// AC:AC11 - Verbose mode shows backend selection
+    #[test]
+    #[ignore] // TODO: Implement backend selection diagnostics
+    fn test_verbose_shows_backend_selection() {
+        // Mock: --backend bitnet --verbose
+        // Capture stderr
+        // Assert: Output contains "[preflight] Selected backend: bitnet.cpp"
+        // Assert: Output contains "[preflight] Install directory: ~/.cache/bitnet_cpp"
+        unimplemented!("AC11: Implement backend selection diagnostics test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
+    /// AC:AC11 - Verbose mode shows time estimates
+    #[test]
+    #[ignore] // TODO: Implement time estimate diagnostics
+    fn test_verbose_shows_time_estimates() {
+        // Mock: Repair workflow with --verbose
+        // Capture stderr
+        // Assert: Output contains "(60-120s estimated)" for setup-cpp-auto
+        // Assert: Output contains "(10-30s estimated)" for rebuild
+        unimplemented!("AC11: Implement time estimate diagnostics test");
+    }
+}
+
+// ============================================================================
+// AC12: Help Text Validation
+// ============================================================================
+
+#[cfg(test)]
+mod ac12_help_text_tests {
+    use super::*;
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
+    /// AC:AC12 - Help text documents --repair flag
+    #[test]
+    #[ignore] // TODO: Implement help text validation
+    fn test_help_text_repair_flag() {
+        // Run: cargo run -p xtask -- preflight --help
+        // Assert: Output contains "--repair <MODE>"
+        // Assert: Output describes auto/never/always variants
+        unimplemented!("AC12: Implement help text repair flag test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
+    /// AC:AC12 - Help text documents CI-aware defaults
+    #[test]
+    #[ignore] // TODO: Implement CI defaults documentation
+    fn test_help_text_ci_defaults() {
+        // Run: cargo run -p xtask -- preflight --help
+        // Assert: Output mentions "auto (default locally), never (default in CI)"
+        unimplemented!("AC12: Implement CI defaults help text test");
+    }
+}
+
+// ============================================================================
+// AC13: Test Coverage Verification
+// ============================================================================
+
+#[cfg(test)]
+mod ac13_test_coverage_tests {
+    use super::*;
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC13
+    /// AC:AC13 - All acceptance criteria have test coverage
+    #[test]
+    #[ignore] // TODO: Implement coverage verification
+    fn test_all_ac_covered() {
+        // Scan test file for AC:AC1 through AC:AC14 tags
+        // Assert: All 14 acceptance criteria have >= 1 test
+        unimplemented!("AC13: Implement test coverage verification");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC13
+    /// AC:AC13 - Test count matches specification requirement
+    #[test]
+    #[ignore] // TODO: Implement test count verification
+    fn test_minimum_test_count() {
+        // Count all tests in this file
+        // Assert: Total tests >= 61 (specification requirement)
+        unimplemented!("AC13: Implement test count verification");
+    }
+}
+
+// ============================================================================
+// AC14: Documentation Completeness
+// ============================================================================
+
+#[cfg(test)]
+mod ac14_documentation_tests {
+    use super::*;
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
+    /// AC:AC14 - All tests have specification traceability
+    #[test]
+    #[ignore] // TODO: Implement traceability verification
+    fn test_all_tests_have_spec_references() {
+        // Scan test file for "Tests feature spec:" comments
+        // Assert: All tests reference preflight-repair-mode-reexec.md
+        unimplemented!("AC14: Implement spec traceability test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
+    /// AC:AC14 - All tests have AC tags for mapping
+    #[test]
+    #[ignore] // TODO: Implement AC tag verification
+    fn test_all_tests_have_ac_tags() {
+        // Scan test file for "AC:AC" tags
+        // Assert: All non-helper tests have AC tags
+        unimplemented!("AC14: Implement AC tag verification test");
+    }
+
+    /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
+    /// AC:AC14 - Test documentation clarity
+    #[test]
+    #[ignore] // TODO: Implement documentation clarity check
+    fn test_documentation_clarity() {
+        // Verify test comments explain Given/When/Then
+        // Assert: Tests have clear setup/action/assertion comments
+        unimplemented!("AC14: Implement documentation clarity test");
     }
 }
 
