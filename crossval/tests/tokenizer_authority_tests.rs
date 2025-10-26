@@ -975,10 +975,7 @@ mod tc8_builder_api_patterns {
 
         // Verify timestamp is RFC3339 format (ISO 8601)
         assert!(!receipt.timestamp.is_empty(), "Timestamp should not be empty");
-        assert!(
-            receipt.timestamp.contains("T"),
-            "Timestamp should contain 'T' separator"
-        );
+        assert!(receipt.timestamp.contains("T"), "Timestamp should contain 'T' separator");
         // Check for either Z (UTC) or +/- offset
         assert!(
             receipt.timestamp.contains("Z")
