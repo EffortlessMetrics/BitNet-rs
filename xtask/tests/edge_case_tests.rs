@@ -27,16 +27,28 @@
 //! All tests that mutate environment variables use `#[serial(bitnet_env)]` to
 //! prevent process-level race conditions during parallel test execution.
 
+// TDD scaffolding - these imports will be used once tests are un-ignored
+#[allow(unused_imports)]
 use serial_test::serial;
+#[allow(unused_imports)]
 use std::env;
+#[allow(unused_imports)]
 use std::fs;
+#[allow(unused_imports)]
 use std::io::Write as _;
+#[allow(unused_imports)]
 use std::path::{Path, PathBuf};
+#[allow(unused_imports)]
 use std::process::Command;
+#[allow(unused_imports)]
 use std::sync::Arc;
+#[allow(unused_imports)]
 use std::sync::atomic::{AtomicBool, Ordering};
+#[allow(unused_imports)]
 use std::thread;
+#[allow(unused_imports)]
 use std::time::Duration;
+#[allow(unused_imports)]
 use tempfile::TempDir;
 
 // ============================================================================
@@ -44,6 +56,7 @@ use tempfile::TempDir;
 // ============================================================================
 
 /// Helper to find workspace root by walking up to .git directory
+#[allow(dead_code)]
 fn workspace_root() -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     while !path.join(".git").exists() {
@@ -59,11 +72,13 @@ fn workspace_root() -> PathBuf {
 /// This guard provides automatic restoration of environment variable state via
 /// the Drop trait. It is used in tests that need to temporarily modify environment
 /// variables without depending on the tests crate.
+#[allow(dead_code)]
 struct EnvGuard {
     key: String,
     old: Option<String>,
 }
 
+#[allow(dead_code)]
 impl EnvGuard {
     /// Create a new environment variable guard, capturing current state
     fn new(key: &str) -> Self {
@@ -109,6 +124,7 @@ impl Drop for EnvGuard {
 }
 
 /// Create a mock library file for testing
+#[allow(dead_code)]
 fn create_mock_lib(dir: &Path, name: &str) -> std::io::Result<()> {
     let lib_path = dir.join(name);
     fs::write(lib_path, b"mock library")?;
@@ -116,6 +132,7 @@ fn create_mock_lib(dir: &Path, name: &str) -> std::io::Result<()> {
 }
 
 /// Create a malformed GGUF file for testing error handling
+#[allow(dead_code)]
 fn create_malformed_gguf(dir: &Path, name: &str) -> std::io::Result<PathBuf> {
     let gguf_path = dir.join(name);
     let mut file = fs::File::create(&gguf_path)?;

@@ -44,6 +44,7 @@
 //! cargo clean -p crossval && cargo build --features crossval-all
 //! ```
 
+#[allow(unused_imports)]
 use bitnet_crossval::backend::CppBackend;
 
 /// Ensure backend is available, skip test if not
@@ -76,6 +77,7 @@ use bitnet_crossval::backend::CppBackend;
 ///     // Test code here
 /// }
 /// ```
+#[allow(dead_code)]
 pub fn ensure_backend_or_skip(backend: CppBackend) {
     use bitnet_crossval::{HAS_BITNET, HAS_LLAMA};
 
@@ -86,28 +88,18 @@ pub fn ensure_backend_or_skip(backend: CppBackend) {
     };
 
     if available {
-        return; // Backend available, proceed with test
+        return; // Backend available, continue test
     }
 
-    // Backend unavailable - check if auto-repair allowed
-    if is_ci_or_no_repair() {
-        // CI mode: deterministic skip without downloads
-        print_skip_diagnostic(backend, "backend unavailable (BITNET_TEST_NO_REPAIR set)");
+    // Backend unavailable - check if we should attempt repair
+    if !is_ci_or_no_repair() && attempt_auto_repair(backend).is_ok() {
+        // Repair succeeded, recheck (would need rebuild in real scenario)
+        eprintln!("Backend {:?} repaired. Note: Rebuild xtask to detect.", backend);
         return;
     }
 
-    // Local dev mode: attempt auto-repair
-    eprintln!("⚠️  {} backend unavailable. Attempting auto-repair...", backend.name());
-
-    if let Err(e) = attempt_auto_repair(backend) {
-        print_skip_diagnostic(backend, &format!("auto-repair failed: {}", e));
-        return;
-    }
-
-    // Repair succeeded but constants still frozen
-    eprintln!("✓ {} backend installed. Rebuild required to detect:", backend.name());
-    eprintln!("  cargo clean -p crossval && cargo build --features crossval-all");
-    print_skip_diagnostic(backend, "backend available after rebuild");
+    // Skip test with diagnostic
+    print_skip_diagnostic(backend);
 }
 
 /// Convenience wrapper for BitNet backend
@@ -136,6 +128,7 @@ pub fn ensure_bitnet_or_skip() {
 ///     // Test code here
 /// }
 /// ```
+#[allow(dead_code)]
 pub fn ensure_llama_or_skip() {
     ensure_backend_or_skip(CppBackend::Llama);
 }
@@ -145,6 +138,7 @@ pub fn ensure_llama_or_skip() {
 /// Returns true if:
 /// - `BITNET_TEST_NO_REPAIR=1` is set, OR
 /// - `CI=1` is set (GitHub Actions, GitLab CI, etc.)
+#[allow(dead_code)]
 fn is_ci_or_no_repair() -> bool {
     std::env::var("BITNET_TEST_NO_REPAIR").is_ok() || std::env::var("CI").is_ok()
 }
@@ -161,12 +155,13 @@ fn is_ci_or_no_repair() -> bool {
 ///
 /// - `Ok(())` if installation succeeded
 /// - `Err(String)` if installation failed with error message
+#[allow(dead_code)]
 fn attempt_auto_repair(backend: CppBackend) -> Result<(), String> {
     use std::process::Command;
 
     // Build xtask command based on backend
     let mut cmd = Command::new("cargo");
-    cmd.args(&["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"]);
+    cmd.args(["run", "-p", "xtask", "--", "setup-cpp-auto", "--emit=sh"]);
 
     // Add backend-specific flags if needed
     match backend {
@@ -198,17 +193,27 @@ fn attempt_auto_repair(backend: CppBackend) -> Result<(), String> {
 /// # Arguments
 ///
 /// * `backend` - The backend that is unavailable
-/// * `reason` - Human-readable reason for skipping
-fn print_skip_diagnostic(backend: CppBackend, reason: &str) {
-    eprintln!("SKIPPED: {} backend {}", backend.name(), reason);
-    eprintln!("  To enable: {}", backend.setup_command());
-    eprintln!("  Then rebuild: cargo clean -p crossval && cargo build --features crossval-all");
+#[allow(dead_code)]
+fn print_skip_diagnostic(backend: CppBackend) {
+    eprintln!("skipped ({:?} not available)", backend);
+    eprintln!();
+    eprintln!("To run this test:");
+    match backend {
+        CppBackend::BitNet => {
+            eprintln!("  1. cargo run -p xtask -- setup-cpp-auto --backend bitnet");
+            eprintln!("  2. cargo build -p xtask --features crossval-all");
+            eprintln!("  3. Re-run tests");
+        }
+        CppBackend::Llama => {
+            eprintln!("  1. cargo run -p xtask -- setup-cpp-auto --backend llama");
+            eprintln!("  2. cargo build -p xtask --features crossval-all");
+            eprintln!("  3. Re-run tests");
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_is_ci_or_no_repair_with_no_repair_flag() {
         // This test would need environment isolation

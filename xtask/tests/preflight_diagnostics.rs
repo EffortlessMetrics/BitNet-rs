@@ -13,6 +13,7 @@ mod error_message_formatting {
     use std::path::PathBuf;
 
     /// Helper to find workspace root by walking up to .git directory
+    #[allow(dead_code)]
     fn workspace_root() -> PathBuf {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         while !path.join(".git").exists() {
@@ -133,6 +134,7 @@ mod verbose_diagnostics {
     use std::path::PathBuf;
 
     /// Helper to find workspace root
+    #[allow(dead_code)]
     fn workspace_root() -> PathBuf {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         while !path.join(".git").exists() {

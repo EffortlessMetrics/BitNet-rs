@@ -3,6 +3,7 @@
 //! Tests validation and parsing of command-line arguments, particularly for
 //! the crossval-per-token command with new parity ladder flags.
 
+#[allow(unused_imports)]
 use std::path::PathBuf;
 
 /// Test default values for ladder, positions, and metrics flags

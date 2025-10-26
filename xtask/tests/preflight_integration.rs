@@ -8,10 +8,14 @@
 //! **Test Strategy**: TDD scaffolding - tests compile but fail due to missing implementation.
 //! All tests are marked with TODO comments indicating the required implementation.
 
+// TDD scaffolding - these imports will be used once tests are un-ignored
+#[allow(unused_imports)]
 use std::path::PathBuf;
+#[allow(unused_imports)]
 use std::process::Command;
 
 /// Helper to find workspace root by walking up to .git directory
+#[allow(dead_code)]
 fn workspace_root() -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     while !path.join(".git").exists() {
@@ -24,6 +28,7 @@ fn workspace_root() -> PathBuf {
 
 #[cfg(test)]
 mod exit_code_validation {
+    #![allow(unused_imports)] // TDD scaffolding
     use super::*;
 
     /// Tests feature spec: preflight-ux-improvements.md#exit-code-standardization
@@ -144,6 +149,7 @@ mod exit_code_validation {
 
 #[cfg(test)]
 mod verbose_flag_behavior {
+    #![allow(unused_imports)] // TDD scaffolding
     use super::*;
 
     /// Tests feature spec: preflight-ux-improvements.md#verbose-diagnostics
@@ -268,6 +274,7 @@ mod verbose_flag_behavior {
 
 #[cfg(test)]
 mod backend_specific_validation {
+    #![allow(unused_imports)] // TDD scaffolding
     use super::*;
 
     /// Tests feature spec: preflight-ux-improvements.md#backend-specific-validation

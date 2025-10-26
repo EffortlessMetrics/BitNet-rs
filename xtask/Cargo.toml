@@ -39,6 +39,7 @@ xtask-build-helper = { path = "../xtask-build-helper" }
 bitnet-crossval = { path = "../crossval", default-features = false, optional = true }
 bitnet-sys = { path = "../crates/bitnet-sys", default-features = false, optional = true }
 scopeguard = "1.2.0"
+thiserror = "2.0.10"
 
 [features]
 default = ["gpu"]

@@ -4,5 +4,6 @@
 //! and other crates (including tests).
 
 pub mod build_helpers;
+pub mod cpp_setup_auto;
 pub mod crossval;
 pub mod ffi;

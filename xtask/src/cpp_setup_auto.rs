@@ -13,6 +13,9 @@
 //! # fish
 //! cargo run -p xtask -- setup-cpp-auto --emit=fish | source
 //!
+
+// TDD scaffolding - suppress warnings for planned implementation
+#![allow(dead_code)]
 //! # Windows PowerShell
 //! cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
 //!
@@ -27,6 +30,9 @@ use std::{
     process::Command,
 };
 use walkdir::WalkDir;
+
+/// GitHub URL for Microsoft BitNet repository
+const BITNET_REPO_URL: &str = "https://github.com/microsoft/BitNet";
 
 /// Shell format for environment variable exports
 #[derive(Clone, Copy, Debug)]
@@ -51,6 +57,277 @@ impl Emit {
             _ => Emit::Sh,
         }
     }
+}
+
+/// Check if a directory contains BitNet or llama libraries
+///
+/// Returns true if the directory contains at least one library file matching:
+/// - libbitnet*.so/.dylib or bitnet*.dll (BitNet.cpp)
+/// - libllama*.so/.dylib or llama*.dll (llama.cpp)
+/// - libggml*.so/.dylib or ggml*.dll (GGML backend)
+fn has_libraries(dir: &Path) -> bool {
+    if !dir.is_dir() {
+        return false;
+    }
+
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                let is_library =
+                    (name.contains("bitnet") || name.contains("llama") || name.contains("ggml"))
+                        && (name.ends_with(".so")
+                            || name.ends_with(".dylib")
+                            || name.ends_with(".dll"));
+                if is_library {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+/// Find all library directories for BitNet.cpp installation
+///
+/// Discovers both BitNet.cpp libraries and vendored llama.cpp libraries
+/// in priority order. Returns all directories containing libraries.
+///
+/// # Search Tiers
+///
+/// **Tier 1 (BitNet.cpp libraries)**:
+/// - `build/bin` - Primary CMake output
+/// - `build/lib` - Standard CMake library location
+/// - `build` - Root build directory
+///
+/// **Tier 2 (Vendored llama.cpp libraries)**:
+/// - `build/3rdparty/llama.cpp/build/bin` - Vendored llama CMake output
+/// - `build/3rdparty/llama.cpp/build/lib` - Vendored llama lib directory
+///
+/// **Tier 3 (Fallback)**:
+/// - `lib` - Root lib directory
+///
+/// # Environment Variable Override
+///
+/// - `BITNET_CROSSVAL_LIBDIR`: Overrides all auto-discovery (takes highest priority)
+/// - `BITNET_CPP_DIR`: Affects base install_dir for discovery
+///
+/// # Returns
+///
+/// Vector of PathBufs for directories containing libraries, in priority order.
+/// Empty vector if no libraries found (caller should handle error).
+pub fn find_bitnet_lib_dirs(install_dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut lib_dirs = vec![];
+
+    // Priority 0: Explicit override via BITNET_CROSSVAL_LIBDIR
+    if let Ok(explicit_libdir) = env::var("BITNET_CROSSVAL_LIBDIR") {
+        let explicit_path = PathBuf::from(explicit_libdir);
+        if has_libraries(&explicit_path) {
+            return Ok(vec![explicit_path]);
+        }
+    }
+
+    // Tier 1: BitNet.cpp libraries
+    let bitnet_candidates =
+        [install_dir.join("build/bin"), install_dir.join("build/lib"), install_dir.join("build")];
+
+    // Tier 2: Vendored llama.cpp libraries
+    let llama_candidates = [
+        install_dir.join("build/3rdparty/llama.cpp/build/bin"),
+        install_dir.join("build/3rdparty/llama.cpp/build/lib"),
+    ];
+
+    // Tier 3: Fallback
+    let fallback = [install_dir.join("lib")];
+
+    // Search in priority order
+    for candidate in bitnet_candidates.iter().chain(llama_candidates.iter()).chain(fallback.iter())
+    {
+        if has_libraries(candidate) {
+            lib_dirs.push(candidate.clone());
+        }
+    }
+
+    Ok(lib_dirs)
+}
+/// Determine the installation directory for BitNet.cpp
+///
+/// Follows environment variable precedence:
+/// 1. BITNET_CPP_DIR (explicit override, highest priority)
+/// 2. ~/.cache/bitnet_cpp (default)
+///
+/// Creates parent directories if they don't exist.
+///
+/// # Returns
+///
+/// PathBuf to the BitNet.cpp installation directory
+fn determine_bitnet_cpp_dir() -> Result<PathBuf> {
+    let home = dirs::home_dir().context("no home directory found")?;
+
+    let install_dir = env::var("BITNET_CPP_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| home.join(".cache/bitnet_cpp"));
+
+    // Create parent directories if they don't exist
+    if let Some(parent) = install_dir.parent()
+        && !parent.exists()
+    {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create parent directory: {}", parent.display()))?;
+    }
+
+    Ok(install_dir)
+}
+
+/// Clone BitNet.cpp repository from GitHub
+///
+/// Clones with --depth=1 for faster download and --recurse-submodules
+/// to initialize the vendored llama.cpp submodule.
+///
+/// # Arguments
+///
+/// * `install_dir` - Target directory for clone
+///
+/// # Returns
+///
+/// Ok(()) if clone succeeds, Err on network or git failures
+fn clone_bitnet_cpp(install_dir: &Path) -> Result<()> {
+    eprintln!("[bitnet] Cloning BitNet.cpp from {}...", BITNET_REPO_URL);
+
+    // Check if git is available
+    let git_check = Command::new("git")
+        .arg("--version")
+        .output()
+        .context("Failed to find git - is it installed?")?;
+
+    if !git_check.status.success() {
+        bail!("git command not available");
+    }
+
+    // Clone with shallow depth and submodules
+    let output = Command::new("git")
+        .arg("clone")
+        .arg("--depth=1")
+        .arg("--recurse-submodules")
+        .arg(BITNET_REPO_URL)
+        .arg(install_dir)
+        .output()
+        .context("Failed to execute git clone")?;
+
+    if !output.status.success() {
+        bail!(
+            "git clone failed with exit code {:?}\nStderr: {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    eprintln!("[bitnet] Clone succeeded");
+
+    Ok(())
+}
+
+/// Update existing BitNet.cpp repository
+///
+/// Runs `git pull --ff-only` to update the repository and
+/// `git submodule update --init --recursive` to update submodules.
+///
+/// Handles detached HEAD state gracefully by skipping pull.
+///
+/// # Arguments
+///
+/// * `install_dir` - Root directory of BitNet.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) if update succeeds or repo is already up-to-date, Err on git failures
+fn update_bitnet_cpp(install_dir: &Path) -> Result<()> {
+    let git_dir = install_dir.join(".git");
+
+    if !git_dir.exists() {
+        eprintln!("[bitnet] Not a git repository, skipping update");
+        return Ok(());
+    }
+
+    eprintln!("[bitnet] Updating BitNet.cpp repository...");
+
+    // Try git pull (idempotent, fast-forward only)
+    let pull_output = Command::new("git")
+        .arg("pull")
+        .arg("--ff-only")
+        .current_dir(install_dir)
+        .output()
+        .context("Failed to execute git pull")?;
+
+    if !pull_output.status.success() {
+        // Check if we're in detached HEAD state
+        let stderr = String::from_utf8_lossy(&pull_output.stderr);
+        if stderr.contains("detached HEAD") || stderr.contains("not currently on a branch") {
+            eprintln!("[bitnet] Detached HEAD detected, skipping pull");
+        } else {
+            eprintln!("[bitnet] Warning: git pull failed (non-fatal): {}", stderr);
+        }
+    } else {
+        eprintln!("[bitnet] Repository updated");
+    }
+
+    // Update submodules (always safe, idempotent)
+    eprintln!("[bitnet] Updating submodules...");
+    let submodule_output = Command::new("git")
+        .arg("submodule")
+        .arg("update")
+        .arg("--init")
+        .arg("--recursive")
+        .current_dir(install_dir)
+        .output()
+        .context("Failed to update git submodules")?;
+
+    if !submodule_output.status.success() {
+        eprintln!(
+            "[bitnet] Warning: submodule update failed (non-fatal): {}",
+            String::from_utf8_lossy(&submodule_output.stderr)
+        );
+    } else {
+        eprintln!("[bitnet] Submodules updated");
+    }
+
+    Ok(())
+}
+
+/// Install or update BitNet.cpp and build if necessary
+///
+/// # Workflow
+///
+/// 1. Determine installation directory (env var or default)
+/// 2. If directory doesn't exist, clone from GitHub
+/// 3. If directory exists, update (git pull + submodule update)
+/// 4. Build if not already built (fast-path check)
+///
+/// # Returns
+///
+/// PathBuf to the BitNet.cpp installation directory
+pub fn install_or_update_bitnet_cpp() -> Result<PathBuf> {
+    let install_dir = determine_bitnet_cpp_dir()?;
+
+    if !install_dir.exists() {
+        // Fresh installation
+        clone_bitnet_cpp(&install_dir)?;
+        build_bitnet_cpp(&install_dir)?;
+    } else {
+        // Update existing installation
+        update_bitnet_cpp(&install_dir)?;
+
+        // Check if build exists (fast-path)
+        let build_dir = install_dir.join("build");
+        if !build_dir.exists() || !has_libraries(&build_dir) {
+            eprintln!("[bitnet] Build artifacts not found, building...");
+            build_bitnet_cpp(&install_dir)?;
+        } else {
+            eprintln!("[bitnet] BitNet.cpp already built at {}", install_dir.display());
+        }
+    }
+
+    Ok(install_dir)
 }
 
 /// Find the directory containing the shared library (libllama.so/dylib/dll)
@@ -134,13 +411,21 @@ pub fn run(emit: Emit) -> Result<()> {
         eprintln!("[bitnet] C++ reference not found at {}", repo.display());
         eprintln!("[bitnet] Fetching and building C++ reference...");
 
-        let status = Command::new("cargo")
+        let output = Command::new("cargo")
             .args(["run", "-p", "xtask", "--", "fetch-cpp"])
-            .status()
+            .output()
             .context("failed to spawn cargo for fetch-cpp")?;
 
-        if !status.success() {
-            bail!("fetch-cpp command failed with exit code: {:?}", status.code());
+        if !output.status.success() {
+            // Capture stderr for detailed error diagnostics
+            let stderr = String::from_utf8_lossy(&output.stderr);
+
+            // Preserve full error context for upstream error classification
+            bail!(
+                "fetch-cpp command failed with exit code: {:?}\n\nError output:\n{}",
+                output.status.code(),
+                stderr
+            );
         }
     }
 
@@ -271,9 +556,211 @@ fn emit_exports(emit: Emit, repo: &Path, lib_dir: &Path, crossval_libdir: Option
     }
 }
 
+/// Build BitNet.cpp using setup_env.py or CMake fallback
+///
+/// Tries setup_env.py first (if present), falls back to manual CMake build.
+/// Also builds vendored llama.cpp in 3rdparty/llama.cpp/.
+///
+/// # Arguments
+///
+/// * `install_dir` - Root directory of BitNet.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) on successful build, Err if both build methods fail
+fn build_bitnet_cpp(install_dir: &Path) -> Result<()> {
+    // Try setup_env.py first (preferred method)
+    if install_dir.join("setup_env.py").exists() {
+        eprintln!("[bitnet] Building with setup_env.py...");
+        match run_setup_env_py(install_dir) {
+            Ok(_) => {
+                eprintln!("[bitnet] setup_env.py build succeeded");
+            }
+            Err(e) => {
+                eprintln!("[bitnet] setup_env.py failed: {}, trying CMake fallback...", e);
+                run_cmake_build(install_dir)?;
+            }
+        }
+    } else {
+        eprintln!("[bitnet] setup_env.py not found, using CMake build");
+        run_cmake_build(install_dir)?;
+    }
+
+    // Build vendored llama.cpp
+    build_vendored_llama_cpp(install_dir)?;
+
+    Ok(())
+}
+
+/// Execute setup_env.py in the BitNet.cpp directory
+///
+/// # Arguments
+///
+/// * `install_dir` - Root directory of BitNet.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) if setup_env.py succeeds, Err otherwise
+fn run_setup_env_py(install_dir: &Path) -> Result<()> {
+    // Find python3 executable
+    let python = if cfg!(target_os = "windows") { "python" } else { "python3" };
+
+    let output = Command::new(python)
+        .arg("setup_env.py")
+        .current_dir(install_dir)
+        .output()
+        .context("Failed to execute setup_env.py - is python3 installed?")?;
+
+    if !output.status.success() {
+        bail!(
+            "setup_env.py failed with exit code {:?}\nStdout: {}\nStderr: {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    Ok(())
+}
+
+/// Run manual CMake build as fallback
+///
+/// Creates build directory and runs cmake configuration and build.
+///
+/// # Arguments
+///
+/// * `install_dir` - Root directory of BitNet.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) if CMake build succeeds, Err otherwise
+fn run_cmake_build(install_dir: &Path) -> Result<()> {
+    let build_dir = install_dir.join("build");
+
+    // Create build directory if it doesn't exist
+    if !build_dir.exists() {
+        fs::create_dir_all(&build_dir).context("Failed to create build directory")?;
+    }
+
+    // Check if cmake is available
+    let cmake_check = Command::new("cmake")
+        .arg("--version")
+        .output()
+        .context("Failed to find cmake - is it installed?")?;
+
+    if !cmake_check.status.success() {
+        bail!("cmake command not available");
+    }
+
+    // Configure with CMake
+    eprintln!("[bitnet] Configuring with CMake...");
+    let configure_output = Command::new("cmake")
+        .arg("..")
+        .arg("-DCMAKE_BUILD_TYPE=Release")
+        .current_dir(&build_dir)
+        .output()
+        .context("Failed to run cmake configuration")?;
+
+    if !configure_output.status.success() {
+        bail!(
+            "CMake configuration failed\nStdout: {}\nStderr: {}",
+            String::from_utf8_lossy(&configure_output.stdout),
+            String::from_utf8_lossy(&configure_output.stderr)
+        );
+    }
+
+    // Build with CMake
+    eprintln!("[bitnet] Building with CMake (parallel)...");
+    let build_output = Command::new("cmake")
+        .arg("--build")
+        .arg(".")
+        .arg("--parallel")
+        .current_dir(&build_dir)
+        .output()
+        .context("Failed to run cmake build")?;
+
+    if !build_output.status.success() {
+        bail!(
+            "CMake build failed\nStdout: {}\nStderr: {}",
+            String::from_utf8_lossy(&build_output.stdout),
+            String::from_utf8_lossy(&build_output.stderr)
+        );
+    }
+
+    Ok(())
+}
+
+/// Build vendored llama.cpp in 3rdparty/llama.cpp
+///
+/// BitNet.cpp includes llama.cpp as a submodule. This function builds
+/// the vendored version to produce libllama.so and libggml.so.
+///
+/// # Arguments
+///
+/// * `install_dir` - Root directory of BitNet.cpp repository
+///
+/// # Returns
+///
+/// Ok(()) if vendored llama.cpp build succeeds, Err otherwise
+fn build_vendored_llama_cpp(install_dir: &Path) -> Result<()> {
+    let llama_dir = install_dir.join("3rdparty").join("llama.cpp");
+
+    if !llama_dir.exists() {
+        eprintln!("[bitnet] Vendored llama.cpp not found at {}, skipping", llama_dir.display());
+        return Ok(());
+    }
+
+    eprintln!("[bitnet] Building vendored llama.cpp...");
+
+    let build_dir = llama_dir.join("build");
+
+    // Create build directory if it doesn't exist
+    if !build_dir.exists() {
+        fs::create_dir_all(&build_dir).context("Failed to create llama.cpp build directory")?;
+    }
+
+    // Configure with CMake
+    let configure_output = Command::new("cmake")
+        .arg("..")
+        .arg("-DCMAKE_BUILD_TYPE=Release")
+        .arg("-DBUILD_SHARED_LIBS=ON")
+        .current_dir(&build_dir)
+        .output()
+        .context("Failed to configure vendored llama.cpp")?;
+
+    if !configure_output.status.success() {
+        bail!(
+            "Vendored llama.cpp CMake configuration failed\nStderr: {}",
+            String::from_utf8_lossy(&configure_output.stderr)
+        );
+    }
+
+    // Build with CMake
+    let build_output = Command::new("cmake")
+        .arg("--build")
+        .arg(".")
+        .arg("--parallel")
+        .current_dir(&build_dir)
+        .output()
+        .context("Failed to build vendored llama.cpp")?;
+
+    if !build_output.status.success() {
+        bail!(
+            "Vendored llama.cpp build failed\nStderr: {}",
+            String::from_utf8_lossy(&build_output.stderr)
+        );
+    }
+
+    eprintln!("[bitnet] Vendored llama.cpp build succeeded");
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_emit_from_string() {
@@ -284,5 +771,156 @@ mod tests {
         assert!(matches!(Emit::from("cmd"), Emit::Cmd));
         assert!(matches!(Emit::from("batch"), Emit::Cmd));
         assert!(matches!(Emit::from("unknown"), Emit::Sh)); // default
+    }
+
+    #[test]
+    fn test_build_vendored_llama_cpp_missing_directory() {
+        // Test graceful handling when vendored llama.cpp doesn't exist
+        let temp_dir = TempDir::new().unwrap();
+        let install_dir = temp_dir.path();
+
+        // Should not fail when 3rdparty/llama.cpp doesn't exist
+        let result = build_vendored_llama_cpp(install_dir);
+        assert!(result.is_ok(), "Should gracefully handle missing vendored llama.cpp");
+    }
+
+    #[test]
+    fn test_run_cmake_build_creates_build_directory() {
+        // Test that run_cmake_build creates the build directory if it doesn't exist
+        let temp_dir = TempDir::new().unwrap();
+        let install_dir = temp_dir.path();
+
+        // Create a minimal CMakeLists.txt
+        fs::write(
+            install_dir.join("CMakeLists.txt"),
+            "cmake_minimum_required(VERSION 3.18)\nproject(test)\n",
+        )
+        .unwrap();
+
+        // This will fail because cmake won't find valid source, but it should create the build dir
+        let build_dir = install_dir.join("build");
+        assert!(!build_dir.exists(), "Build directory should not exist initially");
+
+        // Try to run cmake build (will fail on empty project, but that's ok for this test)
+        let _ = run_cmake_build(install_dir);
+
+        // Check that build directory was created
+        assert!(build_dir.exists(), "Build directory should be created by run_cmake_build");
+    }
+
+    // ============================================================================
+    // Library Discovery Tests (AC8-AC13)
+    // ============================================================================
+
+    #[test]
+    fn test_has_libraries_empty_dir() {
+        let temp_dir = TempDir::new().unwrap();
+        assert!(!has_libraries(temp_dir.path()));
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_has_libraries_with_bitnet_so() {
+        let temp_dir = TempDir::new().unwrap();
+        fs::write(temp_dir.path().join("libbitnet.so"), b"mock").unwrap();
+        assert!(has_libraries(temp_dir.path()));
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_has_libraries_with_llama_so() {
+        let temp_dir = TempDir::new().unwrap();
+        fs::write(temp_dir.path().join("libllama.so"), b"mock").unwrap();
+        assert!(has_libraries(temp_dir.path()));
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_has_libraries_with_ggml_so() {
+        let temp_dir = TempDir::new().unwrap();
+        fs::write(temp_dir.path().join("libggml.so"), b"mock").unwrap();
+        assert!(has_libraries(temp_dir.path()));
+    }
+
+    #[test]
+    fn test_find_bitnet_lib_dirs_empty() {
+        let temp_dir = TempDir::new().unwrap();
+        let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
+        assert_eq!(result.len(), 0, "Should return empty vector when no libraries found");
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_find_bitnet_lib_dirs_tier1_bitnet() {
+        let temp_dir = TempDir::new().unwrap();
+        let build_bin = temp_dir.path().join("build/bin");
+        fs::create_dir_all(&build_bin).unwrap();
+        fs::write(build_bin.join("libbitnet.so"), b"mock").unwrap();
+
+        let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], build_bin);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_find_bitnet_lib_dirs_tier2_llama() {
+        let temp_dir = TempDir::new().unwrap();
+        let llama_bin = temp_dir.path().join("build/3rdparty/llama.cpp/build/bin");
+        fs::create_dir_all(&llama_bin).unwrap();
+        fs::write(llama_bin.join("libllama.so"), b"mock").unwrap();
+
+        let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], llama_bin);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_find_bitnet_lib_dirs_both_tiers() {
+        let temp_dir = TempDir::new().unwrap();
+        let build_bin = temp_dir.path().join("build/bin");
+        let llama_bin = temp_dir.path().join("build/3rdparty/llama.cpp/build/bin");
+
+        fs::create_dir_all(&build_bin).unwrap();
+        fs::create_dir_all(&llama_bin).unwrap();
+        fs::write(build_bin.join("libbitnet.so"), b"mock").unwrap();
+        fs::write(llama_bin.join("libllama.so"), b"mock").unwrap();
+
+        let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
+        assert_eq!(result.len(), 2);
+        // Tier 1 should come before Tier 2
+        assert_eq!(result[0], build_bin);
+        assert_eq!(result[1], llama_bin);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_find_bitnet_lib_dirs_env_override() {
+        use serial_test::serial;
+
+        #[serial(bitnet_env)]
+        fn run_test() {
+            let temp_dir = TempDir::new().unwrap();
+            let override_dir = temp_dir.path().join("override");
+            fs::create_dir_all(&override_dir).unwrap();
+            fs::write(override_dir.join("libbitnet.so"), b"mock").unwrap();
+
+            // Set BITNET_CROSSVAL_LIBDIR to override auto-discovery
+            unsafe {
+                env::set_var("BITNET_CROSSVAL_LIBDIR", override_dir.to_str().unwrap());
+            }
+
+            let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
+            assert_eq!(result.len(), 1);
+            assert_eq!(result[0], override_dir);
+
+            // Clean up
+            unsafe {
+                env::remove_var("BITNET_CROSSVAL_LIBDIR");
+            }
+        }
+
+        run_test();
     }
 }

@@ -60,11 +60,18 @@
 //! cargo test -p xtask --test bitnet_cpp_auto_setup_tests -- --ignored --include-ignored
 //! ```
 
+// TDD scaffolding - these imports will be used once tests are un-ignored
+#[allow(unused_imports)]
 use serial_test::serial;
+#[allow(unused_imports)]
 use std::env;
+#[allow(unused_imports)]
 use std::fs;
+#[allow(unused_imports)]
 use std::path::{Path, PathBuf};
+#[allow(unused_imports)]
 use std::process::Command;
+#[allow(unused_imports)]
 use tempfile::TempDir;
 
 // ============================================================================
@@ -74,11 +81,13 @@ use tempfile::TempDir;
 /// RAII guard for environment variable management
 ///
 /// Automatically restores environment variable state on drop, ensuring test isolation.
+#[allow(dead_code)]
 struct EnvGuard {
     key: String,
     old: Option<String>,
 }
 
+#[allow(dead_code)]
 impl EnvGuard {
     /// Create a new environment variable guard, capturing current state
     fn new(key: &str) -> Self {
@@ -116,6 +125,7 @@ impl Drop for EnvGuard {
 }
 
 /// Find workspace root by walking up to .git directory
+#[allow(dead_code)]
 fn workspace_root() -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     while !path.join(".git").exists() {
@@ -127,6 +137,7 @@ fn workspace_root() -> PathBuf {
 }
 
 /// Create a mock library file for testing library discovery
+#[allow(dead_code)]
 fn create_mock_lib(dir: &Path, name: &str) -> std::io::Result<()> {
     fs::create_dir_all(dir)?;
     let lib_path = dir.join(name);
@@ -135,6 +146,7 @@ fn create_mock_lib(dir: &Path, name: &str) -> std::io::Result<()> {
 }
 
 /// Create a mock BitNet.cpp repository structure for testing
+#[allow(dead_code)]
 fn create_mock_bitnet_repo(repo: &Path) -> std::io::Result<()> {
     // Create directory structure
     fs::create_dir_all(repo.join("build/bin"))?;
@@ -189,10 +201,10 @@ fn create_mock_bitnet_repo(repo: &Path) -> std::io::Result<()> {
 #[ignore] // AC:AC1
 fn test_ac1_detects_missing_installation() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let bitnet_dir = temp_dir.path().join("bitnet_cpp");
+    let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
 
     // Ensure directory does not exist
-    assert!(!bitnet_dir.exists(), "Bitnet directory should not exist initially");
+    assert!(!_bitnet_dir.exists(), "Bitnet directory should not exist initially");
 
     // TODO: Implement setup-cpp-auto --backend bitnet logic
     // Expected behavior:
@@ -215,7 +227,7 @@ fn test_ac1_detects_missing_installation() {
 #[ignore] // AC:AC2
 fn test_ac2_clones_from_github() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let bitnet_dir = temp_dir.path().join("bitnet_cpp");
+    let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
 
     // TODO: Implement git clone logic in install_or_update_bitnet_cpp()
     // Expected behavior:
@@ -555,7 +567,7 @@ fn test_ac14_consistent_env_var_names() {
 #[ignore] // AC:AC15
 fn test_ac15_backend_both_option() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let install_dir = temp_dir.path();
+    let _install_dir = temp_dir.path();
 
     // TODO: Implement --backend both logic
     // Expected behavior:
@@ -863,6 +875,676 @@ fn test_property_rpath_ordering_preserved() {
 
     assert!(result.starts_with(&canonical_bitnet), "BitNet path should appear first");
     assert!(result.contains(&format!(":{}", canonical_llama)), "llama path should appear second");
+}
+
+// ============================================================================
+// Spec AC1-AC6: Backend Selection and Clone/Build Tests
+// ============================================================================
+
+/// Spec AC1: Backend selection flag parsing
+///
+/// **Test**: Parse --backend bitnet|llama flag from command line
+/// **Expected**: Flag parsed correctly and backend configuration selected
+/// **Tag**: `// Spec:AC1`
+#[test]
+#[ignore] // Spec:AC1
+fn test_spec_ac1_backend_flag_parsing() {
+    // TODO: Implement backend flag parsing in xtask CLI
+    // Expected behavior:
+    // 1. Parse --backend bitnet flag -> CppBackend::BitNet
+    // 2. Parse --backend llama flag -> CppBackend::Llama
+    // 3. Default behavior (no flag) -> CppBackend::BitNet (backward compatible)
+
+    unimplemented!(
+        "Spec AC1: Backend selection flag not yet implemented. \
+         Expected: cargo run -p xtask -- setup-cpp-auto --backend bitnet|llama. \
+         Verification: Parse CLI args and verify backend selection."
+    );
+}
+
+/// Spec AC2: Clone detection for both backends
+///
+/// **Test**: Detect existing installations for BitNet.cpp and llama.cpp
+/// **Expected**: Skip clone if directory exists, update via git pull
+/// **Tag**: `// Spec:AC2`
+#[test]
+#[ignore] // Spec:AC2
+fn test_spec_ac2_clone_detection_both_backends() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let bitnet_dir = temp_dir.path().join("bitnet_cpp");
+    let llama_dir = temp_dir.path().join("llama_cpp");
+
+    // TODO: Implement clone detection for both backends
+    // Expected behavior:
+    // 1. Check if bitnet_dir exists -> skip clone, run git pull
+    // 2. Check if llama_dir exists -> skip clone, run git pull
+    // 3. Verify submodule update for BitNet.cpp (vendored llama.cpp)
+
+    unimplemented!(
+        "Spec AC2: Clone detection for both backends not yet implemented. \
+         Expected: Detect existing ~/.cache/bitnet_cpp and ~/.cache/llama_cpp. \
+         Verification: Check directories exist and git pull executed."
+    );
+}
+
+/// Spec AC3: Build strategy selection per backend
+///
+/// **Test**: BitNet.cpp uses setup_env.py with CMake fallback, llama.cpp uses CMake only
+/// **Expected**: Correct build method selected based on backend
+/// **Tag**: `// Spec:AC3`
+#[test]
+#[ignore] // Spec:AC3
+fn test_spec_ac3_build_strategy_per_backend() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let bitnet_dir = temp_dir.path().join("bitnet_cpp");
+    let llama_dir = temp_dir.path().join("llama_cpp");
+
+    // TODO: Implement per-backend build strategy
+    // Expected behavior:
+    // - BitNet.cpp: Try setup_env.py first, fallback to CMake
+    // - llama.cpp: CMake only (no setup_env.py)
+
+    unimplemented!(
+        "Spec AC3: Build strategy selection not yet implemented. \
+         Expected: BitNet.cpp tries setup_env.py, llama.cpp uses CMake only. \
+         Verification: Check build method selection in build_backend()."
+    );
+}
+
+/// Spec AC4: Library discovery three-tier hierarchy
+///
+/// **Test**: Tier 1 (backend-specific), Tier 2 (fallback), Tier 3 (env override)
+/// **Expected**: Libraries discovered in priority order with deduplication
+/// **Tag**: `// Spec:AC4`
+#[test]
+#[ignore] // Spec:AC4
+#[cfg(target_os = "linux")]
+fn test_spec_ac4_library_discovery_three_tier() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let bitnet_dir = temp_dir.path().join("bitnet_cpp");
+    let llama_dir = temp_dir.path().join("llama_cpp");
+
+    // Create Tier 1 structure for BitNet.cpp
+    fs::create_dir_all(bitnet_dir.join("build/bin")).unwrap();
+    fs::write(bitnet_dir.join("build/bin/libbitnet.so"), b"mock").unwrap();
+
+    // Create Tier 1 structure for llama.cpp
+    fs::create_dir_all(llama_dir.join("build")).unwrap();
+    fs::write(llama_dir.join("build/libllama.so"), b"mock").unwrap();
+
+    // TODO: Implement three-tier library discovery
+    // Expected behavior:
+    // Tier 1: Backend-specific primary locations
+    //   - BitNet: build/bin, build/lib, build/3rdparty/llama.cpp/build/bin
+    //   - llama: build, build/bin, build/lib
+    // Tier 2: Fallback locations (build/, lib/)
+    // Tier 3: Env var override (BITNET_CROSSVAL_LIBDIR, CROSSVAL_RPATH_BITNET, CROSSVAL_RPATH_LLAMA)
+
+    unimplemented!(
+        "Spec AC4: Three-tier library discovery not yet implemented. \
+         Expected: find_lib_dirs() searches tier 1, tier 2, tier 3 in order. \
+         Verification: Check discovered paths match tier precedence."
+    );
+}
+
+/// Spec AC5: RPATH embedding with validation
+///
+/// **Test**: Embed discovered library paths via linker RPATH with length validation
+/// **Expected**: RPATH embedded, deduplicated, validated ≤4096 bytes
+/// **Tag**: `// Spec:AC5`
+#[test]
+#[ignore] // Spec:AC5
+fn test_spec_ac5_rpath_embedding_validation() {
+    use xtask::build_helpers::merge_and_deduplicate;
+
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let path1 = temp_dir.path().join("lib1");
+    let path2 = temp_dir.path().join("lib2");
+
+    fs::create_dir_all(&path1).unwrap();
+    fs::create_dir_all(&path2).unwrap();
+
+    // TODO: Implement RPATH embedding with validation
+    // Expected behavior:
+    // 1. Merge paths using merge_and_deduplicate()
+    // 2. Validate total RPATH length ≤ 4096 bytes
+    // 3. Emit linker flags: -Wl,-rpath,{merged_paths}
+
+    unimplemented!(
+        "Spec AC5: RPATH embedding with validation not yet complete. \
+         Expected: Emit RPATH via build.rs, validate length limit. \
+         Verification: Check readelf -d shows correct RPATH on Linux."
+    );
+}
+
+/// Spec AC6: Shell export formats for all platforms
+///
+/// **Test**: Verify sh, fish, pwsh, cmd export syntax correctness
+/// **Expected**: Platform-appropriate exports emitted
+/// **Tag**: `// Spec:AC6`
+#[test]
+#[ignore] // Spec:AC6
+fn test_spec_ac6_shell_export_formats() {
+    // TODO: Verify shell export format correctness
+    // Expected output per format:
+    // - sh: export VAR="value"
+    // - fish: set -gx VAR "value"
+    // - pwsh: $env:VAR = "value"
+    // - cmd: set VAR=value
+
+    unimplemented!(
+        "Spec AC6: Shell export format validation not yet comprehensive. \
+         Expected: emit_exports() generates correct syntax per shell. \
+         Verification: Parse emitted output and verify syntax."
+    );
+}
+
+// ============================================================================
+// Spec AC7-AC9: Dual-Backend Support Tests
+// ============================================================================
+
+/// Spec AC7: Backend configuration abstraction
+///
+/// **Test**: BackendConfig struct provides unified backend interface
+/// **Expected**: BackendConfig::for_backend(bitnet|llama) returns correct config
+/// **Tag**: `// Spec:AC7`
+#[test]
+#[ignore] // Spec:AC7
+fn test_spec_ac7_backend_config_abstraction() {
+    // TODO: Implement BackendConfig struct
+    // Expected behavior:
+    // 1. BackendConfig::for_backend(CppBackend::BitNet) returns BitNet config
+    // 2. BackendConfig::for_backend(CppBackend::Llama) returns llama config
+    // 3. Config includes: repo_url, install_subdir, build_method
+
+    unimplemented!(
+        "Spec AC7: BackendConfig struct not yet implemented. \
+         Expected: BackendConfig provides backend, repo_url, install_subdir, build_method. \
+         Verification: Test config factory methods return correct values."
+    );
+}
+
+/// Spec AC8: Dual-backend installation workflow
+///
+/// **Test**: Install both backends with merged RPATH
+/// **Expected**: Both BitNet.cpp and llama.cpp installed, RPATH merged
+/// **Tag**: `// Spec:AC8`
+#[test]
+#[ignore] // Spec:AC8
+fn test_spec_ac8_dual_backend_installation() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let _install_base = temp_dir.path();
+
+    // TODO: Implement dual-backend installation
+    // Expected behavior:
+    // 1. Install BitNet.cpp to ~/.cache/bitnet_cpp
+    // 2. Install llama.cpp to ~/.cache/llama_cpp
+    // 3. Discover libraries from both backends
+    // 4. Merge RPATH using merge_and_deduplicate()
+    // 5. Emit unified shell exports
+
+    unimplemented!(
+        "Spec AC8: Dual-backend installation not yet implemented. \
+         Expected: Both backends installed and RPATH merged. \
+         Verification: Check both repos cloned and RPATH contains both paths."
+    );
+}
+
+/// Spec AC9: RPATH merging strategy with deduplication
+///
+/// **Test**: Merge multiple RPATH entries with canonical deduplication
+/// **Expected**: Correct precedence, deduplication, length validation
+/// **Tag**: `// Spec:AC9`
+#[test]
+#[ignore] // Spec:AC9
+#[serial(bitnet_env)]
+fn test_spec_ac9_rpath_merging_strategy() {
+    use xtask::build_helpers::merge_and_deduplicate;
+
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let bitnet_lib = temp_dir.path().join("bitnet_lib");
+    let llama_lib = temp_dir.path().join("llama_lib");
+
+    fs::create_dir_all(&bitnet_lib).unwrap();
+    fs::create_dir_all(&llama_lib).unwrap();
+
+    // TODO: Test RPATH merging with precedence
+    // Precedence order:
+    // 1. BITNET_CROSSVAL_LIBDIR (legacy, highest)
+    // 2. CROSSVAL_RPATH_BITNET + CROSSVAL_RPATH_LLAMA (granular)
+    // 3. Auto-discovery from BITNET_CPP_DIR and LLAMA_CPP_DIR (lowest)
+
+    unimplemented!(
+        "Spec AC9: RPATH merging strategy not yet comprehensive. \
+         Expected: merge_and_deduplicate() respects precedence order. \
+         Verification: Test all three precedence tiers."
+    );
+}
+
+// ============================================================================
+// Spec AC10-AC12: Standalone llama.cpp Support Tests
+// ============================================================================
+
+/// Spec AC10: llama.cpp-specific GitHub URL
+///
+/// **Test**: Clone llama.cpp from official ggerganov/llama.cpp repository
+/// **Expected**: Correct GitHub URL used for llama.cpp backend
+/// **Tag**: `// Spec:AC10`
+#[test]
+#[ignore] // Spec:AC10
+fn test_spec_ac10_llama_cpp_github_url() {
+    // TODO: Verify llama.cpp GitHub URL constant
+    // Expected:
+    // const LLAMA_REPO_URL: &str = "https://github.com/ggerganov/llama.cpp";
+
+    unimplemented!(
+        "Spec AC10: llama.cpp GitHub URL constant not yet implemented. \
+         Expected: LLAMA_REPO_URL = https://github.com/ggerganov/llama.cpp. \
+         Verification: Check constant definition and clone_llama_cpp() usage."
+    );
+}
+
+/// Spec AC11: llama.cpp CMake-only build method
+///
+/// **Test**: llama.cpp builds with CMake only (no setup_env.py)
+/// **Expected**: CMake build executed without setup_env.py fallback
+/// **Tag**: `// Spec:AC11`
+#[test]
+#[ignore] // Spec:AC11
+fn test_spec_ac11_llama_cpp_cmake_only() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let llama_dir = temp_dir.path().join("llama_cpp");
+
+    // TODO: Implement llama.cpp CMake-only build
+    // Expected behavior:
+    // 1. build_llama_cpp() calls run_cmake_build() directly
+    // 2. No setup_env.py check or fallback
+    // 3. CMake build with standard flags
+
+    unimplemented!(
+        "Spec AC11: llama.cpp CMake-only build not yet implemented. \
+         Expected: build_llama_cpp() uses CMake without setup_env.py. \
+         Verification: Check build function calls CMake directly."
+    );
+}
+
+/// Spec AC12: llama.cpp-specific library discovery paths
+///
+/// **Test**: llama.cpp library search uses different paths than BitNet.cpp
+/// **Expected**: Correct search paths for llama.cpp (build, build/bin, build/lib)
+/// **Tag**: `// Spec:AC12`
+#[test]
+#[ignore] // Spec:AC12
+#[cfg(target_os = "linux")]
+fn test_spec_ac12_llama_cpp_library_discovery() {
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let llama_dir = temp_dir.path().join("llama_cpp");
+
+    // Create llama.cpp library structure
+    fs::create_dir_all(llama_dir.join("build")).unwrap();
+    fs::write(llama_dir.join("build/libllama.so"), b"mock").unwrap();
+    fs::write(llama_dir.join("build/libggml.so"), b"mock").unwrap();
+
+    // TODO: Implement llama.cpp-specific library discovery
+    // Expected search paths:
+    // - build (top-level, llama.cpp standard)
+    // - build/bin (CMake bin output)
+    // - build/lib (CMake lib output)
+
+    unimplemented!(
+        "Spec AC12: llama.cpp library discovery not yet implemented. \
+         Expected: find_llama_lib_dirs() searches llama-specific paths. \
+         Verification: Check discovered paths match llama.cpp build structure."
+    );
+}
+
+// ============================================================================
+// Spec AC13-AC17: Integration and Platform Tests
+// ============================================================================
+
+/// Spec AC13: Unit test coverage for backend selection
+///
+/// **Test**: Comprehensive unit tests for new backend functions
+/// **Expected**: All backend selection functions tested
+/// **Tag**: `// Spec:AC13`
+#[test]
+#[ignore] // Spec:AC13
+fn test_spec_ac13_unit_test_coverage() {
+    // TODO: Verify unit test coverage
+    // Required tests:
+    // - test_backend_bitnet_clone()
+    // - test_backend_llama_clone()
+    // - test_dual_backend_rpath_merge()
+    // - test_library_discovery_tier1_bitnet()
+    // - test_library_discovery_tier1_llama()
+
+    unimplemented!(
+        "Spec AC13: Unit test coverage not yet complete. \
+         Expected: 30+ unit tests covering all backend functions. \
+         Verification: Count test functions and check coverage."
+    );
+}
+
+/// Spec AC14: Integration test workflow for all backends
+///
+/// **Test**: End-to-end test script for bitnet, llama, both backends
+/// **Expected**: Test matrix covers all configurations
+/// **Tag**: `// Spec:AC14`
+#[test]
+#[ignore] // Spec:AC14
+fn test_spec_ac14_integration_test_workflow() {
+    // TODO: Create integration test script
+    // Test matrix:
+    // - Backend: bitnet, llama, both
+    // - Platform: Linux, macOS, Windows
+    // - Scenario: fresh install, update, rebuild
+
+    unimplemented!(
+        "Spec AC14: Integration test workflow not yet implemented. \
+         Expected: scripts/test_cpp_setup_all_backends.sh. \
+         Verification: Run script and verify all scenarios pass."
+    );
+}
+
+/// Spec AC15: CI validation for automated backend testing
+///
+/// **Test**: GitHub Actions workflow validates both backends
+/// **Expected**: CI tests bitnet, llama, both configurations
+/// **Tag**: `// Spec:AC15`
+#[test]
+#[ignore] // Spec:AC15
+fn test_spec_ac15_ci_validation() {
+    // TODO: Update .github/workflows/crossval.yml
+    // Expected CI jobs:
+    // 1. Test BitNet.cpp auto-setup
+    // 2. Test llama.cpp auto-setup
+    // 3. Test dual-backend setup with RPATH merging
+
+    unimplemented!(
+        "Spec AC15: CI validation not yet implemented. \
+         Expected: GitHub Actions workflow tests all backends. \
+         Verification: Check .github/workflows/crossval.yml."
+    );
+}
+
+/// Spec AC16: Platform-specific RPATH embedding validation
+///
+/// **Test**: Validate RPATH on Linux (readelf), macOS (otool), Windows (PATH)
+/// **Expected**: Platform-appropriate RPATH embedding verified
+/// **Tag**: `// Spec:AC16`
+#[test]
+#[ignore] // Spec:AC16
+#[cfg(target_os = "linux")]
+fn test_spec_ac16_platform_rpath_validation_linux() {
+    // TODO: Validate RPATH on Linux using readelf
+    // Expected:
+    // readelf -d target/debug/xtask | grep RPATH
+    // Should show: Library rpath: [~/.cache/bitnet_cpp/build/bin:~/.cache/llama_cpp/build]
+
+    unimplemented!(
+        "Spec AC16: Platform-specific RPATH validation not yet implemented. \
+         Expected: readelf -d shows correct RPATH on Linux. \
+         Verification: Execute readelf and parse output."
+    );
+}
+
+/// Spec AC17: Regression test suite for backward compatibility
+///
+/// **Test**: Ensure BITNET_CROSSVAL_LIBDIR and BITNET_CPP_DIR still work
+/// **Expected**: Legacy environment variables respected
+/// **Tag**: `// Spec:AC17`
+#[test]
+#[ignore] // Spec:AC17
+#[serial(bitnet_env)]
+fn test_spec_ac17_regression_backward_compatibility() {
+    let _guard = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
+    let _guard2 = EnvGuard::clear("BITNET_CPP_DIR");
+
+    // TODO: Test backward compatibility
+    // Expected behavior:
+    // 1. BITNET_CROSSVAL_LIBDIR still overrides auto-discovery
+    // 2. BITNET_CPP_DIR still controls installation directory
+    // 3. No breaking changes to existing workflows
+
+    unimplemented!(
+        "Spec AC17: Regression test suite not yet implemented. \
+         Expected: Legacy env vars (BITNET_CROSSVAL_LIBDIR, BITNET_CPP_DIR) still work. \
+         Verification: Test with legacy env vars and verify behavior unchanged."
+    );
+}
+
+// ============================================================================
+// Spec AC18-AC22: Advanced Features Tests
+// ============================================================================
+
+/// Spec AC18: Retry logic with exponential backoff
+///
+/// **Test**: Network operations retry with exponential backoff
+/// **Expected**: Transient errors retried with increasing delay
+/// **Tag**: `// Spec:AC18`
+#[test]
+#[ignore] // Spec:AC18
+fn test_spec_ac18_retry_logic_exponential_backoff() {
+    // TODO: Implement clone_with_retry()
+    // Expected behavior:
+    // 1. Retry network operations (git clone) on transient errors
+    // 2. Exponential backoff: 1s, 2s, 4s
+    // 3. Max retries: 3 attempts
+    // 4. Fail-fast on permanent errors
+
+    unimplemented!(
+        "Spec AC18: Retry logic not yet implemented. \
+         Expected: clone_with_retry() with exponential backoff. \
+         Verification: Simulate network failures and verify retry behavior."
+    );
+}
+
+/// Spec AC19: Concurrent locking to prevent simultaneous installs
+///
+/// **Test**: File-based locking prevents concurrent installations
+/// **Expected**: Second process waits or fails-fast with clear error
+/// **Tag**: `// Spec:AC19`
+#[test]
+#[ignore] // Spec:AC19
+fn test_spec_ac19_concurrent_locking() {
+    // TODO: Implement acquire_lock() using fs2::FileExt
+    // Expected behavior:
+    // 1. Create ~/.cache/{backend}_setup.lock
+    // 2. Try exclusive lock (fail-fast if locked)
+    // 3. Release on drop (RAII pattern)
+
+    unimplemented!(
+        "Spec AC19: Concurrent locking not yet implemented. \
+         Expected: acquire_lock() prevents concurrent installs. \
+         Verification: Simulate concurrent processes and verify locking."
+    );
+}
+
+/// Spec AC20: Transactional state management with rollback
+///
+/// **Test**: Installation failures trigger atomic rollback
+/// **Expected**: Incomplete installations cleaned up on failure
+/// **Tag**: `// Spec:AC20`
+#[test]
+#[ignore] // Spec:AC20
+fn test_spec_ac20_transactional_state_management() {
+    // TODO: Implement InstallTransaction with Drop rollback
+    // Expected behavior:
+    // 1. Track installation state
+    // 2. On failure (panic or error), rollback via Drop
+    // 3. Remove incomplete build artifacts
+
+    unimplemented!(
+        "Spec AC20: Transactional state management not yet implemented. \
+         Expected: InstallTransaction rolls back on failure. \
+         Verification: Simulate build failure and verify cleanup."
+    );
+}
+
+/// Spec AC21: Rebuild triggers for new environment variables
+///
+/// **Test**: cargo:rerun-if-env-changed emitted for all relevant vars
+/// **Expected**: Build system detects env var changes
+/// **Tag**: `// Spec:AC21`
+#[test]
+#[ignore] // Spec:AC21
+fn test_spec_ac21_rebuild_triggers() {
+    // TODO: Verify build.rs emits correct rebuild triggers
+    // Expected triggers:
+    // - BITNET_CROSSVAL_LIBDIR
+    // - BITNET_CPP_DIR
+    // - LLAMA_CPP_DIR (new)
+    // - CROSSVAL_RPATH_BITNET (new)
+    // - CROSSVAL_RPATH_LLAMA (new)
+
+    unimplemented!(
+        "Spec AC21: Rebuild triggers not yet comprehensive. \
+         Expected: build.rs emits cargo:rerun-if-env-changed for new vars. \
+         Verification: Check build.rs for all rebuild triggers."
+    );
+}
+
+/// Spec AC22: Progress indicators with indicatif
+///
+/// **Test**: Progress bars show clone/build progress
+/// **Expected**: User-friendly progress indicators during long operations
+/// **Tag**: `// Spec:AC22`
+#[test]
+#[ignore] // Spec:AC22
+fn test_spec_ac22_progress_indicators() {
+    // TODO: Implement progress indicators using indicatif
+    // Expected behavior:
+    // 1. Show spinner during git clone
+    // 2. Show progress bar during CMake build
+    // 3. Clear indicators on completion/failure
+
+    unimplemented!(
+        "Spec AC22: Progress indicators not yet implemented. \
+         Expected: clone_with_progress() and build_with_progress() use indicatif. \
+         Verification: Run commands and verify progress output."
+    );
+}
+
+// ============================================================================
+// Edge Case Tests
+// ============================================================================
+
+/// Edge case: Handle detached HEAD gracefully during git pull
+///
+/// **Test**: Git pull in detached HEAD state doesn't fail hard
+/// **Expected**: Warning emitted, continues with submodule update
+#[test]
+#[ignore] // Edge case
+fn test_edge_detached_head_git_pull() {
+    // TODO: Test detached HEAD handling
+    // Expected: Warning message, no hard failure
+
+    unimplemented!(
+        "Edge case: Detached HEAD handling not yet tested. \
+         Expected: update_backend() emits warning and continues."
+    );
+}
+
+/// Edge case: Missing CMake dependency detected early
+///
+/// **Test**: CMake not installed shows helpful error
+/// **Expected**: Clear error with installation instructions
+#[test]
+#[ignore] // Edge case
+fn test_edge_missing_cmake_dependency() {
+    // TODO: Test dependency detection
+    // Expected: "cmake not found" error with platform-specific install commands
+
+    unimplemented!(
+        "Edge case: CMake dependency check not yet comprehensive. \
+         Expected: check_dependency() shows installation commands."
+    );
+}
+
+/// Edge case: Extremely long RPATH exceeds linker limit
+///
+/// **Test**: RPATH >4096 bytes triggers clear error
+/// **Expected**: Error with actionable guidance
+#[test]
+#[ignore] // Edge case
+fn test_edge_rpath_length_limit() {
+    use xtask::build_helpers::merge_and_deduplicate;
+
+    // TODO: Test RPATH length validation
+    // Expected: Panic with clear error when RPATH >4096 bytes
+
+    unimplemented!(
+        "Edge case: RPATH length validation not yet tested. \
+         Expected: merge_and_deduplicate() panics with helpful error."
+    );
+}
+
+/// Edge case: Network timeout during git clone
+///
+/// **Test**: Network timeout triggers retry logic
+/// **Expected**: Retry with exponential backoff
+#[test]
+#[ignore] // Edge case
+fn test_edge_network_timeout_retry() {
+    // TODO: Test network timeout handling
+    // Expected: clone_with_retry() retries on timeout errors
+
+    unimplemented!(
+        "Edge case: Network timeout retry not yet implemented. \
+         Expected: Retry logic handles timeout errors."
+    );
+}
+
+/// Edge case: Simultaneous installation attempts
+///
+/// **Test**: Two processes try to install same backend
+/// **Expected**: Second process fails-fast with lock error
+#[test]
+#[ignore] // Edge case
+fn test_edge_concurrent_installation_conflict() {
+    // TODO: Test concurrent locking
+    // Expected: Second process gets "Another setup-cpp-auto process is running" error
+
+    unimplemented!(
+        "Edge case: Concurrent installation not yet tested. \
+         Expected: acquire_lock() prevents concurrent installs."
+    );
+}
+
+/// Edge case: Partial build failure leaves artifacts
+///
+/// **Test**: Build fails mid-process, state cleaned up
+/// **Expected**: Transactional rollback removes partial artifacts
+#[test]
+#[ignore] // Edge case
+fn test_edge_partial_build_cleanup() {
+    // TODO: Test transactional rollback
+    // Expected: InstallTransaction::drop() removes incomplete build/
+
+    unimplemented!(
+        "Edge case: Partial build cleanup not yet tested. \
+         Expected: Transaction rollback on build failure."
+    );
+}
+
+/// Edge case: Invalid library directory in environment variable
+///
+/// **Test**: BITNET_CROSSVAL_LIBDIR points to non-existent path
+/// **Expected**: Graceful fallback to auto-discovery
+#[test]
+#[ignore] // Edge case
+#[serial(bitnet_env)]
+fn test_edge_invalid_libdir_env_var() {
+    let _guard = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
+    _guard.set("/this/path/does/not/exist");
+
+    // TODO: Test invalid env var handling
+    // Expected: Warning emitted, fallback to auto-discovery
+
+    unimplemented!(
+        "Edge case: Invalid BITNET_CROSSVAL_LIBDIR not yet tested. \
+         Expected: Fallback to auto-discovery with warning."
+    );
 }
 
 // ============================================================================

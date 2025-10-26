@@ -7,6 +7,187 @@
 use crate::crossval::CppBackend;
 use anyhow::{Result, bail};
 use std::path::Path;
+use std::{env, process::Command};
+
+/// Error types for auto-repair functionality
+///
+/// These errors provide detailed diagnostics and recovery steps for users
+/// experiencing issues during automatic C++ backend installation.
+#[derive(Debug, thiserror::Error)]
+pub enum RepairError {
+    /// Network failure during git clone or download
+    #[error(
+        "Network failure during clone: {error}\n\nRecovery steps:\n1. Check internet connection: ping github.com\n2. Verify firewall allows git clone\n3. Retry with: cargo run -p xtask -- preflight --backend {backend} --repair\n\nFor more help, see:\n  docs/howto/cpp-setup.md"
+    )]
+    NetworkFailure { error: String, backend: String },
+
+    /// Build failure during CMake or compilation
+    #[error(
+        "Build failure: {error}\n\nRecovery steps:\n1. Check dependencies installed:\n   - cmake --version  (should be >= 3.18)\n   - gcc --version or clang --version\n2. Review build log above for specific errors\n3. Try manual setup: cargo run -p xtask -- setup-cpp-auto --backend {backend}\n\nFor more help, see:\n  docs/howto/cpp-setup.md\n  docs/GPU_SETUP.md (for GPU-related build errors)"
+    )]
+    BuildFailure { error: String, backend: String },
+
+    /// Permission denied during file operations
+    #[error(
+        "Permission denied: {path}\n\nRecovery steps:\n1. Check directory ownership:\n   ls -ld {path}\n2. Fix ownership if needed:\n   sudo chown -R $USER {path}\n3. OR set custom directory:\n   export BITNET_CPP_DIR=~/my-bitnet-cpp\n   cargo run -p xtask -- preflight --backend {backend} --repair"
+    )]
+    PermissionDenied { path: String, backend: String },
+
+    /// setup-cpp-auto command failed
+    #[error("setup-cpp-auto failed: {0}")]
+    SetupFailed(String),
+
+    /// Revalidation failed after repair (backend still unavailable)
+    #[error(
+        "Revalidation failed after repair: backend still unavailable\n\nThis may indicate:\n1. Libraries were built but in unexpected location\n2. Build succeeded but libraries are incompatible\n3. Partial build state from previous failed attempt\n\nRecovery steps:\n1. Clean previous build state:\n   rm -rf ~/.cache/bitnet_cpp\n2. Retry repair:\n   cargo run -p xtask -- preflight --backend {backend} --repair --verbose\n3. If problem persists, see manual setup: docs/howto/cpp-setup.md"
+    )]
+    RevalidationFailed { backend: String },
+
+    /// xtask rebuild failed during repair
+    #[error("xtask rebuild failed: {0}")]
+    RebuildFailed(#[from] RebuildError),
+
+    /// Repair already in progress (recursion guard)
+    #[error(
+        "Repair already in progress (recursion detected)\n\nThis indicates an internal error. Please report this issue with:\n1. Full command that triggered repair\n2. Environment variables (BITNET_CPP_DIR, etc.)\n3. Output from: cargo run -p xtask -- preflight --verbose"
+    )]
+    RecursionDetected,
+}
+
+/// Error types for xtask rebuild operations
+#[derive(Debug, thiserror::Error)]
+pub enum RebuildError {
+    /// cargo clean failed
+    #[error(
+        "cargo clean failed: {0}\n\nRecovery steps:\n1. Check cargo is installed and accessible\n2. Verify no file locks on target/ directory\n3. Try manual clean: cargo clean -p xtask -p crossval"
+    )]
+    CleanFailed(String),
+
+    /// cargo build failed
+    #[error(
+        "cargo build failed: {0}\n\nRecovery steps:\n1. Check Rust toolchain: rustc --version\n2. Verify no compilation errors in xtask crate\n3. Try manual build: cargo build -p xtask --features crossval-all"
+    )]
+    BuildFailed(String),
+
+    /// Permission denied during rebuild
+    #[error(
+        "Permission denied during rebuild: {0}\n\nRecovery steps:\n1. Check target/ directory permissions\n2. Ensure no process has files locked\n3. Try: sudo chown -R $USER target/"
+    )]
+    PermissionDenied(String),
+}
+
+/// Classify error from stderr output
+///
+/// Determines error type based on stderr content from setup-cpp-auto or cmake.
+///
+/// # Arguments
+///
+/// * `stderr` - Standard error output to classify
+///
+/// # Returns
+///
+/// Error classification:
+/// - Network: Connection timeouts, git clone failures, DNS errors
+/// - Build: CMake errors, compiler errors, linker failures
+/// - Permission: EACCES, permission denied, cannot create directory
+/// - Unknown: Unrecognized error pattern
+fn classify_error(stderr: &str) -> &'static str {
+    let lower = stderr.to_lowercase();
+
+    // Network error patterns
+    if lower.contains("connection timeout")
+        || lower.contains("failed to clone")
+        || lower.contains("could not resolve host")
+        || lower.contains("network unreachable")
+        || lower.contains("connection refused")
+        || lower.contains("failed to connect")
+    {
+        return "network";
+    }
+
+    // Build error patterns
+    if lower.contains("cmake error")
+        || lower.contains("ninja: build stopped")
+        || lower.contains("undefined reference")
+        || lower.contains("no such file or directory")
+        || lower.contains("compilation failed")
+        || lower.contains("cannot find")
+    {
+        return "build";
+    }
+
+    // Permission error patterns
+    if lower.contains("permission denied")
+        || lower.contains("eacces")
+        || lower.contains("cannot create directory")
+        || lower.contains("access is denied")
+    {
+        return "permission";
+    }
+
+    "unknown"
+}
+
+/// Check if an error is retryable
+///
+/// Network errors are typically transient and can be retried with exponential backoff.
+/// Build and permission errors are usually permanent and should not be retried.
+///
+/// # Arguments
+///
+/// * `err` - The repair error to check
+///
+/// # Returns
+///
+/// `true` if error should be retried, `false` otherwise
+pub fn is_retryable_error(err: &RepairError) -> bool {
+    matches!(err, RepairError::NetworkFailure { .. })
+}
+
+/// Progress tracker for verbose repair logging
+///
+/// Provides timestamped progress messages during auto-repair flow.
+/// Only emits messages when verbose mode is enabled.
+///
+/// # Examples
+///
+/// ```ignore
+/// let progress = RepairProgress::new(true); // verbose enabled
+/// progress.log("DETECT", "Backend 'bitnet.cpp' not found");
+/// progress.log("REPAIR", "Cloning from GitHub...");
+/// // Output: [  0.00s] DETECT: Backend 'bitnet.cpp' not found
+/// //         [  2.15s] REPAIR: Cloning from GitHub...
+/// ```
+pub struct RepairProgress {
+    start_time: std::time::Instant,
+    verbose: bool,
+}
+
+impl RepairProgress {
+    /// Create new progress tracker
+    ///
+    /// # Arguments
+    ///
+    /// * `verbose` - If true, emit progress messages to stderr
+    pub fn new(verbose: bool) -> Self {
+        Self { start_time: std::time::Instant::now(), verbose }
+    }
+
+    /// Log a progress message with timestamp
+    ///
+    /// Format: `[  XXX.XXs] STAGE: message`
+    ///
+    /// # Arguments
+    ///
+    /// * `stage` - Stage identifier (e.g., "DETECT", "REPAIR", "REBUILD")
+    /// * `message` - Progress message to display
+    pub fn log(&self, stage: &str, message: &str) {
+        if self.verbose {
+            let elapsed = self.start_time.elapsed();
+            eprintln!("[{:>6.2}s] {}: {}", elapsed.as_secs_f64(), stage, message);
+        }
+    }
+}
 
 // Feature-gated imports for build-time library detection
 // These constants are set by crossval/build.rs during compilation
@@ -826,6 +1007,214 @@ pub fn print_backend_status(verbose: bool) {
     } else if has_bitnet && has_llama {
         println!("Both backends available. Dual-backend cross-validation supported.");
     }
+}
+
+/// Preflight check with optional auto-repair
+///
+/// Implements the detect → repair → redetect flow for automatic C++ backend installation.
+///
+/// # Arguments
+///
+/// * `backend` - Which C++ backend to check (bitnet or llama)
+/// * `verbose` - Show detailed diagnostics
+/// * `should_repair` - Whether to attempt auto-repair if backend is missing
+///
+/// # Returns
+///
+/// * `Ok(())` - Backend is available (or successfully repaired)
+/// * `Err(anyhow::Error)` - Backend unavailable and repair failed/disabled
+///
+/// # Examples
+///
+/// ```ignore
+/// // Auto-repair disabled (traditional behavior)
+/// preflight_with_auto_repair(CppBackend::BitNet, false, false)?;
+///
+/// // Auto-repair enabled (new behavior)
+/// preflight_with_auto_repair(CppBackend::BitNet, true, true)?;
+/// ```
+#[allow(dead_code)] // Will be used when integrated with command handler
+pub fn preflight_with_auto_repair(
+    backend: CppBackend,
+    verbose: bool,
+    should_repair: bool,
+) -> Result<()> {
+    // Step 1: Check if backend is already available
+    let is_available = match backend {
+        CppBackend::BitNet => HAS_BITNET,
+        CppBackend::Llama => HAS_LLAMA,
+    };
+
+    if is_available {
+        // Backend already available - use existing preflight logic
+        return preflight_backend_libs(backend, verbose);
+    }
+
+    // Step 2: Backend not available - attempt repair if enabled
+    if !should_repair {
+        // No repair requested - use traditional error path
+        return preflight_backend_libs(backend, verbose);
+    }
+
+    // Step 3: Attempt repair
+    if verbose {
+        eprintln!("Backend '{}' not found, attempting auto-repair...", backend.name());
+    }
+
+    if let Err(e) = attempt_repair(backend, verbose) {
+        // Repair failed - show error with recovery steps
+        eprintln!("\n{}", e);
+        bail!("Auto-repair failed for backend '{}'", backend.name());
+    }
+
+    // Step 4: Revalidation note
+    // NOTE: After rebuild, we would need to re-execute the xtask binary to see
+    // updated build-time constants. For now, we show success message and expect
+    // user to re-run preflight to verify.
+    if verbose {
+        eprintln!(
+            "✓ Backend '{}' setup complete. Rebuild xtask to detect libraries:",
+            backend.name()
+        );
+        eprintln!("  cargo clean -p xtask && cargo build -p xtask --features crossval-all");
+        eprintln!(
+            "  cargo run -p xtask -- preflight --backend {} --verbose",
+            backend.name().split('.').next().unwrap()
+        );
+    } else {
+        println!("✓ Backend '{}' setup complete (rebuild xtask to detect)", backend.name());
+    }
+
+    Ok(())
+}
+
+/// Attempt to repair a missing backend
+///
+/// Invokes setup-cpp-auto to install C++ libraries, then prompts for xtask rebuild.
+///
+/// # Arguments
+///
+/// * `backend` - The backend to install
+/// * `verbose` - Show detailed progress
+///
+/// # Returns
+///
+/// * `Ok(())` - Setup succeeded (user must rebuild xtask)
+/// * `Err(RepairError)` - Setup failed with classified error
+fn attempt_repair(backend: CppBackend, verbose: bool) -> Result<(), RepairError> {
+    let progress = RepairProgress::new(verbose);
+
+    // Check recursion guard
+    if env::var("BITNET_REPAIR_IN_PROGRESS").is_ok() {
+        return Err(RepairError::RecursionDetected);
+    }
+
+    // Set recursion guard
+    // SAFETY: This env var is only used as a recursion guard during auto-repair.
+    // We ensure cleanup happens even on error via the removal below.
+    unsafe {
+        env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+    }
+
+    progress.log("DETECT", &format!("Backend '{}' not found", backend.name()));
+    progress.log("REPAIR", "Invoking setup-cpp-auto...");
+
+    // Invoke setup-cpp-auto
+    let setup_result = Command::new(
+        env::current_exe()
+            .map_err(|e| RepairError::SetupFailed(format!("Failed to get current exe: {}", e)))?,
+    )
+    .args(["setup-cpp-auto", "--emit=sh"])
+    .output()
+    .map_err(|e| RepairError::SetupFailed(format!("Failed to execute setup-cpp-auto: {}", e)))?;
+
+    // Cleanup recursion guard
+    // SAFETY: We're removing the same env var we set above, restoring the environment state.
+    unsafe {
+        env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+    }
+
+    if !setup_result.status.success() {
+        let stderr = String::from_utf8_lossy(&setup_result.stderr);
+        let error_type = classify_error(&stderr);
+        let backend_name = backend.name().to_string();
+
+        return Err(match error_type {
+            "network" => {
+                RepairError::NetworkFailure { error: stderr.to_string(), backend: backend_name }
+            }
+            "build" => {
+                RepairError::BuildFailure { error: stderr.to_string(), backend: backend_name }
+            }
+            "permission" => {
+                // Try to extract path from error message
+                let path = stderr
+                    .lines()
+                    .find(|line| line.contains("Permission denied"))
+                    .and_then(|line| {
+                        line.split_whitespace()
+                            .find(|word| word.starts_with('/') || word.starts_with("~/"))
+                    })
+                    .unwrap_or("~/.cache/bitnet_cpp");
+                RepairError::PermissionDenied { path: path.to_string(), backend: backend_name }
+            }
+            _ => RepairError::SetupFailed(stderr.to_string()),
+        });
+    }
+
+    progress.log("REPAIR", "C++ libraries installed successfully");
+
+    // Note: We don't rebuild xtask automatically because:
+    // 1. It would require re-executing the current binary
+    // 2. Build-time constants are baked into the current process
+    // 3. User needs to rebuild explicitly to see updated constants
+    //
+    // Instead, we show clear instructions for the required rebuild step.
+
+    Ok(())
+}
+
+/// Rebuild xtask to detect newly installed libraries
+///
+/// NOTE: This function is planned for future implementation.
+/// Currently, we rely on user to manually rebuild xtask after setup-cpp-auto.
+///
+/// The challenge is that build-time constants (HAS_BITNET, HAS_LLAMA) are
+/// embedded during compilation and can't be updated at runtime. We would need to:
+/// 1. Rebuild xtask binary
+/// 2. Re-execute the new binary
+/// 3. Continue from where we left off
+///
+/// For the MVP, we show clear rebuild instructions to the user.
+#[allow(dead_code)]
+fn rebuild_xtask_for_detection() -> Result<(), RebuildError> {
+    // Step 1: Clean xtask and crossval crates
+    let clean_status = Command::new("cargo")
+        .args(["clean", "-p", "xtask", "-p", "crossval"])
+        .status()
+        .map_err(|e: std::io::Error| RebuildError::CleanFailed(e.to_string()))?;
+
+    if !clean_status.success() {
+        return Err(RebuildError::CleanFailed(format!(
+            "cargo clean exited with code {:?}",
+            clean_status.code()
+        )));
+    }
+
+    // Step 2: Rebuild with crossval features
+    let build_status = Command::new("cargo")
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
+        .status()
+        .map_err(|e: std::io::Error| RebuildError::BuildFailed(e.to_string()))?;
+
+    if !build_status.success() {
+        return Err(RebuildError::BuildFailed(format!(
+            "cargo build exited with code {:?}",
+            build_status.code()
+        )));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

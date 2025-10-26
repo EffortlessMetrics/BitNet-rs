@@ -395,6 +395,14 @@ enum Cmd {
         /// Show detailed diagnostic information (environment vars, search paths, build metadata)
         #[arg(long, short)]
         verbose: bool,
+
+        /// Automatically repair missing backends (default: true in interactive, false in CI)
+        #[arg(long, default_value_t = true)]
+        repair: bool,
+
+        /// Disable automatic repair (explicit flag for clarity)
+        #[arg(long, action = clap::ArgAction::SetFalse)]
+        no_repair: bool,
     },
 
     /// Run deterministic cross-validation tests against C++ implementation
@@ -530,6 +538,81 @@ enum Cmd {
 
         /// Metrics to compute: mse,kl,topk (comma-separated)
         #[arg(long, default_value = "mse,kl,topk")]
+        metrics: String,
+    },
+
+    /// Dual-lane cross-validation: run both BitNet.cpp and llama.cpp backends in one command
+    ///
+    /// Orchestrates dual-lane cross-validation with unified receipts, auto-repair,
+    /// and comparative summary. Runs Rust inference once, compares against both
+    /// C++ backends (BitNet.cpp and llama.cpp), and generates side-by-side receipts.
+    ///
+    /// AC: parity-both-command.md#ac1-ac7
+    ///
+    /// Example:
+    ///     cargo run -p xtask --features crossval-all -- parity-both \
+    ///       --model-gguf models/model.gguf \
+    ///       --tokenizer models/tokenizer.json \
+    ///       --prompt "What is 2+2?" \
+    ///       --max-tokens 4 \
+    ///       --out-dir ci/parity
+    #[cfg(feature = "crossval-all")]
+    #[command(name = "parity-both")]
+    ParityBoth {
+        /// Path to GGUF model file
+        #[arg(long)]
+        model_gguf: PathBuf,
+
+        /// Path to tokenizer.json file
+        #[arg(long)]
+        tokenizer: PathBuf,
+
+        /// Input prompt for inference
+        #[arg(long, default_value = "What is 2+2?")]
+        prompt: String,
+
+        /// Maximum tokens to generate (excluding prompt)
+        #[arg(long, default_value_t = 4)]
+        max_tokens: usize,
+
+        /// Cosine similarity threshold (0.0-1.0)
+        #[arg(long, default_value_t = 0.999)]
+        cos_tol: f64,
+
+        /// Output directory for receipts
+        #[arg(long, default_value = ".parity")]
+        out_dir: PathBuf,
+
+        /// Output format: text or json
+        #[arg(long, default_value = "text")]
+        format: String,
+
+        /// Prompt template: auto, raw, instruct, llama3-chat
+        #[arg(long, default_value = "auto", value_enum)]
+        prompt_template: PromptTemplateArg,
+
+        /// System prompt for chat templates
+        #[arg(long)]
+        system_prompt: Option<String>,
+
+        /// Disable auto-repair of missing backends
+        #[arg(long)]
+        no_repair: bool,
+
+        /// Show detailed progress for each lane
+        #[arg(long, short)]
+        verbose: bool,
+
+        /// Dump Rust token IDs to stderr
+        #[arg(long)]
+        dump_ids: bool,
+
+        /// Dump C++ token IDs to stderr
+        #[arg(long)]
+        dump_cpp_ids: bool,
+
+        /// Metrics to compute: mse,kl,topk (comma-separated)
+        #[arg(long, default_value = "mse")]
         metrics: String,
     },
 
@@ -975,8 +1058,8 @@ fn real_main() -> Result<()> {
             Ok(())
         }
         #[cfg(any(feature = "crossval", feature = "crossval-all"))]
-        Cmd::Preflight { backend, verbose } => {
-            cpp_backend_preflight_cmd(backend, verbose)?;
+        Cmd::Preflight { backend, verbose, repair, no_repair } => {
+            cpp_backend_preflight_cmd(backend, verbose, repair, no_repair)?;
             Ok(())
         }
         Cmd::Crossval { model, cpp_dir, release, dry_run, extra } => {
@@ -1024,6 +1107,41 @@ fn real_main() -> Result<()> {
                 receipt.as_deref(),
                 &ladder,
                 positions,
+                &metrics,
+            )?;
+            Ok(())
+        }
+        #[cfg(feature = "crossval-all")]
+        Cmd::ParityBoth {
+            model_gguf,
+            tokenizer,
+            prompt,
+            max_tokens,
+            cos_tol,
+            out_dir,
+            format,
+            prompt_template,
+            system_prompt,
+            no_repair,
+            verbose,
+            dump_ids,
+            dump_cpp_ids,
+            metrics,
+        } => {
+            parity_both_cmd(
+                &model_gguf,
+                &tokenizer,
+                &prompt,
+                max_tokens,
+                cos_tol,
+                &out_dir,
+                &format,
+                prompt_template,
+                system_prompt.as_deref(),
+                !no_repair, // auto_repair = !no_repair
+                verbose,
+                dump_ids,
+                dump_cpp_ids,
                 &metrics,
             )?;
             Ok(())
@@ -2562,16 +2680,25 @@ fn format_markdown_output(comparison: &BenchmarkComparison, verbose: bool) -> Re
 /// Validates that required C++ libraries are available for the specified backend.
 /// If no backend is specified, checks all available backends.
 #[cfg(any(feature = "crossval", feature = "crossval-all"))]
-fn cpp_backend_preflight_cmd(backend: Option<CppBackend>, verbose: bool) -> Result<()> {
-    use crossval::{preflight_backend_libs, print_backend_status};
+fn cpp_backend_preflight_cmd(
+    backend: Option<CppBackend>,
+    verbose: bool,
+    repair: bool,
+    no_repair: bool,
+) -> Result<()> {
+    use crossval::{preflight_with_auto_repair, print_backend_status};
+
+    // Determine repair mode: explicit --no-repair overrides default, CI detection, etc.
+    let should_repair = if no_repair { false } else { repair && !is_ci_environment() };
 
     match backend {
         Some(b) => {
-            // Check specific backend - exit code reflects availability
-            preflight_backend_libs(b, verbose)?;
+            // Check specific backend with optional auto-repair
+            preflight_with_auto_repair(b, verbose, should_repair)?;
 
             // Only print success message if not verbose (verbose already printed detailed output)
-            if !verbose {
+            if !verbose && !should_repair {
+                // If repair was attempted, preflight_with_auto_repair already printed status
                 println!("✓ {} backend is available", b.name());
             }
         }
@@ -2582,6 +2709,15 @@ fn cpp_backend_preflight_cmd(backend: Option<CppBackend>, verbose: bool) -> Resu
     }
 
     Ok(())
+}
+
+/// Detect if running in CI environment
+#[allow(dead_code)]
+fn is_ci_environment() -> bool {
+    std::env::var("CI").is_ok()
+        || std::env::var("GITHUB_ACTIONS").is_ok()
+        || std::env::var("JENKINS_HOME").is_ok()
+        || std::env::var("GITLAB_CI").is_ok()
 }
 
 fn fetch_cpp_cmd(
@@ -3521,6 +3657,49 @@ fn crossval_per_token_cmd_impl(
             anyhow::bail!("Unknown ladder mode: {}", ladder);
         }
     }
+
+    Ok(())
+}
+
+/// Dual-lane cross-validation: run both BitNet.cpp and llama.cpp backends in one command
+///
+/// AC: parity-both-command.md#ac1-ac7
+#[cfg(feature = "crossval-all")]
+#[allow(clippy::too_many_arguments)] // Command handler mirrors CLI arguments
+fn parity_both_cmd(
+    model_gguf: &Path,
+    tokenizer: &Path,
+    prompt: &str,
+    max_tokens: usize,
+    cos_tol: f64,
+    out_dir: &Path,
+    format: &str,
+    _prompt_template: PromptTemplateArg,
+    _system_prompt: Option<&str>,
+    auto_repair: bool,
+    verbose: bool,
+    _dump_ids: bool,
+    _dump_cpp_ids: bool,
+    _metrics: &str,
+) -> Result<()> {
+    use crossval::parity_both;
+
+    // Phase 1: Preflight both backends (auto-repair by default)
+    if verbose {
+        println!("⚙ Preflight: Checking both backends...");
+    }
+
+    parity_both::run(&parity_both::ParityBothArgs {
+        model_gguf: model_gguf.to_path_buf(),
+        tokenizer: tokenizer.to_path_buf(),
+        prompt: prompt.to_string(),
+        max_tokens,
+        cos_tol,
+        out_dir: out_dir.to_path_buf(),
+        format: format.to_string(),
+        auto_repair,
+        verbose,
+    })?;
 
     Ok(())
 }
