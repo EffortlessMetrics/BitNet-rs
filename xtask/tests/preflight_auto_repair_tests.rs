@@ -221,13 +221,17 @@ mod ac2_repair_mode_enum_tests {
     #[serial(bitnet_env)]
     fn test_repair_mode_auto_detects_ci_environment() {
         // Setup: Set CI=true
-        std::env::set_var("CI", "true");
+        unsafe {
+            std::env::set_var("CI", "true");
+        }
 
         // Create RepairMode::Auto
         // Assert: Resolves to RepairMode::Never in CI
 
         // Cleanup
-        std::env::remove_var("CI");
+        unsafe {
+            std::env::remove_var("CI");
+        }
         unimplemented!("AC2: Implement CI environment detection test");
     }
 }
@@ -431,14 +435,18 @@ mod ac4_exit_codes_tests {
     #[serial(bitnet_env)]
     fn test_exit_code_recursion_detected() {
         // Setup: Set BITNET_REPAIR_IN_PROGRESS=1
-        std::env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+        unsafe {
+            std::env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+        }
 
         // Run: preflight --backend bitnet --repair=auto
         // Assert: Exit code 6
         // Assert: Error message contains "recursion detected"
 
         // Cleanup
-        std::env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+        unsafe {
+            std::env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+        }
         unimplemented!("AC4: Implement exit code 6 test");
     }
 }

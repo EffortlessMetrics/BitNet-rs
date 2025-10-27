@@ -78,3 +78,7 @@ cli-bench = []
 # build the extra subcommands only when you want them
 full-cli = ["cli-bench"]
 trace = ["bitnet-inference/trace"]  # Enable tensor activation tracing
+# Mock feature - compile-time firewall (intentionally triggers compile_error! in main.rs)
+# This prevents production CLI builds with test mocks
+# DO NOT enable this feature - it will fail to compile by design
+mock = []

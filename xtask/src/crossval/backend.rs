@@ -105,6 +105,123 @@ impl CppBackend {
     }
 }
 
+/// Runtime backend detection fallback (post-install, pre-rebuild)
+///
+/// This function provides runtime detection when libraries are installed after xtask build.
+/// It checks multiple sources in priority order:
+///
+/// 1. `BITNET_CROSSVAL_LIBDIR` (explicit override)
+/// 2. Backend-specific granular overrides (`CROSSVAL_RPATH_BITNET`, `CROSSVAL_RPATH_LLAMA`)
+/// 3. Backend home dir + subdirectories (`BITNET_CPP_DIR/build`, `LLAMA_CPP_DIR/build`, etc.)
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to detect (BitNet or Llama)
+///
+/// # Returns
+///
+/// * `Ok((true, Some(path)))` - Backend libraries found at runtime, with matched path
+/// * `Ok((false, None))` - Backend libraries not found
+/// * `Err(String)` - Error during detection
+///
+/// # Platform-Specific Library Extensions
+///
+/// - Linux: `.so`
+/// - macOS: `.dylib`
+/// - Windows: `.dll`
+pub fn detect_backend_runtime(
+    backend: CppBackend,
+) -> Result<(bool, Option<std::path::PathBuf>), String> {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
+    // Priority 1: BITNET_CROSSVAL_LIBDIR (explicit override)
+    if let Ok(p) = std::env::var("BITNET_CROSSVAL_LIBDIR") {
+        candidates.push(p.into());
+    }
+
+    // Priority 2: Granular overrides (backend-specific)
+    match backend {
+        CppBackend::BitNet => {
+            if let Ok(p) = std::env::var("CROSSVAL_RPATH_BITNET") {
+                candidates.push(p.into());
+            }
+        }
+        CppBackend::Llama => {
+            if let Ok(p) = std::env::var("CROSSVAL_RPATH_LLAMA") {
+                candidates.push(p.into());
+            }
+        }
+    }
+
+    // Priority 3: Backend home directory + subdirectories
+    let home_var = match backend {
+        CppBackend::BitNet => "BITNET_CPP_DIR",
+        CppBackend::Llama => "LLAMA_CPP_DIR",
+    };
+
+    if let Ok(root) = std::env::var(home_var) {
+        let root_path = std::path::Path::new(&root);
+        for sub in ["build", "build/bin", "build/lib"] {
+            candidates.push(root_path.join(sub));
+        }
+    }
+
+    // Check for required library filenames per platform
+    let exts = if cfg!(target_os = "windows") {
+        vec!["dll"]
+    } else if cfg!(target_os = "macos") {
+        vec!["dylib"]
+    } else {
+        vec!["so"]
+    };
+
+    let needs: &[&str] = match backend {
+        CppBackend::BitNet => &["bitnet"],
+        CppBackend::Llama => &["llama", "ggml"],
+    };
+
+    // Check each candidate directory and return first match with path
+    for dir in candidates {
+        if !dir.exists() {
+            continue;
+        }
+
+        // Check if all required libraries are present
+        let all_found = needs.iter().all(|stem| {
+            exts.iter().any(|ext| {
+                let lib_name = format_lib_name_ext(stem, ext);
+                dir.join(&lib_name).exists()
+            })
+        });
+
+        if all_found {
+            return Ok((true, Some(dir)));
+        }
+    }
+
+    Ok((false, None))
+}
+
+/// Format library name with specific extension (helper for runtime detection)
+///
+/// # Arguments
+///
+/// * `stem` - Library name stem (e.g., "bitnet", "llama")
+/// * `ext` - File extension (e.g., "so", "dylib", "dll")
+///
+/// # Returns
+///
+/// Formatted library name:
+/// - Windows: `{stem}.{ext}` (e.g., "bitnet.dll")
+/// - Unix: `lib{stem}.{ext}` (e.g., "libbitnet.so")
+fn format_lib_name_ext(stem: &str, ext: &str) -> String {
+    if cfg!(target_os = "windows") {
+        format!("{}.{}", stem, ext)
+    } else {
+        format!("lib{}.{}", stem, ext)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

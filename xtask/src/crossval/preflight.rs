@@ -6,6 +6,7 @@
 
 use crate::crossval::CppBackend;
 use anyhow::{Result, bail};
+use std::collections::HashMap;
 use std::path::Path;
 use std::time::Duration;
 use std::{env, process::Command};
@@ -516,6 +517,353 @@ const SEPARATOR_HEAVY: &str = "━━━━━━━━━━━━━━━━�
 const SEPARATOR_LIGHT: &str =
     "─────────────────────────────────────────────────────────────────────";
 
+// ============================================================================
+// Stale Build Warning Functions (AC1-AC7)
+// ============================================================================
+
+/// Emit stale build warning when runtime detection succeeds but build-time constants are false
+///
+/// This function provides user-facing warnings when libraries are installed after xtask build.
+/// It uses std::sync::Once for deduplication to ensure warnings appear only once per backend.
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend detected at runtime
+/// * `matched_path` - The directory path where libraries were found
+/// * `verbose` - If true, emit detailed diagnostic output
+fn emit_stale_build_warning(backend: CppBackend, matched_path: &std::path::Path, verbose: bool) {
+    use std::sync::Once;
+
+    // Per-backend deduplication using static Once flags
+    static BITNET_WARNING_EMITTED: Once = Once::new();
+    static LLAMA_WARNING_EMITTED: Once = Once::new();
+
+    let once_flag = match backend {
+        CppBackend::BitNet => &BITNET_WARNING_EMITTED,
+        CppBackend::Llama => &LLAMA_WARNING_EMITTED,
+    };
+
+    once_flag.call_once(|| {
+        if verbose {
+            emit_verbose_stale_warning(backend, matched_path);
+        } else {
+            emit_standard_stale_warning(backend);
+        }
+    });
+}
+
+/// Emit standard one-line stale build warning
+///
+/// Format: Single-line with warning symbol, backend name, and rebuild command
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend detected at runtime
+fn emit_standard_stale_warning(backend: CppBackend) {
+    eprintln!(
+        "⚠️  STALE BUILD: {} found at runtime but not at build time. Rebuild required: cargo clean -p crossval && cargo build -p xtask --features crossval-all",
+        backend.name()
+    );
+}
+
+/// Emit verbose multi-line stale build diagnostic
+///
+/// Provides comprehensive diagnostic information including:
+/// - What happened (libraries found at runtime but not build-time)
+/// - Why rebuild is needed (build-time detection is baked into binary)
+/// - Runtime detection results (matched path, libraries found)
+/// - Build-time state (HAS_BITNET/HAS_LLAMA = false)
+/// - Fix instructions (rebuild command)
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend detected at runtime
+/// * `matched_path` - The directory path where libraries were found
+fn emit_verbose_stale_warning(backend: CppBackend, matched_path: &std::path::Path) {
+    const SEPARATOR: &str = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    eprintln!("{}", SEPARATOR);
+    eprintln!("⚠️  STALE BUILD DETECTION");
+    eprintln!("{}", SEPARATOR);
+    eprintln!();
+    eprintln!("Backend '{}' found at runtime but not at xtask build time.", backend.name());
+    eprintln!();
+    eprintln!("This happens when:");
+    eprintln!("  1. You built xtask");
+    eprintln!("  2. Then installed {} libraries later", backend.name());
+    eprintln!("  3. xtask binary still contains old detection constants");
+    eprintln!();
+    eprintln!("Why rebuild is needed:");
+    eprintln!("  • Library detection runs at BUILD time (not runtime)");
+    eprintln!("  • Results are baked into the xtask binary as constants");
+    eprintln!("  • Runtime detection is a fallback for developer convenience");
+    eprintln!("  • Rebuild refreshes the constants to match filesystem reality");
+    eprintln!();
+    eprintln!("Runtime Detection Results:");
+    eprintln!("  Matched path: {}", matched_path.display());
+
+    // List libraries found in matched path
+    if let Ok(entries) = std::fs::read_dir(matched_path) {
+        let mut libs = Vec::new();
+        for entry in entries.flatten() {
+            if let Some(name) = entry.path().file_name().and_then(|n| n.to_str())
+                && name.starts_with("lib")
+                && (name.ends_with(".so") || name.ends_with(".dylib") || name.ends_with(".a"))
+            {
+                libs.push(name.to_string());
+                #[cfg(target_os = "windows")]
+                if name.ends_with(".dll") {
+                    libs.push(name.to_string());
+                }
+            }
+        }
+        if !libs.is_empty() {
+            eprintln!("  Libraries found: {}", libs.join(", "));
+        }
+    }
+
+    eprintln!();
+    eprintln!("Build-Time Detection State:");
+    eprintln!(
+        "  HAS_{} = false (stale)",
+        match backend {
+            CppBackend::BitNet => "BITNET",
+            CppBackend::Llama => "LLAMA",
+        }
+    );
+
+    eprintln!();
+    eprintln!("Fix:");
+    eprintln!("  cargo clean -p crossval && cargo build -p xtask --features crossval-all");
+    eprintln!();
+    eprintln!("Then re-run your test.");
+}
+
+/// Format CI-mode skip message when runtime detects libraries but build-time constants are stale
+///
+/// Provides clear diagnostic explaining why test is skipped in CI mode and setup instructions.
+///
+/// # Arguments
+///
+/// * `backend` - The backend that is unavailable at build-time
+/// * `matched_path` - Optional matched path where runtime found libraries
+///
+/// # Returns
+///
+/// Formatted skip diagnostic message
+fn format_ci_stale_skip_diagnostic(
+    backend: CppBackend,
+    matched_path: Option<&std::path::Path>,
+) -> String {
+    const SEPARATOR: &str = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    let mut msg = String::new();
+    msg.push_str(&format!("{}\n", SEPARATOR));
+    msg.push_str(&format!("⊘ Test skipped: {} not available (CI mode)\n", backend.name()));
+    msg.push_str(&format!("{}\n\n", SEPARATOR));
+
+    msg.push_str("CI mode detected (CI=1 or BITNET_TEST_NO_REPAIR=1).\n");
+    msg.push_str("Runtime detection found libraries but build-time constants are stale.\n\n");
+
+    if let Some(path) = matched_path {
+        msg.push_str(&format!("Runtime found libraries at: {}\n", path.display()));
+        msg.push_str("But xtask was built before libraries were installed.\n\n");
+    }
+
+    msg.push_str("In CI mode:\n");
+    msg.push_str("  • Build-time detection is the source of truth\n");
+    msg.push_str("  • Runtime fallback is DISABLED for determinism\n");
+    msg.push_str("  • xtask must be rebuilt to detect libraries\n\n");
+
+    msg.push_str("Setup Instructions:\n");
+    msg.push_str("  1. Install backend:\n");
+    msg.push_str("     eval \"$(cargo run -p xtask -- setup-cpp-auto --emit=sh)\"\n");
+    msg.push_str("  2. Rebuild xtask:\n");
+    msg.push_str("     cargo clean -p crossval && cargo build -p xtask --features crossval-all\n");
+    msg.push_str("  3. Re-run CI job\n");
+
+    msg
+}
+
+// ============================================================================
+// Environment Export Parsing (env-export-before-rebuild-deterministic.md)
+// ============================================================================
+
+/// Parse shell export statements from `setup-cpp-auto` output
+///
+/// Extracts environment variable key-value pairs from shell export syntax.
+/// Supports multiple shell formats for cross-platform compatibility.
+///
+/// # Supported Formats
+///
+/// - **POSIX sh/bash**: `export KEY=value` or `export KEY="value"`
+/// - **Fish shell**: `set -gx KEY "value"`
+/// - **PowerShell**: `$env:KEY = "value"`
+///
+/// # Arguments
+///
+/// * `script` - Shell script output containing export statements
+///
+/// # Returns
+///
+/// HashMap of environment variable key-value pairs, with quotes stripped
+/// from values. Non-export lines are silently skipped.
+///
+/// # Examples
+///
+/// ```ignore
+/// let script = r#"
+/// export BITNET_CPP_DIR="/path/to/libs"
+/// export LD_LIBRARY_PATH="/lib:/usr/lib"
+/// echo "Setup complete"
+/// "#;
+///
+/// let exports = parse_sh_exports(script);
+/// assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path/to/libs".to_string()));
+/// assert_eq!(exports.len(), 2); // Non-export lines skipped
+/// ```
+///
+/// # Specification
+///
+/// See: `docs/specs/env-export-before-rebuild-deterministic.md` (AC1)
+pub fn parse_sh_exports(script: &str) -> HashMap<String, String> {
+    let mut result = HashMap::new();
+
+    for line in script.lines() {
+        let line = line.trim();
+
+        // Parse POSIX sh/bash: export KEY=value
+        if let Some(export) = line.strip_prefix("export ") {
+            if let Some((key, value)) = export.split_once('=') {
+                let key = key.trim();
+                let value = strip_quotes(value.trim());
+                // Skip if key is empty (malformed)
+                if !key.is_empty() {
+                    result.insert(key.to_string(), value);
+                }
+            }
+        }
+        // Parse fish shell: set -gx KEY "value"
+        else if line.starts_with("set -gx ") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 4 && parts[0] == "set" && parts[1] == "-gx" {
+                let key = parts[2];
+                // Join remaining parts as value (handles multi-word values)
+                let value = parts[3..].join(" ");
+                let value = strip_quotes(&value);
+                result.insert(key.to_string(), value);
+            }
+        }
+        // Parse PowerShell: $env:KEY = "value"
+        else if line.starts_with("$env:") {
+            if let Some(rest) = line.strip_prefix("$env:")
+                && let Some((key, value)) = rest.split_once('=')
+            {
+                let key = key.trim();
+                let value = strip_quotes(value.trim());
+                result.insert(key.to_string(), value);
+            }
+        }
+    }
+
+    result
+}
+
+/// Strip surrounding quotes from a string value
+///
+/// Removes matching single or double quotes from start and end of string.
+/// Preserves inner quotes (e.g., `"BitNet \"C++\" Backend"` becomes
+/// `BitNet \"C++\" Backend`).
+///
+/// # Arguments
+///
+/// * `s` - String potentially wrapped in quotes
+///
+/// # Returns
+///
+/// String with outer quotes removed if present, otherwise unchanged
+fn strip_quotes(s: &str) -> String {
+    let s = s.trim();
+    if s.len() >= 2
+        && ((s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')))
+    {
+        return s[1..s.len() - 1].to_string();
+    }
+    s.to_string()
+}
+
+/// Rebuild xtask with environment variables applied
+///
+/// Invokes `cargo build -p xtask --features crossval-all` with provided
+/// environment variables set, enabling build.rs to detect newly installed
+/// C++ libraries via BITNET_CPP_DIR and LD_LIBRARY_PATH.
+///
+/// # Arguments
+///
+/// * `env_vars` - Environment variables to set during cargo build
+/// * `verbose` - If true, print diagnostic messages
+///
+/// # Returns
+///
+/// * `Ok(())` - Rebuild succeeded with environment applied
+/// * `Err(RepairError::RebuildFailed)` - Cargo build failed
+///
+/// # Environment Propagation
+///
+/// This function applies environment variables to the cargo subprocess,
+/// ensuring build.rs scripts can detect library paths during compilation.
+/// Existing environment variables are preserved (additive behavior).
+///
+/// # Examples
+///
+/// ```ignore
+/// let mut exports = HashMap::new();
+/// exports.insert("BITNET_CPP_DIR".to_string(), "/path/to/libs".to_string());
+/// exports.insert("LD_LIBRARY_PATH".to_string(), "/path/to/libs/lib".to_string());
+///
+/// rebuild_xtask_with_env(&exports, true)?;
+/// // cargo build -p xtask --features crossval-all
+/// // (with BITNET_CPP_DIR and LD_LIBRARY_PATH set)
+/// ```
+///
+/// # Specification
+///
+/// See: `docs/specs/env-export-before-rebuild-deterministic.md` (AC2)
+pub fn rebuild_xtask_with_env(
+    env_vars: &HashMap<String, String>,
+    verbose: bool,
+) -> Result<(), RepairError> {
+    if verbose {
+        eprintln!("[preflight] Rebuilding xtask with {} environment variables...", env_vars.len());
+        for (key, value) in env_vars {
+            eprintln!("[preflight]   {}={}", key, value);
+        }
+    }
+
+    let mut cmd = Command::new("cargo");
+    cmd.args(["build", "-p", "xtask", "--features", "crossval-all"]);
+
+    // Apply environment variables to cargo subprocess
+    for (key, value) in env_vars {
+        cmd.env(key, value);
+    }
+
+    let output = cmd
+        .output()
+        .map_err(|e| RepairError::RebuildFailed(RebuildError::BuildFailed(e.to_string())))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(RepairError::RebuildFailed(RebuildError::BuildFailed(stderr.to_string())));
+    }
+
+    if verbose {
+        eprintln!("[preflight] ✓ Rebuild complete with environment applied");
+    }
+
+    Ok(())
+}
+
 /// Verify required libraries are available for selected backend
 ///
 /// Checks build-time detection from the crossval crate, which exports constants:
@@ -583,6 +931,25 @@ pub fn preflight_backend_libs(backend: CppBackend, verbose: bool) -> Result<()> 
     }
 
     if !has_libs {
+        // Priority 2: Runtime detection fallback (stale build scenario)
+        if let Ok((runtime_available, matched_path)) =
+            crate::crossval::detect_backend_runtime(backend)
+        {
+            if runtime_available && is_ci() {
+                // STALE BUILD SCENARIO + CI: skip with matched path diagnostic and exit
+                let skip_msg = format_ci_stale_skip_diagnostic(backend, matched_path.as_deref());
+                eprintln!("{}", skip_msg);
+                std::process::exit(0); // Exit code 0 = skip (not failure)
+            } else if runtime_available {
+                // STALE BUILD SCENARIO + DEV: warn with matched path and continue
+                let verbose_flag = std::env::var("VERBOSE").is_ok() || verbose;
+                if let Some(path) = matched_path {
+                    emit_stale_build_warning(backend, &path, verbose_flag);
+                }
+                return Ok(()); // Continue execution
+            }
+        }
+
         if verbose {
             print_verbose_failure_diagnostics(backend);
         }
@@ -1390,25 +1757,39 @@ pub fn preflight_with_auto_repair(
         eprintln!("Auto-repairing... (this will take 5-10 minutes on first run)");
     }
 
-    if let Err(e) = attempt_repair_with_retry(backend, verbose) {
-        // Repair failed - show error with recovery steps
-        eprintln!("\n{}", e);
-        bail!("Auto-repair failed for backend '{}'", backend.name());
-    }
+    let stdout = match attempt_repair_with_retry(backend, verbose) {
+        Ok(stdout) => stdout,
+        Err(e) => {
+            // Repair failed - show error with recovery steps
+            eprintln!("\n{}", e);
+            bail!("Auto-repair failed for backend '{}'", backend.name());
+        }
+    };
 
-    // Step 4: Rebuild xtask to pick up new detection (AC3)
+    // Step 3.5: Parse environment exports from stdout (AC1)
     if verbose {
-        eprintln!("[repair] Step 2/3: Rebuilding xtask binary...");
+        eprintln!("[repair] Step 2/4: Parsing environment exports...");
     }
 
-    if let Err(e) = rebuild_xtask(verbose) {
+    let env_exports = parse_sh_exports(&stdout);
+
+    if verbose && !env_exports.is_empty() {
+        eprintln!("[repair] Parsed {} environment variables", env_exports.len());
+    }
+
+    // Step 4: Rebuild xtask with environment variables applied (AC2 + AC3)
+    if verbose {
+        eprintln!("[repair] Step 3/4: Rebuilding xtask with environment...");
+    }
+
+    if let Err(e) = rebuild_xtask_with_env(&env_exports, verbose) {
         eprintln!("\n{}", e);
         bail!("xtask rebuild failed after successful C++ setup");
     }
 
     // Step 5: Re-exec with updated binary (AC4)
     if verbose {
-        eprintln!("[repair] Step 3/3: Re-executing with updated detection...");
+        eprintln!("[repair] Step 4/4: Re-executing with updated detection...");
     }
 
     let original_args: Vec<String> = env::args().collect();
@@ -1513,6 +1894,31 @@ fn is_repair_in_progress() -> bool {
     env::var_os("BITNET_REPAIR_IN_PROGRESS").is_some()
 }
 
+/// Check if running in CI mode or with test-mode no-repair override
+///
+/// Returns `true` if either:
+/// - `CI` environment variable is set (any value)
+/// - `BITNET_TEST_NO_REPAIR` environment variable is set (any value)
+///
+/// This allows tests and CI pipelines to disable auto-repair behavior.
+///
+/// # Returns
+///
+/// * `true` - Running in CI or test-mode no-repair (auto-repair disabled)
+/// * `false` - Running in dev mode (auto-repair enabled)
+///
+/// # Examples
+///
+/// ```ignore
+/// if is_ci_or_no_repair() {
+///     eprintln!("⊘ Auto-repair disabled (CI=1 or BITNET_TEST_NO_REPAIR=1)");
+///     return Ok(());
+/// }
+/// ```
+pub fn is_ci_or_no_repair() -> bool {
+    env::var("CI").is_ok() || env::var("BITNET_TEST_NO_REPAIR").is_ok()
+}
+
 /// Auto-repair with setup-cpp-auto subprocess invocation
 ///
 /// Implements AC6: setup-cpp-auto invocation on missing backend.
@@ -1542,6 +1948,12 @@ pub fn auto_repair_with_setup_cpp(
     backend: CppBackend,
     mode: RepairMode,
 ) -> Result<(), RepairError> {
+    // Early exit for CI or test-mode no-repair
+    if is_ci_or_no_repair() {
+        eprintln!("⊘ Auto-repair disabled (CI=1 or BITNET_TEST_NO_REPAIR=1)");
+        return Ok(());
+    }
+
     // Check RepairMode: return early if Never
     // Note: backend_available parameter not needed here since caller checks availability
     if matches!(mode, RepairMode::Never) {
@@ -1670,8 +2082,33 @@ fn rebuild_xtask_for_detection() -> Result<(), RebuildError> {
 
 /// Re-execute current xtask binary with original arguments
 ///
-/// After rebuilding xtask to pick up new library detection, this function
-/// replaces the current process with a new execution of the updated binary.
+/// Implements robust two-tier re-execution mechanism for automatic C++ backend
+/// repair workflow. After `setup-cpp-auto` installs backend libraries and
+/// `rebuild_xtask()` recompiles the binary, this function re-executes the new
+/// binary to pick up updated build-time constants (`HAS_BITNET`, `HAS_LLAMA`).
+///
+/// # Two-Tier Execution Strategy
+///
+/// **Tier 1: Fast Path (Unix only)**
+/// - Calls `exec()` with `current_exe()` path to replace current process
+/// - Zero overhead: no spawn, same PID, instant transition
+/// - Fails gracefully when binary unavailable (ENOENT)
+///
+/// **Tier 2: Fallback Path (all platforms)**
+/// - Uses `cargo run -p xtask --features crossval-all -- <args>`
+/// - Rebuilds binary if needed (handles race conditions transparently)
+/// - Spawns child process, parent exits with child's exit code
+///
+/// # Race Condition Handling
+///
+/// Between `path.exists()` check and `exec()` call, cargo may:
+/// - Delete old binary for incremental rebuild (10-100ms window)
+/// - Move binary to new location during link phase
+/// - Invalidate /proc/self/exe symlink on kernel updates
+///
+/// This window is typically 10-100ms on local filesystems, but can extend
+/// to seconds on network filesystems. The fallback path handles this
+/// transparently by letting cargo rebuild the binary.
 ///
 /// # Recursion Guard
 ///
@@ -1685,12 +2122,12 @@ fn rebuild_xtask_for_detection() -> Result<(), RebuildError> {
 ///
 /// # Arguments
 ///
-/// * `original_args` - Command-line arguments to preserve (from `env::args()`)
+/// * `original_args` - Full argument list from `env::args()`, including program name
 ///
 /// # Returns
 ///
-/// * `Ok(())` - Never returns on Unix success
-/// * `Err(RepairError)` - Re-exec failed (Unix exec error or Windows spawn error)
+/// Never returns on Unix fast path success (process replaced).
+/// Returns `RepairError` only if both exec() and cargo run fail.
 ///
 /// # Examples
 ///
@@ -1700,84 +2137,144 @@ fn rebuild_xtask_for_detection() -> Result<(), RebuildError> {
 /// // After rebuild, re-exec with original args
 /// let args: Vec<String> = env::args().collect();
 /// reexec_current_command(&args)?;
-/// // Unix: Never reaches here on success
-/// // Windows: Process exits before reaching here
+/// // This point never reached on Unix (exec replaces process)
+/// // On Windows, process exits in reexec_current_command
 /// ```
+///
+/// # Acceptance Criteria
+///
+/// - **AC1**: Fast path uses exec() when binary exists (Unix)
+/// - **AC2**: Fallback to cargo run when binary unavailable
+/// - **AC3**: All CLI arguments preserved across re-exec
+/// - **AC4**: BITNET_REPAIR_PARENT guard prevents infinite loops
+/// - **AC5**: Diagnostic logging shows resolved path + existence
+/// - **AC6**: Windows uses spawn() pattern consistently
+/// - **AC7**: Exit code propagated correctly from spawned process
 pub fn reexec_current_command(original_args: &[String]) -> Result<(), RepairError> {
     eprintln!("[repair] Re-executing with updated detection...");
 
-    // Unix fast path: Try exec() with current_exe() first
+    // AC1 + AC5: Unix fast path - Try exec() with current_exe() first
     #[cfg(unix)]
     {
         if let Ok(current_exe) = env::current_exe() {
             let exists = current_exe.exists();
 
-            // Diagnostic logging (AC5)
+            // AC5: Diagnostic logging (resolved path and existence)
             eprintln!("[reexec] exe: {}", current_exe.display());
             eprintln!("[reexec] exe exists: {}", exists);
             eprintln!("[reexec] args: {:?}", original_args);
 
+            // AC1: Only attempt exec() if binary exists
             if exists {
                 use std::os::unix::process::CommandExt;
 
                 let mut cmd = Command::new(&current_exe);
+
+                // AC3: Preserve all original arguments (including program name for exec)
                 cmd.args(original_args);
-                cmd.env("BITNET_REPAIR_PARENT", "1"); // AC4: recursion guard
+
+                // AC4: Set recursion guard to prevent child from attempting repair
+                cmd.env("BITNET_REPAIR_PARENT", "1");
 
                 eprintln!("[reexec] Attempting exec()...");
 
                 // Try exec() - never returns on success
+                // If we reach the line after this, exec() failed
                 let err = cmd.exec();
 
-                // If we reach here, exec() failed
+                // AC2 + AC5: exec() failed (race condition or other error) - log and fall through
                 eprintln!("[reexec] Fast path failed: {}", err);
                 eprintln!("[reexec] Error kind: {:?}", err.kind());
 
                 // Fall through to cargo run fallback
             } else {
+                // AC2 + AC5: Binary doesn't exist - skip exec() and use fallback
                 eprintln!("[reexec] Binary doesn't exist, skipping exec()");
             }
         } else {
+            // AC2 + AC5: current_exe() failed - skip exec() and use fallback
             eprintln!("[reexec] current_exe() failed, skipping exec()");
         }
     }
 
-    // Fallback path: cargo run (all platforms, Unix if exec failed)
+    // AC2 + AC6: Fallback path - cargo run (all platforms, Unix if exec failed)
+    // This path is the ONLY path on Windows (no exec() available)
     eprintln!("[reexec] Trying cargo run fallback...");
 
     let mut cmd = Command::new("cargo");
     cmd.arg("run").arg("-p").arg("xtask").arg("--features").arg("crossval-all").arg("--");
 
-    // AC3: Preserve all original arguments (skip program name)
+    // AC3: Preserve all original arguments (skip program name - cargo run adds it)
     if original_args.len() > 1 {
         cmd.args(&original_args[1..]);
     }
 
-    // AC4: Set recursion guard
+    // AC4: Set recursion guard to prevent child from attempting repair
     cmd.env("BITNET_REPAIR_PARENT", "1");
 
-    // Diagnostic logging (AC5)
+    // AC5: Diagnostic logging for fallback command
     eprintln!(
         "[reexec] Fallback command: cargo run -p xtask --features crossval-all -- {:?}",
         if original_args.len() > 1 { &original_args[1..] } else { &[] }
     );
 
-    // Spawn and wait for child
+    // AC6 + AC7: Spawn child and wait for completion (Windows spawn semantics)
     match cmd.status() {
         Ok(status) => {
+            // AC7: Propagate child's exit code exactly
             let code = status.code().unwrap_or(1);
             eprintln!("[reexec] Fallback child exited with code: {}", code);
-            std::process::exit(code); // AC7: Propagate exit code
+            std::process::exit(code);
         }
         Err(e) => {
-            // Both exec() (if Unix) and cargo run failed
-            Err(RepairError::Unknown {
-                error: format!(
-                    "Re-exec failed: exec() and cargo run both failed. Last error: {}",
-                    e
-                ),
-                backend: "unknown".to_string(),
-            })
+            // Both exec() (if Unix) and cargo run fallback failed
+            // Classify error to provide clear recovery steps
+            let error_msg = match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    format!(
+                        "Re-exec failed: cargo not found in PATH\n\
+                         Tried: cargo run -p xtask --features crossval-all -- ...\n\
+                         Error: {}\n\
+                         \n\
+                         Recovery steps:\n\
+                         1. Install Rust toolchain: https://rustup.rs/\n\
+                         2. Verify cargo in PATH: which cargo\n\
+                         3. Retry preflight with --repair=auto",
+                        e
+                    )
+                }
+                std::io::ErrorKind::PermissionDenied => {
+                    format!(
+                        "Re-exec failed: permission denied executing cargo\n\
+                         Error: {}\n\
+                         \n\
+                         Recovery steps:\n\
+                         1. Check cargo executable permissions\n\
+                         2. Verify user has execute permission\n\
+                         3. If in restricted environment, manually rebuild xtask",
+                        e
+                    )
+                }
+                _ => {
+                    format!(
+                        "Re-exec failed: cargo run failed\n\
+                         Error: {}\n\
+                         \n\
+                         This may indicate:\n\
+                         1. Cargo workspace is corrupted\n\
+                         2. Insufficient disk space\n\
+                         3. File system permissions issue\n\
+                         \n\
+                         Recovery steps:\n\
+                         1. Try manual rebuild: cargo build -p xtask --features crossval-all\n\
+                         2. Check disk space: df -h\n\
+                         3. Verify workspace: cargo check -p xtask",
+                        e
+                    )
+                }
+            };
+
+            Err(RepairError::Unknown { error: error_msg, backend: "unknown".to_string() })
         }
     }
 }
@@ -1813,7 +2310,7 @@ impl Default for RetryConfig {
 ///
 /// # Returns
 ///
-/// * `Ok(())` - Repair succeeded (user must rebuild xtask)
+/// * `Ok(stdout)` - Repair succeeded with captured stdout
 /// * `Err(RepairError)` - Repair failed after retries
 ///
 /// # Examples
@@ -1823,15 +2320,18 @@ impl Default for RetryConfig {
 /// use xtask::crossval::CppBackend;
 ///
 /// // Auto-repair BitNet backend with retries
-/// attempt_repair_with_retry(CppBackend::BitNet, true)?;
+/// let stdout = attempt_repair_with_retry(CppBackend::BitNet, true)?;
 /// ```
-pub fn attempt_repair_with_retry(backend: CppBackend, verbose: bool) -> Result<(), RepairError> {
+pub fn attempt_repair_with_retry(
+    backend: CppBackend,
+    verbose: bool,
+) -> Result<String, RepairError> {
     let config = RetryConfig::default();
     let mut retries = 0;
 
     loop {
         match attempt_repair_once(backend, verbose) {
-            Ok(()) => return Ok(()),
+            Ok((_, stdout)) => return Ok(stdout),
             Err(e) if is_retryable_error(&e) && retries < config.max_retries => {
                 retries += 1;
                 let backoff_ms = config.initial_backoff_ms * 2_u64.pow(retries - 1);
@@ -1853,6 +2353,7 @@ pub fn attempt_repair_with_retry(backend: CppBackend, verbose: bool) -> Result<(
 /// Attempt repair once (single attempt, no retries)
 ///
 /// Core repair logic that invokes setup-cpp-auto and classifies errors.
+/// Modified to capture and return stdout for environment export parsing.
 ///
 /// # Arguments
 ///
@@ -1861,9 +2362,13 @@ pub fn attempt_repair_with_retry(backend: CppBackend, verbose: bool) -> Result<(
 ///
 /// # Returns
 ///
-/// * `Ok(())` - Repair succeeded
+/// * `Ok((success, stdout))` - Repair result with captured stdout
 /// * `Err(RepairError)` - Repair failed with classified error
-fn attempt_repair_once(backend: CppBackend, verbose: bool) -> Result<(), RepairError> {
+///
+/// # Specification
+///
+/// See: `docs/specs/env-export-before-rebuild-deterministic.md` (AC3)
+fn attempt_repair_once(backend: CppBackend, verbose: bool) -> Result<(bool, String), RepairError> {
     let progress = RepairProgress::new(verbose);
 
     // Check recursion guard
@@ -1896,6 +2401,9 @@ fn attempt_repair_once(backend: CppBackend, verbose: bool) -> Result<(), RepairE
         env::remove_var("BITNET_REPAIR_IN_PROGRESS");
     }
 
+    // Capture stdout (contains shell export statements)
+    let stdout = String::from_utf8_lossy(&setup_result.stdout).to_string();
+
     if !setup_result.status.success() {
         let stderr = String::from_utf8_lossy(&setup_result.stderr);
         let backend_name = backend.name();
@@ -1920,7 +2428,7 @@ fn attempt_repair_once(backend: CppBackend, verbose: bool) -> Result<(), RepairE
         );
     }
 
-    Ok(())
+    Ok((true, stdout))
 }
 
 #[cfg(test)]

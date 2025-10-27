@@ -96,6 +96,182 @@ $env:BITNET_CPP_DIR = "$env:USERPROFILE\.cache\bitnet_cpp"
 $env:PATH = "$env:BITNET_CPP_DIR\build\bin;$env:PATH"
 ```
 
+### Windows PATH Configuration
+
+On Windows, the `PATH` environment variable is used instead of `LD_LIBRARY_PATH` to locate DLL files. Below are six methods to configure PATH for BitNet.rs C++ libraries.
+
+#### Method 1: PowerShell (Current Session)
+
+Temporary PATH update for the current PowerShell session only:
+
+```powershell
+# Set PATH for current session
+$env:PATH += ";C:\path\to\bitnet.cpp\build"
+$env:PATH += ";C:\path\to\llama.cpp\build\bin\Release"
+
+# Verify DLLs are found
+where.exe libbitnet.dll
+where.exe llama.dll
+```
+
+**Pros**: Quick testing, no system changes
+**Cons**: Lost when PowerShell window closes
+
+#### Method 2: PowerShell (Persistent User Scope)
+
+Update PATH permanently for the current user:
+
+```powershell
+# Get current user PATH
+$currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+
+# Append new paths (semicolon-separated)
+$newPath = "$currentPath;C:\path\to\bitnet.cpp\build;C:\path\to\llama.cpp\build\bin\Release"
+
+# Save to user environment
+[Environment]::SetEnvironmentVariable("PATH", $newPath, "User")
+
+# Restart PowerShell to apply
+```
+
+**Pros**: Permanent, doesn't require admin, user-specific
+**Cons**: Requires PowerShell restart, user-scoped only
+
+#### Method 3: PowerShell (System-Wide, Requires Admin)
+
+Update PATH system-wide (all users):
+
+```powershell
+# Run PowerShell as Administrator
+$currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
+$newPath = "$currentPath;C:\path\to\bitnet.cpp\build"
+[Environment]::SetEnvironmentVariable("PATH", $newPath, "Machine")
+```
+
+**Pros**: System-wide, persists across users
+**Cons**: Requires admin rights, affects all users
+
+#### Method 4: Command Prompt (Current Session)
+
+Temporary PATH update for the current CMD session:
+
+```cmd
+REM Set PATH for current session
+set PATH=%PATH%;C:\path\to\bitnet.cpp\build
+set PATH=%PATH%;C:\path\to\llama.cpp\build\bin\Release
+
+REM Verify DLLs
+where libbitnet.dll
+where llama.dll
+```
+
+**Pros**: Quick testing
+**Cons**: Lost when CMD window closes
+
+#### Method 5: Command Prompt (Persistent with setx)
+
+Update PATH permanently (user scope):
+
+```cmd
+REM WARNING: setx has 1024-character limit for PATH
+setx PATH "%PATH%;C:\path\to\bitnet.cpp\build"
+
+REM Restart CMD to apply
+```
+
+**⚠️ WARNING**: `setx` has a 1024-character PATH limit. If your PATH is long, use Method 2 or 6 instead.
+
+**Pros**: Permanent
+**Cons**: 1024-char limit, user-scoped only, requires CMD restart
+
+#### Method 6: System Properties GUI (Persistent, Any User)
+
+Configure PATH via Windows System Properties:
+
+1. **Open System Properties**:
+   - Press `Win + Pause` or right-click "This PC" → "Properties"
+   - Click "Advanced system settings"
+   - Click "Environment Variables..." button
+
+2. **Edit User PATH** (current user):
+   - In "User variables" section, select "Path"
+   - Click "Edit..."
+   - Click "New"
+   - Add: `C:\path\to\bitnet.cpp\build`
+   - Click "OK" on all dialogs
+
+3. **Edit System PATH** (all users, requires admin):
+   - In "System variables" section, select "Path"
+   - Click "Edit..." (requires admin rights)
+   - Click "New"
+   - Add: `C:\path\to\bitnet.cpp\build`
+   - Click "OK" on all dialogs
+
+4. **Apply changes**:
+   - Restart any open terminal windows
+   - Verify with `where libbitnet.dll`
+
+**Pros**: GUI-based, persistent, system or user scope
+**Cons**: Requires manual navigation, restart terminals
+
+---
+
+#### Verification Commands
+
+After configuring PATH, verify DLLs are found:
+
+```powershell
+# PowerShell
+where.exe libbitnet.dll
+where.exe llama.dll
+where.exe ggml.dll
+
+# Command Prompt
+where libbitnet.dll
+where llama.dll
+```
+
+**Expected output**: Full path to each DLL, e.g., `C:\path\to\bitnet.cpp\build\libbitnet.dll`
+
+**If not found**:
+- Restart terminal (PATH changes require new sessions)
+- Check DLL filenames match: `dir C:\path\to\bitnet.cpp\build\*.dll`
+- Verify no typos in path
+
+#### Advanced: DLL Dependency Analysis
+
+Use `dumpbin` (Visual Studio tool) to check DLL dependencies:
+
+```cmd
+dumpbin /dependents C:\path\to\bitnet.cpp\build\libbitnet.dll
+```
+
+**Output shows**: Required DLLs (e.g., `msvcr140.dll`, `kernel32.dll`)
+
+**If missing dependencies**: Install Visual C++ Redistributable from Microsoft.
+
+---
+
+#### Troubleshooting
+
+**Problem**: "The specified module could not be found"
+
+**Solution**: DLL dependencies missing
+- Install [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)
+- Check dependencies with `dumpbin /dependents`
+
+**Problem**: "where" command not found
+
+**Solution**: Use full path `C:\Windows\System32\where.exe` or add System32 to PATH
+
+**Problem**: PATH not updating after setx
+
+**Solution**: Restart terminal completely (close all windows, open new one)
+
+**Problem**: setx fails with "The maximum length of the value is 1024 characters"
+
+**Solution**: Use Method 2 (PowerShell) or Method 6 (GUI) instead
+
 **For LLaMA Models** (llama.cpp backend):
 
 If you need separate llama.cpp setup (optional—bitnet.cpp includes llama.cpp):

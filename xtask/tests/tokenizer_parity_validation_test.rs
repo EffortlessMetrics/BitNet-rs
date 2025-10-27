@@ -2,15 +2,13 @@
 //!
 //! These tests verify AC7 requirements from parity-both-preflight-tokenizer.md
 
-use anyhow::Result;
-
 // Import the validate_tokenizer_parity function from parity_both module
 // Note: This test file validates the implementation exists and has correct signature
 
 #[test]
 fn test_validate_tokenizer_parity_identical_tokens() {
-    let rust_tokens = vec![1, 2, 3, 4, 5];
-    let cpp_tokens = vec![1, 2, 3, 4, 5];
+    let rust_tokens = [1, 2, 3, 4, 5];
+    let cpp_tokens = [1, 2, 3, 4, 5];
 
     // Note: We can't directly call the function here because it's not public
     // This test verifies the implementation compiles and the logic is sound
@@ -29,8 +27,8 @@ fn test_validate_tokenizer_parity_identical_tokens() {
 
 #[test]
 fn test_validate_tokenizer_parity_length_mismatch() {
-    let rust_tokens = vec![1, 2, 3, 4, 5];
-    let cpp_tokens = vec![1, 2, 3, 4];
+    let rust_tokens = [1, 2, 3, 4, 5];
+    let cpp_tokens = [1, 2, 3, 4];
 
     // Should detect length mismatch
     assert_ne!(rust_tokens.len(), cpp_tokens.len());
@@ -49,8 +47,8 @@ fn test_validate_tokenizer_parity_length_mismatch() {
 
 #[test]
 fn test_validate_tokenizer_parity_token_divergence() {
-    let rust_tokens = vec![1, 2, 3, 4, 5];
-    let cpp_tokens = vec![1, 2, 99, 4, 5]; // Divergence at position 2
+    let rust_tokens = [1, 2, 3, 4, 5];
+    let cpp_tokens = [1, 2, 99, 4, 5]; // Divergence at position 2
 
     // Find first mismatch
     let mut found_mismatch = false;

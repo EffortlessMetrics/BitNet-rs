@@ -93,7 +93,7 @@ fn emit_stale_build_warning(backend: CppBackend, matched_path: &std::path::Path,
 /// # Arguments
 ///
 /// * `backend` - The C++ backend detected at runtime
-fn emit_standard_stale_warning(backend: CppBackend) {
+pub fn emit_standard_stale_warning(backend: CppBackend) {
     eprintln!(
         "⚠️  STALE BUILD: {} found at runtime but not at build time. Rebuild required: cargo clean -p crossval && cargo build -p xtask --features crossval-all",
         backend.name()
@@ -113,7 +113,7 @@ fn emit_standard_stale_warning(backend: CppBackend) {
 ///
 /// * `backend` - The C++ backend detected at runtime
 /// * `matched_path` - The directory path where libraries were found
-fn emit_verbose_stale_warning(backend: CppBackend, matched_path: &std::path::Path) {
+pub fn emit_verbose_stale_warning(backend: CppBackend, matched_path: &std::path::Path) {
     const SEPARATOR: &str = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
 
     eprintln!("{}", SEPARATOR);
@@ -140,12 +140,11 @@ fn emit_verbose_stale_warning(backend: CppBackend, matched_path: &std::path::Pat
     if let Ok(entries) = std::fs::read_dir(matched_path) {
         let mut libs = Vec::new();
         for entry in entries.flatten() {
-            if let Some(name) = entry.path().file_name().and_then(|n| n.to_str()) {
-                if name.starts_with("lib")
-                    && (name.ends_with(".so") || name.ends_with(".dylib") || name.ends_with(".a"))
-                {
-                    libs.push(name.to_string());
-                }
+            if let Some(name) = entry.path().file_name().and_then(|n| n.to_str())
+                && name.starts_with("lib")
+                && (name.ends_with(".so") || name.ends_with(".dylib") || name.ends_with(".a"))
+            {
+                libs.push(name.to_string());
                 #[cfg(target_os = "windows")]
                 if name.ends_with(".dll") {
                     libs.push(name.to_string());
@@ -186,7 +185,7 @@ fn emit_verbose_stale_warning(backend: CppBackend, matched_path: &std::path::Pat
 /// # Returns
 ///
 /// Formatted skip diagnostic message
-fn format_ci_stale_skip_diagnostic(
+pub fn format_ci_stale_skip_diagnostic(
     backend: CppBackend,
     matched_path: Option<&std::path::Path>,
 ) -> String {
@@ -227,7 +226,7 @@ fn format_ci_stale_skip_diagnostic(
 /// # Returns
 ///
 /// `true` if any CI environment variable is set, `false` otherwise
-fn is_ci() -> bool {
+pub fn is_ci() -> bool {
     std::env::var_os("CI").is_some()
         || std::env::var_os("GITHUB_ACTIONS").is_some()
         || std::env::var_os("JENKINS_HOME").is_some()
@@ -286,23 +285,22 @@ pub fn ensure_backend_or_skip(backend: CppBackend) {
     }
 
     // Check runtime detection as fallback (Priority 2)
-    if let Ok((runtime_available, matched_path)) = detect_backend_runtime(backend) {
-        if runtime_available {
-            // STALE BUILD SCENARIO: Runtime found libs but build-time constant is false
-
-            if is_ci() {
-                // CI mode: respect build-time constants only (no runtime override)
-                let skip_msg = format_ci_stale_skip_diagnostic(backend, matched_path.as_deref());
-                panic!("SKIPPED: {}", skip_msg);
-            } else {
-                // Dev mode: allow test to proceed with warning
-                let verbose = std::env::var("VERBOSE").is_ok();
-                if let Some(path) = matched_path {
-                    emit_stale_build_warning(backend, &path, verbose);
-                }
-                return; // Continue execution
-            }
+    if let Ok((runtime_available, matched_path)) = detect_backend_runtime(backend)
+        && runtime_available
+        && is_ci()
+    {
+        // STALE BUILD SCENARIO + CI: respect build-time constants only (no runtime override)
+        let skip_msg = format_ci_stale_skip_diagnostic(backend, matched_path.as_deref());
+        panic!("SKIPPED: {}", skip_msg);
+    } else if let Ok((runtime_available, matched_path)) = detect_backend_runtime(backend)
+        && runtime_available
+    {
+        // STALE BUILD SCENARIO + DEV: allow test to proceed with warning
+        let verbose = std::env::var("VERBOSE").is_ok();
+        if let Some(path) = matched_path {
+            emit_stale_build_warning(backend, &path, verbose);
         }
+        return; // Continue execution
     }
 
     // CI mode: skip immediately (Priority 3)
@@ -345,6 +343,7 @@ pub fn ensure_backend_or_skip(backend: CppBackend) {
 ///     // Test code here
 /// }
 /// ```
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn ensure_bitnet_or_skip() {
     ensure_backend_or_skip(CppBackend::BitNet);
 }
@@ -480,9 +479,9 @@ fn backend_name(backend: CppBackend) -> &'static str {
 #[allow(dead_code)]
 fn format_skip_diagnostic(backend: CppBackend, error_context: Option<&str>) -> String {
     let mut msg = String::new();
-    msg.push_str(&format!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+    msg.push_str("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     msg.push_str(&format!("⊘ Test skipped: {} not available\n", backend_name(backend)));
-    msg.push_str(&format!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+    msg.push_str("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
     if let Some(ctx) = error_context {
         msg.push_str(&format!("\nContext: {}\n", ctx));
@@ -578,8 +577,7 @@ fn print_skip_diagnostic(backend: CppBackend, context: Option<&str>) {
 /// - Linux: `.so`
 /// - macOS: `.dylib`
 /// - Windows: `.dll`
-#[allow(dead_code)]
-fn detect_backend_runtime(
+pub fn detect_backend_runtime(
     backend: CppBackend,
 ) -> Result<(bool, Option<std::path::PathBuf>), String> {
     let mut candidates: Vec<std::path::PathBuf> = Vec::new();
@@ -725,6 +723,45 @@ pub fn get_loader_path_var() -> &'static str {
     }
 }
 
+/// Get backend library filenames for current platform
+///
+/// Returns the list of library filenames required for the specified backend,
+/// using platform-specific naming conventions.
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend (BitNet or Llama)
+///
+/// # Returns
+///
+/// Vector of library filenames with platform-specific extensions and prefixes:
+/// - Linux: `["libbitnet.so"]` or `["libllama.so", "libggml.so"]`
+/// - macOS: `["libbitnet.dylib"]` or `["libllama.dylib", "libggml.dylib"]`
+/// - Windows: `["bitnet.dll"]` or `["llama.dll", "ggml.dll"]`
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use tests::support::backend_helpers::get_backend_lib_names;
+/// use xtask::crossval::backend::CppBackend;
+///
+/// let bitnet_libs = get_backend_lib_names(CppBackend::BitNet);
+/// assert_eq!(bitnet_libs.len(), 1);
+/// assert!(bitnet_libs[0].starts_with("lib") || cfg!(target_os = "windows"));
+///
+/// let llama_libs = get_backend_lib_names(CppBackend::Llama);
+/// assert_eq!(llama_libs.len(), 2); // libllama + libggml
+/// ```
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn get_backend_lib_names(backend: CppBackend) -> Vec<String> {
+    let stems = match backend {
+        CppBackend::BitNet => vec!["bitnet"],
+        CppBackend::Llama => vec!["llama", "ggml"],
+    };
+
+    stems.iter().map(|stem| format_lib_name(stem)).collect()
+}
+
 /// Get platform-specific shared library extension
 ///
 /// # Returns
@@ -833,6 +870,420 @@ pub fn create_mock_backend_libs(backend: CppBackend) -> Result<tempfile::TempDir
 
     Ok(temp)
 }
+
+/// Create mock C++ libraries in specified directory (flexible version for AC2/AC7/AC8 tests)
+///
+/// This helper provides more control over library creation for testing precedence
+/// and environment variable behavior. Unlike `create_mock_backend_libs()`, this
+/// allows specifying the target directory and optionally skipping file creation
+/// for negative tests.
+///
+/// # Arguments
+///
+/// * `dir` - Directory to create libraries in
+/// * `backend` - Backend type (determines which libraries to create)
+/// * `create_files` - If true, creates actual files; if false, only creates directory structure
+///
+/// # Returns
+///
+/// * `Ok(())` - Libraries created successfully
+/// * `Err(std::io::Error)` - File creation or directory error
+///
+/// # Platform-Specific Behavior
+///
+/// - Linux: Creates `libbitnet.so`, `libllama.so`, `libggml.so`
+/// - macOS: Creates `libbitnet.dylib`, `libllama.dylib`, `libggml.dylib`
+/// - Windows: Creates `bitnet.dll`, `llama.dll`, `ggml.dll`
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use tempfile::TempDir;
+/// use std::path::Path;
+/// use tests::support::backend_helpers::create_mock_cpp_libs;
+/// use xtask::crossval::backend::CppBackend;
+///
+/// #[test]
+/// fn test_precedence_with_mocks() {
+///     let temp = TempDir::new().unwrap();
+///     let high_priority = temp.path().join("high");
+///     let low_priority = temp.path().join("low");
+///
+///     std::fs::create_dir_all(&high_priority).unwrap();
+///     std::fs::create_dir_all(&low_priority).unwrap();
+///
+///     // Create libs in both directories
+///     create_mock_cpp_libs(&high_priority, CppBackend::BitNet, true).unwrap();
+///     create_mock_cpp_libs(&low_priority, CppBackend::BitNet, true).unwrap();
+///
+///     // Test environment variable precedence...
+/// }
+/// ```
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn create_mock_cpp_libs(
+    dir: &std::path::Path,
+    backend: CppBackend,
+    create_files: bool,
+) -> Result<(), std::io::Error> {
+    use std::fs::{File, create_dir_all};
+
+    // Ensure directory exists
+    create_dir_all(dir)?;
+
+    if !create_files {
+        return Ok(()); // Directory structure only
+    }
+
+    // Get library names for backend
+    let lib_names = get_backend_lib_names(backend);
+
+    for lib_name in lib_names {
+        let lib_path = dir.join(&lib_name);
+
+        // Create empty file
+        File::create(&lib_path)?;
+
+        // Set executable permissions on Unix platforms
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&lib_path)?.permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&lib_path, perms)?;
+        }
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// Test Assertion Helpers (AC2/AC7/AC8)
+// ============================================================================
+
+/// Assert that backend runtime detection returns expected results
+///
+/// This helper simplifies test assertions for backend availability and matched path
+/// validation. It calls `detect_backend_runtime()` and asserts on both availability
+/// and matched path.
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to detect
+/// * `expected_available` - Expected availability boolean
+/// * `expected_path` - Expected matched path (None if backend unavailable)
+///
+/// # Panics
+///
+/// Panics if:
+/// - `detect_backend_runtime()` returns an error
+/// - Availability doesn't match `expected_available`
+/// - Matched path doesn't match `expected_path` (canonical comparison)
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use tempfile::TempDir;
+/// use tests::support::backend_helpers::{assert_backend_runtime, create_mock_cpp_libs};
+/// use tests::support::env_guard::EnvGuard;
+/// use xtask::crossval::backend::CppBackend;
+///
+/// #[test]
+/// #[serial_test::serial(bitnet_env)]
+/// fn test_backend_detection() {
+///     let temp = TempDir::new().unwrap();
+///     create_mock_cpp_libs(temp.path(), CppBackend::BitNet, true).unwrap();
+///
+///     let _guard = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
+///     _guard.set(temp.path().to_str().unwrap());
+///
+///     // Assert backend is available at temp path
+///     assert_backend_runtime(
+///         CppBackend::BitNet,
+///         true,
+///         Some(temp.path())
+///     );
+/// }
+/// ```
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn assert_backend_runtime(
+    backend: CppBackend,
+    expected_available: bool,
+    expected_path: Option<&std::path::Path>,
+) {
+    let result = detect_backend_runtime(backend);
+
+    assert!(
+        result.is_ok(),
+        "detect_backend_runtime({:?}) should not error: {:?}",
+        backend,
+        result.unwrap_err()
+    );
+
+    let (available, matched_path) = result.unwrap();
+
+    assert_eq!(
+        available, expected_available,
+        "Backend {:?} availability mismatch: expected {}, got {}",
+        backend, expected_available, available
+    );
+
+    match (matched_path, expected_path) {
+        (Some(actual), Some(expected)) => {
+            let actual_canonical = actual.canonicalize().unwrap_or_else(|_| {
+                panic!("Failed to canonicalize actual path: {}", actual.display())
+            });
+            let expected_canonical = expected.canonicalize().unwrap_or_else(|_| {
+                panic!("Failed to canonicalize expected path: {}", expected.display())
+            });
+
+            assert_eq!(
+                actual_canonical,
+                expected_canonical,
+                "Matched path mismatch: expected {}, got {}",
+                expected.display(),
+                actual.display()
+            );
+        }
+        (None, None) => {
+            // Both None - match
+        }
+        (Some(actual), None) => {
+            panic!("Unexpected matched path: got Some({}), expected None", actual.display());
+        }
+        (None, Some(expected)) => {
+            panic!("Missing matched path: got None, expected Some({})", expected.display());
+        }
+    }
+}
+
+// ============================================================================
+// Environment Setup Helpers (AC7/AC8 - Precedence Tests)
+// ============================================================================
+
+/// Setup environment variables for precedence testing
+///
+/// This helper configures multiple environment variables in priority order
+/// for testing environment variable precedence in runtime detection.
+///
+/// # Environment Variable Priority Order (from highest to lowest)
+///
+/// 1. `BITNET_CROSSVAL_LIBDIR` - Explicit override (highest precedence)
+/// 2. `BITNET_CPP_DIR` or `LLAMA_CPP_DIR` - Backend home directory (medium precedence)
+/// 3. `CROSSVAL_RPATH_BITNET` or `CROSSVAL_RPATH_LLAMA` - Granular RPATH (lowest precedence)
+///
+/// # Arguments
+///
+/// * `crossval_libdir` - Optional path for BITNET_CROSSVAL_LIBDIR (Priority 1)
+/// * `cpp_dir` - Optional path for BITNET_CPP_DIR/LLAMA_CPP_DIR (Priority 2)
+/// * `rpath` - Optional path for CROSSVAL_RPATH_BITNET/LLAMA (Priority 3)
+///
+/// # Returns
+///
+/// Vector of `EnvGuard` instances for automatic cleanup. The guards MUST be kept
+/// alive for the duration of the test to maintain environment state.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use tempfile::TempDir;
+/// use tests::support::backend_helpers::{setup_precedence_test, create_mock_cpp_libs};
+/// use tests::support::env_guard::EnvGuard;
+/// use xtask::crossval::backend::CppBackend;
+///
+/// #[test]
+/// #[serial_test::serial(bitnet_env)]
+/// fn test_crossval_libdir_precedence() {
+///     let high = TempDir::new().unwrap();
+///     let low = TempDir::new().unwrap();
+///
+///     create_mock_cpp_libs(high.path(), CppBackend::BitNet, true).unwrap();
+///     create_mock_cpp_libs(low.path(), CppBackend::BitNet, true).unwrap();
+///
+///     // Setup: BITNET_CROSSVAL_LIBDIR (high) vs CROSSVAL_RPATH_BITNET (low)
+///     let _guards = setup_precedence_test(
+///         Some(high.path()),  // Priority 1
+///         None,               // Priority 2 (skip)
+///         Some(low.path())    // Priority 3
+///     );
+///
+///     // Runtime detection should use high priority path
+///     let (available, matched_path) = detect_backend_runtime(CppBackend::BitNet).unwrap();
+///     assert!(available);
+///     assert_eq!(matched_path.unwrap().canonicalize().unwrap(),
+///                high.path().canonicalize().unwrap());
+/// }
+/// ```
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn setup_precedence_test(
+    crossval_libdir: Option<&std::path::Path>,
+    cpp_dir: Option<&std::path::Path>,
+    rpath: Option<&std::path::Path>,
+) -> Vec<super::env_guard::EnvGuard> {
+    let mut guards = Vec::new();
+
+    // Priority 1: BITNET_CROSSVAL_LIBDIR (explicit override)
+    if let Some(path) = crossval_libdir {
+        let guard = super::env_guard::EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
+        guard.set(path.to_str().expect("Path must be valid UTF-8"));
+        guards.push(guard);
+    }
+
+    // Priority 2: BITNET_CPP_DIR or LLAMA_CPP_DIR (backend home)
+    // Note: Caller should specify which backend via separate parameter if needed
+    // For now, we set BITNET_CPP_DIR as the default
+    if let Some(path) = cpp_dir {
+        let guard = super::env_guard::EnvGuard::new("BITNET_CPP_DIR");
+        guard.set(path.to_str().expect("Path must be valid UTF-8"));
+        guards.push(guard);
+    }
+
+    // Priority 3: CROSSVAL_RPATH_BITNET or CROSSVAL_RPATH_LLAMA (granular RPATH)
+    // Default to CROSSVAL_RPATH_BITNET
+    if let Some(path) = rpath {
+        let guard = super::env_guard::EnvGuard::new("CROSSVAL_RPATH_BITNET");
+        guard.set(path.to_str().expect("Path must be valid UTF-8"));
+        guards.push(guard);
+    }
+
+    guards
+}
+
+/// Setup environment variables for backend-specific precedence testing
+///
+/// This is a specialized version of `setup_precedence_test()` that allows
+/// specifying the backend type explicitly, ensuring correct environment
+/// variable names (BITNET_CPP_DIR vs LLAMA_CPP_DIR, etc.).
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend type (BitNet or Llama)
+/// * `crossval_libdir` - Optional path for BITNET_CROSSVAL_LIBDIR (Priority 1)
+/// * `cpp_dir` - Optional path for {BITNET|LLAMA}_CPP_DIR (Priority 2)
+/// * `rpath` - Optional path for CROSSVAL_RPATH_{BITNET|LLAMA} (Priority 3)
+///
+/// # Returns
+///
+/// Vector of `EnvGuard` instances for automatic cleanup
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use tests::support::backend_helpers::setup_backend_precedence_test;
+/// use xtask::crossval::backend::CppBackend;
+///
+/// #[test]
+/// #[serial_test::serial(bitnet_env)]
+/// fn test_llama_precedence() {
+///     let high = TempDir::new().unwrap();
+///     let low = TempDir::new().unwrap();
+///
+///     create_mock_cpp_libs(high.path(), CppBackend::Llama, true).unwrap();
+///     create_mock_cpp_libs(low.path(), CppBackend::Llama, true).unwrap();
+///
+///     // Setup with correct Llama environment variable names
+///     let _guards = setup_backend_precedence_test(
+///         CppBackend::Llama,
+///         Some(high.path()),
+///         None,
+///         Some(low.path())
+///     );
+///
+///     // Runtime detection uses LLAMA_CPP_DIR, CROSSVAL_RPATH_LLAMA
+///     let (available, matched_path) = detect_backend_runtime(CppBackend::Llama).unwrap();
+///     assert!(available);
+/// }
+/// ```
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn setup_backend_precedence_test(
+    backend: CppBackend,
+    crossval_libdir: Option<&std::path::Path>,
+    cpp_dir: Option<&std::path::Path>,
+    rpath: Option<&std::path::Path>,
+) -> Vec<super::env_guard::EnvGuard> {
+    let mut guards = Vec::new();
+
+    // Priority 1: BITNET_CROSSVAL_LIBDIR (explicit override - shared for both backends)
+    if let Some(path) = crossval_libdir {
+        let guard = super::env_guard::EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
+        guard.set(path.to_str().expect("Path must be valid UTF-8"));
+        guards.push(guard);
+    }
+
+    // Priority 2: Backend-specific home directory
+    if let Some(path) = cpp_dir {
+        let env_var = match backend {
+            CppBackend::BitNet => "BITNET_CPP_DIR",
+            CppBackend::Llama => "LLAMA_CPP_DIR",
+        };
+        let guard = super::env_guard::EnvGuard::new(env_var);
+        guard.set(path.to_str().expect("Path must be valid UTF-8"));
+        guards.push(guard);
+    }
+
+    // Priority 3: Backend-specific granular RPATH
+    if let Some(path) = rpath {
+        let env_var = match backend {
+            CppBackend::BitNet => "CROSSVAL_RPATH_BITNET",
+            CppBackend::Llama => "CROSSVAL_RPATH_LLAMA",
+        };
+        let guard = super::env_guard::EnvGuard::new(env_var);
+        guard.set(path.to_str().expect("Path must be valid UTF-8"));
+        guards.push(guard);
+    }
+
+    guards
+}
+
+/// Create temporary directory for mock libraries (convenience wrapper)
+///
+/// This is a thin wrapper around `tempfile::tempdir()` for consistency
+/// with other helper functions.
+///
+/// # Returns
+///
+/// A `TempDir` instance that auto-cleans on drop
+///
+/// # Panics
+///
+/// Panics if temporary directory creation fails
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// use tests::support::backend_helpers::{create_temp_lib_dir, create_mock_cpp_libs};
+/// use xtask::crossval::backend::CppBackend;
+///
+/// #[test]
+/// fn test_with_temp_libs() {
+///     let temp = create_temp_lib_dir();
+///     create_mock_cpp_libs(temp.path(), CppBackend::BitNet, true).unwrap();
+///
+///     // Test code here...
+///     // TempDir auto-cleaned on drop
+/// }
+/// ```
+#[cfg_attr(not(test), allow(dead_code))]
+pub fn create_temp_lib_dir() -> tempfile::TempDir {
+    tempfile::tempdir().expect("Failed to create temporary directory")
+}
+
+// ============================================================================
+// Test Data Constants (AC2/AC7/AC8)
+// ============================================================================
+
+/// Mock library file size for testing (1KB)
+///
+/// This constant is used to create mock library files with a realistic size
+/// for testing file detection and validation.
+#[cfg(test)]
+pub const MOCK_BITNET_LIB_SIZE: u64 = 1024;
+
+/// Mock library file size for testing (2KB)
+///
+/// This constant is used for Llama libraries to differentiate from BitNet
+/// in tests that validate library-specific behavior.
+#[cfg(test)]
+pub const MOCK_LLAMA_LIB_SIZE: u64 = 2048;
 
 #[cfg(test)]
 mod tests {

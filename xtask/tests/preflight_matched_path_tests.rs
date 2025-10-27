@@ -44,7 +44,7 @@
 //! These tests verify the **integration** of this existing function into preflight.rs.
 
 #[allow(unused_imports)]
-use bitnet_crossval::backend::CppBackend;
+use xtask::crossval::CppBackend;
 
 // ============================================================================
 // Category A: Warning Format Tests with Matched Path (AC2, AC4)

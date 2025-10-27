@@ -7,7 +7,7 @@ pub mod preflight;
 #[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]
 pub mod parity_both;
 
-pub use backend::CppBackend;
+pub use backend::{CppBackend, detect_backend_runtime};
 
 // Export preflight_backend_libs for all crossval-related features (including inference)
 #[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]

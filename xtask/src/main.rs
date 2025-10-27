@@ -378,15 +378,72 @@ enum Cmd {
     /// not runtime, so xtask must be rebuilt if C++ libraries are installed after
     /// the initial build.
     ///
-    /// Exit Codes:
-    ///   - 0: Backend available (or general status check succeeded)
-    ///   - 1: Backend unavailable (libraries not found at build time)
-    ///   - 2: Invalid arguments (unknown backend)
+    /// REPAIR MODES:
+    ///   auto (default in interactive shells)  - Auto-provision missing backends
+    ///   never (default in CI)                 - Fail fast if backend missing
+    ///   always                                - Force refresh even if backend present
     ///
-    /// Usage:
-    ///   cargo run -p xtask --features crossval-all -- preflight
-    ///   cargo run -p xtask --features crossval-all -- preflight --backend bitnet --verbose
-    ///   cargo run -p xtask --features crossval-all -- preflight --backend bitnet --repair=auto
+    /// ENVIRONMENT DETECTION:
+    ///   CI=true, GITHUB_ACTIONS=true          → Defaults to never (safe for CI)
+    ///   Interactive shell (keyboard attached) → Defaults to auto (user-friendly)
+    ///
+    /// EXIT CODES:
+    ///   0  - Backend available (ready for cross-validation)
+    ///   1  - Backend unavailable (repair disabled or failed)
+    ///   2  - Invalid arguments (unknown backend or bad flag)
+    ///   3  - Network error (repair failed, retryable)
+    ///   4  - Permission error (repair failed, manual fix needed)
+    ///   5  - Build error (repair failed, missing dependencies)
+    ///   6  - Recursion detected (internal error, report bug)
+    ///
+    /// EXAMPLES:
+    ///   # Check both backends (uses default repair mode)
+    ///   cargo run -p xtask -- preflight
+    ///
+    ///   # Check specific backend with auto-repair
+    ///   cargo run -p xtask --features crossval-all -- preflight \
+    ///     --backend bitnet --repair=auto --verbose
+    ///
+    ///   # Force repair even if backend appears available
+    ///   cargo run -p xtask --features crossval-all -- preflight \
+    ///     --backend llama --repair=always
+    ///
+    ///   # CI-safe: fail fast if backend missing (disable auto-repair)
+    ///   CI=1 cargo run -p xtask --features crossval-all -- preflight \
+    ///     --backend bitnet --repair=never
+    ///
+    /// PRECEDENCE:
+    ///   Explicit --repair flag > --no-repair flag > Environment detection
+    ///   --no-repair is equivalent to --repair=never
+    ///
+    /// MANUAL REPAIR ALTERNATIVE:
+    ///   If auto-repair fails or is disabled, use manual setup:
+    ///   eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+    ///
+    /// BACKEND-SPECIFIC BEHAVIOR:
+    ///   bitnet: Provisions microsoft/bitnet.cpp, builds libbitnet*.so
+    ///   llama:  Provisions ggerganov/llama.cpp, builds libllama*.so + libggml*.so
+    ///
+    /// TROUBLESHOOTING:
+    ///   Exit 0: Success, proceed with cross-validation
+    ///   Exit 1: Backend unavailable
+    ///     → See docs/howto/cpp-setup.md for manual setup
+    ///     → Or retry with --repair=auto
+    ///   Exit 3: Network error (transient)
+    ///     → Retry in 60s (automatic with --repair=auto)
+    ///   Exit 4: Permission error
+    ///     → Fix ownership: sudo chown -R $USER ~/.cache/bitnet_cpp
+    ///   Exit 5: Build error
+    ///     → Install: sudo apt-get install cmake build-essential (Linux)
+    ///     → Or: brew install cmake (macOS)
+    ///   Exit 6: Recursion detected (bug)
+    ///     → Check logs for re-exec loops
+    ///     → File bug with BITNET_REPAIR_PARENT trace
+    ///
+    /// See also:
+    ///   docs/howto/cpp-setup.md          - Manual C++ setup guide
+    ///   docs/development/xtask.md        - Full xtask reference
+    ///   docs/CLAUDE.md                   - Cross-validation workflows
     #[cfg(any(feature = "crossval", feature = "crossval-all"))]
     Preflight {
         /// Backend to check (bitnet or llama). If omitted, checks both.

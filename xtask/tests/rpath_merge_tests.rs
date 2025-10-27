@@ -1,14 +1,11 @@
 // RPATH Merging Algorithm Comprehensive Test Scaffolding
-//
 // This test suite validates the RPATH merging logic in `xtask/build.rs` for
 // multi-backend cross-validation library path resolution.
-//
 // Tests follow BitNet.rs TDD patterns:
 // - Feature-gated: Tests compile but fail due to missing implementation
 // - EnvGuard isolation: `#[serial(bitnet_env)]` for env-mutating tests
 // - Property-based: Validation of merge algorithm correctness
 // - Cross-platform: Unix/Windows cfg-gated tests
-//
 // Specification: /tmp/rpath_merge_analysis.md
 // Related: docs/specs/rpath-merging-strategy.md
 
@@ -19,9 +16,7 @@ use tempfile::TempDir;
 // ====================================================================================
 // BASIC MERGE OPERATIONS (AC1: Basic Merge, 5 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#4-merge-and-deduplicate-algorithm
-
 #[cfg(test)]
 mod basic_merge_operations {
     use super::*;
@@ -165,7 +160,6 @@ mod basic_merge_operations {
 // ====================================================================================
 // CANONICALIZATION TESTS (AC2: Path Normalization, 5 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#4.3-canonicalization-details
 
 #[cfg(test)]
@@ -310,7 +304,6 @@ mod canonicalization_tests {
 // ====================================================================================
 // DEDUPLICATION TESTS (AC3: Duplicate Removal, 5 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#4.4-deduplication-strategy
 
 #[cfg(test)]
@@ -457,7 +450,6 @@ mod deduplication_tests {
 // ====================================================================================
 // PRIORITY CHAIN TESTS (AC4: Five-Tier Priority, 10 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#3-priority-chain-for-rpath-sources
 
 #[cfg(test)]
@@ -618,7 +610,6 @@ mod priority_chain_tests {
 // ====================================================================================
 // ENVIRONMENT VARIABLE PRECEDENCE TESTS (AC5: Precedence Rules, 5 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#3.2-environment-variable-summary-table
 
 #[cfg(test)]
@@ -704,7 +695,6 @@ mod env_precedence_tests {
 // ====================================================================================
 // PLATFORM-SPECIFIC TESTS (AC6: Cross-Platform, 5 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#5-platform-specific-considerations
 
 #[cfg(test)]
@@ -797,7 +787,6 @@ mod platform_specific_tests {
 // ====================================================================================
 // LENGTH VALIDATION TESTS (AC7: 4096 Byte Limit, 3 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#4.6-length-validation
 
 #[cfg(test)]
@@ -880,7 +869,6 @@ mod length_validation_tests {
 // ====================================================================================
 // ERROR HANDLING TESTS (AC8: Invalid Paths, 4 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#4.3-canonicalization-details (Edge Cases)
 
 #[cfg(test)]
@@ -1010,7 +998,6 @@ mod empty_input_tests {
 // ====================================================================================
 // BACKWARD COMPATIBILITY TESTS (AC10: Legacy Support, 3 tests)
 // ====================================================================================
-//
 /// Tests feature spec: rpath_merge_analysis.md#2.2-single-vs-multi-path (Legacy)
 
 #[cfg(test)]

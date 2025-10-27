@@ -194,13 +194,13 @@ fn test_metrics_validation() {
 }
 
 /// Test positions parameter validation
+///
+/// TODO: Implement actual position validation logic when CLI positions parameter is implemented
+/// Currently scaffolding - placeholder assertions removed
 #[test]
+#[ignore] // TDD scaffolding - blocked pending CLI position parameter feature implementation
 fn test_positions_validation() {
-    // Valid positions
-    assert!(1_usize > 0);
-    assert!(8_usize > 0);
-    assert!(100_usize > 0);
-
-    // Invalid positions (0)
-    assert_eq!(0_usize, 0);
+    unimplemented!(
+        "Waiting for CLI position parameter feature - implement actual validation logic"
+    );
 }

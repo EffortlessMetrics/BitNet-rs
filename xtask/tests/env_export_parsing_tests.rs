@@ -24,8 +24,7 @@
 
 #[cfg(test)]
 mod parse_sh_exports_tests {
-    // TODO: Import parse_sh_exports() function once implemented
-    // use crate::crossval::preflight::parse_sh_exports;
+    use xtask::crossval::preflight::parse_sh_exports;
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
     /// AC:AC1 - Parse POSIX sh basic unquoted export
@@ -45,10 +44,11 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_basic_unquoted() {
-        // TODO: Test parsing of `export KEY=value` format (no quotes)
-        // Input: "export BITNET_CPP_DIR=/path/to/libs"
-        // Expected: HashMap with ("BITNET_CPP_DIR", "/path/to/libs")
-        todo!("AC1: Implement basic unquoted export parsing test");
+        let input = "export BITNET_CPP_DIR=/path/to/libs";
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path/to/libs".to_string()));
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -69,11 +69,14 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_double_quoted() {
-        // TODO: Test parsing of `export KEY="value"` format
-        // Input: export BITNET_CPP_DIR="/home/user/.cache/bitnet_cpp"
-        // Expected: HashMap with ("BITNET_CPP_DIR", "/home/user/.cache/bitnet_cpp")
-        // Note: Quotes should be stripped from value
-        todo!("AC1: Implement double-quoted export parsing test");
+        let input = r#"export BITNET_CPP_DIR="/home/user/.cache/bitnet_cpp""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(
+            exports.get("BITNET_CPP_DIR"),
+            Some(&"/home/user/.cache/bitnet_cpp".to_string())
+        );
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -101,12 +104,16 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_multi_line_script() {
-        // TODO: Test multi-line script with 3+ exports
-        // Input: Multi-line string with export lines and echo statements
-        // Expected: HashMap with 3 entries (BITNET_CPP_DIR, LD_LIBRARY_PATH, BITNET_CROSSVAL_LIBDIR)
-        // Assert: Non-export lines (echo, comments) are skipped
-        // Assert: HashMap length == 3
-        todo!("AC1: Implement multi-line script parsing test");
+        let input = r#"export BITNET_CPP_DIR="/path1"
+export LD_LIBRARY_PATH="/path2:/path3"
+export BITNET_CROSSVAL_LIBDIR="/path4"
+echo "[bitnet] C++ ready""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 3);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path1".to_string()));
+        assert_eq!(exports.get("LD_LIBRARY_PATH"), Some(&"/path2:/path3".to_string()));
+        assert_eq!(exports.get("BITNET_CROSSVAL_LIBDIR"), Some(&"/path4".to_string()));
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -127,12 +134,14 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_empty_script() {
-        // TODO: Test graceful handling of empty input
-        // Input: "" (empty string)
-        // Expected: Ok(HashMap::new()) - empty but valid
-        // Assert: Result is Ok
-        // Assert: HashMap is empty (len() == 0)
-        todo!("AC1: Implement empty script handling test");
+        let exports = parse_sh_exports("");
+        assert!(exports.is_empty());
+
+        let exports2 = parse_sh_exports("   ");
+        assert!(exports2.is_empty());
+
+        let exports3 = parse_sh_exports("\n\n\n");
+        assert!(exports3.is_empty());
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -155,12 +164,11 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_no_exports() {
-        // TODO: Test script with only non-export lines
-        // Input: Multi-line with comments and echo statements
-        // Expected: Ok(HashMap::new()) - no exports found
-        // Assert: HashMap is empty
-        // Assert: No false positives from echo lines
-        todo!("AC1: Implement no-exports script test");
+        let input = r#"# This is a comment
+echo "[bitnet] Setup complete"
+echo "No exports here""#;
+        let exports = parse_sh_exports(input);
+        assert!(exports.is_empty());
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -187,12 +195,15 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_malformed_lines() {
-        // TODO: Test resilience to malformed export syntax
-        // Input: Mix of valid and invalid export statements
-        // Expected: Only valid exports in HashMap
-        // Assert: Malformed lines are skipped (no panic)
-        // Assert: Valid exports still parsed correctly
-        todo!("AC1: Implement malformed line skipping test");
+        let input = r#"export VALID="/path"
+export MISSING_VALUE
+export =value_without_key
+export ANOTHER_VALID="/path2""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 2);
+        assert_eq!(exports.get("VALID"), Some(&"/path".to_string()));
+        assert_eq!(exports.get("ANOTHER_VALID"), Some(&"/path2".to_string()));
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -217,11 +228,13 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_fish_format() {
-        // TODO: Test fish shell `set -gx VAR "value"` format
-        // Input: set -gx BITNET_CPP_DIR "/home/user/.cache/bitnet_cpp"
-        // Expected: HashMap with ("BITNET_CPP_DIR", "/home/user/.cache/bitnet_cpp")
-        // Note: Fish uses `set -gx` instead of `export`
-        todo!("AC1: Implement fish shell format parsing test");
+        let input = r#"set -gx BITNET_CPP_DIR "/path/to/libs"
+set -gx LD_LIBRARY_PATH "/lib:/usr/lib""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 2);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path/to/libs".to_string()));
+        assert_eq!(exports.get("LD_LIBRARY_PATH"), Some(&"/lib:/usr/lib".to_string()));
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -246,11 +259,13 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_pwsh_format() {
-        // TODO: Test PowerShell `$env:VAR = "value"` format
-        // Input: $env:BITNET_CPP_DIR = "/home/user/.cache/bitnet_cpp"
-        // Expected: HashMap with ("BITNET_CPP_DIR", "/home/user/.cache/bitnet_cpp")
-        // Note: PowerShell uses `$env:` prefix
-        todo!("AC1: Implement PowerShell format parsing test");
+        let input = r#"$env:BITNET_CPP_DIR = "/path/to/libs"
+$env:LD_LIBRARY_PATH = "/lib:/usr/lib""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 2);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path/to/libs".to_string()));
+        assert_eq!(exports.get("LD_LIBRARY_PATH"), Some(&"/lib:/usr/lib".to_string()));
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -271,11 +286,11 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_nested_quotes() {
-        // TODO: Test handling of nested/escaped quotes in values
-        // Input: export PROJECT_NAME="BitNet \"C++\" Backend"
-        // Expected: HashMap with nested quotes preserved in value
-        // Note: Inner quotes should be preserved as-is
-        todo!("AC1: Implement nested quotes handling test");
+        let input = r#"export PROJECT_NAME="BitNet \"C++\" Backend""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports.get("PROJECT_NAME"), Some(&r#"BitNet \"C++\" Backend"#.to_string()));
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -296,11 +311,14 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_paths_with_spaces() {
-        // TODO: Test paths containing spaces (common on Windows)
-        // Input: export BITNET_CPP_DIR="/path/with spaces/bitnet"
-        // Expected: HashMap with spaces preserved in path value
-        // Assert: Entire path string captured correctly
-        todo!("AC1: Implement space-in-path handling test");
+        let input = r#"export BITNET_CPP_DIR="/home/user/My Documents/bitnet cpp""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(
+            exports.get("BITNET_CPP_DIR"),
+            Some(&"/home/user/My Documents/bitnet cpp".to_string())
+        );
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -321,11 +339,14 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_ld_library_path() {
-        // TODO: Test variable reference preservation (no expansion)
-        // Input: export LD_LIBRARY_PATH="/path:${LD_LIBRARY_PATH:-}"
-        // Expected: Literal string with ${...} preserved (not expanded)
-        // Note: Parser should NOT expand shell variables
-        todo!("AC1: Implement variable reference preservation test");
+        let input = r#"export LD_LIBRARY_PATH="/new/path:${LD_LIBRARY_PATH:-}""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(
+            exports.get("LD_LIBRARY_PATH"),
+            Some(&"/new/path:${LD_LIBRARY_PATH:-}".to_string())
+        );
     }
 
     /// Tests spec: env-export-before-rebuild-deterministic.md#AC1
@@ -346,10 +367,10 @@ mod parse_sh_exports_tests {
     /// ```
     #[test]
     fn test_parse_sh_exports_windows_path() {
-        // TODO: Test Windows PATH format with semicolons and %VAR% refs
-        // Input: export PATH="C:\bitnet\bin;C:\tools;%PATH%"
-        // Expected: Literal string with semicolons and %VAR% preserved
-        // Note: Backslashes and semicolons should be preserved as-is
-        todo!("AC1: Implement Windows PATH format test");
+        let input = r#"export PATH="C:\bitnet\bin;C:\tools;%PATH%""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports.get("PATH"), Some(&r"C:\bitnet\bin;C:\tools;%PATH%".to_string()));
     }
 }

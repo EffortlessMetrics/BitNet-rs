@@ -1009,9 +1009,10 @@ fn test_mse_from_l2_distance() {
     ];
 
     for (l2, expected_mse) in test_cases {
-        let calculated_mse = l2 * l2;
+        let calculated_mse: f64 = l2 * l2;
+        let expected: f64 = expected_mse;
         assert!(
-            (calculated_mse - expected_mse).abs() < 1e-10,
+            (calculated_mse - expected).abs() < 1e-10_f64,
             "MSE from L2={} should be {}, got {}",
             l2,
             expected_mse,

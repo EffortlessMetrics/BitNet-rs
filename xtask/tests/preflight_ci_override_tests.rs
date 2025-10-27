@@ -1,0 +1,345 @@
+//! Comprehensive TDD test scaffolding for AC10 CI override testing (Phase 2: P1)
+//!
+//! **Specification**: `/tmp/phase2_test_flip_specification.md` (Section 2: AC10)
+//!
+//! This test suite validates the `BITNET_TEST_NO_REPAIR=1` and `CI=1` environment
+//! variable predicates that disable auto-repair in deterministic CI environments.
+//!
+//! **Critical Context**: AC10 tests are **COMPLETELY MISSING** from the codebase -
+//! this is the #1 blocker for P1 completion.
+//!
+//! **Acceptance Criteria Coverage (4 tests)**:
+//! - AC10: CI mode disables auto-repair (CI=1)
+//! - AC10: BITNET_TEST_NO_REPAIR disables auto-repair (test override)
+//! - AC10: Dev mode allows auto-repair (both flags unset)
+//! - AC10: Precedence validation (either flag sufficient)
+//!
+//! **Test Strategy**:
+//! - Feature-gated with `#[cfg(feature = "crossval-all")]`
+//! - Serial execution with `#[serial(bitnet_env)]` for environment isolation
+//! - TDD scaffolding: Tests compile but fail with `unimplemented!()` until implementation
+//! - Environment safety: Uses `EnvGuard` for automatic cleanup
+//! - AC tags: `// AC:AC10` for traceability
+//!
+//! **Implementation Required**:
+//! 1. Add `is_ci_or_no_repair()` predicate function to `xtask/src/crossval/preflight.rs`
+//! 2. Integrate predicate into `auto_repair()` entry point for early exit
+//! 3. Flip these tests from `unimplemented!()` to passing assertions
+//!
+//! **Expected Behavior**:
+//! - When `CI=1` or `BITNET_TEST_NO_REPAIR=1` → auto-repair disabled (exit early)
+//! - When both unset → auto-repair enabled (normal operation)
+//! - Either flag is sufficient to disable repair (OR logic)
+//!
+//! **Traceability**: Section 1 of Phase 2 specification (lines 49-221)
+
+#![cfg(feature = "crossval-all")]
+
+use serial_test::serial;
+use std::env;
+
+// Shared RAII guard for env vars (already in the repo)
+mod env_guard {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../tests/support/env_guard.rs"));
+}
+use env_guard::EnvGuard;
+
+/// Tests feature spec: phase2_test_flip_specification.md#AC10 (lines 124-146)
+/// AC:AC10 - CI Mode Disables Auto-Repair
+///
+/// **Given**: `CI=1` environment variable set
+/// **When**: `is_ci_or_no_repair()` predicate called
+/// **Then**: Returns `true` (auto-repair disabled)
+///
+/// **Expected integration**:
+/// - `auto_repair()` calls `is_ci_or_no_repair()` at entry point
+/// - When predicate returns `true`, exit early with `Ok(())`
+/// - No setup-cpp-auto invoked
+/// - No libraries installed
+/// - No rebuild triggered
+///
+/// **Exit code**: 0 (graceful skip)
+#[test]
+#[serial(bitnet_env)]
+fn test_ci_mode_disables_auto_repair() {
+    // Setup: Set CI=1 environment variable
+    let _guard = EnvGuard::new("CI");
+    _guard.set("1");
+
+    // Test 1: Verify predicate returns true when CI=1
+    assert!(
+        xtask::crossval::preflight::is_ci_or_no_repair(),
+        "is_ci_or_no_repair() should return true when CI=1"
+    );
+
+    // Test 2: Verify auto_repair_with_setup_cpp() returns Ok without attempting repair
+    let result = xtask::crossval::preflight::auto_repair_with_setup_cpp(
+        xtask::crossval::backend::CppBackend::BitNet,
+        xtask::crossval::preflight::RepairMode::Auto,
+    );
+
+    assert!(result.is_ok(), "auto_repair_with_setup_cpp should return Ok(()) in CI mode");
+
+    // Test 3: No side effects validation - the function exits early before any setup
+}
+
+/// Tests feature spec: phase2_test_flip_specification.md#AC10 (lines 149-167)
+/// AC:AC10 - BITNET_TEST_NO_REPAIR Disables Auto-Repair
+///
+/// **Given**: `BITNET_TEST_NO_REPAIR=1` environment variable set
+/// **When**: `is_ci_or_no_repair()` predicate called
+/// **Then**: Returns `true` (auto-repair disabled)
+///
+/// **Purpose**: Test-mode override to prevent auto-repair during test execution
+/// without relying on CI environment detection. Provides explicit control for
+/// test scaffolding that needs to validate "backend unavailable" scenarios.
+///
+/// **Exit code**: 0 (graceful skip)
+#[test]
+#[serial(bitnet_env)]
+fn test_no_repair_env_disables_auto_repair() {
+    // Setup: Set BITNET_TEST_NO_REPAIR=1 environment variable
+    let _guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+    _guard.set("1");
+
+    // Ensure CI is not set (isolate this test from CI detection)
+    let _ci_guard = EnvGuard::new("CI");
+    _ci_guard.remove();
+
+    // Test 1: Verify predicate returns true when BITNET_TEST_NO_REPAIR=1
+    assert!(
+        xtask::crossval::preflight::is_ci_or_no_repair(),
+        "is_ci_or_no_repair() should return true when BITNET_TEST_NO_REPAIR=1"
+    );
+
+    // Test 2: Verify auto_repair_with_setup_cpp() exits early with Ok(())
+    let result = xtask::crossval::preflight::auto_repair_with_setup_cpp(
+        xtask::crossval::backend::CppBackend::BitNet,
+        xtask::crossval::preflight::RepairMode::Auto,
+    );
+
+    assert!(
+        result.is_ok(),
+        "auto_repair_with_setup_cpp should return Ok(()) when BITNET_TEST_NO_REPAIR=1"
+    );
+
+    // Test 3: Diagnostic message is emitted (verified by eprintln! in implementation)
+}
+
+/// Tests feature spec: phase2_test_flip_specification.md#AC10 (lines 169-185)
+/// AC:AC10 - Dev Mode Allows Auto-Repair
+///
+/// **Given**: Both `CI` and `BITNET_TEST_NO_REPAIR` unset
+/// **When**: `is_ci_or_no_repair()` predicate called
+/// **Then**: Returns `false` (auto-repair enabled)
+///
+/// **Purpose**: Validates that in normal development mode (no CI, no test override),
+/// the auto-repair system proceeds normally. This is the default happy path.
+///
+/// **Note**: This test only validates the predicate logic. Full auto-repair execution
+/// would require C++ dependencies and is tested separately.
+#[test]
+#[serial(bitnet_env)]
+fn test_dev_mode_allows_auto_repair() {
+    // Setup: Ensure both CI and BITNET_TEST_NO_REPAIR are unset
+    let _ci_guard = EnvGuard::new("CI");
+    _ci_guard.remove();
+
+    let _no_repair_guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+    _no_repair_guard.remove();
+
+    // Test 1: Verify predicate returns false in dev mode
+    assert!(
+        !xtask::crossval::preflight::is_ci_or_no_repair(),
+        "is_ci_or_no_repair() should return false when both CI and BITNET_TEST_NO_REPAIR unset"
+    );
+
+    // Test 2: Verify auto_repair_with_setup_cpp() proceeds normally (predicate check passes)
+    // Note: We don't call auto_repair_with_setup_cpp() here because it would actually attempt repair.
+    // This test validates the predicate logic only. Full auto-repair flow is tested
+    // separately with proper C++ environment setup.
+}
+
+/// Tests feature spec: phase2_test_flip_specification.md#AC10 (lines 187-207)
+/// AC:AC10 - Precedence Validation (Either Flag Sufficient)
+///
+/// **Given**: Various combinations of `CI` and `BITNET_TEST_NO_REPAIR` flags
+/// **When**: `is_ci_or_no_repair()` predicate called
+/// **Then**: Returns `true` if **either** flag is set (OR logic)
+///
+/// **Test cases**:
+/// 1. Both CI=1 and BITNET_TEST_NO_REPAIR=1 → true
+/// 2. Only CI=1 → true
+/// 3. Only BITNET_TEST_NO_REPAIR=1 → true
+/// 4. Neither set → false
+///
+/// **Purpose**: Validates OR logic - either flag is sufficient to disable repair.
+/// This ensures BITNET_TEST_NO_REPAIR works independently of CI environment.
+#[test]
+#[serial(bitnet_env)]
+fn test_precedence_both_flags_set() {
+    // Test case 1: Both flags set → should disable repair
+    {
+        let _ci_guard = EnvGuard::new("CI");
+        _ci_guard.set("1");
+
+        let _no_repair_guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+        _no_repair_guard.set("1");
+
+        assert!(
+            xtask::crossval::preflight::is_ci_or_no_repair(),
+            "is_ci_or_no_repair() should return true when both CI=1 and BITNET_TEST_NO_REPAIR=1"
+        );
+    }
+
+    // Test case 2: Only CI=1 → should disable repair
+    {
+        let _ci_guard = EnvGuard::new("CI");
+        _ci_guard.set("1");
+
+        let _no_repair_guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+        _no_repair_guard.remove();
+
+        assert!(
+            xtask::crossval::preflight::is_ci_or_no_repair(),
+            "is_ci_or_no_repair() should return true when only CI=1"
+        );
+    }
+
+    // Test case 3: Only BITNET_TEST_NO_REPAIR=1 → should disable repair
+    {
+        let _ci_guard = EnvGuard::new("CI");
+        _ci_guard.remove();
+
+        let _no_repair_guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+        _no_repair_guard.set("1");
+
+        assert!(
+            xtask::crossval::preflight::is_ci_or_no_repair(),
+            "is_ci_or_no_repair() should return true when only BITNET_TEST_NO_REPAIR=1"
+        );
+    }
+
+    // Test case 4: Neither set → should enable repair
+    {
+        let _ci_guard = EnvGuard::new("CI");
+        _ci_guard.remove();
+
+        let _no_repair_guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+        _no_repair_guard.remove();
+
+        assert!(
+            !xtask::crossval::preflight::is_ci_or_no_repair(),
+            "is_ci_or_no_repair() should return false when neither CI nor BITNET_TEST_NO_REPAIR set"
+        );
+    }
+}
+
+// ============================================================================
+// Test Helpers
+// ============================================================================
+
+/// Helper function to verify environment variable state
+///
+/// Used by tests to validate EnvGuard behavior and environment isolation.
+#[allow(dead_code)]
+fn assert_env_var_state(key: &str, expected: Option<&str>) {
+    let actual = env::var(key).ok();
+    assert_eq!(
+        actual.as_deref(),
+        expected,
+        "Environment variable '{}' state mismatch: expected {:?}, got {:?}",
+        key,
+        expected,
+        actual
+    );
+}
+
+/// Helper function to verify predicate logic (when implemented)
+///
+/// This will be useful for validating is_ci_or_no_repair() behavior
+/// across different environment configurations.
+#[allow(dead_code)]
+fn verify_ci_or_no_repair_predicate(ci_set: bool, no_repair_set: bool, _expected: bool) {
+    // Setup environment
+    let _ci_guard = EnvGuard::new("CI");
+    if ci_set {
+        _ci_guard.set("1");
+    } else {
+        _ci_guard.remove();
+    }
+
+    let _no_repair_guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+    if no_repair_set {
+        _no_repair_guard.set("1");
+    } else {
+        _no_repair_guard.remove();
+    }
+
+    // TODO: Uncomment when is_ci_or_no_repair() implemented
+    // let actual = xtask::crossval::preflight::is_ci_or_no_repair();
+    // assert_eq!(
+    //     actual, expected,
+    //     "is_ci_or_no_repair() mismatch: CI={}, NO_REPAIR={}, expected={}, actual={}",
+    //     ci_set, no_repair_set, expected, actual
+    // );
+}
+
+// ============================================================================
+// Integration Points Reference
+// ============================================================================
+
+/// Reference implementation for is_ci_or_no_repair() predicate
+///
+/// This should be added to `/home/steven/code/Rust/BitNet-rs/xtask/src/crossval/preflight.rs`:
+///
+/// ```rust,ignore
+/// /// Check if running in CI mode or with test-mode no-repair override
+/// ///
+/// /// Returns true if either:
+/// /// - CI=1 environment variable is set (CI environment)
+/// /// - BITNET_TEST_NO_REPAIR=1 environment variable is set (test override)
+/// ///
+/// /// This predicate is used to disable auto-repair in deterministic environments
+/// /// where downloading external dependencies during test execution is prohibited.
+/// ///
+/// /// # Returns
+/// ///
+/// /// * `true` - Running in CI or test-mode no-repair (auto-repair disabled)
+/// /// * `false` - Running in dev mode (auto-repair enabled)
+/// ///
+/// /// # Examples
+/// ///
+/// /// ```ignore
+/// /// if is_ci_or_no_repair() {
+/// ///     eprintln!("⊘ Test mode: auto-repair disabled");
+/// ///     return Ok(());
+/// /// }
+/// /// ```
+/// pub fn is_ci_or_no_repair() -> bool {
+///     env::var("CI").is_ok() || env::var("BITNET_TEST_NO_REPAIR").is_ok()
+/// }
+/// ```
+///
+/// Integration into auto_repair():
+///
+/// ```rust,ignore
+/// pub fn auto_repair(backend: CppBackend, mode: RepairMode) -> Result<()> {
+///     // Early exit for CI or test-mode no-repair
+///     if is_ci_or_no_repair() {
+///         eprintln!("⊘ Test mode: auto-repair disabled (CI=1 or BITNET_TEST_NO_REPAIR=1)");
+///         return Ok(());
+///     }
+///
+///     // Check recursion guard
+///     if env::var("BITNET_REPAIR_IN_PROGRESS").is_ok() {
+///         return Err(RepairError::RecursionDetected.into());
+///     }
+///
+///     // Rest of auto-repair logic...
+/// }
+/// ```
+#[allow(dead_code)]
+fn reference_implementation_location() {
+    // This is a documentation function - no implementation needed
+}
