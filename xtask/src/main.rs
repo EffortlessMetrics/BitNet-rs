@@ -386,6 +386,7 @@ enum Cmd {
     /// Usage:
     ///   cargo run -p xtask --features crossval-all -- preflight
     ///   cargo run -p xtask --features crossval-all -- preflight --backend bitnet --verbose
+    ///   cargo run -p xtask --features crossval-all -- preflight --backend bitnet --repair=auto
     #[cfg(any(feature = "crossval", feature = "crossval-all"))]
     Preflight {
         /// Backend to check (bitnet or llama). If omitted, checks both.
@@ -396,12 +397,12 @@ enum Cmd {
         #[arg(long, short)]
         verbose: bool,
 
-        /// Automatically repair missing backends (default: true in interactive, false in CI)
-        #[arg(long, default_value_t = true)]
-        repair: bool,
+        /// Repair mode: auto (default locally), never (default in CI), always
+        #[arg(long, value_parser = ["auto", "never", "always"])]
+        repair: Option<String>,
 
-        /// Disable automatic repair (explicit flag for clarity)
-        #[arg(long, action = clap::ArgAction::SetFalse)]
+        /// Shorthand for --repair=never
+        #[arg(long, conflicts_with = "repair")]
         no_repair: bool,
     },
 
@@ -2683,21 +2684,26 @@ fn format_markdown_output(comparison: &BenchmarkComparison, verbose: bool) -> Re
 fn cpp_backend_preflight_cmd(
     backend: Option<CppBackend>,
     verbose: bool,
-    repair: bool,
+    repair: Option<String>,
     no_repair: bool,
 ) -> Result<()> {
+    use crossval::preflight::{RepairMode, is_ci};
     use crossval::{preflight_with_auto_repair, print_backend_status};
 
-    // Determine repair mode: explicit --no-repair overrides default, CI detection, etc.
-    let should_repair = if no_repair { false } else { repair && !is_ci_environment() };
+    // Determine repair mode using CLI flags and CI detection
+    let repair_mode = if no_repair {
+        RepairMode::Never
+    } else {
+        RepairMode::from_cli_flags(repair.as_deref(), is_ci())
+    };
 
     match backend {
         Some(b) => {
             // Check specific backend with optional auto-repair
-            preflight_with_auto_repair(b, verbose, should_repair)?;
+            preflight_with_auto_repair(b, verbose, repair_mode)?;
 
             // Only print success message if not verbose (verbose already printed detailed output)
-            if !verbose && !should_repair {
+            if !verbose && !matches!(repair_mode, RepairMode::Auto | RepairMode::Always) {
                 // If repair was attempted, preflight_with_auto_repair already printed status
                 println!("✓ {} backend is available", b.name());
             }
@@ -3264,6 +3270,7 @@ fn crossval_per_token_cmd_impl(
     positions: usize,
     metrics: &str,
 ) -> Result<()> {
+    use crate::crossval::preflight_backend_libs;
     use bitnet_crossval::logits_compare::compare_per_position_logits;
     use bitnet_inference::parity::eval_logits_all_positions;
     use std::collections::HashSet;
@@ -3699,7 +3706,7 @@ fn parity_both_cmd(
         format: format.to_string(),
         prompt_template,
         system_prompt: system_prompt.map(|s| s.to_string()),
-        auto_repair,
+        no_repair: !auto_repair,
         verbose,
         dump_ids,
         dump_cpp_ids,

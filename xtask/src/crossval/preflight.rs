@@ -139,6 +139,41 @@ impl RepairError {
         // Unknown error (catch-all)
         RepairError::Unknown { error: stderr.to_string(), backend: backend.to_string() }
     }
+
+    /// Map RepairError to semantic exit code
+    ///
+    /// Provides clear exit codes for CI/CD integration and automated workflows.
+    ///
+    /// # Returns
+    ///
+    /// Exit code integer:
+    /// - NetworkFailure → 3 (retryable)
+    /// - BuildFailure → 5 (permanent, needs dependency installation)
+    /// - PermissionDenied → 4 (permanent, needs ownership fix)
+    /// - RecursionDetected → 6 (internal error)
+    /// - Others → 1 (generic unavailable)
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let error = RepairError::NetworkFailure {
+    ///     error: "connection timeout".to_string(),
+    ///     backend: "bitnet".to_string(),
+    /// };
+    /// assert_eq!(error.to_exit_code(), 3);
+    /// ```
+    pub fn to_exit_code(&self) -> i32 {
+        match self {
+            RepairError::NetworkFailure { .. } => PreflightExitCode::NetworkFailure as i32,
+            RepairError::BuildFailure { .. } => PreflightExitCode::BuildFailure as i32,
+            RepairError::PermissionDenied { .. } => PreflightExitCode::PermissionDenied as i32,
+            RepairError::RecursionDetected => PreflightExitCode::RecursionDetected as i32,
+            RepairError::Unknown { .. }
+            | RepairError::SetupFailed(_)
+            | RepairError::RevalidationFailed { .. }
+            | RepairError::RebuildFailed(_) => PreflightExitCode::Unavailable as i32,
+        }
+    }
 }
 
 /// Error types for xtask rebuild operations
@@ -232,6 +267,154 @@ impl PreflightExitCode {
             | RepairError::RebuildFailed(_) => PreflightExitCode::Unavailable,
         }
     }
+}
+
+/// RepairMode enum controlling auto-repair behavior
+///
+/// Determines whether preflight should automatically attempt to repair missing backends
+/// by invoking setup-cpp-auto, rebuilding xtask, and re-executing with updated detection.
+///
+/// # Variants
+///
+/// - `Auto`: Default in development/interactive mode. Automatically repairs when backend missing.
+/// - `Never`: Default in CI. Never attempts auto-repair, fails fast with clear error.
+/// - `Always`: Forces repair even if backend appears available (useful for updates/refresh).
+///
+/// # Examples
+///
+/// ```ignore
+/// // Automatically repair if backend missing (default locally)
+/// let mode = RepairMode::Auto;
+/// assert!(mode.should_repair(false)); // backend unavailable → repair
+/// assert!(!mode.should_repair(true)); // backend available → no repair
+///
+/// // Never repair (default in CI)
+/// let mode = RepairMode::Never;
+/// assert!(!mode.should_repair(false)); // never repair
+/// assert!(!mode.should_repair(true));  // never repair
+///
+/// // Always repair (force refresh)
+/// let mode = RepairMode::Always;
+/// assert!(mode.should_repair(false)); // always repair
+/// assert!(mode.should_repair(true));  // always repair
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepairMode {
+    /// Automatically repair missing backend (default in interactive mode)
+    Auto,
+
+    /// Never attempt auto-repair (explicit opt-out, default in CI)
+    Never,
+
+    /// Always attempt repair even if backend appears available (force refresh)
+    Always,
+}
+
+impl RepairMode {
+    /// Determine if repair should be attempted based on backend availability
+    ///
+    /// # Arguments
+    ///
+    /// * `backend_available` - Whether the backend is currently detected
+    ///
+    /// # Returns
+    ///
+    /// `true` if repair workflow should be initiated, `false` otherwise
+    ///
+    /// # Logic
+    ///
+    /// - `Auto`: Only repair if backend unavailable
+    /// - `Never`: Never repair
+    /// - `Always`: Always repair (even if available)
+    pub fn should_repair(self, backend_available: bool) -> bool {
+        match self {
+            RepairMode::Auto => !backend_available, // Only if missing
+            RepairMode::Never => false,             // Never repair
+            RepairMode::Always => true,             // Always repair
+        }
+    }
+
+    /// Create RepairMode from CLI flags with CI-aware defaults
+    ///
+    /// # Arguments
+    ///
+    /// * `repair_flag` - Optional explicit repair mode from --repair flag
+    /// * `ci_detected` - Whether running in CI environment
+    ///
+    /// # Returns
+    ///
+    /// Appropriate RepairMode:
+    /// - Explicit flag value if provided
+    /// - `Never` if in CI environment (safe default)
+    /// - `Auto` if local environment (user-friendly default)
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Explicit flag takes precedence
+    /// let mode = RepairMode::from_cli_flags(Some("never"), false);
+    /// assert_eq!(mode, RepairMode::Never);
+    ///
+    /// // CI defaults to Never
+    /// let mode = RepairMode::from_cli_flags(None, true);
+    /// assert_eq!(mode, RepairMode::Never);
+    ///
+    /// // Local defaults to Auto
+    /// let mode = RepairMode::from_cli_flags(None, false);
+    /// assert_eq!(mode, RepairMode::Auto);
+    /// ```
+    pub fn from_cli_flags(repair_flag: Option<&str>, ci_detected: bool) -> Self {
+        match repair_flag {
+            Some("auto") => RepairMode::Auto,
+            Some("never") => RepairMode::Never,
+            Some("always") => RepairMode::Always,
+            None => {
+                // Default behavior: CI-aware
+                if ci_detected {
+                    RepairMode::Never // Safe default: fail fast in CI
+                } else {
+                    RepairMode::Auto // User-friendly: auto-repair locally
+                }
+            }
+            _ => RepairMode::Never, // Unknown value → conservative default
+        }
+    }
+}
+
+/// Detect if running in CI environment
+///
+/// Checks standard CI environment variables used by major CI/CD platforms.
+///
+/// # Returns
+///
+/// `true` if any CI environment variable is set, `false` otherwise
+///
+/// # Detected Platforms
+///
+/// - GitHub Actions: `GITHUB_ACTIONS`, `CI`
+/// - GitLab CI: `GITLAB_CI`, `CI`
+/// - Jenkins: `JENKINS_HOME`
+/// - CircleCI: `CIRCLECI`
+/// - Generic: `CI`, `BITNET_TEST_NO_REPAIR`
+///
+/// # Examples
+///
+/// ```ignore
+/// // In CI environment
+/// std::env::set_var("GITHUB_ACTIONS", "true");
+/// assert!(is_ci());
+///
+/// // In local environment
+/// std::env::remove_var("CI");
+/// assert!(!is_ci());
+/// ```
+pub fn is_ci() -> bool {
+    std::env::var_os("CI").is_some()
+        || std::env::var_os("GITHUB_ACTIONS").is_some()
+        || std::env::var_os("JENKINS_HOME").is_some()
+        || std::env::var_os("GITLAB_CI").is_some()
+        || std::env::var_os("CIRCLECI").is_some()
+        || std::env::var_os("BITNET_TEST_NO_REPAIR").is_some()
 }
 
 /// Check if an error is retryable
@@ -1143,20 +1326,57 @@ pub fn print_backend_status(verbose: bool) {
 pub fn preflight_with_auto_repair(
     backend: CppBackend,
     verbose: bool,
-    should_repair: bool,
+    repair_mode: RepairMode,
 ) -> Result<()> {
+    // AC5: Check recursion guard (re-exec child path)
+    if is_repair_parent() {
+        // We are the re-exec child, do NOT attempt repair again
+        if verbose {
+            eprintln!("[repair] Re-exec detected, skipping repair (checking detection only)");
+        }
+
+        // Just check backend availability (should now be detected)
+        let is_available = match backend {
+            CppBackend::BitNet => HAS_BITNET,
+            CppBackend::Llama => HAS_LLAMA,
+        };
+
+        if is_available {
+            println!("✓ {} AVAILABLE (detected after repair)", backend.name());
+            return Ok(());
+        } else {
+            bail!(
+                "Revalidation failed: backend '{}' still unavailable after repair.\n\
+                This may indicate:\n\
+                1. Libraries were built but in unexpected location\n\
+                2. Build succeeded but libraries are incompatible\n\
+                3. Partial build state from previous failed attempt\n\
+                \n\
+                Recovery steps:\n\
+                1. Clean previous build state: rm -rf ~/.cache/{}_cpp\n\
+                2. Retry repair: cargo run -p xtask -- preflight --backend {} --repair=auto\n\
+                3. If problem persists, see manual setup: docs/howto/cpp-setup.md",
+                backend.name(),
+                backend.name(),
+                backend.name()
+            );
+        }
+    }
+
     // Step 1: Check if backend is already available
     let is_available = match backend {
         CppBackend::BitNet => HAS_BITNET,
         CppBackend::Llama => HAS_LLAMA,
     };
 
-    if is_available {
-        // Backend already available - use existing preflight logic
+    // Step 2: Determine if repair should be attempted based on RepairMode
+    let should_repair = repair_mode.should_repair(is_available);
+
+    if is_available && !should_repair {
+        // Backend already available and no forced repair - use existing preflight logic
         return preflight_backend_libs(backend, verbose);
     }
 
-    // Step 2: Backend not available - attempt repair if enabled
     if !should_repair {
         // No repair requested - use traditional error path
         return preflight_backend_libs(backend, verbose);
@@ -1176,11 +1396,29 @@ pub fn preflight_with_auto_repair(
         bail!("Auto-repair failed for backend '{}'", backend.name());
     }
 
-    // Step 4: Success message (rebuild instructions shown by attempt_repair_once)
-    if !verbose {
-        println!("✓ Backend '{}' setup complete (rebuild xtask to detect)", backend.name());
+    // Step 4: Rebuild xtask to pick up new detection (AC3)
+    if verbose {
+        eprintln!("[repair] Step 2/3: Rebuilding xtask binary...");
     }
 
+    if let Err(e) = rebuild_xtask(verbose) {
+        eprintln!("\n{}", e);
+        bail!("xtask rebuild failed after successful C++ setup");
+    }
+
+    // Step 5: Re-exec with updated binary (AC4)
+    if verbose {
+        eprintln!("[repair] Step 3/3: Re-executing with updated detection...");
+    }
+
+    let original_args: Vec<String> = env::args().collect();
+    if let Err(e) = reexec_current_command(&original_args) {
+        eprintln!("\n{}", e);
+        bail!("Re-exec failed after successful rebuild");
+    }
+
+    // This point is never reached on Unix (exec replaces process)
+    // On Windows, process exits in reexec_current_command
     Ok(())
 }
 
@@ -1249,18 +1487,168 @@ fn attempt_repair(backend: CppBackend, verbose: bool) -> Result<(), RepairError>
     Ok(())
 }
 
-/// Rebuild xtask to detect newly installed libraries
+/// Check if we are the re-exec child (post-rebuild detection)
 ///
-/// NOTE: This function is planned for future implementation.
-/// Currently, we rely on user to manually rebuild xtask after setup-cpp-auto.
+/// Returns true if `BITNET_REPAIR_PARENT` environment variable is set,
+/// indicating that this process was spawned after auto-repair and rebuild.
 ///
-/// The challenge is that build-time constants (HAS_BITNET, HAS_LLAMA) are
-/// embedded during compilation and can't be updated at runtime. We would need to:
-/// 1. Rebuild xtask binary
-/// 2. Re-execute the new binary
-/// 3. Continue from where we left off
+/// # Returns
 ///
-/// For the MVP, we show clear rebuild instructions to the user.
+/// * `true` - This is a re-exec child, skip repair
+/// * `false` - Normal execution, repair allowed if needed
+fn is_repair_parent() -> bool {
+    env::var_os("BITNET_REPAIR_PARENT").is_some()
+}
+
+/// Check if repair is currently in progress (recursion guard)
+///
+/// Returns true if `BITNET_REPAIR_IN_PROGRESS` environment variable is set,
+/// indicating that an auto-repair operation is already running.
+///
+/// # Returns
+///
+/// * `true` - Repair is in progress (guard active)
+/// * `false` - No active repair (guard not set)
+fn is_repair_in_progress() -> bool {
+    env::var_os("BITNET_REPAIR_IN_PROGRESS").is_some()
+}
+
+/// Auto-repair with setup-cpp-auto subprocess invocation
+///
+/// Implements AC6: setup-cpp-auto invocation on missing backend.
+///
+/// This function:
+/// 1. Checks RepairMode: returns early if Never
+/// 2. Sets recursion guard: `BITNET_REPAIR_IN_PROGRESS=1`
+/// 3. Invokes: `cargo run -p xtask -- setup-cpp-auto --backend {bitnet|llama}`
+/// 4. Captures stdout/stderr for diagnostics
+/// 5. Clears recursion guard on completion
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend to repair (BitNet or Llama)
+/// * `mode` - RepairMode controlling whether repair should proceed
+///
+/// # Returns
+///
+/// * `Ok(())` - Repair succeeded (setup-cpp-auto completed successfully)
+/// * `Err(RepairError)` - Repair failed with classified error
+///
+/// # Errors
+///
+/// Returns `RepairError::RecursionDetected` if called while repair is already in progress.
+/// Returns classified errors (NetworkFailure, BuildFailure, PermissionDenied) based on stderr.
+pub fn auto_repair_with_setup_cpp(
+    backend: CppBackend,
+    mode: RepairMode,
+) -> Result<(), RepairError> {
+    // Check RepairMode: return early if Never
+    // Note: backend_available parameter not needed here since caller checks availability
+    if matches!(mode, RepairMode::Never) {
+        return Ok(());
+    }
+
+    // Check recursion guard
+    if is_repair_in_progress() {
+        return Err(RepairError::RecursionDetected);
+    }
+
+    // Set recursion guard
+    // SAFETY: This env var is only used as a recursion guard during auto-repair.
+    // We ensure cleanup happens even on error via the removal below.
+    unsafe {
+        env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+    }
+
+    // Invoke setup-cpp-auto subprocess
+    let current_exe = env::current_exe().map_err(|e| {
+        // Cleanup recursion guard on error
+        unsafe {
+            env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+        }
+        RepairError::SetupFailed(format!("Failed to get current exe: {}", e))
+    })?;
+
+    let backend_arg = match backend {
+        CppBackend::BitNet => "bitnet",
+        CppBackend::Llama => "llama",
+    };
+
+    let setup_result = Command::new(&current_exe)
+        .args(["setup-cpp-auto", "--backend", backend_arg, "--emit=sh"])
+        .env("BITNET_REPAIR_IN_PROGRESS", "1")  // Explicit env pass
+        .output()
+        .map_err(|e| {
+            // Cleanup recursion guard on execution failure
+            unsafe {
+                env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+            }
+            RepairError::SetupFailed(format!("Failed to execute setup-cpp-auto: {}", e))
+        })?;
+
+    // Cleanup recursion guard
+    // SAFETY: We're removing the same env var we set above, restoring the environment state.
+    unsafe {
+        env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+    }
+
+    // Check command exit status
+    if !setup_result.status.success() {
+        let stderr = String::from_utf8_lossy(&setup_result.stderr);
+        return Err(RepairError::classify(&stderr, backend.name()));
+    }
+
+    Ok(())
+}
+
+/// Rebuild xtask quickly (incremental, no clean)
+///
+/// After auto-repair installs C++ libraries, this rebuilds xtask to pick up
+/// the new build-time detection constants without doing a full clean.
+///
+/// # Arguments
+///
+/// * `verbose` - If true, print progress messages
+///
+/// # Returns
+///
+/// * `Ok(())` - Rebuild succeeded
+/// * `Err(RebuildError)` - Rebuild failed
+fn rebuild_xtask(verbose: bool) -> Result<(), RebuildError> {
+    if verbose {
+        eprintln!("[preflight] Rebuilding xtask...");
+    }
+
+    let build_status = Command::new("cargo")
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
+        .status()
+        .map_err(|e: std::io::Error| RebuildError::BuildFailed(e.to_string()))?;
+
+    if !build_status.success() {
+        return Err(RebuildError::BuildFailed(format!(
+            "cargo build exited with code {:?}",
+            build_status.code()
+        )));
+    }
+
+    if verbose {
+        eprintln!("[preflight] ✓ Rebuild complete");
+    }
+
+    Ok(())
+}
+
+/// Rebuild xtask to detect newly installed libraries (with clean)
+///
+/// This function does a full clean + rebuild cycle, which is slower but
+/// ensures all build-time detection runs from scratch.
+///
+/// For faster incremental rebuilds after auto-repair, use `rebuild_xtask()` instead.
+///
+/// # Returns
+///
+/// * `Ok(())` - Rebuild succeeded
+/// * `Err(RebuildError)` - Clean or build failed
 #[allow(dead_code)]
 fn rebuild_xtask_for_detection() -> Result<(), RebuildError> {
     // Step 1: Clean xtask and crossval crates
@@ -1277,84 +1665,121 @@ fn rebuild_xtask_for_detection() -> Result<(), RebuildError> {
     }
 
     // Step 2: Rebuild with crossval features
-    let build_status = Command::new("cargo")
-        .args(["build", "-p", "xtask", "--features", "crossval-all"])
-        .status()
-        .map_err(|e: std::io::Error| RebuildError::BuildFailed(e.to_string()))?;
-
-    if !build_status.success() {
-        return Err(RebuildError::BuildFailed(format!(
-            "cargo build exited with code {:?}",
-            build_status.code()
-        )));
-    }
-
-    Ok(())
+    rebuild_xtask(false)
 }
 
-/// Repair mode for auto-repair functionality
+/// Re-execute current xtask binary with original arguments
 ///
-/// Controls whether preflight should automatically provision missing C++ backends.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RepairMode {
-    /// Auto-repair if backend missing (default in interactive mode)
-    Auto,
+/// After rebuilding xtask to pick up new library detection, this function
+/// replaces the current process with a new execution of the updated binary.
+///
+/// # Recursion Guard
+///
+/// Sets `BITNET_REPAIR_PARENT=1` to prevent infinite recursion. The re-executed
+/// binary will skip repair and only validate detection.
+///
+/// # Platform-Specific Behavior
+///
+/// * **Unix**: Uses `exec()` to replace current process (never returns on success)
+/// * **Windows**: Spawns child process and exits with its status code
+///
+/// # Arguments
+///
+/// * `original_args` - Command-line arguments to preserve (from `env::args()`)
+///
+/// # Returns
+///
+/// * `Ok(())` - Never returns on Unix success
+/// * `Err(RepairError)` - Re-exec failed (Unix exec error or Windows spawn error)
+///
+/// # Examples
+///
+/// ```ignore
+/// use xtask::crossval::preflight::reexec_current_command;
+///
+/// // After rebuild, re-exec with original args
+/// let args: Vec<String> = env::args().collect();
+/// reexec_current_command(&args)?;
+/// // Unix: Never reaches here on success
+/// // Windows: Process exits before reaching here
+/// ```
+pub fn reexec_current_command(original_args: &[String]) -> Result<(), RepairError> {
+    eprintln!("[repair] Re-executing with updated detection...");
 
-    /// Never auto-repair (explicit user opt-out)
-    Never,
+    // Unix fast path: Try exec() with current_exe() first
+    #[cfg(unix)]
+    {
+        if let Ok(current_exe) = env::current_exe() {
+            let exists = current_exe.exists();
 
-    /// Always attempt repair even if backend appears available (force refresh)
-    Always,
-}
+            // Diagnostic logging (AC5)
+            eprintln!("[reexec] exe: {}", current_exe.display());
+            eprintln!("[reexec] exe exists: {}", exists);
+            eprintln!("[reexec] args: {:?}", original_args);
 
-impl RepairMode {
-    /// Create RepairMode from CLI flags
-    ///
-    /// # Arguments
-    ///
-    /// * `repair` - Value from --repair flag (default true)
-    /// * `no_repair` - Value from --no-repair flag (overrides repair)
-    ///
-    /// # Returns
-    ///
-    /// RepairMode based on flags:
-    /// - `no_repair = true` → RepairMode::Never
-    /// - `repair = true && !is_ci()` → RepairMode::Auto
-    /// - `repair = true && is_ci()` → RepairMode::Never (CI safety)
-    pub fn from_cli_flags(repair: bool, no_repair: bool) -> Self {
-        if no_repair {
-            RepairMode::Never
-        } else if repair && !is_ci_environment() {
-            RepairMode::Auto
+            if exists {
+                use std::os::unix::process::CommandExt;
+
+                let mut cmd = Command::new(&current_exe);
+                cmd.args(original_args);
+                cmd.env("BITNET_REPAIR_PARENT", "1"); // AC4: recursion guard
+
+                eprintln!("[reexec] Attempting exec()...");
+
+                // Try exec() - never returns on success
+                let err = cmd.exec();
+
+                // If we reach here, exec() failed
+                eprintln!("[reexec] Fast path failed: {}", err);
+                eprintln!("[reexec] Error kind: {:?}", err.kind());
+
+                // Fall through to cargo run fallback
+            } else {
+                eprintln!("[reexec] Binary doesn't exist, skipping exec()");
+            }
         } else {
-            RepairMode::Never
+            eprintln!("[reexec] current_exe() failed, skipping exec()");
         }
     }
 
-    /// Check if repair should be attempted
-    ///
-    /// # Arguments
-    ///
-    /// * `backend_available` - Whether backend is currently available
-    ///
-    /// # Returns
-    ///
-    /// `true` if repair should run, `false` otherwise
-    pub fn should_repair(self, backend_available: bool) -> bool {
-        match self {
-            RepairMode::Auto => !backend_available,
-            RepairMode::Never => false,
-            RepairMode::Always => true,
+    // Fallback path: cargo run (all platforms, Unix if exec failed)
+    eprintln!("[reexec] Trying cargo run fallback...");
+
+    let mut cmd = Command::new("cargo");
+    cmd.arg("run").arg("-p").arg("xtask").arg("--features").arg("crossval-all").arg("--");
+
+    // AC3: Preserve all original arguments (skip program name)
+    if original_args.len() > 1 {
+        cmd.args(&original_args[1..]);
+    }
+
+    // AC4: Set recursion guard
+    cmd.env("BITNET_REPAIR_PARENT", "1");
+
+    // Diagnostic logging (AC5)
+    eprintln!(
+        "[reexec] Fallback command: cargo run -p xtask --features crossval-all -- {:?}",
+        if original_args.len() > 1 { &original_args[1..] } else { &[] }
+    );
+
+    // Spawn and wait for child
+    match cmd.status() {
+        Ok(status) => {
+            let code = status.code().unwrap_or(1);
+            eprintln!("[reexec] Fallback child exited with code: {}", code);
+            std::process::exit(code); // AC7: Propagate exit code
+        }
+        Err(e) => {
+            // Both exec() (if Unix) and cargo run failed
+            Err(RepairError::Unknown {
+                error: format!(
+                    "Re-exec failed: exec() and cargo run both failed. Last error: {}",
+                    e
+                ),
+                backend: "unknown".to_string(),
+            })
         }
     }
-}
-
-/// Detect if running in CI environment
-fn is_ci_environment() -> bool {
-    std::env::var("CI").is_ok()
-        || std::env::var("GITHUB_ACTIONS").is_ok()
-        || std::env::var("JENKINS_HOME").is_ok()
-        || std::env::var("GITLAB_CI").is_ok()
 }
 
 /// Retry configuration for auto-repair with exponential backoff
@@ -1520,5 +1945,51 @@ mod tests {
         // Just verify it doesn't panic
         print_backend_status(false);
         print_backend_status(true);
+    }
+
+    #[test]
+    fn test_is_repair_in_progress_false_by_default() {
+        // Ensure no recursion guard is set initially
+        unsafe {
+            std::env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+        }
+        assert!(!is_repair_in_progress());
+    }
+
+    #[test]
+    fn test_is_repair_in_progress_true_when_set() {
+        // Set recursion guard
+        unsafe {
+            std::env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+        }
+        assert!(is_repair_in_progress());
+        // Cleanup
+        unsafe {
+            std::env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+        }
+    }
+
+    #[test]
+    fn test_auto_repair_with_setup_cpp_returns_ok_for_never_mode() {
+        // RepairMode::Never should return Ok immediately without invoking setup-cpp-auto
+        let result = auto_repair_with_setup_cpp(CppBackend::Llama, RepairMode::Never);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_auto_repair_with_setup_cpp_detects_recursion() {
+        // Set recursion guard
+        unsafe {
+            std::env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+        }
+
+        // Should detect recursion and return error
+        let result = auto_repair_with_setup_cpp(CppBackend::Llama, RepairMode::Auto);
+        assert!(matches!(result, Err(RepairError::RecursionDetected)));
+
+        // Cleanup
+        unsafe {
+            std::env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+        }
     }
 }

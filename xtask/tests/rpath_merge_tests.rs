@@ -14,7 +14,6 @@
 
 use serial_test::serial;
 use std::env;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // ====================================================================================
@@ -976,7 +975,6 @@ mod error_handling_tests {
 
 #[cfg(test)]
 mod empty_input_tests {
-    use super::*;
 
     /// Test empty vector input
     ///
@@ -1071,7 +1069,6 @@ mod backward_compatibility_tests {
 
 #[cfg(test)]
 mod build_integration_tests {
-    use super::*;
 
     /// Test cargo:rerun-if-env-changed directives
     ///
@@ -1108,7 +1105,6 @@ mod build_integration_tests {
 
 #[cfg(test)]
 mod verification_helpers {
-    use super::*;
 
     /// Simulate readelf output parsing (Linux)
     ///

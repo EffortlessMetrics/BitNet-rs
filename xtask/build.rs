@@ -108,7 +108,6 @@ fn embed_crossval_rpath() {
     });
 
     if let Ok(cpp_dir) = bitnet_cpp_dir {
-        use std::path::PathBuf;
         let cpp_path = Path::new(&cpp_dir);
 
         // Build multi-tier search paths matching crossval/build.rs (Tier 1 + Tier 2)
@@ -150,7 +149,6 @@ fn embed_crossval_rpath() {
 
     // Priority 3b: Standalone llama.cpp auto-discovery (AC10-AC12, AC14-AC17)
     if let Ok(llama_dir) = env::var("LLAMA_CPP_DIR") {
-        use std::path::PathBuf;
         let llama_path = Path::new(&llama_dir);
 
         // Tier 1: PRIMARY llama.cpp locations (standalone build structure)
@@ -281,6 +279,11 @@ fn merge_and_deduplicate(paths: &[&str]) -> String {
     let mut merged = Vec::new();
 
     for path_str in paths {
+        // AC7: Filter empty paths before canonicalization
+        if path_str.trim().is_empty() {
+            continue; // Silently skip empty strings
+        }
+
         let path = PathBuf::from(path_str);
 
         // Canonicalize to resolve symlinks and normalize paths

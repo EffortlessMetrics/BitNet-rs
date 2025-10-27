@@ -33,7 +33,7 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Tokenizer source type (AC5)
 ///
@@ -41,13 +41,14 @@ use std::path::{Path, PathBuf};
 ///
 /// Represents where the tokenizer configuration originated from.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum TokenizerSource {
     /// Tokenizer embedded in GGUF file
     GgufEmbedded,
     /// External tokenizer.json file (explicitly provided)
-    JsonFile(PathBuf),
+    External,
     /// Auto-discovered tokenizer from model directory
-    AutoDiscovered(PathBuf),
+    AutoDiscovered,
 }
 
 /// Tokenizer authority metadata for receipt reproducibility (AC4-AC6)
@@ -56,10 +57,13 @@ pub enum TokenizerSource {
 ///
 /// This structure captures complete tokenizer provenance to ensure
 /// receipt reproducibility and enable tokenizer parity validation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TokenizerAuthority {
-    /// Tokenizer source: GgufEmbedded, JsonFile, or AutoDiscovered
+    /// Tokenizer source: GgufEmbedded, External, or AutoDiscovered
     pub source: TokenizerSource,
+
+    /// Path to tokenizer (GGUF path or tokenizer.json path)
+    pub path: String,
 
     /// SHA256 hash of tokenizer.json file (if external)
     ///
@@ -71,8 +75,10 @@ pub struct TokenizerAuthority {
     ///
     /// This hash is computed from the tokenizer's configuration fingerprint,
     /// ensuring consistency across different instances.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub config_hash: Option<String>,
+    pub config_hash: String,
+
+    /// Token count (for quick validation)
+    pub token_count: usize,
 }
 
 /// Parity receipt - structured output for cross-validation comparison
@@ -97,15 +103,19 @@ pub struct ParityReceipt {
     pub prompt: String,
 
     /// Number of token positions compared
+    #[serde(default)]
     pub positions: usize,
 
     /// Quality thresholds for validation
+    #[serde(default)]
     pub thresholds: Thresholds,
 
     /// Per-position metrics (one entry per token position)
+    #[serde(default)]
     pub rows: Vec<PositionMetrics>,
 
     /// Aggregate summary metrics
+    #[serde(default)]
     pub summary: Summary,
 
     // v2 fields (optional for backward compatibility)
@@ -194,6 +204,12 @@ pub struct Summary {
     pub mean_kl: Option<f32>,
 }
 
+impl Default for Summary {
+    fn default() -> Self {
+        Self { all_passed: true, first_divergence: None, mean_mse: 0.0, mean_kl: None }
+    }
+}
+
 impl ParityReceipt {
     /// Create a new parity receipt with metadata
     ///
@@ -247,6 +263,18 @@ impl ParityReceipt {
     /// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC4
     pub fn set_prompt_template(&mut self, template: String) {
         self.prompt_template = Some(template);
+    }
+
+    /// Infer schema version based on fields present (AC7)
+    ///
+    /// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC7
+    ///
+    /// Returns "1.0.0" if no v2 fields are present, "2.0.0" otherwise.
+    pub fn infer_version(&self) -> &str {
+        match (&self.tokenizer_authority, &self.prompt_template) {
+            (Some(_), _) | (_, Some(_)) => "2.0.0",
+            _ => "1.0.0",
+        }
     }
 
     /// Finalize the receipt by computing summary statistics
@@ -321,12 +349,37 @@ pub fn compute_tokenizer_file_hash(tokenizer_path: &Path) -> anyhow::Result<Stri
     Ok(format!("{:x}", hasher.finalize()))
 }
 
-/// Compute SHA256 hash of tokenizer config (AC6)
+/// Compute SHA256 hash of tokenizer config from vocab sizes (AC6)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC6
+///
+/// This computes a hash from vocab size and special tokens.
+/// Takes vocab_size and special_tokens list for canonical hashing.
+pub fn compute_tokenizer_config_hash(
+    vocab_size: usize,
+    special_tokens: &[String],
+) -> anyhow::Result<String> {
+    use sha2::{Digest, Sha256};
+
+    // Create canonical representation from vocab config
+    let config_repr = serde_json::json!({
+        "vocab_size": vocab_size,
+        "special_tokens": special_tokens,
+    });
+    let canonical_json =
+        serde_json::to_string(&config_repr).context("Failed to serialize tokenizer config")?;
+
+    let mut hasher = Sha256::new();
+    hasher.update(canonical_json.as_bytes());
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Compute SHA256 hash of tokenizer config from Tokenizer trait (AC6)
 ///
 /// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC6
 ///
 /// This computes a hash from the tokenizer's vocab size configuration.
-pub fn compute_tokenizer_config_hash(
+pub fn compute_tokenizer_config_hash_from_tokenizer(
     tokenizer: &dyn bitnet_tokenizers::Tokenizer,
 ) -> anyhow::Result<String> {
     use sha2::{Digest, Sha256};
@@ -352,10 +405,101 @@ pub fn detect_tokenizer_source(tokenizer_path: &Path) -> TokenizerSource {
     if tokenizer_path.exists()
         && tokenizer_path.file_name() == Some(std::ffi::OsStr::new("tokenizer.json"))
     {
-        TokenizerSource::JsonFile(tokenizer_path.to_path_buf())
+        TokenizerSource::External
     } else {
         TokenizerSource::GgufEmbedded
     }
+}
+
+/// Validate tokenizer parity between Rust and C++ implementations (AC7)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC7
+///
+/// Compares token sequences from Rust and C++ tokenizers to ensure parity.
+/// Returns an error if lengths differ or any token at corresponding positions differs.
+///
+/// # Arguments
+///
+/// * `rust_tokens` - Token IDs from Rust tokenizer
+/// * `cpp_tokens` - Token IDs from C++ tokenizer
+/// * `backend_name` - Name of the C++ backend (for error reporting)
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Token sequence lengths differ
+/// - Any token at corresponding positions differs
+pub fn validate_tokenizer_parity(
+    rust_tokens: &[u32],
+    cpp_tokens: &[u32],
+    backend_name: &str,
+) -> anyhow::Result<()> {
+    // Check 1: Length parity
+    if rust_tokens.len() != cpp_tokens.len() {
+        anyhow::bail!(
+            "Tokenizer parity mismatch for {}: Rust {} tokens vs C++ {} tokens",
+            backend_name,
+            rust_tokens.len(),
+            cpp_tokens.len()
+        );
+    }
+
+    // Check 2: Token-by-token comparison
+    for (i, (r_token, c_token)) in rust_tokens.iter().zip(cpp_tokens.iter()).enumerate() {
+        if r_token != c_token {
+            anyhow::bail!(
+                "Tokenizer divergence for {} at position {}: Rust token={}, C++ token={}",
+                backend_name,
+                i,
+                r_token,
+                c_token
+            );
+        }
+    }
+
+    Ok(())
+}
+
+/// Validate tokenizer authority consistency between two lanes (AC7)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC7
+///
+/// Ensures that two TokenizerAuthority instances represent the same effective tokenizer
+/// by comparing config hashes and token counts.
+///
+/// # Arguments
+///
+/// * `lane_a` - First TokenizerAuthority to compare
+/// * `lane_b` - Second TokenizerAuthority to compare
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Config hashes differ (different effective tokenizers)
+/// - Token counts differ (sanity check)
+pub fn validate_tokenizer_consistency(
+    lane_a: &TokenizerAuthority,
+    lane_b: &TokenizerAuthority,
+) -> anyhow::Result<()> {
+    // Config hash must match (effective tokenizer is identical)
+    if lane_a.config_hash != lane_b.config_hash {
+        anyhow::bail!(
+            "Tokenizer config mismatch: Lane A hash={}, Lane B hash={}",
+            lane_a.config_hash,
+            lane_b.config_hash
+        );
+    }
+
+    // Token count should match (sanity check)
+    if lane_a.token_count != lane_b.token_count {
+        anyhow::bail!(
+            "Token count mismatch: Lane A={}, Lane B={}",
+            lane_a.token_count,
+            lane_b.token_count
+        );
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -553,5 +697,46 @@ mod tests {
         assert_eq!(loaded.version, receipt.version);
         assert_eq!(loaded.model, receipt.model);
         assert_eq!(loaded.positions, receipt.positions);
+    }
+
+    #[test]
+    fn test_compute_tokenizer_config_hash_determinism() {
+        use super::compute_tokenizer_config_hash;
+
+        let vocab_size = 128000;
+        let special_tokens = vec!["<bos>".to_string(), "<eos>".to_string()];
+
+        let hash1 = compute_tokenizer_config_hash(vocab_size, &special_tokens).unwrap();
+        let hash2 = compute_tokenizer_config_hash(vocab_size, &special_tokens).unwrap();
+
+        assert_eq!(hash1, hash2, "Config hash should be deterministic");
+        assert_eq!(hash1.len(), 64, "SHA256 hash should be 64 hex characters");
+        assert!(
+            hash1.chars().all(|c| c.is_ascii_hexdigit()),
+            "Hash should only contain hex digits"
+        );
+    }
+
+    #[test]
+    fn test_compute_tokenizer_file_hash_determinism() {
+        use super::compute_tokenizer_file_hash;
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        // Create temp file with known content
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        temp_file.write_all(b"test tokenizer content").expect("Failed to write");
+        let temp_path = temp_file.path();
+
+        // Compute hash twice
+        let hash1 = compute_tokenizer_file_hash(temp_path).unwrap();
+        let hash2 = compute_tokenizer_file_hash(temp_path).unwrap();
+
+        assert_eq!(hash1, hash2, "File hash should be deterministic");
+        assert_eq!(hash1.len(), 64, "SHA256 hash should be 64 hex characters");
+        assert!(
+            hash1.chars().all(|c| c.is_ascii_hexdigit()),
+            "Hash should only contain hex digits"
+        );
     }
 }

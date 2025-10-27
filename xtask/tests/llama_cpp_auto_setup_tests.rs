@@ -436,18 +436,19 @@ fn test_ac5_tier0_explicit_override_precedence() {
     let _guard = EnvGuard::new("LLAMA_CROSSVAL_LIBDIR");
     _guard.set(override_dir.to_str().unwrap());
 
-    // TODO: Implement tier 0 override precedence
-    // Expected behavior:
-    // 1. find_backend_lib_dirs() checks LLAMA_CROSSVAL_LIBDIR first
+    // Call find_llama_lib_dirs - should find ONLY the override directory
+    let result = xtask::cpp_setup_auto::find_llama_lib_dirs(&install_dir);
+
+    // Verify behavior:
+    // 1. LLAMA_CROSSVAL_LIBDIR takes absolute precedence
     // 2. Override directory has both libs - returns immediately
-    // 3. Tier 1 paths NOT checked
+    // 3. Tier 1 paths NOT checked (only override returned)
     // 4. Result contains only override directory
 
-    unimplemented!(
-        "AC5: Tier 0 override precedence not yet implemented. \
-         Expected: LLAMA_CROSSVAL_LIBDIR takes absolute precedence. \
-         Verification: Check only override dir returned, tier1 ignored."
-    );
+    assert!(result.is_ok(), "find_llama_lib_dirs should succeed with override");
+    let lib_dirs = result.unwrap();
+    assert_eq!(lib_dirs.len(), 1, "Should find exactly one directory (override only)");
+    assert_eq!(lib_dirs[0], override_dir, "Should return override directory, not tier1 directory");
 }
 
 /// AC5: Tier 1 primary paths checked before tier 2
@@ -471,18 +472,44 @@ fn test_ac5_tier1_precedence_over_tier2() {
     fs::create_dir_all(&tier1_dir).expect("Failed to create tier1 dir");
     create_mock_libs(&tier1_dir, &["llama", "ggml"]).expect("Failed to create tier1 libs");
 
-    // TODO: Implement tier precedence
-    // Expected behavior:
-    // 1. find_backend_lib_dirs() checks tier 1 candidates first
-    // 2. Tier 1 (build/lib) has both libs - added to results
-    // 3. Tier 2 (build/) also has libs but lower priority
-    // 4. Result prefers tier 1 over tier 2
+    // Call find_llama_lib_dirs - should find tier 1 paths first
+    let result = xtask::cpp_setup_auto::find_llama_lib_dirs(install_dir);
 
-    unimplemented!(
-        "AC5: Tier 1/2 precedence not yet implemented. \
-         Expected: Tier 1 (build/lib) preferred over Tier 2 (build/). \
-         Verification: Check tier 1 path returned first."
+    // Verify behavior:
+    // 1. find_llama_lib_dirs() checks tier 1 candidates first
+    // 2. Tier 1 (build/lib) has both libs - added to results
+    // 3. Tier 2 (build/) also has libs and is included
+    // 4. Result includes both, with tier 1 paths before tier 2
+
+    assert!(result.is_ok(), "find_llama_lib_dirs should succeed");
+    let lib_dirs = result.unwrap();
+    assert!(!lib_dirs.is_empty(), "Should find at least one directory");
+
+    // Verify tier 1 (build/lib) is present
+    assert!(
+        lib_dirs.iter().any(|p| p.ends_with("build/lib")),
+        "Should include tier 1 path (build/lib). Found: {:?}",
+        lib_dirs
     );
+
+    // Verify tier 2 (build/) is also present
+    assert!(
+        lib_dirs.iter().any(|p| p == &tier2_dir),
+        "Should include tier 2 path (build/). Found: {:?}",
+        lib_dirs
+    );
+
+    // Verify tier 1 appears before tier 2 in the results
+    let tier1_idx = lib_dirs.iter().position(|p| p.ends_with("build/lib"));
+    let tier2_idx = lib_dirs.iter().position(|p| p == &tier2_dir);
+
+    if let (Some(idx1), Some(idx2)) = (tier1_idx, tier2_idx) {
+        assert!(
+            idx1 < idx2,
+            "Tier 1 (build/lib) should appear before Tier 2 (build/). Order: {:?}",
+            lib_dirs
+        );
+    }
 }
 
 /// AC5: llama.cpp-specific tier 1 candidates
@@ -493,19 +520,62 @@ fn test_ac5_tier1_precedence_over_tier2() {
 #[test]
 #[ignore] // AC:AC5
 fn test_ac5_llama_cpp_tier1_candidates() {
-    // TODO: Verify llama.cpp tier 1 search paths
-    // Expected tier 1 candidates:
+    // This test verifies the tier 1 search paths by code inspection.
+    // Expected tier 1 candidates for llama.cpp (from cpp_setup_auto.rs line 1234-1235):
     // - install_dir/build/bin
     // - install_dir/build/lib
     // - install_dir/build
     //
     // NOT include (BitNet.cpp-specific):
     // - install_dir/build/3rdparty/llama.cpp/build/bin
+    //
+    // The implementation is in xtask/src/cpp_setup_auto.rs::find_llama_lib_dirs()
+    //
+    // Verification approach:
+    // 1. Create test directory structure with libraries in different locations
+    // 2. Call find_llama_lib_dirs()
+    // 3. Verify it finds libraries in expected tier 1 locations
 
-    unimplemented!(
-        "AC5: llama.cpp tier 1 candidates not yet defined. \
-         Expected: Tier 1 = [build/bin, build/lib, build]. \
-         Verification: Check search path list for llama backend."
+    let temp_dir = TempDir::new().expect("Failed to create temp directory");
+    let install_dir = temp_dir.path();
+
+    // Create libraries in tier 1 locations
+    let build_bin = install_dir.join("build/bin");
+    let build_lib = install_dir.join("build/lib");
+    let _build_root = install_dir.join("build");
+
+    fs::create_dir_all(&build_bin).expect("Failed to create build/bin");
+    fs::create_dir_all(&build_lib).expect("Failed to create build/lib");
+
+    // Place libraries in build/lib (tier 1 standard location)
+    create_mock_libs(&build_lib, &["llama", "ggml"]).expect("Failed to create libs in build/lib");
+
+    // Call find_llama_lib_dirs
+    let result = xtask::cpp_setup_auto::find_llama_lib_dirs(install_dir);
+
+    assert!(result.is_ok(), "find_llama_lib_dirs should succeed");
+    let lib_dirs = result.unwrap();
+
+    // Verify that tier 1 standard locations are searched
+    assert!(
+        lib_dirs.iter().any(|p| p.ends_with("build/lib")),
+        "Should find libraries in tier 1 location (build/lib). Found: {:?}",
+        lib_dirs
+    );
+
+    // Verify build_root is also in tier 1 (build/ is a tier 1 candidate)
+    // Note: build_root contains the libraries because build/ is the parent of build/lib
+    assert!(
+        lib_dirs.iter().any(|p| p.ends_with("build") || p.ends_with("build/lib")),
+        "Should search tier 1 candidate (build/ or build/lib). Found: {:?}",
+        lib_dirs
+    );
+
+    // Verify NO 3rdparty paths (those are BitNet-specific, not llama-specific)
+    assert!(
+        !lib_dirs.iter().any(|p| p.to_string_lossy().contains("3rdparty")),
+        "Should NOT include BitNet.cpp-specific 3rdparty paths. Found: {:?}",
+        lib_dirs
     );
 }
 

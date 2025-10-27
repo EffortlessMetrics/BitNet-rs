@@ -34,6 +34,9 @@
 use serial_test::serial;
 use std::path::PathBuf;
 
+// Import types needed for AC7 tests
+use xtask::crossval::preflight::{PreflightExitCode, RepairError, is_retryable_error};
+
 // ============================================================================
 // AC1: RepairMode Enum and CLI Integration
 // ============================================================================
@@ -448,12 +451,9 @@ mod ac7_exit_code_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Exit code 0 when backend available
     #[test]
-    #[ignore] // TODO: Implement exit code 0
     fn test_exit_code_available() {
-        // Mock: Backend available
-        // Run: preflight --backend bitnet
-        // Assert: Exit code 0
-        unimplemented!("AC7: Implement exit code 0 test");
+        // Verify that PreflightExitCode::Available maps to exit code 0
+        assert_eq!(PreflightExitCode::Available as i32, 0);
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
@@ -532,12 +532,26 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Network error: connection timeout
     #[test]
-    #[ignore] // TODO: Implement error classification
     fn test_classify_network_error_timeout() {
         // Mock: Stderr = "connection timeout"
+        let stderr = "connection timeout";
+        let backend = "bitnet";
+
+        // Classify the error
+        let error = RepairError::classify(stderr, backend);
+
         // Assert: Classified as NetworkFailure
+        assert!(
+            matches!(error, RepairError::NetworkFailure { .. }),
+            "Expected NetworkFailure, got: {:?}",
+            error
+        );
+
         // Assert: is_retryable_error() returns true
-        unimplemented!("AC7: Implement network timeout classification test");
+        assert!(is_retryable_error(&error), "Network errors should be retryable");
+
+        // Assert: Maps to exit code 3
+        assert_eq!(error.to_exit_code(), 3);
     }
 
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7

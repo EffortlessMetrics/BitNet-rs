@@ -47,6 +47,199 @@
 #[allow(unused_imports)]
 use bitnet_crossval::backend::CppBackend;
 
+// ============================================================================
+// Stale Build Warning Functions (AC1-AC7)
+// ============================================================================
+
+/// Emit stale build warning when runtime detection succeeds but build-time constants are false
+///
+/// This function provides user-facing warnings when libraries are installed after xtask build.
+/// It uses std::sync::Once for deduplication to ensure warnings appear only once per backend.
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend detected at runtime
+/// * `matched_path` - The directory path where libraries were found
+/// * `verbose` - If true, emit detailed diagnostic output
+///
+/// # Environment Variables
+///
+/// * `VERBOSE` - If set to "1", enables verbose diagnostic output
+fn emit_stale_build_warning(backend: CppBackend, matched_path: &std::path::Path, verbose: bool) {
+    use std::sync::Once;
+
+    // Per-backend deduplication using static Once flags
+    static BITNET_WARNING_EMITTED: Once = Once::new();
+    static LLAMA_WARNING_EMITTED: Once = Once::new();
+
+    let once_flag = match backend {
+        CppBackend::BitNet => &BITNET_WARNING_EMITTED,
+        CppBackend::Llama => &LLAMA_WARNING_EMITTED,
+    };
+
+    once_flag.call_once(|| {
+        if verbose {
+            emit_verbose_stale_warning(backend, matched_path);
+        } else {
+            emit_standard_stale_warning(backend);
+        }
+    });
+}
+
+/// Emit standard one-line stale build warning
+///
+/// Format: Single-line with warning symbol, backend name, and rebuild command
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend detected at runtime
+fn emit_standard_stale_warning(backend: CppBackend) {
+    eprintln!(
+        "⚠️  STALE BUILD: {} found at runtime but not at build time. Rebuild required: cargo clean -p crossval && cargo build -p xtask --features crossval-all",
+        backend.name()
+    );
+}
+
+/// Emit verbose multi-line stale build diagnostic
+///
+/// Provides comprehensive diagnostic information including:
+/// - What happened (libraries found at runtime but not build-time)
+/// - Why rebuild is needed (build-time detection is baked into binary)
+/// - Runtime detection results (matched path, libraries found)
+/// - Build-time state (HAS_BITNET/HAS_LLAMA = false)
+/// - Fix instructions (rebuild command)
+///
+/// # Arguments
+///
+/// * `backend` - The C++ backend detected at runtime
+/// * `matched_path` - The directory path where libraries were found
+fn emit_verbose_stale_warning(backend: CppBackend, matched_path: &std::path::Path) {
+    const SEPARATOR: &str = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    eprintln!("{}", SEPARATOR);
+    eprintln!("⚠️  STALE BUILD DETECTION");
+    eprintln!("{}", SEPARATOR);
+    eprintln!();
+    eprintln!("Backend '{}' found at runtime but not at xtask build time.", backend.name());
+    eprintln!();
+    eprintln!("This happens when:");
+    eprintln!("  1. You built xtask");
+    eprintln!("  2. Then installed {} libraries later", backend.name());
+    eprintln!("  3. xtask binary still contains old detection constants");
+    eprintln!();
+    eprintln!("Why rebuild is needed:");
+    eprintln!("  • Library detection runs at BUILD time (not runtime)");
+    eprintln!("  • Results are baked into the xtask binary as constants");
+    eprintln!("  • Runtime detection is a fallback for developer convenience");
+    eprintln!("  • Rebuild refreshes the constants to match filesystem reality");
+    eprintln!();
+    eprintln!("Runtime Detection Results:");
+    eprintln!("  Matched path: {}", matched_path.display());
+
+    // List libraries found in matched path
+    if let Ok(entries) = std::fs::read_dir(matched_path) {
+        let mut libs = Vec::new();
+        for entry in entries.flatten() {
+            if let Some(name) = entry.path().file_name().and_then(|n| n.to_str()) {
+                if name.starts_with("lib")
+                    && (name.ends_with(".so") || name.ends_with(".dylib") || name.ends_with(".a"))
+                {
+                    libs.push(name.to_string());
+                }
+                #[cfg(target_os = "windows")]
+                if name.ends_with(".dll") {
+                    libs.push(name.to_string());
+                }
+            }
+        }
+        if !libs.is_empty() {
+            eprintln!("  Libraries found: {}", libs.join(", "));
+        }
+    }
+
+    eprintln!();
+    eprintln!("Build-Time Detection State:");
+    eprintln!(
+        "  HAS_{} = false (stale)",
+        match backend {
+            CppBackend::BitNet => "BITNET",
+            CppBackend::Llama => "LLAMA",
+        }
+    );
+
+    eprintln!();
+    eprintln!("Fix:");
+    eprintln!("  cargo clean -p crossval && cargo build -p xtask --features crossval-all");
+    eprintln!();
+    eprintln!("Then re-run your test.");
+}
+
+/// Format CI-mode skip message when runtime detects libraries but build-time constants are stale
+///
+/// Provides clear diagnostic explaining why test is skipped in CI mode and setup instructions.
+///
+/// # Arguments
+///
+/// * `backend` - The backend that is unavailable at build-time
+/// * `matched_path` - Optional matched path where runtime found libraries
+///
+/// # Returns
+///
+/// Formatted skip diagnostic message
+fn format_ci_stale_skip_diagnostic(
+    backend: CppBackend,
+    matched_path: Option<&std::path::Path>,
+) -> String {
+    const SEPARATOR: &str = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+    let mut msg = String::new();
+    msg.push_str(&format!("{}\n", SEPARATOR));
+    msg.push_str(&format!("⊘ Test skipped: {} not available (CI mode)\n", backend.name()));
+    msg.push_str(&format!("{}\n\n", SEPARATOR));
+
+    msg.push_str("CI mode detected (CI=1 or BITNET_TEST_NO_REPAIR=1).\n");
+    msg.push_str("Runtime detection found libraries but build-time constants are stale.\n\n");
+
+    if let Some(path) = matched_path {
+        msg.push_str(&format!("Runtime found libraries at: {}\n", path.display()));
+        msg.push_str("But xtask was built before libraries were installed.\n\n");
+    }
+
+    msg.push_str("In CI mode:\n");
+    msg.push_str("  • Build-time detection is the source of truth\n");
+    msg.push_str("  • Runtime fallback is DISABLED for determinism\n");
+    msg.push_str("  • xtask must be rebuilt to detect libraries\n\n");
+
+    msg.push_str("Setup Instructions:\n");
+    msg.push_str("  1. Install backend:\n");
+    msg.push_str("     eval \"$(cargo run -p xtask -- setup-cpp-auto --emit=sh)\"\n");
+    msg.push_str("  2. Rebuild xtask:\n");
+    msg.push_str("     cargo clean -p crossval && cargo build -p xtask --features crossval-all\n");
+    msg.push_str("  3. Re-run CI job\n");
+
+    msg
+}
+
+/// Check if running in CI environment (for CI-aware behavior)
+///
+/// Checks standard CI environment variables used by major CI/CD platforms.
+///
+/// # Returns
+///
+/// `true` if any CI environment variable is set, `false` otherwise
+fn is_ci() -> bool {
+    std::env::var_os("CI").is_some()
+        || std::env::var_os("GITHUB_ACTIONS").is_some()
+        || std::env::var_os("JENKINS_HOME").is_some()
+        || std::env::var_os("GITLAB_CI").is_some()
+        || std::env::var_os("CIRCLECI").is_some()
+        || std::env::var_os("BITNET_TEST_NO_REPAIR").is_some()
+}
+
+// ============================================================================
+// Backend Availability Checks
+// ============================================================================
+
 /// Ensure backend is available, skip test if not
 ///
 /// This function checks if the specified C++ backend is available. If not,
@@ -67,6 +260,7 @@ use bitnet_crossval::backend::CppBackend;
 ///
 /// - `BITNET_TEST_NO_REPAIR=1`: Disable auto-repair (CI mode)
 /// - `CI=1`: Auto-enable no-repair mode
+/// - `BITNET_REPAIR_ATTEMPTED=1`: Prevent multiple repair attempts
 ///
 /// # Examples
 ///
@@ -81,7 +275,7 @@ use bitnet_crossval::backend::CppBackend;
 pub fn ensure_backend_or_skip(backend: CppBackend) {
     use bitnet_crossval::{HAS_BITNET, HAS_LLAMA};
 
-    // Check build-time constant first
+    // Check build-time constant first (Priority 1)
     let build_time_available = match backend {
         CppBackend::BitNet => HAS_BITNET,
         CppBackend::Llama => HAS_LLAMA,
@@ -91,29 +285,53 @@ pub fn ensure_backend_or_skip(backend: CppBackend) {
         return; // Backend available at build time, continue test
     }
 
-    // Check runtime detection as fallback (in case libraries installed post-build)
-    if let Ok(runtime_available) = detect_backend_runtime(backend) {
+    // Check runtime detection as fallback (Priority 2)
+    if let Ok((runtime_available, matched_path)) = detect_backend_runtime(backend) {
         if runtime_available {
-            print_rebuild_warning(backend);
-            return; // Backend available at runtime, warn about rebuild but continue
+            // STALE BUILD SCENARIO: Runtime found libs but build-time constant is false
+
+            if is_ci() {
+                // CI mode: respect build-time constants only (no runtime override)
+                let skip_msg = format_ci_stale_skip_diagnostic(backend, matched_path.as_deref());
+                panic!("SKIPPED: {}", skip_msg);
+            } else {
+                // Dev mode: allow test to proceed with warning
+                let verbose = std::env::var("VERBOSE").is_ok();
+                if let Some(path) = matched_path {
+                    emit_stale_build_warning(backend, &path, verbose);
+                }
+                return; // Continue execution
+            }
         }
     }
 
-    // Backend unavailable - check if we should attempt repair
-    if !is_ci_or_no_repair() {
-        eprintln!("Attempting auto-repair for {:?} backend...", backend);
-        if let Ok(()) = attempt_auto_repair(backend) {
-            eprintln!("✓ {:?} backend installed.", backend);
-            print_rebuild_instructions(backend);
+    // CI mode: skip immediately (Priority 3)
+    if is_ci_or_no_repair() {
+        panic!("SKIPPED: {}", format_skip_diagnostic(backend, None));
+    }
+
+    // Check if repair already attempted (Priority 4)
+    if std::env::var_os("BITNET_REPAIR_ATTEMPTED").is_some() {
+        panic!("SKIPPED: {}", format_skip_diagnostic(backend, Some("repair already attempted")));
+    }
+
+    // Dev mode: attempt auto-repair (Priority 5)
+    unsafe {
+        std::env::set_var("BITNET_REPAIR_ATTEMPTED", "1");
+    }
+    eprintln!("Attempting auto-repair for {} backend...", backend_name(backend));
+
+    match auto_repair_with_rebuild(backend) {
+        Ok(()) => {
+            eprintln!("✅ {} backend installed and configured.", backend_name(backend));
+            // Backend now available, test can continue
             return;
-        } else {
-            eprintln!("Auto-repair failed.");
+        }
+        Err(e) => {
+            eprintln!("❌ Auto-repair failed: {}", e);
+            panic!("SKIPPED: {}", format_skip_diagnostic(backend, Some(&e.to_string())));
         }
     }
-
-    // Skip test with diagnostic
-    print_skip_diagnostic(backend, None);
-    panic!("SKIPPED: {:?} backend unavailable", backend);
 }
 
 /// Convenience wrapper for BitNet backend
@@ -199,6 +417,129 @@ fn attempt_auto_repair(backend: CppBackend) -> Result<(), String> {
     Ok(())
 }
 
+/// Auto-repair with rebuild (AC1-AC2 implementation)
+///
+/// Performs full auto-repair cycle:
+/// 1. Check recursion guard
+/// 2. Run setup-cpp-auto
+/// 3. Rebuild xtask (optional - may require manual step)
+/// 4. Verify backend available
+///
+/// # Arguments
+///
+/// * `backend` - The backend to repair
+///
+/// # Returns
+///
+/// - `Ok(())` if repair successful and backend now available
+/// - `Err(String)` if repair failed with error message
+#[allow(dead_code)]
+fn auto_repair_with_rebuild(backend: CppBackend) -> Result<(), String> {
+    // Recursion prevention - check if already in repair
+    if std::env::var_os("BITNET_REPAIR_IN_PROGRESS").is_some() {
+        return Err("Recursion detected: repair already in progress".to_string());
+    }
+
+    // Set recursion guard
+    unsafe {
+        std::env::set_var("BITNET_REPAIR_IN_PROGRESS", "1");
+    }
+
+    // Attempt repair
+    let result = attempt_auto_repair(backend);
+
+    // Clear recursion guard
+    unsafe {
+        std::env::remove_var("BITNET_REPAIR_IN_PROGRESS");
+    }
+
+    // Return result
+    result
+}
+
+/// Get backend name as string
+fn backend_name(backend: CppBackend) -> &'static str {
+    match backend {
+        CppBackend::BitNet => "bitnet.cpp",
+        CppBackend::Llama => "llama.cpp",
+    }
+}
+
+/// Format skip diagnostic message without printing
+///
+/// Returns a formatted skip message string with setup instructions.
+///
+/// # Arguments
+///
+/// * `backend` - The backend that is unavailable
+/// * `error_context` - Optional error context string
+///
+/// # Returns
+///
+/// Formatted skip diagnostic message
+#[allow(dead_code)]
+fn format_skip_diagnostic(backend: CppBackend, error_context: Option<&str>) -> String {
+    let mut msg = String::new();
+    msg.push_str(&format!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+    msg.push_str(&format!("⊘ Test skipped: {} not available\n", backend_name(backend)));
+    msg.push_str(&format!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"));
+
+    if let Some(ctx) = error_context {
+        msg.push_str(&format!("\nContext: {}\n", ctx));
+    }
+
+    msg.push_str(&format!("\nThis test requires the {:?} C++ reference backend.\n", backend));
+
+    msg.push_str("\nSetup Instructions:\n");
+    msg.push_str("──────────────────────────────────────────────────────────\n");
+
+    msg.push_str("\n  Option A: Auto-setup (recommended)\n\n");
+    msg.push_str("    1. Install backend:\n");
+    msg.push_str("       eval \"$(cargo run -p xtask -- setup-cpp-auto --emit=sh)\"\n");
+    msg.push_str("\n    2. Rebuild xtask to update detection:\n");
+    msg.push_str(
+        "       cargo clean -p crossval && cargo build -p xtask --features crossval-all\n",
+    );
+    msg.push_str("\n    3. Re-run tests:\n");
+    msg.push_str("       cargo test --workspace --no-default-features --features cpu\n");
+
+    msg.push_str("\n  Option B: Manual setup (advanced)\n\n");
+    match backend {
+        CppBackend::BitNet => {
+            msg.push_str("    1. Clone and build BitNet.cpp:\n");
+            msg.push_str(
+                "       git clone https://github.com/microsoft/BitNet.git ~/.cache/bitnet_cpp\n",
+            );
+            msg.push_str("       cd ~/.cache/bitnet_cpp && mkdir build && cd build\n");
+            msg.push_str("       cmake .. && cmake --build .\n");
+            msg.push_str("\n    2. Set environment variables:\n");
+            msg.push_str("       export BITNET_CPP_DIR=~/.cache/bitnet_cpp\n");
+            msg.push_str(
+                "       export LD_LIBRARY_PATH=~/.cache/bitnet_cpp/build/bin:$LD_LIBRARY_PATH\n",
+            );
+        }
+        CppBackend::Llama => {
+            msg.push_str("    1. Clone and build llama.cpp:\n");
+            msg.push_str(
+                "       git clone https://github.com/ggerganov/llama.cpp.git ~/.cache/llama_cpp\n",
+            );
+            msg.push_str("       cd ~/.cache/llama_cpp && mkdir build && cd build\n");
+            msg.push_str("       cmake .. && cmake --build .\n");
+            msg.push_str("\n    2. Set environment variables:\n");
+            msg.push_str("       export LLAMA_CPP_DIR=~/.cache/llama_cpp\n");
+            msg.push_str(
+                "       export LD_LIBRARY_PATH=~/.cache/llama_cpp/build:$LD_LIBRARY_PATH\n",
+            );
+        }
+    }
+    msg.push_str("\n    3. Rebuild and re-run tests (steps 2-3 from Option A)\n");
+
+    msg.push_str("\nDocumentation: docs/howto/cpp-setup.md\n");
+    msg.push_str("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    msg
+}
+
 /// Print skip diagnostic message
 ///
 /// This prints a standardized skip message to stderr, providing actionable
@@ -210,96 +551,125 @@ fn attempt_auto_repair(backend: CppBackend) -> Result<(), String> {
 /// * `context` - Optional context string (e.g., "CI mode", "auto-repair failed")
 #[allow(dead_code)]
 fn print_skip_diagnostic(backend: CppBackend, context: Option<&str>) {
-    eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    match backend {
-        CppBackend::BitNet => eprintln!("⊘ Test skipped: bitnet.cpp not available"),
-        CppBackend::Llama => eprintln!("⊘ Test skipped: llama.cpp not available"),
-    }
-    eprintln!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-    if let Some(ctx) = context {
-        eprintln!("\nContext: {}", ctx);
-    }
-
-    eprintln!("\nThis test requires the {:?} C++ reference backend.", backend);
-
-    eprintln!("\nSetup Instructions:");
-    eprintln!("──────────────────────────────────────────────────────────");
-
-    eprintln!("\n  Option A: Auto-setup (recommended)\n");
-    eprintln!("    1. Install backend:");
-    eprintln!("       eval \"$(cargo run -p xtask -- setup-cpp-auto --emit=sh)\"");
-    eprintln!("\n    2. Rebuild xtask to update detection:");
-    eprintln!("       cargo clean -p crossval && cargo build -p xtask --features crossval-all");
-    eprintln!("\n    3. Re-run tests:");
-    eprintln!("       cargo test --workspace --no-default-features --features cpu");
-
-    eprintln!("\n  Option B: Manual setup (advanced)\n");
-    match backend {
-        CppBackend::BitNet => {
-            eprintln!("    1. Clone and build BitNet.cpp:");
-            eprintln!(
-                "       git clone https://github.com/microsoft/BitNet.git ~/.cache/bitnet_cpp"
-            );
-            eprintln!("       cd ~/.cache/bitnet_cpp && mkdir build && cd build");
-            eprintln!("       cmake .. && cmake --build .");
-            eprintln!("\n    2. Set environment variables:");
-            eprintln!("       export BITNET_CPP_DIR=~/.cache/bitnet_cpp");
-            eprintln!(
-                "       export LD_LIBRARY_PATH=~/.cache/bitnet_cpp/build/bin:$LD_LIBRARY_PATH"
-            );
-        }
-        CppBackend::Llama => {
-            eprintln!("    1. Clone and build llama.cpp:");
-            eprintln!(
-                "       git clone https://github.com/ggerganov/llama.cpp.git ~/.cache/llama_cpp"
-            );
-            eprintln!("       cd ~/.cache/llama_cpp && mkdir build && cd build");
-            eprintln!("       cmake .. && cmake --build .");
-            eprintln!("\n    2. Set environment variables:");
-            eprintln!("       export LLAMA_CPP_DIR=~/.cache/llama_cpp");
-            eprintln!("       export LD_LIBRARY_PATH=~/.cache/llama_cpp/build:$LD_LIBRARY_PATH");
-        }
-    }
-    eprintln!("\n    3. Rebuild and re-run tests (steps 2-3 from Option A)");
-
-    eprintln!("\nDocumentation: docs/howto/cpp-setup.md");
-    eprintln!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    eprint!("{}", format_skip_diagnostic(backend, context));
 }
 
-/// Detect backend availability at runtime
+/// Runtime backend detection fallback (post-install, pre-rebuild)
 ///
-/// This provides a fallback detection mechanism when libraries were installed
-/// after xtask was built (avoiding full rebuild requirement).
+/// This function provides runtime detection when libraries are installed after xtask build.
+/// It checks multiple sources in priority order:
+///
+/// 1. `BITNET_CROSSVAL_LIBDIR` (explicit override)
+/// 2. Backend-specific granular overrides (`CROSSVAL_RPATH_BITNET`, `CROSSVAL_RPATH_LLAMA`)
+/// 3. Backend home dir + subdirectories (`BITNET_CPP_DIR/build`, `LLAMA_CPP_DIR/build`, etc.)
 ///
 /// # Arguments
 ///
-/// * `backend` - The backend to detect
+/// * `backend` - The C++ backend to detect (BitNet or Llama)
 ///
 /// # Returns
 ///
-/// - `Ok(true)` if libraries found via dynamic loader or environment variables
-/// - `Ok(false)` if libraries not found
-/// - `Err(String)` if detection failed
+/// * `Ok((true, Some(path)))` - Backend libraries found at runtime, with matched path
+/// * `Ok((false, None))` - Backend libraries not found
+/// * `Err(String)` - Error during detection
+///
+/// # Platform-Specific Library Extensions
+///
+/// - Linux: `.so`
+/// - macOS: `.dylib`
+/// - Windows: `.dll`
 #[allow(dead_code)]
-fn detect_backend_runtime(backend: CppBackend) -> Result<bool, String> {
-    // Check environment variable first
-    let env_var = match backend {
+fn detect_backend_runtime(
+    backend: CppBackend,
+) -> Result<(bool, Option<std::path::PathBuf>), String> {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
+    // Priority 1: BITNET_CROSSVAL_LIBDIR (explicit override)
+    if let Ok(p) = std::env::var("BITNET_CROSSVAL_LIBDIR") {
+        candidates.push(p.into());
+    }
+
+    // Priority 2: Granular overrides (backend-specific)
+    match backend {
+        CppBackend::BitNet => {
+            if let Ok(p) = std::env::var("CROSSVAL_RPATH_BITNET") {
+                candidates.push(p.into());
+            }
+        }
+        CppBackend::Llama => {
+            if let Ok(p) = std::env::var("CROSSVAL_RPATH_LLAMA") {
+                candidates.push(p.into());
+            }
+        }
+    }
+
+    // Priority 3: Backend home directory + subdirectories
+    let home_var = match backend {
         CppBackend::BitNet => "BITNET_CPP_DIR",
         CppBackend::Llama => "LLAMA_CPP_DIR",
     };
 
-    if let Ok(dir) = std::env::var(env_var) {
-        let path = std::path::Path::new(&dir);
-        if path.exists() {
-            return Ok(true);
+    if let Ok(root) = std::env::var(home_var) {
+        let root_path = std::path::Path::new(&root);
+        for sub in ["build", "build/bin", "build/lib"] {
+            candidates.push(root_path.join(sub));
         }
     }
 
-    // Could add more sophisticated runtime detection here
-    // (e.g., checking LD_LIBRARY_PATH, searching common install locations)
-    // For now, just rely on environment variable
-    Ok(false)
+    // Check for required library filenames per platform
+    let exts = if cfg!(target_os = "windows") {
+        vec!["dll"]
+    } else if cfg!(target_os = "macos") {
+        vec!["dylib"]
+    } else {
+        vec!["so"]
+    };
+
+    let needs: &[&str] = match backend {
+        CppBackend::BitNet => &["bitnet"],
+        CppBackend::Llama => &["llama", "ggml"],
+    };
+
+    // Check each candidate directory and return first match with path
+    for dir in candidates {
+        if !dir.exists() {
+            continue;
+        }
+
+        // Check if all required libraries are present
+        let all_found = needs.iter().all(|stem| {
+            exts.iter().any(|ext| {
+                let lib_name = format_lib_name_ext(stem, ext);
+                dir.join(&lib_name).exists()
+            })
+        });
+
+        if all_found {
+            return Ok((true, Some(dir)));
+        }
+    }
+
+    Ok((false, None))
+}
+
+/// Format library name with specific extension (helper for runtime detection)
+///
+/// # Arguments
+///
+/// * `stem` - Library name stem (e.g., "bitnet", "llama")
+/// * `ext` - File extension (e.g., "so", "dylib", "dll")
+///
+/// # Returns
+///
+/// Formatted library name:
+/// - Windows: `{stem}.{ext}` (e.g., "bitnet.dll")
+/// - Unix: `lib{stem}.{ext}` (e.g., "libbitnet.so")
+fn format_lib_name_ext(stem: &str, ext: &str) -> String {
+    if cfg!(target_os = "windows") {
+        format!("{}.{}", stem, ext)
+    } else {
+        format!("lib{}.{}", stem, ext)
+    }
 }
 
 /// Print rebuild warning when runtime detection differs from build-time

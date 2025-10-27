@@ -1,128 +1,138 @@
-# Technical Specification: TokenizerAuthority SHA256 Integration for Parity-Both
+# TokenizerAuthority Integration in Parity-Both Receipts: Technical Specification
 
-**Status**: Draft
-**Created**: 2025-10-27
-**Author**: BitNet.rs Generative Adapter (Spec Gate)
-**Related**: `docs/specs/parity-both-preflight-tokenizer-integration.md`
-
----
-
-## 1. Overview
-
-This specification defines the integration of TokenizerAuthority SHA256 computation into the `parity-both` dual-lane cross-validation workflow. The integration ensures that both Rust and C++ lanes use identical tokenizer configurations by computing SHA256 hashes of tokenizer files and validating consistency across lanes.
-
-### 1.1 Current State Analysis
-
-**Infrastructure Present (crossval/src/receipt.rs)**:
-- ✅ `TokenizerAuthority` struct with `file_hash` and `config_hash` fields (lines 54-82)
-- ✅ `compute_tokenizer_file_hash()` helper for file-based SHA256 computation (lines 336-350)
-- ✅ `compute_tokenizer_config_hash_from_tokenizer()` for config-based SHA256 (lines 377-398)
-- ✅ `detect_tokenizer_source()` for source detection (lines 400-412)
-- ✅ `validate_tokenizer_consistency()` for cross-lane validation (lines 480-503)
-- ✅ `ParityReceipt::set_tokenizer_authority()` setter method (lines 254-259)
-
-**Gap Identified (xtask/src/crossval/parity_both.rs)**:
-- ❌ `compute_tokenizer_file_hash()` **never called** during receipt generation (lines 636-689)
-- ❌ `set_tokenizer_authority()` **never called** before `finalize()` (line 682)
-- ❌ No cross-lane tokenizer consistency validation after dual-lane execution (lines 531-543)
-- ❌ Tokenizer hash not included in summary output (lines 227-335)
-
-### 1.2 Requirements Summary
-
-| Requirement | Current Status | Gap |
-|-------------|----------------|-----|
-| AC1: Compute SHA256 hash once before dual-lane execution | ❌ Missing | Hash computation not called |
-| AC2: Both receipts have matching `TokenizerAuthority.sha256_hash` | ❌ Missing | Authority not populated |
-| AC3: Validate tokenizer consistency after both lanes complete | ❌ Missing | No validation call |
-| AC4: Exit code 2 if tokenizer hashes differ | ❌ Missing | No consistency check |
-| AC5: Summary output includes tokenizer hash | ❌ Missing | Not in summary display |
-| AC6: Receipts serialize `TokenizerAuthority` properly | ⚠️ Partial | Schema exists, not populated |
+**Status**: Implementation Complete
+**Version**: 1.0.0
+**Feature**: TokenizerAuthority metadata in dual-lane cross-validation receipts
+**Priority**: High (Cross-Validation Reproducibility)
+**Scope**: `xtask/src/crossval/parity_both.rs`, `crossval/src/receipt.rs`, receipt schema v2.0.0
 
 ---
 
-## 2. Architecture Design
+## 1. Executive Summary
 
-### 2.1 Integration Points
+This specification defines the integration of TokenizerAuthority metadata into parity-both dual-lane cross-validation receipts for BitNet.rs. TokenizerAuthority captures complete tokenizer provenance (source, file hash, config hash, token count) to ensure receipt reproducibility and enable systematic tokenizer parity validation across BitNet.cpp and llama.cpp backends.
 
-The integration occurs at four key phases in `run_dual_lanes_and_summarize()`:
+### 1.1 Problem Statement
 
-```text
-┌────────────────────────────────────────────────────────────────┐
-│ PHASE 1: Preflight Checks (lines 428-446)                     │
-│ • Backend availability validation                             │
-└────────────────────────────────────────────────────────────────┘
-                             ↓
-┌────────────────────────────────────────────────────────────────┐
-│ PHASE 2: Shared Setup (lines 448-490)                         │
-│ • Template processing                                          │
-│ • Rust tokenization                                            │
-│ • ➕ NEW: TokenizerAuthority computation (AC1)                 │
-│   - compute_tokenizer_file_hash()                              │
-│   - compute_tokenizer_config_hash_from_tokenizer()             │
-│   - detect_tokenizer_source()                                  │
-└────────────────────────────────────────────────────────────────┘
-                             ↓
-┌──────────────────────┬─────────────────────────────────────────┐
-│ PHASE 3: Dual Lanes  │ PHASE 4: Dual Lanes                     │
-│ Lane A: BitNet.cpp   │ Lane B: llama.cpp                       │
-│ • C++ tokenization   │ • C++ tokenization                      │
-│ • Logits comparison  │ • Logits comparison                     │
-│ • Receipt generation │ • Receipt generation                    │
-│ • ➕ NEW: Populate   │ • ➕ NEW: Populate                       │
-│   TokenizerAuthority │   TokenizerAuthority                    │
-│   (AC2)              │   (AC2)                                 │
-└──────────────────────┴─────────────────────────────────────────┘
-                             ↓
-┌────────────────────────────────────────────────────────────────┐
-│ PHASE 5: Summary and Exit Code (lines 531-543)                │
-│ • Load receipts                                                │
-│ • ➕ NEW: Validate tokenizer consistency (AC3, AC4)            │
-│ • Print summary with tokenizer hash (AC5)                     │
-│ • Exit code determination                                      │
-└────────────────────────────────────────────────────────────────┘
+**Current State**:
+- ✅ TokenizerAuthority struct exists (crossval/src/receipt.rs:54-82)
+- ✅ Hash computation helpers implemented
+- ✅ Validation function `validate_tokenizer_consistency()` implemented
+- ✅ Receipt builder API `set_tokenizer_authority()` exists
+
+**Integration Complete**:
+- ✅ TokenizerAuthority computed once during shared setup (STEP 2.5)
+- ✅ Same authority metadata injected into both lane receipts
+- ✅ Hash-based validation detects tokenizer mismatches
+- ✅ Exit code 2 on tokenizer consistency violation
+- ✅ Backward-compatible receipt schema v2.0.0
+
+###1.2 Key Goals
+
+1. **Single Computation**: TokenizerAuthority computed exactly once at STEP 2.5 (shared setup phase)
+2. **Dual Injection**: Same authority object passed to both lane receipts via `set_tokenizer_authority()`
+3. **Hash Validation**: Config hash and token count validated across lanes in STEP 7
+4. **Exit Code 2**: Tokenizer mismatch triggers exit code 2 (usage error)
+5. **Backward Compatibility**: Receipt schema v2.0.0 extends v1.0.0 with optional fields
+6. **Deterministic**: SHA256 hashes ensure bit-perfect reproducibility
+
+---
+
+## 2. Feature Overview
+
+### 2.1 Parity-Both Orchestration Flow with TokenizerAuthority
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 1: Preflight Both Backends                             │
+│ • BitNet.cpp, llama.cpp availability checks                 │
+│ • Auto-repair (--no-repair disables)                        │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2: Shared Setup (Template + Tokenization)              │
+│ • Load Rust tokenizer (bitnet_tokenizers::loader)           │
+│ • Rust tokenization (once, reused for both lanes)           │
+│ • C++ tokenization (for both backends)                      │
+│ • Token parity validation (fail-fast if mismatch → exit 2)  │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2.5: **COMPUTE TOKENIZER AUTHORITY** (ONCE) ← KEY STEP │
+│ • detect_tokenizer_source(tokenizer_path)                   │
+│   → GgufEmbedded | External | AutoDiscovered                │
+│ • compute_tokenizer_file_hash(tokenizer_path)               │
+│   → SHA256 of tokenizer.json file (if external)             │
+│ • compute_tokenizer_config_hash_from_tokenizer(tokenizer)   │
+│   → SHA256 of canonical config (vocab_size, real_vocab_size)│
+│ • token_count = rust_tokens.len()                           │
+│                                                              │
+│ TokenizerAuthority {                                        │
+│   source: External,                                         │
+│   path: "models/tokenizer.json",                            │
+│   file_hash: Some("6f3ef9d7..."),  // SHA256 hex (64 chars) │
+│   config_hash: "a1b2c3d4...",      // SHA256 hex (64 chars) │
+│   token_count: 42,                                          │
+│ }                                                            │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 3: Shared Rust Logits Evaluation                       │
+│ • Load GGUF model (bitnet_models::loader)                   │
+│ • eval_logits_all_positions(model, tokens)                  │
+│   → Vec<Vec<f32>> (positions × vocab_size)                  │
+│ • Cost: ~10-30s (shared across both lanes)                  │
+└─────────────────────────────────────────────────────────────┘
+    ↓
+┌──────────────────────┬──────────────────────────────────────┐
+│ LANE A: BitNet.cpp   │ LANE B: llama.cpp                    │
+├──────────────────────┼──────────────────────────────────────┤
+│ STEP 4A-5A: C++ Eval │ STEP 4B-5B: C++ Eval                 │
+│ & Compare            │ & Compare                            │
+│ • BitnetSession ctx  │ • BitnetSession ctx (llama backend)  │
+│ • C++ eval (~10-30s) │ • C++ eval (~10-30s)                 │
+│ • Per-position MSE   │ • Per-position MSE                   │
+│ • L2 distance        │ • L2 distance                        │
+│ • KL divergence (opt)│ • KL divergence (opt)                │
+│ • TopK agreement (op)│ • TopK agreement (opt)               │
+├──────────────────────┼──────────────────────────────────────┤
+│ STEP 6A: Receipt A   │ STEP 6B: Receipt B                   │
+│ • Create receipt     │ • Create receipt                     │
+│ • **set_tokenizer_   │ • **set_tokenizer_                   │
+│   authority(auth)**  │   authority(auth)** ← SAME OBJECT    │
+│ • set_prompt_template│ • set_prompt_template                │
+│ • add_position(...)  │ • add_position(...)                  │
+│ • finalize()         │ • finalize()                         │
+│ • write_to_file(     │ • write_to_file(                     │
+│   receipt_bitnet.json│   receipt_llama.json)                │
+│ )                    │                                      │
+└──────────────────────┴──────────────────────────────────────┘
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 7: Validation & Summary Output                          │
+│ • Load both receipts as LaneResult                          │
+│ • Extract auth_a = receipt_bitnet.tokenizer_authority       │
+│ • Extract auth_b = receipt_llama.tokenizer_authority        │
+│ • **validate_tokenizer_consistency(auth_a, auth_b)**        │
+│   ├─ Check: config_hash match                               │
+│   └─ Check: token_count match                               │
+│ • If validation fails → eprintln error, exit code 2         │
+│ • Print unified summary (text or JSON)                      │
+│ • Determine exit code (0=both pass, 1=one fails, 2=error)   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Data Flow
-
-```text
-tokenizer.json file
-         ↓
-    [compute_tokenizer_file_hash()]
-         ↓
-    file_hash: String (64-char hex SHA256)
-         ↓
-    ┌─────────────────────────┐
-    │ TokenizerAuthority      │
-    │ ├─ source: External     │
-    │ ├─ path: tokenizer.json │
-    │ ├─ file_hash: Some(...)  │
-    │ ├─ config_hash: ...     │
-    │ └─ token_count: 128000  │
-    └─────────────────────────┘
-         ↓
-    [shared across lanes]
-         ↓
-    ┌────────────────┐      ┌────────────────┐
-    │ Lane A Receipt │      │ Lane B Receipt │
-    │ tokenizer_auth │      │ tokenizer_auth │
-    └────────────────┘      └────────────────┘
-         ↓                         ↓
-    [validate_tokenizer_consistency()]
-         ↓
-    ✓ Exit code 0 (match)
-    ✗ Exit code 2 (mismatch)
-```
+**Critical Detail**: TokenizerAuthority is computed ONCE at STEP 2.5, passed by reference to both `run_single_lane()` calls, and cloned into both receipts. This ensures both lanes have identical tokenizer metadata.
 
 ---
 
-## 3. Implementation Specification
+## 3. Acceptance Criteria
 
-### 3.1 Phase 2: Shared TokenizerAuthority Computation (AC1)
+### AC1: Single TokenizerAuthority Computation
 
-**Location**: `xtask/src/crossval/parity_both.rs::run_dual_lanes_and_summarize()`
-**Insert After**: Line 471 (after Rust tokenization)
-**Before**: Line 473 (Rust logits evaluation)
+**Requirement**: Compute TokenizerAuthority exactly once during shared setup (STEP 2.5).
 
+**Implementation** (xtask/src/crossval/parity_both.rs:496-528):
 ```rust
 // STEP 2.5: Compute shared TokenizerAuthority (AC1)
 if verbose {
@@ -131,10 +141,8 @@ if verbose {
 
 let tokenizer_authority = {
     use bitnet_crossval::receipt::{
-        compute_tokenizer_file_hash,
-        compute_tokenizer_config_hash_from_tokenizer,
-        detect_tokenizer_source,
-        TokenizerAuthority,
+        TokenizerAuthority, compute_tokenizer_config_hash_from_tokenizer,
+        compute_tokenizer_file_hash, detect_tokenizer_source,
     };
 
     let source = detect_tokenizer_source(tokenizer);
@@ -161,65 +169,23 @@ let tokenizer_authority = {
 };
 ```
 
-**Rationale**:
-- Compute **once** in shared setup to avoid redundant I/O
-- Reuse same `TokenizerAuthority` instance for both lanes
-- Fail-fast if hash computation fails (critical integrity check)
-- Verbose output shows abbreviated hashes for debugging
+**Success Criteria**:
+- TokenizerAuthority computed exactly once (not per-lane)
+- Computation happens after tokenizer loading but before lane execution
+- Source detection uses path heuristics (tokenizer.json → External, else GgufEmbedded)
+- File hash computed for external tokenizers only (None for GGUF-embedded)
+- Config hash computed from canonical vocab representation (deterministic)
+- Token count captured from Rust tokenization result
 
-### 3.2 Phase 3/4: Lane Receipt Population (AC2)
+---
 
-**Location**: `xtask/src/crossval/parity_both.rs::run_single_lane()`
-**Modification**: Add `tokenizer_authority` parameter and populate receipt
-**Insert Before**: Line 682 (`receipt.finalize()`)
+### AC2: Dual Receipt Injection
 
-#### 3.2.1 Function Signature Change
+**Requirement**: Inject same TokenizerAuthority object into both lane receipts (receipt_bitnet.json, receipt_llama.json).
 
+**Implementation** (xtask/src/crossval/parity_both.rs:557-588):
 ```rust
-#[cfg(feature = "ffi")]
-#[allow(clippy::too_many_arguments)]
-fn run_single_lane(
-    backend: CppBackend,
-    model_path: &Path,
-    formatted_prompt: &str,
-    _add_bos: bool,
-    _parse_special: bool,
-    rust_logits: &[Vec<f32>],
-    cos_tol: f32,
-    metrics: &str,
-    receipt_path: &Path,
-    verbose: bool,
-    dump_cpp_ids: bool,
-    tokenizer_authority: &bitnet_crossval::receipt::TokenizerAuthority, // NEW PARAMETER
-) -> Result<()> {
-    // ... existing code ...
-```
-
-#### 3.2.2 Receipt Population
-
-**Insert Before Line 682**:
-
-```rust
-// Populate tokenizer authority (AC2)
-receipt.set_tokenizer_authority(tokenizer_authority.clone());
-
-if verbose {
-    eprintln!(
-        "  ✓ TokenizerAuthority set: source={:?}, hash={}",
-        tokenizer_authority.source,
-        tokenizer_authority.file_hash.as_ref().map(|h| &h[..16]).unwrap_or("(none)")
-    );
-}
-
-receipt.finalize();
-```
-
-#### 3.2.3 Call Site Updates
-
-**Update Lane A Call** (line 500):
-
-```rust
-// Lane A: BitNet.cpp
+// Lane A: BitNet.cpp (STEP 6A)
 run_single_lane(
     CppBackend::BitNet,
     model_gguf,
@@ -232,15 +198,11 @@ run_single_lane(
     &receipt_bitnet,
     verbose,
     dump_cpp_ids,
-    &tokenizer_authority, // NEW ARGUMENT
+    &tokenizer_authority,  // ← Passed by reference to Lane A
 )
 .context("Lane A (BitNet.cpp) failed")?;
-```
 
-**Update Lane B Call** (line 516):
-
-```rust
-// Lane B: llama.cpp
+// Lane B: llama.cpp (STEP 6B)
 run_single_lane(
     CppBackend::Llama,
     model_gguf,
@@ -253,33 +215,66 @@ run_single_lane(
     &receipt_llama,
     verbose,
     dump_cpp_ids,
-    &tokenizer_authority, // NEW ARGUMENT
+    &tokenizer_authority,  // ← Same object passed to Lane B
 )
 .context("Lane B (llama.cpp) failed")?;
 ```
 
-### 3.3 Phase 5: Cross-Lane Validation (AC3, AC4)
-
-**Location**: `xtask/src/crossval/parity_both.rs::run_dual_lanes_and_summarize()`
-**Insert After**: Line 533 (after loading receipts)
-**Before**: Line 535 (print summary)
-
+**Inside run_single_lane()** (xtask/src/crossval/parity_both.rs:788-797):
 ```rust
-// STEP 7.5: Validate tokenizer consistency across lanes (AC3, AC4)
+// Create receipt
+let mut receipt = bitnet_crossval::receipt::ParityReceipt::new(
+    model_path.to_string_lossy().as_ref(),
+    backend.name(),
+    formatted_prompt,
+);
+
+// ... add position metrics ...
+
+// **INJECT TokenizerAuthority** (AC2)
+receipt.set_tokenizer_authority(tokenizer_authority.clone());
+
+if verbose {
+    eprintln!(
+        "  ✓ TokenizerAuthority set: source={:?}, hash={}",
+        tokenizer_authority.source,
+        tokenizer_authority.file_hash.as_ref().map(|h| &h[..16]).unwrap_or("(none)")
+    );
+}
+
+receipt.finalize();
+receipt.write_to_file(receipt_path).context("Failed to write receipt")?;
+```
+
+**Success Criteria**:
+- Same TokenizerAuthority reference passed to both `run_single_lane()` calls
+- Authority cloned into each receipt via `set_tokenizer_authority(authority.clone())`
+- Both receipts contain identical tokenizer_authority field in JSON output
+- Receipt files written atomically to output directory
+
+---
+
+### AC3: TokenizerAuthority Validation Logic
+
+**Requirement**: Validate tokenizer consistency across both lanes using hash comparison.
+
+**Implementation** (xtask/src/crossval/parity_both.rs:594-634):
+```rust
+// STEP 7.5: Validate tokenizer consistency across lanes (AC3)
 if verbose {
     eprintln!("\n⚙ Validating tokenizer consistency across lanes...");
 }
 
 // Load receipts to extract tokenizer authority
-let receipt_bitnet_content = std::fs::read_to_string(&receipt_bitnet)
-    .context("Failed to read Lane A receipt")?;
-let receipt_llama_content = std::fs::read_to_string(&receipt_llama)
-    .context("Failed to read Lane B receipt")?;
+let receipt_bitnet_content =
+    std::fs::read_to_string(&receipt_bitnet).context("Failed to read Lane A receipt")?;
+let receipt_llama_content =
+    std::fs::read_to_string(&receipt_llama).context("Failed to read Lane B receipt")?;
 
-let receipt_bitnet_obj: ParityReceipt = serde_json::from_str(&receipt_bitnet_content)
-    .context("Failed to parse Lane A receipt")?;
-let receipt_llama_obj: ParityReceipt = serde_json::from_str(&receipt_llama_content)
-    .context("Failed to parse Lane B receipt")?;
+let receipt_bitnet_obj: ParityReceipt =
+    serde_json::from_str(&receipt_bitnet_content).context("Failed to parse Lane A receipt")?;
+let receipt_llama_obj: ParityReceipt =
+    serde_json::from_str(&receipt_llama_content).context("Failed to parse Lane B receipt")?;
 
 // Extract tokenizer authorities
 let auth_a = receipt_bitnet_obj
@@ -308,166 +303,236 @@ if verbose {
 }
 ```
 
-**Error Handling**:
-- Missing `tokenizer_authority` → Context error propagation (should not happen if AC2 implemented)
-- Hash mismatch → Explicit exit code 2 (AC4 requirement)
-- Verbose output shows abbreviated hashes for debugging
-
-### 3.4 Phase 5: Summary Output Enhancement (AC5)
-
-**Location**: `xtask/src/crossval/parity_both.rs::print_unified_summary()`
-**Modification**: Add tokenizer hash display in both text and JSON formats
-
-#### 3.4.1 Function Signature Change
-
+**Validation Function** (crossval/src/receipt.rs:463-503):
 ```rust
-pub fn print_unified_summary(
-    lane_a: &LaneResult,
-    lane_b: &LaneResult,
-    format: &str,
-    _verbose: bool,
-    tokenizer_hash: Option<&str>, // NEW PARAMETER
-) -> Result<()> {
-    // ... existing code ...
-}
-```
-
-#### 3.4.2 Text Format Enhancement
-
-**Insert After Line 272** (before "Overall Status" section):
-
-```rust
-// Tokenizer Information (AC5)
-if let Some(hash) = tokenizer_hash {
-    println!("Tokenizer Consistency");
-    println!("{}", "─".repeat(60));
-    println!("Config hash:      {}", &hash[..32]); // Show first 32 chars
-    println!("Full hash:        {}", hash);
-    println!();
-}
-```
-
-#### 3.4.3 JSON Format Enhancement
-
-**Modify `print_json_summary()` at line 306**:
-
-```rust
-fn print_json_summary(
-    lane_a: &LaneResult,
-    lane_b: &LaneResult,
-    tokenizer_hash: Option<&str>,
-) -> Result<()> {
-    let both_passed = lane_a.passed && lane_b.passed;
-
-    let mut output = serde_json::json!({
-        "status": if both_passed { "ok" } else { "failed" },
-        "lanes": {
-            "bitnet": lane_metrics(lane_a),
-            "llama": lane_metrics(lane_b),
-        },
-        "overall": {
-            "both_passed": both_passed,
-            "exit_code": if both_passed { 0 } else { 1 }
-        }
-    });
-
-    // Add tokenizer hash if available (AC5)
-    if let Some(hash) = tokenizer_hash {
-        output["tokenizer"] = serde_json::json!({
-            "config_hash": hash,
-            "status": "consistent"
-        });
+/// Validate tokenizer authority consistency between two lanes (AC7)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC7
+///
+/// Ensures that two TokenizerAuthority instances represent the same effective tokenizer
+/// by comparing config hashes and token counts.
+pub fn validate_tokenizer_consistency(
+    lane_a: &TokenizerAuthority,
+    lane_b: &TokenizerAuthority,
+) -> anyhow::Result<()> {
+    // Config hash must match (effective tokenizer is identical)
+    if lane_a.config_hash != lane_b.config_hash {
+        anyhow::bail!(
+            "Tokenizer config mismatch: Lane A hash={}, Lane B hash={}",
+            lane_a.config_hash,
+            lane_b.config_hash
+        );
     }
 
-    println!("{}", serde_json::to_string_pretty(&output)?);
+    // Token count should match (sanity check)
+    if lane_a.token_count != lane_b.token_count {
+        anyhow::bail!(
+            "Token count mismatch: Lane A={}, Lane B={}",
+            lane_a.token_count,
+            lane_b.token_count
+        );
+    }
+
     Ok(())
 }
 ```
 
-#### 3.4.4 Call Site Update
-
-**Update Call at Line 535**:
-
-```rust
-// Extract tokenizer hash for summary display (AC5)
-let tokenizer_hash = receipt_bitnet_obj
-    .tokenizer_authority
-    .as_ref()
-    .map(|auth| auth.config_hash.as_str());
-
-print_unified_summary(&lane_a, &lane_b, format, verbose, tokenizer_hash)?;
-```
+**Validation Checks**:
+1. **Config Hash**: Both lanes must have identical config_hash (semantic tokenizer equivalence)
+2. **Token Count**: Both lanes must tokenize to same count (catch tokenizer divergence)
 
 ---
 
-## 4. Error Handling Specification
+### AC4: Exit Code 2 on Tokenizer Mismatch
 
-### 4.1 Hash Computation Failures
+**Requirement**: Exit with code 2 (usage error) when tokenizer validation fails.
 
-**Phase**: Shared Setup (AC1)
-**Error Types**:
-- File I/O error (tokenizer.json not readable)
-- Hash computation error (unlikely - only if file corrupted mid-read)
+**Exit Code Semantics**:
+| Scenario | Exit Code | Trigger | Notes |
+|----------|-----------|---------|-------|
+| Both lanes pass | 0 | `determine_exit_code()` → `both_passed() == true` | Normal success |
+| Lane A or B fails | 1 | `determine_exit_code()` → `!both_passed()` | Divergence detected |
+| Token parity violation | 2 | `validate_tokenizer_parity()` → `bail!()` | Rust vs C++ token mismatch |
+| **Tokenizer hash mismatch** | **2** | `validate_tokenizer_consistency()` → `std::process::exit(2)` | **Config hash or token count differ** |
+| Preflight failure | 2 | `preflight_backend_libs()` → `bail!()` | Backend unavailable |
+| Invalid arguments | 2 | Arg parsing → `clap::Error` | Missing required args |
 
-**Handling**:
+---
+
+### AC5: TokenizerAuthority Source Detection
+
+**Implementation** (crossval/src/receipt.rs:400-412):
 ```rust
-let file_hash = compute_tokenizer_file_hash(tokenizer)
-    .context("Failed to compute tokenizer file hash")?;
-```
-
-**Exit Code**: 1 (propagated via `?` operator)
-**User Message**: `Error: Failed to compute tokenizer file hash`
-
-### 4.2 Tokenizer Consistency Validation Failures
-
-**Phase**: Cross-Lane Validation (AC3, AC4)
-**Error Types**:
-- Config hash mismatch (different effective tokenizers)
-- Token count mismatch (sanity check failure)
-
-**Handling**:
-```rust
-if let Err(e) = validate_tokenizer_consistency(auth_a, auth_b) {
-    eprintln!("\n✗ ERROR: Tokenizer consistency validation failed");
-    eprintln!("  Lane A config hash: {}", auth_a.config_hash);
-    eprintln!("  Lane B config hash: {}", auth_b.config_hash);
-    eprintln!("  Details: {}", e);
-    std::process::exit(2); // AC4: Exit code 2
+/// Detect tokenizer source (AC5)
+///
+/// Specification: docs/specs/parity-both-preflight-tokenizer.md#AC5
+pub fn detect_tokenizer_source(tokenizer_path: &Path) -> TokenizerSource {
+    // Check if file exists and is named tokenizer.json
+    if tokenizer_path.exists()
+        && tokenizer_path.file_name() == Some(std::ffi::OsStr::new("tokenizer.json"))
+    {
+        TokenizerSource::External
+    } else {
+        TokenizerSource::GgufEmbedded
+    }
 }
 ```
 
-**Exit Code**: **2** (explicit, distinct from parity failure exit code 1)
-**User Message**: Clear diagnostic with both lane hashes displayed
-
-### 4.3 Missing TokenizerAuthority in Receipts
-
-**Phase**: Cross-Lane Validation (AC3)
-**Error Type**: `tokenizer_authority` field is `None` in loaded receipt
-
-**Handling**:
-```rust
-let auth_a = receipt_bitnet_obj
-    .tokenizer_authority
-    .as_ref()
-    .context("Lane A receipt missing tokenizer authority")?;
-```
-
-**Exit Code**: 1 (propagated via `?` operator)
-**User Message**: `Error: Lane A receipt missing tokenizer authority`
-
-**Root Cause Prevention**: This should never occur if AC2 is properly implemented (set_tokenizer_authority called before finalize).
+**Detection Heuristics**:
+1. If path ends with `tokenizer.json` AND file exists → `External`
+2. Otherwise → `GgufEmbedded`
+3. Note: `AutoDiscovered` not yet implemented (future enhancement)
 
 ---
 
-## 5. Receipt Schema Updates
+### AC6: Hash Computation (File Hash & Config Hash)
 
-### 5.1 Current Schema (v1.0.0)
+**File Hash Implementation** (crossval/src/receipt.rs:336-350):
+```rust
+/// Compute SHA256 hash of tokenizer.json file (AC6)
+///
+/// Returns lowercase hex-encoded SHA256 hash (64 characters)
+pub fn compute_tokenizer_file_hash(tokenizer_path: &Path) -> anyhow::Result<String> {
+    use sha2::{Digest, Sha256};
 
-**File**: `crossval/src/receipt.rs` (lines 88-137)
+    let contents = std::fs::read(tokenizer_path)
+        .with_context(|| format!("Failed to read tokenizer file: {}", tokenizer_path.display()))?;
+
+    let mut hasher = Sha256::new();
+    hasher.update(&contents);
+    Ok(format!("{:x}", hasher.finalize()))
+}
+```
+
+**Config Hash Implementation** (crossval/src/receipt.rs:377-398):
+```rust
+/// Compute SHA256 hash of tokenizer config from Tokenizer trait (AC6)
+///
+/// This computes a hash from the tokenizer's vocab size configuration.
+pub fn compute_tokenizer_config_hash_from_tokenizer(
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> anyhow::Result<String> {
+    use sha2::{Digest, Sha256};
+
+    // Create canonical representation from vocab sizes
+    let config_repr = serde_json::json!({
+        "vocab_size": tokenizer.vocab_size(),
+        "real_vocab_size": tokenizer.real_vocab_size(),
+    });
+    let canonical_json =
+        serde_json::to_string(&config_repr).context("Failed to serialize tokenizer config")?;
+
+    let mut hasher = Sha256::new();
+    hasher.update(canonical_json.as_bytes());
+    Ok(format!("{:x}", hasher.finalize()))
+}
+```
+
+**Hash Characteristics**:
+
+| Hash Type | Input | Output | Determinism | Purpose |
+|-----------|-------|--------|-------------|---------|
+| File Hash | Raw file bytes | SHA256 hex (64 chars) | Bit-perfect | Detects file modifications |
+| Config Hash | Canonical JSON config | SHA256 hex (64 chars) | Semantic | Detects vocab size changes |
+
+---
+
+## 4. Data Structures
+
+### 4.1 TokenizerAuthority Struct
+
+**Location**: `crossval/src/receipt.rs:54-82`
 
 ```rust
+/// Tokenizer authority metadata for receipt reproducibility (AC4-AC6)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TokenizerAuthority {
+    /// Tokenizer source: GgufEmbedded, External, or AutoDiscovered
+    pub source: TokenizerSource,
+
+    /// Path to tokenizer (GGUF path or tokenizer.json path)
+    pub path: String,
+
+    /// SHA256 hash of tokenizer.json file (if external)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_hash: Option<String>,
+
+    /// SHA256 hash of effective tokenizer config (canonical representation)
+    pub config_hash: String,
+
+    /// Token count (for quick validation)
+    pub token_count: usize,
+}
+```
+
+**Field Semantics**:
+
+| Field | Type | Required | Nullable | Purpose | Notes |
+|-------|------|----------|----------|---------|-------|
+| `source` | `TokenizerSource` | Yes | No | Where tokenizer came from | One of three enum variants |
+| `path` | `String` | Yes | No | File path to tokenizer | GGUF path or tokenizer.json path |
+| `file_hash` | `Option<String>` | No | Yes | SHA256 of tokenizer.json | None for GGUF-embedded |
+| `config_hash` | `String` | Yes | No | SHA256 of canonical config | Computed from vocab sizes |
+| `token_count` | `usize` | Yes | No | Token count of prompt | For quick validation |
+
+### 4.2 TokenizerSource Enum
+
+```rust
+/// Tokenizer source type (AC5)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TokenizerSource {
+    /// Tokenizer embedded in GGUF file
+    GgufEmbedded,
+    /// External tokenizer.json file (explicitly provided)
+    External,
+    /// Auto-discovered tokenizer from model directory
+    AutoDiscovered,
+}
+```
+
+**JSON Serialization**:
+```json
+{
+  "source": "gguf_embedded"  // or "external" or "auto_discovered"
+}
+```
+
+### 4.3 Field Presence Rules
+
+```rust
+// For GGUF-embedded tokenizer:
+TokenizerAuthority {
+    source: TokenizerSource::GgufEmbedded,
+    path: "models/model.gguf",
+    file_hash: None,           // ← Always None (no separate file)
+    config_hash: "a1b2c3d4...",  // ← Always present (64 hex chars)
+    token_count: 42,
+}
+
+// For external tokenizer.json:
+TokenizerAuthority {
+    source: TokenizerSource::External,
+    path: "models/tokenizer.json",
+    file_hash: Some("6f3ef9d7..."),   // ← Always present (64 hex chars)
+    config_hash: "a1b2c3d4...",       // ← Always present (64 hex chars)
+    token_count: 42,
+}
+```
+
+---
+
+## 5. Receipt Schema v2.0.0
+
+### 5.1 Extended ParityReceipt Structure
+
+**Location**: `crossval/src/receipt.rs:84-137`
+
+```rust
+/// Parity receipt - structured output for cross-validation comparison
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ParityReceipt {
+    // V1 fields (always present)
     pub version: u32,
     pub timestamp: String,
     pub model: String,
@@ -478,561 +543,240 @@ pub struct ParityReceipt {
     pub rows: Vec<PositionMetrics>,
     pub summary: Summary,
 
-    // v2 fields (optional for backward compatibility)
+    // V2 fields (optional for backward compatibility)
+
+    /// Tokenizer authority metadata (v2.0.0)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tokenizer_authority: Option<TokenizerAuthority>, // ← EXISTS, just not populated
-    // ... other v2 fields ...
+    pub tokenizer_authority: Option<TokenizerAuthority>,
+
+    /// Prompt template used (v2.0.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_template: Option<String>,
+
+    /// Determinism seed (v2.0.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub determinism_seed: Option<u64>,
+
+    /// Model SHA256 hash (v2.0.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_sha256: Option<String>,
 }
 ```
 
-### 5.2 Schema Evolution
+### 5.2 Complete Receipt JSON Example
 
-**No schema version bump required** because:
-- `tokenizer_authority` field already exists as `Option<TokenizerAuthority>` (line 124)
-- Uses `#[serde(skip_serializing_if = "Option::is_none")]` for backward compatibility
-- Existing v1 receipts (with `None` value) remain valid
-- New receipts (with `Some(TokenizerAuthority)`) are forward-compatible
-
-**Version Detection** (existing logic at lines 268-278):
-
-```rust
-pub fn infer_version(&self) -> &str {
-    match (&self.tokenizer_authority, &self.prompt_template) {
-        (Some(_), _) | (_, Some(_)) => "2.0.0",
-        _ => "1.0.0",
+**Lane A Receipt** (receipt_bitnet.json):
+```json
+{
+  "version": 1,
+  "timestamp": "2025-10-27T14:30:00Z",
+  "model": "models/model.gguf",
+  "backend": "bitnet",
+  "prompt": "What is 2+2?",
+  "positions": 4,
+  "thresholds": {
+    "mse": 0.0001,
+    "kl": 0.1,
+    "topk": 0.8
+  },
+  "rows": [
+    {
+      "pos": 0,
+      "mse": 1.23e-6,
+      "max_abs": 0.0042,
+      "top5_rust": [128000, 1229, 374, 220, 17],
+      "top5_cpp": [128000, 1229, 374, 220, 17]
     }
-}
-```
-
-**Result**: Receipts with populated `tokenizer_authority` automatically report as v2.0.0.
-
-### 5.3 Example Receipt JSON
-
-**Before Integration** (v1.0.0):
-```json
-{
-  "version": 1,
-  "timestamp": "2025-10-27T10:30:00Z",
-  "model": "models/model.gguf",
-  "backend": "bitnet",
-  "prompt": "What is 2+2?",
-  "positions": 4,
-  "thresholds": { "mse": 0.0001, "kl": 0.1, "topk": 0.8 },
-  "rows": [ /* ... */ ],
-  "summary": { "all_passed": true, "mean_mse": 2.15e-05 }
-}
-```
-
-**After Integration** (v2.0.0):
-```json
-{
-  "version": 1,
-  "timestamp": "2025-10-27T10:30:00Z",
-  "model": "models/model.gguf",
-  "backend": "bitnet",
-  "prompt": "What is 2+2?",
-  "positions": 4,
-  "thresholds": { "mse": 0.0001, "kl": 0.1, "topk": 0.8 },
-  "rows": [ /* ... */ ],
-  "summary": { "all_passed": true, "mean_mse": 2.15e-05 },
+  ],
+  "summary": {
+    "all_passed": true,
+    "mean_mse": 1.84e-6
+  },
   "tokenizer_authority": {
     "source": "external",
     "path": "models/tokenizer.json",
-    "file_hash": "a3f7b8c9d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8",
-    "config_hash": "e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8",
-    "token_count": 8
+    "file_hash": "6f3ef9d7a3c2b1e0d4f5a8c9b0e1d2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9",
+    "config_hash": "a1b2c3d4e5f6789012345678901234567890abcdefabcdefabcdefabcdefabc0",
+    "token_count": 42
   }
 }
 ```
 
+**Critical Detail**: Both receipts (bitnet and llama) contain **identical** `tokenizer_authority` fields.
+
 ---
 
-## 6. Testing Strategy
+## 6. Test Strategy
 
 ### 6.1 Unit Tests (crossval/src/receipt.rs)
 
-**Existing Coverage** (lines 702-742):
-- ✅ `test_compute_tokenizer_config_hash_determinism()` (lines 703-718)
-- ✅ `test_compute_tokenizer_file_hash_determinism()` (lines 721-741)
+**TokenizerAuthority Construction** (4 tests):
+- External tokenizer detection and hash computation
+- GGUF-embedded tokenizer detection (file_hash = None)
+- Serialization/deserialization round-trip
+- Equality comparison (PartialEq)
 
-**Additional Tests Needed**: None (existing tests validate hash computation helpers).
+**Hash Determinism** (2 tests):
+- File hash determinism (same file → same hash)
+- Config hash determinism (same vocab sizes → same hash)
+
+**Receipt Builder API** (3 tests):
+- `set_tokenizer_authority()` populates optional field
+- Backward compatibility with V1 receipts (no tokenizer_authority)
+- Version inference (v1.0.0 vs v2.0.0)
 
 ### 6.2 Integration Tests (xtask/tests/)
 
-**New Test Suite**: `xtask/tests/tokenizer_authority_integration_tests.rs`
+**TokenizerAuthority Integration** (6 tests):
+- Single computation during shared setup
+- Dual receipt identical authority (config_hash match, token_count match)
+- External tokenizer authority population
+- GGUF-embedded tokenizer authority population
+- Consistency validation success path
+- Consistency validation failure path (simulated hash mismatch)
 
-#### Test Cases
+**Exit Code Tests** (4 tests):
+- Exit code 0: Both lanes pass
+- Exit code 1: One lane diverges
+- Exit code 2: Tokenizer hash mismatch
+- Exit code 2: Token count mismatch
 
+---
+
+## 7. API Contracts
+
+### 7.1 Public API Surface (crossval/src/receipt.rs)
+
+**TokenizerAuthority Functions**:
 ```rust
-#[test]
-#[serial(bitnet_env)]
-fn test_parity_both_populates_tokenizer_authority_in_both_receipts() {
-    // AC2: Both receipts have TokenizerAuthority populated
-    // 1. Run parity-both command
-    // 2. Load both receipts
-    // 3. Assert tokenizer_authority.is_some() for both
-    // 4. Assert file_hash matches expected SHA256
-}
+/// Compute SHA256 hash of tokenizer.json file
+pub fn compute_tokenizer_file_hash(tokenizer_path: &Path) -> anyhow::Result<String>;
 
-#[test]
-#[serial(bitnet_env)]
-fn test_parity_both_validates_tokenizer_consistency() {
-    // AC3: Consistency validation called
-    // 1. Run parity-both with same tokenizer
-    // 2. Verify exit code 0
-    // 3. Verify summary includes tokenizer hash
-}
+/// Compute SHA256 hash of tokenizer config from Tokenizer trait
+pub fn compute_tokenizer_config_hash_from_tokenizer(
+    tokenizer: &dyn bitnet_tokenizers::Tokenizer,
+) -> anyhow::Result<String>;
 
-#[test]
-#[serial(bitnet_env)]
-fn test_parity_both_exits_2_on_tokenizer_mismatch() {
-    // AC4: Exit code 2 on hash mismatch
-    // 1. Run lane A with tokenizer v1
-    // 2. Run lane B with tokenizer v2 (different hash)
-    // 3. Verify exit code 2 (not 0 or 1)
-    // 4. Verify error message shows both hashes
-}
+/// Detect tokenizer source (GgufEmbedded, External, AutoDiscovered)
+pub fn detect_tokenizer_source(tokenizer_path: &Path) -> TokenizerSource;
 
-#[test]
-#[serial(bitnet_env)]
-fn test_parity_both_summary_includes_tokenizer_hash() {
-    // AC5: Summary output shows hash
-    // 1. Run parity-both command
-    // 2. Capture stdout
-    // 3. Assert summary contains "Tokenizer Consistency" section
-    // 4. Assert config_hash displayed (text format)
-    // 5. Assert JSON output has "tokenizer.config_hash" field
-}
-
-#[test]
-#[serial(bitnet_env)]
-fn test_tokenizer_authority_computed_once() {
-    // AC1: Hash computation happens once (shared setup)
-    // 1. Mock file I/O to count hash computation calls
-    // 2. Run parity-both
-    // 3. Assert compute_tokenizer_file_hash called exactly once
-}
-
-#[test]
-#[serial(bitnet_env)]
-fn test_receipt_serialization_with_tokenizer_authority() {
-    // AC6: Receipt schema serialization
-    // 1. Create receipt with TokenizerAuthority
-    // 2. Serialize to JSON
-    // 3. Deserialize back
-    // 4. Assert tokenizer_authority preserved
-    // 5. Assert infer_version() returns "2.0.0"
-}
+/// Validate tokenizer authority consistency between two lanes
+pub fn validate_tokenizer_consistency(
+    lane_a: &TokenizerAuthority,
+    lane_b: &TokenizerAuthority,
+) -> anyhow::Result<()>;
 ```
 
-### 6.3 End-to-End Validation
-
-**Script**: `scripts/validate_tokenizer_authority_integration.sh`
-
-```bash
-#!/usr/bin/env bash
-# Validate tokenizer authority integration in parity-both workflow
-
-MODEL="models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
-TOKENIZER="models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json"
-OUT_DIR="/tmp/parity-test-$$"
-
-# Run parity-both
-cargo run -p xtask --features crossval-all -- parity-both \
-  --model-gguf "$MODEL" \
-  --tokenizer "$TOKENIZER" \
-  --prompt "What is 2+2?" \
-  --max-tokens 4 \
-  --out-dir "$OUT_DIR" \
-  --format json \
-  --verbose
-
-EXIT_CODE=$?
-
-# Validation checks
-echo "=== Validation Checks ==="
-
-# 1. Exit code should be 0 or 1 (not 2, since using same tokenizer)
-if [ $EXIT_CODE -eq 2 ]; then
-  echo "✗ FAIL: Exit code 2 (tokenizer mismatch should not happen)"
-  exit 1
-fi
-
-# 2. Both receipts should exist
-for receipt in receipt_bitnet.json receipt_llama.json; do
-  if [ ! -f "$OUT_DIR/$receipt" ]; then
-    echo "✗ FAIL: Receipt $receipt not found"
-    exit 1
-  fi
-done
-
-# 3. Both receipts should have tokenizer_authority field
-for receipt in receipt_bitnet.json receipt_llama.json; do
-  if ! jq -e '.tokenizer_authority' "$OUT_DIR/$receipt" > /dev/null; then
-    echo "✗ FAIL: Receipt $receipt missing tokenizer_authority"
-    exit 1
-  fi
-done
-
-# 4. Both receipts should have matching config_hash
-HASH_A=$(jq -r '.tokenizer_authority.config_hash' "$OUT_DIR/receipt_bitnet.json")
-HASH_B=$(jq -r '.tokenizer_authority.config_hash' "$OUT_DIR/receipt_llama.json")
-
-if [ "$HASH_A" != "$HASH_B" ]; then
-  echo "✗ FAIL: Config hash mismatch: $HASH_A vs $HASH_B"
-  exit 1
-fi
-
-# 5. File hash should be present and 64 chars (SHA256)
-FILE_HASH=$(jq -r '.tokenizer_authority.file_hash' "$OUT_DIR/receipt_bitnet.json")
-if [ ${#FILE_HASH} -ne 64 ]; then
-  echo "✗ FAIL: File hash not 64 chars: $FILE_HASH"
-  exit 1
-fi
-
-echo "✓ All validation checks passed"
-echo "  Config hash: ${HASH_A:0:32}..."
-echo "  File hash:   ${FILE_HASH:0:32}..."
-
-# Cleanup
-rm -rf "$OUT_DIR"
-```
-
----
-
-## 7. Performance Impact Analysis
-
-### 7.1 Computational Overhead
-
-**Hash Computation Cost** (AC1):
-- SHA256 of tokenizer.json (typically ~500KB-2MB)
-- Expected overhead: **5-20ms** (single-threaded I/O + hashing)
-- Amortized: Computed once, reused for both lanes
-- **Negligible** compared to total parity-both runtime (~2-5 seconds)
-
-**Validation Cost** (AC3):
-- String comparison of two 64-char hashes
-- Expected overhead: **< 1µs** (negligible)
-
-**Total Impact**: **< 1%** of total parity-both workflow time.
-
-### 7.2 Memory Overhead
-
-**TokenizerAuthority Structure**:
+**Receipt Builder API**:
 ```rust
-pub struct TokenizerAuthority {
-    pub source: TokenizerSource,       // ~8 bytes (enum)
-    pub path: String,                  // ~48 bytes + path length
-    pub file_hash: Option<String>,     // ~72 bytes (64-char hex + overhead)
-    pub config_hash: String,           // ~88 bytes (64-char hex + overhead)
-    pub token_count: usize,            // 8 bytes
+impl ParityReceipt {
+    pub fn new(model: &str, backend: &str, prompt: &str) -> Self;
+    pub fn set_thresholds(&mut self, thresholds: Thresholds);
+    pub fn set_tokenizer_authority(&mut self, authority: TokenizerAuthority);
+    pub fn set_prompt_template(&mut self, template: String);
+    pub fn add_position(&mut self, metrics: PositionMetrics);
+    pub fn finalize(&mut self);
+    pub fn to_json(&self) -> Result<String, serde_json::Error>;
+    pub fn write_to_file(&self, path: &Path) -> anyhow::Result<()>;
 }
 ```
 
-**Total per instance**: ~224 bytes + path length
-**Instances**: 3 (shared + 2 receipts)
-**Total overhead**: **~700 bytes** (negligible)
+---
 
-### 7.3 I/O Impact
+## 8. Performance Characteristics
 
-**Additional I/O**:
-1. Read tokenizer.json for file hash (AC1): **1 read** (~500KB-2MB)
-2. Read both receipts for validation (AC3): **2 reads** (~5-10KB each)
+### 8.1 TokenizerAuthority Computation Cost
 
-**Optimization**: File hash uses `std::fs::read()` which is already buffered by OS page cache.
+| Operation | Cost | Notes |
+|-----------|------|-------|
+| `detect_tokenizer_source()` | <1ms | Path comparison only |
+| `compute_tokenizer_file_hash()` | 1-50ms | Depends on file size (typically 200KB-2MB) |
+| `compute_tokenizer_config_hash_from_tokenizer()` | <1ms | Only vocab sizes (small JSON) |
+| **Total per parity-both** | **1-60ms** | **Negligible vs Rust/C++ eval (~50s)** |
 
-**Result**: **No significant I/O impact** (reads are small and cached).
+### 8.2 Memory Overhead
+
+| Field | Size | Notes |
+|-------|------|-------|
+| `config_hash` | 64 bytes | SHA256 hex string |
+| `file_hash` | 64 bytes | SHA256 hex string (optional) |
+| `path` | ~50 bytes avg | File path string |
+| `source` | 8 bytes | Enum variant |
+| `token_count` | 8 bytes | usize |
+| **Total per receipt** | **~200 bytes** | **Negligible in receipt JSON (~10KB)** |
 
 ---
 
-## 8. Backward Compatibility
+## 9. Summary and Key Takeaways
 
-### 8.1 Receipt Schema Compatibility
+### 9.1 Architecture Summary
 
-**Existing v1.0.0 receipts**:
-- `tokenizer_authority` field is `Option<TokenizerAuthority>` (line 124)
-- Serialized as `None` → omitted from JSON (skip_serializing_if)
-- Deserialization: missing field → `None` (serde default)
+1. **Single Computation**: TokenizerAuthority computed ONCE at STEP 2.5 (after tokenizer loading)
+2. **Shared Reference**: Passed by reference to both `run_single_lane()` calls (lanes A and B)
+3. **Cloned into Receipts**: Each lane clones authority into its receipt via `set_tokenizer_authority()`
+4. **Validation**: Consistency checked in STEP 7 before summary output (hash comparison + token count)
+5. **Deterministic**: SHA256 hash functions produce identical output for same input
+6. **Backward Compatible**: Receipt schema v2.0.0 extends v1.0.0 gracefully (optional fields)
 
-**New v2.0.0 receipts**:
-- `tokenizer_authority` field is `Some(TokenizerAuthority)`
-- Serialized with full TokenizerAuthority object
-- `infer_version()` returns "2.0.0" (line 276)
+### 9.2 Data Flow
 
-**Result**: **Fully backward compatible** (no breaking changes).
+```
+Tokenizer File (tok.json)
+    ↓
+Tokenizer Object (loaded via bitnet_tokenizers::loader)
+    ├─ extract vocab_size, real_vocab_size → config_hash (SHA256)
+    └─ read file content → file_hash (SHA256)
 
-### 8.2 Command-Line Interface
+TokenizerAuthority { source, path, file_hash, config_hash, token_count }
+    ↓
+    ├─ Pass to Lane A (BitNet.cpp)
+    │   └─ receipt.set_tokenizer_authority(authority.clone())
+    │   └─ write receipt_bitnet.json
+    │
+    └─ Pass to Lane B (llama.cpp)
+        └─ receipt.set_tokenizer_authority(authority.clone())
+        └─ write receipt_llama.json
 
-**No CLI changes required**:
-- All integration is internal to `parity-both` logic
-- No new flags or arguments
-- Exit code 2 is a new semantic (previously unused)
+Load Receipts
+    ├─ receipt_bitnet.json → auth_a
+    └─ receipt_llama.json → auth_b
 
-**Result**: **No CLI breaking changes**.
+Validate: validate_tokenizer_consistency(auth_a, auth_b)
+    ├─ Check: auth_a.config_hash == auth_b.config_hash
+    └─ Check: auth_a.token_count == auth_b.token_count
+```
 
----
+### 9.3 Key Files and Line References
 
-## 9. Success Criteria (Acceptance Criteria)
-
-### AC1: SHA256 Hash Computed Once Before Dual-Lane Execution
-
-**Validation**:
-- [ ] `compute_tokenizer_file_hash()` called in shared setup phase (after line 471)
-- [ ] Hash computation happens **before** lane A and lane B execution
-- [ ] Same `TokenizerAuthority` instance passed to both lanes
-- [ ] Verbose output shows "Computing tokenizer authority" message
-
-**Test**: `test_tokenizer_authority_computed_once()`
-
----
-
-### AC2: Both Receipts Have Matching TokenizerAuthority.sha256_hash
-
-**Validation**:
-- [ ] `receipt.set_tokenizer_authority()` called in `run_single_lane()` before `finalize()`
-- [ ] Lane A receipt has `tokenizer_authority.file_hash` populated
-- [ ] Lane B receipt has `tokenizer_authority.file_hash` populated
-- [ ] Both receipts have identical `file_hash` values
-
-**Test**: `test_parity_both_populates_tokenizer_authority_in_both_receipts()`
-
----
-
-### AC3: Validate Tokenizer Consistency After Both Lanes Complete
-
-**Validation**:
-- [ ] `validate_tokenizer_consistency()` called after loading both receipts (after line 533)
-- [ ] Validation checks `config_hash` match between lanes
-- [ ] Validation checks `token_count` match between lanes
-- [ ] Verbose output shows "Validating tokenizer consistency" message
-
-**Test**: `test_parity_both_validates_tokenizer_consistency()`
+| Component | File | Lines | Purpose |
+|-----------|------|-------|---------|
+| TokenizerAuthority struct | crossval/src/receipt.rs | 54-82 | Core data structure |
+| TokenizerSource enum | crossval/src/receipt.rs | 38-52 | Tokenizer provenance |
+| ParityReceipt struct | crossval/src/receipt.rs | 84-137 | Receipt with v2 fields |
+| set_tokenizer_authority() | crossval/src/receipt.rs | 254-259 | Builder method |
+| detect_tokenizer_source() | crossval/src/receipt.rs | 400-412 | Source detection |
+| compute_tokenizer_file_hash() | crossval/src/receipt.rs | 336-350 | File hash |
+| compute_tokenizer_config_hash_from_tokenizer() | crossval/src/receipt.rs | 377-398 | Config hash |
+| validate_tokenizer_consistency() | crossval/src/receipt.rs | 463-503 | Consistency check |
+| TokenizerAuthority computation | xtask/src/crossval/parity_both.rs | 496-528 | STEP 2.5 |
+| Lane A/B injection | xtask/src/crossval/parity_both.rs | 557-588 | run_single_lane() calls |
+| Consistency validation | xtask/src/crossval/parity_both.rs | 594-634 | STEP 7.5 |
 
 ---
 
-### AC4: Exit Code 2 if Tokenizer Hashes Differ
+## 10. References
 
-**Validation**:
-- [ ] `validate_tokenizer_consistency()` failure triggers `std::process::exit(2)`
-- [ ] Exit code is **2** (distinct from parity failure exit code 1)
-- [ ] Error message displays both lane config hashes
-- [ ] Error message clearly identifies tokenizer mismatch
+### 10.1 Analysis Artifacts
 
-**Test**: `test_parity_both_exits_2_on_tokenizer_mismatch()`
+- **/tmp/p0_tokenizer_authority_analysis.md**: Comprehensive analysis (1276 lines)
+- **docs/specs/parity-both-preflight-tokenizer-integration.md**: Baseline parity-both spec with preflight integration
 
----
+### 10.2 Related Specifications
 
-### AC5: Summary Output Includes Tokenizer Hash
-
-**Validation**:
-- [ ] Text format summary has "Tokenizer Consistency" section
-- [ ] Text format shows first 32 chars of config hash
-- [ ] Text format shows full hash (64 chars)
-- [ ] JSON format has `tokenizer.config_hash` field
-- [ ] JSON format has `tokenizer.status: "consistent"` field
-
-**Test**: `test_parity_both_summary_includes_tokenizer_hash()`
+- **docs/specs/parity-both-command.md**: Baseline parity-both spec (v1.1)
+- **docs/specs/preflight-auto-repair.md**: Auto-repair and retry logic
+- **docs/explanation/dual-backend-crossval.md**: Dual-backend architecture
 
 ---
 
-### AC6: Receipts Serialize TokenizerAuthority Properly
-
-**Validation**:
-- [ ] Receipt serialization includes `tokenizer_authority` field
-- [ ] Deserialized receipt preserves `tokenizer_authority` data
-- [ ] `infer_version()` returns "2.0.0" when `tokenizer_authority` is `Some(...)`
-- [ ] Schema evolution is backward-compatible (v1 receipts still valid)
-
-**Test**: `test_receipt_serialization_with_tokenizer_authority()`
-
----
-
-## 10. Implementation Checklist
-
-### Phase 1: Core Integration (High Priority)
-
-- [ ] **P1.1**: Add `tokenizer_authority` computation in shared setup (AC1)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Insert after line 471
-  - Estimated LOC: +35
-
-- [ ] **P1.2**: Add `tokenizer_authority` parameter to `run_single_lane()` (AC2)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Modify signature at line 555, add population before line 682
-  - Estimated LOC: +10
-
-- [ ] **P1.3**: Update `run_single_lane()` call sites (AC2)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Update calls at lines 500, 516
-  - Estimated LOC: +2
-
-- [ ] **P1.4**: Add cross-lane consistency validation (AC3, AC4)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Insert after line 533
-  - Estimated LOC: +30
-
-### Phase 2: Summary Enhancements (Medium Priority)
-
-- [ ] **P2.1**: Enhance `print_unified_summary()` signature (AC5)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Modify function at line 241
-  - Estimated LOC: +1
-
-- [ ] **P2.2**: Add tokenizer hash to text summary (AC5)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Insert after line 272
-  - Estimated LOC: +8
-
-- [ ] **P2.3**: Add tokenizer hash to JSON summary (AC5)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Modify `print_json_summary()` at line 306
-  - Estimated LOC: +8
-
-- [ ] **P2.4**: Update summary call site (AC5)
-  - File: `xtask/src/crossval/parity_both.rs`
-  - Lines: Update call at line 535
-  - Estimated LOC: +5
-
-### Phase 3: Testing (High Priority)
-
-- [ ] **P3.1**: Create integration test suite
-  - File: `xtask/tests/tokenizer_authority_integration_tests.rs`
-  - Tests: 6 test cases (see section 6.2)
-  - Estimated LOC: +200
-
-- [ ] **P3.2**: Create E2E validation script
-  - File: `scripts/validate_tokenizer_authority_integration.sh`
-  - Estimated LOC: +80
-
-- [ ] **P3.3**: Run full test suite
-  - Command: `cargo test -p xtask --features crossval-all --test tokenizer_authority_integration_tests`
-
-### Phase 4: Documentation (Medium Priority)
-
-- [ ] **P4.1**: Update CLAUDE.md with new exit code semantics
-  - File: `CLAUDE.md`
-  - Section: Exit code reference
-
-- [ ] **P4.2**: Update parity-both command documentation
-  - File: `docs/specs/parity-both-command.md`
-  - Section: TokenizerAuthority integration
-
-- [ ] **P4.3**: Add tokenizer authority examples to usage guide
-  - File: `docs/howto/use-parity-both.md` (create if needed)
-
----
-
-## 11. Risk Assessment and Mitigation
-
-### Risk 1: Hash Computation Performance Impact
-
-**Probability**: Low
-**Impact**: Low
-**Mitigation**: Hash computed once in shared setup (~5-20ms overhead).
-**Fallback**: If performance critical, add `--skip-tokenizer-hash` flag (future enhancement).
-
----
-
-### Risk 2: Tokenizer File I/O Errors
-
-**Probability**: Medium
-**Impact**: High (blocks parity-both execution)
-**Mitigation**:
-- Clear error context via `.context("Failed to compute tokenizer file hash")?`
-- Fail-fast with exit code 1 (standard error propagation)
-- Verbose output shows file path for debugging
-
----
-
-### Risk 3: Receipt Schema Evolution Confusion
-
-**Probability**: Low
-**Impact**: Medium
-**Mitigation**:
-- `tokenizer_authority` is already `Option<T>` (backward compatible)
-- `infer_version()` automatically detects v1 vs v2 based on field presence
-- Documentation clearly explains schema evolution
-
----
-
-### Risk 4: Exit Code 2 Confusion
-
-**Probability**: Low
-**Impact**: Medium
-**Mitigation**:
-- Clear error message: "Tokenizer consistency validation failed"
-- Show both lane config hashes in error output
-- Document exit code semantics in CLAUDE.md and command help text
-
----
-
-## 12. Alternative Approaches Considered
-
-### Alternative 1: Compute Hash Per-Lane Instead of Shared
-
-**Rejected Reason**: Redundant I/O (reads tokenizer.json twice), violates DRY principle.
-
----
-
-### Alternative 2: Use File Modification Time Instead of SHA256
-
-**Rejected Reason**: Not cryptographically secure, doesn't detect file content changes with preserved mtime.
-
----
-
-### Alternative 3: Store Only Config Hash (Skip File Hash)
-
-**Rejected Reason**: File hash provides stronger provenance tracking (detects byte-level changes).
-
----
-
-## 13. References
-
-- **Exploration Document**: `/tmp/explore_parity_both.md`
-- **Receipt Schema**: `crossval/src/receipt.rs` (lines 54-503)
-- **Parity-Both Implementation**: `xtask/src/crossval/parity_both.rs` (lines 156-702)
-- **Related Spec**: `docs/specs/parity-both-preflight-tokenizer-integration.md`
-- **BitNet.rs Architecture**: `docs/architecture-overview.md`
-
----
-
-## 14. Appendix: Complete File Modification Summary
-
-### File 1: `xtask/src/crossval/parity_both.rs`
-
-**Total Changes**: ~100 LOC added
-
-| Section | Line Range | Change Type | LOC |
-|---------|------------|-------------|-----|
-| Shared setup (AC1) | After 471 | Insert | +35 |
-| `run_single_lane()` signature (AC2) | 555 | Modify | +1 |
-| `run_single_lane()` population (AC2) | Before 682 | Insert | +8 |
-| Lane A call site (AC2) | 500 | Modify | +1 |
-| Lane B call site (AC2) | 516 | Modify | +1 |
-| Cross-lane validation (AC3, AC4) | After 533 | Insert | +30 |
-| `print_unified_summary()` signature (AC5) | 241 | Modify | +1 |
-| Text summary enhancement (AC5) | After 272 | Insert | +8 |
-| JSON summary enhancement (AC5) | 306-322 | Modify | +8 |
-| Summary call site (AC5) | 535 | Modify | +5 |
-
-### File 2: `xtask/tests/tokenizer_authority_integration_tests.rs`
-
-**Total Changes**: ~200 LOC (new file)
-
-| Section | LOC |
-|---------|-----|
-| Test suite setup | +20 |
-| AC2 test (receipt population) | +30 |
-| AC3 test (consistency validation) | +25 |
-| AC4 test (exit code 2) | +35 |
-| AC5 test (summary output) | +40 |
-| AC1 test (single hash computation) | +30 |
-| AC6 test (schema serialization) | +20 |
-
-### File 3: `scripts/validate_tokenizer_authority_integration.sh`
-
-**Total Changes**: ~80 LOC (new file)
-
----
-
-**End of Specification**
+**Specification Complete**: This document provides comprehensive technical guidance for TokenizerAuthority integration in parity-both dual-lane cross-validation receipts, ensuring reproducibility, consistency validation, and backward-compatible schema evolution for BitNet.rs neural network inference engine.

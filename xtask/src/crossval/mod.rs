@@ -1,6 +1,7 @@
 //! Cross-validation support modules
 
 pub mod backend;
+pub mod locking;
 pub mod preflight;
 
 #[cfg(any(feature = "crossval", feature = "crossval-all", feature = "inference"))]
@@ -13,8 +14,12 @@ pub use backend::CppBackend;
 pub use preflight::preflight_backend_libs;
 
 // Export preflight_with_auto_repair for auto-repair functionality
+#[cfg(any(feature = "crossval", feature = "crossval-all"))]
+pub use preflight::preflight_with_auto_repair;
 
 // Export RepairMode and retry logic for auto-repair
+#[cfg(any(feature = "crossval", feature = "crossval-all"))]
+pub use preflight::{PreflightExitCode, RepairError, RepairMode, is_retryable_error};
 
 // print_backend_status is only used by crossval/crossval-all commands
 #[cfg(any(feature = "crossval", feature = "crossval-all"))]

@@ -146,7 +146,7 @@ pub struct ParityBothArgs {
     pub cos_tol: f64,
     pub out_dir: PathBuf,
     pub format: String,
-    pub auto_repair: bool,
+    pub no_repair: bool,
     pub dump_ids: bool,
     pub dump_cpp_ids: bool,
     pub metrics: String,
@@ -174,6 +174,7 @@ pub fn run(args: &ParityBothArgs) -> Result<()> {
 
     #[cfg(feature = "ffi")]
     {
+        let auto_repair = !args.no_repair;
         run_dual_lanes_and_summarize(
             &args.model_gguf,
             &args.tokenizer,
@@ -184,7 +185,7 @@ pub fn run(args: &ParityBothArgs) -> Result<()> {
             args.prompt_template.to_template_type(),
             args.system_prompt.as_deref(),
             &args.out_dir,
-            args.auto_repair,
+            auto_repair,
             args.verbose,
             args.dump_ids,
             args.dump_cpp_ids,
@@ -233,6 +234,7 @@ impl LaneResult {
 /// * `lane_b` - Result from Lane B (llama.cpp)
 /// * `format` - Output format ("text" or "json")
 /// * `_verbose` - Show detailed progress (currently unused in summary)
+/// * `tokenizer_hash` - Optional tokenizer config hash for display (AC5)
 ///
 /// # Errors
 ///
@@ -242,9 +244,10 @@ pub fn print_unified_summary(
     lane_b: &LaneResult,
     format: &str,
     _verbose: bool,
+    tokenizer_hash: Option<&str>,
 ) -> Result<()> {
     if format == "json" {
-        return print_json_summary(lane_a, lane_b);
+        return print_json_summary(lane_a, lane_b, tokenizer_hash);
     }
 
     // Text format (default)
@@ -263,6 +266,15 @@ pub fn print_unified_summary(
     println!("{}", "─".repeat(60));
     print_lane_summary(lane_b);
     println!();
+
+    // Tokenizer Information (AC5)
+    if let Some(hash) = tokenizer_hash {
+        println!("Tokenizer Consistency");
+        println!("{}", "─".repeat(60));
+        println!("Config hash:      {}", &hash[..32]); // Show first 32 chars
+        println!("Full hash:        {}", hash);
+        println!();
+    }
 
     // Overall Status
     println!("Overall Status");
@@ -302,10 +314,14 @@ fn print_overall_status(lane_a: &LaneResult, lane_b: &LaneResult) {
 }
 
 /// Print JSON format summary
-fn print_json_summary(lane_a: &LaneResult, lane_b: &LaneResult) -> Result<()> {
+fn print_json_summary(
+    lane_a: &LaneResult,
+    lane_b: &LaneResult,
+    tokenizer_hash: Option<&str>,
+) -> Result<()> {
     let both_passed = lane_a.passed && lane_b.passed;
 
-    let output = serde_json::json!({
+    let mut output = serde_json::json!({
         "status": if both_passed { "ok" } else { "failed" },
         "lanes": {
             "bitnet": lane_metrics(lane_a),
@@ -316,6 +332,14 @@ fn print_json_summary(lane_a: &LaneResult, lane_b: &LaneResult) -> Result<()> {
             "exit_code": if both_passed { 0 } else { 1 }
         }
     });
+
+    // Add tokenizer hash if available (AC5)
+    if let Some(hash) = tokenizer_hash {
+        output["tokenizer"] = serde_json::json!({
+            "config_hash": hash,
+            "status": "consistent"
+        });
+    }
 
     println!("{}", serde_json::to_string_pretty(&output)?);
     Ok(())
@@ -410,7 +434,7 @@ pub fn run_dual_lanes_and_summarize(
     dump_cpp_ids: bool,
     metrics: &str,
 ) -> Result<()> {
-    use super::preflight::preflight_backend_libs;
+    use super::preflight::preflight_with_auto_repair;
 
     if verbose {
         eprintln!("═══════════════════════════════════════════════════");
@@ -424,16 +448,19 @@ pub fn run_dual_lanes_and_summarize(
         eprintln!("═══════════════════════════════════════════════════\n");
     }
 
-    // STEP 1: Preflight both backends
-    // TODO: Implement preflight_both_backends in preflight.rs
-    // For now, validate each backend separately
+    // STEP 1: Preflight both backends with auto-repair
     let backends = [CppBackend::BitNet, CppBackend::Llama];
     for backend in backends {
         if verbose {
             eprintln!("⚙ Preflight: Checking {} backend...", backend.name());
         }
 
-        preflight_backend_libs(backend, verbose)
+        let repair_mode = if auto_repair {
+            super::preflight::RepairMode::Auto
+        } else {
+            super::preflight::RepairMode::Never
+        };
+        preflight_with_auto_repair(backend, verbose, repair_mode)
             .with_context(|| format!("Preflight check failed for {}", backend.name()))?;
 
         if verbose {
@@ -465,6 +492,40 @@ pub fn run_dual_lanes_and_summarize(
     if dump_ids || verbose {
         eprintln!("🦀 Rust tokens ({} total): {:?}", token_ids.len(), token_ids);
     }
+
+    // STEP 2.5: Compute shared TokenizerAuthority (AC1)
+    if verbose {
+        eprintln!("\n⚙ Shared: Computing tokenizer authority...");
+    }
+
+    let tokenizer_authority = {
+        use bitnet_crossval::receipt::{
+            TokenizerAuthority, compute_tokenizer_config_hash_from_tokenizer,
+            compute_tokenizer_file_hash, detect_tokenizer_source,
+        };
+
+        let source = detect_tokenizer_source(tokenizer);
+        let file_hash = compute_tokenizer_file_hash(tokenizer)
+            .context("Failed to compute tokenizer file hash")?;
+        let config_hash = compute_tokenizer_config_hash_from_tokenizer(&*tokenizer_obj)
+            .context("Failed to compute tokenizer config hash")?;
+        let token_count = rust_tokens.len();
+
+        if verbose {
+            eprintln!("  Source: {:?}", source);
+            eprintln!("  File hash: {}", &file_hash[..16]); // First 16 chars
+            eprintln!("  Config hash: {}", &config_hash[..16]);
+            eprintln!("  Token count: {}", token_count);
+        }
+
+        TokenizerAuthority {
+            source,
+            path: tokenizer.to_string_lossy().to_string(),
+            file_hash: Some(file_hash),
+            config_hash,
+            token_count,
+        }
+    };
 
     // STEP 3: Shared Rust logits evaluation
     if verbose {
@@ -505,6 +566,7 @@ pub fn run_dual_lanes_and_summarize(
         &receipt_bitnet,
         verbose,
         dump_cpp_ids,
+        &tokenizer_authority,
     )
     .context("Lane A (BitNet.cpp) failed")?;
 
@@ -521,6 +583,7 @@ pub fn run_dual_lanes_and_summarize(
         &receipt_llama,
         verbose,
         dump_cpp_ids,
+        &tokenizer_authority,
     )
     .context("Lane B (llama.cpp) failed")?;
 
@@ -528,7 +591,53 @@ pub fn run_dual_lanes_and_summarize(
     let lane_a = load_receipt_as_lane_result(CppBackend::BitNet, &receipt_bitnet)?;
     let lane_b = load_receipt_as_lane_result(CppBackend::Llama, &receipt_llama)?;
 
-    print_unified_summary(&lane_a, &lane_b, format, verbose)?;
+    // STEP 7.5: Validate tokenizer consistency across lanes (AC3, AC4)
+    if verbose {
+        eprintln!("\n⚙ Validating tokenizer consistency across lanes...");
+    }
+
+    // Load receipts to extract tokenizer authority
+    let receipt_bitnet_content =
+        std::fs::read_to_string(&receipt_bitnet).context("Failed to read Lane A receipt")?;
+    let receipt_llama_content =
+        std::fs::read_to_string(&receipt_llama).context("Failed to read Lane B receipt")?;
+
+    let receipt_bitnet_obj: ParityReceipt =
+        serde_json::from_str(&receipt_bitnet_content).context("Failed to parse Lane A receipt")?;
+    let receipt_llama_obj: ParityReceipt =
+        serde_json::from_str(&receipt_llama_content).context("Failed to parse Lane B receipt")?;
+
+    // Extract tokenizer authorities
+    let auth_a = receipt_bitnet_obj
+        .tokenizer_authority
+        .as_ref()
+        .context("Lane A receipt missing tokenizer authority")?;
+    let auth_b = receipt_llama_obj
+        .tokenizer_authority
+        .as_ref()
+        .context("Lane B receipt missing tokenizer authority")?;
+
+    // Validate consistency (AC3)
+    use bitnet_crossval::receipt::validate_tokenizer_consistency;
+    if let Err(e) = validate_tokenizer_consistency(auth_a, auth_b) {
+        eprintln!("\n✗ ERROR: Tokenizer consistency validation failed");
+        eprintln!("  Lane A config hash: {}", auth_a.config_hash);
+        eprintln!("  Lane B config hash: {}", auth_b.config_hash);
+        eprintln!("  Details: {}", e);
+        std::process::exit(2); // AC4: Exit code 2 for tokenizer mismatch
+    }
+
+    if verbose {
+        eprintln!("  ✓ Tokenizer consistency validated");
+        eprintln!("    Config hash: {}", &auth_a.config_hash[..16]);
+        eprintln!("    Token count: {}", auth_a.token_count);
+    }
+
+    // Extract tokenizer hash for summary display (AC5)
+    let tokenizer_hash =
+        receipt_bitnet_obj.tokenizer_authority.as_ref().map(|auth| auth.config_hash.as_str());
+
+    print_unified_summary(&lane_a, &lane_b, format, verbose, tokenizer_hash)?;
 
     // Exit code logic: AC4
     let both_passed = both_passed(&lane_a, &lane_b);
@@ -560,6 +669,7 @@ fn run_single_lane(
     receipt_path: &Path,
     verbose: bool,
     dump_cpp_ids: bool,
+    tokenizer_authority: &bitnet_crossval::receipt::TokenizerAuthority,
 ) -> Result<()> {
     use bitnet_crossval::cpp_bindings::BitnetSession;
     use bitnet_crossval::logits_compare::compare_per_position_logits;
@@ -673,6 +783,17 @@ fn run_single_lane(
             top5_rust: vec![],
             top5_cpp: vec![],
         });
+    }
+
+    // Populate tokenizer authority (AC2)
+    receipt.set_tokenizer_authority(tokenizer_authority.clone());
+
+    if verbose {
+        eprintln!(
+            "  ✓ TokenizerAuthority set: source={:?}, hash={}",
+            tokenizer_authority.source,
+            tokenizer_authority.file_hash.as_ref().map(|h| &h[..16]).unwrap_or("(none)")
+        );
     }
 
     receipt.finalize();

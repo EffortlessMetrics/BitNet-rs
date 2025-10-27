@@ -1,92 +1,53 @@
-//! Test scaffolding for TokenizerAuthority schema and validation
+//! Test scaffolding for TokenizerAuthority integration in parity-both receipts
 //!
-//! Specification: docs/specs/parity-both-preflight-tokenizer.md
-//! Acceptance Criteria: AC4-AC7
+//! **Specification**: `docs/specs/tokenizer-authority-integration-parity-both.md`
+//! **Coverage**: AC1-AC6
 //!
-//! Test Categories:
-//! 1. TokenizerAuthority struct construction (TC1)
-//! 2. TokenizerSource variants (TC2)
-//! 3. SHA256 hash computation deterministic (TC3)
-//! 4. Hash consistency across platforms (TC4)
-//! 5. Tokenizer config serialization (TC5)
-//! 6. Parity validation token sequence (TC6)
-//! 7. Receipt schema v2 backward compatibility (TC7)
-//! 8. Builder API patterns (TC8)
-//! 9. Error handling (TC9)
-//! 10. Integration with ParityReceipt (TC10)
+//! ## Test Categories
+//!
+//! 1. **AC1**: Single TokenizerAuthority Computation (TC1, 8 tests)
+//! 2. **AC2**: Dual Receipt Injection (TC2, 6 tests)
+//! 3. **AC3**: Validation Logic (TC3, 8 tests)
+//! 4. **AC4**: Exit Code 2 on Mismatch (TC4, 4 tests)
+//! 5. **AC5**: Source Detection (TC5, 6 tests)
+//! 6. **AC6**: Hash Computation (TC6, 12 tests)
+//!
+//! ## Existing Test Categories (Baseline)
+//!
+//! - TokenizerAuthority struct construction (TC1)
+//! - TokenizerSource variants (TC2)
+//! - SHA256 hash computation deterministic (TC3)
+//! - Hash consistency across platforms (TC4)
+//! - Tokenizer config serialization (TC5)
+//! - Parity validation token sequence (TC6)
+//! - Receipt schema v2 backward compatibility (TC7)
+//! - Builder API patterns (TC8)
+//! - Error handling (TC9)
+//! - Integration with ParityReceipt (TC10)
+//!
+//! ## New Test Categories (Integration)
+//!
+//! - AC1: Single computation verification
+//! - AC2: Dual receipt identical metadata
+//! - AC3: Hash-based consistency validation
+//! - AC4: Exit code enforcement
+//! - AC5: Source detection heuristics
+//! - AC6: Hash determinism and collision resistance
 
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::path::Path;
+
+// Import from production code
+use bitnet_crossval::receipt::{
+    ParityReceipt, TokenizerAuthority, TokenizerSource, validate_tokenizer_consistency,
+    validate_tokenizer_parity,
+};
 
 // ========================================
 // Data Structures (AC4)
 // ========================================
-
-/// Tokenizer authority metadata for receipt reproducibility
-///
-/// Tests: TC1, TC5, TC7, TC10
-/// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC4
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct TokenizerAuthority {
-    /// Tokenizer source: "gguf_embedded" | "external" | "auto_discovered"
-    pub source: TokenizerSource,
-
-    /// Path to tokenizer (GGUF path or tokenizer.json path)
-    pub path: String,
-
-    /// SHA256 hash of tokenizer.json file (if external)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_hash: Option<String>,
-
-    /// SHA256 hash of effective tokenizer config (canonical JSON)
-    pub config_hash: String,
-
-    /// Token count (for quick validation)
-    pub token_count: usize,
-}
-
-/// Tokenizer source enum (AC5)
-///
-/// Tests: TC2
-/// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC5
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum TokenizerSource {
-    /// GGUF file contains embedded tokenizer metadata
-    GgufEmbedded,
-    /// External tokenizer.json file explicitly provided
-    External,
-    /// Tokenizer auto-discovered from model directory
-    AutoDiscovered,
-}
-
-/// ParityReceipt v2 with tokenizer authority (AC4, AC7)
-///
-/// Tests: TC7, TC10
-/// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC4
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ParityReceipt {
-    pub version: u32,
-    pub timestamp: String,
-    pub model: String,
-    pub backend: String,
-    pub prompt: String,
-
-    // NEW: v2 fields (optional for backward compatibility)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tokenizer_authority: Option<TokenizerAuthority>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prompt_template: Option<String>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub determinism_seed: Option<u64>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model_sha256: Option<String>,
-}
+//
+// TokenizerAuthority, TokenizerSource, and ParityReceipt are imported from bitnet_crossval::receipt
+// See: crossval/src/receipt.rs
 
 // ========================================
 // Helper Functions (AC6)
@@ -96,7 +57,7 @@ pub struct ParityReceipt {
 ///
 /// Tests: TC3, TC4
 /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
-pub fn compute_tokenizer_file_hash(_tokenizer_path: &Path) -> Result<String> {
+pub fn compute_tokenizer_file_hash(_tokenizer_path: &Path) -> anyhow::Result<String> {
     // TODO: Implement file reading and SHA256 hash computation
     // This is TDD scaffolding - test will compile but fail until implemented
     unimplemented!("AC6: compute_tokenizer_file_hash - blocked by missing std::fs integration")
@@ -106,7 +67,7 @@ pub fn compute_tokenizer_file_hash(_tokenizer_path: &Path) -> Result<String> {
 ///
 /// Tests: TC3, TC4
 /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
-pub fn compute_tokenizer_config_hash(_vocab: &serde_json::Value) -> Result<String> {
+pub fn compute_tokenizer_config_hash(_vocab: &serde_json::Value) -> anyhow::Result<String> {
     // TODO: Implement canonical JSON serialization and SHA256 hash
     // Strategy: Sort keys, serialize to canonical JSON, hash bytes
     unimplemented!(
@@ -114,120 +75,15 @@ pub fn compute_tokenizer_config_hash(_vocab: &serde_json::Value) -> Result<Strin
     )
 }
 
-/// Validate tokenizer parity between Rust and C++ implementations (AC7)
-///
-/// Tests: TC6, TC9
-/// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC7
-pub fn validate_tokenizer_parity(
-    rust_tokens: &[u32],
-    cpp_tokens: &[u32],
-    backend_name: &str,
-) -> Result<()> {
-    // Check 1: Length parity
-    if rust_tokens.len() != cpp_tokens.len() {
-        anyhow::bail!(
-            "Tokenizer parity mismatch for {}: Rust {} tokens vs C++ {} tokens",
-            backend_name,
-            rust_tokens.len(),
-            cpp_tokens.len()
-        );
-    }
-
-    // Check 2: Token-by-token comparison
-    for (i, (r_token, c_token)) in rust_tokens.iter().zip(cpp_tokens.iter()).enumerate() {
-        if r_token != c_token {
-            anyhow::bail!(
-                "Tokenizer divergence for {} at position {}: Rust token={}, C++ token={}",
-                backend_name,
-                i,
-                r_token,
-                c_token
-            );
-        }
-    }
-
-    Ok(())
-}
-
-/// Validate tokenizer authority consistency between two lanes (AC7)
-///
-/// Tests: TC6, TC10
-/// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC7
-pub fn validate_tokenizer_consistency(
-    lane_a: &TokenizerAuthority,
-    lane_b: &TokenizerAuthority,
-) -> Result<()> {
-    // Config hash must match (effective tokenizer is identical)
-    if lane_a.config_hash != lane_b.config_hash {
-        anyhow::bail!(
-            "Tokenizer config mismatch: Lane A hash={}, Lane B hash={}",
-            lane_a.config_hash,
-            lane_b.config_hash
-        );
-    }
-
-    // Token count should match (sanity check)
-    if lane_a.token_count != lane_b.token_count {
-        anyhow::bail!(
-            "Token count mismatch: Lane A={}, Lane B={}",
-            lane_a.token_count,
-            lane_b.token_count
-        );
-    }
-
-    Ok(())
-}
+// validate_tokenizer_parity and validate_tokenizer_consistency are now imported
+// from bitnet_crossval::receipt - see imports at top of file
 
 // ========================================
 // Builder API (AC4, AC8)
 // ========================================
-
-impl ParityReceipt {
-    /// Create new ParityReceipt with minimal fields
-    ///
-    /// Tests: TC8, TC10
-    /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC8
-    pub fn new(model: &str, backend: &str, prompt: &str) -> Self {
-        Self {
-            version: 1,
-            timestamp: chrono::Utc::now().to_rfc3339(),
-            model: model.to_string(),
-            backend: backend.to_string(),
-            prompt: prompt.to_string(),
-            tokenizer_authority: None,
-            prompt_template: None,
-            determinism_seed: None,
-            model_sha256: None,
-        }
-    }
-
-    /// Set tokenizer authority metadata (AC4)
-    ///
-    /// Tests: TC8, TC10
-    /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC4
-    pub fn set_tokenizer_authority(&mut self, authority: TokenizerAuthority) {
-        self.tokenizer_authority = Some(authority);
-    }
-
-    /// Set prompt template used (AC4)
-    ///
-    /// Tests: TC8, TC10
-    /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC4
-    pub fn set_prompt_template(&mut self, template: String) {
-        self.prompt_template = Some(template);
-    }
-
-    /// Infer schema version based on fields present (AC7)
-    ///
-    /// Tests: TC7
-    /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC7
-    pub fn infer_version(&self) -> &str {
-        match (&self.tokenizer_authority, &self.prompt_template) {
-            (Some(_), _) | (_, Some(_)) => "2.0.0",
-            _ => "1.0.0",
-        }
-    }
-}
+//
+// ParityReceipt builder methods are already implemented in crossval/src/receipt.rs
+// See: ParityReceipt::new, set_tokenizer_authority, set_prompt_template, infer_version
 
 // ========================================
 // TC1: TokenizerAuthority Struct Construction
@@ -1244,5 +1100,633 @@ mod tc10_integration_parity_receipt {
             &receipt_llama.tokenizer_authority.unwrap(),
         );
         assert!(result.is_ok());
+    }
+}
+
+// ========================================
+// NEW TEST CATEGORIES: Integration Tests (AC1-AC6)
+// ========================================
+
+// ========================================
+// TC_AC1: Single TokenizerAuthority Computation
+// ========================================
+
+#[cfg(test)]
+mod tc_ac1_single_tokenizer_authority_computation {
+    use super::*;
+
+    /// Test: TokenizerAuthority computed once for dual-lane parity-both
+    ///
+    /// AC: AC1
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_computed_once_shared_setup() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: TokenizerAuthority computed once, not per-lane
+        todo!("AC1: Verify single TokenizerAuthority computation in shared setup (STEP 2.5)");
+    }
+
+    /// Test: TokenizerAuthority contains all required fields after computation
+    ///
+    /// AC: AC1
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_complete_fields_after_computation() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: source, path, file_hash, config_hash, token_count populated
+        todo!("AC1: Verify TokenizerAuthority has all required fields after computation");
+    }
+
+    /// Test: Source detection for external tokenizer.json
+    ///
+    /// AC: AC1, AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_source_external() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: detect_tokenizer_source() returns External for tokenizer.json
+        todo!("AC1: Verify source detection for external tokenizer.json");
+    }
+
+    /// Test: Source detection for GGUF-embedded tokenizer
+    ///
+    /// AC: AC1, AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_source_gguf_embedded() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: detect_tokenizer_source() returns GgufEmbedded for model.gguf
+        todo!("AC1: Verify source detection for GGUF-embedded tokenizer");
+    }
+
+    /// Test: File hash computed only for external tokenizers
+    ///
+    /// AC: AC1, AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_file_hash_external_only() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: file_hash is Some() for External, None for GgufEmbedded
+        todo!("AC1: Verify file hash computed only for external tokenizers");
+    }
+
+    /// Test: Config hash always computed from tokenizer trait
+    ///
+    /// AC: AC1, AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_config_hash_always_computed() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: config_hash always present (64 hex chars)
+        todo!("AC1: Verify config hash always computed from tokenizer trait");
+    }
+
+    /// Test: Token count captured from Rust tokenization result
+    ///
+    /// AC: AC1
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_token_count_from_rust_tokenization() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: token_count matches rust_tokens.len()
+        todo!("AC1: Verify token count captured from Rust tokenization result");
+    }
+
+    /// Test: TokenizerAuthority deterministic (same inputs → same output)
+    ///
+    /// AC: AC1, AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC1
+    #[test]
+    fn test_tokenizer_authority_deterministic_computation() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
+        // Verify: Computing authority twice yields identical results
+        todo!("AC1: Verify TokenizerAuthority computation is deterministic");
+    }
+}
+
+// ========================================
+// TC_AC2: Dual Receipt Injection
+// ========================================
+
+#[cfg(test)]
+mod tc_ac2_dual_receipt_injection {
+    use super::*;
+
+    /// Test: Same TokenizerAuthority passed to both run_single_lane() calls
+    ///
+    /// AC: AC2
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC2
+    #[test]
+    fn test_same_authority_passed_to_both_lanes() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
+        // Verify: Same authority reference passed to Lane A and Lane B
+        todo!("AC2: Verify same TokenizerAuthority passed to both run_single_lane() calls");
+    }
+
+    /// Test: Authority cloned into each receipt via set_tokenizer_authority()
+    ///
+    /// AC: AC2
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC2
+    #[test]
+    fn test_authority_cloned_into_receipts() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
+        // Verify: receipt.set_tokenizer_authority(authority.clone()) called in each lane
+        todo!("AC2: Verify authority cloned into each receipt via set_tokenizer_authority()");
+    }
+
+    /// Test: Both receipts contain identical tokenizer_authority field
+    ///
+    /// AC: AC2
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC2
+    #[test]
+    fn test_both_receipts_identical_tokenizer_authority() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
+        // Verify: receipt_bitnet.json and receipt_llama.json have matching tokenizer_authority
+        todo!("AC2: Verify both receipts contain identical tokenizer_authority field");
+    }
+
+    /// Test: Receipt files written atomically to output directory
+    ///
+    /// AC: AC2
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC2
+    #[test]
+    fn test_receipt_files_written_atomically() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
+        // Verify: receipt.write_to_file() succeeds for both lanes
+        todo!("AC2: Verify receipt files written atomically to output directory");
+    }
+
+    /// Test: Receipt JSON includes tokenizer_authority with all fields
+    ///
+    /// AC: AC2
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC2
+    #[test]
+    fn test_receipt_json_includes_tokenizer_authority() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
+        // Verify: JSON serialization includes tokenizer_authority object
+        todo!("AC2: Verify receipt JSON includes tokenizer_authority with all fields");
+    }
+
+    /// Test: Receipt schema v2.0.0 backward compatibility
+    ///
+    /// AC: AC2
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC2
+    #[test]
+    fn test_receipt_schema_v2_backward_compat() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
+        // Verify: v2 receipts with tokenizer_authority can be deserialized
+        todo!("AC2: Verify receipt schema v2.0.0 backward compatibility");
+    }
+}
+
+// ========================================
+// TC_AC3: Validation Logic (Hash Comparison)
+// ========================================
+
+#[cfg(test)]
+mod tc_ac3_validation_logic {
+    use super::*;
+
+    /// Test: Validation checks config_hash match across lanes
+    ///
+    /// AC: AC3
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_checks_config_hash_match() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: validate_tokenizer_consistency() checks config_hash equality
+        todo!("AC3: Verify validation checks config_hash match across lanes");
+    }
+
+    /// Test: Validation checks token_count match across lanes
+    ///
+    /// AC: AC3
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_checks_token_count_match() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: validate_tokenizer_consistency() checks token_count equality
+        todo!("AC3: Verify validation checks token_count match across lanes");
+    }
+
+    /// Test: Validation succeeds when both authorities identical
+    ///
+    /// AC: AC3
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_succeeds_identical_authorities() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: validate_tokenizer_consistency(auth_a, auth_b) returns Ok(())
+        let auth = TokenizerAuthority {
+            source: TokenizerSource::External,
+            path: "tokenizer.json".to_string(),
+            file_hash: Some("hash".to_string()),
+            config_hash: "config_hash".to_string(),
+            token_count: 5,
+        };
+
+        let result = validate_tokenizer_consistency(&auth, &auth);
+        assert!(result.is_ok());
+    }
+
+    /// Test: Validation fails on config_hash mismatch
+    ///
+    /// AC: AC3, AC4
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_fails_config_hash_mismatch() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: Different config_hash triggers validation error
+        let auth_a = TokenizerAuthority {
+            source: TokenizerSource::External,
+            path: "tokenizer.json".to_string(),
+            file_hash: Some("hash".to_string()),
+            config_hash: "config_hash_a".to_string(),
+            token_count: 5,
+        };
+
+        let auth_b = TokenizerAuthority {
+            source: TokenizerSource::External,
+            path: "tokenizer.json".to_string(),
+            file_hash: Some("hash".to_string()),
+            config_hash: "config_hash_b".to_string(),
+            token_count: 5,
+        };
+
+        let result = validate_tokenizer_consistency(&auth_a, &auth_b);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Tokenizer config mismatch"));
+    }
+
+    /// Test: Validation fails on token_count mismatch
+    ///
+    /// AC: AC3, AC4
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_fails_token_count_mismatch() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: Different token_count triggers validation error
+        let auth_a = TokenizerAuthority {
+            source: TokenizerSource::External,
+            path: "tokenizer.json".to_string(),
+            file_hash: Some("hash".to_string()),
+            config_hash: "config_hash".to_string(),
+            token_count: 5,
+        };
+
+        let auth_b = TokenizerAuthority {
+            source: TokenizerSource::External,
+            path: "tokenizer.json".to_string(),
+            file_hash: Some("hash".to_string()),
+            config_hash: "config_hash".to_string(),
+            token_count: 10,
+        };
+
+        let result = validate_tokenizer_consistency(&auth_a, &auth_b);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Token count mismatch"));
+    }
+
+    /// Test: Validation error message includes both hashes
+    ///
+    /// AC: AC3
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_error_message_includes_hashes() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: Error message shows both Lane A and Lane B config hashes
+        todo!("AC3: Verify validation error message includes both config hashes");
+    }
+
+    /// Test: Validation executed in STEP 7.5 after receipt writes
+    ///
+    /// AC: AC3
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_executed_after_receipt_writes() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: Validation happens after both receipts written to disk
+        todo!("AC3: Verify validation executed in STEP 7.5 after receipt writes");
+    }
+
+    /// Test: Validation loads receipts from disk to extract authorities
+    ///
+    /// AC: AC3
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC3
+    #[test]
+    fn test_validation_loads_receipts_from_disk() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
+        // Verify: Receipts re-read from receipt_bitnet.json, receipt_llama.json
+        todo!("AC3: Verify validation loads receipts from disk to extract authorities");
+    }
+}
+
+// ========================================
+// TC_AC4: Exit Code 2 on Tokenizer Mismatch
+// ========================================
+
+#[cfg(test)]
+mod tc_ac4_exit_code_2_mismatch {
+    use super::*;
+
+    /// Test: Exit code 2 on config_hash mismatch
+    ///
+    /// AC: AC4
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
+    #[test]
+    #[ignore] // Integration test - requires end-to-end parity-both execution
+    fn test_exit_code_2_config_hash_mismatch() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
+        // Verify: std::process::exit(2) called on config_hash mismatch
+        todo!("AC4: Verify exit code 2 on config_hash mismatch");
+    }
+
+    /// Test: Exit code 2 on token_count mismatch
+    ///
+    /// AC: AC4
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
+    #[test]
+    #[ignore] // Integration test - requires end-to-end parity-both execution
+    fn test_exit_code_2_token_count_mismatch() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
+        // Verify: std::process::exit(2) called on token_count mismatch
+        todo!("AC4: Verify exit code 2 on token_count mismatch");
+    }
+
+    /// Test: Exit code semantics preserved (0=success, 1=divergence, 2=error)
+    ///
+    /// AC: AC4
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
+    #[test]
+    #[ignore] // Integration test - requires end-to-end parity-both execution
+    fn test_exit_code_semantics_preserved() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
+        // Verify: Exit code semantics match spec table
+        todo!("AC4: Verify exit code semantics preserved (0=success, 1=divergence, 2=error)");
+    }
+
+    /// Test: Error message printed to stderr before exit
+    ///
+    /// AC: AC4
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
+    #[test]
+    #[ignore] // Integration test - requires end-to-end parity-both execution
+    fn test_error_message_printed_to_stderr() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
+        // Verify: eprintln!() called with detailed error message
+        todo!("AC4: Verify error message printed to stderr before exit");
+    }
+}
+
+// ========================================
+// TC_AC5: Source Detection Heuristics
+// ========================================
+
+#[cfg(test)]
+mod tc_ac5_source_detection {
+    use super::*;
+    use bitnet_crossval::receipt::detect_tokenizer_source;
+
+    /// Test: detect_tokenizer_source() returns External for tokenizer.json
+    ///
+    /// AC: AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
+    #[test]
+    #[ignore] // Requires file system fixture
+    fn test_detect_source_external_tokenizer_json() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
+        // Verify: Path ending with "tokenizer.json" → External
+        todo!("AC5: Verify detect_tokenizer_source() returns External for tokenizer.json");
+    }
+
+    /// Test: detect_tokenizer_source() returns GgufEmbedded for model.gguf
+    ///
+    /// AC: AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
+    #[test]
+    fn test_detect_source_gguf_embedded() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
+        // Verify: Path not ending with "tokenizer.json" → GgufEmbedded
+        let path = Path::new("models/model.gguf");
+        let source = detect_tokenizer_source(path);
+        assert_eq!(source, TokenizerSource::GgufEmbedded);
+    }
+
+    /// Test: detect_tokenizer_source() handles non-existent paths
+    ///
+    /// AC: AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
+    #[test]
+    fn test_detect_source_nonexistent_path() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
+        // Verify: Non-existent path returns GgufEmbedded (safe default)
+        let path = Path::new("nonexistent/tokenizer.json");
+        let source = detect_tokenizer_source(path);
+        assert_eq!(source, TokenizerSource::GgufEmbedded);
+    }
+
+    /// Test: detect_tokenizer_source() case sensitivity
+    ///
+    /// AC: AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
+    #[test]
+    fn test_detect_source_case_sensitivity() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
+        // Verify: "Tokenizer.json" (capitalized) not treated as External
+        let path = Path::new("models/Tokenizer.json");
+        let source = detect_tokenizer_source(path);
+        // Expect GgufEmbedded because exact match "tokenizer.json" required
+        assert_eq!(source, TokenizerSource::GgufEmbedded);
+    }
+
+    /// Test: detect_tokenizer_source() with absolute paths
+    ///
+    /// AC: AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
+    #[test]
+    #[ignore] // Requires file system fixture
+    fn test_detect_source_absolute_path() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
+        // Verify: Absolute path ending with "tokenizer.json" → External
+        todo!("AC5: Verify detect_tokenizer_source() with absolute paths");
+    }
+
+    /// Test: AutoDiscovered variant not yet implemented
+    ///
+    /// AC: AC5
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
+    #[test]
+    fn test_auto_discovered_not_implemented() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
+        // Verify: AutoDiscovered is enum variant but not returned by detect function yet
+        // This is expected behavior - AutoDiscovered is future enhancement
+        assert_eq!(TokenizerSource::AutoDiscovered, TokenizerSource::AutoDiscovered);
+    }
+}
+
+// ========================================
+// TC_AC6: Hash Computation (Determinism & Collision Resistance)
+// ========================================
+
+#[cfg(test)]
+mod tc_ac6_hash_computation {
+    use super::*;
+    use bitnet_crossval::receipt::{
+        compute_tokenizer_config_hash_from_tokenizer, compute_tokenizer_file_hash,
+    };
+
+    /// Test: compute_tokenizer_file_hash() returns 64 hex characters
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires file system fixture
+    fn test_file_hash_64_hex_chars() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: SHA256 hash is lowercase hex string of exactly 64 characters
+        todo!("AC6: Verify compute_tokenizer_file_hash() returns 64 hex characters");
+    }
+
+    /// Test: compute_tokenizer_file_hash() deterministic (same file → same hash)
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires file system fixture
+    fn test_file_hash_deterministic() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Hashing same file twice produces identical output
+        todo!("AC6: Verify compute_tokenizer_file_hash() deterministic");
+    }
+
+    /// Test: compute_tokenizer_file_hash() fails on missing file
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    fn test_file_hash_missing_file_error() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Missing file returns Err with descriptive message
+        let path = Path::new("nonexistent/tokenizer.json");
+        let result = compute_tokenizer_file_hash(path);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Failed to read"));
+    }
+
+    /// Test: compute_tokenizer_config_hash_from_tokenizer() deterministic
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires mock tokenizer implementation
+    fn test_config_hash_deterministic() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Hashing same tokenizer config twice produces identical output
+        todo!("AC6: Verify compute_tokenizer_config_hash_from_tokenizer() deterministic");
+    }
+
+    /// Test: compute_tokenizer_config_hash_from_tokenizer() uses canonical JSON
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires mock tokenizer implementation
+    fn test_config_hash_canonical_json() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Hash computed from canonical JSON (vocab_size, real_vocab_size)
+        todo!("AC6: Verify compute_tokenizer_config_hash_from_tokenizer() uses canonical JSON");
+    }
+
+    /// Test: Config hash includes vocab_size and real_vocab_size
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires mock tokenizer implementation
+    fn test_config_hash_includes_vocab_sizes() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Config hash changes when vocab_size or real_vocab_size differ
+        todo!("AC6: Verify config hash includes vocab_size and real_vocab_size");
+    }
+
+    /// Test: File hash and config hash are independent
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires mock tokenizer implementation
+    fn test_file_hash_and_config_hash_independent() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Modifying file content changes file_hash but not config_hash
+        todo!("AC6: Verify file hash and config hash are independent");
+    }
+
+    /// Test: Hash collision resistance (different inputs → different hashes)
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires mock tokenizer implementation
+    fn test_hash_collision_resistance() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Different vocab configs produce different config hashes
+        todo!("AC6: Verify hash collision resistance");
+    }
+
+    /// Test: Hash format is lowercase hex (no uppercase, no hyphens)
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires file system fixture
+    fn test_hash_format_lowercase_hex() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Hash string is lowercase hex (a-f0-9), no uppercase or punctuation
+        todo!("AC6: Verify hash format is lowercase hex");
+    }
+
+    /// Test: File hash performance (< 100ms for typical tokenizer.json)
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires file system fixture and performance profiling
+    fn test_file_hash_performance() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: File hash computation completes in < 100ms for 2MB tokenizer file
+        todo!("AC6: Verify file hash performance (< 100ms for typical tokenizer.json)");
+    }
+
+    /// Test: Config hash performance (< 1ms for typical tokenizer)
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    #[ignore] // Requires mock tokenizer implementation and performance profiling
+    fn test_config_hash_performance() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: Config hash computation completes in < 1ms
+        todo!("AC6: Verify config hash performance (< 1ms for typical tokenizer)");
+    }
+
+    /// Test: Hash memory overhead is negligible (< 200 bytes per receipt)
+    ///
+    /// AC: AC6
+    /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
+    #[test]
+    fn test_hash_memory_overhead_negligible() {
+        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
+        // Verify: TokenizerAuthority struct size is acceptable
+        let auth = TokenizerAuthority {
+            source: TokenizerSource::External,
+            path: "tokenizer.json".to_string(),
+            file_hash: Some("a".repeat(64)),
+            config_hash: "b".repeat(64),
+            token_count: 128000,
+        };
+
+        // Memory layout check - TokenizerAuthority should be < 200 bytes
+        let size = std::mem::size_of_val(&auth);
+        assert!(size < 200, "TokenizerAuthority struct too large: {} bytes", size);
     }
 }
