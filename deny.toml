@@ -14,7 +14,13 @@ multiple-versions = "warn"
 # Warn on wildcard dependencies (allow for workspace crates, but review external deps)
 # Note: Path dependencies (workspace members) don't need version specifications
 wildcards = "warn"
-deny = []
+# Prevent reintroduction of deprecated dependencies
+deny = [
+    { name = "serde_yaml", reason = "Use serde_yaml_ng (aliased as 'serde_yaml' in workspace dependencies)" },
+]
+# Note: lazy_static is NOT in workspace Cargo.toml dependencies (removed in favor of OnceLock)
+# but exists transitively via logos-codegen and prometheus. This is acceptable until upstream migrates.
+# Policy: No NEW direct lazy_static dependencies allowed; use std::sync::OnceLock (MSRV 1.90)
 
 [advisories]
 db-path = "~/.cargo/advisory-db"

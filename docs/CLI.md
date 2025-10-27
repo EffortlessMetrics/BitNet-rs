@@ -381,7 +381,7 @@ bitnet --completions powershell > $PROFILE\bitnet.ps1
 1. **Use native CPU features**: Build with `-C target-cpu=native` for optimal SIMD
 2. **Thread tuning**: Set `--threads` to physical core count for best performance
 3. **Batch processing**: Use larger `--batch-size` for throughput
-4. **GPU offloading**: Use `--device cuda` when available
+4. **GPU offloading**: Use `--device cuda` (requires gpu feature compilation)
 5. **Memory mapping**: Models are memory-mapped by default for efficiency
 
 ## Troubleshooting

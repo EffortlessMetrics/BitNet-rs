@@ -2,12 +2,18 @@
 //!
 //! Provides thread-safe environment variable management with automatic restoration.
 
-use once_cell::sync::Lazy;
-use std::{env as std_env, sync::Mutex};
+use std::{
+    env as std_env,
+    sync::{Mutex, OnceLock},
+};
 
 /// Global lock to serialize environment variable modifications across tests
 #[allow(dead_code)]
-pub static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+pub static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn get_env_lock() -> &'static Mutex<()> {
+    ENV_LOCK.get_or_init(|| Mutex::new(()))
+}
 
 /// RAII guard for safe environment variable management
 ///
@@ -34,7 +40,7 @@ impl EnvVarGuard {
     /// The global lock ensures thread safety and proper restoration order
     #[allow(dead_code)]
     pub fn set(key: &'static str, val: &str) -> Self {
-        let guard = ENV_LOCK.lock().unwrap();
+        let guard = get_env_lock().lock().unwrap();
         let prior = std_env::var(key).ok();
         // SAFETY: We hold a global lock, ensuring no concurrent access to env vars
         unsafe {

@@ -28,11 +28,11 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```rust,no_run
 //! use bitnet_crossval::backend::CppBackend;
 //! use tests::support::mock_fixtures::create_mock_backend_libs;
 //!
-//! #[test]
+//! // Example test function (not executed in doctest)
 //! fn test_backend_discovery() {
 //!     // Create mock libraries in temp directory
 //!     let temp = create_mock_backend_libs(CppBackend::BitNet).unwrap();
@@ -81,12 +81,12 @@ use super::platform_utils::format_lib_name;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,no_run
 /// use bitnet_crossval::backend::CppBackend;
 /// use tests::support::mock_fixtures::create_mock_backend_libs;
 /// use tests::support::platform_utils::get_loader_path_var;
 ///
-/// #[test]
+/// // Example test function (not executed in doctest)
 /// fn test_with_mock_backend() {
 ///     // Create mock libraries
 ///     let temp = create_mock_backend_libs(CppBackend::BitNet).unwrap();

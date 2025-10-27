@@ -78,6 +78,7 @@ impl FileLock {
     ///
     /// - Unix: Uses `flock()` with LOCK_EX
     /// - Windows: Uses `LockFileEx()` with LOCKFILE_EXCLUSIVE_LOCK
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn acquire(backend: CppBackend) -> Result<Self> {
         // Get cache directory for locks
         let lock_dir =

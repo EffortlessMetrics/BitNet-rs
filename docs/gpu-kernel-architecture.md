@@ -602,7 +602,7 @@ pub struct MemoryTracker {
 2. **Kernel Availability Validation**: Ensure required kernels loaded
 3. **Memory Allocation**: Track GPU memory allocation with leak detection
 4. **Precision Conversion**: FP32 → FP16/BF16 conversion on device
-5. **Optimized Execution**: Use Tensor Cores when available
+5. **Optimized Execution**: Use Tensor Cores (compiled with gpu feature and CUDA detected at runtime)
 6. **Result Conversion**: FP16/BF16 → FP32 conversion back to host
 7. **Performance Tracking**: Record execution time and memory metrics
 
@@ -686,7 +686,7 @@ pub fn check_memory_health(&self) -> Result<MemoryResult> {
 ```rust
 #[cfg(all(feature = "ffi", have_cpp))]
 mod imp {
-    // Real FFI bindings when available
+    // Real FFI bindings (compiled if ffi feature enabled)
     extern "C" {
         fn bitnet_cpp_matmul_i2s(/* ... */) -> c_int;
     }

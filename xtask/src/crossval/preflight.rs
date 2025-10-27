@@ -755,14 +755,13 @@ pub fn parse_sh_exports(script: &str) -> HashMap<String, String> {
             }
         }
         // Parse PowerShell: $env:KEY = "value"
-        else if line.starts_with("$env:") {
-            if let Some(rest) = line.strip_prefix("$env:")
-                && let Some((key, value)) = rest.split_once('=')
-            {
-                let key = key.trim();
-                let value = strip_quotes(value.trim());
-                result.insert(key.to_string(), value);
-            }
+        else if line.starts_with("$env:")
+            && let Some(rest) = line.strip_prefix("$env:")
+            && let Some((key, value)) = rest.split_once('=')
+        {
+            let key = key.trim();
+            let value = strip_quotes(value.trim());
+            result.insert(key.to_string(), value);
         }
     }
 
@@ -2434,6 +2433,7 @@ fn attempt_repair_once(backend: CppBackend, verbose: bool) -> Result<(bool, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_preflight_respects_env() {
@@ -2456,6 +2456,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(bitnet_env)]
     fn test_is_repair_in_progress_false_by_default() {
         // Ensure no recursion guard is set initially
         unsafe {
@@ -2465,6 +2466,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(bitnet_env)]
     fn test_is_repair_in_progress_true_when_set() {
         // Set recursion guard
         unsafe {
@@ -2485,6 +2487,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(bitnet_env)]
     fn test_auto_repair_with_setup_cpp_detects_recursion() {
         // Set recursion guard
         unsafe {

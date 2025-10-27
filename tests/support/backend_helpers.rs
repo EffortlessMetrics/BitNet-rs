@@ -323,7 +323,6 @@ pub fn ensure_backend_or_skip(backend: CppBackend) {
         Ok(()) => {
             eprintln!("✅ {} backend installed and configured.", backend_name(backend));
             // Backend now available, test can continue
-            return;
         }
         Err(e) => {
             eprintln!("❌ Auto-repair failed: {}", e);
@@ -1193,7 +1192,7 @@ pub fn setup_precedence_test(
 ///     assert!(available);
 /// }
 /// ```
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)] // Test scaffolding - used in future tests
 pub fn setup_backend_precedence_test(
     backend: CppBackend,
     crossval_libdir: Option<&std::path::Path>,
@@ -1262,7 +1261,7 @@ pub fn setup_backend_precedence_test(
 ///     // TempDir auto-cleaned on drop
 /// }
 /// ```
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)] // Test scaffolding - used in future tests
 pub fn create_temp_lib_dir() -> tempfile::TempDir {
     tempfile::tempdir().expect("Failed to create temporary directory")
 }
@@ -1276,6 +1275,7 @@ pub fn create_temp_lib_dir() -> tempfile::TempDir {
 /// This constant is used to create mock library files with a realistic size
 /// for testing file detection and validation.
 #[cfg(test)]
+#[allow(dead_code)] // Test scaffolding - used in future tests
 pub const MOCK_BITNET_LIB_SIZE: u64 = 1024;
 
 /// Mock library file size for testing (2KB)
@@ -1283,6 +1283,7 @@ pub const MOCK_BITNET_LIB_SIZE: u64 = 1024;
 /// This constant is used for Llama libraries to differentiate from BitNet
 /// in tests that validate library-specific behavior.
 #[cfg(test)]
+#[allow(dead_code)] // Test scaffolding - used in future tests
 pub const MOCK_LLAMA_LIB_SIZE: u64 = 2048;
 
 #[cfg(test)]

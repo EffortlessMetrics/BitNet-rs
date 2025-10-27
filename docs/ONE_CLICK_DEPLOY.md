@@ -312,7 +312,7 @@ make              # Automatically uses Metal
 
 ### Linux (NVIDIA GPU)
 ```bash
-make              # Automatically uses CUDA if available
+make              # Automatically uses CUDA (compiled with gpu feature and CUDA detected at runtime)
 ```
 
 ### Windows (WSL2)

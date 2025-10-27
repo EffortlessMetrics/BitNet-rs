@@ -75,7 +75,7 @@
 //!     );
 //!
 //!     let output = Command::new("cargo")
-//!         .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+//!         .args(["build", "-p", "xtask", "--features", "crossval-all"])
 //!         .env("CROSSVAL_RPATH_BITNET", &rpath_value)
 //!         .output()
 //!         .expect("Failed to build xtask");
@@ -154,7 +154,7 @@ fn is_tool_available(tool_name: &str) -> bool {
 #[cfg(target_os = "linux")]
 fn verify_linux_rpath(binary_path: &std::path::Path, expected_rpath: &str) -> Result<(), String> {
     let output = Command::new("readelf")
-        .args(&["-d", binary_path.to_str().unwrap()])
+        .args(["-d", binary_path.to_str().unwrap()])
         .output()
         .map_err(|e| format!("Failed to run readelf: {}", e))?;
 
@@ -351,7 +351,7 @@ fn test_linux_rpath_embedding() {
     // Step 3: Build xtask with RPATH environment variable
     // Note: We use BITNET_CROSSVAL_LIBDIR which xtask/build.rs reads
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", primary_lib_path)
         .output()
         .expect("Failed to build xtask");
@@ -419,7 +419,7 @@ fn test_linux_rpath_embedding_failure_invalid_path() {
     let invalid_path = "/tmp/nonexistent_bitnet_path_12345";
 
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", invalid_path)
         .output()
         .expect("Failed to build xtask");
@@ -496,7 +496,7 @@ fn test_linux_rpath_embedding_multiple_paths() {
 
     // Build with multiple RPATH entries
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", &multiple_rpaths)
         .output()
         .expect("Failed to build xtask");
@@ -597,7 +597,7 @@ fn test_macos_rpath_embedding() {
     // Step 3: Build xtask with RPATH environment variable
     // Note: We use BITNET_CROSSVAL_LIBDIR which xtask/build.rs reads
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", primary_lib_path)
         .output()
         .expect("Failed to build xtask");
@@ -680,7 +680,7 @@ fn test_macos_rpath_embedding_at_rpath_notation() {
 
     // Build with RPATH set
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", primary_lib_path)
         .output()
         .expect("Failed to build xtask");
@@ -759,7 +759,7 @@ fn test_macos_rpath_embedding_multiple_commands() {
 
     // Build with multiple RPATH entries
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", &multiple_rpaths)
         .output()
         .expect("Failed to build xtask");
@@ -870,7 +870,7 @@ fn test_windows_static_linkage() {
 
     // Step 3: Build xtask (Windows doesn't use RPATH - libraries resolved via PATH)
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", primary_lib_path)
         .output()
         .expect("Failed to build xtask");
@@ -928,7 +928,7 @@ fn test_windows_static_linkage_failure_missing_dll() {
 
     // Build without library path set (simulating missing DLLs)
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .output()
         .expect("Failed to build xtask");
 
@@ -998,7 +998,7 @@ fn test_windows_static_linkage_path_resolution() {
 
     // Build xtask with library path set
     let output = Command::new("cargo")
-        .args(&["build", "-p", "xtask", "--features", "crossval-all"])
+        .args(["build", "-p", "xtask", "--features", "crossval-all"])
         .env("BITNET_CROSSVAL_LIBDIR", primary_lib_path)
         .output()
         .expect("Failed to build xtask");

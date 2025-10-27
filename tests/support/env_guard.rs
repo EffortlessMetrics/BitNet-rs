@@ -71,15 +71,21 @@
 ///     // ❌ Races with other tests!
 /// }
 /// ```
-use once_cell::sync::Lazy;
-use std::{env, sync::Mutex};
+use std::{
+    env,
+    sync::{Mutex, OnceLock},
+};
 
 /// Global lock to serialize environment variable modifications across threads
 ///
 /// This mutex ensures thread-safe access to environment variables within a single
 /// test process. It does NOT prevent races across multiple cargo test processes -
 /// use `#[serial(bitnet_env)]` for that.
-static ENV_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn get_env_lock() -> &'static Mutex<()> {
+    ENV_LOCK.get_or_init(|| Mutex::new(()))
+}
 
 /// RAII guard for safe environment variable management
 ///
@@ -127,7 +133,7 @@ impl EnvGuard {
     /// use `#[serial(bitnet_env)]` on your test to prevent races across
     /// multiple cargo test processes.
     pub fn new(key: &str) -> Self {
-        let lock = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let lock = get_env_lock().lock().unwrap_or_else(|e| e.into_inner());
 
         let old = env::var(key).ok();
 

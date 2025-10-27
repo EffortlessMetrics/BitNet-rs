@@ -8,9 +8,9 @@
 //! Supports auto-detection from GGUF metadata and extensible YAML policies.
 
 use anyhow::{Result, anyhow};
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
+use std::sync::OnceLock;
 
 /// A threshold rule with regex pattern matching
 #[derive(Debug, Clone)]
@@ -73,58 +73,70 @@ fn re(s: &str) -> Regex {
 /// - post_attention_layernorm: typically 0.25-1.0
 /// - input_layernorm: typically 0.35-1.0
 /// - final_norm: should be close to 1.0 (0.5-2.0 envelope)
-static BITNET_B158_F16: Lazy<Ruleset> = Lazy::new(|| Ruleset {
-    ln: vec![
-        Threshold { pattern: re(r"ffn_layernorm\.weight$"), min: 0.05, max: 2.0 },
-        Threshold { pattern: re(r"post_attention_layernorm\.weight$"), min: 0.25, max: 2.0 },
-        Threshold { pattern: re(r"input_layernorm\.weight$"), min: 0.35, max: 2.0 },
-        Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
-        Threshold { pattern: re(r"(attn|ffn|rms).*norm\.weight$"), min: 0.50, max: 2.0 },
-        Threshold { pattern: re(r".*norm\.weight$"), min: 0.50, max: 2.0 },
-    ],
-    // Weight RMS envelope for projections in F16 (empirical ~0.01..0.25)
-    proj_weight_rms_min: Some(0.01),
-    proj_weight_rms_max: Some(0.40),
-    name: "bitnet-b1.58:f16".into(),
-});
+static BITNET_B158_F16: OnceLock<Ruleset> = OnceLock::new();
+
+fn get_bitnet_b158_f16() -> &'static Ruleset {
+    BITNET_B158_F16.get_or_init(|| Ruleset {
+        ln: vec![
+            Threshold { pattern: re(r"ffn_layernorm\.weight$"), min: 0.05, max: 2.0 },
+            Threshold { pattern: re(r"post_attention_layernorm\.weight$"), min: 0.25, max: 2.0 },
+            Threshold { pattern: re(r"input_layernorm\.weight$"), min: 0.35, max: 2.0 },
+            Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
+            Threshold { pattern: re(r"(attn|ffn|rms).*norm\.weight$"), min: 0.50, max: 2.0 },
+            Threshold { pattern: re(r".*norm\.weight$"), min: 0.50, max: 2.0 },
+        ],
+        // Weight RMS envelope for projections in F16 (empirical ~0.01..0.25)
+        proj_weight_rms_min: Some(0.01),
+        proj_weight_rms_max: Some(0.40),
+        name: "bitnet-b1.58:f16".into(),
+    })
+}
 
 pub fn rules_bitnet_b158_f16() -> Ruleset {
-    BITNET_B158_F16.clone()
+    get_bitnet_b158_f16().clone()
 }
 
 /// BitNet b1.58, **I2_S** quantized GGUF (e.g., `ggml-model-i2_s.gguf`)
 ///
 /// Many attn_norm weights sit ≈ 0.01..0.02 legitimately after I2_S quantization.
 /// So we loosen the LN gate significantly.
-static BITNET_B158_I2S: Lazy<Ruleset> = Lazy::new(|| Ruleset {
-    ln: vec![
-        Threshold { pattern: re(r"attn_norm\.weight$"), min: 0.01, max: 2.0 },
-        Threshold { pattern: re(r"ffn_norm\.weight$"), min: 0.50, max: 2.0 },
-        Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
-        Threshold { pattern: re(r".*norm\.weight$"), min: 0.25, max: 2.0 },
-    ],
-    // Weight RMS after I2_S dequant tends to be small but non-zero
-    proj_weight_rms_min: Some(0.002),
-    proj_weight_rms_max: Some(0.20),
-    name: "bitnet-b1.58:i2_s".into(),
-});
+static BITNET_B158_I2S: OnceLock<Ruleset> = OnceLock::new();
+
+fn get_bitnet_b158_i2s() -> &'static Ruleset {
+    BITNET_B158_I2S.get_or_init(|| Ruleset {
+        ln: vec![
+            Threshold { pattern: re(r"attn_norm\.weight$"), min: 0.01, max: 2.0 },
+            Threshold { pattern: re(r"ffn_norm\.weight$"), min: 0.50, max: 2.0 },
+            Threshold { pattern: re(r"final_(layer)?norm\.weight$"), min: 0.50, max: 2.0 },
+            Threshold { pattern: re(r".*norm\.weight$"), min: 0.25, max: 2.0 },
+        ],
+        // Weight RMS after I2_S dequant tends to be small but non-zero
+        proj_weight_rms_min: Some(0.002),
+        proj_weight_rms_max: Some(0.20),
+        name: "bitnet-b1.58:i2_s".into(),
+    })
+}
 
 pub fn rules_bitnet_b158_i2s() -> Ruleset {
-    BITNET_B158_I2S.clone()
+    get_bitnet_b158_i2s().clone()
 }
 
 /// Generic (LLaMA-ish/RMSNorm) fallback
 ///
 /// Assumes standard RMSNorm with gamma weights near 1.0
-static GENERIC: Lazy<Ruleset> = Lazy::new(|| Ruleset {
-    ln: vec![Threshold { pattern: re(r".*norm\.weight$"), min: 0.80, max: 1.20 }],
-    proj_weight_rms_min: None,
-    proj_weight_rms_max: None,
-    name: "generic".into(),
-});
+static GENERIC: OnceLock<Ruleset> = OnceLock::new();
+
+fn get_generic() -> &'static Ruleset {
+    GENERIC.get_or_init(|| Ruleset {
+        ln: vec![Threshold { pattern: re(r".*norm\.weight$"), min: 0.80, max: 1.20 }],
+        proj_weight_rms_min: None,
+        proj_weight_rms_max: None,
+        name: "generic".into(),
+    })
+}
 
 pub fn rules_generic() -> Ruleset {
-    GENERIC.clone()
+    get_generic().clone()
 }
 
 // ---------- Auto-detection ----------

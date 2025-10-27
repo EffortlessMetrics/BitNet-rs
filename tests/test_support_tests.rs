@@ -851,7 +851,7 @@ fn test_ac5_mock_library_builder_version_suffix() {
 #[serial(bitnet_env)]
 fn test_ac5_create_temp_cpp_env_integrated_setup() {
     // Minimal implementation: Manual setup using basic helpers
-    use support::backend_helpers::{create_mock_backend_libs, get_loader_path_var};
+    use support::backend_helpers::create_mock_backend_libs;
     use support::env_guard::EnvGuard;
 
     let temp = create_mock_backend_libs(CppBackend::BitNet).unwrap();

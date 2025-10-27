@@ -117,12 +117,12 @@ pub fn get_loader_path_var() -> &'static str {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,no_run
 /// use std::path::Path;
 /// use bitnet_crossval::backend::CppBackend;
 /// use tests::support::platform::create_mock_backend_libs;
 ///
-/// #[test]
+/// // Example test function (not executed in doctest)
 /// fn test_with_mock_backend() {
 ///     let temp_dir = tempfile::tempdir().unwrap();
 ///     create_mock_backend_libs(temp_dir.path(), CppBackend::BitNet).unwrap();

@@ -42,7 +42,6 @@ wasm-bindgen-futures = { version = "0.4.53", optional = true }
 gloo-timers = { version = "0.3.0", features = ["futures"], optional = true }
 rustc_version_runtime = "0.3"
 chrono = "0.4"
-once_cell = "1.20.2"
 
 [dev-dependencies]
 tokio-test = "0.4.4"

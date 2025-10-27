@@ -61,5 +61,4 @@ tokio = { workspace = true, features = ["full"] }
 tempfile = "3.22.0"
 temp-env = "0.3.6"
 serial_test.workspace = true
-once_cell.workspace = true
 bitnet-tests = { path = "../../tests" }

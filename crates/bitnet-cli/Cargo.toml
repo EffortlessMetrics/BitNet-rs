@@ -39,10 +39,9 @@ tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 indicatif = { workspace = true, features = ["tokio"] }
 serde_json.workspace = true
 serde = { workspace = true, features = ["derive"] }
-serde_yaml = "0.9"
+serde_yaml = { package = "serde_yaml_ng", version = "0.10.0" }
 toml.workspace = true
 regex = "1"
-once_cell = "1.21.3"
 console.workspace = true
 humantime.workspace = true
 humansize.workspace = true

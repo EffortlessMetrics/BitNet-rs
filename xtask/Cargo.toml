@@ -33,7 +33,6 @@ bitnet-inference = { path = "../crates/bitnet-inference", default-features = fal
 bitnet = { path = "..", default-features = false, features = ["cpu"], optional = true }
 tokio = { version = "1.48.0", features = ["rt"], optional = true }
 futures = { version = "0.3.31", optional = true }
-once_cell = "1.21.3"
 regex = "1.12.2"
 xtask-build-helper = { path = "../xtask-build-helper" }
 bitnet-crossval = { path = "../crossval", default-features = false, optional = true }
@@ -54,3 +53,4 @@ tiny_http = "0.12.0"
 assert_cmd = "2.0.17"
 predicates = "3.1.3"
 serial_test = "3.2.0"
+temp-env = "0.3.6"

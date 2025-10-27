@@ -143,7 +143,7 @@ let config = ModelConfig {
     // Optimize memory usage
     gpu_memory_fraction: 0.8,
 
-    // Enable tensor cores (if available)
+    // Enable tensor cores (compiled with gpu feature and CUDA available at runtime)
     use_tensor_cores: true,
 
     ..Default::default()
@@ -716,7 +716,7 @@ scaler.monitor(&model).await?;
 - [ ] Choose appropriate quantization
 - [ ] Set optimal batch size
 - [ ] Configure memory limits
-- [ ] Enable GPU acceleration (if available)
+- [ ] Enable GPU acceleration (compiled with gpu feature)
 - [ ] Test with production-like workload
 
 ### Monitoring

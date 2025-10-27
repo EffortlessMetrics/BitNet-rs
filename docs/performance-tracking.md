@@ -143,7 +143,7 @@ if let Some(stats) = quantizer.get_stats() {
 
 - **Process-Specific Memory**: Uses `memory-stats` crate for accurate current process memory usage
 - **System Memory Monitoring**: Uses `sysinfo` crate with optimized memory refresh for total system memory
-- **GPU Memory Integration**: CUDA cuMemGetInfo_v2 for device memory statistics (when available)
+- **GPU Memory Integration**: CUDA cuMemGetInfo_v2 for device memory statistics (compiled if gpu feature enabled)
 - **Thread-Safe Access**: All memory statistics protected by Arc<Mutex<DeviceStatsInternal>>
 - **Real-Time Updates**: Memory stats automatically updated during quantization and matrix operations
 - **Memory Efficiency Calculation**: Derived metrics like usage percentages and efficiency ratios

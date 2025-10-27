@@ -111,6 +111,7 @@ pub fn l2_distance(a: &[f32], b: &[f32]) -> f64 {
 /// # Returns
 ///
 /// MSE value, or f64::INFINITY if vectors have different lengths
+#[allow(dead_code)]
 pub fn mse(a: &[f32], b: &[f32]) -> f64 {
     if a.len() != b.len() || a.is_empty() {
         return f64::INFINITY;
@@ -358,6 +359,7 @@ fn lane_metrics(result: &LaneResult) -> serde_json::Value {
 }
 
 /// Determine exit code based on lane results
+#[allow(dead_code)]
 pub fn determine_exit_code(lane_a: &LaneResult, lane_b: &LaneResult) -> i32 {
     let both_passed = lane_a.passed && lane_b.passed;
     if both_passed { 0 } else { 1 }
@@ -369,6 +371,7 @@ pub fn both_passed(lane_a: &LaneResult, lane_b: &LaneResult) -> bool {
 }
 
 /// Get overall status string ("ok" or "divergence")
+#[allow(dead_code)]
 pub fn overall_status(lane_a: &LaneResult, lane_b: &LaneResult) -> &'static str {
     if both_passed(lane_a, lane_b) { "ok" } else { "divergence" }
 }

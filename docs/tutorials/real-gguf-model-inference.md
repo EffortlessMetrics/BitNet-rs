@@ -251,7 +251,7 @@ async fn main() -> Result<()> {
     // Create inference engine with device-aware backend
     let engine = InferenceEngine::builder()
         .model(model)
-        .backend(Backend::Auto)  // GPU if available, CPU fallback
+        .backend(Backend::Auto)  // GPU (runtime detection), CPU fallback
         .quantization(QuantizationType::I2S)
         .build()?;
 

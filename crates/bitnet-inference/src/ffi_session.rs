@@ -18,11 +18,10 @@
 
 use anyhow::Result;
 use bitnet_sys::{BitnetContext, BitnetModel, bitnet_eval_tokens, bitnet_prefill, cpp_vocab_size};
-use once_cell::sync::OnceCell;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 /// Global FFI session for parity checking (reused across tests)
-static PARITY_CPP_SESSION: OnceCell<Mutex<ParityCppSession>> = OnceCell::new();
+static PARITY_CPP_SESSION: OnceLock<Mutex<ParityCppSession>> = OnceLock::new();
 
 /// Reusable C++ FFI session for parity validation
 ///

@@ -7,7 +7,6 @@ use fs2::FileExt;
 use fs2::available_space;
 use httpdate::parse_http_date;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
-use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::StatusCode;
 use reqwest::blocking::Client;
@@ -18,6 +17,7 @@ use reqwest::header::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use std::sync::OnceLock;
 use std::{
     collections::HashMap,
     fs,
@@ -5197,21 +5197,25 @@ fn verify_cmd(model: &Path, tokenizer: Option<&Path>, format: &str, strict: bool
 ///
 /// Broad but safe set of identifiers we've actually seen in receipts.
 /// NOTE: explicitly exclude i2s_cpu_* so a CPU path can't sneak through.
-static GPU_KERNEL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
-    [
-        r"^gemm_",    // general GEMM family
-        r"^wmma_",    // warp MMA
-        r"^cublas_",  // cublas wrappers
-        r"^cutlass_", // cutlass wrappers
-        r"^cuda_",    // generic CUDA kernels
-        r"^tl1_gpu_",
-        r"^tl2_gpu_",                   // TL1/TL2 GPU
-        r"^i2s_(quantize|dequantize)$", // observed in GPU receipts
-    ]
-    .into_iter()
-    .map(|p| Regex::new(p).expect("internal GPU kernel regex must compile"))
-    .collect()
-});
+static GPU_KERNEL_PATTERNS: OnceLock<Vec<Regex>> = OnceLock::new();
+
+fn get_gpu_kernel_patterns() -> &'static Vec<Regex> {
+    GPU_KERNEL_PATTERNS.get_or_init(|| {
+        [
+            r"^gemm_",    // general GEMM family
+            r"^wmma_",    // warp MMA
+            r"^cublas_",  // cublas wrappers
+            r"^cutlass_", // cutlass wrappers
+            r"^cuda_",    // generic CUDA kernels
+            r"^tl1_gpu_",
+            r"^tl2_gpu_",                   // TL1/TL2 GPU
+            r"^i2s_(quantize|dequantize)$", // observed in GPU receipts
+        ]
+        .into_iter()
+        .map(|p| Regex::new(p).expect("internal GPU kernel regex must compile"))
+        .collect()
+    })
+}
 
 /// Human-friendly examples used in error messages; must track GPU_KERNEL_PATTERNS.
 static GPU_KERNEL_EXAMPLES: &[&str] = &[
@@ -5231,7 +5235,7 @@ fn is_gpu_kernel_id(id: &str) -> bool {
     if id.starts_with("i2s_cpu_") {
         return false;
     }
-    GPU_KERNEL_PATTERNS.iter().any(|re| re.is_match(id))
+    get_gpu_kernel_patterns().iter().any(|re| re.is_match(id))
 }
 
 /// Check if a kernel ID represents a CPU quantized kernel
