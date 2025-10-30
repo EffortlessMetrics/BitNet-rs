@@ -5,6 +5,7 @@
 use bitnet_common::{BitNetError, Result};
 use bitnet_tests::support::env_guard::EnvGuard;
 use bitnet_tokenizers::{BasicTokenizer, Tokenizer};
+#[allow(unused_imports)]
 use serial_test::serial;
 #[allow(unused_imports)] // Used in test scaffolding
 use std::path::Path;

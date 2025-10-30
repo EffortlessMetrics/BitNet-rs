@@ -2,12 +2,14 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
 
+#[allow(unused_imports)]
 use bitnet_tests::support::env_guard::EnvGuard;
 #[allow(unused_imports)] // Test scaffolding imports for comprehensive integration tests
 use bitnet_tokenizers::{
     BasicTokenizer, BitNetTokenizerWrapper, Gpt2TokenizerWrapper, LlamaTokenizerWrapper,
     SmartTokenizerDownload, Tokenizer, TokenizerDiscovery, TokenizerStrategy,
 };
+#[allow(unused_imports)]
 use serial_test::serial;
 
 /// AC7: End-to-end tokenizer discovery integration test

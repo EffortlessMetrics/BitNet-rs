@@ -6,9 +6,11 @@
 //! including caching, verification, network failure handling, and retry logic.
 
 // Imports will be used once implementation is complete
+#[allow(unused_imports)]
 use bitnet_tests::support::env_guard::EnvGuard;
 #[allow(unused_imports)]
 use bitnet_tokenizers::{SmartTokenizerDownload, TokenizerDiscovery, TokenizerDownloadInfo};
+#[allow(unused_imports)]
 use serial_test::serial;
 #[allow(unused_imports)]
 use std::path::Path;

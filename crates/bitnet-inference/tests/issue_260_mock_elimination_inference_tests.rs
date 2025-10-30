@@ -539,7 +539,6 @@ impl GPUPerformanceBenchmark {
         use std::time::Instant;
 
         // Simulate GPU benchmark with realistic metrics
-        let start = Instant::now();
 
         // Warmup
         for _ in 0..config.warmup_iterations {
