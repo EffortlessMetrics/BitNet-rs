@@ -20,12 +20,6 @@ on:
           - all
           - linux
           - macos
-  push:
-    branches: [ main ]
-    paths:
-      - 'crates/bitnet-kernels/**'
-      - 'crates/bitnet-inference/**'
-      - 'crates/bitnet-quantization/**'
 
 env:
   CARGO_TERM_COLOR: always

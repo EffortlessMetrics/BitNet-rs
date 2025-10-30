@@ -1,13 +1,10 @@
 name: Security Audit
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
   schedule:
     # Run security audit daily at 2 AM UTC
     - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual trigger
 
 env:
   CARGO_TERM_COLOR: always

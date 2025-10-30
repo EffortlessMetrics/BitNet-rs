@@ -1,20 +1,9 @@
 name: Property-Based Tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'crates/**'
-      - 'crossval/**'
-      - 'scripts/prop-*.sh'
-      - '.github/workflows/property-tests.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'crates/**'
-      - 'crossval/**'
-      - 'scripts/prop-*.sh'
-      - '.github/workflows/property-tests.yml'
+  schedule:
+    # Run property tests nightly at 5 AM UTC
+    - cron: '0 5 * * *'
   workflow_dispatch:
     inputs:
       num_examples:
