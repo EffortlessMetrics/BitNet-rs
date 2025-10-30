@@ -274,15 +274,19 @@ impl BitNetCInferenceConfig {
 
     /// Convert to Rust GenerationConfig
     pub fn to_generation_config(&self) -> bitnet_inference::GenerationConfig {
-        bitnet_inference::GenerationConfig {
-            max_new_tokens: self.max_new_tokens,
-            temperature: self.temperature,
-            top_k: self.top_k,
-            top_p: self.top_p,
-            repetition_penalty: self.repetition_penalty,
-            seed: if self.seed == 0 { None } else { Some(self.seed) },
-            ..Default::default()
+        let mut config = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(self.max_new_tokens)
+            .with_temperature(self.temperature)
+            .with_top_k(self.top_k)
+            .with_top_p(self.top_p);
+
+        config.repetition_penalty = self.repetition_penalty;
+
+        if self.seed != 0 {
+            config = config.with_seed(self.seed);
         }
+
+        config
     }
 }
 

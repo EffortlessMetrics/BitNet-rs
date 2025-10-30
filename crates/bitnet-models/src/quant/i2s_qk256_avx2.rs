@@ -341,100 +341,72 @@ mod tests {
         );
     }
 
-    /// Verify AVX2 implementation matches scalar reference
+    /// Smoke test: AVX2 implementation matches scalar reference
     ///
-    /// This test is the core correctness validation for the AVX2 implementation.
-    /// It compares AVX2 results against the scalar reference for multiple random
-    /// test cases with different matrix dimensions.
+    /// This is a minimal smoke test to verify basic AVX2 functionality.
+    /// For comprehensive correctness validation, see the integration test suite
+    /// in `tests/qk256_avx2_correctness.rs`.
     ///
-    /// # Test Strategy
+    /// # Test Coverage
     ///
-    /// 1. Generate random QK256 quantized data (multiple blocks)
-    /// 2. Generate random input vector
-    /// 3. Compute result using scalar reference (gemv_qk256)
-    /// 4. Compute result using AVX2 path (gemv_qk256_avx2)
-    /// 5. Compare results with tolerance 1e-5
-    ///
-    /// # Fixtures
-    ///
-    /// - Random seeds: 42, 1337, 9999
-    /// - Matrix sizes:
-    ///   * 4×256 (single block per row)
-    ///   * 8×512 (two blocks per row)
-    ///   * 16×1024 (four blocks per row)
-    ///   * 3×300 (non-multiple of 256, tail handling)
+    /// - Single test case: 4×256 matrix (single block per row, seed 42)
+    /// - Validates basic AVX2 vs scalar parity
+    /// - Ensures the module compiles and links correctly
     #[test]
     #[cfg(target_arch = "x86_64")]
-    fn test_gemv_qk256_avx2_matches_scalar() {
+    fn test_gemv_qk256_avx2_smoke() {
         use super::super::i2s_qk256::gemv_qk256;
         use rand::{Rng, SeedableRng};
         use rand_chacha::ChaCha8Rng;
 
         // Skip if AVX2 not available
         if !is_x86_feature_detected!("avx2") {
-            eprintln!("Skipping AVX2 correctness test: AVX2 not available");
+            eprintln!("Skipping AVX2 smoke test: AVX2 not available");
             return;
         }
 
         const TOLERANCE: f32 = 1e-5;
 
-        // Test configurations: (rows, cols, seed)
-        let test_cases: [(usize, usize, u64); 4] = [
-            (4, 256, 42),     // Single block per row
-            (8, 512, 1337),   // Two blocks per row
-            (16, 1024, 9999), // Four blocks per row
-            (3, 300, 12345),  // Non-multiple of 256 (tail handling)
-        ];
+        // Single smoke test case: 4×256 (single block per row)
+        let (rows, cols, seed) = (4usize, 256usize, 42u64);
+        let mut rng = ChaCha8Rng::seed_from_u64(seed);
 
-        for (rows, cols, seed) in test_cases {
-            let mut rng = ChaCha8Rng::seed_from_u64(seed);
+        let blocks_per_row = cols.div_ceil(QK256_BLOCK);
+        let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
 
-            let blocks_per_row = cols.div_ceil(QK256_BLOCK);
-            let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
+        // Generate random quantized data
+        let mut qs_data = vec![0u8; rows * row_stride_bytes];
+        for byte in qs_data.iter_mut() {
+            *byte = rng.random();
+        }
 
-            // Generate random quantized data (2-bit codes)
-            let mut qs_data = vec![0u8; rows * row_stride_bytes];
-            for byte in qs_data.iter_mut() {
-                *byte = rng.random();
-            }
+        // Generate random input vector
+        let x: Vec<f32> = (0..cols).map(|_| rng.random_range(-10.0..10.0)).collect();
 
-            // Generate random input vector
-            let x: Vec<f32> = (0..cols).map(|_| rng.random_range(-10.0..10.0)).collect();
+        // Compute reference result using scalar path
+        let mut y_scalar = vec![0.0f32; rows];
+        gemv_qk256(&qs_data, &x, &mut y_scalar, rows, cols, row_stride_bytes)
+            .expect("Scalar GEMV should succeed");
 
-            // Compute reference result using scalar path
-            let mut y_scalar = vec![0.0f32; rows];
-            gemv_qk256(&qs_data, &x, &mut y_scalar, rows, cols, row_stride_bytes)
-                .expect("Scalar GEMV should succeed");
+        // Compute AVX2 result
+        let mut y_avx2 = vec![0.0f32; rows];
+        gemv_qk256_avx2(&qs_data, &x, &mut y_avx2, rows, cols, row_stride_bytes)
+            .expect("AVX2 GEMV should succeed");
 
-            // Compute AVX2 result
-            let mut y_avx2 = vec![0.0f32; rows];
-            gemv_qk256_avx2(&qs_data, &x, &mut y_avx2, rows, cols, row_stride_bytes)
-                .expect("AVX2 GEMV should succeed");
-
-            // Compare results
-            for (i, (&scalar, &avx2)) in y_scalar.iter().zip(y_avx2.iter()).enumerate() {
-                let abs_diff = (scalar - avx2).abs();
-                let rel_diff = if scalar.abs() > 1e-6 { abs_diff / scalar.abs() } else { abs_diff };
-
-                assert!(
-                    abs_diff < TOLERANCE || rel_diff < TOLERANCE,
-                    "Mismatch at row {} for {}×{} (seed={}): scalar={}, avx2={}, abs_diff={}, rel_diff={}",
-                    i,
-                    rows,
-                    cols,
-                    seed,
-                    scalar,
-                    avx2,
-                    abs_diff,
-                    rel_diff
-                );
-            }
-
-            println!(
-                "✅ AVX2 correctness test passed: {}×{} (seed={}, {} blocks/row)",
-                rows, cols, seed, blocks_per_row
+        // Compare results
+        for (i, (&scalar, &avx2)) in y_scalar.iter().zip(y_avx2.iter()).enumerate() {
+            let abs_diff = (scalar - avx2).abs();
+            assert!(
+                abs_diff < TOLERANCE,
+                "Smoke test failed at row {}: scalar={}, avx2={}, diff={}",
+                i,
+                scalar,
+                avx2,
+                abs_diff
             );
         }
+
+        println!("✅ AVX2 smoke test passed: {}×{} (seed={})", rows, cols, seed);
     }
 
     /// Test that AVX2 stub returns error on non-x86_64 architectures

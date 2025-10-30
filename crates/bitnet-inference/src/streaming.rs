@@ -453,20 +453,6 @@ impl GenerationStream {
         Ok(vec![0.1; vocab_size])
     }
 
-    /// Check if stop sequence matches when including the candidate token
-    fn matches_with_candidate(
-        tail_tokens: &[u32],
-        candidate_token: u32,
-        stop_sequences: &[String],
-        tokenizer: &Arc<dyn Tokenizer>,
-    ) -> bool {
-        let mut test_tokens = tail_tokens.to_vec();
-        test_tokens.push(candidate_token);
-
-        let text = tokenizer.decode(&test_tokens).unwrap_or_default();
-        stop_sequences.iter().any(|seq| text.ends_with(seq))
-    }
-
     /// Check if generation should stop
     fn should_stop(
         token: u32,
@@ -474,10 +460,10 @@ impl GenerationStream {
         config: &GenerationConfig,
         tokenizer: &Arc<dyn Tokenizer>,
     ) -> bool {
-        // 1) Check token-level stops FIRST (fast path - O(1) check)
+        // 1) Check token-level stops FIRST (fast path - O(1) using HashSet)
         // CRITICAL: Check stop_token_ids BEFORE string matching for performance
         // For LLaMA-3 <|eot_id|> and other special tokens
-        if !config.stop_token_ids.is_empty() && config.stop_token_ids.contains(&token) {
+        if config.is_stop_token(token) {
             return true;
         }
 
@@ -491,20 +477,19 @@ impl GenerationStream {
 
         // 3) String-based stop sequences (tail window optimization - O(window_size) decode)
         // Only decode if we have stop sequences to check
-        // CRITICAL FIX: Include the candidate token in the check to avoid "one token late" bug
         if !config.stop_sequences.is_empty() {
             // Tail window optimization: only decode the last N tokens to avoid O(n²) cost
-            // Account for the candidate token in window size calculation
-            let window_size = config.stop_string_window.min(current_tokens.len() + 1);
-            let tail_start = current_tokens.len().saturating_sub(window_size - 1);
+            let window_size = config.stop_string_window.min(current_tokens.len());
+            let tail_start = current_tokens.len().saturating_sub(window_size);
             let tail_tokens = &current_tokens[tail_start..];
 
-            return Self::matches_with_candidate(
-                tail_tokens,
-                token,
-                &config.stop_sequences,
-                tokenizer,
-            );
+            if let Ok(current_text) = tokenizer.decode(tail_tokens) {
+                for stop_seq in &config.stop_sequences {
+                    if current_text.ends_with(stop_seq) {
+                        return true;
+                    }
+                }
+            }
         }
 
         false
@@ -645,7 +630,7 @@ mod tests {
         let backend = Box::new(MockBackend);
         let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
 
-        let config = GenerationConfig { max_new_tokens: 5, ..Default::default() };
+        let config = GenerationConfig::default().with_max_tokens(5);
 
         let streaming_config = StreamingConfig::default();
 
@@ -697,11 +682,7 @@ mod tests {
         let backend = Box::new(MockBackend);
         let cache = Arc::new(RwLock::new(KVCache::new(Default::default()).unwrap()));
 
-        let config = GenerationConfig {
-            max_new_tokens: 5,
-            seed: Some(42), // Ensure reproducible token generation
-            ..Default::default()
-        };
+        let config = GenerationConfig::default().with_max_tokens(5).with_seed(42); // Ensure reproducible token generation
 
         let streaming_config = StreamingConfig::default();
 

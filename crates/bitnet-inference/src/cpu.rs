@@ -240,10 +240,10 @@ impl CpuInferenceEngine {
             };
 
             // 3-tier stop check (partial - CPU backend lacks tokenizer for string checks)
-            // 1) ID-based stops (fast path - O(1) check on stop_token_ids list)
+            // 1) ID-based stops (fast path - O(1) using HashSet)
             // CRITICAL: Check token IDs BEFORE EOS for performance and correctness
             // For LLaMA-3 <|eot_id|> and other models with token-ID stop sequences
-            if !generation_config.stop_token_ids.is_empty() && generation_config.stop_token_ids.contains(&next_token) {
+            if generation_config.is_stop_token(next_token) {
                 break;
             }
 

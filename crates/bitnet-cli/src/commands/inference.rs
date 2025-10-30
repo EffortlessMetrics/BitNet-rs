@@ -302,10 +302,6 @@ pub struct InferenceCommand {
     /// Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features).
     #[arg(long)]
     pub strict_loader: bool,
-
-    /// Print input token IDs after tokenization (debug tokenizer/template/BOS behavior)
-    #[arg(long)]
-    pub print_input_tokens: bool,
 }
 
 impl InferenceCommand {
@@ -458,23 +454,19 @@ impl PrefillEngine for InferenceEngine {
         config: &'a GenerationConfig,
     ) -> BoxFuture<'a, Result<Vec<u32>>> {
         // Map CLI GenerationConfig to engine GenerationConfig
-        let engine_config = bitnet_inference::GenerationConfig {
-            max_new_tokens: config.max_new_tokens as u32,
-            temperature: config.sampling.temperature,
-            top_k: config.sampling.top_k,
-            top_p: config.sampling.top_p,
-            repetition_penalty: config.sampling.repetition_penalty,
-            stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids: vec![], // Token-level stops not available in PrefillEngine path (no tokenizer access)
-            seed: config.sampling.seed,
-            skip_special_tokens: true,
-            eos_token_id: None,
-            logits_tap_steps: 0,
-            logits_topk: 10,
-            logits_cb: None,
-            add_bos: false, // Pre-tokenized, BOS already handled
-            stop_string_window: config.stop_string_window,
-        };
+        let mut engine_config = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(config.max_new_tokens as u32)
+            .with_temperature(config.sampling.temperature)
+            .with_top_k(config.sampling.top_k)
+            .with_top_p(config.sampling.top_p)
+            .with_repetition_penalty(config.sampling.repetition_penalty)
+            .with_stop_string_window(config.stop_string_window)
+            .with_stop_sequences(config.stop_sequences.clone())
+            .with_skip_special_tokens(true) // Token-level stops not available in PrefillEngine path (no tokenizer access)
+            .with_add_bos(false); // Pre-tokenized, BOS already handled
+        if let Some(seed) = config.sampling.seed {
+            engine_config = engine_config.with_seed(seed);
+        }
         Box::pin(async move {
             // Use explicit InferenceEngine method to avoid recursion
             InferenceEngine::generate_tokens(self, tokens, &engine_config).await
@@ -744,7 +736,7 @@ impl InferenceCommand {
                 Ok(Device::Cpu)
             }
             "cuda" => {
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
+                #[cfg(feature = "gpu")]
                 {
                     if candle_core::utils::cuda_is_available() {
                         info!("Using CUDA device");
@@ -753,13 +745,13 @@ impl InferenceCommand {
                         anyhow::bail!("CUDA requested but no GPU available");
                     }
                 }
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+                #[cfg(not(feature = "gpu"))]
                 {
                     anyhow::bail!("Binary not built with GPU support");
                 }
             }
             "auto" => {
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
+                #[cfg(feature = "gpu")]
                 {
                     if candle_core::utils::cuda_is_available() {
                         info!("Auto-select: CUDA");
@@ -769,7 +761,7 @@ impl InferenceCommand {
                         Ok(Device::Cpu)
                     }
                 }
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+                #[cfg(not(feature = "gpu"))]
                 {
                     info!("Auto-select: CPU (GPU support not compiled)");
                     Ok(Device::Cpu)
@@ -856,23 +848,22 @@ impl InferenceCommand {
             }
         }
 
-        bitnet_inference::GenerationConfig {
-            max_new_tokens: config.max_new_tokens as u32,
-            temperature: config.sampling.temperature,
-            top_k: config.sampling.top_k,
-            top_p: config.sampling.top_p,
-            repetition_penalty: config.sampling.repetition_penalty,
-            stop_sequences: config.stop_sequences.clone(),
-            stop_token_ids,
-            stop_string_window: self.stop_string_window,
-            seed: config.sampling.seed,
-            skip_special_tokens: true,
-            eos_token_id: None,
-            logits_tap_steps: 0,
-            logits_topk: self.logits_topk,
-            logits_cb: None,
-            add_bos: self.should_add_bos(), // Template-aware BOS policy
+        let mut gen_config = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(config.max_new_tokens as u32)
+            .with_temperature(config.sampling.temperature)
+            .with_top_k(config.sampling.top_k)
+            .with_top_p(config.sampling.top_p)
+            .with_repetition_penalty(config.sampling.repetition_penalty)
+            .with_stop_token_ids(stop_token_ids)
+            .with_stop_string_window(self.stop_string_window)
+            .with_stop_sequences(config.stop_sequences.clone())
+            .with_skip_special_tokens(true)
+            .with_add_bos(self.should_add_bos()); // Template-aware BOS policy
+        gen_config.logits_topk = self.logits_topk;
+        if let Some(seed) = config.sampling.seed {
+            gen_config = gen_config.with_seed(seed);
         }
+        gen_config
     }
 
     /// Run streaming inference
@@ -1157,33 +1148,9 @@ impl InferenceCommand {
             // Use template-aware parse_special parameter for LLaMA-3 chat special tokens
             let parse_special =
                 self.resolve_template_type().map(|t| t.parse_special()).unwrap_or(false);
-            let add_bos = self.should_add_bos();
-            let prompt_ids = tokenizer.encode(&formatted_prompt, add_bos, parse_special)?;
+            let prompt_ids =
+                tokenizer.encode(&formatted_prompt, self.should_add_bos(), parse_special)?;
             let t_tok_ms = t0.elapsed().as_secs_f64() * 1e3;
-
-            // Debug: Print tokenization provenance and token IDs
-            if self.print_input_tokens || self.verbose {
-                let template_type = self.resolve_template_type().ok();
-                debug!(
-                    "Tokenization provenance: template={:?} add_bos={} parse_special={} ({})",
-                    template_type,
-                    add_bos,
-                    parse_special,
-                    if let Some(t) = template_type {
-                        if t.should_add_bos() {
-                            "BOS added by tokenizer"
-                        } else {
-                            "BOS injected by template"
-                        }
-                    } else {
-                        "template detection failed"
-                    }
-                );
-            }
-
-            if self.print_input_tokens {
-                println!("Input tokens ({}): {:?}", prompt_ids.len(), prompt_ids);
-            }
 
             // 2. Prefill Phase: Warm model cache with prompt tokens
             // CRITICAL: This is the new explicit prefill step that:
@@ -1913,7 +1880,6 @@ mod tests {
             receipt_path: None,
             qa: false,
             strict_loader: false,
-            print_input_tokens: false,
         };
 
         let gen_config = GenerationConfig {

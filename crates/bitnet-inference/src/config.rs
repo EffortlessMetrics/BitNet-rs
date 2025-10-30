@@ -3,6 +3,7 @@
 //! Configuration structures for inference engine and text generation.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Type alias for logits callback function
@@ -36,6 +37,7 @@ impl Default for InferenceConfig {
 }
 
 /// Configuration for text generation
+#[non_exhaustive]
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {
     /// Maximum number of new tokens to generate
@@ -53,6 +55,12 @@ pub struct GenerationConfig {
     /// Token IDs that trigger immediate stop (checked before string matching)
     /// Useful for LLaMA-3 <|eot_id|> and other special tokens
     pub stop_token_ids: Vec<u32>,
+    /// Precomputed HashSet for O(1) stop token ID lookups
+    /// This is derived from stop_token_ids and not serialized.
+    /// Use `with_stop_token_ids()` builder to set stop tokens, which automatically
+    /// maintains this internal set for O(1) lookups via `is_stop_token()`.
+    #[serde(skip)]
+    stop_token_ids_set: HashSet<u32>,
     /// Window size for tail-based string matching (default: 64)
     /// Only decode the last N tokens when checking stop sequences to avoid O(n²) decode costs
     pub stop_string_window: usize,
@@ -106,6 +114,7 @@ impl Default for GenerationConfig {
             repetition_penalty: 1.0,
             stop_sequences: vec![],
             stop_token_ids: vec![],
+            stop_token_ids_set: HashSet::new(),
             stop_string_window: 64, // Default: decode only last 64 tokens for stop sequence matching
             seed: None,
             skip_special_tokens: true,
@@ -168,45 +177,192 @@ impl GenerationConfig {
     }
 
     /// Set random seed for reproducible generation
+    #[must_use]
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.seed = Some(seed);
         self
     }
 
     /// Add stop sequence
+    #[must_use]
     pub fn with_stop_sequence(mut self, stop_seq: String) -> Self {
         self.stop_sequences.push(stop_seq);
         self
     }
 
+    /// Set all stop sequences at once
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_stop_sequences(vec!["</s>".to_string(), "\n\n".to_string()]);
+    /// assert_eq!(config.stop_sequences.len(), 2);
+    /// ```
+    #[must_use]
+    pub fn with_stop_sequences<I: IntoIterator<Item = String>>(mut self, sequences: I) -> Self {
+        self.stop_sequences = sequences.into_iter().collect();
+        self
+    }
+
     /// Set maximum tokens
+    #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_new_tokens = max_tokens;
         self
     }
 
     /// Set temperature
+    #[must_use]
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = temperature;
         self
     }
 
     /// Set top-k
+    #[must_use]
     pub fn with_top_k(mut self, top_k: u32) -> Self {
         self.top_k = top_k;
         self
     }
 
     /// Set top-p
+    #[must_use]
     pub fn with_top_p(mut self, top_p: f32) -> Self {
         self.top_p = top_p;
         self
     }
 
+    /// Set repetition penalty
+    #[must_use]
+    pub fn with_repetition_penalty(mut self, penalty: f32) -> Self {
+        self.repetition_penalty = penalty;
+        self
+    }
+
     /// Set stop string window size
+    #[must_use]
     pub fn with_stop_string_window(mut self, window: usize) -> Self {
         self.stop_string_window = window;
         self
+    }
+
+    /// Set whether to skip special tokens in output
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_skip_special_tokens(false);
+    /// assert!(!config.skip_special_tokens);
+    /// ```
+    #[must_use]
+    pub fn with_skip_special_tokens(mut self, skip: bool) -> Self {
+        self.skip_special_tokens = skip;
+        self
+    }
+
+    /// Set whether to add BOS token during tokenization
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_add_bos(true);
+    /// assert!(config.add_bos);
+    /// ```
+    #[must_use]
+    pub fn with_add_bos(mut self, add_bos: bool) -> Self {
+        self.add_bos = add_bos;
+        self
+    }
+
+    /// Add stop token IDs and rebuild the HashSet for O(1) lookups
+    ///
+    /// This is the preferred way to set stop token IDs as it automatically
+    /// maintains the internal HashSet for O(1) lookups via `is_stop_token()`.
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_stop_token_ids(vec![128009, 128001]); // LLaMA-3 EOT tokens
+    ///
+    /// assert!(config.is_stop_token(128009)); // O(1) lookup
+    /// assert!(config.is_stop_token(128001));
+    /// assert!(!config.is_stop_token(999));
+    /// ```
+    #[must_use]
+    pub fn with_stop_token_ids(mut self, token_ids: Vec<u32>) -> Self {
+        self.stop_token_ids = token_ids;
+        self.rebuild_stop_token_set();
+        self
+    }
+
+    /// Add a single stop token ID
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_stop_token_id(128009); // LLaMA-3 <|eot_id|>
+    ///
+    /// assert!(config.is_stop_token(128009));
+    /// ```
+    #[must_use]
+    pub fn with_stop_token_id(mut self, token_id: u32) -> Self {
+        self.stop_token_ids.push(token_id);
+        self.stop_token_ids_set.insert(token_id);
+        self
+    }
+
+    /// Rebuild the stop token HashSet from the Vec
+    ///
+    /// Call this after:
+    /// - Modifying `stop_token_ids` directly (discouraged - use builders instead)
+    /// - Deserializing from JSON/YAML (HashSet is not serialized)
+    ///
+    /// # Example: Direct modification (not recommended)
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let mut config = GenerationConfig::default();
+    ///
+    /// // Direct modification without rebuild - is_stop_token() won't work!
+    /// config.stop_token_ids = vec![128009];
+    /// assert!(!config.is_stop_token(128009)); // ❌ Returns false!
+    ///
+    /// // Must call rebuild_stop_token_set() to sync the internal HashSet
+    /// config.rebuild_stop_token_set();
+    /// assert!(config.is_stop_token(128009)); // ✅ Now works!
+    /// ```
+    ///
+    /// # Example: Deserialization (required)
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let json = r#"{"max_new_tokens":100,"temperature":0.7,"top_k":50,"top_p":0.9,
+    ///                "repetition_penalty":1.0,"stop_sequences":[],"stop_token_ids":[128009],
+    ///                "stop_string_window":64,"seed":null,"skip_special_tokens":true,
+    ///                "eos_token_id":null,"logits_tap_steps":0,"logits_topk":10,"add_bos":false}"#;
+    ///
+    /// let mut config: GenerationConfig = serde_json::from_str(json).unwrap();
+    /// config.rebuild_stop_token_set(); // Required after deserialization
+    ///
+    /// assert!(config.is_stop_token(128009));
+    /// ```
+    pub fn rebuild_stop_token_set(&mut self) {
+        self.stop_token_ids_set = self.stop_token_ids.iter().copied().collect();
+    }
+
+    /// Check if a token ID is a stop token (O(1) using HashSet)
+    pub fn is_stop_token(&self, token_id: u32) -> bool {
+        self.stop_token_ids_set.contains(&token_id)
     }
 }
 
@@ -436,5 +592,74 @@ mod tests {
 
         assert_eq!(inf_config.max_context_length, deserialized.max_context_length);
         assert_eq!(inf_config.num_threads, deserialized.num_threads);
+    }
+
+    #[test]
+    fn test_stop_token_set_vs_fallback() {
+        // Test 1: Using builder maintains O(1) lookup set
+        let config = GenerationConfig::default().with_stop_token_ids(vec![128009, 128001]);
+
+        assert!(config.is_stop_token(128009), "Builder should maintain HashSet for O(1) lookup");
+        assert!(config.is_stop_token(128001), "Builder should maintain HashSet for O(1) lookup");
+        assert!(!config.is_stop_token(999), "Non-stop token should return false");
+
+        // Test 2: Direct modification without rebuild - is_stop_token() won't work
+        // This pattern is intentionally wrong to demonstrate the foot-gun
+        #[allow(clippy::field_reassign_with_default)]
+        let mut config = GenerationConfig::default();
+        #[allow(clippy::field_reassign_with_default)]
+        {
+            config.stop_token_ids = vec![128009];
+        }
+
+        assert!(
+            !config.is_stop_token(128009),
+            "Direct vec modification without rebuild should NOT enable O(1) lookup"
+        );
+
+        // Test 3: After rebuild, O(1) lookup works
+        config.rebuild_stop_token_set();
+        assert!(
+            config.is_stop_token(128009),
+            "After rebuild_stop_token_set(), O(1) lookup should work"
+        );
+
+        // Test 4: Verify with_stop_token_id also maintains the set
+        let config =
+            GenerationConfig::default().with_stop_token_id(128009).with_stop_token_id(128001);
+
+        assert!(config.is_stop_token(128009));
+        assert!(config.is_stop_token(128001));
+        assert_eq!(config.stop_token_ids.len(), 2);
+    }
+
+    #[test]
+    fn test_new_builder_methods() {
+        // Test with_skip_special_tokens
+        let config = GenerationConfig::default().with_skip_special_tokens(false);
+        assert!(!config.skip_special_tokens);
+
+        // Test with_add_bos
+        let config = GenerationConfig::default().with_add_bos(true);
+        assert!(config.add_bos);
+
+        // Test with_stop_sequences
+        let config = GenerationConfig::default()
+            .with_stop_sequences(vec!["</s>".to_string(), "\n\n".to_string()]);
+        assert_eq!(config.stop_sequences.len(), 2);
+        assert_eq!(config.stop_sequences[0], "</s>");
+        assert_eq!(config.stop_sequences[1], "\n\n");
+
+        // Test chaining all new builders
+        let config = GenerationConfig::default()
+            .with_skip_special_tokens(false)
+            .with_add_bos(true)
+            .with_stop_sequences(vec!["END".to_string()])
+            .with_stop_token_ids(vec![128009]);
+
+        assert!(!config.skip_special_tokens);
+        assert!(config.add_bos);
+        assert_eq!(config.stop_sequences.len(), 1);
+        assert!(config.is_stop_token(128009));
     }
 }

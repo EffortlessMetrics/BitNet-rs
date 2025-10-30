@@ -1,11 +1,13 @@
 //! Configuration management with environment variable support
 
 use anyhow::Result;
+use bitnet_common::Device;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::env;
 use std::net::IpAddr;
 use std::path::Path;
+use std::str::FromStr;
 use std::time::Duration;
 
 use crate::batch_engine::BatchEngineConfig;
@@ -14,6 +16,63 @@ use crate::execution_router::{DeviceSelectionStrategy, ExecutionRouterConfig};
 use crate::model_manager::ModelManagerConfig;
 use crate::monitoring::MonitoringConfig;
 use crate::security::SecurityConfig;
+
+/// Device configuration mode for server initialization
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub enum DeviceConfig {
+    /// Automatically select the best available device (prefer GPU if available)
+    #[default]
+    Auto,
+    /// Force CPU execution
+    Cpu,
+    /// Force GPU execution on specific device ID
+    Gpu(usize),
+}
+
+impl FromStr for DeviceConfig {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "auto" => Ok(DeviceConfig::Auto),
+            "cpu" => Ok(DeviceConfig::Cpu),
+            "gpu" => Ok(DeviceConfig::Gpu(0)),
+            s if s.starts_with("gpu:") => {
+                let id_str = &s[4..];
+                let id = id_str.parse::<usize>()?;
+                Ok(DeviceConfig::Gpu(id))
+            }
+            s if s.starts_with("cuda:") => {
+                let id_str = &s[5..];
+                let id = id_str.parse::<usize>()?;
+                Ok(DeviceConfig::Gpu(id))
+            }
+            _ => anyhow::bail!("Unknown device config: {}", s),
+        }
+    }
+}
+
+impl DeviceConfig {
+    /// Resolve device configuration to actual device
+    pub fn resolve(&self) -> Device {
+        match self {
+            DeviceConfig::Auto => {
+                // Auto: prefer GPU if available at runtime
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
+                {
+                    use bitnet_kernels::device_features::gpu_available_runtime;
+                    if gpu_available_runtime() { Device::Cuda(0) } else { Device::Cpu }
+                }
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+                {
+                    Device::Cpu
+                }
+            }
+            DeviceConfig::Cpu => Device::Cpu,
+            DeviceConfig::Gpu(id) => Device::Cuda(*id),
+        }
+    }
+}
 
 /// Complete server configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -38,6 +97,7 @@ pub struct ServerSettings {
     pub graceful_shutdown_timeout: Duration,
     pub default_model_path: Option<String>,
     pub default_tokenizer_path: Option<String>,
+    pub default_device: DeviceConfig,
 }
 
 impl Default for ServerSettings {
@@ -51,6 +111,7 @@ impl Default for ServerSettings {
             graceful_shutdown_timeout: Duration::from_secs(30),
             default_model_path: None,
             default_tokenizer_path: None,
+            default_device: DeviceConfig::Auto,
         }
     }
 }
@@ -91,6 +152,17 @@ impl ConfigBuilder {
 
         if let Ok(tokenizer_path) = env::var("BITNET_DEFAULT_TOKENIZER_PATH") {
             self.config.server.default_tokenizer_path = Some(tokenizer_path);
+        }
+
+        if let Ok(device) = env::var("BITNET_DEFAULT_DEVICE") {
+            match device.parse::<DeviceConfig>() {
+                Ok(device_config) => {
+                    self.config.server.default_device = device_config;
+                }
+                Err(e) => {
+                    tracing::warn!("Invalid BITNET_DEFAULT_DEVICE value '{}': {}", device, e);
+                }
+            }
         }
 
         // Model manager settings
@@ -415,6 +487,45 @@ mod tests {
         assert_eq!(config.server.host, "0.0.0.0");
         assert_eq!(config.server.port, 8080);
         assert!(config.model_manager.max_concurrent_loads > 0);
+        assert_eq!(config.server.default_device, DeviceConfig::Auto);
+    }
+
+    #[test]
+    fn test_device_config_from_str() {
+        assert_eq!("auto".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);
+        assert_eq!("cpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);
+        assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
+        assert_eq!("gpu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(1));
+        assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));
+        assert!("invalid".parse::<DeviceConfig>().is_err());
+    }
+
+    #[test]
+    fn test_device_config_resolve_cpu() {
+        let config = DeviceConfig::Cpu;
+        assert_eq!(config.resolve(), Device::Cpu);
+    }
+
+    #[test]
+    fn test_device_config_resolve_gpu() {
+        let config = DeviceConfig::Gpu(1);
+        assert_eq!(config.resolve(), Device::Cuda(1));
+    }
+
+    #[test]
+    fn test_device_config_resolve_auto() {
+        let config = DeviceConfig::Auto;
+        let device = config.resolve();
+        // Auto resolves to CPU or GPU depending on feature flags and runtime detection
+        // In CPU-only builds, it should be CPU
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        assert_eq!(device, Device::Cpu);
+        // In GPU builds, it depends on runtime GPU availability
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        {
+            // Device can be either CPU or CUDA(0) depending on GPU availability
+            assert!(device == Device::Cpu || device == Device::Cuda(0));
+        }
     }
 
     #[test]

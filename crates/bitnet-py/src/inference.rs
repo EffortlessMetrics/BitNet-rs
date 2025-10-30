@@ -101,13 +101,11 @@ impl PyInferenceEngine {
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
             rt.block_on(async {
-                let config = GenerationConfig {
-                    max_new_tokens: max_tokens.unwrap_or(100),
-                    temperature: temperature.unwrap_or(0.7),
-                    top_p: top_p.unwrap_or(0.9),
-                    top_k: top_k.unwrap_or(50),
-                    ..Default::default()
-                };
+                let config = GenerationConfig::default()
+                    .with_max_tokens(max_tokens.unwrap_or(100))
+                    .with_temperature(temperature.unwrap_or(0.7))
+                    .with_top_p(top_p.unwrap_or(0.9))
+                    .with_top_k(top_k.unwrap_or(50));
 
                 info!("Starting synchronous generation with prompt length: {}", prompt.len());
                 debug!(
@@ -162,13 +160,11 @@ impl PyInferenceEngine {
     ) -> PyResult<PyStreamingGenerator> {
         info!("Starting streaming generation with prompt length: {}", prompt.len());
 
-        let config = GenerationConfig {
-            max_new_tokens: max_tokens.unwrap_or(100),
-            temperature: temperature.unwrap_or(0.7),
-            top_p: top_p.unwrap_or(0.9),
-            top_k: top_k.unwrap_or(50),
-            ..Default::default()
-        };
+        let config = GenerationConfig::default()
+            .with_max_tokens(max_tokens.unwrap_or(100))
+            .with_temperature(temperature.unwrap_or(0.7))
+            .with_top_p(top_p.unwrap_or(0.9))
+            .with_top_k(top_k.unwrap_or(50));
 
         debug!(
             "Generation config: max_tokens={}, temp={:.2}, top_p={:.2}, top_k={}",

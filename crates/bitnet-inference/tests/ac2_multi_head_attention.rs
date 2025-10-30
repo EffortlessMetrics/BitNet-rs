@@ -62,9 +62,23 @@ impl AttentionMask {
         Self { mask }
     }
 
-    pub fn combine(_mask1: &AttentionMask, _mask2: &AttentionMask) -> Result<AttentionMask> {
-        // TODO: Replace with real mask combination logic
-        unimplemented!("AttentionMask::combine: Replace with real mask combination")
+    pub fn combine(mask1: &AttentionMask, mask2: &AttentionMask) -> Result<AttentionMask> {
+        use candle_core::Tensor as _;
+
+        // Get underlying Candle tensors
+        let candle1 = mask1.mask.as_candle();
+        let candle2 = mask2.mask.as_candle();
+
+        // Attention masks are typically float tensors where:
+        // - 0.0 = attend (not masked)
+        // - -inf or large negative = do not attend (masked)
+        // We use element-wise minimum to combine (most restrictive mask wins)
+        let combined = candle1
+            .minimum(candle2)
+            .context("Failed to combine attention masks with element-wise minimum")?;
+
+        // Convert back to BitNetTensor
+        Ok(AttentionMask::new(BitNetTensor::new(combined)))
     }
 }
 

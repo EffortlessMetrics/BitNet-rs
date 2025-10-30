@@ -70,29 +70,105 @@ impl FeatureMatrixFixture {
 
 /// CPU-only build: Test basic weight loading functionality
 /// AC6: CPU/GPU Feature Flag Support
-#[ignore] // Issue #159: TDD placeholder - GGUF parsing implementation needed
 #[cfg(all(feature = "cpu", not(feature = "gpu")))]
 #[tokio::test]
 #[serial(bitnet_env)]
 async fn test_feature_matrix_cpu_only() -> Result<()> {
-    let fixture = FeatureMatrixFixture::new()?;
-    let model_path = fixture.create_test_model()?;
+    use bitnet_st2gguf::writer::{GgufWriter, MetadataValue, TensorDType, TensorEntry};
+    use half::f16;
+
+    // Create a minimal GGUF model with basic tensors using bitnet-st2gguf
+    let temp_dir = tempfile::TempDir::new().context("Failed to create temp dir")?;
+    let model_path = temp_dir.path().join("cpu_only_test.gguf");
+
+    let mut writer = GgufWriter::new();
+
+    // Add minimal metadata for a small test model
+    let hidden_size = 128;
+    let vocab_size = 1000;
+    let num_layers = 2;
+
+    writer.add_metadata("llama.embedding_length", MetadataValue::U32(hidden_size));
+    writer.add_metadata("llama.block_count", MetadataValue::U32(num_layers));
+    writer.add_metadata("llama.attention.head_count", MetadataValue::U32(8));
+    writer.add_metadata("llama.attention.head_count_kv", MetadataValue::U32(4));
+    writer.add_metadata("llama.feed_forward_length", MetadataValue::U32(512));
+    writer.add_metadata("llama.vocab_size", MetadataValue::U32(vocab_size));
+
+    // Add token embeddings [vocab_size, hidden_size]
+    let tok_emb_data: Vec<f32> =
+        (0..(vocab_size * hidden_size)).map(|i| (i as f32 * 0.001).sin() * 0.1).collect();
+    let tok_emb_f16: Vec<f16> = tok_emb_data.iter().map(|&f| f16::from_f32(f)).collect();
+    let tok_emb_bytes = bytemuck::cast_slice(&tok_emb_f16).to_vec();
+    writer.add_tensor(TensorEntry::new(
+        "token_embd.weight".to_string(),
+        vec![vocab_size as u64, hidden_size as u64],
+        TensorDType::F16,
+        tok_emb_bytes,
+    ));
+
+    // Add output projection [hidden_size, vocab_size]
+    let output_data: Vec<f32> =
+        (0..(hidden_size * vocab_size)).map(|i| (i as f32 * 0.002).cos() * 0.1).collect();
+    let output_f16: Vec<f16> = output_data.iter().map(|&f| f16::from_f32(f)).collect();
+    let output_bytes = bytemuck::cast_slice(&output_f16).to_vec();
+    writer.add_tensor(TensorEntry::new(
+        "output.weight".to_string(),
+        vec![hidden_size as u64, vocab_size as u64],
+        TensorDType::F16,
+        output_bytes,
+    ));
+
+    // Write GGUF file
+    writer.write_to_file(&model_path).context("Failed to write test GGUF file")?;
 
     // Test CPU-only weight loading
-    let result = bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cpu);
+    let result = bitnet_models::gguf_simple::load_gguf_full(
+        &model_path,
+        Device::Cpu,
+        bitnet_models::gguf_simple::GGUFLoaderConfig::default(),
+    );
 
     match result {
-        Ok((config, tensor_map)) => {
+        Ok(load_result) => {
             // Validate CPU-specific behavior
-            validate_cpu_only_tensors(&tensor_map)?;
-            validate_cpu_only_config(&config)?;
+            validate_cpu_only_tensors(&load_result.tensors)?;
+            validate_cpu_only_config(&load_result.config)?;
 
             // Ensure no GPU dependencies are present
-            assert_no_gpu_dependencies(&tensor_map)?;
+            assert_no_gpu_dependencies(&load_result.tensors)?;
+
+            // Verify basic tensor metadata
+            assert!(
+                load_result.tensors.len() >= 2,
+                "Expected at least 2 tensors (token_embd + output), got {}",
+                load_result.tensors.len()
+            );
+
+            // Validate configuration was extracted correctly
+            assert_eq!(
+                load_result.config.model.hidden_size, hidden_size as usize,
+                "Hidden size mismatch"
+            );
+            assert_eq!(
+                load_result.config.model.vocab_size, vocab_size as usize,
+                "Vocab size mismatch"
+            );
+            assert_eq!(
+                load_result.config.model.num_layers, num_layers as usize,
+                "Num layers mismatch"
+            );
+
+            tracing::info!(
+                "CPU-only weight loading test passed: {} tensors loaded",
+                load_result.tensors.len()
+            );
         }
         Err(err) => {
-            eprintln!("CPU-only feature test correctly failing (TDD Red): {}", err);
-            panic!("CPU-only test will pass once basic GGUF loading is implemented");
+            return Err(anyhow::anyhow!(
+                "CPU-only GGUF loading failed (expected to pass): {}",
+                err
+            ));
         }
     }
 

@@ -279,8 +279,9 @@ impl MetricsCollector {
     async fn get_memory_info(&self) -> Result<MemoryInfo> {
         let mut sys = System::new();
         sys.refresh_memory();
-        let total = sys.total_memory();
-        let used = sys.used_memory();
+        // sysinfo returns KiB - convert to bytes
+        let total = sys.total_memory() * 1024;
+        let used = sys.used_memory() * 1024;
         Ok(MemoryInfo { used_bytes: used, total_bytes: total })
     }
 

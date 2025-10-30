@@ -488,13 +488,18 @@ impl BitNetAttention {
 
         let (batch_size, seq_len, _) = self.get_input_dimensions(hidden_states)?;
 
-        // Compute query, key, value projections
+        // Compute query, key, value projections (shape: [batch, seq_len, num_heads, head_dim])
         let (query_states, key_states, value_states) =
             self.compute_qkv_projections(hidden_states, batch_size, seq_len).await?;
 
-        // Apply rotary embeddings
+        // Apply rotary embeddings (expects shape: [batch, seq_len, num_heads, head_dim])
         let query_states = self.rope.apply(&query_states, seq_len).await?;
         let key_states = self.rope.apply(&key_states, seq_len).await?;
+
+        // Transpose for attention computation (shape: [batch, num_heads, seq_len, head_dim])
+        let query_states = self.transpose_for_attention(&query_states)?;
+        let key_states = self.transpose_for_attention(&key_states)?;
+        let value_states = self.transpose_for_attention(&value_states)?;
 
         // Handle KV-cache and GQA
         let (key_states, value_states) =
@@ -536,20 +541,21 @@ impl BitNetAttention {
             .await
             .context("Failed to compute value projection")?;
 
-        // Reshape for multi-head attention
-        let query_states = self.reshape_for_attention(
+        // Reshape WITHOUT transpose for RoPE application
+        // Shape: [batch_size, seq_len, num_heads, head_dim]
+        let query_states = self.reshape_for_rope(
             &query_states,
             batch_size,
             seq_len,
             self.config.num_attention_heads,
         )?;
-        let key_states = self.reshape_for_attention(
+        let key_states = self.reshape_for_rope(
             &key_states,
             batch_size,
             seq_len,
             self.config.num_key_value_heads,
         )?;
-        let value_states = self.reshape_for_attention(
+        let value_states = self.reshape_for_rope(
             &value_states,
             batch_size,
             seq_len,
@@ -592,7 +598,9 @@ impl BitNetAttention {
         Ok((shape[0], shape[1], shape[2]))
     }
 
-    fn reshape_for_attention(
+    /// Reshape tensor for RoPE application (no transpose)
+    /// Output shape: [batch_size, seq_len, num_heads, head_dim]
+    fn reshape_for_rope(
         &self,
         tensor: &BitNetTensor,
         batch_size: usize,
@@ -602,10 +610,18 @@ impl BitNetAttention {
         let candle_tensor = tensor.to_candle()?;
         let reshaped = candle_tensor
             .reshape(&[batch_size, seq_len, num_heads, self.config.head_dim])
-            .context("Failed to reshape tensor for attention")?;
-        let permuted =
-            reshaped.transpose(1, 2).context("Failed to transpose tensor for attention")?;
-        Ok(BitNetTensor::new(permuted))
+            .context("Failed to reshape tensor for RoPE")?;
+        Ok(BitNetTensor::new(reshaped))
+    }
+
+    /// Transpose tensor for attention computation
+    /// Input shape: [batch_size, seq_len, num_heads, head_dim]
+    /// Output shape: [batch_size, num_heads, seq_len, head_dim]
+    fn transpose_for_attention(&self, tensor: &BitNetTensor) -> Result<BitNetTensor> {
+        let candle_tensor = tensor.to_candle()?;
+        let transposed =
+            candle_tensor.transpose(1, 2).context("Failed to transpose tensor for attention")?;
+        Ok(BitNetTensor::new(transposed))
     }
 
     fn apply_gqa(

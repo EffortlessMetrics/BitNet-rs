@@ -150,14 +150,12 @@ async fn real_stream(
 
     async_stream::stream! {
         // Build generation config
-        let config = bitnet_inference::GenerationConfig {
-            max_new_tokens: request.max_tokens.unwrap_or(64) as u32,
-            temperature: request.temperature.unwrap_or(1.0),
-            top_p: request.top_p.unwrap_or(0.9),
-            top_k: request.top_k.unwrap_or(50) as u32,
-            repetition_penalty: request.repetition_penalty.unwrap_or(1.0),
-            ..Default::default()
-        };
+        let mut config = bitnet_inference::GenerationConfig::default()
+            .with_max_tokens(request.max_tokens.unwrap_or(64) as u32)
+            .with_temperature(request.temperature.unwrap_or(1.0))
+            .with_top_p(request.top_p.unwrap_or(0.9))
+            .with_top_k(request.top_k.unwrap_or(50) as u32);
+        config.repetition_penalty = request.repetition_penalty.unwrap_or(1.0);
 
         // Create streaming config
         let _stream_config = bitnet_inference::StreamingConfig {

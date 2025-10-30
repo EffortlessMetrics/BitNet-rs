@@ -35,7 +35,7 @@ pub use loader::load_tokenizer;
 pub use mock::MockTokenizer;
 #[cfg(feature = "spm")]
 pub use spm_tokenizer::SpmTokenizer;
-pub use universal::UniversalTokenizer;
+pub use universal::{TokenizerBackend, UniversalTokenizer};
 
 // Export the new pure-Rust GGUF tokenizer types
 pub use gguf_loader::{GgufTokKind, RustTokenizer};

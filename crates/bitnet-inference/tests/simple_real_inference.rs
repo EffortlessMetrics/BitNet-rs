@@ -66,12 +66,8 @@ async fn test_basic_text_generation() -> Result<()> {
 
     let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
 
-    let gen_config = GenerationConfig {
-        max_new_tokens: 3,
-        temperature: 1.0,
-        seed: Some(42),
-        ..Default::default()
-    };
+    let gen_config =
+        GenerationConfig::default().with_max_tokens(3).with_temperature(1.0).with_seed(42);
 
     let start_time = Instant::now();
     let result = engine.generate_with_config("Hello", &gen_config).await?;
@@ -131,12 +127,8 @@ async fn test_basic_performance() -> Result<()> {
 
     let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
 
-    let gen_config = GenerationConfig {
-        max_new_tokens: 10,
-        temperature: 1.0,
-        seed: Some(42),
-        ..Default::default()
-    };
+    let gen_config =
+        GenerationConfig::default().with_max_tokens(10).with_temperature(1.0).with_seed(42);
 
     let start_time = Instant::now();
     let result = engine.generate_with_config("Test prompt", &gen_config).await?;

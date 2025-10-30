@@ -39,18 +39,20 @@ impl CLITestConfig {
         }
     }
 
-    fn skip_if_no_model(&self) {
+    fn maybe_model_path(&self) -> Option<std::path::PathBuf> {
         if self.model_path.is_none() || !self.model_path.as_ref().unwrap().exists() {
             eprintln!("Skipping CLI real model test - set BITNET_GGUF environment variable");
-            std::process::exit(0);
+            return None;
         }
+        Some(self.model_path.clone().unwrap())
     }
 
-    fn skip_if_no_cli(&self) {
+    fn check_cli(&self) -> bool {
         if !self.bitnet_cli_path.exists() {
             eprintln!("Skipping CLI test - build bitnet-cli first: cargo build -p bitnet-cli");
-            std::process::exit(0);
+            return false;
         }
+        true
     }
 }
 
@@ -65,10 +67,12 @@ impl CLITestConfig {
 fn test_cli_real_model_inference_integration() {
     // AC:4
     let config = CLITestConfig::from_env();
-    config.skip_if_no_cli();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    if !config.check_cli() {
+        return;
+    }
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
     let test_prompt = "The capital of France is";
 
     // TODO: This test will initially fail - drives CLI inference implementation
@@ -139,10 +143,12 @@ fn test_cli_real_model_inference_integration() {
 fn test_cli_performance_benchmarking_commands() {
     // AC:10
     let config = CLITestConfig::from_env();
-    config.skip_if_no_cli();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    if !config.check_cli() {
+        return;
+    }
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // TODO: This test will initially fail - drives CLI benchmarking implementation
     let mut cmd = Command::new(&config.bitnet_cli_path);
@@ -262,10 +268,12 @@ fn test_cli_performance_benchmarking_commands() {
 fn test_cli_model_validation_commands() {
     // AC:6
     let config = CLITestConfig::from_env();
-    config.skip_if_no_cli();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    if !config.check_cli() {
+        return;
+    }
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // TODO: This test will initially fail - drives CLI validation implementation
     // Test model compatibility check
@@ -392,10 +400,12 @@ fn test_cli_model_validation_commands() {
 fn test_cli_batch_inference_functionality() {
     // AC:3
     let config = CLITestConfig::from_env();
-    config.skip_if_no_cli();
-    config.skip_if_no_model();
-
-    let model_path = config.model_path.unwrap();
+    if !config.check_cli() {
+        return;
+    }
+    let Some(model_path) = config.maybe_model_path() else {
+        return;
+    };
 
     // TODO: This test will initially fail - drives CLI batch processing implementation
     // Create test input file with multiple prompts
@@ -502,7 +512,9 @@ fn test_cli_batch_inference_functionality() {
 fn test_cli_error_handling_and_recovery() {
     // AC:6
     let config = CLITestConfig::from_env();
-    config.skip_if_no_cli();
+    if !config.check_cli() {
+        return;
+    }
 
     // TODO: This test will initially fail - drives CLI error handling implementation
     // Test missing model file
@@ -604,7 +616,9 @@ mod integration_tests {
     #[test]
     fn test_complete_cli_workflow_integration() {
         let config = CLITestConfig::from_env();
-        config.skip_if_no_cli();
+        if !config.check_cli() {
+            return;
+        }
 
         // This test validates the complete workflow without requiring real models
         // It tests CLI infrastructure and error handling

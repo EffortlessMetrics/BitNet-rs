@@ -593,12 +593,35 @@ cat ci/receipts/pr-0462/generative-gate-mutation-check-run.md
 
 **See also:** `ci/receipts/pr-0462/` for detailed mutation testing reports and analysis.
 
+### Resolved Issues: Issue #260 - SIMD Kernel Integration ✅
+
+Issue #260 has been successfully resolved with comprehensive SIMD kernel testing:
+
+**Completed Tests (Now Enabled):**
+- `test_cpu_simd_kernel_integration`: Validates SIMD throughput with real quantized computation
+- `test_tl2_avx_optimization`: Validates AVX optimization speedup for TL2 lookup tables
+
+**Running Issue #260 Tests:**
+```bash
+# Run resolved SIMD kernel tests
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_cpu_simd_kernel_integration
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu test_tl2_avx_optimization
+
+# Run all quantization tests (includes SIMD validation)
+cargo test --no-default-features -p bitnet-kernels --no-default-features --features cpu
+```
+
+**Related Documentation:**
+- See `docs/explanation/issue-260-mock-elimination-completion.md` for full completion details
+- See `docs/explanation/issue-260-spec.md` for original technical specification
+
 ### Core Testing Framework
 - **Unit tests**: Each crate has comprehensive tests
 - **Integration tests**: Cross-crate tests in `tests/`
 - **Property-based testing**: Fuzz testing for GGUF parser robustness
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
+- **SIMD Kernel Tests** ✅: Real quantization computation validation (Issue #260 resolved)
 
 ### Enhanced Mock Infrastructure and Tokenizer Testing
 

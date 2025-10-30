@@ -36,13 +36,11 @@ impl PyGenerationConfig {
     #[new]
     #[pyo3(signature = (max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50))]
     fn new(max_tokens: u32, temperature: f32, top_p: f32, top_k: u32) -> Self {
-        let config = GenerationConfig {
-            max_new_tokens: max_tokens,
-            temperature,
-            top_p,
-            top_k,
-            ..Default::default()
-        };
+        let config = GenerationConfig::default()
+            .with_max_tokens(max_tokens)
+            .with_temperature(temperature)
+            .with_top_p(top_p)
+            .with_top_k(top_k);
         Self { inner: config }
     }
 

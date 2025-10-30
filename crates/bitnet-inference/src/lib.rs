@@ -40,7 +40,7 @@ pub use generation::{
     AutoregressiveGenerator, GenConfig, SampleConfig, SamplingStrategy as GenSamplingStrategy,
 };
 pub use kernel_recorder::KernelRecorder;
-pub use layers::{BitNetAttention, QuantizedLinear};
+pub use layers::{BitNetAttention, LookupTable, QuantizedLinear};
 pub use parity::{
     eval_logits_all_positions, eval_logits_incremental, eval_logits_once,
     eval_logits_once_for_parity, get_model_config, get_model_vocab_size,
