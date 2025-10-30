@@ -34,6 +34,7 @@ pub struct PerformanceMetrics {
 }
 
 // Real implementations
+#[derive(Default)]
 pub struct CIMockDetector;
 
 impl CIMockDetector {
@@ -113,6 +114,7 @@ pub struct RegressionReport {
 }
 
 // CPU Performance Benchmark
+#[derive(Default)]
 pub struct CPUPerformanceBenchmark;
 
 #[derive(Debug, Clone)]

@@ -410,7 +410,7 @@ fn test_oncelock_fallible_initialization_result() {
 
     static RESULT_VALUE: OnceLock<Result<u32, &'static str>> = OnceLock::new();
 
-    let result = RESULT_VALUE.get_or_init(|| try_init());
+    let result = RESULT_VALUE.get_or_init(try_init);
 
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), "initialization failed");
@@ -888,7 +888,7 @@ fn test_cargo_tree_static_dependencies() {
     use std::process::Command;
 
     let output =
-        Command::new("cargo").args(&["tree"]).output().expect("Failed to execute cargo tree");
+        Command::new("cargo").args(["tree"]).output().expect("Failed to execute cargo tree");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 

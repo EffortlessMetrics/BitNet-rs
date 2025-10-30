@@ -1250,7 +1250,7 @@ mod tc_ac1_single_tokenizer_authority_computation {
     fn test_tokenizer_authority_token_count_from_rust_tokenization() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
         // Verify: token_count matches rust_tokens.len()
-        let rust_tokens = vec![1u32, 2, 3, 4, 5];
+        let rust_tokens = [1u32, 2, 3, 4, 5];
         let auth = TokenizerAuthority {
             source: TokenizerSource::External,
             path: "tokenizer.json".to_string(),
@@ -1655,7 +1655,6 @@ mod tc_ac3_validation_logic {
 
 #[cfg(test)]
 mod tc_ac4_exit_code_2_mismatch {
-    use super::*;
 
     /// Test: Exit code 2 on config_hash mismatch
     ///
@@ -1799,9 +1798,7 @@ mod tc_ac5_source_detection {
 #[cfg(test)]
 mod tc_ac6_hash_computation {
     use super::*;
-    use bitnet_crossval::receipt::{
-        compute_tokenizer_config_hash_from_tokenizer, compute_tokenizer_file_hash,
-    };
+    use bitnet_crossval::receipt::compute_tokenizer_file_hash;
 
     /// Test: compute_tokenizer_file_hash() returns 64 hex characters
     ///

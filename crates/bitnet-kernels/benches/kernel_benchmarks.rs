@@ -363,7 +363,6 @@ fn bench_qk256_dequant(c: &mut Criterion) {
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
             if is_x86_feature_detected!("avx2") {
-                use bitnet_kernels::KernelProvider;
                 use bitnet_kernels::cpu::x86::Avx2Kernel;
 
                 group.bench_with_input(BenchmarkId::new("avx2", size), &size, |b, &_size| {
@@ -399,7 +398,7 @@ fn bench_qk256_dequant_breakdown(c: &mut Criterion) {
     const NUM_BLOCKS: usize = SIZE / 256;
 
     let packed = vec![0x1Bu8; SIZE / 4];
-    let scales = vec![0.5f32; NUM_BLOCKS];
+    let scales = [0.5f32; NUM_BLOCKS];
 
     group.throughput(Throughput::Elements(SIZE as u64));
 
@@ -511,7 +510,6 @@ fn bench_qk256_memory_bandwidth(c: &mut Criterion) {
         #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
         {
             if is_x86_feature_detected!("avx2") {
-                use bitnet_kernels::KernelProvider;
                 use bitnet_kernels::cpu::x86::Avx2Kernel;
 
                 group.bench_with_input(
@@ -546,7 +544,6 @@ fn bench_qk256_speedup_analysis(c: &mut Criterion) {
             return;
         }
 
-        use bitnet_kernels::KernelProvider;
         use bitnet_kernels::cpu::x86::Avx2Kernel;
 
         let mut group = c.benchmark_group("qk256_speedup_analysis");

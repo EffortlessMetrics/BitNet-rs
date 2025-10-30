@@ -551,7 +551,7 @@ fn test_dependency_versions_consistent() {
 #[ignore] // Requires cargo-audit installed - run explicitly in CI
 fn test_cargo_audit_passes() {
     // Check if cargo-audit is installed
-    let check = Command::new("cargo").args(&["audit", "--version"]).output();
+    let check = Command::new("cargo").args(["audit", "--version"]).output();
 
     if check.is_err() {
         eprintln!("cargo-audit not installed - skipping test");
@@ -869,7 +869,7 @@ fn test_once_cell_version_consolidated() {
 #[ignore] // Requires cargo-deny installed - run explicitly in CI
 fn test_cargo_deny_bans() {
     // Check if cargo-deny is installed
-    let check = Command::new("cargo").args(&["deny", "--version"]).output();
+    let check = Command::new("cargo").args(["deny", "--version"]).output();
 
     if check.is_err() {
         eprintln!("cargo-deny not installed - skipping test");
@@ -897,7 +897,7 @@ fn test_cargo_deny_bans() {
 #[ignore] // Requires cargo-deny installed - run explicitly in CI
 fn test_cargo_deny_advisories() {
     // Check if cargo-deny is installed
-    let check = Command::new("cargo").args(&["deny", "--version"]).output();
+    let check = Command::new("cargo").args(["deny", "--version"]).output();
 
     if check.is_err() {
         eprintln!("cargo-deny not installed - skipping test");
@@ -932,7 +932,7 @@ fn test_cargo_deny_advisories() {
 #[ignore] // Requires cargo-deny installed - run explicitly in CI
 fn test_cargo_deny_licenses() {
     // Check if cargo-deny is installed
-    let check = Command::new("cargo").args(&["deny", "--version"]).output();
+    let check = Command::new("cargo").args(["deny", "--version"]).output();
 
     if check.is_err() {
         eprintln!("cargo-deny not installed - skipping test");
@@ -958,7 +958,7 @@ fn test_cargo_deny_licenses() {
 #[ignore] // Requires cargo-deny installed - run explicitly in CI
 fn test_cargo_deny_sources() {
     // Check if cargo-deny is installed
-    let check = Command::new("cargo").args(&["deny", "--version"]).output();
+    let check = Command::new("cargo").args(["deny", "--version"]).output();
 
     if check.is_err() {
         eprintln!("cargo-deny not installed - skipping test");
@@ -984,7 +984,7 @@ fn test_cargo_deny_sources() {
 #[ignore] // Requires cargo-deny installed - run explicitly in CI
 fn test_cargo_deny_all() {
     // Check if cargo-deny is installed
-    let check = Command::new("cargo").args(&["deny", "--version"]).output();
+    let check = Command::new("cargo").args(["deny", "--version"]).output();
 
     if check.is_err() {
         eprintln!("cargo-deny not installed - skipping test");
