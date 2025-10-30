@@ -633,6 +633,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
+ "bitnet-st2gguf",
  "bitnet-trace",
  "bytemuck",
  "candle-core",

@@ -26,7 +26,7 @@ use std::process::Command;
 
 /// Helper to build xtask command
 fn xtask_cmd() -> Command {
-    Command::cargo_bin("xtask").unwrap()
+    cargo_bin_cmd!("xtask")
 }
 
 // ============================================================================

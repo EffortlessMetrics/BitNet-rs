@@ -3,7 +3,7 @@
 //! Tests the CLI interface for receipt verification, ensuring proper
 //! validation of compute_path, kernels, and optional GPU kernel requirements.
 
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use std::{env, fs, path::PathBuf};
 
@@ -37,7 +37,7 @@ fn fixture_path(name: &str) -> PathBuf {
 
 #[test]
 fn test_verify_receipt_valid() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("valid_receipt").to_str().unwrap()]);
 
     cmd.assert()
@@ -49,7 +49,7 @@ fn test_verify_receipt_valid() {
 
 #[test]
 fn test_verify_receipt_invalid_compute_path() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("invalid_compute_path").to_str().unwrap()]);
 
     cmd.assert()
@@ -60,7 +60,7 @@ fn test_verify_receipt_invalid_compute_path() {
 
 #[test]
 fn test_verify_receipt_missing_kernels() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("missing_kernels").to_str().unwrap()]);
 
     cmd.assert().failure().stderr(predicate::str::contains("empty kernels[]"));
@@ -68,7 +68,7 @@ fn test_verify_receipt_missing_kernels() {
 
 #[test]
 fn test_verify_receipt_valid_gpu() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args([
         "verify-receipt",
         "--path",
@@ -84,7 +84,7 @@ fn test_verify_receipt_valid_gpu() {
 
 #[test]
 fn test_verify_receipt_invalid_gpu() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args([
         "verify-receipt",
         "--path",
@@ -100,7 +100,7 @@ fn test_verify_receipt_invalid_gpu() {
 
 #[test]
 fn test_verify_receipt_missing_file() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", "nonexistent/receipt.json"]);
 
     cmd.assert().failure().stderr(predicate::str::contains("Failed to read receipt"));
@@ -110,7 +110,7 @@ fn test_verify_receipt_missing_file() {
 fn test_verify_receipt_default_path() {
     // Test that default path is ci/inference.json
     // If file exists with mock kernels, expect CPU validation failure
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.arg("verify-receipt");
 
     // Should fail either because file doesn't exist OR because it contains mock kernels

@@ -48,6 +48,7 @@ dirs = "6.0.0"
 serial_test.workspace = true
 sha2 = "0.10.9"
 sysinfo = "0.37.2"
+bitnet-st2gguf = { path = "../bitnet-st2gguf", version = "0.1.0" }
 
 [features]
 default = []
