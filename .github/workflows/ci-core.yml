@@ -1,0 +1,138 @@
+name: CI (Core)
+
+# Core gating checks that MUST pass for PR merges.
+# This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: "-Dwarnings"
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Job 1: Build and test on Linux
+  build-test-linux:
+    name: Build & Test (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+          components: clippy,rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-ubuntu
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Build workspace
+        run: cargo build --locked --workspace --no-default-features --features cpu
+
+      - name: Run tests
+        run: cargo test --locked --workspace --no-default-features --features cpu -- --nocapture
+
+  # Job 2: Build and test on macOS
+  build-test-macos:
+    name: Build & Test (macos-latest)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+          components: clippy,rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-macos
+
+      - name: Build workspace
+        run: cargo build --locked --workspace --no-default-features --features cpu
+
+      - name: Run tests
+        run: cargo test --locked --workspace --no-default-features --features cpu -- --nocapture
+
+  # Job 3: Clippy linting
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-clippy
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --no-default-features --features cpu -- -D warnings
+
+  # Job 4: Documentation build
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-docs
+
+      - name: Build documentation
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace
+
+  # Summary job (required for branch protection)
+  ci-core-success:
+    name: CI Core Success
+    runs-on: ubuntu-latest
+    needs: [build-test-linux, build-test-macos, clippy, docs]
+    if: always()
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          if [[ "${{ needs.build-test-linux.result }}" != "success" ]] || \
+             [[ "${{ needs.build-test-macos.result }}" != "success" ]] || \
+             [[ "${{ needs.clippy.result }}" != "success" ]] || \
+             [[ "${{ needs.docs.result }}" != "success" ]]; then
+            echo "❌ One or more core CI jobs failed"
+            exit 1
+          fi
+          echo "✅ All core CI jobs passed"

@@ -1,0 +1,69 @@
+name: CI (Guards)
+
+# Policy and guard checks (non-gating during stabilization)
+# These checks provide signal but do NOT block PR merges while we stabilize the codebase.
+# Once stable, these can be made required in branch protection rules.
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guards:
+    name: Policy Guards
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Non-blocking during stabilization
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Check feature gates
+        run: |
+          echo "→ Checking feature gate consistency..."
+          if [ -f scripts/check-feature-gates.sh ]; then
+            bash scripts/check-feature-gates.sh || echo "⚠ Feature gate issues detected"
+          else
+            echo "Script not found, skipping"
+          fi
+
+      - name: Check ignore annotations
+        run: |
+          echo "→ Checking #[ignore] test annotations..."
+          if [ -f scripts/check-ignore-annotations.sh ]; then
+            bash scripts/check-ignore-annotations.sh || echo "⚠ Ignore annotation issues detected"
+          else
+            echo "Script not found, skipping"
+          fi
+
+      - name: Check serial annotations
+        run: |
+          echo "→ Checking #[serial] test annotations..."
+          if [ -f scripts/check-serial-annotations.sh ]; then
+            bash scripts/check-serial-annotations.sh || echo "⚠ Serial annotation issues detected"
+          else
+            echo "Script not found, skipping"
+          fi
+
+      - name: Validate test fixtures
+        run: |
+          echo "→ Validating test fixtures..."
+          if [ -f scripts/validate-fixtures.sh ]; then
+            bash scripts/validate-fixtures.sh || echo "⚠ Fixture validation issues detected"
+          else
+            echo "Script not found, skipping"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "Guard checks completed. Review output above for any warnings."
+          echo "Note: These checks are non-gating during CI stabilization."
