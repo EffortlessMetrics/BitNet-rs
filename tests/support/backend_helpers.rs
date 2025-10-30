@@ -14,7 +14,7 @@
 //! # Usage
 //!
 //! ```rust,ignore
-//! use tests::support::backend_helpers::ensure_bitnet_or_skip;
+//! use bitnet_tests::support::backend_helpers::ensure_bitnet_or_skip;
 //!
 //! #[test]
 //! fn test_cpp_crossval() {
@@ -707,8 +707,13 @@ fn print_rebuild_instructions(backend: CppBackend) {
 ///
 /// # Example
 /// ```rust
+/// use bitnet_tests::support::backend_helpers::get_loader_path_var;
+/// use std::env;
+///
 /// let loader_var = get_loader_path_var();
-/// env::set_var(loader_var, "/custom/lib");
+/// unsafe {
+///     env::set_var(loader_var, "/custom/lib");
+/// }
 /// ```
 pub fn get_loader_path_var() -> &'static str {
     if cfg!(target_os = "linux") {
@@ -741,7 +746,7 @@ pub fn get_loader_path_var() -> &'static str {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use tests::support::backend_helpers::get_backend_lib_names;
+/// use bitnet_tests::support::backend_helpers::get_backend_lib_names;
 /// use xtask::crossval::backend::CppBackend;
 ///
 /// let bitnet_libs = get_backend_lib_names(CppBackend::BitNet);
@@ -791,6 +796,8 @@ pub fn get_lib_extension() -> &'static str {
 ///
 /// # Example
 /// ```rust
+/// use bitnet_tests::support::backend_helpers::format_lib_name;
+///
 /// let lib_name = format_lib_name("bitnet");
 /// assert_eq!(lib_name, "libbitnet.so"); // Linux
 /// ```
@@ -899,7 +906,7 @@ pub fn create_mock_backend_libs(backend: CppBackend) -> Result<tempfile::TempDir
 /// ```rust,ignore
 /// use tempfile::TempDir;
 /// use std::path::Path;
-/// use tests::support::backend_helpers::create_mock_cpp_libs;
+/// use bitnet_tests::support::backend_helpers::create_mock_cpp_libs;
 /// use xtask::crossval::backend::CppBackend;
 ///
 /// #[test]
@@ -982,8 +989,8 @@ pub fn create_mock_cpp_libs(
 ///
 /// ```rust,ignore
 /// use tempfile::TempDir;
-/// use tests::support::backend_helpers::{assert_backend_runtime, create_mock_cpp_libs};
-/// use tests::support::env_guard::EnvGuard;
+/// use bitnet_tests::support::backend_helpers::{assert_backend_runtime, create_mock_cpp_libs};
+/// use bitnet_tests::support::env_guard::EnvGuard;
 /// use xtask::crossval::backend::CppBackend;
 ///
 /// #[test]
@@ -1085,8 +1092,8 @@ pub fn assert_backend_runtime(
 ///
 /// ```rust,ignore
 /// use tempfile::TempDir;
-/// use tests::support::backend_helpers::{setup_precedence_test, create_mock_cpp_libs};
-/// use tests::support::env_guard::EnvGuard;
+/// use bitnet_tests::support::backend_helpers::{setup_precedence_test, create_mock_cpp_libs};
+/// use bitnet_tests::support::env_guard::EnvGuard;
 /// use xtask::crossval::backend::CppBackend;
 ///
 /// #[test]
@@ -1167,7 +1174,7 @@ pub fn setup_precedence_test(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use tests::support::backend_helpers::setup_backend_precedence_test;
+/// use bitnet_tests::support::backend_helpers::setup_backend_precedence_test;
 /// use xtask::crossval::backend::CppBackend;
 ///
 /// #[test]
@@ -1249,7 +1256,7 @@ pub fn setup_backend_precedence_test(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use tests::support::backend_helpers::{create_temp_lib_dir, create_mock_cpp_libs};
+/// use bitnet_tests::support::backend_helpers::{create_temp_lib_dir, create_mock_cpp_libs};
 /// use xtask::crossval::backend::CppBackend;
 ///
 /// #[test]

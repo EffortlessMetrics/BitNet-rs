@@ -16,7 +16,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use tests::support::platform_utils::{get_loader_path_var, format_lib_name};
+//! use bitnet_tests::support::platform_utils::{get_loader_path_var, format_lib_name};
 //!
 //! // Get platform-specific loader path variable
 //! let loader_var = get_loader_path_var();
@@ -44,7 +44,7 @@
 /// # Examples
 ///
 /// ```rust
-/// use tests::support::platform_utils::get_loader_path_var;
+/// use bitnet_tests::support::platform_utils::get_loader_path_var;
 ///
 /// let loader_var = get_loader_path_var();
 ///
@@ -82,7 +82,7 @@ pub fn get_loader_path_var() -> &'static str {
 /// # Examples
 ///
 /// ```rust
-/// use tests::support::platform_utils::get_lib_extension;
+/// use bitnet_tests::support::platform_utils::get_lib_extension;
 ///
 /// let ext = get_lib_extension();
 ///
@@ -120,7 +120,7 @@ pub fn get_lib_extension() -> &'static str {
 /// # Examples
 ///
 /// ```rust
-/// use tests::support::platform_utils::format_lib_name;
+/// use bitnet_tests::support::platform_utils::format_lib_name;
 ///
 /// let name = format_lib_name("bitnet");
 ///
@@ -160,18 +160,22 @@ pub fn format_lib_name(stem: &str) -> String {
 ///
 /// # Examples
 ///
-/// ```rust
-/// use tests::support::platform_utils::append_to_loader_path;
+/// ```rust,ignore
+/// use bitnet_tests::support::platform_utils::append_to_loader_path;
 ///
 /// // With existing path
-/// std::env::set_var("LD_LIBRARY_PATH", "/existing/path");
+/// unsafe {
+///     std::env::set_var("LD_LIBRARY_PATH", "/existing/path");
+/// }
 /// let updated = append_to_loader_path("/opt/libs");
 /// // Linux: "/opt/libs:/existing/path"
 /// // macOS: "/opt/libs:/existing/path"
 /// // Windows: "/opt/libs;C:\\existing\\path"
 ///
 /// // With empty path
-/// std::env::remove_var("LD_LIBRARY_PATH");
+/// unsafe {
+///     std::env::remove_var("LD_LIBRARY_PATH");
+/// }
 /// let updated = append_to_loader_path("/opt/libs");
 /// // All platforms: "/opt/libs"
 /// ```

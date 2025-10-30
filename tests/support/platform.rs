@@ -37,7 +37,7 @@ use bitnet_crossval::backend::CppBackend;
 /// # Examples
 ///
 /// ```rust
-/// use tests::support::platform::format_lib_name;
+/// use bitnet_tests::support::platform::format_lib_name;
 ///
 /// let name = format_lib_name("bitnet");
 ///
@@ -69,7 +69,7 @@ pub fn format_lib_name(base: &str) -> String {
 /// # Examples
 ///
 /// ```rust
-/// use tests::support::platform::get_loader_path_var;
+/// use bitnet_tests::support::platform::get_loader_path_var;
 ///
 /// let var = get_loader_path_var();
 ///
@@ -120,7 +120,7 @@ pub fn get_loader_path_var() -> &'static str {
 /// ```rust,no_run
 /// use std::path::Path;
 /// use bitnet_crossval::backend::CppBackend;
-/// use tests::support::platform::create_mock_backend_libs;
+/// use bitnet_tests::support::platform::create_mock_backend_libs;
 ///
 /// // Example test function (not executed in doctest)
 /// fn test_with_mock_backend() {

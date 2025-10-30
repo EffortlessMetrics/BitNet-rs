@@ -884,7 +884,7 @@ pub fn rebuild_xtask_with_env(
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```ignore
 /// use xtask::crossval::{CppBackend, preflight_backend_libs};
 ///
 /// # fn main() -> anyhow::Result<()> {

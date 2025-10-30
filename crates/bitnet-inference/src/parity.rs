@@ -355,7 +355,7 @@ fn extract_last_token_logits(logits: bitnet_common::ConcreteTensor) -> Result<Ve
     }
 }
 
-/// Extracts per-position logits from a [B,T,V] tensor into Vec<Vec<f32>>.
+/// Extracts per-position logits from a [B,T,V] tensor into `Vec<Vec<f32>>`.
 ///
 /// Assumes batch_size = 1 (single sample inference).
 ///
@@ -364,7 +364,7 @@ fn extract_last_token_logits(logits: bitnet_common::ConcreteTensor) -> Result<Ve
 /// * `seq_len` - Number of token positions to extract
 ///
 /// # Returns
-/// Vec of length `seq_len`, where each element is a Vec<f32> of length vocab_size
+/// Vec of length `seq_len`, where each element is a `Vec<f32>` of length vocab_size
 #[allow(dead_code)]
 fn extract_all_position_logits(
     logits: bitnet_common::ConcreteTensor,

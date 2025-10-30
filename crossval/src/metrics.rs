@@ -227,10 +227,10 @@ pub fn kl_divergence(p: &[f32], q: &[f32]) -> f32 {
 /// let b = vec![1.5, 2.0, 2.5, 4.0];
 ///
 /// // Top-2 in a: [3, 2] (indices by value: 4.0, 3.0)
-/// // Top-2 in b: [3, 0] (indices by value: 4.0, 2.5)
+/// // Top-2 in b: [3, 2] (indices by value: 4.0, 2.5)
 /// let agreement = topk_agree(&a, &b, 2);
-/// // Should have 50% agreement (index 3 matches)
-/// assert!((agreement - 0.5).abs() < 0.01);
+/// // Should have 100% agreement (both indices 3 and 2 match)
+/// assert!((agreement - 1.0).abs() < 0.01);
 /// ```
 pub fn topk_agree(a: &[f32], b: &[f32], k: usize) -> f32 {
     assert_eq!(

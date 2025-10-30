@@ -30,7 +30,7 @@
 //!
 //! ```rust,no_run
 //! use bitnet_crossval::backend::CppBackend;
-//! use tests::support::mock_fixtures::create_mock_backend_libs;
+//! use bitnet_tests::support::mock_fixtures::create_mock_backend_libs;
 //!
 //! // Example test function (not executed in doctest)
 //! fn test_backend_discovery() {
@@ -83,8 +83,8 @@ use super::platform_utils::format_lib_name;
 ///
 /// ```rust,no_run
 /// use bitnet_crossval::backend::CppBackend;
-/// use tests::support::mock_fixtures::create_mock_backend_libs;
-/// use tests::support::platform_utils::get_loader_path_var;
+/// use bitnet_tests::support::mock_fixtures::create_mock_backend_libs;
+/// use bitnet_tests::support::platform_utils::get_loader_path_var;
 ///
 /// // Example test function (not executed in doctest)
 /// fn test_with_mock_backend() {
@@ -93,7 +93,9 @@ use super::platform_utils::format_lib_name;
 ///
 ///     // Set loader path for discovery
 ///     let loader_var = get_loader_path_var();
-///     std::env::set_var(loader_var, temp.path());
+///     unsafe {
+///         std::env::set_var(loader_var, temp.path());
+///     }
 ///
 ///     // Backend discovery now succeeds
 ///     // Tests can proceed without real C++ libraries

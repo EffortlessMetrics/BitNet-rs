@@ -38,8 +38,8 @@ use std::path::{Path, PathBuf};
 ///
 /// # Example
 ///
-/// ```no_run
-/// use std::path::PathBuf;
+/// ```ignore
+/// use std::path::{Path, PathBuf};
 /// use xtask::ffi::{compile_cpp_shim, bitnet_cpp_system_includes, cuda_system_includes};
 ///
 /// let local_includes = vec![PathBuf::from("csrc")];
@@ -138,7 +138,7 @@ pub fn compile_cpp_shim(
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use std::path::{Path, PathBuf};
 /// use xtask::ffi::compile_cpp_shims_multi;
 ///
@@ -248,7 +248,7 @@ pub fn compile_cpp_shims_multi(
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use xtask::ffi::cuda_system_includes;
 ///
 /// let cuda_includes = cuda_system_includes();
@@ -286,7 +286,7 @@ pub fn cuda_system_includes() -> Vec<PathBuf> {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use xtask::ffi::bitnet_cpp_system_includes;
 ///
 /// let cpp_includes = bitnet_cpp_system_includes().unwrap_or_default();

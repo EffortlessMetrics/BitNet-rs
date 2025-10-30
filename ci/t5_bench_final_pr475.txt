@@ -1,0 +1,58 @@
+
+running 4 tests
+iiii
+test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+iiiiii
+test result: ok. 0 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 14 tests
+iiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 14 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 19 tests
+iiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 19 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+i
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 80 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 80 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 29 tests
+iiiiiiiiiiiiiiiiiiiiiiiiiiiii
+test result: ok. 0 passed; 0 failed; 29 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+WARNING: Failed to find function "__sanitizer_acquire_crash_state".
+WARNING: Failed to find function "__sanitizer_print_stack_trace".
+WARNING: Failed to find function "__sanitizer_set_death_callback".
+INFO: libFuzzer ignores flags that start with '--'
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2346100971
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: A corpus is not provided, starting from an empty corpus
+#2	INITED exec/s: 0 rss: 141Mb
+WARNING: no interesting inputs were found so far. Is the code instrumented for coverage?
+This may also happen if the target rejected all inputs we tried so far
+#16777216	pulse  corp: 1/1b lim: 4096 exec/s: 5592405 rss: 141Mb
+#33554432	pulse  corp: 1/1b lim: 4096 exec/s: 5592405 rss: 141Mb
+#67108864	pulse  corp: 1/1b lim: 4096 exec/s: 5162220 rss: 141Mb
+#134217728	pulse  corp: 1/1b lim: 4096 exec/s: 4793490 rss: 141Mb
+#268435456	pulse  corp: 1/1b lim: 4096 exec/s: 4793490 rss: 141Mb
+#536870912	pulse  corp: 1/1b lim: 4096 exec/s: 4880644 rss: 141Mb
+#1073741824	pulse  corp: 1/1b lim: 4096 exec/s: 4994148 rss: 141Mb

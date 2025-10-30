@@ -34,7 +34,7 @@
 //!
 //! # fn example() -> candle_core::Result<()> {
 //! let tensor = Tensor::randn(0f32, 1f32, (32, 128), &Device::Cpu)?;
-//! dump_trace("layer_output", &tensor)?;
+//! dump_trace("layer_output", &tensor, None, None, None)?;
 //! # Ok(())
 //! # }
 //! ```
