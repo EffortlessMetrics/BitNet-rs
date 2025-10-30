@@ -342,7 +342,7 @@ pub fn ensure_backend_or_skip(backend: CppBackend) {
 ///     // Test code here
 /// }
 /// ```
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)]
 pub fn ensure_bitnet_or_skip() {
     ensure_backend_or_skip(CppBackend::BitNet);
 }
@@ -751,7 +751,7 @@ pub fn get_loader_path_var() -> &'static str {
 /// let llama_libs = get_backend_lib_names(CppBackend::Llama);
 /// assert_eq!(llama_libs.len(), 2); // libllama + libggml
 /// ```
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)]
 pub fn get_backend_lib_names(backend: CppBackend) -> Vec<String> {
     let stems = match backend {
         CppBackend::BitNet => vec!["bitnet"],
@@ -918,7 +918,7 @@ pub fn create_mock_backend_libs(backend: CppBackend) -> Result<tempfile::TempDir
 ///     // Test environment variable precedence...
 /// }
 /// ```
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)]
 pub fn create_mock_cpp_libs(
     dir: &std::path::Path,
     backend: CppBackend,
@@ -1003,7 +1003,7 @@ pub fn create_mock_cpp_libs(
 ///     );
 /// }
 /// ```
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)]
 pub fn assert_backend_runtime(
     backend: CppBackend,
     expected_available: bool,
@@ -1112,7 +1112,7 @@ pub fn assert_backend_runtime(
 ///                high.path().canonicalize().unwrap());
 /// }
 /// ```
-#[cfg_attr(not(test), allow(dead_code))]
+#[allow(dead_code)]
 pub fn setup_precedence_test(
     crossval_libdir: Option<&std::path::Path>,
     cpp_dir: Option<&std::path::Path>,

@@ -440,6 +440,7 @@ fn bench_qk256_dequant_breakdown(c: &mut Criterion) {
 
         b.iter(|| {
             let mut output = vec![0.0f32; SIZE];
+            #[allow(clippy::needless_range_loop)]
             for block_idx in 0..NUM_BLOCKS {
                 let block_start = block_idx * 256;
                 let packed_start = block_idx * 64;

@@ -1178,8 +1178,7 @@ fn test_github_actions_compatibility() {
 /// Smoke test: Verify test harness is working
 #[test]
 fn test_harness_working() {
-    // Basic sanity check
-    assert!(true, "Test harness is operational");
+    // Basic sanity check - test harness is operational
 
     // Verify workspace root exists
     let workspace_root = Path::new("/home/steven/code/Rust/BitNet-rs");

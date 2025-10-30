@@ -125,6 +125,10 @@ name = "kv_position_tracking_tests"
 path = "tests/kv_position_tracking_tests.rs"
 required-features = ["crossval"]
 
+[[example]]
+name = "test_llama_ffi"
+required-features = ["ffi"]
+
 [build-dependencies]
 bindgen = { version = "0.72.1", optional = true }
 cc = { version = "1.2.41", optional = true }

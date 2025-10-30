@@ -293,8 +293,8 @@ mod tests {
     #[test]
     #[ignore = "TODO: Capture stderr to validate error output format"]
     fn test_error_displays_both_sequences() {
-        let _rust_tokens = vec![1, 2, 3];
-        let _cpp_tokens = vec![1_i32, 2, 4];
+        let _rust_tokens = [1, 2, 3];
+        let _cpp_tokens = [1_i32, 2, 4];
 
         // TODO: Use test harness to capture stderr
         // Verify output contains both sequences
@@ -437,7 +437,7 @@ mod tests {
 
         // Generate 1000-token sequence
         let rust_tokens: Vec<u32> = (0..1000).collect();
-        let cpp_tokens: Vec<i32> = (0..1000).map(|x| x as i32).collect();
+        let cpp_tokens: Vec<i32> = (0i32..1000i32).collect();
 
         let start = Instant::now();
 
@@ -543,8 +543,8 @@ mod tests {
     #[test]
     #[ignore = "TODO: Decide how to handle negative i32 tokens from C++"]
     fn test_negative_cpp_tokens() {
-        let _rust = vec![1, 2, 3];
-        let _cpp = vec![1_i32, -1, 3]; // Negative token ID
+        let _rust = [1, 2, 3];
+        let _cpp = [1_i32, -1, 3]; // Negative token ID
 
         // What should happen here? Error or conversion?
         unimplemented!("Need policy for negative C++ token IDs");

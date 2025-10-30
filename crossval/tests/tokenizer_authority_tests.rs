@@ -1132,7 +1132,7 @@ mod tc_ac1_single_tokenizer_authority_computation {
         // - Same authority reference passed to both lanes
         //
         // This behavior is validated by integration tests in parity_both_integration_tests.rs
-        assert!(true, "Design verified: TokenizerAuthority computed once in STEP 2.5");
+        // Design verified: TokenizerAuthority computed once in STEP 2.5
     }
 
     /// Test: TokenizerAuthority contains all required fields after computation
@@ -1308,7 +1308,7 @@ mod tc_ac2_dual_receipt_injection {
         // Verify: Same authority reference passed to Lane A and Lane B
         // This is a design verification test - parity_both.rs lines 557-588
         // pass same `&tokenizer_authority` to both run_single_lane() calls
-        assert!(true, "Design verified: Same authority reference passed to both lanes");
+        // Design verified: Same authority reference passed to both lanes
     }
 
     /// Test: Authority cloned into each receipt via set_tokenizer_authority()
@@ -1614,7 +1614,7 @@ mod tc_ac3_validation_logic {
         // Verify: Validation happens after both receipts written to disk
         // This is a design verification test - parity_both.rs lines 594-634
         // validate tokenizer consistency after receipt writes (STEP 7.5)
-        assert!(true, "Design verified: Validation executed in STEP 7.5 after receipt writes");
+        // Design verified: Validation executed in STEP 7.5 after receipt writes
     }
 
     /// Test: Validation loads receipts from disk to extract authorities
