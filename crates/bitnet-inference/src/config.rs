@@ -280,6 +280,73 @@ impl GenerationConfig {
         self
     }
 
+    /// Set EOS token ID
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_eos_token_id(Some(2));
+    /// assert_eq!(config.eos_token_id, Some(2));
+    /// ```
+    #[must_use]
+    pub fn with_eos_token_id(mut self, eos_token_id: Option<u32>) -> Self {
+        self.eos_token_id = eos_token_id;
+        self
+    }
+
+    /// Set logits tap steps
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_logits_tap_steps(5);
+    /// assert_eq!(config.logits_tap_steps, 5);
+    /// ```
+    #[must_use]
+    pub fn with_logits_tap_steps(mut self, steps: usize) -> Self {
+        self.logits_tap_steps = steps;
+        self
+    }
+
+    /// Set logits top-k
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_logits_topk(10);
+    /// assert_eq!(config.logits_topk, 10);
+    /// ```
+    #[must_use]
+    pub fn with_logits_topk(mut self, topk: usize) -> Self {
+        self.logits_topk = topk;
+        self
+    }
+
+    /// Set logits callback
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_inference::config::GenerationConfig;
+    /// use std::sync::Arc;
+    ///
+    /// let config = GenerationConfig::default()
+    ///     .with_logits_cb(Some(Arc::new(|step, tokens, chosen| {
+    ///         println!("Step {}: chose token {}", step, chosen);
+    ///     })));
+    /// assert!(config.logits_cb.is_some());
+    /// ```
+    #[must_use]
+    pub fn with_logits_cb(mut self, callback: Option<LogitsCallback>) -> Self {
+        self.logits_cb = callback;
+        self
+    }
+
     /// Add stop token IDs and rebuild the HashSet for O(1) lookups
     ///
     /// This is the preferred way to set stop token IDs as it automatically

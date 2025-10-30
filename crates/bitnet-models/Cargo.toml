@@ -47,6 +47,7 @@ tokio = { workspace = true, features = ["rt", "macros"] }
 dirs = "6.0.0"
 serial_test.workspace = true
 sha2 = "0.10.9"
+sysinfo = "0.37.2"
 
 [features]
 default = []

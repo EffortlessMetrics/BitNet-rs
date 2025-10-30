@@ -146,10 +146,18 @@ impl ParityCppSession {
 /// * Reference to the global session (behind Mutex)
 pub fn parity_cpp_session(model_path: &str) -> Result<&'static Mutex<ParityCppSession>> {
     // Get or initialize the session (first model path wins)
-    let session_mutex = PARITY_CPP_SESSION.get_or_try_init(|| {
-        let session = ParityCppSession::new(model_path)?;
-        Ok::<_, anyhow::Error>(Mutex::new(session))
-    })?;
+    // Use stable get_or_init with Result handling inside
+    let session_mutex = PARITY_CPP_SESSION.get_or_init(|| {
+        match ParityCppSession::new(model_path) {
+            Ok(session) => Mutex::new(session),
+            Err(e) => {
+                // If initialization fails, we panic since OnceLock doesn't support
+                // error propagation with stable APIs. This is acceptable for validation
+                // code where session creation failure is a fatal error anyway.
+                panic!("Failed to initialize FFI session: {}", e);
+            }
+        }
+    });
 
     // Verify model path matches (parity tests should use same model throughout)
     {
