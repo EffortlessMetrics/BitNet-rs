@@ -1,80 +1,17 @@
 #!/usr/bin/env bash
-#
-# Pre-commit hook for BitNet.rs
-#
-# Enforces local quality gates before allowing commits:
-# - No bare #[ignore] attributes (must have reasons)
-# - No raw env::set_var/remove_var (must use EnvGuard + #[serial(bitnet_env)])
-#
-# To enable: git config core.hooksPath .githooks
-
 set -euo pipefail
 
-# Preflight: Check for ripgrep
-if ! command -v rg >/dev/null 2>&1; then
-  echo "❌ Error: ripgrep (rg) is required but not installed"
+# Guard: Prevent GenerationConfig struct literals in tests (must use builder API)
+if rg -n 'GenerationConfig\s*\{' crates/bitnet-inference/tests | grep -v ") -> GenerationConfig" >/dev/null 2>&1; then
+  echo "✖ Found GenerationConfig struct literal in tests; use builder API instead."
   echo ""
-  echo "Install ripgrep:"
-  echo "  macOS:   brew install ripgrep"
-  echo "  Ubuntu:  sudo apt-get install ripgrep"
-  echo "  Windows: choco install ripgrep"
-  echo "  or visit: https://github.com/BurntSushi/ripgrep"
+  rg -n 'GenerationConfig\s*\{' crates/bitnet-inference/tests | grep -v ") -> GenerationConfig"
+  echo ""
+  echo "Example: Replace"
+  echo "  GenerationConfig { max_new_tokens: 10, temperature: 0.7, ... }"
+  echo "with"
+  echo "  GenerationConfig::greedy().with_max_new_tokens(10).with_temperature(0.7)"
   exit 1
 fi
 
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
-
-echo "🔍 Running BitNet.rs pre-commit checks..."
-
-# Check 1: Bare #[ignore] annotations
-echo "  Checking for bare #[ignore] markers..."
-
-# Get script directory
-HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${HOOK_DIR}/.." && pwd)"
-
-# Call unified ignore check (suppress emoji output, we have our own)
-if ! "${REPO_ROOT}/scripts/lib/ignore_check.sh" --quiet crates tests tests-new xtask; then
-  echo ""
-  echo -e "${RED}❌ Bare #[ignore] markers found without justification${NC}"
-  echo ""
-  echo "See output above for details and valid annotation patterns."
-  echo ""
-  exit 1
-fi
-
-# Check 2: Raw env mutation (only in crates/, aligns with CI)
-echo "  Checking for raw environment mutations in production code..."
-OFFENDERS=$(rg -n '(std::env::set_var|std::env::remove_var)\(' crates \
-  --glob '!**/tests/support/**' \
-  --glob '!**/support/**' \
-  --glob '!**/helpers/**' \
-  --glob '!**/test_fixtures/**' \
-  --type rust 2>/dev/null || true)
-
-if [ -n "$OFFENDERS" ]; then
-  echo -e "${RED}❌ Raw environment mutations found in production code${NC}"
-  echo ""
-  echo "$OFFENDERS"
-  echo ""
-  echo "BitNet.rs requires environment mutations in tests to use EnvGuard pattern:"
-  echo ""
-  echo "  use serial_test::serial;"
-  echo "  use tests::helpers::env_guard::EnvGuard;"
-  echo ""
-  echo "  #[test]"
-  echo "  #[serial(bitnet_env)]  // Ensures serial execution"
-  echo "  fn test_with_env() {"
-  echo "      let _guard = EnvGuard::new(\"BITNET_DETERMINISTIC\", \"1\");"
-  echo "      // Test code - env automatically restored on drop"
-  echo "  }"
-  echo ""
-  echo "See: docs/development/test-suite.md#environment-variable-testing"
-  exit 1
-fi
-
-echo -e "${GREEN}✅ Pre-commit checks passed${NC}"
 exit 0

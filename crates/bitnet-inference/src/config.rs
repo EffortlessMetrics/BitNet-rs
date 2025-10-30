@@ -1,6 +1,19 @@
 //! # Inference Configuration
 //!
 //! Configuration structures for inference engine and text generation.
+//!
+//! ## Developer Note
+//!
+//! **Prefer `GenerationConfig::greedy()` or `::creative()` with fluent setters.**
+//! Direct struct literal initialization is intentionally unsupported (marked `#[non_exhaustive]`).
+//! Use the builder pattern to ensure forward compatibility as new fields are added:
+//!
+//! ```
+//! # use bitnet_inference::config::GenerationConfig;
+//! let config = GenerationConfig::greedy()
+//!     .with_max_new_tokens(32)
+//!     .with_temperature(0.0);
+//! ```
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
