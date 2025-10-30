@@ -790,7 +790,8 @@ fn test_workspace_dependencies_centralized() {
     );
 
     // Check for common dependencies that should be centralized
-    let centralized_deps = vec!["serde", "anyhow", "thiserror", "once_cell", "serial_test"];
+    // Note: once_cell is NOT included - we use std::sync::OnceLock instead
+    let centralized_deps = vec!["serde", "anyhow", "thiserror", "serial_test"];
 
     for dep in centralized_deps {
         let pattern = format!("{} =", dep);
