@@ -223,14 +223,14 @@ jobs:
             body: comment
           });
 
-    - name: Block Massive PRs
+    - name: Report Massive PRs (informational)
       if: steps.evaluate.outputs.should_block == 'true'
       run: |
-        echo "❌ PR is too large and should be reviewed before merging"
+        echo "⚠️ PR is large and may need review before merging"
         echo "Size: ${{ steps.pr-size.outputs.total_changes }} lines"
         echo "Category: ${{ steps.evaluate.outputs.size_category }}"
         echo ""
-        echo "This is a warning - the PR is not blocked but requires manual review."
-        echo "Consider splitting this PR into smaller, focused changes."
-        # Note: We don't exit 1 here to avoid breaking the workflow completely
-        # The comment above will alert reviewers to the issue
+        echo "This is informational - the PR is not blocked."
+        echo "Consider splitting large PRs or add 'mechanical-change' label to acknowledge."
+        # Always exit 0 - this is informational only
+        exit 0
