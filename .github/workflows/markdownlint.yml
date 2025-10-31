@@ -13,4 +13,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm -g i markdownlint-cli2
-      - run: markdownlint-cli2 "**/*.md"
+      - run: markdownlint-cli2 --config .markdownlint.jsonc "**/*.md"

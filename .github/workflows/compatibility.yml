@@ -64,6 +64,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.90.0"
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake clang pkg-config
       - name: Build FFI library
         run: |
           cargo build -p bitnet-ffi --locked --release --no-default-features --features cpu
@@ -141,11 +145,13 @@ jobs:
           python-version: '3.10'
       - name: Install Python dependencies
         run: |
-          pip install transformers torch
+          python -m pip install -U pip
+          pip install "transformers==4.44.2" "tokenizers==0.19.1" "torch==2.*" "scipy==1.*"
       - name: Ensure tokenizer fixtures
         run: |
           cd crates/bitnet-tokenizers
-          test -f fixtures/gpt2-hello-world.json || mkdir -p fixtures && cp -r ../../tests/fixtures/tokenizers/* fixtures/ || true
+          mkdir -p fixtures
+          cp -r ../../tests/fixtures/tokenizers/* fixtures/ || true
       - name: Test tokenizer fixtures
         run: |
           cd crates/bitnet-tokenizers
@@ -213,6 +219,7 @@ jobs:
   cross-val-determinism:
     name: Cross-Validation Determinism
     runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'crossval')
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

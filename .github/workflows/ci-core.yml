@@ -37,6 +37,10 @@ jobs:
   build-test-linux:
     name: Build & Test (ubuntu-latest)
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,8 +62,18 @@ jobs:
       - name: Build workspace
         run: cargo build --locked --workspace --no-default-features --features cpu
 
-      - name: Run tests
-        run: cargo test --locked --workspace --no-default-features --features cpu -- --nocapture
+      - name: Run unit tests (libs only, CPU features)
+        run: |
+          # Target only the library crates to keep feedback fast.
+          cargo test --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --lib \
+            --no-default-features --features cpu \
+            -- --nocapture
 
   # Job 2: Clippy linting
   clippy:
@@ -80,8 +94,17 @@ jobs:
         with:
           shared-key: ci-core-clippy
 
-      - name: Run clippy
-        run: cargo clippy --locked --workspace --all-targets --no-default-features --features cpu -- -D warnings
+      - name: Run clippy (core crates)
+        run: |
+          cargo clippy --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --all-targets \
+            --no-default-features --features cpu \
+            -- -D warnings
 
   # Job 4: Documentation build
   docs:

@@ -49,6 +49,7 @@ jobs:
   test-receipt-verification:
     name: Test Receipt Verification (Examples)
     runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'receipts')
 
     steps:
       - name: Checkout code

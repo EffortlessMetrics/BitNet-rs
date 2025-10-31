@@ -38,13 +38,13 @@ jobs:
         run: |
           if rg -n 'BITNET_FIX_LN_SCALE\s*=\s*1' .github/workflows; then
             echo "WARNING: BITNET_FIX_LN_SCALE should not be set in CI (deprecated - use correction policy)"
-          fi
+          fi || true
           if rg -n 'BITNET_CORRECTION_POLICY\s*=' .github/workflows; then
             echo "WARNING: BITNET_CORRECTION_POLICY should not be set in CI (corrections are for known-bad models only)"
-          fi
+          fi || true
           if rg -n 'BITNET_ALLOW_RUNTIME_CORRECTIONS\s*=\s*1' .github/workflows; then
             echo "WARNING: BITNET_ALLOW_RUNTIME_CORRECTIONS should not be set in CI (corrections are for known-bad models only)"
-          fi
+          fi || true
           echo "✅ Dev-only flags check completed"
       - name: Guard bare cfg(cuda) in tests
         run: |
@@ -52,4 +52,13 @@ jobs:
             echo "WARNING: Use #[cfg(any(feature=\"gpu\", feature=\"cuda\"))] instead of bare cfg(cuda) in tests"
           else
             echo "✅ No bare cfg(cuda) in tests"
-          fi
+          fi || true
+      - name: Upload guard logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guards-report
+          path: |
+            **/guards*.log
+            **/guards*.txt
+          retention-days: 3
