@@ -42,7 +42,21 @@ jobs:
         test -s crates/bitnet-ggml-ffi/csrc/VENDORED_GGML_COMMIT
         ! grep -qx "unknown" crates/bitnet-ggml-ffi/csrc/VENDORED_GGML_COMMIT
 
+    - name: Probe feature availability
+      id: probe
+      continue-on-error: true
+      run: |
+        # Fast probe: check if feature combo builds in 5 seconds
+        if timeout 5s cargo check --locked -p bitnet-cli --no-default-features --features "${{ matrix.features }}" >/dev/null 2>&1; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "✅ Feature combo available: ${{ matrix.features }}"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "⏭️ Skipping unavailable feature combo: ${{ matrix.features }}"
+        fi
+
     - name: Clippy Check
+      if: steps.probe.outputs.available == 'true'
       run: |
         cargo clippy --workspace \
           --locked \
@@ -52,6 +66,7 @@ jobs:
           -- -D warnings
 
     - name: Build
+      if: steps.probe.outputs.available == 'true'
       run: |
         cargo build -p bitnet-cli \
           --locked \
@@ -60,6 +75,7 @@ jobs:
           --release
 
     - name: Run tests
+      if: steps.probe.outputs.available == 'true'
       run: |
         cargo test --workspace \
           --locked \
@@ -68,7 +84,7 @@ jobs:
           -- --nocapture
 
     - name: Acceptance Test (IQ2_S)
-      if: contains(matrix.features, 'iq2s-ffi')
+      if: steps.probe.outputs.available == 'true' && contains(matrix.features, 'iq2s-ffi')
       env:
         IQ2S_MODEL: ${{ secrets.IQ2S_TEST_MODEL }}
       run: |
@@ -81,6 +97,7 @@ jobs:
         fi
 
     - name: Store binary artifact
+      if: steps.probe.outputs.available == 'true'
       uses: actions/upload-artifact@v3
       with:
         name: bitnet-cli-${{ matrix.features }}

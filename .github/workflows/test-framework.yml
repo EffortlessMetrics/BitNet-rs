@@ -77,7 +77,7 @@ jobs:
 
       - name: Run configuration scenario tests
         run: |
-          cargo test --locked -p bitnet --test test_configuration_scenarios
+          cargo test --locked -p bitnet --test test_configuration_scenarios --no-default-features --features cpu -- --nocapture
 
   integration-tests:
     name: Integration Tests

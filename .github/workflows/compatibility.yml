@@ -67,6 +67,8 @@ jobs:
       - name: Build FFI library
         run: |
           cargo build -p bitnet-ffi --locked --release --no-default-features --features cpu
+      - name: Export LD_LIBRARY_PATH
+        run: echo "LD_LIBRARY_PATH=$PWD/target/release:$LD_LIBRARY_PATH" >> $GITHUB_ENV
       - name: Compile C test
         run: |
           cd crates/bitnet-ffi/tests
@@ -76,11 +78,7 @@ jobs:
       - name: Run C test
         run: |
           cd crates/bitnet-ffi/tests
-          if [ "$(uname)" = "Darwin" ]; then
-            DYLD_LIBRARY_PATH=../../../target/release ./test_ffi
-          else
-            LD_LIBRARY_PATH=../../../target/release ./test_ffi
-          fi
+          LD_LIBRARY_PATH=../../../target/release ./test_ffi
 
   validation-pr:
     name: Model Validation (PR Lane)
@@ -144,6 +142,10 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install transformers torch
+      - name: Ensure tokenizer fixtures
+        run: |
+          cd crates/bitnet-tokenizers
+          test -f fixtures/gpt2-hello-world.json || mkdir -p fixtures && cp -r ../../tests/fixtures/tokenizers/* fixtures/ || true
       - name: Test tokenizer fixtures
         run: |
           cd crates/bitnet-tokenizers
