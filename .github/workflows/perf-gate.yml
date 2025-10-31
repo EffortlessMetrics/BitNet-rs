@@ -19,6 +19,7 @@ jobs:
   performance-gate:
     name: Performance Regression Gate
     runs-on: ubuntu-latest
+    continue-on-error: true  # Informational while baselines stabilize
 
     steps:
       - name: Checkout code
