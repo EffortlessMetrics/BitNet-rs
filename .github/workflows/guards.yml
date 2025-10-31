@@ -26,6 +26,7 @@ jobs:
   guards:
     runs-on: ubuntu-latest
     continue-on-error: true  # Temporarily non-blocking while stabilizing baselines
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       # Ensure scripts are executable in fresh clones

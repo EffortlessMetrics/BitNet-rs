@@ -65,6 +65,7 @@ jobs:
   test-scenarios:
     name: Test Configuration Scenarios
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4

@@ -508,6 +508,7 @@ mod tests {
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system
     #[tokio::test]
     #[cfg(feature = "cpu")]
+    #[serial_test::serial(bitnet_env)]
     async fn test_offline_mode_behavior() {
         // Set offline mode
         unsafe {
@@ -695,6 +696,7 @@ mod tests {
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system
     #[test]
     #[cfg(feature = "cpu")]
+    #[serial_test::serial(bitnet_env)]
     fn test_environment_variable_detection() {
         // Test strict mode detection
         unsafe {

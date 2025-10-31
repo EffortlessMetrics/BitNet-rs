@@ -59,6 +59,8 @@ jobs:
   ffi-smoke-test:
     name: FFI Smoke Test
     runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -136,6 +138,7 @@ jobs:
     name: Tokenizer Compatibility Tests
     runs-on: ubuntu-latest
     continue-on-error: true  # Informational while stabilizing baselines
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

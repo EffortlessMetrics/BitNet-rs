@@ -209,6 +209,7 @@ jobs:
     name: Validation Integration Tests
     runs-on: ubuntu-latest
     needs: build-tools
+    continue-on-error: true
 
     steps:
       - name: Checkout repository

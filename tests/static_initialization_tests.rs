@@ -673,10 +673,10 @@ fn test_env_guard_migration() {
     // - Lazy<Mutex<()>> → OnceLock<Mutex<()>>
     // - Helper function: get_env_lock()
 
-    static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    static TEST_ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
     fn get_env_lock() -> &'static Mutex<()> {
-        ENV_LOCK.get_or_init(|| Mutex::new(()))
+        TEST_ENV_LOCK.get_or_init(|| Mutex::new(()))
     }
 
     // Validate pattern (serialize access via lock)
