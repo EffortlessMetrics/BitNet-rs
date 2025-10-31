@@ -34,10 +34,10 @@ jobs:
 
       - name: Run TL stress tests
         run: |
-          cargo test -p bitnet-kernels --no-default-features --features cpu \
+          cargo test --locked -p bitnet-kernels --no-default-features --features cpu \
             --test issue_462_tl_lut_tests -- --test-threads=1
 
       - name: Run quantization stress tests
         run: |
-          cargo test -p bitnet-quantization --no-default-features --features cpu \
+          cargo test --locked -p bitnet-quantization --no-default-features --features cpu \
             --lib tl -- --test-threads=1

@@ -47,11 +47,11 @@ jobs:
 
       - name: Build library (${{ matrix.profile.desc }})
         run: |
-          cargo build -p bitnet-tests --lib ${{ matrix.profile.features }}
+          cargo build --locked -p bitnet-tests --lib ${{ matrix.profile.features }}
 
       - name: Run clippy (${{ matrix.profile.desc }})
         run: |
-          cargo clippy -p bitnet-tests --lib ${{ matrix.profile.features }} -- -D warnings
+          cargo clippy --locked -p bitnet-tests --lib ${{ matrix.profile.features }} -- -D warnings
 
       - name: Check formatting
         run: |
@@ -60,7 +60,7 @@ jobs:
       - name: Build binaries (${{ matrix.profile.desc }})
         if: matrix.profile.name == 'full'
         run: |
-          cargo build -p bitnet-tests ${{ matrix.profile.features }}
+          cargo build --locked -p bitnet-tests ${{ matrix.profile.features }}
 
   test-scenarios:
     name: Test Configuration Scenarios
@@ -77,7 +77,7 @@ jobs:
 
       - name: Run configuration scenario tests
         run: |
-          cargo test -p bitnet --test test_configuration_scenarios
+          cargo test --locked -p bitnet --test test_configuration_scenarios
 
   integration-tests:
     name: Integration Tests
@@ -95,11 +95,11 @@ jobs:
 
       - name: Run library tests (minimal)
         run: |
-          cargo test -p bitnet-tests --lib
+          cargo test --locked -p bitnet-tests --lib
 
       - name: Run library tests (full)
         run: |
-          cargo test -p bitnet-tests --lib --features full-framework
+          cargo test --locked -p bitnet-tests --lib --features full-framework
 
   doc-check:
     name: Documentation Check
@@ -113,6 +113,6 @@ jobs:
 
       - name: Check documentation
         run: |
-          cargo doc -p bitnet-tests --no-deps --features full-framework
+          cargo doc --locked -p bitnet-tests --no-deps --features full-framework
         env:
           RUSTDOCFLAGS: "-D warnings"

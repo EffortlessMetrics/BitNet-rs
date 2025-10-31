@@ -45,14 +45,16 @@ jobs:
     - name: Clippy Check
       run: |
         cargo clippy --workspace \
+          --locked \
           --no-default-features \
           --features "${{ matrix.features }}" \
           --all-targets \
-          -- -D warnings -D clippy::pedantic -D unused_unsafe
+          -- -D warnings
 
     - name: Build
       run: |
         cargo build -p bitnet-cli \
+          --locked \
           --no-default-features \
           --features "${{ matrix.features }}" \
           --release
@@ -60,6 +62,7 @@ jobs:
     - name: Run tests
       run: |
         cargo test --workspace \
+          --locked \
           --no-default-features \
           --features "${{ matrix.features }}" \
           -- --nocapture

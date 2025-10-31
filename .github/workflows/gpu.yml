@@ -67,8 +67,8 @@ jobs:
       - name: GPU Smoke Test
         run: |
           cargo xtask gpu-smoke
-          cargo test -p bitnet-kernels --test gpu_smoke \
-            --no-default-features --features cuda -- --nocapture
+          cargo test --locked -p bitnet-kernels --test gpu_smoke \
+            --no-default-features --features gpu -- --nocapture
         env:
           BITNET_CI_SKIP_GPU: ${{ env.CI_SKIP_GPU }}
 

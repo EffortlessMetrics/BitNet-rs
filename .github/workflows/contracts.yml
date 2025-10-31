@@ -2,8 +2,18 @@ name: Contracts (Public API)
 
 on:
   pull_request:
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/contracts.yml'
   push:
     branches: [ main ]
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/contracts.yml'
 
 concurrency:
   group: contracts-${{ github.ref }}
@@ -67,7 +77,7 @@ jobs:
           for c in "${CRATES[@]}"; do
             echo "===> $c"
             # Deny breaks: removed/changed public items. Allow additions.
-            cargo public-api -p "$c" diff "${BASE}..${HEAD}" \
+            cargo public-api -p "$c" --no-default-features --features cpu diff "${BASE}..${HEAD}" \
               --deny removed --deny changed \
               | tee "api-diff/${c}.txt"
           done

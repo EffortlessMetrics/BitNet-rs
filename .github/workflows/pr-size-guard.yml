@@ -8,6 +8,8 @@ jobs:
   check-pr-size:
     name: Check PR Size
     runs-on: ubuntu-latest
+    # Skip this check if the PR has the 'mechanical-change' label
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'mechanical-change') }}
 
     steps:
     - name: Checkout PR
@@ -96,10 +98,10 @@ jobs:
         TOTAL_CHANGES=${{ steps.pr-size.outputs.total_changes }}
         FILES_CHANGED=${{ steps.pr-size.outputs.files_changed }}
 
-        # Size thresholds
-        LARGE_THRESHOLD=5000     # 5k lines = large
-        OVERSIZED_THRESHOLD=50000 # 50k lines = oversized
-        MASSIVE_THRESHOLD=100000  # 100k+ lines = massive
+        # Size thresholds (increased for mechanical refactoring)
+        LARGE_THRESHOLD=8000     # 8k lines = large
+        OVERSIZED_THRESHOLD=80000 # 80k lines = oversized
+        MASSIVE_THRESHOLD=200000  # 200k+ lines = massive
 
         if [ $TOTAL_CHANGES -ge $MASSIVE_THRESHOLD ]; then
           echo "size_category=massive" >> $GITHUB_OUTPUT

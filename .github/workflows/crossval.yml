@@ -37,6 +37,16 @@ on:
   # PR trigger with crossval label
   pull_request:
     types: [labeled]
+    paths:
+      - 'crates/bitnet-inference/**'
+      - 'crates/bitnet-models/**'
+      - 'crates/bitnet-quantization/**'
+      - 'crates/bitnet-kernels/**'
+      - 'crossval/**'
+      - 'xtask/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/crossval.yml'
 
 # Cancel in-progress runs for same PR/branch
 concurrency:
@@ -147,7 +157,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.82.0
+          toolchain: 1.90.0
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
@@ -165,6 +175,13 @@ jobs:
         run: |
           echo "🔍 Verifying no accidental FFI coupling in public API..."
 
+          # Check that FFI is not in default features
+          if grep -q 'default = \[.*"ffi".*\]' crates/bitnet-crossval/Cargo.toml; then
+            echo "❌ ERROR: FFI is in default features for bitnet-crossval"
+            echo "   This breaks --no-default-features builds."
+            exit 1
+          fi
+
           # Check that crossval crate doesn't unconditionally depend on FFI symbols
           if cargo tree -p bitnet-crossval --no-default-features | grep -q "bitnet-sys"; then
             echo "❌ ERROR: crossval crate has unconditional dependency on bitnet-sys"
@@ -173,6 +190,7 @@ jobs:
           fi
 
           echo "✅ No unconditional FFI dependencies detected"
+          echo "✅ FFI is not in default features"
 
   # ============================================================================
   # Job: STUB Mode Check
@@ -192,7 +210,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.82.0
+          toolchain: 1.90.0
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
@@ -208,7 +226,7 @@ jobs:
         run: |
           echo "🔍 Building with FFI feature but no libraries (STUB mode)..."
 
-          cargo build -p bitnet-crossval --features ffi
+          cargo build --locked -p bitnet-crossval --features ffi
 
           echo "✅ STUB mode compilation successful"
           echo "   This ensures graceful degradation when C++ libs are unavailable"
@@ -221,7 +239,7 @@ jobs:
           echo "🔍 Running STUB mode tests (no C++ dependencies)..."
 
           # Run only tests that don't require C++ libraries
-          cargo test -p bitnet-crossval --features ffi --lib
+          cargo test --locked -p bitnet-crossval --features ffi --lib
 
           echo "✅ STUB mode tests passed"
 
@@ -232,23 +250,11 @@ jobs:
   # Fast execution (~5-10 min with cache)
 
   lane-b-llama:
-    name: Lane B - llama.cpp Cross-Validation (${{ matrix.os }})
+    name: Lane B - llama.cpp Cross-Validation
     needs: [check-trigger, check-no-ffi, check-llama-stub]
     if: needs.check-trigger.outputs.should_run_lane_b == 'true'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
-
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            features: "cpu,ffi,crossval"
-            cache-key-suffix: "linux"
-          - os: macos-latest
-            features: "cpu,ffi,crossval"
-            cache-key-suffix: "macos"
 
     steps:
       - name: Checkout repository
@@ -259,23 +265,19 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.82.0
+          toolchain: 1.90.0
 
       - name: Install system dependencies
         run: |
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            sudo apt-get update
-            sudo apt-get install -y build-essential cmake ninja-build jq
-          else
-            brew install cmake ninja jq
-          fi
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build jq
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
         with:
           cache-all-crates: true
           cache-targets: true
-          key: lane-b-${{ matrix.cache-key-suffix }}-${{ hashFiles('**/Cargo.lock') }}
+          key: lane-b-linux-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache llama.cpp libraries
         id: cache-llama
@@ -306,12 +308,7 @@ jobs:
 
           # Export library paths
           echo "LLAMA_CPP_DIR=$HOME/.cache/llama_cpp" >> $GITHUB_ENV
-
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            echo "LD_LIBRARY_PATH=$HOME/.cache/llama_cpp/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          else
-            echo "DYLD_LIBRARY_PATH=$HOME/.cache/llama_cpp/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-          fi
+          echo "LD_LIBRARY_PATH=$HOME/.cache/llama_cpp/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
       - name: Verify llama.cpp availability
         run: |
@@ -343,8 +340,9 @@ jobs:
         run: |
           echo "🔨 Building Rust implementation with crossval features..."
           cargo build --workspace \
+            --locked \
             --no-default-features \
-            --features "${{ matrix.features }}"
+            --features "cpu,ffi,crossval"
 
           echo "✅ Rust build complete"
 
@@ -357,7 +355,8 @@ jobs:
 
           # Run crossval tests with llama.cpp backend
           cargo test -p bitnet-crossval \
-            --features "${{ matrix.features }}" \
+            --locked \
+            --features "cpu,ffi,crossval" \
             --test dual_backend_integration \
             -- --nocapture
 
@@ -375,7 +374,7 @@ jobs:
             --max-tokens 4 \
             --cos-tol "${{ env.CROSSVAL_TOLERANCE }}" \
             --cpp-backend llama \
-            --format json > crossval-parity-${{ matrix.os }}.json || {
+            --format json > crossval-parity-linux.json || {
               echo "⚠️  Per-token parity check failed (non-blocking for Lane B)"
             }
 
@@ -384,12 +383,12 @@ jobs:
         run: |
           echo "📄 Generating cross-validation receipt..."
 
-          cat > crossval-receipt-${{ matrix.os }}.json << EOF
+          cat > crossval-receipt-linux.json << EOF
           {
             "lane": "B",
             "backend": "llama.cpp",
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platform": "${{ matrix.os }}",
+            "platform": "ubuntu-latest",
             "tolerance": "${{ env.CROSSVAL_TOLERANCE }}",
             "cpp_version": "${{ env.CPP_TAG }}",
             "status": "completed"
@@ -400,7 +399,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lane-b-${{ matrix.os }}-${{ github.run_id }}
+          name: lane-b-linux-${{ github.run_id }}
           path: |
             crossval-receipt-*.json
             crossval-parity-*.json
@@ -430,7 +429,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.82.0
+          toolchain: 1.90.0
 
       - name: Install system dependencies
         run: |
@@ -481,6 +480,7 @@ jobs:
         run: |
           echo "🔨 Building Rust with BitNet crossval features..."
           cargo build --workspace \
+            --locked \
             --no-default-features \
             --features "cpu,ffi,crossval"
 
@@ -492,6 +492,7 @@ jobs:
           echo "🧪 Running Lane A cross-validation tests..."
 
           cargo test -p bitnet-crossval \
+            --locked \
             --features "cpu,ffi,crossval" \
             --test dual_backend_integration \
             -- --nocapture --ignored

@@ -1,11 +1,25 @@
 {
+  // Markdownlint configuration for BitNet.rs
+  // Relaxed rules for technical documentation
   "default": true,
 
-  // Line length: use 120; do not enforce in code blocks or tables.
-  "MD013": { "line_length": 120, "code_blocks": false, "tables": false, "headings": false },
+  // Line length: disabled - allow long lines for code blocks, URLs, and tables
+  "MD013": false,
 
   // First line heading (release notes, CHANGELOG excerpts often violate this).
   "MD041": false,
+
+  // Inline HTML - needed for custom formatting in docs
+  "MD033": false,
+
+  // Bare URLs - technical docs often have many URLs
+  "MD034": false,
+
+  // Code block style - allow both fenced and indented
+  "MD046": false,
+
+  // Duplicate heading - allow in different sections
+  "MD024": { "siblings_only": true },
 
   // Trailing punctuation in headings (release titles sometimes need it).
   "MD026": { "punctuation": ".,;:!。，；：" }

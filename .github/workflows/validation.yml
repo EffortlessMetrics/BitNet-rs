@@ -158,17 +158,17 @@ jobs:
       - name: Build bitnet-cli (with full-cli features)
         run: |
           echo "🔨 Building bitnet-cli with full-cli features..."
-          cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cli
+          cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,full-cli
 
       - name: Build bitnet-st2gguf
         run: |
           echo "🔨 Building bitnet-st2gguf..."
-          cargo build -p bitnet-st2gguf --release
+          cargo build --locked -p bitnet-st2gguf --release
 
       - name: Build bitnet-st-tools
         run: |
           echo "🔨 Building bitnet-st-tools..."
-          cargo build -p bitnet-st-tools --release
+          cargo build --locked -p bitnet-st-tools --release
 
       - name: Verify binaries exist
         shell: bash
@@ -254,12 +254,12 @@ jobs:
       - name: Run validation workflow tests
         run: |
           echo "🧪 Running validation workflow integration tests..."
-          cargo test -p bitnet-cli --test validation_workflow --no-default-features --features cpu,full-cli -- --nocapture
+          cargo test --locked -p bitnet-cli --test validation_workflow --no-default-features --features cpu,full-cli -- --nocapture
 
       - name: Run inspect tests
         run: |
           echo "🧪 Running inspect integration tests..."
-          cargo test -p bitnet-cli --test inspect_ln_stats --no-default-features --features cpu,full-cli -- --nocapture
+          cargo test --locked -p bitnet-cli --test inspect_ln_stats --no-default-features --features cpu,full-cli -- --nocapture
 
       - name: Generate test report
         if: always()
