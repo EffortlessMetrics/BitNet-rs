@@ -59,8 +59,15 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Build workspace
-        run: cargo build --locked --workspace --no-default-features --features cpu
+      - name: Build core crates (libs, CPU features)
+        run: |
+          cargo build --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --no-default-features --features cpu
 
       - name: Run unit tests (libs only, CPU features)
         run: |
