@@ -284,25 +284,49 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    continue-on-error: true  # Non-blocking for PRs
+    timeout-minutes: 20
+    continue-on-error: true  # Non-blocking (informational only)
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: "1.90.0"
       - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
-      - name: Generate coverage
+        run: cargo install cargo-llvm-cov --locked || true
+      - name: Generate coverage (informational)
+        env:
+          RUST_BACKTRACE: 1
         run: |
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu --html || echo "Coverage generation completed with warnings"
-          cargo llvm-cov --workspace --locked --no-default-features --features cpu --text | tee coverage.txt || echo "Coverage text generation completed"
-      - name: Check coverage threshold
-        continue-on-error: true
+          set +e
+          cargo llvm-cov --workspace --locked \
+            --no-default-features --features cpu \
+            --html --output-dir target/llvm-cov/html || true
+          cargo llvm-cov --workspace --locked \
+            --no-default-features --features cpu \
+            --json --output-path coverage.json || true
+          cargo llvm-cov report --text | tee coverage.txt || true
+      - name: Check threshold (informational)
         run: |
-          awk '/TOTAL/ {gsub(/%/,"",$(NF)); v=$(NF)+0; print "Coverage:", v"%"; if (v < 70) {print "Coverage below 70% threshold (non-blocking)"; exit 0}}' coverage.txt
-      - name: Upload coverage report
+          set +e
+          if [ -f coverage.json ]; then
+            perc=$(jq -r '.data[0].totals.lines.percent // 0' coverage.json 2>/dev/null || echo 0)
+            echo "Coverage: $perc%"
+            if awk "BEGIN{exit !($perc < 70)}"; then
+              echo "⚠️  Coverage below 70% (informational - does not block merge)"
+            else
+              echo "✅ Coverage OK: $perc%"
+            fi
+          else
+            echo "Coverage data not available"
+          fi
+          exit 0
+      - name: Upload coverage artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: target/llvm-cov/html/
+          path: |
+            coverage.json
+            coverage.txt
+            target/llvm-cov/html/**
+          retention-days: 7
