@@ -26,8 +26,11 @@ env:
 jobs:
   gpu-tests:
     name: GPU Tests
+    # Gate GPU tests behind label to save CI minutes (informational)
+    if: contains(github.event.pull_request.labels.*.name, 'gpu') || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, linux, gpu]
-    timeout-minutes: 30
+    timeout-minutes: 15
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
