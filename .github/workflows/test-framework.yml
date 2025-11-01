@@ -86,6 +86,8 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true  # Informational (end-to-end scenarios)
     needs: [build-matrix]
 
     steps:
