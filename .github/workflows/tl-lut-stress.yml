@@ -15,6 +15,9 @@ concurrency:
 jobs:
   tl-lut:
     name: TL LUT Stress Tests
+    # Only run when 'lut' label is present (opt-in for PRs)
+    # Nightly strict suite provides comprehensive coverage
+    if: contains(github.event.pull_request.labels.*.name, 'lut') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     continue-on-error: true  # Informational while stress tests stabilize
@@ -40,23 +43,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-tl-
 
-      - name: Run smoke tests (fast)
-        if: "!contains(github.event.pull_request.labels.*.name, 'lut')"
+      - name: Run TL LUT stress suite
         run: |
-          echo "🧪 Running fast smoke tests (no 'lut' label detected)..."
-          # Run only ignored/marked tests as quick sanity check
-          cargo test --locked -p bitnet-kernels --no-default-features --features cpu \
-            --test issue_462_tl_lut_tests -- --ignored --nocapture || true
-
-          cargo test --locked -p bitnet-quantization --no-default-features --features cpu \
-            --lib tl -- --test-threads=1 || true
-
-          echo "✅ Smoke tests completed"
-
-      - name: Run full stress suite (on demand with 'lut' label)
-        if: "contains(github.event.pull_request.labels.*.name, 'lut')"
-        run: |
-          echo "🏋️  Running full TL LUT stress suite (lut' label detected)..."
+          echo "🏋️  Running TL LUT stress suite ('lut' label detected)..."
 
           cargo test --locked -p bitnet-kernels --no-default-features --features cpu \
             --test issue_462_tl_lut_tests -- --test-threads=1 --nocapture || true
@@ -64,7 +53,7 @@ jobs:
           cargo test --locked -p bitnet-quantization --no-default-features --features cpu \
             --lib tl -- --test-threads=1 || true
 
-          echo "✅ Full stress suite completed"
+          echo "✅ Stress suite completed"
 
       - name: Upload stress test summary
         if: always()
@@ -72,7 +61,6 @@ jobs:
           cat > tl-lut-summary.md << 'EOF'
           # TL LUT Stress Test Summary
 
-          **Run Mode**: ${{ contains(github.event.pull_request.labels.*.name, 'lut') && 'Full Stress Suite' || 'Smoke Tests' }}
           **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           **Platform**: ubuntu-latest
 
@@ -86,7 +74,7 @@ jobs:
 
           See workflow logs for detailed test output.
 
-          **Note**: Add `lut` label to run full stress suite on this PR.
+          **Note**: This workflow only runs when the `lut` label is present.
           EOF
 
           cat tl-lut-summary.md >> $GITHUB_STEP_SUMMARY
