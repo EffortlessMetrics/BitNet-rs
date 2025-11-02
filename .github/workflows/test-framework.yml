@@ -15,6 +15,10 @@ on:
       - 'Cargo.toml'
       - '.github/workflows/test-framework.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -23,6 +27,7 @@ jobs:
   build-matrix:
     name: Build ${{ matrix.profile.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         profile:
@@ -68,6 +73,7 @@ jobs:
     # Only run when explicitly requested via label
     if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'framework')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: true
 
     steps:
@@ -85,6 +91,8 @@ jobs:
 
   integration-tests:
     name: Integration Tests
+    # Only run on push to main or when explicitly requested via label
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'framework')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true  # Informational (end-to-end scenarios)
@@ -110,6 +118,7 @@ jobs:
   doc-check:
     name: Documentation Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4

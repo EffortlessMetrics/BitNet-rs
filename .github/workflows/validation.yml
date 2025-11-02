@@ -36,6 +36,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -58,6 +62,7 @@ jobs:
   security-guard:
     name: Security Guard (Block Correction Flags)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     continue-on-error: true  # Informational while stabilizing baselines
     steps:
       - name: Checkout repository
@@ -114,6 +119,7 @@ jobs:
   build-tools:
     name: Build Validation Tools
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: security-guard
 
     steps:
@@ -207,6 +213,7 @@ jobs:
   validation-tests:
     name: Validation Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build-tools
     continue-on-error: true
 
@@ -274,6 +281,7 @@ jobs:
   validate-models:
     name: Validate GGUF Models
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build-tools
     if: ${{ github.event.inputs.skip_model_validation != 'true' }}
     strategy:
@@ -420,6 +428,7 @@ jobs:
     needs: [security-guard, build-tools, validation-tests, validate-models]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     continue-on-error: true
 
     steps:
@@ -515,6 +524,7 @@ jobs:
     needs: validation-summary
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     continue-on-error: true
     permissions:
       checks: write
