@@ -62,6 +62,23 @@ jobs:
             echo "✅ No bare cfg(cuda) in tests"
           fi
           exit 0
+      - name: Enforce --locked on cargo commands (informational)
+        run: |
+          set +e
+          echo "Checking for cargo commands missing --locked flag..."
+          misses=$(rg -n "(cargo (build|test|run|clippy))" .github/workflows \
+                    | rg -v "cargo install" | rg -v "\-\-locked" | wc -l | tr -d ' ')
+          if [ "$misses" -ne 0 ]; then
+            echo "⚠️  Found $misses cargo command(s) missing --locked flag:"
+            rg -n "(cargo (build|test|run|clippy))" .github/workflows \
+              | rg -v "cargo install" | rg -v "\-\-locked" | head -10
+            echo ""
+            echo "Recommendation: Add --locked to ensure deterministic builds"
+            echo "This is informational only - not blocking merge"
+          else
+            echo "✅ All cargo commands use --locked flag"
+          fi
+          exit 0
       - name: Upload guard logs
         if: always()
         uses: actions/upload-artifact@v4

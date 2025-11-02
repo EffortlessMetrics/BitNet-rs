@@ -281,52 +281,11 @@ jobs:
       - name: Check dependencies
         run: cargo deny check bans || true
 
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true  # Non-blocking (informational only)
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: "1.90.0"
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov --locked || true
-      - name: Generate coverage (informational)
-        env:
-          RUST_BACKTRACE: 1
-        run: |
-          set +e
-          cargo llvm-cov --workspace --locked \
-            --no-default-features --features cpu \
-            --html --output-dir target/llvm-cov/html || true
-          cargo llvm-cov --workspace --locked \
-            --no-default-features --features cpu \
-            --json --output-path coverage.json || true
-          cargo llvm-cov report --text | tee coverage.txt || true
-      - name: Check threshold (informational)
-        run: |
-          set +e
-          if [ -f coverage.json ]; then
-            perc=$(jq -r '.data[0].totals.lines.percent // 0' coverage.json 2>/dev/null || echo 0)
-            echo "Coverage: $perc%"
-            if awk "BEGIN{exit !($perc < 70)}"; then
-              echo "⚠️  Coverage below 70% (informational - does not block merge)"
-            else
-              echo "✅ Coverage OK: $perc%"
-            fi
-          else
-            echo "Coverage data not available"
-          fi
-          exit 0
-      - name: Upload coverage artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: |
-            coverage.json
-            coverage.txt
-            target/llvm-cov/html/**
-          retention-days: 7
+  # coverage:
+  #   MOVED TO: .github/workflows/coverage.yml
+  #   This job was migrated to a dedicated coverage workflow with:
+  #     - Strict 70% threshold on main (blocks push)
+  #     - Label-gated on PRs (opt-in via 'coverage' label)
+  #     - Separate workflow for better control and visibility
+  #   See: .github/workflows/coverage.yml
+  #   if: ${{ false }}  # Disabled - legacy job
