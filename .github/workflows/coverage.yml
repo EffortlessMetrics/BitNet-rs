@@ -55,6 +55,10 @@ jobs:
             --json --output-path coverage.json
           cargo llvm-cov report --text | tee coverage.txt
 
+      - name: Install jq
+        if: github.event_name == 'push'
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Enforce threshold on main (70%)
         if: github.event_name == 'push'
         run: |
