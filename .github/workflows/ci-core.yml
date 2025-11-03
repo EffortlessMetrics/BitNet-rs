@@ -2,7 +2,7 @@ name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges.
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
-# Note: This workflow triggers on changes to crates/**, Cargo.{toml,lock}, and this file itself
+# Note: This workflow triggers on changes to crates/**, Cargo.{toml,lock}, README.md, docs/**, and this file itself
 
 on:
   pull_request:
@@ -12,6 +12,8 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/ci-core.yml'
+      - 'README.md'
+      - 'docs/**'
   push:
     branches: [ main ]
     paths:
@@ -19,6 +21,8 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/ci-core.yml'
+      - 'README.md'
+      - 'docs/**'
   workflow_dispatch:
 
 concurrency:
@@ -36,8 +40,8 @@ env:
 jobs:
   # Job 1: Build and test on Linux
   build-test-linux:
-    name: Build & Test (ubuntu-latest)
-    runs-on: ubuntu-latest
+    name: Build & Test (ubuntu-22.04)
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     env:
       RUSTFLAGS: "-D warnings"
@@ -87,7 +91,7 @@ jobs:
   # Job 2: Clippy linting
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -119,7 +123,7 @@ jobs:
   # Job 4: Documentation build
   docs:
     name: Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -141,7 +145,7 @@ jobs:
   # Summary job (required for branch protection)
   ci-core-success:
     name: CI Core Success
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     needs: [build-test-linux, clippy, docs]
     if: always()
