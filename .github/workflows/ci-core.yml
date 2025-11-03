@@ -137,6 +137,35 @@ jobs:
       - name: Build documentation
         run: cargo doc --locked --no-deps --workspace --no-default-features --features cpu
 
+  # Job 5: Cross-platform build probe (informational, non-blocking)
+  build-probe:
+    name: Build on ${{ matrix.os }} (probe)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+          components: rustfmt, clippy
+          profile: minimal
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-${{ matrix.os }}
+
+      - name: Build (CPU, no tests)
+        run: |
+          cargo build --locked --workspace \
+            --no-default-features --features cpu
+
   # Summary job (required for branch protection)
   ci-core-success:
     name: CI Core Success
