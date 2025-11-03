@@ -141,7 +141,7 @@ These workflows only run when their corresponding label is applied to a PR:
 
 ## Always-Run Workflows
 
-These workflows run on every PR and push to `main`:
+These workflows run on every PR and push to `main` (Linux runners only):
 
 ### Core CI (`ci-core.yml`)
 
