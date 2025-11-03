@@ -20,7 +20,7 @@
 //!
 //! Mutation Testing Target: Kill 13+/16 mutants (≥80%)
 
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use std::{env, fs, path::PathBuf};
 
@@ -66,7 +66,7 @@ fn fixture_path(name: &str) -> PathBuf {
 /// - Mutations that change the validation logic to always fail
 #[test]
 fn test_cpu_with_quantized_kernels_passes() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("valid_receipt").to_str().unwrap()]);
 
     cmd.assert()
@@ -85,7 +85,7 @@ fn test_cpu_with_quantized_kernels_passes() {
 /// - Mutations that change the error message
 #[test]
 fn test_cpu_with_empty_kernels_fails() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("missing_kernels").to_str().unwrap()]);
 
     cmd.assert().failure().stderr(predicate::str::contains("empty kernels[]"));
@@ -106,7 +106,7 @@ fn test_cpu_with_empty_kernels_fails() {
 /// - Mutations that remove the CPU backend validation branch
 #[test]
 fn test_cpu_no_quant_kernels_fails() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("cpu_no_quant_kernels").to_str().unwrap()]);
 
     cmd.assert().failure().stderr(predicate::str::contains("no quantized kernels found"));
@@ -126,7 +126,7 @@ fn test_cpu_no_quant_kernels_fails() {
 /// - Mutations that change the fallback error message branch
 #[test]
 fn test_cpu_fallback_only_fails() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("cpu_fallback_only").to_str().unwrap()]);
 
     cmd.assert()
@@ -151,7 +151,7 @@ fn test_cpu_fallback_only_fails() {
 /// - Mutations in the CPU quantized kernel classification logic
 #[test]
 fn test_cpu_contains_trap_fails() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("cpu_contains_trap").to_str().unwrap()]);
 
     cmd.assert().failure().stderr(predicate::str::contains("no quantized kernels found"));
@@ -171,7 +171,7 @@ fn test_cpu_contains_trap_fails() {
 /// - Mutations that change the validation logic to always fail
 #[test]
 fn test_gpu_with_gpu_kernels_passes() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args([
         "verify-receipt",
         "--path",
@@ -200,7 +200,7 @@ fn test_gpu_with_gpu_kernels_passes() {
 /// - Mutations in GPU kernel prefix patterns
 #[test]
 fn test_gpu_cpu_kernels_only_fails() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("gpu_cpu_kernels_only").to_str().unwrap()]);
 
     cmd.assert()
@@ -222,7 +222,7 @@ fn test_gpu_cpu_kernels_only_fails() {
 /// - Mutations in the backend.eq_ignore_ascii_case("cuda") check
 #[test]
 fn test_gpu_backend_auto_enforcement() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     // Note: NO --require-gpu-kernels flag, but backend="cuda" should enforce it
     cmd.args(["verify-receipt", "--path", fixture_path("invalid_gpu_receipt").to_str().unwrap()]);
 
@@ -250,7 +250,7 @@ fn test_gpu_backend_auto_enforcement() {
 /// - Mutations that remove the compute_path check
 #[test]
 fn test_mock_compute_path_fails() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("invalid_compute_path").to_str().unwrap()]);
 
     cmd.assert()
@@ -271,7 +271,7 @@ fn test_mock_compute_path_fails() {
 /// - Mutations that change error handling for missing files
 #[test]
 fn test_missing_receipt_file_fails() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", "nonexistent/receipt.json"]);
 
     cmd.assert().failure().stderr(predicate::str::contains("Failed to read receipt"));
@@ -286,7 +286,7 @@ fn test_missing_receipt_file_fails() {
 /// - Mutations in default path handling
 #[test]
 fn test_default_path_behavior() {
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.arg("verify-receipt");
 
     // Should fail either because file doesn't exist OR because it contains invalid content
@@ -329,7 +329,7 @@ fn test_cpu_quantized_prefix_validation() {
     let receipt_path = temp_dir.join("test_cpu_quant_prefix.json");
     fs::write(&receipt_path, serde_json::to_string_pretty(&receipt).unwrap()).unwrap();
 
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", receipt_path.to_str().unwrap()]);
 
     cmd.assert().success();
@@ -364,7 +364,7 @@ fn test_gpu_kernel_prefix_validation() {
     let receipt_path = temp_dir.join("test_gpu_kernel_prefix.json");
     fs::write(&receipt_path, serde_json::to_string_pretty(&receipt).unwrap()).unwrap();
 
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", receipt_path.to_str().unwrap()]);
 
     cmd.assert().success();
@@ -386,7 +386,7 @@ fn test_gpu_kernel_prefix_validation() {
 fn test_fallback_kernel_detection() {
     // Already tested via test_cpu_fallback_only_fails(), but this provides
     // additional coverage for the error message formatting with fallback details
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", fixture_path("cpu_fallback_only").to_str().unwrap()]);
 
     cmd.assert()
@@ -422,7 +422,7 @@ fn test_schema_version_validation() {
     let receipt_path = temp_dir.join("test_missing_schema.json");
     fs::write(&receipt_path, serde_json::to_string_pretty(&receipt).unwrap()).unwrap();
 
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", receipt_path.to_str().unwrap()]);
 
     cmd.assert().failure().stderr(predicate::str::contains("schema_version"));
@@ -455,7 +455,7 @@ fn test_empty_kernel_ids_rejected() {
     let receipt_path = temp_dir.join("test_empty_kernel_id.json");
     fs::write(&receipt_path, serde_json::to_string_pretty(&receipt).unwrap()).unwrap();
 
-    let mut cmd = Command::cargo_bin("xtask").unwrap();
+    let mut cmd = cargo_bin_cmd!("xtask");
     cmd.args(["verify-receipt", "--path", receipt_path.to_str().unwrap()]);
 
     cmd.assert().failure().stderr(predicate::str::contains("empty kernel ID"));

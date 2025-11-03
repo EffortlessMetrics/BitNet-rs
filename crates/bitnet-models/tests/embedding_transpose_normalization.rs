@@ -18,6 +18,7 @@ use candle_core::{Device as CDevice, Tensor};
 use std::collections::HashMap;
 
 /// Helper to create a synthetic embedding tensor with specified shape
+#[allow(dead_code)]
 fn create_embedding_tensor(
     vocab_size: usize,
     hidden_size: usize,
@@ -30,6 +31,7 @@ fn create_embedding_tensor(
 }
 
 /// Helper to create a synthetic lm_head tensor with specified shape
+#[allow(dead_code)]
 fn create_lm_head_tensor(rows: usize, cols: usize, device: &CDevice) -> Result<Tensor> {
     let total = rows * cols;
     let data: Vec<f32> = (0..total).map(|i| (i as f32) * 0.005).collect();
@@ -37,6 +39,7 @@ fn create_lm_head_tensor(rows: usize, cols: usize, device: &CDevice) -> Result<T
 }
 
 /// Helper to get 2D tensor dimensions
+#[allow(dead_code)]
 fn get_dims_2d(tensor: &Tensor, name: &str) -> Result<(usize, usize)> {
     let shape = tensor.shape().dims();
     if shape.len() != 2 {

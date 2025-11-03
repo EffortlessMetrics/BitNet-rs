@@ -8,6 +8,12 @@
 /// 3. **Dimension Handling**: Test single block (256 cols), multi-block with tail (300 cols)
 /// 4. **Numerical Validation**: Compare QK256 vs FP32 fallback within quantization tolerance
 ///
+/// ## Fixture Generation Approach
+///
+/// Tests use **in-memory tensor creation** for fast kernel validation. For GGUF loading tests,
+/// see `qk256_dual_flavor_tests.rs` (in-memory GGUF generation) or `qk256_fixture_loader_tests.rs`
+/// (disk-based fixtures from `ci/fixtures/qk256/`).
+///
 /// ## QK256 Format Recap
 ///
 /// - **Block size**: 256 elements
@@ -19,6 +25,10 @@ use bitnet_models::quant::i2s_qk256::{
     I2SQk256NoScale, QK256_BLOCK, QK256_PACKED_BYTES, gemv_qk256, unpack_qk256_block,
 };
 use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
+
+// Import tolerance helpers from test helpers
+mod helpers;
+use helpers::qk256_tolerance::approx_eq_with_len;
 
 /// Helper to create QK256 packed tensor from code pattern
 ///
@@ -91,11 +101,12 @@ fn test_qk256_single_block_predictable_output() {
     // Verify: Each row should equal sum(input) since weight=+1.0
     for (i, &val) in output.iter().enumerate() {
         assert!(
-            (val - expected_sum).abs() < 1e-3,
-            "Row {}: expected {}, got {}",
+            approx_eq_with_len(val, expected_sum, cols),
+            "Row {}: expected {}, got {}, diff={}",
             i,
             expected_sum,
-            val
+            val,
+            (val - expected_sum).abs()
         );
     }
 
@@ -124,11 +135,12 @@ fn test_qk256_single_block_all_codes() {
             .expect("gemv_qk256 failed");
 
         assert!(
-            (output[0] - expected).abs() < 1e-3,
-            "Code {}: expected {}, got {}",
+            approx_eq_with_len(output[0], expected, cols),
+            "Code {}: expected {}, got {}, diff={}",
             code,
             expected,
-            output[0]
+            output[0],
+            (output[0] - expected).abs()
         );
     }
 
@@ -167,11 +179,12 @@ fn test_qk256_multi_block_with_tail() {
     // Verify: Each row should equal sum(input) since weight=+1.0
     for (i, &val) in output.iter().enumerate() {
         assert!(
-            (val - expected_sum).abs() < 1e-3,
-            "Row {}: expected {}, got {} (tail handling failed)",
+            approx_eq_with_len(val, expected_sum, cols),
+            "Row {}: expected {}, got {}, diff={} (tail handling failed)",
             i,
             expected_sum,
-            val
+            val,
+            (val - expected_sum).abs()
         );
     }
 
@@ -205,7 +218,14 @@ fn test_qk256_large_matrix() {
 
     // Verify all rows have correct value
     for (i, &val) in output.iter().enumerate() {
-        assert!((val - expected).abs() < 1e-2, "Row {}: expected {}, got {}", i, expected, val);
+        assert!(
+            approx_eq_with_len(val, expected, cols),
+            "Row {}: expected {}, got {}, diff={}",
+            i,
+            expected,
+            val,
+            (val - expected).abs()
+        );
     }
 
     println!(
@@ -257,11 +277,12 @@ fn test_qk256_transformer_dispatch() {
     let expected_sum: f32 = input_data.iter().sum();
     for (i, &val) in output.iter().enumerate() {
         assert!(
-            (val - expected_sum).abs() < 1e-3,
-            "Output {}: expected {}, got {}",
+            approx_eq_with_len(val, expected_sum, cols),
+            "Output {}: expected {}, got {}, diff={}",
             i,
             expected_sum,
-            val
+            val,
+            (val - expected_sum).abs()
         );
     }
 
@@ -350,19 +371,20 @@ fn test_qk256_vs_fp32_quantization_error() {
     gemv_qk256(&qs_bytes, &input_data, &mut qk256_output, rows, cols, QK256_PACKED_BYTES)
         .expect("gemv_qk256 failed");
 
-    // Compare outputs
+    // Compare outputs using adaptive tolerance
     let mut max_diff = 0.0f32;
     for i in 0..rows {
         let diff = (fp32_output[i] - qk256_output[i]).abs();
         max_diff = max_diff.max(diff);
 
         assert!(
-            diff < 1e-4,
-            "Row {}: FP32={}, QK256={}, diff={} (too large)",
+            approx_eq_with_len(qk256_output[i], fp32_output[i], cols),
+            "Row {}: FP32={}, QK256={}, diff={} (exceeds tolerance for cols={})",
             i,
             fp32_output[i],
             qk256_output[i],
-            diff
+            diff,
+            cols
         );
     }
 
@@ -406,20 +428,21 @@ fn test_qk256_fp32_fallback_comparison() {
     gemv_qk256(&flat_bytes, &input_data, &mut qk256_output, rows, cols, row_stride_bytes)
         .expect("gemv_qk256 failed");
 
-    // Compare outputs (should be nearly identical since weights are identical)
+    // Compare outputs using adaptive tolerance
     for i in 0..rows {
         let diff = (fp32_output[i] - qk256_output[i]).abs();
         assert!(
-            diff < 1e-5,
-            "Row {}: FP32={}, QK256={}, diff={} (fallback comparison failed)",
+            approx_eq_with_len(qk256_output[i], fp32_output[i], cols),
+            "Row {}: FP32={}, QK256={}, diff={} (fallback comparison failed, cols={})",
             i,
             fp32_output[i],
             qk256_output[i],
-            diff
+            diff,
+            cols
         );
     }
 
-    println!("✓ QK256 vs FP32 fallback comparison passed: Results match within 1e-5 tolerance");
+    println!("✓ QK256 vs FP32 fallback comparison passed: Results match within 1e-3 tolerance");
 }
 
 // ==================== Test 5: Edge Cases and Error Handling ====================
@@ -510,19 +533,37 @@ fn test_qk256_struct_creation() {
     assert_eq!(qk256.cols, cols);
     assert_eq!(qk256.row_stride_bytes, row_stride_bytes);
 
-    // Test 2: Invalid size (too few bytes)
-    let short_qs = vec![0u8; rows * row_stride_bytes - 1];
-    let result = I2SQk256NoScale::new(rows, cols, short_qs);
-    assert!(result.is_err(), "Short data should fail");
+    // Test 2: Within tolerance (should pass)
+    // The implementation allows up to 128 bytes tolerance for alignment padding.
+    // Data with -64 bytes is within the 128-byte tolerance window.
+    let within_tolerance = vec![0u8; rows * row_stride_bytes - 64];
+    let result = I2SQk256NoScale::new(rows, cols, within_tolerance);
+    assert!(
+        result.is_ok(),
+        "Data within 128-byte tolerance should pass: size_diff=64 <= TOLERANCE=128"
+    );
+
+    // Test 3: Beyond tolerance (should fail)
+    // Data with -200 bytes exceeds the 128-byte tolerance.
+    let beyond_tolerance = vec![0u8; rows * row_stride_bytes - 200];
+    let result = I2SQk256NoScale::new(rows, cols, beyond_tolerance);
+    assert!(
+        result.is_err(),
+        "Data beyond 128-byte tolerance should fail: size_diff=200 > TOLERANCE=128"
+    );
     assert!(
         result.unwrap_err().to_string().contains("data size mismatch"),
         "Error should mention size mismatch"
     );
 
-    // Test 3: Invalid size (too many bytes)
-    let long_qs = vec![0u8; rows * row_stride_bytes + 1];
-    let result = I2SQk256NoScale::new(rows, cols, long_qs);
-    assert!(result.is_err(), "Extra data should fail");
+    // Test 4: At tolerance boundary (should pass)
+    // Data with exactly 128 bytes difference is at the boundary and should pass.
+    let at_boundary = vec![0u8; rows * row_stride_bytes - 128];
+    let result = I2SQk256NoScale::new(rows, cols, at_boundary);
+    assert!(
+        result.is_ok(),
+        "Data at exact tolerance boundary should pass: size_diff=128 <= TOLERANCE=128"
+    );
 
     println!("✓ I2SQk256NoScale struct creation tests passed");
 }

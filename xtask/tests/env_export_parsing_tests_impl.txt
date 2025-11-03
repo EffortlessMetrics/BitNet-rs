@@ -1,0 +1,105 @@
+    #[test]
+    fn test_parse_sh_exports_multi_line_script() {
+        let input = r#"export BITNET_CPP_DIR="/path1"
+export LD_LIBRARY_PATH="/path2:/path3"
+export BITNET_CROSSVAL_LIBDIR="/path4"
+echo "[bitnet] C++ ready""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 3);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path1".to_string()));
+        assert_eq!(exports.get("LD_LIBRARY_PATH"), Some(&"/path2:/path3".to_string()));
+        assert_eq!(exports.get("BITNET_CROSSVAL_LIBDIR"), Some(&"/path4".to_string()));
+    }
+
+    #[test]
+    fn test_parse_sh_exports_empty_script() {
+        let exports = parse_sh_exports("");
+        assert!(exports.is_empty());
+
+        let exports2 = parse_sh_exports("   ");
+        assert!(exports2.is_empty());
+
+        let exports3 = parse_sh_exports("\n\n\n");
+        assert!(exports3.is_empty());
+    }
+
+    #[test]
+    fn test_parse_sh_exports_no_exports() {
+        let input = r#"# This is a comment
+echo "[bitnet] Setup complete"
+echo "No exports here""#;
+        let exports = parse_sh_exports(input);
+        assert!(exports.is_empty());
+    }
+
+    #[test]
+    fn test_parse_sh_exports_malformed_lines() {
+        let input = r#"export VALID="/path"
+export MISSING_VALUE
+export =value_without_key
+export ANOTHER_VALID="/path2""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 2);
+        assert_eq!(exports.get("VALID"), Some(&"/path".to_string()));
+        assert_eq!(exports.get("ANOTHER_VALID"), Some(&"/path2".to_string()));
+    }
+
+    #[test]
+    fn test_parse_sh_exports_fish_format() {
+        let input = r#"set -gx BITNET_CPP_DIR "/path/to/libs"
+set -gx LD_LIBRARY_PATH "/lib:/usr/lib""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 2);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path/to/libs".to_string()));
+        assert_eq!(exports.get("LD_LIBRARY_PATH"), Some(&"/lib:/usr/lib".to_string()));
+    }
+
+    #[test]
+    fn test_parse_sh_exports_pwsh_format() {
+        let input = r#"$env:BITNET_CPP_DIR = "/path/to/libs"
+$env:LD_LIBRARY_PATH = "/lib:/usr/lib""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 2);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/path/to/libs".to_string()));
+        assert_eq!(exports.get("LD_LIBRARY_PATH"), Some(&"/lib:/usr/lib".to_string()));
+    }
+
+    #[test]
+    fn test_parse_sh_exports_nested_quotes() {
+        let input = r#"export PROJECT_NAME="BitNet \"C++\" Backend""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports.get("PROJECT_NAME"), Some(&r#"BitNet \"C++\" Backend"#.to_string()));
+    }
+
+    #[test]
+    fn test_parse_sh_exports_paths_with_spaces() {
+        let input = r#"export BITNET_CPP_DIR="/home/user/My Documents/bitnet cpp""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports.get("BITNET_CPP_DIR"), Some(&"/home/user/My Documents/bitnet cpp".to_string()));
+    }
+
+    #[test]
+    fn test_parse_sh_exports_ld_library_path() {
+        let input = r#"export LD_LIBRARY_PATH="/new/path:${LD_LIBRARY_PATH:-}""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports.get("LD_LIBRARY_PATH"), Some(&"/new/path:${LD_LIBRARY_PATH:-}".to_string()));
+    }
+
+    #[test]
+    fn test_parse_sh_exports_windows_path() {
+        let input = r#"export PATH="C:\bitnet\bin;C:\tools;%PATH%""#;
+        let exports = parse_sh_exports(input);
+
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports.get("PATH"), Some(&r"C:\bitnet\bin;C:\tools;%PATH%".to_string()));
+    }

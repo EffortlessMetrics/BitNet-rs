@@ -26,8 +26,11 @@ env:
 jobs:
   gpu-tests:
     name: GPU Tests
+    # Gate GPU tests behind label to save CI minutes (informational)
+    if: contains(github.event.pull_request.labels.*.name, 'gpu') || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, linux, gpu]
-    timeout-minutes: 30
+    timeout-minutes: 15
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +38,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.89.0
+          toolchain: 1.90.0
           components: rustfmt, clippy
 
       - name: Setup sccache
@@ -67,8 +70,8 @@ jobs:
       - name: GPU Smoke Test
         run: |
           cargo xtask gpu-smoke
-          cargo test -p bitnet-kernels --test gpu_smoke \
-            --no-default-features --features cuda -- --nocapture
+          cargo test --locked -p bitnet-kernels --test gpu_smoke \
+            --no-default-features --features gpu -- --nocapture
         env:
           BITNET_CI_SKIP_GPU: ${{ env.CI_SKIP_GPU }}
 

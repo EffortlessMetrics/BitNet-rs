@@ -1,0 +1,87 @@
+name: TL LUT Nightly (strict)
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # Daily at 4 AM UTC
+  workflow_dispatch:      # Allow manual triggers
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  tl-lut-full:
+    name: TL LUT Full Stress Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.90.0
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-tl-nightly-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-tl-nightly-
+
+      - name: Run full TL LUT stress suite
+        env:
+          RUST_BACKTRACE: 1
+        run: |
+          echo "🏋️  Running full TL LUT stress suite (nightly)..."
+          echo "This is a strict run - failures will be reported"
+
+          cargo test --locked -p bitnet-kernels --no-default-features --features cpu \
+            --test issue_462_tl_lut_tests -- --test-threads=1 --nocapture
+
+          cargo test --locked -p bitnet-quantization --no-default-features --features cpu \
+            --lib tl -- --test-threads=1
+
+          echo "✅ Full stress suite completed successfully"
+
+      - name: Generate nightly report
+        if: always()
+        run: |
+          cat > tl-lut-nightly-report.md << 'EOF'
+          # TL LUT Nightly Stress Report
+
+          **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Platform**: ubuntu-latest
+          **Mode**: Strict (failures block)
+
+          ## Configuration
+
+          - **Test Threads**: 1 (deterministic)
+          - **Features**: cpu (no-default-features)
+          - **Crates**: bitnet-kernels, bitnet-quantization
+
+          ## Results
+
+          See workflow logs for detailed test output.
+
+          **Note**: This is a nightly strict run. Failures indicate regressions
+          that need immediate attention.
+          EOF
+
+          cat tl-lut-nightly-report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload nightly artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tl-lut-nightly-${{ github.run_id }}
+          path: |
+            tl-lut-nightly-report.md
+          retention-days: 30

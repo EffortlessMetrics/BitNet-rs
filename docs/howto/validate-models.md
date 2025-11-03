@@ -503,7 +503,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 # blk.0.attn_norm.weight RMS=0.0127 [SUSPICIOUS - expected ~1.0]
 
 # 2. Create correction policy (see docs/explanation/correction-policy.md)
-nano correction-policy.yml
+nano config/correction-policy.yml
 
 # Example correction policy:
 # version: 1
@@ -514,7 +514,7 @@ nano correction-policy.yml
 #         target_rms: 1.0
 
 # 3. Enable runtime corrections (DEVELOPMENT ONLY)
-export BITNET_CORRECTION_POLICY=./correction-policy.yml
+export BITNET_CORRECTION_POLICY=./config/correction-policy.yml
 export BITNET_ALLOW_RUNTIME_CORRECTIONS=1
 export BITNET_DETERMINISTIC=1
 export BITNET_SEED=42

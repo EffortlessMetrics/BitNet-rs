@@ -1,0 +1,14 @@
+  # Guard: Unannotated Ignore Detector
+  # Ensures all #[ignore] tests have issue references or justification
+  # See: SPEC-2025-006
+  guard-ignore-annotations:
+    name: Guard - Ignore Annotations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Check ignore annotations
+        run: bash scripts/check-ignore-annotations.sh

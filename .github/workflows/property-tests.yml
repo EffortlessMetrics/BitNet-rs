@@ -1,20 +1,9 @@
 name: Property-Based Tests
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'crates/**'
-      - 'crossval/**'
-      - 'scripts/prop-*.sh'
-      - '.github/workflows/property-tests.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'crates/**'
-      - 'crossval/**'
-      - 'scripts/prop-*.sh'
-      - '.github/workflows/property-tests.yml'
+  schedule:
+    # Run property tests nightly at 5 AM UTC
+    - cron: '0 5 * * *'
   workflow_dispatch:
     inputs:
       num_examples:
@@ -47,7 +36,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.89.0
+          toolchain: 1.90.0
           override: true
           components: rustfmt, clippy
 

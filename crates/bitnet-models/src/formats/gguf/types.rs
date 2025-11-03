@@ -46,6 +46,33 @@ impl GgufHeader {
         Self::read_with_limits(data, offset, &SecurityLimits::default())
     }
 
+    /// Check if this header represents a standard GGUF v3 file
+    /// (with explicit alignment and data_offset fields)
+    pub fn is_standard_v3(&self) -> bool {
+        self.version >= 3 && self.data_offset > 0
+    }
+
+    /// Check if this header represents an early v3 variant
+    /// (missing alignment/data_offset fields, using defaults)
+    pub fn is_early_v3_variant(&self) -> bool {
+        self.version >= 3 && self.data_offset == 0
+    }
+
+    /// Get a description of the GGUF format variant
+    pub fn format_description(&self) -> String {
+        match self.version {
+            2 => "GGUF v2 (legacy)".to_string(),
+            3 if self.is_standard_v3() => {
+                format!(
+                    "GGUF v3 (standard, align={}, data_offset={})",
+                    self.alignment, self.data_offset
+                )
+            }
+            3 => "GGUF v3 (early variant, missing alignment/data_offset fields)".to_string(),
+            v => format!("GGUF v{} (unknown)", v),
+        }
+    }
+
     pub fn read_with_limits(
         data: &[u8],
         offset: &mut usize,
@@ -183,8 +210,14 @@ impl GgufHeader {
                             // Early v3 variant detected: Missing alignment/data_offset fields
                             // This format is used by Microsoft BitNet models and others
                             // We handle it gracefully by using default alignment (32) and computing offset later
-                            tracing::warn!(
-                                "GGUF v3 early variant detected (missing alignment/data_offset) - handling gracefully"
+                            //
+                            // Note: This is a non-standard v3 format. Proper GGUF v3 files should include:
+                            // - alignment (u32) at offset 24
+                            // - data_offset (u64) at offset 28
+                            // This loader is lenient and accepts both standard and early variants.
+                            tracing::debug!(
+                                "GGUF v3 early variant detected (missing alignment/data_offset fields) - using defaults (align=32, data_offset=computed). \
+                                This is a non-standard format used by some models. Consider re-exporting with proper v3 structure for full compliance."
                             );
                             (32u32, 0u64)
                         } else {
@@ -889,6 +922,15 @@ pub fn detect_i2s_flavor(
             available,
             qk256_need
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=GgmlQk256NoScale kernel=scalar shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::GgmlQk256NoScale);
     }
     if diff_inline == 0 {
@@ -898,6 +940,15 @@ pub fn detect_i2s_flavor(
             available,
             inline_need
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=BitNet32F16 kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::BitNet32F16);
     }
     if diff_split32 == 0 && has_scale_sibling {
@@ -907,6 +958,15 @@ pub fn detect_i2s_flavor(
             available,
             split_need
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=Split32WithSibling kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::Split32WithSibling);
     }
 
@@ -919,6 +979,15 @@ pub fn detect_i2s_flavor(
             qk256_need,
             diff_qk256
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=GgmlQk256NoScale kernel=scalar shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::GgmlQk256NoScale);
     }
     if has_scale_sibling && diff_split32 <= tolerance {
@@ -929,6 +998,15 @@ pub fn detect_i2s_flavor(
             split_need,
             diff_split32
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=Split32WithSibling kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::Split32WithSibling);
     }
     if diff_inline <= tolerance {
@@ -939,6 +1017,15 @@ pub fn detect_i2s_flavor(
             inline_need,
             diff_inline
         );
+
+        // BITNET_TRACE_QUANT=1: Log quantization dispatch
+        if std::env::var("BITNET_TRACE_QUANT").as_deref() == Ok("1") {
+            eprintln!(
+                "quant_dispatch: tensor={} format=BitNet32F16 kernel=simd shape={:?}",
+                info.name, info.shape
+            );
+        }
+
         return Ok(I2SFlavor::BitNet32F16);
     }
 

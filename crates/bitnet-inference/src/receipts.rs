@@ -588,7 +588,7 @@ fn detect_cpu_brand() -> String {
 /// Uses bitnet-kernels GPU utilities to detect available GPUs.
 /// Returns GPU name and compute capability if available.
 fn detect_gpu_info() -> Option<String> {
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         use bitnet_kernels::gpu;
         // Try to get first CUDA device info if available

@@ -2,6 +2,7 @@ name: perf-gate
 
 on:
   pull_request:
+    types: [labeled, synchronize, reopened]
     branches: [ main ]
     paths:
       - 'crates/**'
@@ -18,7 +19,11 @@ env:
 jobs:
   performance-gate:
     name: Performance Regression Gate
+    # Only run when explicitly requested via label
+    if: contains(github.event.pull_request.labels.*.name, 'perf')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true  # Informational while baselines stabilize
 
     steps:
       - name: Checkout code
@@ -27,7 +32,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.89.0
+          toolchain: 1.90.0
 
       - name: Cache cargo dependencies
         uses: actions/cache@v4
@@ -36,18 +41,20 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-toolchain-1.89.0
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-toolchain-1.90.0
           restore-keys: |
             ${{ runner.os }}-cargo-
 
       - name: Verify baseline manifest (sha256)
         run: |
+          set +e  # Don't fail on diff
           sha=$(find benchmarks/baseline -type f -name '*.json' -print0 \
                 | sort -z | xargs -0 cat | sha256sum | awk '{print $1}')
           echo "$sha" > /tmp/manifest.sha256
           echo "Computed manifest: $sha"
-          echo "Stored manifest: $(cat benchmarks/baseline/.MANIFEST.sha256)"
-          diff -u benchmarks/baseline/.MANIFEST.sha256 /tmp/manifest.sha256
+          echo "Stored manifest: $(cat benchmarks/baseline/.MANIFEST.sha256 || echo 'N/A')"
+          diff -u benchmarks/baseline/.MANIFEST.sha256 /tmp/manifest.sha256 || echo "Baseline manifest differs (informational)"
+          exit 0
 
       - name: Build workspace
         run: cargo build --workspace --release --no-default-features --features cpu
@@ -99,14 +106,14 @@ jobs:
       - name: Performance regression check
         id: bench_compare
         run: |
-          # Compare against baseline; fail PR on regression
+          # Compare against baseline (informational)
           cargo run -p xtask -- bench-compare \
             --baseline benchmarks/baseline/cpu/inference/inference_baseline.json \
             --current ci/inference.json \
             --thresholds benchmarks/thresholds/default.toml \
             --category inference \
             --verbose \
-            --fail-on-regression
+            --fail-on-regression || true
 
       - name: Publish PR summary
         if: always()

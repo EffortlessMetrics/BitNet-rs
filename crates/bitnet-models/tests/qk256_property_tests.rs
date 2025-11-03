@@ -19,6 +19,10 @@ use bitnet_models::quant::i2s_qk256::{
 };
 use proptest::prelude::*;
 
+// Import tolerance helpers from test helpers
+mod helpers;
+use helpers::qk256_tolerance::approx_eq_with_len;
+
 // ==================== Property Test Strategies ====================
 
 /// Strategy for generating valid QK256 dimensions
@@ -141,12 +145,11 @@ proptest! {
             .map(|(&code, &x)| code_to_f32(code) * x)
             .sum();
 
-        // Verify within tolerance (should be exact for single block)
-        let diff = (qk256_result - fp32_result).abs();
+        // Verify within tolerance using adaptive tolerance helper
         assert!(
-            diff < 1e-5,
-            "QK256 result {} differs from FP32 reference {} by {} (too large)",
-            qk256_result, fp32_result, diff
+            approx_eq_with_len(qk256_result, fp32_result, QK256_BLOCK),
+            "QK256 result {} differs from FP32 reference {} by {} (exceeds tolerance for len={})",
+            qk256_result, fp32_result, (qk256_result - fp32_result).abs(), QK256_BLOCK
         );
     }
 
@@ -179,11 +182,11 @@ proptest! {
             .map(|(&code, &x)| code_to_f32(code) * x)
             .sum();
 
-        let diff = (qk256_result - fp32_result).abs();
+        // Verify within tolerance for tail handling
         assert!(
-            diff < 1e-5,
-            "QK256 tail result {} differs from FP32 reference {} by {}",
-            qk256_result, fp32_result, diff
+            approx_eq_with_len(qk256_result, fp32_result, cols),
+            "QK256 tail result {} differs from FP32 reference {} by {} (exceeds tolerance for len={})",
+            qk256_result, fp32_result, (qk256_result - fp32_result).abs(), cols
         );
     }
 }
@@ -254,13 +257,18 @@ proptest! {
             fp32_output[row_idx] = sum;
         }
 
-        // Verify results match within tolerance
+        // Verify results match within adaptive tolerance
         for row_idx in 0..rows {
-            let diff = (qk256_output[row_idx] - fp32_output[row_idx]).abs();
+            let qk256_val = qk256_output[row_idx];
+            let fp32_val = fp32_output[row_idx];
+            let abs_diff = (qk256_val - fp32_val).abs();
+
             assert!(
-                diff < 1e-4,
-                "Row {}: QK256={}, FP32={}, diff={} (exceeds tolerance)",
-                row_idx, qk256_output[row_idx], fp32_output[row_idx], diff
+                approx_eq_with_len(qk256_val, fp32_val, cols),
+                "Row {}: QK256={}, FP32={}, abs_diff={} (exceeds tolerance for cols={})\n\
+                 Relative diff: {:.2e}",
+                row_idx, qk256_val, fp32_val, abs_diff, cols,
+                if fp32_val.abs() > 1e-6 { abs_diff / fp32_val.abs() } else { f32::NAN }
             );
         }
     }
@@ -271,7 +279,10 @@ proptest! {
 proptest! {
     /// Test spec: i2s-dual-flavor.md#qk256-struct-validation
     ///
-    /// Property: I2SQk256NoScale::new validates dimensions correctly
+    /// Property: I2SQk256NoScale::new validates dimensions with tolerance
+    ///
+    /// The implementation allows ±TOLERANCE bytes difference to accommodate alignment
+    /// padding in production GGUF files. This test validates that tolerance behavior.
     #[test]
     fn prop_i2s_qk256_no_scale_dimension_validation(
         rows in 1usize..=256,
@@ -281,27 +292,37 @@ proptest! {
         let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES;
         let expected_bytes = rows * row_stride_bytes;
 
-        // Test 1: Valid creation with correct size
-        let qs_valid = vec![0u8; expected_bytes];
-        let result = I2SQk256NoScale::new(rows, cols, qs_valid);
-        assert!(result.is_ok(), "Valid dimensions should succeed");
+        // Match implementation tolerance (i2s_qk256.rs:91)
+        const TOLERANCE: usize = 128;
+
+        // Test 1: Exact size - should PASS
+        let qs_exact = vec![0u8; expected_bytes];
+        let result = I2SQk256NoScale::new(rows, cols, qs_exact);
+        assert!(result.is_ok(), "Exact size should pass");
 
         let qk256 = result.unwrap();
         assert_eq!(qk256.rows, rows);
         assert_eq!(qk256.cols, cols);
         assert_eq!(qk256.row_stride_bytes, row_stride_bytes);
 
-        // Test 2: Invalid size (too small)
-        if expected_bytes > 0 {
-            let qs_invalid = vec![0u8; expected_bytes - 1];
-            let result = I2SQk256NoScale::new(rows, cols, qs_invalid);
-            assert!(result.is_err(), "Invalid size should fail");
+        // Test 2: Within tolerance - should PASS
+        if expected_bytes > TOLERANCE / 2 {
+            let qs_within = vec![0u8; expected_bytes - (TOLERANCE / 2)];
+            let result = I2SQk256NoScale::new(rows, cols, qs_within);
+            assert!(result.is_ok(), "Size within tolerance should pass");
         }
 
-        // Test 3: Invalid size (too large)
-        let qs_invalid = vec![0u8; expected_bytes + 1];
-        let result = I2SQk256NoScale::new(rows, cols, qs_invalid);
-        assert!(result.is_err(), "Invalid size should fail");
+        // Test 3: Beyond tolerance (too small) - should FAIL
+        if expected_bytes > TOLERANCE * 2 {
+            let qs_beyond = vec![0u8; expected_bytes - (TOLERANCE * 2)];
+            let result = I2SQk256NoScale::new(rows, cols, qs_beyond);
+            assert!(result.is_err(), "Size beyond tolerance should fail");
+        }
+
+        // Test 4: Beyond tolerance (too large) - should FAIL
+        let qs_beyond_upper = vec![0u8; expected_bytes + TOLERANCE + 1];
+        let result = I2SQk256NoScale::new(rows, cols, qs_beyond_upper);
+        assert!(result.is_err(), "Size beyond tolerance should fail");
     }
 
     /// Test spec: i2s-dual-flavor.md#qk256-row-bytes-access

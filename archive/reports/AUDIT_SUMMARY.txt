@@ -1,0 +1,169 @@
+================================================================================
+COMPREHENSIVE #[ignore] TEST PATTERN AUDIT - EXECUTIVE SUMMARY
+================================================================================
+
+GENERATED: 2025-10-23
+CODEBASE: BitNet.rs (Rust neural network inference engine)
+SCOPE: All #[ignore] annotations across crates/, tests/, tests-new/, xtask/
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+TOTAL ANNOTATIONS: 194
+├── Annotated (with reason):  59 (30.4%)
+└── Bare (no reason):        135 (69.6%) ⚠️ NEEDS WORK
+
+CRITICAL ISSUE: 69.6% of #[ignore] annotations lack explicit reasoning
+
+AFFECTED FILES: 46 files across codebase
+
+ESTIMATED EFFORT: 2-4 hours to fully annotate all tests
+
+================================================================================
+DISTRIBUTION OVERVIEW
+================================================================================
+
+Bare Ignores by Category:
+  - Issue-blocked (GitHub issues):   46 tests
+  - Slow/Performance:                17 tests
+  - Requires GGUF/Model:             29 tests
+  - GPU/CUDA specific:               13 tests
+  - Feature-gate/TODO:               14 tests
+  - Network/External:                10 tests
+  - Quantization/Kernels:            22 tests
+  - Parity/Accuracy:                  7 tests
+  - Deterministic tests:              4 tests
+  - Other (flaky, fixture, etc):     13 tests
+
+Files Most Needing Annotation:
+  1. issue_254_ac3_deterministic_generation.rs      (10 bare)
+  2. gguf_weight_loading_property_tests.rs          (9 bare)
+  3. test_ac4_smart_download_integration.rs         (9 bare)
+  4. neural_network_test_scaffolding.rs             (8 bare)
+  5. gguf_weight_loading_property_tests_enhanced.rs (7 bare)
+
+================================================================================
+RECOMMENDED REASON TAXONOMY
+================================================================================
+
+Issue-Blocked (46 tests):
+  #[ignore = "Issue #254: shape mismatch in layer-norm - needs investigation"]
+  #[ignore = "Issue #260: TDD placeholder - quantized_matmul not yet implemented"]
+
+Slow Performance (17 tests):
+  #[ignore = "slow: 50+ token generations, see fast unit tests"]
+  #[ignore = "slow: integration test, see unit_tests.rs for fast equivalents"]
+
+Model/Fixture Requirements (29 tests):
+  #[ignore = "requires: real GGUF model with complete metadata"]
+  #[ignore = "fixture: missing test data at tests/fixtures/tokenizer.gguf"]
+
+Network/External (10 tests):
+  #[ignore = "network: requires HuggingFace API access"]
+  #[ignore = "network: requires internet connection and HF_TOKEN"]
+
+GPU/CUDA (13 tests):
+  #[ignore = "gpu: requires CUDA toolkit installed"]
+  #[ignore = "gpu: run with --ignored flag when CUDA available"]
+
+Feature/TODO (14 tests):
+  #[ignore = "TODO: update to use QuantizedLinear::new_tl1() with proper LookupTable"]
+
+================================================================================
+IMPLEMENTATION PLAN
+================================================================================
+
+Phase 1: High-Impact (Tier 1) - 37 bare ignores
+  - Target 5 files with 10+ bare ignores
+  - Est. time: 30 min
+  - Impact: 27% of total
+
+Phase 2: Secondary (Tier 2) - 23 bare ignores
+  - Target 5 files with 5-9 bare ignores
+  - Est. time: 30 min
+  - Cumulative: 41%
+
+Phase 3: Standard (Tier 3) - 20 bare ignores
+  - Target 5 files with 4 bare ignores
+  - Est. time: 30 min
+  - Cumulative: 56%
+
+Phase 4: Cleanup (Tier 4) - 59 bare ignores remaining
+  - Target 21 files with 2-3 bare ignores
+  - Est. time: 1.5-2 hours
+  - Final: 100%
+
+================================================================================
+VALIDATION COMMANDS
+================================================================================
+
+After annotation, run these to verify:
+
+# 1. Count remaining bare ignores (should be 0)
+grep -r '#\[ignore\]$' crates/ tests/ --include='*.rs' | wc -l
+
+# 2. List all reasons (check for consistency)
+grep -r '#\[ignore = ' crates/ tests/ --include='*.rs' | \
+  cut -d'"' -f2 | sort | uniq -c | sort -rn
+
+# 3. Verify no short reasons (<10 chars)
+grep -r '#\[ignore = ' crates/ tests/ --include='*.rs' | \
+  awk -F'"' '{if (length($2) < 10) print FILENAME":"NR":"$0}'
+
+================================================================================
+CONTEXT & RELEVANCE
+================================================================================
+
+From CLAUDE.md:
+"~548 TODO/FIXME/unimplemented markers and ~70 ignored tests represent TDD-style
+scaffolding for planned features. This is intentional during MVP phase."
+
+This audit confirms:
+- Ignored tests (70+) are accounted for (we found 135 bare #[ignore])
+- Issue references are critical (46 tests blocked by known issues)
+- Patterns are consistent enough to standardize
+- Completion would significantly improve test discoverability
+
+================================================================================
+DELIVERABLES
+================================================================================
+
+Generated audit documents:
+
+1. IGNORE_TESTS_AUDIT_DETAILED.md
+   - Full analysis with all line numbers
+   - Context analysis for each bare ignore
+   - Implementation strategies
+
+2. IGNORE_TESTS_QUICK_REFERENCE.md
+   - Quick templates for each category
+   - Top 5 priority files
+   - Easy-reference reason strings
+
+3. IGNORE_ANNOTATION_TARGETS.txt
+   - Complete file list by priority tier
+   - All 135 bare ignores with line numbers
+   - Validation commands
+
+4. IGNORE_TESTS_SUMMARY.md (this document)
+   - Executive summary
+   - Roadmap and metrics
+   - Benefits after completion
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+After completing annotations:
+
+[ ] Zero bare #[ignore] annotations remain
+[ ] All reasons follow standardized patterns
+[ ] Issue numbers included where applicable
+[ ] Performance/slow tests reference faster alternatives
+[ ] Network-dependent tests marked with "network:" prefix
+[ ] All reason strings are >10 characters and descriptive
+[ ] Tests still pass with --ignored flag
+[ ] Code review validates consistency
+
+================================================================================

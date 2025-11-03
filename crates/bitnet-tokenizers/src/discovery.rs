@@ -838,7 +838,7 @@ mod tests {
     /// AC1: Tests large vocabulary optimization detection for GPU acceleration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac1-tokenizerdiscovery-implementation
     #[test]
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn test_large_vocab_optimization_detection() {
         // Test GPU acceleration requirements for large vocabularies
 
@@ -1279,7 +1279,7 @@ mod tests {
 
     /// Test device capability detection for large vocabularies
     #[test]
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn test_device_capability_detection() {
         // Test GPU acceleration requirements for different vocabulary sizes
         let vocab_scenarios = [

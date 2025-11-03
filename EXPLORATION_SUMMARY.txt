@@ -1,0 +1,275 @@
+================================================================================
+BITNET.RS LOGITS EXTRACTION - COMPREHENSIVE EXPLORATION COMPLETE
+================================================================================
+
+DELIVERABLES CREATED:
+✓ LOGITS_EXTRACTION_ANALYSIS.md      (20 KB - Full technical deep-dive)
+✓ SPRINT1_QUICK_REFERENCE.md         (8.8 KB - Quick implementation guide)
+✓ IMPLEMENTATION_GUIDE.md            (Complete step-by-step with templates)
+
+================================================================================
+KEY DISCOVERIES
+================================================================================
+
+1. CURRENT ARCHITECTURE
+   ✓ eval_logits_once() returns single token logits [1, V]
+   ✓ Forward pass uses model.forward() for incremental processing
+   ✓ KV cache used for efficient single-token evaluation
+   ✓ extract_last_token_logits() expects 3D input but only gets 2D
+
+2. INFRASTRUCTURE ALREADY EXISTS
+   ✓ model.forward_full() at transformer.rs:1416 - handles [B,T,H] → [B,T,H]
+   ✓ model.logits() at transformer.rs:1548 with rank-3 path (lines 1635-1687)
+   ✓ logits() method already handles 3D tensors perfectly
+   ✓ compare_per_position_logits() ready in crossval/logits_compare.rs
+
+3. MINIMAL CHANGES NEEDED
+   Implementation requires ONLY:
+   - Add eval_logits_all_positions() to parity.rs (120 lines)
+   - Add extract_all_position_logits() to parity.rs (70 lines)
+   - Update lib.rs exports (1 line)
+   
+   Total: ~190 lines of code for full feature
+
+4. NO DEPENDENCIES OR BREAKING CHANGES
+   ✓ Existing eval_logits_once() unchanged
+   ✓ All callers continue working
+   ✓ New functions are purely additive
+   ✓ Works with all quantization formats (I2_S, QK256, TL1/TL2)
+
+================================================================================
+CRITICAL FINDINGS
+================================================================================
+
+1. THE MISALIGNMENT
+   extract_last_token_logits() EXPECTS 3D tensor [B,T,V] but current flow
+   provides 2D [B,V]. This function was designed for all-positions work!
+
+2. LATENT INFRASTRUCTURE
+   The transformer.rs logits() method has completely separate code paths for:
+   - Rank 2 (current single-token path)
+   - Rank 3 (designed for all-positions but never used)
+
+3. SOLUTION PATTERN
+   Split into TWO code paths in parity.rs:
+   
+   CURRENT (working):
+   eval_logits_once() → 
+     embed() [single token] → 
+     forward() [incremental] → 
+     logits() [rank-2 path] → 
+     Vec<f32>
+
+   NEW (proposed):
+   eval_logits_all_positions() → 
+     embed() [full sequence] → 
+     forward_full() [batch] → 
+     logits() [rank-3 path] → 
+     Vec<Vec<f32>>
+
+================================================================================
+EXACT CODE LOCATIONS
+================================================================================
+
+PRIMARY TARGET: /home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/src/parity.rs
+   - eval_logits_once(): lines 30-111 (copy as template)
+   - extract_last_token_logits(): lines 223-261 (copy as template)
+   - Tests: lines 283-308 (add new test)
+
+MODEL METHODS (NO CHANGES): /home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/transformer.rs
+   - forward_full(): line 1416 (fully functional)
+   - forward(): lines 1507-1546 (leave as is)
+   - logits(): lines 1548-1691 (rank-3 path ready at 1635-1687)
+
+COMPARISON READY: /home/steven/code/Rust/BitNet-rs/crossval/src/logits_compare.rs
+   - compare_per_position_logits(): lines 49-102 (fully functional)
+   - cosine_similarity(): lines 104-123
+   - l2_distance(): lines 125-139
+
+EXPORTS: /home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/src/lib.rs
+   - pub use parity block: lines 44-46 (add new function)
+
+================================================================================
+DATA FLOW TRANSFORMATIONS
+================================================================================
+
+CURRENT SINGLE-TOKEN PATH:
+  input: [i32; seq_len]
+    ↓
+  embed(): [1, hidden] ← only last token captured
+    ↓
+  forward(): [1, hidden]
+    ↓
+  logits() [rank-2]: [1, vocab]
+    ↓
+  extract_last_token(): Vec<f32>
+    ↓
+  output: vocab_size floats
+
+ALL-POSITIONS PATH (NEW):
+  input: [i32; seq_len]
+    ↓
+  embed(): [1, seq_len, hidden] ← all tokens
+    ↓
+  forward_full(): [1, seq_len, hidden]
+    ↓
+  logits() [rank-3]: [1, seq_len, vocab]
+    ↓
+  extract_all_position(): Vec<Vec<f32>>
+    ↓
+  output: seq_len × vocab_size matrix
+
+================================================================================
+IMPLEMENTATION EFFORT ESTIMATE
+================================================================================
+
+CODE WRITING:       150-200 lines
+TEST CODE:          100-150 lines
+DOCUMENTATION:      Included in deliverables
+ESTIMATED TIME:     2-3 hours for experienced developer
+                    3-4 hours including testing & validation
+
+COMPLEXITY LEVEL:   Low-Medium
+- Copy-paste from existing functions
+- Tensor operation changes minimal
+- No new algorithms
+- Follows established patterns
+
+================================================================================
+VALIDATION CHECKLIST
+================================================================================
+
+Before submission, verify:
+  [ ] Function compiles without warnings
+  [ ] All logits are finite F32 values
+  [ ] Output shape is [seq_len][vocab_size]
+  [ ] Matches C++ reference within 1e-5
+  [ ] Works with all quantization formats
+  [ ] Comprehensive test coverage
+  [ ] No breaking changes to existing code
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. READ THESE IN ORDER:
+   a) /home/steven/code/Rust/BitNet-rs/SPRINT1_QUICK_REFERENCE.md
+   b) /home/steven/code/Rust/BitNet-rs/IMPLEMENTATION_GUIDE.md
+   c) /home/steven/code/Rust/BitNet-rs/LOGITS_EXTRACTION_ANALYSIS.md (full deep-dive)
+
+2. IMPLEMENT FOLLOWING:
+   a) Use IMPLEMENTATION_GUIDE.md templates exactly
+   b) Copy code blocks as specified
+   c) Change only marked lines (forward → forward_full, etc)
+
+3. TEST FOLLOWING:
+   a) cargo build --no-default-features --features cpu
+   b) cargo test -p bitnet-inference --no-default-features --features cpu
+   c) cargo test -p bitnet-inference --features crossval (if available)
+
+4. VERIFY:
+   a) All values finite
+   b) Correct output shape
+   c) Matches C++ reference
+   d) No performance regression
+
+================================================================================
+RISK ASSESSMENT
+================================================================================
+
+RISK LEVEL: LOW
+
+Why:
+- No changes to existing working code
+- New code uses established patterns
+- Infrastructure already built and tested
+- Extensive documentation provided
+- Clear templates and line-by-line guide
+- No dependency on external systems
+- Backward compatible (additive only)
+
+Mitigations:
+- Start with mock tensor tests
+- Validate with small models first
+- Test with C++ reference early
+- Comprehensive error handling included
+
+================================================================================
+CRITICAL FILES FOR REFERENCE
+================================================================================
+
+1. crates/bitnet-inference/src/parity.rs
+   - Current implementation (30-311 lines)
+   - Template source code
+   - Test location
+
+2. crates/bitnet-models/src/transformer.rs
+   - BitNetModel struct definition
+   - forward_full() implementation (ready to use)
+   - logits() with rank-2 and rank-3 paths
+
+3. crossval/src/logits_compare.rs
+   - Per-position comparison logic
+   - Cosine similarity & L2 distance metrics
+
+4. Documentation (in repository root)
+   - LOGITS_EXTRACTION_ANALYSIS.md (comprehensive)
+   - SPRINT1_QUICK_REFERENCE.md (quick guide)
+   - IMPLEMENTATION_GUIDE.md (step-by-step)
+
+================================================================================
+SUCCESS INDICATORS
+================================================================================
+
+When complete, you should be able to:
+
+1. Call eval_logits_all_positions(model_path, tokens)
+2. Get back Vec<Vec<f32>> with shape [seq_len][vocab_size]
+3. Compare per-position logits with C++ reference
+4. Identify first divergence point between implementations
+5. Measure cosine similarity at each position
+6. Calculate L2 distance for divergence analysis
+
+ALL WITH ZERO BREAKING CHANGES TO EXISTING CODE.
+
+================================================================================
+QUESTIONS ANSWERED
+================================================================================
+
+Q: Where do logits get extracted?
+A: Multiple places:
+   - Current: extract_last_token_logits() at parity.rs:223-261
+   - Needed: extract_all_position_logits() for all positions
+
+Q: What data structures hold logits?
+A: 
+   - Single-token: [1, V] tensor → Vec<f32>
+   - All-positions: [1, T, V] tensor → Vec<Vec<f32>>
+
+Q: What needs to change for all-positions?
+A: Two functions + one export:
+   - eval_logits_all_positions() (120 lines)
+   - extract_all_position_logits() (70 lines)
+   - Update lib.rs pub use (1 line)
+
+Q: Are there engine changes needed?
+A: No. The Model and Transformer classes already support this.
+
+Q: Breaking changes?
+A: None. Purely additive. All existing code continues unchanged.
+
+================================================================================
+END OF EXPLORATION REPORT
+================================================================================
+
+This exploration reveals a well-architected codebase with latent infrastructure
+for per-position logits extraction. The solution is elegant, minimal, and 
+requires only ~190 lines of code to fully implement.
+
+All deliverables are in the repository root:
+- LOGITS_EXTRACTION_ANALYSIS.md (20 KB comprehensive analysis)
+- SPRINT1_QUICK_REFERENCE.md (8.8 KB quick start)
+- IMPLEMENTATION_GUIDE.md (complete step-by-step guide)
+
+Ready for implementation!
+

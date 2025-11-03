@@ -1,0 +1,539 @@
+# Auto-Generated #[ignore] Annotation Suggestions
+# Generated: Thu Oct 23 08:32:28 PM EDT 2025
+
+# crates/bitnet-tokenizers/tests/tokenization_smoke.rs:44
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/tokenization_smoke.rs:90
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/tokenization_smoke.rs:156
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/tokenization_smoke.rs:225
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/tokenization_smoke.rs:285
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/tokenization_smoke.rs:347
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/sp_roundtrip.rs:5
+# Categories: unknown (confidence: 0%)
+#[ignore = "FIXME: add reason - ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac5_production_readiness.rs:22
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac5_production_readiness.rs:55
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac5_production_readiness.rs:94
+# Categories: requires-model,parity (confidence: 40%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-tokenizers/tests/generate_test_fixtures.rs:14
+# Categories: requires-model (confidence: 20%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-kernels/tests/gpu_integration.rs:20
+# Categories: gpu,slow,quantization (confidence: 65%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/tests/gpu_integration.rs:166
+# Categories: gpu,quantization (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/tests/gpu_integration.rs:183
+# Categories: gpu,slow (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/tests/gpu_integration.rs:225
+# Categories: gpu,slow (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:23
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:56
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:98
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:161
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:229
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:260
+# Categories: flaky,network (confidence: 45%)
+#[ignore = "FLAKY: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:330
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:381
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs:462
+# Categories: flaky,network (confidence: 45%)
+#[ignore = "FLAKY: ..."]
+
+# crates/bitnet-common/tests/issue_260_strict_mode_tests.rs:112
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-common/tests/issue_260_strict_mode_tests.rs:189
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-kernels/tests/gpu_quantization.rs:139
+# Categories: gpu,quantization (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/tests/gpu_quantization.rs:179
+# Categories: gpu,quantization,parity (confidence: 65%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/tests/gpu_quantization.rs:265
+# Categories: gpu,quantization (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/tests/gpu_quantization.rs:317
+# Categories: flaky,gpu,quantization (confidence: 70%)
+#[ignore = "FLAKY: ..."]
+
+# crates/bitnet-kernels/tests/gpu_quantization.rs:349
+# Categories: gpu,quantization (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/tests/issue_260_feature_gated_tests.rs:179
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-kernels/tests/issue_260_feature_gated_tests.rs:314
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-kernels/tests/issue_260_feature_gated_tests.rs:732
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-kernels/tests/issue_260_feature_gated_tests.rs:780
+# Categories: issue-blocked,flaky,todo (confidence: 70%)
+#[ignore = "Issue #260: ..."]
+
+# xtask/tests/tokenizer_subcommand_tests.rs:26
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/tests/tokenizer_subcommand_tests.rs:78
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/tests/tokenizer_subcommand_tests.rs:159
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:73
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:109
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:148
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:191
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:227
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:268
+# Categories: issue-blocked,flaky,quantization,parity,todo (confidence: 110%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:308
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:402
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs:438
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-tokenizers/tests/fixtures/generate_fixtures.rs:12
+# Categories: requires-model (confidence: 20%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_tests.rs:110
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_tests.rs:251
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_tests.rs:292
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_tests.rs:330
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-kernels/src/device_aware.rs:553
+# Categories: gpu,quantization (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_device_aware_tests.rs:88
+# Categories: issue-blocked,gpu (confidence: 55%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_device_aware_tests.rs:366
+# Categories: issue-blocked,gpu,todo (confidence: 70%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-kernels/src/gpu/validation.rs:562
+# Categories: gpu (confidence: 25%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs:64
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs:134
+# Categories: issue-blocked,quantization,parity (confidence: 70%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs:183
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs:242
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs:294
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs:345
+# Categories: issue-blocked,quantization,parity,todo (confidence: 85%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs:389
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/src/gguf_min.rs:503
+# Categories: requires-model (confidence: 20%)
+#[ignore = "requires: ..."]
+
+# crates/bitnet-cli/tests/qa_greedy_math_confidence.rs:457
+# Categories: slow,network (confidence: 40%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_feature_matrix_tests.rs:73
+# Categories: issue-blocked,gpu,requires-model,todo (confidence: 90%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-models/tests/rope_parity.rs:216
+# Categories: parity,todo (confidence: 35%)
+#[ignore = "parity: ..."]
+
+# crates/bitnet-tokenizers/src/discovery.rs:972
+# Categories: todo (confidence: 15%)
+#[ignore = "TODO: ..."]
+
+# crates/bitnet-models/src/quant/i2s_qk256_avx2.rs:469
+# Categories: slow,quantization,parity (confidence: 60%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-models/tests/gguf_weight_loading_integration_tests.rs:353
+# Categories: issue-blocked,slow,todo (confidence: 65%)
+#[ignore = "Issue #159: ..."]
+
+# crates/bitnet-kernels/src/gpu/cuda.rs:539
+# Categories: gpu,parity (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-kernels/src/gpu/cuda.rs:582
+# Categories: gpu (confidence: 25%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/ac3_autoregressive_generation.rs:192
+# Categories: slow,todo (confidence: 35%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/ac3_autoregressive_generation.rs:207
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/ac3_autoregressive_generation.rs:299
+# Categories: slow,todo (confidence: 35%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/ac3_autoregressive_generation.rs:314
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/ac3_autoregressive_generation.rs:399
+# Categories: slow,todo (confidence: 35%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/ac3_autoregressive_generation.rs:414
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/ac1_quantized_linear_layers.rs:142
+# Categories: gpu,quantization,todo (confidence: 60%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/ac1_quantized_linear_layers.rs:236
+# Categories: quantization,todo (confidence: 35%)
+#[ignore = "quantization: ..."]
+
+# crates/bitnet-server/tests/concurrent_load_tests.rs:313
+# Categories: flaky,gpu,slow (confidence: 70%)
+#[ignore = "FLAKY: ..."]
+
+# crates/bitnet-kernels/src/gpu/benchmark.rs:299
+# Categories: gpu,slow (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/ac9_comprehensive_integration_testing.rs:22
+# Categories: todo (confidence: 15%)
+#[ignore = "TODO: ..."]
+
+# crates/bitnet-inference/tests/issue_260_mock_elimination_inference_tests.rs:524
+# Categories: issue-blocked,parity,todo (confidence: 65%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-inference/tests/issue_260_mock_elimination_inference_tests.rs:559
+# Categories: issue-blocked,gpu,slow,todo (confidence: 90%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-inference/tests/issue_260_mock_elimination_inference_tests.rs:627
+# Categories: issue-blocked,slow,todo (confidence: 65%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-inference/tests/issue_260_mock_elimination_inference_tests.rs:756
+# Categories: issue-blocked,gpu,slow,todo (confidence: 90%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-inference/tests/issue_260_mock_elimination_inference_tests.rs:1038
+# Categories: issue-blocked,slow,parity,todo (confidence: 85%)
+#[ignore = "Issue #260: ..."]
+
+# crates/bitnet-inference/tests/test_real_vs_mock_comparison.rs:16
+# Categories: issue-blocked,gpu (confidence: 55%)
+#[ignore = "Issue #254: ..."]
+
+# crates/bitnet-inference/tests/test_real_inference.rs:21
+# Categories: issue-blocked,gpu (confidence: 55%)
+#[ignore = "Issue #254: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:39
+# Categories: issue-blocked,network,quantization,parity,todo (confidence: 105%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:66
+# Categories: issue-blocked,network,quantization,todo (confidence: 85%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:94
+# Categories: issue-blocked,network,todo (confidence: 65%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:153
+# Categories: issue-blocked,gpu,slow,network,parity,todo (confidence: 130%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:210
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:252
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:279
+# Categories: issue-blocked,todo (confidence: 45%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/neural_network_test_scaffolding.rs:310
+# Categories: issue-blocked,quantization,todo (confidence: 65%)
+#[ignore = "Issue #248: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac4_receipt_generation.rs:22
+# Categories: issue-blocked,network,todo (confidence: 65%)
+#[ignore = "Issue #254: ..."]
+
+# crates/bitnet-inference/tests/simple_real_inference.rs:29
+# Categories: gpu (confidence: 25%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/simple_real_inference.rs:61
+# Categories: gpu (confidence: 25%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/simple_real_inference.rs:96
+# Categories: unknown (confidence: 0%)
+#[ignore = "FIXME: add reason - ..."]
+
+# crates/bitnet-inference/tests/simple_real_inference.rs:126
+# Categories: gpu,slow (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/full_engine_compilation_test.rs:3
+# Categories: unknown (confidence: 0%)
+#[ignore = "FIXME: add reason - ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:24
+# Categories: gpu,slow (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:28
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:125
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:129
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:175
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:179
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:225
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:229
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:286
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs:290
+# Categories: flaky,slow (confidence: 45%)
+#[ignore = "FLAKY: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac6_determinism_integration.rs:23
+# Categories: gpu,slow (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac6_determinism_integration.rs:27
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac6_determinism_integration.rs:80
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac6_determinism_integration.rs:84
+# Categories: slow (confidence: 20%)
+#[ignore = "slow: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac1_quantized_linear_no_fp32_staging.rs:62
+# Categories: gpu,quantization,todo (confidence: 60%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac1_quantized_linear_no_fp32_staging.rs:93
+# Categories: gpu,quantization,todo (confidence: 60%)
+#[ignore = "gpu: ..."]
+
+# crates/bitnet-inference/tests/issue_254_ac1_quantized_linear_no_fp32_staging.rs:124
+# Categories: quantization,todo (confidence: 35%)
+#[ignore = "quantization: ..."]
+
+# xtask/src/main.rs:5543
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/src/main.rs:5564
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/tests/ci_integration_tests.rs:49
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/tests/ci_integration_tests.rs:110
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/tests/ci_integration_tests.rs:196
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/tests/ci_integration_tests.rs:329
+# Categories: network (confidence: 20%)
+#[ignore = "network: ..."]
+
+# xtask/tests/ci_integration_tests.rs:374
+# Categories: network,parity (confidence: 40%)
+#[ignore = "network: ..."]
+
+# crates/bitnet-quantization/tests/comprehensive_tests.rs:272
+# Categories: quantization (confidence: 20%)
+#[ignore = "quantization: ..."]
+
+# crates/bitnet-quantization/tests/mutation_killer_tests.rs:575
+# Categories: quantization,parity (confidence: 40%)
+#[ignore = "quantization: ..."]
+
+# crates/bitnet-quantization/tests/mutation_killer_tests.rs:620
+# Categories: quantization,parity (confidence: 40%)
+#[ignore = "quantization: ..."]
+
+# crates/bitnet-quantization/tests/mutation_killer_tests.rs:662
+# Categories: quantization,parity (confidence: 40%)
+#[ignore = "quantization: ..."]
+
+# crates/bitnet-quantization/tests/mutation_killer_tests.rs:803
+# Categories: gpu,quantization (confidence: 45%)
+#[ignore = "gpu: ..."]
+
+# tests/readme_examples.rs:20
+# Categories: network,parity (confidence: 40%)
+#[ignore = "network: ..."]
+

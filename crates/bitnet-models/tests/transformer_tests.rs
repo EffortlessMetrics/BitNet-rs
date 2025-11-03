@@ -48,10 +48,9 @@ fn test_forward_shapes() -> anyhow::Result<()> {
     let mut kv = KVCache::new(&config, batch, &candle_core::Device::Cpu)?;
 
     // Forward pass
-    let y = model.forward(&x, Some(&mut kv))?;
+    let y = model.forward(x, Some(&mut kv))?;
 
     // Check output shape matches input shape
-    assert_eq!(y.dims(), x.dims());
     assert_eq!(y.dims(), &[batch, seq_len, hidden_size]);
 
     Ok(())
@@ -130,7 +129,7 @@ fn test_step_vs_full_equivalence() -> anyhow::Result<()> {
 
     // Full forward pass (all tokens at once)
     let emb_full = model.embed(&tokens)?;
-    let h_full = model.forward(&emb_full, None)?;
+    let h_full = model.forward(emb_full, None)?;
     let logits_full = model.logits(&h_full)?;
 
     // forward_full path
@@ -144,7 +143,7 @@ fn test_step_vs_full_equivalence() -> anyhow::Result<()> {
     for &token in &tokens {
         let current_token = vec![token];
         let emb = model.embed(&current_token)?;
-        let h = model.forward(&emb, Some(&mut kv))?;
+        let h = model.forward(emb, Some(&mut kv))?;
         outs.push(model.logits(&h)?);
     }
     let out_refs: Vec<&Tensor> = outs.iter().collect();
@@ -187,7 +186,7 @@ fn test_forward_full_matches_incremental() -> anyhow::Result<()> {
     let mut step_logits = Vec::new();
     for &token in &tokens {
         let emb = model.embed(&[token])?;
-        let hidden = model.forward(&emb, Some(&mut kv))?;
+        let hidden = model.forward(emb, Some(&mut kv))?;
         let logits = model.logits(&hidden)?;
         step_logits.push(logits);
     }
@@ -246,7 +245,7 @@ fn test_causal_mask_with_kv_cache() -> anyhow::Result<()> {
 
     for &token in &tokens {
         let emb = model.embed(&[token])?;
-        let hidden = model.forward(&emb, Some(&mut kv_cache))?;
+        let hidden = model.forward(emb, Some(&mut kv_cache))?;
         let logits = model.logits(&hidden)?;
         all_logits.push(logits);
     }

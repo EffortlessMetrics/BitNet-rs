@@ -10,7 +10,7 @@ use crate::utils::{
 };
 use crate::{QuantizedTensor, QuantizerTrait};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
-#[cfg(feature = "gpu")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 #[allow(unused_imports)]
 use bitnet_kernels::KernelProvider;
 use candle_core::Device;

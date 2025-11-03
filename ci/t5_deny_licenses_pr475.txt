@@ -1,0 +1,19 @@
+warning[license-not-encountered]: license was not encountered
+   ┌─ /home/steven/code/Rust/BitNet-rs/deny.toml:55:6
+   │
+55 │     "CDLA-Permissive-2.0",
+   │      ━━━━━━━━━━━━━━━━━━━ unmatched license allowance
+
+warning[license-not-encountered]: license was not encountered
+   ┌─ /home/steven/code/Rust/BitNet-rs/deny.toml:54:6
+   │
+54 │     "NCSA",
+   │      ━━━━ unmatched license allowance
+
+warning[license-not-encountered]: license was not encountered
+   ┌─ /home/steven/code/Rust/BitNet-rs/deny.toml:47:6
+   │
+47 │     "Unicode-DFS-2016",
+   │      ━━━━━━━━━━━━━━━━ unmatched license allowance
+
+licenses ok

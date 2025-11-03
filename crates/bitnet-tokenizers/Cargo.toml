@@ -9,11 +9,17 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Tokenization support for BitNet models"
+include = [
+  "src/**",
+  "Cargo.toml",
+  "docs/**",
+  "TEST_COVERAGE_SUMMARY.md",
+]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common" }
-bitnet-models = { path = "../bitnet-models" }
-bitnet-quantization = { path = "../bitnet-quantization" }
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
 anyhow.workspace = true
 tracing.workspace = true
 serde = { workspace = true, features = ["derive"] }
@@ -36,6 +42,7 @@ inference = []
 downloads = ["reqwest", "futures-util"]
 cpu = []
 gpu = []
+cuda = ["gpu"]  # Backward compatibility alias for gpu
 crossval = []
 ffi_tokenizer = []
 # Debug feature: emit verbose diagnostics for tokenization (first 8 tokens, piece→ID mapping)
@@ -54,3 +61,4 @@ tokio = { workspace = true, features = ["full"] }
 tempfile = "3.22.0"
 temp-env = "0.3.6"
 serial_test.workspace = true
+bitnet-tests = { path = "../../tests" }

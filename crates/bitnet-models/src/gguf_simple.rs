@@ -269,15 +269,35 @@ fn load_gguf_enhanced(
         let info = gguf_reader.get_tensor_info(i)?;
 
         // Detect QK256 format by size calculation
+        // NOTE: Must distinguish between QK256 (256-elem blocks) and BitNet32 (32-elem blocks with inline F16)
         if info.tensor_type == GgufTensorType::I2_S {
             let total_elements: usize = info.shape.iter().product();
             let available_bytes = info.size as usize;
 
-            // Calculate expected sizes
-            let blocks_256 = total_elements.div_ceil(256);
-            let expected_qk256 = blocks_256 * 64;
+            // Calculate expected sizes for both formats
+            // CRITICAL: QK256 packs by ROW, not by total elements!
+            // Each row has ceil(cols/256) blocks × 64 bytes/block
+            let (rows, cols) = if info.shape.len() == 2 {
+                (info.shape[0], info.shape[1])
+            } else {
+                // For non-2D tensors, fall back to total elements approach (shouldn't happen for weight matrices)
+                (1, total_elements)
+            };
 
-            if available_bytes.abs_diff(expected_qk256) <= QK256_SIZE_TOLERANCE {
+            let blocks_per_row_256 = cols.div_ceil(256);
+            let expected_qk256 = rows * blocks_per_row_256 * 64;
+
+            let blocks_32 = total_elements.div_ceil(32);
+            let expected_bitnet32 = blocks_32 * 10; // 8 bytes data + 2 bytes F16 scale
+
+            // Check which format is the better match
+            let qk256_diff = available_bytes.abs_diff(expected_qk256);
+            let bitnet32_diff = available_bytes.abs_diff(expected_bitnet32);
+
+            // Only treat as QK256 if:
+            // 1. It matches QK256 within tolerance, AND
+            // 2. It's a better match for QK256 than for BitNet32
+            if qk256_diff <= QK256_SIZE_TOLERANCE && qk256_diff < bitnet32_diff {
                 // This is QK256 format - extract raw bytes and create I2SQk256NoScale
                 // Skip QK256 orientation for non-2D tensors (prevents panics/log spam)
                 if info.shape.len() != 2 {
@@ -367,20 +387,20 @@ fn load_gguf_enhanced(
                 match I2SQk256NoScale::new(rows, cols, tensor_data.to_vec()) {
                     Ok(qk256_tensor) => {
                         tracing::debug!(
-                            "QK256 '{}': rows={}, cols={}, blocks={}, row_stride={}B, tol={}B",
+                            "QK256 '{}': rows={}, cols={}, blocks_per_row={}, row_stride={}B, tol={}B",
                             info.name,
                             rows,
                             cols,
-                            blocks_256,
+                            blocks_per_row_256,
                             row_stride_bytes,
                             QK256_SIZE_TOLERANCE
                         );
                         tracing::info!(
-                            "Loaded QK256 I2_S tensor '{}': rows={}, cols={}, blocks={}, row_stride={} bytes",
+                            "Loaded QK256 I2_S tensor '{}': rows={}, cols={}, blocks_per_row={}, row_stride={} bytes",
                             info.name,
                             rows,
                             cols,
-                            blocks_256,
+                            blocks_per_row_256,
                             row_stride_bytes
                         );
 
@@ -460,7 +480,10 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
     // Try the existing minimal GGUF parser, but handle mock files gracefully
     let two = match crate::gguf_min::load_two(path) {
         Ok(two_tensors) => two_tensors,
-        Err(_) => {
+        Err(e) => {
+            // Log the actual error from minimal parser for debugging
+            tracing::error!("Minimal parser error: {:?}", e);
+
             // If minimal GGUF parsing also fails, check if this is a mock file from tests
             if let Ok(content) = std::fs::read(path)
                 && content == b"mock_gguf_content"
@@ -471,10 +494,11 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
                 // Create mock TwoTensors for test compatibility
                 return create_mock_tensor_layout(device);
             }
-            // Real parsing failure - re-throw original error
-            return Err(BitNetError::Validation(
-                "Failed to parse GGUF file with both enhanced and minimal parsers".to_string(),
-            ));
+            // Real parsing failure - re-throw original error with context
+            return Err(BitNetError::Validation(format!(
+                "Failed to parse GGUF file with both enhanced and minimal parsers. Minimal parser error: {}",
+                e
+            )));
         }
     };
 

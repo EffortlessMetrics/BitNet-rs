@@ -1,0 +1,184 @@
+COMPREHENSIVE LIST OF FILES REQUIRING #[ignore] ANNOTATION
+
+================================================================================
+SUMMARY
+================================================================================
+Total bare #[ignore] annotations requiring reasons: 135
+Total files affected: 46
+Estimated annotation effort: 2-4 hours
+
+================================================================================
+PRIORITY TIER 1 (10+ bare ignores each) - START HERE
+================================================================================
+
+1. crates/bitnet-inference/tests/issue_254_ac3_deterministic_generation.rs - 10
+   Lines: 24, 28, 125, 129, 175, 179, 225, 229, 286, 290
+   Category: Slow tests (50+ token generations)
+   Action: Add slow: prefix, reference fast unit test alternatives
+
+2. crates/bitnet-models/tests/gguf_weight_loading_property_tests.rs - 9
+   Lines: 73, 109, 148, 191, 227, 268, 308, 402, 438
+   Category: Issue #159 TDD placeholders
+   Action: Add Issue #159 prefix with specific quantization type
+
+3. crates/bitnet-tokenizers/tests/test_ac4_smart_download_integration.rs - 9
+   Lines: 23, 56, 98, 161, 229, 260, 330, 381, 462
+   Category: Network-dependent
+   Action: Add network: prefix
+
+4. crates/bitnet-inference/tests/neural_network_test_scaffolding.rs - 8
+   Lines: 39, 66, 94, 153, 210, 252, 279, 310
+   Category: Issue #248 TDD scaffolding
+   Action: Add Issue #248 prefix with AC#/feature
+
+5. crates/bitnet-models/tests/gguf_weight_loading_property_tests_enhanced.rs - 7
+   Lines: 64, 134, 183, 242, 294, 345, 389
+   Category: Issue #159 property-based tests
+   Action: Add Issue #159 prefix with test type
+
+================================================================================
+PRIORITY TIER 2 (5-9 bare ignores) - SECOND WAVE
+================================================================================
+
+6. crates/bitnet-inference/tests/ac3_autoregressive_generation.rs - 6
+   Lines: 192, 207, 299, 314, 399, 414
+   Category: Slow tests (full model generations)
+   Action: slow: prefix with token count and reference
+
+7. crates/bitnet-tokenizers/tests/tokenization_smoke.rs - 6
+   Lines: 44, 90, 156, 225, 285, 347
+   Category: Integration tests with CROSSVAL_GGUF dependency
+   Action: requires: CROSSVAL_GGUF environment variable
+
+8. crates/bitnet-kernels/tests/gpu_quantization.rs - 5
+   Lines: 139, 179, 265, 317, 349
+   Category: GPU/CUDA specific
+   Action: gpu: prefix
+
+9. crates/bitnet-inference/tests/issue_260_mock_elimination_inference_tests.rs - 5
+   Lines: 524, 559, 627, 756, 1038
+   Category: Issue #260 mock elimination
+   Action: Issue #260 prefix with specific unimplemented feature
+
+10. xtask/tests/ci_integration_tests.rs - 5
+    Lines: 49, 110, 196, 329, 374
+    Category: Integration/network tests
+    Action: Varies - network, requires, or Issue prefix
+
+================================================================================
+PRIORITY TIER 3 (4 bare ignores each) - COMPLETE COVERAGE
+================================================================================
+
+11. crates/bitnet-kernels/tests/issue_260_feature_gated_tests.rs - 4
+    Lines: 179, 314, 732, 780
+    Category: Issue #260 TDD placeholders
+    Action: Issue #260 prefix with feature/implementation
+
+12. crates/bitnet-kernels/tests/gpu_integration.rs - 4
+    Lines: 20, 166, 183, 225
+    Category: GPU/performance integration
+    Action: gpu: and slow: prefixes depending on test
+
+13. crates/bitnet-models/tests/gguf_weight_loading_tests.rs - 4
+    Lines: 110, 251, 292, 330
+    Category: Issue #159 quantization accuracy
+    Action: Issue #159 prefix with quantization format
+
+14. crates/bitnet-inference/tests/issue_254_ac6_determinism_integration.rs - 4
+    Lines: 23, 27, 80, 84
+    Category: Issue #254 slow integration tests
+    Action: slow: prefix with Issue #254 reference
+
+15. crates/bitnet-inference/tests/simple_real_inference.rs - 4
+    Lines: 29, 61, 96, 126
+    Category: Requires real model with weights
+    Action: requires: real GGUF model
+
+================================================================================
+PRIORITY TIER 4 (3 bare ignores each) - CLEANUP ROUND
+================================================================================
+
+16. crates/bitnet-inference/tests/issue_254_ac1_quantized_linear_no_fp32_staging.rs - 3
+17. crates/bitnet-inference/tests/full_engine_compilation_test.rs - 3
+18. crates/bitnet-cli/tests/qa_greedy_math_confidence.rs - 3
+19. crates/bitnet-quantization/tests/mutation_killer_tests.rs - 3+1=4 combined
+20. tests/readme_examples.rs - 3
+
+================================================================================
+FILES WITH 2 BARE IGNORES (Cleanup)
+================================================================================
+
+- crates/bitnet-common/tests/issue_260_strict_mode_tests.rs
+- crates/bitnet-models/tests/gguf_weight_loading_device_aware_tests.rs
+- crates/bitnet-models/src/quant/i2s_qk256_avx2.rs
+- crates/bitnet-models/src/gguf_min.rs
+- crates/bitnet-kernels/src/device_aware.rs
+- crates/bitnet-kernels/src/gpu/cuda.rs
+- crates/bitnet-kernels/src/gpu/benchmark.rs
+- crates/bitnet-kernels/src/gpu/validation.rs
+- crates/bitnet-inference/tests/ac1_quantized_linear_layers.rs
+- crates/bitnet-inference/tests/issue_254_ac4_receipt_generation.rs
+- crates/bitnet-inference/tests/test_real_inference.rs
+- crates/bitnet-inference/tests/test_real_vs_mock_comparison.rs
+- crates/bitnet-tokenizers/tests/test_ac5_production_readiness.rs
+- crates/bitnet-tokenizers/tests/generate_test_fixtures.rs
+- crates/bitnet-tokenizers/tests/fixtures/generate_fixtures.rs
+- crates/bitnet-tokenizers/src/discovery.rs
+- crates/bitnet-server/tests/concurrent_load_tests.rs
+- crates/bitnet-quantization/tests/comprehensive_tests.rs
+- crates/bitnet-models/tests/rope_parity.rs
+- xtask/tests/tokenizer_subcommand_tests.rs
+- xtask/src/main.rs
+- tests-new/integration/ac9_comprehensive_integration_testing.rs
+
+================================================================================
+REASON STRING TEMPLATES BY CATEGORY
+================================================================================
+
+ISSUE-BLOCKED (46 tests):
+  #[ignore = "Issue #254: <brief description - shape mismatch/mock elimination/etc>"]
+  #[ignore = "Issue #260: TDD placeholder - <feature> not yet implemented"]
+  #[ignore = "Issue #159: TDD placeholder - <quantization type> integration needed"]
+  #[ignore = "Issue #248: TDD placeholder - <AC#/feature> unimplemented"]
+
+SLOW PERFORMANCE (17 tests):
+  #[ignore = "slow: runs 50+ token generations, see fast unit tests"]
+  #[ignore = "slow: full model integration test, see unit_tests.rs for fast equivalents"]
+  #[ignore = "benchmark: not a unit test"]
+
+REQUIRES MODEL/FIXTURE (29 tests):
+  #[ignore = "requires: real GGUF model with complete metadata"]
+  #[ignore = "requires: bitnet.cpp FFI implementation"]
+  #[ignore = "fixture: missing test data at tests/fixtures/tokenizer.gguf"]
+
+GPU/CUDA (13 tests):
+  #[ignore = "gpu: requires CUDA toolkit installed and available"]
+  #[ignore = "gpu: run with --ignored flag when CUDA available"]
+
+NETWORK/EXTERNAL (10 tests):
+  #[ignore = "network: requires HuggingFace API access and internet"]
+  #[ignore = "network: requires HF_TOKEN environment variable"]
+  #[ignore = "fixture: requires network connectivity"]
+
+FEATURE/TODO (14 tests):
+  #[ignore = "TODO: update to use QuantizedLinear::new_tl1() with proper LookupTable"]
+  #[ignore = "TODO: implement GPU mixed-precision tests"]
+
+================================================================================
+VALIDATION COMMANDS
+================================================================================
+
+# Count remaining bare ignores (should be 0 after fix)
+grep -r '#\[ignore\]$' crates/ tests/ --include='*.rs' | wc -l
+
+# List all bare ignores with context
+grep -B1 -A2 '#\[ignore\]$' crates/ tests/ --include='*.rs' | grep -v '^--$'
+
+# Show annotated reasons for reference
+grep -r '#\[ignore = ' crates/ tests/ --include='*.rs' | cut -d: -f3 | sort | uniq -c | sort -rn
+
+# Verify format consistency
+grep -r '#\[ignore = ' crates/ tests/ --include='*.rs' | \
+  awk -F'"' '{print $2}' | \
+  awk '{print substr($0,1,20)}' | \
+  sort | uniq -c | sort -rn

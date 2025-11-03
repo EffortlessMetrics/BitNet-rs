@@ -1,0 +1,15 @@
+  # Guard: Fixture Integrity Validator
+  # Validates fixture checksums, schema, and alignment
+  # See: SPEC-2025-006
+  guard-fixture-integrity:
+    name: Guard - Fixture Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Validate fixture integrity
+        run: bash scripts/validate-fixtures.sh

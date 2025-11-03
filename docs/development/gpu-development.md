@@ -28,7 +28,7 @@ println!("Metal: {}", gpu_info.metal);
 println!("ROCm: {}", gpu_info.rocm);
 println!("WebGPU: {}", gpu_info.wgpu);
 
-// Version information (when available)
+// Version information (compiled if gpu feature enabled)
 if let Some(version) = gpu_info.cuda_version {
     println!("CUDA Version: {}", version);
 }
@@ -307,7 +307,7 @@ if let Some(stats) = quantizer.get_stats() {
 
 - **Real-time Host Memory**: Uses `memory-stats` crate for accurate process-specific memory usage
 - **System Memory Monitoring**: Uses `sysinfo` crate for total system memory tracking
-- **GPU Memory Integration**: CUDA cuMemGetInfo_v2 for GPU memory statistics (when available)
+- **GPU Memory Integration**: CUDA cuMemGetInfo_v2 for GPU memory statistics (compiled with gpu feature and CUDA runtime detected)
 - **Thread-Safe Tracking**: Arc<Mutex<DeviceStatsInternal>> for safe concurrent access
 - **Memory Efficiency Metrics**: Calculated ratios and usage percentages
 - **Automatic Updates**: Memory stats updated during quantization and matrix operations

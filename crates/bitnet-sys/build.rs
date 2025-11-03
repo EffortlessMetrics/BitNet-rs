@@ -75,7 +75,11 @@ fn link_cpp_implementation(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Err
     let build_dir = cpp_dir.join("build");
 
     // Library search paths - order matters!
+    // Support both BitNet.cpp (with 3rdparty/llama.cpp) and standalone llama.cpp
     let lib_search_paths = [
+        // Standalone llama.cpp paths
+        build_dir.join("bin"), // llama.cpp puts libraries in build/bin/
+        // BitNet.cpp embedded llama.cpp paths
         build_dir.join("3rdparty/llama.cpp/src"),
         build_dir.join("3rdparty/llama.cpp/ggml/src"),
         build_dir.join("3rdparty/llama.cpp"),
@@ -174,9 +178,12 @@ fn compile_cpp_shim(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // These paths assume a specific llama.cpp directory structure.
     // If llama.cpp reorganizes headers, paths may need adjustment.
     let system_includes = vec![
+        // Standalone llama.cpp paths
+        cpp_dir.join("include"),      // llama.h
+        cpp_dir.join("ggml/include"), // ggml.h
+        // BitNet.cpp embedded llama.cpp paths
         cpp_dir.join("3rdparty/llama.cpp/include"),
         cpp_dir.join("3rdparty/llama.cpp/ggml/include"),
-        cpp_dir.join("include"),
         cpp_dir.join("src"),
         build_dir.join("3rdparty/llama.cpp/include"),
         build_dir.join("3rdparty/llama.cpp/ggml/include"),
@@ -210,8 +217,10 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     // Try to find llama.h as well
     let possible_llama_locations = [
-        cpp_dir.join("3rdparty/llama.cpp/include/llama.h"),
+        // Standalone llama.cpp path (most common)
         cpp_dir.join("include/llama.h"),
+        // BitNet.cpp embedded llama.cpp paths
+        cpp_dir.join("3rdparty/llama.cpp/include/llama.h"),
         cpp_dir.join("src/llama.h"),
         cpp_dir.join("llama.h"),
     ];
@@ -248,9 +257,12 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     // Add include paths - check which ones exist
     let possible_include_paths = [
+        // Standalone llama.cpp paths
+        cpp_dir.join("include"),
+        cpp_dir.join("ggml/include"),
+        // BitNet.cpp embedded llama.cpp paths
         cpp_dir.join("3rdparty/llama.cpp/include"),
         cpp_dir.join("3rdparty/llama.cpp/ggml/include"),
-        cpp_dir.join("include"),
         cpp_dir.join("src"),
         cpp_dir.to_path_buf(),
     ];

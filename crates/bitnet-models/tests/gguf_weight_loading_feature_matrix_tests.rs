@@ -14,6 +14,7 @@ use bitnet_common::BitNetError;
 #[allow(unused_imports)]
 use bitnet_common::Device;
 use candle_core::Tensor as CandleTensor;
+use serial_test::serial;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -71,6 +72,7 @@ impl FeatureMatrixFixture {
 /// AC6: CPU/GPU Feature Flag Support
 #[cfg(all(feature = "cpu", not(feature = "gpu")))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_cpu_only() -> Result<()> {
     use bitnet_st2gguf::writer::{GgufWriter, MetadataValue, TensorDType, TensorEntry};
     use half::f16;
@@ -178,6 +180,7 @@ async fn test_feature_matrix_cpu_only() -> Result<()> {
 /// AC2: Support Quantization Formats with ≥99% Accuracy
 #[cfg(all(feature = "cpu", not(feature = "gpu"), feature = "quantization"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_cpu_quantization_only() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -209,6 +212,7 @@ async fn test_feature_matrix_cpu_quantization_only() -> Result<()> {
 /// AC6: CPU/GPU Feature Flag Support
 #[cfg(all(feature = "gpu", feature = "cpu"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_gpu_with_cpu_fallback() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -255,6 +259,7 @@ async fn test_feature_matrix_gpu_with_cpu_fallback() -> Result<()> {
 /// GPU-only build (no CPU fallback): Test strict GPU requirements
 #[cfg(all(feature = "gpu", not(feature = "cpu")))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_gpu_only_strict() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -281,6 +286,7 @@ async fn test_feature_matrix_gpu_only_strict() -> Result<()> {
 /// Mixed precision GPU: Test FP16/BF16 support
 #[cfg(all(feature = "gpu", feature = "mixed-precision"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_mixed_precision_gpu() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -311,6 +317,7 @@ async fn test_feature_matrix_mixed_precision_gpu() -> Result<()> {
 /// FFI-enabled build: Test C++ bridge integration
 #[cfg(feature = "ffi")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_ffi_bridge() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -337,6 +344,7 @@ async fn test_feature_matrix_ffi_bridge() -> Result<()> {
 /// FFI + GPU: Test C++ GPU interoperability
 #[cfg(all(feature = "ffi", feature = "gpu"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_ffi_gpu_interop() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -367,6 +375,7 @@ async fn test_feature_matrix_ffi_gpu_interop() -> Result<()> {
 /// WASM browser build: Test web browser compatibility
 #[cfg(all(target_arch = "wasm32", feature = "browser"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_wasm_browser() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -394,6 +403,7 @@ async fn test_feature_matrix_wasm_browser() -> Result<()> {
 /// WASM Node.js build: Test Node.js compatibility
 #[cfg(all(target_arch = "wasm32", feature = "nodejs"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_wasm_nodejs() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -424,6 +434,7 @@ async fn test_feature_matrix_wasm_nodejs() -> Result<()> {
 /// Cross-validation enabled: Test C++ reference comparison
 #[cfg(feature = "crossval")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_crossval_enabled() -> Result<()> {
     // Set cross-validation environment
     unsafe {
@@ -461,6 +472,7 @@ async fn test_feature_matrix_crossval_enabled() -> Result<()> {
 /// I2S quantization only: Test I2S-specific features
 #[cfg(all(feature = "quantization", feature = "i2s"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_i2s_quantization_only() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -489,6 +501,7 @@ async fn test_feature_matrix_i2s_quantization_only() -> Result<()> {
 /// Full quantization support: Test all quantization formats
 #[cfg(all(feature = "quantization", feature = "i2s", feature = "tl1", feature = "tl2"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_full_quantization_support() -> Result<()> {
     let fixture = FeatureMatrixFixture::new()?;
     let model_path = fixture.create_test_model()?;
@@ -523,6 +536,7 @@ async fn test_feature_matrix_full_quantization_support() -> Result<()> {
 /// Strict mode: Test with no mocks or fallbacks
 #[cfg(feature = "cpu")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_feature_matrix_strict_mode() -> Result<()> {
     // Enable strict testing mode
     unsafe {

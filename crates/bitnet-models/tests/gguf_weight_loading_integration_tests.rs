@@ -16,6 +16,7 @@ use bitnet_common::BitNetConfig;
 #[allow(unused_imports)]
 use bitnet_common::Device;
 use candle_core::Tensor as CandleTensor;
+use serial_test::serial;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -87,6 +88,7 @@ impl IntegrationTestFixture {
 /// Validates that GGUF weight loading properly integrates with quantization
 #[cfg(all(feature = "cpu", feature = "quantization"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_models_quantization_cpu() -> Result<()> {
     let config = IntegrationTestConfig::default();
     let fixture = IntegrationTestFixture::new()?.with_config(config.clone());
@@ -129,6 +131,7 @@ async fn test_integration_models_quantization_cpu() -> Result<()> {
 /// Validates device-aware operations with loaded weights
 #[cfg(all(feature = "cpu", feature = "kernels"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_models_kernels_cpu() -> Result<()> {
     let config = IntegrationTestConfig::default();
     let fixture = IntegrationTestFixture::new()?.with_config(config.clone());
@@ -165,6 +168,7 @@ async fn test_integration_models_kernels_cpu() -> Result<()> {
 /// Validates end-to-end inference pipeline with real weights
 #[cfg(all(feature = "cpu", feature = "inference"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_models_inference_cpu() -> Result<()> {
     let config = IntegrationTestConfig::default();
     let fixture = IntegrationTestFixture::new()?.with_config(config.clone());
@@ -192,6 +196,7 @@ async fn test_integration_models_inference_cpu() -> Result<()> {
 /// GPU Integration test: Complete pipeline with GPU acceleration
 #[cfg(feature = "gpu")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_full_pipeline_gpu() -> Result<()> {
     let config = IntegrationTestConfig::default();
     let fixture = IntegrationTestFixture::new()?.with_config(config.clone());
@@ -232,6 +237,7 @@ async fn test_integration_full_pipeline_gpu() -> Result<()> {
 /// Cross-validation integration: bitnet-models + crossval framework
 #[cfg(feature = "crossval")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_crossval_framework() -> Result<()> {
     // Set deterministic environment for reproducible results
     unsafe {
@@ -277,6 +283,7 @@ async fn test_integration_crossval_framework() -> Result<()> {
 /// FFI Integration test: GGUF weight loading with C++ bridge validation
 #[cfg(feature = "ffi")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_ffi_bridge_validation() -> Result<()> {
     let config = IntegrationTestConfig::default();
     let fixture = IntegrationTestFixture::new()?.with_config(config.clone());
@@ -313,6 +320,7 @@ async fn test_integration_ffi_bridge_validation() -> Result<()> {
 /// WASM Integration test: Weight loading in WebAssembly environment
 #[cfg(all(target_arch = "wasm32", feature = "browser"))]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_wasm_weight_loading() -> Result<()> {
     let config = IntegrationTestConfig::default();
     let fixture = IntegrationTestFixture::new()?.with_config(config);
@@ -355,6 +363,7 @@ async fn test_integration_wasm_weight_loading() -> Result<()> {
 /// For real model performance validation (>50 MB/s throughput), larger GGUF models are required.
 #[cfg(feature = "cpu")]
 #[tokio::test]
+#[serial(bitnet_env)]
 async fn test_integration_performance_pipeline_cpu() -> Result<()> {
     use std::time::Instant;
 

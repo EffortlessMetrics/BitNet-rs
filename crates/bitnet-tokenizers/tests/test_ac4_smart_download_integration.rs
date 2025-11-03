@@ -7,7 +7,11 @@
 
 // Imports will be used once implementation is complete
 #[allow(unused_imports)]
+use bitnet_tests::support::env_guard::EnvGuard;
+#[allow(unused_imports)]
 use bitnet_tokenizers::{SmartTokenizerDownload, TokenizerDiscovery, TokenizerDownloadInfo};
+#[allow(unused_imports)]
+use serial_test::serial;
 #[allow(unused_imports)]
 use std::path::Path;
 
@@ -292,12 +296,12 @@ async fn ac4_download_progress_monitoring() {
 /// Tests feature spec: issue-336-universal-tokenizer-discovery-spec.md#ac4-smart-download-integration
 // AC:ID AC4
 #[tokio::test]
+#[serial(bitnet_env)]
 #[cfg(feature = "cpu")]
 async fn ac4_offline_mode_handling() {
-    // Set offline mode
-    unsafe {
-        std::env::set_var("BITNET_OFFLINE", "1");
-    }
+    // Set offline mode with EnvGuard
+    let _offline_guard = EnvGuard::new("BITNET_OFFLINE");
+    _offline_guard.set("1");
 
     let download_info = TokenizerDownloadInfo {
         repo: "meta-llama/Llama-2-7b-hf".to_string(),
@@ -317,9 +321,7 @@ async fn ac4_offline_mode_handling() {
         }
     }
 
-    unsafe {
-        std::env::remove_var("BITNET_OFFLINE");
-    }
+    // Guard automatically restores original value on drop
 }
 
 /// AC4: Test concurrent downloads

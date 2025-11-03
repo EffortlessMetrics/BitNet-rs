@@ -1,4 +1,6 @@
 use bitnet_kernels::gpu_utils::get_gpu_info;
+use bitnet_tests::support::env_guard::EnvGuard;
+use serial_test::serial;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use tempfile::tempdir;
@@ -10,16 +12,17 @@ fn make_exec(path: &std::path::Path) {
 }
 
 #[test]
+#[serial(bitnet_env)]
 fn test_gpu_info_mocked_scenarios() {
-    let original = std::env::var("PATH").unwrap_or_default();
-
     // Scenario: no GPU present
     {
         let dir = tempdir().unwrap();
-        unsafe {
-            std::env::set_var("PATH", dir.path());
-            std::env::remove_var("BITNET_GPU_FAKE");
-        }
+        let _path_guard = EnvGuard::new("PATH");
+        _path_guard.set(dir.path().to_str().unwrap());
+
+        let _fake_guard = EnvGuard::new("BITNET_GPU_FAKE");
+        _fake_guard.remove(); // Ensure no fake GPU override
+
         let info = get_gpu_info();
         assert!(!info.any_available());
     }
@@ -34,16 +37,18 @@ fn test_gpu_info_mocked_scenarios() {
         fs::write(&nvcc, "#!/bin/sh\necho 'Cuda compilation tools, release 12.1, V12.1.0'\n")
             .unwrap();
         make_exec(&nvcc);
-        unsafe {
-            std::env::set_var("PATH", format!("{}:{}", dir.path().display(), original));
-            std::env::remove_var("BITNET_GPU_FAKE");
-        }
+
+        let _path_guard = EnvGuard::new("PATH");
+        let original_path = std::env::var("PATH").unwrap_or_default();
+        _path_guard.set(&format!("{}:{}", dir.path().display(), original_path));
+
+        let _fake_guard = EnvGuard::new("BITNET_GPU_FAKE");
+        _fake_guard.remove(); // Ensure no fake GPU override
+
         let info = get_gpu_info();
         assert!(info.cuda);
         assert!(info.cuda_version.unwrap_or_default().starts_with("12.1"));
     }
 
-    unsafe {
-        std::env::set_var("PATH", original);
-    }
+    // Guards automatically restore original PATH on drop
 }

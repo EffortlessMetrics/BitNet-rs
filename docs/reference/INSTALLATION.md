@@ -235,7 +235,7 @@ For developers who want to contribute or use the latest features:
 
 ### Prerequisites
 
-- Rust 1.89.0 or later
+- Rust 1.90.0 or later (supports Rust 2024 edition)
 - Git
 - C compiler (gcc, clang, or MSVC)
 

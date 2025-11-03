@@ -1,0 +1,9 @@
+error: no bench target named `criterion` in default-run packages
+help: available bench targets:
+    gpu_offloading_bench
+    i2s_dequant
+    kernel_benchmarks
+    mixed_precision_bench
+    performance
+    quantization
+    simd_comparison

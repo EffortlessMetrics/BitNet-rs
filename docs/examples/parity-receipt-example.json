@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "timestamp": "2025-01-15T14:30:00Z",
+  "model": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf",
+  "backend": "bitnet",
+  "prompt": "What is 2+2?",
+  "positions": 4,
+  "thresholds": {
+    "mse": 0.0001,
+    "kl": 0.1,
+    "topk": 0.8
+  },
+  "rows": [
+    {
+      "pos": 0,
+      "mse": 0.000005,
+      "max_abs": 0.00015,
+      "kl": 0.0023,
+      "topk_agree": 1.0,
+      "top5_rust": [
+        128000,
+        1229,
+        374,
+        220,
+        17
+      ],
+      "top5_cpp": [
+        128000,
+        1229,
+        374,
+        220,
+        17
+      ]
+    },
+    {
+      "pos": 1,
+      "mse": 0.000012,
+      "max_abs": 0.00032,
+      "kl": 0.0034,
+      "topk_agree": 1.0,
+      "top5_rust": [
+        374,
+        220,
+        17,
+        128009,
+        1229
+      ],
+      "top5_cpp": [
+        374,
+        220,
+        17,
+        128009,
+        1229
+      ]
+    },
+    {
+      "pos": 2,
+      "mse": 0.000008,
+      "max_abs": 0.00021,
+      "kl": 0.0019,
+      "topk_agree": 0.8,
+      "top5_rust": [
+        17,
+        374,
+        220,
+        128009,
+        1229
+      ],
+      "top5_cpp": [
+        17,
+        374,
+        220,
+        128009,
+        891
+      ]
+    },
+    {
+      "pos": 3,
+      "mse": 0.000006,
+      "max_abs": 0.00018,
+      "kl": 0.0015,
+      "topk_agree": 1.0,
+      "top5_rust": [
+        128009,
+        17,
+        374,
+        220,
+        891
+      ],
+      "top5_cpp": [
+        128009,
+        17,
+        374,
+        220,
+        891
+      ]
+    }
+  ],
+  "summary": {
+    "all_passed": true,
+    "mean_mse": 0.0000078,
+    "mean_kl": 0.00228
+  }
+}

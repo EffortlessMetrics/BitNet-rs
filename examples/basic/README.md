@@ -24,6 +24,6 @@ cargo run --example streaming --no-default-features --features cpu
 
 ## Prerequisites
 
-- Rust 1.90.0 or later
+- **Rust 1.90.0+** (supports Rust 2024 edition)
 - For GPU examples: CUDA toolkit and compatible GPU
 - Model files in GGUF format (use `cargo run -p xtask -- download-model` to get started)

@@ -9,14 +9,18 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Inference engines for BitNet models"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common" }
-bitnet-models = { path = "../bitnet-models" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers" }
-bitnet-kernels = { path = "../bitnet-kernels" }
-bitnet-quantization = { path = "../bitnet-quantization" }
-bitnet-sys = { path = "../bitnet-sys", optional = true }
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.1.0" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
+bitnet-sys = { path = "../bitnet-sys", version = "0.1.0", optional = true }
 anyhow.workspace = true
 futures.workspace = true
 futures-util = "0.3.31"
@@ -32,25 +36,25 @@ async-trait = "0.1.89"
 num_cpus = "1.17.0"
 tokio = { workspace = true }
 thiserror = { workspace = true }
-log = "0.4.28"
-async-stream = "0.3.6"
-wasm-bindgen-futures = { version = "0.4.54", optional = true }
+log = "0.4"
+async-stream = "0.3"
+wasm-bindgen-futures = { version = "0.4.53", optional = true }
 gloo-timers = { version = "0.3.0", features = ["futures"], optional = true }
-rustc_version_runtime = "0.3.0"
-chrono = "0.4.42"
-once_cell = "1.21.3"
+rustc_version_runtime = "0.3"
+chrono = "0.4"
 
 [dev-dependencies]
 tokio-test = "0.4.4"
-proptest = "1.8.0"
-tempfile = "3.23.0"
-chrono = "0.4.42"
+proptest = "1.7.0"
+tempfile = "3.22.0"
+chrono = "0.4"
 serial_test = "3.2.0"
 
 [features]
 default = []
 cpu = ["bitnet-kernels/cpu-optimized"]
 gpu = ["bitnet-kernels/gpu"]
+cuda = ["gpu"]  # Backward compatibility alias for gpu
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
 # Runtime selection
@@ -63,9 +67,7 @@ full-engine = []
 integration-tests = []
 inference = []
 crossval = []
-
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("cuda"))'] }
+trace = ["bitnet-models/trace"]  # Enable tensor activation tracing
 
 [[test]]
 name = "comprehensive_tests"

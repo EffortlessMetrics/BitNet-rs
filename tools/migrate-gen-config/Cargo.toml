@@ -1,0 +1,12 @@
+[package]
+name = "migrate-gen-config"
+version = "0.1.0"
+edition = "2024"
+publish = false  # One-time migration tool, not for distribution
+
+[dependencies]
+walkdir = "2.5"
+syn = { version = "2.0", features = ["full", "visit-mut"] }
+quote = "1.0"
+prettyplease = "0.2"
+proc-macro2 = "1.0"

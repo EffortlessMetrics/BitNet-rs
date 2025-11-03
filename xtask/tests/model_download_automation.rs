@@ -13,6 +13,32 @@ use std::process::Command;
 use std::process::Output;
 use std::time::{Duration, Instant};
 
+/// Simple RAII guard for environment variable cleanup
+struct EnvGuard {
+    key: String,
+    original: Option<String>,
+}
+
+impl EnvGuard {
+    fn new(key: impl Into<String>) -> Self {
+        let key = key.into();
+        let original = std::env::var(&key).ok();
+        Self { key, original }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        // SAFETY: Restoring environment state in single-threaded test context with serial execution
+        unsafe {
+            match &self.original {
+                Some(value) => std::env::set_var(&self.key, value),
+                None => std::env::remove_var(&self.key),
+            }
+        }
+    }
+}
+
 /// Test configuration for xtask tests
 #[derive(Debug, Clone)]
 struct XtaskTestConfig {
@@ -180,13 +206,17 @@ fn test_model_download_automation_integration() {
 /// Test CI caching automation
 /// Validates intelligent model caching for CI environments
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_ci_caching_automation() {
     // AC:9
     let config = XtaskTestConfig::from_env();
     config.skip_if_no_xtask();
 
     // TODO: This test will initially fail - drives CI caching implementation
-    // Simulate CI environment
+    // Simulate CI environment with proper cleanup
+    let _ci_guard = EnvGuard::new("CI");
+    let _gh_guard = EnvGuard::new("GITHUB_ACTIONS");
+    // SAFETY: Setting environment variables in single-threaded test context with serial execution and EnvGuard cleanup
     unsafe {
         env::set_var("CI", "true");
         env::set_var("GITHUB_ACTIONS", "true");
@@ -267,11 +297,7 @@ fn test_ci_caching_automation() {
         assert!(save_result["saved_size_mb"].is_number(), "Should report saved size");
     }
 
-    // Cleanup CI environment variables
-    unsafe {
-        env::remove_var("CI");
-        env::remove_var("GITHUB_ACTIONS");
-    }
+    // EnvGuard automatically restores environment on drop
 
     println!("✅ CI caching automation test scaffolding created");
 }

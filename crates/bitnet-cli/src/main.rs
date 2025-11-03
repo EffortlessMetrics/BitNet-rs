@@ -3,6 +3,10 @@
 //! A comprehensive command-line interface for BitNet 1-bit LLM inference.
 //! Supports model loading, inference, conversion, benchmarking, and serving.
 
+// COMPILE-TIME FIREWALL: Prevent mock feature in production CLI
+#[cfg(feature = "mock")]
+compile_error!("The 'mock' feature must never be enabled for the CLI – tests only.");
+
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
 use candle_core::{DType, IndexOp};
@@ -33,7 +37,7 @@ fn compiled_features() -> &'static [&'static str] {
     &[
         #[cfg(feature = "cpu")]
         "cpu",
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         "gpu",
         // Removed cuda and ffi - not declared in bitnet-cli/Cargo.toml
         #[cfg(feature = "iq2s-ffi")]
@@ -111,6 +115,12 @@ PERFORMANCE:
 
   Run with:
     RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn bitnet run ...
+
+  QK256 Models (I2_S quantization):
+    - Without AVX2: ~0.1 tok/s (scalar kernels, ~10s per token)
+    - With AVX2: ~1.2× faster (optimized kernels)
+    - For quick validation: use --max-tokens 4-16
+    - SIMD optimizations (≥3× faster) coming in v0.2.0
 "#)]
 #[command(version = bitnet_version())]
 #[command(author = "BitNet Contributors")]
@@ -286,6 +296,10 @@ enum Commands {
         /// Assert greedy argmax invariant when dumping logits
         #[arg(long, default_value_t = false)]
         assert_greedy: bool,
+
+        /// Suppress performance warnings
+        #[arg(long, default_value_t = false)]
+        no_warnings: bool,
     },
 
     /// Tokenize text and output token IDs as JSON
@@ -427,6 +441,12 @@ enum ConfigAction {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // RUNTIME GUARD: Forbid test shims in production
+    if std::env::var_os("BITNET_GPU_FAKE").is_some() && std::env::var_os("CI").is_none() {
+        eprintln!("Error: BITNET_GPU_FAKE is test-only and not allowed outside CI.");
+        std::process::exit(8);
+    }
+
     // Parse CLI arguments
     let cli = Cli::parse();
 
@@ -484,6 +504,7 @@ async fn main() -> Result<()> {
             dump_logit_steps,
             logits_topk,
             assert_greedy,
+            no_warnings,
         }) => {
             run_simple_generation(
                 model,
@@ -512,6 +533,7 @@ async fn main() -> Result<()> {
                 dump_logit_steps,
                 logits_topk,
                 assert_greedy,
+                no_warnings,
             )
             .await
         }
@@ -723,6 +745,96 @@ async fn handle_config_command(action: ConfigAction, config: &CliConfig) -> Resu
     Ok(())
 }
 
+/// Check if AVX2 is available at runtime
+#[cfg(target_arch = "x86_64")]
+fn has_avx2() -> bool {
+    is_x86_feature_detected!("avx2")
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+fn has_avx2() -> bool {
+    false
+}
+
+/// Check for QK256 quantization and emit performance warnings if using scalar kernels
+fn check_and_warn_qk256_performance(model_path: &std::path::Path, max_tokens: usize) -> Result<()> {
+    use bitnet_models::GgufReader;
+
+    // Read GGUF file to check for I2_S quantization
+    let gguf_data = std::fs::read(model_path)
+        .with_context(|| format!("Failed to read model file: {}", model_path.display()))?;
+
+    let reader =
+        GgufReader::new(&gguf_data).context("Failed to parse GGUF file for quantization check")?;
+
+    // Check if the model uses I2_S quantization (which could be QK256)
+    let has_i2s = reader.tensor_names().iter().any(|name| {
+        if let Some(info) = reader.get_tensor_info_by_name(name) {
+            matches!(info.tensor_type, bitnet_models::formats::gguf::GgufTensorType::I2_S)
+        } else {
+            false
+        }
+    });
+
+    if !has_i2s {
+        // No I2_S quantization, no warning needed
+        return Ok(());
+    }
+
+    // Count I2_S tensors to check if it's a significant portion of the model
+    let i2s_count = reader
+        .tensor_names()
+        .iter()
+        .filter(|name| {
+            if let Some(info) = reader.get_tensor_info_by_name(name) {
+                matches!(info.tensor_type, bitnet_models::formats::gguf::GgufTensorType::I2_S)
+            } else {
+                false
+            }
+        })
+        .count();
+
+    // Only warn if we have a significant number of I2_S tensors (likely QK256)
+    if i2s_count < 5 {
+        return Ok(());
+    }
+
+    // Check if AVX2 is available
+    let avx2_available = has_avx2();
+
+    // If AVX2 is available, QK256 will use optimized kernels, no warning needed
+    // (This is conservative - the actual dispatch depends on runtime detection in the kernel)
+    if avx2_available {
+        // Still show a minimal note about QK256 usage
+        eprintln!("{} Using QK256 quantization with AVX2 acceleration", style("ℹ").cyan().bold());
+        return Ok(());
+    }
+
+    // Show performance warning for scalar kernels
+    eprintln!();
+    eprintln!("{}", style("⚠  WARNING: Using QK256 scalar kernels (~0.1 tok/s)").yellow().bold());
+    eprintln!();
+    eprintln!("For quick validation, use --max-tokens 4-16");
+    eprintln!("Performance: ~10 seconds per token (2B models)");
+    eprintln!();
+
+    // Estimate time for requested token count
+    let estimated_seconds = max_tokens * 10; // ~10 seconds per token
+    if estimated_seconds > 60 {
+        let minutes = estimated_seconds / 60;
+        eprintln!("Estimated time for {} tokens: ~{} minutes", max_tokens, minutes);
+    } else {
+        eprintln!("Estimated time for {} tokens: ~{} seconds", max_tokens, estimated_seconds);
+    }
+    eprintln!();
+    eprintln!("SIMD optimizations coming in v0.2.0 (≥3× faster)");
+    eprintln!();
+    eprintln!("Use --no-warnings to suppress this message");
+    eprintln!();
+
+    Ok(())
+}
+
 /// Run text generation with sampling
 #[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
@@ -752,6 +864,7 @@ async fn run_simple_generation(
     dump_logit_steps: Option<usize>,
     logits_topk: usize,
     assert_greedy: bool,
+    no_warnings: bool,
 ) -> Result<()> {
     use crate::sampling::Sampler;
     use bitnet_common::Device;
@@ -805,6 +918,11 @@ async fn run_simple_generation(
     };
 
     println!("Loading model from: {}", model_path.display());
+
+    // Check for QK256 scalar kernel usage and emit performance warnings
+    if !no_warnings {
+        check_and_warn_qk256_performance(&model_path, max_new_tokens)?;
+    }
 
     // Try real loader first
     use bitnet_models::loader::{LoadConfig, ModelLoader};
@@ -1022,13 +1140,39 @@ async fn run_simple_generation(
         None
     };
 
-    // Generation loop
-    for step_idx in 0..max_new_tokens {
-        // Embed tokens
-        let x = model.embed(&tokens)?;
+    // BITNET_TRACE_TIMING=1: Enable timing instrumentation
+    let timing_enabled = std::env::var("BITNET_TRACE_TIMING").as_deref() == Ok("1");
 
-        // Forward pass
+    // Generation loop: incremental decoding
+    //
+    // Each step:
+    //   1. Embed ONLY the new token (last in sequence)
+    //   2. Forward pass uses KV cache for historical context
+    //   3. No need to re-embed previous tokens (O(N) not O(N²))
+    //
+    // Historical context is maintained via:
+    //   - KV cache: stores key/value tensors from previous steps
+    //   - `tokens` vector: tracks full sequence for stop detection/logging
+    //
+    // Performance impact: This changes embedding from O(N²) to O(N), providing
+    // ~50× speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    for step_idx in 0..max_new_tokens {
+        // Embed only the LAST token (incremental)
+        // KV cache already maintains historical context
+        let last_token = tokens.last().copied().expect("tokens must be non-empty");
+
+        let t0 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
+        let x = model.embed(&[last_token])?;
+        if let Some(t) = t0 {
+            eprintln!("timing: embed_us={}", t.elapsed().as_micros());
+        }
+
+        // Forward pass (with KV cache handling history)
+        let t1 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
         let h = model.forward(&x, any_cache.as_mut())?;
+        if let Some(t) = t1 {
+            eprintln!("timing: forward_us={}", t.elapsed().as_micros());
+        }
 
         // Extract last token hidden state first to avoid 3D×2D matmul issues
         let last_hidden = extract_last_token_hidden(&h)?;
@@ -1041,7 +1185,11 @@ async fn run_simple_generation(
         }
 
         // Get logits from last token hidden state
+        let t2 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
         let logits = model.logits(&last_hidden)?;
+        if let Some(t) = t2 {
+            eprintln!("timing: logits_us={}", t.elapsed().as_micros());
+        }
 
         // Extract logits vector with robust shape handling
         let logits_vec = extract_logits_2d(&logits)?;
@@ -1102,7 +1250,31 @@ async fn run_simple_generation(
         }
 
         // Sample next token
+        let t3 = if timing_enabled { Some(std::time::Instant::now()) } else { None };
         let next_token = sampler.sample(&logits_vec, &generated_tokens);
+        if let Some(t) = t3 {
+            eprintln!("timing: sample_us={}", t.elapsed().as_micros());
+        }
+
+        // BITNET_PARITY=1: Log chosen token + top-10 logits for greedy decode verification
+        if std::env::var("BITNET_PARITY").as_deref() == Ok("1") {
+            // Extract top-10 logits with token IDs
+            let mut logits_with_idx: Vec<(usize, f32)> =
+                logits_vec.iter().copied().enumerate().collect();
+            logits_with_idx
+                .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+            let top_k_logits: Vec<(u32, f32)> =
+                logits_with_idx.iter().take(10).map(|(idx, logit)| (*idx as u32, *logit)).collect();
+
+            // JSON format for easy parsing
+            eprintln!(
+                "{{\"step\":{},\"token\":{},\"top_k\":{}}}",
+                step_idx,
+                next_token,
+                serde_json::to_string(&top_k_logits).unwrap_or_default()
+            );
+        }
 
         // Assert greedy invariant if requested
         if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
@@ -1408,21 +1580,21 @@ async fn show_system_info() -> Result<()> {
 
     // Feature information
     println!("{}", style("Features:").bold());
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         println!("  GPU support: {}", style("✓ Enabled").green());
         // Check CUDA availability
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             match candle_core::Device::cuda_if_available(0).is_ok() {
                 true => println!("  CUDA: {}", style("✓ Available").green()),
                 false => println!("  CUDA: {}", style("✗ Not available").red()),
             }
         }
-        #[cfg(not(feature = "gpu"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         println!("  CUDA: {}", style("✗ Not compiled").yellow())
     }
-    #[cfg(not(feature = "gpu"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     {
         println!("  GPU support: {}", style("✗ Disabled").red());
     }

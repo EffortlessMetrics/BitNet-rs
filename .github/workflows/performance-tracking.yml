@@ -20,12 +20,6 @@ on:
           - all
           - linux
           - macos
-  push:
-    branches: [ main ]
-    paths:
-      - 'crates/bitnet-kernels/**'
-      - 'crates/bitnet-inference/**'
-      - 'crates/bitnet-quantization/**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -35,6 +29,7 @@ jobs:
   performance-benchmark:
     name: Performance Benchmark (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

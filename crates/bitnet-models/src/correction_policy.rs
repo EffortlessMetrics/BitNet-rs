@@ -100,7 +100,7 @@ impl CorrectionPolicy {
 
     /// Parse policy from YAML string
     pub fn from_yaml(yaml: &str) -> Result<Self> {
-        serde_yaml_ng::from_str(yaml).map_err(|e| {
+        serde_yaml::from_str(yaml).map_err(|e| {
             BitNetError::Validation(format!("Failed to parse correction policy YAML: {}", e))
         })
     }

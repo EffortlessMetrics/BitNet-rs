@@ -107,8 +107,8 @@ impl Avx2Kernel {
         unsafe { self.dequantize_qk256_avx2(quantized, scales, block_size) }
     }
 
-    /// Scalar fallback for QK256 dequantization
-    fn dequantize_qk256_scalar(
+    /// Scalar fallback for QK256 dequantization (exposed for testing)
+    pub fn dequantize_qk256_scalar(
         &self,
         quantized: &[i8],
         scales: &[f32],

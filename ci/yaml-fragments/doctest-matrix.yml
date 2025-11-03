@@ -1,0 +1,41 @@
+  # Doctest Feature Matrix - Validate documentation examples
+  # Gates CI - must pass for merge
+  # See: SPEC-2025-006
+  doctest-matrix:
+    name: Doctests (Feature Matrix)
+    runs-on: ubuntu-latest
+    needs: test  # Run after primary tests pass
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - cpu
+          - cpu,avx2
+          - all-features
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+
+      - name: Run doctests (${{ matrix.features }})
+        run: |
+          echo "::group::Doctests with ${{ matrix.features }}"
+
+          if [[ "${{ matrix.features }}" == "all-features" ]]; then
+            cargo test --doc --workspace --all-features
+          else
+            cargo test --doc --workspace --no-default-features --features "${{ matrix.features }}"
+          fi
+
+          echo "::endgroup::"
+        # Continue on error for all-features (GPU may not be available)
+        continue-on-error: ${{ matrix.features == 'all-features' }}

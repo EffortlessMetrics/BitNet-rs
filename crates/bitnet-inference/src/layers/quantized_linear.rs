@@ -9,7 +9,7 @@ use bitnet_common::{BitNetTensor, Device, QuantizationType, Tensor};
 use bitnet_kernels::{DeviceAwareQuantizer, KernelManager};
 pub use bitnet_quantization::QuantizedTensor as QuantizedTensorType;
 use bitnet_quantization::{Quantize, QuantizedTensor};
-#[cfg(feature = "gpu")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 use candle_core::DType;
 use std::sync::Arc;
 
@@ -370,7 +370,7 @@ impl QuantizedLinear {
             }
 
             // GPU kernels require explicit kernel availability
-            #[cfg(feature = "gpu")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             (Device::Cuda(_), _) => self.kernel_manager.select_best().is_ok(),
 
             // Default: assume no native kernel
@@ -1009,7 +1009,7 @@ impl QuantizedLinear {
     }
 
     /// Pre-allocate GPU workspace to avoid runtime allocation
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn allocate_gpu_workspace(&mut self) -> Result<()> {
         let workspace_size = self.calculate_gpu_workspace_size()?;
         self.workspace = Some(BitNetTensor::zeros(&[workspace_size], DType::F32, &self.device)?);
@@ -1018,7 +1018,7 @@ impl QuantizedLinear {
         Ok(())
     }
 
-    #[cfg(not(feature = "gpu"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     fn allocate_gpu_workspace(&mut self) -> Result<()> {
         // No-op for non-GPU builds
         Ok(())
@@ -1391,12 +1391,12 @@ pub fn validate_tensor_stability(tensor: &BitNetTensor) -> Result<()> {
 
 /// Check if GPU acceleration is available
 pub fn is_gpu_available() -> bool {
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     {
         // Check for CUDA availability
         candle_core::Device::new_cuda(0).is_ok()
     }
-    #[cfg(not(feature = "gpu"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     {
         false
     }

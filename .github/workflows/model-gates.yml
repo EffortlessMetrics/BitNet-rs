@@ -7,6 +7,7 @@ name: Model Gates (CPU Receipt Verification)
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, labeled, ready_for_review]
     branches: [main]
     paths:
       - "crates/bitnet-inference/**"
@@ -16,6 +17,9 @@ on:
       - "xtask/**"
       - ".github/workflows/model-gates.yml"
   workflow_dispatch: {}
+  schedule:
+    # Run nightly at 4 AM UTC for strict validation
+    - cron: '0 4 * * *'
 
 env:
   CARGO_TERM_COLOR: always
@@ -34,8 +38,21 @@ env:
 jobs:
   cpu-receipt-gate:
     name: CPU Receipt Gate
+    # Run on PRs only when 'receipts' label is present; always run for manual/scheduled and main.
+    if: >
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'receipts')) ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      startsWith(github.ref, 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: read
+    concurrency:
+      group: receipts-gate-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout repository
@@ -56,12 +73,12 @@ jobs:
       - name: Build xtask
         run: |
           echo "🔨 Building xtask..."
-          cargo build -p xtask --release
+          cargo build --locked -p xtask --release
 
       - name: Build bitnet-cli (CPU)
         run: |
           echo "🔨 Building bitnet-cli with CPU features..."
-          cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cli
+          cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,full-cli
 
       - name: Run benchmark and write receipt
         run: |
@@ -70,7 +87,7 @@ jobs:
           echo "This runs a tiny deterministic inference benchmark (128 tokens)"
           echo "and writes a receipt with measured tokens/sec and real kernel IDs."
           echo ""
-          cargo run -p xtask -- benchmark --model tests/models/mini.gguf --tokens 128
+          cargo run --locked -p xtask -- benchmark --model tests/models/mini.gguf --tokens 128
 
       - name: Display receipt
         run: |
@@ -80,7 +97,7 @@ jobs:
       - name: Verify receipt (strict)
         run: |
           echo "🔍 Verifying receipt against quality gates..."
-          cargo run -p xtask -- verify-receipt --path ci/inference.json
+          cargo run --locked -p xtask -- verify-receipt --path ci/inference.json
 
       - name: Upload receipt artifact
         if: always()
@@ -148,7 +165,11 @@ jobs:
     name: Receipt Gate Summary
     needs: cpu-receipt-gate
     if: always()
+    # Same gating as the main job, so we don't surface red on PRs without the label.
+    # Note: The outer if: always() ensures this runs even if cpu-receipt-gate is skipped.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Check gate result
@@ -176,7 +197,9 @@ jobs:
             echo "Review the job logs for detailed failure information." >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Verify gate passed
+      # Fail loudly on main/nightly, not on PRs.
+      - name: Verify gate passed (main/nightly only)
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           if [[ "${{ needs.cpu-receipt-gate.result }}" != "success" ]]; then
             echo "❌ CPU Receipt Gate failed"
@@ -184,3 +207,13 @@ jobs:
           fi
 
           echo "✅ CPU Receipt Gate passed - honest compute verified"
+
+      - name: Report gate status (PRs)
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          if [[ "${{ needs.cpu-receipt-gate.result }}" == "success" ]]; then
+            echo "✅ CPU Receipt Gate passed - honest compute verified"
+          else
+            echo "⚠️  CPU Receipt Gate failed (informational on PRs)"
+            echo "This is not blocking the PR. See logs for details."
+          fi

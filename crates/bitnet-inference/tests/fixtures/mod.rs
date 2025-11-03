@@ -32,47 +32,24 @@
 //!     DeviceType::Gpu
 //! ));
 //! ```
-
 pub mod quantization_test_data;
 pub mod device_capabilities;
 pub mod mock_kernels;
 pub mod mock_quantized_model;
-
-// Re-export commonly used types
 pub use quantization_test_data::{
-    QuantizationTestMatrix,
-    QuantizationType as QuantDataType,
-    DeviceType as QuantDeviceType,
-    I2S_ACCURACY_METRICS,
-    TL1_ACCURACY_METRICS,
+    QuantizationTestMatrix, QuantizationType as QuantDataType,
+    DeviceType as QuantDeviceType, I2S_ACCURACY_METRICS, TL1_ACCURACY_METRICS,
     TL2_ACCURACY_METRICS,
 };
-
 pub use device_capabilities::{
-    MockGpuDevice,
-    MockCpuDevice,
-    FallbackScenario,
-    FallbackTrigger,
-    StrictModeBehavior,
+    MockGpuDevice, MockCpuDevice, FallbackScenario, FallbackTrigger, StrictModeBehavior,
 };
-
 pub use mock_kernels::{
-    MockKernel,
-    MockKernelRegistry,
-    QuantizationType as KernelQuantType,
-    DeviceType as KernelDeviceType,
-    is_gpu_kernel,
-    is_quantized_kernel,
-    is_fallback_kernel,
-    generate_kernel_id,
+    MockKernel, MockKernelRegistry, QuantizationType as KernelQuantType,
+    DeviceType as KernelDeviceType, is_gpu_kernel, is_quantized_kernel,
+    is_fallback_kernel, generate_kernel_id,
 };
-
 pub use mock_quantized_model::{
-    MockQuantizedLinear,
-    MockBitNetAttention,
-    MockBitNetModel,
-    MockTokenizer,
-    MockReceipt,
-    create_test_model_with_fallback,
-    create_test_model_quantized,
+    MockQuantizedLinear, MockBitNetAttention, MockBitNetModel, MockTokenizer,
+    MockReceipt, create_test_model_with_fallback, create_test_model_quantized,
 };

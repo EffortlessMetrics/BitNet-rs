@@ -4,15 +4,13 @@
 //! availability, SIMD feature detection, and fallback scenarios.
 //!
 //! All device mocks support feature-gated compilation for CPU/GPU testing.
-
 #![allow(dead_code)]
-
 /// Mock GPU device with compute capability
 #[derive(Debug, Clone)]
 pub struct MockGpuDevice {
     pub device_id: u32,
     pub name: &'static str,
-    pub compute_capability: (u32, u32), // (major, minor)
+    pub compute_capability: (u32, u32),
     pub supports_fp16: bool,
     pub supports_bf16: bool,
     pub supports_tensor_cores: bool,
@@ -20,7 +18,6 @@ pub struct MockGpuDevice {
     pub max_shared_memory_per_block: usize,
     pub available: bool,
 }
-
 /// Mock CPU device with SIMD features
 #[derive(Debug, Clone)]
 pub struct MockCpuDevice {
@@ -34,7 +31,6 @@ pub struct MockCpuDevice {
     pub num_cores: u32,
     pub available: bool,
 }
-
 /// CPU architecture enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CpuArchitecture {
@@ -42,7 +38,6 @@ pub enum CpuArchitecture {
     Aarch64,
     Unknown,
 }
-
 /// Fallback trigger scenario
 #[derive(Debug, Clone)]
 pub struct FallbackScenario {
@@ -51,7 +46,6 @@ pub struct FallbackScenario {
     pub expected_strict_mode_behavior: StrictModeBehavior,
     pub description: &'static str,
 }
-
 /// Fallback trigger reason
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FallbackTrigger {
@@ -62,7 +56,6 @@ pub enum FallbackTrigger {
     ComputeCapabilityTooLow,
     MissingSimdFeatures,
 }
-
 /// Expected strict mode behavior
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StrictModeBehavior {
@@ -70,11 +63,6 @@ pub enum StrictModeBehavior {
     AllowWithWarning,
     AllowSilently,
 }
-
-// ============================================================================
-// NVIDIA GPU Device Mocks (Compute Capabilities)
-// ============================================================================
-
 /// NVIDIA GTX 1080 Ti (Pascal - Compute 6.1)
 #[cfg(feature = "gpu")]
 pub fn nvidia_gtx_1080ti() -> MockGpuDevice {
@@ -83,14 +71,13 @@ pub fn nvidia_gtx_1080ti() -> MockGpuDevice {
         name: "NVIDIA GeForce GTX 1080 Ti",
         compute_capability: (6, 1),
         supports_fp16: true,
-        supports_bf16: false, // BF16 requires Ampere (8.0+)
+        supports_bf16: false,
         supports_tensor_cores: false,
         max_threads_per_block: 1024,
-        max_shared_memory_per_block: 49152, // 48 KB
+        max_shared_memory_per_block: 49152,
         available: true,
     }
 }
-
 /// NVIDIA RTX 2080 Ti (Turing - Compute 7.5)
 #[cfg(feature = "gpu")]
 pub fn nvidia_rtx_2080ti() -> MockGpuDevice {
@@ -102,11 +89,10 @@ pub fn nvidia_rtx_2080ti() -> MockGpuDevice {
         supports_bf16: false,
         supports_tensor_cores: true,
         max_threads_per_block: 1024,
-        max_shared_memory_per_block: 65536, // 64 KB
+        max_shared_memory_per_block: 65536,
         available: true,
     }
 }
-
 /// NVIDIA A100 (Ampere - Compute 8.0)
 #[cfg(feature = "gpu")]
 pub fn nvidia_a100() -> MockGpuDevice {
@@ -118,11 +104,10 @@ pub fn nvidia_a100() -> MockGpuDevice {
         supports_bf16: true,
         supports_tensor_cores: true,
         max_threads_per_block: 1024,
-        max_shared_memory_per_block: 163840, // 160 KB
+        max_shared_memory_per_block: 163840,
         available: true,
     }
 }
-
 /// NVIDIA RTX 3090 (Ampere - Compute 8.6)
 #[cfg(feature = "gpu")]
 pub fn nvidia_rtx_3090() -> MockGpuDevice {
@@ -134,11 +119,10 @@ pub fn nvidia_rtx_3090() -> MockGpuDevice {
         supports_bf16: true,
         supports_tensor_cores: true,
         max_threads_per_block: 1024,
-        max_shared_memory_per_block: 102400, // 100 KB
+        max_shared_memory_per_block: 102400,
         available: true,
     }
 }
-
 /// NVIDIA RTX 4090 (Ada Lovelace - Compute 8.9)
 #[cfg(feature = "gpu")]
 pub fn nvidia_rtx_4090() -> MockGpuDevice {
@@ -150,11 +134,10 @@ pub fn nvidia_rtx_4090() -> MockGpuDevice {
         supports_bf16: true,
         supports_tensor_cores: true,
         max_threads_per_block: 1024,
-        max_shared_memory_per_block: 102400, // 100 KB
+        max_shared_memory_per_block: 102400,
         available: true,
     }
 }
-
 /// NVIDIA H100 (Hopper - Compute 9.0)
 #[cfg(feature = "gpu")]
 pub fn nvidia_h100() -> MockGpuDevice {
@@ -166,11 +149,10 @@ pub fn nvidia_h100() -> MockGpuDevice {
         supports_bf16: true,
         supports_tensor_cores: true,
         max_threads_per_block: 1024,
-        max_shared_memory_per_block: 228352, // 223 KB
+        max_shared_memory_per_block: 228352,
         available: true,
     }
 }
-
 /// GPU device with unavailable status (for fallback testing)
 #[cfg(feature = "gpu")]
 pub fn nvidia_gpu_unavailable() -> MockGpuDevice {
@@ -183,14 +165,9 @@ pub fn nvidia_gpu_unavailable() -> MockGpuDevice {
         supports_tensor_cores: true,
         max_threads_per_block: 1024,
         max_shared_memory_per_block: 102400,
-        available: false, // Force unavailable for strict mode testing
+        available: false,
     }
 }
-
-// ============================================================================
-// CPU Device Mocks (SIMD Features)
-// ============================================================================
-
 /// Intel x86_64 CPU with AVX2 support
 #[cfg(feature = "cpu")]
 pub fn intel_cpu_avx2() -> MockCpuDevice {
@@ -206,7 +183,6 @@ pub fn intel_cpu_avx2() -> MockCpuDevice {
         available: true,
     }
 }
-
 /// Intel x86_64 CPU with AVX-512 support
 #[cfg(feature = "cpu")]
 pub fn intel_cpu_avx512() -> MockCpuDevice {
@@ -222,7 +198,6 @@ pub fn intel_cpu_avx512() -> MockCpuDevice {
         available: true,
     }
 }
-
 /// AMD x86_64 CPU with AVX2 support (no AVX-512)
 #[cfg(feature = "cpu")]
 pub fn amd_cpu_avx2() -> MockCpuDevice {
@@ -231,14 +206,13 @@ pub fn amd_cpu_avx2() -> MockCpuDevice {
         name: "AMD Ryzen 9 5950X",
         architecture: CpuArchitecture::X86_64,
         supports_avx2: true,
-        supports_avx512: false, // AMD Zen 3 lacks AVX-512
+        supports_avx512: false,
         supports_neon: false,
         supports_sve: false,
         num_cores: 16,
         available: true,
     }
 }
-
 /// ARM Aarch64 CPU with NEON support
 #[cfg(feature = "cpu")]
 pub fn arm_cpu_neon() -> MockCpuDevice {
@@ -254,7 +228,6 @@ pub fn arm_cpu_neon() -> MockCpuDevice {
         available: true,
     }
 }
-
 /// ARM Aarch64 CPU with NEON and SVE support
 #[cfg(feature = "cpu")]
 pub fn arm_cpu_neon_sve() -> MockCpuDevice {
@@ -265,12 +238,11 @@ pub fn arm_cpu_neon_sve() -> MockCpuDevice {
         supports_avx2: false,
         supports_avx512: false,
         supports_neon: true,
-        supports_sve: true, // Scalable Vector Extension
+        supports_sve: true,
         num_cores: 64,
         available: true,
     }
 }
-
 /// CPU with no SIMD features (for fallback testing)
 #[cfg(feature = "cpu")]
 pub fn cpu_no_simd() -> MockCpuDevice {
@@ -286,7 +258,6 @@ pub fn cpu_no_simd() -> MockCpuDevice {
         available: true,
     }
 }
-
 /// CPU device unavailable (for fallback testing)
 #[cfg(feature = "cpu")]
 pub fn cpu_unavailable() -> MockCpuDevice {
@@ -299,14 +270,9 @@ pub fn cpu_unavailable() -> MockCpuDevice {
         supports_neon: false,
         supports_sve: false,
         num_cores: 8,
-        available: false, // Force unavailable for strict mode testing
+        available: false,
     }
 }
-
-// ============================================================================
-// Fallback Trigger Scenarios
-// ============================================================================
-
 /// I2S kernel unavailable on GPU
 #[cfg(feature = "gpu")]
 pub fn fallback_i2s_kernel_unavailable() -> FallbackScenario {
@@ -317,7 +283,6 @@ pub fn fallback_i2s_kernel_unavailable() -> FallbackScenario {
         description: "I2S GPU kernel unavailable - strict mode should reject with error",
     }
 }
-
 /// TL1 NEON kernel unavailable on ARM
 #[cfg(feature = "cpu")]
 pub fn fallback_tl1_neon_unavailable() -> FallbackScenario {
@@ -328,7 +293,6 @@ pub fn fallback_tl1_neon_unavailable() -> FallbackScenario {
         description: "TL1 NEON kernel unavailable - strict mode should reject with error",
     }
 }
-
 /// TL2 AVX kernel unavailable on x86
 #[cfg(feature = "cpu")]
 pub fn fallback_tl2_avx_unavailable() -> FallbackScenario {
@@ -339,7 +303,6 @@ pub fn fallback_tl2_avx_unavailable() -> FallbackScenario {
         description: "TL2 AVX kernel unavailable - strict mode should reject with error",
     }
 }
-
 /// GPU compute capability too low for FP16
 #[cfg(feature = "gpu")]
 pub fn fallback_compute_capability_too_low() -> FallbackScenario {
@@ -350,7 +313,6 @@ pub fn fallback_compute_capability_too_low() -> FallbackScenario {
         description: "GPU compute capability < 7.0 - FP16 not fully supported",
     }
 }
-
 /// GPU memory insufficient for quantization buffer
 #[cfg(feature = "gpu")]
 pub fn fallback_insufficient_gpu_memory() -> FallbackScenario {
@@ -361,7 +323,6 @@ pub fn fallback_insufficient_gpu_memory() -> FallbackScenario {
         description: "GPU memory insufficient for quantization buffer allocation",
     }
 }
-
 /// Tensor dimensions unsupported by quantized kernel
 pub fn fallback_unsupported_dimensions() -> FallbackScenario {
     FallbackScenario {
@@ -371,7 +332,6 @@ pub fn fallback_unsupported_dimensions() -> FallbackScenario {
         description: "Tensor dimensions not aligned to kernel requirements (e.g., not multiple of 32)",
     }
 }
-
 /// Device mismatch (model on GPU, kernel on CPU)
 pub fn fallback_device_mismatch() -> FallbackScenario {
     FallbackScenario {
@@ -381,7 +341,6 @@ pub fn fallback_device_mismatch() -> FallbackScenario {
         description: "Model loaded on GPU but quantized kernel only available on CPU",
     }
 }
-
 /// Missing SIMD features for CPU kernel
 #[cfg(feature = "cpu")]
 pub fn fallback_missing_simd_features() -> FallbackScenario {
@@ -392,88 +351,71 @@ pub fn fallback_missing_simd_features() -> FallbackScenario {
         description: "Required SIMD features (AVX2/AVX-512/NEON) not available on CPU",
     }
 }
-
-// ============================================================================
-// Device Capability Helpers
-// ============================================================================
-
 /// Check if GPU supports FP16 Tensor Cores
 #[cfg(feature = "gpu")]
 pub fn supports_fp16_tensor_cores(device: &MockGpuDevice) -> bool {
-    device.supports_fp16 && device.supports_tensor_cores && device.compute_capability >= (7, 0)
+    device.supports_fp16 && device.supports_tensor_cores
+        && device.compute_capability >= (7, 0)
 }
-
 /// Check if GPU supports BF16 Tensor Cores
 #[cfg(feature = "gpu")]
 pub fn supports_bf16_tensor_cores(device: &MockGpuDevice) -> bool {
-    device.supports_bf16 && device.supports_tensor_cores && device.compute_capability >= (8, 0)
+    device.supports_bf16 && device.supports_tensor_cores
+        && device.compute_capability >= (8, 0)
 }
-
 /// Check if CPU supports TL2 AVX-512 kernels
 #[cfg(feature = "cpu")]
 pub fn supports_tl2_avx512(device: &MockCpuDevice) -> bool {
     device.supports_avx512 && device.architecture == CpuArchitecture::X86_64
 }
-
 /// Check if CPU supports TL1 NEON kernels
 #[cfg(feature = "cpu")]
 pub fn supports_tl1_neon(device: &MockCpuDevice) -> bool {
     device.supports_neon && device.architecture == CpuArchitecture::Aarch64
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     #[cfg(feature = "gpu")]
     fn test_gpu_compute_capabilities() {
         let pascal = nvidia_gtx_1080ti();
         assert_eq!(pascal.compute_capability, (6, 1));
-        assert!(!pascal.supports_tensor_cores);
-
+        assert!(! pascal.supports_tensor_cores);
         let turing = nvidia_rtx_2080ti();
         assert_eq!(turing.compute_capability, (7, 5));
         assert!(turing.supports_tensor_cores);
-        assert!(!turing.supports_bf16);
-
+        assert!(! turing.supports_bf16);
         let ampere = nvidia_a100();
         assert_eq!(ampere.compute_capability, (8, 0));
         assert!(ampere.supports_bf16);
         assert!(ampere.supports_tensor_cores);
     }
-
     #[test]
     #[cfg(feature = "cpu")]
     fn test_cpu_simd_features() {
         let avx2 = intel_cpu_avx2();
         assert!(avx2.supports_avx2);
-        assert!(!avx2.supports_avx512);
-
+        assert!(! avx2.supports_avx512);
         let avx512 = intel_cpu_avx512();
         assert!(avx512.supports_avx2);
         assert!(avx512.supports_avx512);
-
         let neon = arm_cpu_neon();
         assert!(neon.supports_neon);
-        assert!(!neon.supports_avx2);
+        assert!(! neon.supports_avx2);
     }
-
     #[test]
     #[cfg(feature = "gpu")]
     fn test_tensor_core_support() {
         let pascal = nvidia_gtx_1080ti();
-        assert!(!supports_fp16_tensor_cores(&pascal));
-
+        assert!(! supports_fp16_tensor_cores(& pascal));
         let turing = nvidia_rtx_2080ti();
-        assert!(supports_fp16_tensor_cores(&turing));
-        assert!(!supports_bf16_tensor_cores(&turing));
-
+        assert!(supports_fp16_tensor_cores(& turing));
+        assert!(! supports_bf16_tensor_cores(& turing));
         let ampere = nvidia_a100();
-        assert!(supports_fp16_tensor_cores(&ampere));
-        assert!(supports_bf16_tensor_cores(&ampere));
+        assert!(supports_fp16_tensor_cores(& ampere));
+        assert!(supports_bf16_tensor_cores(& ampere));
     }
-
     #[test]
     fn test_fallback_scenarios() {
         let unsupported_dims = fallback_unsupported_dimensions();
@@ -481,11 +423,7 @@ mod tests {
             unsupported_dims.expected_strict_mode_behavior,
             StrictModeBehavior::RejectWithError
         );
-
         let device_mismatch = fallback_device_mismatch();
-        assert_eq!(
-            device_mismatch.trigger_reason,
-            FallbackTrigger::DeviceMismatch
-        );
+        assert_eq!(device_mismatch.trigger_reason, FallbackTrigger::DeviceMismatch);
     }
 }

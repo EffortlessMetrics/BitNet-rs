@@ -242,24 +242,28 @@ impl DeviceMonitor {
             Device::Cuda(device_id) => {
                 #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
-                    use cudarc::driver::{CudaContext, result::mem as cu_mem};
+                    use cudarc::driver::{
+                        CudaContext,
+                        sys::{cuMemGetInfo_v2, cudaError_enum},
+                    };
 
                     // Query free memory using CUDA memory info API
                     match CudaContext::new(*device_id) {
                         Ok(_ctx) => {
-                            match unsafe { cu_mem::get_info() } {
-                                Ok((free_bytes, _total_bytes)) => {
-                                    (free_bytes / (1024 * 1024)) as u64 // Convert bytes to MB
-                                }
-                                Err(_) => {
-                                    warn!(
-                                        device_id = device_id,
-                                        "Failed to query CUDA free memory, estimating"
-                                    );
-                                    // Estimate 50% free as conservative fallback
-                                    let total_mb = Self::get_device_memory_total(device, system);
-                                    total_mb / 2
-                                }
+                            let mut free_bytes: usize = 0;
+                            let mut _total_bytes: usize = 0;
+                            let result =
+                                unsafe { cuMemGetInfo_v2(&mut free_bytes, &mut _total_bytes) };
+                            if result == cudaError_enum::CUDA_SUCCESS {
+                                (free_bytes / (1024 * 1024)) as u64 // Convert bytes to MB
+                            } else {
+                                warn!(
+                                    device_id = device_id,
+                                    "Failed to query CUDA free memory, estimating"
+                                );
+                                // Estimate 50% free as conservative fallback
+                                let total_mb = Self::get_device_memory_total(device, system);
+                                total_mb / 2
                             }
                         }
                         Err(_) => {

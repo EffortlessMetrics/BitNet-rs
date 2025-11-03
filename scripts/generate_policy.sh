@@ -3,7 +3,7 @@
 set -euo pipefail
 
 MODEL="${1:?Usage: $0 <model.gguf> [output.yml]}"
-OUTPUT="${2:-correction-policy.yml}"
+OUTPUT="${2:-config/correction-policy.yml}"
 
 if [[ ! -f "$MODEL" ]]; then
     echo "Error: Model file not found: $MODEL" >&2

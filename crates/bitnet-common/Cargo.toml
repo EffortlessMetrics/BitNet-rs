@@ -9,6 +9,11 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Common types, traits, and utilities for BitNet inference"
+include = [
+  "src/**",
+  "Cargo.toml",
+  "WARN_ONCE_README.md",
+]
 
 [dependencies]
 anyhow.workspace = true
@@ -38,6 +43,7 @@ cuda = ["candle-core/cuda"]  # Keep cuda as direct feature for now
 # We keep a local "metal" feature for code cfgs, but wire Candle's "metal"
 # only on macOS via a target-specific dependency (see below).
 metal = []
+test-util = []  # Exposes test-only APIs for integration tests
 
 [target.'cfg(target_os = "macos")'.dependencies.candle-core]
 # This augments the base candle-core dependency by adding the "metal" feature

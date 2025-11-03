@@ -1,0 +1,13 @@
+--- xtask/src/main.rs
++++ xtask/src/main.rs
+@@ -929,8 +964,8 @@ fn real_main() -> Result<()> {
+             full_crossval_cmd(force, &tag, &backend, &cmake_flags, &repo)
+         }
+         #[cfg(feature = "inference")]
+-        Cmd::CrossvalPerToken { model, tokenizer, prompt, max_tokens, cos_tol, format } => {
+-            crossval_per_token_cmd(&model, &tokenizer, &prompt, max_tokens, cos_tol, &format)?;
++        Cmd::CrossvalPerToken { model, tokenizer, prompt, max_tokens, cos_tol, format, prompt_template, system_prompt } => {
++            crossval_per_token_cmd(&model, &tokenizer, &prompt, max_tokens, cos_tol, &format, prompt_template, system_prompt.as_deref())?;
+             Ok(())
+         }
+         Cmd::GenFixtures { size, output } => gen_fixtures(&size, &output),

@@ -9,7 +9,7 @@
 **Rust implementation of BitNet 1-bit neural network inference** with memory safety,
 device-aware quantization, and cross-platform support.
 
-**Status:** v0.1.0 MVP (Q&A Ready) — Core inference working, but known performance limitations and quality issues. See [Status & Limitations](#status--limitations) below.
+**Status:** v0.1.0 MVP (Q&A Ready) — Core inference working, but known performance limitations and quality issues. See [Status & Limitations](#status-limitations) below.
 
 ## Why BitNet.rs?
 

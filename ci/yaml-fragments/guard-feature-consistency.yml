@@ -1,0 +1,14 @@
+  # Guard: Feature Gate Consistency Checker
+  # Cross-checks #[cfg(feature = "...")] with defined features
+  # See: SPEC-2025-006
+  guard-feature-consistency:
+    name: Guard - Feature Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Check feature gate consistency
+        run: bash scripts/check-feature-gates.sh

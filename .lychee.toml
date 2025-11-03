@@ -1,0 +1,74 @@
+# Lychee Link Checker Configuration
+# Documentation: https://github.com/lycheeverse/lychee
+
+# Maximum number of concurrent link checks
+max_concurrency = 8
+
+# Number of retries for failed requests
+max_retries = 2
+
+# Request timeout in seconds
+timeout = 10
+
+# Accept these HTTP status codes as valid
+accept = [200, 429]
+
+# Offline mode - don't check external links (useful for CI performance)
+# Set to false if you want to check external links
+offline = true
+
+# Disable progress bar for cleaner CI logs
+no_progress = true
+
+# Exclude patterns - directories and files to skip
+exclude = [
+    # Build artifacts
+    "target/",
+    "vendor/",
+
+    # Dependencies
+    "node_modules/",
+
+    # Git metadata
+    ".git/",
+
+    # IDE files
+    ".vscode/",
+    ".idea/",
+
+    # Temporary files
+    ".tmp",
+    ".temp",
+
+    # Lock files
+    "Cargo.lock",
+    "package-lock.json",
+    "docs/archive/",  # Historical documentation - not maintained (archived 2025-10-23)
+]
+
+# Exclude these URL patterns
+exclude_path = [
+    # Local development URLs
+    "http://localhost*",
+    "http://127.0.0.1*",
+
+    # Example domains
+    "http://example.com*",
+    "https://example.com*",
+]
+
+# Check links in these file types
+# Markdown, HTML, reStructuredText, and plain text
+include = [".md", ".html", ".rst", ".txt"]
+
+# Scheme to check (http, https, file, mailto)
+scheme = ["https", "http"]
+
+# User agent string for HTTP requests
+user_agent = "Mozilla/5.0 (compatible; lychee/0.14.0; +https://github.com/lycheeverse/lychee)"
+
+# Follow redirects
+max_redirects = 5
+
+# Cache results to avoid re-checking unchanged links
+cache = true

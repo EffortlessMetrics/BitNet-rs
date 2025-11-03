@@ -13,6 +13,7 @@ members = [
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
+  "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
   "crates/bitnet-ffi",
   "crates/bitnet-py",
   "crates/bitnet-wasm",
@@ -21,6 +22,7 @@ members = [
   "tests",
   "xtask",
   "fuzz",
+  "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -157,6 +159,7 @@ iq2s-ffi = ["bitnet-models/iq2s-ffi", "dep:bitnet_ggml_ffi"] # Enable IQ2_S quan
 # Cross-validation features
 cpp-ffi = []  # Link tests against BitNet.cpp library
 crossval = [] # Enable cross-validation against C++ implementation
+trace = ["bitnet-models/trace"] # Enable tensor activation tracing
 
 # Test framework features (forward to bitnet-tests)
 ffi-tests = []
@@ -219,18 +222,18 @@ candle-nn = { version = "0.9.1", default-features = false }
 candle-transformers = { version = "0.9.1", default-features = false }
 
 # Serialization formats
-memmap2 = "0.9.8"
+memmap2 = "0.9.9"
 safetensors = "0.6.2"
 
 # CLI and configuration
-clap = { version = "4.5.49", features = ["derive", "env"] }
-clap_complete = "4.5.59"
+clap = { version = "4.5.51", features = ["derive", "env"] }
+clap_complete = "4.5.60"
 console = "0.16.1"
 crossterm = "0.29.0"
 dirs = "6.0.0"
 humansize = "2.1.3"
 humantime = "2.3.0"
-indicatif = "0.18.0"
+indicatif = "0.18.2"
 num_cpus = "1.17.0"
 sysinfo = "0.37.2"
 
@@ -254,17 +257,17 @@ tracing-opentelemetry = "0.32.0"
 uuid = { version = "1.18.1", features = ["v4"] }
 
 # FFI and bindings
-js-sys = "0.3.81"
-pyo3 = { version = "0.26.0", features = ["extension-module"] }
-wasm-bindgen = "0.2.104"
-web-sys = "0.3.81"
+js-sys = "0.3.82"
+pyo3 = { version = "0.27.1", features = ["extension-module"] }
+wasm-bindgen = "0.2.105"
+web-sys = "0.3.82"
 
 # GPU support
-cudarc = "0.17.3"
+cudarc = "0.17.5"
 
 # Testing and benchmarking
 criterion = { version = "0.7.0", features = ["html_reports"] }
-proptest = "1.8.0"
+proptest = "1.9.0"
 tempfile = "3.23.0"
 serial_test = "3.2.0"
 temp-env = "0.3.6"
@@ -274,7 +277,7 @@ reqwest = { version = "0.12.24", features = ["json"] }
 
 # Code quality
 bindgen = "0.72.1"
-cc = "1.2.41"
+cc = "1.2.43"
 
 # Build-time information
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -339,4 +342,4 @@ keywords = [
   "inference",        # Model inference
   "bitnet",           # BitNet specific
 ]
-msrv = "1.89.0"
+msrv = "1.90.0"

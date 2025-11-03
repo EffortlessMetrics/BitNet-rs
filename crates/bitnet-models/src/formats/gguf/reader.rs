@@ -14,7 +14,7 @@ use bitnet_common::{BitNetError, ModelError, QuantizationType, Result, SecurityL
 /// Alignment is sanitized to a power-of-two (defaults to 32 if the file is malformed).
 pub struct GgufReader<'a> {
     data: &'a [u8],
-    header: GgufHeader,
+    pub header: GgufHeader,
     metadata: Vec<GgufMetadata>,
     tensor_infos: Vec<TensorInfo>,
     data_start: usize,
@@ -82,6 +82,9 @@ impl<'a> GgufReader<'a> {
                 version: format!("GGUF version {}", header.version),
             }));
         }
+
+        // Log format variant for diagnostic purposes
+        tracing::debug!("Detected GGUF format: {}", header.format_description());
 
         // Read metadata with security limits
         let mut metadata = Vec::new();

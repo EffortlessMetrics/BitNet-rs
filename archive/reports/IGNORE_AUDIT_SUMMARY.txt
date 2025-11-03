@@ -1,0 +1,248 @@
+================================================================================
+                    #[ignore] TESTS AUDIT - FINAL SUMMARY
+================================================================================
+
+PROJECT: BitNet.rs
+AUDIT DATE: 2025-10-23
+TOTAL TESTS ANALYZED: 240
+CODEBASE: /home/steven/code/Rust/BitNet-rs
+
+================================================================================
+                              KEY FINDINGS
+================================================================================
+
+TOTAL IGNORES: 240 tests (100%)
+├─ Properly Classified: 56 tests (23.3%) - Have issue references
+│  ├─ Issue #254: 10 tests
+│  ├─ Issue #260: 11 tests
+│  ├─ Other issues (#159, #248, #432, etc.): 35 tests
+│
+└─ UNCLASSIFIED: 184 tests (76.7%) - PRIMARY FOCUS
+   ├─ Requires Model/Fixture: 29 tests (HIGH priority)
+   ├─ Fixture Needed: 13 tests (HIGH priority)
+   ├─ Network/Auth Dependent: 15 tests (MEDIUM)
+   ├─ GPU/CUDA Environment: 10 tests (MEDIUM)
+   ├─ Performance/Timeout: 6 tests (HIGH)
+   ├─ Work in Progress: 10 tests (MEDIUM)
+   ├─ Implementation Pending: 18 tests (MEDIUM)
+   ├─ Integration Tests: 9 tests (MEDIUM)
+   └─ Miscellaneous/Vague: 71 tests (HIGH - CRITICAL)
+
+================================================================================
+                          CRITICAL ISSUES
+================================================================================
+
+1. 71 MISCELLANEOUS TESTS WITH VAGUE/NO REASONS
+   Examples:
+   - xtask/src/main.rs:5564 - Just "#[ignore]" (no explanation!)
+   - issue_254_ac*_deterministic_generation.rs - Bare "#[ignore]"
+   - Various tests with minimal or cryptic descriptions
+   
+   ACTION: Comprehensive audit with original authors
+
+2. 29 TESTS REQUIRING EXTERNAL MODEL FILES
+   Examples:
+   - bitnet-cli intelligibility smoke tests
+   - bitnet-inference greedy decode parity tests
+   - documentation validation tests
+   
+   ACTION: Create shared model fixture provisioning strategy
+
+3. 10 GPU/CUDA TESTS USING #[ignore] INSTEAD OF FEATURE GATES
+   Current: #[ignore] // Only run with CUDA available
+   Better: #[cfg(any(feature = "gpu", feature = "cuda"))]
+   
+   ACTION: Replace all ignores with proper feature gates
+
+================================================================================
+                        PROPERLY CLASSIFIED (56)
+================================================================================
+
+Issue #254 (10 tests) - Shape mismatch in layer-norm
+  Status: In analysis phase
+  Impact: Blocks real inference tests
+  Tests: Shape mismatch tests + 7 deterministic generation tests
+  Action: Link all tests to tracking issue
+
+Issue #260 (11 tests) - Mock elimination not complete
+  Status: Awaiting refactoring
+  Impact: Blocks 15 end-to-end tests
+  Tests: Feature gates, FFI scaffolds, strict mode, perf detectors
+  Action: Create milestone to unblock
+
+Issue #159 (20 tests) - GGUF weight loading
+  Status: TDD placeholders
+  Impact: Quantization loading unimplemented
+  Tests: Weight loading, property tests
+
+Issue #248 (8 tests) - Neural network scaffolding
+  Status: TDD placeholders
+  Impact: NN components unimplemented
+  Tests: Quantized linear, attention, generation
+
+Issue #432 (3 tests) - GPU CUDA flaky
+  Status: Known issue
+  Impact: Test cleanup race conditions
+  Tests: CUDA context cleanup
+
+Other (4 tests) - Various issues
+
+================================================================================
+                        TESTS BY CRATE
+================================================================================
+
+bitnet-inference:    60+ tests
+  - Model fixtures (25+)
+  - WIP features (10)
+  - Slow/perf tests (5)
+  - Deterministic generation (7)
+
+xtask:               35+ tests
+  - Network/model download (10)
+  - CI integration (8)
+  - Documentation validation (6)
+  - Bare #[ignore] (many)
+
+bitnet-cli:          25+ tests
+  - Model fixtures (15)
+  - Implementation pending (4)
+  - CLI args (3)
+  - Help text (3)
+
+bitnet-kernels:      30+ tests
+  - GPU/CUDA (10)
+  - Performance/timeout (2)
+  - Flaky (2)
+  - Feature gates (8)
+  - CPU SIMD (2)
+  - Other (6)
+
+bitnet-models:       25+ tests
+  - Weight loading (10)
+  - Property tests (10)
+  - Other (5)
+
+Other:               15+ tests
+
+TOTAL:               240 tests
+
+================================================================================
+                     OWNERSHIP RECOMMENDATIONS
+================================================================================
+
+Test Infra Team (Primary)
+  - 29 Requires Model/Fixture (HIGH)
+  - 13 Fixture Needed (HIGH)
+  - 9 Integration Tests (MEDIUM)
+  - 15 Network/Auth (shared with CI, MEDIUM)
+
+GPU Team
+  - 10 GPU/CUDA Environment (MEDIUM)
+
+Feature Owners
+  - 10 Work in Progress (MEDIUM)
+  - 18 Implementation Pending (MEDIUM)
+  - 71 Miscellaneous (varies - HIGH)
+
+Performance Team
+  - 6 Performance/Timeout (HIGH)
+
+CI/Automation
+  - 15 Network/Auth (shared with Test Infra, MEDIUM)
+
+Issue #254 Owner
+  - 10 Shape mismatch blocking (HIGH)
+
+Issue #260 Owner
+  - 11 Mock elimination blocking (HIGH)
+
+================================================================================
+                     ACTION ITEMS BY PRIORITY
+================================================================================
+
+IMMEDIATE (This Sprint):
+  [ ] Create GitHub issues for 9 main unclassified categories
+  [ ] Audit 71 miscellaneous ignores with original authors
+  - Review bare #[ignore] with no explanation
+  - Document fixture provisioning strategy
+  - Assign owners to each category
+
+SHORT-TERM (1-2 Sprints):
+  [ ] Replace GPU #[ignore] with feature gates (10 tests)
+  [ ] Set up model provisioning in CI (29 tests)
+  [ ] Create fixture generation scripts (13 tests)
+  [ ] Document network test gating (15 tests)
+
+MEDIUM-TERM (Post-MVP):
+  [ ] Reduce ignores by 50% (target: <120)
+  [ ] Resolve #254, #260 blockers
+  [ ] Convert scaffolding to real implementations
+  [ ] Establish #[ignore] lifecycle policy
+
+LONG-TERM:
+  [ ] Eliminate all miscellaneous ignores (target: 0)
+  [ ] Quarterly review with 10% reduction target
+
+================================================================================
+                      POLICY RECOMMENDATIONS
+================================================================================
+
+1. ALL #[ignore] MUST HAVE CONTEXT
+   - Issue reference (#XXX) OR
+   - CI gate explanation (@ci-team review) OR
+   - Fixture dependency documented OR
+   - Explicit owner assignment
+
+2. NO BARE #[ignore]
+   Must explain why in attribute or comment
+
+3. MONTHLY AUDIT
+   Categorize new ignores within 1 week of merge
+
+4. QUARTERLY REVIEW
+   Target 10% reduction per quarter
+
+5. FEATURE GATES > ENV VARS
+   Use #[cfg(feature = "gpu")] instead of #[ignore]
+
+6. TRACKING ISSUE MANDATORY
+   No test can be ignored > 2 sprints without tracking issue
+
+================================================================================
+                     DOCUMENTS GENERATED
+================================================================================
+
+1. IGNORE_TESTS_AUDIT.md (369 lines, 15KB)
+   - Comprehensive analysis with detailed tables
+   - Part 1: Properly classified tests (56)
+   - Part 2: Unclassified tests (184) with 9 categories
+   - Part 3: Resolved issues
+   - Part 4: Audit recommendations
+   - Appendix: Owner matrix and crate breakdown
+
+2. IGNORE_TESTS_QUICK_REFERENCE.md (267 lines, 6.7KB)
+   - At-a-glance summary tables
+   - Category details with action items
+   - Owner matrix
+   - Timeline and checklist
+   - Key recommendations
+
+3. IGNORE_AUDIT_SUMMARY.txt (This file)
+   - Executive summary
+   - Key findings and critical issues
+   - Statistics by crate
+   - Action items and recommendations
+   - Policy guidelines
+
+================================================================================
+                          NEXT STEPS
+================================================================================
+
+1. Review IGNORE_TESTS_QUICK_REFERENCE.md for overview
+2. Review IGNORE_TESTS_AUDIT.md for detailed analysis
+3. Share with team leads by category
+4. Create GitHub issues for each category
+5. Assign owners and set completion targets
+6. Monthly audit cadence starting next sprint
+
+================================================================================

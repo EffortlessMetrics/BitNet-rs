@@ -128,7 +128,7 @@ async fn main() -> Result<()> {
 
     let engine = InferenceEngine::builder()
         .model(model)
-        .backend(Backend::Auto)  // Automatically selects GPU if available
+        .backend(Backend::Auto)  // Automatically selects GPU (runtime detection)
         .quantization(QuantizationType::I2S)  // Use I2_S quantization
         .strict_mode(true)  // Prevent mock inference fallbacks
         .build()?;
@@ -330,7 +330,7 @@ let config = InferenceConfig {
    - **CRITICAL**: Verify strict mode is enabled: `BITNET_STRICT_MODE=1` to prevent mock fallbacks
    - Check for mock inference warnings in logs (should be eliminated in Issue #260)
    - Enable native CPU features with `RUSTFLAGS="-C target-cpu=native"`
-   - Use GPU acceleration if available with proper feature flags
+   - Use GPU acceleration (compiled with gpu feature)
    - Adjust batch size and thread count
    - Expect realistic performance with real quantization: CPU 10-20 tok/s, GPU 50-100 tok/s
 

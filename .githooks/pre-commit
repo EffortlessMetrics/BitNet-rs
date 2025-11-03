@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Guard: Prevent GenerationConfig struct literals in tests (must use builder API)
+if rg -n 'GenerationConfig\s*\{' crates/bitnet-inference/tests | grep -v ") -> GenerationConfig" >/dev/null 2>&1; then
+  echo "✖ Found GenerationConfig struct literal in tests; use builder API instead."
+  echo ""
+  rg -n 'GenerationConfig\s*\{' crates/bitnet-inference/tests | grep -v ") -> GenerationConfig"
+  echo ""
+  echo "Example: Replace"
+  echo "  GenerationConfig { max_new_tokens: 10, temperature: 0.7, ... }"
+  echo "with"
+  echo "  GenerationConfig::greedy().with_max_new_tokens(10).with_temperature(0.7)"
+  exit 1
+fi
+
+exit 0

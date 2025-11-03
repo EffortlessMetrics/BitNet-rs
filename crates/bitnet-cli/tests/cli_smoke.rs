@@ -1,25 +1,18 @@
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 
 #[test]
 fn help_works() {
-    Command::cargo_bin("bitnet").unwrap().arg("--help").assert().success();
+    cargo_bin_cmd!("bitnet").arg("--help").assert().success();
 }
 
 #[test]
 fn version_works() {
-    Command::cargo_bin("bitnet").unwrap().arg("--version").assert().success();
+    cargo_bin_cmd!("bitnet").arg("--version").assert().success();
 }
 
 #[test]
 fn help_mentions_core_subcommands() {
-    let out = Command::cargo_bin("bitnet")
-        .unwrap()
-        .arg("--help")
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
+    let out = cargo_bin_cmd!("bitnet").arg("--help").assert().success().get_output().stdout.clone();
     let s = String::from_utf8(out).unwrap();
 
     // Check always-available commands (not gated behind full-cli)
@@ -31,14 +24,7 @@ fn help_mentions_core_subcommands() {
 #[cfg(feature = "full-cli")]
 #[test]
 fn help_mentions_full_cli_subcommands() {
-    let out = Command::cargo_bin("bitnet")
-        .unwrap()
-        .arg("--help")
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
+    let out = cargo_bin_cmd!("bitnet").arg("--help").assert().success().get_output().stdout.clone();
     let s = String::from_utf8(out).unwrap();
 
     // Check full-cli gated commands
@@ -50,28 +36,24 @@ fn help_mentions_full_cli_subcommands() {
 #[cfg(feature = "full-cli")]
 #[test]
 fn benchmark_help_works() {
-    Command::cargo_bin("bitnet").unwrap().args(["benchmark", "--help"]).assert().success();
+    cargo_bin_cmd!("bitnet").args(["benchmark", "--help"]).assert().success();
 }
 
 #[test]
 fn score_help_works() {
-    Command::cargo_bin("bitnet").unwrap().args(["score", "--help"]).assert().success();
+    cargo_bin_cmd!("bitnet").args(["score", "--help"]).assert().success();
 }
 
 #[test]
 fn score_command_validates_args() {
     // Score command should fail gracefully with missing required args
-    Command::cargo_bin("bitnet").unwrap().args(["score"]).assert().failure();
+    cargo_bin_cmd!("bitnet").args(["score"]).assert().failure();
 
     // Score command should show error for missing model
-    Command::cargo_bin("bitnet")
-        .unwrap()
-        .args(["score", "--file", "/nonexistent"])
-        .assert()
-        .failure();
+    cargo_bin_cmd!("bitnet").args(["score", "--file", "/nonexistent"]).assert().failure();
 }
 
 #[test]
 fn invalid_command_fails() {
-    Command::cargo_bin("bitnet").unwrap().arg("nonexistent-command").assert().failure();
+    cargo_bin_cmd!("bitnet").arg("nonexistent-command").assert().failure();
 }

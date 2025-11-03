@@ -1,357 +1,312 @@
-# BitNet.rs Codebase Exploration - Complete Index
+# Backend Routing Exploration: Complete File Index
 
-**Date**: October 16, 2025
-**Branch**: feat/cli-chat-repl-ux-polish
-**Status**: Exploration Complete
+This index documents all files analyzed during the backend routing exploration for the `crossval-per-token` command.
 
-## Generated Documentation
+## Documentation Generated
 
-Four comprehensive reference documents have been created to guide implementation:
+Three comprehensive analysis documents have been created in the repository root:
 
-### 1. README_EXPLORATION.md (START HERE)
-**Purpose**: Executive summary and navigation guide
-**Size**: 9.7 KB | **Time to read**: 15 minutes
+1. **BACKEND_ROUTING_ANALYSIS.md** (15 KB)
+   - Complete architectural analysis
+   - 8-step execution flow with status markers
+   - Call site identification
+   - Error handling patterns
+   - Preflight validation details
+   - Implementation roadmap (3 phases)
+   - Summary table with component status
 
-Contains:
-- Overview of all 5 core systems analyzed
-- Architecture strengths assessment
-- Critical issues ranked by priority
-- Implementation status matrix
-- File modification guide with effort estimates
-- Testing recommendations
-- Migration path recommendations
-- Performance implications
-- Quality gates checklist
+2. **QUICK_IMPLEMENTATION_GUIDE.md** (8.1 KB)
+   - TL;DR implementation checklist
+   - Exact code patterns to use
+   - Minimal change strategy
+   - Testing procedures
+   - Variable scope considerations
+   - Verification checklist
 
-**Use when**: Getting started, planning implementation, assessing scope
+3. **DISPATCHER_ARCHITECTURE_SUMMARY.md** (This file)
+   - Visual ASCII architecture diagram
+   - Backend infrastructure overview
+   - Two routing points clearly identified
+   - Component status matrix
+   - Implementation checklist (3 phases)
+   - Key insights and strategy
 
----
+## Source Files Analyzed
 
-### 2. ARCHITECTURE_ANALYSIS.md (COMPREHENSIVE)
-**Purpose**: Deep technical analysis of all systems
-**Size**: 17 KB | **Time to read**: 30 minutes
+### Command Handler
+- `/home/steven/code/Rust/BitNet-rs/xtask/src/main.rs`
+  - Lines 437-483: CLI argument definition for CrossvalPerToken
+  - Lines 2974-3189: crossval_per_token_cmd() handler function
+  - Lines 2992-3004: Backend selection and preflight validation
+  - Lines 3050-3080: **[ROUTING POINT #1]** C++ tokenization (hardcoded)
+  - Lines 3104-3118: **[ROUTING POINT #2]** C++ logits evaluation (hardcoded)
 
-Contains:
-- 1. Prompt Template System (current architecture, limitations)
-- 2. Chat Command Implementation (REPL loop, formatting duplication)
-- 3. Tokenizer Integration (BOS/EOS handling, current flow)
-- 4. Streaming Inference (engine methods, tokenization coupling)
-- 5. Receipt Generation (schema, hardcoded paths, per-turn emission)
-- 6. Auto-Detection & Template Resolution (detection logic, missing integration)
-- 7. Identified Issues & Duplication (5 critical issues detailed)
-- 8. Current Data Flow Diagram (shows all coupling points)
-- 9. Files Requiring Changes (primary and supporting)
-- 10. Key Abstractions Already in Place (existing foundations)
-- Summary table of all components
+### Backend Infrastructure
+- `/home/steven/code/Rust/BitNet-rs/xtask/src/crossval/backend.rs`
+  - Lines 10-106: CppBackend enum definition and methods
+  - Lines 50-61: Auto-detection from model path
+  - Lines 72-106: Metadata methods (name, required_libs, setup_command)
+  - Lines 108-138: Unit tests
 
-**Use when**: Understanding existing code deeply, implementing fixes, writing tests
+- `/home/steven/code/Rust/BitNet-rs/xtask/src/crossval/preflight.rs`
+  - Lines 34-79: preflight_backend_libs() function
+  - Lines 85-121: Backend status diagnostics
 
-**Key Line Numbers**:
-- Auto-detection: prompt_template.rs:83-109
-- Chat REPL: chat.rs:61-224
-- Template duplication: chat.rs:266-329
-- History storage: chat.rs:82, 173, 289-325
-- Receipt writing: inference.rs:832-883
-- Prefill: engine.rs:1015-1066
+- `/home/steven/code/Rust/BitNet-rs/xtask/src/crossval/mod.rs`
+  - Module exports (backend, preflight)
 
----
+### Cross-Validation Framework
+- `/home/steven/code/Rust/BitNet-rs/crossval/src/lib.rs`
+  - Lines 1-70: Module documentation and exports
+  - Lines 73-93: assert_first_logits_match() helper
+  - Lines 101-116: Backend detection tests
 
-### 3. IMPLEMENTATION_REFERENCE.md (QUICK LOOKUP)
-**Purpose**: Fast reference for exact locations
-**Size**: 9.4 KB | **Time to read**: 5 minutes (per lookup)
+- `/home/steven/code/Rust/BitNet-rs/crossval/src/token_parity.rs`
+  - Token sequence validation (used in crossval-per-token)
 
-Contains:
-- File structure map
-- Component-by-component line number tables
-- Status indicators (✓/⚠/✗)
-- Duplication locations (source vs. duplicate)
-- Hardcoded path locations
-- Auto-detection missing integration points
-- Tokenizer integration points
-- Prefill integration points
-- Testing locations
-- File modification priority ranking
+- `/home/steven/code/Rust/BitNet-rs/crossval/src/logits_compare.rs`
+  - Per-position logits comparison (used in crossval-per-token)
 
-**Tables Include**:
-- Prompt template system components (12 items)
-- Chat command components (14 items)
-- Inference command components (14 items)
-- Engine & streaming components (8 items)
-- Receipts components (5 items)
+### Inference Parity Module
+- `/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/src/parity.rs`
+  - Lines 14-111: eval_logits_all_positions() function
+  - Pure Rust logits evaluation for all token positions
+  - Supports BitNet I2_S and GGML I2_S (QK256) formats
 
-**Use when**: Locating specific code, cross-referencing during implementation
-
-**Quick Lookups**:
-- **format_chat_turn() duplication**: chat.rs:266-329 vs. prompt_template.rs:189-255
-- **History storage**: chat.rs:82, 173, 289-325
-- **Receipt paths**: chat.rs:31, inference.rs:878
-- **Auto-detection**: prompt_template.rs:83-109 (not integrated in chat.rs:74, inference.rs:1423)
-- **Prefill**: engine.rs:1015-1066 (used in inference.rs:992, NOT in chat.rs)
-
----
-
-### 4. ARCHITECTURE_DIAGRAMS.md (VISUAL REFERENCE)
-**Purpose**: Visual representation of systems and flows
-**Size**: 20 KB | **Time to read**: 20 minutes
-
-Contains:
-1. **Current Chat Inference Flow** (shows all coupling points)
-2. **Proposed Refactored Flow** (improvements highlighted)
-3. **Component Architecture** (system boundaries and dependencies)
-4. **History Storage Evolution** (tuples → ChatTurn objects)
-5. **Receipt Path Problem** (hardcoded → parameterized)
-6. **Template Auto-Detection Flow** (3-level fallback)
-7. **Duplication Problem** (what exists vs. what's duplicated)
-8. **Tokenization & Prefill Path** (current vs. target)
-9. **File Dependency Graph** (visual dependency structure)
-10. **Prefill Architecture** (phase breakdown)
-11. **Summary of Issues & Locations** (consolidated checklist)
-
-**Use when**:
-- Explaining architecture to team
-- Understanding data flow visually
-- Planning refactoring sequence
-- Identifying integration points
-
----
-
-## Quick Start Guide
-
-### For Architecture Understanding
-1. Read: README_EXPLORATION.md (sections: Overview, Strengths, Critical Issues)
-2. View: ARCHITECTURE_DIAGRAMS.md (sections: Component Architecture, Current Chat Inference Flow)
-3. Reference: IMPLEMENTATION_REFERENCE.md (section: File Modification Priority)
-
-**Time**: 30 minutes
-
-### For Implementation Planning
-1. Read: README_EXPLORATION.md (section: File Modification Guide)
-2. Study: ARCHITECTURE_ANALYSIS.md (sections: 7-9)
-3. Reference: IMPLEMENTATION_REFERENCE.md (for line numbers)
-
-**Time**: 45 minutes
-
-### For Specific Code Changes
-1. Use: IMPLEMENTATION_REFERENCE.md (to find exact locations)
-2. Read: ARCHITECTURE_ANALYSIS.md (for context)
-3. View: ARCHITECTURE_DIAGRAMS.md (for flow visualization)
-
-**Time**: Varies by task
-
----
+- `/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/src/lib.rs`
+  - Module exports (parity module)
 
 ## Key Findings Summary
 
-### Critical Issues (Must Fix)
+### Infrastructure Status: 90% Complete
 
-| Issue | Priority | File | Lines | Solution |
-|-------|----------|------|-------|----------|
-| Template formatting duplication | HIGH | chat.rs | 266-329 | Use `template.render_chat()` |
-| History storage type mismatch | MEDIUM | chat.rs | 82, 173, 289-325 | Use `Vec<ChatTurn>` |
-| Hardcoded receipt paths | MEDIUM | chat.rs, inference.rs | 31, 878 | Parameterize with CLI flag |
-| Missing GGUF auto-detection | LOW | chat.rs, inference.rs | 74, 1423 | Integrate `TemplateType::detect()` |
-| Tokenization coupling | FUTURE | engine.rs | 975 | Pre-tokenize before stream |
+**Working (✅)**:
+- CLI argument parsing with CppBackend enum
+- Backend auto-detection from model path
+- Preflight library validation
+- Rust tokenization (universal tokenizer)
+- Token parity validation
+- Rust logits evaluation (pure Rust, all formats)
+- Logits comparison and diagnostics
 
-### Existing Strengths (Don't Change)
+**Not Implemented (❌)**:
+- C++ tokenization dispatch (hardcoded to llama.cpp)
+- C++ logits evaluation dispatch (hardcoded to llama.cpp)
+- BitNet.cpp FFI wrappers
 
-- ✓ ChatRole enum (prompt_template.rs:9-16)
-- ✓ ChatTurn struct (prompt_template.rs:28-38)
-- ✓ TemplateType with auto-detection (prompt_template.rs:42-109)
-- ✓ render_chat() multi-turn method (prompt_template.rs:189-255)
-- ✓ Prefill system (engine.rs:1015-1066)
-- ✓ InferenceReceipt schema (receipts.rs:150-189)
+### Call Sites Requiring Backend Dispatch
+
+**Call Site #1: C++ Tokenization**
+- File: `xtask/src/main.rs`
+- Line: ~3074
+- Current: `bitnet_sys::wrapper::Session::load_deterministic(...)`
+- Need: Match on `backend` with arms for BitNet and Llama
+
+**Call Site #2: C++ Logits Evaluation**
+- File: `xtask/src/main.rs`
+- Line: ~3108
+- Current: `cpp_session.context.eval(...)`
+- Need: Match on `backend` with arms for BitNet and Llama
+
+### No Changes Needed
+
+These areas are already backend-agnostic and require no modification:
+- Prompt formatting and template application
+- Rust tokenization
+- Token parity validation
+- Rust logits evaluation
+- Logits comparison
+- Output formatting (text/JSON)
 
 ---
 
-## Effort Estimates
+## Implementation Phases
 
-| Task | File | Effort | Risk | Dependencies |
-|------|------|--------|------|--------------|
-| Fix duplication | chat.rs | 2 hrs | Low | None |
-| Update history type | chat.rs, prompt_template.rs | 1 hr | Low | Duplication fix |
-| Parameterize paths | chat.rs, inference.rs | 1 hr | Very Low | None |
-| Add auto-detection | chat.rs, inference.rs | 1.5 hrs | Medium | GGUF reading |
-| Add tests | chat.rs + | 2 hrs | Low | Above fixes |
-| **Total** | | **~7.5 hrs** | **Medium** | Sequential |
+### Phase 1: Insert Backend Match Statements (IMMEDIATE)
+**Effort**: 1-2 hours
+**Risk**: Minimal (preserves existing behavior)
+**Outcome**: Infrastructure ready for Phase 2
+
+Detailed steps in QUICK_IMPLEMENTATION_GUIDE.md
+
+### Phase 2: Implement BitNet.cpp FFI Wrappers (FUTURE)
+**Effort**: TBD (depends on bitnet.cpp FFI availability)
+**Risk**: Moderate (new FFI integration)
+**Outcome**: Full dual-backend support
+
+Expected wrappers:
+- `tokenize_bitnet(model_path: &str, prompt: &str) -> Result<Vec<u32>>`
+- `evaluate_logits_bitnet(model_path: &str, tokens: &[u32]) -> Result<Vec<Vec<f32>>>`
+
+### Phase 3: Optimization & Polish (OPTIONAL)
+**Effort**: 1-2 hours
+**Risk**: Low (optional enhancements)
+**Outcome**: Better diagnostics and performance
+
+Planned enhancements:
+- Timing metrics per backend
+- Verbose FFI call tracing
+- Session initialization optimization
 
 ---
 
 ## Testing Strategy
 
-### Existing Test Coverage
-- prompt_template.rs: Lines 311-506 (comprehensive template tests)
-- inference.rs: Lines 1566-1622 (prefill timing tests)
-
-### Tests to Add
-1. Chat command integration tests (format_chat_turn replacement)
-2. Auto-detection with GGUF metadata
-3. Per-turn receipt generation
-4. History serialization with ChatTurn
-5. Parameterized path validation
-
-### Quality Gates (Must Pass)
-- All existing tests pass
-- New tests cover all changes
-- No duplication remains
-- All hardcoded paths removed
-- Auto-detection integrated
-
----
-
-## Implementation Roadmap
-
-### Phase 1: Deduplication (Lowest Risk)
-**Files**: chat.rs (only)
-**Changes**: Replace format_chat_turn() with template.render_chat()
-**Time**: 1-2 hours
-**Tests**: Existing tests should pass
-
-### Phase 2: Type Safety (Low Risk)
-**Files**: chat.rs, prompt_template.rs
-**Changes**: Vec<(String, String)> → Vec<ChatTurn>
-**Time**: 1 hour
-**Tests**: Add history serialization test
-
-### Phase 3: Parameterization (Very Low Risk)
-**Files**: chat.rs, inference.rs
-**Changes**: Remove hardcoded paths, add CLI flags
-**Time**: 1 hour
-**Tests**: Add path validation test
-
-### Phase 4: Enhancement (Medium Risk)
-**Files**: chat.rs, inference.rs
-**Changes**: Add GGUF auto-detection
-**Time**: 1-2 hours
-**Tests**: Add auto-detection tests
-
-### Phase 5: Validation (Low Risk)
-**All Files**: Integration tests
-**Time**: 1-2 hours
-**Tests**: Full end-to-end scenarios
-
----
-
-## Document Cross-References
-
+### Regression Testing (Phase 1)
+```bash
+# Test with llama model (existing functionality)
+cargo run -p xtask -- crossval-per-token \
+  --model models/llama-3-8b-instruct.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "What is 2+2?" --max-tokens 4 --verbose
 ```
-README_EXPLORATION.md
-├── Links to: ARCHITECTURE_ANALYSIS.md (section 1-10)
-├── Links to: IMPLEMENTATION_REFERENCE.md (section: Modification Priority)
-└── Links to: ARCHITECTURE_DIAGRAMS.md (all sections)
+Expected: Works exactly as before
 
-ARCHITECTURE_ANALYSIS.md
-├── Referenced by: README_EXPLORATION.md (implementation guide)
-├── Links to: IMPLEMENTATION_REFERENCE.md (exact line numbers)
-└── Links to: ARCHITECTURE_DIAGRAMS.md (visual flows)
+### Placeholder Testing (Phase 1)
+```bash
+# Test with bitnet model (should fail gracefully)
+cargo run -p xtask -- crossval-per-token \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "What is 2+2?" --max-tokens 4
+```
+Expected: Panics with "BitNet.cpp tokenization not yet implemented"
 
-IMPLEMENTATION_REFERENCE.md
-├── Referenced by: ARCHITECTURE_ANALYSIS.md (components)
-├── Links to: ARCHITECTURE_DIAGRAMS.md (file dependencies)
-└── Referenced by: README_EXPLORATION.md (modification priority)
+### Auto-Detection Testing (Phase 1)
+```bash
+# Test auto-detection (no --cpp-backend flag)
+cargo run -p xtask -- crossval-per-token \
+  --model models/llama-3-8b-instruct.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "Test" --verbose
+```
+Expected: Prints "Selected backend: llama.cpp (auto-detected)"
 
-ARCHITECTURE_DIAGRAMS.md
-├── Referenced by: All other documents
-├── Shows: Data flows from ARCHITECTURE_ANALYSIS.md
-└── Details: Components from IMPLEMENTATION_REFERENCE.md
+### Full Integration (Phase 2+)
+Once BitNet.cpp FFI wrappers are implemented:
+```bash
+# Test with BitNet model using explicit backend
+cargo run -p xtask -- crossval-per-token \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "What is 2+2?" --cpp-backend bitnet
+```
+Expected: Full per-token parity validation
+
+---
+
+## Related Code Patterns
+
+### Existing Backend Selection (Already Working)
+```rust
+let backend = cpp_backend.unwrap_or_else(|| CppBackend::from_model_path(model_path));
+crate::crossval::preflight_backend_libs(backend, verbose)?;
 ```
 
----
+### Current llama.cpp Usage Pattern (To Be Refactored)
+```rust
+bitnet_sys::wrapper::init_backend();
+let _guard = scopeguard::guard((), |_| bitnet_sys::wrapper::free_backend());
+let mut cpp_session = bitnet_sys::wrapper::Session::load_deterministic(model_path_str)?;
+let cpp_tokens = cpp_session.tokenize(&formatted_prompt)?;
+cpp_session.context.eval(&cpp_tokens, 0)?;
+let cpp_logits = cpp_session.context.get_all_logits(cpp_tokens.len())?;
+```
 
-## How to Use These Documents
+### Error Handling Pattern (Already Established)
+```rust
+use anyhow::{Result, bail};
 
-### Scenario 1: "I need to understand the codebase"
-1. Start: README_EXPLORATION.md (5 min overview)
-2. Deep dive: ARCHITECTURE_ANALYSIS.md (section 1-5)
-3. Visual: ARCHITECTURE_DIAGRAMS.md (component architecture)
-4. Reference: IMPLEMENTATION_REFERENCE.md (as needed)
+// Parse with context
+let model_path_str = model_path.to_str()
+    .ok_or_else(|| anyhow::anyhow!("Invalid model path"))?;
 
-**Total time**: ~1 hour
+// Propagate with ?
+let result = some_operation()?;
 
-### Scenario 2: "I need to fix the duplication issue"
-1. Look up: IMPLEMENTATION_REFERENCE.md (duplication locations)
-2. Study: ARCHITECTURE_ANALYSIS.md (section 7.1)
-3. Understand: ARCHITECTURE_DIAGRAMS.md (duplication problem)
-4. Implement: Use exact line numbers from IMPLEMENTATION_REFERENCE.md
-
-**Total time**: ~30 minutes + implementation
-
-### Scenario 3: "I need to prepare an implementation plan"
-1. Review: README_EXPLORATION.md (critical issues, file modification guide)
-2. Study: ARCHITECTURE_ANALYSIS.md (sections 7-9)
-3. Plan: Use effort estimates from README_EXPLORATION.md
-4. Sequence: Follow roadmap in README_EXPLORATION.md
-
-**Total time**: ~45 minutes
-
-### Scenario 4: "I'm implementing and need to find something"
-1. Search: IMPLEMENTATION_REFERENCE.md (exact line numbers)
-2. Context: ARCHITECTURE_ANALYSIS.md (understanding)
-3. Visualize: ARCHITECTURE_DIAGRAMS.md (data flows)
-
-**Total time**: ~5-10 minutes per lookup
+// Bail with diagnostic message
+bail!("Helpful error message");
+```
 
 ---
 
-## Key Statistics
+## File Size Reference
 
-### Code Analysis
-- **Total lines analyzed**: ~2,000 lines of Rust code
-- **Files analyzed**: 6 primary files
-- **Components identified**: 50+ distinct components
-- **Issues found**: 5 critical, 2 minor
-- **Duplication detected**: 64 lines in chat.rs (format_chat_turn)
-
-### Documentation Generated
-- **Total size**: 62 KB of analysis
-- **Documents**: 4 comprehensive references
-- **Diagrams**: 11 visual representations
-- **Tables**: 10+ reference tables
-- **Line number references**: 100+ specific locations
-
-### Test Coverage (Existing)
-- **prompt_template.rs**: 200+ lines of tests
-- **inference.rs**: 200+ lines of tests
-- **Chat command**: No dedicated tests (identified gap)
+| File | Size | Status |
+|------|------|--------|
+| BACKEND_ROUTING_ANALYSIS.md | 15 KB | Reference documentation |
+| QUICK_IMPLEMENTATION_GUIDE.md | 8.1 KB | Implementation guide |
+| DISPATCHER_ARCHITECTURE_SUMMARY.md | This file | Overview |
+| xtask/src/main.rs | 31 KB (full file) | **Requires modification** |
+| xtask/src/crossval/backend.rs | 3.5 KB | Ready to use |
+| xtask/src/crossval/preflight.rs | 3.6 KB | Ready to use |
+| crossval/src/lib.rs | 4 KB | Ready to use |
 
 ---
 
-## Document Maintenance
+## Dependency Map
 
-These documents are accurate as of:
-- **Date**: October 16, 2025
-- **Branch**: feat/cli-chat-repl-ux-polish
-- **Commit**: Latest at exploration time
-- **Status**: Exploration complete, ready for implementation
-
-### When to Update
-- After major refactoring
-- When architecture changes
-- After implementation of recommendations
-- When new issues discovered
+```
+crossval-per-token command
+├─ CppBackend enum (backend.rs)
+│  ├─ Auto-detection logic
+│  ├─ Metadata methods
+│  └─ Unit tests
+├─ Preflight validation (preflight.rs)
+│  ├─ Library detection
+│  └─ Setup instructions
+├─ Rust tokenization (bitnet_tokenizers)
+│  └─ Universal tokenizer
+├─ C++ FFI wrapper (bitnet_sys::wrapper)
+│  ├─ Session management
+│  ├─ Tokenization
+│  └─ Logits evaluation
+├─ Token parity (crossval::token_parity)
+│  └─ Sequence validation
+├─ Rust logits (bitnet_inference::parity)
+│  └─ Pure Rust evaluation (all formats)
+├─ Logits comparison (crossval::logits_compare)
+│  └─ Per-position comparison
+└─ Output formatting (serde_json)
+   └─ JSON/text output
+```
 
 ---
 
-## Contact & Questions
+## Next Steps
 
-All analysis based on current codebase state. For:
-- **Architecture questions**: See ARCHITECTURE_ANALYSIS.md
-- **Line number lookups**: See IMPLEMENTATION_REFERENCE.md
-- **Data flow understanding**: See ARCHITECTURE_DIAGRAMS.md
-- **Implementation planning**: See README_EXPLORATION.md
+1. **Review QUICK_IMPLEMENTATION_GUIDE.md** - Start here for implementation
+2. **Review BACKEND_ROUTING_ANALYSIS.md** - Detailed reference
+3. **Execute Phase 1** - Insert match statements (1-2 hours)
+4. **Test with llama models** - Verify no regression
+5. **Document Phase 2 requirements** - BitNet.cpp FFI wrappers
 
 ---
 
-## Final Checklist
+## Questions This Exploration Answers
 
-- [x] Prompt template system analyzed
-- [x] Chat command implementation studied
-- [x] Tokenizer integration reviewed
-- [x] Streaming inference examined
-- [x] Receipt generation documented
-- [x] Issues identified and ranked
-- [x] Existing strengths cataloged
-- [x] Implementation roadmap created
-- [x] Testing strategy developed
-- [x] Documentation generated and indexed
+1. ✅ Where are C++ calls currently made?
+   - Line 3074 (tokenization), Line 3108 (logits)
 
-**Ready for implementation planning and execution.**
+2. ✅ Which wrapper functions are being called?
+   - `Session::load_deterministic()`, `session.tokenize()`, `session.context.eval()`, `context.get_all_logits()`
+
+3. ✅ What's the current error handling pattern?
+   - anyhow::Result with context, scopeguard for cleanup
+
+4. ✅ Where should the backend match go?
+   - Right before the C++ calls (2 locations)
+
+5. ✅ What function signatures must we match?
+   - Tokenization: `&str, &str -> Result<Vec<u32>>`
+   - Logits: `&[u32] -> Result<Vec<Vec<f32>>>`
+
+6. ✅ What crossval exports are available?
+   - token_parity::validate_token_parity(), logits_compare::compare_per_position_logits()
+
+7. ✅ Is backend infrastructure already in place?
+   - Yes, 90% complete. Only C++ dispatch needed.
+
+8. ✅ What needs no changes?
+   - Rust paths, comparison logic, output formatting
+

@@ -9,6 +9,12 @@ license.workspace = true
 name = "bitnet-server"
 repository.workspace = true
 version.workspace = true
+include = [
+  "src/**",
+  "Cargo.toml",
+  "build.rs",
+  "HEALTH_ENDPOINTS.md",
+]
 
 [dependencies]
 anyhow.workspace = true

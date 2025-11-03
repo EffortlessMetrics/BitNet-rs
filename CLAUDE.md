@@ -11,21 +11,35 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 - CPU inference with SIMD optimization (AVX2/AVX-512/NEON)
 - GPU inference with CUDA acceleration (GPU support via feature gates)
 - QK256 (GGML I2_S) MVP with scalar kernels (~0.1 tok/s for 2B models)
+- **QK256 AVX2 Dequantization** - Foundation for v0.2 (1.2× uplift, targeting ≥3×)
 - Interactive chat and Q&A workflows with prompt templates
 - Model validation and inspection tools
 - Cross-validation framework against C++ reference
+- **GGUF Fixtures & Dual-Flavor Tests** - Complete test infrastructure (12/12 passing)
+- **EnvGuard Environment Isolation** - Robust parallel test execution with `#[serial(bitnet_env)]`
+- **Receipt Verification** - Schema v1.0.0 with 8 validation gates (25/25 tests passing)
+- **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
 
 ### Current Limitations (MVP Phase)
 
-- **QK256 Performance**: Scalar-only kernels. For quick validation, limit to
-  `--max-new-tokens 4-16`.
+- **QK256 Performance (Critical Limitation)**:
+  - **Current Status**: Scalar kernels only (~0.1 tok/s for 2B models)
+  - **Impact**: NOT suitable for production inference
+  - **Recommendation**: Limit to `--max-tokens 4-16` for validation only
+  - **Roadmap**: v0.2.0 targets ≥3× improvement with AVX2 nibble-LUT + FMA tiling
+  - **Alternative**: Use I2_S BitNet32-F16 format for 10-20× faster performance
+  - **This is expected MVP behavior, not a bug**
+
 - **Model Quality**: The microsoft-bitnet-b1.58-2B-4T-gguf produces non-sensical
   output in some configurations. This is a known model quality issue, not an
   inference bug.
-- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~68 ignored tests
+
+- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests
   represent TDD-style scaffolding for planned features. See **Test Status** section
-  below. (Down from ~70 after Issue #260 completion)
-- **Active Issues**: See GitHub issue tracker for current blockers and their status. Run `just tdd-receipts` for test execution receipts.
+  below.
+
+- **Active Blockers**: Issues #254, #260, #469 affect some real inference tests and
+  cross-validation. Issue #439 resolved (feature gate unification merged).
 
 ## Quick Reference
 
@@ -40,8 +54,12 @@ cargo build --no-default-features --features gpu     # GPU inference
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
   cargo build --release --no-default-features --features cpu,full-cli
 
-# Test
+# Test (standard cargo test)
 cargo test --workspace --no-default-features --features cpu
+
+# Test with nextest (recommended - prevents hangs with 5min timeout)
+cargo nextest run --workspace --no-default-features --features cpu
+cargo nextest run --profile ci  # Use CI profile with fixed 4 threads
 
 # Quality
 cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
@@ -84,6 +102,18 @@ cargo run -p xtask -- verify-receipt --require-gpu-kernels  # Explicitly require
 # SafeTensors to GGUF converter (Rust st2gguf - preferred)
 cargo run -p bitnet-st2gguf -- --input model.safetensors --output model.gguf --strict
 cargo run --release -p bitnet-st2gguf -- --help      # See all options
+
+# Cross-validation sweep (comprehensive multi-scenario testing)
+./scripts/run_crossval_sweep.sh model.gguf tokenizer.json /tmp/crossval
+# Runs 3 scenarios (1, 2, 4 tokens), captures traces, compares Rust vs C++
+
+# C++ reference auto-bootstrap (one-command setup)
+eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"  # Linux/macOS
+cargo run -p xtask -- setup-cpp-auto --emit=fish | source  # fish shell
+cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression  # PowerShell
+
+# Trace comparison (debug cross-validation divergence)
+cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
 ```
 
 ## Core Architecture
@@ -106,6 +136,7 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 - `bitnet-st2gguf`: SafeTensors to GGUF converter with LayerNorm preservation
 - `bitnet-cli`: Command-line interface and utilities
 - `crossval`: C++ reference validation framework
+- `tests`: Shared test infrastructure with EnvGuard for environment isolation
 
 ## Key Configurations
 
@@ -118,6 +149,9 @@ cargo run --release -p bitnet-st2gguf -- --help      # See all options
 - `cuda`: Backward-compatible alias for `gpu` (temporary - prefer `gpu` in new code)
 - `ffi`: C++ FFI bridge for gradual migration
 - `crossval`: Cross-validation against Microsoft BitNet C++
+- `inference`: Enable advanced inference and cross-validation commands in xtask (required for `crossval-per-token`)
+- `crossval-all`: Unified feature enabling all cross-validation functionality (`inference`, `crossval`, `ffi`) for xtask
+- `fixtures`: Enable GGUF fixture-based integration tests (test-only feature)
 
 **Important**: Always use unified GPU predicate in code:
 
@@ -202,6 +236,7 @@ BitNet.rs implements AVX2-accelerated QK256 dequantization with runtime dispatch
 - `docs/development/xtask.md`: Developer tooling
 - `docs/howto/export-clean-gguf.md`: Clean GGUF export and validation
 - `docs/howto/validate-models.md`: Complete validation workflow guide
+- `docs/howto/cpp-setup.md`: C++ reference setup for cross-validation (BitNet.cpp + llama.cpp)
 
 ### Architecture
 
@@ -210,6 +245,7 @@ BitNet.rs implements AVX2-accelerated QK256 dequantization with runtime dispatch
 - `docs/reference/validation-gates.md`: Validation system technical reference
 - `docs/gpu-kernel-architecture.md`: CUDA kernel design
 - `docs/tokenizer-architecture.md`: Universal tokenizer system
+- `docs/explanation/dual-backend-crossval.md`: Dual-backend cross-validation architecture (BitNet.cpp + llama.cpp)
 
 ### Operations
 
@@ -236,7 +272,7 @@ automatically detects the appropriate template using:
 providing better Q&A behavior out-of-box. This is more reliable than raw completion mode for
 getting coherent answers to questions.
 
-**Note**: As of v0.9.x, the default auto-detection fallback changed from `raw` to
+**Note**: As of v0.1.x, the default auto-detection fallback changed from `raw` to
 `instruct` for better out-of-box experience with instruction-tuned models. Use
 `--prompt-template raw` if you need raw completion behavior.
 
@@ -485,6 +521,42 @@ cargo test -p bitnet-models --no-default-features --features crossval
 export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval
 
+# Comprehensive cross-validation sweep (multi-scenario with tracing)
+# Runs 3 deterministic scenarios, captures 90+ traces per scenario, compares with C++
+./scripts/run_crossval_sweep.sh \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  /tmp/crossval-sweep
+# Generates: scenario reports, trace files, logits comparison, summary.md
+
+# Auto-bootstrap C++ reference (one-command setup)
+eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+
+# Per-token logits divergence detection (requires --features inference or crossval-all)
+# Compares Rust vs C++ logits position-by-position to find first divergence
+# Auto-detects backend from model path (bitnet.cpp for BitNet models, llama.cpp for LLaMA)
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "What is 2+2?" \
+  --max-tokens 4 \
+  --cos-tol 0.999
+
+# Per-token with explicit backend selection (override auto-detection)
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --cpp-backend bitnet \
+  --prompt-template raw \
+  --prompt "Test" \
+  --max-tokens 4 \
+  --dump-ids \
+  --dump-cpp-ids \
+  --verbose
+
+# If divergence found, capture and compare traces
+cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
+
 # Model operations
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 cargo run -p bitnet-cli -- compat-check model.gguf
@@ -524,14 +596,196 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 
 **See also:** `docs/howto/validate-models.md` for complete validation guide.
 
-### Troubleshooting
+### Cross-Validation CLI Reference
+
+### crossval-per-token Command
+
+**Purpose**: Per-token parity comparison between Rust and C++ inference (find first logits divergence)
+
+**Requirements**:
+- Build flag: `--features crossval-all` (or `--features inference`)
+- C++ reference installed: `cargo run -p xtask -- fetch-cpp` or `setup-cpp-auto`
+- Environment: `BITNET_CPP_DIR` and dynamic loader path set
+
+**Flags**:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--model` | path | (required) | Path to GGUF model file |
+| `--tokenizer` | path | (required) | Path to tokenizer.json file |
+| `--prompt` | string | (required) | Input prompt for inference |
+| `--max-tokens` | integer | 4 | Maximum tokens to generate (excluding prompt) |
+| `--cos-tol` | float | 0.999 | Cosine similarity threshold (0.0-1.0); below = divergence |
+| `--format` | string | "text" | Output format: "text" or "json" |
+| `--prompt-template` | enum | "auto" | Template type: raw, instruct, llama3-chat, auto |
+| `--system-prompt` | string | (none) | System prompt for chat templates |
+| `--cpp-backend` | enum | (auto) | C++ backend selection: bitnet, llama (auto-detects from path if omitted) |
+| `--verbose` | flag | false | Show backend selection, preflight checks, diagnostics |
+| `--dump-ids` | flag | false | Dump Rust token IDs to stderr for debugging |
+| `--dump-cpp-ids` | flag | false | Dump C++ token IDs to stderr for debugging |
+
+**Backend Auto-Detection Heuristics**:
+- Path contains "bitnet" or "microsoft/bitnet" → Uses bitnet.cpp
+- Path contains "llama" → Uses llama.cpp
+- Default fallback → llama.cpp (conservative)
+- Override with `--cpp-backend bitnet|llama`
+
+**Example Usage**:
+
+```bash
+# BitNet model (auto-detects bitnet.cpp)
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --prompt "What is 2+2?" \
+  --max-tokens 4 \
+  --cos-tol 0.999 \
+  --format json \
+  --dump-ids --dump-cpp-ids --verbose
+
+# LLaMA model (auto-detects llama.cpp)
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/llama-3-8b-instruct.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "What is the capital of France?" \
+  --max-tokens 8 \
+  --cos-tol 0.995
+
+# Explicit backend + template override + debugging
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --cpp-backend llama \
+  --prompt-template raw \
+  --prompt "2+2=" \
+  --max-tokens 1 \
+  --dump-ids \
+  --dump-cpp-ids \
+  --verbose
+
+# With system prompt for chat template
+cargo run -p xtask --features crossval-all -- crossval-per-token \
+  --model models/model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt-template llama3-chat \
+  --system-prompt "You are a helpful assistant" \
+  --prompt "Explain photosynthesis" \
+  --max-tokens 32
+```
+
+**Output Formats**:
+
+Text (default):
+```
+Position 0: OK (cos_sim: 0.9999, l2_dist: 0.0042)
+Position 1: OK (cos_sim: 0.9997, l2_dist: 0.0051)
+Position 2: OK (cos_sim: 0.9995, l2_dist: 0.0084)
+
+Summary: All positions parity OK
+Minimum cosine similarity: 0.99950
+Maximum L2 distance: 0.00840
+```
+
+JSON:
+```json
+{
+  "status": "ok",
+  "backend": "bitnet",
+  "divergence_token": -1,
+  "metrics": {
+    "min_cosine_similarity": 0.99999,
+    "max_l2_distance": 0.00042,
+    "mean_abs_difference": 0.00018,
+    "token_count": 4
+  }
+}
+```
+
+### setup-cpp-auto Command
+
+**Purpose**: One-command C++ reference setup (fetch, build, emit environment exports)
+
+**Flags**:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--emit` | string | "sh" | Output shell format: sh, fish, pwsh, cmd |
+
+**Example Usage**:
+
+```bash
+# Bash/Zsh
+eval "$(cargo run -p xtask -- setup-cpp-auto --emit=sh)"
+
+# Fish
+cargo run -p xtask -- setup-cpp-auto --emit=fish | source
+
+# PowerShell
+cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression
+
+# Windows Command Prompt (less common, use PowerShell)
+# cargo run -p xtask -- setup-cpp-auto --emit=cmd
+```
+
+**What It Does**:
+1. Detects if bitnet.cpp is already built
+2. Downloads and builds C++ reference if needed
+3. Emits shell-specific environment variable exports
+4. Outputs: `BITNET_CPP_DIR`, `LD_LIBRARY_PATH`/`DYLD_LIBRARY_PATH`/`PATH`
+
+### preflight Command
+
+**Purpose**: Check C++ backend availability for cross-validation
+
+**Flags**:
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--backend` | enum | (none) | Backend to check: bitnet, llama. If omitted, checks both. |
+| `--verbose` | flag | false | Show detailed diagnostic information |
+
+**Example Usage**:
+
+```bash
+# Check all backends
+cargo run -p xtask --features crossval-all -- preflight
+
+# Check specific backend
+cargo run -p xtask --features crossval-all -- preflight --backend bitnet --verbose
+cargo run -p xtask --features crossval-all -- preflight --backend llama
+
+# Should fail gracefully if libs not found
+BITNET_CPP_DIR="" cargo run -p xtask --features crossval-all -- preflight --backend bitnet
+```
+
+**Output**:
+```
+Backend Library Status:
+
+  ✓ bitnet.cpp: AVAILABLE
+    Libraries: libbitnet*
+
+  ✓ llama.cpp: AVAILABLE
+    Libraries: libllama*, libggml*
+
+Both backends available. Dual-backend cross-validation supported.
+```
+
+## Troubleshooting
 
 - FFI linker errors: Use `--no-default-features --features cpu` or
-  `cargo xtask fetch-cpp`
+  `cargo run -p xtask -- fetch-cpp`. See `docs/howto/cpp-setup.md` for complete C++ reference setup.
+- C++ cross-validation setup: See `docs/howto/cpp-setup.md` for detailed guide on setting up
+  Microsoft BitNet C++ reference, libllama.so, and dynamic loader paths
 - CUDA issues: Ensure CUDA toolkit installed and `nvcc` in PATH
 - Model validation: `cargo run -p bitnet-cli -- compat-check model.gguf`
-- GPU detection: Run `cargo run -p xtask -- preflight` to check GPU compilation and
+- GPU detection: Run `cargo run -p xtask -- gpu-preflight` to check GPU compilation and
   runtime availability
+- C++ backend availability: Use `cargo run -p xtask --features crossval-all -- preflight --verbose`
+  to diagnose bitnet.cpp and llama.cpp library availability for cross-validation
+  - For specific backend: `--backend bitnet` or `--backend llama`
+  - See `docs/howto/cpp-setup.md` for detailed setup instructions
+  - See `docs/explanation/dual-backend-crossval.md` for architecture details
 - Silent CPU fallback: Check receipts for GPU kernel IDs (`gemm_*`, `i2s_gpu_*`); use
   `BITNET_GPU_FAKE` for testing
 - Feature gate mismatches: Always use `#[cfg(any(feature = "gpu", feature = "cuda"))]`
@@ -540,6 +794,18 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
   `--prompt-template` (raw/instruct/llama3-chat). Check GGUF metadata with
   `cargo run -p bitnet-cli -- compat-check model.gguf --show-kv` to diagnose detection
   priority issues.
+- Backend selection: Use `--cpp-backend bitnet|llama` to explicitly select C++ reference implementation
+  - Auto-detection: "bitnet" in path → bitnet.cpp, "llama" in path → llama.cpp, default → llama.cpp
+  - Override detection: `--cpp-backend bitnet` or `--cpp-backend llama`
+- Token mismatch diagnostics: Use `--dump-ids` and `--dump-cpp-ids` to compare token sequences
+  between Rust and C++ implementations
+  - Combine with `--verbose` for full diagnostic output
+  - Example: `--dump-ids --dump-cpp-ids --verbose 2>&1 | head -50`
+- Preflight checks: Run `cargo run -p xtask --features crossval-all -- preflight --verbose` to diagnose
+  C++ library availability before running cross-validation
+  - Check all backends: `preflight` (no args)
+  - Check specific backend: `preflight --backend bitnet --verbose`
+  - Verifies: library presence, linkage, and FFI availability
 - Slow QK256 inference: The QK256 MVP uses scalar kernels (~0.1 tok/s for 2B models).
   For quick validation, use `--max-new-tokens 4-16`. SIMD optimizations are planned.
 - LayerNorm validation errors: If you see "suspicious LayerNorm gamma" warnings, your
@@ -565,17 +831,15 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- \
 
 ### Overview
 
-<!-- TEST-STATUS:BEGIN -->
-**As of 2025-10-21T04:14:57Z (CPU features)**
+BitNet.rs uses extensive test scaffolding during the MVP phase. This is **intentional** and follows TDD patterns:
 
-- **Discovered**: 0 tests
-- **Executed**: 0 tests
-  - Passed: 0
-  - Failed: 0
-  - Ignored: 0
+- **~548 TODO/FIXME/unimplemented markers**: Development placeholders for planned
+  features
+- **~70 ignored tests** (#[ignore]): Tests scaffolded but blocked by active issues
+- **unimplemented!() helper functions**: TDD-style test infrastructure placeholders
 
-_Auto-generated by `scripts/tdd_receipts.py`. Run `just tdd-receipts` to refresh._
-<!-- TEST-STATUS:END -->
+**This is normal for an MVP.** Tests are intentionally structured to guide development
+and prevent regressions once blockers are resolved.
 
 ### Test Execution
 
@@ -583,131 +847,116 @@ _Auto-generated by `scripts/tdd_receipts.py`. Run `just tdd-receipts` to refresh
 # Run all enabled tests (skips #[ignore] tests)
 cargo test --workspace --no-default-features --features cpu
 
+# Run with nextest (recommended - 5min timeout prevents hangs)
+cargo nextest run --workspace --no-default-features --features cpu
+cargo nextest run --profile ci  # CI profile: 4 threads, no retries
+
+# Run fixture-based integration tests
+cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features --features fixtures
+
 # Run including ignored tests (will encounter blocked tests)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
+cargo nextest run --workspace --no-default-features --features cpu --run-ignored all
 
 # Run specific test category
 cargo test -p bitnet-inference --no-default-features --features cpu
-cargo test -p bitnet-quantization --no-default-features --features cpu
-cargo test -p bitnet-kernels --no-default-features --features cpu
+cargo nextest run -p bitnet-inference --no-default-features --features cpu
 
 # Skip slow tests (QK256 scalar kernels)
 BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
+BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --no-default-features --features cpu
 ```
 
-### TDD Scaffolds and Cleanup Items
+**Nextest Benefits:**
+- **Timeout protection**: 5-minute global timeout prevents test hangs
+- **Clean output**: `success-output = "never"` reduces noise
+- **No retries**: `retries = 0` ensures tests pass consistently (no flaky tests)
+- **JUnit reports**: Automatic XML output in `target/nextest/junit.xml`
+- **Parallel execution**: Per-test isolation with configurable thread count
 
-The following tests are marked `#[ignore]` and reference specific issues. Run `just tdd-receipts` for current status:
+**Nextest Configuration:** See `.config/nextest.toml` for profiles and settings.
 
-1. **Issue #254** - **1 test**:
-   - `test_real_transformer_forward_pass` (bitnet-inference/tests/test_real_inference.rs)
-   - **See**: GitHub issue #254 for current status and investigation details
+### Critical Blocked Tests
 
-**Resolved Issues** (tests now enabled):
-- **Issue #260** - ✅ RESOLVED: SIMD throughput validation and AVX optimization tests now passing
-  - Previously: `test_cpu_simd_kernel_integration`, `test_tl2_avx_optimization`
-  - Status: Both tests now enabled; moved to working test categories below
-  - See: `docs/explanation/issue-260-mock-elimination-completion.md` for completion details
+These tests are marked #[ignore] and blocked by active issues:
 
-**Note**: Previous documentation referenced `test_real_vs_mock_comparison` which doesn't exist. The actual test is named `test_real_vs_mock_inference_comparison` (note "inference" in the middle).
+1. **Issue #254** (Shape mismatch in layer-norm):
+   - Blocks: Real inference tests for multiple architectures
+   - Tests affected: bitnet-inference layer norm integration tests
+   - Status: In analysis phase
 
-**Current Status**: See auto-generated test receipts in TEST-STATUS section above.
+2. **Issue #260** (Mock elimination not complete):
+   - Blocks: Transition from mock to real inference paths
+   - Tests affected: ~15 inference end-to-end tests
+   - Status: Awaiting refactoring
+
+3. **Issue #439** (Feature gate consistency):
+   - ✅ **RESOLVED** - Merged to main in PR #475
+   - GPU/CPU feature predicates unified
+   - All device selection and fallback tests validated
+
+4. **Issue #469** (Tokenizer parity and FFI build hygiene):
+   - Blocks: Cross-validation tests, FFI integration tests
+   - Tests affected: ~20 cross-validation and tokenizer tests
+   - Status: Active development
+
+5. **AC9 Integration Tests**:
+   - Blocks: Complete cross-validation against C++ reference
+   - Reason: Depends on resolution of #254, #260, #469
+   - Status: Awaiting above blockers
 
 ### Ignored Test Patterns
 
-Common reasons for #[ignore] markers (with counts):
+Common reasons for #[ignore] markers:
 
 ```rust
-// Pattern 1: Infrastructure-gated (52 tests) - FULLY IMPLEMENTED
+// Pattern 1: Awaiting issue resolution
 #[test]
-#[ignore] // Requires CUDA hardware
-fn test_gpu_quantization() { /* ... */ }
+#[ignore] // Blocked by Issue #254 - shape mismatch in layer-norm
+fn test_inference_with_shape_validation() { /* ... */ }
 
+// Pattern 2: TDD scaffolding - planned feature
 #[test]
-#[ignore] // Requires BITNET_GGUF environment variable
-fn test_real_model_loading() { /* ... */ }
+#[ignore] // TODO: Implement GPU mixed-precision tests after #439 resolution
+fn test_gpu_fp16_dequantize() { /* ... */ }
 
+// Pattern 3: Slow tests (performance acceptable for MVP)
 #[test]
-#[ignore] // Network-dependent test
-fn test_tokenizer_download() { /* ... */ }
-
-// Pattern 2: TDD scaffolds (1 test remaining) - See issue tracker for status
-#[test]
-#[ignore] // Issue #254 - see GitHub issue for current status
-fn test_real_transformer_forward_pass() { /* ... */ }
-
-// Pattern 2a: Issue #260 tests (RESOLVED - moved to Pattern 4 below)
-// The following tests are now ENABLED and in regular test suite:
-// - test_cpu_simd_kernel_integration (SIMD throughput validation)
-// - test_tl2_avx_optimization (AVX optimization validation)
-
-// Pattern 3: Intentionally disabled by design (12 tests)
-#[test]
-#[ignore] // Benchmark, not unit test
-fn bench_avx2_dequantize() { /* ... */ }
-
-#[test]
-#[ignore] // Disabled due to edge case handling - focus on successful mutation killers
-fn test_mutation_edge_case() { /* ... */ }
-
-// Pattern 4: Newly enabled tests (2 tests from Issue #260 resolution)
-// These tests are now fully enabled and pass in regular test suite:
-#[test]
-fn test_cpu_simd_kernel_integration() { /* SIMD kernel validation */ }
-
-#[test]
-fn test_tl2_avx_optimization() { /* AVX optimization validation */ }
-```
-
-**How to Enable Infrastructure-Gated Tests**:
-```bash
-# GPU tests (14 tests)
-cargo test --workspace --features gpu --ignored
-
-# Environment variable tests (14 tests)
-export BITNET_GGUF=/path/to/model.gguf
-export CROSSVAL_GGUF=/path/to/crossval-model.gguf
-cargo test --workspace --features cpu --ignored
-
-# Cross-validation tests (3 tests)
-export BITNET_CPP_DIR=/path/to/bitnet.cpp
-export CROSSVAL_GGUF=/path/to/model.gguf
-cargo test --workspace --features crossval test_ac5 -- --ignored
-
-# Network tests (9 tests) - require internet connection
-cargo test --workspace --features cpu test_ac4 -- --ignored
+#[ignore] // Slow: QK256 scalar kernels (~0.1 tok/s). Run with --ignored for validation.
+fn test_qk256_full_model_inference() { /* ... */ }
 ```
 
 ### Working Test Categories
 
-These test suites pass reliably:
+These test suites pass reliably (152+ tests passing):
 
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
+- **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
 - **tokenizer tests**: Universal tokenizer, auto-discovery (except parity tests blocked by #469)
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
 - **validation tests**: LayerNorm inspection, projection statistics (when not in strict mode)
-- **SIMD kernel tests** ✅ NEW: `test_cpu_simd_kernel_integration` - SIMD throughput validation (Issue #260 resolved)
-- **AVX optimization tests** ✅ NEW: `test_tl2_avx_optimization` - AVX speedup validation (Issue #260 resolved)
+- **receipt verification tests**: Schema v1.0.0 with 8 gates (25/25 passing)
+- **strict mode tests**: Runtime guards and enforcement (12/12 passing)
+- **environment isolation tests**: EnvGuard parallel safety (7/7 passing)
 
 ### Test Dependencies
 
-**Test Blocking Analysis**: See auto-generated receipts in TEST-STATUS section above for current counts.
+```text
+Real Inference Tests
+  └─ Depends on: Issue #254 resolution (shape mismatch fix)
+    └─ Depends on: Issue #260 resolution (mock elimination)
+      └─ Depends on: Issue #439 resolution (feature consistency)
 
-**Referenced Issues**:
-- Issue #254: 1 test (still pending)
-- Issue #260: ✅ 0 tests (RESOLVED - both tests now passing and enabled)
+Cross-Validation Tests
+  └─ Depends on: Issue #469 resolution (tokenizer parity + FFI)
+    └─ Depends on: Real Inference Tests (above)
 
-See individual GitHub issues for detailed status, root cause analysis, and resolution plans.
-
-**Resolved Issues**:
-- **Issue #260** (Completed 2025-10-21): SIMD throughput and AVX optimization - See `docs/explanation/issue-260-mock-elimination-completion.md`
-
-**Infrastructure-Gated Tests**: Tests requiring GPU hardware, environment variables, or network connectivity are marked `#[ignore]` with clear skip reasons in test output.
-
-**Hidden Tests**: ~1000 additional tests exist in `tests/` directory but are not
-auto-discovered due to `autotests = false` configuration (intentional for MVP).
+GPU Mixed-Precision Tests
+  └─ Depends on: Issue #439 resolution (feature unification)
+    └─ Depends on: GPU kernel optimization (post-MVP)
+```
 
 ## Environment Variables
 
@@ -719,6 +968,19 @@ auto-discovered due to `autotests = false` configuration (intentional for MVP).
 - `RAYON_NUM_THREADS=1`: Single-threaded determinism
 - `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing
   (Issue #439)
+
+### GPU Configuration
+
+- `BITNET_GPU_LAYERS`: Configure GPU layer offloading for C++ cross-validation backend
+  - `0`: CPU-only inference (default for predictability and CI compatibility)
+  - `1..N`: Offload first N transformer layers to GPU (requires CUDA runtime)
+  - `-1`: Auto-detect and offload all layers to GPU
+  - **Precedence**: Explicit API parameter > `BITNET_GPU_LAYERS` env var > default 0
+  - **Graceful fallback**: GPU unavailable → CPU (no crashes)
+  - **Example**: `BITNET_GPU_LAYERS=24 cargo run -p xtask --features crossval-all -- crossval-per-token`
+  - **Requirements**: CUDA-capable GPU (compute ≥6.0), CUDA runtime, sufficient VRAM (~100-500MB per billion params)
+  - **Note**: This applies only to C++ cross-validation backend (`BitnetSession::create`), not Rust inference
+  - **See**: `docs/explanation/cpp-wrapper-gpu-layer-config.md` for detailed specification
 
 ### Validation Configuration
 
@@ -741,27 +1003,65 @@ auto-discovered due to `autotests = false` configuration (intentional for MVP).
 - `BITNET_SKIP_SLOW_TESTS=1`: Skip slow tests (QK256 scalar kernel tests that exceed timeout)
 - `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., blocked tests waiting for issue resolution)
 
+### Test Isolation
+
+**EnvGuard Pattern**: Use `#[serial(bitnet_env)]` for tests that mutate environment variables:
+
+```rust
+use serial_test::serial;
+use tests::helpers::env_guard::EnvGuard;
+
+#[test]
+#[serial(bitnet_env)]  // Ensures serial execution with other env-mutating tests
+fn test_determinism_with_env_flags() {
+    let _guard = EnvGuard::new("BITNET_DETERMINISTIC", "1");
+    // Test code here - env automatically restored on drop
+}
+```
+
+This prevents race conditions when tests run in parallel (e.g., with `--test-threads=4`).
+
 ## Known Issues
 
 These are active issues affecting current development. See issue tracker for details and workarounds.
 
-### Active Issues
+### Issue #254: Shape Mismatch in Layer-Norm
 
-For current status of all issues, see the GitHub issue tracker:
+**Status**: In analysis phase
+**Impact**: Blocks real inference tests; affects multiple architectures
 
-- **Issue #254**: Test fixtures and RMSNorm configuration
-- **Issue #439**: Feature gate consistency across GPU/CPU predicates
-- **Issue #469**: Tokenizer parity and FFI build hygiene
+- Root cause under investigation in shape handling during layer normalization
+- Blocks transition from mock to real inference paths
+- Workaround: Use mock inference paths for testing (temporary)
+- Tracking: See GitHub issue #254 for detailed analysis
 
-Check individual issues for:
-- Current status and resolution progress
-- Root cause analysis and investigation details
-- Workarounds and temporary mitigation strategies
-- Impact on test execution (see `just tdd-receipts` for counts)
+### Issue #260: Mock Elimination Not Complete
 
-### Resolved Issues
+**Status**: Awaiting refactoring
+**Impact**: Prevents full transition to real inference paths
 
-- **Issue #260** ✅ RESOLVED: Kernel implementation with SIMD throughput validation and AVX optimization. See `docs/explanation/issue-260-mock-elimination-completion.md` for completion details.
+- Test infrastructure still contains mock inference paths
+- ~15 end-to-end tests blocked until real paths validated
+- Refactoring in progress; tracked in GitHub issue #260
+
+### Issue #439: Feature Gate Consistency
+
+**Status**: ✅ **RESOLVED** (PR #475)
+**Impact**: GPU/CPU feature predicate unification completed
+
+- Unified `feature = "gpu"` and `feature = "cuda"` predicates
+- All device selection and fallback tests validated
+- See PR #475 and GitHub issue #439 for details
+
+### Issue #469: Tokenizer Parity and FFI Build Hygiene
+
+**Status**: Active development
+**Impact**: Blocks cross-validation tests and FFI integration
+
+- Tokenizer behavior parity between Rust and C++ implementations
+- FFI build system hygiene and dependency management
+- Blocks ~20 cross-validation tests
+- Tracking: GitHub issue #469
 
 ### Model Quality: microsoft-bitnet-b1.58-2B-4T-gguf
 
@@ -827,8 +1127,8 @@ Output: "jjjjkkkk llll mmmm nnnn..."
 **Problem**: Getting linker errors or silent GPU fallback
 
 ```bash
-# Wrong - uses default (empty) features, causes errors
-cargo build
+# Wrong example (don't do this) - uses default (empty) features, causes errors
+# cargo build
 
 # Right - always specify features
 cargo build --no-default-features --features cpu
@@ -842,8 +1142,8 @@ cargo build --no-default-features --features gpu
 **Problem**: Running all tests with `--ignored` flag
 
 ```bash
-# Will encounter blocked tests
-cargo test --workspace -- --ignored --include-ignored
+# Wrong example (will encounter blocked tests)
+# cargo test --workspace -- --ignored --include-ignored
 ```
 
 **Solution**: Check blocking issue numbers in test comments. These are intentional placeholders:
@@ -861,9 +1161,11 @@ cargo test -p bitnet-models --no-default-features --features cpu
 
 **Current State (MVP)**:
 
-- ~500+ tests with passing infrastructure
+- **152+ tests passing** (91 lib + 49 integration + 12 fixtures)
+  - Note: 152+ represents key test categories; total enabled tests = 1935+ (see PR #475 report)
 - ~70 tests intentionally ignored (scaffolding)
-- Real inference tests blocked by #254, #260, #439, #469
+- Real inference tests blocked by #254, #260, #469 (Issue #439 resolved)
+- Complete test infrastructure: fixtures, receipts, strict mode, environment isolation
 
 **CI Status**: Only non-ignored tests run in CI. Ignored tests are tracked separately.
 
@@ -895,8 +1197,9 @@ cargo build --no-default-features --features cpu
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
-- **Expect test scaffolding during MVP**: ~548 TODO/FIXME markers and ~68 ignored tests are intentional
+- **Expect test scaffolding during MVP**: ~548 TODO/FIXME markers and ~70 ignored tests are intentional
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
-- **Check issue tracker for blockers**: Before investigating test failures, see #254, #439, #469 (Issue #260 resolved)
+- **Use `#[serial(bitnet_env)]` for env-mutating tests**: Prevents race conditions in parallel execution
+- **Check issue tracker for blockers**: Before investigating test failures, see #254, #260, #469 (Issue #439 resolved in PR #475)
 
 For comprehensive documentation, see the `docs/` directory organized by audience and use case.

@@ -558,6 +558,7 @@ mod tests {
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac2-smarttokenizer-download-implementation
     #[tokio::test]
     #[cfg(feature = "cpu")]
+    #[serial_test::serial(bitnet_env)]
     async fn test_offline_mode_behavior() {
         // Set offline mode environment variable
         unsafe {
@@ -1132,6 +1133,7 @@ mod tests {
     /// Test offline mode with various cache states
     #[tokio::test]
     #[cfg(feature = "cpu")]
+    #[serial_test::serial(bitnet_env)]
     async fn test_offline_mode_comprehensive() {
         use std::io::Write;
         use tempfile::tempdir;

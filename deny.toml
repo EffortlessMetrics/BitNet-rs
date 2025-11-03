@@ -2,23 +2,41 @@
 # See https://embarkstudios.github.io/cargo-deny/
 
 [graph]
+# Analyze all feature combinations for comprehensive coverage
+all-features = true
+# Don't exclude dev dependencies from analysis
+# Note: cargo-deny uses 'exclude-dev' not 'no-dev-deps'
 targets = []
 
 [bans]
+# Warn on multiple versions of the same crate (helps reduce dependency bloat)
 multiple-versions = "warn"
-wildcards = "allow"
-deny = []
+# Warn on wildcard dependencies (allow for workspace crates, but review external deps)
+# Note: Path dependencies (workspace members) don't need version specifications
+wildcards = "warn"
+# Prevent reintroduction of deprecated dependencies
+deny = [
+    { name = "serde_yaml", reason = "Use serde_yaml_ng (aliased as 'serde_yaml' in workspace dependencies)" },
+]
+# Note: lazy_static is NOT in workspace Cargo.toml dependencies (removed in favor of OnceLock)
+# but exists transitively via logos-codegen and prometheus. This is acceptable until upstream migrates.
+# Policy: No NEW direct lazy_static dependencies allowed; use std::sync::OnceLock (MSRV 1.90)
 
 [advisories]
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
+# Opt into future behavior where all advisories are errors by default
+# Individual advisories can still be ignored via the ignore list
+version = 2
 ignore = [
     "RUSTSEC-2024-0436",  # paste crate unmaintained - transitive dependency via tokenizers/candle
-    "RUSTSEC-2022-0054",  # wee_alloc unmaintained - replaced with dlmalloc
 ]
 
 [licenses]
 version = 2
+# Allow list of acceptable permissive licenses
+# Note: Crates with licenses outside this list will be denied
+# This implicitly blocks copyleft (GPL/AGPL) and unlicensed crates
 allow = [
     "MIT",
     "Apache-2.0",
@@ -42,5 +60,10 @@ exceptions = []
 [sources]
 unknown-registry = "warn"
 unknown-git = "warn"
+# Allow crates.io as the primary registry source
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# Allow common Git hosting platforms for Git dependencies
+allow-git = [
+    "https://github.com/*",
+    "https://gitlab.com/*",
+]

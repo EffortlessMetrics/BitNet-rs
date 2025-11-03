@@ -1,0 +1,546 @@
+Gnuplot not found, using plotters backend
+Benchmarking quantization_sizes/I2S_quantize/1024
+Benchmarking quantization_sizes/I2S_quantize/1024: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 6.7s, enable flat sampling, or reduce sample count to 60.
+Benchmarking quantization_sizes/I2S_quantize/1024: Collecting 100 samples in estimated 6.7093 s (5050 iterations)
+Benchmarking quantization_sizes/I2S_quantize/1024: Analyzing
+quantization_sizes/I2S_quantize/1024
+                        time:   [1.3339 ms 1.3462 ms 1.3599 ms]
+                        thrpt:  [752.97 Kelem/s 760.65 Kelem/s 767.69 Kelem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  2 (2.00%) low mild
+  4 (4.00%) high mild
+Benchmarking quantization_sizes/TL1_quantize/1024
+Benchmarking quantization_sizes/TL1_quantize/1024: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL1_quantize/1024: Collecting 100 samples in estimated 8.9568 s (10k iterations)
+Benchmarking quantization_sizes/TL1_quantize/1024: Analyzing
+quantization_sizes/TL1_quantize/1024
+                        time:   [874.86 µs 879.32 µs 884.01 µs]
+                        thrpt:  [1.1584 Melem/s 1.1645 Melem/s 1.1705 Melem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  1 (1.00%) low severe
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+Benchmarking quantization_sizes/TL2_quantize/1024
+Benchmarking quantization_sizes/TL2_quantize/1024: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL2_quantize/1024: Collecting 100 samples in estimated 5.5175 s (20k iterations)
+Benchmarking quantization_sizes/TL2_quantize/1024: Analyzing
+quantization_sizes/TL2_quantize/1024
+                        time:   [273.36 µs 275.06 µs 276.83 µs]
+                        thrpt:  [3.6991 Melem/s 3.7228 Melem/s 3.7460 Melem/s]
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) low mild
+  3 (3.00%) high mild
+  2 (2.00%) high severe
+Benchmarking quantization_sizes/I2S_quantize/4096
+Benchmarking quantization_sizes/I2S_quantize/4096: Warming up for 3.0000 s
+Benchmarking quantization_sizes/I2S_quantize/4096: Collecting 100 samples in estimated 5.1493 s (2100 iterations)
+Benchmarking quantization_sizes/I2S_quantize/4096: Analyzing
+quantization_sizes/I2S_quantize/4096
+                        time:   [2.4059 ms 2.4373 ms 2.4690 ms]
+                        thrpt:  [1.6590 Melem/s 1.6805 Melem/s 1.7025 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking quantization_sizes/TL1_quantize/4096
+Benchmarking quantization_sizes/TL1_quantize/4096: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL1_quantize/4096: Collecting 100 samples in estimated 5.0522 s (2300 iterations)
+Benchmarking quantization_sizes/TL1_quantize/4096: Analyzing
+quantization_sizes/TL1_quantize/4096
+                        time:   [2.1684 ms 2.1868 ms 2.2059 ms]
+                        thrpt:  [1.8568 Melem/s 1.8730 Melem/s 1.8890 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+Benchmarking quantization_sizes/TL2_quantize/4096
+Benchmarking quantization_sizes/TL2_quantize/4096: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL2_quantize/4096: Collecting 100 samples in estimated 8.7909 s (10k iterations)
+Benchmarking quantization_sizes/TL2_quantize/4096: Analyzing
+quantization_sizes/TL2_quantize/4096
+                        time:   [891.62 µs 896.62 µs 901.99 µs]
+                        thrpt:  [4.5411 Melem/s 4.5682 Melem/s 4.5939 Melem/s]
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) low mild
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+Benchmarking quantization_sizes/I2S_quantize/16384
+Benchmarking quantization_sizes/I2S_quantize/16384: Warming up for 3.0000 s
+Benchmarking quantization_sizes/I2S_quantize/16384: Collecting 100 samples in estimated 5.1883 s (2100 iterations)
+Benchmarking quantization_sizes/I2S_quantize/16384: Analyzing
+quantization_sizes/I2S_quantize/16384
+                        time:   [2.4393 ms 2.4955 ms 2.5526 ms]
+                        thrpt:  [6.4185 Melem/s 6.5653 Melem/s 6.7168 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking quantization_sizes/TL1_quantize/16384
+Benchmarking quantization_sizes/TL1_quantize/16384: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL1_quantize/16384: Collecting 100 samples in estimated 5.0170 s (2000 iterations)
+Benchmarking quantization_sizes/TL1_quantize/16384: Analyzing
+quantization_sizes/TL1_quantize/16384
+                        time:   [2.4565 ms 2.5021 ms 2.5489 ms]
+                        thrpt:  [6.4278 Melem/s 6.5481 Melem/s 6.6695 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking quantization_sizes/TL2_quantize/16384
+Benchmarking quantization_sizes/TL2_quantize/16384: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL2_quantize/16384: Collecting 100 samples in estimated 5.0587 s (2300 iterations)
+Benchmarking quantization_sizes/TL2_quantize/16384: Analyzing
+quantization_sizes/TL2_quantize/16384
+                        time:   [2.1650 ms 2.1829 ms 2.2011 ms]
+                        thrpt:  [7.4435 Melem/s 7.5056 Melem/s 7.5675 Melem/s]
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) low mild
+  4 (4.00%) high mild
+Benchmarking quantization_sizes/I2S_quantize/65536
+Benchmarking quantization_sizes/I2S_quantize/65536: Warming up for 3.0000 s
+Benchmarking quantization_sizes/I2S_quantize/65536: Collecting 100 samples in estimated 5.0973 s (2000 iterations)
+Benchmarking quantization_sizes/I2S_quantize/65536: Analyzing
+quantization_sizes/I2S_quantize/65536
+                        time:   [2.4046 ms 2.4846 ms 2.5661 ms]
+                        thrpt:  [25.539 Melem/s 26.377 Melem/s 27.255 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking quantization_sizes/TL1_quantize/65536
+Benchmarking quantization_sizes/TL1_quantize/65536: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL1_quantize/65536: Collecting 100 samples in estimated 5.0353 s (1800 iterations)
+Benchmarking quantization_sizes/TL1_quantize/65536: Analyzing
+quantization_sizes/TL1_quantize/65536
+                        time:   [2.4849 ms 2.5663 ms 2.6481 ms]
+                        thrpt:  [24.748 Melem/s 25.538 Melem/s 26.373 Melem/s]
+Benchmarking quantization_sizes/TL2_quantize/65536
+Benchmarking quantization_sizes/TL2_quantize/65536: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL2_quantize/65536: Collecting 100 samples in estimated 5.2456 s (2000 iterations)
+Benchmarking quantization_sizes/TL2_quantize/65536: Analyzing
+quantization_sizes/TL2_quantize/65536
+                        time:   [2.5235 ms 2.5598 ms 2.5962 ms]
+                        thrpt:  [25.243 Melem/s 25.602 Melem/s 25.970 Melem/s]
+Benchmarking quantization_sizes/I2S_quantize/262144
+Benchmarking quantization_sizes/I2S_quantize/262144: Warming up for 3.0000 s
+Benchmarking quantization_sizes/I2S_quantize/262144: Collecting 100 samples in estimated 5.1396 s (1400 iterations)
+Benchmarking quantization_sizes/I2S_quantize/262144: Analyzing
+quantization_sizes/I2S_quantize/262144
+                        time:   [3.3865 ms 3.4955 ms 3.6075 ms]
+                        thrpt:  [72.666 Melem/s 74.995 Melem/s 77.408 Melem/s]
+Benchmarking quantization_sizes/TL1_quantize/262144
+Benchmarking quantization_sizes/TL1_quantize/262144: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL1_quantize/262144: Collecting 100 samples in estimated 5.1369 s (1100 iterations)
+Benchmarking quantization_sizes/TL1_quantize/262144: Analyzing
+quantization_sizes/TL1_quantize/262144
+                        time:   [4.2911 ms 4.3731 ms 4.4582 ms]
+                        thrpt:  [58.800 Melem/s 59.944 Melem/s 61.090 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+Benchmarking quantization_sizes/TL2_quantize/262144
+Benchmarking quantization_sizes/TL2_quantize/262144: Warming up for 3.0000 s
+Benchmarking quantization_sizes/TL2_quantize/262144: Collecting 100 samples in estimated 5.2310 s (1800 iterations)
+Benchmarking quantization_sizes/TL2_quantize/262144: Analyzing
+quantization_sizes/TL2_quantize/262144
+                        time:   [2.8630 ms 2.9291 ms 2.9978 ms]
+                        thrpt:  [87.445 Melem/s 89.495 Melem/s 91.563 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+
+Benchmarking dequantization_sizes/I2S_dequantize/1024
+Benchmarking dequantization_sizes/I2S_dequantize/1024: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 6.3s, enable flat sampling, or reduce sample count to 60.
+Benchmarking dequantization_sizes/I2S_dequantize/1024: Collecting 100 samples in estimated 6.2656 s (5050 iterations)
+Benchmarking dequantization_sizes/I2S_dequantize/1024: Analyzing
+dequantization_sizes/I2S_dequantize/1024
+                        time:   [1.2201 ms 1.2303 ms 1.2406 ms]
+                        thrpt:  [825.42 Kelem/s 832.33 Kelem/s 839.30 Kelem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high severe
+Benchmarking dequantization_sizes/TL1_dequantize/1024
+Benchmarking dequantization_sizes/TL1_dequantize/1024: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL1_dequantize/1024: Collecting 100 samples in estimated 7.4963 s (10k iterations)
+Benchmarking dequantization_sizes/TL1_dequantize/1024: Analyzing
+dequantization_sizes/TL1_dequantize/1024
+                        time:   [766.14 µs 781.55 µs 801.06 µs]
+                        thrpt:  [1.2783 Melem/s 1.3102 Melem/s 1.3366 Melem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  1 (1.00%) high mild
+  5 (5.00%) high severe
+Benchmarking dequantization_sizes/TL2_dequantize/1024
+Benchmarking dequantization_sizes/TL2_dequantize/1024: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL2_dequantize/1024: Collecting 100 samples in estimated 6.0022 s (25k iterations)
+Benchmarking dequantization_sizes/TL2_dequantize/1024: Analyzing
+dequantization_sizes/TL2_dequantize/1024
+                        time:   [233.45 µs 237.56 µs 242.15 µs]
+                        thrpt:  [4.2287 Melem/s 4.3104 Melem/s 4.3864 Melem/s]
+Found 13 outliers among 100 measurements (13.00%)
+  4 (4.00%) low severe
+  7 (7.00%) high mild
+  2 (2.00%) high severe
+Benchmarking dequantization_sizes/I2S_dequantize/4096
+Benchmarking dequantization_sizes/I2S_dequantize/4096: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/I2S_dequantize/4096: Collecting 100 samples in estimated 5.1030 s (2100 iterations)
+Benchmarking dequantization_sizes/I2S_dequantize/4096: Analyzing
+dequantization_sizes/I2S_dequantize/4096
+                        time:   [2.3958 ms 2.4370 ms 2.4876 ms]
+                        thrpt:  [1.6466 Melem/s 1.6807 Melem/s 1.7096 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high severe
+Benchmarking dequantization_sizes/TL1_dequantize/4096
+Benchmarking dequantization_sizes/TL1_dequantize/4096: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL1_dequantize/4096: Collecting 100 samples in estimated 5.1594 s (2600 iterations)
+Benchmarking dequantization_sizes/TL1_dequantize/4096: Analyzing
+dequantization_sizes/TL1_dequantize/4096
+                        time:   [1.9833 ms 2.0087 ms 2.0383 ms]
+                        thrpt:  [2.0095 Melem/s 2.0391 Melem/s 2.0653 Melem/s]
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+Benchmarking dequantization_sizes/TL2_dequantize/4096
+Benchmarking dequantization_sizes/TL2_dequantize/4096: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL2_dequantize/4096: Collecting 100 samples in estimated 7.5382 s (10k iterations)
+Benchmarking dequantization_sizes/TL2_dequantize/4096: Analyzing
+dequantization_sizes/TL2_dequantize/4096
+                        time:   [736.16 µs 745.51 µs 757.12 µs]
+                        thrpt:  [5.4099 Melem/s 5.4942 Melem/s 5.5640 Melem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+Benchmarking dequantization_sizes/I2S_dequantize/16384
+Benchmarking dequantization_sizes/I2S_dequantize/16384: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/I2S_dequantize/16384: Collecting 100 samples in estimated 5.1750 s (1900 iterations)
+Benchmarking dequantization_sizes/I2S_dequantize/16384: Analyzing
+dequantization_sizes/I2S_dequantize/16384
+                        time:   [2.5852 ms 2.6282 ms 2.6722 ms]
+                        thrpt:  [6.1313 Melem/s 6.2338 Melem/s 6.3375 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking dequantization_sizes/TL1_dequantize/16384
+Benchmarking dequantization_sizes/TL1_dequantize/16384: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL1_dequantize/16384: Collecting 100 samples in estimated 5.1985 s (2000 iterations)
+Benchmarking dequantization_sizes/TL1_dequantize/16384: Analyzing
+dequantization_sizes/TL1_dequantize/16384
+                        time:   [2.5548 ms 2.5870 ms 2.6194 ms]
+                        thrpt:  [6.2548 Melem/s 6.3333 Melem/s 6.4129 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) low mild
+  1 (1.00%) high mild
+Benchmarking dequantization_sizes/TL2_dequantize/16384
+Benchmarking dequantization_sizes/TL2_dequantize/16384: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL2_dequantize/16384: Collecting 100 samples in estimated 5.0273 s (2500 iterations)
+Benchmarking dequantization_sizes/TL2_dequantize/16384: Analyzing
+dequantization_sizes/TL2_dequantize/16384
+                        time:   [1.9396 ms 1.9552 ms 1.9711 ms]
+                        thrpt:  [8.3120 Melem/s 8.3797 Melem/s 8.4470 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking dequantization_sizes/I2S_dequantize/65536
+Benchmarking dequantization_sizes/I2S_dequantize/65536: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/I2S_dequantize/65536: Collecting 100 samples in estimated 5.0032 s (1900 iterations)
+Benchmarking dequantization_sizes/I2S_dequantize/65536: Analyzing
+dequantization_sizes/I2S_dequantize/65536
+                        time:   [2.4593 ms 2.5810 ms 2.7371 ms]
+                        thrpt:  [23.944 Melem/s 25.392 Melem/s 26.649 Melem/s]
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) low mild
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+Benchmarking dequantization_sizes/TL1_dequantize/65536
+Benchmarking dequantization_sizes/TL1_dequantize/65536: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL1_dequantize/65536: Collecting 100 samples in estimated 5.1073 s (2000 iterations)
+Benchmarking dequantization_sizes/TL1_dequantize/65536: Analyzing
+dequantization_sizes/TL1_dequantize/65536
+                        time:   [2.5366 ms 2.6178 ms 2.7079 ms]
+                        thrpt:  [24.201 Melem/s 25.035 Melem/s 25.836 Melem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+Benchmarking dequantization_sizes/TL2_dequantize/65536
+Benchmarking dequantization_sizes/TL2_dequantize/65536: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL2_dequantize/65536: Collecting 100 samples in estimated 5.1804 s (2000 iterations)
+Benchmarking dequantization_sizes/TL2_dequantize/65536: Analyzing
+dequantization_sizes/TL2_dequantize/65536
+                        time:   [2.5866 ms 2.6318 ms 2.6803 ms]
+                        thrpt:  [24.451 Melem/s 24.902 Melem/s 25.337 Melem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) low mild
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+Benchmarking dequantization_sizes/I2S_dequantize/262144
+Benchmarking dequantization_sizes/I2S_dequantize/262144: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/I2S_dequantize/262144: Collecting 100 samples in estimated 5.1119 s (1700 iterations)
+Benchmarking dequantization_sizes/I2S_dequantize/262144: Analyzing
+dequantization_sizes/I2S_dequantize/262144
+                        time:   [2.8839 ms 2.9906 ms 3.0998 ms]
+                        thrpt:  [84.567 Melem/s 87.657 Melem/s 90.900 Melem/s]
+Benchmarking dequantization_sizes/TL1_dequantize/262144
+Benchmarking dequantization_sizes/TL1_dequantize/262144: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL1_dequantize/262144: Collecting 100 samples in estimated 5.2439 s (1800 iterations)
+Benchmarking dequantization_sizes/TL1_dequantize/262144: Analyzing
+dequantization_sizes/TL1_dequantize/262144
+                        time:   [2.6988 ms 2.7887 ms 2.8782 ms]
+                        thrpt:  [91.081 Melem/s 94.004 Melem/s 97.132 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) low mild
+Benchmarking dequantization_sizes/TL2_dequantize/262144
+Benchmarking dequantization_sizes/TL2_dequantize/262144: Warming up for 3.0000 s
+Benchmarking dequantization_sizes/TL2_dequantize/262144: Collecting 100 samples in estimated 5.0907 s (1800 iterations)
+Benchmarking dequantization_sizes/TL2_dequantize/262144: Analyzing
+dequantization_sizes/TL2_dequantize/262144
+                        time:   [2.7110 ms 2.7767 ms 2.8424 ms]
+                        thrpt:  [92.225 Melem/s 94.410 Melem/s 96.695 Melem/s]
+
+Benchmarking round_trip/I2S_round_trip/4096
+Benchmarking round_trip/I2S_round_trip/4096: Warming up for 3.0000 s
+Benchmarking round_trip/I2S_round_trip/4096: Collecting 100 samples in estimated 5.2866 s (1100 iterations)
+Benchmarking round_trip/I2S_round_trip/4096: Analyzing
+round_trip/I2S_round_trip/4096
+                        time:   [4.7544 ms 4.8088 ms 4.8636 ms]
+                        thrpt:  [842.17 Kelem/s 851.77 Kelem/s 861.52 Kelem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) low mild
+  1 (1.00%) high mild
+Benchmarking round_trip/TL1_round_trip/4096
+Benchmarking round_trip/TL1_round_trip/4096: Warming up for 3.0000 s
+Benchmarking round_trip/TL1_round_trip/4096: Collecting 100 samples in estimated 5.0922 s (1200 iterations)
+Benchmarking round_trip/TL1_round_trip/4096: Analyzing
+round_trip/TL1_round_trip/4096
+                        time:   [4.2331 ms 4.2624 ms 4.2912 ms]
+                        thrpt:  [954.52 Kelem/s 960.97 Kelem/s 967.61 Kelem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) low mild
+Benchmarking round_trip/TL2_round_trip/4096
+Benchmarking round_trip/TL2_round_trip/4096: Warming up for 3.0000 s
+
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 8.2s, enable flat sampling, or reduce sample count to 50.
+Benchmarking round_trip/TL2_round_trip/4096: Collecting 100 samples in estimated 8.2434 s (5050 iterations)
+Benchmarking round_trip/TL2_round_trip/4096: Analyzing
+round_trip/TL2_round_trip/4096
+                        time:   [1.6161 ms 1.6253 ms 1.6348 ms]
+                        thrpt:  [2.5056 Melem/s 2.5201 Melem/s 2.5344 Melem/s]
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
+Benchmarking round_trip/I2S_round_trip/16384
+Benchmarking round_trip/I2S_round_trip/16384: Warming up for 3.0000 s
+Benchmarking round_trip/I2S_round_trip/16384: Collecting 100 samples in estimated 5.1737 s (1000 iterations)
+Benchmarking round_trip/I2S_round_trip/16384: Analyzing
+round_trip/I2S_round_trip/16384
+                        time:   [5.1079 ms 5.2028 ms 5.2975 ms]
+                        thrpt:  [3.0928 Melem/s 3.1491 Melem/s 3.2076 Melem/s]
+Benchmarking round_trip/TL1_round_trip/16384
+Benchmarking round_trip/TL1_round_trip/16384: Warming up for 3.0000 s
+Benchmarking round_trip/TL1_round_trip/16384: Collecting 100 samples in estimated 5.0150 s (1000 iterations)
+Benchmarking round_trip/TL1_round_trip/16384: Analyzing
+round_trip/TL1_round_trip/16384
+                        time:   [4.8845 ms 4.9530 ms 5.0212 ms]
+                        thrpt:  [3.2630 Melem/s 3.3079 Melem/s 3.3543 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) low mild
+Benchmarking round_trip/TL2_round_trip/16384
+Benchmarking round_trip/TL2_round_trip/16384: Warming up for 3.0000 s
+Benchmarking round_trip/TL2_round_trip/16384: Collecting 100 samples in estimated 5.4054 s (1300 iterations)
+Benchmarking round_trip/TL2_round_trip/16384: Analyzing
+round_trip/TL2_round_trip/16384
+                        time:   [4.1149 ms 4.1427 ms 4.1715 ms]
+                        thrpt:  [3.9276 Melem/s 3.9549 Melem/s 3.9816 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking round_trip/I2S_round_trip/65536
+Benchmarking round_trip/I2S_round_trip/65536: Warming up for 3.0000 s
+Benchmarking round_trip/I2S_round_trip/65536: Collecting 100 samples in estimated 5.1210 s (1000 iterations)
+Benchmarking round_trip/I2S_round_trip/65536: Analyzing
+round_trip/I2S_round_trip/65536
+                        time:   [4.8866 ms 5.0264 ms 5.1713 ms]
+                        thrpt:  [12.673 Melem/s 13.038 Melem/s 13.411 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking round_trip/TL1_round_trip/65536
+Benchmarking round_trip/TL1_round_trip/65536: Warming up for 3.0000 s
+Benchmarking round_trip/TL1_round_trip/65536: Collecting 100 samples in estimated 5.2395 s (1000 iterations)
+Benchmarking round_trip/TL1_round_trip/65536: Analyzing
+round_trip/TL1_round_trip/65536
+                        time:   [4.9710 ms 5.1101 ms 5.2511 ms]
+                        thrpt:  [12.480 Melem/s 12.825 Melem/s 13.184 Melem/s]
+Benchmarking round_trip/TL2_round_trip/65536
+Benchmarking round_trip/TL2_round_trip/65536: Warming up for 3.0000 s
+Benchmarking round_trip/TL2_round_trip/65536: Collecting 100 samples in estimated 5.2669 s (1000 iterations)
+Benchmarking round_trip/TL2_round_trip/65536: Analyzing
+round_trip/TL2_round_trip/65536
+                        time:   [5.1558 ms 5.2787 ms 5.4414 ms]
+                        thrpt:  [12.044 Melem/s 12.415 Melem/s 12.711 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking block_sizes/I2S_block_size/16
+Benchmarking block_sizes/I2S_block_size/16: Warming up for 3.0000 s
+Benchmarking block_sizes/I2S_block_size/16: Collecting 100 samples in estimated 5.1897 s (2000 iterations)
+Benchmarking block_sizes/I2S_block_size/16: Analyzing
+block_sizes/I2S_block_size/16
+                        time:   [2.5071 ms 2.6357 ms 2.7784 ms]
+                        thrpt:  [23.588 Melem/s 24.865 Melem/s 26.140 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high severe
+Benchmarking block_sizes/I2S_block_size/32
+Benchmarking block_sizes/I2S_block_size/32: Warming up for 3.0000 s
+Benchmarking block_sizes/I2S_block_size/32: Collecting 100 samples in estimated 5.0398 s (2000 iterations)
+Benchmarking block_sizes/I2S_block_size/32: Analyzing
+block_sizes/I2S_block_size/32
+                        time:   [2.4271 ms 2.5400 ms 2.6733 ms]
+                        thrpt:  [24.515 Melem/s 25.801 Melem/s 27.001 Melem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) low mild
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+Benchmarking block_sizes/I2S_block_size/64
+Benchmarking block_sizes/I2S_block_size/64: Warming up for 3.0000 s
+Benchmarking block_sizes/I2S_block_size/64: Collecting 100 samples in estimated 5.0389 s (2000 iterations)
+Benchmarking block_sizes/I2S_block_size/64: Analyzing
+block_sizes/I2S_block_size/64
+                        time:   [2.4729 ms 2.5741 ms 2.7009 ms]
+                        thrpt:  [24.265 Melem/s 25.460 Melem/s 26.501 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+Benchmarking block_sizes/I2S_block_size/128
+Benchmarking block_sizes/I2S_block_size/128: Warming up for 3.0000 s
+Benchmarking block_sizes/I2S_block_size/128: Collecting 100 samples in estimated 5.0930 s (2000 iterations)
+Benchmarking block_sizes/I2S_block_size/128: Analyzing
+block_sizes/I2S_block_size/128
+                        time:   [2.4987 ms 2.5605 ms 2.6210 ms]
+                        thrpt:  [25.005 Melem/s 25.595 Melem/s 26.228 Melem/s]
+Benchmarking block_sizes/I2S_block_size/256
+Benchmarking block_sizes/I2S_block_size/256: Warming up for 3.0000 s
+Benchmarking block_sizes/I2S_block_size/256: Collecting 100 samples in estimated 5.1923 s (2000 iterations)
+Benchmarking block_sizes/I2S_block_size/256: Analyzing
+block_sizes/I2S_block_size/256
+                        time:   [2.5562 ms 2.5992 ms 2.6427 ms]
+                        thrpt:  [24.799 Melem/s 25.214 Melem/s 25.638 Melem/s]
+
+Benchmarking 2d_tensors/I2S_2d/256x256
+Benchmarking 2d_tensors/I2S_2d/256x256: Warming up for 3.0000 s
+Benchmarking 2d_tensors/I2S_2d/256x256: Collecting 100 samples in estimated 5.0446 s (2000 iterations)
+Benchmarking 2d_tensors/I2S_2d/256x256: Analyzing
+2d_tensors/I2S_2d/256x256
+                        time:   [2.4234 ms 2.5018 ms 2.5811 ms]
+                        thrpt:  [25.391 Melem/s 26.195 Melem/s 27.043 Melem/s]
+Benchmarking 2d_tensors/TL2_2d/256x256
+Benchmarking 2d_tensors/TL2_2d/256x256: Warming up for 3.0000 s
+Benchmarking 2d_tensors/TL2_2d/256x256: Collecting 100 samples in estimated 5.1674 s (2000 iterations)
+Benchmarking 2d_tensors/TL2_2d/256x256: Analyzing
+2d_tensors/TL2_2d/256x256
+                        time:   [2.5387 ms 2.5779 ms 2.6172 ms]
+                        thrpt:  [25.041 Melem/s 25.422 Melem/s 25.815 Melem/s]
+Benchmarking 2d_tensors/I2S_2d/512x512
+Benchmarking 2d_tensors/I2S_2d/512x512: Warming up for 3.0000 s
+Benchmarking 2d_tensors/I2S_2d/512x512: Collecting 100 samples in estimated 5.2114 s (1500 iterations)
+Benchmarking 2d_tensors/I2S_2d/512x512: Analyzing
+2d_tensors/I2S_2d/512x512
+                        time:   [3.3201 ms 3.4248 ms 3.5308 ms]
+                        thrpt:  [74.246 Melem/s 76.543 Melem/s 78.956 Melem/s]
+Benchmarking 2d_tensors/TL2_2d/512x512
+Benchmarking 2d_tensors/TL2_2d/512x512: Warming up for 3.0000 s
+Benchmarking 2d_tensors/TL2_2d/512x512: Collecting 100 samples in estimated 5.1558 s (1800 iterations)
+Benchmarking 2d_tensors/TL2_2d/512x512: Analyzing
+2d_tensors/TL2_2d/512x512
+                        time:   [2.8388 ms 2.9051 ms 2.9723 ms]
+                        thrpt:  [88.197 Melem/s 90.236 Melem/s 92.343 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking 2d_tensors/I2S_2d/1024x1024
+Benchmarking 2d_tensors/I2S_2d/1024x1024: Warming up for 3.0000 s
+Benchmarking 2d_tensors/I2S_2d/1024x1024: Collecting 100 samples in estimated 5.4821 s (800 iterations)
+Benchmarking 2d_tensors/I2S_2d/1024x1024: Analyzing
+2d_tensors/I2S_2d/1024x1024
+                        time:   [6.7880 ms 6.9313 ms 7.0758 ms]
+                        thrpt:  [148.19 Melem/s 151.28 Melem/s 154.48 Melem/s]
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) low mild
+  4 (4.00%) high mild
+Benchmarking 2d_tensors/TL2_2d/1024x1024
+Benchmarking 2d_tensors/TL2_2d/1024x1024: Warming up for 3.0000 s
+Benchmarking 2d_tensors/TL2_2d/1024x1024: Collecting 100 samples in estimated 5.4748 s (1000 iterations)
+Benchmarking 2d_tensors/TL2_2d/1024x1024: Analyzing
+2d_tensors/TL2_2d/1024x1024
+                        time:   [5.7238 ms 5.8073 ms 5.8932 ms]
+                        thrpt:  [177.93 Melem/s 180.56 Melem/s 183.20 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+
+Benchmarking trait_quantization/I2S_trait
+Benchmarking trait_quantization/I2S_trait: Warming up for 3.0000 s
+Benchmarking trait_quantization/I2S_trait: Collecting 100 samples in estimated 5.0837 s (2000 iterations)
+Benchmarking trait_quantization/I2S_trait: Analyzing
+trait_quantization/I2S_trait
+                        time:   [2.4856 ms 2.5384 ms 2.5917 ms]
+                        thrpt:  [6.3217 Melem/s 6.4543 Melem/s 6.5917 Melem/s]
+Benchmarking trait_quantization/TL1_trait
+Benchmarking trait_quantization/TL1_trait: Warming up for 3.0000 s
+Benchmarking trait_quantization/TL1_trait: Collecting 100 samples in estimated 5.0801 s (2000 iterations)
+Benchmarking trait_quantization/TL1_trait: Analyzing
+trait_quantization/TL1_trait
+                        time:   [2.4537 ms 2.4972 ms 2.5405 ms]
+                        thrpt:  [6.4491 Melem/s 6.5610 Melem/s 6.6773 Melem/s]
+Benchmarking trait_quantization/TL2_trait
+Benchmarking trait_quantization/TL2_trait: Warming up for 3.0000 s
+Benchmarking trait_quantization/TL2_trait: Collecting 100 samples in estimated 5.0954 s (2300 iterations)
+Benchmarking trait_quantization/TL2_trait: Analyzing
+trait_quantization/TL2_trait
+                        time:   [2.1830 ms 2.2027 ms 2.2228 ms]
+                        thrpt:  [7.3707 Melem/s 7.4382 Melem/s 7.5054 Melem/s]
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high mild
+Benchmarking trait_quantization/tensor_quantize_I2S
+Benchmarking trait_quantization/tensor_quantize_I2S: Warming up for 3.0000 s
+Benchmarking trait_quantization/tensor_quantize_I2S: Collecting 100 samples in estimated 5.1304 s (2000 iterations)
+Benchmarking trait_quantization/tensor_quantize_I2S: Analyzing
+trait_quantization/tensor_quantize_I2S
+                        time:   [2.4882 ms 2.5392 ms 2.5924 ms]
+                        thrpt:  [6.3201 Melem/s 6.4524 Melem/s 6.5848 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+Benchmarking trait_quantization/tensor_quantize_TL1
+Benchmarking trait_quantization/tensor_quantize_TL1: Warming up for 3.0000 s
+Benchmarking trait_quantization/tensor_quantize_TL1: Collecting 100 samples in estimated 5.0510 s (2000 iterations)
+Benchmarking trait_quantization/tensor_quantize_TL1: Analyzing
+trait_quantization/tensor_quantize_TL1
+                        time:   [2.4830 ms 2.5556 ms 2.6455 ms]
+                        thrpt:  [6.1931 Melem/s 6.4109 Melem/s 6.5985 Melem/s]
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) low mild
+  2 (2.00%) high severe
+Benchmarking trait_quantization/tensor_quantize_TL2
+Benchmarking trait_quantization/tensor_quantize_TL2: Warming up for 3.0000 s
+Benchmarking trait_quantization/tensor_quantize_TL2: Collecting 100 samples in estimated 5.1695 s (2300 iterations)
+Benchmarking trait_quantization/tensor_quantize_TL2: Analyzing
+trait_quantization/tensor_quantize_TL2
+                        time:   [2.2380 ms 2.2883 ms 2.3725 ms]
+                        thrpt:  [6.9057 Melem/s 7.1600 Melem/s 7.3209 Melem/s]
+Found 4 outliers among 100 measurements (4.00%)
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking compression_ratios/compression_analysis/4096
+Benchmarking compression_ratios/compression_analysis/4096: Warming up for 3.0000 s
+Benchmarking compression_ratios/compression_analysis/4096: Collecting 100 samples in estimated 5.0149 s (900 iterations)
+Benchmarking compression_ratios/compression_analysis/4096: Analyzing
+compression_ratios/compression_analysis/4096
+                        time:   [5.5132 ms 5.5589 ms 5.6050 ms]
+Benchmarking compression_ratios/compression_analysis/16384
+Benchmarking compression_ratios/compression_analysis/16384: Warming up for 3.0000 s
+Benchmarking compression_ratios/compression_analysis/16384: Collecting 100 samples in estimated 5.2221 s (700 iterations)
+Benchmarking compression_ratios/compression_analysis/16384: Analyzing
+compression_ratios/compression_analysis/16384
+                        time:   [7.1713 ms 7.2806 ms 7.3909 ms]
+Benchmarking compression_ratios/compression_analysis/65536
+Benchmarking compression_ratios/compression_analysis/65536: Warming up for 3.0000 s
+Benchmarking compression_ratios/compression_analysis/65536: Collecting 100 samples in estimated 5.2739 s (700 iterations)
+Benchmarking compression_ratios/compression_analysis/65536: Analyzing
+compression_ratios/compression_analysis/65536
+                        time:   [7.3423 ms 7.5102 ms 7.6787 ms]
+
+Benchmarking simd_vs_scalar/I2S_simd_enabled
+Benchmarking simd_vs_scalar/I2S_simd_enabled: Warming up for 3.0000 s
+Benchmarking simd_vs_scalar/I2S_simd_enabled: Collecting 100 samples in estimated 5.2389 s (2000 iterations)
+Benchmarking simd_vs_scalar/I2S_simd_enabled: Analyzing
+simd_vs_scalar/I2S_simd_enabled
+                        time:   [2.6106 ms 2.6717 ms 2.7333 ms]
+                        thrpt:  [11.989 Melem/s 12.265 Melem/s 12.552 Melem/s]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+

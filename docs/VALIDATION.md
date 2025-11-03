@@ -1,268 +1,250 @@
 # BitNet.rs Validation Framework
 
-This document describes the comprehensive validation framework for BitNet.rs, ensuring correctness and parity with reference implementations.
+## Overview
 
-## 🎯 Overview
+The BitNet.rs validation framework provides comprehensive testing and benchmarking tools to ensure correctness and performance of the 1-bit LLM implementation. It includes tokenizer parity testing, logit correlation analysis, perplexity evaluation, performance benchmarking infrastructure, and enhanced GGUF metadata inspection capabilities.
 
-The BitNet.rs validation framework uses a three-tier pyramid approach to catch regressions without false positives from legitimate quantization effects:
+⚠️ **Performance Benchmarking Status**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](GOALS_VS_REALITY_ANALYSIS.md), the performance benchmarking framework requires development to provide verified performance comparisons against the C++ implementation.
 
-```
-         NLL Parity
-        /          \
-    Logit Parity (τ-b)
-   /                  \
-Tokenizer Parity (exact)
-```
+## Components
 
-Each layer builds on the previous one, providing increasingly sophisticated validation.
+### 1. Main Validation Script (`scripts/validate_all.sh`)
 
-## 🔧 Components
+Runs the complete validation suite including:
+- Unit tests
+- Tokenizer parity
+- Greedy argmax invariant
+- Logit parity (τ-b correlation)
+- NLL parity (perplexity)
+- Optional throughput benchmarking
 
-### 1. Tokenizer Parity (Foundation)
-
-**Purpose**: Ensure exact token ID matching between Rust and HuggingFace tokenizers.
-
-**Command**:
+**Usage:**
 ```bash
-BITNET_BIN=target/release/bitnet \
 MODEL_PATH=models/bitnet/model.gguf \
 TOKENIZER=models/bitnet/tokenizer.json \
 HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
-scripts/test-tokenizer-parity.py --smoke
+scripts/validate_all.sh
 ```
 
-**What it validates**:
-- Exact token ID sequences
-- BOS/EOS token handling
-- Special token processing
-- Vocabulary size consistency
-
-### 2. Logit Parity (Belief Layer)
-
-**Purpose**: Validate that model outputs preserve relative rankings despite quantization.
-
-**Command**:
+**For quantized models:**
 ```bash
-PROP_EXAMPLES=10 TAU_STEPS=24 LOGIT_TOPK=10 TAU_MIN=0.60 \
-MODEL_PATH=models/bitnet/model.gguf \
-TOKENIZER=models/bitnet/tokenizer.json \
-HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
-scripts/logit-parity.sh
+DELTA_NLL_MAX=2e-2 scripts/validate_all.sh
 ```
 
-**Key Features**:
-- **Score-aware Kendall's tau-b**: Handles tied ranks from quantization
-- **Deterministic top-k**: Stable sorting with tie-breaking by token ID
-- **NaN robustness**: Demotes NaN/Inf to -∞ before ranking
-- **Configurable thresholds**:
-  - `TAU_MIN=0.60`: Default (allows quantization variance)
-  - `TAU_MIN=0.70`: Strict mode for nightly tests
+### 2. Greedy Argmax Checker (`scripts/check_greedy_argmax.py`)
 
-**Mathematical Foundation**:
-```python
-tau_b = (P - Q) / sqrt((P + Q + T_x) * (P + Q + T_y))
-```
-Where:
-- P = concordant pairs
-- Q = discordant pairs
-- T_x, T_y = ties in each ranking
+Validates that greedy decoding always selects the argmax token from logits.
 
-### 3. NLL Parity (Probability Layer)
-
-**Purpose**: Ensure corpus-level perplexity matches reference implementations.
-
-**Command**:
+**Usage:**
 ```bash
-DELTA_NLL_MAX=1e-2 \
-MODEL_PATH=models/bitnet/model.gguf \
-TOKENIZER=models/bitnet/tokenizer.json \
-HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
-PPL_FILE=crossval/data/ppl_smoke.txt \
-scripts/nll-parity.sh
+bitnet run --model model.gguf --tokenizer tokenizer.json \
+  --prompt "Test" --greedy --dump-logit-steps 10 \
+  --json-out output.json
+
+python3 scripts/check_greedy_argmax.py output.json
 ```
 
-**Implementation Details**:
-- **Token-weighted mean**: `Σ(token_nlls) / Σ(predicted_tokens)`
-- **Teacher-forcing**: Exact decode path with causal masking
-- **PAD masking**: Correctly excludes padding from loss
-- **T-1 accounting**: Metrics use predicted tokens only
+### 3. Decode Throughput Benchmark (`scripts/bench-decode.sh`)
 
-**Tolerance Thresholds**:
-- `DELTA_NLL_MAX=1e-2`: FP32 vs FP32
-- `DELTA_NLL_MAX=2e-2`: Quantized vs FP32
-- `DELTA_NLL_MAX=5e-2`: Heavily quantized (i2s)
+Measures generation throughput and first-token latency.
 
-## 📊 Evaluation Commands
-
-### Basic Perplexity Evaluation
-
+**Usage:**
 ```bash
-# Evaluate on a corpus
-target/release/bitnet eval \
-  --model models/bitnet/model.gguf \
-  --tokenizer models/bitnet/tokenizer.json \
-  --text-file crossval/data/ppl_smoke.txt
+MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
+scripts/bench-decode.sh
 ```
 
-### Teacher-Forcing with Logit Dump
-
+**With baseline comparison:**
 ```bash
-# Explicit token path with logit capture
-target/release/bitnet eval \
-  --model models/bitnet/model.gguf \
-  --tokenizer models/bitnet/tokenizer.json \
-  --teacher-force-ids 1,2,3,4,5,6 \
-  --dump-logit-steps 6 \
-  --logits-topk 10 \
-  --json-out /tmp/tf_eval.json
+BENCH_BASELINE=baseline.json scripts/bench-decode.sh
 ```
 
-### Deterministic Generation
+### 4. Performance Gate (`scripts/perf-gate.sh`)
 
+Automated performance regression detection with configurable thresholds.
+
+**Usage:**
 ```bash
-# Greedy generation with full determinism
-target/release/bitnet run \
-  --model models/bitnet/model.gguf \
-  --tokenizer models/bitnet/tokenizer.json \
-  --prompt "Define entropy." \
-  --max-new-tokens 32 \
-  --greedy \
+MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
+scripts/perf-gate.sh
+```
+
+### 5. Replay Tool (`scripts/replay_parity.py`)
+
+Debug parity failures by replaying specific test cases.
+
+**Usage:**
+```bash
+python3 scripts/replay_parity.py --row 1 artifacts/parity_failures.jsonl
+```
+
+## CLI Enhancements
+
+The `bitnet` CLI now supports advanced validation features:
+
+### Run Command
+```bash
+bitnet run --model model.gguf --tokenizer tokenizer.json \
+  --prompt "Hello world" \
+  --greedy                    # Force greedy decoding
+  --deterministic            # Single-threaded determinism
+  --threads 1                # Explicit thread count
+  --dump-logit-steps 10      # Capture first 10 steps
+  --logits-topk 10          # Top-10 logits per step
+  --assert-greedy           # Fail on non-argmax selection
+  --json-out results.json
+```
+
+### Eval Command
+```bash
+bitnet eval --model model.gguf --tokenizer tokenizer.json \
+  --text-file corpus.txt \
   --deterministic \
-  --threads 1 \
-  --dump-logit-steps 8 \
+  --dump-logit-steps 24 \
   --logits-topk 10 \
-  --json-out /tmp/run.json
+  --json-out eval.json
 ```
 
-## 🧪 Property-Based Testing
-
-The validation framework uses Hypothesis for exhaustive testing:
-
-```python
-# crossval/props/test_logit_parity.py
-@given(
-    prompt=st.text(min_size=1, max_size=200),
-    seed=st.integers(min_value=0, max_value=2**32-1),
-    max_tokens=st.integers(min_value=1, max_value=32)
-)
-def test_logit_parity(prompt, seed, max_tokens):
-    # Runs both implementations
-    # Computes tau-b correlation
-    # Asserts tau >= TAU_MIN
-```
-
-## 🔒 Determinism Controls
-
-Full control over non-deterministic sources:
-
+### Inspect Command (Enhanced GGUF Metadata with Categorization)
 ```bash
-# Environment variables
-export BITNET_DETERMINISTIC=1
-export BITNET_SEED=42
-export RAYON_NUM_THREADS=1
-export OMP_NUM_THREADS=1
-export MKL_NUM_THREADS=1
-export BLAS_NUM_THREADS=1
+# Comprehensive GGUF metadata inspection with categorization and statistics
+bitnet inspect --model model.gguf                     # Categorized human-readable format
+bitnet inspect --model model.gguf --json              # Structured JSON with tensor statistics
 
-# CLI flags
---deterministic  # Sets all above
---threads 1      # Single-threaded execution
---seed 42        # Fixed RNG seed
+# Enhanced example with JSON support
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- model.gguf        # Human-readable
+cargo run --example inspect_gguf_metadata --no-default-features --features cpu -- --json model.gguf  # JSON output
+
+# Quick header validation in tests (enhanced)
+cargo test -p bitnet-inference --test engine_inspect
 ```
 
-## 📈 CI Integration
+**Enhanced Features:**
+- **Memory Efficient**: Only reads GGUF header, not tensor data
+- **Categorized Metadata**: Organized by model params, architecture, tokenizer, training, quantization
+- **Tensor Statistics**: Parameter counts, memory estimates, data type distribution
+- **JSON Serialization**: Both compact and pretty-printed formats for automation
+- **Error Resilient**: Handles malformed GGUF files with detailed error messages
+- **CI/CD Ready**: Fast inspection suitable for automated pipelines
 
-### PR Gates (Required)
+**Validation Benefits:**
+- **Pre-flight Checks**: Validate model format before expensive loading with enhanced categorization
+- **Quantization Analysis**: Understand compression schemes with automated classification
+- **Tensor Statistics**: Get parameter counts and memory estimates without loading
+- **Architecture Inspection**: Examine model structure through categorized metadata
+- **Debugging Support**: Inspect GGUF structure with organized output for troubleshooting
 
+## Validation Thresholds
+
+### PR Gates (Default)
+- **Tau-b correlation**: ≥ 0.60
+- **NLL delta**: ≤ 1e-2 (FP32), ≤ 2e-2 (quantized)
+- **Examples**: 12 prompts, 24 steps
+- **Performance regression**: ≤ 10%
+
+### Nightly Validation (Strict)
+- **Tau-b correlation**: ≥ 0.70
+- **NLL delta**: ≤ 1e-2
+- **Examples**: 100 prompts, 32 steps
+- **Performance regression**: ≤ 10%
+
+## Exit Codes
+
+| Code | Meaning | Action Required |
+|------|---------|-----------------|
+| 0 | Success | None |
+| 3 | Strict mapping failed | Check tensor mapping |
+| 4 | Strict tokenizer failed | Fix tokenizer loading |
+| 5 | NLL too high | Check perplexity calculation |
+| 6 | Tau-b too low | Check logit correlation |
+| 7 | Argmax mismatch | Fix greedy decoding |
+| 9 | Performance regression | Profile and optimize |
+
+## Environment Variables
+
+### Determinism
+- `BITNET_DETERMINISTIC=1`: Force deterministic execution
+- `RAYON_NUM_THREADS=1`: Single-threaded CPU
+- `BITNET_SEED=42`: Fixed random seed
+
+### Validation Tuning
+- `PROP_EXAMPLES`: Number of test examples
+- `TAU_STEPS`: Steps for tau-b calculation
+- `TAU_MIN`: Minimum tau-b threshold
+- `DELTA_NLL_MAX`: Maximum NLL delta
+- `LOGIT_TOPK`: Top-k logits to capture
+
+### Performance
+- `BENCH_PROMPTS`: Number of benchmark prompts
+- `MAX_NEW_TOKENS`: Tokens per benchmark
+- `PERF_REGRESSION_THRESHOLD`: Max acceptable regression %
+
+## CI Integration
+
+### GitHub Actions Workflow
 ```yaml
-# .github/workflows/validation.yml
-validation:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Tokenizer Parity
-      run: scripts/test-tokenizer-parity.py --smoke
-
-    - name: Logit Parity
-      run: |
-        PROP_EXAMPLES=10 TAU_MIN=0.60 scripts/logit-parity.sh
-
-    - name: NLL Parity
-      run: |
-        DELTA_NLL_MAX=2e-2 scripts/nll-parity.sh
+- name: Run Validation
+  env:
+    MODEL_PATH: ${{ env.MODEL_PATH }}
+    TOKENIZER: ${{ env.TOKENIZER }}
+    HF_MODEL_ID: ${{ env.HF_MODEL_ID }}
+  run: scripts/validate_all.sh
 ```
 
-### Nightly Strict Tests
+### Nightly Validation
+See `.github/workflows/nightly-validation.yml` for automated strict validation with artifact collection.
 
-```yaml
-# .github/workflows/nightly.yml
-nightly-strict:
-  schedule:
-    - cron: '0 2 * * *'
-  steps:
-    - name: Strict Validation
-      run: |
-        PROP_EXAMPLES=100 \
-        TAU_MIN=0.70 \
-        TAU_STEPS=32 \
-        DELTA_NLL_MAX=1e-2 \
-        scripts/full-validation.sh
+## Troubleshooting
+
+### Tokenizer Parity Fails
+1. Check BOS/EOS token handling
+2. Verify vocabulary mapping
+3. Compare special token IDs
+
+### Low Tau-b Correlation
+1. Check teacher-forcing path construction
+2. Verify attention masks and position encoding
+3. Look for NaN/inf in logits
+4. Check tie-breaking determinism
+
+### High NLL Delta
+1. Verify token-weighted aggregation
+2. Check PAD masking policy
+3. For quantized models, increase threshold to 2e-2
+
+### Performance Regression
+1. Profile with `cargo bench`
+2. Check recent changes to hot paths
+3. Compare with `perf record/report`
+4. Update baseline if regression is expected
+
+## Quick Recipes
+
+### Full validation (deterministic)
+```bash
+export MODEL_PATH="models/bitnet/model.gguf"
+export TOKENIZER="models/bitnet/tokenizer.json"
+export HF_MODEL_ID="1bitLLM/bitnet_b1_58-3B"
+export BITNET_DETERMINISTIC=1 BITNET_SEED=42
+scripts/validate_all.sh
 ```
 
-## 🛠️ Debugging Tools
-
-### Greedy Argmax Checker
-
-```python
-# scripts/check_greedy_argmax.py
-import json, sys
-
-def check(path):
-    j = json.load(open(path))
-    for step in j.get("logits_dump", []):
-        topk = step["topk"]
-        chosen = step.get("chosen_id")
-        argmax = max(topk, key=lambda x: (x[1], -x[0]))[0]
-        if argmax != chosen:
-            raise SystemExit(f"Non-argmax at step {step['step']}")
-    print("OK: greedy argmax invariant holds")
+### Quick smoke test
+```bash
+cargo test -p bitnet-cli --no-default-features --features cpu
 ```
 
-### Artifact Replay
-
-```python
-# scripts/replay_artifact.py
-import json
-
-def replay(artifact_path, row_idx):
-    with open(artifact_path) as f:
-        row = json.loads(f.readlines()[row_idx])
-
-    # Re-run both implementations with row["prompt"], row["seed"]
-    # Compare tau-b and NLL
-    # Print detailed diff for debugging
+### Performance baseline
+```bash
+MODEL_PATH=model.gguf TOKENIZER=tokenizer.json \
+scripts/perf-gate.sh
 ```
 
-## 📝 Key Invariants
+### Debug parity failure
+```bash
+# Capture failure
+PARITY_ARTIFACT=debug.jsonl scripts/validate_all.sh
 
-1. **Greedy Argmax**: In greedy mode, chosen token = argmax(logits)
-2. **Teacher-Forcing**: NLL computed through decode path, not special forward
-3. **Token Weighting**: Corpus NLL = mean over tokens, not sequences
-4. **Deterministic Top-K**: Ties broken by token ID (ascending)
-5. **NaN Safety**: NaN/Inf → -∞ before any comparisons
-
-## 🚀 Performance Considerations
-
-- **Batching**: Validation uses single sequences for correctness
-- **Threading**: Set to 1 for deterministic validation
-- **Caching**: 15-minute cache for tokenizer/model loads
-- **Artifacts**: JSONL format for efficient streaming
-
-## 📚 References
-
-- [Kendall's Tau-b](https://en.wikipedia.org/wiki/Kendall_rank_correlation_coefficient)
-- [Perplexity Calculation](https://huggingface.co/docs/transformers/perplexity)
-- [Teacher Forcing](https://machinelearningmastery.com/teacher-forcing-for-recurrent-neural-networks/)
-
----
-
-The validation framework ensures BitNet.rs maintains correctness while allowing for legitimate quantization effects. It catches real regressions early without false positives from numerical precision differences.
+# Replay specific case
+python3 scripts/replay_parity.py --row 1 debug.jsonl
+```

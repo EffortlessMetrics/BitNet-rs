@@ -401,4 +401,54 @@ mod tests {
         }
         Ok(())
     }
+
+    #[test]
+    fn test_writer_produces_standard_v3_format() -> Result<()> {
+        // Verify that GgufWriter produces proper GGUF v3 files with alignment and data_offset
+        let tmp = NamedTempFile::new().unwrap();
+        let out = tmp.path().to_path_buf();
+
+        let mut w = GgufWriter::new();
+        w.add_metadata("general.architecture", MetadataValue::String("bitnet-b1.58".into()));
+        w.add_metadata("bitnet.hidden_size", MetadataValue::U32(8));
+        w.add_metadata("bitnet.num_layers", MetadataValue::U32(2));
+        w.add_metadata("bitnet.num_heads", MetadataValue::U32(2));
+        w.add_metadata("bitnet.vocab_size", MetadataValue::U32(16));
+        w.add_metadata("bitnet.context_length", MetadataValue::U32(32));
+        w.add_metadata("general.file_type", MetadataValue::U32(1));
+
+        let a: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+        w.add_tensor_f32("test.a", &a, &[2, 2])?;
+        w.write_to_file(&out)?;
+
+        // Read the file and verify it's standard v3
+        let file = File::open(&out).unwrap();
+        let mmap = unsafe { memmap2::Mmap::map(&file).unwrap() };
+        let reader = GgufReader::new(&mmap).unwrap();
+
+        // Verify the header indicates standard v3 (not early variant)
+        let header = &reader.header;
+        assert_eq!(header.version, 3, "should be GGUF v3");
+        assert!(header.is_standard_v3(), "should be standard v3, not early variant");
+        assert!(!header.is_early_v3_variant(), "should not be early variant");
+
+        // Verify alignment and data_offset are present and valid
+        assert_eq!(header.alignment, 32, "alignment should be 32");
+        assert!(header.data_offset > 0, "data_offset should be non-zero for standard v3");
+        assert_eq!(
+            header.data_offset % header.alignment as u64,
+            0,
+            "data_offset should be aligned"
+        );
+
+        // Verify format description
+        let desc = header.format_description();
+        assert!(desc.contains("standard"), "format description should indicate standard v3");
+        assert!(
+            !desc.contains("early variant"),
+            "format description should not indicate early variant"
+        );
+
+        Ok(())
+    }
 }

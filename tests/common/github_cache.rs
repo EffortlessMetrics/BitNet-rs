@@ -558,7 +558,8 @@ mod tests {
 
         // Set environment variable with guard for automatic cleanup
         {
-            let _guard = EnvGuard::set("GITHUB_ACTIONS", "true");
+            let _guard = EnvGuard::new("GITHUB_ACTIONS");
+            _guard.set("true");
             assert!(cache_manager.is_github_actions());
         }
     }

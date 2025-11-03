@@ -407,11 +407,11 @@ impl BatchEngine {
         match quantization_type {
             "I2S" => {
                 // I2S works well on both CPU and GPU, prefer GPU for larger batches
-                #[cfg(feature = "gpu")]
+                #[cfg(any(feature = "gpu", feature = "cuda"))]
                 {
                     Device::Cuda(0)
                 }
-                #[cfg(not(feature = "gpu"))]
+                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 {
                     Device::Cpu
                 }
@@ -507,11 +507,11 @@ impl BatchEngine {
         }
 
         // Default device selection
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             Device::Cuda(0)
         }
-        #[cfg(not(feature = "gpu"))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
         {
             Device::Cpu
         }

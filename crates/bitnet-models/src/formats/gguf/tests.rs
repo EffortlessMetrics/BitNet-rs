@@ -147,6 +147,87 @@ fn test_gguf_header_invalid_magic() {
 }
 
 #[test]
+fn test_gguf_v3_early_variant_detection() {
+    // Test v3 early variant (missing alignment/data_offset, goes straight to KV pairs)
+    // This simulates Microsoft BitNet model structure
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF"); // Magic
+    data.extend_from_slice(&3u32.to_le_bytes()); // Version 3
+    data.extend_from_slice(&0u64.to_le_bytes()); // Tensor count
+    data.extend_from_slice(&1u64.to_le_bytes()); // Metadata count (1 KV pair)
+
+    // Instead of alignment/data_offset, write a KV pair that looks like a string key
+    let key = "general.architecture";
+    data.extend_from_slice(&(key.len() as u64).to_le_bytes()); // Key length
+    data.extend_from_slice(key.as_bytes()); // Key bytes
+    data.extend_from_slice(&8u32.to_le_bytes()); // String type
+    let value = "bitnet";
+    data.extend_from_slice(&(value.len() as u64).to_le_bytes()); // Value length
+    data.extend_from_slice(value.as_bytes()); // Value bytes
+
+    let mut offset = 0;
+    let header = GgufHeader::read(&data, &mut offset).unwrap();
+
+    // Should detect early variant and use defaults
+    assert_eq!(header.version, 3);
+    assert_eq!(header.alignment, 32); // Default
+    assert_eq!(header.data_offset, 0); // Early variant marker
+    assert!(header.is_early_v3_variant());
+    assert!(!header.is_standard_v3());
+    assert_eq!(
+        header.format_description(),
+        "GGUF v3 (early variant, missing alignment/data_offset fields)"
+    );
+
+    // Offset should be positioned at the start of the KV pair (after header, not consuming KV data)
+    assert_eq!(offset, 24); // Just the base header, no alignment/data_offset consumed
+}
+
+#[test]
+fn test_gguf_v3_standard_detection() {
+    // Test standard v3 with proper alignment and data_offset
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF"); // Magic
+    data.extend_from_slice(&3u32.to_le_bytes()); // Version 3
+    data.extend_from_slice(&0u64.to_le_bytes()); // Tensor count
+    data.extend_from_slice(&0u64.to_le_bytes()); // Metadata count
+    data.extend_from_slice(&32u32.to_le_bytes()); // Alignment
+    data.extend_from_slice(&512u64.to_le_bytes()); // Data offset (non-zero)
+
+    let mut offset = 0;
+    let header = GgufHeader::read(&data, &mut offset).unwrap();
+
+    assert_eq!(header.version, 3);
+    assert_eq!(header.alignment, 32);
+    assert_eq!(header.data_offset, 512);
+    assert!(header.is_standard_v3());
+    assert!(!header.is_early_v3_variant());
+    assert_eq!(header.format_description(), "GGUF v3 (standard, align=32, data_offset=512)");
+
+    // Should consume alignment + data_offset fields
+    assert_eq!(offset, 36); // 24 + 4 + 8
+}
+
+#[test]
+fn test_gguf_v3_invalid_alignment_clamped() {
+    // Test v3 with invalid alignment (not power of 2)
+    let mut data = Vec::new();
+    data.extend_from_slice(b"GGUF"); // Magic
+    data.extend_from_slice(&3u32.to_le_bytes()); // Version 3
+    data.extend_from_slice(&0u64.to_le_bytes()); // Tensor count
+    data.extend_from_slice(&0u64.to_le_bytes()); // Metadata count
+    data.extend_from_slice(&17u32.to_le_bytes()); // Invalid alignment (not power of 2)
+    data.extend_from_slice(&1024u64.to_le_bytes()); // Data offset
+
+    let mut offset = 0;
+    let header = GgufHeader::read(&data, &mut offset).unwrap();
+
+    // Should clamp invalid alignment to 32
+    assert_eq!(header.alignment, 32);
+    assert_eq!(header.data_offset, 1024);
+}
+
+#[test]
 fn test_builder_writes_header_v2_shape() {
     let bytes = build_gguf_bytes(vec![("k", GgufValue::U32(1))]);
     // Check header structure
@@ -994,7 +1075,8 @@ fn test_ln_gamma_validator_envelope() {
 
     // Test 3: Invalid RMS should fail in strict mode
     {
-        let _guard = EnvGuard::set("BITNET_STRICT_MODE", "1");
+        let _guard = EnvGuard::new("BITNET_STRICT_MODE");
+        _guard.set("1");
         let invalid_tensor = tensor_with_rms(0.01, 100);
         let result = GgufLoader::check_ln_gamma_stats("test.norm.weight", &invalid_tensor);
         assert!(result.is_err(), "Invalid RMS should fail in strict mode");

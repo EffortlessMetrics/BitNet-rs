@@ -322,7 +322,7 @@ fn assert_model_structure_valid(model: &dyn Model) {
     // Check KV heads configuration
     assert!(config.model.num_key_value_heads > 0, "Number of KV heads must be positive");
     assert!(
-        config.model.num_heads % config.model.num_key_value_heads == 0,
+        config.model.num_heads.is_multiple_of(config.model.num_key_value_heads),
         "num_heads {} must be divisible by num_key_value_heads {}",
         config.model.num_heads,
         config.model.num_key_value_heads
@@ -337,7 +337,7 @@ fn assert_tensor_alignment_valid(model: &dyn Model) {
 
     // Check that dimensions are aligned to common boundaries
     // Hidden size should be multiple of 64 for SIMD efficiency
-    if config.model.hidden_size % 64 != 0 {
+    if !config.model.hidden_size.is_multiple_of(64) {
         eprintln!(
             "Warning: Hidden size {} not aligned to 64-byte boundary (may impact SIMD performance)",
             config.model.hidden_size

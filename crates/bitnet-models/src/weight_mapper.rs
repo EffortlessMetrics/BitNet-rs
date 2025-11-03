@@ -1,10 +1,10 @@
 use bitnet_common::Result;
 use candle_core::{DType, Device, Tensor};
-use once_cell::sync::Lazy;
 use regex::Regex;
 /// Weight mapping utilities for loading model weights from various formats
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 /// Model dimensions for tensor shape validation and transposition
 #[derive(Clone, Copy, Debug)]
@@ -94,80 +94,138 @@ fn ensure_matrix_or_transpose(
 /// layers.{i}.feed_forward.{gate_proj|up_proj|down_proj}.weight
 /// layers.{i}.attention_norm.weight
 /// layers.{i}.post_attention_layernorm.weight
-static RE_BLK_ATTN_Q: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_q\.weight$").unwrap());
-static RE_BLK_ATTN_K: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_k\.weight$").unwrap());
-static RE_BLK_ATTN_V: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_v\.weight$").unwrap());
-static RE_BLK_ATTN_O: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^blk\.(\d+)\.attn_o(?:utput)?\.weight$").unwrap());
+static RE_BLK_ATTN_Q: OnceLock<Regex> = OnceLock::new();
+fn re_blk_attn_q() -> &'static Regex {
+    RE_BLK_ATTN_Q.get_or_init(|| Regex::new(r"^blk\.(\d+)\.attn_q\.weight$").unwrap())
+}
 
-static RE_LLAMA_WQ: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wq\.weight$").unwrap());
-static RE_LLAMA_WK: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wk\.weight$").unwrap());
-static RE_LLAMA_WV: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wv\.weight$").unwrap());
-static RE_LLAMA_WO: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wo\.weight$").unwrap());
+static RE_BLK_ATTN_K: OnceLock<Regex> = OnceLock::new();
+fn re_blk_attn_k() -> &'static Regex {
+    RE_BLK_ATTN_K.get_or_init(|| Regex::new(r"^blk\.(\d+)\.attn_k\.weight$").unwrap())
+}
+
+static RE_BLK_ATTN_V: OnceLock<Regex> = OnceLock::new();
+fn re_blk_attn_v() -> &'static Regex {
+    RE_BLK_ATTN_V.get_or_init(|| Regex::new(r"^blk\.(\d+)\.attn_v\.weight$").unwrap())
+}
+
+static RE_BLK_ATTN_O: OnceLock<Regex> = OnceLock::new();
+fn re_blk_attn_o() -> &'static Regex {
+    RE_BLK_ATTN_O.get_or_init(|| Regex::new(r"^blk\.(\d+)\.attn_o(?:utput)?\.weight$").unwrap())
+}
+
+static RE_LLAMA_WQ: OnceLock<Regex> = OnceLock::new();
+fn re_llama_wq() -> &'static Regex {
+    RE_LLAMA_WQ.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wq\.weight$").unwrap()
+    })
+}
+
+static RE_LLAMA_WK: OnceLock<Regex> = OnceLock::new();
+fn re_llama_wk() -> &'static Regex {
+    RE_LLAMA_WK.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wk\.weight$").unwrap()
+    })
+}
+
+static RE_LLAMA_WV: OnceLock<Regex> = OnceLock::new();
+fn re_llama_wv() -> &'static Regex {
+    RE_LLAMA_WV.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wv\.weight$").unwrap()
+    })
+}
+
+static RE_LLAMA_WO: OnceLock<Regex> = OnceLock::new();
+fn re_llama_wo() -> &'static Regex {
+    RE_LLAMA_WO.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:self_)?attn\.wo\.weight$").unwrap()
+    })
+}
 
 // FFN / MLP variants
-static RE_BLK_FFN_GATE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^blk\.(\d+)\.ffn_gate(?:_inp)?\.weight$").unwrap());
-static RE_BLK_FFN_UP: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^blk\.(\d+)\.ffn_(?:up|up_proj)\.weight$").unwrap());
-static RE_BLK_FFN_DOWN: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^blk\.(\d+)\.ffn_(?:down|down_proj)\.weight$").unwrap());
+static RE_BLK_FFN_GATE: OnceLock<Regex> = OnceLock::new();
+fn re_blk_ffn_gate() -> &'static Regex {
+    RE_BLK_FFN_GATE.get_or_init(|| Regex::new(r"^blk\.(\d+)\.ffn_gate(?:_inp)?\.weight$").unwrap())
+}
 
-static RE_FFN_W1: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w1|gate_proj)\.weight$")
-        .unwrap()
-});
-static RE_FFN_W3: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w3|up_proj)\.weight$")
-        .unwrap()
-});
-static RE_FFN_W2: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w2|down_proj)\.weight$")
-        .unwrap()
-});
+static RE_BLK_FFN_UP: OnceLock<Regex> = OnceLock::new();
+fn re_blk_ffn_up() -> &'static Regex {
+    RE_BLK_FFN_UP.get_or_init(|| Regex::new(r"^blk\.(\d+)\.ffn_(?:up|up_proj)\.weight$").unwrap())
+}
+
+static RE_BLK_FFN_DOWN: OnceLock<Regex> = OnceLock::new();
+fn re_blk_ffn_down() -> &'static Regex {
+    RE_BLK_FFN_DOWN
+        .get_or_init(|| Regex::new(r"^blk\.(\d+)\.ffn_(?:down|down_proj)\.weight$").unwrap())
+}
+
+static RE_FFN_W1: OnceLock<Regex> = OnceLock::new();
+fn re_ffn_w1() -> &'static Regex {
+    RE_FFN_W1.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w1|gate_proj)\.weight$")
+            .unwrap()
+    })
+}
+
+static RE_FFN_W3: OnceLock<Regex> = OnceLock::new();
+fn re_ffn_w3() -> &'static Regex {
+    RE_FFN_W3.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w3|up_proj)\.weight$")
+            .unwrap()
+    })
+}
+
+static RE_FFN_W2: OnceLock<Regex> = OnceLock::new();
+fn re_ffn_w2() -> &'static Regex {
+    RE_FFN_W2.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:mlp|feed_forward)\.(?:w2|down_proj)\.weight$")
+            .unwrap()
+    })
+}
 
 // Norm aliases
-static RE_ATTN_NORM: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:attention_norm|input_layernorm)\.weight$").unwrap()
-});
-static RE_FFN_NORM: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:post_attention_layernorm|ffn_norm)\.weight$")
-        .unwrap()
-});
+static RE_ATTN_NORM: OnceLock<Regex> = OnceLock::new();
+fn re_attn_norm() -> &'static Regex {
+    RE_ATTN_NORM.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:attention_norm|input_layernorm)\.weight$")
+            .unwrap()
+    })
+}
+
+static RE_FFN_NORM: OnceLock<Regex> = OnceLock::new();
+fn re_ffn_norm() -> &'static Regex {
+    RE_FFN_NORM.get_or_init(|| {
+        Regex::new(r"^(?:model\.)?layers\.(\d+)\.(?:post_attention_layernorm|ffn_norm)\.weight$")
+            .unwrap()
+    })
+}
 
 /// Returns canonical key if `k` matches a known vendor pattern.
 pub fn normalize_vendor_key(k: &str) -> Option<String> {
     macro_rules! cap {
-        ($re:expr, $k:expr, $fmt:expr) => {{ if let Some(c) = $re.captures($k) { Some(format!($fmt, &c[1])) } else { None } }};
+        ($re_fn:expr, $k:expr, $fmt:expr) => {{ if let Some(c) = $re_fn().captures($k) { Some(format!($fmt, &c[1])) } else { None } }};
     }
 
     // Attention (blk.*)
-    cap!(RE_BLK_ATTN_Q, k, "layers.{}.attention.q_proj.weight")
-        .or_else(|| cap!(RE_BLK_ATTN_K, k, "layers.{}.attention.k_proj.weight"))
-        .or_else(|| cap!(RE_BLK_ATTN_V, k, "layers.{}.attention.v_proj.weight"))
-        .or_else(|| cap!(RE_BLK_ATTN_O, k, "layers.{}.attention.o_proj.weight"))
+    cap!(re_blk_attn_q, k, "layers.{}.attention.q_proj.weight")
+        .or_else(|| cap!(re_blk_attn_k, k, "layers.{}.attention.k_proj.weight"))
+        .or_else(|| cap!(re_blk_attn_v, k, "layers.{}.attention.v_proj.weight"))
+        .or_else(|| cap!(re_blk_attn_o, k, "layers.{}.attention.o_proj.weight"))
         // LLaMA-style attention
-        .or_else(|| cap!(RE_LLAMA_WQ, k, "layers.{}.attention.q_proj.weight"))
-        .or_else(|| cap!(RE_LLAMA_WK, k, "layers.{}.attention.k_proj.weight"))
-        .or_else(|| cap!(RE_LLAMA_WV, k, "layers.{}.attention.v_proj.weight"))
-        .or_else(|| cap!(RE_LLAMA_WO, k, "layers.{}.attention.o_proj.weight"))
+        .or_else(|| cap!(re_llama_wq, k, "layers.{}.attention.q_proj.weight"))
+        .or_else(|| cap!(re_llama_wk, k, "layers.{}.attention.k_proj.weight"))
+        .or_else(|| cap!(re_llama_wv, k, "layers.{}.attention.v_proj.weight"))
+        .or_else(|| cap!(re_llama_wo, k, "layers.{}.attention.o_proj.weight"))
         // FFN / MLP
-        .or_else(|| cap!(RE_BLK_FFN_GATE, k, "layers.{}.feed_forward.gate_proj.weight"))
-        .or_else(|| cap!(RE_BLK_FFN_UP,   k, "layers.{}.feed_forward.up_proj.weight"))
-        .or_else(|| cap!(RE_BLK_FFN_DOWN, k, "layers.{}.feed_forward.down_proj.weight"))
-        .or_else(|| cap!(RE_FFN_W1, k, "layers.{}.feed_forward.gate_proj.weight"))
-        .or_else(|| cap!(RE_FFN_W3, k, "layers.{}.feed_forward.up_proj.weight"))
-        .or_else(|| cap!(RE_FFN_W2, k, "layers.{}.feed_forward.down_proj.weight"))
+        .or_else(|| cap!(re_blk_ffn_gate, k, "layers.{}.feed_forward.gate_proj.weight"))
+        .or_else(|| cap!(re_blk_ffn_up,   k, "layers.{}.feed_forward.up_proj.weight"))
+        .or_else(|| cap!(re_blk_ffn_down, k, "layers.{}.feed_forward.down_proj.weight"))
+        .or_else(|| cap!(re_ffn_w1, k, "layers.{}.feed_forward.gate_proj.weight"))
+        .or_else(|| cap!(re_ffn_w3, k, "layers.{}.feed_forward.up_proj.weight"))
+        .or_else(|| cap!(re_ffn_w2, k, "layers.{}.feed_forward.down_proj.weight"))
         // Norms
-        .or_else(|| cap!(RE_ATTN_NORM, k, "layers.{}.attention_norm.weight"))
-        .or_else(|| cap!(RE_FFN_NORM,  k, "layers.{}.post_attention_layernorm.weight"))
+        .or_else(|| cap!(re_attn_norm, k, "layers.{}.attention_norm.weight"))
+        .or_else(|| cap!(re_ffn_norm,  k, "layers.{}.post_attention_layernorm.weight"))
 }
 
 /// Map GGUF tensor names to transformer module names

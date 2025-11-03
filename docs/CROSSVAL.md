@@ -1,175 +1,391 @@
-# Cross-Validation Guide
+# Cross-Validation Documentation
 
-This document describes how to use BitNet.rs cross-validation tools to ensure compatibility and correctness against reference implementations.
+This document describes how to run cross-validation tests between BitNet.rs and Microsoft's official BitNet C++ implementation to ensure drop-in compatibility and identical results.
 
-## Fetching test models (no repo binaries)
-
-BitNet.rs uses a lockfile-based approach to fetch models deterministically without committing large binary files to the repository.
-
-### Quick Start
+## Quick Start
 
 ```bash
-cargo run -p xtask -- fetch-models --lock crossval-models.lock.json
+# One-command cross-validation using xtask (RECOMMENDED!)
+cargo xtask full-crossval  # Downloads model, fetches C++, runs tests
+
+# Or run individual steps:
+cargo xtask download-model  # Download BitNet GGUF model (resumable, HF_TOKEN support)
+cargo xtask fetch-cpp       # Fetch and build C++ implementation
+cargo xtask crossval        # Run tests (auto-discovers model)
+
+# Legacy script approach (still works)
+./scripts/test_parity.sh  # Will guide you through model download if needed
+
+# Or set environment and run tests directly
+export CROSSVAL_GGUF=/path/to/model.gguf
+export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp
+cargo test --features crossval -p bitnet-crossval
 ```
 
-### Output
+## Prerequisites
 
-The command prints JSON with model information:
+- Rust 1.89+ with cargo
+- C++ compiler (g++ or clang++)
+- CMake 3.14+
+- Git with submodule support
+- bindgen dependencies (libclang)
+- ~2GB disk space for C++ build
+- A BitNet GGUF model file (see below for download instructions)
 
-```json
-{
-  "id": "microsoft/bitnet-b1.58-2B-4T-gguf@ggml-model-i2_s.gguf",
-  "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
-  "local": "/home/user/.cache/bitnet/models/<sha>/model.gguf",
-  "status": "downloaded"
-}
+## Setup Process
+
+### 1. Download the BitNet Model
+
+Download the official Microsoft BitNet b1.58 2B model (1.19 GB):
+
+**Option 1: Using huggingface-cli (recommended)**
+```bash
+pip install -U "huggingface_hub[cli]"
+huggingface-cli download microsoft/bitnet-b1.58-2B-4T-gguf \
+  --include "ggml-model-i2_s.gguf" \
+  --local-dir ./models/bitnet-b1.58-2B-4T-gguf
 ```
 
-### Cache Location
-
-Models are cached in `~/.cache/bitnet/models/<sha256>/model.gguf` for deterministic retrieval. The SHA256 hash ensures integrity and deduplication.
-
-### Lockfile Format
-
-The lockfile (`crossval-models.lock.json`) contains:
-
-```json
-[
-  {
-    "id": "model-identifier",
-    "sha256": "expected-sha256-hash",
-    "bytes": 12345,
-    "urls": ["https://..."],
-    "license": "license-name"
-  }
-]
+**Option 2: Using git-lfs**
+```bash
+git lfs install
+git clone https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf models/bitnet-b1.58-2B-4T-gguf
 ```
 
-### Using in Cross-Validation
+**Option 3: Direct download**
+```bash
+mkdir -p models/bitnet-b1.58-2B-4T-gguf
+curl -L -o models/bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/main/ggml-model-i2_s.gguf
+```
 
-Set environment variables to use cached models:
+### 2. Fetch and Build Microsoft BitNet C++
+
+The fetch script clones the official Microsoft BitNet repository and builds it:
 
 ```bash
-# Fetch model
-cargo run -p xtask -- fetch-models --lock crossval-models.lock.json
+# Build pinned stable release (recommended)
+./ci/fetch_bitnet_cpp.sh --tag b1-65-ggml
 
-# Use in parity/bench tests
-export CROSSVAL_GGUF="/home/user/.cache/bitnet/models/<sha>/model.gguf"
-cargo test -p crossval --features crossval-bitnetcpp
+# Or use latest main branch
+./ci/fetch_bitnet_cpp.sh --tag main --force
 ```
 
-## Cross-Validation Workflow
+This script:
+- Clones https://github.com/microsoft/BitNet.git with submodules
+- Handles the known `bitnet-lut-kernels.h` header issue
+- Builds shared libraries for FFI
+- Verifies all critical files are present
 
-1. **Fetch models**: `cargo run -p xtask -- fetch-models --lock crossval-models.lock.json`
-2. **Build C++ reference**: `cargo run -p xtask -- fetch-cpp`
-3. **Run cross-validation**: `cargo run -p xtask -- crossval`
-4. **Review results**: Check reports in `crossval/reports/`
+The C++ implementation is cached at `$HOME/.cache/bitnet_cpp`.
 
-## Parity Harness (Rust ↔ bitnet.cpp)
+### 3. Set Environment Variables
 
-The parity harness validates that the Rust inference engine produces identical outputs to Microsoft's BitNet C++ implementation for deterministic inference. This ensures correctness and helps catch regressions.
-
-### Prerequisites
-
-1. **Model**: Fetch a test model using the lockfile approach
-2. **BitNet C++ (optional)**: For full parity validation, set `BITNET_CPP_DIR`
-
-### Running Parity Tests
-
-**Rust-only validation** (no C++ comparison):
 ```bash
-# Fetch model
-cargo run -p xtask -- fetch-models --lock crossval-models.lock.json | tee /tmp/fetch.json
-export CROSSVAL_GGUF=$(jq -r '.local // .[0].local' /tmp/fetch.json)
+# Point to C++ implementation
+export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp
 
-# Run parity test
-cargo test -p bitnet-crossval --features crossval,integration-tests -- parity_bitnetcpp
+# Deterministic execution (REQUIRED for parity)
+export OMP_NUM_THREADS=1
+export GGML_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+
+# Library paths (optional with RPATH support)
+export LD_LIBRARY_PATH=$BITNET_CPP_DIR/build/3rdparty/llama.cpp/src:$LD_LIBRARY_PATH
+
+# Your test model (using the downloaded model)
+export CROSSVAL_GGUF=$(pwd)/models/bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 ```
 
-**Full parity validation** (with C++ comparison):
+### 4. Build Rust with Cross-Validation
+
 ```bash
-# Set up environment
-export CROSSVAL_GGUF=$(jq -r '.local // .[0].local' /tmp/fetch.json)
-export BITNET_CPP_DIR=/path/to/bitnetcpp/build
-
-# Run parity test
-cargo test -p bitnet-crossval --features crossval,integration-tests,cpu -- parity_bitnetcpp
+# Build the crossval crate with C++ support
+cargo build --features crossval -p bitnet-crossval --release
 ```
 
-### Custom Prompts
+## Running Tests
 
-Override the default test prompt:
+### BitNet.cpp Parity Harness
+
+The comprehensive parity harness validates Rust implementation against Microsoft's BitNet C++ reference:
+
 ```bash
-export CROSSVAL_PROMPT="Explain photosynthesis in one sentence."
-cargo test -p bitnet-crossval --features crossval,integration-tests -- parity_bitnetcpp
+# Set environment variables
+export CROSSVAL_GGUF=/path/to/model.gguf
+export BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp
+
+# Run parity test (with C++ comparison)
+cargo test -p crossval --features crossval,integration-tests parity_bitnetcpp -- --nocapture
+
+# Rust-only mode (skips C++ comparison if BITNET_CPP_DIR not set)
+unset BITNET_CPP_DIR
+cargo test -p crossval --features crossval,integration-tests parity_bitnetcpp -- --nocapture
+
+# Custom prompt for testing
+export CROSSVAL_PROMPT="Explain quantum entanglement in simple terms."
+cargo test -p crossval --features crossval,integration-tests parity_bitnetcpp -- --nocapture
 ```
 
-Or use predefined prompts from `crossval/prompts.yaml`:
+**Receipt Output**: The parity test writes a JSON receipt to `docs/baselines/YYYY-MM-DD/parity-bitnetcpp.json` containing:
+- Model SHA256 fingerprint
+- Tokenization metadata (BOS/EOT/vocab size)
+- Rust inference outputs (logits, decoded tokens)
+- C++ parity metrics (cosine similarity, exact match rate) when available
+- Validation flags (deterministic execution, production engine)
+
+### All Parity Tests
+
 ```bash
-export CROSSVAL_PROMPT="$(yq '.parity_prompts.math.text' crossval/prompts.yaml)"
-cargo test -p bitnet-crossval --features crossval,integration-tests -- parity_bitnetcpp
+./scripts/crossval.sh /path/to/model.gguf
 ```
 
-### Parity Receipts
+### Individual Tests
 
-The parity test writes a receipt to `docs/baselines/<date>/parity-bitnetcpp.json` containing:
-- **Timestamp** and **commit hash**
-- **Rust engine outputs**: tokens, logits, greedy decode results
-- **Parity metrics** (when C++ is available): cosine similarity, exact match rate
-- **Template detection**: which prompt template was used
-- **Validation status**: production vs mock, deterministic flags
+```bash
+# Tokenization parity
+cargo test --features crossval -p bitnet-crossval test_tokenization_parity -- --nocapture
 
-Example receipt:
-```json
-{
-  "timestamp": "2025-01-16T10:30:00Z",
-  "commit": "a606a0d2",
-  "model_path": "/home/user/.cache/bitnet/models/.../model.gguf",
-  "template": "instruct",
-  "prompt": "Q: 2+2? A:",
-  "rust": {
-    "token_count": 5,
-    "vocab_size": 50257,
-    "decoded_tokens": [657, 604],
-    "n_steps": 8
-  },
-  "parity": {
-    "cpp_available": false,
-    "status": "rust_only"
-  },
-  "validation": {
-    "rust_engine": "production",
-    "deterministic": true
-  }
-}
+# Single-step logits parity
+cargo test --features crossval -p bitnet-crossval test_single_step_logits -- --nocapture
+
+# Multi-step generation parity
+cargo test --features crossval -p bitnet-crossval test_multi_step_generation -- --nocapture
+
+# Batch processing parity
+cargo test --features crossval -p bitnet-crossval test_batch_processing -- --nocapture
 ```
 
-### Deterministic Inference
+## Test Coverage
 
-The parity harness enforces deterministic inference:
-- **Single-threaded**: `RAYON_NUM_THREADS=1`
-- **Greedy sampling**: temperature = 0.0
-- **Fixed seed**: seed = 0
-- **Template-aware BOS**: Respects template's `should_add_bos()` policy
-- **Token-level EOT**: Uses `<|eot_id|>` for LLaMA-3 models
+The cross-validation suite tests:
 
-### Troubleshooting
+1. **Model Loading**: Verifies model properties match (vocab size, context, embedding dim)
+2. **Tokenization Parity**: Uses C++ tokenizer for both to ensure identical tokens
+3. **Single-Step Logits**: Forward pass produces identical logits (tolerance: 1e-4)
+4. **Multi-Step Generation**: Greedy decoding produces identical token sequences
+5. **Batch Processing**: All positions in a batch have matching logits
 
-**"CROSSVAL_GGUF not set"**
-- Run `cargo run -p xtask -- fetch-models` first
-- Or set `CROSSVAL_GGUF` manually to a model path
+### Tolerance Settings
 
-**"BITNET_CPP_DIR not set"**
-- Rust-only validation will run (no C++ comparison)
-- To enable C++ parity, build bitnet.cpp and set the env var
+- **Logit comparison**: `1e-4` (can tighten to `5e-5` for stricter validation)
+- **Token comparison**: Exact match required
+- **Greedy sampling**: Argmax must select same token ID
 
-**"C++ library available but FFI not yet integrated"**
-- The C++ shim exists but build.rs needs updating
-- This is expected in the current implementation
-- Track issue for build.rs integration
+## Deterministic Execution
 
-## See Also
+For reproducible parity testing:
 
-- [Validation Framework](development/validation-framework.md)
-- [Test Suite](development/test-suite.md)
-- [Parity Prompts](../crossval/prompts.yaml)
+- **Threading**: Single thread (`n_threads=1`, `OMP_NUM_THREADS=1`, `GGML_NUM_THREADS=1`)
+- **Hardware**: CPU-only (no GPU/Metal/BLAS acceleration)
+- **Sampling**: Greedy (argmax, no randomness)
+- **Context**: Fixed seed (`seed=0`), `logits_all=true` for per-position comparison
+- **Build**: Release mode with same optimization flags
+
+## Architecture
+
+```
+bitnet-sys/              # FFI bindings to Microsoft BitNet
+├── build.rs            # Links to C++ libs with RPATH, generates bindings
+├── src/
+│   ├── lib.rs          # Module exports
+│   └── wrapper.rs      # Safe wrappers using official llama.cpp API
+│
+crossval/                # Cross-validation framework
+├── src/
+│   └── lib.rs          # Comparison utilities
+└── tests/
+    └── parity.rs       # Deterministic parity tests with per-step validation
+
+ci/
+└── fetch_bitnet_cpp.sh # Fetch & build script with strict validation
+
+scripts/
+└── crossval.sh         # One-command runner with all flags set
+```
+
+## Troubleshooting
+
+### Missing Headers
+
+If you see `bitnet-lut-kernels.h not found`:
+- The fetch script automatically copies from preset kernels
+- This is a known issue with the Microsoft repository structure
+
+### Library Not Found
+
+If linking fails:
+```bash
+# Verify libraries were built
+find $HOME/.cache/bitnet_cpp/build -name "*.so" -o -name "*.dylib"
+
+# Should find:
+# - libllama.so / libllama.dylib
+# - libggml.so / libggml.dylib
+```
+
+### Parity Harness Issues
+
+**C++ Shim Compilation Errors:**
+- Ensure `BITNET_CPP_DIR` points to a complete BitNet C++ build directory
+- Check that `$BITNET_CPP_DIR/include` and `$BITNET_CPP_DIR/3rdparty/llama.cpp/include` exist
+- Verify C++17 compiler is available (`g++ --version` or `clang++ --version`)
+
+**Platform-Specific Linker Issues:**
+- **Linux**: Ensure `libstdc++`, `libdl`, `libpthread` are available
+- **macOS**: Ensure Xcode Command Line Tools installed for `libc++`
+- **Runtime library path**: The build uses RPATH; if you still get "library not found", check `LD_LIBRARY_PATH` (Linux) or `DYLD_LIBRARY_PATH` (macOS)
+
+**Parity Test Skipping:**
+- If test skips with "CROSSVAL_GGUF not set", export the model path
+- If test skips with "C++ library available but FFI not yet integrated", this is expected until C++ comparison is fully wired
+
+### Parity Failures
+
+If tests show differences:
+1. **Check environment**: All threading vars must be `1`
+2. **Verify model**: Must be exact same GGUF file
+3. **Check step number**: Early divergence = fundamental issue
+4. **Compare top-5**: Test shows highest probability tokens
+5. **Isolate failure**: Run single-step test first
+
+Debug commands:
+```bash
+# Maximum verbosity
+RUST_BACKTRACE=1 cargo test --features crossval -p bitnet-crossval \
+  test_single_step_logits -- --nocapture
+
+# Check just tokenization
+cargo test --features crossval -p bitnet-crossval \
+  test_tokenization_parity -- --nocapture
+
+# Run parity harness with debug output
+RUST_BACKTRACE=1 cargo test -p crossval --features crossval,integration-tests \
+  parity_bitnetcpp -- --nocapture
+```
+
+### Clean Rebuild
+
+```bash
+# Clean C++ build
+rm -rf $HOME/.cache/bitnet_cpp/build
+./ci/fetch_bitnet_cpp.sh --clean
+
+# Clean Rust build
+cargo clean
+cargo build --features crossval
+```
+
+## CI Integration
+
+For GitHub Actions:
+
+```yaml
+- name: Setup cross-validation
+  run: |
+    ./ci/fetch_bitnet_cpp.sh --tag b1-65-ggml
+    echo "BITNET_CPP_DIR=$HOME/.cache/bitnet_cpp" >> $GITHUB_ENV
+    echo "OMP_NUM_THREADS=1" >> $GITHUB_ENV
+    echo "GGML_NUM_THREADS=1" >> $GITHUB_ENV
+
+- name: Run parity tests
+  run: |
+    cargo test --features crossval -p bitnet-crossval --release \
+      -- --test-threads=1
+```
+
+### Caching
+
+```yaml
+- name: Cache BitNet C++
+  uses: actions/cache@v3
+  with:
+    path: ~/.cache/bitnet_cpp
+    key: bitnet-cpp-b1-65-ggml-${{ runner.os }}
+```
+
+## Implementation Details
+
+### Pinned Version
+
+We pin to tag `b1-65-ggml` (BitNet v1.0 release) for stability. This version:
+- Has working llama.cpp integration
+- Supports GGUF format
+- Includes BitNet b1.58 kernels
+
+### Key APIs Used
+
+- `llama_batch_add()`: Official batch construction (not direct field access)
+- `llama_get_logits_ith()`: Per-position logits with `logits_all=true`
+- `llama_tokenize()`: C++ tokenizer for exact match
+- `llama_context_default_params()`: Deterministic context setup
+
+### Safety
+
+- RAII with Drop traits for cleanup
+- Safe wrappers around all C calls
+- No manual memory management
+- Fail-fast on missing dependencies
+
+## Troubleshooting
+
+### Disk Space Issues
+The xtask now checks for available disk space before downloading. If you see:
+```
+Not enough disk space: need ~1200 MB, have ~500 MB
+```
+Free up disk space or use a different download directory with `--out`.
+
+### Resume Download Issues
+- Downloads are automatically resumed if interrupted (Ctrl-C friendly)
+- If server doesn't support resume, download restarts automatically
+- Partial files are kept as `.part` for resuming
+
+### Debugging Cross-validation
+Use `--dry-run` to see exact commands without running:
+```bash
+cargo xtask crossval --dry-run
+# Shows environment variables and full cargo test command
+```
+
+### SHA256 Verification
+For reproducible builds, verify downloads with SHA256:
+```bash
+cargo xtask download-model --sha256 abc123def456...
+```
+
+### CI/CD Caching (GitHub Actions)
+Keep CI runs fast by caching models and the C++ build:
+
+```yaml
+- name: Cache BitNet C++ checkout
+  uses: actions/cache@v4
+  with:
+    path: ~/.cache/bitnet_cpp
+    key: cpp-${{ runner.os }}-${{ hashFiles('xtask/src/main.rs') }}
+
+- name: Cache model
+  uses: actions/cache@v4
+  with:
+    path: models
+    key: model-${{ runner.os }}-${{ inputs.model-id || 'microsoft/bitnet-b1.58-2B-4T-gguf' }}-${{ inputs.sha256 || 'v1' }}
+
+- name: Download model (idempotent with ETag cache)
+  run: |
+    cargo xtask download-model \
+      --id "${{ inputs.model-id || 'microsoft/bitnet-b1.58-2B-4T-gguf' }}" \
+      --file "${{ inputs.file || 'ggml-model-i2_s.gguf' }}" \
+      ${{ inputs.sha256 && format('--sha256 {0}', inputs.sha256) || '' }}
+
+- name: Run cross-validation
+  run: cargo xtask crossval
+```
+
+The download command now uses ETag/Last-Modified caching, so it will automatically skip downloads when the cached file is up-to-date (returns 304 Not Modified).
+
+## References
+
+- [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)
+- [BitNet Paper](https://arxiv.org/abs/2402.17764)
+- [GGUF Format Specification](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)

@@ -482,7 +482,7 @@ impl GPUQuantizer {
         Self { tolerance_config, device_id }
     }
 
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     pub fn quantize_i2s(&self, data: &[f32]) -> Result<QuantizedTensor> {
         debug!("Performing I2S quantization on GPU:{}", self.device_id);
 
@@ -492,14 +492,14 @@ impl GPUQuantizer {
         cpu_quantizer.quantize_i2s(data)
     }
 
-    #[cfg(not(feature = "gpu"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     pub fn quantize_i2s(&self, data: &[f32]) -> Result<QuantizedTensor> {
         warn!("GPU quantization requested but GPU features not enabled, falling back to CPU");
         let cpu_quantizer = CPUQuantizer::new(self.tolerance_config.clone());
         cpu_quantizer.quantize_i2s(data)
     }
 
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     pub fn dequantize_i2s(&self, tensor: &QuantizedTensor) -> Result<Vec<f32>> {
         debug!("Performing I2S dequantization on GPU:{}", self.device_id);
 
@@ -508,7 +508,7 @@ impl GPUQuantizer {
         cpu_quantizer.dequantize_i2s(tensor)
     }
 
-    #[cfg(not(feature = "gpu"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     pub fn dequantize_i2s(&self, tensor: &QuantizedTensor) -> Result<Vec<f32>> {
         warn!("GPU dequantization requested but GPU features not enabled, falling back to CPU");
         let cpu_quantizer = CPUQuantizer::new(self.tolerance_config.clone());
@@ -638,7 +638,7 @@ fn log_sum_exp(values: &[f32]) -> f64 {
 /// Main device-aware quantizer
 pub struct DeviceAwareQuantizer {
     cpu_backend: CPUQuantizer,
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     gpu_backend: Option<GPUQuantizer>,
     accuracy_validator: AccuracyValidator,
     tolerance_config: ToleranceConfig,
@@ -649,7 +649,7 @@ impl DeviceAwareQuantizer {
         let tolerance_config = ToleranceConfig::default();
         Self {
             cpu_backend: CPUQuantizer::new(tolerance_config.clone()),
-            #[cfg(feature = "gpu")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             gpu_backend: Some(GPUQuantizer::new(tolerance_config.clone(), 0)),
             accuracy_validator: AccuracyValidator::new(tolerance_config.clone()),
             tolerance_config,
@@ -666,7 +666,7 @@ impl DeviceAwareQuantizer {
     pub fn with_tolerance_config(tolerance_config: ToleranceConfig) -> Self {
         Self {
             cpu_backend: CPUQuantizer::new(tolerance_config.clone()),
-            #[cfg(feature = "gpu")]
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
             gpu_backend: Some(GPUQuantizer::new(tolerance_config.clone(), 0)),
             accuracy_validator: AccuracyValidator::new(tolerance_config.clone()),
             tolerance_config,
@@ -729,7 +729,7 @@ impl DeviceAwareQuantizer {
     }
 
     /// Validate GPU/CPU quantization parity
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     pub fn validate_gpu_cpu_parity(&self, test_data: &[f32]) -> Result<ParityReport> {
         debug!("Running GPU/CPU parity validation");
 
@@ -780,7 +780,7 @@ impl DeviceAwareQuantizer {
         })
     }
 
-    #[cfg(not(feature = "gpu"))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
     pub fn validate_gpu_cpu_parity(&self, _test_data: &[f32]) -> Result<ParityReport> {
         warn!("GPU features not enabled, skipping GPU/CPU parity validation");
         Err(bitnet_common::BitNetError::Quantization(QuantizationError::UnsupportedType {
@@ -888,7 +888,7 @@ mod tests {
         assert_eq!(tensor.qtype, QuantizationType::I2S);
     }
 
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
     fn test_gpu_cpu_parity() {
         let quantizer = DeviceAwareQuantizer::new();

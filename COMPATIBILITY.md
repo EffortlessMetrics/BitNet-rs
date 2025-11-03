@@ -143,7 +143,8 @@ All compatibility features are protected by tests:
 - `.github/workflows/compatibility.yml` - Runs on every PR
 - Must test on Linux, macOS, Windows
 - Must test Python 3.12+ (updated PyO3 ABI3-py312 requirement)
-- Must test Rust stable and MSRV (1.89.0)
+- Must test Rust stable and MSRV (1.90.0)
+  - MSRV bumped to 1.90.0 to enable AVX2 SIMD intrinsics and stabilized portable SIMD APIs for QK256 performance optimizations
 
 ## 📊 Performance Guarantees
 

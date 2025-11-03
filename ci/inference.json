@@ -5,7 +5,7 @@
   "environment": {
     "BITNET_VERSION": "0.1.0",
     "OS": "linux-x86_64",
-    "RUST_VERSION": ""
+    "RUST_VERSION": "rustc 1.92.0-nightly (4082d6a3f 2025-09-27)"
   },
   "kernels": [
     "embedding_lookup",
@@ -20,7 +20,7 @@
     "path": "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
   },
   "schema_version": "1.0.0",
-  "timestamp": "2025-10-16T05:07:45.637549080+00:00",
+  "timestamp": "2025-10-23T00:39:09.569365214+00:00",
   "tokens_generated": 1,
   "tokens_per_second": 0.0,
   "tokens_requested": 1

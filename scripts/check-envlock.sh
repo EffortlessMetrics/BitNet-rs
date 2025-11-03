@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "Checking for duplicate env lock definitions..."
-ALLOW='tests/common/env\.rs'
+ALLOW='tests/common/env\.rs|tests/static_initialization_tests\.rs|tests/support/env_guard\.rs'
 
 if command -v rg >/dev/null 2>&1; then
   if rg -n --pcre2 'OnceLock<\s*Mutex<\s*\(\s*\)\s*>\s*>' tests | rg -v "$ALLOW" ; then

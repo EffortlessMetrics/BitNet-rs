@@ -55,7 +55,15 @@ fn gemv_fp32_reference(
 
 /// Test spec: i2s-dual-flavor.md#qk256-vs-fp32-reference
 ///
-/// Verify QK256 kernel matches FP32 reference within 1e-5 tolerance
+/// Verify QK256 kernel matches FP32 reference within 1e-4 tolerance
+///
+/// Note: Tolerance is 1e-4 to account for:
+/// - FMA rounding differences between scalar and SIMD (AVX2)
+/// - Order-of-operations differences in accumulation
+/// - Minor precision loss in horizontal sum reduction
+///
+/// This matches the tolerance used in qk256_avx2_correctness.rs since gemv_qk256
+/// uses runtime dispatch and may select AVX2 path on x86_64.
 #[test]
 fn test_qk256_vs_fp32_reference_small_matrix() -> Result<()> {
     let rows = 8;
@@ -89,19 +97,16 @@ fn test_qk256_vs_fp32_reference_small_matrix() -> Result<()> {
     let mut fp32_output = vec![0.0f32; rows];
     gemv_fp32_reference(&codes, &input, &mut fp32_output, rows, cols)?;
 
-    // Compare results
-    // Note: QK256 uses 2-bit quantization, so tolerance is looser than FP32
-    const TOLERANCE: f32 = 1e-4; // Adjusted for 2-bit quantization precision
+    // Compare results with 1e-4 tolerance (accounts for AVX2 rounding differences)
     for row_idx in 0..rows {
         let diff = (qk256_output[row_idx] - fp32_output[row_idx]).abs();
         assert!(
-            diff < TOLERANCE,
-            "Row {}: QK256={}, FP32={}, diff={} (exceeds tolerance {})",
+            diff < 1e-4,
+            "Row {}: QK256={}, FP32={}, diff={} (exceeds tolerance)",
             row_idx,
             qk256_output[row_idx],
             fp32_output[row_idx],
-            diff,
-            TOLERANCE
+            diff
         );
     }
 

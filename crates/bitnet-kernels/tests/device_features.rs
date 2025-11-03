@@ -33,6 +33,8 @@
 //! The 50% mutation score reflects tooling limitations, not test quality. See
 //! Issue #440 for detailed analysis and mitigation strategies.
 
+mod support;
+
 #[cfg(test)]
 mod compile_time_detection {
     /// AC:3 - gpu_compiled() returns true when GPU features enabled
@@ -76,6 +78,11 @@ mod compile_time_detection {
 
 #[cfg(test)]
 mod runtime_detection {
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    use super::support;
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    use serial_test::serial;
+
     /// AC:3 - gpu_available_runtime() respects BITNET_GPU_FAKE=cuda
     ///
     /// Tests that the fake GPU environment variable overrides real hardware
@@ -83,22 +90,16 @@ mod runtime_detection {
     ///
     /// Tests specification: docs/explanation/issue-439-spec.md#implementation-approach-3
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_gpu_fake_cuda_overrides_detection() {
         use bitnet_kernels::device_features::gpu_available_runtime;
-        use std::env;
+        use support::EnvVarGuard;
 
         // Set fake GPU environment variable
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "cuda");
-        }
+        let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "cuda");
 
         let result = gpu_available_runtime();
-
-        // Clean up environment
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
 
         assert!(
             result,
@@ -115,22 +116,16 @@ mod runtime_detection {
     ///
     /// Tests specification: docs/explanation/issue-439-spec.md#xtask-preflight
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_gpu_fake_none_disables_detection() {
         use bitnet_kernels::device_features::gpu_available_runtime;
-        use std::env;
+        use support::EnvVarGuard;
 
         // Disable GPU detection via fake environment
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "none");
-        }
+        let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "none");
 
         let result = gpu_available_runtime();
-
-        // Clean up environment
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
 
         assert!(
             !result,
@@ -164,23 +159,18 @@ mod runtime_detection {
     /// Verifies that the fake GPU environment variable accepts various
     /// case variations (CUDA, cuda, Cuda) for user convenience.
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_gpu_fake_case_insensitive() {
         use bitnet_kernels::device_features::gpu_available_runtime;
-        use std::env;
+        use support::EnvVarGuard;
 
         let test_cases = vec!["cuda", "CUDA", "Cuda", "CuDa"];
 
         for fake_value in test_cases {
-            unsafe {
-                env::set_var("BITNET_GPU_FAKE", fake_value);
-            }
+            let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", fake_value);
 
             let result = gpu_available_runtime();
-
-            unsafe {
-                env::remove_var("BITNET_GPU_FAKE");
-            }
 
             assert!(
                 result,
@@ -202,10 +192,11 @@ mod runtime_detection {
     ///
     /// Tests specification: docs/explanation/issue-439-spec.md#shared-helpers
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_gpu_compiled_but_runtime_unavailable() {
         use bitnet_kernels::device_features::{gpu_available_runtime, gpu_compiled};
-        use std::env;
+        use support::EnvVarGuard;
 
         // GPU should be compiled in
         assert!(
@@ -214,16 +205,9 @@ mod runtime_detection {
         );
 
         // Simulate CUDA runtime unavailable
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "none");
-        }
+        let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "none");
 
         let runtime_available = gpu_available_runtime();
-
-        // Clean up environment
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
 
         // Runtime should report unavailable
         assert!(
@@ -247,28 +231,23 @@ mod runtime_detection {
     ///
     /// Issue #440 - Mutation testing hardening
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn mutation_gpu_runtime_real_detection() {
         use bitnet_kernels::device_features::gpu_available_runtime;
-        use std::env;
+        use support::EnvVarGuard;
 
         // Step 1: Get result with BITNET_GPU_FAKE=cuda (should be true)
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "cuda");
-        }
-        let fake_cuda_result = gpu_available_runtime();
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
+        let fake_cuda_result = {
+            let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "cuda");
+            gpu_available_runtime()
+        };
 
         // Step 2: Get result with BITNET_GPU_FAKE=none (should be false)
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "none");
-        }
-        let fake_none_result = gpu_available_runtime();
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
+        let fake_none_result = {
+            let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "none");
+            gpu_available_runtime()
+        };
 
         // Step 3: Get result without fake (real hardware detection)
         let real_result = gpu_available_runtime();
@@ -312,28 +291,23 @@ mod runtime_detection {
     ///
     /// Issue #440 - Mutation testing hardening
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn mutation_gpu_fake_or_semantics() {
         use bitnet_kernels::device_features::gpu_available_runtime;
-        use std::env;
+        use support::EnvVarGuard;
 
         // Test 1: "cuda" value must return true (validates OR clause 1)
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "cuda");
-        }
-        let cuda_result = gpu_available_runtime();
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
+        let cuda_result = {
+            let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "cuda");
+            gpu_available_runtime()
+        };
 
         // Test 2: "gpu" value must also return true (validates OR clause 2)
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "gpu");
-        }
-        let gpu_result = gpu_available_runtime();
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
+        let gpu_result = {
+            let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "gpu");
+            gpu_available_runtime()
+        };
 
         // MUTATION KILL: Both must be true with OR logic
         // With AND mutation (||→&&), both would be false since string can't equal both values
@@ -436,6 +410,11 @@ mod mutation_hardening_compile_time {
 
 #[cfg(test)]
 mod integration_tests {
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    use super::support;
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    use serial_test::serial;
+
     /// AC:3 - Test device_capability_summary() output format
     ///
     /// Validates that the diagnostic summary function provides human-readable
@@ -478,19 +457,17 @@ mod integration_tests {
     /// Verifies that the diagnostic summary correctly reflects fake GPU state
     /// when BITNET_GPU_FAKE environment variable is set.
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac3_capability_summary_respects_fake() {
         use bitnet_kernels::device_features::device_capability_summary;
-        use std::env;
+        use support::EnvVarGuard;
 
         // Test with fake GPU enabled
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "cuda");
-        }
-        let summary_with_fake = device_capability_summary();
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
+        let summary_with_fake = {
+            let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "cuda");
+            device_capability_summary()
+        };
 
         // Summary should show CUDA as available when fake is set
         assert!(
@@ -500,13 +477,10 @@ mod integration_tests {
         );
 
         // Test with fake GPU disabled
-        unsafe {
-            env::set_var("BITNET_GPU_FAKE", "none");
-        }
-        let summary_no_fake = device_capability_summary();
-        unsafe {
-            env::remove_var("BITNET_GPU_FAKE");
-        }
+        let summary_no_fake = {
+            let _guard = EnvVarGuard::set("BITNET_GPU_FAKE", "none");
+            device_capability_summary()
+        };
 
         // Summary should show CUDA as unavailable when fake=none
         assert!(
@@ -521,31 +495,29 @@ mod integration_tests {
 
 #[cfg(test)]
 mod strict_mode_tests {
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    use super::support;
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    use serial_test::serial;
+
     /// Test that BITNET_STRICT_MODE=1 forbids BITNET_GPU_FAKE
     ///
     /// Validates that when strict mode is enabled, fake GPU simulation is
     /// disabled and only real GPU detection is used. This prevents fake
     /// GPU receipts in production/CI strict mode.
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac_strict_mode_forbids_fake_gpu() {
         use bitnet_kernels::device_features::gpu_available_runtime;
-        use std::env;
+        use support::EnvVarGuard;
 
-        // Enable strict mode
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-            env::set_var("BITNET_GPU_FAKE", "cuda");
-        }
+        // Enable strict mode and fake GPU
+        let _guard1 = EnvVarGuard::set("BITNET_STRICT_MODE", "1");
+        let _guard2 = EnvVarGuard::set("BITNET_GPU_FAKE", "cuda");
 
         // In strict mode, BITNET_GPU_FAKE should be ignored
         let result = gpu_available_runtime();
-
-        // Clean up environment
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-            env::remove_var("BITNET_GPU_FAKE");
-        }
 
         // In strict mode with fake GPU, should use real detection
         // On CPU-only CI, real detection returns false
@@ -564,24 +536,17 @@ mod strict_mode_tests {
     /// Validates that strict mode doesn't block real GPU detection,
     /// only fake GPU simulation.
     #[test]
+    #[serial(bitnet_env)]
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn ac_strict_mode_allows_real_gpu() {
         use bitnet_kernels::device_features::gpu_available_runtime;
-        use std::env;
+        use support::EnvVarGuard;
 
         // Enable strict mode WITHOUT fake GPU
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-            env::remove_var("BITNET_GPU_FAKE");
-        }
+        let _guard = EnvVarGuard::set("BITNET_STRICT_MODE", "1");
 
         // Should use real GPU detection
         let result = gpu_available_runtime();
-
-        // Clean up environment
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
 
         // Result should match real GPU detection
         let real_gpu_available = bitnet_kernels::gpu_utils::get_gpu_info().cuda;

@@ -9,7 +9,7 @@ pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-#[cfg(feature = "gpu")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod gpu;
 pub mod gpu_utils;
 mod stubs;
@@ -49,7 +49,7 @@ impl KernelManager {
         let mut providers: Vec<Box<dyn KernelProvider>> = vec![Box::new(cpu::FallbackKernel)];
 
         // Add GPU kernels first (highest priority)
-        #[cfg(feature = "gpu")]
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
         {
             if let Ok(cuda_kernel) = gpu::CudaKernel::new() {
                 if cuda_kernel.is_available() {
@@ -177,7 +177,7 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
 }
 
 /// Select the best GPU kernel provider
-#[cfg(feature = "gpu")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn select_gpu_kernel(device_id: usize) -> Result<Box<dyn KernelProvider>> {
     let cuda_kernel = gpu::CudaKernel::new_with_device(device_id)?;
     if cuda_kernel.is_available() {
@@ -187,7 +187,7 @@ pub fn select_gpu_kernel(device_id: usize) -> Result<Box<dyn KernelProvider>> {
     }
 }
 
-#[cfg(not(feature = "gpu"))]
+#[cfg(not(any(feature = "gpu", feature = "cuda")))]
 pub fn select_gpu_kernel(_device_id: usize) -> Result<Box<dyn KernelProvider>> {
     Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
 }
@@ -207,7 +207,7 @@ pub use cpu::NeonKernel;
 pub use stubs::Avx2Kernel;
 
 pub use device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
-#[cfg(feature = "gpu")]
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use gpu::CudaKernel;
 #[cfg(not(target_arch = "aarch64"))]
 pub use stubs::NeonKernel;

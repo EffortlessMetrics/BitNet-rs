@@ -2,11 +2,15 @@
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
 
+#[allow(unused_imports)]
+use bitnet_tests::support::env_guard::EnvGuard;
 #[allow(unused_imports)] // Test scaffolding imports for comprehensive integration tests
 use bitnet_tokenizers::{
     BasicTokenizer, BitNetTokenizerWrapper, Gpt2TokenizerWrapper, LlamaTokenizerWrapper,
     SmartTokenizerDownload, Tokenizer, TokenizerDiscovery, TokenizerStrategy,
 };
+#[allow(unused_imports)]
+use serial_test::serial;
 
 /// AC7: End-to-end tokenizer discovery integration test
 /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac7-integration-tests
@@ -485,6 +489,7 @@ async fn test_end_to_end_multiple_failure_points() {
 
 /// Test cross-platform compatibility scenarios
 #[tokio::test]
+#[serial(bitnet_env)]
 #[cfg(feature = "cpu")]
 async fn test_cross_platform_compatibility() {
     use std::path::PathBuf;
@@ -559,22 +564,21 @@ async fn test_cross_platform_compatibility() {
     ];
 
     for (env_var, test_value) in env_scenarios {
-        // Test setting environment variable
-        unsafe {
-            std::env::set_var(env_var, test_value);
-        }
+        // Test setting environment variable with EnvGuard
+        let guard = EnvGuard::new(env_var);
+        guard.set(test_value);
 
         let retrieved = std::env::var(env_var);
         assert!(retrieved.is_ok(), "Should be able to retrieve env var: {}", env_var);
         assert_eq!(retrieved.unwrap(), test_value, "Env var value should match: {}", env_var);
 
-        // Clean up
-        unsafe {
-            std::env::remove_var(env_var);
-        }
+        // Test removal with EnvGuard
+        guard.remove();
 
         let removed = std::env::var(env_var);
         assert!(removed.is_err(), "Env var should be removed: {}", env_var);
+
+        // Guard automatically restores original value on drop
     }
 
     println!("✅ Cross-platform compatibility test completed");

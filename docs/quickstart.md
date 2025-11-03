@@ -98,6 +98,40 @@ RAYON_NUM_THREADS=1 RUST_LOG=warn \
 - `RAYON_NUM_THREADS=1`: Single-threaded (deterministic results for validation)
 - `RUST_LOG=warn`: Reduce logging overhead (shows only warnings/errors)
 
+## Performance Expectations (Read This First!)
+
+**Before you start, understand the performance characteristics of different quantization formats:**
+
+| Quantization Format | Status | CPU Performance | Use Case | Time for 128 tokens |
+|---------------------|--------|-----------------|----------|---------------------|
+| **I2_S BitNet32-F16** | ✅ Production | 10-20 tok/s | Recommended | ~6-13 seconds |
+| **I2_S QK256 (GGML)** | ⚠️ MVP Scalar | ~0.1 tok/s | Validation only | ~20 minutes |
+| **TL1/TL2** | 🚧 Experimental | 8-15 tok/s | Research | ~8-16 seconds |
+
+**The microsoft/bitnet-b1.58-2B-4T-gguf model uses QK256 format**, which is currently MVP-only with scalar kernels.
+
+### QK256 Performance Guidance
+
+**If you're using QK256 models (like microsoft/bitnet-b1.58-2B-4T-gguf):**
+
+```bash
+# ✅ Quick validation (4-16 tokens) - RECOMMENDED
+cargo run -p bitnet-cli --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --prompt "What is 2+2?" \
+  --max-tokens 8  # Keep this small for QK256
+
+# ❌ Long generation (128+ tokens) - WILL BE VERY SLOW
+# This will take 20+ minutes with QK256 scalar kernels
+```
+
+**Why is QK256 slow?**
+- Uses scalar (non-SIMD) kernels for correctness validation
+- SIMD optimizations planned for v0.2.0 (≥3× improvement target)
+- This is **expected MVP behavior**, not a bug
+
+**For production inference, use I2_S BitNet32-F16 models instead.**
+
 ## Step 6: Benchmark Performance
 
 ```bash
@@ -106,14 +140,14 @@ RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
   cargo build --release --no-default-features --features cpu,full-cli
 RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
   cargo run --release -p xtask -- benchmark \
-  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 128
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf --tokens 16  # Reduced for QK256
 ```
 
 **Expected Performance:**
-- I2_S quantization: >99% accuracy retention with real transformer computation
-- Inference speed: 20-100 tokens/second (CPU, depends on RUSTFLAGS optimization), 100-500 tokens/second (GPU)
-- Memory usage: ~2GB for 2B parameter model
-- Production-ready: Real neural network inference with quantized linear layers, multi-head attention, and KV-cache optimization
+- **I2_S BitNet32-F16**: 10-20 tok/s (production-ready)
+- **I2_S QK256**: ~0.1 tok/s (MVP scalar kernels, validation only)
+- **Memory usage**: ~2GB for 2B parameter model
+- **Accuracy**: >99% retention with real transformer computation
 
 ## QK256 Strict Mode Validation
 
@@ -134,6 +168,54 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 ```
 
 **Why Strict Mode?** The strict loader prevents silent fallback to the minimal loader, which may use incorrect default values (e.g., 32 layers, 0 kv_heads) if the enhanced loader fails. This ensures production inference uses accurate model dimensions.
+
+## Using QK256 Models (GGML I2_S)
+
+QK256 is a GGML-compatible I2_S quantization format with 256-element blocks and separate scale tensors. BitNet.rs provides automatic format detection and strict validation modes for production deployments.
+
+### Automatic Format Detection
+
+The loader automatically detects QK256 format based on tensor size patterns. When a tensor's size matches the QK256 quantization scheme (256-element blocks with separate scales), the loader routes to QK256-specific kernels without requiring explicit configuration.
+
+**How it works:**
+1. Loader examines tensor dimensions during GGUF parsing
+2. Calculates expected size for different quantization formats
+3. Prioritizes QK256 (GgmlQk256NoScale) for close matches
+4. Routes to appropriate dequantization kernels automatically
+
+**Benefits:**
+- Zero configuration required for standard QK256 models
+- Seamless compatibility with GGML ecosystem
+- Automatic fallback to other I2_S flavors if needed
+
+### Strict Loader Mode
+
+Enforce exact QK256 alignment (reject tensors with >0.1% size deviation) for production validation:
+
+```bash
+# Enable strict loader with BITNET_DISABLE_MINIMAL_LOADER environment variable
+export BITNET_DISABLE_MINIMAL_LOADER=1
+
+# Run inference with strict validation
+cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
+  --strict-loader \
+  --prompt "Test" \
+  --max-tokens 16
+```
+
+**Use strict mode when:**
+- Validating model exports for production deployment
+- Debugging model loading issues
+- Running CI/CD parity tests
+
+**What strict mode enforces:**
+- Exact tensor size alignment (no tolerance for size mismatches)
+- Fail-fast on quantization format detection errors
+- Prevents silent fallback to minimal loader defaults
+
+**Learn more:** See [howto/use-qk256-models.md](howto/use-qk256-models.md) for comprehensive QK256 usage guide.
 
 ## Receipt Validation Workflow
 
@@ -160,6 +242,42 @@ jq '{parity, tokenizer, validation}' docs/baselines/$(date +%Y-%m-%d)/parity-bit
 - `parity.status`: `"ok"` (validated), `"rust_only"` (no C++ ref), or `"failed"`
 - `parity.cpp_available`: `true` if C++ reference was used for validation
 - `tokenizer.source`: `"rust"` (always Rust tokenizer, even with FFI compute)
+
+### Cross-Validation Against C++ Reference
+
+Verify QK256 implementation against the Microsoft BitNet C++ reference:
+
+```bash
+# Set up C++ reference path
+export BITNET_CPP_DIR=/path/to/bitnet.cpp
+
+# Run comprehensive cross-validation
+cargo run -p xtask -- crossval
+
+# Or use quick parity smoke test
+./scripts/parity_smoke.sh models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+```
+
+**Receipt validation:**
+
+```bash
+# View parity metrics from generated receipt
+jq '.parity' docs/baselines/*/parity-bitnetcpp.json
+
+# Expected output:
+# {
+#   "cpp_available": true,
+#   "cosine_similarity": 0.9923,
+#   "exact_match_rate": 1.0,
+#   "status": "ok"
+# }
+```
+
+**Cross-validation ensures:**
+- Numerical equivalence between Rust and C++ implementations
+- Cosine similarity ≥0.99 for output tensors
+- Token-level agreement for autoregressive generation
+- Receipt-based proof of parity validation
 
 ## What Just Happened?
 

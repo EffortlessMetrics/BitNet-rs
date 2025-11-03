@@ -1,0 +1,44 @@
+# CODEOWNERS - Code ownership and review requirements
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Fallback owner for all files
+* @EffortlessSteven
+
+# Core library crates
+/crates/bitnet/ @EffortlessSteven
+/crates/bitnet-inference/ @EffortlessSteven
+/crates/bitnet-models/ @EffortlessSteven
+/crates/bitnet-quantization/ @EffortlessSteven
+/crates/bitnet-tokenizers/ @EffortlessSteven
+
+# Kernels and FFI (C/C++)
+/crates/bitnet-kernels/ @EffortlessSteven
+/crates/bitnet-ggml-ffi/ @EffortlessSteven
+
+# CLI and tools
+/crates/bitnet-cli/ @EffortlessSteven
+/crates/bitnet-st2gguf/ @EffortlessSteven
+/xtask/ @EffortlessSteven
+
+# Tests and infrastructure
+/tests/ @EffortlessSteven
+/crossval/ @EffortlessSteven
+
+# CI, security, automation
+/.github/ @EffortlessSteven
+/deny.toml @EffortlessSteven
+/.githooks/ @EffortlessSteven
+/scripts/ @EffortlessSteven
+
+# Configuration
+/config/ @EffortlessSteven
+/.config/ @EffortlessSteven
+
+# Documentation
+/docs/ @EffortlessSteven
+/README.md @EffortlessSteven
+/CLAUDE.md @EffortlessSteven
+/CONTRIBUTING.md @EffortlessSteven
+
+# Policies and examples
+/examples/ @EffortlessSteven

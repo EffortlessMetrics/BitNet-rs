@@ -1,0 +1,24 @@
+This file contains implementation notes for file locking and network retry in setup-cpp-auto.
+
+## Summary
+
+Implemented AC7-AC8 requirements:
+1. FileLock struct with RAII pattern
+2. Network retry with exponential backoff (3 attempts: 1s, 2s, 4s delays)
+3. Lock acquisition in install_or_update_backend
+4. Stale lock cleanup (>1 hour old)
+
+## Key Changes
+
+1. Added imports: Duration, Instant, SystemTime, AsRawFd (unix), AsRawHandle (windows)
+2. Added FileLock struct with acquire() and Drop impl
+3. Added clone_repository_with_retry() function
+4. Updated install_or_update_backend() to use lock and retry
+
+## Test Coverage
+
+Tests in xtask/tests/llama_cpp_auto_setup_tests.rs:
+- test_ac7_file_lock_prevents_concurrent_builds
+- test_ac7_lock_released_on_drop
+- test_ac8_network_retry_exponential_backoff
+- test_ac8_network_retry_max_attempts

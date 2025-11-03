@@ -297,7 +297,8 @@ impl GpuMemoryLeakDetector {
 
         // Trim old samples to maintain max_samples limit
         if samples.len() > self.max_samples {
-            samples.drain(0..(samples.len() - self.max_samples));
+            let excess = samples.len() - self.max_samples;
+            samples.drain(0..excess);
         }
     }
 
@@ -566,7 +567,7 @@ mod tests {
                 error_message: None,
             };
             detector.record_sample(&metrics).await;
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
 
         let status = detector.analyze().await;
@@ -592,7 +593,7 @@ mod tests {
                 error_message: None,
             };
             detector.record_sample(&metrics).await;
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
 
         let status = detector.analyze().await;

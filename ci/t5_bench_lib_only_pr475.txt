@@ -1,0 +1,968 @@
+   Compiling target-lexicon v0.13.3
+   Compiling memoffset v0.9.1
+   Compiling matrixmultiply v0.3.10
+   Compiling indoc v2.0.6
+   Compiling rawpointer v0.2.1
+   Compiling unindent v0.2.4
+   Compiling rustc-hash v2.1.1
+   Compiling pyo3-build-config v0.26.0
+   Compiling pyo3-macros-backend v0.26.0
+   Compiling pyo3-ffi v0.26.0
+   Compiling pyo3 v0.26.0
+   Compiling numpy v0.26.0
+   Compiling bitnet-py v0.1.0 (/home/steven/code/Rust/BitNet-rs/crates/bitnet-py)
+   Compiling ndarray v0.16.1
+   Compiling pyo3-macros v0.26.0
+   Compiling pyo3-async-runtimes v0.26.0
+    Finished `bench` profile [optimized + debuginfo] target(s) in 29.83s
+     Running unittests src/lib.rs (target/release/deps/bitnet-16830cbffb8ce2d6)
+
+running 4 tests
+test tests::test_build_info ... ignored
+test tests::test_msrv ... ignored
+test tests::test_prelude_imports ... ignored
+test tests::test_version ... ignored
+
+test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_cli-e4c9b9bd2d38cb37)
+
+running 6 tests
+test tokenizer_discovery::tests::test_discover_parent_tokenizer ... ignored
+test tokenizer_discovery::tests::test_discover_sibling_tokenizer ... ignored
+test tokenizer_discovery::tests::test_discovery_chain_order ... ignored
+test tokenizer_discovery::tests::test_discovery_returns_absolute_paths ... ignored
+test tokenizer_discovery::tests::test_explicit_path_takes_precedence ... ignored
+test tokenizer_discovery::tests::test_fail_with_clear_error ... ignored
+
+test result: ok. 0 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_common-6ed93e7bd1d996bf)
+
+running 19 tests
+test config::tests::test_config_builder ... ignored
+test config::tests::test_config_loader_precedence ... ignored
+test config::tests::test_config_merging ... ignored
+test config::tests::test_config_validation ... ignored
+test config::tests::test_default_config ... ignored
+test config::tests::test_env_overrides ... ignored
+test config::tests::test_invalid_env_values ... ignored
+test config::tests::test_json_config_loading ... ignored
+test config::tests::test_memory_limit_parsing ... ignored
+test config::tests::test_toml_config_loading ... ignored
+test strict_mode::tests::test_new_test_with_config_avoids_env_pollution ... ignored
+test strict_mode::tests::test_new_test_with_config_disabled ... ignored
+test strict_mode::tests::test_new_test_with_config_enabled ... ignored
+test warn_once::tests::test_clear_registry ... ignored
+test warn_once::tests::test_multiple_unique_keys ... ignored
+test warn_once::tests::test_warn_once_is_rate_limited ... ignored
+test warn_once::tests::test_warn_once_macro_formatted ... ignored
+test warn_once::tests::test_warn_once_macro_simple ... ignored
+test warn_once::tests::test_warn_once_thread_safety ... ignored
+
+test result: ok. 0 passed; 0 failed; 19 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_compat-21e736445fdcbfdc)
+
+running 1 test
+test gguf_fixer::tests::diagnose_detects_missing_metadata ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_crossval-dc14db6138198329)
+
+running 80 tests
+test backend::tests::test_backend_display ... ignored
+test backend::tests::test_backend_names ... ignored
+test backend::tests::test_backend_required_libs ... ignored
+test backend::tests::test_backend_setup_commands ... ignored
+test backend::tests::test_from_model_path_bitnet ... ignored
+test backend::tests::test_from_model_path_default ... ignored
+test backend::tests::test_from_model_path_llama ... ignored
+test backend::tests::test_from_name ... ignored
+test logits_compare::tests::test_compare_per_position_logits_empty ... ignored
+test logits_compare::tests::test_compare_per_position_logits_no_divergence ... ignored
+test logits_compare::tests::test_compare_per_position_logits_size_mismatch ... ignored
+test logits_compare::tests::test_compare_per_position_logits_with_divergence ... ignored
+test logits_compare::tests::test_cosine_similarity_identical ... ignored
+test logits_compare::tests::test_cosine_similarity_orthogonal ... ignored
+test logits_compare::tests::test_l2_distance_identical ... ignored
+test logits_compare::tests::test_l2_distance_simple ... ignored
+test metrics::tests::test_comprehensive_parity_example ... ignored
+test metrics::tests::test_kl_divergence_empty ... ignored
+test metrics::tests::test_kl_divergence_identical ... ignored
+test metrics::tests::test_kl_divergence_length_mismatch - should panic ... ignored
+test metrics::tests::test_kl_divergence_non_zero ... ignored
+test metrics::tests::test_kl_divergence_uniform ... ignored
+test metrics::tests::test_max_abs_empty ... ignored
+test metrics::tests::test_max_abs_identical ... ignored
+test metrics::tests::test_max_abs_length_mismatch - should panic ... ignored
+test metrics::tests::test_max_abs_negative ... ignored
+test metrics::tests::test_max_abs_simple ... ignored
+test metrics::tests::test_mse_row_empty ... ignored
+test metrics::tests::test_mse_row_identical ... ignored
+test metrics::tests::test_mse_row_length_mismatch - should panic ... ignored
+test metrics::tests::test_mse_row_simple ... ignored
+test metrics::tests::test_softmax_empty ... ignored
+test metrics::tests::test_softmax_numerical_stability ... ignored
+test metrics::tests::test_softmax_simple ... ignored
+test metrics::tests::test_softmax_sums_to_one ... ignored
+test metrics::tests::test_topk_agree_identical ... ignored
+test metrics::tests::test_topk_agree_k_zero - should panic ... ignored
+test metrics::tests::test_topk_agree_length_mismatch - should panic ... ignored
+test metrics::tests::test_topk_agree_no_match ... ignored
+test metrics::tests::test_topk_agree_partial ... ignored
+test metrics::tests::test_topk_indices_all ... ignored
+test metrics::tests::test_topk_indices_k_too_large - should panic ... ignored
+test metrics::tests::test_topk_indices_simple ... ignored
+test metrics::tests::test_topk_indices_single ... ignored
+test metrics::tests::test_topk_indices_with_ties ... ignored
+test receipt::tests::test_compute_tokenizer_config_hash_determinism ... ignored
+test receipt::tests::test_compute_tokenizer_file_hash_determinism ... ignored
+test receipt::tests::test_empty_receipt ... ignored
+test receipt::tests::test_file_io ... ignored
+test receipt::tests::test_receipt_builder_api ... ignored
+test receipt::tests::test_receipt_deserialization ... ignored
+test receipt::tests::test_receipt_serialization ... ignored
+test receipt::tests::test_summary_divergence_detection ... ignored
+test receipt::tests::test_thresholds_default ... ignored
+test score::tests::test_log_softmax_numerical_stability ... ignored
+test score::tests::test_log_softmax_uniform ... ignored
+test score::tests::test_parity_validation ... ignored
+test token_parity::tests::test_backend_in_example_command ... ignored
+test token_parity::tests::test_backend_specific_error_messages ... ignored
+test token_parity::tests::test_detect_token_mismatch ... ignored
+test token_parity::tests::test_empty_sequences ... ignored
+test token_parity::tests::test_error_detects_duplicate_bos ... ignored
+test token_parity::tests::test_error_displays_both_sequences ... ignored, TODO: Capture stderr to validate error output format
+test token_parity::tests::test_error_message_actionable ... ignored
+test token_parity::tests::test_error_message_includes_suggestions ... ignored
+test token_parity::tests::test_error_message_shows_examples ... ignored
+test token_parity::tests::test_exit_code_on_mismatch ... ignored, TODO: Use std::process::Command to spawn subprocess and check exit code
+test token_parity::tests::test_first_diff_length_mismatch ... ignored
+test token_parity::tests::test_first_diff_position ... ignored
+test token_parity::tests::test_negative_cpp_tokens ... ignored, TODO: Decide how to handle negative i32 tokens from C++
+test token_parity::tests::test_performance_under_100ms ... ignored
+test token_parity::tests::test_scenario_duplicate_bos ... ignored, TODO: Requires stderr capture to validate full error output
+test token_parity::tests::test_scenario_length_mismatch ... ignored
+test token_parity::tests::test_scenario_tokens_match ... ignored
+test token_parity::tests::test_silent_success_on_match ... ignored
+test token_parity::tests::test_single_token ... ignored
+test validation::tests::test_report_generation ... ignored
+test validation::tests::test_validation_suite ... ignored
+test validation::tests::validate_model_compatibility_reports_unmapped ... ignored
+test validation::tests::validate_model_compatibility_success ... ignored
+
+test result: ok. 0 passed; 0 failed; 80 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_ffi-fd758b251b67fd47)
+
+running 29 tests
+test config::tests::test_config_conversion ... ignored
+test config::tests::test_generation_config_conversion ... ignored
+test config::tests::test_inference_config_validation ... ignored
+test config::tests::test_performance_metrics_conversion ... ignored
+test error::tests::test_error_conversion ... ignored
+test error::tests::test_error_display ... ignored
+test error::tests::test_error_state_management ... ignored
+test inference::tests::test_gpu_enabled_setting ... ignored
+test inference::tests::test_inference_manager_creation ... ignored
+test inference::tests::test_mock_model ... ignored
+test inference::tests::test_mock_model_embed_and_logits ... ignored
+test inference::tests::test_streaming_session_creation ... ignored
+test memory::tests::test_auto_cleanup ... ignored
+test memory::tests::test_leak_detection ... ignored
+test memory::tests::test_memory_manager ... ignored
+test memory::tests::test_memory_pool ... ignored
+test memory::tests::test_memory_stats ... ignored
+test model::tests::test_memory_usage_estimation ... ignored
+test model::tests::test_model_info_conversion ... ignored
+test model::tests::test_model_manager_creation ... ignored
+test streaming::tests::test_cleanup_finished_sessions ... ignored
+test streaming::tests::test_global_streaming_manager ... ignored
+test streaming::tests::test_streaming_manager ... ignored
+test threading::tests::test_thread_local_storage ... ignored
+test threading::tests::test_thread_manager ... ignored
+test threading::tests::test_thread_pool_config ... ignored
+test threading::tests::test_thread_pool_creation ... ignored
+test threading::tests::test_thread_pool_execution ... ignored
+test threading::tests::test_thread_safe_ref_counter ... ignored
+
+test result: ok. 0 passed; 0 failed; 29 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_ggml_ffi-55a248a183a6d9c6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_inference-7edec07022b000c1)
+
+running 120 tests
+test backends::tests::test_backend_capabilities ... ignored
+test backends::tests::test_backend_selection ... ignored
+test backends::tests::test_backend_type_identifiers ... ignored
+test backends::tests::test_backend_warmup ... ignored
+test backends::tests::test_cpu_backend_creation ... ignored
+test backends::tests::test_cpu_backend_forward ... ignored
+test backends::tests::test_gpu_backend_creation ... ignored
+test backends::tests::test_mock_tensor ... ignored
+test cache::tests::test_cache_clear ... ignored
+test cache::tests::test_cache_creation ... ignored
+test cache::tests::test_cache_layer_clear ... ignored
+test cache::tests::test_cache_miss ... ignored
+test cache::tests::test_cache_stats ... ignored
+test cache::tests::test_cache_store_and_get ... ignored
+test cache::tests::test_eviction_policy ... ignored
+test config::tests::test_config_serialization ... ignored
+test config::tests::test_generation_config_builder ... ignored
+test config::tests::test_generation_config_default ... ignored
+test config::tests::test_generation_config_presets ... ignored
+test config::tests::test_generation_config_validation ... ignored
+test config::tests::test_inference_config_builder ... ignored
+test config::tests::test_inference_config_default ... ignored
+test config::tests::test_inference_config_presets ... ignored
+test config::tests::test_inference_config_validation ... ignored
+test engine::tests::test_inference_engine_creation ... ignored
+test engine::tests::test_model_info_json_serialization_content ... ignored
+test engine::tests::test_prefill_context_length_exceeded ... ignored
+test engine::tests::test_prefill_edge_case_single_token ... ignored
+test engine::tests::test_prefill_functionality ... ignored
+test engine::tests::test_prefill_invalid_tokens ... ignored
+test engine::tests::test_prefill_multiple_calls ... ignored
+test engine::tests::test_prefill_timing_measurable ... ignored
+test engine::tests::test_prefill_with_empty_tokens ... ignored
+test engine::tests::test_prefill_with_large_sequence ... ignored
+test engine::tests::test_should_stop_on_eot_id ... ignored
+test engine::tests::test_stop_tail_window ... ignored
+test engine::tests::test_stop_token_ids_before_strings ... ignored
+test engine::tests::test_text_generation ... ignored
+test kernel_recorder::tests::test_kernel_recorder_basic ... ignored
+test kernel_recorder::tests::test_kernel_recorder_clear ... ignored
+test kernel_recorder::tests::test_kernel_recorder_count ... ignored
+test kernel_recorder::tests::test_kernel_recorder_deduplication ... ignored
+test kernel_recorder::tests::test_kernel_recorder_thread_safe ... ignored
+test layers::kv_cache_validation::tests::test_gqa_validation ... ignored
+test layers::kv_cache_validation::tests::test_invalid_batch_dimension ... ignored
+test layers::kv_cache_validation::tests::test_invalid_head_dimension ... ignored
+test layers::kv_cache_validation::tests::test_invalid_heads_dimension ... ignored
+test layers::kv_cache_validation::tests::test_sequence_length_overflow ... ignored
+test layers::kv_cache_validation::tests::test_valid_cache_dimensions ... ignored
+test layers::quantized_linear_tests::tests::test_qk256_cannot_set_twice ... ignored
+test layers::quantized_linear_tests::tests::test_qk256_dimension_validation ... ignored
+test layers::quantized_linear_tests::tests::test_qk256_forward_pass ... ignored
+test layers::quantized_linear_tests::tests::test_qk256_multi_block ... ignored
+test layers::quantized_linear_tests::tests::test_qk256_set_data ... ignored
+test layers::quantized_linear_tests::tests::test_qk256_tail_handling ... ignored
+test layers::quantized_linear_tests::tests::test_qk256_vs_standard_numerical ... ignored
+test parity::tests::test_mock_eval ... ignored
+test production_engine::tests::test_device_manager ... ignored
+test production_engine::tests::test_generation_result ... ignored
+test production_engine::tests::test_metrics_collection ... ignored
+test production_engine::tests::test_performance_metrics_collector ... ignored
+test prompt_template::tests::test_bos_control ... ignored
+test prompt_template::tests::test_chat_role_as_str ... ignored
+test prompt_template::tests::test_chat_turn_new ... ignored
+test prompt_template::tests::test_conversation_history ... ignored
+test prompt_template::tests::test_instruct_template ... ignored
+test prompt_template::tests::test_llama3_chat_template ... ignored
+test prompt_template::tests::test_parse_special_control ... ignored
+test prompt_template::tests::test_prompt_template_builder ... ignored
+test prompt_template::tests::test_raw_template ... ignored
+test prompt_template::tests::test_render_chat_instruct ... ignored
+test prompt_template::tests::test_render_chat_instruct_with_system ... ignored
+test prompt_template::tests::test_render_chat_llama3 ... ignored
+test prompt_template::tests::test_render_chat_raw ... ignored
+test prompt_template::tests::test_render_chat_raw_with_system ... ignored
+test prompt_template::tests::test_resolve_stop_token_ids ... ignored
+test prompt_template::tests::test_stop_sequences ... ignored
+test prompt_template::tests::test_template_from_str ... ignored
+test prompt_template::tests::test_template_glue_with_real_token_ids ... ignored
+test receipts::tests::test_receipt_empty_corrections_by_default ... ignored
+test receipts::tests::test_receipt_env_vars_content_validation ... ignored
+test receipts::tests::test_receipt_generation_mock_detected ... ignored
+test receipts::tests::test_receipt_generation_real_path ... ignored
+test receipts::tests::test_receipt_serialization_with_corrections ... ignored
+test receipts::tests::test_receipt_validation_fails_failed_tests ... ignored
+test receipts::tests::test_receipt_validation_fails_mock_kernels ... ignored
+test receipts::tests::test_receipt_validation_fails_mock_path ... ignored
+test receipts::tests::test_receipt_validation_passes ... ignored
+test receipts::tests::test_receipt_with_corrections ... ignored
+test receipts::tests::test_receipt_with_model_metadata ... ignored
+test receipts::tests::test_validate_compute_path_invalid ... ignored
+test receipts::tests::test_validate_compute_path_valid ... ignored
+test receipts::tests::test_validate_kernel_ids_empty_array ... ignored
+test receipts::tests::test_validate_kernel_ids_empty_string ... ignored
+test receipts::tests::test_validate_kernel_ids_exact_10k_count ... ignored
+test receipts::tests::test_validate_kernel_ids_exact_128_chars ... ignored
+test receipts::tests::test_validate_kernel_ids_excessive_count ... ignored
+test receipts::tests::test_validate_kernel_ids_excessive_length ... ignored
+test receipts::tests::test_validate_kernel_ids_mixed_kernels ... ignored
+test receipts::tests::test_validate_kernel_ids_mock_kernel ... ignored
+test receipts::tests::test_validate_kernel_ids_valid_cpu_kernels ... ignored
+test receipts::tests::test_validate_kernel_ids_valid_gpu_kernels ... ignored
+test receipts::tests::test_validate_kernel_ids_whitespace_only ... ignored
+test receipts::tests::test_validate_schema_invalid_version ... ignored
+test receipts::tests::test_validate_schema_valid ... ignored
+test runtime_utils::tests::test_block_on_with_runtime ... ignored
+test runtime_utils::tests::test_spawn_blocking_with_fallback ... ignored
+test sampling::tests::test_deterministic_sampling ... ignored
+test sampling::tests::test_greedy_sampling ... ignored
+test sampling::tests::test_repetition_penalty ... ignored
+test sampling::tests::test_sampling_config_default ... ignored
+test sampling::tests::test_softmax ... ignored
+test sampling::tests::test_temperature_sampling ... ignored
+test sampling::tests::test_top_k_filtering ... ignored
+test sampling::tests::test_top_p_filtering ... ignored
+test simple_forward::tests::test_logits_basic ... ignored
+test streaming::tests::test_streaming_config ... ignored
+test streaming::tests::test_streaming_generation ... ignored
+test streaming::tests::test_token_id_streaming ... ignored
+test tests::test_inference_engine_creation ... ignored
+
+test result: ok. 0 passed; 0 failed; 120 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_kernels-388e63b749506a23)
+
+running 35 tests
+test cpu::fallback::tests::test_fallback_kernel_availability ... ignored
+test cpu::fallback::tests::test_matmul_i2s_basic ... ignored
+test cpu::fallback::tests::test_matmul_i2s_dimension_validation ... ignored
+test cpu::fallback::tests::test_quantize_buffer_size_validation ... ignored
+test cpu::fallback::tests::test_quantize_i2s ... ignored
+test cpu::x86::tests::test_avx2_dequantize_qk256_all_codes ... ignored
+test cpu::x86::tests::test_avx2_dequantize_qk256_basic ... ignored
+test cpu::x86::tests::test_avx2_dequantize_qk256_errors ... ignored
+test cpu::x86::tests::test_avx2_dequantize_qk256_matches_scalar ... ignored
+test cpu::x86::tests::test_avx2_kernel_availability ... ignored
+test cpu::x86::tests::test_avx2_matmul_basic ... ignored
+test cpu::x86::tests::test_avx2_matmul_matches_fallback ... ignored
+test cpu::x86::tests::test_avx2_quantize_tl2 ... ignored
+test cpu::x86::tests::test_avx2_tl2_validation ... ignored
+test cpu::x86::tests::test_avx512_kernel_availability ... ignored
+test cpu::x86::tests::test_avx512_matmul_basic ... ignored
+test cpu::x86::tests::test_avx512_quantize_tl2 ... ignored
+test cpu::x86::tests::test_avx512_vs_avx2_correctness ... ignored
+test device_aware::tests::test_cpu_provider_creation ... ignored
+test device_aware::tests::test_device_aware_creation ... ignored
+test device_aware::tests::test_factory ... ignored
+test device_aware::tests::test_feature_gated_compilation ... ignored
+test device_aware::tests::test_memory_tracking ... ignored
+test device_aware::tests::test_performance_tracking ... ignored, Flaky test - memory tracking platform-specific (WSL2/Linux)
+test device_aware::tests::test_platform_kernel_selection ... ignored
+test device_aware::tests::test_quantization_fallback ... ignored
+test device_aware::tests::test_x86_64_feature_detection ... ignored
+test gpu_utils::tests::test_gpu_info_summary ... ignored
+test gpu_utils::tests::test_no_gpu_info ... ignored
+test tl_lut::tests::test_division_by_8 ... ignored
+test tl_lut::tests::test_elem_bounds_check ... ignored
+test tl_lut::tests::test_elems_per_block_validation ... ignored
+test tl_lut::tests::test_lut_length_validation ... ignored
+test tl_lut::tests::test_overflow_detection ... ignored
+test tl_lut::tests::test_valid_indices ... ignored
+
+test result: ok. 0 passed; 0 failed; 35 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_models-91805f6feeffbd9c)
+
+running 152 tests
+test correction_policy::tests::test_build_map ... ignored
+test correction_policy::tests::test_find_plan ... ignored
+test correction_policy::tests::test_i2s_dequant_override_validation ... ignored
+test correction_policy::tests::test_i2s_dequant_override_validation_empty_tensors ... ignored
+test correction_policy::tests::test_i2s_dequant_override_validation_invalid_k ... ignored
+test correction_policy::tests::test_i2s_dequant_override_yaml_parsing ... ignored
+test correction_policy::tests::test_policy_json_parsing ... ignored
+test correction_policy::tests::test_policy_validation ... ignored
+test correction_policy::tests::test_policy_validation_bad_fingerprint ... ignored
+test correction_policy::tests::test_policy_validation_duplicate_fingerprint ... ignored
+test correction_policy::tests::test_policy_validation_invalid_clamp ... ignored
+test correction_policy::tests::test_policy_yaml_parsing ... ignored
+test fingerprint::tests::test_compute_file_fingerprint ... ignored
+test fingerprint::tests::test_compute_file_fingerprint_large ... ignored
+test fingerprint::tests::test_compute_fingerprint_different_data ... ignored
+test fingerprint::tests::test_compute_fingerprint_empty ... ignored
+test fingerprint::tests::test_compute_fingerprint_known ... ignored
+test fingerprint::tests::test_compute_fingerprint_stability ... ignored
+test fingerprint::tests::test_format_fingerprint ... ignored
+test formats::gguf::tests::env_guard::tests::test_env_guard_key_accessor ... ignored
+test formats::gguf::tests::env_guard::tests::test_env_guard_multiple_sets ... ignored
+test formats::gguf::tests::env_guard::tests::test_env_guard_panic_safety - should panic ... ignored
+test formats::gguf::tests::env_guard::tests::test_env_guard_panic_safety_verification ... ignored
+test formats::gguf::tests::env_guard::tests::test_env_guard_preserves_original ... ignored
+test formats::gguf::tests::env_guard::tests::test_env_guard_remove_and_restore ... ignored
+test formats::gguf::tests::env_guard::tests::test_env_guard_set_and_restore ... ignored
+test formats::gguf::tests::test_binary_reading_functions ... ignored
+test formats::gguf::tests::test_builder_writes_header_v2_shape ... ignored
+test formats::gguf::tests::test_gguf_arithmetic_overflow_protection ... ignored
+test formats::gguf::tests::test_gguf_corrupted_header ... ignored
+test formats::gguf::tests::test_gguf_corrupted_header_edge_cases ... ignored
+test formats::gguf::tests::test_gguf_extreme_tensor_counts ... ignored
+test formats::gguf::tests::test_gguf_extreme_value_boundary_conditions ... ignored
+test formats::gguf::tests::test_gguf_header_invalid_magic ... ignored
+test formats::gguf::tests::test_gguf_header_parsing ... ignored
+test formats::gguf::tests::test_gguf_loader_format_detection ... ignored
+test formats::gguf::tests::test_gguf_malformed_metadata ... ignored
+test formats::gguf::tests::test_gguf_memory_exhaustion_protection ... ignored
+test formats::gguf::tests::test_gguf_metadata_extraction ... ignored
+test formats::gguf::tests::test_gguf_misaligned_tensor_data ... ignored
+test formats::gguf::tests::test_gguf_security_validation_edge_cases ... ignored
+test formats::gguf::tests::test_gguf_tensor_data_boundary_validation ... ignored
+test formats::gguf::tests::test_gguf_truncated_file ... ignored
+test formats::gguf::tests::test_gguf_v3_early_variant_detection ... ignored
+test formats::gguf::tests::test_gguf_v3_invalid_alignment_clamped ... ignored
+test formats::gguf::tests::test_gguf_v3_standard_detection ... ignored
+test formats::gguf::tests::test_gguf_value_types ... ignored
+test formats::gguf::tests::test_insufficient_data_errors ... ignored
+test formats::gguf::tests::test_ln_gamma_validator_envelope ... ignored
+test formats::gguf::tests::test_ln_name_matching ... ignored
+test formats::gguf::tests::test_reader_accepts_v3_header_and_metadata ... ignored
+test formats::gguf::tests::test_reader_v2_v3_parity_for_same_kvs ... ignored
+test formats::gguf::tests::test_reader_v3_clamps_weird_alignment ... ignored
+test formats::gguf::tests::test_reader_v3_falls_back_when_doff_past_eof ... ignored
+test formats::gguf::tests::test_reader_v3_ignores_bad_data_offset ... ignored
+test formats::gguf::tests::test_reader_v3_rejects_doff_past_eof_and_falls_back ... ignored
+test formats::gguf::tests::test_reader_v3_respects_header_alignment ... ignored
+test formats::gguf::tests::test_string_reading ... ignored
+test formats::gguf::tests::test_string_reading_invalid_utf8 ... ignored
+test formats::gguf::tests::test_tensor_type_conversion ... ignored
+test formats::gguf::tests::test_tensor_type_element_sizes ... ignored
+test formats::gguf::types::tests::test_align_up ... ignored
+test formats::gguf::types::tests::test_lossy_utf8_string_does_not_panic ... ignored
+test formats::gguf::types::tests::test_valid_utf8_string ... ignored
+test formats::safetensors::tests::test_model_dimension_inference ... ignored
+test formats::safetensors::tests::test_safetensors_header_detection ... ignored
+test formats::safetensors::tests::test_safetensors_invalid_header ... ignored
+test formats::safetensors::tests::test_safetensors_loader_format_detection ... ignored
+test formats::safetensors::tests::test_safetensors_metadata_extraction ... ignored
+test gguf_min::tests::loads_two_tensors ... ignored
+test gguf_min::tests::property_tests::i2s_block_alignment_correct ... ignored
+test gguf_min::tests::property_tests::i2s_blocks_never_underflow ... ignored
+test gguf_min::tests::property_tests::i2s_quantization_stability_test ... ignored
+test gguf_min::tests::property_tests::test_i2s_block_boundary_edge_cases ... ignored
+test gguf_min::tests::property_tests::test_i2s_device_fallback_scenarios ... ignored
+test gguf_min::tests::property_tests::test_i2s_memory_layout_security ... ignored
+test gguf_min::tests::test_align_up ... ignored
+test gguf_min::tests::test_i2s_dequant_nonzero_block ... ignored
+test gguf_min::tests::test_i2s_layout_geometry ... ignored
+test gguf_min::tests::test_i2s_roundtrip_dequant ... ignored
+test gguf_min::tests::test_skip_gguf_value_coverage ... ignored
+test gguf_min::tests::test_skip_gguf_value_seek ... ignored
+test gguf_min::tests::test_transpose_roundtrip ... ignored
+test gguf_min::tests::tied_weights_transpose_roundtrip ... ignored
+test loader::tests::test_format_detection_by_extension ... ignored
+test loader::tests::test_load_config_defaults ... ignored
+test loader::tests::test_magic_bytes_detection ... ignored
+test loader::tests::test_mmap_file ... ignored
+test loader::tests::test_model_loader_creation ... ignored
+test loader::tests::test_progress_callback ... ignored
+test loader::tests::test_utils_get_file_size ... ignored
+test loader::tests::test_utils_progress_callbacks ... ignored
+test loader::tests::test_utils_validate_file_access ... ignored
+test minimal::tests::test_dummy_weights_deterministic ... ignored
+test minimal::tests::test_gguf_loader_placeholder ... ignored
+test names::tests::test_layernorm_predicates ... ignored
+test names::tests::test_projection_predicates ... ignored
+test production_loader::tests::test_architecture_support ... ignored
+test production_loader::tests::test_device_config_optimization ... ignored
+test production_loader::tests::test_file_access_validation ... ignored
+test production_loader::tests::test_memory_requirements_cpu ... ignored
+test production_loader::tests::test_memory_requirements_gpu ... ignored
+test production_loader::tests::test_mock_model_creation ... ignored
+test production_loader::tests::test_production_loader_creation ... ignored
+test production_loader::tests::test_strict_validation_loader ... ignored
+test qk256_utils::tests::test_detect_qk256_orientation_by_bytes ... ignored
+test qk256_utils::tests::test_expected_qk256_shape ... ignored
+test quant::backend::tests::iq2s_rust_dequant_basic ... ignored
+test quant::backend::tests::iq2s_rust_partial_blocks ... ignored
+test quant::backend::tests::iq2s_rust_partial_tail ... ignored
+test quant::backend::tests::test_backend_env_override ... ignored
+test quant::backend::tests::test_backend_selection ... ignored
+test quant::i2s::tests::i2s_arithmetic_overflow_protection ... ignored
+test quant::i2s::tests::i2s_block_size_edge_cases ... ignored
+test quant::i2s::tests::i2s_boundary_tensor_dimensions ... ignored
+test quant::i2s::tests::i2s_code_boundary_values ... ignored
+test quant::i2s::tests::i2s_extreme_scale_values ... ignored
+test quant::i2s::tests::i2s_lut_mapping_sym_k1 ... ignored
+test quant::i2s::tests::i2s_partial_block_processing ... ignored
+test quant::i2s::tests::i2s_transposed_edge_cases ... ignored
+test quant::i2s::tests::i2s_transposed_parity_small ... ignored
+test quant::i2s_qk256::tests::code_to_f32_lut ... ignored
+test quant::i2s_qk256::tests::gemv_mismatched_y - should panic ... ignored
+test quant::i2s_qk256::tests::gemv_multi_row ... ignored
+test quant::i2s_qk256::tests::gemv_row_smoke ... ignored
+test quant::i2s_qk256::tests::gemv_row_with_tail ... ignored
+test quant::i2s_qk256::tests::qk256_block_decode_golden ... ignored
+test quant::i2s_qk256::tests::qk256_lut_basic ... ignored
+test quant::i2s_qk256::tests::qk256_negatives_dimension_checks ... ignored
+test quant::i2s_qk256::tests::qk256_tiny_gemv_e2e ... ignored
+test quant::i2s_qk256::tests::test_qk256_size_tolerance ... ignored
+test quant::i2s_qk256::tests::unpack_block_smoke ... ignored
+test quant::i2s_qk256_avx2::tests::bench_avx2_speedup ... ignored
+test quant::i2s_qk256_avx2::tests::test_avx2_smoke ... ignored
+test quant::i2s_qk256_avx2::tests::test_gemv_qk256_avx2_matches_scalar ... ignored
+test security::tests::test_file_size_limits ... ignored
+test security::tests::test_hash_computation ... ignored
+test security::tests::test_source_verification ... ignored
+test transformer::tests::test_layer_norm_with_optional_bias ... ignored
+test transformer::tests::test_layer_norm_with_small_gamma ... ignored
+test transformer::tests::test_layer_norm_with_standard_gamma ... ignored
+test transformer::tests::test_rmsnorm_formula_consistency ... ignored
+test transformer::tests::test_rmsnorm_output_scale_relationship ... ignored
+test transformer_tests::test_embedding_transposed_runtime_equals_materialized ... ignored
+test transformer_tests::test_index_select_with_transposed_embeddings ... ignored
+test transformer_tests::test_lm_head_transposed_runtime_equals_reference ... ignored
+test transformer_tests::test_no_memory_explosion_on_large_tensors ... ignored
+test transformer_tests::test_tied_weights_with_transposed_embeddings ... ignored
+test weight_mapper::tests::maps_blk_and_llama_variants ... ignored
+test weight_mapper::tests::test_kv_slicing_for_gqa ... ignored
+test weight_mapper::tests::test_remap_qk256_suffix ... ignored
+test weight_mapper::tests::test_remap_regular_key_no_suffix ... ignored
+
+test result: ok. 0 passed; 0 failed; 152 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_py-138609c039d07166)
+
+running 4 tests
+test inference::tests::test_streaming_generator ... ignored
+test model::tests::test_model_loader_creation ... ignored
+test tests::test_device_to_string ... ignored
+test tests::test_parse_device ... ignored
+
+test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_quantization-2e6d01bd8a98c7b6)
+
+running 41 tests
+test accuracy_validation_tests::tests::test_deterministic_quantization_round_trip ... ignored
+test accuracy_validation_tests::tests::test_i2s_accuracy_distributions ... ignored
+test accuracy_validation_tests::tests::test_i2s_bit_level_accuracy ... ignored
+test accuracy_validation_tests::tests::test_quantization_stability ... ignored
+test accuracy_validation_tests::tests::test_tl1_tl2_accuracy_comparison ... ignored
+test device_aware_quantizer::tests::test_accuracy_validation ... ignored
+test device_aware_quantizer::tests::test_device_aware_quantizer_creation ... ignored
+test device_aware_quantizer::tests::test_i2s_quantization ... ignored
+test device_aware_quantizer::tests::test_perplexity_calculation ... ignored
+test device_aware_quantizer::tests::test_quantized_tensor ... ignored
+test device_aware_quantizer::tests::test_tl1_quantization ... ignored
+test device_aware_quantizer::tests::test_tolerance_config ... ignored
+test i2s::tests::test_different_block_sizes ... ignored
+test i2s::tests::test_i2s_compression_ratio ... ignored
+test i2s::tests::test_i2s_quantization_round_trip ... ignored
+test property_based_tests::tests::property_data_type_preservation ... ignored
+test property_based_tests::tests::property_quantization_determinism ... ignored
+test property_based_tests::tests::property_round_trip_tolerance ... ignored
+test property_based_tests::tests::property_scale_bounds ... ignored
+test simd_ops::tests::test_optimal_block_size ... ignored
+test simd_ops::tests::test_quantization_kernels ... ignored
+test simd_ops::tests::test_scalar_quantize_dequantize_value ... ignored
+test simd_ops::tests::test_simd_capabilities_detection ... ignored
+test simd_ops::tests::test_simd_fallback ... ignored
+test tl1::tests::test_asymmetric_quantization ... ignored
+test tl1::tests::test_lookup_table_creation ... ignored
+test tl1::tests::test_tl1_config_loading ... ignored
+test tl1::tests::test_tl1_quantization_round_trip ... ignored
+test tl2::tests::test_cpu_feature_detection ... ignored
+test tl2::tests::test_large_tensor_quantization ... ignored
+test tl2::tests::test_tl2_config_adaptation ... ignored
+test tl2::tests::test_tl2_quantization_round_trip ... ignored
+test tl2::tests::test_vectorized_lookup_table ... ignored
+test utils::tests::test_pack_unpack_2bit ... ignored
+test utils::tests::test_quantize_dequantize_value ... ignored
+test utils::tests::test_scale_calculation ... ignored
+test validation::tests::test_memory_estimation ... ignored
+test validation::tests::test_needs_detailed_validation ... ignored
+test validation::tests::test_validate_data_shape_consistency ... ignored
+test validation::tests::test_validate_numerical_input ... ignored
+test validation::tests::test_validate_tensor_input ... ignored
+
+test result: ok. 0 passed; 0 failed; 41 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_server-a4e4e262517d2330)
+
+running 20 tests
+test config::tests::test_config_builder ... ignored
+test config::tests::test_config_validation ... ignored
+test config::tests::test_default_config ... ignored
+test config::tests::test_env_override ... ignored
+test monitoring::health::tests::cache_control_headers_on_all_endpoints ... ignored
+test monitoring::health::tests::head_live_respects_mapping_on_degraded ... ignored
+test monitoring::health::tests::head_readiness_degraded_is_503 ... ignored
+test monitoring::health::tests::head_requests_set_no_store ... ignored
+test monitoring::health::tests::head_respects_mapping_on_degraded ... ignored
+test monitoring::health::tests::http_mapping_fail_fast_default ... ignored
+test monitoring::health::tests::overall_degraded_when_no_unhealthy ... ignored
+test monitoring::health::tests::overall_healthy_when_none ... ignored
+test monitoring::health::tests::overall_unhealthy_wins ... ignored
+test monitoring::health::tests::route_health_fail_fast_mapping ... ignored
+test monitoring::health::tests::route_live_uses_mapping ... ignored
+test monitoring::health::tests::route_readiness_always_fail_fast ... ignored
+test security::tests::test_invalid_temperature ... ignored
+test security::tests::test_prompt_too_long ... ignored
+test security::tests::test_prompt_validation ... ignored
+test streaming::tests::sse_token_ids_match_model_outputs ... ignored
+
+test result: ok. 0 passed; 0 failed; 20 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_st_tools-d5e8370b95ee1361)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_st2gguf-7cd0c93c34e9daa8)
+
+running 7 tests
+test layernorm::tests::test_alias_delegates_to_shared_predicate ... ignored
+test layernorm::tests::test_count ... ignored
+test writer::tests::test_align_up ... ignored
+test writer::tests::test_metadata_value ... ignored
+test writer::tests::test_required_metadata_present_minimal ... ignored
+test writer::tests::test_roundtrip_small_tensors_and_alignment ... ignored
+test writer::tests::test_writer_produces_standard_v3_format ... ignored
+
+test result: ok. 0 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_sys-013ae564fe02005e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests lib.rs (target/release/deps/bitnet_tests-44934888b67257a4)
+
+running 157 tests
+test common::concurrency_caps::tests::test_get_limits ... ignored
+test common::concurrency_caps::tests::test_init_concurrency_caps ... ignored
+test common::config::tests::test_ci_config ... ignored
+test common::config::tests::test_default_config ... ignored
+test common::config::tests::test_dev_config ... ignored
+test common::config::tests::test_get_config_value ... ignored
+test common::config::tests::test_merge_configs ... ignored
+test common::config::tests::test_minimal_config ... ignored
+test common::config::tests::test_validate_config ... ignored
+test common::config::tests::test_validate_custom_fixtures ... ignored
+test common::config_scenarios::tests::test_config_resolution ... ignored
+test common::config_scenarios::tests::test_environment_parsing ... ignored
+test common::config_scenarios::tests::test_scenario_parsing ... ignored
+test common::config_validator::tests::test_disk_space_check ... ignored
+test common::config_validator::tests::test_validation_result ... ignored
+test common::config_validator::tests::test_validator_creation ... ignored
+test common::debug_integration::tests::test_debug_config_from_env ... ignored
+test common::debug_integration::tests::test_debug_test_case_failure ... ignored
+test common::debug_integration::tests::test_debug_test_case_wrapper ... ignored
+test common::env::tests::test_env_bool_parsing ... ignored
+test common::env::tests::test_env_duration_parsing ... ignored
+test common::env::tests::test_env_numeric_parsing ... ignored
+test common::env::tests::test_env_string_parsing ... ignored
+test common::error_analysis::tests::test_debugging_guide_generation ... ignored
+test common::error_analysis::tests::test_error_analysis ... ignored
+test common::error_analysis::tests::test_pattern_matching ... ignored
+test common::fast_config::tests::test_apply_fast_overrides ... ignored
+test common::fast_config::tests::test_fast_config ... ignored
+test common::fast_config::tests::test_fast_config_builder ... ignored
+test common::fast_config::tests::test_smoke_test_config ... ignored
+test common::fast_config::tests::test_speed_profiles ... ignored
+test common::fast_feedback_simple::tests::test_ci_configuration ... ignored
+test common::fast_feedback_simple::tests::test_development_configuration ... ignored
+test common::fast_feedback_simple::tests::test_execution_strategy_determination ... ignored
+test common::fast_feedback_simple::tests::test_fast_feedback_execution ... ignored
+test common::fast_feedback_simple::tests::test_fast_feedback_system_creation ... ignored
+test common::fast_feedback_simple::tests::test_feedback_quality_assessment ... ignored
+test common::fast_feedback_simple::tests::test_test_priority_calculation ... ignored
+test common::fixtures::tests::test_auto_cleanup ... ignored
+test common::fixtures::tests::test_cache_size_management ... ignored
+test common::fixtures::tests::test_cache_stats ... ignored
+test common::fixtures::tests::test_cleanup_old_fixtures ... ignored
+test common::fixtures::tests::test_cleanup_with_file_timestamps ... ignored
+test common::fixtures::tests::test_concurrent_fixture_access ... ignored
+test common::fixtures::tests::test_fixture_manager_creation ... ignored
+test common::fixtures::tests::test_fixture_preloading ... ignored
+test common::fixtures::tests::test_fixture_validation_and_cleanup ... ignored
+test common::fixtures::tests::test_get_fixture_info ... ignored
+test common::fixtures::tests::test_is_cached ... ignored
+test common::fixtures::tests::test_list_fixtures ... ignored
+test common::fixtures::tests::test_shared_fixture_lifecycle ... ignored
+test common::gpu::tests::test_gpu_tests_disabled_by_default ... ignored
+test common::gpu::tests::test_gpu_tests_disabled_when_set_to_non_one ... ignored
+test common::gpu::tests::test_gpu_tests_enabled_when_set ... ignored
+test common::incremental::tests::test_dependency_graph ... ignored
+test common::incremental::tests::test_incremental_tester_creation ... ignored
+test common::incremental::tests::test_relevant_file_detection ... ignored
+test common::incremental::tests::test_should_use_incremental ... ignored
+test common::logging::tests::test_debug_artifact_creation ... ignored
+test common::logging::tests::test_debug_context ... ignored
+test common::logging::tests::test_error_context ... ignored
+test common::logging::tests::test_metrics_collector ... ignored
+test common::logging::tests::test_parse_log_level ... ignored
+test common::logging::tests::test_performance_profiler ... ignored
+test common::logging::tests::test_test_tracer ... ignored
+test common::optimization::tests::test_optimization_config ... ignored
+test common::optimization::tests::test_parallel_time_calculation ... ignored
+test common::optimization::tests::test_priority_calculation ... ignored
+test common::optimization::tests::test_test_execution_optimizer ... ignored
+test common::parallel::tests::test_execution_stats ... ignored
+test common::parallel::tests::test_parallel_executor_creation ... ignored
+test common::parallel::tests::test_resource_monitor ... ignored
+test common::reporting::formats::html::tests::test_html_report_generation ... ignored
+test common::reporting::formats::html::tests::test_minimal_html_output ... ignored
+test common::reporting::formats::json::tests::test_compact_json_output ... ignored
+test common::reporting::formats::json::tests::test_json_report_generation ... ignored
+test common::reporting::formats::junit::tests::test_junit_report_generation ... ignored
+test common::reporting::formats::junit::tests::test_minimal_junit_output ... ignored
+test common::reporting::formats::markdown::tests::test_markdown_content_structure ... ignored
+test common::reporting::formats::markdown::tests::test_markdown_report_generation ... ignored
+test common::reporting::formats::markdown::tests::test_minimal_markdown_output ... ignored
+test common::reporting::reporter::tests::test_generate_summary_report ... ignored
+test common::reporting::reporter::tests::test_reporting_manager_creation ... ignored
+test common::selection::tests::test_affected_crates_detection ... ignored
+test common::selection::tests::test_categorize_test ... ignored
+test common::selection::tests::test_priority_rules ... ignored
+test common::selection::tests::test_test_selector_creation ... ignored
+test common::utils::tests::test_format_bytes ... ignored
+test common::utils::tests::test_format_duration ... ignored
+test common::utils::tests::test_generate_test_id ... ignored
+test common::utils::tests::test_get_cpu_cores ... ignored
+test common::utils::tests::test_get_optimal_parallel_tests ... ignored
+test common::utils::tests::test_measure_time ... ignored
+test support::backend_helpers::tests::test_attempt_auto_repair_failure ... ignored
+test support::backend_helpers::tests::test_attempt_auto_repair_success ... ignored
+test support::backend_helpers::tests::test_convenience_wrappers ... ignored
+test support::backend_helpers::tests::test_ensure_backend_or_skip_backend_available ... ignored
+test support::backend_helpers::tests::test_ensure_backend_or_skip_backend_unavailable_ci ... ignored
+test support::backend_helpers::tests::test_ensure_backend_or_skip_backend_unavailable_repair ... ignored
+test support::backend_helpers::tests::test_is_ci_or_no_repair_interactive ... ignored
+test support::backend_helpers::tests::test_is_ci_or_no_repair_with_ci_flag ... ignored
+test support::backend_helpers::tests::test_is_ci_or_no_repair_with_no_repair_flag ... ignored
+test support::backend_helpers::tests::test_print_skip_diagnostic_format ... ignored
+test support::env_guard::tests::test_env_guard_key_accessor ... ignored
+test support::env_guard::tests::test_env_guard_multiple_sets ... ignored
+test support::env_guard::tests::test_env_guard_panic_safety - should panic ... ignored
+test support::env_guard::tests::test_env_guard_panic_safety_verification ... ignored
+test support::env_guard::tests::test_env_guard_preserves_original ... ignored
+test support::env_guard::tests::test_env_guard_remove_and_restore ... ignored
+test support::env_guard::tests::test_env_guard_set_and_restore ... ignored
+test support::mock_fixtures::tests::test_bitnet_single_library ... ignored
+test support::mock_fixtures::tests::test_create_mock_bitnet_libs ... ignored
+test support::mock_fixtures::tests::test_create_mock_llama_libs ... ignored
+test support::mock_fixtures::tests::test_llama_dual_libraries ... ignored
+test support::mock_fixtures::tests::test_mock_libs_have_executable_permissions ... ignored
+test support::mock_fixtures::tests::test_mock_libs_platform_specific_naming ... ignored
+test support::mock_fixtures::tests::test_temp_dir_cleanup ... ignored
+test support::platform::tests::test_create_mock_backend_libs_bitnet ... ignored
+test support::platform::tests::test_create_mock_backend_libs_creates_dir ... ignored
+test support::platform::tests::test_create_mock_backend_libs_llama ... ignored
+test support::platform::tests::test_format_lib_name_multiple_stems ... ignored
+test support::platform::tests::test_format_lib_name_platform_specific ... ignored
+test support::platform::tests::test_get_loader_path_var_platform_specific ... ignored
+test support::platform::tests::test_mock_libs_have_executable_permissions ... ignored
+test support::platform::tests::test_platform_specific_library_naming ... ignored
+test support::platform_utils::tests::test_append_to_loader_path_unix ... ignored
+test support::platform_utils::tests::test_format_lib_name_multiple_stems ... ignored
+test support::platform_utils::tests::test_format_lib_name_platform_specific ... ignored
+test support::platform_utils::tests::test_get_lib_extension_platform_specific ... ignored
+test support::platform_utils::tests::test_get_loader_path_var_platform_specific ... ignored
+test support::runtime_detection_warning_tests::test_ci_skip_diagnostic_format ... ignored
+test support::runtime_detection_warning_tests::test_ci_skip_diagnostic_without_path ... ignored
+test support::runtime_detection_warning_tests::test_detect_backend_runtime_colon_separated_rpath ... ignored
+test support::runtime_detection_warning_tests::test_detect_backend_runtime_empty_rpath_env ... ignored
+test support::runtime_detection_warning_tests::test_detect_backend_runtime_follows_symlinks ... ignored
+test support::runtime_detection_warning_tests::test_detect_backend_runtime_permission_error ... ignored
+test support::runtime_detection_warning_tests::test_detect_backend_runtime_requires_all_libs_llama ... ignored
+test support::runtime_detection_warning_tests::test_detect_backend_runtime_returns_matched_path_bitnet ... ignored
+test support::runtime_detection_warning_tests::test_detect_backend_runtime_returns_matched_path_llama ... ignored
+test support::runtime_detection_warning_tests::test_emit_stale_build_warning_standard_format ... ignored
+test support::runtime_detection_warning_tests::test_is_ci_detects_bitnet_test_no_repair ... ignored
+test support::runtime_detection_warning_tests::test_is_ci_detects_circleci ... ignored
+test support::runtime_detection_warning_tests::test_is_ci_detects_generic_ci_flag ... ignored
+test support::runtime_detection_warning_tests::test_is_ci_detects_github_actions ... ignored
+test support::runtime_detection_warning_tests::test_is_ci_detects_gitlab_ci ... ignored
+test support::runtime_detection_warning_tests::test_is_ci_detects_jenkins ... ignored
+test support::runtime_detection_warning_tests::test_is_ci_false_when_unset ... ignored
+test support::runtime_detection_warning_tests::test_preflight_backend_unavailable_everywhere ... ignored
+test support::runtime_detection_warning_tests::test_preflight_build_time_priority_no_runtime_check ... ignored
+test support::runtime_detection_warning_tests::test_preflight_ci_mode_skips_on_stale_build ... ignored
+test support::runtime_detection_warning_tests::test_preflight_dev_mode_continues_on_stale_build ... ignored
+test support::runtime_detection_warning_tests::test_preflight_fast_path_performance ... ignored
+test support::runtime_detection_warning_tests::test_preflight_verbose_mode_shows_diagnostics ... ignored
+test support::runtime_detection_warning_tests::test_verbose_warning_explains_rebuild_rationale ... ignored
+test support::runtime_detection_warning_tests::test_verbose_warning_includes_matched_path ... ignored
+test support::runtime_detection_warning_tests::test_warning_deduplication_per_backend ... ignored
+test support::runtime_detection_warning_tests::test_warning_includes_backend_name ... ignored
+
+test result: ok. 0 passed; 0 failed; 157 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_tokenizers-126a082a23b626cc)
+
+running 92 tests
+test deterministic::tests::test_deterministic_behavior_support ... ignored
+test discovery::tests::test_cache_directory_edge_cases ... ignored
+test discovery::tests::test_concurrent_gguf_discovery ... ignored
+test discovery::tests::test_directory_instead_of_file ... ignored
+test discovery::tests::test_discover_tokenizer_strategy_neural_networks ... ignored
+test discovery::tests::test_error_message_quality ... ignored
+test discovery::tests::test_fallback_edge_cases ... ignored
+test discovery::tests::test_file_permission_errors ... ignored
+test discovery::tests::test_gguf_extreme_vocab_sizes ... ignored
+test discovery::tests::test_gguf_metadata_variations ... ignored
+test discovery::tests::test_gguf_parsing_corrupted_metadata ... ignored
+test discovery::tests::test_long_file_paths ... ignored
+test discovery::tests::test_memory_pressure_large_models ... ignored
+test discovery::tests::test_model_type_detection_neural_networks ... ignored
+test discovery::tests::test_neural_network_compatibility_matrix ... ignored
+test discovery::tests::test_neural_network_edge_cases ... ignored
+test discovery::tests::test_performance_boundaries ... ignored
+test discovery::tests::test_quantization_tokenizer_compatibility ... ignored
+test discovery::tests::test_strict_mode_edge_cases ... ignored
+test discovery::tests::test_tokenizer_discovery_from_gguf_llama3 ... ignored
+test discovery::tests::test_tokenizer_file_validation ... ignored
+test discovery::tests::test_tokenizer_strategy_properties ... ignored
+test discovery::tests::test_vocab_size_extraction_large_models ... ignored
+test download::tests::test_cache_corruption_recovery ... ignored
+test download::tests::test_concurrent_download_conflicts ... ignored
+test download::tests::test_concurrent_multi_file_downloads ... ignored
+test download::tests::test_disk_space_exhaustion ... ignored
+test download::tests::test_download_bandwidth_limits ... ignored
+test download::tests::test_download_cache_management ... ignored
+test download::tests::test_download_error_handling ... ignored
+test download::tests::test_download_progress_reporting ... ignored
+test download::tests::test_download_progress_tracking ... ignored
+test download::tests::test_download_resume_capability ... ignored
+test download::tests::test_download_resume_interrupted ... ignored
+test download::tests::test_download_retry_backoff ... ignored
+test download::tests::test_download_tokenizer_llama_models ... ignored
+test download::tests::test_invalid_repository_urls ... ignored
+test download::tests::test_malformed_download_responses ... ignored
+test download::tests::test_memory_efficient_streaming ... ignored
+test download::tests::test_network_timeout_scenarios ... ignored
+test download::tests::test_offline_mode_behavior ... ignored
+test download::tests::test_offline_mode_comprehensive ... ignored
+test download::tests::test_partial_download_corruption ... ignored
+test download::tests::test_smart_tokenizer_download_initialization ... ignored
+test download::tests::test_tokenizer_validation_neural_networks ... ignored
+test error_handling::tests::test_actionable_error_creation ... ignored
+test error_handling::tests::test_cache_management ... ignored
+test error_handling::tests::test_consistent_error_creation ... ignored
+test error_handling::tests::test_error_handling_anyhow_integration ... ignored
+test error_handling::tests::test_error_suggestions ... ignored
+test error_handling::tests::test_file_validation ... ignored
+test error_handling::tests::test_model_type_detection ... ignored
+test fallback::tests::env_guard::tests::test_env_guard_key_accessor ... ignored
+test fallback::tests::env_guard::tests::test_env_guard_multiple_sets ... ignored
+test fallback::tests::env_guard::tests::test_env_guard_panic_safety - should panic ... ignored
+test fallback::tests::env_guard::tests::test_env_guard_panic_safety_verification ... ignored
+test fallback::tests::env_guard::tests::test_env_guard_preserves_original ... ignored
+test fallback::tests::env_guard::tests::test_env_guard_remove_and_restore ... ignored
+test fallback::tests::env_guard::tests::test_env_guard_set_and_restore ... ignored
+test fallback::tests::test_environment_variable_detection ... ignored
+test fallback::tests::test_error_reporting_and_suggestions ... ignored
+test fallback::tests::test_fallback_chain_execution ... ignored
+test fallback::tests::test_fallback_chain_initialization ... ignored
+test fallback::tests::test_fallback_error_variants ... ignored
+test fallback::tests::test_fallback_strategy_ordering ... ignored
+test fallback::tests::test_fallback_strategy_properties ... ignored
+test fallback::tests::test_offline_mode_behavior ... ignored
+test fallback::tests::test_strict_mode_behavior ... ignored
+test fallback::tests::test_tokenizer_resolution_variants ... ignored
+test gguf_loader::tests::test_getters ... ignored
+test gguf_loader::tests::test_kind_detection ... ignored
+test gguf_loader::tests::test_special_token_lookup ... ignored
+test strategy::tests::test_bitnet_tokenizer_wrapper ... ignored
+test strategy::tests::test_concurrent_strategy_resolution ... ignored
+test strategy::tests::test_error_propagation_wrapper_layers ... ignored
+test strategy::tests::test_fallback_chain_execution ... ignored
+test strategy::tests::test_fallback_chain_exhaustion ... ignored
+test strategy::tests::test_gpt2_tokenizer_wrapper ... ignored
+test strategy::tests::test_llama_tokenizer_wrapper ... ignored
+test strategy::tests::test_memory_pressure_tokenizer_creation ... ignored
+test strategy::tests::test_model_compatibility_boundary_conditions ... ignored
+test strategy::tests::test_neural_network_model_configurations ... ignored
+test strategy::tests::test_quantization_compatibility_edge_cases ... ignored
+test strategy::tests::test_quantization_invalid_token_validation ... ignored
+test strategy::tests::test_special_token_handling_edge_cases ... ignored
+test strategy::tests::test_strict_mode_behavior ... ignored
+test strategy::tests::test_tokenizer_resolution_corrupted_files ... ignored
+test strategy::tests::test_tokenizer_strategy_error_handling ... ignored
+test strategy::tests::test_tokenizer_strategy_resolution ... ignored
+test strategy::tests::test_tokenizer_strategy_resolver_initialization ... ignored
+test strategy::tests::test_tokenizer_wrapper_error_handling ... ignored
+test strategy::tests::test_vocab_size_validation ... ignored
+
+test result: ok. 0 passed; 0 failed; 92 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_trace-ce5a439ed1d66c85)
+
+running 5 tests
+test tests::test_dump_trace_disabled ... ignored
+test tests::test_sanitize_filename ... ignored
+test tests::test_trace_record_optional_fields_included ... ignored
+test tests::test_trace_record_optional_fields_omitted ... ignored
+test tests::test_trace_record_serialization ... ignored
+
+test result: ok. 0 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/bitnet_wasm-6ef519a08a5ae53e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/xtask-c32975a93149cbe9)
+
+running 47 tests
+test build_helpers::tests::test_cpp_backend_fallback_search_paths ... ignored
+test build_helpers::tests::test_cpp_backend_lib_pattern ... ignored
+test build_helpers::tests::test_cpp_backend_name ... ignored
+test build_helpers::tests::test_cpp_backend_primary_search_paths ... ignored
+test build_helpers::tests::test_duplicate_paths_deduplicated ... ignored
+test build_helpers::tests::test_empty_input ... ignored
+test build_helpers::tests::test_find_libraries_in_nonexistent_dir ... ignored
+test build_helpers::tests::test_find_libraries_linux ... ignored
+test build_helpers::tests::test_has_any_library ... ignored
+test build_helpers::tests::test_invalid_path_skipped ... ignored
+test build_helpers::tests::test_library_extensions ... ignored
+test build_helpers::tests::test_merge_paths_preserve_order_dedup ... ignored
+test build_helpers::tests::test_merge_paths_preserve_order_empty ... ignored
+test build_helpers::tests::test_ordering_preserved ... ignored
+test build_helpers::tests::test_single_valid_path ... ignored
+test build_helpers::tests::test_symlink_canonicalization ... ignored
+test build_helpers::tests::test_two_distinct_paths ... ignored
+test build_helpers::tests::test_verify_library_loadable_directory ... ignored
+test build_helpers::tests::test_verify_library_loadable_no_permissions ... ignored
+test build_helpers::tests::test_verify_library_loadable_nonexistent ... ignored
+test build_helpers::tests::test_verify_library_loadable_valid ... ignored
+test cpp_setup_auto::tests::test_build_vendored_llama_cpp_missing_directory ... ignored
+test cpp_setup_auto::tests::test_emit_from_string ... ignored
+test cpp_setup_auto::tests::test_find_bitnet_lib_dirs_both_tiers ... ignored
+test cpp_setup_auto::tests::test_find_bitnet_lib_dirs_empty ... ignored
+test cpp_setup_auto::tests::test_find_bitnet_lib_dirs_env_override ... ignored
+test cpp_setup_auto::tests::test_find_bitnet_lib_dirs_tier1_bitnet ... ignored
+test cpp_setup_auto::tests::test_find_bitnet_lib_dirs_tier2_llama ... ignored
+test cpp_setup_auto::tests::test_has_libraries_empty_dir ... ignored
+test cpp_setup_auto::tests::test_has_libraries_with_bitnet_so ... ignored
+test cpp_setup_auto::tests::test_has_libraries_with_ggml_so ... ignored
+test cpp_setup_auto::tests::test_has_libraries_with_llama_so ... ignored
+test cpp_setup_auto::tests::test_run_cmake_build_creates_build_directory ... ignored
+test crossval::backend::tests::test_autodetect_bitnet ... ignored
+test crossval::backend::tests::test_autodetect_llama ... ignored
+test crossval::backend::tests::test_backend_metadata ... ignored
+test crossval::locking::tests::test_ac10_file_lock_acquisition_success ... ignored
+test crossval::locking::tests::test_lock_acquire_failure ... ignored
+test crossval::locking::tests::test_lock_cleanup_on_drop ... ignored
+test crossval::locking::tests::test_lock_cleanup_on_panic ... ignored
+test crossval::locking::tests::test_lock_per_backend ... ignored
+test crossval::preflight::tests::test_auto_repair_with_setup_cpp_detects_recursion ... ignored
+test crossval::preflight::tests::test_auto_repair_with_setup_cpp_returns_ok_for_never_mode ... ignored
+test crossval::preflight::tests::test_is_repair_in_progress_false_by_default ... ignored
+test crossval::preflight::tests::test_is_repair_in_progress_true_when_set ... ignored
+test crossval::preflight::tests::test_preflight_respects_env ... ignored
+test crossval::preflight::tests::test_print_backend_status_runs ... ignored
+
+test result: ok. 0 passed; 0 failed; 47 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/xtask_build_helper-43ca9f1e76792b6d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

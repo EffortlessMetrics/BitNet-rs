@@ -229,6 +229,43 @@ impl Default for StrictModeEnforcer {
     }
 }
 
+impl StrictModeEnforcer {
+    /// Create enforcer with explicit configuration (test-only, no OnceLock)
+    ///
+    /// **FOR TESTING ONLY** - This method bypasses the OnceLock cache and environment
+    /// variable pollution, ensuring test isolation and thread-safety in parallel test execution.
+    ///
+    /// # Warning
+    /// This API is not part of the public API contract and is subject to change.
+    /// It should only be used in test code to avoid environment variable pollution.
+    ///
+    /// # Arguments
+    /// * `strict_mode_enabled` - Whether strict mode is enabled
+    ///
+    /// # Example (test code only)
+    /// ```no_run
+    /// # use bitnet_common::strict_mode::StrictModeEnforcer;
+    /// let enforcer = StrictModeEnforcer::new_test_with_config(true);
+    /// assert!(enforcer.is_enabled());
+    /// ```
+    #[cfg(any(test, feature = "test-util"))]
+    #[doc(hidden)]
+    pub fn new_test_with_config(strict_mode_enabled: bool) -> Self {
+        Self {
+            config: StrictModeConfig {
+                enabled: strict_mode_enabled,
+                fail_on_mock: strict_mode_enabled,
+                require_quantization: strict_mode_enabled,
+                enforce_quantized_inference: strict_mode_enabled,
+                validate_performance: strict_mode_enabled,
+                ci_enhanced_mode: false,
+                log_all_validations: false,
+                fail_fast_on_any_mock: false,
+            },
+        }
+    }
+}
+
 /// Mock inference path for validation
 #[derive(Debug, Clone)]
 pub struct MockInferencePath {
@@ -267,4 +304,46 @@ pub enum ComputationType {
     #[default]
     Real,
     Mock,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_test_with_config_enabled() {
+        let enforcer = StrictModeEnforcer::new_test_with_config(true);
+        assert!(enforcer.is_enabled());
+        assert!(enforcer.get_config().fail_on_mock);
+        assert!(enforcer.get_config().require_quantization);
+        assert!(enforcer.get_config().enforce_quantized_inference);
+        assert!(enforcer.get_config().validate_performance);
+    }
+
+    #[test]
+    fn test_new_test_with_config_disabled() {
+        let enforcer = StrictModeEnforcer::new_test_with_config(false);
+        assert!(!enforcer.is_enabled());
+        assert!(!enforcer.get_config().fail_on_mock);
+        assert!(!enforcer.get_config().require_quantization);
+        assert!(!enforcer.get_config().enforce_quantized_inference);
+        assert!(!enforcer.get_config().validate_performance);
+    }
+
+    #[test]
+    fn test_new_test_with_config_avoids_env_pollution() {
+        // Set environment variable
+        unsafe {
+            std::env::set_var("BITNET_STRICT_MODE", "1");
+        }
+
+        // new_test_with_config should ignore environment
+        let enforcer = StrictModeEnforcer::new_test_with_config(false);
+        assert!(!enforcer.is_enabled(), "Test config should ignore environment variables");
+
+        // Cleanup
+        unsafe {
+            std::env::remove_var("BITNET_STRICT_MODE");
+        }
+    }
 }

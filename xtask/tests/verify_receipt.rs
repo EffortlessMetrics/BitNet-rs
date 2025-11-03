@@ -162,7 +162,8 @@ mod corrections_validation_tests {
     #[test]
     #[serial]
     fn test_receipt_with_corrections_fails_in_ci() {
-        let _guard = EnvGuard::remove("BITNET_ALLOW_CORRECTIONS");
+        let guard = EnvGuard::new("BITNET_ALLOW_CORRECTIONS");
+        guard.remove();
 
         let receipt = Receipt {
             backend: "cpu".to_string(),
@@ -196,7 +197,8 @@ mod corrections_validation_tests {
     #[test]
     #[serial]
     fn test_receipt_with_corrections_passes_in_canary() {
-        let _guard = EnvGuard::set("BITNET_ALLOW_CORRECTIONS", "1");
+        let guard = EnvGuard::new("BITNET_ALLOW_CORRECTIONS");
+        guard.set("1");
 
         let receipt = Receipt {
             backend: "cpu".to_string(),
@@ -227,7 +229,8 @@ mod corrections_validation_tests {
     #[test]
     #[serial]
     fn test_corrections_error_shows_details() {
-        let _guard = EnvGuard::remove("BITNET_ALLOW_CORRECTIONS");
+        let guard = EnvGuard::new("BITNET_ALLOW_CORRECTIONS");
+        guard.remove();
 
         let receipt = Receipt {
             backend: "cpu".to_string(),

@@ -197,8 +197,8 @@ impl Model for BitNetModel {
         // Convert input to Candle tensor
         let input_tensor = self.to_candle_tensor(input)?;
 
-        // Run transformer forward pass
-        let output = transformer.forward(&input_tensor, kv_cache)?;
+        // Run transformer forward pass (passes ownership to avoid clone on hot path)
+        let output = transformer.forward(input_tensor, kv_cache)?;
 
         // Convert back to ConcreteTensor
         Ok(self.candle_to_concrete(output))

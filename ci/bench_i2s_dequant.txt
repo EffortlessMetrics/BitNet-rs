@@ -1,0 +1,10 @@
+Gnuplot not found, using plotters backend
+Benchmarking i2s_dequant_8k_blocks
+Benchmarking i2s_dequant_8k_blocks: Warming up for 3.0000 s
+Benchmarking i2s_dequant_8k_blocks: Collecting 100 samples in estimated 5.1008 s (1600 iterations)
+Benchmarking i2s_dequant_8k_blocks: Analyzing
+i2s_dequant_8k_blocks   time:   [3.2683 ms 3.4063 ms 3.5717 ms]
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+

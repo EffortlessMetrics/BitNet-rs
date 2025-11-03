@@ -1,0 +1,229 @@
+================================================================================
+  BitNet.rs FFI & TRACING ARCHITECTURE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FFI LAYER STACK                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │ EXTERNAL CONSUMERS (C/C++/Python)                                   │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                              ↑                                              │
+│                          C FFI API                                          │
+│                   (30+ exported functions)                                  │
+│                              ↑                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │ bitnet-ffi crate (crates/bitnet-ffi/src/)                          │  │
+│  │                                                                      │  │
+│  │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐              │  │
+│  │  │ c_api.rs    │  │ inference.rs │  │ model.rs     │  ...         │  │
+│  │  │ (1178 lines)│  │ (495 lines)  │  │              │              │  │
+│  │  └─────────────┘  └──────────────┘  └──────────────┘              │  │
+│  │                                                                      │  │
+│  │ • bitnet_inference()     • bitnet_batch_inference()               │  │
+│  │ • bitnet_start_streaming()  • bitnet_get_performance_metrics()    │  │
+│  │ • bitnet_model_load()       • bitnet_set_gpu_enabled()            │  │
+│  │ • Error handling, threading, memory management                    │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                              ↑                                              │
+│                    Rust Library APIs                                        │
+│                              ↑                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │ bitnet-inference, bitnet-models, bitnet-tokenizers                 │  │
+│  │ (Core inference engine, model loading, tokenization)               │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                              ↑                                              │
+│                              ↓                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │ bitnet-trace (Optional)                                            │  │
+│  │ Captures tensor activations during inference                       │  │
+│  │ env var: BITNET_TRACE_DIR=/path/to/traces                        │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+  TRACE CAPTURE FLOW
+================================================================================
+
+1. DURING INFERENCE:
+   ┌─────────────────────┐
+   │ TransformerModel    │
+   │   .embed(tokens)    │ ──→ TRACE: "t0/embeddings" [B,T,H]
+   └─────────────────────┘
+           ↓
+   ┌─────────────────────┐
+   │ TransformerBlock    │  
+   │ [layer 0..N]        │ ──→ TRACE: "blk{i}/attn_norm", "blk{i}/q_proj", 
+   │   • LayerNorm       │         "blk{i}/attn_out", "blk{i}/ffn_out"
+   │   • Attention       │
+   │   • FFN             │
+   └─────────────────────┘
+           ↓
+   ┌─────────────────────┐
+   │   .logits(hidden)   │ ──→ TRACE: "t0/logits" [B,V]
+   └─────────────────────┘
+
+2. EACH TRACE RECORD:
+   {
+     "name": "blk0/attn_norm",        # Identifier
+     "shape": [1, 2560],              # Dimensions
+     "dtype": "F32",                  # Data type
+     "blake3": "abc123...",           # Hash of raw bytes
+     "rms": 0.9982,                   # Root mean square
+     "num_elements": 2560,            # Count
+     "seq": 0,                        # Token position (0=prefill, 1+=decode)
+     "layer": 0,                      # Layer index (-1=embeddings/logits)
+     "stage": "attn_norm"             # Computation stage
+   }
+
+3. OUTPUT LOCATION:
+   /path/to/BITNET_TRACE_DIR/
+   ├─ t0_embeddings.trace
+   ├─ blk0_attn_norm.trace
+   ├─ blk0_q_proj.trace
+   ├─ blk0_attn_out.trace
+   ├─ ...
+   └─ t0_logits.trace
+
+================================================================================
+  CROSS-VALIDATION FLOW (Rust vs C++)
+================================================================================
+
+┌──────────────────────────┐          ┌──────────────────────────┐
+│  RUST INFERENCE          │          │  C++ INFERENCE           │
+│                          │          │  (External/Instrumented) │
+│  BITNET_TRACE_DIR=/tmp/rs│          │  trace_dir=/tmp/cpp      │
+│                          │          │                          │
+│  Input: "What is 2+2?"   │          │  Input: "What is 2+2?"   │
+│    ↓                     │          │    ↓                     │
+│  [Model::embed]          │          │  [C++ embed]             │
+│    → /tmp/rs/...embed    │          │    → /tmp/cpp/...embed   │
+│    ↓                     │          │    ↓                     │
+│  [Attention blocks]      │          │  [C++ attention]         │
+│    → /tmp/rs/...blk*.    │          │    → /tmp/cpp/...blk*.   │
+│    ↓                     │          │    ↓                     │
+│  [Logits]                │          │  [C++ logits]            │
+│    → /tmp/rs/...logits   │          │    → /tmp/cpp/...logits  │
+│                          │          │                          │
+└──────────────────────────┘          └──────────────────────────┘
+         ↓                                      ↓
+         └──────────────────────┬───────────────┘
+                                ↓
+                    ┌────────────────────────┐
+                    │  trace-diff Tool       │
+                    │  (xtask trace_diff)    │
+                    │                        │
+                    │ Compare Blake3 hashes  │
+                    │ Find first divergence: │
+                    │  (token_pos,layer,stage)│
+                    └────────────────────────┘
+
+================================================================================
+  WEIGHT MAPPING: LM HEAD & TIED EMBEDDINGS
+================================================================================
+
+SCENARIO 1: TIED WEIGHTS (no dedicated lm_head)
+────────────────────────────────────────────────
+
+Load Time:
+  ┌─────────────────┐
+  │ embed_tokens    │ [vocab_size, hidden_size]
+  │ (Candle format) │ (always this order)
+  └─────────────────┘
+         ↓
+  [OPTIMIZATION] Pre-transpose ONCE at load
+         ↓
+  ┌────────────────────┐
+  │ embed_tied_weight  │ [hidden_size, vocab_size]
+  │ (cached for reuse) │ (pre-computed)
+  └────────────────────┘
+
+Inference Time (Per Token):
+  ┌─────────────┐
+  │ hidden [B,H]│
+  └─────────────┘
+         ↓
+  hidden @ embed_tied_weight  ← No transpose needed! (cached version)
+         ↓
+  logits [B,V]
+
+SCENARIO 2: DEDICATED LM HEAD
+──────────────────────────────
+
+Load Time:
+  ┌──────────┐     ┌──────────┐
+  │ lm_head  │     │ lm_head. │ [vocab_size, hidden_size] or [hidden_size, vocab_size]
+  │ (Linear) │ AND │ weight   │ (check lm_head_transposed flag)
+  └──────────┘     └──────────┘
+
+Inference Time:
+  ┌─────────────┐
+  │ hidden [B,H]│
+  └─────────────┘
+         ↓
+  lm_head.forward(hidden)  ← Direct Linear layer
+         ↓
+  logits [B,V]
+
+================================================================================
+  LOGITS DIVERGENCE DETECTION
+================================================================================
+
+Input: Logits from Rust and C++ implementations
+        rs_logits  = [[logit_1...vocab], [logit_2...vocab], ...]
+        cpp_logits = [[logit_1...vocab], [logit_2...vocab], ...]
+
+Processing:
+  For each token position:
+    1. Calculate cosine_similarity(rs_vec, cpp_vec)
+       → Threshold: 1e-4 (1.0 = identical, 0.0 = orthogonal)
+    
+    2. Calculate l2_distance(rs_vec, cpp_vec)
+       → Euclidean distance
+    
+    3. Calculate max_absolute_diff
+       → max(|rs - cpp|) across all logits
+
+Output:
+  LogitsDivergence {
+    first_divergence_token: Option<usize>,      // Position where cosine_sim < threshold
+    per_token_cosine_sim: Vec<f32>,             // [pos0, pos1, pos2, ...]
+    per_token_l2_dist: Vec<f32>,                // [dist0, dist1, dist2, ...]
+    max_absolute_diff: f32,                     // Largest single difference
+  }
+
+Example:
+  Divergence detected at token 2:
+    pos 0: cosine_sim = 0.9999 (OK)
+    pos 1: cosine_sim = 0.9998 (OK)
+    pos 2: cosine_sim = 0.9990 ← First divergence!
+
+================================================================================
+  TOKEN PASSING: CURRENT vs NEEDED
+================================================================================
+
+CURRENT (Strings Only):
+  bitnet_inference(model_id, "What is 2+2?", output, max_len)
+                           ↑
+                      Prompt string
+  Returns: Generated text (also as string)
+
+AVAILABLE (Lower-Level):
+  bitnet_sys::wrapper::Session
+  {
+    tokenize(prompt)                      ← Text → Token IDs
+    eval_and_get_logits(&tokens, pos)     ← Tokens → Logits directly
+  }
+
+MISSING (Would Be Convenient):
+  bitnet_tokenize(text, tokens_out, count_out)
+  bitnet_inference_tokens(model_id, tokens_in, num_tokens, tokens_out, num_out)
+
+Implication:
+  ✓ For string-based inference: Use bitnet-ffi C API
+  ✓ For token-level control: Use bitnet_sys::wrapper::Session
+  ✗ No direct token FFI functions yet (feature request for future)
+
+================================================================================

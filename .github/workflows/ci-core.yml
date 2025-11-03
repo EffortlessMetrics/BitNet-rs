@@ -1,0 +1,156 @@
+name: CI (Core)
+
+# Core gating checks that MUST pass for PR merges.
+# This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/ci-core.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/ci-core.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: "-Dwarnings"
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Job 1: Build and test on Linux
+  build-test-linux:
+    name: Build & Test (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RUSTFLAGS: "-D warnings"
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+          components: clippy,rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-ubuntu
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Build core crates (libs, CPU features)
+        run: |
+          cargo build --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --no-default-features --features cpu
+
+      - name: Run unit tests (libs only, CPU features)
+        run: |
+          # Target only the library crates to keep feedback fast.
+          cargo test --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --lib \
+            --no-default-features --features cpu \
+            -- --nocapture
+
+  # Job 2: Clippy linting
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-clippy
+
+      - name: Run clippy (core crates)
+        run: |
+          cargo clippy --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-tokenizers \
+            -p bitnet-quantization \
+            -p bitnet-kernels \
+            --all-targets \
+            --no-default-features --features cpu \
+            -- -D warnings
+
+  # Job 4: Documentation build
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.90.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci-core-docs
+
+      - name: Build documentation
+        run: cargo doc --locked --no-deps --workspace --no-default-features --features cpu
+
+  # Summary job (required for branch protection)
+  ci-core-success:
+    name: CI Core Success
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build-test-linux, clippy, docs]
+    if: always()
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          if [[ "${{ needs.build-test-linux.result }}" != "success" ]] || \
+             [[ "${{ needs.clippy.result }}" != "success" ]] || \
+             [[ "${{ needs.docs.result }}" != "success" ]]; then
+            echo "❌ One or more core CI jobs failed"
+            exit 1
+          fi
+          echo "✅ All core CI jobs passed"

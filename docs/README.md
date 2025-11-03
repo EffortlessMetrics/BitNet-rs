@@ -13,10 +13,12 @@ Welcome to the comprehensive documentation for BitNet.rs, the production-ready R
 - **[Configuration layering and clamps](./configuration.md)** - How the manager, environment overlay, and context clamps interact
 - **[Testing guidelines](./testing.md)** - Writing stable, non-flaky tests
 
-### Architecture
+### Architecture & Explanations
+- **[Dual I2_S Flavor Architecture](explanation/i2s-dual-flavor.md)** - I2_S BitNet32-F16 and QK256 (GGML) quantization formats with automatic flavor detection
 - **[ADR-0001: Configuration layering and clamp location](./adr/0001-configuration-layering.md)** - Architectural decision record
 
-### Guides
+### How-To Guides
+- **[Using QK256 Models](howto/use-qk256-models.md)** - QK256 (GGML I2_S) model format usage, automatic detection, strict loader mode, and cross-validation
 - **[Performance Tuning](performance-tuning.md)** - Optimize performance for your hardware and use case
 - **[Troubleshooting](troubleshooting/troubleshooting.md)** - Common issues and solutions
 

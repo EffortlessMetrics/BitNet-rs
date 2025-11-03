@@ -1,0 +1,5 @@
+error: unexpected argument '--format' found
+
+Usage: cargo audit [OPTIONS] [COMMAND]
+
+For more information, try '--help'.

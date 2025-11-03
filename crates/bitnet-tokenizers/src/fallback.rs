@@ -483,7 +483,8 @@ mod tests {
     #[cfg(feature = "cpu")]
     async fn test_strict_mode_behavior() {
         // Set strict mode with guard for automatic cleanup
-        let _guard = EnvGuard::set("BITNET_STRICT_TOKENIZERS", "1");
+        #[allow(clippy::let_unit_value)]
+        let _guard = EnvGuard::new("BITNET_STRICT_TOKENIZERS").set("1");
 
         let strategies = vec![
             FallbackStrategy::ColocatedFiles,
@@ -507,6 +508,7 @@ mod tests {
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system
     #[tokio::test]
     #[cfg(feature = "cpu")]
+    #[serial_test::serial(bitnet_env)]
     async fn test_offline_mode_behavior() {
         // Set offline mode
         unsafe {
@@ -694,6 +696,7 @@ mod tests {
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system
     #[test]
     #[cfg(feature = "cpu")]
+    #[serial_test::serial(bitnet_env)]
     fn test_environment_variable_detection() {
         // Test strict mode detection
         unsafe {
