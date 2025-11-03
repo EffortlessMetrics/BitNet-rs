@@ -49,6 +49,7 @@ jobs:
   test-receipt-verification:
     name: Test Receipt Verification (Examples)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: contains(github.event.pull_request.labels.*.name, 'receipts')
 
     steps:
@@ -146,6 +147,7 @@ jobs:
   verify-generated-receipt:
     name: Verify Generated Receipt (Benchmark)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     # Only run on main/develop branches or workflow_dispatch to avoid overhead on PRs
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
 
@@ -280,6 +282,7 @@ jobs:
   verify-gpu-receipt:
     name: Verify GPU Receipt (Optional)
     runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 30
     # Only run on workflow_dispatch or main branch to avoid overhead
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     continue-on-error: true  # GPU verification is optional

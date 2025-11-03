@@ -542,6 +542,62 @@ Pre-commit hooks catch issues early in your local workflow:
 3. **Cross-validation**: Must pass accuracy validation
 4. **Performance**: No significant performance regressions
 
+### CI Labels and Optional Workflows
+
+BitNet.rs uses a **label-gated CI system** to optimize CI resource usage. By default, only fast core checks run on every PR:
+- **Build & Test** (ubuntu-latest, ~5 minutes)
+- **Clippy** (linting)
+- **Documentation** (doc generation)
+- **CI Core Success** (aggregate gate)
+
+**Optional label-triggered workflows** run heavier validation on-demand. Add these labels to your PR to trigger additional checks:
+
+| Label | Workflow | Description | Typical Runtime |
+|-------|----------|-------------|----------------|
+| `gpu` | GPU Tests | CUDA kernel validation (requires GPU runner) | ~10-15 min |
+| `quant` | Quantization Matrix CI | Build & test quantization features (I2S, TL1, TL2, IQ2_S) | ~15-20 min |
+| `crossval` | Cross-Validation Determinism | Compare Rust vs C++ reference implementation | ~20-30 min |
+| `perf` | Performance Regression Gate | Benchmark validation against baselines | ~20-30 min |
+| `integration` | Integration Tests | Full integration test suite | ~15-25 min |
+| `receipts` | Receipt Verification | Verify inference receipt quality gates | ~10-15 min |
+| `coverage` | Code Coverage | Generate coverage report (70% threshold) | ~10-15 min |
+| `stress` | TL LUT Stress Tests | Deterministic stress tests for table lookup kernels | ~30-45 min |
+
+**When to use labels:**
+
+- **`gpu`**: Required for GPU kernel changes, CUDA optimizations, or device selection logic
+- **`quant`**: Required for quantization algorithm changes (I2S, TL1, TL2, IQ2_S)
+- **`crossval`**: Recommended for inference engine changes, ensures parity with C++ reference
+- **`perf`**: Required for performance-critical changes, prevents regressions
+- **`integration`**: Recommended for multi-crate changes, end-to-end validation
+- **`receipts`**: Required for receipt schema changes, kernel ID validation
+- **`coverage`**: Optional, useful for tracking test coverage improvements
+- **`stress`**: Optional, validates deterministic behavior under heavy load
+
+**Example workflow:**
+
+```bash
+# 1. Create PR (core checks run automatically)
+gh pr create --title "feat: optimize QK256 dequantization" --body "..."
+
+# 2. Add labels to trigger optional checks
+gh pr edit 123 --add-label quant,perf,crossval
+
+# 3. CI runs: core + quantization + performance + cross-validation
+
+# 4. Remove labels after validation (optional, to save CI minutes on subsequent pushes)
+gh pr edit 123 --remove-label quant,perf,crossval
+```
+
+**CI Configuration Notes:**
+
+- **Timeouts**: All jobs have appropriate timeouts (15-60 minutes) to prevent hangs
+- **Continue-on-error**: Some jobs (like `coverage`, `crossval`) are informational during stabilization
+- **Branch protection**: Only the 4 core checks are required; optional jobs are skipped by default
+- **Workflow dispatch**: Most label-gated workflows can also be triggered manually via GitHub Actions UI
+
+**See also:** `.github/workflows/` for individual workflow definitions and trigger conditions.
+
 ## Architecture Guidelines
 
 ### Crate Organization

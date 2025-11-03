@@ -135,7 +135,7 @@ jobs:
           shared-key: ci-core-docs
 
       - name: Build documentation
-        run: cargo doc --no-deps --workspace --no-default-features --features cpu
+        run: cargo doc --locked --no-deps --workspace --no-default-features --features cpu
 
   # Summary job (required for branch protection)
   ci-core-success:

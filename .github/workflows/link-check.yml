@@ -1,0 +1,123 @@
+name: Link Checker
+
+# Weekly link validation to catch broken or moved links proactively
+# Uses lychee with configuration from .lychee.toml
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:  # Manual trigger option
+  pull_request:
+    # Optional: run on PRs that modify documentation
+    paths:
+      - '**.md'
+      - 'docs/**'
+      - '.lychee.toml'
+      - '.github/workflows/link-check.yml'
+
+env:
+  LYCHEE_VERSION: 0.21.0
+
+jobs:
+  link-check:
+    name: Check Documentation Links
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install lychee
+        run: |
+          curl -sSL https://github.com/lycheeverse/lychee/releases/download/v${LYCHEE_VERSION}/lychee-v${LYCHEE_VERSION}-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz -C /usr/local/bin lychee
+          lychee --version
+
+      - name: Run link checker
+        id: lychee
+        run: |
+          # Run lychee using .lychee.toml config
+          # Check markdown files and docs directory
+          lychee \
+            --config .lychee.toml \
+            --format markdown \
+            --output link-check-report.md \
+            --verbose \
+            '**/*.md' \
+            'docs/**' \
+            'README.md' \
+            'CONTRIBUTING.md' \
+            'CLAUDE.md' || true
+
+          # Capture exit code
+          LYCHEE_EXIT=$?
+          echo "exit_code=$LYCHEE_EXIT" >> $GITHUB_OUTPUT
+
+          # Show report
+          if [ -f link-check-report.md ]; then
+            echo "## 🔗 Link Check Report" >> $GITHUB_STEP_SUMMARY
+            cat link-check-report.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Exit with original code
+          exit $LYCHEE_EXIT
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-check-report
+          path: link-check-report.md
+          retention-days: 30
+
+      - name: Create issue on failure (scheduled runs only)
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = 'Link checker detected broken links.\n\n';
+
+            try {
+              if (fs.existsSync('link-check-report.md')) {
+                report += fs.readFileSync('link-check-report.md', 'utf8');
+              }
+            } catch (error) {
+              report += 'Error reading report: ' + error.message;
+            }
+
+            // Create an issue
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔗 Weekly Link Check Failed',
+              body: report + '\n\n---\n\n**Automated issue from weekly link checker**\n\nWorkflow run: ' + context.payload.repository.html_url + '/actions/runs/' + context.runId,
+              labels: ['documentation', 'automated']
+            });
+
+      - name: Comment on PR (PR runs only)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## ❌ Link Check Failed\n\n';
+
+            try {
+              if (fs.existsSync('link-check-report.md')) {
+                comment += fs.readFileSync('link-check-report.md', 'utf8');
+              }
+            } catch (error) {
+              comment += 'Error reading report: ' + error.message;
+            }
+
+            comment += '\n\n---\n\nPlease fix the broken links in your PR.\n\nSee: `.lychee.toml` for link checker configuration.';
+
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
