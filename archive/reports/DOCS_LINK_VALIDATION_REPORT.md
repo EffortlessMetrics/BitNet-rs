@@ -3,11 +3,6 @@
 > **Note**: References to `docs/archive/reports/` point to historical archived documentation.
 > For current status, see [CLAUDE.md](CLAUDE.md) and [PR #475](PR_475_FINAL_SUCCESS_REPORT.md).
 
-
-> **Note**: References to `docs/archive/reports/` point to historical archived documentation.
-> For current status, see [CLAUDE.md](CLAUDE.md) and [PR #475](PR_475_FINAL_SUCCESS_REPORT.md).
-
-
 **Date**: 2025-10-23
 **Validator**: lychee v0.21.0
 **Scope**: ci/solutions/, docs/, README.md, CLAUDE.md, PR_475_FINAL_SUCCESS_REPORT.md

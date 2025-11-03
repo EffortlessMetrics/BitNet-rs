@@ -49,14 +49,6 @@ version = "0.1.0"
 autoexamples = false
 autotests = false
 autobenches = false
-# Only ship essential files to avoid oversized package
-include = [
-  "src/**",
-  "Cargo.toml",
-  "build.rs",
-  "README.md",
-  "LICENSE",
-]
 
 [lib]
 # Library source

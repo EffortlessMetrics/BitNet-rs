@@ -420,19 +420,21 @@ use serial_test::serial;
 #[serial(bitnet_env)]  // Prevents parallel execution with other env-mutating tests
 fn test_strict_mode_validation() {
     // EnvGuard automatically restores original env state on drop
-    let _guard = EnvGuard::new("BITNET_STRICT_MODE", Some("1"));
+    let guard = EnvGuard::new("BITNET_STRICT_MODE");
+    guard.set("1");
 
     // Test code that depends on BITNET_STRICT_MODE=1
     let result = validate_model("models/test.gguf");
     assert!(result.is_err(), "Expected strict mode to fail on warnings");
 
-    // _guard drops here → BITNET_STRICT_MODE restored to original value
+    // guard drops here → BITNET_STRICT_MODE restored to original value
 }
 
 #[test]
 #[serial(bitnet_env)]  // Same serial group ensures sequential execution
 fn test_model_path_override() {
-    let _guard = EnvGuard::new("BITNET_GGUF", Some("/tmp/test.gguf"));
+    let guard = EnvGuard::new("BITNET_GGUF");
+    guard.set("/tmp/test.gguf");
 
     // Test code that uses BITNET_GGUF env var
     assert_eq!(get_model_path(), Some("/tmp/test.gguf".into()));

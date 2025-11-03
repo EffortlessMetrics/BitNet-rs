@@ -15,7 +15,7 @@ once_cell.workspace = true
 # Change from:
 let lock = ENV_LOCK.lock().unwrap_or_else(|poisoned| {
 # Change to:
-let lock = ENV_LOCK.lock().unwrap_or_else(|poisoned: std::sync::PoisonError<std::sync::MutexGuard<()>>| {
+let lock = ENV_LOCK.lock().unwrap_or_else(|poisoned: std::sync::PoisonError<std::sync::MutexGuard<'static, ()>>| {
 
 # 3. Fix all 26 incorrect API usages
 # See "API Usage Fixes" section below
@@ -55,7 +55,7 @@ let lock = ENV_LOCK.lock().unwrap_or_else(|poisoned| {
 
 ### Fixed Code
 ```rust
-let lock = ENV_LOCK.lock().unwrap_or_else(|poisoned: std::sync::PoisonError<std::sync::MutexGuard<()>>| {
+let lock = ENV_LOCK.lock().unwrap_or_else(|poisoned: std::sync::PoisonError<std::sync::MutexGuard<'static, ()>>| {
     poisoned.into_inner()
 });
 ```
