@@ -6,7 +6,7 @@
 
 <!-- List the main changes in this PR -->
 
--
+- <!-- Add a bullet point for each meaningful change -->
 -
 
 ## Testing
