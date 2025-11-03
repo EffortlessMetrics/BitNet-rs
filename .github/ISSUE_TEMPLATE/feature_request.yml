@@ -1,0 +1,102 @@
+name: Feature Request
+description: Propose an enhancement or new feature for BitNet.rs
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe what you'd like to see and why it would be valuable.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: |
+        What problem would this feature solve? Or what capability is currently missing?
+      placeholder: |
+        Currently, BitNet.rs doesn't support ...
+        This makes it difficult to ...
+        Users would benefit from ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: |
+        Describe your proposed feature. Include API shapes, CLI flags, configuration options, or examples.
+      placeholder: |
+        **API Example**:
+        ```rust
+        let config = InferenceConfig::new()
+            .with_feature(...)
+            .build()?;
+        ```
+
+        **CLI Example**:
+        ```bash
+        cargo run -p bitnet-cli -- run --new-flag value
+        ```
+
+        **Configuration**:
+        - Add environment variable `BITNET_NEW_FEATURE`
+        - Support new quantization format X
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: |
+        Have you considered other approaches? What are the trade-offs?
+      placeholder: |
+        - Alternative A: ...
+        - Alternative B: ...
+        - Why the proposed solution is better: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Success Criteria / Validation
+      description: |
+        How would we test or measure success for this feature?
+      placeholder: |
+        - Unit tests covering ...
+        - Integration tests validating ...
+        - Performance benchmarks showing ...
+        - Documentation explaining ...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      description: Which areas would this feature affect?
+      options:
+        - label: "Core inference engine"
+        - label: "Quantization algorithms"
+        - label: "GPU/CUDA kernels"
+        - label: "CLI interface"
+        - label: "Model loading (GGUF/SafeTensors)"
+        - label: "Tokenization"
+        - label: "Documentation"
+        - label: "Testing/validation"
+        - label: "Other (specify in proposal)"
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other context, links to related issues/PRs, or references.
+      placeholder: |
+        - Related to issue #123
+        - Similar to feature X in project Y
+        - Reference: https://...
+    validations:
+      required: false
