@@ -16,9 +16,6 @@ on:
       - '.lychee.toml'
       - '.github/workflows/link-check.yml'
 
-env:
-  LYCHEE_VERSION: 0.21.0
-
 jobs:
   link-check:
     name: Check Documentation Links
@@ -29,40 +26,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install lychee
-        run: |
-          curl -sSL https://github.com/lycheeverse/lychee/releases/download/v${LYCHEE_VERSION}/lychee-v${LYCHEE_VERSION}-x86_64-unknown-linux-gnu.tar.gz \
-            | tar -xz -C /usr/local/bin lychee
-          lychee --version
-
       - name: Run link checker
         id: lychee
-        run: |
-          # Run lychee using .lychee.toml config
-          # Check markdown files and docs directory
-          lychee \
-            --config .lychee.toml \
-            --format markdown \
-            --output link-check-report.md \
-            --verbose \
-            '**/*.md' \
-            'docs/**' \
-            'README.md' \
-            'CONTRIBUTING.md' \
-            'CLAUDE.md' || true
-
-          # Capture exit code
-          LYCHEE_EXIT=$?
-          echo "exit_code=$LYCHEE_EXIT" >> $GITHUB_OUTPUT
-
-          # Show report
-          if [ -f link-check-report.md ]; then
-            echo "## 🔗 Link Check Report" >> $GITHUB_STEP_SUMMARY
-            cat link-check-report.md >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Exit with original code
-          exit $LYCHEE_EXIT
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Use .lychee.toml config file
+          args: --verbose --config .lychee.toml '**/*.md' 'docs/**' 'README.md' 'CONTRIBUTING.md' 'CLAUDE.md'
+          # Generate report
+          output: link-check-report.md
+          format: markdown
+          # Don't fail on broken links (informational)
+          fail: false
 
       - name: Upload report
         if: always()
