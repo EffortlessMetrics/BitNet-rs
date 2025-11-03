@@ -1,6 +1,6 @@
 name: CI (Core)
 
-# Core gating checks that MUST pass for PR merges.
+# Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
 # Note: This workflow triggers on changes to crates/**, Cargo.{toml,lock}, README.md, docs/**, and this file itself
 
