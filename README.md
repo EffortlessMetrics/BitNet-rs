@@ -1,10 +1,8 @@
 # BitNet.rs - Rust 1-bit LLM Inference (MVP)
 
-[![Crates.io](https://img.shields.io/crates/v/bitnet.svg)](https://crates.io/crates/bitnet)
-[![Documentation](https://docs.rs/bitnet/badge.svg)](https://docs.rs/bitnet)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/microsoft/BitNet#license)
-[![Build Status](https://github.com/microsoft/BitNet/workflows/CI/badge.svg)](https://github.com/microsoft/BitNet/actions)
-[![MSRV](https://img.shields.io/badge/MSRV-1.90.0-blue.svg)](https://github.com/microsoft/BitNet)
+[![CI](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.90.0-blue.svg)](./rust-toolchain.toml)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
 
 **Rust implementation of BitNet 1-bit neural network inference** with memory safety,
 device-aware quantization, and cross-platform support.
@@ -17,8 +15,8 @@ device-aware quantization, and cross-platform support.
   prevents mock fallbacks. Validation gates enforce honest compute paths.
 - 📐 **Real Quantization**: Numerically validated against Microsoft C++ reference with
   cross-validation framework. CPU/GPU inference paths both implemented.
-- 🌐 **Cross-Platform**: Linux/macOS/Windows with CPU/GPU backends (I2_S BitNet32-F16
-  and I2_S QK256/GGML quantization formats)
+- 🐧 **Linux-first**: Ubuntu (x86_64) with CPU/GPU backends (I2_S BitNet32-F16 and
+  I2_S QK256/GGML quantization formats). macOS/Windows currently out-of-scope.
 - 🔧 **Developer Friendly**: Modern Rust tooling, extensive documentation, xtask automation,
   and deterministic testing infrastructure
 
@@ -26,8 +24,15 @@ device-aware quantization, and cross-platform support.
 
 ### Prerequisites
 
-- **Rust 1.90.0+** (supports Rust 2024 edition)
-- **For GPU**: CUDA toolkit 12.0+ with NVCC compiler
+**Supported (MVP)**
+
+- OS: Ubuntu 22.04/24.04 (x86_64)
+- Rust: 1.90.0+ (2024 edition)
+- GPU (optional): CUDA toolkit 12.x with NVCC
+
+**Out of scope (for now)**
+
+- macOS / Windows (may compile in places, but not supported or CI'd)
 
 ### Build & Installation
 
