@@ -16,6 +16,10 @@ We actively support the following versions for security updates:
 
 ### How to Report
 
+> **Note:** This repository is maintained by EffortlessMetrics under the
+> MIT/Apache-2.0 licenses in `LICENSE`. Security reports for this repo
+> should go to **security@effortlessmetrics.com**.
+
 Send security reports to: **security@effortlessmetrics.com**
 
 Include the following information:
@@ -89,7 +93,9 @@ We consider the following areas in scope for security reports:
 2. **Verify checksums**: Check release signatures when available
 3. **Pin dependencies**: Use `Cargo.lock` for reproducible builds
 4. **Enable strict mode**: Set `BITNET_STRICT_MODE=1` for production
-5. **Review receipts**: If not using strict mode, validate that compute paths in receipts are `"real"`, not `"mocked"`. Strict mode (`BITNET_STRICT_MODE=1`) enforces this check automatically.
+5. **Review receipts**: If not using strict mode, validate that compute paths
+   in receipts are `"real"`, not `"mocked"`. Strict mode (`BITNET_STRICT_MODE=1`)
+   enforces this check automatically.
 
 ### For Contributors
 
