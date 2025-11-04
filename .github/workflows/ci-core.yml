@@ -40,7 +40,7 @@ env:
 jobs:
   # Job 1: Build and test on Linux
   build-test-linux:
-    name: Build & Test (ubuntu-22.04)
+    name: Build & Test (ubuntu-latest)
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     env:
