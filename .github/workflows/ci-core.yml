@@ -93,6 +93,10 @@ jobs:
     name: Clippy
     runs-on: ubuntu-22.04
     timeout-minutes: 10
+    env:
+      RUSTFLAGS: "-D warnings"
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -117,8 +121,7 @@ jobs:
             -p bitnet-quantization \
             -p bitnet-kernels \
             --lib \
-            --no-default-features --features cpu \
-            -- -D warnings
+            --no-default-features --features cpu
 
   # Job 4: Documentation build
   docs:
