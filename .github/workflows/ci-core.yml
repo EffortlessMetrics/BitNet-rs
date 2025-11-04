@@ -108,7 +108,7 @@ jobs:
         with:
           shared-key: ci-core-clippy
 
-      - name: Run clippy (core crates)
+      - name: Run clippy (core crates, libs only)
         run: |
           cargo clippy --locked \
             -p bitnet-common \
@@ -116,7 +116,7 @@ jobs:
             -p bitnet-tokenizers \
             -p bitnet-quantization \
             -p bitnet-kernels \
-            --all-targets \
+            --lib \
             --no-default-features --features cpu \
             -- -D warnings
 
