@@ -38,7 +38,7 @@ These workflows only run when their corresponding label is applied to a PR:
 - Schema v1.0.0 compliance
 - Kernel ID hygiene (length ≤128, count ≤10K)
 
-**Note**: On `main` branch and nightly scheduled runs, receipt gates run strictly (blocking merge).
+**Note**: On `main` and on **scheduled** nightly runs, receipt gates run strictly (blocking merge).
 
 ---
 
@@ -141,35 +141,20 @@ These workflows only run when their corresponding label is applied to a PR:
 
 ## Always-Run Workflows
 
-These workflows run on every PR and push to `main` (Linux runners only):
+These workflows run on every PR and on `main` (Linux runners only):
 
 ### Core CI (`ci-core.yml`)
 
 **Required checks**:
-1. **build** - Workspace compilation check
-2. **test** - Core test suite (`cargo test --workspace`)
-3. **doc** - Documentation build (`cargo doc --no-deps`)
-4. **aggregator** - Status rollup for branch protection
+1. **Build & Test (ubuntu-latest)** - Workspace compilation and test suite
+2. **Clippy** - Lint checks with `RUSTFLAGS=-Dwarnings`
+3. **Documentation** - Documentation build (`cargo doc --no-deps`)
+4. **CI Core Success** - Status rollup for branch protection
 
-**Runs on**: All PRs and all `main` pushes
+**Runs on**: All PRs and on `main`
 **Timeout**: 30 minutes global
 **Features**: Uses `--locked` for determinism, runs with `cpu` features by default
-
----
-
-### Clippy (`ci-clippy.yml`)
-
-**Required**: Yes (informational on PRs, strict on `main`)
-**Runs on**: All PRs and all `main` pushes
-**Command**: `cargo clippy --all-targets --all-features -- -D warnings`
-
----
-
-### Security Audit (`ci-audit.yml`)
-
-**Required**: Yes (informational on PRs, strict on `main`)
-**Runs on**: All PRs and all `main` pushes
-**Tools**: `cargo audit` for CVE checks
+**Notes**: All jobs run on Linux (ubuntu-22.04). Clippy job aligns environment with Build & Test job for consistent warning detection.
 
 ---
 
@@ -185,11 +170,11 @@ These workflows run on every PR and push to `main` (Linux runners only):
 
 These workflows provide feedback but don't block merges:
 
-### Security Guard (`security-guard.yml`)
+### Security checks
 
-**Triggers**: All PRs
-**Purpose**: Detect correction policy flags in CI (future blocking)
-**Current**: Informational only (will become required in v0.2.0)
+**Security & license audit**: PR-time audit runs as **Security and License Audit** job in `.github/workflows/compatibility.yml` (informational on PRs). Nightly/`main` security scan runs as **Security check** in `.github/workflows/security.yml` (required on `main`).
+
+**Security Guard**: `Security Guard` job in `.github/workflows/validation.yml` flags banned correction flags (currently informational; will be made required in v0.2).
 
 ---
 
@@ -281,8 +266,8 @@ gh pr edit <PR> --add-label lut
 
 ---
 
-## See Also
+## See also
 
-- [PR Template](../../.github/pull_request_template.md) - Quick label checklist
-- [CI Workflows](../../.github/workflows/) - Workflow configurations
-- [Branch Protection](https://github.com/EffortlessMetrics/BitNet-rs/settings/branches) - Required checks (maintainers only)
+- [PR template](../../.github/pull_request_template.md) - Quick label checklist
+- [CI workflows](../../.github/workflows/) – Workflow files
+- [Branch protection](https://github.com/EffortlessMetrics/BitNet-rs/settings/branches) *(maintainers only)*
