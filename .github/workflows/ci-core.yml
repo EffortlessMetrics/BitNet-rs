@@ -39,6 +39,8 @@ env:
 
 jobs:
   # Job 1: Build and test on Linux
+  # Note: Job name kept as 'ubuntu-latest' for branch protection rule compatibility,
+  # but runner is pinned to ubuntu-22.04 for CI reproducibility.
   build-test-linux:
     name: Build & Test (ubuntu-latest)
     runs-on: ubuntu-22.04
