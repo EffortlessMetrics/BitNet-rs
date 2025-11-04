@@ -27,7 +27,7 @@ Include the following information:
 
 ### Response Timeline
 
-- **72-hour acknowledgment**: We will confirm receipt within 3 business days
+- **3 business day acknowledgment**: We will confirm receipt within 3 business days
 - **14-day initial assessment**: Preliminary analysis and severity classification
 - **30-day resolution target**: For critical vulnerabilities (best effort)
 - **Coordinated disclosure**: We will work with you on an appropriate disclosure timeline
@@ -89,7 +89,7 @@ We consider the following areas in scope for security reports:
 2. **Verify checksums**: Check release signatures when available
 3. **Pin dependencies**: Use `Cargo.lock` for reproducible builds
 4. **Enable strict mode**: Set `BITNET_STRICT_MODE=1` for production
-5. **Review receipts**: Validate compute paths are `"real"`, not `"mocked"`
+5. **Review receipts**: If not using strict mode, validate that compute paths in receipts are `"real"`, not `"mocked"`. Strict mode (`BITNET_STRICT_MODE=1`) enforces this check automatically.
 
 ### For Contributors
 
