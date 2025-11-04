@@ -155,12 +155,24 @@ jobs:
     needs: [build-test-linux, clippy, docs]
     if: always()
     steps:
-      - name: Check all jobs succeeded
+      - name: Summarize core results
+        if: always()
         run: |
-          if [[ "${{ needs.build-test-linux.result }}" != "success" ]] || \
-             [[ "${{ needs.clippy.result }}" != "success" ]] || \
-             [[ "${{ needs.docs.result }}" != "success" ]]; then
-            echo "❌ One or more core CI jobs failed"
-            exit 1
+          echo "Core results:"
+          echo "  Build & Test: ${{ needs.build-test-linux.result }}"
+          echo "  Clippy:       ${{ needs.clippy.result }}"
+          echo "  Docs:         ${{ needs.docs.result }}"
+
+      - name: Check all jobs succeeded
+        if: always()
+        run: |
+          bad=0
+          for r in "${{ needs.build-test-linux.result }}" \
+                   "${{ needs.clippy.result }}" \
+                   "${{ needs.docs.result }}"; do
+            [ "$r" = "success" ] || bad=1
+          done
+          if [ $bad -ne 0 ]; then
+            echo "❌ One or more core CI jobs failed (or were cancelled)"; exit 1
           fi
-          echo "✅ All core CI jobs passed"
+          echo "✅ Core CI jobs succeeded"
