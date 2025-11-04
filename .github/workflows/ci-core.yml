@@ -42,7 +42,7 @@ jobs:
   build-test-linux:
     name: Build & Test (ubuntu-latest)
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
@@ -127,7 +127,7 @@ jobs:
   docs:
     name: Documentation
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
