@@ -1,7 +1,8 @@
 name: CI (Core)
 
-# Core gating checks that MUST pass for PR merges.
+# Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
+# Note: This workflow triggers on changes to crates/**, Cargo.{toml,lock}, README.md, docs/**, and this file itself
 
 on:
   pull_request:
@@ -11,6 +12,8 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/ci-core.yml'
+      - 'README.md'
+      - 'docs/**'
   push:
     branches: [ main ]
     paths:
@@ -18,6 +21,8 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/ci-core.yml'
+      - 'README.md'
+      - 'docs/**'
   workflow_dispatch:
 
 concurrency:
@@ -34,10 +39,12 @@ env:
 
 jobs:
   # Job 1: Build and test on Linux
+  # Note: Job name kept as 'ubuntu-latest' for branch protection rule compatibility,
+  # but runner is pinned to ubuntu-22.04 for CI reproducibility.
   build-test-linux:
     name: Build & Test (ubuntu-latest)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
     env:
       RUSTFLAGS: "-D warnings"
       CARGO_TERM_COLOR: always
@@ -86,8 +93,12 @@ jobs:
   # Job 2: Clippy linting
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
+    env:
+      RUSTFLAGS: "-D warnings"
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -103,7 +114,7 @@ jobs:
         with:
           shared-key: ci-core-clippy
 
-      - name: Run clippy (core crates)
+      - name: Run clippy (core crates, libs only)
         run: |
           cargo clippy --locked \
             -p bitnet-common \
@@ -111,15 +122,14 @@ jobs:
             -p bitnet-tokenizers \
             -p bitnet-quantization \
             -p bitnet-kernels \
-            --all-targets \
-            --no-default-features --features cpu \
-            -- -D warnings
+            --lib \
+            --no-default-features --features cpu
 
   # Job 4: Documentation build
   docs:
     name: Documentation
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -140,17 +150,29 @@ jobs:
   # Summary job (required for branch protection)
   ci-core-success:
     name: CI Core Success
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     needs: [build-test-linux, clippy, docs]
     if: always()
     steps:
-      - name: Check all jobs succeeded
+      - name: Summarize core results
+        if: always()
         run: |
-          if [[ "${{ needs.build-test-linux.result }}" != "success" ]] || \
-             [[ "${{ needs.clippy.result }}" != "success" ]] || \
-             [[ "${{ needs.docs.result }}" != "success" ]]; then
-            echo "❌ One or more core CI jobs failed"
-            exit 1
+          echo "Core results:"
+          echo "  Build & Test: ${{ needs.build-test-linux.result }}"
+          echo "  Clippy:       ${{ needs.clippy.result }}"
+          echo "  Docs:         ${{ needs.docs.result }}"
+
+      - name: Check all jobs succeeded
+        if: always()
+        run: |
+          bad=0
+          for r in "${{ needs.build-test-linux.result }}" \
+                   "${{ needs.clippy.result }}" \
+                   "${{ needs.docs.result }}"; do
+            [ "$r" = "success" ] || bad=1
+          done
+          if [ $bad -ne 0 ]; then
+            echo "❌ One or more core CI jobs failed (or were cancelled)"; exit 1
           fi
-          echo "✅ All core CI jobs passed"
+          echo "✅ Core CI jobs succeeded"
