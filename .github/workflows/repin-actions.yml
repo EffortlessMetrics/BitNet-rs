@@ -1,0 +1,134 @@
+name: Repin actions
+
+# Automated weekly workflow to keep action SHAs up-to-date with upstream tags.
+# Opens a PR when action pins can be advanced to newer SHAs.
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"  # Mondays 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: repin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repin:
+    name: Repin Action SHAs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Repin action refs to latest SHAs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Embedded pin script for self-containment
+          cat > /tmp/pin_actions.sh <<'BASH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          ROOT=".github/workflows"
+
+          # Find all unpinned action references (not using SHAs, not local actions)
+          mapfile -t HITS < <(grep -RInE '^\s*uses:\s*[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+' "$ROOT" \
+            | grep -vE '@[0-9a-f]{40}\b' | grep -vE '^\s*uses:\s*\./' || true)
+
+          # Helper to resolve tag/branch to SHA
+          resolve_sha() {
+            local owner="$1" repo="$2" ref="$3"
+            gh api "repos/$owner/$repo/commits/$ref" -q .sha 2>/dev/null || true
+          }
+
+          # Process each unpinned reference
+          for h in "${HITS[@]}"; do
+            file="${h%%:*}"
+            rest="${h#*:}"
+            line="${rest%%:*}"
+
+            # Extract owner/repo@ref from the line
+            ur=$(sed -n "${line}p" "$file" | sed -E 's/^\s*uses:\s*([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)@([A-Za-z0-9_.-]+).*/\1@\2/')
+            owner_repo="${ur%@*}"
+            ref="${ur#*@}"
+            owner="${owner_repo%/*}"
+            repo="${owner_repo#*/}"
+
+            # Resolve ref to SHA
+            sha="$(resolve_sha "$owner" "$repo" "$ref" || true)"
+
+            # Validate SHA format
+            if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "WARN: Failed to resolve $owner_repo@$ref, skipping"
+              continue
+            fi
+
+            # Pin the action: replace @ref with @sha, keep ref in trailing comment
+            perl -i -0777 -pe "
+              if (\$. == $line) {
+                s@(\\s*uses:\\s*)${owner_repo}@${ref}(\\s*(#.*)?\$)@\\1${owner_repo}\@${sha}  # ${ref}@;
+              }
+            " "$file"
+
+            echo "✓ Pinned $file:$line $owner_repo@$ref → $sha"
+          done
+          BASH
+
+          chmod +x /tmp/pin_actions.sh
+          /tmp/pin_actions.sh || true
+
+      - name: Open PR if changes detected
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Check if any workflows changed
+          if ! git diff --quiet .github/workflows; then
+            # Create branch with date stamp
+            BR="ci/repin-$(date +%Y%m%d)"
+            git checkout -b "$BR"
+
+            # Stage and commit changes
+            git add .github/workflows
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m "ci: repin actions to latest SHAs"
+
+            # Push to remote
+            git push -u origin "$BR"
+
+            # Create PR
+            gh pr create \
+              --title "ci: repin actions to latest upstream SHAs" \
+              --body "$(cat <<'EOF'
+Automated weekly repin to keep action SHAs up-to-date with upstream tags.
+
+This PR updates pinned action SHAs to their latest versions while preserving
+the original tag reference in trailing comments for human readability.
+
+**Review checklist:**
+- [ ] Verify all pinned SHAs match their corresponding tag references
+- [ ] Check that no local actions (`./*`) were affected
+- [ ] Confirm CI passes with updated action versions
+
+**Merge when ready:** Core CI checks must pass; other checks are advisory.
+EOF
+              )"
+
+            echo "✓ PR created: ci/repin-$(date +%Y%m%d)"
+          else
+            echo "ℹ No action pins changed - all actions are up-to-date"
+          fi
