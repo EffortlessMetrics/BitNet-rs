@@ -68,7 +68,7 @@ jobs:
     - name: Clippy Check
       if: steps.probe.outputs.available == 'true'
       run: |
-        cargo clippy --workspace \
+        cargo clippy --workspace \ --locked
           --locked \
           --no-default-features \
           --features "${{ matrix.features }}" \
@@ -78,7 +78,7 @@ jobs:
     - name: Build
       if: steps.probe.outputs.available == 'true'
       run: |
-        cargo build -p bitnet-cli \
+        cargo build -p bitnet-cli \ --locked
           --locked \
           --no-default-features \
           --features "${{ matrix.features }}" \
@@ -87,7 +87,7 @@ jobs:
     - name: Run tests
       if: steps.probe.outputs.available == 'true'
       run: |
-        cargo test --workspace \
+        cargo test --workspace \ --locked
           --locked \
           --no-default-features \
           --features "${{ matrix.features }}" \
@@ -185,7 +185,7 @@ jobs:
     - name: Run IQ2_S parity test
       run: |
         # When test slices are committed:
-        cargo test -p bitnet-models \
+        cargo test -p bitnet-models \ --locked
           --no-default-features \
           --features "cpu,iq2s-ffi" \
           --test iq2s_tests \
