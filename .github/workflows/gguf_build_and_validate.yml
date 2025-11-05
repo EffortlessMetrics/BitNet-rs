@@ -28,7 +28,8 @@ on:
         default: false
 
   push:
-    branches: [ main ]
+    # Heavy: run only on main (plus nightly + manual), not on PRs
+    branches: [main]
     paths:
       - 'scripts/export_clean_gguf.sh'
       - 'scripts/validate_gguf.sh'
