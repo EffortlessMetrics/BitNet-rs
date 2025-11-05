@@ -20,6 +20,10 @@ on:
       - 'Cargo.lock'
       - '.github/workflows/compatibility.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
@@ -29,6 +33,7 @@ jobs:
   msrv:
     name: Minimum Supported Rust Version
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust 1.90.0
@@ -43,6 +48,7 @@ jobs:
   abi-stability:
     name: ABI Stability Check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -89,6 +95,7 @@ jobs:
   validation-pr:
     name: Model Validation (PR Lane)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
@@ -197,6 +204,7 @@ jobs:
   gguf-compat:
     name: GGUF Compatibility Check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -228,6 +236,7 @@ jobs:
   cross-val-determinism:
     name: Cross-Validation Determinism
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: contains(github.event.pull_request.labels.*.name, 'crossval')
     steps:
       - uses: actions/checkout@v4
@@ -264,6 +273,7 @@ jobs:
   audit-and-deny:
     name: Security and License Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     continue-on-error: true  # Non-blocking for PRs
     steps:
       - uses: actions/checkout@v4

@@ -17,6 +17,10 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/bitnet-cpp-cache
@@ -25,6 +29,7 @@ jobs:
   determine-versions:
     name: Determine BitNet.cpp Versions to Cache
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       versions: ${{ steps.versions.outputs.versions }}
 
@@ -54,6 +59,7 @@ jobs:
     name: Build Cache for ${{ matrix.version }}
     needs: determine-versions
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -167,6 +173,7 @@ jobs:
     name: Cleanup Old Cache Images
     needs: [determine-versions, build-cache]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: always()
 
     permissions:
@@ -194,6 +201,7 @@ jobs:
     name: Update CI Cache Configuration
     needs: [determine-versions, build-cache]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: success()
 
     steps:

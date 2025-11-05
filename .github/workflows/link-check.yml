@@ -16,6 +16,10 @@ on:
       - '.lychee.toml'
       - '.github/workflows/link-check.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   link-check:
     name: Check Documentation Links

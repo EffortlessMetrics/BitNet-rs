@@ -28,20 +28,20 @@ on:
         default: false
 
   push:
+    # Heavy: run only on main (plus nightly + manual), not on PRs
+    branches: [main]
     paths:
       - 'scripts/export_clean_gguf.sh'
       - 'scripts/validate_gguf.sh'
       - 'scripts/convert_safetensors_to_gguf.py'
       - '.github/workflows/gguf_build_and_validate.yml'
-    branches:
-      - main
 
-  pull_request:
-    paths:
-      - 'scripts/export_clean_gguf.sh'
-      - 'scripts/validate_gguf.sh'
-      - 'scripts/convert_safetensors_to_gguf.py'
-      - '.github/workflows/gguf_build_and_validate.yml'
+  schedule:
+    - cron: '0 3 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # Ensure no policy corrections are used (strict validation)
