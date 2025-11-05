@@ -75,11 +75,12 @@ jobs:
             fi
 
             # Pin the action: replace @ref with @sha, keep ref in trailing comment
-            perl -i -0777 -pe "
-              if (\$. == $line) {
-                s@(\\s*uses:\\s*)${owner_repo}@${ref}(\\s*(#.*)?\$)@\\1${owner_repo}\@${sha}  # ${ref}@;
+            awk -v owner_repo="$owner_repo" -v sha="$sha" -v ref="$ref" '
+              {
+                gsub("uses:[ \t]*"owner_repo"@"ref, "uses: "owner_repo"@"sha"  # "ref);
+                print
               }
-            " "$file"
+            ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
 
             echo "✓ Pinned $file:$line $owner_repo@$ref → $sha"
           done

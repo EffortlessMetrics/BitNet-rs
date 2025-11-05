@@ -64,8 +64,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.89.0"
       - name: Build FFI library
@@ -82,8 +82,8 @@ jobs:
     continue-on-error: true
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.89.0"
       - name: Install system deps
@@ -112,11 +112,11 @@ jobs:
     timeout-minutes: 30
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.89.0"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
       - name: Install dependencies
@@ -161,11 +161,11 @@ jobs:
     continue-on-error: true  # Informational while stabilizing baselines
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.89.0"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
       - name: Install Python dependencies
@@ -220,8 +220,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.89.0"
       - name: Cache test GGUF
@@ -253,11 +253,11 @@ jobs:
     timeout-minutes: 30
     if: contains(github.event.pull_request.labels.*.name, 'crossval')
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.89.0"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
       - name: Install Python dependencies
@@ -290,8 +290,8 @@ jobs:
     timeout-minutes: 15
     continue-on-error: true  # Non-blocking for PRs
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.89.0"
       - name: Install cargo-audit

@@ -34,14 +34,12 @@ jobs:
             hf_id: "1bitLLM/bitnet_b1_58-3B"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
       - name: Setup Rust
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af  # v1
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          profile: minimal
-          toolchain: 1.90.0
-          override: true
+          toolchain: 1.89.0
           components: rustfmt, clippy
 
       - name: Setup Python
@@ -208,7 +206,7 @@ if files:
     if: github.event_name == 'workflow_dispatch'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
       - name: Setup environment
         run: |
