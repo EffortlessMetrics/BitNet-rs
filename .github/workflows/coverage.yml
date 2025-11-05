@@ -10,10 +10,6 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
-      - 'README.md'
-      - 'docs/**'
-      - 'SECURITY.md'
-      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     types: [labeled, synchronize, reopened]
     branches: [ main ]
@@ -24,10 +20,6 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/coverage.yml'
-      - 'README.md'
-      - 'docs/**'
-      - 'SECURITY.md'
-      - '.github/ISSUE_TEMPLATE/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
