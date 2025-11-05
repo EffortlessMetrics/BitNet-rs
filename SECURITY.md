@@ -1,41 +1,155 @@
-<!-- BEGIN MICROSOFT SECURITY.MD V0.0.9 BLOCK -->
+# Security Policy
 
-## Security
+## Supported Versions
 
-Microsoft takes the security of our software products and services seriously, which includes all source code repositories managed through our GitHub organizations, which include [Microsoft](https://github.com/Microsoft), [Azure](https://github.com/Azure), [DotNet](https://github.com/dotnet), [AspNet](https://github.com/aspnet) and [Xamarin](https://github.com/xamarin).
+We actively support the following versions for security updates:
 
-If you believe you have found a security vulnerability in any Microsoft-owned repository that meets [Microsoft's definition of a security vulnerability](https://aka.ms/security.md/definition), please report it to us as described below.
+| Version | Status | Support Level |
+|---------|--------|---------------|
+| `main` branch | ✅ Active Development | Full support with rapid response |
+| `v0.1.x` (MVP) | ✅ Maintained | Security fixes and critical bugs |
+| Older versions | ⚠️ Best Effort | May receive fixes at maintainer discretion |
 
-## Reporting Security Issues
+## Reporting a Vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+**Please do not file public GitHub issues for security vulnerabilities.**
 
-Instead, please report them to the Microsoft Security Response Center (MSRC) at [https://msrc.microsoft.com/create-report](https://aka.ms/security.md/msrc/create-report).
+### How to Report
 
-If you prefer to submit without logging in, send email to [secure@microsoft.com](mailto:secure@microsoft.com).  If possible, encrypt your message with our PGP key; please download it from the [Microsoft Security Response Center PGP Key page](https://aka.ms/security.md/msrc/pgp).
+> **Note:** This repository is maintained by EffortlessMetrics under the
+> MIT/Apache-2.0 licenses in `LICENSE`. Security reports for this repo
+> should go to **security@effortlessmetrics.com**.
 
-You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your original message. Additional information can be found at [microsoft.com/msrc](https://www.microsoft.com/msrc).
+Send security reports to: **security@effortlessmetrics.com**
 
-Please include the requested information listed below (as much as you can provide) to help us better understand the nature and scope of the possible issue:
+Include the following information:
+1. **Affected version/commit** and configuration (OS, Rust version, feature flags)
+2. **Detailed reproduction steps** with minimal example
+3. **Impact assessment**: What could an attacker achieve?
+4. **Proof-of-concept** (if applicable) or logs demonstrating the issue
+5. **Suggested fix** (optional but appreciated)
 
-  * Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting, etc.)
-  * Full paths of source file(s) related to the manifestation of the issue
-  * The location of the affected source code (tag/branch/commit or direct URL)
-  * Any special configuration required to reproduce the issue
-  * Step-by-step instructions to reproduce the issue
-  * Proof-of-concept or exploit code (if possible)
-  * Impact of the issue, including how an attacker might exploit the issue
+### Response Timeline
 
-This information will help us triage your report more quickly.
+- **3 business day acknowledgment**: We will confirm receipt within 3 business days
+- **14-day initial assessment**: Preliminary analysis and severity classification
+- **30-day resolution target**: For critical vulnerabilities (best effort)
+- **Coordinated disclosure**: We will work with you on an appropriate disclosure timeline
 
-If you are reporting for a bug bounty, more complete reports can contribute to a higher bounty award. Please visit our [Microsoft Bug Bounty Program](https://aka.ms/security.md/msrc/bounty) page for more details about our active programs.
+### PGP Encryption (Optional)
 
-## Preferred Languages
+If you prefer to encrypt your report, you may request our PGP public key via the security email address.
 
-We prefer all communications to be in English.
+## Security Scope
 
-## Policy
+We consider the following areas in scope for security reports:
 
-Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://aka.ms/security.md/cvd).
+### High Priority
 
-<!-- END MICROSOFT SECURITY.MD BLOCK -->
+1. **Runtime Memory Safety**
+   - Unsafe Rust usage leading to undefined behavior
+   - Memory corruption or use-after-free
+   - Buffer overflows in kernels or quantization code
+
+2. **Honest Compute Verification**
+   - Receipt forgery or tampering
+   - Mock compute paths bypassing validation
+   - Kernel ID manipulation in receipts
+
+3. **Inference Correctness**
+   - Quantization algorithm vulnerabilities
+   - Numerical instability leading to incorrect outputs
+   - GPU/CPU kernel parity violations
+
+4. **Supply Chain Security**
+   - GitHub Actions workflow vulnerabilities
+   - Dependency confusion or malicious packages
+   - Build reproducibility issues
+
+### Medium Priority
+
+5. **Model Loading Security**
+   - GGUF/SafeTensors parser vulnerabilities
+   - Malformed model file crashes or hangs
+   - Resource exhaustion (memory/CPU)
+
+6. **CLI Security**
+   - Command injection vulnerabilities
+   - Path traversal issues
+   - Unsafe file operations
+
+### Out of Scope
+
+- **Vulnerabilities in dependencies**: Report to the upstream project first, then notify us if we need a coordinated patch
+- **Denial of Service via large models**: Expected behavior; use resource limits
+- **Model quality issues**: Not a security concern (report as bug)
+- **Theoretical attacks without PoC**: Low priority without demonstrated impact
+
+## Security Best Practices
+
+### For Users
+
+1. **Use official releases**: Download from GitHub releases or crates.io
+2. **Verify checksums**: Check release signatures when available
+3. **Pin dependencies**: Use `Cargo.lock` for reproducible builds
+4. **Enable strict mode**: Set `BITNET_STRICT_MODE=1` for production
+5. **Review receipts**: If not using strict mode, validate that compute paths
+   in receipts are `"real"`, not `"mocked"`. Strict mode (`BITNET_STRICT_MODE=1`)
+   enforces this check automatically.
+
+### For Contributors
+
+1. **Minimize unsafe code**: Justify all `unsafe` blocks with safety comments
+2. **Validate inputs**: Check model files, prompts, and configuration
+3. **Test edge cases**: Fuzzing, property-based testing, malformed inputs
+4. **Review CI workflows**: Avoid secrets in logs, pin action SHAs
+5. **Document security assumptions**: Explain trust boundaries
+
+## Known Security Considerations
+
+### Receipt Verification
+
+BitNet.rs implements "honest compute" verification through receipts. Receipts prove that real computation occurred by including kernel IDs and validation gates.
+
+**Security Properties**:
+- `compute_path` must be `"real"` (strict mode enforces this)
+- Non-empty `kernels` array with valid kernel IDs
+- Schema v1.0.0 compliance
+
+**Limitations**:
+- Receipts are not cryptographically signed (planned for v0.2.0)
+- Kernel IDs are self-reported (future: hash-based verification)
+
+### Quantization Accuracy
+
+BitNet.rs validates quantization accuracy through cross-validation with C++ reference implementations.
+
+**Security Implications**:
+- Incorrect quantization could leak model weights or produce biased outputs
+- Validation gates enforce ≥99% accuracy for I2_S/TL1/TL2
+- GPU/CPU parity checked via cosine similarity (≥0.999 threshold)
+
+### Unsafe Rust Usage
+
+The codebase uses `unsafe` in performance-critical paths (SIMD kernels, FFI). All unsafe blocks are:
+- Documented with safety comments
+- Tested with Miri (undefined behavior detection)
+- Reviewed for memory safety
+
+## Security Updates
+
+We will publish security advisories through:
+1. **GitHub Security Advisories**: https://github.com/EffortlessMetrics/BitNet-rs/security/advisories
+2. **Release Notes**: CVE references in CHANGELOG.md
+3. **Crates.io**: Security advisories (if published)
+
+## Contact
+
+For non-security questions, use GitHub issues or discussions.
+
+For security-related inquiries: **security@effortlessmetrics.com**
+
+---
+
+**Last Updated**: 2025-11-03
+**Policy Version**: 1.0

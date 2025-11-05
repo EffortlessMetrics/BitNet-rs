@@ -1,0 +1,103 @@
+name: Bug Report
+description: File a bug report for BitNet.rs
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill out the sections below to help us diagnose and fix the issue.
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction Steps
+      description: |
+        Provide clear steps to reproduce the bug, including commands, environment details, and expected vs actual behavior.
+      placeholder: |
+        1. Download model: `cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf`
+        2. Run inference: `cargo run -p bitnet-cli --features cpu -- run --model model.gguf --prompt "Test"`
+        3. See error: ...
+
+        **Expected**: Model should load and generate text
+        **Actual**: Error message or crash
+      value: |
+        **Steps**:
+        1.
+        2.
+        3.
+
+        **Expected behavior**:
+
+
+        **Actual behavior**:
+
+    validations:
+      required: true
+
+  - type: input
+    id: rust-version
+    attributes:
+      label: Rust Version
+      description: Output of `rustc -V`
+      placeholder: "rustc 1.90.0 (example)"
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: OS and version
+      placeholder: "Ubuntu 22.04, macOS 14.0, Windows 11, etc."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: features
+    attributes:
+      label: Feature Flags Used
+      description: Which feature flags did you build with?
+      options:
+        - label: "`cpu` (SIMD-optimized CPU inference)"
+        - label: "`gpu` (CUDA acceleration)"
+        - label: "`full-cli` (complete CLI features)"
+        - label: "`crossval` (cross-validation)"
+        - label: "`ffi` (C++ FFI bridge)"
+        - label: "Other (specify in reproduction steps)"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Error Output
+      description: |
+        Include relevant error messages, stack traces, or receipt JSON.
+        Use `RUST_LOG=debug` or `RUST_BACKTRACE=1` for more detailed output.
+      placeholder: |
+        ```
+        Error: ...
+        ```
+
+        Or receipt snippet:
+        ```json
+        {
+          "compute_path": "real",
+          "kernels": [...],
+          ...
+        }
+        ```
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Any other context about the problem: model used, quantization format, GPU type, etc.
+      placeholder: |
+        - Model: microsoft/bitnet-b1.58-2B-4T-gguf
+        - Quantization: I2_S QK256
+        - GPU: NVIDIA RTX 4090 (if applicable)
+    validations:
+      required: false
