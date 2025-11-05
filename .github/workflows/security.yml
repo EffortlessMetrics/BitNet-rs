@@ -49,7 +49,7 @@ jobs:
       run: cargo deny check
 
     - name: Run clippy security lints
-      run: cargo clippy --all-targets --all-features -- -D warnings -D clippy::all -D clippy::pedantic
+      run: cargo clippy --all-targets --all-features -- -D warnings -D clippy::all -D clippy::pedantic --locked
 
     - name: Check for unsafe code
       run: |
