@@ -4,10 +4,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-pr-size:
     name: Check PR Size
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Skip this check if the PR has the 'mechanical-change' label
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'mechanical-change') }}
     continue-on-error: true

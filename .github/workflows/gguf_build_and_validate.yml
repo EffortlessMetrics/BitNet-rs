@@ -43,6 +43,10 @@ on:
       - 'scripts/convert_safetensors_to_gguf.py'
       - '.github/workflows/gguf_build_and_validate.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # Ensure no policy corrections are used (strict validation)
   BITNET_STRICT_MODE: "1"

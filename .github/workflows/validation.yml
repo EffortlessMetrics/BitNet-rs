@@ -18,6 +18,10 @@ on:
       - "scripts/validate_gguf.sh"
       - "scripts/export_clean_gguf.sh"
       - ".github/workflows/validation.yml"
+      - "README.md"
+      - "docs/**"
+      - "SECURITY.md"
+      - ".github/ISSUE_TEMPLATE/**"
   pull_request:
     branches: [main, develop]
     paths:
@@ -28,6 +32,10 @@ on:
       - "scripts/validate_gguf.sh"
       - "scripts/export_clean_gguf.sh"
       - ".github/workflows/validation.yml"
+      - "README.md"
+      - "docs/**"
+      - "SECURITY.md"
+      - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch:
     inputs:
       skip_model_validation:
