@@ -28,15 +28,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
         with:
           fetch-depth: 0 # Need full history for trend analysis
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
 
       - name: Cache cargo registry
-        uses: actions/cache@v3
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c  # v3
         with:
           path: |
             ~/.cargo/registry
@@ -45,7 +45,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Download test artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a  # v3
         with:
           path: test-artifacts
         continue-on-error: true
@@ -85,7 +85,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload CI reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5  # v3
         with:
           name: ci-reports
           path: ci-reports/
@@ -93,7 +93,7 @@ jobs:
         if: always()
 
       - name: Upload trend data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5  # v3
         with:
           name: trend-data
           path: trend-data/
@@ -101,7 +101,7 @@ jobs:
         if: always()
 
       - name: Publish test results
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@d61b558e8df85cb60d09ca3e5b09653b4477cea7  # v1
         if: always()
         with:
           name: BitNet.rs Test Results
@@ -111,7 +111,7 @@ jobs:
 
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
             const fs = require('fs');
@@ -155,7 +155,7 @@ jobs:
 
       - name: Create status checks
         if: always()
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
             const fs = require('fs');
@@ -186,20 +186,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
 
       - name: Download trend data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a  # v3
         with:
           name: trend-data
           path: trend-data
         continue-on-error: true
 
       - name: Download current test results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a  # v3
         with:
           name: ci-reports
           path: ci-reports
@@ -217,7 +217,7 @@ jobs:
 
       - name: Report performance regressions
         if: always()
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410  # v6
         with:
           script: |
             const fs = require('fs');
@@ -265,13 +265,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
 
       - name: Download trend data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a  # v3
         with:
           name: trend-data
           path: trend-data
@@ -288,7 +288,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload trend reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5  # v3
         with:
           name: trend-reports
           path: trend-reports/
@@ -297,7 +297,7 @@ jobs:
 
       - name: Deploy trend reports to GitHub Pages
         if: success()
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@373f7f263a76c20808c831209c920827a82a2847  # v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./trend-reports
@@ -313,7 +313,7 @@ jobs:
     steps:
       - name: Send Slack notification on failure
         if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-        uses: 8398a7/action-slack@v3
+        uses: 8398a7/action-slack@77eaa4f1c608a7d68b38af4e3f739dcd8cba273e  # v3
         with:
           status: failure
           channel: "#bitnet-ci"
@@ -330,7 +330,7 @@ jobs:
 
       - name: Send success notification for main branch
         if: success() && github.ref == 'refs/heads/main'
-        uses: 8398a7/action-slack@v3
+        uses: 8398a7/action-slack@77eaa4f1c608a7d68b38af4e3f739dcd8cba273e  # v3
         with:
           status: success
           channel: "#bitnet-ci"
