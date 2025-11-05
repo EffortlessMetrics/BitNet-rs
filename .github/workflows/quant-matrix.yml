@@ -31,15 +31,15 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
     - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
       with:
-        toolchain: 1.90.0
+        toolchain: 1.89.0
 
     - name: Rust Cache
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
       with:
         workspaces: |
           . -> target
@@ -108,7 +108,7 @@ jobs:
 
     - name: Store binary artifact
       if: steps.probe.outputs.available == 'true'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
       with:
         name: bitnet-cli-${{ matrix.features }}
         path: target/release/bitnet
@@ -122,17 +122,17 @@ jobs:
     continue-on-error: true
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
     - name: Download I2_S binary
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
       with:
         name: bitnet-cli-cpu
         path: ./bin
       continue-on-error: true
 
     - name: Download IQ2_S binary
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
       with:
         name: bitnet-cli-cpu,iq2s-ffi
         path: ./bin-iq2s
@@ -175,12 +175,12 @@ jobs:
     if: false # Enable when test data is available
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
     - name: Setup Rust
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
       with:
-        toolchain: 1.90.0
+        toolchain: 1.89.0
 
     - name: Run IQ2_S parity test
       run: |

@@ -32,28 +32,42 @@ env:
 jobs:
   msrv:
     name: Minimum Supported Rust Version
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: "0"
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust 1.90.0
-        uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust 1.89.0
+        uses: dtolnay/rust-toolchain@6d653acede28d24f02e3cd41383119e8b1b35921  # master
         with:
-          toolchain: 1.90.0
-      - name: Check MSRV
+          toolchain: 1.89.0
+
+      - name: Cache (MSRV)
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          # MSRV-specific key to avoid collisions with 1.90/stable
+          shared-key: msrv-1_89
+
+      - name: Warm fetch (locked)
+        run: cargo fetch --locked
+
+      - name: MSRV check (workspace, no codegen)
         run: |
-          cargo check --workspace --locked --no-default-features --features cpu
-          cargo build --workspace --locked --no-default-features --features cpu
+          cargo --version && rustc --version
+          cargo check --workspace --all-targets --locked --no-default-features --features cpu
 
   abi-stability:
     name: ABI Stability Check
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.90.0"
+          toolchain: "1.89.0"
       - name: Build FFI library
         run: |
           cargo build -p bitnet-ffi --locked --release --no-default-features --features cpu
@@ -68,10 +82,10 @@ jobs:
     continue-on-error: true
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.90.0"
+          toolchain: "1.89.0"
       - name: Install system deps
         run: |
           sudo apt-get update
@@ -98,11 +112,11 @@ jobs:
     timeout-minutes: 30
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.90.0"
-      - uses: actions/setup-python@v5
+          toolchain: "1.89.0"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
       - name: Install dependencies
@@ -136,7 +150,7 @@ jobs:
           fi
       - name: Upload artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: validation-artifacts
           path: artifacts/
@@ -147,11 +161,11 @@ jobs:
     continue-on-error: true  # Informational while stabilizing baselines
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.90.0"
-      - uses: actions/setup-python@v5
+          toolchain: "1.89.0"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
       - name: Install Python dependencies
@@ -206,13 +220,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.90.0"
+          toolchain: "1.89.0"
       - name: Cache test GGUF
         id: cache-gguf
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
         with:
           path: test-model.gguf
           key: test-gguf-llama2-q2k-v1
@@ -239,11 +253,11 @@ jobs:
     timeout-minutes: 30
     if: contains(github.event.pull_request.labels.*.name, 'crossval')
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.90.0"
-      - uses: actions/setup-python@v5
+          toolchain: "1.89.0"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
       - name: Install Python dependencies
@@ -265,7 +279,7 @@ jobs:
             --nocapture
       - name: Upload parity artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: parity-artifacts
           path: artifacts/*.jsonl
@@ -276,10 +290,10 @@ jobs:
     timeout-minutes: 15
     continue-on-error: true  # Non-blocking for PRs
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+      - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.90.0"
+          toolchain: "1.89.0"
       - name: Install cargo-audit
         run: cargo install cargo-audit || true
       - name: Install cargo-deny

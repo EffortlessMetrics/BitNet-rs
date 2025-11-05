@@ -1,7 +1,7 @@
 # BitNet.rs - Rust 1-bit LLM Inference (MVP)
 
 [![CI](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml)
-[![MSRV](https://img.shields.io/badge/MSRV-1.90.0-blue.svg)](./rust-toolchain.toml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.89.0-blue.svg)](./rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
 
 **Rust implementation of BitNet 1-bit neural network inference** with memory safety,
