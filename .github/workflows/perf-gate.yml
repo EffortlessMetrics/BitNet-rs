@@ -61,12 +61,12 @@ jobs:
           exit 0
 
       - name: Build workspace
-        run: cargo build --workspace --release --no-default-features --features cpu
+        run: cargo build --workspace --release --no-default-features --features cpu --locked
 
       - name: Download test model (if needed)
         run: |
           if [ ! -f "models/bitnet/ggml-model-i2_s.gguf" ]; then
-            cargo run -p xtask -- download-model --dry-run || echo "Model download not available in CI"
+            cargo run -p xtask --locked -- download-model --dry-run || echo "Model download not available in CI"
           fi
 
       - name: Run performance benchmarks
@@ -76,8 +76,8 @@ jobs:
           mkdir -p ci
 
           # Run xtask benchmark if available, otherwise use fallback
-          if cargo run -p xtask -- benchmark --help &>/dev/null; then
-            cargo run -p xtask -- benchmark \
+          if cargo run -p xtask --locked -- benchmark --help &>/dev/null; then
+            cargo run -p xtask --locked -- benchmark \
               --model models/bitnet/ggml-model-i2_s.gguf \
               --tokens 32 \
               --no-output \
@@ -111,7 +111,7 @@ jobs:
         id: bench_compare
         run: |
           # Compare against baseline (informational)
-          cargo run -p xtask -- bench-compare \
+          cargo run -p xtask --locked -- bench-compare \
             --baseline benchmarks/baseline/cpu/inference/inference_baseline.json \
             --current ci/inference.json \
             --thresholds benchmarks/thresholds/default.toml \
