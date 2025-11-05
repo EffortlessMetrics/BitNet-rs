@@ -140,7 +140,7 @@ cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
 
 ## Key Configurations
 
-### MSRV: 1.90.0 (Rust 2024 edition)
+### MSRV: 1.89.0 (Rust 2024 edition)
 
 ### Feature Flags
 
