@@ -1,0 +1,22 @@
+# Test fixture: Commands with " -- " separator
+name: Double Dash Commands
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test with args
+        run: cargo test --locked -- --nocapture
+
+      - name: Run with args
+        run: cargo run --locked -- --help
+
+      - name: Multi-line with double dash
+        run: |
+          cargo test --locked \
+            -p bitnet-common \
+            --no-default-features --features cpu \
+            -- --nocapture --test-threads=1
+
+      - name: Clippy with args
+        run: cargo clippy --all-targets --locked -- -D warnings

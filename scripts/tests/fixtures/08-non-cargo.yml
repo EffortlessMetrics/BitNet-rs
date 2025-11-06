@@ -1,0 +1,18 @@
+# Test fixture: Non-cargo commands (should NOT be modified)
+name: Non-Cargo Commands
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Shell commands
+        run: |
+          echo "Building project"
+          ls -la
+          ./scripts/build.sh
+
+      - name: Python script
+        run: python scripts/test.py
+
+      - name: Cargo in string (should not match)
+        run: echo "cargo build is running"

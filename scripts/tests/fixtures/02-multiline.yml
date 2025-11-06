@@ -1,0 +1,22 @@
+# Test fixture: Multi-line cargo commands with backslash continuation
+name: Multi-line Commands
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Multi-line build
+        run: |
+          cargo build \
+            -p bitnet-common \
+            -p bitnet-models \
+            --no-default-features --features cpu
+
+      - name: Multi-line test with continuation
+        run: |
+          cargo test \
+            -p bitnet-common \
+            -p bitnet-models \
+            --lib \
+            --no-default-features --features cpu \
+            -- --nocapture

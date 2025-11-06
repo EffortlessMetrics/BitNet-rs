@@ -1,0 +1,21 @@
+# Test fixture: Commands already containing --locked (idempotency test)
+name: Already Locked
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Already has locked
+        run: cargo build --locked
+
+      - name: Locked before double dash
+        run: cargo test --locked -- --nocapture
+
+      - name: Locked with other flags
+        run: cargo test --locked -p bitnet-common --features cpu
+
+      - name: Multi-line already locked
+        run: |
+          cargo build --locked \
+            -p bitnet-common \
+            --no-default-features --features cpu

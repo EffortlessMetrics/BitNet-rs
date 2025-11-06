@@ -1,0 +1,19 @@
+# Test fixture: cargo run ... -- ... patterns (complex case)
+name: Cargo Run with Args
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run xtask with args
+        run: cargo run -p xtask -- download-model
+
+      - name: Run CLI with args
+        run: cargo run -p bitnet-cli -- run --model model.gguf
+
+      - name: Multi-line run with args
+        run: |
+          cargo run \
+            -p bitnet-cli \
+            --no-default-features --features cpu \
+            -- run --model model.gguf --prompt "test"
