@@ -100,8 +100,8 @@ jobs:
         export RUSTFLAGS="-C target-cpu=native -C opt-level=3"
 
         if [[ "${{ matrix.cross }}" == "true" ]]; then
-          cross build --release --target ${{ matrix.target }} --no-default-features --features cpu
-          cross build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu
+          cross build --release --target ${{ matrix.target }} --no-default-features --features cpu --locked
+          cross build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu --locked
         else
           cargo build --release --target ${{ matrix.target }} --no-default-features --features cpu --locked
           cargo build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu --locked

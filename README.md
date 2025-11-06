@@ -27,7 +27,7 @@ device-aware quantization, and cross-platform support.
 **Supported (MVP)**
 
 - OS: Ubuntu 22.04/24.04 (x86_64)
-- Rust: 1.90.0+ (2024 edition)
+- Rust: 1.89.0+ (2024 edition)
 - GPU (optional): CUDA toolkit 12.x with NVCC
 
 **Out of scope (for now)**
@@ -510,5 +510,5 @@ This project is licensed under the MIT OR Apache-2.0 license.
 
 ---
 
-**MSRV**: 1.90.0 | **Status**: v0.1.0 MVP (Q&A Ready) | **Expected Performance**:
+**MSRV**: 1.89.0 | **Status**: v0.1.0 MVP (Q&A Ready) | **Expected Performance**:
 10-20 tok/s CPU (I2_S BitNet32-F16), 0.1 tok/s CPU (QK256 MVP scalar kernel)

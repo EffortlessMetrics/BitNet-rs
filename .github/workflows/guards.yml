@@ -96,23 +96,24 @@ jobs:
             echo "✅ No bare cfg(cuda) in tests"
           fi
           exit 0
-      - name: Enforce --locked on cargo commands (informational)
+      - name: Guard - cargo/cross --locked everywhere
         run: |
-          set +e
-          echo "Checking for cargo commands missing --locked flag..."
-          misses=$(rg -n "(cargo (build|test|run|clippy))" .github/workflows \
-                    | rg -v "cargo install" | rg -v "\-\-locked" | wc -l | tr -d ' ')
-          if [ "$misses" -ne 0 ]; then
-            echo "⚠️  Found $misses cargo command(s) missing --locked flag:"
-            rg -n "(cargo (build|test|run|clippy))" .github/workflows \
-              | rg -v "cargo install" | rg -v "\-\-locked" | head -10
-            echo ""
-            echo "Recommendation: Add --locked to ensure deterministic builds"
-            echo "This is informational only - not blocking merge"
-          else
-            echo "✅ All cargo commands use --locked flag"
+          # We allow: 'cargo|cross (build|test|run|bench|clippy) ... --locked'
+          # Exclude guards.yml (contains the regex itself)
+          violations=$(
+            rg -n --color=never --glob '*.yml' --glob '!guards.yml' \
+               -e '\b(cargo|cross)\s+(build|test|run|bench|clippy)\b' \
+               .github/workflows \
+            | grep -v -- '--locked' || true
+          )
+          if [ -n "$violations" ]; then
+            echo "❌ Missing --locked in workflow cargo/cross command(s):"
+            echo "$violations"
+            echo
+            echo "All cargo/cross build/test/run/bench/clippy commands must use --locked (before any standalone ' -- ')."
+            exit 1
           fi
-          exit 0
+          echo "✅ All workflow cargo/cross commands use --locked"
       - name: Upload guard logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4

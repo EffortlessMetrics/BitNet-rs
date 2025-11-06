@@ -12,7 +12,7 @@ Welcome to BitNet.rs! We appreciate your interest in contributing to our high-pe
 
 2. **Setup Development Environment**
    ```bash
-   # Install Rust 1.90.0 or later
+   # Install Rust 1.89.0 or later (MSRV: 1.89.0)
    rustup update stable
 
    # Install development tools
@@ -177,7 +177,7 @@ This ensures local validation exactly matches CI, preventing surprise failures.
 
 ### Code Quality Standards
 
-- **MSRV**: Minimum Rust 1.90.0 (2024 edition)
+- **MSRV**: Minimum Rust 1.89.0 (2024 edition)
 - **Features**: Always specify `--no-default-features --features cpu|gpu`
 - **Safety**: Minimize `unsafe` code; document all usage
 - **Performance**: Target >99% quantization accuracy
@@ -479,6 +479,52 @@ Pre-commit hooks catch issues early in your local workflow:
 - **Saves CI resources** by catching issues before push
 
 **Note**: You can temporarily bypass hooks with `git commit --no-verify`, but CI will still enforce these checks.
+
+## CI and Supply Chain Requirements
+
+BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply chain attacks and ensure reproducible builds:
+
+**GitHub Actions Supply Chain:**
+- **All workflow actions must be SHA-pinned** (not floating tags like `@v3`)
+- Automated weekly repin workflow (`repin-actions.yml`) updates pins while maintaining security
+- CI blocks PRs that introduce floating action references via the **Guards** gate
+
+**Dependency Determinism:**
+- **All `cargo`/`cross` invocations use `--locked`** (77+ invocations across workflows)
+- Ensures reproducible builds by enforcing exact dependency versions from `Cargo.lock`
+- CI blocks PRs that add non-locked cargo/cross commands via the **Guards** gate
+
+**MSRV Enforcement:**
+- **Minimum Supported Rust Version (MSRV): 1.89.0** (Rust 2024 edition)
+- All workflows must use `rust-toolchain.toml` for MSRV consistency
+- CI blocks PRs that hardcode toolchain versions outside `rust-toolchain.toml`
+
+**Violations will fail the required "Guards" check and block merge.** See `.github/workflows/guards.yml` for detailed enforcement rules.
+
+### Quick-fix helpers
+
+- Add `--locked` to workflow commands safely (handles `cargo run … -- …`):
+  ```bash
+  scripts/fix-locked.sh .github/workflows/*.yml
+  ```
+
+- Run guards locally (approximate):
+  ```bash
+  rg --glob '!guards.yml' 'uses:.*@v[0-9]|uses:.*@(main|stable|latest)' .github/workflows || echo "OK: pinned"
+  rg --glob '!guards.yml' 'toolchain:\s*"?1\.90\.0"?|rust-version\s*=\s*"1\.90\.0"|\"RUST_VERSION\"\s*:\s*\"1\.90\.0\"' .github/workflows || echo "OK: MSRV"
+  rg --glob '*.yml' --glob '!guards.yml' 'cargo (build|test|run|bench|clippy)' .github/workflows | grep -v -- '--locked' || echo "OK: locked"
+  ```
+
+### PR Checklist (CI Requirements)
+
+Before submitting a PR, ensure:
+
+- [ ] **Actions are SHA-pinned** - No floating tags (@v3, @main, @stable, @latest)
+- [ ] **Cargo/cross commands use `--locked`** - All `cargo`/`cross build/test/run/bench/clippy` include `--locked`
+- [ ] **MSRV compliance** - Toolchain is 1.89.0 (respect `rust-toolchain.toml`, no hardcoded versions)
+- [ ] **Guards check is green** - CI will automatically validate these requirements
+
+---
 
 ## Pull Request Process
 
