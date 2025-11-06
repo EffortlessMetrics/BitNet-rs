@@ -75,8 +75,8 @@ jobs:
         run: |
           echo "🔍 Running Rust quality checks..."
           cargo fmt --all -- --check
-          cargo clippy --workspace --all-targets --features cpu -- -D warnings
-          cargo test --workspace --features cpu
+          cargo clippy --workspace --all-targets --features cpu -- -D warnings --locked
+          cargo test --workspace --features cpu --locked
 
       - name: Run security audit
         run: |
@@ -89,7 +89,7 @@ jobs:
           echo "📚 Validating documentation..."
           cargo doc --workspace --features cpu --no-deps --document-private-items
           # Check that README examples compile
-          cargo test --doc --features cpu
+          cargo test --doc --features cpu --locked
 
       - name: Check version consistency
         run: |
@@ -163,7 +163,7 @@ jobs:
           if [[ "${{ matrix.cross }}" == "true" ]]; then
             cross build --release --target ${{ matrix.target }} --features ${{ matrix.features }} --bin bitnet
           else
-            cargo build --release --target ${{ matrix.target }} --features ${{ matrix.features }} --bin bitnet
+            cargo build --release --target ${{ matrix.target }} --features ${{ matrix.features }} --bin bitnet --locked
           fi
 
       - name: Create binary archive
