@@ -47,7 +47,6 @@ fi
 # Check 3: Model file
 log_info "Checking model file..."
 if [[ -f "${BITNET_GGUF}" ]]; then
-    local model_size
     model_size=$(stat -c%s "${BITNET_GGUF}" 2>/dev/null || stat -f%z "${BITNET_GGUF}" 2>/dev/null || echo "0")
     if [[ ${model_size} -gt 100000000 ]]; then
         log_info "✅ Model file exists and has reasonable size (${model_size} bytes)"

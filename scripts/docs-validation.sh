@@ -89,7 +89,7 @@ validate_readme() {
     fi
 
     # Check for code examples
-    if echo "$readme_content" | grep -q "```rust\|```bash\|```python"; then
+    if echo "$readme_content" | grep -q '```rust\|```bash\|```python'; then
         record_result "README Examples" "PASS" "Code examples present"
     else
         record_result "README Examples" "WARN" "No code examples found"
@@ -174,7 +174,7 @@ validate_examples() {
     fi
 
     # Check README examples
-    local readme_rust_blocks=$(grep -c "```rust" README.md 2>/dev/null || echo "0")
+    local readme_rust_blocks=$(grep -c '```rust' README.md 2>/dev/null || echo "0")
     if [[ $readme_rust_blocks -gt 0 ]]; then
         record_result "README Code Blocks" "PASS" "$readme_rust_blocks Rust code blocks in README"
 
@@ -183,7 +183,7 @@ validate_examples() {
         local readme_examples_work=true
 
         # This is a simplified check - in practice, you'd extract and test each block
-        if grep -A 20 "```rust" README.md | grep -q "use bitnet"; then
+        if grep -A 20 '```rust' README.md | grep -q "use bitnet"; then
             record_result "README Code Quality" "PASS" "README examples use proper imports"
         else
             record_result "README Code Quality" "WARN" "README examples may need improvement"
