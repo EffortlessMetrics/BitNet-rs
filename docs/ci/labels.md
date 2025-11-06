@@ -272,4 +272,4 @@ gh pr edit <PR> --add-label lut
 - [CI workflows](../../.github/workflows/) – Workflow files
 - [Branch protection](https://github.com/EffortlessMetrics/BitNet-rs/settings/branches) *(maintainers only)*
 
-<\!-- ci: trigger core checks for pull_request paths filter -->
+<!-- ci: trigger core checks for pull_request paths filter -->
