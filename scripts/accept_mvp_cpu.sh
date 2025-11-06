@@ -464,7 +464,7 @@ if [ -f "$RECEIPT_JSON" ]; then
         log INFO "    Kernels: $(jq -r '.kernels | length' "$RECEIPT_JSON") kernels"
 
         if jq -e '.corrections' "$RECEIPT_JSON" >/dev/null 2>&1; then
-            local correction_count=$(jq '.corrections | length' "$RECEIPT_JSON")
+            correction_count=$(jq '.corrections | length' "$RECEIPT_JSON")
             log INFO "    Corrections: $correction_count applied"
         fi
 

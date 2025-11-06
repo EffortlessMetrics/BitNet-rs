@@ -91,7 +91,7 @@ done
 
 # Run specific target or all targets
 if [ -n "$TARGET" ]; then
-    if [[ " ${TARGETS[@]} " =~ " ${TARGET} " ]]; then
+    if [[ " ${TARGETS[*]} " =~ " ${TARGET} " ]]; then
         run_fuzz_target "$TARGET" "$DURATION"
     else
         echo "Error: Unknown target '$TARGET'"

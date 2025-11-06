@@ -85,7 +85,7 @@ jobs:
 
       - name: Build BitNet CLI
         run: |
-          cargo build -p bitnet-cli --release --no-default-features --features cpu
+          cargo build -p bitnet-cli --release --no-default-features --features cpu --locked
 
       - name: Download test model
         env:
@@ -95,7 +95,7 @@ jobs:
           MODEL_DIR="models/${{ matrix.model.name }}"
           if [ ! -f "$MODEL_DIR/${{ matrix.model.gguf }}" ]; then
             echo "Downloading model..."
-            cargo run -p xtask -- download-model \
+            cargo run -p xtask --locked -- download-model \
               --model-id "${{ matrix.model.hf_id }}" \
               --output-dir "$MODEL_DIR" \
               || echo "Model download failed, will use fallback"
