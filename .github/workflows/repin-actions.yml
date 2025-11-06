@@ -89,6 +89,23 @@ jobs:
           chmod +x /tmp/pin_actions.sh
           /tmp/pin_actions.sh || true
 
+      - name: Validate all pins are 40-hex SHAs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # After substitution, ensure all external actions use 40-hex SHAs
+          # (Guards will reject non-40-hex pins, so block the repin PR early)
+          if grep -RInE '^\s*uses:\s*[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@' .github/workflows \
+             | grep -vE '^\s*uses:\s*\./' \
+             | grep -vE '@[0-9a-f]{40}\b'; then
+            echo "❌ Non-40-hex action pin(s) detected after repin"
+            echo "Refusing to open repin PR - Guards would reject it"
+            exit 1
+          fi
+
+          echo "✅ All external actions pinned to 40-hex SHAs"
+
       - name: Open PR if changes detected
         shell: bash
         env:
