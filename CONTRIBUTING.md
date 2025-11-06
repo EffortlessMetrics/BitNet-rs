@@ -513,7 +513,7 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
   scripts/check-codeowners-teams.sh
   ```
 
-- Run guards locally (approximate):
+- Run guards locally (individual checks):
   ```bash
   # Check for floating action refs (no @v1, @main, @stable, @latest)
   rg --glob '!guards.yml' 'uses:.*@v[0-9]|uses:.*@(main|stable|latest)' .github/workflows || echo "OK: pinned"
@@ -526,6 +526,15 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
 
   # Check cargo/cross --locked everywhere
   rg --glob '*.yml' --glob '!guards.yml' 'cargo (build|test|run|bench|clippy)' .github/workflows | grep -v -- '--locked' || echo "OK: locked"
+  ```
+
+- Run all guards as single preflight (fail-fast):
+  ```bash
+  ( rg --glob '!guards.yml' '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' .github/workflows \
+    || rg --glob '!guards.yml' 'uses:.*@v[0-9]|uses:.*@(main|stable|latest)' .github/workflows \
+    || rg --glob '!guards.yml' 'toolchain:\s*"?1\.90\.0"?|rust-version\s*=\s*"1\.90\.0"|"RUST_VERSION"\s*:\s*"1\.90\.0"' .github/workflows \
+    || rg --glob '*.yml' --glob '!guards.yml' '\b(cargo|cross)\s+(build|test|run|bench|clippy)\b' .github/workflows | grep -v -- '--locked' ) \
+  && { echo "❌ Preflight failed"; exit 1; } || echo "✅ Preflight OK"
   ```
 
 ### PR Checklist (CI Requirements)
