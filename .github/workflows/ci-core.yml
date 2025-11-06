@@ -2,7 +2,7 @@ name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
-# Note: This workflow triggers on changes to crates/**, Cargo.{toml,lock}, README.md, docs/**, SECURITY.md, issue templates, and this file itself
+# Note: This workflow triggers on changes to crates/**, Cargo.{toml,lock}, .github/workflows/**, README.md, docs/**, SECURITY.md, and issue templates
 # Workflow hardening: concurrency + timeouts applied across all workflows in #485
 
 on:
@@ -12,7 +12,7 @@ on:
       - 'crates/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - '.github/workflows/ci-core.yml'
+      - '.github/workflows/**'
       - 'README.md'
       - 'docs/**'
       - 'SECURITY.md'
@@ -23,7 +23,7 @@ on:
       - 'crates/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
-      - '.github/workflows/ci-core.yml'
+      - '.github/workflows/**'
       - 'README.md'
       - 'docs/**'
       - 'SECURITY.md'
