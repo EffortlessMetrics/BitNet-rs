@@ -52,6 +52,18 @@ jobs:
           fi
           echo "✅ All actions pinned to SHA refs"
 
+      - name: Guard - actions pinned to 40-hex SHA
+        run: |
+          # External actions must be pinned to exactly 40 hex chars.
+          # Local actions like "./.github/actions/..." are allowed.
+          if rg -n --color=never --glob '!guards.yml' \
+               -e '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' \
+               .github/workflows; then
+            echo "❌ Non-immutable action pin detected (must be 40-hex SHA)"
+            exit 1
+          fi
+          echo "✅ All actions pinned to 40-hex SHAs"
+
       - name: Guard - MSRV consistency (1.89.0 only)
         run: |
           # Restrict matches to actual toolchain declarations or explicit JSON/env

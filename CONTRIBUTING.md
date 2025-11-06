@@ -508,10 +508,23 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
   scripts/fix-locked.sh .github/workflows/*.yml
   ```
 
+- Validate CODEOWNERS team slugs (requires `gh` auth):
+  ```bash
+  scripts/check-codeowners-teams.sh
+  ```
+
 - Run guards locally (approximate):
   ```bash
+  # Check for floating action refs (no @v1, @main, @stable, @latest)
   rg --glob '!guards.yml' 'uses:.*@v[0-9]|uses:.*@(main|stable|latest)' .github/workflows || echo "OK: pinned"
+
+  # Check for 40-hex SHA pins (external actions must use full commit SHA)
+  rg --glob '!guards.yml' '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' .github/workflows || echo "OK: 40-hex"
+
+  # Check MSRV consistency (1.89.0 only)
   rg --glob '!guards.yml' 'toolchain:\s*"?1\.90\.0"?|rust-version\s*=\s*"1\.90\.0"|\"RUST_VERSION\"\s*:\s*\"1\.90\.0\"' .github/workflows || echo "OK: MSRV"
+
+  # Check cargo/cross --locked everywhere
   rg --glob '*.yml' --glob '!guards.yml' 'cargo (build|test|run|bench|clippy)' .github/workflows | grep -v -- '--locked' || echo "OK: locked"
   ```
 
@@ -519,7 +532,7 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
 
 Before submitting a PR, ensure:
 
-- [ ] **Actions are SHA-pinned** - No floating tags (@v3, @main, @stable, @latest)
+- [ ] **Actions are SHA-pinned** - No floating tags (@v3, @main, @stable, @latest); all external actions must use 40-hex commit SHAs
 - [ ] **Cargo/cross commands use `--locked`** - All `cargo`/`cross build/test/run/bench/clippy` include `--locked`
 - [ ] **MSRV compliance** - Toolchain is 1.89.0 (respect `rust-toolchain.toml`, no hardcoded versions)
 - [ ] **Guards check is green** - CI will automatically validate these requirements
