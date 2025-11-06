@@ -12,7 +12,7 @@ Welcome to BitNet.rs! We appreciate your interest in contributing to our high-pe
 
 2. **Setup Development Environment**
    ```bash
-   # Install Rust 1.89.0 or later (MSRV: 1.89.0)
+   # Install Rust (MSRV defined in rust-toolchain.toml)
    rustup update stable
 
    # Install development tools
@@ -177,7 +177,7 @@ This ensures local validation exactly matches CI, preventing surprise failures.
 
 ### Code Quality Standards
 
-- **MSRV**: Minimum Rust 1.89.0 (2024 edition)
+- **MSRV**: See [`rust-toolchain.toml`](../rust-toolchain.toml) for the pinned toolchain version (Rust 2024 edition)
 - **Features**: Always specify `--no-default-features --features cpu|gpu`
 - **Safety**: Minimize `unsafe` code; document all usage
 - **Performance**: Target >99% quantization accuracy
@@ -495,7 +495,7 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
 - CI blocks PRs that add non-locked cargo/cross commands via the **Guards** gate
 
 **MSRV Enforcement:**
-- **Minimum Supported Rust Version (MSRV): 1.89.0** (Rust 2024 edition)
+- **Minimum Supported Rust Version (MSRV)**: Defined in [`rust-toolchain.toml`](../rust-toolchain.toml) (Rust 2024 edition)
 - All workflows must use `rust-toolchain.toml` for MSRV consistency
 - CI blocks PRs that hardcode toolchain versions outside `rust-toolchain.toml`
 
@@ -521,7 +521,7 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
   # Check for 40-hex SHA pins (external actions must use full commit SHA)
   rg --glob '!guards.yml' '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' .github/workflows || echo "OK: 40-hex"
 
-  # Check MSRV consistency (1.89.0 only)
+  # Check MSRV consistency (must match rust-toolchain.toml)
   rg --glob '!guards.yml' 'toolchain:\s*"?1\.90\.0"?|rust-version\s*=\s*"1\.90\.0"|\"RUST_VERSION\"\s*:\s*\"1\.90\.0\"' .github/workflows || echo "OK: MSRV"
 
   # Check cargo/cross --locked everywhere
@@ -543,7 +543,7 @@ Before submitting a PR, ensure:
 
 - [ ] **Actions are SHA-pinned** - No floating tags (@v3, @main, @stable, @latest); all external actions must use 40-hex commit SHAs
 - [ ] **Cargo/cross commands use `--locked`** - All `cargo`/`cross build/test/run/bench/clippy` include `--locked`
-- [ ] **MSRV compliance** - Toolchain is 1.89.0 (respect `rust-toolchain.toml`, no hardcoded versions)
+- [ ] **MSRV compliance** - Toolchain version must match [`rust-toolchain.toml`](../rust-toolchain.toml), no hardcoded versions in workflows
 - [ ] **Guards check is green** - CI will automatically validate these requirements
 
 ---
