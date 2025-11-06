@@ -503,6 +503,20 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
 
 ### Quick-fix helpers
 
+**Recommended: One-command preflight check**
+```bash
+# Run all guards checks with clear output (fail-fast)
+make guards   # or make preflight
+```
+
+This single command checks:
+- ✅ Floating action refs (no @v1, @main, @stable, @latest)
+- ✅ 40-hex SHA pins (external actions must use full commit SHA)
+- ✅ MSRV consistency (must match rust-toolchain.toml)
+- ✅ cargo/cross --locked flags (all build/test/run/bench/clippy)
+
+**Other helpers:**
+
 - Add `--locked` to workflow commands safely (handles `cargo run … -- …`):
   ```bash
   scripts/fix-locked.sh .github/workflows/*.yml
@@ -513,7 +527,7 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
   scripts/check-codeowners-teams.sh
   ```
 
-- Run guards locally (individual checks):
+- Run guards locally (individual checks, for debugging):
   ```bash
   # Check for floating action refs (no @v1, @main, @stable, @latest)
   rg --glob '!guards.yml' 'uses:.*@v[0-9]|uses:.*@(main|stable|latest)' .github/workflows || echo "OK: pinned"
@@ -528,23 +542,15 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
   rg --glob '*.yml' --glob '!guards.yml' 'cargo (build|test|run|bench|clippy)' .github/workflows | grep -v -- '--locked' || echo "OK: locked"
   ```
 
-- Run all guards as single preflight (fail-fast):
-  ```bash
-  ( rg --glob '!guards.yml' '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' .github/workflows \
-    || rg --glob '!guards.yml' 'uses:.*@v[0-9]|uses:.*@(main|stable|latest)' .github/workflows \
-    || rg --glob '!guards.yml' 'toolchain:\s*"?1\.90\.0"?|rust-version\s*=\s*"1\.90\.0"|"RUST_VERSION"\s*:\s*"1\.90\.0"' .github/workflows \
-    || rg --glob '*.yml' --glob '!guards.yml' '\b(cargo|cross)\s+(build|test|run|bench|clippy)\b' .github/workflows | grep -v -- '--locked' ) \
-  && { echo "❌ Preflight failed"; exit 1; } || echo "✅ Preflight OK"
-  ```
-
 ### PR Checklist (CI Requirements)
 
 Before submitting a PR, ensure:
 
+- [ ] **Run local guards check** - `make guards` passes locally before push
 - [ ] **Actions are SHA-pinned** - No floating tags (@v3, @main, @stable, @latest); all external actions must use 40-hex commit SHAs
 - [ ] **Cargo/cross commands use `--locked`** - All `cargo`/`cross build/test/run/bench/clippy` include `--locked`
 - [ ] **MSRV compliance** - Toolchain version must match [`rust-toolchain.toml`](../rust-toolchain.toml), no hardcoded versions in workflows
-- [ ] **Guards check is green** - CI will automatically validate these requirements
+- [ ] **Guards check is green** - CI will automatically validate these requirements (but catch issues early with `make guards`)
 
 ---
 
@@ -557,7 +563,21 @@ Before submitting a PR, ensure:
    git config core.hooksPath .githooks
    ```
 
-2. **Run Local Quality Gates** (Recommended)
+2. **Run Local Preflight Guards** (Recommended - CI alignment check)
+   ```bash
+   # Quick preflight: Check CI guards (floating refs, MSRV, --locked flags)
+   make guards   # or make preflight
+   ```
+
+   This verifies:
+   - ✅ All GitHub Actions are SHA-pinned (no floating @v3, @main, etc.)
+   - ✅ All action pins use 40-hex commit SHAs (immutable)
+   - ✅ MSRV consistency (1.89.0 only, no hardcoded 1.90.0)
+   - ✅ All cargo/cross commands use `--locked` flags
+
+   **Why run this locally?** Catches CI blockers before push, saving CI minutes and iteration time.
+
+3. **Run Local Quality Gates** (Recommended - full validation)
    ```bash
    # Comprehensive quality gates: fmt → clippy → tests → (bench) → verify-receipt
    ./scripts/local_gates.sh
@@ -565,18 +585,18 @@ Before submitting a PR, ensure:
 
    Or run individual checks:
 
-3. **Format and Lint**
+4. **Format and Lint**
    ```bash
    cargo fmt --all
    cargo clippy --all-targets --all-features -- -D warnings
    ```
 
-4. **Run Full Test Suite**
+5. **Run Full Test Suite**
    ```bash
    ./scripts/test-all.sh
    ```
 
-5. **Verify Inference Receipt** (if you have ci/inference.json)
+6. **Verify Inference Receipt** (if you have ci/inference.json)
    ```bash
    # Verify CPU receipt
    cargo run -p xtask -- verify-receipt --path ci/inference.json
@@ -585,12 +605,12 @@ Before submitting a PR, ensure:
    cargo run -p xtask -- verify-receipt --path ci/inference.json --require-gpu-kernels
    ```
 
-6. **Update Documentation**
+7. **Update Documentation**
    ```bash
    cargo doc --workspace --no-default-features --features cpu --no-deps
    ```
 
-7. **Cross-validate Changes** (optional, for inference changes)
+8. **Cross-validate Changes** (optional, for inference changes)
    ```bash
    cargo run -p xtask -- full-crossval
    ```
