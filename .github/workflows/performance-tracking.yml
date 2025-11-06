@@ -103,14 +103,14 @@ jobs:
           cross build --release --target ${{ matrix.target }} --no-default-features --features cpu
           cross build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu
         else
-          cargo build --release --target ${{ matrix.target }} --no-default-features --features cpu
-          cargo build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu
+          cargo build --release --target ${{ matrix.target }} --no-default-features --features cpu --locked
+          cargo build --release --target ${{ matrix.target }} -p bitnet-cli --no-default-features --features cpu --locked
         fi
 
     - name: Generate test fixtures
       run: |
         echo "Generating deterministic test fixtures..."
-        cargo run -p xtask -- gen-fixtures --size small --output crossval/fixtures/
+        cargo run -p xtask --locked -- gen-fixtures --size small --output crossval/fixtures/
 
     - name: Run performance benchmarks
       run: |
