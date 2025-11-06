@@ -13,8 +13,8 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: repin-${{ github.ref }}
-  cancel-in-progress: true
+  group: repin-actions-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel in-flight repins
 
 jobs:
   repin:
@@ -111,9 +111,10 @@ jobs:
             # Push to remote
             git push -u origin "$BR"
 
-            # Create PR
+            # Create PR with labels, or update existing PR
             gh pr create \
               --title "ci: repin actions to latest upstream SHAs" \
+              --label "ci,automation,low-risk" \
               --body "$(cat <<'EOF'
 Automated weekly repin to keep action SHAs up-to-date with upstream tags.
 
@@ -127,9 +128,19 @@ the original tag reference in trailing comments for human readability.
 
 **Merge when ready:** Core CI checks must pass; other checks are advisory.
 EOF
-              )"
+              )" || {
+                # If PR already exists, update labels
+                PR_NUM=$(gh pr list --state open --head "$BR" --json number -q '.[0].number')
+                if [ -n "$PR_NUM" ]; then
+                  gh pr edit "$PR_NUM" --add-label "ci,automation,low-risk"
+                  echo "✓ PR already exists (#$PR_NUM), labels updated"
+                else
+                  echo "⚠ PR creation failed for unknown reason"
+                  exit 1
+                fi
+              }
 
-            echo "✓ PR created: ci/repin-$(date +%Y%m%d)"
+            echo "✓ Repin PR ready: $BR"
           else
             echo "ℹ No action pins changed - all actions are up-to-date"
           fi
