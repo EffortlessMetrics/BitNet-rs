@@ -31,6 +31,23 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       # Ensure scripts are executable in fresh clones
       - run: chmod +x scripts/*.sh || true
+
+      - name: Guard - no floating action refs
+        run: |
+          if rg -n --color=never -e '^\s*uses:\s*[^ @]+/[^ @]+@(v\d+|stable|main|master|latest)\b' .github/workflows; then
+            echo "❌ Floating GitHub Action refs detected (must use SHA pins)"
+            exit 1
+          fi
+          echo "✅ All actions pinned to SHA refs"
+
+      - name: Guard - MSRV consistency (1.89.0 only)
+        run: |
+          if rg -n --color=never -e '1\.90\.0' .github/workflows; then
+            echo "❌ Found stale toolchain 1.90.0 in workflows (MSRV is 1.89.0)"
+            exit 1
+          fi
+          echo "✅ MSRV consistent across all workflows (1.89.0)"
+
       - name: Check units
         run: ./scripts/check-units.sh || true
       - name: Check envlock
