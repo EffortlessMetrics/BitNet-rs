@@ -89,7 +89,7 @@ jobs:
 
       - name: Build bitnet-cli (CPU features only)
         run: |
-          cargo build -p bitnet-cli --no-default-features --features cpu --release
+          cargo build -p bitnet-cli --no-default-features --features cpu --release --locked
 
       - name: Download model (if needed)
         if: ${{ github.event.inputs.validate_only != 'true' }}

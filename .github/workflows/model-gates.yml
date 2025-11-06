@@ -77,12 +77,12 @@ jobs:
       - name: Build xtask
         run: |
           echo "🔨 Building xtask..."
-          cargo build --locked -p xtask --release
+          cargo build --locked -p xtask --release --locked
 
       - name: Build bitnet-cli (CPU)
         run: |
           echo "🔨 Building bitnet-cli with CPU features..."
-          cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,full-cli
+          cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,full-cli --locked
 
       - name: Run benchmark and write receipt
         run: |
@@ -91,7 +91,7 @@ jobs:
           echo "This runs a tiny deterministic inference benchmark (128 tokens)"
           echo "and writes a receipt with measured tokens/sec and real kernel IDs."
           echo ""
-          cargo run --locked -p xtask -- benchmark --model tests/models/mini.gguf --tokens 128
+          cargo run --locked -p xtask --locked -- benchmark --model tests/models/mini.gguf --tokens 128
 
       - name: Display receipt
         run: |
@@ -101,7 +101,7 @@ jobs:
       - name: Verify receipt (strict)
         run: |
           echo "🔍 Verifying receipt against quality gates..."
-          cargo run --locked -p xtask -- verify-receipt --path ci/inference.json
+          cargo run --locked -p xtask --locked -- verify-receipt --path ci/inference.json
 
       - name: Upload receipt artifact
         if: always()
