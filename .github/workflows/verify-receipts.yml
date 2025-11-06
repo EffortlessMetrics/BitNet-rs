@@ -77,7 +77,7 @@ jobs:
             ${{ runner.os }}-receipt-verify-
 
       - name: Build xtask
-        run: cargo build -p xtask --release
+        run: cargo build -p xtask --release --locked
 
       # Test 1: Verify positive example (should pass)
       - name: Test positive example (CPU valid receipt)
@@ -86,7 +86,7 @@ jobs:
           echo "::group::Verifying positive example"
 
           # This should succeed - valid CPU receipt with real compute path
-          cargo run -p xtask --release -- verify-receipt \
+          cargo run -p xtask --release --locked -- verify-receipt \
             --path docs/tdd/receipts/cpu_positive_example.json
 
           RESULT=$?
@@ -106,7 +106,7 @@ jobs:
           echo "::group::Verifying negative example"
 
           # This should fail - receipt has compute_path="mock"
-          cargo run -p xtask --release -- verify-receipt \
+          cargo run -p xtask --release --locked -- verify-receipt \
             --path docs/tdd/receipts/cpu_negative_example.json && RESULT=0 || RESULT=$?
 
           echo "::endgroup::"
@@ -176,14 +176,14 @@ jobs:
             ${{ runner.os }}-receipt-benchmark-
 
       - name: Build workspace (CPU features)
-        run: cargo build --workspace --release --no-default-features --features cpu
+        run: cargo build --workspace --release --no-default-features --features cpu --locked
 
       # Note: Model download is optional for this test
       # The benchmark command can use mock mode if no model is available
       - name: Download test model (best effort)
         continue-on-error: true
         run: |
-          cargo run -p xtask --release -- download-model
+          cargo run -p xtask --release --locked -- download-model
 
       # Generate receipt via benchmark
       - name: Run benchmark to generate receipt
@@ -197,7 +197,7 @@ jobs:
           # Run benchmark with small token count for fast execution
           # Falls back to mock mode if model unavailable (CI acceptable for workflow test)
           if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
-            cargo run -p xtask --release -- benchmark \
+            cargo run -p xtask --release --locked -- benchmark \
               --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
               --tokens 8 \
               --json ci/inference.json || echo "Benchmark failed, trying mock mode"
@@ -246,7 +246,7 @@ jobs:
           echo "::group::Verifying generated receipt"
 
           # Verify the receipt meets quality gates
-          cargo run -p xtask --release -- verify-receipt \
+          cargo run -p xtask --release --locked -- verify-receipt \
             --path ci/inference.json
 
           echo "::endgroup::"
@@ -316,7 +316,7 @@ jobs:
             ${{ runner.os }}-receipt-gpu-
 
       - name: Build workspace (GPU features)
-        run: cargo build --workspace --release --no-default-features --features gpu
+        run: cargo build --workspace --release --no-default-features --features gpu --locked
 
       # Generate GPU receipt
       - name: Run GPU benchmark
@@ -324,11 +324,11 @@ jobs:
           mkdir -p ci
 
           # Download model if needed
-          cargo run -p xtask --release -- download-model || true
+          cargo run -p xtask --release --locked -- download-model || true
 
           # Run GPU benchmark
           if [ -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]; then
-            cargo run -p xtask --release -- benchmark \
+            cargo run -p xtask --release --locked -- benchmark \
               --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
               --tokens 8 \
               --json ci/inference_gpu.json || echo "GPU benchmark failed"
@@ -341,7 +341,7 @@ jobs:
           echo "::group::Verifying GPU receipt"
 
           # Verify with --require-gpu-kernels flag
-          cargo run -p xtask --release -- verify-receipt \
+          cargo run -p xtask --release --locked -- verify-receipt \
             --path ci/inference_gpu.json \
             --require-gpu-kernels
 
