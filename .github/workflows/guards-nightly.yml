@@ -1,0 +1,61 @@
+name: Guards (nightly)
+
+on:
+  schedule:
+    - cron: "0 2 * * *"  # 02:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guards-nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  guards-nightly:
+    name: Guards (nightly)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      # (Optional) Ensure ripgrep exists on runners that might not have it
+      - name: Ensure ripgrep
+        run: |
+          command -v rg >/dev/null 2>&1 || sudo apt-get update -y && sudo apt-get install -y ripgrep
+
+      # Reuse the same guard patterns you enforce in PRs
+      - name: Guard - actions pinned to 40-hex SHA
+        run: |
+          if rg -n --glob '!guards.yml' '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' .github/workflows; then
+            echo "❌ Non-immutable action pin detected"
+            exit 1
+          fi
+          echo "✅ 40-hex SHA pins OK"
+
+      - name: Guard - no floating action refs
+        run: |
+          if rg -n --glob '!guards.yml' 'uses:.*@v[0-9]|uses:.*@(main|stable|latest)' .github/workflows; then
+            echo "❌ Floating action refs detected"
+            exit 1
+          fi
+          echo "✅ No floating refs"
+
+      - name: Guard - MSRV consistency (1.89.0 only)
+        run: |
+          if rg -n --glob '!guards.yml' 'toolchain:\s*"?1\.90\.0"?|rust-version\s*=\s*"1\.90\.0"|"RUST_VERSION"\s*:\s*"1\.90\.0"' .github/workflows; then
+            echo "❌ Stale 1.90.0 reference found"
+            exit 1
+          fi
+          echo "✅ MSRV consistent (1.89.0)"
+
+      - name: Guard - cargo/cross --locked
+        run: |
+          violations=$(rg -n --glob '*.yml' --glob '!guards.yml' '\b(cargo|cross)\s+(build|test|run|bench|clippy)\b' .github/workflows | grep -v -- '--locked' || true)
+          if [ -n "$violations" ]; then
+            echo "❌ Missing --locked in workflow cargo/cross command(s):"
+            echo "$violations"
+            exit 1
+          fi
+          echo "✅ All cargo/cross use --locked"
