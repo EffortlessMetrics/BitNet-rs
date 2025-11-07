@@ -39,7 +39,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: 1.89.0
+          toolchain-file: rust-toolchain.toml
           components: rustfmt, clippy
 
       - name: Setup Python

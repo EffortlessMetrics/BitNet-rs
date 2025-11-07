@@ -253,14 +253,16 @@ guards:
 	@echo ""
 	@# Check for hardcoded Rust toolchain versions
 	@echo "$(BLUE)Checking for hardcoded Rust toolchain versions (use toolchain-file)...$(NC)"
-	@if rg --color=never --glob '!guards.yml' \
+	@output=$$(rg --color=never --glob '!guards.yml' \
 	      -e '(^|\s)toolchain:\s' \
 	      -e '(^|\s)rust-version:\s' \
 	      -e '(^|\s)RUST_VERSION:\s' \
-	      .github/workflows 2>/dev/null | grep -qv 'toolchain-file:'; then \
-	   echo "$(RED)❌ Found hardcoded Rust toolchain in workflows. Use 'toolchain-file: rust-toolchain.toml'.$(NC)"; \
+	      .github/workflows 2>/dev/null | grep -v 'toolchain-file:' || true); \
+	if [ -n "$$output" ]; then \
+	   echo "$(RED)❌ Found hardcoded Rust toolchain in workflows:$(NC)"; \
+	   echo "$$output"; \
 	   exit 1; \
-	 fi
+	fi
 	@echo "$(GREEN)✅ No hardcoded toolchain versions found (single-sourced via rust-toolchain.toml)$(NC)"
 	@echo ""
 	@# Check cargo/cross --locked flags
