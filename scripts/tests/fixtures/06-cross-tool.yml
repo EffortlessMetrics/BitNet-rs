@@ -1,0 +1,15 @@
+# Test fixture: Cross tool commands (should be handled like cargo)
+name: Cross Tool Commands
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cross build
+        run: cross build --target x86_64-unknown-linux-gnu
+
+      - name: Cross test
+        run: cross test --target aarch64-unknown-linux-gnu
+
+      - name: Cross with double dash
+        run: cross test --target x86_64-unknown-linux-gnu -- --nocapture

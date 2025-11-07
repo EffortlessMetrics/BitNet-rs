@@ -1,0 +1,16 @@
+# Test fixture: Commands with inline comments
+name: Commands with Comments
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build with comment
+        run: cargo build --locked  # This builds the project
+
+      - name: Test with comment
+        run: |
+          # Run unit tests
+          cargo test -p bitnet-common --locked
+          # Run integration tests
+          cargo test -p bitnet-models --locked

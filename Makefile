@@ -16,6 +16,7 @@ NC := $(shell tput sgr0 2>/dev/null || echo "")
 .PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt lint check fix docs ci setup \
         build test-quick test-gpu test-integration gpu-smoke download-model crossval tree loc size \
         watch flame audit outdated bloat docker-run docker-gpu profile valgrind heaptrack wasm python list verbose \
+        guards preflight \
         b t r c f l d g bt bf cf cb ct fr ft q a i
 
 # Detect OS and features
@@ -224,6 +225,60 @@ ci:
 	@$(CARGO) clippy --workspace --all-targets --all-features -- -D warnings
 	@$(CARGO) test --locked --workspace --no-default-features --features cpu
 	@echo "$(GREEN)✓ CI checks passed$(NC)"
+
+## guards: Run local preflight guards (floating refs, MSRV, --locked flags)
+guards:
+	@echo "$(GREEN)Running local preflight guards...$(NC)"
+	@echo ""
+	@# Check for floating action refs
+	@echo "$(BLUE)Checking for floating action refs...$(NC)"
+	@if rg --color=never --glob '!guards.yml' \
+	     -e '^\s*uses:\s*[^ @]+/[^ @]+@(?:v[0-9]+(?:\.[0-9]+)*)\b' \
+	     -e '^\s*uses:\s*[^ @]+/[^ @]+@(?:stable|main|master|latest)\b' \
+	     .github/workflows 2>/dev/null; then \
+	  echo "$(RED)❌ Floating GitHub Action refs detected (must use SHA pins)$(NC)"; \
+	  exit 1; \
+	fi
+	@echo "$(GREEN)✅ All actions pinned to SHA refs$(NC)"
+	@echo ""
+	@# Check for 40-hex SHA pins
+	@echo "$(BLUE)Checking for 40-hex SHA pins...$(NC)"
+	@if rg --pcre2 --color=never --glob '!guards.yml' \
+	     -e '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' \
+	     .github/workflows 2>/dev/null; then \
+	  echo "$(RED)❌ Non-immutable action pin detected (must be 40-hex SHA)$(NC)"; \
+	  exit 1; \
+	fi
+	@echo "$(GREEN)✅ All actions pinned to 40-hex SHAs$(NC)"
+	@echo ""
+	@# Check for hardcoded Rust toolchain versions
+	@echo "$(BLUE)Checking for hardcoded Rust toolchain versions (use toolchain-file)...$(NC)"
+	@if rg --color=never --glob '!guards.yml' \
+	      -e '(^|\s)toolchain:\s' \
+	      -e '(^|\s)rust-version:\s' \
+	      -e '(^|\s)RUST_VERSION:\s' \
+	      .github/workflows 2>/dev/null | grep -qv 'toolchain-file:'; then \
+	   echo "$(RED)❌ Found hardcoded Rust toolchain in workflows. Use 'toolchain-file: rust-toolchain.toml'.$(NC)"; \
+	   exit 1; \
+	 fi
+	@echo "$(GREEN)✅ No hardcoded toolchain versions found (single-sourced via rust-toolchain.toml)$(NC)"
+	@echo ""
+	@# Check cargo/cross --locked flags
+	@echo "$(BLUE)Checking cargo/cross --locked flags...$(NC)"
+	@violations=$$(rg --color=never --glob '*.yml' --glob '!guards.yml' \
+	     -e '\b(cargo|cross)\s+(build|test|run|bench|clippy)\b' \
+	     .github/workflows 2>/dev/null | grep -v -- '--locked' || true); \
+	if [ -n "$$violations" ]; then \
+	  echo "$(RED)❌ Missing --locked in workflow cargo/cross command(s):$(NC)"; \
+	  echo "$$violations"; \
+	  exit 1; \
+	fi
+	@echo "$(GREEN)✅ All workflow cargo/cross commands use --locked$(NC)"
+	@echo ""
+	@echo "$(GREEN)✓ All preflight guards passed!$(NC)"
+
+## preflight: Alias for guards
+preflight: guards
 
 ## deploy: Deploy to production
 deploy:

@@ -1,0 +1,21 @@
+# Test fixture: Simple single-line cargo commands
+name: Simple Commands
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simple build
+        run: cargo build --locked
+
+      - name: Simple test
+        run: cargo test --locked
+
+      - name: Simple run
+        run: cargo run --locked
+
+      - name: Simple bench
+        run: cargo bench --locked
+
+      - name: Simple clippy
+        run: cargo clippy --locked
