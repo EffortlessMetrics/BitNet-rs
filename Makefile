@@ -243,7 +243,7 @@ guards:
 	@echo ""
 	@# Check for 40-hex SHA pins
 	@echo "$(BLUE)Checking for 40-hex SHA pins...$(NC)"
-	@if rg --color=never --glob '!guards.yml' \
+	@if rg --pcre2 --color=never --glob '!guards.yml' \
 	     -e '^\s*uses:\s*(?!\./)[^ @]+/[^ @]+@(?![0-9a-f]{40}\b)' \
 	     .github/workflows 2>/dev/null; then \
 	  echo "$(RED)❌ Non-immutable action pin detected (must be 40-hex SHA)$(NC)"; \
@@ -251,17 +251,17 @@ guards:
 	fi
 	@echo "$(GREEN)✅ All actions pinned to 40-hex SHAs$(NC)"
 	@echo ""
-	@# Check MSRV consistency
-	@echo "$(BLUE)Checking MSRV consistency (1.89.0 only)...$(NC)"
+	@# Check for hardcoded Rust toolchain versions
+	@echo "$(BLUE)Checking for hardcoded Rust toolchain versions (use toolchain-file)...$(NC)"
 	@if rg --color=never --glob '!guards.yml' \
-	     -e 'toolchain:\s*"?1\.90\.0"?' \
-	     -e 'rust-version\s*=\s*"1\.90\.0"' \
-	     -e '"RUST_VERSION"\s*:\s*"1\.90\.0"' \
-	     .github/workflows 2>/dev/null; then \
-	  echo "$(RED)❌ Found stale toolchain 1.90.0 in workflows (MSRV is 1.89.0)$(NC)"; \
-	  exit 1; \
-	fi
-	@echo "$(GREEN)✅ MSRV consistent across all workflows (1.89.0)$(NC)"
+	      -e '(^|\s)toolchain:\s' \
+	      -e '(^|\s)rust-version:\s' \
+	      -e '(^|\s)RUST_VERSION:\s' \
+	      .github/workflows 2>/dev/null | grep -qv 'toolchain-file:'; then \
+	   echo "$(RED)❌ Found hardcoded Rust toolchain in workflows. Use 'toolchain-file: rust-toolchain.toml'.$(NC)"; \
+	   exit 1; \
+	 fi
+	@echo "$(GREEN)✅ No hardcoded toolchain versions found (single-sourced via rust-toolchain.toml)$(NC)"
 	@echo ""
 	@# Check cargo/cross --locked flags
 	@echo "$(BLUE)Checking cargo/cross --locked flags...$(NC)"
