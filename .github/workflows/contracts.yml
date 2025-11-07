@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   public-api:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     continue-on-error: true    # informative until parity PR lands
     steps:

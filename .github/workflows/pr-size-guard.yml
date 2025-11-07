@@ -11,7 +11,7 @@ concurrency:
 jobs:
   check-pr-size:
     name: Check PR Size
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     # Skip this check if the PR has the 'mechanical-change' label
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'mechanical-change') }}

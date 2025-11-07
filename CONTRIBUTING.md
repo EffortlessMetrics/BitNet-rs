@@ -499,6 +499,14 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
 - All workflows must use `rust-toolchain.toml` for MSRV consistency
 - CI blocks PRs that hardcode toolchain versions outside `rust-toolchain.toml`
 
+**Runner Pinning:**
+- **Default runners are pinned to `ubuntu-22.04`** for single-platform deterministic CI lanes
+- **Intentional `ubuntu-latest` usage** is allowed for:
+  - Security scanning workflows (e.g., `security.yml`) - should track latest tools
+  - Coverage tracking workflows (e.g., `coverage.yml`) - benefits from latest tooling
+  - Compatibility smoke testing (e.g., `compatibility.yml`) - explicitly tests across versions
+- **When adding new workflows**: Default to `ubuntu-22.04` for reproducibility. If `ubuntu-latest` is required, justify in PR and add an inline comment explaining why.
+
 **Violations will fail the required "Guards" check and block merge.** See `.github/workflows/guards.yml` for detailed enforcement rules.
 
 ### Quick-fix helpers

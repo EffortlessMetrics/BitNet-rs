@@ -20,7 +20,7 @@ jobs:
     name: Build ${{ matrix.features }}
     # Only run when explicitly requested via label
     if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'quant')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: true
     timeout-minutes: 8
     strategy:
@@ -117,7 +117,7 @@ jobs:
     name: Smoke Test Quantization
     # Only run when explicitly requested via label
     if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'quant')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build-matrix
     continue-on-error: true
 
@@ -170,7 +170,7 @@ jobs:
 
   parity-test:
     name: Parity Test (when slices exist)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build-matrix
     if: false # Enable when test data is available
 
