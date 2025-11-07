@@ -59,3 +59,20 @@ jobs:
             exit 1
           fi
           echo "✅ All cargo/cross use --locked"
+
+      # Non-blocking informational check for new ubuntu-latest usage
+      - name: Info - Check for new ubuntu-latest usage (non-blocking)
+        continue-on-error: true
+        run: |
+          # Approved allowlist: security, coverage, compatibility (intentional floaters)
+          new_latest=$(rg -n 'runs-on:\s*ubuntu-latest' .github/workflows \
+            | grep -Ev '(security\.yml|coverage\.yml|compatibility\.yml|ci-reporting\.yml\.disabled)' || true)
+          if [ -n "$new_latest" ]; then
+            echo "⚠️  Found ubuntu-latest usage outside approved allowlist:"
+            echo "$new_latest"
+            echo ""
+            echo "Policy: Default to ubuntu-22.04 for reproducibility."
+            echo "If ubuntu-latest is intentional, add to allowlist and document in PR."
+          else
+            echo "✅ No unexpected ubuntu-latest usage"
+          fi

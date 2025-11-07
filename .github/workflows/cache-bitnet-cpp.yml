@@ -28,7 +28,7 @@ env:
 jobs:
   determine-versions:
     name: Determine BitNet.cpp Versions to Cache
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     outputs:
       versions: ${{ steps.versions.outputs.versions }}
@@ -58,7 +58,7 @@ jobs:
   build-cache:
     name: Build Cache for ${{ matrix.version }}
     needs: determine-versions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -172,7 +172,7 @@ jobs:
   cleanup-old-cache:
     name: Cleanup Old Cache Images
     needs: [determine-versions, build-cache]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     if: always()
 
@@ -200,7 +200,7 @@ jobs:
   update-ci-cache-config:
     name: Update CI Cache Configuration
     needs: [determine-versions, build-cache]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     if: success()
 

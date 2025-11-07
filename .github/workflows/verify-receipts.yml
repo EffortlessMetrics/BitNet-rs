@@ -52,7 +52,7 @@ jobs:
   # Test receipt verification with known examples
   test-receipt-verification:
     name: Test Receipt Verification (Examples)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     if: contains(github.event.pull_request.labels.*.name, 'receipts')
 
@@ -150,7 +150,7 @@ jobs:
   # Generate and verify receipt from actual benchmark
   verify-generated-receipt:
     name: Verify Generated Receipt (Benchmark)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     # Only run on main/develop branches or workflow_dispatch to avoid overhead on PRs
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'

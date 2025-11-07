@@ -61,7 +61,7 @@ jobs:
   # Security gate: Block correction flags in CI
   security-guard:
     name: Security Guard (Block Correction Flags)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     continue-on-error: true  # Informational while stabilizing baselines
     steps:
@@ -118,7 +118,7 @@ jobs:
   # Build validation tools (Linux-only for CI efficiency)
   build-tools:
     name: Build Validation Tools
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     needs: security-guard
 
@@ -212,7 +212,7 @@ jobs:
   # Run validation integration tests (Linux-only for CI efficiency)
   validation-tests:
     name: Validation Integration Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     needs: build-tools
     continue-on-error: true
@@ -280,7 +280,7 @@ jobs:
   # Validate GGUF models (if available) - Linux-only
   validate-models:
     name: Validate GGUF Models
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
     needs: build-tools
     if: ${{ github.event.inputs.skip_model_validation != 'true' }}
@@ -427,7 +427,7 @@ jobs:
     name: Validation Summary
     needs: [security-guard, build-tools, validation-tests, validate-models]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     continue-on-error: true
 
@@ -523,7 +523,7 @@ jobs:
     name: Quality Gate
     needs: validation-summary
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     continue-on-error: true
     permissions:

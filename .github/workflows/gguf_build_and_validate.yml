@@ -54,7 +54,7 @@ env:
 jobs:
   build-validate:
     name: Export & Validate Clean GGUF
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
 
     steps:
@@ -247,7 +247,7 @@ jobs:
 
   quality-gate:
     name: Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build-validate
     if: always()
 

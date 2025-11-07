@@ -28,7 +28,7 @@ jobs:
   # Pre-release validation
   validate:
     name: Pre-release Validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -261,7 +261,7 @@ jobs:
   # Build WebAssembly
   build-wasm:
     name: Build WebAssembly
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: validate
     steps:
       - name: Checkout code
@@ -306,7 +306,7 @@ jobs:
   # Build Docker images
   build-docker:
     name: Build Docker images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: validate
     steps:
       - name: Checkout code
@@ -347,7 +347,7 @@ jobs:
   # Create GitHub release
   release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [validate, build, build-python, build-wasm, build-docker]
     if: github.event.inputs.dry_run != 'true'
     steps:
@@ -419,7 +419,7 @@ jobs:
   # Publish to crates.io
   publish-crates:
     name: Publish to crates.io
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [validate, build]
     if: github.event.inputs.dry_run != 'true'
     steps:
@@ -471,7 +471,7 @@ jobs:
   # Publish Python wheels to PyPI
   publish-python:
     name: Publish to PyPI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [validate, build-python]
     if: github.event.inputs.dry_run != 'true'
     steps:
@@ -500,7 +500,7 @@ jobs:
   # Publish WebAssembly to npm
   publish-npm:
     name: Publish to npm
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [validate, build-wasm]
     if: github.event.inputs.dry_run != 'true'
     steps:
@@ -538,7 +538,7 @@ jobs:
   # Post-release tasks
   post-release:
     name: Post-release tasks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: [release, publish-crates, publish-python, publish-npm]
     if: always() && github.event.inputs.dry_run != 'true'
     steps:

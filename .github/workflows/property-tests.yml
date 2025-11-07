@@ -22,7 +22,7 @@ env:
 jobs:
   property-tests:
     name: Greedy Parity Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 45
 
     strategy:
@@ -201,7 +201,7 @@ if files:
 
   cross-system-parity:
     name: Cross-System Parity (Optional)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     if: github.event_name == 'workflow_dispatch'
 

@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     continue-on-error: true  # Informational while stabilizing docs
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4

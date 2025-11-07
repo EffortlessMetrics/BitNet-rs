@@ -49,7 +49,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'schedule' ||
       startsWith(github.ref, 'refs/heads/main')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 25
     continue-on-error: ${{ github.event_name == 'pull_request' }}
     permissions:
@@ -171,7 +171,7 @@ jobs:
     if: always()
     # Same gating as the main job, so we don't surface red on PRs without the label.
     # Note: The outer if: always() ensures this runs even if cpu-receipt-gate is skipped.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: read
 
