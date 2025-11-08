@@ -157,7 +157,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain-file: rust-toolchain.toml
+          toolchain: "1.89.0"
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
@@ -210,7 +210,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain-file: rust-toolchain.toml
+          toolchain: "1.89.0"
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
@@ -226,7 +226,7 @@ jobs:
         run: |
           echo "🔍 Building with FFI feature but no libraries (STUB mode)..."
 
-          cargo build --locked -p bitnet-crossval --features ffi --locked
+          cargo build --locked -p bitnet-crossval --features ffi 
 
           echo "✅ STUB mode compilation successful"
           echo "   This ensures graceful degradation when C++ libs are unavailable"
@@ -239,7 +239,7 @@ jobs:
           echo "🔍 Running STUB mode tests (no C++ dependencies)..."
 
           # Run only tests that don't require C++ libraries
-          cargo test --locked -p bitnet-crossval --features ffi --lib --locked
+          cargo test --locked -p bitnet-crossval --features ffi --lib 
 
           echo "✅ STUB mode tests passed"
 
@@ -265,7 +265,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain-file: rust-toolchain.toml
+          toolchain: "1.89.0"
 
       - name: Install system dependencies
         run: |
@@ -303,7 +303,7 @@ jobs:
             echo "🔨 Building llama.cpp from source..."
             # TODO: Implement llama.cpp build script
             # For now, use xtask fetch-cpp with llama backend
-            cargo run --locked -p xtask --locked -- fetch-cpp --tag "${CPP_TAG}" --backend llama
+            cargo run --locked -p xtask  -- fetch-cpp --tag "${CPP_TAG}" --backend llama
           fi
 
           # Export library paths
@@ -326,7 +326,7 @@ jobs:
         run: |
           echo "📦 Downloading test model for Lane B..."
           # Use xtask download-model or a lightweight test model
-          cargo run --locked -p xtask --locked -- download-model
+          cargo run --locked -p xtask  -- download-model
 
           # Verify model
           if [[ ! -f "models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf" ]]; then
@@ -367,7 +367,7 @@ jobs:
         run: |
           echo "🔍 Running per-token parity check..."
 
-          cargo run --locked -p xtask --features crossval-all --locked -- crossval-per-token \
+          cargo run --locked -p xtask --features crossval-all  -- crossval-per-token \
             --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
             --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
             --prompt "What is 2+2?" \
@@ -429,7 +429,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain-file: rust-toolchain.toml
+          toolchain: "1.89.0"
 
       - name: Install system dependencies
         run: |
@@ -464,7 +464,7 @@ jobs:
             echo "⚡ Using cached BitNet.cpp libraries"
           else
             echo "🔨 Building BitNet.cpp from source..."
-            cargo run --locked -p xtask --locked -- fetch-cpp --tag "${CPP_TAG}"
+            cargo run --locked -p xtask  -- fetch-cpp --tag "${CPP_TAG}"
           fi
 
           # Export library paths
@@ -474,7 +474,7 @@ jobs:
       - name: Download test model
         run: |
           echo "📦 Downloading BitNet test model..."
-          cargo run --locked -p xtask --locked -- download-model
+          cargo run --locked -p xtask  -- download-model
 
       - name: Build Rust implementation
         run: |
@@ -519,6 +519,10 @@ jobs:
     needs: [check-trigger, check-no-ffi, check-llama-stub, lane-b-llama, lane-a-bitnet]
     if: always()
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
 
     steps:
       - name: Download all artifacts

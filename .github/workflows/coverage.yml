@@ -39,7 +39,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain-file: rust-toolchain.toml
+          toolchain: "1.89.0"
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked

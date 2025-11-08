@@ -28,7 +28,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain-file: rust-toolchain.toml
+          toolchain: "1.89.0"
 
       - name: Cache Rust dependencies
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
