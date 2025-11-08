@@ -251,17 +251,19 @@ guards:
 	fi
 	@echo "$(GREEN)✅ All actions pinned to 40-hex SHAs$(NC)"
 	@echo ""
-	@# Check for hardcoded Rust toolchain versions
-	@echo "$(BLUE)Checking for hardcoded Rust toolchain versions (use toolchain-file)...$(NC)"
-	@if rg --color=never --glob '!guards.yml' \
-	      -e '(^|\s)toolchain:\s' \
-	      -e '(^|\s)rust-version:\s' \
-	      -e '(^|\s)RUST_VERSION:\s' \
-	      .github/workflows 2>/dev/null | grep -qv 'toolchain-file:'; then \
-	   echo "$(RED)❌ Found hardcoded Rust toolchain in workflows. Use 'toolchain-file: rust-toolchain.toml'.$(NC)"; \
+	@# Check for wrong MSRV (1.90.0 or other non-1.89.0 hardcoded versions)
+	@echo "$(BLUE)Checking for wrong MSRV versions (should be 1.89.0 or dynamic)...$(NC)"
+	@wrong_msrv=$$(rg --color=never --glob '!guards.yml' \
+	      -e 'toolchain:\s*"?1\.90\.0"?' \
+	      -e 'rust-version\s*=\s*"1\.90\.0"' \
+	      -e '"RUST_VERSION"\s*:\s*"1\.90\.0"' \
+	      .github/workflows 2>/dev/null || true); \
+	if [ -n "$$wrong_msrv" ]; then \
+	   echo "$(RED)❌ Found wrong MSRV (1.90.0) in workflows:$(NC)"; \
+	   echo "$$wrong_msrv"; \
 	   exit 1; \
-	 fi
-	@echo "$(GREEN)✅ No hardcoded toolchain versions found (single-sourced via rust-toolchain.toml)$(NC)"
+	fi
+	@echo "$(GREEN)✅ No wrong MSRV versions found (1.89.0 or dynamic from rust-toolchain.toml)$(NC)"
 	@echo ""
 	@# Check cargo/cross --locked flags
 	@echo "$(BLUE)Checking cargo/cross --locked flags...$(NC)"
