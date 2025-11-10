@@ -176,7 +176,9 @@ jobs:
             ${{ runner.os }}-receipt-benchmark-
 
       - name: Build workspace (CPU features)
-        run: cargo build --workspace --release --no-default-features --features cpu --locked
+        run: |
+          cargo build --workspace --release --no-default-features --features cpu --locked \
+            --exclude bitnet-py --exclude bitnet-wasm
 
       # Note: Model download is optional for this test
       # The benchmark command can use mock mode if no model is available
@@ -316,7 +318,9 @@ jobs:
             ${{ runner.os }}-receipt-gpu-
 
       - name: Build workspace (GPU features)
-        run: cargo build --workspace --release --no-default-features --features gpu --locked
+        run: |
+          cargo build --workspace --release --no-default-features --features gpu --locked \
+            --exclude bitnet-py --exclude bitnet-wasm
 
       # Generate GPU receipt
       - name: Run GPU benchmark
