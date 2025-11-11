@@ -1,3 +1,5 @@
+#![allow(dead_code)] // temporary until wired into inference path (cleared in PR2/PR3)
+
 //! QK256 GEMV Dispatch Layer
 //!
 //! Runtime CPU feature detection and dispatch for QK256 (GGML-compatible)
@@ -87,7 +89,7 @@ pub fn qk256_gemv(
     qk256_gemv_scalar(output, rows, cols, packed, scales, activations);
 }
 
-/// Scalar QK256 GEMV (no SIMD)
+/// Scalar QK256 GEMV (no SIMD).
 ///
 /// Reference implementation. All optimized paths must match this output
 /// within tolerance.
@@ -98,7 +100,8 @@ pub fn qk256_gemv(
 ///       - Unpack 2-bit values → signed (-1, 0, 1)
 ///       - Dot product with activation slice
 ///       - Scale by block scale
-///    b. Sum scaled block results → row output
+///
+///    b. Sum scaled block results → row output.
 ///
 /// **Performance (PR1 Baseline)**:
 /// - 2B model (2048x2048): ~0.1 tok/s (scalar only)
@@ -130,7 +133,7 @@ pub fn qk256_gemv_scalar(
         "Scales length mismatch"
     );
 
-    for row_idx in 0..rows {
+    for (row_idx, output_elem) in output.iter_mut().enumerate().take(rows) {
         let mut row_sum = 0.0f32;
 
         for block_idx in 0..blocks_per_row {
@@ -166,7 +169,7 @@ pub fn qk256_gemv_scalar(
             row_sum += block_sum * scale;
         }
 
-        output[row_idx] = row_sum;
+        *output_elem = row_sum;
     }
 }
 
