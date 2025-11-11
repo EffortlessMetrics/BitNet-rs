@@ -18,6 +18,7 @@ pub mod device_aware_quantizer;
 // pub mod error_handling_tests; // Temporarily disabled - needs API fixes
 pub mod i2s;
 pub mod property_based_tests;
+pub mod qk256_dispatch; // Sprint-2 Track A PR1: QK256 SIMD dispatch scaffolding
 // pub mod robustness_tests; // Keep disabled until needed
 pub mod simd_ops;
 pub mod tl1;
