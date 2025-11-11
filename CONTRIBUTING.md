@@ -507,6 +507,12 @@ BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply
   - Compatibility smoke testing (e.g., `compatibility.yml`) - explicitly tests across versions
 - **When adding new workflows**: Default to `ubuntu-22.04` for reproducibility. If `ubuntu-latest` is required, justify in PR and add an inline comment explaining why.
 
+**Receipt Workflow Hygiene:**
+- **Receipt verification builds must exclude Python/WASM bindings** (`--exclude bitnet-py --exclude bitnet-wasm`)
+- Required in both CPU and GPU build lanes to prevent libpython and WASM linker dependencies
+- CI blocks PRs that remove these excludes from `verify-receipts.yml` via the **Guards** gate
+- Keeps receipt verification hermetic and reproducible across CI environments
+
 **Violations will fail the required "Guards" check and block merge.** See `.github/workflows/guards.yml` for detailed enforcement rules.
 
 ### Quick-fix helpers
@@ -522,6 +528,7 @@ This single command checks:
 - ✅ 40-hex SHA pins (external actions must use full commit SHA)
 - ✅ MSRV consistency (must match rust-toolchain.toml)
 - ✅ cargo/cross --locked flags (all build/test/run/bench/clippy)
+- ✅ Receipt workflow excludes (bitnet-py/bitnet-wasm in CPU+GPU lanes)
 
 **Other helpers:**
 

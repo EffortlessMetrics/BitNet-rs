@@ -76,3 +76,19 @@ jobs:
           else
             echo "✅ No unexpected ubuntu-latest usage"
           fi
+
+      - name: Info – receipt excludes present (non-blocking)
+        continue-on-error: true
+        run: |
+          f=".github/workflows/verify-receipts.yml"
+          want=2
+          pyc=$(rg -n -- '--exclude bitnet-py'   "$f" | wc -l | tr -d ' ')
+          was=$(rg -n -- '--exclude bitnet-wasm' "$f" | wc -l | tr -d ' ')
+
+          if [ "$pyc" -lt "$want" ] || [ "$was" -lt "$want" ]; then
+            echo "⚠️ ${f} missing excludes in one or more lanes:"
+            echo "   --exclude bitnet-py   occurrences: $pyc (need >= $want)"
+            echo "   --exclude bitnet-wasm occurrences: $was (need >= $want)"
+          else
+            echo "✅ receipt excludes present (CPU+GPU)"
+          fi
