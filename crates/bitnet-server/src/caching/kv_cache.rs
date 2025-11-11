@@ -223,9 +223,11 @@ impl MemoryPool {
     }
 }
 
+#[cfg(any(test, doc, rustdoc))]
 const F32_BYTES: usize = core::mem::size_of::<f32>();
 
 /// Align a size up to the nearest multiple of `align`.
+#[cfg(any(test, doc, rustdoc))]
 #[inline]
 fn align_up(size: usize, align: usize) -> usize {
     debug_assert!(align.is_power_of_two(), "align must be power of two");
