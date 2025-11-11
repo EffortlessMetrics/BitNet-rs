@@ -39,6 +39,15 @@ pub struct PerformanceTuner {
     last_optimization: Instant,
 }
 
+/// Lightweight report used by `generate_report()`; keep simple for MSRV builds.
+#[derive(Debug, Clone)]
+pub struct PerformanceReport {
+    pub average_requests_per_second: f64,
+    pub average_latency_ms: f64,
+    pub current_config: CachingConfig,
+    pub sample_count: usize,
+}
+
 /// Tunable performance parameters
 #[derive(Debug, Clone)]
 pub struct PerformanceParameters {
