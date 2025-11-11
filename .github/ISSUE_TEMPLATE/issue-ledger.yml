@@ -1,0 +1,220 @@
+name: Issue Ledger
+description: Structured issue tracking for complex features with acceptance criteria, gates, and decision records
+title: "[AREA] Brief description of the issue"
+labels: ["tracking", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Issue Ledger Template
+
+        Use this template for complex features that require:
+        - Multiple acceptance criteria
+        - Gate-based validation (build, test, lint, parity, docs)
+        - Decision records and hoplog (History of Present Ledger)
+
+        **Example:** See [#469](https://github.com/EffortlessMetrics/BitNet-rs/issues/469) for a well-structured issue ledger.
+
+  - type: input
+    id: status
+    attributes:
+      label: Status
+      description: Current status (e.g., "Ready for Implementation", "In Progress", "Blocked")
+      placeholder: "Ready for Implementation"
+    validations:
+      required: true
+
+  - type: input
+    id: flow
+    attributes:
+      label: Flow
+      description: Development flow type (e.g., "Generative", "Integrative", "Exploratory")
+      placeholder: "Generative"
+    validations:
+      required: false
+
+  - type: input
+    id: target_release
+    attributes:
+      label: Target Release
+      description: Target release version (e.g., "v0.1.0-mvp", "v0.2.0")
+      placeholder: "v0.1.0-mvp"
+    validations:
+      required: false
+
+  - type: input
+    id: effort
+    attributes:
+      label: Estimated Effort
+      description: Development effort estimate (e.g., "5-7 developer-days", "2-3 weeks")
+      placeholder: "5-7 developer-days"
+    validations:
+      required: false
+
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User Story
+      description: |
+        User story in standard format:
+        As a **[role]**, I want **[feature]**, so that **[benefit]**.
+      placeholder: |
+        As a **BitNet.rs developer**, I want **[feature description]**, so that **[benefit to users/developers]**.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: |
+        List acceptance criteria with clear "Done when" conditions and testable examples.
+
+        **Format:**
+        ### AC1: [Title]
+        **What:** [Brief description]
+
+        **Done when:**
+        * [Condition 1]
+        * [Condition 2]
+        * [Condition 3]
+
+        **Testable:**
+        ```bash
+        # Test command or description
+        cargo test -p [package] test_name
+        ```
+      placeholder: |
+        ### AC1: [Feature Component 1]
+        **What:** [Brief description of what needs to be implemented]
+
+        **Done when:**
+        * [Specific condition 1]
+        * [Specific condition 2]
+        * [Specific condition 3]
+
+        **Testable:**
+        ```bash
+        cargo test -p [package] --no-default-features --features cpu test_feature_component_1
+        ```
+
+        ---
+
+        ### AC2: [Feature Component 2]
+        **What:** [Brief description]
+
+        **Done when:**
+        * [Condition 1]
+        * [Condition 2]
+
+        **Testable:**
+        ```bash
+        cargo test -p [package] test_feature_component_2
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: gates
+    attributes:
+      label: Gates (Validation Checkpoints)
+      description: |
+        List validation gates that must pass before completion.
+        Common gates: issue, spec, build, test, lint, parity, docs
+      placeholder: |
+        - [x] **issue**: Ledger structure complete with ACs
+        - [ ] **spec**: Technical specification documented
+        - [ ] **build**: Cargo build passes on all feature combinations
+        - [ ] **test**: All acceptance criteria tests pass
+        - [ ] **lint**: Clippy and fmt clean
+        - [ ] **parity**: Cross-validation with C++ reference (if applicable)
+        - [ ] **docs**: Documentation updated (README, CLAUDE.md, howtos)
+    validations:
+      required: false
+
+  - type: textarea
+    id: hoplog
+    attributes:
+      label: Hoplog (History of Present Ledger)
+      description: |
+        Decision records and progress updates.
+        Format: [YYYY-MM-DD] Decision/Update description
+      placeholder: |
+        ### Decisions
+        - [2025-11-10] **Tolerance Policy**: Use 0.1% tolerance for QK256 size validation
+        - [2025-11-09] **CLI Flag**: Use `--strict-loader` instead of environment variable
+
+        ### Progress Updates
+        - [2025-11-11] AC1 implemented and tested
+        - [2025-11-10] Spec completed, ready for implementation
+    validations:
+      required: false
+
+  - type: textarea
+    id: technical_spec
+    attributes:
+      label: Technical Specification
+      description: |
+        Link to detailed technical specification (if separate document exists)
+      placeholder: |
+        See `docs/explanation/specs/issue-XXX-spec.md` for detailed specification.
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies & Blockers
+      description: |
+        List any dependencies or blocking issues
+      placeholder: |
+        **Dependencies:**
+        - Issue #123 must be resolved first
+        - C++ reference setup required (BITNET_CPP_DIR)
+
+        **Blockers:**
+        - None
+    validations:
+      required: false
+
+  - type: textarea
+    id: testing_strategy
+    attributes:
+      label: Testing Strategy
+      description: |
+        Overall testing approach (unit tests, integration tests, property tests, etc.)
+      placeholder: |
+        - Unit tests for each AC in respective packages
+        - Integration tests in crossval for parity validation
+        - Property tests for tolerance calculations
+        - Manual validation with example models
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation_plan
+    attributes:
+      label: Documentation Plan
+      description: |
+        Documentation updates required
+      placeholder: |
+        **To Update:**
+        - README.md: Add QK256 quick-start section
+        - docs/howto/use-qk256-models.md: Create new guide
+        - docs/explanation/i2s-dual-flavor.md: Update flavor detection
+        - CLAUDE.md: Update known limitations section
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or references
+      placeholder: |
+        **References:**
+        - Related PR: #XXX
+        - Discussion: #YYY
+        - Upstream issue: microsoft/BitNet#ZZZ
+    validations:
+      required: false
