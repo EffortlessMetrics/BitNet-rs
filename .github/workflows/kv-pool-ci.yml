@@ -1,0 +1,54 @@
+name: KV Pool CI (focused)
+
+# Lightweight fast-feedback workflow for KV cache pool changes
+# Runs only on relevant file changes to keep signal fast during iteration
+
+on:
+  pull_request:
+    paths:
+      - "crates/bitnet-server/src/caching/**"
+      - ".github/workflows/kv-pool-ci.yml"
+
+jobs:
+  kv-pool-tests:
+    name: KV Pool Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-target-kv-pool-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run KV cache pool tests
+        run: |
+          cargo test -p bitnet-server --lib -- caching::kv_cache::tests --nocapture
+
+      - name: Check formatting
+        run: |
+          cargo fmt --check -- crates/bitnet-server/src/caching/kv_cache.rs
+
+      - name: Run clippy on caching module
+        run: |
+          cargo clippy -p bitnet-server --no-default-features --lib -- \
+            -D warnings \
+            -A clippy::too_many_arguments
