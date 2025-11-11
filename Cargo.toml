@@ -343,5 +343,3 @@ keywords = [
   "bitnet",           # BitNet specific
 ]
 msrv = "1.90.0"
-
-<\!-- ci: trigger guards for dependabot.yml change -->
