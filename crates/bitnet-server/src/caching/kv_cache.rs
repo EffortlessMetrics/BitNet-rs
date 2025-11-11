@@ -1,4 +1,5 @@
 //! KV cache optimization with memory pooling
+#![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
 use anyhow::Result;
 use std::collections::HashMap;
@@ -96,11 +97,7 @@ impl Default for KVCacheStatistics {
 impl MemoryPool {
     /// Create a new memory pool
     pub fn new(size_bytes: usize) -> Self {
-        let initial_block = MemoryBlock {
-            offset: 0,
-            size: size_bytes,
-            in_use: false,
-        };
+        let initial_block = MemoryBlock { offset: 0, size: size_bytes, in_use: false };
 
         Self {
             memory: vec![0u8; size_bytes],
@@ -115,11 +112,7 @@ impl MemoryPool {
         // Find a suitable block
         for (i, block) in self.available_blocks.iter().enumerate() {
             if !block.in_use && block.size >= size {
-                let allocated_block = MemoryBlock {
-                    offset: block.offset,
-                    size,
-                    in_use: true,
-                };
+                let allocated_block = MemoryBlock { offset: block.offset, size, in_use: true };
 
                 // If the block is larger than needed, split it
                 if block.size > size {
@@ -146,11 +139,7 @@ impl MemoryPool {
     pub fn deallocate(&mut self, block: MemoryBlock) {
         self.used_memory = self.used_memory.saturating_sub(block.size);
 
-        let free_block = MemoryBlock {
-            offset: block.offset,
-            size: block.size,
-            in_use: false,
-        };
+        let free_block = MemoryBlock { offset: block.offset, size: block.size, in_use: false };
 
         // Insert the block back and try to merge with adjacent blocks
         self.available_blocks.push(free_block);
@@ -166,8 +155,7 @@ impl MemoryPool {
             let current = &self.available_blocks[i];
             let next = &self.available_blocks[i + 1];
 
-            if !current.in_use && !next.in_use &&
-               current.offset + current.size == next.offset {
+            if !current.in_use && !next.in_use && current.offset + current.size == next.offset {
                 // Merge the blocks
                 let merged_block = MemoryBlock {
                     offset: current.offset,
@@ -185,24 +173,14 @@ impl MemoryPool {
 
     /// Get memory utilization
     pub fn utilization(&self) -> f64 {
-        if self.total_size == 0 {
-            0.0
-        } else {
-            self.used_memory as f64 / self.total_size as f64
-        }
+        if self.total_size == 0 { 0.0 } else { self.used_memory as f64 / self.total_size as f64 }
     }
 
     /// Get fragmentation ratio
     pub fn fragmentation(&self) -> f64 {
-        let free_blocks = self.available_blocks.iter()
-            .filter(|block| !block.in_use)
-            .count();
+        let free_blocks = self.available_blocks.iter().filter(|block| !block.in_use).count();
 
-        if free_blocks <= 1 {
-            0.0
-        } else {
-            (free_blocks - 1) as f64 / free_blocks as f64
-        }
+        if free_blocks <= 1 { 0.0 } else { (free_blocks - 1) as f64 / free_blocks as f64 }
     }
 
     /// Zero-initialize a range of memory (no panics in release).
@@ -213,7 +191,9 @@ impl MemoryPool {
         } else {
             Err(anyhow::anyhow!(
                 "zero_range out of bounds: offset={} len={} total={}",
-                offset, len, self.memory.len()
+                offset,
+                len,
+                self.memory.len()
             ))
         }
     }
@@ -267,7 +247,11 @@ impl KVCacheManager {
     }
 
     /// Get or create a KV cache for a session
-    pub async fn get_or_create_cache(&self, session_id: &str, context_length: usize) -> Result<Option<KVCacheEntry>> {
+    pub async fn get_or_create_cache(
+        &self,
+        session_id: &str,
+        context_length: usize,
+    ) -> Result<Option<KVCacheEntry>> {
         let mut stats = self.statistics.write().await;
 
         // Check if cache exists
@@ -275,7 +259,8 @@ impl KVCacheManager {
             let cache = self.cache.read().await;
             if let Some(entry) = cache.get(session_id) {
                 stats.cache_hits += 1;
-                stats.hit_rate = stats.cache_hits as f64 / (stats.cache_hits + stats.cache_misses) as f64;
+                stats.hit_rate =
+                    stats.cache_hits as f64 / (stats.cache_hits + stats.cache_misses) as f64;
                 return Ok(Some(entry.clone()));
             }
         }
@@ -288,7 +273,11 @@ impl KVCacheManager {
     }
 
     /// Create a new cache entry
-    async fn create_cache_entry(&self, session_id: &str, context_length: usize) -> Result<Option<KVCacheEntry>> {
+    async fn create_cache_entry(
+        &self,
+        session_id: &str,
+        context_length: usize,
+    ) -> Result<Option<KVCacheEntry>> {
         // Calculate required memory (simplified calculation)
         let key_size = context_length * 64 * 4; // 64 dimensions, 4 bytes per float
         let value_size = context_length * 64 * 4;
@@ -351,7 +340,12 @@ impl KVCacheManager {
     }
 
     /// Update cache with new tokens
-    pub async fn update_cache(&self, session_id: &str, _key_data: &[f32], _value_data: &[f32]) -> Result<()> {
+    pub async fn update_cache(
+        &self,
+        session_id: &str,
+        _key_data: &[f32],
+        _value_data: &[f32],
+    ) -> Result<()> {
         let mut cache = self.cache.write().await;
 
         if let Some(entry) = cache.get_mut(session_id) {
@@ -455,11 +449,8 @@ impl KVCacheManager {
             for session_id in expired_sessions {
                 if let Some(entry) = cache.write().await.remove(&session_id) {
                     // Return memory to pool
-                    let memory_block = MemoryBlock {
-                        offset: 0,
-                        size: entry.size_bytes,
-                        in_use: true,
-                    };
+                    let memory_block =
+                        MemoryBlock { offset: 0, size: entry.size_bytes, in_use: true };
 
                     memory_pool.write().await.deallocate(memory_block);
 
@@ -481,7 +472,8 @@ impl KVCacheManager {
                 // Calculate average session length
                 let cache_read = cache.read().await;
                 if !cache_read.is_empty() {
-                    let total_tokens: usize = cache_read.values().map(|entry| entry.token_count).sum();
+                    let total_tokens: usize =
+                        cache_read.values().map(|entry| entry.token_count).sum();
                     stats.average_session_length = total_tokens as f64 / cache_read.len() as f64;
                 }
             }
@@ -665,9 +657,7 @@ mod tests {
         pool.deallocate(block1.clone());
 
         // Check that blocks merged
-        let free_blocks: Vec<_> = pool.available_blocks.iter()
-            .filter(|b| !b.in_use)
-            .collect();
+        let free_blocks: Vec<_> = pool.available_blocks.iter().filter(|b| !b.in_use).collect();
 
         // Should have merged into one contiguous block
         assert!(free_blocks.iter().any(|b| b.offset == 0 && b.size == 512));

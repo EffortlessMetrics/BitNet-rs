@@ -1,10 +1,14 @@
 //! Caching and performance optimization for BitNet server
+#![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
-pub mod model_cache;
+#[cfg(feature = "connection_pool")]
+pub mod connection_pool;
 pub mod kv_cache;
-#[cfg(feature = "request_batching")] pub mod request_batching;
-#[cfg(feature = "connection_pool")]  pub mod connection_pool;
-#[cfg(any(test, feature = "tuning"))] pub mod performance_tuning;
+pub mod model_cache;
+#[cfg(any(test, feature = "tuning"))]
+pub mod performance_tuning;
+#[cfg(feature = "request_batching")]
+pub mod request_batching;
 
 // ---- Stubs for disabled features (types only; keep callers compiling) ----
 #[cfg(not(feature = "request_batching"))]
@@ -27,8 +31,6 @@ pub mod performance_tuning {
 
 use anyhow::Result;
 use std::sync::Arc;
-#[cfg(any(test, feature = "tuning"))]
-use tokio::sync::RwLock;
 
 /// Caching configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -85,7 +87,7 @@ pub struct CachingSystem {
     #[cfg(feature = "connection_pool")]
     connection_pool: Arc<connection_pool::ConnectionPool>,
     #[cfg(any(test, feature = "tuning"))]
-    performance_tuner: Arc<RwLock<performance_tuning::PerformanceTuner>>,
+    performance_tuner: Arc<tokio::sync::RwLock<performance_tuning::PerformanceTuner>>,
 }
 
 impl CachingSystem {
@@ -98,9 +100,8 @@ impl CachingSystem {
         #[cfg(feature = "connection_pool")]
         let connection_pool = Arc::new(connection_pool::ConnectionPool::new(&config)?);
         #[cfg(any(test, feature = "tuning"))]
-        let performance_tuner = Arc::new(RwLock::new(
-            performance_tuning::PerformanceTuner::new(&config)?
-        ));
+        let performance_tuner =
+            Arc::new(tokio::sync::RwLock::new(performance_tuning::PerformanceTuner::new(&config)?));
 
         Ok(Self {
             config,
@@ -170,9 +171,7 @@ impl CachingSystem {
             let performance_tuner = self.performance_tuner.clone();
             let interval = self.config.tuning_interval_seconds;
             tokio::spawn(async move {
-                let mut interval = tokio::time::interval(
-                    std::time::Duration::from_secs(interval)
-                );
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(interval));
                 loop {
                     interval.tick().await;
                     {

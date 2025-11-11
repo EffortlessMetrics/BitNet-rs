@@ -115,7 +115,8 @@ impl ConnectionPool {
                     stats.total_connections += 1;
                     stats.active_connections += 1;
                     stats.peak_connections = stats.peak_connections.max(stats.active_connections);
-                    stats.connection_utilization = stats.active_connections as f64 / self.config.connection_pool_size as f64;
+                    stats.connection_utilization =
+                        stats.active_connections as f64 / self.config.connection_pool_size as f64;
                 }
 
                 // Don't drop the permit - it will be released when connection is closed
@@ -145,15 +146,19 @@ impl ConnectionPool {
             {
                 let mut stats = self.statistics.write().await;
                 stats.active_connections = stats.active_connections.saturating_sub(1);
-                stats.connection_utilization = stats.active_connections as f64 / self.config.connection_pool_size as f64;
+                stats.connection_utilization =
+                    stats.active_connections as f64 / self.config.connection_pool_size as f64;
 
                 // Update average connection duration
-                let total_duration = stats.average_connection_duration_seconds * (stats.total_connections - 1) as f64;
-                stats.average_connection_duration_seconds = (total_duration + duration.as_secs_f64()) / stats.total_connections as f64;
+                let total_duration = stats.average_connection_duration_seconds
+                    * (stats.total_connections - 1) as f64;
+                stats.average_connection_duration_seconds =
+                    (total_duration + duration.as_secs_f64()) / stats.total_connections as f64;
 
                 // Update average requests per connection
                 if stats.total_connections > 0 {
-                    stats.average_requests_per_connection = stats.total_requests as f64 / stats.total_connections as f64;
+                    stats.average_requests_per_connection =
+                        stats.total_requests as f64 / stats.total_connections as f64;
                 }
             }
 
@@ -176,7 +181,8 @@ impl ConnectionPool {
             {
                 let mut stats = self.statistics.write().await;
                 stats.total_requests += 1;
-                stats.average_requests_per_connection = stats.total_requests as f64 / stats.total_connections as f64;
+                stats.average_requests_per_connection =
+                    stats.total_requests as f64 / stats.total_connections as f64;
             }
         }
 
@@ -192,10 +198,7 @@ impl ConnectionPool {
     /// List all active connections
     pub async fn list_connections(&self) -> Vec<Connection> {
         let connections = self.connections.read().await;
-        connections.values()
-            .filter(|conn| conn.state == ConnectionState::Active)
-            .cloned()
-            .collect()
+        connections.values().filter(|conn| conn.state == ConnectionState::Active).cloned().collect()
     }
 
     /// Start connection cleanup task
@@ -218,8 +221,9 @@ impl ConnectionPool {
                 {
                     let connections_read = connections.read().await;
                     for (id, connection) in connections_read.iter() {
-                        if connection.state == ConnectionState::Active &&
-                           now.duration_since(connection.last_activity) > timeout_duration {
+                        if connection.state == ConnectionState::Active
+                            && now.duration_since(connection.last_activity) > timeout_duration
+                        {
                             timed_out_connections.push(id.clone());
                         }
                     }
@@ -249,10 +253,11 @@ impl ConnectionPool {
                 // Update idle connections count
                 {
                     let connections_read = connections.read().await;
-                    let idle_count = connections_read.values()
+                    let idle_count = connections_read
+                        .values()
                         .filter(|conn| {
-                            conn.state == ConnectionState::Active &&
-                            now.duration_since(conn.last_activity) > Duration::from_secs(30)
+                            conn.state == ConnectionState::Active
+                                && now.duration_since(conn.last_activity) > Duration::from_secs(30)
                         })
                         .count();
 
@@ -270,17 +275,18 @@ impl ConnectionPool {
         // Update current connection counts
         let connections = self.connections.read().await;
         stats.total_connections = connections.len();
-        stats.active_connections = connections.values()
-            .filter(|conn| conn.state == ConnectionState::Active)
-            .count();
-        stats.idle_connections = connections.values()
+        stats.active_connections =
+            connections.values().filter(|conn| conn.state == ConnectionState::Active).count();
+        stats.idle_connections = connections
+            .values()
             .filter(|conn| {
-                conn.state == ConnectionState::Active &&
-                Instant::now().duration_since(conn.last_activity) > Duration::from_secs(30)
+                conn.state == ConnectionState::Active
+                    && Instant::now().duration_since(conn.last_activity) > Duration::from_secs(30)
             })
             .count();
 
-        stats.connection_utilization = stats.active_connections as f64 / self.config.connection_pool_size as f64;
+        stats.connection_utilization =
+            stats.active_connections as f64 / self.config.connection_pool_size as f64;
 
         stats
     }

@@ -1,4 +1,5 @@
 //! Model caching with pre-warming capabilities
+#![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
 use anyhow::Result;
 use std::collections::HashMap;
@@ -279,7 +280,8 @@ impl ModelCache {
         {
             let mut stats = self.statistics.write().await;
             let total_load_time = stats.average_load_time_ms * stats.cache_misses as f64;
-            stats.average_load_time_ms = (total_load_time + load_time.as_millis() as f64) / (stats.cache_misses + 1) as f64;
+            stats.average_load_time_ms =
+                (total_load_time + load_time.as_millis() as f64) / (stats.cache_misses + 1) as f64;
         }
 
         Ok(Some(model))
