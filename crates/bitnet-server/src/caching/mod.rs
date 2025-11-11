@@ -27,6 +27,7 @@ pub mod performance_tuning {
 
 use anyhow::Result;
 use std::sync::Arc;
+#[cfg(any(test, feature = "tuning"))]
 use tokio::sync::RwLock;
 
 /// Caching configuration

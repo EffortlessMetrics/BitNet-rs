@@ -175,7 +175,7 @@ impl ModelCache {
     }
 
     /// Ensure there's enough capacity for a new model
-    async fn ensure_capacity(&self, required_size: usize) -> Result<()> {
+    async fn ensure_capacity(&self, _required_size: usize) -> Result<()> {
         let max_models = self.config.model_cache_size;
         let current_models = self.cache.read().await.len();
 
