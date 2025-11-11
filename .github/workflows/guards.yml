@@ -8,6 +8,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/**"
+      - ".github/pull_request_template.md"
+      - ".github/ISSUE_TEMPLATE/**"
   push:
     branches: [main]
     paths:
@@ -17,6 +19,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/**"
+      - ".github/pull_request_template.md"
+      - ".github/ISSUE_TEMPLATE/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
