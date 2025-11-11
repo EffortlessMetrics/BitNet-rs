@@ -16,8 +16,8 @@
 //! - Benchmark compiles on x86_64 and ARM (feature-gated)
 //! - Throughput reported in tokens/sec for 2B model size (typical workload)
 
-use bitnet_quantization::qk256_dispatch::{qk256_gemv_scalar, QK256};
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use bitnet_quantization::qk256_dispatch::{QK256, qk256_gemv_scalar};
+use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use std::hint::black_box;
 
 /// Typical model dimensions for 2B parameter model

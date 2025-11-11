@@ -122,16 +122,8 @@ pub fn qk256_gemv_scalar(
     let expected_packed_len = rows * cols / 4; // 2 bits per element = 4 elem/byte
     let expected_scales_len = rows * blocks_per_row;
 
-    assert_eq!(
-        packed.len(),
-        expected_packed_len,
-        "Packed weight size mismatch"
-    );
-    assert_eq!(
-        scales.len(),
-        expected_scales_len,
-        "Scales length mismatch"
-    );
+    assert_eq!(packed.len(), expected_packed_len, "Packed weight size mismatch");
+    assert_eq!(scales.len(), expected_scales_len, "Scales length mismatch");
 
     for (row_idx, output_elem) in output.iter_mut().enumerate().take(rows) {
         let mut row_sum = 0.0f32;
