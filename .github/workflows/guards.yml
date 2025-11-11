@@ -126,6 +126,25 @@ jobs:
             exit 1
           fi
           echo "✅ All workflow cargo/cross commands use --locked"
+      - name: Guard - receipt workflow excludes python/wasm
+        run: |
+          f=".github/workflows/verify-receipts.yml"
+
+          # We expect both excludes to appear in CPU *and* GPU build steps (2+ hits each)
+          want=2
+          pyc=$(rg -n -- '--exclude bitnet-py'   "$f" | wc -l | tr -d ' ')
+          was=$(rg -n -- '--exclude bitnet-wasm' "$f" | wc -l | tr -d ' ')
+
+          if [ "$pyc" -lt "$want" ] || [ "$was" -lt "$want" ]; then
+            echo "❌ ${f} is missing required excludes in both CPU and GPU lanes:"
+            echo "   --exclude bitnet-py   occurrences: $pyc (need >= $want)"
+            echo "   --exclude bitnet-wasm occurrences: $was (need >= $want)"
+            echo ""
+            echo "Expected: receipt builds exclude Python/WASM bindings to avoid libpython/linker deps."
+            exit 1
+          fi
+
+          echo "✅ receipt workflow excludes python/wasm in CPU+GPU lanes"
       - name: Upload guard logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
