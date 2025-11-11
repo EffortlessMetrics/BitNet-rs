@@ -6,6 +6,25 @@ pub mod kv_cache;
 #[cfg(feature = "connection_pool")]  pub mod connection_pool;
 #[cfg(any(test, feature = "tuning"))] pub mod performance_tuning;
 
+// ---- Stubs for disabled features (types only; keep callers compiling) ----
+#[cfg(not(feature = "request_batching"))]
+pub mod request_batching {
+    #[derive(Default, Clone, Debug)]
+    pub struct BatchingStatistics {}
+}
+
+#[cfg(not(feature = "connection_pool"))]
+pub mod connection_pool {
+    #[derive(Default, Clone, Debug)]
+    pub struct ConnectionStatistics {}
+}
+
+#[cfg(not(any(test, feature = "tuning")))]
+pub mod performance_tuning {
+    #[derive(Default, Clone, Debug)]
+    pub struct PerformanceStatistics {}
+}
+
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;

@@ -205,18 +205,16 @@ impl MemoryPool {
         }
     }
 
-    /// Zero-initialize a range of memory
-    ///
-    /// # Panics
-    /// Panics if `offset + len` exceeds the memory buffer length.
-    pub fn zero_range(&mut self, offset: usize, len: usize) {
-        if offset + len <= self.memory.len() {
+    /// Zero-initialize a range of memory (no panics in release).
+    pub fn zero_range(&mut self, offset: usize, len: usize) -> anyhow::Result<()> {
+        if offset.checked_add(len).map_or(false, |end| end <= self.memory.len()) {
             self.memory[offset..offset + len].fill(0);
+            Ok(())
         } else {
-            panic!(
-                "zero_range out of bounds: offset={}, len={}, total={}",
+            Err(anyhow::anyhow!(
+                "zero_range out of bounds: offset={} len={} total={}",
                 offset, len, self.memory.len()
-            );
+            ))
         }
     }
 
@@ -225,9 +223,10 @@ impl MemoryPool {
     /// # Safety
     /// Caller must ensure that the offset is valid and the returned pointer
     /// is used with appropriate bounds checking.
+    #[cfg(test)]
     #[allow(dead_code)]
     pub(crate) fn as_ptr_at(&self, offset: usize) -> *const u8 {
-        assert!(offset <= self.memory.len(), "offset {} > len {}", offset, self.memory.len());
+        debug_assert!(offset <= self.memory.len(), "offset {} > len {}", offset, self.memory.len());
         unsafe { self.memory.as_ptr().add(offset) }
     }
 
@@ -236,9 +235,10 @@ impl MemoryPool {
     /// # Safety
     /// Caller must ensure that the offset is valid and the returned pointer
     /// is used with appropriate bounds checking.
+    #[cfg(test)]
     #[allow(dead_code)]
     pub(crate) fn as_mut_ptr_at(&mut self, offset: usize) -> *mut u8 {
-        assert!(offset <= self.memory.len(), "offset {} > len {}", offset, self.memory.len());
+        debug_assert!(offset <= self.memory.len(), "offset {} > len {}", offset, self.memory.len());
         unsafe { self.memory.as_mut_ptr().add(offset) }
     }
 }
@@ -550,7 +550,7 @@ mod tests {
         }
 
         // Zero a range
-        pool.zero_range(100, 200);
+        pool.zero_range(100, 200).expect("in-bounds");
 
         // Check zeros in range
         for i in 100..300 {
@@ -563,10 +563,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "zero_range out of bounds")]
     fn test_zero_range_out_of_bounds() {
         let mut pool = MemoryPool::new(1024);
-        pool.zero_range(1000, 100); // Should panic
+        let err = pool.zero_range(1000, 100).expect_err("should be OOB");
+        assert!(err.to_string().contains("zero_range out of bounds"));
     }
 
     #[test]
@@ -818,7 +818,7 @@ mod tests {
         let block = pool.allocate(256).expect("Should allocate");
 
         // Zero-initialize it
-        pool.zero_range(block.offset, block.size);
+        pool.zero_range(block.offset, block.size).expect("in-bounds");
 
         // Verify all zeros
         for i in block.offset..block.offset + block.size {
