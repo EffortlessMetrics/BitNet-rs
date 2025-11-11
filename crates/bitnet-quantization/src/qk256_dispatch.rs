@@ -103,7 +103,7 @@ pub fn qk256_gemv(
 /// **Performance (PR1 Baseline)**:
 /// - 2B model (2048x2048): ~0.1 tok/s (scalar only)
 /// - Target (PR3 AVX2): ≥3× faster (~0.3 tok/s)
-fn qk256_gemv_scalar(
+pub fn qk256_gemv_scalar(
     output: &mut [f32],
     rows: usize,
     cols: usize,
@@ -149,13 +149,14 @@ fn qk256_gemv_scalar(
                 let bit_shift = (elem % 4) * 2;
                 let two_bit = (packed[byte_idx] >> bit_shift) & 0b11;
 
-                // Map 2-bit → signed: 00→-1, 01→0, 10→1, 11→reserved
+                // Map 2-bit → signed: 00→-1, 01→0, 10→1, 11→-1 (for reference compatibility)
                 // TODO(PR2): Replace with nibble LUT for faster unpack
+                // TODO(PR2): Strict-mode error for 0b11 can be added in PR2
                 let signed_val = match two_bit {
                     0b00 => -1.0f32,
                     0b01 => 0.0f32,
                     0b10 => 1.0f32,
-                    0b11 => -1.0f32, // Or panic in strict mode
+                    0b11 => -1.0f32, // Fallback for reference compatibility
                     _ => unreachable!(),
                 };
 
@@ -193,13 +194,14 @@ mod tests {
         let rows = 256;
         let cols = 256;
         let mut output = vec![0.0f32; rows];
-        let packed = vec![0u8; rows * cols / 4];
+        // Use 0x55 pattern: 01010101 → 01 01 01 01 → 0, 0, 0, 0 (all zeros)
+        let packed = vec![0x55u8; rows * cols / 4];
         let scales = vec![1.0f32; rows * cols / QK256];
         let activations = vec![0.5f32; cols];
 
         qk256_gemv(&mut output, rows, cols, &packed, &scales, &activations);
 
-        // With all zeros in packed, output should be zero
+        // With 0x55 pattern (01→0), output should be zero
         assert!(output.iter().all(|&x| x == 0.0));
     }
 

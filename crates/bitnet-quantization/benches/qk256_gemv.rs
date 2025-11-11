@@ -16,11 +16,9 @@
 //! - Benchmark compiles on x86_64 and ARM (feature-gated)
 //! - Throughput reported in tokens/sec for 2B model size (typical workload)
 
+use bitnet_quantization::qk256_dispatch::{qk256_gemv_scalar, QK256};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use std::hint::black_box;
-
-/// QK256 block size (256 elements per quantized block)
-const QK256: usize = 256;
 
 /// Typical model dimensions for 2B parameter model
 const TYPICAL_2B_ROWS: usize = 2048; // Hidden dimension
@@ -58,69 +56,9 @@ fn create_activation_vector(cols: usize) -> Vec<f32> {
         .collect()
 }
 
-/// Scalar baseline: QK256 GEMV (no SIMD)
-///
-/// This is the reference implementation. All optimized paths must
-/// match this output within tolerance (cosine similarity ≥ .99999).
-///
-/// **Algorithm**:
-/// 1. For each row:
-///    a. For each QK256 block in row:
-///       - Unpack 2-bit values to i8 (-1, 0, 1)
-///       - Dot product with activation slice
-///       - Scale by block scale
-///    b. Sum block results → row output
-fn qk256_gemv_scalar(
-    output: &mut [f32],
-    rows: usize,
-    cols: usize,
-    packed: &[u8],
-    scales: &[f32],
-    activations: &[f32],
-) {
-    assert_eq!(output.len(), rows);
-    assert_eq!(activations.len(), cols);
-    assert_eq!(cols % QK256, 0);
-
-    let blocks_per_row = cols / QK256;
-
-    for row_idx in 0..rows {
-        let mut row_sum = 0.0f32;
-
-        for block_idx in 0..blocks_per_row {
-            let global_block = row_idx * blocks_per_row + block_idx;
-            let scale = scales[global_block];
-
-            // Byte offset: 4 elements per byte (2 bits each)
-            let byte_offset = global_block * QK256 / 4;
-            let act_offset = block_idx * QK256;
-
-            // Unpack and dot product (scalar path - no SIMD)
-            let mut block_sum = 0.0f32;
-            for elem in 0..QK256 {
-                // Extract 2-bit value (placeholder logic)
-                let byte_idx = byte_offset + elem / 4;
-                let bit_shift = (elem % 4) * 2;
-                let two_bit = (packed[byte_idx] >> bit_shift) & 0b11;
-
-                // Map 2-bit → signed value: 00→-1, 01→0, 10→1, 11→-1 (placeholder)
-                let signed_val = match two_bit {
-                    0b00 => -1.0f32,
-                    0b01 => 0.0f32,
-                    0b10 => 1.0f32,
-                    0b11 => -1.0f32, // Could also be reserved
-                    _ => unreachable!(),
-                };
-
-                block_sum += signed_val * activations[act_offset + elem];
-            }
-
-            row_sum += block_sum * scale;
-        }
-
-        output[row_idx] = row_sum;
-    }
-}
+// Note: qk256_gemv_scalar() is imported from bitnet_quantization::qk256_dispatch
+// We reuse the library implementation to avoid duplication and ensure benchmarks
+// measure the exact same code path that will be used in production.
 
 /// Benchmark: Scalar QK256 GEMV across different sizes
 fn bench_qk256_scalar(c: &mut Criterion) {
