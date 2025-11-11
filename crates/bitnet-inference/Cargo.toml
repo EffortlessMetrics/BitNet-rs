@@ -36,18 +36,18 @@ async-trait = "0.1.89"
 num_cpus = "1.17.0"
 tokio = { workspace = true }
 thiserror = { workspace = true }
-log = "0.4"
-async-stream = "0.3"
-wasm-bindgen-futures = { version = "0.4.53", optional = true }
+log = "0.4.28"
+async-stream = "0.3.6"
+wasm-bindgen-futures = { version = "0.4.55", optional = true }
 gloo-timers = { version = "0.3.0", features = ["futures"], optional = true }
-rustc_version_runtime = "0.3"
-chrono = "0.4"
+rustc_version_runtime = "0.3.0"
+chrono = "0.4.42"
 
 [dev-dependencies]
 tokio-test = "0.4.4"
-proptest = "1.7.0"
-tempfile = "3.22.0"
-chrono = "0.4"
+proptest = "1.9.0"
+tempfile = "3.23.0"
+chrono = "0.4.42"
 serial_test = "3.2.0"
 
 [features]

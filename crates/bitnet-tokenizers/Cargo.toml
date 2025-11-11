@@ -25,13 +25,13 @@ tracing.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 tokenizers = { version = "0.22.1", default-features = false, features = ["onig", "unstable_wasm"] }
-tempfile = "3.22.0"
+tempfile = "3.23.0"
 base64 = "0.22.1"
 ahash = "0.8.12"
-reqwest = { version = "0.12", default-features = false, features = ["json", "stream"], optional = true }
-futures-util = { version = "0.3", optional = true }
-dirs = "6.0"
-memmap2 = "0.9"
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "stream"], optional = true }
+futures-util = { version = "0.3.31", optional = true }
+dirs = "6.0.0"
+memmap2 = "0.9.9"
 thiserror.workspace = true
 
 [features]
@@ -53,12 +53,12 @@ version = "0.12.0"
 optional = true
 
 [dependencies.sentencepiece-model]
-version = "0.1.0"
+version = "0.1.4"
 optional = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
-tempfile = "3.22.0"
+tempfile = "3.23.0"
 temp-env = "0.3.6"
 serial_test.workspace = true
 bitnet-tests = { path = "../../tests" }
