@@ -30,6 +30,15 @@ pub struct TuningRecommendation {
     pub confidence: f64,
 }
 
+/// Performance report
+#[derive(Debug, Clone)]
+pub struct PerformanceReport {
+    pub average_requests_per_second: f64,
+    pub average_latency_ms: f64,
+    pub current_config: CachingConfig,
+    pub sample_count: usize,
+}
+
 /// Automatic performance tuner
 pub struct PerformanceTuner {
     config: CachingConfig,

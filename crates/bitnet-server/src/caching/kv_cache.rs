@@ -9,15 +9,21 @@ use tokio::sync::RwLock;
 
 use super::CachingConfig;
 
-/// KV cache entry
+/// KV cache entry backed by pool slices (no owned Vec<f32>).
 #[derive(Debug, Clone)]
 pub struct KVCacheEntry {
     /// Session identifier
     pub session_id: String,
-    /// Key cache data
-    pub key_cache: Vec<f32>,
-    /// Value cache data
-    pub value_cache: Vec<f32>,
+    /// Key cache offset in pool (byte offset)
+    key_off: usize,
+    /// Key cache length (as f32 elements)
+    key_len_f32: usize,
+    /// Value cache offset in pool (byte offset)
+    val_off: usize,
+    /// Value cache length (as f32 elements)
+    val_len_f32: usize,
+    /// Original allocation block (returned to pool on evict)
+    block: MemoryBlock,
     /// Cache size in bytes
     pub size_bytes: usize,
     /// Last access time
@@ -28,6 +34,32 @@ pub struct KVCacheEntry {
     pub token_count: usize,
     /// Maximum context length
     pub max_context_length: usize,
+}
+
+impl KVCacheEntry {
+    /// Get mutable key slice from pool
+    #[inline]
+    pub fn key_mut<'a>(&self, pool: &'a mut MemoryPool) -> &'a mut [f32] {
+        pool.f32_slice_mut(self.key_off, self.key_len_f32)
+    }
+
+    /// Get mutable value slice from pool
+    #[inline]
+    pub fn value_mut<'a>(&self, pool: &'a mut MemoryPool) -> &'a mut [f32] {
+        pool.f32_slice_mut(self.val_off, self.val_len_f32)
+    }
+
+    /// Get read-only key slice from pool
+    #[inline]
+    pub fn key<'a>(&self, pool: &'a MemoryPool) -> &'a [f32] {
+        pool.f32_slice(self.key_off, self.key_len_f32)
+    }
+
+    /// Get read-only value slice from pool
+    #[inline]
+    pub fn value<'a>(&self, pool: &'a MemoryPool) -> &'a [f32] {
+        pool.f32_slice(self.val_off, self.val_len_f32)
+    }
 }
 
 /// Memory pool for KV cache allocation
@@ -221,6 +253,31 @@ impl MemoryPool {
         debug_assert!(offset <= self.memory.len(), "offset {} > len {}", offset, self.memory.len());
         unsafe { self.memory.as_mut_ptr().add(offset) }
     }
+
+    /// Create a mutable f32 slice view into the arena.
+    /// Bounds and alignment are checked; panic on misuse (transition period).
+    #[inline]
+    pub fn f32_slice_mut(&mut self, offset: usize, len_f32: usize) -> &mut [f32] {
+        let bytes = len_f32.checked_mul(core::mem::size_of::<f32>()).expect("f32 len overflow");
+        assert!(offset % core::mem::align_of::<f32>() == 0, "unaligned f32 slice");
+        assert!(offset.checked_add(bytes).unwrap() <= self.memory.len(), "OOB f32 slice");
+        unsafe {
+            let ptr = self.memory.as_mut_ptr().add(offset) as *mut f32;
+            core::slice::from_raw_parts_mut(ptr, len_f32)
+        }
+    }
+
+    /// Read-only f32 view.
+    #[inline]
+    pub fn f32_slice(&self, offset: usize, len_f32: usize) -> &[f32] {
+        let bytes = len_f32.checked_mul(core::mem::size_of::<f32>()).expect("f32 len overflow");
+        assert!(offset % core::mem::align_of::<f32>() == 0, "unaligned f32 slice");
+        assert!(offset.checked_add(bytes).unwrap() <= self.memory.len(), "OOB f32 slice");
+        unsafe {
+            let ptr = self.memory.as_ptr().add(offset) as *const f32;
+            core::slice::from_raw_parts(ptr, len_f32)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -285,7 +342,7 @@ impl KVCacheManager {
         // Calculate required memory (simplified calculation)
         let key_size = context_length * 64 * 4; // 64 dimensions, 4 bytes per float
         let value_size = context_length * 64 * 4;
-        let total_size = key_size + value_size;
+        let total_size = align_up(key_size, 64) + align_up(value_size, 64);
 
         // Try to allocate memory from the pool
         let memory_block = {
@@ -293,12 +350,25 @@ impl KVCacheManager {
             pool.allocate(total_size)
         };
 
-        if let Some(_block) = memory_block {
+        if let Some(block) = memory_block {
+            let key_off = block.offset;
+            let val_off = align_up(block.offset + key_size, 64);
+
+            // Zero-initialize the allocated memory
+            {
+                let mut pool = self.memory_pool.write().await;
+                pool.zero_range(key_off, key_size);
+                pool.zero_range(val_off, value_size);
+            }
+
             // Create the cache entry
             let entry = KVCacheEntry {
                 session_id: session_id.to_string(),
-                key_cache: vec![0.0; key_size / 4],
-                value_cache: vec![0.0; value_size / 4],
+                key_off,
+                key_len_f32: key_size / core::mem::size_of::<f32>(),
+                val_off,
+                val_len_f32: value_size / core::mem::size_of::<f32>(),
+                block: block.clone(),
                 size_bytes: total_size,
                 last_accessed: Instant::now(),
                 created_at: Instant::now(),
@@ -334,9 +404,49 @@ impl KVCacheManager {
                 pool.allocate(total_size)
             };
 
-            if memory_block.is_some() {
-                // Retry creating the entry with Box::pin to avoid recursion
-                Box::pin(self.create_cache_entry(session_id, context_length)).await
+            if let Some(block) = memory_block {
+                let key_off = block.offset;
+                let val_off = align_up(block.offset + key_size, 64);
+
+                // Zero-initialize the allocated memory
+                {
+                    let mut pool = self.memory_pool.write().await;
+                    pool.zero_range(key_off, key_size);
+                    pool.zero_range(val_off, value_size);
+                }
+
+                let entry = KVCacheEntry {
+                    session_id: session_id.to_string(),
+                    key_off,
+                    key_len_f32: key_size / core::mem::size_of::<f32>(),
+                    val_off,
+                    val_len_f32: value_size / core::mem::size_of::<f32>(),
+                    block,
+                    size_bytes: total_size,
+                    last_accessed: Instant::now(),
+                    created_at: Instant::now(),
+                    token_count: 0,
+                    max_context_length: context_length,
+                };
+
+                // Insert into cache
+                {
+                    let mut cache = self.cache.write().await;
+                    cache.insert(session_id.to_string(), entry.clone());
+                }
+
+                // Update statistics
+                {
+                    let mut stats = self.statistics.write().await;
+                    stats.total_sessions += 1;
+                    let pool = self.memory_pool.read().await;
+                    stats.used_memory_mb = pool.used_memory as f64 / (1024.0 * 1024.0);
+                    stats.total_memory_mb = pool.total_size as f64 / (1024.0 * 1024.0);
+                    stats.memory_utilization = pool.utilization();
+                    stats.memory_pool_efficiency = 1.0 - pool.fragmentation();
+                }
+
+                Ok(Some(entry))
             } else {
                 Ok(None)
             }
@@ -818,5 +928,48 @@ mod tests {
         for i in block.offset..block.offset + block.size {
             assert_eq!(pool.memory[i], 0);
         }
+    }
+
+    #[test]
+    fn entry_views_round_trip() {
+        let mut pool = MemoryPool::new(1024);
+
+        // Mimic create path
+        let key_bytes = 10 * core::mem::size_of::<f32>();
+        let val_bytes = 12 * core::mem::size_of::<f32>();
+        let total = align_up(key_bytes, 64) + align_up(val_bytes, 64);
+
+        let block = pool.allocate(total).expect("allocate");
+        let key_off = block.offset;
+        let val_off = align_up(block.offset + key_bytes, 64);
+
+        pool.zero_range(key_off, key_bytes);
+        pool.zero_range(val_off, val_bytes);
+
+        let entry = KVCacheEntry {
+            session_id: "s".into(),
+            key_off,
+            key_len_f32: key_bytes / 4,
+            val_off,
+            val_len_f32: val_bytes / 4,
+            block,
+            size_bytes: total,
+            last_accessed: Instant::now(),
+            created_at: Instant::now(),
+            token_count: 0,
+            max_context_length: 0,
+        };
+
+        // Write via typed views
+        for (i, v) in entry.key_mut(&mut pool).iter_mut().enumerate() {
+            *v = (i as f32) + 1.0;
+        }
+        for (i, v) in entry.value_mut(&mut pool).iter_mut().enumerate() {
+            *v = (i as f32) + 2.0;
+        }
+
+        // Read back
+        assert_eq!(entry.key(&pool)[0], 1.0);
+        assert_eq!(entry.value(&pool)[1], 3.0);
     }
 }
