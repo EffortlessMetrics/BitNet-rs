@@ -3,7 +3,7 @@
 # Generated: 2025-11-11
 # Estimated time: 30 minutes
 
-set -e
+set -euo pipefail
 
 echo "==========================================="
 echo "BitNet.rs Issue Cleanup - Phase 1"
@@ -40,10 +40,10 @@ echo "Closing #233 (Environment variables - resolved)..."
 gh issue close 233 --comment "✅ RESOLVED. Environment variable documentation added in docs/environment-variables.md (15KB, Nov 3, 2025) covering all BITNET_* variables, validation config, GPU config, and test isolation."
 
 echo "Closing #271 (Performance docs - duplicate of #459)..."
-gh issue close 271 --reason "duplicate" --comment "Duplicate of #459 (Replace performance claims with receipt-driven examples). #459 has better-defined acceptance criteria and is the canonical tracking issue."
+gh issue close 271 --reason "not planned" --comment "Duplicate of #459 (Replace performance claims with receipt-driven examples). #459 has better-defined acceptance criteria and is the canonical tracking issue."
 
 echo "Closing #273 (Performance docs - duplicate of #459)..."
-gh issue close 273 --reason "duplicate" --comment "Duplicate of #459 (Replace performance claims with receipt-driven examples). #459 has better-defined acceptance criteria and is the canonical tracking issue."
+gh issue close 273 --reason "not planned" --comment "Duplicate of #459 (Replace performance claims with receipt-driven examples). #459 has better-defined acceptance criteria and is the canonical tracking issue."
 
 # CI issue superseded by guardrail wave
 echo "Closing #480 (Composite action - superseded)..."
