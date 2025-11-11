@@ -9,19 +9,19 @@ pub mod kv_cache;
 // ---- Stubs for disabled features (types only; keep callers compiling) ----
 #[cfg(not(feature = "request_batching"))]
 pub mod request_batching {
-    #[derive(Default, Clone, Debug)]
+    #[derive(Default, Clone, Debug, serde::Serialize)]
     pub struct BatchingStatistics {}
 }
 
 #[cfg(not(feature = "connection_pool"))]
 pub mod connection_pool {
-    #[derive(Default, Clone, Debug)]
+    #[derive(Default, Clone, Debug, serde::Serialize)]
     pub struct ConnectionStatistics {}
 }
 
 #[cfg(not(any(test, feature = "tuning")))]
 pub mod performance_tuning {
-    #[derive(Default, Clone, Debug)]
+    #[derive(Default, Clone, Debug, serde::Serialize)]
     pub struct PerformanceStatistics {}
 }
 
