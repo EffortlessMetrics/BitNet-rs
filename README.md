@@ -69,6 +69,46 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 
 **Note:** Always specify `--no-default-features --features cpu|gpu` — default features are empty to prevent unwanted dependencies.
 
+### QK256 Models Quick Start
+
+BitNet.rs supports two I2_S quantization formats with automatic detection:
+
+- **I2_S BitNet32-F16**: Production format (32-element blocks, inline F16 scales) - ✅ CPU/GPU
+- **I2_S QK256 (GGML)**: Pure Rust format (256-element blocks, separate scales) - ✅ MVP (scalar)
+
+**Using QK256 Models:**
+
+```bash
+# QK256 models auto-detect from tensor sizes
+# Performance: ~0.1 tok/s (MVP scalar kernels) - use small token budgets for validation
+RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
+  --model models/qk256-model.gguf \
+  --tokenizer models/tokenizer.json \
+  --prompt "What is 2+2?" \
+  --max-tokens 4  # Recommended: 4-16 tokens for MVP validation
+
+# Validation with C++ reference (requires BITNET_CPP_DIR)
+./scripts/parity_smoke.sh models/qk256-model.gguf models/tokenizer.json
+
+# Full cross-validation with receipts
+BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
+```
+
+**Format Detection:**
+
+- Automatic: Loader checks QK256 (GgmlQk256NoScale) first for more specific matches
+- Validation: Uses C++ reference via FFI when `BITNET_CPP_DIR` is set
+- Parity: Cross-validation receipts show cosine similarity and exact match rates
+
+**Performance Notes:**
+
+- **MVP Status**: Scalar kernels only (~0.1 tok/s for 2B models)
+- **Not production-ready**: Limit to `--max-tokens 4-16` for quick validation
+- **Roadmap**: v0.2.0 targets ≥3× improvement with AVX2 nibble-LUT + FMA tiling
+- **Alternative**: Use I2_S BitNet32-F16 format for 10-20× faster performance
+
+See [`docs/howto/use-qk256-models.md`](docs/howto/use-qk256-models.md) and [`docs/explanation/i2s-dual-flavor.md`](docs/explanation/i2s-dual-flavor.md) for details.
+
 ## Status & Limitations
 
 ### Current Implementation Status (v0.1.0-qna-mvp)
@@ -197,6 +237,8 @@ export PARITY_TEST_TIMEOUT_SECS=60
 jq '.schema_version,.compute_path,.validation,.quant,.timeout_seconds' \
   docs/baselines/*/parity-bitnetcpp.json
 ```
+
+**CI Guardrails**: See [`docs/ci/guardrails.md`](docs/ci/guardrails.md) for comprehensive documentation on CI determinism, including SHA pins, MSRV enforcement, `--locked` flags, runner pinning, receipt hygiene, and validation gates.
 
 **Note:** The LLaMA-3 chat template **auto-stops** on `<|eot_id|>` and is **auto-selected** when the tokenizer exposes it. BitNet base models default to the **instruct** template (Q&A-oriented).
 
