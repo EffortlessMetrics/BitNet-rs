@@ -280,16 +280,14 @@ impl MemoryPool {
     }
 }
 
-#[cfg(test)]
-#[allow(unused)]
 const F32_BYTES: usize = core::mem::size_of::<f32>();
 
-/// Align a size up to the nearest multiple of `align`.
-#[cfg(test)]
-#[inline]
-#[allow(unused)]
-fn align_up(size: usize, align: usize) -> usize {
-    debug_assert!(align.is_power_of_two(), "align must be power of two");
+/// Align a size up to the nearest multiple of alignment
+///
+/// # Arguments
+/// * `size` - Size to align
+/// * `align` - Alignment (must be power of 2)
+const fn align_up(size: usize, align: usize) -> usize {
     (size + align - 1) & !(align - 1)
 }
 
@@ -353,6 +351,9 @@ impl KVCacheManager {
         if let Some(block) = memory_block {
             let key_off = block.offset;
             let val_off = align_up(block.offset + key_size, 64);
+            debug_assert!(key_off >= block.offset);
+            debug_assert!(val_off >= block.offset);
+            debug_assert!(val_off + value_size <= block.offset + block.size, "KV split exceeds block");
 
             // Zero-initialize the allocated memory
             {
@@ -365,9 +366,9 @@ impl KVCacheManager {
             let entry = KVCacheEntry {
                 session_id: session_id.to_string(),
                 key_off,
-                key_len_f32: key_size / core::mem::size_of::<f32>(),
+                key_len_f32: key_size / F32_BYTES,
                 val_off,
-                val_len_f32: value_size / core::mem::size_of::<f32>(),
+                val_len_f32: value_size / F32_BYTES,
                 block: block.clone(),
                 size_bytes: total_size,
                 last_accessed: Instant::now(),
@@ -407,6 +408,9 @@ impl KVCacheManager {
             if let Some(block) = memory_block {
                 let key_off = block.offset;
                 let val_off = align_up(block.offset + key_size, 64);
+                debug_assert!(key_off >= block.offset);
+                debug_assert!(val_off >= block.offset);
+                debug_assert!(val_off + value_size <= block.offset + block.size, "KV split exceeds block");
 
                 // Zero-initialize the allocated memory
                 {
@@ -418,9 +422,9 @@ impl KVCacheManager {
                 let entry = KVCacheEntry {
                     session_id: session_id.to_string(),
                     key_off,
-                    key_len_f32: key_size / core::mem::size_of::<f32>(),
+                    key_len_f32: key_size / F32_BYTES,
                     val_off,
-                    val_len_f32: value_size / core::mem::size_of::<f32>(),
+                    val_len_f32: value_size / F32_BYTES,
                     block,
                     size_bytes: total_size,
                     last_accessed: Instant::now(),
@@ -454,12 +458,8 @@ impl KVCacheManager {
     }
 
     /// Update cache with new tokens
-    pub async fn update_cache(
-        &self,
-        session_id: &str,
-        _key_data: &[f32],
-        _value_data: &[f32],
-    ) -> Result<()> {
+    /// TODO(PR-4): Wire append semantics; copy into pool-backed slices.
+    pub async fn update_cache(&self, session_id: &str, _key_data: &[f32], _value_data: &[f32]) -> Result<()> {
         let mut cache = self.cache.write().await;
 
         if let Some(entry) = cache.get_mut(session_id) {
@@ -862,7 +862,7 @@ mod tests {
 
         let block = pool.allocate(aligned_size).expect("Should allocate");
         assert_eq!(block.size, aligned_size);
-        assert_eq!(aligned_size, 128); // 100 aligned up to 64-byte boundary
+        assert_eq!(aligned_size, 128); // align_up(100, 64) = 128 (next 64B boundary)
     }
 
     #[test]
