@@ -13,18 +13,21 @@ pub mod request_batching;
 // ---- Stubs for disabled features (types only; keep callers compiling) ----
 #[cfg(not(feature = "request_batching"))]
 pub mod request_batching {
+    #[doc(hidden)]
     #[derive(Default, Clone, Debug, serde::Serialize)]
     pub struct BatchingStatistics {}
 }
 
 #[cfg(not(feature = "connection_pool"))]
 pub mod connection_pool {
+    #[doc(hidden)]
     #[derive(Default, Clone, Debug, serde::Serialize)]
     pub struct ConnectionStatistics {}
 }
 
 #[cfg(not(any(test, feature = "tuning")))]
 pub mod performance_tuning {
+    #[doc(hidden)]
     #[derive(Default, Clone, Debug, serde::Serialize)]
     pub struct PerformanceStatistics {}
 }
