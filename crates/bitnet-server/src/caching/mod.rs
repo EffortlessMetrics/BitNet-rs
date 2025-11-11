@@ -142,7 +142,8 @@ impl CachingSystem {
                 );
                 loop {
                     interval.tick().await;
-                    if let Ok(mut tuner) = performance_tuner.write().await {
+                    {
+                        let mut tuner = performance_tuner.write().await;
                         if let Err(e) = tuner.run_optimization().await {
                             eprintln!("Performance tuning error: {}", e);
                         }

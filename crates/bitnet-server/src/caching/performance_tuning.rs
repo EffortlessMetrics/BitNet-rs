@@ -420,4 +420,22 @@ impl PerformanceTuner {
             .collect();
 
         let avg_rps = if !recent_samples.is_empty() {
-            recent_samples.iter().map(|s| s.requests_per_second).sum::<f64>() / recent
+            recent_samples.iter().map(|s| s.requests_per_second).sum::<f64>() / recent_samples.len() as f64
+        } else {
+            0.0
+        };
+
+        let avg_latency = if !recent_samples.is_empty() {
+            recent_samples.iter().map(|s| s.average_latency_ms).sum::<f64>() / recent_samples.len() as f64
+        } else {
+            0.0
+        };
+
+        PerformanceReport {
+            average_requests_per_second: avg_rps,
+            average_latency_ms: avg_latency,
+            current_config: self.config.clone(),
+            sample_count: recent_samples.len(),
+        }
+    }
+}

@@ -1,6 +1,7 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
 
 pub mod batch_engine;
+pub mod caching;
 pub mod concurrency;
 pub mod config;
 pub mod execution_router;
