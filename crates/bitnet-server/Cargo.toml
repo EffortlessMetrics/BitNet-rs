@@ -81,3 +81,6 @@ degraded-ok = []                                                                
 gpu = ["cuda"]                                                                                                                                                                    # GPU inference support (alias for cuda)
 opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry", "dep:tonic"]
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
+request_batching = []                                                                                                                                                             # Gate request batching module (PR-1 scope)
+connection_pool = []                                                                                                                                                              # Gate connection pool module (PR-1 scope)
+tuning = []                                                                                                                                                                       # Gate performance tuning module (PR-1 scope)
