@@ -273,3 +273,5 @@ gh pr edit <PR> --add-label lut
 - [Branch protection](https://github.com/EffortlessMetrics/BitNet-rs/settings/branches) *(maintainers only)*
 
 <\!-- ci: trigger core checks for PR template change -->
+
+<\!-- ci: trigger core checks for dependabot.yml change -->
