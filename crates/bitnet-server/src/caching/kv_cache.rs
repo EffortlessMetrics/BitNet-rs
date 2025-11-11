@@ -207,8 +207,8 @@ impl MemoryPool {
 
     /// Zero-initialize a range of memory
     ///
-    /// # Safety
-    /// Caller must ensure that `offset` and `len` are within bounds of the memory buffer.
+    /// # Panics
+    /// Panics if `offset + len` exceeds the memory buffer length.
     pub fn zero_range(&mut self, offset: usize, len: usize) {
         if offset + len <= self.memory.len() {
             self.memory[offset..offset + len].fill(0);
@@ -227,6 +227,7 @@ impl MemoryPool {
     /// is used with appropriate bounds checking.
     #[allow(dead_code)]
     pub(crate) fn as_ptr_at(&self, offset: usize) -> *const u8 {
+        assert!(offset <= self.memory.len(), "offset {} > len {}", offset, self.memory.len());
         unsafe { self.memory.as_ptr().add(offset) }
     }
 
@@ -237,16 +238,17 @@ impl MemoryPool {
     /// is used with appropriate bounds checking.
     #[allow(dead_code)]
     pub(crate) fn as_mut_ptr_at(&mut self, offset: usize) -> *mut u8 {
+        assert!(offset <= self.memory.len(), "offset {} > len {}", offset, self.memory.len());
         unsafe { self.memory.as_mut_ptr().add(offset) }
     }
 }
 
-/// Align a size up to the nearest multiple of alignment
-///
-/// # Arguments
-/// * `size` - Size to align
-/// * `align` - Alignment (must be power of 2)
-const fn align_up(size: usize, align: usize) -> usize {
+const F32_BYTES: usize = core::mem::size_of::<f32>();
+
+/// Align a size up to the nearest multiple of `align`.
+#[inline]
+fn align_up(size: usize, align: usize) -> usize {
+    debug_assert!(align.is_power_of_two(), "align must be power of two");
     (size + align - 1) & !(align - 1)
 }
 
