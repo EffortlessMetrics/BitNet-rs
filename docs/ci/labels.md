@@ -271,3 +271,5 @@ gh pr edit <PR> --add-label lut
 - [PR template](../../.github/pull_request_template.md) - Quick label checklist
 - [CI workflows](../../.github/workflows/) – Workflow files
 - [Branch protection](https://github.com/EffortlessMetrics/BitNet-rs/settings/branches) *(maintainers only)*
+
+<\!-- ci: trigger core checks for PR template change -->
