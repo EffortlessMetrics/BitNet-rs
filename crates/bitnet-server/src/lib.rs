@@ -1,11 +1,11 @@
 //! Production-ready HTTP server for BitNet inference with comprehensive features
-#![cfg_attr(any(doc, rustdoc), allow(dead_code, unused_imports, unused_variables))]
+#![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
 
 pub mod batch_engine;
 // Expose `caching` only when generating docs to avoid -Dwarnings dead_code in scaffolding.
-#[cfg(any(doc, rustdoc))]
+#[cfg(doc)]
 pub mod caching;
-#[cfg(not(any(doc, rustdoc)))]
+#[cfg(not(doc))]
 mod caching;
 pub mod concurrency;
 pub mod config;
