@@ -185,7 +185,7 @@ impl MemoryPool {
 
     /// Zero-initialize a range of memory (no panics in release).
     pub fn zero_range(&mut self, offset: usize, len: usize) -> anyhow::Result<()> {
-        if offset.checked_add(len).map_or(false, |end| end <= self.memory.len()) {
+        if offset.checked_add(len).is_some_and(|end| end <= self.memory.len()) {
             self.memory[offset..offset + len].fill(0);
             Ok(())
         } else {
