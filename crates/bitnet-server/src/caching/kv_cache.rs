@@ -1,5 +1,5 @@
 //! KV cache optimization with memory pooling
-#![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
+#![allow(dead_code, unused_imports, unused_variables)]
 
 use anyhow::Result;
 use std::collections::HashMap;

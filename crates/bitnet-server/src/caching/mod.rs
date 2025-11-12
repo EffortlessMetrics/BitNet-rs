@@ -1,5 +1,5 @@
 //! Caching and performance optimization for BitNet server
-#![cfg_attr(doc, allow(dead_code, unused_imports, unused_variables))]
+#![allow(dead_code, unused_imports, unused_variables)]
 
 #[cfg(feature = "connection_pool")]
 pub mod connection_pool;
