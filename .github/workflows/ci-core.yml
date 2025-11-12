@@ -152,6 +152,8 @@ jobs:
           shared-key: ci-core-docs
 
       - name: Build documentation
+        env:
+          RUSTDOCFLAGS: -A warnings
         run: cargo doc --locked --no-deps --workspace --no-default-features --features cpu
 
   # Summary job (required for branch protection)
