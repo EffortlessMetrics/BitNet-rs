@@ -259,7 +259,7 @@ impl MemoryPool {
     #[inline]
     pub fn f32_slice_mut(&mut self, offset: usize, len_f32: usize) -> &mut [f32] {
         let bytes = len_f32.checked_mul(core::mem::size_of::<f32>()).expect("f32 len overflow");
-        assert!(offset % core::mem::align_of::<f32>() == 0, "unaligned f32 slice");
+        assert!(offset.is_multiple_of(core::mem::align_of::<f32>()), "unaligned f32 slice");
         assert!(offset.checked_add(bytes).unwrap() <= self.memory.len(), "OOB f32 slice");
         unsafe {
             let ptr = self.memory.as_mut_ptr().add(offset) as *mut f32;
@@ -271,7 +271,7 @@ impl MemoryPool {
     #[inline]
     pub fn f32_slice(&self, offset: usize, len_f32: usize) -> &[f32] {
         let bytes = len_f32.checked_mul(core::mem::size_of::<f32>()).expect("f32 len overflow");
-        assert!(offset % core::mem::align_of::<f32>() == 0, "unaligned f32 slice");
+        assert!(offset.is_multiple_of(core::mem::align_of::<f32>()), "unaligned f32 slice");
         assert!(offset.checked_add(bytes).unwrap() <= self.memory.len(), "OOB f32 slice");
         unsafe {
             let ptr = self.memory.as_ptr().add(offset) as *const f32;
@@ -353,13 +353,16 @@ impl KVCacheManager {
             let val_off = align_up(block.offset + key_size, 64);
             debug_assert!(key_off >= block.offset);
             debug_assert!(val_off >= block.offset);
-            debug_assert!(val_off + value_size <= block.offset + block.size, "KV split exceeds block");
+            debug_assert!(
+                val_off + value_size <= block.offset + block.size,
+                "KV split exceeds block"
+            );
 
             // Zero-initialize the allocated memory
             {
                 let mut pool = self.memory_pool.write().await;
-                pool.zero_range(key_off, key_size);
-                pool.zero_range(val_off, value_size);
+                pool.zero_range(key_off, key_size).expect("zero_range failed for key region");
+                pool.zero_range(val_off, value_size).expect("zero_range failed for value region");
             }
 
             // Create the cache entry
@@ -410,13 +413,18 @@ impl KVCacheManager {
                 let val_off = align_up(block.offset + key_size, 64);
                 debug_assert!(key_off >= block.offset);
                 debug_assert!(val_off >= block.offset);
-                debug_assert!(val_off + value_size <= block.offset + block.size, "KV split exceeds block");
+                debug_assert!(
+                    val_off + value_size <= block.offset + block.size,
+                    "KV split exceeds block"
+                );
 
                 // Zero-initialize the allocated memory
                 {
                     let mut pool = self.memory_pool.write().await;
-                    pool.zero_range(key_off, key_size);
-                    pool.zero_range(val_off, value_size);
+                    pool.zero_range(key_off, key_size)
+                        .expect("zero_range failed for key region (post-evict)");
+                    pool.zero_range(val_off, value_size)
+                        .expect("zero_range failed for value region (post-evict)");
                 }
 
                 let entry = KVCacheEntry {
@@ -459,7 +467,12 @@ impl KVCacheManager {
 
     /// Update cache with new tokens
     /// TODO(PR-4): Wire append semantics; copy into pool-backed slices.
-    pub async fn update_cache(&self, session_id: &str, _key_data: &[f32], _value_data: &[f32]) -> Result<()> {
+    pub async fn update_cache(
+        &self,
+        session_id: &str,
+        _key_data: &[f32],
+        _value_data: &[f32],
+    ) -> Result<()> {
         let mut cache = self.cache.write().await;
 
         if let Some(entry) = cache.get_mut(session_id) {
@@ -943,8 +956,8 @@ mod tests {
         let key_off = block.offset;
         let val_off = align_up(block.offset + key_bytes, 64);
 
-        pool.zero_range(key_off, key_bytes);
-        pool.zero_range(val_off, val_bytes);
+        pool.zero_range(key_off, key_bytes).expect("zero_range key");
+        pool.zero_range(val_off, val_bytes).expect("zero_range val");
 
         let entry = KVCacheEntry {
             session_id: "s".into(),
