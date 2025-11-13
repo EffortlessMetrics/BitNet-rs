@@ -314,7 +314,7 @@ fn ac1_api_contract_schema_definitions_ok() -> Result<()> {
         "prompt", // string, minLength: 1, maxLength: 8192
     ];
 
-    let optional_request_fields = vec![
+    let optional_request_fields = [
         "max_tokens",              // integer, 1-2048, default: 100
         "model",                   // string, pattern: ^[a-zA-Z0-9_-]+$
         "temperature",             // number, 0.0-2.0, default: 0.7
