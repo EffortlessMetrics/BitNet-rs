@@ -524,16 +524,10 @@ impl KVCacheManager {
         };
 
         if let Some(entry) = entry {
-            // Return memory to the pool
-            let memory_block = MemoryBlock {
-                offset: 0, // In a real implementation, we'd track the actual offset
-                size: entry.size_bytes,
-                in_use: true,
-            };
-
+            // Return memory to the pool using the real MemoryBlock captured in entry
             {
                 let mut pool = self.memory_pool.write().await;
-                pool.deallocate(memory_block);
+                pool.deallocate(entry.block.clone());
             }
 
             // Update statistics
@@ -544,6 +538,7 @@ impl KVCacheManager {
 
                 let pool = self.memory_pool.read().await;
                 stats.used_memory_mb = pool.used_memory as f64 / (1024.0 * 1024.0);
+                stats.total_memory_mb = pool.total_size as f64 / (1024.0 * 1024.0);
                 stats.memory_utilization = pool.utilization();
                 stats.memory_pool_efficiency = 1.0 - pool.fragmentation();
             }
@@ -984,5 +979,74 @@ mod tests {
         // Read back
         assert_eq!(entry.key(&pool)[0], 1.0);
         assert_eq!(entry.value(&pool)[1], 3.0);
+    }
+
+    #[test]
+    fn test_eviction_returns_block_to_pool() {
+        let mut pool = MemoryPool::new(1024);
+
+        // Allocate a block
+        let block = pool.allocate(256).expect("Should allocate");
+        let start_used = pool.used_memory;
+        assert_eq!(start_used, 256);
+
+        // Simulate eviction by deallocating
+        pool.deallocate(block.clone());
+
+        // Verify memory was returned
+        assert_eq!(pool.used_memory, start_used - block.size);
+        assert_eq!(pool.used_memory, 0);
+
+        // Verify fragmentation is valid
+        assert!(pool.fragmentation() >= 0.0);
+        assert!(pool.fragmentation() <= 1.0);
+
+        // Verify we can reallocate the same block
+        let block2 = pool.allocate(256).expect("Should reallocate");
+        assert_eq!(block2.offset, 0); // Should reuse the freed region
+        assert_eq!(block2.size, 256);
+    }
+
+    #[tokio::test]
+    async fn test_eviction_updates_stats() -> Result<()> {
+        use crate::caching::CachingConfig;
+
+        // Create small cache to force eviction
+        let config = CachingConfig {
+            kv_cache_size_mb: 1, // 1 MB
+            ..Default::default()
+        };
+
+        let manager = KVCacheManager::new(&config)?;
+
+        // Create a session (triggers allocation)
+        let session_id = "test_session";
+        manager.create_cache_entry(session_id, 64).await?;
+
+        // Snapshot stats before eviction
+        let before = manager.get_statistics().await;
+        assert!(before.used_memory_mb > 0.0, "Should have used memory");
+        assert_eq!(before.total_sessions, 1);
+        assert_eq!(before.evictions, 0);
+
+        // Evict the entry
+        manager.remove_cache_entry(session_id).await?;
+
+        // Stats should reflect freed memory
+        let after = manager.get_statistics().await;
+        assert_eq!(after.total_sessions, 0, "Should have 0 sessions after removal");
+        assert_eq!(after.evictions, 1, "Should have 1 eviction");
+        assert!(after.used_memory_mb < before.used_memory_mb, "Used memory should decrease");
+        assert!(after.total_memory_mb > 0.0, "Total memory should be set");
+        assert!(
+            after.memory_utilization >= 0.0 && after.memory_utilization <= 1.0,
+            "Utilization should be in [0,1]"
+        );
+        assert!(
+            after.memory_pool_efficiency >= 0.0 && after.memory_pool_efficiency <= 1.0,
+            "Efficiency should be in [0,1]"
+        );
+
+        Ok(())
     }
 }
