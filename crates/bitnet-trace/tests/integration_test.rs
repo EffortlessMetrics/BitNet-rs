@@ -1,6 +1,6 @@
 //! Integration tests for bitnet-trace crate.
 
-use bitnet_trace::{dump_trace, TraceRecord};
+use bitnet_trace::{TraceRecord, dump_trace};
 use candle_core::{Device, Tensor};
 use std::env;
 use std::fs;
@@ -19,7 +19,8 @@ fn test_dump_trace_integration() {
     let trace_dir = temp_dir.path().to_str().unwrap();
 
     // Set environment variable
-    env::set_var("BITNET_TRACE_DIR", trace_dir);
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::set_var("BITNET_TRACE_DIR", trace_dir) };
 
     // Create a test tensor with known values
     let data = vec![1.0f32, 2.0, 3.0, 4.0];
@@ -67,7 +68,8 @@ fn test_dump_trace_integration() {
     assert_eq!(record.blake3, expected_hash, "Blake3 hash should match expected value");
 
     // Cleanup
-    env::remove_var("BITNET_TRACE_DIR");
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::remove_var("BITNET_TRACE_DIR") };
 }
 
 #[test]
@@ -80,7 +82,8 @@ fn test_dump_trace_creates_directory() {
     let trace_path = trace_dir.to_str().unwrap().to_string();
 
     // Set environment variable to non-existent directory
-    env::set_var("BITNET_TRACE_DIR", &trace_path);
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::set_var("BITNET_TRACE_DIR", &trace_path) };
 
     // Create tensor and dump trace
     let tensor = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
@@ -94,7 +97,8 @@ fn test_dump_trace_creates_directory() {
     assert!(trace_file.exists(), "Trace file should exist");
 
     // Cleanup
-    env::remove_var("BITNET_TRACE_DIR");
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::remove_var("BITNET_TRACE_DIR") };
 }
 
 #[test]
@@ -103,7 +107,8 @@ fn test_dump_trace_different_dtypes() {
 
     let temp_dir = TempDir::new().unwrap();
     let trace_dir = temp_dir.path().to_str().unwrap();
-    env::set_var("BITNET_TRACE_DIR", trace_dir);
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::set_var("BITNET_TRACE_DIR", trace_dir) };
 
     // Test with different dtypes
     let tensor_f32 = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
@@ -122,7 +127,8 @@ fn test_dump_trace_different_dtypes() {
     let record: TraceRecord = serde_json::from_str(&contents).unwrap();
     assert_eq!(record.dtype, "F64");
 
-    env::remove_var("BITNET_TRACE_DIR");
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::remove_var("BITNET_TRACE_DIR") };
 }
 
 #[test]
@@ -131,7 +137,8 @@ fn test_dump_trace_various_shapes() {
 
     let temp_dir = TempDir::new().unwrap();
     let trace_dir = temp_dir.path().to_str().unwrap();
-    env::set_var("BITNET_TRACE_DIR", trace_dir);
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::set_var("BITNET_TRACE_DIR", trace_dir) };
 
     // Test various tensor shapes
     let shapes = [
@@ -156,7 +163,8 @@ fn test_dump_trace_various_shapes() {
         assert_eq!(record.num_elements, expected_elements);
     }
 
-    env::remove_var("BITNET_TRACE_DIR");
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::remove_var("BITNET_TRACE_DIR") };
 }
 
 #[test]
@@ -164,7 +172,8 @@ fn test_dump_trace_empty_trace_dir() {
     let _guard = ENV_LOCK.lock().unwrap();
 
     // Test with empty string for BITNET_TRACE_DIR
-    env::set_var("BITNET_TRACE_DIR", "");
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::set_var("BITNET_TRACE_DIR", "") };
 
     let tensor = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
     let result = dump_trace("empty_dir", &tensor, None, None, None);
@@ -172,5 +181,6 @@ fn test_dump_trace_empty_trace_dir() {
     // Should succeed silently (tracing disabled)
     assert!(result.is_ok());
 
-    env::remove_var("BITNET_TRACE_DIR");
+    // SAFETY: Test runs with ENV_LOCK held, preventing concurrent access
+    unsafe { env::remove_var("BITNET_TRACE_DIR") };
 }

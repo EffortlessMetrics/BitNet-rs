@@ -187,7 +187,8 @@ mod tests {
     #[test]
     fn test_dump_trace_disabled() {
         // Ensure BITNET_TRACE_DIR is not set
-        env::remove_var("BITNET_TRACE_DIR");
+        // SAFETY: This test runs in isolation and doesn't interact with other threads
+        unsafe { env::remove_var("BITNET_TRACE_DIR") };
 
         let tensor = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
         let result = dump_trace("test_disabled", &tensor, None, None, None);

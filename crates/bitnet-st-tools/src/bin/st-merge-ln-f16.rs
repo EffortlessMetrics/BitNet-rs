@@ -110,7 +110,7 @@ fn main() -> Result<()> {
     meta.insert("format".to_string(), "safetensors".to_string());
     meta.insert("ln_gamma".to_string(), "float16".to_string());
 
-    serialize_to_file(&map, &Some(meta), &args.output)
+    serialize_to_file(&map, Some(meta), &args.output)
         .with_context(|| format!("writing {}", args.output.display()))?;
 
     println!(
