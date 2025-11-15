@@ -7,6 +7,7 @@ pub mod kv_cache;
 pub mod model_cache;
 #[cfg(any(test, feature = "tuning"))]
 pub mod performance_tuning;
+pub mod receipts;
 #[cfg(feature = "request_batching")]
 pub mod request_batching;
 
