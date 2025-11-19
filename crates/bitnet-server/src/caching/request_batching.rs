@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, RwLock, Semaphore};
+use tokio::sync::{RwLock, Semaphore, mpsc};
 use uuid::Uuid;
 
 use super::CachingConfig;
@@ -158,7 +158,8 @@ impl RequestBatcher {
 
         // Start batch formation task
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_millis(config.batch_timeout_ms));
+            let mut interval =
+                tokio::time::interval(Duration::from_millis(config.batch_timeout_ms));
 
             loop {
                 interval.tick().await;
@@ -171,8 +172,10 @@ impl RequestBatcher {
                     {
                         let mut stats = statistics.write().await;
                         stats.total_batches += 1;
-                        let total_batch_size = stats.average_batch_size * (stats.total_batches - 1) as f64;
-                        stats.average_batch_size = (total_batch_size + batch.requests.len() as f64) / stats.total_batches as f64;
+                        let total_batch_size =
+                            stats.average_batch_size * (stats.total_batches - 1) as f64;
+                        stats.average_batch_size = (total_batch_size + batch.requests.len() as f64)
+                            / stats.total_batches as f64;
                         stats.queue_depth = request_queue.read().await.len();
                     }
 
@@ -226,14 +229,17 @@ impl RequestBatcher {
         // Group requests by model and respect timeout
         while let Some(request) = queue.front() {
             // Check if request has timed out
-            if now.duration_since(request.timestamp) > Duration::from_millis(config.batch_timeout_ms * 2) {
+            if now.duration_since(request.timestamp)
+                > Duration::from_millis(config.batch_timeout_ms * 2)
+            {
                 // Remove timed out request
                 if let Some(timed_out) = queue.pop_front() {
                     let _ = timed_out.response_sender.send(BatchedResponse {
                         request_id: timed_out.id,
                         text: "Request timed out".to_string(),
                         tokens_generated: 0,
-                        processing_time_ms: now.duration_since(timed_out.timestamp).as_millis() as u64,
+                        processing_time_ms: now.duration_since(timed_out.timestamp).as_millis()
+                            as u64,
                         batch_size: 0,
                     });
                 }
@@ -245,7 +251,9 @@ impl RequestBatcher {
                 target_model = Some(request.model.clone());
             }
 
-            if target_model.as_ref() == Some(&request.model) && batch_requests.len() < config.max_batch_size {
+            if target_model.as_ref() == Some(&request.model)
+                && batch_requests.len() < config.max_batch_size
+            {
                 if let Some(request) = queue.pop_front() {
                     batch_requests.push(request);
                 }
@@ -294,23 +302,28 @@ impl RequestBatcher {
             // Update wait time statistics
             {
                 let mut stats = statistics.write().await;
-                let total_wait_time = stats.average_wait_time_ms * (stats.total_requests - 1) as f64;
-                stats.average_wait_time_ms = (total_wait_time + wait_time_ms as f64) / stats.total_requests as f64;
+                let total_wait_time =
+                    stats.average_wait_time_ms * (stats.total_requests - 1) as f64;
+                stats.average_wait_time_ms =
+                    (total_wait_time + wait_time_ms as f64) / stats.total_requests as f64;
             }
         }
 
         // Update processing time statistics
         {
             let mut stats = statistics.write().await;
-            let total_processing_time = stats.average_processing_time_ms * (stats.total_batches - 1) as f64;
-            stats.average_processing_time_ms = (total_processing_time + processing_time_ms as f64) / stats.total_batches as f64;
+            let total_processing_time =
+                stats.average_processing_time_ms * (stats.total_batches - 1) as f64;
+            stats.average_processing_time_ms =
+                (total_processing_time + processing_time_ms as f64) / stats.total_batches as f64;
 
             // Calculate batching efficiency (higher is better)
             stats.batching_efficiency = stats.average_batch_size / batch_size as f64;
 
             // Calculate throughput
             if stats.average_processing_time_ms > 0.0 {
-                stats.throughput_requests_per_second = (stats.average_batch_size * 1000.0) / stats.average_processing_time_ms;
+                stats.throughput_requests_per_second =
+                    (stats.average_batch_size * 1000.0) / stats.average_processing_time_ms;
             }
         }
     }

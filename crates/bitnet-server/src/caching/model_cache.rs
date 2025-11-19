@@ -1,4 +1,5 @@
 //! Model caching with pre-warming capabilities
+#![allow(dead_code, unused_imports, unused_variables)]
 
 use anyhow::Result;
 use std::collections::HashMap;
@@ -175,7 +176,7 @@ impl ModelCache {
     }
 
     /// Ensure there's enough capacity for a new model
-    async fn ensure_capacity(&self, required_size: usize) -> Result<()> {
+    async fn ensure_capacity(&self, _required_size: usize) -> Result<()> {
         let max_models = self.config.model_cache_size;
         let current_models = self.cache.read().await.len();
 
@@ -279,7 +280,8 @@ impl ModelCache {
         {
             let mut stats = self.statistics.write().await;
             let total_load_time = stats.average_load_time_ms * stats.cache_misses as f64;
-            stats.average_load_time_ms = (total_load_time + load_time.as_millis() as f64) / (stats.cache_misses + 1) as f64;
+            stats.average_load_time_ms =
+                (total_load_time + load_time.as_millis() as f64) / (stats.cache_misses + 1) as f64;
         }
 
         Ok(Some(model))

@@ -39,6 +39,15 @@ pub struct PerformanceTuner {
     last_optimization: Instant,
 }
 
+/// Lightweight report used by `generate_report()`; keep simple for MSRV builds.
+#[derive(Debug, Clone)]
+pub struct PerformanceReport {
+    pub average_requests_per_second: f64,
+    pub average_latency_ms: f64,
+    pub current_config: CachingConfig,
+    pub sample_count: usize,
+}
+
 /// Tunable performance parameters
 #[derive(Debug, Clone)]
 pub struct PerformanceParameters {
@@ -123,12 +132,8 @@ impl PerformanceTuner {
         let mut recommendations = Vec::new();
 
         // Analyze recent performance trends
-        let recent_samples: Vec<_> = self.performance_history
-            .iter()
-            .rev()
-            .take(20)
-            .cloned()
-            .collect();
+        let recent_samples: Vec<_> =
+            self.performance_history.iter().rev().take(20).cloned().collect();
 
         // Generate recommendations based on analysis
         recommendations.extend(self.analyze_batch_performance(&recent_samples));
@@ -147,12 +152,10 @@ impl PerformanceTuner {
             self.statistics.recommendations_applied += applied_recommendations.len() as u64;
         }
 
-        self.statistics.optimization_success_rate =
-            self.statistics.successful_optimizations as f64 / self.statistics.total_optimizations as f64;
+        self.statistics.optimization_success_rate = self.statistics.successful_optimizations as f64
+            / self.statistics.total_optimizations as f64;
 
-        self.statistics.last_optimization_time = Some(
-            chrono::Utc::now().to_rfc3339()
-        );
+        self.statistics.last_optimization_time = Some(chrono::Utc::now().to_rfc3339());
 
         self.last_optimization = Instant::now();
 
@@ -160,15 +163,20 @@ impl PerformanceTuner {
     }
 
     /// Analyze batch performance and generate recommendations
-    fn analyze_batch_performance(&self, samples: &[PerformanceSample]) -> Vec<TuningRecommendation> {
+    fn analyze_batch_performance(
+        &self,
+        samples: &[PerformanceSample],
+    ) -> Vec<TuningRecommendation> {
         let mut recommendations = Vec::new();
 
         if samples.is_empty() {
             return recommendations;
         }
 
-        let avg_rps = samples.iter().map(|s| s.requests_per_second).sum::<f64>() / samples.len() as f64;
-        let avg_latency = samples.iter().map(|s| s.average_latency_ms).sum::<f64>() / samples.len() as f64;
+        let avg_rps =
+            samples.iter().map(|s| s.requests_per_second).sum::<f64>() / samples.len() as f64;
+        let avg_latency =
+            samples.iter().map(|s| s.average_latency_ms).sum::<f64>() / samples.len() as f64;
         let avg_batch_size = samples.iter().map(|s| s.batch_size).sum::<usize>() / samples.len();
 
         // If latency is high but batch size is small, recommend increasing batch size
@@ -176,7 +184,8 @@ impl PerformanceTuner {
             recommendations.push(TuningRecommendation {
                 parameter: "batch_size".to_string(),
                 current_value: self.current_parameters.batch_size as f64,
-                recommended_value: (self.current_parameters.batch_size * 2).min(self.config.max_batch_size) as f64,
+                recommended_value: (self.current_parameters.batch_size * 2)
+                    .min(self.config.max_batch_size) as f64,
                 reason: "Low batch utilization with high latency detected".to_string(),
                 expected_improvement: 15.0,
                 confidence: 0.8,
@@ -215,7 +224,8 @@ impl PerformanceTuner {
             recommendations.push(TuningRecommendation {
                 parameter: "cache_size_mb".to_string(),
                 current_value: self.current_parameters.cache_size_mb as f64,
-                recommended_value: (self.current_parameters.cache_size_mb as f64 * reduction_factor),
+                recommended_value: (self.current_parameters.cache_size_mb as f64
+                    * reduction_factor),
                 reason: "High memory usage detected".to_string(),
                 expected_improvement: 5.0,
                 confidence: 0.9,
@@ -254,7 +264,8 @@ impl PerformanceTuner {
             recommendations.push(TuningRecommendation {
                 parameter: "connection_pool_size".to_string(),
                 current_value: self.current_parameters.connection_pool_size as f64,
-                recommended_value: (self.current_parameters.connection_pool_size as f64 * reduction_factor),
+                recommended_value: (self.current_parameters.connection_pool_size as f64
+                    * reduction_factor),
                 reason: "High CPU usage detected".to_string(),
                 expected_improvement: 10.0,
                 confidence: 0.8,
@@ -284,8 +295,10 @@ impl PerformanceTuner {
             return recommendations;
         }
 
-        let recent_latency: Vec<f64> = samples.iter().rev().take(5).map(|s| s.average_latency_ms).collect();
-        let older_latency: Vec<f64> = samples.iter().rev().skip(5).take(5).map(|s| s.average_latency_ms).collect();
+        let recent_latency: Vec<f64> =
+            samples.iter().rev().take(5).map(|s| s.average_latency_ms).collect();
+        let older_latency: Vec<f64> =
+            samples.iter().rev().skip(5).take(5).map(|s| s.average_latency_ms).collect();
 
         if !older_latency.is_empty() {
             let recent_avg = recent_latency.iter().sum::<f64>() / recent_latency.len() as f64;
@@ -315,7 +328,8 @@ impl PerformanceTuner {
             return recommendations;
         }
 
-        let avg_error_rate = samples.iter().map(|s| s.error_rate).sum::<f64>() / samples.len() as f64;
+        let avg_error_rate =
+            samples.iter().map(|s| s.error_rate).sum::<f64>() / samples.len() as f64;
 
         // If error rate is high, recommend reducing load
         if avg_error_rate > 5.0 {
@@ -342,7 +356,10 @@ impl PerformanceTuner {
     }
 
     /// Apply high-confidence recommendations
-    async fn apply_recommendations(&mut self, recommendations: &[TuningRecommendation]) -> Result<Vec<TuningRecommendation>> {
+    async fn apply_recommendations(
+        &mut self,
+        recommendations: &[TuningRecommendation],
+    ) -> Result<Vec<TuningRecommendation>> {
         let mut applied = Vec::new();
 
         for recommendation in recommendations {
@@ -350,19 +367,23 @@ impl PerformanceTuner {
             if recommendation.confidence >= 0.8 {
                 match recommendation.parameter.as_str() {
                     "batch_size" => {
-                        self.current_parameters.batch_size = recommendation.recommended_value as usize;
+                        self.current_parameters.batch_size =
+                            recommendation.recommended_value as usize;
                         applied.push(recommendation.clone());
                     }
                     "batch_timeout_ms" => {
-                        self.current_parameters.batch_timeout_ms = recommendation.recommended_value as u64;
+                        self.current_parameters.batch_timeout_ms =
+                            recommendation.recommended_value as u64;
                         applied.push(recommendation.clone());
                     }
                     "cache_size_mb" => {
-                        self.current_parameters.cache_size_mb = recommendation.recommended_value as usize;
+                        self.current_parameters.cache_size_mb =
+                            recommendation.recommended_value as usize;
                         applied.push(recommendation.clone());
                     }
                     "connection_pool_size" => {
-                        self.current_parameters.connection_pool_size = recommendation.recommended_value as usize;
+                        self.current_parameters.connection_pool_size =
+                            recommendation.recommended_value as usize;
                         applied.push(recommendation.clone());
                     }
                     _ => {}
@@ -381,12 +402,16 @@ impl PerformanceTuner {
             let latency_score = (1.0 - (latest_sample.average_latency_ms / 1000.0).min(1.0)) * 25.0;
             let error_score = (1.0 - (latest_sample.error_rate / 10.0).min(1.0)) * 20.0;
             let cache_score = latest_sample.cache_hit_rate * 15.0;
-            let resource_score = (1.0 - ((latest_sample.cpu_usage + latest_sample.memory_usage) / 200.0).min(1.0)) * 10.0;
+            let resource_score = (1.0
+                - ((latest_sample.cpu_usage + latest_sample.memory_usage) / 200.0).min(1.0))
+                * 10.0;
 
-            let current_score = rps_score + latency_score + error_score + cache_score + resource_score;
+            let current_score =
+                rps_score + latency_score + error_score + cache_score + resource_score;
 
             self.statistics.current_performance_score = current_score;
-            self.statistics.peak_performance_score = self.statistics.peak_performance_score.max(current_score);
+            self.statistics.peak_performance_score =
+                self.statistics.peak_performance_score.max(current_score);
         }
     }
 
@@ -412,12 +437,28 @@ impl PerformanceTuner {
 
     /// Generate performance report
     pub fn generate_report(&self) -> PerformanceReport {
-        let recent_samples: Vec<_> = self.performance_history
-            .iter()
-            .rev()
-            .take(100)
-            .cloned()
-            .collect();
+        let recent_samples: Vec<_> =
+            self.performance_history.iter().rev().take(100).cloned().collect();
 
         let avg_rps = if !recent_samples.is_empty() {
-            recent_samples.iter().map(|s| s.requests_per_second).sum::<f64>() / recent
+            recent_samples.iter().map(|s| s.requests_per_second).sum::<f64>()
+                / recent_samples.len() as f64
+        } else {
+            0.0
+        };
+
+        let avg_latency = if !recent_samples.is_empty() {
+            recent_samples.iter().map(|s| s.average_latency_ms).sum::<f64>()
+                / recent_samples.len() as f64
+        } else {
+            0.0
+        };
+
+        PerformanceReport {
+            average_requests_per_second: avg_rps,
+            average_latency_ms: avg_latency,
+            current_config: self.config.clone(),
+            sample_count: recent_samples.len(),
+        }
+    }
+}

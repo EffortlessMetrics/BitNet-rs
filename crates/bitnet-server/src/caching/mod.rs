@@ -1,14 +1,39 @@
 //! Caching and performance optimization for BitNet server
+#![allow(dead_code, unused_imports, unused_variables)]
 
-pub mod model_cache;
-pub mod kv_cache;
-pub mod request_batching;
+#[cfg(feature = "connection_pool")]
 pub mod connection_pool;
+pub mod kv_cache;
+pub mod model_cache;
+#[cfg(any(test, feature = "tuning"))]
 pub mod performance_tuning;
+#[cfg(feature = "request_batching")]
+pub mod request_batching;
+
+// ---- Stubs for disabled features (types only; keep callers compiling) ----
+#[cfg(not(feature = "request_batching"))]
+pub mod request_batching {
+    #[doc(hidden)]
+    #[derive(Default, Clone, Debug, serde::Serialize)]
+    pub struct BatchingStatistics {}
+}
+
+#[cfg(not(feature = "connection_pool"))]
+pub mod connection_pool {
+    #[doc(hidden)]
+    #[derive(Default, Clone, Debug, serde::Serialize)]
+    pub struct ConnectionStatistics {}
+}
+
+#[cfg(not(any(test, feature = "tuning")))]
+pub mod performance_tuning {
+    #[doc(hidden)]
+    #[derive(Default, Clone, Debug, serde::Serialize)]
+    pub struct PerformanceStatistics {}
+}
 
 use anyhow::Result;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 /// Caching configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -60,9 +85,12 @@ pub struct CachingSystem {
     config: CachingConfig,
     model_cache: Arc<model_cache::ModelCache>,
     kv_cache_manager: Arc<kv_cache::KVCacheManager>,
+    #[cfg(feature = "request_batching")]
     request_batcher: Arc<request_batching::RequestBatcher>,
+    #[cfg(feature = "connection_pool")]
     connection_pool: Arc<connection_pool::ConnectionPool>,
-    performance_tuner: Arc<RwLock<performance_tuning::PerformanceTuner>>,
+    #[cfg(any(test, feature = "tuning"))]
+    performance_tuner: Arc<tokio::sync::RwLock<performance_tuning::PerformanceTuner>>,
 }
 
 impl CachingSystem {
@@ -70,18 +98,23 @@ impl CachingSystem {
     pub async fn new(config: CachingConfig) -> Result<Self> {
         let model_cache = Arc::new(model_cache::ModelCache::new(&config).await?);
         let kv_cache_manager = Arc::new(kv_cache::KVCacheManager::new(&config)?);
+        #[cfg(feature = "request_batching")]
         let request_batcher = Arc::new(request_batching::RequestBatcher::new(&config).await?);
+        #[cfg(feature = "connection_pool")]
         let connection_pool = Arc::new(connection_pool::ConnectionPool::new(&config)?);
-        let performance_tuner = Arc::new(RwLock::new(
-            performance_tuning::PerformanceTuner::new(&config)?
-        ));
+        #[cfg(any(test, feature = "tuning"))]
+        let performance_tuner =
+            Arc::new(tokio::sync::RwLock::new(performance_tuning::PerformanceTuner::new(&config)?));
 
         Ok(Self {
             config,
             model_cache,
             kv_cache_manager,
+            #[cfg(feature = "request_batching")]
             request_batcher,
+            #[cfg(feature = "connection_pool")]
             connection_pool,
+            #[cfg(any(test, feature = "tuning"))]
             performance_tuner,
         })
     }
@@ -97,11 +130,13 @@ impl CachingSystem {
     }
 
     /// Get the request batcher
+    #[cfg(feature = "request_batching")]
     pub fn request_batcher(&self) -> Arc<request_batching::RequestBatcher> {
         self.request_batcher.clone()
     }
 
     /// Get the connection pool
+    #[cfg(feature = "connection_pool")]
     pub fn connection_pool(&self) -> Arc<connection_pool::ConnectionPool> {
         self.connection_pool.clone()
     }
@@ -125,6 +160,7 @@ impl CachingSystem {
         }
 
         // Start request batching task
+        #[cfg(feature = "request_batching")]
         if self.config.batching_enabled {
             let request_batcher = self.request_batcher.clone();
             tokio::spawn(async move {
@@ -133,16 +169,16 @@ impl CachingSystem {
         }
 
         // Start performance tuning task
+        #[cfg(any(test, feature = "tuning"))]
         if self.config.auto_tuning_enabled {
             let performance_tuner = self.performance_tuner.clone();
             let interval = self.config.tuning_interval_seconds;
             tokio::spawn(async move {
-                let mut interval = tokio::time::interval(
-                    std::time::Duration::from_secs(interval)
-                );
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(interval));
                 loop {
                     interval.tick().await;
-                    if let Ok(mut tuner) = performance_tuner.write().await {
+                    {
+                        let mut tuner = performance_tuner.write().await;
                         if let Err(e) = tuner.run_optimization().await {
                             eprintln!("Performance tuning error: {}", e);
                         }
@@ -158,9 +194,18 @@ impl CachingSystem {
     pub async fn get_statistics(&self) -> CachingStatistics {
         let model_cache_stats = self.model_cache.get_statistics().await;
         let kv_cache_stats = self.kv_cache_manager.get_statistics().await;
+        #[cfg(feature = "request_batching")]
         let batching_stats = self.request_batcher.get_statistics().await;
+        #[cfg(not(feature = "request_batching"))]
+        let batching_stats = request_batching::BatchingStatistics::default();
+        #[cfg(feature = "connection_pool")]
         let connection_stats = self.connection_pool.get_statistics().await;
+        #[cfg(not(feature = "connection_pool"))]
+        let connection_stats = connection_pool::ConnectionStatistics::default();
+        #[cfg(any(test, feature = "tuning"))]
         let performance_stats = self.performance_tuner.read().await.get_statistics().await;
+        #[cfg(not(any(test, feature = "tuning")))]
+        let performance_stats = performance_tuning::PerformanceStatistics::default();
 
         CachingStatistics {
             model_cache: model_cache_stats,
@@ -176,9 +221,11 @@ impl CachingSystem {
         println!("Shutting down caching system");
 
         // Shutdown components in reverse order
+        #[cfg(feature = "request_batching")]
         self.request_batcher.shutdown().await?;
         self.kv_cache_manager.shutdown().await?;
         self.model_cache.shutdown().await?;
+        #[cfg(feature = "connection_pool")]
         self.connection_pool.shutdown().await?;
 
         Ok(())
