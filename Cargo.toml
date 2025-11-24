@@ -264,7 +264,7 @@ wasm-bindgen = "0.2.105"
 web-sys = "0.3.82"
 
 # GPU support
-cudarc = "0.17.8"
+cudarc = "0.18.1"
 
 # Testing and benchmarking
 criterion = { version = "0.7.0", features = ["html_reports"] }
