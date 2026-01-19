@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -340,14 +340,24 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let cors = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    if config.allowed_origins.contains(&"*".to_string()) {
+        cors.allow_origin(Any)
+    } else {
+        let origins: Vec<HeaderValue> = config
+            .allowed_origins
+            .iter()
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        cors.allow_origin(origins)
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +500,34 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[test]
+    fn test_cors_configuration() {
+        // Test with wildcard
+        let config_wildcard = SecurityConfig {
+            allowed_origins: vec!["*".to_string()],
+            ..Default::default()
+        };
+        // Should not panic
+        let _ = configure_cors(&config_wildcard);
+
+        // Test with specific origins
+        let config_specific = SecurityConfig {
+            allowed_origins: vec![
+                "https://example.com".to_string(),
+                "http://localhost:3000".to_string(),
+            ],
+            ..Default::default()
+        };
+        // Should not panic
+        let _ = configure_cors(&config_specific);
+
+        // Test with invalid origin string (should be ignored, not panic)
+        let config_invalid = SecurityConfig {
+            allowed_origins: vec!["invalid origin".to_string()],
+            ..Default::default()
+        };
+        let _ = configure_cors(&config_invalid);
     }
 }
