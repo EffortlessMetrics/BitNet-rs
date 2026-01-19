@@ -189,17 +189,22 @@ pub struct BatchEngineStats {
     pub cache_hit_rate: f64,
 }
 
+/// Batch processing metrics (atomic counters shared across clones)
+pub struct BatchEngineMetrics {
+    pub request_counter: AtomicU64,
+    pub batch_counter: AtomicU64,
+    pub total_processing_time: AtomicU64,
+    pub total_tokens_generated: AtomicU64,
+}
+
 /// Batch processing engine
+#[derive(Clone)]
 pub struct BatchEngine {
     config: BatchEngineConfig,
     request_queue: Arc<Mutex<VecDeque<PendingRequest>>>,
     processing_batches: Arc<RwLock<HashMap<String, ProcessingBatch>>>,
     batch_semaphore: Arc<Semaphore>,
-    stats: Arc<BatchEngineStats>,
-    request_counter: AtomicU64,
-    batch_counter: AtomicU64,
-    total_processing_time: AtomicU64,
-    total_tokens_generated: AtomicU64,
+    metrics: Arc<BatchEngineMetrics>,
 }
 
 impl BatchEngine {
@@ -210,20 +215,12 @@ impl BatchEngine {
             config,
             request_queue: Arc::new(Mutex::new(VecDeque::new())),
             processing_batches: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(BatchEngineStats {
-                total_requests_processed: 0,
-                total_batches_processed: 0,
-                average_batch_size: 0.0,
-                average_batch_time_ms: 0.0,
-                queue_depth: 0,
-                active_batches: 0,
-                throughput_tokens_per_second: 0.0,
-                cache_hit_rate: 0.0,
+            metrics: Arc::new(BatchEngineMetrics {
+                request_counter: AtomicU64::new(0),
+                batch_counter: AtomicU64::new(0),
+                total_processing_time: AtomicU64::new(0),
+                total_tokens_generated: AtomicU64::new(0),
             }),
-            request_counter: AtomicU64::new(0),
-            batch_counter: AtomicU64::new(0),
-            total_processing_time: AtomicU64::new(0),
-            total_tokens_generated: AtomicU64::new(0),
         }
     }
 
@@ -248,7 +245,7 @@ impl BatchEngine {
             }
         }
 
-        self.request_counter.fetch_add(1, Ordering::Relaxed);
+        self.metrics.request_counter.fetch_add(1, Ordering::Relaxed);
 
         // Trigger batch processing
         tokio::spawn({
@@ -273,16 +270,16 @@ impl BatchEngine {
             }
         };
 
-        let batch = self.form_batch().await;
-        if let Some(batch) = batch
-            && let Err(e) = self.execute_batch(batch).await
+        let result = self.form_batch().await;
+        if let Some((batch, channels)) = result
+            && let Err(e) = self.execute_batch(batch, channels).await
         {
             error!(error = %e, "Failed to execute batch");
         }
     }
 
     /// Form a batch from queued requests with optimized memory usage
-    async fn form_batch(&self) -> Option<ProcessingBatch> {
+    async fn form_batch(&self) -> Option<(ProcessingBatch, Vec<oneshot::Sender<Result<BatchResult>>>)> {
         let mut queue = self.request_queue.lock().await;
 
         if queue.is_empty() {
@@ -293,8 +290,8 @@ impl BatchEngine {
         let mut candidates = Vec::with_capacity(self.config.max_batch_size);
         let mut timed_out_count = 0;
 
-        // Process requests efficiently without unnecessary allocations
-        for _ in 0..self.config.max_batch_size {
+        // Process requests efficiently, ensuring batch is filled if possible
+        while candidates.len() < self.config.max_batch_size {
             if let Some(pending) = queue.pop_front() {
                 // Check if request has timed out
                 if let Some(timeout) = pending.request.timeout
@@ -321,34 +318,20 @@ impl BatchEngine {
             return None;
         }
 
-        // Apply quantization-aware optimization
-        let optimized = if self.config.quantization_aware {
-            self.optimize_batch_for_quantization(&candidates).await
-        } else {
-            None
-        };
-
-        // Select device for batch
-        let device = self.select_batch_device(&candidates, optimized.as_ref()).await;
+        // Select device for batch (simplified, no optimization hint used for now to ensure all requests are processed)
+        let device = self.select_batch_device(&candidates, None).await;
 
         // Create processing batch
         let mut batch = ProcessingBatch::new(device);
+        let mut response_channels = Vec::with_capacity(candidates.len());
 
-        // Add requests to batch (optimize order if needed)
-        if let Some(optimization) = optimized {
-            for &index in &optimization.batch_compatible_requests {
-                if index < candidates.len() {
-                    batch.add_request(candidates[index].request.clone());
-                }
-            }
-        } else {
-            for pending in &candidates {
-                batch.add_request(pending.request.clone());
-            }
+        // Process all candidates in order
+        // Note: Optimization logic is disabled here to prevent dropping requests that are not selected by the optimizer.
+        // In the future, unselected requests should be returned to the queue.
+        for pending in candidates {
+            batch.add_request(pending.request);
+            response_channels.push(pending.response_tx);
         }
-
-        // Store response channels for this batch
-        self.store_batch_responses(batch.id.clone(), candidates).await;
 
         info!(
             batch_id = %batch.id,
@@ -358,17 +341,11 @@ impl BatchEngine {
             "Formed batch for processing"
         );
 
-        Some(batch)
-    }
-
-    /// Store response channels for batch
-    async fn store_batch_responses(&self, batch_id: String, candidates: Vec<PendingRequest>) {
-        // TODO: Store response channels mapped to batch ID
-        // For now, we'll handle responses directly in execute_batch
-        let _ = (batch_id, candidates); // Suppress unused warning
+        Some((batch, response_channels))
     }
 
     /// Optimize batch for quantization compatibility
+    #[allow(dead_code)]
     async fn optimize_batch_for_quantization(
         &self,
         candidates: &[PendingRequest],
@@ -403,6 +380,7 @@ impl BatchEngine {
     }
 
     /// Recommend device for quantization type
+    #[allow(dead_code)]
     async fn recommend_device_for_quantization(&self, quantization_type: &str) -> Device {
         match quantization_type {
             "I2S" => {
@@ -425,6 +403,7 @@ impl BatchEngine {
     }
 
     /// Get optimal SIMD instruction set for BitNet quantization
+    #[allow(dead_code)]
     async fn get_optimal_simd_instruction_set(&self) -> Option<String> {
         if !self.config.simd_optimization {
             return None;
@@ -434,6 +413,7 @@ impl BatchEngine {
     }
 
     /// Detect optimal SIMD instruction set for BitNet I2S quantization
+    #[allow(dead_code)]
     fn detect_bitnet_optimal_simd() -> Option<String> {
         #[cfg(target_arch = "x86_64")]
         {
@@ -462,6 +442,7 @@ impl BatchEngine {
     }
 
     /// Estimate memory requirement for batch
+    #[allow(dead_code)]
     async fn estimate_memory_requirement(&self, candidates: &[PendingRequest]) -> u64 {
         let mut total_tokens = 0u64;
 
@@ -518,7 +499,11 @@ impl BatchEngine {
     }
 
     /// Execute a batch of requests
-    async fn execute_batch(&self, batch: ProcessingBatch) -> Result<()> {
+    async fn execute_batch(
+        &self,
+        batch: ProcessingBatch,
+        response_channels: Vec<oneshot::Sender<Result<BatchResult>>>
+    ) -> Result<()> {
         let start_time = Instant::now();
 
         info!(
@@ -536,14 +521,32 @@ impl BatchEngine {
         let execution_duration = self.simulate_batch_execution(&batch).await?;
 
         // Update statistics
-        self.batch_counter.fetch_add(1, Ordering::Relaxed);
-        self.total_processing_time
+        self.metrics.batch_counter.fetch_add(1, Ordering::Relaxed);
+        self.metrics.total_processing_time
             .fetch_add(execution_duration.as_millis() as u64, Ordering::Relaxed);
 
         // Remove from processing map
         {
             let mut processing = self.processing_batches.write().await;
             processing.remove(&batch_id);
+        }
+
+        // Send responses
+        for (i, channel) in response_channels.into_iter().enumerate() {
+            if i < batch.requests.len() {
+                let request = &batch.requests[i];
+                let result = BatchResult {
+                    request_id: request.id.clone(),
+                    generated_text: "Simulated response".to_string(), // In real impl, this comes from inference
+                    tokens_generated: 50, // In real impl, this comes from inference
+                    execution_time: execution_duration,
+                    device_used: batch.device,
+                    quantization_type: request.quantization_hint.clone().unwrap_or_else(|| "I2S".to_string()),
+                    batch_id: batch_id.clone(),
+                    batch_size: batch.size(),
+                };
+                let _ = channel.send(Ok(result));
+            }
         }
 
         let processing_time = start_time.elapsed();
@@ -573,7 +576,7 @@ impl BatchEngine {
         // Simulate token generation
         let tokens_per_request = 50;
         let total_tokens = batch.size() as u64 * tokens_per_request;
-        self.total_tokens_generated.fetch_add(total_tokens, Ordering::Relaxed);
+        self.metrics.total_tokens_generated.fetch_add(total_tokens, Ordering::Relaxed);
 
         Ok(start.elapsed())
     }
@@ -590,10 +593,10 @@ impl BatchEngine {
             processing.len()
         };
 
-        let total_requests = self.request_counter.load(Ordering::Relaxed);
-        let total_batches = self.batch_counter.load(Ordering::Relaxed);
-        let total_time_ms = self.total_processing_time.load(Ordering::Relaxed);
-        let total_tokens = self.total_tokens_generated.load(Ordering::Relaxed);
+        let total_requests = self.metrics.request_counter.load(Ordering::Relaxed);
+        let total_batches = self.metrics.batch_counter.load(Ordering::Relaxed);
+        let total_time_ms = self.metrics.total_processing_time.load(Ordering::Relaxed);
+        let total_tokens = self.metrics.total_tokens_generated.load(Ordering::Relaxed);
 
         let average_batch_size =
             if total_batches > 0 { total_requests as f64 / total_batches as f64 } else { 0.0 };
@@ -651,26 +654,6 @@ impl BatchEngine {
     }
 }
 
-// Clone implementation for spawning tasks
-impl Clone for BatchEngine {
-    fn clone(&self) -> Self {
-        Self {
-            config: self.config.clone(),
-            request_queue: Arc::clone(&self.request_queue),
-            processing_batches: Arc::clone(&self.processing_batches),
-            batch_semaphore: Arc::clone(&self.batch_semaphore),
-            stats: Arc::clone(&self.stats),
-            request_counter: AtomicU64::new(self.request_counter.load(Ordering::Relaxed)),
-            batch_counter: AtomicU64::new(self.batch_counter.load(Ordering::Relaxed)),
-            total_processing_time: AtomicU64::new(
-                self.total_processing_time.load(Ordering::Relaxed),
-            ),
-            total_tokens_generated: AtomicU64::new(
-                self.total_tokens_generated.load(Ordering::Relaxed),
-            ),
-        }
-    }
-}
 
 /// Batch engine health status
 #[derive(Debug, Clone, Serialize)]
