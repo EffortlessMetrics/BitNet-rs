@@ -444,23 +444,43 @@ function createGenerationConfig() {
     return config;
 }
 
-// Tab switching
+// Tab switching with Accessibility support
 function switchTab(tabName) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
     });
 
-    // Remove active class from all tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-
-    // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
+    const t = document.getElementById(`tab-${tabName}`);
+    if (t) {
+        t.classList.add('active');
+        t.setAttribute('aria-selected', 'true');
+        t.setAttribute('tabindex', '0');
+        t.focus();
+    }
+}
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+function setupTabs() {
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.id.replace('tab-', '')));
+        tab.addEventListener('keydown', (e) => {
+            const idx = Array.from(tabs).indexOf(e.target);
+            let next = -1;
+            if (e.key === 'ArrowRight') next = (idx + 1) % tabs.length;
+            if (e.key === 'ArrowLeft') next = (idx - 1 + tabs.length) % tabs.length;
+            if (e.key === 'Home') next = 0;
+            if (e.key === 'End') next = tabs.length - 1;
+
+            if (next !== -1) {
+                e.preventDefault();
+                switchTab(tabs[next].id.replace('tab-', ''));
+            }
+        });
+    });
 }
 
 // Settings management
@@ -565,4 +585,7 @@ window.exportSettings = exportSettings;
 window.importSettings = importSettings;
 
 // Initialize the application when the page loads
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => {
+    setupTabs();
+    initApp();
+});
