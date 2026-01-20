@@ -189,17 +189,21 @@ pub struct BatchEngineStats {
     pub cache_hit_rate: f64,
 }
 
+/// Internal metrics for batch engine
+struct BatchEngineMetrics {
+    request_counter: AtomicU64,
+    batch_counter: AtomicU64,
+    total_processing_time: AtomicU64,
+    total_tokens_generated: AtomicU64,
+}
+
 /// Batch processing engine
 pub struct BatchEngine {
     config: BatchEngineConfig,
     request_queue: Arc<Mutex<VecDeque<PendingRequest>>>,
     processing_batches: Arc<RwLock<HashMap<String, ProcessingBatch>>>,
     batch_semaphore: Arc<Semaphore>,
-    stats: Arc<BatchEngineStats>,
-    request_counter: AtomicU64,
-    batch_counter: AtomicU64,
-    total_processing_time: AtomicU64,
-    total_tokens_generated: AtomicU64,
+    metrics: Arc<BatchEngineMetrics>,
 }
 
 impl BatchEngine {
@@ -210,20 +214,12 @@ impl BatchEngine {
             config,
             request_queue: Arc::new(Mutex::new(VecDeque::new())),
             processing_batches: Arc::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(BatchEngineStats {
-                total_requests_processed: 0,
-                total_batches_processed: 0,
-                average_batch_size: 0.0,
-                average_batch_time_ms: 0.0,
-                queue_depth: 0,
-                active_batches: 0,
-                throughput_tokens_per_second: 0.0,
-                cache_hit_rate: 0.0,
+            metrics: Arc::new(BatchEngineMetrics {
+                request_counter: AtomicU64::new(0),
+                batch_counter: AtomicU64::new(0),
+                total_processing_time: AtomicU64::new(0),
+                total_tokens_generated: AtomicU64::new(0),
             }),
-            request_counter: AtomicU64::new(0),
-            batch_counter: AtomicU64::new(0),
-            total_processing_time: AtomicU64::new(0),
-            total_tokens_generated: AtomicU64::new(0),
         }
     }
 
@@ -248,7 +244,7 @@ impl BatchEngine {
             }
         }
 
-        self.request_counter.fetch_add(1, Ordering::Relaxed);
+        self.metrics.request_counter.fetch_add(1, Ordering::Relaxed);
 
         // Trigger batch processing
         tokio::spawn({
@@ -294,7 +290,9 @@ impl BatchEngine {
         let mut timed_out_count = 0;
 
         // Process requests efficiently without unnecessary allocations
-        for _ in 0..self.config.max_batch_size {
+        // Loop terminates when batch is full (candidates.len() == max_batch_size)
+        // OR when queue is empty (pop_front returns None -> break)
+        while candidates.len() < self.config.max_batch_size {
             if let Some(pending) = queue.pop_front() {
                 // Check if request has timed out
                 if let Some(timeout) = pending.request.timeout
@@ -536,8 +534,9 @@ impl BatchEngine {
         let execution_duration = self.simulate_batch_execution(&batch).await?;
 
         // Update statistics
-        self.batch_counter.fetch_add(1, Ordering::Relaxed);
-        self.total_processing_time
+        self.metrics.batch_counter.fetch_add(1, Ordering::Relaxed);
+        self.metrics
+            .total_processing_time
             .fetch_add(execution_duration.as_millis() as u64, Ordering::Relaxed);
 
         // Remove from processing map
@@ -573,7 +572,7 @@ impl BatchEngine {
         // Simulate token generation
         let tokens_per_request = 50;
         let total_tokens = batch.size() as u64 * tokens_per_request;
-        self.total_tokens_generated.fetch_add(total_tokens, Ordering::Relaxed);
+        self.metrics.total_tokens_generated.fetch_add(total_tokens, Ordering::Relaxed);
 
         Ok(start.elapsed())
     }
@@ -590,10 +589,10 @@ impl BatchEngine {
             processing.len()
         };
 
-        let total_requests = self.request_counter.load(Ordering::Relaxed);
-        let total_batches = self.batch_counter.load(Ordering::Relaxed);
-        let total_time_ms = self.total_processing_time.load(Ordering::Relaxed);
-        let total_tokens = self.total_tokens_generated.load(Ordering::Relaxed);
+        let total_requests = self.metrics.request_counter.load(Ordering::Relaxed);
+        let total_batches = self.metrics.batch_counter.load(Ordering::Relaxed);
+        let total_time_ms = self.metrics.total_processing_time.load(Ordering::Relaxed);
+        let total_tokens = self.metrics.total_tokens_generated.load(Ordering::Relaxed);
 
         let average_batch_size =
             if total_batches > 0 { total_requests as f64 / total_batches as f64 } else { 0.0 };
@@ -659,15 +658,7 @@ impl Clone for BatchEngine {
             request_queue: Arc::clone(&self.request_queue),
             processing_batches: Arc::clone(&self.processing_batches),
             batch_semaphore: Arc::clone(&self.batch_semaphore),
-            stats: Arc::clone(&self.stats),
-            request_counter: AtomicU64::new(self.request_counter.load(Ordering::Relaxed)),
-            batch_counter: AtomicU64::new(self.batch_counter.load(Ordering::Relaxed)),
-            total_processing_time: AtomicU64::new(
-                self.total_processing_time.load(Ordering::Relaxed),
-            ),
-            total_tokens_generated: AtomicU64::new(
-                self.total_tokens_generated.load(Ordering::Relaxed),
-            ),
+            metrics: Arc::clone(&self.metrics),
         }
     }
 }
