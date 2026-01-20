@@ -296,7 +296,7 @@ impl BitNetServer {
             ))
             .layer(middleware::from_fn(enhanced_metrics_middleware))
             .layer(TraceLayer::new_for_http())
-            .layer(configure_cors());
+            .layer(configure_cors(&self.config.security.allowed_origins));
 
         app
     }
