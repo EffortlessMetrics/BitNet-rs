@@ -447,20 +447,68 @@ function createGenerationConfig() {
 // Tab switching
 function switchTab(tabName) {
     // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-
-    // Remove active class from all tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
+    document.querySelectorAll('.tab-content').forEach(panel => {
+        panel.classList.remove('active');
     });
 
     // Show selected tab content
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+    const selectedPanel = document.getElementById(`${tabName}-tab`);
+    if (selectedPanel) {
+        selectedPanel.classList.add('active');
+    }
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Update tabs state
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
+    });
+
+    // Activate selected tab
+    const selectedTab = document.getElementById(`tab-btn-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        selectedTab.setAttribute('aria-selected', 'true');
+        selectedTab.setAttribute('tabindex', '0');
+    }
+}
+
+// Setup keyboard navigation for tabs
+function setupTabs() {
+    const tabs = document.querySelectorAll('[role="tab"]');
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('keydown', (e) => {
+            let nextIndex = null;
+
+            switch (e.key) {
+                case 'ArrowRight':
+                    nextIndex = (index + 1) % tabs.length;
+                    break;
+                case 'ArrowLeft':
+                    nextIndex = (index - 1 + tabs.length) % tabs.length;
+                    break;
+                case 'Home':
+                    nextIndex = 0;
+                    break;
+                case 'End':
+                    nextIndex = tabs.length - 1;
+                    break;
+                case 'Enter':
+                case ' ':
+                    e.preventDefault();
+                    tab.click();
+                    return;
+            }
+
+            if (nextIndex !== null) {
+                e.preventDefault();
+                const nextTab = tabs[nextIndex];
+                nextTab.focus();
+                nextTab.click(); // Follows focus
+            }
+        });
+    });
 }
 
 // Settings management
@@ -565,4 +613,7 @@ window.exportSettings = exportSettings;
 window.importSettings = importSettings;
 
 // Initialize the application when the page loads
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+    setupTabs();
+});
