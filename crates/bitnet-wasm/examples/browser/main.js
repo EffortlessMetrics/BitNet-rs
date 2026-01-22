@@ -451,16 +451,54 @@ function switchTab(tabName) {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all tabs
+    // Remove active class from all tabs and update ARIA
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Add active class to selected tab and update ARIA
+    const selectedTab = document.getElementById(`tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        selectedTab.setAttribute('aria-selected', 'true');
+        selectedTab.setAttribute('tabindex', '0');
+    }
+}
+
+// Handle keyboard navigation for tabs
+function handleTabKeydown(event) {
+    const key = event.key;
+    const currentTab = event.target;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const index = tabs.indexOf(currentTab);
+
+    let newIndex = -1;
+
+    if (key === 'ArrowRight') {
+        newIndex = (index + 1) % tabs.length;
+    } else if (key === 'ArrowLeft') {
+        newIndex = (index - 1 + tabs.length) % tabs.length;
+    } else if (key === 'Home') {
+        newIndex = 0;
+    } else if (key === 'End') {
+        newIndex = tabs.length - 1;
+    } else if (key === 'Enter' || key === ' ') {
+        event.preventDefault();
+        currentTab.click();
+        return;
+    }
+
+    if (newIndex !== -1) {
+        event.preventDefault();
+        const newTab = tabs[newIndex];
+        newTab.click();
+        newTab.focus();
+    }
 }
 
 // Settings management
@@ -559,6 +597,7 @@ window.runKernelBenchmark = runKernelBenchmark;
 window.runMemoryBenchmark = runMemoryBenchmark;
 window.runLoadingBenchmark = runLoadingBenchmark;
 window.switchTab = switchTab;
+window.handleTabKeydown = handleTabKeydown;
 window.saveSettings = saveSettings;
 window.resetSettings = resetSettings;
 window.exportSettings = exportSettings;
