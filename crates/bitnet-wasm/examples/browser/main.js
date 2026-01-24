@@ -45,6 +45,9 @@ async function initApp() {
 
         Logger.info('BitNet WASM application initialized');
 
+        // Setup accessible tabs
+        setupTabs();
+
         // Hide progress bar after a delay
         setTimeout(() => {
             document.getElementById('progress').parentElement.style.display = 'none';
@@ -446,21 +449,42 @@ function createGenerationConfig() {
 
 // Tab switching
 function switchTab(tabName) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
+    document.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+        t.setAttribute('tabindex', '-1');
     });
 
-    // Remove active class from all tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-
-    // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    const tab = document.getElementById(`tab-${tabName}`);
+    if (tab) {
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.setAttribute('tabindex', '0');
+        tab.focus();
+    }
+}
+
+function setupTabs() {
+    const tabList = document.querySelector('[role="tablist"]');
+    if (!tabList) return;
+
+    tabList.addEventListener('keydown', (e) => {
+        const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
+        const index = tabs.indexOf(document.activeElement);
+        if (index === -1) return;
+
+        let nextIndex = null;
+        if (e.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+        if (e.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+
+        if (nextIndex !== null) {
+            e.preventDefault();
+            tabs[nextIndex].click();
+        }
+    });
 }
 
 // Settings management
