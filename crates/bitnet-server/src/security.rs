@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -340,14 +340,24 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let layer = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    if config.allowed_origins.contains(&"*".to_string()) {
+        layer.allow_origin(Any)
+    } else {
+        let origins: Vec<HeaderValue> = config
+            .allowed_origins
+            .iter()
+            .filter_map(|o| HeaderValue::from_str(o).ok())
+            .collect();
+        layer.allow_origin(origins)
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +500,50 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[tokio::test]
+    async fn test_cors_configuration() {
+        use axum::{routing::get, Router};
+        use tower::ServiceExt;
+
+        // Test wildcard
+        let config_wildcard = SecurityConfig::default(); // defaults to "*"
+        let _cors_wildcard = configure_cors(&config_wildcard);
+
+        // Test specific origin
+        let mut config_specific = SecurityConfig::default();
+        config_specific.allowed_origins = vec!["http://example.com".to_string()];
+        let cors_specific = configure_cors(&config_specific);
+
+        // We verify behavior by constructing a small router
+        let app = Router::new()
+            .route("/", get(|| async { "ok" }))
+            .layer(cors_specific);
+
+        // Request from allowed origin
+        let req = Request::builder()
+            .uri("/")
+            .header("Origin", "http://example.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let response = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(
+            response.headers().get("access-control-allow-origin").unwrap(),
+            "http://example.com"
+        );
+
+        // Request from disallowed origin
+        let req = Request::builder()
+            .uri("/")
+            .header("Origin", "http://attacker.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert!(response.headers().get("access-control-allow-origin").is_none());
     }
 }
