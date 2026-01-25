@@ -378,12 +378,12 @@ impl BatchEngine {
         }
 
         // Analyze requests for quantization compatibility
-        let mut compatible_groups: HashMap<String, Vec<usize>> = HashMap::new();
+        let mut compatible_groups: HashMap<&str, Vec<usize>> = HashMap::new();
 
         for (index, pending) in candidates.iter().enumerate() {
             let quantization_type = pending.request.quantization_hint.as_deref().unwrap_or("I2S"); // Default to I2S quantization
 
-            compatible_groups.entry(quantization_type.to_string()).or_default().push(index);
+            compatible_groups.entry(quantization_type).or_default().push(index);
         }
 
         // Find the largest compatible group
@@ -391,12 +391,12 @@ impl BatchEngine {
             compatible_groups.into_iter().max_by_key(|(_, indices)| indices.len())?;
 
         // Recommend device based on quantization type and SIMD support
-        let recommended_device = self.recommend_device_for_quantization(&best_quantization).await;
+        let recommended_device = self.recommend_device_for_quantization(best_quantization).await;
 
         Some(QuantizationOptimization {
             batch_compatible_requests: best_indices,
             recommended_device,
-            quantization_type: best_quantization,
+            quantization_type: best_quantization.to_string(),
             simd_instruction_set: self.get_optimal_simd_instruction_set().await,
             memory_requirement_mb: self.estimate_memory_requirement(candidates).await,
         })
@@ -681,4 +681,60 @@ pub struct BatchEngineHealth {
     pub average_batch_size: f64,
     pub throughput_tokens_per_second: f64,
     pub issues: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_optimize_batch_for_quantization() {
+        let config = BatchEngineConfig {
+            quantization_aware: true,
+            ..Default::default()
+        };
+        let engine = BatchEngine::new(config);
+
+        let mut candidates = Vec::new();
+
+        // 3 requests with I2S (2 explicit, 1 implicit default)
+        // 2 requests with TL1
+
+        // Request 0: I2S
+        let req1 = BatchRequest::new("p1".to_string(), GenerationConfig::default())
+            .with_quantization_hint("I2S".to_string());
+        let (tx1, _) = oneshot::channel();
+        candidates.push(PendingRequest { request: req1, response_tx: tx1 });
+
+        // Request 1: TL1
+        let req2 = BatchRequest::new("p2".to_string(), GenerationConfig::default())
+            .with_quantization_hint("TL1".to_string());
+        let (tx2, _) = oneshot::channel();
+        candidates.push(PendingRequest { request: req2, response_tx: tx2 });
+
+        // Request 2: I2S
+        let req3 = BatchRequest::new("p3".to_string(), GenerationConfig::default())
+            .with_quantization_hint("I2S".to_string());
+        let (tx3, _) = oneshot::channel();
+        candidates.push(PendingRequest { request: req3, response_tx: tx3 });
+
+        // Request 3: TL1
+        let req4 = BatchRequest::new("p4".to_string(), GenerationConfig::default())
+            .with_quantization_hint("TL1".to_string());
+        let (tx4, _) = oneshot::channel();
+        candidates.push(PendingRequest { request: req4, response_tx: tx4 });
+
+        // Request 4: Default (should be I2S)
+        let req5 = BatchRequest::new("p5".to_string(), GenerationConfig::default());
+        let (tx5, _) = oneshot::channel();
+        candidates.push(PendingRequest { request: req5, response_tx: tx5 });
+
+        let optimization = engine.optimize_batch_for_quantization(&candidates).await.expect("Optimization failed");
+
+        assert_eq!(optimization.quantization_type, "I2S");
+        assert_eq!(optimization.batch_compatible_requests.len(), 3);
+        assert!(optimization.batch_compatible_requests.contains(&0));
+        assert!(optimization.batch_compatible_requests.contains(&2));
+        assert!(optimization.batch_compatible_requests.contains(&4));
+    }
 }
