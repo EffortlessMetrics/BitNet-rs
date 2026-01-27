@@ -340,14 +340,26 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
-    use tower_http::cors::{Any, CorsLayer};
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
+    use axum::http::HeaderValue;
+    use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let cors = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    if config.allowed_origins.contains(&"*".to_string()) {
+        cors.allow_origin(Any)
+    } else {
+        let origins: Vec<HeaderValue> = config
+            .allowed_origins
+            .iter()
+            .filter_map(|origin| origin.parse::<HeaderValue>().ok())
+            .collect();
+
+        cors.allow_origin(AllowOrigin::list(origins))
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +502,74 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[tokio::test]
+    async fn test_cors_integration() {
+        use axum::{Router, http::{Method, HeaderValue}, routing::get};
+        use tower::ServiceExt; // for oneshot
+
+        // 1. Test Wildcard
+        let config = SecurityConfig {
+            allowed_origins: vec!["*".to_string()],
+            ..Default::default()
+        };
+        let app = Router::new()
+            .route("/", get(|| async {}))
+            .layer(configure_cors(&config));
+
+        let req = Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/")
+            .header("Origin", "http://example.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(
+            response.headers().get("access-control-allow-origin"),
+            Some(&HeaderValue::from_static("*"))
+        );
+
+        // 2. Test Specific Origin
+        let config = SecurityConfig {
+            allowed_origins: vec!["http://trusted.com".to_string()],
+            ..Default::default()
+        };
+        let app = Router::new()
+            .route("/", get(|| async {}))
+            .layer(configure_cors(&config));
+
+        // Allowed origin
+        let req = Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/")
+            .header("Origin", "http://trusted.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(
+            response.headers().get("access-control-allow-origin"),
+            Some(&HeaderValue::from_static("http://trusted.com"))
+        );
+
+        // Blocked origin
+        let app = Router::new()
+            .route("/", get(|| async {}))
+            .layer(configure_cors(&config));
+
+        let req = Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/")
+            .header("Origin", "http://evil.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(axum::body::Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert!(response.headers().get("access-control-allow-origin").is_none());
     }
 }
