@@ -188,14 +188,25 @@
             margin-bottom: 20px;
         }
 
-        .tab {
+        button.tab {
             padding: 12px 20px;
             cursor: pointer;
+            border: none;
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
+            background: transparent;
+            color: inherit;
+            border-radius: 0;
+            font-size: 16px;
+            font-family: inherit;
         }
 
-        .tab.active {
+        button.tab:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: #0056b3;
+        }
+
+        button.tab.active {
             border-bottom-color: #007bff;
             color: #007bff;
         }
@@ -225,12 +236,12 @@
         </div>
     </div>
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('basic')">Basic Inference</div>
-        <div class="tab" onclick="switchTab('streaming')">Streaming</div>
-        <div class="tab" onclick="switchTab('worker')">Web Workers</div>
-        <div class="tab" onclick="switchTab('benchmark')">Benchmarks</div>
-        <div class="tab" onclick="switchTab('settings')">Settings</div>
+    <div class="tabs" role="tablist">
+        <button id="tab-btn-basic" class="tab active" role="tab" aria-selected="true" aria-controls="basic-tab" onclick="switchTab('basic')">Basic Inference</button>
+        <button id="tab-btn-streaming" class="tab" role="tab" aria-selected="false" aria-controls="streaming-tab" onclick="switchTab('streaming')">Streaming</button>
+        <button id="tab-btn-worker" class="tab" role="tab" aria-selected="false" aria-controls="worker-tab" onclick="switchTab('worker')">Web Workers</button>
+        <button id="tab-btn-benchmark" class="tab" role="tab" aria-selected="false" aria-controls="benchmark-tab" onclick="switchTab('benchmark')">Benchmarks</button>
+        <button id="tab-btn-settings" class="tab" role="tab" aria-selected="false" aria-controls="settings-tab" onclick="switchTab('settings')">Settings</button>
     </div>
 
     <!-- Basic Inference Tab -->
