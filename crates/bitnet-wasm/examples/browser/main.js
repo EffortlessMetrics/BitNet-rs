@@ -445,22 +445,32 @@ function createGenerationConfig() {
 }
 
 // Tab switching
-function switchTab(tabName) {
+function switchTab(tabName, element) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all tabs
+    // Remove active class and update aria-selected from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Add active class to selected tab and update aria-selected
+    // Fallback to event.target or finding by ID if element not passed
+    const activeTab = element || document.getElementById(`tab-${tabName}`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+        activeTab.setAttribute('aria-selected', 'true');
+    } else if (typeof event !== 'undefined' && event.target) {
+        // Fallback for cases where element isn't passed and we're in an event handler
+        event.target.classList.add('active');
+        event.target.setAttribute('aria-selected', 'true');
+    }
 }
 
 // Settings management
