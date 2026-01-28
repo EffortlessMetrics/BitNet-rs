@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -340,14 +340,36 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let allow_any = config.allowed_origins.iter().any(|o| o == "*");
+    let mut origins = Vec::new();
+
+    if !allow_any {
+        for o in &config.allowed_origins {
+            if let Ok(v) = o.parse::<HeaderValue>() {
+                origins.push(v);
+            } else {
+                warn!("Invalid CORS origin: {}", o);
+            }
+        }
+
+        if origins.is_empty() {
+            warn!("No valid allowed origins found, CORS will block all requests");
+        }
+    }
+
+    let cors = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    if allow_any {
+        cors.allow_origin(Any)
+    } else {
+        cors.allow_origin(origins)
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +512,25 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[test]
+    fn test_cors_configuration() {
+        // Test wildcard
+        let mut config = SecurityConfig::default();
+        config.allowed_origins = vec!["*".to_string()];
+        let _layer = configure_cors(&config);
+        // We can't easily introspect the layer, but we ensure it constructs without panic
+
+        // Test specific origins
+        config.allowed_origins = vec![
+            "https://example.com".to_string(),
+            "http://localhost:3000".to_string(),
+        ];
+        let _layer = configure_cors(&config);
+
+        // Test invalid origin (should verify it doesn't panic)
+        config.allowed_origins = vec!["invalid char \x00 in header".to_string()];
+        let _layer = configure_cors(&config);
     }
 }
