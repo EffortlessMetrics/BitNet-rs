@@ -38,6 +38,10 @@ async function initApp() {
 
         // Load settings
         loadSettings();
+        updateProgress(80);
+
+        // Setup accessibility
+        setupTabAccessibility();
         updateProgress(90);
 
         updateStatus('WebAssembly module initialized successfully!', 'success');
@@ -445,7 +449,9 @@ function createGenerationConfig() {
 }
 
 // Tab switching
-function switchTab(tabName) {
+function switchTab(tabName, element) {
+    const targetElement = element || event.target;
+
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
@@ -454,13 +460,27 @@ function switchTab(tabName) {
     // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
     // Add active class to selected tab
-    event.target.classList.add('active');
+    targetElement.classList.add('active');
+    targetElement.setAttribute('aria-selected', 'true');
+}
+
+// Setup keyboard accessibility for tabs
+function setupTabAccessibility() {
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                tab.click();
+            }
+        });
+    });
 }
 
 // Settings management
