@@ -686,13 +686,11 @@ pub struct BatchEngineHealth {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::sync::oneshot;
 
     #[tokio::test]
     async fn test_quantization_optimization_allocation() {
-        let config = BatchEngineConfig {
-            quantization_aware: true,
-            ..Default::default()
-        };
+        let config = BatchEngineConfig { quantization_aware: true, ..Default::default() };
         let engine = BatchEngine::new(config);
 
         let mut candidates = Vec::new();
@@ -704,10 +702,7 @@ mod tests {
                 .with_quantization_hint(hint.to_string());
 
             let (tx, _rx) = oneshot::channel();
-            candidates.push(PendingRequest {
-                request,
-                response_tx: tx,
-            });
+            candidates.push(PendingRequest { request, response_tx: tx });
         }
 
         let optimization = engine.optimize_batch_for_quantization(&candidates).await;
