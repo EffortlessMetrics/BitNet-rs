@@ -113,8 +113,8 @@ pub struct BatchResult {
 
 /// Pending request with response channel
 struct PendingRequest {
-    pub request: BatchRequest,
-    pub response_tx: oneshot::Sender<Result<BatchResult>>,
+    request: BatchRequest,
+    response_tx: oneshot::Sender<Result<BatchResult>>,
 }
 
 /// Batch for processing
