@@ -516,4 +516,22 @@ mod tests {
             Err(ValidationError::InvalidFieldValue(_))
         ));
     }
+
+    #[test]
+    fn test_cors_configuration() {
+        // Test default (wildcard)
+        let config = SecurityConfig::default();
+        let _ = configure_cors(&config);
+
+        // Test specific origin
+        let mut config = SecurityConfig::default();
+        config.allowed_origins = vec!["https://example.com".to_string()];
+        let _ = configure_cors(&config);
+
+        // Test invalid origin
+        let mut config = SecurityConfig::default();
+        config.allowed_origins = vec!["invalid origin".to_string()];
+        // Should log warning but not panic
+        let _ = configure_cors(&config);
+    }
 }
