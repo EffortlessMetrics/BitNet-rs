@@ -340,14 +340,39 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
+    use axum::http::HeaderValue;
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let layer = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    // Check if we should allow all origins
+    if config.allowed_origins.contains(&"*".to_string()) {
+        return layer.allow_origin(Any);
+    }
+
+    // Parse specific origins
+    let origins: Vec<HeaderValue> = config
+        .allowed_origins
+        .iter()
+        .filter_map(|origin| match origin.parse::<HeaderValue>() {
+            Ok(header) => Some(header),
+            Err(e) => {
+                warn!("Invalid allowed origin '{}': {}", origin, e);
+                None
+            }
+        })
+        .collect();
+
+    if origins.is_empty() {
+        warn!("No valid allowed origins configured, defaulting to blocking all");
+        layer.allow_origin(origins)
+    } else {
+        layer.allow_origin(origins)
+    }
 }
 
 /// Input validation helper for JSON payloads
