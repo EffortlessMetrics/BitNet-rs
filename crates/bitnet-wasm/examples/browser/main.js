@@ -445,7 +445,7 @@ function createGenerationConfig() {
 }
 
 // Tab switching
-function switchTab(tabName) {
+function switchTab(element, tabName) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
@@ -454,13 +454,24 @@ function switchTab(tabName) {
     // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
     // Add active class to selected tab
-    event.target.classList.add('active');
+    if (element) {
+        element.classList.add('active');
+        element.setAttribute('aria-selected', 'true');
+    }
+}
+
+function handleTabKey(event, tabName) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        switchTab(event.currentTarget, tabName);
+    }
 }
 
 // Settings management
@@ -559,6 +570,7 @@ window.runKernelBenchmark = runKernelBenchmark;
 window.runMemoryBenchmark = runMemoryBenchmark;
 window.runLoadingBenchmark = runLoadingBenchmark;
 window.switchTab = switchTab;
+window.handleTabKey = handleTabKey;
 window.saveSettings = saveSettings;
 window.resetSettings = resetSettings;
 window.exportSettings = exportSettings;
