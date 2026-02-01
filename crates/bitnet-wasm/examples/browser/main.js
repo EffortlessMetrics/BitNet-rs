@@ -454,13 +454,51 @@ function switchTab(tabName) {
     // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
     // Add active class to selected tab
-    event.target.classList.add('active');
+    const activeTab = document.getElementById(`tab-${tabName}`);
+    activeTab.classList.add('active');
+    activeTab.setAttribute('aria-selected', 'true');
+    activeTab.setAttribute('tabindex', '0');
+    activeTab.focus();
+}
+
+// Handle keyboard navigation for tabs
+function handleTabKey(event) {
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const currentIndex = tabs.indexOf(event.target);
+    let nextIndex = null;
+
+    switch (event.key) {
+        case 'ArrowRight':
+            nextIndex = (currentIndex + 1) % tabs.length;
+            break;
+        case 'ArrowLeft':
+            nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+            break;
+        case 'Home':
+            nextIndex = 0;
+            break;
+        case 'End':
+            nextIndex = tabs.length - 1;
+            break;
+        case 'Enter':
+        case ' ':
+            event.preventDefault();
+            event.target.click();
+            return;
+    }
+
+    if (nextIndex !== null) {
+        event.preventDefault();
+        tabs[nextIndex].click();
+    }
 }
 
 // Settings management
@@ -559,6 +597,7 @@ window.runKernelBenchmark = runKernelBenchmark;
 window.runMemoryBenchmark = runMemoryBenchmark;
 window.runLoadingBenchmark = runLoadingBenchmark;
 window.switchTab = switchTab;
+window.handleTabKey = handleTabKey;
 window.saveSettings = saveSettings;
 window.resetSettings = resetSettings;
 window.exportSettings = exportSettings;
