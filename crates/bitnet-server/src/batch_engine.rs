@@ -691,10 +691,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_optimize_batch_allocation() {
-        let config = BatchEngineConfig {
-            quantization_aware: true,
-            ..Default::default()
-        };
+        let config = BatchEngineConfig { quantization_aware: true, ..Default::default() };
         let engine = BatchEngine::new(config);
 
         let mut candidates = Vec::new();
@@ -704,10 +701,7 @@ mod tests {
             let request = BatchRequest::new(format!("prompt {}", i), GenerationConfig::default())
                 .with_quantization_hint(hint.to_string());
             let (tx, _rx) = oneshot::channel();
-            candidates.push(PendingRequest {
-                request,
-                response_tx: tx,
-            });
+            candidates.push(PendingRequest { request, response_tx: tx });
         }
 
         let optimization = engine.optimize_batch_for_quantization(&candidates).await;
