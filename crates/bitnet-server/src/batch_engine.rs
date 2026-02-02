@@ -117,6 +117,14 @@ struct PendingRequest {
     response_tx: oneshot::Sender<Result<BatchResult>>,
 }
 
+impl PendingRequest {
+    #[cfg(test)]
+    fn new_test(request: BatchRequest) -> Self {
+        let (tx, _rx) = oneshot::channel();
+        Self { request, response_tx: tx }
+    }
+}
+
 /// Batch for processing
 #[derive(Debug, Clone)]
 struct ProcessingBatch {
@@ -378,12 +386,12 @@ impl BatchEngine {
         }
 
         // Analyze requests for quantization compatibility
-        let mut compatible_groups: HashMap<String, Vec<usize>> = HashMap::new();
+        let mut compatible_groups: HashMap<&str, Vec<usize>> = HashMap::new();
 
         for (index, pending) in candidates.iter().enumerate() {
             let quantization_type = pending.request.quantization_hint.as_deref().unwrap_or("I2S"); // Default to I2S quantization
 
-            compatible_groups.entry(quantization_type.to_string()).or_default().push(index);
+            compatible_groups.entry(quantization_type).or_default().push(index);
         }
 
         // Find the largest compatible group
@@ -391,12 +399,12 @@ impl BatchEngine {
             compatible_groups.into_iter().max_by_key(|(_, indices)| indices.len())?;
 
         // Recommend device based on quantization type and SIMD support
-        let recommended_device = self.recommend_device_for_quantization(&best_quantization).await;
+        let recommended_device = self.recommend_device_for_quantization(best_quantization).await;
 
         Some(QuantizationOptimization {
             batch_compatible_requests: best_indices,
             recommended_device,
-            quantization_type: best_quantization,
+            quantization_type: best_quantization.to_string(),
             simd_instruction_set: self.get_optimal_simd_instruction_set().await,
             memory_requirement_mb: self.estimate_memory_requirement(candidates).await,
         })
@@ -681,4 +689,56 @@ pub struct BatchEngineHealth {
     pub average_batch_size: f64,
     pub throughput_tokens_per_second: f64,
     pub issues: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_optimize_batch_allocation_correctness() {
+        let mut config = BatchEngineConfig::default();
+        config.quantization_aware = true;
+        let engine = BatchEngine::new(config);
+
+        let gen_config = GenerationConfig::default();
+
+        let mut candidates = Vec::new();
+
+        // 3 requests with I2S
+        for _ in 0..3 {
+            let req = BatchRequest::new("prompt".to_string(), gen_config.clone())
+                .with_quantization_hint("I2S".to_string());
+            candidates.push(PendingRequest::new_test(req));
+        }
+
+        // 2 requests with TL1
+        for _ in 0..2 {
+            let req = BatchRequest::new("prompt".to_string(), gen_config.clone())
+                .with_quantization_hint("TL1".to_string());
+            candidates.push(PendingRequest::new_test(req));
+        }
+
+        // 1 request with no hint (defaults to I2S)
+        let req = BatchRequest::new("prompt".to_string(), gen_config.clone());
+        candidates.push(PendingRequest::new_test(req));
+
+        // Total I2S = 3 + 1 = 4. TL1 = 2.
+        // Expected winner: I2S.
+
+        let optimization = engine
+            .optimize_batch_for_quantization(&candidates)
+            .await
+            .expect("Should return optimization");
+
+        assert_eq!(optimization.quantization_type, "I2S");
+        assert_eq!(optimization.batch_compatible_requests.len(), 4);
+
+        // Check indices: 0, 1, 2 (I2S) and 5 (None -> I2S)
+        let indices = &optimization.batch_compatible_requests;
+        assert!(indices.contains(&0));
+        assert!(indices.contains(&1));
+        assert!(indices.contains(&2));
+        assert!(indices.contains(&5));
+    }
 }
