@@ -340,11 +340,30 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
-    use tower_http::cors::{Any, CorsLayer};
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
+    use axum::http::HeaderValue;
+    use tower_http::cors::{AllowOrigin, Any, CorsLayer};
+
+    let allow_origin = if config.allowed_origins.contains(&"*".to_string()) {
+        AllowOrigin::any()
+    } else {
+        let origins: Vec<HeaderValue> = config
+            .allowed_origins
+            .iter()
+            .filter_map(|origin| match HeaderValue::from_str(origin) {
+                Ok(val) => Some(val),
+                Err(_) => {
+                    warn!("Invalid origin in configuration: {}", origin);
+                    None
+                }
+            })
+            .collect();
+
+        AllowOrigin::list(origins)
+    };
 
     CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin(allow_origin)
         .allow_methods(Any)
         .allow_headers(Any)
         .max_age(std::time::Duration::from_secs(3600))
