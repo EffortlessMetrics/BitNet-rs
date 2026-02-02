@@ -451,16 +451,29 @@ function switchTab(tabName) {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all tabs
+    // Update tabs state
     document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
+        const isTarget = tab.id === `tab-${tabName}`;
+
+        if (isTarget) {
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+        } else {
+            tab.classList.remove('active');
+            tab.setAttribute('aria-selected', 'false');
+        }
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
+}
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+// Handle keyboard navigation for tabs
+function handleTabKey(event, tabName) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        switchTab(tabName);
+    }
 }
 
 // Settings management
@@ -559,6 +572,7 @@ window.runKernelBenchmark = runKernelBenchmark;
 window.runMemoryBenchmark = runMemoryBenchmark;
 window.runLoadingBenchmark = runLoadingBenchmark;
 window.switchTab = switchTab;
+window.handleTabKey = handleTabKey;
 window.saveSettings = saveSettings;
 window.resetSettings = resetSettings;
 window.exportSettings = exportSettings;
