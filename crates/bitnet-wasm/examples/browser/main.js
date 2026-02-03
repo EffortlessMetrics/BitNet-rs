@@ -451,16 +451,54 @@ function switchTab(tabName) {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all tabs
+    // Remove active class from all tabs and update ARIA attributes
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Add active class to selected tab and update ARIA attributes
+    const selectedTab = document.getElementById(`tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        selectedTab.setAttribute('aria-selected', 'true');
+        selectedTab.setAttribute('tabindex', '0');
+        selectedTab.focus();
+    }
+}
+
+// Handle keyboard navigation for tabs
+function handleTabKey(event) {
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const currentTab = event.target;
+    const currentIndex = tabs.indexOf(currentTab);
+
+    let newIndex = -1;
+
+    switch(event.key) {
+        case 'ArrowRight':
+            newIndex = (currentIndex + 1) % tabs.length;
+            break;
+        case 'ArrowLeft':
+            newIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+            break;
+        case 'Home':
+            newIndex = 0;
+            break;
+        case 'End':
+            newIndex = tabs.length - 1;
+            break;
+    }
+
+    if (newIndex !== -1) {
+        event.preventDefault();
+        tabs[newIndex].click();
+        tabs[newIndex].focus();
+    }
 }
 
 // Settings management
@@ -559,6 +597,7 @@ window.runKernelBenchmark = runKernelBenchmark;
 window.runMemoryBenchmark = runMemoryBenchmark;
 window.runLoadingBenchmark = runLoadingBenchmark;
 window.switchTab = switchTab;
+window.handleTabKey = handleTabKey;
 window.saveSettings = saveSettings;
 window.resetSettings = resetSettings;
 window.exportSettings = exportSettings;
