@@ -378,12 +378,12 @@ impl BatchEngine {
         }
 
         // Analyze requests for quantization compatibility
-        let mut compatible_groups: HashMap<String, Vec<usize>> = HashMap::new();
+        let mut compatible_groups: HashMap<&str, Vec<usize>> = HashMap::new();
 
         for (index, pending) in candidates.iter().enumerate() {
             let quantization_type = pending.request.quantization_hint.as_deref().unwrap_or("I2S"); // Default to I2S quantization
 
-            compatible_groups.entry(quantization_type.to_string()).or_default().push(index);
+            compatible_groups.entry(quantization_type).or_default().push(index);
         }
 
         // Find the largest compatible group
@@ -391,12 +391,12 @@ impl BatchEngine {
             compatible_groups.into_iter().max_by_key(|(_, indices)| indices.len())?;
 
         // Recommend device based on quantization type and SIMD support
-        let recommended_device = self.recommend_device_for_quantization(&best_quantization).await;
+        let recommended_device = self.recommend_device_for_quantization(best_quantization).await;
 
         Some(QuantizationOptimization {
             batch_compatible_requests: best_indices,
             recommended_device,
-            quantization_type: best_quantization,
+            quantization_type: best_quantization.to_string(),
             simd_instruction_set: self.get_optimal_simd_instruction_set().await,
             memory_requirement_mb: self.estimate_memory_requirement(candidates).await,
         })
@@ -681,4 +681,48 @@ pub struct BatchEngineHealth {
     pub average_batch_size: f64,
     pub throughput_tokens_per_second: f64,
     pub issues: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::oneshot;
+
+    #[tokio::test]
+    async fn test_optimize_batch_for_quantization() {
+        let config = BatchEngineConfig {
+            quantization_aware: true,
+            ..Default::default()
+        };
+        let engine = BatchEngine::new(config);
+
+        // Helper to create pending request
+        let create_request = |hint: Option<&str>| {
+            let config = GenerationConfig::default();
+            let mut req = BatchRequest::new("test".to_string(), config);
+            if let Some(h) = hint {
+                req = req.with_quantization_hint(h.to_string());
+            }
+            let (tx, _) = oneshot::channel();
+            PendingRequest {
+                request: req,
+                response_tx: tx,
+            }
+        };
+
+        let requests = vec![
+            create_request(Some("Q4_0")),
+            create_request(Some("Q4_0")),
+            create_request(Some("Q8_0")),
+        ];
+
+        let opt = engine.optimize_batch_for_quantization(&requests).await.unwrap();
+
+        assert_eq!(opt.quantization_type, "Q4_0");
+        // The order of indices depends on the map iteration order if it wasn't sorted,
+        // but PendingRequest processing order is usually preserved or deterministic if we iterate candidates.
+        // Wait, compatible_groups stores indices in a Vec, push adds them in order of appearance in candidates.
+        // So they should be [0, 1].
+        assert_eq!(opt.batch_compatible_requests, vec![0, 1]);
+    }
 }
