@@ -447,20 +447,53 @@ function createGenerationConfig() {
 // Tab switching
 function switchTab(tabName) {
     // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-
-    // Remove active class from all tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.remove('active');
+    document.querySelectorAll('.tab-content').forEach(panel => {
+        panel.classList.remove('active');
     });
 
     // Show selected tab content
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+    const panel = document.getElementById(`${tabName}-tab`);
+    if (panel) panel.classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Deactivate all tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
+    });
+
+    // Activate selected tab
+    const tab = document.getElementById(`tab-${tabName}`);
+    if (tab) {
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.setAttribute('tabindex', '0');
+        tab.focus();
+    }
+}
+
+// Handle keyboard navigation for tabs
+function handleTabKey(e) {
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const index = tabs.indexOf(e.target);
+    if (index === -1) return;
+
+    let newIndex = index;
+    if (e.key === 'ArrowRight') {
+        newIndex = (index + 1) % tabs.length;
+    } else if (e.key === 'ArrowLeft') {
+        newIndex = (index - 1 + tabs.length) % tabs.length;
+    } else if (e.key === 'Home') {
+        newIndex = 0;
+    } else if (e.key === 'End') {
+        newIndex = tabs.length - 1;
+    } else {
+        return;
+    }
+
+    e.preventDefault();
+    const tabId = tabs[newIndex].id.replace('tab-', '');
+    switchTab(tabId);
 }
 
 // Settings management
@@ -559,6 +592,7 @@ window.runKernelBenchmark = runKernelBenchmark;
 window.runMemoryBenchmark = runMemoryBenchmark;
 window.runLoadingBenchmark = runLoadingBenchmark;
 window.switchTab = switchTab;
+window.handleTabKey = handleTabKey;
 window.saveSettings = saveSettings;
 window.resetSettings = resetSettings;
 window.exportSettings = exportSettings;
