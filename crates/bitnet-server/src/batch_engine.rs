@@ -694,18 +694,12 @@ mod tests {
             req = req.with_quantization_hint(h.to_string());
         }
         let (tx, _) = oneshot::channel();
-        PendingRequest {
-            request: req,
-            response_tx: tx,
-        }
+        PendingRequest { request: req, response_tx: tx }
     }
 
     #[tokio::test]
     async fn test_optimize_batch_allocation_correctness() {
-        let config = BatchEngineConfig {
-            quantization_aware: true,
-            ..Default::default()
-        };
+        let config = BatchEngineConfig { quantization_aware: true, ..Default::default() };
         let engine = BatchEngine::new(config);
 
         let candidates = vec![
