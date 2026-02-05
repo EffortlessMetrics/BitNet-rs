@@ -454,13 +454,54 @@ function switchTab(tabName) {
     // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('tabindex', '-1');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Add active class and A11y attributes to selected tab
+    const selectedTab = document.getElementById(`tab-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        selectedTab.setAttribute('aria-selected', 'true');
+        selectedTab.setAttribute('tabindex', '0');
+        // Ensure focus follows if this wasn't a mouse click
+        if (document.activeElement !== selectedTab) {
+            selectedTab.focus();
+        }
+    }
+}
+
+// Handle keyboard navigation for tabs
+function handleTabKeydown(e) {
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const index = tabs.indexOf(e.target);
+
+    let nextTab = null;
+
+    switch (e.key) {
+        case 'ArrowRight':
+            nextTab = tabs[(index + 1) % tabs.length];
+            break;
+        case 'ArrowLeft':
+            nextTab = tabs[(index - 1 + tabs.length) % tabs.length];
+            break;
+        case 'Home':
+            nextTab = tabs[0];
+            break;
+        case 'End':
+            nextTab = tabs[tabs.length - 1];
+            break;
+    }
+
+    if (nextTab) {
+        e.preventDefault();
+        // Trigger the click to switch tabs
+        nextTab.click();
+        nextTab.focus();
+    }
 }
 
 // Settings management
@@ -565,4 +606,10 @@ window.exportSettings = exportSettings;
 window.importSettings = importSettings;
 
 // Initialize the application when the page loads
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+    // Initialize tab keyboard accessibility
+    document.querySelectorAll('[role="tab"]').forEach(tab => {
+        tab.addEventListener('keydown', handleTabKeydown);
+    });
+});
