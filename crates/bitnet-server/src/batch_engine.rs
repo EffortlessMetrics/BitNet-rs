@@ -690,10 +690,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_optimize_batch_allocation() {
-        let config = BatchEngineConfig {
-            quantization_aware: true,
-            ..Default::default()
-        };
+        let config = BatchEngineConfig { quantization_aware: true, ..Default::default() };
         let engine = BatchEngine::new(config);
 
         // Manually construct candidates
