@@ -516,17 +516,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_cors_wildcard() {
-        use axum::{routing::get, Router};
+        use axum::{Router, routing::get};
         use tower::ServiceExt;
 
-        let config = SecurityConfig {
-            allowed_origins: vec!["*".to_string()],
-            ..Default::default()
-        };
+        let config =
+            SecurityConfig { allowed_origins: vec!["*".to_string()], ..Default::default() };
 
-        let app = Router::new()
-            .route("/", get(|| async { "hello" }))
-            .layer(configure_cors(&config));
+        let app =
+            Router::new().route("/", get(|| async { "hello" })).layer(configure_cors(&config));
 
         let response = app
             .oneshot(
@@ -539,15 +536,12 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(
-            response.headers().get("access-control-allow-origin").unwrap(),
-            "*"
-        );
+        assert_eq!(response.headers().get("access-control-allow-origin").unwrap(), "*");
     }
 
     #[tokio::test]
     async fn test_cors_specific_origin() {
-        use axum::{routing::get, Router};
+        use axum::{Router, routing::get};
         use tower::ServiceExt;
 
         let config = SecurityConfig {
@@ -555,9 +549,8 @@ mod tests {
             ..Default::default()
         };
 
-        let app = Router::new()
-            .route("/", get(|| async { "hello" }))
-            .layer(configure_cors(&config));
+        let app =
+            Router::new().route("/", get(|| async { "hello" })).layer(configure_cors(&config));
 
         // Allowed origin
         let response = app
