@@ -188,14 +188,23 @@
             margin-bottom: 20px;
         }
 
-        .tab {
+        button.tab {
             padding: 12px 20px;
             cursor: pointer;
+            border: none;
+            background: none;
+            font: inherit;
+            color: inherit;
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
+            border-radius: 0;
         }
 
-        .tab.active {
+        button.tab:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        button.tab.active {
             border-bottom-color: #007bff;
             color: #007bff;
         }
@@ -225,16 +234,16 @@
         </div>
     </div>
 
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('basic')">Basic Inference</div>
-        <div class="tab" onclick="switchTab('streaming')">Streaming</div>
-        <div class="tab" onclick="switchTab('worker')">Web Workers</div>
-        <div class="tab" onclick="switchTab('benchmark')">Benchmarks</div>
-        <div class="tab" onclick="switchTab('settings')">Settings</div>
+    <div class="tabs" role="tablist">
+        <button type="button" role="tab" class="tab active" onclick="switchTab('basic', this)" aria-selected="true" aria-controls="basic-tab" id="tab-basic">Basic Inference</button>
+        <button type="button" role="tab" class="tab" onclick="switchTab('streaming', this)" aria-selected="false" aria-controls="streaming-tab" id="tab-streaming">Streaming</button>
+        <button type="button" role="tab" class="tab" onclick="switchTab('worker', this)" aria-selected="false" aria-controls="worker-tab" id="tab-worker">Web Workers</button>
+        <button type="button" role="tab" class="tab" onclick="switchTab('benchmark', this)" aria-selected="false" aria-controls="benchmark-tab" id="tab-benchmark">Benchmarks</button>
+        <button type="button" role="tab" class="tab" onclick="switchTab('settings', this)" aria-selected="false" aria-controls="settings-tab" id="tab-settings">Settings</button>
     </div>
 
     <!-- Basic Inference Tab -->
-    <div id="basic-tab" class="tab-content active">
+    <div id="basic-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-basic">
         <div class="container">
             <h3>Basic Text Generation</h3>
 
@@ -281,7 +290,7 @@
     </div>
 
     <!-- Streaming Tab -->
-    <div id="streaming-tab" class="tab-content">
+    <div id="streaming-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-streaming">
         <div class="container">
             <h3>Streaming Text Generation</h3>
 
@@ -319,7 +328,7 @@
     </div>
 
     <!-- Web Workers Tab -->
-    <div id="worker-tab" class="tab-content">
+    <div id="worker-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-worker">
         <div class="container">
             <h3>Web Workers Integration</h3>
 
@@ -347,7 +356,7 @@
     </div>
 
     <!-- Benchmark Tab -->
-    <div id="benchmark-tab" class="tab-content">
+    <div id="benchmark-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-benchmark">
         <div class="container">
             <h3>Performance Benchmarks</h3>
 
@@ -389,7 +398,7 @@
     </div>
 
     <!-- Settings Tab -->
-    <div id="settings-tab" class="tab-content">
+    <div id="settings-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-settings">
         <div class="container">
             <h3>Configuration Settings</h3>
 
