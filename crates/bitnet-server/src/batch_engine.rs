@@ -687,13 +687,11 @@ pub struct BatchEngineHealth {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tokio::sync::oneshot;
 
     #[tokio::test]
     async fn test_optimize_batch_for_quantization_grouping() {
-        let config = BatchEngineConfig {
-            quantization_aware: true,
-            ..Default::default()
-        };
+        let config = BatchEngineConfig { quantization_aware: true, ..Default::default() };
         let engine = BatchEngine::new(config);
 
         let mut candidates = Vec::new();
