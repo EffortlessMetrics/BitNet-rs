@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode, HeaderValue},
+    http::{HeaderMap, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -353,10 +353,8 @@ pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
         cors.allow_origin(Any)
     } else {
         // Parse valid origins
-        let origins: Vec<HeaderValue> = config.allowed_origins
-            .iter()
-            .filter_map(|s| s.parse::<HeaderValue>().ok())
-            .collect();
+        let origins: Vec<HeaderValue> =
+            config.allowed_origins.iter().filter_map(|s| s.parse::<HeaderValue>().ok()).collect();
 
         if origins.is_empty() {
             warn!("No valid origins configured for CORS, blocking all requests");
@@ -513,10 +511,8 @@ mod tests {
     #[test]
     fn test_cors_config_logic() {
         // Test wildcard
-        let config_wildcard = SecurityConfig {
-            allowed_origins: vec!["*".to_string()],
-            ..Default::default()
-        };
+        let config_wildcard =
+            SecurityConfig { allowed_origins: vec!["*".to_string()], ..Default::default() };
         let _cors = configure_cors(&config_wildcard);
         // We can't easily assert the internal state of CorsLayer, but we verify it runs without panic
 
