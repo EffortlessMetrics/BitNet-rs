@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode, HeaderValue},
     middleware::Next,
     response::Response,
 };
@@ -340,14 +340,32 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let cors = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    // Check if wildcard is present
+    if config.allowed_origins.contains(&"*".to_string()) {
+        cors.allow_origin(Any)
+    } else {
+        // Parse valid origins
+        let origins: Vec<HeaderValue> = config.allowed_origins
+            .iter()
+            .filter_map(|s| s.parse::<HeaderValue>().ok())
+            .collect();
+
+        if origins.is_empty() {
+            warn!("No valid origins configured for CORS, blocking all requests");
+            // Returning the layer without allow_origin set defaults to blocking everything
+            cors
+        } else {
+            cors.allow_origin(origins)
+        }
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +508,30 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[test]
+    fn test_cors_config_logic() {
+        // Test wildcard
+        let config_wildcard = SecurityConfig {
+            allowed_origins: vec!["*".to_string()],
+            ..Default::default()
+        };
+        let _cors = configure_cors(&config_wildcard);
+        // We can't easily assert the internal state of CorsLayer, but we verify it runs without panic
+
+        // Test specific origins
+        let config_specific = SecurityConfig {
+            allowed_origins: vec!["http://example.com".to_string(), "https://app.com".to_string()],
+            ..Default::default()
+        };
+        let _cors = configure_cors(&config_specific);
+
+        // Test invalid origin (should be ignored)
+        let config_invalid = SecurityConfig {
+            allowed_origins: vec!["invalid origin".to_string()], // Spaces not allowed in headers
+            ..Default::default()
+        };
+        let _cors = configure_cors(&config_invalid);
     }
 }
