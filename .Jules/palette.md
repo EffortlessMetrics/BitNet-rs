@@ -1,0 +1,3 @@
+## 2025-10-21 - Accessible Tab Buttons
+**Learning:** When converting interactive `div` elements to `button` elements, explicit CSS resets for `border`, `background`, and `color` are required because `button` elements have strong user-agent defaults (especially `color` which is not inherited). Additionally, `:hover` states on generic `button` elements often have high specificity in design systems, requiring specific selectors (e.g., `button.classname:hover`) to override.
+**Action:** Always include a CSS reset block for `.classname` when converting `div` to `button`, and specifically check/override `:hover` and `:focus` states to prevent unwanted default button styles.
