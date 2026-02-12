@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -340,14 +340,32 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let cors = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    if config.allowed_origins.iter().any(|o| o == "*") {
+        cors.allow_origin(Any)
+    } else {
+        let mut allowed_origins = Vec::new();
+        for origin in &config.allowed_origins {
+            match HeaderValue::from_str(origin) {
+                Ok(val) => allowed_origins.push(val),
+                Err(e) => warn!("Invalid allowed origin '{}': {}", origin, e),
+            }
+        }
+
+        if allowed_origins.is_empty() {
+            warn!("No valid allowed origins configured, blocking all cross-origin requests");
+            cors
+        } else {
+            cors.allow_origin(allowed_origins)
+        }
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +508,26 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[test]
+    fn test_configure_cors() {
+        // Test with "*" (default)
+        let config = SecurityConfig::default();
+        let _cors = configure_cors(&config);
+
+        // Test with specific origin
+        let config = SecurityConfig {
+            allowed_origins: vec!["http://localhost:3000".to_string()],
+            ..Default::default()
+        };
+        let _cors = configure_cors(&config);
+
+        // Test with invalid origin
+        let config = SecurityConfig {
+            allowed_origins: vec!["Invalid Origin".to_string()],
+            ..Default::default()
+        };
+        let _cors = configure_cors(&config);
     }
 }
