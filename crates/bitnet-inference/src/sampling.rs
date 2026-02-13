@@ -35,7 +35,7 @@ pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
     token_counts: HashMap<u32, usize>,
-    total_tokens_processed: usize,
+    cached_context: Vec<u32>,
 }
 
 impl SamplingStrategy {
@@ -47,29 +47,54 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self {
-            config,
-            rng,
-            token_counts: HashMap::new(),
-            total_tokens_processed: 0,
-        }
+        Self { config, rng, token_counts: HashMap::new(), cached_context: Vec::new() }
     }
 
     /// Synchronize internal token counts with provided context
     fn sync_token_counts(&mut self, context_tokens: &[u32]) {
-        // Optimization: If the context length matches our tracked count, assume consistency.
-        // This relies on the fact that `sample` updates `token_counts` incrementally.
-        if context_tokens.len() == self.total_tokens_processed {
+        // Common case: simple append (e.g., autoregressive generation)
+        if context_tokens.len() == self.cached_context.len() + 1
+            && context_tokens.starts_with(&self.cached_context)
+        {
+            let new_token = context_tokens[context_tokens.len() - 1];
+            *self.token_counts.entry(new_token).or_insert(0) += 1;
+            self.cached_context.push(new_token);
             return;
         }
 
-        // Mismatch detected (e.g., first run, context switch, or windowing).
-        // Rebuild counts from scratch.
-        self.token_counts.clear();
-        for &token in context_tokens {
+        // No change case
+        if context_tokens == self.cached_context {
+            return;
+        }
+
+        // Full synchronization needed: handle divergence
+        // Find the length of the common prefix
+        let common_len = self
+            .cached_context
+            .iter()
+            .zip(context_tokens.iter())
+            .take_while(|(a, b)| a == b)
+            .count();
+
+        // Decrement counts for tokens that are no longer in context (from cached_context)
+        for &token in &self.cached_context[common_len..] {
+            if let Some(count) = self.token_counts.get_mut(&token) {
+                if *count > 1 {
+                    *count -= 1;
+                } else {
+                    self.token_counts.remove(&token);
+                }
+            }
+        }
+
+        // Increment counts for new tokens (from context_tokens)
+        for &token in &context_tokens[common_len..] {
             *self.token_counts.entry(token).or_insert(0) += 1;
         }
-        self.total_tokens_processed = context_tokens.len();
+
+        // Update cached context to match
+        self.cached_context.truncate(common_len);
+        self.cached_context.extend_from_slice(&context_tokens[common_len..]);
     }
 
     /// Sample the next token from logits
@@ -113,7 +138,7 @@ impl SamplingStrategy {
         // Update token counts for repetition penalty for the next step
         if self.config.repetition_penalty != 1.0 {
             *self.token_counts.entry(token).or_insert(0) += 1;
-            self.total_tokens_processed += 1;
+            self.cached_context.push(token);
         }
 
         debug!("Sampled token: {}", token);
@@ -284,7 +309,7 @@ impl SamplingStrategy {
     /// Reset token counts (useful for new sequences)
     pub fn reset(&mut self) {
         self.token_counts.clear();
-        self.total_tokens_processed = 0;
+        self.cached_context.clear();
     }
 
     /// Update configuration
