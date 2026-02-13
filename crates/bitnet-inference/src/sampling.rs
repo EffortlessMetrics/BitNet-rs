@@ -35,6 +35,7 @@ pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
     token_counts: HashMap<u32, usize>,
+    total_tokens_processed: usize,
 }
 
 impl SamplingStrategy {
@@ -46,15 +47,43 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self { config, rng, token_counts: HashMap::new() }
+        Self {
+            config,
+            rng,
+            token_counts: HashMap::new(),
+            total_tokens_processed: 0,
+        }
+    }
+
+    /// Synchronize internal token counts with provided context
+    fn sync_token_counts(&mut self, context_tokens: &[u32]) {
+        // Optimization: If the context length matches our tracked count, assume consistency.
+        // This relies on the fact that `sample` updates `token_counts` incrementally.
+        if context_tokens.len() == self.total_tokens_processed {
+            return;
+        }
+
+        // Mismatch detected (e.g., first run, context switch, or windowing).
+        // Rebuild counts from scratch.
+        self.token_counts.clear();
+        for &token in context_tokens {
+            *self.token_counts.entry(token).or_insert(0) += 1;
+        }
+        self.total_tokens_processed = context_tokens.len();
     }
 
     /// Sample the next token from logits
     pub fn sample(&mut self, logits: &[f32], context_tokens: &[u32]) -> Result<u32> {
         debug!("Sampling from {} logits", logits.len());
 
-        // Apply repetition penalty
-        let mut adjusted_logits = self.apply_repetition_penalty(logits, context_tokens);
+        // Only maintain counts if repetition penalty is enabled to avoid overhead
+        if self.config.repetition_penalty != 1.0 {
+            // Ensure token counts are in sync with context
+            self.sync_token_counts(context_tokens);
+        }
+
+        // Apply repetition penalty using internal counts
+        let mut adjusted_logits = self.apply_repetition_penalty(logits);
 
         // Apply temperature
         if self.config.temperature != 1.0 {
@@ -81,31 +110,28 @@ impl SamplingStrategy {
         // Sample from the final distribution
         let token = self.sample_from_distribution(&final_probs)?;
 
-        // Update token counts for repetition penalty
-        *self.token_counts.entry(token).or_insert(0) += 1;
+        // Update token counts for repetition penalty for the next step
+        if self.config.repetition_penalty != 1.0 {
+            *self.token_counts.entry(token).or_insert(0) += 1;
+            self.total_tokens_processed += 1;
+        }
 
         debug!("Sampled token: {}", token);
         Ok(token)
     }
 
     /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &[f32], context_tokens: &[u32]) -> Vec<f32> {
+    fn apply_repetition_penalty(&self, logits: &[f32]) -> Vec<f32> {
         if self.config.repetition_penalty == 1.0 {
             return logits.to_vec();
         }
 
         let mut adjusted_logits = logits.to_vec();
 
-        // Count token frequencies in context
-        let mut token_counts = HashMap::new();
-        for &token in context_tokens {
-            *token_counts.entry(token).or_insert(0) += 1;
-        }
-
-        // Apply penalty to repeated tokens
-        for (&token, &count) in &token_counts {
+        // Apply penalty to repeated tokens using maintained counts
+        for (&token, &count) in &self.token_counts {
             if token < adjusted_logits.len() as u32 {
-                let penalty = self.config.repetition_penalty.powi(count);
+                let penalty = self.config.repetition_penalty.powi(count as i32);
                 if adjusted_logits[token as usize] > 0.0 {
                     adjusted_logits[token as usize] /= penalty;
                 } else {
@@ -258,6 +284,7 @@ impl SamplingStrategy {
     /// Reset token counts (useful for new sequences)
     pub fn reset(&mut self) {
         self.token_counts.clear();
+        self.total_tokens_processed = 0;
     }
 
     /// Update configuration
@@ -399,12 +426,13 @@ mod tests {
     #[test]
     fn test_repetition_penalty() {
         let config = SamplingConfig { repetition_penalty: 1.2, ..Default::default() };
-        let strategy = SamplingStrategy::new(config);
+        let mut strategy = SamplingStrategy::new(config);
 
         let logits = vec![1.0, 1.0, 1.0];
         let context = vec![0, 0, 1]; // Token 0 appears twice, token 1 once
 
-        let adjusted = strategy.apply_repetition_penalty(&logits, &context);
+        strategy.sync_token_counts(&context);
+        let adjusted = strategy.apply_repetition_penalty(&logits);
 
         // Token 0 should be penalized more than token 1
         assert!(adjusted[0] < adjusted[1]);
