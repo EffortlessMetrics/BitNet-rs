@@ -451,16 +451,21 @@ function switchTab(tabName) {
         tab.classList.remove('active');
     });
 
-    // Remove active class from all tabs
+    // Remove active class from all tabs and update aria-selected
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
+        tab.setAttribute('aria-selected', 'false');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Add active class to selected tab
-    event.target.classList.add('active');
+    // Add active class to selected tab and update aria-selected
+    const tabButton = document.getElementById(`tab-${tabName}`);
+    if (tabButton) {
+        tabButton.classList.add('active');
+        tabButton.setAttribute('aria-selected', 'true');
+    }
 }
 
 // Settings management
