@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -340,14 +340,44 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+    // Check if we should allow all origins
+    let allow_any = config.allowed_origins.iter().any(|s| s == "*");
+
+    if allow_any {
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any)
+            .max_age(std::time::Duration::from_secs(3600))
+    } else {
+        // Parse allowed origins
+        let origins: Vec<HeaderValue> = config
+            .allowed_origins
+            .iter()
+            .filter_map(|s| match HeaderValue::from_str(s) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    warn!(origin = %s, error = %e, "Invalid origin in configuration");
+                    None
+                }
+            })
+            .collect();
+
+        // If no valid origins found but list wasn't empty/wildcard, this will effectively block all requests
+        // which is safer than failing open or crashing
+        if origins.is_empty() && !config.allowed_origins.is_empty() {
+            warn!("No valid origins parsed from configuration, CORS will block requests");
+        }
+
+        CorsLayer::new()
+            .allow_origin(origins)
+            .allow_methods(Any)
+            .allow_headers(Any)
+            .max_age(std::time::Duration::from_secs(3600))
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +520,69 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[tokio::test]
+    async fn test_cors_configuration() {
+        use axum::{Router, body::Body, http::{Method, Request}, routing::get};
+        use tower::ServiceExt;
+
+        // Test wildcard
+        let config_wildcard = SecurityConfig {
+            allowed_origins: vec!["*".to_string()],
+            ..Default::default()
+        };
+        let app = Router::new()
+            .route("/", get(|| async { "ok" }))
+            .layer(configure_cors(&config_wildcard));
+
+        let req = Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/")
+            .header("Origin", "http://example.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.headers().get("access-control-allow-origin").unwrap(), "*");
+
+        // Test specific origin
+        let config_specific = SecurityConfig {
+            allowed_origins: vec!["http://trusted.com".to_string()],
+            ..Default::default()
+        };
+        let app = Router::new()
+            .route("/", get(|| async { "ok" }))
+            .layer(configure_cors(&config_specific));
+
+        // Allowed
+        let req = Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/")
+            .header("Origin", "http://trusted.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.headers().get("access-control-allow-origin").unwrap(), "http://trusted.com");
+
+        // Disallowed
+        let app = Router::new()
+            .route("/", get(|| async { "ok" }))
+            .layer(configure_cors(&config_specific));
+
+        let req = Request::builder()
+            .method(Method::OPTIONS)
+            .uri("/")
+            .header("Origin", "http://evil.com")
+            .header("Access-Control-Request-Method", "GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        // CORS middleware usually doesn't set ACAO header if origin is not allowed
+        assert!(resp.headers().get("access-control-allow-origin").is_none());
     }
 }
