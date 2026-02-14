@@ -89,12 +89,8 @@ impl SamplingStrategy {
     /// Sync internal token counts with provided context
     fn sync_token_counts(&mut self, new_context: &[u32]) {
         // Find common prefix length
-        let common_len = self
-            .cached_context
-            .iter()
-            .zip(new_context.iter())
-            .take_while(|(a, b)| a == b)
-            .count();
+        let common_len =
+            self.cached_context.iter().zip(new_context.iter()).take_while(|(a, b)| a == b).count();
 
         // If context hasn't changed (same length and content), do nothing
         if common_len == self.cached_context.len() && common_len == new_context.len() {
