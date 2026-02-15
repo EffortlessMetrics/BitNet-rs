@@ -2,7 +2,7 @@ global:
   smtp_smarthost: 'localhost:587'
   smtp_from: 'bitnet-alerts@example.com'
   smtp_auth_username: 'bitnet-alerts@example.com'
-  smtp_auth_password: 'password'
+  smtp_auth_password: 'YOUR_SMTP_PASSWORD' # Replace with real password
 
 # Routing configuration
 route:
