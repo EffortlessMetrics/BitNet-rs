@@ -340,14 +340,35 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors() -> tower_http::cors::CorsLayer {
+pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
+    use axum::http::HeaderValue;
     use tower_http::cors::{Any, CorsLayer};
 
-    CorsLayer::new()
-        .allow_origin(Any)
+    let allowed_origins = &config.allowed_origins;
+
+    // Check for wildcard
+    let allow_all = allowed_origins.contains(&"*".to_string());
+
+    let cors = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_secs(3600));
+
+    if allow_all {
+        cors.allow_origin(Any)
+    } else {
+        let valid_origins: Vec<HeaderValue> = allowed_origins
+            .iter()
+            .filter_map(|origin| match HeaderValue::from_str(origin) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    warn!("Invalid origin in configuration: {} ({})", origin, e);
+                    None
+                }
+            })
+            .collect();
+        cors.allow_origin(valid_origins)
+    }
 }
 
 /// Input validation helper for JSON payloads
@@ -490,5 +511,23 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
+    }
+
+    #[test]
+    fn test_cors_config() {
+        let mut config = SecurityConfig::default();
+        config.allowed_origins = vec!["*".to_string()];
+        let _layer = configure_cors(&config);
+
+        config.allowed_origins = vec!["https://example.com".to_string()];
+        let _layer = configure_cors(&config);
+    }
+
+    #[test]
+    fn test_cors_invalid_origin() {
+        let mut config = SecurityConfig::default();
+        config.allowed_origins = vec!["invalid header value \n".to_string()];
+        let _layer = configure_cors(&config);
+        // Should log warning but not panic
     }
 }
