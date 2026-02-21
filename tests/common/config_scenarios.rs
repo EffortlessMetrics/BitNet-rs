@@ -6,93 +6,11 @@ use super::config::{
 
 // Simple configs are now defined inline as part of the compatibility shim
 
+pub use bitnet_runtime_profile::{ExecutionEnvironment as EnvironmentType, TestingScenario};
+use bitnet_runtime_profile::ActiveContext;
+
 use std::collections::HashMap;
 use std::time::Duration;
-
-/// Configuration scenarios for different testing contexts
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TestingScenario {
-    Unit,
-    Integration,
-    EndToEnd,
-    Performance,
-    CrossValidation,
-    Smoke,
-    Development,
-    Debug,
-    Minimal,
-}
-
-impl std::fmt::Display for TestingScenario {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Unit => write!(f, "unit"),
-            Self::Integration => write!(f, "integration"),
-            Self::EndToEnd => write!(f, "e2e"),
-            Self::Performance => write!(f, "performance"),
-            Self::CrossValidation => write!(f, "crossval"),
-            Self::Smoke => write!(f, "smoke"),
-            Self::Development => write!(f, "dev"),
-            Self::Debug => write!(f, "debug"),
-            Self::Minimal => write!(f, "minimal"),
-        }
-    }
-}
-
-impl std::str::FromStr for TestingScenario {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "unit" => Ok(Self::Unit),
-            "integration" => Ok(Self::Integration),
-            "e2e" | "end-to-end" | "endtoend" => Ok(Self::EndToEnd),
-            "performance" | "perf" => Ok(Self::Performance),
-            "crossval" | "cross-validation" => Ok(Self::CrossValidation),
-            "smoke" => Ok(Self::Smoke),
-            "dev" | "development" => Ok(Self::Development),
-            "debug" => Ok(Self::Debug),
-            "minimal" | "min" => Ok(Self::Minimal),
-            _ => Err(format!("Unknown testing scenario: {}", s)),
-        }
-    }
-}
-
-/// Environment types for test execution
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum EnvironmentType {
-    Local,
-    CI,
-    PreProduction,
-    Production,
-}
-
-impl std::fmt::Display for EnvironmentType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Local => write!(f, "local"),
-            Self::CI => write!(f, "ci"),
-            Self::PreProduction => write!(f, "pre-prod"),
-            Self::Production => write!(f, "prod"),
-        }
-    }
-}
-
-impl std::str::FromStr for EnvironmentType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "local" | "dev" | "development" => Ok(Self::Local),
-            "ci" | "ci/cd" | "cicd" => Ok(Self::CI),
-            "pre-prod" | "preprod" | "pre-production" | "preproduction" | "staging" => {
-                Ok(Self::PreProduction)
-            }
-            "prod" | "production" => Ok(Self::Production),
-            _ => Err(format!("Unknown environment type: {}", s)),
-        }
-    }
-}
 
 /// Configuration context containing scenario, environment, and constraints
 #[derive(Debug, Clone)]
@@ -280,24 +198,11 @@ impl ScenarioConfigManager {
 
     /// Create a configuration context from environment variables
     pub fn context_from_environment() -> ConfigurationContext {
-        let scenario = std::env::var("BITNET_TEST_SCENARIO")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(TestingScenario::Unit);
-
-        let environment = if std::env::var("CI").is_ok() || std::env::var("GITHUB_ACTIONS").is_ok()
-        {
-            EnvironmentType::CI
-        } else {
-            std::env::var("BITNET_TEST_ENV")
-                .ok()
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(EnvironmentType::Local)
-        };
+        let active_context = ActiveContext::from_env();
 
         ConfigurationContext {
-            scenario,
-            environment,
+            scenario: active_context.scenario,
+            environment: active_context.environment,
             resource_constraints: None,
             time_constraints: None,
             quality_requirements: None,

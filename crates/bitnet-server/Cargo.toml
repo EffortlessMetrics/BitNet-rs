@@ -26,6 +26,7 @@ bitnet-inference = { path = "../bitnet-inference" }
 bitnet-kernels = { path = "../bitnet-kernels" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
 chrono.workspace = true
 clap.workspace = true
 cudarc = { workspace = true, optional = true }
@@ -73,12 +74,27 @@ name = "server"
 path = "src/bin/server.rs"
 
 [features]
-cpu = []                                                                                                                                                                          # CPU inference support with SIMD optimization
-cuda = ["dep:cudarc"]                                                                                                                                                             # Recognized flag that gates GPU health checks
+cpu = [
+  "bitnet-inference/cpu",
+  "bitnet-kernels/cpu",
+  "bitnet-runtime-bootstrap/runtime-profile-cpu",
+  "bitnet-tokenizers/cpu",
+]
+cuda = [
+  "dep:cudarc",
+  "bitnet-inference/cuda",
+  "bitnet-kernels/cuda",
+  "bitnet-runtime-bootstrap/runtime-profile-cuda",
+]
 crossval = []                                                                                                                                                                     # Cross-validation framework support
-default = ["prometheus"]
+default = ["prometheus", "server"]
 degraded-ok = []                                                                                                                                                                  # Map Degraded → 200 OK (default is fail-fast)
-gpu = ["cuda"]                                                                                                                                                                    # GPU inference support (alias for cuda)
+gpu = [
+  "bitnet-inference/gpu",
+  "bitnet-kernels/gpu",
+  "bitnet-runtime-bootstrap/runtime-profile-gpu",
+]
+server = ["bitnet-runtime-bootstrap/runtime-profile-server"]
 opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry", "dep:tonic"]
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
 request_batching = []                                                                                                                                                             # Gate request batching module (PR-1 scope)

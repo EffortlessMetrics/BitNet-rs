@@ -1,0 +1,20 @@
+[package]
+name = "bitnet-bdd-grid"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Canonical BDD scenario + feature-grid primitives for BitNet tests and tooling"
+include = ["src/**", "Cargo.toml"]
+
+[lib]
+name = "bitnet_bdd_grid"
+path = "src/lib.rs"
+
+[dependencies]
+
+[dev-dependencies]

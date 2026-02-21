@@ -1,0 +1,30 @@
+[package]
+name = "bitnet-runtime-bootstrap"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Startup profile contracts for BitNet apps built from runtime feature flags and BDD grid context"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+bitnet-startup-contract = { path = "../bitnet-startup-contract", version = "0.1.0" }
+
+[features]
+default = []
+runtime-profile-cpu = ["bitnet-startup-contract/runtime-profile-cpu"]
+runtime-profile-gpu = ["bitnet-startup-contract/runtime-profile-gpu"]
+runtime-profile-cuda = ["bitnet-startup-contract/runtime-profile-cuda"]
+runtime-profile-cli = ["bitnet-startup-contract/runtime-profile-cli"]
+runtime-profile-crossval = ["bitnet-startup-contract/runtime-profile-crossval"]
+runtime-profile-iq2s-ffi = ["bitnet-startup-contract/runtime-profile-iq2s-ffi"]
+runtime-profile-server = ["bitnet-startup-contract/runtime-profile-server"]
+runtime-profile-trace = ["bitnet-startup-contract/runtime-profile-trace"]

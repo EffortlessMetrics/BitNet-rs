@@ -14,6 +14,7 @@
 pub mod concurrency_caps;
 pub mod config;
 pub mod config_scenarios;
+pub mod bdd_grid;
 pub mod config_scenarios_simple;
 pub mod env;
 pub mod error_analysis;
@@ -81,6 +82,21 @@ pub mod cross_validation;
 pub use config::TestConfig;
 #[allow(unused_imports)]
 pub use config_scenarios::{EnvironmentType, ScenarioConfigManager, TestingScenario};
+#[allow(unused_imports)]
+pub use bdd_grid::{
+    active_features,
+    active_profile,
+    active_profile_summary,
+    active_profile_violation_labels,
+    canonical_grid,
+    from_grid_environment,
+    from_grid_scenario,
+    validate_explicit_profile,
+    to_grid_environment,
+    to_grid_scenario,
+    validate_active_profile,
+    ActiveProfile,
+};
 
 // Avoid name collisions: expose both result types clearly
 #[allow(unused_imports)]

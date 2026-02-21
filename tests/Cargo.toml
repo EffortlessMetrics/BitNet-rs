@@ -17,19 +17,29 @@ path = "lib.rs"
 # Keep integration OFF by default to unblock builds/tests focused on crossval
 default = ["reporting", "fixtures", "trend"]
 full-framework = ["reporting", "fixtures", "trend", "inference", "quantization"]
-reporting = []
-fixtures = []
-trend = []
-crossval = []
+reporting = ["bitnet-feature-contract/reporting", "bitnet-runtime-profile/reporting"]
+fixtures = ["bitnet-feature-contract/fixtures", "bitnet-runtime-profile/fixtures"]
+trend = ["bitnet-feature-contract/trend", "bitnet-runtime-profile/trend"]
+crossval = ["bitnet-feature-contract/crossval", "bitnet-runtime-profile/crossval"]
+cpu = ["inference", "bitnet-feature-contract/cpu", "bitnet-runtime-profile/cpu"]
 # Optional C++ implementation for cross-validation
-cpp = []
+cpp = ["bitnet-feature-contract/cpp-ffi", "bitnet-runtime-profile/cpp-ffi"]
 # New: gate the integration suite
-integration-tests = []
-cpp-ffi = []
+integration-tests = ["bitnet-feature-contract/integration-tests", "bitnet-runtime-profile/integration-tests"]
+cpp-ffi = ["bitnet-feature-contract/cpp-ffi", "bitnet-runtime-profile/cpp-ffi"]
 # Real model testing features
-inference = ["bitnet-inference/cpu"]
-quantization = []
-gpu = ["bitnet-kernels/gpu", "bitnet-quantization/gpu"]
+inference = ["bitnet-inference/cpu", "bitnet-feature-contract/inference", "bitnet-runtime-profile/inference"]
+quantization = ["bitnet-feature-contract/quantization", "bitnet-runtime-profile/quantization"]
+gpu = ["bitnet-kernels/gpu", "bitnet-quantization/gpu", "bitnet-feature-contract/gpu", "bitnet-runtime-profile/gpu"]
+cuda = ["gpu"]
+kernels = ["bitnet-feature-contract/kernels", "bitnet-runtime-profile/kernels"]
+tokenizers = ["bitnet-feature-contract/tokenizers", "bitnet-runtime-profile/tokenizers"]
+cli = ["bitnet-feature-contract/cli", "bitnet-runtime-profile/cli"]
+server = ["bitnet-feature-contract/server", "bitnet-runtime-profile/server"]
+ffi = ["bitnet-feature-contract/ffi", "bitnet-runtime-profile/ffi"]
+python = ["bitnet-feature-contract/python", "bitnet-runtime-profile/python"]
+wasm = ["bitnet-feature-contract/wasm", "bitnet-runtime-profile/wasm"]
+iq2s-ffi = ["bitnet-feature-contract/iq2s-ffi", "bitnet-runtime-profile/iq2s-ffi"]
 
 [[bin]]
 name = "validate_config"
@@ -160,6 +170,8 @@ path = "examples/reporting_example.rs"
 async-trait = "0.1.89"
 futures-util = "0.3.31"
 tokio = { version = "1.48.0", features = ["full"] }
+bitnet-feature-contract = { path = "../crates/bitnet-feature-contract", version = "0.1.0" }
+bitnet-runtime-profile = { path = "../crates/bitnet-runtime-profile", version = "0.1.0" }
 
 # System information
 num_cpus = "1.17.0"

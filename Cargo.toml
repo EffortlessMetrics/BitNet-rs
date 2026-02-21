@@ -2,13 +2,17 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
+  "crates/bitnet-runtime-context",
+  "crates/bitnet-bdd-grid",
   "crates/bitnet-compat",
   "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
+  "crates/bitnet-runtime-feature-flags",
   "crates/bitnet-models",
   "crates/bitnet-quantization",
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-tokenizers",
+  "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
@@ -16,8 +20,13 @@ members = [
   "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
   "crates/bitnet-ffi",
   "crates/bitnet-py",
+  "crates/bitnet-runtime-bootstrap",
+  "crates/bitnet-startup-contract",
   "crates/bitnet-wasm",
   "crates/bitnet-sys",
+  "crates/bitnet-feature-contract",
+  "crates/bitnet-runtime-profile",
+  "crates/bitnet-runtime-profile-core",
   "crossval",
   "tests",
   "xtask",

@@ -1,0 +1,39 @@
+[package]
+name = "bitnet-feature-matrix"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Shared feature flag and BDD profile matrix contracts"
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]
+bitnet-runtime-profile-core = { path = "../bitnet-runtime-profile-core", version = "0.1.0" }
+
+[features]
+default = []
+cpu = ["bitnet-runtime-profile-core/cpu"]
+gpu = ["bitnet-runtime-profile-core/gpu"]
+cuda = ["bitnet-runtime-profile-core/cuda"]
+inference = ["bitnet-runtime-profile-core/inference"]
+kernels = ["bitnet-runtime-profile-core/kernels"]
+tokenizers = ["bitnet-runtime-profile-core/tokenizers"]
+quantization = ["bitnet-runtime-profile-core/quantization"]
+cli = ["bitnet-runtime-profile-core/cli"]
+server = ["bitnet-runtime-profile-core/server"]
+ffi = ["bitnet-runtime-profile-core/ffi"]
+python = ["bitnet-runtime-profile-core/python"]
+wasm = ["bitnet-runtime-profile-core/wasm"]
+crossval = ["bitnet-runtime-profile-core/crossval"]
+trace = ["bitnet-runtime-profile-core/trace"]
+iq2s-ffi = ["bitnet-runtime-profile-core/iq2s-ffi"]
+cpp-ffi = ["bitnet-runtime-profile-core/cpp-ffi"]
+fixtures = ["bitnet-runtime-profile-core/fixtures"]
+reporting = ["bitnet-runtime-profile-core/reporting"]
+trend = ["bitnet-runtime-profile-core/trend"]
+integration-tests = ["bitnet-runtime-profile-core/integration-tests"]

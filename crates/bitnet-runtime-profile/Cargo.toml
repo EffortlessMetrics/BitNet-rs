@@ -1,0 +1,39 @@
+[package]
+name = "bitnet-runtime-profile"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Runtime profile, BDD, and feature-flagging utilities for BitNet"
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]
+bitnet-feature-matrix = { path = "../bitnet-feature-matrix", version = "0.1.0" }
+
+[features]
+default = []
+cpu = ["bitnet-feature-matrix/cpu"]
+gpu = ["bitnet-feature-matrix/gpu"]
+cuda = ["bitnet-feature-matrix/cuda"]
+inference = ["bitnet-feature-matrix/inference"]
+kernels = ["bitnet-feature-matrix/kernels"]
+tokenizers = ["bitnet-feature-matrix/tokenizers"]
+quantization = ["bitnet-feature-matrix/quantization"]
+cli = ["bitnet-feature-matrix/cli"]
+server = ["bitnet-feature-matrix/server"]
+ffi = ["bitnet-feature-matrix/ffi"]
+python = ["bitnet-feature-matrix/python"]
+wasm = ["bitnet-feature-matrix/wasm"]
+crossval = ["bitnet-feature-matrix/crossval"]
+trace = ["bitnet-feature-matrix/trace"]
+iq2s-ffi = ["bitnet-feature-matrix/iq2s-ffi"]
+cpp-ffi = ["bitnet-feature-matrix/cpp-ffi"]
+fixtures = ["bitnet-feature-matrix/fixtures"]
+reporting = ["bitnet-feature-matrix/reporting"]
+trend = ["bitnet-feature-matrix/trend"]
+integration-tests = ["bitnet-feature-matrix/integration-tests"]

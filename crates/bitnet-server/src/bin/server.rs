@@ -3,7 +3,8 @@
 use anyhow::Result;
 use bitnet_server::{BitNetServer, ServerConfig};
 use clap::Parser;
-use tracing::info;
+use bitnet_runtime_bootstrap::{ContractPolicy, ProfileContract, RuntimeComponent};
+use tracing::{info, warn};
 
 #[derive(Parser)]
 #[command(name = "bitnet-server")]
@@ -65,6 +66,19 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    let startup_contract = ProfileContract::evaluate(
+        RuntimeComponent::Server,
+        ContractPolicy::Observe,
+    )
+    .enforce()?;
+    info!("{}", startup_contract.summary());
+    if !startup_contract.is_compatible() {
+        warn!(
+            "Startup contract is non-compliant: missing={:?} forbidden={:?}",
+            startup_contract.missing_required(),
+            startup_contract.forbidden_active()
+        );
+    }
 
     // Create server configuration
     let mut config = ServerConfig::default();

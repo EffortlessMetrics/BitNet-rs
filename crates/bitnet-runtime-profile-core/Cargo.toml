@@ -1,0 +1,41 @@
+[package]
+name = "bitnet-runtime-profile-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core runtime profile, BDD, and feature-flag contracts"
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]
+bitnet-bdd-grid = { path = "../bitnet-bdd-grid", version = "0.1.0" }
+bitnet-runtime-context = { path = "../bitnet-runtime-context", version = "0.1.0" }
+bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.1.0" }
+
+[features]
+default = []
+cpu = ["bitnet-runtime-feature-flags/cpu"]
+gpu = ["bitnet-runtime-feature-flags/gpu"]
+cuda = ["bitnet-runtime-feature-flags/cuda"]
+inference = ["bitnet-runtime-feature-flags/inference"]
+kernels = ["bitnet-runtime-feature-flags/kernels"]
+tokenizers = ["bitnet-runtime-feature-flags/tokenizers"]
+quantization = ["bitnet-runtime-feature-flags/quantization"]
+cli = ["bitnet-runtime-feature-flags/cli"]
+server = ["bitnet-runtime-feature-flags/server"]
+ffi = ["bitnet-runtime-feature-flags/ffi"]
+python = ["bitnet-runtime-feature-flags/python"]
+wasm = ["bitnet-runtime-feature-flags/wasm"]
+crossval = ["bitnet-runtime-feature-flags/crossval"]
+trace = ["bitnet-runtime-feature-flags/trace"]
+iq2s-ffi = ["bitnet-runtime-feature-flags/iq2s-ffi"]
+cpp-ffi = ["bitnet-runtime-feature-flags/cpp-ffi"]
+fixtures = ["bitnet-runtime-feature-flags/fixtures"]
+reporting = ["bitnet-runtime-feature-flags/reporting"]
+trend = ["bitnet-runtime-feature-flags/trend"]
+integration-tests = ["bitnet-runtime-feature-flags/integration-tests"]

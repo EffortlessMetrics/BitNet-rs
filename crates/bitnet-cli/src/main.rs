@@ -14,7 +14,8 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
 use std::io;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
+use bitnet_runtime_bootstrap::{ContractPolicy, ProfileContract, RuntimeComponent, feature_line};
 
 #[cfg(feature = "full-cli")]
 mod commands;
@@ -33,20 +34,6 @@ pub fn build_cli() -> clap::Command {
     Cli::command()
 }
 
-fn compiled_features() -> &'static [&'static str] {
-    &[
-        #[cfg(feature = "cpu")]
-        "cpu",
-        #[cfg(any(feature = "gpu", feature = "cuda"))]
-        "gpu",
-        // Removed cuda and ffi - not declared in bitnet-cli/Cargo.toml
-        #[cfg(feature = "iq2s-ffi")]
-        "iq2s-ffi",
-        #[cfg(feature = "crossval")]
-        "crossval",
-    ]
-}
-
 /// CLI interface version (SemVer for CLI surface compatibility)
 const INTERFACE_VERSION: &str = "1.0.0";
 
@@ -55,12 +42,7 @@ fn bitnet_version() -> &'static str {
     static VERSION_STRING: OnceLock<String> = OnceLock::new();
 
     VERSION_STRING.get_or_init(|| {
-        let features = compiled_features();
-        let features_line = if features.is_empty() {
-            "features: none".to_string()
-        } else {
-            format!("features: {}", features.join(", "))
-        };
+        let features_line = feature_line();
 
         #[cfg(feature = "iq2s-ffi")]
         let ggml_line = format!("ggml: {}", bitnet_ggml_ffi::GGML_COMMIT);
@@ -474,6 +456,20 @@ async fn main() -> Result<()> {
 
     // Setup logging
     setup_logging(&config, cli.log_level.as_deref())?;
+
+    let runtime_contract = ProfileContract::evaluate(
+        RuntimeComponent::Cli,
+        ContractPolicy::Observe,
+    )
+    .enforce()?;
+    info!("{}", runtime_contract.summary());
+    if !runtime_contract.is_compatible() {
+        warn!(
+            "Startup contract is non-compliant: missing={:?} forbidden={:?}",
+            runtime_contract.missing_required(),
+            runtime_contract.forbidden_active()
+        );
+    }
 
     // Handle commands
     let result = match cli.command {
