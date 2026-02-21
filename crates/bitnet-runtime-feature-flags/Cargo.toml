@@ -16,7 +16,8 @@ include = [
 ]
 
 [dependencies]
-bitnet-bdd-grid = { path = "../bitnet-bdd-grid", version = "0.1.0" }
+bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.1.0" }
+bitnet-runtime-feature-flags-core = { path = "../bitnet-runtime-feature-flags-core", version = "0.1.0" }
 
 [features]
 default = []
@@ -40,4 +41,23 @@ fixtures = []
 reporting = []
 trend = []
 integration-tests = []
-
+runtime-profile-cpu = ["cpu"]
+runtime-profile-gpu = ["gpu"]
+runtime-profile-cuda = ["cuda"]
+runtime-profile-inference = ["inference"]
+runtime-profile-kernels = ["kernels"]
+runtime-profile-tokenizers = ["tokenizers"]
+runtime-profile-quantization = ["quantization"]
+runtime-profile-cli = ["cli"]
+runtime-profile-server = ["server"]
+runtime-profile-ffi = ["ffi"]
+runtime-profile-python = ["python"]
+runtime-profile-wasm = ["wasm"]
+runtime-profile-crossval = ["crossval"]
+runtime-profile-trace = ["trace"]
+runtime-profile-iq2s-ffi = ["iq2s-ffi"]
+runtime-profile-cpp-ffi = ["cpp-ffi"]
+runtime-profile-fixtures = ["fixtures"]
+runtime-profile-reporting = ["reporting"]
+runtime-profile-trend = ["trend"]
+runtime-profile-integration-tests = ["integration-tests"]

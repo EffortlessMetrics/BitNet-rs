@@ -17,29 +17,135 @@ path = "lib.rs"
 # Keep integration OFF by default to unblock builds/tests focused on crossval
 default = ["reporting", "fixtures", "trend"]
 full-framework = ["reporting", "fixtures", "trend", "inference", "quantization"]
-reporting = ["bitnet-feature-contract/reporting", "bitnet-runtime-profile/reporting"]
-fixtures = ["bitnet-feature-contract/fixtures", "bitnet-runtime-profile/fixtures"]
-trend = ["bitnet-feature-contract/trend", "bitnet-runtime-profile/trend"]
-crossval = ["bitnet-feature-contract/crossval", "bitnet-runtime-profile/crossval"]
-cpu = ["inference", "bitnet-feature-contract/cpu", "bitnet-runtime-profile/cpu"]
+reporting = [
+  "bitnet-testing-policy-tests/reporting",
+]
+fixtures = [
+  "bitnet-testing-policy-tests/fixtures",
+]
+trend = [
+  "bitnet-testing-policy-tests/trend",
+]
+crossval = [
+  "bitnet-testing-policy-tests/crossval",
+]
+cpu = [
+  "inference",
+  "bitnet-testing-policy-tests/cpu",
+]
 # Optional C++ implementation for cross-validation
-cpp = ["bitnet-feature-contract/cpp-ffi", "bitnet-runtime-profile/cpp-ffi"]
+cpp = ["cpp-ffi"]
 # New: gate the integration suite
-integration-tests = ["bitnet-feature-contract/integration-tests", "bitnet-runtime-profile/integration-tests"]
-cpp-ffi = ["bitnet-feature-contract/cpp-ffi", "bitnet-runtime-profile/cpp-ffi"]
+integration-tests = [
+  "bitnet-testing-policy-tests/integration-tests",
+]
+cpp-ffi = [
+  "bitnet-testing-policy-tests/cpp-ffi",
+]
 # Real model testing features
-inference = ["bitnet-inference/cpu", "bitnet-feature-contract/inference", "bitnet-runtime-profile/inference"]
-quantization = ["bitnet-feature-contract/quantization", "bitnet-runtime-profile/quantization"]
-gpu = ["bitnet-kernels/gpu", "bitnet-quantization/gpu", "bitnet-feature-contract/gpu", "bitnet-runtime-profile/gpu"]
-cuda = ["gpu"]
-kernels = ["bitnet-feature-contract/kernels", "bitnet-runtime-profile/kernels"]
-tokenizers = ["bitnet-feature-contract/tokenizers", "bitnet-runtime-profile/tokenizers"]
-cli = ["bitnet-feature-contract/cli", "bitnet-runtime-profile/cli"]
-server = ["bitnet-feature-contract/server", "bitnet-runtime-profile/server"]
-ffi = ["bitnet-feature-contract/ffi", "bitnet-runtime-profile/ffi"]
-python = ["bitnet-feature-contract/python", "bitnet-runtime-profile/python"]
-wasm = ["bitnet-feature-contract/wasm", "bitnet-runtime-profile/wasm"]
-iq2s-ffi = ["bitnet-feature-contract/iq2s-ffi", "bitnet-runtime-profile/iq2s-ffi"]
+inference = [
+  "bitnet-inference/cpu",
+  "bitnet-testing-policy-tests/inference",
+]
+quantization = [
+  "bitnet-testing-policy-tests/quantization",
+]
+gpu = [
+  "bitnet-kernels/gpu",
+  "bitnet-quantization/gpu",
+  "bitnet-testing-policy-tests/gpu",
+]
+cuda = [
+  "bitnet-testing-policy-tests/cuda",
+  "gpu",
+]
+kernels = [
+  "bitnet-testing-policy-tests/kernels",
+]
+tokenizers = [
+  "bitnet-testing-policy-tests/tokenizers",
+]
+cli = [
+  "bitnet-testing-policy-tests/cli",
+]
+server = [
+  "bitnet-testing-policy-tests/server",
+]
+ffi = [
+  "bitnet-testing-policy-tests/ffi",
+]
+python = [
+  "bitnet-testing-policy-tests/python",
+]
+wasm = [
+  "bitnet-testing-policy-tests/wasm",
+]
+iq2s-ffi = [
+  "bitnet-testing-policy-tests/iq2s-ffi",
+]
+trace = [
+  "bitnet-testing-policy-tests/trace",
+]
+runtime-profile-cpu = [
+  "bitnet-testing-policy-tests/runtime-profile-cpu",
+]
+runtime-profile-gpu = [
+  "bitnet-testing-policy-tests/runtime-profile-gpu",
+]
+runtime-profile-cuda = [
+  "bitnet-testing-policy-tests/runtime-profile-cuda",
+]
+runtime-profile-inference = [
+  "bitnet-testing-policy-tests/runtime-profile-inference",
+]
+runtime-profile-kernels = [
+  "bitnet-testing-policy-tests/runtime-profile-kernels",
+]
+runtime-profile-tokenizers = [
+  "bitnet-testing-policy-tests/runtime-profile-tokenizers",
+]
+runtime-profile-quantization = [
+  "bitnet-testing-policy-tests/runtime-profile-quantization",
+]
+runtime-profile-cli = [
+  "bitnet-testing-policy-tests/runtime-profile-cli",
+]
+runtime-profile-server = [
+  "bitnet-testing-policy-tests/runtime-profile-server",
+]
+runtime-profile-ffi = [
+  "bitnet-testing-policy-tests/runtime-profile-ffi",
+]
+runtime-profile-python = [
+  "bitnet-testing-policy-tests/runtime-profile-python",
+]
+runtime-profile-wasm = [
+  "bitnet-testing-policy-tests/runtime-profile-wasm",
+]
+runtime-profile-crossval = [
+  "bitnet-testing-policy-tests/runtime-profile-crossval",
+]
+runtime-profile-trace = [
+  "bitnet-testing-policy-tests/runtime-profile-trace",
+]
+runtime-profile-iq2s-ffi = [
+  "bitnet-testing-policy-tests/runtime-profile-iq2s-ffi",
+]
+runtime-profile-cpp-ffi = [
+  "bitnet-testing-policy-tests/runtime-profile-cpp-ffi",
+]
+runtime-profile-fixtures = [
+  "bitnet-testing-policy-tests/runtime-profile-fixtures",
+]
+runtime-profile-reporting = [
+  "bitnet-testing-policy-tests/runtime-profile-reporting",
+]
+runtime-profile-trend = [
+  "bitnet-testing-policy-tests/runtime-profile-trend",
+]
+runtime-profile-integration-tests = [
+  "bitnet-testing-policy-tests/runtime-profile-integration-tests",
+]
 
 [[bin]]
 name = "validate_config"
@@ -170,8 +276,7 @@ path = "examples/reporting_example.rs"
 async-trait = "0.1.89"
 futures-util = "0.3.31"
 tokio = { version = "1.48.0", features = ["full"] }
-bitnet-feature-contract = { path = "../crates/bitnet-feature-contract", version = "0.1.0" }
-bitnet-runtime-profile = { path = "../crates/bitnet-runtime-profile", version = "0.1.0" }
+bitnet-testing-policy-tests = { path = "../crates/bitnet-testing-policy-tests", version = "0.1.0" }
 
 # System information
 num_cpus = "1.17.0"

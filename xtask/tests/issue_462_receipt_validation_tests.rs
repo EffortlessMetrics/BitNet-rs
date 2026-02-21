@@ -15,7 +15,7 @@ use anyhow::Result;
 use serde_json::json;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Test utilities for receipt validation
 mod test_utils {
@@ -54,7 +54,7 @@ mod test_utils {
     ///
     /// Returns: (exit_code, stdout, stderr)
     #[allow(dead_code)]
-    pub fn run_verify_receipt(_receipt_path: &PathBuf) -> Result<(i32, String, String)> {
+    pub fn run_verify_receipt(_receipt_path: &Path) -> Result<(i32, String, String)> {
         // TODO: This requires calling xtask::verify_receipt_cmd directly
         // or building xtask binary and executing it
         //

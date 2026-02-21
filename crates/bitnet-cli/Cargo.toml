@@ -29,6 +29,7 @@ bitnet-inference = { path = "../bitnet-inference", version = "0.1.0" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
+bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.1.0" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.1.0", optional = true }
 candle-core.workspace = true
 anyhow.workspace = true
@@ -66,12 +67,20 @@ serial_test = "3.2.0"
 
 [features]
 default = ["cpu", "full-cli"]
+runtime-profile-core = [
+  "bitnet-runtime-bootstrap/runtime-profile-inference",
+  "bitnet-runtime-bootstrap/runtime-profile-kernels",
+  "bitnet-runtime-bootstrap/runtime-profile-tokenizers",
+  "bitnet-runtime-bootstrap/runtime-profile-quantization",
+]
 cpu = [
   "bitnet-inference/cpu",
+  "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
 ]
 gpu = [
   "bitnet-inference/gpu",
+  "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-gpu",
 ]
 cuda = ["gpu", "bitnet-runtime-bootstrap/runtime-profile-cuda"]  # Backward compatibility alias for gpu
@@ -86,7 +95,7 @@ crossval = ["bitnet-runtime-bootstrap/runtime-profile-crossval"]
 # Gate benchmark subcommand behind feature flag
 cli-bench = []
 # build the extra subcommands only when you want them
-full-cli = ["cli-bench", "bitnet-runtime-bootstrap/runtime-profile-cli"]
+full-cli = ["cli-bench", "runtime-profile-core", "bitnet-runtime-bootstrap/runtime-profile-cli"]
 trace = ["bitnet-inference/trace", "bitnet-runtime-bootstrap/runtime-profile-trace"]  # Enable tensor activation tracing
 # Mock feature - compile-time firewall (intentionally triggers compile_error! in main.rs)
 # This prevents production CLI builds with test mocks

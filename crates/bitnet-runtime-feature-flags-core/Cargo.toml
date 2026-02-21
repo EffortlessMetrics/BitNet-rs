@@ -1,0 +1,22 @@
+[package]
+name = "bitnet-runtime-feature-flags-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core feature-flag set construction for BitNet runtime profile contracts"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.1.0" }
+
+[features]
+default = []

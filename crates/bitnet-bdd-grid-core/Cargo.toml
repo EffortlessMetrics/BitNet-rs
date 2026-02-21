@@ -1,0 +1,15 @@
+[package]
+name = "bitnet-bdd-grid-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core BDD scenario, feature, and grid primitives for BitNet"
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]

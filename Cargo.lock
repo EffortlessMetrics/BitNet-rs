@@ -404,6 +404,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-bdd-grid"
+version = "0.1.0"
+dependencies = [
+ "bitnet-bdd-grid-core",
+]
+
+[[package]]
+name = "bitnet-bdd-grid-core"
+version = "0.1.0"
+
+[[package]]
 name = "bitnet-cli"
 version = "0.1.0"
 dependencies = [
@@ -414,6 +425,8 @@ dependencies = [
  "bitnet-inference",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-runtime-bootstrap",
+ "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
  "bytemuck",
  "candle-core",
@@ -513,6 +526,21 @@ dependencies = [
  "thiserror 2.0.17",
  "tokio",
  "toml",
+]
+
+[[package]]
+name = "bitnet-feature-contract"
+version = "0.1.0"
+dependencies = [
+ "bitnet-bdd-grid",
+ "bitnet-feature-matrix",
+]
+
+[[package]]
+name = "bitnet-feature-matrix"
+version = "0.1.0"
+dependencies = [
+ "bitnet-runtime-profile-core",
 ]
 
 [[package]]
@@ -707,6 +735,72 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-runtime-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "bitnet-startup-contract",
+]
+
+[[package]]
+name = "bitnet-runtime-context"
+version = "0.1.0"
+dependencies = [
+ "bitnet-runtime-context-core",
+]
+
+[[package]]
+name = "bitnet-runtime-context-core"
+version = "0.1.0"
+dependencies = [
+ "bitnet-bdd-grid-core",
+]
+
+[[package]]
+name = "bitnet-runtime-feature-flags"
+version = "0.1.0"
+dependencies = [
+ "bitnet-bdd-grid-core",
+ "bitnet-runtime-feature-flags-core",
+]
+
+[[package]]
+name = "bitnet-runtime-feature-flags-core"
+version = "0.1.0"
+dependencies = [
+ "bitnet-bdd-grid-core",
+]
+
+[[package]]
+name = "bitnet-runtime-profile"
+version = "0.1.0"
+dependencies = [
+ "bitnet-feature-matrix",
+]
+
+[[package]]
+name = "bitnet-runtime-profile-contract"
+version = "0.1.0"
+dependencies = [
+ "bitnet-runtime-profile-contract-core",
+]
+
+[[package]]
+name = "bitnet-runtime-profile-contract-core"
+version = "0.1.0"
+dependencies = [
+ "bitnet-bdd-grid",
+ "bitnet-runtime-context",
+ "bitnet-runtime-feature-flags",
+]
+
+[[package]]
+name = "bitnet-runtime-profile-core"
+version = "0.1.0"
+dependencies = [
+ "bitnet-runtime-profile-contract",
+]
+
+[[package]]
 name = "bitnet-server"
 version = "0.1.0"
 dependencies = [
@@ -718,6 +812,8 @@ dependencies = [
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
+ "bitnet-runtime-bootstrap",
+ "bitnet-startup-contract-guard",
  "bitnet-tokenizers",
  "chrono",
  "clap",
@@ -794,6 +890,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-startup-contract"
+version = "0.1.0"
+dependencies = [
+ "bitnet-startup-contract-core",
+]
+
+[[package]]
+name = "bitnet-startup-contract-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitnet-runtime-profile",
+]
+
+[[package]]
+name = "bitnet-startup-contract-diagnostics"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitnet-runtime-bootstrap",
+]
+
+[[package]]
+name = "bitnet-startup-contract-guard"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitnet-runtime-bootstrap",
+ "bitnet-startup-contract-diagnostics",
+ "tracing",
+]
+
+[[package]]
 name = "bitnet-sys"
 version = "0.1.0"
 dependencies = [
@@ -801,6 +930,82 @@ dependencies = [
  "cc",
  "thiserror 2.0.17",
  "xtask-build-helper",
+]
+
+[[package]]
+name = "bitnet-testing-policy"
+version = "0.1.0"
+dependencies = [
+ "bitnet-testing-policy-core",
+]
+
+[[package]]
+name = "bitnet-testing-policy-contract"
+version = "0.1.0"
+dependencies = [
+ "bitnet-feature-contract",
+ "bitnet-runtime-feature-flags",
+ "bitnet-testing-policy-core",
+]
+
+[[package]]
+name = "bitnet-testing-policy-core"
+version = "0.1.0"
+dependencies = [
+ "bitnet-testing-profile",
+ "bitnet-testing-scenarios-core",
+]
+
+[[package]]
+name = "bitnet-testing-policy-interop"
+version = "0.1.0"
+dependencies = [
+ "bitnet-runtime-feature-flags",
+ "bitnet-testing-policy-contract",
+ "bitnet-testing-policy-kit",
+]
+
+[[package]]
+name = "bitnet-testing-policy-kit"
+version = "0.1.0"
+dependencies = [
+ "bitnet-testing-policy",
+]
+
+[[package]]
+name = "bitnet-testing-policy-runtime"
+version = "0.1.0"
+dependencies = [
+ "bitnet-testing-policy-interop",
+]
+
+[[package]]
+name = "bitnet-testing-policy-tests"
+version = "0.1.0"
+dependencies = [
+ "bitnet-testing-policy-runtime",
+]
+
+[[package]]
+name = "bitnet-testing-profile"
+version = "0.1.0"
+dependencies = [
+ "bitnet-runtime-profile",
+]
+
+[[package]]
+name = "bitnet-testing-scenarios"
+version = "0.1.0"
+dependencies = [
+ "bitnet-testing-scenarios-core",
+]
+
+[[package]]
+name = "bitnet-testing-scenarios-core"
+version = "0.1.0"
+dependencies = [
+ "bitnet-testing-profile",
+ "num_cpus",
 ]
 
 [[package]]
@@ -819,6 +1024,7 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-testing-policy-tests",
  "bitnet-tokenizers",
  "byteorder",
  "cargo_metadata 0.23.1",

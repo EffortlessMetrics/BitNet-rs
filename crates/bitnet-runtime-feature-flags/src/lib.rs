@@ -1,112 +1,51 @@
-//! Compile-time feature discovery for BitNet profile contracts.
+//! Compatibility façade over `bitnet-runtime-feature-flags-core`.
+//!
+//! This crate preserves the previous public surface and keeps all `cfg(feature =
+//! "...")` wiring in one place.
 
-use bitnet_bdd_grid::{BitnetFeature, FeatureSet};
+use bitnet_bdd_grid_core::FeatureSet;
+pub use bitnet_runtime_feature_flags_core::{
+    FeatureActivation, active_features_from_activation, feature_labels_from_activation,
+    feature_line_from_activation,
+};
 
 /// Detect active feature flags and project them into a canonical [`FeatureSet`].
 pub fn active_features() -> FeatureSet {
-    let mut features = FeatureSet::new();
-
-    if cfg!(feature = "cpu") {
-        features.insert(BitnetFeature::Cpu);
-        features.insert(BitnetFeature::Inference);
-        features.insert(BitnetFeature::Kernels);
-        features.insert(BitnetFeature::Tokenizers);
-    }
-
-    if cfg!(feature = "gpu") {
-        features.insert(BitnetFeature::Gpu);
-        features.insert(BitnetFeature::Inference);
-        features.insert(BitnetFeature::Kernels);
-    }
-
-    if cfg!(feature = "cuda") {
-        features.insert(BitnetFeature::Cuda);
-        features.insert(BitnetFeature::Gpu);
-    }
-
-    if cfg!(feature = "inference") {
-        features.insert(BitnetFeature::Inference);
-    }
-
-    if cfg!(feature = "kernels") {
-        features.insert(BitnetFeature::Kernels);
-    }
-
-    if cfg!(feature = "tokenizers") {
-        features.insert(BitnetFeature::Tokenizers);
-    }
-
-    if cfg!(feature = "quantization") {
-        features.insert(BitnetFeature::Quantization);
-    }
-
-    if cfg!(feature = "cli") {
-        features.insert(BitnetFeature::Cli);
-    }
-
-    if cfg!(feature = "server") {
-        features.insert(BitnetFeature::Server);
-    }
-
-    if cfg!(feature = "ffi") {
-        features.insert(BitnetFeature::Ffi);
-    }
-
-    if cfg!(feature = "python") {
-        features.insert(BitnetFeature::Python);
-    }
-
-    if cfg!(feature = "wasm") {
-        features.insert(BitnetFeature::Wasm);
-    }
-
-    if cfg!(feature = "crossval") {
-        features.insert(BitnetFeature::CrossValidation);
-    }
-
-    if cfg!(feature = "trace") {
-        features.insert(BitnetFeature::Trace);
-    }
-
-    if cfg!(feature = "iq2s-ffi") {
-        features.insert(BitnetFeature::Iq2sFfi);
-    }
-
-    if cfg!(feature = "cpp-ffi") {
-        features.insert(BitnetFeature::CppFfi);
-    }
-
-    if cfg!(feature = "fixtures") {
-        features.insert(BitnetFeature::Fixtures);
-    }
-
-    if cfg!(feature = "reporting") {
-        features.insert(BitnetFeature::Reporting);
-    }
-
-    if cfg!(feature = "trend") {
-        features.insert(BitnetFeature::Trend);
-    }
-
-    if cfg!(feature = "integration-tests") {
-        features.insert(BitnetFeature::IntegrationTests);
-    }
-
-    features
+    active_features_from_activation(activation_from_cfg())
 }
 
 /// Return active feature labels in canonical stable order.
 pub fn feature_labels() -> Vec<String> {
-    active_features().labels()
+    feature_labels_from_activation(activation_from_cfg())
 }
 
 /// Return a compact, human-readable feature line.
 pub fn feature_line() -> String {
-    let labels = feature_labels();
-    if labels.is_empty() {
-        "features: none".to_string()
-    } else {
-        format!("features: {}", labels.join(", "))
+    feature_line_from_activation(activation_from_cfg())
+}
+
+fn activation_from_cfg() -> FeatureActivation {
+    FeatureActivation {
+        cpu: cfg!(feature = "cpu"),
+        gpu: cfg!(feature = "gpu"),
+        cuda: cfg!(any(feature = "gpu", feature = "cuda")),
+        inference: cfg!(feature = "inference"),
+        kernels: cfg!(feature = "kernels"),
+        tokenizers: cfg!(feature = "tokenizers"),
+        quantization: cfg!(feature = "quantization"),
+        cli: cfg!(feature = "cli"),
+        server: cfg!(feature = "server"),
+        ffi: cfg!(feature = "ffi"),
+        python: cfg!(feature = "python"),
+        wasm: cfg!(feature = "wasm"),
+        crossval: cfg!(feature = "crossval"),
+        trace: cfg!(feature = "trace"),
+        iq2s_ffi: cfg!(feature = "iq2s-ffi"),
+        cpp_ffi: cfg!(feature = "cpp-ffi"),
+        fixtures: cfg!(feature = "fixtures"),
+        reporting: cfg!(feature = "reporting"),
+        trend: cfg!(feature = "trend"),
+        integration_tests: cfg!(feature = "integration-tests"),
     }
 }
 

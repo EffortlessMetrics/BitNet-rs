@@ -9,13 +9,15 @@ compile_error!("The 'mock' feature must never be enabled for the CLI – tests o
 
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
+use bitnet_startup_contract_guard::{
+    ContractPolicy, RuntimeComponent, evaluate_and_emit, feature_line,
+};
 use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
 use std::io;
 use tracing::{debug, error, info, warn};
-use bitnet_runtime_bootstrap::{ContractPolicy, ProfileContract, RuntimeComponent, feature_line};
 
 #[cfg(feature = "full-cli")]
 mod commands;
@@ -457,18 +459,10 @@ async fn main() -> Result<()> {
     // Setup logging
     setup_logging(&config, cli.log_level.as_deref())?;
 
-    let runtime_contract = ProfileContract::evaluate(
-        RuntimeComponent::Cli,
-        ContractPolicy::Observe,
-    )
-    .enforce()?;
-    info!("{}", runtime_contract.summary());
-    if !runtime_contract.is_compatible() {
-        warn!(
-            "Startup contract is non-compliant: missing={:?} forbidden={:?}",
-            runtime_contract.missing_required(),
-            runtime_contract.forbidden_active()
-        );
+    let startup_contract_report =
+        evaluate_and_emit(RuntimeComponent::Cli, ContractPolicy::Observe)?;
+    if !startup_contract_report.is_compatible() {
+        warn!(component = ?RuntimeComponent::Cli, "CLI startup contract reported issues");
     }
 
     // Handle commands

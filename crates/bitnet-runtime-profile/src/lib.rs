@@ -5,8 +5,8 @@
 //! semantics and keep interoperability straightforward across crates.
 
 pub use bitnet_feature_matrix::{
-    active_features, active_profile, active_profile_for, active_profile_summary, active_profile_violation_labels,
-    canonical_grid, feature_labels, feature_line, validate_active_profile,
-    validate_active_profile_for, ActiveContext, ActiveProfile, BddCell, BddGrid, BitnetFeature,
-    ExecutionEnvironment, FeatureSet, TestingScenario,
+    ActiveContext, ActiveProfile, BddCell, BddGrid, BitnetFeature, ExecutionEnvironment,
+    FeatureSet, TestingScenario, active_features, active_profile, active_profile_for,
+    active_profile_summary, active_profile_violation_labels, canonical_grid, feature_labels,
+    feature_line, validate_active_profile, validate_active_profile_for,
 };

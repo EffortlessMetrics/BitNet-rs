@@ -1,0 +1,24 @@
+[package]
+name = "bitnet-testing-scenarios-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core scenario/environment policy model and configuration resolver for BitNet test orchestration"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.1.0" }
+num_cpus = "1.17.0"
+
+[features]
+default = []
+fixtures = []

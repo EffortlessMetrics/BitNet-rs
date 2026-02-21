@@ -1,0 +1,61 @@
+[package]
+name = "bitnet-testing-policy-interop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Interoperability façade for BitNet testing policy, BDD grid, and runtime feature flags"
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]
+bitnet-testing-policy-contract = { path = "../bitnet-testing-policy-contract", version = "0.1.0" }
+bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.1.0" }
+bitnet-testing-policy-kit = { path = "../bitnet-testing-policy-kit", version = "0.1.0" }
+
+[features]
+default = []
+cpu = ["bitnet-runtime-feature-flags/cpu", "bitnet-testing-policy-contract/cpu", "bitnet-testing-policy-kit/cpu"]
+gpu = ["bitnet-runtime-feature-flags/gpu", "bitnet-testing-policy-contract/gpu", "bitnet-testing-policy-kit/gpu"]
+cuda = ["bitnet-runtime-feature-flags/cuda", "bitnet-testing-policy-contract/cuda", "bitnet-testing-policy-kit/cuda"]
+inference = ["bitnet-runtime-feature-flags/inference", "bitnet-testing-policy-contract/inference", "bitnet-testing-policy-kit/inference"]
+kernels = ["bitnet-runtime-feature-flags/kernels", "bitnet-testing-policy-contract/kernels", "bitnet-testing-policy-kit/kernels"]
+tokenizers = ["bitnet-runtime-feature-flags/tokenizers", "bitnet-testing-policy-contract/tokenizers", "bitnet-testing-policy-kit/tokenizers"]
+quantization = ["bitnet-runtime-feature-flags/quantization", "bitnet-testing-policy-contract/quantization", "bitnet-testing-policy-kit/quantization"]
+cli = ["bitnet-runtime-feature-flags/cli", "bitnet-testing-policy-contract/cli", "bitnet-testing-policy-kit/cli"]
+server = ["bitnet-runtime-feature-flags/server", "bitnet-testing-policy-contract/server", "bitnet-testing-policy-kit/server"]
+ffi = ["bitnet-runtime-feature-flags/ffi", "bitnet-testing-policy-contract/ffi", "bitnet-testing-policy-kit/ffi"]
+python = ["bitnet-runtime-feature-flags/python", "bitnet-testing-policy-contract/python", "bitnet-testing-policy-kit/python"]
+wasm = ["bitnet-runtime-feature-flags/wasm", "bitnet-testing-policy-contract/wasm", "bitnet-testing-policy-kit/wasm"]
+crossval = ["bitnet-runtime-feature-flags/crossval", "bitnet-testing-policy-contract/crossval", "bitnet-testing-policy-kit/crossval"]
+trace = ["bitnet-runtime-feature-flags/trace", "bitnet-testing-policy-contract/trace", "bitnet-testing-policy-kit/trace"]
+iq2s-ffi = ["bitnet-runtime-feature-flags/iq2s-ffi", "bitnet-testing-policy-contract/iq2s-ffi", "bitnet-testing-policy-kit/iq2s-ffi"]
+cpp-ffi = ["bitnet-runtime-feature-flags/cpp-ffi", "bitnet-testing-policy-contract/cpp-ffi", "bitnet-testing-policy-kit/cpp-ffi"]
+fixtures = ["bitnet-runtime-feature-flags/fixtures", "bitnet-testing-policy-contract/fixtures", "bitnet-testing-policy-kit/fixtures"]
+reporting = ["bitnet-runtime-feature-flags/reporting", "bitnet-testing-policy-contract/reporting", "bitnet-testing-policy-kit/reporting"]
+trend = ["bitnet-runtime-feature-flags/trend", "bitnet-testing-policy-contract/trend", "bitnet-testing-policy-kit/trend"]
+integration-tests = ["bitnet-runtime-feature-flags/integration-tests", "bitnet-testing-policy-contract/integration-tests", "bitnet-testing-policy-kit/integration-tests"]
+runtime-profile-cpu = ["bitnet-runtime-feature-flags/runtime-profile-cpu", "bitnet-testing-policy-contract/runtime-profile-cpu", "bitnet-testing-policy-kit/runtime-profile-cpu"]
+runtime-profile-gpu = ["bitnet-runtime-feature-flags/runtime-profile-gpu", "bitnet-testing-policy-contract/runtime-profile-gpu", "bitnet-testing-policy-kit/runtime-profile-gpu"]
+runtime-profile-cuda = ["bitnet-runtime-feature-flags/runtime-profile-cuda", "bitnet-testing-policy-contract/runtime-profile-cuda", "bitnet-testing-policy-kit/runtime-profile-cuda"]
+runtime-profile-inference = ["bitnet-runtime-feature-flags/runtime-profile-inference", "bitnet-testing-policy-contract/runtime-profile-inference", "bitnet-testing-policy-kit/runtime-profile-inference"]
+runtime-profile-kernels = ["bitnet-runtime-feature-flags/runtime-profile-kernels", "bitnet-testing-policy-contract/runtime-profile-kernels", "bitnet-testing-policy-kit/runtime-profile-kernels"]
+runtime-profile-tokenizers = ["bitnet-runtime-feature-flags/runtime-profile-tokenizers", "bitnet-testing-policy-contract/runtime-profile-tokenizers", "bitnet-testing-policy-kit/runtime-profile-tokenizers"]
+runtime-profile-quantization = ["bitnet-runtime-feature-flags/runtime-profile-quantization", "bitnet-testing-policy-contract/runtime-profile-quantization", "bitnet-testing-policy-kit/runtime-profile-quantization"]
+runtime-profile-cli = ["bitnet-runtime-feature-flags/runtime-profile-cli", "bitnet-testing-policy-contract/runtime-profile-cli", "bitnet-testing-policy-kit/runtime-profile-cli"]
+runtime-profile-server = ["bitnet-runtime-feature-flags/runtime-profile-server", "bitnet-testing-policy-contract/runtime-profile-server", "bitnet-testing-policy-kit/runtime-profile-server"]
+runtime-profile-ffi = ["bitnet-runtime-feature-flags/runtime-profile-ffi", "bitnet-testing-policy-contract/runtime-profile-ffi", "bitnet-testing-policy-kit/runtime-profile-ffi"]
+runtime-profile-python = ["bitnet-runtime-feature-flags/runtime-profile-python", "bitnet-testing-policy-contract/runtime-profile-python", "bitnet-testing-policy-kit/runtime-profile-python"]
+runtime-profile-wasm = ["bitnet-runtime-feature-flags/runtime-profile-wasm", "bitnet-testing-policy-contract/runtime-profile-wasm", "bitnet-testing-policy-kit/runtime-profile-wasm"]
+runtime-profile-crossval = ["bitnet-runtime-feature-flags/runtime-profile-crossval", "bitnet-testing-policy-contract/runtime-profile-crossval", "bitnet-testing-policy-kit/runtime-profile-crossval"]
+runtime-profile-trace = ["bitnet-runtime-feature-flags/runtime-profile-trace", "bitnet-testing-policy-contract/runtime-profile-trace", "bitnet-testing-policy-kit/runtime-profile-trace"]
+runtime-profile-iq2s-ffi = ["bitnet-runtime-feature-flags/runtime-profile-iq2s-ffi", "bitnet-testing-policy-contract/runtime-profile-iq2s-ffi", "bitnet-testing-policy-kit/runtime-profile-iq2s-ffi"]
+runtime-profile-cpp-ffi = ["bitnet-runtime-feature-flags/runtime-profile-cpp-ffi", "bitnet-testing-policy-contract/runtime-profile-cpp-ffi", "bitnet-testing-policy-kit/runtime-profile-cpp-ffi"]
+runtime-profile-fixtures = ["bitnet-runtime-feature-flags/runtime-profile-fixtures", "bitnet-testing-policy-contract/runtime-profile-fixtures", "bitnet-testing-policy-kit/runtime-profile-fixtures"]
+runtime-profile-reporting = ["bitnet-runtime-feature-flags/runtime-profile-reporting", "bitnet-testing-policy-contract/runtime-profile-reporting", "bitnet-testing-policy-kit/runtime-profile-reporting"]
+runtime-profile-trend = ["bitnet-runtime-feature-flags/runtime-profile-trend", "bitnet-testing-policy-contract/runtime-profile-trend", "bitnet-testing-policy-kit/runtime-profile-trend"]
+runtime-profile-integration-tests = ["bitnet-runtime-feature-flags/runtime-profile-integration-tests", "bitnet-testing-policy-contract/runtime-profile-integration-tests", "bitnet-testing-policy-kit/runtime-profile-integration-tests"]
