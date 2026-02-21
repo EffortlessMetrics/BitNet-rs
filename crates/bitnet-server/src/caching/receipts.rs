@@ -1,43 +1,98 @@
-//! KV Pool Receipt Structures
+//! KV Pool Receipt Structures and Event Emission
 //!
 //! This module defines receipt types for tracing and auditing KV cache operations,
 //! including evictions, batch operations, and pool health snapshots.
 //!
-//! These structures are designed to integrate with BitNet.rs's existing receipts
-//! infrastructure and support JSON serialization for logging and telemetry.
+//! Phase 2 adds trait-based event emission with dependency injection for
+//! testability and production observability.
 
+use crate::caching::CachingConfig;
+use crate::caching::kv_cache::KVCacheStatistics;
+#[cfg(any(test, feature = "tuning"))]
+use crate::caching::performance_tuning::PerformanceReport;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
-/// Receipt emitted when a single KV cache entry is evicted
-///
-/// Captures before/after pool state for traceability and debugging.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KvEvictionReceipt {
-    /// Event type identifier
-    pub event: String,
+/// Target for tracing-based receipt events.
+pub const KV_RECEIPTS_TARGET: &str = "bitnet::kv::receipts";
 
-    /// Session being evicted
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 2: Runtime-wired eviction receipts
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Receipt emitted when a single KV cache entry is evicted (Phase 2).
+///
+/// Captures full before/after statistics snapshots for detailed analysis.
+#[derive(Debug, Clone, Serialize)]
+pub struct KvEvictionReport {
+    /// Stable identifier for the logical session.
     pub session_id: String,
 
-    /// Memory freed by this eviction (bytes)
-    pub bytes_freed: usize,
+    /// Offset of the evicted block within the arena.
+    pub block_offset: usize,
 
-    /// Pool state before eviction
-    pub pool_used_before: usize,
-    pub pool_total: usize,
-    pub fragmentation_before: f64,
-    pub sessions_before: u64,
+    /// Size of the evicted block in bytes.
+    pub block_size_bytes: usize,
 
-    /// Pool state after eviction
-    pub pool_used_after: usize,
-    pub fragmentation_after: f64,
-    pub sessions_after: u64,
+    /// Snapshot of cache metrics before the eviction.
+    pub before: KVCacheStatistics,
 
-    /// Timing and metadata
+    /// Snapshot of cache metrics after the eviction.
+    pub after: KVCacheStatistics,
+
+    /// Optional performance summary at the time of eviction.
+    #[cfg(any(test, feature = "tuning"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub performance: Option<PerformanceReport>,
+
+    /// Wall-clock time the eviction was recorded.
     pub timestamp: SystemTime,
-    pub eviction_reason: EvictionReason,
 }
+
+/// Trait for consuming KV cache lifecycle events.
+///
+/// Implementations can route events to tracing, structured logging,
+/// metrics backends, or test channels.
+pub trait KvEventSink: Send + Sync {
+    /// Record a single eviction event.
+    fn on_eviction(&self, event: KvEvictionReport);
+
+    // Future extension points for Phase 3/4:
+    // fn on_batch(&self, event: KvEvictionBatchReceipt);
+    // fn on_performance(&self, report: PerformanceReport);
+}
+
+/// A sink that emits events via `tracing::info!`.
+///
+/// This is the default production sink when receipts are enabled.
+pub struct TracingSink;
+
+impl KvEventSink for TracingSink {
+    fn on_eviction(&self, event: KvEvictionReport) {
+        #[cfg(any(test, feature = "tuning"))]
+        let has_perf = event.performance.is_some();
+        #[cfg(not(any(test, feature = "tuning")))]
+        let has_perf = false;
+
+        tracing::info!(
+            target: KV_RECEIPTS_TARGET,
+            kv_event = "eviction",
+            session_id = %event.session_id,
+            block_offset = event.block_offset,
+            block_size_bytes = event.block_size_bytes,
+            before_sessions = event.before.total_sessions,
+            after_sessions = event.after.total_sessions,
+            before_mem_mb = event.before.used_memory_mb,
+            after_mem_mb = event.after.used_memory_mb,
+            has_perf = has_perf,
+            "KV eviction recorded"
+        );
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 1: Receipt types (for future batch/snapshot work)
+// ────────────────────────────────────────────────────────────────────────────
 
 /// Receipt emitted when multiple KV cache entries are evicted in a batch
 ///
@@ -105,36 +160,42 @@ pub enum EvictionReason {
     Ttl,
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Test-only helpers
+// ────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+pub(crate) mod test_helpers {
+    use super::*;
+    use tokio::sync::mpsc;
+
+    /// A channel-based sink for test assertions.
+    ///
+    /// Call `ChannelSink::channel(buffer)` to get a `(sink, receiver)` pair.
+    #[derive(Clone)]
+    pub struct ChannelSink {
+        tx: mpsc::Sender<KvEvictionReport>,
+    }
+
+    impl KvEventSink for ChannelSink {
+        fn on_eviction(&self, event: KvEvictionReport) {
+            // Fire and forget; tests should size the buffer appropriately.
+            let _ = self.tx.try_send(event);
+        }
+    }
+
+    impl ChannelSink {
+        /// Create a bounded channel sink with the given buffer capacity.
+        pub fn channel(buffer: usize) -> (Self, mpsc::Receiver<KvEvictionReport>) {
+            let (tx, rx) = mpsc::channel(buffer);
+            (Self { tx }, rx)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_eviction_receipt_roundtrip() {
-        let receipt = KvEvictionReceipt {
-            event: "kv_eviction".to_string(),
-            session_id: "sess_test123".to_string(),
-            bytes_freed: 262144,
-            pool_used_before: 1048576,
-            pool_total: 10485760,
-            fragmentation_before: 0.12,
-            sessions_before: 8,
-            pool_used_after: 786432,
-            fragmentation_after: 0.08,
-            sessions_after: 7,
-            timestamp: SystemTime::UNIX_EPOCH,
-            eviction_reason: EvictionReason::Lru,
-        };
-
-        // Round-trip through serde_json::Value to avoid lifetime issues
-        let value = serde_json::to_value(&receipt).unwrap();
-        let parsed: KvEvictionReceipt = serde_json::from_value(value).unwrap();
-
-        assert_eq!(parsed.event, "kv_eviction");
-        assert_eq!(parsed.session_id, "sess_test123");
-        assert_eq!(parsed.bytes_freed, 262144);
-        assert_eq!(parsed.eviction_reason, EvictionReason::Lru);
-    }
 
     #[test]
     fn test_batch_receipt_roundtrip() {

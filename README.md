@@ -29,12 +29,42 @@ device-aware quantization, and cross-platform support.
 - OS: Ubuntu 22.04/24.04 (x86_64)
 - Rust: See [`rust-toolchain.toml`](./rust-toolchain.toml) for MSRV (Rust 2024 edition)
 - GPU (optional): CUDA toolkit 12.x with NVCC
+- **Nix (recommended)**: For reproducible builds and development environment
 
 **Out of scope (for now)**
 
 - macOS / Windows (may compile in places, but not supported or CI'd)
 
-### Build & Installation
+### Nix Quick Start (Recommended - Reproducible)
+
+```bash
+# Enter development environment (pinned Rust + all dependencies)
+nix develop
+
+# Build production artifacts (hermetic, reproducible)
+nix build .#bitnet-server    # Inference server
+nix build .#bitnet-cli        # CLI tool
+nix build .#bitnet-st2gguf    # SafeTensors converter
+
+# Run directly without building local artifacts
+nix run .#bitnet-cli -- --help
+nix run .#bitnet-server -- --version
+
+# Validate before PR (local CI, identical to future GitHub Actions)
+nix flake check                           # All checks
+nix flake check .#workspace               # Full workspace
+nix flake check .#bitnet-server-receipts  # Receipts only
+nix flake check .#nextest                 # Fast tests
+
+# Why Nix?
+# ✅ Same toolchain/deps across all machines
+# ✅ Local checks = CI checks (no divergence)
+# ✅ Zero setup (nix develop → ready to work)
+```
+
+**See**: [`docs/kv-pool/NIX_FLAKE_USAGE.md`](docs/kv-pool/NIX_FLAKE_USAGE.md) for complete guide.
+
+### Traditional Cargo Build (Without Nix)
 
 ```bash
 # Build for CPU (recommended for MVP testing)

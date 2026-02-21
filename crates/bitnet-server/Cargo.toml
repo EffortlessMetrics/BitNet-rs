@@ -84,3 +84,4 @@ prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
 request_batching = []                                                                                                                                                             # Gate request batching module (PR-1 scope)
 connection_pool = []                                                                                                                                                              # Gate connection pool module (PR-1 scope)
 tuning = []                                                                                                                                                                       # Gate performance tuning module (PR-1 scope)
+receipts = []                                                                                                                                                                     # Enable KV cache eviction receipts (Phase 2)

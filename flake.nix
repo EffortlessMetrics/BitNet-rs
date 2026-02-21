@@ -31,6 +31,7 @@
           libclang
           zlib
           oniguruma
+          cargo-nextest  # Faster test runner with timeout protection
         ];
 
         # Common env for rust builds: no sccache, no incremental
@@ -173,6 +174,7 @@
             nativeBuildInputs = [ rustStable rustMsrv ] ++ nativeDeps;
 
             buildPhase = ''
+              set -euxo pipefail
               export HOME=$(mktemp -d)
               export RUSTUP_TOOLCHAIN=${commonEnv.RUSTUP_TOOLCHAIN}
               export RUSTC_WRAPPER=${commonEnv.RUSTC_WRAPPER}
@@ -183,11 +185,12 @@
               chmod +x scripts/ci-local.sh
 
               echo ">>> Running workspace CI checks (CPU-only)…"
-              ./scripts/ci-local.sh workspace
+              ./scripts/ci-local.sh workspace | tee ci-workspace.log
             '';
 
             installPhase = ''
               mkdir -p $out
+              cp ci-workspace.log $out/
               echo "workspace CI checks passed" > $out/result
             '';
           };
@@ -199,6 +202,7 @@
             nativeBuildInputs = [ rustStable rustMsrv ] ++ nativeDeps;
 
             buildPhase = ''
+              set -euxo pipefail
               export HOME=$(mktemp -d)
               export RUSTUP_TOOLCHAIN=${commonEnv.RUSTUP_TOOLCHAIN}
               export RUSTC_WRAPPER=${commonEnv.RUSTC_WRAPPER}
@@ -209,12 +213,40 @@
               chmod +x scripts/ci-local.sh
 
               echo ">>> Running bitnet-server receipts CI checks…"
-              ./scripts/ci-local.sh bitnet-server-receipts
+              ./scripts/ci-local.sh bitnet-server-receipts | tee ci-receipts.log
             '';
 
             installPhase = ''
               mkdir -p $out
+              cp ci-receipts.log $out/
               echo "bitnet-server receipts checks passed" > $out/result
+            '';
+          };
+
+          # Nextest validation (faster test runner with timeouts)
+          nextest = pkgs.stdenv.mkDerivation {
+            name = "ci-nextest";
+            src = ./.;
+            nativeBuildInputs = [ rustStable rustMsrv ] ++ nativeDeps;
+
+            buildPhase = ''
+              set -euxo pipefail
+              export HOME=$(mktemp -d)
+              export RUSTUP_TOOLCHAIN=${commonEnv.RUSTUP_TOOLCHAIN}
+              export RUSTC_WRAPPER=${commonEnv.RUSTC_WRAPPER}
+              export CARGO_NET_GIT_FETCH_WITH_CLI=${commonEnv.CARGO_NET_GIT_FETCH_WITH_CLI}
+              export CARGO_INCREMENTAL=${commonEnv.CARGO_INCREMENTAL}
+              export LIBCLANG_PATH="${pkgs.libclang.lib}/lib"
+
+              echo ">>> Running nextest checks (CPU features)…"
+              cargo nextest run --workspace --no-default-features --features cpu --profile ci | tee ci-nextest.log
+            '';
+
+            installPhase = ''
+              mkdir -p $out
+              cp ci-nextest.log $out/
+              cp target/nextest/ci/junit.xml $out/ || true
+              echo "nextest checks passed" > $out/result
             '';
           };
         };

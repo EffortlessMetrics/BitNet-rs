@@ -43,6 +43,37 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 
 ## Quick Reference
 
+### Nix Flake (Recommended - Reproducible Builds)
+
+BitNet.rs uses **Nix as the canonical build and development spine**:
+
+```bash
+# Reproducible development environment (pinned Rust + all deps)
+nix develop
+
+# Build production artifacts (hermetic, reproducible)
+nix build .#bitnet-server
+nix build .#bitnet-cli
+nix build .#bitnet-st2gguf
+
+# Run binaries directly (no local artifact)
+nix run .#bitnet-cli -- --help
+nix run .#bitnet-server -- --version
+
+# Local CI validation (hermetic, identical to future CI)
+nix flake check                         # All checks (workspace + receipts)
+nix flake check .#workspace             # Full workspace validation
+nix flake check .#bitnet-server-receipts # Receipts validation
+```
+
+**Why Nix?**
+- ✅ **Reproducible**: Same toolchain/deps across all machines
+- ✅ **CI parity**: Local checks identical to CI
+- ✅ **Zero setup**: `nix develop` → ready to work
+- ✅ **Hermetic builds**: No hidden dependencies
+
+**See also:** `docs/kv-pool/NIX_FLAKE_USAGE.md` for complete guide.
+
 ### Essential Commands
 
 ```bash

@@ -61,6 +61,9 @@ pub struct CachingConfig {
     pub auto_tuning_enabled: bool,
     /// Performance tuning interval in seconds
     pub tuning_interval_seconds: u64,
+    /// Enable KV cache receipts (Phase 2: runtime-wired eviction tracking)
+    #[serde(default)]
+    pub enable_receipts: bool,
 }
 
 impl Default for CachingConfig {
@@ -77,6 +80,7 @@ impl Default for CachingConfig {
             connection_pool_size: 100,
             auto_tuning_enabled: true,
             tuning_interval_seconds: 300, // 5 minutes
+            enable_receipts: false,       // Phase 2: off by default for safe rollout
         }
     }
 }
