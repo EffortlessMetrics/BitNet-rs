@@ -1,544 +1,145 @@
-# BitNet.rs - Rust 1-bit LLM Inference (MVP)
+# BitNet.rs
 
 [![CI](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml)
 [![MSRV](https://img.shields.io/badge/MSRV-1.89.0-blue.svg)](./rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
 
-**Rust implementation of BitNet 1-bit neural network inference** with memory safety,
-device-aware quantization, and cross-platform support.
-
-**Status:** v0.1.0 MVP (Q&A Ready) — Core inference working, but known performance limitations and quality issues. See [Status & Limitations](#status-limitations) below.
-
-## Why BitNet.rs?
-
-- 🦀 **Memory Safe**: No segfaults or crashes, comprehensive error handling, strict mode
-  prevents mock fallbacks. Validation gates enforce honest compute paths.
-- 📐 **Real Quantization**: Numerically validated against Microsoft C++ reference with
-  cross-validation framework. CPU/GPU inference paths both implemented.
-- 🐧 **Linux-first**: Ubuntu (x86_64) with CPU/GPU backends (I2_S BitNet32-F16 and
-  I2_S QK256/GGML quantization formats). macOS/Windows currently out-of-scope.
-- 🔧 **Developer Friendly**: Modern Rust tooling, extensive documentation, xtask automation,
-  and deterministic testing infrastructure
+Rust inference engine for 1-bit BitNet large language models — memory-safe, cross-validated against the C++ reference, with SIMD/CUDA acceleration.
 
 ## Quick Start
 
-### Prerequisites
-
-**Supported (MVP)**
-
-- OS: Ubuntu 22.04/24.04 (x86_64)
-- Rust: See [`rust-toolchain.toml`](./rust-toolchain.toml) for MSRV (Rust 2024 edition)
-- GPU (optional): CUDA toolkit 12.x with NVCC
-- **Nix (recommended)**: For reproducible builds and development environment
-
-**Out of scope (for now)**
-
-- macOS / Windows (may compile in places, but not supported or CI'd)
-
-### Nix Quick Start (Recommended - Reproducible)
-
 ```bash
-# Enter development environment (pinned Rust + all dependencies)
-nix develop
-
-# Build production artifacts (hermetic, reproducible)
-nix build .#bitnet-server    # Inference server
-nix build .#bitnet-cli        # CLI tool
-nix build .#bitnet-st2gguf    # SafeTensors converter
-
-# Run directly without building local artifacts
-nix run .#bitnet-cli -- --help
-nix run .#bitnet-server -- --version
-
-# Validate before PR (local CI, identical to future GitHub Actions)
-nix flake check                           # All checks
-nix flake check .#workspace               # Full workspace
-nix flake check .#bitnet-server-receipts  # Receipts only
-nix flake check .#nextest                 # Fast tests
-
-# Why Nix?
-# ✅ Same toolchain/deps across all machines
-# ✅ Local checks = CI checks (no divergence)
-# ✅ Zero setup (nix develop → ready to work)
-```
-
-**See**: [`docs/kv-pool/NIX_FLAKE_USAGE.md`](docs/kv-pool/NIX_FLAKE_USAGE.md) for complete guide.
-
-### Traditional Cargo Build (Without Nix)
-
-```bash
-# Build for CPU (recommended for MVP testing)
-cargo build --release --no-default-features --features cpu
-
-# Build for GPU (requires CUDA)
-cargo build --release --no-default-features --features gpu
-
-# Build with CPU optimization for better performance
-RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
-  cargo build --release --no-default-features --features cpu,full-cli
-```
-
-### Basic Inference
-
-```bash
-# Download a model and tokenizer
+# 1. Download a model
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf
 
-# Run simple inference (CPU, scalar kernels)
+# 2. Run inference
 RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
   --prompt "What is 2+2?" \
-  --max-tokens 16
+  --max-tokens 8
 
-# Or use interactive chat mode (with auto-template detection)
+# 3. Interactive chat
 RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
 ```
 
-**Note:** Always specify `--no-default-features --features cpu|gpu` — default features are empty to prevent unwanted dependencies.
-
-## Status & Limitations
-
-### Current Implementation Status (v0.1.0-qna-mvp)
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| CPU Inference (I2_S QK256) | ✅ MVP | Scalar kernels (~0.1 tok/s for 2B models); SIMD optimizations planned |
-| GPU Inference (CUDA) | ⚠️ Available | Implemented but needs receipt validation; performance validation pending |
-| Chat REPL | ✅ Working | Auto-detects prompt templates; interactive commands (/help, /clear, /metrics) |
-| Quantization Validation | ✅ Working | Cross-validation against C++ reference; receipt generation with kernel IDs |
-| Model Validation | ✅ Working | LayerNorm statistics, projection checks, architecture-aware validation |
-| Python Bindings | 🚧 Not Ready | FFI bridge available; Python wrapper packaging pending |
-| Server/API Endpoints | 🚧 Not Ready | Health checks and serving endpoints have extensive TODOs |
-
-### Known Issues
-
-1. **QK256 Performance (MVP Limitation)**
-   - Current implementation uses scalar kernels (~0.1 tok/s for 2B models on CPU)
-   - SIMD optimizations planned for v0.2.0
-   - For quick validation, use `--max-tokens 4-16` instead of longer runs
-
-2. **Model Quality Issues**
-   - The Microsoft BitNet B1.58 2B model produces non-sensical outputs in many cases
-   - Model was trained on limited data; not suitable for production Q&A
-   - Works best for deterministic single-token validation (e.g., math sanity checks)
-   - Better models coming from community contributions
-
-3. **Test Infrastructure** (Updated: Issue #260 resolved ✅)
-   <!-- TEST-STATUS:BEGIN -->
-**As of 2025-10-21T04:14:57Z (CPU features)**
-
-- **Discovered**: 0 tests
-- **Executed**: 0 tests
-  - Passed: 0
-  - Failed: 0
-  - Ignored: 0
-
-_Auto-generated by `scripts/tdd_receipts.py`. Run `just tdd-receipts` to refresh._
-<!-- TEST-STATUS:END -->
-
-### What's Working Well
-
-- ✅ **Honest Compute**: Receipt verification with kernel IDs proves real computation
-- ✅ **Memory Safety**: No segfaults, strict validation modes prevent mock fallbacks
-- ✅ **Cross-Validation**: Numerically equivalent to C++ reference (cosine similarity > 0.99)
-- ✅ **Deterministic Inference**: Reproducible outputs for testing with BITNET_DETERMINISTIC=1
-- ✅ **CLI Tools**: Robust command-line interface with inspection and validation
-- ✅ **Model Loading**: Handles GGUF with automatic early v3 variant support
-
-### Not Production-Ready
-
-This is an MVP release for experimentation and validation, not for production deployment. Expect:
-- Breaking API changes in v0.2.0
-- Performance improvements pending (especially for QK256)
-- Model quality limitations with current datasets
-
-### CLI Examples
-
-**Inference with different sampling modes:**
-
-```bash
-# Greedy decoding (deterministic, useful for validation)
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model model.gguf --tokenizer tokenizer.json \
-  --prompt "What is the capital of France?" \
-  --max-tokens 16 --temperature 0.0 --greedy
-
-# Nucleus sampling (creative, natural generation)
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model model.gguf --tokenizer tokenizer.json \
-  --prompt "Explain photosynthesis" \
-  --max-tokens 128 --temperature 0.7 --top-p 0.95
-
-# Interactive chat with auto-template detection
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
-  --model model.gguf --tokenizer tokenizer.json
-```
-
-**Available prompt templates:**
-- `auto` (default): Detects from GGUF metadata, falls back to `instruct`
-- `raw`: No formatting (pure completion)
-- `instruct`: Q&A format (recommended for models like BitNet)
-- `llama3-chat`: LLaMA-3 compatible format with auto-stop on `<|eot_id|>`
-
-### Deterministic & Reproducible Inference
-
-For testing and validation, enable deterministic output:
-
-```bash
-# Reproducible inference with fixed seed
-export BITNET_DETERMINISTIC=1
-export BITNET_SEED=42
-export RAYON_NUM_THREADS=1
-
-# Single-token sanity check (validates model correctness)
-RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
-  --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json \
-  --prompt "2+2=" \
-  --max-tokens 1 \
-  --temperature 0.0 \
-  --greedy
-```
-
-### Strict Receipts (CI & Local)
-
-To generate a production receipt with strict validation for CI/CD workflows:
-
-```bash
-# Deterministic & strict mode
-export BITNET_DISABLE_MINIMAL_LOADER=1
-export BITNET_DETERMINISTIC=1
-export BITNET_SEED=42
-export RAYON_NUM_THREADS=1
-export PARITY_TEST_TIMEOUT_SECS=60
-
-# Run parity smoke test
-./scripts/parity_smoke.sh \
-  models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
-  models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
-
-# Receipt lands under the workspace:
-# docs/baselines/<YYYY-MM-DD>/parity-bitnetcpp.json
-
-# Inspect receipt fields
-jq '.schema_version,.compute_path,.validation,.quant,.timeout_seconds' \
-  docs/baselines/*/parity-bitnetcpp.json
-```
-
-**Note:** The LLaMA-3 chat template **auto-stops** on `<|eot_id|>` and is **auto-selected** when the tokenizer exposes it. BitNet base models default to the **instruct** template (Q&A-oriented).
-
-### Performance Optimization
-
-Build with CPU optimizations for better throughput:
-
-```bash
-# Native CPU optimization (AVX2/AVX-512/NEON auto-detected)
-RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
-  cargo build --release --no-default-features --features cpu,full-cli
-
-# Run with all CPU cores
-RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn \
-  cargo run --release -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model model.gguf --tokenizer tokenizer.json \
-  --prompt "Test" --max-tokens 32
-```
-
-**Expected performance after optimization:**
-- CPU: ~10-20 tok/s (2B I2_S model on modern hardware)
-- GPU: ~50-100 tok/s (2B I2_S model on NVIDIA GPU with CUDA)
-- MVP note: QK256 scalar kernel ~0.1 tok/s (SIMD optimizations coming in v0.2.0)
-
-### Flag Aliases for Compatibility
-
-BitNet.rs CLI provides aliases for common flags to maintain compatibility with other tools:
-
-```bash
-# These are equivalent (primary flag: --max-tokens)
---max-tokens 32        # Primary
---max-new-tokens 32    # Alias (HuggingFace compatible)
---n-predict 32         # Alias (GGML compatible)
-
-# These are equivalent (primary flag: --stop)
---stop "</s>"              # Primary
---stop-sequence "</s>"     # Alias
---stop_sequences "</s>"    # Alias
-```
-
-### Stop Configuration (IDs First, EOS Next, Strings Last)
-
-Stop sequences are evaluated in priority order for all generation paths:
-
-```bash
-# Token IDs (fastest - checked first)
---stop-id 128009           # LLaMA-3 <|eot_id|> token
-
-# String sequences (UTF-8-safe rolling tail window)
---stop "</s>" --stop "\n\n"
-
-# Configure tail window size (bytes, default: 64)
---stop-string-window 128   # Increase for longer stop sequences
-```
-
-**Stop evaluation order:**
-
-1. Token IDs (`--stop-id`) — checked first (O(1) lookup)
-2. EOS token — from tokenizer or explicit
-3. String sequences (`--stop`) — matched on rolling UTF-8-safe tail buffer
-
-**Note:** The tail window size controls how many bytes of recent output are kept for
-string matching. Increase `--stop-string-window` if you have very long stop sequences
-(default 64 bytes is sufficient for most cases).
-
-### Rust API Usage
-
-See `docs/getting-started.md` for detailed API documentation and examples. The MVP API is
-stabilizing; expect refinements in v0.2.0 as we finalize the inference engine interfaces.
-
-## Core Features (MVP Status)
-
-### Quantization Support
-
-BitNet.rs supports I2_S 1-bit and 2-bit quantization formats with automatic detection:
-
-- **I2_S BitNet32-F16**: Native BitNet format with inline F16 scales (32-element blocks)
-  - Used by Microsoft's BitNet models
-  - Status: Implemented, cross-validated against C++ reference
-
-- **I2_S QK256 (GGML)**: GGML-compatible 2-bit format (256-element blocks)
-  - Status: MVP scalar implementation (0.1 tok/s for 2B); SIMD optimizations in v0.2.0
-  - Automatic flavor detection from tensor size with QK256 priority in close-match scenarios
-  - Detection priority: QK256 (GgmlQk256NoScale) checked first for more specific format matches
-
-- **TL1/TL2**: Table lookup quantization (planned for v0.2.0)
-
-- **Real Computation**: All inference uses quantized matrix multiplication; strict mode prevents mock fallbacks
-
-### Device Support
-
-**CPU:**
-
-- SIMD optimizations: AVX2/AVX-512 (x86), NEON (ARM) planned
-- Auto CPU feature detection with graceful fallback
-- Parallelization via Rayon (configurable with `RAYON_NUM_THREADS`)
-
-**GPU:**
-
-- CUDA backend available (requires CUDA 12.0+ toolkit)
-- Receipt validation required; performance testing pending
-- Mixed precision (FP16/BF16) support with Tensor Cores
-
-### Tokenizer System
-
-- **Automatic Discovery**: Extracts tokenizers from GGUF metadata
-- **Architecture Recognition**: Detects BitNet, LLaMA-2/3, GPT-2, etc. from model patterns
-- **Smart Fallbacks**: Co-located files → GGUF embedded → HuggingFace download
-- **Model-Specific Support**: LLaMA (32K/128K variants), BitNet, GPT-2
-- **`cargo run -p xtask -- tokenizer` command**: Download LLaMA-3 tokenizers from HuggingFace
-
-## Receipt Verification
-
-BitNet.rs implements **honest compute** verification through production receipts. Every
-inference run generates a receipt with kernel IDs proving real computation.
-
-### Receipt Schema v1.0.0
-
-```json
-{
-  "schema_version": "1.0.0",
-  "compute_path": "real",
-  "backend": "cpu",
-  "model": "microsoft/bitnet-b1.58-2B-4T-gguf",
-  "quantization": "i2s",
-  "tokens_generated": 128,
-  "throughput_tokens_per_sec": 15.3,
-  "success": true,
-  "kernels": [
-    "i2s_cpu_quantized_matmul",
-    "tl1_lut_dequant_forward",
-    "attention_kv_cache_update",
-    "layernorm_forward"
-  ],
-  "timestamp": "2025-10-15T12:00:00Z"
-}
-```
-
-### xtask Commands
-
-```bash
-# Download tokenizer from HuggingFace
-# Official source (requires HF_TOKEN with LLaMA-3 license)
-HF_TOKEN=your_token cargo run -p xtask -- tokenizer \
-  --into models/model-dir \
-  --source official
-
-# Mirror source (no authentication required, development use)
-cargo run -p xtask -- tokenizer \
-  --into models/model-dir \
-  --source mirror
-
-# Force re-download even if tokenizer exists
-cargo run -p xtask -- tokenizer --into models/model-dir --force
-
-# Generate receipt (writes ci/inference.json)
-cargo run -p xtask -- benchmark --model <model.gguf> --tokens 128
-
-# Verify receipt passes quality gates
-cargo run -p xtask -- verify-receipt ci/inference.json
-
-# Strict mode (fail on warnings)
-BITNET_STRICT_MODE=1 cargo run -p xtask -- verify-receipt ci/inference.json
-```
-
-### Environment Variables
-
-| Variable | Description | Default | Use Case |
-|----------|-------------|---------|----------|
-| `BITNET_DETERMINISTIC` | Enable deterministic inference | `0` | Reproducible outputs for testing/validation |
-| `BITNET_SEED` | Random seed for deterministic mode | `42` | Control randomness in inference |
-| `RAYON_NUM_THREADS` | Thread count (use `1` for determinism) | auto | Single-threaded for reproducibility |
-| `BITNET_STRICT_MODE` | Fail on validation warnings | `0` | Production deployments |
-| `BITNET_GGUF` | Override model path | auto-discover `models/` | Cross-validation workflows |
-| `BITNET_CPP_DIR` | Path to C++ reference (parity only) | unset | Parity validation with BitNet.cpp |
-| `BITNET_DISABLE_MINIMAL_LOADER` | Fail-fast on loader errors | `0` | CI/CD strict validation |
-
-### Receipt Requirements
-
-**Honest Compute:**
-
-- `compute_path` must be `"real"` (not `"mocked"`)
-- `kernels` array must be non-empty
-- Kernel IDs must be valid (non-empty, ≤128 chars, ≤10,000 count)
-
-**CI Enforcement:**
-
-- Model Gates (CPU) workflow requires valid receipts
-- Branch protection blocks PRs with mocked receipts
-- See [.github/workflows/model-gates.yml](.github/workflows/model-gates.yml)
-
-### Baseline Receipts
-
-Reference receipts are stored in [docs/baselines/](docs/baselines/) with datestamped
-filenames (`YYYYMMDD-cpu.json`). These baselines establish reproducible performance
-benchmarks for CPU inference.
+> **Always** specify `--no-default-features --features cpu|gpu` — default features are empty by design.
 
 ## Architecture
 
-BitNet.rs is organized as a Rust workspace:
+```
+┌────────────────────────────────────────────────────────┐
+│                    bitnet-cli / bitnet-server           │
+└────────────────────┬───────────────────────────────────┘
+                     │
+          ┌──────────▼──────────┐
+          │   bitnet-inference  │  autoregressive engine
+          │  ┌────────────────┐ │
+          │  │ bitnet-sampling│ │  temperature / top-k / top-p
+          │  │ bitnet-prompt- │ │  chat templates (raw/instruct/llama3)
+          │  │   templates    │ │
+          │  │ bitnet-receipts│ │  honest-compute receipts
+          │  └────────────────┘ │
+          └──────────┬──────────┘
+                     │
+     ┌───────────────▼─────────────────┐
+     │          bitnet-models           │  GGUF loading, transformer
+     │  ┌──────────────────────────┐   │
+     │  │   bitnet-quantization    │   │  I2_S / TL1 / TL2 / IQ2_S
+     │  │   bitnet-kernels (SIMD)  │   │  AVX2 / AVX-512 / NEON / CUDA
+     │  └──────────────────────────┘   │
+     └──────────────────────────────────┘
+                     │
+          ┌──────────▼──────────┐
+          │  bitnet-tokenizers  │  universal tokenizer + auto-discovery
+          └─────────────────────┘
+```
 
-- **`bitnet`**: Main library with unified API
-- **`bitnet-inference`**: Autoregressive generation engine
-- **`bitnet-quantization`**: 1-bit quantization algorithms (I2_S, TL1, TL2)
-- **`bitnet-kernels`**: SIMD/CUDA compute kernels
-- **`bitnet-models`**: GGUF/SafeTensors model loading with zero-copy memory mapping
-- **`bitnet-tokenizers`**: Universal tokenizer discovery with automatic GGUF extraction
+## Status (v0.1.0-qna-mvp)
+
+| Feature                        | Status | Notes |
+|-------------------------------|--------|-------|
+| CPU inference — I2_S QK256    | ✅     | Scalar kernels (~0.1 tok/s on 2B); AVX2 foundation merged |
+| CPU inference — I2_S BitNet32 | ✅     | Production path, 10-20× faster than QK256 scalar |
+| GPU inference — CUDA          | ⚠️     | Implemented; receipt validation pending |
+| Interactive chat (REPL)       | ✅     | `/help`, `/clear`, `/metrics`, auto-template detection |
+| Cross-validation vs C++       | ✅     | Cosine similarity > 0.99, per-token comparison |
+| Receipt / honest-compute      | ✅     | Schema v1.0.0, 8 validation gates |
+| Strict mode                   | ✅     | Runtime guards prevent mock fallback |
+| SafeTensors → GGUF export     | ✅     | `bitnet-st2gguf` with F16 LayerNorm preservation |
+| Server / HTTP API             | 🚧     | Health endpoints wired; serving endpoints have TODOs |
+
+## Build
+
+```bash
+# CPU (recommended for development)
+cargo build --no-default-features --features cpu
+
+# CPU — release + native SIMD
+RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+  cargo build --release --no-default-features --features cpu,full-cli
+
+# GPU (requires CUDA 12.x)
+cargo build --no-default-features --features gpu
+
+# Nix (reproducible, identical to CI)
+nix develop
+nix build .#bitnet-cli
+nix flake check
+```
+
+## Test
+
+```bash
+# All tests (nextest recommended — 5 min timeout)
+cargo nextest run --workspace --no-default-features --features cpu
+
+# CI profile (4 threads, no retries)
+cargo nextest run --profile ci
+
+# GGUF fixture tests
+cargo test -p bitnet-models --test qk256_dual_flavor_tests \
+  --no-default-features --features fixtures
+
+# Skip slow QK256 scalar tests
+BITNET_SKIP_SLOW_TESTS=1 cargo nextest run \
+  --workspace --no-default-features --features cpu
+```
 
 ## Documentation
 
-- 📚 **[Getting Started](docs/getting-started.md)** - Comprehensive setup guide
-- 🚀 **[Quick Start](docs/quickstart.md)** - 5-minute setup
-- 🏗️ **[Architecture](docs/architecture-overview.md)** - System design
-- 🔧 **[Development](docs/development/)** - Build, test, and contribution guides
-- 📖 **[API Reference](https://docs.rs/bitnet)** - Complete Rust documentation
+Organised by [Diátaxis](https://diataxis.fr/):
 
-### Key Guides
+| Section | Contents |
+|---------|----------|
+| [**Tutorials**](docs/tutorials/) | Getting started, first inference, tokenizer discovery |
+| [**How-to**](docs/how-to/) | Install, run inference, export GGUF, cross-validate, validate models |
+| [**Explanation**](docs/explanation/) | Architecture, quantization formats, dual-backend, features |
+| [**Reference**](docs/reference/) | CLI flags, environment variables, API, quantization support |
 
-- [Tokenizer Discovery](docs/reference/tokenizer-discovery-api.md) - Automatic tokenizer resolution
-- [Export Clean GGUF](docs/howto/export-clean-gguf.md) - SafeTensors to GGUF with F16 LayerNorm preservation
-- [Model Baselines](docs/baselines/README.md) - Validated model fingerprints and performance metrics
-- [GPU Setup](docs/GPU_SETUP.md) - CUDA configuration
-- [Performance](docs/performance-benchmarking.md) - Optimization and benchmarking
-- [Migration](docs/migration-guide.md) - From C++/Python implementations
-- [Troubleshooting](docs/troubleshooting/troubleshooting.md) - Common issues
+### Key guides
 
-## Language Bindings (MVP Status)
+- [Quickstart](docs/quickstart.md)
+- [Environment variables](docs/environment-variables.md)
+- [GPU setup](docs/GPU_SETUP.md)
+- [C++ cross-validation setup](docs/how-to/automatic-tokenizer-discovery.md)
+- [Quantization support](docs/reference/quantization-support.md)
+- [Validation gates](docs/reference/validation-gates.md)
 
-Currently available:
+## Contributing
 
-- **Rust**: Full API support via `bitnet` crate and `bitnet-cli` binary
-- **C FFI**: Bridge available in `bitnet-sys` (experimental, testing-only)
-
-Coming in v0.2.0:
-
-- Python bindings via PyO3
-- WebAssembly bindings
-- Complete C API
-
-See [docs/explanation/FEATURES.md](docs/explanation/FEATURES.md) for detailed feature roadmap.
-
-## MVP Testing & Troubleshooting
-
-### Common Issues
-
-**Model produces garbled output:**
-
-- The Microsoft BitNet B1.58 2B model has known quality issues with the training data
-- Try shorter prompts or use `--temperature 0.0 --greedy` for deterministic output
-- Better models from community contributors coming soon
-
-**QK256 inference very slow (~0.1 tok/s):**
-
-- Current implementation uses scalar kernels (MVP limitation)
-- Use `--max-tokens 4-16` for quick validation instead of long runs
-- SIMD optimizations shipping in v0.2.0
-
-**Tests hanging or failing:**
-
-- Ensure you're using `--no-default-features --features cpu|gpu`
-- Try `cargo test -p bitnet-common --lib` to test individual crates
-- Check [docs/development/test-suite.md](docs/development/test-suite.md)
-
-**GPU not being used despite CUDA installation:**
-
-- Build with `--no-default-features --features gpu`
-- Run `cargo run -p xtask -- preflight` to check GPU detection
-- See [docs/GPU_SETUP.md](docs/GPU_SETUP.md) for CUDA configuration
-
-### Quick Validation
+See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests welcome.
 
 ```bash
-# Verify core functionality
-cargo build --release --no-default-features --features cpu
-cargo test --doc --workspace --no-default-features --features cpu
-
-# Run minimal sanity test (1 token)
-BITNET_DETERMINISTIC=1 cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
-  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
-  --prompt "x" --max-tokens 1 --greedy
-```
-
-## Contributing & Development
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
-
-**For maintainers:**
-
-```bash
-# Development cycle with strict mode
-BITNET_STRICT_MODE=1 cargo test --workspace --no-default-features --features cpu
-
-# Code quality
+# Format + lint
 cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 
-# Cross-validation (when changing quantization)
-cargo run -p xtask -- download-model  # First-time setup
-cargo run -p xtask -- crossval        # Validate against C++ reference
+# Run tests before pushing
+cargo nextest run --workspace --no-default-features --features cpu
 ```
 
 ## License
 
-This project is licensed under the MIT OR Apache-2.0 license.
-
-## Acknowledgments
-
-- **Microsoft Research** for the original BitNet architecture
-- **C++ reference implementation** for validation and cross-compatibility
-- **Rust community** for excellent ecosystem tools
-- **Contributors** who are helping shape BitNet.rs
-
----
-
-**MSRV**: See [`rust-toolchain.toml`](./rust-toolchain.toml) | **Status**: v0.1.0 MVP (Q&A Ready) | **Expected Performance**:
-10-20 tok/s CPU (I2_S BitNet32-F16), 0.1 tok/s CPU (QK256 MVP scalar kernel)
+Dual-licensed under [MIT](LICENSE) and [Apache 2.0](LICENSE).

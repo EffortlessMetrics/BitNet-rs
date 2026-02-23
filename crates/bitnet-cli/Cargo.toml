@@ -28,6 +28,7 @@ bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.1.0" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
+bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.1.0" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
 bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.1.0" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.1.0", optional = true }

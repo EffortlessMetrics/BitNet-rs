@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/property_tests.rs
+assertion_line: 99
+expression: out
+---
+System: You are a helpful assistant
+
+Q: What is 2+2?
+A:

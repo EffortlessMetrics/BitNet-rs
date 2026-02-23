@@ -153,6 +153,7 @@ fn test_gamma_rescaling_produces_target_rms() -> Result<()> {
 
 #[test]
 #[serial(bitnet_env)]
+#[ignore = "deadlocks: two simultaneous EnvGuard instances hold non-reentrant ENV_LOCK; scaffold test for strict-mode gamma rescaling behavior"]
 fn test_gamma_rescaling_disabled_in_strict_mode() -> Result<()> {
     let _guard1 = EnvGuard::new("BITNET_RESCALE_GAMMA_ON_LOAD");
     _guard1.set("1");

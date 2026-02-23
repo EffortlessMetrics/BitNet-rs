@@ -15,6 +15,10 @@ members = [
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-tokenizers",
+  "crates/bitnet-prompt-templates",
+  "crates/bitnet-receipts",
+  "crates/bitnet-sampling",
+  # "crates/bitnet-transformer",  # TODO: extract after bitnet-quantization refactor resolves circular dep
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
   "crates/bitnet-cli",
@@ -56,7 +60,28 @@ members = [
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
-default-members = ["crates/bitnet-common", "crates/bitnet-models", "crates/bitnet-tokenizers", "crates/bitnet-quantization", "crates/bitnet-kernels", "crates/bitnet-inference", "crates/bitnet-cli", "crates/bitnet-server", "crates/bitnet-st2gguf"]
+default-members = [
+  "crates/bitnet-common",
+  "crates/bitnet-models",
+  "crates/bitnet-tokenizers",
+  "crates/bitnet-quantization",
+  "crates/bitnet-kernels",
+  "crates/bitnet-inference",
+  "crates/bitnet-prompt-templates",
+  "crates/bitnet-receipts",
+  "crates/bitnet-sampling",
+  "crates/bitnet-cli",
+  "crates/bitnet-server",
+  "crates/bitnet-st2gguf",
+  # Testing infrastructure crates (always built/tested by default)
+  "crates/bitnet-bdd-grid",
+  "crates/bitnet-bdd-grid-core",
+  "crates/bitnet-feature-contract",
+  "crates/bitnet-feature-matrix",
+  "crates/bitnet-testing-policy-core",
+  "crates/bitnet-testing-scenarios-core",
+  "crates/bitnet-runtime-profile-core",
+]
 
 [package]
 authors = ["BitNet Contributors <bitnet@microsoft.com>"]
@@ -298,6 +323,7 @@ cudarc = "0.17.8"
 # Testing and benchmarking
 criterion = { version = "0.7.0", features = ["html_reports"] }
 proptest = "1.9.0"
+insta = { version = "1.43.2", features = ["yaml", "json", "redactions"] }
 tempfile = "3.23.0"
 serial_test = "3.2.0"
 temp-env = "0.3.6"

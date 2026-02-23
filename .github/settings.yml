@@ -1,0 +1,65 @@
+# Probot Settings — https://probot.github.io/apps/settings/
+# Applied automatically on push to the default branch.
+
+repository:
+  name: BitNet-rs
+  description: >
+    Rust inference engine for 1-bit BitNet large language models — memory-safe,
+    cross-validated against the C++ reference, with SIMD/CUDA acceleration.
+  homepage: https://github.com/EffortlessMetrics/BitNet-rs
+  topics:
+    - rust
+    - llm
+    - inference
+    - bitnet
+    - quantization
+    - machine-learning
+    - neural-network
+    - simd
+    - cuda
+    - gguf
+
+  private: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  has_downloads: true
+
+  default_branch: main
+
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: false
+  delete_branch_on_merge: true
+
+  squash_merge_commit_title: PR_TITLE
+  squash_merge_commit_message: PR_BODY
+
+labels:
+  - name: "breaking-change"
+    color: "d73a4a"
+    description: "Introduces a breaking API change"
+  - name: "performance"
+    color: "0075ca"
+    description: "Relates to inference speed or memory usage"
+  - name: "quantization"
+    color: "e4e669"
+    description: "I2_S / TL1 / TL2 / QK256 quantization work"
+  - name: "testing"
+    color: "0e8a16"
+    description: "Adds or improves tests"
+  - name: "documentation"
+    color: "0075ca"
+    description: "Improvements or additions to documentation"
+  - name: "gpu"
+    color: "b60205"
+    description: "CUDA / GPU kernel work"
+  - name: "blocked"
+    color: "e11d48"
+    description: "Blocked by another issue or PR"
+  - name: "good-first-issue"
+    color: "7057ff"
+    description: "Good for newcomers"
+  - name: "help-wanted"
+    color: "008672"
+    description: "Extra attention is needed"
