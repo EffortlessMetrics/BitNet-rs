@@ -15,11 +15,8 @@ fn probe_command(cmd: &str, args: &[&str]) -> bool {
     let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
     let (tx, rx) = mpsc::channel();
     thread::spawn(move || {
-        let ok = Command::new(&cmd)
-            .args(&args)
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false);
+        let ok =
+            Command::new(&cmd).args(&args).output().map(|o| o.status.success()).unwrap_or(false);
         let _ = tx.send(ok);
     });
     rx.recv_timeout(Duration::from_secs(5)).unwrap_or(false)

@@ -85,34 +85,23 @@ proptest! {
 
 #[test]
 fn generated_receipt_validates() {
-    let receipt = InferenceReceipt::generate(
-        "cpu",
-        vec!["i2s_gemv".to_string(), "rope_apply".to_string()],
-    )
-    .unwrap();
+    let receipt =
+        InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string(), "rope_apply".to_string()])
+            .unwrap();
     receipt.validate().expect("Valid receipt should pass validation");
 }
 
 #[test]
 fn mock_receipt_fails_validation() {
-    let receipt = InferenceReceipt::generate(
-        "cpu",
-        vec!["mock_gemv".to_string()],
-    )
-    .unwrap();
-    assert!(
-        receipt.validate().is_err(),
-        "Receipt with mock kernels should fail validation"
-    );
+    let receipt = InferenceReceipt::generate("cpu", vec!["mock_gemv".to_string()]).unwrap();
+    assert!(receipt.validate().is_err(), "Receipt with mock kernels should fail validation");
 }
 
 #[test]
 fn snapshot_receipt_structure() {
-    let mut receipt = InferenceReceipt::generate(
-        "cpu",
-        vec!["i2s_gemv".to_string(), "rope_apply".to_string()],
-    )
-    .unwrap();
+    let mut receipt =
+        InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string(), "rope_apply".to_string()])
+            .unwrap();
     // Normalize non-deterministic fields for snapshot
     receipt.timestamp = "2024-01-01T00:00:00+00:00".to_string();
     receipt.environment.clear();
