@@ -974,7 +974,7 @@ fn test_create_temp_cpp_env_llama() {
 /// Integration: Test full auto-repair workflow end-to-end
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // Slow test, run with --ignored
+#[ignore = "Slow test, run with --ignored"]
 fn test_full_auto_repair_workflow_e2e() {
     // AC:AC1, AC2, AC7, AC8
     // Setup: Mock complete auto-repair cycle

@@ -441,7 +441,7 @@ fn test_preflight_build_time_priority_no_runtime_check() {
 /// Validates: CI mode skips test when stale build detected
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // Requires subprocess to capture exit code
+#[ignore = "Requires subprocess to capture exit code"]
 fn test_preflight_ci_mode_skips_on_stale_build() {
     // Create temporary directory with mock libraries (simulate stale build)
     let temp = tempfile::tempdir().expect("Failed to create temp dir");
@@ -582,7 +582,7 @@ fn test_preflight_verbose_mode_shows_diagnostics() {
 /// Tests spec: runtime-detection-warning-ci-safe.md#AC9
 /// Validates: No performance regression in fast path (build-time available)
 #[test]
-#[ignore] // Performance benchmark - run manually
+#[ignore = "Performance benchmark - run manually"]
 fn test_preflight_fast_path_performance() {
     // TODO: Benchmark preflight_backend_libs when HAS_BITNET=true
     //
@@ -652,7 +652,7 @@ fn test_preflight_backend_unavailable_everywhere() {
 /// Validates: Runtime detection handles permission errors gracefully
 #[test]
 #[cfg(unix)]
-#[ignore] // Requires special permissions setup
+#[ignore = "Requires special permissions setup"]
 fn test_detect_backend_runtime_permission_error() {
     // TODO: Create directory with restricted permissions and verify:
     // 1. detect_backend_runtime returns Err(String) with permission error
@@ -723,7 +723,7 @@ fn test_detect_backend_runtime_colon_separated_rpath() {
 /// Validates: Symlinked library directories are followed correctly
 #[test]
 #[cfg(unix)]
-#[ignore] // Requires symlink support
+#[ignore = "Requires symlink support"]
 fn test_detect_backend_runtime_follows_symlinks() {
     // TODO: Create symlink to directory with libraries and verify:
     // 1. Runtime detection follows symlink

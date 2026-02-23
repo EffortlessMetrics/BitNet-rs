@@ -1,0 +1,99 @@
+name: Fuzz CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run nightly fuzz sessions at 02:00 UTC
+    - cron: '0 2 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Always-on: build all fuzz targets (catches compilation regressions on every PR)
+  fuzz-build:
+    name: Fuzz targets build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install nightly Rust (required by cargo-fuzz)
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: nightly
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: fuzz-build
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Build all fuzz targets
+        run: |
+          cd fuzz
+          cargo fuzz build 2>&1
+
+  # Scheduled only: run each fuzz target for a short time to catch new crashes
+  fuzz-run:
+    name: "Fuzz run (${{ matrix.target }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    # Only run on schedule (nightly) or manual workflow dispatch — not on PRs
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - quantization_i2s
+          - quantization_tl1
+          - quantization_tl2
+          - gguf_parser
+          - safetensors_parser
+          - tokenizer_discovery
+          - kernel_matmul
+          - tl_lut_helper
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install nightly Rust
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: nightly
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: fuzz-run-${{ matrix.target }}
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Run fuzz target (60 seconds)
+        run: |
+          cd fuzz
+          # -max_total_time limits the run; -timeout guards against single-input hangs
+          cargo fuzz run ${{ matrix.target }} -- -max_total_time=60 -timeout=10 2>&1
+        continue-on-error: false
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          retention-days: 30

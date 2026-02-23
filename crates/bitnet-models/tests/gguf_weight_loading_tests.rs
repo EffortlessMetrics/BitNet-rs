@@ -107,7 +107,7 @@ impl MockGgufFileBuilder {
 /// attention layers, feed-forward layers, and normalization layers.
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore] // Issue #159: TDD placeholder - requires real GGUF weight loading implementation to replace mock initialization
+#[ignore = "Issue #159: TDD placeholder - requires real GGUF weight loading implementation to replace mock initialization"]
 async fn test_ac1_complete_transformer_weight_parsing_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
@@ -248,7 +248,7 @@ async fn test_ac1_complete_transformer_weight_parsing_gpu() -> Result<()> {
 /// Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore] // Issue #159: TDD placeholder - requires I2S quantization integration and FP32 cross-validation
+#[ignore = "Issue #159: TDD placeholder - requires I2S quantization integration and FP32 cross-validation"]
 async fn test_ac2_i2s_quantization_accuracy_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
@@ -289,7 +289,7 @@ async fn test_ac2_i2s_quantization_accuracy_cpu() -> Result<()> {
 /// AC2: Test TL1 quantization accuracy
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore] // Issue #159: TDD placeholder - requires TL1 quantization integration and FP32 cross-validation
+#[ignore = "Issue #159: TDD placeholder - requires TL1 quantization integration and FP32 cross-validation"]
 async fn test_ac2_tl1_quantization_accuracy_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
@@ -327,7 +327,7 @@ async fn test_ac2_tl1_quantization_accuracy_cpu() -> Result<()> {
 /// AC2: Test TL2 quantization accuracy
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore] // Issue #159: TDD placeholder - requires TL2 quantization integration and FP32 cross-validation
+#[ignore = "Issue #159: TDD placeholder - requires TL2 quantization integration and FP32 cross-validation"]
 async fn test_ac2_tl2_quantization_accuracy_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());

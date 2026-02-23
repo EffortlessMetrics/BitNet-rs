@@ -159,7 +159,7 @@ fn test_workspace_builds_with_cpu_features() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#build-gates (line 513)
 #[test]
-#[ignore] // Requires GPU toolchain (CUDA, etc.) - run explicitly with --ignored
+#[ignore = "Requires GPU toolchain (CUDA, etc.) - run explicitly with --ignored"]
 fn test_workspace_builds_with_gpu_features() {
     let (success, stdout, stderr) =
         run_cargo_command(&["build", "--workspace", "--no-default-features", "--features", "gpu"])
@@ -178,7 +178,7 @@ fn test_workspace_builds_with_gpu_features() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#cross-validation-gates (line 529)
 #[test]
-#[ignore] // Post-migration test - requires crossval-all feature implementation
+#[ignore = "Post-migration test - requires crossval-all feature implementation"]
 fn test_workspace_builds_with_crossval_features() {
     let (success, stdout, stderr) = run_cargo_command(&[
         "build",
@@ -422,7 +422,7 @@ fn test_serde_yaml_ng_version_consistency() {
 /// Specification: phase1_deprecated_deps_analysis.md#lazy_static (lines 58-89)
 /// Phase: Phase 2 (P1 HIGH)
 #[test]
-#[ignore] // Post-Phase-2: Enable after lazy_static → OnceLock migration
+#[ignore = "Post-Phase-2: Enable after lazy_static → OnceLock migration"]
 fn test_no_lazy_static_dependencies() {
     let crates_to_check =
         vec!["/home/steven/code/Rust/BitNet-rs/crates/bitnet-st-tools/Cargo.toml"];
@@ -561,7 +561,7 @@ fn test_dependency_versions_consistent() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#final-gates (line 540)
 #[test]
-#[ignore] // Requires cargo-audit installed - run explicitly in CI
+#[ignore = "Requires cargo-audit installed - run explicitly in CI"]
 fn test_cargo_audit_passes() {
     // Check if cargo-audit is installed
     let check = Command::new("cargo").args(["audit", "--version"]).output();
@@ -629,7 +629,7 @@ fn test_cpu_only_feature_build() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#build-gates (line 513)
 #[test]
-#[ignore] // Requires GPU toolchain (CUDA, etc.) - run explicitly with --ignored
+#[ignore = "Requires GPU toolchain (CUDA, etc.) - run explicitly with --ignored"]
 fn test_gpu_feature_build() {
     let gpu_crates = vec!["bitnet-kernels", "bitnet-quantization"];
 
@@ -684,7 +684,7 @@ fn test_feature_flags_dont_conflict() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#cross-validation-gates (line 529)
 #[test]
-#[ignore] // Post-migration test - requires crossval infrastructure
+#[ignore = "Post-migration test - requires crossval infrastructure"]
 fn test_crossval_feature_build() {
     let (success, stdout, stderr) =
         run_cargo_command(&["build", "-p", "xtask", "--features", "crossval-all"])
@@ -707,7 +707,7 @@ fn test_crossval_feature_build() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#build-gates (line 516)
 #[test]
-#[ignore] // Slow test - run explicitly in CI
+#[ignore = "Slow test - run explicitly in CI"]
 fn test_workspace_clippy_clean() {
     let (success, stdout, stderr) =
         run_cargo_command(&["clippy", "--all-targets", "--all-features", "--", "-D", "warnings"])
@@ -855,7 +855,7 @@ fn test_workspace_dependencies_centralized() {
 /// Specification: phase1_deprecated_deps_analysis.md#dirs (lines 119-145)
 /// Phase: Phase 3 (P2 MEDIUM)
 #[test]
-#[ignore] // Post-Phase-3: Enable after dirs version consolidation
+#[ignore = "Post-Phase-3: Enable after dirs version consolidation"]
 fn test_dirs_version_consolidated() {
     let packages = parse_cargo_lock_for_duplicates().expect("Failed to parse Cargo.lock");
 
@@ -881,7 +881,7 @@ fn test_dirs_version_consolidated() {
 /// Specification: phase1_deprecated_deps_analysis.md#once_cell (lines 149-169)
 /// Phase: Phase 3 (P2 MEDIUM)
 #[test]
-#[ignore] // Post-Phase-3: Enable after once_cell version consolidation
+#[ignore = "Post-Phase-3: Enable after once_cell version consolidation"]
 fn test_once_cell_version_consolidated() {
     let packages = parse_cargo_lock_for_duplicates().expect("Failed to parse Cargo.lock");
 
@@ -910,7 +910,7 @@ fn test_once_cell_version_consolidated() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 915)
 #[test]
-#[ignore] // Requires cargo-deny installed - run explicitly in CI
+#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_bans() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
@@ -938,7 +938,7 @@ fn test_cargo_deny_bans() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 927)
 #[test]
-#[ignore] // Requires cargo-deny installed - run explicitly in CI
+#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_advisories() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
@@ -973,7 +973,7 @@ fn test_cargo_deny_advisories() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 928)
 #[test]
-#[ignore] // Requires cargo-deny installed - run explicitly in CI
+#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_licenses() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
@@ -999,7 +999,7 @@ fn test_cargo_deny_licenses() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 929)
 #[test]
-#[ignore] // Requires cargo-deny installed - run explicitly in CI
+#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_sources() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
@@ -1025,7 +1025,7 @@ fn test_cargo_deny_sources() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 924)
 #[test]
-#[ignore] // Requires cargo-deny installed - run explicitly in CI
+#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_all() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
@@ -1126,7 +1126,7 @@ fn test_no_version_conflicts() {
 ///
 /// Ensures workspace builds with minimal versions to verify version constraints
 #[test]
-#[ignore] // Slow test - requires cargo clean and full rebuild
+#[ignore = "Slow test - requires cargo clean and full rebuild"]
 fn test_minimal_dependency_versions() {
     // This test validates that version constraints in Cargo.toml are correct
     // by attempting to build with --minimal-versions

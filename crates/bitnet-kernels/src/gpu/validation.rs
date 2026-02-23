@@ -559,7 +559,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Only run with CUDA available
+    #[ignore = "Only run with CUDA available"]
     fn test_gpu_validation() {
         let validator = GpuValidator::new();
         match validator.validate() {

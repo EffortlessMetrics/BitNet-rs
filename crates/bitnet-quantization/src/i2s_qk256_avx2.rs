@@ -438,7 +438,7 @@ mod tests {
     /// cargo test --release -p bitnet-models bench_avx2 -- --nocapture --ignored
     /// ```
     #[test]
-    #[ignore] // Marked as ignored because it's a benchmark, not a unit test
+    #[ignore = "Marked as ignored because it's a benchmark, not a unit test"]
     #[cfg(target_arch = "x86_64")]
     fn bench_avx2_speedup() {
         use crate::i2s_qk256::gemv_qk256_row;

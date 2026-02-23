@@ -163,7 +163,7 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
 /// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 async fn test_ac3_temperature_sampling_validation() -> Result<()> {
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;
@@ -230,7 +230,7 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
 /// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 async fn test_ac3_top_k_sampling_validation() -> Result<()> {
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;
@@ -294,7 +294,7 @@ async fn test_ac3_top_k_sampling_validation() -> Result<()> {
 /// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 async fn test_ac3_nucleus_sampling_validation() -> Result<()> {
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;

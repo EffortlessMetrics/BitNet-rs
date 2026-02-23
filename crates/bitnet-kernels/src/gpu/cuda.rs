@@ -536,7 +536,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Only run with --ignored flag when CUDA is available
+    #[ignore = "Only run with --ignored flag when CUDA is available"]
     fn test_cuda_numerical_accuracy() {
         use crate::gpu::validation::{GpuValidator, ValidationConfig};
 
@@ -579,7 +579,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Only run with --ignored flag when CUDA is available
+    #[ignore = "Only run with --ignored flag when CUDA is available"]
     fn test_cuda_memory_management() {
         // Test that multiple kernel creations don't leak memory
         for i in 0..10 {

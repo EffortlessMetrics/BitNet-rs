@@ -11,7 +11,7 @@ use candle_core::Tensor as CandleTensor;
 use std::collections::HashMap;
 use std::sync::Arc;
 /// Test showing the difference between empty models (mock fallback) and models with weights (real computation)
-#[ignore]
+#[ignore = "TDD scaffold: unimplemented; see blocking issue for details"]
 #[tokio::test]
 async fn test_real_vs_mock_inference_comparison() -> Result<()> {
     println!("=== Issue #248 Validation: Real vs Mock Inference ===");

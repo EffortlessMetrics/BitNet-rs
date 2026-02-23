@@ -550,7 +550,7 @@ mod tests {
 
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
-    #[ignore] // Only run when CUDA is available
+    #[ignore = "Only run when CUDA is available"]
     fn test_cuda_device_aware() {
         if gpu::is_cuda_available() {
             let quantizer = DeviceAwareQuantizer::new(Device::Cuda(0)).unwrap();

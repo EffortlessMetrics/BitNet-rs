@@ -17,7 +17,7 @@ use serial_test::serial;
 use support::EnvGuard;
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 /// AC3.1: Deterministic Generation - SLOW INTEGRATION TEST
 ///
 /// **This test runs 50-token generation (100+ forward passes) and is marked #[ignore].**
@@ -92,7 +92,7 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 /// AC3.3: Top-k Seeded Sampling - SLOW INTEGRATION TEST
 ///
 /// **This test runs 30-token generation (60+ forward passes) and is marked #[ignore].**
@@ -131,7 +131,7 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 /// AC3.4: Top-p Nucleus Sampling - SLOW INTEGRATION TEST
 ///
 /// **This test runs 25-token generation (50+ forward passes) and is marked #[ignore].**
@@ -170,7 +170,7 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 /// AC3.5: Different Seeds Produce Different Outputs - SLOW INTEGRATION TEST
 ///
 /// **This test runs 20-token generation (40+ forward passes) and is marked #[ignore].**
@@ -217,7 +217,7 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 /// AC3.6: Rayon Single-Thread Determinism - SLOW INTEGRATION TEST
 ///
 /// **This test runs 15-token generation 3 times (90+ forward passes) and is marked #[ignore].**

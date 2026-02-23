@@ -213,7 +213,7 @@ fn test_rope_interleaved_vs_split_halves() {
 }
 
 #[test]
-#[ignore] // Requires bitnet.cpp FFI
+#[ignore = "Requires bitnet.cpp FFI"]
 fn test_rope_parity_cpp() {
     // TODO: Use FFI to call bitnet.cpp RoPE and compare
     // Load same Q tensor, apply RoPE in both stacks, assert cosine similarity > 0.9999

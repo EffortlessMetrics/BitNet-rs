@@ -296,7 +296,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Only run with CUDA available
+    #[ignore = "Only run with CUDA available"]
     fn test_quick_benchmark() {
         match quick_benchmark() {
             Ok(_) => println!("Quick benchmark completed successfully"),

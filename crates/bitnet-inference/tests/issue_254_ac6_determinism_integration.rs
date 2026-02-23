@@ -16,7 +16,7 @@ use serial_test::serial;
 use support::EnvGuard;
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 /// AC6.1: Deterministic Inference - SLOW INTEGRATION TEST
 ///
 /// **This test runs 50-token generation (100+ forward passes) and is marked #[ignore].**
@@ -58,7 +58,7 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore]
+#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 /// AC6.2: Determinism Multiple Runs - SLOW INTEGRATION TEST
 ///
 /// **This test runs 20-token generation 5 times (200+ forward passes) and is marked #[ignore].**
