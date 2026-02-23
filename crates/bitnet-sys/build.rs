@@ -16,34 +16,54 @@ fn main() {
         println!("cargo:rerun-if-changed=build.rs");
         println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
         println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH");
+        println!("cargo::rustc-check-cfg=cfg(bitnet_sys_stub)");
         return;
     }
 
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=BITNET_CPP_DIR");
     println!("cargo:rerun-if-env-changed=BITNET_CPP_PATH"); // Legacy support
+    // Declare the cfg key so rustc doesn't warn about unknown cfg values
+    println!("cargo::rustc-check-cfg=cfg(bitnet_sys_stub)");
 
     #[cfg(feature = "ffi")]
     {
-        // When the ffi feature is enabled, try to find the C++ implementation
-        let cpp_dir = env::var("BITNET_CPP_DIR")
-            .or_else(|_| env::var("BITNET_CPP_PATH")) // Try legacy env var
-            .or_else(|_| env::var("HOME").map(|h| format!("{}/.cache/bitnet_cpp", h)))
+        // When the ffi feature is enabled, try to find the C++ implementation.
+        // Empty BITNET_CPP_DIR ("") is treated as unset (stub mode).
+        let explicit_dir = env::var("BITNET_CPP_DIR")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| env::var("BITNET_CPP_PATH").ok().filter(|s| !s.is_empty()));
+
+        let cpp_dir = explicit_dir
             .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                panic!(
-                    "bitnet-sys: BITNET_CPP_DIR not set. \n\
-                     Set BITNET_CPP_DIR to the path of the built BitNet C++ sources or disable the 'ffi' feature."
-                )
+            .or_else(|| {
+                env::var("HOME")
+                    .ok()
+                    .map(|h| PathBuf::from(format!("{}/.cache/bitnet_cpp", h)))
+                    .filter(|d| d.exists())
             });
 
-        if !cpp_dir.exists() {
-            panic!(
-                "bitnet-sys: BitNet C++ directory not found: {}\n\
-                 Run: ./ci/fetch_bitnet_cpp.sh",
-                cpp_dir.display()
-            );
-        }
+        // If no C++ directory is available, enter stub mode: compile succeeds but
+        // runtime calls will return errors. Emit cfg flag so lib.rs can gate real
+        // bindings/wrappers behind #[cfg(not(bitnet_sys_stub))].
+        let cpp_dir = match cpp_dir {
+            Some(d) if d.exists() => d,
+            _ => {
+                let out_dir = env::var("OUT_DIR").expect("OUT_DIR must be set by cargo");
+                std::fs::write(
+                    Path::new(&out_dir).join("bindings.rs"),
+                    "// stub mode: C++ libraries not available\n",
+                )
+                .expect("bitnet-sys: failed to write stub bindings.rs");
+                println!("cargo:rustc-cfg=bitnet_sys_stub");
+                eprintln!(
+                    "bitnet-sys: STUB mode — compiling without C++ libraries. \
+                     Set BITNET_CPP_DIR to enable real cross-validation."
+                );
+                return;
+            }
+        };
 
         // Verify the C++ implementation is built
         let build_dir = cpp_dir.join("build");
