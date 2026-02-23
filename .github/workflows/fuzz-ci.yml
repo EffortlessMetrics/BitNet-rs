@@ -46,6 +46,8 @@ jobs:
         run: |
           cd fuzz
           cargo fuzz build 2>&1
+        env:
+          RUSTUP_TOOLCHAIN: nightly
 
   # Scheduled only: run each fuzz target for a short time to catch new crashes
   fuzz-run:
@@ -89,6 +91,8 @@ jobs:
           # -max_total_time limits the run; -timeout guards against single-input hangs
           cargo fuzz run ${{ matrix.target }} -- -max_total_time=60 -timeout=10 2>&1
         continue-on-error: false
+        env:
+          RUSTUP_TOOLCHAIN: nightly
 
       - name: Upload crash artifacts
         if: failure()
