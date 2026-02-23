@@ -35,6 +35,7 @@ pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
     token_counts: HashMap<u32, usize>,
+    cached_context: Vec<u32>,
 }
 
 impl SamplingStrategy {
@@ -46,7 +47,12 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self { config, rng, token_counts: HashMap::new() }
+        Self {
+            config,
+            rng,
+            token_counts: HashMap::new(),
+            cached_context: Vec::new(),
+        }
     }
 
     /// Sample the next token from logits
@@ -81,31 +87,59 @@ impl SamplingStrategy {
         // Sample from the final distribution
         let token = self.sample_from_distribution(&final_probs)?;
 
-        // Update token counts for repetition penalty
-        *self.token_counts.entry(token).or_insert(0) += 1;
-
         debug!("Sampled token: {}", token);
         Ok(token)
     }
 
     /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &[f32], context_tokens: &[u32]) -> Vec<f32> {
+    fn apply_repetition_penalty(
+        &mut self,
+        logits: &[f32],
+        context_tokens: &[u32],
+    ) -> Vec<f32> {
         if self.config.repetition_penalty == 1.0 {
             return logits.to_vec();
         }
 
-        let mut adjusted_logits = logits.to_vec();
+        // Find common prefix length between cached context and current context
+        // This handles:
+        // 1. Simple append (common_len == cached_context.len())
+        // 2. Backtracking/rewind (common_len < cached_context.len())
+        // 3. New context (common_len == 0)
+        let common_len = self
+            .cached_context
+            .iter()
+            .zip(context_tokens.iter())
+            .take_while(|(a, b)| a == b)
+            .count();
 
-        // Count token frequencies in context
-        let mut token_counts = HashMap::new();
-        for &token in context_tokens {
-            *token_counts.entry(token).or_insert(0) += 1;
+        // If context shrunk or diverged, remove counts for lost tokens
+        if common_len < self.cached_context.len() {
+            for i in common_len..self.cached_context.len() {
+                let token = self.cached_context[i];
+                if let Some(count) = self.token_counts.get_mut(&token) {
+                    *count -= 1;
+                    if *count == 0 {
+                        self.token_counts.remove(&token);
+                    }
+                }
+            }
+            self.cached_context.truncate(common_len);
         }
 
-        // Apply penalty to repeated tokens
-        for (&token, &count) in &token_counts {
+        // Add new tokens to counts
+        for i in common_len..context_tokens.len() {
+            let token = context_tokens[i];
+            *self.token_counts.entry(token).or_insert(0) += 1;
+            self.cached_context.push(token);
+        }
+
+        let mut adjusted_logits = logits.to_vec();
+
+        // Apply penalty based on updated token counts
+        for (&token, &count) in &self.token_counts {
             if token < adjusted_logits.len() as u32 {
-                let penalty = self.config.repetition_penalty.powi(count);
+                let penalty = self.config.repetition_penalty.powi(count as i32);
                 if adjusted_logits[token as usize] > 0.0 {
                     adjusted_logits[token as usize] /= penalty;
                 } else {
@@ -258,6 +292,7 @@ impl SamplingStrategy {
     /// Reset token counts (useful for new sequences)
     pub fn reset(&mut self) {
         self.token_counts.clear();
+        self.cached_context.clear();
     }
 
     /// Update configuration
@@ -399,7 +434,7 @@ mod tests {
     #[test]
     fn test_repetition_penalty() {
         let config = SamplingConfig { repetition_penalty: 1.2, ..Default::default() };
-        let strategy = SamplingStrategy::new(config);
+        let mut strategy = SamplingStrategy::new(config);
 
         let logits = vec![1.0, 1.0, 1.0];
         let context = vec![0, 0, 1]; // Token 0 appears twice, token 1 once
