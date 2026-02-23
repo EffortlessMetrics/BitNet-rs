@@ -41,7 +41,7 @@ use std::env;
 use std::path::PathBuf;
 
 // Import test infrastructure from bitnet_tests crate
-use bitnet_tests::support::env_guard::EnvGuard;
+use bitnet_tests::support::env_guard::{EnvGuard, EnvScope};
 
 /// Tests feature spec: rpath-merging-strategy.md#regression-tests (Section 5.3)
 /// Validates that legacy BITNET_CROSSVAL_LIBDIR still works with highest priority
@@ -65,13 +65,10 @@ fn test_legacy_bitnet_crossval_libdir_still_works() {
 #[test]
 #[serial(bitnet_env)]
 fn test_legacy_libdir_overrides_new_granular_vars() {
-    let _g1 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
-    let _g2 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
-    let _g3 = EnvGuard::new("CROSSVAL_RPATH_LLAMA");
-
-    _g1.set("/legacy/override");
-    _g2.set("/new/bitnet/path");
-    _g3.set("/new/llama/path");
+    let mut scope = EnvScope::new();
+    scope.set("BITNET_CROSSVAL_LIBDIR", "/legacy/override");
+    scope.set("CROSSVAL_RPATH_BITNET", "/new/bitnet/path");
+    scope.set("CROSSVAL_RPATH_LLAMA", "/new/llama/path");
 
     // Legacy variable should take precedence over new granular variables
     let resolved = resolve_library_path();
@@ -87,11 +84,9 @@ fn test_legacy_libdir_overrides_new_granular_vars() {
 #[test]
 #[serial(bitnet_env)]
 fn test_deprecated_bitnet_cpp_path_fallback() {
-    let _g1 = EnvGuard::new("BITNET_CPP_DIR");
-    let _g2 = EnvGuard::new("BITNET_CPP_PATH");
-
-    _g1.remove(); // Ensure BITNET_CPP_DIR not set
-    _g2.set("/old/cpp/path");
+    let mut scope = EnvScope::new();
+    scope.remove("BITNET_CPP_DIR"); // Ensure BITNET_CPP_DIR not set
+    scope.set("BITNET_CPP_PATH", "/old/cpp/path");
 
     // Should fall back to deprecated var
     let resolved = resolve_bitnet_cpp_dir();
@@ -109,11 +104,9 @@ fn test_deprecated_bitnet_cpp_path_fallback() {
 #[test]
 #[serial(bitnet_env)]
 fn test_bitnet_cpp_dir_takes_precedence_over_deprecated_path() {
-    let _g1 = EnvGuard::new("BITNET_CPP_DIR");
-    let _g2 = EnvGuard::new("BITNET_CPP_PATH");
-
-    _g1.set("/new/cpp/dir");
-    _g2.set("/old/cpp/path");
+    let mut scope = EnvScope::new();
+    scope.set("BITNET_CPP_DIR", "/new/cpp/dir");
+    scope.set("BITNET_CPP_PATH", "/old/cpp/path");
 
     // BITNET_CPP_DIR should win
     let resolved = resolve_bitnet_cpp_dir();
@@ -146,13 +139,10 @@ fn test_existing_bitnet_cpp_dir_unchanged() {
 #[test]
 #[serial(bitnet_env)]
 fn test_priority_chain_legacy_highest() {
-    let _g1 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
-    let _g2 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
-    let _g3 = EnvGuard::new("BITNET_CPP_DIR");
-
-    _g1.set("/priority1/legacy");
-    _g2.set("/priority2/granular");
-    _g3.set("/priority3/fallback");
+    let mut scope = EnvScope::new();
+    scope.set("BITNET_CROSSVAL_LIBDIR", "/priority1/legacy");
+    scope.set("CROSSVAL_RPATH_BITNET", "/priority2/granular");
+    scope.set("BITNET_CPP_DIR", "/priority3/fallback");
 
     // Priority 1: Legacy override
     let resolved = resolve_library_path();
@@ -168,13 +158,10 @@ fn test_priority_chain_legacy_highest() {
 #[test]
 #[serial(bitnet_env)]
 fn test_priority_chain_granular_second() {
-    let _g1 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
-    let _g2 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
-    let _g3 = EnvGuard::new("BITNET_CPP_DIR");
-
-    _g1.remove(); // Legacy not set
-    _g2.set("/priority2/granular");
-    _g3.set("/priority3/fallback/build/bin");
+    let mut scope = EnvScope::new();
+    scope.remove("BITNET_CROSSVAL_LIBDIR"); // Legacy not set
+    scope.set("CROSSVAL_RPATH_BITNET", "/priority2/granular");
+    scope.set("BITNET_CPP_DIR", "/priority3/fallback/build/bin");
 
     // Priority 2: Granular variables (when legacy not set)
     let resolved = resolve_library_path();
@@ -190,15 +177,11 @@ fn test_priority_chain_granular_second() {
 #[test]
 #[serial(bitnet_env)]
 fn test_priority_chain_fallback_third() {
-    let _g1 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
-    let _g2 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
-    let _g3 = EnvGuard::new("CROSSVAL_RPATH_LLAMA");
-    let _g4 = EnvGuard::new("BITNET_CPP_DIR");
-
-    _g1.remove(); // Legacy not set
-    _g2.remove(); // Granular BITNET not set
-    _g3.remove(); // Granular LLAMA not set
-    _g4.set("/priority3/fallback");
+    let mut scope = EnvScope::new();
+    scope.remove("BITNET_CROSSVAL_LIBDIR"); // Legacy not set
+    scope.remove("CROSSVAL_RPATH_BITNET"); // Granular BITNET not set
+    scope.remove("CROSSVAL_RPATH_LLAMA"); // Granular LLAMA not set
+    scope.set("BITNET_CPP_DIR", "/priority3/fallback");
 
     // Priority 3: BITNET_CPP_DIR auto-discovery fallback
     let resolved = resolve_library_path_with_autodiscovery();
@@ -221,16 +204,12 @@ fn test_priority_chain_fallback_third() {
 #[test]
 #[serial(bitnet_env)]
 fn test_migration_scenario_no_custom_vars() {
-    let _g1 = EnvGuard::new("BITNET_CPP_DIR");
-    let _g2 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
-    let _g3 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
-    let _g4 = EnvGuard::new("CROSSVAL_RPATH_LLAMA");
-
     // Clear all environment variables (simulate fresh user)
-    _g1.remove();
-    _g2.remove();
-    _g3.remove();
-    _g4.remove();
+    let mut scope = EnvScope::new();
+    scope.remove("BITNET_CPP_DIR");
+    scope.remove("BITNET_CROSSVAL_LIBDIR");
+    scope.remove("CROSSVAL_RPATH_BITNET");
+    scope.remove("CROSSVAL_RPATH_LLAMA");
 
     // Should fall back to runtime default: ~/.cache/bitnet_cpp
     let resolved = resolve_bitnet_cpp_dir_with_defaults();
@@ -404,11 +383,9 @@ fn test_preflight_output_append_only() {
 #[test]
 #[serial(bitnet_env)]
 fn test_deprecation_warning_emitted_for_bitnet_cpp_path() {
-    let _g1 = EnvGuard::new("BITNET_CPP_DIR");
-    let _g2 = EnvGuard::new("BITNET_CPP_PATH");
-
-    _g1.remove();
-    _g2.set("/old/path");
+    let mut scope = EnvScope::new();
+    scope.remove("BITNET_CPP_DIR");
+    scope.set("BITNET_CPP_PATH", "/old/path");
 
     // Capture warnings (implementation will emit to cargo:warning or logs)
     let warnings = capture_deprecation_warnings();
@@ -425,15 +402,11 @@ fn test_deprecation_warning_emitted_for_bitnet_cpp_path() {
 #[test]
 #[serial(bitnet_env)]
 fn test_no_breaking_changes_cpp_dir_fallback() {
-    let _g1 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
-    let _g2 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
-    let _g3 = EnvGuard::new("CROSSVAL_RPATH_LLAMA");
-    let _g4 = EnvGuard::new("BITNET_CPP_DIR");
-
-    _g1.remove();
-    _g2.remove();
-    _g3.remove();
-    _g4.set("/test/cpp/dir");
+    let mut scope = EnvScope::new();
+    scope.remove("BITNET_CROSSVAL_LIBDIR");
+    scope.remove("CROSSVAL_RPATH_BITNET");
+    scope.remove("CROSSVAL_RPATH_LLAMA");
+    scope.set("BITNET_CPP_DIR", "/test/cpp/dir");
 
     // Existing BITNET_CPP_DIR fallback should still work
     let resolved = resolve_library_path_with_autodiscovery();
@@ -452,16 +425,12 @@ fn test_no_breaking_changes_cpp_dir_fallback() {
 #[test]
 #[serial(bitnet_env)]
 fn test_no_breaking_changes_graceful_stub_mode() {
-    let _g1 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");
-    let _g2 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
-    let _g3 = EnvGuard::new("CROSSVAL_RPATH_LLAMA");
-    let _g4 = EnvGuard::new("BITNET_CPP_DIR");
-
     // Clear all variables
-    _g1.remove();
-    _g2.remove();
-    _g3.remove();
-    _g4.remove();
+    let mut scope = EnvScope::new();
+    scope.remove("BITNET_CROSSVAL_LIBDIR");
+    scope.remove("CROSSVAL_RPATH_BITNET");
+    scope.remove("CROSSVAL_RPATH_LLAMA");
+    scope.remove("BITNET_CPP_DIR");
 
     // Should gracefully degrade to STUB mode (no panic/error)
     let result = simulate_build_script_with_no_vars();

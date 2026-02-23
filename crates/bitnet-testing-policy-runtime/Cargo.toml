@@ -1,0 +1,62 @@
+[package]
+name = "bitnet-testing-policy-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Runtime-oriented façade for BDD-grid policy and feature-contract diagnostics"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+bitnet-testing-policy-interop = { path = "../bitnet-testing-policy-interop", version = "0.1.0" }
+
+[features]
+default = []
+cpu = ["bitnet-testing-policy-interop/cpu"]
+gpu = ["bitnet-testing-policy-interop/gpu"]
+cuda = ["bitnet-testing-policy-interop/cuda"]
+inference = ["bitnet-testing-policy-interop/inference"]
+kernels = ["bitnet-testing-policy-interop/kernels"]
+tokenizers = ["bitnet-testing-policy-interop/tokenizers"]
+quantization = ["bitnet-testing-policy-interop/quantization"]
+cli = ["bitnet-testing-policy-interop/cli"]
+server = ["bitnet-testing-policy-interop/server"]
+ffi = ["bitnet-testing-policy-interop/ffi"]
+python = ["bitnet-testing-policy-interop/python"]
+wasm = ["bitnet-testing-policy-interop/wasm"]
+crossval = ["bitnet-testing-policy-interop/crossval"]
+trace = ["bitnet-testing-policy-interop/trace"]
+iq2s-ffi = ["bitnet-testing-policy-interop/iq2s-ffi"]
+cpp-ffi = ["bitnet-testing-policy-interop/cpp-ffi"]
+fixtures = ["bitnet-testing-policy-interop/fixtures"]
+reporting = ["bitnet-testing-policy-interop/reporting"]
+trend = ["bitnet-testing-policy-interop/trend"]
+integration-tests = ["bitnet-testing-policy-interop/integration-tests"]
+runtime-profile-cpu = ["bitnet-testing-policy-interop/runtime-profile-cpu"]
+runtime-profile-gpu = ["bitnet-testing-policy-interop/runtime-profile-gpu"]
+runtime-profile-cuda = ["bitnet-testing-policy-interop/runtime-profile-cuda"]
+runtime-profile-inference = ["bitnet-testing-policy-interop/runtime-profile-inference"]
+runtime-profile-kernels = ["bitnet-testing-policy-interop/runtime-profile-kernels"]
+runtime-profile-tokenizers = ["bitnet-testing-policy-interop/runtime-profile-tokenizers"]
+runtime-profile-quantization = ["bitnet-testing-policy-interop/runtime-profile-quantization"]
+runtime-profile-cli = ["bitnet-testing-policy-interop/runtime-profile-cli"]
+runtime-profile-server = ["bitnet-testing-policy-interop/runtime-profile-server"]
+runtime-profile-ffi = ["bitnet-testing-policy-interop/runtime-profile-ffi"]
+runtime-profile-python = ["bitnet-testing-policy-interop/runtime-profile-python"]
+runtime-profile-wasm = ["bitnet-testing-policy-interop/runtime-profile-wasm"]
+runtime-profile-crossval = ["bitnet-testing-policy-interop/runtime-profile-crossval"]
+runtime-profile-trace = ["bitnet-testing-policy-interop/runtime-profile-trace"]
+runtime-profile-iq2s-ffi = ["bitnet-testing-policy-interop/runtime-profile-iq2s-ffi"]
+runtime-profile-cpp-ffi = ["bitnet-testing-policy-interop/runtime-profile-cpp-ffi"]
+runtime-profile-fixtures = ["bitnet-testing-policy-interop/runtime-profile-fixtures"]
+runtime-profile-reporting = ["bitnet-testing-policy-interop/runtime-profile-reporting"]
+runtime-profile-trend = ["bitnet-testing-policy-interop/runtime-profile-trend"]
+runtime-profile-integration-tests = ["bitnet-testing-policy-interop/runtime-profile-integration-tests"]

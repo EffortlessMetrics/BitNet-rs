@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use bitnet_server::{BitNetServer, ServerConfig};
+use bitnet_startup_contract_guard::{ContractPolicy, RuntimeComponent, evaluate_and_emit};
 use clap::Parser;
 use tracing::info;
 
@@ -65,6 +66,11 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
+    let startup_contract_report =
+        evaluate_and_emit(RuntimeComponent::Server, ContractPolicy::Observe)?;
+    if !startup_contract_report.is_compatible() {
+        tracing::warn!(component = ?RuntimeComponent::Server, "Server startup contract reported issues");
+    }
 
     // Create server configuration
     let mut config = ServerConfig::default();

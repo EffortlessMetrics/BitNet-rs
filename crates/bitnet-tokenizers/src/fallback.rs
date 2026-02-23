@@ -400,12 +400,8 @@ mod tests {
     use super::*;
 
     // Use shared EnvGuard from workspace test support
-    #[allow(dead_code)]
-    mod env_guard {
-        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/support/env_guard.rs"));
-    }
     #[cfg(feature = "cpu")]
-    use env_guard::EnvGuard;
+    use bitnet_test_support::env_guard::EnvGuard;
 
     /// AC5: Tests TokenizerFallbackChain initialization and configuration
     /// Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac5-fallback-strategy-system

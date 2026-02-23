@@ -9,6 +9,11 @@ use tokio::sync::RwLock;
 
 use super::CachingConfig;
 
+#[cfg(all(feature = "receipts", any(test, feature = "tuning")))]
+use super::performance_tuning::PerformanceReport;
+#[cfg(any(test, feature = "receipts"))]
+use super::receipts::{KvEventSink, KvEvictionReport, TracingSink};
+
 /// KV cache entry backed by pool slices (no owned Vec<f32>).
 #[derive(Debug, Clone)]
 pub struct KVCacheEntry {
@@ -92,6 +97,8 @@ pub struct KVCacheManager {
     cache: Arc<RwLock<HashMap<String, KVCacheEntry>>>,
     memory_pool: Arc<RwLock<MemoryPool>>,
     statistics: Arc<RwLock<KVCacheStatistics>>,
+    #[cfg(feature = "receipts")]
+    receipt_sink: Option<Arc<dyn KvEventSink>>,
 }
 
 /// KV cache statistics
@@ -297,11 +304,37 @@ impl KVCacheManager {
         let pool_size_bytes = config.kv_cache_size_mb * 1024 * 1024;
         let memory_pool = MemoryPool::new(pool_size_bytes);
 
+        #[cfg(feature = "receipts")]
+        let receipt_sink: Option<Arc<dyn KvEventSink>> =
+            if config.enable_receipts { Some(Arc::new(TracingSink)) } else { None };
+
         Ok(Self {
             config: config.clone(),
             cache: Arc::new(RwLock::new(HashMap::new())),
             memory_pool: Arc::new(RwLock::new(memory_pool)),
             statistics: Arc::new(RwLock::new(KVCacheStatistics::default())),
+            #[cfg(feature = "receipts")]
+            receipt_sink,
+        })
+    }
+
+    /// Test-only constructor with injected receipt sink.
+    #[cfg(any(test, feature = "receipts"))]
+    #[allow(dead_code)]
+    pub(crate) fn with_receipt_sink(
+        config: CachingConfig,
+        sink: Option<Arc<dyn KvEventSink>>,
+    ) -> Result<Self> {
+        let pool_size_bytes = config.kv_cache_size_mb * 1024 * 1024;
+        let memory_pool = MemoryPool::new(pool_size_bytes);
+
+        Ok(Self {
+            config,
+            cache: Arc::new(RwLock::new(HashMap::new())),
+            memory_pool: Arc::new(RwLock::new(memory_pool)),
+            statistics: Arc::new(RwLock::new(KVCacheStatistics::default())),
+            #[cfg(feature = "receipts")]
+            receipt_sink: sink,
         })
     }
 
@@ -516,8 +549,41 @@ impl KVCacheManager {
         Ok(())
     }
 
+    /// Record a KV eviction event.
+    #[cfg(feature = "receipts")]
+    fn record_kv_eviction(
+        &self,
+        session_id: &str,
+        block: &MemoryBlock,
+        before: &KVCacheStatistics,
+        after: &KVCacheStatistics,
+        #[cfg(any(test, feature = "tuning"))] perf: Option<PerformanceReport>,
+    ) {
+        use std::time::SystemTime;
+
+        if let Some(sink) = &self.receipt_sink {
+            let event = KvEvictionReport {
+                session_id: session_id.to_owned(),
+                block_offset: block.offset,
+                block_size_bytes: block.size,
+                before: before.clone(),
+                after: after.clone(),
+                #[cfg(any(test, feature = "tuning"))]
+                performance: perf,
+                timestamp: SystemTime::now(),
+            };
+
+            sink.on_eviction(event);
+        }
+    }
+
     /// Remove a cache entry
     async fn remove_cache_entry(&self, session_id: &str) -> Result<()> {
+        // Capture before stats if receipts enabled
+        #[cfg(feature = "receipts")]
+        let maybe_before =
+            if self.config.enable_receipts { Some(self.get_statistics().await) } else { None };
+
         let entry = {
             let mut cache = self.cache.write().await;
             cache.remove(session_id)
@@ -541,6 +607,24 @@ impl KVCacheManager {
                 stats.total_memory_mb = pool.total_size as f64 / (1024.0 * 1024.0);
                 stats.memory_utilization = pool.utilization();
                 stats.memory_pool_efficiency = 1.0 - pool.fragmentation();
+            }
+
+            // Emit receipt if enabled
+            #[cfg(feature = "receipts")]
+            if self.config.enable_receipts {
+                let after = self.get_statistics().await;
+
+                if let Some(ref before) = maybe_before {
+                    #[cfg(any(test, feature = "tuning"))]
+                    {
+                        let perf = Some(PerformanceReport::from_stats(&after, &self.config));
+                        self.record_kv_eviction(session_id, &entry.block, before, &after, perf);
+                    }
+                    #[cfg(not(any(test, feature = "tuning")))]
+                    {
+                        self.record_kv_eviction(session_id, &entry.block, before, &after);
+                    }
+                }
             }
         }
 
@@ -1046,6 +1130,63 @@ mod tests {
             after.memory_pool_efficiency >= 0.0 && after.memory_pool_efficiency <= 1.0,
             "Efficiency should be in [0,1]"
         );
+
+        Ok(())
+    }
+
+    #[cfg(feature = "receipts")]
+    #[tokio::test]
+    async fn emits_eviction_receipt_with_correct_payload() -> Result<()> {
+        use crate::caching::receipts::test_helpers::ChannelSink;
+
+        let (sink, mut rx) = ChannelSink::channel(4);
+        let mut cfg = CachingConfig::default();
+        cfg.enable_receipts = true;
+
+        let manager = KVCacheManager::with_receipt_sink(cfg, Some(Arc::new(sink)))?;
+
+        // Create a small entry
+        let session_id = "sess-evict";
+        let entry = manager.create_cache_entry(session_id, 16).await?.expect("entry created");
+
+        let before = manager.get_statistics().await;
+        manager.remove_cache_entry(session_id).await?;
+        let after = manager.get_statistics().await;
+
+        // There should be exactly one event
+        let report = rx.recv().await.expect("expected eviction report");
+        assert_eq!(report.session_id, session_id);
+        assert_eq!(report.block_offset, entry.block.offset);
+        assert_eq!(report.block_size_bytes, entry.block.size);
+        assert_eq!(report.before.total_sessions, before.total_sessions);
+        assert_eq!(report.after.total_sessions, after.total_sessions);
+        // Performance report may or may not be present depending on tuning feature
+        // assert!(report.performance.is_none()); // not asserting here
+
+        Ok(())
+    }
+
+    #[cfg(feature = "receipts")]
+    #[tokio::test]
+    async fn does_not_emit_receipt_when_disabled() -> Result<()> {
+        use crate::caching::receipts::test_helpers::ChannelSink;
+        use tokio::sync::mpsc::error::TryRecvError;
+
+        let (sink, mut rx) = ChannelSink::channel(1);
+        let mut cfg = CachingConfig::default();
+        cfg.enable_receipts = false; // explicitly off
+
+        let manager = KVCacheManager::with_receipt_sink(cfg, Some(Arc::new(sink)))?;
+
+        let session_id = "sess-no-receipt";
+        let _entry = manager.create_cache_entry(session_id, 16).await?.expect("entry");
+        manager.remove_cache_entry(session_id).await?;
+
+        // Channel should remain empty
+        match rx.try_recv() {
+            Err(TryRecvError::Empty) => {}
+            other => panic!("expected no event, got {:?}", other),
+        }
 
         Ok(())
     }

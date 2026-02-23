@@ -3,7 +3,7 @@
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac6-cross-validation-tests
 
 use bitnet_common::{BitNetError, Result};
-use bitnet_tests::support::env_guard::EnvGuard;
+use bitnet_tests::support::env_guard::EnvScope;
 use bitnet_tokenizers::{BasicTokenizer, Tokenizer};
 #[allow(unused_imports)]
 use serial_test::serial;
@@ -314,15 +314,11 @@ async fn test_multi_architecture_cross_validation() {
 #[serial(bitnet_env)]
 #[cfg(feature = "cpu")]
 async fn test_deterministic_cross_validation() {
-    // Enable deterministic mode with EnvGuard
-    let _deterministic_guard = EnvGuard::new("BITNET_DETERMINISTIC");
-    _deterministic_guard.set("1");
-
-    let _seed_guard = EnvGuard::new("BITNET_SEED");
-    _seed_guard.set("42");
-
-    let _threads_guard = EnvGuard::new("RAYON_NUM_THREADS");
-    _threads_guard.set("1");
+    // Enable deterministic mode with a single EnvScope (avoids deadlock)
+    let mut scope = EnvScope::new();
+    scope.set("BITNET_DETERMINISTIC", "1");
+    scope.set("BITNET_SEED", "42");
+    scope.set("RAYON_NUM_THREADS", "1");
 
     let _test_model = "test-models/test.gguf";
 
@@ -346,7 +342,8 @@ async fn test_deterministic_cross_validation() {
     // Results should be identical in deterministic mode
     assert_eq!(tokens1, tokens2, "Tokenizer discovery should be deterministic");
 
-    // Guards automatically restore original values on drop
+    // scope automatically restores original values on drop
+    drop(scope);
 
     println!("✅ Deterministic cross-validation test completed");
 }

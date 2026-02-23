@@ -28,7 +28,7 @@ fn workspace_root() -> PathBuf {
 #[test]
 fn ac5_preflight_detects_no_gpu_with_fake_none() {
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "preflight"])
+        .args(["run", "-p", "xtask", "--", "gpu-preflight"])
         .current_dir(workspace_root())
         .env("BITNET_GPU_FAKE", "none")
         .output()
@@ -67,7 +67,7 @@ fn ac5_preflight_detects_no_gpu_with_fake_none() {
 #[test]
 fn ac5_preflight_detects_gpu_with_fake_cuda() {
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "preflight"])
+        .args(["run", "-p", "xtask", "--", "gpu-preflight"])
         .current_dir(workspace_root())
         .env("BITNET_GPU_FAKE", "cuda")
         .output()
@@ -103,7 +103,7 @@ fn ac5_preflight_detects_gpu_with_fake_cuda() {
 #[test]
 fn ac5_preflight_real_gpu_detection() {
     let output = Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "preflight"])
+        .args(["run", "-p", "xtask", "--", "gpu-preflight"])
         .current_dir(workspace_root())
         .env_remove("BITNET_GPU_FAKE") // Ensure no fake override
         .output()
@@ -143,7 +143,7 @@ mod preflight_edge_cases {
 
         for invalid_value in invalid_values {
             let output = Command::new("cargo")
-                .args(["run", "-p", "xtask", "--", "preflight"])
+                .args(["run", "-p", "xtask", "--", "gpu-preflight"])
                 .current_dir(workspace_root())
                 .env("BITNET_GPU_FAKE", invalid_value)
                 .output()
@@ -166,7 +166,7 @@ mod preflight_edge_cases {
     #[test]
     fn ac5_preflight_reports_compile_status() {
         let output = Command::new("cargo")
-            .args(["run", "-p", "xtask", "--", "preflight"])
+            .args(["run", "-p", "xtask", "--", "gpu-preflight"])
             .current_dir(workspace_root())
             .output()
             .expect("Failed to run xtask preflight");
@@ -201,7 +201,7 @@ mod preflight_edge_cases {
     fn ac5_preflight_exit_code_success() {
         // Test with fake=none
         let output_no_gpu = Command::new("cargo")
-            .args(["run", "-p", "xtask", "--", "preflight"])
+            .args(["run", "-p", "xtask", "--", "gpu-preflight"])
             .current_dir(workspace_root())
             .env("BITNET_GPU_FAKE", "none")
             .output()
@@ -214,7 +214,7 @@ mod preflight_edge_cases {
 
         // Test with fake=cuda
         let output_with_gpu = Command::new("cargo")
-            .args(["run", "-p", "xtask", "--", "preflight"])
+            .args(["run", "-p", "xtask", "--", "gpu-preflight"])
             .current_dir(workspace_root())
             .env("BITNET_GPU_FAKE", "cuda")
             .output()

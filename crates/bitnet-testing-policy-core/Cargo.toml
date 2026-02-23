@@ -1,0 +1,60 @@
+[package]
+name = "bitnet-testing-policy-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core policy and BDD compatibility orchestration for BitNet runtime and scenario configuration"
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]
+bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.1.0" }
+bitnet-testing-scenarios-core = { path = "../bitnet-testing-scenarios-core", version = "0.1.0" }
+
+[features]
+default = []
+cpu = ["bitnet-testing-profile/cpu"]
+gpu = ["bitnet-testing-profile/gpu"]
+cuda = ["bitnet-testing-profile/cuda"]
+inference = ["bitnet-testing-profile/inference"]
+kernels = ["bitnet-testing-profile/kernels"]
+tokenizers = ["bitnet-testing-profile/tokenizers"]
+quantization = ["bitnet-testing-profile/quantization"]
+cli = ["bitnet-testing-profile/cli"]
+server = ["bitnet-testing-profile/server"]
+ffi = ["bitnet-testing-profile/ffi"]
+python = ["bitnet-testing-profile/python"]
+wasm = ["bitnet-testing-profile/wasm"]
+crossval = ["bitnet-testing-profile/crossval"]
+trace = ["bitnet-testing-profile/trace"]
+iq2s-ffi = ["bitnet-testing-profile/iq2s-ffi"]
+cpp-ffi = ["bitnet-testing-profile/cpp-ffi"]
+fixtures = ["bitnet-testing-profile/fixtures", "bitnet-testing-scenarios-core/fixtures"]
+reporting = ["bitnet-testing-profile/reporting"]
+trend = ["bitnet-testing-profile/trend"]
+integration-tests = ["bitnet-testing-profile/integration-tests"]
+runtime-profile-cpu = ["bitnet-testing-profile/runtime-profile-cpu"]
+runtime-profile-gpu = ["bitnet-testing-profile/runtime-profile-gpu"]
+runtime-profile-cuda = ["bitnet-testing-profile/runtime-profile-cuda"]
+runtime-profile-inference = ["bitnet-testing-profile/runtime-profile-inference"]
+runtime-profile-kernels = ["bitnet-testing-profile/runtime-profile-kernels"]
+runtime-profile-tokenizers = ["bitnet-testing-profile/runtime-profile-tokenizers"]
+runtime-profile-quantization = ["bitnet-testing-profile/runtime-profile-quantization"]
+runtime-profile-cli = ["bitnet-testing-profile/runtime-profile-cli"]
+runtime-profile-server = ["bitnet-testing-profile/runtime-profile-server"]
+runtime-profile-ffi = ["bitnet-testing-profile/runtime-profile-ffi"]
+runtime-profile-python = ["bitnet-testing-profile/runtime-profile-python"]
+runtime-profile-wasm = ["bitnet-testing-profile/runtime-profile-wasm"]
+runtime-profile-crossval = ["bitnet-testing-profile/runtime-profile-crossval"]
+runtime-profile-trace = ["bitnet-testing-profile/runtime-profile-trace"]
+runtime-profile-iq2s-ffi = ["bitnet-testing-profile/runtime-profile-iq2s-ffi"]
+runtime-profile-cpp-ffi = ["bitnet-testing-profile/runtime-profile-cpp-ffi"]
+runtime-profile-fixtures = ["bitnet-testing-profile/runtime-profile-fixtures"]
+runtime-profile-reporting = ["bitnet-testing-profile/runtime-profile-reporting"]
+runtime-profile-trend = ["bitnet-testing-profile/runtime-profile-trend"]
+runtime-profile-integration-tests = ["bitnet-testing-profile/runtime-profile-integration-tests"]

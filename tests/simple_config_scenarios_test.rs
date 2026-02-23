@@ -7,8 +7,8 @@ use std::time::Duration;
 // Import the configuration scenarios module directly
 mod common;
 use common::config_scenarios::{
-    ConfigurationContext, EnvironmentType, Platform, PlatformSettings, QualityRequirements,
-    ResourceConstraints, ScenarioConfigManager, TestingScenario, TimeConstraints, scenarios,
+    ConfigurationContext, EnvironmentType, PlatformSettings, ScenarioConfigManager,
+    TestingScenario,
 };
 
 #[test]
@@ -41,12 +41,12 @@ fn test_environment_configurations() {
     let manager = ScenarioConfigManager::new();
 
     // Test development environment
-    let dev_config = manager.get_environment_config(&EnvironmentType::Development);
+    let dev_config = manager.get_environment_config(&EnvironmentType::Local);
     assert_eq!(dev_config.log_level, "info");
     assert!(!dev_config.reporting.generate_coverage);
 
     // Test CI environment
-    let ci_config = manager.get_environment_config(&EnvironmentType::ContinuousIntegration);
+    let ci_config = manager.get_environment_config(&EnvironmentType::CI);
     assert_eq!(ci_config.log_level, "debug");
     assert!(ci_config.reporting.generate_coverage);
 
@@ -60,7 +60,7 @@ fn test_configuration_context() {
     // Test complex context configuration
     let mut context = ConfigurationContext::default();
     context.scenario = TestingScenario::Performance;
-    context.environment = EnvironmentType::ContinuousIntegration;
+    context.environment = EnvironmentType::CI;
     context.resource_constraints.max_parallel_tests = Some(1);
     context.resource_constraints.network_access = false;
     context.time_constraints.max_test_timeout = Duration::from_secs(300);
@@ -119,20 +119,21 @@ fn test_time_constraints() {
 
 #[test]
 fn test_convenience_functions() {
-    // Test unit testing convenience function
-    let unit_config = scenarios::unit_testing();
+    // Test unit testing configuration
+    let manager = ScenarioConfigManager::new();
+    let unit_config = manager.get_scenario_config(&TestingScenario::Unit);
     assert_eq!(unit_config.log_level, "warn");
 
-    // Test performance testing convenience function
-    let performance_config = scenarios::performance_testing();
+    // Test performance testing configuration
+    let performance_config = manager.get_scenario_config(&TestingScenario::Performance);
     assert_eq!(performance_config.max_parallel_tests, 1);
 
-    // Test smoke testing convenience function
-    let smoke_config = scenarios::smoke_testing();
+    // Test smoke testing configuration
+    let smoke_config = manager.get_scenario_config(&TestingScenario::Smoke);
     assert_eq!(smoke_config.test_timeout, Duration::from_secs(10));
 
-    // Test development convenience function
-    let dev_config = scenarios::development();
+    // Test development configuration
+    let dev_config = manager.get_scenario_config(&TestingScenario::Development);
     assert!(!dev_config.reporting.generate_coverage);
 
     println!("✓ Convenience functions work correctly");
@@ -164,13 +165,21 @@ fn test_platform_specific_configurations() {
     let mut context = ConfigurationContext::default();
 
     // Test Windows platform
-    context.platform_settings.platform = Platform::Windows;
+    context.platform_settings = Some(PlatformSettings {
+        os: Some("windows".to_string()),
+        arch: None,
+        features: vec![],
+    });
     context.scenario = TestingScenario::Unit; // Start with high parallelism
     let config = manager.get_context_config(&context);
     assert!(config.max_parallel_tests <= 8);
 
     // Test macOS platform
-    context.platform_settings.platform = Platform::MacOS;
+    context.platform_settings = Some(PlatformSettings {
+        os: Some("macos".to_string()),
+        arch: None,
+        features: vec![],
+    });
     let config = manager.get_context_config(&context);
     assert!(config.max_parallel_tests <= 6);
 
@@ -183,39 +192,7 @@ fn test_available_scenarios() {
     assert!(scenarios.contains(&TestingScenario::Unit));
     assert!(scenarios.contains(&TestingScenario::Performance));
     assert!(scenarios.contains(&TestingScenario::CrossValidation));
-    assert_eq!(scenarios.len(), 15);
+    assert_eq!(scenarios.len(), 8);
 
     println!("✓ Available scenarios list is correct");
-}
-
-fn main() {
-    println!("Running configuration scenarios tests...");
-
-    test_scenario_configurations();
-    test_environment_configurations();
-    test_configuration_context();
-    test_resource_constraints();
-    test_time_constraints();
-    test_convenience_functions();
-    test_scenario_descriptions();
-    test_platform_specific_configurations();
-    test_available_scenarios();
-
-    println!("\n🎉 All configuration scenario tests passed!");
-    println!("Configuration management supports various testing scenarios:");
-    println!("  ✓ Unit testing - Fast, isolated tests with high parallelism");
-    println!("  ✓ Integration testing - Component interaction tests with balanced performance");
-    println!("  ✓ Performance testing - Sequential benchmarking with detailed metrics");
-    println!("  ✓ Cross-validation - Implementation comparison with strict accuracy requirements");
-    println!("  ✓ Smoke testing - Basic functionality validation with minimal overhead");
-    println!("  ✓ Development - Local development testing optimized for fast feedback");
-    println!("  ✓ CI/CD - Continuous integration testing with comprehensive reporting");
-    println!("  ✓ And 8 more specialized scenarios...");
-    println!("\nThe configuration system successfully adapts to:");
-    println!("  ✓ Different testing scenarios (15 total)");
-    println!("  ✓ Various environments (Development, CI, Production, etc.)");
-    println!("  ✓ Resource constraints (memory, CPU, network, parallelism)");
-    println!("  ✓ Time constraints (fast feedback, timeouts)");
-    println!("  ✓ Quality requirements (coverage, reporting, cross-validation)");
-    println!("  ✓ Platform-specific optimizations (Windows, Linux, macOS)");
 }

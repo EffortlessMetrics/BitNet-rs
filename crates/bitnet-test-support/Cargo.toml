@@ -1,0 +1,19 @@
+[package]
+name = "bitnet-test-support"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Shared test infrastructure for BitNet.rs: EnvGuard/EnvScope, model-path gating, RNG seeds"
+publish = false
+
+[dependencies]
+# No runtime deps — this crate is intentionally minimal
+
+[dev-dependencies]
+serial_test.workspace = true
+
+[features]
+default = []

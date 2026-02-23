@@ -6,6 +6,9 @@
 pub mod common;
 pub mod prelude;
 pub mod support;
+pub mod bdd_grid {
+    pub use crate::common::bdd_grid::*;
+}
 
 // Only compile integration tests when explicitly enabled.
 // This keeps crossval work unblocked.

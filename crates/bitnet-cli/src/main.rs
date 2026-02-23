@@ -9,12 +9,15 @@ compile_error!("The 'mock' feature must never be enabled for the CLI – tests o
 
 use anyhow::{Context, Result};
 use bitnet_common::Tensor;
+use bitnet_startup_contract_guard::{
+    ContractPolicy, RuntimeComponent, evaluate_and_emit, feature_line,
+};
 use candle_core::{DType, IndexOp};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{Shell, generate};
 use console::style;
 use std::io;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[cfg(feature = "full-cli")]
 mod commands;
@@ -33,20 +36,6 @@ pub fn build_cli() -> clap::Command {
     Cli::command()
 }
 
-fn compiled_features() -> &'static [&'static str] {
-    &[
-        #[cfg(feature = "cpu")]
-        "cpu",
-        #[cfg(any(feature = "gpu", feature = "cuda"))]
-        "gpu",
-        // Removed cuda and ffi - not declared in bitnet-cli/Cargo.toml
-        #[cfg(feature = "iq2s-ffi")]
-        "iq2s-ffi",
-        #[cfg(feature = "crossval")]
-        "crossval",
-    ]
-}
-
 /// CLI interface version (SemVer for CLI surface compatibility)
 const INTERFACE_VERSION: &str = "1.0.0";
 
@@ -55,12 +44,7 @@ fn bitnet_version() -> &'static str {
     static VERSION_STRING: OnceLock<String> = OnceLock::new();
 
     VERSION_STRING.get_or_init(|| {
-        let features = compiled_features();
-        let features_line = if features.is_empty() {
-            "features: none".to_string()
-        } else {
-            format!("features: {}", features.join(", "))
-        };
+        let features_line = feature_line();
 
         #[cfg(feature = "iq2s-ffi")]
         let ggml_line = format!("ggml: {}", bitnet_ggml_ffi::GGML_COMMIT);
@@ -474,6 +458,12 @@ async fn main() -> Result<()> {
 
     // Setup logging
     setup_logging(&config, cli.log_level.as_deref())?;
+
+    let startup_contract_report =
+        evaluate_and_emit(RuntimeComponent::Cli, ContractPolicy::Observe)?;
+    if !startup_contract_report.is_compatible() {
+        warn!(component = ?RuntimeComponent::Cli, "CLI startup contract reported issues");
+    }
 
     // Handle commands
     let result = match cli.command {

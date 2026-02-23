@@ -5,7 +5,39 @@
 
 use std::env;
 use std::process::Command;
-use sysinfo::System;
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
+
+/// Run a shell command with a timeout. Returns `false` on timeout or failure.
+fn probe_command(cmd: &str, args: &[&str]) -> bool {
+    let cmd = cmd.to_string();
+    let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        let ok =
+            Command::new(&cmd).args(&args).output().map(|o| o.status.success()).unwrap_or(false);
+        let _ = tx.send(ok);
+    });
+    rx.recv_timeout(Duration::from_secs(5)).unwrap_or(false)
+}
+
+/// Run a shell command with a timeout and capture its stdout. Returns `None` on timeout or failure.
+fn probe_command_output(cmd: &str, args: &[&str]) -> Option<String> {
+    let cmd = cmd.to_string();
+    let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        let out = Command::new(&cmd)
+            .args(&args)
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .and_then(|o| String::from_utf8(o.stdout).ok());
+        let _ = tx.send(out);
+    });
+    rx.recv_timeout(Duration::from_secs(5)).unwrap_or(None)
+}
 
 /// Check if any GPU backend is available
 pub fn gpu_available() -> bool {
@@ -34,30 +66,15 @@ pub fn get_gpu_info() -> GpuInfo {
         };
     }
 
-    let _sys = System::new_all();
+    let metal = cfg!(target_os = "macos");
 
-    let mut metal = System::name().unwrap_or_default().to_lowercase().contains("mac");
-
-    let cuda = Command::new("nvidia-smi")
-        .arg("--query-gpu=gpu_name")
-        .arg("--format=csv,noheader")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false);
+    let cuda = probe_command("nvidia-smi", &["--query-gpu=gpu_name", "--format=csv,noheader"]);
 
     let cuda_version = if cuda { get_cuda_version() } else { None };
 
-    let rocm = Command::new("rocm-smi")
-        .arg("--showid")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false);
+    let rocm = probe_command("rocm-smi", &["--showid"]);
 
     let rocm_version = if rocm { get_rocm_version() } else { None };
-
-    if cfg!(target_os = "macos") {
-        metal = true;
-    }
 
     let wgpu = cuda || rocm || metal;
 
@@ -119,40 +136,24 @@ impl GpuInfo {
 
 /// Get CUDA version if available
 fn get_cuda_version() -> Option<String> {
-    Command::new("nvcc")
-        .arg("--version")
-        .output()
-        .ok()
-        .and_then(|output| {
-            if output.status.success() { String::from_utf8(output.stdout).ok() } else { None }
+    probe_command_output("nvcc", &["--version"]).and_then(|output| {
+        output.lines().find(|line| line.contains("release")).and_then(|line| {
+            line.split("release")
+                .nth(1)
+                .and_then(|s| s.split(',').next())
+                .map(|s| s.trim().to_string())
         })
-        .and_then(|output| {
-            // Parse version from nvcc output
-            output.lines().find(|line| line.contains("release")).and_then(|line| {
-                line.split("release")
-                    .nth(1)
-                    .and_then(|s| s.split(',').next())
-                    .map(|s| s.trim().to_string())
-            })
-        })
+    })
 }
 
 /// Get ROCm version if available
 fn get_rocm_version() -> Option<String> {
-    Command::new("rocm-smi")
-        .arg("--version")
-        .output()
-        .ok()
-        .and_then(|output| {
-            if output.status.success() { String::from_utf8(output.stdout).ok() } else { None }
-        })
-        .and_then(|output| {
-            // Parse version from rocm-smi output
-            output
-                .lines()
-                .find(|line| line.contains("Version"))
-                .and_then(|line| line.split(':').nth(1).map(|s| s.trim().to_string()))
-        })
+    probe_command_output("rocm-smi", &["--version"]).and_then(|output| {
+        output
+            .lines()
+            .find(|line| line.contains("Version"))
+            .and_then(|line| line.split(':').nth(1).map(|s| s.trim().to_string()))
+    })
 }
 
 /// Perform a preflight check for GPU operations

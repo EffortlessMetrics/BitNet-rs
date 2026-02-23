@@ -1,0 +1,31 @@
+[package]
+name = "bitnet-transformer"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "BitNet transformer architecture: attention, feed-forward, and KV-cache layers"
+categories.workspace = true
+keywords.workspace = true
+readme = "README.md"
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+serial_test.workspace = true
+
+[features]
+default = []
+cpu = ["bitnet-quantization/cpu"]
+gpu = ["bitnet-common/gpu", "candle-core/cuda", "bitnet-quantization/gpu"]
+cuda = ["gpu"]
+trace = []

@@ -1,0 +1,22 @@
+[package]
+name = "bitnet-sampling"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Sampling strategies for BitNet LLM inference (temperature, top-k, top-p, repetition penalty)"
+categories.workspace = true
+keywords.workspace = true
+readme = "README.md"
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+tracing = { workspace = true }
+rand = "0.9.2"
+rand_chacha = "0.9.0"
+
+[dev-dependencies]
+proptest = { workspace = true }
+insta = { workspace = true }

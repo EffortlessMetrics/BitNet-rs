@@ -1,0 +1,62 @@
+[package]
+name = "bitnet-runtime-profile-contract"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Canonical runtime profile contract primitives shared by BDD grid and feature flags"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+bitnet-runtime-profile-contract-core = { path = "../bitnet-runtime-profile-contract-core", version = "0.1.0" }
+
+[features]
+default = []
+cpu = ["bitnet-runtime-profile-contract-core/cpu"]
+gpu = ["bitnet-runtime-profile-contract-core/gpu"]
+cuda = ["bitnet-runtime-profile-contract-core/cuda"]
+inference = ["bitnet-runtime-profile-contract-core/inference"]
+kernels = ["bitnet-runtime-profile-contract-core/kernels"]
+tokenizers = ["bitnet-runtime-profile-contract-core/tokenizers"]
+quantization = ["bitnet-runtime-profile-contract-core/quantization"]
+cli = ["bitnet-runtime-profile-contract-core/cli"]
+server = ["bitnet-runtime-profile-contract-core/server"]
+ffi = ["bitnet-runtime-profile-contract-core/ffi"]
+python = ["bitnet-runtime-profile-contract-core/python"]
+wasm = ["bitnet-runtime-profile-contract-core/wasm"]
+crossval = ["bitnet-runtime-profile-contract-core/crossval"]
+trace = ["bitnet-runtime-profile-contract-core/trace"]
+iq2s-ffi = ["bitnet-runtime-profile-contract-core/iq2s-ffi"]
+cpp-ffi = ["bitnet-runtime-profile-contract-core/cpp-ffi"]
+fixtures = ["bitnet-runtime-profile-contract-core/fixtures"]
+reporting = ["bitnet-runtime-profile-contract-core/reporting"]
+trend = ["bitnet-runtime-profile-contract-core/trend"]
+integration-tests = ["bitnet-runtime-profile-contract-core/integration-tests"]
+runtime-profile-cpu = ["bitnet-runtime-profile-contract-core/runtime-profile-cpu"]
+runtime-profile-gpu = ["bitnet-runtime-profile-contract-core/runtime-profile-gpu"]
+runtime-profile-cuda = ["bitnet-runtime-profile-contract-core/runtime-profile-cuda"]
+runtime-profile-inference = ["bitnet-runtime-profile-contract-core/runtime-profile-inference"]
+runtime-profile-kernels = ["bitnet-runtime-profile-contract-core/runtime-profile-kernels"]
+runtime-profile-tokenizers = ["bitnet-runtime-profile-contract-core/runtime-profile-tokenizers"]
+runtime-profile-quantization = ["bitnet-runtime-profile-contract-core/runtime-profile-quantization"]
+runtime-profile-cli = ["bitnet-runtime-profile-contract-core/runtime-profile-cli"]
+runtime-profile-server = ["bitnet-runtime-profile-contract-core/runtime-profile-server"]
+runtime-profile-ffi = ["bitnet-runtime-profile-contract-core/runtime-profile-ffi"]
+runtime-profile-python = ["bitnet-runtime-profile-contract-core/runtime-profile-python"]
+runtime-profile-wasm = ["bitnet-runtime-profile-contract-core/runtime-profile-wasm"]
+runtime-profile-crossval = ["bitnet-runtime-profile-contract-core/runtime-profile-crossval"]
+runtime-profile-trace = ["bitnet-runtime-profile-contract-core/runtime-profile-trace"]
+runtime-profile-iq2s-ffi = ["bitnet-runtime-profile-contract-core/runtime-profile-iq2s-ffi"]
+runtime-profile-cpp-ffi = ["bitnet-runtime-profile-contract-core/runtime-profile-cpp-ffi"]
+runtime-profile-fixtures = ["bitnet-runtime-profile-contract-core/runtime-profile-fixtures"]
+runtime-profile-reporting = ["bitnet-runtime-profile-contract-core/runtime-profile-reporting"]
+runtime-profile-trend = ["bitnet-runtime-profile-contract-core/runtime-profile-trend"]
+runtime-profile-integration-tests = ["bitnet-runtime-profile-contract-core/runtime-profile-integration-tests"]

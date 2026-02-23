@@ -169,6 +169,15 @@ impl Default for ScanConfig {
         safe_files.insert("issue_465_test_utils.rs".to_string()); // Also match without prefix
         safe_files.insert("tests/env_guard_compliance.rs".to_string());
         safe_files.insert("env_guard_compliance.rs".to_string()); // The compliance test itself
+        // Support code that provides env isolation primitives or uses EnvGuard internally
+        safe_files.insert("tests/support/platform_utils.rs".to_string());
+        safe_files.insert("support/platform_utils.rs".to_string()); // uses EnvGuard + inner set_var
+        safe_files.insert("tests/support/backend_helpers.rs".to_string());
+        safe_files.insert("support/backend_helpers.rs".to_string()); // implementation setting operational env vars
+        safe_files.insert("tests/test_support_tests.rs".to_string());
+        safe_files.insert("test_support_tests.rs".to_string()); // tests EnvGuard itself (all #[ignore])
+        safe_files.insert("tests/integration/fixtures/env_isolation.rs".to_string());
+        safe_files.insert("integration/fixtures/env_isolation.rs".to_string()); // env isolation fixture implementation
         // Archive and new test directories (separate migration efforts)
         safe_files.insert("tests-new/".to_string());
         // Non-test code that reads (doesn't mutate) env vars

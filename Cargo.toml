@@ -2,13 +2,24 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
+  "crates/bitnet-runtime-context",
+  "crates/bitnet-runtime-context-core",
+  "crates/bitnet-bdd-grid",
+  "crates/bitnet-bdd-grid-core",
   "crates/bitnet-compat",
   "crates/bitnet-ggml-ffi",     # GGML FFI for IQ2_S support
+  "crates/bitnet-runtime-feature-flags",
+  "crates/bitnet-runtime-feature-flags-core",
   "crates/bitnet-models",
   "crates/bitnet-quantization",
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
   "crates/bitnet-tokenizers",
+  "crates/bitnet-prompt-templates",
+  "crates/bitnet-receipts",
+  "crates/bitnet-sampling",
+      "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
+  "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
   "crates/bitnet-cli",
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
@@ -16,18 +27,64 @@ members = [
   "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
   "crates/bitnet-ffi",
   "crates/bitnet-py",
+  "crates/bitnet-runtime-bootstrap",
+  "crates/bitnet-startup-contract",
   "crates/bitnet-wasm",
   "crates/bitnet-sys",
+  "crates/bitnet-feature-contract",
+  "crates/bitnet-runtime-profile",
+  "crates/bitnet-runtime-profile-core",
+  "crates/bitnet-runtime-profile-contract",
+  "crates/bitnet-runtime-profile-contract-core",
+  "crates/bitnet-testing-profile",
+  "crates/bitnet-testing-scenarios",
+  "crates/bitnet-testing-policy-core",
+  "crates/bitnet-testing-scenarios-core",
+  "crates/bitnet-testing-scenarios-profile-core",
+  "crates/bitnet-testing-policy", 
+  "crates/bitnet-testing-policy-tests", 
+  "crates/bitnet-testing-policy-kit",
+  "crates/bitnet-testing-policy-contract",
+  "crates/bitnet-testing-policy-interop",
+  "crates/bitnet-testing-policy-runtime",
+  "crates/bitnet-startup-contract-core",
+  "crates/bitnet-startup-contract-diagnostics",
+  "crates/bitnet-startup-contract-guard",
+  "crates/bitnet-test-support",
   "crossval",
   "tests",
   "xtask",
+  "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
 # wasm/py/ffi, etc.) remain workspace members but are opt-in.
-default-members = ["crates/bitnet-common", "crates/bitnet-models", "crates/bitnet-tokenizers", "crates/bitnet-quantization", "crates/bitnet-kernels", "crates/bitnet-inference", "crates/bitnet-cli", "crates/bitnet-server", "crates/bitnet-st2gguf"]
+default-members = [
+  "crates/bitnet-common",
+  "crates/bitnet-quantization",
+  "crates/bitnet-transformer",
+  "crates/bitnet-test-support",
+  "crates/bitnet-models",
+  "crates/bitnet-tokenizers",
+  "crates/bitnet-kernels",
+  "crates/bitnet-inference",
+  "crates/bitnet-prompt-templates",
+  "crates/bitnet-receipts",
+  "crates/bitnet-sampling",
+  "crates/bitnet-cli",
+  "crates/bitnet-server",
+  "crates/bitnet-st2gguf",
+  # Testing infrastructure crates (always built/tested by default)
+  "crates/bitnet-bdd-grid",
+  "crates/bitnet-bdd-grid-core",
+  "crates/bitnet-feature-contract",
+  "crates/bitnet-feature-matrix",
+  "crates/bitnet-testing-policy-core",
+  "crates/bitnet-testing-scenarios-core",
+  "crates/bitnet-runtime-profile-core",
+]
 
 [package]
 authors = ["BitNet Contributors <bitnet@microsoft.com>"]
@@ -269,9 +326,12 @@ cudarc = "0.17.8"
 # Testing and benchmarking
 criterion = { version = "0.7.0", features = ["html_reports"] }
 proptest = "1.9.0"
+insta = { version = "1.43.2", features = ["yaml", "json", "redactions"] }
 tempfile = "3.23.0"
 serial_test = "3.2.0"
 temp-env = "0.3.6"
+rand = "0.9.2"
+bitnet-test-support = { path = "crates/bitnet-test-support" }
 
 # HTTP client for examples
 reqwest = { version = "0.12.24", features = ["json"] }

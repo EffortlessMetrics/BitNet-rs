@@ -26,6 +26,8 @@ bitnet-inference = { path = "../bitnet-inference" }
 bitnet-kernels = { path = "../bitnet-kernels" }
 bitnet-models = { path = "../bitnet-models" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers" }
+bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
+bitnet-startup-contract-guard = { path = "../bitnet-startup-contract-guard", version = "0.1.0" }
 chrono.workspace = true
 clap.workspace = true
 cudarc = { workspace = true, optional = true }
@@ -73,14 +75,39 @@ name = "server"
 path = "src/bin/server.rs"
 
 [features]
-cpu = []                                                                                                                                                                          # CPU inference support with SIMD optimization
-cuda = ["dep:cudarc"]                                                                                                                                                             # Recognized flag that gates GPU health checks
-crossval = []                                                                                                                                                                     # Cross-validation framework support
-default = ["prometheus"]
+runtime-profile-core = [
+  "bitnet-runtime-bootstrap/runtime-profile-inference",
+  "bitnet-runtime-bootstrap/runtime-profile-kernels",
+  "bitnet-runtime-bootstrap/runtime-profile-tokenizers",
+  "bitnet-runtime-bootstrap/runtime-profile-quantization",
+]
+cpu = [
+  "bitnet-inference/cpu",
+  "bitnet-kernels/cpu",
+  "runtime-profile-core",
+  "bitnet-runtime-bootstrap/runtime-profile-cpu",
+  "bitnet-tokenizers/cpu",
+]
+cuda = [
+  "dep:cudarc",
+  "bitnet-inference/cuda",
+  "bitnet-kernels/cuda",
+  "runtime-profile-core",
+  "bitnet-runtime-bootstrap/runtime-profile-cuda",
+]
+crossval = ["runtime-profile-core", "bitnet-runtime-bootstrap/runtime-profile-crossval"]                                                                                                                             # Cross-validation framework support
+default = ["prometheus", "server"]
 degraded-ok = []                                                                                                                                                                  # Map Degraded → 200 OK (default is fail-fast)
-gpu = ["cuda"]                                                                                                                                                                    # GPU inference support (alias for cuda)
+gpu = [
+  "bitnet-inference/gpu",
+  "bitnet-kernels/gpu",
+  "runtime-profile-core",
+  "bitnet-runtime-bootstrap/runtime-profile-gpu",
+]
+server = ["runtime-profile-core", "bitnet-runtime-bootstrap/runtime-profile-server"]
 opentelemetry = ["dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:opentelemetry-stdout", "dep:tracing-opentelemetry", "dep:tonic"]
 prometheus = ["dep:prometheus", "dep:metrics-prometheus"]
 request_batching = []                                                                                                                                                             # Gate request batching module (PR-1 scope)
 connection_pool = []                                                                                                                                                              # Gate connection pool module (PR-1 scope)
 tuning = []                                                                                                                                                                       # Gate performance tuning module (PR-1 scope)
+receipts = []                                                                                                                                                                     # Enable KV cache eviction receipts (Phase 2)

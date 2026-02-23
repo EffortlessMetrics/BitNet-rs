@@ -243,22 +243,6 @@ fn context_from_environment() -> TestConfigContext {
     ctx.scenario = framework_ctx.scenario;
     ctx.environment = framework_ctx.environment;
 
-    // BITNET_ENV (explicit) takes precedence over inferred CI markers.
-    // We only infer CI when BITNET_ENV is not set.
-    // Check explicit BITNET_ENV first (highest priority)
-    if let Ok(env_str) = env::var("BITNET_ENV") {
-        ctx.environment = match env_str.to_lowercase().as_str() {
-            "production" | "prod" => EnvironmentType::Production,
-            "preproduction" | "preprod" => EnvironmentType::PreProduction,
-            "ci" => EnvironmentType::CI,
-            "local" => EnvironmentType::Local,
-            _ => ctx.environment,
-        };
-    } else if env_bool("CI") || env::var("GITHUB_ACTIONS").is_ok() {
-        // Only infer CI if no explicit BITNET_ENV was provided
-        ctx.environment = EnvironmentType::CI;
-    }
-
     // Check resource constraints from environment
     if let Some(mb) = env_u64("BITNET_MAX_MEMORY_MB") {
         ctx.resource_constraints.max_memory_mb = mb;

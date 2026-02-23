@@ -12,7 +12,7 @@ use candle_core::{Device, Tensor};
 use serial_test::serial;
 
 mod helpers;
-use helpers::env_guard::EnvGuard;
+use helpers::env_guard::{EnvGuard, EnvScope};
 
 /// Calculate RMS (root mean square) of a slice
 fn calculate_rms(values: &[f32]) -> f32 {
@@ -154,10 +154,9 @@ fn test_gamma_rescaling_produces_target_rms() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_gamma_rescaling_disabled_in_strict_mode() -> Result<()> {
-    let _guard1 = EnvGuard::new("BITNET_RESCALE_GAMMA_ON_LOAD");
-    _guard1.set("1");
-    let _guard2 = EnvGuard::new("BITNET_STRICT_MODE");
-    _guard2.set("1");
+    let mut scope = EnvScope::new();
+    scope.set("BITNET_RESCALE_GAMMA_ON_LOAD", "1");
+    scope.set("BITNET_STRICT_MODE", "1");
 
     // Even with BITNET_RESCALE_GAMMA_ON_LOAD=1, strict mode should prevent rescaling
     // This test would need to load an actual GGUF to verify the behavior

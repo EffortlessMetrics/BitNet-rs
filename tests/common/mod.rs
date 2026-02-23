@@ -11,6 +11,7 @@
 #![allow(dead_code)]
 
 // Lightweight, always-on modules
+pub mod bdd_grid;
 pub mod concurrency_caps;
 pub mod config;
 pub mod config_scenarios;
@@ -77,6 +78,17 @@ pub mod cross_validation;
 // pub mod integration;
 
 // Re-export commonly used types
+#[allow(unused_imports)]
+pub use bdd_grid::{
+    ActiveContext, ActiveProfile, BddCell, BddGrid, BitnetFeature, GridEnvironment, GridScenario,
+    PolicyContract, PolicyDiagnostics, active_features, active_profile, active_profile_for,
+    active_profile_for_context, active_profile_summary, active_profile_violation_labels,
+    active_runtime_features, canonical_grid, diagnostics, diagnostics_for_context, drift_check,
+    feature_contract_snapshot, feature_labels, feature_line, from_grid_environment,
+    from_grid_scenario, runtime_feature_labels, runtime_feature_line, to_grid_environment,
+    to_grid_scenario, validate_active_profile, validate_active_profile_from_context,
+    validate_explicit_profile, validate_profile_for_context,
+};
 #[allow(unused_imports)]
 pub use config::TestConfig;
 #[allow(unused_imports)]
@@ -153,6 +165,16 @@ pub mod prelude {
     #[cfg(feature = "reporting")]
     #[allow(unused_imports)]
     pub use super::ci_reporting;
+
+    // Policy + feature-flag helpers for feature-gated test scenarios
+    #[allow(unused_imports)]
+    pub use super::bdd_grid::{
+        active_features, active_profile, active_profile_for, active_profile_for_context,
+        active_profile_summary, active_profile_violation_labels, active_runtime_features,
+        canonical_grid, diagnostics, diagnostics_for_context, drift_check, runtime_feature_labels,
+        validate_active_profile, validate_active_profile_from_context,
+        validate_profile_for_context,
+    };
 
     // Concurrency control utilities
     #[allow(unused_imports)]

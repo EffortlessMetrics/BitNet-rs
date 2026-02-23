@@ -54,3 +54,4 @@ assert_cmd = "2.1.1"
 predicates = "3.1.3"
 serial_test = "3.2.0"
 temp-env = "0.3.6"
+bitnet-test-support = { path = "../crates/bitnet-test-support" }

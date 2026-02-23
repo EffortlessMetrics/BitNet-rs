@@ -1,0 +1,19 @@
+[package]
+name = "bitnet-startup-contract-guard"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Startup contract orchestration helper with BDD+feature diagnostics for runtime entrypoints."
+include = ["src/**", "Cargo.toml"]
+
+[dependencies]
+anyhow.workspace = true
+bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
+bitnet-startup-contract-diagnostics = { path = "../bitnet-startup-contract-diagnostics", version = "0.1.0" }
+tracing.workspace = true

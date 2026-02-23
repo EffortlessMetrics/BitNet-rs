@@ -31,12 +31,30 @@ pub struct TuningRecommendation {
 }
 
 /// Performance report
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct PerformanceReport {
     pub average_requests_per_second: f64,
     pub average_latency_ms: f64,
     pub current_config: CachingConfig,
     pub sample_count: usize,
+}
+
+impl PerformanceReport {
+    /// Create a performance report from cache statistics.
+    ///
+    /// Used by KV cache eviction receipts to capture performance context
+    /// at the time of eviction.
+    ///
+    /// Note: Phase 2 MVP uses placeholder values for throughput/latency.
+    /// These will be properly tracked in future phases.
+    pub fn from_stats(stats: &super::kv_cache::KVCacheStatistics, cfg: &CachingConfig) -> Self {
+        Self {
+            average_requests_per_second: 0.0, // TODO: derive from hits+misses over time window
+            average_latency_ms: 0.0,          // TODO: add latency tracking to KVCacheStatistics
+            current_config: cfg.clone(),
+            sample_count: (stats.cache_hits + stats.cache_misses) as usize,
+        }
+    }
 }
 
 /// Automatic performance tuner

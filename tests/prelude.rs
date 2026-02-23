@@ -12,6 +12,10 @@
 // we should just use the local common modules
 
 // Re-export from local common modules (tests/ integration tests context)
+pub use crate::common::bdd_grid::{
+    ActiveProfile, active_features, active_profile, canonical_grid, to_grid_environment,
+    to_grid_scenario, validate_active_profile,
+};
 pub use crate::common::errors::{ErrorSeverity, FixtureError, TestError, collect_environment_info};
 pub use crate::common::harness::{FixtureCtx, TestCase, TestHarness};
 pub use crate::common::results::{PassCheck, TestMetrics, TestResult, TestStatus, TestSummary};

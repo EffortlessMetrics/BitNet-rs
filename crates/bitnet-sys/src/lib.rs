@@ -34,11 +34,12 @@ pub mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-#[cfg(feature = "ffi")]
+// wrapper and safe require real C++ symbols — skip in stub mode
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 #[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
 pub mod wrapper;
 
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 #[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
 pub mod safe {
     //! Safe wrappers around the raw FFI bindings
@@ -127,12 +128,14 @@ pub mod safe {
     }
 }
 
-#[cfg(not(feature = "ffi"))]
+// Disabled stubs used when: (a) ffi feature is not enabled, or
+// (b) ffi is enabled but no C++ directory was found (stub mode).
+#[cfg(any(not(feature = "ffi"), bitnet_sys_stub))]
 pub mod disabled {
-    //! Disabled stubs when ffi feature is not enabled
+    //! Stub implementations when ffi is disabled or C++ libraries are unavailable.
     //!
-    //! This module provides stub implementations that return errors
-    //! when the ffi feature is not enabled.
+    //! In stub mode (`BITNET_CPP_DIR` not set with `ffi` feature), all calls
+    //! return errors at runtime while compilation succeeds.
 
     /// Error returned when ffi feature is disabled
     #[derive(Debug, thiserror::Error)]
@@ -178,12 +181,12 @@ pub mod disabled {
 }
 
 // Re-export the appropriate module based on feature
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 pub use safe::{
     ModelHandle, SysError, cleanup, generate, initialize, is_available, load_model, version,
 };
 
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 pub use wrapper::{
     BitnetContext, BitnetModel, Context, CppError, Model, Session, bitnet_eval_tokens,
     bitnet_prefill, bitnet_tokenize_text, cpp_decode_greedy, cpp_vocab_size, free_backend,
@@ -191,11 +194,12 @@ pub use wrapper::{
 };
 
 // Export Result types under different names to avoid conflicts
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 pub use safe::Result as SafeResult;
 
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 pub use wrapper::Result as WrapperResult;
 
-#[cfg(not(feature = "ffi"))]
+// Use disabled stubs when ffi is off or C++ libs are unavailable (stub mode)
+#[cfg(any(not(feature = "ffi"), bitnet_sys_stub))]
 pub use disabled::*;

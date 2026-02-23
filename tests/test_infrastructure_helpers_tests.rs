@@ -50,6 +50,7 @@ use serial_test::serial;
 
 /// AC1: Test ensure_backend_or_skip returns immediately when backend available at build time
 #[test]
+#[ignore = "TDD scaffold: Test ensure_backend_or_skip with build-time backend availability"]
 #[serial(bitnet_env)]
 fn test_ac1_backend_available_build_time_continues() {
     // AC:AC1
@@ -60,6 +61,7 @@ fn test_ac1_backend_available_build_time_continues() {
 
 /// AC1: Test ensure_backend_or_skip warns and continues when backend available at runtime only
 #[test]
+#[ignore = "TDD scaffold: Test runtime-only backend detection with rebuild warning"]
 #[serial(bitnet_env)]
 fn test_ac1_backend_available_runtime_warns_rebuild() {
     // AC:AC1
@@ -70,6 +72,7 @@ fn test_ac1_backend_available_runtime_warns_rebuild() {
 
 /// AC1: Test ensure_backend_or_skip skips deterministically in CI mode
 #[test]
+#[ignore = "TDD scaffold: Test deterministic skip in CI mode (CI=1)"]
 #[serial(bitnet_env)]
 fn test_ac1_ci_mode_skips_immediately() {
     // AC:AC1
@@ -80,6 +83,7 @@ fn test_ac1_ci_mode_skips_immediately() {
 
 /// AC1: Test ensure_backend_or_skip skips with BITNET_TEST_NO_REPAIR flag
 #[test]
+#[ignore = "TDD scaffold: Test explicit no-repair flag prevents auto-repair"]
 #[serial(bitnet_env)]
 fn test_ac1_no_repair_flag_skips_immediately() {
     // AC:AC1
@@ -90,6 +94,7 @@ fn test_ac1_no_repair_flag_skips_immediately() {
 
 /// AC1: Test dev mode attempts auto-repair when backend unavailable
 #[test]
+#[ignore = "TDD scaffold: Test auto-repair attempt in dev mode"]
 #[serial(bitnet_env)]
 fn test_ac1_dev_mode_attempts_auto_repair() {
     // AC:AC1
@@ -100,6 +105,7 @@ fn test_ac1_dev_mode_attempts_auto_repair() {
 
 /// AC1: Test successful auto-repair allows test to continue
 #[test]
+#[ignore = "TDD scaffold: Test successful auto-repair enables test continuation"]
 #[serial(bitnet_env)]
 fn test_ac1_auto_repair_success_continues_test() {
     // AC:AC1
@@ -110,6 +116,7 @@ fn test_ac1_auto_repair_success_continues_test() {
 
 /// AC1: Test failed auto-repair prints diagnostic and skips
 #[test]
+#[ignore = "TDD scaffold: Test auto-repair failure handling with diagnostics"]
 #[serial(bitnet_env)]
 fn test_ac1_auto_repair_failure_skips_with_diagnostic() {
     // AC:AC1
@@ -120,6 +127,7 @@ fn test_ac1_auto_repair_failure_skips_with_diagnostic() {
 
 /// AC1: Test GitHub Actions environment triggers CI mode
 #[test]
+#[ignore = "TDD scaffold: Test GITHUB_ACTIONS environment variable detection"]
 #[serial(bitnet_env)]
 fn test_ac1_github_actions_triggers_ci_mode() {
     // AC:AC1
@@ -134,6 +142,7 @@ fn test_ac1_github_actions_triggers_ci_mode() {
 
 /// AC2: Test is_ci_or_no_repair detects CI environment variable
 #[test]
+#[ignore = "TDD scaffold: Test CI environment variable detection"]
 #[serial(bitnet_env)]
 fn test_ac2_is_ci_or_no_repair_detects_ci() {
     // AC:AC2
@@ -144,6 +153,7 @@ fn test_ac2_is_ci_or_no_repair_detects_ci() {
 
 /// AC2: Test is_ci_or_no_repair detects BITNET_TEST_NO_REPAIR flag
 #[test]
+#[ignore = "TDD scaffold: Test BITNET_TEST_NO_REPAIR flag detection"]
 #[serial(bitnet_env)]
 fn test_ac2_is_ci_or_no_repair_detects_no_repair_flag() {
     // AC:AC2
@@ -154,6 +164,7 @@ fn test_ac2_is_ci_or_no_repair_detects_no_repair_flag() {
 
 /// AC2: Test is_ci_or_no_repair returns false in dev mode
 #[test]
+#[ignore = "TDD scaffold: Test dev mode detection (no CI flags)"]
 #[serial(bitnet_env)]
 fn test_ac2_is_ci_or_no_repair_dev_mode_false() {
     // AC:AC2
@@ -164,6 +175,7 @@ fn test_ac2_is_ci_or_no_repair_dev_mode_false() {
 
 /// AC2: Test auto-repair invokes setup-cpp-auto command
 #[test]
+#[ignore = "TDD scaffold: Test setup-cpp-auto command invocation"]
 #[serial(bitnet_env)]
 fn test_ac2_auto_repair_invokes_setup_cpp_auto() {
     // AC:AC2
@@ -174,6 +186,7 @@ fn test_ac2_auto_repair_invokes_setup_cpp_auto() {
 
 /// AC2: Test auto-repair applies environment exports
 #[test]
+#[ignore = "TDD scaffold: Test environment export application"]
 #[serial(bitnet_env)]
 fn test_ac2_auto_repair_applies_env_exports() {
     // AC:AC2
@@ -184,6 +197,7 @@ fn test_ac2_auto_repair_applies_env_exports() {
 
 /// AC2: Test auto-repair rebuilds xtask after installation
 #[test]
+#[ignore = "TDD scaffold: Test xtask rebuild after backend installation"]
 #[serial(bitnet_env)]
 fn test_ac2_auto_repair_rebuilds_xtask() {
     // AC:AC2
@@ -194,6 +208,7 @@ fn test_ac2_auto_repair_rebuilds_xtask() {
 
 /// AC2: Test auto-repair verifies backend available after rebuild
 #[test]
+#[ignore = "TDD scaffold: Test post-rebuild backend verification"]
 #[serial(bitnet_env)]
 fn test_ac2_auto_repair_verifies_backend_post_rebuild() {
     // AC:AC2
@@ -204,6 +219,7 @@ fn test_ac2_auto_repair_verifies_backend_post_rebuild() {
 
 /// AC2: Test auto-repair retry logic with exponential backoff
 #[test]
+#[ignore = "TDD scaffold: Test retry logic with exponential backoff"]
 #[serial(bitnet_env)]
 fn test_ac2_auto_repair_retry_with_backoff() {
     // AC:AC2
@@ -499,6 +515,7 @@ fn test_ac5_get_loader_path_var_windows() {
 
 /// AC5: Test append_to_loader_path on Windows
 #[test]
+#[ignore = "TDD scaffold: Test append_to_loader_path with semicolon separator (Windows)"]
 #[cfg(target_os = "windows")]
 #[serial(bitnet_env)]
 fn test_ac5_append_to_loader_path_windows() {
@@ -514,6 +531,7 @@ fn test_ac5_append_to_loader_path_windows() {
 
 /// AC6: Test detect_backend_runtime finds backend via BITNET_CPP_DIR
 #[test]
+#[ignore = "TDD scaffold: Test runtime detection via BITNET_CPP_DIR environment variable"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_backend_runtime_via_env_var() {
     // AC:AC6
@@ -524,6 +542,7 @@ fn test_ac6_detect_backend_runtime_via_env_var() {
 
 /// AC6: Test detect_backend_runtime returns false when backend missing
 #[test]
+#[ignore = "TDD scaffold: Test runtime detection when backend unavailable"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_backend_runtime_missing() {
     // AC:AC6
@@ -534,6 +553,7 @@ fn test_ac6_detect_backend_runtime_missing() {
 
 /// AC6: Test detect_backend_runtime checks library file existence
 #[test]
+#[ignore = "TDD scaffold: Test runtime detection verifies library file existence"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_backend_runtime_checks_lib_files() {
     // AC:AC6
@@ -544,6 +564,7 @@ fn test_ac6_detect_backend_runtime_checks_lib_files() {
 
 /// AC6: Test print_rebuild_warning displays correct message
 #[test]
+#[ignore = "TDD scaffold: Test rebuild warning message format"]
 fn test_ac6_print_rebuild_warning_format() {
     // AC:AC6
     // Setup: Capture stderr output
@@ -553,6 +574,7 @@ fn test_ac6_print_rebuild_warning_format() {
 
 /// AC6: Test runtime detection for llama.cpp backend
 #[test]
+#[ignore = "TDD scaffold: Test runtime detection for llama.cpp backend"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_llama_backend_runtime() {
     // AC:AC6
@@ -567,6 +589,7 @@ fn test_ac6_detect_llama_backend_runtime() {
 
 /// AC7: Test recursion guard prevents infinite loop
 #[test]
+#[ignore = "TDD scaffold: Test recursion guard prevents re-entry during repair"]
 #[serial(bitnet_env)]
 fn test_ac7_recursion_guard_prevents_infinite_loop() {
     // AC:AC7
@@ -577,6 +600,7 @@ fn test_ac7_recursion_guard_prevents_infinite_loop() {
 
 /// AC7: Test recursion guard set during auto-repair
 #[test]
+#[ignore = "TDD scaffold: Test recursion guard environment variable set"]
 #[serial(bitnet_env)]
 fn test_ac7_recursion_guard_set_during_repair() {
     // AC:AC7
@@ -587,6 +611,7 @@ fn test_ac7_recursion_guard_set_during_repair() {
 
 /// AC7: Test recursion guard cleanup on success
 #[test]
+#[ignore = "TDD scaffold: Test recursion guard cleanup on successful repair"]
 #[serial(bitnet_env)]
 fn test_ac7_recursion_guard_cleanup_on_success() {
     // AC:AC7
@@ -597,6 +622,7 @@ fn test_ac7_recursion_guard_cleanup_on_success() {
 
 /// AC7: Test recursion guard cleanup on failure
 #[test]
+#[ignore = "TDD scaffold: Test recursion guard cleanup on repair failure"]
 #[serial(bitnet_env)]
 fn test_ac7_recursion_guard_cleanup_on_failure() {
     // AC:AC7
@@ -607,6 +633,7 @@ fn test_ac7_recursion_guard_cleanup_on_failure() {
 
 /// AC7: Test recursion detection error message
 #[test]
+#[ignore = "TDD scaffold: Test recursion error message clarity"]
 fn test_ac7_recursion_error_message() {
     // AC:AC7
     // Setup: Trigger recursion detection
@@ -620,6 +647,7 @@ fn test_ac7_recursion_error_message() {
 
 /// AC8: Test single repair attempt per test execution
 #[test]
+#[ignore = "TDD scaffold: Test single repair attempt enforcement"]
 #[serial(bitnet_env)]
 fn test_ac8_single_repair_attempt() {
     // AC:AC8
@@ -630,6 +658,7 @@ fn test_ac8_single_repair_attempt() {
 
 /// AC8: Test REPAIR_ATTEMPTED flag prevents re-entry
 #[test]
+#[ignore = "TDD scaffold: Test REPAIR_ATTEMPTED atomic flag usage"]
 #[serial(bitnet_env)]
 fn test_ac8_repair_attempted_flag_prevents_reentry() {
     // AC:AC8
@@ -640,6 +669,7 @@ fn test_ac8_repair_attempted_flag_prevents_reentry() {
 
 /// AC8: Test repair attempt flag reset between tests
 #[test]
+#[ignore = "TDD scaffold: Test repair flag isolation between tests"]
 #[serial(bitnet_env)]
 fn test_ac8_repair_flag_reset_between_tests() {
     // AC:AC8
@@ -650,6 +680,7 @@ fn test_ac8_repair_flag_reset_between_tests() {
 
 /// AC8: Test skip message when repair already attempted
 #[test]
+#[ignore = "TDD scaffold: Test skip diagnostic when repair previously attempted"]
 #[serial(bitnet_env)]
 fn test_ac8_skip_message_repair_already_attempted() {
     // AC:AC8
@@ -660,6 +691,7 @@ fn test_ac8_skip_message_repair_already_attempted() {
 
 /// AC8: Test repair attempt counter (max 2 retries)
 #[test]
+#[ignore = "TDD scaffold: Test repair retry limit enforcement"]
 #[serial(bitnet_env)]
 fn test_ac8_repair_retry_limit() {
     // AC:AC8
@@ -674,6 +706,7 @@ fn test_ac8_repair_retry_limit() {
 
 /// AC9: Test print_skip_diagnostic format with BitNet backend
 #[test]
+#[ignore = "TDD scaffold: Test skip diagnostic message format for BitNet backend"]
 fn test_ac9_skip_diagnostic_format_bitnet() {
     // AC:AC9
     // Setup: Capture stderr, call print_skip_diagnostic(CppBackend::BitNet, None)
@@ -683,6 +716,7 @@ fn test_ac9_skip_diagnostic_format_bitnet() {
 
 /// AC9: Test print_skip_diagnostic with error context
 #[test]
+#[ignore = "TDD scaffold: Test skip diagnostic with error context"]
 fn test_ac9_skip_diagnostic_with_error_context() {
     // AC:AC9
     // Setup: Call print_skip_diagnostic with error context
@@ -692,6 +726,7 @@ fn test_ac9_skip_diagnostic_with_error_context() {
 
 /// AC9: Test skip diagnostic includes auto-setup instructions
 #[test]
+#[ignore = "TDD scaffold: Test skip diagnostic includes auto-setup option"]
 fn test_ac9_skip_diagnostic_auto_setup_instructions() {
     // AC:AC9
     // Setup: Call print_skip_diagnostic
@@ -701,6 +736,7 @@ fn test_ac9_skip_diagnostic_auto_setup_instructions() {
 
 /// AC9: Test skip diagnostic includes manual setup instructions
 #[test]
+#[ignore = "TDD scaffold: Test skip diagnostic includes manual setup option"]
 fn test_ac9_skip_diagnostic_manual_setup_instructions() {
     // AC:AC9
     // Setup: Call print_skip_diagnostic
@@ -710,6 +746,7 @@ fn test_ac9_skip_diagnostic_manual_setup_instructions() {
 
 /// AC9: Test skip diagnostic references documentation
 #[test]
+#[ignore = "TDD scaffold: Test skip diagnostic references documentation"]
 fn test_ac9_skip_diagnostic_documentation_reference() {
     // AC:AC9
     // Setup: Call print_skip_diagnostic
@@ -723,6 +760,7 @@ fn test_ac9_skip_diagnostic_documentation_reference() {
 
 /// AC10: Test create_temp_cpp_env sets BITNET_CPP_DIR
 #[test]
+#[ignore = "TDD scaffold: Test create_temp_cpp_env sets directory environment variable"]
 #[serial(bitnet_env)]
 fn test_ac10_temp_cpp_env_sets_dir_var() {
     // AC:AC10
@@ -733,6 +771,7 @@ fn test_ac10_temp_cpp_env_sets_dir_var() {
 
 /// AC10: Test create_temp_cpp_env sets loader path variable
 #[test]
+#[ignore = "TDD scaffold: Test create_temp_cpp_env sets loader path variable"]
 #[serial(bitnet_env)]
 fn test_ac10_temp_cpp_env_sets_loader_path() {
     // AC:AC10
@@ -743,6 +782,7 @@ fn test_ac10_temp_cpp_env_sets_loader_path() {
 
 /// AC10: Test create_temp_cpp_env automatic cleanup
 #[test]
+#[ignore = "TDD scaffold: Test automatic environment restoration via EnvGuard"]
 #[serial(bitnet_env)]
 fn test_ac10_temp_cpp_env_automatic_cleanup() {
     // AC:AC10
@@ -753,6 +793,7 @@ fn test_ac10_temp_cpp_env_automatic_cleanup() {
 
 /// AC10: Test EnvGuard integration with multiple variables
 #[test]
+#[ignore = "TDD scaffold: Test multiple EnvGuard instances for complex setup"]
 #[serial(bitnet_env)]
 fn test_ac10_envguard_multiple_variables() {
     // AC:AC10
@@ -763,6 +804,7 @@ fn test_ac10_envguard_multiple_variables() {
 
 /// AC10: Test EnvGuard original_value() method
 #[test]
+#[ignore = "TDD scaffold: Test EnvGuard original_value() retrieval"]
 #[serial(bitnet_env)]
 fn test_ac10_envguard_original_value() {
     // AC:AC10
@@ -777,6 +819,7 @@ fn test_ac10_envguard_original_value() {
 
 /// AC11: Test serial annotation prevents environment pollution
 #[test]
+#[ignore = "TDD scaffold: Test #[serial(bitnet_env)] prevents test pollution"]
 #[serial(bitnet_env)]
 fn test_ac11_serial_annotation_prevents_pollution() {
     // AC:AC11
@@ -787,6 +830,7 @@ fn test_ac11_serial_annotation_prevents_pollution() {
 
 /// AC11: Test env-mutating tests use serial annotation
 #[test]
+#[ignore = "TDD scaffold: Test coverage: verify serial annotations on env tests"]
 fn test_ac11_env_mutating_tests_have_serial() {
     // AC:AC11
     // Setup: Check this test file's annotations
@@ -796,6 +840,7 @@ fn test_ac11_env_mutating_tests_have_serial() {
 
 /// AC11: Test serial execution prevents concurrent env access
 #[test]
+#[ignore = "TDD scaffold: Test serial execution prevents concurrent environment access"]
 #[serial(bitnet_env)]
 fn test_ac11_serial_prevents_concurrent_access() {
     // AC:AC11
@@ -806,6 +851,7 @@ fn test_ac11_serial_prevents_concurrent_access() {
 
 /// AC11: Test EnvGuard with serial annotation pattern
 #[test]
+#[ignore = "TDD scaffold: Test recommended EnvGuard + serial pattern"]
 #[serial(bitnet_env)]
 fn test_ac11_envguard_with_serial_pattern() {
     // AC:AC11
@@ -816,6 +862,7 @@ fn test_ac11_envguard_with_serial_pattern() {
 
 /// AC11: Test temp_env::with_var scoped approach
 #[test]
+#[ignore = "TDD scaffold: Test temp_env::with_var scoped pattern (preferred)"]
 #[serial(bitnet_env)]
 fn test_ac11_temp_env_scoped_approach() {
     // AC:AC11
@@ -830,6 +877,7 @@ fn test_ac11_temp_env_scoped_approach() {
 
 /// AC12: Test all platform utilities have tests
 #[test]
+#[ignore = "TDD scaffold: Verify test coverage for platform utilities"]
 fn test_ac12_platform_utilities_coverage() {
     // AC:AC12
     // Setup: List all platform utility functions
@@ -839,6 +887,7 @@ fn test_ac12_platform_utilities_coverage() {
 
 /// AC12: Test all backend helpers have tests
 #[test]
+#[ignore = "TDD scaffold: Verify test coverage for backend helpers"]
 fn test_ac12_backend_helpers_coverage() {
     // AC:AC12
     // Setup: List all backend helper functions
@@ -848,6 +897,7 @@ fn test_ac12_backend_helpers_coverage() {
 
 /// AC12: Test error classification coverage
 #[test]
+#[ignore = "TDD scaffold: Verify test coverage for RepairError classification"]
 fn test_ac12_error_classification_coverage() {
     // AC:AC12
     // Setup: List all RepairError variants
@@ -857,6 +907,7 @@ fn test_ac12_error_classification_coverage() {
 
 /// AC12: Test cross-platform coverage matrix
 #[test]
+#[ignore = "TDD scaffold: Verify cross-platform test distribution"]
 fn test_ac12_cross_platform_coverage() {
     // AC:AC12
     // Setup: Count platform-specific tests (Linux/macOS/Windows)
@@ -870,6 +921,7 @@ fn test_ac12_cross_platform_coverage() {
 
 /// Edge Case: Test error classification for network errors
 #[test]
+#[ignore = "TDD scaffold: Test network error classification and retry"]
 fn test_error_classification_network_error() {
     // AC:AC2, AC9
     // Setup: Mock network timeout during setup-cpp-auto
@@ -879,6 +931,7 @@ fn test_error_classification_network_error() {
 
 /// Edge Case: Test error classification for build errors
 #[test]
+#[ignore = "TDD scaffold: Test build error classification"]
 fn test_error_classification_build_error() {
     // AC:AC2, AC9
     // Setup: Mock cmake failure during backend build
@@ -888,6 +941,7 @@ fn test_error_classification_build_error() {
 
 /// Edge Case: Test error classification for missing prerequisites
 #[test]
+#[ignore = "TDD scaffold: Test prerequisite error classification"]
 fn test_error_classification_prerequisite_error() {
     // AC:AC2, AC9
     // Setup: Mock missing cmake prerequisite
@@ -897,6 +951,7 @@ fn test_error_classification_prerequisite_error() {
 
 /// Edge Case: Test append_to_loader_path with empty existing path
 #[test]
+#[ignore = "TDD scaffold: Test append_to_loader_path with empty existing path"]
 #[serial(bitnet_env)]
 fn test_append_to_loader_path_empty_existing() {
     // AC:AC5
@@ -907,6 +962,7 @@ fn test_append_to_loader_path_empty_existing() {
 
 /// Edge Case: Test create_temp_cpp_env for llama backend
 #[test]
+#[ignore = "TDD scaffold: Test create_temp_cpp_env for llama.cpp backend"]
 #[serial(bitnet_env)]
 fn test_create_temp_cpp_env_llama() {
     // AC:AC10
@@ -928,6 +984,7 @@ fn test_full_auto_repair_workflow_e2e() {
 
 /// Integration: Test CI mode workflow end-to-end
 #[test]
+#[ignore = "TDD scaffold: Test CI mode complete workflow (integration)"]
 #[serial(bitnet_env)]
 fn test_ci_mode_workflow_e2e() {
     // AC:AC1
@@ -938,6 +995,7 @@ fn test_ci_mode_workflow_e2e() {
 
 /// Integration: Test mock library discovery workflow
 #[test]
+#[ignore = "TDD scaffold: Test mock library creation and discovery (integration)"]
 #[serial(bitnet_env)]
 fn test_mock_library_discovery_workflow() {
     // AC:AC3, AC6, AC10
@@ -948,6 +1006,7 @@ fn test_mock_library_discovery_workflow() {
 
 /// Platform: Test path separator detection
 #[test]
+#[ignore = "TDD scaffold: Test platform-specific path separator detection"]
 fn test_path_separator_detection() {
     // AC:AC5
     // Setup: Call path_separator()
@@ -957,6 +1016,7 @@ fn test_path_separator_detection() {
 
 /// Platform: Test split_loader_path
 #[test]
+#[ignore = "TDD scaffold: Test split_loader_path utility function"]
 fn test_split_loader_path() {
     // AC:AC5
     // Setup: Split path string into components
@@ -966,6 +1026,7 @@ fn test_split_loader_path() {
 
 /// Platform: Test join_loader_path
 #[test]
+#[ignore = "TDD scaffold: Test join_loader_path utility function"]
 fn test_join_loader_path() {
     // AC:AC5
     // Setup: Join path components into string
@@ -979,6 +1040,7 @@ fn test_join_loader_path() {
 
 /// Meta-test: Verify test count meets target (69+ tests)
 #[test]
+#[ignore = "TDD scaffold: Meta-test: Verify total test count ≥69"]
 fn test_meta_verify_test_count() {
     // AC:AC12
     // This meta-test verifies comprehensive coverage

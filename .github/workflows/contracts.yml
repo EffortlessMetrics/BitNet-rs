@@ -35,7 +35,8 @@ jobs:
           toolchain: "1.89.0"
 
       - name: Install cargo-public-api
-        run: cargo install cargo-public-api
+        # Pin to a version compatible with MSRV 1.89.0
+        run: cargo install cargo-public-api --version "0.43.0" --locked
 
       - name: Compute base and head
         id: revs

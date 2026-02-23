@@ -225,8 +225,11 @@ fn test_no_deprecated_yaml_dependencies() {
             failures.push(format!("Found deprecated serde_yaml 0.9 in {}", toml_path));
         }
 
-        // Verify new serde_yaml_ng pattern exists
-        if !content.contains("package = \"serde_yaml_ng\"") {
+        // Verify new serde_yaml_ng pattern exists (either inline or via workspace inheritance)
+        let has_alias = content.contains("package = \"serde_yaml_ng\"");
+        let uses_workspace =
+            content.lines().any(|l| l.contains("serde_yaml") && l.contains("workspace = true"));
+        if !has_alias && !uses_workspace {
             failures.push(format!("Missing serde_yaml_ng aliasing in {}", toml_path));
         }
     }
@@ -260,13 +263,16 @@ fn test_serde_yaml_ng_migration_complete() {
         let content = std::fs::read_to_string(toml_path)
             .unwrap_or_else(|_| panic!("Failed to read {}", toml_path));
 
-        // AC1: Verify package aliasing exists
-        if !content.contains("package = \"serde_yaml_ng\"") {
+        // AC1: Verify package aliasing exists (inline or via workspace inheritance)
+        let has_inline_alias = content.contains("package = \"serde_yaml_ng\"");
+        let uses_workspace =
+            content.lines().any(|l| l.contains("serde_yaml") && l.contains("workspace = true"));
+        if !has_inline_alias && !uses_workspace {
             failures.push(format!("AC1 FAIL: Missing serde_yaml_ng aliasing in {}", toml_path));
         }
 
-        // AC1: Verify version is 0.10.0+
-        if content.contains("serde_yaml_ng") && !content.contains("0.10.") {
+        // AC1: Verify version is 0.10.0+ (only applies to inline definitions)
+        if content.contains("serde_yaml_ng") && !content.contains("0.10.") && !uses_workspace {
             failures.push(format!("AC1 FAIL: Incorrect serde_yaml_ng version in {}", toml_path));
         }
 
@@ -356,6 +362,7 @@ fn test_cargo_tree_shows_only_serde_yaml_ng() {
 #[test]
 fn test_serde_yaml_ng_version_consistency() {
     let crates_to_check = vec![
+        "/home/steven/code/Rust/BitNet-rs/Cargo.toml", // workspace root defines canonical version
         "/home/steven/code/Rust/BitNet-rs/crates/bitnet-cli/Cargo.toml",
         "/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/Cargo.toml",
         "/home/steven/code/Rust/BitNet-rs/tests/Cargo.toml",
@@ -389,7 +396,13 @@ fn test_serde_yaml_ng_version_consistency() {
         }
     }
 
-    // All versions should be identical (0.10.0)
+    // All versions should be identical (0.10.0). When crates use workspace = true,
+    // their version is inherited from the workspace root which is also checked.
+    if versions.is_empty() {
+        panic!(
+            "FAIL: No explicit serde_yaml_ng version found in workspace (workspace root should define it)"
+        );
+    }
     if versions.len() != 1 {
         panic!("FAIL: Inconsistent serde_yaml_ng versions across workspace: {:?}", versions);
     }
@@ -737,15 +750,43 @@ fn test_workspace_formatting() {
 fn test_workspace_members_complete() {
     let expected_members = vec![
         "crates/bitnet-common",
+        "crates/bitnet-runtime-context",
+        "crates/bitnet-runtime-context-core",
+        "crates/bitnet-bdd-grid",
+        "crates/bitnet-bdd-grid-core",
         "crates/bitnet-compat",
         "crates/bitnet-ggml-ffi",
+        "crates/bitnet-runtime-feature-flags",
+        "crates/bitnet-runtime-feature-flags-core",
         "crates/bitnet-models",
         "crates/bitnet-quantization",
         "crates/bitnet-kernels",
         "crates/bitnet-inference",
         "crates/bitnet-tokenizers",
+        "crates/bitnet-feature-matrix",
+        "crates/bitnet-feature-contract",
+        "crates/bitnet-runtime-profile",
+        "crates/bitnet-runtime-profile-core",
+        "crates/bitnet-runtime-profile-contract",
+        "crates/bitnet-runtime-profile-contract-core",
+        "crates/bitnet-testing-profile",
+        "crates/bitnet-testing-scenarios",
+        "crates/bitnet-testing-scenarios-core",
+        "crates/bitnet-testing-scenarios-profile-core",
+        "crates/bitnet-testing-policy-core",
+        "crates/bitnet-testing-policy",
+        "crates/bitnet-testing-policy-tests",
+        "crates/bitnet-testing-policy-kit",
+        "crates/bitnet-testing-policy-contract",
+        "crates/bitnet-testing-policy-interop",
+        "crates/bitnet-testing-policy-runtime",
         "crates/bitnet-server",
         "crates/bitnet-cli",
+        "crates/bitnet-runtime-bootstrap",
+        "crates/bitnet-startup-contract",
+        "crates/bitnet-startup-contract-core",
+        "crates/bitnet-startup-contract-diagnostics",
+        "crates/bitnet-startup-contract-guard",
         "crates/bitnet-st2gguf",
         "crates/bitnet-st-tools",
         "crates/bitnet-trace",
@@ -756,7 +797,9 @@ fn test_workspace_members_complete() {
         "crossval",
         "tests",
         "xtask",
+        "xtask-build-helper",
         "fuzz",
+        "tools/migrate-gen-config",
     ];
 
     let root_toml = std::fs::read_to_string("/home/steven/code/Rust/BitNet-rs/Cargo.toml")

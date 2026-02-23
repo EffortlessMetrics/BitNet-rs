@@ -83,6 +83,11 @@ jobs:
             -p bitnet-quantization \
             -p bitnet-kernels \
             --no-default-features --features cpu
+          # SRP microcrates (no feature flags required)
+          cargo build --locked \
+            -p bitnet-prompt-templates \
+            -p bitnet-receipts \
+            -p bitnet-sampling
 
       - name: Run unit tests (libs only, CPU features)
         run: |
@@ -96,6 +101,11 @@ jobs:
             --lib \
             --no-default-features --features cpu \
             -- --nocapture
+          # SRP microcrates (unit tests + integration tests)
+          cargo test --locked \
+            -p bitnet-prompt-templates \
+            -p bitnet-receipts \
+            -p bitnet-sampling
 
   # Job 2: Clippy linting
   clippy:
@@ -131,6 +141,11 @@ jobs:
             -p bitnet-kernels \
             --lib \
             --no-default-features --features cpu
+          # SRP microcrates
+          cargo clippy --locked \
+            -p bitnet-prompt-templates \
+            -p bitnet-receipts \
+            -p bitnet-sampling
 
   # Job 4: Documentation build
   docs:

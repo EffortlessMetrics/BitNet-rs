@@ -220,3 +220,4 @@ clippy_report.txt
 
 # Benchmark outputs
 benchmarks-new/
+tests/tests/cache/
