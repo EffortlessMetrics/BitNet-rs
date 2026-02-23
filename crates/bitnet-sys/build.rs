@@ -35,14 +35,12 @@ fn main() {
             .filter(|s| !s.is_empty())
             .or_else(|| env::var("BITNET_CPP_PATH").ok().filter(|s| !s.is_empty()));
 
-        let cpp_dir = explicit_dir
-            .map(PathBuf::from)
-            .or_else(|| {
-                env::var("HOME")
-                    .ok()
-                    .map(|h| PathBuf::from(format!("{}/.cache/bitnet_cpp", h)))
-                    .filter(|d| d.exists())
-            });
+        let cpp_dir = explicit_dir.map(PathBuf::from).or_else(|| {
+            env::var("HOME")
+                .ok()
+                .map(|h| PathBuf::from(format!("{}/.cache/bitnet_cpp", h)))
+                .filter(|d| d.exists())
+        });
 
         // If no C++ directory is available, enter stub mode: compile succeeds but
         // runtime calls will return errors. Emit cfg flag so lib.rs can gate real
