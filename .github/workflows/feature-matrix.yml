@@ -41,6 +41,7 @@ jobs:
             allow_failure: true
           - label: "cpu+ffi (stub)"
             flags: "--no-default-features --features cpu,ffi"
+            allow_failure: true  # requires C++ bitnet_sys library built
             env:
               BITNET_CPP_DIR: ""
           - label: "cpu+fixtures"
