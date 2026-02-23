@@ -277,6 +277,7 @@ async-trait = "0.1.89"
 futures-util = "0.3.31"
 tokio = { version = "1.48.0", features = ["full"] }
 bitnet-testing-policy-tests = { path = "../crates/bitnet-testing-policy-tests", version = "0.1.0" }
+bitnet-test-support = { workspace = true }
 
 # System information
 num_cpus = "1.17.0"

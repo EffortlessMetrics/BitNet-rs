@@ -50,6 +50,7 @@ members = [
   "crates/bitnet-startup-contract-core",
   "crates/bitnet-startup-contract-diagnostics",
   "crates/bitnet-startup-contract-guard",
+  "crates/bitnet-test-support",
   "crossval",
   "tests",
   "xtask",
@@ -64,6 +65,7 @@ default-members = [
   "crates/bitnet-common",
   "crates/bitnet-quantization",
   "crates/bitnet-transformer",
+  "crates/bitnet-test-support",
   "crates/bitnet-models",
   "crates/bitnet-tokenizers",
   "crates/bitnet-kernels",
@@ -329,6 +331,7 @@ tempfile = "3.23.0"
 serial_test = "3.2.0"
 temp-env = "0.3.6"
 rand = "0.9.2"
+bitnet-test-support = { path = "crates/bitnet-test-support" }
 
 # HTTP client for examples
 reqwest = { version = "0.12.24", features = ["json"] }

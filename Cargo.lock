@@ -465,6 +465,7 @@ name = "bitnet-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitnet-test-support",
  "bytemuck",
  "candle-core",
  "criterion",
@@ -602,6 +603,7 @@ dependencies = [
  "bitnet-receipts",
  "bitnet-sampling",
  "bitnet-sys",
+ "bitnet-test-support",
  "bitnet-tokenizers",
  "candle-core",
  "candle-nn",
@@ -636,6 +638,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
+ "bitnet-test-support",
  "bitnet-tests",
  "bytemuck",
  "cc",
@@ -666,6 +669,7 @@ dependencies = [
  "bitnet-ggml-ffi",
  "bitnet-quantization",
  "bitnet-st2gguf",
+ "bitnet-test-support",
  "bitnet-trace",
  "bitnet-transformer",
  "bytemuck",
@@ -978,6 +982,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-test-support"
+version = "0.1.0"
+dependencies = [
+ "serial_test",
+]
+
+[[package]]
 name = "bitnet-testing-policy"
 version = "0.1.0"
 dependencies = [
@@ -1077,6 +1088,7 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-test-support",
  "bitnet-testing-policy-tests",
  "bitnet-tokenizers",
  "byteorder",
@@ -1124,6 +1136,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-test-support",
  "bitnet-tests",
  "dirs",
  "futures-util",

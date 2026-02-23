@@ -7,10 +7,7 @@ use std::io::Write;
 use tempfile::NamedTempFile;
 
 // Use shared EnvGuard from workspace test support
-mod env_guard {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/support/env_guard.rs"));
-}
-use env_guard::EnvGuard;
+use bitnet_test_support::env_guard::EnvGuard;
 
 /// Helper to build valid GGUF bytes for testing
 fn build_gguf_bytes(metadata: Vec<(&str, GgufValue)>) -> Vec<u8> {

@@ -1,4 +1,2 @@
-//! Safe environment variable management for tests
-//!
-//! Re-exports the shared EnvGuard from workspace test support.
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/support/env_guard.rs"));
+//! Environment variable guard re-exports for bitnet-inference tests.
+pub use bitnet_test_support::env_guard::{EnvGuard, EnvScope};
