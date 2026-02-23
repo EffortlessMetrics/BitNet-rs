@@ -8,12 +8,8 @@
 use serial_test::serial;
 use std::path::PathBuf;
 
-// Shared RAII guard for env vars (already in the repo)
-mod env_guard {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../tests/support/env_guard.rs"));
-}
 use bitnet_common::CorrectionRecord;
-use env_guard::EnvGuard;
+use bitnet_test_support::env_guard::EnvGuard;
 
 /// Helper to find workspace root by walking up to .git directory
 fn workspace_root() -> PathBuf {
