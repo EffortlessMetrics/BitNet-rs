@@ -240,7 +240,7 @@ impl DeviceMonitor {
         match device {
             Device::Cpu => system.free_memory() / (1024 * 1024), // Convert to MB
             Device::Cuda(device_id) => {
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
+                #[cfg(feature = "cuda")]
                 {
                     use cudarc::driver::{
                         CudaContext,
@@ -275,7 +275,7 @@ impl DeviceMonitor {
                         }
                     }
                 }
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+                #[cfg(not(feature = "cuda"))]
                 {
                     let _ = device_id;
                     0
