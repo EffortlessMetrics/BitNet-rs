@@ -8286,6 +8286,7 @@ dependencies = [
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-sys",
+ "bitnet-test-support",
  "bitnet-tokenizers",
  "chrono",
  "clap",
