@@ -19,3 +19,4 @@ path = "src/lib.rs"
 bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.1.0" }
 
 [dev-dependencies]
+bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.1.0" }
