@@ -28,7 +28,7 @@ fn activation_from_cfg() -> FeatureActivation {
     FeatureActivation {
         cpu: cfg!(feature = "cpu"),
         gpu: cfg!(feature = "gpu"),
-        cuda: cfg!(any(feature = "gpu", feature = "cuda")),
+        cuda: cfg!(feature = "cuda"),
         inference: cfg!(feature = "inference"),
         kernels: cfg!(feature = "kernels"),
         tokenizers: cfg!(feature = "tokenizers"),
