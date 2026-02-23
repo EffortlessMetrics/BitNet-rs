@@ -759,6 +759,7 @@ fn test_workspace_members_complete() {
         "crates/bitnet-testing-profile",
         "crates/bitnet-testing-scenarios",
         "crates/bitnet-testing-scenarios-core",
+        "crates/bitnet-testing-scenarios-profile-core",
         "crates/bitnet-testing-policy-core",
         "crates/bitnet-testing-policy",
         "crates/bitnet-testing-policy-tests",

@@ -36,6 +36,7 @@ members = [
   "crates/bitnet-testing-scenarios",
   "crates/bitnet-testing-policy-core",
   "crates/bitnet-testing-scenarios-core",
+  "crates/bitnet-testing-scenarios-profile-core",
   "crates/bitnet-testing-policy", 
   "crates/bitnet-testing-policy-tests", 
   "crates/bitnet-testing-policy-kit",

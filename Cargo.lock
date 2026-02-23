@@ -1004,6 +1004,14 @@ dependencies = [
 name = "bitnet-testing-scenarios-core"
 version = "0.1.0"
 dependencies = [
+ "bitnet-testing-scenarios-profile-core",
+ "num_cpus",
+]
+
+[[package]]
+name = "bitnet-testing-scenarios-profile-core"
+version = "0.1.0"
+dependencies = [
  "bitnet-testing-profile",
  "num_cpus",
 ]
