@@ -606,6 +606,7 @@ dependencies = [
  "bitnet-prompt-templates",
  "bitnet-quantization",
  "bitnet-receipts",
+ "bitnet-rope",
  "bitnet-sampling",
  "bitnet-sys",
  "bitnet-test-support",
@@ -776,6 +777,10 @@ dependencies = [
  "serde_json",
  "tempfile",
 ]
+
+[[package]]
+name = "bitnet-rope"
+version = "0.1.0"
 
 [[package]]
 name = "bitnet-runtime-bootstrap"
@@ -1180,6 +1185,7 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-quantization",
+ "bitnet-rope",
  "candle-core",
  "candle-nn",
  "serial_test",

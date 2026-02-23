@@ -1,0 +1,22 @@
+[package]
+name = "bitnet-rope"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Shared rotary-position-embedding (RoPE) cache table generation for BitNet"
+include = [
+  "src/**",
+  "Cargo.toml",
+  "README.md",
+]
+
+[dependencies]
+
+[features]
+default = []

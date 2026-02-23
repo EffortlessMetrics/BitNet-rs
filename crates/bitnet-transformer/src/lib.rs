@@ -1,4 +1,5 @@
 use bitnet_common::{BitNetConfig, BitNetError, Result};
+use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
 
@@ -101,26 +102,13 @@ impl RotaryEmbedding {
         rope_theta: Option<f32>,
         device: &Device,
     ) -> Result<Self> {
-        let theta = rope_theta.unwrap_or(10000.0);
-        let freqs = (0..dim)
-            .step_by(2)
-            .map(|i| 1.0 / theta.powf(i as f32 / dim as f32))
-            .collect::<Vec<_>>();
+        let theta = resolve_rope_base(rope_theta);
+        let tables = build_rope_tables(dim, max_seq_len, theta)
+            .map_err(|err| BitNetError::Validation(format!("invalid RoPE configuration: {err}")))?;
+        let bitnet_rope::RopeTables { half_dim, sin, cos } = tables;
 
-        let positions = (0..max_seq_len).map(|i| i as f32).collect::<Vec<_>>();
-        let mut sin_vals = Vec::with_capacity(max_seq_len * dim / 2);
-        let mut cos_vals = Vec::with_capacity(max_seq_len * dim / 2);
-
-        for pos in &positions {
-            for &freq in &freqs {
-                let angle = pos * freq;
-                sin_vals.push(angle.sin());
-                cos_vals.push(angle.cos());
-            }
-        }
-
-        let sin = Tensor::from_vec(sin_vals, &[max_seq_len, dim / 2], device)?;
-        let cos = Tensor::from_vec(cos_vals, &[max_seq_len, dim / 2], device)?;
+        let sin = Tensor::from_vec(sin, &[max_seq_len, half_dim], device)?;
+        let cos = Tensor::from_vec(cos, &[max_seq_len, half_dim], device)?;
 
         // Log ROPE initialization parameters
         tracing::info!(
