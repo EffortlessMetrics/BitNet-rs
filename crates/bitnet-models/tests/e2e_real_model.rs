@@ -64,7 +64,11 @@ mod tests {
         let cfg = &loaded.config;
         // A real model will have non-default vocab_size and hidden_size
         assert!(cfg.model.vocab_size > 0, "vocab_size must be > 0, got {}", cfg.model.vocab_size);
-        assert!(cfg.model.hidden_size > 0, "hidden_size must be > 0, got {}", cfg.model.hidden_size);
+        assert!(
+            cfg.model.hidden_size > 0,
+            "hidden_size must be > 0, got {}",
+            cfg.model.hidden_size
+        );
         assert!(cfg.model.num_layers > 0, "num_layers must be > 0");
         println!(
             "e2e_config_populated PASS — vocab={} hidden={} layers={}",
@@ -95,7 +99,8 @@ mod tests {
             .iter()
             .take(8)
             .map(|(name, tensor)| {
-                let flat: Vec<f32> = tensor.flatten_all().and_then(|t| t.to_vec1()).unwrap_or_default();
+                let flat: Vec<f32> =
+                    tensor.flatten_all().and_then(|t| t.to_vec1()).unwrap_or_default();
                 let any_finite = flat.iter().any(|v| v.is_finite());
                 (name.clone(), flat.len(), any_finite)
             })
