@@ -47,12 +47,7 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self {
-            config,
-            rng,
-            token_counts: HashMap::new(),
-            cached_context: Vec::new(),
-        }
+        Self { config, rng, token_counts: HashMap::new(), cached_context: Vec::new() }
     }
 
     /// Sample the next token from logits
@@ -92,11 +87,7 @@ impl SamplingStrategy {
     }
 
     /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(
-        &mut self,
-        logits: &[f32],
-        context_tokens: &[u32],
-    ) -> Vec<f32> {
+    fn apply_repetition_penalty(&mut self, logits: &[f32], context_tokens: &[u32]) -> Vec<f32> {
         if self.config.repetition_penalty == 1.0 {
             return logits.to_vec();
         }
@@ -128,8 +119,7 @@ impl SamplingStrategy {
         }
 
         // Add new tokens to counts
-        for i in common_len..context_tokens.len() {
-            let token = context_tokens[i];
+        for &token in context_tokens.iter().skip(common_len) {
             *self.token_counts.entry(token).or_insert(0) += 1;
             self.cached_context.push(token);
         }
