@@ -147,7 +147,7 @@ struct BitnetContext {
 ///
 /// **Spec Reference**: Section 6.1 - Unit Tests: Position Tracking
 #[test]
-#[ignore] // TODO: Enable when bitnet_cpp_init_context() FFI implemented
+#[ignore = "TODO: Enable when bitnet_cpp_init_context() FFI implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_init_zero() -> Result<()> {
@@ -172,7 +172,7 @@ fn test_position_init_zero() -> Result<()> {
 ///
 /// **Spec Reference**: Section 5.3 - Position Initialization (Prompt)
 #[test]
-#[ignore] // TODO: Enable when bitnet_cpp_eval_with_context() FFI implemented
+#[ignore = "TODO: Enable when bitnet_cpp_eval_with_context() FFI implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_increment_after_eval() -> Result<()> {
@@ -212,7 +212,7 @@ fn test_position_increment_after_eval() -> Result<()> {
 ///
 /// **Spec Reference**: Section 5.6 - Position Overflow Handling
 #[test]
-#[ignore] // TODO: Enable when position validation implemented
+#[ignore = "TODO: Enable when position validation implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_validation_bounds() -> Result<()> {
@@ -260,7 +260,7 @@ fn test_position_validation_bounds() -> Result<()> {
 ///
 /// **Spec Reference**: Section 5.5 - Position Reset (New Conversation)
 #[test]
-#[ignore] // TODO: Enable when bitnet_cpp_reset_context() FFI implemented
+#[ignore = "TODO: Enable when bitnet_cpp_reset_context() FFI implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_reset_clears_cache() -> Result<()> {
@@ -302,7 +302,7 @@ fn test_position_reset_clears_cache() -> Result<()> {
 ///
 /// **Spec Reference**: Section 3.1 - Context Initialization (Socket 1)
 #[test]
-#[ignore] // TODO: Enable when Socket 1 FFI implemented
+#[ignore = "TODO: Enable when Socket 1 FFI implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_context_init_sets_position() -> Result<()> {
@@ -333,7 +333,7 @@ fn test_context_init_sets_position() -> Result<()> {
 ///
 /// **Spec Reference**: Section 3.2 - Evaluation with Position Tracking (Socket 3)
 #[test]
-#[ignore] // TODO: Enable when Socket 3 signature updated to non-const
+#[ignore = "TODO: Enable when Socket 3 signature updated to non-const"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_eval_updates_position_state() -> Result<()> {
@@ -364,7 +364,7 @@ fn test_eval_updates_position_state() -> Result<()> {
 ///
 /// **Spec Reference**: Section 3.3 - Context Reset (Socket 1 Extension)
 #[test]
-#[ignore] // TODO: Enable when reset API implemented
+#[ignore = "TODO: Enable when reset API implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_reset_api_signature() -> Result<()> {
@@ -395,7 +395,7 @@ fn test_reset_api_signature() -> Result<()> {
 ///
 /// **Spec Reference**: Section 2.5 - Position Validation and Overflow Handling
 #[test]
-#[ignore] // TODO: Enable when overflow validation implemented
+#[ignore = "TODO: Enable when overflow validation implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_overflow_error() -> Result<()> {
@@ -441,7 +441,7 @@ fn test_position_overflow_error() -> Result<()> {
 ///
 /// **Spec Reference**: Section 6.2 - Integration Tests: Multi-Turn Evaluation
 #[test]
-#[ignore] // TODO: Enable when multi-turn support implemented
+#[ignore = "TODO: Enable when multi-turn support implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_multi_turn_conversation() -> Result<()> {
@@ -492,7 +492,7 @@ fn test_multi_turn_conversation() -> Result<()> {
 ///
 /// **Spec Reference**: Section 5.4 - Position Increment (Autoregressive)
 #[test]
-#[ignore] // TODO: Enable when autoregressive generation implemented
+#[ignore = "TODO: Enable when autoregressive generation implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_autoregressive_generation() -> Result<()> {
@@ -532,7 +532,7 @@ fn test_autoregressive_generation() -> Result<()> {
 ///
 /// **Spec Reference**: Section 2.4 - Position Tracking Across Evaluation Phases
 #[test]
-#[ignore] // TODO: Enable when prefill/decode phases implemented
+#[ignore = "TODO: Enable when prefill/decode phases implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_prefill_and_decode() -> Result<()> {
@@ -569,7 +569,7 @@ fn test_prefill_and_decode() -> Result<()> {
 ///
 /// **Spec Reference**: Section 1.3 - Need for Position Tracking
 #[test]
-#[ignore] // TODO: Enable when end-to-end workflow implemented
+#[ignore = "TODO: Enable when end-to-end workflow implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_tracking_e2e() -> Result<()> {
@@ -615,7 +615,7 @@ fn test_position_tracking_e2e() -> Result<()> {
 ///
 /// **Spec Reference**: Section 6.3 - Parity Tests: Rust vs C++
 #[test]
-#[ignore] // TODO: Enable when Rust implementation available for comparison
+#[ignore = "TODO: Enable when Rust implementation available for comparison"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_rust_cpp_position_parity_single_turn() -> Result<()> {
@@ -651,7 +651,7 @@ fn test_rust_cpp_position_parity_single_turn() -> Result<()> {
 ///
 /// **Spec Reference**: Section 6.3 - Parity Tests: Multi-Turn
 #[test]
-#[ignore] // TODO: Enable when multi-turn parity validated
+#[ignore = "TODO: Enable when multi-turn parity validated"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_rust_cpp_position_parity_multi_turn() -> Result<()> {
@@ -691,7 +691,7 @@ fn test_rust_cpp_position_parity_multi_turn() -> Result<()> {
 ///
 /// **Spec Reference**: Section 8.3 - Parity Requirements
 #[test]
-#[ignore] // TODO: Enable when cosine similarity validation implemented
+#[ignore = "TODO: Enable when cosine similarity validation implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_rust_cpp_logits_parity_with_position() -> Result<()> {
@@ -735,7 +735,7 @@ fn test_rust_cpp_logits_parity_with_position() -> Result<()> {
 ///
 /// **Spec Reference**: Section 7.1 - Socket 0 vs Socket 1 Overhead Analysis
 #[test]
-#[ignore] // TODO: Enable when Socket 0 and Socket 1 both implemented
+#[ignore = "TODO: Enable when Socket 0 and Socket 1 both implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn bench_socket0_vs_socket1_overhead() -> Result<()> {
@@ -786,7 +786,7 @@ fn bench_socket0_vs_socket1_overhead() -> Result<()> {
 ///
 /// **Spec Reference**: Section 7.2 - Context Persistence Benefits
 #[test]
-#[ignore] // TODO: Enable when KV cache performance benchmarking implemented
+#[ignore = "TODO: Enable when KV cache performance benchmarking implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn bench_multi_turn_kv_cache_benefit() -> Result<()> {
@@ -854,7 +854,7 @@ fn bench_multi_turn_kv_cache_benefit() -> Result<()> {
 ///
 /// **Spec Reference**: Appendix B - Position Tracking Invariants
 #[test]
-#[ignore] // TODO: Enable when boundary validation implemented
+#[ignore = "TODO: Enable when boundary validation implemented"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_boundary_exact() -> Result<()> {
@@ -880,7 +880,7 @@ fn test_position_boundary_exact() -> Result<()> {
 ///
 /// **Spec Reference**: Section 10.2 - Position Tracking Bugs
 #[test]
-#[ignore] // TODO: Enable when reset idempotency validated
+#[ignore = "TODO: Enable when reset idempotency validated"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_reset_idempotency() -> Result<()> {
@@ -915,7 +915,7 @@ fn test_reset_idempotency() -> Result<()> {
 ///
 /// **Spec Reference**: Appendix B - Invariant 2
 #[test]
-#[ignore] // TODO: Enable when error handling validated
+#[ignore = "TODO: Enable when error handling validated"]
 #[cfg(feature = "crossval")]
 #[serial(bitnet_env)]
 fn test_position_unchanged_on_failure() -> Result<()> {

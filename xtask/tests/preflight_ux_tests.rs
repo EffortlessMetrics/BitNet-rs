@@ -345,7 +345,7 @@ mod preflight_ux_integration_tests {
     /// - Platform-Specific Configuration
     /// - Summary section
     #[test]
-    #[ignore] // TODO: Requires C++ libraries installed for success path testing
+    #[ignore = "TODO: Requires C++ libraries installed for success path testing"]
     fn test_success_output_validation() {
         // Run with verbose flag to get full diagnostics
         let (stdout, _stderr, exit_code) = run_preflight_command("bitnet", true);
@@ -392,7 +392,7 @@ mod preflight_ux_integration_tests {
     /// - RECOVERY STEPS with unified setup command (no --bitnet flag)
     /// - TROUBLESHOOTING section
     #[test]
-    #[ignore] // TODO: Requires environment without C++ libraries (or mock failure)
+    #[ignore = "TODO: Requires environment without C++ libraries (or mock failure)"]
     fn test_failure_output_validation() {
         // Note: This test requires running in environment without C++ libraries
         // or using BITNET_CPP_DIR="" to simulate missing libraries
@@ -452,7 +452,7 @@ mod preflight_ux_integration_tests {
     /// **Expected behavior**: Verbose output includes search paths with existence status,
     /// found libraries enumerated, platform-specific loader variables.
     #[test]
-    #[ignore] // TODO: Requires implementation of verbose diagnostics enhancements
+    #[ignore = "TODO: Requires implementation of verbose diagnostics enhancements"]
     fn test_verbose_mode_section_completeness() {
         let (stdout_verbose, _, _) = run_preflight_command("bitnet", true);
         let (stdout_normal, _, _) = run_preflight_command("bitnet", false);
@@ -496,7 +496,7 @@ mod preflight_ux_integration_tests {
     /// **Expected behavior**: Paths appear numbered 1-7 in priority order with build/bin
     /// at position 3 (after build/, before build/lib/).
     #[test]
-    #[ignore] // TODO: Requires implementation of search path display enhancement
+    #[ignore = "TODO: Requires implementation of search path display enhancement"]
     fn test_search_path_priority_display_order() {
         let (stdout, _, _) = run_preflight_command("llama", true);
 
@@ -536,7 +536,7 @@ mod preflight_ux_integration_tests {
     /// - macOS: Shows DYLD_LIBRARY_PATH
     /// - Windows: Shows PATH
     #[test]
-    #[ignore] // TODO: Platform-specific test requiring conditional compilation
+    #[ignore = "TODO: Platform-specific test requiring conditional compilation"]
     fn test_platform_specific_loader_variables() {
         let (stdout, _, _) = run_preflight_command("bitnet", true);
 
@@ -581,7 +581,7 @@ mod preflight_ux_integration_tests {
     /// **Expected behavior**: Old command syntax with --bitnet flag should still work
     /// (backward compatibility).
     #[test]
-    #[ignore] // TODO: Requires setup-cpp-auto command implementation
+    #[ignore = "TODO: Requires setup-cpp-auto command implementation"]
     fn test_backward_compatibility_bitnet_flag() {
         // Test that old command with --bitnet flag still works
         let mut cmd = Command::new("cargo");
@@ -612,7 +612,7 @@ mod preflight_ux_integration_tests {
     /// **Expected behavior**: Section headers, separator lengths, and structure should be
     /// identical across Linux/macOS/Windows (only loader variable names differ).
     #[test]
-    #[ignore] // TODO: Requires cross-platform testing infrastructure
+    #[ignore = "TODO: Requires cross-platform testing infrastructure"]
     fn test_cross_platform_output_format_consistency() {
         let (stdout, _, _) = run_preflight_command("llama", true);
 

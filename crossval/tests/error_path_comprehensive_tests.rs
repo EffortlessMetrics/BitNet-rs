@@ -45,7 +45,7 @@ fn get_test_model_path() -> &'static str {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns LibraryNotFound("libbitnet.so")
 #[test]
-#[ignore] // P3: Nice-to-have - implement BitNet library not found error
+#[ignore = "P3: Nice-to-have - implement BitNet library not found error"]
 fn test_bitnet_lib_not_found() {
     // TODO: Implement test for missing BitNet library
     // This test validates error when libbitnet.so is not found
@@ -75,7 +75,7 @@ fn test_bitnet_lib_not_found() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns LibraryNotFound("libllama.so")
 #[test]
-#[ignore] // P3: Nice-to-have - implement llama.cpp library not found error
+#[ignore = "P3: Nice-to-have - implement llama.cpp library not found error"]
 fn test_llama_lib_not_found() {
     // TODO: Implement test for missing llama.cpp library
     // This test validates error when libllama.so is not found
@@ -106,7 +106,7 @@ fn test_llama_lib_not_found() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns CppNotAvailable (no fallback available)
 #[test]
-#[ignore] // P3: Nice-to-have - implement both libraries not found error
+#[ignore = "P3: Nice-to-have - implement both libraries not found error"]
 fn test_both_libs_not_found() {
     // TODO: Implement test for missing both libraries
     // This test validates error when neither BitNet nor llama.cpp available
@@ -136,7 +136,7 @@ fn test_both_libs_not_found() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns SymbolNotFound with version guidance
 #[test]
-#[ignore] // P3: Nice-to-have - implement missing required symbol error
+#[ignore = "P3: Nice-to-have - implement missing required symbol error"]
 fn test_missing_required_symbol() {
     // TODO: Implement test for missing required symbol
     // This test validates error when required symbol not found
@@ -169,7 +169,7 @@ fn test_missing_required_symbol() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Succeeds with fallback, logs warning
 #[test]
-#[ignore] // P3: Nice-to-have - implement missing optional symbol fallback
+#[ignore = "P3: Nice-to-have - implement missing optional symbol fallback"]
 fn test_missing_optional_symbol_fallback() {
     // TODO: Implement test for missing optional symbol fallback
     // This test validates graceful fallback when optional symbol missing
@@ -201,7 +201,7 @@ fn test_missing_optional_symbol_fallback() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns SymbolNotFound with rebuild guidance
 #[test]
-#[ignore] // P3: Nice-to-have - implement version mismatch symbol error
+#[ignore = "P3: Nice-to-have - implement version mismatch symbol error"]
 fn test_version_mismatch_symbol() {
     // TODO: Implement test for version mismatch symbol
     // This test validates error when symbol signature changed (version mismatch)
@@ -238,7 +238,7 @@ fn test_version_mismatch_symbol() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns ModelLoadError with format validation guidance
 #[test]
-#[ignore] // P3: Nice-to-have - implement invalid GGUF format error
+#[ignore = "P3: Nice-to-have - implement invalid GGUF format error"]
 fn test_invalid_gguf_format() {
     // TODO: Implement test for invalid GGUF format
     // This test validates error when GGUF magic header is wrong
@@ -271,7 +271,7 @@ fn test_invalid_gguf_format() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns ModelLoadError with checksum/integrity guidance
 #[test]
-#[ignore] // P3: Nice-to-have - implement corrupted model file error
+#[ignore = "P3: Nice-to-have - implement corrupted model file error"]
 fn test_corrupted_model_file() {
     // TODO: Implement test for corrupted model file
     // This test validates error when model file is corrupted mid-file
@@ -304,7 +304,7 @@ fn test_corrupted_model_file() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns ModelLoadError with supported formats list
 #[test]
-#[ignore] // P3: Nice-to-have - implement unsupported quantization error
+#[ignore = "P3: Nice-to-have - implement unsupported quantization error"]
 fn test_unsupported_quantization() {
     // TODO: Implement test for unsupported quantization format
     // This test validates error when quantization type not supported
@@ -342,7 +342,7 @@ fn test_unsupported_quantization() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns ContextOverflow with context size guidance
 #[test]
-#[ignore] // P3: Nice-to-have - implement context size exceeded error
+#[ignore = "P3: Nice-to-have - implement context size exceeded error"]
 fn test_context_size_exceeded() {
     // TODO: Implement test for context size exceeded
     // This test validates error when token count exceeds context size
@@ -374,7 +374,7 @@ fn test_context_size_exceeded() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns OutOfMemory with memory reduction guidance
 #[test]
-#[ignore] // P3: Nice-to-have - implement OOM during inference error
+#[ignore = "P3: Nice-to-have - implement OOM during inference error"]
 fn test_oom_during_inference() {
     // TODO: Implement test for OOM during inference
     // This test validates error when C++ malloc fails during evaluation
@@ -409,7 +409,7 @@ fn test_oom_during_inference() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns InferenceError with NaN/Inf detection
 #[test]
-#[ignore] // P3: Nice-to-have - implement numerical instability error
+#[ignore = "P3: Nice-to-have - implement numerical instability error"]
 fn test_numerical_instability() {
     // TODO: Implement test for numerical instability
     // This test validates error when logits contain NaN or Inf
@@ -446,7 +446,7 @@ fn test_numerical_instability() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Returns InferenceError with buffer size guidance
 #[test]
-#[ignore] // P3: Nice-to-have - implement buffer too small error
+#[ignore = "P3: Nice-to-have - implement buffer too small error"]
 fn test_buffer_too_small() {
     // TODO: Implement test for buffer too small
     // This test validates error when output buffer is insufficient
@@ -479,7 +479,7 @@ fn test_buffer_too_small() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Safe truncation or error, no undefined behavior
 #[test]
-#[ignore] // P3: Nice-to-have - implement buffer overflow prevention
+#[ignore = "P3: Nice-to-have - implement buffer overflow prevention"]
 fn test_buffer_overflow_prevention() {
     // TODO: Implement test for buffer overflow prevention
     // This test validates that buffer overflow doesn't occur
@@ -525,7 +525,7 @@ fn test_buffer_overflow_prevention() {
 /// **Expected:** No context leak when model load fails
 #[test]
 #[cfg(debug_assertions)]
-#[ignore] // P3: Nice-to-have - implement cleanup on model load failure
+#[ignore = "P3: Nice-to-have - implement cleanup on model load failure"]
 fn test_model_cleanup_on_load_failure() {
     // TODO: Implement test for cleanup on model load failure
     // This test validates RAII cleanup when model loading fails
@@ -553,7 +553,7 @@ fn test_model_cleanup_on_load_failure() {
 /// **Expected:** No resource leak when context init fails
 #[test]
 #[cfg(debug_assertions)]
-#[ignore] // P3: Nice-to-have - implement cleanup on context init failure
+#[ignore = "P3: Nice-to-have - implement cleanup on context init failure"]
 fn test_context_cleanup_on_init_failure() {
     // TODO: Implement test for cleanup on context init failure
     // This test validates cleanup when C++ context initialization fails
@@ -584,7 +584,7 @@ fn test_context_cleanup_on_init_failure() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** No leaks detected across 100+ error scenarios
 #[test]
-#[ignore] // P3: Nice-to-have - implement resource leak detection
+#[ignore = "P3: Nice-to-have - implement resource leak detection"]
 fn test_resource_leak_detection() {
     // TODO: Implement resource leak detection test
     // This test validates no memory leaks across diverse error scenarios
@@ -661,7 +661,7 @@ fn test_resource_leak_detection() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Error messages follow template: What, Why, How, Where
 #[test]
-#[ignore] // P3: Nice-to-have - implement actionable error message validation
+#[ignore = "P3: Nice-to-have - implement actionable error message validation"]
 fn test_actionable_error_messages() {
     // TODO: Implement actionable error message validation
     // This test validates error message quality across all scenarios
@@ -708,7 +708,7 @@ fn test_actionable_error_messages() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Consistent format and terminology across C++ → Rust boundary
 #[test]
-#[ignore] // P3: Nice-to-have - implement error message consistency validation
+#[ignore = "P3: Nice-to-have - implement error message consistency validation"]
 fn test_error_message_consistency() {
     // TODO: Implement error message consistency validation
     // This test validates consistent error messages across FFI boundary
@@ -752,7 +752,7 @@ fn test_error_message_consistency() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Succeeds via llama.cpp when BitNet symbol unavailable
 #[test]
-#[ignore] // P3: Nice-to-have - implement tokenization fallback validation
+#[ignore = "P3: Nice-to-have - implement tokenization fallback validation"]
 fn test_tokenization_fallback_bitnet_to_llama() {
     // TODO: Implement tokenization fallback validation
     // This test validates graceful fallback for tokenization
@@ -784,7 +784,7 @@ fn test_tokenization_fallback_bitnet_to_llama() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** BitNet → llama.cpp → error (complete fallback chain)
 #[test]
-#[ignore] // P3: Nice-to-have - implement inference fallback chain
+#[ignore = "P3: Nice-to-have - implement inference fallback chain"]
 fn test_inference_fallback_chain() {
     // TODO: Implement inference fallback chain validation
     // This test validates complete fallback hierarchy
@@ -826,7 +826,7 @@ fn test_inference_fallback_chain() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Fallback overhead < 5% vs direct implementation
 #[test]
-#[ignore] // P3: Nice-to-have - implement fallback performance validation
+#[ignore = "P3: Nice-to-have - implement fallback performance validation"]
 fn test_fallback_performance_overhead() {
     // TODO: Implement fallback performance validation
     // This test validates fallback doesn't introduce significant overhead
@@ -877,7 +877,7 @@ fn test_fallback_performance_overhead() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Fallback results match direct implementation exactly
 #[test]
-#[ignore] // P3: Nice-to-have - implement fallback consistency validation
+#[ignore = "P3: Nice-to-have - implement fallback consistency validation"]
 fn test_fallback_consistency_with_direct() {
     // TODO: Implement fallback consistency validation
     // This test validates fallback produces identical results
@@ -918,7 +918,7 @@ fn test_fallback_consistency_with_direct() {
 /// **Priority:** P3 (Nice-to-Have)
 /// **Expected:** Preflight shows fallback status clearly
 #[test]
-#[ignore] // P3: Nice-to-have - implement fallback diagnostics validation
+#[ignore = "P3: Nice-to-have - implement fallback diagnostics validation"]
 fn test_fallback_diagnostics_in_preflight() {
     // TODO: Implement fallback diagnostics validation
     // This test validates preflight command shows fallback status

@@ -6675,7 +6675,7 @@ mod tests {
 
     // Integration test for download edge cases
     #[test]
-    #[ignore] // Run with: cargo test --features test-download -- --ignored
+    #[ignore = "Run with: cargo test --features test-download -- --ignored"]
     fn test_download_206_misaligned() {
         let _server = TestServer::new(|rq| {
             use tiny_http::{Header, Response, StatusCode};
@@ -6696,7 +6696,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Annotate with specific reason (blocked test - see issue tracker)
+    #[ignore = "TODO: Annotate with specific reason (blocked test - see issue tracker)"]
     fn test_download_429_retry_after() {
         let counter = Arc::new(Mutex::new(0));
         let counter_clone = counter.clone();

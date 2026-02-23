@@ -36,7 +36,7 @@ fn get_test_model_path() -> &'static str {
 /// **Expected:** Context handle is created successfully and model is loaded
 /// **Performance:** Should eliminate per-call model reload overhead (100-500ms)
 #[test]
-#[ignore] // TODO: Implement Socket 1 - bitnet_cpp_init_context FFI binding
+#[ignore = "TODO: Implement Socket 1 - bitnet_cpp_init_context FFI binding"]
 fn test_socket1_context_init_success() {
     // TODO: Implement BitnetSession::create() wrapper
     // let model_path = Path::new(get_test_model_path());
@@ -59,7 +59,7 @@ fn test_socket1_context_init_success() {
 /// **Expected:** Context is freed automatically when session goes out of scope
 /// **Validation:** Should not leak memory (verify with valgrind in CI)
 #[test]
-#[ignore] // TODO: Implement Socket 1 - Drop trait for BitnetSession
+#[ignore = "TODO: Implement Socket 1 - Drop trait for BitnetSession"]
 fn test_socket1_context_cleanup_on_drop() {
     // TODO: Implement BitnetSession with RAII Drop pattern
     // {
@@ -79,7 +79,7 @@ fn test_socket1_context_cleanup_on_drop() {
 /// **Expected:** Returns actionable error message, not panic
 /// **Error Message:** Should guide user to check model path
 #[test]
-#[ignore] // TODO: Implement Socket 1 - error handling for invalid model
+#[ignore = "TODO: Implement Socket 1 - error handling for invalid model"]
 fn test_socket1_context_init_invalid_model() {
     // TODO: Test error path for missing model file
     // let result = BitnetSession::create(
@@ -106,7 +106,7 @@ fn test_socket1_context_init_invalid_model() {
 /// **Expected:** out_ctx pointer should be set to NULL on failure
 /// **Safety:** Prevents use-after-free bugs
 #[test]
-#[ignore] // TODO: Implement Socket 1 - NULL-safe error handling
+#[ignore = "TODO: Implement Socket 1 - NULL-safe error handling"]
 fn test_socket1_context_init_null_safety() {
     // TODO: Validate that failed init sets out_ctx to NULL
     // let result = BitnetSession::create(
@@ -131,7 +131,7 @@ fn test_socket1_context_init_null_safety() {
 /// **Expected:** Tokenizes text and returns token IDs matching llama.cpp baseline
 /// **Fallback:** Should work even if bitnet_cpp_tokenize_with_context symbol missing
 #[test]
-#[ignore] // TODO: Implement Socket 2 - bitnet_cpp_tokenize_with_context
+#[ignore = "TODO: Implement Socket 2 - bitnet_cpp_tokenize_with_context"]
 fn test_socket2_bitnet_tokenize_with_session() {
     // TODO: Implement BitnetSession::tokenize() with two-pass pattern
     // let model_path = Path::new(get_test_model_path());
@@ -153,7 +153,7 @@ fn test_socket2_bitnet_tokenize_with_session() {
 /// **Expected:** Pass 1 (NULL buffer) returns size, Pass 2 fills buffer
 /// **Pattern:** Standard GGML/llama.cpp two-pass negotiation
 #[test]
-#[ignore] // TODO: Implement Socket 2 - two-pass buffer pattern
+#[ignore = "TODO: Implement Socket 2 - two-pass buffer pattern"]
 fn test_socket2_tokenize_two_pass_buffer_negotiation() {
     // TODO: Test two-pass pattern explicitly
     // let model_path = Path::new(get_test_model_path());
@@ -176,7 +176,7 @@ fn test_socket2_tokenize_two_pass_buffer_negotiation() {
 /// **Expected:** Flags control BOS token insertion and special token parsing
 /// **Behavior:** add_bos=true → first token should be BOS (ID 1)
 #[test]
-#[ignore] // TODO: Implement Socket 2 - BOS and special token flags
+#[ignore = "TODO: Implement Socket 2 - BOS and special token flags"]
 fn test_socket2_tokenize_bos_and_special_flags() {
     // TODO: Test add_bos and parse_special flag behavior
     // let model_path = Path::new(get_test_model_path());
@@ -203,7 +203,7 @@ fn test_socket2_tokenize_bos_and_special_flags() {
 /// **Expected:** Returns all-position logits (not just last token)
 /// **Performance:** Should use 1-bit quantization kernels, not generic llama.cpp
 #[test]
-#[ignore] // TODO: Implement Socket 3 - bitnet_cpp_eval_with_context
+#[ignore = "TODO: Implement Socket 3 - bitnet_cpp_eval_with_context"]
 fn test_socket3_bitnet_eval_with_context() {
     // TODO: Implement BitnetSession::evaluate() with BitNet-native kernels
     // let model_path = Path::new(get_test_model_path());
@@ -225,7 +225,7 @@ fn test_socket3_bitnet_eval_with_context() {
 /// **Expected:** Pass 1 returns shape (rows, cols), Pass 2 fills buffer
 /// **Shape:** rows = n_tokens (all positions), cols = vocab_size
 #[test]
-#[ignore] // TODO: Implement Socket 3 - two-pass logits buffer pattern
+#[ignore = "TODO: Implement Socket 3 - two-pass logits buffer pattern"]
 fn test_socket3_eval_two_pass_logits_buffer() {
     // TODO: Test two-pass logits buffer negotiation
     // let model_path = Path::new(get_test_model_path());
@@ -251,7 +251,7 @@ fn test_socket3_eval_two_pass_logits_buffer() {
 /// **Expected:** seq_id allows multiple sequences in batch (future)
 /// **MVP:** seq_id=0 for single sequence
 #[test]
-#[ignore] // TODO: Implement Socket 3 - seq_id batch processing
+#[ignore = "TODO: Implement Socket 3 - seq_id batch processing"]
 fn test_socket3_eval_seq_id_parameter() {
     // TODO: Test seq_id parameter for future batch processing
     // let model_path = Path::new(get_test_model_path());
@@ -276,7 +276,7 @@ fn test_socket3_eval_seq_id_parameter() {
 /// **Expected:** Single create() call initializes model, context, tokenizer
 /// **Decision Point:** Use Socket 4 if BitNet.cpp provides session API, else Socket 1+2+3
 #[test]
-#[ignore] // TODO: Implement Socket 4 - bitnet_cpp_session_create
+#[ignore = "TODO: Implement Socket 4 - bitnet_cpp_session_create"]
 fn test_socket4_session_create() {
     // TODO: Decide if BitNet.cpp provides session API or use Socket 1+2+3
     // If Socket 4 exists:
@@ -298,7 +298,7 @@ fn test_socket4_session_create() {
 /// **Expected:** Session API tokenize() uses integrated tokenizer
 /// **Alternative:** Socket 2 if session API unavailable
 #[test]
-#[ignore] // TODO: Implement Socket 4 - bitnet_cpp_session_tokenize
+#[ignore = "TODO: Implement Socket 4 - bitnet_cpp_session_tokenize"]
 fn test_socket4_session_tokenize() {
     // TODO: Test integrated session tokenization
     // let session = BitnetHighLevelSession::create(
@@ -320,7 +320,7 @@ fn test_socket4_session_tokenize() {
 /// **Expected:** Session API eval() uses persistent context
 /// **Alternative:** Socket 3 if session API unavailable
 #[test]
-#[ignore] // TODO: Implement Socket 4 - bitnet_cpp_session_eval
+#[ignore = "TODO: Implement Socket 4 - bitnet_cpp_session_eval"]
 fn test_socket4_session_eval() {
     // TODO: Test integrated session evaluation
     // let session = BitnetHighLevelSession::create(
@@ -343,7 +343,7 @@ fn test_socket4_session_eval() {
 /// **Expected:** Session freed on drop (RAII pattern)
 /// **Safety:** Should not leak memory
 #[test]
-#[ignore] // TODO: Implement Socket 4 - bitnet_cpp_session_free
+#[ignore = "TODO: Implement Socket 4 - bitnet_cpp_session_free"]
 fn test_socket4_session_cleanup_on_drop() {
     // TODO: Test session cleanup
     // {
@@ -370,7 +370,7 @@ fn test_socket4_session_cleanup_on_drop() {
 /// **Expected:** bitnet_cpp_eval_gpu uses GPU kernels for specified layers
 /// **Priority:** v0.3 (post-MVP)
 #[test]
-#[ignore] // TODO: Implement Socket 5 - bitnet_cpp_eval_gpu (v0.3)
+#[ignore = "TODO: Implement Socket 5 - bitnet_cpp_eval_gpu (v0.3)"]
 fn test_socket5_gpu_eval() {
     // TODO: Test GPU-accelerated evaluation (v0.3)
     // let model_path = Path::new(get_test_model_path());
@@ -395,7 +395,7 @@ fn test_socket5_gpu_eval() {
 /// **Expected:** 0=CPU-only, >0=offload specified layers to GPU
 /// **Behavior:** Should gracefully fallback to CPU if GPU unavailable
 #[test]
-#[ignore] // TODO: Implement Socket 5 - GPU layer offloading parameter
+#[ignore = "TODO: Implement Socket 5 - GPU layer offloading parameter"]
 fn test_socket5_gpu_layer_offloading() {
     // TODO: Test n_gpu_layers parameter
     // // CPU-only
@@ -423,7 +423,7 @@ fn test_socket5_gpu_layer_offloading() {
 /// **Expected:** Should not error if GPU requested but unavailable
 /// **Behavior:** Transparent fallback to CPU with warning log
 #[test]
-#[ignore] // TODO: Implement Socket 5 - GPU fallback to CPU
+#[ignore = "TODO: Implement Socket 5 - GPU fallback to CPU"]
 fn test_socket5_gpu_fallback_to_cpu() {
     // TODO: Test graceful GPU fallback
     // let result = BitnetSession::create(
@@ -448,7 +448,7 @@ fn test_socket5_gpu_fallback_to_cpu() {
 /// **Expected:** Returns BitnetCapabilities struct with feature flags
 /// **Priority:** v0.3 (enables runtime optimization)
 #[test]
-#[ignore] // TODO: Implement Socket 6 - bitnet_cpp_get_capabilities (v0.3)
+#[ignore = "TODO: Implement Socket 6 - bitnet_cpp_get_capabilities (v0.3)"]
 fn test_socket6_capability_detection() {
     // TODO: Test runtime capability detection
     // let caps = bitnet_get_capabilities().expect("Capability detection failed");
@@ -470,7 +470,7 @@ fn test_socket6_capability_detection() {
 /// **Expected:** At least one SIMD feature should be available on modern CPUs
 /// **Behavior:** Used for kernel selection
 #[test]
-#[ignore] // TODO: Implement Socket 6 - SIMD capability detection
+#[ignore = "TODO: Implement Socket 6 - SIMD capability detection"]
 fn test_socket6_simd_capabilities() {
     // TODO: Test SIMD capability flags
     // let caps = bitnet_get_capabilities().unwrap();
@@ -488,7 +488,7 @@ fn test_socket6_simd_capabilities() {
 /// **Expected:** Returns GPU availability based on runtime detection
 /// **Behavior:** Used for GPU kernel selection
 #[test]
-#[ignore] // TODO: Implement Socket 6 - GPU backend capability detection
+#[ignore = "TODO: Implement Socket 6 - GPU backend capability detection"]
 fn test_socket6_gpu_backend_capabilities() {
     // TODO: Test GPU backend capability flags
     // let caps = bitnet_get_capabilities().unwrap();
@@ -513,7 +513,7 @@ fn test_socket6_gpu_backend_capabilities() {
 /// **Expected:** Create session → tokenize → evaluate → cleanup
 /// **Performance:** Should reuse persistent context across calls
 #[test]
-#[ignore] // TODO: Implement Socket 1+2+3 composition
+#[ignore = "TODO: Implement Socket 1+2+3 composition"]
 fn test_cross_socket_session_tokenize_eval_workflow() {
     // TODO: Test end-to-end workflow using Socket 1+2+3
     // let model_path = Path::new(get_test_model_path());
@@ -541,7 +541,7 @@ fn test_cross_socket_session_tokenize_eval_workflow() {
 /// **Baseline:** Per-call mode: ~100-500ms per call (model reload overhead)
 /// **Target:** Session mode: ~10-50ms per call (reuses loaded model)
 #[test]
-#[ignore] // TODO: Implement performance validation for session API
+#[ignore = "TODO: Implement performance validation for session API"]
 fn test_cross_socket_session_performance_improvement() {
     // TODO: Benchmark session API vs per-call mode
     // let model_path = Path::new(get_test_model_path());

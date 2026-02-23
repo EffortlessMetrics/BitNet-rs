@@ -460,7 +460,7 @@ mod priority_chain_tests {
     /// Validates that BITNET_CROSSVAL_LIBDIR takes precedence over new variables.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_1_crossval_libdir_override() {
         unimplemented!(
             "Priority 1: BITNET_CROSSVAL_LIBDIR override pending build.rs implementation. \
@@ -475,7 +475,7 @@ mod priority_chain_tests {
     /// Validates granular RPATH specification overrides BITNET_CPP_DIR.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_2_granular_rpath_bitnet() {
         unimplemented!(
             "Priority 2: CROSSVAL_RPATH_BITNET granular override pending. \
@@ -490,7 +490,7 @@ mod priority_chain_tests {
     /// Validates granular RPATH for llama.cpp.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_2_granular_rpath_llama() {
         unimplemented!(
             "Priority 2: CROSSVAL_RPATH_LLAMA granular override pending. \
@@ -505,7 +505,7 @@ mod priority_chain_tests {
     /// Validates merging of both CROSSVAL_RPATH_BITNET and CROSSVAL_RPATH_LLAMA.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_2_both_granular_variables() {
         unimplemented!(
             "Priority 2: Merging both CROSSVAL_RPATH_BITNET and CROSSVAL_RPATH_LLAMA pending. \
@@ -520,7 +520,7 @@ mod priority_chain_tests {
     /// Validates auto-discovery from BITNET_CPP_DIR/build/bin.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_3a_bitnet_cpp_dir_tier1() {
         unimplemented!(
             "Priority 3A Tier 1: BITNET_CPP_DIR/build/bin auto-discovery pending. \
@@ -535,7 +535,7 @@ mod priority_chain_tests {
     /// Validates fallback to embedded llama.cpp paths.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_3a_bitnet_cpp_dir_tier2() {
         unimplemented!(
             "Priority 3A Tier 2: BITNET_CPP_DIR embedded llama fallback pending. \
@@ -550,7 +550,7 @@ mod priority_chain_tests {
     /// Validates auto-discovery from standalone llama.cpp installation.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_3b_llama_cpp_dir() {
         unimplemented!(
             "Priority 3B: LLAMA_CPP_DIR auto-discovery pending. \
@@ -565,7 +565,7 @@ mod priority_chain_tests {
     /// Validates fallback to $HOME/.cache/bitnet_cpp.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_4a_default_bitnet_path() {
         unimplemented!(
             "Priority 4A: Default ~/.cache/bitnet_cpp fallback pending. \
@@ -580,7 +580,7 @@ mod priority_chain_tests {
     /// Validates fallback to $HOME/.cache/llama_cpp.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_4b_default_llama_path() {
         unimplemented!(
             "Priority 4B: Default ~/.cache/llama_cpp fallback pending. \
@@ -595,7 +595,7 @@ mod priority_chain_tests {
     /// Validates that build succeeds even when no libraries are found.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_priority_5_stub_mode() {
         unimplemented!(
             "Priority 5: STUB mode graceful degradation pending. \
@@ -619,7 +619,7 @@ mod env_precedence_tests {
     /// Validates that legacy variable overrides new granular variables.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_precedence_legacy_over_granular() {
         unimplemented!(
             "Precedence: BITNET_CROSSVAL_LIBDIR should win over CROSSVAL_RPATH_*. \
@@ -634,7 +634,7 @@ mod env_precedence_tests {
     /// Validates that explicit RPATH overrides auto-discovery.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_precedence_granular_over_autodiscovery() {
         unimplemented!(
             "Precedence: CROSSVAL_RPATH_BITNET should win over BITNET_CPP_DIR. \
@@ -649,7 +649,7 @@ mod env_precedence_tests {
     /// Validates that explicit env var overrides default cache paths.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_precedence_explicit_over_defaults() {
         unimplemented!(
             "Precedence: BITNET_CPP_DIR should win over ~/.cache defaults. \
@@ -664,7 +664,7 @@ mod env_precedence_tests {
     /// Validates that warning is emitted when conflicting variables are set.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution and output capture
+    #[ignore = "Integration test - requires build.rs execution and output capture"]
     fn test_precedence_conflict_warning() {
         unimplemented!(
             "Precedence Warning: Should emit cargo:warning when both legacy and new vars set. \
@@ -679,7 +679,7 @@ mod env_precedence_tests {
     /// Validates that $HOME is correctly expanded for default paths.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_precedence_home_expansion() {
         unimplemented!(
             "HOME expansion: Verify ~/.cache paths use actual HOME value. \
@@ -725,7 +725,7 @@ mod platform_specific_tests {
     /// Validates that Windows build emits warning about RPATH not applicable.
     #[test]
     #[cfg(windows)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_windows_rpath_not_applicable() {
         unimplemented!(
             "Windows: Should emit cargo:warning that RPATH not applicable, use PATH. \
@@ -740,7 +740,7 @@ mod platform_specific_tests {
     /// Validates RPATH embedding can be verified with readelf.
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // Integration test - requires binary build and readelf
+    #[ignore = "Integration test - requires binary build and readelf"]
     fn test_linux_readelf_verification() {
         unimplemented!(
             "Linux: readelf -d target/debug/xtask | grep RPATH verification. \
@@ -755,7 +755,7 @@ mod platform_specific_tests {
     /// Validates RPATH embedding can be verified with otool.
     #[test]
     #[cfg(target_os = "macos")]
-    #[ignore] // Integration test - requires binary build and otool
+    #[ignore = "Integration test - requires binary build and otool"]
     fn test_macos_otool_verification() {
         unimplemented!(
             "macOS: otool -l target/debug/xtask | grep -A 3 LC_RPATH verification. \
@@ -770,7 +770,7 @@ mod platform_specific_tests {
     /// Validates runtime library resolution from RPATH.
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // Integration test - requires binary build and ldd
+    #[ignore = "Integration test - requires binary build and ldd"]
     fn test_linux_ldd_resolution() {
         unimplemented!(
             "Linux: ldd target/debug/xtask | grep libbitnet verification. \
@@ -847,7 +847,7 @@ mod length_validation_tests {
     /// Validates that exceeding 4KB limit causes panic with helpful message.
     #[test]
     #[should_panic(expected = "Merged RPATH exceeds maximum length")]
-    #[ignore] // Difficult to create paths long enough to exceed 4KB in temp dir
+    #[ignore = "Difficult to create paths long enough to exceed 4KB in temp dir"]
     fn test_length_exceeds_limit() {
         use xtask::build_helpers::merge_and_deduplicate;
 
@@ -914,7 +914,7 @@ mod error_handling_tests {
     /// Validates that permission-denied paths emit warnings and are skipped.
     #[test]
     #[cfg(unix)]
-    #[ignore] // Requires root to create inaccessible directories
+    #[ignore = "Requires root to create inaccessible directories"]
     fn test_permission_errors() {
         unimplemented!(
             "Permission errors: Should skip paths with no read permission. \
@@ -1003,7 +1003,7 @@ mod backward_compatibility_tests {
     /// Validates that existing deployments using BITNET_CROSSVAL_LIBDIR continue to work.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_backward_compat_crossval_libdir() {
         unimplemented!(
             "Backward Compatibility: BITNET_CROSSVAL_LIBDIR should work as before. \
@@ -1018,7 +1018,7 @@ mod backward_compatibility_tests {
     /// Validates that existing auto-discovery from BITNET_CPP_DIR still works.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_backward_compat_cpp_dir() {
         unimplemented!(
             "Backward Compatibility: BITNET_CPP_DIR auto-discovery should work. \
@@ -1033,7 +1033,7 @@ mod backward_compatibility_tests {
     /// Validates that graceful degradation still works when no libraries found.
     #[test]
     #[serial(bitnet_env)]
-    #[ignore] // Integration test - requires build.rs execution
+    #[ignore = "Integration test - requires build.rs execution"]
     fn test_backward_compat_stub_mode() {
         unimplemented!(
             "Backward Compatibility: STUB mode should still succeed gracefully. \
@@ -1055,7 +1055,7 @@ mod build_integration_tests {
     ///
     /// Validates that build.rs emits correct rebuild triggers.
     #[test]
-    #[ignore] // Integration test - requires build.rs output capture
+    #[ignore = "Integration test - requires build.rs output capture"]
     fn test_rerun_triggers() {
         unimplemented!(
             "Build Integration: cargo:rerun-if-env-changed directives verification. \
@@ -1069,7 +1069,7 @@ mod build_integration_tests {
     ///
     /// Validates that correct linker arguments are emitted.
     #[test]
-    #[ignore] // Integration test - requires build.rs output capture
+    #[ignore = "Integration test - requires build.rs output capture"]
     fn test_linker_arg_emission() {
         unimplemented!(
             "Build Integration: cargo:rustc-link-arg=-Wl,-rpath,... verification. \
@@ -1092,7 +1092,7 @@ mod verification_helpers {
     /// Provides helper for verifying RPATH in built binary using readelf.
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // Helper test - requires built binary
+    #[ignore = "Helper test - requires built binary"]
     fn test_simulate_readelf_verification() {
         unimplemented!(
             "Verification Helper: Parse readelf -d output to verify RPATH. \
@@ -1107,7 +1107,7 @@ mod verification_helpers {
     /// Provides helper for verifying RPATH in built binary using otool.
     #[test]
     #[cfg(target_os = "macos")]
-    #[ignore] // Helper test - requires built binary
+    #[ignore = "Helper test - requires built binary"]
     fn test_simulate_otool_verification() {
         unimplemented!(
             "Verification Helper: Parse otool -l output to verify RPATH. \

@@ -32,7 +32,7 @@ fn get_test_model_path() -> &'static str {
 /// **Expected:** If bitnet_cpp_tokenize_with_context missing, use crossval_bitnet_tokenize
 /// **Behavior:** Should succeed via llama.cpp fallback, log warning
 #[test]
-#[ignore] // TODO: Implement tokenization fallback validation
+#[ignore = "TODO: Implement tokenization fallback validation"]
 fn test_fallback_tokenize_bitnet_to_llama() {
     // TODO: Test tokenization fallback chain
     // This requires mocking dlopen loader to simulate missing symbol
@@ -63,7 +63,7 @@ fn test_fallback_tokenize_bitnet_to_llama() {
 /// **Expected:** Fallback behavior matches existing crossval_bitnet_tokenize
 /// **Validation:** Compare results with direct llama.cpp call
 #[test]
-#[ignore] // TODO: Implement tokenization fallback parity validation
+#[ignore = "TODO: Implement tokenization fallback parity validation"]
 fn test_fallback_tokenize_parity_with_llama_cpp() {
     // TODO: Validate fallback produces same results as direct llama.cpp call
     // let model_path = Path::new(get_test_model_path());
@@ -92,7 +92,7 @@ fn test_fallback_tokenize_parity_with_llama_cpp() {
 /// **Expected:** When fallback occurs, log warning but continue
 /// **Log Message:** Should mention "bitnet_cpp_tokenize_with_context not found, falling back"
 #[test]
-#[ignore] // TODO: Implement fallback warning log validation
+#[ignore = "TODO: Implement fallback warning log validation"]
 fn test_fallback_tokenize_logs_warning() {
     // TODO: Validate fallback logs warning
     // This requires capturing log output
@@ -126,7 +126,7 @@ fn test_fallback_tokenize_logs_warning() {
 /// **Expected:** If bitnet_cpp_eval_with_context missing, use crossval_bitnet_eval_with_tokens
 /// **Behavior:** Should succeed via llama.cpp fallback, log warning
 #[test]
-#[ignore] // TODO: Implement evaluation fallback validation
+#[ignore = "TODO: Implement evaluation fallback validation"]
 fn test_fallback_eval_bitnet_to_llama() {
     // TODO: Test evaluation fallback chain
     // std::env::set_var("BITNET_TEST_FORCE_LLAMA_FALLBACK", "1");
@@ -157,7 +157,7 @@ fn test_fallback_eval_bitnet_to_llama() {
 /// **Expected:** Fallback behavior matches existing crossval_bitnet_eval_with_tokens
 /// **Validation:** Compare results with direct llama.cpp call
 #[test]
-#[ignore] // TODO: Implement evaluation fallback parity validation
+#[ignore = "TODO: Implement evaluation fallback parity validation"]
 fn test_fallback_eval_parity_with_llama_cpp() {
     // TODO: Validate fallback produces same results as direct llama.cpp call
     // let model_path = Path::new(get_test_model_path());
@@ -186,7 +186,7 @@ fn test_fallback_eval_parity_with_llama_cpp() {
 /// **Expected:** When fallback occurs, log warning but continue
 /// **Log Message:** Should mention "bitnet_cpp_eval_with_context not found, falling back"
 #[test]
-#[ignore] // TODO: Implement fallback warning log validation for eval
+#[ignore = "TODO: Implement fallback warning log validation for eval"]
 fn test_fallback_eval_logs_warning() {
     // TODO: Validate fallback logs warning
     // std::env::set_var("BITNET_TEST_FORCE_LLAMA_FALLBACK", "1");
@@ -214,7 +214,7 @@ fn test_fallback_eval_logs_warning() {
 /// **Expected:** Try BitNet first, fallback to llama.cpp, error if both missing
 /// **Behavior:** Should exhaust all options before returning CppNotAvailable
 #[test]
-#[ignore] // TODO: Implement complete fallback chain validation
+#[ignore = "TODO: Implement complete fallback chain validation"]
 fn test_fallback_chain_exhaustive() {
     // TODO: Test complete fallback chain
     // This requires mocking environment where:
@@ -247,7 +247,7 @@ fn test_fallback_chain_exhaustive() {
 /// **Expected:** Returns CppNotAvailable after exhausting all fallbacks
 /// **Error Message:** Should be actionable (guide to set BITNET_CPP_DIR)
 #[test]
-#[ignore] // TODO: Implement error when all fallbacks exhausted
+#[ignore = "TODO: Implement error when all fallbacks exhausted"]
 fn test_fallback_error_when_all_backends_unavailable() {
     // TODO: Test error when both BitNet and llama.cpp unavailable
     // This requires mocking environment where both backends missing
@@ -284,7 +284,7 @@ fn test_fallback_error_when_all_backends_unavailable() {
 /// **Expected:** try_resolve_symbol returns None for missing symbols
 /// **Behavior:** Should NOT panic or error on missing optional symbols
 #[test]
-#[ignore] // TODO: Implement dlopen symbol resolution fallback
+#[ignore = "TODO: Implement dlopen symbol resolution fallback"]
 fn test_fallback_dlopen_symbol_resolution() {
     // TODO: Test dlopen loader symbol resolution
     // let loader = DlopenLoader::discover().unwrap();
@@ -310,7 +310,7 @@ fn test_fallback_dlopen_symbol_resolution() {
 /// **Expected:** resolve_symbol errors on missing required, try_resolve_symbol returns None on missing optional
 /// **Behavior:** Different error handling for required vs optional symbols
 #[test]
-#[ignore] // TODO: Implement required vs optional symbol fallback
+#[ignore = "TODO: Implement required vs optional symbol fallback"]
 fn test_fallback_required_vs_optional_symbols() {
     // TODO: Test required vs optional symbol resolution
     // let loader = DlopenLoader::discover().unwrap();
@@ -338,7 +338,7 @@ fn test_fallback_required_vs_optional_symbols() {
 /// **Expected:** Fallback to llama.cpp should have MVP performance (per-call overhead)
 /// **Baseline:** llama.cpp per-call: ~100-500ms (model reload overhead)
 #[test]
-#[ignore] // TODO: Implement fallback performance validation
+#[ignore = "TODO: Implement fallback performance validation"]
 fn test_fallback_performance_acceptable() {
     // TODO: Benchmark fallback performance
     // let model_path = Path::new(get_test_model_path());
@@ -376,7 +376,7 @@ fn test_fallback_performance_acceptable() {
 /// **Expected:** Both paths should produce identical tokenization results
 /// **Validation:** Compare token IDs directly
 #[test]
-#[ignore] // TODO: Implement tokenization consistency validation
+#[ignore = "TODO: Implement tokenization consistency validation"]
 fn test_fallback_tokenization_consistency() {
     // TODO: Validate BitNet-native and llama.cpp produce same tokens
     // let model_path = Path::new(get_test_model_path());
@@ -409,7 +409,7 @@ fn test_fallback_tokenization_consistency() {
 /// **Expected:** Both paths should produce numerically close logits
 /// **Validation:** Compare logits with small tolerance (may differ slightly due to kernels)
 #[test]
-#[ignore] // TODO: Implement evaluation consistency validation
+#[ignore = "TODO: Implement evaluation consistency validation"]
 fn test_fallback_evaluation_consistency() {
     // TODO: Validate BitNet-native and llama.cpp produce similar logits
     // let model_path = Path::new(get_test_model_path());
@@ -452,7 +452,7 @@ fn test_fallback_evaluation_consistency() {
 /// **Expected:** --dlopen-diagnostics shows which symbols missing, which using fallback
 /// **Output:** Should clearly indicate fallback status for each symbol
 #[test]
-#[ignore] // TODO: Implement fallback diagnostic flag validation
+#[ignore = "TODO: Implement fallback diagnostic flag validation"]
 fn test_fallback_diagnostic_output() {
     // TODO: Test --dlopen-diagnostics flag shows fallback status
     // This test would invoke CLI with diagnostic flag and parse output
@@ -473,7 +473,7 @@ fn test_fallback_diagnostic_output() {
 /// **Expected:** session.get_backend_info() returns "bitnet-native" or "llama-cpp-fallback"
 /// **Behavior:** Allows runtime introspection of active backend
 #[test]
-#[ignore] // TODO: Implement backend info API validation
+#[ignore = "TODO: Implement backend info API validation"]
 fn test_fallback_backend_info_api() {
     // TODO: Test backend info API
     // let model_path = Path::new(get_test_model_path());

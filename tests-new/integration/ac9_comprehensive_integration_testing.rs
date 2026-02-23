@@ -20,7 +20,7 @@ use std::sync::Arc;
 /// Validates complete transformer pipeline from tokenization to detokenization
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore] // TODO: Requires proper test model with complete metadata
+#[ignore = "TODO: Requires proper test model with complete metadata"]
 async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
     // Load complete BitNet model with all components
     // Find workspace root by looking for Cargo.toml with [workspace]

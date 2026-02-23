@@ -229,7 +229,7 @@ fn test_preflight_dev_mode_emits_warning_with_path() {
 #[test]
 #[cfg(all(test, feature = "crossval-all"))]
 #[serial_test::serial(bitnet_env)]
-#[ignore] // Requires subprocess execution to capture exit code
+#[ignore = "Requires subprocess execution to capture exit code"]
 fn test_preflight_ci_mode_skips_with_diagnostic() {
     // TODO: AC1, AC3 - Integration test for CI mode:
     // 1. Create temp directory with mock BitNet libraries
@@ -462,7 +462,7 @@ fn test_preflight_returns_ok_on_runtime_override_dev() {
 #[test]
 #[cfg(all(test, feature = "crossval-all"))]
 #[serial_test::serial(bitnet_env)]
-#[ignore] // Requires subprocess to capture exit code
+#[ignore = "Requires subprocess to capture exit code"]
 fn test_preflight_exits_on_runtime_override_ci() {
     // TODO: AC1, AC3 - Verify CI mode exit behavior:
     // 1. Create temp directory with mock libraries (stale build simulation)
@@ -558,7 +558,7 @@ fn test_detect_backend_partial_library_set() {
 #[test]
 #[cfg(all(test, feature = "crossval-all", unix))]
 #[serial_test::serial(bitnet_env)]
-#[ignore] // Requires symlink support (platform-specific)
+#[ignore = "Requires symlink support (platform-specific)"]
 fn test_detect_backend_symlink_resolution() {
     // TODO: Edge case - Symlink resolution:
     // 1. Create temp directory with real libraries
@@ -583,7 +583,7 @@ fn test_detect_backend_symlink_resolution() {
 #[test]
 #[cfg(all(test, feature = "crossval-all", unix))]
 #[serial_test::serial(bitnet_env)]
-#[ignore] // Requires permission manipulation (may fail in CI)
+#[ignore = "Requires permission manipulation (may fail in CI)"]
 fn test_detect_backend_permission_error() {
     // TODO: Edge case - Permission errors:
     // 1. Create temp directory and remove read permissions

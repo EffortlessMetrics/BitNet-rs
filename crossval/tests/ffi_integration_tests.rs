@@ -35,7 +35,7 @@ fn get_test_model_path() -> &'static str {
 /// **Expected:** All steps succeed with persistent session (no per-call model reload)
 /// **Validation:** Should complete without errors and return valid logits
 #[test]
-#[ignore] // TODO: Implement Socket 1+2+3 integration
+#[ignore = "TODO: Implement Socket 1+2+3 integration"]
 fn test_integration_full_session_lifecycle() {
     // TODO: Implement end-to-end session workflow
     // let model_path = Path::new(get_test_model_path());
@@ -71,7 +71,7 @@ fn test_integration_full_session_lifecycle() {
 /// **Expected:** All calls succeed using persistent context
 /// **Performance:** Should NOT reload model between calls
 #[test]
-#[ignore] // TODO: Implement multi-call session workflow
+#[ignore = "TODO: Implement multi-call session workflow"]
 fn test_integration_multiple_inferences_with_session() {
     // TODO: Test multiple inferences with persistent session
     // let model_path = Path::new(get_test_model_path());
@@ -102,7 +102,7 @@ fn test_integration_multiple_inferences_with_session() {
 /// **Expected:** Both approaches should produce identical results
 /// **Decision:** Use Socket 4 if available, else fallback to Socket 1+2+3
 #[test]
-#[ignore] // TODO: Implement Socket 4 vs Socket 1+2+3 comparison
+#[ignore = "TODO: Implement Socket 4 vs Socket 1+2+3 comparison"]
 fn test_integration_session_api_vs_socket_composition() {
     // TODO: Compare Socket 4 (high-level session API) vs Socket 1+2+3 (low-level)
     // let model_path = Path::new(get_test_model_path());
@@ -135,7 +135,7 @@ fn test_integration_session_api_vs_socket_composition() {
 /// **Expected:** Should try BitNet-specific symbols first, fallback to llama.cpp
 /// **Behavior:** Graceful degradation when BitNet-specific symbols unavailable
 #[test]
-#[ignore] // TODO: Implement fallback chain validation
+#[ignore = "TODO: Implement fallback chain validation"]
 fn test_integration_fallback_chain_bitnet_to_llama() {
     // TODO: Test fallback chain with symbol resolution
     // let model_path = Path::new(get_test_model_path());
@@ -160,7 +160,7 @@ fn test_integration_fallback_chain_bitnet_to_llama() {
 /// **Expected:** Returns CppNotAvailable error with actionable message
 /// **Error Message:** Should guide user to set BITNET_CPP_DIR
 #[test]
-#[ignore] // TODO: Implement error path for missing backends
+#[ignore = "TODO: Implement error path for missing backends"]
 fn test_integration_fallback_error_when_all_unavailable() {
     // TODO: Test error when no backends available
     // This test requires mocking environment where both BitNet and llama.cpp missing
@@ -193,7 +193,7 @@ fn test_integration_fallback_error_when_all_unavailable() {
 /// **Expected:** Missing BitNet-specific symbols gracefully fallback to llama.cpp
 /// **Behavior:** Should log warning but continue with llama.cpp implementation
 #[test]
-#[ignore] // TODO: Implement symbol resolution fallback testing
+#[ignore = "TODO: Implement symbol resolution fallback testing"]
 fn test_integration_symbol_resolution_fallback() {
     // TODO: Test dlopen symbol resolution with missing symbols
     // This test requires mocking dlopen loader to simulate missing symbols
@@ -222,7 +222,7 @@ fn test_integration_symbol_resolution_fallback() {
 /// **Baseline:** Per-call: ~100-500ms per inference (model reload overhead)
 /// **Target:** Session: ~10-50ms per inference (persistent context)
 #[test]
-#[ignore] // TODO: Implement performance benchmark (session vs per-call)
+#[ignore = "TODO: Implement performance benchmark (session vs per-call)"]
 fn test_integration_performance_session_vs_per_call() {
     // TODO: Benchmark session API vs per-call mode
     // let model_path = Path::new(get_test_model_path());
@@ -272,7 +272,7 @@ fn test_integration_performance_session_vs_per_call() {
 /// **Expected:** Session creation: ~500ms one-time, per-inference: ~10-50ms
 /// **Amortization:** After ~5-10 calls, session API breaks even with per-call
 #[test]
-#[ignore] // TODO: Implement session creation overhead validation
+#[ignore = "TODO: Implement session creation overhead validation"]
 fn test_integration_performance_session_creation_overhead() {
     // TODO: Measure session creation overhead
     // let model_path = Path::new(get_test_model_path());
@@ -309,7 +309,7 @@ fn test_integration_performance_session_creation_overhead() {
 /// **Expected:** ~600 MB persistent (model + context + vocab)
 /// **Trade-off:** Memory for speed (acceptable for multi-call workflows)
 #[test]
-#[ignore] // TODO: Implement memory overhead validation
+#[ignore = "TODO: Implement memory overhead validation"]
 fn test_integration_performance_memory_overhead() {
     // TODO: Measure session memory overhead
     // This requires platform-specific memory measurement (e.g., /proc/self/status on Linux)
@@ -343,7 +343,7 @@ fn test_integration_performance_memory_overhead() {
 /// **Expected:** Tokenize uses persistent context from Socket 1
 /// **Performance:** Should NOT reload model for tokenization
 #[test]
-#[ignore] // TODO: Implement Socket 1+2 composition test
+#[ignore = "TODO: Implement Socket 1+2 composition test"]
 fn test_integration_socket1_socket2_composition() {
     // TODO: Test Socket 1 + Socket 2 composition
     // let model_path = Path::new(get_test_model_path());
@@ -368,7 +368,7 @@ fn test_integration_socket1_socket2_composition() {
 /// **Expected:** Eval uses persistent context from Socket 1
 /// **Performance:** Should NOT reload model for evaluation
 #[test]
-#[ignore] // TODO: Implement Socket 1+3 composition test
+#[ignore = "TODO: Implement Socket 1+3 composition test"]
 fn test_integration_socket1_socket3_composition() {
     // TODO: Test Socket 1 + Socket 3 composition
     // let model_path = Path::new(get_test_model_path());
@@ -397,7 +397,7 @@ fn test_integration_socket1_socket3_composition() {
 /// **Expected:** All sockets work together seamlessly with persistent context
 /// **Performance:** Should reuse context across all operations
 #[test]
-#[ignore] // TODO: Implement Socket 1+2+3 full composition test
+#[ignore = "TODO: Implement Socket 1+2+3 full composition test"]
 fn test_integration_socket1_socket2_socket3_full_composition() {
     // TODO: Test full Socket 1+2+3 composition
     // let model_path = Path::new(get_test_model_path());
@@ -429,7 +429,7 @@ fn test_integration_socket1_socket2_socket3_full_composition() {
 /// **Expected:** Session with n_gpu_layers>0 uses GPU kernels
 /// **Priority:** v0.3 (post-MVP)
 #[test]
-#[ignore] // TODO: Implement GPU integration test (v0.3)
+#[ignore = "TODO: Implement GPU integration test (v0.3)"]
 fn test_integration_gpu_session_workflow() {
     // TODO: Test GPU-accelerated session workflow (v0.3)
     // let model_path = Path::new(get_test_model_path());
@@ -457,7 +457,7 @@ fn test_integration_gpu_session_workflow() {
 /// **Expected:** Session uses capabilities to select optimal kernels
 /// **Priority:** v0.3 (runtime optimization)
 #[test]
-#[ignore] // TODO: Implement capability detection integration (v0.3)
+#[ignore = "TODO: Implement capability detection integration (v0.3)"]
 fn test_integration_capability_based_kernel_selection() {
     // TODO: Test capability-based kernel selection (v0.3)
     // let caps = bitnet_get_capabilities().unwrap();

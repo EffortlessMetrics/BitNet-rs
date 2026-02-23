@@ -198,7 +198,7 @@ fn create_mock_bitnet_repo(repo: &Path) -> std::io::Result<()> {
 /// **Expected**: Automatically triggers clone and build workflow
 /// **Tag**: `// AC:AC1`
 #[test]
-#[ignore] // AC:AC1
+#[ignore = "AC:AC1"]
 fn test_ac1_detects_missing_installation() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -224,7 +224,7 @@ fn test_ac1_detects_missing_installation() {
 /// **Expected**: Repository cloned to `~/.cache/bitnet_cpp` (or `$BITNET_CPP_DIR`)
 /// **Tag**: `// AC:AC2`
 #[test]
-#[ignore] // AC:AC2
+#[ignore = "AC:AC2"]
 fn test_ac2_clones_from_github() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -248,7 +248,7 @@ fn test_ac2_clones_from_github() {
 /// **Expected**: Libraries built in `build/` directory
 /// **Tag**: `// AC:AC3`
 #[test]
-#[ignore] // AC:AC3
+#[ignore = "AC:AC3"]
 fn test_ac3_runs_build_process() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -274,7 +274,7 @@ fn test_ac3_runs_build_process() {
 /// **Expected**: Both `build/bin` and `build/3rdparty/llama.cpp/build/bin` in RPATH
 /// **Tag**: `// AC:AC4`
 #[test]
-#[ignore] // AC:AC4
+#[ignore = "AC:AC4"]
 fn test_ac4_emits_rpath_for_both_backends() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -300,7 +300,7 @@ fn test_ac4_emits_rpath_for_both_backends() {
 /// **Expected**: `BITNET_CPP_DIR` and `BITNET_CROSSVAL_LIBDIR` set correctly
 /// **Tag**: `// AC:AC5`
 #[test]
-#[ignore] // AC:AC5
+#[ignore = "AC:AC5"]
 fn test_ac5_exports_environment_variables() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -325,7 +325,7 @@ fn test_ac5_exports_environment_variables() {
 /// **Expected**: Successful build on all platforms with platform-appropriate env vars
 /// **Tag**: `// AC:AC6`
 #[test]
-#[ignore] // AC:AC6
+#[ignore = "AC:AC6"]
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 fn test_ac6_multi_platform_support() {
     // TODO: Implement platform-specific logic in emit_exports()
@@ -348,7 +348,7 @@ fn test_ac6_multi_platform_support() {
 /// **Expected**: Second run detects existing build, fast-path success
 /// **Tag**: `// AC:AC7`
 #[test]
-#[ignore] // AC:AC7
+#[ignore = "AC:AC7"]
 fn test_ac7_idempotent_updates() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -378,7 +378,7 @@ fn test_ac7_idempotent_updates() {
 /// **Expected**: Existing build cleaned and rebuilt
 /// **Tag**: `// AC:AC8`
 #[test]
-#[ignore] // AC:AC8
+#[ignore = "AC:AC8"]
 fn test_ac8_rebuild_options() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -403,7 +403,7 @@ fn test_ac8_rebuild_options() {
 /// **Expected**: User flags preserved unless `--clean` specified
 /// **Tag**: `// AC:AC9`
 #[test]
-#[ignore] // AC:AC9
+#[ignore = "AC:AC9"]
 fn test_ac9_preserves_user_modifications() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -431,7 +431,7 @@ fn test_ac9_preserves_user_modifications() {
 /// **Expected**: "BitNet.cpp already built at <path>" message, no rebuild
 /// **Tag**: `// AC:AC10`
 #[test]
-#[ignore] // AC:AC10
+#[ignore = "AC:AC10"]
 fn test_ac10_fast_path_message() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -457,7 +457,7 @@ fn test_ac10_fast_path_message() {
 /// **Tag**: `// AC:AC11`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC11
+#[ignore = "AC:AC11"]
 fn test_ac11_bitnet_cpp_dir_controls_installation() {
     let _guard = EnvGuard::clear("BITNET_CPP_DIR");
 
@@ -487,7 +487,7 @@ fn test_ac11_bitnet_cpp_dir_controls_installation() {
 /// **Tag**: `// AC:AC12`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC12
+#[ignore = "AC:AC12"]
 fn test_ac12_crossval_libdir_override() {
     let _guard = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
 
@@ -518,7 +518,7 @@ fn test_ac12_crossval_libdir_override() {
 /// **Tag**: `// AC:AC13`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC13
+#[ignore = "AC:AC13"]
 fn test_ac13_precedence_order() {
     // TODO: Implement comprehensive precedence tests
     // Precedence chain:
@@ -543,7 +543,7 @@ fn test_ac13_precedence_order() {
 /// **Expected**: BITNET_CPP_DIR, BITNET_CROSSVAL_LIBDIR used for both
 /// **Tag**: `// AC:AC14`
 #[test]
-#[ignore] // AC:AC14
+#[ignore = "AC:AC14"]
 fn test_ac14_consistent_env_var_names() {
     // TODO: Document and verify environment variable naming consistency
     // Expected behavior:
@@ -564,7 +564,7 @@ fn test_ac14_consistent_env_var_names() {
 /// **Expected**: Both BitNet.cpp and llama.cpp installed
 /// **Tag**: `// AC:AC15`
 #[test]
-#[ignore] // AC:AC15
+#[ignore = "AC:AC15"]
 fn test_ac15_backend_both_option() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _install_dir = temp_dir.path();
@@ -589,7 +589,7 @@ fn test_ac15_backend_both_option() {
 /// **Expected**: Merged RPATH with deduplication
 /// **Tag**: `// AC:AC16`
 #[test]
-#[ignore] // AC:AC16
+#[ignore = "AC:AC16"]
 fn test_ac16_rpath_merging() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_lib = temp_dir.path().join("bitnet_lib");
@@ -618,7 +618,7 @@ fn test_ac16_rpath_merging() {
 /// **Expected**: BitNet.cpp library paths before llama.cpp in RPATH
 /// **Tag**: `// AC:AC17`
 #[test]
-#[ignore] // AC:AC17
+#[ignore = "AC:AC17"]
 fn test_ac17_autodiscovery_priority() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -647,7 +647,7 @@ fn test_ac17_autodiscovery_priority() {
 /// **Expected**: Users understand which backend is used for each command
 /// **Tag**: `// AC:AC18`
 #[test]
-#[ignore] // AC:AC18
+#[ignore = "AC:AC18"]
 fn test_ac18_clear_documentation() {
     // TODO: Validate documentation completeness
     // Expected documentation:
@@ -669,7 +669,7 @@ fn test_ac18_clear_documentation() {
 /// **Expected**: Error message shows platform-specific installation commands
 /// **Tag**: `// AC:AC19`
 #[test]
-#[ignore] // AC:AC19
+#[ignore = "AC:AC19"]
 fn test_ac19_missing_dependency_errors() {
     // TODO: Implement check_dependency() with helpful error messages
     // Expected error format:
@@ -695,7 +695,7 @@ fn test_ac19_missing_dependency_errors() {
 /// **Expected**: Error shows last 20 lines of CMake log + troubleshooting link
 /// **Tag**: `// AC:AC20`
 #[test]
-#[ignore] // AC:AC20
+#[ignore = "AC:AC20"]
 fn test_ac20_build_failure_errors() {
     // TODO: Implement build failure error handling
     // Expected error format:
@@ -725,7 +725,7 @@ fn test_ac20_build_failure_errors() {
 /// **Expected**: Error message suggests --verbose flag for debugging
 /// **Tag**: `// AC:AC21`
 #[test]
-#[ignore] // AC:AC21
+#[ignore = "AC:AC21"]
 fn test_ac21_library_discovery_failures() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -764,7 +764,7 @@ fn test_ac21_library_discovery_failures() {
 /// **Expected**: Error shows platform-appropriate workaround
 /// **Tag**: `// AC:AC22`
 #[test]
-#[ignore] // AC:AC22
+#[ignore = "AC:AC22"]
 #[cfg(target_os = "linux")]
 fn test_ac22_platform_specific_errors() {
     // TODO: Implement platform-specific error handling
@@ -794,7 +794,7 @@ fn test_ac22_platform_specific_errors() {
 ///
 /// Validates that applying deduplication multiple times yields same result.
 #[test]
-#[ignore] // Property-based test
+#[ignore = "Property-based test"]
 fn test_property_rpath_deduplication_idempotent() {
     use xtask::build_helpers::merge_and_deduplicate;
 
@@ -826,7 +826,7 @@ fn test_property_rpath_deduplication_idempotent() {
 ///
 /// Validates that symlinks are canonicalized and deduplicated.
 #[test]
-#[ignore] // Property-based test
+#[ignore = "Property-based test"]
 #[cfg(unix)] // Symlinks are Unix-specific
 fn test_property_symlink_resolution() {
     use xtask::build_helpers::merge_and_deduplicate;
@@ -854,7 +854,7 @@ fn test_property_symlink_resolution() {
 ///
 /// Validates that insertion order is maintained after deduplication.
 #[test]
-#[ignore] // Property-based test
+#[ignore = "Property-based test"]
 fn test_property_rpath_ordering_preserved() {
     use xtask::build_helpers::merge_and_deduplicate;
 
@@ -887,7 +887,7 @@ fn test_property_rpath_ordering_preserved() {
 /// **Expected**: Flag parsed correctly and backend configuration selected
 /// **Tag**: `// Spec:AC1`
 #[test]
-#[ignore] // Spec:AC1
+#[ignore = "Spec:AC1"]
 fn test_spec_ac1_backend_flag_parsing() {
     // TODO: Implement backend flag parsing in xtask CLI
     // Expected behavior:
@@ -908,7 +908,7 @@ fn test_spec_ac1_backend_flag_parsing() {
 /// **Expected**: Skip clone if directory exists, update via git pull
 /// **Tag**: `// Spec:AC2`
 #[test]
-#[ignore] // Spec:AC2
+#[ignore = "Spec:AC2"]
 fn test_spec_ac2_clone_detection_both_backends() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -933,7 +933,7 @@ fn test_spec_ac2_clone_detection_both_backends() {
 /// **Expected**: Correct build method selected based on backend
 /// **Tag**: `// Spec:AC3`
 #[test]
-#[ignore] // Spec:AC3
+#[ignore = "Spec:AC3"]
 fn test_spec_ac3_build_strategy_per_backend() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -957,7 +957,7 @@ fn test_spec_ac3_build_strategy_per_backend() {
 /// **Expected**: Libraries discovered in priority order with deduplication
 /// **Tag**: `// Spec:AC4`
 #[test]
-#[ignore] // Spec:AC4
+#[ignore = "Spec:AC4"]
 #[cfg(target_os = "linux")]
 fn test_spec_ac4_library_discovery_three_tier() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -993,7 +993,7 @@ fn test_spec_ac4_library_discovery_three_tier() {
 /// **Expected**: RPATH embedded, deduplicated, validated ≤4096 bytes
 /// **Tag**: `// Spec:AC5`
 #[test]
-#[ignore] // Spec:AC5
+#[ignore = "Spec:AC5"]
 fn test_spec_ac5_rpath_embedding_validation() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let path1 = temp_dir.path().join("lib1");
@@ -1021,7 +1021,7 @@ fn test_spec_ac5_rpath_embedding_validation() {
 /// **Expected**: Platform-appropriate exports emitted
 /// **Tag**: `// Spec:AC6`
 #[test]
-#[ignore] // Spec:AC6
+#[ignore = "Spec:AC6"]
 fn test_spec_ac6_shell_export_formats() {
     // TODO: Verify shell export format correctness
     // Expected output per format:
@@ -1047,7 +1047,7 @@ fn test_spec_ac6_shell_export_formats() {
 /// **Expected**: BackendConfig::for_backend(bitnet|llama) returns correct config
 /// **Tag**: `// Spec:AC7`
 #[test]
-#[ignore] // Spec:AC7
+#[ignore = "Spec:AC7"]
 fn test_spec_ac7_backend_config_abstraction() {
     // TODO: Implement BackendConfig struct
     // Expected behavior:
@@ -1068,7 +1068,7 @@ fn test_spec_ac7_backend_config_abstraction() {
 /// **Expected**: Both BitNet.cpp and llama.cpp installed, RPATH merged
 /// **Tag**: `// Spec:AC8`
 #[test]
-#[ignore] // Spec:AC8
+#[ignore = "Spec:AC8"]
 fn test_spec_ac8_dual_backend_installation() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _install_base = temp_dir.path();
@@ -1094,7 +1094,7 @@ fn test_spec_ac8_dual_backend_installation() {
 /// **Expected**: Correct precedence, deduplication, length validation
 /// **Tag**: `// Spec:AC9`
 #[test]
-#[ignore] // Spec:AC9
+#[ignore = "Spec:AC9"]
 #[serial(bitnet_env)]
 fn test_spec_ac9_rpath_merging_strategy() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -1127,7 +1127,7 @@ fn test_spec_ac9_rpath_merging_strategy() {
 /// **Expected**: Correct GitHub URL used for llama.cpp backend
 /// **Tag**: `// Spec:AC10`
 #[test]
-#[ignore] // Spec:AC10
+#[ignore = "Spec:AC10"]
 fn test_spec_ac10_llama_cpp_github_url() {
     // TODO: Verify llama.cpp GitHub URL constant
     // Expected:
@@ -1146,7 +1146,7 @@ fn test_spec_ac10_llama_cpp_github_url() {
 /// **Expected**: CMake build executed without setup_env.py fallback
 /// **Tag**: `// Spec:AC11`
 #[test]
-#[ignore] // Spec:AC11
+#[ignore = "Spec:AC11"]
 fn test_spec_ac11_llama_cpp_cmake_only() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _llama_dir = temp_dir.path().join("llama_cpp");
@@ -1170,7 +1170,7 @@ fn test_spec_ac11_llama_cpp_cmake_only() {
 /// **Expected**: Correct search paths for llama.cpp (build, build/bin, build/lib)
 /// **Tag**: `// Spec:AC12`
 #[test]
-#[ignore] // Spec:AC12
+#[ignore = "Spec:AC12"]
 #[cfg(target_os = "linux")]
 fn test_spec_ac12_llama_cpp_library_discovery() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -1204,7 +1204,7 @@ fn test_spec_ac12_llama_cpp_library_discovery() {
 /// **Expected**: All backend selection functions tested
 /// **Tag**: `// Spec:AC13`
 #[test]
-#[ignore] // Spec:AC13
+#[ignore = "Spec:AC13"]
 fn test_spec_ac13_unit_test_coverage() {
     // TODO: Verify unit test coverage
     // Required tests:
@@ -1227,7 +1227,7 @@ fn test_spec_ac13_unit_test_coverage() {
 /// **Expected**: Test matrix covers all configurations
 /// **Tag**: `// Spec:AC14`
 #[test]
-#[ignore] // Spec:AC14
+#[ignore = "Spec:AC14"]
 fn test_spec_ac14_integration_test_workflow() {
     // TODO: Create integration test script
     // Test matrix:
@@ -1248,7 +1248,7 @@ fn test_spec_ac14_integration_test_workflow() {
 /// **Expected**: CI tests bitnet, llama, both configurations
 /// **Tag**: `// Spec:AC15`
 #[test]
-#[ignore] // Spec:AC15
+#[ignore = "Spec:AC15"]
 fn test_spec_ac15_ci_validation() {
     // TODO: Update .github/workflows/crossval.yml
     // Expected CI jobs:
@@ -1269,7 +1269,7 @@ fn test_spec_ac15_ci_validation() {
 /// **Expected**: Platform-appropriate RPATH embedding verified
 /// **Tag**: `// Spec:AC16`
 #[test]
-#[ignore] // Spec:AC16
+#[ignore = "Spec:AC16"]
 #[cfg(target_os = "linux")]
 fn test_spec_ac16_platform_rpath_validation_linux() {
     // TODO: Validate RPATH on Linux using readelf
@@ -1290,7 +1290,7 @@ fn test_spec_ac16_platform_rpath_validation_linux() {
 /// **Expected**: Legacy environment variables respected
 /// **Tag**: `// Spec:AC17`
 #[test]
-#[ignore] // Spec:AC17
+#[ignore = "Spec:AC17"]
 #[serial(bitnet_env)]
 fn test_spec_ac17_regression_backward_compatibility() {
     let _guard = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
@@ -1319,7 +1319,7 @@ fn test_spec_ac17_regression_backward_compatibility() {
 /// **Expected**: Transient errors retried with increasing delay
 /// **Tag**: `// Spec:AC18`
 #[test]
-#[ignore] // Spec:AC18
+#[ignore = "Spec:AC18"]
 fn test_spec_ac18_retry_logic_exponential_backoff() {
     // TODO: Implement clone_with_retry()
     // Expected behavior:
@@ -1341,7 +1341,7 @@ fn test_spec_ac18_retry_logic_exponential_backoff() {
 /// **Expected**: Second process waits or fails-fast with clear error
 /// **Tag**: `// Spec:AC19`
 #[test]
-#[ignore] // Spec:AC19
+#[ignore = "Spec:AC19"]
 fn test_spec_ac19_concurrent_locking() {
     // TODO: Implement acquire_lock() using fs2::FileExt
     // Expected behavior:
@@ -1362,7 +1362,7 @@ fn test_spec_ac19_concurrent_locking() {
 /// **Expected**: Incomplete installations cleaned up on failure
 /// **Tag**: `// Spec:AC20`
 #[test]
-#[ignore] // Spec:AC20
+#[ignore = "Spec:AC20"]
 fn test_spec_ac20_transactional_state_management() {
     // TODO: Implement InstallTransaction with Drop rollback
     // Expected behavior:
@@ -1383,7 +1383,7 @@ fn test_spec_ac20_transactional_state_management() {
 /// **Expected**: Build system detects env var changes
 /// **Tag**: `// Spec:AC21`
 #[test]
-#[ignore] // Spec:AC21
+#[ignore = "Spec:AC21"]
 fn test_spec_ac21_rebuild_triggers() {
     // TODO: Verify build.rs emits correct rebuild triggers
     // Expected triggers:
@@ -1406,7 +1406,7 @@ fn test_spec_ac21_rebuild_triggers() {
 /// **Expected**: User-friendly progress indicators during long operations
 /// **Tag**: `// Spec:AC22`
 #[test]
-#[ignore] // Spec:AC22
+#[ignore = "Spec:AC22"]
 fn test_spec_ac22_progress_indicators() {
     // TODO: Implement progress indicators using indicatif
     // Expected behavior:
@@ -1430,7 +1430,7 @@ fn test_spec_ac22_progress_indicators() {
 /// **Test**: Git pull in detached HEAD state doesn't fail hard
 /// **Expected**: Warning emitted, continues with submodule update
 #[test]
-#[ignore] // Edge case
+#[ignore = "Edge case"]
 fn test_edge_detached_head_git_pull() {
     // TODO: Test detached HEAD handling
     // Expected: Warning message, no hard failure
@@ -1446,7 +1446,7 @@ fn test_edge_detached_head_git_pull() {
 /// **Test**: CMake not installed shows helpful error
 /// **Expected**: Clear error with installation instructions
 #[test]
-#[ignore] // Edge case
+#[ignore = "Edge case"]
 fn test_edge_missing_cmake_dependency() {
     // TODO: Test dependency detection
     // Expected: "cmake not found" error with platform-specific install commands
@@ -1462,7 +1462,7 @@ fn test_edge_missing_cmake_dependency() {
 /// **Test**: RPATH >4096 bytes triggers clear error
 /// **Expected**: Error with actionable guidance
 #[test]
-#[ignore] // Edge case
+#[ignore = "Edge case"]
 fn test_edge_rpath_length_limit() {
     // TODO: Test RPATH length validation
     // Expected: Panic with clear error when RPATH >4096 bytes
@@ -1478,7 +1478,7 @@ fn test_edge_rpath_length_limit() {
 /// **Test**: Network timeout triggers retry logic
 /// **Expected**: Retry with exponential backoff
 #[test]
-#[ignore] // Edge case
+#[ignore = "Edge case"]
 fn test_edge_network_timeout_retry() {
     // TODO: Test network timeout handling
     // Expected: clone_with_retry() retries on timeout errors
@@ -1494,7 +1494,7 @@ fn test_edge_network_timeout_retry() {
 /// **Test**: Two processes try to install same backend
 /// **Expected**: Second process fails-fast with lock error
 #[test]
-#[ignore] // Edge case
+#[ignore = "Edge case"]
 fn test_edge_concurrent_installation_conflict() {
     // TODO: Test concurrent locking
     // Expected: Second process gets "Another setup-cpp-auto process is running" error
@@ -1510,7 +1510,7 @@ fn test_edge_concurrent_installation_conflict() {
 /// **Test**: Build fails mid-process, state cleaned up
 /// **Expected**: Transactional rollback removes partial artifacts
 #[test]
-#[ignore] // Edge case
+#[ignore = "Edge case"]
 fn test_edge_partial_build_cleanup() {
     // TODO: Test transactional rollback
     // Expected: InstallTransaction::drop() removes incomplete build/
@@ -1526,7 +1526,7 @@ fn test_edge_partial_build_cleanup() {
 /// **Test**: BITNET_CROSSVAL_LIBDIR points to non-existent path
 /// **Expected**: Graceful fallback to auto-discovery
 #[test]
-#[ignore] // Edge case
+#[ignore = "Edge case"]
 #[serial(bitnet_env)]
 fn test_edge_invalid_libdir_env_var() {
     let _guard = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
@@ -1549,7 +1549,7 @@ fn test_edge_invalid_libdir_env_var() {
 ///
 /// Validates that emitted shell exports are syntactically correct for POSIX shells.
 #[test]
-#[ignore] // Integration test
+#[ignore = "Integration test"]
 fn test_shell_emission_sh() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -1575,7 +1575,7 @@ fn test_shell_emission_sh() {
 ///
 /// Validates that emitted shell exports use fish syntax.
 #[test]
-#[ignore] // Integration test
+#[ignore = "Integration test"]
 fn test_shell_emission_fish() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let bitnet_dir = temp_dir.path().join("bitnet_cpp");
@@ -1601,7 +1601,7 @@ fn test_shell_emission_fish() {
 ///
 /// Validates that emitted shell exports use PowerShell syntax.
 #[test]
-#[ignore] // Integration test
+#[ignore = "Integration test"]
 #[cfg(target_os = "windows")]
 fn test_shell_emission_pwsh() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -1628,7 +1628,7 @@ fn test_shell_emission_pwsh() {
 ///
 /// Validates that emitted shell exports use batch script syntax.
 #[test]
-#[ignore] // Integration test
+#[ignore = "Integration test"]
 #[cfg(target_os = "windows")]
 fn test_shell_emission_cmd() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
