@@ -16,6 +16,7 @@ members = [
   "crates/bitnet-inference",
   "crates/bitnet-tokenizers",
   "crates/bitnet-prompt-templates",
+  "crates/bitnet-honest-compute",
   "crates/bitnet-receipts",
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization

@@ -75,11 +75,7 @@ fn grid_covers_all_required_scenarios() {
     ];
     for scenario in &required_scenarios {
         let found = grid.rows_for_scenario(*scenario);
-        assert!(
-            !found.is_empty(),
-            "BDD grid missing required scenario: {:?}",
-            scenario
-        );
+        assert!(!found.is_empty(), "BDD grid missing required scenario: {:?}", scenario);
     }
 }
 
@@ -116,10 +112,7 @@ fn grid_lookup_returns_correct_cell() {
 
     // Unit/Local is the most commonly-exercised cell; verify we can find it
     let cell = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
-    assert!(
-        cell.is_some(),
-        "Curated BDD grid must contain a Unit/Local cell"
-    );
+    assert!(cell.is_some(), "Curated BDD grid must contain a Unit/Local cell");
     let cell = cell.unwrap();
     assert_eq!(cell.scenario, TestingScenario::Unit);
     assert_eq!(cell.environment, ExecutionEnvironment::Local);

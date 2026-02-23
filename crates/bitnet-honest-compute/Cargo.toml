@@ -1,0 +1,23 @@
+[package]
+name = "bitnet-honest-compute"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Core honest-compute policy helpers for compute-path and kernel ID validation"
+readme = "README.md"
+include = [
+  "src/**",
+  "Cargo.toml",
+  "README.md",
+]
+
+[dependencies]
+
+[features]
+default = []

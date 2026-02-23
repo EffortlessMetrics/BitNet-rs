@@ -408,6 +408,7 @@ name = "bitnet-bdd-grid"
 version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid-core",
+ "bitnet-runtime-feature-flags",
 ]
 
 [[package]]
@@ -589,6 +590,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-honest-compute"
+version = "0.1.0"
+
+[[package]]
 name = "bitnet-inference"
 version = "0.1.0"
 dependencies = [
@@ -762,6 +767,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-honest-compute",
  "chrono",
  "insta",
  "proptest",
@@ -1084,6 +1090,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-compat",
  "bitnet-crossval",
+ "bitnet-honest-compute",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
