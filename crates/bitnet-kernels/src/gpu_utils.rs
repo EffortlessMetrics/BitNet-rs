@@ -44,39 +44,39 @@ fn probe_command(cmd: &str, args: &[&str]) -> bool {
 /// Run a shell command with a hard-kill timeout and capture its stdout.
 /// Returns `None` on timeout, failure, or non-UTF8 output.
 fn probe_command_output(cmd: &str, args: &[&str]) -> Option<String> {
-    let mut child = match Command::new(cmd).args(args).stderr(std::process::Stdio::null()).spawn() {
+    use std::io::Read;
+    let mut child = match Command::new(cmd)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
         Ok(c) => c,
         Err(_) => return None,
     };
     let deadline = Instant::now() + PROBE_TIMEOUT;
-    loop {
+    let status = loop {
         match child.try_wait() {
-            Ok(Some(status)) => {
-                if !status.success() {
-                    return None;
-                }
-                // Process exited; collect output via wait_with_output isn't available
-                // after try_wait consumes the exit status. Instead, re-run to capture.
-                break;
-            }
+            Ok(Some(status)) => break status,
             Ok(None) => {
                 if Instant::now() >= deadline {
                     let _ = child.kill();
-                    let _ = child.wait();
+                    let _ = child.wait(); // reap to avoid zombie
                     return None;
                 }
                 std::thread::sleep(PROBE_POLL_INTERVAL);
             }
             Err(_) => return None,
         }
+    };
+    if !status.success() {
+        return None;
     }
-    // Re-run with captured stdout now that we know the command succeeds quickly.
-    Command::new(cmd)
-        .args(args)
-        .output()
-        .ok()
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
+    // Process already exited; drain its piped stdout (at EOF, so this is fast).
+    let mut stdout = child.stdout.take()?;
+    let mut output = String::new();
+    stdout.read_to_string(&mut output).ok()?;
+    Some(output)
 }
 
 /// Check if any GPU backend is available

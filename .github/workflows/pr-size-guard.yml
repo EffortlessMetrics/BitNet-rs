@@ -66,7 +66,7 @@ jobs:
       run: |
         # Check for files over 100KB, ignoring always-large lockfiles
         LARGE_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD \
-          | grep -vE '^(Cargo\.lock|flake\.lock|package-lock\.json|yarn\.lock)$' \
+          | { grep -vE '^(Cargo\.lock|flake\.lock|package-lock\.json|yarn\.lock)$' || true; } \
           | xargs -I {} du -b -- "{}" 2>/dev/null \
           | awk '$1 > 102400 {print $2}' | head -10)
 
@@ -159,7 +159,7 @@ jobs:
       if: >-
         ${{
           steps.evaluate.outputs.size_category != 'normal'
-          && github.event.pull_request.head.repo.fork == false
+          && !github.event.pull_request.head.repo.fork
         }}
       continue-on-error: true
       uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7

@@ -69,7 +69,7 @@ jobs:
         continue-on-error: ${{ matrix.allow_failure == true }}
         env:
           BITNET_CPP_DIR: ${{ matrix.env.BITNET_CPP_DIR || '' }}
-        run: cargo check --workspace --locked ${{ matrix.flags }} 2>&1
+        run: cargo check --workspace --locked ${{ matrix.flags }}
 
   # Targeted compile checks for key crates that are most likely to diverge
   crate-feature-check:

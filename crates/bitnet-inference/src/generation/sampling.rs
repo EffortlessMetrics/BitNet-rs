@@ -161,21 +161,22 @@ impl SamplingStrategy {
             return Ok(logits.clone());
         }
 
-        // O(N) partition: find the k-th largest value, then mask everything below it.
+        // O(N) partition: rearrange so that indices[0..k] are the top-k highest logits.
         // This is significantly faster than a full sort for large vocabularies (32k+).
         let mut indices: Vec<usize> = (0..vocab_size).collect();
-        // select_nth_unstable_by rearranges so that element at position k-1 is the
-        // (k-1)-th largest (descending), with no guarantees on relative order.
         indices.select_nth_unstable_by(k - 1, |&i, &j| {
             logits_vec[j].partial_cmp(&logits_vec[i]).unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        // Determine the cutoff value (the k-th largest logit)
-        let cutoff = logits_vec[indices[k - 1]];
-
-        // Mask all tokens below the cutoff
-        for val in logits_vec.iter_mut() {
-            if *val < cutoff {
+        // Keep exactly the k tokens in the top partition; mask all others.
+        // Using index-based masking (not value-based) ensures correct cardinality
+        // even when multiple tokens share the same logit value as the k-th token.
+        let mut keep = vec![false; vocab_size];
+        for &idx in &indices[..k] {
+            keep[idx] = true;
+        }
+        for (i, val) in logits_vec.iter_mut().enumerate() {
+            if !keep[i] {
                 *val = f32::NEG_INFINITY;
             }
         }
