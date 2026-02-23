@@ -3,9 +3,9 @@
 //! Provides various sampling strategies including temperature scaling,
 //! top-k sampling, nucleus (top-p) sampling, and repetition penalty.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use bitnet_common::{BitNetTensor, Tensor};
-use candle_core::Tensor as CandleTensor;
+
 use rand::{Rng, RngCore};
 use std::collections::HashMap;
 
