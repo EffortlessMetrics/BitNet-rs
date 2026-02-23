@@ -35,7 +35,10 @@
 //! the planned enhanced detection warning system that will be implemented after this
 //! test scaffolding is complete.
 
-use crate::support::{backend_helpers, env_guard::EnvGuard};
+use crate::support::{
+    backend_helpers,
+    env_guard::{EnvGuard, EnvScope},
+};
 use bitnet_crossval::backend::CppBackend;
 use serial_test::serial;
 
@@ -108,19 +111,14 @@ fn test_is_ci_detects_generic_ci_flag() {
 #[test]
 #[serial(bitnet_env)]
 fn test_is_ci_false_when_unset() {
-    // Clear all CI-related environment variables
-    let _guards = [
-        EnvGuard::new("CI"),
-        EnvGuard::new("GITHUB_ACTIONS"),
-        EnvGuard::new("JENKINS_HOME"),
-        EnvGuard::new("GITLAB_CI"),
-        EnvGuard::new("CIRCLECI"),
-        EnvGuard::new("BITNET_TEST_NO_REPAIR"),
-    ];
-
-    for guard in &_guards {
-        guard.remove();
-    }
+    // Clear all CI-related environment variables using a single scope to avoid deadlock
+    let mut _scope = EnvScope::new();
+    _scope.remove("CI");
+    _scope.remove("GITHUB_ACTIONS");
+    _scope.remove("JENKINS_HOME");
+    _scope.remove("GITLAB_CI");
+    _scope.remove("CIRCLECI");
+    _scope.remove("BITNET_TEST_NO_REPAIR");
 
     // Verify is_ci() returns false in clean environment
     assert!(!backend_helpers::is_ci(), "is_ci() should return false when no CI vars are set");
@@ -508,22 +506,15 @@ fn test_preflight_dev_mode_continues_on_stale_build() {
     std::fs::write(build_dir.join("bitnet.dll"), b"mock library")
         .expect("Failed to create mock library");
 
-    // Clear CI environment variables (dev mode)
-    let _guards = [
-        EnvGuard::new("CI"),
-        EnvGuard::new("GITHUB_ACTIONS"),
-        EnvGuard::new("JENKINS_HOME"),
-        EnvGuard::new("GITLAB_CI"),
-        EnvGuard::new("CIRCLECI"),
-        EnvGuard::new("BITNET_TEST_NO_REPAIR"),
-    ];
-
-    for guard in &_guards {
-        guard.remove();
-    }
-
-    let _guard_cpp_dir = EnvGuard::new("BITNET_CPP_DIR");
-    _guard_cpp_dir.set(temp.path().to_str().unwrap());
+    // Clear CI environment variables (dev mode) using a single scope to avoid deadlock
+    let mut _scope = EnvScope::new();
+    _scope.remove("CI");
+    _scope.remove("GITHUB_ACTIONS");
+    _scope.remove("JENKINS_HOME");
+    _scope.remove("GITLAB_CI");
+    _scope.remove("CIRCLECI");
+    _scope.remove("BITNET_TEST_NO_REPAIR");
+    _scope.set("BITNET_CPP_DIR", temp.path().to_str().unwrap());
 
     // TODO: Call preflight_backend_libs(CppBackend::BitNet, false) and verify:
     // 1. Returns Ok(()) (does not exit or panic)
@@ -559,11 +550,10 @@ fn test_preflight_verbose_mode_shows_diagnostics() {
     std::fs::write(build_dir.join("bitnet.dll"), b"mock library")
         .expect("Failed to create mock library");
 
-    let _guard1 = EnvGuard::new("BITNET_CPP_DIR");
-    let _guard2 = EnvGuard::new("VERBOSE");
-
-    _guard1.set(temp.path().to_str().unwrap());
-    _guard2.set("1");
+    // Use EnvScope to set multiple variables without deadlocking
+    let mut _scope = EnvScope::new();
+    _scope.set("BITNET_CPP_DIR", temp.path().to_str().unwrap());
+    _scope.set("VERBOSE", "1");
 
     // TODO: Capture stderr and call preflight_backend_libs(CppBackend::BitNet, true)
     //
@@ -616,22 +606,15 @@ fn test_preflight_backend_unavailable_everywhere() {
     // Create empty temporary directory (no libraries)
     let temp = tempfile::tempdir().expect("Failed to create temp dir");
 
-    // Clear CI environment variables
-    let _guards = [
-        EnvGuard::new("CI"),
-        EnvGuard::new("GITHUB_ACTIONS"),
-        EnvGuard::new("JENKINS_HOME"),
-        EnvGuard::new("GITLAB_CI"),
-        EnvGuard::new("CIRCLECI"),
-        EnvGuard::new("BITNET_TEST_NO_REPAIR"),
-    ];
-
-    for guard in &_guards {
-        guard.remove();
-    }
-
-    let _guard_cpp_dir = EnvGuard::new("BITNET_CPP_DIR");
-    _guard_cpp_dir.set(temp.path().to_str().unwrap());
+    // Clear CI environment variables using a single scope to avoid deadlock
+    let mut _scope = EnvScope::new();
+    _scope.remove("CI");
+    _scope.remove("GITHUB_ACTIONS");
+    _scope.remove("JENKINS_HOME");
+    _scope.remove("GITLAB_CI");
+    _scope.remove("CIRCLECI");
+    _scope.remove("BITNET_TEST_NO_REPAIR");
+    _scope.set("BITNET_CPP_DIR", temp.path().to_str().unwrap());
 
     // TODO: Call preflight_backend_libs(CppBackend::BitNet, false) and verify:
     // 1. Build-time constant false (assumed)

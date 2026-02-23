@@ -324,6 +324,7 @@ fn verify_windows_linkage(binary_path: &std::path::Path) -> Result<(), String> {
 #[test]
 #[cfg(target_os = "linux")]
 #[serial(bitnet_env)]
+#[ignore = "requires bitnet.cpp shared libraries to link (run with BITNET_CPP_DIR set)"]
 fn test_linux_rpath_embedding() {
     // Tests feature spec: bitnet-integration-tests.md#scenario-17-linux-so-libraries
 
@@ -406,6 +407,7 @@ fn test_linux_rpath_embedding() {
 #[test]
 #[cfg(target_os = "linux")]
 #[serial(bitnet_env)]
+#[ignore = "requires bitnet.cpp shared libraries to link (run with BITNET_CPP_DIR set)"]
 fn test_linux_rpath_embedding_failure_invalid_path() {
     // Tests feature spec: bitnet-integration-tests.md#scenario-17-linux-so-libraries
 
@@ -468,6 +470,7 @@ fn test_linux_rpath_embedding_failure_invalid_path() {
 #[test]
 #[cfg(target_os = "linux")]
 #[serial(bitnet_env)]
+#[ignore = "requires bitnet.cpp shared libraries to link (run with BITNET_CPP_DIR set)"]
 fn test_linux_rpath_embedding_multiple_paths() {
     // Tests feature spec: bitnet-integration-tests.md#scenario-17-linux-so-libraries
 
