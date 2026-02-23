@@ -129,23 +129,23 @@ jobs:
             git push -u origin "$BR"
 
             # Create PR with labels, or update existing PR
+            {
+              echo 'Automated weekly repin to keep action SHAs up-to-date with upstream tags.'
+              echo ''
+              echo 'This PR updates pinned action SHAs to their latest versions while preserving the original tag reference in trailing comments for human readability.'
+              echo ''
+              echo '**Review checklist:**'
+              echo '- [ ] Verify all pinned SHAs match their corresponding tag references'
+              echo '- [ ] Check that no local actions were affected'
+              echo '- [ ] Confirm CI passes with updated action versions'
+              echo ''
+              echo '**Merge when ready:** Core CI checks must pass; other checks are advisory.'
+            } > /tmp/pr_body.txt
+
             gh pr create \
               --title "ci: repin actions to latest upstream SHAs" \
               --label "ci,automation,low-risk" \
-              --body "$(cat <<'EOF'
-Automated weekly repin to keep action SHAs up-to-date with upstream tags.
-
-This PR updates pinned action SHAs to their latest versions while preserving
-the original tag reference in trailing comments for human readability.
-
-**Review checklist:**
-- [ ] Verify all pinned SHAs match their corresponding tag references
-- [ ] Check that no local actions (`./*`) were affected
-- [ ] Confirm CI passes with updated action versions
-
-**Merge when ready:** Core CI checks must pass; other checks are advisory.
-EOF
-              )" || {
+              --body-file /tmp/pr_body.txt || {
                 # If PR already exists, update labels
                 PR_NUM=$(gh pr list --state open --head "$BR" --json number -q '.[0].number')
                 if [ -n "$PR_NUM" ]; then
