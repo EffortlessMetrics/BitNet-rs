@@ -17,6 +17,7 @@ include = [
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
+bitnet-transformer = { path = "../bitnet-transformer", version = "0.1.0" }
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.1.0", optional = true }
 bitnet-trace = { path = "../bitnet-trace", version = "0.1.0", optional = true }
 anyhow.workspace = true
@@ -52,8 +53,8 @@ bitnet-st2gguf = { path = "../bitnet-st2gguf", version = "0.1.0" }
 
 [features]
 default = []
-cpu = []  # CPU feature for test scaffolding
-gpu = ["bitnet-common/gpu", "candle-core/cuda"]
+cpu = ["bitnet-transformer/cpu"]  # CPU feature for test scaffolding
+gpu = ["bitnet-common/gpu", "candle-core/cuda", "bitnet-transformer/gpu"]
 cuda = ["gpu"]  # Backward compatibility alias for gpu
 validation = []
 iq2s-ffi = ["dep:bitnet-ggml-ffi", "bitnet-ggml-ffi/iq2s-ffi"]

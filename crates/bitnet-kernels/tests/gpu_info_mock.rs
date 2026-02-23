@@ -1,5 +1,5 @@
 use bitnet_kernels::gpu_utils::get_gpu_info;
-use bitnet_tests::support::env_guard::EnvGuard;
+use bitnet_tests::support::env_guard::EnvScope;
 use serial_test::serial;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -13,16 +13,13 @@ fn make_exec(path: &std::path::Path) {
 
 #[test]
 #[serial(bitnet_env)]
-#[ignore = "deadlocks: multiple simultaneous EnvGuard instances hold non-reentrant ENV_LOCK; fix tracked in EnvGuard redesign task"]
 fn test_gpu_info_mocked_scenarios() {
     // Scenario: no GPU present
     {
         let dir = tempdir().unwrap();
-        let _path_guard = EnvGuard::new("PATH");
-        _path_guard.set(dir.path().to_str().unwrap());
-
-        let _fake_guard = EnvGuard::new("BITNET_GPU_FAKE");
-        _fake_guard.remove(); // Ensure no fake GPU override
+        let mut scope = EnvScope::new();
+        scope.set("PATH", dir.path().to_str().unwrap());
+        scope.remove("BITNET_GPU_FAKE");
 
         let info = get_gpu_info();
         assert!(!info.any_available());
@@ -39,17 +36,15 @@ fn test_gpu_info_mocked_scenarios() {
             .unwrap();
         make_exec(&nvcc);
 
-        let _path_guard = EnvGuard::new("PATH");
         let original_path = std::env::var("PATH").unwrap_or_default();
-        _path_guard.set(&format!("{}:{}", dir.path().display(), original_path));
-
-        let _fake_guard = EnvGuard::new("BITNET_GPU_FAKE");
-        _fake_guard.remove(); // Ensure no fake GPU override
+        let mut scope = EnvScope::new();
+        scope.set("PATH", &format!("{}:{}", dir.path().display(), original_path));
+        scope.remove("BITNET_GPU_FAKE");
 
         let info = get_gpu_info();
         assert!(info.cuda);
         assert!(info.cuda_version.unwrap_or_default().starts_with("12.1"));
     }
 
-    // Guards automatically restore original PATH on drop
+    // EnvScope automatically restores original PATH on drop
 }

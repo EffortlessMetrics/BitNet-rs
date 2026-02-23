@@ -234,6 +234,72 @@ impl Drop for EnvGuard {
     }
 }
 
+/// A scope that acquires the env lock **once** and allows setting or removing
+/// any number of environment variables under that single lock.
+///
+/// This is the preferred replacement for creating multiple `EnvGuard` instances
+/// in the same test scope, which deadlocks because `EnvGuard` holds a
+/// non-reentrant global mutex for its entire lifetime.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// #[test]
+/// #[serial(bitnet_env)]
+/// fn test_multi_env() {
+///     let mut scope = EnvScope::new();
+///     scope.set("VAR_A", "1");
+///     scope.set("VAR_B", "2");
+///     // ... test body ...
+/// } // all vars restored on drop
+/// ```
+pub struct EnvScope {
+    _lock: std::sync::MutexGuard<'static, ()>,
+    saved: std::collections::HashMap<String, Option<String>>,
+}
+
+impl EnvScope {
+    /// Acquire the env lock and return a new scope.
+    pub fn new() -> Self {
+        let lock = get_env_lock().lock().unwrap_or_else(|e| e.into_inner());
+        Self { _lock: lock, saved: std::collections::HashMap::new() }
+    }
+
+    /// Set `key` to `value`, saving the original value for restoration.
+    pub fn set(&mut self, key: &str, value: &str) {
+        self.saved.entry(key.to_string()).or_insert_with(|| env::var(key).ok());
+        // SAFETY: We hold the global ENV_LOCK mutex for the duration of this scope.
+        unsafe { env::set_var(key, value) };
+    }
+
+    /// Remove `key` from the environment, saving the original value for restoration.
+    pub fn remove(&mut self, key: &str) {
+        self.saved.entry(key.to_string()).or_insert_with(|| env::var(key).ok());
+        // SAFETY: We hold the global ENV_LOCK mutex for the duration of this scope.
+        unsafe { env::remove_var(key) };
+    }
+}
+
+impl Default for EnvScope {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Drop for EnvScope {
+    fn drop(&mut self) {
+        for (key, original) in &self.saved {
+            // SAFETY: We still hold the global ENV_LOCK mutex (via self._lock).
+            unsafe {
+                match original {
+                    Some(v) => env::set_var(key, v),
+                    None => env::remove_var(key),
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -10,4 +10,4 @@ mod env_guard_impl {
 }
 
 #[allow(unused_imports)]
-pub use env_guard_impl::EnvGuard;
+pub use env_guard_impl::{EnvGuard, EnvScope};
