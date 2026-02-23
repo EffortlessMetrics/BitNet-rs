@@ -157,6 +157,7 @@ fn test_default_path_no_env_vars() {
 /// Spec: Section 5.1, Test 2
 /// Expected: Uses explicit BITNET_CPP_DIR value (Tier 1 precedence)
 #[test]
+#[ignore = "integration test: requires C++ reference at the specified path (setup-cpp-auto fetches if missing)"]
 #[serial(bitnet_env)]
 fn test_bitnet_cpp_dir_overrides_default() {
     let _g1 = EnvGuard::clear("BITNET_CPP_PATH");
@@ -194,6 +195,7 @@ fn test_bitnet_cpp_dir_overrides_default() {
 /// Spec: Section 5.1, Test 3
 /// Expected: Falls back to BITNET_CPP_PATH if BITNET_CPP_DIR is not set
 #[test]
+#[ignore = "integration test: requires C++ reference at the specified path (setup-cpp-auto fetches if missing)"]
 #[serial(bitnet_env)]
 fn test_bitnet_cpp_path_fallback() {
     let _g1 = EnvGuard::clear("BITNET_CPP_DIR");
@@ -232,6 +234,7 @@ fn test_bitnet_cpp_path_fallback() {
 /// Spec: Section 5.1, Test 4
 /// Expected: BITNET_CPP_DIR wins when both are set (Tier 1 precedence order)
 #[test]
+#[ignore = "integration test: requires C++ reference at the specified path (setup-cpp-auto fetches if missing)"]
 #[serial(bitnet_env)]
 fn test_bitnet_cpp_dir_precedence_over_path() {
     let _g1 = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");

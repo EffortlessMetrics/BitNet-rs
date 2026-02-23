@@ -225,8 +225,11 @@ fn test_no_deprecated_yaml_dependencies() {
             failures.push(format!("Found deprecated serde_yaml 0.9 in {}", toml_path));
         }
 
-        // Verify new serde_yaml_ng pattern exists
-        if !content.contains("package = \"serde_yaml_ng\"") {
+        // Verify new serde_yaml_ng pattern exists (either inline or via workspace inheritance)
+        let has_alias = content.contains("package = \"serde_yaml_ng\"");
+        let uses_workspace =
+            content.lines().any(|l| l.contains("serde_yaml") && l.contains("workspace = true"));
+        if !has_alias && !uses_workspace {
             failures.push(format!("Missing serde_yaml_ng aliasing in {}", toml_path));
         }
     }
@@ -260,13 +263,16 @@ fn test_serde_yaml_ng_migration_complete() {
         let content = std::fs::read_to_string(toml_path)
             .unwrap_or_else(|_| panic!("Failed to read {}", toml_path));
 
-        // AC1: Verify package aliasing exists
-        if !content.contains("package = \"serde_yaml_ng\"") {
+        // AC1: Verify package aliasing exists (inline or via workspace inheritance)
+        let has_inline_alias = content.contains("package = \"serde_yaml_ng\"");
+        let uses_workspace =
+            content.lines().any(|l| l.contains("serde_yaml") && l.contains("workspace = true"));
+        if !has_inline_alias && !uses_workspace {
             failures.push(format!("AC1 FAIL: Missing serde_yaml_ng aliasing in {}", toml_path));
         }
 
-        // AC1: Verify version is 0.10.0+
-        if content.contains("serde_yaml_ng") && !content.contains("0.10.") {
+        // AC1: Verify version is 0.10.0+ (only applies to inline definitions)
+        if content.contains("serde_yaml_ng") && !content.contains("0.10.") && !uses_workspace {
             failures.push(format!("AC1 FAIL: Incorrect serde_yaml_ng version in {}", toml_path));
         }
 
@@ -356,6 +362,7 @@ fn test_cargo_tree_shows_only_serde_yaml_ng() {
 #[test]
 fn test_serde_yaml_ng_version_consistency() {
     let crates_to_check = vec![
+        "/home/steven/code/Rust/BitNet-rs/Cargo.toml", // workspace root defines canonical version
         "/home/steven/code/Rust/BitNet-rs/crates/bitnet-cli/Cargo.toml",
         "/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/Cargo.toml",
         "/home/steven/code/Rust/BitNet-rs/tests/Cargo.toml",
@@ -389,7 +396,13 @@ fn test_serde_yaml_ng_version_consistency() {
         }
     }
 
-    // All versions should be identical (0.10.0)
+    // All versions should be identical (0.10.0). When crates use workspace = true,
+    // their version is inherited from the workspace root which is also checked.
+    if versions.is_empty() {
+        panic!(
+            "FAIL: No explicit serde_yaml_ng version found in workspace (workspace root should define it)"
+        );
+    }
     if versions.len() != 1 {
         panic!("FAIL: Inconsistent serde_yaml_ng versions across workspace: {:?}", versions);
     }

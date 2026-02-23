@@ -6,7 +6,7 @@
 
 Rust inference engine for 1-bit BitNet large language models — memory-safe, cross-validated against the C++ reference, with SIMD/CUDA acceleration.
 
-## Quick Start
+## CLI Quickstart
 
 ```bash
 # 1. Download a model
@@ -19,7 +19,14 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
   --prompt "What is 2+2?" \
   --max-tokens 8
 
-# 3. Interactive chat
+# 3. Deterministic benchmark + receipt verification
+BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1 \
+  cargo run -p xtask -- benchmark \
+  --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
+  --tokens 128
+cargo run -p xtask -- verify-receipt
+
+# 4. Interactive chat
 RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- chat \
   --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
   --tokenizer models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json
@@ -100,8 +107,7 @@ cargo nextest run --workspace --no-default-features --features cpu
 cargo nextest run --profile ci
 
 # GGUF fixture tests
-cargo test -p bitnet-models --test qk256_dual_flavor_tests \
-  --no-default-features --features fixtures
+cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features --features fixtures
 
 # Skip slow QK256 scalar tests
 BITNET_SKIP_SLOW_TESTS=1 cargo nextest run \
@@ -127,8 +133,50 @@ Organised by [Diátaxis](https://diataxis.fr/):
 - [C++ cross-validation setup](docs/how-to/automatic-tokenizer-discovery.md)
 - [Quantization support](docs/reference/quantization-support.md)
 - [Validation gates](docs/reference/validation-gates.md)
+- [QK256 Usage Guide](docs/howto/use-qk256-models.md) — GGML I2_S QK256 Format with 256-element blocks and `--strict-loader` validation
+- [Dual I2_S Flavor Architecture](docs/explanation/i2s-dual-flavor.md) — how BitNet.rs differentiates between I2_S format variants
 
-## Contributing
+## Receipt Verification
+
+BitNet.rs uses "honest-compute" receipts to verify real inference (no mock fallback).
+
+```bash
+# Run benchmark and write receipt
+cargo run -p xtask -- benchmark \
+  --model models/model.gguf --tokens 128
+
+# Verify receipt against quality gates
+cargo run -p xtask -- verify-receipt
+
+# Strict mode — fail on suspicious LN weights (exit code 8)
+BITNET_STRICT_MODE=1 cargo run -p xtask -- verify-receipt
+```
+
+Receipt JSON schema (v1.0.0):
+
+```json
+{
+  "version": "1.0.0",
+  "compute_path": "real",
+  "kernels": ["i2s_cpu_avx2"],
+  "tokens_per_sec": 0.1,
+  "success": true
+}
+```
+
+Key environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `BITNET_DETERMINISTIC` | Enable deterministic inference |
+| `BITNET_SEED` | Random seed for reproducibility |
+| `RAYON_NUM_THREADS` | Worker thread count (1 = single-threaded) |
+| `BITNET_STRICT_MODE` | Fail on validation warnings |
+
+Kernel ID hygiene: all kernel IDs must be non-empty strings ≤ 128 chars.
+See [baselines/](baselines/) for reference receipts.
+
+
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and pull requests welcome.
 

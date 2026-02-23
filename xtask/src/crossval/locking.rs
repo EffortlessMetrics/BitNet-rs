@@ -23,6 +23,14 @@ use fs2::FileExt;
 use std::fs::{self, File};
 use std::path::PathBuf;
 
+/// Get the lock directory, respecting `BITNET_TEST_LOCK_DIR` override for tests
+fn lock_dir() -> Result<PathBuf> {
+    if let Ok(dir) = std::env::var("BITNET_TEST_LOCK_DIR") {
+        return Ok(PathBuf::from(dir));
+    }
+    Ok(dirs::cache_dir().context("Failed to get cache directory")?.join("bitnet_locks"))
+}
+
 /// RAII file lock for auto-repair operations
 ///
 /// Prevents concurrent repairs of the same backend by using platform-specific
@@ -81,8 +89,7 @@ impl FileLock {
     #[cfg_attr(not(test), allow(dead_code))]
     pub fn acquire(backend: CppBackend) -> Result<Self> {
         // Get cache directory for locks
-        let lock_dir =
-            dirs::cache_dir().context("Failed to get cache directory")?.join("bitnet_locks");
+        let lock_dir = lock_dir()?;
 
         // Ensure lock directory exists
         fs::create_dir_all(&lock_dir)
@@ -121,8 +128,7 @@ impl FileLock {
     #[allow(dead_code)]
     pub fn try_acquire(backend: CppBackend) -> Result<Option<Self>> {
         // Get cache directory for locks
-        let lock_dir =
-            dirs::cache_dir().context("Failed to get cache directory")?.join("bitnet_locks");
+        let lock_dir = lock_dir()?;
 
         // Ensure lock directory exists
         fs::create_dir_all(&lock_dir)
@@ -177,11 +183,23 @@ mod tests {
     use crate::crossval::CppBackend;
     use serial_test::serial;
 
+    /// Set BITNET_TEST_LOCK_DIR to a process-unique temp path to prevent
+    /// cross-process interference when nextest runs lib and bin tests simultaneously.
+    fn setup_unique_lock_dir() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().expect("Failed to create temp lock dir");
+        // Safety: test-only mutation, guarded by #[serial(file_lock)]
+        unsafe {
+            std::env::set_var("BITNET_TEST_LOCK_DIR", dir.path());
+        }
+        dir
+    }
+
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC10
     /// AC:AC10 - Lock acquired successfully when available
     #[test]
     #[serial(file_lock)]
     fn test_ac10_file_lock_acquisition_success() {
+        let _tmpdir = setup_unique_lock_dir();
         // Acquire lock for BitNet backend
         let lock = FileLock::acquire(CppBackend::BitNet);
 
@@ -204,6 +222,7 @@ mod tests {
     #[test]
     #[serial(file_lock)]
     fn test_lock_acquire_failure() {
+        let _tmpdir = setup_unique_lock_dir();
         // Acquire first lock
         let _lock1 = FileLock::acquire(CppBackend::BitNet).expect("Failed to acquire first lock");
 
@@ -225,6 +244,7 @@ mod tests {
     #[test]
     #[serial(file_lock)]
     fn test_lock_cleanup_on_drop() {
+        let _tmpdir = setup_unique_lock_dir();
         let lock_path = {
             // Acquire lock
             let lock = FileLock::acquire(CppBackend::BitNet).expect("Failed to acquire lock");
@@ -246,6 +266,7 @@ mod tests {
     #[test]
     #[serial(file_lock)]
     fn test_lock_cleanup_on_panic() {
+        let _tmpdir = setup_unique_lock_dir();
         use std::panic::{AssertUnwindSafe, catch_unwind};
 
         let lock_path = {
@@ -274,6 +295,7 @@ mod tests {
     #[test]
     #[serial(file_lock)]
     fn test_lock_per_backend() {
+        let _tmpdir = setup_unique_lock_dir();
         // Acquire locks for both backends simultaneously
         let lock_bitnet =
             FileLock::acquire(CppBackend::BitNet).expect("Failed to acquire BitNet lock");

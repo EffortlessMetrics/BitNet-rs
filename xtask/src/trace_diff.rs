@@ -87,7 +87,7 @@ pub fn run(rs_dir: &Path, cpp_dir: &Path) -> Result<()> {
         eprintln!("    cargo run -p bitnet-cli --features cpu,trace -- run \\");
         eprintln!("    --model <model.gguf> --tokenizer <tokenizer.json> \\");
         eprintln!("    --prompt \"What is 2+2?\" --max-tokens 4 --greedy");
-        std::process::exit(2); // Usage error
+        anyhow::bail!("Rust trace directory not found: {}", rs_dir.display());
     }
 
     if !cpp_dir.exists() {
@@ -95,7 +95,7 @@ pub fn run(rs_dir: &Path, cpp_dir: &Path) -> Result<()> {
         eprintln!();
         eprintln!("How to capture C++ traces:");
         eprintln!("  See docs/howto/cpp-setup.md for C++ instrumentation and trace capture");
-        std::process::exit(2); // Usage error
+        anyhow::bail!("C++ trace directory not found: {}", cpp_dir.display());
     }
 
     // 2) Check if directories are empty
@@ -109,7 +109,7 @@ pub fn run(rs_dir: &Path, cpp_dir: &Path) -> Result<()> {
         eprintln!("    cargo run -p bitnet-cli --features cpu,trace -- run \\");
         eprintln!("    --model <model.gguf> --tokenizer <tokenizer.json> \\");
         eprintln!("    --prompt \"What is 2+2?\" --max-tokens 4 --greedy");
-        std::process::exit(2); // Usage error
+        anyhow::bail!("Rust trace directory is empty: {}", rs_dir.display());
     }
 
     if !has_trace_files(cpp_dir) {
@@ -117,7 +117,7 @@ pub fn run(rs_dir: &Path, cpp_dir: &Path) -> Result<()> {
         eprintln!();
         eprintln!("How to capture C++ traces:");
         eprintln!("  See docs/howto/cpp-setup.md for C++ instrumentation and trace capture");
-        std::process::exit(2); // Usage error
+        anyhow::bail!("C++ trace directory is empty: {}", cpp_dir.display());
     }
 
     // 3) Verify trace_diff.py script exists
