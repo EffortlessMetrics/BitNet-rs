@@ -26,6 +26,7 @@ path = "src/main.rs"
 bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
 bitnet-inference = { path = "../bitnet-inference", version = "0.1.0" }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.1.0" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
 bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.1.0" }
@@ -76,11 +77,13 @@ runtime-profile-core = [
 ]
 cpu = [
   "bitnet-inference/cpu",
+  "bitnet-kernels/cpu",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
 ]
 cuda = [
   "bitnet-inference/cuda",
+  "bitnet-kernels/cuda",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cuda",
 ]

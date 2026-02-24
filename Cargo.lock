@@ -424,6 +424,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-ggml-ffi",
  "bitnet-inference",
+ "bitnet-kernels",
  "bitnet-models",
  "bitnet-prompt-templates",
  "bitnet-quantization",
