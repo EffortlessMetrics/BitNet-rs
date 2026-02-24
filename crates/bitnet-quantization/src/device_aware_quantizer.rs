@@ -357,9 +357,21 @@ impl CPUQuantizer {
             ));
         }
 
-        let mut dequantized = Vec::new();
+        // 16-entry lookup table matching the CPUQuantizer TL1 encoding:
+        // code c ∈ [0,15] was produced by `((normalized + 1.0) * 7.5) as u8`,
+        // so the inverse is `c as f32 / 7.5 - 1.0`.
+        // Pre-computing avoids a floating-point divide per element.
+        #[rustfmt::skip]
+        const TL1_LUT: [f32; 16] = [
+            -1.0,      -0.8667,  -0.7333,  -0.6,
+            -0.4667,   -0.3333,  -0.2,     -0.0667,
+             0.0667,    0.2,      0.3333,   0.4667,
+             0.6,       0.7333,   0.8667,   1.0,
+        ];
+
         let block_size = tensor.block_size;
         let num_blocks = tensor.scales.len();
+        let mut dequantized = Vec::with_capacity(tensor.numel());
 
         for block_idx in 0..num_blocks {
             let scale = tensor.scales[block_idx];
@@ -367,10 +379,8 @@ impl CPUQuantizer {
             let end = (start + block_size).min(tensor.data.len());
 
             for i in start..end {
-                let quantized = tensor.data[i] as f32;
-                let normalized = (quantized / 7.5) - 1.0;
-                let dequantized_val = normalized * scale;
-                dequantized.push(dequantized_val);
+                let code = (tensor.data[i] as usize).min(15);
+                dequantized.push(TL1_LUT[code] * scale);
             }
         }
 
@@ -888,10 +898,38 @@ mod tests {
         assert_eq!(tensor.qtype, QuantizationType::I2S);
     }
 
+    #[test]
+    fn test_tl1_dequantize_lut_round_trip() {
+        let quantizer = CPUQuantizer::new(ToleranceConfig::default());
+        // Values spread across the range; after quantize→dequantize the max
+        // error per element is bounded by the step size (1/7.5 ≈ 0.133).
+        let original: Vec<f32> = (-7..=7).map(|i| i as f32 / 7.0).collect();
+        let quantized = quantizer.quantize_tl1(&original).unwrap();
+        let dequantized = quantizer.dequantize_tl1(&quantized).unwrap();
+
+        assert_eq!(original.len(), dequantized.len());
+        for (orig, deq) in original.iter().zip(dequantized.iter()) {
+            // Max error for 16-level uniform quantization over [-1,1] is 1/7.5 ≈ 0.134
+            assert!(
+                (orig - deq).abs() < 0.14,
+                "TL1 round-trip error too large: orig={orig:.6}, deq={deq:.6}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_tl1_dequantize_type_check() {
+        let quantizer = CPUQuantizer::new(ToleranceConfig::default());
+        // A TL2 tensor should fail type check
+        let tl2_tensor = quantizer.quantize_tl2(&[0.5, -0.5]).unwrap();
+        let err = quantizer.dequantize_tl1(&tl2_tensor).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("TL2") || msg.contains("Unsupported"), "unexpected error: {msg}");
+    }
+
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
     fn test_gpu_cpu_parity() {
-        let quantizer = DeviceAwareQuantizer::new();
         let test_data = vec![1.0, -0.5, 0.3, -0.8, 0.0, 0.7];
 
         let result = quantizer.validate_gpu_cpu_parity(&test_data);
