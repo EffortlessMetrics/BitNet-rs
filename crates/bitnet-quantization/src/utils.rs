@@ -107,6 +107,28 @@ pub fn quantize_value(value: f32, scale: f32, bits: u8) -> i8 {
     0i8
 }
 
+/// Quantize a single value with an asymmetric zero-point offset.
+///
+/// Asymmetric quantization improves accuracy for tensors with non-zero means:
+/// ```text
+/// quantized = round(value / scale) + offset
+/// ```
+/// where `offset` shifts the zero-point so the representable range covers
+/// `[min_val - offset*scale, max_val - offset*scale]`.
+///
+/// Use `dequantize_value_with_offset` to invert this operation.
+#[inline]
+pub fn quantize_value_with_offset(value: f32, scale: f32, offset: i32, bits: u8) -> i8 {
+    let max_val = (1 << (bits - 1)) - 1;
+    let min_val = -(1 << (bits - 1));
+
+    if value.is_finite() && scale != 0.0 && scale.is_finite() {
+        let normalized = (value / scale).round() as i32 + offset;
+        return normalized.clamp(min_val, max_val) as i8;
+    }
+    0i8
+}
+
 /// Dequantize a single value from n-bit signed integer with numerical stability
 #[inline]
 pub fn dequantize_value(quantized: i8, scale: f32) -> f32 {
@@ -116,6 +138,17 @@ pub fn dequantize_value(quantized: i8, scale: f32) -> f32 {
     } else {
         0.0 // Safe fallback for invalid scale
     }
+}
+
+/// Dequantize a single value with an asymmetric zero-point offset.
+///
+/// Inverts `quantize_value_with_offset`:
+/// ```text
+/// value ≈ (quantized - offset) * scale
+/// ```
+#[inline]
+pub fn dequantize_value_with_offset(quantized: i8, scale: f32, offset: i32) -> f32 {
+    if scale.is_finite() { (quantized as i32 - offset) as f32 * scale } else { 0.0 }
 }
 
 /// Calculate mean squared error between two tensors
@@ -223,5 +256,42 @@ mod tests {
         // 2-bit quantization has limited precision
         assert!((-2..=1).contains(&quantized)); // 2-bit signed range
         assert!(dequantized.abs() <= 2.0); // Should be in reasonable range
+    }
+
+    #[test]
+    fn test_quantize_with_offset_round_trip() {
+        // Asymmetric: values centered around 0.5 benefit from a non-zero offset
+        let scale = 0.5f32;
+        let offset = 1i32;
+        let bits = 8u8;
+        for &v in &[0.0f32, 0.5, 1.0, -0.5, -1.0] {
+            let q = quantize_value_with_offset(v, scale, offset, bits);
+            let deq = dequantize_value_with_offset(q, scale, offset);
+            // Round-trip error should be at most half a scale step
+            assert!((deq - v).abs() <= scale * 0.5 + 1e-6, "v={v} deq={deq}");
+        }
+    }
+
+    #[test]
+    fn test_quantize_with_offset_zero_offset_matches_symmetric() {
+        // With offset=0 the functions must agree with the non-offset variants
+        let scale = 0.25f32;
+        let bits = 8u8;
+        for &v in &[0.0f32, 1.25, -1.0, 0.75] {
+            let q_sym = quantize_value(v, scale, bits);
+            let q_off = quantize_value_with_offset(v, scale, 0, bits);
+            assert_eq!(q_sym, q_off, "v={v}: symmetric={q_sym} offset-zero={q_off}");
+
+            let deq_sym = dequantize_value(q_sym, scale);
+            let deq_off = dequantize_value_with_offset(q_off, scale, 0);
+            assert!((deq_sym - deq_off).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_dequantize_with_offset_invalid_scale() {
+        // Should return 0.0 for non-finite scale, not panic
+        assert_eq!(dequantize_value_with_offset(5, f32::INFINITY, 2), 0.0);
+        assert_eq!(dequantize_value_with_offset(5, f32::NAN, 2), 0.0);
     }
 }
