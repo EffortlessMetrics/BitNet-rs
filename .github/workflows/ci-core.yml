@@ -110,6 +110,14 @@ jobs:
           cargo test --locked \
             -p bitnet-inference --test cpu_golden_path \
             --no-default-features --features cpu
+          # Phase 6 SRP microcrates (no feature flags required)
+          cargo test --locked \
+            -p bitnet-logits \
+            -p bitnet-gguf \
+            -p bitnet-generation \
+            -p bitnet-device-probe \
+            -p bitnet-engine-core \
+            --no-default-features
 
       - name: BDD Grid Check (CPU cells)
         run: cargo run --locked --no-default-features -p xtask -- grid-check --cpu-only
