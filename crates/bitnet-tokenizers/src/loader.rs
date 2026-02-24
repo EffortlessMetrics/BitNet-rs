@@ -60,9 +60,7 @@ pub fn load_tokenizer(path: &Path) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     match ext {
-        "gguf" => {
-            Ok(Arc::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?))
-        }
+        "gguf" => Ok(Arc::new(crate::gguf_tokenizer::GgufTokenizer::from_gguf_file(path)?)),
         "json" => {
             let data = fs::read_to_string(path).context("Failed to read tokenizer JSON file")?;
             let value: Value =
