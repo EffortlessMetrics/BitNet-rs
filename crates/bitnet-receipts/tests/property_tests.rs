@@ -31,7 +31,7 @@ proptest! {
             .collect();
         if kernels.is_empty() { return Ok(()); }
 
-        let receipt = InferenceReceipt::generate("cpu", kernels).unwrap();
+        let receipt = InferenceReceipt::generate("cpu", kernels, None).unwrap();
         prop_assert_eq!(&receipt.compute_path, "real");
     }
 
@@ -43,7 +43,7 @@ proptest! {
     ) {
         let mut kernels = real_kernels;
         kernels.push(mock_kern);
-        let receipt = InferenceReceipt::generate("cpu", kernels).unwrap();
+        let receipt = InferenceReceipt::generate("cpu", kernels, None).unwrap();
         prop_assert_eq!(&receipt.compute_path, "mock");
     }
 
@@ -58,7 +58,7 @@ proptest! {
             .filter(|k| !k.to_lowercase().contains("mock"))
             .collect();
         if kernels.is_empty() { return Ok(()); }
-        let receipt = InferenceReceipt::generate(&backend, kernels).unwrap();
+        let receipt = InferenceReceipt::generate(&backend, kernels, None).unwrap();
         prop_assert_eq!(&receipt.schema_version, RECEIPT_SCHEMA_VERSION);
     }
 
@@ -73,7 +73,7 @@ proptest! {
             .collect();
         if kernels.is_empty() { return Ok(()); }
 
-        let receipt = InferenceReceipt::generate("cpu", kernels).unwrap();
+        let receipt = InferenceReceipt::generate("cpu", kernels, None).unwrap();
         let json = serde_json::to_string(&receipt).unwrap();
         let restored: InferenceReceipt = serde_json::from_str(&json).unwrap();
         prop_assert_eq!(&receipt.compute_path, &restored.compute_path);
@@ -85,23 +85,29 @@ proptest! {
 
 #[test]
 fn generated_receipt_validates() {
-    let receipt =
-        InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string(), "rope_apply".to_string()])
-            .unwrap();
+    let receipt = InferenceReceipt::generate(
+        "cpu",
+        vec!["i2s_gemv".to_string(), "rope_apply".to_string()],
+        None,
+    )
+    .unwrap();
     receipt.validate().expect("Valid receipt should pass validation");
 }
 
 #[test]
 fn mock_receipt_fails_validation() {
-    let receipt = InferenceReceipt::generate("cpu", vec!["mock_gemv".to_string()]).unwrap();
+    let receipt = InferenceReceipt::generate("cpu", vec!["mock_gemv".to_string()], None).unwrap();
     assert!(receipt.validate().is_err(), "Receipt with mock kernels should fail validation");
 }
 
 #[test]
 fn snapshot_receipt_structure() {
-    let mut receipt =
-        InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string(), "rope_apply".to_string()])
-            .unwrap();
+    let mut receipt = InferenceReceipt::generate(
+        "cpu",
+        vec!["i2s_gemv".to_string(), "rope_apply".to_string()],
+        None,
+    )
+    .unwrap();
     // Normalize non-deterministic fields for snapshot
     receipt.timestamp = "2024-01-01T00:00:00+00:00".to_string();
     receipt.environment.clear();

@@ -47,6 +47,7 @@ async fn test_parity_receipt_schema_validation() {
     let receipt = InferenceReceipt::generate(
         "cpu",
         vec!["i2s_gemv".to_string(), "rope_apply".to_string(), "attention_real".to_string()],
+        None,
     )
     .expect("Receipt generation should succeed")
     .with_parity(ParityMetadata {

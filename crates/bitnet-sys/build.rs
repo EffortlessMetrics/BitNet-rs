@@ -4,10 +4,16 @@
 //! the `ffi` feature is enabled. It fails fast if dependencies are missing.
 
 use std::env;
+use std::path::Path;
 #[cfg(feature = "ffi")]
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn main() {
+    // Always declare cfg keys so rustc doesn't warn about unknown cfg values.
+    println!("cargo::rustc-check-cfg=cfg(bitnet_cpp_available)");
+    println!("cargo::rustc-check-cfg=cfg(bitnet_cpp_has_cuda)");
+    println!("cargo::rustc-check-cfg=cfg(bitnet_cpp_has_bitnet_shim)");
+
     // If the crate is compiled without `--features bitnet-sys/ffi`,
     // skip all native build steps so the workspace remains green.
     if env::var("CARGO_FEATURE_FFI").is_err() {
@@ -75,6 +81,9 @@ fn main() {
 
         eprintln!("bitnet-sys: Building with cross-validation support");
         eprintln!("bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
+
+        // Symbol analysis: emit cfg flags for detected capabilities.
+        run_symbol_analysis(&cpp_dir);
 
         // Link against the C++ implementation - fail on error
         link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
@@ -329,4 +338,114 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     eprintln!("bitnet-sys: Generated C++ bindings successfully");
     Ok(())
+}
+
+/// Inspect shared libraries in `cpp_dir/build/` using `nm` or `objdump` and
+/// emit `cargo:rustc-cfg` flags for detected capabilities.
+///
+/// Always emits `bitnet_cpp_available`. Conditionally emits `bitnet_cpp_has_cuda`
+/// and `bitnet_cpp_has_bitnet_shim` based on symbol presence.
+fn run_symbol_analysis(cpp_dir: &Path) {
+    let build_dir = cpp_dir.join("build");
+    if !build_dir.exists() {
+        return;
+    }
+
+    // Walk build dir up to depth 3, collect .so and .dylib files.
+    let mut libraries: Vec<std::path::PathBuf> = Vec::new();
+    collect_libraries(&build_dir, 0, 3, &mut libraries);
+
+    if libraries.is_empty() {
+        eprintln!(
+            "bitnet-sys: symbol-analysis: no shared libraries found in {}",
+            build_dir.display()
+        );
+        // Still emit available since cpp_dir itself exists.
+        println!("cargo:rustc-cfg=bitnet_cpp_available");
+        return;
+    }
+
+    let mut has_cuda = false;
+    let mut has_shim = false;
+
+    for lib in &libraries {
+        eprintln!("bitnet-sys: symbol-analysis: inspecting {}", lib.display());
+        if let Some((cuda, shim)) = analyze_library_symbols(lib) {
+            if cuda {
+                has_cuda = true;
+            }
+            if shim {
+                has_shim = true;
+            }
+        }
+    }
+
+    println!("cargo:rustc-cfg=bitnet_cpp_available");
+    if has_cuda {
+        eprintln!("bitnet-sys: symbol-analysis: CUDA symbols detected");
+        println!("cargo:rustc-cfg=bitnet_cpp_has_cuda");
+    }
+    if has_shim {
+        eprintln!("bitnet-sys: symbol-analysis: BitNet shim symbols detected");
+        println!("cargo:rustc-cfg=bitnet_cpp_has_bitnet_shim");
+    }
+}
+
+/// Recursively collect `.so` and `.dylib` files up to `max_depth`.
+fn collect_libraries(
+    dir: &Path,
+    depth: usize,
+    max_depth: usize,
+    out: &mut Vec<std::path::PathBuf>,
+) {
+    if depth > max_depth {
+        return;
+    }
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_libraries(&path, depth + 1, max_depth, out);
+        } else if let Some(ext) = path.extension() {
+            if ext == "so" || ext == "dylib" {
+                out.push(path);
+            }
+        }
+    }
+}
+
+/// Run `nm --dynamic --defined-only` (falling back to `objdump -T`) on `lib`
+/// and return `(has_cuda, has_bitnet_shim)`. Returns `None` if both tools fail.
+fn analyze_library_symbols(lib: &Path) -> Option<(bool, bool)> {
+    let output = std::process::Command::new("nm")
+        .args(["--dynamic", "--defined-only"])
+        .arg(lib)
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| o.stdout)
+        .or_else(|| {
+            std::process::Command::new("objdump")
+                .args(["-T"])
+                .arg(lib)
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .map(|o| o.stdout)
+        })?;
+
+    let text = String::from_utf8_lossy(&output);
+    let has_cuda = text.lines().any(|l| {
+        let l = l.to_ascii_lowercase();
+        l.contains("cuda") || l.contains("cublas") || l.contains("cudarc")
+    });
+    let has_shim = text.lines().any(|l| {
+        l.contains("bitnet_eval")
+            || l.contains("bitnet_init")
+            || l.contains("bitnet_create_context")
+    });
+    Some((has_cuda, has_shim))
 }

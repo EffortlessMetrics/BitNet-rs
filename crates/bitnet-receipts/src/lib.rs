@@ -194,6 +194,11 @@ pub struct InferenceReceipt {
     /// Backend used: "cpu" | "cuda" | "metal"
     pub backend: String,
 
+    /// Backend selection summary: "requested=X detected=[Y] selected=Z"
+    /// Populated from BackendSelectionResult::summary() at receipt generation time.
+    #[serde(default)]
+    pub backend_summary: String,
+
     /// Kernels executed during inference
     /// Examples: ["i2s_gemv", "rope_apply", "attention_real"]
     pub kernels: Vec<String>,
@@ -241,12 +246,17 @@ impl InferenceReceipt {
     ///
     /// let receipt = InferenceReceipt::generate(
     ///     "cpu",
-    ///     vec!["i2s_gemv".to_string(), "rope_apply".to_string()]
+    ///     vec!["i2s_gemv".to_string(), "rope_apply".to_string()],
+    ///     None,
     /// ).unwrap();
     ///
     /// assert_eq!(receipt.compute_path, "real");
     /// ```
-    pub fn generate(backend: &str, kernels: Vec<String>) -> Result<Self> {
+    pub fn generate(
+        backend: &str,
+        kernels: Vec<String>,
+        backend_summary: Option<String>,
+    ) -> Result<Self> {
         // AC4: Detect mock kernels (case-insensitive)
         let compute_path = classify_compute_path(kernels.iter().map(String::as_str));
 
@@ -255,6 +265,7 @@ impl InferenceReceipt {
             timestamp: Utc::now().to_rfc3339(),
             compute_path: compute_path.to_string(),
             backend: backend.to_string(),
+            backend_summary: backend_summary.unwrap_or_default(),
             kernels,
             deterministic: std::env::var("BITNET_DETERMINISTIC").is_ok(),
             environment: Self::collect_env_vars(),
@@ -333,7 +344,7 @@ impl InferenceReceipt {
     /// use std::path::Path;
     /// use bitnet_receipts::InferenceReceipt;
     ///
-    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     /// receipt.save(Path::new("ci/inference.json")).unwrap();
     /// ```
     pub fn save(&self, path: &Path) -> Result<()> {
@@ -367,7 +378,7 @@ impl InferenceReceipt {
     /// ```no_run
     /// use bitnet_receipts::InferenceReceipt;
     ///
-    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     /// assert!(receipt.validate().is_ok());
     /// ```
     pub fn validate(&self) -> Result<()> {
@@ -424,6 +435,14 @@ impl InferenceReceipt {
             return Err(anyhow!("Determinism test failed: sequences not identical"));
         }
 
+        // Soft gate: if backend_summary is non-empty, verify it has the expected format.
+        if !self.backend_summary.is_empty() && !self.backend_summary.contains("selected=") {
+            return Err(anyhow!(
+                "backend_summary format invalid: expected to contain \"selected=\", got: {:?}",
+                self.backend_summary
+            ));
+        }
+
         Ok(())
     }
 
@@ -436,7 +455,7 @@ impl InferenceReceipt {
     /// ```no_run
     /// use bitnet_receipts::InferenceReceipt;
     ///
-    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     /// assert!(receipt.validate_schema().is_ok());
     /// ```
     pub fn validate_schema(&self) -> Result<()> {
@@ -458,7 +477,7 @@ impl InferenceReceipt {
     /// ```no_run
     /// use bitnet_receipts::InferenceReceipt;
     ///
-    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     /// assert!(receipt.validate_compute_path().is_ok());
     /// ```
     pub fn validate_compute_path(&self) -> Result<()> {
@@ -479,7 +498,7 @@ impl InferenceReceipt {
     /// ```no_run
     /// use bitnet_receipts::InferenceReceipt;
     ///
-    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     /// assert!(receipt.validate_kernel_ids().is_ok());
     /// ```
     pub fn validate_kernel_ids(&self) -> Result<()> {
@@ -576,6 +595,7 @@ mod tests {
         let receipt = InferenceReceipt::generate(
             "cpu",
             vec!["i2s_gemv".to_string(), "rope_apply".to_string()],
+            None,
         )
         .unwrap();
 
@@ -590,6 +610,7 @@ mod tests {
         let receipt = InferenceReceipt::generate(
             "cpu",
             vec!["mock_gemv".to_string(), "i2s_gemv".to_string()],
+            None,
         )
         .unwrap();
 
@@ -598,14 +619,16 @@ mod tests {
 
     #[test]
     fn test_receipt_validation_passes() {
-        let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
 
         assert!(receipt.validate().is_ok());
     }
 
     #[test]
     fn test_receipt_validation_fails_mock_path() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
 
         receipt.compute_path = "mock".to_string();
         assert!(receipt.validate().is_err());
@@ -613,14 +636,16 @@ mod tests {
 
     #[test]
     fn test_receipt_validation_fails_mock_kernels() {
-        let receipt = InferenceReceipt::generate("cpu", vec!["mock_gemv".to_string()]).unwrap();
+        let receipt =
+            InferenceReceipt::generate("cpu", vec!["mock_gemv".to_string()], None).unwrap();
 
         assert!(receipt.validate().is_err());
     }
 
     #[test]
     fn test_receipt_validation_fails_failed_tests() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
 
         receipt.test_results.failed = 1;
         assert!(receipt.validate().is_err());
@@ -628,7 +653,8 @@ mod tests {
 
     #[test]
     fn test_receipt_with_corrections() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
 
         // Add a correction record
         let correction = CorrectionRecord {
@@ -654,13 +680,15 @@ mod tests {
 
     #[test]
     fn test_receipt_empty_corrections_by_default() {
-        let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         assert!(receipt.corrections.is_empty(), "Corrections should be empty by default");
     }
 
     #[test]
     fn test_receipt_serialization_with_corrections() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
 
         let correction = CorrectionRecord {
             layer: "test.layer".to_string(),
@@ -690,7 +718,8 @@ mod tests {
 
     #[test]
     fn test_receipt_with_model_metadata() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
 
         // Add model SHA256 and correction digest
         receipt.model_info.sha256 = Some("abc123def456".to_string());
@@ -707,7 +736,8 @@ mod tests {
     /// Test validate_schema with invalid version
     #[test]
     fn test_validate_schema_invalid_version() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.schema_version = "2.0.0".to_string();
 
         let result = receipt.validate_schema();
@@ -718,14 +748,16 @@ mod tests {
     /// Test validate_schema with valid version
     #[test]
     fn test_validate_schema_valid() {
-        let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         assert!(receipt.validate_schema().is_ok());
     }
 
     /// Test validate_compute_path with invalid path
     #[test]
     fn test_validate_compute_path_invalid() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.compute_path = "mock".to_string();
 
         let result = receipt.validate_compute_path();
@@ -736,14 +768,16 @@ mod tests {
     /// Test validate_compute_path with valid path
     #[test]
     fn test_validate_compute_path_valid() {
-        let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         assert!(receipt.validate_compute_path().is_ok());
     }
 
     /// Test validate_kernel_ids with empty array
     #[test]
     fn test_validate_kernel_ids_empty_array() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec![];
 
         let result = receipt.validate_kernel_ids();
@@ -754,7 +788,8 @@ mod tests {
     /// Test validate_kernel_ids with empty string
     #[test]
     fn test_validate_kernel_ids_empty_string() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec!["".to_string()];
 
         let result = receipt.validate_kernel_ids();
@@ -765,7 +800,8 @@ mod tests {
     /// Test validate_kernel_ids with whitespace-only string
     #[test]
     fn test_validate_kernel_ids_whitespace_only() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec!["   ".to_string()];
 
         let result = receipt.validate_kernel_ids();
@@ -776,7 +812,8 @@ mod tests {
     /// Test validate_kernel_ids with excessive length
     #[test]
     fn test_validate_kernel_ids_excessive_length() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec!["a".repeat(129)];
 
         let result = receipt.validate_kernel_ids();
@@ -787,7 +824,8 @@ mod tests {
     /// Test validate_kernel_ids at exact 128 character boundary (should pass)
     #[test]
     fn test_validate_kernel_ids_exact_128_chars() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec!["a".repeat(128)];
 
         assert!(receipt.validate_kernel_ids().is_ok());
@@ -796,7 +834,8 @@ mod tests {
     /// Test validate_kernel_ids with excessive count
     #[test]
     fn test_validate_kernel_ids_excessive_count() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec!["kernel".to_string(); 10_001];
 
         let result = receipt.validate_kernel_ids();
@@ -807,7 +846,8 @@ mod tests {
     /// Test validate_kernel_ids at exact 10,000 count boundary (should pass)
     #[test]
     fn test_validate_kernel_ids_exact_10k_count() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec!["kernel".to_string(); 10_000];
 
         assert!(receipt.validate_kernel_ids().is_ok());
@@ -820,7 +860,7 @@ mod tests {
 
         for kernel_id in test_cases {
             let mut receipt =
-                InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+                InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
             receipt.kernels = vec![kernel_id.to_string()];
 
             let result = receipt.validate_kernel_ids();
@@ -832,7 +872,8 @@ mod tests {
     /// Test validate_kernel_ids with mixed valid and invalid kernels
     #[test]
     fn test_validate_kernel_ids_mixed_kernels() {
-        let mut receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()]).unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.kernels = vec!["valid_kernel".to_string(), "".to_string()];
 
         let result = receipt.validate_kernel_ids();
@@ -851,6 +892,7 @@ mod tests {
                 "tl2_lut_backward".to_string(),
                 "cpu_attention_qkvo".to_string(),
             ],
+            None,
         )
         .unwrap();
 
@@ -867,6 +909,7 @@ mod tests {
                 "cuda_i2s_quantize".to_string(),
                 "gpu_attention_flash".to_string(),
             ],
+            None,
         )
         .unwrap();
 

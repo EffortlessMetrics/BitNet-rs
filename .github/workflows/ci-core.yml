@@ -107,6 +107,9 @@ jobs:
             -p bitnet-receipts \
             -p bitnet-sampling
 
+      - name: BDD Grid Check (CPU cells)
+        run: cargo run --locked -p xtask -- grid-check --cpu-only
+
   # Job 2: Clippy linting
   clippy:
     name: Clippy

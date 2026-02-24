@@ -8,6 +8,7 @@ expression: receipt
   "timestamp": "[timestamp]",
   "compute_path": "real",
   "backend": "cpu",
+  "backend_summary": "",
   "kernels": [
     "i2s_gemv",
     "rope_apply"
