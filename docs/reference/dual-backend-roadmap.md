@@ -27,13 +27,24 @@
 | Preflight backend availability checks | `xtask/` | #611 |
 | `BITNET_GPU_FAKE`, `BITNET_STRICT_MODE` env guards | `crates/bitnet-device-probe/` | #609 |
 | TL1/TL2 quantizer round-trip accuracy fix | `crates/bitnet-quantization/` | #641 |
-| Backend selection wired into CLI/server startup | `crates/bitnet-cli/`, `crates/bitnet-server/` | #642 |
-| `BackendCapabilities` startup snapshot (requested/detected/selected) | `crates/bitnet-kernels/src/device_features.rs` | #642 |
-| BDD grid as compile-coverage contract (`xtask grid-check`) | `xtask/src/grid_check.rs`, CI | #611/#644 |
-| CPU golden path E2E test (always-on, synthetic model, no download) | `crates/bitnet-inference/tests/cpu_golden_path.rs` | #643 |
-| Phase 6 SRP microcrates wired into CI | `.github/workflows/ci-core.yml` | #644 |
+| Runtime backend validation + enforcement wired into CLI/server | `crates/bitnet-cli/`, `crates/bitnet-server/` | #642 |
+| `BackendCapabilities` snapshot: `requested=X detected=[…] selected=Y` | `crates/bitnet-kernels/src/device_features.rs` | #642 |
+| CPU golden path E2E tests (5 deterministic, no model download) | `crates/bitnet-inference/tests/cpu_golden_path.rs` | #643 |
+| SRP microcrates wired into CI matrix | `.github/workflows/ci-core.yml` | #644 |
+| Security audit fixes (bytes, time CVEs; audit.toml accepted-risk) | `Cargo.lock`, `.cargo/audit.toml` | #645 |
 | Nightly fuzz runs with artifact upload | `.github/workflows/fuzz-ci.yml` | #609 |
 | Cross-validation scheduled lanes | `.github/workflows/crossval.yml` | #611 |
+| Build-time symbol detection → rustc-cfg flags | `crates/bitnet-sys/build.rs` (feature: `symbol-analysis`) | #611 |
+
+### 🔲 What's Planned
+
+1. **CUDA smoke lane** (self-hosted runner, nightly/manual)
+   - Allocate device, run small inference, upload parity receipt
+   - Blocked on having a CUDA-capable self-hosted runner
+
+2. **Scheduled fuzz/crossval evidence expansion**
+   - Nightly timeboxed fuzz runs with artifact upload (partially done via `fuzz-ci.yml`)
+   - Real-model crossval producing receipts (gated on model download infrastructure)
 
 ---
 
@@ -66,16 +77,6 @@ use bitnet_device_probe::{gpu_compiled, gpu_available_runtime};
 Adding a new GPU backend only requires new feature entries and new
 backend-specific modules. Existing `#[cfg(feature = "gpu")]` code
 continues to work without modification.
-
-### 🔲 What Remains (Future Work)
-
-1. **Build-time symbol detection → rustc-cfg flags** (`bitnet-sys`)
-   - `build.rs` runs `nm`/`objdump -T` on found libs
-   - Emits `bitnet_cpp_has_cuda`, `bitnet_cpp_has_bitnet_shim`
-   - Code can compile-time gate "CUDA-backed C++ path" vs "CPU-only C++ path"
-
-2. **CUDA smoke lane** (self-hosted runner, nightly/manual)
-   - Allocate device, run small inference, upload parity receipt
 
 ---
 

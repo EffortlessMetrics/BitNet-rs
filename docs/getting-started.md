@@ -6,7 +6,7 @@ This guide will help you get up and running with BitNet Rust, a production-ready
 
 ### Prerequisites
 
-- Rust 1.90.0 or later
+- Rust 1.92.0 or later
 - CUDA 11.8+ (optional, for GPU acceleration)
 - Python 3.8+ (optional, for Python bindings)
 
@@ -19,7 +19,7 @@ cargo install bitnet-cli
 ### Build from source
 
 ```bash
-git clone https://github.com/microsoft/BitNet-rs.git
+git clone https://github.com/EffortlessMetrics/BitNet-rs.git
 cd BitNet-rs
 cargo build --no-default-features --release --no-default-features --features cpu
 ```
@@ -359,6 +359,6 @@ bitnet-cli benchmark --model model.gguf --monitor-memory
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/microsoft/BitNet-rs/issues)
+- [GitHub Issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
 - [Documentation](https://docs.rs/bitnet)
 - [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)

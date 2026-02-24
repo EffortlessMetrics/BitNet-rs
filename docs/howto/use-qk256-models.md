@@ -21,7 +21,7 @@ The `cpu` feature includes QK256 support:
 
 ```bash
 # Clone repository
-git clone https://github.com/microsoft/BitNet-rs
+git clone https://github.com/EffortlessMetrics/BitNet-rs
 cd BitNet-rs
 
 # Build with CPU support (includes QK256)

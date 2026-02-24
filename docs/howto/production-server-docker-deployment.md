@@ -19,7 +19,7 @@ Before deploying, ensure you have:
 
 ```bash
 # Clone repository
-git clone https://github.com/microsoft/BitNet-rs
+git clone https://github.com/EffortlessMetrics/BitNet-rs
 cd BitNet-rs
 
 # Download model
@@ -698,5 +698,5 @@ jobs:
 
 - **Docker Documentation**: https://docs.docker.com/
 - **NVIDIA Container Toolkit**: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/
-- **BitNet.rs Repository**: https://github.com/microsoft/BitNet-rs
+- **BitNet.rs Repository**: https://github.com/EffortlessMetrics/BitNet-rs
 - **GGUF Format**: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
