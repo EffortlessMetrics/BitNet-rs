@@ -111,7 +111,7 @@ fn test_ac5_branch_protection_configured() -> Result<()> {
 #[serial(bitnet_env)]
 fn test_ac6_mocked_receipt_rejected() -> Result<()> {
     // AC6: Smoke test validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Create temporary test directory for test fixtures
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
@@ -179,7 +179,7 @@ fn write_test_receipt(path: &Path, receipt: &serde_json::Value) -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_comprehensive_kernel_id_type_safety() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -224,7 +224,7 @@ fn test_comprehensive_kernel_id_type_safety() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_comprehensive_multiple_invalid_patterns() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -320,7 +320,7 @@ fn test_comprehensive_ci_workflow_structure() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_comprehensive_kernel_hygiene_realistic_patterns() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -364,7 +364,7 @@ fn test_comprehensive_kernel_hygiene_realistic_patterns() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_comprehensive_schema_version_compatibility() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -393,7 +393,7 @@ fn test_comprehensive_schema_version_compatibility() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_comprehensive_compute_path_strictness() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -433,7 +433,7 @@ fn test_comprehensive_compute_path_strictness() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_comprehensive_performance_edge_cases() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 

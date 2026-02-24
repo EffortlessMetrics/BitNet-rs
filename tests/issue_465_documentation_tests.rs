@@ -28,7 +28,7 @@ use std::fs;
 #[serial(bitnet_env)]
 fn test_ac1_readme_quickstart_block_present() -> Result<()> {
     // AC1: README quickstart block validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let readme_path = workspace_root().join("README.md");
 

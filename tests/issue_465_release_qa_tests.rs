@@ -113,7 +113,7 @@ fn test_ac8_mock_inference_issue_closed() -> Result<()> {
 #[serial(bitnet_env)]
 fn test_ac11_pre_tag_verification_passes() -> Result<()> {
     // AC11: Pre-tag verification validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let root = workspace_root();
 
@@ -266,7 +266,7 @@ fn test_edge_case_github_api_responses() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_pre_tag_verification_failures() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let root = workspace_root();
 

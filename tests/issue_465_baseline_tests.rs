@@ -34,7 +34,7 @@ const MAX_REALISTIC_CPU_TPS: f64 = 50.0;
 #[serial(bitnet_env)]
 fn test_ac3_cpu_baseline_generated() -> Result<()> {
     // AC3: CPU baseline generation validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Find CPU baseline using shared utility
     let baseline_path = find_cpu_baseline().context(
@@ -98,7 +98,7 @@ fn test_ac3_cpu_baseline_generated() -> Result<()> {
 #[serial(bitnet_env)]
 fn test_ac4_baseline_verification_passes() -> Result<()> {
     // AC4: Baseline verification validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Find CPU baseline using shared utility
     let baseline_path = find_cpu_baseline().context(
@@ -123,7 +123,7 @@ fn test_ac4_baseline_verification_passes() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_empty_kernels_rejected() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
     let receipt = create_test_receipt("real", vec![]);
@@ -148,7 +148,7 @@ fn test_edge_case_empty_kernels_rejected() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_invalid_schema_versions() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -180,7 +180,7 @@ fn test_edge_case_invalid_schema_versions() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_malformed_json() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -217,7 +217,7 @@ fn test_edge_case_malformed_json() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_missing_required_fields() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -280,7 +280,7 @@ fn test_edge_case_missing_required_fields() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_performance_bounds() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let baseline_path = find_cpu_baseline().context("CPU baseline not found")?;
     let receipt_content = fs::read_to_string(&baseline_path)?;
@@ -316,7 +316,7 @@ fn test_edge_case_performance_bounds() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_kernel_id_length_constraints() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -352,7 +352,7 @@ fn test_edge_case_kernel_id_length_constraints() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_kernel_count_limits() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -379,7 +379,7 @@ fn test_edge_case_kernel_count_limits() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_deterministic_configuration() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Verify deterministic environment is configured
     assert_eq!(
@@ -408,7 +408,7 @@ fn test_edge_case_deterministic_configuration() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_negative_performance() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -435,7 +435,7 @@ fn test_edge_case_negative_performance() -> Result<()> {
 #[test]
 #[serial(bitnet_env)]
 fn test_edge_case_boundary_token_counts() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let baseline_path = find_cpu_baseline().context("CPU baseline not found")?;
     let receipt_content = fs::read_to_string(&baseline_path)?;
