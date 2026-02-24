@@ -3,6 +3,11 @@
 //! Comprehensive sampling strategies for text generation including greedy,
 //! top-k, top-p (nucleus), temperature, and repetition penalty sampling.
 
+// Re-export pure logits transforms from the dedicated micro-crate.
+pub use bitnet_logits::{
+    apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p, argmax, softmax_in_place,
+};
+
 use anyhow::{Context, Result};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;

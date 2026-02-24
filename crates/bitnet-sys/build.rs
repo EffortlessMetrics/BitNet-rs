@@ -413,10 +413,10 @@ fn collect_libraries(
         let path = entry.path();
         if path.is_dir() {
             collect_libraries(&path, depth + 1, max_depth, out);
-        } else if let Some(ext) = path.extension() {
-            if ext == "so" || ext == "dylib" || ext == "dll" {
-                out.push(path);
-            }
+        } else if let Some(ext) = path.extension()
+            && (ext == "so" || ext == "dylib" || ext == "dll")
+        {
+            out.push(path);
         }
     }
 }
