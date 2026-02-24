@@ -82,11 +82,11 @@ pub fn select_backend(
             }
             (KernelBackend::CpuRust, "CPU explicitly requested".to_string())
         }
-        BackendRequest::Gpu | BackendRequest::Cuda => {
+        BackendRequest::Gpu => {
             if caps.cuda_compiled && caps.cuda_runtime {
                 (KernelBackend::Cuda, "CUDA GPU available and requested".to_string())
             } else if caps.cuda_compiled && !caps.cuda_runtime {
-                // CUDA compiled but no runtime GPU — fall back to CPU with warning
+                // GPU requested but no runtime — fall back to CPU with warning
                 if caps.cpu_rust {
                     (
                         KernelBackend::CpuRust,
@@ -99,6 +99,17 @@ pub fn select_backend(
                         available: detected.clone(),
                     });
                 }
+            } else {
+                return Err(BackendSelectionError::RequestedUnavailable {
+                    requested: request,
+                    available: detected.clone(),
+                });
+            }
+        }
+        BackendRequest::Cuda => {
+            // Cuda is a strict requirement — no silent fallback to CPU.
+            if caps.cuda_compiled && caps.cuda_runtime {
+                (KernelBackend::Cuda, "CUDA GPU available and requested".to_string())
             } else {
                 return Err(BackendSelectionError::RequestedUnavailable {
                     requested: request,
@@ -204,6 +215,19 @@ mod tests {
         assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
         let msg = err.to_string();
         assert!(msg.contains("not available"));
+    }
+
+    #[test]
+    fn cuda_request_fails_when_no_runtime_available() {
+        // BackendRequest::Cuda is strict: no silent CPU fallback
+        let err = select_backend(BackendRequest::Cuda, &cuda_no_runtime_caps()).unwrap_err();
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+    }
+
+    #[test]
+    fn cuda_request_succeeds_with_full_cuda_caps() {
+        let result = select_backend(BackendRequest::Cuda, &cuda_caps()).unwrap();
+        assert_eq!(result.selected, KernelBackend::Cuda);
     }
 
     #[test]

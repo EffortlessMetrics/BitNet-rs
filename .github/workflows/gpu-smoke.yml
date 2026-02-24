@@ -51,8 +51,7 @@ jobs:
         run: |
           # gpu feature activates cuda feature (CUDA-first lattice)
           # This compile check ensures GPU code compiles even without NVCC
-          cargo check --no-default-features --features gpu 2>&1 | grep -E "^error" || true
-          echo "GPU compile check complete"
+          cargo check --locked --no-default-features --features gpu
         env:
           # Stub out CUDA runtime detection at compile time
           BITNET_GPU_FAKE: none

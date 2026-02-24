@@ -5664,17 +5664,26 @@ struct LockEntry {
 
 /// Inspect a shared library and report detected backends.
 fn analyze_library(path: &Path) -> Result<()> {
+    let path_str = path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Library path contains invalid UTF-8: {:?}", path))?;
+
     let syms = {
         let out = Command::new("nm")
-            .args(["--dynamic", "--defined-only", path.to_str().unwrap_or("")])
+            .args(["--dynamic", "--defined-only", path_str])
             .output();
 
         match out {
             Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
             Ok(_) => {
                 // Try objdump as fallback
-                let out2 =
-                    Command::new("objdump").args(["-T", path.to_str().unwrap_or("")]).output()?;
+                let out2 = Command::new("objdump").args(["-T", path_str]).output()?;
+                if !out2.status.success() {
+                    anyhow::bail!(
+                        "Both nm and objdump failed to inspect library {:?}",
+                        path
+                    );
+                }
                 String::from_utf8_lossy(&out2.stdout).into_owned()
             }
             Err(_) => {

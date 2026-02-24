@@ -20,7 +20,8 @@ deny = [
 ]
 # Note: lazy_static is NOT in workspace Cargo.toml dependencies (removed in favor of OnceLock)
 # but exists transitively via logos-codegen and prometheus. This is acceptable until upstream migrates.
-# Policy: No NEW direct lazy_static dependencies allowed; use std::sync::OnceLock (MSRV 1.92)
+# Policy: No NEW direct lazy_static dependencies allowed; use std::sync::OnceLock (stabilized in Rust 1.70.0;
+# project MSRV is 1.92.0)
 
 [advisories]
 db-path = "~/.cargo/advisory-db"
