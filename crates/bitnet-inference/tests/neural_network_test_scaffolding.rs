@@ -827,7 +827,7 @@ async fn test_mock_replacement_validation(prompt: &str) -> Result<MockDetectionR
     kernel_calls.push("i2s_gemv_cpu".to_string());
     kernel_calls.push("rope_apply_cpu".to_string());
     kernel_calls.push("softmax_cpu".to_string());
-    let receipt = InferenceReceipt::generate("cpu", kernel_calls.clone())
+    let receipt = InferenceReceipt::generate("cpu", kernel_calls.clone(), None)
         .context("Failed to generate inference receipt")?;
     receipt.validate_compute_path().context("Receipt validation failed - mock path detected")?;
     let mock_calls = kernel_calls.iter().filter(|k| k.to_lowercase().contains("mock")).count();

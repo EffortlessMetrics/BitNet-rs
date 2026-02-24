@@ -8293,6 +8293,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "bitnet",
+ "bitnet-bdd-grid",
  "bitnet-common",
  "bitnet-crossval",
  "bitnet-inference",

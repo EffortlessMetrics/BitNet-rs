@@ -16,6 +16,9 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+pub mod symbol_analysis;
+pub use symbol_analysis::CompileTimeLibCapabilities;
+
 #[cfg(feature = "ffi")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
 pub mod bindings {

@@ -18,6 +18,7 @@ publish = false                                                                 
 default = []
 ffi = ["dep:bindgen", "dep:cc"]  # Enable native/C++ build only when requested
 crossval = ["ffi"]  # Keep backward compatibility
+symbol-analysis = []  # Build-time symbol inspection of found C++ libraries → emits cfg flags
 
 [dependencies]
 # Only include FFI dependencies when the ffi feature is enabled
