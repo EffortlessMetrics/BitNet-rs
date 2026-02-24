@@ -454,18 +454,13 @@ function switchTab(tabName) {
     // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
-        tab.setAttribute('aria-selected', 'false');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
     // Add active class to selected tab
-    const selectedTab = document.getElementById(`tab-${tabName}`);
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-        selectedTab.setAttribute('aria-selected', 'true');
-    }
+    event.target.classList.add('active');
 }
 
 // Settings management
