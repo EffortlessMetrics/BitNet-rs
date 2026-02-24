@@ -12,7 +12,7 @@
 | Capability | Location | PR |
 |---|---|---|
 | Library discovery (bitnet.cpp + llama.cpp) | `crossval/build.rs`, `crates/bitnet-sys/` | #608 |
-| Feature lattice: `gpu = ["cuda"]`, `cuda` stays backend | workspace `Cargo.toml` | #611 |
+| Feature lattice: `gpu` umbrella, `cuda = ["gpu"]` backward-compat alias | workspace `Cargo.toml` | #611 |
 | Orthogonal runtime reporting: `gpu`/`cuda` never conflated | `crates/bitnet-runtime-feature-flags/src/lib.rs` | #611 |
 | Kernel capability registry (single source of truth) | `crates/bitnet-common/src/kernel_registry.rs` | #611 |
 | `xtask analyze-library` symbol inspection command | `xtask/src/analyze_library.rs` | #611 |
@@ -21,7 +21,7 @@
 | `bitnet-generation` SRP microcrate | `crates/bitnet-generation/` | #629 |
 | `bitnet-engine-core` SRP microcrate | `crates/bitnet-engine-core/` | #629 |
 | `bitnet-gguf` SRP microcrate | `crates/bitnet-gguf/` | #629 |
-| `BackendSelectionPolicy`, `AnalyzedLibrary` types | `crates/bitnet-common/src/kernel_registry.rs` | #611 |
+| `KernelBackend`, `KernelCapabilities`, `SimdLevel` types | `crates/bitnet-common/src/kernel_registry.rs` | #611 |
 | CodeRabbit path exclusions (archive, reports) | `.coderabbit.yaml` | #611 |
 | GPU smoke workflow (compile-only PR lane) | `.github/workflows/gpu-smoke.yml` | #611 |
 | Preflight backend availability checks | `xtask/` | #611 |
@@ -68,8 +68,8 @@
 
 ```toml
 [features]
-gpu = ["cuda"]      # umbrella alias — CUDA is the only GPU backend today
-cuda = [...]        # backend-specific deps (cudarc, half)
+gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", ...]
+cuda = ["gpu"]      # backward-compat alias — CUDA is the only GPU backend today
 ```
 
 ### Code Gating Rules
@@ -89,15 +89,15 @@ use bitnet_device_probe::{gpu_compiled, gpu_available_runtime};
 ### Adding ROCm / Metal (future, additive only)
 
 Adding a new GPU backend only requires new feature entries and new
-backend-specific modules. Existing  code
+backend-specific modules. Existing `#[cfg(feature = "gpu")]` code
 continues to work without modification.
 
 ---
 
 ## Phase A: Build-time Symbol Detection (Planned)
 
-Wire  symbol analysis into  to
-emit rustc-cfg flags (, )
+Wire `xtask analyze-library` symbol analysis into `bitnet-sys/build.rs` to
+emit rustc-cfg flags (`bitnet_cpp_has_cuda`, `bitnet_cpp_has_bitnet_shim`)
 that let downstream code distinguish "CUDA-backed C++ path" vs "CPU-only C++ path"
 at compile time.
 
@@ -105,19 +105,19 @@ at compile time.
 
 ## Phase B: Runtime Validation + Enforcement (Planned)
 
-Add a  snapshot at CLI/server startup that reports:
+Add a `BackendCapabilities` snapshot at CLI/server startup that reports:
 compiled backends, runtime CUDA availability, FFI library loadability + symbol
-presence. Enforce  → hard error when CUDA unavailable;
- → graceful fallback, always recorded in receipts.
+presence. Enforce `BackendRequest::Cuda` → hard error when CUDA unavailable;
+`BackendRequest::Gpu`/`Auto` → graceful fallback, always recorded in receipts.
 
-Startup output:  (deterministic, in logs + receipts).
+Startup output: `requested=X detected=[…] selected=Y` (deterministic, in logs + receipts).
 
 ---
 
 ## Phase C: BDD Grid as Compile-Coverage Contract (Planned)
 
- enumerates every supported BDD grid cell and runs
- for each. Unsupported
+`xtask grid-check` enumerates every supported BDD grid cell and runs
+`cargo check --features <cell>` for each. Unsupported
 cells require a reason token — no silent gaps. CPU cells in PR lane;
 GPU cells compile-only (runtime tests on CUDA runner).
 
@@ -136,16 +136,16 @@ GPU cells compile-only (runtime tests on CUDA runner).
 
 | Issue | Affected Component | Status |
 |---|---|---|
-| TL1/TL2 round-trip max error ~2.0 |  | Known; tests use loose tolerance |
-| Shape mismatch in layer-norm (#254) |  | In analysis |
-| Mock elimination (#260) |  | Pending refactor |
-| Tokenizer parity + FFI hygiene (#469) | ,  | Active development |
+| TL1/TL2 round-trip max error ~2.0 | `bitnet-quantization` | Known; tests use loose tolerance |
+| Shape mismatch in layer-norm (#254) | `bitnet-inference` | In analysis |
+| Mock elimination (#260) | `bitnet-inference` | Pending refactor |
+| Tokenizer parity + FFI hygiene (#469) | `bitnet-tokenizers`, `crossval` | Active development |
 
 ---
 
 ## Related Documentation
 
--  — architecture overview
--  — building C++ reference for crossval
--  — I2S QK256 vs BitNet32 formats
--  — canonical kernel/backend types
+- `docs/architecture-overview.md` — overall system design and crate relationships
+- `docs/howto/cpp-setup.md` — building the C++ reference for cross-validation
+- `docs/explanation/i2s-dual-flavor.md` — I2S QK256 vs BitNet32 format details
+- `crates/bitnet-common/src/kernel_registry.rs` — canonical kernel/backend type definitions
