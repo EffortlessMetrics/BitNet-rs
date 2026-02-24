@@ -185,19 +185,25 @@ impl Tokenizer for BasicTokenizer {
             return Ok(Vec::new());
         }
 
-        let words: Vec<&str> = text.split_whitespace().collect();
-        let mut tokens: Vec<u32> = Vec::new();
+        let mut tokens: Vec<u32> = Vec::with_capacity(text.len() + 2);
 
-        if add_bos && let Some(bos) = self.bos_token_id {
-            tokens.push(bos);
+        if add_bos {
+            if let Some(bos) = self.bos_token_id {
+                tokens.push(bos);
+            }
         }
 
-        for (i, _) in words.iter().enumerate() {
-            let id = i as u32;
+        // Byte-level encoding: each UTF-8 byte maps to token ID 0–255.
+        // This is a deterministic, invertible fallback when no real vocabulary
+        // is available. Enforce vocab_size so callers with small vocabularies get
+        // an explicit error rather than silently producing out-of-range token IDs.
+        for byte in text.bytes() {
+            let id = byte as u32;
             if id >= self.vocab_size as u32 {
-                return Err(BitNetError::Model(ModelError::LoadingFailed {
-                    reason: "token id exceeds vocab size".to_string(),
-                }));
+                return Err(BitNetError::Config(format!(
+                    "byte value {id} exceeds vocab_size {}",
+                    self.vocab_size
+                )));
             }
             tokens.push(id);
         }
@@ -218,9 +224,29 @@ impl Tokenizer for BasicTokenizer {
         if tokens.is_empty() {
             return Ok(String::new());
         }
-        // BasicTokenizer has no real vocabulary; concatenate piece representations
-        // so the output is at least deterministic and reflects the actual token IDs.
-        Ok(tokens.iter().filter_map(|&id| self.token_to_piece(id)).collect::<Vec<_>>().join(""))
+
+        // Collect raw bytes for IDs 0–255 (byte-level tokens); skip special
+        // tokens (BOS/EOS/PAD) and any ID ≥ 256 that isn't in a real vocab.
+        let mut byte_buf: Vec<u8> = Vec::with_capacity(tokens.len());
+        for &id in tokens {
+            // Skip special tokens silently.
+            let is_special = matches!(
+                Some(id),
+                Some(x) if self.bos_token_id == Some(x)
+                    || self.eos_token_id == Some(x)
+                    || self.pad_token_id == Some(x)
+            );
+            if is_special {
+                continue;
+            }
+            if id < 256 {
+                byte_buf.push(id as u8);
+            }
+            // IDs ≥ 256 without a vocab entry are dropped; they represent
+            // real vocabulary tokens that BasicTokenizer cannot recover.
+        }
+
+        Ok(String::from_utf8_lossy(&byte_buf).into_owned())
     }
 
     fn vocab_size(&self) -> usize {
@@ -228,7 +254,15 @@ impl Tokenizer for BasicTokenizer {
     }
 
     fn token_to_piece(&self, token: u32) -> Option<String> {
-        Some(format!("<token_{}>", token))
+        if token < 256 {
+            // Represent the byte as a UTF-8 character where possible,
+            // otherwise fall back to the hex escape notation.
+            let byte = token as u8;
+            Some(String::from_utf8_lossy(&[byte]).into_owned())
+        } else {
+            // Higher IDs do not map to printable bytes in this fallback.
+            Some(format!("<token_{}>", token))
+        }
     }
 
     fn eos_token_id(&self) -> Option<u32> {
