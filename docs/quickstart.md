@@ -287,7 +287,7 @@ You've successfully:
 3. **Automatic tokenizer discovery** extracted tokenizer from GGUF metadata, detected model architecture, and applied optimal configuration
 4. **Verified model compatibility** with enhanced GGUF loader, strict mode validation, and comprehensive tensor validation
 5. **Ran production-grade inference** with pure-Rust QK256 kernels, real transformer weights, and autoregressive generation
-6. **Benchmarked performance** achieving 20+ tokens/second with native CPU optimization
+6. **Benchmarked performance** — run `cargo run -p xtask -- benchmark --model <path> --tokens 128` to produce a verifiable receipt (typical CPU envelope: 10–25 tok/s for I2_S BitNet32-F16)
 7. **Generated validation receipts** with parity metrics, kernel IDs, and reproducible baselines in `docs/baselines/`
 
 ## Next Steps
