@@ -107,6 +107,9 @@ legacy/
 fixtures/models/
 fixtures/datasets/
 **/fixtures/**/*.gguf
+# Exception: small synthetic GGUF test fixtures (must be kept < 10KB each)
+!crates/bitnet-tokenizers/tests/fixtures/gguf/*.gguf
+!crates/bitnet-models/tests/fixtures/**/*.gguf
 **/fixtures/**/*.safetensors
 **/fixtures/**/*.bin
 **/fixtures/**/*.json.bz2
