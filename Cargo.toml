@@ -64,6 +64,7 @@ members = [
   "crates/bitnet-generation",
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
+  "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crossval",
   "tests",
   "xtask",
@@ -104,6 +105,7 @@ default-members = [
   "crates/bitnet-generation",
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
+  "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
 ]
 
 [package]
