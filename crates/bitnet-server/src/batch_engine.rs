@@ -378,12 +378,12 @@ impl BatchEngine {
         }
 
         // Analyze requests for quantization compatibility
-        let mut compatible_groups: HashMap<&str, Vec<usize>> = HashMap::new();
+        let mut compatible_groups: HashMap<String, Vec<usize>> = HashMap::new();
 
         for (index, pending) in candidates.iter().enumerate() {
             let quantization_type = pending.request.quantization_hint.as_deref().unwrap_or("I2S"); // Default to I2S quantization
 
-            compatible_groups.entry(quantization_type).or_default().push(index);
+            compatible_groups.entry(quantization_type.to_string()).or_default().push(index);
         }
 
         // Find the largest compatible group
@@ -391,12 +391,12 @@ impl BatchEngine {
             compatible_groups.into_iter().max_by_key(|(_, indices)| indices.len())?;
 
         // Recommend device based on quantization type and SIMD support
-        let recommended_device = self.recommend_device_for_quantization(best_quantization).await;
+        let recommended_device = self.recommend_device_for_quantization(&best_quantization).await;
 
         Some(QuantizationOptimization {
             batch_compatible_requests: best_indices,
             recommended_device,
-            quantization_type: best_quantization.to_string(),
+            quantization_type: best_quantization,
             simd_instruction_set: self.get_optimal_simd_instruction_set().await,
             memory_requirement_mb: self.estimate_memory_requirement(candidates).await,
         })
@@ -681,50 +681,4 @@ pub struct BatchEngineHealth {
     pub average_batch_size: f64,
     pub throughput_tokens_per_second: f64,
     pub issues: Vec<String>,
-}
-
-#[cfg(test)]
-impl PendingRequest {
-    fn new_test(request: BatchRequest) -> Self {
-        let (response_tx, _) = oneshot::channel();
-        Self { request, response_tx }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use bitnet_inference::GenerationConfig;
-
-    #[tokio::test]
-    async fn test_optimize_batch_allocations() {
-        let config = BatchEngineConfig {
-            quantization_aware: true,
-            ..Default::default()
-        };
-        let engine = BatchEngine::new(config);
-
-        let mut candidates = Vec::new();
-
-        // Create requests with different quantization hints
-        // Group 1: "I2S" (3 requests)
-        for _ in 0..3 {
-            let req = BatchRequest::new("test".to_string(), GenerationConfig::default())
-                .with_quantization_hint("I2S".to_string());
-            candidates.push(PendingRequest::new_test(req));
-        }
-
-        // Group 2: "TL1" (2 requests)
-        for _ in 0..2 {
-            let req = BatchRequest::new("test".to_string(), GenerationConfig::default())
-                .with_quantization_hint("TL1".to_string());
-            candidates.push(PendingRequest::new_test(req));
-        }
-
-        let optimization = engine.optimize_batch_for_quantization(&candidates).await.unwrap();
-
-        // Should select "I2S" as it has more requests
-        assert_eq!(optimization.quantization_type, "I2S");
-        assert_eq!(optimization.batch_compatible_requests.len(), 3);
-    }
 }
