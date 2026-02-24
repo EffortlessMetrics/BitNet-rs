@@ -59,9 +59,17 @@ impl SamplingStrategy {
     /// Pipeline (all in-place via `bitnet-logits`):
     /// 1. Count-aware repetition penalty
     /// 2. Greedy short-circuit at temperature == 0.0
-    /// 3. Temperature scaling → softmax → top-k → top-p → renormalize → sample
+    /// 3. Temperature scaling → top-k → softmax → top-p → renormalize → sample
+    ///
+    /// Note: `apply_top_k` operates in the **logits domain** (writes `NEG_INFINITY`)
+    /// and must run *before* `softmax_in_place`.  `apply_top_p` operates on
+    /// probabilities and runs *after* softmax.
     pub fn sample(&mut self, logits: &[f32], context_tokens: &[u32]) -> Result<u32> {
         debug!("Sampling from {} logits", logits.len());
+
+        if logits.is_empty() {
+            return Err(anyhow::anyhow!("Empty logits slice"));
+        }
 
         let mut buf = logits.to_vec();
 
@@ -76,23 +84,30 @@ impl SamplingStrategy {
             return Ok(token);
         }
 
-        // Stochastic path: temperature → softmax → top-k → top-p
+        // Stochastic path:
+        //  1. temperature scaling (logit domain)
+        //  2. top-k filtering (logit domain — NEG_INFINITY for filtered entries)
+        //  3. softmax (NEG_INFINITY → 0.0 probability)
+        //  4. top-p filtering (probability domain — zero for filtered entries)
+        //  5. renormalize (top-p may leave sum < 1.0)
         apply_temperature(&mut buf, self.config.temperature);
-        softmax_in_place(&mut buf);
 
         if self.config.top_k > 0 {
             apply_top_k(&mut buf, self.config.top_k as usize);
         }
 
+        softmax_in_place(&mut buf);
+
         if self.config.top_p < 1.0 {
             apply_top_p(&mut buf, self.config.top_p);
         }
 
-        // Re-normalize: top-k/top-p zero out tokens without renormalizing.
+        // Re-normalize after top-p (top-p zeroes entries without renormalizing).
         let sum: f32 = buf.iter().sum();
         if sum > 0.0 {
+            let inv_sum = 1.0 / sum;
             for p in buf.iter_mut() {
-                *p /= sum;
+                *p *= inv_sum;
             }
         }
 
@@ -279,13 +294,30 @@ mod tests {
 
     #[test]
     fn test_top_k_filtering() {
-        // Delegate to the bitnet-logits free function (re-exported as `apply_top_k`)
-        let mut probs = vec![0.1_f32, 0.4, 0.3, 0.2];
-        apply_top_k(&mut probs, 2);
+        // apply_top_k operates in the logits domain: filtered entries become NEG_INFINITY.
+        let mut logits = vec![1.0_f32, 4.0, 3.0, 2.0];
+        apply_top_k(&mut logits, 2);
 
-        // Only the top-2 tokens should survive
-        let non_zero = probs.iter().filter(|&&x| x > 0.0).count();
-        assert_eq!(non_zero, 2);
+        // Top-2 are 4.0 (idx 1) and 3.0 (idx 2) — both must be finite.
+        assert!(logits[1].is_finite(), "top logit should survive");
+        assert!(logits[2].is_finite(), "second logit should survive");
+        assert!(
+            logits[0].is_infinite() && logits[0].is_sign_negative(),
+            "non-top logit should be NEG_INFINITY"
+        );
+        assert!(
+            logits[3].is_infinite() && logits[3].is_sign_negative(),
+            "non-top logit should be NEG_INFINITY"
+        );
+
+        // After softmax, NEG_INFINITY entries become 0.0 probability.
+        softmax_in_place(&mut logits);
+        assert!(logits[1] > 0.0);
+        assert!(logits[2] > 0.0);
+        assert_eq!(logits[0], 0.0);
+        assert_eq!(logits[3], 0.0);
+        let sum: f32 = logits.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-6, "top-k + softmax should produce a valid distribution");
     }
 
     #[test]
