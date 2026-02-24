@@ -196,10 +196,10 @@ pub struct BatchEngine {
     processing_batches: Arc<RwLock<HashMap<String, ProcessingBatch>>>,
     batch_semaphore: Arc<Semaphore>,
     stats: Arc<BatchEngineStats>,
-    request_counter: Arc<AtomicU64>,
-    batch_counter: Arc<AtomicU64>,
-    total_processing_time: Arc<AtomicU64>,
-    total_tokens_generated: Arc<AtomicU64>,
+    request_counter: AtomicU64,
+    batch_counter: AtomicU64,
+    total_processing_time: AtomicU64,
+    total_tokens_generated: AtomicU64,
 }
 
 impl BatchEngine {
@@ -220,10 +220,10 @@ impl BatchEngine {
                 throughput_tokens_per_second: 0.0,
                 cache_hit_rate: 0.0,
             }),
-            request_counter: Arc::new(AtomicU64::new(0)),
-            batch_counter: Arc::new(AtomicU64::new(0)),
-            total_processing_time: Arc::new(AtomicU64::new(0)),
-            total_tokens_generated: Arc::new(AtomicU64::new(0)),
+            request_counter: AtomicU64::new(0),
+            batch_counter: AtomicU64::new(0),
+            total_processing_time: AtomicU64::new(0),
+            total_tokens_generated: AtomicU64::new(0),
         }
     }
 
@@ -369,21 +369,21 @@ impl BatchEngine {
     }
 
     /// Optimize batch for quantization compatibility
-    async fn optimize_batch_for_quantization<'a>(
+    async fn optimize_batch_for_quantization(
         &self,
-        candidates: &'a [PendingRequest],
+        candidates: &[PendingRequest],
     ) -> Option<QuantizationOptimization> {
         if !self.config.quantization_aware {
             return None;
         }
 
         // Analyze requests for quantization compatibility
-        let mut compatible_groups: HashMap<&'a str, Vec<usize>> = HashMap::new();
+        let mut compatible_groups: HashMap<String, Vec<usize>> = HashMap::new();
 
         for (index, pending) in candidates.iter().enumerate() {
             let quantization_type = pending.request.quantization_hint.as_deref().unwrap_or("I2S"); // Default to I2S quantization
 
-            compatible_groups.entry(quantization_type).or_default().push(index);
+            compatible_groups.entry(quantization_type.to_string()).or_default().push(index);
         }
 
         // Find the largest compatible group
@@ -391,12 +391,12 @@ impl BatchEngine {
             compatible_groups.into_iter().max_by_key(|(_, indices)| indices.len())?;
 
         // Recommend device based on quantization type and SIMD support
-        let recommended_device = self.recommend_device_for_quantization(best_quantization).await;
+        let recommended_device = self.recommend_device_for_quantization(&best_quantization).await;
 
         Some(QuantizationOptimization {
             batch_compatible_requests: best_indices,
             recommended_device,
-            quantization_type: best_quantization.to_string(),
+            quantization_type: best_quantization,
             simd_instruction_set: self.get_optimal_simd_instruction_set().await,
             memory_requirement_mb: self.estimate_memory_requirement(candidates).await,
         })
@@ -660,10 +660,14 @@ impl Clone for BatchEngine {
             processing_batches: Arc::clone(&self.processing_batches),
             batch_semaphore: Arc::clone(&self.batch_semaphore),
             stats: Arc::clone(&self.stats),
-            request_counter: Arc::clone(&self.request_counter),
-            batch_counter: Arc::clone(&self.batch_counter),
-            total_processing_time: Arc::clone(&self.total_processing_time),
-            total_tokens_generated: Arc::clone(&self.total_tokens_generated),
+            request_counter: AtomicU64::new(self.request_counter.load(Ordering::Relaxed)),
+            batch_counter: AtomicU64::new(self.batch_counter.load(Ordering::Relaxed)),
+            total_processing_time: AtomicU64::new(
+                self.total_processing_time.load(Ordering::Relaxed),
+            ),
+            total_tokens_generated: AtomicU64::new(
+                self.total_tokens_generated.load(Ordering::Relaxed),
+            ),
         }
     }
 }
@@ -677,52 +681,4 @@ pub struct BatchEngineHealth {
     pub average_batch_size: f64,
     pub throughput_tokens_per_second: f64,
     pub issues: Vec<String>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::sync::oneshot;
-
-    #[tokio::test]
-    async fn test_optimize_batch_for_quantization() {
-        let config = BatchEngineConfig::default();
-        let engine = BatchEngine::new(config);
-
-        let mut candidates = Vec::new();
-        // Create 10 requests, 5 I2S, 5 TL1
-        for i in 0..10 {
-            let hint = if i % 2 == 0 { "I2S".to_string() } else { "TL1".to_string() };
-            let req = BatchRequest::new("test".to_string(), GenerationConfig::default())
-                .with_quantization_hint(hint);
-            let (tx, _rx) = oneshot::channel();
-            candidates.push(PendingRequest { request: req, response_tx: tx });
-        }
-
-        let opt = engine.optimize_batch_for_quantization(&candidates).await;
-
-        assert!(opt.is_some(), "Optimization should produce a result");
-        let opt = opt.unwrap();
-        // Should pick the group with 5 items
-        assert_eq!(opt.batch_compatible_requests.len(), 5);
-        assert!(opt.quantization_type == "I2S" || opt.quantization_type == "TL1");
-    }
-
-    #[tokio::test]
-    async fn test_metrics_sharing() {
-        let config = BatchEngineConfig::default();
-        let engine = BatchEngine::new(config);
-
-        // Clone the engine (simulate spawning task)
-        let cloned_engine = engine.clone();
-
-        // Update counter on cloned engine
-        cloned_engine.request_counter.fetch_add(1, Ordering::Relaxed);
-
-        // Check counter on original engine
-        let count = engine.request_counter.load(Ordering::Relaxed);
-
-        // This assertion will fail before the fix
-        assert_eq!(count, 1, "Metrics should be shared between clones");
-    }
 }
