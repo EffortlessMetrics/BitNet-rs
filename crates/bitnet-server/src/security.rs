@@ -12,7 +12,6 @@ use std::collections::HashSet;
 use std::net::IpAddr;
 use std::sync::Arc;
 use tracing::{debug, warn};
-use axum::http::HeaderValue;
 
 /// Security configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -341,30 +340,12 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
+pub fn configure_cors() -> tower_http::cors::CorsLayer {
     use tower_http::cors::{Any, CorsLayer};
 
-    let allow_any = config.allowed_origins.iter().any(|o| o == "*");
-
-    let cors = CorsLayer::new();
-    let cors = if allow_any {
-        cors.allow_origin(Any)
-    } else {
-        let allowed_origins: Vec<HeaderValue> = config.allowed_origins.iter()
-            .filter_map(|o| {
-                match o.parse::<HeaderValue>() {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        warn!("Invalid allowed origin '{}': {}", o, e);
-                        None
-                    }
-                }
-            })
-            .collect();
-        cors.allow_origin(allowed_origins)
-    };
-
-    cors.allow_methods(Any)
+    CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
         .allow_headers(Any)
         .max_age(std::time::Duration::from_secs(3600))
 }
@@ -509,77 +490,5 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
-    }
-
-    #[tokio::test]
-    async fn test_cors_configuration() {
-        use tower::ServiceExt;
-        use tower::ServiceBuilder;
-        use axum::body::Body;
-        use axum::http::{Request, Response};
-
-        // Case 1: Specific origin
-        let config = SecurityConfig {
-            allowed_origins: vec!["http://example.com".to_string()],
-            ..Default::default()
-        };
-
-        let cors_layer = configure_cors(&config);
-
-        let service = ServiceBuilder::new()
-            .layer(cors_layer)
-            .service_fn(|_req: Request<Body>| async {
-                Ok::<_, std::convert::Infallible>(Response::new(Body::empty()))
-            });
-
-        // Test allowed origin
-        let req = Request::builder()
-            .header("Origin", "http://example.com")
-            .header("Access-Control-Request-Method", "GET")
-            .body(Body::empty())
-            .unwrap();
-
-        let res = service.clone().oneshot(req).await.unwrap();
-        assert_eq!(
-            res.headers().get("access-control-allow-origin").unwrap(),
-            "http://example.com"
-        );
-
-        // Test disallowed origin
-        let req = Request::builder()
-            .header("Origin", "http://attacker.com")
-            .header("Access-Control-Request-Method", "GET")
-            .body(Body::empty())
-            .unwrap();
-
-        let res = service.clone().oneshot(req).await.unwrap();
-        assert!(res.headers().get("access-control-allow-origin").is_none());
-
-        // Case 2: Wildcard
-        let config_wildcard = SecurityConfig {
-            allowed_origins: vec!["*".to_string()],
-            ..Default::default()
-        };
-
-        let cors_layer_wildcard = configure_cors(&config_wildcard);
-        let service_wildcard = ServiceBuilder::new()
-            .layer(cors_layer_wildcard)
-            .service_fn(|_req: Request<Body>| async {
-                Ok::<_, std::convert::Infallible>(Response::new(Body::empty()))
-            });
-
-        let req = Request::builder()
-            .header("Origin", "http://anywhere.com")
-            .header("Access-Control-Request-Method", "GET")
-            .body(Body::empty())
-            .unwrap();
-
-        let res = service_wildcard.oneshot(req).await.unwrap();
-        // With Any, it usually echoes the origin or returns * depending on configuration
-        // In tower-http 0.6 with allow_origin(Any), it usually returns *
-        assert_eq!(
-            res.headers().get("access-control-allow-origin").unwrap(),
-            "*"
-        );
     }
 }
