@@ -353,10 +353,11 @@ impl<'a> GgufReader<'a> {
         })
     }
 
-    /// Get U32 metadata by key
+    /// Get U32 metadata by key, also accepting INT32 values (common in practice).
     pub fn get_u32_metadata(&self, key: &str) -> Option<u32> {
         self.metadata.iter().find(|m| m.key == key).and_then(|m| match &m.value {
             GgufValue::U32(v) => Some(*v),
+            GgufValue::I32(v) if *v >= 0 => Some(*v as u32),
             _ => None,
         })
     }
