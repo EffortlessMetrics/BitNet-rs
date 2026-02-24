@@ -104,7 +104,7 @@ jobs:
         if: matrix.test == 'inference-smoke'
         run: |
           # Quick 4-token inference to validate GPU end-to-end
-          RUST_LOG=warn cargo run --release -p bitnet-cli \
+          RUST_LOG=warn cargo run --release --locked -p bitnet-cli \
             --no-default-features --features gpu,full-cli -- run \
             --model "${BITNET_GGUF:-models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf}" \
             --tokenizer "${BITNET_TOKENIZER:-models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json}" \
