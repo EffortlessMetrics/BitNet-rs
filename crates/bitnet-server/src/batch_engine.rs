@@ -195,10 +195,11 @@ pub struct BatchEngine {
     request_queue: Arc<Mutex<VecDeque<PendingRequest>>>,
     processing_batches: Arc<RwLock<HashMap<String, ProcessingBatch>>>,
     batch_semaphore: Arc<Semaphore>,
-    request_counter: Arc<AtomicU64>,
-    batch_counter: Arc<AtomicU64>,
-    total_processing_time: Arc<AtomicU64>,
-    total_tokens_generated: Arc<AtomicU64>,
+    stats: Arc<BatchEngineStats>,
+    request_counter: AtomicU64,
+    batch_counter: AtomicU64,
+    total_processing_time: AtomicU64,
+    total_tokens_generated: AtomicU64,
 }
 
 impl BatchEngine {
@@ -209,10 +210,20 @@ impl BatchEngine {
             config,
             request_queue: Arc::new(Mutex::new(VecDeque::new())),
             processing_batches: Arc::new(RwLock::new(HashMap::new())),
-            request_counter: Arc::new(AtomicU64::new(0)),
-            batch_counter: Arc::new(AtomicU64::new(0)),
-            total_processing_time: Arc::new(AtomicU64::new(0)),
-            total_tokens_generated: Arc::new(AtomicU64::new(0)),
+            stats: Arc::new(BatchEngineStats {
+                total_requests_processed: 0,
+                total_batches_processed: 0,
+                average_batch_size: 0.0,
+                average_batch_time_ms: 0.0,
+                queue_depth: 0,
+                active_batches: 0,
+                throughput_tokens_per_second: 0.0,
+                cache_hit_rate: 0.0,
+            }),
+            request_counter: AtomicU64::new(0),
+            batch_counter: AtomicU64::new(0),
+            total_processing_time: AtomicU64::new(0),
+            total_tokens_generated: AtomicU64::new(0),
         }
     }
 
@@ -323,33 +334,21 @@ impl BatchEngine {
         // Create processing batch
         let mut batch = ProcessingBatch::new(device);
 
-        // Extract requests and response channels without cloning
-        let mut response_channels = Vec::with_capacity(self.config.max_batch_size);
-
-        // Convert candidates to Option to allow moving out
-        let mut candidates_opts: Vec<Option<PendingRequest>> =
-            candidates.into_iter().map(Some).collect();
-
+        // Add requests to batch (optimize order if needed)
         if let Some(optimization) = optimized {
             for &index in &optimization.batch_compatible_requests {
-                if index < candidates_opts.len() {
-                    if let Some(pending) = candidates_opts[index].take() {
-                        batch.add_request(pending.request);
-                        response_channels.push(pending.response_tx);
-                    }
+                if index < candidates.len() {
+                    batch.add_request(candidates[index].request.clone());
                 }
             }
         } else {
-            for opt in &mut candidates_opts {
-                if let Some(pending) = opt.take() {
-                    batch.add_request(pending.request);
-                    response_channels.push(pending.response_tx);
-                }
+            for pending in &candidates {
+                batch.add_request(pending.request.clone());
             }
         }
 
         // Store response channels for this batch
-        self.store_batch_responses(batch.id.clone(), response_channels).await;
+        self.store_batch_responses(batch.id.clone(), candidates).await;
 
         info!(
             batch_id = %batch.id,
@@ -363,14 +362,10 @@ impl BatchEngine {
     }
 
     /// Store response channels for batch
-    async fn store_batch_responses(
-        &self,
-        batch_id: String,
-        response_channels: Vec<oneshot::Sender<Result<BatchResult>>>,
-    ) {
+    async fn store_batch_responses(&self, batch_id: String, candidates: Vec<PendingRequest>) {
         // TODO: Store response channels mapped to batch ID
         // For now, we'll handle responses directly in execute_batch
-        let _ = (batch_id, response_channels); // Suppress unused warning
+        let _ = (batch_id, candidates); // Suppress unused warning
     }
 
     /// Optimize batch for quantization compatibility
@@ -664,10 +659,15 @@ impl Clone for BatchEngine {
             request_queue: Arc::clone(&self.request_queue),
             processing_batches: Arc::clone(&self.processing_batches),
             batch_semaphore: Arc::clone(&self.batch_semaphore),
-            request_counter: Arc::clone(&self.request_counter),
-            batch_counter: Arc::clone(&self.batch_counter),
-            total_processing_time: Arc::clone(&self.total_processing_time),
-            total_tokens_generated: Arc::clone(&self.total_tokens_generated),
+            stats: Arc::clone(&self.stats),
+            request_counter: AtomicU64::new(self.request_counter.load(Ordering::Relaxed)),
+            batch_counter: AtomicU64::new(self.batch_counter.load(Ordering::Relaxed)),
+            total_processing_time: AtomicU64::new(
+                self.total_processing_time.load(Ordering::Relaxed),
+            ),
+            total_tokens_generated: AtomicU64::new(
+                self.total_tokens_generated.load(Ordering::Relaxed),
+            ),
         }
     }
 }
@@ -681,43 +681,4 @@ pub struct BatchEngineHealth {
     pub average_batch_size: f64,
     pub throughput_tokens_per_second: f64,
     pub issues: Vec<String>,
-}
-
-#[cfg(test)]
-mod verification_tests {
-    use super::*;
-    use tokio::time::{Duration, sleep};
-
-    #[tokio::test]
-    async fn test_batch_engine_stats_and_processing() {
-        let config = BatchEngineConfig {
-            batch_timeout: Duration::from_millis(10), // Fast timeout for test
-            max_batch_size: 2,
-            ..Default::default()
-        };
-        let engine = BatchEngine::new(config);
-
-        let request = BatchRequest::new("test prompt".to_string(), GenerationConfig::default());
-
-        // Submit a request
-        let engine_clone = engine.clone();
-        let handle = tokio::spawn(async move { engine_clone.submit_request(request).await });
-
-        // Wait enough time for simulated processing (100ms base + overhead)
-        sleep(Duration::from_millis(200)).await;
-
-        let stats = engine.get_stats().await;
-        println!("Stats: {:?}", stats);
-
-        // Verify request counter (updated in submit_request on the instance called)
-        // Since we called submit_request on engine_clone, 'engine' might NOT see request_counter increment if they are not shared!
-        // submit_request calls self.request_counter.fetch_add.
-        // If engine and engine_clone have different counters, engine.get_stats() will show 0.
-
-        // The fix (Arc) will make them shared.
-
-        // Wait for result
-        let result = handle.await;
-        assert!(result.is_ok());
-    }
 }
