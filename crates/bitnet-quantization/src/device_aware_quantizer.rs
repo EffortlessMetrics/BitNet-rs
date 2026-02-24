@@ -695,9 +695,23 @@ impl DeviceAwareQuantizer {
             QuantizationType::I2S => self.cpu_backend.quantize_i2s(weights)?,
             QuantizationType::TL1 => self.cpu_backend.quantize_tl1(weights)?,
             QuantizationType::TL2 => self.cpu_backend.quantize_tl2(weights)?,
-            _ => {
+            QuantizationType::FP32 => {
+                // FP32 passthrough: store raw f32 bytes with a unit scale.
+                let data: Vec<u8> = weights.iter().flat_map(|&v| v.to_le_bytes()).collect();
+                QuantizedTensor::new(
+                    data,
+                    QuantizationType::FP32,
+                    vec![weights.len()],
+                    vec![1.0],
+                    1,
+                )
+            }
+            QuantizationType::IQ2S => {
                 return Err(bitnet_common::BitNetError::Quantization(
-                    QuantizationError::UnsupportedType { qtype: quant_type.to_string() },
+                    QuantizationError::UnsupportedType {
+                        qtype: "IQ2S (requires bitnet.cpp FFI bridge; use --features ffi)"
+                            .to_string(),
+                    },
                 ));
             }
         };
@@ -712,11 +726,20 @@ impl DeviceAwareQuantizer {
             QuantizationType::TL1 | QuantizationType::TL2 => {
                 self.accuracy_validator.validate_tl_accuracy(weights, &quantized)?
             }
-            _ => {
-                return Err(bitnet_common::BitNetError::Quantization(
-                    QuantizationError::UnsupportedType { qtype: quant_type.to_string() },
-                ));
+            QuantizationType::FP32 => {
+                // FP32 is lossless — always passes validation.
+                let mut report = AccuracyReport::new(
+                    QuantizationType::FP32,
+                    Device::Cpu,
+                    self.tolerance_config.i2s_tolerance,
+                );
+                report.max_absolute_error = 0.0;
+                report.mean_absolute_error = 0.0;
+                report.relative_error = 0.0;
+                report.passed = true;
+                report
             }
+            QuantizationType::IQ2S => unreachable!("IQ2S returns early above"),
         };
 
         if self.tolerance_config.strict_validation && !validation_result.passed {
@@ -943,5 +966,41 @@ mod tests {
                 // GPU not available, test passes
             }
         }
+    }
+
+    /// Issue #390: FP32 passthrough quantization stores weights without loss.
+    #[test]
+    fn test_fp32_passthrough_is_lossless() {
+        let quantizer = DeviceAwareQuantizer::default();
+        let input = vec![1.5f32, -0.75, 0.0, 3.14, -100.0, 0.001];
+
+        let result = quantizer.quantize_with_validation(&input, QuantizationType::FP32);
+        assert!(result.is_ok(), "FP32 passthrough should succeed: {:?}", result.err());
+
+        let qt = result.unwrap();
+        assert_eq!(qt.qtype, QuantizationType::FP32);
+        assert_eq!(qt.data.len(), input.len() * 4, "4 bytes per f32");
+
+        // Round-trip: bytes → f32 must equal original.
+        for (i, &orig) in input.iter().enumerate() {
+            let bytes = &qt.data[i * 4..i * 4 + 4];
+            let recovered = f32::from_le_bytes(bytes.try_into().unwrap());
+            assert_eq!(recovered, orig, "FP32 round-trip mismatch at index {i}");
+        }
+    }
+
+    /// Issue #390: IQ2S returns a clear error pointing to the FFI bridge.
+    #[test]
+    fn test_iq2s_returns_ffi_hint_error() {
+        let quantizer = DeviceAwareQuantizer::default();
+        let input = vec![0.5f32, -0.5, 0.1];
+
+        let result = quantizer.quantize_with_validation(&input, QuantizationType::IQ2S);
+        assert!(result.is_err(), "IQ2S should not succeed without FFI");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("ffi") || msg.contains("FFI") || msg.contains("IQ2S"),
+            "Error should mention FFI bridge; got: {msg}"
+        );
     }
 }
