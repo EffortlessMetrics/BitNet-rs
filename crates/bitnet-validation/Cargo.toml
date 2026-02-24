@@ -1,0 +1,20 @@
+[package]
+name = "bitnet-validation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+description = "Architecture-aware LayerNorm and projection weight validation rules for BitNet models"
+readme = "README.md"
+
+[dependencies]
+anyhow.workspace = true
+regex = "1.12.2"
+serde = { workspace = true, features = ["derive"] }
+serde_yaml.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

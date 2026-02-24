@@ -6,43 +6,11 @@
 
 use anyhow::{Result, anyhow};
 use half::{bf16, f16};
-use regex::Regex;
 use safetensors::{Dtype, SafeTensors};
 use std::path::Path;
-use std::sync::OnceLock;
 
-/// Match *norm.weight variants we care about:
-///  - attn_norm, ffn_norm, ffn_layernorm, rms_norm
-///  - input_layernorm, post_attention_layernorm
-///  - final_layernorm, final_norm
-///
-/// Uses `OnceLock` for lazy regex compilation (compiled once on first call,
-/// cached for program lifetime). Thread-safe under concurrent access.
-///
-/// (strict suffix ".weight")
-pub fn is_ln_gamma(name: &str) -> bool {
-    // cheap fast-path first
-    if !name.ends_with(".weight") {
-        return false;
-    }
-
-    // precise patterns (compiled once, cached for program lifetime)
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let regex = RE.get_or_init(|| {
-        Regex::new(
-            r#"(?x)
-            (?:^|[./])
-            (?:attn_norm|ffn_norm|ffn_layernorm|rms_norm|
-               input_layernorm|post_attention_layernorm|
-               final_layernorm|final_norm|norm)
-            \.weight$
-            "#,
-        )
-        .expect("Failed to compile LayerNorm regex pattern")
-    });
-
-    regex.is_match(name)
-}
+// Re-export shared name predicate from bitnet-validation
+pub use bitnet_validation::is_ln_gamma;
 
 /// Read a SafeTensors file fully into memory.
 pub fn read_safetensors_bytes(path: &Path) -> Result<Vec<u8>> {
