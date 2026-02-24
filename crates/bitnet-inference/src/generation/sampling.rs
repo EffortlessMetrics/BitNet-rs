@@ -3,9 +3,8 @@
 //! Provides various sampling strategies including temperature scaling,
 //! top-k sampling, nucleus (top-p) sampling, and repetition penalty.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use bitnet_common::{BitNetTensor, Tensor};
-use candle_core::Tensor as CandleTensor;
 use rand::{Rng, RngCore};
 use std::collections::HashMap;
 
@@ -37,6 +36,9 @@ pub struct SamplingStrategy {
     config: SamplingConfig,
     repetition_counts: HashMap<usize, usize>,
     current_repetition_penalty: f32,
+    // Reusable buffers to minimize allocations
+    scratch_indices: Vec<usize>,
+    scratch_probs: Vec<f32>,
 }
 
 impl SamplingStrategy {
@@ -46,6 +48,8 @@ impl SamplingStrategy {
             current_repetition_penalty: config.repetition_penalty,
             config,
             repetition_counts: HashMap::new(),
+            scratch_indices: Vec::new(),
+            scratch_probs: Vec::new(),
         }
     }
 
@@ -71,35 +75,36 @@ impl SamplingStrategy {
             return Err(anyhow::anyhow!("Unexpected logits shape: {:?}", logits_candle.shape()));
         };
 
-        // Apply temperature scaling
-        let scaled_logits = if self.config.temperature != 1.0 {
-            last_logits.affine(1.0 / self.config.temperature as f64, 0.0)?
-        } else {
-            last_logits
-        };
+        // Extract logits to Vec<f32> once.
+        // This is the main allocation we can't easily avoid without lower-level API access.
+        let mut logits_vec = last_logits.flatten_all()?.to_vec1::<f32>()?;
 
-        // Apply repetition penalty
-        let penalized_logits = self.apply_repetition_penalty(&scaled_logits)?;
+        // Apply temperature scaling in-place
+        if self.config.temperature != 1.0 {
+            let inv_temp = 1.0 / self.config.temperature;
+            for x in logits_vec.iter_mut() {
+                *x *= inv_temp;
+            }
+        }
 
-        // Apply top-k filtering if specified
-        let filtered_logits = if let Some(top_k) = self.config.top_k {
-            self.apply_top_k(&penalized_logits, top_k)?
-        } else {
-            penalized_logits
-        };
+        // Apply repetition penalty in-place
+        self.apply_repetition_penalty_inplace(&mut logits_vec);
 
-        // Apply nucleus (top-p) sampling if specified
-        let final_logits = if let Some(top_p) = self.config.top_p {
-            self.apply_top_p(&filtered_logits, top_p)?
-        } else {
-            filtered_logits
-        };
+        // Apply top-k filtering in-place
+        if let Some(top_k) = self.config.top_k {
+            self.apply_top_k_inplace(&mut logits_vec, top_k);
+        }
 
-        // Convert to probabilities
-        let probabilities = candle_nn::ops::softmax(&final_logits, candle_core::D::Minus1)?;
+        // Apply nucleus (top-p) sampling in-place
+        if let Some(top_p) = self.config.top_p {
+            self.apply_top_p_inplace(&mut logits_vec, top_p);
+        }
+
+        // Compute softmax in-place to get probabilities for sampling
+        Self::softmax_inplace(&mut logits_vec);
 
         // Sample from distribution
-        self.multinomial_sample(&probabilities, rng).await
+        self.multinomial_sample_vec(&logits_vec, rng).await
     }
 
     /// Greedy sampling (argmax)
@@ -127,127 +132,131 @@ impl SamplingStrategy {
         Ok((max_idx, *max_prob))
     }
 
-    /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &CandleTensor) -> Result<CandleTensor> {
+    fn apply_repetition_penalty_inplace(&self, logits: &mut [f32]) {
         if self.current_repetition_penalty == 1.0 || self.repetition_counts.is_empty() {
-            return Ok(logits.clone());
+            return;
         }
 
-        let mut logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
-
-        // Apply penalty to repeated tokens
         for (&token_id, &count) in &self.repetition_counts {
-            if token_id < logits_vec.len() && count > 0 {
+            if token_id < logits.len() && count > 0 {
                 let penalty_factor = self.current_repetition_penalty.powi(count as i32);
-                if logits_vec[token_id] > 0.0 {
-                    logits_vec[token_id] /= penalty_factor;
+                if logits[token_id] > 0.0 {
+                    logits[token_id] /= penalty_factor;
                 } else {
-                    logits_vec[token_id] *= penalty_factor;
+                    logits[token_id] *= penalty_factor;
                 }
             }
         }
-
-        CandleTensor::from_slice(&logits_vec, logits.shape(), logits.device())
-            .context("Failed to create tensor from penalized logits")
     }
 
-    /// Apply top-k filtering
-    fn apply_top_k(&self, logits: &CandleTensor, k: usize) -> Result<CandleTensor> {
-        let mut logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
-        let vocab_size = logits_vec.len();
-
-        // k=0 means "all tokens" — skip filtering entirely
+    fn apply_top_k_inplace(&mut self, logits: &mut [f32], k: usize) {
+        let vocab_size = logits.len();
         if k == 0 || k >= vocab_size {
-            return Ok(logits.clone());
+            return;
         }
 
-        // O(N) partition: rearrange so that indices[0..k] are the top-k highest logits.
-        // This is significantly faster than a full sort for large vocabularies (32k+).
-        let mut indices: Vec<usize> = (0..vocab_size).collect();
-        indices.select_nth_unstable_by(k - 1, |&i, &j| {
-            logits_vec[j].partial_cmp(&logits_vec[i]).unwrap_or(std::cmp::Ordering::Equal)
-        });
-
-        // Keep exactly the k tokens in the top partition; mask all others.
-        // Using index-based masking (not value-based) ensures correct cardinality
-        // even when multiple tokens share the same logit value as the k-th token.
-        let mut keep = vec![false; vocab_size];
-        for &idx in &indices[..k] {
-            keep[idx] = true;
-        }
-        for (i, val) in logits_vec.iter_mut().enumerate() {
-            if !keep[i] {
-                *val = f32::NEG_INFINITY;
+        // Initialize scratch indices
+        if self.scratch_indices.len() != vocab_size {
+            self.scratch_indices = (0..vocab_size).collect();
+        } else {
+            // Need to reset because select_nth_unstable permutes
+            for i in 0..vocab_size {
+                self.scratch_indices[i] = i;
             }
         }
 
-        CandleTensor::from_slice(&logits_vec, logits.shape(), logits.device())
-            .context("Failed to create tensor from top-k filtered logits")
-    }
-
-    /// Apply nucleus (top-p) sampling
-    fn apply_top_p(&self, logits: &CandleTensor, p: f32) -> Result<CandleTensor> {
-        let probabilities = candle_nn::ops::softmax(logits, candle_core::D::Minus1)?;
-        let prob_vec = probabilities.flatten_all()?.to_vec1::<f32>()?;
-        let logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
-
-        // Only consider candidates that are not already masked (NEG_INFINITY)
-        // and have non-negligible probability. Sorting a sparse subset is faster
-        // than sorting the full vocabulary (important at 32k-128k vocab sizes).
-        let mut candidates: Vec<usize> = (0..prob_vec.len())
-            .filter(|&i| logits_vec[i] > f32::NEG_INFINITY && prob_vec[i] > 0.0)
-            .collect();
-
-        // Sort candidates by probability descending
-        candidates.sort_unstable_by(|&i, &j| {
-            prob_vec[j].partial_cmp(&prob_vec[i]).unwrap_or(std::cmp::Ordering::Equal)
+        // O(N) partition
+        self.scratch_indices.select_nth_unstable_by(k - 1, |&i, &j| {
+            logits[j].partial_cmp(&logits[i]).unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        // Find cutoff point where cumulative probability exceeds p
-        let mut cumulative_prob = 0.0;
-        let mut cutoff_idx = candidates.len();
+        // Mask indices that are not in the top-k (i.e., those after k-1)
+        for &idx in &self.scratch_indices[k..] {
+            logits[idx] = f32::NEG_INFINITY;
+        }
+    }
 
-        for (i, &idx) in candidates.iter().enumerate() {
-            cumulative_prob += prob_vec[idx];
+    fn apply_top_p_inplace(&mut self, logits: &mut [f32], p: f32) {
+        // We need probabilities to sort candidates.
+        // We reuse scratch_probs to store probabilities of VALID tokens.
+        // We avoid full softmax if we can, but logic implies we need full softmax
+        // over valid logits to get correct probabilities.
+
+        // Reuse scratch_probs
+        self.scratch_probs.resize(logits.len(), 0.0);
+        self.scratch_probs.copy_from_slice(logits);
+
+        // Compute softmax on scratch_probs
+        Self::softmax_inplace(&mut self.scratch_probs);
+
+        // Reuse scratch_indices for candidates
+        // Only consider candidates that are not already masked and have >0 prob
+        self.scratch_indices.clear();
+        for (i, &prob) in self.scratch_probs.iter().enumerate() {
+            if logits[i] > f32::NEG_INFINITY && prob > 0.0 {
+                self.scratch_indices.push(i);
+            }
+        }
+
+        // Sort candidates by probability descending
+        let probs = &self.scratch_probs;
+        self.scratch_indices.sort_unstable_by(|&i, &j| {
+            probs[j].partial_cmp(&probs[i]).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Find cutoff
+        let mut cumulative_prob = 0.0;
+        let mut cutoff_idx = self.scratch_indices.len();
+
+        for (i, &idx) in self.scratch_indices.iter().enumerate() {
+            cumulative_prob += probs[idx];
             if cumulative_prob >= p {
                 cutoff_idx = i + 1;
                 break;
             }
         }
 
-        // Build filtered logits: keep nucleus tokens, mask the rest
-        let mut filtered_logits = vec![f32::NEG_INFINITY; prob_vec.len()];
-        for &idx in candidates.iter().take(cutoff_idx) {
-            filtered_logits[idx] = logits_vec[idx];
+        // Mask rejected candidates
+        for &idx in self.scratch_indices.iter().skip(cutoff_idx) {
+            logits[idx] = f32::NEG_INFINITY;
         }
-
-        CandleTensor::from_slice(&filtered_logits, logits.shape(), logits.device())
-            .context("Failed to create tensor from nucleus filtered logits")
     }
 
-    /// Sample from multinomial distribution
-    async fn multinomial_sample<R: RngCore>(
+    fn softmax_inplace(x: &mut [f32]) {
+        let max_val = x.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
+        let mut sum = 0.0;
+        for val in x.iter_mut() {
+            *val = (*val - max_val).exp();
+            sum += *val;
+        }
+        if sum > 0.0 {
+            for val in x.iter_mut() {
+                *val /= sum;
+            }
+        } else {
+            // Handle all -inf case (uniform)
+            let uniform = 1.0 / x.len() as f32;
+            for val in x.iter_mut() {
+                *val = uniform;
+            }
+        }
+    }
+
+    async fn multinomial_sample_vec<R: RngCore>(
         &self,
-        probabilities: &CandleTensor,
+        probs: &[f32],
         rng: &mut R,
     ) -> Result<(usize, f32)> {
-        let prob_vec = probabilities.flatten_all()?.to_vec1::<f32>()?;
-
-        // Generate random number
         let random_val: f32 = rng.random();
-
-        // Find token by cumulative probability
         let mut cumulative_prob = 0.0;
-        for (i, &prob) in prob_vec.iter().enumerate() {
+        for (i, &prob) in probs.iter().enumerate() {
             cumulative_prob += prob;
             if random_val <= cumulative_prob {
                 return Ok((i, prob));
             }
         }
-
-        // Fallback: return last token
-        let last_idx = prob_vec.len() - 1;
-        Ok((last_idx, prob_vec[last_idx]))
+        let last_idx = probs.len() - 1;
+        Ok((last_idx, probs[last_idx]))
     }
 
     /// Update repetition tracking
@@ -332,5 +341,38 @@ impl SamplingStrategy {
             repetition_penalty: 1.05,
             do_sample: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_top_k_inplace() {
+        let config = SamplingConfig::default();
+        let mut strategy = SamplingStrategy::new(config);
+
+        let mut logits = vec![0.1, 0.5, 0.2, 0.8, 0.3];
+        // top_k = 2. Should keep 0.8 and 0.5. Others -inf.
+        strategy.apply_top_k_inplace(&mut logits, 2);
+
+        assert_eq!(logits[3], 0.8);
+        assert_eq!(logits[1], 0.5);
+        assert_eq!(logits[0], f32::NEG_INFINITY);
+        assert_eq!(logits[2], f32::NEG_INFINITY);
+        assert_eq!(logits[4], f32::NEG_INFINITY);
+    }
+
+    #[test]
+    fn test_softmax_inplace() {
+        let mut logits = vec![0.0, 0.0];
+        SamplingStrategy::softmax_inplace(&mut logits);
+        assert!((logits[0] - 0.5).abs() < 1e-6);
+        assert!((logits[1] - 0.5).abs() < 1e-6);
+
+        let mut logits = vec![10.0, 10.0];
+        SamplingStrategy::softmax_inplace(&mut logits);
+        assert!((logits[0] - 0.5).abs() < 1e-6);
     }
 }

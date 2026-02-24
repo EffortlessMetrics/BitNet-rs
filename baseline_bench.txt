@@ -1,0 +1,6 @@
+sampling_strategy_sample
+                        time:   [946.59 µs 947.60 µs 948.65 µs]
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) low mild
+  1 (1.00%) high mild
+  1 (1.00%) high severe
