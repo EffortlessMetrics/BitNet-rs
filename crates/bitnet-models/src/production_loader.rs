@@ -104,7 +104,6 @@ pub struct ValidationResult {
 }
 
 /// Enhanced model loader for production environments
-#[allow(dead_code)] // Production infrastructure not fully activated yet
 pub struct ProductionModelLoader {
     /// Base model loader
     base_loader: ModelLoader,
@@ -114,7 +113,6 @@ pub struct ProductionModelLoader {
     validation_enabled: bool,
 }
 
-#[allow(dead_code)] // Production infrastructure methods not fully activated yet
 impl ProductionModelLoader {
     /// Create a new production model loader
     pub fn new() -> Self {
