@@ -13,7 +13,7 @@
 //! skipped with a note rather than failed, so the suite stays green in partial
 //! feature builds.
 
-use bitnet_bdd_grid::{BddGrid, ExecutionEnvironment, FeatureSet, TestingScenario, curated};
+use bitnet_bdd_grid::{ExecutionEnvironment, TestingScenario, curated};
 use bitnet_runtime_feature_flags::active_features;
 use std::collections::HashSet;
 

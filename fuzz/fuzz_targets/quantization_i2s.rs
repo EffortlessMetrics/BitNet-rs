@@ -17,9 +17,13 @@ fuzz_target!(|input: FuzzInput| {
         return;
     }
 
-    // Ensure shape is consistent with data length
-    let total_elements: usize = input.shape.iter().product();
-    if total_elements == 0 || total_elements != input.data.len() {
+    // Ensure shape product doesn't overflow and is consistent with data length.
+    // Fuzzer can supply [usize::MAX, 2] which would panic with .product().
+    const MAX_FUZZ_ELEMENTS: usize = 1_000_000;
+    let Some(total_elements) = input.shape.iter().try_fold(1usize, |acc, &dim| acc.checked_mul(dim)) else {
+        return;
+    };
+    if total_elements == 0 || total_elements > MAX_FUZZ_ELEMENTS || total_elements != input.data.len() {
         return;
     }
 

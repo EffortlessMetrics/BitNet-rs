@@ -121,7 +121,7 @@ Organised by [Diátaxis](https://diataxis.fr/):
 | Section | Contents |
 |---------|----------|
 | [**Tutorials**](docs/tutorials/) | Getting started, first inference, tokenizer discovery |
-| [**How-to**](docs/how-to/) | Install, run inference, export GGUF, cross-validate, validate models |
+| [**How-to**](docs/howto/) | Install, run inference, export GGUF, cross-validate, validate models |
 | [**Explanation**](docs/explanation/) | Architecture, quantization formats, dual-backend, features |
 | [**Reference**](docs/reference/) | CLI flags, environment variables, API, quantization support |
 
@@ -130,7 +130,7 @@ Organised by [Diátaxis](https://diataxis.fr/):
 - [Quickstart](docs/quickstart.md)
 - [Environment variables](docs/environment-variables.md)
 - [GPU setup](docs/GPU_SETUP.md)
-- [C++ cross-validation setup](docs/how-to/automatic-tokenizer-discovery.md)
+- [C++ cross-validation setup](docs/howto/cpp-setup.md)
 - [Quantization support](docs/reference/quantization-support.md)
 - [Validation gates](docs/reference/validation-gates.md)
 - [QK256 Usage Guide](docs/howto/use-qk256-models.md) — GGML I2_S QK256 Format with 256-element blocks and `--strict-loader` validation
