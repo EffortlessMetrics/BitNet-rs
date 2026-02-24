@@ -18,42 +18,43 @@ fn get_env_lock() -> &'static Mutex<()> {
 /// RAII guard for safe environment variable management
 ///
 /// This guard ensures:
-/// 1. Thread-safe access to environment variables via global mutex
+/// 1. Thread-safe access to environment variables via global mutex (brief, not held across scope)
 /// 2. Automatic restoration of original values on drop
 /// 3. No unsafe blocks required
+///
+/// # Deadlock prevention
+/// The mutex is acquired only momentarily during `set` and again during `Drop`, rather than
+/// held for the guard's entire lifetime. This allows multiple `EnvVarGuard`s in the same
+/// scope without self-deadlock. Use `#[serial(bitnet_env)]` on tests that set multiple vars
+/// to prevent concurrent test interference.
 #[allow(dead_code)]
 pub struct EnvVarGuard {
     key: &'static str,
     prior: Option<String>,
-    _guard: std::sync::MutexGuard<'static, ()>,
 }
 
 impl EnvVarGuard {
-    /// Set an environment variable safely with automatic restoration
+    /// Set an environment variable safely with automatic restoration.
     ///
-    /// This method:
-    /// - Acquires a global lock to prevent races
-    /// - Stores the original value for restoration
-    /// - Sets the new value using unsafe calls (required for env::set_var)
-    ///
-    /// # Safety
-    /// The global lock ensures thread safety and proper restoration order
+    /// The global lock is acquired briefly for the set operation, then released.
+    /// Use `#[serial(bitnet_env)]` on tests that use multiple guards in the same scope.
     #[allow(dead_code)]
     pub fn set(key: &'static str, val: &str) -> Self {
-        let guard = get_env_lock().lock().unwrap();
-        let prior = std_env::var(key).ok();
-        // SAFETY: We hold a global lock, ensuring no concurrent access to env vars
-        unsafe {
-            std_env::set_var(key, val);
-        }
-        Self { key, prior, _guard: guard }
+        let prior = {
+            let _guard = get_env_lock().lock().unwrap();
+            let prior = std_env::var(key).ok();
+            // SAFETY: We hold the global lock during set.
+            unsafe { std_env::set_var(key, val) };
+            prior
+        };
+        Self { key, prior }
     }
 }
 
 impl Drop for EnvVarGuard {
     fn drop(&mut self) {
-        // Note: _guard is still held, ensuring thread safety during restoration
-        // SAFETY: We still hold the global lock, ensuring no concurrent access to env vars
+        let _guard = get_env_lock().lock().unwrap();
+        // SAFETY: We hold the global lock during restore.
         unsafe {
             if let Some(v) = &self.prior {
                 std_env::set_var(self.key, v);
