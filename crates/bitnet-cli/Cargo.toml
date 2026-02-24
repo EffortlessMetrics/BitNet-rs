@@ -79,12 +79,12 @@ cpu = [
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
 ]
-gpu = [
-  "bitnet-inference/gpu",
+cuda = [
+  "bitnet-inference/cuda",
   "runtime-profile-core",
-  "bitnet-runtime-bootstrap/runtime-profile-gpu",
+  "bitnet-runtime-bootstrap/runtime-profile-cuda",
 ]
-cuda = ["gpu", "bitnet-runtime-bootstrap/runtime-profile-cuda"]  # Backward compatibility alias for gpu
+gpu = ["cuda", "bitnet-runtime-bootstrap/runtime-profile-gpu"]  # GPU umbrella — CUDA is the current implementation
 # IQ2_S support via GGML FFI
 iq2s-ffi = [
     "bitnet-models/iq2s-ffi",

@@ -39,8 +39,8 @@ default = []
 cpu = ["bitnet-kernels/cpu"]
 simd = []
 integration-tests = []
-gpu = ["bitnet-kernels/gpu"]
-cuda = ["gpu"]  # Alias for backward compatibility
+cuda = ["bitnet-kernels/cuda"]
+gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 inference = []
 
 [[bench]]

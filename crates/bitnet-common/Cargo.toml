@@ -38,8 +38,9 @@ bitnet-test-support.workspace = true
 [features]
 integration-tests = []
 default = []
-gpu = ["candle-core/cuda"]
-cuda = ["candle-core/cuda"]  # Keep cuda as direct feature for now
+cpu = []
+cuda = ["candle-core/cuda"]
+gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 # Do NOT enable Candle's Metal feature on non-Apple hosts.
 # We keep a local "metal" feature for code cfgs, but wire Candle's "metal"
 # only on macOS via a target-specific dependency (see below).

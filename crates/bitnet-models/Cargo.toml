@@ -55,8 +55,8 @@ bitnet-test-support.workspace = true
 [features]
 default = []
 cpu = ["bitnet-transformer/cpu"]  # CPU feature for test scaffolding
-gpu = ["bitnet-common/gpu", "candle-core/cuda", "bitnet-transformer/gpu"]
-cuda = ["gpu"]  # Backward compatibility alias for gpu
+cuda = ["bitnet-common/cuda", "candle-core/cuda", "bitnet-transformer/cuda"]
+gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 validation = []
 iq2s-ffi = ["dep:bitnet-ggml-ffi", "bitnet-ggml-ffi/iq2s-ffi"]
 iq2s-rust = []  # Placeholder for pure-Rust IQ2_S (safe no-op)
