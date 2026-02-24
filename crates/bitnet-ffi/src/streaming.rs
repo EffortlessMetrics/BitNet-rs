@@ -111,9 +111,7 @@ pub fn get_streaming_manager() -> &'static StreamingManager {
 
 /// Store a streaming session and return its ID
 pub fn store_streaming_session(session: StreamingSession) -> u32 {
-    get_streaming_manager()
-        .store_session(session)
-        .unwrap_or(u32::MAX) // Return invalid ID on error
+    get_streaming_manager().store_session(session).unwrap_or(u32::MAX) // Return invalid ID on error
 }
 
 /// Remove a streaming session
