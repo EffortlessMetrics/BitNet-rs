@@ -100,6 +100,10 @@ pub struct KVCache {
     tokens_prefilled: usize,
     /// Total number of tokens processed (prefill + incremental)
     tokens_total: usize,
+    /// Number of cache lookups that found an entry
+    cache_hits: u64,
+    /// Number of cache lookups that found no entry
+    cache_misses: u64,
 }
 
 impl KVCache {
@@ -115,6 +119,8 @@ impl KVCache {
             memory_pool,
             tokens_prefilled: 0,
             tokens_total: 0,
+            cache_hits: 0,
+            cache_misses: 0,
         })
     }
 
@@ -165,9 +171,11 @@ impl KVCache {
                 self.access_order.push_back(entry_key);
             }
 
+            self.cache_hits += 1;
             debug!("Cache hit for layer {} position {}", layer, position);
             Some((&entry.key, &entry.value))
         } else {
+            self.cache_misses += 1;
             debug!("Cache miss for layer {} position {}", layer, position);
             None
         }
@@ -186,6 +194,8 @@ impl KVCache {
         self.memory_pool.reset();
         self.tokens_prefilled = 0;
         self.tokens_total = 0;
+        self.cache_hits = 0;
+        self.cache_misses = 0;
         debug!("Cache cleared");
     }
 
@@ -209,12 +219,16 @@ impl KVCache {
         let total_entries = self.cache.len();
         let compressed_entries = self.cache.values().filter(|entry| entry.compressed).count();
 
+        let total_lookups = self.cache_hits + self.cache_misses;
+        let hit_rate =
+            if total_lookups > 0 { self.cache_hits as f64 / total_lookups as f64 } else { 0.0 };
+
         CacheStats {
             total_entries,
             compressed_entries,
             current_size_bytes: self.current_size,
             max_size_bytes: self.config.max_size_bytes,
-            hit_rate: 0.0, // Would need to track hits/misses
+            hit_rate,
             memory_efficiency: self.current_size as f64 / self.config.max_size_bytes as f64,
             cache_size: self.current_size, // Alias for compatibility
         }
@@ -435,6 +449,35 @@ mod tests {
         let stats = cache.stats();
         assert_eq!(stats.total_entries, 1);
         assert!(stats.current_size_bytes > 0);
+    }
+
+    #[test]
+    fn test_cache_hit_miss_tracking() {
+        let config = CacheConfig::default();
+        let mut cache = KVCache::new(config).unwrap();
+
+        // Initially no lookups → hit_rate == 0.0
+        assert_eq!(cache.stats().hit_rate, 0.0);
+
+        let key = vec![1.0f32, 2.0, 3.0];
+        let value = vec![4.0f32, 5.0, 6.0];
+        cache.store(0, 0, key, value).unwrap();
+
+        // First lookup: miss (not yet accessed via get before storing, but the entry exists)
+        // One hit
+        let _ = cache.get(0, 0);
+        let stats = cache.stats();
+        assert_eq!(stats.hit_rate, 1.0, "single hit should give 100% rate");
+
+        // Second lookup: miss (entry doesn't exist)
+        let _ = cache.get(0, 99);
+        let stats = cache.stats();
+        // 1 hit + 1 miss = 50%
+        assert!((stats.hit_rate - 0.5).abs() < 1e-9);
+
+        // After clear, counters reset
+        cache.clear();
+        assert_eq!(cache.stats().hit_rate, 0.0);
     }
 
     #[test]
