@@ -1,3 +1,3 @@
-## 2024-11-22 - HashMap Key Allocation Optimization
-**Learning:** Using `String` as a `HashMap` key when `&str` is available from the source data (with sufficient lifetime) causes unnecessary heap allocations on every insertion. In high-frequency hot paths like batch formation, this adds up.
-**Action:** Always prefer `HashMap<&str, V>` over `HashMap<String, V>` when keys can be borrowed from a longer-lived structure, especially in loops.
+## 2024-11-22 - HashMap Key Allocation Optimization (OBSOLETE)
+**Learning:** Using `String` as a `HashMap` key when `&str` is available is inefficient. However, this task was closed as obsolete due to refactoring in PRs #608–#638.
+**Action:** Always verify if ongoing refactoring affects current optimization tasks.
