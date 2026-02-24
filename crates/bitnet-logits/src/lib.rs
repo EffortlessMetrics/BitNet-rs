@@ -47,9 +47,13 @@ pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
     if top_k == 0 || top_k >= logits.len() {
         return logits.len();
     }
+    // Use O(N) selection to find the k-th largest threshold.
     let mut vals: Vec<f32> = logits.to_vec();
-    vals.sort_unstable_by(|a, b| f32_descending(*a, *b));
-    let threshold = vals[top_k - 1];
+    // select_nth_unstable_by puts the (len - top_k)-th smallest at index (len-top_k),
+    // with all smaller values before it and larger values after it.
+    let partition_idx = vals.len() - top_k;
+    vals.select_nth_unstable_by(partition_idx, |a, b| f32_ascending(*a, *b));
+    let threshold = vals[partition_idx];
     let mut kept = 0usize;
     for l in logits.iter_mut() {
         if *l >= threshold && kept < top_k {
@@ -103,6 +107,15 @@ pub fn softmax_in_place(logits: &mut [f32]) {
         for l in logits.iter_mut() {
             *l /= sum;
         }
+    } else {
+        // Degenerate case: all exponentiated values underflowed to 0.
+        // Fall back to a uniform distribution so downstream sampling receives
+        // a valid probability distribution.
+        #[allow(clippy::cast_precision_loss)]
+        let uniform = 1.0_f32 / logits.len() as f32;
+        for l in logits.iter_mut() {
+            *l = uniform;
+        }
     }
 }
 
@@ -113,7 +126,7 @@ pub fn softmax_in_place(logits: &mut [f32]) {
 /// * `penalty == 1.0` → no-op.
 pub fn apply_repetition_penalty(logits: &mut [f32], token_ids: &[u32], penalty: f32) {
     #[allow(clippy::float_cmp)]
-    if penalty == 1.0 || token_ids.is_empty() {
+    if penalty <= 0.0 || !penalty.is_finite() || penalty == 1.0 || token_ids.is_empty() {
         return;
     }
     for &id in token_ids {

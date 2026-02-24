@@ -188,7 +188,7 @@ pub fn parse_header(data: &[u8]) -> anyhow::Result<GgufFileInfo> {
     // v3 adds alignment (u32) at byte 24.
     let alignment = if version >= 3 && data.len() >= 28 {
         let a = u32::from_le_bytes(data[24..28].try_into()?);
-        if a == 0 || !a.is_power_of_two() { 32 } else { a }
+        if a.is_power_of_two() { a } else { 32 }
     } else {
         32
     };

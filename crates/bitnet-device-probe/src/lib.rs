@@ -35,7 +35,7 @@ pub fn gpu_available_runtime() -> bool {
         }
     }
 
-    // Probe nvidia-smi with a hard timeout (best-effort, non-blocking).
+    // Probe nvidia-smi (best-effort; may block briefly if the driver hangs).
     Command::new("nvidia-smi")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())

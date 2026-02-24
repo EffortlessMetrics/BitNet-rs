@@ -20,7 +20,6 @@ include = [
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.1.0" }
-anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
 rayon.workspace = true
@@ -68,8 +67,8 @@ cpu-optimized = ["avx2", "neon"]
 avx2 = []
 avx512 = []
 neon = []
-cuda = ["dep:cudarc", "dep:half"]
-gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+cuda = ["dep:cudarc", "dep:half", "bitnet-device-probe/cuda"]
+gpu = ["cuda", "bitnet-device-probe/gpu"]  # GPU umbrella — CUDA is the current implementation
 ffi = ["dep:cc", "dep:bindgen"]
 inference = []
 strict = []  # Strict mode for mock elimination validation
