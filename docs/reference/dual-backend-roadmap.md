@@ -78,16 +78,6 @@ Adding a new GPU backend only requires new feature entries and new
 backend-specific modules. Existing `#[cfg(feature = "gpu")]` code
 continues to work without modification.
 
-### 🔲 What Remains (Future Work)
-
-1. **Build-time symbol detection → rustc-cfg flags** (`bitnet-sys`)
-   - `build.rs` runs `nm`/`objdump -T` on found libs
-   - Emits `bitnet_cpp_has_cuda`, `bitnet_cpp_has_bitnet_shim`
-   - Code can compile-time gate "CUDA-backed C++ path" vs "CPU-only C++ path"
-
-2. **CUDA smoke lane** (self-hosted runner, nightly/manual)
-   - Allocate device, run small inference, upload parity receipt
-
 ---
 
 ## Known Issues

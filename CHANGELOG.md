@@ -8,31 +8,11 @@ All notable changes to BitNet.rs will be documented in this file.
 - **Runtime Backend Selection** (PR #642): `BackendCapabilities` snapshot at CLI/server startup producing `requested=X detected=[…] selected=Y` log line and receipt field
 - **CPU Golden Path E2E Tests** (PR #643): 5 deterministic end-to-end tests in `bitnet-inference` always running in PR CI without model download
 - **SRP Microcrates Wired Into CI** (PR #644): `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` added to CI test matrix
+- **QK256 (GGML I2_S) Pure-Rust Support** (PR #640): GGUF loader detects and stores QK256 tensors; pure-Rust `gemv_qk256()` kernel; dual I2_S flavor detection; 17 comprehensive tests; no FFI required
 
 ### Fixed
 - **TL1/TL2 Quantizer Round-Trip Accuracy** (PR #641): LUT offset mismatch in `pack_2bit_values` caused clipping of codes 2–3; dequantize now maps ternary inputs within `[-1, 1]`
 - **Security Audit** (PR #645): Updated `bytes` to 1.11.1 (RUSTSEC-2026-0007) and `time` to 0.3.47 (RUSTSEC-2026-0009); added documented accepted-risk entries for gix-date, rsa, bincode advisories; fixed LGPL false-positive in GPL license check; fixed supply-chain Cargo.lock verification command
-
-### Added (PR #640–#641)
-
-  - GGUF loader automatically detects and stores QK256 tensors as U8 tensors with `.qk256_qs` suffix
-  - Pure-Rust `gemv_qk256()` kernel for inference (no FFI required)
-  - Transformer-level automatic dispatch: forwards automatically use QK256 kernel when weights present
-  - Dual I2_S flavor support: BitNet native (32-elem) and GGML (256-elem/QK256) with automatic detection
-  - 17 comprehensive tests validating end-to-end functionality (unit + integration + parity)
-  - Parity harness updated to show `backend: rust, compute: rust` for pure-Rust inference
-  - Compatible with MS BitNet GGUF models using GGML format without FFI dependency
-  - Automatic format detection: loader inspects tensor sizes to identify I2_S flavor
-  - Transparent kernel dispatch: no model changes required for QK256 support
-  - New module `bitnet-models::quant::i2s_qk256` with scalar and SIMD reference kernels
-  - Documentation: architecture overview, how-to guide, and dual-flavor explanation
-
-### Status
-- ✅ Pure-Rust kernel implementation complete and tested
-- ✅ GGUF loader integration with automatic format detection
-- ✅ Transformer-level dispatch wiring complete
-- ✅ Integration tests and parity validation passing
-- ✅ Production-ready for pure-Rust inference on GGML models
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
