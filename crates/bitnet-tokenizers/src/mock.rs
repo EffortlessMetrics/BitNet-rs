@@ -31,21 +31,30 @@ impl Default for MockTokenizer {
 
 impl Tokenizer for MockTokenizer {
     fn encode(&self, text: &str, _add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
-        // Simple character-based encoding for testing
-        Ok(text.chars().map(|c| c as u32 % self.vocab_size as u32).collect())
+        // Byte-level encoding for realistic mock behaviour: each UTF-8 byte → token ID 0–255.
+        // This produces a proper round-trip through decode(), making test assertions meaningful.
+        Ok(text.bytes().map(|b| b as u32).collect())
     }
 
     fn decode(&self, tokens: &[u32]) -> Result<String> {
-        // Simple placeholder
-        Ok(tokens.iter().map(|&t| ((t % 128) as u8) as char).collect())
+        // Reconstruct UTF-8 text from byte-level token IDs (0–255); skip higher IDs (special
+        // tokens or out-of-range values) so the round-trip is lossless for ASCII/UTF-8 input.
+        let bytes: Vec<u8> =
+            tokens.iter().filter_map(|&t| if t < 256 { Some(t as u8) } else { None }).collect();
+        Ok(String::from_utf8_lossy(&bytes).into_owned())
     }
 
     fn vocab_size(&self) -> usize {
         self.vocab_size
     }
 
-    fn token_to_piece(&self, _token: u32) -> Option<String> {
-        Some("<token>".to_string())
+    fn token_to_piece(&self, token: u32) -> Option<String> {
+        if token < 256 {
+            let b = [token as u8];
+            Some(String::from_utf8_lossy(&b).into_owned())
+        } else {
+            Some(format!("<token_{}>", token))
+        }
     }
 
     fn token_to_id(&self, token: &str) -> Option<u32> {
