@@ -218,9 +218,9 @@ impl Tokenizer for BasicTokenizer {
         if tokens.is_empty() {
             return Ok(String::new());
         }
-
-        // Simple placeholder implementation - in real tokenizer this would map back to text
-        Ok(format!("Generated text from {} tokens", tokens.len()))
+        // BasicTokenizer has no real vocabulary; concatenate piece representations
+        // so the output is at least deterministic and reflects the actual token IDs.
+        Ok(tokens.iter().filter_map(|&id| self.token_to_piece(id)).collect::<Vec<_>>().join(""))
     }
 
     fn vocab_size(&self) -> usize {
@@ -327,9 +327,7 @@ impl Tokenizer for RustGgufTokenizer {
     }
 
     fn decode(&self, tokens: &[u32]) -> Result<String> {
-        // RustTokenizer doesn't implement decode yet - return placeholder
-        // TODO: Implement decode in RustTokenizer when needed
-        Ok(format!("Generated text from {} tokens", tokens.len()))
+        self.inner.decode(tokens)
     }
 
     fn vocab_size(&self) -> usize {
@@ -343,9 +341,7 @@ impl Tokenizer for RustGgufTokenizer {
     }
 
     fn token_to_piece(&self, token: u32) -> Option<String> {
-        // Return placeholder - actual piece conversion requires vocab lookup
-        // TODO: Implement token_to_piece in RustTokenizer when needed
-        Some(format!("<token_{}>", token))
+        self.inner.token_to_piece(token)
     }
 
     fn bos_token_id(&self) -> Option<u32> {

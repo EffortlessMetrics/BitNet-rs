@@ -167,11 +167,12 @@ fn test_basic_tokenizer_decode_returns_actual_text() {
     assert_ne!(decoded, String::new(), "Decode must not return empty string");
     assert_ne!(decoded, "xyzzy", "Decode must not return dummy 'xyzzy' string");
 
-    // Verify output contains token count information (BasicTokenizer's format)
-    assert!(
-        decoded.contains(&tokens.len().to_string()),
-        "BasicTokenizer decode should reference token count"
-    );
+    // BasicTokenizer has no real vocab: decode uses token_to_piece("<token_{id}>") concatenated.
+    // Verify each token produces a piece in the output.
+    for &id in &tokens {
+        let piece = format!("<token_{}>", id);
+        assert!(decoded.contains(&piece), "Decoded output should contain piece for token {}", id);
+    }
 }
 
 /// KILLS MUTANTS: lib.rs:78 encode_legacy with add_bos parameter
