@@ -354,6 +354,7 @@ bitnet-quantization = { path = "../crates/bitnet-quantization" }
 bitnet-kernels = { path = "../crates/bitnet-kernels" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 bitnet-compat = { path = "../crates/bitnet-compat" }
+bitnet-honest-compute = { path = "../crates/bitnet-honest-compute" }
 bitnet = { path = "../", default-features = false, features = ["cpu"] }
 bitnet-crossval = { path = "../crossval", package = "bitnet-crossval" }
 

@@ -32,7 +32,7 @@ mod error_message_formatting {
     /// **Expected behavior**: Error message should have "Option A" (recommended) and
     /// "Option B" (manual) sections, with both explaining LD_LIBRARY_PATH vs rpath tradeoffs.
     #[test]
-    #[ignore] // TODO: Implement enhanced error message template in preflight.rs
+    #[ignore = "TODO: Implement enhanced error message template in preflight.rs"]
     fn test_error_message_includes_both_ld_library_path_and_rpath_options() {
         // TODO: Mock preflight_backend_libs() failure case
         // TODO: Capture error message output
@@ -56,7 +56,7 @@ mod error_message_formatting {
     /// **Expected behavior**: Error messages should use heavy separators (━━━━━━)
     /// for major sections and light separators (─────────) for subsections.
     #[test]
-    #[ignore] // TODO: Define SEPARATOR_HEAVY and SEPARATOR_LIGHT constants
+    #[ignore = "TODO: Define SEPARATOR_HEAVY and SEPARATOR_LIGHT constants"]
     fn test_error_message_uses_visual_separators() {
         // TODO: Define SEPARATOR_HEAVY constant (heavy box drawing)
         // TODO: Define SEPARATOR_LIGHT constant (light box drawing)
@@ -76,7 +76,7 @@ mod error_message_formatting {
     /// **Expected behavior**: Error message should have "CRITICAL: Library detection
     /// happens at BUILD time, not runtime" section explaining why rebuild is required.
     #[test]
-    #[ignore] // TODO: Implement enhanced error message with build-time explanation
+    #[ignore = "TODO: Implement enhanced error message with build-time explanation"]
     fn test_error_message_explains_build_time_vs_runtime_detection() {
         // TODO: Mock preflight_backend_libs() failure case
         // TODO: Capture error message output
@@ -96,7 +96,7 @@ mod error_message_formatting {
     /// **Expected behavior**: "Option A: One-Command Setup (Recommended)" should
     /// appear before "Option B: Manual Setup".
     #[test]
-    #[ignore] // TODO: Update error message template with priority ordering
+    #[ignore = "TODO: Update error message template with priority ordering"]
     fn test_error_message_shows_recommended_option_first() {
         // TODO: Mock preflight_backend_libs() failure case
         // TODO: Capture error message output
@@ -115,7 +115,7 @@ mod error_message_formatting {
     /// **Expected behavior**: All commands should be directly copy-pasteable without
     /// requiring user substitution (except for /path/to/llama.cpp in manual instructions).
     #[test]
-    #[ignore] // TODO: Ensure all error message commands are copy-pasteable
+    #[ignore = "TODO: Ensure all error message commands are copy-pasteable"]
     fn test_error_message_provides_exact_commands_no_placeholders() {
         // TODO: Mock preflight_backend_libs() failure case
         // TODO: Capture error message output
@@ -153,7 +153,7 @@ mod verbose_diagnostics {
     /// **Expected behavior**: Verbose output should number search paths and indicate
     /// which paths exist vs don't exist with visual markers.
     #[test]
-    #[ignore] // TODO: Implement print_verbose_success_diagnostics() enhancements
+    #[ignore = "TODO: Implement print_verbose_success_diagnostics() enhancements"]
     fn test_verbose_output_shows_search_paths_in_priority_order() {
         // TODO: Mock HAS_LLAMA = true condition
         // TODO: Set up test environment with BITNET_CPP_DIR
@@ -177,7 +177,7 @@ mod verbose_diagnostics {
     /// **Expected behavior**: Output should show when xtask was built, which flags
     /// are set (CROSSVAL_HAS_LLAMA, CROSSVAL_HAS_BITNET), and rpath configuration.
     #[test]
-    #[ignore] // TODO: Implement get_xtask_build_timestamp() helper
+    #[ignore = "TODO: Implement get_xtask_build_timestamp() helper"]
     fn test_verbose_output_includes_build_metadata() {
         // TODO: Implement get_xtask_build_timestamp() helper function
         // TODO: Mock HAS_LLAMA = true condition
@@ -198,7 +198,7 @@ mod verbose_diagnostics {
     /// **Expected behavior**: Output should show platform name, standard library linking,
     /// and loader search order (rpath → LD_LIBRARY_PATH → system paths on Linux/macOS).
     #[test]
-    #[ignore] // TODO: Implement platform-specific section in verbose diagnostics
+    #[ignore = "TODO: Implement platform-specific section in verbose diagnostics"]
     fn test_verbose_output_shows_platform_specific_details() {
         // TODO: Mock HAS_LLAMA = true condition
         // TODO: Call print_verbose_success_diagnostics()
@@ -220,7 +220,7 @@ mod verbose_diagnostics {
     /// explanation: "(a) C++ libraries were never installed, OR (b) libraries
     /// were installed AFTER xtask was built".
     #[test]
-    #[ignore] // TODO: Enhance print_verbose_failure_diagnostics() with diagnosis section
+    #[ignore = "TODO: Enhance print_verbose_failure_diagnostics() with diagnosis section"]
     fn test_verbose_failure_includes_diagnosis_section() {
         // TODO: Mock HAS_LLAMA = false condition
         // TODO: Call print_verbose_failure_diagnostics()
@@ -240,7 +240,7 @@ mod verbose_diagnostics {
     /// **Expected behavior**: Output should show "Last xtask build: 2025-10-25T10:30:00Z"
     /// or similar timestamp to help users identify stale builds.
     #[test]
-    #[ignore] // TODO: Use get_xtask_build_timestamp() in failure diagnostics
+    #[ignore = "TODO: Use get_xtask_build_timestamp() in failure diagnostics"]
     fn test_verbose_failure_shows_xtask_build_timestamp() {
         // TODO: Mock HAS_LLAMA = false condition
         // TODO: Call print_verbose_failure_diagnostics()
@@ -259,7 +259,7 @@ mod verbose_diagnostics {
     /// **Expected behavior**: Output should have callout explaining why xtask
     /// must be rebuilt: "Library detection runs during BUILD (not runtime)".
     #[test]
-    #[ignore] // TODO: Add "Why rebuild?" callout to failure diagnostics
+    #[ignore = "TODO: Add \"Why rebuild?\" callout to failure diagnostics"]
     fn test_verbose_failure_includes_rebuild_rationale() {
         // TODO: Mock HAS_LLAMA = false condition
         // TODO: Call print_verbose_failure_diagnostics()
@@ -283,7 +283,7 @@ mod build_metadata_helpers {
     /// **Expected behavior**: Function should return Some(timestamp) on success
     /// or None on error (e.g., if binary path not accessible).
     #[test]
-    #[ignore] // TODO: Implement get_xtask_build_timestamp() function
+    #[ignore = "TODO: Implement get_xtask_build_timestamp() function"]
     fn test_get_xtask_build_timestamp_returns_valid_or_none() {
         // TODO: Implement get_xtask_build_timestamp() in preflight.rs
         // TODO: Call get_xtask_build_timestamp()
@@ -302,7 +302,7 @@ mod build_metadata_helpers {
     /// **Expected behavior**: Function should return string with section header,
     /// HAS_BACKEND status, timestamp, and feature flags.
     #[test]
-    #[ignore] // TODO: Implement format_build_metadata() function
+    #[ignore = "TODO: Implement format_build_metadata() function"]
     fn test_format_build_metadata_contains_all_required_fields() {
         // TODO: Implement format_build_metadata() in preflight.rs
         // TODO: Call format_build_metadata(CppBackend::Llama)
@@ -322,7 +322,7 @@ mod build_metadata_helpers {
     /// **Expected behavior**: SEPARATOR_HEAVY and SEPARATOR_LIGHT should both
     /// be 70 characters long for proper visual alignment.
     #[test]
-    #[ignore] // TODO: Define SEPARATOR_HEAVY and SEPARATOR_LIGHT constants
+    #[ignore = "TODO: Define SEPARATOR_HEAVY and SEPARATOR_LIGHT constants"]
     fn test_separator_constants_have_equal_length() {
         // TODO: Define SEPARATOR_HEAVY constant in preflight.rs
         // TODO: Define SEPARATOR_LIGHT constant in preflight.rs
@@ -346,7 +346,7 @@ mod message_structure_validation {
     /// delineate major sections (RECOVERY STEPS, TROUBLESHOOTING) and subsections
     /// (Option A, Option B).
     #[test]
-    #[ignore] // TODO: Implement hierarchical error message structure
+    #[ignore = "TODO: Implement hierarchical error message structure"]
     fn test_error_message_has_clear_hierarchical_structure() {
         // TODO: Mock preflight_backend_libs() failure case
         // TODO: Capture error message output
@@ -366,7 +366,7 @@ mod message_structure_validation {
     /// **Expected behavior**: Error should have "TROUBLESHOOTING" section
     /// with verbose diagnostics hint and links to docs.
     #[test]
-    #[ignore] // TODO: Add troubleshooting section to error message
+    #[ignore = "TODO: Add troubleshooting section to error message"]
     fn test_error_message_includes_troubleshooting_section() {
         // TODO: Mock preflight_backend_libs() failure case
         // TODO: Capture error message output

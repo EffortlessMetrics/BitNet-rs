@@ -33,7 +33,7 @@ use std::time::Duration;
 /// **Expected:** Returns OperationTimeout error after 30s default timeout
 /// **Error Message:** Should guide user to increase timeout or reduce input size
 #[test]
-#[ignore] // P1: Must-have - implement timeout infrastructure
+#[ignore = "P1: Must-have - implement timeout infrastructure"]
 fn test_timeout_mechanism_default_30s() {
     // TODO: Implement timeout mechanism with default 30s timeout
     // This test validates the timeout wrapper for C++ FFI calls
@@ -71,7 +71,7 @@ fn test_timeout_mechanism_default_30s() {
 /// **Expected:** Respects custom timeout duration (100ms, 60s, etc.)
 /// **Validation:** Timeout triggers at configured duration
 #[test]
-#[ignore] // P1: Must-have - implement configurable timeout
+#[ignore = "P1: Must-have - implement configurable timeout"]
 fn test_timeout_mechanism_configurable() {
     // TODO: Implement configurable timeout mechanism
     // This test validates custom timeout durations
@@ -109,7 +109,7 @@ fn test_timeout_mechanism_configurable() {
 /// **Expected:** Timeout triggers for hung C++ operations, prevents blocking
 /// **Behavior:** Thread leak acceptable, timeout error returned
 #[test]
-#[ignore] // P1: Must-have - implement hang prevention
+#[ignore = "P1: Must-have - implement hang prevention"]
 fn test_timeout_prevents_hangs() {
     // TODO: Implement timeout hang prevention
     // This test validates that timeout actually prevents hangs
@@ -149,7 +149,7 @@ fn test_timeout_prevents_hangs() {
 /// **Debug-Only:** Only enabled in debug builds (`#[cfg(debug_assertions)]`)
 #[test]
 #[cfg(debug_assertions)]
-#[ignore] // P1: Must-have - implement context counter
+#[ignore = "P1: Must-have - implement context counter"]
 fn test_cleanup_validation_context_counter() {
     // TODO: Implement AtomicUsize context counter for cleanup validation
     // This test validates that active contexts are tracked
@@ -190,7 +190,7 @@ fn test_cleanup_validation_context_counter() {
 /// **Expected:** No memory leaks detected by valgrind on error paths
 /// **CI Integration:** Run with `valgrind --leak-check=full`
 #[test]
-#[ignore] // P1: Must-have - implement valgrind leak detection
+#[ignore = "P1: Must-have - implement valgrind leak detection"]
 fn test_cleanup_validation_valgrind() {
     // TODO: Implement valgrind memory leak detection
     // This test validates that no memory leaks occur on error paths
@@ -221,7 +221,7 @@ fn test_cleanup_validation_valgrind() {
 /// **Validation:** Context counter decrements even when errors occur
 #[test]
 #[cfg(debug_assertions)]
-#[ignore] // P1: Must-have - implement error path cleanup
+#[ignore = "P1: Must-have - implement error path cleanup"]
 fn test_cleanup_on_error_paths() {
     // TODO: Implement cleanup on error paths validation
     // This test validates RAII Drop enforcement
@@ -272,7 +272,7 @@ fn test_cleanup_on_error_paths() {
 /// **Expected:** C++ errors logged to stderr with structured format
 /// **Format:** `[YYYY-MM-DD HH:MM:SS] [LEVEL] [Component] Message`
 #[test]
-#[ignore] // P1: Must-have - implement C++ logging macros
+#[ignore = "P1: Must-have - implement C++ logging macros"]
 fn test_cpp_logging_macros() {
     // TODO: Implement C++ logging macros (ERROR, WARN, INFO, DEBUG)
     // This test validates structured logging in C++ bridge
@@ -314,7 +314,7 @@ fn test_cpp_logging_macros() {
 /// **Expected:** C++ errors logged and captured in Rust error messages
 /// **Integration:** C++ stderr + Rust `log` crate integration
 #[test]
-#[ignore] // P1: Must-have - implement FFI log propagation
+#[ignore = "P1: Must-have - implement FFI log propagation"]
 fn test_cpp_log_capture_in_rust() {
     // TODO: Implement C++ log capture in Rust
     // This test validates FFI log propagation
@@ -357,7 +357,7 @@ fn test_cpp_log_capture_in_rust() {
 /// **Expected:** Error contexts chain with full trace
 /// **Integration:** anyhow::Context trait for enrichment
 #[test]
-#[ignore] // P1: Must-have - implement error context chaining
+#[ignore = "P1: Must-have - implement error context chaining"]
 fn test_error_context_chaining() {
     // TODO: Implement error context chaining with anyhow
     // This test validates full error trace with context
@@ -393,7 +393,7 @@ fn test_error_context_chaining() {
 /// **Expected:** Returns LibraryNotFound when libbitnet.so missing
 /// **Error Message:** Guides user to set LD_LIBRARY_PATH or run setup-cpp-auto
 #[test]
-#[ignore] // P1: Must-have - implement LibraryNotFound error variant
+#[ignore = "P1: Must-have - implement LibraryNotFound error variant"]
 fn test_library_not_found_error() {
     // TODO: Implement LibraryNotFound error variant
     // This test validates new error variant for missing libraries
@@ -430,7 +430,7 @@ fn test_library_not_found_error() {
 /// **Expected:** Returns SymbolNotFound when required symbol missing
 /// **Error Message:** Guides user to check version mismatch and rebuild
 #[test]
-#[ignore] // P1: Must-have - implement SymbolNotFound error variant
+#[ignore = "P1: Must-have - implement SymbolNotFound error variant"]
 fn test_symbol_not_found_error() {
     // TODO: Implement SymbolNotFound error variant
     // This test validates new error variant for missing symbols
@@ -468,7 +468,7 @@ fn test_symbol_not_found_error() {
 /// **Expected:** Returns OutOfMemory when C++ malloc/new fails
 /// **Error Message:** Guides user to reduce context size or enable GPU offloading
 #[test]
-#[ignore] // P1: Must-have - implement OutOfMemory error variant
+#[ignore = "P1: Must-have - implement OutOfMemory error variant"]
 fn test_out_of_memory_error() {
     // TODO: Implement OutOfMemory error variant
     // This test validates new error variant for memory exhaustion
@@ -511,7 +511,7 @@ fn test_out_of_memory_error() {
 /// **Variants:** LibraryNotFound, SymbolNotFound, OptionalSymbolMissing, OutOfMemory,
 ///              ContextOverflow, ThreadSafetyError, CleanupFailed, OperationTimeout
 #[test]
-#[ignore] // P2: Should-have - implement complete error enum expansion
+#[ignore = "P2: Should-have - implement complete error enum expansion"]
 fn test_error_enum_expansion() {
     // TODO: Implement complete error enum with 8+ new variants
     // This test validates all new error variants compile and format
@@ -557,7 +557,7 @@ fn test_error_enum_expansion() {
 /// **Expected:** Query vs Fill phase distinguishable in error messages
 /// **Error Format:** "BitNet tokenization (QUERY PHASE) failed" vs "(FILL PHASE) failed"
 #[test]
-#[ignore] // P2: Should-have - implement pass-phase distinction for tokenization
+#[ignore = "P2: Should-have - implement pass-phase distinction for tokenization"]
 fn test_tokenization_phase_error() {
     // TODO: Implement pass-phase distinction for tokenization errors
     // This test validates Query vs Fill phase error messages
@@ -602,7 +602,7 @@ fn test_tokenization_phase_error() {
 /// **Expected:** Query vs Fill phase distinguishable for evaluation
 /// **Error Format:** "Evaluation (QUERY PHASE) failed" vs "(FILL PHASE) failed"
 #[test]
-#[ignore] // P2: Should-have - implement pass-phase distinction for inference
+#[ignore = "P2: Should-have - implement pass-phase distinction for inference"]
 fn test_inference_phase_error() {
     // TODO: Implement pass-phase distinction for inference errors
     // This test validates Query vs Fill phase error messages for evaluation
@@ -643,7 +643,7 @@ fn test_inference_phase_error() {
 /// **Expected:** Returns ContextOverflow when token count exceeds context size
 /// **Error Message:** Guides user to increase --n-ctx or reduce prompt length
 #[test]
-#[ignore] // P2: Should-have - implement ContextOverflow error variant
+#[ignore = "P2: Should-have - implement ContextOverflow error variant"]
 fn test_context_overflow_error() {
     // TODO: Implement ContextOverflow error variant
     //
@@ -678,7 +678,7 @@ fn test_context_overflow_error() {
 /// **Expected:** Returns ThreadSafetyError on concurrent access
 /// **Error Message:** Guides user to use separate sessions per thread
 #[test]
-#[ignore] // P2: Should-have - implement ThreadSafetyError error variant
+#[ignore = "P2: Should-have - implement ThreadSafetyError error variant"]
 fn test_thread_safety_error() {
     // TODO: Implement ThreadSafetyError error variant
     //
@@ -714,7 +714,7 @@ fn test_thread_safety_error() {
 /// **Expected:** Returns CleanupFailed when C++ cleanup fails
 /// **Error Message:** Guides user to run with valgrind for leak detection
 #[test]
-#[ignore] // P2: Should-have - implement CleanupFailed error variant
+#[ignore = "P2: Should-have - implement CleanupFailed error variant"]
 fn test_cleanup_failed_error() {
     // TODO: Implement CleanupFailed error variant
     //
@@ -749,7 +749,7 @@ fn test_cleanup_failed_error() {
 /// **Expected:** Returns OperationTimeout with duration
 /// **Error Message:** Guides user to increase timeout or reduce input size
 #[test]
-#[ignore] // P2: Should-have - implement OperationTimeout error variant
+#[ignore = "P2: Should-have - implement OperationTimeout error variant"]
 fn test_operation_timeout_error() {
     // TODO: Implement OperationTimeout error variant
     //
@@ -792,7 +792,7 @@ fn test_operation_timeout_error() {
 /// **Expected:** All error messages follow template: What, Why, How, Where
 /// **Format:** Clear description + Root cause + Actionable steps + Context
 #[test]
-#[ignore] // P2: Should-have - implement actionable error message validation
+#[ignore = "P2: Should-have - implement actionable error message validation"]
 fn test_error_message_actionable_guidance() {
     // TODO: Implement actionable error message validation
     // This test validates all error messages are user-friendly

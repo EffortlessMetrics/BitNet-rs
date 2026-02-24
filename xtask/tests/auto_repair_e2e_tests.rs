@@ -43,7 +43,7 @@ mod workflow_fresh_install_tests {
     /// **Scenario**: No C++ backends installed, user runs preflight with auto-repair
     /// **Expected**: setup-cpp-auto downloads and builds llama.cpp, xtask rebuilds, re-exec succeeds
     #[test]
-    #[ignore] // TODO: Expensive E2E test - requires network and build
+    #[ignore = "TODO: Expensive E2E test - requires network and build"]
     #[serial(bitnet_env)]
     fn test_fresh_install_llama_workflow_end_to_end() {
         // Setup: Clean environment with no C++ libraries
@@ -62,7 +62,7 @@ mod workflow_fresh_install_tests {
     /// **Scenario**: No C++ backends installed, user runs preflight for bitnet
     /// **Expected**: setup-cpp-auto clones BitNet repo, builds with bitnet+llama libs, xtask rebuilds
     #[test]
-    #[ignore] // TODO: Expensive E2E test - requires network and build
+    #[ignore = "TODO: Expensive E2E test - requires network and build"]
     #[serial(bitnet_env)]
     fn test_fresh_install_bitnet_workflow_end_to_end() {
         // Setup: Clean environment with no C++ libraries
@@ -81,7 +81,7 @@ mod workflow_fresh_install_tests {
     /// **Scenario**: First git clone attempt times out, retry succeeds
     /// **Expected**: Exponential backoff retry succeeds, workflow completes
     #[test]
-    #[ignore] // TODO: Expensive E2E test with network simulation
+    #[ignore = "TODO: Expensive E2E test with network simulation"]
     #[serial(bitnet_env)]
     fn test_fresh_install_with_transient_network_error() {
         // Mock: First git clone fails with timeout (simulate with timeout wrapper)
@@ -98,7 +98,7 @@ mod workflow_fresh_install_tests {
     /// **Scenario**: User runs fresh install with --verbose flag for detailed progress
     /// **Expected**: Timestamped progress messages, build output shown, diagnostics clear
     #[test]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_fresh_install_with_verbose_diagnostics() {
         // Setup: Clean environment
@@ -118,7 +118,7 @@ mod workflow_fresh_install_tests {
     /// **Scenario**: User provides BITNET_CPP_DIR pointing to custom location
     /// **Expected**: setup-cpp-auto installs to custom directory, detection succeeds
     #[test]
-    #[ignore] // TODO: Expensive E2E test with environment override
+    #[ignore = "TODO: Expensive E2E test with environment override"]
     #[serial(bitnet_env)]
     fn test_fresh_install_with_custom_install_directory() {
         // Setup: Create custom temp directory for installation
@@ -140,7 +140,7 @@ mod workflow_repair_on_missing_tests {
     /// **Scenario**: xtask built without libraries, user runs preflight (no explicit --repair flag)
     /// **Expected**: Auto-repair triggers automatically, downloads libs, rebuilds
     #[test]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_repair_on_missing_backend_auto_mode() {
         // Setup: Build xtask with HAS_LLAMA=false
@@ -156,7 +156,7 @@ mod workflow_repair_on_missing_tests {
     /// **Scenario**: User explicitly disables repair with --repair=never
     /// **Expected**: No setup-cpp-auto invoked, clear error message with manual instructions
     #[test]
-    #[ignore] // TODO: Fast E2E test (no network/build)
+    #[ignore = "TODO: Fast E2E test (no network/build)"]
     #[serial(bitnet_env)]
     fn test_repair_skipped_with_never_mode() {
         // Setup: Build xtask with HAS_LLAMA=false
@@ -173,7 +173,7 @@ mod workflow_repair_on_missing_tests {
     /// **Scenario**: Libraries already installed, user forces refresh with --repair=always
     /// **Expected**: setup-cpp-auto re-runs even though libs exist, updates installation
     #[test]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_repair_forced_with_always_mode() {
         // Setup: Install llama.cpp libraries (simulate existing installation)
@@ -191,7 +191,7 @@ mod workflow_repair_on_missing_tests {
     /// **Scenario**: Partial C++ installation (some libs missing), repair completes it
     /// **Expected**: setup-cpp-auto detects partial state, re-installs cleanly
     #[test]
-    #[ignore] // TODO: Expensive E2E test with partial state
+    #[ignore = "TODO: Expensive E2E test with partial state"]
     #[serial(bitnet_env)]
     fn test_repair_with_partial_installation() {
         // Setup: Create partial installation (e.g., libllama.so exists but libggml.so missing)
@@ -213,7 +213,7 @@ mod workflow_dual_backend_tests {
     /// **Scenario**: Install bitnet.cpp, which includes llama.cpp libraries
     /// **Expected**: Both HAS_BITNET and HAS_LLAMA become true after single install
     #[test]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_dual_backend_bitnet_provides_llama_libs() {
         // Setup: Clean environment
@@ -230,7 +230,7 @@ mod workflow_dual_backend_tests {
     /// **Scenario**: Install llama.cpp first, then bitnet.cpp separately
     /// **Expected**: Both backends independently functional
     #[test]
-    #[ignore] // TODO: Very expensive E2E test (two full builds)
+    #[ignore = "TODO: Very expensive E2E test (two full builds)"]
     #[serial(bitnet_env)]
     fn test_dual_backend_sequential_install() {
         // Setup: Clean environment
@@ -246,7 +246,7 @@ mod workflow_dual_backend_tests {
     /// **Scenario**: Both backends installed, preflight without --backend flag
     /// **Expected**: Shows status for both backends, both AVAILABLE
     #[test]
-    #[ignore] // TODO: Fast E2E test (depends on prior dual install)
+    #[ignore = "TODO: Fast E2E test (depends on prior dual install)"]
     #[serial(bitnet_env)]
     fn test_dual_backend_general_status_check() {
         // Setup: Both backends installed (HAS_BITNET=true, HAS_LLAMA=true)
@@ -262,7 +262,7 @@ mod workflow_dual_backend_tests {
     /// **Scenario**: llama.cpp installed, bitnet.cpp missing, repair bitnet
     /// **Expected**: bitnet repair proceeds without affecting llama
     #[test]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_dual_backend_repair_one_while_other_available() {
         // Setup: Install llama.cpp (HAS_LLAMA=true)
@@ -278,7 +278,7 @@ mod workflow_dual_backend_tests {
     /// **Scenario**: Both backends installed, run crossval-per-token command
     /// **Expected**: Commands can select backend dynamically
     #[test]
-    #[ignore] // TODO: Expensive E2E test with actual crossval
+    #[ignore = "TODO: Expensive E2E test with actual crossval"]
     #[serial(bitnet_env)]
     fn test_dual_backend_crossval_integration() {
         // Setup: Both backends installed
@@ -299,7 +299,7 @@ mod workflow_ci_vs_local_tests {
     /// **Scenario**: CI=true set, preflight run without explicit --repair flag
     /// **Expected**: Auto-repair disabled, clear error if libs missing
     #[test]
-    #[ignore] // TODO: Fast E2E test
+    #[ignore = "TODO: Fast E2E test"]
     #[serial(bitnet_env)]
     fn test_ci_environment_defaults_to_never_mode() {
         // Setup: Set CI=true
@@ -316,7 +316,7 @@ mod workflow_ci_vs_local_tests {
     /// **Scenario**: CI=true but user explicitly requests repair
     /// **Expected**: Auto-repair proceeds despite CI environment
     #[test]
-    #[ignore] // TODO: Expensive E2E test in CI context
+    #[ignore = "TODO: Expensive E2E test in CI context"]
     #[serial(bitnet_env)]
     fn test_ci_environment_with_explicit_auto_override() {
         // Setup: Set CI=true
@@ -333,7 +333,7 @@ mod workflow_ci_vs_local_tests {
     /// **Scenario**: CI unset, preflight run without explicit --repair flag
     /// **Expected**: Auto-repair enabled by default
     #[test]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_local_environment_defaults_to_auto_mode() {
         // Setup: Ensure CI=unset (local environment)
@@ -349,7 +349,7 @@ mod workflow_ci_vs_local_tests {
     /// **Scenario**: CI script uses preflight exit code for conditional logic
     /// **Expected**: Exit code 0 allows tests, exit code 1 skips tests
     #[test]
-    #[ignore] // TODO: Fast E2E test for CI integration
+    #[ignore = "TODO: Fast E2E test for CI integration"]
     #[serial(bitnet_env)]
     fn test_ci_script_integration_exit_code_validation() {
         // Mock: CI script logic
@@ -364,7 +364,7 @@ mod workflow_ci_vs_local_tests {
     /// **Scenario**: CI restores cached libraries, preflight validates cache
     /// **Expected**: Cached libraries detected, no rebuild needed
     #[test]
-    #[ignore] // TODO: Fast E2E test with cache simulation
+    #[ignore = "TODO: Fast E2E test with cache simulation"]
     #[serial(bitnet_env)]
     fn test_ci_cache_restoration_with_preflight_validation() {
         // Setup: Simulate CI cache restoration (pre-installed libs)
@@ -380,7 +380,7 @@ mod workflow_ci_vs_local_tests {
     /// **Scenario**: Developer installed libs but forgot to rebuild xtask
     /// **Expected**: Runtime fallback detects libs, warns about rebuild
     #[test]
-    #[ignore] // TODO: Fast E2E test for runtime fallback
+    #[ignore = "TODO: Fast E2E test for runtime fallback"]
     #[serial(bitnet_env)]
     fn test_local_stale_xtask_build_with_runtime_fallback() {
         // Setup: Install llama.cpp libraries
@@ -407,7 +407,7 @@ mod error_recovery_network_tests {
     /// **Scenario**: GitHub unreachable, git clone times out
     /// **Expected**: Retries with exponential backoff, clear error if all fail
     #[test]
-    #[ignore] // TODO: Expensive E2E test with network simulation
+    #[ignore = "TODO: Expensive E2E test with network simulation"]
     #[serial(bitnet_env)]
     fn test_error_recovery_network_timeout_git_clone() {
         // Mock: Simulate network timeout via timeout wrapper or firewall rule
@@ -425,7 +425,7 @@ mod error_recovery_network_tests {
     /// **Scenario**: github.com DNS lookup fails
     /// **Expected**: Retries, clear error message with DNS diagnostics
     #[test]
-    #[ignore] // TODO: Expensive E2E test with DNS override
+    #[ignore = "TODO: Expensive E2E test with DNS override"]
     #[serial(bitnet_env)]
     fn test_error_recovery_dns_resolution_failure() {
         // Mock: Override DNS to simulate resolution failure
@@ -441,7 +441,7 @@ mod error_recovery_network_tests {
     /// **Scenario**: Corporate proxy blocks GitHub access
     /// **Expected**: Retries fail, error suggests proxy configuration
     #[test]
-    #[ignore] // TODO: Expensive E2E test with proxy simulation
+    #[ignore = "TODO: Expensive E2E test with proxy simulation"]
     #[serial(bitnet_env)]
     fn test_error_recovery_proxy_firewall_blocking() {
         // Mock: Simulate proxy blocking via http_proxy override
@@ -457,7 +457,7 @@ mod error_recovery_network_tests {
     /// **Scenario**: GitHub API rate limit exceeded
     /// **Expected**: Retries with backoff, eventual success or clear error
     #[test]
-    #[ignore] // TODO: Expensive E2E test (requires GitHub API interaction)
+    #[ignore = "TODO: Expensive E2E test (requires GitHub API interaction)"]
     #[serial(bitnet_env)]
     fn test_error_recovery_github_rate_limiting() {
         // Mock: Trigger GitHub rate limit (multiple rapid requests)
@@ -472,7 +472,7 @@ mod error_recovery_network_tests {
     /// **Scenario**: First attempt fails, network restored, retry succeeds
     /// **Expected**: Retry succeeds, workflow completes successfully
     #[test]
-    #[ignore] // TODO: Expensive E2E test with network toggle
+    #[ignore = "TODO: Expensive E2E test with network toggle"]
     #[serial(bitnet_env)]
     fn test_error_recovery_network_recovery_after_transient_failure() {
         // Mock: First git clone fails (simulate network down)
@@ -494,7 +494,7 @@ mod error_recovery_build_tests {
     /// **Scenario**: CMake not installed or wrong version
     /// **Expected**: Build fails, error suggests CMake installation
     #[test]
-    #[ignore] // TODO: Expensive E2E test with CMake removal
+    #[ignore = "TODO: Expensive E2E test with CMake removal"]
     #[serial(bitnet_env)]
     fn test_error_recovery_missing_cmake_dependency() {
         // Mock: Temporarily hide CMake binary (rename or PATH override)
@@ -510,7 +510,7 @@ mod error_recovery_build_tests {
     /// **Scenario**: g++ or clang not installed
     /// **Expected**: Build fails, error suggests compiler installation
     #[test]
-    #[ignore] // TODO: Expensive E2E test with compiler removal
+    #[ignore = "TODO: Expensive E2E test with compiler removal"]
     #[serial(bitnet_env)]
     fn test_error_recovery_missing_cpp_compiler() {
         // Mock: Temporarily hide g++ and clang (PATH override)
@@ -526,7 +526,7 @@ mod error_recovery_build_tests {
     /// **Scenario**: Source code has compilation error (corrupt download)
     /// **Expected**: Build fails, error shows compilation diagnostics
     #[test]
-    #[ignore] // TODO: Expensive E2E test with corrupt source simulation
+    #[ignore = "TODO: Expensive E2E test with corrupt source simulation"]
     #[serial(bitnet_env)]
     fn test_error_recovery_cmake_build_compilation_error() {
         // Mock: Introduce compilation error in downloaded source (modify file)
@@ -541,7 +541,7 @@ mod error_recovery_build_tests {
     /// **Scenario**: Insufficient disk space for build artifacts
     /// **Expected**: Build fails, error suggests disk space check
     #[test]
-    #[ignore] // TODO: Expensive E2E test with disk quota simulation
+    #[ignore = "TODO: Expensive E2E test with disk quota simulation"]
     #[serial(bitnet_env)]
     fn test_error_recovery_disk_full_during_build() {
         // Mock: Simulate disk full (use small tmpfs or quota)
@@ -556,7 +556,7 @@ mod error_recovery_build_tests {
     /// **Scenario**: Existing installation, build fails, rollback restores old version
     /// **Expected**: Backup restored, original installation intact
     #[test]
-    #[ignore] // TODO: Expensive E2E test with build failure + rollback
+    #[ignore = "TODO: Expensive E2E test with build failure + rollback"]
     #[serial(bitnet_env)]
     fn test_error_recovery_build_failure_with_transactional_rollback() {
         // Setup: Install working llama.cpp version
@@ -578,7 +578,7 @@ mod error_recovery_permission_tests {
     /// **Scenario**: User lacks write permission to ~/.cache
     /// **Expected**: Install fails, error suggests chown command
     #[test]
-    #[ignore] // TODO: Expensive E2E test with permission simulation
+    #[ignore = "TODO: Expensive E2E test with permission simulation"]
     #[serial(bitnet_env)]
     fn test_error_recovery_permission_denied_install_directory() {
         // Mock: Create read-only install directory (chmod 555)
@@ -594,7 +594,7 @@ mod error_recovery_permission_tests {
     /// **Scenario**: Lock file owned by different user
     /// **Expected**: Lock acquisition fails, error explains ownership issue
     #[test]
-    #[ignore] // TODO: Fast E2E test with lock file ownership
+    #[ignore = "TODO: Fast E2E test with lock file ownership"]
     #[serial(bitnet_env)]
     fn test_error_recovery_permission_denied_lock_file() {
         // Mock: Create lock file owned by root or different user
@@ -609,7 +609,7 @@ mod error_recovery_permission_tests {
     /// **Scenario**: Install directory on read-only filesystem
     /// **Expected**: Install fails immediately, clear error message
     #[test]
-    #[ignore] // TODO: Expensive E2E test with read-only mount
+    #[ignore = "TODO: Expensive E2E test with read-only mount"]
     #[serial(bitnet_env)]
     fn test_error_recovery_readonly_filesystem() {
         // Mock: Mount install directory as read-only
@@ -624,7 +624,7 @@ mod error_recovery_permission_tests {
     /// **Scenario**: SELinux policy blocks file creation
     /// **Expected**: Install fails, error suggests SELinux diagnostics
     #[test]
-    #[ignore] // TODO: Expensive E2E test on SELinux-enabled system
+    #[ignore = "TODO: Expensive E2E test on SELinux-enabled system"]
     #[serial(bitnet_env)]
     fn test_error_recovery_selinux_apparmor_denial() {
         // Mock: Enable SELinux enforcement or AppArmor profile
@@ -638,7 +638,7 @@ mod error_recovery_permission_tests {
     /// **Scenario**: User disk quota exceeded
     /// **Expected**: Install fails, error suggests quota check
     #[test]
-    #[ignore] // TODO: Expensive E2E test with quota simulation
+    #[ignore = "TODO: Expensive E2E test with quota simulation"]
     #[serial(bitnet_env)]
     fn test_error_recovery_insufficient_disk_quota() {
         // Mock: Simulate disk quota limit exceeded
@@ -663,7 +663,7 @@ mod cross_platform_linux_tests {
     /// **Expected**: Libraries end with .so, LD_LIBRARY_PATH configured
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_linux_library_discovery_with_so_extension() {
         // Run: preflight --backend llama --repair=auto
@@ -678,7 +678,7 @@ mod cross_platform_linux_tests {
     /// **Expected**: Binaries find libraries via RPATH, no LD_LIBRARY_PATH needed
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_linux_rpath_embedding() {
         // Run: preflight --backend llama --repair=auto
@@ -693,7 +693,7 @@ mod cross_platform_linux_tests {
     /// **Expected**: Repair installs to user directory, avoids system conflict
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // TODO: Expensive E2E test with system package
+    #[ignore = "TODO: Expensive E2E test with system package"]
     #[serial(bitnet_env)]
     fn test_linux_system_package_conflict_avoidance() {
         // Mock: Install llama.cpp via system package manager (to /usr/lib)
@@ -708,7 +708,7 @@ mod cross_platform_linux_tests {
     /// **Expected**: Correct architecture libraries detected
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // TODO: Expensive E2E test with architecture validation
+    #[ignore = "TODO: Expensive E2E test with architecture validation"]
     #[serial(bitnet_env)]
     fn test_linux_multilib_architecture_detection() {
         // Run: preflight --backend llama --repair=auto --verbose
@@ -723,7 +723,7 @@ mod cross_platform_linux_tests {
     /// **Expected**: Install directory accessible within sandbox
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // TODO: Expensive E2E test in sandbox environment
+    #[ignore = "TODO: Expensive E2E test in sandbox environment"]
     #[serial(bitnet_env)]
     fn test_linux_snap_flatpak_sandboxing() {
         // Mock: Run inside Snap or Flatpak sandbox
@@ -743,7 +743,7 @@ mod cross_platform_macos_tests {
     /// **Expected**: Libraries end with .dylib, DYLD_LIBRARY_PATH configured
     #[test]
     #[cfg(target_os = "macos")]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_macos_library_discovery_with_dylib_extension() {
         // Run: preflight --backend llama --repair=auto
@@ -758,7 +758,7 @@ mod cross_platform_macos_tests {
     /// **Expected**: Libraries built and signed correctly for macOS security
     #[test]
     #[cfg(target_os = "macos")]
-    #[ignore] // TODO: Expensive E2E test with code signing
+    #[ignore = "TODO: Expensive E2E test with code signing"]
     #[serial(bitnet_env)]
     fn test_macos_code_signing_validation() {
         // Run: preflight --backend llama --repair=auto
@@ -773,7 +773,7 @@ mod cross_platform_macos_tests {
     /// **Expected**: Libraries compiled for arm64, NEON optimizations enabled
     #[test]
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    #[ignore] // TODO: Expensive E2E test on Apple Silicon
+    #[ignore = "TODO: Expensive E2E test on Apple Silicon"]
     #[serial(bitnet_env)]
     fn test_macos_apple_silicon_arm64_architecture() {
         // Run: preflight --backend llama --repair=auto --verbose
@@ -788,7 +788,7 @@ mod cross_platform_macos_tests {
     /// **Expected**: Libraries compiled for x86_64, AVX optimizations enabled
     #[test]
     #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
-    #[ignore] // TODO: Expensive E2E test on Intel Mac
+    #[ignore = "TODO: Expensive E2E test on Intel Mac"]
     #[serial(bitnet_env)]
     fn test_macos_intel_x86_64_architecture() {
         // Run: preflight --backend llama --repair=auto --verbose
@@ -803,7 +803,7 @@ mod cross_platform_macos_tests {
     /// **Expected**: Repair installs to user directory, avoids Homebrew conflict
     #[test]
     #[cfg(target_os = "macos")]
-    #[ignore] // TODO: Expensive E2E test with Homebrew
+    #[ignore = "TODO: Expensive E2E test with Homebrew"]
     #[serial(bitnet_env)]
     fn test_macos_homebrew_conflict_avoidance() {
         // Mock: Install llama.cpp via Homebrew (to /opt/homebrew or /usr/local)
@@ -823,7 +823,7 @@ mod cross_platform_windows_tests {
     /// **Expected**: Libraries end with .dll, PATH configured
     #[test]
     #[cfg(target_os = "windows")]
-    #[ignore] // TODO: Expensive E2E test
+    #[ignore = "TODO: Expensive E2E test"]
     #[serial(bitnet_env)]
     fn test_windows_library_discovery_with_dll_extension() {
         // Run: preflight --backend llama --repair=auto
@@ -838,7 +838,7 @@ mod cross_platform_windows_tests {
     /// **Expected**: CMake uses MSVC compiler, builds succeed
     #[test]
     #[cfg(target_os = "windows")]
-    #[ignore] // TODO: Expensive E2E test with MSVC
+    #[ignore = "TODO: Expensive E2E test with MSVC"]
     #[serial(bitnet_env)]
     fn test_windows_visual_studio_toolchain_detection() {
         // Run: preflight --backend llama --repair=auto --verbose
@@ -853,7 +853,7 @@ mod cross_platform_windows_tests {
     /// **Expected**: CMake uses MinGW compiler, builds succeed
     #[test]
     #[cfg(target_os = "windows")]
-    #[ignore] // TODO: Expensive E2E test with MinGW
+    #[ignore = "TODO: Expensive E2E test with MinGW"]
     #[serial(bitnet_env)]
     fn test_windows_mingw_msys2_toolchain_compatibility() {
         // Run: preflight --backend llama --repair=auto --verbose
@@ -868,7 +868,7 @@ mod cross_platform_windows_tests {
     /// **Expected**: Install handles MAX_PATH limitations gracefully
     #[test]
     #[cfg(target_os = "windows")]
-    #[ignore] // TODO: Expensive E2E test with path depth
+    #[ignore = "TODO: Expensive E2E test with path depth"]
     #[serial(bitnet_env)]
     fn test_windows_path_length_limitation_handling() {
         // Mock: Create deep directory nesting (approach MAX_PATH)
@@ -883,7 +883,7 @@ mod cross_platform_windows_tests {
     /// **Expected**: Both shells produce consistent results
     #[test]
     #[cfg(target_os = "windows")]
-    #[ignore] // TODO: Fast E2E test with shell comparison
+    #[ignore = "TODO: Fast E2E test with shell comparison"]
     #[serial(bitnet_env)]
     fn test_windows_powershell_vs_cmd_shell_compatibility() {
         // Run: preflight --backend llama from PowerShell
@@ -909,7 +909,7 @@ mod reexec_integration_tests {
     /// **Expected**: Process replaced via exec(), no fallback needed, child continues with same PID
     #[test]
     #[cfg(unix)]
-    #[ignore] // TODO: Expensive E2E test with process monitoring
+    #[ignore = "TODO: Expensive E2E test with process monitoring"]
     #[serial(bitnet_env)]
     fn test_reexec_auto_repair_rebuild_fast_path_unix() {
         // **Setup Phase**
@@ -941,7 +941,7 @@ mod reexec_integration_tests {
     /// **Scenario**: Binary deleted or unavailable, fallback to cargo run
     /// **Expected**: Fallback invoked transparently, cargo rebuilds binary, workflow succeeds
     #[test]
-    #[ignore] // TODO: Expensive E2E test with binary manipulation
+    #[ignore = "TODO: Expensive E2E test with binary manipulation"]
     #[serial(bitnet_env)]
     fn test_reexec_binary_missing_fallback_cargo_run() {
         // **Setup Phase**
@@ -974,7 +974,7 @@ mod reexec_integration_tests {
     /// **Expected**: exec() fails with ENOENT, fallback catches error, cargo run succeeds
     #[test]
     #[cfg(unix)]
-    #[ignore] // TODO: Very expensive E2E test with race condition simulation
+    #[ignore = "TODO: Very expensive E2E test with race condition simulation"]
     #[serial(bitnet_env)]
     fn test_reexec_race_condition_enoent_fallback() {
         // **Setup Phase**
@@ -1007,7 +1007,7 @@ mod reexec_integration_tests {
     /// **Scenario**: Complex arguments with spaces, quotes, special characters
     /// **Expected**: All arguments preserved exactly, no truncation or injection
     #[test]
-    #[ignore] // TODO: E2E test with complex argument validation
+    #[ignore = "TODO: E2E test with complex argument validation"]
     #[serial(bitnet_env)]
     fn test_reexec_argument_preservation_complex_args() {
         // **Setup Phase**
@@ -1037,7 +1037,7 @@ mod reexec_integration_tests {
     /// **Scenario**: Parent repairs, child detects BITNET_REPAIR_PARENT guard
     /// **Expected**: No recursive repair attempts, child only validates backend
     #[test]
-    #[ignore] // TODO: E2E test with recursion guard validation
+    #[ignore = "TODO: E2E test with recursion guard validation"]
     #[serial(bitnet_env)]
     fn test_reexec_recursion_guard_prevents_loops() {
         // **Setup Phase**
@@ -1070,7 +1070,7 @@ mod reexec_integration_tests {
     /// **Scenario**: Re-exec with verbose diagnostics enabled
     /// **Expected**: Structured diagnostic output showing path, existence, args, execution path
     #[test]
-    #[ignore] // TODO: E2E test with diagnostic validation
+    #[ignore = "TODO: E2E test with diagnostic validation"]
     #[serial(bitnet_env)]
     fn test_reexec_diagnostic_logging_comprehensive() {
         // **Setup Phase**
@@ -1101,7 +1101,7 @@ mod reexec_integration_tests {
     /// **Expected**: Always uses cargo run fallback with spawn, consistent behavior
     #[test]
     #[cfg(windows)]
-    #[ignore] // TODO: E2E test on Windows platform
+    #[ignore = "TODO: E2E test on Windows platform"]
     #[serial(bitnet_env)]
     fn test_reexec_windows_spawn_pattern_consistent() {
         // **Setup Phase**
@@ -1129,7 +1129,7 @@ mod reexec_integration_tests {
     /// **Scenario**: Child process exits with code 0 (success)
     /// **Expected**: Parent exits with code 0, CI/CD detects success
     #[test]
-    #[ignore] // TODO: E2E test with exit code validation
+    #[ignore = "TODO: E2E test with exit code validation"]
     #[serial(bitnet_env)]
     fn test_reexec_exit_code_propagation_success() {
         // **Setup Phase**
@@ -1155,7 +1155,7 @@ mod reexec_integration_tests {
     /// **Scenario**: Child process exits with non-zero code (e.g., 3 for network error)
     /// **Expected**: Parent exits with same non-zero code, CI/CD detects failure
     #[test]
-    #[ignore] // TODO: E2E test with failure exit code
+    #[ignore = "TODO: E2E test with failure exit code"]
     #[serial(bitnet_env)]
     fn test_reexec_exit_code_propagation_failure() {
         // **Setup Phase**
@@ -1181,7 +1181,7 @@ mod reexec_integration_tests {
     /// **Expected**: Fallback handles extended race window transparently
     #[test]
     #[cfg(unix)]
-    #[ignore] // TODO: Very expensive E2E test with network filesystem simulation
+    #[ignore = "TODO: Very expensive E2E test with network filesystem simulation"]
     #[serial(bitnet_env)]
     fn test_reexec_network_filesystem_extended_race() {
         // **Setup Phase**
@@ -1210,7 +1210,7 @@ mod reexec_integration_tests {
     /// **Scenario**: cargo executable missing from PATH
     /// **Expected**: Clear error message with recovery instructions
     #[test]
-    #[ignore] // TODO: E2E test with PATH manipulation
+    #[ignore = "TODO: E2E test with PATH manipulation"]
     #[serial(bitnet_env)]
     fn test_reexec_cargo_missing_error_handling() {
         // **Setup Phase**
@@ -1239,7 +1239,7 @@ mod reexec_integration_tests {
     /// **Scenario**: Auto-repair → re-exec → crossval-per-token execution
     /// **Expected**: Complete workflow from repair to cross-validation succeeds
     #[test]
-    #[ignore] // TODO: Very expensive E2E test with full crossval integration
+    #[ignore = "TODO: Very expensive E2E test with full crossval integration"]
     #[serial(bitnet_env)]
     fn test_reexec_crossval_integration_end_to_end() {
         // **Setup Phase**

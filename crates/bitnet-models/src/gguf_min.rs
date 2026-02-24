@@ -500,7 +500,7 @@ mod tests {
     use std::io::Cursor;
 
     #[test]
-    #[ignore] // set BITNET_GGUF to a real path to run
+    #[ignore = "set BITNET_GGUF to a real path to run"]
     fn loads_two_tensors() {
         let p = std::env::var_os("BITNET_GGUF").expect("set BITNET_GGUF");
         let two = load_two(p).unwrap();

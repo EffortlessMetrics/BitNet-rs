@@ -17,7 +17,7 @@ mod cuda_tests {
     };
 
     #[test]
-    #[ignore] // Run with: cargo test --features cuda --ignored
+    #[ignore = "Run with: cargo test --features cuda --ignored"]
     fn test_comprehensive_gpu_validation() {
         env_logger::init();
 
@@ -163,7 +163,7 @@ mod cuda_tests {
     }
 
     #[test]
-    #[ignore] // Run with: cargo test --features cuda --ignored
+    #[ignore = "Run with: cargo test --features cuda --ignored"]
     fn test_quick_benchmark_integration() {
         env_logger::init();
 
@@ -180,7 +180,7 @@ mod cuda_tests {
     }
 
     #[test]
-    #[ignore] // Run with: cargo test --features cuda --ignored
+    #[ignore = "Run with: cargo test --features cuda --ignored"]
     fn test_large_matrix_performance() {
         env_logger::init();
 
@@ -222,7 +222,7 @@ mod cuda_tests {
     }
 
     #[test]
-    #[ignore] // Run with: cargo test --features cuda --ignored
+    #[ignore = "Run with: cargo test --features cuda --ignored"]
     fn test_concurrent_kernel_usage() {
         env_logger::init();
 

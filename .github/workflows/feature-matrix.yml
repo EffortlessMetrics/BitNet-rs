@@ -1,0 +1,117 @@
+name: Feature Matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Compile-only checks for each significant feature combination.
+  # These are fast (no linking of tests) and catch feature-wiring regressions early.
+  compile-check:
+    name: "check (${{ matrix.label }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: "no-features"
+            flags: "--no-default-features"
+          - label: "cpu"
+            flags: "--no-default-features --features cpu"
+          - label: "cpu+full-cli"
+            flags: "--no-default-features --features cpu,full-cli"
+          # GPU checks require CUDA toolkit (nvcc) — informational only on standard runners
+          - label: "gpu (no CUDA runtime)"
+            flags: "--no-default-features --features gpu"
+            allow_failure: true
+          - label: "cpu+gpu"
+            flags: "--no-default-features --features cpu,gpu"
+            allow_failure: true
+          # FFI/crossval checks require C++ bitnet_sys library — informational only
+          - label: "cpu+ffi (stub)"
+            flags: "--no-default-features --features cpu,ffi"
+            allow_failure: true
+            env:
+              BITNET_CPP_DIR: ""
+          - label: "cpu+fixtures"
+            flags: "--no-default-features --features cpu,fixtures"
+          - label: "cpu+crossval"
+            flags: "--no-default-features --features cpu,crossval"
+            allow_failure: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: feature-matrix-${{ matrix.label }}
+
+      - name: cargo check ${{ matrix.label }}
+        # continue-on-error at step level: step conclusion = success even on failure,
+        # so the job (and its check run) reports green for informational-only combos.
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        env:
+          BITNET_CPP_DIR: ${{ matrix.env.BITNET_CPP_DIR || '' }}
+        run: cargo check --workspace --locked ${{ matrix.flags }}
+
+  # Targeted compile checks for key crates that are most likely to diverge
+  crate-feature-check:
+    name: "crate-check (${{ matrix.crate }}/${{ matrix.label }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - crate: bitnet-server
+            label: cpu
+            flags: "--no-default-features --features cpu"
+          - crate: bitnet-server
+            label: gpu
+            flags: "--no-default-features --features gpu"
+          - crate: bitnet-kernels
+            label: cpu
+            flags: "--no-default-features --features cpu"
+          - crate: bitnet-kernels
+            label: gpu
+            flags: "--no-default-features --features gpu"
+          - crate: bitnet-inference
+            label: cpu
+            flags: "--no-default-features --features cpu"
+          - crate: bitnet-inference
+            label: gpu
+            flags: "--no-default-features --features gpu"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: crate-check-${{ matrix.crate }}-${{ matrix.label }}
+
+      - name: cargo check -p ${{ matrix.crate }} (${{ matrix.label }})
+        run: cargo check -p ${{ matrix.crate }} --locked ${{ matrix.flags }}

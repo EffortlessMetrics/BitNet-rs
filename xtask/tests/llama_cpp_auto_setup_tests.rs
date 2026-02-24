@@ -187,7 +187,7 @@ fn format_lib_name(base: &str) -> String {
 /// **Expected**: Command executes without error, only llama.cpp is processed
 /// **Tag**: `// AC:AC1`
 #[test]
-#[ignore] // AC:AC1
+#[ignore = "AC:AC1"]
 fn test_ac1_backend_llama_flag_parsing() {
     // TODO: Implement backend flag parsing in xtask CLI
     // Expected behavior:
@@ -209,7 +209,7 @@ fn test_ac1_backend_llama_flag_parsing() {
 /// **Expected**: Only llama.cpp cloned/built, no BitNet.cpp modifications
 /// **Tag**: `// AC:AC1`
 #[test]
-#[ignore] // AC:AC1
+#[ignore = "AC:AC1"]
 fn test_ac1_backend_llama_excludes_bitnet() {
     // TODO: Verify backend isolation
     // Expected behavior:
@@ -236,7 +236,7 @@ fn test_ac1_backend_llama_excludes_bitnet() {
 /// **Tag**: `// AC:AC2`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC2
+#[ignore = "AC:AC2"]
 fn test_ac2_llama_cpp_dir_env_var_override() {
     let _guard = EnvGuard::clear("LLAMA_CPP_DIR");
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -266,7 +266,7 @@ fn test_ac2_llama_cpp_dir_env_var_override() {
 /// **Tag**: `// AC:AC2`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC2
+#[ignore = "AC:AC2"]
 fn test_ac2_llama_cpp_dir_no_conflict_with_bitnet() {
     let _guard1 = EnvGuard::new("BITNET_CPP_DIR");
     let _guard2 = EnvGuard::new("LLAMA_CPP_DIR");
@@ -297,7 +297,7 @@ fn test_ac2_llama_cpp_dir_no_conflict_with_bitnet() {
 /// **Expected**: Build process calls cmake directly, no Python dependency
 /// **Tag**: `// AC:AC3`
 #[test]
-#[ignore] // AC:AC3
+#[ignore = "AC:AC3"]
 fn test_ac3_llama_cpp_cmake_only_build() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path().join("llama_cpp");
@@ -325,7 +325,7 @@ fn test_ac3_llama_cpp_cmake_only_build() {
 /// **Expected**: BUILD_SHARED_LIBS=ON
 /// **Tag**: `// AC:AC3`
 #[test]
-#[ignore] // AC:AC3
+#[ignore = "AC:AC3"]
 fn test_ac3_llama_cpp_cmake_flags_correctness() {
     // Verification: build_llama_cpp() in xtask/src/cpp_setup_auto.rs
     // implements the following CMake configuration:
@@ -354,7 +354,7 @@ fn test_ac3_llama_cpp_cmake_flags_correctness() {
 /// **Expected**: Discovery fails if only one library present
 /// **Tag**: `// AC:AC4`
 #[test]
-#[ignore] // AC:AC4
+#[ignore = "AC:AC4"]
 fn test_ac4_llama_cpp_requires_both_libraries() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path();
@@ -382,7 +382,7 @@ fn test_ac4_llama_cpp_requires_both_libraries() {
 /// **Expected**: has_all_libraries() returns true
 /// **Tag**: `// AC:AC4`
 #[test]
-#[ignore] // AC:AC4
+#[ignore = "AC:AC4"]
 fn test_ac4_llama_cpp_both_libraries_present() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path();
@@ -418,7 +418,7 @@ fn test_ac4_llama_cpp_both_libraries_present() {
 /// **Tag**: `// AC:AC5`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC5
+#[ignore = "AC:AC5"]
 fn test_ac5_tier0_explicit_override_precedence() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path().join("llama_cpp");
@@ -457,7 +457,7 @@ fn test_ac5_tier0_explicit_override_precedence() {
 /// **Expected**: First valid tier 1 path returned
 /// **Tag**: `// AC:AC5`
 #[test]
-#[ignore] // AC:AC5
+#[ignore = "AC:AC5"]
 fn test_ac5_tier1_precedence_over_tier2() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path();
@@ -518,7 +518,7 @@ fn test_ac5_tier1_precedence_over_tier2() {
 /// **Expected**: Tier 1 includes build/bin, build/lib, build (not 3rdparty/)
 /// **Tag**: `// AC:AC5`
 #[test]
-#[ignore] // AC:AC5
+#[ignore = "AC:AC5"]
 fn test_ac5_llama_cpp_tier1_candidates() {
     // This test verifies the tier 1 search paths by code inspection.
     // Expected tier 1 candidates for llama.cpp (from cpp_setup_auto.rs line 1234-1235):
@@ -589,7 +589,7 @@ fn test_ac5_llama_cpp_tier1_candidates() {
 /// **Expected**: export LLAMA_CPP_DIR="...", export LD_LIBRARY_PATH="..."
 /// **Tag**: `// AC:AC6`
 #[test]
-#[ignore] // AC:AC6
+#[ignore = "AC:AC6"]
 fn test_ac6_shell_emission_sh_format() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _repo = temp_dir.path().join("llama_cpp");
@@ -616,7 +616,7 @@ fn test_ac6_shell_emission_sh_format() {
 /// **Expected**: set -gx LLAMA_CPP_DIR "...", set -gx LD_LIBRARY_PATH "..."
 /// **Tag**: `// AC:AC6`
 #[test]
-#[ignore] // AC:AC6
+#[ignore = "AC:AC6"]
 fn test_ac6_shell_emission_fish_format() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _repo = temp_dir.path().join("llama_cpp");
@@ -643,7 +643,7 @@ fn test_ac6_shell_emission_fish_format() {
 /// **Expected**: $env:LLAMA_CPP_DIR = "...", $env:PATH = "..."
 /// **Tag**: `// AC:AC6`
 #[test]
-#[ignore] // AC:AC6
+#[ignore = "AC:AC6"]
 #[cfg(target_os = "windows")]
 fn test_ac6_shell_emission_pwsh_format() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -671,7 +671,7 @@ fn test_ac6_shell_emission_pwsh_format() {
 /// **Expected**: set LLAMA_CPP_DIR=..., set PATH=...
 /// **Tag**: `// AC:AC6`
 #[test]
-#[ignore] // AC:AC6
+#[ignore = "AC:AC6"]
 #[cfg(target_os = "windows")]
 fn test_ac6_shell_emission_cmd_format() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
@@ -704,7 +704,7 @@ fn test_ac6_shell_emission_cmd_format() {
 /// **Tag**: `// AC:AC7`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC7
+#[ignore = "AC:AC7"]
 fn test_ac7_file_lock_prevents_concurrent_builds() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _install_dir = temp_dir.path().join("llama_cpp");
@@ -730,7 +730,7 @@ fn test_ac7_file_lock_prevents_concurrent_builds() {
 /// **Tag**: `// AC:AC7`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC7
+#[ignore = "AC:AC7"]
 fn test_ac7_lock_released_on_drop() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _install_dir = temp_dir.path().join("llama_cpp");
@@ -759,7 +759,7 @@ fn test_ac7_lock_released_on_drop() {
 /// **Expected**: Retries with increasing delay (1s, 1.5s, 2.25s, ...)
 /// **Tag**: `// AC:AC8`
 #[test]
-#[ignore] // AC:AC8
+#[ignore = "AC:AC8"]
 fn test_ac8_network_retry_exponential_backoff() {
     // TODO: Implement clone_repository_with_retry()
     // Expected behavior:
@@ -782,7 +782,7 @@ fn test_ac8_network_retry_exponential_backoff() {
 /// **Expected**: After 5 failures, returns error
 /// **Tag**: `// AC:AC8`
 #[test]
-#[ignore] // AC:AC8
+#[ignore = "AC:AC8"]
 fn test_ac8_network_retry_max_attempts() {
     // TODO: Test max retry limit
     // Expected behavior:
@@ -808,7 +808,7 @@ fn test_ac8_network_retry_max_attempts() {
 /// **Expected**: Original installation restored after failure
 /// **Tag**: `// AC:AC9`
 #[test]
-#[ignore] // AC:AC9
+#[ignore = "AC:AC9"]
 fn test_ac9_rollback_on_build_failure() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path().join("llama_cpp");
@@ -838,7 +838,7 @@ fn test_ac9_rollback_on_build_failure() {
 /// **Expected**: .backup directory removed on success
 /// **Tag**: `// AC:AC9`
 #[test]
-#[ignore] // AC:AC9
+#[ignore = "AC:AC9"]
 fn test_ac9_successful_build_removes_backup() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let _install_dir = temp_dir.path().join("llama_cpp");
@@ -867,7 +867,7 @@ fn test_ac9_successful_build_removes_backup() {
 /// **Expected**: libllama.so, libggml.so
 /// **Tag**: `// AC:AC10`
 #[test]
-#[ignore] // AC:AC10
+#[ignore = "AC:AC10"]
 #[cfg(target_os = "linux")]
 fn test_ac10_linux_library_naming() {
     assert_eq!(format_lib_name("llama"), "libllama.so");
@@ -880,7 +880,7 @@ fn test_ac10_linux_library_naming() {
 /// **Expected**: libllama.dylib, libggml.dylib
 /// **Tag**: `// AC:AC10`
 #[test]
-#[ignore] // AC:AC10
+#[ignore = "AC:AC10"]
 #[cfg(target_os = "macos")]
 fn test_ac10_macos_library_naming() {
     assert_eq!(format_lib_name("llama"), "libllama.dylib");
@@ -893,7 +893,7 @@ fn test_ac10_macos_library_naming() {
 /// **Expected**: llama.dll, ggml.dll (not libllama.dll)
 /// **Tag**: `// AC:AC10`
 #[test]
-#[ignore] // AC:AC10
+#[ignore = "AC:AC10"]
 #[cfg(target_os = "windows")]
 fn test_ac10_windows_library_naming() {
     assert_eq!(format_lib_name("llama"), "llama.dll");
@@ -906,7 +906,7 @@ fn test_ac10_windows_library_naming() {
 /// **Expected**: find_libraries_in_dir() matches correct extension
 /// **Tag**: `// AC:AC10`
 #[test]
-#[ignore] // AC:AC10
+#[ignore = "AC:AC10"]
 fn test_ac10_platform_library_discovery() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let lib_dir = temp_dir.path();
@@ -940,7 +940,7 @@ fn test_ac10_platform_library_discovery() {
 /// **Tag**: `// AC:AC11`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC11
+#[ignore = "AC:AC11"]
 fn test_ac11_rpath_merge_with_bitnet() {
     let _guard1 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
     let _guard2 = EnvGuard::new("CROSSVAL_RPATH_LLAMA");
@@ -969,7 +969,7 @@ fn test_ac11_rpath_merge_with_bitnet() {
 /// **Tag**: `// AC:AC11`
 #[test]
 #[serial(bitnet_env)]
-#[ignore] // AC:AC11
+#[ignore = "AC:AC11"]
 fn test_ac11_rpath_deduplication() {
     let _guard1 = EnvGuard::new("CROSSVAL_RPATH_BITNET");
     let _guard2 = EnvGuard::new("CROSSVAL_RPATH_LLAMA");
@@ -1002,7 +1002,7 @@ fn test_ac11_rpath_deduplication() {
 /// **Expected**: Checks install dir and both libraries
 /// **Tag**: `// AC:AC12`
 #[test]
-#[ignore] // AC:AC12
+#[ignore = "AC:AC12"]
 fn test_ac12_preflight_verification_success() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path().join("llama_cpp");
@@ -1033,7 +1033,7 @@ fn test_ac12_preflight_verification_success() {
 /// **Expected**: Error message lists missing libraries
 /// **Tag**: `// AC:AC12`
 #[test]
-#[ignore] // AC:AC12
+#[ignore = "AC:AC12"]
 fn test_ac12_preflight_verification_missing_library() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let install_dir = temp_dir.path().join("llama_cpp");
@@ -1067,7 +1067,7 @@ fn test_ac12_preflight_verification_missing_library() {
 /// **Expected**: Works on Linux (.so), macOS (.dylib), Windows (.dll)
 /// **Tag**: `// AC:AC13`
 #[test]
-#[ignore] // AC:AC13
+#[ignore = "AC:AC13"]
 fn test_ac13_cross_platform_library_discovery() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let lib_dir = temp_dir.path();
@@ -1095,7 +1095,7 @@ fn test_ac13_cross_platform_library_discovery() {
 /// **Expected**: LD_LIBRARY_PATH (Linux), DYLD_LIBRARY_PATH (macOS), PATH (Windows)
 /// **Tag**: `// AC:AC13`
 #[test]
-#[ignore] // AC:AC13
+#[ignore = "AC:AC13"]
 fn test_ac13_cross_platform_loader_path_variable() {
     // TODO: Test platform-specific loader path variable
     // Expected behavior:
@@ -1129,7 +1129,7 @@ fn test_ac13_cross_platform_loader_path_variable() {
 /// **Expected**: Help text mentions --backend flag and llama option
 /// **Tag**: `// AC:AC14`
 #[test]
-#[ignore] // AC:AC14
+#[ignore = "AC:AC14"]
 fn test_ac14_help_text_comprehensive() {
     // TODO: Verify help text completeness
     // Expected help text includes:
@@ -1152,7 +1152,7 @@ fn test_ac14_help_text_comprehensive() {
 /// **Expected**: Examples show --backend llama usage
 /// **Tag**: `// AC:AC14`
 #[test]
-#[ignore] // AC:AC14
+#[ignore = "AC:AC14"]
 fn test_ac14_help_text_includes_llama_examples() {
     // TODO: Verify help text examples
     // Expected examples:
@@ -1177,7 +1177,7 @@ fn test_ac14_help_text_includes_llama_examples() {
 /// **Expected**: All 14 acceptance criteria have corresponding tests
 /// **Tag**: `// AC:AC15`
 #[test]
-#[ignore] // AC:AC15
+#[ignore = "AC:AC15"]
 fn test_ac15_all_acceptance_criteria_covered() {
     // TODO: Verify test coverage for AC1-AC14
     // Expected coverage:
@@ -1214,7 +1214,7 @@ fn test_ac15_all_acceptance_criteria_covered() {
 /// **Test**: End-to-end test of llama.cpp setup
 /// **Expected**: Clone, build, emit exports, preflight passes
 #[test]
-#[ignore] // Integration test (requires network)
+#[ignore = "Integration test (requires network)"]
 fn test_integration_full_llama_cpp_workflow() {
     // TODO: Implement end-to-end integration test
     // Expected workflow:
@@ -1236,7 +1236,7 @@ fn test_integration_full_llama_cpp_workflow() {
 /// **Test**: Install both BitNet.cpp and llama.cpp
 /// **Expected**: Both backends installed, RPATH merged
 #[test]
-#[ignore] // Integration test (requires network)
+#[ignore = "Integration test (requires network)"]
 fn test_integration_dual_backend_installation() {
     // TODO: Implement dual-backend integration test
     // Expected workflow:
@@ -1258,7 +1258,7 @@ fn test_integration_dual_backend_installation() {
 /// **Test**: Apply deduplication multiple times
 /// **Expected**: Result unchanged after first deduplication
 #[test]
-#[ignore] // Property-based test
+#[ignore = "Property-based test"]
 fn test_property_rpath_deduplication_idempotent() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let path1 = temp_dir.path().join("lib1");
@@ -1286,7 +1286,7 @@ fn test_property_rpath_deduplication_idempotent() {
 /// **Test**: Verify library name formatting roundtrip
 /// **Expected**: format_lib_name is consistent with platform conventions
 #[test]
-#[ignore] // Property-based test
+#[ignore = "Property-based test"]
 fn test_property_library_naming_consistency() {
     let stems = ["llama", "ggml", "bitnet"];
 

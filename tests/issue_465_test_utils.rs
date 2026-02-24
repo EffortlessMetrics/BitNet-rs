@@ -4,6 +4,10 @@
 //! Extracted from individual test files to improve maintainability.
 
 use anyhow::{Context, Result};
+use bitnet_honest_compute::{
+    validate_compute_path as validate_honest_compute_path,
+    validate_kernel_ids as validate_honest_kernel_ids,
+};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -141,7 +145,7 @@ pub fn verify_receipt_schema(path: &Path) -> Result<()> {
         .and_then(|v| v.as_str())
         .with_context(|| format!("Receipt missing compute_path field: {}", path.display()))?;
 
-    if compute_path != "real" {
+    if validate_honest_compute_path(compute_path).is_err() {
         anyhow::bail!(
             "Invalid compute_path '{}' in {}: expected 'real' for honest compute",
             compute_path,
@@ -154,40 +158,18 @@ pub fn verify_receipt_schema(path: &Path) -> Result<()> {
         format!("Receipt missing kernels field or not an array: {}", path.display())
     })?;
 
-    if kernels.is_empty() {
-        anyhow::bail!(
-            "Empty kernels array in {}: honest compute requires kernel IDs",
-            path.display()
-        );
-    }
+    let kernel_ids: Vec<&str> = kernels
+        .iter()
+        .enumerate()
+        .map(|(idx, kernel)| {
+            kernel.as_str().with_context(|| {
+                format!("Kernel at index {} is not a string in {}", idx, path.display())
+            })
+        })
+        .collect::<Result<_>>()?;
 
-    // Validate kernel ID hygiene
-    for (idx, kernel) in kernels.iter().enumerate() {
-        let kernel_id = kernel.as_str().with_context(|| {
-            format!("Kernel at index {} is not a string in {}", idx, path.display())
-        })?;
-
-        if kernel_id.is_empty() {
-            anyhow::bail!("Empty kernel ID at index {} in {}", idx, path.display());
-        }
-
-        // Check for whitespace-only kernel IDs
-        if kernel_id.trim().is_empty() {
-            anyhow::bail!("Whitespace-only kernel ID at index {} in {}", idx, path.display());
-        }
-
-        if kernel_id.len() > 128 {
-            anyhow::bail!(
-                "Kernel ID at index {} exceeds 128 characters in {}: '{}'",
-                idx,
-                path.display(),
-                kernel_id
-            );
-        }
-    }
-
-    if kernels.len() > 10_000 {
-        anyhow::bail!("Kernel count {} exceeds 10,000 limit in {}", kernels.len(), path.display());
+    if let Err(err) = validate_honest_kernel_ids(kernel_ids.iter().copied()) {
+        anyhow::bail!("{} in {}", err, path.display());
     }
 
     // Validate performance metrics (support multiple schema variations)

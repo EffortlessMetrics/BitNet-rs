@@ -204,7 +204,7 @@ fn test_socket0_eval_null_vocab() {
 /// **Expected:** Returns -1 with error message, NO cleanup (context owns resources)
 /// **Cleanup:** Must NOT free ctx->model (persistent context owns it)
 #[test]
-#[ignore] // TODO: Remove after implementing NULL check at line 558
+#[ignore = "TODO: Remove after implementing NULL check at line 558"]
 fn test_socket2_tokenize_null_vocab() {
     // TODO: This test requires Socket 1 (bitnet_cpp_init_context) to be implemented
     // For now, scaffold the test structure
@@ -234,7 +234,7 @@ fn test_socket2_tokenize_null_vocab() {
 /// **Expected:** Returns -1 with error message, NO cleanup (context owns resources)
 /// **Cleanup:** Must NOT free ctx->model or ctx->ctx (persistent context owns them)
 #[test]
-#[ignore] // TODO: Remove after implementing NULL check at line 710
+#[ignore = "TODO: Remove after implementing NULL check at line 710"]
 fn test_socket3_eval_null_vocab() {
     // TODO: This test requires Socket 1 (bitnet_cpp_init_context) to be implemented
     // For now, scaffold the test structure
@@ -264,7 +264,7 @@ fn test_socket3_eval_null_vocab() {
 /// **Expected:** No memory leaks detected by valgrind
 /// **Validation:** Run with `valgrind --leak-check=full` to verify cleanup
 #[test]
-#[ignore] // TODO: Remove after implementing NULL checks at lines 102, 261
+#[ignore = "TODO: Remove after implementing NULL checks at lines 102, 261"]
 fn test_socket0_cleanup_on_vocab_failure() {
     // Test both Socket 0 functions (tokenize and eval) repeatedly
     // to ensure no memory accumulates from missing cleanup
@@ -339,7 +339,7 @@ fn test_socket0_cleanup_on_vocab_failure() {
 /// **Expected:** Context cleanup happens via bitnet_cpp_free_context(), not error path
 /// **Safety:** Prevents double-free bugs
 #[test]
-#[ignore] // TODO: Remove after implementing NULL checks at lines 558, 710 and Socket 1
+#[ignore = "TODO: Remove after implementing NULL checks at lines 558, 710 and Socket 1"]
 fn test_socket23_no_cleanup_on_vocab_failure() {
     // TODO: This test requires Socket 1 (bitnet_cpp_init_context) to be implemented
     //
@@ -365,7 +365,7 @@ fn test_socket23_no_cleanup_on_vocab_failure() {
 /// **Expected:** Graceful error propagation from C++ to Rust, no crashes
 /// **Coverage:** Full workflow from model load to inference failure
 #[test]
-#[ignore] // TODO: Remove after implementing all NULL checks
+#[ignore = "TODO: Remove after implementing all NULL checks"]
 fn test_invalid_gguf_handling_e2e() {
     let (_temp_dir, model_path) = setup_invalid_model();
 
@@ -436,7 +436,7 @@ fn test_invalid_gguf_handling_e2e() {
 /// **Expected:** Error strings properly NUL-terminated and UTF-8 valid
 /// **Safety:** Prevents buffer overflows and encoding issues
 #[test]
-#[ignore] // TODO: Remove after implementing NULL checks
+#[ignore = "TODO: Remove after implementing NULL checks"]
 fn test_error_propagation_to_rust() {
     let (_temp_dir, model_path) = setup_invalid_model();
     let model_path_c = CString::new(model_path.to_str().unwrap()).unwrap();
@@ -495,7 +495,7 @@ fn test_error_propagation_to_rust() {
 /// **Expected:** All error messages follow template: `<function>: Failed to get vocab from model (check model format/compatibility)`
 /// **Length:** Max 108 bytes (including NUL terminator) to fit within 256-byte buffers
 #[test]
-#[ignore] // TODO: Remove after implementing all NULL checks
+#[ignore = "TODO: Remove after implementing all NULL checks"]
 fn test_vocab_error_message_format() {
     let (_temp_dir, model_path) = setup_invalid_model();
 

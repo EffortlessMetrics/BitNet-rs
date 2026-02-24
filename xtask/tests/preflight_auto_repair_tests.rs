@@ -45,7 +45,7 @@ mod ac1_default_auto_repair_tests {
     /// - Prompts to rebuild xtask
     /// - Exit code 0 (repair succeeded)
     #[test]
-    #[ignore] // TODO: Implement default auto-repair behavior
+    #[ignore = "TODO: Implement default auto-repair behavior"]
     #[serial(bitnet_env)]
     fn test_default_repair_on_missing_backend() {
         // Setup: No C++ libraries present
@@ -61,7 +61,7 @@ mod ac1_default_auto_repair_tests {
     ///
     /// Validates that successful repair displays "AVAILABLE (auto-repaired)" status.
     #[test]
-    #[ignore] // TODO: Implement RepairStatus display logic
+    #[ignore = "TODO: Implement RepairStatus display logic"]
     #[serial(bitnet_env)]
     fn test_auto_repair_success_message_shows_repaired_status() {
         // Mock: Successful repair flow
@@ -77,7 +77,7 @@ mod ac1_default_auto_repair_tests {
     ///
     /// Validates that auto-repair output includes exact rebuild command.
     #[test]
-    #[ignore] // TODO: Implement rebuild instruction formatting
+    #[ignore = "TODO: Implement rebuild instruction formatting"]
     #[serial(bitnet_env)]
     fn test_auto_repair_shows_rebuild_instructions() {
         // Mock: Successful repair
@@ -92,7 +92,7 @@ mod ac1_default_auto_repair_tests {
     ///
     /// Validates that auto-repair displays timestamped progress messages.
     #[test]
-    #[ignore] // TODO: Implement progress message logging
+    #[ignore = "TODO: Implement progress message logging"]
     #[serial(bitnet_env)]
     fn test_auto_repair_shows_timestamped_progress() {
         // Mock: Repair in progress
@@ -109,7 +109,7 @@ mod ac1_default_auto_repair_tests {
     ///
     /// Validates that auto-repair shows estimated time (5-10 minutes first run).
     #[test]
-    #[ignore] // TODO: Implement duration estimation
+    #[ignore = "TODO: Implement duration estimation"]
     #[serial(bitnet_env)]
     fn test_auto_repair_shows_estimated_duration() {
         // Mock: Repair starting
@@ -123,7 +123,7 @@ mod ac1_default_auto_repair_tests {
     ///
     /// Validates that cached libraries skip repair and show "AVAILABLE (cached)" status.
     #[test]
-    #[ignore] // TODO: Implement cached library detection
+    #[ignore = "TODO: Implement cached library detection"]
     #[serial(bitnet_env)]
     fn test_cached_libraries_skip_repair() {
         // Setup: C++ libraries already installed
@@ -140,7 +140,7 @@ mod ac1_default_auto_repair_tests {
     ///
     /// Validates that repair skips rebuild if libraries already detected after setup-cpp-auto.
     #[test]
-    #[ignore] // TODO: Implement conditional rebuild logic
+    #[ignore = "TODO: Implement conditional rebuild logic"]
     #[serial(bitnet_env)]
     fn test_auto_repair_skips_rebuild_if_already_detected() {
         // Mock: setup-cpp-auto succeeds, xtask already has HAS_BITNET=true
@@ -161,7 +161,7 @@ mod ac2_repair_mode_enum_tests {
     ///
     /// Validates that RepairMode::Auto attempts repair when backend missing.
     #[test]
-    #[ignore] // TODO: Implement RepairMode enum
+    #[ignore = "TODO: Implement RepairMode enum"]
     fn test_repair_mode_auto() {
         // Create RepairMode::Auto
         // Mock: Backend missing
@@ -174,7 +174,7 @@ mod ac2_repair_mode_enum_tests {
     ///
     /// Validates that RepairMode::Never skips repair even when backend missing.
     #[test]
-    #[ignore] // TODO: Implement RepairMode::Never variant
+    #[ignore = "TODO: Implement RepairMode::Never variant"]
     #[serial(bitnet_env)]
     fn test_repair_mode_never() {
         // Create RepairMode::Never
@@ -189,7 +189,7 @@ mod ac2_repair_mode_enum_tests {
     ///
     /// Validates that RepairMode::Always forces repair even when backend available.
     #[test]
-    #[ignore] // TODO: Implement RepairMode::Always variant
+    #[ignore = "TODO: Implement RepairMode::Always variant"]
     #[serial(bitnet_env)]
     fn test_repair_mode_always() {
         // Create RepairMode::Always
@@ -203,7 +203,7 @@ mod ac2_repair_mode_enum_tests {
     ///
     /// Validates RepairMode construction from CLI flags.
     #[test]
-    #[ignore] // TODO: Implement RepairMode::from_cli_flags()
+    #[ignore = "TODO: Implement RepairMode::from_cli_flags()"]
     fn test_repair_mode_from_cli_flags() {
         // Test: --repair=auto → RepairMode::Auto
         // Test: --repair=never → RepairMode::Never
@@ -217,7 +217,7 @@ mod ac2_repair_mode_enum_tests {
     ///
     /// Validates that RepairMode::Auto detects CI environment and defaults to Never.
     #[test]
-    #[ignore] // TODO: Implement is_ci_environment() detection
+    #[ignore = "TODO: Implement is_ci_environment() detection"]
     #[serial(bitnet_env)]
     fn test_repair_mode_auto_detects_ci_environment() {
         // Setup: Set CI=true
@@ -243,7 +243,7 @@ mod ac3_error_classification_tests {
     ///
     /// Validates RepairError::NetworkFailure classification from stderr patterns.
     #[test]
-    #[ignore] // TODO: Implement RepairError::classify()
+    #[ignore = "TODO: Implement RepairError::classify()"]
     fn test_classify_network_error() {
         let network_patterns = vec![
             "connection timeout",
@@ -265,7 +265,7 @@ mod ac3_error_classification_tests {
     ///
     /// Validates RepairError::BuildFailure classification from stderr patterns.
     #[test]
-    #[ignore] // TODO: Implement build error classification
+    #[ignore = "TODO: Implement build error classification"]
     fn test_classify_build_error() {
         let build_patterns = vec!["cmake error", "ninja: build stopped", "compilation failed"];
 
@@ -282,7 +282,7 @@ mod ac3_error_classification_tests {
     ///
     /// Validates RepairError::PermissionDenied classification from stderr patterns.
     #[test]
-    #[ignore] // TODO: Implement permission error classification
+    #[ignore = "TODO: Implement permission error classification"]
     fn test_classify_permission_error() {
         let permission_patterns = vec!["permission denied", "eacces", "cannot create directory"];
 
@@ -299,7 +299,7 @@ mod ac3_error_classification_tests {
     ///
     /// Validates network error recovery message formatting.
     #[test]
-    #[ignore] // TODO: Implement network error recovery message
+    #[ignore = "TODO: Implement network error recovery message"]
     fn test_network_error_shows_recovery_steps() {
         // Create RepairError::NetworkFailure
         // Format error message
@@ -314,7 +314,7 @@ mod ac3_error_classification_tests {
     ///
     /// Validates build error recovery message with dependency check commands.
     #[test]
-    #[ignore] // TODO: Implement build error recovery message
+    #[ignore = "TODO: Implement build error recovery message"]
     fn test_build_error_shows_cmake_diagnostics() {
         // Create RepairError::BuildFailure
         // Format error message
@@ -329,7 +329,7 @@ mod ac3_error_classification_tests {
     ///
     /// Validates permission error recovery message with chown command.
     #[test]
-    #[ignore] // TODO: Implement permission error recovery message
+    #[ignore = "TODO: Implement permission error recovery message"]
     fn test_permission_error_shows_ownership_fix() {
         // Create RepairError::PermissionDenied with path
         // Format error message
@@ -349,7 +349,7 @@ mod ac4_exit_codes_tests {
     ///
     /// Validates exit code 0 when backend available.
     #[test]
-    #[ignore] // TODO: Implement PreflightExitCode enum
+    #[ignore = "TODO: Implement PreflightExitCode enum"]
     #[serial(bitnet_env)]
     fn test_exit_code_available() {
         // Mock: Backend available (cached)
@@ -363,7 +363,7 @@ mod ac4_exit_codes_tests {
     ///
     /// Validates exit code 1 when backend unavailable after repair disabled/failed.
     #[test]
-    #[ignore] // TODO: Implement exit code 1 handling
+    #[ignore = "TODO: Implement exit code 1 handling"]
     #[serial(bitnet_env)]
     fn test_exit_code_unavailable() {
         // Mock: Backend missing, repair disabled (--repair=never)
@@ -377,7 +377,7 @@ mod ac4_exit_codes_tests {
     ///
     /// Validates exit code 2 for invalid arguments.
     #[test]
-    #[ignore] // TODO: Implement argument validation
+    #[ignore = "TODO: Implement argument validation"]
     fn test_exit_code_invalid_args() {
         // Run: preflight --backend unknown_backend
         // Assert: Exit code 2
@@ -389,7 +389,7 @@ mod ac4_exit_codes_tests {
     ///
     /// Validates exit code 3 for network error after retries.
     #[test]
-    #[ignore] // TODO: Implement exit code 3 handling
+    #[ignore = "TODO: Implement exit code 3 handling"]
     #[serial(bitnet_env)]
     fn test_exit_code_network_failure() {
         // Mock: setup-cpp-auto fails with network error (after retries)
@@ -403,7 +403,7 @@ mod ac4_exit_codes_tests {
     ///
     /// Validates exit code 4 for permission denied errors.
     #[test]
-    #[ignore] // TODO: Implement exit code 4 handling
+    #[ignore = "TODO: Implement exit code 4 handling"]
     #[serial(bitnet_env)]
     fn test_exit_code_permission_denied() {
         // Mock: setup-cpp-auto fails with permission error
@@ -417,7 +417,7 @@ mod ac4_exit_codes_tests {
     ///
     /// Validates exit code 5 for build failures.
     #[test]
-    #[ignore] // TODO: Implement exit code 5 handling
+    #[ignore = "TODO: Implement exit code 5 handling"]
     #[serial(bitnet_env)]
     fn test_exit_code_build_failure() {
         // Mock: setup-cpp-auto fails with CMake error
@@ -431,7 +431,7 @@ mod ac4_exit_codes_tests {
     ///
     /// Validates exit code 6 for recursion detection.
     #[test]
-    #[ignore] // TODO: Implement recursion detection
+    #[ignore = "TODO: Implement recursion detection"]
     #[serial(bitnet_env)]
     fn test_exit_code_recursion_detected() {
         // Setup: Set BITNET_REPAIR_IN_PROGRESS=1
@@ -460,7 +460,7 @@ mod ac5_user_messaging_tests {
     ///
     /// Validates "AVAILABLE (cached)" message format.
     #[test]
-    #[ignore] // TODO: Implement cached message formatting
+    #[ignore = "TODO: Implement cached message formatting"]
     #[serial(bitnet_env)]
     fn test_message_available_cached() {
         // Mock: Backend available at build time
@@ -477,7 +477,7 @@ mod ac5_user_messaging_tests {
     ///
     /// Validates "AVAILABLE (auto-repaired)" message format.
     #[test]
-    #[ignore] // TODO: Implement auto-repaired message formatting
+    #[ignore = "TODO: Implement auto-repaired message formatting"]
     #[serial(bitnet_env)]
     fn test_message_available_auto_repaired() {
         // Mock: Successful repair
@@ -495,7 +495,7 @@ mod ac5_user_messaging_tests {
     ///
     /// Validates "UNAVAILABLE (repair disabled)" message format.
     #[test]
-    #[ignore] // TODO: Implement repair disabled message formatting
+    #[ignore = "TODO: Implement repair disabled message formatting"]
     #[serial(bitnet_env)]
     fn test_message_unavailable_repair_disabled() {
         // Mock: Backend missing, repair disabled
@@ -514,7 +514,7 @@ mod ac5_user_messaging_tests {
     ///
     /// Validates "UNAVAILABLE (repair failed: network error)" message format.
     #[test]
-    #[ignore] // TODO: Implement network failure message formatting
+    #[ignore = "TODO: Implement network failure message formatting"]
     #[serial(bitnet_env)]
     fn test_message_unavailable_repair_failed_network() {
         // Mock: Network error during repair
@@ -534,7 +534,7 @@ mod ac5_user_messaging_tests {
     ///
     /// Validates that messages use explicit timing instead of ambiguous phrasing.
     #[test]
-    #[ignore] // TODO: Implement message validation
+    #[ignore = "TODO: Implement message validation"]
     #[serial(bitnet_env)]
     fn test_no_when_available_phrasing() {
         // Mock: Various message scenarios
@@ -555,7 +555,7 @@ mod ac6_backend_specific_repair_tests {
     ///
     /// Validates backend-specific repair for bitnet.cpp.
     #[test]
-    #[ignore] // TODO: Implement backend-specific repair logic
+    #[ignore = "TODO: Implement backend-specific repair logic"]
     #[serial(bitnet_env)]
     fn test_repair_bitnet_backend() {
         // Mock: BitNet backend missing
@@ -572,7 +572,7 @@ mod ac6_backend_specific_repair_tests {
     ///
     /// Validates backend-specific repair for llama.cpp.
     #[test]
-    #[ignore] // TODO: Implement llama backend repair
+    #[ignore = "TODO: Implement llama backend repair"]
     #[serial(bitnet_env)]
     fn test_repair_llama_backend() {
         // Mock: Llama backend missing
@@ -589,7 +589,7 @@ mod ac6_backend_specific_repair_tests {
     ///
     /// Validates CppBackend::auto_detect_from_path() heuristics.
     #[test]
-    #[ignore] // TODO: Implement backend auto-detection
+    #[ignore = "TODO: Implement backend auto-detection"]
     fn test_auto_detect_backend_from_path() {
         // Test: Path contains "bitnet" → CppBackend::BitNet
         // Test: Path contains "microsoft/bitnet" → CppBackend::BitNet
@@ -603,7 +603,7 @@ mod ac6_backend_specific_repair_tests {
     ///
     /// Validates CppBackend::required_libs() returns correct library names.
     #[test]
-    #[ignore] // TODO: Implement required_libs() method
+    #[ignore = "TODO: Implement required_libs() method"]
     fn test_backend_required_libs() {
         // Create CppBackend::BitNet
         // Assert: required_libs() == ["libbitnet"]
@@ -621,7 +621,7 @@ mod ac7_no_when_available_phrasing_tests {
     ///
     /// Validates that help text uses explicit timing terminology.
     #[test]
-    #[ignore] // TODO: Implement help text validation
+    #[ignore = "TODO: Implement help text validation"]
     fn test_help_text_no_when_available() {
         // Get preflight command help text
         // Assert: Does NOT contain "when available"
@@ -636,7 +636,7 @@ mod ac7_no_when_available_phrasing_tests {
     ///
     /// Validates that error messages use explicit timing.
     #[test]
-    #[ignore] // TODO: Implement error message validation
+    #[ignore = "TODO: Implement error message validation"]
     fn test_error_messages_no_when_available() {
         // Create various RepairError instances
         // Format error messages
@@ -650,7 +650,7 @@ mod ac7_no_when_available_phrasing_tests {
     ///
     /// Validates adherence to terminology glossary from spec.
     #[test]
-    #[ignore] // TODO: Implement terminology validation
+    #[ignore = "TODO: Implement terminology validation"]
     fn test_terminology_glossary_compliance() {
         // Get all user-facing messages
         // Assert: "detected at build time" instead of "when available"
@@ -670,7 +670,7 @@ mod retry_logic_tests {
     ///
     /// Validates retry logic with exponential backoff for network errors.
     #[test]
-    #[ignore] // TODO: Implement retry with backoff
+    #[ignore = "TODO: Implement retry with backoff"]
     #[serial(bitnet_env)]
     fn test_retry_with_exponential_backoff() {
         // Mock: Network error on attempts 1 and 2, success on attempt 3
@@ -686,7 +686,7 @@ mod retry_logic_tests {
     ///
     /// Validates that retries stop after max attempts.
     #[test]
-    #[ignore] // TODO: Implement max retry limit
+    #[ignore = "TODO: Implement max retry limit"]
     #[serial(bitnet_env)]
     fn test_retry_max_attempts() {
         // Mock: Network error on all attempts
@@ -701,7 +701,7 @@ mod retry_logic_tests {
     ///
     /// Validates that build/permission errors are NOT retried.
     #[test]
-    #[ignore] // TODO: Implement non-retryable error detection
+    #[ignore = "TODO: Implement non-retryable error detection"]
     #[serial(bitnet_env)]
     fn test_non_retryable_errors_no_retry() {
         // Mock: Build error on first attempt
@@ -727,7 +727,7 @@ mod platform_specific_tests {
     /// Validates .so library discovery on Linux.
     #[test]
     #[cfg(target_os = "linux")]
-    #[ignore] // TODO: Implement Linux library discovery
+    #[ignore = "TODO: Implement Linux library discovery"]
     #[serial(bitnet_env)]
     fn test_linux_library_discovery() {
         // Mock: Create libbitnet.so in temp directory
@@ -743,7 +743,7 @@ mod platform_specific_tests {
     /// Validates .dylib library discovery on macOS.
     #[test]
     #[cfg(target_os = "macos")]
-    #[ignore] // TODO: Implement macOS library discovery
+    #[ignore = "TODO: Implement macOS library discovery"]
     #[serial(bitnet_env)]
     fn test_macos_library_discovery() {
         // Mock: Create libbitnet.dylib in temp directory
@@ -759,7 +759,7 @@ mod platform_specific_tests {
     /// Validates .dll library discovery on Windows.
     #[test]
     #[cfg(target_os = "windows")]
-    #[ignore] // TODO: Implement Windows library discovery
+    #[ignore = "TODO: Implement Windows library discovery"]
     #[serial(bitnet_env)]
     fn test_windows_library_discovery() {
         // Mock: Create bitnet.dll in temp directory

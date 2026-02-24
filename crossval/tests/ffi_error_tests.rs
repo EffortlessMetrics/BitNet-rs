@@ -34,7 +34,7 @@ fn get_test_model_path() -> &'static str {
 /// **Expected:** Returns CppNotAvailable with actionable error message
 /// **Error Message:** Should guide user to set BITNET_CPP_DIR and rebuild
 #[test]
-#[ignore] // TODO: Implement CppNotAvailable error handling
+#[ignore = "TODO: Implement CppNotAvailable error handling"]
 fn test_error_cpp_not_available() {
     // TODO: Test CppNotAvailable error when FFI not compiled
     // This test requires mocking compile-time feature detection
@@ -65,7 +65,7 @@ fn test_error_cpp_not_available() {
 /// **Expected:** Error message includes steps to enable cross-validation
 /// **Message Format:** Should list: 1) Set BITNET_CPP_DIR, 2) Rebuild with --features ffi
 #[test]
-#[ignore] // TODO: Implement actionable error message validation
+#[ignore = "TODO: Implement actionable error message validation"]
 fn test_error_cpp_not_available_actionable_message() {
     // TODO: Validate error message content
     // let result = BitnetSession::create(
@@ -92,7 +92,7 @@ fn test_error_cpp_not_available_actionable_message() {
 /// **Expected:** Returns LibraryNotFound with LD_LIBRARY_PATH guidance
 /// **Error Message:** Should guide user to set LD_LIBRARY_PATH or BITNET_CPP_LIBDIR
 #[test]
-#[ignore] // TODO: Implement LibraryNotFound error handling
+#[ignore = "TODO: Implement LibraryNotFound error handling"]
 fn test_error_library_not_found() {
     // TODO: Test LibraryNotFound error (dlopen fails to find library)
     // This test requires mocking dlopen loader
@@ -125,7 +125,7 @@ fn test_error_library_not_found() {
 /// **Expected:** Returns SymbolNotFound with version mismatch guidance
 /// **Error Message:** Should guide user to verify BitNet.cpp version and rebuild
 #[test]
-#[ignore] // TODO: Implement SymbolNotFound error handling
+#[ignore = "TODO: Implement SymbolNotFound error handling"]
 fn test_error_symbol_not_found_required() {
     // TODO: Test SymbolNotFound for required symbols
     // This test requires mocking dlopen loader to simulate missing symbols
@@ -157,7 +157,7 @@ fn test_error_symbol_not_found_required() {
 /// **Expected:** Missing bitnet_cpp_tokenize_with_context falls back to llama.cpp
 /// **Behavior:** Should NOT error, but log warning and use fallback
 #[test]
-#[ignore] // TODO: Implement optional symbol fallback
+#[ignore = "TODO: Implement optional symbol fallback"]
 fn test_error_optional_symbol_missing_fallback() {
     // TODO: Test graceful fallback for optional symbols
     // This test requires mocking dlopen loader
@@ -189,7 +189,7 @@ fn test_error_optional_symbol_missing_fallback() {
 /// **Expected:** Returns ModelLoadError with clear path in error message
 /// **Behavior:** Should NOT panic, should return error
 #[test]
-#[ignore] // TODO: Implement ModelLoadError for invalid path
+#[ignore = "TODO: Implement ModelLoadError for invalid path"]
 fn test_error_model_load_invalid_path() {
     // TODO: Test ModelLoadError for nonexistent file
     // let result = BitnetSession::create(
@@ -216,7 +216,7 @@ fn test_error_model_load_invalid_path() {
 /// **Expected:** Returns ModelLoadError with GGUF validation guidance
 /// **Error Message:** Should suggest running compat-check
 #[test]
-#[ignore] // TODO: Implement ModelLoadError for corrupted GGUF
+#[ignore = "TODO: Implement ModelLoadError for corrupted GGUF"]
 fn test_error_model_load_corrupted_gguf() {
     // TODO: Test ModelLoadError for corrupted GGUF file
     // This test requires creating a corrupted GGUF file (e.g., truncated)
@@ -246,7 +246,7 @@ fn test_error_model_load_corrupted_gguf() {
 /// **Expected:** out_ctx should be set to NULL on error
 /// **Safety:** Prevents use-after-free or null pointer dereference
 #[test]
-#[ignore] // TODO: Implement NULL pointer safety on model load error
+#[ignore = "TODO: Implement NULL pointer safety on model load error"]
 fn test_error_model_load_null_context_on_error() {
     // TODO: Validate NULL context pointer on error
     // let result = BitnetSession::create(
@@ -272,7 +272,7 @@ fn test_error_model_load_null_context_on_error() {
 /// **Expected:** Returns InferenceError with clear failure reason
 /// **Example:** Empty prompt, invalid UTF-8, etc.
 #[test]
-#[ignore] // TODO: Implement InferenceError for tokenization failure
+#[ignore = "TODO: Implement InferenceError for tokenization failure"]
 fn test_error_inference_tokenization_failure() {
     // TODO: Test InferenceError for tokenization failure
     // let model_path = Path::new(get_test_model_path());
@@ -296,7 +296,7 @@ fn test_error_inference_tokenization_failure() {
 /// **Expected:** Returns InferenceError with clear failure reason
 /// **Example:** Empty tokens, context overflow, etc.
 #[test]
-#[ignore] // TODO: Implement InferenceError for evaluation failure
+#[ignore = "TODO: Implement InferenceError for evaluation failure"]
 fn test_error_inference_evaluation_failure() {
     // TODO: Test InferenceError for evaluation failure
     // let model_path = Path::new(get_test_model_path());
@@ -317,7 +317,7 @@ fn test_error_inference_evaluation_failure() {
 /// **Expected:** Returns InferenceError mentioning context overflow
 /// **Behavior:** Should NOT crash, should return error
 #[test]
-#[ignore] // TODO: Implement InferenceError for context overflow
+#[ignore = "TODO: Implement InferenceError for context overflow"]
 fn test_error_inference_context_overflow() {
     // TODO: Test InferenceError for context size overflow
     // let model_path = Path::new(get_test_model_path());
@@ -350,7 +350,7 @@ fn test_error_inference_context_overflow() {
 /// **Expected:** Returns error mentioning buffer size mismatch
 /// **Pattern:** Query size → allocate buffer → fill (should not fail if sized correctly)
 #[test]
-#[ignore] // TODO: Implement buffer size mismatch error
+#[ignore = "TODO: Implement buffer size mismatch error"]
 fn test_error_buffer_too_small_tokenization() {
     // TODO: Test buffer size mismatch in tokenization
     // let model_path = Path::new(get_test_model_path());
@@ -380,7 +380,7 @@ fn test_error_buffer_too_small_tokenization() {
 /// **Expected:** Returns error mentioning logits buffer size mismatch
 /// **Pattern:** Query shape → allocate buffer → fill (should not fail if sized correctly)
 #[test]
-#[ignore] // TODO: Implement logits buffer size mismatch error
+#[ignore = "TODO: Implement logits buffer size mismatch error"]
 fn test_error_buffer_too_small_evaluation() {
     // TODO: Test logits buffer size mismatch
     // let model_path = Path::new(get_test_model_path());
@@ -410,7 +410,7 @@ fn test_error_buffer_too_small_evaluation() {
 /// **Expected:** Drop trait cleans up even if session creation partially failed
 /// **Validation:** Run with valgrind to detect memory leaks
 #[test]
-#[ignore] // TODO: Implement cleanup on error validation
+#[ignore = "TODO: Implement cleanup on error validation"]
 fn test_error_cleanup_on_session_creation_failure() {
     // TODO: Validate cleanup on session creation error
     // This test should be run with valgrind to detect memory leaks
@@ -437,7 +437,7 @@ fn test_error_cleanup_on_session_creation_failure() {
 /// **Expected:** Drop trait cleans up session despite mid-operation errors
 /// **Safety:** Prevents resource leaks
 #[test]
-#[ignore] // TODO: Implement cleanup on tokenization error
+#[ignore = "TODO: Implement cleanup on tokenization error"]
 fn test_error_cleanup_on_tokenization_failure() {
     // TODO: Validate cleanup on tokenization error
     // let model_path = Path::new(get_test_model_path());
@@ -462,7 +462,7 @@ fn test_error_cleanup_on_tokenization_failure() {
 /// **Expected:** Drop trait cleans up session despite mid-operation errors
 /// **Safety:** Prevents resource leaks
 #[test]
-#[ignore] // TODO: Implement cleanup on evaluation error
+#[ignore = "TODO: Implement cleanup on evaluation error"]
 fn test_error_cleanup_on_evaluation_failure() {
     // TODO: Validate cleanup on evaluation error
     // let model_path = Path::new(get_test_model_path());
@@ -491,7 +491,7 @@ fn test_error_cleanup_on_evaluation_failure() {
 /// **Expected:** All errors include next steps to fix the issue
 /// **Quality:** Error messages should NOT just say "failed" without context
 #[test]
-#[ignore] // TODO: Implement error message quality validation
+#[ignore = "TODO: Implement error message quality validation"]
 fn test_error_messages_are_actionable() {
     // TODO: Validate error message quality across all error types
     // Test matrix:
@@ -510,7 +510,7 @@ fn test_error_messages_are_actionable() {
 /// **Expected:** --dlopen-diagnostics shows symbol resolution status
 /// **Output:** Lists available symbols, missing symbols, fallback status
 #[test]
-#[ignore] // TODO: Implement diagnostic flag validation
+#[ignore = "TODO: Implement diagnostic flag validation"]
 fn test_error_diagnostic_flag_output() {
     // TODO: Test --dlopen-diagnostics flag output
     // This test would invoke CLI with diagnostic flag and parse output

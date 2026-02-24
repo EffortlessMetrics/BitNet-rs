@@ -96,7 +96,7 @@ mod first_time_setup_workflow {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of auto-repair workflow
+    #[ignore = "TODO: Requires implementation of auto-repair workflow"]
     fn test_first_time_setup_both_backends_missing() {
         // Integration: Simulate clean environment (no backends installed)
         // TODO: Re-enable when simulate_missing_backend is implemented
@@ -161,7 +161,7 @@ mod first_time_setup_workflow {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of no-repair failure path
+    #[ignore = "TODO: Requires implementation of no-repair failure path"]
     fn test_first_time_setup_no_repair_explicit() {
         // Integration: Simulate clean environment
         // TODO: Re-enable when simulate_missing_backend is implemented
@@ -217,7 +217,7 @@ mod partial_backend_availability {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of selective auto-repair
+    #[ignore = "TODO: Requires implementation of selective auto-repair"]
     fn test_selective_repair_only_bitnet_missing() {
         // Integration: Simulate partial backend availability
         // TODO: Set up environment with llama.cpp present, bitnet.cpp absent
@@ -264,7 +264,7 @@ mod partial_backend_availability {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of selective auto-repair
+    #[ignore = "TODO: Requires implementation of selective auto-repair"]
     fn test_selective_repair_only_llama_missing() {
         // Integration: Simulate partial backend availability (bitnet present, llama absent)
         // TODO: Set up environment with bitnet.cpp present, llama.cpp absent
@@ -318,7 +318,7 @@ mod stale_backend_detection {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of staleness detection
+    #[ignore = "TODO: Requires implementation of staleness detection"]
     fn test_stale_backend_reinstall() {
         // Integration: Simulate stale backend (BITNET_CPP_DIR set but libraries missing)
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -370,7 +370,7 @@ mod stale_backend_detection {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of selective staleness repair
+    #[ignore = "TODO: Requires implementation of selective staleness repair"]
     fn test_partial_staleness_selective_repair() {
         // Integration: Simulate partial staleness
         // TODO: Set up llama.cpp healthy, bitnet.cpp stale (BITNET_CPP_DIR set, no libs)
@@ -415,7 +415,7 @@ mod network_failure_recovery {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of network failure handling
+    #[ignore = "TODO: Requires implementation of network failure handling"]
     fn test_network_failure_during_clone() {
         // Integration: Simulate network failure
         // TODO: Mock git clone to fail with network error
@@ -457,7 +457,7 @@ mod network_failure_recovery {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of partial failure handling
+    #[ignore = "TODO: Requires implementation of partial failure handling"]
     fn test_partial_network_failure_recovery() {
         // Integration: Simulate partial network failure
         // TODO: Mock llama.cpp clone success, bitnet.cpp clone failure
@@ -492,7 +492,7 @@ mod ci_determinism {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of CI determinism enforcement
+    #[ignore = "TODO: Requires implementation of CI determinism enforcement"]
     fn test_ci_determinism_no_network_calls() {
         // Integration: Simulate CI environment
         // TODO: Re-enable when EnvGuard is accessible
@@ -548,7 +548,7 @@ mod ci_determinism {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of CI cached backend detection
+    #[ignore = "TODO: Requires implementation of CI cached backend detection"]
     fn test_ci_with_cached_backends_deterministic_success() {
         // Integration: Simulate CI environment with cached backends
         // TODO: Re-enable when EnvGuard is accessible
@@ -592,7 +592,7 @@ mod rpath_integration {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of RPATH auto-discovery
+    #[ignore = "TODO: Requires implementation of RPATH auto-discovery"]
     fn test_rpath_auto_discovery_custom_dir() {
         // Integration: Simulate custom installation directory
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
@@ -633,7 +633,7 @@ mod rpath_integration {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires implementation of RPATH precedence diagnostics
+    #[ignore = "TODO: Requires implementation of RPATH precedence diagnostics"]
     fn test_rpath_precedence_over_ld_library_path() {
         // Integration: Set up conflicting paths
         // TODO: RPATH points to path A, LD_LIBRARY_PATH points to path B
@@ -670,7 +670,7 @@ mod cross_platform_compatibility {
     #[test]
     #[cfg(all(feature = "crossval-all", target_os = "linux"))]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires platform-specific integration testing
+    #[ignore = "TODO: Requires platform-specific integration testing"]
     fn test_linux_ld_library_path_integration() {
         // Integration: Run preflight verbose mode
         let (stdout, _stderr, _exit_code) =
@@ -718,7 +718,7 @@ mod cross_platform_compatibility {
     #[test]
     #[cfg(all(feature = "crossval-all", target_os = "macos"))]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires platform-specific integration testing
+    #[ignore = "TODO: Requires platform-specific integration testing"]
     fn test_macos_dyld_library_path_integration() {
         // Integration: Run preflight verbose mode
         let (stdout, _stderr, _exit_code) =
@@ -762,7 +762,7 @@ mod cross_platform_compatibility {
     #[test]
     #[cfg(all(feature = "crossval-all", target_os = "windows"))]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires platform-specific integration testing
+    #[ignore = "TODO: Requires platform-specific integration testing"]
     fn test_windows_path_integration() {
         // Integration: Run preflight verbose mode
         let (stdout, _stderr, _exit_code) =
@@ -808,7 +808,7 @@ mod cross_platform_compatibility {
     #[test]
     #[cfg(feature = "crossval-all")]
     #[serial(bitnet_env)]
-    #[ignore] // TODO: Requires cross-platform emit format validation
+    #[ignore = "TODO: Requires cross-platform emit format validation"]
     fn test_cross_platform_emit_formats() {
         // Integration: Test Bash/Zsh format
         let (sh_stdout, _sh_stderr, sh_exit) = run_xtask_command(&["setup-cpp-auto", "--emit=sh"]);

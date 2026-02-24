@@ -15,6 +15,10 @@
 
 use anyhow::{Result, anyhow};
 use bitnet_common::CorrectionRecord;
+use bitnet_honest_compute::{
+    classify_compute_path, validate_compute_path as validate_honest_compute_path,
+    validate_kernel_ids as validate_honest_kernel_ids,
+};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -244,8 +248,7 @@ impl InferenceReceipt {
     /// ```
     pub fn generate(backend: &str, kernels: Vec<String>) -> Result<Self> {
         // AC4: Detect mock kernels (case-insensitive)
-        let compute_path =
-            if kernels.iter().any(|k| k.to_lowercase().contains("mock")) { "mock" } else { "real" };
+        let compute_path = classify_compute_path(kernels.iter().map(String::as_str));
 
         Ok(Self {
             schema_version: RECEIPT_SCHEMA_VERSION.to_string(),
@@ -459,10 +462,7 @@ impl InferenceReceipt {
     /// assert!(receipt.validate_compute_path().is_ok());
     /// ```
     pub fn validate_compute_path(&self) -> Result<()> {
-        if self.compute_path != "real" {
-            return Err(anyhow!("Invalid compute_path: {} (expected 'real')", self.compute_path));
-        }
-        Ok(())
+        validate_honest_compute_path(&self.compute_path).map_err(Into::into)
     }
 
     /// Validate kernel IDs
@@ -483,44 +483,7 @@ impl InferenceReceipt {
     /// assert!(receipt.validate_kernel_ids().is_ok());
     /// ```
     pub fn validate_kernel_ids(&self) -> Result<()> {
-        // Check for non-empty kernel array
-        if self.kernels.is_empty() {
-            return Err(anyhow!("Kernel array is empty: honest compute requires kernel IDs"));
-        }
-
-        // Check total kernel count
-        if self.kernels.len() > 10_000 {
-            return Err(anyhow!("Kernel count {} exceeds 10,000 limit", self.kernels.len()));
-        }
-
-        // Validate each kernel ID
-        for (idx, kernel_id) in self.kernels.iter().enumerate() {
-            // Check for empty kernel ID
-            if kernel_id.is_empty() {
-                return Err(anyhow!("Empty kernel ID at index {}", idx));
-            }
-
-            // Check for whitespace-only kernel ID
-            if kernel_id.trim().is_empty() {
-                return Err(anyhow!("Whitespace-only kernel ID at index {}", idx));
-            }
-
-            // Check kernel ID length
-            if kernel_id.len() > 128 {
-                return Err(anyhow!(
-                    "Kernel ID at index {} exceeds 128 characters: '{}'",
-                    idx,
-                    kernel_id
-                ));
-            }
-
-            // Check for mock kernels (case-insensitive)
-            if kernel_id.to_lowercase().contains("mock") {
-                return Err(anyhow!("Mock kernel detected at index {}: '{}'", idx, kernel_id));
-            }
-        }
-
-        Ok(())
+        validate_honest_kernel_ids(self.kernels.iter().map(String::as_str)).map_err(Into::into)
     }
 
     /// Builder for test results

@@ -5,38 +5,78 @@
 
 use std::env;
 use std::process::Command;
-use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-/// Run a shell command with a timeout. Returns `false` on timeout or failure.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+const PROBE_POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+/// Run a shell command with a hard-kill timeout. Returns `false` on timeout or failure.
+///
+/// Unlike the previous `recv_timeout` approach, this actually kills the subprocess
+/// when the deadline is exceeded so no zombie processes or stuck threads are left behind.
 fn probe_command(cmd: &str, args: &[&str]) -> bool {
-    let cmd = cmd.to_string();
-    let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
-    let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
-        let ok =
-            Command::new(&cmd).args(&args).output().map(|o| o.status.success()).unwrap_or(false);
-        let _ = tx.send(ok);
-    });
-    rx.recv_timeout(Duration::from_secs(5)).unwrap_or(false)
+    let mut child = match Command::new(cmd)
+        .args(args)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    let deadline = Instant::now() + PROBE_TIMEOUT;
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return status.success(),
+            Ok(None) => {
+                if Instant::now() >= deadline {
+                    let _ = child.kill();
+                    let _ = child.wait(); // reap to avoid zombie
+                    return false;
+                }
+                std::thread::sleep(PROBE_POLL_INTERVAL);
+            }
+            Err(_) => return false,
+        }
+    }
 }
 
-/// Run a shell command with a timeout and capture its stdout. Returns `None` on timeout or failure.
+/// Run a shell command with a hard-kill timeout and capture its stdout.
+/// Returns `None` on timeout, failure, or non-UTF8 output.
 fn probe_command_output(cmd: &str, args: &[&str]) -> Option<String> {
-    let cmd = cmd.to_string();
-    let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
-    let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
-        let out = Command::new(&cmd)
-            .args(&args)
-            .output()
-            .ok()
-            .filter(|o| o.status.success())
-            .and_then(|o| String::from_utf8(o.stdout).ok());
-        let _ = tx.send(out);
-    });
-    rx.recv_timeout(Duration::from_secs(5)).unwrap_or(None)
+    use std::io::Read;
+    let mut child = match Command::new(cmd)
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(_) => return None,
+    };
+    let deadline = Instant::now() + PROBE_TIMEOUT;
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) => {
+                if Instant::now() >= deadline {
+                    let _ = child.kill();
+                    let _ = child.wait(); // reap to avoid zombie
+                    return None;
+                }
+                std::thread::sleep(PROBE_POLL_INTERVAL);
+            }
+            Err(_) => return None,
+        }
+    };
+    if !status.success() {
+        return None;
+    }
+    // Process already exited; drain its piped stdout (at EOF, so this is fast).
+    let mut stdout = child.stdout.take()?;
+    let mut output = String::new();
+    stdout.read_to_string(&mut output).ok()?;
+    Some(output)
 }
 
 /// Check if any GPU backend is available

@@ -5,6 +5,7 @@
 
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetTensor, Device, Tensor};
+use bitnet_rope::build_tables as build_rope_tables;
 use candle_core::DType;
 use std::collections::HashMap;
 
@@ -172,25 +173,12 @@ pub struct RotaryEmbedding {
 
 impl RotaryEmbedding {
     pub fn new(dim: usize, max_seq_len: usize, base: f32, device: &Device) -> Result<Self> {
-        let half_dim = dim / 2;
-        let inv_freq: Vec<f32> =
-            (0..half_dim).map(|i| 1.0 / base.powf(2.0 * i as f32 / dim as f32)).collect();
-
-        let positions: Vec<f32> = (0..max_seq_len).map(|i| i as f32).collect();
-
-        let mut cos_values = Vec::new();
-        let mut sin_values = Vec::new();
-
-        for &pos in &positions {
-            for &freq in &inv_freq {
-                let angle = pos * freq;
-                cos_values.push(angle.cos());
-                sin_values.push(angle.sin());
-            }
-        }
-
-        let cos_cache = BitNetTensor::from_slice(&cos_values, &[max_seq_len, half_dim], device)?;
-        let sin_cache = BitNetTensor::from_slice(&sin_values, &[max_seq_len, half_dim], device)?;
+        let tables = build_rope_tables(dim, max_seq_len, base)
+            .context("failed to build RoPE cache tables")?;
+        let cos_cache =
+            BitNetTensor::from_slice(&tables.cos, &[max_seq_len, tables.half_dim], device)?;
+        let sin_cache =
+            BitNetTensor::from_slice(&tables.sin, &[max_seq_len, tables.half_dim], device)?;
 
         // Calculate scaling factor for numerical stability
         let scale_factor = 1.0 / (dim as f32).sqrt();

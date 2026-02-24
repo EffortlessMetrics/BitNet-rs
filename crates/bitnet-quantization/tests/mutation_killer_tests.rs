@@ -572,7 +572,7 @@ mod quantization_round_trip_property_tests {
 
     proptest! {
         #[test]
-        #[ignore] // Disabled due to edge case handling - focus on successful mutation killers
+        #[ignore = "Disabled due to edge case handling - focus on successful mutation killers"]
         fn test_i2s_round_trip_accuracy_invariant(
             data in prop::collection::vec(-100.0f32..100.0f32, 32..1024),
             block_size in 16usize..128
@@ -617,7 +617,7 @@ mod quantization_round_trip_property_tests {
         }
 
         #[test]
-        #[ignore] // Disabled due to edge case handling - focus on successful mutation killers
+        #[ignore = "Disabled due to edge case handling - focus on successful mutation killers"]
         fn test_tl1_round_trip_accuracy_invariant(
             data in prop::collection::vec(-50.0f32..50.0f32, 64..512),
             block_size in prop::sample::select(vec![16, 32, 64, 128])
@@ -659,7 +659,7 @@ mod quantization_round_trip_property_tests {
         }
 
         #[test]
-        #[ignore] // Disabled due to edge case handling - focus on successful mutation killers
+        #[ignore = "Disabled due to edge case handling - focus on successful mutation killers"]
         fn test_tl2_round_trip_accuracy_invariant(
             data in prop::collection::vec(-25.0f32..25.0f32, 128..256),
             use_avx2 in any::<bool>()
@@ -800,7 +800,7 @@ mod quantization_boundary_tests {
     use super::*;
 
     #[test]
-    #[ignore] // Disabled due to edge case handling - focus on successful mutation killers
+    #[ignore = "Disabled due to edge case handling - focus on successful mutation killers"]
     fn test_extreme_value_quantization() {
         let quantizers: Vec<Box<dyn QuantizerTrait>> = vec![
             Box::new(I2SQuantizer::new()),

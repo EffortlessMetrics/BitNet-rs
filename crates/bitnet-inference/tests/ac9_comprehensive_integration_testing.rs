@@ -17,7 +17,7 @@ use std::sync::Arc;
 /// Validates complete transformer pipeline from tokenization to detokenization
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore]
+#[ignore = "blocked by issues #254, #260 (integration test scaffold)"]
 async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
     let workspace_root = find_workspace_root().unwrap();
     let model_path =

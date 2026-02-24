@@ -17,7 +17,7 @@ use std::process::Command;
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac4-documentation
 #[test]
-#[ignore] // Requires cargo to be available
+#[ignore = "Requires cargo to be available"]
 fn test_readme_quickstart_works() -> Result<()> {
     // Test example 1: Download model and tokenizer (from README)
     // cargo run -p xtask -- download-model

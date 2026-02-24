@@ -193,7 +193,7 @@ pub fn format_ci_stale_skip_diagnostic(
 
     let mut msg = String::new();
     msg.push_str(&format!("{}\n", SEPARATOR));
-    msg.push_str(&format!("⊘ Test skipped: {} not available (CI mode)\n", backend.name()));
+    msg.push_str(&format!("⊘ Test skipped: {} not available (CI mode)\n", backend_name(backend)));
     msg.push_str(&format!("{}\n\n", SEPARATOR));
 
     msg.push_str("CI mode detected (CI=1 or BITNET_TEST_NO_REPAIR=1).\n");
@@ -583,19 +583,25 @@ pub fn detect_backend_runtime(
 
     // Priority 1: BITNET_CROSSVAL_LIBDIR (explicit override)
     if let Ok(p) = std::env::var("BITNET_CROSSVAL_LIBDIR") {
-        candidates.push(p.into());
+        for part in p.split(if cfg!(windows) { ';' } else { ':' }) {
+            candidates.push(part.into());
+        }
     }
 
-    // Priority 2: Granular overrides (backend-specific)
+    // Priority 2: Granular overrides (backend-specific), colon-separated on Unix
     match backend {
         CppBackend::BitNet => {
             if let Ok(p) = std::env::var("CROSSVAL_RPATH_BITNET") {
-                candidates.push(p.into());
+                for part in p.split(if cfg!(windows) { ';' } else { ':' }) {
+                    candidates.push(part.into());
+                }
             }
         }
         CppBackend::Llama => {
             if let Ok(p) = std::env::var("CROSSVAL_RPATH_LLAMA") {
-                candidates.push(p.into());
+                for part in p.split(if cfg!(windows) { ';' } else { ':' }) {
+                    candidates.push(part.into());
+                }
             }
         }
     }

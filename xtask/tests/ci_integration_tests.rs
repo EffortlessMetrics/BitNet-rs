@@ -46,7 +46,7 @@ impl Drop for EnvGuard {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
-#[ignore] // Requires HF_TOKEN secret in CI
+#[ignore = "Requires HF_TOKEN secret in CI"]
 fn test_ci_with_hf_token() -> Result<()> {
     // Precondition: HF_TOKEN must be available (CI secret)
     let hf_token = match std::env::var("HF_TOKEN") {
@@ -107,7 +107,7 @@ fn test_ci_with_hf_token() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
-#[ignore] // Requires network access
+#[ignore = "Requires network access"]
 #[serial_test::serial(bitnet_env)]
 fn test_ci_without_hf_token() -> Result<()> {
     // Setup: Remove HF_TOKEN to simulate public CI environment with proper cleanup
@@ -193,7 +193,7 @@ fn test_ci_caching() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
-#[ignore] // Requires xtask to be built
+#[ignore = "Requires xtask to be built"]
 fn test_ci_workflow_simulation() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let models_dir = temp_dir.path().join("models");
@@ -326,7 +326,7 @@ fn test_ci_error_handling() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
-#[ignore] // Requires network access
+#[ignore = "Requires network access"]
 fn test_ci_deterministic_downloads() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let models_dir = temp_dir.path().join("models");
@@ -371,7 +371,7 @@ fn test_ci_deterministic_downloads() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac3-ci-integration
 #[test]
-#[ignore] // Requires parity_smoke.sh script and model
+#[ignore = "Requires parity_smoke.sh script and model"]
 fn test_parity_smoke_integration() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let models_dir = temp_dir.path().join("models");

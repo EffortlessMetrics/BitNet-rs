@@ -408,6 +408,7 @@ name = "bitnet-bdd-grid"
 version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid-core",
+ "bitnet-runtime-feature-flags",
 ]
 
 [[package]]
@@ -589,6 +590,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-honest-compute"
+version = "0.1.0"
+
+[[package]]
 name = "bitnet-inference"
 version = "0.1.0"
 dependencies = [
@@ -601,6 +606,7 @@ dependencies = [
  "bitnet-prompt-templates",
  "bitnet-quantization",
  "bitnet-receipts",
+ "bitnet-rope",
  "bitnet-sampling",
  "bitnet-sys",
  "bitnet-test-support",
@@ -762,6 +768,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitnet-common",
+ "bitnet-honest-compute",
  "chrono",
  "insta",
  "proptest",
@@ -770,6 +777,10 @@ dependencies = [
  "serde_json",
  "tempfile",
 ]
+
+[[package]]
+name = "bitnet-rope"
+version = "0.1.0"
 
 [[package]]
 name = "bitnet-runtime-bootstrap"
@@ -1084,6 +1095,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-compat",
  "bitnet-crossval",
+ "bitnet-honest-compute",
  "bitnet-inference",
  "bitnet-kernels",
  "bitnet-models",
@@ -1173,6 +1185,7 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-quantization",
+ "bitnet-rope",
  "candle-core",
  "candle-nn",
  "serial_test",

@@ -144,7 +144,7 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing GPU layer configuration in BitnetSession::create
+#[ignore = "TODO: Enable after implementing GPU layer configuration in BitnetSession::create"]
 fn test_cpu_baseline_zero_gpu_layers() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.remove(); // Ensure no env var override
@@ -177,7 +177,7 @@ fn test_cpu_baseline_zero_gpu_layers() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing GPU layer configuration
+#[ignore = "TODO: Enable after implementing GPU layer configuration"]
 fn test_explicit_gpu_layers_via_api() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.remove();
@@ -209,7 +209,7 @@ fn test_explicit_gpu_layers_via_api() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing GPU layer configuration
+#[ignore = "TODO: Enable after implementing GPU layer configuration"]
 fn test_auto_detect_all_gpu_layers() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.remove();
@@ -240,7 +240,7 @@ fn test_auto_detect_all_gpu_layers() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing env var support in BitnetSession::create
+#[ignore = "TODO: Enable after implementing env var support in BitnetSession::create"]
 fn test_env_var_gpu_layers() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.set("24");
@@ -271,7 +271,7 @@ fn test_env_var_gpu_layers() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing precedence logic
+#[ignore = "TODO: Enable after implementing precedence logic"]
 fn test_env_var_overrides_default() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.set("8");
@@ -302,7 +302,7 @@ fn test_env_var_overrides_default() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing env var parsing with error handling
+#[ignore = "TODO: Enable after implementing env var parsing with error handling"]
 fn test_env_var_parsing_edge_cases() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.set("invalid");
@@ -334,7 +334,7 @@ fn test_env_var_parsing_edge_cases() {
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
 #[cfg_attr(not(feature = "gpu"), ignore)] // Only run if GPU feature enabled
-#[ignore] // TODO: Enable after verifying llama.cpp graceful fallback behavior
+#[ignore = "TODO: Enable after verifying llama.cpp graceful fallback behavior"]
 fn test_gpu_unavailable_fallback() {
     let _cuda_guard = EnvGuard::new("CUDA_VISIBLE_DEVICES");
     _cuda_guard.set("-1"); // Force GPU unavailable
@@ -376,7 +376,7 @@ fn test_gpu_unavailable_fallback() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing GPU layer configuration + logits validation
+#[ignore = "TODO: Enable after implementing GPU layer configuration + logits validation"]
 fn test_gpu_inference_logits_validation() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.set("24");
@@ -422,7 +422,7 @@ fn test_gpu_inference_logits_validation() {
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
 #[cfg(feature = "gpu")]
-#[ignore] // TODO: Enable after implementing GPU layer configuration + parity validation
+#[ignore = "TODO: Enable after implementing GPU layer configuration + parity validation"]
 fn test_gpu_cpu_parity() {
     let model_path = get_test_model_path();
     let tokens = vec![1, 2, 3];
@@ -501,7 +501,7 @@ fn test_gpu_cpu_parity() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after verifying llama.cpp layer count clamping
+#[ignore = "TODO: Enable after verifying llama.cpp layer count clamping"]
 fn test_excessive_gpu_layers_count() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.remove();
@@ -525,7 +525,7 @@ fn test_excessive_gpu_layers_count() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing negative value validation
+#[ignore = "TODO: Enable after implementing negative value validation"]
 fn test_negative_gpu_layers_invalid() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.remove();
@@ -547,7 +547,7 @@ fn test_negative_gpu_layers_invalid() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing robust env var parsing
+#[ignore = "TODO: Enable after implementing robust env var parsing"]
 fn test_env_var_whitespace_handling() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.set(" 24 "); // Whitespace padding
@@ -568,7 +568,7 @@ fn test_env_var_whitespace_handling() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "ffi")]
-#[ignore] // TODO: Enable after implementing empty string handling
+#[ignore = "TODO: Enable after implementing empty string handling"]
 fn test_env_var_empty_string() {
     let _guard = EnvGuard::new("BITNET_GPU_LAYERS");
     _guard.set(""); // Empty string

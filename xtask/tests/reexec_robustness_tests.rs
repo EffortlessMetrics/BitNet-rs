@@ -353,7 +353,7 @@ mod integration_tests {
     /// **Related**: FR1 - Try exec() with current_exe() path first (fast path)
     #[test]
     #[cfg(unix)]
-    #[ignore] // TODO: Requires subprocess harness to avoid replacing test process
+    #[ignore = "TODO: Requires subprocess harness to avoid replacing test process"]
     #[serial(bitnet_env)]
     fn test_reexec_fast_path_with_existing_binary() {
         // **Test Strategy**:
@@ -429,7 +429,7 @@ mod integration_tests {
     ///
     /// **Related**: FR2 - Fall back to cargo run when binary unavailable
     #[test]
-    #[ignore] // TODO: Requires subprocess harness to test fallback without terminating test
+    #[ignore = "TODO: Requires subprocess harness to test fallback without terminating test"]
     #[serial(bitnet_env)]
     fn test_reexec_fallback_when_current_exe_fails() {
         // **Test Strategy**:
@@ -528,7 +528,7 @@ mod integration_tests {
     ///
     /// **Related**: FR4 - Preserve BITNET_REPAIR_PARENT environment variable
     #[test]
-    #[ignore] // TODO: Requires end-to-end repair workflow test
+    #[ignore = "TODO: Requires end-to-end repair workflow test"]
     #[serial(bitnet_env)]
     fn test_reexec_recursion_guard_prevents_loops() {
         // **Test Strategy**:
@@ -598,7 +598,7 @@ mod integration_tests {
     /// - AC6: Windows uses cargo run consistently
     /// - AC7: Exit code propagated correctly
     #[test]
-    #[ignore] // TODO: Requires full repair workflow implementation
+    #[ignore = "TODO: Requires full repair workflow implementation"]
     #[serial(bitnet_env)]
     fn test_reexec_end_to_end_repair_flow() {
         // **Test Strategy**:
@@ -702,7 +702,7 @@ mod integration_tests {
     /// **Related**: FR6 - Handle both Unix (exec) and Windows (spawn) platforms
     #[test]
     #[cfg(windows)]
-    #[ignore] // TODO: Requires Windows CI environment
+    #[ignore = "TODO: Requires Windows CI environment"]
     #[serial(bitnet_env)]
     fn test_reexec_windows_uses_spawn_consistently() {
         // **Test Strategy**:

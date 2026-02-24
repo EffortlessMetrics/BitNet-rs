@@ -288,52 +288,17 @@ jobs:
           echo "" >> benchmarks-new/results/performance-report.md
 
           if [[ -f benchmarks-new/results/regression-analysis.json ]]; then
-            python3 << 'EOF'
-import json
-try:
-    with open('benchmarks-new/results/regression-analysis.json', 'r') as f:
-        data = json.load(f)
-
-    status = data.get('status', 'unknown')
-    alerts = data.get('alerts', [])
-    summary = data.get('summary', {})
-
-    print(f'**Regression Status**: {status.upper()}')
-    print('')
-
-    if alerts:
-        critical_alerts = [a for a in alerts if a.get('level') == 'critical']
-        warning_alerts = [a for a in alerts if a.get('level') == 'warning']
-        improvement_alerts = [a for a in alerts if a.get('level') == 'improvement']
-
-        if critical_alerts:
-            print('### 🚨 Critical Issues')
-            for alert in critical_alerts:
-                print(f'- {alert.get("message", "Unknown critical issue")}')
-            print('')
-
-        if warning_alerts:
-            print('### ⚠️ Warnings')
-            for alert in warning_alerts:
-                print(f'- {alert.get("message", "Unknown warning")}')
-            print('')
-
-        if improvement_alerts:
-            print('### ✅ Improvements')
-            for alert in improvement_alerts:
-                print(f'- {alert.get("message", "Unknown improvement")}')
-            print('')
-    else:
-        print('✅ No performance issues detected')
-        print('')
-
-    if summary:
-        total_alerts = summary.get('total_alerts', 0)
-        print(f'**Summary**: {total_alerts} total alerts')
-
-except Exception as e:
-    print(f'Error generating regression analysis: {e}')
-EOF
+            status=$(jq -r '.status // "unknown"' benchmarks-new/results/regression-analysis.json | tr '[:lower:]' '[:upper:]')
+            echo "**Regression Status**: ${status}" >> benchmarks-new/results/performance-report.md
+            echo "" >> benchmarks-new/results/performance-report.md
+            jq -r '.alerts[]? | select(.level == "critical") | "- " + .message' benchmarks-new/results/regression-analysis.json | \
+              { read -r first && echo "### 🚨 Critical Issues" && echo "$first" && cat; } >> benchmarks-new/results/performance-report.md || true
+            jq -r '.alerts[]? | select(.level == "warning") | "- " + .message' benchmarks-new/results/regression-analysis.json | \
+              { read -r first && echo "### ⚠️ Warnings" && echo "$first" && cat; } >> benchmarks-new/results/performance-report.md || true
+            jq -r '.alerts[]? | select(.level == "improvement") | "- " + .message' benchmarks-new/results/regression-analysis.json | \
+              { read -r first && echo "### ✅ Improvements" && echo "$first" && cat; } >> benchmarks-new/results/performance-report.md || true
+            total=$(jq '.summary.total_alerts // 0' benchmarks-new/results/regression-analysis.json)
+            echo "**Summary**: ${total} total alerts" >> benchmarks-new/results/performance-report.md
           else
             echo "⚠️ Regression analysis not available" >> benchmarks-new/results/performance-report.md
           fi

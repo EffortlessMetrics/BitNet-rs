@@ -119,7 +119,7 @@ mod e2e_determinism_tests {
     /// **Coverage**: Validates complete fix for environment export propagation gap
     /// and deterministic auto-repair workflow (Issue #P0-1).
     #[test]
-    #[ignore] // Requires real setup-cpp-auto and cargo build - manual execution only
+    #[ignore = "Requires real setup-cpp-auto and cargo build - manual execution only"]
     #[serial(bitnet_env)]
     fn test_deterministic_available_after_repair_bitnet() {
         let _guard = EnvGuard::new("BITNET_CPP_DIR");
@@ -186,7 +186,7 @@ mod e2e_determinism_tests {
     /// **Coverage**: Validates dual-backend support (bitnet.cpp + llama.cpp)
     /// with correct environment variable handling for both backends.
     #[test]
-    #[ignore] // Requires real setup-cpp-auto and cargo build - manual execution only
+    #[ignore = "Requires real setup-cpp-auto and cargo build - manual execution only"]
     #[serial(bitnet_env)]
     fn test_deterministic_available_after_repair_llama() {
         let _guard1 = EnvGuard::new("BITNET_CROSSVAL_LIBDIR");

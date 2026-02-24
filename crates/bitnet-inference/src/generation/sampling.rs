@@ -154,16 +154,31 @@ impl SamplingStrategy {
     /// Apply top-k filtering
     fn apply_top_k(&self, logits: &CandleTensor, k: usize) -> Result<CandleTensor> {
         let mut logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
+        let vocab_size = logits_vec.len();
 
-        // Get indices sorted by logits value (descending)
-        let mut indices: Vec<usize> = (0..logits_vec.len()).collect();
-        indices.sort_by(|&i, &j| {
+        // k=0 means "all tokens" — skip filtering entirely
+        if k == 0 || k >= vocab_size {
+            return Ok(logits.clone());
+        }
+
+        // O(N) partition: rearrange so that indices[0..k] are the top-k highest logits.
+        // This is significantly faster than a full sort for large vocabularies (32k+).
+        let mut indices: Vec<usize> = (0..vocab_size).collect();
+        indices.select_nth_unstable_by(k - 1, |&i, &j| {
             logits_vec[j].partial_cmp(&logits_vec[i]).unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        // Keep only top-k, set others to negative infinity
-        for &idx in indices.iter().skip(k) {
-            logits_vec[idx] = f32::NEG_INFINITY;
+        // Keep exactly the k tokens in the top partition; mask all others.
+        // Using index-based masking (not value-based) ensures correct cardinality
+        // even when multiple tokens share the same logit value as the k-th token.
+        let mut keep = vec![false; vocab_size];
+        for &idx in &indices[..k] {
+            keep[idx] = true;
+        }
+        for (i, val) in logits_vec.iter_mut().enumerate() {
+            if !keep[i] {
+                *val = f32::NEG_INFINITY;
+            }
         }
 
         CandleTensor::from_slice(&logits_vec, logits.shape(), logits.device())
@@ -174,18 +189,25 @@ impl SamplingStrategy {
     fn apply_top_p(&self, logits: &CandleTensor, p: f32) -> Result<CandleTensor> {
         let probabilities = candle_nn::ops::softmax(logits, candle_core::D::Minus1)?;
         let prob_vec = probabilities.flatten_all()?.to_vec1::<f32>()?;
+        let logits_vec = logits.flatten_all()?.to_vec1::<f32>()?;
 
-        // Get indices sorted by probability (descending)
-        let mut indices: Vec<usize> = (0..prob_vec.len()).collect();
-        indices.sort_by(|&i, &j| {
+        // Only consider candidates that are not already masked (NEG_INFINITY)
+        // and have non-negligible probability. Sorting a sparse subset is faster
+        // than sorting the full vocabulary (important at 32k-128k vocab sizes).
+        let mut candidates: Vec<usize> = (0..prob_vec.len())
+            .filter(|&i| logits_vec[i] > f32::NEG_INFINITY && prob_vec[i] > 0.0)
+            .collect();
+
+        // Sort candidates by probability descending
+        candidates.sort_unstable_by(|&i, &j| {
             prob_vec[j].partial_cmp(&prob_vec[i]).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Find cutoff point where cumulative probability exceeds p
         let mut cumulative_prob = 0.0;
-        let mut cutoff_idx = prob_vec.len();
+        let mut cutoff_idx = candidates.len();
 
-        for (i, &idx) in indices.iter().enumerate() {
+        for (i, &idx) in candidates.iter().enumerate() {
             cumulative_prob += prob_vec[idx];
             if cumulative_prob >= p {
                 cutoff_idx = i + 1;
@@ -193,10 +215,10 @@ impl SamplingStrategy {
             }
         }
 
-        // Convert back to logits, masking tokens outside nucleus
+        // Build filtered logits: keep nucleus tokens, mask the rest
         let mut filtered_logits = vec![f32::NEG_INFINITY; prob_vec.len()];
-        for &idx in indices.iter().take(cutoff_idx) {
-            filtered_logits[idx] = logits.flatten_all()?.to_vec1::<f32>()?[idx];
+        for &idx in candidates.iter().take(cutoff_idx) {
+            filtered_logits[idx] = logits_vec[idx];
         }
 
         CandleTensor::from_slice(&filtered_logits, logits.shape(), logits.device())

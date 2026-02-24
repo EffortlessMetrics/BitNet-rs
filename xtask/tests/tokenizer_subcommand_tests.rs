@@ -23,7 +23,7 @@ use tempfile::TempDir;
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac1-tokenizer-subcommand
 #[test]
-#[ignore] // Requires HF_TOKEN and network access
+#[ignore = "Requires HF_TOKEN and network access"]
 fn test_fetch_official_source_success() -> Result<()> {
     // Precondition: HF_TOKEN must be set
     if std::env::var("HF_TOKEN").is_err() {
@@ -75,7 +75,7 @@ fn test_fetch_official_source_success() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac1-tokenizer-subcommand
 #[test]
-#[ignore] // Requires network access
+#[ignore = "Requires network access"]
 fn test_fetch_mirror_source_success() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let output_path = temp_dir.path().join("tokenizer.json");
@@ -156,7 +156,7 @@ fn test_fetch_skip_if_exists() -> Result<()> {
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac1-tokenizer-subcommand
 #[test]
-#[ignore] // Requires network access
+#[ignore = "Requires network access"]
 fn test_fetch_force_redownload() -> Result<()> {
     let temp_dir = TempDir::new()?;
     let output_path = temp_dir.path().join("tokenizer.json");

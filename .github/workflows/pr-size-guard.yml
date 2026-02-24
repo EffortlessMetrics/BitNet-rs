@@ -9,16 +9,21 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  contents: read
   pull-requests: write
+  issues: write
 
 jobs:
   check-pr-size:
     name: Check PR Size
     runs-on: ubuntu-22.04
     timeout-minutes: 10
-    # Skip this check if the PR has the 'mechanical-change' label
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'mechanical-change') }}
-    continue-on-error: true
+    # Skip for explicitly-acknowledged large PRs (mechanical refactors, AI-native work)
+    if: >-
+      ${{
+        !contains(github.event.pull_request.labels.*.name, 'mechanical-change')
+        && !contains(github.event.pull_request.labels.*.name, 'ai-native')
+      }}
 
     steps:
     - name: Checkout PR
@@ -59,8 +64,11 @@ jobs:
     - name: Check for Large Files
       id: large-files
       run: |
-        # Check for files over 100KB
-        LARGE_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | xargs -I {} du -b {} 2>/dev/null | awk '$1 > 102400 {print $2}' | head -10)
+        # Check for files over 100KB, ignoring always-large lockfiles
+        LARGE_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD \
+          | { grep -vE '^(Cargo\.lock|flake\.lock|package-lock\.json|yarn\.lock)$' || true; } \
+          | xargs -I {} du -b -- "{}" 2>/dev/null \
+          | awk '$1 > 102400 {print $2}' | head -10)
 
         if [ ! -z "$LARGE_FILES" ]; then
           echo "large_files_found=true" >> $GITHUB_OUTPUT
@@ -126,8 +134,34 @@ jobs:
           echo "should_block=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Comment on PR
-      if: steps.evaluate.outputs.size_category != 'normal'
+    - name: Write job summary
+      run: |
+        {
+          echo "## 📊 PR Size Analysis"
+          echo ""
+          echo "| Metric | Value |"
+          echo "| ------ | ----- |"
+          echo "| Total changes | ${{ steps.pr-size.outputs.total_changes }} lines |"
+          echo "| Additions | ${{ steps.pr-size.outputs.additions }} |"
+          echo "| Deletions | ${{ steps.pr-size.outputs.deletions }} |"
+          echo "| Files changed | ${{ steps.pr-size.outputs.files_changed }} |"
+          echo "| Category | ${{ steps.evaluate.outputs.size_category }} |"
+          if [ "${{ steps.large-files.outputs.large_files_found }}" = "true" ]; then
+            echo ""
+            echo "### Large files (>100 KB, excluding lockfiles)"
+            echo '```'
+            echo "${{ steps.large-files.outputs.large_files }}"
+            echo '```'
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Comment on PR (best-effort, skipped on forks)
+      if: >-
+        ${{
+          steps.evaluate.outputs.size_category != 'normal'
+          && !github.event.pull_request.head.repo.fork
+        }}
+      continue-on-error: true
       uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
       with:
         script: |
@@ -224,12 +258,16 @@ jobs:
           **Reference:** This check was added after PRs #92, #101, #103, #104 grew to 300k+ lines due to scope creep.
           `;
 
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+          try {
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (e) {
+            core.warning(`PR Size Guard: couldn't post comment (non-blocking): ${e.message}`);
+          }
 
     - name: Report Massive PRs (informational)
       if: steps.evaluate.outputs.should_block == 'true'

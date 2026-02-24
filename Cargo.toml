@@ -14,8 +14,10 @@ members = [
   "crates/bitnet-quantization",
   "crates/bitnet-kernels",
   "crates/bitnet-inference",
+  "crates/bitnet-rope",
   "crates/bitnet-tokenizers",
   "crates/bitnet-prompt-templates",
+  "crates/bitnet-honest-compute",
   "crates/bitnet-receipts",
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
@@ -64,6 +66,7 @@ resolver = "2"
 default-members = [
   "crates/bitnet-common",
   "crates/bitnet-quantization",
+  "crates/bitnet-rope",
   "crates/bitnet-transformer",
   "crates/bitnet-test-support",
   "crates/bitnet-models",

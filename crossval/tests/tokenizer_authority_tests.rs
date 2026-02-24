@@ -258,7 +258,7 @@ mod tc3_sha256_hash_deterministic {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_file_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_file_hash"]
     fn test_file_hash_determinism() {
         let path = Path::new("tests/fixtures/tokenizer.json");
 
@@ -274,7 +274,7 @@ mod tc3_sha256_hash_deterministic {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_config_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_config_hash"]
     fn test_config_hash_determinism() {
         let vocab = serde_json::json!({
             "token_0": 0,
@@ -293,7 +293,7 @@ mod tc3_sha256_hash_deterministic {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_file_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_file_hash"]
     fn test_hash_format_64_hex_chars() {
         let path = Path::new("tests/fixtures/tokenizer.json");
         let hash = compute_tokenizer_file_hash(path).unwrap();
@@ -307,7 +307,7 @@ mod tc3_sha256_hash_deterministic {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_config_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_config_hash"]
     fn test_config_hash_empty_vocab() {
         let empty_vocab = serde_json::json!({});
         let hash = compute_tokenizer_config_hash(&empty_vocab).unwrap();
@@ -321,7 +321,7 @@ mod tc3_sha256_hash_deterministic {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_config_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_config_hash"]
     fn test_config_hash_large_vocab() {
         // Simulate large vocab (128k tokens)
         let mut vocab = serde_json::Map::new();
@@ -348,7 +348,7 @@ mod tc4_hash_consistency_platforms {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_config_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_config_hash"]
     fn test_config_hash_invariant_to_key_order() {
         let vocab1 = serde_json::json!({
             "a": 0,
@@ -373,7 +373,7 @@ mod tc4_hash_consistency_platforms {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_file_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_file_hash"]
     fn test_file_hash_binary_consistency() {
         let path = Path::new("tests/fixtures/tokenizer.json");
 
@@ -390,7 +390,7 @@ mod tc4_hash_consistency_platforms {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_config_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_config_hash"]
     fn test_config_hash_property_based_determinism() {
         // TODO: Implement property-based test with proptest
         // Strategy: Generate random vocabs, verify hash consistency
@@ -402,7 +402,7 @@ mod tc4_hash_consistency_platforms {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_config_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_config_hash"]
     fn test_config_hash_length_invariant_parametric() {
         // Test with multiple vocab sizes
         let sizes = vec![1, 10, 100, 1000, 10000, 128000];
@@ -855,7 +855,7 @@ mod tc9_error_handling {
     /// AC: AC6
     /// Spec: docs/specs/parity-both-preflight-tokenizer.md#AC6
     #[test]
-    #[ignore] // Blocked by AC6 implementation: compute_tokenizer_file_hash
+    #[ignore = "Blocked by AC6 implementation: compute_tokenizer_file_hash"]
     fn test_file_hash_missing_file_error() {
         let path = Path::new("nonexistent/tokenizer.json");
         let result = compute_tokenizer_file_hash(path);
@@ -1661,7 +1661,7 @@ mod tc_ac4_exit_code_2_mismatch {
     /// AC: AC4
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
     #[test]
-    #[ignore] // Integration test - requires end-to-end parity-both execution
+    #[ignore = "Integration test - requires end-to-end parity-both execution"]
     fn test_exit_code_2_config_hash_mismatch() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
         // Verify: std::process::exit(2) called on config_hash mismatch
@@ -1673,7 +1673,7 @@ mod tc_ac4_exit_code_2_mismatch {
     /// AC: AC4
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
     #[test]
-    #[ignore] // Integration test - requires end-to-end parity-both execution
+    #[ignore = "Integration test - requires end-to-end parity-both execution"]
     fn test_exit_code_2_token_count_mismatch() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
         // Verify: std::process::exit(2) called on token_count mismatch
@@ -1685,7 +1685,7 @@ mod tc_ac4_exit_code_2_mismatch {
     /// AC: AC4
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
     #[test]
-    #[ignore] // Integration test - requires end-to-end parity-both execution
+    #[ignore = "Integration test - requires end-to-end parity-both execution"]
     fn test_exit_code_semantics_preserved() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
         // Verify: Exit code semantics match spec table
@@ -1697,7 +1697,7 @@ mod tc_ac4_exit_code_2_mismatch {
     /// AC: AC4
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC4
     #[test]
-    #[ignore] // Integration test - requires end-to-end parity-both execution
+    #[ignore = "Integration test - requires end-to-end parity-both execution"]
     fn test_error_message_printed_to_stderr() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
         // Verify: eprintln!() called with detailed error message
@@ -1719,7 +1719,7 @@ mod tc_ac5_source_detection {
     /// AC: AC5
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
     #[test]
-    #[ignore] // Requires file system fixture
+    #[ignore = "Requires file system fixture"]
     fn test_detect_source_external_tokenizer_json() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
         // Verify: Path ending with "tokenizer.json" → External
@@ -1771,7 +1771,7 @@ mod tc_ac5_source_detection {
     /// AC: AC5
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
     #[test]
-    #[ignore] // Requires file system fixture
+    #[ignore = "Requires file system fixture"]
     fn test_detect_source_absolute_path() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
         // Verify: Absolute path ending with "tokenizer.json" → External
@@ -1805,7 +1805,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires file system fixture
+    #[ignore = "Requires file system fixture"]
     fn test_file_hash_64_hex_chars() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: SHA256 hash is lowercase hex string of exactly 64 characters
@@ -1817,7 +1817,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires file system fixture
+    #[ignore = "Requires file system fixture"]
     fn test_file_hash_deterministic() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Hashing same file twice produces identical output
@@ -1843,7 +1843,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires mock tokenizer implementation
+    #[ignore = "Requires mock tokenizer implementation"]
     fn test_config_hash_deterministic() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Hashing same tokenizer config twice produces identical output
@@ -1855,7 +1855,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires mock tokenizer implementation
+    #[ignore = "Requires mock tokenizer implementation"]
     fn test_config_hash_canonical_json() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Hash computed from canonical JSON (vocab_size, real_vocab_size)
@@ -1867,7 +1867,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires mock tokenizer implementation
+    #[ignore = "Requires mock tokenizer implementation"]
     fn test_config_hash_includes_vocab_sizes() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Config hash changes when vocab_size or real_vocab_size differ
@@ -1879,7 +1879,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires mock tokenizer implementation
+    #[ignore = "Requires mock tokenizer implementation"]
     fn test_file_hash_and_config_hash_independent() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Modifying file content changes file_hash but not config_hash
@@ -1891,7 +1891,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires mock tokenizer implementation
+    #[ignore = "Requires mock tokenizer implementation"]
     fn test_hash_collision_resistance() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Different vocab configs produce different config hashes
@@ -1903,7 +1903,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires file system fixture
+    #[ignore = "Requires file system fixture"]
     fn test_hash_format_lowercase_hex() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Hash string is lowercase hex (a-f0-9), no uppercase or punctuation
@@ -1915,7 +1915,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires file system fixture and performance profiling
+    #[ignore = "Requires file system fixture and performance profiling"]
     fn test_file_hash_performance() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: File hash computation completes in < 100ms for 2MB tokenizer file
@@ -1927,7 +1927,7 @@ mod tc_ac6_hash_computation {
     /// AC: AC6
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC6
     #[test]
-    #[ignore] // Requires mock tokenizer implementation and performance profiling
+    #[ignore = "Requires mock tokenizer implementation and performance profiling"]
     fn test_config_hash_performance() {
         // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
         // Verify: Config hash computation completes in < 1ms

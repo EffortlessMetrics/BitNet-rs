@@ -1936,7 +1936,7 @@ fn test_coverage_full_integration_flow() {
 /// AC1_INT.1: End-to-end test - TokenizerAuthority computed once in parity-both
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires model files and both C++ backends (BitNet.cpp, llama.cpp)
+#[ignore = "Requires model files and both C++ backends (BitNet.cpp, llama.cpp)"]
 #[serial(bitnet_env)]
 fn test_e2e_tokenizer_authority_computed_once() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -1947,7 +1947,7 @@ fn test_e2e_tokenizer_authority_computed_once() {
 /// AC1_INT.2: End-to-end test - External tokenizer source detection
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires model files and external tokenizer.json
+#[ignore = "Requires model files and external tokenizer.json"]
 #[serial(bitnet_env)]
 fn test_e2e_external_tokenizer_source() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -1958,7 +1958,7 @@ fn test_e2e_external_tokenizer_source() {
 /// AC1_INT.3: End-to-end test - GGUF-embedded tokenizer source detection
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires GGUF model with embedded tokenizer
+#[ignore = "Requires GGUF model with embedded tokenizer"]
 #[serial(bitnet_env)]
 fn test_e2e_gguf_embedded_tokenizer_source() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -1969,7 +1969,7 @@ fn test_e2e_gguf_embedded_tokenizer_source() {
 /// AC1_INT.4: End-to-end test - File hash computed for external tokenizers
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires external tokenizer.json file
+#[ignore = "Requires external tokenizer.json file"]
 #[serial(bitnet_env)]
 fn test_e2e_file_hash_external_tokenizer() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -1980,7 +1980,7 @@ fn test_e2e_file_hash_external_tokenizer() {
 /// AC1_INT.5: End-to-end test - Config hash always computed
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires model files
+#[ignore = "Requires model files"]
 #[serial(bitnet_env)]
 fn test_e2e_config_hash_always_computed() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -1991,7 +1991,7 @@ fn test_e2e_config_hash_always_computed() {
 /// AC1_INT.6: End-to-end test - Token count from Rust tokenization
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires model files and tokenizer
+#[ignore = "Requires model files and tokenizer"]
 #[serial(bitnet_env)]
 fn test_e2e_token_count_from_rust_tokenization() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -2002,7 +2002,7 @@ fn test_e2e_token_count_from_rust_tokenization() {
 /// AC1_INT.7: End-to-end test - TokenizerAuthority determinism across runs
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires model files and reproducible environment
+#[ignore = "Requires model files and reproducible environment"]
 #[serial(bitnet_env)]
 fn test_e2e_tokenizer_authority_determinism() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -2013,7 +2013,7 @@ fn test_e2e_tokenizer_authority_determinism() {
 /// AC1_INT.8: End-to-end test - TokenizerAuthority computed after tokenizer load
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
 #[test]
-#[ignore] // Requires model files and execution trace analysis
+#[ignore = "Requires model files and execution trace analysis"]
 #[serial(bitnet_env)]
 fn test_e2e_authority_computed_after_tokenizer_load() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC1
@@ -2028,7 +2028,7 @@ fn test_e2e_authority_computed_after_tokenizer_load() {
 /// AC2_INT.1: End-to-end test - Same authority passed to both lanes
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_same_authority_both_lanes() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
@@ -2039,7 +2039,7 @@ fn test_e2e_same_authority_both_lanes() {
 /// AC2_INT.2: End-to-end test - Both receipts contain identical authority
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_both_receipts_identical_authority() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
@@ -2050,7 +2050,7 @@ fn test_e2e_both_receipts_identical_authority() {
 /// AC2_INT.3: End-to-end test - Receipt JSON includes all TokenizerAuthority fields
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_receipt_json_includes_authority_fields() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
@@ -2061,7 +2061,7 @@ fn test_e2e_receipt_json_includes_authority_fields() {
 /// AC2_INT.4: End-to-end test - Receipt files written atomically
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_receipt_files_written_atomically() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
@@ -2072,7 +2072,7 @@ fn test_e2e_receipt_files_written_atomically() {
 /// AC2_INT.5: End-to-end test - Receipt schema v2.0.0 backward compatibility
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_receipt_schema_v2_backward_compat() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
@@ -2083,7 +2083,7 @@ fn test_e2e_receipt_schema_v2_backward_compat() {
 /// AC2_INT.6: End-to-end test - Receipt naming convention (bitnet/llama)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_receipt_naming_convention() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC2
@@ -2098,7 +2098,7 @@ fn test_e2e_receipt_naming_convention() {
 /// AC3_INT.1: End-to-end test - Validation checks config_hash match
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_config_hash_match() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2109,7 +2109,7 @@ fn test_e2e_validation_config_hash_match() {
 /// AC3_INT.2: End-to-end test - Validation checks token_count match
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_token_count_match() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2120,7 +2120,7 @@ fn test_e2e_validation_token_count_match() {
 /// AC3_INT.3: End-to-end test - Validation succeeds with identical authorities
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_succeeds_identical_authorities() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2131,7 +2131,7 @@ fn test_e2e_validation_succeeds_identical_authorities() {
 /// AC3_INT.4: End-to-end test - Validation fails on config_hash mismatch
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and simulated hash mismatch
+#[ignore = "Requires model files and simulated hash mismatch"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_fails_config_hash_mismatch() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2142,7 +2142,7 @@ fn test_e2e_validation_fails_config_hash_mismatch() {
 /// AC3_INT.5: End-to-end test - Validation fails on token_count mismatch
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and simulated token count mismatch
+#[ignore = "Requires model files and simulated token count mismatch"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_fails_token_count_mismatch() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2153,7 +2153,7 @@ fn test_e2e_validation_fails_token_count_mismatch() {
 /// AC3_INT.6: End-to-end test - Validation error message includes hashes
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and simulated hash mismatch
+#[ignore = "Requires model files and simulated hash mismatch"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_error_message_includes_hashes() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2164,7 +2164,7 @@ fn test_e2e_validation_error_message_includes_hashes() {
 /// AC3_INT.7: End-to-end test - Validation after receipt writes (STEP 7.5)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and execution trace analysis
+#[ignore = "Requires model files and execution trace analysis"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_after_receipt_writes() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2175,7 +2175,7 @@ fn test_e2e_validation_after_receipt_writes() {
 /// AC3_INT.8: End-to-end test - Validation loads receipts from disk
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_validation_loads_receipts_from_disk() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC3
@@ -2190,7 +2190,7 @@ fn test_e2e_validation_loads_receipts_from_disk() {
 /// AC4_INT.1: End-to-end test - Exit code 2 on config_hash mismatch
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
 #[test]
-#[ignore] // Requires model files and simulated hash mismatch
+#[ignore = "Requires model files and simulated hash mismatch"]
 #[serial(bitnet_env)]
 fn test_e2e_exit_code_2_config_hash_mismatch() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
@@ -2201,7 +2201,7 @@ fn test_e2e_exit_code_2_config_hash_mismatch() {
 /// AC4_INT.2: End-to-end test - Exit code 2 on token_count mismatch
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
 #[test]
-#[ignore] // Requires model files and simulated token count mismatch
+#[ignore = "Requires model files and simulated token count mismatch"]
 #[serial(bitnet_env)]
 fn test_e2e_exit_code_2_token_count_mismatch() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
@@ -2212,7 +2212,7 @@ fn test_e2e_exit_code_2_token_count_mismatch() {
 /// AC4_INT.3: End-to-end test - Exit code semantics preserved
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
 #[test]
-#[ignore] // Requires model files and both C++ backends
+#[ignore = "Requires model files and both C++ backends"]
 #[serial(bitnet_env)]
 fn test_e2e_exit_code_semantics_preserved() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
@@ -2223,7 +2223,7 @@ fn test_e2e_exit_code_semantics_preserved() {
 /// AC4_INT.4: End-to-end test - Error message to stderr before exit
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
 #[test]
-#[ignore] // Requires model files and simulated tokenizer mismatch
+#[ignore = "Requires model files and simulated tokenizer mismatch"]
 #[serial(bitnet_env)]
 fn test_e2e_error_message_to_stderr() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC4
@@ -2238,7 +2238,7 @@ fn test_e2e_error_message_to_stderr() {
 /// AC5_INT.1: End-to-end test - External tokenizer.json detection
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
 #[test]
-#[ignore] // Requires external tokenizer.json file
+#[ignore = "Requires external tokenizer.json file"]
 #[serial(bitnet_env)]
 fn test_e2e_detect_source_external_tokenizer_json() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
@@ -2249,7 +2249,7 @@ fn test_e2e_detect_source_external_tokenizer_json() {
 /// AC5_INT.2: End-to-end test - GGUF-embedded tokenizer detection
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
 #[test]
-#[ignore] // Requires GGUF model file
+#[ignore = "Requires GGUF model file"]
 #[serial(bitnet_env)]
 fn test_e2e_detect_source_gguf_embedded() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
@@ -2260,7 +2260,7 @@ fn test_e2e_detect_source_gguf_embedded() {
 /// AC5_INT.3: End-to-end test - Case sensitivity in detection
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
 #[test]
-#[ignore] // Requires file system fixture
+#[ignore = "Requires file system fixture"]
 #[serial(bitnet_env)]
 fn test_e2e_detect_source_case_sensitivity() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
@@ -2271,7 +2271,7 @@ fn test_e2e_detect_source_case_sensitivity() {
 /// AC5_INT.4: End-to-end test - Absolute path detection
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
 #[test]
-#[ignore] // Requires file system fixture with absolute paths
+#[ignore = "Requires file system fixture with absolute paths"]
 #[serial(bitnet_env)]
 fn test_e2e_detect_source_absolute_path() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
@@ -2282,7 +2282,7 @@ fn test_e2e_detect_source_absolute_path() {
 /// AC5_INT.5: End-to-end test - Symlink resolution
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
 #[test]
-#[ignore] // Requires file system fixture with symlinks
+#[ignore = "Requires file system fixture with symlinks"]
 #[serial(bitnet_env)]
 fn test_e2e_detect_source_symlink_resolution() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
@@ -2293,7 +2293,7 @@ fn test_e2e_detect_source_symlink_resolution() {
 /// AC5_INT.6: End-to-end test - Non-existent path fallback
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
 #[test]
-#[ignore] // Requires non-existent path handling
+#[ignore = "Requires non-existent path handling"]
 #[serial(bitnet_env)]
 fn test_e2e_detect_source_nonexistent_path_fallback() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
@@ -2308,7 +2308,7 @@ fn test_e2e_detect_source_nonexistent_path_fallback() {
 /// AC6_INT.1: End-to-end test - File hash determinism across runs
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files and multiple runs
+#[ignore = "Requires model files and multiple runs"]
 #[serial(bitnet_env)]
 fn test_e2e_file_hash_determinism() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2319,7 +2319,7 @@ fn test_e2e_file_hash_determinism() {
 /// AC6_INT.2: End-to-end test - Config hash determinism across runs
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files and multiple runs
+#[ignore = "Requires model files and multiple runs"]
 #[serial(bitnet_env)]
 fn test_e2e_config_hash_determinism() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2330,7 +2330,7 @@ fn test_e2e_config_hash_determinism() {
 /// AC6_INT.3: End-to-end test - Hash format validation (64 hex chars)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files
+#[ignore = "Requires model files"]
 #[serial(bitnet_env)]
 fn test_e2e_hash_format_64_hex_chars() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2341,7 +2341,7 @@ fn test_e2e_hash_format_64_hex_chars() {
 /// AC6_INT.4: End-to-end test - Hash independence (file vs config)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files
+#[ignore = "Requires model files"]
 #[serial(bitnet_env)]
 fn test_e2e_hash_independence_file_vs_config() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2352,7 +2352,7 @@ fn test_e2e_hash_independence_file_vs_config() {
 /// AC6_INT.5: End-to-end test - Hash collision resistance
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires multiple tokenizer fixtures
+#[ignore = "Requires multiple tokenizer fixtures"]
 #[serial(bitnet_env)]
 fn test_e2e_hash_collision_resistance() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2363,7 +2363,7 @@ fn test_e2e_hash_collision_resistance() {
 /// AC6_INT.6: End-to-end test - File hash performance (< 100ms)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files and performance profiling
+#[ignore = "Requires model files and performance profiling"]
 #[serial(bitnet_env)]
 fn test_e2e_file_hash_performance() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2374,7 +2374,7 @@ fn test_e2e_file_hash_performance() {
 /// AC6_INT.7: End-to-end test - Config hash performance (< 1ms)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files and performance profiling
+#[ignore = "Requires model files and performance profiling"]
 #[serial(bitnet_env)]
 fn test_e2e_config_hash_performance() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2385,7 +2385,7 @@ fn test_e2e_config_hash_performance() {
 /// AC6_INT.8: End-to-end test - Large file hash (> 5MB tokenizer)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires large tokenizer fixture (> 5MB)
+#[ignore = "Requires large tokenizer fixture (> 5MB)"]
 #[serial(bitnet_env)]
 fn test_e2e_large_file_hash() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2396,7 +2396,7 @@ fn test_e2e_large_file_hash() {
 /// AC6_INT.9: End-to-end test - Hash memory overhead negligible
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files and memory profiling
+#[ignore = "Requires model files and memory profiling"]
 #[serial(bitnet_env)]
 fn test_e2e_hash_memory_overhead_negligible() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2407,7 +2407,7 @@ fn test_e2e_hash_memory_overhead_negligible() {
 /// AC6_INT.10: End-to-end test - Hash format lowercase hex (no uppercase/hyphens)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires model files
+#[ignore = "Requires model files"]
 #[serial(bitnet_env)]
 fn test_e2e_hash_format_lowercase_hex() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2418,7 +2418,7 @@ fn test_e2e_hash_format_lowercase_hex() {
 /// AC6_INT.11: End-to-end test - Config hash includes vocab sizes
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires tokenizer fixtures with different vocab sizes
+#[ignore = "Requires tokenizer fixtures with different vocab sizes"]
 #[serial(bitnet_env)]
 fn test_e2e_config_hash_includes_vocab_sizes() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
@@ -2429,7 +2429,7 @@ fn test_e2e_config_hash_includes_vocab_sizes() {
 /// AC6_INT.12: End-to-end test - Hash error handling (missing file)
 /// Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6
 #[test]
-#[ignore] // Requires simulated missing file scenario
+#[ignore = "Requires simulated missing file scenario"]
 #[serial(bitnet_env)]
 fn test_e2e_hash_error_handling_missing_file() {
     // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC6

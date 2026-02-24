@@ -144,27 +144,10 @@ jobs:
           # Generate performance summary from test artifacts
           if [ -d "test-artifacts" ]; then
             echo "## Performance Summary"
-            python3 -c "
-import json
-import glob
-import statistics
-
-files = glob.glob('test-artifacts/regression_*.json')
-if files:
-    timings = []
-    for f in files:
-        with open(f) as fp:
-            data = json.load(fp)
-            if 'meta' in data and 'timing_ms' in data['meta']:
-                total = data['meta']['timing_ms'].get('total', 0)
-                if total > 0:
-                    timings.append(total)
-
-    if timings:
-        print(f'Median inference time: {statistics.median(timings):.1f}ms')
-        print(f'Mean inference time: {statistics.mean(timings):.1f}ms')
-        print(f'Min/Max: {min(timings):.1f}ms / {max(timings):.1f}ms')
-"
+            for f in test-artifacts/regression_*.json; do
+              [ -f "$f" ] || continue
+              python3 -c "import json,statistics; d=json.load(open('$f')); ms=d.get('meta',{}).get('timing_ms',{}).get('total',0); print(f'Timing ({f}): {ms:.1f}ms') if ms else None"
+            done
           fi
 
       - name: Comment PR with results

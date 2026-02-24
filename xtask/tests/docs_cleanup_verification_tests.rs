@@ -82,7 +82,7 @@ fn read_file(relative_path: &str) -> Result<String> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac1_grep_no_when_available_in_rust_sources() -> Result<()> {
     let output =
         run_grep("when available", &["xtask/src", "bitnet-cli/src", "crates/*/src"], &["*.rs"])?;
@@ -93,7 +93,7 @@ fn test_ac1_grep_no_when_available_in_rust_sources() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac1_grep_no_if_available_in_rust_sources() -> Result<()> {
     let output =
         run_grep("if available", &["xtask/src", "bitnet-cli/src", "crates/*/src"], &["*.rs"])?;
@@ -104,7 +104,7 @@ fn test_ac1_grep_no_if_available_in_rust_sources() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac1_grep_no_runtime_availability_in_rust_sources() -> Result<()> {
     let output = run_grep(
         "runtime availability",
@@ -118,7 +118,7 @@ fn test_ac1_grep_no_runtime_availability_in_rust_sources() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac1_grep_no_as_available_in_rust_sources() -> Result<()> {
     let output =
         run_grep("as available", &["xtask/src", "bitnet-cli/src", "crates/*/src"], &["*.rs"])?;
@@ -129,7 +129,7 @@ fn test_ac1_grep_no_as_available_in_rust_sources() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac1_grep_no_when_available_in_documentation() -> Result<()> {
     let output = run_grep("when available", &["docs", "CLAUDE.md"], &["*.md"])?;
 
@@ -139,7 +139,7 @@ fn test_ac1_grep_no_when_available_in_documentation() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac1_grep_no_if_available_in_documentation() -> Result<()> {
     let output = run_grep("if available", &["docs", "CLAUDE.md"], &["*.md"])?;
 
@@ -149,7 +149,7 @@ fn test_ac1_grep_no_if_available_in_documentation() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac1_automated_verification_script_exists() {
     assert!(
         file_exists("scripts/verify_no_ambiguous_phrasing.sh"),
@@ -163,7 +163,7 @@ fn test_ac1_automated_verification_script_exists() {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac2
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac2_preflight_uses_detected_at_build_time() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -176,7 +176,7 @@ fn test_ac2_preflight_uses_detected_at_build_time() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac2
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac2_feature_flags_use_compiled_if_terminology() -> Result<()> {
     let content = read_file("docs/explanation/FEATURES.md")?;
 
@@ -189,7 +189,7 @@ fn test_ac2_feature_flags_use_compiled_if_terminology() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac2
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac2_runtime_library_resolution_terminology() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -205,7 +205,7 @@ fn test_ac2_runtime_library_resolution_terminology() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac2
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac2_backend_libraries_found_terminology() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -222,7 +222,7 @@ fn test_ac2_backend_libraries_found_terminology() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac3
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac3_rebuild_instructions_in_error_messages() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -236,7 +236,7 @@ fn test_ac3_rebuild_instructions_in_error_messages() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac3
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac3_environment_override_documented() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -249,7 +249,7 @@ fn test_ac3_environment_override_documented() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac3
 #[test]
-#[ignore] // TODO: Implement after documentation cleanup
+#[ignore = "TODO: Implement after documentation cleanup"]
 fn test_ac3_rebuild_guidance_explains_build_time_constants() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -266,7 +266,7 @@ fn test_ac3_rebuild_guidance_explains_build_time_constants() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac4
 #[test]
-#[ignore] // TODO: Implement after preflight help text implementation
+#[ignore = "TODO: Implement after preflight help text implementation"]
 fn test_ac4_help_text_documents_repair_mode_auto() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -279,7 +279,7 @@ fn test_ac4_help_text_documents_repair_mode_auto() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac4
 #[test]
-#[ignore] // TODO: Implement after preflight help text implementation
+#[ignore = "TODO: Implement after preflight help text implementation"]
 fn test_ac4_help_text_documents_repair_mode_never() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -292,7 +292,7 @@ fn test_ac4_help_text_documents_repair_mode_never() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac4
 #[test]
-#[ignore] // TODO: Implement after preflight help text implementation
+#[ignore = "TODO: Implement after preflight help text implementation"]
 fn test_ac4_help_text_documents_repair_mode_always() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -305,7 +305,7 @@ fn test_ac4_help_text_documents_repair_mode_always() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac4
 #[test]
-#[ignore] // TODO: Implement after preflight help text implementation
+#[ignore = "TODO: Implement after preflight help text implementation"]
 fn test_ac4_help_text_documents_ci_aware_defaults() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -318,7 +318,7 @@ fn test_ac4_help_text_documents_ci_aware_defaults() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac4
 #[test]
-#[ignore] // TODO: Implement after preflight help text implementation
+#[ignore = "TODO: Implement after preflight help text implementation"]
 fn test_ac4_help_text_includes_repair_flag_examples() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -335,7 +335,7 @@ fn test_ac4_help_text_includes_repair_flag_examples() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac5
 #[test]
-#[ignore] // TODO: Implement after exit code documentation created
+#[ignore = "TODO: Implement after exit code documentation created"]
 fn test_ac5_exit_codes_reference_file_exists() {
     assert!(
         file_exists("docs/reference/exit-codes.md"),
@@ -345,7 +345,7 @@ fn test_ac5_exit_codes_reference_file_exists() {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac5
 #[test]
-#[ignore] // TODO: Implement after exit code documentation created
+#[ignore = "TODO: Implement after exit code documentation created"]
 fn test_ac5_exit_codes_reference_includes_taxonomy() -> Result<()> {
     let content = read_file("docs/reference/exit-codes.md")?;
 
@@ -362,7 +362,7 @@ fn test_ac5_exit_codes_reference_includes_taxonomy() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac5
 #[test]
-#[ignore] // TODO: Implement after preflight help text implementation
+#[ignore = "TODO: Implement after preflight help text implementation"]
 fn test_ac5_help_text_includes_exit_codes_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -375,7 +375,7 @@ fn test_ac5_help_text_includes_exit_codes_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac5
 #[test]
-#[ignore] // TODO: Implement after preflight help text implementation
+#[ignore = "TODO: Implement after preflight help text implementation"]
 fn test_ac5_help_text_documents_recovery_by_exit_code() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -388,7 +388,7 @@ fn test_ac5_help_text_documents_recovery_by_exit_code() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac5
 #[test]
-#[ignore] // TODO: Implement after exit code documentation created
+#[ignore = "TODO: Implement after exit code documentation created"]
 fn test_ac5_exit_codes_reference_links_in_help_text() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -405,7 +405,7 @@ fn test_ac5_exit_codes_reference_links_in_help_text() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac6
 #[test]
-#[ignore] // TODO: Implement after error message templates implemented
+#[ignore = "TODO: Implement after error message templates implemented"]
 fn test_ac6_error_messages_include_status_icon() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -418,7 +418,7 @@ fn test_ac6_error_messages_include_status_icon() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac6
 #[test]
-#[ignore] // TODO: Implement after error message templates implemented
+#[ignore = "TODO: Implement after error message templates implemented"]
 fn test_ac6_error_messages_include_error_detail_section() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -431,7 +431,7 @@ fn test_ac6_error_messages_include_error_detail_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac6
 #[test]
-#[ignore] // TODO: Implement after error message templates implemented
+#[ignore = "TODO: Implement after error message templates implemented"]
 fn test_ac6_error_messages_include_recovery_steps() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -444,7 +444,7 @@ fn test_ac6_error_messages_include_recovery_steps() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac6
 #[test]
-#[ignore] // TODO: Implement after error message templates implemented
+#[ignore = "TODO: Implement after error message templates implemented"]
 fn test_ac6_error_messages_include_documentation_links() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -457,7 +457,7 @@ fn test_ac6_error_messages_include_documentation_links() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac6
 #[test]
-#[ignore] // TODO: Implement after error message templates implemented
+#[ignore = "TODO: Implement after error message templates implemented"]
 fn test_ac6_error_messages_include_exit_code_description() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -474,7 +474,7 @@ fn test_ac6_error_messages_include_exit_code_description() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_command_name_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -487,7 +487,7 @@ fn test_ac7_help_text_includes_command_name_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_usage_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -500,7 +500,7 @@ fn test_ac7_help_text_includes_usage_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_description_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -513,7 +513,7 @@ fn test_ac7_help_text_includes_description_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_options_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -526,7 +526,7 @@ fn test_ac7_help_text_includes_options_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_examples_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -539,7 +539,7 @@ fn test_ac7_help_text_includes_examples_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_exit_codes_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -552,7 +552,7 @@ fn test_ac7_help_text_includes_exit_codes_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_recovery_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -565,7 +565,7 @@ fn test_ac7_help_text_includes_recovery_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_ac7_help_text_includes_documentation_section() -> Result<()> {
     let help = run_preflight_help()?;
 
@@ -582,7 +582,7 @@ fn test_ac7_help_text_includes_documentation_section() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac8
 #[test]
-#[ignore] // TODO: Implement after verbose output enhancement
+#[ignore = "TODO: Implement after verbose output enhancement"]
 fn test_ac8_verbose_output_includes_timestamps() -> Result<()> {
     let repo = repo_root();
     let mut cmd = Command::new("cargo");
@@ -602,7 +602,7 @@ fn test_ac8_verbose_output_includes_timestamps() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac8
 #[test]
-#[ignore] // TODO: Implement after verbose output enhancement
+#[ignore = "TODO: Implement after verbose output enhancement"]
 fn test_ac8_verbose_output_includes_phase_markers() -> Result<()> {
     let repo = repo_root();
     let mut cmd = Command::new("cargo");
@@ -627,7 +627,7 @@ fn test_ac8_verbose_output_includes_phase_markers() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac8
 #[test]
-#[ignore] // TODO: Implement after verbose output enhancement
+#[ignore = "TODO: Implement after verbose output enhancement"]
 fn test_ac8_verbose_output_timestamp_format_consistency() -> Result<()> {
     let repo = repo_root();
     let mut cmd = Command::new("cargo");
@@ -654,7 +654,7 @@ fn test_ac8_verbose_output_timestamp_format_consistency() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac9
 #[test]
-#[ignore] // TODO: Implement after CLAUDE.md updates
+#[ignore = "TODO: Implement after CLAUDE.md updates"]
 fn test_ac9_claude_md_documents_preflight_auto_repair() -> Result<()> {
     let content = read_file("CLAUDE.md")?;
 
@@ -667,7 +667,7 @@ fn test_ac9_claude_md_documents_preflight_auto_repair() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac9
 #[test]
-#[ignore] // TODO: Implement after CLAUDE.md updates
+#[ignore = "TODO: Implement after CLAUDE.md updates"]
 fn test_ac9_claude_md_documents_repair_mode_variants() -> Result<()> {
     let content = read_file("CLAUDE.md")?;
 
@@ -680,7 +680,7 @@ fn test_ac9_claude_md_documents_repair_mode_variants() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac9
 #[test]
-#[ignore] // TODO: Implement after CLAUDE.md updates
+#[ignore = "TODO: Implement after CLAUDE.md updates"]
 fn test_ac9_claude_md_includes_dual_backend_patterns() -> Result<()> {
     let content = read_file("CLAUDE.md")?;
 
@@ -693,7 +693,7 @@ fn test_ac9_claude_md_includes_dual_backend_patterns() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac9
 #[test]
-#[ignore] // TODO: Implement after CLAUDE.md updates
+#[ignore = "TODO: Implement after CLAUDE.md updates"]
 fn test_ac9_claude_md_includes_exit_code_handling() -> Result<()> {
     let content = read_file("CLAUDE.md")?;
 
@@ -706,7 +706,7 @@ fn test_ac9_claude_md_includes_exit_code_handling() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac9
 #[test]
-#[ignore] // TODO: Implement after CLAUDE.md updates
+#[ignore = "TODO: Implement after CLAUDE.md updates"]
 fn test_ac9_claude_md_no_ambiguous_when_available() -> Result<()> {
     let content = read_file("CLAUDE.md")?;
 
@@ -723,7 +723,7 @@ fn test_ac9_claude_md_no_ambiguous_when_available() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac10
 #[test]
-#[ignore] // TODO: Implement after cpp-setup.md updates
+#[ignore = "TODO: Implement after cpp-setup.md updates"]
 fn test_ac10_cpp_setup_includes_quick_start_auto_provisioning() -> Result<()> {
     let content = read_file("docs/howto/cpp-setup.md")?;
 
@@ -736,7 +736,7 @@ fn test_ac10_cpp_setup_includes_quick_start_auto_provisioning() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac10
 #[test]
-#[ignore] // TODO: Implement after cpp-setup.md updates
+#[ignore = "TODO: Implement after cpp-setup.md updates"]
 fn test_ac10_cpp_setup_documents_backend_selection() -> Result<()> {
     let content = read_file("docs/howto/cpp-setup.md")?;
 
@@ -750,7 +750,7 @@ fn test_ac10_cpp_setup_documents_backend_selection() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac10
 #[test]
-#[ignore] // TODO: Implement after cpp-setup.md updates
+#[ignore = "TODO: Implement after cpp-setup.md updates"]
 fn test_ac10_cpp_setup_includes_preflight_examples() -> Result<()> {
     let content = read_file("docs/howto/cpp-setup.md")?;
 
@@ -763,7 +763,7 @@ fn test_ac10_cpp_setup_includes_preflight_examples() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac10
 #[test]
-#[ignore] // TODO: Implement after cpp-setup.md updates
+#[ignore = "TODO: Implement after cpp-setup.md updates"]
 fn test_ac10_cpp_setup_includes_manual_setup_alternatives() -> Result<()> {
     let content = read_file("docs/howto/cpp-setup.md")?;
 
@@ -776,7 +776,7 @@ fn test_ac10_cpp_setup_includes_manual_setup_alternatives() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac10
 #[test]
-#[ignore] // TODO: Implement after cpp-setup.md updates
+#[ignore = "TODO: Implement after cpp-setup.md updates"]
 fn test_ac10_cpp_setup_documents_troubleshooting() -> Result<()> {
     let content = read_file("docs/howto/cpp-setup.md")?;
 
@@ -791,7 +791,7 @@ fn test_ac10_cpp_setup_documents_troubleshooting() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac10
 #[test]
-#[ignore] // TODO: Implement after cpp-setup.md updates
+#[ignore = "TODO: Implement after cpp-setup.md updates"]
 fn test_ac10_cpp_setup_no_ambiguous_when_available() -> Result<()> {
     let content = read_file("docs/howto/cpp-setup.md")?;
 
@@ -808,7 +808,7 @@ fn test_ac10_cpp_setup_no_ambiguous_when_available() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after verification script created
+#[ignore = "TODO: Implement after verification script created"]
 fn test_integration_verify_no_ambiguous_phrasing_script_succeeds() -> Result<()> {
     let repo = repo_root();
     let script_path = repo.join("scripts/verify_no_ambiguous_phrasing.sh");
@@ -836,7 +836,7 @@ fn test_integration_verify_no_ambiguous_phrasing_script_succeeds() -> Result<()>
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac5
 #[test]
-#[ignore] // TODO: Implement after exit code verification script created
+#[ignore = "TODO: Implement after exit code verification script created"]
 fn test_integration_verify_exit_codes_script_succeeds() -> Result<()> {
     let repo = repo_root();
     let script_path = repo.join("scripts/verify_exit_codes.sh");
@@ -862,7 +862,7 @@ fn test_integration_verify_exit_codes_script_succeeds() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac1
 #[test]
-#[ignore] // TODO: Implement after replacement script created
+#[ignore = "TODO: Implement after replacement script created"]
 fn test_integration_replace_ambiguous_phrasing_script_exists() {
     assert!(
         file_exists("scripts/replace_ambiguous_phrasing.sh"),
@@ -876,7 +876,7 @@ fn test_integration_replace_ambiguous_phrasing_script_exists() {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac6
 #[test]
-#[ignore] // TODO: Implement after error message templates implemented
+#[ignore = "TODO: Implement after error message templates implemented"]
 fn test_property_all_error_messages_have_4_part_structure() -> Result<()> {
     let content = read_file("xtask/src/crossval/preflight.rs")?;
 
@@ -907,7 +907,7 @@ fn test_property_all_error_messages_have_4_part_structure() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac7
 #[test]
-#[ignore] // TODO: Implement after help text standardization
+#[ignore = "TODO: Implement after help text standardization"]
 fn test_property_all_commands_use_8_section_help_template() -> Result<()> {
     let commands = vec!["preflight", "setup-cpp-auto", "crossval-per-token"];
 
@@ -949,7 +949,7 @@ fn test_property_all_commands_use_8_section_help_template() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac9-ac10
 #[test]
-#[ignore] // TODO: Implement after documentation updates
+#[ignore = "TODO: Implement after documentation updates"]
 fn test_cross_reference_claude_md_and_cpp_setup_consistency() -> Result<()> {
     let claude_content = read_file("CLAUDE.md")?;
     let cpp_setup_content = read_file("docs/howto/cpp-setup.md")?;
@@ -976,7 +976,7 @@ fn test_cross_reference_claude_md_and_cpp_setup_consistency() -> Result<()> {
 
 /// Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md#ac5-ac6
 #[test]
-#[ignore] // TODO: Implement after exit code documentation and error templates
+#[ignore = "TODO: Implement after exit code documentation and error templates"]
 fn test_cross_reference_exit_codes_in_error_messages_and_help() -> Result<()> {
     let preflight_content = read_file("xtask/src/crossval/preflight.rs")?;
     let exit_codes_doc = read_file("docs/reference/exit-codes.md")?;

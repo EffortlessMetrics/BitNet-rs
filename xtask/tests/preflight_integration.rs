@@ -39,7 +39,7 @@ mod exit_code_validation {
     /// exit code should be 0 (success).
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Verify exit code 0 when HAS_LLAMA=true
+    #[ignore = "TODO: Verify exit code 0 when HAS_LLAMA=true"]
     fn test_exit_code_0_when_backend_available() {
         // TODO: Build xtask with crossval-all features
         // TODO: Ensure HAS_LLAMA=true (setup C++ libraries if needed)
@@ -58,7 +58,7 @@ mod exit_code_validation {
     /// exit code should be 1 (unavailable).
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Verify exit code 1 when HAS_LLAMA=false
+    #[ignore = "TODO: Verify exit code 1 when HAS_LLAMA=false"]
     fn test_exit_code_1_when_backend_unavailable() {
         // TODO: Build xtask without C++ libraries present
         // TODO: Ensure HAS_LLAMA=false (clean environment)
@@ -161,7 +161,7 @@ mod verbose_flag_behavior {
     /// variables section and library search paths section.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Implement verbose diagnostics output
+    #[ignore = "TODO: Implement verbose diagnostics output"]
     fn test_verbose_flag_shows_environment_variables() {
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama --verbose
         // TODO: Capture stdout
@@ -181,7 +181,7 @@ mod verbose_flag_behavior {
     /// paths with ✓ exists / ✗ missing markers.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Implement verbose search path display
+    #[ignore = "TODO: Implement verbose search path display"]
     fn test_verbose_flag_shows_search_paths_with_existence_checks() {
         // TODO: Set up test environment with BITNET_CPP_DIR
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama --verbose
@@ -202,7 +202,7 @@ mod verbose_flag_behavior {
     /// built and which detection flags are set (CROSSVAL_HAS_LLAMA, etc.).
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Implement build metadata display in verbose mode
+    #[ignore = "TODO: Implement build metadata display in verbose mode"]
     fn test_verbose_flag_shows_build_metadata() {
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama --verbose
         // TODO: Capture stdout
@@ -222,7 +222,7 @@ mod verbose_flag_behavior {
     /// standard library linking, and rpath configuration.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Implement platform-specific section in verbose output
+    #[ignore = "TODO: Implement platform-specific section in verbose output"]
     fn test_verbose_flag_shows_platform_specific_details() {
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama --verbose
         // TODO: Capture stdout
@@ -286,7 +286,7 @@ mod backend_specific_validation {
     /// llama.cpp required libraries, not bitnet libraries.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Ensure backend-specific validation only checks relevant libraries
+    #[ignore = "TODO: Ensure backend-specific validation only checks relevant libraries"]
     fn test_backend_llama_validates_only_llama_libraries() {
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama --verbose
         // TODO: Capture stdout
@@ -307,7 +307,7 @@ mod backend_specific_validation {
     /// bitnet.cpp required libraries, not llama libraries.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Ensure backend-specific validation only checks relevant libraries
+    #[ignore = "TODO: Ensure backend-specific validation only checks relevant libraries"]
     fn test_backend_bitnet_validates_only_bitnet_libraries() {
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend bitnet --verbose
         // TODO: Capture stdout
@@ -360,7 +360,7 @@ mod error_message_validation {
     /// setup-cpp-auto, rebuild, and verification.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate exact commands in error output
+    #[ignore = "TODO: Validate exact commands in error output"]
     fn test_error_output_contains_exact_recovery_commands() {
         // TODO: Ensure HAS_LLAMA=false (no C++ libraries)
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama
@@ -381,7 +381,7 @@ mod error_message_validation {
     /// major sections and light separators (─────────) for subsections.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate visual separators in error output
+    #[ignore = "TODO: Validate visual separators in error output"]
     fn test_error_output_uses_visual_separators() {
         // TODO: Ensure HAS_LLAMA=false
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama
@@ -401,7 +401,7 @@ mod error_message_validation {
     /// appear before "Option B: Manual Setup + LD_LIBRARY_PATH".
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate option ordering in error output
+    #[ignore = "TODO: Validate option ordering in error output"]
     fn test_error_output_shows_recommended_option_first() {
         // TODO: Ensure HAS_LLAMA=false
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama
@@ -422,7 +422,7 @@ mod error_message_validation {
     /// with verbose flag hint and links to docs/howto/cpp-setup.md.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate troubleshooting section in error output
+    #[ignore = "TODO: Validate troubleshooting section in error output"]
     fn test_error_output_includes_troubleshooting_section() {
         // TODO: Ensure HAS_LLAMA=false
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama
@@ -449,7 +449,7 @@ mod user_journey_scenarios {
     /// rebuild, and verification steps.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate first-time user error message flow
+    #[ignore = "TODO: Validate first-time user error message flow"]
     fn test_user_journey_first_time_user_no_cpp_installed() {
         // TODO: Clean environment (no BITNET_CPP_DIR, no libraries)
         // TODO: Rebuild xtask to ensure HAS_LLAMA=false
@@ -471,7 +471,7 @@ mod user_journey_scenarios {
     /// with "CRITICAL" callout explaining build-time detection.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate stale build scenario error message
+    #[ignore = "TODO: Validate stale build scenario error message"]
     fn test_user_journey_cpp_installed_but_stale_xtask_build() {
         // TODO: Set BITNET_CPP_DIR to valid path with libraries
         // TODO: Ensure xtask was built before BITNET_CPP_DIR was set (stale build)
@@ -493,7 +493,7 @@ mod user_journey_scenarios {
     /// suitable for CI conditional logic.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate CI use case with clear exit codes
+    #[ignore = "TODO: Validate CI use case with clear exit codes"]
     fn test_user_journey_ci_pipeline_conditional_validation() {
         // TODO: Run preflight in CI-like environment
         // TODO: Verify exit code reflects library availability (0 or 1)
@@ -512,7 +512,7 @@ mod user_journey_scenarios {
     /// existence checks to help user identify mismatches.
     #[test]
     #[cfg(feature = "crossval-all")]
-    #[ignore] // TODO: Validate verbose diagnostics for debugging
+    #[ignore = "TODO: Validate verbose diagnostics for debugging"]
     fn test_user_journey_debug_complex_library_installation() {
         // TODO: Set up non-standard BITNET_CPP_DIR layout (libs in unexpected location)
         // TODO: Run: cargo run -p xtask --features crossval-all -- preflight --backend llama --verbose

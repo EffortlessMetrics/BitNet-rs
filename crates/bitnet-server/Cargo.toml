@@ -99,6 +99,7 @@ crossval = ["runtime-profile-core", "bitnet-runtime-bootstrap/runtime-profile-cr
 default = ["prometheus", "server"]
 degraded-ok = []                                                                                                                                                                  # Map Degraded → 200 OK (default is fail-fast)
 gpu = [
+  "dep:cudarc",
   "bitnet-inference/gpu",
   "bitnet-kernels/gpu",
   "runtime-profile-core",

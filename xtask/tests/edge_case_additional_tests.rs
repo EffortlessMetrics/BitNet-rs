@@ -99,7 +99,7 @@ impl Drop for EnvGuard {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires network simulation or fault injection
+#[ignore = "Edge case - requires network simulation or fault injection"]
 fn test_network_timeout_exponential_backoff() {
     // EdgeCase: Transient network timeout during clone, should retry with backoff
 
@@ -161,7 +161,7 @@ fn test_network_timeout_exponential_backoff() {
 /// Property: Preflight checks are thread-safe and idempotent
 #[test]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires thread safety validation
+#[ignore = "Edge case - requires thread safety validation"]
 fn test_parallel_preflight_checks() {
     // EdgeCase: Multiple threads checking backend availability simultaneously
 
@@ -232,7 +232,7 @@ fn test_parallel_preflight_checks() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires DNS failure simulation
+#[ignore = "Edge case - requires DNS failure simulation"]
 fn test_dns_failure_handling() {
     // EdgeCase: DNS resolution fails during git clone
 
@@ -288,7 +288,7 @@ fn test_dns_failure_handling() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires timeout enforcement
+#[ignore = "Edge case - requires timeout enforcement"]
 fn test_build_timeout_during_cmake() {
     // EdgeCase: CMake build exceeds configured timeout
 
@@ -339,7 +339,7 @@ fn test_build_timeout_during_cmake() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires dependency checking
+#[ignore = "Edge case - requires dependency checking"]
 fn test_missing_cmake_detection() {
     // EdgeCase: cmake not available in PATH
 
@@ -400,7 +400,7 @@ fn test_missing_cmake_detection() {
 /// Property: RPATH entries are validated and cleaned up automatically
 #[test]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires RPATH validation
+#[ignore = "Edge case - requires RPATH validation"]
 fn test_stale_rpath_cleanup() {
     // EdgeCase: RPATH contains paths to deleted/moved directories
 
@@ -471,7 +471,7 @@ fn test_stale_rpath_cleanup() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires Unicode path validation
+#[ignore = "Edge case - requires Unicode path validation"]
 fn test_unicode_path_handling() {
     // EdgeCase: Path contains Unicode characters
 
@@ -530,7 +530,7 @@ fn test_unicode_path_handling() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Security edge case - requires path validation
+#[ignore = "Security edge case - requires path validation"]
 fn test_path_traversal_prevention() {
     // EdgeCase: Attempt path traversal via environment variable
 
@@ -589,7 +589,7 @@ fn test_path_traversal_prevention() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(all(feature = "crossval-all", unix))] // Unix-specific (symlinks)
-#[ignore] // Security edge case - requires symlink validation
+#[ignore = "Security edge case - requires symlink validation"]
 fn test_symlink_attack_prevention() {
     // EdgeCase: Installation directory contains malicious symlink
 
@@ -653,7 +653,7 @@ fn test_symlink_attack_prevention() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(all(feature = "crossval-all", target_os = "macos"))]
-#[ignore] // Platform-specific edge case - requires SIP detection
+#[ignore = "Platform-specific edge case - requires SIP detection"]
 fn test_macos_sip_restrictions() {
     // EdgeCase: Attempt to install in SIP-protected directory
 
@@ -702,7 +702,7 @@ fn test_macos_sip_restrictions() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(all(feature = "crossval-all", target_os = "windows"))]
-#[ignore] // Platform-specific edge case - Windows only
+#[ignore = "Platform-specific edge case - Windows only"]
 fn test_windows_path_length_limits() {
     // EdgeCase: Installation path exceeds Windows MAX_PATH (260 characters)
 
@@ -763,7 +763,7 @@ fn test_windows_path_length_limits() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(all(feature = "crossval-all", target_os = "linux"))]
-#[ignore] // Platform-specific edge case - Linux only
+#[ignore = "Platform-specific edge case - Linux only"]
 fn test_linux_glibc_version_mismatch() {
     // EdgeCase: Library requires newer GLIBC than system provides
 
@@ -811,7 +811,7 @@ fn test_linux_glibc_version_mismatch() {
 /// Property: Circular RPATH dependencies do not cause infinite loops
 #[test]
 #[cfg(all(feature = "crossval-all", unix))] // Unix-specific (symlinks)
-#[ignore] // Edge case - requires circular symlink detection
+#[ignore = "Edge case - requires circular symlink detection"]
 fn test_rpath_circular_dependency_detection() {
     // EdgeCase: RPATH contains circular symlink references
 
@@ -877,7 +877,7 @@ fn test_rpath_circular_dependency_detection() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Security edge case - requires input sanitization
+#[ignore = "Security edge case - requires input sanitization"]
 fn test_environment_variable_injection_attack() {
     // EdgeCase: Attempt shell injection via environment variable
 
@@ -943,7 +943,7 @@ fn test_environment_variable_injection_attack() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires partial download simulation
+#[ignore = "Edge case - requires partial download simulation"]
 fn test_partial_download_cleanup() {
     // EdgeCase: Clone interrupted mid-transfer, leaving partial .git
 
@@ -1003,7 +1003,7 @@ fn test_partial_download_cleanup() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires rollback logic
+#[ignore = "Edge case - requires rollback logic"]
 fn test_rollback_on_build_failure() {
     // EdgeCase: Build update fails, should preserve existing working installation
 

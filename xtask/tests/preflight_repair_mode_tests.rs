@@ -54,7 +54,7 @@ mod ac1_repair_mode_enum_tests {
     /// **When**: Backend is available
     /// **Then**: should_repair returns false
     #[test]
-    #[ignore] // TODO: Implement RepairMode enum
+    #[ignore = "TODO: Implement RepairMode enum"]
     fn test_repair_mode_auto() {
         // Mock: Create RepairMode::Auto
         // Test: should_repair(backend_available: false) -> true
@@ -65,7 +65,7 @@ mod ac1_repair_mode_enum_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC1
     /// AC:AC1 - RepairMode::Never skips repair in all cases
     #[test]
-    #[ignore] // TODO: Implement RepairMode::Never variant
+    #[ignore = "TODO: Implement RepairMode::Never variant"]
     fn test_repair_mode_never() {
         // Mock: Create RepairMode::Never
         // Test: should_repair(backend_available: false) -> false
@@ -76,7 +76,7 @@ mod ac1_repair_mode_enum_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC1
     /// AC:AC1 - RepairMode::Always forces repair even when available
     #[test]
-    #[ignore] // TODO: Implement RepairMode::Always variant
+    #[ignore = "TODO: Implement RepairMode::Always variant"]
     fn test_repair_mode_always() {
         // Mock: Create RepairMode::Always
         // Test: should_repair(backend_available: false) -> true
@@ -87,7 +87,7 @@ mod ac1_repair_mode_enum_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC1
     /// AC:AC1 - Default repair mode is Never in CI environment
     #[test]
-    #[ignore] // TODO: Implement CI detection logic
+    #[ignore = "TODO: Implement CI detection logic"]
     #[serial(bitnet_env)]
     fn test_repair_mode_default_ci() {
         // Setup: Set CI=true environment variable
@@ -99,7 +99,7 @@ mod ac1_repair_mode_enum_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC1
     /// AC:AC1 - Default repair mode is Auto in local environment
     #[test]
-    #[ignore] // TODO: Implement local environment default
+    #[ignore = "TODO: Implement local environment default"]
     fn test_repair_mode_default_local() {
         // Mock: CI=unset (local environment)
         // Mock: No explicit --repair flag
@@ -119,7 +119,7 @@ mod ac2_ci_detection_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
     /// AC:AC2 - Detects GitHub Actions CI environment
     #[test]
-    #[ignore] // TODO: Implement CI detection
+    #[ignore = "TODO: Implement CI detection"]
     #[serial(bitnet_env)]
     fn test_ci_detection_github_actions() {
         // Setup: Set GITHUB_ACTIONS=true
@@ -130,7 +130,7 @@ mod ac2_ci_detection_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
     /// AC:AC2 - Detects GitLab CI environment
     #[test]
-    #[ignore] // TODO: Implement GitLab CI detection
+    #[ignore = "TODO: Implement GitLab CI detection"]
     #[serial(bitnet_env)]
     fn test_ci_detection_gitlab() {
         // Setup: Set GITLAB_CI=true
@@ -141,7 +141,7 @@ mod ac2_ci_detection_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
     /// AC:AC2 - Detects generic CI environment variable
     #[test]
-    #[ignore] // TODO: Implement generic CI detection
+    #[ignore = "TODO: Implement generic CI detection"]
     #[serial(bitnet_env)]
     fn test_ci_detection_generic() {
         // Setup: Set CI=true
@@ -152,7 +152,7 @@ mod ac2_ci_detection_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
     /// AC:AC2 - Returns false for local environment
     #[test]
-    #[ignore] // TODO: Implement local environment detection
+    #[ignore = "TODO: Implement local environment detection"]
     fn test_ci_detection_local() {
         // Setup: No CI environment variables set
         // Assert: is_ci_environment() returns false
@@ -162,7 +162,7 @@ mod ac2_ci_detection_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC2
     /// AC:AC2 - Detects CircleCI environment
     #[test]
-    #[ignore] // TODO: Implement CircleCI detection
+    #[ignore = "TODO: Implement CircleCI detection"]
     #[serial(bitnet_env)]
     fn test_ci_detection_circleci() {
         // Setup: Set CIRCLECI=true
@@ -182,7 +182,7 @@ mod ac3_setup_cpp_auto_invocation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - setup-cpp-auto invoked with correct arguments
     #[test]
-    #[ignore] // TODO: Implement subprocess invocation
+    #[ignore = "TODO: Implement subprocess invocation"]
     fn test_setup_cpp_auto_invocation() {
         // Mock: Backend missing, RepairMode::Auto
         // Mock: Command::new() to capture invocation
@@ -194,7 +194,7 @@ mod ac3_setup_cpp_auto_invocation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - Recursion guard environment variable passed to child
     #[test]
-    #[ignore] // TODO: Implement environment variable passing
+    #[ignore = "TODO: Implement environment variable passing"]
     #[serial(bitnet_env)]
     fn test_setup_cpp_auto_env_pass() {
         // Mock: setup-cpp-auto subprocess
@@ -206,7 +206,7 @@ mod ac3_setup_cpp_auto_invocation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - Stderr captured and classified on failure
     #[test]
-    #[ignore] // TODO: Implement error capture logic
+    #[ignore = "TODO: Implement error capture logic"]
     fn test_setup_cpp_auto_error_capture() {
         // Mock: setup-cpp-auto fails with network error
         // Mock: Stderr contains "connection timeout"
@@ -218,7 +218,7 @@ mod ac3_setup_cpp_auto_invocation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - Recursion guard cleanup after success
     #[test]
-    #[ignore] // TODO: Implement guard cleanup
+    #[ignore = "TODO: Implement guard cleanup"]
     #[serial(bitnet_env)]
     fn test_setup_cpp_auto_guard_cleanup_success() {
         // Mock: setup-cpp-auto succeeds
@@ -229,7 +229,7 @@ mod ac3_setup_cpp_auto_invocation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - Recursion guard cleanup after failure
     #[test]
-    #[ignore] // TODO: Implement guard cleanup on failure
+    #[ignore = "TODO: Implement guard cleanup on failure"]
     #[serial(bitnet_env)]
     fn test_setup_cpp_auto_guard_cleanup_failure() {
         // Mock: setup-cpp-auto fails
@@ -249,7 +249,7 @@ mod ac3_xtask_rebuild_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - Successful rebuild executes clean + build sequence
     #[test]
-    #[ignore] // TODO: Implement rebuild logic
+    #[ignore = "TODO: Implement rebuild logic"]
     fn test_rebuild_xtask_success() {
         // Mock: cargo clean -p xtask -p crossval (success)
         // Mock: cargo build -p xtask --features crossval-all (success)
@@ -261,7 +261,7 @@ mod ac3_xtask_rebuild_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - Clean failure returns RebuildError::CleanFailed
     #[test]
-    #[ignore] // TODO: Implement clean error handling
+    #[ignore = "TODO: Implement clean error handling"]
     fn test_rebuild_xtask_clean_failure() {
         // Mock: cargo clean fails with exit code 1
         // Assert: Returns Err(RebuildError::CleanFailed { code: Some(1) })
@@ -271,7 +271,7 @@ mod ac3_xtask_rebuild_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC3
     /// AC:AC3 - Build failure returns RebuildError::BuildFailed
     #[test]
-    #[ignore] // TODO: Implement build error handling
+    #[ignore = "TODO: Implement build error handling"]
     fn test_rebuild_xtask_build_failure() {
         // Mock: cargo clean succeeds
         // Mock: cargo build fails with exit code 101
@@ -291,7 +291,7 @@ mod ac4_binary_reexec_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC4
     /// AC:AC4 - Original arguments preserved in re-exec
     #[test]
-    #[ignore] // TODO: Implement argument preservation
+    #[ignore = "TODO: Implement argument preservation"]
     fn test_reexec_preserves_arguments() {
         // Mock: Original args = ["xtask", "preflight", "--backend", "bitnet", "--verbose"]
         // Mock: Re-exec command creation
@@ -302,7 +302,7 @@ mod ac4_binary_reexec_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC4
     /// AC:AC4 - BITNET_REPAIR_PARENT=1 set in re-exec child
     #[test]
-    #[ignore] // TODO: Implement parent env variable
+    #[ignore = "TODO: Implement parent env variable"]
     #[serial(bitnet_env)]
     fn test_reexec_sets_parent_env() {
         // Mock: Re-exec command creation
@@ -314,7 +314,7 @@ mod ac4_binary_reexec_tests {
     /// AC:AC4 - Unix: exec() replaces current process
     #[test]
     #[cfg(unix)]
-    #[ignore] // TODO: Implement Unix exec() path
+    #[ignore = "TODO: Implement Unix exec() path"]
     fn test_reexec_replaces_process_unix() {
         // Mock: Unix platform
         // Mock: CommandExt::exec() call
@@ -327,7 +327,7 @@ mod ac4_binary_reexec_tests {
     /// AC:AC4 - Windows: spawn + exit
     #[test]
     #[cfg(not(unix))]
-    #[ignore] // TODO: Implement Windows spawn path
+    #[ignore = "TODO: Implement Windows spawn path"]
     fn test_reexec_spawns_child_windows() {
         // Mock: Windows platform
         // Mock: Command::status() call
@@ -348,7 +348,7 @@ mod ac5_recursion_guard_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC5
     /// AC:AC5 - Repair attempted when guard not set
     #[test]
-    #[ignore] // TODO: Implement recursion guard logic
+    #[ignore = "TODO: Implement recursion guard logic"]
     #[serial(bitnet_env)]
     fn test_recursion_guard_parent_not_set() {
         // Setup: BITNET_REPAIR_PARENT not set
@@ -360,7 +360,7 @@ mod ac5_recursion_guard_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC5
     /// AC:AC5 - Repair skipped when guard is set
     #[test]
-    #[ignore] // TODO: Implement guard skip logic
+    #[ignore = "TODO: Implement guard skip logic"]
     #[serial(bitnet_env)]
     fn test_recursion_guard_parent_set() {
         // Setup: Set BITNET_REPAIR_PARENT=1
@@ -373,7 +373,7 @@ mod ac5_recursion_guard_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC5
     /// AC:AC5 - Re-exec child detects libraries (success)
     #[test]
-    #[ignore] // TODO: Implement revalidation success
+    #[ignore = "TODO: Implement revalidation success"]
     #[serial(bitnet_env)]
     fn test_recursion_guard_revalidation_success() {
         // Setup: Set BITNET_REPAIR_PARENT=1
@@ -386,7 +386,7 @@ mod ac5_recursion_guard_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC5
     /// AC:AC5 - Re-exec child fails if libraries still missing
     #[test]
-    #[ignore] // TODO: Implement revalidation failure
+    #[ignore = "TODO: Implement revalidation failure"]
     #[serial(bitnet_env)]
     fn test_recursion_guard_revalidation_failure() {
         // Setup: Set BITNET_REPAIR_PARENT=1
@@ -408,7 +408,7 @@ mod ac6_runtime_fallback_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC6
     /// AC:AC6 - Runtime detects libs when build-time missed
     #[test]
-    #[ignore] // TODO: Implement runtime fallback detection
+    #[ignore = "TODO: Implement runtime fallback detection"]
     fn test_runtime_fallback_detects_libs() {
         // Mock: Build-time detection failed (HAS_BITNET=false)
         // Mock: Runtime discovery finds libraries
@@ -419,7 +419,7 @@ mod ac6_runtime_fallback_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC6
     /// AC:AC6 - Warning message emitted with rebuild instructions
     #[test]
-    #[ignore] // TODO: Implement warning emission
+    #[ignore = "TODO: Implement warning emission"]
     fn test_runtime_fallback_emits_warning() {
         // Mock: Runtime fallback detected
         // Capture stderr
@@ -431,7 +431,7 @@ mod ac6_runtime_fallback_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC6
     /// AC:AC6 - No warning when build-time detection succeeded
     #[test]
-    #[ignore] // TODO: Implement no-warning path
+    #[ignore = "TODO: Implement no-warning path"]
     fn test_runtime_fallback_no_warning_when_build_time_ok() {
         // Mock: Build-time detection succeeded (HAS_BITNET=true)
         // Assert: check_runtime_fallback() returns None
@@ -459,7 +459,7 @@ mod ac7_exit_code_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Exit code 1 when unavailable + repair disabled
     #[test]
-    #[ignore] // TODO: Implement exit code 1
+    #[ignore = "TODO: Implement exit code 1"]
     fn test_exit_code_unavailable() {
         // Mock: Backend unavailable
         // Mock: RepairMode::Never
@@ -471,7 +471,7 @@ mod ac7_exit_code_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Exit code 2 when invalid CLI arguments
     #[test]
-    #[ignore] // TODO: Implement exit code 2
+    #[ignore = "TODO: Implement exit code 2"]
     fn test_exit_code_invalid_args() {
         // Run: preflight --backend unknown_backend
         // Assert: Exit code 2
@@ -481,7 +481,7 @@ mod ac7_exit_code_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Exit code 3 on network failure (after retries)
     #[test]
-    #[ignore] // TODO: Implement exit code 3
+    #[ignore = "TODO: Implement exit code 3"]
     fn test_exit_code_network_failure() {
         // Mock: setup-cpp-auto fails with network error
         // Mock: All 3 retries fail
@@ -492,7 +492,7 @@ mod ac7_exit_code_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Exit code 4 on permission denied
     #[test]
-    #[ignore] // TODO: Implement exit code 4
+    #[ignore = "TODO: Implement exit code 4"]
     fn test_exit_code_permission_denied() {
         // Mock: setup-cpp-auto fails with permission error
         // Assert: Exit code 4
@@ -502,7 +502,7 @@ mod ac7_exit_code_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Exit code 5 on build failure
     #[test]
-    #[ignore] // TODO: Implement exit code 5
+    #[ignore = "TODO: Implement exit code 5"]
     fn test_exit_code_build_failure() {
         // Mock: setup-cpp-auto fails with build error
         // Assert: Exit code 5
@@ -512,7 +512,7 @@ mod ac7_exit_code_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Exit code 6 on recursion detected
     #[test]
-    #[ignore] // TODO: Implement exit code 6
+    #[ignore = "TODO: Implement exit code 6"]
     #[serial(bitnet_env)]
     fn test_exit_code_recursion_detected() {
         // Mock: Recursion guard triggered (infinite loop detection)
@@ -557,7 +557,7 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Network error: DNS resolution failure
     #[test]
-    #[ignore] // TODO: Implement DNS error classification
+    #[ignore = "TODO: Implement DNS error classification"]
     fn test_classify_network_error_dns() {
         // Mock: Stderr = "could not resolve host"
         // Assert: Classified as NetworkFailure
@@ -567,7 +567,7 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Build error: CMake not found
     #[test]
-    #[ignore] // TODO: Implement CMake error classification
+    #[ignore = "TODO: Implement CMake error classification"]
     fn test_classify_build_error_cmake_missing() {
         // Mock: Stderr = "cmake not found"
         // Assert: Classified as BuildFailure
@@ -578,7 +578,7 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Build error: Compiler not found
     #[test]
-    #[ignore] // TODO: Implement compiler error classification
+    #[ignore = "TODO: Implement compiler error classification"]
     fn test_classify_build_error_compiler_missing() {
         // Mock: Stderr = "No CMAKE_CXX_COMPILER could be found"
         // Assert: Classified as BuildFailure
@@ -588,7 +588,7 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Permission error: mkdir failure
     #[test]
-    #[ignore] // TODO: Implement permission error classification
+    #[ignore = "TODO: Implement permission error classification"]
     fn test_classify_permission_error_mkdir() {
         // Mock: Stderr = "cannot create directory '/path': Permission denied"
         // Assert: Classified as PermissionDenied
@@ -599,7 +599,7 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Permission error: EACCES
     #[test]
-    #[ignore] // TODO: Implement EACCES classification
+    #[ignore = "TODO: Implement EACCES classification"]
     fn test_classify_permission_error_eacces() {
         // Mock: Stderr contains "EACCES"
         // Assert: Classified as PermissionDenied
@@ -609,7 +609,7 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Unknown error fallback
     #[test]
-    #[ignore] // TODO: Implement unknown error classification
+    #[ignore = "TODO: Implement unknown error classification"]
     fn test_classify_unknown_error() {
         // Mock: Stderr = "unexpected error message"
         // Assert: Classified as Unknown
@@ -619,7 +619,7 @@ mod ac7_error_classification_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC7
     /// AC:AC7 - Path extraction from permission error
     #[test]
-    #[ignore] // TODO: Implement path extraction
+    #[ignore = "TODO: Implement path extraction"]
     fn test_extract_path_from_permission_error() {
         // Mock: Stderr = "permission denied: /home/user/.cache/bitnet_cpp"
         // Assert: extract_path_from_error() returns Some("/home/user/.cache/bitnet_cpp")
@@ -638,7 +638,7 @@ mod ac8_error_message_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - Network error message format
     #[test]
-    #[ignore] // TODO: Implement error message formatting
+    #[ignore = "TODO: Implement error message formatting"]
     fn test_error_message_network() {
         // Mock: NetworkFailure error
         // Assert: Message contains "❌ Backend 'bitnet.cpp' UNAVAILABLE (network error during repair)"
@@ -650,7 +650,7 @@ mod ac8_error_message_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - Build error message format
     #[test]
-    #[ignore] // TODO: Implement build error message
+    #[ignore = "TODO: Implement build error message"]
     fn test_error_message_build() {
         // Mock: BuildFailure error
         // Assert: Message contains "❌ Backend 'bitnet.cpp' UNAVAILABLE (build error during repair)"
@@ -662,7 +662,7 @@ mod ac8_error_message_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - Permission error message format
     #[test]
-    #[ignore] // TODO: Implement permission error message
+    #[ignore = "TODO: Implement permission error message"]
     fn test_error_message_permission() {
         // Mock: PermissionDenied error with path
         // Assert: Message contains "❌ Backend 'bitnet.cpp' UNAVAILABLE (permission error during repair)"
@@ -674,7 +674,7 @@ mod ac8_error_message_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - All error messages have recovery steps
     #[test]
-    #[ignore] // TODO: Implement recovery steps validation
+    #[ignore = "TODO: Implement recovery steps validation"]
     fn test_error_message_has_recovery_steps() {
         // Test: All error variants
         // Assert: Each message contains "Recovery Steps:" section
@@ -684,7 +684,7 @@ mod ac8_error_message_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC8
     /// AC:AC8 - All error messages document exit code
     #[test]
-    #[ignore] // TODO: Implement exit code documentation
+    #[ignore = "TODO: Implement exit code documentation"]
     fn test_error_message_has_exit_code() {
         // Test: All error variants
         // Assert: Each message contains "Exit code: N"
@@ -703,7 +703,7 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Exponential backoff timing verified
     #[test]
-    #[ignore] // TODO: Implement retry timing
+    #[ignore = "TODO: Implement retry timing"]
     fn test_retry_exponential_backoff() {
         // Mock: 3 network failures
         // Assert: Retry delays are 1000ms, 2000ms, 4000ms
@@ -714,7 +714,7 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Maximum retry attempts respected
     #[test]
-    #[ignore] // TODO: Implement max retry limit
+    #[ignore = "TODO: Implement max retry limit"]
     fn test_retry_max_attempts() {
         // Mock: 5 consecutive network failures
         // Assert: Only 3 retries attempted (1 initial + 3 retries = 4 total)
@@ -725,7 +725,7 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Only network errors are retryable
     #[test]
-    #[ignore] // TODO: Implement retryable error predicate
+    #[ignore = "TODO: Implement retryable error predicate"]
     fn test_retry_network_only() {
         // Test: is_retryable_error(NetworkFailure) -> true
         // Test: is_retryable_error(BuildFailure) -> false
@@ -736,7 +736,7 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Build errors not retried
     #[test]
-    #[ignore] // TODO: Implement no-retry for build errors
+    #[ignore = "TODO: Implement no-retry for build errors"]
     fn test_retry_build_error_no_retry() {
         // Mock: BuildFailure error
         // Assert: No retry attempted
@@ -747,7 +747,7 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Permission errors not retried
     #[test]
-    #[ignore] // TODO: Implement no-retry for permission errors
+    #[ignore = "TODO: Implement no-retry for permission errors"]
     fn test_retry_permission_error_no_retry() {
         // Mock: PermissionDenied error
         // Assert: No retry attempted
@@ -758,7 +758,7 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Successful retry after transient failure
     #[test]
-    #[ignore] // TODO: Implement successful retry
+    #[ignore = "TODO: Implement successful retry"]
     fn test_retry_success_after_transient_failure() {
         // Mock: First attempt fails with NetworkFailure
         // Mock: Second attempt succeeds
@@ -770,7 +770,7 @@ mod ac9_retry_logic_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC9
     /// AC:AC9 - Retry backoff capped at max_backoff_ms
     #[test]
-    #[ignore] // TODO: Implement backoff cap
+    #[ignore = "TODO: Implement backoff cap"]
     fn test_retry_backoff_capped() {
         // Mock: 10 consecutive failures (hypothetical)
         // Assert: Backoff delays capped at 16000ms (max_backoff_ms)
@@ -790,7 +790,7 @@ mod ac10_file_lock_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC10
     /// AC:AC10 - Lock acquired successfully when available
     #[test]
-    #[ignore] // TODO: Implement file lock acquisition
+    #[ignore = "TODO: Implement file lock acquisition"]
     fn test_lock_acquire_success() {
         // Mock: No existing lock file
         // Assert: RepairLock::acquire() succeeds
@@ -801,7 +801,7 @@ mod ac10_file_lock_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC10
     /// AC:AC10 - Lock acquisition fails when already held
     #[test]
-    #[ignore] // TODO: Implement lock conflict detection
+    #[ignore = "TODO: Implement lock conflict detection"]
     fn test_lock_acquire_failure() {
         // Mock: Existing lock held by another process
         // Assert: RepairLock::acquire() returns LockFailed error
@@ -812,7 +812,7 @@ mod ac10_file_lock_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC10
     /// AC:AC10 - Lock file cleaned up on drop
     #[test]
-    #[ignore] // TODO: Implement lock cleanup
+    #[ignore = "TODO: Implement lock cleanup"]
     fn test_lock_cleanup_on_drop() {
         // Mock: Acquire lock
         // Drop lock
@@ -823,7 +823,7 @@ mod ac10_file_lock_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC10
     /// AC:AC10 - Lock released even on panic
     #[test]
-    #[ignore] // TODO: Implement panic-safe cleanup
+    #[ignore = "TODO: Implement panic-safe cleanup"]
     fn test_lock_cleanup_on_panic() {
         // Mock: Acquire lock
         // Trigger panic (catch_unwind)
@@ -843,7 +843,7 @@ mod ac11_transactional_rollback_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
     /// AC:AC11 - Backup created before modifying installation
     #[test]
-    #[ignore] // TODO: Implement backup creation
+    #[ignore = "TODO: Implement backup creation"]
     fn test_transactional_backup_created() {
         // Mock: Existing installation directory
         // Mock: Start repair
@@ -855,7 +855,7 @@ mod ac11_transactional_rollback_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
     /// AC:AC11 - Backup restored on repair failure
     #[test]
-    #[ignore] // TODO: Implement rollback logic
+    #[ignore = "TODO: Implement rollback logic"]
     fn test_transactional_rollback_on_failure() {
         // Mock: Existing installation
         // Mock: setup-cpp-auto fails
@@ -867,7 +867,7 @@ mod ac11_transactional_rollback_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
     /// AC:AC11 - Backup removed on success
     #[test]
-    #[ignore] // TODO: Implement backup cleanup
+    #[ignore = "TODO: Implement backup cleanup"]
     fn test_transactional_cleanup_on_success() {
         // Mock: Existing installation
         // Mock: setup-cpp-auto succeeds
@@ -879,7 +879,7 @@ mod ac11_transactional_rollback_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
     /// AC:AC11 - No backup for fresh installation
     #[test]
-    #[ignore] // TODO: Implement fresh install path
+    #[ignore = "TODO: Implement fresh install path"]
     fn test_transactional_no_backup_for_fresh_install() {
         // Mock: No existing installation
         // Mock: Start repair
@@ -900,7 +900,7 @@ mod ac11_verbose_diagnostics_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
     /// AC:AC11 - Verbose mode shows repair workflow steps
     #[test]
-    #[ignore] // TODO: Implement verbose diagnostics
+    #[ignore = "TODO: Implement verbose diagnostics"]
     fn test_verbose_shows_repair_steps() {
         // Mock: RepairMode::Auto with --verbose
         // Capture stderr
@@ -913,7 +913,7 @@ mod ac11_verbose_diagnostics_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
     /// AC:AC11 - Verbose mode shows backend selection
     #[test]
-    #[ignore] // TODO: Implement backend selection diagnostics
+    #[ignore = "TODO: Implement backend selection diagnostics"]
     fn test_verbose_shows_backend_selection() {
         // Mock: --backend bitnet --verbose
         // Capture stderr
@@ -925,7 +925,7 @@ mod ac11_verbose_diagnostics_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC11
     /// AC:AC11 - Verbose mode shows time estimates
     #[test]
-    #[ignore] // TODO: Implement time estimate diagnostics
+    #[ignore = "TODO: Implement time estimate diagnostics"]
     fn test_verbose_shows_time_estimates() {
         // Mock: Repair workflow with --verbose
         // Capture stderr
@@ -946,7 +946,7 @@ mod ac12_help_text_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
     /// AC:AC12 - Help text documents --repair flag
     #[test]
-    #[ignore] // TODO: Implement help text validation
+    #[ignore = "TODO: Implement help text validation"]
     fn test_help_text_repair_flag() {
         // Run: cargo run -p xtask -- preflight --help
         // Assert: Output contains "--repair <MODE>"
@@ -957,7 +957,7 @@ mod ac12_help_text_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
     /// AC:AC12 - Help text documents CI-aware defaults
     #[test]
-    #[ignore] // TODO: Implement CI defaults documentation
+    #[ignore = "TODO: Implement CI defaults documentation"]
     fn test_help_text_ci_defaults() {
         // Run: cargo run -p xtask -- preflight --help
         // Assert: Output mentions "auto (default locally), never (default in CI)"
@@ -976,7 +976,7 @@ mod ac13_test_coverage_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC13
     /// AC:AC13 - All acceptance criteria have test coverage
     #[test]
-    #[ignore] // TODO: Implement coverage verification
+    #[ignore = "TODO: Implement coverage verification"]
     fn test_all_ac_covered() {
         // Scan test file for AC:AC1 through AC:AC14 tags
         // Assert: All 14 acceptance criteria have >= 1 test
@@ -986,7 +986,7 @@ mod ac13_test_coverage_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC13
     /// AC:AC13 - Test count matches specification requirement
     #[test]
-    #[ignore] // TODO: Implement test count verification
+    #[ignore = "TODO: Implement test count verification"]
     fn test_minimum_test_count() {
         // Count all tests in this file
         // Assert: Total tests >= 61 (specification requirement)
@@ -1005,7 +1005,7 @@ mod ac14_documentation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - All tests have specification traceability
     #[test]
-    #[ignore] // TODO: Implement traceability verification
+    #[ignore = "TODO: Implement traceability verification"]
     fn test_all_tests_have_spec_references() {
         // Scan test file for "Tests feature spec:" comments
         // Assert: All tests reference preflight-repair-mode-reexec.md
@@ -1015,7 +1015,7 @@ mod ac14_documentation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - All tests have AC tags for mapping
     #[test]
-    #[ignore] // TODO: Implement AC tag verification
+    #[ignore = "TODO: Implement AC tag verification"]
     fn test_all_tests_have_ac_tags() {
         // Scan test file for "AC:AC" tags
         // Assert: All non-helper tests have AC tags
@@ -1025,7 +1025,7 @@ mod ac14_documentation_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - Test documentation clarity
     #[test]
-    #[ignore] // TODO: Implement documentation clarity check
+    #[ignore = "TODO: Implement documentation clarity check"]
     fn test_documentation_clarity() {
         // Verify test comments explain Given/When/Then
         // Assert: Tests have clear setup/action/assertion comments
@@ -1044,7 +1044,7 @@ mod ac12_dual_backend_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
     /// AC:AC12 - BitNet backend end-to-end repair
     #[test]
-    #[ignore] // TODO: Implement BitNet backend repair
+    #[ignore = "TODO: Implement BitNet backend repair"]
     fn test_repair_bitnet_backend() {
         // Mock: Backend = BitNet
         // Mock: Full repair workflow
@@ -1057,7 +1057,7 @@ mod ac12_dual_backend_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
     /// AC:AC12 - llama backend end-to-end repair
     #[test]
-    #[ignore] // TODO: Implement llama backend repair
+    #[ignore = "TODO: Implement llama backend repair"]
     fn test_repair_llama_backend() {
         // Mock: Backend = Llama
         // Mock: Full repair workflow
@@ -1070,7 +1070,7 @@ mod ac12_dual_backend_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
     /// AC:AC12 - Backend-specific install directories
     #[test]
-    #[ignore] // TODO: Implement install directory verification
+    #[ignore = "TODO: Implement install directory verification"]
     fn test_backend_specific_install_dir() {
         // Test: CppBackend::BitNet.install_subdir() == "bitnet_cpp"
         // Test: CppBackend::Llama.install_subdir() == "llama_cpp"
@@ -1080,7 +1080,7 @@ mod ac12_dual_backend_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC12
     /// AC:AC12 - Backend-specific environment variables
     #[test]
-    #[ignore] // TODO: Implement env var verification
+    #[ignore = "TODO: Implement env var verification"]
     fn test_backend_specific_env_vars() {
         // Test: CppBackend::BitNet.env_var_dir() == "BITNET_CPP_DIR"
         // Test: CppBackend::Llama.env_var_dir() == "LLAMA_CPP_DIR"
@@ -1099,7 +1099,7 @@ mod ac13_ci_aware_defaults_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC13
     /// AC:AC13 - CI environment defaults to RepairMode::Never
     #[test]
-    #[ignore] // TODO: Implement CI detection
+    #[ignore = "TODO: Implement CI detection"]
     #[serial(bitnet_env)]
     fn test_default_repair_ci() {
         // Setup: Set CI=true
@@ -1111,7 +1111,7 @@ mod ac13_ci_aware_defaults_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC13
     /// AC:AC13 - Local environment defaults to RepairMode::Auto
     #[test]
-    #[ignore] // TODO: Implement local default
+    #[ignore = "TODO: Implement local default"]
     fn test_default_repair_local() {
         // Setup: CI=unset
         // Mock: No explicit --repair flag
@@ -1122,7 +1122,7 @@ mod ac13_ci_aware_defaults_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC13
     /// AC:AC13 - Explicit --repair=auto overrides CI default
     #[test]
-    #[ignore] // TODO: Implement explicit override
+    #[ignore = "TODO: Implement explicit override"]
     #[serial(bitnet_env)]
     fn test_explicit_override_ci() {
         // Setup: Set CI=true
@@ -1143,7 +1143,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - End-to-end repair success flow
     #[test]
-    #[ignore] // TODO: Implement end-to-end success flow
+    #[ignore = "TODO: Implement end-to-end success flow"]
     #[serial(bitnet_env)]
     fn test_integration_repair_success_flow() {
         // Mock: Backend missing
@@ -1159,7 +1159,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - Network failure with retry exhaustion
     #[test]
-    #[ignore] // TODO: Implement network failure flow
+    #[ignore = "TODO: Implement network failure flow"]
     fn test_integration_network_failure_flow() {
         // Mock: Backend missing
         // Mock: setup-cpp-auto fails 4 times (1 initial + 3 retries)
@@ -1171,7 +1171,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - Build failure with rollback
     #[test]
-    #[ignore] // TODO: Implement build failure flow
+    #[ignore = "TODO: Implement build failure flow"]
     fn test_integration_build_failure_flow() {
         // Mock: Backend missing
         // Mock: setup-cpp-auto fails with build error
@@ -1184,7 +1184,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - Permission error with clear recovery
     #[test]
-    #[ignore] // TODO: Implement permission error flow
+    #[ignore = "TODO: Implement permission error flow"]
     fn test_integration_permission_error_flow() {
         // Mock: Backend missing
         // Mock: setup-cpp-auto fails with permission error
@@ -1196,7 +1196,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - Lock conflict with clear message
     #[test]
-    #[ignore] // TODO: Implement lock conflict flow
+    #[ignore = "TODO: Implement lock conflict flow"]
     fn test_integration_lock_conflict_flow() {
         // Mock: Backend missing
         // Mock: Another repair operation in progress (lock held)
@@ -1208,7 +1208,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - Recursion guard prevents infinite loop
     #[test]
-    #[ignore] // TODO: Implement recursion prevention flow
+    #[ignore = "TODO: Implement recursion prevention flow"]
     #[serial(bitnet_env)]
     fn test_integration_recursion_prevention_flow() {
         // Mock: Set BITNET_REPAIR_PARENT=1 (simulate re-exec child)
@@ -1221,7 +1221,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - RepairMode::Never skips repair with manual instructions
     #[test]
-    #[ignore] // TODO: Implement never mode flow
+    #[ignore = "TODO: Implement never mode flow"]
     fn test_integration_never_mode_flow() {
         // Mock: Backend missing
         // Mock: RepairMode::Never (explicit --repair=never)
@@ -1234,7 +1234,7 @@ mod ac14_integration_tests {
     /// Tests feature spec: preflight-repair-mode-reexec.md#AC14
     /// AC:AC14 - RepairMode::Always forces refresh
     #[test]
-    #[ignore] // TODO: Implement always mode flow
+    #[ignore = "TODO: Implement always mode flow"]
     fn test_integration_always_mode_flow() {
         // Mock: Backend already available
         // Mock: RepairMode::Always (explicit --repair=always)

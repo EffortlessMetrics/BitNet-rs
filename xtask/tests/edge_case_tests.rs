@@ -179,7 +179,7 @@ fn simulate_disk_full(dir: &Path) -> std::io::Result<PathBuf> {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires implementation of file locking mechanism
+#[ignore = "Edge case - requires implementation of file locking mechanism"]
 fn test_concurrent_repair_same_backend() {
     // EdgeCase: Two threads attempt to repair bitnet.cpp simultaneously
 
@@ -274,7 +274,7 @@ fn test_concurrent_repair_same_backend() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires disk space simulation or quota enforcement
+#[ignore = "Edge case - requires disk space simulation or quota enforcement"]
 fn test_disk_space_exhaustion_during_clone() {
     // EdgeCase: Clone operation fails due to insufficient disk space
 
@@ -331,7 +331,7 @@ fn test_disk_space_exhaustion_during_clone() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires permission simulation
+#[ignore = "Edge case - requires permission simulation"]
 fn test_permission_denied_cache_directory() {
     // EdgeCase: Default cache directory is not writable
 
@@ -391,7 +391,7 @@ fn test_permission_denied_cache_directory() {
 /// Property: RPATH length is bounded by MAX_RPATH_LENGTH constant
 #[test]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires RPATH length validation
+#[ignore = "Edge case - requires RPATH length validation"]
 fn test_rpath_length_limit() {
     // EdgeCase: Many library directories create RPATH exceeding 4KB limit
 
@@ -510,7 +510,7 @@ fn test_property_deduplication_reduces_length() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires submodule simulation
+#[ignore = "Edge case - requires submodule simulation"]
 fn test_circular_dependency_timeout() {
     // EdgeCase: Git submodules form circular dependency graph
 
@@ -559,7 +559,7 @@ fn test_circular_dependency_timeout() {
 /// Property: Malformed input never causes undefined behavior
 #[test]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires GGUF validation logic
+#[ignore = "Edge case - requires GGUF validation logic"]
 fn test_malformed_gguf_error_handling() {
     // EdgeCase: Attempt parity comparison with malformed GGUF file
 
@@ -613,7 +613,7 @@ fn test_malformed_gguf_error_handling() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires version detection logic
+#[ignore = "Edge case - requires version detection logic"]
 fn test_backend_version_mismatch() {
     // EdgeCase: C++ backend version incompatibility
 
@@ -670,7 +670,7 @@ fn test_backend_version_mismatch() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires installation state tracking
+#[ignore = "Edge case - requires installation state tracking"]
 fn test_incomplete_installation_cleanup() {
     // EdgeCase: Backend installation interrupted mid-process
 
@@ -729,7 +729,7 @@ fn test_incomplete_installation_cleanup() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires precedence logic implementation
+#[ignore = "Edge case - requires precedence logic implementation"]
 fn test_environment_variable_precedence_conflict() {
     // EdgeCase: Conflicting environment variables set simultaneously
 
@@ -790,7 +790,7 @@ fn test_environment_variable_precedence_conflict() {
 #[test]
 #[serial(bitnet_env)]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Edge case - requires dependency checking logic
+#[ignore = "Edge case - requires dependency checking logic"]
 fn test_missing_dependencies_detection() {
     // EdgeCase: Required build tools not available in PATH
 
@@ -846,7 +846,7 @@ fn test_missing_dependencies_detection() {
 /// Validates that all error messages provide clear recovery steps.
 #[test]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Property test - requires error message audit
+#[ignore = "Property test - requires error message audit"]
 fn test_property_error_messages_actionable() {
     // Property: Every error message includes actionable guidance
 
@@ -877,7 +877,7 @@ fn test_property_error_messages_actionable() {
 /// Validates that partial operations can be rolled back on failure.
 #[test]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Property test - requires atomic operation verification
+#[ignore = "Property test - requires atomic operation verification"]
 fn test_property_file_operations_atomic() {
     // Property: File operations either complete fully or roll back
 
@@ -902,7 +902,7 @@ fn test_property_file_operations_atomic() {
 /// Validates that all timeouts can be customized via environment variables.
 #[test]
 #[cfg(feature = "crossval-all")]
-#[ignore] // Property test - requires timeout configuration audit
+#[ignore = "Property test - requires timeout configuration audit"]
 fn test_property_timeouts_configurable() {
     // Property: All timeout values are configurable and have sensible defaults
 

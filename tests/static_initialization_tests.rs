@@ -53,7 +53,7 @@ use std::time::{Duration, Instant};
 /// This test ensures that the initialization closure runs exactly once, regardless
 /// of how many times `get_or_init()` is called.
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration in ln_rules.rs, ffi_session.rs, weight_mapper.rs
+#[ignore = "TODO: Remove after OnceLock migration in ln_rules.rs, ffi_session.rs, weight_mapper.rs"]
 fn test_oncelock_single_initialization() {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
     static VALUE: OnceLock<u32> = OnceLock::new();
@@ -86,7 +86,7 @@ fn test_oncelock_single_initialization() {
 /// This test ensures that the initialization closure does NOT run until the
 /// first call to `get_or_init()`, preserving lazy evaluation semantics.
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_lazy_evaluation() {
     static INIT_FLAG: AtomicUsize = AtomicUsize::new(0);
     static LAZY_VALUE: OnceLock<String> = OnceLock::new();
@@ -130,7 +130,7 @@ fn test_oncelock_lazy_evaluation() {
 /// This test ensures that creating a static OnceLock does not cause side effects
 /// or premature initialization.
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_initialization_order() {
     static ORDER_TRACKER: AtomicUsize = AtomicUsize::new(0);
     static EARLY_INIT: OnceLock<u32> = OnceLock::new();
@@ -169,7 +169,7 @@ fn test_oncelock_initialization_order() {
 ///
 /// **Specification Reference**: Section 2.2.1 - API Comparison Matrix
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_get_or_init_return_value() {
     static VALUE: OnceLock<Vec<u32>> = OnceLock::new();
 
@@ -198,7 +198,7 @@ fn test_oncelock_get_or_init_return_value() {
 /// This test ensures that OnceLock provides identical thread safety guarantees
 /// to once_cell::Lazy, including single initialization and no data races.
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_concurrent_access() {
     static INIT_COUNTER: AtomicUsize = AtomicUsize::new(0);
     static SHARED_VALUE: OnceLock<Arc<Mutex<Vec<u32>>>> = OnceLock::new();
@@ -248,7 +248,7 @@ fn test_oncelock_concurrent_access() {
 /// This test ensures that exactly one thread executes the initialization closure,
 /// and all other threads block until initialization completes.
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_race_condition_protection() {
     static RACE_COUNTER: AtomicUsize = AtomicUsize::new(0);
     static PROTECTED_VALUE: OnceLock<usize> = OnceLock::new();
@@ -290,7 +290,7 @@ fn test_oncelock_race_condition_protection() {
 ///
 /// **Specification Reference**: Section 2.2.3 - Thread Safety Analysis
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_deadlock_freedom() {
     static VALUE_A: OnceLock<u32> = OnceLock::new();
     static VALUE_B: OnceLock<u32> = OnceLock::new();
@@ -322,7 +322,7 @@ fn test_oncelock_deadlock_freedom() {
 ///
 /// **Specification Reference**: Section 2.2.3 - Memory Ordering (SeqCst)
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_cross_thread_visibility() {
     static SHARED_DATA: OnceLock<Arc<Mutex<Vec<u32>>>> = OnceLock::new();
 
@@ -355,7 +355,7 @@ fn test_oncelock_cross_thread_visibility() {
 ///
 /// **Specification Reference**: Section 2.2.4 - Initialization Semantics Preservation
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_complex_initialization() {
     static COMPLEX_VALUE: OnceLock<(String, Vec<u32>, bool)> = OnceLock::new();
 
@@ -383,7 +383,7 @@ fn test_oncelock_complex_initialization() {
 ///
 /// **Specification Reference**: Section 2.2.5 - Error Handling Changes
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 #[should_panic(expected = "deliberate panic")]
 fn test_oncelock_fallible_initialization_panic() {
     static FALLIBLE_VALUE: OnceLock<u32> = OnceLock::new();
@@ -400,7 +400,7 @@ fn test_oncelock_fallible_initialization_panic() {
 ///
 /// **Specification Reference**: Section 2.2.5 - Defensive Pattern
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_fallible_initialization_result() {
     use std::sync::OnceLock;
 
@@ -422,7 +422,7 @@ fn test_oncelock_fallible_initialization_result() {
 ///
 /// **Specification Reference**: Section 3.1 - File-by-File Migration Guide
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_initialization_with_dependencies() {
     use regex::Regex;
 
@@ -441,7 +441,7 @@ fn test_oncelock_initialization_with_dependencies() {
 ///
 /// **Specification Reference**: Section 2.2.4 - Lazy Evaluation Timing
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_initialization_timing() {
     static TIMING_FLAG: AtomicUsize = AtomicUsize::new(0);
     static TIMED_VALUE: OnceLock<Instant> = OnceLock::new();
@@ -473,7 +473,7 @@ fn test_oncelock_initialization_timing() {
 ///
 /// **Specification Reference**: Section 6.4 - Performance Benchmarks
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_performance_baseline() {
     static PERF_VALUE: OnceLock<Vec<u32>> = OnceLock::new();
 
@@ -505,7 +505,7 @@ fn test_oncelock_performance_baseline() {
 ///
 /// **Specification Reference**: Section 2.2.1 - Performance (Zero-cost after init)
 #[test]
-#[ignore] // TODO: Remove after OnceLock migration completes
+#[ignore = "TODO: Remove after OnceLock migration completes"]
 fn test_oncelock_repeated_access_performance() {
     static FAST_PATH: OnceLock<u64> = OnceLock::new();
 
@@ -538,7 +538,7 @@ fn test_oncelock_repeated_access_performance() {
 ///
 /// **Specification Reference**: Section 3.1 - File 1: ln_rules.rs
 #[test]
-#[ignore] // TODO: Remove after crates/bitnet-cli/src/ln_rules.rs migration completes
+#[ignore = "TODO: Remove after crates/bitnet-cli/src/ln_rules.rs migration completes"]
 fn test_ln_rules_migration() {
     // This test validates the migration pattern used in ln_rules.rs:
     // - 3 static OnceLock<Ruleset> declarations
@@ -595,7 +595,7 @@ fn test_ln_rules_migration() {
 ///
 /// **Specification Reference**: Section 3.1 - File 2: ffi_session.rs
 #[test]
-#[ignore] // TODO: Remove after crates/bitnet-inference/src/ffi_session.rs migration completes
+#[ignore = "TODO: Remove after crates/bitnet-inference/src/ffi_session.rs migration completes"]
 fn test_ffi_session_migration() {
     // This test validates the migration pattern used in ffi_session.rs:
     // - OnceCell<Mutex<T>> → OnceLock<Mutex<T>> (direct rename, API identical)
@@ -632,7 +632,7 @@ fn test_ffi_session_migration() {
 ///
 /// **Specification Reference**: Section 3.1 - File 3: weight_mapper.rs
 #[test]
-#[ignore] // TODO: Remove after crates/bitnet-models/src/weight_mapper.rs migration completes
+#[ignore = "TODO: Remove after crates/bitnet-models/src/weight_mapper.rs migration completes"]
 fn test_weight_mapper_migration() {
     // This test validates the migration pattern used in weight_mapper.rs:
     // - Lazy<Regex> → OnceLock<Regex>
@@ -667,7 +667,7 @@ fn test_weight_mapper_migration() {
 ///
 /// **Specification Reference**: Section 3.1 - File 4: env_guard.rs
 #[test]
-#[ignore] // TODO: Remove after tests/support/env_guard.rs migration completes
+#[ignore = "TODO: Remove after tests/support/env_guard.rs migration completes"]
 fn test_env_guard_migration() {
     // This test validates the migration pattern used in env_guard.rs:
     // - Lazy<Mutex<()>> → OnceLock<Mutex<()>>
@@ -701,7 +701,7 @@ fn test_env_guard_migration() {
 ///
 /// **Specification Reference**: Section 3.1 - File 6: xtask/main.rs
 #[test]
-#[ignore] // TODO: Remove after xtask/src/main.rs migration completes
+#[ignore = "TODO: Remove after xtask/src/main.rs migration completes"]
 fn test_xtask_main_migration() {
     // This test validates the migration pattern used in xtask/main.rs:
     // - Lazy<Regex> → OnceLock<Regex>
@@ -737,7 +737,7 @@ fn test_xtask_main_migration() {
 ///
 /// **Specification Reference**: Section 6.5 - Functional Tests
 #[test]
-#[ignore] // TODO: Remove after full migration completes and CLI tests pass
+#[ignore = "TODO: Remove after full migration completes and CLI tests pass"]
 fn test_cli_workflow_with_oncelock() {
     // This test validates that CLI workflows using ln_rules.rs still work
     // after migration to OnceLock.
@@ -757,7 +757,7 @@ fn test_cli_workflow_with_oncelock() {
 ///
 /// **Specification Reference**: Section 6.5 - Functional Tests
 #[test]
-#[ignore] // TODO: Remove after full migration completes and model loading tests pass
+#[ignore = "TODO: Remove after full migration completes and model loading tests pass"]
 fn test_model_loading_with_oncelock() {
     // This test validates that model loading using weight_mapper.rs still works
     // after migration to OnceLock.
@@ -777,7 +777,7 @@ fn test_model_loading_with_oncelock() {
 ///
 /// **Specification Reference**: Section 6.5 - Functional Tests
 #[test]
-#[ignore] // TODO: Remove after full migration completes and inference tests pass
+#[ignore = "TODO: Remove after full migration completes and inference tests pass"]
 fn test_inference_with_oncelock() {
     // This test validates that inference using ffi_session.rs still works
     // after migration to OnceLock.
@@ -801,7 +801,7 @@ fn test_inference_with_oncelock() {
 ///
 /// **Specification Reference**: Section 3.2 - Cargo.toml Cleanup
 #[test]
-#[ignore] // TODO: Remove after Cargo.toml cleanup completes
+#[ignore = "TODO: Remove after Cargo.toml cleanup completes"]
 fn test_no_once_cell_dependencies() {
     // This test verifies that once_cell is removed from:
     // - Cargo.toml (workspace dependencies)
@@ -840,7 +840,7 @@ fn test_no_once_cell_dependencies() {
 ///
 /// **Specification Reference**: Section 1.1 - Current State (no lazy_static)
 #[test]
-#[ignore] // TODO: Remove after Cargo.toml verification completes
+#[ignore = "TODO: Remove after Cargo.toml verification completes"]
 fn test_no_lazy_static_dependencies() {
     // This test verifies that lazy_static was never introduced
     // (BitNet.rs never used lazy_static directly)
@@ -881,7 +881,7 @@ fn test_no_lazy_static_dependencies() {
 ///
 /// **Specification Reference**: Section 7.1 - Verification Command List
 #[test]
-#[ignore] // TODO: Remove after full migration completes
+#[ignore = "TODO: Remove after full migration completes"]
 fn test_cargo_tree_static_dependencies() {
     // This test verifies that `cargo tree` output contains no once_cell or lazy_static
 
@@ -903,7 +903,7 @@ fn test_cargo_tree_static_dependencies() {
 ///
 /// **Specification Reference**: Section 7.1 - cargo-deny Verification
 #[test]
-#[ignore] // TODO: Remove after deny.toml updated with bans
+#[ignore = "TODO: Remove after deny.toml updated with bans"]
 fn test_cargo_deny_blocks_reintroduction() {
     // This test verifies that deny.toml is configured to block once_cell and lazy_static
 
@@ -944,7 +944,7 @@ fn test_cargo_deny_blocks_reintroduction() {
 ///
 /// **Specification Reference**: Section 1.3 - MSRV Implications
 #[test]
-#[ignore] // TODO: Remove after CLAUDE.md and Cargo.toml verification completes
+#[ignore = "TODO: Remove after CLAUDE.md and Cargo.toml verification completes"]
 fn test_msrv_documented() {
     use std::fs;
     use std::path::Path;

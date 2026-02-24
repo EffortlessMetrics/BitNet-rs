@@ -41,7 +41,7 @@ fn get_gguf_path() -> Result<String> {
 }
 
 #[test]
-#[ignore] // Requires CROSSVAL_GGUF environment variable
+#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn pure_rust_tokenizer_from_gguf_smoke() -> Result<()> {
     let gguf_path = get_gguf_path()?;
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
@@ -87,7 +87,7 @@ fn pure_rust_tokenizer_from_gguf_smoke() -> Result<()> {
 }
 
 #[test]
-#[ignore] // Requires CROSSVAL_GGUF environment variable
+#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn bos_token_handling() -> Result<()> {
     let gguf_path = get_gguf_path()?;
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
@@ -153,7 +153,7 @@ fn bos_token_handling() -> Result<()> {
 }
 
 #[test]
-#[ignore] // Requires CROSSVAL_GGUF environment variable
+#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn special_token_lookup() -> Result<()> {
     let gguf_path = get_gguf_path()?;
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
@@ -222,7 +222,7 @@ fn special_token_lookup() -> Result<()> {
 }
 
 #[test]
-#[ignore] // Requires CROSSVAL_GGUF environment variable
+#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn parse_special_eot_handling() -> Result<()> {
     let gguf_path = get_gguf_path()?;
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
@@ -282,7 +282,7 @@ fn parse_special_eot_handling() -> Result<()> {
 }
 
 #[test]
-#[ignore] // Requires CROSSVAL_GGUF environment variable
+#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn tokenizer_kind_detection() -> Result<()> {
     let gguf_path = get_gguf_path()?;
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
@@ -344,7 +344,7 @@ fn tokenizer_kind_detection() -> Result<()> {
 //   - crossval: Cross-validation against C++ reference implementation
 
 #[test]
-#[ignore] // Requires CROSSVAL_GGUF environment variable
+#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn vocab_size_sanity() -> Result<()> {
     let gguf_path = get_gguf_path()?;
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;

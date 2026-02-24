@@ -61,7 +61,7 @@ impl ModelLoadingTestConfig {
 /// Tests the complete model loading pipeline with production-grade validation
 #[test]
 #[cfg(feature = "inference")]
-#[ignore] // Requires BITNET_GGUF environment variable
+#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_real_gguf_model_loading_with_validation() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
@@ -105,7 +105,7 @@ fn test_real_gguf_model_loading_with_validation() {
 /// Validates 32-byte tensor alignment requirements and provides detailed error reporting
 #[test]
 #[cfg(feature = "inference")]
-#[ignore] // Requires direct GGUF tensor access - future enhancement
+#[ignore = "Requires direct GGUF tensor access - future enhancement"]
 fn test_enhanced_tensor_alignment_validation() {
     // AC:6
     let config = ModelLoadingTestConfig::from_env();
@@ -128,7 +128,7 @@ fn test_enhanced_tensor_alignment_validation() {
 /// Validates that models can be optimized for specific device configurations
 #[test]
 #[cfg(all(feature = "inference", feature = "gpu"))]
-#[ignore] // Requires BITNET_GGUF and GPU hardware
+#[ignore = "Requires BITNET_GGUF and GPU hardware"]
 fn test_device_aware_model_optimization() {
     // AC:3
     let config = ModelLoadingTestConfig::from_env();
@@ -152,7 +152,7 @@ fn test_device_aware_model_optimization() {
 /// Validates comprehensive metadata extraction from GGUF headers
 #[test]
 #[cfg(feature = "inference")]
-#[ignore] // Requires BITNET_GGUF environment variable
+#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_model_metadata_extraction_validation() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
@@ -187,7 +187,7 @@ fn test_model_metadata_extraction_validation() {
 /// Validates GGUF format compliance and version compatibility
 #[test]
 #[cfg(feature = "inference")]
-#[ignore] // Requires BITNET_GGUF environment variable
+#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_model_format_validation_compatibility() {
     // AC:6
     let config = ModelLoadingTestConfig::from_env();
@@ -209,7 +209,7 @@ fn test_model_format_validation_compatibility() {
 /// Validates efficient loading of large models using memory mapping
 #[test]
 #[cfg(feature = "inference")]
-#[ignore] // Requires BITNET_GGUF and large model file
+#[ignore = "Requires BITNET_GGUF and large model file"]
 fn test_memory_mapped_model_loading() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
@@ -251,7 +251,7 @@ fn test_memory_mapped_model_loading() {
 /// Validates that models load consistently across different platforms
 #[test]
 #[cfg(feature = "inference")]
-#[ignore] // Requires BITNET_GGUF environment variable
+#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_cross_platform_model_loading_consistency() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
