@@ -451,61 +451,16 @@ function switchTab(tabName) {
         tab.classList.remove('active');
     });
 
-    // Reset state for all tabs
+    // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
-        tab.setAttribute('aria-selected', 'false');
-        tab.setAttribute('tabindex', '-1');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
-    // Update active tab state
-    const activeTab = document.getElementById(`tab-${tabName}`);
-    if (activeTab) {
-        activeTab.classList.add('active');
-        activeTab.setAttribute('aria-selected', 'true');
-        activeTab.setAttribute('tabindex', '0');
-        activeTab.focus();
-    }
-}
-
-// Setup keyboard navigation for tabs
-function setupTabNavigation() {
-    const tabList = document.querySelector('.tabs');
-    const tabs = Array.from(document.querySelectorAll('.tab'));
-
-    tabList.addEventListener('keydown', (e) => {
-        const key = e.key;
-        let targetTab = null;
-        const currentTab = document.activeElement;
-        const currentIndex = tabs.indexOf(currentTab);
-
-        if (currentIndex === -1) return;
-
-        switch (key) {
-            case 'ArrowLeft':
-                targetTab = tabs[currentIndex === 0 ? tabs.length - 1 : currentIndex - 1];
-                break;
-            case 'ArrowRight':
-                targetTab = tabs[currentIndex === tabs.length - 1 ? 0 : currentIndex + 1];
-                break;
-            case 'Home':
-                targetTab = tabs[0];
-                break;
-            case 'End':
-                targetTab = tabs[tabs.length - 1];
-                break;
-            default:
-                return;
-        }
-
-        if (targetTab) {
-            e.preventDefault();
-            targetTab.click();
-        }
-    });
+    // Add active class to selected tab
+    event.target.classList.add('active');
 }
 
 // Settings management
@@ -610,10 +565,4 @@ window.exportSettings = exportSettings;
 window.importSettings = importSettings;
 
 // Initialize the application when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    // Setup keyboard navigation immediately
-    setupTabNavigation();
-
-    // Start application initialization
-    initApp();
-});
+document.addEventListener('DOMContentLoaded', initApp);
