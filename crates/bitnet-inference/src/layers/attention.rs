@@ -98,9 +98,8 @@ impl KVCache {
             let tensor_candle = tensor.to_candle()?;
             let shape = tensor_candle.shape();
             if !shape.dims().is_empty() {
-                let empty = tensor_candle
-                    .narrow(0, 0, 0)
-                    .context("Failed to create empty cache slice")?;
+                let empty =
+                    tensor_candle.narrow(0, 0, 0).context("Failed to create empty cache slice")?;
                 return Ok(BitNetTensor::new(empty));
             }
             return Ok(tensor.clone());
@@ -754,10 +753,6 @@ mod tests {
         let k = &kvcache.k_cache[0];
         let result = kvcache.slice_cache_tensor(k, 3).expect("slice should not fail");
         let shape = result.shape();
-        assert_eq!(
-            shape[0], 3,
-            "seq_len=3 should yield exactly 3 rows; got shape {:?}",
-            shape
-        );
+        assert_eq!(shape[0], 3, "seq_len=3 should yield exactly 3 rows; got shape {:?}", shape);
     }
 }
