@@ -363,8 +363,18 @@ impl EndToEndValidator {
 
         let exact_match_rate = exact_matches as f64 / total_tests as f64;
 
-        // Placeholder for semantic similarity (would use embeddings in practice)
-        let semantic_similarity = average_token_accuracy * 0.9;
+        // Character bigram Dice coefficient as a proxy for semantic similarity.
+        // This measures surface-level text overlap, which approximates semantic
+        // agreement for model output comparison without requiring embeddings.
+        let semantic_similarity = if total_tests == 0 {
+            0.0
+        } else {
+            test_results
+                .iter()
+                .map(|r| bigram_dice(&r.rust_output, &r.python_output))
+                .sum::<f64>()
+                / total_tests as f64
+        };
 
         let numerical_precision_errors = test_results.iter()
             .map(|r| r.errors.len())
@@ -664,6 +674,29 @@ pub struct StressTestResult {
     pub success: bool,
     pub error: Option<String>,
     pub metrics: PerformanceMetrics,
+}
+
+/// Compute the character bigram Dice coefficient between two strings.
+/// Returns a value in [0.0, 1.0] where 1.0 means identical.
+/// Used as a lightweight proxy for semantic similarity in validation reports.
+fn bigram_dice(a: &str, b: &str) -> f64 {
+    fn bigrams(s: &str) -> std::collections::HashSet<[char; 2]> {
+        let chars: Vec<char> = s.chars().collect();
+        chars.windows(2).map(|w| [w[0], w[1]]).collect()
+    }
+
+    if a.is_empty() && b.is_empty() {
+        return 1.0;
+    }
+    if a.is_empty() || b.is_empty() {
+        return 0.0;
+    }
+
+    let bg_a = bigrams(a);
+    let bg_b = bigrams(b);
+
+    let intersection = bg_a.intersection(&bg_b).count();
+    2.0 * intersection as f64 / (bg_a.len() + bg_b.len()) as f64
 }
 
 #[cfg(test)]
