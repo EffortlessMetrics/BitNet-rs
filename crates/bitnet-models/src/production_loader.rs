@@ -399,13 +399,32 @@ impl ProductionModelLoader {
         }
     }
 
-    /// Get optimal device configuration for the model
+    /// Get optimal device configuration based on system capabilities.
+    ///
+    /// Determines CPU thread count from [`std::thread::available_parallelism`],
+    /// selects GPU strategy when the `gpu` or `cuda` feature is compiled in,
+    /// and scales the recommended batch size with available parallelism.
     pub fn get_optimal_device_config(&self) -> DeviceConfig {
+        // Query the OS for the number of logical CPUs available.
+        let cpu_threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4).max(1);
+
+        // Recommended batch size: 1 per CPU thread up to 8.
+        let recommended_batch_size = cpu_threads.min(8);
+
+        // Select strategy based on compiled GPU support.
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        let (strategy, gpu_memory_fraction) = (
+            Some(DeviceStrategy::GpuOnly),
+            Some(0.8_f32), // Leave 20 % headroom for the OS and other processes.
+        );
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        let (strategy, gpu_memory_fraction) = (Some(DeviceStrategy::CpuOnly), None);
+
         DeviceConfig {
-            strategy: Some(DeviceStrategy::CpuOnly),
-            cpu_threads: Some(4),
-            gpu_memory_fraction: None,
-            recommended_batch_size: 1,
+            strategy,
+            cpu_threads: Some(cpu_threads),
+            gpu_memory_fraction,
+            recommended_batch_size,
         }
     }
 }
@@ -534,6 +553,49 @@ mod tests {
 
         assert!(config.strategy.is_some());
         assert!(config.recommended_batch_size > 0);
+    }
+
+    #[test]
+    fn test_device_config_cpu_threads_from_system() {
+        let loader = ProductionModelLoader::new();
+        let config = loader.get_optimal_device_config();
+
+        // cpu_threads must reflect real parallelism (≥ 1)
+        let threads = config.cpu_threads.expect("cpu_threads should be set");
+        assert!(threads >= 1, "cpu_threads should be at least 1, got {threads}");
+
+        // batch size is bounded by the thread count but never more than 8
+        assert!(config.recommended_batch_size >= 1);
+        assert!(config.recommended_batch_size <= 8);
+        assert!(config.recommended_batch_size <= threads);
+    }
+
+    #[test]
+    fn test_device_config_strategy_consistent_with_features() {
+        let loader = ProductionModelLoader::new();
+        let config = loader.get_optimal_device_config();
+
+        // When compiled without GPU features, strategy must be CpuOnly and
+        // gpu_memory_fraction must be None.
+        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        {
+            assert!(
+                matches!(config.strategy, Some(DeviceStrategy::CpuOnly)),
+                "Expected CpuOnly strategy without GPU features"
+            );
+            assert!(config.gpu_memory_fraction.is_none());
+        }
+
+        // When compiled with GPU features, strategy must be GpuOnly and
+        // gpu_memory_fraction must be set.
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        {
+            assert!(
+                matches!(config.strategy, Some(DeviceStrategy::GpuOnly)),
+                "Expected GpuOnly strategy with GPU features"
+            );
+            assert!(config.gpu_memory_fraction.is_some());
+        }
     }
 
     #[test]
