@@ -342,15 +342,9 @@ mod tests {
         let rust = vec![1u32, 2, 3];
         let cpp = vec![1_i32, 2, 99];
         let result = validate_token_parity(&rust, &cpp, "test", CppBackend::BitNet);
-        assert!(
-            result.is_err(),
-            "validate_token_parity should return Err on mismatch"
-        );
+        assert!(result.is_err(), "validate_token_parity should return Err on mismatch");
         let msg = result.unwrap_err().to_string();
-        assert!(
-            msg.contains("mismatch"),
-            "Error message should mention mismatch, got: {msg}"
-        );
+        assert!(msg.contains("mismatch"), "Error message should mention mismatch, got: {msg}");
     }
 
     // AC5: Error message includes suggestions
