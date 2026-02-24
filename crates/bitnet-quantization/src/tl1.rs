@@ -5,8 +5,8 @@
 //! with configurable block sizes for optimal performance on ARM architectures.
 
 use crate::utils::{
-    calculate_grouped_scales, create_tensor_from_f32, extract_f32_data, pack_2bit_values,
-    unpack_2bit_values,
+    calculate_grouped_scales, create_tensor_from_f32, extract_f32_data, pack_unsigned_2bit_values,
+    unpack_unsigned_2bit_values,
 };
 use crate::{QuantizedTensor, QuantizerTrait};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
@@ -336,6 +336,9 @@ impl TL1Quantizer {
         zero_points: &[i32],
     ) -> Result<Vec<f32>> {
         let mut dequantized = vec![0.0f32; quantized.len()];
+        // After pack_unsigned_2bit_values/unpack, codes are in [0, num_levels-1].
+        // For symmetric quantization, subtract num_levels/2 to center around 0.
+        let num_levels = 1i32 << self.config.precision_bits;
 
         dequantized
             .par_chunks_mut(self.config.block_size)
@@ -347,7 +350,7 @@ impl TL1Quantizer {
                     let adjusted = if self.config.use_asymmetric {
                         value as i32 - zero_point
                     } else {
-                        value as i32
+                        value as i32 - num_levels / 2
                     };
                     dequant_block[i] = adjusted as f32 * scale;
                 }
@@ -486,7 +489,11 @@ impl TL1Quantizer {
         use std::arch::aarch64::*;
 
         let scale_vec = vdupq_n_f32(scale);
-        let zero_point_vec = vdupq_n_s32(zero_point);
+        // For symmetric: subtract num_levels/2 to center codes around 0.
+        // For asymmetric: subtract stored zero_point as usual.
+        let num_levels = 1i32 << self.config.precision_bits;
+        let effective_offset = if self.config.use_asymmetric { zero_point } else { num_levels / 2 };
+        let offset_vec = vdupq_n_s32(effective_offset);
 
         let chunks = quantized.chunks_exact(4);
         let remainder = chunks.remainder();
@@ -499,12 +506,8 @@ impl TL1Quantizer {
                 let i16_vec = vmovl_s8(i8_vec);
                 let i32_vec = vmovl_s16(vget_low_s16(i16_vec));
 
-                // Apply zero point adjustment if using asymmetric quantization
-                let adjusted = if self.config.use_asymmetric {
-                    vsubq_s32(i32_vec, zero_point_vec)
-                } else {
-                    i32_vec
-                };
+                // Subtract effective offset (zero_point or num_levels/2)
+                let adjusted = vsubq_s32(i32_vec, offset_vec);
 
                 // Convert to float and scale
                 let f32_vec = vcvtq_f32_s32(adjusted);
@@ -517,20 +520,19 @@ impl TL1Quantizer {
         // Handle remainder with scalar code
         for (i, &value) in remainder.iter().enumerate() {
             let idx = quantized.len() - remainder.len() + i;
-            let adjusted =
-                if self.config.use_asymmetric { value as i32 - zero_point } else { value as i32 };
+            let adjusted = value as i32 - effective_offset;
             output[idx] = adjusted as f32 * scale;
         }
     }
 
-    /// Pack TL1 quantized values (2-bit packing similar to I2_S)
+    /// Pack TL1 quantized values (unsigned 2-bit LUT codes in [0, num_levels-1])
     fn pack_tl1_values(&self, values: &[i8]) -> Vec<u8> {
-        pack_2bit_values(values)
+        pack_unsigned_2bit_values(values)
     }
 
-    /// Unpack TL1 quantized values
+    /// Unpack TL1 quantized values, returning raw LUT codes in [0, num_levels-1]
     fn unpack_tl1_values(&self, packed: &[u8], output_len: usize) -> Vec<i8> {
-        unpack_2bit_values(packed, output_len)
+        unpack_unsigned_2bit_values(packed, output_len)
     }
 }
 

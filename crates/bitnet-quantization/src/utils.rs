@@ -90,6 +90,37 @@ pub fn unpack_2bit_values(packed: &[u8], output_len: usize) -> Vec<i8> {
     values
 }
 
+/// Pack 4 unsigned 2-bit codes (range [0, 3]) into a single byte.
+///
+/// Used by TL1/TL2 quantizers which output raw LUT codes in `[0, num_levels-1]`.
+pub fn pack_unsigned_2bit_values(values: &[i8]) -> Vec<u8> {
+    let mut packed = Vec::with_capacity(values.len().div_ceil(4));
+    for chunk in values.chunks(4) {
+        let mut byte = 0u8;
+        for (i, &val) in chunk.iter().enumerate() {
+            byte |= ((val as u8) & 0x3) << (i * 2);
+        }
+        packed.push(byte);
+    }
+    packed
+}
+
+/// Unpack 4 unsigned 2-bit codes from a single byte, returning values in `[0, 3]`.
+///
+/// Inverse of [`pack_unsigned_2bit_values`].
+pub fn unpack_unsigned_2bit_values(packed: &[u8], output_len: usize) -> Vec<i8> {
+    let mut values = Vec::with_capacity(output_len);
+    for &byte in packed {
+        for i in 0..4 {
+            if values.len() >= output_len {
+                break;
+            }
+            values.push(((byte >> (i * 2)) & 0x3) as i8);
+        }
+    }
+    values
+}
+
 /// Quantize a single value to n-bit signed integer with numerical stability
 #[inline]
 pub fn quantize_value(value: f32, scale: f32, bits: u8) -> i8 {

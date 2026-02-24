@@ -5,8 +5,8 @@
 //! on x86 architectures, with runtime CPU feature detection for optimal instruction set selection.
 
 use crate::utils::{
-    calculate_grouped_scales, create_tensor_from_f32, dequantize_value, extract_f32_data,
-    pack_2bit_values, unpack_2bit_values,
+    calculate_grouped_scales, create_tensor_from_f32, dequantize_value_with_offset,
+    extract_f32_data, pack_unsigned_2bit_values, unpack_unsigned_2bit_values,
 };
 use crate::{QuantizedTensor, QuantizerTrait};
 use bitnet_common::{BitNetTensor, QuantizationError, QuantizationType, Result, Tensor};
@@ -395,6 +395,9 @@ impl TL2Quantizer {
     /// Scalar dequantization implementation
     fn dequantize_scalar(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
         let mut dequantized = vec![0.0f32; quantized.len()];
+        // After pack_unsigned_2bit_values/unpack, codes are in [0, num_levels-1].
+        // Subtract num_levels/2 to center them (symmetric quantization only).
+        let shift = (1i32 << self.config.precision_bits) / 2;
 
         dequantized
             .par_chunks_mut(self.config.block_size)
@@ -402,7 +405,7 @@ impl TL2Quantizer {
             .zip(scales.par_iter())
             .for_each(|((dequant_block, quant_block), &scale)| {
                 for (i, &value) in quant_block.iter().enumerate() {
-                    dequant_block[i] = dequantize_value(value, scale);
+                    dequant_block[i] = dequantize_value_with_offset(value, scale, shift);
                 }
             });
 
@@ -500,8 +503,9 @@ impl TL2Quantizer {
         #[allow(clippy::wildcard_imports)]
         use std::arch::x86_64::*;
 
-        let inv_scale = 1.0 / scale;
-        let inv_scale_vec = _mm256_set1_ps(inv_scale);
+        // Must match the scalar path: index = (value / scale * 128.0 + 128.0).round()
+        let scale_factor = 128.0 / scale;
+        let scale_factor_vec = _mm256_set1_ps(scale_factor);
         let offset_vec = _mm256_set1_ps(128.0);
 
         let chunks = data.chunks_exact(8);
@@ -510,7 +514,7 @@ impl TL2Quantizer {
         for (i, chunk) in chunks.enumerate() {
             unsafe {
                 let data_vec = _mm256_loadu_ps(chunk.as_ptr());
-                let scaled = _mm256_mul_ps(data_vec, inv_scale_vec);
+                let scaled = _mm256_mul_ps(data_vec, scale_factor_vec);
                 let offset = _mm256_add_ps(scaled, offset_vec);
                 let indices = _mm256_cvtps_epi32(offset);
 
@@ -553,6 +557,9 @@ impl TL2Quantizer {
         use std::arch::x86_64::*;
 
         let scale_vec = _mm256_set1_ps(scale);
+        // Subtract num_levels/2 to center codes around 0 (symmetric quantization).
+        let shift = (1i32 << self.config.precision_bits) / 2;
+        let shift_vec = _mm256_set1_epi32(shift);
 
         let chunks = quantized.chunks_exact(8);
         let remainder = chunks.remainder();
@@ -564,8 +571,9 @@ impl TL2Quantizer {
                 let i8_vec = _mm_set1_epi64x(i8_data);
                 let i32_vec = _mm256_cvtepi8_epi32(i8_vec);
 
-                // Convert to float and scale
-                let f32_vec = _mm256_cvtepi32_ps(i32_vec);
+                // Subtract shift and convert to float and scale
+                let shifted = _mm256_sub_epi32(i32_vec, shift_vec);
+                let f32_vec = _mm256_cvtepi32_ps(shifted);
                 let result = _mm256_mul_ps(f32_vec, scale_vec);
 
                 _mm256_storeu_ps(output.as_mut_ptr().add(i * 8), result);
@@ -575,21 +583,21 @@ impl TL2Quantizer {
         // Handle remainder with scalar code
         for (i, &value) in remainder.iter().enumerate() {
             let idx = quantized.len() - remainder.len() + i;
-            output[idx] = dequantize_value(value, scale);
+            output[idx] = dequantize_value_with_offset(value, scale, shift);
         }
     }
 
     // AVX-512 kernels removed due to unstable features
     // Will be re-added when AVX-512 support is stabilized
 
-    /// Pack TL2 quantized values (optimized for x86 cache efficiency)
+    /// Pack TL2 quantized values (unsigned 2-bit LUT codes in [0, num_levels-1])
     fn pack_tl2_values(&self, values: &[i8]) -> Vec<u8> {
-        pack_2bit_values(values)
+        pack_unsigned_2bit_values(values)
     }
 
-    /// Unpack TL2 quantized values
+    /// Unpack TL2 quantized values, returning raw LUT codes in [0, num_levels-1]
     fn unpack_tl2_values(&self, packed: &[u8], output_len: usize) -> Vec<i8> {
-        unpack_2bit_values(packed, output_len)
+        unpack_unsigned_2bit_values(packed, output_len)
     }
 }
 
