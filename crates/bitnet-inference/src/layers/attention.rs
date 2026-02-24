@@ -93,7 +93,17 @@ impl KVCache {
     /// Slice cache tensor to current sequence length
     fn slice_cache_tensor(&self, tensor: &BitNetTensor, seq_len: usize) -> Result<BitNetTensor> {
         if seq_len == 0 {
-            return Ok(tensor.clone()); // Return full tensor if no slicing needed
+            // Return an empty (0-row) tensor instead of the full pre-allocated cache.
+            // Callers must not treat an empty cache as a valid key/value store.
+            let tensor_candle = tensor.to_candle()?;
+            let shape = tensor_candle.shape();
+            if !shape.dims().is_empty() {
+                let empty = tensor_candle
+                    .narrow(0, 0, 0)
+                    .context("Failed to create empty cache slice")?;
+                return Ok(BitNetTensor::new(empty));
+            }
+            return Ok(tensor.clone());
         }
 
         let tensor_candle = tensor.to_candle()?;
@@ -707,5 +717,47 @@ impl BitNetAttention {
         }
 
         Ok(BitNetTensor::from_slice(&mask_data, &[input_ids.len(), seq_len], device)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_kvcache() -> KVCache {
+        let device = Device::Cpu;
+        KVCache::new(8, 1, 2, 4, &device).expect("KVCache::new should not fail")
+    }
+
+    /// Issue #392/#388: get_sliced_cache at current_len=0 must return an empty (0-row)
+    /// tensor, not the full pre-allocated cache.
+    #[test]
+    fn test_get_sliced_cache_zero_len_returns_empty_tensor() {
+        let kvcache = make_kvcache();
+        // current_len == 0 at construction
+        assert_eq!(kvcache.current_len, 0, "KVCache should start with current_len=0");
+
+        let k = &kvcache.k_cache[0];
+        let result = kvcache.slice_cache_tensor(k, 0).expect("slice should not fail");
+        let shape = result.shape();
+        assert_eq!(
+            shape[0], 0,
+            "seq_len=0 must yield an empty (0-row) tensor, not the full cache; got shape {:?}",
+            shape
+        );
+    }
+
+    /// Non-zero seq_len must slice the first dimension to exactly seq_len rows.
+    #[test]
+    fn test_get_sliced_cache_non_zero_slices_first_dim() {
+        let kvcache = make_kvcache();
+        let k = &kvcache.k_cache[0];
+        let result = kvcache.slice_cache_tensor(k, 3).expect("slice should not fail");
+        let shape = result.shape();
+        assert_eq!(
+            shape[0], 3,
+            "seq_len=3 should yield exactly 3 rows; got shape {:?}",
+            shape
+        );
     }
 }
