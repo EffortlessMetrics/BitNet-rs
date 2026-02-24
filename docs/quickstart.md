@@ -11,7 +11,7 @@ This guide gets you from zero to running BitNet 1-bit quantized neural network i
 rustc --version
 
 # Clone repository
-git clone https://github.com/microsoft/BitNet-rs
+git clone https://github.com/EffortlessMetrics/BitNet-rs
 cd BitNet-rs
 ```
 

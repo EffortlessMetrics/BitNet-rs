@@ -20,7 +20,7 @@ Before deploying, ensure you have:
 
 ```bash
 # Clone repository
-git clone https://github.com/microsoft/BitNet-rs
+git clone https://github.com/EffortlessMetrics/BitNet-rs
 cd BitNet-rs
 
 # Add Helm repository (future)
@@ -929,5 +929,5 @@ EOF
 - **Kubernetes Documentation**: https://kubernetes.io/docs/
 - **Helm Documentation**: https://helm.sh/docs/
 - **NVIDIA GPU Operator**: https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/
-- **BitNet.rs Repository**: https://github.com/microsoft/BitNet-rs
+- **BitNet.rs Repository**: https://github.com/EffortlessMetrics/BitNet-rs
 - **Kubernetes Best Practices**: https://kubernetes.io/docs/concepts/configuration/overview/

@@ -19,7 +19,7 @@ cargo install bitnet-cli
 ### Build from source
 
 ```bash
-git clone https://github.com/microsoft/BitNet-rs.git
+git clone https://github.com/EffortlessMetrics/BitNet-rs.git
 cd BitNet-rs
 cargo build --no-default-features --release --no-default-features --features cpu
 ```
@@ -359,6 +359,6 @@ bitnet-cli benchmark --model model.gguf --monitor-memory
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/microsoft/BitNet-rs/issues)
+- [GitHub Issues](https://github.com/EffortlessMetrics/BitNet-rs/issues)
 - [Documentation](https://docs.rs/bitnet)
 - [Microsoft BitNet Repository](https://github.com/microsoft/BitNet)
