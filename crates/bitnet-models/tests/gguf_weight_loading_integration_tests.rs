@@ -364,6 +364,7 @@ async fn test_integration_wasm_weight_loading() -> Result<()> {
 #[cfg(feature = "cpu")]
 #[tokio::test]
 #[serial(bitnet_env)]
+#[ignore = "Slow: runs a full mock inference pipeline — exceeds 5min nextest timeout on CI"]
 async fn test_integration_performance_pipeline_cpu() -> Result<()> {
     use std::time::Instant;
 
