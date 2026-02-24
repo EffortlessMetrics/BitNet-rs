@@ -6,7 +6,7 @@ This guide will help you get up and running with BitNet Rust, a production-ready
 
 ### Prerequisites
 
-- Rust 1.90.0 or later
+- Rust 1.92.0 or later
 - CUDA 11.8+ (optional, for GPU acceleration)
 - Python 3.8+ (optional, for Python bindings)
 
