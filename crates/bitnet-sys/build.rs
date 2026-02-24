@@ -345,6 +345,7 @@ fn generate_bindings(cpp_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
 ///
 /// Always emits `bitnet_cpp_available`. Conditionally emits `bitnet_cpp_has_cuda`
 /// and `bitnet_cpp_has_bitnet_shim` based on symbol presence.
+#[allow(dead_code)]
 fn run_symbol_analysis(cpp_dir: &Path) {
     let build_dir = cpp_dir.join("build");
     if !build_dir.exists() {
@@ -392,6 +393,7 @@ fn run_symbol_analysis(cpp_dir: &Path) {
 }
 
 /// Recursively collect `.so` and `.dylib` files up to `max_depth`.
+#[allow(dead_code)]
 fn collect_libraries(
     dir: &Path,
     depth: usize,
@@ -419,6 +421,7 @@ fn collect_libraries(
 
 /// Run `nm --dynamic --defined-only` (falling back to `objdump -T`) on `lib`
 /// and return `(has_cuda, has_bitnet_shim)`. Returns `None` if both tools fail.
+#[allow(dead_code)]
 fn analyze_library_symbols(lib: &Path) -> Option<(bool, bool)> {
     let output = std::process::Command::new("nm")
         .args(["--dynamic", "--defined-only"])
