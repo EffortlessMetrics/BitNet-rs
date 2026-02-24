@@ -14,6 +14,8 @@ bitnet-quantization = { path = "../crates/bitnet-quantization" }
 bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-kernels = { path = "../crates/bitnet-kernels" }
 bitnet-common = { path = "../crates/bitnet-common" }
+bitnet-gguf = { path = "../crates/bitnet-gguf" }
+bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 candle-core = { workspace = true }
 arbitrary = { version = "1.4.2", features = ["derive"] }
 
@@ -42,6 +44,12 @@ test = false
 doc = false
 
 [[bin]]
+name = "gguf_header"
+path = "fuzz_targets/gguf_header.rs"
+test = false
+doc = false
+
+[[bin]]
 name = "safetensors_parser"
 path = "fuzz_targets/safetensors_parser.rs"
 test = false
@@ -50,5 +58,29 @@ doc = false
 [[bin]]
 name = "kernel_matmul"
 path = "fuzz_targets/kernel_matmul.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "architecture_detection"
+path = "fuzz_targets/architecture_detection.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tl_lut_helper"
+path = "fuzz_targets/tl_lut_helper.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tokenizer_discovery"
+path = "fuzz_targets/tokenizer_discovery.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "vocab_size_extraction"
+path = "fuzz_targets/vocab_size_extraction.rs"
 test = false
 doc = false

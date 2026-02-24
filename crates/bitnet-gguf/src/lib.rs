@@ -294,4 +294,57 @@ mod tests {
         }
         assert!(GgufValueType::from_u32(99).is_none());
     }
+
+    // --- proptest -----------------------------------------------------------
+
+    proptest::proptest! {
+        #[test]
+        fn check_magic_is_true_only_for_gguf_prefix(data in proptest::collection::vec(0u8..=255, 4..32)) {
+            let is_gguf = data.starts_with(b"GGUF");
+            proptest::prop_assert_eq!(check_magic(&data), is_gguf);
+        }
+
+        #[test]
+        fn parse_header_never_panics_on_arbitrary_bytes(
+            data in proptest::collection::vec(0u8..=255, 0..64)
+        ) {
+            // Must not panic, regardless of the input.
+            let _ = parse_header(&data);
+        }
+
+        #[test]
+        fn parse_header_rejects_wrong_magic(
+            // First 4 bytes are NOT "GGUF".
+            b0 in 0u8..=255u8,
+            b1 in 0u8..=255u8,
+            b2 in 0u8..=255u8,
+            b3 in 0u8..=255u8,
+            rest in proptest::collection::vec(0u8..=255, 20..40),
+        ) {
+            let mut data = vec![b0, b1, b2, b3];
+            data.extend_from_slice(&rest);
+            // If the first 4 bytes happen to be "GGUF" the predicate may pass
+            // – that's fine; we only assert the invariant when magic is wrong.
+            if &data[0..4] != b"GGUF" {
+                proptest::prop_assert!(parse_header(&data).is_err());
+            }
+        }
+
+        #[test]
+        fn valid_v2_header_always_parses(
+            tensor_count in 0u64..1_000_000,
+            metadata_count in 0u64..1_000_000,
+        ) {
+            let mut d = Vec::new();
+            d.extend_from_slice(b"GGUF");
+            d.extend_from_slice(&2u32.to_le_bytes());
+            d.extend_from_slice(&tensor_count.to_le_bytes());
+            d.extend_from_slice(&metadata_count.to_le_bytes());
+            let info = parse_header(&d).expect("valid v2 header must parse");
+            proptest::prop_assert_eq!(info.version, 2);
+            proptest::prop_assert_eq!(info.tensor_count, tensor_count);
+            proptest::prop_assert_eq!(info.metadata_count, metadata_count);
+            proptest::prop_assert_eq!(info.alignment, 32); // v2 default
+        }
+    }
 }

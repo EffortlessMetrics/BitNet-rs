@@ -16,7 +16,7 @@ bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 serde.workspace = true
 
 [dev-dependencies]
-# No extra deps needed for unit tests.
+proptest.workspace = true
 
 [features]
 default = []
