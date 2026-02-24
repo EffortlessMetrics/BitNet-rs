@@ -151,7 +151,7 @@ mod tests {
     ) -> StopCriteria {
         StopCriteria {
             stop_token_ids: stop_ids.to_vec(),
-            stop_strings: stop_strings.iter().map(|s| s.to_string()).collect(),
+            stop_strings: stop_strings.iter().map(ToString::to_string).collect(),
             max_tokens: max,
             eos_token_id: eos,
         }
@@ -241,7 +241,7 @@ mod tests {
                 assert_eq!(reason, StopReason::EosToken);
                 assert_eq!(stats.tokens_generated, 10);
             }
-            _ => panic!("expected Done event"),
+            StreamEvent::Token { .. } => panic!("expected Done event"),
         }
     }
 }

@@ -239,7 +239,11 @@ mod tests {
         apply_top_p(&mut probs, 0.8);
         assert!(probs[0] > 0.0);
         assert!(probs[1] > 0.0);
-        assert_eq!(probs[2], 0.0);
+        // apply_top_p explicitly sets excluded tokens to exactly 0.0
+        #[allow(clippy::float_cmp)]
+        {
+            assert_eq!(probs[2], 0.0);
+        }
     }
 
     #[test]

@@ -117,8 +117,12 @@ mod tests {
     fn session_metrics_default_is_zero() {
         let m = SessionMetrics::default();
         assert_eq!(m.total_tokens, 0);
-        assert_eq!(m.tokens_per_second, 0.0);
-        assert_eq!(m.time_to_first_token_ms, 0.0);
+        // Checking exact zero: these fields are initialized to literal 0.0
+        #[allow(clippy::float_cmp)]
+        {
+            assert_eq!(m.tokens_per_second, 0.0);
+            assert_eq!(m.time_to_first_token_ms, 0.0);
+        }
     }
 
     #[test]
@@ -129,9 +133,10 @@ mod tests {
 
     #[test]
     fn stop_reason_variants_accessible() {
-        let _max = StopReason::MaxTokens;
-        let _eos = StopReason::EosToken;
-        let _id = StopReason::StopTokenId(42);
-        let _str = StopReason::StopString("</s>".to_string());
+        // Just verify the variants are constructible
+        let _ = StopReason::MaxTokens;
+        let _ = StopReason::EosToken;
+        let _ = StopReason::StopTokenId(42);
+        let _ = StopReason::StopString("</s>".to_string());
     }
 }
