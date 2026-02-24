@@ -32,12 +32,15 @@ async fn generate_with_tokens(
         .tokenizer()
         .decode(input_tokens)
         .context("Failed to decode input tokens to prompt")?;
-    let result = engine.generate(&prompt).await?;
-    let tokens = engine
+    let new_text = engine.generate(&prompt).await?;
+    let new_tokens = engine
         .tokenizer()
-        .encode(&result, false, false)
-        .context("Failed to encode result to tokens")?;
-    Ok(MockGenerationResult { tokens })
+        .encode(&new_text, false, false)
+        .context("Failed to encode generated text to tokens")?;
+    // Return input_tokens + new_tokens so that callers can use tokens[input_len..] for new tokens.
+    let mut all_tokens = input_tokens.to_vec();
+    all_tokens.extend(new_tokens);
+    Ok(MockGenerationResult { tokens: all_tokens })
 }
 /// Helper function to create a valid GenerationConfig with test parameters
 fn create_generation_config(
