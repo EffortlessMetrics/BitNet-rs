@@ -23,7 +23,7 @@ pub fn parallel_matmul(
         return Err(BitNetError::Config("matrix dimension mismatch".to_string()));
     }
 
-    let chunk_size = (m + num_threads.max(1) - 1) / num_threads.max(1);
+    let chunk_size = m.div_ceil(num_threads.max(1));
 
     c.par_chunks_mut(chunk_size * n).enumerate().for_each(|(chunk_idx, c_chunk)| {
         let start_row = chunk_idx * chunk_size;
@@ -94,9 +94,9 @@ pub fn parallel_attention(
                 // Numerically-stable softmax.
                 let max_score = scores[..seq_len].iter().cloned().fold(f32::NEG_INFINITY, f32::max);
                 let mut sum_exp = 0.0f32;
-                for j in 0..seq_len {
-                    scores[j] = (scores[j] - max_score).exp();
-                    sum_exp += scores[j];
+                for score in scores[..seq_len].iter_mut() {
+                    *score = (*score - max_score).exp();
+                    sum_exp += *score;
                 }
 
                 // Weighted sum of values; zero the output slot first.

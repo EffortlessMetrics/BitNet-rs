@@ -224,15 +224,15 @@ impl DeviceManager {
     }
 
     pub fn validate_device_compatibility(&self, required_memory: u64) -> Result<()> {
-        if let Some(available) = self.capabilities.memory_bytes {
-            if available < required_memory {
-                return Err(BitNetError::Inference(InferenceError::GenerationFailed {
-                    reason: format!(
-                        "Device {:?} has {} bytes available but {} bytes required",
-                        self.primary_device, available, required_memory
-                    ),
-                }));
-            }
+        if let Some(available) = self.capabilities.memory_bytes
+            && available < required_memory
+        {
+            return Err(BitNetError::Inference(InferenceError::GenerationFailed {
+                reason: format!(
+                    "Device {:?} has {} bytes available but {} bytes required",
+                    self.primary_device, available, required_memory
+                ),
+            }));
         }
         Ok(())
     }

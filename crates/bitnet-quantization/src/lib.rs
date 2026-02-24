@@ -261,12 +261,23 @@ pub fn convert_quantization(
 pub fn validate_round_trip(
     original: &BitNetTensor,
     qtype: QuantizationType,
-    _tolerance: f32,
+    tolerance: f32,
 ) -> Result<bool> {
     let quantized = original.quantize(qtype)?;
-    let _dequantized = quantized.dequantize()?;
+    let dequantized = quantized.dequantize()?;
 
-    // Compare tensors (simplified - would need proper tensor comparison)
-    // This is a placeholder for the actual validation logic
-    Ok(true)
+    let original_data = original.to_vec()?;
+    let deq_data = dequantized.to_vec()?;
+
+    if original_data.len() != deq_data.len() {
+        return Ok(false);
+    }
+
+    let max_abs_err = original_data
+        .iter()
+        .zip(deq_data.iter())
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0f32, f32::max);
+
+    Ok(max_abs_err <= tolerance)
 }
