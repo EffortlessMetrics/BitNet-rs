@@ -8,6 +8,7 @@ use bitnet_honest_compute::{
     validate_compute_path as validate_honest_compute_path,
     validate_kernel_ids as validate_honest_kernel_ids,
 };
+use bitnet_test_support::env_guard::EnvScope;
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -61,12 +62,15 @@ pub fn workspace_root() -> PathBuf {
 /// - BITNET_DETERMINISTIC=1
 /// - RAYON_NUM_THREADS=1
 /// - BITNET_SEED=42
-pub fn configure_deterministic_env() {
-    unsafe {
-        std::env::set_var("BITNET_DETERMINISTIC", "1");
-        std::env::set_var("RAYON_NUM_THREADS", "1");
-        std::env::set_var("BITNET_SEED", "42");
-    }
+///
+/// Returns an [`EnvScope`] guard that restores the original environment when dropped.
+/// Bind the return value for the test's lifetime: `let _env = configure_deterministic_env();`
+pub fn configure_deterministic_env() -> EnvScope {
+    let mut scope = EnvScope::new();
+    scope.set("BITNET_DETERMINISTIC", "1");
+    scope.set("RAYON_NUM_THREADS", "1");
+    scope.set("BITNET_SEED", "42");
+    scope
 }
 
 /// Find CPU baseline receipt in baselines directory

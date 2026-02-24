@@ -54,177 +54,99 @@ impl SamplingStrategy {
         Self { config, rng, token_counts: HashMap::new() }
     }
 
-    /// Sample the next token from logits
+    /// Sample the next token from logits.
+    ///
+    /// Pipeline (all in-place via `bitnet-logits`):
+    /// 1. Count-aware repetition penalty
+    /// 2. Greedy short-circuit at temperature == 0.0
+    /// 3. Temperature scaling → top-k → softmax → top-p → renormalize → sample
+    ///
+    /// Note: `apply_top_k` operates in the **logits domain** (writes `NEG_INFINITY`)
+    /// and must run *before* `softmax_in_place`.  `apply_top_p` operates on
+    /// probabilities and runs *after* softmax.
     pub fn sample(&mut self, logits: &[f32], context_tokens: &[u32]) -> Result<u32> {
         debug!("Sampling from {} logits", logits.len());
 
-        // Apply repetition penalty
-        let mut adjusted_logits = self.apply_repetition_penalty(logits, context_tokens);
+        if logits.is_empty() {
+            return Err(anyhow::anyhow!("Empty logits slice"));
+        }
 
-        // Greedy path: temperature == 0.0 → argmax
+        let mut buf = logits.to_vec();
+
+        // Count-aware penalty: applies penalty^count per token (distinct from
+        // the flat single-occurrence version in bitnet-logits).
+        self.penalize_repeated_tokens(&mut buf, context_tokens);
+
+        // Greedy path: temperature == 0.0 → greedy_sample (handles empty input
+        // as Err and breaks ties by lowest token ID for llama.cpp compatibility).
         if self.config.temperature == 0.0 {
-            let token = greedy_sample(&adjusted_logits)?;
+            let token = greedy_sample(&buf)?;
             *self.token_counts.entry(token).or_insert(0) += 1;
             return Ok(token);
         }
 
-        // Apply temperature
-        if self.config.temperature != 1.0 {
-            self.apply_temperature(&mut adjusted_logits);
+        // Stochastic path:
+        //  1. temperature scaling (logit domain)
+        //  2. top-k filtering (logit domain — NEG_INFINITY for filtered entries)
+        //  3. softmax (NEG_INFINITY → 0.0 probability)
+        //  4. top-p filtering (probability domain — zero for filtered entries)
+        //  5. renormalize (top-p may leave sum < 1.0)
+        apply_temperature(&mut buf, self.config.temperature);
+
+        if self.config.top_k > 0 {
+            apply_top_k(&mut buf, self.config.top_k as usize);
         }
 
-        // Convert to probabilities
-        let probabilities = self.softmax(&adjusted_logits);
+        softmax_in_place(&mut buf);
 
-        // Apply top-k filtering
-        let filtered_probs = if self.config.top_k > 0 {
-            self.apply_top_k(&probabilities, self.config.top_k as usize)
-        } else {
-            probabilities
-        };
+        if self.config.top_p < 1.0 {
+            apply_top_p(&mut buf, self.config.top_p);
+        }
 
-        // Apply top-p (nucleus) filtering
-        let final_probs = if self.config.top_p < 1.0 {
-            self.apply_top_p(&filtered_probs, self.config.top_p)
-        } else {
-            filtered_probs
-        };
+        // Re-normalize after top-p (top-p zeroes entries without renormalizing).
+        let sum: f32 = buf.iter().sum();
+        if sum > 0.0 {
+            let inv_sum = 1.0 / sum;
+            for p in buf.iter_mut() {
+                *p *= inv_sum;
+            }
+        }
 
-        // Sample from the final distribution
-        let token = self.sample_from_distribution(&final_probs)?;
-
-        // Update token counts for repetition penalty
+        let token = self.sample_from_distribution(&buf)?;
         *self.token_counts.entry(token).or_insert(0) += 1;
 
         debug!("Sampled token: {}", token);
         Ok(token)
     }
 
-    /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &[f32], context_tokens: &[u32]) -> Vec<f32> {
+    /// Count-aware repetition penalty applied in-place.
+    ///
+    /// Applies `penalty ^ occurrence_count` per token, so tokens seen twice are
+    /// penalized more than tokens seen once.  This differs from
+    /// [`bitnet_logits::apply_repetition_penalty`], which applies a flat single-
+    /// occurrence penalty.
+    fn penalize_repeated_tokens(&self, logits: &mut [f32], context_tokens: &[u32]) {
+        #[allow(clippy::float_cmp)]
         if self.config.repetition_penalty == 1.0 {
-            return logits.to_vec();
+            return;
         }
 
-        let mut adjusted_logits = logits.to_vec();
-
-        // Count token frequencies in context
-        let mut token_counts = HashMap::new();
+        let mut counts: HashMap<u32, i32> = HashMap::new();
         for &token in context_tokens {
-            *token_counts.entry(token).or_insert(0) += 1;
+            *counts.entry(token).or_insert(0) += 1;
         }
 
-        // Apply penalty to repeated tokens
-        for (&token, &count) in &token_counts {
-            if token < adjusted_logits.len() as u32 {
+        for (&token, &count) in &counts {
+            let idx = token as usize;
+            if idx < logits.len() {
                 let penalty = self.config.repetition_penalty.powi(count);
-                if adjusted_logits[token as usize] > 0.0 {
-                    adjusted_logits[token as usize] /= penalty;
+                if logits[idx] > 0.0 {
+                    logits[idx] /= penalty;
                 } else {
-                    adjusted_logits[token as usize] *= penalty;
+                    logits[idx] *= penalty;
                 }
             }
         }
-
-        adjusted_logits
-    }
-
-    /// Apply temperature scaling to logits
-    fn apply_temperature(&self, logits: &mut [f32]) {
-        if self.config.temperature > 0.0 {
-            for logit in logits.iter_mut() {
-                *logit /= self.config.temperature;
-            }
-        }
-    }
-
-    /// Convert logits to probabilities using softmax
-    fn softmax(&self, logits: &[f32]) -> Vec<f32> {
-        // Find maximum for numerical stability
-        let max_logit = logits.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
-
-        // Compute exponentials
-        let exp_logits: Vec<f32> = logits.iter().map(|&x| (x - max_logit).exp()).collect();
-
-        // Compute sum
-        let sum: f32 = exp_logits.iter().sum();
-
-        // Normalize
-        if sum > 0.0 {
-            exp_logits.iter().map(|&x| x / sum).collect()
-        } else {
-            vec![1.0 / logits.len() as f32; logits.len()]
-        }
-    }
-
-    /// Apply top-k filtering
-    fn apply_top_k(&self, probabilities: &[f32], k: usize) -> Vec<f32> {
-        if k >= probabilities.len() {
-            return probabilities.to_vec();
-        }
-
-        // Create indices sorted by probability (descending)
-        let mut indices: Vec<usize> = (0..probabilities.len()).collect();
-        indices.sort_by(|&a, &b| probabilities[b].partial_cmp(&probabilities[a]).unwrap());
-
-        // Keep only top-k
-        let mut filtered = vec![0.0; probabilities.len()];
-        let mut sum = 0.0;
-
-        for &idx in indices.iter().take(k) {
-            filtered[idx] = probabilities[idx];
-            sum += probabilities[idx];
-        }
-
-        // Renormalize
-        if sum > 0.0 {
-            for prob in filtered.iter_mut() {
-                *prob /= sum;
-            }
-        }
-
-        filtered
-    }
-
-    /// Apply top-p (nucleus) filtering
-    fn apply_top_p(&self, probabilities: &[f32], p: f32) -> Vec<f32> {
-        if p >= 1.0 {
-            return probabilities.to_vec();
-        }
-
-        // Create indices sorted by probability (descending)
-        let mut indices: Vec<usize> = (0..probabilities.len()).collect();
-        indices.sort_by(|&a, &b| probabilities[b].partial_cmp(&probabilities[a]).unwrap());
-
-        // Find cutoff point
-        let mut cumulative_prob = 0.0;
-        let mut cutoff_idx = probabilities.len();
-
-        for (i, &idx) in indices.iter().enumerate() {
-            cumulative_prob += probabilities[idx];
-            if cumulative_prob >= p {
-                cutoff_idx = i + 1;
-                break;
-            }
-        }
-
-        // Keep only tokens in nucleus
-        let mut filtered = vec![0.0; probabilities.len()];
-        let mut sum = 0.0;
-
-        for &idx in indices.iter().take(cutoff_idx) {
-            filtered[idx] = probabilities[idx];
-            sum += probabilities[idx];
-        }
-
-        // Renormalize
-        if sum > 0.0 {
-            for prob in filtered.iter_mut() {
-                *prob /= sum;
-            }
-        }
-
-        filtered
     }
 
     /// Sample from probability distribution
@@ -359,68 +281,72 @@ mod tests {
 
     #[test]
     fn test_softmax() {
-        let config = SamplingConfig::default();
-        let strategy = SamplingStrategy::new(config);
+        // Delegate to the bitnet-logits free function (re-exported as `softmax_in_place`)
+        let mut logits = vec![1.0_f32, 2.0, 3.0];
+        softmax_in_place(&mut logits);
 
-        let logits = vec![1.0, 2.0, 3.0];
-        let probs = strategy.softmax(&logits);
-
-        // Check that probabilities sum to 1
-        let sum: f32 = probs.iter().sum();
+        let sum: f32 = logits.iter().sum();
         assert!((sum - 1.0).abs() < 1e-6);
 
-        // Check that higher logits have higher probabilities
-        assert!(probs[2] > probs[1]);
-        assert!(probs[1] > probs[0]);
+        // Higher original logit → higher probability after softmax
+        assert!(logits[2] > logits[1]);
+        assert!(logits[1] > logits[0]);
     }
 
     #[test]
     fn test_top_k_filtering() {
-        let config = SamplingConfig::default();
-        let strategy = SamplingStrategy::new(config);
+        // apply_top_k operates in the logits domain: filtered entries become NEG_INFINITY.
+        let mut logits = vec![1.0_f32, 4.0, 3.0, 2.0];
+        apply_top_k(&mut logits, 2);
 
-        let probs = vec![0.1, 0.4, 0.3, 0.2];
-        let filtered = strategy.apply_top_k(&probs, 2);
+        // Top-2 are 4.0 (idx 1) and 3.0 (idx 2) — both must be finite.
+        assert!(logits[1].is_finite(), "top logit should survive");
+        assert!(logits[2].is_finite(), "second logit should survive");
+        assert!(
+            logits[0].is_infinite() && logits[0].is_sign_negative(),
+            "non-top logit should be NEG_INFINITY"
+        );
+        assert!(
+            logits[3].is_infinite() && logits[3].is_sign_negative(),
+            "non-top logit should be NEG_INFINITY"
+        );
 
-        // Only top 2 should be non-zero
-        let non_zero_count = filtered.iter().filter(|&&x| x > 0.0).count();
-        assert_eq!(non_zero_count, 2);
-
-        // Should still sum to 1
-        let sum: f32 = filtered.iter().sum();
-        assert!((sum - 1.0).abs() < 1e-6);
+        // After softmax, NEG_INFINITY entries become 0.0 probability.
+        softmax_in_place(&mut logits);
+        assert!(logits[1] > 0.0);
+        assert!(logits[2] > 0.0);
+        assert_eq!(logits[0], 0.0);
+        assert_eq!(logits[3], 0.0);
+        let sum: f32 = logits.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-6, "top-k + softmax should produce a valid distribution");
     }
 
     #[test]
     fn test_top_p_filtering() {
-        let config = SamplingConfig::default();
-        let strategy = SamplingStrategy::new(config);
+        // Delegate to the bitnet-logits free function (re-exported as `apply_top_p`)
+        let mut probs = vec![0.5_f32, 0.3, 0.1, 0.1];
+        apply_top_p(&mut probs, 0.8);
 
-        let probs = vec![0.5, 0.3, 0.1, 0.1];
-        let filtered = strategy.apply_top_p(&probs, 0.8);
-
-        // Should include tokens that sum to at least 0.8
-        let sum: f32 = filtered.iter().sum();
-        assert!((sum - 1.0).abs() < 1e-6);
-
-        // Should have fewer non-zero elements than original
-        let non_zero_count = filtered.iter().filter(|&&x| x > 0.0).count();
-        assert!(non_zero_count <= probs.len());
+        // At least the dominant token should remain; fewer tokens than the original
+        let non_zero = probs.iter().filter(|&&x| x > 0.0).count();
+        assert!(non_zero >= 1);
+        assert!(non_zero <= probs.len());
     }
 
     #[test]
     fn test_repetition_penalty() {
+        // Test the count-aware private implementation via the private accessor.
         let config = SamplingConfig { repetition_penalty: 1.2, ..Default::default() };
         let strategy = SamplingStrategy::new(config);
 
-        let logits = vec![1.0, 1.0, 1.0];
-        let context = vec![0, 0, 1]; // Token 0 appears twice, token 1 once
+        let mut logits = vec![1.0_f32, 1.0, 1.0];
+        let context = vec![0_u32, 0, 1]; // Token 0 twice, token 1 once
 
-        let adjusted = strategy.apply_repetition_penalty(&logits, &context);
+        strategy.penalize_repeated_tokens(&mut logits, &context);
 
-        // Token 0 should be penalized more than token 1
-        assert!(adjusted[0] < adjusted[1]);
-        assert!(adjusted[1] < adjusted[2]); // Token 2 not penalized
+        // Token 0 penalized more (1.2^2) than token 1 (1.2^1); token 2 untouched
+        assert!(logits[0] < logits[1]);
+        assert!(logits[1] < logits[2]);
     }
 
     #[test]

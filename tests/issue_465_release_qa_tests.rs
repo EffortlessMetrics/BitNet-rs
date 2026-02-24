@@ -15,6 +15,7 @@ mod issue_465_test_utils;
 use anyhow::{Context, Result};
 use issue_465_test_utils::{configure_deterministic_env, git_tag_exists, workspace_root};
 use serde_json::Value;
+use serial_test::serial;
 use std::fs;
 
 /// Tests feature spec: issue-465-implementation-spec.md#ac7-pr-435-merge-status
@@ -109,9 +110,10 @@ fn test_ac8_mock_inference_issue_closed() -> Result<()> {
 /// - cargo run -p xtask -- benchmark succeeds
 /// - cargo run -p xtask -- verify-receipt passes
 #[test]
+#[serial(bitnet_env)]
 fn test_ac11_pre_tag_verification_passes() -> Result<()> {
     // AC11: Pre-tag verification validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let root = workspace_root();
 
@@ -262,8 +264,9 @@ fn test_edge_case_github_api_responses() -> Result<()> {
 ///
 /// This test validates that pre-tag verification catches common issues.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_pre_tag_verification_failures() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let root = workspace_root();
 

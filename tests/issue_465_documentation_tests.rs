@@ -14,6 +14,7 @@ mod issue_465_test_utils;
 
 use anyhow::{Context, Result};
 use issue_465_test_utils::{configure_deterministic_env, workspace_root};
+use serial_test::serial;
 use std::fs;
 
 /// Tests feature spec: issue-465-implementation-spec.md#ac1-readme-quickstart-block
@@ -24,9 +25,10 @@ use std::fs;
 /// - Deterministic inference with environment variables
 /// - Receipt verification workflow
 #[test]
+#[serial(bitnet_env)]
 fn test_ac1_readme_quickstart_block_present() -> Result<()> {
     // AC1: README quickstart block validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let readme_path = workspace_root().join("README.md");
 

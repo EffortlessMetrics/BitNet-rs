@@ -15,6 +15,7 @@ use issue_465_test_utils::{
     configure_deterministic_env, create_test_receipt, find_cpu_baseline, has_cpu_kernel_ids,
     verify_receipt_schema,
 };
+use serial_test::serial;
 use std::fs;
 
 /// Performance bounds for CPU baseline validation
@@ -30,9 +31,10 @@ const MAX_REALISTIC_CPU_TPS: f64 = 50.0;
 /// - Non-empty kernel array with CPU kernel IDs
 /// - Measured performance metrics
 #[test]
+#[serial(bitnet_env)]
 fn test_ac3_cpu_baseline_generated() -> Result<()> {
     // AC3: CPU baseline generation validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Find CPU baseline using shared utility
     let baseline_path = find_cpu_baseline().context(
@@ -93,9 +95,10 @@ fn test_ac3_cpu_baseline_generated() -> Result<()> {
 /// - Kernel hygiene checks pass
 /// - Honest compute validation passes
 #[test]
+#[serial(bitnet_env)]
 fn test_ac4_baseline_verification_passes() -> Result<()> {
     // AC4: Baseline verification validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Find CPU baseline using shared utility
     let baseline_path = find_cpu_baseline().context(
@@ -118,8 +121,9 @@ fn test_ac4_baseline_verification_passes() -> Result<()> {
 /// This test validates kernel hygiene enforcement - receipts with empty kernel
 /// arrays should fail validation as they indicate no real computation occurred.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_empty_kernels_rejected() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
     let receipt = create_test_receipt("real", vec![]);
@@ -142,8 +146,9 @@ fn test_edge_case_empty_kernels_rejected() -> Result<()> {
 /// This test validates strict schema version checking - only v1.0.0 and v1.0
 /// should be accepted.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_invalid_schema_versions() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -173,8 +178,9 @@ fn test_edge_case_invalid_schema_versions() -> Result<()> {
 ///
 /// This test validates robust error handling for corrupted receipt files.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_malformed_json() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -209,8 +215,9 @@ fn test_edge_case_malformed_json() -> Result<()> {
 ///
 /// This test validates that all required receipt fields are enforced.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_missing_required_fields() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -271,8 +278,9 @@ fn test_edge_case_missing_required_fields() -> Result<()> {
 /// This test validates that performance metrics are within realistic bounds
 /// for CPU inference with I2_S quantization.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_performance_bounds() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let baseline_path = find_cpu_baseline().context("CPU baseline not found")?;
     let receipt_content = fs::read_to_string(&baseline_path)?;
@@ -306,8 +314,9 @@ fn test_edge_case_performance_bounds() -> Result<()> {
 ///
 /// This test validates that kernel IDs respect the 128 character limit.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_kernel_id_length_constraints() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -341,8 +350,9 @@ fn test_edge_case_kernel_id_length_constraints() -> Result<()> {
 ///
 /// This test validates that kernel counts respect the 10,000 limit.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_kernel_count_limits() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -367,8 +377,9 @@ fn test_edge_case_kernel_count_limits() -> Result<()> {
 ///
 /// This test validates that deterministic environment variables are properly configured.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_deterministic_configuration() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Verify deterministic environment is configured
     assert_eq!(
@@ -395,8 +406,9 @@ fn test_edge_case_deterministic_configuration() -> Result<()> {
 ///
 /// This test validates that negative performance metrics are rejected.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_negative_performance() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -421,8 +433,9 @@ fn test_edge_case_negative_performance() -> Result<()> {
 ///
 /// This test validates that various token count configurations are handled correctly.
 #[test]
+#[serial(bitnet_env)]
 fn test_edge_case_boundary_token_counts() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let baseline_path = find_cpu_baseline().context("CPU baseline not found")?;
     let receipt_content = fs::read_to_string(&baseline_path)?;

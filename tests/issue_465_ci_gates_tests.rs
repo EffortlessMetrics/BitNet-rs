@@ -12,6 +12,7 @@ mod issue_465_test_utils;
 
 use anyhow::{Context, Result};
 use issue_465_test_utils::{configure_deterministic_env, create_test_receipt, workspace_root};
+use serial_test::serial;
 use std::fs;
 use std::path::Path;
 
@@ -107,9 +108,10 @@ fn test_ac5_branch_protection_configured() -> Result<()> {
 /// - CI rejects receipts without real kernel IDs
 /// - Smoke test validates honest compute enforcement
 #[test]
+#[serial(bitnet_env)]
 fn test_ac6_mocked_receipt_rejected() -> Result<()> {
     // AC6: Smoke test validation
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     // Create temporary test directory for test fixtures
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
@@ -175,8 +177,9 @@ fn write_test_receipt(path: &Path, receipt: &serde_json::Value) -> Result<()> {
 ///
 /// This test validates that kernel IDs are always strings, never other types.
 #[test]
+#[serial(bitnet_env)]
 fn test_comprehensive_kernel_id_type_safety() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -219,8 +222,9 @@ fn test_comprehensive_kernel_id_type_safety() -> Result<()> {
 ///
 /// This test validates comprehensive receipt validation across multiple failure modes.
 #[test]
+#[serial(bitnet_env)]
 fn test_comprehensive_multiple_invalid_patterns() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -314,8 +318,9 @@ fn test_comprehensive_ci_workflow_structure() -> Result<()> {
 ///
 /// This test validates kernel ID hygiene with patterns from real CPU/GPU kernels.
 #[test]
+#[serial(bitnet_env)]
 fn test_comprehensive_kernel_hygiene_realistic_patterns() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -357,8 +362,9 @@ fn test_comprehensive_kernel_hygiene_realistic_patterns() -> Result<()> {
 ///
 /// This test validates backward compatibility with different schema versions.
 #[test]
+#[serial(bitnet_env)]
 fn test_comprehensive_schema_version_compatibility() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -385,8 +391,9 @@ fn test_comprehensive_schema_version_compatibility() -> Result<()> {
 ///
 /// This test validates that only "real" compute paths are accepted.
 #[test]
+#[serial(bitnet_env)]
 fn test_comprehensive_compute_path_strictness() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
@@ -424,8 +431,9 @@ fn test_comprehensive_compute_path_strictness() -> Result<()> {
 ///
 /// This test validates edge cases in performance metric validation.
 #[test]
+#[serial(bitnet_env)]
 fn test_comprehensive_performance_edge_cases() -> Result<()> {
-    configure_deterministic_env();
+    let _env = configure_deterministic_env();
 
     let temp_dir = tempfile::tempdir().context("Failed to create temp directory")?;
 
