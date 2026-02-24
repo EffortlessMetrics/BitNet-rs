@@ -173,3 +173,23 @@ pub use bitnet_device_probe::DeviceCapabilities;
 pub fn detect_simd_level() -> bitnet_common::kernel_registry::SimdLevel {
     bitnet_device_probe::detect_simd_level()
 }
+
+/// Build a fully-populated [`KernelCapabilities`] by combining compile-time
+/// feature flags with a live runtime GPU probe.
+///
+/// This is the canonical way for binaries (CLI, server) to determine what
+/// backend to use at startup. Combine with [`bitnet_common::select_backend`]
+/// to get the startup log line:
+/// `requested=auto detected=[cpu-rust] selected=cpu-rust`.
+///
+/// Note: uses the `bitnet-kernels` crate's own feature flags (`cpu`, `cuda`)
+/// which are the authoritative source for kernel availability.
+pub fn current_kernel_capabilities() -> bitnet_common::kernel_registry::KernelCapabilities {
+    bitnet_common::kernel_registry::KernelCapabilities {
+        cpu_rust: cfg!(feature = "cpu"),
+        cuda_compiled: cfg!(any(feature = "gpu", feature = "cuda")),
+        cuda_runtime: gpu_available_runtime(),
+        cpp_ffi: false,
+        simd_level: detect_simd_level(),
+    }
+}

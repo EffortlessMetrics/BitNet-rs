@@ -72,6 +72,18 @@ async fn main() -> Result<()> {
         tracing::warn!(component = ?RuntimeComponent::Server, "Server startup contract reported issues");
     }
 
+    // Report backend selection at startup.
+    {
+        use bitnet_common::{BackendRequest, select_backend};
+        use bitnet_kernels::device_features::current_kernel_capabilities;
+
+        let caps = current_kernel_capabilities();
+        match select_backend(BackendRequest::Auto, &caps) {
+            Ok(result) => info!(backend_selection = %result.summary(), "backend selected"),
+            Err(e) => tracing::warn!(error = %e, "backend selection warning"),
+        }
+    }
+
     // Create server configuration
     let mut config = ServerConfig::default();
 

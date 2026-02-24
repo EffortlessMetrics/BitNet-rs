@@ -92,6 +92,8 @@ pub struct KernelCapabilities {
 
 impl KernelCapabilities {
     /// Build from compile-time feature flags (no runtime probing).
+    ///
+    /// `cuda_runtime` will be `false`; use [`with_cuda_runtime`] to fill it in.
     pub fn from_compile_time() -> Self {
         KernelCapabilities {
             cpu_rust: cfg!(feature = "cpu"),
@@ -100,6 +102,24 @@ impl KernelCapabilities {
             cpp_ffi: false,      // bitnet-common has no ffi feature; FFI detection is crate-local
             simd_level: compile_time_simd_level(),
         }
+    }
+
+    /// Fill in the `cuda_runtime` field from a live probe result.
+    ///
+    /// Callers in `bitnet-kernels` call
+    /// `KernelCapabilities::from_compile_time().with_cuda_runtime(gpu_available_runtime())`
+    /// to get a fully-populated snapshot.
+    #[must_use]
+    pub fn with_cuda_runtime(mut self, available: bool) -> Self {
+        self.cuda_runtime = available;
+        self
+    }
+
+    /// Fill in the `cpp_ffi` field.
+    #[must_use]
+    pub fn with_cpp_ffi(mut self, available: bool) -> Self {
+        self.cpp_ffi = available;
+        self
     }
 
     /// Returns backends that are compiled in, in priority order (best first).
@@ -252,5 +272,38 @@ mod tests {
         let s = caps.summary();
         assert!(s.contains("avx2"), "summary: {s}");
         assert!(s.contains("cpu-rust"), "summary: {s}");
+    }
+
+    #[test]
+    fn with_cuda_runtime_sets_flag() {
+        let caps = KernelCapabilities {
+            cpu_rust: true,
+            cuda_compiled: true,
+            cuda_runtime: false,
+            cpp_ffi: false,
+            simd_level: SimdLevel::Scalar,
+        };
+        let caps = caps.with_cuda_runtime(true);
+        assert!(caps.cuda_runtime);
+        // cuda available → best_available is Cuda
+        assert_eq!(caps.best_available(), Some(KernelBackend::Cuda));
+    }
+
+    #[test]
+    fn with_cpp_ffi_sets_flag() {
+        let caps = KernelCapabilities::from_compile_time().with_cpp_ffi(true);
+        assert!(caps.cpp_ffi);
+    }
+
+    #[test]
+    fn with_cuda_runtime_false_keeps_cpu_as_best() {
+        let caps = KernelCapabilities {
+            cpu_rust: true,
+            cuda_compiled: true,
+            cuda_runtime: false, // compiled but no runtime
+            cpp_ffi: false,
+            simd_level: SimdLevel::Scalar,
+        };
+        assert_eq!(caps.best_available(), Some(KernelBackend::CpuRust));
     }
 }

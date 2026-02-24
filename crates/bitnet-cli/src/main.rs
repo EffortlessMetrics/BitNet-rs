@@ -465,7 +465,24 @@ async fn main() -> Result<()> {
         warn!(component = ?RuntimeComponent::Cli, "CLI startup contract reported issues");
     }
 
-    // Handle commands
+    // Report backend selection at startup so logs and receipts are deterministic.
+    {
+        use bitnet_common::{BackendRequest, select_backend};
+        use bitnet_kernels::device_features::current_kernel_capabilities;
+
+        let caps = current_kernel_capabilities();
+        let request = match cli.device.as_deref() {
+            Some("cuda") => BackendRequest::Cuda,
+            Some("gpu") => BackendRequest::Gpu,
+            Some("cpu") => BackendRequest::Cpu,
+            _ => BackendRequest::Auto,
+        };
+        match select_backend(request, &caps) {
+            Ok(result) => info!(backend_selection = %result.summary(), "backend selected"),
+            Err(e) => warn!(error = %e, "backend selection warning"),
+        }
+    }
+
     let result = match cli.command {
         Some(Commands::Run {
             model,
