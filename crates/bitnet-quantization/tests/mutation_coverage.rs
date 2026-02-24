@@ -289,16 +289,17 @@ fn test_validate_round_trip_success() -> Result<()> {
     let result = validate_round_trip(&tensor_i2s, QuantizationType::I2S, 0.01)?;
     assert!(result, "I2S round-trip should succeed for ternary values");
 
-    // TL1/TL2 have larger quantization error due to their LUT encoding; use loose
-    // tolerance that still kills Ok(false) mutations.
+    // TL1/TL2: use general ascending values to exercise the quantization range.
+    // After the pack_unsigned_2bit / dequantize fix, max error ≈ scale/2 ≈ abs_max/2.
+    // For values 0..2.55, last-block abs_max≈2.55 → max_error≈1.275; use 1.5 headroom.
     let general: Vec<f32> = (0..256).map(|i| (i as f32) / 100.0).collect();
     let tensor_tl = BitNetTensor::from_slice(&general, &[256], &Device::Cpu)?;
 
-    let result = validate_round_trip(&tensor_tl, QuantizationType::TL1, 3.0)?;
-    assert!(result, "TL1 round-trip should succeed within loose tolerance");
+    let result = validate_round_trip(&tensor_tl, QuantizationType::TL1, 1.5)?;
+    assert!(result, "TL1 round-trip should succeed within tolerance");
 
-    let result = validate_round_trip(&tensor_tl, QuantizationType::TL2, 3.0)?;
-    assert!(result, "TL2 round-trip should succeed within loose tolerance");
+    let result = validate_round_trip(&tensor_tl, QuantizationType::TL2, 1.5)?;
+    assert!(result, "TL2 round-trip should succeed within tolerance");
 
     Ok(())
 }
@@ -366,12 +367,13 @@ fn test_validate_round_trip_all_types() -> Result<()> {
     let i2s_result = validate_round_trip(&tensor, QuantizationType::I2S, 0.01)?;
     assert!(i2s_result, "I2S round-trip validation should succeed");
 
-    // TL1/TL2 have larger quantization error due to LUT encoding; use loose tolerance.
-    let tl1_result = validate_round_trip(&tensor, QuantizationType::TL1, 3.0)?;
-    assert!(tl1_result, "TL1 round-trip validation should succeed");
+    // TL1/TL2: ternary {-1, 0, 1} aligns exactly with the 2-bit LUT levels
+    // after the pack_unsigned_2bit fix. Round-trip should be near-exact (< 0.01).
+    let tl1_result = validate_round_trip(&tensor, QuantizationType::TL1, 0.01)?;
+    assert!(tl1_result, "TL1 round-trip validation should succeed for ternary values");
 
-    let tl2_result = validate_round_trip(&tensor, QuantizationType::TL2, 3.0)?;
-    assert!(tl2_result, "TL2 round-trip validation should succeed");
+    let tl2_result = validate_round_trip(&tensor, QuantizationType::TL2, 0.01)?;
+    assert!(tl2_result, "TL2 round-trip validation should succeed for ternary values");
 
     Ok(())
 }
