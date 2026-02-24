@@ -224,20 +224,29 @@ cargo run -p bitnet-cli --features cpu,full-cli -- compat-check <model.gguf> --s
 
 ### QK256 Kernel Performance
 
-Expected inference speed (tokens/second) on various hardware:
+> **MVP Status**: The QK256 MVP uses scalar-only kernels (~0.1 tok/s for 2B models).
+> For quick validation, use `--max-new-tokens 4-16`.
+> SIMD acceleration is planned for v0.2.0 (targeting ≥3× uplift via AVX2 nibble-LUT + FMA tiling).
 
-**CPU (x86_64):**
-- AVX2: 15-25 tok/s (2B model, batch=1)
-- AVX-512: 25-35 tok/s (2B model, batch=1)
+Run the benchmark to measure and record actual throughput on your hardware:
 
-**CPU (ARM64):**
-- NEON: 10-20 tok/s (2B model, batch=1)
+```bash
+cargo run -p xtask -- benchmark --model <path/to/model.gguf> --tokens 128
+cargo run -p xtask -- verify-receipt
+```
 
-**GPU (NVIDIA):**
-- RTX 4090: 100-150 tok/s (2B model, batch=1)
-- A100: 200-400 tok/s (2B model, batch=1)
+**Target envelopes (v0.2.0 goals, not current MVP performance):**
 
-*Note: Actual performance depends on model size, batch size, sequence length, and hardware.*
+| Backend | Target tok/s | Model |
+|---------|-------------|-------|
+| CPU AVX2 | 15–25 | 2B, batch=1 |
+| CPU AVX-512 | 25–35 | 2B, batch=1 |
+| CPU NEON (ARM64) | 10–20 | 2B, batch=1 |
+| GPU RTX 4090 | 100–150 | 2B, batch=1 |
+| GPU A100 | 200–400 | 2B, batch=1 |
+
+*Actual performance depends on model size, batch size, sequence length, and hardware.
+Always measure with `cargo run -p xtask -- benchmark` to get a verifiable receipt.*
 
 ## Advanced Usage
 
