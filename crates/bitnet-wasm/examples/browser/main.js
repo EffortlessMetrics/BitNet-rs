@@ -445,33 +445,22 @@ function createGenerationConfig() {
 }
 
 // Tab switching
-function switchTab(tabName, btnElement) {
+function switchTab(tabName) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
 
-    // Remove active class and aria-selected from all tabs
+    // Remove active class from all tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.remove('active');
-        tab.setAttribute('aria-selected', 'false');
     });
 
     // Show selected tab content
     document.getElementById(`${tabName}-tab`).classList.add('active');
 
     // Add active class to selected tab
-    if (btnElement) {
-        btnElement.classList.add('active');
-        btnElement.setAttribute('aria-selected', 'true');
-    } else {
-        // Fallback for calls without element
-        const btn = document.getElementById(`${tabName}-tab-btn`);
-        if (btn) {
-            btn.classList.add('active');
-            btn.setAttribute('aria-selected', 'true');
-        }
-    }
+    event.target.classList.add('active');
 }
 
 // Settings management
