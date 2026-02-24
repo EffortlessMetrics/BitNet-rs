@@ -3,7 +3,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Request, State},
-    http::{HeaderMap, HeaderValue, StatusCode},
+    http::{HeaderMap, StatusCode},
     middleware::Next,
     response::Response,
 };
@@ -340,29 +340,11 @@ pub fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
 }
 
 /// CORS middleware configuration
-pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
-    use tower_http::cors::{Any, CorsLayer, AllowOrigin};
-
-    let allow_origin = if config.allowed_origins.iter().any(|o| o == "*") {
-        AllowOrigin::any()
-    } else {
-        let origins: Vec<HeaderValue> = config.allowed_origins
-            .iter()
-            .filter_map(|s| {
-                match s.parse::<HeaderValue>() {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        warn!("Invalid allowed origin '{}': {}", s, e);
-                        None
-                    }
-                }
-            })
-            .collect();
-        AllowOrigin::list(origins)
-    };
+pub fn configure_cors() -> tower_http::cors::CorsLayer {
+    use tower_http::cors::{Any, CorsLayer};
 
     CorsLayer::new()
-        .allow_origin(allow_origin)
+        .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any)
         .max_age(std::time::Duration::from_secs(3600))
@@ -508,20 +490,5 @@ mod tests {
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
         ));
-    }
-
-    #[test]
-    fn test_cors_configuration() {
-        let config = SecurityConfig {
-            allowed_origins: vec!["https://example.com".to_string()],
-            ..Default::default()
-        };
-        let _layer = configure_cors(&config);
-
-        let config_wildcard = SecurityConfig {
-            allowed_origins: vec!["*".to_string()],
-            ..Default::default()
-        };
-        let _layer_wildcard = configure_cors(&config_wildcard);
     }
 }

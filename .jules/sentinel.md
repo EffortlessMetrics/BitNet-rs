@@ -1,4 +1,0 @@
-## 2025-10-24 - Tower HTTP CORS Configuration
-**Vulnerability:** Overly permissive CORS configuration (defaulting to "*") allows any website to access the API.
-**Learning:** `tower-http` (0.6.x) `CorsLayer::allow_origin` requires a concrete `AllowOrigin` type. It does not support closures directly for dynamic origin checking. Instead, `AllowOrigin` implements `From<Vec<HeaderValue>>` and `From<Any>`. To support both wildcard and specific lists, one must conditionally construct the `AllowOrigin` instance (e.g., using `AllowOrigin::list` or `AllowOrigin::any`) before passing it to `CorsLayer`.
-**Prevention:** When configuring CORS dynamically, ensure `AllowOrigin` is constructed correctly based on configuration. Always validate and log invalid origin strings during startup to prevent silent configuration failures.
