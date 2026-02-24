@@ -19,4 +19,46 @@ ignore = [
     # Review Date: 2024-09-25
     # Re-evaluate: 2025-03-01
     "RUSTSEC-2024-0436",
+
+    # RUSTSEC-2025-0140: gix-date parse overflow
+    #
+    # Status: Accepted Risk — Cannot Upgrade
+    # Rationale: gix-date is a transitive dependency of gix@0.71.0, which is pinned
+    #           by vergen-gix@1.0.9 (build-time dependency). The vulnerability involves
+    #           integer overflow in date parsing during git history traversal — used
+    #           only at build time for embedding version metadata.
+    #
+    # Dependencies: bitnet-server -> vergen-gix -> gix -> gix-date (build-time only)
+    # Impact: Build-time only; not exposed in inference runtime
+    # Mitigation: Will be resolved when vergen-gix updates to gix >= 0.72
+    # Re-evaluate: 2025-06-01
+    "RUSTSEC-2025-0140",
+
+    # RUSTSEC-2023-0071: Marvin Attack on RSA (rsa crate)
+    #
+    # Status: Accepted Risk — No Fix Available
+    # Rationale: The rsa crate vulnerability (timing side-channel in RSA decryption)
+    #           has no upstream fix. It is a dependency of jsonwebtoken@10.2.0 used
+    #           in bitnet-server for JWT token verification. BitNet.rs is a local
+    #           inference engine; JWT usage is for API authentication, not bulk RSA
+    #           decryption operations susceptible to timing attacks.
+    #
+    # Dependencies: bitnet-server -> jsonwebtoken -> rsa
+    # Impact: Low — local-deployment API server; not a high-volume crypto service
+    # Mitigation: Monitor for jsonwebtoken upgrade to a maintained RSA crate
+    # Re-evaluate: 2025-06-01
+    "RUSTSEC-2023-0071",
+
+    # RUSTSEC-2025-0141: bincode 2.x deserialization issue
+    #
+    # Status: Accepted Risk
+    # Rationale: bincode 2.0.1 is a dependency of bitnet-tests (test-only crate).
+    #           The vulnerability only affects runtime if deserializing untrusted data.
+    #           BitNet.rs only deserializes trusted test fixtures.
+    #
+    # Dependencies: bitnet-tests -> bincode (test-only)
+    # Impact: Test infrastructure only; not in release builds
+    # Mitigation: Update when bincode releases a patch
+    # Re-evaluate: 2025-06-01
+    "RUSTSEC-2025-0141",
 ]
