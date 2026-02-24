@@ -18,6 +18,10 @@ repository:
     - simd
     - cuda
     - gguf
+    - ggml
+    - text-generation
+    - transformer
+    - 1-bit
 
   private: false
   has_issues: true

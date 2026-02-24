@@ -54,6 +54,25 @@ use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::process::Command;
 
+/// Helper to discover test model from environment or models/ directory.
+///
+/// Returns `Ok(None)` if no model is available (test should skip).
+/// Returns `Ok(Some(path))` if a model was found.
+fn try_discover_test_model() -> Result<Option<PathBuf>> {
+    match discover_test_model() {
+        Ok(p) => Ok(Some(p)),
+        Err(_) => Ok(None),
+    }
+}
+
+/// Helper to get bitnet-cli binary, returning None if not built yet.
+fn try_get_cli_binary_path() -> Result<Option<PathBuf>> {
+    match get_cli_binary_path() {
+        Ok(p) => Ok(Some(p)),
+        Err(_) => Ok(None),
+    }
+}
+
 /// Helper to discover test model from environment or models/ directory
 fn discover_test_model() -> Result<PathBuf> {
     // Priority 1: BITNET_GGUF environment variable
@@ -428,8 +447,18 @@ mod intelligibility_smoke_tests {
             return Ok(());
         }
 
-        let model_path = discover_test_model()?;
-        let cli_binary = get_cli_binary_path()?;
+        let Some(model_path) = try_discover_test_model()? else {
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
+            return Ok(());
+        };
+        let Some(cli_binary) = try_get_cli_binary_path()? else {
+            eprintln!(
+                "Skipping: bitnet-cli binary not found. Build with: cargo build -p bitnet-cli --features cpu,full-cli"
+            );
+            return Ok(());
+        };
 
         eprintln!("\n=== Intelligibility Smoke Test Suite ===");
         eprintln!("Model: {}", model_path.display());
@@ -495,8 +524,16 @@ mod intelligibility_smoke_tests {
             return Ok(());
         }
 
-        let model_path = discover_test_model()?;
-        let cli_binary = get_cli_binary_path()?;
+        let Some(model_path) = try_discover_test_model()? else {
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
+            return Ok(());
+        };
+        let Some(cli_binary) = try_get_cli_binary_path()? else {
+            eprintln!("Skipping: bitnet-cli binary not found.");
+            return Ok(());
+        };
 
         let test = IntelligibilityTest {
             name: "simple_math_completion",
@@ -534,8 +571,16 @@ mod intelligibility_smoke_tests {
             return Ok(());
         }
 
-        let model_path = discover_test_model()?;
-        let cli_binary = get_cli_binary_path()?;
+        let Some(model_path) = try_discover_test_model()? else {
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
+            return Ok(());
+        };
+        let Some(cli_binary) = try_get_cli_binary_path()? else {
+            eprintln!("Skipping: bitnet-cli binary not found.");
+            return Ok(());
+        };
 
         let test = IntelligibilityTest {
             name: "capital_city_qa",
@@ -573,8 +618,16 @@ mod intelligibility_smoke_tests {
             return Ok(());
         }
 
-        let model_path = discover_test_model()?;
-        let cli_binary = get_cli_binary_path()?;
+        let Some(model_path) = try_discover_test_model()? else {
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
+            return Ok(());
+        };
+        let Some(cli_binary) = try_get_cli_binary_path()? else {
+            eprintln!("Skipping: bitnet-cli binary not found.");
+            return Ok(());
+        };
 
         let test = IntelligibilityTest {
             name: "greeting_continuation",
