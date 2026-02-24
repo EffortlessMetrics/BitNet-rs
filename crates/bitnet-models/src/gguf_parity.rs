@@ -1,6 +1,6 @@
 //! GGUF model metadata and parity validation utilities
 
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, anyhow};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek};
@@ -54,30 +54,30 @@ pub fn read_gguf_metadata(path: &Path) -> Result<GgufMetadata> {
         metadata.insert(key, value);
     }
 
-    // Extract required fields
+    // Extract required fields — fail explicitly rather than use arbitrary defaults
     let vocab_size = metadata
         .get("llama.vocab_size")
         .or_else(|| metadata.get("tokenizer.ggml.tokens"))
         .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(50257); // GPT-2 default
+        .ok_or_else(|| anyhow!("missing required GGUF field: llama.vocab_size"))?;
 
     let hidden_size = metadata
         .get("llama.embedding_length")
         .or_else(|| metadata.get("llama.hidden_size"))
         .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(768);
+        .ok_or_else(|| anyhow!("missing required GGUF field: llama.embedding_length"))?;
 
     let num_layers = metadata
         .get("llama.block_count")
         .or_else(|| metadata.get("llama.layer_count"))
         .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(12);
+        .ok_or_else(|| anyhow!("missing required GGUF field: llama.block_count"))?;
 
     let num_heads = metadata
         .get("llama.attention.head_count")
         .or_else(|| metadata.get("llama.head_count"))
         .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(12);
+        .ok_or_else(|| anyhow!("missing required GGUF field: llama.attention.head_count"))?;
 
     let tokenizer_type = metadata
         .get("tokenizer.ggml.model")
