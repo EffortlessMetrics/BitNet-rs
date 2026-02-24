@@ -35,7 +35,6 @@ pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
     token_counts: HashMap<u32, usize>,
-    cached_context: Vec<u32>,
 }
 
 impl SamplingStrategy {
@@ -47,68 +46,15 @@ impl SamplingStrategy {
             ChaCha8Rng::from_rng(&mut rand::rng())
         };
 
-        Self { config, rng, token_counts: HashMap::new(), cached_context: Vec::new() }
-    }
-
-    /// Synchronize internal token counts with provided context
-    fn sync_token_counts(&mut self, context_tokens: &[u32]) {
-        // Common case: simple append (e.g., autoregressive generation)
-        if context_tokens.len() == self.cached_context.len() + 1
-            && context_tokens.starts_with(&self.cached_context)
-        {
-            let new_token = context_tokens[context_tokens.len() - 1];
-            *self.token_counts.entry(new_token).or_insert(0) += 1;
-            self.cached_context.push(new_token);
-            return;
-        }
-
-        // No change case
-        if context_tokens == self.cached_context {
-            return;
-        }
-
-        // Full synchronization needed: handle divergence
-        // Find the length of the common prefix
-        let common_len = self
-            .cached_context
-            .iter()
-            .zip(context_tokens.iter())
-            .take_while(|(a, b)| a == b)
-            .count();
-
-        // Decrement counts for tokens that are no longer in context (from cached_context)
-        for &token in &self.cached_context[common_len..] {
-            if let Some(count) = self.token_counts.get_mut(&token) {
-                if *count > 1 {
-                    *count -= 1;
-                } else {
-                    self.token_counts.remove(&token);
-                }
-            }
-        }
-
-        // Increment counts for new tokens (from context_tokens)
-        for &token in &context_tokens[common_len..] {
-            *self.token_counts.entry(token).or_insert(0) += 1;
-        }
-
-        // Update cached context to match
-        self.cached_context.truncate(common_len);
-        self.cached_context.extend_from_slice(&context_tokens[common_len..]);
+        Self { config, rng, token_counts: HashMap::new() }
     }
 
     /// Sample the next token from logits
     pub fn sample(&mut self, logits: &[f32], context_tokens: &[u32]) -> Result<u32> {
         debug!("Sampling from {} logits", logits.len());
 
-        // Only maintain counts if repetition penalty is enabled to avoid overhead
-        if self.config.repetition_penalty != 1.0 {
-            // Ensure token counts are in sync with context
-            self.sync_token_counts(context_tokens);
-        }
-
-        // Apply repetition penalty using internal counts
-        let mut adjusted_logits = self.apply_repetition_penalty(logits);
+        // Apply repetition penalty
+        let mut adjusted_logits = self.apply_repetition_penalty(logits, context_tokens);
 
         // Apply temperature
         if self.config.temperature != 1.0 {
@@ -135,28 +81,31 @@ impl SamplingStrategy {
         // Sample from the final distribution
         let token = self.sample_from_distribution(&final_probs)?;
 
-        // Update token counts for repetition penalty for the next step
-        if self.config.repetition_penalty != 1.0 {
-            *self.token_counts.entry(token).or_insert(0) += 1;
-            self.cached_context.push(token);
-        }
+        // Update token counts for repetition penalty
+        *self.token_counts.entry(token).or_insert(0) += 1;
 
         debug!("Sampled token: {}", token);
         Ok(token)
     }
 
     /// Apply repetition penalty to logits
-    fn apply_repetition_penalty(&self, logits: &[f32]) -> Vec<f32> {
+    fn apply_repetition_penalty(&self, logits: &[f32], context_tokens: &[u32]) -> Vec<f32> {
         if self.config.repetition_penalty == 1.0 {
             return logits.to_vec();
         }
 
         let mut adjusted_logits = logits.to_vec();
 
-        // Apply penalty to repeated tokens using maintained counts
-        for (&token, &count) in &self.token_counts {
+        // Count token frequencies in context
+        let mut token_counts = HashMap::new();
+        for &token in context_tokens {
+            *token_counts.entry(token).or_insert(0) += 1;
+        }
+
+        // Apply penalty to repeated tokens
+        for (&token, &count) in &token_counts {
             if token < adjusted_logits.len() as u32 {
-                let penalty = self.config.repetition_penalty.powi(count as i32);
+                let penalty = self.config.repetition_penalty.powi(count);
                 if adjusted_logits[token as usize] > 0.0 {
                     adjusted_logits[token as usize] /= penalty;
                 } else {
@@ -309,7 +258,6 @@ impl SamplingStrategy {
     /// Reset token counts (useful for new sequences)
     pub fn reset(&mut self) {
         self.token_counts.clear();
-        self.cached_context.clear();
     }
 
     /// Update configuration
@@ -451,13 +399,12 @@ mod tests {
     #[test]
     fn test_repetition_penalty() {
         let config = SamplingConfig { repetition_penalty: 1.2, ..Default::default() };
-        let mut strategy = SamplingStrategy::new(config);
+        let strategy = SamplingStrategy::new(config);
 
         let logits = vec![1.0, 1.0, 1.0];
         let context = vec![0, 0, 1]; // Token 0 appears twice, token 1 once
 
-        strategy.sync_token_counts(&context);
-        let adjusted = strategy.apply_repetition_penalty(&logits);
+        let adjusted = strategy.apply_repetition_penalty(&logits, &context);
 
         // Token 0 should be penalized more than token 1
         assert!(adjusted[0] < adjusted[1]);
