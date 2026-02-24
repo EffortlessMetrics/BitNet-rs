@@ -532,6 +532,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-device-probe"
+version = "0.1.0"
+dependencies = [
+ "bitnet-common",
+ "log",
+ "serial_test",
+ "temp-env",
+]
+
+[[package]]
+name = "bitnet-engine-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitnet-common",
+ "bitnet-generation",
+ "serde",
+]
+
+[[package]]
 name = "bitnet-feature-contract"
 version = "0.1.0"
 dependencies = [
@@ -582,11 +602,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-generation"
+version = "0.1.0"
+dependencies = [
+ "bitnet-common",
+ "serde",
+]
+
+[[package]]
 name = "bitnet-ggml-ffi"
 version = "0.1.0"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "bitnet-gguf"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "memmap2",
 ]
 
 [[package]]
@@ -601,6 +637,8 @@ dependencies = [
  "async-stream",
  "async-trait",
  "bitnet-common",
+ "bitnet-engine-core",
+ "bitnet-generation",
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-prompt-templates",
@@ -642,6 +680,7 @@ dependencies = [
  "anyhow",
  "bindgen",
  "bitnet-common",
+ "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-quantization",
  "bitnet-test-support",
@@ -667,12 +706,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-logits"
+version = "0.1.0"
+dependencies = [
+ "proptest",
+]
+
+[[package]]
 name = "bitnet-models"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-ggml-ffi",
+ "bitnet-gguf",
  "bitnet-quantization",
  "bitnet-st2gguf",
  "bitnet-test-support",
@@ -853,6 +900,7 @@ name = "bitnet-sampling"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitnet-logits",
  "insta",
  "proptest",
  "rand 0.9.2",

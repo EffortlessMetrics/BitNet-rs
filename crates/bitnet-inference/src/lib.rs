@@ -59,6 +59,9 @@ pub use bitnet_common::CorrectionRecord;
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};
 
+// Re-export SRP-extracted orchestration contracts from bitnet-engine-core.
+pub use bitnet_engine_core::{BackendInfo, InferenceSession, SessionConfig, SessionMetrics};
+
 // Module-level imports (removed - unused)
 
 /// Re-export commonly used types

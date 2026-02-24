@@ -21,6 +21,11 @@ members = [
   "crates/bitnet-receipts",
   "crates/bitnet-sampling",
       "crates/bitnet-transformer",  # Extracted from bitnet-models; depends on bitnet-quantization
+  "crates/bitnet-device-probe",  # SRP: device detection / capability probing
+  "crates/bitnet-logits",        # SRP: pure logits transform functions
+  "crates/bitnet-generation",    # SRP: decode-loop stopping logic & generation events
+  "crates/bitnet-engine-core",   # SRP: orchestration contracts (traits, session types)
+  "crates/bitnet-gguf",          # SRP: lightweight GGUF file format types & header parser
   "crates/bitnet-feature-matrix",
   "crates/bitnet-server",
   "crates/bitnet-cli",
@@ -53,6 +58,12 @@ members = [
   "crates/bitnet-startup-contract-diagnostics",
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
+  # SRP microcrate extractions (phase-6)
+  "crates/bitnet-device-probe",
+  "crates/bitnet-logits",
+  "crates/bitnet-generation",
+  "crates/bitnet-engine-core",
+  "crates/bitnet-gguf",
   "crossval",
   "tests",
   "xtask",
@@ -87,6 +98,12 @@ default-members = [
   "crates/bitnet-testing-policy-core",
   "crates/bitnet-testing-scenarios-core",
   "crates/bitnet-runtime-profile-core",
+  # SRP microcrate extractions (phase-6)
+  "crates/bitnet-device-probe",
+  "crates/bitnet-logits",
+  "crates/bitnet-generation",
+  "crates/bitnet-engine-core",
+  "crates/bitnet-gguf",
 ]
 
 [package]

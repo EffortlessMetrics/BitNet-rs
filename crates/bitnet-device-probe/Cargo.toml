@@ -1,0 +1,29 @@
+[package]
+name = "bitnet-device-probe"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Device detection and capability probing for BitNet inference"
+rust-version.workspace = true
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+log.workspace = true
+
+[dev-dependencies]
+temp-env.workspace = true
+serial_test.workspace = true
+
+[features]
+default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
+
+[lints]
+workspace = true

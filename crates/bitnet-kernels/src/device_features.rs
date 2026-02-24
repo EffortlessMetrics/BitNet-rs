@@ -162,3 +162,14 @@ pub fn device_capability_summary() -> String {
 
     summary
 }
+
+// Re-export the dedicated crate so callers can use either path.
+pub use bitnet_device_probe::DeviceCapabilities;
+
+/// Detect the best SIMD level available at runtime.
+///
+/// Delegates to [`bitnet_device_probe::detect_simd_level`].
+#[inline]
+pub fn detect_simd_level() -> bitnet_common::kernel_registry::SimdLevel {
+    bitnet_device_probe::detect_simd_level()
+}

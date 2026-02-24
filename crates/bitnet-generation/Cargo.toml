@@ -1,0 +1,28 @@
+[package]
+name = "bitnet-generation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Decode-loop stopping logic and generation event types for BitNet inference"
+rust-version.workspace = true
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+serde.workspace = true
+
+[dev-dependencies]
+# No extra deps needed for unit tests.
+
+[features]
+default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
+
+[lints]
+workspace = true

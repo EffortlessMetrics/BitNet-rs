@@ -1,0 +1,30 @@
+[package]
+name = "bitnet-engine-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Orchestration contracts and session types for BitNet inference engines"
+rust-version.workspace = true
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-generation = { path = "../bitnet-generation", version = "0.1.0" }
+anyhow.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+# No extra deps needed for unit tests.
+
+[features]
+default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
+
+[lints]
+workspace = true

@@ -19,6 +19,7 @@ include = [
 
 [dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
+bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.1.0" }
 anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
