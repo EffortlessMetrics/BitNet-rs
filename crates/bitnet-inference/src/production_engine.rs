@@ -13,9 +13,7 @@
 
 use crate::engine::PerformanceMetrics;
 use crate::{GenerationConfig, InferenceEngine};
-#[cfg(feature = "inference")]
-use bitnet_common::BitNetError;
-use bitnet_common::{Device, InferenceError, Result};
+use bitnet_common::{BitNetError, Device, InferenceError, Result};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use serde::{Deserialize, Serialize};
@@ -202,17 +200,40 @@ impl DeviceManager {
     }
 
     pub fn get_optimal_device(&self) -> Device {
-        // In a real implementation, this would:
-        // 1. Check device availability
-        // 2. Validate memory requirements
-        // 3. Test device functionality
-        // 4. Return best available device
+        // Use the primary device if it is CPU — always available.
+        if self.primary_device == Device::Cpu {
+            return self.primary_device;
+        }
 
-        self.primary_device
+        // For a GPU-class primary device, verify the GPU backend is both compiled
+        // and available at runtime before committing to it.
+        #[cfg(any(feature = "gpu", feature = "cuda"))]
+        {
+            if bitnet_kernels::device_features::gpu_available_runtime() {
+                return self.primary_device;
+            }
+            // GPU compiled but not available at runtime — fall back gracefully.
+            log::warn!(
+                "Primary device {:?} unavailable at runtime; falling back to {:?}",
+                self.primary_device,
+                self.fallback_device,
+            );
+        }
+
+        self.fallback_device
     }
 
-    pub fn validate_device_compatibility(&self, _required_memory: u64) -> Result<()> {
-        // Device validation logic would go here
+    pub fn validate_device_compatibility(&self, required_memory: u64) -> Result<()> {
+        if let Some(available) = self.capabilities.memory_bytes {
+            if available < required_memory {
+                return Err(BitNetError::Inference(InferenceError::GenerationFailed {
+                    reason: format!(
+                        "Device {:?} has {} bytes available but {} bytes required",
+                        self.primary_device, available, required_memory
+                    ),
+                }));
+            }
+        }
         Ok(())
     }
 }
