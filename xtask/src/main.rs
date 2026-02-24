@@ -5669,9 +5669,7 @@ fn analyze_library(path: &Path) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Library path contains invalid UTF-8: {:?}", path))?;
 
     let syms = {
-        let out = Command::new("nm")
-            .args(["--dynamic", "--defined-only", path_str])
-            .output();
+        let out = Command::new("nm").args(["--dynamic", "--defined-only", path_str]).output();
 
         match out {
             Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
@@ -5679,10 +5677,7 @@ fn analyze_library(path: &Path) -> Result<()> {
                 // Try objdump as fallback
                 let out2 = Command::new("objdump").args(["-T", path_str]).output()?;
                 if !out2.status.success() {
-                    anyhow::bail!(
-                        "Both nm and objdump failed to inspect library {:?}",
-                        path
-                    );
+                    anyhow::bail!("Both nm and objdump failed to inspect library {:?}", path);
                 }
                 String::from_utf8_lossy(&out2.stdout).into_owned()
             }
