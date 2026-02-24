@@ -137,6 +137,11 @@ pub struct AutoregressiveGenerator {
     adaptive_batch_size: usize,
     latency_window: VecDeque<f64>,
     performance_mode: PerformanceMode,
+
+    // Sampling statistics (reported in GenerationStats)
+    temperature_adjustments: usize,
+    fallback_to_greedy_count: usize,
+    batched_generations_count: usize,
 }
 
 /// Performance mode for different optimization strategies
@@ -247,6 +252,11 @@ impl AutoregressiveGenerator {
             adaptive_batch_size: initial_batch_size,
             latency_window: VecDeque::with_capacity(50),
             performance_mode,
+
+            // Sampling statistics
+            temperature_adjustments: 0,
+            fallback_to_greedy_count: 0,
+            batched_generations_count: 0,
         })
     }
 
@@ -557,6 +567,7 @@ impl AutoregressiveGenerator {
         // Simplified sampling with reduced computation
         if self.config.temperature < 0.1 || !self.config.do_sample {
             // Use greedy sampling for very low temperature
+            self.fallback_to_greedy_count += 1;
             return self.sampling_strategy.sample(logits, &mut self.rng).await;
         }
 
@@ -580,12 +591,14 @@ impl AutoregressiveGenerator {
                 // Reduce sampling complexity
                 if self.config.top_k.unwrap_or(50) > 20 {
                     log::debug!("Reducing top-k for latency optimization");
+                    self.temperature_adjustments += 1;
                     // Would update config in practice
                 }
             }
             PerformanceMode::Conservative => {
                 // Switch to greedy sampling if needed
                 log::debug!("Considering greedy sampling for conservative mode");
+                self.fallback_to_greedy_count += 1;
             }
             _ => {}
         }
@@ -696,6 +709,7 @@ impl AutoregressiveGenerator {
     fn flush_token_buffer(&mut self) {
         // In a full implementation, this would process buffered tokens
         log::debug!("Flushing token buffer with {} tokens", self.token_buffer.len());
+        self.batched_generations_count += 1;
         self.token_buffer.clear();
     }
 
@@ -754,9 +768,9 @@ impl AutoregressiveGenerator {
             memory_usage_mb: self.estimate_memory_usage(),
 
             // Sampling statistics
-            temperature_adjustments: 0, // Would track in full implementation
-            fallback_to_greedy: 0,      // Would track in full implementation
-            batched_generations: 0,     // Would track in full implementation
+            temperature_adjustments: self.temperature_adjustments,
+            fallback_to_greedy: self.fallback_to_greedy_count,
+            batched_generations: self.batched_generations_count,
 
             // Quality metrics
             average_entropy: 0.0, // Would calculate from logits in full implementation
