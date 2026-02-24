@@ -456,7 +456,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Next Steps
 
 - **API Reference**: Complete API documentation in [tokenizer-discovery-api.md](../reference/tokenizer-discovery-api.md)
-- **How-To Guides**: Task-oriented guides in [docs/how-to/](../how-to/)
+- **How-To Guides**: Task-oriented guides in [docs/howto/](../howto/)
 - **Architecture**: System design in [issue-336-universal-tokenizer-discovery-spec.md](../explanation/issue-336-universal-tokenizer-discovery-spec.md)
 - **Testing**: Cross-validation with [xtask crossval](../development/xtask.md)
 
