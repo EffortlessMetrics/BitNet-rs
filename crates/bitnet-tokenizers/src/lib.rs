@@ -220,11 +220,7 @@ impl Tokenizer for BasicTokenizer {
         }
         // BasicTokenizer has no real vocabulary; concatenate piece representations
         // so the output is at least deterministic and reflects the actual token IDs.
-        Ok(tokens
-            .iter()
-            .filter_map(|&id| self.token_to_piece(id))
-            .collect::<Vec<_>>()
-            .join(""))
+        Ok(tokens.iter().filter_map(|&id| self.token_to_piece(id)).collect::<Vec<_>>().join(""))
     }
 
     fn vocab_size(&self) -> usize {
