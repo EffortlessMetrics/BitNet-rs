@@ -6,6 +6,7 @@
 pub mod backends;
 pub mod cache;
 pub mod config;
+pub mod cpu_opt;
 pub mod engine;
 pub mod generation;
 pub mod gguf;

@@ -437,7 +437,16 @@ pub mod cpu_optimizations {
         Ok(())
     }
 
-    /// Parallel attention computation
+    /// Parallel attention computation with numerically-stable softmax.
+    ///
+    /// Computes scaled dot-product attention per query position:
+    /// ```text
+    /// scores[i, j] = (Q[i] · K[j]) / sqrt(head_dim)
+    /// attn[i, j]   = softmax(scores[i, :])
+    ///     = exp(scores[i,j] − max_j scores[i,j])
+    ///       / Σ_k exp(scores[i,k] − max_k scores[i,k])
+    /// output[i]    = Σ_j attn[i,j] · V[j]
+    /// ```
     pub fn parallel_attention(
         query: &[f32],
         key: &[f32],
@@ -447,6 +456,8 @@ pub mod cpu_optimizations {
         head_dim: usize,
         num_heads: usize,
     ) -> Result<()> {
+        let scale = 1.0 / (head_dim as f32).sqrt();
+
         // Parallel processing by attention heads
         output
             .par_chunks_mut(seq_len * head_dim)
@@ -460,20 +471,40 @@ pub mod cpu_optimizations {
                 let k_offset = head_idx * seq_len * head_dim;
                 let v_offset = head_idx * seq_len * head_dim;
 
-                // Compute attention scores for this head
-                for i in 0..seq_len {
-                    for j in 0..seq_len {
-                        let mut score = 0.0f32;
-                        for d in 0..head_dim {
-                            score += query[q_offset + i * head_dim + d]
-                                   * key[k_offset + j * head_dim + d];
-                        }
+                // Pre-compute raw attention scores for each query position.
+                let mut scores = vec![0.0f32; seq_len];
 
-                        // Apply softmax and compute weighted sum (simplified)
-                        let weight = score.exp(); // Simplified softmax
+                for i in 0..seq_len {
+                    // Compute dot products Q[i] · K[j] for all j.
+                    for j in 0..seq_len {
+                        let mut dot = 0.0f32;
                         for d in 0..head_dim {
-                            head_output[i * head_dim + d] +=
-                                weight * value[v_offset + j * head_dim + d];
+                            dot += query[q_offset + i * head_dim + d]
+                                * key[k_offset + j * head_dim + d];
+                        }
+                        scores[j] = dot * scale;
+                    }
+
+                    // Numerically-stable softmax: subtract max before exp.
+                    let max_score = scores[..seq_len].iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+                    let mut sum_exp = 0.0f32;
+                    for j in 0..seq_len {
+                        scores[j] = (scores[j] - max_score).exp();
+                        sum_exp += scores[j];
+                    }
+
+                    // Normalize and accumulate weighted values.
+                    let out_base = i * head_dim;
+                    for d in 0..head_dim {
+                        head_output[out_base + d] = 0.0; // explicit zero (no stale data)
+                    }
+                    if sum_exp > 0.0 {
+                        for j in 0..seq_len {
+                            let attn_weight = scores[j] / sum_exp;
+                            for d in 0..head_dim {
+                                head_output[out_base + d] +=
+                                    attn_weight * value[v_offset + j * head_dim + d];
+                            }
                         }
                     }
                 }
@@ -555,5 +586,63 @@ mod tests {
         assert_eq!(config.max_sequence_length, 1024);
         assert!(config.enable_kv_cache);
         assert!(!config.enable_memory_pooling);
+    }
+
+    /// Attention weights for a single query position must sum to 1.0 (proper softmax).
+    #[test]
+    fn test_parallel_attention_softmax_normalization() {
+        use cpu_optimizations::parallel_attention;
+
+        let seq_len = 4;
+        let head_dim = 2;
+        let num_heads = 1;
+        // Q, K, V all 1 × seq_len × head_dim (one head)
+        let query = vec![1.0f32, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0]; // seq_len=4 rows
+        let key = query.clone();
+        let value = vec![1.0f32; seq_len * head_dim];
+        let mut output = vec![0.0f32; seq_len * head_dim];
+
+        parallel_attention(&query, &key, &value, &mut output, seq_len, head_dim, num_heads)
+            .expect("attention should not fail");
+
+        // When V is all-ones, output for each query should also be all-ones
+        // (regardless of attention weights, since every value is 1.0).
+        for i in 0..seq_len {
+            for d in 0..head_dim {
+                let got = output[i * head_dim + d];
+                assert!(
+                    (got - 1.0).abs() < 1e-5,
+                    "output[{i},{d}] = {got}, expected ~1.0 (weights sum to 1.0)"
+                );
+            }
+        }
+    }
+
+    /// With a single key/value position, attention weight must be exactly 1.0.
+    #[test]
+    fn test_parallel_attention_single_token() {
+        use cpu_optimizations::parallel_attention;
+
+        let seq_len = 1;
+        let head_dim = 4;
+        let num_heads = 1;
+        let query = vec![0.5f32; head_dim];
+        let key = vec![0.5f32; head_dim];
+        let value = vec![2.0f32; head_dim];
+        let mut output = vec![0.0f32; head_dim];
+
+        cpu_optimizations::parallel_attention(
+            &query, &key, &value, &mut output, seq_len, head_dim, num_heads,
+        )
+        .expect("single-token attention should not fail");
+
+        // Single token → softmax gives weight 1.0 → output == value.
+        for d in 0..head_dim {
+            assert!(
+                (output[d] - 2.0).abs() < 1e-5,
+                "output[{d}] = {}, expected ~2.0",
+                output[d]
+            );
+        }
     }
 }
