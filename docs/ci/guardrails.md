@@ -49,12 +49,12 @@ rg 'uses:\s+[a-zA-Z0-9/_-]+@(?![0-9a-f]{40}\b)' .github/workflows/
 
 ### 2. MSRV Single-Source
 
-**Why**: Prevent MSRV drift across workflows (e.g., one workflow tests 1.89.0, another 1.90.0).
+**Why**: Prevent MSRV drift across workflows (e.g., one workflow tests 1.91.0, another 1.92.0).
 
-**Rule**: Minimum Supported Rust Version (MSRV) is **1.89.0** (Rust 2024 edition), sourced exclusively from `rust-toolchain.toml`.
+**Rule**: Minimum Supported Rust Version (MSRV) is **1.92.0** (Rust 2024 edition), sourced exclusively from `rust-toolchain.toml`.
 
 **Enforcement**: Guards workflow validates:
-- No hardcoded `1.90.0` or other versions in workflows
+- No hardcoded `1.92.0` or other versions in workflows
 - All workflows use `rust-toolchain.toml` via `toolchain-file: rust-toolchain.toml`
 
 **Example**:
@@ -62,7 +62,7 @@ rg 'uses:\s+[a-zA-Z0-9/_-]+@(?![0-9a-f]{40}\b)' .github/workflows/
 # ❌ BAD - hardcoded version
 - uses: dtolnay/rust-toolchain@...
   with:
-    toolchain: 1.89.0
+    toolchain: 1.92.0
 
 # ✅ GOOD - single-source from file
 - uses: dtolnay/rust-toolchain@...
@@ -74,7 +74,7 @@ rg 'uses:\s+[a-zA-Z0-9/_-]+@(?![0-9a-f]{40}\b)' .github/workflows/
 1. Update `rust-toolchain.toml`:
    ```toml
    [toolchain]
-   channel = "1.89.0"
+   channel = "1.92.0"
    ```
 2. All workflows automatically inherit new MSRV
 3. No workflow YAML changes required
@@ -205,7 +205,7 @@ make guards
 # Option 2: Manual checks
 rg 'uses:\s+[a-zA-Z0-9/_-]+@(?![0-9a-f]{40}\b)' .github/workflows/
 rg '\b(cargo|cross)\s+(build|test|bench)\b(?!.*--locked)' .github/workflows/
-rg '1\.90\.0' .github/workflows/  # Should be empty (use 1.89.0 from toolchain file)
+rg '1\.92\.0' .github/workflows/  # Should be empty (use 1.92.0 from toolchain file)
 ```
 
 ---
@@ -301,14 +301,14 @@ gh pr view <NUMBER> && gh pr merge <NUMBER> --squash
 
 ```bash
 # 1. Update rust-toolchain.toml
-echo '[toolchain]\nchannel = "1.90.0"' > rust-toolchain.toml
+echo '[toolchain]\nchannel = "1.92.0"' > rust-toolchain.toml
 
 # 2. Verify all workflows inherit new MSRV
 rg 'toolchain-file: rust-toolchain.toml' .github/workflows/
 
 # 3. Commit and push (no workflow YAML changes needed)
 git add rust-toolchain.toml
-git commit -m "chore: bump MSRV to 1.90.0"
+git commit -m "chore: bump MSRV to 1.92.0"
 ```
 
 ### Adding New Workflow
@@ -383,14 +383,14 @@ jq '.kernels' ci/inference.json
 
 ### MSRV Drift Detected
 
-**Symptom**: Guards workflow fails with "Found 1.90.0 in workflows".
+**Symptom**: Guards workflow fails with "Found 1.92.0 in workflows".
 **Cause**: Workflow hardcodes MSRV instead of using `rust-toolchain.toml`.
 **Fix**:
 ```yaml
 # Before (BAD)
 - uses: dtolnay/rust-toolchain@...
   with:
-    toolchain: 1.89.0
+    toolchain: 1.92.0
 
 # After (GOOD)
 - uses: dtolnay/rust-toolchain@...

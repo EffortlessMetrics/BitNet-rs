@@ -8,7 +8,7 @@ This is the main development guide for BitNet.rs, providing an overview of devel
    ```bash
    git clone https://github.com/microsoft/BitNet-rs.git
    cd BitNet-rs
-   rustup update stable  # Requires Rust 1.90.0+
+   rustup update stable  # Requires Rust 1.92.0+
    ```
 
 2. **Run Tests**

@@ -3,7 +3,7 @@
 # Supports both CPU and GPU backends
 
 # CPU builder
-FROM rust:1.89-bookworm AS builder-cpu
+FROM rust:1.92-bookworm AS builder-cpu
 
 # Install sccache for faster rebuilds
 RUN cargo install sccache
@@ -48,7 +48,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM nvidia/cuda:12.3.1-devel-ubuntu22.04 AS builder-gpu
 RUN apt-get update && apt-get install -y curl build-essential pkg-config libssl-dev ca-certificates git && \
     rm -rf /var/lib/apt/lists/*
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.89.0
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.92.0
 ENV PATH=/root/.cargo/bin:$PATH
 # Install sccache for faster rebuilds
 RUN /root/.cargo/bin/cargo install sccache
