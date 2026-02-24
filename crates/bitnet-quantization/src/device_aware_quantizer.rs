@@ -281,11 +281,24 @@ impl CPUQuantizer {
             ));
         }
 
-        let mut dequantized = Vec::new();
+        // 2-bit code → signed {-1, 0, +1} look-up table.
+        //
+        // The CPUQuantizer::quantize_i2s encoder packs values as two's-complement
+        // bits (val as u8 & 0x03):
+        //   0  (0b00) → 0
+        //   +1 (0b01) → +1
+        //   -1 → (-1i8 as u8) & 0x03 = 0xFF & 0x03 = 3 (0b11) → -1
+        //
+        // Code 2 (0b10) is never produced by the encoder; map it to 0 to avoid
+        // amplifying noise in any externally-sourced tensors.
+        const I2S_LUT: [f32; 4] = [0.0, 1.0, 0.0, -1.0];
+
         let block_size = tensor.block_size;
         let num_blocks = tensor.scales.len();
+        let numel = tensor.numel();
+        let mut dequantized = Vec::with_capacity(numel);
 
-        for block_idx in 0..num_blocks {
+        'outer: for block_idx in 0..num_blocks {
             let scale = tensor.scales[block_idx];
             let start_byte = block_idx * block_size.div_ceil(4); // 4 values per byte
 
@@ -295,28 +308,18 @@ impl CPUQuantizer {
                 }
 
                 let packed = tensor.data[start_byte + byte_idx];
-                for bit_idx in 0..4 {
-                    let quantized = ((packed >> (bit_idx * 2)) & 0x03) as i8;
-                    let signed_val = match quantized {
-                        0 => 0i8,
-                        1 => 1i8,
-                        2 => -1i8, // 2 in 2-bit represents -1
-                        3 => 0i8,  // Invalid value, treat as 0
-                        _ => 0i8,
-                    };
+                for bit_idx in 0..4u32 {
+                    let code = ((packed >> (bit_idx * 2)) & 0x03) as usize;
+                    // SAFETY: code is always in 0..=3 because of the & 0x03 mask.
+                    dequantized.push(I2S_LUT[code] * scale);
 
-                    let dequantized_val = signed_val as f32 * scale;
-                    dequantized.push(dequantized_val);
-
-                    if dequantized.len() >= tensor.numel() {
-                        break;
+                    if dequantized.len() >= numel {
+                        break 'outer;
                     }
                 }
             }
         }
 
-        // Trim to exact size
-        dequantized.truncate(tensor.numel());
         Ok(dequantized)
     }
 
@@ -1002,5 +1005,38 @@ mod tests {
             msg.contains("ffi") || msg.contains("FFI") || msg.contains("IQ2S"),
             "Error should mention FFI bridge; got: {msg}"
         );
+    }
+
+    /// Verify that quantize_i2s → dequantize_i2s round-trips correctly for
+    /// all three representable values {-1, 0, +1}.
+    #[test]
+    fn test_i2s_round_trip_negative_values() {
+        let quantizer = CPUQuantizer::new(ToleranceConfig::default());
+
+        // Include all three ternary values: -1, 0, +1.
+        // With scale = max_abs = 1.0 they should round-trip exactly.
+        let original = vec![-1.0f32, 0.0, 1.0, -1.0, 1.0, 0.0];
+        let quantized = quantizer.quantize_i2s(&original).expect("quantize should succeed");
+        let deq = quantizer.dequantize_i2s(&quantized).expect("dequantize should succeed");
+
+        assert_eq!(deq.len(), original.len());
+        for (i, (&orig, &got)) in original.iter().zip(deq.iter()).enumerate() {
+            // Exact values are expected for ±1.0 and 0.0 with scale=1.0.
+            assert!((orig - got).abs() < 1e-6, "index {i}: expected {orig}, got {got}");
+        }
+    }
+
+    /// Verify that dequantize_i2s returns the correct length for non-multiple-of-4 inputs.
+    #[test]
+    fn test_i2s_round_trip_non_aligned_length() {
+        let quantizer = CPUQuantizer::new(ToleranceConfig::default());
+        let original = vec![1.0f32, -1.0, 0.0]; // 3 elements, not a multiple of 4
+        let quantized = quantizer.quantize_i2s(&original).expect("quantize_i2s failed");
+        let deq = quantizer.dequantize_i2s(&quantized).expect("dequantize_i2s failed");
+
+        assert_eq!(deq.len(), original.len(), "output length must match input");
+        for (i, (&o, &d)) in original.iter().zip(deq.iter()).enumerate() {
+            assert!((o - d).abs() < 1e-6, "index {i}: expected {o}, got {d}");
+        }
     }
 }
