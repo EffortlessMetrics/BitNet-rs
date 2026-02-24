@@ -1,0 +1,121 @@
+name: GPU Smoke Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_parity:
+        description: 'Run parity receipt upload'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Run nightly at 3 AM UTC (after perf tracking)
+    - cron: '0 3 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUST_LOG: warn
+
+jobs:
+  # Always-on compile check (no GPU required)
+  gpu-compile:
+    name: GPU Compile Check
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: rustfmt, clippy
+
+      - name: Cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.cargo/registry/
+            ~/.cargo/git/
+            target/
+          key: ${{ runner.os }}-gpu-compile-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-gpu-compile-
+
+      - name: Check GPU build (no CUDA runtime required)
+        run: |
+          # gpu feature activates cuda feature (CUDA-first lattice)
+          # This compile check ensures GPU code compiles even without NVCC
+          cargo check --locked --no-default-features --features gpu
+        env:
+          # Stub out CUDA runtime detection at compile time
+          BITNET_GPU_FAKE: none
+
+  # Runtime GPU tests — requires self-hosted GPU runner
+  gpu-runtime:
+    name: GPU Runtime Smoke (${{ matrix.test }})
+    runs-on: [self-hosted, gpu, cuda]
+    timeout-minutes: 60
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - kernel-smoke
+          - inference-smoke
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.cargo/registry/
+            ~/.cargo/git/
+            target/
+          key: ${{ runner.os }}-gpu-runtime-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build GPU release
+        run: cargo build --release --no-default-features --features gpu --locked
+
+      - name: GPU kernel smoke (${{ matrix.test }})
+        if: matrix.test == 'kernel-smoke'
+        run: |
+          cargo nextest run -p bitnet-kernels \
+            --no-default-features --features gpu \
+            --profile ci \
+            -E 'test(gpu)' \
+            2>&1 | tail -20
+
+      - name: GPU inference smoke (${{ matrix.test }})
+        if: matrix.test == 'inference-smoke'
+        run: |
+          # Quick 4-token inference to validate GPU end-to-end
+          RUST_LOG=warn cargo run --release --locked -p bitnet-cli \
+            --no-default-features --features gpu,full-cli -- run \
+            --model "${BITNET_GGUF:-models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf}" \
+            --tokenizer "${BITNET_TOKENIZER:-models/microsoft-bitnet-b1.58-2B-4T-gguf/tokenizer.json}" \
+            --prompt "2+2=" \
+            --max-tokens 4 \
+            --temperature 0.0 \
+            --greedy 2>&1 | tail -10
+
+      - name: Upload GPU receipts
+        if: github.event.inputs.run_parity == 'true' || github.event_name == 'schedule'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: gpu-receipts-${{ matrix.test }}
+          path: ci/
+          retention-days: 30

@@ -4,8 +4,8 @@
 repository:
   name: BitNet-rs
   description: >
-    Rust inference engine for 1-bit BitNet large language models — memory-safe,
-    cross-validated against the C++ reference, with SIMD/CUDA acceleration.
+    High-performance Rust inference engine for 1-bit BitNet LLMs — memory-safe,
+    SIMD/CUDA-accelerated, cross-validated against the C++ reference.
   homepage: https://github.com/EffortlessMetrics/BitNet-rs
   topics:
     - rust

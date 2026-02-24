@@ -7,7 +7,7 @@ This guide gets you from zero to running BitNet 1-bit quantized neural network i
 ## Prerequisites (1 minute)
 
 ```bash
-# Check Rust version (1.90.0+ required)
+# Check Rust version (1.92.0+ required)
 rustc --version
 
 # Clone repository

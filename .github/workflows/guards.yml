@@ -68,7 +68,7 @@ jobs:
           fi
           echo "✅ All actions pinned to 40-hex SHAs"
 
-      - name: Guard - MSRV consistency (1.89.0 only)
+      - name: Guard - MSRV consistency (1.92.0 only)
         run: |
           # Restrict matches to actual toolchain declarations or explicit JSON/env
           if rg -n --color=never --glob '!guards.yml' \
@@ -76,10 +76,10 @@ jobs:
                -e 'rust-version\s*=\s*"1\.90\.0"' \
                -e '"RUST_VERSION"\s*:\s*"1\.90\.0"' \
                .github/workflows; then
-            echo "❌ Found stale toolchain 1.90.0 in workflows (MSRV is 1.89.0)"
+            echo "❌ Found stale toolchain 1.90.0 in workflows (MSRV is 1.92.0)"
             exit 1
           fi
-          echo "✅ MSRV consistent across all workflows (1.89.0)"
+          echo "✅ MSRV consistent across all workflows (1.92.0)"
 
       - name: Check units
         run: ./scripts/check-units.sh || true

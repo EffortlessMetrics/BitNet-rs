@@ -47,8 +47,8 @@ pyo3-build-config = "0.27.1"
 integration-tests = []
 default = ["cpu"]
 cpu = ["bitnet-inference/cpu"]
-gpu = ["bitnet-inference/gpu"]
-cuda = ["gpu"]  # Backward compatibility alias for gpu
+cuda = ["bitnet-inference/cuda"]
+gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 
 [[test]]
 name = "streaming_comprehensive"

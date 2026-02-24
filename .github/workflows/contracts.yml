@@ -32,10 +32,10 @@ jobs:
       - name: Install Rust (MSRV)
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
 
       - name: Install cargo-public-api
-        # Pin to a version compatible with MSRV 1.89.0
+        # Pin to a version compatible with MSRV 1.92.0
         run: cargo install cargo-public-api --version "0.43.0" --locked
 
       - name: Compute base and head

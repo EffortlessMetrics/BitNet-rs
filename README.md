@@ -1,7 +1,7 @@
 # BitNet.rs
 
 [![CI](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml)
-[![MSRV](https://img.shields.io/badge/MSRV-1.89.0-blue.svg)](./rust-toolchain.toml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.92.0-blue.svg)](./rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
 
 Rust inference engine for 1-bit BitNet large language models — memory-safe, cross-validated against the C++ reference, with SIMD/CUDA acceleration.

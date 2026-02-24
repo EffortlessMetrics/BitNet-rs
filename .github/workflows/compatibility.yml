@@ -78,7 +78,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
       - name: Build FFI library
         run: |
           cargo build -p bitnet-ffi --locked --release --no-default-features --features cpu
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
       - name: Install system deps
         run: |
           sudo apt-get update
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
@@ -175,7 +175,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
@@ -234,7 +234,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
       - name: Cache test GGUF
         id: cache-gguf
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
@@ -267,7 +267,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.10'
@@ -304,7 +304,7 @@ jobs:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
-          toolchain: "1.89.0"
+          toolchain: "1.92.0"
       - name: Install cargo-audit
         run: cargo install cargo-audit || true
       - name: Install cargo-deny

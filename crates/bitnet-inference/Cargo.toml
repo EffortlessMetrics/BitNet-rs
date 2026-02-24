@@ -58,8 +58,8 @@ bitnet-test-support.workspace = true
 [features]
 default = []
 cpu = ["bitnet-kernels/cpu-optimized"]
-gpu = ["bitnet-kernels/gpu"]
-cuda = ["gpu"]  # Backward compatibility alias for gpu
+cuda = ["bitnet-kernels/cuda"]
+gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
 # Runtime selection

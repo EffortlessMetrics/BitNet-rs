@@ -1,7 +1,7 @@
 # Pinned Rust toolchain for reproducible builds
-# MSRV: 1.89.0 (using Rust 2024 edition)
+# MSRV: 1.92.0 (using Rust 2024 edition)
 [toolchain]
-channel = "1.89.0"
+channel = "1.92.0"
 profile = "minimal"
 components = ["rustfmt", "clippy", "rust-analyzer"]
 targets = []

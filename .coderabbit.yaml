@@ -1,0 +1,9 @@
+version: "2"
+
+reviews:
+  path_filters:
+    - "!archive/**"
+    - "!docs/archive/**"
+    - "!docs/reports/**"
+    - "!**/*.lock"
+    - "!target/**"

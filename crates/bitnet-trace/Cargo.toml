@@ -2,7 +2,7 @@
 name = "bitnet-trace"
 version = "0.1.0"
 edition.workspace = true
-rust-version = "1.89.0"
+rust-version = "1.92.0"
 license = "MIT OR Apache-2.0"
 description = "Tensor activation tracing for BitNet.rs cross-validation debugging"
 

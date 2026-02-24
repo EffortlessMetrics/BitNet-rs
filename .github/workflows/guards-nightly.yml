@@ -42,13 +42,13 @@ jobs:
           fi
           echo "✅ No floating refs"
 
-      - name: Guard - no stale 1.90.0 MSRV references (should be 1.89.0)
+      - name: Guard - no stale 1.90.0 MSRV references (should be 1.92.0)
         run: |
           if rg -n --glob '!guards.yml' 'toolchain:\s*"?1\.90\.0"?|rust-version\s*=\s*"1\.90\.0"|"RUST_VERSION"\s*:\s*"1\.90\.0"' .github/workflows; then
             echo "❌ Stale 1.90.0 reference found"
             exit 1
           fi
-          echo "✅ MSRV consistent (1.89.0)"
+          echo "✅ MSRV consistent (1.92.0)"
 
       - name: Guard - cargo/cross --locked
         run: |

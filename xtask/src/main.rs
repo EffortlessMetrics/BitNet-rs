@@ -1003,6 +1003,16 @@ enum Cmd {
         #[arg(long)]
         lock: PathBuf,
     },
+
+    /// Inspect a shared library and report detected backends
+    ///
+    /// Uses `nm --dynamic` (or `objdump -T` as fallback) to enumerate exported
+    /// symbols and detect which backends (bitnet.cpp, llama.cpp, CUDA) are present.
+    #[command(name = "analyze-library")]
+    AnalyzeLibrary {
+        /// Path to the shared library (.so / .dylib / .dll)
+        path: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1302,6 +1312,7 @@ fn real_main() -> Result<()> {
             verify_receipt_cmd(&path, require_gpu_kernels)
         }
         Cmd::FetchModels { lock } => fetch_models_cmd(&lock),
+        Cmd::AnalyzeLibrary { path } => analyze_library(&path),
     }
 }
 
@@ -5649,6 +5660,60 @@ struct LockEntry {
     /// Present for lockfile JSON compatibility (not used at runtime).
     #[allow(dead_code)]
     license: String,
+}
+
+/// Inspect a shared library and report detected backends.
+fn analyze_library(path: &Path) -> Result<()> {
+    let path_str = path
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Library path contains invalid UTF-8: {:?}", path))?;
+
+    let syms = {
+        let out = Command::new("nm").args(["--dynamic", "--defined-only", path_str]).output();
+
+        match out {
+            Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
+            Ok(_) => {
+                // Try objdump as fallback
+                let out2 = Command::new("objdump").args(["-T", path_str]).output()?;
+                if !out2.status.success() {
+                    anyhow::bail!("Both nm and objdump failed to inspect library {:?}", path);
+                }
+                String::from_utf8_lossy(&out2.stdout).into_owned()
+            }
+            Err(_) => {
+                anyhow::bail!("nm and objdump not available; cannot inspect library");
+            }
+        }
+    };
+
+    let has_bitnet = syms.lines().any(|l| l.contains("bitnet") || l.contains("BitNet"));
+    let has_llama = syms.lines().any(|l| l.contains("llama_") || l.contains("ggml_"));
+    let has_cuda =
+        syms.lines().any(|l| l.contains("cuda") || l.contains("cublas") || l.contains("cudarc"));
+
+    let mut backends = Vec::new();
+    if has_bitnet {
+        backends.push("bitnet.cpp");
+    }
+    if has_llama {
+        backends.push("llama.cpp");
+    }
+    if has_cuda {
+        backends.push("cuda");
+    }
+
+    println!("Library: {}", path.display());
+    println!("Symbols:");
+    println!("  bitnet: {has_bitnet}");
+    println!("  llama:  {has_llama}");
+    println!("  cuda:   {has_cuda}");
+    println!(
+        "Detected backends: {}",
+        if backends.is_empty() { "none".to_string() } else { backends.join(", ") }
+    );
+
+    Ok(())
 }
 
 /// Download and verify models from lockfile

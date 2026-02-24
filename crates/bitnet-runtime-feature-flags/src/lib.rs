@@ -28,7 +28,11 @@ fn activation_from_cfg() -> FeatureActivation {
     FeatureActivation {
         cpu: cfg!(feature = "cpu"),
         gpu: cfg!(feature = "gpu"),
-        cuda: cfg!(any(feature = "gpu", feature = "cuda")),
+        // NOTE: cuda reports true ONLY when feature="cuda" is explicitly enabled.
+        // Normalization (cuda ⟹ Gpu in FeatureSet) happens in active_features_from_activation().
+        // With the lattice gpu=["cuda"], enabling --features gpu activates both,
+        // so activation.cuda will also be true when using --features gpu.
+        cuda: cfg!(feature = "cuda"),
         inference: cfg!(feature = "inference"),
         kernels: cfg!(feature = "kernels"),
         tokenizers: cfg!(feature = "tokenizers"),

@@ -27,6 +27,6 @@ serial_test.workspace = true
 [features]
 default = []
 cpu = ["bitnet-quantization/cpu"]
-gpu = ["bitnet-common/gpu", "candle-core/cuda", "bitnet-quantization/gpu"]
-cuda = ["gpu"]
+cuda = ["bitnet-common/cuda", "candle-core/cuda", "bitnet-quantization/cuda"]
+gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 trace = []

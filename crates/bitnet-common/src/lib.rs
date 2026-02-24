@@ -4,16 +4,22 @@
 //! the BitNet ecosystem, including configuration, error handling, and tensor
 //! abstractions.
 
+pub mod backend_selection;
 pub mod config;
 pub mod error;
+pub mod kernel_registry;
 pub mod math;
 pub mod strict_mode;
 pub mod tensor;
 pub mod types;
 pub mod warn_once;
 
+pub use backend_selection::{
+    BackendRequest, BackendSelectionError, BackendSelectionResult, select_backend,
+};
 pub use config::*;
 pub use error::*;
+pub use kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 pub use math::ceil_div;
 pub use strict_mode::{
     ComputationType, MissingKernelScenario, MockInferencePath, PerformanceMetrics,
