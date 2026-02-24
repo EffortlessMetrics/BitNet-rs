@@ -25,23 +25,21 @@ pub fn parallel_matmul(
 
     let chunk_size = (m + num_threads.max(1) - 1) / num_threads.max(1);
 
-    c.par_chunks_mut(chunk_size * n)
-        .enumerate()
-        .for_each(|(chunk_idx, c_chunk)| {
-            let start_row = chunk_idx * chunk_size;
-            let end_row = (start_row + chunk_size).min(m);
+    c.par_chunks_mut(chunk_size * n).enumerate().for_each(|(chunk_idx, c_chunk)| {
+        let start_row = chunk_idx * chunk_size;
+        let end_row = (start_row + chunk_size).min(m);
 
-            for i in 0..(end_row - start_row) {
-                let global_i = start_row + i;
-                for j in 0..n {
-                    let mut sum = 0.0f32;
-                    for l in 0..k {
-                        sum += a[global_i * k + l] * b[l * n + j];
-                    }
-                    c_chunk[i * n + j] = sum;
+        for i in 0..(end_row - start_row) {
+            let global_i = start_row + i;
+            for j in 0..n {
+                let mut sum = 0.0f32;
+                for l in 0..k {
+                    sum += a[global_i * k + l] * b[l * n + j];
                 }
+                c_chunk[i * n + j] = sum;
             }
-        });
+        }
+    });
 
     Ok(())
 }
@@ -70,10 +68,8 @@ pub fn parallel_attention(
 ) -> Result<()> {
     let scale = 1.0 / (head_dim as f32).sqrt();
 
-    output
-        .par_chunks_mut(seq_len * head_dim)
-        .enumerate()
-        .try_for_each(|(head_idx, head_output)| -> Result<()> {
+    output.par_chunks_mut(seq_len * head_dim).enumerate().try_for_each(
+        |(head_idx, head_output)| -> Result<()> {
             if head_idx >= num_heads {
                 return Ok(());
             }
@@ -89,17 +85,14 @@ pub fn parallel_attention(
                 for j in 0..seq_len {
                     let mut dot = 0.0f32;
                     for d in 0..head_dim {
-                        dot += query[q_offset + i * head_dim + d]
-                            * key[k_offset + j * head_dim + d];
+                        dot +=
+                            query[q_offset + i * head_dim + d] * key[k_offset + j * head_dim + d];
                     }
                     scores[j] = dot * scale;
                 }
 
                 // Numerically-stable softmax.
-                let max_score = scores[..seq_len]
-                    .iter()
-                    .cloned()
-                    .fold(f32::NEG_INFINITY, f32::max);
+                let max_score = scores[..seq_len].iter().cloned().fold(f32::NEG_INFINITY, f32::max);
                 let mut sum_exp = 0.0f32;
                 for j in 0..seq_len {
                     scores[j] = (scores[j] - max_score).exp();
@@ -122,7 +115,8 @@ pub fn parallel_attention(
             }
 
             Ok(())
-        })?;
+        },
+    )?;
 
     Ok(())
 }
@@ -173,10 +167,7 @@ mod tests {
         parallel_attention(&v, &v, &v, &mut out, 1, head_dim, 1).unwrap();
 
         for (i, &val) in out.iter().enumerate() {
-            assert!(
-                (val - 2.0).abs() < 1e-5,
-                "out[{i}] = {val}, expected 2.0"
-            );
+            assert!((val - 2.0).abs() < 1e-5, "out[{i}] = {val}, expected 2.0");
         }
     }
 
