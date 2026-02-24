@@ -80,3 +80,8 @@ trace = ["bitnet-models/trace"]  # Enable tensor activation tracing
 name = "comprehensive_tests"
 path = "tests/comprehensive_tests.rs"
 required-features = ["full-engine"]
+
+[[test]]
+name = "cpu_golden_path"
+path = "tests/cpu_golden_path.rs"
+required-features = ["cpu"]

@@ -106,6 +106,10 @@ jobs:
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
+          # Phase 5: CPU golden path E2E (always-on, no model download)
+          cargo test --locked \
+            -p bitnet-inference --test cpu_golden_path \
+            --no-default-features --features cpu
 
       - name: BDD Grid Check (CPU cells)
         run: cargo run --locked --no-default-features -p xtask -- grid-check --cpu-only
