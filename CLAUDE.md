@@ -19,6 +19,11 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 - **EnvGuard Environment Isolation** - Robust parallel test execution with `#[serial(bitnet_env)]`
 - **Receipt Verification** - Schema v1.0.0 with 8 validation gates (25/25 tests passing)
 - **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
+- **Runtime Backend Selection** - `BackendCapabilities` snapshot at startup with `requested=X detected=[…] selected=Y` logging
+- **CPU Golden Path E2E Tests** - 5 deterministic end-to-end tests always running in PR CI (no model download)
+- **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
+- **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
+- **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
 
 ### Current Limitations (MVP Phase)
 
@@ -959,7 +964,7 @@ fn test_qk256_full_model_inference() { /* ... */ }
 
 ### Working Test Categories
 
-These test suites pass reliably (152+ tests passing):
+These test suites pass reliably (1935+ tests passing):
 
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
@@ -971,6 +976,8 @@ These test suites pass reliably (152+ tests passing):
 - **receipt verification tests**: Schema v1.0.0 with 8 gates (25/25 passing)
 - **strict mode tests**: Runtime guards and enforcement (12/12 passing)
 - **environment isolation tests**: EnvGuard parallel safety (7/7 passing)
+- **CPU golden path E2E tests**: Deterministic inference with receipt invariants (5/5 passing)
+- **SRP microcrate tests**: bitnet-logits (15), bitnet-gguf (8), bitnet-generation (11), bitnet-device-probe (5), bitnet-engine-core (4)
 
 ### Test Dependencies
 
@@ -978,15 +985,14 @@ These test suites pass reliably (152+ tests passing):
 Real Inference Tests
   └─ Depends on: Issue #254 resolution (shape mismatch fix)
     └─ Depends on: Issue #260 resolution (mock elimination)
-      └─ Depends on: Issue #439 resolution (feature consistency)
 
 Cross-Validation Tests
   └─ Depends on: Issue #469 resolution (tokenizer parity + FFI)
     └─ Depends on: Real Inference Tests (above)
 
 GPU Mixed-Precision Tests
-  └─ Depends on: Issue #439 resolution (feature unification)
-    └─ Depends on: GPU kernel optimization (post-MVP)
+  └─ Depends on: GPU kernel optimization (post-MVP)
+  Note: Issue #439 resolved (feature gate unification merged in PR #475)
 ```
 
 ## Environment Variables

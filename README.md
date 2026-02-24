@@ -37,9 +37,9 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                    bitnet-cli / bitnet-server           │
-└────────────────────┬───────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                    bitnet-cli / bitnet-server               │
+└────────────────────┬───────────────────────────────────────┘
                      │
           ┌──────────▼──────────┐
           │   bitnet-inference  │  autoregressive engine
@@ -48,6 +48,9 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
           │  │ bitnet-prompt- │ │  chat templates (raw/instruct/llama3)
           │  │   templates    │ │
           │  │ bitnet-receipts│ │  honest-compute receipts
+          │  │ bitnet-logits  │ │  logit transforms / penalties
+          │  │ bitnet-        │ │  decode loop / stop criteria
+          │  │   generation   │ │
           │  └────────────────┘ │
           └──────────┬──────────┘
                      │
@@ -56,12 +59,15 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
      │  ┌──────────────────────────┐   │
      │  │   bitnet-quantization    │   │  I2_S / TL1 / TL2 / IQ2_S
      │  │   bitnet-kernels (SIMD)  │   │  AVX2 / AVX-512 / NEON / CUDA
+     │  │   bitnet-gguf            │   │  GGUF parser (fuzz-tested)
      │  └──────────────────────────┘   │
      └──────────────────────────────────┘
                      │
-          ┌──────────▼──────────┐
-          │  bitnet-tokenizers  │  universal tokenizer + auto-discovery
-          └─────────────────────┘
+     ┌───────────────▼──────────────────┐
+     │  bitnet-tokenizers               │  universal tokenizer + auto-discovery
+     │  bitnet-device-probe             │  OS/GPU probing + capability snapshot
+     │  bitnet-engine-core              │  session / orchestration contracts
+     └──────────────────────────────────┘
 ```
 
 ## Status (v0.1.0-qna-mvp)
@@ -76,6 +82,8 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 | Receipt / honest-compute      | ✅     | Schema v1.0.0, 8 validation gates |
 | Strict mode                   | ✅     | Runtime guards prevent mock fallback |
 | SafeTensors → GGUF export     | ✅     | `bitnet-st2gguf` with F16 LayerNorm preservation |
+| Backend selection + reporting | ✅     | `requested=X detected=[…] selected=Y` at startup |
+| CPU golden path E2E tests     | ✅     | 5 deterministic tests, always-on in PR CI |
 | Server / HTTP API             | 🚧     | Health endpoints wired; serving endpoints have TODOs |
 
 ## Build
