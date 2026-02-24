@@ -187,10 +187,8 @@ impl Tokenizer for BasicTokenizer {
 
         let mut tokens: Vec<u32> = Vec::with_capacity(text.len() + 2);
 
-        if add_bos {
-            if let Some(bos) = self.bos_token_id {
-                tokens.push(bos);
-            }
+        if add_bos && let Some(bos) = self.bos_token_id {
+            tokens.push(bos);
         }
 
         // Byte-level encoding: each UTF-8 byte maps to token ID 0–255.
