@@ -1,6 +1,6 @@
 //! GGUF model metadata and parity validation utilities
 
-use anyhow::{Result, bail, anyhow};
+use anyhow::{Result, anyhow, bail};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek};

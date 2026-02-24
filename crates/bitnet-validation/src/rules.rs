@@ -275,11 +275,7 @@ mod tests {
     #[test]
     fn test_load_policy_missing_key() {
         let tmp = tempfile::NamedTempFile::new().unwrap();
-        std::fs::write(
-            tmp.path(),
-            "version: 1\nrules:\n  my-key:\n    ln: []\n",
-        )
-        .unwrap();
+        std::fs::write(tmp.path(), "version: 1\nrules:\n  my-key:\n    ln: []\n").unwrap();
         let result = load_policy(tmp.path(), "missing-key");
         assert!(result.is_err());
     }
