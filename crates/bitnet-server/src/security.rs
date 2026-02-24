@@ -539,10 +539,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            response.headers().get("access-control-allow-origin").unwrap(),
-            "*"
-        );
+        assert_eq!(response.headers().get("access-control-allow-origin").unwrap(), "*");
 
         // Test specific origin
         config.allowed_origins = vec!["http://trusted.com".to_string()];
