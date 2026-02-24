@@ -12,13 +12,15 @@
 //! - Device-aware model configuration
 
 use crate::{LoadConfig, Model, ModelLoader};
-use bitnet_common::{
-    BitNetError, Device, ModelError, ModelMetadata, Result, ValidationErrorDetails,
-};
+#[cfg(feature = "inference")]
+use bitnet_common::{BitNetError, ModelError, ModelMetadata};
+use bitnet_common::{Device, Result, ValidationErrorDetails};
 use std::path::Path;
 #[cfg(feature = "inference")]
+use tracing::debug;
+use tracing::info;
+#[cfg(feature = "inference")]
 use tracing::warn;
-use tracing::{debug, info};
 
 /// Enhanced model loading configuration for production use
 #[derive(Debug, Clone)]
@@ -106,11 +108,11 @@ pub struct ValidationResult {
 /// Enhanced model loader for production environments
 pub struct ProductionModelLoader {
     /// Base model loader
-    base_loader: ModelLoader,
+    pub base_loader: ModelLoader,
     /// Production configuration
-    config: ProductionLoadConfig,
+    pub config: ProductionLoadConfig,
     /// Validation enabled
-    validation_enabled: bool,
+    pub validation_enabled: bool,
 }
 
 impl ProductionModelLoader {
@@ -209,6 +211,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate file access and basic properties
+    #[cfg(feature = "inference")]
     fn validate_file_access(&self, path: &Path) -> Result<()> {
         if !path.exists() {
             return Err(BitNetError::Model(ModelError::NotFound {
@@ -231,6 +234,7 @@ impl ProductionModelLoader {
     }
 
     /// Comprehensive model file validation
+    #[cfg(feature = "inference")]
     fn validate_model_file(&self, path: &Path) -> Result<ValidationResult> {
         let mut result = ValidationResult {
             passed: true,
@@ -273,6 +277,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate extracted metadata
+    #[cfg(feature = "inference")]
     fn validate_metadata(&self, metadata: &ModelMetadata, result: &mut ValidationResult) {
         // Check vocabulary size
         if metadata.vocab_size == 0 {
@@ -301,6 +306,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate tensor alignment (simplified implementation)
+    #[cfg(feature = "inference")]
     fn validate_tensor_alignment(&self, _path: &Path) -> Result<()> {
         // In a real implementation, this would:
         // 1. Parse GGUF header to get tensor offsets
@@ -314,6 +320,7 @@ impl ProductionModelLoader {
     }
 
     /// Check if architecture is supported
+    #[cfg(feature = "inference")]
     fn is_supported_architecture(&self, architecture: &str) -> bool {
         matches!(
             architecture.to_lowercase().as_str(),
@@ -322,6 +329,7 @@ impl ProductionModelLoader {
     }
 
     /// Add performance recommendations based on model properties
+    #[cfg(feature = "inference")]
     fn add_performance_recommendations(
         &self,
         metadata: &ModelMetadata,
@@ -351,6 +359,7 @@ impl ProductionModelLoader {
     }
 
     /// Validate loaded model
+    #[cfg(feature = "inference")]
     fn validate_loaded_model(&self, _model: &dyn Model) -> Result<()> {
         // In a real implementation, this would:
         // 1. Run a small forward pass to validate model works
@@ -596,6 +605,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "inference")]
     #[test]
     fn test_file_access_validation() {
         let loader = ProductionModelLoader::new();
@@ -605,6 +615,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "inference")]
     #[test]
     fn test_architecture_support() {
         let loader = ProductionModelLoader::new();
