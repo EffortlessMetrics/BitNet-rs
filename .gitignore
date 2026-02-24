@@ -198,7 +198,11 @@ fixture_test/
 test-results/
 mutants-report/
 
-fuzz/
+# Fuzz build artifacts only (source files are tracked)
+fuzz/target/
+fuzz/artifacts/
+fuzz/coverage/
+fuzz/corpus/
 
 tests/tests/cache/incremental/last_run.json
 
