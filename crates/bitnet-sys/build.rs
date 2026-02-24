@@ -83,7 +83,10 @@ fn main() {
         eprintln!("bitnet-sys: Using BitNet C++ from: {}", cpp_dir.display());
 
         // Symbol analysis: emit cfg flags for detected capabilities.
-        run_symbol_analysis(&cpp_dir);
+        // Only runs when the `symbol-analysis` feature is explicitly requested.
+        if std::env::var("CARGO_FEATURE_SYMBOL_ANALYSIS").is_ok() {
+            run_symbol_analysis(&cpp_dir);
+        }
 
         // Link against the C++ implementation - fail on error
         link_cpp_implementation(&cpp_dir).expect("Failed to link Microsoft BitNet C++ libraries");
@@ -361,8 +364,7 @@ fn run_symbol_analysis(cpp_dir: &Path) {
             "bitnet-sys: symbol-analysis: no shared libraries found in {}",
             build_dir.display()
         );
-        // Still emit available since cpp_dir itself exists.
-        println!("cargo:rustc-cfg=bitnet_cpp_available");
+        // cpp_dir exists but no analyzable libs found; do NOT emit bitnet_cpp_available.
         return;
     }
 
@@ -412,7 +414,7 @@ fn collect_libraries(
         if path.is_dir() {
             collect_libraries(&path, depth + 1, max_depth, out);
         } else if let Some(ext) = path.extension() {
-            if ext == "so" || ext == "dylib" {
+            if ext == "so" || ext == "dylib" || ext == "dll" {
                 out.push(path);
             }
         }

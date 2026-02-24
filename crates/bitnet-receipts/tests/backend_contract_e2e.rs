@@ -81,17 +81,25 @@ fn receipt_without_backend_summary_still_validates() {
 
 #[test]
 fn receipt_backend_summary_format_check_rejects_garbage() {
-    // When backend_summary is non-empty, it must contain "selected="
-    // InferenceReceipt::generate() sets the field directly; validation checks format.
-    // We test the validation by building a receipt with a bad summary via JSON round-trip.
+    // When backend_summary is non-empty, it must contain "selected=".
+    // InferenceReceipt::generate() sets the field; validation checks its format.
+    // We test the validation by introducing a bad summary via JSON round-trip.
 
-    let mut receipt = make_receipt(
+    let receipt = make_receipt(
         "cpu",
         Some("requested=auto detected=[cpu-rust] selected=cpu-rust".to_string()),
     );
-    receipt.backend_summary = "bogus_no_selected_key".to_string();
 
-    let err = receipt.validate();
+    // Serialize to JSON, corrupt backend_summary in the JSON payload, then deserialize.
+    let json = serde_json::to_string(&receipt).expect("receipt must serialize");
+    let mut value: serde_json::Value =
+        serde_json::from_str(&json).expect("receipt JSON must parse to Value");
+    value["backend_summary"] = serde_json::Value::String("bogus_no_selected_key".to_string());
+    let corrupted_json = serde_json::to_string(&value).expect("corrupted JSON must serialize");
+    let corrupted_receipt: InferenceReceipt =
+        serde_json::from_str(&corrupted_json).expect("corrupted JSON must deserialize");
+
+    let err = corrupted_receipt.validate();
     assert!(err.is_err(), "receipt with malformed backend_summary should fail validation");
 }
 

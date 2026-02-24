@@ -5745,6 +5745,7 @@ fn bdd_feature_to_cargo(name: &str) -> Option<&'static str> {
         "crossval" => Some("crossval"),
         "server" => Some("full-cli"),
         "fixtures" => Some("fixtures"),
+        "reporting" => Some("reporting"),
         _ => None,
     }
 }
@@ -5774,7 +5775,7 @@ fn grid_check(cpu_only: bool, verbose: bool) -> Result<()> {
             .filter_map(|f| bdd_feature_to_cargo(&f.to_string()))
             .map(str::to_owned)
             .collect();
-        // Deduplicate preserving order
+        // Sort then deduplicate (order in feature sets is not meaningful).
         cargo_features.sort();
         cargo_features.dedup();
 

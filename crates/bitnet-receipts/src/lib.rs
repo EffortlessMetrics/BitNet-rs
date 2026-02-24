@@ -278,6 +278,14 @@ impl InferenceReceipt {
         })
     }
 
+    /// Backward-compatible alias for [`generate`] with no backend summary.
+    ///
+    /// Equivalent to `generate(backend, kernels, None)`. Prefer `generate()` for new code.
+    #[deprecated(since = "0.1.1", note = "use generate(backend, kernels, None) instead")]
+    pub fn generate_basic(backend: &str, kernels: Vec<String>) -> Result<Self> {
+        Self::generate(backend, kernels, None)
+    }
+
     /// Collect relevant environment variables
     fn collect_env_vars() -> HashMap<String, String> {
         let mut env_vars = HashMap::new();
