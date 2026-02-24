@@ -77,9 +77,10 @@ impl SamplingStrategy {
         // the flat single-occurrence version in bitnet-logits).
         self.penalize_repeated_tokens(&mut buf, context_tokens);
 
-        // Greedy path: temperature == 0.0 → argmax
+        // Greedy path: temperature == 0.0 → greedy_sample (handles empty input
+        // as Err and breaks ties by lowest token ID for llama.cpp compatibility).
         if self.config.temperature == 0.0 {
-            let token = argmax(&buf) as u32;
+            let token = greedy_sample(&buf)?;
             *self.token_counts.entry(token).or_insert(0) += 1;
             return Ok(token);
         }
