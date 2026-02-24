@@ -448,11 +448,15 @@ mod intelligibility_smoke_tests {
         }
 
         let Some(model_path) = try_discover_test_model()? else {
-            eprintln!("Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model");
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
             return Ok(());
         };
         let Some(cli_binary) = try_get_cli_binary_path()? else {
-            eprintln!("Skipping: bitnet-cli binary not found. Build with: cargo build -p bitnet-cli --features cpu,full-cli");
+            eprintln!(
+                "Skipping: bitnet-cli binary not found. Build with: cargo build -p bitnet-cli --features cpu,full-cli"
+            );
             return Ok(());
         };
 
@@ -521,7 +525,9 @@ mod intelligibility_smoke_tests {
         }
 
         let Some(model_path) = try_discover_test_model()? else {
-            eprintln!("Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model");
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
             return Ok(());
         };
         let Some(cli_binary) = try_get_cli_binary_path()? else {
@@ -566,7 +572,9 @@ mod intelligibility_smoke_tests {
         }
 
         let Some(model_path) = try_discover_test_model()? else {
-            eprintln!("Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model");
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
             return Ok(());
         };
         let Some(cli_binary) = try_get_cli_binary_path()? else {
@@ -611,7 +619,9 @@ mod intelligibility_smoke_tests {
         }
 
         let Some(model_path) = try_discover_test_model()? else {
-            eprintln!("Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model");
+            eprintln!(
+                "Skipping: no model available. Set BITNET_GGUF or run: cargo run -p xtask -- download-model"
+            );
             return Ok(());
         };
         let Some(cli_binary) = try_get_cli_binary_path()? else {
