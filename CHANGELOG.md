@@ -7,6 +7,15 @@ All notable changes to BitNet.rs will be documented in this file.
 ### Added
 - **Property Tests for `bitnet-device-probe`** (PR #650): 4 proptest properties verifying GPU compiled idempotency, SIMD level determinism, CPU always available, and cuda_compiled consistency with `gpu_compiled()`
 - **Property Tests for `bitnet-engine-core`** (PR #650): 3 proptest properties verifying `SessionConfig` JSON round-trips, `BackendInfo` JSON round-trips, and `SessionMetrics` non-negativity invariants
+- **Property Tests for `bitnet-validation`** (PR #650): 7 proptest properties for `rules.rs` (detect_rules name invariants, envelope bounds, proj_rms consistency) and `names.rs` (is_ln_gamma keyword recognition, suffix requirement, determinism)
+- **Property Tests for `bitnet-sampling`** (PR #650): 5 proptest properties for greedy argmax, index bounds, softmax distribution validity, top-k finite count, temperature=0 greedy equivalence
+- **Property Tests for `bitnet-rope`** (PR #650): 4 proptest properties for valid input success, shape invariants, sin²+cos²=1 trig identity, odd-dim rejection
+- **Property Tests for `bitnet-receipts`** (PR #650): 4 proptest properties for schema validation, real compute_path, valid kernel ID acceptance, empty kernel ID rejection
+- **Property Tests for `bitnet-common/kernel_registry`** (PR #650): 4 proptest properties for no-duplicate backends, best_available reachability, CUDA preference, requires_gpu semantics
+- **Property Tests for `bitnet-prompt-templates`** (PR #650): 4 proptest properties for user text inclusion, Raw identity, Instruct suffix, non-Raw stop sequences
+- **Property Tests for `bitnet-tokenizers`** (PR #650): 4 proptest properties for BasicTokenizer ASCII round-trip, byte-count invariant, empty input, empty slice decode
+- **Property Tests for `bitnet-honest-compute`** (PR #650): 4 proptest properties for valid ID acceptance, too-long ID rejection, compute_path validation, classify_compute_path correctness
+- **Docs Archive Cleanup** (PR #650): 136 stale planning/sprint/spec documents moved to `docs/archive/`; `docs/explanation/` reduced to 13 user-facing Diataxis docs
 - **Libfuzzer Crash Artifacts Gitignored**: Added `fuzz/crash-*`, `fuzz/slow-unit-*`, `fuzz/leak-*`, `fuzz/timeout-*` patterns to `.gitignore` to keep fuzz crash files out of the repo
 - **Runtime Backend Selection** (PR #642): `BackendCapabilities` snapshot at CLI/server startup producing `requested=X detected=[…] selected=Y` log line and receipt field
 - **CPU Golden Path E2E Tests** (PR #643): 5 deterministic end-to-end tests in `bitnet-inference` always running in PR CI without model download
