@@ -107,10 +107,8 @@ fn context_scenario_preserved_in_snapshot() {
 
 #[test]
 fn unit_scenario_has_reasonable_timeout() {
-    let context = ConfigurationContext {
-        scenario: TestingScenario::Unit,
-        ..ConfigurationContext::default()
-    };
+    let context =
+        ConfigurationContext { scenario: TestingScenario::Unit, ..ConfigurationContext::default() };
     let snap = PolicySnapshot::from_configuration_context(context);
     // Timeout should be a sensible duration: > 1 second, < 24 hours.
     let secs = snap.resolved_config.test_timeout.as_secs();

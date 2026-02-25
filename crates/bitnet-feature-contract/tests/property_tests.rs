@@ -10,8 +10,16 @@ use proptest::prelude::*;
 
 /// A small fixed-size vocabulary of feature name strings.
 const FEATURE_VOCAB: &[&str] = &[
-    "cpu", "gpu", "cuda", "inference", "kernels", "tokenizers",
-    "tracing", "crossval", "ffi", "fixtures",
+    "cpu",
+    "gpu",
+    "cuda",
+    "inference",
+    "kernels",
+    "tokenizers",
+    "tracing",
+    "crossval",
+    "ffi",
+    "fixtures",
 ];
 
 fn arb_feature_set() -> impl Strategy<Value = Vec<String>> {

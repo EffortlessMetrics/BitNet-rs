@@ -14,9 +14,8 @@ use proptest::prelude::*;
 /// A proptest strategy producing strings that do NOT contain "mock" (any case).
 fn arb_real_kernel_id() -> impl Strategy<Value = String> {
     // Generate short printable ASCII strings; filter out any that contain "mock".
-    "[a-zA-Z0-9_]{1,64}".prop_filter("must not contain 'mock'", |s| {
-        !s.to_ascii_lowercase().contains("mock")
-    })
+    "[a-zA-Z0-9_]{1,64}"
+        .prop_filter("must not contain 'mock'", |s| !s.to_ascii_lowercase().contains("mock"))
 }
 
 // ── Property tests ───────────────────────────────────────────────────────────

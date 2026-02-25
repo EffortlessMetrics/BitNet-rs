@@ -133,7 +133,7 @@ fn known_non_ln_names_are_not_detected() {
         "output.weight",
         "token_embd.weight",
         "blk.0.ffn_up.weight",
-        "blk.0.ffn_norm",          // missing .weight suffix
+        "blk.0.ffn_norm", // missing .weight suffix
         "not_a_norm.bias",
     ];
     for name in negative {
