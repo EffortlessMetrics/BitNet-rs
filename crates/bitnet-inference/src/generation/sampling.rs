@@ -3,9 +3,8 @@
 //! Provides various sampling strategies including temperature scaling,
 //! top-k sampling, nucleus (top-p) sampling, and repetition penalty.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use bitnet_common::{BitNetTensor, Tensor};
-use candle_core::Tensor as CandleTensor;
 use rand::{Rng, RngCore};
 use std::collections::HashMap;
 
@@ -132,7 +131,9 @@ impl SamplingStrategy {
 
     /// Compute softmax in-place
     fn softmax_inplace(&self, x: &mut [f32]) {
-        if x.is_empty() { return; }
+        if x.is_empty() {
+            return;
+        }
         let max_val = x.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
         let mut sum = 0.0;
         for val in x.iter_mut() {
@@ -194,9 +195,7 @@ impl SamplingStrategy {
     /// Apply nucleus (top-p) sampling on probabilities (in-place)
     fn apply_top_p(&self, probs: &mut [f32], p: f32) {
         // Create candidates from non-zero probabilities
-        let mut candidates: Vec<usize> = (0..probs.len())
-            .filter(|&i| probs[i] > 0.0)
-            .collect();
+        let mut candidates: Vec<usize> = (0..probs.len()).filter(|&i| probs[i] > 0.0).collect();
 
         // Sort candidates by probability descending
         candidates.sort_unstable_by(|&i, &j| {
@@ -341,6 +340,7 @@ impl SamplingStrategy {
 mod tests {
     use super::*;
     use candle_core::Device;
+    use candle_core::Tensor as CandleTensor;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
