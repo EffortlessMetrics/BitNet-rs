@@ -325,7 +325,7 @@ mod property_tests {
         )
     }
 
-    /// compiled_backends never contains duplicates.
+    // compiled_backends never contains duplicates.
     proptest! {
         #[test]
         fn compiled_backends_no_duplicates(caps in arb_caps()) {
@@ -335,7 +335,7 @@ mod property_tests {
         }
     }
 
-    /// best_available returns Some iff cpu_rust or (cuda_compiled && cuda_runtime) or cpp_ffi.
+    // best_available returns Some iff cpu_rust or (cuda_compiled && cuda_runtime) or cpp_ffi.
     proptest! {
         #[test]
         fn best_available_iff_any_backend_reachable(caps in arb_caps()) {
@@ -352,7 +352,7 @@ mod property_tests {
         }
     }
 
-    /// CUDA is preferred over CPU when both are available.
+    // CUDA is preferred over CPU when both are available.
     proptest! {
         #[test]
         fn cuda_preferred_over_cpu_when_both_available(any_ffi in any::<bool>()) {
@@ -367,7 +367,7 @@ mod property_tests {
         }
     }
 
-    /// KernelBackend::requires_gpu is true only for Cuda.
+    // KernelBackend::requires_gpu is true only for Cuda.
     proptest! {
         #[test]
         fn requires_gpu_only_for_cuda(

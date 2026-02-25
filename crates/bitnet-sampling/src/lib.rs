@@ -370,7 +370,7 @@ mod property_tests {
     use super::*;
     use proptest::prelude::*;
 
-    /// greedy_sample always returns a valid index into the logit slice.
+    // greedy_sample always returns a valid index into the logit slice.
     proptest! {
         #[test]
         fn greedy_sample_returns_valid_index(
@@ -381,7 +381,7 @@ mod property_tests {
         }
     }
 
-    /// greedy_sample picks the argmax.
+    // greedy_sample picks the argmax.
     proptest! {
         #[test]
         fn greedy_sample_picks_argmax(
@@ -398,7 +398,7 @@ mod property_tests {
         }
     }
 
-    /// softmax_in_place produces a valid probability distribution (non-negative, sums to 1).
+    // softmax_in_place produces a valid probability distribution (non-negative, sums to 1).
     proptest! {
         #[test]
         fn softmax_is_valid_distribution(
@@ -414,7 +414,7 @@ mod property_tests {
         }
     }
 
-    /// apply_top_k leaves at most k finite entries; the rest become NEG_INFINITY.
+    // apply_top_k leaves at most k finite entries; the rest become NEG_INFINITY.
     proptest! {
         #[test]
         fn top_k_leaves_at_most_k_finite(
@@ -434,7 +434,7 @@ mod property_tests {
         }
     }
 
-    /// SamplingStrategy with temperature=0 behaves like greedy.
+    // SamplingStrategy with temperature=0 behaves like greedy.
     proptest! {
         #[test]
         fn strategy_temp_zero_is_greedy(

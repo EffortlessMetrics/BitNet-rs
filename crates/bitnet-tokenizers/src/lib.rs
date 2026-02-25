@@ -526,8 +526,8 @@ mod property_tests {
     use super::*;
     use proptest::prelude::*;
 
-    /// BasicTokenizer byte-level encode is invertible (round-trips through decode).
-    /// Only ASCII text fits in byte-level vocab (IDs 0–255) with default vocab_size ≥ 256.
+    // BasicTokenizer byte-level encode is invertible (round-trips through decode).
+    // Only ASCII text fits in byte-level vocab (IDs 0–255) with default vocab_size ≥ 256.
     proptest! {
         #[test]
         fn basic_tokenizer_ascii_roundtrip(text in "[a-zA-Z0-9 .,!?:;-]{1,80}") {
@@ -538,7 +538,7 @@ mod property_tests {
         }
     }
 
-    /// encode without add_bos/add_special: length equals UTF-8 byte count.
+    // encode without add_bos/add_special: length equals UTF-8 byte count.
     proptest! {
         #[test]
         fn basic_tokenizer_length_matches_bytes(text in "[a-z]{1,64}") {
@@ -548,7 +548,7 @@ mod property_tests {
         }
     }
 
-    /// encode of empty string always returns empty vec regardless of flags.
+    // encode of empty string always returns empty vec regardless of flags.
     proptest! {
         #[test]
         fn basic_tokenizer_empty_is_always_empty(add_bos in any::<bool>(), add_special in any::<bool>()) {
@@ -560,7 +560,7 @@ mod property_tests {
         }
     }
 
-    /// decode of empty slice always returns empty string.
+    // decode of empty slice always returns empty string.
     proptest! {
         #[test]
         fn basic_tokenizer_decode_empty_slice_is_empty(_dummy in any::<bool>()) {

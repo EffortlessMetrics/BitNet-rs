@@ -119,7 +119,7 @@ mod property_tests {
     use super::*;
     use proptest::prelude::*;
 
-    /// Any name not ending in ".weight" is never a LayerNorm gamma.
+    // Any name not ending in ".weight" is never a LayerNorm gamma.
     proptest! {
         #[test]
         fn is_ln_gamma_requires_weight_suffix(
@@ -136,7 +136,7 @@ mod property_tests {
         }
     }
 
-    /// Names with known LN keywords and a .weight suffix are always recognized.
+    // Names with known LN keywords and a .weight suffix are always recognized.
     proptest! {
         #[test]
         fn is_ln_gamma_recognizes_known_keywords(
@@ -160,7 +160,7 @@ mod property_tests {
         }
     }
 
-    /// is_ln_gamma is deterministic: calling it twice on the same input agrees.
+    // is_ln_gamma is deterministic: calling it twice on the same input agrees.
     proptest! {
         #[test]
         fn is_ln_gamma_is_deterministic(name in "[a-z._/0-9]{1,50}") {

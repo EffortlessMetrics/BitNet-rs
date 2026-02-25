@@ -168,7 +168,7 @@ mod property_tests {
     use super::*;
     use proptest::prelude::*;
 
-    /// build_tables with valid even dim and positive base always succeeds.
+    // build_tables with valid even dim and positive base always succeeds.
     proptest! {
         #[test]
         fn build_tables_valid_inputs_succeed(
@@ -181,7 +181,7 @@ mod property_tests {
         }
     }
 
-    /// Resulting tables have the expected shape: len == seq_len * half_dim.
+    // Resulting tables have the expected shape: len == seq_len * half_dim.
     proptest! {
         #[test]
         fn build_tables_shape_invariant(
@@ -197,7 +197,7 @@ mod property_tests {
         }
     }
 
-    /// sin^2 + cos^2 ≈ 1 for every corresponding pair.
+    // sin^2 + cos^2 ≈ 1 for every corresponding pair.
     proptest! {
         #[test]
         fn build_tables_trig_identity(
@@ -216,7 +216,7 @@ mod property_tests {
         }
     }
 
-    /// Odd dimensions and non-positive bases are rejected.
+    // Odd dimensions and non-positive bases are rejected.
     proptest! {
         #[test]
         fn build_tables_rejects_odd_dim(dim in (1u32..=32u32).prop_map(|d| d * 2 - 1)) {

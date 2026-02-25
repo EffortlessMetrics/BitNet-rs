@@ -623,7 +623,7 @@ mod property_tests {
         ]
     }
 
-    /// apply always returns a non-empty string containing the user text.
+    // apply always returns a non-empty string containing the user text.
     proptest! {
         #[test]
         fn apply_contains_user_text(
@@ -645,7 +645,7 @@ mod property_tests {
         }
     }
 
-    /// Raw template passes user text through unchanged (no system prompt).
+    // Raw template passes user text through unchanged (no system prompt).
     proptest! {
         #[test]
         fn raw_template_is_identity(user_text in "[a-zA-Z0-9 .,?!]{1,80}") {
@@ -654,7 +654,7 @@ mod property_tests {
         }
     }
 
-    /// Instruct template always ends with "\nA:".
+    // Instruct template always ends with "\nA:".
     proptest! {
         #[test]
         fn instruct_ends_with_answer_prompt(
@@ -670,7 +670,7 @@ mod property_tests {
         }
     }
 
-    /// default_stop_sequences returns at least one entry for non-Raw templates.
+    // default_stop_sequences returns at least one entry for non-Raw templates.
     proptest! {
         #[test]
         fn non_raw_templates_have_stop_sequences(

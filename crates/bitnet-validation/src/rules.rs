@@ -308,7 +308,7 @@ mod property_tests {
     use super::*;
     use proptest::prelude::*;
 
-    /// detect_rules always returns one of the three known ruleset names.
+    // detect_rules always returns one of the three known ruleset names.
     proptest! {
         #[test]
         fn detect_rules_always_returns_known_name(
@@ -325,8 +325,8 @@ mod property_tests {
         }
     }
 
-    /// For any RMS value within a ruleset's envelope, check_ln accepts it.
-    /// Uses the bitnet-b1.58:f16 ruleset and a known-matching pattern.
+    // For any RMS value within a ruleset's envelope, check_ln accepts it.
+    // Uses the bitnet-b1.58:f16 ruleset and a known-matching pattern.
     proptest! {
         #[test]
         fn check_ln_accepts_values_in_f16_attn_envelope(
@@ -342,8 +342,8 @@ mod property_tests {
         }
     }
 
-    /// For any RMS strictly outside [0.50, 2.0], generic ruleset rejects it
-    /// when the name matches the generic norm pattern.
+    // For any RMS strictly outside [0.50, 2.0], generic ruleset rejects it
+    // when the name matches the generic norm pattern.
     proptest! {
         #[test]
         fn check_ln_rejects_values_outside_generic_envelope(
@@ -365,7 +365,7 @@ mod property_tests {
         }
     }
 
-    /// check_proj_rms is consistent with its min/max bounds in the bitnet-f16 ruleset.
+    // check_proj_rms is consistent with its min/max bounds in the bitnet-f16 ruleset.
     proptest! {
         #[test]
         fn check_proj_rms_consistent_with_f16_bounds(rms in 0.0f32..=1.0) {
