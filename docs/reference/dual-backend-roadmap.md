@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#645.
+> **Last updated**: reflects implementation state after PRs #608–#650.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -35,6 +35,10 @@
 | Nightly fuzz runs with artifact upload | `.github/workflows/fuzz-ci.yml` | #609 |
 | Cross-validation scheduled lanes | `.github/workflows/crossval.yml` | #611 |
 | Build-time symbol detection → rustc-cfg flags | `crates/bitnet-sys/build.rs` (feature: `symbol-analysis`) | #611 |
+| Proptest for `bitnet-gguf` and `bitnet-generation` | `crates/bitnet-gguf/src/lib.rs`, `crates/bitnet-generation/src/lib.rs` | #649 |
+| GGUF header libfuzzer fuzz target | `fuzz/fuzz_targets/gguf_header.rs` | #649 |
+| Fuzz target registration completeness (all 11 targets in Cargo.toml + CI) | `fuzz/Cargo.toml`, `fuzz-ci.yml` | #649 |
+| Proptest for `bitnet-device-probe` and `bitnet-engine-core` | `crates/bitnet-device-probe/src/lib.rs`, `crates/bitnet-engine-core/src/lib.rs` | #650 |
 
 ### 🔲 What's Planned
 
