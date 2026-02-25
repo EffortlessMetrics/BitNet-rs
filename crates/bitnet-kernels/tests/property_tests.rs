@@ -7,10 +7,10 @@
 //! - `device_features::gpu_compiled()`: deterministic (constant) across calls
 //! - `select_cpu_kernel()`: always succeeds and returns a valid provider
 
-use bitnet_kernels::{FallbackKernel, KernelManager, select_cpu_kernel};
-use bitnet_kernels::device_features::gpu_compiled;
 use bitnet_common::QuantizationType;
 use bitnet_kernels::KernelProvider;
+use bitnet_kernels::device_features::gpu_compiled;
+use bitnet_kernels::{FallbackKernel, KernelManager, select_cpu_kernel};
 use proptest::prelude::*;
 
 // ---------------------------------------------------------------------------

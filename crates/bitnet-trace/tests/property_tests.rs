@@ -34,12 +34,12 @@ fn arb_blake3() -> impl Strategy<Value = String> {
 /// Generate a valid TraceRecord from arbitrary components.
 fn arb_trace_record() -> impl Strategy<Value = TraceRecord> {
     (
-        "[a-z][a-z0-9_./-]{0,31}",    // name
+        "[a-z][a-z0-9_./-]{0,31}", // name
         arb_shape(),
         arb_dtype(),
         arb_blake3(),
-        0.0f64..100.0f64,             // rms
-        prop::option::of(0usize..64), // seq
+        0.0f64..100.0f64,              // rms
+        prop::option::of(0usize..64),  // seq
         prop::option::of(-1isize..32), // layer
         prop::option::of(prop::sample::select(vec!["embeddings", "q_proj", "attn_out", "logits"])),
     )
