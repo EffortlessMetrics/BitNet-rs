@@ -639,6 +639,7 @@ dependencies = [
  "insta",
  "memmap2",
  "proptest",
+ "tempfile",
 ]
 
 [[package]]
