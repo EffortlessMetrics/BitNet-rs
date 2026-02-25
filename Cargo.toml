@@ -352,6 +352,7 @@ insta = { version = "1.43.2", features = ["yaml", "json", "redactions"] }
 tempfile = "3.23.0"
 serial_test = "3.2.0"
 temp-env = "0.3.6"
+tracing-test = "0.2.6"
 rand = "0.9.2"
 bitnet-test-support = { path = "crates/bitnet-test-support" }
 

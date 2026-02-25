@@ -14,8 +14,11 @@ rust-version.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 serde = { workspace = true }
+tracing = { workspace = true }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = { workspace = true }
 insta = { workspace = true }
+tracing-test.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
