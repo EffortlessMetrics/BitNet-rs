@@ -143,6 +143,24 @@ pub trait Tokenizer: Send + Sync {
     fn pad_token_id(&self) -> Option<u32> {
         None
     }
+
+    /// Returns the tokenizer family name based on known special tokens.
+    ///
+    /// Inspects special token IDs to determine the tokenizer family:
+    /// - `"llama3"` if `<|eot_id|>` or `<|start_header_id|>` is present
+    /// - `"mistral-instruct"` if `[INST]` is present but not LLaMA-3 markers
+    /// - `"unknown"` otherwise
+    fn get_family_name(&self) -> &'static str {
+        if self.token_to_id("<|eot_id|>").is_some()
+            || self.token_to_id("<|start_header_id|>").is_some()
+        {
+            "llama3"
+        } else if self.token_to_id("[INST]").is_some() {
+            "mistral-instruct"
+        } else {
+            "unknown"
+        }
+    }
 }
 
 /// Basic tokenizer implementation

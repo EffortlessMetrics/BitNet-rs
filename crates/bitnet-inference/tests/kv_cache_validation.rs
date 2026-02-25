@@ -165,12 +165,18 @@ fn test_debug_assertions_in_hot_path() {
 /// - KVCache::new validates head_dim > 0 and divisible by 4
 /// - KVCache::new validates max_seq_len > 0
 #[test]
-#[ignore = "Integration test - requires KVCache::new implementation"]
 fn test_kv_cache_initialization_validation() {
-    panic!(
-        "AC3: KVCache initialization validation not yet implemented. \
-         Expected: KVCache::new uses anyhow::ensure! for parameter validation."
+    use bitnet_common::Device;
+    use bitnet_inference::layers::attention::KVCache;
+    assert!(KVCache::new(0, 1, 16, 64, &Device::Cpu).is_err(), "max_seq_len=0 should fail");
+    assert!(KVCache::new(2048, 0, 16, 64, &Device::Cpu).is_err(), "num_layers=0 should fail");
+    assert!(KVCache::new(2048, 1, 0, 64, &Device::Cpu).is_err(), "num_heads=0 should fail");
+    assert!(KVCache::new(2048, 1, 16, 0, &Device::Cpu).is_err(), "head_dim=0 should fail");
+    assert!(
+        KVCache::new(2048, 1, 16, 63, &Device::Cpu).is_err(),
+        "head_dim not div-by-4 should fail"
     );
+    assert!(KVCache::new(128, 2, 8, 64, &Device::Cpu).is_ok(), "valid params should succeed");
 }
 /// AC3: K/V cache validation warning message format
 ///
