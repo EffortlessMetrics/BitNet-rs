@@ -609,3 +609,79 @@ mod tests {
         assert_eq!(turn.text, "test message");
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn arb_template_type() -> impl Strategy<Value = TemplateType> {
+        prop_oneof![
+            Just(TemplateType::Raw),
+            Just(TemplateType::Instruct),
+            Just(TemplateType::Llama3Chat),
+        ]
+    }
+
+    /// apply always returns a non-empty string containing the user text.
+    proptest! {
+        #[test]
+        fn apply_contains_user_text(
+            template in arb_template_type(),
+            user_text in "[a-zA-Z0-9 .,?!]{1,80}",
+        ) {
+            let result = template.apply(&user_text, None);
+            prop_assert!(
+                !result.is_empty(),
+                "apply returned empty string for template={:?}",
+                template
+            );
+            prop_assert!(
+                result.contains(&user_text),
+                "output {:?} should contain user_text {:?}",
+                result,
+                user_text
+            );
+        }
+    }
+
+    /// Raw template passes user text through unchanged (no system prompt).
+    proptest! {
+        #[test]
+        fn raw_template_is_identity(user_text in "[a-zA-Z0-9 .,?!]{1,80}") {
+            let result = TemplateType::Raw.apply(&user_text, None);
+            prop_assert_eq!(result, user_text);
+        }
+    }
+
+    /// Instruct template always ends with "\nA:".
+    proptest! {
+        #[test]
+        fn instruct_ends_with_answer_prompt(
+            user_text in "[a-zA-Z0-9 .,?!]{1,80}",
+            system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+        ) {
+            let result = TemplateType::Instruct.apply(&user_text, system.as_deref());
+            prop_assert!(
+                result.ends_with("\nA:"),
+                "instruct result {:?} should end with '\\nA:'",
+                result
+            );
+        }
+    }
+
+    /// default_stop_sequences returns at least one entry for non-Raw templates.
+    proptest! {
+        #[test]
+        fn non_raw_templates_have_stop_sequences(
+            template in prop_oneof![Just(TemplateType::Instruct), Just(TemplateType::Llama3Chat)],
+        ) {
+            let stops = template.default_stop_sequences();
+            prop_assert!(
+                !stops.is_empty(),
+                "template={:?} should have default stop sequences",
+                template
+            );
+        }
+    }
+}
