@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_tests.rs
+expression: second
+---
+3

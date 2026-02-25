@@ -1,0 +1,24 @@
+---
+source: crates/bitnet-receipts/tests/snapshot_tests.rs
+expression: receipt
+---
+{
+  "schema_version": "1.0.0",
+  "timestamp": "[timestamp]",
+  "compute_path": "mock",
+  "backend": "cpu",
+  "backend_summary": "",
+  "kernels": [
+    "mock_gemv"
+  ],
+  "deterministic": false,
+  "environment": {},
+  "model_info": {},
+  "test_results": {
+    "total_tests": 0,
+    "passed": 0,
+    "failed": 0
+  },
+  "performance_baseline": {},
+  "corrections": []
+}

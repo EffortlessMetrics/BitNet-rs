@@ -1,0 +1,25 @@
+---
+source: crates/bitnet-receipts/tests/snapshot_tests.rs
+expression: receipt
+---
+{
+  "schema_version": "1.0.0",
+  "timestamp": "[timestamp]",
+  "compute_path": "real",
+  "backend": "cpu",
+  "backend_summary": "",
+  "kernels": [
+    "i2s_gemv"
+  ],
+  "deterministic": false,
+  "environment": {},
+  "model_info": {},
+  "test_results": {
+    "total_tests": 100,
+    "passed": 98,
+    "failed": 2,
+    "skipped": 5
+  },
+  "performance_baseline": {},
+  "corrections": []
+}

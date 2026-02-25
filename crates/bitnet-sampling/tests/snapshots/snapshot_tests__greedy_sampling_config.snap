@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-sampling/tests/snapshot_tests.rs
+expression: config
+---
+SamplingConfig {
+    temperature: 0.0,
+    top_k: 0,
+    top_p: 1.0,
+    repetition_penalty: 1.0,
+    seed: Some(
+        42,
+    ),
+}
