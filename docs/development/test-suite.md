@@ -312,7 +312,7 @@ BitNet.rs test suite is organized into distinct categories, each addressing spec
 | **Integration Tests** | 110+ | 🟡 Partial | End-to-end workflows (some blocked by issues) |
 | **Slow/Ignored Tests** | 70+ | ⏸️ Skipped | QK256 scalar kernels, architecture blockers |
 
-**Total Enabled**: 3,359+ tests
+**Total Enabled**: 3,446 tests
 **Total Skipped**: 462 tests (intentional)
 **Pass Rate**: 100%
 
