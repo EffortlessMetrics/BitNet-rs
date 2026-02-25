@@ -4,18 +4,21 @@ This document covers the comprehensive test suite for BitNet.rs, including runni
 
 ## Test Status Summary
 
-**Current Test Results (PR #475)**:
-- **Total Enabled Tests**: 1,935
-- **Passing Tests**: 1,935 (100%)
-- **Properly Skipped Tests**: 192 (intentional: ignored, integration, fixtures)
-- **Execution Time**: ~227 seconds (with parallel execution)
+**Current Test Results**:
+- **Total Enabled Tests**: 2,082+
+- **Passing Tests**: 2,082+ (100%)
+- **Properly Skipped Tests**: 462 (intentional: ignored, integration, fixtures)
+- **Execution Time**: ~162 seconds (with parallel execution)
 
 **Test Infrastructure Status**:
 - ✅ **Receipt Verification**: 25/25 tests passing (schema v1.0.0)
 - ✅ **Strict Mode Guards**: 12/12 tests passing (runtime enforcement)
 - ✅ **Environment Isolation**: 7/7 tests passing (EnvGuard parallel safety)
 - ✅ **GGUF Fixtures**: 12/12 tests passing (QK256 dual-flavor detection)
-- ✅ **Mutation Testing**: 91% score (20/22 mutants killed)
+- ✅ **Snapshot Tests**: 42 test files across the workspace (insta)
+- ✅ **Property Tests**: 20 test files across the workspace (proptest)
+- ✅ **Fuzz Targets**: 11 targets, nightly scheduled (cargo-fuzz)
+- ✅ **CPU Golden Path E2E**: deterministic end-to-end inference test
 
 ## Running Tests
 
@@ -296,6 +299,8 @@ BitNet.rs test suite is organized into distinct categories, each addressing spec
 | **Quantization Tests** | 180+ | ✅ Passing | I2_S flavor detection, TL1/TL2, IQ2_S via FFI |
 | **Model Loading Tests** | 95+ | ✅ Passing | GGUF and SafeTensors parsing |
 | **Fixture Tests** | 12 | ✅ Passing | QK256 dual-flavor detection, alignment validation |
+| **Snapshot Tests** | 200+ | ✅ Passing | Struct/output stability (insta, 42 test files) |
+| **Property Tests** | 100+ | ✅ Passing | Randomised invariants (proptest, 20 test files) |
 | **Tokenizer Tests** | 110+ | ✅ Passing | Universal tokenizer, auto-discovery |
 | **CLI Tests** | 140+ | ✅ Passing | Command-line parsing, flag validation |
 | **Device Feature Tests** | 65+ | ✅ Passing | CPU/GPU compilation, feature guards |
@@ -307,9 +312,9 @@ BitNet.rs test suite is organized into distinct categories, each addressing spec
 | **Integration Tests** | 110+ | 🟡 Partial | End-to-end workflows (some blocked by issues) |
 | **Slow/Ignored Tests** | 70+ | ⏸️ Skipped | QK256 scalar kernels, architecture blockers |
 
-**Total Enabled**: 1,935 tests
-**Total Skipped**: 192 tests (intentional)
-**Pass Rate**: 100% (1,935/1,935)
+**Total Enabled**: 2,082+ tests
+**Total Skipped**: 462 tests (intentional)
+**Pass Rate**: 100%
 
 ### Quantization Tests
 
@@ -618,10 +623,100 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 ### Core Testing Framework
 - **Unit tests**: Each crate has comprehensive tests
 - **Integration tests**: Cross-crate tests in `tests/`
-- **Property-based testing**: Fuzz testing for GGUF parser robustness
+- **Snapshot tests**: Struct/output stability assertions (insta, 42 test files, 200+ assertions)
+- **Property-based tests**: Randomised invariant checks (proptest, 20 test files, 100+ properties)
+- **Fuzz targets**: Parser and kernel robustness (cargo-fuzz, 11 targets, nightly scheduled)
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
 - **SIMD Kernel Tests** ✅: Real quantization computation validation (Issue #260 resolved)
+
+### Snapshot Tests (insta)
+
+BitNet.rs uses [insta](https://insta.rs) for snapshot testing across all crates. Snapshots pin the human-readable serialization of structs and public API outputs, making unintended behavioural changes visible as CI failures.
+
+**Running snapshot tests:**
+
+```bash
+# Run all snapshot tests
+cargo nextest run --workspace --no-default-features --features cpu snapshot
+
+# Review and accept new/changed snapshots interactively
+cargo insta review
+
+# Update all snapshots non-interactively (after intentional changes)
+INSTA_UPDATE=always cargo nextest run --workspace --no-default-features --features cpu snapshot
+
+# Run snapshot tests for a specific crate
+cargo nextest run -p bitnet-common --no-default-features --features cpu snapshot
+cargo nextest run -p bitnet-receipts --no-default-features --features cpu snapshot
+```
+
+**Snapshot locations:** Each crate stores snapshots in `tests/snapshots/` beside its `snapshot_tests.rs`. They are committed to source control.
+
+**When to update snapshots:** Update snapshots only for intentional API/behaviour changes. CI runs in `INSTA_UPDATE=unseen` mode (accepts new snapshots, rejects changes to existing ones).
+
+### Property Tests (proptest)
+
+BitNet.rs uses [proptest](https://proptest-rs.github.io/proptest/intro.html) to verify invariants across randomised inputs. Property tests complement snapshot tests by covering edge cases that fixed examples miss.
+
+**Running property tests:**
+
+```bash
+# Run all property tests
+cargo nextest run --workspace --no-default-features --features cpu prop
+
+# Run with more cases for deeper coverage
+PROPTEST_CASES=1000 cargo nextest run --workspace --no-default-features --features cpu prop
+
+# Run for a specific crate
+cargo nextest run -p bitnet-quantization --no-default-features --features cpu prop
+cargo nextest run -p bitnet-sampling --no-default-features --features cpu prop
+```
+
+**Key property invariants tested:**
+- Quantization round-trip accuracy (I2_S, TL1, TL2)
+- Sampling reproducibility with fixed seeds
+- Tokenizer encoding round-trips
+- GGUF header field ordering invariants
+
+### Fuzz Testing (cargo-fuzz)
+
+BitNet.rs has 11 fuzz targets covering parsers, kernels, and tokenizers. Fuzz targets run nightly via `.github/workflows/fuzz-ci.yml` (60 seconds per target, `01:00 UTC`).
+
+**Running fuzz tests manually:**
+
+```bash
+# List available fuzz targets
+cargo fuzz list
+
+# Fuzz a specific target (runs indefinitely - Ctrl+C to stop)
+cargo fuzz run quantization_i2s
+
+# Run with a time limit (e.g., 60 seconds)
+cargo fuzz run gguf_parser -- -max_total_time=60
+
+# Run all targets briefly (CI mode, 30s each)
+for target in $(cargo fuzz list); do
+  cargo fuzz run "$target" -- -max_total_time=30 || true
+done
+```
+
+**Available fuzz targets:**
+| Target | Tests |
+|--------|-------|
+| `quantization_i2s` | I2_S dequantization with arbitrary inputs |
+| `quantization_tl1` | TL1 lookup table with arbitrary codes |
+| `quantization_tl2` | TL2 lookup table with arbitrary codes |
+| `gguf_parser` | GGUF file header parsing |
+| `safetensors_parser` | SafeTensors format parsing |
+| `kernel_matmul` | Matrix multiply kernel correctness |
+| `tokenizer_discovery` | Tokenizer file auto-discovery |
+| `i2s_quantize_roundtrip` | I2_S quantize-dequantize round-trip |
+| `sampling_temperature` | Temperature sampling with extreme values |
+| `prompt_template` | Prompt template formatting |
+| `receipt_json` | Receipt JSON deserialisation |
+
+**Corpus:** Seed corpora live in `fuzz/corpus/<target>/`. CI uploads crash artifacts to GitHub Actions on failure.
 
 ### Enhanced Mock Infrastructure and Tokenizer Testing
 
@@ -1088,10 +1183,10 @@ grep -r "#254\|#260\|#469" tests --include="*.rs"
 
 ### CI Behavior with Ignored Tests
 
-**In CI**: Only non-ignored tests run (1,935 enabled tests)
+**In CI**: Only non-ignored tests run (2,082+ enabled tests)
 **Ignored tests**: Tracked separately, not blocking CI
-**Skipped tests**: 192 tests properly marked as skipped
-**Exit code**: Success (0) even with 192+ skipped tests
+**Skipped tests**: 462 tests properly marked as skipped
+**Exit code**: Success (0) even with 462+ skipped tests
 
 To run ignored tests locally:
 
