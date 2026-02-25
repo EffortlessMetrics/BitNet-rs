@@ -147,19 +147,25 @@ mod tests {
     #[test]
     #[serial(bitnet_env)]
     fn from_env_uses_bitnet_test_env_when_bitnet_env_absent() {
-        temp_env::with_var("BITNET_TEST_ENV", Some("pre-prod"), || {
-            let context = ActiveContext::from_env();
-            assert_eq!(context.environment, ExecutionEnvironment::PreProduction);
-        });
+        temp_env::with_vars(
+            [("BITNET_ENV", None::<&str>), ("BITNET_TEST_ENV", Some("pre-prod"))],
+            || {
+                let context = ActiveContext::from_env();
+                assert_eq!(context.environment, ExecutionEnvironment::PreProduction);
+            },
+        );
     }
 
     #[test]
     #[serial(bitnet_env)]
     fn from_env_falls_back_to_ci_when_no_env_explicitly_set() {
-        temp_env::with_var("CI", Some("1"), || {
-            let context = ActiveContext::from_env();
-            assert_eq!(context.environment, ExecutionEnvironment::Ci);
-        });
+        temp_env::with_vars(
+            [("BITNET_ENV", None::<&str>), ("BITNET_TEST_ENV", None::<&str>), ("CI", Some("1"))],
+            || {
+                let context = ActiveContext::from_env();
+                assert_eq!(context.environment, ExecutionEnvironment::Ci);
+            },
+        );
     }
 
     #[test]
@@ -176,12 +182,15 @@ mod tests {
     #[test]
     #[serial(bitnet_env)]
     fn from_env_with_defaults_prefers_ci_when_no_override() {
-        temp_env::with_var("CI", Some("1"), || {
-            let context = ActiveContext::from_env_with_defaults(
-                TestingScenario::Integration,
-                ExecutionEnvironment::Local,
-            );
-            assert_eq!(context.environment, ExecutionEnvironment::Ci);
-        });
+        temp_env::with_vars(
+            [("BITNET_ENV", None::<&str>), ("BITNET_TEST_ENV", None::<&str>), ("CI", Some("1"))],
+            || {
+                let context = ActiveContext::from_env_with_defaults(
+                    TestingScenario::Integration,
+                    ExecutionEnvironment::Local,
+                );
+                assert_eq!(context.environment, ExecutionEnvironment::Ci);
+            },
+        );
     }
 }

@@ -483,7 +483,7 @@ mod gpu_feature_tests {
     use super::*;
 
     /// Tests GPU CUDA kernel integration
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
     #[serial(bitnet_env)]
     #[allow(clippy::cmp_owned)]
@@ -565,7 +565,7 @@ mod gpu_feature_tests {
     }
 
     /// Tests GPU memory optimization and coalesced access
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
     fn test_gpu_memory_optimization() {
         println!("🔧 GPU: Testing memory optimization");
@@ -588,7 +588,7 @@ mod gpu_feature_tests {
     }
 
     /// Tests GPU batch processing optimization
-    #[cfg(feature = "gpu")]
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
     #[test]
     fn test_gpu_batch_processing_optimization() {
         println!("🔧 GPU: Testing batch processing optimization");
