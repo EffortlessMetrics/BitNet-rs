@@ -16,7 +16,7 @@ This document covers the comprehensive test suite for BitNet.rs, including runni
 - ✅ **Environment Isolation**: 7/7 tests passing (EnvGuard parallel safety)
 - ✅ **GGUF Fixtures**: 12/12 tests passing (QK256 dual-flavor detection)
 - ✅ **Snapshot Tests**: 42 test files across the workspace (insta)
-- ✅ **Property Tests**: 20 test files across the workspace (proptest)
+- ✅ **Property Tests**: 26 test files across the workspace (proptest)
 - ✅ **Fuzz Targets**: 11 targets, nightly scheduled (cargo-fuzz)
 - ✅ **CPU Golden Path E2E**: deterministic end-to-end inference test
 
