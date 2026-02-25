@@ -8,8 +8,8 @@ fn feature_line_starts_with_features_prefix() {
 }
 
 #[test]
-fn feature_labels_without_features_is_empty() {
-    // When no features are compiled, labels must be empty
+fn feature_labels_count_with_cpu_feature() {
+    // When compiled with --features cpu, labels must be non-empty
     let labels = feature_labels();
     insta::assert_snapshot!(&labels.len().to_string());
 }
