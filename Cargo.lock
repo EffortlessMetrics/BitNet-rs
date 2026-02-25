@@ -414,6 +414,9 @@ dependencies = [
 [[package]]
 name = "bitnet-bdd-grid-core"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "bitnet-cli"

@@ -13,3 +13,6 @@ description = "Core BDD scenario, feature, and grid primitives for BitNet"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
+
+[dev-dependencies]
+proptest.workspace = true
