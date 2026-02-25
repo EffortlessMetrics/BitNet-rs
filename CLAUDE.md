@@ -39,12 +39,7 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
   output in some configurations. This is a known model quality issue, not an
   inference bug.
 
-- **Test Scaffolding**: ~548 TODO/FIXME/unimplemented markers and ~70 ignored tests
-  represent TDD-style scaffolding for planned features. See **Test Status** section
-  below.
-
-- **Active Blockers**: Issues #254, #260, #469 affect some real inference tests and
-  cross-validation. Issue #439 resolved (feature gate unification merged).
+- **Test Scaffolding**: ~466 tests skipped in full `--workspace` runs (87 in core crates, ~379 in xtask/crossval scaffolding), all with justification
 
 ## Quick Reference
 
@@ -863,19 +858,16 @@ Both backends available. Dual-backend cross-validation supported.
     weights (exit code 8)
   - **See also**: `docs/howto/validate-models.md` for complete troubleshooting guide
 
-## Test Status (MVP Phase)
+## Test Status
 
 ### Overview
 
-BitNet.rs uses extensive test scaffolding during the MVP phase. This is **intentional** and follows TDD patterns:
+BitNet.rs maintains a healthy test suite. All `#[ignore]` attributes include a
+justification string (enforced by pre-commit hooks):
 
-- **~548 TODO/FIXME/unimplemented markers**: Development placeholders for planned
-  features
-- **~70 ignored tests** (#[ignore]): Tests scaffolded but blocked by active issues
-- **unimplemented!() helper functions**: TDD-style test infrastructure placeholders
-
-**This is normal for an MVP.** Tests are intentionally structured to guide development
-and prevent regressions once blockers are resolved.
+- **~466 tests skipped** in a full `--workspace` run (87 in default-members, ~379 in xtask/crossval/tests scaffolding) — all with `#[ignore = "reason"]` justification, categorized below
+- **970+ tests pass** in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
+- **Zero bare `#[ignore]`** attributes (no un-reasoned skips)
 
 ### Test Execution
 
@@ -912,87 +904,75 @@ BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --no-default-features --f
 
 **Nextest Configuration:** See `.config/nextest.toml` for profiles and settings.
 
-### Critical Blocked Tests
+### Ignored Test Categories
 
-These tests are marked #[ignore] and blocked by active issues:
+Tests are currently ignored for these reasons (all have justification strings):
 
-1. **Issue #254** (Shape mismatch in layer-norm):
-   - Blocks: Real inference tests for multiple architectures
-   - Tests affected: bitnet-inference layer norm integration tests
-   - Status: In analysis phase
+1. **Requires real model file** (~23 tests): Need `BITNET_GGUF` or `BITNET_MODEL_PATH`.
+   These tests skip gracefully when the env var is unset.
 
-2. **Issue #260** (Mock elimination not complete):
-   - Blocks: Transition from mock to real inference paths
-   - Tests affected: ~15 inference end-to-end tests
-   - Status: Awaiting refactoring
+2. **CUDA / GPU hardware** (~13 tests): Need `--features gpu` (or legacy alias `--features cuda`) and a CUDA runtime.
+   Compile-only coverage on PR CI; runtime on GPU runner.
 
-3. **Issue #439** (Feature gate consistency):
-   - ✅ **RESOLVED** - Merged to main in PR #475
-   - GPU/CPU feature predicates unified
-   - All device selection and fallback tests validated
+3. **Slow mock inference** (~17 tests): Run 50–300+ mock forward passes; exceed the
+   5-minute nextest CI timeout. Run manually with `--run-ignored all` for validation.
 
-4. **Issue #469** (Tokenizer parity and FFI build hygiene):
-   - Blocks: Cross-validation tests, FFI integration tests
-   - Tests affected: ~20 cross-validation and tokenizer tests
-   - Status: Active development
+4. **Network-dependent** (~8 tests): Download or call external resources.
 
-5. **AC9 Integration Tests**:
-   - Blocks: Complete cross-validation against C++ reference
-   - Reason: Depends on resolution of #254, #260, #469
-   - Status: Awaiting above blockers
+5. **C++ reference / crossval** (~9 tests): Need `CROSSVAL_GGUF` + bitnet.cpp built.
+
+6. **TDD scaffolds** (~55 tests): Placeholder tests for features not yet implemented
+   (log capture, attention-layer integration, FFI types, tokenizer fixtures).
+   These contain `panic!()` or `unimplemented!()` as their body.
 
 ### Ignored Test Patterns
 
 Common reasons for #[ignore] markers:
 
 ```rust
-// Pattern 1: Awaiting issue resolution
+// Pattern 1: Resource gated (real model)
 #[test]
-#[ignore] // Blocked by Issue #254 - shape mismatch in layer-norm
-fn test_inference_with_shape_validation() { /* ... */ }
+#[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
+fn test_real_inference_path() { /* ... */ }
 
 // Pattern 2: TDD scaffolding - planned feature
 #[test]
-#[ignore] // TODO: Implement GPU mixed-precision tests after #439 resolution
-fn test_gpu_fp16_dequantize() { /* ... */ }
+#[ignore = "TDD scaffold: requires log capture mechanism for tracing output"]
+fn test_warning_message_format() {
+    panic!("not yet implemented");
+}
 
-// Pattern 3: Slow tests (performance acceptable for MVP)
+// Pattern 3: Slow tests (exceed CI timeout)
 #[test]
-#[ignore] // Slow: QK256 scalar kernels (~0.1 tok/s). Run with --ignored for validation.
+#[ignore = "Slow: runs 50+ mock forward passes; run manually with --ignored for generation validation"]
 fn test_qk256_full_model_inference() { /* ... */ }
 ```
 
 ### Working Test Categories
 
-These test suites pass reliably (1935+ tests passing):
+These test suites pass reliably (970+ tests passing):
 
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
 - **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
-- **tokenizer tests**: Universal tokenizer, auto-discovery (except parity tests blocked by #469)
+- **tokenizer tests**: Universal tokenizer, auto-discovery
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
 - **validation tests**: LayerNorm inspection, projection statistics (when not in strict mode)
 - **receipt verification tests**: Schema v1.0.0 with 8 gates (25/25 passing)
 - **strict mode tests**: Runtime guards and enforcement (12/12 passing)
-- **environment isolation tests**: EnvGuard parallel safety (7/7 passing)
+- **environment isolation tests**: EnvGuard parallel safety (serial + temp_env)
 - **CPU golden path E2E tests**: Deterministic inference with receipt invariants (5/5 passing)
 - **SRP microcrate tests**: bitnet-logits (15), bitnet-gguf (8), bitnet-generation (11), bitnet-device-probe (5), bitnet-engine-core (4)
 
 ### Test Dependencies
 
 ```text
-Real Inference Tests
-  └─ Depends on: Issue #254 resolution (shape mismatch fix)
-    └─ Depends on: Issue #260 resolution (mock elimination)
-
-Cross-Validation Tests
-  └─ Depends on: Issue #469 resolution (tokenizer parity + FFI)
-    └─ Depends on: Real Inference Tests (above)
-
-GPU Mixed-Precision Tests
-  └─ Depends on: GPU kernel optimization (post-MVP)
-  Note: Issue #439 resolved (feature gate unification merged in PR #475)
+Real inference tests     — need BITNET_GGUF (opt-in via --run-ignored)
+CUDA tests               — need --features gpu + GPU runner (cuda is an alias)
+Slow integration tests   — run manually with --run-ignored all (exceed 5min timeout)
+C++ crossval tests       — need CROSSVAL_GGUF + bitnet.cpp
+TDD scaffolds            — unblock by implementing the feature the test describes
 ```
 
 ## Environment Variables
@@ -1004,7 +984,6 @@ GPU Mixed-Precision Tests
   `models/` if not set)
 - `RAYON_NUM_THREADS=1`: Single-threaded determinism
 - `BITNET_GPU_FAKE=cuda|none`: Override GPU detection for deterministic testing
-  (Issue #439)
 
 ### GPU Configuration
 
@@ -1038,7 +1017,7 @@ GPU Mixed-Precision Tests
 ### Test Configuration
 
 - `BITNET_SKIP_SLOW_TESTS=1`: Skip slow tests (QK256 scalar kernel tests that exceed timeout)
-- `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., blocked tests waiting for issue resolution)
+- `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., real-model, CUDA, slow, or crossval tests)
 
 ### Test Isolation
 
@@ -1060,46 +1039,6 @@ This prevents race conditions when tests run in parallel (e.g., with `--test-thr
 
 ## Known Issues
 
-These are active issues affecting current development. See issue tracker for details and workarounds.
-
-### Issue #254: Shape Mismatch in Layer-Norm
-
-**Status**: In analysis phase
-**Impact**: Blocks real inference tests; affects multiple architectures
-
-- Root cause under investigation in shape handling during layer normalization
-- Blocks transition from mock to real inference paths
-- Workaround: Use mock inference paths for testing (temporary)
-- Tracking: See GitHub issue #254 for detailed analysis
-
-### Issue #260: Mock Elimination Not Complete
-
-**Status**: Awaiting refactoring
-**Impact**: Prevents full transition to real inference paths
-
-- Test infrastructure still contains mock inference paths
-- ~15 end-to-end tests blocked until real paths validated
-- Refactoring in progress; tracked in GitHub issue #260
-
-### Issue #439: Feature Gate Consistency
-
-**Status**: ✅ **RESOLVED** (PR #475)
-**Impact**: GPU/CPU feature predicate unification completed
-
-- Unified `feature = "gpu"` and `feature = "cuda"` predicates
-- All device selection and fallback tests validated
-- See PR #475 and GitHub issue #439 for details
-
-### Issue #469: Tokenizer Parity and FFI Build Hygiene
-
-**Status**: Active development
-**Impact**: Blocks cross-validation tests and FFI integration
-
-- Tokenizer behavior parity between Rust and C++ implementations
-- FFI build system hygiene and dependency management
-- Blocks ~20 cross-validation tests
-- Tracking: GitHub issue #469
-
 ### Model Quality: microsoft-bitnet-b1.58-2B-4T-gguf
 
 **Status**: Known limitation
@@ -1112,20 +1051,21 @@ These are active issues affecting current development. See issue tracker for det
 
 ## Common Pitfalls
 
-### 1. Confusing Test Scaffolding with Bugs
+### 1. Confusing TDD Scaffolds with Bugs
 
-**Problem**: Seeing unimplemented!() calls or #[ignore] tests
+**Problem**: Seeing `panic!()` or `unimplemented!()` inside `#[ignore]` tests
 
 ```rust
-// This is NORMAL during MVP - it's intentional scaffolding
+// This is INTENTIONAL — TDD scaffold for a feature not yet implemented
 #[test]
-#[ignore] // Blocked by Issue #254
-fn test_real_inference_path() {
-    unimplemented!("Waiting for shape mismatch fix")
+#[ignore = "TDD scaffold: requires log capture mechanism for tracing output"]
+fn test_warning_message_format() {
+    panic!("not yet implemented");
 }
 ```
 
-**Solution**: Check the blocking issue (e.g., #254). These are placeholder tests that will be enabled once issues are resolved.
+**Solution**: Check the `#[ignore = "..."]` justification string. If it says "TDD scaffold",
+the test body is a placeholder. Implement the described feature, then remove the `#[ignore]`.
 
 ### 2. Expecting Production Performance from QK256 MVP
 
@@ -1183,7 +1123,7 @@ cargo build --no-default-features --features gpu
 # cargo test --workspace -- --ignored --include-ignored
 ```
 
-**Solution**: Check blocking issue numbers in test comments. These are intentional placeholders:
+**Solution**: Read the `#[ignore = "..."]` justification string — it tells you exactly what is needed to unblock the test. These are intentional placeholders:
 
 ```bash
 # Run only non-ignored tests (recommended for CI)
@@ -1196,15 +1136,14 @@ cargo test -p bitnet-models --no-default-features --features cpu
 
 ### 6. Expecting All Tests to Pass
 
-**Current State (MVP)**:
+**Current State**:
 
-- **152+ tests passing** (91 lib + 49 integration + 12 fixtures)
-  - Note: 152+ represents key test categories; total enabled tests = 1935+ (see PR #475 report)
-- ~70 tests intentionally ignored (scaffolding)
-- Real inference tests blocked by #254, #260, #469 (Issue #439 resolved)
+- **970+ tests passing** in `cargo nextest run --workspace --no-default-features --features cpu`
+- ~466 tests intentionally skipped in `--workspace` runs (87 in core crates, ~379 in xtask/crossval scaffolding); all have `#[ignore = "reason"]` justification strings
+- Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds
 - Complete test infrastructure: fixtures, receipts, strict mode, environment isolation
 
-**CI Status**: Only non-ignored tests run in CI. Ignored tests are tracked separately.
+**CI Status**: Only non-ignored tests run in PR CI. Ignored tests are opt-in via `--run-ignored`.
 
 ### 7. FFI Linker Issues
 
@@ -1234,9 +1173,9 @@ cargo build --no-default-features --features cpu
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
-- **Expect test scaffolding during MVP**: ~548 TODO/FIXME markers and ~70 ignored tests are intentional
+- **Expect test scaffolding for unimplemented features**: ~466 tests skipped across the workspace (87 in core, ~379 in xtask/crossval scaffolding); all have justification strings
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
 - **Use `#[serial(bitnet_env)]` for env-mutating tests**: Prevents race conditions in parallel execution
-- **Check issue tracker for blockers**: Before investigating test failures, see #254, #260, #469 (Issue #439 resolved in PR #475)
+- **Check `#[ignore = "..."]` justification before investigating**: The reason tells you exactly what's needed to unblock
 
 For comprehensive documentation, see the `docs/` directory organized by audience and use case.
