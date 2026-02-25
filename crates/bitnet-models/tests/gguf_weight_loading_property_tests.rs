@@ -681,7 +681,7 @@ fn test_zero_copy_efficiency(
         return Ok((0, 0, false));
     }
     // "copy" memory = raw f32 storage (4 bytes each).
-    let raw_size = weight_data.len() * std::mem::size_of::<f32>();
+    let raw_size = std::mem::size_of_val(weight_data);
     // "zero-copy" memory = 2-bit packed quantized data (4× smaller than raw).
     let quantizer = I2SQuantizer::new();
     let quantized = quantizer.quantize_weights(weight_data)?;
