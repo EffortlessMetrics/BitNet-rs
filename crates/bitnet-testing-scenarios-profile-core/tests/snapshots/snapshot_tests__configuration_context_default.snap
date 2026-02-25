@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-testing-scenarios-profile-core/tests/snapshot_tests.rs
+expression: ctx
+---
+ConfigurationContext {
+    scenario: Unit,
+    environment: Local,
+    resource_constraints: None,
+    time_constraints: None,
+    quality_requirements: None,
+    platform_settings: None,
+}

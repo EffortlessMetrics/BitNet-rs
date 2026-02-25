@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-testing-scenarios-profile-core/tests/snapshot_tests.rs
+expression: profile
+---
+FixtureProfile {
+    auto_download: true,
+    max_cache_size: 10737418240,
+    cleanup_interval: 86400s,
+    download_timeout: 300s,
+    base_url: None,
+}

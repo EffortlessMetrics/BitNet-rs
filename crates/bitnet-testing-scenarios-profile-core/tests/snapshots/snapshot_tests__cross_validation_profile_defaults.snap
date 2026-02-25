@@ -1,0 +1,21 @@
+---
+source: crates/bitnet-testing-scenarios-profile-core/tests/snapshot_tests.rs
+expression: profile
+---
+CrossValidationProfile {
+    enabled: false,
+    tolerance: ComparisonToleranceProfile {
+        min_token_accuracy: 0.999999,
+        max_probability_divergence: 1e-6,
+        max_performance_regression: 0.1,
+        numerical_tolerance: 1e-6,
+    },
+    cpp_binary_path: None,
+    test_cases: [
+        "basic_inference",
+        "tokenization",
+        "model_loading",
+    ],
+    performance_comparison: true,
+    accuracy_comparison: true,
+}
