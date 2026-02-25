@@ -140,7 +140,9 @@ fn test_once_per_layer_warning_guards() {
 /// - None (code inspection test)
 ///
 /// # Expected Behavior
+///
 /// - validate_kv_cache_dims uses debug_assert_eq! for tensor rank check
+///
 /// AC3: Debug assertions in hot path (code inspection test)
 ///
 /// Tests that validate_kv_cache_dims uses debug_assert_eq! for tensor rank check

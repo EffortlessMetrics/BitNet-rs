@@ -10,8 +10,8 @@ use proptest::prelude::*;
 // Helper: build a minimal valid GGUF header byte slice
 // ---------------------------------------------------------------------------
 
-/// Build a well-formed GGUF header: magic + 4-byte version + 8-byte tensor_count +
-/// 8-byte metadata_kv_count = 24 bytes.  Version is clamped to [2, 3].
+/// Build a well-formed GGUF header: magic + 4-byte version + 8-byte `tensor_count` +
+/// 8-byte `metadata_kv_count` = 24 bytes.  Version is clamped to [2, 3].
 fn make_valid_header(version: u32) -> Vec<u8> {
     let version = version.clamp(2, 3);
     let mut data = Vec::with_capacity(24);
