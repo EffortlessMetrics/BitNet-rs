@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#707.
+> **Last updated**: reflects implementation state after PRs #608–#709.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -71,6 +71,8 @@
 | `bitnet-bdd-grid` proptest + snapshot tests (8 proptest: LazyLock stability, required∩forbidden disjoint, find/rows consistency, supports/violations semantics; 4 snapshots: grid summary, Unit/Local cell, EndToEnd/CI cell, cell count) | `crates/bitnet-bdd-grid/tests/property_tests.rs`, `crates/bitnet-bdd-grid/tests/snapshot_tests.rs` | #705 |
 | `bitnet-trace` snapshot tests (4 JSON: minimal, optional-fields, decode-step, logits) + `bitnet-compat` snapshot tests (2: diagnose messages + count) + `bitnet-bdd-grid-core` snapshot tests (6: Scenario/Env/Feature Display strings, FeatureSet labels, BddCell debug, BddGrid::validate None) | `crates/bitnet-trace/tests/snapshot_tests.rs`, `crates/bitnet-compat/tests/snapshot_tests.rs`, `crates/bitnet-bdd-grid-core/tests/snapshot_tests.rs` | #706 |
 | `bitnet-quantization` snapshot tests (5: QuantizationType Display/Debug, best_for_arch x86_64/aarch64, round_trip I2S/TL2) + `bitnet-cli` snapshot tests (5, `full-cli` gated: InferenceCommand defaults, help text for --max-tokens/--stop/sampling/--prompt-template aliases) | `crates/bitnet-quantization/tests/snapshot_tests.rs`, `crates/bitnet-cli/tests/snapshot_tests.rs` | #707 |
+| `bitnet-runtime-feature-flags-core` (4 snaps: to_labels CPU/GPU+CUDA/empty, active feature set) + `bitnet-testing-scenarios-core` (4: scenario descriptions, timeout, log level, count) + `bitnet-startup-contract-core` (3: RuntimeComponent labels, summary tokens, is_compatible) + `bitnet-feature-contract` (4: consistent/inconsistent/empty) + `bitnet-testing-policy-core` (3: unit/local summary, active_profile_summary, CI snapshot) | `crates/bitnet-{runtime-feature-flags,testing-scenarios,startup-contract,feature-contract,testing-policy}-core/tests/snapshot_tests.rs` | #708 |
+| `bitnet-inference` (7 snaps: GenerationConfig defaults/greedy/creative, InferenceConfig defaults, validation error) + `bitnet-kernels` (4: provider count/fallback/selection/name, cpu-gated) + `bitnet-models` (5: LoadConfig/ProductionLoadConfig defaults, DeviceStrategy Debug) + `bitnet-server` (6: ServerSettings host/port/timeouts, BatchEngineConfig, ConcurrencyConfig, DeviceConfig variants) | `crates/bitnet-{inference,kernels,models,server}/tests/snapshot_tests.rs` | #709 |
 
 ### 🔲 What's Planned
 
