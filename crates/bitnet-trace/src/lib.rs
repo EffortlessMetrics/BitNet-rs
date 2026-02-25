@@ -175,7 +175,7 @@ fn sanitize_filename(name: &str) -> String {
 mod tests {
     use super::*;
     use candle_core::Device;
-    use std::env;
+    use serial_test::serial;
 
     #[test]
     fn test_sanitize_filename() {
@@ -185,16 +185,16 @@ mod tests {
     }
 
     #[test]
+    #[serial(bitnet_env)]
     fn test_dump_trace_disabled() {
         // Ensure BITNET_TRACE_DIR is not set
-        // SAFETY: This test runs in isolation and doesn't interact with other threads
-        unsafe { env::remove_var("BITNET_TRACE_DIR") };
+        temp_env::with_var_unset("BITNET_TRACE_DIR", || {
+            let tensor = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
+            let result = dump_trace("test_disabled", &tensor, None, None, None);
 
-        let tensor = Tensor::randn(0f32, 1f32, (4, 8), &Device::Cpu).unwrap();
-        let result = dump_trace("test_disabled", &tensor, None, None, None);
-
-        // Should succeed silently when tracing is disabled
-        assert!(result.is_ok());
+            // Should succeed silently when tracing is disabled
+            assert!(result.is_ok());
+        });
     }
 
     #[test]
