@@ -244,4 +244,50 @@ mod tests {
             StreamEvent::Token { .. } => panic!("expected Done event"),
         }
     }
+
+    // --- proptest -----------------------------------------------------------
+
+    proptest::proptest! {
+        #[test]
+        fn stop_on_token_id_always_fires_when_present(
+            id in 0u32..1000,
+        ) {
+            let criteria = make_criteria(&[id], &[], 1000, None);
+            let result = check_stop(&criteria, id, &[1, 2, 3], "hello");
+            proptest::prop_assert_eq!(result, Some(StopReason::StopTokenId(id)));
+        }
+
+        #[test]
+        fn no_stop_without_triggers(
+            id in 1000u32..2000,
+            generated_len in 1usize..50,
+        ) {
+            // Use a different id than stop_token_ids and max_tokens > generated_len.
+            let criteria = make_criteria(&[9999], &[], 100, Some(9998));
+            let generated: Vec<u32> = (0..generated_len as u32).collect();
+            let result = check_stop(&criteria, id, &generated, "no-stop-string-here");
+            proptest::prop_assert!(result.is_none());
+        }
+
+        #[test]
+        fn max_tokens_fires_exactly_at_budget(
+            budget in 1usize..100,
+        ) {
+            let criteria = make_criteria(&[], &[], budget, None);
+            let generated: Vec<u32> = vec![1u32; budget];
+            // At exactly budget, max_tokens should fire.
+            let result = check_stop(&criteria, 5, &generated, "");
+            proptest::prop_assert_eq!(result, Some(StopReason::MaxTokens));
+        }
+
+        #[test]
+        fn stop_string_match_fires(
+            prefix in "[a-z]{0,20}",
+        ) {
+            let criteria = make_criteria(&[], &["STOP"], 1000, None);
+            let tail = format!("{prefix}STOP");
+            let result = check_stop(&criteria, 5, &[], &tail);
+            proptest::prop_assert_eq!(result, Some(StopReason::StopString("STOP".to_string())));
+        }
+    }
 }

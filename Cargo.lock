@@ -595,9 +595,11 @@ version = "0.0.0"
 dependencies = [
  "arbitrary",
  "bitnet-common",
+ "bitnet-gguf",
  "bitnet-kernels",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-tokenizers",
  "candle-core",
  "libfuzzer-sys",
 ]
@@ -607,6 +609,7 @@ name = "bitnet-generation"
 version = "0.1.0"
 dependencies = [
  "bitnet-common",
+ "proptest",
  "serde",
 ]
 
@@ -624,6 +627,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "memmap2",
+ "proptest",
 ]
 
 [[package]]
