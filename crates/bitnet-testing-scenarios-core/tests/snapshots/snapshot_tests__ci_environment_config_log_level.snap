@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-scenarios-core/tests/snapshot_tests.rs
+expression: "format!(\"log_level={}\", cfg.log_level)"
+---
+log_level=debug

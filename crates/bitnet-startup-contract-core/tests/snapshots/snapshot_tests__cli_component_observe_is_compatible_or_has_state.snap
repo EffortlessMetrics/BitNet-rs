@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-startup-contract-core/tests/snapshot_tests.rs
+expression: "format!(\"is_compatible={}\", contract.is_compatible())"
+---
+is_compatible=false

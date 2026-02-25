@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-testing-scenarios-core/tests/snapshot_tests.rs
+expression: "descs.join(\"\\n\")"
+---
+Unit: Fast, isolated tests with minimal dependencies and quick feedback.
+Integration: End-to-end integration tests covering realistic flows and services.
+Performance: Sequential performance runs that measure latency and throughput.
+CrossValidation: A/B comparison (cross-validation) to check accuracy regressions.
+Debug: Verbose debug runs with thorough logging and artifact capture.
+Development: Local development defaults for quick iteration and diagnostics.
+Minimal: Tiny smoke test configuration for ultra-fast checks.

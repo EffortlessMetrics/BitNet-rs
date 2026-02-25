@@ -18,6 +18,7 @@ bitnet-feature-matrix = { path = "../bitnet-feature-matrix", version = "0.1.0" }
 
 [dev-dependencies]
 proptest.workspace = true
+insta.workspace = true
 
 [features]
 default = []
