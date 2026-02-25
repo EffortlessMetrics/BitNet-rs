@@ -150,6 +150,11 @@ pub struct GpuBackend {
 impl GpuBackend {
     /// Create a new GPU backend
     pub fn new(model: Arc<dyn Model>, device: Device) -> Result<Self> {
+        if !Self::is_available() {
+            return Err(anyhow::anyhow!(
+                "GPU backend requires gpu or cuda feature to be compiled in"
+            ));
+        }
         match device {
             Device::Cuda(_) => {
                 info!("Created GPU backend with device: {:?}", device);
@@ -346,7 +351,8 @@ mod tests {
             .await
             .expect("CPU forward should succeed with mock model");
         // Minimal invariant: output tensor has expected shape
-        assert_eq!(output.shape(), &[1, 10, 768], "unexpected output shape");
+        // MockModel::forward returns [1, vocab_size] = [1, 50257] (logits shape)
+        assert_eq!(output.shape(), &[1, 50257], "unexpected output shape");
     }
 
     // Requires a CUDA/Metal/WGPU environment; off by default.

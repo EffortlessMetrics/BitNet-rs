@@ -969,7 +969,6 @@ mod tests {
     /// Test memory pressure scenarios with large model files
     #[test]
     #[cfg(feature = "cpu")]
-    #[ignore = "TODO: Re-enable after implementing BitNetError handling"]
     fn test_memory_pressure_large_models() {
         use std::io::Write;
         use tempfile::NamedTempFile;
