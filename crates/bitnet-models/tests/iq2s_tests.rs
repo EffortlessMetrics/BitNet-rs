@@ -1,35 +1,28 @@
 //! Tests for IQ2_S quantization support - both native Rust and FFI backends
 
 use bitnet_models::quant::backend::Iq2sBackend;
+use serial_test::serial;
 
 #[test]
+#[serial(bitnet_env)]
 fn test_iq2s_backend_selection() {
-    // Test default selection (should be Rust)
-    unsafe {
-        std::env::remove_var("BITNET_IQ2S_IMPL");
-    }
-    let backend = Iq2sBackend::selected();
-    assert_eq!(backend, Iq2sBackend::Rust);
-    assert!(backend.is_available());
+    temp_env::with_var_unset("BITNET_IQ2S_IMPL", || {
+        let backend = Iq2sBackend::selected();
+        assert_eq!(backend, Iq2sBackend::Rust);
+        assert!(backend.is_available());
+    });
 
     // Test environment override to FFI
-    unsafe {
-        std::env::set_var("BITNET_IQ2S_IMPL", "ffi");
-    }
-    let backend = Iq2sBackend::selected();
-    assert_eq!(backend, Iq2sBackend::Ffi);
+    temp_env::with_var("BITNET_IQ2S_IMPL", Some("ffi"), || {
+        let backend = Iq2sBackend::selected();
+        assert_eq!(backend, Iq2sBackend::Ffi);
+    });
 
     // Test explicit rust selection
-    unsafe {
-        std::env::set_var("BITNET_IQ2S_IMPL", "rust");
-    }
-    let backend = Iq2sBackend::selected();
-    assert_eq!(backend, Iq2sBackend::Rust);
-
-    // Clean up
-    unsafe {
-        std::env::remove_var("BITNET_IQ2S_IMPL");
-    }
+    temp_env::with_var("BITNET_IQ2S_IMPL", Some("rust"), || {
+        let backend = Iq2sBackend::selected();
+        assert_eq!(backend, Iq2sBackend::Rust);
+    });
 }
 
 #[test]
