@@ -53,8 +53,7 @@ fn kvcache_after_append_snapshot() {
 
     let summary = format!(
         "layer[0].seq_len={} layer[1].seq_len={}",
-        cache.layers[0].seq_len,
-        cache.layers[1].seq_len,
+        cache.layers[0].seq_len, cache.layers[1].seq_len,
     );
     insta::assert_snapshot!("kvcache_after_single_append", summary);
 }
@@ -71,8 +70,7 @@ fn kvcache_after_clear_snapshot() {
 
     let summary = format!(
         "layer[0].seq_len={} layer[1].seq_len={}",
-        cache.layers[0].seq_len,
-        cache.layers[1].seq_len,
+        cache.layers[0].seq_len, cache.layers[1].seq_len,
     );
     insta::assert_snapshot!("kvcache_after_clear", summary);
 }
