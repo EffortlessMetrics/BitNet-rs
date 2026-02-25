@@ -15,7 +15,7 @@ This document covers the comprehensive test suite for BitNet.rs, including runni
 - ✅ **Strict Mode Guards**: 12/12 tests passing (runtime enforcement)
 - ✅ **Environment Isolation**: 7/7 tests passing (EnvGuard parallel safety)
 - ✅ **GGUF Fixtures**: 12/12 tests passing (QK256 dual-flavor detection)
-- ✅ **Snapshot Tests**: 37 test files across the workspace (insta)
+- ✅ **Snapshot Tests**: 42 test files across the workspace (insta)
 - ✅ **Property Tests**: 20 test files across the workspace (proptest)
 - ✅ **Fuzz Targets**: 11 targets, nightly scheduled (cargo-fuzz)
 - ✅ **CPU Golden Path E2E**: deterministic end-to-end inference test
@@ -299,7 +299,7 @@ BitNet.rs test suite is organized into distinct categories, each addressing spec
 | **Quantization Tests** | 180+ | ✅ Passing | I2_S flavor detection, TL1/TL2, IQ2_S via FFI |
 | **Model Loading Tests** | 95+ | ✅ Passing | GGUF and SafeTensors parsing |
 | **Fixture Tests** | 12 | ✅ Passing | QK256 dual-flavor detection, alignment validation |
-| **Snapshot Tests** | 200+ | ✅ Passing | Struct/output stability (insta, 37 test files) |
+| **Snapshot Tests** | 200+ | ✅ Passing | Struct/output stability (insta, 42 test files) |
 | **Property Tests** | 100+ | ✅ Passing | Randomised invariants (proptest, 20 test files) |
 | **Tokenizer Tests** | 110+ | ✅ Passing | Universal tokenizer, auto-discovery |
 | **CLI Tests** | 140+ | ✅ Passing | Command-line parsing, flag validation |
@@ -623,7 +623,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 ### Core Testing Framework
 - **Unit tests**: Each crate has comprehensive tests
 - **Integration tests**: Cross-crate tests in `tests/`
-- **Snapshot tests**: Struct/output stability assertions (insta, 37 test files, 200+ assertions)
+- **Snapshot tests**: Struct/output stability assertions (insta, 42 test files, 200+ assertions)
 - **Property-based tests**: Randomised invariant checks (proptest, 20 test files, 100+ properties)
 - **Fuzz targets**: Parser and kernel robustness (cargo-fuzz, 11 targets, nightly scheduled)
 - **Cross-validation**: Automated testing against C++ implementation
