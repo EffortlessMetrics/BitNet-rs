@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: "format!(\"{:?}\", DeviceStrategy::CpuOnly)"
+---
+CpuOnly

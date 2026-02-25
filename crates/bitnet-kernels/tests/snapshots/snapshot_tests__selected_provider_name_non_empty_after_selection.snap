@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_tests.rs
+expression: "format!(\"some={} non_empty={}\", name.is_some(),\nname.map(|n| !n.is_empty()).unwrap_or(false))"
+---
+some=true non_empty=true

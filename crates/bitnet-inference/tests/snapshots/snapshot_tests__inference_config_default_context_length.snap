@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"max_context_length={}\", cfg.max_context_length)"
+---
+max_context_length=2048

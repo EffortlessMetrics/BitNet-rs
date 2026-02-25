@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_tests.rs
+expression: "format!(\"host={} port={}\", cfg.host, cfg.port)"
+---
+host=0.0.0.0 port=8080

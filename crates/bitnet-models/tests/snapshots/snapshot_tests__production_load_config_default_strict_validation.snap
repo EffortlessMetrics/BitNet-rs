@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: "format!(\"strict_validation={} validate_tensor_alignment={}\",\ncfg.strict_validation, cfg.validate_tensor_alignment)"
+---
+strict_validation=true validate_tensor_alignment=true

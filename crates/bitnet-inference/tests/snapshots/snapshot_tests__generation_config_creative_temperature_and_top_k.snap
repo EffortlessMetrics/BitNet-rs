@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"temperature={} top_k={} top_p={}\", cfg.temperature, cfg.top_k,\ncfg.top_p)"
+---
+temperature=0.9 top_k=100 top_p=0.95

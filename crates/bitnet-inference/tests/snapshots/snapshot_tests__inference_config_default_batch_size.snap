@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"batch_size={}\", cfg.batch_size)"
+---
+batch_size=1

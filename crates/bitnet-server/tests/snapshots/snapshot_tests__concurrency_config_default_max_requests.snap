@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_tests.rs
+expression: "format!(\"max_concurrent={}\", cfg.max_concurrent_requests)"
+---
+max_concurrent=100

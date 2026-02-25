@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/snapshot_tests.rs
+expression: "format!(\"has_fallback={}\",\nproviders.iter().any(|p| p.contains(\"fallback\") || p.contains(\"cpu\")))"
+---
+has_fallback=true

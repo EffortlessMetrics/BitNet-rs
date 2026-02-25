@@ -53,6 +53,7 @@ sha2 = "0.10.9"
 sysinfo = "0.37.2"
 bitnet-st2gguf = { path = "../bitnet-st2gguf", version = "0.1.0" }
 bitnet-test-support.workspace = true
+insta.workspace = true
 
 [features]
 default = []
