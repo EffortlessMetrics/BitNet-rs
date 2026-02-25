@@ -993,6 +993,7 @@ dependencies = [
  "opentelemetry-stdout",
  "opentelemetry_sdk",
  "prometheus",
+ "proptest",
  "regex",
  "serde",
  "serde_json",
