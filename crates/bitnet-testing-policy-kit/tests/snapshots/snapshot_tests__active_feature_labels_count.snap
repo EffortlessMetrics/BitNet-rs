@@ -1,5 +1,0 @@
----
-source: crates/bitnet-testing-policy-kit/tests/snapshot_tests.rs
-expression: labels.len().to_string()
----
-0
