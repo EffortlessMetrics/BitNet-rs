@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_tests.rs
+expression: relevant
+---
+      --max-tokens <N>                Maximum number of tokens to generate (aliases: --max-new-tokens, --n-predict) [default: 512] [aliases: --max-new-tokens, --n-predict]

@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-cli/tests/snapshot_tests.rs
+expression: relevant
+---
+      --temperature <TEMP>            Temperature for sampling (0.0 = greedy, higher = more random) [default: 0.7]
+      --top-k <K>                     Top-k sampling parameter
+      --top-p <P>                     Top-p (nucleus) sampling parameter
+      --seed <SEED>                   Random seed for reproducible generation
+      --greedy                        Enable greedy decoding (temperature=0, top_p=1, top_k=0)
+      --qa                            Q&A mode: bundle Q&A-friendly defaults (auto template, temp=0.7, top-p=0.95, top-k=50) Individual parameters can still be overridden (e.g., --qa --temperature 0.5)

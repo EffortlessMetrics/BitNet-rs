@@ -32,6 +32,7 @@ tempfile.workspace = true
 serial_test = "3.1"
 rand.workspace = true
 rand_chacha = "0.9"
+insta = { workspace = true, features = ["json"] }
 bitnet-models = { path = "../bitnet-models", version = "0.1.0", features = ["cpu"] }  # AC2: For testing re-exports
 
 [features]
