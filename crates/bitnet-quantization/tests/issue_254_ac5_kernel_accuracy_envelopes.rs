@@ -29,7 +29,8 @@ fn calculate_mse(original: &[f32], reconstructed: &[f32]) -> f32 {
 /// which exceeds the 1e-5 threshold by design.
 fn generate_test_weights(m: usize, n: usize) -> Vec<f32> {
     // Deterministic ternary pattern with varied distribution
-    let pattern = [-1.0f32, 0.0f32, 1.0f32, 0.0f32, 1.0f32, -1.0f32, 0.0f32, 1.0f32, -1.0f32, 0.0f32];
+    let pattern =
+        [-1.0f32, 0.0f32, 1.0f32, 0.0f32, 1.0f32, -1.0f32, 0.0f32, 1.0f32, -1.0f32, 0.0f32];
     (0..m * n).map(|i| pattern[i % pattern.len()]).collect()
 }
 
