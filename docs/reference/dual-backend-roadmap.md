@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#678.
+> **Last updated**: reflects implementation state after PRs #608–#684.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -48,6 +48,12 @@
 | Receipts property test: mock-containing IDs excluded from strategy | `crates/bitnet-receipts/src/lib.rs` | #675 |
 | Issue #159 resolved: `MockGgufFileBuilder` uses real `GgufWriter` | `crates/bitnet-models/tests/gguf_weight_loading_tests.rs` | #676 |
 | Env-var race conditions eliminated: `serial+temp_env` across bitnet-kernels, bitnet-models, bitnet-trace, bitnet-runtime-profile-contract-core | `crates/bitnet-kernels/`, `crates/bitnet-models/`, `crates/bitnet-trace/`, `crates/bitnet-runtime-profile-contract-core/` | #678 |
+| Flaky SIMD throughput test removed | `crates/bitnet-kernels/tests/` | #681 |
+| Clippy warnings resolved workspace-wide (zero-warning CPU policy) | workspace | #682 |
+| Property tests for `bitnet-logits` (13 properties) | `crates/bitnet-logits/tests/property_tests.rs` | #683 |
+| Property tests for `bitnet-generation` (8 tests) | `crates/bitnet-generation/tests/property_tests.rs` | #683 |
+| Property tests for `bitnet-engine-core` standalone suite (7 tests) | `crates/bitnet-engine-core/tests/property_tests.rs` | #683 |
+| `ci-core.yml` paths filter includes doc-only files (`CLAUDE.md`, `CHANGELOG.md`, etc.) | `.github/workflows/ci-core.yml` | #684 |
 
 ### 🔲 What's Planned
 

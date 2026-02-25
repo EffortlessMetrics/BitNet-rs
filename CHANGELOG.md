@@ -5,6 +5,9 @@ All notable changes to BitNet.rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Property Tests for `bitnet-logits`** (PR #683): 13 proptest properties verifying softmax sum-to-one / non-negativity / argmax-preservation, temperature scaling semantics (T=1.0 identity, argmax preservation), top-k filtering (≤k elements, k=0/k≥len no-ops), argmax correctness, and repetition penalty semantics (1.0 no-op, reduces positives, worsens negatives)
+- **Property Tests for `bitnet-generation`** (PR #683): 8 tests (5 property + 3 unit) covering `check_stop` priority order (token-ID > EOS > max-tokens > stop-string), `max_tokens=0` disabling budget, determinism, and stop-string boundary matching
+- **Property Tests for `bitnet-engine-core` standalone suite** (PR #683): 7 tests (5 property + 2 unit) in `tests/property_tests.rs` for `SessionConfig` JSON round-trips, `BackendInfo` JSON round-trips, `SessionMetrics` non-negativity, and default values
 - **`Tokenizer::get_family_name()` trait method** (PR #673): Returns family hint (`"llama3"`, `"default"`, etc.) based on special tokens; used for auto-template detection
 - **Property Tests for `bitnet-device-probe`** (PR #650): 4 proptest properties verifying GPU compiled idempotency, SIMD level determinism, CPU always available, and cuda_compiled consistency with `gpu_compiled()`
 - **Property Tests for `bitnet-engine-core`** (PR #650): 3 proptest properties verifying `SessionConfig` JSON round-trips, `BackendInfo` JSON round-trips, and `SessionMetrics` non-negativity invariants
@@ -27,6 +30,9 @@ All notable changes to BitNet.rs will be documented in this file.
 - **Fuzz Target Registration** (PR #649): `architecture_detection`, `tl_lut_helper`, `tokenizer_discovery`, `vocab_size_extraction` fuzz targets were present but not registered in `fuzz/Cargo.toml`; now properly wired
 
 ### Fixed
+- **Flaky SIMD throughput test** (PR #681): Removed brittle `throughput.is_finite()` assertion in `bitnet-kernels` quantized matmul throughput test; avoids intermittent failures on CI runners where elapsed time rounds to 0
+- **Clippy warnings workspace-wide** (PR #682): Resolved all `clippy --all-targets --features cpu` warnings; zero-warning policy enforced for CPU feature gate
+- **`ci-core.yml` paths filter excludes documentation-only PRs** (PR #684): Added `CLAUDE.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `.github/copilot-instructions.md` to the `paths:` trigger so docs-only PRs correctly run required status checks instead of being permanently blocked
 - **Env-var race conditions eliminated across workspace** (PR #678): Replaced bare `unsafe { env::set_var/remove_var }` with `temp_env::with_var`/`with_vars`/`with_var_unset` + `#[serial(bitnet_env)]` in `bitnet-kernels` (3 tests in `issue_260_feature_gated_tests.rs`), `bitnet-models` (`test_iq2s_backend_selection`), `bitnet-trace` (5 integration tests + 1 unit test), and `bitnet-runtime-profile-contract-core` (4 tests); eliminates flaky test failures from cross-test env var races in parallel nextest runs
 - **Template detection + KV cache init tests unblocked** (PR #673): 3 tests previously failing due to missing `get_family_name()` and wrong KV cache test logic now pass without `#[ignore]`
 - **QK256, CLI, and simple inference tests unblocked** (PR #674): 9 TDD scaffold tests (`test_qk256_tolerance_*`, `test_help_text_snapshot`, `test_simple_real_inference`, etc.) activated by fixing stub implementations
@@ -39,7 +45,7 @@ All notable changes to BitNet.rs will be documented in this file.
 - **Env-var race condition hardening** (PR #678): Replaced `unsafe { env::set_var / remove_var }` call sites without serial+RAII cleanup with `temp_env::with_var` + `#[serial(bitnet_env)]` where practical; duplicate `blake3` dev-dep removed; GPU cfg predicates unified to `any(feature = "gpu", feature = "cuda")`
 
 ### Documentation
-- **CLAUDE.md + copilot-instructions.md accuracy refresh**: Removed stale "Active Blockers" references to non-existent/closed issues (#254, #260, #439, #469); updated MSRV to 1.92.0; updated test counts (970+ passing, ~125 ignored); simplified ignored-test categorization to reflect actual reasons (model-gated, CUDA, slow, crossval, TDD scaffold)
+- **CLAUDE.md + copilot-instructions.md accuracy refresh** (PR #680): Removed stale "Active Blockers" references to non-existent/closed issues (#254, #260, #439, #469); updated MSRV to 1.92.0; updated test counts (3,097 passing, 466 skipped); simplified ignored-test categorization to reflect actual reasons (model-gated, CUDA, slow, crossval, TDD scaffold); updated architecture doc with SRP microcrate section
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
