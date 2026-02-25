@@ -861,6 +861,7 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-honest-compute",
+ "bitnet-kernels",
  "chrono",
  "insta",
  "proptest",
