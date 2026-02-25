@@ -16,6 +16,9 @@ include = ["src/**", "Cargo.toml"]
 bitnet-bdd-grid = { path = "../bitnet-bdd-grid", version = "0.1.0" }
 bitnet-feature-matrix = { path = "../bitnet-feature-matrix", version = "0.1.0" }
 
+[dev-dependencies]
+proptest.workspace = true
+
 [features]
 default = []
 cpu = ["bitnet-feature-matrix/cpu"]
