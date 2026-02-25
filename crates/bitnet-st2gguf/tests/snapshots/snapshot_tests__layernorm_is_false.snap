@@ -1,0 +1,22 @@
+---
+source: crates/bitnet-st2gguf/tests/snapshot_tests.rs
+expression: non_ln_results
+---
+[
+    (
+        "model.embed_tokens.weight",
+        false,
+    ),
+    (
+        "model.layers.0.attn.q_proj.weight",
+        false,
+    ),
+    (
+        "model.layers.0.ffn.gate_proj.weight",
+        false,
+    ),
+    (
+        "lm_head.weight",
+        false,
+    ),
+]

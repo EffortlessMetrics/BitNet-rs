@@ -1,0 +1,38 @@
+---
+source: crates/bitnet-st2gguf/tests/snapshot_tests.rs
+expression: ln_results
+---
+[
+    (
+        "model.layers.0.attn_norm.weight",
+        true,
+    ),
+    (
+        "model.layers.0.ffn_norm.weight",
+        true,
+    ),
+    (
+        "model.layers.15.attn_norm.weight",
+        true,
+    ),
+    (
+        "model.layers.15.ffn_norm.weight",
+        true,
+    ),
+    (
+        "model.norm.weight",
+        true,
+    ),
+    (
+        "model.layers.0.input_layernorm.weight",
+        true,
+    ),
+    (
+        "model.layers.0.post_attention_layernorm.weight",
+        true,
+    ),
+    (
+        "final_norm.weight",
+        true,
+    ),
+]

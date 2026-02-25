@@ -1040,6 +1040,7 @@ dependencies = [
  "console 0.16.2",
  "half",
  "indicatif",
+ "insta",
  "memmap2",
  "safetensors 0.6.2",
  "serde",
@@ -1146,6 +1147,7 @@ name = "bitnet-testing-policy-kit"
 version = "0.1.0"
 dependencies = [
  "bitnet-testing-policy",
+ "insta",
 ]
 
 [[package]]
@@ -1153,6 +1155,7 @@ name = "bitnet-testing-policy-runtime"
 version = "0.1.0"
 dependencies = [
  "bitnet-testing-policy-interop",
+ "insta",
 ]
 
 [[package]]

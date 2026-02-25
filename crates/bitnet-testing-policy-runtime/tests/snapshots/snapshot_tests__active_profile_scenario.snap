@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-runtime/tests/snapshot_tests.rs
+expression: profile.scenario.to_string()
+---
+unit
