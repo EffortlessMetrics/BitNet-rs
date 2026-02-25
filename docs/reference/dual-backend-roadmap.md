@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#726.
+> **Last updated**: reflects implementation state after PRs #608–#733.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -85,6 +85,10 @@
 | Proptest for `bitnet-trace` (+6 JSON round-trip/hash/rms invariants) and `bitnet-kernels` (+8 provider/quantize invariants); proptest: 22→23 crates | `crates/bitnet-trace/tests/property_tests.rs`, `crates/bitnet-kernels/tests/property_tests.rs` | #724 |
 | Proptest for `bitnet-server` (+11 BatchEngineConfig/SecurityValidator invariants); proptest: 23→24 crates | `crates/bitnet-server/tests/property_tests.rs` | #725 |
 | Proptest for `bitnet-cli` (+9 CLI arg-parsing invariants); proptest: 24→26 crates; workspace: 3,359→3,384 tests | `crates/bitnet-cli/tests/property_tests.rs` | #726 |
+| Fix GPU mode compilation in `bitnet-receipts` (missing optional `bitnet-kernels` dep; let-chain type inference fix) | `crates/bitnet-receipts/Cargo.toml`, `src/lib.rs` | #731 |
+| Fix CLI tests: assert `.stderr(...)` not `.stdout(...)` for error messages logged via `tracing::error!` | `crates/bitnet-cli/tests/inspect_ln_stats.rs`, `validation_workflow.rs` | #730 |
+| Proptest for `bitnet-common` (+17), `bitnet-tokenizers` (+9), `bitnet-inference` (+16); proptest: 26→29 crates; workspace: 3,384→3,426 tests | `crates/*/tests/property_tests.rs` | #732 |
+| Proptest for `bitnet-quantization` (+12 math invariants) and `bitnet-models` (+8 predicate/re-export invariants) | `crates/bitnet-quantization/tests/property_tests.rs`, `crates/bitnet-models/tests/property_tests.rs` | #733 |
 
 ### 🔲 What's Planned
 
