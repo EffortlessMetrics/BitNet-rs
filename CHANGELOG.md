@@ -4,8 +4,11 @@ All notable changes to BitNet.rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Property tests for `bitnet-compat` and `bitnet-st2gguf`** (PR #722): Adds proptest coverage to two crates that previously had no property-based tests — `bitnet-compat` (+5 tests: `diagnose()` determinism, issues are non-empty strings, minimal GGUF always has issues, `export_fixed()` passes idempotency check, fixing never increases issue count); `bitnet-st2gguf` (+9 tests: `is_layernorm_tensor` purity and boundary cases, `count_layernorm_tensors` bounds, `TensorDType` type codes and element sizes, `GgufWriter` tensor shape acceptance). Workspace total: **3,359 tests, all passing**.
+
 ### Fixed
-- **Workspace snapshot tests (4 tests across 3 crates)** (PR #720): Replaced exact-count/exact-value snapshot assertions with presence checks in `bitnet-runtime-feature-flags` (`feature_labels_count_with_cpu_feature`, `feature_line_format_stable`), `bitnet-startup-contract-core` (`cli_component_observe_is_compatible_or_has_state`), and `bitnet-testing-policy-kit` (`active_feature_labels_returns_list`). Cargo feature unification in workspace builds activates extra features (`fixtures`, `reporting`, `trend`, `quantization`) via other crates, making context-dependent exact-match snapshots fail. Full workspace run now: **3345 passed, 0 failed, 462 skipped**.
+- **Workspace snapshot tests (4 tests across 3 crates)** (PR #720): Replaced exact-count/exact-value snapshot assertions with presence checks in `bitnet-runtime-feature-flags` (`feature_labels_count_with_cpu_feature`, `feature_line_format_stable`), `bitnet-startup-contract-core` (`cli_component_observe_is_compatible_or_has_state`), and `bitnet-testing-policy-kit` (`active_feature_labels_returns_list`). Cargo feature unification in workspace builds activates extra features (`fixtures`, `reporting`, `trend`, `quantization`) via other crates, making context-dependent exact-match snapshots fail. Full workspace run now: **3,359 passed, 0 failed, 462 skipped**.
 
 ### Documentation
 - **Dual-Backend Roadmap update** (PR #719): Marks PRs #711–#717 as implemented in the roadmap tracking table; adds retrospective rows for previously-implemented but un-tracked items (Phase 6 SRP microcrates, BDD grid runner, CPU golden path, GPU smoke lane).
