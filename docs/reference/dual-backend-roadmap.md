@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#702.
+> **Last updated**: reflects implementation state after PRs #608–#703.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -67,6 +67,7 @@
 | GGUF `open()` file integration tests using 224-byte `mini.gguf` fixture (4 tests): happy path, snapshot, nonexistent error, bad-magic error | `crates/bitnet-gguf/tests/file_open_tests.rs` | #699 |
 | `bitnet-device-probe` proptest integration tests (7 proptest): SIMD determinism, gpu_compiled stability, DeviceCapabilities invariants, BITNET_GPU_FAKE / BITNET_STRICT_MODE env-var semantics | `crates/bitnet-device-probe/tests/property_tests.rs` | #701 |
 | `bitnet-transformer` KVCache snapshot tests (5 insta snapshots): initial state, post-append, post-clear, layer-initial-state, 3-append seq_len accumulation | `crates/bitnet-transformer/tests/snapshot_tests.rs` | #702 |
+| `bitnet-receipts` snapshot tests (6 JSON snapshots) + `bitnet-sampling` snapshot tests (6 debug snapshots) + `bitnet-prompt-templates` snapshot tests (7 snaps): all template types + multi-turn history | `crates/bitnet-receipts/tests/snapshot_tests.rs`, `crates/bitnet-sampling/tests/snapshot_tests.rs`, `crates/bitnet-prompt-templates/tests/snapshot_tests.rs` | #703 |
 
 ### 🔲 What's Planned
 
