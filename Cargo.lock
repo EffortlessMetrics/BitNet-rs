@@ -636,6 +636,9 @@ dependencies = [
 [[package]]
 name = "bitnet-honest-compute"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "bitnet-inference"

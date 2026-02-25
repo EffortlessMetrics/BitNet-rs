@@ -21,3 +21,6 @@ include = [
 
 [features]
 default = []
+
+[dev-dependencies]
+proptest = { workspace = true }
