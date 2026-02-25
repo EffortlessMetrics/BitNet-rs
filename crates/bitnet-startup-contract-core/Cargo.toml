@@ -61,3 +61,8 @@ runtime-profile-fixtures = ["bitnet-runtime-profile/runtime-profile-fixtures"]
 runtime-profile-reporting = ["bitnet-runtime-profile/runtime-profile-reporting"]
 runtime-profile-trend = ["bitnet-runtime-profile/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-runtime-profile/runtime-profile-integration-tests"]
+
+[dev-dependencies]
+serial_test.workspace = true
+temp-env = "0.3.6"
+proptest.workspace = true
