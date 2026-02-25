@@ -17,6 +17,27 @@ BitNet.rs is organized as a Rust workspace with specialized crates:
 
 **See also**: [Issue #254 Real Inference Specification](explanation/issue-254-real-inference-spec.md) for comprehensive real inference architecture
 
+### SRP Microcrates (inference pipeline)
+
+These small, single-responsibility crates reduce coupling in `bitnet-inference` and are re-exported from their original locations for zero breaking changes.
+
+- **`bitnet-logits`**: Pure logit-transform functions (`apply_temperature`, `apply_top_k`, `apply_top_p`, `softmax_in_place`, `apply_repetition_penalty`, `argmax`) — no external dependencies, suitable for `no_std`
+- **`bitnet-sampling`**: Token-sampling strategies (greedy, temperature, top-k, top-p, repetition penalty) built on `bitnet-logits`; seeded with `ChaCha8Rng` for reproducibility
+- **`bitnet-generation`**: Decode-loop contracts: `StopCriteria`, `check_stop` priority logic, `StopReason`, `GenerationConfig`, streaming `StreamEvent` / `GenerationStats`
+- **`bitnet-engine-core`**: Session/orchestration contracts: `SessionConfig`, `SessionMetrics`, `BackendInfo`
+- **`bitnet-device-probe`**: OS/GPU probing and capability snapshot (`gpu_compiled()`, `gpu_available_runtime()`, `detect_simd_level()`, `DeviceCapabilities`) — respects `BITNET_GPU_FAKE` and `BITNET_STRICT_MODE`
+- **`bitnet-gguf`**: GGUF parser surface with property and fuzz tests
+- **`bitnet-prompt-templates`**: Chat template types (`PromptTemplate`, `TemplateType`, `ChatTurn`) and formatters
+- **`bitnet-receipts`**: Honest-compute receipt schema v1.0.0 and serialization
+- **`bitnet-honest-compute`**: `compute_path=real` enforcement and kernel-ID hygiene policy (no-mock gate)
+- **`bitnet-runtime-feature-flags`**: Runtime snapshot of compiled features (`cpu`, `gpu`, `cuda` flags reported independently)
+
+### Testing / CI microcrates
+
+- **`bitnet-bdd-grid`** / **`bitnet-bdd-grid-core`**: BDD compatibility grid with compile-coverage enforcement (`xtask grid-check`)
+- **`bitnet-feature-matrix`** / **`bitnet-feature-contract`**: Feature-lattice contracts and enforcement tests
+- **`bitnet-testing-policy-core`** / **`bitnet-testing-scenarios-core`** / **`bitnet-runtime-profile-core`**: Test policy and scenario primitives
+
 ### Application Layer
 - **`bitnet-server`**: **Production HTTP/REST inference server** providing scalable inference endpoints with batch processing, model hot-swapping capabilities, comprehensive health monitoring (liveness/readiness/startup probes), real-time system metrics collection (CPU, memory, disk, network I/O), Prometheus metrics integration, OpenTelemetry observability, streaming inference support, and deployment-ready configurations for Docker and Kubernetes environments
 - **`bitnet-cli`**: Command-line interface for local inference, model verification, and compatibility checking
