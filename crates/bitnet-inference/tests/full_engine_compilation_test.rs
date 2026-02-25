@@ -10,7 +10,6 @@
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_full_engine_feature_compiles() {}
 /// AC:5 - Test EngineConfig default works
 ///
@@ -20,7 +19,6 @@ fn test_ac5_full_engine_feature_compiles() {}
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_engine_config_default_works() {}
 /// AC:5 - Test ProductionInferenceEngine::new compiles
 ///
@@ -30,7 +28,6 @@ fn test_ac5_engine_config_default_works() {}
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_production_inference_engine_new_compiles() {}
 /// AC:5 - Test inference execution stub
 ///
@@ -40,7 +37,6 @@ fn test_ac5_production_inference_engine_new_compiles() {}
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_inference_execution_stub() {}
 /// AC:5 - Test performance monitoring stub
 ///
@@ -49,7 +45,6 @@ fn test_ac5_inference_execution_stub() {}
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_performance_monitoring_stub() {}
 /// AC:5 - Test prefill strategy configuration stub
 ///
@@ -58,7 +53,6 @@ fn test_ac5_performance_monitoring_stub() {}
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_prefill_strategy_configuration_stub() {}
 /// AC:5 - Test batch processing stub
 ///
@@ -67,7 +61,6 @@ fn test_ac5_prefill_strategy_configuration_stub() {}
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_batch_processing_stub() {}
 /// AC:5 - Test error handling stub
 ///
@@ -76,5 +69,4 @@ fn test_ac5_batch_processing_stub() {}
 /// Tests specification: inference-engine-type-visibility-spec.md#ac5-ensure-full-engine-feature-compiles
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac5_error_handling_stub() {}

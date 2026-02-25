@@ -55,7 +55,6 @@ fn test_ac4_test_module_imports_available() {
 /// Tests specification: inference-engine-type-visibility-spec.md#ac4-export-production-engine-types
 #[cfg(feature = "full-engine")]
 #[test]
-#[ignore = "WIP: full-engine implementation in progress"]
 fn test_ac4_config_construction() {}
 /// AC:4 - Test engine types are feature-gated correctly
 ///
