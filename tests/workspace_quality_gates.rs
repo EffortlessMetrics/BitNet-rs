@@ -59,11 +59,21 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::process::Command;
 
+/// Returns the workspace root directory at compile-time via CARGO_MANIFEST_DIR.
+///
+/// `bitnet-tests` lives in `<workspace_root>/tests/`, so parent is workspace root.
+fn workspace_root() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("CARGO_MANIFEST_DIR parent should be workspace root")
+        .to_path_buf()
+}
+
 /// Helper: Run cargo command and capture output
 fn run_cargo_command(args: &[&str]) -> Result<(bool, String, String), String> {
     let output = Command::new("cargo")
         .args(args)
-        .current_dir("/home/steven/code/Rust/BitNet-rs")
+        .current_dir(workspace_root())
         .output()
         .map_err(|e| format!("Failed to execute cargo: {}", e))?;
 
@@ -76,8 +86,8 @@ fn run_cargo_command(args: &[&str]) -> Result<(bool, String, String), String> {
 
 /// Helper: Parse Cargo.lock to detect duplicate dependencies
 fn parse_cargo_lock_for_duplicates() -> Result<HashMap<String, Vec<String>>, String> {
-    let cargo_lock_path = "/home/steven/code/Rust/BitNet-rs/Cargo.lock";
-    let content = std::fs::read_to_string(cargo_lock_path)
+    let cargo_lock_path = workspace_root().join("Cargo.lock");
+    let content = std::fs::read_to_string(&cargo_lock_path)
         .map_err(|e| format!("Failed to read Cargo.lock: {}", e))?;
 
     let mut packages: HashMap<String, Vec<String>> = HashMap::new();
@@ -209,15 +219,15 @@ fn test_workspace_builds_with_crossval_features() {
 #[test]
 fn test_no_deprecated_yaml_dependencies() {
     let crates_to_check = vec![
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-cli/Cargo.toml",
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/Cargo.toml",
-        "/home/steven/code/Rust/BitNet-rs/tests/Cargo.toml",
+        workspace_root().join("crates/bitnet-cli/Cargo.toml").to_str().unwrap().to_string(),
+        workspace_root().join("crates/bitnet-models/Cargo.toml").to_str().unwrap().to_string(),
+        workspace_root().join("tests/Cargo.toml").to_str().unwrap().to_string(),
     ];
 
     let mut failures = Vec::new();
 
     for toml_path in crates_to_check {
-        let content = std::fs::read_to_string(toml_path)
+        let content = std::fs::read_to_string(&toml_path)
             .unwrap_or_else(|_| panic!("Failed to read {}", toml_path));
 
         // Check for old serde_yaml 0.9 pattern (should NOT exist)
@@ -252,15 +262,15 @@ fn test_no_deprecated_yaml_dependencies() {
 #[test]
 fn test_serde_yaml_ng_migration_complete() {
     let crates_to_check = vec![
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-cli/Cargo.toml",
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/Cargo.toml",
-        "/home/steven/code/Rust/BitNet-rs/tests/Cargo.toml",
+        workspace_root().join("crates/bitnet-cli/Cargo.toml").to_str().unwrap().to_string(),
+        workspace_root().join("crates/bitnet-models/Cargo.toml").to_str().unwrap().to_string(),
+        workspace_root().join("tests/Cargo.toml").to_str().unwrap().to_string(),
     ];
 
     let mut failures = Vec::new();
 
     for toml_path in crates_to_check {
-        let content = std::fs::read_to_string(toml_path)
+        let content = std::fs::read_to_string(&toml_path)
             .unwrap_or_else(|_| panic!("Failed to read {}", toml_path));
 
         // AC1: Verify package aliasing exists (inline or via workspace inheritance)
@@ -299,7 +309,7 @@ fn test_serde_yaml_ng_migration_complete() {
     }
 
     // AC2: Verify Cargo.lock shows only serde_yaml_ng
-    let cargo_lock_path = "/home/steven/code/Rust/BitNet-rs/Cargo.lock";
+    let cargo_lock_path = workspace_root().join("Cargo.lock").to_str().unwrap().to_string();
     let cargo_lock_content =
         std::fs::read_to_string(cargo_lock_path).expect("Failed to read Cargo.lock");
 
@@ -362,16 +372,16 @@ fn test_cargo_tree_shows_only_serde_yaml_ng() {
 #[test]
 fn test_serde_yaml_ng_version_consistency() {
     let crates_to_check = vec![
-        "/home/steven/code/Rust/BitNet-rs/Cargo.toml", // workspace root defines canonical version
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-cli/Cargo.toml",
-        "/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/Cargo.toml",
-        "/home/steven/code/Rust/BitNet-rs/tests/Cargo.toml",
+        workspace_root().join("Cargo.toml").to_str().unwrap().to_string(), // workspace root defines canonical version
+        workspace_root().join("crates/bitnet-cli/Cargo.toml").to_str().unwrap().to_string(),
+        workspace_root().join("crates/bitnet-models/Cargo.toml").to_str().unwrap().to_string(),
+        workspace_root().join("tests/Cargo.toml").to_str().unwrap().to_string(),
     ];
 
     let mut versions = HashSet::new();
 
     for toml_path in crates_to_check {
-        let content = std::fs::read_to_string(toml_path)
+        let content = std::fs::read_to_string(&toml_path)
             .unwrap_or_else(|_| panic!("Failed to read {}", toml_path));
 
         // Extract version from: serde_yaml = { package = "serde_yaml_ng", version = "0.10.0" }
@@ -422,15 +432,15 @@ fn test_serde_yaml_ng_version_consistency() {
 /// Specification: phase1_deprecated_deps_analysis.md#lazy_static (lines 58-89)
 /// Phase: Phase 2 (P1 HIGH)
 #[test]
-#[ignore = "Post-Phase-2: Enable after lazy_static → OnceLock migration"]
 fn test_no_lazy_static_dependencies() {
-    let crates_to_check =
-        vec!["/home/steven/code/Rust/BitNet-rs/crates/bitnet-st-tools/Cargo.toml"];
+    let crates_to_check = vec![
+        workspace_root().join("crates/bitnet-st-tools/Cargo.toml").to_str().unwrap().to_string(),
+    ];
 
     let mut failures = Vec::new();
 
     for toml_path in crates_to_check {
-        match check_deprecated_dependency("lazy_static", toml_path) {
+        match check_deprecated_dependency("lazy_static", &toml_path) {
             Ok(true) => {
                 failures.push(format!("Found deprecated lazy_static in {}", toml_path));
             }
@@ -802,8 +812,9 @@ fn test_workspace_members_complete() {
         "tools/migrate-gen-config",
     ];
 
-    let root_toml = std::fs::read_to_string("/home/steven/code/Rust/BitNet-rs/Cargo.toml")
-        .expect("Failed to read root Cargo.toml");
+    let root_toml =
+        std::fs::read_to_string(workspace_root().join("Cargo.toml").to_str().unwrap().to_string())
+            .expect("Failed to read root Cargo.toml");
 
     let mut missing_members = Vec::new();
 
@@ -823,8 +834,9 @@ fn test_workspace_members_complete() {
 /// Specification: phase1_deprecated_deps_analysis.md#workspace-summary (line 243)
 #[test]
 fn test_workspace_dependencies_centralized() {
-    let root_toml = std::fs::read_to_string("/home/steven/code/Rust/BitNet-rs/Cargo.toml")
-        .expect("Failed to read root Cargo.toml");
+    let root_toml =
+        std::fs::read_to_string(workspace_root().join("Cargo.toml").to_str().unwrap().to_string())
+            .expect("Failed to read root Cargo.toml");
 
     // Check that workspace dependencies section exists
     assert!(
@@ -855,7 +867,6 @@ fn test_workspace_dependencies_centralized() {
 /// Specification: phase1_deprecated_deps_analysis.md#dirs (lines 119-145)
 /// Phase: Phase 3 (P2 MEDIUM)
 #[test]
-#[ignore = "Post-Phase-3: Enable after dirs version consolidation"]
 fn test_dirs_version_consolidated() {
     let packages = parse_cargo_lock_for_duplicates().expect("Failed to parse Cargo.lock");
 
@@ -881,7 +892,6 @@ fn test_dirs_version_consolidated() {
 /// Specification: phase1_deprecated_deps_analysis.md#once_cell (lines 149-169)
 /// Phase: Phase 3 (P2 MEDIUM)
 #[test]
-#[ignore = "Post-Phase-3: Enable after once_cell version consolidation"]
 fn test_once_cell_version_consolidated() {
     let packages = parse_cargo_lock_for_duplicates().expect("Failed to parse Cargo.lock");
 
