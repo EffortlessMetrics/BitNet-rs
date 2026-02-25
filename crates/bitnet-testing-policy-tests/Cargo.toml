@@ -60,3 +60,6 @@ runtime-profile-fixtures = ["bitnet-testing-policy-runtime/runtime-profile-fixtu
 runtime-profile-reporting = ["bitnet-testing-policy-runtime/runtime-profile-reporting"]
 runtime-profile-trend = ["bitnet-testing-policy-runtime/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-testing-policy-runtime/runtime-profile-integration-tests"]
+
+[dev-dependencies]
+insta.workspace = true

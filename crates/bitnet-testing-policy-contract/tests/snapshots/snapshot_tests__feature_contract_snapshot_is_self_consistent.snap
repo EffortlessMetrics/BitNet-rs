@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-contract/tests/snapshot_tests.rs
+expression: snapshot.is_consistent().to_string()
+---
+true

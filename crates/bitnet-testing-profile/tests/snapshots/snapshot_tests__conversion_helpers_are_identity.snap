@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-testing-profile/tests/snapshot_tests.rs
+expression: "(to_grid_scenario(scenario) == scenario, to_grid_environment(env) == env,\nfrom_grid_scenario(scenario) == scenario, from_grid_environment(env) == env,)"
+---
+(
+    true,
+    true,
+    true,
+    true,
+)

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-runtime-profile-contract-core/tests/snapshot_tests.rs
+expression: profile.cell.is_some().to_string()
+---
+true
