@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/backend_selection_tests.rs
+expression: r.summary()
+---
+requested=auto detected=[cpu-rust] selected=cpu-rust

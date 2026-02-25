@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-common/tests/backend_selection_tests.rs
+expression: r
+---
+BackendSelectionResult {
+    requested: Auto,
+    detected: [
+        CpuRust,
+    ],
+    selected: CpuRust,
+    rationale: "auto-selected best available backend",
+}
