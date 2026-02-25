@@ -1254,6 +1254,7 @@ name = "bitnet-validation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "proptest",
  "regex",
  "serde",
  "serde_yaml_ng",

@@ -113,3 +113,58 @@ mod tests {
         assert!(!is_ln_gamma("token_embd.weight"));
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Any name not ending in ".weight" is never a LayerNorm gamma.
+    proptest! {
+        #[test]
+        fn is_ln_gamma_requires_weight_suffix(
+            prefix in "[a-z._]{1,40}",
+            suffix in "[a-z]{0,8}",
+        ) {
+            prop_assume!(!suffix.is_empty() && suffix != "weight");
+            let name = format!("{}.{}", prefix, suffix);
+            prop_assert!(
+                !is_ln_gamma(&name),
+                "expected false for non-weight suffix: {:?}",
+                name
+            );
+        }
+    }
+
+    /// Names with known LN keywords and a .weight suffix are always recognized.
+    proptest! {
+        #[test]
+        fn is_ln_gamma_recognizes_known_keywords(
+            prefix in "(?:blk\\.[0-9]+\\.|model\\.layers\\.[0-9]+\\.)?",
+            keyword in prop_oneof![
+                Just("attn_norm"),
+                Just("ffn_norm"),
+                Just("ffn_layernorm"),
+                Just("input_layernorm"),
+                Just("post_attention_layernorm"),
+                Just("final_norm"),
+            ],
+        ) {
+            let name = format!("{}{}.weight", prefix, keyword);
+            prop_assert!(
+                is_ln_gamma(&name),
+                "expected true for known LN keyword {:?} in {:?}",
+                keyword,
+                name
+            );
+        }
+    }
+
+    /// is_ln_gamma is deterministic: calling it twice on the same input agrees.
+    proptest! {
+        #[test]
+        fn is_ln_gamma_is_deterministic(name in "[a-z._/0-9]{1,50}") {
+            prop_assert_eq!(is_ln_gamma(&name), is_ln_gamma(&name));
+        }
+    }
+}
