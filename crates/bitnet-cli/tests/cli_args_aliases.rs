@@ -86,20 +86,15 @@ mod ac1_max_tokens_aliases {
 
     // AC1:help_text - Help text shows primary flag with aliases documented
     #[test]
-    #[ignore = "implementation pending: verify help text includes aliases"]
     fn test_help_text_shows_aliases() -> Result<()> {
         // Tests feature spec: cli-ux-improvements-spec.md#AC1
         // Verify that help text shows --max-tokens as primary with aliases
-
-        // TODO: Capture help output and verify content
-        // let help_output = get_cli_help_output("run");
-
-        // Expected: Help text mentions all three variants
-        // assert!(help_output.contains("--max-tokens"));
-        // assert!(help_output.contains("--max-new-tokens"));
-        // assert!(help_output.contains("--n-predict"));
-
-        panic!("Test not implemented: needs help text verification");
+        use clap::CommandFactory;
+        let help = TestCli::command().render_long_help().to_string();
+        assert!(help.contains("--max-tokens"), "Help must show --max-tokens primary flag");
+        assert!(help.contains("max-new-tokens"), "Help must show max-new-tokens alias");
+        assert!(help.contains("n-predict"), "Help must show n-predict alias");
+        Ok(())
     }
 }
 
@@ -203,20 +198,17 @@ mod ac5_stop_sequence_aliases {
 
     // AC5:help_text - Help text shows primary flag with aliases documented
     #[test]
-    #[ignore = "implementation pending: verify help text includes stop aliases"]
     fn test_help_text_shows_stop_aliases() -> Result<()> {
         // Tests feature spec: cli-ux-improvements-spec.md#AC5
         // Verify that help text shows --stop as primary with aliases
-
-        // TODO: Capture help output and verify content
-        // let help_output = get_cli_help_output("run");
-
-        // Expected: Help text mentions all three variants
-        // assert!(help_output.contains("--stop"));
-        // assert!(help_output.contains("--stop-sequence"));
-        // assert!(help_output.contains("--stop_sequences"));
-
-        panic!("Test not implemented: needs help text verification");
+        use clap::CommandFactory;
+        let help = TestCli::command().render_long_help().to_string();
+        assert!(help.contains("--stop"), "Help must show --stop primary flag");
+        assert!(
+            help.contains("stop-sequence") || help.contains("stop_sequence"),
+            "Help must show stop-sequence alias"
+        );
+        Ok(())
     }
 }
 
