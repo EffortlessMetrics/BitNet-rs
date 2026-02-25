@@ -920,20 +920,18 @@ fn test_once_cell_version_consolidated() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 915)
 #[test]
-#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_bans() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
 
-    if check.is_err() {
+    if check.is_err() || check.unwrap().status.success() == false {
         eprintln!("cargo-deny not installed - skipping test");
         eprintln!("Install with: cargo install cargo-deny --locked");
         return;
     }
 
     let (success, stdout, stderr) =
-        run_cargo_command(&["deny", "check", "bans", "--allow-warnings"])
-            .expect("Failed to run cargo deny check bans");
+        run_cargo_command(&["deny", "check", "bans"]).expect("Failed to run cargo deny check bans");
 
     if !success {
         eprintln!("=== STDOUT ===\n{}", stdout);
@@ -948,12 +946,11 @@ fn test_cargo_deny_bans() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 927)
 #[test]
-#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_advisories() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
 
-    if check.is_err() {
+    if check.is_err() || check.unwrap().status.success() == false {
         eprintln!("cargo-deny not installed - skipping test");
         return;
     }
@@ -964,15 +961,6 @@ fn test_cargo_deny_advisories() {
     if !success {
         eprintln!("=== STDOUT ===\n{}", stdout);
         eprintln!("=== STDERR ===\n{}", stderr);
-
-        // Check if only known-safe advisories (paste unmaintained)
-        if stderr.contains("RUSTSEC-2024-0436") && !stderr.contains("RUSTSEC-") {
-            eprintln!(
-                "Only known-safe advisory RUSTSEC-2024-0436 (paste unmaintained) found - acceptable"
-            );
-            return;
-        }
-
         panic!("Cargo deny advisories check found security vulnerabilities");
     }
 
@@ -983,12 +971,11 @@ fn test_cargo_deny_advisories() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 928)
 #[test]
-#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_licenses() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
 
-    if check.is_err() {
+    if check.is_err() || check.unwrap().status.success() == false {
         eprintln!("cargo-deny not installed - skipping test");
         return;
     }
@@ -1009,12 +996,11 @@ fn test_cargo_deny_licenses() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 929)
 #[test]
-#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_sources() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
 
-    if check.is_err() {
+    if check.is_err() || check.unwrap().status.success() == false {
         eprintln!("cargo-deny not installed - skipping test");
         return;
     }
@@ -1035,12 +1021,11 @@ fn test_cargo_deny_sources() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#gate-7-cargo-deny-check (line 924)
 #[test]
-#[ignore = "Requires cargo-deny installed - run explicitly in CI"]
 fn test_cargo_deny_all() {
     // Check if cargo-deny is installed
     let check = Command::new("cargo").args(["deny", "--version"]).output();
 
-    if check.is_err() {
+    if check.is_err() || check.unwrap().status.success() == false {
         eprintln!("cargo-deny not installed - skipping test");
         eprintln!("Install with: cargo install cargo-deny --locked");
         return;
@@ -1052,14 +1037,6 @@ fn test_cargo_deny_all() {
     if !success {
         eprintln!("=== STDOUT ===\n{}", stdout);
         eprintln!("=== STDERR ===\n{}", stderr);
-
-        // Allow known-safe advisories
-        if stderr.contains("RUSTSEC-2024-0436") && stderr.matches("RUSTSEC-").count() == 1 {
-            eprintln!(
-                "Only known-safe advisory RUSTSEC-2024-0436 (paste unmaintained) found - acceptable"
-            );
-            return;
-        }
 
         panic!("Cargo deny check all failed - review issues above");
     }
