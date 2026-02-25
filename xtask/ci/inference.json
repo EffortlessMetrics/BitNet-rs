@@ -14,7 +14,7 @@
     "path": "/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
   },
   "schema_version": "1.0.0",
-  "timestamp": "2026-02-25T02:03:41.929253477+00:00",
+  "timestamp": "2026-02-25T07:48:41.708845119+00:00",
   "tokens_generated": 4,
   "tokens_per_second": 200.0,
   "tokens_requested": 4

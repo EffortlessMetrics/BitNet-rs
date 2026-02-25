@@ -291,7 +291,6 @@ proptest! {
 
     #[test]
     #[serial(bitnet_env)]
-    #[ignore = "Issue #159: TDD placeholder - deterministic reproducibility implementation needed"]
     fn property_quantization_deterministic_reproducibility(
         tensor_data in prop::collection::vec(-3.0f32..3.0f32, 64..256),
         seed in 1u64..1000,
@@ -386,7 +385,6 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(30))]
 
     #[test]
-    #[ignore = "Issue #159: TDD placeholder - quantization memory efficiency implementation needed"]
     fn property_quantization_memory_efficiency(
         tensor_size in 1024usize..8192,
         quantization_type in prop::sample::select(vec!["I2S", "TL1", "TL2"]),
@@ -630,10 +628,8 @@ fn get_unique_values(data: &[f32]) -> Vec<f32> {
 
 /// Estimate memory usage of quantized tensor
 fn estimate_quantized_tensor_memory(quantized: &QuantizedTensor) -> usize {
-    // TODO: Replace with actual memory calculation when QuantizedTensor API is available
-    // For now, estimate based on tensor size and quantization type
-    let _ = quantized;
-    1024 // Placeholder estimate
+    // data is packed bits (Vec<u8>), scales are f32 per block
+    quantized.data.len() + quantized.scales.len() * std::mem::size_of::<f32>()
 }
 
 /// Simulate C++ reference quantization for testing
