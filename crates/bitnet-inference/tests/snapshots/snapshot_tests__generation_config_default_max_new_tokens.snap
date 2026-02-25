@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"max_new_tokens={}\", cfg.max_new_tokens)"
+---
+max_new_tokens=100

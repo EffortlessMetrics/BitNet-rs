@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_tests.rs
+expression: "format!(\"max_batch_size={} max_concurrent_batches={}\", cfg.max_batch_size,\ncfg.max_concurrent_batches)"
+---
+max_batch_size=16 max_concurrent_batches=4

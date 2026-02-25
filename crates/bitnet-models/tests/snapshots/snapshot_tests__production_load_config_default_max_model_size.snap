@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: "format!(\"max_size_gb={size_gb}\")"
+---
+max_size_gb=32

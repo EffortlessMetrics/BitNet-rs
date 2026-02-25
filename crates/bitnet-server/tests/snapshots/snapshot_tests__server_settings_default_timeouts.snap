@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-server/tests/snapshot_tests.rs
+expression: "format!(\"keep_alive={}s request_timeout={}s shutdown={}s\",\ncfg.keep_alive.as_secs(), cfg.request_timeout.as_secs(),\ncfg.graceful_shutdown_timeout.as_secs())"
+---
+keep_alive=60s request_timeout=300s shutdown=30s

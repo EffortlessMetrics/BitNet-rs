@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: "format!(\"{:?}\", DeviceStrategy::Hybrid { cpu_layers: 4, gpu_layers: 8 })"
+---
+Hybrid { cpu_layers: 4, gpu_layers: 8 }
