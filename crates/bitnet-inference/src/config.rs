@@ -11,7 +11,7 @@
 //! ```
 //! # use bitnet_inference::config::GenerationConfig;
 //! let config = GenerationConfig::greedy()
-//!     .with_max_tokens(32)
+//!     .with_max_new_tokens(32)
 //!     .with_temperature(0.0);
 //! ```
 
