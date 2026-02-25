@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-gguf/tests/file_open_tests.rs
+expression: summary
+---
+version=3 tensors=0 metadata=4 alignment=32
