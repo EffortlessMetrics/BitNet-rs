@@ -582,13 +582,13 @@ fn detect_gpu_info() -> Option<String> {
     {
         use bitnet_kernels::gpu;
         // Try to get first CUDA device info if available
-        if let Ok(devices) = gpu::list_cuda_devices()
-            && let Some(device) = devices.first()
-        {
-            return Some(format!(
-                "{} (CC: {}.{})",
-                device.name, device.compute_capability.0, device.compute_capability.1
-            ));
+        if let Ok(devices) = gpu::list_cuda_devices() {
+            if let Some(device) = devices.first() {
+                return Some(format!(
+                    "{} (CC: {}.{})",
+                    device.name, device.compute_capability.0, device.compute_capability.1
+                ));
+            }
         }
     }
     None
