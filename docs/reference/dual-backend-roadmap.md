@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#738.
+> **Last updated**: reflects implementation state after PRs #608–#741.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -93,6 +93,9 @@
 | fix: config doctest called `with_max_new_tokens()` but method was renamed to `with_max_tokens()` | `crates/bitnet-inference/src/config.rs` | #736 |
 | docs: update test counts and roadmap for PRs #733-#736; update CHANGELOG; fix duplicate `--no-default-features` in getting-started.md | `CLAUDE.md`, `docs/development/test-suite.md`, `CHANGELOG.md`, `docs/getting-started.md` | #737 |
 | Proptest for `bitnet-sys` (+10 CompileTimeLibCapabilities invariants) and `bitnet-st-tools` (+8 is_ln_gamma properties); proptest: 30→32 crates; workspace: 3,446→3,464 tests | `crates/bitnet-sys/tests/property_tests.rs`, `crates/bitnet-st-tools/tests/property_tests.rs` | #738 |
+| docs: update test counts and roadmap for PR #738; 3,464 tests; 32 proptest crates | `CLAUDE.md`, `docs/development/test-suite.md`, `CHANGELOG.md`, `docs/reference/dual-backend-roadmap.md` | #739 |
+| Add fuzz targets for `bitnet-logits` (6 functions) and `bitnet-generation` (`check_stop`); proptest for `bitnet-runtime-context-core` (+8 tests: Display→FromStr round-trips, env-var default precedence); fuzz: 11→13 targets; proptest: 32→33 crates; workspace: 3,464→3,472 tests | `fuzz/fuzz_targets/logits_transforms.rs`, `fuzz/fuzz_targets/generation_stop_check.rs`, `crates/bitnet-runtime-context-core/tests/property_tests.rs` | #740 |
+| chore: remove duplicate workspace members in Cargo.toml (bitnet-device-probe, -logits, -generation, -engine-core, -gguf listed twice) | `Cargo.toml` | #741 |
 
 ### 🔲 What's Planned
 
