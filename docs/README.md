@@ -12,6 +12,8 @@ Step-by-step guides for getting started.
 
 - [Getting started](getting-started.md) — install, run your first model
 - [Your first inference](tutorials/first-inference.md) — load a GGUF and generate tokens
+- [Real GGUF model inference](tutorials/real-gguf-model-inference.md) — end-to-end inference walkthrough
+- [Tokenizer auto-discovery](tutorials/tokenizer-auto-discovery.md) — automatic tokenizer detection
 
 ---
 
@@ -27,6 +29,11 @@ Task-oriented. These assume you know what you want to do.
 | [use-qk256-models.md](howto/use-qk256-models.md) | Load and run QK256 format models |
 | [parity-playbook.md](howto/parity-playbook.md) | Verify Rust vs C++ numeric parity |
 | [troubleshoot-intelligibility.md](howto/troubleshoot-intelligibility.md) | Debug incoherent model output |
+| [deterministic-inference-setup.md](howto/deterministic-inference-setup.md) | Set up reproducible inference |
+| [receipt-verification.md](howto/receipt-verification.md) | Verify inference receipts |
+| [strict-mode-validation-workflows.md](howto/strict-mode-validation-workflows.md) | Use strict validation in CI |
+| [automatic-tokenizer-discovery.md](howto/automatic-tokenizer-discovery.md) | Configure tokenizer auto-detection |
+| [quantization-optimization-and-performance.md](howto/quantization-optimization-and-performance.md) | Optimize quantization performance |
 
 ---
 
@@ -41,6 +48,9 @@ Understanding-oriented. These explain *why* things work the way they do.
 | [explanation/dual-backend-crossval.md](explanation/dual-backend-crossval.md) | Dual-backend cross-validation design |
 | [explanation/i2s-dual-flavor.md](explanation/i2s-dual-flavor.md) | I2_S quantization flavor auto-detection |
 | [explanation/correction-policy.md](explanation/correction-policy.md) | Model-specific correction policies |
+| [explanation/cpu-inference-architecture.md](explanation/cpu-inference-architecture.md) | CPU inference pipeline |
+| [explanation/device-feature-detection.md](explanation/device-feature-detection.md) | Runtime device/capability detection |
+| [explanation/backend-detection-and-device-selection-patterns.md](explanation/backend-detection-and-device-selection-patterns.md) | Backend selection patterns |
 | [gpu-kernel-architecture.md](gpu-kernel-architecture.md) | CUDA kernel design |
 | [tokenizer-architecture.md](tokenizer-architecture.md) | Universal tokenizer system |
 
