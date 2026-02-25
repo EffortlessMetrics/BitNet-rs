@@ -280,7 +280,7 @@ fn test_basic_tokenizer_token_to_piece_returns_actual_data() {
     );
     // For byte-level tokens, the piece is the UTF-8 char; for higher IDs it is <token_N>.
     // Either way the length should be at least 1.
-    assert!(piece_str.len() >= 1, "BasicTokenizer token_to_piece should have length >= 1");
+    assert!(!piece_str.is_empty(), "BasicTokenizer token_to_piece should have length >= 1");
 }
 
 /// KILLS MUTANTS: gguf_tokenizer.rs:97 token_to_piece mutations

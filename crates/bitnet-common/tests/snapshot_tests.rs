@@ -21,7 +21,7 @@ fn simd_level_display_all_variants() {
 fn simd_level_ordering_is_ascending() {
     // Snapshot the sorted order to document the contract: Scalar < Neon < SSE4.2 < AVX2 < AVX512
     let ordered = {
-        let mut v = vec![
+        let mut v = [
             SimdLevel::Avx512,
             SimdLevel::Scalar,
             SimdLevel::Neon,

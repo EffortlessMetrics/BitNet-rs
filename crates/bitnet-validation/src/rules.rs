@@ -370,7 +370,7 @@ mod property_tests {
             let r = rules_bitnet_b158_f16();
             // f16 ruleset: proj_weight_rms_min=0.01, proj_weight_rms_max=0.40
             let accepted = r.check_proj_rms(rms);
-            let expected = rms >= 0.01 && rms <= 0.40;
+            let expected = (0.01f32..=0.40f32).contains(&rms);
             prop_assert_eq!(
                 accepted,
                 expected,

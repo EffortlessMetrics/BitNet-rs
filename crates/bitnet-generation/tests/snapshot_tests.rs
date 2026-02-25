@@ -9,7 +9,7 @@ use bitnet_generation::{GenerationConfig, StopCriteria, StopReason};
 fn stop_reason_debug_all_variants() {
     let reasons = [
         StopReason::MaxTokens,
-        StopReason::StopTokenId(128009),
+        StopReason::StopTokenId(128_009),
         StopReason::StopString("</s>".to_string()),
         StopReason::EosToken,
     ];
@@ -32,7 +32,7 @@ fn stop_criteria_default_debug_snapshot() {
 #[test]
 fn stop_criteria_with_token_ids_debug_snapshot() {
     let criteria = StopCriteria {
-        stop_token_ids: vec![128009, 2],
+        stop_token_ids: vec![128_009, 2],
         stop_strings: vec!["</s>".to_string()],
         max_tokens: 64,
         eos_token_id: Some(2),
