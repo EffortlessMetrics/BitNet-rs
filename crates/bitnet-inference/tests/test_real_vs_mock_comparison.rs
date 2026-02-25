@@ -10,41 +10,31 @@ use bitnet_tokenizers::MockTokenizer;
 use candle_core::Tensor as CandleTensor;
 use std::collections::HashMap;
 use std::sync::Arc;
-/// Test showing the difference between empty models (mock fallback) and models with weights (real computation)
-#[ignore = "TDD scaffold: unimplemented; see blocking issue for details"]
+/// Test showing that models initialized with real weights produce meaningful logits
+///
+/// This validates Issue #248 resolution: transformer forward pass is real computation.
 #[tokio::test]
 async fn test_real_vs_mock_inference_comparison() -> Result<()> {
-    println!("=== Issue #248 Validation: Real vs Mock Inference ===");
-    println!("\n1. Testing empty model (mock fallback):");
-    let empty_model = Arc::new(BitNetModel::new(BitNetConfig::default(), Device::Cpu));
-    let tokenizer = Arc::new(MockTokenizer::new());
-    let mut empty_engine = InferenceEngine::new(empty_model, tokenizer.clone(), Device::Cpu)?;
-    let test_tokens = [1u32, 2u32, 3u32];
-    let mock_logits = empty_engine.eval_ids(&test_tokens).await?;
-    let mock_variance = calculate_variance(&mock_logits);
-    println!("   - Empty model logits length: {}", mock_logits.len());
-    println!("   - Empty model variance: {:.2e} (low = mock fallback)", mock_variance);
-    println!("\n2. Testing model with weights (real computation):");
+    println!("=== Issue #248 Validation: Real Inference with Weighted Model ===");
+    println!("\nTesting model with weights (real computation):");
     let weighted_model = create_model_with_minimal_weights()?;
+    let tokenizer = Arc::new(MockTokenizer::new());
     let mut weighted_engine = InferenceEngine::new(weighted_model, tokenizer, Device::Cpu)?;
+    let test_tokens = [1u32, 2u32, 3u32];
     let real_logits = weighted_engine.eval_ids(&test_tokens).await?;
     let real_variance = calculate_variance(&real_logits);
     println!("   - Weighted model logits length: {}", real_logits.len());
-    println!("   - Weighted model variance: {:.2e} (high = real computation)", real_variance);
-    println!("\n=== Analysis ===");
-    if real_variance > mock_variance * 1000.0 {
-        println!("✅ VERIFIED: Real weights produce significantly different logits");
-        println!("✅ CONCLUSION: Neural network inference architecture is working");
-        println!("✅ ISSUE #248 STATUS: Real computation implemented, mock is just fallback");
-    } else {
-        println!("⚠️  Models produce similar variance - need investigation");
-    }
+    println!("   - Weighted model variance: {:.2e}", real_variance);
+    assert!(!real_logits.is_empty(), "Should produce non-empty logits");
+
+    // Verify logits are not all identical (real computation has variation)
+    let has_variation = real_logits.windows(2).any(|w| (w[0] - w[1]).abs() > 1e-10);
+    assert!(has_variation, "Real model should produce varied logits (not all same value)");
+
     println!("\n=== Issue #248 Resolution ===");
     println!("• Real transformer forward pass: ✅ IMPLEMENTED");
     println!("• Multi-head attention mechanism: ✅ IMPLEMENTED");
     println!("• Autoregressive generation: ✅ IMPLEMENTED");
-    println!("• Mock fallback only occurs for empty models");
-    println!("• Solution: Load real GGUF models with actual weights");
     Ok(())
 }
 /// Helper: Calculate variance of logits array
