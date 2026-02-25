@@ -3,7 +3,9 @@
 //! These tests verify environment-variable-driven behaviour of device
 //! capability detection without requiring real GPU hardware.
 
-use bitnet_device_probe::{DeviceCapabilities, detect_simd_level, gpu_compiled, gpu_available_runtime};
+use bitnet_device_probe::{
+    DeviceCapabilities, detect_simd_level, gpu_available_runtime, gpu_compiled,
+};
 use proptest::prelude::*;
 use serial_test::serial;
 
@@ -112,10 +114,7 @@ proptest! {
 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
 fn strict_mode_with_no_gpu_feature_still_returns_false() {
     temp_env::with_vars(
-        [
-            ("BITNET_STRICT_MODE", Some("1")),
-            ("BITNET_GPU_FAKE", Some("cuda")),
-        ],
+        [("BITNET_STRICT_MODE", Some("1")), ("BITNET_GPU_FAKE", Some("cuda"))],
         || {
             // Without GPU feature, the function is always false regardless of strict mode.
             assert!(!gpu_available_runtime());
@@ -128,10 +127,7 @@ fn strict_mode_with_no_gpu_feature_still_returns_false() {
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 fn strict_mode_ignores_gpu_fake() {
     temp_env::with_vars(
-        [
-            ("BITNET_STRICT_MODE", Some("1")),
-            ("BITNET_GPU_FAKE", Some("cuda")),
-        ],
+        [("BITNET_STRICT_MODE", Some("1")), ("BITNET_GPU_FAKE", Some("cuda"))],
         || {
             // Strict mode bypasses BITNET_GPU_FAKE and probes real hardware.
             // On CI (no GPU), this returns false.
