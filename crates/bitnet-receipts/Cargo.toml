@@ -18,11 +18,12 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 bitnet-honest-compute = { path = "../bitnet-honest-compute", version = "0.1.0" }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.1.0", optional = true }
 rustc_version_runtime = "0.3.0"
 
 [features]
-gpu = []
-cuda = []
+gpu = ["dep:bitnet-kernels", "bitnet-kernels/gpu"]
+cuda = ["dep:bitnet-kernels", "bitnet-kernels/cuda"]
 
 [dev-dependencies]
 proptest = { workspace = true }
