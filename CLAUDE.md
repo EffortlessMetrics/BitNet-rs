@@ -1020,7 +1020,7 @@ TDD scaffolds            — unblock by implementing the feature the test descri
 ### Test Configuration
 
 - `BITNET_SKIP_SLOW_TESTS=1`: Skip slow tests (QK256 scalar kernel tests that exceed timeout)
-- `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., blocked tests waiting for issue resolution)
+- `BITNET_RUN_IGNORED_TESTS=1`: Include ignored tests when running suite (e.g., real-model, CUDA, slow, or crossval tests)
 
 ### Test Isolation
 
@@ -1126,7 +1126,7 @@ cargo build --no-default-features --features gpu
 # cargo test --workspace -- --ignored --include-ignored
 ```
 
-**Solution**: Check blocking issue numbers in test comments. These are intentional placeholders:
+**Solution**: Read the `#[ignore = "..."]` justification string — it tells you exactly what is needed to unblock the test. These are intentional placeholders:
 
 ```bash
 # Run only non-ignored tests (recommended for CI)

@@ -39,7 +39,7 @@ All notable changes to BitNet.rs will be documented in this file.
 - **Env-var race conditions eliminated across 4 crates** (PR #678): All `unsafe { env::set_var / remove_var }` calls without serial+RAII cleanup replaced with `temp_env::with_var` + `#[serial(bitnet_env)]` in `bitnet-kernels`, `bitnet-models`, `bitnet-trace`, and `bitnet-runtime-profile-contract-core`; duplicate `blake3` dev-dep removed; GPU cfg predicates unified to `any(feature = "gpu", feature = "cuda")`
 
 ### Documentation
-- **CLAUDE.md + copilot-instructions.md accuracy refresh**: Removed stale "Active Blockers" references to non-existent/closed issues (#254, #260, #469); updated MSRV to 1.92.0; updated test counts (970+ passing, ~125 ignored); simplified ignored-test categorization to reflect actual reasons (model-gated, CUDA, slow, crossval, TDD scaffold)
+- **CLAUDE.md + copilot-instructions.md accuracy refresh**: Removed stale "Active Blockers" references to non-existent/closed issues (#254, #260, #439, #469); updated MSRV to 1.92.0; updated test counts (970+ passing, ~125 ignored); simplified ignored-test categorization to reflect actual reasons (model-gated, CUDA, slow, crossval, TDD scaffold)
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
