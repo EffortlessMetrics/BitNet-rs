@@ -341,8 +341,8 @@ mod tests {
     use super::*;
     use candle_core::Device;
     use candle_core::Tensor as CandleTensor;
-    use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     fn create_logits(values: &[f32]) -> BitNetTensor {
         let tensor = CandleTensor::from_slice(values, (1, values.len()), &Device::Cpu).unwrap();
