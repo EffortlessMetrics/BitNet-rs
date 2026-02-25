@@ -318,12 +318,12 @@ mod cpu_feature_tests {
                 assert!(!result.contains_mock_data(), "Result should not contain mock data");
 
                 // Verify computation completed in finite time (not a performance gate,
-                // which would be flaky under CI parallel load).
+                // which would be flaky under CI parallel load). Use is_finite() to
+                // reject NaN and INFINITY (the latter can arise if elapsed is 0).
                 let throughput = (128 * 256 * 512) as f64 / elapsed.as_secs_f64() / 1e9;
                 assert!(
-                    throughput > 0.0,
-                    "SIMD throughput should be positive: {:.3} GOPS",
-                    throughput
+                    throughput.is_finite(),
+                    "SIMD throughput should be a finite number, got {throughput:?}",
                 );
 
                 println!("  ✅ CPU SIMD kernel integration successful");
