@@ -1470,8 +1470,8 @@ impl TransformerModel {
         // Collect logits for each position.
         let mut logits_steps = Vec::with_capacity(seq_len);
         for t in 0..seq_len {
-            // Select the current token's embedding and squeeze to [B,H]
-            let step_hidden = hidden.narrow(1, t, 1)?.squeeze(1)?;
+            // Select the current token's embedding as [B, 1, H] (keep seq dim for attention)
+            let step_hidden = hidden.narrow(1, t, 1)?;
 
             // Run through all layers using the incremental path which applies
             // positional encoding per layer and causal masking internally.
@@ -1488,14 +1488,6 @@ impl TransformerModel {
                     Some(-2),               // layer=-2 (post-all-layers)
                     Some("all_layers_out"), // stage name
                 );
-            }
-
-            // Ensure forward preserves expected shape [B, H]
-            if step_hidden.dims().len() != 2 {
-                return Err(BitNetError::Validation(format!(
-                    "forward() should return [B, H] shape, got {:?}",
-                    step_hidden.dims()
-                )));
             }
 
             // Project to vocabulary logits for this step.
