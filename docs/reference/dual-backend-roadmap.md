@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#696.
+> **Last updated**: reflects implementation state after PRs #608–#699.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -63,6 +63,8 @@
 | 6 proptest properties for `bitnet-runtime-feature-flags-core` (cuda⇒gpu, cpu⇒inference+kernels+tokenizers, feature_line prefix) | `crates/bitnet-runtime-feature-flags-core/tests/property_tests.rs` | #692 |
 | 10 proptest properties for `bitnet-bdd-grid-core` (Display↔FromStr round-trips for all 3 enums; FeatureSet invariants) | `crates/bitnet-bdd-grid-core/tests/property_tests.rs` | #694 |
 | Integration proptest coverage for 6 SRP microcrates: policy-core (7), scenarios-core (8), honest-compute (16), rope (11), validation (10), feature-contract (8) = ~45 new tests | `crates/*/tests/property_tests.rs` | #696 |
+| Backend selection property + snapshot tests (13 tests, no feature gate): `BackendRequest::Display`, `summary()` format, `select_backend()` determinism, 2 insta snapshots | `crates/bitnet-common/tests/backend_selection_tests.rs` | #698 |
+| GGUF `open()` file integration tests using 224-byte `mini.gguf` fixture (4 tests): happy path, snapshot, nonexistent error, bad-magic error | `crates/bitnet-gguf/tests/file_open_tests.rs` | #699 |
 
 ### 🔲 What's Planned
 
