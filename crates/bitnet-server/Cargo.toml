@@ -60,7 +60,7 @@ uuid.workspace = true
 
 [build-dependencies]
 anyhow = "1.0.100"
-vergen-gix = { version = "1.0.9", features = ["build", "cargo", "rustc"] }
+vergen-gix = { version = "9", features = ["build", "cargo", "rustc"] }
 
 [dev-dependencies]
 futures = "0.3.31"

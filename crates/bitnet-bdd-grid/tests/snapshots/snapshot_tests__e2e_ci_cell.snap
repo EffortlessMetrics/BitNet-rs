@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
+expression: s
+---
+required=[inference,kernels,tokenizers,crossval,reporting] optional=[server,fixtures,trend] forbidden=[] intent=Full stack workflow checks spanning startup through response path

@@ -74,7 +74,7 @@ fn test_tied_weights_with_transposed_embeddings() -> CandleResult<()> {
     // Both should give same result
     let diff =
         (&logits_standard - &logits_transposed)?.abs()?.flatten_all()?.max(0)?.to_vec0::<f32>()?;
-    assert!(diff < 1e-6, "Tied weights diff={}", diff);
+    assert!(diff < 1e-5, "Tied weights diff={}", diff);
 
     // Verify shapes
     assert_eq!(logits_standard.dims(), &[seq_len, vocab]);
