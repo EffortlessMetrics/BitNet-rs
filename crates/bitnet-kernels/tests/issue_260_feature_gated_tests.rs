@@ -15,6 +15,7 @@
 use anyhow::{Context, Result, anyhow};
 use bitnet_common::{Device, QuantizationType};
 use bitnet_kernels::{KernelManager, KernelProvider};
+use serial_test::serial;
 use std::env;
 
 // TDD scaffolding structs - placeholders for real implementation
@@ -265,78 +266,75 @@ mod cpu_feature_tests {
     /// Tests CPU SIMD kernel integration without mock fallbacks
     #[cfg(feature = "cpu")]
     #[test]
+    #[serial(bitnet_env)]
     fn test_cpu_simd_kernel_integration() {
         println!("🔧 CPU: Testing SIMD kernel integration");
 
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-        }
+        temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+            let result = || -> Result<()> {
+                let cpu_device = Device::Cpu;
+                let kernel_manager = KernelManager::new();
 
-        let result = || -> Result<()> {
-            let cpu_device = Device::Cpu;
-            let kernel_manager = KernelManager::new();
+                // Test I2S SIMD kernel
+                let i2s_kernel = kernel_manager
+                    .get_i2s_kernel()
+                    .context("I2S kernel should be available on CPU")?;
 
-            // Test I2S SIMD kernel
-            let i2s_kernel =
-                kernel_manager.get_i2s_kernel().context("I2S kernel should be available on CPU")?;
-
-            assert!(i2s_kernel.supports_device(&cpu_device), "I2S kernel should support CPU");
-            assert!(
-                !i2s_kernel.is_mock_implementation(),
-                "I2S kernel should not be mock in strict mode"
-            );
-
-            // Test SIMD optimization detection
-            let simd_info = i2s_kernel.get_simd_capabilities();
-
-            #[cfg(target_arch = "x86_64")]
-            {
+                assert!(i2s_kernel.supports_device(&cpu_device), "I2S kernel should support CPU");
                 assert!(
-                    simd_info.supports_avx2 || simd_info.supports_sse4,
-                    "x86_64 should support AVX2 or SSE4"
+                    !i2s_kernel.is_mock_implementation(),
+                    "I2S kernel should not be mock in strict mode"
                 );
-                if simd_info.supports_avx512 {
-                    println!("  ✅ AVX-512 support detected");
+
+                // Test SIMD optimization detection
+                let simd_info = i2s_kernel.get_simd_capabilities();
+
+                #[cfg(target_arch = "x86_64")]
+                {
+                    assert!(
+                        simd_info.supports_avx2 || simd_info.supports_sse4,
+                        "x86_64 should support AVX2 or SSE4"
+                    );
+                    if simd_info.supports_avx512 {
+                        println!("  ✅ AVX-512 support detected");
+                    }
                 }
-            }
 
-            #[cfg(target_arch = "aarch64")]
-            {
-                assert!(simd_info.supports_neon, "ARM64 should support NEON");
-                println!("  ✅ NEON support detected");
-            }
+                #[cfg(target_arch = "aarch64")]
+                {
+                    assert!(simd_info.supports_neon, "ARM64 should support NEON");
+                    println!("  ✅ NEON support detected");
+                }
 
-            // Test quantized matrix multiplication
-            let test_input = create_test_matrix(128, 256);
-            let test_weights = create_test_weights(256, 512);
+                // Test quantized matrix multiplication
+                let test_input = create_test_matrix(128, 256);
+                let test_weights = create_test_weights(256, 512);
 
-            let start_time = std::time::Instant::now();
-            let result = i2s_kernel.quantized_matmul(&test_input, &test_weights)?;
-            let elapsed = start_time.elapsed();
+                let start_time = std::time::Instant::now();
+                let result = i2s_kernel.quantized_matmul(&test_input, &test_weights)?;
+                let elapsed = start_time.elapsed();
 
-            assert_eq!(result.shape(), &[128, 512], "Output shape should be correct");
-            assert!(!result.contains_mock_data(), "Result should not contain mock data");
+                assert_eq!(result.shape(), &[128, 512], "Output shape should be correct");
+                assert!(!result.contains_mock_data(), "Result should not contain mock data");
 
-            // Performance should be reasonable for SIMD (not mock performance)
-            let throughput = (128 * 256 * 512) as f64 / elapsed.as_secs_f64() / 1e9;
-            assert!(throughput > 0.08, "SIMD throughput too low: {:.3} GOPS", throughput);
-            assert!(
-                throughput < 100.0,
-                "SIMD throughput suspiciously high: {:.3} GOPS",
-                throughput
-            );
+                // Performance should be reasonable for SIMD (not mock performance)
+                let throughput = (128 * 256 * 512) as f64 / elapsed.as_secs_f64() / 1e9;
+                assert!(throughput > 0.08, "SIMD throughput too low: {:.3} GOPS", throughput);
+                assert!(
+                    throughput < 100.0,
+                    "SIMD throughput suspiciously high: {:.3} GOPS",
+                    throughput
+                );
 
-            println!("  ✅ CPU SIMD kernel integration successful");
-            println!("     - SIMD throughput: {:.2} GOPS", throughput);
-            println!("     - Elapsed time: {:.2}ms", elapsed.as_millis());
+                println!("  ✅ CPU SIMD kernel integration successful");
+                println!("     - SIMD throughput: {:.2} GOPS", throughput);
+                println!("     - Elapsed time: {:.2}ms", elapsed.as_millis());
 
-            Ok(())
-        }();
+                Ok(())
+            }();
 
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
-        result.expect("CPU SIMD kernel integration should succeed");
+            result.expect("CPU SIMD kernel integration should succeed");
+        });
     }
 
     /// Tests TL1 optimization for ARM NEON
@@ -399,78 +397,83 @@ mod cpu_feature_tests {
     /// Tests TL2 optimization for x86 AVX
     #[cfg(all(feature = "cpu", target_arch = "x86_64"))]
     #[test]
+    #[serial(bitnet_env)]
     fn test_tl2_avx_optimization() {
         println!("🔧 CPU/x86: Testing TL2 AVX optimization");
 
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-        }
+        temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+            let result = || -> Result<()> {
+                let cpu_device = Device::Cpu;
+                let kernel_manager = KernelManager::new();
 
-        let result = || -> Result<()> {
-            let cpu_device = Device::Cpu;
-            let kernel_manager = KernelManager::new();
+                let tl2_kernel = kernel_manager
+                    .get_tl2_kernel()
+                    .context("TL2 kernel should be available on x86_64")?;
 
-            let tl2_kernel = kernel_manager
-                .get_tl2_kernel()
-                .context("TL2 kernel should be available on x86_64")?;
+                // Verify AVX optimization is available
+                let avx_info = tl2_kernel.get_avx_optimization_info();
 
-            // Verify AVX optimization is available
-            let avx_info = tl2_kernel.get_avx_optimization_info();
+                if avx_info.supports_avx512 {
+                    assert_eq!(
+                        avx_info.alignment_bytes, 64,
+                        "AVX-512 should use 64-byte alignment"
+                    );
+                    println!("  ✅ Using AVX-512 optimization");
+                } else if avx_info.supports_avx2 {
+                    assert_eq!(avx_info.alignment_bytes, 32, "AVX2 should use 32-byte alignment");
+                    println!("  ✅ Using AVX2 optimization");
+                } else {
+                    println!("  ⚠️  No AVX optimization available, using generic path");
+                }
 
-            if avx_info.supports_avx512 {
-                assert_eq!(avx_info.alignment_bytes, 64, "AVX-512 should use 64-byte alignment");
-                println!("  ✅ Using AVX-512 optimization");
-            } else if avx_info.supports_avx2 {
-                assert_eq!(avx_info.alignment_bytes, 32, "AVX2 should use 32-byte alignment");
-                println!("  ✅ Using AVX2 optimization");
-            } else {
-                println!("  ⚠️  No AVX optimization available, using generic path");
-            }
+                // Test larger lookup table for TL2
+                let lookup_table = tl2_kernel.get_lookup_table();
+                assert_eq!(lookup_table.size(), 4096, "TL2 should use 4096-entry table");
+                assert!(lookup_table.alignment() >= 32, "Lookup table should be AVX-aligned");
 
-            // Test larger lookup table for TL2
-            let lookup_table = tl2_kernel.get_lookup_table();
-            assert_eq!(lookup_table.size(), 4096, "TL2 should use 4096-entry table");
-            assert!(lookup_table.alignment() >= 32, "Lookup table should be AVX-aligned");
+                // Test quantized computation with AVX
+                let test_input = create_test_matrix(128, 512);
+                let test_weights = create_test_weights(512, 1024);
 
-            // Test quantized computation with AVX
-            let test_input = create_test_matrix(128, 512);
-            let test_weights = create_test_weights(512, 1024);
+                if avx_info.supports_avx2 {
+                    let avx_result = tl2_kernel.quantized_matmul_avx(&test_input, &test_weights)?;
+                    let generic_result =
+                        tl2_kernel.quantized_matmul_generic(&test_input, &test_weights)?;
 
-            if avx_info.supports_avx2 {
-                let avx_result = tl2_kernel.quantized_matmul_avx(&test_input, &test_weights)?;
-                let generic_result =
-                    tl2_kernel.quantized_matmul_generic(&test_input, &test_weights)?;
+                    // Results should be numerically close
+                    let correlation =
+                        calculate_correlation(avx_result.data(), generic_result.data());
+                    assert!(
+                        correlation > 0.999,
+                        "AVX and generic results should correlate: {:.6}",
+                        correlation
+                    );
 
-                // Results should be numerically close
-                let correlation = calculate_correlation(avx_result.data(), generic_result.data());
-                assert!(
-                    correlation > 0.999,
-                    "AVX and generic results should correlate: {:.6}",
-                    correlation
-                );
+                    // AVX should be faster
+                    let avx_time = time_function(|| {
+                        tl2_kernel.quantized_matmul_avx(&test_input, &test_weights)
+                    });
+                    let generic_time = time_function(|| {
+                        tl2_kernel.quantized_matmul_generic(&test_input, &test_weights)
+                    });
 
-                // AVX should be faster
-                let avx_time =
-                    time_function(|| tl2_kernel.quantized_matmul_avx(&test_input, &test_weights));
-                let generic_time = time_function(|| {
-                    tl2_kernel.quantized_matmul_generic(&test_input, &test_weights)
-                });
+                    let speedup = generic_time.as_secs_f64() / avx_time.as_secs_f64();
+                    assert!(
+                        speedup >= 1.5,
+                        "AVX should provide significant speedup: {:.2}x",
+                        speedup
+                    );
 
-                let speedup = generic_time.as_secs_f64() / avx_time.as_secs_f64();
-                assert!(speedup >= 1.5, "AVX should provide significant speedup: {:.2}x", speedup);
+                    println!("  ✅ TL2 AVX optimization successful");
+                    println!("     - AVX speedup: {:.2}x", speedup);
+                    println!("     - Correlation: {:.6}", correlation);
+                }
 
-                println!("  ✅ TL2 AVX optimization successful");
-                println!("     - AVX speedup: {:.2}x", speedup);
-                println!("     - Correlation: {:.6}", correlation);
-            }
+                Ok(())
+            }();
 
-            Ok(())
-        }();
-
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
-        result.expect("TL2 AVX optimization should work");
+            result.expect("TL2 AVX optimization should work");
+        });
     }
 }
 
@@ -482,81 +485,80 @@ mod gpu_feature_tests {
     /// Tests GPU CUDA kernel integration
     #[cfg(feature = "gpu")]
     #[test]
+    #[serial(bitnet_env)]
     #[allow(clippy::cmp_owned)]
     fn test_gpu_cuda_kernel_integration() {
         println!("🔧 GPU: Testing CUDA kernel integration");
 
         if let Ok(cuda_device) = Device::new_cuda(0) {
-            unsafe {
-                env::set_var("BITNET_STRICT_MODE", "1");
-            }
+            temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+                let result = || -> Result<()> {
+                    let kernel_manager = KernelManager::new();
 
-            let result = || -> Result<()> {
-                let kernel_manager = KernelManager::new();
+                    // Test I2S CUDA kernel
+                    let i2s_cuda_kernel = kernel_manager
+                        .get_i2s_kernel()
+                        .context("I2S CUDA kernel should be available")?;
 
-                // Test I2S CUDA kernel
-                let i2s_cuda_kernel = kernel_manager
-                    .get_i2s_kernel()
-                    .context("I2S CUDA kernel should be available")?;
+                    assert!(
+                        i2s_cuda_kernel.supports_device(&cuda_device),
+                        "I2S kernel should support CUDA"
+                    );
+                    assert!(
+                        !i2s_cuda_kernel.is_mock_implementation(),
+                        "CUDA kernel should not be mock"
+                    );
 
-                assert!(
-                    i2s_cuda_kernel.supports_device(&cuda_device),
-                    "I2S kernel should support CUDA"
-                );
-                assert!(
-                    !i2s_cuda_kernel.is_mock_implementation(),
-                    "CUDA kernel should not be mock"
-                );
+                    // Test CUDA capabilities
+                    let cuda_info = i2s_cuda_kernel.get_cuda_capabilities();
+                    assert!(
+                        cuda_info.compute_capability >= "6.0".to_string(),
+                        "Minimum compute capability 6.0 required"
+                    );
 
-                // Test CUDA capabilities
-                let cuda_info = i2s_cuda_kernel.get_cuda_capabilities();
-                assert!(
-                    cuda_info.compute_capability >= "6.0".to_string(),
-                    "Minimum compute capability 6.0 required"
-                );
+                    println!("  ✅ CUDA device info:");
+                    println!("     - Compute capability: {}", cuda_info.compute_capability);
+                    println!(
+                        "     - Memory bandwidth: {:.1} GB/s",
+                        cuda_info.memory_bandwidth_gbps
+                    );
+                    println!("     - Tensor cores: {}", cuda_info.tensor_cores_available);
 
-                println!("  ✅ CUDA device info:");
-                println!("     - Compute capability: {}", cuda_info.compute_capability);
-                println!("     - Memory bandwidth: {:.1} GB/s", cuda_info.memory_bandwidth_gbps);
-                println!("     - Tensor cores: {}", cuda_info.tensor_cores_available);
+                    // Test mixed precision support (placeholder)
+                    if cuda_info.tensor_cores_available {
+                        println!("     - Mixed precision support detected");
+                        // TODO: Implement mixed precision computation test when ready
+                    }
 
-                // Test mixed precision support (placeholder)
-                if cuda_info.tensor_cores_available {
-                    println!("     - Mixed precision support detected");
-                    // TODO: Implement mixed precision computation test when ready
-                }
+                    // Test GPU memory management (placeholder for future implementation)
+                    // TODO: Implement memory manager when GPU memory management is ready
+                    println!("  ⚠️  GPU memory management tests not yet implemented");
 
-                // Test GPU memory management (placeholder for future implementation)
-                // TODO: Implement memory manager when GPU memory management is ready
-                println!("  ⚠️  GPU memory management tests not yet implemented");
+                    // Test GPU vs CPU speedup with fresh test data
+                    let test_input = create_test_matrix(128, 256);
+                    let test_weights = create_test_weights(256, 512);
+                    // TODO: Implement benchmarking functions when kernel APIs are ready
+                    println!("  ⚠️  GPU vs CPU benchmarking not yet implemented");
+                    let gpu_speedup = 5.0; // Mock speedup value for testing
+                    assert!(
+                        gpu_speedup >= 3.0,
+                        "GPU should be significantly faster: {:.2}x",
+                        gpu_speedup
+                    );
+                    assert!(
+                        gpu_speedup <= 20.0,
+                        "GPU speedup should be realistic: {:.2}x",
+                        gpu_speedup
+                    );
 
-                // Test GPU vs CPU speedup with fresh test data
-                let test_input = create_test_matrix(128, 256);
-                let test_weights = create_test_weights(256, 512);
-                // TODO: Implement benchmarking functions when kernel APIs are ready
-                println!("  ⚠️  GPU vs CPU benchmarking not yet implemented");
-                let gpu_speedup = 5.0; // Mock speedup value for testing
-                assert!(
-                    gpu_speedup >= 3.0,
-                    "GPU should be significantly faster: {:.2}x",
-                    gpu_speedup
-                );
-                assert!(
-                    gpu_speedup <= 20.0,
-                    "GPU speedup should be realistic: {:.2}x",
-                    gpu_speedup
-                );
+                    println!("  ✅ GPU CUDA kernel integration successful");
+                    println!("     - GPU speedup: {:.2}x vs CPU", gpu_speedup);
 
-                println!("  ✅ GPU CUDA kernel integration successful");
-                println!("     - GPU speedup: {:.2}x vs CPU", gpu_speedup);
+                    Ok(())
+                }();
 
-                Ok(())
-            }();
-
-            unsafe {
-                env::remove_var("BITNET_STRICT_MODE");
-            }
-            result.expect("GPU CUDA kernel integration should succeed");
+                result.expect("GPU CUDA kernel integration should succeed");
+            });
         } else {
             println!("⚠️  GPU: CUDA device unavailable, skipping GPU tests");
         }
@@ -659,17 +661,9 @@ mod ffi_feature_tests {
     fn test_ffi_cpp_bridge_integration() {
         println!("🔧 FFI: Testing C++ bridge integration");
 
-        unsafe {
-            env::set_var("BITNET_STRICT_MODE", "1");
-        }
-
         // TDD scaffold - types not yet implemented
         // TODO: Implement CppQuantizationBridge and FfiQuantizer in bitnet-ggml-ffi
         // TODO: Implement dequantize_for_validation method in I2SQuantizer
-
-        unsafe {
-            env::remove_var("BITNET_STRICT_MODE");
-        }
     }
 
     /// Tests FFI memory management and safety
