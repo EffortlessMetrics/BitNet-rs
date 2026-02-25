@@ -61,3 +61,4 @@ runtime-profile-integration-tests = ["bitnet-testing-profile/runtime-profile-int
 
 [dev-dependencies]
 proptest.workspace = true
+insta.workspace = true

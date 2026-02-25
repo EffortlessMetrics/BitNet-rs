@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-startup-contract-core/tests/snapshot_tests.rs
+expression: "format!(\"has_component={} has_state={} has_scenario={}\",\nsummary.contains(\"test\"), summary.contains(\"state=\"),\nsummary.contains(\"scenario=\"))"
+---
+has_component=true has_state=true has_scenario=true

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-runtime-feature-flags-core/tests/snapshot_tests.rs
+expression: "format!(\"count={}\", labels.len())"
+---
+count=0

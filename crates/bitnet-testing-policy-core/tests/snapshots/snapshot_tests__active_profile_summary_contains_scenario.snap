@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-core/tests/snapshot_tests.rs
+expression: "format!(\"non_empty={} has_scenario={}\", !summary.is_empty(),\nsummary.contains(\"scenario=\"))"
+---
+non_empty=true has_scenario=true

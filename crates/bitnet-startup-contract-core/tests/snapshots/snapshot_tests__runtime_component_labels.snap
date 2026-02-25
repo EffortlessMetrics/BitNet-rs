@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-startup-contract-core/tests/snapshot_tests.rs
+expression: "labels.join(\"\\n\")"
+---
+bitnet-cli
+bitnet-server
+test
+custom

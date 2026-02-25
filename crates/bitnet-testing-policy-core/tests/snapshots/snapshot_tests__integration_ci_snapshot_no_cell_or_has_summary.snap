@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-core/tests/snapshot_tests.rs
+expression: "format!(\"summary_non_empty={}\", !snap.summary().is_empty())"
+---
+summary_non_empty=true

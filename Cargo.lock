@@ -567,6 +567,7 @@ version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid",
  "bitnet-feature-matrix",
+ "insta",
  "proptest",
 ]
 
@@ -894,6 +895,7 @@ name = "bitnet-runtime-feature-flags-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid-core",
+ "insta",
  "proptest",
 ]
 
@@ -1044,6 +1046,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitnet-runtime-profile",
+ "insta",
  "proptest",
  "serial_test",
  "temp-env",
@@ -1106,6 +1109,7 @@ version = "0.1.0"
 dependencies = [
  "bitnet-testing-profile",
  "bitnet-testing-scenarios-core",
+ "insta",
  "proptest",
 ]
 
@@ -1158,6 +1162,7 @@ name = "bitnet-testing-scenarios-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-testing-scenarios-profile-core",
+ "insta",
  "num_cpus",
  "proptest",
 ]

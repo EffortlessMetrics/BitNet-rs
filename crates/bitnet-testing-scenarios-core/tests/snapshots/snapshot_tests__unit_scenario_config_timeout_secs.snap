@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-scenarios-core/tests/snapshot_tests.rs
+expression: "format!(\"timeout={}s\", cfg.test_timeout.as_secs())"
+---
+timeout=10s

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-feature-contract/tests/snapshot_tests.rs
+expression: "format!(\"is_consistent={} extra={:?}\", snap.is_consistent(),\nsnap.extra_from_runtime)"
+---
+is_consistent=false extra=["cuda", "gpu"]

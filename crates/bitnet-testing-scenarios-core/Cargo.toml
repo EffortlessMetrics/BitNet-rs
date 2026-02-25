@@ -21,6 +21,7 @@ num_cpus = "1.17.0"
 
 [dev-dependencies]
 proptest.workspace = true
+insta.workspace = true
 
 [features]
 default = []

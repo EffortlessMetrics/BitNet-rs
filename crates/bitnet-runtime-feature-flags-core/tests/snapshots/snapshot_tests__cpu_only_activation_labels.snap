@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-runtime-feature-flags-core/tests/snapshot_tests.rs
+expression: "labels.join(\"\\n\")"
+---
+cpu
+inference
+kernels
+tokenizers
