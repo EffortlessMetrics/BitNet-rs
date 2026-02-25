@@ -5,6 +5,7 @@ All notable changes to BitNet.rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Property Tests for `bitnet-bdd-grid-core`** (PR #694): 10 proptest properties — `TestingScenario`/`ExecutionEnvironment`/`BitnetFeature` Display→FromStr round-trips (all variants lossless); `FeatureSet` insert→contains, superset satisfaction, labels completeness; plus 4 unit error-case tests
 - **Property Tests for `bitnet-runtime-feature-flags-core`** (PR #692): 6 proptest properties verifying `FeatureActivation → FeatureSet` conversion invariants — `cuda ⇒ gpu`, `cpu ⇒ inference+kernels+tokenizers`, `feature_line` prefix, default activation empty labels, and 2 unit stability tests
 - **Property Tests for `bitnet-startup-contract-core`** (PR #691): 4 proptest properties verifying `ProfileContract` invariants — context round-trips, summary non-empty, `Observe` policy never fails `enforce()`, `is_compatible()` consistent with `state()`; plus 1 unit stability test (5 total)
 - **Property Tests for `bitnet-transformer`** (PR #689): 4 proptest properties covering KVCache invariants — seq_len tracks N append operations correctly, clear/reset semantics, overflow (capacity) rejection, and initial zero state

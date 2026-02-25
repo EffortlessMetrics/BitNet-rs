@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#692.
+> **Last updated**: reflects implementation state after PRs #608–#694.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -61,6 +61,7 @@
 | Property tests for `bitnet-transformer` KVCache invariants (4 proptest properties) | `crates/bitnet-transformer/tests/property_tests.rs` | #689 |
 | Env-var race fixed in `bitnet-startup-contract-core`; 5 proptest properties added | `crates/bitnet-startup-contract-core/src/lib.rs`, `tests/property_tests.rs` | #691 |
 | 6 proptest properties for `bitnet-runtime-feature-flags-core` (cuda⇒gpu, cpu⇒inference+kernels+tokenizers, feature_line prefix) | `crates/bitnet-runtime-feature-flags-core/tests/property_tests.rs` | #692 |
+| 10 proptest properties for `bitnet-bdd-grid-core` (Display↔FromStr round-trips for all 3 enums; FeatureSet invariants) | `crates/bitnet-bdd-grid-core/tests/property_tests.rs` | #694 |
 
 ### 🔲 What's Planned
 
