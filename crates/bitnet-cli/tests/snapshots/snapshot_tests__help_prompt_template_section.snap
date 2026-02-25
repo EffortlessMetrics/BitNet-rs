@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-cli/tests/snapshot_tests.rs
+expression: relevant
+---
+      --system-prompt <TEXT>          System prompt for chat models
+      --chat-template <TEMPLATE>      Chat template to use (deprecated - use --prompt-template)
+      --prompt-template <TEMPLATE>    Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format) [default: auto]

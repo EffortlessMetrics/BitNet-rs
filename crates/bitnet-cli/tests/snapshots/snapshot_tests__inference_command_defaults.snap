@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-cli/tests/snapshot_tests.rs
+expression: defaults
+---
+max_tokens=0 temperature=0.0 seed=None greedy=false prompt_template=""
