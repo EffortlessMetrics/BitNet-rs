@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-gguf/tests/snapshot_tests.rs
+expression: magic_str
+---
+GGUF

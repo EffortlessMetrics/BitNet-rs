@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-rope/tests/snapshot_tests.rs
+expression: err.to_string()
+---
+RoPE dimension must be greater than zero

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-honest-compute/tests/snapshot_tests.rs
+expression: err.to_string()
+---
+Kernel count 20000 exceeds 10,000 limit

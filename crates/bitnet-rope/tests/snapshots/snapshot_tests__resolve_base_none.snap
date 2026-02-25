@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-rope/tests/snapshot_tests.rs
+expression: resolved.to_string()
+---
+10000

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-rope/tests/snapshot_tests.rs
+expression: DEFAULT_ROPE_BASE.to_string()
+---
+10000

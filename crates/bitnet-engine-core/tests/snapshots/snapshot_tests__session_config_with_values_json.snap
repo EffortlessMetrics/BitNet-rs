@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-engine-core/tests/snapshot_tests.rs
+expression: json
+---
+{
+  "model_path": "/models/model.gguf",
+  "tokenizer_path": "/models/tokenizer.json",
+  "backend": "cpu",
+  "max_context": 4096,
+  "seed": 42
+}

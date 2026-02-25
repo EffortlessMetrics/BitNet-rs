@@ -17,6 +17,7 @@ memmap2.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
+insta = { workspace = true }
 
 [features]
 default = []

@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-engine-core/tests/snapshot_tests.rs
+expression: json
+---
+{
+  "backend_name": "cpu-rust",
+  "kernel_ids": [
+    "i2s_cpu_matmul",
+    "layernorm_cpu"
+  ],
+  "backend_summary": "CPU-Rust (AVX2) — 2 kernels"
+}

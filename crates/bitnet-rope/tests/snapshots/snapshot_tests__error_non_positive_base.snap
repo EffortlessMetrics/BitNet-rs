@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-rope/tests/snapshot_tests.rs
+expression: err.to_string()
+---
+RoPE base must be greater than zero, got -1

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-honest-compute/tests/snapshot_tests.rs
+expression: truncated
+---
+Kernel ID at index 0 exceeds 128 characters: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

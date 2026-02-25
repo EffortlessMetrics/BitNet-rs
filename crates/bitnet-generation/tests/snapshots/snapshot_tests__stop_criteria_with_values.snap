@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-generation/tests/snapshot_tests.rs
+expression: criteria
+---
+StopCriteria {
+    stop_token_ids: [
+        128009,
+        2,
+    ],
+    stop_strings: [
+        "</s>",
+    ],
+    max_tokens: 64,
+    eos_token_id: Some(
+        2,
+    ),
+}

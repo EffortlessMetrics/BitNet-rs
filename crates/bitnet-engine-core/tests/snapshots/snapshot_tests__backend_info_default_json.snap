@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-engine-core/tests/snapshot_tests.rs
+expression: json
+---
+{
+  "backend_name": "",
+  "kernel_ids": [],
+  "backend_summary": ""
+}
