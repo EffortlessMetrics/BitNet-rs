@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#706.
+> **Last updated**: reflects implementation state after PRs #608–#707.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -70,6 +70,7 @@
 | `bitnet-receipts` snapshot tests (6 JSON snapshots) + `bitnet-sampling` snapshot tests (6 debug snapshots) + `bitnet-prompt-templates` snapshot tests (7 snaps): all template types + multi-turn history | `crates/bitnet-receipts/tests/snapshot_tests.rs`, `crates/bitnet-sampling/tests/snapshot_tests.rs`, `crates/bitnet-prompt-templates/tests/snapshot_tests.rs` | #703 |
 | `bitnet-bdd-grid` proptest + snapshot tests (8 proptest: LazyLock stability, required∩forbidden disjoint, find/rows consistency, supports/violations semantics; 4 snapshots: grid summary, Unit/Local cell, EndToEnd/CI cell, cell count) | `crates/bitnet-bdd-grid/tests/property_tests.rs`, `crates/bitnet-bdd-grid/tests/snapshot_tests.rs` | #705 |
 | `bitnet-trace` snapshot tests (4 JSON: minimal, optional-fields, decode-step, logits) + `bitnet-compat` snapshot tests (2: diagnose messages + count) + `bitnet-bdd-grid-core` snapshot tests (6: Scenario/Env/Feature Display strings, FeatureSet labels, BddCell debug, BddGrid::validate None) | `crates/bitnet-trace/tests/snapshot_tests.rs`, `crates/bitnet-compat/tests/snapshot_tests.rs`, `crates/bitnet-bdd-grid-core/tests/snapshot_tests.rs` | #706 |
+| `bitnet-quantization` snapshot tests (5: QuantizationType Display/Debug, best_for_arch x86_64/aarch64, round_trip I2S/TL2) + `bitnet-cli` snapshot tests (5, `full-cli` gated: InferenceCommand defaults, help text for --max-tokens/--stop/sampling/--prompt-template aliases) | `crates/bitnet-quantization/tests/snapshot_tests.rs`, `crates/bitnet-cli/tests/snapshot_tests.rs` | #707 |
 
 ### 🔲 What's Planned
 
