@@ -888,6 +888,7 @@ name = "bitnet-runtime-feature-flags-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid-core",
+ "proptest",
 ]
 
 [[package]]
