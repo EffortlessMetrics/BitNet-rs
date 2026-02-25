@@ -342,7 +342,7 @@ mod property_tests {
         }
     }
 
-    // For any RMS strictly outside [0.50, 2.0], generic ruleset rejects it
+    // For any RMS strictly outside [0.80, 1.20], generic ruleset rejects it
     // when the name matches the generic norm pattern.
     proptest! {
         #[test]
@@ -354,14 +354,12 @@ mod property_tests {
         ) {
             let r = rules_generic();
             prop_assume!(rms.is_finite() && rms >= 0.0);
-            // generic has min=0.80, max=1.20 for norm weights
-            if rms < 0.80 || rms > 1.20 {
-                prop_assert!(
-                    !r.check_ln("blk.0.attn_norm.weight", rms),
-                    "expected generic to reject rms={} for attn_norm",
-                    rms
-                );
-            }
+            // generic has min=0.80, max=1.20 for norm weights; generator ensures out-of-range
+            prop_assert!(
+                !r.check_ln("blk.0.attn_norm.weight", rms),
+                "expected generic to reject rms={} for attn_norm",
+                rms
+            );
         }
     }
 

@@ -18,7 +18,6 @@ log.workspace = true
 [dev-dependencies]
 temp-env.workspace = true
 serial_test.workspace = true
-proptest.workspace = true
 
 [features]
 default = []

@@ -165,6 +165,8 @@ mod property_tests {
             };
             let json = serde_json::to_string(&cfg).expect("serialize");
             let back: SessionConfig = serde_json::from_str(&json).expect("deserialize");
+            prop_assert_eq!(&cfg.model_path, &back.model_path);
+            prop_assert_eq!(&cfg.tokenizer_path, &back.tokenizer_path);
             prop_assert_eq!(&cfg.backend, &back.backend);
             prop_assert_eq!(cfg.max_context, back.max_context);
             prop_assert_eq!(cfg.seed, back.seed);
@@ -186,6 +188,7 @@ mod property_tests {
             let back: BackendInfo = serde_json::from_str(&json).expect("deserialize");
             prop_assert_eq!(&info.backend_name, &back.backend_name);
             prop_assert_eq!(&info.kernel_ids, &back.kernel_ids);
+            prop_assert_eq!(&info.backend_summary, &back.backend_summary);
         }
 
         /// `SessionMetrics` non-negativity: metrics constructed from valid

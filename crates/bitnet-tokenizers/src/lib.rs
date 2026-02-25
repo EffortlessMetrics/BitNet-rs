@@ -552,10 +552,10 @@ mod property_tests {
     proptest! {
         #[test]
         fn basic_tokenizer_empty_is_always_empty(add_bos in any::<bool>(), add_special in any::<bool>()) {
-            // For empty text, BOS token can be added but no byte tokens exist.
+            // BasicTokenizer::encode returns early for empty text, producing no tokens
+            // even when add_bos or add_special are true (bos_token_id is None by default).
             let tok = BasicTokenizer::new();
             let tokens = tok.encode("", add_bos, add_special).unwrap();
-            // BasicTokenizer: empty text → empty regardless (BOS skipped when bos_token_id is None)
             prop_assert_eq!(tokens.len(), 0);
         }
     }
