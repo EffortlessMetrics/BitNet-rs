@@ -5,6 +5,7 @@ All notable changes to BitNet.rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Property Tests for `bitnet-transformer`** (PR #689): 4 proptest properties covering KVCache invariants — seq_len tracks N append operations correctly, clear/reset semantics, overflow (capacity) rejection, and initial zero state
 - **Tracing Instrumentation for Template Detection** (PR #686): `bitnet-prompt-templates::TemplateType::detect()` now emits `debug!` on each branch (Llama3Chat, Instruct, Raw) and `warn!` on the Raw fallback; in-crate `#[traced_test]` unit tests verify log capture
 - **`tracing-test` 0.2.6 Added to Workspace** (PR #686): Shared dev-dep for crates that test tracing output
 
