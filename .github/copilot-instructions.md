@@ -1,6 +1,6 @@
 # BitNet.rs — Copilot Instructions
 
-High-performance Rust implementation of BitNet 1-bit LLM inference. MSRV 1.89.0, Rust 2024 edition.
+High-performance Rust implementation of BitNet 1-bit LLM inference. MSRV 1.92.0, Rust 2024 edition.
 
 ## Build & Test Commands
 
@@ -84,9 +84,14 @@ fn test_strict_mode() {
 ### Ignored tests must have justifications
 Pre-commit hooks reject bare `#[ignore]`. Always add a reason:
 ```rust
-#[ignore = "Blocked by Issue #254 - shape mismatch in layer-norm"]
-#[ignore] // Slow: QK256 scalar kernels (~0.1 tok/s)
+#[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
+#[ignore = "Slow: QK256 scalar kernels (~0.1 tok/s); run manually with --ignored"]
 ```
+
+### TDD scaffolding
+~125 `#[ignore]` tests (all with justification strings) represent intentional scaffolding,
+not bugs. Categories: real-model tests, CUDA tests, slow mock-inference tests, crossval
+tests, and TDD scaffolds for unimplemented features.
 
 ### Rate-limited logging
 Use `warn_once!` from `bitnet_common` for hot-path warnings that would otherwise spam logs:
@@ -100,9 +105,6 @@ Benchmarks write a receipt to `ci/inference.json` (schema v1.0.0). `compute_path
 
 ### BITNET_STRICT_MODE
 When `BITNET_STRICT_MODE=1`: validation fails with exit code 8 on suspicious LayerNorm weights, `BITNET_GPU_FAKE` is ignored, and mock inference paths are rejected.
-
-### TDD scaffolding
-~190 `#[ignore]` tests and ~548 TODO/unimplemented markers are **intentional scaffolding**, not bugs. Active blockers: Issues #254 (shape mismatch), #260 (mock elimination), #469 (tokenizer parity + FFI). Issue #439 is resolved.
 
 ### Quantization flavor detection
 When loading I2_S tensors, QK256 (256-element blocks) is checked before BitNet32-F16 (32-element blocks with inline F16 scales) for closer-match disambiguation. See `bitnet-models/src/formats/` for the loader.
