@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+Q: Can I use it for web servers?
+A:

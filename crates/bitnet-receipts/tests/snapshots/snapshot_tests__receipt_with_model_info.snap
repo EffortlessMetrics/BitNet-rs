@@ -1,0 +1,32 @@
+---
+source: crates/bitnet-receipts/tests/snapshot_tests.rs
+expression: receipt
+---
+{
+  "schema_version": "1.0.0",
+  "timestamp": "[timestamp]",
+  "compute_path": "real",
+  "backend": "cpu",
+  "backend_summary": "",
+  "kernels": [
+    "i2s_gemv"
+  ],
+  "deterministic": false,
+  "environment": {},
+  "model_info": {
+    "model_path": "models/test.gguf",
+    "quantization_type": "i2_s",
+    "layers": 32,
+    "hidden_size": 2048,
+    "num_attention_heads": 32,
+    "num_key_value_heads": 8,
+    "vocab_size": 32000
+  },
+  "test_results": {
+    "total_tests": 0,
+    "passed": 0,
+    "failed": 0
+  },
+  "performance_baseline": {},
+  "corrections": []
+}

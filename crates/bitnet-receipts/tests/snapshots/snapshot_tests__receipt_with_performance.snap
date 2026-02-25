@@ -1,0 +1,32 @@
+---
+source: crates/bitnet-receipts/tests/snapshot_tests.rs
+expression: receipt
+---
+{
+  "schema_version": "1.0.0",
+  "timestamp": "[timestamp]",
+  "compute_path": "real",
+  "backend": "cpu",
+  "backend_summary": "",
+  "kernels": [
+    "i2s_gemv",
+    "attention_real"
+  ],
+  "deterministic": false,
+  "environment": {},
+  "model_info": {},
+  "test_results": {
+    "total_tests": 0,
+    "passed": 0,
+    "failed": 0
+  },
+  "performance_baseline": {
+    "tokens_generated": 128,
+    "total_time_ms": 1024,
+    "tokens_per_second": 125.0,
+    "first_token_latency_ms": 32,
+    "average_token_latency_ms": 8,
+    "memory_usage_mb": 512
+  },
+  "corrections": []
+}

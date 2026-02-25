@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+System: You are a helpful assistant.
+
+Q: What is 2+2?
+A:
