@@ -204,8 +204,10 @@ mod ac5_stop_sequence_aliases {
         use clap::CommandFactory;
         let help = TestCli::command().render_long_help().to_string();
         assert!(help.contains("--stop"), "Help must show --stop primary flag");
-        assert!(help.contains("stop-sequence") || help.contains("stop_sequence"),
-            "Help must show stop-sequence alias");
+        assert!(
+            help.contains("stop-sequence") || help.contains("stop_sequence"),
+            "Help must show stop-sequence alias"
+        );
         Ok(())
     }
 }
