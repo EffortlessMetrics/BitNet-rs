@@ -1029,11 +1029,15 @@ mod property_tests {
         }
     }
 
-    // validate_kernel_ids accepts any kernel IDs that are non-empty and ≤128 chars.
+    // validate_kernel_ids accepts any kernel IDs that are non-empty, ≤128 chars, and
+    // do not contain the "mock" substring (which the honest-compute policy forbids).
     proptest! {
         #[test]
         fn validate_kernel_ids_accepts_valid_ids(
-            ids in prop::collection::vec("[a-z_]{1,32}", 1..=16),
+            ids in prop::collection::vec(
+                "[a-z_]{1,32}".prop_filter("must not contain 'mock'", |s| !s.contains("mock")),
+                1..=16
+            ),
         ) {
             let mut receipt =
                 InferenceReceipt::generate("cpu", ids.clone(), None).unwrap();
