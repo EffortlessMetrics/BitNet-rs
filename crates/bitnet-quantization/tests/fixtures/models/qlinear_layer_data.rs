@@ -195,41 +195,41 @@ pub fn load_qlinear_layer_fixtures() -> Vec<QLinearLayerFixture> {
             layer_type: LayerType::Mlp,
             gguf_compatible: true,
         },
-        // Large layer with TL2
+        // Large layer with TL2 (reduced to keep fixture memory <2MB)
         QLinearLayerFixture {
             layer_name: "large_projection_tl2",
-            input_shape: (1, 1024),
-            output_shape: (1, 4096),
+            input_shape: (1, 512),
+            output_shape: (1, 1024),
             quantization_type: QuantizationType::TL2,
-            weight_data: generate_projection_weights(1024, 4096),
+            weight_data: generate_projection_weights(512, 1024),
             bias_data: None, // No bias for some layers
-            quantized_weights: create_quantized_weights(1024 * 4096, QuantizationType::TL2, 128),
+            quantized_weights: create_quantized_weights(512 * 1024, QuantizationType::TL2, 128),
             expected_output_range: (-4.0, 4.0),
             layer_type: LayerType::Mlp,
             gguf_compatible: true,
         },
-        // Embedding layer
+        // Embedding layer (reduced vocab to keep fixture memory <1MB)
         QLinearLayerFixture {
             layer_name: "embedding_lookup",
-            input_shape: (1, 50257), // GPT-style vocab
+            input_shape: (1, 512),
             output_shape: (1, 768),
             quantization_type: QuantizationType::I2S,
-            weight_data: generate_embedding_weights(50257, 768),
+            weight_data: generate_embedding_weights(512, 768),
             bias_data: None,
-            quantized_weights: create_quantized_weights(50257 * 768, QuantizationType::I2S, 64),
+            quantized_weights: create_quantized_weights(512 * 768, QuantizationType::I2S, 64),
             expected_output_range: (-1.0, 1.0),
             layer_type: LayerType::Embedding,
             gguf_compatible: true,
         },
-        // Output projection
+        // Output projection (reduced vocab to keep fixture memory <1MB)
         QLinearLayerFixture {
             layer_name: "output_projection",
             input_shape: (1, 768),
-            output_shape: (1, 50257),
+            output_shape: (1, 512),
             quantization_type: QuantizationType::TL1,
-            weight_data: generate_output_weights(768, 50257),
-            bias_data: Some(generate_bias_vector(50257)),
-            quantized_weights: create_quantized_weights(768 * 50257, QuantizationType::TL1, 64),
+            weight_data: generate_output_weights(768, 512),
+            bias_data: Some(generate_bias_vector(512)),
+            quantized_weights: create_quantized_weights(768 * 512, QuantizationType::TL1, 64),
             expected_output_range: (-10.0, 10.0),
             layer_type: LayerType::Output,
             gguf_compatible: true,
@@ -239,6 +239,8 @@ pub fn load_qlinear_layer_fixtures() -> Vec<QLinearLayerFixture> {
 
 /// Load GGUF model test fixtures
 pub fn load_gguf_model_fixtures() -> Vec<GgufModelFixture> {
+    // Use tiny hidden_dim (32) to keep fixture allocation under 1MB per model.
+    // The metadata (tensor_count, vocab_size, …) still reflects realistic model sizes.
     vec![
         GgufModelFixture {
             model_name: "bitnet_small_1b",
@@ -248,7 +250,7 @@ pub fn load_gguf_model_fixtures() -> Vec<GgufModelFixture> {
             context_length: 2048,
             model_type: "bitnet",
             quantization_types: vec![QuantizationType::I2S],
-            layers: generate_model_layers(12, 768, QuantizationType::I2S),
+            layers: generate_model_layers(2, 32, QuantizationType::I2S),
             weight_mapper_compatible: true,
             tensor_alignment: 32,
         },
@@ -260,7 +262,7 @@ pub fn load_gguf_model_fixtures() -> Vec<GgufModelFixture> {
             context_length: 4096,
             model_type: "bitnet",
             quantization_types: vec![QuantizationType::I2S, QuantizationType::TL1],
-            layers: generate_model_layers(24, 1024, QuantizationType::TL1),
+            layers: generate_model_layers(2, 32, QuantizationType::TL1),
             weight_mapper_compatible: true,
             tensor_alignment: 32,
         },
@@ -276,7 +278,7 @@ pub fn load_gguf_model_fixtures() -> Vec<GgufModelFixture> {
                 QuantizationType::TL1,
                 QuantizationType::TL2,
             ],
-            layers: generate_model_layers(32, 2048, QuantizationType::TL2),
+            layers: generate_model_layers(2, 32, QuantizationType::TL2),
             weight_mapper_compatible: true,
             tensor_alignment: 32,
         },
@@ -303,10 +305,10 @@ pub fn load_layer_replacement_scenarios() -> Vec<LayerReplacementScenario> {
         },
         LayerReplacementScenario {
             scenario_name: "large_layer_tl2_replacement",
-            original_layer: create_mock_layer(1024, 4096, true),
+            original_layer: create_mock_layer(512, 1024, true),
             replacement_layer: load_qlinear_layer_fixtures()[2].clone(),
-            test_inputs: generate_test_inputs(3, 1024),
-            expected_outputs: generate_expected_outputs(3, 4096),
+            test_inputs: generate_test_inputs(3, 512),
+            expected_outputs: generate_expected_outputs(3, 1024),
             tolerance: 0.05,
             performance_target: PerformanceTarget {
                 min_throughput_cpu: 8.0,
