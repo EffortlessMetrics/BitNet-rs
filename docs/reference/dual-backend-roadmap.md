@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#687.
+> **Last updated**: reflects implementation state after PRs #608–#689.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -58,6 +58,7 @@
 | 4 previously-ignored tests unblocked (kv_cache unique-layer-index, template_detection behavioral) | `crates/bitnet-inference/tests/` | #686 |
 | `tracing-test 0.2.6` added to workspace dependencies | `Cargo.toml` | #686 |
 | Fixture timeout fixed: >300s → ~1s (50k-vocab allocations replaced with 512-dim) | `crates/bitnet-quantization/tests/fixtures/models/qlinear_layer_data.rs` | #687 |
+| Property tests for `bitnet-transformer` KVCache invariants (4 proptest properties) | `crates/bitnet-transformer/tests/property_tests.rs` | #689 |
 
 ### 🔲 What's Planned
 
