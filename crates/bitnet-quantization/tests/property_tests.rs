@@ -8,10 +8,10 @@
 
 #![cfg(feature = "cpu")]
 
-use bitnet_quantization::{QK256_SIZE_TOLERANCE_PERCENT, qk256_tolerance_bytes};
 use bitnet_quantization::utils::{
-    calculate_scale, pack_2bit_values, unpack_2bit_values, quantize_value, dequantize_value,
+    calculate_scale, dequantize_value, pack_2bit_values, quantize_value, unpack_2bit_values,
 };
+use bitnet_quantization::{QK256_SIZE_TOLERANCE_PERCENT, qk256_tolerance_bytes};
 use proptest::prelude::*;
 
 // ── qk256_tolerance_bytes ───────────────────────────────────────────────────

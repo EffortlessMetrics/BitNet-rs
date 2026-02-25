@@ -113,8 +113,7 @@ proptest! {
 #[test]
 fn reexport_tolerance_constant_matches_source() {
     use bitnet_quantization::QK256_SIZE_TOLERANCE_PERCENT as SRC;
-    assert_eq!(QK256_SIZE_TOLERANCE_PERCENT, SRC,
-        "re-exported constant must equal source");
+    assert_eq!(QK256_SIZE_TOLERANCE_PERCENT, SRC, "re-exported constant must equal source");
 }
 
 proptest! {
