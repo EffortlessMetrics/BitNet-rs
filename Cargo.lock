@@ -618,8 +618,10 @@ version = "0.0.0"
 dependencies = [
  "arbitrary",
  "bitnet-common",
+ "bitnet-generation",
  "bitnet-gguf",
  "bitnet-kernels",
+ "bitnet-logits",
  "bitnet-models",
  "bitnet-quantization",
  "bitnet-tokenizers",
@@ -899,6 +901,9 @@ version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid-core",
  "insta",
+ "proptest",
+ "serial_test",
+ "temp-env",
 ]
 
 [[package]]

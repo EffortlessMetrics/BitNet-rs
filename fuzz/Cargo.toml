@@ -16,6 +16,8 @@ bitnet-kernels = { path = "../crates/bitnet-kernels" }
 bitnet-common = { path = "../crates/bitnet-common" }
 bitnet-gguf = { path = "../crates/bitnet-gguf" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
+bitnet-logits = { path = "../crates/bitnet-logits" }
+bitnet-generation = { path = "../crates/bitnet-generation" }
 candle-core = { workspace = true }
 arbitrary = { version = "1.4.2", features = ["derive"] }
 
@@ -82,5 +84,17 @@ doc = false
 [[bin]]
 name = "vocab_size_extraction"
 path = "fuzz_targets/vocab_size_extraction.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "logits_transforms"
+path = "fuzz_targets/logits_transforms.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "generation_stop_check"
+path = "fuzz_targets/generation_stop_check.rs"
 test = false
 doc = false
