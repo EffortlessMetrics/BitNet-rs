@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-runtime-feature-flags/tests/snapshot_tests.rs
+assertion_line: 14
 expression: "&labels.len().to_string()"
 ---
-0
+4

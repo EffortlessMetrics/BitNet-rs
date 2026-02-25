@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-runtime-feature-flags/tests/snapshot_tests.rs
+assertion_line: 20
 expression: feature_line()
 ---
-features: none
+features: cpu, inference, kernels, tokenizers
