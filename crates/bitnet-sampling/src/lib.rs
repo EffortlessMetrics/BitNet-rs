@@ -381,20 +381,22 @@ mod property_tests {
         }
     }
 
-    // greedy_sample picks the argmax.
+    // greedy_sample picks the value at the argmax (returns an index with the highest logit).
     proptest! {
         #[test]
         fn greedy_sample_picks_argmax(
             logits in prop::collection::vec(-100f32..=100f32, 1..=64),
         ) {
-            let expected = logits
-                .iter()
-                .enumerate()
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
-                .map(|(i, _)| i as u32)
-                .unwrap();
+            let max_val = logits.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
             let result = greedy_sample(&logits).unwrap();
-            prop_assert_eq!(result, expected);
+            prop_assert_eq!(
+                logits[result as usize],
+                max_val,
+                "greedy returned idx {} with value {}, but max is {}",
+                result,
+                logits[result as usize],
+                max_val
+            );
         }
     }
 
