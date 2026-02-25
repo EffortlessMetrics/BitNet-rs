@@ -1183,10 +1183,10 @@ grep -r "#254\|#260\|#469" tests --include="*.rs"
 
 ### CI Behavior with Ignored Tests
 
-**In CI**: Only non-ignored tests run (1,935 enabled tests)
+**In CI**: Only non-ignored tests run (2,082+ enabled tests)
 **Ignored tests**: Tracked separately, not blocking CI
-**Skipped tests**: 192 tests properly marked as skipped
-**Exit code**: Success (0) even with 192+ skipped tests
+**Skipped tests**: 462 tests properly marked as skipped
+**Exit code**: Success (0) even with 462+ skipped tests
 
 To run ignored tests locally:
 
