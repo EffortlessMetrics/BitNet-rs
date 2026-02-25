@@ -27,6 +27,7 @@ All notable changes to BitNet.rs will be documented in this file.
 - **Fuzz Target Registration** (PR #649): `architecture_detection`, `tl_lut_helper`, `tokenizer_discovery`, `vocab_size_extraction` fuzz targets were present but not registered in `fuzz/Cargo.toml`; now properly wired
 
 ### Fixed
+- **Env-var race conditions eliminated across workspace** (PR #678): Replaced bare `unsafe { env::set_var/remove_var }` with `temp_env::with_var`/`with_vars`/`with_var_unset` + `#[serial(bitnet_env)]` in `bitnet-kernels` (3 tests in `issue_260_feature_gated_tests.rs`), `bitnet-models` (`test_iq2s_backend_selection`), `bitnet-trace` (5 integration tests + 1 unit test), and `bitnet-runtime-profile-contract-core` (4 tests); eliminates flaky test failures from cross-test env var races in parallel nextest runs
 - **Template detection + KV cache init tests unblocked** (PR #673): 3 tests previously failing due to missing `get_family_name()` and wrong KV cache test logic now pass without `#[ignore]`
 - **QK256, CLI, and simple inference tests unblocked** (PR #674): 9 TDD scaffold tests (`test_qk256_tolerance_*`, `test_help_text_snapshot`, `test_simple_real_inference`, etc.) activated by fixing stub implementations
 - **Receipts property test mock filter** (PR #675): `proptest` strategy for valid kernel IDs excluded "mock"-containing strings that are rejected by honest-compute policy (`0.99f32 as f64` precision issue also fixed)
