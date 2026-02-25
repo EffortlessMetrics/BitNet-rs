@@ -21,7 +21,7 @@ cargo install bitnet-cli
 ```bash
 git clone https://github.com/EffortlessMetrics/BitNet-rs.git
 cd BitNet-rs
-cargo build --no-default-features --release --no-default-features --features cpu
+cargo build --release --no-default-features --features cpu
 ```
 
 ### Feature flags
@@ -278,7 +278,7 @@ BitNet.rs provides realistic performance baselines based on real quantized compu
 
 1. **Enable CPU features with strict mode**:
 ```bash
-RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release --no-default-features --features cpu
+RUSTFLAGS="-C target-cpu=native" cargo build --release --no-default-features --features cpu
 BITNET_STRICT_MODE=1 bitnet-cli inference --model model.gguf --prompt "Hello"
 ```
 

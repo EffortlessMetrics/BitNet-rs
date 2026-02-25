@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#733.
+> **Last updated**: reflects implementation state after PRs #608–#737.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -89,6 +89,8 @@
 | Fix CLI tests: assert `.stderr(...)` not `.stdout(...)` for error messages logged via `tracing::error!` | `crates/bitnet-cli/tests/inspect_ln_stats.rs`, `validation_workflow.rs` | #730 |
 | Proptest for `bitnet-common` (+17), `bitnet-tokenizers` (+9), `bitnet-inference` (+16); proptest: 26→29 crates; workspace: 3,384→3,426 tests | `crates/*/tests/property_tests.rs` | #732 |
 | Proptest for `bitnet-quantization` (+12 math invariants) and `bitnet-models` (+8 predicate/re-export invariants) | `crates/bitnet-quantization/tests/property_tests.rs`, `crates/bitnet-models/tests/property_tests.rs` | #733 |
+| docs: add `docs/tutorials/first-inference.md` (step-by-step inference guide); fix broken link in `docs/README.md`; expand docs README index with 11 previously unlisted guides | `docs/tutorials/first-inference.md`, `docs/README.md` | #735 |
+| fix: config doctest called `with_max_new_tokens()` but method was renamed to `with_max_tokens()` | `crates/bitnet-inference/src/config.rs` | #736 |
 
 ### 🔲 What's Planned
 

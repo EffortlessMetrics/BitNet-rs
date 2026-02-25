@@ -866,7 +866,7 @@ BitNet.rs maintains a healthy test suite. All `#[ignore]` attributes include a
 justification string (enforced by pre-commit hooks):
 
 - **~462 tests skipped** in a full `--workspace` run — all with `#[ignore = "reason"]` justification
-- **3,426 tests run, all pass** in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
+- **3,446 tests run, all pass** in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
 - **Zero bare `#[ignore]`** attributes (no un-reasoned skips)
 
 ### Test Execution
@@ -950,13 +950,13 @@ fn test_qk256_full_model_inference() { /* ... */ }
 
 ### Working Test Categories
 
-These test suites pass reliably (3,426 tests run: 3,426 passed):
+These test suites pass reliably (3,446 tests run: 3,446 passed):
 
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
 - **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
 - **snapshot tests**: Struct/output stability via insta (42 files, ~160 assertions, 192 snapshot files)
-- **property tests**: Randomised invariants via proptest (26 files, 100+ properties)
+- **property tests**: Randomised invariants via proptest (30 crates, 170+ properties)
 - **tokenizer tests**: Universal tokenizer, auto-discovery
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
@@ -1140,7 +1140,7 @@ cargo test -p bitnet-models --no-default-features --features cpu
 
 **Current State**:
 
-- **3,426 tests run: 3,426 passed** in `cargo nextest run --workspace --no-default-features --features cpu`
+- **3,446 tests run: 3,446 passed** in `cargo nextest run --workspace --no-default-features --features cpu`
 - ~462 tests intentionally skipped in `--workspace` runs; all have `#[ignore = "reason"]` justification strings
 - Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds
 - Complete test infrastructure: fixtures, receipts, strict mode, environment isolation, snapshot tests, property tests, fuzz

@@ -5,10 +5,10 @@ This document covers the comprehensive test suite for BitNet.rs, including runni
 ## Test Status Summary
 
 **Current Test Results**:
-- **Total Enabled Tests**: 3,359+ (all pass)
-- **Passing Tests**: 3,359+ (100%)
+- **Total Enabled Tests**: 3,446 (all pass)
+- **Passing Tests**: 3,446 (100%)
 - **Properly Skipped Tests**: 462 (intentional: ignored, integration, fixtures)
-- **Execution Time**: ~162 seconds (with parallel execution)
+- **Execution Time**: ~118 seconds (with parallel execution)
 
 **Test Infrastructure Status**:
 - ✅ **Receipt Verification**: 25/25 tests passing (schema v1.0.0)
@@ -16,7 +16,7 @@ This document covers the comprehensive test suite for BitNet.rs, including runni
 - ✅ **Environment Isolation**: 7/7 tests passing (EnvGuard parallel safety)
 - ✅ **GGUF Fixtures**: 12/12 tests passing (QK256 dual-flavor detection)
 - ✅ **Snapshot Tests**: 42 test files across the workspace (insta)
-- ✅ **Property Tests**: 26 test files across the workspace (proptest)
+- ✅ **Property Tests**: 30 test files across all 30 proptest crates (proptest)
 - ✅ **Fuzz Targets**: 11 targets, nightly scheduled (cargo-fuzz)
 - ✅ **CPU Golden Path E2E**: deterministic end-to-end inference test
 
@@ -312,7 +312,7 @@ BitNet.rs test suite is organized into distinct categories, each addressing spec
 | **Integration Tests** | 110+ | 🟡 Partial | End-to-end workflows (some blocked by issues) |
 | **Slow/Ignored Tests** | 70+ | ⏸️ Skipped | QK256 scalar kernels, architecture blockers |
 
-**Total Enabled**: 3,359+ tests
+**Total Enabled**: 3,446 tests
 **Total Skipped**: 462 tests (intentional)
 **Pass Rate**: 100%
 
