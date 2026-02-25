@@ -30,8 +30,5 @@ fn feature_line_contains_cpu() {
         line.starts_with("features: "),
         "feature_line must start with 'features: ', got: {line:?}"
     );
-    assert!(
-        line.contains("cpu"),
-        "feature_line must contain 'cpu', got: {line:?}"
-    );
+    assert!(line.contains("cpu"), "feature_line must contain 'cpu', got: {line:?}");
 }
