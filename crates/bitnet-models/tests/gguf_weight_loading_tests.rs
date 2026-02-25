@@ -98,14 +98,9 @@ impl MockGgufFileBuilder {
                 cfg.intermediate_size,
             ));
             // LayerNorm weights (F32 ones)
-            writer.add_tensor(f32_ones_tensor(
-                format!("{}.attn_norm.weight", pfx),
-                cfg.hidden_size,
-            ));
-            writer.add_tensor(f32_ones_tensor(
-                format!("{}.ffn_norm.weight", pfx),
-                cfg.hidden_size,
-            ));
+            writer
+                .add_tensor(f32_ones_tensor(format!("{}.attn_norm.weight", pfx), cfg.hidden_size));
+            writer.add_tensor(f32_ones_tensor(format!("{}.ffn_norm.weight", pfx), cfg.hidden_size));
         }
         // Final norm and output
         writer.add_tensor(f32_ones_tensor("output_norm.weight".to_string(), cfg.hidden_size));
@@ -134,7 +129,10 @@ impl MockGgufFileBuilder {
         writer.add_metadata("llama.block_count", MetadataValue::U32(layers as u32));
         writer.add_metadata("llama.attention.head_count", MetadataValue::U32(8));
         writer.add_metadata("llama.attention.head_count_kv", MetadataValue::U32(8));
-        writer.add_metadata("llama.feed_forward_length", MetadataValue::U32(self.config.intermediate_size as u32));
+        writer.add_metadata(
+            "llama.feed_forward_length",
+            MetadataValue::U32(self.config.intermediate_size as u32),
+        );
         writer.add_metadata("llama.vocab_size", MetadataValue::U32(vocab as u32));
         // Token embeddings
         writer.add_tensor(f32_tensor("token_embd.weight".to_string(), vocab, hidden));
@@ -146,8 +144,7 @@ impl MockGgufFileBuilder {
 
 /// Build a TensorEntry with F32 weights of shape [rows, cols] filled with sinusoidal values.
 fn f32_tensor(name: String, rows: usize, cols: usize) -> TensorEntry {
-    let data: Vec<f32> =
-        (0..(rows * cols)).map(|i| ((i as f32) * 0.001).sin() * 0.1).collect();
+    let data: Vec<f32> = (0..(rows * cols)).map(|i| ((i as f32) * 0.001).sin() * 0.1).collect();
     let bytes: Vec<u8> = data.iter().flat_map(|f| f.to_le_bytes()).collect();
     TensorEntry::new(name, vec![rows as u64, cols as u64], TensorDType::F32, bytes)
 }
@@ -169,7 +166,10 @@ fn f32_ones_tensor(name: String, n: usize) -> TensorEntry {
 /// attention layers, feed-forward layers, and normalization layers.
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[cfg_attr(not(any(feature = "cpu", feature = "gpu", feature = "crossval")), ignore = "requires cpu or gpu feature")]
+#[cfg_attr(
+    not(any(feature = "cpu", feature = "gpu", feature = "crossval")),
+    ignore = "requires cpu or gpu feature"
+)]
 async fn test_ac1_complete_transformer_weight_parsing_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
@@ -310,7 +310,10 @@ async fn test_ac1_complete_transformer_weight_parsing_gpu() -> Result<()> {
 /// Tests feature spec: gguf-weight-loading.md#tr2-quantization-integration
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[cfg_attr(not(any(feature = "cpu", feature = "gpu", feature = "crossval")), ignore = "requires cpu or gpu feature")]
+#[cfg_attr(
+    not(any(feature = "cpu", feature = "gpu", feature = "crossval")),
+    ignore = "requires cpu or gpu feature"
+)]
 async fn test_ac2_i2s_quantization_accuracy_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
@@ -351,7 +354,10 @@ async fn test_ac2_i2s_quantization_accuracy_cpu() -> Result<()> {
 /// AC2: Test TL1 quantization accuracy
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[cfg_attr(not(any(feature = "cpu", feature = "gpu", feature = "crossval")), ignore = "requires cpu or gpu feature")]
+#[cfg_attr(
+    not(any(feature = "cpu", feature = "gpu", feature = "crossval")),
+    ignore = "requires cpu or gpu feature"
+)]
 async fn test_ac2_tl1_quantization_accuracy_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
@@ -389,7 +395,10 @@ async fn test_ac2_tl1_quantization_accuracy_cpu() -> Result<()> {
 /// AC2: Test TL2 quantization accuracy
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[cfg_attr(not(any(feature = "cpu", feature = "gpu", feature = "crossval")), ignore = "requires cpu or gpu feature")]
+#[cfg_attr(
+    not(any(feature = "cpu", feature = "gpu", feature = "crossval")),
+    ignore = "requires cpu or gpu feature"
+)]
 async fn test_ac2_tl2_quantization_accuracy_cpu() -> Result<()> {
     let config = GgufWeightLoadingTestConfig::default();
     let mock_builder = MockGgufFileBuilder::new()?.with_config(config.clone());
