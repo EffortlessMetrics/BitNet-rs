@@ -1191,6 +1191,7 @@ name = "bitnet-testing-scenarios-profile-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-testing-profile",
+ "insta",
  "num_cpus",
 ]
 
