@@ -110,6 +110,7 @@ mod strict_mode_config_tests {
 
     /// Tests strict mode validation behavior
     #[test]
+    #[serial(bitnet_env)]
     fn test_strict_mode_validation_behavior() {
         println!("🔒 Strict Mode: Testing validation behavior");
 
@@ -186,6 +187,7 @@ mod strict_mode_config_tests {
 
     /// Tests granular strict mode configuration options
     #[test]
+    #[serial(bitnet_env)]
     fn test_granular_strict_mode_configuration() {
         println!("🔒 Strict Mode: Testing granular configuration");
 
