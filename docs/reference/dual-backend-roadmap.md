@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#694.
+> **Last updated**: reflects implementation state after PRs #608–#696.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -62,6 +62,7 @@
 | Env-var race fixed in `bitnet-startup-contract-core`; 5 proptest properties added | `crates/bitnet-startup-contract-core/src/lib.rs`, `tests/property_tests.rs` | #691 |
 | 6 proptest properties for `bitnet-runtime-feature-flags-core` (cuda⇒gpu, cpu⇒inference+kernels+tokenizers, feature_line prefix) | `crates/bitnet-runtime-feature-flags-core/tests/property_tests.rs` | #692 |
 | 10 proptest properties for `bitnet-bdd-grid-core` (Display↔FromStr round-trips for all 3 enums; FeatureSet invariants) | `crates/bitnet-bdd-grid-core/tests/property_tests.rs` | #694 |
+| Integration proptest coverage for 6 SRP microcrates: policy-core (7), scenarios-core (8), honest-compute (16), rope (11), validation (10), feature-contract (8) = ~45 new tests | `crates/*/tests/property_tests.rs` | #696 |
 
 ### 🔲 What's Planned
 
