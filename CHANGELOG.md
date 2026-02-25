@@ -5,7 +5,7 @@ All notable changes to BitNet.rs will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
-- **`bitnet-runtime-feature-flags` workspace snapshot tests** (PR #720): Replaced exact-count/exact-feature-list snapshot assertions with presence checks (`labels.contains("cpu")` + `line.starts_with("features: ")`). Workspace feature unification caused `fixtures`, `reporting`, `trend`, `quantization` to be added via other crates, making exact-match snapshots context-dependent and flaky.
+- **Workspace snapshot tests (4 tests across 3 crates)** (PR #720): Replaced exact-count/exact-value snapshot assertions with presence checks in `bitnet-runtime-feature-flags` (`feature_labels_count_with_cpu_feature`, `feature_line_format_stable`), `bitnet-startup-contract-core` (`cli_component_observe_is_compatible_or_has_state`), and `bitnet-testing-policy-kit` (`active_feature_labels_returns_list`). Cargo feature unification in workspace builds activates extra features (`fixtures`, `reporting`, `trend`, `quantization`) via other crates, making context-dependent exact-match snapshots fail. Full workspace run now: **3345 passed, 0 failed, 462 skipped**.
 
 ### Documentation
 - **Dual-Backend Roadmap update** (PR #719): Marks PRs #711–#717 as implemented in the roadmap tracking table; adds retrospective rows for previously-implemented but un-tracked items (Phase 6 SRP microcrates, BDD grid runner, CPU golden path, GPU smoke lane).
