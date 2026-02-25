@@ -13,7 +13,7 @@ jobs:
     continue-on-error: true  # Informational while stabilizing docs
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
-      - run: npm -g i markdownlint-cli2
+      - run: npm -g i markdownlint-cli2 || echo "markdownlint-cli2 install failed (network/registry issue), skipping lint"
       - name: Lint markdown (informational)
         run: |
-          markdownlint-cli2 --config .markdownlint.jsonc "**/*.md" "!archive/**" "!CROSSVAL_IMPLEMENTATION_COMPLETE.md" || true
+          command -v markdownlint-cli2 && markdownlint-cli2 --config .markdownlint.jsonc "**/*.md" "!archive/**" "!CROSSVAL_IMPLEMENTATION_COMPLETE.md" || true
