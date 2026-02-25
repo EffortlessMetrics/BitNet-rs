@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-tests/tests/snapshot_tests.rs
+expression: diag.profile().cell.is_some().to_string()
+---
+true

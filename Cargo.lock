@@ -936,6 +936,7 @@ dependencies = [
  "bitnet-bdd-grid",
  "bitnet-runtime-context",
  "bitnet-runtime-feature-flags",
+ "insta",
  "serial_test",
  "temp-env",
 ]
@@ -1121,6 +1122,7 @@ dependencies = [
  "bitnet-feature-contract",
  "bitnet-runtime-feature-flags",
  "bitnet-testing-policy-core",
+ "insta",
 ]
 
 [[package]]
@@ -1140,6 +1142,7 @@ dependencies = [
  "bitnet-runtime-feature-flags",
  "bitnet-testing-policy-contract",
  "bitnet-testing-policy-kit",
+ "insta",
 ]
 
 [[package]]
@@ -1163,6 +1166,7 @@ name = "bitnet-testing-policy-tests"
 version = "0.1.0"
 dependencies = [
  "bitnet-testing-policy-runtime",
+ "insta",
 ]
 
 [[package]]
@@ -1170,6 +1174,7 @@ name = "bitnet-testing-profile"
 version = "0.1.0"
 dependencies = [
  "bitnet-runtime-profile",
+ "insta",
 ]
 
 [[package]]

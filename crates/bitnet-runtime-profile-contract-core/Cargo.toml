@@ -64,5 +64,6 @@ runtime-profile-trend = ["bitnet-runtime-feature-flags/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-runtime-feature-flags/runtime-profile-integration-tests"]
 
 [dev-dependencies]
+insta.workspace = true
 serial_test.workspace = true
 temp-env = "0.3.6"

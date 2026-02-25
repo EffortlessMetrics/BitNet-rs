@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-runtime-profile-contract-core/tests/snapshot_tests.rs
+expression: labels
+---
+[]

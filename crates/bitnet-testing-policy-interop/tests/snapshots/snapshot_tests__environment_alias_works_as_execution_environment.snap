@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-interop/tests/snapshot_tests.rs
+expression: env
+---
+Local
