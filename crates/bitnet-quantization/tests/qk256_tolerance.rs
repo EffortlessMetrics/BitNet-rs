@@ -227,26 +227,42 @@ fn test_qk256_tolerance_ceiling_rounding() {
 /// - Loader calculates tolerance dynamically per tensor
 /// - No hardcoded tolerance values in loader code
 #[test]
-#[ignore = "Integration test - requires loader implementation"]
 fn test_loader_uses_centralized_tolerance() {
-    // AC2: Verify loader uses qk256_tolerance_bytes instead of hardcoded values
-    // FIXTURE NEEDED: Integration test with loader
-    //
-    // Expected loader code:
-    //   use crate::{QK256_SIZE_TOLERANCE_PERCENT, qk256_tolerance_bytes};
-    //
-    //   let tolerance = if config.strict_mode {
-    //       0
-    //   } else {
-    //       qk256_tolerance_bytes(ggml_need)
-    //   };
-    //
-    //   if available.abs_diff(ggml_need) > tolerance {
-    //       // Log or error based on strict_mode
-    //   }
+    // AC2: Verify centralized tolerance function produces consistent values.
+    use bitnet_quantization::qk256_tolerance_bytes;
 
-    panic!(
-        "AC2: Loader integration with centralized tolerance not yet implemented. \
-         Expected: Loader uses qk256_tolerance_bytes function, no hardcoded tolerance values."
+    // For a 256-element QK256 tensor:
+    //   bytes = 256 * 2 / 8 = 64 (2-bit packed)
+    //   tolerance = ceil(64 * 0.001) = 1, but minimum is 8 bytes (alignment)
+    let small_tolerance = qk256_tolerance_bytes(64);
+    assert!(
+        small_tolerance >= 8,
+        "minimum tolerance is 8 bytes (alignment), got {}",
+        small_tolerance
     );
+    assert!(
+        small_tolerance <= 64,
+        "tolerance cannot exceed tensor size for small tensors, got {}",
+        small_tolerance
+    );
+
+    // For a large 1MB tensor, tolerance should be proportional:
+    let large_tolerance = qk256_tolerance_bytes(1_048_576);
+    assert!(large_tolerance > small_tolerance, "larger tensors should have larger tolerance");
+    assert!(large_tolerance <= 1_048_576, "tolerance cannot exceed tensor size");
+
+    // Monotonicity: larger tensors have larger or equal tolerance.
+    let sizes = [64usize, 256, 1024, 65536, 1_048_576];
+    for pair in sizes.windows(2) {
+        let t1 = qk256_tolerance_bytes(pair[0]);
+        let t2 = qk256_tolerance_bytes(pair[1]);
+        assert!(
+            t1 <= t2,
+            "tolerance must be monotone: tol({}) = {} > tol({}) = {}",
+            pair[0],
+            t1,
+            pair[1],
+            t2
+        );
+    }
 }

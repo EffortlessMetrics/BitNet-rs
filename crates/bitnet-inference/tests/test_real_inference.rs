@@ -16,7 +16,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 /// AC1: Test real transformer forward pass with quantized weights
-#[ignore = "TDD scaffold: unimplemented; see blocking issue for details"]
 #[tokio::test]
 async fn test_real_transformer_forward_pass() -> Result<()> {
     let config = create_test_bitnet_config();

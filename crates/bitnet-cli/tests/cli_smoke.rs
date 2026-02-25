@@ -57,3 +57,21 @@ fn score_command_validates_args() {
 fn invalid_command_fails() {
     cargo_bin_cmd!("bitnet").arg("nonexistent-command").assert().failure();
 }
+
+/// AC1: Verify --strict-loader flag is accepted by the run subcommand (bitnet-models#loader_strict_mode).
+///
+/// The --strict-loader flag enables fail-fast validation mode.
+/// This test verifies the flag is wired up (the flag appears in run --help).
+#[cfg(feature = "full-cli")]
+#[test]
+fn run_help_mentions_strict_loader() {
+    let out = cargo_bin_cmd!("bitnet")
+        .args(["run", "--help"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    assert!(s.contains("strict-loader"), "run --help should mention --strict-loader flag");
+}
