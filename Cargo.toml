@@ -58,12 +58,6 @@ members = [
   "crates/bitnet-startup-contract-diagnostics",
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
-  # SRP microcrate extractions (phase-6)
-  "crates/bitnet-device-probe",
-  "crates/bitnet-logits",
-  "crates/bitnet-generation",
-  "crates/bitnet-engine-core",
-  "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
   "crossval",
   "tests",
