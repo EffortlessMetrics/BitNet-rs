@@ -13,12 +13,11 @@ fn gpu_compiled_is_bool() {
 
 #[test]
 fn detect_simd_level_returns_valid_variant() {
+    // Just confirm the function returns without panicking — the actual level
+    // is hardware-dependent and cannot be snapshotted portably.
     let level = detect_simd_level();
-    // Any valid SimdLevel is acceptable; snapshot the string form.
-    insta::assert_snapshot!(
-        "detected_simd_level",
-        format!("simd={level} (valid SimdLevel variant)")
-    );
+    // Document the invariant: every detected level has a non-empty Display.
+    assert!(!level.to_string().is_empty());
 }
 
 #[test]
