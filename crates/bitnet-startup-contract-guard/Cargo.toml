@@ -17,3 +17,6 @@ anyhow.workspace = true
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
 bitnet-startup-contract-diagnostics = { path = "../bitnet-startup-contract-diagnostics", version = "0.1.0" }
 tracing.workspace = true
+
+[dev-dependencies]
+insta.workspace = true

@@ -894,6 +894,7 @@ name = "bitnet-runtime-context-core"
 version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid-core",
+ "insta",
 ]
 
 [[package]]
@@ -902,6 +903,7 @@ version = "0.1.0"
 dependencies = [
  "bitnet-bdd-grid-core",
  "bitnet-runtime-feature-flags-core",
+ "insta",
 ]
 
 [[package]]
@@ -1073,6 +1075,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitnet-runtime-bootstrap",
+ "insta",
 ]
 
 [[package]]
@@ -1082,6 +1085,7 @@ dependencies = [
  "anyhow",
  "bitnet-runtime-bootstrap",
  "bitnet-startup-contract-diagnostics",
+ "insta",
  "tracing",
 ]
 

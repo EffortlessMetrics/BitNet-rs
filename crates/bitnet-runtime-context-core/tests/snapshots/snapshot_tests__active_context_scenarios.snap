@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-runtime-context-core/tests/snapshot_tests.rs
+expression: "{\n    let mut out = String::new(); for s in\n    [TestingScenario::Unit, TestingScenario::Integration,\n    TestingScenario::EndToEnd,] { out.push_str(&format!(\"{}\\n\", s)); } out\n}"
+---
+unit
+integration
+e2e

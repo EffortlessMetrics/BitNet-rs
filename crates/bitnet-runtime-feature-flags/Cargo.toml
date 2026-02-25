@@ -61,3 +61,6 @@ runtime-profile-fixtures = ["fixtures"]
 runtime-profile-reporting = ["reporting"]
 runtime-profile-trend = ["trend"]
 runtime-profile-integration-tests = ["integration-tests"]
+
+[dev-dependencies]
+insta.workspace = true

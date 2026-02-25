@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-startup-contract-diagnostics/tests/snapshot_tests.rs
+expression: summary
+---
+scenario=crossval/environment=ci,required=inference+kernels+tokenizers+crossval,optional=fixtures+reporting+trend,forbidden=none
