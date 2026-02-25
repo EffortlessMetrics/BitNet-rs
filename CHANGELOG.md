@@ -4,6 +4,12 @@ All notable changes to BitNet.rs will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Workspace snapshot tests (4 tests across 3 crates)** (PR #720): Replaced exact-count/exact-value snapshot assertions with presence checks in `bitnet-runtime-feature-flags` (`feature_labels_count_with_cpu_feature`, `feature_line_format_stable`), `bitnet-startup-contract-core` (`cli_component_observe_is_compatible_or_has_state`), and `bitnet-testing-policy-kit` (`active_feature_labels_returns_list`). Cargo feature unification in workspace builds activates extra features (`fixtures`, `reporting`, `trend`, `quantization`) via other crates, making context-dependent exact-match snapshots fail. Full workspace run now: **3345 passed, 0 failed, 462 skipped**.
+
+### Documentation
+- **Dual-Backend Roadmap update** (PR #719): Marks PRs #711–#717 as implemented in the roadmap tracking table; adds retrospective rows for previously-implemented but un-tracked items (Phase 6 SRP microcrates, BDD grid runner, CPU golden path, GPU smoke lane).
+
 ### Added
 - **CLAUDE.md Test Count and Category Update** (PR #717): Updates test count from 970+ to 2,082+, skipped count from ~466 to ~462, and adds snapshot tests (37 files, 200+ assertions) and property tests (20 files, 100+ properties) to the Working Test Categories section.
 - **`docs/development/test-suite.md` Snapshot/Property/Fuzz Update** (PR #716): Adds dedicated sections for Snapshot Tests (insta, 37 files, 200+ assertions, run/review/update commands), Property Tests (proptest, 20 files, PROPTEST_CASES env, key invariants), and Fuzz Testing (11 targets table, corpus location, nightly CI schedule); updates test counts and category table.
