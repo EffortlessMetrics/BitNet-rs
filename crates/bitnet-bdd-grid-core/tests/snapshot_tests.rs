@@ -4,7 +4,9 @@
 //! (`TestingScenario`, `ExecutionEnvironment`, `BitnetFeature`)
 //! and the `BddCell` / `FeatureSet` debug output.
 
-use bitnet_bdd_grid_core::{BddCell, BddGrid, BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario};
+use bitnet_bdd_grid_core::{
+    BddCell, BddGrid, BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario,
+};
 use insta::assert_snapshot;
 
 // -- TestingScenario Display -------------------------------------------------

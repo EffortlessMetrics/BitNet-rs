@@ -11,7 +11,7 @@ use tempfile::TempDir;
 /// Build a minimal valid GGUF v3 file with zero tensors and zero metadata entries.
 fn minimal_gguf_bytes() -> Vec<u8> {
     let mut data = Vec::new();
-    data.extend_from_slice(b"GGUF");         // Magic
+    data.extend_from_slice(b"GGUF"); // Magic
     data.extend_from_slice(&3u32.to_le_bytes()); // Version 3
     data.extend_from_slice(&0u64.to_le_bytes()); // tensor_count = 0
     data.extend_from_slice(&0u64.to_le_bytes()); // metadata_kv_count = 0
