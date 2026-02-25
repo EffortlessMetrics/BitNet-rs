@@ -955,7 +955,7 @@ These test suites pass reliably (2,082+ tests passing):
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
 - **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
-- **snapshot tests**: Struct/output stability via insta (37 files, 200+ assertions)
+- **snapshot tests**: Struct/output stability via insta (42 files, 200+ assertions)
 - **property tests**: Randomised invariants via proptest (20 files, 100+ properties)
 - **tokenizer tests**: Universal tokenizer, auto-discovery
 - **cli tests**: Command-line parsing, flag validation
