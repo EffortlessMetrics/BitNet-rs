@@ -264,7 +264,7 @@ mod tests {
         ) {
             // Use a different id than stop_token_ids and max_tokens > generated_len.
             let criteria = make_criteria(&[9999], &[], 100, Some(9998));
-            let generated: Vec<u32> = (0..generated_len as u32).collect();
+            let generated: Vec<u32> = (0..u32::try_from(generated_len).unwrap()).collect();
             let result = check_stop(&criteria, id, &generated, "no-stop-string-here");
             proptest::prop_assert!(result.is_none());
         }

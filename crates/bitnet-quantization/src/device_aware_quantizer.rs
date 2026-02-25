@@ -975,7 +975,7 @@ mod tests {
     #[test]
     fn test_fp32_passthrough_is_lossless() {
         let quantizer = DeviceAwareQuantizer::default();
-        let input = vec![1.5f32, -0.75, 0.0, 3.14, -100.0, 0.001];
+        let input = vec![1.5f32, -0.75, 0.0, 3.21, -100.0, 0.001];
 
         let result = quantizer.quantize_with_validation(&input, QuantizationType::FP32);
         assert!(result.is_ok(), "FP32 passthrough should succeed: {:?}", result.err());

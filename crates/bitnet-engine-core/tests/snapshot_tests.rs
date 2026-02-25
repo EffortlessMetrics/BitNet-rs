@@ -4,7 +4,6 @@
 //! changes to the wire format are visible in code review.
 
 use bitnet_engine_core::{BackendInfo, SessionConfig, SessionMetrics};
-use serde_json;
 
 #[test]
 fn session_config_default_json_snapshot() {
