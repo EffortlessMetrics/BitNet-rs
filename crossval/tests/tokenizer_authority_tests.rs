@@ -1736,11 +1736,14 @@ mod tc_ac5_source_detection {
     /// AC: AC5
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
     #[test]
-    #[ignore = "Requires file system fixture"]
     fn test_detect_source_external_tokenizer_json() {
-        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
-        // Verify: Path ending with "tokenizer.json" → External
-        todo!("AC5: Verify detect_tokenizer_source() returns External for tokenizer.json");
+        let path = Path::new("tests/fixtures/tokenizer.json");
+        let source = detect_tokenizer_source(path);
+        assert_eq!(
+            source,
+            TokenizerSource::External,
+            "Existing tokenizer.json file should be detected as External"
+        );
     }
 
     /// Test: detect_tokenizer_source() returns GgufEmbedded for model.gguf
@@ -1788,11 +1791,14 @@ mod tc_ac5_source_detection {
     /// AC: AC5
     /// Spec: docs/specs/tokenizer-authority-integration-parity-both.md#AC5
     #[test]
-    #[ignore = "Requires file system fixture"]
     fn test_detect_source_absolute_path() {
-        // Tests feature spec: tokenizer-authority-integration-parity-both.md#AC5
-        // Verify: Absolute path ending with "tokenizer.json" → External
-        todo!("AC5: Verify detect_tokenizer_source() with absolute paths");
+        let abs_path = std::env::current_dir().unwrap().join("tests/fixtures/tokenizer.json");
+        let source = detect_tokenizer_source(&abs_path);
+        assert_eq!(
+            source,
+            TokenizerSource::External,
+            "Existing tokenizer.json at absolute path should be detected as External"
+        );
     }
 
     /// Test: AutoDiscovered variant not yet implemented
