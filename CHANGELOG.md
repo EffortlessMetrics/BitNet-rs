@@ -5,11 +5,14 @@ All notable changes to BitNet.rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Property Tests for `bitnet-runtime-feature-flags-core`** (PR #692): 6 proptest properties verifying `FeatureActivation → FeatureSet` conversion invariants — `cuda ⇒ gpu`, `cpu ⇒ inference+kernels+tokenizers`, `feature_line` prefix, default activation empty labels, and 2 unit stability tests
+- **Property Tests for `bitnet-startup-contract-core`** (PR #691): 4 proptest properties verifying `ProfileContract` invariants — context round-trips, summary non-empty, `Observe` policy never fails `enforce()`, `is_compatible()` consistent with `state()`; plus 1 unit stability test (5 total)
 - **Property Tests for `bitnet-transformer`** (PR #689): 4 proptest properties covering KVCache invariants — seq_len tracks N append operations correctly, clear/reset semantics, overflow (capacity) rejection, and initial zero state
 - **Tracing Instrumentation for Template Detection** (PR #686): `bitnet-prompt-templates::TemplateType::detect()` now emits `debug!` on each branch (Llama3Chat, Instruct, Raw) and `warn!` on the Raw fallback; in-crate `#[traced_test]` unit tests verify log capture
 - **`tracing-test` 0.2.6 Added to Workspace** (PR #686): Shared dev-dep for crates that test tracing output
 
 ### Fixed
+- **Env-var race in `bitnet-startup-contract-core`** (PR #691): Replaced `unsafe { env::set_var/remove_var }` with `temp_env::with_var + #[serial(bitnet_env)]` in `evaluate_preserves_context_overrides` test
 - **4 Previously-Ignored Tests Unblocked** (PR #686): `test_once_per_layer_warning_guards`, `test_kv_cache_warning_message_format` (unique layer indices avoid `Once` state collisions), `test_detection_logs_decision`, `test_fallback_logs_warning` (converted to behavioral assertions; log coverage in emitting crate)
 - **Fixture Timeout: 5-min → ~1s** (PR #687): Reduced huge synthetic fixture allocations in `bitnet-quantization` — vocab fixtures (50257→512), large projection (1024×4096→512×1024), GGUF model layers (realistic dims→2×32) reduced fixture allocation from >2GB to <5MB total
 
