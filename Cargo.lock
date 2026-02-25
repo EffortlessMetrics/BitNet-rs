@@ -1212,6 +1212,7 @@ dependencies = [
  "dirs",
  "futures-util",
  "memmap2",
+ "proptest",
  "reqwest",
  "sentencepiece",
  "sentencepiece-model",

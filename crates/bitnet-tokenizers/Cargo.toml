@@ -63,3 +63,4 @@ temp-env = "0.3.6"
 serial_test.workspace = true
 bitnet-tests = { path = "../../tests" }
 bitnet-test-support.workspace = true
+proptest = { workspace = true }

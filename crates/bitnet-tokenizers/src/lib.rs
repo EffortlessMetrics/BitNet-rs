@@ -520,3 +520,53 @@ impl TokenizerBuilder {
         }
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// BasicTokenizer byte-level encode is invertible (round-trips through decode).
+    /// Only ASCII text fits in byte-level vocab (IDs 0–255) with default vocab_size ≥ 256.
+    proptest! {
+        #[test]
+        fn basic_tokenizer_ascii_roundtrip(text in "[a-zA-Z0-9 .,!?:;-]{1,80}") {
+            let tok = BasicTokenizer::new();
+            let tokens = tok.encode(&text, false, false).unwrap();
+            let decoded = tok.decode(&tokens).unwrap();
+            prop_assert_eq!(decoded, text.clone(), "round-trip failed for {:?}", text);
+        }
+    }
+
+    /// encode without add_bos/add_special: length equals UTF-8 byte count.
+    proptest! {
+        #[test]
+        fn basic_tokenizer_length_matches_bytes(text in "[a-z]{1,64}") {
+            let tok = BasicTokenizer::new();
+            let tokens = tok.encode(&text, false, false).unwrap();
+            prop_assert_eq!(tokens.len(), text.len(), "token count != byte count for {:?}", text);
+        }
+    }
+
+    /// encode of empty string always returns empty vec regardless of flags.
+    proptest! {
+        #[test]
+        fn basic_tokenizer_empty_is_always_empty(add_bos in any::<bool>(), add_special in any::<bool>()) {
+            // For empty text, BOS token can be added but no byte tokens exist.
+            let tok = BasicTokenizer::new();
+            let tokens = tok.encode("", add_bos, add_special).unwrap();
+            // BasicTokenizer: empty text → empty regardless (BOS skipped when bos_token_id is None)
+            prop_assert_eq!(tokens.len(), 0);
+        }
+    }
+
+    /// decode of empty slice always returns empty string.
+    proptest! {
+        #[test]
+        fn basic_tokenizer_decode_empty_slice_is_empty(_dummy in any::<bool>()) {
+            let tok = BasicTokenizer::new();
+            let result = tok.decode(&[]).unwrap();
+            prop_assert_eq!(result, "");
+        }
+    }
+}
