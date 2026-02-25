@@ -7,12 +7,18 @@
 //! - `argmax`: always returns the index of the maximum element
 //! - `apply_repetition_penalty`: penalised tokens are not larger than unpenalised
 
-use bitnet_logits::{apply_repetition_penalty, apply_temperature, apply_top_k, argmax, softmax_in_place};
+use bitnet_logits::{
+    apply_repetition_penalty, apply_temperature, apply_top_k, argmax, softmax_in_place,
+};
 use proptest::prelude::*;
 
 // ── helpers ───────────────────────────────────────────────────────────────
 
-fn finite_logits(min: f32, max: f32, len_range: std::ops::Range<usize>) -> impl Strategy<Value = Vec<f32>> {
+fn finite_logits(
+    min: f32,
+    max: f32,
+    len_range: std::ops::Range<usize>,
+) -> impl Strategy<Value = Vec<f32>> {
     prop::collection::vec(min..max, len_range)
         .prop_filter("must have at least one finite value", |v| v.iter().any(|x| x.is_finite()))
 }

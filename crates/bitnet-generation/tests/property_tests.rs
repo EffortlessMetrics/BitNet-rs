@@ -21,7 +21,11 @@ fn arb_stop_criteria() -> impl Strategy<Value = StopCriteria> {
         prop::option::of(arb_token_id()),
         0usize..128usize,
         prop::collection::vec(
-            prop_oneof![Just("[STOP]".to_string()), Just("</s>".to_string()), Just("\n".to_string())],
+            prop_oneof![
+                Just("[STOP]".to_string()),
+                Just("</s>".to_string()),
+                Just("\n".to_string())
+            ],
             0..3,
         ),
     )
