@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#709.
+> **Last updated**: reflects implementation state after PRs #608–#710.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -73,6 +73,7 @@
 | `bitnet-quantization` snapshot tests (5: QuantizationType Display/Debug, best_for_arch x86_64/aarch64, round_trip I2S/TL2) + `bitnet-cli` snapshot tests (5, `full-cli` gated: InferenceCommand defaults, help text for --max-tokens/--stop/sampling/--prompt-template aliases) | `crates/bitnet-quantization/tests/snapshot_tests.rs`, `crates/bitnet-cli/tests/snapshot_tests.rs` | #707 |
 | `bitnet-runtime-feature-flags-core` (4 snaps: to_labels CPU/GPU+CUDA/empty, active feature set) + `bitnet-testing-scenarios-core` (4: scenario descriptions, timeout, log level, count) + `bitnet-startup-contract-core` (3: RuntimeComponent labels, summary tokens, is_compatible) + `bitnet-feature-contract` (4: consistent/inconsistent/empty) + `bitnet-testing-policy-core` (3: unit/local summary, active_profile_summary, CI snapshot) | `crates/bitnet-{runtime-feature-flags,testing-scenarios,startup-contract,feature-contract,testing-policy}-core/tests/snapshot_tests.rs` | #708 |
 | `bitnet-inference` (7 snaps: GenerationConfig defaults/greedy/creative, InferenceConfig defaults, validation error) + `bitnet-kernels` (4: provider count/fallback/selection/name, cpu-gated) + `bitnet-models` (5: LoadConfig/ProductionLoadConfig defaults, DeviceStrategy Debug) + `bitnet-server` (6: ServerSettings host/port/timeouts, BatchEngineConfig, ConcurrencyConfig, DeviceConfig variants) | `crates/bitnet-{inference,kernels,models,server}/tests/snapshot_tests.rs` | #709 |
+| `bitnet-runtime-context-core` (3: ActiveContext Unit/Local+Integration/Ci defaults, TestingScenario variants) + `bitnet-startup-contract-diagnostics` (3: profile_summary format, info count, warnings count) + `bitnet-startup-contract-guard` (3: RuntimeComponent labels, is_compatible, feature_line prefix) + `bitnet-runtime-feature-flags` (3: feature_line prefix+full, feature_labels count) + `bitnet-testing-scenarios-profile-core` (7: ConfigurationContext/ReportingProfile/FixtureProfile/ComparisonToleranceProfile/CrossValidationProfile/TestConfigProfile defaults, ReportFormat variants) | `crates/bitnet-{runtime-context-core,startup-contract-diagnostics,startup-contract-guard,runtime-feature-flags,testing-scenarios-profile-core}/tests/snapshot_tests.rs` | #710 |
 
 ### 🔲 What's Planned
 
