@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-transformer/tests/snapshot_tests.rs
+expression: summary
+---
+seq_len=0 max_seq_len=16 n_kv_heads=2

@@ -1279,6 +1279,7 @@ dependencies = [
  "bitnet-rope",
  "candle-core",
  "candle-nn",
+ "insta",
  "proptest",
  "serial_test",
  "thiserror 2.0.17",

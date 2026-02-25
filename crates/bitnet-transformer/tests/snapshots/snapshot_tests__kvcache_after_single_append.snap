@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-transformer/tests/snapshot_tests.rs
+expression: summary
+---
+layer[0].seq_len=1 layer[1].seq_len=0
