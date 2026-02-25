@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#650.
+> **Last updated**: reflects implementation state after PRs #608–#676.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -42,6 +42,11 @@
 | Insta snapshot tests for 10 SRP microcrates (45 snapshots) | `crates/*/tests/snapshot_tests.rs` | #651 |
 | AC6 hash stubs implemented; TC3/TC4/tc_ac6 unblocked (88 tests pass, 6 ignored) | `crossval/tests/tokenizer_authority_tests.rs`, `crossval/tests/fixtures/` | #653 |
 | AC5 source detection stubs implemented; 2 remaining fixture tests unblocked | `crossval/tests/tokenizer_authority_tests.rs` | #654 |
+| `Tokenizer::get_family_name()` trait method (llama3 detection) | `crates/bitnet-tokenizers/src/lib.rs` | #673 |
+| Template detection + KV cache init tests unblocked | `crates/bitnet-inference/tests/template_detection.rs`, `kv_cache_validation.rs` | #673 |
+| QK256 tolerance, CLI snapshot, simple_real_inference tests unblocked | `crates/bitnet-quantization/`, `crates/bitnet-cli/` | #674 |
+| Receipts property test: mock-containing IDs excluded from strategy | `crates/bitnet-receipts/src/lib.rs` | #675 |
+| Issue #159 resolved: `MockGgufFileBuilder` uses real `GgufWriter` | `crates/bitnet-models/tests/gguf_weight_loading_tests.rs` | #676 |
 
 ### 🔲 What's Planned
 
@@ -52,6 +57,14 @@
 2. **Scheduled fuzz/crossval evidence expansion**
    - Nightly timeboxed fuzz runs with artifact upload (partially done via `fuzz-ci.yml`)
    - Real-model crossval producing receipts (gated on model download infrastructure)
+
+3. **GgufTokenizer `real_vocab_size()` method**
+   - Distinguish real vs padded vocab sizes in `bitnet-tokenizers`
+   - Required for tokenizer fixture tests in `tokenizer_vocab_size.rs`
+
+4. **Log-capture test infrastructure**
+   - `tracing-test` integration for testing `warn!`/`debug!` emission in hot paths
+   - Required for kv_cache_validation and qk256_tolerance log-format tests
 
 ---
 
