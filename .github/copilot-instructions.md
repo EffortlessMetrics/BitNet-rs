@@ -84,14 +84,20 @@ fn test_strict_mode() {
 ### Ignored tests must have justifications
 Pre-commit hooks reject bare `#[ignore]`. Always add a reason:
 ```rust
+// Model-gated test (one ignore per test function)
 #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
+fn test_inference_with_real_model() { ... }
+
+// Performance-sensitive test
 #[ignore = "Slow: QK256 scalar kernels (~0.1 tok/s); run manually with --ignored"]
+fn test_qk256_full_model_inference() { ... }
 ```
 
 ### TDD scaffolding
-~125 `#[ignore]` tests (all with justification strings) represent intentional scaffolding,
-not bugs. Categories: real-model tests, CUDA tests, slow mock-inference tests, crossval
-tests, and TDD scaffolds for unimplemented features.
+~1070 `#[ignore]` tests across the workspace (all with justification strings) represent
+intentional scaffolding, not bugs. ~112 in core crates, ~129 in the integration test
+crate, ~652 in xtask, ~173 in crossval. Categories: real-model tests, CUDA tests, slow
+mock-inference tests, crossval tests, and TDD scaffolds for unimplemented features.
 
 ### Rate-limited logging
 Use `warn_once!` from `bitnet_common` for hot-path warnings that would otherwise spam logs:

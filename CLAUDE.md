@@ -39,10 +39,7 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
   output in some configurations. This is a known model quality issue, not an
   inference bug.
 
-- **Test Scaffolding**: ~125 `#[ignore]` tests remain (all with justification
-  strings), covering: real-model tests (need `BITNET_GGUF`), CUDA tests (need GPU),
-  slow mock-inference tests (exceed 5-min CI timeout), and TDD scaffolds for planned
-  features. See **Test Status** section below.
+- **Test Scaffolding**: ~466 tests skipped in full `--workspace` runs (87 in core crates, ~379 in xtask/crossval scaffolding), all with justification
 
 ## Quick Reference
 
@@ -868,7 +865,7 @@ Both backends available. Dual-backend cross-validation supported.
 BitNet.rs maintains a healthy test suite. All `#[ignore]` attributes include a
 justification string (enforced by pre-commit hooks):
 
-- **~125 ignored tests** — all with justification, categorized below
+- **~466 tests skipped** in a full `--workspace` run (87 in default-members, ~379 in xtask/crossval/tests scaffolding) — all with `#[ignore = "reason"]` justification, categorized below
 - **970+ tests pass** in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
 - **Zero bare `#[ignore]`** attributes (no un-reasoned skips)
 
@@ -914,7 +911,7 @@ Tests are currently ignored for these reasons (all have justification strings):
 1. **Requires real model file** (~23 tests): Need `BITNET_GGUF` or `BITNET_MODEL_PATH`.
    These tests skip gracefully when the env var is unset.
 
-2. **CUDA / GPU hardware** (~13 tests): Need `--features cuda` and a CUDA runtime.
+2. **CUDA / GPU hardware** (~13 tests): Need `--features gpu` (or legacy alias `--features cuda`) and a CUDA runtime.
    Compile-only coverage on PR CI; runtime on GPU runner.
 
 3. **Slow mock inference** (~17 tests): Run 50–300+ mock forward passes; exceed the
@@ -972,7 +969,7 @@ These test suites pass reliably (970+ tests passing):
 
 ```text
 Real inference tests     — need BITNET_GGUF (opt-in via --run-ignored)
-CUDA tests               — need --features cuda + GPU runner
+CUDA tests               — need --features gpu + GPU runner (cuda is an alias)
 Slow integration tests   — run manually with --run-ignored all (exceed 5min timeout)
 C++ crossval tests       — need CROSSVAL_GGUF + bitnet.cpp
 TDD scaffolds            — unblock by implementing the feature the test describes
@@ -1142,7 +1139,7 @@ cargo test -p bitnet-models --no-default-features --features cpu
 **Current State**:
 
 - **970+ tests passing** in `cargo nextest run --workspace --no-default-features --features cpu`
-- ~125 tests intentionally ignored (with justification strings)
+- ~466 tests intentionally skipped in `--workspace` runs (87 in core crates, ~379 in xtask/crossval scaffolding); all have `#[ignore = "reason"]` justification strings
 - Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds
 - Complete test infrastructure: fixtures, receipts, strict mode, environment isolation
 
@@ -1176,7 +1173,7 @@ cargo build --no-default-features --features cpu
 - **Use xtask for operations**: `cargo run -p xtask --` instead of scripts
 - **Check compatibility**: Review `COMPATIBILITY.md` before API changes
 - **Never modify GGUF in-place**: Use `bitnet-compat export-fixed` for new files
-- **Expect test scaffolding for unimplemented features**: ~125 ignored tests; all have justification strings
+- **Expect test scaffolding for unimplemented features**: ~466 tests skipped across the workspace (87 in core, ~379 in xtask/crossval scaffolding); all have justification strings
 - **unimplemented!() in tests is not a bug**: It's TDD scaffolding for planned features
 - **Use `#[serial(bitnet_env)]` for env-mutating tests**: Prevents race conditions in parallel execution
 - **Check `#[ignore = "..."]` justification before investigating**: The reason tells you exactly what's needed to unblock
