@@ -364,3 +364,92 @@ mod tests {
         assert_eq!(token1, token2); // Should be deterministic with same seed
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// greedy_sample always returns a valid index into the logit slice.
+    proptest! {
+        #[test]
+        fn greedy_sample_returns_valid_index(
+            logits in prop::collection::vec(-1e6f32..=1e6f32, 1..=256),
+        ) {
+            let result = greedy_sample(&logits).unwrap();
+            prop_assert!((result as usize) < logits.len());
+        }
+    }
+
+    /// greedy_sample picks the argmax.
+    proptest! {
+        #[test]
+        fn greedy_sample_picks_argmax(
+            logits in prop::collection::vec(-100f32..=100f32, 1..=64),
+        ) {
+            let expected = logits
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                .map(|(i, _)| i as u32)
+                .unwrap();
+            let result = greedy_sample(&logits).unwrap();
+            prop_assert_eq!(result, expected);
+        }
+    }
+
+    /// softmax_in_place produces a valid probability distribution (non-negative, sums to 1).
+    proptest! {
+        #[test]
+        fn softmax_is_valid_distribution(
+            logits in prop::collection::vec(-50f32..=50f32, 1..=128),
+        ) {
+            let mut probs = logits;
+            softmax_in_place(&mut probs);
+            for &p in &probs {
+                prop_assert!(p >= 0.0 && p.is_finite(), "probability {} is not valid", p);
+            }
+            let sum: f32 = probs.iter().sum();
+            prop_assert!((sum - 1.0).abs() < 1e-4, "softmax sum={} expected ~1.0", sum);
+        }
+    }
+
+    /// apply_top_k leaves at most k finite entries; the rest become NEG_INFINITY.
+    proptest! {
+        #[test]
+        fn top_k_leaves_at_most_k_finite(
+            logits in prop::collection::vec(-10f32..=10f32, 2..=64),
+            k in 1usize..=32,
+        ) {
+            let mut filtered = logits.clone();
+            let effective_k = k.min(filtered.len());
+            apply_top_k(&mut filtered, effective_k);
+            let finite_count = filtered.iter().filter(|v| v.is_finite()).count();
+            prop_assert!(
+                finite_count <= effective_k,
+                "finite_count={} > k={}",
+                finite_count,
+                effective_k
+            );
+        }
+    }
+
+    /// SamplingStrategy with temperature=0 behaves like greedy.
+    proptest! {
+        #[test]
+        fn strategy_temp_zero_is_greedy(
+            logits in prop::collection::vec(-10f32..=10f32, 2..=32),
+            seed in 0u64..=u64::MAX,
+        ) {
+            let config = SamplingConfig {
+                temperature: 0.0,
+                seed: Some(seed),
+                ..Default::default()
+            };
+            let mut strategy = SamplingStrategy::new(config);
+            let result = strategy.sample(&logits, &[]).unwrap();
+            let greedy = greedy_sample(&logits).unwrap();
+            prop_assert_eq!(result, greedy, "temperature=0 should be greedy");
+        }
+    }
+}
