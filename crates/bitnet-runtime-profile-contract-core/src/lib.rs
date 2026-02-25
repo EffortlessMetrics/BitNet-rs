@@ -137,17 +137,11 @@ mod tests {
     #[test]
     #[serial(bitnet_env)]
     fn from_env_uses_bitnet_env_over_ci() {
-        temp_env::with_vars(
-            [
-                ("BITNET_ENV", Some("production")),
-                ("CI", Some("true")),
-            ],
-            || {
-                let context = ActiveContext::from_env();
-                assert_eq!(context.scenario, TestingScenario::Unit);
-                assert_eq!(context.environment, ExecutionEnvironment::Production);
-            },
-        );
+        temp_env::with_vars([("BITNET_ENV", Some("production")), ("CI", Some("true"))], || {
+            let context = ActiveContext::from_env();
+            assert_eq!(context.scenario, TestingScenario::Unit);
+            assert_eq!(context.environment, ExecutionEnvironment::Production);
+        });
     }
 
     #[test]

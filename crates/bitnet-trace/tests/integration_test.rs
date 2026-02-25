@@ -127,4 +127,3 @@ fn test_dump_trace_empty_trace_dir() {
         assert!(result.is_ok());
     });
 }
-
