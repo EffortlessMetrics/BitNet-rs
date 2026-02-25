@@ -865,8 +865,8 @@ Both backends available. Dual-backend cross-validation supported.
 BitNet.rs maintains a healthy test suite. All `#[ignore]` attributes include a
 justification string (enforced by pre-commit hooks):
 
-- **~466 tests skipped** in a full `--workspace` run (87 in default-members, ~379 in xtask/crossval/tests scaffolding) — all with `#[ignore = "reason"]` justification, categorized below
-- **970+ tests pass** in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
+- **~462 tests skipped** in a full `--workspace` run — all with `#[ignore = "reason"]` justification
+- **2,082+ tests pass** in a normal `cargo nextest run --workspace --no-default-features --features cpu` run
 - **Zero bare `#[ignore]`** attributes (no un-reasoned skips)
 
 ### Test Execution
@@ -950,11 +950,13 @@ fn test_qk256_full_model_inference() { /* ... */ }
 
 ### Working Test Categories
 
-These test suites pass reliably (970+ tests passing):
+These test suites pass reliably (2,082+ tests passing):
 
 - **quantization tests**: I2_S flavor detection, TL1/TL2, IQ2_S via FFI
 - **model loading tests**: GGUF and SafeTensors parsing
 - **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
+- **snapshot tests**: Struct/output stability via insta (37 files, 200+ assertions)
+- **property tests**: Randomised invariants via proptest (20 files, 100+ properties)
 - **tokenizer tests**: Universal tokenizer, auto-discovery
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
@@ -1138,10 +1140,10 @@ cargo test -p bitnet-models --no-default-features --features cpu
 
 **Current State**:
 
-- **970+ tests passing** in `cargo nextest run --workspace --no-default-features --features cpu`
-- ~466 tests intentionally skipped in `--workspace` runs (87 in core crates, ~379 in xtask/crossval scaffolding); all have `#[ignore = "reason"]` justification strings
+- **2,082+ tests passing** in `cargo nextest run --workspace --no-default-features --features cpu`
+- ~462 tests intentionally skipped in `--workspace` runs; all have `#[ignore = "reason"]` justification strings
 - Categories: real-model tests, CUDA tests, slow tests, crossval tests, TDD scaffolds
-- Complete test infrastructure: fixtures, receipts, strict mode, environment isolation
+- Complete test infrastructure: fixtures, receipts, strict mode, environment isolation, snapshot tests, property tests, fuzz
 
 **CI Status**: Only non-ignored tests run in PR CI. Ignored tests are opt-in via `--run-ignored`.
 
