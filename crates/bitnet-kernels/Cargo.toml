@@ -46,6 +46,7 @@ anyhow = "1.0.100"
 serde = { version = "1.0.228", features = ["derive"] }
 half = "2.7.1"
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
+proptest.workspace = true
 bitnet-ggml-ffi = { path = "../bitnet-ggml-ffi", version = "0.1.0" }
 rand = "0.9.2"
 insta.workspace = true
