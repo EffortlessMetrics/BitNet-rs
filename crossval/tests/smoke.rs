@@ -35,13 +35,19 @@ fn smoke_env_preflight() {
 #[ignore = "requires CROSSVAL_GGUF and C++ libraries"]
 fn smoke_first_token_logits_parity() {
     // Keep this tiny (short prompt, 1 step) so the smoke job finishes quickly.
-    let model_path = env::var("CROSSVAL_GGUF").expect("CROSSVAL_GGUF must be set");
+    let Ok(model_path) = env::var("CROSSVAL_GGUF") else {
+        println!("SKIP: CROSSVAL_GGUF not set — skipping smoke_first_token_logits_parity");
+        return;
+    };
 
     // Verify the model file exists
     assert!(Path::new(&model_path).exists(), "Model file not found: {}", model_path);
 
     // Quick check that the C++ library dir is set
-    let cpp_dir = env::var("BITNET_CPP_DIR").expect("BITNET_CPP_DIR must be set");
+    let Ok(cpp_dir) = env::var("BITNET_CPP_DIR") else {
+        println!("SKIP: BITNET_CPP_DIR not set — skipping smoke_first_token_logits_parity");
+        return;
+    };
     assert!(Path::new(&cpp_dir).exists(), "C++ directory not found: {}", cpp_dir);
 
     // Perform a minimal parity check on the first token logits

@@ -319,11 +319,11 @@ fn test_dump_fixture_for_debug() {
 #[test]
 #[cfg(feature = "fixtures")]
 fn test_load_fixture_from_fixed_path() {
-    use std::path::Path;
-
-    // Fixture already written by test_dump_fixture_for_debug
-    let path = Path::new("/tmp/test_generated_fixture.gguf");
-    assert!(path.exists(), "Fixture should exist");
+    // Generate the fixture inline (don't depend on state from another test)
+    let fixture_bytes = helpers::qk256_fixtures::generate_qk256_4x256(42);
+    let path = std::path::PathBuf::from("/tmp/test_generated_fixture.gguf");
+    std::fs::write(&path, &fixture_bytes).expect("Should write fixture");
+    let path = path.as_path();
 
     let result = load_gguf_full(path, Device::Cpu, bitnet_models::GGUFLoaderConfig::default());
 
