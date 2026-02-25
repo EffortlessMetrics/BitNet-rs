@@ -433,8 +433,9 @@ fn test_serde_yaml_ng_version_consistency() {
 /// Phase: Phase 2 (P1 HIGH)
 #[test]
 fn test_no_lazy_static_dependencies() {
-    let crates_to_check =
-        vec![workspace_root().join("crates/bitnet-st-tools/Cargo.toml").to_str().unwrap().to_string()];
+    let crates_to_check = vec![
+        workspace_root().join("crates/bitnet-st-tools/Cargo.toml").to_str().unwrap().to_string(),
+    ];
 
     let mut failures = Vec::new();
 
@@ -811,8 +812,9 @@ fn test_workspace_members_complete() {
         "tools/migrate-gen-config",
     ];
 
-    let root_toml = std::fs::read_to_string(workspace_root().join("Cargo.toml").to_str().unwrap().to_string())
-        .expect("Failed to read root Cargo.toml");
+    let root_toml =
+        std::fs::read_to_string(workspace_root().join("Cargo.toml").to_str().unwrap().to_string())
+            .expect("Failed to read root Cargo.toml");
 
     let mut missing_members = Vec::new();
 
@@ -832,8 +834,9 @@ fn test_workspace_members_complete() {
 /// Specification: phase1_deprecated_deps_analysis.md#workspace-summary (line 243)
 #[test]
 fn test_workspace_dependencies_centralized() {
-    let root_toml = std::fs::read_to_string(workspace_root().join("Cargo.toml").to_str().unwrap().to_string())
-        .expect("Failed to read root Cargo.toml");
+    let root_toml =
+        std::fs::read_to_string(workspace_root().join("Cargo.toml").to_str().unwrap().to_string())
+            .expect("Failed to read root Cargo.toml");
 
     // Check that workspace dependencies section exists
     assert!(
