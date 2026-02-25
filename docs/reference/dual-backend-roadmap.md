@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#717.
+> **Last updated**: reflects implementation state after PRs #608–#726.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -81,6 +81,10 @@
 | `CLAUDE.md` updated: test count 970+→2082+, snapshot/property test categories added | `CLAUDE.md` | #717 |
 | `GgufTokenizer::real_vocab_size()` method — distinguishes real vs padded vocab sizes | `crates/bitnet-tokenizers/src/lib.rs`, `crates/bitnet-tokenizers/src/gguf_loader.rs` | #673 |
 | Log-capture test infrastructure (`tracing-test 0.2.6`) and `#[traced_test]` unit tests | `crates/bitnet-prompt-templates/src/lib.rs` | #686 |
+| Proptest for `bitnet-compat` (+5) and `bitnet-st2gguf` (+9); workspace: 3,345→3,359 tests | `crates/bitnet-compat/tests/property_tests.rs`, `crates/bitnet-st2gguf/tests/property_tests.rs` | #722 |
+| Proptest for `bitnet-trace` (+6 JSON round-trip/hash/rms invariants) and `bitnet-kernels` (+8 provider/quantize invariants); proptest: 22→23 crates | `crates/bitnet-trace/tests/property_tests.rs`, `crates/bitnet-kernels/tests/property_tests.rs` | #724 |
+| Proptest for `bitnet-server` (+11 BatchEngineConfig/SecurityValidator invariants); proptest: 23→24 crates | `crates/bitnet-server/tests/property_tests.rs` | #725 |
+| Proptest for `bitnet-cli` (+9 CLI arg-parsing invariants); proptest: 24→26 crates; workspace: 3,359→3,384 tests | `crates/bitnet-cli/tests/property_tests.rs` | #726 |
 
 ### 🔲 What's Planned
 
