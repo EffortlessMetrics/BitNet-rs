@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#684.
+> **Last updated**: reflects implementation state after PRs #608–#687.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -54,6 +54,10 @@
 | Property tests for `bitnet-generation` (8 tests) | `crates/bitnet-generation/tests/property_tests.rs` | #683 |
 | Property tests for `bitnet-engine-core` standalone suite (7 tests) | `crates/bitnet-engine-core/tests/property_tests.rs` | #683 |
 | `ci-core.yml` paths filter includes doc-only files (`CLAUDE.md`, `CHANGELOG.md`, etc.) | `.github/workflows/ci-core.yml` | #684 |
+| Tracing instrumentation in `TemplateType::detect()`; `#[traced_test]` log-capture unit tests | `crates/bitnet-prompt-templates/src/lib.rs` | #686 |
+| 4 previously-ignored tests unblocked (kv_cache unique-layer-index, template_detection behavioral) | `crates/bitnet-inference/tests/` | #686 |
+| `tracing-test 0.2.6` added to workspace dependencies | `Cargo.toml` | #686 |
+| Fixture timeout fixed: >300s → ~1s (50k-vocab allocations replaced with 512-dim) | `crates/bitnet-quantization/tests/fixtures/models/qlinear_layer_data.rs` | #687 |
 
 ### 🔲 What's Planned
 

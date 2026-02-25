@@ -5,6 +5,14 @@ All notable changes to BitNet.rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Tracing Instrumentation for Template Detection** (PR #686): `bitnet-prompt-templates::TemplateType::detect()` now emits `debug!` on each branch (Llama3Chat, Instruct, Raw) and `warn!` on the Raw fallback; in-crate `#[traced_test]` unit tests verify log capture
+- **`tracing-test` 0.2.6 Added to Workspace** (PR #686): Shared dev-dep for crates that test tracing output
+
+### Fixed
+- **4 Previously-Ignored Tests Unblocked** (PR #686): `test_once_per_layer_warning_guards`, `test_kv_cache_warning_message_format` (unique layer indices avoid `Once` state collisions), `test_detection_logs_decision`, `test_fallback_logs_warning` (converted to behavioral assertions; log coverage in emitting crate)
+- **Fixture Timeout: 5-min → ~1s** (PR #687): Reduced huge synthetic fixture allocations in `bitnet-quantization` — vocab fixtures (50257→512), large projection (1024×4096→512×1024), GGUF model layers (realistic dims→2×32) reduced fixture allocation from >2GB to <5MB total
+
+### Added (prior)
 - **Property Tests for `bitnet-logits`** (PR #683): 13 proptest properties verifying softmax sum-to-one / non-negativity / argmax-preservation, temperature scaling semantics (T=1.0 identity, argmax preservation), top-k filtering (≤k elements, k=0/k≥len no-ops), argmax correctness, and repetition penalty semantics (1.0 no-op, reduces positives, worsens negatives)
 - **Property Tests for `bitnet-generation`** (PR #683): 8 tests (5 property + 3 unit) covering `check_stop` priority order (token-ID > EOS > max-tokens > stop-string), `max_tokens=0` disabling budget, determinism, and stop-string boundary matching
 - **Property Tests for `bitnet-engine-core` standalone suite** (PR #683): 7 tests (5 property + 2 unit) in `tests/property_tests.rs` for `SessionConfig` JSON round-trips, `BackendInfo` JSON round-trips, `SessionMetrics` non-negativity, and default values
