@@ -5,8 +5,8 @@ This document covers the comprehensive test suite for BitNet.rs, including runni
 ## Test Status Summary
 
 **Current Test Results**:
-- **Total Enabled Tests**: 3,446 (all pass)
-- **Passing Tests**: 3,446 (100%)
+- **Total Enabled Tests**: 3,464 (all pass)
+- **Passing Tests**: 3,464 (100%)
 - **Properly Skipped Tests**: 462 (intentional: ignored, integration, fixtures)
 - **Execution Time**: ~118 seconds (with parallel execution)
 
@@ -312,7 +312,7 @@ BitNet.rs test suite is organized into distinct categories, each addressing spec
 | **Integration Tests** | 110+ | 🟡 Partial | End-to-end workflows (some blocked by issues) |
 | **Slow/Ignored Tests** | 70+ | ⏸️ Skipped | QK256 scalar kernels, architecture blockers |
 
-**Total Enabled**: 3,446 tests
+**Total Enabled**: 3,464 tests
 **Total Skipped**: 462 tests (intentional)
 **Pass Rate**: 100%
 
