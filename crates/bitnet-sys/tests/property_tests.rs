@@ -18,20 +18,24 @@ use proptest::prelude::*;
 /// Generate a logically valid (implication-respecting) capabilities struct.
 fn valid_caps_strategy() -> impl Strategy<Value = CompileTimeLibCapabilities> {
     // available: bool; cuda/shim can only be true when available is true
-    (any::<bool>(), any::<bool>(), any::<bool>()).prop_map(
-        |(available, maybe_cuda, maybe_shim)| CompileTimeLibCapabilities {
+    (any::<bool>(), any::<bool>(), any::<bool>()).prop_map(|(available, maybe_cuda, maybe_shim)| {
+        CompileTimeLibCapabilities {
             available,
             has_cuda: available && maybe_cuda,
             has_bitnet_shim: available && maybe_shim,
-        },
-    )
+        }
+    })
 }
 
 /// Generate all 8 combinations including logically impossible ones (for negative tests).
 fn any_caps_strategy() -> impl Strategy<Value = CompileTimeLibCapabilities> {
-    (any::<bool>(), any::<bool>(), any::<bool>()).prop_map(|(available, has_cuda, has_bitnet_shim)| {
-        CompileTimeLibCapabilities { available, has_cuda, has_bitnet_shim }
-    })
+    (any::<bool>(), any::<bool>(), any::<bool>()).prop_map(
+        |(available, has_cuda, has_bitnet_shim)| CompileTimeLibCapabilities {
+            available,
+            has_cuda,
+            has_bitnet_shim,
+        },
+    )
 }
 
 // ---------------------------------------------------------------------------

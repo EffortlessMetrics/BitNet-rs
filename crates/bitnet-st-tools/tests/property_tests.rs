@@ -18,20 +18,16 @@ use proptest::prelude::*;
 
 /// Generate a random identifier component (letters, digits, underscores).
 fn ident_strategy() -> impl Strategy<Value = String> {
-    "[a-z][a-z0-9_]{0,15}"
-        .prop_map(|s| s)
+    "[a-z][a-z0-9_]{0,15}".prop_map(|s| s)
 }
 
 /// Generate a tensor name that definitely does NOT end with ".weight".
 fn non_weight_name_strategy() -> impl Strategy<Value = String> {
-    (ident_strategy(), prop_oneof![
-        Just(".bias"),
-        Just(".scale"),
-        Just(""),
-        Just(".gamma"),
-        Just(".beta"),
-    ])
-    .prop_map(|(base, suffix)| format!("model.{base}{suffix}"))
+    (
+        ident_strategy(),
+        prop_oneof![Just(".bias"), Just(".scale"), Just(""), Just(".gamma"), Just(".beta"),],
+    )
+        .prop_map(|(base, suffix)| format!("model.{base}{suffix}"))
 }
 
 /// Generate a valid layernorm-like tensor name (ends with ".weight", contains norm keyword).
@@ -47,7 +43,7 @@ fn ln_weight_name_strategy() -> impl Strategy<Value = String> {
             Just("rms_norm"),
         ],
     )
-    .prop_map(|(layer, norm)| format!("model.layers.{layer}.{norm}.weight"))
+        .prop_map(|(layer, norm)| format!("model.layers.{layer}.{norm}.weight"))
 }
 
 /// Generate a projection weight name (not a layernorm).
@@ -64,7 +60,7 @@ fn proj_weight_name_strategy() -> impl Strategy<Value = String> {
             Just("mlp.down_proj"),
         ],
     )
-    .prop_map(|(layer, proj)| format!("model.layers.{layer}.{proj}.weight"))
+        .prop_map(|(layer, proj)| format!("model.layers.{layer}.{proj}.weight"))
 }
 
 // ---------------------------------------------------------------------------
