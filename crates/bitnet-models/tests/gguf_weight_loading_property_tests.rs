@@ -481,11 +481,8 @@ fn test_i2s_quantization_roundtrip(
     // Sign preservation accuracy: I2S ternary quantization never inverts a sign;
     // positive values map to {0, +scale} and negative values map to {-scale, 0}.
     // This metric equals 1.0 for all well-formed inputs.
-    let preserved = weight_data
-        .iter()
-        .zip(dequantized.iter())
-        .filter(|&(orig, deq)| orig * deq >= 0.0)
-        .count();
+    let preserved =
+        weight_data.iter().zip(dequantized.iter()).filter(|&(orig, deq)| orig * deq >= 0.0).count();
     Ok(preserved as f32 / weight_data.len() as f32)
 }
 
@@ -552,11 +549,8 @@ fn test_tl1_quantization_stability(weight_data: &[f32], shape: &[usize]) -> Resu
     // accuracy: sign preservation rate.  TL1 symmetric quantization maps positive
     // values to {0, +scale, +2*scale, …} and negative to {-scale, 0, …}, so this
     // is always 1.0.
-    let preserved = weight_data
-        .iter()
-        .zip(dequantized.iter())
-        .filter(|&(orig, deq)| orig * deq >= 0.0)
-        .count();
+    let preserved =
+        weight_data.iter().zip(dequantized.iter()).filter(|&(orig, deq)| orig * deq >= 0.0).count();
     let accuracy = preserved as f32 / weight_data.len() as f32;
     // stability_metric: mean absolute error normalised by global abs_max (always finite).
     let abs_max = weight_data.iter().map(|x| x.abs()).fold(0.0f32, f32::max).max(1e-8);
@@ -610,11 +604,8 @@ fn test_tl2_extreme_value_handling(weight_data: &[f32], shape: &[usize]) -> Resu
     // overflow_handled: all dequantized values must be finite.
     let overflow_handled = dequantized.iter().all(|x| x.is_finite());
     // accuracy: sign preservation rate (symmetric TL2 guarantees same-sign or zero mapping).
-    let preserved = weight_data
-        .iter()
-        .zip(dequantized.iter())
-        .filter(|&(orig, deq)| orig * deq >= 0.0)
-        .count();
+    let preserved =
+        weight_data.iter().zip(dequantized.iter()).filter(|&(orig, deq)| orig * deq >= 0.0).count();
     let accuracy = preserved as f32 / weight_data.len() as f32;
     Ok((accuracy, overflow_handled))
 }
@@ -637,11 +628,8 @@ fn test_tl2_block_size_effects(
     let dequantized_tensor = quantizer.dequantize_tensor(&quantized)?;
     let dequantized = dequantized_tensor.to_vec()?;
     // accuracy: sign preservation rate (always 1.0 for symmetric TL2).
-    let preserved = weight_data
-        .iter()
-        .zip(dequantized.iter())
-        .filter(|&(orig, deq)| orig * deq >= 0.0)
-        .count();
+    let preserved =
+        weight_data.iter().zip(dequantized.iter()).filter(|&(orig, deq)| orig * deq >= 0.0).count();
     Ok(preserved as f32 / weight_data.len() as f32)
 }
 
