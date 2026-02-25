@@ -153,14 +153,32 @@ mod ac4_debug_logging {
 mod template_detection_integration {
     use super::*;
     #[test]
-    #[ignore = "implementation pending: verify detection affects formatting"]
     fn test_detected_template_affects_formatting() -> Result<()> {
-        panic!("Test not implemented: needs formatting integration");
+        let user_text = "What is 2+2?";
+        let instruct_output = TemplateType::Instruct.apply(user_text, None);
+        let raw_output = TemplateType::Raw.apply(user_text, None);
+        // Instruct template wraps with Q: / A: markers, Raw returns plain text.
+        assert_ne!(
+            instruct_output, raw_output,
+            "Instruct and Raw templates must produce different output"
+        );
+        assert!(instruct_output.contains(user_text), "Instruct output must contain user text");
+        assert!(raw_output.contains(user_text), "Raw output must contain user text");
+        Ok(())
     }
     #[test]
-    #[ignore = "implementation pending: benchmark detection overhead"]
     fn test_detection_overhead_minimal() -> Result<()> {
-        panic!("Test not implemented: needs performance benchmarking");
+        let start = std::time::Instant::now();
+        for _ in 0..10_000 {
+            let _ = TemplateType::detect(Some("llama3-chat"), None);
+        }
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed.as_millis() < 1000,
+            "10k detect calls should complete within 1s, took {}ms",
+            elapsed.as_millis()
+        );
+        Ok(())
     }
     #[test]
     #[ignore = "implementation pending: test with real GGUF models"]
@@ -171,19 +189,38 @@ mod template_detection_integration {
 #[cfg(test)]
 mod tokenizer_family_hints {
     use super::*;
+    use bitnet_tokenizers::{MockTokenizer, Tokenizer};
+
     #[test]
-    #[ignore = "implementation pending: implement get_family_name for tokenizers"]
     fn test_tokenizer_llama3_family() -> Result<()> {
-        panic!("Test not implemented: needs tokenizer family detection");
+        let tok = MockTokenizer::with_special_tokens(&[
+            ("<|eot_id|>", 128009),
+            ("<|start_header_id|>", 128006),
+        ]);
+        assert_eq!(tok.get_family_name(), "llama3");
+        Ok(())
     }
+
     #[test]
-    #[ignore = "implementation pending: implement instruct family detection"]
     fn test_tokenizer_mistral_instruct_family() -> Result<()> {
-        panic!("Test not implemented: needs mistral family detection");
+        let tok = MockTokenizer::with_special_tokens(&[("[INST]", 1001), ("[/INST]", 1002)]);
+        assert_eq!(tok.get_family_name(), "mistral-instruct");
+        Ok(())
     }
+
     #[test]
-    #[ignore = "implementation pending: add get_family_name to Tokenizer trait"]
     fn test_tokenizer_get_family_name_trait() -> Result<()> {
-        panic!("Test not implemented: needs Tokenizer trait extension");
+        // Unknown tokenizer (no special tokens) returns "unknown".
+        let unknown = MockTokenizer::new();
+        assert_eq!(unknown.get_family_name(), "unknown");
+
+        // LLaMA-3 check: <|eot_id|> alone is sufficient.
+        let llama3 = MockTokenizer::with_special_tokens(&[("<|eot_id|>", 128009)]);
+        assert_eq!(llama3.get_family_name(), "llama3");
+
+        // Mistral: [INST] token without LLaMA-3 markers.
+        let mistral = MockTokenizer::with_special_tokens(&[("[INST]", 2001)]);
+        assert_eq!(mistral.get_family_name(), "mistral-instruct");
+        Ok(())
     }
 }

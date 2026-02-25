@@ -29,6 +29,14 @@ impl KVCache {
         head_dim: usize,
         device: &Device,
     ) -> Result<Self> {
+        anyhow::ensure!(num_layers > 0, "num_layers must be > 0");
+        anyhow::ensure!(num_heads > 0, "num_heads must be > 0");
+        anyhow::ensure!(
+            head_dim > 0 && head_dim % 4 == 0,
+            "head_dim must be > 0 and divisible by 4"
+        );
+        anyhow::ensure!(max_seq_len > 0, "max_seq_len must be > 0");
+
         let mut k_cache = Vec::new();
         let mut v_cache = Vec::new();
 
