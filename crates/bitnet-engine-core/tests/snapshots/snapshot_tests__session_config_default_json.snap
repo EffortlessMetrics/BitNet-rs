@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-engine-core/tests/snapshot_tests.rs
+expression: json
+---
+{
+  "model_path": "",
+  "tokenizer_path": "",
+  "backend": "cpu",
+  "max_context": 2048,
+  "seed": null
+}

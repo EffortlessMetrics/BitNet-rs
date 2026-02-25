@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-validation/tests/snapshot_tests.rs
+expression: summary
+---
+name=bitnet-b1.58:f16 ln_rules=6

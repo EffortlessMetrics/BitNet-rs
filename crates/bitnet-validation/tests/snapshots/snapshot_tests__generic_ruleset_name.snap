@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-validation/tests/snapshot_tests.rs
+expression: ruleset.name
+---
+generic

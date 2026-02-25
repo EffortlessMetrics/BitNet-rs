@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_tests.rs
+expression: "format!(\"simd={level} (valid SimdLevel variant)\")"
+---
+simd=avx512 (valid SimdLevel variant)

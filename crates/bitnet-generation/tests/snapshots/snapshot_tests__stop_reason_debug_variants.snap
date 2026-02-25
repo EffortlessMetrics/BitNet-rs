@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-generation/tests/snapshot_tests.rs
+expression: debug
+---
+[
+    "MaxTokens",
+    "StopTokenId(128009)",
+    "StopString(\"</s>\")",
+    "EosToken",
+]

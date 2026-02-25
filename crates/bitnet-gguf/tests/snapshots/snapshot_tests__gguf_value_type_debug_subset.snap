@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-gguf/tests/snapshot_tests.rs
+expression: debug
+---
+[
+    "Uint8",
+    "Int8",
+    "Uint32",
+    "String",
+    "Float32",
+]

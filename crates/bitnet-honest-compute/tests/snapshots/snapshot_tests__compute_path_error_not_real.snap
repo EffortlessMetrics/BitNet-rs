@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-honest-compute/tests/snapshot_tests.rs
+expression: err.to_string()
+---
+Invalid compute_path: mock (expected 'real')

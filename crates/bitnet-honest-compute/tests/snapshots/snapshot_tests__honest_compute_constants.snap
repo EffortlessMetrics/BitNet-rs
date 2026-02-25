@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-honest-compute/tests/snapshot_tests.rs
+expression: summary
+---
+real=real mock=mock max_id_len=128 max_count=10000

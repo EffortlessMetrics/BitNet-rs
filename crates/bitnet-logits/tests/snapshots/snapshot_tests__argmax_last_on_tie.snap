@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-logits/tests/snapshot_tests.rs
+expression: result.to_string()
+---
+1

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-gguf/tests/snapshot_tests.rs
+expression: msg
+---
+file too small for a GGUF header

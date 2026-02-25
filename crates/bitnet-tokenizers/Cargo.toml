@@ -64,3 +64,4 @@ serial_test.workspace = true
 bitnet-tests = { path = "../../tests" }
 bitnet-test-support.workspace = true
 proptest = { workspace = true }
+insta = { workspace = true }

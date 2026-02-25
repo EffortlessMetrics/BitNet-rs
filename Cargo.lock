@@ -471,6 +471,7 @@ dependencies = [
  "bytemuck",
  "candle-core",
  "criterion",
+ "insta",
  "proptest",
  "serde",
  "serde_json",
@@ -537,6 +538,7 @@ name = "bitnet-device-probe"
 version = "0.1.0"
 dependencies = [
  "bitnet-common",
+ "insta",
  "log",
  "serial_test",
  "temp-env",
@@ -549,6 +551,7 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-generation",
+ "insta",
  "proptest",
  "serde",
  "serde_json",
@@ -611,6 +614,7 @@ name = "bitnet-generation"
 version = "0.1.0"
 dependencies = [
  "bitnet-common",
+ "insta",
  "proptest",
  "serde",
 ]
@@ -628,6 +632,7 @@ name = "bitnet-gguf"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "insta",
  "memmap2",
  "proptest",
 ]
@@ -636,6 +641,7 @@ dependencies = [
 name = "bitnet-honest-compute"
 version = "0.1.0"
 dependencies = [
+ "insta",
  "proptest",
 ]
 
@@ -719,6 +725,7 @@ dependencies = [
 name = "bitnet-logits"
 version = "0.1.0"
 dependencies = [
+ "insta",
  "proptest",
 ]
 
@@ -839,6 +846,7 @@ dependencies = [
 name = "bitnet-rope"
 version = "0.1.0"
 dependencies = [
+ "insta",
  "proptest",
 ]
 
@@ -1213,6 +1221,7 @@ dependencies = [
  "bitnet-tests",
  "dirs",
  "futures-util",
+ "insta",
  "memmap2",
  "proptest",
  "reqwest",
@@ -1260,6 +1269,7 @@ name = "bitnet-validation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "insta",
  "proptest",
  "regex",
  "serde",

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_tests.rs
+expression: "format!(\"cpu_rust={}\", caps.cpu_rust)"
+---
+cpu_rust=true

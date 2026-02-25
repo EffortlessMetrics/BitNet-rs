@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-honest-compute/tests/snapshot_tests.rs
+expression: err.to_string()
+---
+Mock kernel detected at index 3: 'mock_cpu_matmul'

@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: ordered
+---
+[
+    "scalar",
+    "neon",
+    "sse4.2",
+    "avx2",
+    "avx512",
+]

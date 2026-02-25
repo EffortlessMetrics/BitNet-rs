@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-device-probe/tests/snapshot_tests.rs
+expression: debug
+---
+[
+    "Scalar",
+    "Neon",
+    "Sse42",
+    "Avx2",
+    "Avx512",
+]
