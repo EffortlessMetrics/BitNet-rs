@@ -80,7 +80,7 @@ fn test_inspect_fails_on_nonexistent_file() {
         .args(["inspect", "--ln-stats", "/nonexistent/model.gguf"])
         .assert()
         .failure()
-        .stdout(predicate::str::contains("Failed to open model"));
+        .stderr(predicate::str::contains("Failed to open model"));
 }
 
 /// Tests feature spec: validation-workflow.md#error-handling
@@ -93,7 +93,7 @@ fn test_inspect_requires_inspection_mode() {
         .args(["inspect", temp_path.to_str().unwrap()])
         .assert()
         .failure()
-        .stdout(predicate::str::contains("No inspection mode specified"));
+        .stderr(predicate::str::contains("No inspection mode specified"));
 }
 
 // ============================================================================

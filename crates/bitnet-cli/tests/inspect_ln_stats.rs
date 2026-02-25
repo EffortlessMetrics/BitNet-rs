@@ -37,7 +37,7 @@ fn inspect_fails_on_missing_file() {
         .args(["inspect", "--ln-stats", "/nonexistent/model.gguf"])
         .assert()
         .failure()
-        .stdout(predicate::str::contains("Failed to open model"));
+        .stderr(predicate::str::contains("Failed to open model"));
 }
 
 #[cfg(feature = "full-cli")]
@@ -49,7 +49,7 @@ fn inspect_requires_inspection_mode() {
         .args(["inspect", "/some/path.gguf"])
         .assert()
         .failure()
-        .stdout(predicate::str::contains("No inspection mode specified"));
+        .stderr(predicate::str::contains("No inspection mode specified"));
 }
 
 // Note: Full integration test with a real GGUF model would require:
