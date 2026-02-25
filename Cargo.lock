@@ -538,6 +538,7 @@ version = "0.1.0"
 dependencies = [
  "bitnet-common",
  "log",
+ "proptest",
  "serial_test",
  "temp-env",
 ]
@@ -549,7 +550,9 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-generation",
+ "proptest",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
