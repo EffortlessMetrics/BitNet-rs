@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#689.
+> **Last updated**: reflects implementation state after PRs #608–#692.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -59,6 +59,8 @@
 | `tracing-test 0.2.6` added to workspace dependencies | `Cargo.toml` | #686 |
 | Fixture timeout fixed: >300s → ~1s (50k-vocab allocations replaced with 512-dim) | `crates/bitnet-quantization/tests/fixtures/models/qlinear_layer_data.rs` | #687 |
 | Property tests for `bitnet-transformer` KVCache invariants (4 proptest properties) | `crates/bitnet-transformer/tests/property_tests.rs` | #689 |
+| Env-var race fixed in `bitnet-startup-contract-core`; 5 proptest properties added | `crates/bitnet-startup-contract-core/src/lib.rs`, `tests/property_tests.rs` | #691 |
+| 6 proptest properties for `bitnet-runtime-feature-flags-core` (cuda⇒gpu, cpu⇒inference+kernels+tokenizers, feature_line prefix) | `crates/bitnet-runtime-feature-flags-core/tests/property_tests.rs` | #692 |
 
 ### 🔲 What's Planned
 
