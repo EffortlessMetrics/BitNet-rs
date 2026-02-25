@@ -336,9 +336,7 @@ mod tests {
         assert!(backend.is_ok());
     }
 
-    // These require complete kernels / weights. Keep them opt-in.
-    // Run with: cargo test -p bitnet-inference --features full-engine
-    #[cfg_attr(not(feature = "full-engine"), ignore)]
+    // Forward pass test using MockModel (no real weights needed).
     #[tokio::test]
     async fn test_cpu_backend_forward() {
         let model = Arc::new(MockModel::new());

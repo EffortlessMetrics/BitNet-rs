@@ -2154,8 +2154,7 @@ mod tests {
         let _ = elapsed; // Suppress unused variable warning
     }
 
-    // Test requires full engine implementation
-    #[cfg_attr(not(feature = "full-engine"), ignore)]
+    // Test using MockModel and MockTokenizer (no real weights needed).
     #[tokio::test]
     async fn test_text_generation() {
         let model = Arc::new(MockModel::new());
