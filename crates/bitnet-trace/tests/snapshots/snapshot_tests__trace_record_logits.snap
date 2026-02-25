@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-trace/tests/snapshot_tests.rs
+expression: record
+---
+{
+  "name": "logits",
+  "shape": [
+    1,
+    1,
+    32000
+  ],
+  "dtype": "F32",
+  "blake3": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "rms": 2.345,
+  "num_elements": 32000,
+  "seq": 1,
+  "layer": -1,
+  "stage": "logits"
+}

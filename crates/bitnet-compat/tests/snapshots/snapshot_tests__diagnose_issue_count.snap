@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-compat/tests/snapshot_tests.rs
+expression: issues.len()
+---
+3

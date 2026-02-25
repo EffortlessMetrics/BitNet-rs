@@ -1,0 +1,19 @@
+---
+source: crates/bitnet-trace/tests/snapshot_tests.rs
+expression: record
+---
+{
+  "name": "layer3/ffn_out",
+  "shape": [
+    1,
+    1,
+    2048
+  ],
+  "dtype": "F32",
+  "blake3": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "rms": 0.5,
+  "num_elements": 2048,
+  "seq": 5,
+  "layer": 3,
+  "stage": "ffn_out"
+}
