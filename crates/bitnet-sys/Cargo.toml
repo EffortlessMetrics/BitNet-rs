@@ -32,6 +32,9 @@ bindgen = { version = "0.72.1", optional = true }
 cc = { version = "1.2.41", optional = true }
 xtask-build-helper = { path = "../../xtask-build-helper" }
 
+[dev-dependencies]
+proptest.workspace = true
+
 [package.metadata.docs.rs]
 features = ["ffi"]
 rustdoc-args = ["--cfg", "docsrs"]

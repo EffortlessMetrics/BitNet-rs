@@ -1028,6 +1028,7 @@ dependencies = [
  "bytemuck",
  "clap",
  "half",
+ "proptest",
  "safetensors 0.6.2",
  "serde_json",
  "tempfile",
@@ -1103,6 +1104,7 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "cc",
+ "proptest",
  "thiserror 2.0.18",
  "xtask-build-helper",
 ]
