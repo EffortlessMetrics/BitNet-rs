@@ -18,8 +18,12 @@ on:
       - '.github/workflows/**'
       - '.github/pull_request_template.md'
       - '.github/ISSUE_TEMPLATE/**'
+      - '.github/copilot-instructions.md'
       - 'README.md'
       - 'docs/**'
+      - 'CLAUDE.md'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
       - 'SECURITY.md'
   push:
     branches: [ main ]
@@ -33,8 +37,12 @@ on:
       - '.github/workflows/**'
       - '.github/pull_request_template.md'
       - '.github/ISSUE_TEMPLATE/**'
+      - '.github/copilot-instructions.md'
       - 'README.md'
       - 'docs/**'
+      - 'CLAUDE.md'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
       - 'SECURITY.md'
   workflow_dispatch:
 
