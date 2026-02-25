@@ -908,6 +908,8 @@ dependencies = [
  "bitnet-bdd-grid",
  "bitnet-runtime-context",
  "bitnet-runtime-feature-flags",
+ "serial_test",
+ "temp-env",
 ]
 
 [[package]]
@@ -1247,6 +1249,8 @@ dependencies = [
  "candle-core",
  "serde",
  "serde_json",
+ "serial_test",
+ "temp-env",
  "tempfile",
 ]
 
