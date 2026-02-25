@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#710.
+> **Last updated**: reflects implementation state after PRs #608–#717.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -74,6 +74,13 @@
 | `bitnet-runtime-feature-flags-core` (4 snaps: to_labels CPU/GPU+CUDA/empty, active feature set) + `bitnet-testing-scenarios-core` (4: scenario descriptions, timeout, log level, count) + `bitnet-startup-contract-core` (3: RuntimeComponent labels, summary tokens, is_compatible) + `bitnet-feature-contract` (4: consistent/inconsistent/empty) + `bitnet-testing-policy-core` (3: unit/local summary, active_profile_summary, CI snapshot) | `crates/bitnet-{runtime-feature-flags,testing-scenarios,startup-contract,feature-contract,testing-policy}-core/tests/snapshot_tests.rs` | #708 |
 | `bitnet-inference` (7 snaps: GenerationConfig defaults/greedy/creative, InferenceConfig defaults, validation error) + `bitnet-kernels` (4: provider count/fallback/selection/name, cpu-gated) + `bitnet-models` (5: LoadConfig/ProductionLoadConfig defaults, DeviceStrategy Debug) + `bitnet-server` (6: ServerSettings host/port/timeouts, BatchEngineConfig, ConcurrencyConfig, DeviceConfig variants) | `crates/bitnet-{inference,kernels,models,server}/tests/snapshot_tests.rs` | #709 |
 | `bitnet-runtime-context-core` (3: ActiveContext Unit/Local+Integration/Ci defaults, TestingScenario variants) + `bitnet-startup-contract-diagnostics` (3: profile_summary format, info count, warnings count) + `bitnet-startup-contract-guard` (3: RuntimeComponent labels, is_compatible, feature_line prefix) + `bitnet-runtime-feature-flags` (3: feature_line prefix+full, feature_labels count) + `bitnet-testing-scenarios-profile-core` (7: ConfigurationContext/ReportingProfile/FixtureProfile/ComparisonToleranceProfile/CrossValidationProfile/TestConfigProfile defaults, ReportFormat variants) | `crates/bitnet-{runtime-context-core,startup-contract-diagnostics,startup-contract-guard,runtime-feature-flags,testing-scenarios-profile-core}/tests/snapshot_tests.rs` | #710 |
+| `bitnet-st2gguf` snapshot tests (6: `ConversionOptions` defaults/strict, `QuantizationType` I2_S/TL2 Display, `ConversionError` missing-file/unsupported-format messages) | `crates/bitnet-st2gguf/tests/snapshot_tests.rs` | #711 |
+| Snapshot tests for 5 thin-wrapper/policy-facade crates (15 total): `bitnet-runtime-profile-contract-core` (4), `bitnet-testing-policy-contract` (3), `bitnet-testing-policy-interop` (3), `bitnet-testing-policy-tests` (3), `bitnet-testing-profile` (2) | `crates/bitnet-{runtime-profile-contract-core,testing-policy-contract,testing-policy-interop,testing-policy-tests,testing-profile}/tests/snapshot_tests.rs` | #712 |
+| `bitnet-runtime-feature-flags` snapshot test name/value corrected to `--features cpu` reality | `crates/bitnet-runtime-feature-flags/tests/snapshot_tests.rs` | #715 |
+| `docs/development/test-suite.md` updated: snapshot/property/fuzz sections, test counts 1935→2082+ | `docs/development/test-suite.md` | #716 |
+| `CLAUDE.md` updated: test count 970+→2082+, snapshot/property test categories added | `CLAUDE.md` | #717 |
+| `GgufTokenizer::real_vocab_size()` method — distinguishes real vs padded vocab sizes | `crates/bitnet-tokenizers/src/lib.rs`, `crates/bitnet-tokenizers/src/gguf_loader.rs` | #673 |
+| Log-capture test infrastructure (`tracing-test 0.2.6`) and `#[traced_test]` unit tests | `crates/bitnet-prompt-templates/src/lib.rs` | #686 |
 
 ### 🔲 What's Planned
 
@@ -84,14 +91,6 @@
 2. **Scheduled fuzz/crossval evidence expansion**
    - Nightly timeboxed fuzz runs with artifact upload (partially done via `fuzz-ci.yml`)
    - Real-model crossval producing receipts (gated on model download infrastructure)
-
-3. **GgufTokenizer `real_vocab_size()` method**
-   - Distinguish real vs padded vocab sizes in `bitnet-tokenizers`
-   - Required for tokenizer fixture tests in `tokenizer_vocab_size.rs`
-
-4. **Log-capture test infrastructure**
-   - `tracing-test` integration for testing `warn!`/`debug!` emission in hot paths
-   - Required for kv_cache_validation and qk256_tolerance log-format tests
 
 ---
 
