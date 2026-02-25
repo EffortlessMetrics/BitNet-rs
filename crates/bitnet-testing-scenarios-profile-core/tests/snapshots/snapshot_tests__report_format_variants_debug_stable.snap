@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-testing-scenarios-profile-core/tests/snapshot_tests.rs
+expression: "{\n    let variants =\n    [ReportFormat::Html, ReportFormat::Json, ReportFormat::Junit,\n    ReportFormat::Markdown, ReportFormat::Csv,];\n    variants.iter().map(|f| format!(\"{:?}\", f)).collect::<Vec<_>>().join(\"\\n\")\n}"
+---
+Html
+Json
+Junit
+Markdown
+Csv

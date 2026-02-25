@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-startup-contract-guard/tests/snapshot_tests.rs
+expression: "{\n    let labels =\n    [RuntimeComponent::Cli.label(), RuntimeComponent::Server.label(),\n    RuntimeComponent::Test.label(),\n    RuntimeComponent::Custom.label(),].join(\"\\n\"); labels\n}"
+---
+bitnet-cli
+bitnet-server
+test
+custom

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-scenarios-profile-core/tests/snapshot_tests.rs
+expression: "{\n    profile.formats.iter().map(|f|\n    format!(\"{:?}\", f)).collect::<Vec<_>>().join(\",\")\n}"
+---
+Html,Json

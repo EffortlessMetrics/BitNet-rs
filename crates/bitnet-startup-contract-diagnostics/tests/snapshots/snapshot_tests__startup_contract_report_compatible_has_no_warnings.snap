@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-startup-contract-diagnostics/tests/snapshot_tests.rs
+expression: "&report.warnings.len().to_string()"
+---
+2

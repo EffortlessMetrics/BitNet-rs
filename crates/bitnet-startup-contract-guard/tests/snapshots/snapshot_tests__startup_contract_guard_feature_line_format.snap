@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-startup-contract-guard/tests/snapshot_tests.rs
+expression: "&guard.feature_line[..9]"
+---
+features:

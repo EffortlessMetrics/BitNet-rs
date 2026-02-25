@@ -22,3 +22,6 @@ num_cpus = "1.17.0"
 [features]
 default = []
 fixtures = []
+
+[dev-dependencies]
+insta.workspace = true

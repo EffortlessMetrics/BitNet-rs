@@ -15,3 +15,6 @@ include = ["src/**", "Cargo.toml"]
 [dependencies]
 anyhow.workspace = true
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
+
+[dev-dependencies]
+insta.workspace = true

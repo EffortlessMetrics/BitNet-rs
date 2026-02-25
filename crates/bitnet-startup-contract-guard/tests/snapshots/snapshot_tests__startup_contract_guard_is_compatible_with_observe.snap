@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-startup-contract-guard/tests/snapshot_tests.rs
+expression: "&guard.is_compatible().to_string()"
+---
+false
