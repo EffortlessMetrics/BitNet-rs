@@ -164,6 +164,7 @@ async fn test_attention_projection_validation() -> Result<()> {
 }
 /// Test that strict mode configuration is properly read from environment
 #[test]
+#[serial_test::serial(bitnet_env)]
 fn test_strict_mode_config_from_env() {
     let config = unsafe {
         std::env::set_var("BITNET_STRICT_MODE", "1");
