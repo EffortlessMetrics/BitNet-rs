@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-bdd-grid-core/tests/snapshot_tests.rs
+expression: "format!(\"{:#?}\", labels)"
+---
+[
+    "cpu",
+    "inference",
+    "kernels",
+]

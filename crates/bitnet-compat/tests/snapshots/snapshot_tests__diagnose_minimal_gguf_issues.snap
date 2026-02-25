@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-compat/tests/snapshot_tests.rs
+expression: issues
+---
+[
+  "Missing BOS token ID",
+  "Missing EOS token ID",
+  "No vocabulary found"
+]

@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-trace/tests/snapshot_tests.rs
+expression: record
+---
+{
+  "name": "embeddings",
+  "shape": [
+    1,
+    512
+  ],
+  "dtype": "F32",
+  "blake3": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "rms": 1.0,
+  "num_elements": 512,
+  "seq": 0,
+  "layer": -1,
+  "stage": "embeddings"
+}

@@ -16,3 +16,4 @@ candle-core = { workspace = true }
 tempfile = "3.23.0"
 serial_test.workspace = true
 temp-env = "0.3.6"
+insta = { workspace = true, features = ["json"] }

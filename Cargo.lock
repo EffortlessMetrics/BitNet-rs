@@ -420,7 +420,10 @@ dependencies = [
 name = "bitnet-bdd-grid-core"
 version = "0.1.0"
 dependencies = [
+ "insta",
  "proptest",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -502,6 +505,7 @@ dependencies = [
  "bitnet-tokenizers",
  "chrono",
  "ggus",
+ "insta",
  "serde",
  "serde_json",
  "sha2",
@@ -1267,6 +1271,7 @@ version = "0.1.0"
 dependencies = [
  "blake3",
  "candle-core",
+ "insta",
  "serde",
  "serde_json",
  "serial_test",

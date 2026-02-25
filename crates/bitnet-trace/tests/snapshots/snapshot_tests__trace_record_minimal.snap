@@ -1,0 +1,16 @@
+---
+source: crates/bitnet-trace/tests/snapshot_tests.rs
+expression: record
+---
+{
+  "name": "layer0/q_proj",
+  "shape": [
+    1,
+    32,
+    128
+  ],
+  "dtype": "F32",
+  "blake3": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "rms": 0.123456789,
+  "num_elements": 4096
+}

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-bdd-grid-core/tests/snapshot_tests.rs
+expression: "format!(\"{:?}\", cell)"
+---
+BddCell { scenario: Unit, environment: Local, required_features: FeatureSet({Cpu}), optional_features: FeatureSet({}), forbidden_features: FeatureSet({}), intent: "Unit tests run without model or GPU" }
