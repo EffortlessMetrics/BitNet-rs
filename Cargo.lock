@@ -1037,6 +1037,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitnet-runtime-profile",
+ "proptest",
+ "serial_test",
+ "temp-env",
 ]
 
 [[package]]
