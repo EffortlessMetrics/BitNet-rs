@@ -109,7 +109,6 @@ mod strict_mode_config_tests {
     }
 
     /// Tests strict mode validation behavior
-    #[ignore = "Issue #260: TDD placeholder - Strict mode validation behavior unimplemented"]
     #[test]
     fn test_strict_mode_validation_behavior() {
         println!("🔒 Strict Mode: Testing validation behavior");
@@ -186,7 +185,6 @@ mod strict_mode_config_tests {
     }
 
     /// Tests granular strict mode configuration options
-    #[ignore = "Issue #260: TDD placeholder - Granular strict mode configuration unimplemented"]
     #[test]
     fn test_granular_strict_mode_configuration() {
         println!("🔒 Strict Mode: Testing granular configuration");

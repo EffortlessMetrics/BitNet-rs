@@ -66,7 +66,7 @@ async fn test_i2s_quantized_linear_forward_real_inference() -> Result<()> {
 /// Coverage target: quantized_linear.rs:forward_tl1()
 /// NOTE: Currently disabled due to kernel index bug (discovered by test hardening)
 #[tokio::test]
-#[ignore = "TL1 kernel has index out of bounds bug - see bitnet-kernels/src/cpu/x86.rs:355"]
+#[ignore = "TL1 kernel produces insufficient output diversity (too few unique values); real bug, keep ignored"]
 async fn test_tl1_quantized_linear_forward_real_inference() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
@@ -101,9 +101,7 @@ async fn test_tl1_quantized_linear_forward_real_inference() -> Result<()> {
 }
 /// Test TL2 quantized linear forward pass with 2-level table lookup
 /// Coverage target: quantized_linear.rs:forward_tl2()
-/// NOTE: Currently disabled due to kernel index bug (discovered by test hardening)
 #[tokio::test]
-#[ignore = "TL2 kernel has index out of bounds bug - see bitnet-kernels/src/cpu/x86.rs:355"]
 async fn test_tl2_quantized_linear_forward_real_inference() -> Result<()> {
     let batch_size = 1;
     let seq_len = 4;

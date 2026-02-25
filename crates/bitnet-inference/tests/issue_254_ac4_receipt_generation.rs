@@ -15,7 +15,6 @@ use std::path::Path;
 use support::EnvGuard;
 /// AC:4.1 - Generate inference receipt with compute_path="real"
 /// Validates receipt schema and required fields
-#[ignore = "blocked by issue #254 (shape mismatch in layer-norm)"]
 #[tokio::test]
 #[serial(bitnet_env)]
 async fn test_ac4_receipt_generation_real_path() -> Result<()> {
