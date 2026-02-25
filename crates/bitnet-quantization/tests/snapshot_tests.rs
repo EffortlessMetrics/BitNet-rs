@@ -74,4 +74,3 @@ fn validate_round_trip_tl2_small_tensor() {
     let passed = result.unwrap();
     assert_snapshot!("round_trip_tl2_half_ones_passed", format!("{}", passed));
 }
-

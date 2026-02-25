@@ -26,11 +26,7 @@ fn inference_command_defaults() {
     // Snapshot the key defaults — catches accidental default value changes
     let defaults = format!(
         "max_tokens={} temperature={:.1} seed={:?} greedy={} prompt_template={:?}",
-        cmd.max_tokens,
-        cmd.temperature,
-        cmd.seed,
-        cmd.greedy,
-        cmd.prompt_template
+        cmd.max_tokens, cmd.temperature, cmd.seed, cmd.greedy, cmd.prompt_template
     );
     assert_snapshot!("inference_command_defaults", defaults);
 }
