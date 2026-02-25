@@ -1,3 +1,4 @@
+use bitnet_server::InferenceRequest;
 /// Property-based tests for bitnet-server using proptest.
 ///
 /// Tests cover:
@@ -8,7 +9,6 @@
 /// - SecurityValidator input validation properties
 use bitnet_server::batch_engine::{BatchEngineConfig, BatchRequest, RequestPriority};
 use bitnet_server::security::{SecurityConfig, SecurityValidator};
-use bitnet_server::InferenceRequest;
 use proptest::prelude::*;
 
 proptest! {
@@ -80,7 +80,7 @@ proptest! {
         prop_assert_eq!(request.priority, priority);
     }
 
-    /// SecurityConfig: max_prompt_length ≥ 1 is always valid  
+    /// SecurityConfig: max_prompt_length ≥ 1 is always valid
     #[test]
     fn prop_security_config_prompt_length_positive(
         max_prompt_length in 1usize..=65536usize
