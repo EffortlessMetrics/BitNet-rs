@@ -203,6 +203,11 @@ fuzz/target/
 fuzz/artifacts/
 fuzz/coverage/
 fuzz/corpus/
+# libfuzzer crash / slow-unit files written to fuzz/ root during local runs
+fuzz/crash-*
+fuzz/slow-unit-*
+fuzz/leak-*
+fuzz/timeout-*
 
 tests/tests/cache/incremental/last_run.json
 

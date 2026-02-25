@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 11d50414880c820ffa04b2dbe9e925bb128c1bb73192b642ff87e92460a43c47 # shrinks to caps = KernelCapabilities { cpu_rust: false, cuda_compiled: false, cuda_runtime: false, cpp_ffi: true, simd_level: Scalar }

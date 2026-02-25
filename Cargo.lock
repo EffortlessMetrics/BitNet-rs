@@ -549,7 +549,9 @@ dependencies = [
  "anyhow",
  "bitnet-common",
  "bitnet-generation",
+ "proptest",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -633,6 +635,9 @@ dependencies = [
 [[package]]
 name = "bitnet-honest-compute"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "bitnet-inference"
@@ -833,6 +838,9 @@ dependencies = [
 [[package]]
 name = "bitnet-rope"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "bitnet-runtime-bootstrap"
@@ -1206,6 +1214,7 @@ dependencies = [
  "dirs",
  "futures-util",
  "memmap2",
+ "proptest",
  "reqwest",
  "sentencepiece",
  "sentencepiece-model",
@@ -1251,6 +1260,7 @@ name = "bitnet-validation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "proptest",
  "regex",
  "serde",
  "serde_yaml_ng",

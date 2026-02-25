@@ -991,3 +991,77 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    // generate_basic always produces a receipt that passes schema validation.
+    proptest! {
+        #[test]
+        fn generate_basic_passes_schema_validation(
+            backend in prop_oneof![Just("cpu"), Just("cuda"), Just("gpu")],
+            kernel_count in 0usize..=8,
+        ) {
+            let kernels: Vec<String> = (0..kernel_count)
+                .map(|i| format!("kernel_{i}"))
+                .collect();
+            let receipt = InferenceReceipt::generate(backend, kernels, None).unwrap();
+            prop_assert!(
+                receipt.validate_schema().is_ok(),
+                "schema validation failed for backend={:?}",
+                backend
+            );
+        }
+    }
+
+    // generate_basic with compute_path "real" always passes validate_compute_path.
+    proptest! {
+        #[test]
+        fn generate_basic_has_real_compute_path(
+            backend in "[a-z]{1,8}",
+        ) {
+            let receipt = InferenceReceipt::generate(&backend, vec!["k".to_string()], None)
+                .unwrap();
+            prop_assert_eq!(receipt.compute_path.as_str(), "real");
+            prop_assert!(receipt.validate_compute_path().is_ok());
+        }
+    }
+
+    // validate_kernel_ids accepts any kernel IDs that are non-empty and ≤128 chars.
+    proptest! {
+        #[test]
+        fn validate_kernel_ids_accepts_valid_ids(
+            ids in prop::collection::vec("[a-z_]{1,32}", 1..=16),
+        ) {
+            let mut receipt =
+                InferenceReceipt::generate("cpu", ids.clone(), None).unwrap();
+            receipt.kernels = ids;
+            prop_assert!(
+                receipt.validate_kernel_ids().is_ok(),
+                "expected Ok for valid kernel IDs"
+            );
+        }
+    }
+
+    // validate_kernel_ids rejects any slice that contains an empty string.
+    proptest! {
+        #[test]
+        fn validate_kernel_ids_rejects_empty_id(
+            prefix in prop::collection::vec("[a-z_]{1,16}", 0..=8),
+            suffix in prop::collection::vec("[a-z_]{1,16}", 0..=8),
+        ) {
+            let mut kernels = prefix;
+            kernels.push(String::new()); // inject empty id
+            kernels.extend(suffix);
+            let mut receipt =
+                InferenceReceipt::generate("cpu", vec!["ok".to_string()], None).unwrap();
+            receipt.kernels = kernels;
+            prop_assert!(
+                receipt.validate_kernel_ids().is_err(),
+                "expected Err when empty kernel ID present"
+            );
+        }
+    }
+}

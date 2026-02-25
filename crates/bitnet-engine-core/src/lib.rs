@@ -140,3 +140,73 @@ mod tests {
         let _ = StopReason::StopString("</s>".to_string());
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        /// `SessionConfig` round-trips through JSON without data loss.
+        #[test]
+        fn session_config_json_roundtrip(
+            model_path in "[a-z0-9/_\\-]{0,64}",
+            tokenizer_path in "[a-z0-9/_\\-]{0,64}",
+            backend in "(cpu|cuda|gpu|ffi)",
+            max_context in 1usize..=65536,
+            seed in proptest::option::of(any::<u64>()),
+        ) {
+            let cfg = SessionConfig {
+                model_path,
+                tokenizer_path,
+                backend,
+                max_context,
+                seed,
+            };
+            let json = serde_json::to_string(&cfg).expect("serialize");
+            let back: SessionConfig = serde_json::from_str(&json).expect("deserialize");
+            prop_assert_eq!(&cfg.model_path, &back.model_path);
+            prop_assert_eq!(&cfg.tokenizer_path, &back.tokenizer_path);
+            prop_assert_eq!(&cfg.backend, &back.backend);
+            prop_assert_eq!(cfg.max_context, back.max_context);
+            prop_assert_eq!(cfg.seed, back.seed);
+        }
+
+        /// `BackendInfo` round-trips through JSON.
+        #[test]
+        fn backend_info_json_roundtrip(
+            backend_name in "[a-z0-9_\\-]{0,32}",
+            kernel_ids in proptest::collection::vec("[a-z0-9_]{1,16}", 0..=8),
+            backend_summary in "[a-z0-9 _\\-]{0,64}",
+        ) {
+            let info = BackendInfo {
+                backend_name,
+                kernel_ids,
+                backend_summary,
+            };
+            let json = serde_json::to_string(&info).expect("serialize");
+            let back: BackendInfo = serde_json::from_str(&json).expect("deserialize");
+            prop_assert_eq!(&info.backend_name, &back.backend_name);
+            prop_assert_eq!(&info.kernel_ids, &back.kernel_ids);
+            prop_assert_eq!(&info.backend_summary, &back.backend_summary);
+        }
+
+        /// `SessionMetrics` non-negativity: metrics constructed from valid
+        /// measurements must not yield negative tokens_per_second.
+        #[test]
+        fn session_metrics_non_negative(
+            tps in 0.0f64..1_000_000.0,
+            ttft in 0.0f64..60_000.0,
+            total in 0usize..=100_000,
+        ) {
+            let m = SessionMetrics {
+                tokens_per_second: tps,
+                time_to_first_token_ms: ttft,
+                total_tokens: total,
+            };
+            prop_assert!(m.tokens_per_second >= 0.0);
+            prop_assert!(m.time_to_first_token_ms >= 0.0);
+            prop_assert_eq!(m.total_tokens, total);
+        }
+    }
+}

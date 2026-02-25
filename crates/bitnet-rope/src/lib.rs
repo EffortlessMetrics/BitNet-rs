@@ -162,3 +162,66 @@ mod tests {
         assert!(matches!(build_tables(4, 1, 0.0), Err(RopeTableError::NonPositiveBase { .. })));
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    // build_tables with valid even dim and positive base always succeeds.
+    proptest! {
+        #[test]
+        fn build_tables_valid_inputs_succeed(
+            dim in (1u32..=32u32).prop_map(|d| d * 2), // even dims 2..=64
+            seq_len in 1usize..=64,
+            base in 100f32..=1_000_000f32,
+        ) {
+            let result = build_tables(dim as usize, seq_len, base);
+            prop_assert!(result.is_ok(), "expected Ok for dim={} seq_len={} base={}", dim, seq_len, base);
+        }
+    }
+
+    // Resulting tables have the expected shape: len == seq_len * half_dim.
+    proptest! {
+        #[test]
+        fn build_tables_shape_invariant(
+            dim in (1u32..=16u32).prop_map(|d| d * 2),
+            seq_len in 1usize..=32,
+        ) {
+            let base = DEFAULT_ROPE_BASE;
+            let tables = build_tables(dim as usize, seq_len, base).unwrap();
+            let expected_half = dim as usize / 2;
+            prop_assert_eq!(tables.half_dim, expected_half);
+            prop_assert_eq!(tables.sin.len(), seq_len * expected_half);
+            prop_assert_eq!(tables.cos.len(), seq_len * expected_half);
+        }
+    }
+
+    // sin^2 + cos^2 ≈ 1 for every corresponding pair.
+    proptest! {
+        #[test]
+        fn build_tables_trig_identity(
+            dim in (1u32..=8u32).prop_map(|d| d * 2),
+            seq_len in 1usize..=16,
+        ) {
+            let tables = build_tables(dim as usize, seq_len, DEFAULT_ROPE_BASE).unwrap();
+            for (s, c) in tables.sin.iter().zip(&tables.cos) {
+                let norm = s * s + c * c;
+                prop_assert!(
+                    (norm - 1.0).abs() < 1e-5,
+                    "sin²+cos²={} != 1.0 for sin={} cos={}",
+                    norm, s, c
+                );
+            }
+        }
+    }
+
+    // Odd dimensions and non-positive bases are rejected.
+    proptest! {
+        #[test]
+        fn build_tables_rejects_odd_dim(dim in (1u32..=32u32).prop_map(|d| d * 2 - 1)) {
+            let result = build_tables(dim as usize, 1, DEFAULT_ROPE_BASE);
+            prop_assert!(result.is_err(), "expected Err for odd dim={}", dim);
+        }
+    }
+}

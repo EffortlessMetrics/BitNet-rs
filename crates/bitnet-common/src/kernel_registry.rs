@@ -307,3 +307,78 @@ mod tests {
         assert_eq!(caps.best_available(), Some(KernelBackend::CpuRust));
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn arb_caps() -> impl Strategy<Value = KernelCapabilities> {
+        (any::<bool>(), any::<bool>(), any::<bool>(), any::<bool>()).prop_map(
+            |(cpu_rust, cuda_compiled, cuda_runtime, cpp_ffi)| KernelCapabilities {
+                cpu_rust,
+                cuda_compiled,
+                cuda_runtime: cuda_compiled && cuda_runtime,
+                cpp_ffi,
+                simd_level: SimdLevel::Scalar,
+            },
+        )
+    }
+
+    // compiled_backends never contains duplicates.
+    proptest! {
+        #[test]
+        fn compiled_backends_no_duplicates(caps in arb_caps()) {
+            let backends = caps.compiled_backends();
+            let unique: std::collections::HashSet<_> = backends.iter().collect();
+            prop_assert_eq!(backends.len(), unique.len(), "duplicates in {:?}", backends);
+        }
+    }
+
+    // best_available returns Some iff cpu_rust or (cuda_compiled && cuda_runtime) or cpp_ffi.
+    proptest! {
+        #[test]
+        fn best_available_iff_any_backend_reachable(caps in arb_caps()) {
+            let reachable = caps.cpu_rust
+                || (caps.cuda_compiled && caps.cuda_runtime)
+                || caps.cpp_ffi;
+            let best = caps.best_available();
+            prop_assert_eq!(
+                best.is_some(),
+                reachable,
+                "reachable={} but best={:?} for cpu_rust={} cuda_compiled={} cuda_runtime={} cpp_ffi={}",
+                reachable, best, caps.cpu_rust, caps.cuda_compiled, caps.cuda_runtime, caps.cpp_ffi
+            );
+        }
+    }
+
+    // CUDA is preferred over CPU when both are available.
+    proptest! {
+        #[test]
+        fn cuda_preferred_over_cpu_when_both_available(any_ffi in any::<bool>()) {
+            let caps = KernelCapabilities {
+                cpu_rust: true,
+                cuda_compiled: true,
+                cuda_runtime: true,
+                cpp_ffi: any_ffi,
+                simd_level: SimdLevel::Scalar,
+            };
+            prop_assert_eq!(caps.best_available(), Some(KernelBackend::Cuda));
+        }
+    }
+
+    // KernelBackend::requires_gpu is true only for Cuda.
+    proptest! {
+        #[test]
+        fn requires_gpu_only_for_cuda(
+            backend in prop_oneof![
+                Just(KernelBackend::CpuRust),
+                Just(KernelBackend::Cuda),
+                Just(KernelBackend::CppFfi),
+            ],
+        ) {
+            let requires = backend.requires_gpu();
+            prop_assert_eq!(requires, backend == KernelBackend::Cuda);
+        }
+    }
+}

@@ -157,3 +157,33 @@ mod tests {
         });
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+
+    // `gpu_compiled()` is a compile-time constant — multiple calls always agree.
+    #[test]
+    fn gpu_compiled_is_idempotent() {
+        assert_eq!(gpu_compiled(), gpu_compiled());
+    }
+
+    // `detect_simd_level()` is deterministic — repeated calls return the same value.
+    #[test]
+    fn simd_level_is_deterministic() {
+        assert_eq!(detect_simd_level(), detect_simd_level());
+    }
+
+    // `DeviceCapabilities::detect()` always reports `cpu_rust = true`.
+    #[test]
+    fn device_caps_always_has_cpu() {
+        assert!(DeviceCapabilities::detect().cpu_rust, "cpu_rust must always be true");
+    }
+
+    // `cuda_compiled` in the capabilities snapshot matches `gpu_compiled()`.
+    #[test]
+    fn device_caps_cuda_consistent_with_gpu_compiled() {
+        let caps = DeviceCapabilities::detect();
+        assert_eq!(caps.cuda_compiled, gpu_compiled());
+    }
+}

@@ -235,3 +235,59 @@ mod tests {
         assert!(validate_kernel_ids(kernels).is_ok());
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    // validate_kernel_ids accepts any non-empty, non-whitespace-only, non-mock,
+    // ≤128 char kernel ID.
+    proptest! {
+        #[test]
+        fn validate_kernel_ids_accepts_valid_single_id(
+            id in "[a-z_][a-z0-9_]{0,30}",
+        ) {
+            // Skip mock-like names
+            prop_assume!(!id.contains("mock") && !id.contains("fake") && !id.contains("placeholder"));
+            let result = validate_kernel_ids([id.as_str()]);
+            prop_assert!(result.is_ok(), "expected Ok for valid id={:?}", id);
+        }
+    }
+
+    // validate_kernel_ids rejects any kernel ID longer than MAX_KERNEL_ID_LENGTH.
+    proptest! {
+        #[test]
+        fn validate_kernel_ids_rejects_too_long_id(extra in 1usize..=64) {
+            let id = "k".repeat(MAX_KERNEL_ID_LENGTH + extra);
+            let result = validate_kernel_ids([id.as_str()]);
+            prop_assert!(result.is_err(), "expected Err for id of length {}", id.len());
+        }
+    }
+
+    // validate_compute_path accepts "real" and rejects anything else.
+    proptest! {
+        #[test]
+        fn validate_compute_path_only_accepts_real(path in "[a-z]{1,16}") {
+            let result = validate_compute_path(&path);
+            if path == REAL_COMPUTE_PATH {
+                prop_assert!(result.is_ok(), "expected Ok for 'real'");
+            } else {
+                prop_assert!(result.is_err(), "expected Err for {:?}", path);
+            }
+        }
+    }
+
+    // classify_compute_path returns "real" when all kernels are non-mock.
+    proptest! {
+        #[test]
+        fn classify_returns_real_for_non_mock_kernels(
+            kernels in prop::collection::vec("[a-z_][a-z0-9_]{0,15}", 1..=8),
+        ) {
+            let all_non_mock = kernels.iter().all(|k| !is_mock_kernel_id(k));
+            prop_assume!(all_non_mock);
+            let result = classify_compute_path(kernels.iter().map(String::as_str));
+            prop_assert_eq!(result, REAL_COMPUTE_PATH);
+        }
+    }
+}

@@ -302,3 +302,83 @@ rules:
         assert!(r.check_ln("blk.0.attn_norm.weight", 0.8));
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    // detect_rules always returns one of the three known ruleset names.
+    proptest! {
+        #[test]
+        fn detect_rules_always_returns_known_name(
+            arch in "[a-zA-Z0-9._-]{1,32}",
+            file_type in 0u32..=10,
+        ) {
+            let r = detect_rules(&arch, file_type);
+            let valid_names = ["bitnet-b1.58:f16", "bitnet-b1.58:i2_s", "generic"];
+            prop_assert!(
+                valid_names.contains(&r.name.as_str()),
+                "unexpected ruleset name: {:?}",
+                r.name
+            );
+        }
+    }
+
+    // For any RMS value within a ruleset's envelope, check_ln accepts it.
+    // Uses the bitnet-b1.58:f16 ruleset and a known-matching pattern.
+    proptest! {
+        #[test]
+        fn check_ln_accepts_values_in_f16_attn_envelope(
+            rms in 0.50f32..=2.0,
+        ) {
+            let r = rules_bitnet_b158_f16();
+            // ".*norm\.weight$" broad pattern: min=0.50, max=2.0
+            prop_assert!(
+                r.check_ln("blk.0.attn_norm.weight", rms),
+                "expected check_ln to accept rms={} for attn_norm in f16 ruleset",
+                rms
+            );
+        }
+    }
+
+    // For any RMS strictly outside [0.80, 1.20], generic ruleset rejects it
+    // when the name matches the generic norm pattern.
+    proptest! {
+        #[test]
+        fn check_ln_rejects_values_outside_generic_envelope(
+            rms in prop_oneof![
+                proptest::num::f32::POSITIVE.prop_filter("below min", |v| *v < 0.80),
+                (1.21f32..=1000.0f32).boxed(),
+            ],
+        ) {
+            let r = rules_generic();
+            prop_assume!(rms.is_finite() && rms >= 0.0);
+            // generic has min=0.80, max=1.20 for norm weights; generator ensures out-of-range
+            prop_assert!(
+                !r.check_ln("blk.0.attn_norm.weight", rms),
+                "expected generic to reject rms={} for attn_norm",
+                rms
+            );
+        }
+    }
+
+    // check_proj_rms is consistent with its min/max bounds in the bitnet-f16 ruleset.
+    proptest! {
+        #[test]
+        fn check_proj_rms_consistent_with_f16_bounds(rms in 0.0f32..=1.0) {
+            let r = rules_bitnet_b158_f16();
+            // f16 ruleset: proj_weight_rms_min=0.01, proj_weight_rms_max=0.40
+            let accepted = r.check_proj_rms(rms);
+            let expected = rms >= 0.01 && rms <= 0.40;
+            prop_assert_eq!(
+                accepted,
+                expected,
+                "rms={}: expected={} got={}",
+                rms,
+                expected,
+                accepted
+            );
+        }
+    }
+}

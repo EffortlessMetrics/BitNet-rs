@@ -5,18 +5,31 @@ All notable changes to BitNet.rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Property Tests for `bitnet-device-probe`** (PR #650): 4 proptest properties verifying GPU compiled idempotency, SIMD level determinism, CPU always available, and cuda_compiled consistency with `gpu_compiled()`
+- **Property Tests for `bitnet-engine-core`** (PR #650): 3 proptest properties verifying `SessionConfig` JSON round-trips, `BackendInfo` JSON round-trips, and `SessionMetrics` non-negativity invariants
+- **Property Tests for `bitnet-validation`** (PR #650): 7 proptest properties for `rules.rs` (detect_rules name invariants, envelope bounds, proj_rms consistency) and `names.rs` (is_ln_gamma keyword recognition, suffix requirement, determinism)
+- **Property Tests for `bitnet-sampling`** (PR #650): 5 proptest properties for greedy argmax, index bounds, softmax distribution validity, top-k finite count, temperature=0 greedy equivalence
+- **Property Tests for `bitnet-rope`** (PR #650): 4 proptest properties for valid input success, shape invariants, sin²+cos²=1 trig identity, odd-dim rejection
+- **Property Tests for `bitnet-receipts`** (PR #650): 4 proptest properties for schema validation, real compute_path, valid kernel ID acceptance, empty kernel ID rejection
+- **Property Tests for `bitnet-common/kernel_registry`** (PR #650): 4 proptest properties for no-duplicate backends, best_available reachability, CUDA preference, requires_gpu semantics
+- **Property Tests for `bitnet-prompt-templates`** (PR #650): 4 proptest properties for user text inclusion, Raw identity, Instruct suffix, non-Raw stop sequences
+- **Property Tests for `bitnet-tokenizers`** (PR #650): 4 proptest properties for BasicTokenizer ASCII round-trip, byte-count invariant, empty input, empty slice decode
+- **Property Tests for `bitnet-honest-compute`** (PR #650): 4 proptest properties for valid ID acceptance, too-long ID rejection, compute_path validation, classify_compute_path correctness
+- **Docs Archive Cleanup** (PR #650): 136 stale planning/sprint/spec documents moved to `docs/archive/`; `docs/explanation/` reduced to 13 user-facing Diataxis docs
+- **Libfuzzer Crash Artifacts Gitignored**: Added `fuzz/crash-*`, `fuzz/slow-unit-*`, `fuzz/leak-*`, `fuzz/timeout-*` patterns to `.gitignore` to keep fuzz crash files out of the repo
 - **Runtime Backend Selection** (PR #642): `BackendCapabilities` snapshot at CLI/server startup producing `requested=X detected=[…] selected=Y` log line and receipt field
 - **CPU Golden Path E2E Tests** (PR #643): 5 deterministic end-to-end tests in `bitnet-inference` always running in PR CI without model download
 - **SRP Microcrates Wired Into CI** (PR #644): `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` added to CI test matrix
 - **QK256 (GGML I2_S) Pure-Rust Support** (PR #640): GGUF loader detects and stores QK256 tensors; pure-Rust `gemv_qk256()` kernel; dual I2_S flavor detection; 17 comprehensive tests; no FFI required
-- **Property Tests for SRP Microcrates**: proptest suites for `bitnet-gguf` (header parsing, magic validation, arbitrary-byte safety) and `bitnet-generation` (stop criteria, max-token budget, stop-string matching)
-- **GGUF Header Fuzz Target** (`fuzz/fuzz_targets/gguf_header.rs`): dedicated libfuzzer target exercising `bitnet-gguf`'s lightweight header parser
-- **Fuzz Target Registration**: `architecture_detection`, `tl_lut_helper`, `tokenizer_discovery`, `vocab_size_extraction` fuzz targets were present but not registered in `fuzz/Cargo.toml`; now properly wired
+- **Property Tests for SRP Microcrates** (PR #649): proptest suites for `bitnet-gguf` (header parsing, magic validation, arbitrary-byte safety) and `bitnet-generation` (stop criteria, max-token budget, stop-string matching)
+- **GGUF Header Fuzz Target** (PR #649, `fuzz/fuzz_targets/gguf_header.rs`): dedicated libfuzzer target exercising `bitnet-gguf`'s lightweight header parser
+- **Fuzz Target Registration** (PR #649): `architecture_detection`, `tl_lut_helper`, `tokenizer_discovery`, `vocab_size_extraction` fuzz targets were present but not registered in `fuzz/Cargo.toml`; now properly wired
 
 ### Fixed
 - **TL1/TL2 Quantizer Round-Trip Accuracy** (PR #641): LUT offset mismatch in `pack_2bit_values` caused clipping of codes 2–3; dequantize now maps ternary inputs within `[-1, 1]`
 - **Security Audit** (PR #645): Updated `bytes` to 1.11.1 (RUSTSEC-2026-0007) and `time` to 0.3.47 (RUSTSEC-2026-0009); added documented accepted-risk entries for gix-date, rsa, bincode advisories; fixed LGPL false-positive in GPL license check; fixed supply-chain Cargo.lock verification command
 - **GGUF Tokenizer Test Fixtures** (PR #648): Repaired three malformed GGUF fixtures (`kv_count` off-by-one, corrupted magic); rebuilt `llama3-with-hf-tokenizer.gguf` with correct 5-KV HF tokenizer metadata; added `.gitignore` exceptions so fixtures reach CI; fixed `get_u32_metadata` in `bitnet-models` to also accept `GgufValue::I32` (as generated by llama.cpp)
+- **Gitignore Fix** (PR #649): `fuzz/` was globally gitignored, preventing fuzz source files from being tracked; replaced with specific artifact-only ignores for `fuzz/target/`, `fuzz/artifacts/`, `fuzz/coverage/`, `fuzz/corpus/`
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
