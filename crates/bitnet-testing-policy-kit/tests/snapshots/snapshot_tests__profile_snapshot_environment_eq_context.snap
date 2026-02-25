@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-kit/tests/snapshot_tests.rs
+expression: (profile.environment == ctx.environment).to_string()
+---
+true

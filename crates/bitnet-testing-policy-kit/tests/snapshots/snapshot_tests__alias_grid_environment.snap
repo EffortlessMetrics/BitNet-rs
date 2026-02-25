@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-kit/tests/snapshot_tests.rs
+expression: grid_env.to_string()
+---
+local

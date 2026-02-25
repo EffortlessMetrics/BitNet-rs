@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-st2gguf/tests/snapshot_tests.rs
+expression: "format!(\"F32={f32_id} F16={f16_id}\")"
+---
+F32=0 F16=1

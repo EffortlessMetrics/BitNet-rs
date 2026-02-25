@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-testing-policy-runtime/tests/snapshot_tests.rs
+expression: state.has_grid_cell().to_string()
+---
+true

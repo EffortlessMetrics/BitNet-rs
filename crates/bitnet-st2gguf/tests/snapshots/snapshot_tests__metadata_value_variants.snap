@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-st2gguf/tests/snapshot_tests.rs
+expression: variants
+---
+[
+    "Bool(true)",
+    "U32(42)",
+    "I32(-1)",
+    "F32(1.5)",
+    "String(\"test\")",
+]

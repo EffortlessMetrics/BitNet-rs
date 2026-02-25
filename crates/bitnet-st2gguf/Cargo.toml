@@ -45,3 +45,4 @@ half = "2.6.0"
 bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
 tempfile.workspace = true
 memmap2.workspace = true
+insta.workspace = true
