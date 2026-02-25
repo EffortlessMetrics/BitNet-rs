@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
+expression: "summary.join(\"\\n\")"
+---
+CrossValidation/Ci: required=[inference,kernels,tokenizers,crossval] intent=Reference parity / regression surface with controlled fixtures
+Debug/Local: required=[inference] intent=Detailed behavior introspection and diagnostics
+EndToEnd/Ci: required=[inference,kernels,tokenizers,crossval,reporting] intent=Full stack workflow checks spanning startup through response path
+Integration/Local: required=[inference,kernels,tokenizers] intent=Component and module interaction in local build
+Minimal/Local: required=[inference] intent=Fastest-path execution with hard constraints
+Performance/Ci: required=[inference,kernels] intent=Throughput and latency-sensitive checks
+Smoke/PreProduction: required=[inference] intent=Minimum viable run for deployment safety
+Unit/Local: required=[inference,kernels,tokenizers] intent=Fast, isolated unit execution with core inference path

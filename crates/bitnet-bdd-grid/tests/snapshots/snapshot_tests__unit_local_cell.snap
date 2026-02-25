@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
+expression: s
+---
+required=[inference,kernels,tokenizers] optional=[fixtures,reporting] forbidden=[cpp-ffi] intent=Fast, isolated unit execution with core inference path
