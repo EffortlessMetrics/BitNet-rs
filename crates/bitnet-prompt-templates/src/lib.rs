@@ -85,10 +85,20 @@ impl TemplateType {
         if let Some(jinja) = chat_template_jinja {
             // LLaMA-3 signature
             if jinja.contains("<|start_header_id|>") && jinja.contains("<|eot_id|>") {
+                tracing::debug!(
+                    template = "Llama3Chat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
                 return Self::Llama3Chat;
             }
             // Generic instruct template
             if jinja.contains("{% for message in messages %}") {
+                tracing::debug!(
+                    template = "Instruct",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
                 return Self::Instruct;
             }
         }
@@ -97,14 +107,27 @@ impl TemplateType {
         if let Some(name) = tokenizer_name {
             let lower = name.to_ascii_lowercase();
             if lower.contains("llama3") || lower.contains("llama-3") {
+                tracing::debug!(
+                    template = "Llama3Chat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
                 return Self::Llama3Chat;
             }
             if lower.contains("instruct") || lower.contains("mistral") {
+                tracing::debug!(
+                    template = "Instruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
                 return Self::Instruct;
             }
         }
 
-        // Priority 3: Fallback
+        // Priority 3: Fallback — no recognisable signature found
+        tracing::warn!(template = "Raw", "no template signature found; falling back to Raw");
         Self::Raw
     }
 
@@ -683,5 +706,36 @@ mod property_tests {
                 template
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod detect_logging_tests {
+    use super::*;
+    use tracing_test::traced_test;
+
+    /// `detect()` emits a debug log naming the chosen template when a GGUF signature matches.
+    #[test]
+    #[traced_test]
+    fn detection_decision_is_logged() {
+        let _t = TemplateType::detect(
+            None,
+            Some("<|start_header_id|>user<|end_header_id|>\n{u}<|eot_id|>"),
+        );
+        assert!(
+            logs_contain("Llama3Chat") || logs_contain("auto-detected"),
+            "detect() must emit a debug log for the detected template"
+        );
+    }
+
+    /// `detect()` emits a warn log when no signature matches and falling back to Raw.
+    #[test]
+    #[traced_test]
+    fn fallback_to_raw_is_warned() {
+        let _t = TemplateType::detect(None, None);
+        assert!(
+            logs_contain("falling back to Raw") || logs_contain("Raw"),
+            "detect() must emit a warn log when falling back to Raw"
+        );
     }
 }
