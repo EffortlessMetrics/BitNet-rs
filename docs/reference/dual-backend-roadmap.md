@@ -39,6 +39,9 @@
 | GGUF header libfuzzer fuzz target | `fuzz/fuzz_targets/gguf_header.rs` | #649 |
 | Fuzz target registration completeness (all 11 targets in Cargo.toml + CI) | `fuzz/Cargo.toml`, `fuzz-ci.yml` | #649 |
 | Proptest for `bitnet-device-probe` and `bitnet-engine-core` | `crates/bitnet-device-probe/src/lib.rs`, `crates/bitnet-engine-core/src/lib.rs` | #650 |
+| Insta snapshot tests for 10 SRP microcrates (45 snapshots) | `crates/*/tests/snapshot_tests.rs` | #651 |
+| AC6 hash stubs implemented; TC3/TC4/tc_ac6 unblocked (88 tests pass, 6 ignored) | `crossval/tests/tokenizer_authority_tests.rs`, `crossval/tests/fixtures/` | #653 |
+| AC5 source detection stubs implemented; 2 remaining fixture tests unblocked | `crossval/tests/tokenizer_authority_tests.rs` | #654 |
 
 ### 🔲 What's Planned
 
