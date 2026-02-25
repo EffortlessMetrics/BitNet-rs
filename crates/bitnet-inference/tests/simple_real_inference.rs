@@ -7,13 +7,90 @@ use bitnet_common::{BitNetConfig, Device};
 use bitnet_inference::{GenerationConfig, InferenceEngine};
 use bitnet_models::BitNetModel;
 use bitnet_tokenizers::MockTokenizer;
+use candle_core::Tensor as CandleTensor;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
-/// Test that we can create an inference engine and it doesn't fallback to mock
+
+/// Helper: Create a minimal model with synthetic weights for testing.
+fn create_minimal_model() -> Result<(Arc<BitNetModel>, BitNetConfig)> {
+    let mut config = BitNetConfig::default();
+    config.model.vocab_size = 1000;
+    config.model.hidden_size = 512;
+    config.model.num_layers = 2;
+    config.model.num_heads = 8;
+    config.model.num_key_value_heads = 8;
+    config.model.intermediate_size = 2048;
+    config.model.max_position_embeddings = 1024;
+    config.model.rope_theta = Some(10000.0);
+
+    let candle_dev = candle_core::Device::Cpu;
+    let hidden = config.model.hidden_size;
+    let vocab = config.model.vocab_size;
+    let intermediate = config.model.intermediate_size;
+    let mut tensors: HashMap<String, CandleTensor> = HashMap::new();
+
+    // Embedding and output weights
+    let embed: Vec<f32> = (0..vocab * hidden).map(|i| (i as f32 * 0.001).sin()).collect();
+    tensors.insert(
+        "token_embd.weight".into(),
+        CandleTensor::from_vec(embed, &[vocab, hidden], &candle_dev)?,
+    );
+    let out: Vec<f32> = (0..vocab * hidden).map(|i| (i as f32 * 0.001 + 0.1).cos()).collect();
+    tensors.insert(
+        "output.weight".into(),
+        CandleTensor::from_vec(out, &[vocab, hidden], &candle_dev)?,
+    );
+
+    // Per-layer weights
+    for l in 0..config.model.num_layers {
+        let prefix = format!("layers.{}", l);
+        for name in ["q_proj.weight", "k_proj.weight", "v_proj.weight", "o_proj.weight"] {
+            let data: Vec<f32> = (0..hidden * hidden).map(|i| (i as f32 * 0.0001).sin()).collect();
+            tensors.insert(
+                format!("{}.self_attn.{}", prefix, name),
+                CandleTensor::from_vec(data, &[hidden, hidden], &candle_dev)?,
+            );
+        }
+        for (name, rows, cols) in [
+            ("gate_proj", intermediate, hidden),
+            ("up_proj", intermediate, hidden),
+            ("down_proj", hidden, intermediate),
+        ] {
+            let data: Vec<f32> = (0..rows * cols).map(|i| (i as f32 * 0.0001).cos()).collect();
+            tensors.insert(
+                format!("{}.mlp.{}.weight", prefix, name),
+                CandleTensor::from_vec(data, &[rows, cols], &candle_dev)?,
+            );
+        }
+        for norm_name in ["attention_norm", "ffn_norm"] {
+            tensors.insert(
+                format!("{}.{}.weight", prefix, norm_name),
+                CandleTensor::from_vec(vec![1.0f32; hidden], &[hidden], &candle_dev)?,
+            );
+            tensors.insert(
+                format!("{}.{}.bias", prefix, norm_name),
+                CandleTensor::from_vec(vec![0.0f32; hidden], &[hidden], &candle_dev)?,
+            );
+        }
+    }
+    tensors.insert(
+        "final_norm.weight".into(),
+        CandleTensor::from_vec(vec![1.0f32; hidden], &[hidden], &candle_dev)?,
+    );
+    tensors.insert(
+        "final_norm.bias".into(),
+        CandleTensor::from_vec(vec![0.0f32; hidden], &[hidden], &candle_dev)?,
+    );
+
+    let model = BitNetModel::from_gguf(config.clone(), tensors, HashMap::new(), Device::Cpu)?;
+    Ok((Arc::new(model), config))
+}
+
+/// Test that we can create an inference engine with a properly initialized model
 #[tokio::test]
 async fn test_real_inference_engine_creation() -> Result<()> {
-    let config = BitNetConfig::default();
-    let model = Arc::new(BitNetModel::new(config, Device::Cpu));
+    let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
     let _engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
     println!("✅ Successfully created InferenceEngine");
@@ -21,10 +98,8 @@ async fn test_real_inference_engine_creation() -> Result<()> {
 }
 /// Test forward pass with actual token IDs
 #[tokio::test]
-#[ignore = "TDD scaffold: unimplemented; see blocking issue for details"]
 async fn test_forward_pass_with_tokens() -> Result<()> {
-    let config = BitNetConfig::default();
-    let model = Arc::new(BitNetModel::new(config, Device::Cpu));
+    let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
     let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
     let test_tokens = [1u32, 2u32, 3u32];
@@ -43,10 +118,8 @@ async fn test_forward_pass_with_tokens() -> Result<()> {
 }
 /// Test text generation (basic autoregressive functionality)
 #[tokio::test]
-#[ignore = "TDD scaffold: unimplemented; see blocking issue for details"]
 async fn test_basic_text_generation() -> Result<()> {
-    let config = BitNetConfig::default();
-    let model = Arc::new(BitNetModel::new(config, Device::Cpu));
+    let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
     let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
     let gen_config =
@@ -66,14 +139,8 @@ async fn test_basic_text_generation() -> Result<()> {
 }
 /// Test that the model configuration is properly loaded
 #[tokio::test]
-#[ignore = "TDD scaffold: unimplemented; see blocking issue for details"]
 async fn test_model_configuration() -> Result<()> {
-    let mut config = BitNetConfig::default();
-    config.model.vocab_size = 1000;
-    config.model.hidden_size = 512;
-    config.model.num_layers = 2;
-    config.model.num_heads = 8;
-    let model = Arc::new(BitNetModel::new(config.clone(), Device::Cpu));
+    let (model, config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
     let mut engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
     let test_tokens = [1u32];
@@ -87,10 +154,8 @@ async fn test_model_configuration() -> Result<()> {
 }
 /// Integration test: measure basic performance
 #[tokio::test]
-#[ignore = "TDD scaffold: unimplemented; see blocking issue for details"]
 async fn test_basic_performance() -> Result<()> {
-    let config = BitNetConfig::default();
-    let model = Arc::new(BitNetModel::new(config, Device::Cpu));
+    let (model, _config) = create_minimal_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
     let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
     let gen_config =

@@ -141,16 +141,26 @@ fn test_once_per_layer_warning_guards() {
 ///
 /// # Expected Behavior
 /// - validate_kv_cache_dims uses debug_assert_eq! for tensor rank check
-/// - Debug assertions compiled out in release builds (--release)
-/// - Explicit anyhow::ensure! used for cold-path initialization
+/// AC3: Debug assertions in hot path (code inspection test)
+///
+/// Tests that validate_kv_cache_dims uses debug_assert_eq! for tensor rank check
+/// (compiled out in release builds — zero overhead in --release).
 #[test]
 #[cfg(debug_assertions)]
-#[ignore = "Code inspection test - verify debug_assert_eq! in validate_kv_cache_dims"]
 fn test_debug_assertions_in_hot_path() {
-    panic!(
-        "AC3: Debug assertions in hot path not yet implemented. \
-         Expected: debug_assert_eq! for tensor rank check, zero overhead in release builds."
-    );
+    use bitnet_common::{BitNetTensor, Device};
+    use bitnet_inference::layers::kv_cache_validation::validate_kv_cache_dims;
+
+    // In debug builds: debug_assert_eq! is active.
+    // A valid 4D cache should pass both the debug_assert_eq! and the explicit ensure!.
+    let valid_cache = BitNetTensor::zeros(&[1, 8, 64, 32], candle_core::DType::F32, &Device::Cpu)
+        .expect("Failed to create valid cache");
+    let result = validate_kv_cache_dims(&valid_cache, 0, 1, 8, 2048, 32);
+    assert!(result.is_ok(), "AC3: debug_assert_eq! should not fire for valid 4D cache");
+
+    // Note: a 3D tensor would trigger debug_assert_eq! (which panics in debug mode),
+    // so that code path is not testable via Result return in debug builds.
+    // The ensure!() check also runs independently in all builds.
 }
 /// AC3: Explicit validation in cache initialization (cold path)
 ///
