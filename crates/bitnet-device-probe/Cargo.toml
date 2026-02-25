@@ -19,6 +19,7 @@ log.workspace = true
 temp-env.workspace = true
 serial_test.workspace = true
 insta = { workspace = true }
+proptest.workspace = true
 
 [features]
 default = []

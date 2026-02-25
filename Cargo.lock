@@ -543,6 +543,7 @@ dependencies = [
  "bitnet-common",
  "insta",
  "log",
+ "proptest",
  "serial_test",
  "temp-env",
 ]
