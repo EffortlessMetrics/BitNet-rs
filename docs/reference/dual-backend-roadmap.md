@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#737.
+> **Last updated**: reflects implementation state after PRs #608–#738.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -91,6 +91,8 @@
 | Proptest for `bitnet-quantization` (+12 math invariants) and `bitnet-models` (+8 predicate/re-export invariants) | `crates/bitnet-quantization/tests/property_tests.rs`, `crates/bitnet-models/tests/property_tests.rs` | #733 |
 | docs: add `docs/tutorials/first-inference.md` (step-by-step inference guide); fix broken link in `docs/README.md`; expand docs README index with 11 previously unlisted guides | `docs/tutorials/first-inference.md`, `docs/README.md` | #735 |
 | fix: config doctest called `with_max_new_tokens()` but method was renamed to `with_max_tokens()` | `crates/bitnet-inference/src/config.rs` | #736 |
+| docs: update test counts and roadmap for PRs #733-#736; update CHANGELOG; fix duplicate `--no-default-features` in getting-started.md | `CLAUDE.md`, `docs/development/test-suite.md`, `CHANGELOG.md`, `docs/getting-started.md` | #737 |
+| Proptest for `bitnet-sys` (+10 CompileTimeLibCapabilities invariants) and `bitnet-st-tools` (+8 is_ln_gamma properties); proptest: 30→32 crates; workspace: 3,446→3,464 tests | `crates/bitnet-sys/tests/property_tests.rs`, `crates/bitnet-st-tools/tests/property_tests.rs` | #738 |
 
 ### 🔲 What's Planned
 
