@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-transformer/tests/snapshot_tests.rs
+expression: summary
+---
+num_layers=2 layer[0].seq_len=0 layer[0].max_seq_len=8 layer[0].n_kv_heads=4

@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-transformer/tests/snapshot_tests.rs
+expression: layer.seq_len.to_string()
+---
+3
