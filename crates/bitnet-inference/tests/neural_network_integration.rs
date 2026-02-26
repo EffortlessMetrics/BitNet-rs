@@ -124,6 +124,15 @@ async fn test_tl2_quantized_linear_forward_real_inference() -> Result<()> {
     let output_candle = output.to_candle()?;
     let output_data = output_candle.flatten_all()?.to_vec1::<f32>()?;
     assert!(output_data.iter().all(|v| v.is_finite()), "TL2 output contains NaN/Inf");
+    // Verify output diversity — correct TL2 dequantization should produce varied outputs,
+    // not near-zero values as the old matmul_i2s path would have produced.
+    let max_val = output_data.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
+    let min_val = output_data.iter().cloned().fold(f32::INFINITY, f32::min);
+    assert!(
+        max_val - min_val > 0.01,
+        "TL2 output has no diversity (max={max_val:.6}, min={min_val:.6}); \
+         kernel bug may have returned near-zero values"
+    );
     println!("✅ TL2 quantized linear forward pass: shape={:?}", output.shape());
     Ok(())
 }
