@@ -18,9 +18,7 @@ use bitnet_common::{
     BitNetError, BitNetTensor, QuantizationError, QuantizationType, Result, SecurityError,
     SecurityLimits, Tensor,
 };
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-#[allow(unused_imports)]
-use bitnet_kernels::KernelProvider;
+
 use candle_core::Device;
 use std::sync::OnceLock;
 
@@ -234,12 +232,6 @@ impl I2SQuantizer {
     /// Legacy wrapper that defaults to CPU dequantization
     pub fn dequantize_tensor(&self, tensor: &QuantizedTensor) -> Result<BitNetTensor> {
         self.dequantize(tensor, &Device::Cpu)
-    }
-
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
-    #[allow(dead_code)]
-    fn quantize_cuda(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
-        self.quantize_cuda_with_limits(tensor, &SecurityLimits::default())
     }
 
     #[cfg(any(feature = "gpu", feature = "cuda"))]
