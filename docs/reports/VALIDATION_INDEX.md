@@ -1,4 +1,4 @@
-# BitNet.rs Validation Documentation Index
+# BitNet-rs Validation Documentation Index
 
 **Date:** 2025-10-24
 **Branch:** `feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2`

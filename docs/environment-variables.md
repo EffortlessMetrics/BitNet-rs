@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-This document describes all environment variables used throughout BitNet.rs for configuration, testing, and development.
+This document describes all environment variables used throughout BitNet-rs for configuration, testing, and development.
 
 ## Runtime Variables
 

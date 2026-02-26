@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Property-based testing for greedy decoding parity
-# Tests BitNet.rs against reference implementations with adversarial prompts
+# Tests BitNet-rs against reference implementations with adversarial prompts
 
 set -euo pipefail
 

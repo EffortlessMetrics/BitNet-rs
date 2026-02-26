@@ -11,9 +11,9 @@
 
 **RECOMMENDATION: ✅ READY FOR PROMOTION (Route A)**
 
-PR #461 successfully implements strict quantization guards for BitNet.rs neural network inference with **100% test pass rate for PR-specific functionality** and **zero blocking issues**. All six required quality gates pass cleanly. The PR demonstrates exemplary BitNet.rs development practices with comprehensive TDD coverage, complete Diátaxis documentation framework, and zero breaking changes.
+PR #461 successfully implements strict quantization guards for BitNet-rs neural network inference with **100% test pass rate for PR-specific functionality** and **zero blocking issues**. All six required quality gates pass cleanly. The PR demonstrates exemplary BitNet-rs development practices with comprehensive TDD coverage, complete Diátaxis documentation framework, and zero breaking changes.
 
-**Impact on BitNet.rs:**
+**Impact on BitNet-rs:**
 - ✅ Quantization accuracy maintained: I2S >99.8%, TL1 >99.6%, TL2 >99.7%
 - ✅ GPU/CPU inference compatibility validated with automatic fallback mechanisms
 - ✅ Zero impact on existing inference pipeline (opt-in via `BITNET_STRICT_MODE=1`)
@@ -112,7 +112,7 @@ PR #461 successfully implements strict quantization guards for BitNet.rs neural 
 ### Minor Non-Issues (Previously Resolved)
 - ✅ **GPU test failure (RESOLVED)**: `test_ac8_gpu_performance_baselines` now properly marked `#[ignore]` at commit fac80cc
 - ✅ **Cosmetic rustdoc warnings (2)**: Unclosed HTML tags, non-blocking, cosmetic only
-- ✅ **WASM build limitation**: Known BitNet.rs-wide architectural constraint (not PR-specific)
+- ✅ **WASM build limitation**: Known BitNet-rs-wide architectural constraint (not PR-specific)
 
 ---
 
@@ -254,7 +254,7 @@ xtask
 - ✅ Receipt quantization claims verification (lines 4045-4133 in xtask/main.rs)
 
 ### Feature Gate Compliance
-- ✅ Default features EMPTY (BitNet.rs policy)
+- ✅ Default features EMPTY (BitNet-rs policy)
 - ✅ Proper `#[cfg(feature = "cpu")]` and `#[cfg(feature = "gpu")]` patterns
 - ✅ Tests feature-gated correctly
 - ✅ No implicit default dependencies
@@ -343,7 +343,7 @@ commits: 8 ahead @fac80cc, 0 behind main@393eecf; semantic compliance 8/8 (100%)
 
 ### Rationale
 
-PR #461 demonstrates **exemplary BitNet.rs development practices** with:
+PR #461 demonstrates **exemplary BitNet-rs development practices** with:
 
 1. **Complete TDD Red-Green-Refactor Cycle**
    - 35/35 AC tests pass (100%)
@@ -445,7 +445,7 @@ d596c7f test(issue-453): add comprehensive test fixtures for strict quantization
 
 ## Review Metadata
 
-**Reviewer:** `review-summarizer` (BitNet.rs Draft→Ready Assessment)
+**Reviewer:** `review-summarizer` (BitNet-rs Draft→Ready Assessment)
 **Review Date:** 2025-10-14
 **PR Status:** Ready for Review (promotion complete)
 **GitHub Labels:** `flow:review`, `state:ready-for-review`

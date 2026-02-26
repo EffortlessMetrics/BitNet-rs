@@ -1,4 +1,4 @@
-# BitNet.rs Tech Debt Cleanup: Executive Summary
+# BitNet-rs Tech Debt Cleanup: Executive Summary
 
 **Analysis Date**: 2025-11-11
 **Scope**: Issues #343-#420 (78 issues from TDD scaffolding phase)
@@ -239,7 +239,7 @@ gh issue list --search "is:issue is:closed number:343..420" --limit 100 | wc -l
 ### Low Risk
 - **Bulk closing resolved issues**: All have PR references and verification commands
 - **Epic consolidation**: Each epic has clear scope and acceptance criteria
-- **Label application**: Follows existing BitNet.rs label taxonomy
+- **Label application**: Follows existing BitNet-rs label taxonomy
 
 ### Medium Risk
 - **Epic size**: Some epics consolidate 8-9 issues (may need sub-tracking)

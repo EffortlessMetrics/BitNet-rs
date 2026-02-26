@@ -320,4 +320,4 @@ export BITNET_GGUF="path/to/model.gguf"
 cargo run -p xtask -- crossval --concurrent-batches 10
 ```
 
-This ADR establishes the foundation for a production-ready concurrency model that optimizes BitNet.rs neural network inference while meeting enterprise performance and reliability requirements.
+This ADR establishes the foundation for a production-ready concurrency model that optimizes BitNet-rs neural network inference while meeting enterprise performance and reliability requirements.

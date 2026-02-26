@@ -104,7 +104,7 @@
 
 **Routing**: `NEXT → merge-readiness`
 
-**Rationale**: PR #466 successfully published with comprehensive BitNet.rs neural network evidence. All quality gates passing (7/7 required + 2/4 hardening). Ready for CI validation and merge readiness assessment.
+**Rationale**: PR #466 successfully published with comprehensive BitNet-rs neural network evidence. All quality gates passing (7/7 required + 2/4 hardening). Ready for CI validation and merge readiness assessment.
 
 **Evidence**:
 - ✅ All required gates: spec, format, clippy, tests, build, features, docs (7/7 PASS)

@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Successfully implemented a thread-safe warn-once utility infrastructure for BitNet.rs using safe Rust patterns. The implementation uses `OnceLock<Mutex<HashSet<String>>>` to track seen warnings without requiring `static mut` or unsafe code.
+Successfully implemented a thread-safe warn-once utility infrastructure for BitNet-rs using safe Rust patterns. The implementation uses `OnceLock<Mutex<HashSet<String>>>` to track seen warnings without requiring `static mut` or unsafe code.
 
 ## Acceptance Criteria
 

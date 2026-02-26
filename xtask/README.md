@@ -1,6 +1,6 @@
-# BitNet.rs Development Tasks (xtask)
+# bitnet-rs Development Tasks (xtask)
 
-A collection of development automation tools for BitNet.rs, providing convenient commands for model downloads, cross-validation, and development workflows.
+A collection of development automation tools for bitnet-rs, providing convenient commands for model downloads, cross-validation, and development workflows.
 
 ## Installation
 

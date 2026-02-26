@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document summarizes the implementation of the CPU inference MVP for BitNet.rs, enabling production-ready neural network inference with strict receipt verification, TL packing guarantees, and comprehensive CI infrastructure.
+This document summarizes the implementation of the CPU inference MVP for BitNet-rs, enabling production-ready neural network inference with strict receipt verification, TL packing guarantees, and comprehensive CI infrastructure.
 
 ## What Was Implemented
 

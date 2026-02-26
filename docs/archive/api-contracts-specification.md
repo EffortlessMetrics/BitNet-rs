@@ -1,12 +1,12 @@
 # API Contracts Specification
 
-**Component**: Forward pass interfaces and error handling patterns for BitNet.rs inference
+**Component**: Forward pass interfaces and error handling patterns for BitNet-rs inference
 **Location**: `bitnet-inference/src/api/contracts.rs`
 **Dependencies**: All inference components (transformer, attention, generation)
 
 ## Overview
 
-This specification defines the comprehensive API contracts for BitNet.rs neural network inference, establishing clear interfaces for transformer forward passes, generation workflows, and robust error handling patterns. These contracts ensure consistent behavior across CPU/GPU backends, provide type safety for quantized operations, and enable seamless integration with the broader BitNet.rs ecosystem.
+This specification defines the comprehensive API contracts for BitNet-rs neural network inference, establishing clear interfaces for transformer forward passes, generation workflows, and robust error handling patterns. These contracts ensure consistent behavior across CPU/GPU backends, provide type safety for quantized operations, and enable seamless integration with the broader BitNet-rs ecosystem.
 
 ## Core API Contracts
 
@@ -1325,4 +1325,4 @@ mod contract_tests {
 }
 ```
 
-These comprehensive API contracts ensure robust, consistent, and high-performance neural network inference across the entire BitNet.rs ecosystem, with strong error handling, input validation, and performance guarantees.
+These comprehensive API contracts ensure robust, consistent, and high-performance neural network inference across the entire BitNet-rs ecosystem, with strong error handling, input validation, and performance guarantees.

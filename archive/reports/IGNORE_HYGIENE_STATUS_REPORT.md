@@ -617,7 +617,7 @@ bash scripts/check-serial-annotations.sh                      # Serial annotatio
 3. Configure CI job
 4. Begin Phase 1 migration
 
-**Report Author**: BitNet.rs Automation Framework  
+**Report Author**: BitNet-rs Automation Framework  
 **Last Updated**: October 23, 2025, 20:32 UTC  
 **Expires**: When all 236 annotations have reasons (target: Week 5)
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This report documents the tokenization flow in BitNet.rs CLI with focus on template application, BOS handling, token output, and reusable components for xtask integration.
+This report documents the tokenization flow in BitNet-rs CLI with focus on template application, BOS handling, token output, and reusable components for xtask integration.
 
 ## 1. Template Application Flow
 

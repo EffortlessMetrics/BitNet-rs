@@ -34,8 +34,8 @@ beats X by Y%
 # - "Receipt-verified throughput: X tok/s"
 
 # Replacement Pattern:
-# OLD: "BitNet.rs achieves blazing fast inference"
-# NEW: "BitNet.rs achieves 10-20 tok/s on CPU for 2B models (see docs/baselines/)"
+# OLD: "BitNet-rs achieves blazing fast inference"
+# NEW: "BitNet-rs achieves 10-20 tok/s on CPU for 2B models (see docs/baselines/)"
 
 # OLD: "Ultra-fast 1000 tok/s throughput"
 # NEW: "Measured 15.3 tok/s for I2_S quantization (receipt in ci/inference.json)"

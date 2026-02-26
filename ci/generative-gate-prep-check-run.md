@@ -9,7 +9,7 @@
 
 ## Summary
 
-Final pre-publication validation complete - all BitNet.rs neural network quality standards met for Issue #453 (strict quantization guards).
+Final pre-publication validation complete - all BitNet-rs neural network quality standards met for Issue #453 (strict quantization guards).
 
 **Branch Preparation Status:**
 - ✅ Branch rebased onto main (up-to-date)
@@ -28,7 +28,7 @@ Final pre-publication validation complete - all BitNet.rs neural network quality
 - ✅ doc-tests: cargo doc --no-deps successful (1 minor warning - pre-existing)
 - ✅ features: smoke validated (cpu/gpu/none all build successfully)
 
-**BitNet.rs Neural Network Validation:**
+**BitNet-rs Neural Network Validation:**
 - ✅ Feature flags: --no-default-features --features cpu|gpu enforced
 - ✅ Quantization API contracts: Additive only (non-breaking)
 - ✅ Strict mode: Opt-in enforcement (no FP32 fallbacks when enabled)
@@ -83,10 +83,10 @@ Final pre-publication validation complete - all BitNet.rs neural network quality
 **Next:** FINALIZE → pub-finalizer
 
 **Rationale:**
-- All BitNet.rs quality gates validated and passing
+- All BitNet-rs quality gates validated and passing
 - Neural network quantization standards met (I2S/TL1/TL2 API contracts preserved)
 - Feature flag compliance verified (--no-default-features enforced)
-- Commit history follows BitNet.rs conventions (neural network context)
+- Commit history follows BitNet-rs conventions (neural network context)
 - Documentation complete (Diátaxis structure + 100% doc test pass rate)
 - Branch clean, rebased, and ready for PR creation
 - Minor clippy fixes applied and validated

@@ -61,7 +61,7 @@ cargo clippy --workspace --all-targets --no-default-features --features cpu -- -
 ```
 - **Status:** PASS
 - **Warnings:** 0
-- **Features:** cpu (BitNet.rs standard)
+- **Features:** cpu (BitNet-rs standard)
 - **Scope:** All workspace crates and targets
 
 ### 5. Build Validation ✅
@@ -205,7 +205,7 @@ b2f66d6 test(cpu): TDD scaffolding for CPU forward pass (#462)
 
 **Rationale:**
 - Branch clean, rebased, and validated
-- All BitNet.rs quality gates passed
+- All BitNet-rs quality gates passed
 - 23/23 Issue #462 tests passing
 - Commits follow semantic conventions
 - Remote branch synchronized

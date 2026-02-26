@@ -6,7 +6,7 @@ export BITNET_DETERMINISTIC=1
 export RAYON_NUM_THREADS=1
 
 # =============================================================================
-# BitNet.rs Phase 2 Flamegraph Generation Script
+# BitNet-rs Phase 2 Flamegraph Generation Script
 # =============================================================================
 # Purpose: Generate CPU flamegraphs for performance profiling and hotspot analysis
 #
@@ -79,7 +79,7 @@ show_usage() {
     cat << 'EOF'
 Usage: ./scripts/phase2_flamegraph.sh [MODEL] [TOKENIZER] [OUTPUT_DIR]
 
-Generate CPU flamegraphs for BitNet.rs inference profiling.
+Generate CPU flamegraphs for BitNet-rs inference profiling.
 
 Arguments:
   MODEL       - Path to GGUF model (default: auto-discover)
@@ -461,7 +461,7 @@ generate_metadata() {
 > **Note**: Fill this section by analyzing the generated SVG.
 > Look for the widest stack frames at the top level.
 
-### Expected Hotspots (for BitNet.rs inference)
+### Expected Hotspots (for BitNet-rs inference)
 
 1. **Forward Pass** (~90-95% of total time)
    - \`bitnet_inference::forward\` or \`bitnet_models::transformer::forward\`
@@ -556,9 +556,9 @@ generate_flamegraph_readme() {
     local readme_file="$OUTPUT_DIR/README.md"
 
     cat > "$readme_file" << 'EOF'
-# BitNet.rs Flamegraph Baselines
+# BitNet-rs Flamegraph Baselines
 
-This directory contains CPU flamegraphs for BitNet.rs inference profiling and hotspot analysis.
+This directory contains CPU flamegraphs for BitNet-rs inference profiling and hotspot analysis.
 
 ## Current Baselines
 
@@ -707,7 +707,7 @@ EOF
 
 main() {
     echo "==================================================================="
-    echo "BitNet.rs Phase 2 Flamegraph Generation"
+    echo "BitNet-rs Phase 2 Flamegraph Generation"
     echo "==================================================================="
     echo ""
 

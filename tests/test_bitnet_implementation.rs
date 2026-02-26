@@ -122,7 +122,7 @@ async fn test_implementation_registry() {
     // Register implementations
     registry.register(
         "rust".to_string(),
-        MockImplementationFactory::new("BitNet.rs".to_string(), "1.0".to_string(), true),
+        MockImplementationFactory::new("BitNet-rs".to_string(), "1.0".to_string(), true),
     );
     registry.register(
         "cpp".to_string(),
@@ -137,7 +137,7 @@ async fn test_implementation_registry() {
 
     // Test creation
     let rust_impl = registry.create_implementation("rust").await.unwrap();
-    assert_eq!(rust_impl.implementation_name(), "BitNet.rs");
+    assert_eq!(rust_impl.implementation_name(), "BitNet-rs");
 
     let cpp_impl = registry.create_implementation("cpp").await.unwrap();
     assert_eq!(cpp_impl.implementation_name(), "BitNet.cpp");

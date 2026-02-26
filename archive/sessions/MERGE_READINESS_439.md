@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Draft PR #440 successfully passes all Generative Flow requirements and is **READY FOR REVIEW FLOW PICKUP**. All 8 quality gates pass with comprehensive local validation, BitNet.rs neural network standards met, and evidence bundle complete (3,128 lines across 6 reports).
+Draft PR #440 successfully passes all Generative Flow requirements and is **READY FOR REVIEW FLOW PICKUP**. All 8 quality gates pass with comprehensive local validation, BitNet-rs neural network standards met, and evidence bundle complete (3,128 lines across 6 reports).
 
 **Routing Decision:** FINALIZE → pr-publication-finalizer
 
@@ -30,8 +30,8 @@ Draft PR #440 successfully passes all Generative Flow requirements and is **READ
   "baseRefName": "main",
   "headRefName": "feat/439-gpu-feature-gate-hardening",
   "labels": [
-    {"name": "state:ready", "description": "BitNet.rs ready for review"},
-    {"name": "flow:generative", "description": "BitNet.rs generative workflow marker"}
+    {"name": "state:ready", "description": "BitNet-rs ready for review"},
+    {"name": "flow:generative", "description": "BitNet-rs generative workflow marker"}
   ]
 }
 ```
@@ -88,7 +88,7 @@ Draft PR #440 successfully passes all Generative Flow requirements and is **READ
 
 ---
 
-## 3. BitNet.rs Compliance Assessment ✅
+## 3. BitNet-rs Compliance Assessment ✅
 
 ### Neural Network Standards
 
@@ -159,7 +159,7 @@ af5e225 fix(#439): Remove unused std::env import in device_features tests
 ```
 
 **Validation Results:**
-- ✅ All commits use proper BitNet.rs prefixes: `feat:`, `docs:`, `test:`, `fix:`, `chore:`, `governance:`
+- ✅ All commits use proper BitNet-rs prefixes: `feat:`, `docs:`, `test:`, `fix:`, `chore:`, `governance:`
 - ✅ Issue #439 referenced appropriately in commit messages
 - ✅ Neural network context present (GPU feature detection, device-aware selection)
 - ✅ Atomic commits (each represents one logical change)
@@ -218,7 +218,7 @@ PUBLICATION_RECEIPT_439.md        207 lines (7.0 KB)
 - ✅ Generative flow complete (microloops 1-8 done)
 - ✅ Quality gates pass (8/8 validated locally)
 - ✅ Evidence comprehensive (3,128 lines)
-- ✅ BitNet.rs standards met (feature flags, device API, backward compat)
+- ✅ BitNet-rs standards met (feature flags, device API, backward compat)
 - ✅ Commit patterns proper (15 commits, all prefixed)
 - ✅ Draft PR ready for Review flow consumption
 
@@ -299,7 +299,7 @@ publication_gate: PASS; PR #440 created; labels applied; issue #439 linked; evid
    - Comprehensive evidence bundle (3,128 lines)
    - Draft PR #440 created with proper labels
 
-2. **BitNet.rs Standards Met:**
+2. **BitNet-rs Standards Met:**
    - Feature flags unified (109 predicates)
    - Device detection API exported and documented
    - Build system parity validated
@@ -316,7 +316,7 @@ publication_gate: PASS; PR #440 created; labels applied; issue #439 linked; evid
    - Documentation: Comprehensive (1,637 lines + doctests)
 
 4. **Commit Compliance:**
-   - 15 commits, all with proper BitNet.rs prefixes
+   - 15 commits, all with proper BitNet-rs prefixes
    - Neural network context in commit messages
    - Issue #439 referenced appropriately
    - Atomic commits, clean history
@@ -345,7 +345,7 @@ For Review Flow consumption:
 - ✅ Draft PR created and labeled
 - ✅ All Generative gates pass locally
 - ✅ Evidence bundle comprehensive
-- ✅ BitNet.rs neural network standards met
+- ✅ BitNet-rs neural network standards met
 - ✅ No blocking issues for Review pickup
 - ⚠️ Remote CI failing (expected; Review Flow will address)
 - ✅ Local validation complete and passing
@@ -367,9 +367,9 @@ For Review Flow consumption:
 **Success Mode 1 - Ready for Review:** ✅ ACHIEVED
 
 - All generative gates pass with proper `generative:gate:*` receipts
-- BitNet.rs template complete with neural network context and quantization details
+- BitNet-rs template complete with neural network context and quantization details
 - Domain-aware labels applied (`flow:generative`, `state:ready`)
-- Commit patterns follow BitNet.rs standards
+- Commit patterns follow BitNet-rs standards
 - Comprehensive validation completed: tests (421/421), feature matrix (cpu/gpu/none), GPU/CPU compatibility
 - Route: **FINALIZE → pub-finalizer**
 

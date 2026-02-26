@@ -3,7 +3,7 @@
   "description": "Cross-validation reference data for Issue #453 strict quantization guards",
   "generated_at": "2025-10-14T05:00:00.000Z",
   "reference_implementation": "Microsoft BitNet C++",
-  "rust_implementation": "BitNet.rs",
+  "rust_implementation": "BitNet-rs",
   "test_cases": [
     {
       "test_id": "i2s_cpu_16_token_decode",

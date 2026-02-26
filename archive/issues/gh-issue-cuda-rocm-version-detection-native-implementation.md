@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The current GPU version detection in BitNet.rs relies on external command execution (`nvcc --version` and `rocm-smi --version`) which introduces fragility, security concerns, and deployment complexity. This approach fails in containerized environments, CI/CD pipelines, and systems where command-line tools are unavailable while GPU runtimes are present.
+The current GPU version detection in BitNet-rs relies on external command execution (`nvcc --version` and `rocm-smi --version`) which introduces fragility, security concerns, and deployment complexity. This approach fails in containerized environments, CI/CD pipelines, and systems where command-line tools are unavailable while GPU runtimes are present.
 
 ## Environment
 

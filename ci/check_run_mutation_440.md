@@ -14,7 +14,7 @@
 
 **Mutation Score: 50% (4/8 mutants caught)**
 
-Mutation testing reveals test suite has excellent line coverage (94.12%) but weak mutation resistance. 4 surviving mutants in critical GPU detection code indicate tests execute paths but don't validate return values or boolean logic correctness. Below BitNet.rs quality threshold (≥85% for safety-critical device detection).
+Mutation testing reveals test suite has excellent line coverage (94.12%) but weak mutation resistance. 4 surviving mutants in critical GPU detection code indicate tests execute paths but don't validate return values or boolean logic correctness. Below BitNet-rs quality threshold (≥85% for safety-critical device detection).
 
 **Status:** ⚠️ NEEDS-HARDENING (routing to test-hardener for targeted assertion strengthening)
 
@@ -207,7 +207,7 @@ This classic gap indicates:
 
 ---
 
-## BitNet.rs Quality Standards Assessment
+## BitNet-rs Quality Standards Assessment
 
 ### Device Detection Requirements (Safety-Critical)
 
@@ -291,7 +291,7 @@ This classic gap indicates:
 ## References
 
 - **Mutation Testing Tool:** cargo-mutants v25.3.1
-- **BitNet.rs Quality Standards:** ≥85% mutation kill rate for safety-critical code
+- **BitNet-rs Quality Standards:** ≥85% mutation kill rate for safety-critical code
 - **Test Specification:** docs/explanation/issue-439-spec.md
 - **Coverage Analysis:** check_run_tests_coverage_440.md (94.12% lines)
 

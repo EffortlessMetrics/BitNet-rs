@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate minimal GGUF test fixtures for BitNet.rs tokenizer tests.
+Generate minimal GGUF test fixtures for BitNet-rs tokenizer tests.
 
 GGUF v3 format:
 - Magic: "GGUF" (4 bytes)

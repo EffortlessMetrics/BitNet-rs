@@ -1,14 +1,14 @@
 # CI Job Dependencies & Git Hooks Analysis
 
 **Date**: 2025-10-23  
-**Repository**: BitNet.rs (feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2)  
+**Repository**: BitNet-rs (feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2)  
 **Thorough Exploration**: CI DAG hygiene and hook dependency checks
 
 ---
 
 ## Executive Summary
 
-The BitNet.rs CI pipeline has a well-structured DAG with clear separation between:
+The BitNet-rs CI pipeline has a well-structured DAG with clear separation between:
 - **Primary gates** (blocking merge): `test` job gates all others
 - **Feature validation gates**: `feature-matrix`, `doctest-matrix`, `feature-hack-check`
 - **Quality guards**: Fixture integrity, serial annotations, feature consistency, ignore annotations, env mutations

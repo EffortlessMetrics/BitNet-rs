@@ -62,7 +62,7 @@ PR #424 successfully implements comprehensive quantization accuracy validation i
 2. **Comprehensive Test Infrastructure** ✅
    - **18+ New Tests Added**: Accuracy validation (5), property-based (4), mutation killers (9)
    - **Test Organization**: Excellent module structure with clear separation of concerns
-   - **Integration Tests**: Mutation killer tests in `tests/` directory follow BitNet.rs conventions
+   - **Integration Tests**: Mutation killer tests in `tests/` directory follow BitNet-rs conventions
    - **Evidence**: `/home/steven/code/Rust/BitNet-rs/crates/bitnet-quantization/src/accuracy_validation_tests.rs`, `property_based_tests.rs`, `tests/mutation_killer_mathematical_correctness.rs`
 
 3. **Architectural Alignment** ✅
@@ -273,7 +273,7 @@ All quality gates PASS. PR #424 is ready for Draft → Ready for Review promotio
 ---
 
 
-## BitNet.rs Promotion Criteria Validation
+## BitNet-rs Promotion Criteria Validation
 
 ### Required Criteria: ✅ ALL MET
 
@@ -341,7 +341,7 @@ This PR successfully implements comprehensive quantization accuracy validation i
 
 
 **Review Completed**: 2025-09-30
-**Reviewer**: review-summarizer (BitNet.rs CI)
+**Reviewer**: review-summarizer (BitNet-rs CI)
 **PR**: #424 - Enhanced quantization accuracy validation and testing (Part 3/4)
 **HEAD**: 6da90ce (post-mutation-artifact-fix)
 **Commits**: 2 (cb9d36d feat, 6da90ce fix)

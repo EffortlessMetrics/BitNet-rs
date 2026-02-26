@@ -325,7 +325,7 @@ git log --oneline --graph --all | grep -E "319|kv-pool|arena|evict" | head -20
 ## Contact & Support
 
 - **Issue:** #319
-- **Project:** BitNet.rs
+- **Project:** BitNet-rs
 - **Maintainer:** @EffortlessMetrics
 - **Documentation:** See index above
 

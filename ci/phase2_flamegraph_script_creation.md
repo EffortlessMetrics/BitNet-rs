@@ -265,7 +265,7 @@ The script also generates `docs/baselines/perf/flamegraphs/README.md` with:
 - **Regeneration instructions**: How to run the script
 - **Viewing guide**: How to open and interact with SVG flamegraphs
 - **Interpretation guide**: How to read width, height, color, and zoom
-- **Key functions**: Expected BitNet.rs hotspots (matmul, RMSNorm, RoPE, etc.)
+- **Key functions**: Expected BitNet-rs hotspots (matmul, RMSNorm, RoPE, etc.)
 - **Performance workflow**: Step-by-step analysis process
 - **Diff analysis**: How to compare before/after flamegraphs
 - **Troubleshooting**: Common issues and solutions

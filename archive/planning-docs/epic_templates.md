@@ -1,4 +1,4 @@
-# BitNet.rs Tech Debt Epics: Issue Templates
+# BitNet-rs Tech Debt Epics: Issue Templates
 
 **Purpose**: Consolidate 23 related issues from TDD scaffolding phase into 4 tracking epics
 

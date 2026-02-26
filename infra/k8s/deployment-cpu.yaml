@@ -1,4 +1,4 @@
-# BitNet.rs CPU Deployment - Primary Rust Implementation
+# bitnet-rs CPU Deployment - Primary Rust Implementation
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -11,7 +11,7 @@
 
 ✅ **Real inference is working correctly with comprehensive validation**
 
-This document provides receipts proving that BitNet.rs inference is:
+This document provides receipts proving that BitNet-rs inference is:
 1. **Real** (no mock computation)
 2. **Deterministic** (reproducible outputs)
 3. **Performant** (baseline established)

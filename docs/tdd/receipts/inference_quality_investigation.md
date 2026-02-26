@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This investigation examined why BitNet.rs produces garbled or non-intelligible text despite passing mathematical correctness validation (>99% quantization accuracy, cross-validation parity). The findings show that **the inference engine is mathematically correct**, but inference quality depends heavily on:
+This investigation examined why BitNet-rs produces garbled or non-intelligible text despite passing mathematical correctness validation (>99% quantization accuracy, cross-validation parity). The findings show that **the inference engine is mathematically correct**, but inference quality depends heavily on:
 
 1. **Model weights quality** (known issue with microsoft-bitnet-b1.58-2B)
 2. **Template selection** (raw vs instruct vs llama3-chat)
@@ -330,10 +330,10 @@ Tests marked `#[ignore]` require model files and are currently blocked by slow i
 
 ## Conclusion
 
-**The BitNet.rs inference engine is mathematically correct and the implementation is sound.**
+**The BitNet-rs inference engine is mathematically correct and the implementation is sound.**
 
 Intelligibility issues stem primarily from:
-1. ✅ Model weights quality (external to BitNet.rs)
+1. ✅ Model weights quality (external to BitNet-rs)
 2. ✅ Template selection (user configuration)
 3. ✅ Performance blockers (optimization opportunity)
 

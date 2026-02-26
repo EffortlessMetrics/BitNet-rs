@@ -30,7 +30,7 @@
 
 ### 1.1 Problem Statement
 
-The current BitNet.rs RPATH embedding system in `xtask/build.rs` and `crossval/build.rs` implements a **five-tier priority hierarchy** for resolving C++ backend library paths, but the implementation has gaps in multi-path merging, deduplication, and platform-specific formatting.
+The current BitNet-rs RPATH embedding system in `xtask/build.rs` and `crossval/build.rs` implements a **five-tier priority hierarchy** for resolving C++ backend library paths, but the implementation has gaps in multi-path merging, deduplication, and platform-specific formatting.
 
 **Current Limitations:**
 - Priority 2 (CROSSVAL_RPATH_BITNET/LLAMA) exists but merge logic lacks robust canonicalization
@@ -63,7 +63,7 @@ This specification defines a **comprehensive multi-path RPATH merge system** tha
 
 ### US1: Developer with Separate llama.cpp Installation
 
-**As a** BitNet.rs developer with system-installed llama.cpp,
+**As a** BitNet-rs developer with system-installed llama.cpp,
 **I want to** specify separate library paths for BitNet.cpp and llama.cpp,
 **So that** I can avoid fragile symlink workarounds and maintain clean library management.
 
@@ -1456,7 +1456,7 @@ cargo build -p xtask --features crossval-all
 ```markdown
 ## RPATH Configuration (Linux/macOS Only)
 
-BitNet.rs uses a five-tier priority system for resolving C++ backend library paths:
+BitNet-rs uses a five-tier priority system for resolving C++ backend library paths:
 
 ### Priority 1: BITNET_CROSSVAL_LIBDIR (Legacy)
 
@@ -1635,7 +1635,7 @@ otool -l target/debug/xtask | grep LC_RPATH  # macOS
 
 ---
 
-### 12.2 BitNet.rs Documentation
+### 12.2 BitNet-rs Documentation
 
 **Existing Specifications:**
 - `docs/specs/rpath-merging-strategy.md` (superseded by this spec)

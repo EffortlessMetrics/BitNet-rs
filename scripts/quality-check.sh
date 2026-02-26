@@ -1,10 +1,10 @@
 #!/bin/bash
-# Comprehensive code quality validation for BitNet.rs
+# Comprehensive code quality validation for BitNet-rs
 # This script runs all quality checks required for crates.io publication
 
 set -euo pipefail
 
-echo "🔍 BitNet.rs Code Quality Validation"
+echo "🔍 BitNet-rs Code Quality Validation"
 echo "===================================="
 
 # Colors for output
@@ -33,7 +33,7 @@ print_error() {
 
 # Check if we're in the right directory
 if [[ ! -f "Cargo.toml" ]] || [[ ! -d "crates" ]]; then
-    print_error "This script must be run from the BitNet.rs root directory"
+    print_error "This script must be run from the BitNet-rs root directory"
     exit 1
 fi
 
@@ -202,7 +202,7 @@ print_success "README/CHANGELOG: ✓"
 print_success "Examples: ✓"
 
 echo ""
-echo "🚀 BitNet.rs is ready for crates.io publication!"
+echo "🚀 BitNet-rs is ready for crates.io publication!"
 echo ""
 echo "Next steps:"
 echo "1. Update version numbers if needed"

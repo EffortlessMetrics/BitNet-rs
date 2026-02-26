@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-BitNet.rs FFI kernel system currently relies on external C++ implementations, creating deployment complexity and runtime dependencies. Two critical FFI components require native Rust implementation:
+BitNet-rs FFI kernel system currently relies on external C++ implementations, creating deployment complexity and runtime dependencies. Two critical FFI components require native Rust implementation:
 
 1. **C++ Bridge Dependency**: `FfiKernel::new()` requires runtime availability checks for C++ libraries
 2. **External Implementation**: `matmul_i2s()` and `quantize()` functions directly call C++ bridge implementations
@@ -82,6 +82,6 @@ Replace FFI bridge with native Rust kernels featuring SIMD optimizations and cro
 
 ## Related Issues
 
-- BitNet.rs #251: Production-ready inference server (benefits from simplified deployment)
-- BitNet.rs #218: Device-aware quantization system (uses native quantization kernels)
-- BitNet.rs #260: Mock elimination project (eliminates FFI bridge complexity)
+- BitNet-rs #251: Production-ready inference server (benefits from simplified deployment)
+- BitNet-rs #218: Device-aware quantization system (uses native quantization kernels)
+- BitNet-rs #260: Mock elimination project (eliminates FFI bridge complexity)

@@ -143,7 +143,7 @@ ls -la ci/receipts/pr-464/
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Neural Network Requirements ✅
 - **TL LUT Helper:** Implemented with 100% mutation coverage

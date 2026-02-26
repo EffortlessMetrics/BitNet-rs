@@ -409,4 +409,4 @@ fn test_production_quality_matches_cpp_reference() {
 - **Review**: BitNet architecture team, production systems team
 - **Testing**: QA validation framework team
 
-**Milestone:** BitNet.rs Production Readiness - Phase 2 (Accuracy & Validation)
+**Milestone:** BitNet-rs Production Readiness - Phase 2 (Accuracy & Validation)

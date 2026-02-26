@@ -110,7 +110,7 @@ docs: cargo doc: clean (workspace); doctests: 6/6 pass; module-level: 3/3 excell
 - **Diátaxis Framework**: Complete coverage maintained
 - **Location**: `/home/steven/code/Rust/BitNet-rs/ci/ledger_docs_gate.md`
 
-**Impact**: Test infrastructure is well-documented and follows BitNet.rs documentation standards.
+**Impact**: Test infrastructure is well-documented and follows BitNet-rs documentation standards.
 
 ### 5. Code Hygiene Excellence ✅
 
@@ -141,7 +141,7 @@ docs: cargo doc: clean (workspace); doctests: 6/6 pass; module-level: 3/3 excell
 - **TDD Red-Green-Refactor**: Comprehensive test-spec bijection
 - **Location**: `/home/steven/code/Rust/BitNet-rs/ci/architecture_review_pr424.md`
 
-**Impact**: Test infrastructure aligns with BitNet.rs architecture and quality standards.
+**Impact**: Test infrastructure aligns with BitNet-rs architecture and quality standards.
 
 ---
 
@@ -196,7 +196,7 @@ docs: cargo doc: clean (workspace); doctests: 6/6 pass; module-level: 3/3 excell
 
 ---
 
-## Quantization Accuracy Validation (BitNet.rs Core)
+## Quantization Accuracy Validation (BitNet-rs Core)
 
 ### I2S Quantization (2-bit signed) ✅
 
@@ -483,7 +483,7 @@ This PR successfully implements comprehensive quantization accuracy validation i
 ---
 
 **Assessment Completed**: 2025-09-30
-**Reviewer**: review-summarizer (BitNet.rs CI)
+**Reviewer**: review-summarizer (BitNet-rs CI)
 **PR**: #424 - Enhanced quantization accuracy validation and testing (Part 3/4)
 **HEAD**: ff11a47 (fix: Resolve quantization test failures with realistic tolerance defaults)
 **Commits**: 4 (cb9d36d feat, 6da90ce fix, ab8b7b1 fix, ff11a47 fix)

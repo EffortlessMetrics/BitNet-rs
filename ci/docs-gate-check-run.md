@@ -1,6 +1,6 @@
 # Quality Gate Check Run: generative:gate:docs
 
-**Gate:** Documentation Validation (BitNet.rs Issue #453 Strict Quantization Guards)
+**Gate:** Documentation Validation (BitNet-rs Issue #453 Strict Quantization Guards)
 **Status:** ✅ PASS
 **Timestamp:** 2025-10-14T12:45:00Z
 **Validator:** generative:gate:docs (Documentation Link and Code Example Validator)
@@ -41,7 +41,7 @@ $ cargo test --doc --workspace --no-default-features --features cpu
 Total: 11/11 tests passed, 0 failed
 ```
 
-**Evidence:** All Rust code examples in documentation compile without errors using BitNet.rs CPU feature flags.
+**Evidence:** All Rust code examples in documentation compile without errors using BitNet-rs CPU feature flags.
 
 ---
 

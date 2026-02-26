@@ -334,7 +334,7 @@ Finished `test` profile [unoptimized + debuginfo] target(s) in 2.38s
 | Gate | Status | Details |
 |:-----|:-------|:--------|
 | **Tests** | ✅ PASS | 12/12 strict mode tests passing; no failures or ignored tests |
-| **Code Quality** | ✅ PASS | Zero clippy warnings; follows BitNet.rs patterns |
+| **Code Quality** | ✅ PASS | Zero clippy warnings; follows BitNet-rs patterns |
 | **Build** | ✅ PASS | Compiles cleanly with `--no-default-features --features cpu` |
 | **Documentation** | ✅ COMPLETE | Comprehensive test documentation; issue references clear |
 | **Integration** | ✅ PASS | Works with existing QuantizedLinear and attention layers |
@@ -425,7 +425,7 @@ PR4 (strict mode runtime guards) implementation is:
 - **Integrated:** Works seamlessly with existing QuantizedLinear and quantization paths
 - **Safe:** Backward compatible, disabled by default, no performance regression
 - **Documented:** Clear error messages and inline documentation
-- **Quality:** Follows BitNet.rs standards for feature flags, error handling, and testing
+- **Quality:** Follows BitNet-rs standards for feature flags, error handling, and testing
 
 **Recommendation:** Merge into main branch. This PR is a key component of Issue #465 (CPU Path Followup for v0.1.0-mvp release).
 

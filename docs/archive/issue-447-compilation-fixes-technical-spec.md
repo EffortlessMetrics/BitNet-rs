@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Issue #447 addresses critical compilation failures across four BitNet.rs workspace crates that prevent successful builds with various feature flag combinations. The primary failure is an **OpenTelemetry Prometheus version incompatibility** (v0.29.1 incompatible with opentelemetry-sdk v0.31.0) in `bitnet-server`, blocking production monitoring. Secondary issues include missing type exports in `bitnet-inference`, fixture module visibility in `bitnet-tests`, and deprecated API usage in the `tests` crate.
+Issue #447 addresses critical compilation failures across four BitNet-rs workspace crates that prevent successful builds with various feature flag combinations. The primary failure is an **OpenTelemetry Prometheus version incompatibility** (v0.29.1 incompatible with opentelemetry-sdk v0.31.0) in `bitnet-server`, blocking production monitoring. Secondary issues include missing type exports in `bitnet-inference`, fixture module visibility in `bitnet-tests`, and deprecated API usage in the `tests` crate.
 
 **Impact Assessment**: The OpenTelemetry incompatibility affects all server observability builds (`--features opentelemetry`), while inference and test infrastructure issues block `--all-features` comprehensive testing workflows.
 
@@ -628,7 +628,7 @@ cargo check -p bitnet-tests --no-default-features --features fixtures,reporting
 
 ---
 
-## 7. BitNet.rs Alignment Verification
+## 7. BitNet-rs Alignment Verification
 
 ### 7.1 Feature-Gated Architecture ✅
 - **Compliance**: All changes respect `--no-default-features` baseline
@@ -725,7 +725,7 @@ cargo clippy --workspace --all-features -- -D warnings || echo "Expected failure
 
 ## 9. References & Neural Network Context
 
-### 9.1 BitNet.rs Architecture Patterns
+### 9.1 BitNet-rs Architecture Patterns
 - **Observability Isolation**: Server-only concerns (health endpoints, metrics) separate from inference
 - **Feature Flag Discipline**: Empty default features enforce explicit capability selection
 - **Workspace Coordination**: Cross-crate dependency updates require careful sequencing
@@ -771,7 +771,7 @@ cargo clippy --workspace --all-features -- -D warnings || echo "Expected failure
 **Evidence**:
 1. ✅ Neural network requirements fully analyzed (zero inference impact confirmed)
 2. ✅ Technical specification created in `docs/explanation/specs/` with comprehensive validation commands
-3. ✅ Architecture approach aligns with BitNet.rs workspace structure and feature flags
+3. ✅ Architecture approach aligns with BitNet-rs workspace structure and feature flags
 4. ✅ Risk assessment includes specific validation commands and mitigation strategies
 5. ✅ All ACs mapped to testable validation commands with expected outcomes
 
@@ -779,6 +779,6 @@ cargo clippy --workspace --all-features -- -D warnings || echo "Expected failure
 
 ---
 
-**Specification Author**: BitNet.rs Neural Network Systems Architect
+**Specification Author**: BitNet-rs Neural Network Systems Architect
 **Review Required**: Spec-finalizer (confirm OpenTelemetry migration strategy and TestConfig API assumptions)
 **Implementation Ready**: Yes (after spec approval)

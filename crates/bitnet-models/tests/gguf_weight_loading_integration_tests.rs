@@ -3,7 +3,7 @@
 //! Tests feature spec: gguf-weight-loading-integration-testing.md
 //! API contract: gguf-weight-loading-api-contracts.md
 //!
-//! Integration tests validating GGUF weight loading across multiple BitNet.rs crates:
+//! Integration tests validating GGUF weight loading across multiple BitNet-rs crates:
 //! - bitnet-models: Weight loading and parsing
 //! - bitnet-quantization: I2S, TL1, TL2 quantization integration
 //! - bitnet-kernels: Device-aware operations and GPU acceleration

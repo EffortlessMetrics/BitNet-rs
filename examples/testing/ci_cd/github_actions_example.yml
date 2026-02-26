@@ -1,7 +1,7 @@
-# Example GitHub Actions workflow for BitNet.rs testing framework
+# Example GitHub Actions workflow for bitnet-rs testing framework
 # This demonstrates comprehensive CI/CD integration with the testing framework
 
-name: BitNet.rs Testing Framework Example
+name: bitnet-rs Testing Framework Example
 
 on:
   push:

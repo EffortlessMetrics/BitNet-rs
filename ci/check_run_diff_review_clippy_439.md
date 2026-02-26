@@ -64,6 +64,6 @@ cargo run -p xtask -- check-features
 - **Legacy cleanup**: 14 standalone `#[cfg(feature = "cuda")]` properly replaced
 
 ## Conclusion
-All linter checks passed with zero warnings for both CPU and GPU configurations. Code quality meets BitNet.rs neural network development standards.
+All linter checks passed with zero warnings for both CPU and GPU configurations. Code quality meets BitNet-rs neural network development standards.
 
 **Gate Status**: ✅ PASS

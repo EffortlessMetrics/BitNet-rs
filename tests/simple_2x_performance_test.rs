@@ -246,7 +246,7 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
     let report_path = temp_dir.path().join("performance_report.md");
 
     let mut report = String::new();
-    report.push_str("# BitNet.rs Performance Benchmark Report\n\n");
+    report.push_str("# BitNet-rs Performance Benchmark Report\n\n");
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     report.push_str(&format!("**Generated:** {} (Unix timestamp)\n", timestamp));
     report.push_str(&format!("**Scenarios:** {}\n", results.len()));

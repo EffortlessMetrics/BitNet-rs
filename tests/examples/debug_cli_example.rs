@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔍 BitNet.rs Debug CLI Example");
+    println!("🔍 BitNet-rs Debug CLI Example");
     println!("==============================\n");
 
     // Check if debug directory exists

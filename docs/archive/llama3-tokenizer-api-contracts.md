@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the public API contracts for the LLaMA-3 tokenizer fetching and auto-discovery feature in BitNet.rs. These contracts ensure consistent behavior across the xtask CLI, bitnet-cli auto-discovery, and CI integration workflows.
+This document defines the public API contracts for the LLaMA-3 tokenizer fetching and auto-discovery feature in BitNet-rs. These contracts ensure consistent behavior across the xtask CLI, bitnet-cli auto-discovery, and CI integration workflows.
 
 ## API Stability Guarantees
 
@@ -152,7 +152,7 @@ pub fn verify_llama3_tokenizer(path: &Path) -> Result<()> {
 
 **Public Interface**:
 ```rust
-/// Tokenizer auto-discovery for BitNet.rs CLI
+/// Tokenizer auto-discovery for BitNet-rs CLI
 ///
 /// Discovery order:
 /// 1. GGUF embedded tokenizer (tokenizer.ggml.model metadata)
@@ -704,6 +704,6 @@ pub enum TokenizerSource {
 
 ## Conclusion
 
-These API contracts ensure consistent, reliable, and maintainable behavior for the LLaMA-3 tokenizer fetching and auto-discovery feature. By defining clear contracts for CLI interfaces, auto-discovery logic, download implementation, and behavioral guarantees, we provide a solid foundation for production-ready BitNet.rs inference workflows.
+These API contracts ensure consistent, reliable, and maintainable behavior for the LLaMA-3 tokenizer fetching and auto-discovery feature. By defining clear contracts for CLI interfaces, auto-discovery logic, download implementation, and behavioral guarantees, we provide a solid foundation for production-ready BitNet-rs inference workflows.
 
 All contracts are designed with backward compatibility, fail-fast error handling, and actionable user guidance as core principles.

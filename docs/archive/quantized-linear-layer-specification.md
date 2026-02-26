@@ -6,7 +6,7 @@
 
 ## Overview
 
-Quantized linear layers form the backbone of BitNet transformer computation, replacing standard FP32 linear operations with 1-bit and 2-bit quantized matrix multiplications. This specification defines production-ready quantized linear layers that integrate seamlessly with BitNet.rs quantization infrastructure while maintaining >99% accuracy compared to full-precision computation.
+Quantized linear layers form the backbone of BitNet transformer computation, replacing standard FP32 linear operations with 1-bit and 2-bit quantized matrix multiplications. This specification defines production-ready quantized linear layers that integrate seamlessly with BitNet-rs quantization infrastructure while maintaining >99% accuracy compared to full-precision computation.
 
 ## Architecture Design
 
@@ -622,7 +622,7 @@ impl AccuracyReport {
 }
 ```
 
-## Integration with BitNet.rs Ecosystem
+## Integration with BitNet-rs Ecosystem
 
 ### GGUF Loading Integration
 
@@ -849,4 +849,4 @@ mod tests {
 }
 ```
 
-This specification provides a comprehensive blueprint for implementing quantized linear layers in BitNet.rs, ensuring seamless integration with the existing quantization infrastructure while delivering production-grade performance and accuracy.
+This specification provides a comprehensive blueprint for implementing quantized linear layers in BitNet-rs, ensuring seamless integration with the existing quantization infrastructure while delivering production-grade performance and accuracy.

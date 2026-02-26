@@ -1,4 +1,4 @@
-# BitNet.rs MVP Finalization - Complete Implementation Audit
+# BitNet-rs MVP Finalization - Complete Implementation Audit
 
 **Date**: 2025-10-22
 **Flow**: Integrative (Generative → Quality → Integrative)
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive audit trail for the BitNet.rs MVP finalization sprint, which delivered critical test infrastructure, environment management, profiling capabilities, and quality gates across **4 parallel implementation tracks**. All implementation work has been completed, validated, and is ready for team review and merge.
+This document provides a comprehensive audit trail for the BitNet-rs MVP finalization sprint, which delivered critical test infrastructure, environment management, profiling capabilities, and quality gates across **4 parallel implementation tracks**. All implementation work has been completed, validated, and is ready for team review and merge.
 
 ### Key Achievements
 

@@ -79,7 +79,7 @@
 
 ---
 
-## BitNet.rs Standards Compliance ✅
+## BitNet-rs Standards Compliance ✅
 
 ### Quantization Accuracy
 - **I2S:** >99% accuracy vs FP32 reference
@@ -254,7 +254,7 @@ ls ci/receipts/pr-464/: 12 files preserved
 **Integrative Flow:** Successfully completed
 **Next Action:** None (finalized)
 **Verified By:** pr-merge-finalizer
-**Certification:** All gates passed, workspace validated, artifacts archived, BitNet.rs standards met
+**Certification:** All gates passed, workspace validated, artifacts archived, BitNet-rs standards met
 
 ---
 
@@ -284,7 +284,7 @@ ls ci/receipts/pr-464/: 12 files preserved
 - 0 CVEs introduced
 - 0 unsafe blocks in new code
 - Cargo audit clean
-- BitNet.rs quantization standards met (>99% accuracy)
+- BitNet-rs quantization standards met (>99% accuracy)
 
 📦 **Documentation & Artifacts:**
 - Complete test documentation (43 tests)

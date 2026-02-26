@@ -937,7 +937,7 @@ mod performance_tests {
 - Standard Rust testing framework
 - `proptest` for property-based testing (optional)
 - `serde` for configuration serialization (optional)
-- Existing BitNet.rs inference types and traits
+- Existing BitNet-rs inference types and traits
 
 ## Related Issues
 

@@ -10,7 +10,7 @@
 
 ## Summary
 
-PR #440 successfully promoted from **Draft** → **Ready for Review** status with all BitNet.rs quality criteria satisfied.
+PR #440 successfully promoted from **Draft** → **Ready for Review** status with all BitNet-rs quality criteria satisfied.
 
 ## Validation Results
 
@@ -219,7 +219,7 @@ architecture=aligned✅ contract=ADDITIVE✅ promotion=complete✅
 
 **Gate Status:** ✅ **PASS**
 
-PR #440 successfully meets all BitNet.rs promotion criteria:
+PR #440 successfully meets all BitNet-rs promotion criteria:
 - All 6 required quality gates PASS
 - Neural network standards validated and exceeded
 - API changes are ADDITIVE-only (no breaking changes)

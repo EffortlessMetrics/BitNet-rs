@@ -30,7 +30,7 @@ test result: ok. 5 passed; 0 failed; 2 ignored
 
 **Result:** ✅ All Issue #462 acceptance criteria tests passing (20/20)
 
-### Phase 2: BitNet.rs Build & Feature Validation ✅
+### Phase 2: BitNet-rs Build & Feature Validation ✅
 ```bash
 # CPU-only workspace build
 cargo build --workspace --no-default-features --features cpu
@@ -46,7 +46,7 @@ test result: ok. 29 passed; 0 failed; 1 ignored
 
 **Result:** ✅ Build and feature validation successful
 
-### Phase 3: BitNet.rs Code Hygiene & Quality Gates ✅
+### Phase 3: BitNet-rs Code Hygiene & Quality Gates ✅
 ```bash
 # Format check
 cargo fmt --all --check
@@ -72,7 +72,7 @@ grep -r "unwrap()\|expect(" crates/bitnet-cli/tests/issue_462_*.rs
 
 ---
 
-## BitNet.rs-Specific Validation
+## BitNet-rs-Specific Validation
 
 ### Error Handling Patterns ✅
 - **TL LUT Helper** (`crates/bitnet-kernels/src/tl_lut.rs`):
@@ -139,7 +139,7 @@ tdd_compliance: PASS (Red-Green-Refactor patterns)
 
 **Status:** ✅ **PASS**
 **Route:** **FINALIZE → code-refiner**
-**Reason:** All BitNet.rs quality gates passed. Implementation validated against TDD standards.
+**Reason:** All BitNet-rs quality gates passed. Implementation validated against TDD standards.
 
 **Next Phase:** Quality Gates microloop (code-refiner agent will perform comprehensive refinement validation)
 
@@ -149,6 +149,6 @@ tdd_compliance: PASS (Red-Green-Refactor patterns)
 - **Pre-existing test failures:** 1 intermittent test in `ac3_autoregressive_generation.rs` (not part of Issue #462, pre-existing)
 - **Ignored tests:** 2 benchmark tests in AC4 (expected, run with `--ignored` flag)
 - **Fix-forward:** No mechanical fixes required
-- **Implementation Quality:** Production-ready, follows BitNet.rs patterns
+- **Implementation Quality:** Production-ready, follows BitNet-rs patterns
 
-✅ **BitNet.rs implementation validation complete. Ready for refinement phase.**
+✅ **BitNet-rs implementation validation complete. Ready for refinement phase.**

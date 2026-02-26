@@ -1,4 +1,4 @@
-# BitNet.rs Validation Reality Check
+# BitNet-rs Validation Reality Check
 
 ## ⚠️ CRITICAL FINDINGS
 

@@ -4,7 +4,7 @@
 **Status**: Ready for Implementation
 **Priority**: P3 - Test Infrastructure Fixes
 **Date**: 2025-10-11
-**Affected Crate**: `tests` (BitNet.rs test harness)
+**Affected Crate**: `tests` (BitNet-rs test harness)
 
 ---
 
@@ -434,7 +434,7 @@ async fn test_ac7_config_initialization() -> TestOpResult<()> { // AC:7
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Flag Discipline
 ✅ Fixtures module properly gated behind `#[cfg(feature = "fixtures")]`
@@ -487,7 +487,7 @@ Before implementation:
 - [x] Validation commands specified with expected outputs
 - [x] Rollback strategy documented
 - [x] Zero impact on production code confirmed
-- [x] BitNet.rs standards compliance verified
+- [x] BitNet-rs standards compliance verified
 - [x] Test structure defined with AC tags
 
 **Status**: ✅ Ready for Implementation

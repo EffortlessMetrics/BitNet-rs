@@ -1,13 +1,13 @@
 # Cross-Validation CI Workflow
 
-Comprehensive documentation for the BitNet.rs cross-validation CI workflow.
+Comprehensive documentation for the BitNet-rs cross-validation CI workflow.
 
 ## Overview
 
-The cross-validation workflow validates BitNet.rs against C++ reference implementations through a dual-lane architecture:
+The cross-validation workflow validates BitNet-rs against C++ reference implementations through a dual-lane architecture:
 
-- **Lane A**: BitNet.rs vs bitnet.cpp (BitNet-specific models)
-- **Lane B**: BitNet.rs vs llama.cpp (LLaMA-compatible models)
+- **Lane A**: BitNet-rs vs bitnet.cpp (BitNet-specific models)
+- **Lane B**: BitNet-rs vs llama.cpp (LLaMA-compatible models)
 
 ## Workflow Structure
 

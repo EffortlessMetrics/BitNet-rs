@@ -109,7 +109,7 @@ We consider the following areas in scope for security reports:
 
 ### Receipt Verification
 
-BitNet.rs implements "honest compute" verification through receipts. Receipts prove that real computation occurred by including kernel IDs and validation gates.
+BitNet-rs implements "honest compute" verification through receipts. Receipts prove that real computation occurred by including kernel IDs and validation gates.
 
 **Security Properties**:
 - `compute_path` must be `"real"` (strict mode enforces this)
@@ -122,7 +122,7 @@ BitNet.rs implements "honest compute" verification through receipts. Receipts pr
 
 ### Quantization Accuracy
 
-BitNet.rs validates quantization accuracy through cross-validation with C++ reference implementations.
+BitNet-rs validates quantization accuracy through cross-validation with C++ reference implementations.
 
 **Security Implications**:
 - Incorrect quantization could leak model weights or produce biased outputs

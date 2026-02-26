@@ -8,7 +8,7 @@
 ## Overview
 
 This document describes the comprehensive test scaffolding created for vocab NULL check
-safety fixes in the BitNet.rs C++ wrapper. The tests are written in TDD style and will
+safety fixes in the BitNet-rs C++ wrapper. The tests are written in TDD style and will
 initially **fail** (red phase) until the NULL checks are implemented in the C++ wrapper.
 
 ## Test Architecture
@@ -274,7 +274,7 @@ valgrind --leak-check=full --error-exitcode=1 \
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2025-10-25 | BitNet.rs Test Scaffolder | Initial test scaffolding (TDD red phase) |
+| 1.0 | 2025-10-25 | BitNet-rs Test Scaffolder | Initial test scaffolding (TDD red phase) |
 
 ---
 

@@ -6,7 +6,7 @@
 
 ## Context
 
-BitNet.rs quantized layers can silently fall back to FP32 dequantization when native quantized kernels are unavailable. Issue #453 requires runtime detection mechanisms to identify and reject FP32 fallback in strict mode.
+BitNet-rs quantized layers can silently fall back to FP32 dequantization when native quantized kernels are unavailable. Issue #453 requires runtime detection mechanisms to identify and reject FP32 fallback in strict mode.
 
 ### Fallback Scenarios
 

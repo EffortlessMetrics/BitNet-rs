@@ -1,6 +1,6 @@
 # CPU MVP Acceptance Checklist
 
-This checklist provides the acceptance criteria for the BitNet.rs CPU inference Minimum Viable Product (MVP). Use this to validate that the inference pipeline meets production quality standards.
+This checklist provides the acceptance criteria for the BitNet-rs CPU inference Minimum Viable Product (MVP). Use this to validate that the inference pipeline meets production quality standards.
 
 ## Pre-Flight Checks
 

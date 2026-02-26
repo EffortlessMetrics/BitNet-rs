@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Comprehensive T2 feature matrix validation for BitNet.rs PR #475 completed successfully. All core features compile and pass clippy validation. Feature combinations validated across CPU/GPU backends with quantization stability confirmed. One blocking issue identified in OnceLock API usage affecting ffi+cpu combination only; workaround available via cpu+crossval path.
+Comprehensive T2 feature matrix validation for BitNet-rs PR #475 completed successfully. All core features compile and pass clippy validation. Feature combinations validated across CPU/GPU backends with quantization stability confirmed. One blocking issue identified in OnceLock API usage affecting ffi+cpu combination only; workaround available via cpu+crossval path.
 
 **Production Readiness**: ✅ READY for T3 integrative test runner
 
@@ -384,7 +384,7 @@ cargo clippy --workspace --all-targets --no-default-features --features gpu -- -
 
 ## Conclusion
 
-BitNet.rs feature matrix validation for PR #475 demonstrates comprehensive feature coverage with production-ready core functionality. All critical features compile, pass code quality checks, and show proper integration patterns. One documented issue with OnceLock API provides clear path forward for resolution. Project is ready to proceed to T3 integrative testing phase.
+BitNet-rs feature matrix validation for PR #475 demonstrates comprehensive feature coverage with production-ready core functionality. All critical features compile, pass code quality checks, and show proper integration patterns. One documented issue with OnceLock API provides clear path forward for resolution. Project is ready to proceed to T3 integrative testing phase.
 
 **Validation Status**: ✅ **COMPLETE**
 **Next Step**: Integrative Test Runner (T3)

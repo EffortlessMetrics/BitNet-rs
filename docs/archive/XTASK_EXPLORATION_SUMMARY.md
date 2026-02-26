@@ -1,8 +1,8 @@
-# BitNet.rs xtask Crate - Comprehensive Exploration
+# BitNet-rs xtask Crate - Comprehensive Exploration
 
 ## Overview
 
-The `xtask` crate is BitNet.rs's developer automation tool built with Clap CLI framework. It provides:
+The `xtask` crate is BitNet-rs's developer automation tool built with Clap CLI framework. It provides:
 
 1. **Model Management**: Download from HuggingFace, tokenizer management, model validation
 2. **Cross-Validation**: Against Microsoft BitNet C++ reference implementation

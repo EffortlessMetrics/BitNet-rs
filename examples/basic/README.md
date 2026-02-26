@@ -1,6 +1,6 @@
 # Basic Examples
 
-This directory contains simple, standalone examples that demonstrate core BitNet.rs functionality.
+This directory contains simple, standalone examples that demonstrate core BitNet-rs functionality.
 
 ## Examples
 

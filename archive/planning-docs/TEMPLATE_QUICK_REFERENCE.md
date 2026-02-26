@@ -1,4 +1,4 @@
-# BitNet.rs Prompt Template System - Quick Reference
+# BitNet-rs Prompt Template System - Quick Reference
 
 ## Template Types
 

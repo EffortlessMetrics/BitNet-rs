@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Comprehensive validation suite for BitNet.rs vs llama.cpp
+# Comprehensive validation suite for bitnet-rs vs llama.cpp
 set -euo pipefail
 
 # Source concurrency caps and preflight checks
@@ -23,7 +23,7 @@ mkdir -p "$TMP"
 # Cleanup on exit
 trap 'rm -rf "$TMP"' EXIT
 
-echo -e "${YELLOW}BitNet.rs Comprehensive Validation Suite${NC}"
+echo -e "${YELLOW}bitnet-rs Comprehensive Validation Suite${NC}"
 echo "================================================"
 echo "Model: $MODEL"
 echo "Tokenizer: ${SPM:-embedded}"
@@ -59,7 +59,7 @@ validate_model_compatibility() {
     echo "--------------------------------"
 
     # Check model with bitnet
-    echo "Checking model with BitNet.rs..."
+    echo "Checking model with bitnet-rs..."
     local bitnet_out="$TMP/model_check.json"
 
     if [[ -n "$SPM" ]]; then
@@ -128,7 +128,7 @@ EOF
     export RAYON_NUM_THREADS=1
     export OMP_NUM_THREADS=1
 
-    echo "Running BitNet.rs perplexity calculation..."
+    echo "Running bitnet-rs perplexity calculation..."
     local bitnet_ppl="$TMP/bitnet_ppl.json"
 
     if [[ -n "$SPM" ]]; then
@@ -143,8 +143,8 @@ EOF
         local bitnet_nll=$(jq -r '.mean_nll // "N/A"' "$bitnet_ppl")
         local bitnet_ppl_val=$(jq -r '.ppl // "N/A"' "$bitnet_ppl")
 
-        echo "  BitNet.rs NLL: $bitnet_nll"
-        echo "  BitNet.rs PPL: $bitnet_ppl_val"
+        echo "  bitnet-rs NLL: $bitnet_nll"
+        echo "  bitnet-rs PPL: $bitnet_ppl_val"
 
         # Try to run llama.cpp for comparison
         if command -v llama-cli &> /dev/null; then
@@ -222,7 +222,7 @@ prompts:
 EOF
     fi
 
-    echo "Running token generation with BitNet.rs..."
+    echo "Running token generation with bitnet-rs..."
     local bitnet_ids="$TMP/bitnet.ids"
     local bitnet_run="$TMP/bitnet_run.json"
 

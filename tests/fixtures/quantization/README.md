@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Demonstrate BitNet.rs neural network patterns for device-aware quantization backend selection using unified GPU feature gates.
+Demonstrate BitNet-rs neural network patterns for device-aware quantization backend selection using unified GPU feature gates.
 
 ## Fixture Files
 

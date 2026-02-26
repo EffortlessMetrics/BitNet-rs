@@ -122,7 +122,7 @@ async fn test_html_reporter() {
 
     let content = fs::read_to_string(&output_path).await.unwrap();
     assert!(content.contains("<!DOCTYPE html>"));
-    assert!(content.contains("BitNet.rs Test Report"));
+    assert!(content.contains("BitNet-rs Test Report"));
 
     println!("✅ HTML report generated successfully: {} bytes", result.size_bytes);
 }
@@ -142,7 +142,7 @@ async fn test_markdown_reporter() {
     assert!(result.size_bytes > 0);
 
     let content = fs::read_to_string(&output_path).await.unwrap();
-    assert!(content.contains("# BitNet.rs Test Report"));
+    assert!(content.contains("# BitNet-rs Test Report"));
     assert!(content.contains("## Summary"));
 
     println!("✅ Markdown report generated successfully: {} bytes", result.size_bytes);

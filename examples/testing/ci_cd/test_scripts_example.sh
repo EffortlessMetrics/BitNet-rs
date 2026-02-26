@@ -1,5 +1,5 @@
 #!/bin/bash
-# Example test scripts for BitNet.rs testing framework
+# Example test scripts for bitnet-rs testing framework
 # This demonstrates various testing scenarios and automation scripts
 
 set -euo pipefail
@@ -380,7 +380,7 @@ run_security_audit() {
 # Usage information
 show_usage() {
     cat << EOF
-BitNet.rs Testing Framework Script
+bitnet-rs Testing Framework Script
 
 Usage: $0 [COMMAND] [OPTIONS]
 

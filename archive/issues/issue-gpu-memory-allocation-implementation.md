@@ -276,7 +276,7 @@ mod tests {
 - Test multi-threaded allocation patterns
 - Test performance under various allocation sizes
 
-## BitNet.rs Integration Notes
+## BitNet-rs Integration Notes
 
 ### CUDA Feature Flag Integration
 ```rust

@@ -169,7 +169,7 @@ This report details the 5 QK256-related documentation test suites and confirms t
 #### QK256 Format (GGML I2_S, 256-element blocks)
 
 QK256 is a GGML-compatible I2_S quantization format with 256-element blocks and
-separate scale tensors. BitNet.rs automatically detects the format and routes
+separate scale tensors. BitNet-rs automatically detects the format and routes
 to the appropriate kernels.
 
 ```bash
@@ -214,7 +214,7 @@ Comprehensive sections covering:
 Comprehensive guide covering:
 - What is QK256 (lines 5-14)
 - Quick Start (lines 16-95):
-  - Build BitNet.rs
+  - Build BitNet-rs
   - Download QK256 model
   - Verify model loading
   - Run inference
@@ -431,4 +431,4 @@ All cross-links are valid, code examples are syntactically correct, and feature 
 
 **Report Generated**: 2025-10-23
 **Test Suite Version**: Comprehensive Documentation Validation v1.0
-**BitNet.rs Version**: v0.1.0-qna-mvp
+**BitNet-rs Version**: v0.1.0-qna-mvp

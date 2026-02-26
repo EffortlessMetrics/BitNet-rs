@@ -87,7 +87,7 @@ f8fabff docs(#439): Add doctests and fix command examples for unified GPU predic
 - Status: ✅ Up-to-date (no uncommitted changes)
 
 **Commit Convention Compliance:**
-- All commits follow BitNet.rs neural network prefixes
+- All commits follow BitNet-rs neural network prefixes
 - Issue reference (#439) present in all commits
 - Semantic types: governance, docs, feat, fix, test, chore
 
@@ -153,7 +153,7 @@ cargo test --lib --workspace --no-default-features --features cpu -- --test-thre
 
 ---
 
-### ✅ 6. BitNet.rs Neural Network Standards
+### ✅ 6. BitNet-rs Neural Network Standards
 
 **Feature-Gated Architecture:**
 - ✅ Default features EMPTY (always specify `--features cpu|gpu`)
@@ -279,7 +279,7 @@ feat: Enhance GPU feature detection
 - Evidence bundle complete (2,299 lines + receipts)
 - Neural network standards preserved and enhanced
 - Backward compatibility fully maintained
-- BitNet.rs commit conventions followed throughout
+- BitNet-rs commit conventions followed throughout
 
 **Next Action:** FINALIZE → pub-finalizer (create Draft PR)
 

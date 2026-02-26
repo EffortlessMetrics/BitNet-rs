@@ -1,6 +1,6 @@
 # Testing Tools
 
-This directory contains helpful scripts and tools for working with the BitNet.rs testing framework.
+This directory contains helpful scripts and tools for working with the BitNet-rs testing framework.
 
 ## Test Template Generator
 

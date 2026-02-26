@@ -1,4 +1,4 @@
-# BitNet.rs TODO Implementation Quick Start Guide
+# BitNet-rs TODO Implementation Quick Start Guide
 
 **Estimated Total Effort:** 270-360 hours (6-9 person-weeks)  
 **Report Date:** 2025-10-19
@@ -125,7 +125,7 @@ cargo test -p bitnet-models --test real_model_loading
 **Quick Start:**
 ```bash
 # 1. Implement model loading for cross-validation
-# 2. Create BitNet.rs inference wrapper
+# 2. Create BitNet-rs inference wrapper
 # 3. Implement C++ reference runner
 # 4. Create comparison metrics system
 # 5. Implement aggregation functions
@@ -137,7 +137,7 @@ cargo test -p bitnet-inference --test ac4_cross_validation_accuracy -- --ignored
 
 **Key Tasks:**
 - [ ] Model loading wrapper
-- [ ] BitNet.rs inference execution
+- [ ] BitNet-rs inference execution
 - [ ] C++ reference implementation runner
 - [ ] Output comparison metrics
 - [ ] Accuracy aggregation (>99% target)

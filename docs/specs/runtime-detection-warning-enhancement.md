@@ -1,7 +1,7 @@
 # Runtime Detection Warning Enhancement Specification
 
 **Status**: Draft
-**Author**: BitNet.rs Specification Agent
+**Author**: BitNet-rs Specification Agent
 **Date**: 2025-10-27
 **Related Issues**: N/A (Enhancement)
 **Related Documents**:
@@ -13,7 +13,7 @@
 
 ## Executive Summary
 
-The BitNet.rs test infrastructure uses a dual-detection system for C++ backend libraries:
+The BitNet-rs test infrastructure uses a dual-detection system for C++ backend libraries:
 
 1. **Build-time constants**: `HAS_BITNET`, `HAS_LLAMA` baked into xtask binary during compilation
 2. **Runtime fallback**: `detect_backend_runtime()` searches filesystem for libraries after xtask is built

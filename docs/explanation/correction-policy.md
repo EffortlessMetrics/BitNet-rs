@@ -1,12 +1,12 @@
 # Correction Policy System
 
-This document describes the policy-driven correction system for handling known-bad GGUF models in BitNet.rs. The system provides fingerprinted, auditable runtime corrections as a **temporary workaround** while you regenerate properly formatted models.
+This document describes the policy-driven correction system for handling known-bad GGUF models in BitNet-rs. The system provides fingerprinted, auditable runtime corrections as a **temporary workaround** while you regenerate properly formatted models.
 
 ## Overview
 
 ### Purpose
 
-The correction policy system enables BitNet.rs to apply targeted fixes to models with known defects (e.g., quantized LayerNorm weights) without modifying the GGUF file on disk. This is a **temporary workaround** - the proper fix is always to regenerate the GGUF with correct weight formats.
+The correction policy system enables BitNet-rs to apply targeted fixes to models with known defects (e.g., quantized LayerNorm weights) without modifying the GGUF file on disk. This is a **temporary workaround** - the proper fix is always to regenerate the GGUF with correct weight formats.
 
 ### Design Principles
 
@@ -413,7 +413,7 @@ All corrections are logged with:
 - Model fingerprint (GGUF hash)
 - Correction parameters applied
 - Validation results (pre/post conditions)
-- Timestamp and BitNet.rs version
+- Timestamp and BitNet-rs version
 
 ## Limitations
 

@@ -1,5 +1,5 @@
 /*
- * llama.cpp Compatible C API for BitNet.rs
+ * llama.cpp Compatible C API for bitnet-rs
  *
  * This header provides a drop-in replacement for llama.cpp's C API.
  * Simply replace #include "llama.h" with #include "llama_compat.h"

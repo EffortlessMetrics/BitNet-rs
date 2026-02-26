@@ -291,7 +291,7 @@ test result: ok. 41 passed; 0 failed; 0 ignored
 
 ---
 
-## BitNet.rs Neural Network Security Context
+## BitNet-rs Neural Network Security Context
 
 ### Quantization Accuracy as Security
 - **Requirement:** >99% accuracy preservation in I2S/TL1/TL2

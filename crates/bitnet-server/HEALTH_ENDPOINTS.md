@@ -1,4 +1,4 @@
-# BitNet.rs Health Endpoints
+# BitNet-rs Health Endpoints
 
 Production-ready health check endpoints for BitNet inference server with real system metrics.
 

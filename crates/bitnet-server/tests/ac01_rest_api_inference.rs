@@ -7,7 +7,7 @@
 /// AC1: REST API Inference Endpoint Implementation
 /// - Synchronous /v1/inference endpoint with JSON request/response
 /// - Request validation and schema enforcement
-/// - Response format compliance with BitNet.rs neural network patterns
+/// - Response format compliance with BitNet-rs neural network patterns
 /// - Device-aware quantization format selection (I2S, TL1, TL2)
 use anyhow::Result;
 use serde_json::json;

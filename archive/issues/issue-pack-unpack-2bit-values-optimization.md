@@ -56,7 +56,7 @@ The `pack_2bit_values` and `unpack_2bit_values` functions in `crates/bitnet-quan
 
 ## Reproduction Steps
 
-1. Build BitNet.rs with quantization features:
+1. Build BitNet-rs with quantization features:
    ```bash
    cargo build --no-default-features --features cpu
    ```

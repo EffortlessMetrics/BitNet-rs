@@ -852,7 +852,7 @@ async fn test_ac8_comprehensive_test_coverage_validation() -> Result<()> {
         validate_ac_test_exists(ac_tag).context(format!("Missing test coverage for {}", ac_tag))?;
     }
 
-    // Verify test structure follows BitNet.rs conventions
+    // Verify test structure follows BitNet-rs conventions
     validate_test_structure_conventions()?;
 
     Ok(())

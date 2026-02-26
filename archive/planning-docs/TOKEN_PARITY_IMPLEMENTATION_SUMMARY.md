@@ -2,7 +2,7 @@
 
 **Date**: 2025-10-25  
 **Status**: ✅ **IMPLEMENTATION COMPLETE**  
-**Feature**: Fail-fast token validation for BitNet.rs cross-validation
+**Feature**: Fail-fast token validation for BitNet-rs cross-validation
 
 ---
 

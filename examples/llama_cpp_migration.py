@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Example showing how to migrate from llama-cpp-python to BitNet.rs
+Example showing how to migrate from llama-cpp-python to bitnet-rs
 
 This demonstrates that the same code works with both libraries,
 requiring only a single import change!
@@ -9,13 +9,13 @@ requiring only a single import change!
 # Original llama-cpp-python code:
 # from llama_cpp import Llama
 
-# BitNet.rs drop-in replacement (ONE LINE CHANGE!):
+# bitnet-rs drop-in replacement (ONE LINE CHANGE!):
 from bitnet.llama_compat import Llama
 
 def main():
     """
     This is EXACTLY the same code you would use with llama-cpp-python!
-    No other changes needed - BitNet.rs handles everything.
+    No other changes needed - bitnet-rs handles everything.
     """
 
     # Load model - identical API
@@ -85,8 +85,8 @@ def main():
     for i, choice in enumerate(batch_output['choices']):
         print(f"{i+1}. {choice['text']}")
 
-    print("\n✅ Migration successful! BitNet.rs works with your existing llama-cpp code!")
-    print("Benefits you get with BitNet.rs:")
+    print("\n✅ Migration successful! bitnet-rs works with your existing llama-cpp code!")
+    print("Benefits you get with bitnet-rs:")
     print("  • Memory safety (no segfaults)")
     print("  • Better performance (SIMD optimizations)")
     print("  • Handles models that llama.cpp can't (GPT-2 tokenizers)")

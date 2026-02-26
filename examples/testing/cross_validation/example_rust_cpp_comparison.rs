@@ -1,7 +1,7 @@
 //! Example cross-validation tests comparing Rust and C++ implementations
 //!
 //! Demonstrates accuracy comparison, performance benchmarking, and
-//! regression detection between BitNet.rs and BitNet.cpp
+//! regression detection between bitnet-rs and BitNet.cpp
 
 use bitnet_crossval::{
     BitNetImplementation, ComparisonTestCase, ComparisonTolerance, CppImplementation,

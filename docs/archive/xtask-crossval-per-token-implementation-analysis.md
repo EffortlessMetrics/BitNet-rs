@@ -783,7 +783,7 @@ LogitsDivergence {
 
 ---
 
-**Report Generated**: Analysis of BitNet.rs `xtask crossval-per-token` implementation  
+**Report Generated**: Analysis of BitNet-rs `xtask crossval-per-token` implementation  
 **Status**: Complete with bug identification  
 **Critical Issue**: Execution order violation (lines 2933 vs 2963)  
 **Recommendation**: Reorder to evaluate token parity before expensive logits computations

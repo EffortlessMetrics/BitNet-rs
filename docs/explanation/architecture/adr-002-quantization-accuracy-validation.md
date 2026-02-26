@@ -6,7 +6,7 @@
 
 ## Context
 
-BitNet.rs implements 1-bit quantization algorithms (I2S, TL1, TL2) that are critical for neural network inference accuracy. With real BitNet model integration, we need comprehensive validation that these quantization operations maintain numerical accuracy compared to reference implementations while providing device-aware optimization.
+BitNet-rs implements 1-bit quantization algorithms (I2S, TL1, TL2) that are critical for neural network inference accuracy. With real BitNet model integration, we need comprehensive validation that these quantization operations maintain numerical accuracy compared to reference implementations while providing device-aware optimization.
 
 ### Current Quantization State
 
@@ -602,6 +602,6 @@ quality_gates:
 
 ## Conclusion
 
-This quantization accuracy validation strategy ensures that BitNet.rs maintains numerical precision with real model weights while providing comprehensive device-aware optimization. The framework balances strict accuracy requirements with practical development needs through configurable tolerances, automated validation, and comprehensive error diagnostics.
+This quantization accuracy validation strategy ensures that BitNet-rs maintains numerical precision with real model weights while providing comprehensive device-aware optimization. The framework balances strict accuracy requirements with practical development needs through configurable tolerances, automated validation, and comprehensive error diagnostics.
 
 The implementation provides confidence in production deployment by validating against C++ reference implementations while enabling efficient development through intelligent testing strategies and automated quality monitoring.

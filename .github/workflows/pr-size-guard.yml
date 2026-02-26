@@ -220,7 +220,7 @@ jobs:
           4. **Use synthetic test data** - avoid committing large fixtures
           5. **Clean the branch** - remove unintended files and changes
 
-          ### BitNet.rs Best Practices:
+          ### bitnet-rs Best Practices:
           - **Target:** <1,000 lines per PR for new features
           - **Maximum:** <5,000 lines (requires justification)
           - **Oversized threshold:** 50,000+ lines (requires review and likely splitting)

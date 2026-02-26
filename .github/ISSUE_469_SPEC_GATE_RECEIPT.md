@@ -3,7 +3,7 @@
 **Gate:** `generative:gate:spec`
 **Status:** ✅ **PASS**
 **Timestamp:** 2025-10-18T$(date -u +%H:%M:%S)Z
-**Agent:** BitNet.rs Schema Validation Specialist (generative-spec-validator)
+**Agent:** bitnet-rs Schema Validation Specialist (generative-spec-validator)
 **Issue:** #469 MVP Sprint - QK256 implementation polish
 
 ---
@@ -83,7 +83,7 @@
 **Full Report:** `/home/steven/code/Rust/BitNet-rs/validation-report-issue-469.md`
 
 **Key Findings:**
-1. All API contracts follow established BitNet.rs naming and structure patterns
+1. All API contracts follow established bitnet-rs naming and structure patterns
 2. Backward compatibility maintained through optional fields and default implementations
 3. Neural network component integration verified (GGUF, quantization, tokenizer, receipts)
 4. Thread safety guaranteed (immutable structs, pure functions, atomic synchronization)
@@ -117,7 +117,7 @@
 **Routing:** **FINALIZE → spec-finalizer**
 
 **Rationale:**
-- All 8 acceptance criteria validated against existing BitNet.rs contracts
+- All 8 acceptance criteria validated against existing bitnet-rs contracts
 - No conflicts or breaking changes identified
 - Backward compatibility confirmed
 - Neural network integration patterns verified
@@ -131,7 +131,7 @@ The spec-finalizer agent should proceed with implementation planning based on th
 
 ## Receipt Metadata
 
-**Agent:** generative-spec-validator (BitNet.rs Schema Validation Specialist)
+**Agent:** generative-spec-validator (bitnet-rs Schema Validation Specialist)
 **Issue:** #469
 **Gate:** generative:gate:spec
 **Validation Files:**
@@ -155,4 +155,4 @@ The spec-finalizer agent should proceed with implementation planning based on th
 ---
 
 **Receipt Generated:** 2025-10-18
-**Validator:** BitNet.rs Schema Validation Specialist
+**Validator:** bitnet-rs Schema Validation Specialist

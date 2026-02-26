@@ -2,7 +2,7 @@
 
 ## Context
 
-BitNet.rs requires a production-ready universal tokenizer discovery system to enable automatic tokenizer resolution for quantized neural network models. The current implementation in `bitnet-tokenizers` contains multiple stub implementations that prevent proper tokenizer extraction from GGUF metadata, model architecture detection, and intelligent fallback strategies.
+BitNet-rs requires a production-ready universal tokenizer discovery system to enable automatic tokenizer resolution for quantized neural network models. The current implementation in `bitnet-tokenizers` contains multiple stub implementations that prevent proper tokenizer extraction from GGUF metadata, model architecture detection, and intelligent fallback strategies.
 
 This specification defines the comprehensive architecture for implementing 5 core components that enable seamless tokenizer discovery, smart downloading, and production-scale neural network inference across BitNet, LLaMA, GPT-2, GPT-Neo, BERT, and T5 architectures.
 
@@ -11,14 +11,14 @@ This specification defines the comprehensive architecture for implementing 5 cor
 ## User Stories
 
 ### Story 1: Automatic Tokenizer Discovery from GGUF Models
-**As a** BitNet.rs user
+**As a** BitNet-rs user
 **I want** automatic tokenizer discovery from GGUF model files
 **So that** I can run neural network inference without manual tokenizer configuration
 
 **Business Value**: Eliminates manual tokenizer setup, reduces configuration errors, enables production-ready inference workflows
 
 ### Story 2: Smart Tokenizer Downloading
-**As a** BitNet.rs developer
+**As a** BitNet-rs developer
 **I want** automatic tokenizer downloading from HuggingFace Hub
 **So that** missing tokenizers are automatically acquired with proper caching
 
@@ -39,7 +39,7 @@ This specification defines the comprehensive architecture for implementing 5 cor
 **Business Value**: Robust production deployments, predictable behavior, clear error diagnostics
 
 ### Story 5: Cross-Validation with C++ Reference
-**As a** BitNet.rs maintainer
+**As a** BitNet-rs maintainer
 **I want** tokenizer discovery validated against Microsoft BitNet C++ reference
 **So that** we maintain >99% compatibility with the official implementation
 
@@ -172,7 +172,7 @@ This specification defines the comprehensive architecture for implementing 5 cor
 
 **Core Discovery API**:
 ```rust
-/// Primary tokenizer discovery engine for BitNet.rs neural network models
+/// Primary tokenizer discovery engine for BitNet-rs neural network models
 pub struct TokenizerDiscovery {
     // Memory-mapped GGUF data with 'static lifetime management
     _mmap: memmap2::Mmap,
@@ -1277,5 +1277,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - [HuggingFace Tokenizers](https://huggingface.co/docs/tokenizers/index)
 - [SentencePiece Documentation](https://github.com/google/sentencepiece)
 - [Microsoft BitNet C++ Reference](https://github.com/microsoft/BitNet)
-- [BitNet.rs Architecture Overview](../architecture-overview.md)
+- [BitNet-rs Architecture Overview](../architecture-overview.md)
 - [Tokenizer Architecture Documentation](../tokenizer-architecture.md)

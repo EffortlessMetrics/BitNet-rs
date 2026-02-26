@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This specification addresses systematic cleanup of ambiguous "when available" phrasing across the BitNet.rs codebase and establishes comprehensive message standards for CLI tools, error reporting, and documentation. The goal is to eliminate timing ambiguity, provide consistent user experiences, and enable robust CI/CD integration through clear exit codes and recovery guidance.
+This specification addresses systematic cleanup of ambiguous "when available" phrasing across the BitNet-rs codebase and establishes comprehensive message standards for CLI tools, error reporting, and documentation. The goal is to eliminate timing ambiguity, provide consistent user experiences, and enable robust CI/CD integration through clear exit codes and recovery guidance.
 
 **Scope**: Affects 70+ instances of ambiguous phrasing across CLI help text, error messages, diagnostic output, and documentation (CLAUDE.md, docs/howto/, docs/explanation/).
 
@@ -896,7 +896,7 @@ Next: Rebuild xtask to detect libraries
 
 ## Backend Selection
 
-BitNet.rs supports two C++ backends for cross-validation:
+BitNet-rs supports two C++ backends for cross-validation:
 
 | Backend | Use Case | Models | Repository |
 |---------|----------|--------|------------|
@@ -1217,7 +1217,7 @@ After provisioning, rebuild xtask to refresh detection constants:
 #!/usr/bin/env bash
 set -euo pipefail
 
-# BitNet.rs - Verify zero ambiguous "when available" phrasing
+# BitNet-rs - Verify zero ambiguous "when available" phrasing
 
 # Colors
 RED='\033[0;31m'
@@ -1287,9 +1287,9 @@ fi
 #!/usr/bin/env bash
 set -euo pipefail
 
-# BitNet.rs - Bulk replace ambiguous phrasing with context-specific terminology
+# BitNet-rs - Bulk replace ambiguous phrasing with context-specific terminology
 
-echo "BitNet.rs - Automated Ambiguous Phrasing Cleanup"
+echo "BitNet-rs - Automated Ambiguous Phrasing Cleanup"
 echo "================================================="
 echo ""
 echo "This script replaces ambiguous phrasing with context-specific terminology."
@@ -1365,7 +1365,7 @@ echo "  git commit -m 'docs: remove ambiguous \"when available\" phrasing'"
 #!/usr/bin/env bash
 set -euo pipefail
 
-# BitNet.rs - Verify exit code consistency across codebase
+# BitNet-rs - Verify exit code consistency across codebase
 
 echo "Verifying exit code consistency..."
 echo ""

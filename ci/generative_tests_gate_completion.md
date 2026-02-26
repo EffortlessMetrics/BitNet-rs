@@ -9,7 +9,7 @@
 ## Test Scaffolding Created
 
 ### Summary
-Created 4 comprehensive test suites for decode parity validation across BitNet.rs inference stack:
+Created 4 comprehensive test suites for decode parity validation across BitNet-rs inference stack:
 
 1. **tokenizer_parity.rs** (bitnet-tokenizers)
    - Round-trip encoding/decoding tests
@@ -67,7 +67,7 @@ cargo test --workspace --no-default-features --features cpu --no-run
 ✅ SUCCESS
 ```
 
-## Test Coverage Across BitNet.rs Components
+## Test Coverage Across BitNet-rs Components
 
 ### Tokenizer Layer (bitnet-tokenizers)
 - ✅ Round-trip encoding/decoding (AC1-AC3)
@@ -110,7 +110,7 @@ Tests validate contracts from:
 
 ## Feature Flag Usage
 
-All tests properly implement BitNet.rs feature gating:
+All tests properly implement BitNet-rs feature gating:
 
 - `#![cfg(feature = "cpu")]` - CPU-only tests (no GPU requirement)
 - `#[ignore]` - Tests requiring model files or CLI binary
@@ -140,7 +140,7 @@ BITNET_GGUF=models/model.gguf cargo test -p bitnet-inference --test template_com
 ✅ Tests compile successfully with `cargo test --workspace --no-default-features --features cpu --no-run`
 ✅ Tests fail only due to missing implementation (model files), not syntax errors
 ✅ Each test clearly linked to specification using doc comments with file references
-✅ Consistent with existing BitNet.rs test structure and error handling with `anyhow`
+✅ Consistent with existing BitNet-rs test structure and error handling with `anyhow`
 ✅ Comprehensive edge case coverage (empty strings, tie-breaking, garbled output detection)
 ✅ Property-based testing patterns for greedy argmax logic
 ✅ Device-aware testing with CPU-only feature gating
@@ -151,7 +151,7 @@ BITNET_GGUF=models/model.gguf cargo test -p bitnet-inference --test template_com
 **Routing Decision:** FINALIZE → fixture-builder
 
 **Rationale:**
-- Test scaffolding compiles successfully across all targeted BitNet.rs crates
+- Test scaffolding compiles successfully across all targeted BitNet-rs crates
 - Clear specification traceability established with doc comment references
 - Feature-gated tests properly structured for CPU-only execution
 - Tests fail only due to missing model files and implementation, not compilation issues

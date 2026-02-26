@@ -6,7 +6,7 @@
 
 ## Overview
 
-Created comprehensive test scaffolding for Issue #462 CPU Forward Pass with Real Inference following BitNet.rs TDD-driven development patterns. All tests compile successfully but fail due to missing implementation (TDD Red phase).
+Created comprehensive test scaffolding for Issue #462 CPU Forward Pass with Real Inference following BitNet-rs TDD-driven development patterns. All tests compile successfully but fail due to missing implementation (TDD Red phase).
 
 ## Test Files Created
 
@@ -208,7 +208,7 @@ This test will pass once AC4 TL LUT helper is implemented.
 - All specification sections covered
 - Edge cases included (error handling, boundaries)
 
-### ✅ BitNet.rs Testing Patterns
+### ✅ BitNet-rs Testing Patterns
 - Feature-gated tests: `#[cfg(feature = "cpu")]`
 - AC traceability: `// AC:N - Description` comments
 - Deterministic flags: `BITNET_DETERMINISTIC=1`, `BITNET_SEED=42`

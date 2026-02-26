@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide helps you diagnose and resolve common issues encountered when working with the BitNet.rs testing framework. It covers debugging techniques, common error patterns, and systematic approaches to problem resolution.
+This guide helps you diagnose and resolve common issues encountered when working with the BitNet-rs testing framework. It covers debugging techniques, common error patterns, and systematic approaches to problem resolution.
 
 ## General Debugging Approach
 
@@ -691,4 +691,4 @@ $(cargo test --no-default-features --features cpu failing_test 2>&1)
 EOF
 ```
 
-This troubleshooting guide provides systematic approaches to identifying and resolving issues in the BitNet.rs testing framework. Regular use of these debugging techniques will help maintain a robust and reliable testing environment.
+This troubleshooting guide provides systematic approaches to identifying and resolving issues in the BitNet-rs testing framework. Regular use of these debugging techniques will help maintain a robust and reliable testing environment.

@@ -128,7 +128,7 @@ The test validates receipts conform to schema v1.0.0:
 - Passes all assertions
 
 ### Code Quality
-- Follows BitNet.rs TDD patterns
+- Follows BitNet-rs TDD patterns
 - Uses anyhow::Result<T> for error handling
 - Includes comprehensive validation logic
 - Passes clippy with `-D warnings`

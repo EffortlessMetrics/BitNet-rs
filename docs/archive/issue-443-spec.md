@@ -2,13 +2,13 @@
 
 ## Context
 
-This issue addresses test harness hygiene violations discovered during CPU feature validation in the BitNet.rs neural network inference codebase. These are not core CPU-path failures affecting inference functionality, but rather code quality issues in the test infrastructure that prevent clean compilation under strict linting rules.
+This issue addresses test harness hygiene violations discovered during CPU feature validation in the BitNet-rs neural network inference codebase. These are not core CPU-path failures affecting inference functionality, but rather code quality issues in the test infrastructure that prevent clean compilation under strict linting rules.
 
 The violations include:
 1. **Unused imports** in `bitnet-models` test files that reference `Device` enum without using it
 2. **Scope visibility issues** with `workspace_root()` helper function in `xtask` tests causing compilation warnings
 
-These test harness hygiene issues affect developer workflow quality and CI/CD validation gates but do not impact production BitNet.rs inference capabilities.
+These test harness hygiene issues affect developer workflow quality and CI/CD validation gates but do not impact production BitNet-rs inference capabilities.
 
 **Affected Components:**
 - `crates/bitnet-models/tests/gguf_weight_loading_integration_tests.rs`
@@ -26,7 +26,7 @@ This is a **test infrastructure** issue affecting the quality gates workflow:
 
 ## User Story
 
-As a BitNet.rs developer, I want clean test harness code that passes all linting and compilation checks so that I can maintain high code quality standards and ensure CI/CD validation gates operate reliably without false negatives from test infrastructure hygiene violations.
+As a BitNet-rs developer, I want clean test harness code that passes all linting and compilation checks so that I can maintain high code quality standards and ensure CI/CD validation gates operate reliably without false negatives from test infrastructure hygiene violations.
 
 ## Acceptance Criteria
 
@@ -179,7 +179,7 @@ use common::workspace_root;
 - **Backward compatibility**: Existing test fixtures and patterns preserved
 
 ### Validation Framework Integration
-This issue validates against BitNet.rs quality gates:
+This issue validates against BitNet-rs quality gates:
 - **Format Gate**: AC5 ensures `cargo fmt --all --check` compliance
 - **Clippy Gate**: AC6 ensures `cargo clippy --workspace --all-targets -- -D warnings` compliance
 - **Test Gate**: AC7 ensures `cargo test --workspace --no-default-features --features cpu` compliance

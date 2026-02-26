@@ -1,8 +1,8 @@
-# BitNet.rs QK256 Support Integration - Codebase Summary
+# BitNet-rs QK256 Support Integration - Codebase Summary
 
 ## Executive Summary
 
-This document provides a comprehensive analysis of the BitNet.rs codebase structure for integrating QK256 (GGML I2_S with 256-element blocks) support. The analysis covers tensor storage patterns, layer implementations, kernel APIs, and the parity harness that will validate the integration.
+This document provides a comprehensive analysis of the BitNet-rs codebase structure for integrating QK256 (GGML I2_S with 256-element blocks) support. The analysis covers tensor storage patterns, layer implementations, kernel APIs, and the parity harness that will validate the integration.
 
 **Key Finding**: The codebase has a **dual-flavor approach** for I2_S quantization:
 1. **BitNet32F16** (pure Rust, 32-element blocks with inline F16 scales)

@@ -8,7 +8,7 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo "Testing BitNet.rs Deterministic Greedy Decoding"
+echo "Testing BitNet-rs Deterministic Greedy Decoding"
 echo "==============================================="
 
 # Build if needed

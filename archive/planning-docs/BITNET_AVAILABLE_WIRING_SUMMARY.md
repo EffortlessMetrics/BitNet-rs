@@ -178,13 +178,13 @@ The new wiring guide complements existing specs:
 ## Key Features
 
 ### 1. Production-Ready
-- Real-world compilation errors from actual BitNet.rs builds
+- Real-world compilation errors from actual BitNet-rs builds
 - Verified against crossval/build.rs implementation
 - Platform coverage based on CI requirements
 
 ### 2. Maintainer-Focused
 - Designed for future contributors unfamiliar with the codebase
-- Assumes basic Rust/C++ knowledge but no BitNet.rs context
+- Assumes basic Rust/C++ knowledge but no BitNet-rs context
 - Progressive disclosure: overview → details → diagnostics
 
 ### 3. Diagnostic-Driven

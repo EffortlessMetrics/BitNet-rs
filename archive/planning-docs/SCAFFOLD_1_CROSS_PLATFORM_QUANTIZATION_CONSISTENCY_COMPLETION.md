@@ -322,7 +322,7 @@ The cross-platform quantization consistency test (Scaffold 1) is **COMPLETE** an
 3. ✅ Provides robust Rust-only validation path
 4. ✅ Scaffolds C++ reference integration for future enhancement
 5. ✅ Gracefully handles missing C++ reference (TDD red state)
-6. ✅ Follows BitNet.rs patterns and coding standards
+6. ✅ Follows BitNet-rs patterns and coding standards
 7. ✅ Passes all quality gates (compilation, clippy, formatting)
 
 **Next Steps**:

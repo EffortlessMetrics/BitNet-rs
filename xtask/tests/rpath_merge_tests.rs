@@ -1,7 +1,7 @@
 // RPATH Merging Algorithm Comprehensive Test Scaffolding
 // This test suite validates the RPATH merging logic in `xtask/build.rs` for
 // multi-backend cross-validation library path resolution.
-// Tests follow BitNet.rs TDD patterns:
+// Tests follow bitnet-rs TDD patterns:
 // - Feature-gated: Tests compile but fail due to missing implementation
 // - EnvGuard isolation: `#[serial(bitnet_env)]` for env-mutating tests
 // - Property-based: Validation of merge algorithm correctness

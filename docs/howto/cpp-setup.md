@@ -1,20 +1,20 @@
 # C++ Reference Setup for Cross-Validation
 
-This guide shows how to set up C++ reference implementations for cross-validation with BitNet.rs. BitNet.rs supports dual-backend cross-validation, allowing you to validate against either BitNet.cpp or llama.cpp depending on your model.
+This guide shows how to set up C++ reference implementations for cross-validation with BitNet-rs. BitNet-rs supports dual-backend cross-validation, allowing you to validate against either BitNet.cpp or llama.cpp depending on your model.
 
 ## Overview
 
-BitNet.rs provides comprehensive cross-validation infrastructure to compare Rust inference against official C++ implementations:
+BitNet-rs provides comprehensive cross-validation infrastructure to compare Rust inference against official C++ implementations:
 
 ### Two Backends Available
 
-**Lane A: BitNet.rs vs bitnet.cpp**
+**Lane A: BitNet-rs vs bitnet.cpp**
 - **Models**: microsoft-bitnet-b1.58-2B-4T-gguf (BitNet-specific models)
 - **Source**: [microsoft/BitNet](https://github.com/microsoft/BitNet)
 - **Libraries**: `libbitnet*.so` (or `.dylib` on macOS)
 - **Use Cases**: BitNet quantization validation, 1-bit inference parity
 
-**Lane B: BitNet.rs vs llama.cpp**
+**Lane B: BitNet-rs vs llama.cpp**
 - **Models**: llama-3, llama-2, SmolLM3, and other GGUF-compatible models
 - **Source**: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
 - **Libraries**: `libllama*.so`, `libggml*.so`
@@ -98,7 +98,7 @@ $env:PATH = "$env:BITNET_CPP_DIR\build\bin;$env:PATH"
 
 ### Windows PATH Configuration
 
-On Windows, the `PATH` environment variable is used instead of `LD_LIBRARY_PATH` to locate DLL files. Below are six methods to configure PATH for BitNet.rs C++ libraries.
+On Windows, the `PATH` environment variable is used instead of `LD_LIBRARY_PATH` to locate DLL files. Below are six methods to configure PATH for BitNet-rs C++ libraries.
 
 #### Method 1: PowerShell (Current Session)
 
@@ -461,7 +461,7 @@ export LD_LIBRARY_PATH="$(pwd)/build/bin:$LD_LIBRARY_PATH"  # Linux
 export DYLD_LIBRARY_PATH="$(pwd)/build/bin:$DYLD_LIBRARY_PATH"  # macOS
 ```
 
-**Note**: BitNet.rs `--cpp-backend llama` will look for `libllama.so` in `$BITNET_CPP_DIR/build/bin`. If using standalone llama.cpp, either set `BITNET_CPP_DIR` to your llama.cpp directory or use `LLAMA_CPP_DIR` and ensure the loader can find the libraries.
+**Note**: BitNet-rs `--cpp-backend llama` will look for `libllama.so` in `$BITNET_CPP_DIR/build/bin`. If using standalone llama.cpp, either set `BITNET_CPP_DIR` to your llama.cpp directory or use `LLAMA_CPP_DIR` and ensure the loader can find the libraries.
 
 ## Troubleshooting
 
@@ -642,7 +642,7 @@ For Windows, you'll need:
 
 ## Cross-Validation Architecture
 
-BitNet.rs provides multiple levels of validation:
+BitNet-rs provides multiple levels of validation:
 
 1. **Smoke Test** (`scripts/parity_smoke.sh`):
    - One-command validation
@@ -669,7 +669,7 @@ BitNet.rs provides multiple levels of validation:
 
 - **C++ Reference**: <https://github.com/microsoft/BitNet>
 - **llama.cpp Build Docs**: <https://github.com/ggml-org/llama.cpp>
-- **BitNet.rs Cross-Validation**: `docs/development/validation-framework.md`
+- **BitNet-rs Cross-Validation**: `docs/development/validation-framework.md`
 - **Trace Infrastructure**: `crates/bitnet-trace/README.md`
 - **Per-Token Parity**: `crossval/src/logits_compare.rs`
 

@@ -18,7 +18,7 @@ fn run_demo() {
     use bitnet_tests::errors::{FixtureError, TestError};
     use std::time::Duration;
 
-    println!("=== BitNet.rs Enhanced Error Handling Demo ===\n");
+    println!("=== BitNet-rs Enhanced Error Handling Demo ===\n");
 
     // Demo 1: Error Severity and Categorization
     println!("1. Error Severity and Categorization:");

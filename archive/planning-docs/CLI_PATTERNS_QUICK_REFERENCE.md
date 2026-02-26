@@ -1,4 +1,4 @@
-# BitNet.rs CLI Patterns - Quick Reference
+# BitNet-rs CLI Patterns - Quick Reference
 
 ## File Locations for Copy-Paste Examples
 
@@ -234,7 +234,7 @@ fn test_enum_parsing() {
 
 ---
 
-## Real Examples from BitNet.rs
+## Real Examples from BitNet-rs
 
 ### Example 1: `--prompt-template` (from bitnet-cli)
 ```rust

@@ -1,10 +1,10 @@
-# BitNet.rs Cross-Validation Infrastructure Exploration Summary
+# BitNet-rs Cross-Validation Infrastructure Exploration Summary
 
 ## Executive Summary
 
-BitNet.rs has a comprehensive dual-backend cross-validation framework supporting:
-- **Lane A**: BitNet.rs vs bitnet.cpp (for BitNet models)
-- **Lane B**: BitNet.rs vs llama.cpp (for LLaMA models)
+BitNet-rs has a comprehensive dual-backend cross-validation framework supporting:
+- **Lane A**: BitNet-rs vs bitnet.cpp (for BitNet models)
+- **Lane B**: BitNet-rs vs llama.cpp (for LLaMA models)
 
 The infrastructure is production-ready with both STUB (no C++) and AVAILABLE (with C++) modes, comprehensive error handling, and token parity pre-gate validation to fail-fast before expensive logits comparisons.
 
@@ -401,13 +401,13 @@ CrossvalPerToken {
 - `test_preflight_env_var_reporting()`: Validates env vars are valid
 - **Status**: IGNORED, `#[cfg(feature = "ffi")]`
 
-#### Category 3: Lane A - BitNet.rs vs bitnet.cpp (Ignored - Requires Model)
+#### Category 3: Lane A - BitNet-rs vs bitnet.cpp (Ignored - Requires Model)
 - `test_lane_a_bitnet_crossval()`: End-to-end BitNet validation
 - **Skip reason**: Requires BitNet libs + GGUF model
 - **Setup**: `BITNET_CPP_DIR`, `cargo run -p xtask -- setup-cpp-auto`
 - **Status**: Scaffolding (TODO: implement tokenization + eval)
 
-#### Category 4: Lane B - BitNet.rs vs llama.cpp (Ignored - Requires Model)
+#### Category 4: Lane B - BitNet-rs vs llama.cpp (Ignored - Requires Model)
 - `test_lane_b_llama_crossval()`: End-to-end LLaMA validation
 - **Skip reason**: Requires LLaMA libs + GGUF model
 - **Setup**: `LD_LIBRARY_PATH`, `llama.cpp/build/src`

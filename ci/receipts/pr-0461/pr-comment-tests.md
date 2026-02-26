@@ -187,6 +187,6 @@ AC_satisfied: 35/35 (AC1=3/3, AC2=3/3, AC3=3/3, AC4=2/2, AC5=2/2, AC6=7/7, AC7=1
 
 ---
 
-**Validation Agent:** `tests-runner` (BitNet.rs TDD Test Suite Orchestrator)
+**Validation Agent:** `tests-runner` (BitNet-rs TDD Test Suite Orchestrator)
 **Validation Date:** 2025-10-14
 **Next Agent:** `review-build-validator`

@@ -2,13 +2,13 @@
 
 **Status**: Draft
 **Created**: 2025-10-16
-**Audience**: BitNet.rs developers implementing validation and benchmarking infrastructure
+**Audience**: BitNet-rs developers implementing validation and benchmarking infrastructure
 **Type**: Explanation (Diátaxis)
 **Related Issues**: #261 (mock elimination), #439 (GPU feature gates)
 
 ## Executive Summary
 
-This specification defines a comprehensive improvement plan for BitNet.rs validation infrastructure, transforming the current mock-based system into a production-grade validation framework with real models, honest compute verification, and systematic parity testing against the C++ reference implementation.
+This specification defines a comprehensive improvement plan for BitNet-rs validation infrastructure, transforming the current mock-based system into a production-grade validation framework with real models, honest compute verification, and systematic parity testing against the C++ reference implementation.
 
 **Core Objectives:**
 1. **Model Fetcher**: Lockfile-based model provisioning with SHA-256 verification
@@ -48,7 +48,7 @@ This specification defines a comprehensive improvement plan for BitNet.rs valida
 
 ### User Stories
 
-**As a BitNet.rs contributor**, I want automated model provisioning so that I can run cross-validation tests without manual setup steps.
+**As a BitNet-rs contributor**, I want automated model provisioning so that I can run cross-validation tests without manual setup steps.
 
 **As a CI pipeline**, I want to verify numerical parity against C++ reference so that regressions are caught before merge.
 
@@ -365,7 +365,7 @@ mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 
-# Set environment for BitNet.rs
+# Set environment for BitNet-rs
 export BITNET_CPP_DIR=$(pwd)/..
 cargo build -p crossval --features crossval-cpp
 ```

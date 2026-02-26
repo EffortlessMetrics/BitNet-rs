@@ -1,10 +1,10 @@
 # Production Inference Server Quickstart
 
-Learn how to set up and run the BitNet.rs production-ready inference server for high-throughput neural network inference with 1-bit quantization.
+Learn how to set up and run the bitnet-rs production-ready inference server for high-throughput neural network inference with 1-bit quantization.
 
 ## Overview
 
-The BitNet.rs production inference server provides enterprise-grade capabilities for deploying BitNet neural network models at scale. It features:
+The bitnet-rs production inference server provides enterprise-grade capabilities for deploying BitNet neural network models at scale. It features:
 
 - **Quantization-Aware Processing**: Automatic I2S/TL1/TL2 quantization support with ≥99%/≥98% accuracy
 - **Device-Aware Routing**: Intelligent CPU/GPU selection with automatic fallback
@@ -17,7 +17,7 @@ The BitNet.rs production inference server provides enterprise-grade capabilities
 Before starting, ensure you have:
 
 1. **Rust Environment**: MSRV 1.90.0 or higher
-2. **BitNet.rs Built**: With appropriate feature flags
+2. **bitnet-rs Built**: With appropriate feature flags
 3. **Model Files**: GGUF format BitNet models
 4. **System Resources**: Minimum 8GB RAM, recommended GPU for acceleration
 

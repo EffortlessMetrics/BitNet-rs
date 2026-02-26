@@ -1,10 +1,10 @@
 # GPU/CUDA Development Guide
 
-This document covers GPU/CUDA development practices, testing strategies, and troubleshooting for BitNet.rs.
+This document covers GPU/CUDA development practices, testing strategies, and troubleshooting for BitNet-rs.
 
 ## GPU Backend Detection and Hardware Querying
 
-BitNet.rs provides comprehensive GPU detection utilities supporting multiple backends (CUDA, Metal, ROCm, WebGPU) alongside production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
+BitNet-rs provides comprehensive GPU detection utilities supporting multiple backends (CUDA, Metal, ROCm, WebGPU) alongside production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
 
 ### GPU Detection API
 
@@ -113,7 +113,7 @@ BITNET_MEMORY_LIMIT=512MB cargo test --no-default-features -p bitnet-kernels --n
 
 ## CUDA Device Querying and Hardware Detection
 
-BitNet.rs implements production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
+BitNet-rs implements production-ready CUDA device querying using the cudarc API to enable intelligent GPU acceleration and automatic fallback mechanisms.
 
 ### Device Information Available
 
@@ -135,7 +135,7 @@ pub struct CudaDeviceInfo {
 
 ### Enhanced GPU Memory Optimization and Debug Tracing (New in PR #201)
 
-BitNet.rs now provides advanced GPU memory optimization with comprehensive debug stack trace capture for improved developer productivity and production debugging:
+BitNet-rs now provides advanced GPU memory optimization with comprehensive debug stack trace capture for improved developer productivity and production debugging:
 
 #### Memory Pool with Stack Trace Debugging
 
@@ -273,7 +273,7 @@ match pattern {
 
 ### Device Memory Tracking
 
-BitNet.rs provides comprehensive memory tracking capabilities for both CPU and GPU devices:
+BitNet-rs provides comprehensive memory tracking capabilities for both CPU and GPU devices:
 
 ```rust
 use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceStats};
@@ -424,7 +424,7 @@ println!("Using device: {} with {} SMs", info.name, info.multiprocessor_count);
 
 ## Multi-GPU Development and Device ID Tracking (New in PR #201)
 
-BitNet.rs now provides comprehensive device ID tracking and multi-GPU support for advanced deployment scenarios:
+BitNet-rs now provides comprehensive device ID tracking and multi-GPU support for advanced deployment scenarios:
 
 ### Device ID Tracking Examples
 
@@ -705,7 +705,7 @@ for device_id in 0..4 {
 
 ### Mixed Precision GPU Acceleration (New in PR #202)
 
-BitNet.rs now provides comprehensive mixed precision support with native CUDA kernels for enhanced GPU performance:
+BitNet-rs now provides comprehensive mixed precision support with native CUDA kernels for enhanced GPU performance:
 
 #### MixedPrecisionKernel API
 
@@ -842,7 +842,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 
 ### Advanced GPU Infrastructure Access (New in PR #199)
 
-BitNet.rs now provides access to low-level CUDA infrastructure for advanced GPU programming:
+BitNet-rs now provides access to low-level CUDA infrastructure for advanced GPU programming:
 
 ```rust
 use bitnet_kernels::gpu::cuda::CudaKernel;
@@ -1064,7 +1064,7 @@ GPU/CUDA tests require special handling due to hardware dependencies:
 
 ### Host Memory Statistics
 
-BitNet.rs now includes comprehensive host memory tracking using the `sysinfo` crate, providing real-time monitoring of system memory usage alongside GPU operations.
+BitNet-rs now includes comprehensive host memory tracking using the `sysinfo` crate, providing real-time monitoring of system memory usage alongside GPU operations.
 
 #### DeviceStats with Memory Tracking
 
@@ -1169,7 +1169,7 @@ Key statistics methods:
 
 ### Memory Debugging and Stack Trace Analysis (New in PR #201)
 
-BitNet.rs now provides comprehensive memory debugging capabilities with stack trace capture for production debugging:
+BitNet-rs now provides comprehensive memory debugging capabilities with stack trace capture for production debugging:
 
 1. **Memory Leak Investigation with Stack Traces**:
    ```bash

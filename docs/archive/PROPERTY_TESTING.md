@@ -2,7 +2,7 @@
 
 ## Overview
 
-BitNet.rs includes a comprehensive property-based testing framework designed to ensure correctness and consistency across different execution modes and compared to reference implementations. The framework uses adversarial prompt generation and hard-to-game metrics to catch regressions and ensure behavioral parity.
+BitNet-rs includes a comprehensive property-based testing framework designed to ensure correctness and consistency across different execution modes and compared to reference implementations. The framework uses adversarial prompt generation and hard-to-game metrics to catch regressions and ensure behavioral parity.
 
 ## Key Features
 

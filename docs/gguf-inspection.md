@@ -1,6 +1,6 @@
 # GGUF Metadata Inspection Guide
 
-BitNet.rs provides comprehensive GGUF metadata inspection capabilities with advanced categorization and JSON serialization for detailed analysis without loading tensors into memory.
+BitNet-rs provides comprehensive GGUF metadata inspection capabilities with advanced categorization and JSON serialization for detailed analysis without loading tensors into memory.
 
 ## Core Features
 

@@ -1,6 +1,6 @@
 //! # Tracing and Observability Integration Example
 //!
-//! This example demonstrates how to integrate BitNet.rs with tracing, metrics collection,
+//! This example demonstrates how to integrate BitNet-rs with tracing, metrics collection,
 //! and observability tools for production monitoring and debugging.
 
 use anyhow::Result;

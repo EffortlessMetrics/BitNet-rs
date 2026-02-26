@@ -2,11 +2,11 @@
 
 ## Problem Description
 
-Current memory leak detection tests in BitNet.rs are failing to catch actual memory leaks in production inference scenarios, particularly in GPU memory management, quantization operations, and tensor lifecycle management. The existing tests are too simplistic and don't adequately validate memory safety in real neural network inference workflows.
+Current memory leak detection tests in BitNet-rs are failing to catch actual memory leaks in production inference scenarios, particularly in GPU memory management, quantization operations, and tensor lifecycle management. The existing tests are too simplistic and don't adequately validate memory safety in real neural network inference workflows.
 
 ## Environment
 - **System**: Linux/Windows/macOS with CUDA-capable GPUs
-- **Rust Version**: 1.90.0+ (BitNet.rs MSRV)
+- **Rust Version**: 1.90.0+ (BitNet-rs MSRV)
 - **Affected Files**:
   - `tests/test_resource_management.rs` - Basic memory leak tests
   - `tests/test_resource_management_comprehensive.rs` - Current memory validation
@@ -829,4 +829,4 @@ echo "Memory leak tests completed successfully!"
 
 ---
 
-This comprehensive memory leak detection and validation framework will ensure BitNet.rs maintains production-grade memory safety across all inference scenarios, preventing memory leaks in quantization operations, GPU memory management, and inference engine lifecycle management.
+This comprehensive memory leak detection and validation framework will ensure BitNet-rs maintains production-grade memory safety across all inference scenarios, preventing memory leaks in quantization operations, GPU memory management, and inference engine lifecycle management.

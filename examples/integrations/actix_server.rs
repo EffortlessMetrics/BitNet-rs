@@ -1,6 +1,6 @@
 //! # Actix-web Server Integration Example
 //!
-//! This example demonstrates how to integrate BitNet.rs with the Actix-web framework
+//! This example demonstrates how to integrate BitNet-rs with the Actix-web framework
 //! to create a robust, production-ready inference API server with middleware support.
 
 use actix_web::{
@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
             .wrap(Compress::default())
             .wrap(DefaultHeaders::new()
                 .add(("X-Version", env!("CARGO_PKG_VERSION")))
-                .add(("X-Powered-By", "BitNet.rs")))
+                .add(("X-Powered-By", "BitNet-rs")))
             .service(
                 web::scope("/api/v1")
                     .wrap(HttpAuthentication::bearer(auth_validator))
@@ -265,7 +265,7 @@ async fn auth_validator(
 #[actix_web::get("/")]
 async fn root_handler() -> ActixResult<HttpResponse> {
     Ok(HttpResponse::Ok().json(serde_json::json!({
-        "name": "BitNet.rs Actix Server",
+        "name": "BitNet-rs Actix Server",
         "version": env!("CARGO_PKG_VERSION"),
         "endpoints": {
             "generate": "POST /api/v1/generate - Generate text from prompt (requires auth)",
@@ -484,7 +484,7 @@ async fn model_info_handler(app_state: web::Data<AppState>) -> ActixResult<HttpR
 #[actix_web::get("/docs")]
 async fn docs_handler() -> ActixResult<HttpResponse> {
     let docs = r#"
-# BitNet.rs Actix Server API
+# BitNet-rs Actix Server API
 
 ## Authentication
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-BitNet.rs currently generates GGUF test fixtures in-memory during test execution, adding ~50-100ms overhead per test and reducing CI/CD stability. Following the successful merge of PR #475 (comprehensive integration with QK256 AVX2, EnvGuard isolation, receipts, and strict mode), we need persistent disk-based fixtures for stable, version-controlled testing.
+BitNet-rs currently generates GGUF test fixtures in-memory during test execution, adding ~50-100ms overhead per test and reducing CI/CD stability. Following the successful merge of PR #475 (comprehensive integration with QK256 AVX2, EnvGuard isolation, receipts, and strict mode), we need persistent disk-based fixtures for stable, version-controlled testing.
 
 **Affected Components:**
 - `bitnet-models/tests/qk256_dual_flavor_tests.rs` - Currently uses in-memory fixture generation

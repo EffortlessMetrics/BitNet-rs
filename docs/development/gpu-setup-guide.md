@@ -1,6 +1,6 @@
 # GPU Setup and Usage Guide
 
-This guide covers setting up and using GPU acceleration with BitNet.rs, including CUDA configuration, memory optimization, and performance tuning.
+This guide covers setting up and using GPU acceleration with BitNet-rs, including CUDA configuration, memory optimization, and performance tuning.
 
 ## Prerequisites
 

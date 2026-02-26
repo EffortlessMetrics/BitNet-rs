@@ -412,5 +412,5 @@ The implementation of SPEC-2025-006 is **complete and ready for integration**. A
 ---
 
 **Implementation Completed**: 2025-10-23
-**Report Author**: BitNet.rs CI Engineering (via generative-implementer subagent)
+**Report Author**: BitNet-rs CI Engineering (via generative-implementer subagent)
 **Spec Reference**: SPEC-2025-006 v1.0.0

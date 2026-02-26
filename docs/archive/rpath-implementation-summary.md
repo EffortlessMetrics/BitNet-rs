@@ -6,7 +6,7 @@
 
 ## Implementation Overview
 
-Successfully implemented RPATH merging algorithm for BitNet.rs dual-backend cross-validation support (BitNet.cpp + llama.cpp).
+Successfully implemented RPATH merging algorithm for BitNet-rs dual-backend cross-validation support (BitNet.cpp + llama.cpp).
 
 ## Components Implemented
 

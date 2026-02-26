@@ -1,8 +1,8 @@
 # Production Readiness Checklist
 
-## BitNet.rs Dual-Format Support
+## BitNet-rs Dual-Format Support
 
-This document provides a comprehensive checklist for ensuring production readiness of the dual-format (SafeTensors + GGUF) support in BitNet.rs.
+This document provides a comprehensive checklist for ensuring production readiness of the dual-format (SafeTensors + GGUF) support in BitNet-rs.
 
 ## ✅ Core Implementation
 

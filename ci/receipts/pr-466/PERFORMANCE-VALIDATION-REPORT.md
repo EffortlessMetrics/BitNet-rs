@@ -208,7 +208,7 @@ Total:            9,906 lines (+), 25 lines (-)
 
 ---
 
-## BitNet.rs Neural Network Standards Compliance
+## BitNet-rs Neural Network Standards Compliance
 
 ### Production SLO Requirements
 | Standard | Requirement | Result | Status |

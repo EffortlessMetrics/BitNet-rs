@@ -1,5 +1,5 @@
 """
-llama-cpp-python compatible API for BitNet.rs
+llama-cpp-python compatible API for BitNet-rs
 
 This module provides a drop-in replacement for llama-cpp-python.
 Simply replace:
@@ -7,7 +7,7 @@ Simply replace:
 with:
     from bitnet.llama_compat import Llama
 
-And your code will work unchanged with BitNet.rs!
+And your code will work unchanged with BitNet-rs!
 """
 
 from typing import Optional, List, Dict, Any, Union

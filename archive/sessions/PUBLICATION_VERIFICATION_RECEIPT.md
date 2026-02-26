@@ -1,4 +1,4 @@
-# BitNet.rs Publication Verification Receipt
+# BitNet-rs Publication Verification Receipt
 
 ## Issue #251 - Production-Ready Inference Server Implementation
 
@@ -15,7 +15,7 @@
 #### Repository State Validation
 - [x] Worktree completely clean (no uncommitted changes, untracked files)
 - [x] Local/remote branch synchronization verified
-- [x] Feature branch naming follows BitNet.rs conventions
+- [x] Feature branch naming follows BitNet-rs conventions
 - [x] Commit hashes match between local and PR head
 
 #### PR Requirements Validation
@@ -25,7 +25,7 @@
 - [x] Properly targets main branch
 - [x] Issue #251 reference and closure
 
-#### BitNet.rs Neural Network Feature Compliance
+#### BitNet-rs Neural Network Feature Compliance
 - [x] **Quantization Accuracy**: I2S: 99.8%, TL1: 99.6%, TL2: 99.7%
 - [x] **Device-Aware Architecture**: CPU/GPU/Metal detection with fallback
 - [x] **SIMD Optimization**: AVX2/AVX-512/NEON accelerated kernels
@@ -102,4 +102,4 @@ security: JWT + rate limiting + input validation implemented
 
 ---
 
-**BitNet.rs Generative Flow for Issue #251 is complete and ready for production deployment.**
+**BitNet-rs Generative Flow for Issue #251 is complete and ready for production deployment.**

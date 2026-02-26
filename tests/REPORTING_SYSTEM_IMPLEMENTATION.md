@@ -1,4 +1,4 @@
-# BitNet.rs Test Reporting System Implementation
+# BitNet-rs Test Reporting System Implementation
 
 ## Overview
 
@@ -151,7 +151,7 @@ The system has been tested and generates the following reports:
 
 📄 Content Samples:
 JSON Structure:
-  • Metadata: "BitNet.rs Test Framework"
+  • Metadata: "BitNet-rs Test Framework"
   • Test Suites: 2
   • Summary - Total Tests: 6
   • Summary - Success Rate: 66.7%
@@ -245,7 +245,7 @@ The system is designed for extensibility:
 
 ## Conclusion
 
-The BitNet.rs test reporting system provides a comprehensive, performant, and extensible solution for test result reporting. It supports multiple output formats, rich interactive features, and detailed metrics collection, making it suitable for both development and CI/CD environments.
+The BitNet-rs test reporting system provides a comprehensive, performant, and extensible solution for test result reporting. It supports multiple output formats, rich interactive features, and detailed metrics collection, making it suitable for both development and CI/CD environments.
 
 The implementation successfully meets all requirements from the specification:
 - ✅ Multiple format support (HTML, JSON, JUnit XML, Markdown)

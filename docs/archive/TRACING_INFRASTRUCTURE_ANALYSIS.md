@@ -1,4 +1,4 @@
-# BitNet.rs Tensor Tracing Infrastructure - Comprehensive Analysis
+# BitNet-rs Tensor Tracing Infrastructure - Comprehensive Analysis
 
 ## Executive Summary
 

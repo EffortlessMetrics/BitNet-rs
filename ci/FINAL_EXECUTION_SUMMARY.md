@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Successfully stabilized the BitNet.rs test suite and generated comprehensive performance receipts following the no-drama path to green tests. All previously failing tests are now either passing or properly ignored with clear documentation explaining the reason and path to enablement.
+Successfully stabilized the BitNet-rs test suite and generated comprehensive performance receipts following the no-drama path to green tests. All previously failing tests are now either passing or properly ignored with clear documentation explaining the reason and path to enablement.
 
 ### Key Achievements
 
@@ -46,7 +46,7 @@ Successfully stabilized the BitNet.rs test suite and generated comprehensive per
 ```
 
 **Path to Enablement**:
-- Generate valid GGUF files using BitNet.rs export tool
+- Generate valid GGUF files using BitNet-rs export tool
 - Store in `tests/fixtures/qk256_*.gguf`
 - Update tests to load real files
 - Expected timeline: 2-3 hours
@@ -326,7 +326,7 @@ crates/bitnet-common/tests/
 ### Immediate Priority (Next Sprint)
 
 1. **Generate Real GGUF Fixtures** (2-3 hours)
-   - Use BitNet.rs export tool to create valid test GGUF files
+   - Use BitNet-rs export tool to create valid test GGUF files
    - Enable 3 QK256 dual flavor tests
    - Verify flavor detection logic with real models
 
@@ -395,7 +395,7 @@ crates/bitnet-common/tests/
 
 **Status**: ✅ **READY FOR PRODUCTION**
 
-The BitNet.rs inference engine is now in a stable, well-documented state with:
+The BitNet-rs inference engine is now in a stable, well-documented state with:
 
 1. **Green test suite**: All tests pass or are properly ignored with clear enablement paths
 2. **Performance baseline**: Comprehensive receipts establish 0.5 tok/s baseline for I2_S
@@ -407,5 +407,5 @@ The BitNet.rs inference engine is now in a stable, well-documented state with:
 ---
 
 **Report Generated**: 2025-10-22
-**Author**: BitNet.rs Development Team
+**Author**: BitNet-rs Development Team
 **Version**: v0.1.0-qna-mvp (post-stabilization)

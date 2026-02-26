@@ -575,7 +575,7 @@ cargo run -p xtask -- benchmark --component model_loading
 
 - Issue #251: Production-Ready Inference Server (reliable model loading critical)
 - Model validation and compatibility checking
-- Error handling standardization across BitNet.rs
+- Error handling standardization across BitNet-rs
 - Production deployment and monitoring requirements
 
 ## Dependencies

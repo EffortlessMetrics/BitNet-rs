@@ -18,7 +18,7 @@
 
 ## Executive Summary
 
-We've successfully implemented a **truly bulletproof** validation framework for BitNet.rs that makes it extremely difficult to pass tests without correct implementation while avoiding false positives. The framework implements a robust three-layer pyramid:
+We've successfully implemented a **truly bulletproof** validation framework for BitNet-rs that makes it extremely difficult to pass tests without correct implementation while avoiding false positives. The framework implements a robust three-layer pyramid:
 
 1. **Surface parity** (text comparison)
 2. **Belief parity** (Kendall's τ-b on logits)

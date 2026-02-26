@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Created comprehensive test fixtures for Issue #465: CPU Path Followup test infrastructure. All 12 acceptance criteria covered with realistic BitNet.rs neural network patterns, receipt schema v1.0.0 compliance, and proper feature-gated organization.
+Created comprehensive test fixtures for Issue #465: CPU Path Followup test infrastructure. All 12 acceptance criteria covered with realistic BitNet-rs neural network patterns, receipt schema v1.0.0 compliance, and proper feature-gated organization.
 
 **Fixtures Created:** 18 files (1,297 lines)
 **Validation Status:** All JSON validated, tests compile
@@ -95,7 +95,7 @@ Created comprehensive test fixtures for Issue #465: CPU Path Followup test infra
   - Fixture validation evidence
   - JSON validation, test compilation, script validation
   - Neural network context validation
-  - BitNet.rs standards compliance
+  - BitNet-rs standards compliance
 
 ## Acceptance Criteria Coverage (12/12)
 
@@ -142,7 +142,7 @@ Created comprehensive test fixtures for Issue #465: CPU Path Followup test infra
 - **Kernel Count:** 11 realistic kernel IDs
 - **Performance:** 15.3 tok/s (2B I2_S model, AVX2 CPU)
 - **Quantization:** I2_S production 2-bit signed
-- **Details:** Valid receipt includes realistic BitNet.rs transformer pipeline kernels
+- **Details:** Valid receipt includes realistic BitNet-rs transformer pipeline kernels
 
 ### Receipt Schema v1.0.0 Compliance
 - **Status:** ✅ PASS
@@ -216,7 +216,7 @@ Complete transformer architecture kernels:
 
 **Context:** 15.3 tok/s is realistic for 2B I2_S model on AVX2 CPU (expected range: 10-20 tok/s).
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Flag Patterns
 
@@ -238,7 +238,7 @@ export BITNET_SEED=42
 
 ### Workspace Awareness
 
-All paths follow BitNet.rs conventions:
+All paths follow BitNet-rs conventions:
 - Baselines: `docs/baselines/YYYYMMDD-cpu.json`
 - Receipts: `ci/inference.json`
 - Fixtures: `tests/fixtures/issue-465/`
@@ -341,7 +341,7 @@ tests/fixtures/issue-465/
 **Receipt Schema:** v1.0.0 compliant
 **Performance:** 15.3 tok/s (realistic CPU baseline)
 **AC Coverage:** 12/12 acceptance criteria
-**BitNet.rs Standards:** Feature flags, deterministic config, workspace paths
+**BitNet-rs Standards:** Feature flags, deterministic config, workspace paths
 **Commit Status:** Committed (38d6fda) with pre-commit checks passing
 
 **Gate Status:** ✅ PASS

@@ -33,7 +33,7 @@ cargo test --workspace --no-default-features --features gpu
 cargo run -p xtask -- preflight  # Check GPU compilation and runtime
 
 # Important Notes:
-# - Default features are EMPTY in BitNet.rs
+# - Default features are EMPTY in BitNet-rs
 # - Always use --no-default-features except for xtask commands
 # - CPU/GPU feature selection is mutually exclusive in most crates
 # - Use unified GPU predicate: #[cfg(any(feature = "gpu", feature = "cuda"))]

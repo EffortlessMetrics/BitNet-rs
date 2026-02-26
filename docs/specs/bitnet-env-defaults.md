@@ -75,7 +75,7 @@ This doesn't mention `libbitnet.*` as an alternative, leading to confusion.
 ### Why This Matters
 
 1. **Developer Experience**: New users should run one command (`setup-cpp-auto`) and have everything work
-2. **Consistency**: All BitNet.rs components should use identical default paths
+2. **Consistency**: All BitNet-rs components should use identical default paths
 3. **Platform Coverage**: Windows, macOS, and Linux users need equal support
 4. **Future-Proofing**: Support both embedded llama.cpp (current) and standalone BitNet libraries (future)
 
@@ -1347,7 +1347,7 @@ echo [bitnet] C++ ready at %BITNET_CPP_DIR%
 ## Document Metadata
 
 **Specification Version**: 1.0
-**Authors**: BitNet.rs Core Team
+**Authors**: BitNet-rs Core Team
 **Review Status**: DRAFT
 **Target Implementation**: v0.2.0
 **Last Updated**: 2025-10-25

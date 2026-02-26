@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-This document provides the comprehensive architectural blueprint for implementing real GGUF model weight loading in BitNet.rs (Issue #159). The current implementation only loads token embeddings and output projections while mock-initializing all transformer layer weights with zeros and ones. This specification defines the complete architecture to parse, validate, and load all quantized model weights from GGUF files, enabling real neural network inference.
+This document provides the comprehensive architectural blueprint for implementing real GGUF model weight loading in BitNet-rs (Issue #159). The current implementation only loads token embeddings and output projections while mock-initializing all transformer layer weights with zeros and ones. This specification defines the complete architecture to parse, validate, and load all quantized model weights from GGUF files, enabling real neural network inference.
 
 ## Business Value
 
-Implementing real GGUF weight loading unlocks the complete BitNet.rs inference pipeline:
+Implementing real GGUF weight loading unlocks the complete BitNet-rs inference pipeline:
 
 - **Model Loading**: Parse all transformer layer weights from GGUF files with quantization support
 - **Quantization**: Validate real I2_S, TL1, TL2 quantized weights against C++ reference implementation
@@ -39,7 +39,7 @@ Implementing real GGUF weight loading unlocks the complete BitNet.rs inference p
 ## User Stories
 
 ### US1: Real Weight Loading
-**As a** BitNet.rs developer
+**As a** BitNet-rs developer
 **I want to** load all transformer layer weights from GGUF files
 **So that** the neural network can perform meaningful inference with trained parameters instead of producing meaningless outputs from zero-initialized weights
 
@@ -642,7 +642,7 @@ fn test_cpp_cross_validation_ac5() {
 
 ## Conclusion
 
-This architectural blueprint provides a comprehensive foundation for implementing real GGUF model weight loading in BitNet.rs. The specification addresses all 10 acceptance criteria from Issue #159 while maintaining compatibility with the existing neural network inference pipeline.
+This architectural blueprint provides a comprehensive foundation for implementing real GGUF model weight loading in BitNet-rs. The specification addresses all 10 acceptance criteria from Issue #159 while maintaining compatibility with the existing neural network inference pipeline.
 
 Key architectural decisions:
 - **Incremental Enhancement**: Build upon existing `gguf_min.rs` infrastructure
@@ -651,7 +651,7 @@ Key architectural decisions:
 - **Performance Focus**: Memory efficiency and zero-copy operations
 - **Quality Assurance**: Comprehensive testing and cross-validation
 
-The implementation will enable BitNet.rs to perform meaningful neural network inference with trained model parameters, unlocking the full potential of the inference pipeline for production use cases.
+The implementation will enable BitNet-rs to perform meaningful neural network inference with trained model parameters, unlocking the full potential of the inference pipeline for production use cases.
 
 ## Referenced Documents
 

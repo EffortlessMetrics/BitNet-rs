@@ -335,7 +335,7 @@ cuda = ["gpu"]  # Backward compatibility alias
 
 ### API Stability ✅ PASS
 
-**BitNet.rs Neural Network Contract Requirements:**
+**BitNet-rs Neural Network Contract Requirements:**
 1. **Quantization APIs:** Unchanged (I2S, TL1, TL2 stable) ✅
 2. **Model Loading:** Unchanged (GGUF parsing stable) ✅
 3. **Inference Engine:** Unchanged (token generation stable) ✅
@@ -426,7 +426,7 @@ contract: cargo check: workspace ok; docs: 2/2 examples pass; api: ADDITIVE (3 f
 
 ---
 
-## BitNet.rs Contract Standards
+## BitNet-rs Contract Standards
 
 **Public API Requirements:**
 - ✅ Comprehensive rustdoc (3/3 functions documented)

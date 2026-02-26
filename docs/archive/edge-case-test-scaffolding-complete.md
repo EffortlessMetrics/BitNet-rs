@@ -102,7 +102,7 @@ Created comprehensive test scaffolding for auto-repair infrastructure edge cases
 
 ## Test Structure
 
-All tests follow BitNet.rs TDD patterns:
+All tests follow BitNet-rs TDD patterns:
 
 ```rust
 #[test]

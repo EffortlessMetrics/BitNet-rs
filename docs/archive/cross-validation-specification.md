@@ -1,12 +1,12 @@
 # Cross-Validation Specification with C++ Reference Implementation
 
 **Component**: Comprehensive validation against C++ reference implementation (llama.cpp)
-**Location**: `crossval/` crate and integrated validation throughout BitNet.rs
+**Location**: `crossval/` crate and integrated validation throughout BitNet-rs
 **Dependencies**: C++ reference bindings, statistical analysis, deterministic testing
 
 ## Overview
 
-This specification defines a comprehensive cross-validation framework for BitNet.rs neural network inference, ensuring >99.9% accuracy correlation with C++ reference implementations (primarily llama.cpp). The framework validates quantization accuracy, numerical stability, generation consistency, and performance parity across CPU and GPU implementations while providing detailed diagnostic information for any deviations.
+This specification defines a comprehensive cross-validation framework for BitNet-rs neural network inference, ensuring >99.9% accuracy correlation with C++ reference implementations (primarily llama.cpp). The framework validates quantization accuracy, numerical stability, generation consistency, and performance parity across CPU and GPU implementations while providing detailed diagnostic information for any deviations.
 
 ## Cross-Validation Architecture
 
@@ -1507,4 +1507,4 @@ mod cross_validation_tests {
 }
 ```
 
-This comprehensive cross-validation specification ensures >99.9% accuracy correlation with C++ reference implementations while providing detailed diagnostic capabilities, statistical analysis, and seamless integration with BitNet.rs development workflows through xtask commands and automated testing.
+This comprehensive cross-validation specification ensures >99.9% accuracy correlation with C++ reference implementations while providing detailed diagnostic capabilities, statistical analysis, and seamless integration with BitNet-rs development workflows through xtask commands and automated testing.

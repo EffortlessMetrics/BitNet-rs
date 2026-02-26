@@ -656,4 +656,4 @@ For each file migration:
 - [ ] Run file-specific tests to verify compatibility
 - [ ] Update any file-specific mock behaviors to use configuration options
 
-This comprehensive refactoring will significantly improve the maintainability and consistency of the BitNet.rs test infrastructure while providing enhanced testing capabilities for the production inference engine.
+This comprehensive refactoring will significantly improve the maintainability and consistency of the BitNet-rs test infrastructure while providing enhanced testing capabilities for the production inference engine.

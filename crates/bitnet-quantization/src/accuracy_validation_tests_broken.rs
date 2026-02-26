@@ -100,7 +100,7 @@ mod tests {
             Self { mse, mae, max_error, snr_db, pearson_correlation, cosine_similarity }
         }
 
-        /// Check if metrics meet production quality thresholds for BitNet.rs
+        /// Check if metrics meet production quality thresholds for BitNet-rs
         fn meets_production_quality(&self) -> bool {
             self.snr_db >= 46.0 &&               // ≥99% accuracy requires ~46dB SNR
             self.pearson_correlation >= 0.99 &&   // ≥99% correlation for I2S
@@ -476,10 +476,10 @@ mod tests {
         Ok(())
     }
 
-    /// Comprehensive production accuracy validation for BitNet.rs requirements
+    /// Comprehensive production accuracy validation for BitNet-rs requirements
     #[test]
     fn test_bitnet_production_accuracy_requirements() -> Result<()> {
-        println!("=== BitNet.rs Production Accuracy Validation ===");
+        println!("=== BitNet-rs Production Accuracy Validation ===");
 
         let mut all_passed = true;
 
@@ -577,7 +577,7 @@ mod tests {
         println!("================================================");
 
         // Hard assertion - tests must pass for production deployment
-        assert!(all_passed, "BitNet.rs production accuracy requirements not met");
+        assert!(all_passed, "BitNet-rs production accuracy requirements not met");
 
         Ok(())
     }

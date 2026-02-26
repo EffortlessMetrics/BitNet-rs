@@ -41,7 +41,7 @@ includedir=${{prefix}}/include
 libdir=${{exec_prefix}}/lib
 
 Name: bitnet-ffi
-Description: BitNet.rs FFI bindings with llama.cpp compatibility
+Description: BitNet-rs FFI bindings with llama.cpp compatibility
 Version: {}
 Cflags: -I${{includedir}}
 Libs: -L${{libdir}} -lbitnet_ffi
@@ -55,7 +55,7 @@ Libs: -L${{libdir}} -lbitnet_ffi
     // Print installation instructions
     if env::var("PROFILE").unwrap() == "release" {
         eprintln!("╭─────────────────────────────────────────────────────────────╮");
-        eprintln!("│ BitNet.rs FFI Library Built Successfully!                  │");
+        eprintln!("│ BitNet-rs FFI Library Built Successfully!                  │");
         eprintln!("├─────────────────────────────────────────────────────────────┤");
         eprintln!("│ To use with C/C++:                                         │");
         eprintln!("│                                                             │");
@@ -68,7 +68,7 @@ Libs: -L${{libdir}} -lbitnet_ffi
         eprintln!("│ 3. Compile your code:                                      │");
         eprintln!("│    gcc your_code.c -lbitnet_ffi -o your_app               │");
         eprintln!("│                                                             │");
-        eprintln!("│ That's it! Your llama.cpp code now uses BitNet.rs!        │");
+        eprintln!("│ That's it! Your llama.cpp code now uses BitNet-rs!        │");
         eprintln!("╰─────────────────────────────────────────────────────────────╯");
     }
 }

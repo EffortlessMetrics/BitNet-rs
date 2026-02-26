@@ -8,7 +8,7 @@
 
 ## Overview
 
-BitNet.rs provides a comprehensive validation system to catch common model export issues:
+BitNet-rs provides a comprehensive validation system to catch common model export issues:
 
 - **Quantized LayerNorm weights**: LayerNorm gamma weights quantized to I2_S/Q4 (should be F16/F32)
 - **Incorrect projection scales**: Inverted I2_S dequantization or corrupted weight scales
@@ -1001,7 +1001,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build BitNet.rs CLI
+      - name: Build BitNet-rs CLI
         run: |
           cargo build --release -p bitnet-cli \
             --no-default-features --features cpu,full-cli

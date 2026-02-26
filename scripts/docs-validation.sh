@@ -1,5 +1,5 @@
 #!/bin/bash
-# Documentation review and accuracy validation for BitNet.rs
+# Documentation review and accuracy validation for BitNet-rs
 # Ensures documentation is complete, accurate, and up-to-date
 
 set -euo pipefail
@@ -362,7 +362,7 @@ generate_docs_report() {
     local report_file="docs_validation_report.md"
 
     cat > "$report_file" << EOF
-# BitNet.rs Documentation Validation Report
+# BitNet-rs Documentation Validation Report
 
 Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 

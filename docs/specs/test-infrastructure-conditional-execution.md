@@ -10,7 +10,7 @@
 
 ## 1. Problem Statement
 
-BitNet.rs test infrastructure requires robust helpers for conditional test execution based on C++ backend availability (BitNet.cpp, llama.cpp). Current implementation provides basic skip functionality, but lacks:
+BitNet-rs test infrastructure requires robust helpers for conditional test execution based on C++ backend availability (BitNet.cpp, llama.cpp). Current implementation provides basic skip functionality, but lacks:
 
 1. **Comprehensive auto-repair integration**: Tests should attempt backend installation before skipping in local dev
 2. **Clear skip diagnostics**: Skip messages need actionable setup instructions and build hygiene guidance
@@ -1257,7 +1257,7 @@ tests/support/env_guard.rs  (~50 lines added)
 
 ## 8. Summary
 
-This specification defines comprehensive test infrastructure enhancements for BitNet.rs, addressing 7 acceptance criteria across backend availability detection, auto-repair, environment isolation, and platform portability.
+This specification defines comprehensive test infrastructure enhancements for BitNet-rs, addressing 7 acceptance criteria across backend availability detection, auto-repair, environment isolation, and platform portability.
 
 **Key Deliverables**:
 - Enhanced `ensure_backend_or_skip()` with auto-repair and retry logic

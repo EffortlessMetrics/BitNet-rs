@@ -1,6 +1,6 @@
 //! # bitnet-test-support
 //!
-//! Shared test infrastructure for BitNet.rs: environment isolation,
+//! Shared test infrastructure for BitNet-rs: environment isolation,
 //! model-path gating, and test helpers.
 //!
 //! This crate has **no runtime dependencies** and is designed to be safe to

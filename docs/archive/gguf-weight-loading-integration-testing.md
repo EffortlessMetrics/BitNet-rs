@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the comprehensive integration architecture and systematic test strategy for implementing real GGUF model weight loading in BitNet.rs. The architecture ensures seamless integration with existing workspace crates while the test strategy provides comprehensive coverage of all acceptance criteria through Test-Driven Development (TDD) practices.
+This document defines the comprehensive integration architecture and systematic test strategy for implementing real GGUF model weight loading in BitNet-rs. The architecture ensures seamless integration with existing workspace crates while the test strategy provides comprehensive coverage of all acceptance criteria through Test-Driven Development (TDD) practices.
 
 ## Integration Architecture
 
@@ -11,7 +11,7 @@ This document defines the comprehensive integration architecture and systematic 
 #### Crate Dependency Architecture
 
 ```rust
-// Primary integration flow across BitNet.rs workspace
+// Primary integration flow across BitNet-rs workspace
 pub mod integration_architecture {
     use bitnet_models::GgufWeightLoader;
     use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
@@ -1425,7 +1425,7 @@ pub mod test_fixtures {
 This comprehensive integration architecture and test strategy provides:
 
 **Integration Architecture:**
-- **Workspace Integration**: Seamless coordination across BitNet.rs crates
+- **Workspace Integration**: Seamless coordination across BitNet-rs crates
 - **Device-Aware Operations**: CPU/GPU support with automatic fallback
 - **Backward Compatibility**: Preservation of mock loading functionality
 - **Cross-Crate Communication**: Well-defined protocols between components
@@ -1449,4 +1449,4 @@ The architecture ensures that Issue #159 (GGUF model weight loading) is implemen
 - **Cross-Platform Support**: Linux, macOS, Windows compatibility
 - **Production Readiness**: Error handling, fallback mechanisms, and monitoring
 
-This systematic approach guarantees successful implementation of real GGUF weight loading while maintaining BitNet.rs's high standards for performance, reliability, and maintainability.
+This systematic approach guarantees successful implementation of real GGUF weight loading while maintaining BitNet-rs's high standards for performance, reliability, and maintainability.

@@ -1,8 +1,8 @@
-# BitNet.rs Installation Guide
+# BitNet-rs Installation Guide
 
-This guide provides comprehensive installation instructions for BitNet.rs, the high-performance Rust implementation of 1-bit LLM inference.
+This guide provides comprehensive installation instructions for BitNet-rs, the high-performance Rust implementation of 1-bit LLM inference.
 
-## 🦀 Why Choose BitNet.rs?
+## 🦀 Why Choose BitNet-rs?
 
 - **Memory Safety**: Rust's ownership system prevents memory leaks and buffer overflows
 - **High Performance**: Zero-cost abstractions and SIMD optimizations
@@ -413,7 +413,7 @@ cargo install --path crates/bitnet-server --force
 
 If you're migrating from the legacy C++ implementation:
 
-1. **Install BitNet.rs** using any method above
+1. **Install BitNet-rs** using any method above
 2. **Test compatibility** with your existing models
 3. **Update scripts** to use new CLI interface
 4. **Benchmark performance** to verify improvements
@@ -423,7 +423,7 @@ See our [Migration Guide](MIGRATION.md) for detailed instructions.
 
 ## 📊 Performance Comparison
 
-BitNet.rs typically shows significant improvements over the C++ implementation:
+BitNet-rs typically shows significant improvements over the C++ implementation:
 
 - **Throughput**: 15-30% faster inference
 - **Memory Usage**: 10-20% lower memory footprint
@@ -436,7 +436,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
-BitNet.rs is licensed under MIT OR Apache-2.0. See [LICENSE](LICENSE) for details.
+BitNet-rs is licensed under MIT OR Apache-2.0. See [LICENSE](LICENSE) for details.
 
 ---
 

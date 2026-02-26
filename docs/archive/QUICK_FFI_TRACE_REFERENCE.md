@@ -1,4 +1,4 @@
-# BitNet.rs FFI & Tracing - Quick Reference
+# BitNet-rs FFI & Tracing - Quick Reference
 
 ## 1-Minute Overview
 

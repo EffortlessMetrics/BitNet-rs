@@ -18,7 +18,7 @@
 
 ## Executive Summary
 
-**BitNet.rs Issue #248 - Real Neural Network Inference: SUBSTANTIALLY COMPLETE** ✅
+**BitNet-rs Issue #248 - Real Neural Network Inference: SUBSTANTIALLY COMPLETE** ✅
 
 The neural network inference infrastructure is **fully implemented and working**. The system successfully performs real transformer computation with:
 

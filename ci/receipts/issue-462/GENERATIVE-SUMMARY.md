@@ -7,7 +7,7 @@
 
 ## Overview
 
-Successfully parsed and structured raw Issue #462 ("Implement CPU Forward Pass with Real Inference") into standardized BitNet.rs feature specification with atomic acceptance criteria, technical constraints, and TDD-mappable test requirements.
+Successfully parsed and structured raw Issue #462 ("Implement CPU Forward Pass with Real Inference") into standardized BitNet-rs feature specification with atomic acceptance criteria, technical constraints, and TDD-mappable test requirements.
 
 ## Deliverables
 
@@ -15,8 +15,8 @@ Successfully parsed and structured raw Issue #462 ("Implement CPU Forward Pass w
 **Location:** `/home/steven/code/Rust/BitNet-rs/docs/explanation/issue-462-spec.md`
 
 **Content:**
-- **Context**: Problem background, current placeholder implementation, BitNet.rs component impact
-- **User Story**: "As a BitNet.rs developer or end-user, I want CPU inference with quantized weights for text generation on CPU-only systems"
+- **Context**: Problem background, current placeholder implementation, BitNet-rs component impact
+- **User Story**: "As a BitNet-rs developer or end-user, I want CPU inference with quantized weights for text generation on CPU-only systems"
 - **7 Atomic Acceptance Criteria** (AC1-AC7) broken down by priority:
   - **P0 (Critical Path)**: AC1 (CPU forward pass), AC2 (CLI wiring)
   - **P1 (Quality & Validation)**: AC3 (receipt validation), AC4 (TL LUT helper), AC5 (baseline + docs)
@@ -41,7 +41,7 @@ Successfully parsed and structured raw Issue #462 ("Implement CPU Forward Pass w
 
 **Validation Results:**
 - ✅ Specification quality (context, user story, ACs, technical notes, DoD)
-- ✅ BitNet.rs alignment (quantization, feature flags, pipeline impact, cross-validation)
+- ✅ BitNet-rs alignment (quantization, feature flags, pipeline impact, cross-validation)
 - ✅ Atomic ACs (7 criteria, all atomic/observable/non-overlapping/TDD-mappable)
 - ✅ GitHub issue creation with Ledger structure
 
@@ -107,7 +107,7 @@ Successfully parsed and structured raw Issue #462 ("Implement CPU Forward Pass w
 
 ## Technical Context
 
-### Affected BitNet.rs Components
+### Affected BitNet-rs Components
 - **bitnet-inference**: Core inference engine with CPU forward pass (AC1)
 - **bitnet-cli**: User-facing inference commands with priming/decode (AC2)
 - **bitnet-kernels**: Quantized linear algebra operations, TL LUT helper (AC4)
@@ -179,7 +179,7 @@ Successfully parsed and structured raw Issue #462 ("Implement CPU Forward Pass w
 
 ### Immediate Actions
 1. **Route to spec-analyzer**: Requirements validation and technical feasibility assessment
-2. **Architectural Review**: Confirm CPU forward pass design aligns with BitNet.rs inference pipeline
+2. **Architectural Review**: Confirm CPU forward pass design aligns with BitNet-rs inference pipeline
 3. **Quantization Validation**: Verify I2S/TL1/TL2 accuracy constraints are achievable
 4. **Feature Flag Compatibility**: Ensure CPU/GPU feature gates are properly specified
 

@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-Comprehensive pre-publication diff validation completed successfully for Issue #462 CPU forward pass implementation. All BitNet.rs quality gates passed with zero warnings, zero debug artifacts, and 100% test success rate. The diff is production-ready and cleared for PR preparation.
+Comprehensive pre-publication diff validation completed successfully for Issue #462 CPU forward pass implementation. All BitNet-rs quality gates passed with zero warnings, zero debug artifacts, and 100% test success rate. The diff is production-ready and cleared for PR preparation.
 
 **Quality Score:** 100%
 **Gate Status:** `generative:gate:format = pass`, `generative:gate:clippy = pass`
@@ -118,7 +118,7 @@ cargo build --no-default-features --features cpu --release
 
 ---
 
-## BitNet.rs Neural Network Standards
+## BitNet-rs Neural Network Standards
 
 ### Quantization Accuracy ✅
 - TL LUT formula mathematically validated
@@ -144,7 +144,7 @@ cargo build --no-default-features --features cpu --release
 - Zero unsafe blocks in new production code
 - All arithmetic uses checked operations
 - Comprehensive bounds validation
-- Error handling follows BitNet.rs patterns
+- Error handling follows BitNet-rs patterns
 - No excessive unwrap() on tensor operations
 
 ### Documentation ✅
@@ -219,7 +219,7 @@ pub fn lut_index(
 
 ### Test Code (0 Issues)
 
-All test files follow BitNet.rs patterns:
+All test files follow BitNet-rs patterns:
 - Proper feature gating: `#[cfg(feature = "cpu")]`
 - Graceful test skips: `eprintln!("SKIP: {}", e)`
 - Deterministic setup: `BITNET_DETERMINISTIC=1` where needed

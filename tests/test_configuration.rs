@@ -1,5 +1,5 @@
 #![cfg(feature = "integration-tests")]
-// Configuration testing module for BitNet.rs testing framework
+// Configuration testing module for BitNet-rs testing framework
 //
 // This module implements comprehensive tests for various configuration combinations,
 // feature flag testing, platform-specific configuration tests, validation tests,

@@ -1,11 +1,11 @@
 # Python to Rust Migration Example
 
-This example demonstrates migrating from Python BitNet usage to BitNet.rs with Python bindings.
+This example demonstrates migrating from Python BitNet usage to bitnet-rs with Python bindings.
 
 ## Overview
 
 This migration shows how to:
-- Replace Python-only BitNet usage with BitNet.rs Python bindings
+- Replace Python-only BitNet usage with bitnet-rs Python bindings
 - Improve performance while maintaining Python API compatibility
 - Handle model loading and inference migration
 - Optimize memory usage and error handling
@@ -56,25 +56,25 @@ if __name__ == "__main__":
     print(f"Speed: {result['tokens_per_second']:.1f} tok/s")
 ```
 
-## After: BitNet.rs Python Bindings
+## After: bitnet-rs Python Bindings
 
-The migrated implementation uses BitNet.rs Python bindings for better performance:
+The migrated implementation uses bitnet-rs Python bindings for better performance:
 
 ```python
 # after/inference.py
-import bitnet_py  # BitNet.rs Python bindings
+import bitnet_py  # bitnet-rs Python bindings
 import time
 from typing import Dict, Optional
 
 class BitNetInference:
     def __init__(self, model_path: str):
-        # BitNet.rs handles model loading more efficiently
+        # bitnet-rs handles model loading more efficiently
         self.model = bitnet_py.Model.load(model_path)
 
     def generate(self, prompt: str, max_tokens: int = 100) -> Dict[str, any]:
         start_time = time.time()
 
-        # BitNet.rs provides streaming generation
+        # bitnet-rs provides streaming generation
         result = self.model.generate(
             prompt=prompt,
             max_tokens=max_tokens,
@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     # Benchmark new implementation
     new_results = benchmark_inference(NewInference, "model.gguf", prompts)
-    print(f"BitNet.rs Python: {new_results['tokens_per_second']:.1f} tok/s")
+    print(f"bitnet-rs Python: {new_results['tokens_per_second']:.1f} tok/s")
 
     # Calculate improvement
     improvement = new_results['tokens_per_second'] / old_results['tokens_per_second']
@@ -185,13 +185,13 @@ if __name__ == "__main__":
 
 ## Migration Steps
 
-### 1. Install BitNet.rs Python Bindings
+### 1. Install bitnet-rs Python Bindings
 
 ```bash
 # Remove old dependencies
 pip uninstall bitnet-python
 
-# Install BitNet.rs Python bindings
+# Install bitnet-rs Python bindings
 pip install bitnet-py
 ```
 
@@ -250,7 +250,7 @@ except bitnet_py.ModelError as e:
 ### Issue: Import Error
 ```python
 # Error: ModuleNotFoundError: No module named 'bitnet_py'
-# Solution: Install BitNet.rs Python bindings
+# Solution: Install bitnet-rs Python bindings
 pip install bitnet-py
 ```
 
@@ -267,7 +267,7 @@ except bitnet_py.ModelError as e:
 ### Issue: Performance Not Improved
 ```python
 # Solution: Ensure you're using the right model format
-# BitNet.rs works best with GGUF models
+# bitnet-rs works best with GGUF models
 model = bitnet_py.Model.load("model.gguf")  # Preferred
 ```
 

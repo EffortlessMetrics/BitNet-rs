@@ -1,6 +1,6 @@
 # Streaming Generation with Token IDs
 
-BitNet.rs provides comprehensive streaming generation capabilities with real-time token ID access, supporting both library API and Server-Sent Events (SSE) for web applications.
+BitNet-rs provides comprehensive streaming generation capabilities with real-time token ID access, supporting both library API and Server-Sent Events (SSE) for web applications.
 
 ## Core Features
 
@@ -135,7 +135,7 @@ curl -X GET http://localhost:8080/health
 
 ## Security Note
 
-Starting with v0.1.0, BitNet.rs uses PyO3 v0.25.1 to resolve CVE-2024-9979 security vulnerability. This affects Python bindings and server components:
+Starting with v0.1.0, BitNet-rs uses PyO3 v0.25.1 to resolve CVE-2024-9979 security vulnerability. This affects Python bindings and server components:
 
 ```bash
 # Verify PyO3 version

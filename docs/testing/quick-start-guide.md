@@ -1,11 +1,11 @@
 # Quick Start Guide for Test Authors
 
-This guide gets you writing tests in the BitNet.rs testing framework in under 10 minutes.
+This guide gets you writing tests in the BitNet-rs testing framework in under 10 minutes.
 
 ## Prerequisites
 
 - Rust toolchain installed
-- BitNet.rs repository cloned
+- BitNet-rs repository cloned
 - Basic familiarity with Rust and async programming
 
 ## Your First Test in 5 Minutes

@@ -116,7 +116,7 @@ Complete the GPU verification lane without breaking non-CUDA hosts.
 **Title**: `[Validation] Add cross-validation test harness for correctness`
 
 **Description**:
-Add opt-in cross-validation tests that compare BitNet.rs output against the C++ reference implementation.
+Add opt-in cross-validation tests that compare bitnet-rs output against the C++ reference implementation.
 
 **Acceptance Criteria**:
 - Feature gate `crossval` for tests

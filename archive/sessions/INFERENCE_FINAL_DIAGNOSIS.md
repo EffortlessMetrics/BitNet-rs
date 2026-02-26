@@ -1,4 +1,4 @@
-# BitNet.rs Inference - Final Diagnosis Report
+# BitNet-rs Inference - Final Diagnosis Report
 
 **Date**: 2025-10-12
 **Status**: ROOT CAUSE IDENTIFIED - GGUF Model Corruption
@@ -195,7 +195,7 @@ python convert_hf_to_gguf.py \
 
 ## Validation Checklist (For Future GGUF Models)
 
-Before using a GGUF model with BitNet.rs, verify:
+Before using a GGUF model with BitNet-rs, verify:
 
 ```bash
 # Run diagnostic on layer-0 attention_norm.weight

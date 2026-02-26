@@ -1,18 +1,18 @@
 # Universal Tokenizer Discovery Tutorial
 
-**Learning Goal**: Understand how BitNet.rs automatically discovers and configures tokenizers for neural network inference.
+**Learning Goal**: Understand how bitnet-rs automatically discovers and configures tokenizers for neural network inference.
 
 **Time Required**: 15 minutes
 
 **Prerequisites**:
 - Completed [quickstart.md](../quickstart.md)
 - Basic understanding of neural network tokenization
-- Rust development environment with BitNet.rs installed
+- Rust development environment with bitnet-rs installed
 
 ## What You'll Learn
 
 By the end of this tutorial, you'll understand:
-1. How BitNet.rs automatically discovers tokenizers from GGUF files
+1. How bitnet-rs automatically discovers tokenizers from GGUF files
 2. The 4 embedded tokenizer extraction strategies
 3. The 5-step fallback chain for tokenizer resolution
 4. Model-specific tokenizer configurations (LLaMA, GPT-2, BitNet)
@@ -22,11 +22,11 @@ By the end of this tutorial, you'll understand:
 
 ## Step 1: Understanding Automatic Tokenizer Discovery
 
-BitNet.rs provides **automatic tokenizer discovery** that eliminates manual configuration for neural network inference.
+bitnet-rs provides **automatic tokenizer discovery** that eliminates manual configuration for neural network inference.
 
 ### The Discovery Process
 
-When you load a GGUF model, BitNet.rs:
+When you load a GGUF model, bitnet-rs:
 
 1. **Parses GGUF metadata** using zero-copy memory mapping
 2. **Detects model architecture** from tensor patterns (BitNet, LLaMA, GPT-2, etc.)
@@ -69,7 +69,7 @@ Strategy: GGUF-embedded tokenizer
 
 ## Step 2: Embedded Tokenizer Extraction
 
-BitNet.rs supports **4 embedded tokenizer extraction strategies** from GGUF metadata.
+bitnet-rs supports **4 embedded tokenizer extraction strategies** from GGUF metadata.
 
 ### Strategy 1: HuggingFace JSON Extraction
 
@@ -134,7 +134,7 @@ Minimal configuration uses just special token IDs:
 
 ## Step 3: Vocabulary Size Resolution
 
-BitNet.rs uses **5 strategies** to determine vocabulary size when metadata is incomplete.
+bitnet-rs uses **5 strategies** to determine vocabulary size when metadata is incomplete.
 
 ### Strategy Flow
 
@@ -174,7 +174,7 @@ fn demonstrate_vocab_resolution() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Step 4: Fallback Chain Resolution
 
-When embedded tokenizers aren't available, BitNet.rs uses a **5-step fallback chain**.
+When embedded tokenizers aren't available, bitnet-rs uses a **5-step fallback chain**.
 
 ### Complete Fallback Example
 
@@ -236,7 +236,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Step 5: Model-Specific Tokenizer Configurations
 
-BitNet.rs applies **model-specific wrappers** for optimal tokenization.
+bitnet-rs applies **model-specific wrappers** for optimal tokenization.
 
 ### LLaMA Tokenizer Configuration
 
@@ -441,7 +441,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## What You've Learned
 
-✅ **Automatic Discovery**: How BitNet.rs automatically discovers tokenizers from GGUF metadata
+✅ **Automatic Discovery**: How bitnet-rs automatically discovers tokenizers from GGUF metadata
 
 ✅ **Extraction Strategies**: 4 embedded tokenizer extraction methods (HF JSON, SPM vocab, SPM binary, minimal)
 
@@ -485,4 +485,4 @@ A: Check GGUF metadata consistency or override with explicit tokenizer for edge 
 
 ---
 
-**Tutorial Complete!** You now understand BitNet.rs universal tokenizer discovery system. 🎉
+**Tutorial Complete!** You now understand bitnet-rs universal tokenizer discovery system. 🎉

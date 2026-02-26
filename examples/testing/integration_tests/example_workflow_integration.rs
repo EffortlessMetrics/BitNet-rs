@@ -1,4 +1,4 @@
-//! Example integration tests for complete BitNet.rs workflows
+//! Example integration tests for complete bitnet-rs workflows
 //!
 //! Demonstrates end-to-end testing patterns for inference pipelines,
 //! component interactions, and system-level validation

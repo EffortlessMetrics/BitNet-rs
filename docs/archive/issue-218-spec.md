@@ -1,12 +1,12 @@
 # Issue #218: MVP Requirement: Real BitNet Model Integration and Validation
 
 ## Context
-BitNet.rs currently relies on mock models and placeholder data for testing and examples, creating a gap between testing infrastructure and production-ready neural network inference. The MVP requires end-to-end validation with actual BitNet model artifacts to ensure the 1-bit neural network inference pipeline works correctly with real-world models. This affects the complete inference pipeline: Model Loading → Quantization → Kernels → Inference → Output, and impacts model compatibility validation, numerical accuracy verification, and cross-validation with the C++ reference implementation.
+BitNet-rs currently relies on mock models and placeholder data for testing and examples, creating a gap between testing infrastructure and production-ready neural network inference. The MVP requires end-to-end validation with actual BitNet model artifacts to ensure the 1-bit neural network inference pipeline works correctly with real-world models. This affects the complete inference pipeline: Model Loading → Quantization → Kernels → Inference → Output, and impacts model compatibility validation, numerical accuracy verification, and cross-validation with the C++ reference implementation.
 
 The existing infrastructure includes `cargo xtask download-model` and `cargo xtask full-crossval`, but lacks integration with examples and comprehensive end-to-end testing. This creates risks for production deployment where inference accuracy and model compatibility are critical for enterprise-scale neural network applications.
 
 ## User Story
-As a BitNet.rs developer, I want to validate the complete inference pipeline with real BitNet models so that I can ensure production-ready neural network inference with verified accuracy and compatibility.
+As a BitNet-rs developer, I want to validate the complete inference pipeline with real BitNet models so that I can ensure production-ready neural network inference with verified accuracy and compatibility.
 
 ## Acceptance Criteria
 
@@ -22,7 +22,7 @@ AC5: Tokenization pipeline correctly processes real model vocabulary and produce
 
 AC6: GGUF compatibility validation passes for real BitNet models with proper tensor alignment and metadata verification
 
-AC7: Cross-validation framework compares BitNet.rs outputs with C++ reference implementation within configurable numerical tolerance
+AC7: Cross-validation framework compares BitNet-rs outputs with C++ reference implementation within configurable numerical tolerance
 
 AC8: Perplexity calculations on real models match expected values and validate quantization accuracy preservation
 

@@ -1,15 +1,15 @@
-# BitNet.rs Security Validation Report: PR #431
+# bitnet-rs Security Validation Report: PR #431
 
 **Date**: 2025-10-04
 **Branch**: `feat/254-real-neural-network-inference`
-**Security Scanner**: BitNet.rs Security Validation Specialist
+**Security Scanner**: bitnet-rs Security Validation Specialist
 **Validation Status**: ✅ **PASS** (with recommendations)
 
 ---
 
 ## Executive Summary
 
-Comprehensive security validation for PR #431 has been completed with **PASS** status. The BitNet.rs neural network inference codebase demonstrates strong security practices with proper model file validation, secure GGUF parsing, and comprehensive integer overflow protection. No critical or high-severity vulnerabilities were identified.
+Comprehensive security validation for PR #431 has been completed with **PASS** status. The bitnet-rs neural network inference codebase demonstrates strong security practices with proper model file validation, secure GGUF parsing, and comprehensive integer overflow protection. No critical or high-severity vulnerabilities were identified.
 
 **Key Findings**:
 - ✅ **Dependency Security**: Clean (0 vulnerabilities from cargo audit)
@@ -65,7 +65,7 @@ Scanning Cargo.lock for vulnerabilities (722 crate dependencies)
 - Test fixtures use mock credentials (appropriate for test code)
 - .env.example file is properly configured (contains no actual secrets)
 
-**BitNet.rs Security Pattern**:
+**bitnet-rs Security Pattern**:
 - HuggingFace tokens managed via environment variables
 - API authentication uses runtime configuration
 - No credentials committed to version control
@@ -261,13 +261,13 @@ Scanning Cargo.lock for vulnerabilities (722 crate dependencies)
 2. **Model Loading**: File I/O timing dependent on model size
 3. **Token Lookups**: Hash table operations with potential timing variations
 
-**BitNet.rs Context**: Neural network inference is **not security-critical** (no cryptographic operations, no authentication secrets in processing path)
+**bitnet-rs Context**: Neural network inference is **not security-critical** (no cryptographic operations, no authentication secrets in processing path)
 
-**Recommendation**: Document that BitNet.rs is designed for performance, not constant-time security
+**Recommendation**: Document that bitnet-rs is designed for performance, not constant-time security
 
 ---
 
-## Security Assessment by BitNet.rs Component
+## Security Assessment by bitnet-rs Component
 
 ### Core Crates Security Analysis
 
@@ -350,7 +350,7 @@ Scanning Cargo.lock for vulnerabilities (722 crate dependencies)
 ### Low Priority
 
 7. **Timing Side-Channel Documentation**:
-   - Document that BitNet.rs prioritizes performance over constant-time execution
+   - Document that bitnet-rs prioritizes performance over constant-time execution
    - Note that neural network inference is not security-critical
    - Clarify intended threat model in security documentation
 
@@ -447,6 +447,6 @@ PR #431 demonstrates **strong security practices** for a neural network inferenc
 ---
 
 **Report Generated**: 2025-10-04 03:52 UTC
-**Scanner**: BitNet.rs Security Validation Specialist
+**Scanner**: bitnet-rs Security Validation Specialist
 **Validation Scope**: Comprehensive (dependencies, secrets, unsafe blocks, GPU safety, model security, overflow protection)
 **Next Step**: Route to hardening-finalizer for final Draft→Ready validation

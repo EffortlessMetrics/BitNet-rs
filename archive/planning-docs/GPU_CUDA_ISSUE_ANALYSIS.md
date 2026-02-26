@@ -1,7 +1,7 @@
-# BitNet.rs GPU/CUDA Issues Analysis
+# bitnet-rs GPU/CUDA Issues Analysis
 **Date**: 2025-11-11
 **Context**: Post-PR #475 (GPU feature gate unification - MERGED 2025-11-03)
-**Analyst**: BitNet.rs GitHub Research Specialist
+**Analyst**: bitnet-rs GitHub Research Specialist
 
 ---
 
@@ -823,7 +823,7 @@ gh issue edit 85 --add-label "area/gpu" --milestone "v0.3.0"
 
 ## Conclusion
 
-BitNet.rs GPU infrastructure has made significant progress with PR #475 resolving the critical feature gate consistency issue (#439). The path forward is clear:
+bitnet-rs GPU infrastructure has made significant progress with PR #475 resolving the critical feature gate consistency issue (#439). The path forward is clear:
 
 1. **Immediate**: Resolve #432 (GPU test race - 2-3 hours)
 2. **Critical Path**: Implement #450 (CUDA backend MVP - 2-3 weeks)

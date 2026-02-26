@@ -13,7 +13,7 @@ The `NeonKernel::matmul_i2s_neon` function in `crates/bitnet-kernels/src/cpu/arm
 
 ## Reproduction Steps
 
-1. Build BitNet.rs with ARM NEON support:
+1. Build BitNet-rs with ARM NEON support:
    ```bash
    cargo build --no-default-features --features cpu --target aarch64-unknown-linux-gnu
    ```
@@ -402,7 +402,7 @@ impl NeonKernel {
 - [ ] Memory usage optimization
 
 ### Phase 4: Integration & Testing (Week 5)
-- [ ] Integrate with BitNet.rs inference pipeline
+- [ ] Integrate with BitNet-rs inference pipeline
 - [ ] Add feature flag conditional compilation
 - [ ] Comprehensive test suite for ARM devices
 - [ ] Documentation and usage examples

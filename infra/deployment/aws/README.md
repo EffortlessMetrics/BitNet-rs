@@ -49,7 +49,7 @@ kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.1
 
 ```bash
 # Add BitNet Helm repository
-helm repo add bitnet https://charts.bitnet.rs
+helm repo add bitnet https://charts.bitnet-rs
 helm repo update
 
 # Install BitNet with GPU support

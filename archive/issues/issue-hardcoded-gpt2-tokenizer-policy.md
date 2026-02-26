@@ -446,4 +446,4 @@ mod tests {
 
 ---
 
-**Note**: This implementation will significantly improve BitNet.rs's ability to support diverse transformer architectures while maintaining backward compatibility and providing clear migration paths for existing users.
+**Note**: This implementation will significantly improve BitNet-rs's ability to support diverse transformer architectures while maintaining backward compatibility and providing clear migration paths for existing users.

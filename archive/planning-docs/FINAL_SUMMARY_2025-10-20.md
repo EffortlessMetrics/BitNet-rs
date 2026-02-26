@@ -1,4 +1,4 @@
-# BitNet.rs Final Session Summary - 2025-10-20
+# BitNet-rs Final Session Summary - 2025-10-20
 
 ## 🎉 BREAKTHROUGH DISCOVERY: ZERO BLOCKERS!
 

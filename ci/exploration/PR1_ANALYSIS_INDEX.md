@@ -2,7 +2,7 @@
 
 ## Documents in This Analysis
 
-This folder contains comprehensive analysis of PR1 fixture generation and GGUF writer integration for BitNet.rs.
+This folder contains comprehensive analysis of PR1 fixture generation and GGUF writer integration for BitNet-rs.
 
 ### 1. Quick Reference (START HERE)
 **File**: `PR1_QUICK_REFERENCE.md` (257 lines, 6.8 KB)
@@ -368,7 +368,7 @@ Tests using helpers
 ## Document Generation Metadata
 
 **Analysis Date**: October 22, 2025
-**Codebase**: BitNet.rs (Rust implementation of BitNet 1-bit LLM)
+**Codebase**: BitNet-rs (Rust implementation of BitNet 1-bit LLM)
 **Focus**: QK256 dual-flavor fixture generation for PR1
 **Scope**: GGUF writer integration, test migration, feature flag design
 

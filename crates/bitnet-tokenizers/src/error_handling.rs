@@ -1,6 +1,6 @@
-//! Comprehensive error handling with anyhow::Result integration for BitNet.rs neural network tokenization
+//! Comprehensive error handling with anyhow::Result integration for BitNet-rs neural network tokenization
 //!
-//! This module provides centralized error handling patterns that follow BitNet.rs coding standards
+//! This module provides centralized error handling patterns that follow BitNet-rs coding standards
 //! with consistent anyhow::Error usage and actionable error messages for neural network operations.
 //!
 //! Tests feature spec: issue-249-tokenizer-discovery-neural-network-spec.md#ac10-error-handling
@@ -11,21 +11,21 @@ use std::path::{Path, PathBuf};
 use tracing::warn;
 //use crate::{CacheManager, ModelTypeDetector};
 
-/// Centralized error handling utilities for BitNet.rs tokenizer operations
+/// Centralized error handling utilities for BitNet-rs tokenizer operations
 ///
 /// Provides consistent error patterns across discovery, download, strategy, and fallback modules
-/// following BitNet.rs neural network inference requirements.
+/// following BitNet-rs neural network inference requirements.
 pub struct TokenizerErrorHandler;
 
 impl TokenizerErrorHandler {
-    /// Convert BitNetError to anyhow::Error with context following BitNet.rs patterns
+    /// Convert BitNetError to anyhow::Error with context following BitNet-rs patterns
     pub fn to_anyhow_error(error: BitNetError, context: &str) -> anyhow::Error {
         anyhow::Error::new(error).context(context.to_string())
     }
 
     /// Create actionable error message for tokenizer failures with neural network context
     pub fn create_actionable_error(error: BitNetError, operation: &str) -> AnyhowResult<()> {
-        let context = format!("BitNet.rs tokenizer operation failed: {}", operation);
+        let context = format!("BitNet-rs tokenizer operation failed: {}", operation);
         let suggestions = Self::get_error_suggestions(&error);
 
         let mut error_msg = Self::to_anyhow_error(error, &context);
@@ -38,7 +38,7 @@ impl TokenizerErrorHandler {
         Err(error_msg)
     }
 
-    /// Create file I/O error with consistent BitNet.rs formatting
+    /// Create file I/O error with consistent BitNet-rs formatting
     pub fn file_io_error(path: &Path, source: std::io::Error) -> BitNetError {
         BitNetError::Model(ModelError::FileIOError { path: path.to_path_buf(), source })
     }
@@ -128,14 +128,14 @@ impl TokenizerErrorHandler {
                     vec![
                         "Check configuration parameters".to_string(),
                         "Verify environment variables are set correctly".to_string(),
-                        "Review BitNet.rs documentation for proper setup".to_string(),
+                        "Review BitNet-rs documentation for proper setup".to_string(),
                     ]
                 }
             }
             _ => vec![
-                "Check BitNet.rs logs for detailed error information".to_string(),
+                "Check BitNet-rs logs for detailed error information".to_string(),
                 "Verify system requirements and dependencies".to_string(),
-                "Consult BitNet.rs documentation for troubleshooting".to_string(),
+                "Consult BitNet-rs documentation for troubleshooting".to_string(),
             ],
         }
     }
@@ -159,13 +159,13 @@ impl TokenizerErrorHandler {
     }
 }
 
-/// Centralized cache management utilities for BitNet.rs tokenizer operations
+/// Centralized cache management utilities for BitNet-rs tokenizer operations
 pub struct CacheManager;
 
 impl CacheManager {
     /// Determine cache directory with environment variable override
     ///
-    /// Follows BitNet.rs standard cache directory conventions
+    /// Follows BitNet-rs standard cache directory conventions
     pub fn cache_directory() -> Result<PathBuf> {
         // Check environment variable first
         if let Ok(cache_dir) = std::env::var("BITNET_CACHE_DIR") {

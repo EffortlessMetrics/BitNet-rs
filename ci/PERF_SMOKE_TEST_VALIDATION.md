@@ -35,7 +35,7 @@ Successfully added a lightweight, non-gating performance smoke test to `.github/
 
 ### ✅ Feature Flags
 - Build: `--no-default-features --features cpu,full-cli`
-- Follows BitNet.rs conventions (empty defaults, explicit features)
+- Follows BitNet-rs conventions (empty defaults, explicit features)
 - Matches other CPU-only jobs
 
 ### ✅ Performance Configuration

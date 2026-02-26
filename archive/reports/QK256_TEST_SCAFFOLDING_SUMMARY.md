@@ -1,7 +1,7 @@
 # QK256 Test Scaffolding Summary
 
 ## Overview
-Comprehensive test scaffolding for QK256 functionality has been successfully created across multiple BitNet.rs workspace crates. All tests compile successfully with both CPU and GPU feature gates and are ready for implementation.
+Comprehensive test scaffolding for QK256 functionality has been successfully created across multiple BitNet-rs workspace crates. All tests compile successfully with both CPU and GPU feature gates and are ready for implementation.
 
 ## Test Inventory
 
@@ -248,7 +248,7 @@ scripts/parity_smoke.sh models/model.gguf
 
 ## Deterministic Testing
 
-All tests follow BitNet.rs deterministic testing principles:
+All tests follow BitNet-rs deterministic testing principles:
 - Use fixed patterns (e.g., cycling codes 0..3, all 0xAA)
 - Validate with tight error bounds (< 1e-4 for GEMV, < 1e-6 for reference)
 - No random data generation

@@ -1,4 +1,4 @@
-//! Support modules for BitNet.rs kernel tests
+//! Support modules for BitNet-rs kernel tests
 
 pub mod env_guard;
 pub mod receipt;

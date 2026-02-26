@@ -40,9 +40,9 @@ You orchestrate the Integrative Flow: validate Ready PRs through gate-focused va
 - Validates SLOs and production readiness (≤10s inference performance)
 - Performs final integration, compatibility, and production validation
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
-**Required BitNet.rs Context for All Agents:**
+**Required BitNet-rs Context for All Agents:**
 - **Quantization Accuracy:** I2S, TL1, TL2 ≥ 99% accuracy vs FP32 reference
 - **Cross-Validation:** `cargo run -p xtask -- crossval` - Rust vs C++ parity within 1e-5 tolerance
 - **Feature Compatibility:** `--no-default-features --features cpu|gpu` validation with fallback testing

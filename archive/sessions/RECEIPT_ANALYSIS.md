@@ -1,8 +1,8 @@
-# BitNet.rs Receipt JSON Files & Infrastructure Analysis
+# BitNet-rs Receipt JSON Files & Infrastructure Analysis
 
 ## Executive Summary
 
-Receipt files in BitNet.rs serve as **honest compute evidence** for inference operations. They provide schema-validated records of:
+Receipt files in BitNet-rs serve as **honest compute evidence** for inference operations. They provide schema-validated records of:
 - Actual kernel execution (CPU/GPU)
 - Model metadata
 - Performance metrics (tokens/sec, latency)

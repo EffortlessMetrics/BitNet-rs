@@ -18,7 +18,7 @@
 
 ## Summary
 
-This Pull Request implements comprehensive real GGUF model weight loading in BitNet.rs, replacing mock tensor initialization with production-ready neural network weight parsing. This enhancement enables meaningful inference with trained model parameters and unlocks the full potential of the BitNet.rs inference pipeline.
+This Pull Request implements comprehensive real GGUF model weight loading in BitNet-rs, replacing mock tensor initialization with production-ready neural network weight parsing. This enhancement enables meaningful inference with trained model parameters and unlocks the full potential of the BitNet-rs inference pipeline.
 
 ### 🧠 **Neural Network Implementation Scope**
 
@@ -56,7 +56,7 @@ This Pull Request implements comprehensive real GGUF model weight loading in Bit
 - ✅ Library Tests: 81/82 core tests pass (1 tokenizer offline test skipped as expected)
 - ✅ Feature Flag Discipline: Maintained `--no-default-features` throughout implementation
 
-**BitNet.rs Neural Network Context:**
+**BitNet-rs Neural Network Context:**
 - Real transformer layer weights loaded from GGUF files with quantization support
 - Enhanced error handling for weight parsing failures with descriptive messages
 - Device-aware tensor placement with automatic GPU/CPU optimization
@@ -76,7 +76,7 @@ This Pull Request implements comprehensive real GGUF model weight loading in Bit
 - [`docs/explanation/gguf-weight-loading-performance-validation.md`](docs/explanation/gguf-weight-loading-performance-validation.md) - Performance requirements and validation
 - [`docs/explanation/gguf-weight-loading-integration-testing.md`](docs/explanation/gguf-weight-loading-integration-testing.md) - Integration testing framework
 
-### 🚀 **BitNet.rs Capabilities Unlocked**
+### 🚀 **BitNet-rs Capabilities Unlocked**
 
 **Neural Network Inference:**
 - Meaningful computations with trained transformer parameters instead of zero weights
@@ -157,7 +157,7 @@ This Pull Request implements comprehensive real GGUF model weight loading in Bit
 - [Performance Validation Requirements](docs/explanation/gguf-weight-loading-performance-validation.md)
 - [Integration Testing Framework](docs/explanation/gguf-weight-loading-integration-testing.md)
 
-**BitNet.rs Architecture:**
+**BitNet-rs Architecture:**
 - [Architecture Overview](docs/architecture-overview.md) - System design and components
 - [Quantization Support](docs/reference/quantization-support.md) - I2_S, TL1, TL2 format specifications
 - [GPU Development Guide](docs/development/gpu-development.md) - CUDA development guidelines
@@ -165,7 +165,7 @@ This Pull Request implements comprehensive real GGUF model weight loading in Bit
 ### 🎯 **Impact Assessment**
 
 **Neural Network Features:**
-- Enables functional BitNet.rs inference with real trained parameters
+- Enables functional BitNet-rs inference with real trained parameters
 - Supports production deployment with optimized memory usage
 - Maintains quantization accuracy through comprehensive validation
 - Provides foundation for advanced neural network research and development

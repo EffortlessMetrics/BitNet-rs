@@ -1,4 +1,4 @@
-# Chocolatey uninstall script for BitNet.rs
+# Chocolatey uninstall script for bitnet-rs
 
 $ErrorActionPreference = 'Stop'
 
@@ -16,4 +16,4 @@ foreach ($binary in $binaries) {
     }
 }
 
-Write-Host "BitNet.rs has been uninstalled successfully!" -ForegroundColor Green
+Write-Host "bitnet-rs has been uninstalled successfully!" -ForegroundColor Green

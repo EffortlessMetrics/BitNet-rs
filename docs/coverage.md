@@ -1,6 +1,6 @@
 # Coverage Collection and Reporting
 
-This document describes the coverage collection system for BitNet.rs, including local development workflows and CI integration.
+This document describes the coverage collection system for BitNet-rs, including local development workflows and CI integration.
 
 ## Quick Start
 

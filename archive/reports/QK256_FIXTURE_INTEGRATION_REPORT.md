@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Created real, persistent GGUF fixtures for BitNet.rs QK256 integration testing with complete infrastructure for both in-memory generation (fast unit tests) and disk-based loading (CI/CD determinism).
+Created real, persistent GGUF fixtures for BitNet-rs QK256 integration testing with complete infrastructure for both in-memory generation (fast unit tests) and disk-based loading (CI/CD determinism).
 
 ## Deliverables
 
@@ -318,4 +318,4 @@ The following tests **already use** in-memory fixture generation:
 - Comprehensive documentation provided
 - All 103 tests passing
 
-The fixture infrastructure supports both fast in-memory testing (current default) and deterministic disk-based loading (CI/CD option), providing flexibility for different testing scenarios while maintaining BitNet.rs quality standards.
+The fixture infrastructure supports both fast in-memory testing (current default) and deterministic disk-based loading (CI/CD option), providing flexibility for different testing scenarios while maintaining BitNet-rs quality standards.

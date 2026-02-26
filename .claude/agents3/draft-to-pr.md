@@ -40,9 +40,9 @@ You are the orchestrator for the Draft → Ready PR validation flow. Your job: i
 - Review validates performance deltas vs established baseline
 - Integrative inherits Review performance metrics for SLO validation
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
-**Required BitNet.rs Context for All Agents:**
+**Required BitNet-rs Context for All Agents:**
 - **Quantization Accuracy:** I2S, TL1, TL2 ≥ 99% accuracy vs FP32 reference
 - **Cross-Validation:** `cargo run -p xtask -- crossval` - Rust vs C++ parity within 1e-5 tolerance
 - **Feature Compatibility:** `--no-default-features --features cpu|gpu` validation with fallback testing

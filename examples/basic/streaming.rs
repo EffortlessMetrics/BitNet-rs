@@ -1,4 +1,4 @@
-//! Streaming generation example using BitNet.rs
+//! Streaming generation example using BitNet-rs
 //!
 //! This example demonstrates how to use streaming generation for real-time text output.
 //!

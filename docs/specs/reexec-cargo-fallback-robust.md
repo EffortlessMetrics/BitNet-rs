@@ -4,7 +4,7 @@
 **Version**: 1.0
 **Status**: Draft
 **Created**: 2025-10-27
-**Author**: BitNet.rs Generative Spec Agent
+**Author**: BitNet-rs Generative Spec Agent
 **Target Release**: v0.2.0
 
 **Related Files**:
@@ -23,13 +23,13 @@
 
 ### Purpose
 
-This specification defines a **robust two-tier re-execution mechanism** for the BitNet.rs automatic C++ backend repair workflow. After `setup-cpp-auto` installs backend libraries and `rebuild_xtask()` recompiles the binary, the system must re-execute the new binary to pick up updated build-time constants (`HAS_BITNET`, `HAS_LLAMA`) for cross-validation.
+This specification defines a **robust two-tier re-execution mechanism** for the BitNet-rs automatic C++ backend repair workflow. After `setup-cpp-auto` installs backend libraries and `rebuild_xtask()` recompiles the binary, the system must re-execute the new binary to pick up updated build-time constants (`HAS_BITNET`, `HAS_LLAMA`) for cross-validation.
 
 The two-tier strategy ensures reliable re-execution even when the rebuilt binary is temporarily unavailable due to race conditions, filesystem inconsistencies, or platform-specific behavior.
 
-### Context in BitNet.rs Architecture
+### Context in BitNet-rs Architecture
 
-The re-exec mechanism is a critical component of the **cross-validation framework**, which validates BitNet.rs neural network inference against reference C++ implementations (BitNet.cpp and llama.cpp). Cross-validation ensures:
+The re-exec mechanism is a critical component of the **cross-validation framework**, which validates BitNet-rs neural network inference against reference C++ implementations (BitNet.cpp and llama.cpp). Cross-validation ensures:
 
 - **Quantization accuracy**: 1-bit and 2-bit quantized weights match reference implementations
 - **GGUF format compatibility**: Model loading and tensor alignment parity
@@ -1387,7 +1387,7 @@ cargo test --features crossval-all test_windows_uses_spawn_only
 ### Why Re-Exec Matters for Neural Networks
 
 **Quantization Accuracy Validation**:
-- BitNet.rs implements 1-bit and 2-bit quantized neural networks
+- BitNet-rs implements 1-bit and 2-bit quantized neural networks
 - Cross-validation compares Rust inference against C++ reference implementations
 - Without automatic backend setup, quantization validation is blocked by manual setup burden
 
@@ -1475,7 +1475,7 @@ cargo test --features crossval-all test_windows_uses_spawn_only
 
 ## Conclusion
 
-The current `reexec_current_command()` implementation in BitNet.rs is **fundamentally sound** with the two-tier strategy (fast path exec + fallback cargo run) already in place. The primary challenge—ENOENT race conditions—is already handled by the fallback mechanism.
+The current `reexec_current_command()` implementation in BitNet-rs is **fundamentally sound** with the two-tier strategy (fast path exec + fallback cargo run) already in place. The primary challenge—ENOENT race conditions—is already handled by the fallback mechanism.
 
 ### Current State Assessment
 

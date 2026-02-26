@@ -55,7 +55,7 @@
 
 2. **Run identical prompt on both engines:**
 
-   **BitNet.rs:**
+   **BitNet-rs:**
    ```bash
    RUST_LOG=debug cargo run --release -p bitnet-cli --features cpu,full-cli -- run \
      --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf \
@@ -117,7 +117,7 @@
 
 1. **Instrument both codebases for intermediate outputs:**
 
-   **In BitNet.rs:**
+   **In BitNet-rs:**
    ```rust
    // Add to forward pass
    tracing::debug!("Layer {}: output norm = {:.6}", layer_idx, output.norm());
@@ -132,7 +132,7 @@
 
 2. **Run both with same input and compare per-layer:**
    ```bash
-   # BitNet.rs with debug output
+   # BitNet-rs with debug output
    RUST_LOG=debug cargo run --release -p bitnet-cli -- run \
      --model model.gguf --prompt "test" --max-tokens 1 \
      2>&1 | grep "Layer" > bitnet-rs-layers.txt
@@ -349,7 +349,7 @@
 
 2. **Tokenize with both implementations:**
 
-   **BitNet.rs:**
+   **BitNet-rs:**
    ```rust
    for line in test_inputs {
        let tokens = tokenizer.encode(line, true, false)?;
@@ -586,7 +586,7 @@
 
    ### microsoft-bitnet-b1.58-2B-4T-gguf
 
-   **Confirmed:** Produces garbled output in both BitNet.rs and bitnet.cpp
+   **Confirmed:** Produces garbled output in both BitNet-rs and bitnet.cpp
 
    **Root cause:** Model weights quality (upstream issue)
 
@@ -597,7 +597,7 @@
    ```rust
    if model_name.contains("microsoft-bitnet-b1.58") {
        eprintln!("⚠️  Warning: This model is known to produce poor quality output.");
-       eprintln!("   This is a model weights issue, not a BitNet.rs bug.");
+       eprintln!("   This is a model weights issue, not a BitNet-rs bug.");
    }
    ```
 
@@ -613,7 +613,7 @@
 ## Acceptance Criteria for "Fixed"
 
 **Minimum (confirm not our bug):**
-- ✅ Proven that BitNet.rs matches C++ reference output
+- ✅ Proven that BitNet-rs matches C++ reference output
 - ✅ Documented which models work vs don't work
 - ✅ Clear user guidance on model selection
 

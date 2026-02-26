@@ -196,10 +196,10 @@ commits: 7 ahead @6268b7c, 0 behind main@393eecf; semantic compliance 7/7 (100%)
 **Residual Risk:** None (does not affect functionality)
 
 ### 4. WASM Build Limitation (Non-Blocking)
-**Severity:** Minor (BitNet.rs-wide limitation)
+**Severity:** Minor (BitNet-rs-wide limitation)
 **Issue:** cargo build --target wasm32-unknown-unknown fails
 **Root Cause:** onig_sys (tokenizer dependency) requires native C library
-**Auto-fix:** N/A (BitNet.rs-wide architectural limitation)
+**Auto-fix:** N/A (BitNet-rs-wide architectural limitation)
 **Residual Risk:** None (CPU and GPU targets unaffected)
 
 ---
@@ -247,7 +247,7 @@ commits: 7 ahead @6268b7c, 0 behind main@393eecf; semantic compliance 7/7 (100%)
 
 ---
 
-## Exemplary BitNet.rs Practices
+## Exemplary BitNet-rs Practices
 
 PR #461 demonstrates:
 - ✅ Complete TDD Red-Green-Refactor cycle

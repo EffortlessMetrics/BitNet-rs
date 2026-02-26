@@ -2,7 +2,7 @@
                     #[ignore] TESTS AUDIT - FINAL SUMMARY
 ================================================================================
 
-PROJECT: BitNet.rs
+PROJECT: BitNet-rs
 AUDIT DATE: 2025-10-23
 TOTAL TESTS ANALYZED: 240
 CODEBASE: /home/steven/code/Rust/BitNet-rs

@@ -1,4 +1,4 @@
-# BitNet.rs MVP Finalization - Quick Reference
+# BitNet-rs MVP Finalization - Quick Reference
 
 **Date**: 2025-10-22
 **Status**: ✅ ALL 4 PRs READY FOR MERGE

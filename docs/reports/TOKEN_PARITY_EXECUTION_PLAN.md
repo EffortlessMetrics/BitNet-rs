@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Based on comprehensive codebase exploration, BitNet.rs has **well-designed** BOS/template infrastructure with proper safeguards. However, three **critical gaps** block reliable cross-validation:
+Based on comprehensive codebase exploration, BitNet-rs has **well-designed** BOS/template infrastructure with proper safeguards. However, three **critical gaps** block reliable cross-validation:
 
 1. **CLI flag exposure**: `--print-input-tokens` exists in code but may not be wired to clap properly
 2. **Token parity pre-gate**: crossval-per-token compares logits without first validating token sequences match

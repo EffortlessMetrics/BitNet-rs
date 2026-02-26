@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Receipt sanity validation for BitNet.rs inference receipts
+# Receipt sanity validation for BitNet-rs inference receipts
 set -euo pipefail
 
 RECEIPT_FILE="${1:-ci/inference.json}"

@@ -8,7 +8,7 @@
 
 ## Validation Summary
 
-AC8 documentation implementation has been comprehensively validated against BitNet.rs quality gates. All acceptance criteria met with production-ready documentation standards.
+AC8 documentation implementation has been comprehensively validated against bitnet-rs quality gates. All acceptance criteria met with production-ready documentation standards.
 
 ## Quality Gates Executed
 
@@ -171,7 +171,7 @@ BITNET_DISABLE_MINIMAL_LOADER: 17 files reference it ✅
 - ✅ Validation variables (STRICT_MODE)
 - ✅ Cross-validation variables (GGUF, CPP_DIR)
 
-## BitNet.rs-Specific Validations
+## bitnet-rs-Specific Validations
 
 ### Error Handling Patterns
 - ✅ No `anyhow::Result` patterns needed (documentation-only AC)
@@ -248,7 +248,7 @@ impl-finalizer validated AC8 implementation (documentation accuracy, quality gat
 
 ```
 State: ready
-Why: AC8 documentation validated against BitNet.rs standards; all quality gates passed; no regressions
+Why: AC8 documentation validated against bitnet-rs standards; all quality gates passed; no regressions
 Next: FINALIZE → code-refiner
 ```
 
@@ -283,4 +283,4 @@ Next: FINALIZE → code-refiner
 
 ---
 
-✅ **BitNet.rs AC8 implementation validation complete. All quality gates passed. Documentation is production-ready and meets comprehensive BitNet.rs standards. Ready for refinement phase.**
+✅ **bitnet-rs AC8 implementation validation complete. All quality gates passed. Documentation is production-ready and meets comprehensive bitnet-rs standards. Ready for refinement phase.**

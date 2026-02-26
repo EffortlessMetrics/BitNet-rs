@@ -115,7 +115,7 @@ Following the successful merge of PR #187 "Call engine prefill during batch infe
 
 ### ✅ Consistency Checks
 - **Terminology**: Consistent use of "prefill", "cache warming", "performance metrics"
-- **Code Style**: Examples follow BitNet.rs patterns
+- **Code Style**: Examples follow BitNet-rs patterns
 - **Documentation Style**: Maintained consistent format and structure
 
 ## Impact Assessment
@@ -149,7 +149,7 @@ examples/prefill_performance_demo.rs          # New comprehensive example
 .claude/pr187-post-merge-documentation-report.md  # This status report
 ```
 
-## BitNet.rs Specific Validations
+## BitNet-rs Specific Validations
 
 ### ✅ Feature Flag Documentation
 - Commands properly specify `--no-default-features --features cpu`
@@ -218,7 +218,7 @@ The documentation for PR #187 prefill functionality has been comprehensively upd
 ---
 
 *Report Generated*: 2025-09-07
-*BitNet.rs Version*: Post-PR #187 merge
+*BitNet-rs Version*: Post-PR #187 merge
 *Documentation Agent*: pr-doc-finalizer
 *Total Files Updated*: 6
 *New Files Created*: 2

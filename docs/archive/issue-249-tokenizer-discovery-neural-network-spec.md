@@ -2,13 +2,13 @@
 
 ## Executive Summary
 
-This specification defines the technical implementation approach for automatic tokenizer discovery and integration in BitNet.rs neural network inference engine. The implementation will enable seamless model inference without manual tokenizer configuration, supporting production-grade neural networks with large vocabularies (LLaMA-3: 128K tokens, LLaMA-2: 32K tokens, GPT-2: 50K tokens) and proper device-aware quantization compatibility.
+This specification defines the technical implementation approach for automatic tokenizer discovery and integration in BitNet-rs neural network inference engine. The implementation will enable seamless model inference without manual tokenizer configuration, supporting production-grade neural networks with large vocabularies (LLaMA-3: 128K tokens, LLaMA-2: 32K tokens, GPT-2: 50K tokens) and proper device-aware quantization compatibility.
 
 **Flow Status**: generative:gate:spec = pass (Neural Network Implementation Analysis Complete)
 
 ## Neural Network Context Analysis
 
-### Current BitNet.rs Inference Pipeline
+### Current BitNet-rs Inference Pipeline
 ```
 Model Loading → Quantization → Kernels → Inference → Output
      ↓             ↓           ↓         ↓        ↓
@@ -1069,16 +1069,16 @@ BITNET_STRICT_NO_FAKE_GPU=1 cargo test --no-default-features --features cpu
 
 ## Conclusion
 
-This specification provides a comprehensive technical approach for implementing automatic tokenizer discovery and integration in BitNet.rs. The proposed solution addresses all 10 acceptance criteria while maintaining compatibility with the existing neural network inference pipeline, quantization formats (I2S/TL1/TL2), and cross-validation framework.
+This specification provides a comprehensive technical approach for implementing automatic tokenizer discovery and integration in BitNet-rs. The proposed solution addresses all 10 acceptance criteria while maintaining compatibility with the existing neural network inference pipeline, quantization formats (I2S/TL1/TL2), and cross-validation framework.
 
 **Key Neural Network Innovations**:
 - **Device-Aware Tokenization**: Automatic GPU/CPU selection for optimal performance
 - **Large Vocabulary Optimization**: Efficient handling of 128K+ token neural network models
-- **Quantization Integration**: Seamless compatibility with BitNet.rs quantization pipeline
+- **Quantization Integration**: Seamless compatibility with BitNet-rs quantization pipeline
 - **Production-Grade Reliability**: Robust error handling and comprehensive fallback strategies
 
 **Next Steps**: **FINALIZE → spec-finalizer** - The technical specification is complete and ready for implementation guidance to development teams.
 
 ---
 
-*This specification aligns with BitNet.rs neural network inference architecture, maintains TDD practices, supports feature-gated builds (--no-default-features --features cpu|gpu), and provides comprehensive validation approaches for production-grade neural network model inference.*
+*This specification aligns with BitNet-rs neural network inference architecture, maintains TDD practices, supports feature-gated builds (--no-default-features --features cpu|gpu), and provides comprehensive validation approaches for production-grade neural network model inference.*

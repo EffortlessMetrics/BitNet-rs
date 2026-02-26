@@ -2,12 +2,12 @@ ultrathink agentically
 
 # Issue → Draft PR Generative Flow
 
-You orchestrate the Generative Flow: transform requirements into Draft PRs through sequential specialized agents that fix, assess, and route until a complete BitNet.rs neural network implementation emerges.
+You orchestrate the Generative Flow: transform requirements into Draft PRs through sequential specialized agents that fix, assess, and route until a complete BitNet-rs neural network implementation emerges.
 
 ## Starting Condition
 
 - Input: Clear requirement (issue text, user story, or neural network feature specification)
-- You have clean BitNet.rs repo with write access
+- You have clean BitNet-rs repo with write access
 - Base branch: main; create feature branch: `feat/<issue-id-or-slug>`
 - Work in **worktree-serial mode**: one agent writes at a time
 
@@ -42,9 +42,9 @@ You orchestrate the Generative Flow: transform requirements into Draft PRs throu
 - Creates implementation foundation with basic quantization and cross-validation
 - Produces working Draft PR with comprehensive test coverage
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
-**Required BitNet.rs Context for All Agents:**
+**Required BitNet-rs Context for All Agents:**
 - **Quantization Accuracy:** I2S, TL1, TL2 ≥ 99% accuracy vs FP32 reference
 - **Cross-Validation:** `cargo run -p xtask -- crossval` - Rust vs C++ parity within 1e-5 tolerance
 - **Feature Compatibility:** `--no-default-features --features cpu|gpu` validation with fallback testing
@@ -66,7 +66,7 @@ benchmarks: inference: 45.2 tokens/sec; baseline established
 - Example: `feat(story-123): implement AC-1..AC-3`
 **Check Runs:** Gate results (`generative:gate:tests`, `generative:gate:mutation`, `generative:gate:security`, etc.)
 **Checks API mapping:** Gate status → Checks conclusion: **pass→success**, **fail→failure**, **skipped→neutral** (summary carries reason)
-**CI-off mode:** If Check Run writes are unavailable, BitNet.rs commands print `CHECK-SKIPPED: reason=...` and exit success. Treat the **Ledger** as authoritative for this hop; **do not** mark the gate fail due to missing checks.
+**CI-off mode:** If Check Run writes are unavailable, BitNet-rs commands print `CHECK-SKIPPED: reason=...` and exit success. Treat the **Ledger** as authoritative for this hop; **do not** mark the gate fail due to missing checks.
 **Idempotent updates:** When re-emitting the same gate on the same commit, find existing check by `name + head_sha` and PATCH to avoid duplicates
 **Labels:** Minimal domains only
 
@@ -102,7 +102,7 @@ Issue → PR Ledger migration with anchored sections:
 <!-- decision:end -->
 ```
 
-## Agent Commands (BitNet.rs-specific)
+## Agent Commands (BitNet-rs-specific)
 
 ```bash
 # Check Runs (authoritative for maintainers)
@@ -118,7 +118,7 @@ gh pr comment <NUM> --body "- [impl-creator] feature complete; NEXT→test-creat
 gh issue edit <NUM> --add-label "flow:generative,state:ready"
 gh pr edit <NUM> --add-label "flow:generative,state:ready"
 
-# BitNet.rs-specific commands (primary)
+# BitNet-rs-specific commands (primary)
 cargo fmt --all --check                                                                 # Format validation
 cargo clippy --workspace --all-targets --all-features -- -D warnings                  # Lint validation
 cargo test --workspace --no-default-features --features cpu                            # CPU test execution
@@ -128,7 +128,7 @@ cargo build --workspace --no-default-features --features gpu                    
 cargo bench --workspace --no-default-features --features cpu                           # Performance baseline
 cargo audit                                                                            # Security audit
 
-# BitNet.rs xtask integration
+# BitNet-rs xtask integration
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf  # Model download
 cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json     # Model verification
 cargo run -p xtask -- crossval                                                                              # Cross-validation
@@ -136,7 +136,7 @@ cargo run -p xtask -- full-crossval                                             
 ./scripts/verify-tests.sh                                                                                   # Test verification
 ./scripts/preflight.sh && cargo t2                                                                          # Concurrency-capped tests
 
-# Spec/Schema validation (BitNet.rs structure)
+# Spec/Schema validation (BitNet-rs structure)
 find docs/explanation/ -name "*.md" -exec grep -l "quantization\|neural network\|BitNet" {} \;            # Spec validation
 cargo test --doc --workspace --no-default-features --features cpu                                          # Doc test validation
 cargo test -p bitnet-inference --test gguf_header                                                          # GGUF validation
@@ -167,7 +167,7 @@ Agents may route to themselves: "NEXT → self (attempt 2/3)" for bounded retrie
 
 **Required gates (enforced via branch protection):**
 - **Generative (Issue → Draft PR):** `spec, format, clippy, tests, build, docs` (foundational)
-- **BitNet.rs Neural Network Hardening:** `mutation, fuzz, security, crossval` (recommended for quantization/inference)
+- **BitNet-rs Neural Network Hardening:** `mutation, fuzz, security, crossval` (recommended for quantization/inference)
 - Gates must have status `pass|fail|skipped` only
 - Check Run names follow pattern: `generative:gate:<gate>` for this flow
 
@@ -212,7 +212,7 @@ Execute examples via `cargo test --doc --no-default-features --features cpu`; Ev
 
 - Generative PRs focus on **complete neural network implementation with working tests**; all tests should pass by publication.
 - Required gates ensure foundational quality: `spec, format, clippy, tests, build, docs`
-- BitNet.rs hardening gates (`mutation, fuzz, security, crossval`) provide additional confidence for quantization/inference features.
+- BitNet-rs hardening gates (`mutation, fuzz, security, crossval`) provide additional confidence for quantization/inference features.
 
 **Enhanced Evidence Patterns:**
 - API gate: `api: additive; neural network examples validated: 37/37; quantization round-trip ok: 37/37`
@@ -291,11 +291,11 @@ Execute examples via `cargo test --doc --no-default-features --features cpu`; Ev
 **Route:** `NEXT → tests-finalizer`
 
 ### tests-finalizer
-**Do:** Finalize test infrastructure with BitNet.rs TDD patterns
+**Do:** Finalize test infrastructure with BitNet-rs TDD patterns
 **Route:** `FINALIZE → impl-creator`
 
 ### impl-creator
-**Do:** Implement neural network features in `crates/*/src/` to satisfy ACs using BitNet.rs patterns
+**Do:** Implement neural network features in `crates/*/src/` to satisfy ACs using BitNet-rs patterns
 **Gates:** Update `tests` and `build` status
 **Route:** `NEXT → code-reviewer`
 
@@ -309,7 +309,7 @@ Execute examples via `cargo test --doc --no-default-features --features cpu`; Ev
 **Route:** `FINALIZE → code-refiner`
 
 ### code-refiner
-**Do:** Polish code quality, remove duplication, ensure BitNet.rs idioms and neural network patterns
+**Do:** Polish code quality, remove duplication, ensure BitNet-rs idioms and neural network patterns
 **Route:** `NEXT → test-hardener`
 
 ### test-hardener
@@ -338,7 +338,7 @@ Execute examples via `cargo test --doc --no-default-features --features cpu`; Ev
 **Route:** `FINALIZE → quality-finalizer`
 
 ### quality-finalizer
-**Do:** Final quality assessment, ensure all BitNet.rs gates pass
+**Do:** Final quality assessment, ensure all BitNet-rs gates pass
 **Route:** `FINALIZE → doc-updater`
 
 ### doc-updater
@@ -403,12 +403,12 @@ Consider "progress" when these improve:
 
 ## Storage Convention Integration
 
-- `docs/explanation/` - Neural network feature specs, quantization design, BitNet.rs architecture
+- `docs/explanation/` - Neural network feature specs, quantization design, BitNet-rs architecture
 - `docs/reference/` - API contracts, GGUF format specifications, CLI reference
-- `docs/quickstart.md` - Getting started with BitNet.rs
+- `docs/quickstart.md` - Getting started with BitNet-rs
 - `docs/development/` - Build guides, xtask automation, GPU setup
 - `docs/troubleshooting/` - CUDA issues, quantization debugging, model loading problems
-- `crates/*/src/` - Implementation code following BitNet.rs workspace structure
+- `crates/*/src/` - Implementation code following BitNet-rs workspace structure
 - `tests/` - Quantization test fixtures, GGUF integration tests, cross-validation data
 - `scripts/` - Model download automation, cross-validation scripts, performance benchmarks
 
@@ -421,10 +421,10 @@ Consider "progress" when these improve:
 
 ## Success Criteria
 
-**Complete Implementation:** Draft PR exists with complete neural network implementation, all required gates pass (`spec, format, clippy, tests, build, docs`), TDD practices followed, BitNet.rs feature compatibility validated (cpu/gpu)
+**Complete Implementation:** Draft PR exists with complete neural network implementation, all required gates pass (`spec, format, clippy, tests, build, docs`), TDD practices followed, BitNet-rs feature compatibility validated (cpu/gpu)
 **Partial Implementation:** Draft PR with working quantization scaffolding, prioritized plan, evidence links, and clear next steps for completion
 
-Begin with neural network issue requirements and invoke agents proactively through the microloop structure, following BitNet.rs TDD-driven, Rust-first development standards with proper feature flags and cross-validation.
+Begin with neural network issue requirements and invoke agents proactively through the microloop structure, following BitNet-rs TDD-driven, Rust-first development standards with proper feature flags and cross-validation.
 
 Create a todo list to guide us through the flow. The series of microloops.
 

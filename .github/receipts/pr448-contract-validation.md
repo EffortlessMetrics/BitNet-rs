@@ -230,7 +230,7 @@ cargo test --doc --workspace --no-default-features --features cpu
 **Recommendation**: Minor version bump (0.1.x → 0.2.0) or patch (0.1.0 → 0.1.1)
 - **No breaking changes**: Patch increment sufficient
 - **New API exports**: Minor increment appropriate
-- **BitNet.rs convention**: Use minor bump for additive public API changes
+- **bitnet-rs convention**: Use minor bump for additive public API changes
 
 ---
 
@@ -348,8 +348,8 @@ contract: cargo check: workspace ok (cpu: 1.72s, gpu: 18.84s)
 - `cargo run -p xtask -- check-features` (feature consistency)
 - Manual API surface diff analysis (git diff main...HEAD)
 
-**Validator**: contract-reviewer agent (BitNet.rs specialized)
-**Contract Standards**: BitNet.rs API contracts, semver, feature gating, environment variable conventions
+**Validator**: contract-reviewer agent (bitnet-rs specialized)
+**Contract Standards**: bitnet-rs API contracts, semver, feature gating, environment variable conventions
 
 **Receipt Hash**: SHA-256: `<generated-by-ci>`
 

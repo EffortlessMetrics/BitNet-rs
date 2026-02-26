@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The BitNet.rs inference engine currently contains multiple KV-cache stubs and mock implementations that severely limit performance and production readiness. Five critical KV-cache functions require complete implementation:
+The BitNet-rs inference engine currently contains multiple KV-cache stubs and mock implementations that severely limit performance and production readiness. Five critical KV-cache functions require complete implementation:
 
 1. **`KVCache::update`** - Simplistic tensor replacement instead of sophisticated cache management
 2. **`KVCache::compress_old_entries`** - Mock compression with no actual memory optimization
@@ -389,13 +389,13 @@ fn test_cache_consistency_with_reference() {
 
 ## Related Issues
 
-- BitNet.rs #218: Device-aware quantization system
-- BitNet.rs #251: Production-ready inference server
-- BitNet.rs #260: Mock elimination project
+- BitNet-rs #218: Device-aware quantization system
+- BitNet-rs #251: Production-ready inference server
+- BitNet-rs #260: Mock elimination project
 
 ## Implementation Notes
 
-### BitNet.rs Integration
+### BitNet-rs Integration
 - Leverage existing `BitNetTensor` type system
 - Integrate with `bitnet-kernels` SIMD optimizations
 - Use `crossval` framework for accuracy validation

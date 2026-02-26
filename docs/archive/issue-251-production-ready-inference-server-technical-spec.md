@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This specification transforms the user story for Issue #251 into comprehensive technical implementation approaches for a production-ready BitNet.rs inference server. Building on the existing `bitnet-server` infrastructure, this document defines quantization-aware architecture, GGUF compatibility enhancements, device-aware routing strategies, and enterprise-grade monitoring capabilities required for high-throughput neural network inference deployments.
+This specification transforms the user story for Issue #251 into comprehensive technical implementation approaches for a production-ready BitNet-rs inference server. Building on the existing `bitnet-server` infrastructure, this document defines quantization-aware architecture, GGUF compatibility enhancements, device-aware routing strategies, and enterprise-grade monitoring capabilities required for high-throughput neural network inference deployments.
 
 ## Technical Feasibility Assessment
 
@@ -987,7 +987,7 @@ stages:
 
 ## Conclusion
 
-This technical specification provides a comprehensive roadmap for implementing a production-ready BitNet.rs inference server with advanced neural network capabilities. The approach builds incrementally on existing infrastructure while adding:
+This technical specification provides a comprehensive roadmap for implementing a production-ready BitNet-rs inference server with advanced neural network capabilities. The approach builds incrementally on existing infrastructure while adding:
 
 **Core Enhancements:**
 - Quantization-aware model management with atomic hot-swapping
@@ -1007,7 +1007,7 @@ This technical specification provides a comprehensive roadmap for implementing a
 - Comprehensive monitoring with Prometheus and OpenTelemetry integration
 - Intelligent resource management and adaptive performance optimization
 
-The specification ensures BitNet.rs can deliver production-grade neural network inference with validated accuracy, optimal performance, and enterprise reliability while maintaining compatibility with existing neural network patterns and quantization validation approaches.
+The specification ensures BitNet-rs can deliver production-grade neural network inference with validated accuracy, optimal performance, and enterprise reliability while maintaining compatibility with existing neural network patterns and quantization validation approaches.
 
 **Next Steps:**
 1. **FINALIZE → spec-finalizer** - Technical specification complete with comprehensive validation framework

@@ -156,7 +156,7 @@ if let Some(tensor) = load_result.tensors.get("tok_embeddings.weight") {
 if let Some(qk256_tensor) = load_result.i2s_qk256.get("tok_embeddings.weight") {
 ```
 
-**Architecture**: BitNet.rs uses dual-map storage for memory efficiency
+**Architecture**: BitNet-rs uses dual-map storage for memory efficiency
 
 - `.tensors` → Float tensors (F32, F16, F64)
 - `.i2s_qk256` → Packed 2-bit tensors
@@ -633,7 +633,7 @@ strategies
 
 ## 📝 Conclusion
 
-This PR represents a **landmark achievement** in the BitNet.rs project:
+This PR represents a **landmark achievement** in the BitNet-rs project:
 
 1. **Technical Excellence**: 100% test pass rate, 0 clippy warnings, 0 flaky
    tests

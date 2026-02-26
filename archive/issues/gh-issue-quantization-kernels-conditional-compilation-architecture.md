@@ -732,4 +732,4 @@ mod benchmarks {
 
 ## Implementation Notes
 
-This architecture enables BitNet.rs to automatically adapt to different hardware capabilities while maintaining a consistent API. The runtime dispatch system ensures optimal performance on each deployment target while providing clear error handling and fallback strategies.
+This architecture enables BitNet-rs to automatically adapt to different hardware capabilities while maintaining a consistent API. The runtime dispatch system ensures optimal performance on each deployment target while providing clear error handling and fallback strategies.

@@ -1,6 +1,6 @@
 # QK256 GGUF Test Fixtures
 
-Minimal GGUF v3 test fixtures for BitNet.rs QK256 (GGML I2_S) and BitNet32-F16 quantization format validation.
+Minimal GGUF v3 test fixtures for BitNet-rs QK256 (GGML I2_S) and BitNet32-F16 quantization format validation.
 
 ## Fixture Inventory
 

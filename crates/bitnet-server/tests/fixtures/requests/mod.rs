@@ -1,7 +1,7 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-//! HTTP Request Fixtures for BitNet.rs Inference Server Testing
+//! HTTP Request Fixtures for BitNet-rs Inference Server Testing
 //!
 //! This module provides comprehensive request fixtures for testing the production
 //! inference server REST API endpoints with various scenarios and edge cases.

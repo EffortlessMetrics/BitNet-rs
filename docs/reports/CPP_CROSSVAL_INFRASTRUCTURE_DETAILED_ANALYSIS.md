@@ -1,4 +1,4 @@
-# BitNet.rs C++ Cross-Validation Infrastructure - Comprehensive Exploration Report
+# BitNet-rs C++ Cross-Validation Infrastructure - Comprehensive Exploration Report
 
 **Date**: 2025-10-24  
 **Status**: Infrastructure 95% Complete - Well-Established System  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The BitNet.rs codebase has **mature, production-ready C++ cross-validation infrastructure** that is more complete than the guidance suggested. Here's what exists:
+The BitNet-rs codebase has **mature, production-ready C++ cross-validation infrastructure** that is more complete than the guidance suggested. Here's what exists:
 
 ### What's Already Built (95% Complete)
 
@@ -739,7 +739,7 @@ GGML_NUM_THREADS=1
 
 ## Conclusion
 
-The BitNet.rs C++ cross-validation infrastructure is **95% production-ready** with:
+The BitNet-rs C++ cross-validation infrastructure is **95% production-ready** with:
 
 **Strengths**:
 - Comprehensive per-token parity checking

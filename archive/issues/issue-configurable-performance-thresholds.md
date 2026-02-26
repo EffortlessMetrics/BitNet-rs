@@ -472,7 +472,7 @@ fn bench_threshold_calculation_overhead(b: &mut Bencher) {
 ---
 
 **Implementation Notes:**
-- Follow existing BitNet.rs configuration patterns established in `bitnet-common`
+- Follow existing BitNet-rs configuration patterns established in `bitnet-common`
 - Ensure compatibility with strict mode testing (`BITNET_STRICT_MODE=1`)
 - Maintain zero-configuration usability with sensible adaptive defaults
 - Integrate with existing hardware detection in `bitnet-kernels` crate

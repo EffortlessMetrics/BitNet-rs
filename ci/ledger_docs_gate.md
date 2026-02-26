@@ -55,7 +55,7 @@
 
 #### ✅ `mutation_killer_mathematical_correctness.rs`
 ```rust
-//! Mathematical Correctness Mutation Killer Tests for BitNet.rs Quantization
+//! Mathematical Correctness Mutation Killer Tests for BitNet-rs Quantization
 //!
 //! This test suite is designed to kill mutations in quantization algorithms by testing
 //! mathematical correctness, device-aware operations, and numerical accuracy validation.
@@ -101,7 +101,7 @@
 
 ### 3. Diátaxis Framework Coverage
 
-BitNet.rs maintains complete Diátaxis framework documentation:
+BitNet-rs maintains complete Diátaxis framework documentation:
 
 #### ✅ **Tutorials** (Getting Started)
 - `docs/quickstart.md` - 5-minute neural network inference setup
@@ -168,7 +168,7 @@ BitNet.rs maintains complete Diátaxis framework documentation:
 
 ---
 
-### 5. BitNet.rs-Specific Requirements
+### 5. BitNet-rs-Specific Requirements
 
 **Feature Flag Documentation:**
 - ✅ CLAUDE.md specifies: `--no-default-features --features cpu|gpu`
@@ -187,7 +187,7 @@ BitNet.rs maintains complete Diátaxis framework documentation:
 - ✅ Quantization accuracy metrics documented (≥99.8% I2S, ≥99.6% TL1/TL2)
 - ✅ Throughput claims in README current (10-20 tok/s CPU, 50-100 tok/s GPU)
 
-**Verdict:** ✅ All BitNet.rs-specific requirements met
+**Verdict:** ✅ All BitNet-rs-specific requirements met
 
 ---
 
@@ -285,7 +285,7 @@ $ cargo test --package bitnet-quantization --no-default-features --features cpu
 3. ✅ Zero doctest failures (6/6 pass workspace-wide)
 4. ✅ Diátaxis framework complete
 5. ✅ Quantization documentation current and accurate
-6. ✅ BitNet.rs-specific requirements met (feature flags, accuracy metrics, cross-validation)
+6. ✅ BitNet-rs-specific requirements met (feature flags, accuracy metrics, cross-validation)
 7. ⚠️ Minor gap: New tests not yet in test-suite.md (non-blocking for test-only PR)
 
 **Conclusion:**

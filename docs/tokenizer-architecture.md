@@ -1,6 +1,6 @@
 # Tokenizer Architecture Guide
 
-Comprehensive guide to BitNet.rs tokenizer system, with focus on SentencePiece (SPM) workflow and test fixtures.
+Comprehensive guide to BitNet-rs tokenizer system, with focus on SentencePiece (SPM) workflow and test fixtures.
 
 ## Table of Contents
 
@@ -16,11 +16,11 @@ Comprehensive guide to BitNet.rs tokenizer system, with focus on SentencePiece (
 
 ## Architecture Overview
 
-BitNet.rs implements a **Universal Tokenizer** architecture with intelligent discovery, automatic downloading, and neural network model integration:
+BitNet-rs implements a **Universal Tokenizer** architecture with intelligent discovery, automatic downloading, and neural network model integration:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         BitNet.rs Tokenizer System                             │
+│                         BitNet-rs Tokenizer System                             │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  Intelligent Discovery Layer (Issue #249)                                      │
 │  ├─ GGUF Metadata Parser (vocab_size, model_type)                             │

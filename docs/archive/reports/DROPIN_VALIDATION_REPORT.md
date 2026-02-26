@@ -14,20 +14,20 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Drop-in Replacement Validation Report
+# BitNet-rs Drop-in Replacement Validation Report
 
 ## Executive Summary
-**✅ BitNet.rs is confirmed as a production-ready drop-in replacement for bitnet.cpp**
+**✅ BitNet-rs is confirmed as a production-ready drop-in replacement for bitnet.cpp**
 
 ## Key Achievement: GGUF Compatibility Fixed
 
 ### Problem Identified & Solved
-The Microsoft BitNet model (1.2GB GGUF v3) was failing to load in BitNet.rs with:
+The Microsoft BitNet model (1.2GB GGUF v3) was failing to load in BitNet-rs with:
 ```
 Invalid model format: String length 7521981564355109234 exceeds maximum 1048576 at offset 36
 ```
 
-**Root Cause**: The file uses an early GGUF v3 format that omits the `alignment` and `data_offset` fields, going directly from header to KV pairs. This is a non-standard variant that bitnet.cpp/llama.cpp handles but BitNet.rs didn't.
+**Root Cause**: The file uses an early GGUF v3 format that omits the `alignment` and `data_offset` fields, going directly from header to KV pairs. This is a non-standard variant that bitnet.cpp/llama.cpp handles but BitNet-rs didn't.
 
 **Solution Implemented**: Enhanced the GGUF reader to detect and handle this variant by:
 1. Detecting when v3 files lack alignment/data_offset fields
@@ -113,17 +113,17 @@ Invalid model format: String length 7521981564355109234 exceeds maximum 1048576 
 ## Migration Path
 
 For teams using bitnet.cpp:
-1. Install BitNet.rs: `cargo install bitnet-cli`
+1. Install BitNet-rs: `cargo install bitnet-cli`
 2. Use the same GGUF models without conversion
 3. API compatible via FFI layer (libbitnet_ffi.so)
 4. Better error messages for debugging
 
 ## Conclusion
 
-BitNet.rs successfully demonstrates **superior compatibility** compared to bitnet.cpp:
+BitNet-rs successfully demonstrates **superior compatibility** compared to bitnet.cpp:
 - ✅ Loads all models that bitnet.cpp can load
 - ✅ Additionally handles edge cases that crash C++ implementation
 - ✅ Production-ready with comprehensive testing
 - ✅ True drop-in replacement confirmed
 
-The fix for the Microsoft BitNet model proves BitNet.rs can handle real-world GGUF files with format variations that exist in the wild, making it more robust than the C++ implementation.
+The fix for the Microsoft BitNet model proves BitNet-rs can handle real-world GGUF files with format variations that exist in the wild, making it more robust than the C++ implementation.

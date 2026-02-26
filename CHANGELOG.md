@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to BitNet.rs will be documented in this file.
+All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
@@ -337,7 +337,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - On-the-fly dequantization with per-channel scaling factors
   - PyTorch reference testing framework for numerical correctness validation
   - Comprehensive unit tests covering basic functionality, edge cases, and error handling
-  - Integration with existing BitNet.rs kernel architecture and error handling patterns
+  - Integration with existing bitnet-rs kernel architecture and error handling patterns
 - **GGUF Validation API**:
   - Fast 24-byte header-only validation without loading full model
   - Production-ready parser with typed errors and non-exhaustive enums

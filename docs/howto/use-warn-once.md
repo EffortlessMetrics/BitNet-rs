@@ -274,4 +274,4 @@ warn_once!("some_warning", "Some warning");
 
 - [`tracing` documentation](https://docs.rs/tracing) for structured logging
 - [Rust stdlib `OnceLock`](https://doc.rust-lang.org/std/sync/struct.OnceLock.html)
-- BitNet.rs logging conventions in `docs/development/logging.md` (if exists)
+- BitNet-rs logging conventions in `docs/development/logging.md` (if exists)

@@ -185,7 +185,7 @@ const USER_AGENT_STRING: &str = "bitnet-xtask/0.1 (+https://github.com/microsoft
 const DEFAULT_CPP_TAG: &str = "main";
 
 #[derive(Parser)]
-#[command(name = "xtask", about = "Developer tasks for BitNet.rs")]
+#[command(name = "xtask", about = "Developer tasks for bitnet-rs")]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -585,7 +585,7 @@ enum Cmd {
     /// for backward compatibility with Issue #439 tests.
     Preflight,
 
-    /// Check system capabilities for BitNet.rs (GPU detection, features)
+    /// Check system capabilities for bitnet-rs (GPU detection, features)
     ///
     /// Reports compile-time and runtime device capabilities including:
     /// - GPU availability (CUDA, Metal, ROCm)
@@ -5267,7 +5267,7 @@ fn load_tokenizer_vocab_size(tokenizer_path: &Path) -> Result<usize> {
     Ok(tokenizer.vocab_size())
 }
 
-/// Auto-discover and download tokenizer for the given model using BitNet.rs tokenizer system
+/// Auto-discover and download tokenizer for the given model using bitnet-rs tokenizer system
 fn try_auto_discover_tokenizer(model_path: &Path) -> Result<Option<PathBuf>> {
     use bitnet_tokenizers::{TokenizerDiscovery, TokenizerStrategy};
 

@@ -2,7 +2,7 @@
 
 **Validation Date:** 2025-10-18
 **Schema Version Validated:** 1.0.0
-**Validator:** BitNet.rs Schema Validation Specialist
+**Validator:** BitNet-rs Schema Validation Specialist
 **Issue:** #469 MVP Sprint - QK256 implementation polish
 
 ---
@@ -11,7 +11,7 @@
 
 **Overall Status:** ✅ **PASS** - All 8 acceptance criteria validated successfully
 **Backward Compatibility:** ✅ **CONFIRMED** - All changes are additive and non-breaking
-**Neural Network Integration:** ✅ **VERIFIED** - Follows established BitNet.rs patterns
+**Neural Network Integration:** ✅ **VERIFIED** - Follows established BitNet-rs patterns
 **GGUF Format Compatibility:** ✅ **VALIDATED** - QK256 dual-flavor support confirmed
 **Routing Decision:** **FINALIZE → spec-finalizer**
 
@@ -34,7 +34,7 @@
 pub strict_loader: bool;
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/environment-variables.md` Line 12-17: `BITNET_STRICT_MODE` boolean flag pattern
 - `/home/steven/code/Rust/BitNet-rs/CLAUDE.md` Line 366: `--strict-loader` flag examples for strict validation
 
@@ -52,12 +52,12 @@ pub struct GGUFLoaderConfig {
 }
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/gguf_simple.rs` Line 11: `QK256_SIZE_TOLERANCE: usize = 128`
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/gguf_simple.rs` Line 229-299: Existing tolerance logic
 
 **Validation:** ✅ PASS
-- Struct follows BitNet.rs config patterns (public fields, `Default` impl)
+- Struct follows BitNet-rs config patterns (public fields, `Default` impl)
 - `tolerance_bytes: usize` matches existing `QK256_SIZE_TOLERANCE` type
 - Thread-safe (immutable after construction, `Send + Sync`)
 
@@ -67,7 +67,7 @@ pub struct GGUFLoaderConfig {
 // Format: "QK256 size mismatch (strict|permissive): tensor='{name}', expected={exp}B, actual={act}B, deviation={dev:+.2}%"
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/validation-gates.md` Line 160-178: Standardized logging format with actionable hints
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/gguf_simple.rs` Line 85-97: `BITNET_DISABLE_MINIMAL_LOADER` error hints
 
@@ -77,7 +77,7 @@ pub struct GGUFLoaderConfig {
 - Follows structured log parsing format (key=value pairs)
 
 ### Conflicts/Issues
-**None identified.** AC1 API is fully consistent with existing BitNet.rs loader patterns.
+**None identified.** AC1 API is fully consistent with existing BitNet-rs loader patterns.
 
 ### Recommendations
 1. ✅ Use centralized `qk256_tolerance_bytes()` function (AC2) for `tolerance_bytes` default
@@ -101,7 +101,7 @@ pub struct GGUFLoaderConfig {
 pub const QK256_SIZE_TOLERANCE_PERCENT: f64 = 0.001; // 0.1%
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/gguf_simple.rs` Line 11: `const QK256_SIZE_TOLERANCE: usize = 128;`
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/src/gpu/validation.rs` Line 20: `pub const DEFAULT_TOLERANCE: f32 = 1e-6;`
 
@@ -116,7 +116,7 @@ pub const QK256_SIZE_TOLERANCE_PERCENT: f64 = 0.001; // 0.1%
 pub fn qk256_tolerance_bytes(expected_bytes: usize) -> usize;
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/quantization-support.md` Line 137-154: Helper function examples with pure signature
 - Existing tolerance calculations in `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/gguf_simple.rs` Line 229-1043
 
@@ -134,7 +134,7 @@ log::warn!(
 );
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/quantization-support.md` Line 160-178: Standardized quantization log format
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/validation-gates.md` Line 860-881: RMS computation logging with structured format
 
@@ -178,14 +178,14 @@ pub fn validate_kv_cache_dims(
 ) -> anyhow::Result<()>;
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/architecture-overview.md` Line 15: `anyhow::Result` error handling standard
 - Existing validation functions use `anyhow::Result` with descriptive errors
 
 **Validation:** ✅ PASS
-- Uses `anyhow::Result` (BitNet.rs standard error type)
+- Uses `anyhow::Result` (BitNet-rs standard error type)
 - 4D tensor shape validation: `[batch, n_heads, seq_len, head_dim]`
-- Public function signature follows BitNet.rs validation patterns
+- Public function signature follows BitNet-rs validation patterns
 
 #### ✅ Debug Assertions for Hot-Path Checks
 **Contract Proposal:**
@@ -194,13 +194,13 @@ pub fn validate_kv_cache_dims(
 debug_assert!(tensor.dims().len() == 4, "K/V cache must be 4D tensor");
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/quantization-support.md` Line 519-547: Debug assertions in `QuantizedLinear::forward`
 - `/home/steven/code/Rust/BitNet-rs/docs/explanation/strict-quantization-guards.md` (referenced): Tier 1 validation with `debug_assert!`
 
 **Validation:** ✅ PASS
 - `debug_assert!` compiled out in release builds (zero overhead)
-- Follows BitNet.rs Tier 1 validation pattern
+- Follows BitNet-rs Tier 1 validation pattern
 - Matches safety patterns in existing quantized layers
 
 #### ✅ Once-Per-Layer Warning Mechanism
@@ -212,9 +212,9 @@ fn emit_once_per_layer_warning(layer_idx: usize, message: String) {
 }
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - Rust `std::sync::Once` is standard pattern for one-time initialization
-- No existing once-per-layer pattern in BitNet.rs, but consistent with Rust best practices
+- No existing once-per-layer pattern in BitNet-rs, but consistent with Rust best practices
 
 **Validation:** ✅ PASS
 - Thread-safe (`Once::call_once` is atomic)
@@ -222,7 +222,7 @@ fn emit_once_per_layer_warning(layer_idx: usize, message: String) {
 - Bounded array size (64 layers max, reasonable for transformer models)
 
 ### Conflicts/Issues
-**None identified.** AC3 API follows BitNet.rs safety and validation patterns.
+**None identified.** AC3 API follows BitNet-rs safety and validation patterns.
 
 ### Recommendations
 1. ✅ Integrate with existing K/V cache initialization in `/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference`
@@ -252,7 +252,7 @@ pub struct ParityMetadata {
 }
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/src/receipts.rs` Line 129-137: `CrossValidation` struct with `cpp_reference_available`
 - `/home/steven/code/Rust/BitNet-rs/crossval/tests/parity_bitnetcpp.rs` Line 119-177: Existing parity check logic
 
@@ -271,7 +271,7 @@ pub struct InferenceReceipt {
 }
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-inference/src/receipts.rs` Line 139-189: `InferenceReceipt` v1.0.0 schema
 - Line 183-184: `#[serde(skip_serializing_if = "Option::is_none")]` pattern for `cross_validation`
 
@@ -287,7 +287,7 @@ pub const DEFAULT_INFERENCE_TIMEOUT_SECS: u64 = 60;
 pub const DEFAULT_PARITY_TIMEOUT_SECS: u64 = DEFAULT_INFERENCE_TIMEOUT_SECS;
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/crossval/tests/parity_bitnetcpp.rs` Line 344: `timeout(Duration::from_secs(60), ...)`
 - Consistent 60-second timeout used across tests
 
@@ -330,7 +330,7 @@ pub trait Tokenizer: Send + Sync {
 }
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/tokenizer-architecture.md` Line 55-58: `Tokenizer` trait interface
 - Line 297-302: `vocab_size()` method existing contract
 
@@ -348,7 +348,7 @@ impl Tokenizer for GgufTokenizer {
 }
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/schemas-issue-469.md` Line 306-344: Vocabulary size semantics table
 - LLaMA-3: 32000 real vs 32064 padded (64-byte alignment)
 
@@ -366,12 +366,12 @@ pub fn validate_tokenizer_parity(
 ) -> anyhow::Result<()>;
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/crossval/tests/parity_bitnetcpp.rs` Line 142-189: Existing tokenization parity checks
 - Line 181: `// Ensure tokenization parity`
 
 **Validation:** ✅ PASS
-- Uses `anyhow::Result` (BitNet.rs error standard)
+- Uses `anyhow::Result` (BitNet-rs error standard)
 - Provides detailed error messages with vocab size mismatch details
 - Integrates with existing parity harness
 
@@ -406,7 +406,7 @@ pub fn compile_cpp_shim(
 ) -> Result<(), Box<dyn std::error::Error>>;
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/environment-variables.md` Line 176-186: FFI compiler configuration
 - Existing build scripts use `cc::Build` for C++ compilation
 
@@ -425,7 +425,7 @@ system_include_dirs: &[PathBuf::from("/usr/local/cuda/include")]
 include_dirs: &[PathBuf::from("csrc/")]
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/CLAUDE.md` Line 453-467: FFI build hygiene best practices
 - `-isystem` recommended for CUDA includes to suppress external warnings
 
@@ -443,13 +443,13 @@ include_dirs: &[PathBuf::from("csrc/")]
 // Warning suppressions: -Wno-unknown-pragmas, -Wno-deprecated-declarations
 ```
 
-**BitNet.rs Existing Patterns:**
-- C++17 is BitNet.rs standard (modern C++ features, widely supported)
+**BitNet-rs Existing Patterns:**
+- C++17 is BitNet-rs standard (modern C++ features, widely supported)
 - `-O2` balances performance and build time
 - `-fPIC` required for shared library builds
 
 **Validation:** ✅ PASS
-- C++17 standard matches BitNet.rs conventions
+- C++17 standard matches BitNet-rs conventions
 - Flag set is minimal and necessary (no flag bloat)
 - Warning suppressions target external headers only
 
@@ -480,7 +480,7 @@ env:
   BITNET_DISABLE_MINIMAL_LOADER: 1
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/gguf_simple.rs` Line 85-97: Existing `BITNET_DISABLE_MINIMAL_LOADER` usage
 - `/home/steven/code/Rust/BitNet-rs/scripts/parity_smoke.sh` Line 54: `export BITNET_DISABLE_MINIMAL_LOADER=1`
 
@@ -499,7 +499,7 @@ env:
 BITNET_STRICT_MODE=1 ./scripts/parity_smoke.sh qk256-model.gguf
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/quantization-support.md` Line 42-54: I2_S dual-flavor support
 - `/home/steven/code/Rust/BitNet-rs/docs/explanation/i2s-dual-flavor.md`: Detailed dual-flavor architecture
 
@@ -517,7 +517,7 @@ BITNET_STRICT_MODE=1 ./scripts/parity_smoke.sh qk256-model.gguf
     jq -e '.parity.status == "ok" or .parity.status == "rust_only"' ci/inference.json
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/validation-gates.md` Line 1232-1249: CI receipt validation examples
 - Receipts written to workspace root for CI artifact collection
 
@@ -527,7 +527,7 @@ BITNET_STRICT_MODE=1 ./scripts/parity_smoke.sh qk256-model.gguf
 - Validates parity status gates (`ok`, `rust_only`)
 
 ### Conflicts/Issues
-**None identified.** AC7 CI configuration follows established BitNet.rs patterns.
+**None identified.** AC7 CI configuration follows established BitNet-rs patterns.
 
 ### Recommendations
 1. ✅ Add dual-flavor testing to `.github/workflows/parity-proof.yml`
@@ -561,14 +561,14 @@ BITNET_STRICT_MODE=1 ./scripts/parity_smoke.sh qk256-model.gguf
 - [QK256 Usage Guide](docs/howto/use-qk256-models.md)
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/README.md`: Top-level quick start
 - `/home/steven/code/Rust/BitNet-rs/docs/quickstart.md`: Detailed quick start
 - `/home/steven/code/Rust/BitNet-rs/docs/getting-started.md`: Comprehensive introduction
 
 **Validation:** ✅ PASS
 - Follows hierarchical structure (README → quickstart → getting-started)
-- Quick-start sections are concise (5-minute setup, per BitNet.rs conventions)
+- Quick-start sections are concise (5-minute setup, per BitNet-rs conventions)
 - Cross-links use relative paths (`docs/howto/...`)
 
 #### ✅ Cross-Linking Conventions
@@ -579,7 +579,7 @@ BITNET_STRICT_MODE=1 ./scripts/parity_smoke.sh qk256-model.gguf
 - [I2_S Dual-Flavor Architecture](docs/explanation/i2s-dual-flavor.md)
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/docs/reference/validation-gates.md` Line 1519-1533: "Related Documentation" section with relative paths
 - `/home/steven/code/Rust/BitNet-rs/CLAUDE.md` Line 422-450: Cross-linking to howto/ and explanation/
 
@@ -598,7 +598,7 @@ bitnet run --model model.gguf --prompt "Test"
 bitnet run --model model.gguf --strict-loader --prompt "Test"
 ```
 
-**BitNet.rs Existing Patterns:**
+**BitNet-rs Existing Patterns:**
 - `/home/steven/code/Rust/BitNet-rs/CLAUDE.md` Line 39-73: Command examples with comments
 - `/home/steven/code/Rust/BitNet-rs/docs/quickstart.md`: Bash code blocks with `# Comment` style
 
@@ -608,7 +608,7 @@ bitnet run --model model.gguf --strict-loader --prompt "Test"
 - Examples are copy-pasteable (no prompt prefix)
 
 ### Conflicts/Issues
-**None identified.** AC8 documentation follows BitNet.rs structure and conventions.
+**None identified.** AC8 documentation follows BitNet-rs structure and conventions.
 
 ### Recommendations
 1. ✅ Add QK256 section to `/home/steven/code/Rust/BitNet-rs/docs/quickstart.md`
@@ -726,10 +726,10 @@ All changes are **additive** and maintain backward compatibility:
 
 ### ✅ **VALIDATION PASSED**
 
-**All 8 acceptance criteria are validated successfully against existing BitNet.rs contracts.**
+**All 8 acceptance criteria are validated successfully against existing BitNet-rs contracts.**
 
 **Key Findings:**
-1. ✅ API contracts follow established BitNet.rs patterns
+1. ✅ API contracts follow established BitNet-rs patterns
 2. ✅ Backward compatibility maintained (all changes additive)
 3. ✅ Neural network integration verified (GGUF, quantization, tokenizer)
 4. ✅ GGUF format compatibility confirmed (dual I2_S flavor support)
@@ -769,5 +769,5 @@ The spec-finalizer agent should proceed with implementation guidance based on th
 ---
 
 **Validation Completed:** 2025-10-18
-**Validator:** BitNet.rs Schema Validation Specialist
+**Validator:** BitNet-rs Schema Validation Specialist
 **Next Agent:** spec-finalizer (for implementation planning)

@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Add feature-aware exploratory CI gates to systematically validate `--all-features` compilation across BitNet.rs workspace. Maintain strict required gates for CPU-only baseline while allowing exploratory gates to fail until Issue #447 fixes are complete. This provides visibility into all-features compatibility without blocking development.
+Add feature-aware exploratory CI gates to systematically validate `--all-features` compilation across BitNet-rs workspace. Maintain strict required gates for CPU-only baseline while allowing exploratory gates to fail until Issue #447 fixes are complete. This provides visibility into all-features compatibility without blocking development.
 
 **Key Changes**:
 - Maintain strict required gates: `--no-default-features --features cpu`
@@ -199,7 +199,7 @@ jobs:
 | **GPU only** | Exploratory | May fail | `cargo clippy --workspace --no-default-features --features gpu` |
 | **All features** | Exploratory | May fail until #447 | `cargo clippy --workspace --all-features` |
 
-**Rationale**: CPU baseline ensures BitNet.rs compiles on all platforms without external dependencies (CUDA, etc.).
+**Rationale**: CPU baseline ensures BitNet-rs compiles on all platforms without external dependencies (CUDA, etc.).
 
 ---
 
@@ -385,7 +385,7 @@ key: ${{ runner.os }}-cargo-all-features-${{ hashFiles('**/Cargo.lock') }}
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Flag Discipline
 ✅ Required gates use `--no-default-features --features cpu`
@@ -419,7 +419,7 @@ key: ${{ runner.os }}-cargo-all-features-${{ hashFiles('**/Cargo.lock') }}
 - [continue-on-error](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idcontinue-on-error)
 - [Job Summaries](https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary)
 
-### BitNet.rs Documentation
+### BitNet-rs Documentation
 - `docs/development/build-commands.md` - Comprehensive build reference
 - `docs/development/validation-framework.md` - Quality assurance
 - `CLAUDE.md` - Feature flag discipline

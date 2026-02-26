@@ -2,14 +2,14 @@
 
 ## Overview
 
-This document defines the public API contracts for the BitNet.rs tokenizer discovery system, providing comprehensive interfaces for automatic tokenizer resolution, smart downloading, and neural network model integration.
+This document defines the public API contracts for the BitNet-rs tokenizer discovery system, providing comprehensive interfaces for automatic tokenizer resolution, smart downloading, and neural network model integration.
 
 ## Core API Contracts
 
 ### 1. TokenizerDiscovery Interface
 
 ```rust
-/// Primary tokenizer discovery engine for BitNet.rs neural network models
+/// Primary tokenizer discovery engine for BitNet-rs neural network models
 pub struct TokenizerDiscovery {
     gguf_reader: Arc<GgufReader<'static>>,
     model_path: PathBuf,
@@ -479,7 +479,7 @@ pub struct DownloadMetrics {
 
 ## Conclusion
 
-These API contracts provide a comprehensive interface for BitNet.rs tokenizer discovery and automatic download functionality. The contracts emphasize:
+These API contracts provide a comprehensive interface for BitNet-rs tokenizer discovery and automatic download functionality. The contracts emphasize:
 
 - **Type Safety**: Comprehensive error types with actionable suggestions
 - **Performance**: Benchmarking interfaces for validation
@@ -487,4 +487,4 @@ These API contracts provide a comprehensive interface for BitNet.rs tokenizer di
 - **Testing**: Mock implementations and validation utilities
 - **Configuration**: Environment variables and feature flags for flexible deployment
 
-All interfaces maintain backward compatibility with existing BitNet.rs tokenizer infrastructure while enabling advanced automatic discovery and download capabilities for production neural network inference.
+All interfaces maintain backward compatibility with existing BitNet-rs tokenizer infrastructure while enabling advanced automatic discovery and download capabilities for production neural network inference.

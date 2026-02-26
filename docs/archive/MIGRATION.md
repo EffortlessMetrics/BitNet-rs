@@ -1,6 +1,6 @@
-# Migration Guide: llama.cpp → BitNet.rs
+# Migration Guide: llama.cpp → BitNet-rs
 
-This guide shows how to migrate existing code from llama.cpp to BitNet.rs. The migration requires minimal changes while providing significant benefits.
+This guide shows how to migrate existing code from llama.cpp to BitNet-rs. The migration requires minimal changes while providing significant benefits.
 
 ## 🚀 Quick Start
 
@@ -26,7 +26,7 @@ int main() {
 }
 ```
 
-#### After (BitNet.rs):
+#### After (BitNet-rs):
 ```c
 #include "llama_compat.h"  // ← Only change needed!
 
@@ -78,7 +78,7 @@ output = llm(
 print(output['choices'][0]['text'])
 ```
 
-#### After (BitNet.rs):
+#### After (BitNet-rs):
 ```python
 from bitnet.llama_compat import Llama  # ← Only change needed!
 
@@ -103,7 +103,7 @@ print(output['choices'][0]['text'])  # Works exactly the same!
 
 ### What You Get Immediately:
 
-| Feature | llama.cpp | BitNet.rs | Improvement |
+| Feature | llama.cpp | BitNet-rs | Improvement |
 |---------|-----------|-----------|-------------|
 | **Memory Safety** | ❌ Segfaults possible | ✅ Guaranteed safe | No crashes |
 | **GPT-2 Tokenizers** | ❌ Often fails | ✅ Always works | +100% compatibility |
@@ -114,11 +114,11 @@ print(output['choices'][0]['text'])  # Works exactly the same!
 ### Models That Now Work:
 
 ```python
-# This model breaks llama.cpp but works with BitNet.rs:
+# This model breaks llama.cpp but works with BitNet-rs:
 llm = Llama(
     model_path="./models/llama3-gpt2-tokenizer.gguf",  # Has GPT-2 tokenizer
     # llama.cpp error: "Tokenization failed"
-    # BitNet.rs: Works perfectly! ✅
+    # BitNet-rs: Works perfectly! ✅
 )
 ```
 
@@ -211,7 +211,7 @@ from bitnet.llama_compat import Llama
 # This automatically fixes the model's metadata!
 llm = Llama(
     model_path="./broken_gpt2_model.gguf",
-    # BitNet.rs auto-fixes missing tokenizer.ggml.pre
+    # BitNet-rs auto-fixes missing tokenizer.ggml.pre
     # and other metadata issues
 )
 
@@ -237,7 +237,7 @@ pip install bitnet-py
 
 ### Issue: "Tokenization failed"
 
-**Solution:** This is exactly what BitNet.rs fixes! Your model should work now. If it still fails, please report it as we want to fix ALL tokenization issues.
+**Solution:** This is exactly what BitNet-rs fixes! Your model should work now. If it still fails, please report it as we want to fix ALL tokenization issues.
 
 ## 📈 Performance Comparison
 
@@ -288,7 +288,7 @@ async def generate():
 
 ## 📚 Migration Checklist
 
-- [ ] Install BitNet.rs library/package
+- [ ] Install BitNet-rs library/package
 - [ ] Update include/import statement (1 line)
 - [ ] Update build configuration (if using build system)
 - [ ] Run your existing tests (they should pass!)

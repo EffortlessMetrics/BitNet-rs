@@ -2,9 +2,9 @@
 
 ## Implementation Status - COMPLETED ✅
 
-**BitNet.rs now has complete neural network inference implementation** with real transformer computation, not mock implementations. The "mock behavior" only occurs with empty/invalid models as proper error handling.
+**BitNet-rs now has complete neural network inference implementation** with real transformer computation, not mock implementations. The "mock behavior" only occurs with empty/invalid models as proper error handling.
 
-**Key Discovery**: BitNet.rs already has a fully functional neural network inference engine with:
+**Key Discovery**: BitNet-rs already has a fully functional neural network inference engine with:
 - ✅ **Real transformer forward pass** with quantized linear layers
 - ✅ **Multi-head attention** with Q,K,V projections and RoPE
 - ✅ **Autoregressive generation** with temperature, top-k, nucleus sampling
@@ -29,9 +29,9 @@ Real benchmarks show 20+ tok/sec performance with actual neural network computat
 
 ## User Story
 
-~~As a **neural network developer** using BitNet.rs for 1-bit quantized inference, I want **actual transformer computation with real quantized weights** so that **I can deploy BitNet models for production text generation with deterministic, high-quality outputs instead of mock placeholders**.~~
+~~As a **neural network developer** using BitNet-rs for 1-bit quantized inference, I want **actual transformer computation with real quantized weights** so that **I can deploy BitNet models for production text generation with deterministic, high-quality outputs instead of mock placeholders**.~~
 
-**COMPLETED ✅**: BitNet.rs now provides production-ready neural network inference with real transformer computation, deterministic outputs, and high-quality text generation using 1-bit quantized weights.
+**COMPLETED ✅**: BitNet-rs now provides production-ready neural network inference with real transformer computation, deterministic outputs, and high-quality text generation using 1-bit quantized weights.
 
 ## Acceptance Criteria - ALL COMPLETED ✅
 
@@ -124,7 +124,7 @@ Real benchmarks show 20+ tok/sec performance with actual neural network computat
 
 ## Implementation Summary - COMPLETED ✅
 
-**RESOLVED**: This specification has been successfully implemented. BitNet.rs has been transformed from a quantization infrastructure with mock inference into a fully functional neural network inference engine capable of real-time text generation with state-of-the-art 1-bit quantization.
+**RESOLVED**: This specification has been successfully implemented. BitNet-rs has been transformed from a quantization infrastructure with mock inference into a fully functional neural network inference engine capable of real-time text generation with state-of-the-art 1-bit quantization.
 
 **Key Achievements:**
 - Real neural network inference with complete transformer implementation

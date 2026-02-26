@@ -1,14 +1,14 @@
 # P0 Tasks Specification Generation - Complete Summary
 
 **Generated**: 2025-10-23
-**Agent**: BitNet.rs Neural Network Systems Architect (Generative Spec Adapter)
+**Agent**: BitNet-rs Neural Network Systems Architect (Generative Spec Adapter)
 **Context**: PR #475 post-merge preparation and CI hardening
 
 ---
 
 ## Executive Summary
 
-Successfully created **3 comprehensive GitHub issue specifications** for P0 tasks identified during PR #475 validation. All specifications are production-ready with detailed acceptance criteria, implementation approaches, and verification procedures aligned with BitNet.rs neural network architecture and TDD practices.
+Successfully created **3 comprehensive GitHub issue specifications** for P0 tasks identified during PR #475 validation. All specifications are production-ready with detailed acceptance criteria, implementation approaches, and verification procedures aligned with BitNet-rs neural network architecture and TDD practices.
 
 **Total Deliverables**:
 - 3 detailed specifications (21,000+ lines total)
@@ -173,13 +173,13 @@ find crates/bitnet-kernels/tests -name "support" -o -name "mod.rs"
 
 ---
 
-## Alignment with BitNet.rs Principles
+## Alignment with BitNet-rs Principles
 
 ### Neural Network Architecture Alignment
 
 1. **TDD Practices**: All specs include comprehensive verification commands and test strategies
 2. **Feature-Gated Architecture**: Issue #3 specifically addresses `--all-features` validation
-3. **Workspace Structure**: All fixes respect BitNet.rs crate boundaries and dependency management
+3. **Workspace Structure**: All fixes respect BitNet-rs crate boundaries and dependency management
 4. **GPU/CPU Parity**: EnvGuard rollout covers GPU/CPU feature gate tests extensively
 5. **Cross-Validation**: Build script hygiene ensures C++ FFI integration reliability
 
@@ -318,7 +318,7 @@ After implementation, verify each spec meets criteria:
 **Evidence**:
 - ✅ Neural network requirements fully analyzed (build hygiene, test isolation, feature gates)
 - ✅ Technical specifications created in `docs/explanation/specs/` (3 comprehensive specs)
-- ✅ Architecture approach aligns with BitNet.rs workspace structure and feature flags
+- ✅ Architecture approach aligns with BitNet-rs workspace structure and feature flags
 - ✅ Risk assessment includes specific validation commands and mitigation strategies
 - ✅ Specifications comprehensive enough to guide implementation while precise enough for validation
 - ✅ Cross-references to existing neural network patterns (quantization, GPU kernels, TDD practices)
@@ -327,7 +327,7 @@ After implementation, verify each spec meets criteria:
 **Next Agent**: `spec-finalizer`
 - Review specifications for completeness and accuracy
 - Validate acceptance criteria are measurable and testable
-- Confirm implementation approaches are feasible and aligned with BitNet.rs architecture
+- Confirm implementation approaches are feasible and aligned with BitNet-rs architecture
 - Approve for implementation or request clarifications
 
 **Receipts Summary**:
@@ -363,13 +363,13 @@ After implementation, verify each spec meets criteria:
 
 ## Notes
 
-- All specifications follow BitNet.rs TDD practices: comprehensive test strategies and verification commands
+- All specifications follow BitNet-rs TDD practices: comprehensive test strategies and verification commands
 - Each spec includes detailed risk assessment with specific mitigation strategies
 - Implementation approaches reference existing patterns (EnvGuard, feature gates, build script hygiene)
 - Documentation updates ensure knowledge transfer and prevent future regressions
 - Automated verification tools (`check-env-guards`, `check-feature-matrix`) prevent manual oversight
 - All specs are production-ready with clear acceptance criteria and measurable outcomes
 
-**Agent Sign-Off**: BitNet.rs Neural Network Systems Architect (Generative Spec Adapter)
+**Agent Sign-Off**: BitNet-rs Neural Network Systems Architect (Generative Spec Adapter)
 **Date**: 2025-10-23
 **Status**: ✅ Specification Analysis Complete - Ready for Finalization

@@ -136,7 +136,7 @@ Architecture: Comprehensive and up-to-date
 - [x] Ledger: finalized with evidence
 - [x] Neural network: performance maintained (2.8s, >99%)
 
-## BitNet.rs MVP Baseline
+## BitNet-rs MVP Baseline
 
 **Version**: v0.1.0-qna-mvp
 **Release Date**: 2025-10-22 (via PR #473 merge)

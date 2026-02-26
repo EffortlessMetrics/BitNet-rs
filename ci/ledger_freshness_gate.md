@@ -55,7 +55,7 @@ cb43e68 test: Fix test infrastructure for Issue #251 (PR #428)
 - **Type**: `feat/` (feature branch)
 - **Issue Reference**: `issue-251` ✅ Valid
 - **Descriptor**: `part3-quantization` ✅ Descriptive
-- **Compliance**: ✅ PASS - Follows BitNet.rs conventions
+- **Compliance**: ✅ PASS - Follows BitNet-rs conventions
 
 ### Rebase Workflow Compliance
 
@@ -80,7 +80,7 @@ $ git log --oneline --merges origin/main..HEAD | wc -l
 - **Contract Gate**: ✅ PASS (from ledger_contract_gate.md)
 - **Public API**: No modifications detected
 
-### BitNet.rs Quality Integration
+### BitNet-rs Quality Integration
 
 **Quantization Validation**
 - I2S quantization: ✅ Enhanced arithmetic mutation killers
@@ -195,5 +195,5 @@ Branch is fully current with main@cb43e68. All commits follow semantic conventio
 **Generated**: 2025-09-30
 **Agent**: review-freshness-checker
 **Ledger Comment ID**: 3354341570
-**Validation Method**: GitHub-native git ancestry analysis with BitNet.rs quality integration
-**Evidence Format**: Standard BitNet.rs gate evidence grammar
+**Validation Method**: GitHub-native git ancestry analysis with BitNet-rs quality integration
+**Evidence Format**: Standard BitNet-rs gate evidence grammar

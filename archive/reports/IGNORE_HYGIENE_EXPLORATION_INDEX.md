@@ -8,7 +8,7 @@
 
 ## Overview
 
-This directory contains a complete exploration and validation of the #[ignore] annotation hygiene system for BitNet.rs. The exploration confirms that all automation infrastructure is **production-ready** and quantifies the current state of annotation compliance.
+This directory contains a complete exploration and validation of the #[ignore] annotation hygiene system for BitNet-rs. The exploration confirms that all automation infrastructure is **production-ready** and quantifies the current state of annotation compliance.
 
 **Key Finding**: 134 bare #[ignore] annotations (56.8% of 236 total) require migration to explicit reason format. Automated tooling can handle ~70% with high confidence (≥70% scoring threshold).
 

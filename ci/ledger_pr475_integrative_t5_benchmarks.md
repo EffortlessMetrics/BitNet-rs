@@ -180,7 +180,7 @@ cargo-deny 0.18.4
 
 ---
 
-**Validator**: benchmark-runner (BitNet.rs Integrative Flow T5)  
+**Validator**: benchmark-runner (BitNet-rs Integrative Flow T5)  
 **Last Updated**: 2025-10-30T08:30:00Z  
 **Status**: ✅ PASS → NEXT (pr-doc-reviewer, T6)
 

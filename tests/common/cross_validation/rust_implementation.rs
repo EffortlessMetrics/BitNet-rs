@@ -1,6 +1,6 @@
-//! Rust implementation wrapper for BitNet.rs cross-validation testing
+//! Rust implementation wrapper for BitNet-rs cross-validation testing
 //!
-//! This module provides a wrapper around the BitNet.rs implementation that conforms
+//! This module provides a wrapper around the BitNet-rs implementation that conforms
 //! to the BitNetImplementation trait for cross-validation testing.
 
 use crate::cross_validation::implementation::{
@@ -20,7 +20,7 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument};
 
-/// Rust implementation wrapper for BitNet.rs
+/// Rust implementation wrapper for BitNet-rs
 pub struct RustImplementation {
     /// Name of this implementation
     name: String,
@@ -65,7 +65,7 @@ impl RustImplementation {
         };
 
         Self {
-            name: "BitNet.rs".to_string(),
+            name: "BitNet-rs".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             device,
             model_info: None,
@@ -120,7 +120,7 @@ impl RustImplementation {
         0
     }
 
-    /// Convert internal inference config to BitNet.rs GenerationConfig
+    /// Convert internal inference config to BitNet-rs GenerationConfig
     fn convert_inference_config(&self, config: &InferenceConfig) -> GenerationConfig {
         let mut gen_config = GenerationConfig::default()
             .with_max_tokens(config.max_tokens as u32)
@@ -197,7 +197,7 @@ impl BitNetImplementation for RustImplementation {
 
     #[instrument(skip(self))]
     async fn is_available(&self) -> bool {
-        // BitNet.rs is always available if compiled
+        // BitNet-rs is always available if compiled
         true
     }
 
@@ -222,7 +222,7 @@ impl BitNetImplementation for RustImplementation {
         let start_time = Instant::now();
         info!("Loading model from: {}", model_path.display());
 
-        // Load model using BitNet.rs model loader
+        // Load model using BitNet-rs model loader
         let loader = ModelLoader::new(self.device);
         let model = loader.load(model_path).map_err(|e| ImplementationError::ModelLoadError {
             message: format!("Failed to load model: {}", e),
@@ -388,8 +388,8 @@ impl BitNetImplementation for RustImplementation {
         let result = InferenceResult {
             tokens: generated_tokens,
             text: generated_text,
-            probabilities: None, // BitNet.rs doesn't expose probabilities in basic interface
-            logits: None,        // BitNet.rs doesn't expose logits in basic interface
+            probabilities: None, // BitNet-rs doesn't expose probabilities in basic interface
+            logits: None,        // BitNet-rs doesn't expose logits in basic interface
             duration,
             memory_usage,
             token_count,
@@ -495,7 +495,7 @@ mod tests {
     #[tokio::test]
     async fn test_rust_implementation_creation() {
         let implementation = RustImplementation::new();
-        assert_eq!(implementation.implementation_name(), "BitNet.rs");
+        assert_eq!(implementation.implementation_name(), "BitNet-rs");
         assert!(!implementation.is_model_loaded());
     }
 
@@ -566,7 +566,7 @@ mod tests {
         assert!(result.is_ok());
 
         let implementation = result.unwrap();
-        assert_eq!(implementation.implementation_name(), "BitNet.rs");
+        assert_eq!(implementation.implementation_name(), "BitNet-rs");
     }
 
     #[tokio::test]
@@ -635,7 +635,7 @@ mod tests {
         assert_eq!(model_info.format, ModelFormat::GGUF);
         assert_eq!(model_info.size_bytes, 16); // Length of "dummy model data"
         assert!(model_info.metadata.contains_key("implementation"));
-        assert_eq!(model_info.metadata.get("implementation"), Some(&"BitNet.rs".to_string()));
+        assert_eq!(model_info.metadata.get("implementation"), Some(&"BitNet-rs".to_string()));
     }
 
     #[tokio::test]

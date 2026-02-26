@@ -1,4 +1,4 @@
-# Building BitNet.rs (INVALID Documentation Pattern)
+# Building BitNet-rs (INVALID Documentation Pattern)
 
 ## ANTI-PATTERN: Standalone cuda examples without context
 

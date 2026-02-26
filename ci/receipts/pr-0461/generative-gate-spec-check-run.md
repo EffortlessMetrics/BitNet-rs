@@ -9,10 +9,10 @@
 
 ## Executive Summary
 
-Comprehensive validation of 5 specification documents (4,821 lines total) against BitNet.rs API contracts, neural network schemas, and repository standards. **All specifications pass validation** with high-confidence implementation readiness.
+Comprehensive validation of 5 specification documents (4,821 lines total) against BitNet-rs API contracts, neural network schemas, and repository standards. **All specifications pass validation** with high-confidence implementation readiness.
 
 **Validation Results:**
-- ✅ API Consistency: All 25+ API signatures match existing BitNet.rs patterns
+- ✅ API Consistency: All 25+ API signatures match existing BitNet-rs patterns
 - ✅ Neural Network Schemas: Transformer, KV cache, quantization schemas valid
 - ✅ Cross-References: All internal references and code locations accurate
 - ✅ Standards Compliance: Feature flags, error handling, test patterns conform
@@ -204,9 +204,9 @@ Final LayerNorm
 [LM Head] → logits: [1, vocab_size]
 ```
 
-**Verified Against:** BitNet.rs architecture standard (embedding → layers → norm → lm_head)
+**Verified Against:** BitNet-rs architecture standard (embedding → layers → norm → lm_head)
 
-**Status:** ✅ Transformer architecture schema matches BitNet.rs conventions
+**Status:** ✅ Transformer architecture schema matches BitNet-rs conventions
 
 ---
 
@@ -398,7 +398,7 @@ fn test_ac1_cpu_forward_bos_nonzero_logits() { /* ... */ }
 
 ---
 
-## 4. BitNet.rs Standards Compliance
+## 4. BitNet-rs Standards Compliance
 
 ### 4.1 Feature Flag Compliance ✅
 
@@ -432,7 +432,7 @@ cargo test -p bitnet-inference test_ac1_greedy_decode_16_tokens \
 
 **Validated Error Patterns:**
 
-| Pattern | Spec Usage | BitNet.rs Standard | Status |
+| Pattern | Spec Usage | BitNet-rs Standard | Status |
 |---------|------------|-------------------|--------|
 | `anyhow::Result<T>` | Throughout specs | `docs/reference/quantization-support.md` | ✅ |
 | `.with_context()` | Error chain | `api-contracts.md:648-650` | ✅ |
@@ -456,7 +456,7 @@ if step >= self.config.max_sequence_length {
 }
 ```
 
-**Status:** ✅ Error handling matches BitNet.rs patterns
+**Status:** ✅ Error handling matches BitNet-rs patterns
 
 ---
 
@@ -492,7 +492,7 @@ fn test_ac1_cpu_forward_bos_nonzero_logits() {
 
 **Verified Against:** `docs/development/test-suite.md` (Testing framework patterns)
 
-**Status:** ✅ Test patterns follow BitNet.rs conventions
+**Status:** ✅ Test patterns follow BitNet-rs conventions
 
 ---
 
@@ -732,7 +732,7 @@ While all specifications **pass validation**, the following minor enhancements w
 
 **Ready for Implementation:**
 
-1. ✅ **API contracts stable** - All signatures match existing BitNet.rs patterns
+1. ✅ **API contracts stable** - All signatures match existing BitNet-rs patterns
 2. ✅ **Neural network schemas valid** - Transformer, KV cache, quantization correct
 3. ✅ **Code seams verified** - `cpu.rs:263` placeholder ready for replacement
 4. ✅ **Dependencies available** - All required crates and features present
@@ -749,7 +749,7 @@ While all specifications **pass validation**, the following minor enhancements w
 
 **Evidence Summary:**
 - Validated 5 specifications (4,821 lines total)
-- All 25+ API signatures match existing BitNet.rs patterns
+- All 25+ API signatures match existing BitNet-rs patterns
 - All neural network schemas (transformer, KV cache, quantization) valid
 - All code seams (`cpu.rs:263`, `quantized_linear.rs`, `cache.rs`) verified
 - All cross-references and file paths accurate

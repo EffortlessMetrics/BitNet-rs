@@ -26,7 +26,7 @@ need() {
 need cargo
 need jq
 
-echo "=== BitNet.rs Baseline Update Tool ==="
+echo "=== BitNet-rs Baseline Update Tool ==="
 echo "Environment: DETERMINISTIC=1, SEED=42, THREADS=1"
 echo ""
 

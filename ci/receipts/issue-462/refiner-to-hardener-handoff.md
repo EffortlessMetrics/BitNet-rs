@@ -163,6 +163,6 @@ Validate that refactoring maintained **semantic equivalence** and prepare for mu
 ---
 
 **Handoff Status:** ✅ Complete
-**Quality Assurance:** Code quality meets BitNet.rs standards
+**Quality Assurance:** Code quality meets BitNet-rs standards
 **Semantic Equivalence:** Assumed (needs validation by test-hardener)
 **Ready for:** Mutation testing and semantic validation

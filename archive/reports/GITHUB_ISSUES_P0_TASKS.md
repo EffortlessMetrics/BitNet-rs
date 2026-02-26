@@ -14,7 +14,7 @@
 
 ### Problem Statement
 
-BitNet.rs build scripts (`build.rs`) contain unhygienic patterns that cause silent failures in minimal container environments:
+BitNet-rs build scripts (`build.rs`) contain unhygienic patterns that cause silent failures in minimal container environments:
 
 1. **Missing `cargo:warning=` directives**: `bitnet-ggml-ffi/build.rs` uses `eprintln!()` instead of `println!("cargo:warning=...")`, making warnings invisible
 2. **Silent CI failures**: When `VENDORED_GGML_COMMIT` is missing in CI, builds succeed locally but fail silently in Docker containers
@@ -126,7 +126,7 @@ mv crates/bitnet-ggml-ffi/csrc/VENDORED_GGML_COMMIT{.bak,}
 
 ### Problem Statement
 
-BitNet.rs has **45+ tests** that mutate environment variables without proper synchronization, causing race conditions when running with `cargo test --test-threads > 1`.
+BitNet-rs has **45+ tests** that mutate environment variables without proper synchronization, causing race conditions when running with `cargo test --test-threads > 1`.
 
 **Critical Finding**: 14 of 16 tests in `device_features.rs` are unprotected, creating a **95% likelihood of intermittent CI failures** in parallel execution.
 

@@ -1,10 +1,10 @@
 # Inference MVP - Minimum Viable Product for CPU Inference
 
-This document describes the Minimum Viable Product (MVP) acceptance criteria for BitNet.rs CPU inference and provides usage instructions for the acceptance test suite.
+This document describes the Minimum Viable Product (MVP) acceptance criteria for BitNet-rs CPU inference and provides usage instructions for the acceptance test suite.
 
 ## Overview
 
-The CPU inference MVP ensures that BitNet.rs can:
+The CPU inference MVP ensures that BitNet-rs can:
 1. Load and validate GGUF models with proper error handling
 2. Perform deterministic inference with reproducible outputs
 3. Generate coherent text that meets quality baselines
@@ -410,5 +410,5 @@ If outputs are gibberish:
 ## References
 
 - Issue #447: Compilation failures and inference quality
-- [CLAUDE.md](CLAUDE.md): Essential guidance for working with BitNet.rs
+- [CLAUDE.md](CLAUDE.md): Essential guidance for working with BitNet-rs
 - [docs/quickstart.md](docs/quickstart.md): 5-minute setup guide

@@ -1,4 +1,4 @@
-# BitNet.rs Quick Start (INVALID Pattern)
+# BitNet-rs Quick Start (INVALID Pattern)
 
 ## ANTI-PATTERN: Bare --features without --no-default-features
 
@@ -43,4 +43,4 @@ cargo build --no-default-features --features gpu
 This documentation will **FAIL AC7 validation** because:
 - Uses `--features` without `--no-default-features`
 - No explanation of feature flag policy
-- Inconsistent with BitNet.rs standardized patterns
+- Inconsistent with BitNet-rs standardized patterns

@@ -1,4 +1,4 @@
-# BitNet.rs Test Suite Audit - Quick Reference
+# BitNet-rs Test Suite Audit - Quick Reference
 
 ## Key Findings Summary
 

@@ -463,7 +463,7 @@ bitnet-cli profile --model model.gguf --output flamegraph.svg
 
 ### 2. Enhanced Performance Metrics and Prefill Monitoring
 
-BitNet.rs now provides comprehensive structured performance metrics with detailed timing breakdowns and prefill optimization:
+BitNet-rs now provides comprehensive structured performance metrics with detailed timing breakdowns and prefill optimization:
 
 ```rust
 use bitnet::{BitNetModel, InferenceEngine, GenerationConfig};

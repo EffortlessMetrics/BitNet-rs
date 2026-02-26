@@ -1,4 +1,4 @@
-# BitNet.rs Comprehensive Test Suite Audit Report
+# BitNet-rs Comprehensive Test Suite Audit Report
 
 **Date**: 2025-10-23  
 **Scope**: Full test suite across all crates (`crates/*/tests/**/*.rs`)  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-BitNet.rs has a well-structured test suite with intentional TDD scaffolding during the MVP phase. However, **critical test hygiene gaps** were identified around environment variable mutations and parallel test safety. Key findings:
+BitNet-rs has a well-structured test suite with intentional TDD scaffolding during the MVP phase. However, **critical test hygiene gaps** were identified around environment variable mutations and parallel test safety. Key findings:
 
 - **123 ignored tests** across 42 files, well-categorized by blocker issue
 - **Major concern**: Tests mutating environment variables WITHOUT `#[serial(bitnet_env)]` (P0 issue)
@@ -675,7 +675,7 @@ Path: `/crates/bitnet-kernels/tests/` and `/crates/bitnet-inference/tests/`
 
 ## 8. CONCLUSION
 
-BitNet.rs has **excellent test scaffolding** for an MVP project, but faces a **critical test hygiene issue** with environment variable isolation. The good news:
+BitNet-rs has **excellent test scaffolding** for an MVP project, but faces a **critical test hygiene issue** with environment variable isolation. The good news:
 
 - ✅ Test structure and organization is solid
 - ✅ Clear documentation of blockers

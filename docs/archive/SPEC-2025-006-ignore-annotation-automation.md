@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-BitNet.rs currently has 194 `#[ignore]` annotations across the test suite, with 135 (69.6%) lacking explicit reasons. This creates maintenance debt, ambiguous test intent, and makes it difficult to track which tests are temporarily disabled vs permanently excluded. This specification defines an automated system for detecting, categorizing, and enforcing annotation hygiene for ignored tests.
+BitNet-rs currently has 194 `#[ignore]` annotations across the test suite, with 135 (69.6%) lacking explicit reasons. This creates maintenance debt, ambiguous test intent, and makes it difficult to track which tests are temporarily disabled vs permanently excluded. This specification defines an automated system for detecting, categorizing, and enforcing annotation hygiene for ignored tests.
 
 **Current State**:
 - **194 total** `#[ignore]` annotations
@@ -602,7 +602,7 @@ suggest_annotation() {
 
 # Main workflow
 main() {
-    print_header "BitNet.rs #[ignore] Hygiene Check"
+    print_header "BitNet-rs #[ignore] Hygiene Check"
 
     # Gather statistics
     local total=$(count_total_ignores)
@@ -1406,7 +1406,7 @@ time MODE=diff ./scripts/check-ignore-hygiene.sh
 # Expected: Execution time <10 seconds
 ```
 
-## Alignment with BitNet.rs Principles
+## Alignment with BitNet-rs Principles
 
 ### TDD Practices
 

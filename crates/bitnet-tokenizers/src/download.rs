@@ -1,7 +1,7 @@
 //! Smart tokenizer downloading with caching and resume capability
 //!
 //! This module provides intelligent tokenizer downloading from HuggingFace Hub with comprehensive
-//! caching, resume capability, and validation for BitNet.rs neural network models.
+//! caching, resume capability, and validation for BitNet-rs neural network models.
 
 use crate::{
     discovery::TokenizerDownloadInfo,

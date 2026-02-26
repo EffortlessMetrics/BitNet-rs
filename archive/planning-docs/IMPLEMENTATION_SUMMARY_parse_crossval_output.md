@@ -31,7 +31,7 @@ The function is implemented as an MVP with proper error handling and clear docum
 #### Diagnostic Logging
 - Debug-level logging for successful completion
 - Trace-level logging for full output capture
-- Supports BitNet.rs logging infrastructure
+- Supports BitNet-rs logging infrastructure
 
 #### Documentation
 The function includes extensive documentation covering:
@@ -53,7 +53,7 @@ The function includes extensive documentation covering:
    - Metric extraction patterns
    - Result structure assembly
 
-## Integration with BitNet.rs Architecture
+## Integration with BitNet-rs Architecture
 
 ### Test Context
 
@@ -82,7 +82,7 @@ When proper types are defined, the function will support validation of:
 
 ### MVP Approach
 
-The implementation follows BitNet.rs TDD patterns:
+The implementation follows BitNet-rs TDD patterns:
 
 1. **Placeholder Types**: `CrossvalResults = ()` allows tests to compile and track progress
 2. **Comprehensive Documentation**: Detailed inline docs guide future implementation
@@ -127,7 +127,7 @@ The test file `ac4_cross_validation_accuracy.rs` is:
 - ✅ Integrated with helper functions and type stubs
 - ✅ Ready for future enablement when blockers resolved
 
-## Alignment with BitNet.rs Standards
+## Alignment with BitNet-rs Standards
 
 ### Code Quality
 
@@ -196,10 +196,10 @@ To complete this implementation:
 
 ## Conclusion
 
-The `parse_crossval_output()` implementation follows BitNet.rs TDD patterns by providing:
+The `parse_crossval_output()` implementation follows BitNet-rs TDD patterns by providing:
 - ✅ Production-quality error handling
 - ✅ Comprehensive documentation for future development
 - ✅ Integration with existing test infrastructure
 - ✅ Clear path for enhancement when types are defined
 
-This MVP implementation unblocks test scaffolding while maintaining code quality and architectural alignment with BitNet.rs standards.
+This MVP implementation unblocks test scaffolding while maintaining code quality and architectural alignment with BitNet-rs standards.

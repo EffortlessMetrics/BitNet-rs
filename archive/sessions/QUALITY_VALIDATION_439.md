@@ -178,7 +178,7 @@ cargo doc --workspace --no-default-features --features cpu --no-deps
 
 ---
 
-## BitNet.rs Neural Network Standards Compliance
+## BitNet-rs Neural Network Standards Compliance
 
 ### ✅ Zero Warnings Policy
 - **Library Code:** 0 clippy warnings with `-D warnings`
@@ -244,7 +244,7 @@ gguf: N/A (feature gates only; no model format changes)
 
 ## Quality Finalizer Assessment
 
-This implementation meets all BitNet.rs neural network development and production-ready quality standards:
+This implementation meets all BitNet-rs neural network development and production-ready quality standards:
 
 ### Implementation Achievements
 

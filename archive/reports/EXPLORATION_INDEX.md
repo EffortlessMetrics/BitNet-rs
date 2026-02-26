@@ -1,4 +1,4 @@
-# BitNet.rs Codebase Exploration - Complete Index
+# BitNet-rs Codebase Exploration - Complete Index
 
 **Date**: October 16, 2025
 **Branch**: feat/cli-chat-repl-ux-polish

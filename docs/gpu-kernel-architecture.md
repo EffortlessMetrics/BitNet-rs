@@ -1,6 +1,6 @@
 # GPU Kernel Architecture and Design Decisions
 
-This document explains the architectural decisions and design patterns used in BitNet.rs GPU kernels, providing context for the GPU kernel refactoring in PR #108.
+This document explains the architectural decisions and design patterns used in BitNet-rs GPU kernels, providing context for the GPU kernel refactoring in PR #108.
 
 ## Table of Contents
 

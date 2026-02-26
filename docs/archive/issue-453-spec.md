@@ -2,7 +2,7 @@
 
 ## Context
 
-BitNet.rs provides receipt-based proof of computation (PR #452) but lacks runtime guarantees that quantized inference actually uses native quantized kernels instead of silently falling back to FP32 dequantization. This gap means receipts can claim "quantized computation" while the actual inference path uses mock FP32 operations, undermining both performance claims and correctness validation.
+BitNet-rs provides receipt-based proof of computation (PR #452) but lacks runtime guarantees that quantized inference actually uses native quantized kernels instead of silently falling back to FP32 dequantization. This gap means receipts can claim "quantized computation" while the actual inference path uses mock FP32 operations, undermining both performance claims and correctness validation.
 
 ### Problem Background
 
@@ -37,7 +37,7 @@ This issue specifically affects:
 
 ## User Story
 
-As a BitNet.rs inference engineer, I want runtime guards in strict mode that prevent silent FP32 fallback in quantized layers and attention projections, so that receipts accurately reflect the actual computation path and I can trust performance baselines for production deployments.
+As a BitNet-rs inference engineer, I want runtime guards in strict mode that prevent silent FP32 fallback in quantized layers and attention projections, so that receipts accurately reflect the actual computation path and I can trust performance baselines for production deployments.
 
 ## Acceptance Criteria
 

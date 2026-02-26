@@ -3,7 +3,7 @@
 **Document ID**: `runtime-detection-warning-ci-safe`
 **Status**: Draft
 **Created**: 2025-10-27
-**Author**: BitNet.rs Generative Spec Agent
+**Author**: BitNet-rs Generative Spec Agent
 **Related Files**:
 - `/tmp/p0_runtime_detection_analysis.md` (comprehensive dual-detection analysis)
 - `/home/steven/code/Rust/BitNet-rs/xtask/src/crossval/preflight.rs` (lines 411-418, 519-695, 1084-1109)
@@ -14,7 +14,7 @@
 
 ## Executive Summary
 
-BitNet.rs implements a **dual-detection system** for C++ backend library availability:
+BitNet-rs implements a **dual-detection system** for C++ backend library availability:
 
 1. **Build-time detection** (`crossval/build.rs`): Scans filesystem during compilation, exports immutable constants (`HAS_BITNET`, `HAS_LLAMA`) baked into xtask binary
 2. **Runtime detection** (`preflight.rs`, `backend_helpers.rs`): Fallback search when build-time detection failed, supports dev convenience
@@ -26,7 +26,7 @@ BitNet.rs implements a **dual-detection system** for C++ backend library availab
 - **CI Mode**: Skip tests with deterministic diagnostic (no runtime override)
 - **Verbose Mode**: Detailed search diagnostics and resolution steps
 
-This specification addresses the "stale build" scenario critical for BitNet.rs neural network cross-validation reliability, ensuring CI determinism while maintaining dev-friendly UX.
+This specification addresses the "stale build" scenario critical for BitNet-rs neural network cross-validation reliability, ensuring CI determinism while maintaining dev-friendly UX.
 
 ---
 

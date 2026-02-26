@@ -15,11 +15,11 @@
 
 ---
 # T4 Comprehensive Security Validation Report
-**PR #255 - BitNet.rs Neural Network Inference Implementation**
+**PR #255 - BitNet-rs Neural Network Inference Implementation**
 
 ## Executive Summary ✅ PASS
 
-BitNet.rs neural network inference implementation successfully passes comprehensive T4 security validation with **ACCEPTABLE RISK** profile. All critical security measures verified with enhanced focus on PR #255 KVCache and RotaryEmbedding optimizations.
+BitNet-rs neural network inference implementation successfully passes comprehensive T4 security validation with **ACCEPTABLE RISK** profile. All critical security measures verified with enhanced focus on PR #255 KVCache and RotaryEmbedding optimizations.
 
 **Final Status**: `integrative:gate:security = success` → Route to **T5 Policy Validation**
 
@@ -153,7 +153,7 @@ Token patterns: 238 legitimate references (test utilities, documentation)
 
 ## Security Evidence Grammar
 
-**BitNet.rs T4 Security Evidence**:
+**BitNet-rs T4 Security Evidence**:
 ```
 audit: clean (0 CVEs)
 gpu: mixed precision validated, memory management safe
@@ -174,7 +174,7 @@ credentials: clean scan, no exposed API keys detected
 
 ---
 
-**Agent**: `integrative-gate-security` (BitNet.rs neural network security specialist)
+**Agent**: `integrative-gate-security` (BitNet-rs neural network security specialist)
 **Flow**: `integrative`
 **Validation Date**: 2025-09-26T15:30:00Z
 **Commit**: 54e4e67d43e595f36e6f5f45d6ee5b7db0da0b6b

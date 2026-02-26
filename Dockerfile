@@ -123,7 +123,7 @@ LABEL org.opencontainers.image.revision=${VCS_REF:-unknown} \
       org.opencontainers.image.version=${VCS_DESCRIBE:-unknown} \
       org.opencontainers.image.ref.name=${VCS_BRANCH:-unknown} \
       org.opencontainers.image.source="https://github.com/bitnet-io/bitnet-rs" \
-      org.opencontainers.image.title="BitNet.rs" \
+      org.opencontainers.image.title="bitnet-rs" \
       org.opencontainers.image.description="High-performance 1-bit LLM inference engine"
 
 # Default command

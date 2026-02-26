@@ -8,7 +8,7 @@
 **Estimated Effort:** 1-2 hours
 **Recommended Approach:** Option 1 (File-Scope Hoisting) for workspace_root()
 
-This technical assessment validates the feature specification for Issue #443 and confirms that the proposed approach is sound, atomic, and aligns with BitNet.rs test infrastructure patterns.
+This technical assessment validates the feature specification for Issue #443 and confirms that the proposed approach is sound, atomic, and aligns with BitNet-rs test infrastructure patterns.
 
 ---
 
@@ -259,7 +259,7 @@ cargo test --package bitnet-models --no-default-features --features cpu -- --lis
 
 ---
 
-## 4. BitNet.rs Standards Alignment
+## 4. BitNet-rs Standards Alignment
 
 ### 4.1 Test Infrastructure Patterns
 
@@ -281,7 +281,7 @@ crates/bitnet-kernels/tests/device_features.rs
 
 ### 4.2 Quality Gates Compliance
 
-**BitNet.rs Quality Gates (from CLAUDE.md):**
+**BitNet-rs Quality Gates (from CLAUDE.md):**
 ```bash
 # Format Gate
 cargo fmt --all --check                                            # AC5
@@ -556,6 +556,6 @@ cargo test --package xtask -- --list | wc -l
 ---
 
 **Assessment Date:** 2025-10-11
-**Assessor:** BitNet.rs Spec Analyzer (Neural Network Systems Architect)
+**Assessor:** BitNet-rs Spec Analyzer (Neural Network Systems Architect)
 **Review Status:** ✅ COMPLETE
 **Implementation Clearance:** ✅ APPROVED

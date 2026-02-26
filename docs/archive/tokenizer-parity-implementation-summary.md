@@ -448,6 +448,6 @@ Next phase requires C++ cross-validation to verify logits parity and generate pr
 
 ---
 
-**Implementation Team**: Claude Code + BitNet.rs Contributors
+**Implementation Team**: Claude Code + BitNet-rs Contributors
 **Review Status**: Ready for C++ Parity Validation
 **Target Release**: v0.10.0-rc.0

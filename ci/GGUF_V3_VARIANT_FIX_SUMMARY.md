@@ -32,7 +32,7 @@ Offset | Bytes                  | Field
 0x20   | 67 65 6e 65 72 61 6c... | "general.architec..." (first KV key)
 ```
 
-### BitNet.rs Exported Model (Standard v3)
+### BitNet-rs Exported Model (Standard v3)
 ```
 Offset | Bytes                  | Field
 -------|------------------------|-------------------
@@ -210,7 +210,7 @@ DEBUG GGUF v3 early variant detected (missing alignment/data_offset fields) - us
 
 ### Export Behavior
 
-BitNet.rs `st2gguf` tool **always** produces standard GGUF v3:
+BitNet-rs `st2gguf` tool **always** produces standard GGUF v3:
 - ✅ Explicit `alignment` field (32 bytes)
 - ✅ Explicit `data_offset` field (properly aligned)
 - ✅ All tests passing
@@ -266,12 +266,12 @@ For users with early variant models:
 - ℹ️ Consider re-exporting from SafeTensors for full compliance
 
 ### For Model Authors
-- ✅ Use BitNet.rs `st2gguf` for new models (produces standard v3)
+- ✅ Use BitNet-rs `st2gguf` for new models (produces standard v3)
 - ℹ️ Existing early variant models work fine, but standard v3 is preferred
 - ℹ️ Re-export when convenient for better interoperability
 
 ### For Tool Developers
-- ✅ Implement support for both variants (like BitNet.rs does)
+- ✅ Implement support for both variants (like BitNet-rs does)
 - ✅ Always write standard v3 when creating new files
 - ✅ Provide clear diagnostics for format detection
 

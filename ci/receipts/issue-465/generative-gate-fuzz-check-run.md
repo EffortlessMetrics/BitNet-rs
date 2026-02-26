@@ -21,7 +21,7 @@
 
 **Fuzzing Infrastructure Status:**
 - ✅ cargo-fuzz v0.13.1 installed and available
-- ✅ 10 existing fuzz targets covering core BitNet.rs components:
+- ✅ 10 existing fuzz targets covering core BitNet-rs components:
   - `gguf_parser` (GGUF model parsing)
   - `safetensors_parser` (SafeTensors parsing)
   - `quantization_i2s`, `quantization_tl1`, `quantization_tl2` (quantization algorithms)
@@ -117,7 +117,7 @@ pub struct Receipt {
 
 **Analysis:**
 - **Input:** Static markdown documentation
-- **Processing:** None (rendered by GitHub, not parsed by BitNet.rs)
+- **Processing:** None (rendered by GitHub, not parsed by BitNet-rs)
 - **Risk:** NONE (no automated parsing)
 
 **Verdict:** ❌ Fuzzing NOT applicable (static documentation)
@@ -135,7 +135,7 @@ pub struct Receipt {
 
 ---
 
-## BitNet.rs Fuzzing Standards Assessment
+## BitNet-rs Fuzzing Standards Assessment
 
 ### Critical Paths (Fuzzing Required)
 
@@ -176,7 +176,7 @@ pub struct Receipt {
 2. ✅ JSON parsing delegated to `serde_json` (well-fuzzed library)
 3. ✅ Test utilities are not production code paths
 4. ✅ Fixtures are static test data (not user input)
-5. ✅ Existing fuzz targets cover all critical BitNet.rs components
+5. ✅ Existing fuzz targets cover all critical BitNet-rs components
 
 **Time Budget:** 0 seconds (fuzzing skipped)
 
@@ -345,7 +345,7 @@ tl_lut_helper
 
 ---
 
-## BitNet.rs Neural Network Context
+## BitNet-rs Neural Network Context
 
 ### Quantization Coverage
 
@@ -392,7 +392,7 @@ tl_lut_helper
 
 ## Compliance Summary
 
-### BitNet.rs Fuzzing Standards
+### BitNet-rs Fuzzing Standards
 
 **Critical Paths:** ✅ ALL COVERED (10 fuzz targets for production code)
 
@@ -408,7 +408,7 @@ tl_lut_helper
 
 **Evidence:**
 - Production code changes: 0 (documentation and tooling only)
-- Existing fuzz coverage: 10 targets covering all critical BitNet.rs components
+- Existing fuzz coverage: 10 targets covering all critical BitNet-rs components
 - Alternative validation: 43 comprehensive tests with edge case coverage
 - Library robustness: `serde_json` (18M+ downloads/month, extensively fuzzed)
 - Static analysis: 91% mutation score (threshold 80%)

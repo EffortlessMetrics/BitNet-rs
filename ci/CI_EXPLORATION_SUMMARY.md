@@ -251,7 +251,7 @@ For different use cases, start with:
 
 ## Conclusion
 
-BitNet.rs has a **well-designed CI pipeline** with clear job dependencies, effective ripgrep-based guards, and good separation of concerns. The main improvement opportunities are:
+BitNet-rs has a **well-designed CI pipeline** with clear job dependencies, effective ripgrep-based guards, and good separation of concerns. The main improvement opportunities are:
 
 1. **Explicit dependencies** - Add missing `needs` declarations
 2. **Ripgrep optimization** - Centralize installation

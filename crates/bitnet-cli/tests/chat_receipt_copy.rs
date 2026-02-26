@@ -3,7 +3,7 @@
 //! Tests feature spec: chat-repl-ux-polish.md#AC4-receipt-archive
 //!
 //! This test suite validates the receipt archiving functionality for the
-//! BitNet.rs CLI chat mode. Tests ensure receipts are correctly copied from
+//! BitNet-rs CLI chat mode. Tests ensure receipts are correctly copied from
 //! ci/inference.json to timestamped files when --emit-receipt-dir is used.
 //!
 //! **TDD Approach**: These tests compile successfully and validate the existing

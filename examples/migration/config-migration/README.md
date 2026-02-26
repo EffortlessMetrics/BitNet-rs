@@ -1,12 +1,12 @@
 # Configuration Migration Example
 
-This example shows how to migrate configuration files from legacy BitNet implementations to BitNet.rs.
+This example shows how to migrate configuration files from legacy BitNet implementations to bitnet-rs.
 
 ## Overview
 
 This migration demonstrates:
 - Converting C++ configuration files to Rust TOML format
-- Updating Python configuration to work with BitNet.rs
+- Updating Python configuration to work with bitnet-rs
 - Migrating server configurations and deployment settings
 - Handling environment variables and runtime configuration
 
@@ -79,7 +79,7 @@ target_compile_definitions(bitnet_server PRIVATE
 }
 ```
 
-## After: BitNet.rs Configuration
+## After: bitnet-rs Configuration
 
 ### Rust TOML Configuration
 ```toml
@@ -461,4 +461,4 @@ unset OLD_BITNET_VAR
 
 ---
 
-**Configuration migrated!** Your BitNet.rs application now uses modern, type-safe configuration with enhanced features.
+**Configuration migrated!** Your bitnet-rs application now uses modern, type-safe configuration with enhanced features.

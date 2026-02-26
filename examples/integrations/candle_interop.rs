@@ -1,6 +1,6 @@
 //! # Candle Tensor Interoperability Example
 //!
-//! This example demonstrates how to integrate BitNet.rs with the Candle tensor library
+//! This example demonstrates how to integrate BitNet-rs with the Candle tensor library
 //! for seamless tensor operations and device management.
 
 use anyhow::Result;

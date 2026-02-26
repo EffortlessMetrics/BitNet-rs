@@ -1,4 +1,4 @@
-# BitNet.rs TDD Scaffold Comprehensive Status Report
+# BitNet-rs TDD Scaffold Comprehensive Status Report
 
 **Date**: 2025-10-20
 **Status**: Post-Sprint Analysis
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-After completing multiple comprehensive TDD implementation sprints, BitNet.rs has achieved exceptional test coverage with **all tests passing** in the CPU-only configuration. This report provides an honest assessment of:
+After completing multiple comprehensive TDD implementation sprints, BitNet-rs has achieved exceptional test coverage with **all tests passing** in the CPU-only configuration. This report provides an honest assessment of:
 
 - ✅ **Completed Work**: ~70+ scaffolds implemented across 4-5 major sprints
 - 🔒 **Infrastructure-Gated Tests**: 34 tests requiring external dependencies (env vars, GPU, network)
@@ -279,7 +279,7 @@ Based on this analysis, the next sprint should focus on:
 
 ## Conclusion
 
-BitNet.rs has successfully transitioned from TDD scaffolding to a **production-ready test suite** with:
+BitNet-rs has successfully transitioned from TDD scaffolding to a **production-ready test suite** with:
 
 - ✅ **100% of actionable scaffolds implemented**
 - ✅ **137+ tests passing** with zero failures

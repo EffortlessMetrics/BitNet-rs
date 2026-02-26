@@ -1,10 +1,10 @@
-# BitNet.rs Feature Flags Documentation
+# BitNet-rs Feature Flags Documentation
 
-This document provides comprehensive documentation for all feature flags available in the BitNet.rs project.
+This document provides comprehensive documentation for all feature flags available in the BitNet-rs project.
 
 ## Overview
 
-BitNet.rs uses Cargo feature flags to control compilation of optional functionality. **Default features are intentionally empty** to prevent unwanted dependencies and allow precise control over the build.
+BitNet-rs uses Cargo feature flags to control compilation of optional functionality. **Default features are intentionally empty** to prevent unwanted dependencies and allow precise control over the build.
 
 ## Quick Reference
 
@@ -327,7 +327,7 @@ Planned features for future releases:
 
 **Feature:** `BITNET_STRICT_MODE` environment variable
 **Purpose:** Prevent silent FP32 fallbacks in quantized inference and ensure honest performance claims
-**Since:** BitNet.rs v0.1.0 (Issue #453)
+**Since:** BitNet-rs v0.1.0 (Issue #453)
 
 ### Rationale
 

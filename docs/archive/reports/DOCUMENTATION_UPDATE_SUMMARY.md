@@ -29,7 +29,7 @@ Key additions:
 - Validation results table showing Rust success where C++ fails
 
 ### 2. README.md Updated
-- **Added validation badge**: Prominent notice that BitNet.rs is a validated superior drop-in replacement
+- **Added validation badge**: Prominent notice that BitNet-rs is a validated superior drop-in replacement
 - **Highlighted key achievement**: Successfully loads models that crash bitnet.cpp
 
 ### 3. types.rs Code Documentation
@@ -58,4 +58,4 @@ Key additions:
 - Memory safety: No segfaults (guaranteed by Rust)
 
 ## Impact
-The documentation now clearly communicates that BitNet.rs is not just a reimplementation but a **superior drop-in replacement** with better format support, memory safety, and error handling than the original C++ implementation.
+The documentation now clearly communicates that BitNet-rs is not just a reimplementation but a **superior drop-in replacement** with better format support, memory safety, and error handling than the original C++ implementation.

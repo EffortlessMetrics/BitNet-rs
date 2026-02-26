@@ -270,7 +270,7 @@ diff <(grep "test result:" /tmp/in-memory.log) \
 
 ### Build Configurations
 
-**Default Features**: Empty (following BitNet.rs convention)
+**Default Features**: Empty (following BitNet-rs convention)
 
 **Test Execution Matrix**:
 ```bash
@@ -512,7 +512,7 @@ pub fn verify_fixture_integrity(path: &Path) -> Result<(), String> {
 
 ---
 
-## BitNet.rs Alignment
+## BitNet-rs Alignment
 
 ### TDD Practices
 
@@ -623,5 +623,5 @@ cargo run -p bitnet-cli --features cpu,full-cli -- \
 ---
 
 **Last Updated**: 2025-10-23
-**Spec Author**: BitNet.rs Spec Analyzer Agent
+**Spec Author**: BitNet-rs Spec Analyzer Agent
 **Review Status**: Pending

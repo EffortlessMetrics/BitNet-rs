@@ -5,7 +5,7 @@
 
 ## Session Overview
 
-This analysis session focused on checking the status of background tests and identifying remaining issues in the BitNet.rs workspace test suite.
+This analysis session focused on checking the status of background tests and identifying remaining issues in the BitNet-rs workspace test suite.
 
 ### What Was Done
 

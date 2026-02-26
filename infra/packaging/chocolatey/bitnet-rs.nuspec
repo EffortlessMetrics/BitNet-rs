@@ -5,7 +5,7 @@
     <version>1.0.0</version>
     <packageSourceUrl>https://github.com/microsoft/BitNet</packageSourceUrl>
     <owners>Microsoft</owners>
-    <title>BitNet.rs</title>
+    <title>bitnet-rs</title>
     <authors>BitNet Contributors</authors>
     <projectUrl>https://github.com/microsoft/BitNet</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/microsoft/BitNet/main/assets/logo.png</iconUrl>
@@ -18,7 +18,7 @@
     <tags>machine-learning llm inference rust bitnet quantization ai</tags>
     <summary>High-performance Rust implementation of BitNet 1-bit LLM inference</summary>
     <description>
-BitNet.rs is the primary, production-ready implementation of BitNet 1-bit Large Language Model inference engine, written in Rust for maximum performance and safety.
+bitnet-rs is the primary, production-ready implementation of BitNet 1-bit Large Language Model inference engine, written in Rust for maximum performance and safety.
 
 ## Features
 
@@ -36,7 +36,7 @@ BitNet.rs is the primary, production-ready implementation of BitNet 1-bit Large 
 
 ## Quick Start
 
-After installation, you can use BitNet.rs immediately:
+After installation, you can use bitnet-rs immediately:
 
 ```
 # Check version

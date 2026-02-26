@@ -1,8 +1,8 @@
-# BitNet.rs Fixture Contract & Validation - Exploration Index
+# BitNet-rs Fixture Contract & Validation - Exploration Index
 
 ## Overview
 
-This exploration thoroughly documents the BitNet.rs fixture contract and validation system, covering fixture generation, storage, verification, and integration testing.
+This exploration thoroughly documents the BitNet-rs fixture contract and validation system, covering fixture generation, storage, verification, and integration testing.
 
 ## Comprehensive Report
 

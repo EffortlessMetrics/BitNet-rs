@@ -1,8 +1,8 @@
-# Environment Variable Testing Patterns in BitNet.rs
+# Environment Variable Testing Patterns in BitNet-rs
 
 ## Executive Summary
 
-The BitNet.rs codebase demonstrates **two complementary approaches** for environment variable testing:
+The BitNet-rs codebase demonstrates **two complementary approaches** for environment variable testing:
 
 1. **RAII-based approach** (`EnvVarGuard` in kernels tests) - Manual restoration via `unsafe { env::set_var/remove_var }`
 2. **Scoped approach** (`temp_env` crate with `#[serial]` macros) - Clean closure-based isolation

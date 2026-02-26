@@ -1,5 +1,5 @@
 ================================================================================
-BitNet.rs CLI ARGUMENT PARSING PATTERNS - EXPLORATION COMPLETE
+bitnet-rs CLI ARGUMENT PARSING PATTERNS - EXPLORATION COMPLETE
 ================================================================================
 
 PROJECT: /home/steven/code/Rust/BitNet-rs
@@ -22,7 +22,7 @@ DELIVERABLES CREATED
    - Copy-paste ready examples
    - Checklist for adding new flags
    - Common mistakes and how to avoid them
-   - Real examples from BitNet.rs codebase
+   - Real examples from bitnet-rs codebase
 
 ================================================================================
 KEY FINDINGS
@@ -119,7 +119,7 @@ Feature Gating:
 ENUM PATTERN (MOST COMMON FOR NEW FLAGS)
 ================================================================================
 
-Three-step pattern used throughout BitNet.rs:
+Three-step pattern used throughout bitnet-rs:
 
 Step 1: Define enum in library crate
    pub enum MyType { Variant1, Variant2 }
@@ -192,7 +192,7 @@ All tests in codebase follow these patterns:
 STRUCTURE OVERVIEW
 ================================================================================
 
-Three-level CLI structure used in BitNet.rs:
+Three-level CLI structure used in bitnet-rs:
 
 Level 1: Top-level Parser (#[derive(Parser)])
          Cli struct with global flags and subcommand dispatcher
@@ -242,7 +242,7 @@ ENVIRONMENT VARIABLE INTEGRATION
 Clap supports environment variable fallback:
    #[arg(long, env = "VAR_NAME")]
    
-Examples in BitNet.rs:
+Examples in bitnet-rs:
    - BITNET_ALLOW_MOCK: Fallback for --allow-mock
    - RUST_LOG: Standard log level
    - BITNET_DETERMINISTIC: Determinism flag

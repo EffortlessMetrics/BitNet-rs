@@ -1,4 +1,4 @@
-# BitNet.rs Logging and Diagnostics - Quick Reference
+# BitNet-rs Logging and Diagnostics - Quick Reference
 
 ## Logging Macros (tracing crate)
 

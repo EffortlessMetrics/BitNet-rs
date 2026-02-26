@@ -1,4 +1,4 @@
-# BitNet.rs TDD Scaffold Implementation Sprint - Completion Report
+# BitNet-rs TDD Scaffold Implementation Sprint - Completion Report
 
 **Sprint Date**: 2025-10-20
 **Sprint Goal**: Build out remaining TDD test scaffolds using parallel impl-creator agents
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully completed a comprehensive TDD scaffold implementation sprint by launching 9 parallel impl-creator agents to build out high-priority test scaffolds across BitNet.rs. All agents completed successfully, with 7 tests passing immediately and 2 providing valuable implementation insights.
+Successfully completed a comprehensive TDD scaffold implementation sprint by launching 9 parallel impl-creator agents to build out high-priority test scaffolds across BitNet-rs. All agents completed successfully, with 7 tests passing immediately and 2 providing valuable implementation insights.
 
 ### Key Metrics
 
@@ -154,7 +154,7 @@ cargo test -p bitnet-inference --no-default-features --features cpu \
 - Checks kernel IDs are not empty, whitespace-only, or contain "mock"
 - Validates kernel ID hygiene (length ≤ 128 chars, count ≤ 10K)
 
-**Key Pattern**: Integrates with existing BitNet.rs honest compute tracking infrastructure.
+**Key Pattern**: Integrates with existing BitNet-rs honest compute tracking infrastructure.
 
 **Execution**:
 ```bash
@@ -370,7 +370,7 @@ cargo test -p bitnet-inference --no-default-features --features cpu,full-engine 
 1. **Feature-gated design** - Uses `#[cfg(feature = "cpu")]` patterns
 2. **Error context preservation** - Uses `anyhow::Context` for error chains
 3. **Comprehensive documentation** - Inline comments and helper function docs
-4. **BitNet.rs architectural alignment** - Follows established patterns
+4. **BitNet-rs architectural alignment** - Follows established patterns
 
 ---
 
@@ -464,7 +464,7 @@ The scaffolds now provide comprehensive coverage for:
 - Neural network inference testing (performance, error handling, mock elimination)
 - Quantized linear layer validation (TL1, TL2 with no FP32 dequantization)
 
-All implementations follow BitNet.rs TDD patterns, integrate with production APIs, and provide robust validation infrastructure for current and future development.
+All implementations follow BitNet-rs TDD patterns, integrate with production APIs, and provide robust validation infrastructure for current and future development.
 
 **Status**: ✅ **SPRINT COMPLETE** - 9/9 scaffolds successfully implemented
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-Multiple compilation failures have been identified across the BitNet.rs workspace that prevent successful builds with various feature flag combinations. The issues span four crates (bitnet-server, bitnet-inference, bitnet-tests, tests) and represent breaking changes in dependencies, missing type exports, and API drift. These failures block development workflows and CI pipeline health.
+Multiple compilation failures have been identified across the BitNet-rs workspace that prevent successful builds with various feature flag combinations. The issues span four crates (bitnet-server, bitnet-inference, bitnet-tests, tests) and represent breaking changes in dependencies, missing type exports, and API drift. These failures block development workflows and CI pipeline health.
 
 The most critical issue is the OpenTelemetry Prometheus version incompatibility in bitnet-server, which causes all builds with observability features to fail. This affects production deployments and monitoring capabilities. The remaining issues prevent `--all-features` builds from succeeding and block comprehensive testing.
 
@@ -19,7 +19,7 @@ The most critical issue is the OpenTelemetry Prometheus version incompatibility 
 
 ## User Story
 
-As a BitNet.rs developer, I want all workspace crates to compile successfully with their respective feature combinations so that I can develop, test, and deploy the inference system without encountering compilation barriers that block CI/CD pipelines and production observability.
+As a BitNet-rs developer, I want all workspace crates to compile successfully with their respective feature combinations so that I can develop, test, and deploy the inference system without encountering compilation barriers that block CI/CD pipelines and production observability.
 
 ## Acceptance Criteria
 
@@ -163,7 +163,7 @@ As a BitNet.rs developer, I want all workspace crates to compile successfully wi
 3. **P3 (AC6-AC7)**: Fix bitnet-tests fixtures and tests config drift (blocks specific test scenarios)
 4. **CI (AC8)**: Update CI gates to reflect compilation reality (enables proactive quality assurance)
 
-### BitNet.rs-Specific Patterns
+### BitNet-rs-Specific Patterns
 - **Feature-Gated Compilation**: All fixes must respect `--no-default-features` baseline requirement
 - **Workspace Structure**: Changes span multiple crates requiring coordinated compilation validation
 - **Observability Isolation**: OpenTelemetry changes isolated to bitnet-server (no inference impact)

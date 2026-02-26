@@ -18,7 +18,7 @@
 
 ## Overview
 
-This document describes the comprehensive improvements made to the BitNet.rs property testing framework to achieve truly bulletproof validation through logit-parity and teacher-forcing NLL tests.
+This document describes the comprehensive improvements made to the BitNet-rs property testing framework to achieve truly bulletproof validation through logit-parity and teacher-forcing NLL tests.
 
 ## Key Improvements Implemented
 

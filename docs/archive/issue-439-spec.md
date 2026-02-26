@@ -3,9 +3,9 @@
 ## Context
 PR #438 fixed quantization-side feature gate mismatches where runtime checks used `cfg!(feature="gpu")` but CUDA code was compiled under `#[cfg(feature="cuda")]`. This created situations where GPU capabilities could be advertised at runtime but the actual GPU kernels were not compiled, leading to silent CPU fallback and misleading performance receipts.
 
-This issue tracks **workspace-wide hardening** to prevent GPU capability drift across all BitNet.rs components: kernels, quantization, inference, models, runtime helpers, xtask tooling, and documentation.
+This issue tracks **workspace-wide hardening** to prevent GPU capability drift across all BitNet-rs components: kernels, quantization, inference, models, runtime helpers, xtask tooling, and documentation.
 
-**Affected BitNet.rs Components:**
+**Affected BitNet-rs Components:**
 - `bitnet-kernels`: CUDA/SIMD kernel implementations with mixed feature gates
 - `bitnet-quantization`: Device-aware quantization selection (I2_S, TL1, TL2)
 - `bitnet-models`: Model loading, device selection, and layer dispatch logic
@@ -20,7 +20,7 @@ This issue tracks **workspace-wide hardening** to prevent GPU capability drift a
 - Feature gate inconsistency prevents proper device-aware quantization selection
 
 ## User Story
-As a BitNet.rs developer, I want a single unified predicate for GPU capability across the entire workspace so that GPU features are only advertised when both compiled and runtime-available, preventing silent CPU fallback and dishonest performance receipts.
+As a BitNet-rs developer, I want a single unified predicate for GPU capability across the entire workspace so that GPU features are only advertised when both compiled and runtime-available, preventing silent CPU fallback and dishonest performance receipts.
 
 ## Acceptance Criteria
 
@@ -258,7 +258,7 @@ cargo run -p xtask -- verify-receipt <path-to-gpu-receipt>
 //! Device feature detection and capability queries
 //!
 //! This module provides unified device capability checks for GPU/CPU selection
-//! across the BitNet.rs workspace. It consolidates compile-time feature gates
+//! across the BitNet-rs workspace. It consolidates compile-time feature gates
 //! with runtime hardware detection.
 //!
 //! # Architecture Decision

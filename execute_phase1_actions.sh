@@ -1,12 +1,12 @@
 #!/bin/bash
-# BitNet.rs Issue Cleanup - Phase 1 (Immediate Actions)
+# BitNet-rs Issue Cleanup - Phase 1 (Immediate Actions)
 # Generated: 2025-11-11
 # Estimated time: 30 minutes
 
 set -euo pipefail
 
 echo "==========================================="
-echo "BitNet.rs Issue Cleanup - Phase 1"
+echo "BitNet-rs Issue Cleanup - Phase 1"
 echo "==========================================="
 echo ""
 echo "This script will:"

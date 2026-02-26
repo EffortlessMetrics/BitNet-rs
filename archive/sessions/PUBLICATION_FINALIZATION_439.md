@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-**Publication verification COMPLETE.** PR #440 successfully published with all Generative Flow requirements satisfied. All 8 quality gates pass, BitNet.rs neural network standards fully met, local/remote synchronization confirmed, and comprehensive evidence bundle posted (3,128 lines across 8 reports).
+**Publication verification COMPLETE.** PR #440 successfully published with all Generative Flow requirements satisfied. All 8 quality gates pass, BitNet-rs neural network standards fully met, local/remote synchronization confirmed, and comprehensive evidence bundle posted (3,128 lines across 8 reports).
 
 **Routing Decision:** FINALIZE → Publication complete (Generative Flow microloop 8 finished)
 
@@ -31,8 +31,8 @@
   "headRefName": "feat/439-gpu-feature-gate-hardening",
   "headRefOid": "b66c97f3b9727862f95baa3aaba5dccf83650a26",
   "labels": [
-    {"name": "state:ready", "description": "BitNet.rs ready for review"},
-    {"name": "flow:generative", "description": "BitNet.rs generative workflow marker"}
+    {"name": "state:ready", "description": "BitNet-rs ready for review"},
+    {"name": "flow:generative", "description": "BitNet-rs generative workflow marker"}
   ]
 }
 ```
@@ -114,7 +114,7 @@ cargo check --workspace --no-default-features --features gpu # ✅ PASS
 
 ---
 
-## 4. BitNet.rs Standards Compliance ✅
+## 4. BitNet-rs Standards Compliance ✅
 
 ### Neural Network Implementation
 - ✅ **Unified GPU Predicates:** 125 instances of `#[cfg(any(feature = "gpu", feature = "cuda"))]`
@@ -195,7 +195,7 @@ af5e225 fix(#439): Remove unused std::env import in device_features tests
 ```
 
 **Validation Results:**
-- ✅ All 15 commits use proper BitNet.rs prefixes: `feat:`, `docs:`, `test:`, `fix:`, `chore:`, `governance:`
+- ✅ All 15 commits use proper BitNet-rs prefixes: `feat:`, `docs:`, `test:`, `fix:`, `chore:`, `governance:`
 - ✅ Issue #439 referenced appropriately in commit messages
 - ✅ Neural network context present (GPU feature detection, device-aware selection)
 - ✅ Atomic commits (each represents one logical change)
@@ -261,7 +261,7 @@ For Review Flow consumption:
 - ✅ **Issue Linkage:** Closes #439 (verified)
 - ✅ **All Gates Pass:** 8/8 quality gates validated locally
 - ✅ **Evidence Comprehensive:** 3,520 lines across 9 reports
-- ✅ **BitNet.rs Standards:** Neural network, quantization, GPU/CPU compatibility met
+- ✅ **BitNet-rs Standards:** Neural network, quantization, GPU/CPU compatibility met
 - ✅ **Local Validation:** Tests pass, clippy clean, features validated
 - ✅ **Commit Quality:** 15 commits with proper prefixes and neural network context
 - ✅ **Documentation Complete:** Diátaxis structure, API contracts, migration guide
@@ -315,7 +315,7 @@ routing: FINALIZE → Publication complete (Generative Flow microloop 8 finished
    - Local validation comprehensive (421/421 tests, 0 warnings, 0 vulnerabilities)
    - Feature matrix validated (cpu/gpu/none all compile)
 
-4. **BitNet.rs Standards Met:**
+4. **BitNet-rs Standards Met:**
    - Unified GPU predicates: 125 instances verified
    - Device detection API exported and documented
    - Build system parity validated
@@ -337,7 +337,7 @@ routing: FINALIZE → Publication complete (Generative Flow microloop 8 finished
 
 **Generative Flow microloop 8 (Publication) is COMPLETE.**
 
-PR #440 successfully published with comprehensive evidence bundle, all quality gates passing, BitNet.rs neural network standards fully met, and local/remote synchronization confirmed.
+PR #440 successfully published with comprehensive evidence bundle, all quality gates passing, BitNet-rs neural network standards fully met, and local/remote synchronization confirmed.
 
 **Next Phase:** Review Flow pickup for additional validation, CI investigation, and merge approval.
 
@@ -349,7 +349,7 @@ PR #440 successfully published with comprehensive evidence bundle, all quality g
 FINALIZE → Publication complete
 
 State: ready
-Why: Generative flow microloop 8 complete. BitNet.rs neural network feature PR is ready for merge review.
+Why: Generative flow microloop 8 complete. BitNet-rs neural network feature PR is ready for merge review.
 Evidence: PR #440 published, all verification checks passed, publication gate = pass
 
 Details:
@@ -363,7 +363,7 @@ Details:
 - Unified Predicates: 125 instances verified
 - Feature Matrix: cpu/gpu/none all compile
 - Evidence Bundle: 9 reports, 3,520 lines
-- Commits: 15 total with proper BitNet.rs prefixes
+- Commits: 15 total with proper BitNet-rs prefixes
 - Local/Remote: Synchronized (HEAD: b66c97f)
 - Generative Flow: Complete (8/8 microloops)
 - Ready For: Review Flow pickup

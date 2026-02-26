@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Comprehensive test fixtures created for Issue #439: GPU Feature-Gate Hardening. All fixtures support feature-gated compilation (`--no-default-features --features cpu|gpu`) and demonstrate unified GPU predicate patterns, device-aware selection, and BitNet.rs neural network quantization integration.
+Comprehensive test fixtures created for Issue #439: GPU Feature-Gate Hardening. All fixtures support feature-gated compilation (`--no-default-features --features cpu|gpu`) and demonstrate unified GPU predicate patterns, device-aware selection, and BitNet-rs neural network quantization integration.
 
 ### Fixture Coverage by Acceptance Criteria
 
@@ -284,7 +284,7 @@ cargo run -p xtask -- preflight
 
 ### 8. Quantization Device-Aware Patterns (`quantization/`)
 
-**Purpose:** BitNet.rs neural network patterns for device-aware quantization.
+**Purpose:** BitNet-rs neural network patterns for device-aware quantization.
 
 **Fixtures (4):**
 

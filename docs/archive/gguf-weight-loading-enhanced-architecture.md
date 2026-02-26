@@ -615,7 +615,7 @@ impl MemoryEfficiencyReport {
 }
 ```
 
-## Integration with BitNet.rs Infrastructure
+## Integration with BitNet-rs Infrastructure
 
 ### Feature Flag Integration
 
@@ -694,13 +694,13 @@ mod integration_tests {
 
 ## Conclusion
 
-This enhanced architectural specification provides the detailed implementation framework for production-ready GGUF weight loading in BitNet.rs. The architecture addresses all acceptance criteria from Issue #159 while maintaining compatibility with the existing neural network inference pipeline and BitNet.rs feature flag discipline.
+This enhanced architectural specification provides the detailed implementation framework for production-ready GGUF weight loading in BitNet-rs. The architecture addresses all acceptance criteria from Issue #159 while maintaining compatibility with the existing neural network inference pipeline and BitNet-rs feature flag discipline.
 
 **Key Enhancements:**
 - **Device-Aware Placement**: Sophisticated GPU/CPU placement with memory optimization
 - **Progressive Loading**: Streaming architecture for large models with memory efficiency
 - **Enhanced Validation**: Comprehensive C++ reference cross-validation framework
 - **Memory Monitoring**: Real-time efficiency tracking with actionable metrics
-- **Feature Integration**: Seamless integration with BitNet.rs workspace structure
+- **Feature Integration**: Seamless integration with BitNet-rs workspace structure
 
 This specification enables meaningful neural network inference with production-ready performance characteristics.

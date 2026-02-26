@@ -1,14 +1,14 @@
 # P0 Implementation Completion Report
 
 **Date**: 2025-10-22
-**Scope**: P0 Performance & Correctness Fixes for BitNet.rs
+**Scope**: P0 Performance & Correctness Fixes for BitNet-rs
 **Status**: ✅ Major Items Complete | ⚠️ Minor Items Remaining
 
 ---
 
 ## Executive Summary
 
-Successfully completed **6 of 9** P0 tasks for BitNet.rs inference engine optimizations. The three agents (general-purpose and Explore) delivered:
+Successfully completed **6 of 9** P0 tasks for BitNet-rs inference engine optimizations. The three agents (general-purpose and Explore) delivered:
 
 - **✅ Performance optimizations**: Removed hot-path clones, saving allocations per token
 - **✅ Test infrastructure**: Fixed 6 loader strict mode tests

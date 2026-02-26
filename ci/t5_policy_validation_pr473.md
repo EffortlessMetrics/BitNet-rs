@@ -118,7 +118,7 @@ Benign duplicates (version skew in transitive deps):
 
 ---
 
-## 2. BitNet.rs Neural Network Governance
+## 2. BitNet-rs Neural Network Governance
 
 ### 2.1 Quantization Accuracy Requirements
 
@@ -593,5 +593,5 @@ policy: cargo deny check (licenses ok, sources ok, bans ok);
 ---
 
 **Last Updated**: 2025-10-22T02:00:00Z by policy-gatekeeper
-**Validator**: BitNet.rs Policy Gatekeeper (Integrative Flow T5)
+**Validator**: BitNet-rs Policy Gatekeeper (Integrative Flow T5)
 **Status**: ✅ PASS → NEXT (benchmark-runner)

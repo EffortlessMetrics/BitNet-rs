@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-BitNet.rs tokenizer discovery system contains multiple critical implementation gaps that prevent robust model loading and tokenizer extraction. Three major components require complete implementation:
+BitNet-rs tokenizer discovery system contains multiple critical implementation gaps that prevent robust model loading and tokenizer extraction. Three major components require complete implementation:
 
 1. **Test Infrastructure**: `test_tokenizer_discovery_from_gguf_llama3()` is a placeholder that always expects failure
 2. **Model Type Inference**: `extract_model_type()` has incomplete tensor pattern matching for architecture detection
@@ -708,13 +708,13 @@ fn test_tokenizer_consistency_with_reference() {
 
 ## Related Issues
 
-- BitNet.rs #251: Production-ready inference server (depends on robust tokenizer loading)
-- BitNet.rs #218: Device-aware quantization system (benefits from better model detection)
-- BitNet.rs #260: Mock elimination project (uses improved test infrastructure)
+- BitNet-rs #251: Production-ready inference server (depends on robust tokenizer loading)
+- BitNet-rs #218: Device-aware quantization system (benefits from better model detection)
+- BitNet-rs #260: Mock elimination project (uses improved test infrastructure)
 
 ## Implementation Notes
 
-### BitNet.rs Integration
+### BitNet-rs Integration
 - Use existing `bitnet-models::GgufReader` as foundation
 - Integrate with `bitnet-tokenizers` trait system
 - Follow feature flag architecture (`--features spm` for SentencePiece support)

@@ -2,7 +2,7 @@
 
 ## Summary
 
-We've successfully implemented a comprehensive, production-ready property-based testing framework for BitNet.rs with the following features:
+We've successfully implemented a comprehensive, production-ready property-based testing framework for BitNet-rs with the following features:
 
 ### 1. Rock-Solid Runner Implementation
 - **No shell injection**: Uses argv lists instead of shell=True
@@ -210,4 +210,4 @@ The framework is now:
 - **Memory efficient**: No huge transposes
 - **CI-ready**: Automated testing with clear artifacts
 
-This provides a solid foundation for ensuring BitNet.rs maintains correctness and consistency as it evolves.
+This provides a solid foundation for ensuring BitNet-rs maintains correctness and consistency as it evolves.

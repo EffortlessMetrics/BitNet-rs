@@ -2,7 +2,7 @@
 
 ## Context
 
-BitNet.rs currently returns placeholder logits (zeros [1, 32000]) from the CPU forward path in `CpuInferenceEngine::forward_parallel()`. This blocks actual token generation and question-answering workflows, preventing the CPU MVP from performing real neural network inference.
+BitNet-rs currently returns placeholder logits (zeros [1, 32000]) from the CPU forward path in `CpuInferenceEngine::forward_parallel()`. This blocks actual token generation and question-answering workflows, preventing the CPU MVP from performing real neural network inference.
 
 **Current State:**
 - `CpuInferenceEngine::forward_parallel()` returns zero-filled tensors instead of computed logits
@@ -17,7 +17,7 @@ BitNet.rs currently returns placeholder logits (zeros [1, 32000]) from the CPU f
 - Cross-validation against C++ reference implementation is blocked
 - User-facing CLI cannot perform question-answering workflows
 
-**Affected BitNet.rs Components:**
+**Affected BitNet-rs Components:**
 - `bitnet-inference` (core inference engine with CPU forward pass)
 - `bitnet-cli` (user-facing inference commands)
 - `bitnet-kernels` (quantized linear algebra operations)
@@ -32,7 +32,7 @@ BitNet.rs currently returns placeholder logits (zeros [1, 32000]) from the CPU f
 
 ## User Story
 
-As a BitNet.rs developer or end-user, I want the CPU inference engine to perform real neural network forward passes with quantized weights so that I can generate coherent text from language models on CPU-only systems without GPU dependencies.
+As a BitNet-rs developer or end-user, I want the CPU inference engine to perform real neural network forward passes with quantized weights so that I can generate coherent text from language models on CPU-only systems without GPU dependencies.
 
 ## Acceptance Criteria
 

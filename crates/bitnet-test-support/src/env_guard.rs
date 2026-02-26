@@ -5,7 +5,7 @@
 //
 /// # Design Philosophy
 //
-/// The BitNet.rs test suite uses a **two-tiered approach** for environment variable testing:
+/// The BitNet-rs test suite uses a **two-tiered approach** for environment variable testing:
 //
 /// 1. **Scoped approach (Preferred)**: Use `temp_env::with_var()` with `#[serial(bitnet_env)]`
 ///    - Closure-based isolation with automatic cleanup

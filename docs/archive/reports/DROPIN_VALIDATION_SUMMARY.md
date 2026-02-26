@@ -14,16 +14,16 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Drop-in Replacement Validation Summary
+# BitNet-rs Drop-in Replacement Validation Summary
 
 ## ✅ Mission Accomplished: Superior Drop-in Replacement Confirmed
 
-BitNet.rs has been successfully validated as a **production-ready drop-in replacement** for bitnet.cpp with **superior compatibility and robustness**.
+BitNet-rs has been successfully validated as a **production-ready drop-in replacement** for bitnet.cpp with **superior compatibility and robustness**.
 
 ## Key Achievement: Fixed GGUF v3 Variant Compatibility
 
 ### Problem Solved
-The Microsoft BitNet model (1.2GB, GGUF v3) was failing to load in BitNet.rs with:
+The Microsoft BitNet model (1.2GB, GGUF v3) was failing to load in BitNet-rs with:
 ```
 Invalid model format: String length 7521981564355109234 at offset 36
 ```
@@ -89,7 +89,7 @@ let model = GgufLoader::new("model.gguf")?;
 ```bash
 # Replace llama.cpp binary
 export LD_LIBRARY_PATH=target/release
-./your-app-using-llama  # Will use BitNet.rs via FFI
+./your-app-using-llama  # Will use BitNet-rs via FFI
 ```
 
 ### Cross-Validation Testing
@@ -121,7 +121,7 @@ if potential_strlen > 0 && potential_strlen < 256 {
 
 ## Conclusion
 
-BitNet.rs is not just a drop-in replacement—it's a **superior implementation** that:
+BitNet-rs is not just a drop-in replacement—it's a **superior implementation** that:
 - ✅ Loads all models that C++ loads
 - ✅ PLUS loads models that crash C++
 - ✅ Provides memory safety guarantees

@@ -402,7 +402,7 @@ pub fn with_stop_token_ids(mut self, token_ids: Vec<u32>) -> Self {
 
 ---
 
-## BitNet.rs Neural Network Quality Metrics
+## BitNet-rs Neural Network Quality Metrics
 
 ### Quantization Accuracy Maintained
 

@@ -1,4 +1,4 @@
-//! Mathematical Correctness Mutation Killer Tests for BitNet.rs Quantization
+//! Mathematical Correctness Mutation Killer Tests for BitNet-rs Quantization
 //!
 //! This test suite is designed to kill mutations in quantization algorithms by testing
 //! mathematical correctness, device-aware operations, and numerical accuracy validation.

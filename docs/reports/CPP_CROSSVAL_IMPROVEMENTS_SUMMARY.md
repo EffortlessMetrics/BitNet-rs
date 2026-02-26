@@ -5,13 +5,13 @@
 
 ## Overview
 
-This report summarizes improvements to BitNet.rs C++ cross-validation infrastructure based on comprehensive exploration of existing capabilities and user guidance for auto-bootstrap workflows.
+This report summarizes improvements to BitNet-rs C++ cross-validation infrastructure based on comprehensive exploration of existing capabilities and user guidance for auto-bootstrap workflows.
 
 ## Key Findings from Exploration
 
 ### Existing Infrastructure (Production-Ready)
 
-BitNet.rs already has **95% complete** cross-validation infrastructure that exceeds initial expectations:
+BitNet-rs already has **95% complete** cross-validation infrastructure that exceeds initial expectations:
 
 1. **xtask Commands** ✅
    - `fetch-cpp` - Downloads & builds Microsoft BitNet C++
@@ -377,7 +377,7 @@ cargo xtask --features inference -- crossval-per-token --help
 
 ## Conclusion
 
-The C++ cross-validation infrastructure in BitNet.rs is **production-ready and comprehensive**. The main improvements needed were:
+The C++ cross-validation infrastructure in BitNet-rs is **production-ready and comprehensive**. The main improvements needed were:
 
 1. **Usability** - Fixed compilation errors (P0) ✅
 2. **Documentation** - Created comprehensive setup guide (P0) ✅

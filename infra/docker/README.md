@@ -1,6 +1,6 @@
-# BitNet.rs Docker Deployment
+# bitnet-rs Docker Deployment
 
-This directory contains Docker configurations for deploying BitNet.rs in various environments.
+This directory contains Docker configurations for deploying bitnet-rs in various environments.
 
 ## Quick Start
 
@@ -37,14 +37,14 @@ This directory contains Docker configurations for deploying BitNet.rs in various
 
 ### Image Features
 
-#### BitNet.rs Primary (`Dockerfile.rust-primary`)
+#### bitnet-rs Primary (`Dockerfile.rust-primary`)
 - **Multi-stage build** for minimal image size
 - **Security hardened** with non-root user
 - **Health checks** built-in
 - **Optimized** for production workloads
 - **Size**: ~50MB (compressed)
 
-#### BitNet.rs GPU (`Dockerfile.rust-gpu`)
+#### bitnet-rs GPU (`Dockerfile.rust-gpu`)
 - **CUDA 12.2** runtime support
 - **GPU acceleration** for inference
 - **Automatic GPU detection**
@@ -62,7 +62,7 @@ This directory contains Docker configurations for deploying BitNet.rs in various
 ### Production Deployment (`docker-compose.rust-primary.yml`)
 
 Complete production stack with:
-- **BitNet.rs server** (primary)
+- **bitnet-rs server** (primary)
 - **Nginx** load balancer with SSL
 - **Prometheus** metrics collection
 - **Grafana** visualization
@@ -87,7 +87,7 @@ Complete production stack with:
 ### Cross-validation Deployment (`docker-compose.crossval.yml`)
 
 Development and testing stack with:
-- **BitNet.rs** implementation
+- **bitnet-rs** implementation
 - **Legacy C++** implementation
 - **Cross-validation runner**
 - **Performance benchmarks**
@@ -169,7 +169,7 @@ After deployment, services are available at:
 
 ### Metrics
 
-BitNet.rs exposes Prometheus metrics at `/metrics`:
+bitnet-rs exposes Prometheus metrics at `/metrics`:
 
 - **Request metrics**: Rate, latency, errors
 - **Inference metrics**: Tokens/second, model performance
@@ -237,7 +237,7 @@ deploy:
 
 ### Horizontal Scaling
 
-Add more BitNet.rs instances:
+Add more bitnet-rs instances:
 
 ```yaml
 # docker-compose.yml
@@ -445,4 +445,4 @@ When reporting issues, include:
 
 ---
 
-**Ready to deploy?** Start with `./deploy.sh deploy` for a production-ready BitNet.rs deployment!
+**Ready to deploy?** Start with `./deploy.sh deploy` for a production-ready bitnet-rs deployment!

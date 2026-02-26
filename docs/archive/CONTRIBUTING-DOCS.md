@@ -1,6 +1,6 @@
 # Documentation Contributing Guide
 
-**Audience:** Contributors writing or updating documentation for BitNet.rs
+**Audience:** Contributors writing or updating documentation for BitNet-rs
 
 **Goal:** Maintain consistent, high-quality documentation that serves different audiences and use cases
 
@@ -46,7 +46,7 @@ Use proper heading hierarchy for scanability and navigation:
 
 ### Tone and Voice
 
-BitNet.rs documentation uses a **direct, technical, and precise** tone:
+BitNet-rs documentation uses a **direct, technical, and precise** tone:
 
 **Do:**
 
@@ -69,7 +69,7 @@ Every documentation file should declare its audience and goal in the front matte
 ```markdown
 # Document Title
 
-**Audience:** Developers building BitNet.rs from source
+**Audience:** Developers building BitNet-rs from source
 
 **Goal:** Successfully compile and test the project on Linux/macOS/Windows
 
@@ -86,7 +86,7 @@ Every documentation file should declare its audience and goal in the front matte
 
 ### Content Types (Diátaxis Framework)
 
-BitNet.rs documentation follows the [Diátaxis framework](https://diataxis.fr/) with four content types:
+BitNet-rs documentation follows the [Diátaxis framework](https://diataxis.fr/) with four content types:
 
 | Type | Purpose | Location | Example |
 |------|---------|----------|---------|
@@ -232,7 +232,7 @@ For living documents, include metadata footer:
 
 ### Always Specify Feature Flags
 
-BitNet.rs has **empty default features**. All code examples must explicitly specify features:
+BitNet-rs has **empty default features**. All code examples must explicitly specify features:
 
 **Correct:**
 
@@ -551,7 +551,7 @@ Use blockquotes with emoji prefixes for callouts:
 
 ✅ **Tip:** Use `--no-default-features --features cpu` to avoid linker errors.
 
-💡 **Note:** Default features are empty in BitNet.rs. Always specify features explicitly.
+💡 **Note:** Default features are empty in BitNet-rs. Always specify features explicitly.
 
 🔒 **Security:** Never enable runtime corrections in CI. Use only for known-bad models in local development.
 ```
@@ -570,7 +570,7 @@ Use blockquotes with emoji prefixes for callouts:
 
 ### Directory Structure
 
-BitNet.rs documentation follows the Diátaxis framework:
+BitNet-rs documentation follows the Diátaxis framework:
 
 ```
 docs/
@@ -663,7 +663,7 @@ Before submitting documentation changes:
 
 ### Markdownlint
 
-BitNet.rs uses markdownlint for style consistency:
+BitNet-rs uses markdownlint for style consistency:
 
 ```bash
 # Install markdownlint-cli
@@ -872,7 +872,7 @@ export BITNET_SEED=42
 
 ## Summary
 
-Key principles for BitNet.rs documentation:
+Key principles for BitNet-rs documentation:
 
 1. **Always specify feature flags** - Never assume default features
 2. **Use descriptive examples** - Show realistic, tested commands

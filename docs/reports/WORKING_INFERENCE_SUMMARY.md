@@ -8,7 +8,7 @@
 
 ## What Was Accomplished
 
-This implementation proves that **BitNet.rs inference is working correctly** with comprehensive validation and mock elimination safeguards.
+This implementation proves that **BitNet-rs inference is working correctly** with comprehensive validation and mock elimination safeguards.
 
 ### ✅ Completed Tasks
 

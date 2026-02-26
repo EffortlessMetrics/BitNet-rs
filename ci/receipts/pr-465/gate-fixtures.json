@@ -41,7 +41,7 @@
       "kernel_count": 11,
       "performance": "15.3 tok/s",
       "quantization": "i2s",
-      "details": "Realistic BitNet.rs kernel IDs and CPU performance baseline"
+      "details": "Realistic BitNet-rs kernel IDs and CPU performance baseline"
     },
     "receipt_schema": {
       "status": "pass",

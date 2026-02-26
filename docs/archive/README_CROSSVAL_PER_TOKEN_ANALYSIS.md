@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains comprehensive analysis of the `xtask crossval-per-token` command implementation in BitNet.rs, including identification of a critical execution order bug and complete documentation of the command's architecture.
+This directory contains comprehensive analysis of the `xtask crossval-per-token` command implementation in BitNet-rs, including identification of a critical execution order bug and complete documentation of the command's architecture.
 
 ## Documents in This Analysis
 
@@ -200,6 +200,6 @@ Medium Priority:
 ---
 
 **Report Generated**: October 25, 2025
-**BitNet.rs Status**: v0.1.0-qna-mvp
+**BitNet-rs Status**: v0.1.0-qna-mvp
 **Branch**: feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2
 

@@ -1,4 +1,4 @@
-// Common testing utilities and infrastructure for BitNet.rs
+// Common testing utilities and infrastructure for BitNet-rs
 //
 // This module provides the core testing framework including:
 // - Test harness for parallel execution and result collection

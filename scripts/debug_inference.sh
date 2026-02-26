@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deterministic inference validation script with comprehensive debug logging
 #
-# This script runs BitNet.rs inference with all diagnostic flags enabled
+# This script runs BitNet-rs inference with all diagnostic flags enabled
 # to validate the fixes for attention scaling, RMSNorm, GQA, and tied embeddings.
 #
 # Usage:
@@ -22,7 +22,7 @@ PROMPT="${3:-Answer in one short sentence: Why is the sky blue?}"
 MAX_TOKENS="${4:-32}"
 
 echo "============================================"
-echo "BitNet.rs Deterministic Debug Inference"
+echo "BitNet-rs Deterministic Debug Inference"
 echo "============================================"
 echo "Model: $MODEL"
 echo "Tokenizer: $TOKENIZER"

@@ -664,4 +664,4 @@ tokio = { version = "1.0", features = ["sync", "time"] }
 - **Device Optimization**: Different batching strategies for CPU vs GPU backends
 - **KV Cache**: Efficient KV cache management for batched sequences
 
-This implementation will transform BitNet.rs from a single-request system into a production-ready multi-user inference engine capable of handling concurrent requests efficiently.
+This implementation will transform BitNet-rs from a single-request system into a production-ready multi-user inference engine capable of handling concurrent requests efficiently.

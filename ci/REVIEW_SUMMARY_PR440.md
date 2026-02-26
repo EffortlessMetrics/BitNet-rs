@@ -5,7 +5,7 @@
 **Issue**: #439 (GPU Feature-Gate Hardening)
 **Flow**: Review (Draft → Ready → Merged)
 **Date**: 2025-10-11
-**Reviewer**: review-synthesizer (BitNet.rs CI/CD)
+**Reviewer**: review-synthesizer (BitNet-rs CI/CD)
 
 ---
 
@@ -13,7 +13,7 @@
 
 ### **PROMOTE TO READY FOR REVIEW** ✅
 
-PR #440 successfully implements GPU feature gate unification with backward-compatible `cuda` alias for BitNet.rs neural network inference. All required quality gates PASS. Test suite exhibits 2 pre-existing flaky tests (orthogonal to PR changes) but PR-critical functionality is thoroughly validated with 94.12% coverage, zero overhead performance, and comprehensive mutation-resistance hardening.
+PR #440 successfully implements GPU feature gate unification with backward-compatible `cuda` alias for BitNet-rs neural network inference. All required quality gates PASS. Test suite exhibits 2 pre-existing flaky tests (orthogonal to PR changes) but PR-critical functionality is thoroughly validated with 94.12% coverage, zero overhead performance, and comprehensive mutation-resistance hardening.
 
 ---
 
@@ -221,7 +221,7 @@ docs=100%✅ (3/3 APIs, 2/2 doctests, Diátaxis complete) arch=aligned✅
 
 ---
 
-## BitNet.rs Neural Network Standards Validation ✅
+## BitNet-rs Neural Network Standards Validation ✅
 
 - ✅ **Neural network inference reliability validated** (device detection 100% functional coverage)
 - ✅ **GPU/CPU feature gate correctness confirmed** (109 unified predicates, cpu/gpu/none matrix tested)
@@ -273,5 +273,5 @@ All quality gates PASS. PR ready for maintainer review.
 ---
 
 **Review Completed**: 2025-10-11 09:30 UTC
-**Agent**: review-synthesizer (BitNet.rs CI/CD)
+**Agent**: review-synthesizer (BitNet-rs CI/CD)
 **Version**: 1.0

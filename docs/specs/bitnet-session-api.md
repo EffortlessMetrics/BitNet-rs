@@ -3,7 +3,7 @@
 **Version**: 1.0.0-draft
 **Status**: Design Phase
 **Target**: G2.6 Fast Iteration Support
-**Author**: BitNet.rs Team
+**Author**: BitNet-rs Team
 **Date**: 2025-10-25
 
 ## Overview

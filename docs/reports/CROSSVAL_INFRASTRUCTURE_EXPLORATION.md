@@ -1,4 +1,4 @@
-# BitNet.rs Cross-Validation Infrastructure - Comprehensive Analysis
+# BitNet-rs Cross-Validation Infrastructure - Comprehensive Analysis
 
 **Date**: 2025-10-24  
 **Status**: Production-Ready (MVP Phase)  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The BitNet.rs codebase has **comprehensive cross-validation infrastructure** that enables:
+The BitNet-rs codebase has **comprehensive cross-validation infrastructure** that enables:
 1. **Per-token logits parity checking** (Rust vs C++)
 2. **Full tensor activation tracing** via `BITNET_TRACE_DIR`
 3. **Multi-scenario cross-validation sweeps** with automated reporting

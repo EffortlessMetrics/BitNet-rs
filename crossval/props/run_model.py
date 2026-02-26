@@ -1,6 +1,6 @@
 """
 Cross-system model runners with deterministic execution.
-Provides unified interface for BitNet.rs, llama.cpp, and HuggingFace.
+Provides unified interface for bitnet-rs, llama.cpp, and HuggingFace.
 """
 import json
 import subprocess
@@ -71,7 +71,7 @@ def normalize_text(s: str) -> str:
 
 
 class BitNetRunner:
-    """Runner for BitNet.rs CLI with deterministic settings."""
+    """Runner for bitnet-rs CLI with deterministic settings."""
 
     def __init__(self, bin_path: str, model: str, tokenizer: Optional[str] = None, threads: int = 1):
         self.bin = bin_path

@@ -1,10 +1,10 @@
-# BitNet.rs TDD Test Scaffolding: Comprehensive Implementation Report
+# BitNet-rs TDD Test Scaffolding: Comprehensive Implementation Report
 
 ## Executive Summary
 
 **Total Scaffolds Found: 98+ Ignored Tests**
 
-This report catalogues all TDD-style test scaffolding in the BitNet.rs codebase, organized by issue number and complexity. These scaffolds represent intentional test infrastructure placeholders that guide development and prevent regressions once blockers are resolved.
+This report catalogues all TDD-style test scaffolding in the BitNet-rs codebase, organized by issue number and complexity. These scaffolds represent intentional test infrastructure placeholders that guide development and prevent regressions once blockers are resolved.
 
 ### Statistics
 - **98 ignored tests** marked with `#[ignore]`

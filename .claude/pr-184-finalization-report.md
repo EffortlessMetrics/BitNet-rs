@@ -10,7 +10,7 @@
 
 ## Summary of Changes
 
-This PR implements comprehensive NaN handling improvements in the BitNet.rs sampling system to prevent panics and ensure robust inference when encountering NaN logits from model outputs.
+This PR implements comprehensive NaN handling improvements in the BitNet-rs sampling system to prevent panics and ensure robust inference when encountering NaN logits from model outputs.
 
 ### Key Improvements
 

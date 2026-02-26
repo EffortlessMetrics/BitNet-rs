@@ -107,7 +107,7 @@ pub enum ExportFormat {
 impl Default for DashboardConfig {
     fn default() -> Self {
         Self {
-            title: "BitNet.rs Performance Dashboard".to_string(),
+            title: "BitNet-rs Performance Dashboard".to_string(),
             include_test_results: true,
             include_regression_analysis: true,
             include_trend_analysis: true,
@@ -239,7 +239,7 @@ impl PerformanceDashboardGenerator {
                 "data_points": 0 // Would be self.visualizer.historical_data.len() if accessible
             },
             "performance_metrics": {
-                "rust_implementation": "BitNet.rs",
+                "rust_implementation": "BitNet-rs",
                 "cpp_implementation": "BitNet.cpp",
                 "comparison_threshold": 5.0
             },
@@ -282,7 +282,7 @@ impl PerformanceDashboardGenerator {
 
         content.push_str("## Overview\n\n");
         content.push_str("This dashboard provides comprehensive performance analysis comparing ");
-        content.push_str("BitNet.rs implementation against the C++ reference implementation.\n\n");
+        content.push_str("BitNet-rs implementation against the C++ reference implementation.\n\n");
 
         content.push_str("## Key Features\n\n");
         content.push_str(
@@ -449,7 +449,7 @@ mod tests {
         let generator = PerformanceDashboardGenerator::new(temp_dir.path().to_path_buf(), config);
 
         assert_eq!(generator.output_dir(), temp_dir.path());
-        assert_eq!(generator.dashboard_config.title, "BitNet.rs Performance Dashboard");
+        assert_eq!(generator.dashboard_config.title, "BitNet-rs Performance Dashboard");
     }
 
     #[tokio::test]
@@ -474,7 +474,7 @@ mod tests {
 
         assert!(json_data.contains("dashboard_config"));
         assert!(json_data.contains("performance_metrics"));
-        assert!(json_data.contains("BitNet.rs"));
+        assert!(json_data.contains("BitNet-rs"));
     }
 
     #[tokio::test]
@@ -498,7 +498,7 @@ mod tests {
 
         assert!(summary_path.exists());
         let content = fs::read_to_string(&summary_path).await.unwrap();
-        assert!(content.contains("# BitNet.rs Performance Dashboard"));
+        assert!(content.contains("# BitNet-rs Performance Dashboard"));
         assert!(content.contains("## Overview"));
         assert!(content.contains("## Key Features"));
     }

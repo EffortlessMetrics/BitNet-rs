@@ -14,7 +14,7 @@
       "details": "No known vulnerabilities found in dependency tree"
     },
     "memory_safety": {
-      "tool": "cargo-clippy with BitNet.rs safety flags",
+      "tool": "cargo-clippy with BitNet-rs safety flags",
       "result": "pass_with_notes",
       "unsafe_blocks_added": 1,
       "unsafe_blocks_scope": "test-only",

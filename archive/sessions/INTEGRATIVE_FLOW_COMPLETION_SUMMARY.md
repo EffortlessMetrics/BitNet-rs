@@ -3,7 +3,7 @@
 **Date**: 2025-10-22
 **PR**: #473 (feat/mvp-finalization)
 **Status**: ✅ READY FOR MERGE
-**Validator**: BitNet.rs Pre-Merge Readiness Validator
+**Validator**: BitNet-rs Pre-Merge Readiness Validator
 
 ---
 
@@ -184,7 +184,7 @@ integrative:gate:throughput    ✅ PASS (2.8s inference, >99% quantization)
 
 ## MVP Features Summary
 
-This PR finalizes BitNet.rs MVP with:
+This PR finalizes BitNet-rs MVP with:
 1. **AVX2 Kernel Optimization**: QK256 dequantization acceleration
 2. **O(1) Stop Token Lookup**: HashSet-based inference optimization
 3. **Production Receipt Schema**: v1.0.0 with honest kernel IDs
@@ -213,7 +213,7 @@ All features validated and production-ready.
 
 ## Validation Scope
 
-**Flow**: integrative (BitNet.rs Pre-Merge Readiness Validator)
+**Flow**: integrative (BitNet-rs Pre-Merge Readiness Validator)
 **Authority**: Read-only + validation + ledger updates
 **Responsibility**: Final checkpoint before merge
 
@@ -241,7 +241,7 @@ The MVP is production-ready.
 ---
 
 **Validation Complete**: 2025-10-22T02:45:00Z
-**Validator**: BitNet.rs Pre-Merge Readiness Validator (integrative-gate:pr-merge-prep)
+**Validator**: BitNet-rs Pre-Merge Readiness Validator (integrative-gate:pr-merge-prep)
 **Status**: READY FOR FINALIZATION
 
 ---

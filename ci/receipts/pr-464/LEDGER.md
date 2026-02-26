@@ -290,7 +290,7 @@ freshness: base up-to-date @e3e987d; ahead: 12, behind: 0; ancestry: confirmed; 
 - ✅ Artifacts archived (ci/receipts/pr-464/)
 - ✅ Issue #465 specifications validated (13 specs, 8 contract docs, 0 blocking issues)
 
-**BitNet.rs Standards Met:**
+**BitNet-rs Standards Met:**
 - Quantization accuracy: >99% (I2S/TL1/TL2 validated)
 - Security posture: 0 CVEs, 0 unsafe blocks in new code
 - Documentation: 43/43 tests documented, API references complete

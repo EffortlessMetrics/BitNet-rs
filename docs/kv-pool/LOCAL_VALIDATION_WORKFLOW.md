@@ -63,7 +63,7 @@ nix flake check .#bitnet-server-receipts
 
 ## What "Working Local Validation" Means
 
-In the context of BitNet.rs with CI offline, **local validation is working** when:
+In the context of BitNet-rs with CI offline, **local validation is working** when:
 
 1. **Repeatable:** Commands are captured in a script, not run ad-hoc
 2. **Documented:** Validation steps are explicitly listed

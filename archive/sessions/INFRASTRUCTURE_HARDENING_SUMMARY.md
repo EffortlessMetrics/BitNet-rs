@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Completed 8 critical infrastructure improvements to harden BitNet.rs quality gates and build system portability. These changes establish enforceable patterns for test hygiene, cross-platform FFI builds, and pre-publication validation.
+Completed 8 critical infrastructure improvements to harden BitNet-rs quality gates and build system portability. These changes establish enforceable patterns for test hygiene, cross-platform FFI builds, and pre-publication validation.
 
 ---
 

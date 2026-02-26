@@ -160,7 +160,7 @@ pub fn forward_full(&self, token_ids: &Tensor) -> Result<Tensor> {
 - [ ] Cross-validate outputs against reference implementation
 - [ ] Performance benchmarking across different sequence lengths
 - [ ] Memory usage profiling and optimization
-- [ ] Integration testing with BitNet.rs inference pipeline
+- [ ] Integration testing with BitNet-rs inference pipeline
 
 ## Testing Strategy
 
@@ -210,7 +210,7 @@ fn benchmark_forward_full_performance() {
 
 - Cross-validation with Microsoft BitNet C++ reference implementation
 - GPU memory optimization for long sequences
-- Integration with BitNet.rs inference server batch processing
+- Integration with BitNet-rs inference server batch processing
 - Performance monitoring and metrics collection
 
 ## Acceptance Criteria

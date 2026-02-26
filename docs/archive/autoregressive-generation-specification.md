@@ -6,7 +6,7 @@
 
 ## Overview
 
-Autoregressive generation forms the core of language model inference, generating text token-by-token while maintaining conversation context through efficient KV-caching. This specification defines a production-ready autoregressive generation system that integrates with BitNet.rs quantized transformers, supports multiple sampling strategies (temperature, top-k, nucleus), and provides deterministic generation for reproducible evaluation.
+Autoregressive generation forms the core of language model inference, generating text token-by-token while maintaining conversation context through efficient KV-caching. This specification defines a production-ready autoregressive generation system that integrates with BitNet-rs quantized transformers, supports multiple sampling strategies (temperature, top-k, nucleus), and provides deterministic generation for reproducible evaluation.
 
 ## Architecture Design
 
@@ -1162,4 +1162,4 @@ mod tests {
 }
 ```
 
-This comprehensive autoregressive generation specification provides a production-ready implementation with advanced sampling strategies, deterministic generation, streaming support, and efficient batch processing, all optimized for BitNet.rs quantized transformers.
+This comprehensive autoregressive generation specification provides a production-ready implementation with advanced sampling strategies, deterministic generation, streaming support, and efficient batch processing, all optimized for BitNet-rs quantized transformers.

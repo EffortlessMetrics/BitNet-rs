@@ -97,7 +97,7 @@ async fn test_html_basic_report() {
     // Verify HTML content
     let content = fs::read_to_string(&output_path).await.unwrap();
     assert!(content.contains("<!DOCTYPE html>"));
-    assert!(content.contains("BitNet.rs Test Report"));
+    assert!(content.contains("BitNet-rs Test Report"));
     assert!(content.contains("basic_test_suite"));
     assert!(content.contains("test_pass"));
     assert!(content.contains("test_fail"));
@@ -151,7 +151,7 @@ async fn test_markdown_basic_report() {
 
     // Verify Markdown content
     let content = fs::read_to_string(&output_path).await.unwrap();
-    assert!(content.contains("# BitNet.rs Test Report"));
+    assert!(content.contains("# BitNet-rs Test Report"));
     assert!(content.contains("## Summary"));
     assert!(content.contains("basic_test_suite"));
     assert!(content.contains("test_pass"));

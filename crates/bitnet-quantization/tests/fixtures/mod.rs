@@ -1,6 +1,6 @@
 //! Test Fixtures Module for Issue #260 Mock Elimination
 //!
-//! Simple fixture loading and management for BitNet.rs neural network
+//! Simple fixture loading and management for BitNet-rs neural network
 //! quantization testing. Provides feature-gated access to comprehensive test
 //! data including I2S/TL1/TL2 quantization, GGUF models, cross-validation,
 //! and mock detection scenarios.

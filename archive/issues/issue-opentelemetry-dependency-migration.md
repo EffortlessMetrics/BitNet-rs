@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The `opentelemetry-prometheus` crate used in BitNet.rs is discontinued and causes build failures due to version incompatibilities with other OpenTelemetry crates. The workspace uses `opentelemetry` version 0.30.0, while `opentelemetry-prometheus` is stuck at 0.29.1, creating a dependency conflict that prevents successful compilation.
+The `opentelemetry-prometheus` crate used in BitNet-rs is discontinued and causes build failures due to version incompatibilities with other OpenTelemetry crates. The workspace uses `opentelemetry` version 0.30.0, while `opentelemetry-prometheus` is stuck at 0.29.1, creating a dependency conflict that prevents successful compilation.
 
 ## Environment
 - **Affected Files**:

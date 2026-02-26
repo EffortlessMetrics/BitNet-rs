@@ -226,6 +226,6 @@ Ratio: 0.0198 ≈ 1/50.5 ✓
 ---
 
 **Generated**: 2025-10-24  
-**Investigation**: BitNet.rs LayerNorm Implementation (Issue #254 context)  
+**Investigation**: BitNet-rs LayerNorm Implementation (Issue #254 context)  
 **Scope**: GGUF tensor loading, RMSNorm forward pass, validation gates, shape handling
 

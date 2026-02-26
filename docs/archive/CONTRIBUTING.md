@@ -1,6 +1,6 @@
-# Contributing to BitNet.rs
+# Contributing to BitNet-rs
 
-Thank you for your interest in contributing to BitNet.rs! This document provides guidelines and best practices for contributing to the project.
+Thank you for your interest in contributing to BitNet-rs! This document provides guidelines and best practices for contributing to the project.
 
 ## Getting Started
 
@@ -82,7 +82,7 @@ cargo test --no-default-features --workspace --features crossval
 ## Reporting Issues
 
 When reporting issues, please include:
-- BitNet.rs version
+- BitNet-rs version
 - Rust version (`rustc --version`)
 - Operating system
 - Steps to reproduce

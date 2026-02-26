@@ -113,7 +113,7 @@
 
 ## Testing Summary
 
-All BitNet.rs quality gates pass:
+All BitNet-rs quality gates pass:
 
 ### Quality Gates ✅
 
@@ -153,7 +153,7 @@ All BitNet.rs quality gates pass:
 
 ---
 
-## BitNet.rs GitHub-Native Receipts
+## BitNet-rs GitHub-Native Receipts
 
 ### Publication Gate Receipt
 
@@ -212,9 +212,9 @@ migration:
 
 ## Labels Applied
 
-**Note**: Repository may not have custom BitNet.rs labels created yet. Recommended labels:
+**Note**: Repository may not have custom BitNet-rs labels created yet. Recommended labels:
 
-- `flow:generative` - BitNet.rs generative flow PR
+- `flow:generative` - BitNet-rs generative flow PR
 - `state:ready` - Ready for review
 - `topic:quantization` - QK256 AVX2 and dual-flavor testing
 - `topic:testing` - Test infrastructure (EnvGuard, fixtures)
@@ -334,6 +334,6 @@ This PR establishes foundations for:
 ---
 
 **Creation Timestamp**: 2025-10-22T21:35:00Z
-**Created By**: BitNet.rs PR Publisher (Generative Flow Agent)
+**Created By**: BitNet-rs PR Publisher (Generative Flow Agent)
 **Document Version**: 1.0
 **Status**: ✅ PR Created Successfully

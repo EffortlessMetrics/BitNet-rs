@@ -1,6 +1,6 @@
-# Contributing to BitNet.rs
+# Contributing to BitNet-rs
 
-Welcome to BitNet.rs! We appreciate your interest in contributing to our high-performance 1-bit neural network quantization and inference library for Rust.
+Welcome to BitNet-rs! We appreciate your interest in contributing to our high-performance 1-bit neural network quantization and inference library for Rust.
 
 ## Quick Start for Contributors
 
@@ -39,7 +39,7 @@ Welcome to BitNet.rs! We appreciate your interest in contributing to our high-pe
 
 ## Pre-Commit Hooks
 
-BitNet.rs uses local pre-commit hooks to catch quality issues before they reach CI.
+BitNet-rs uses local pre-commit hooks to catch quality issues before they reach CI.
 
 ### Setup
 
@@ -229,7 +229,7 @@ This ensures local validation exactly matches CI, preventing surprise failures.
 
 ### Working with Test Fixtures
 
-BitNet.rs uses a **3-layer fixture architecture** for testing neural network operations, quantization algorithms, and model loading:
+BitNet-rs uses a **3-layer fixture architecture** for testing neural network operations, quantization algorithms, and model loading:
 
 #### Fixture Patterns
 
@@ -403,7 +403,7 @@ cargo test --workspace --no-default-features --features gpu
 
 ### Environment Variable Testing
 
-BitNet.rs uses environment variables for runtime configuration (e.g., `BITNET_STRICT_MODE`, `BITNET_DETERMINISTIC`, `BITNET_GGUF`). Tests that mutate environment variables must use **EnvGuard** and **serial execution** to prevent flaky tests and race conditions.
+BitNet-rs uses environment variables for runtime configuration (e.g., `BITNET_STRICT_MODE`, `BITNET_DETERMINISTIC`, `BITNET_GGUF`). Tests that mutate environment variables must use **EnvGuard** and **serial execution** to prevent flaky tests and race conditions.
 
 **Why This Matters**: Environment variables are process-global state. Without isolation, parallel tests can interfere with each other:
 - Test A sets `BITNET_STRICT_MODE=1` → Test B unexpectedly sees strict mode enabled
@@ -457,7 +457,7 @@ fn test_model_path_override() {
 
 ### Enable Pre-commit Hooks (Recommended)
 
-BitNet.rs provides Git hooks that enforce quality standards locally before commits reach CI:
+BitNet-rs provides Git hooks that enforce quality standards locally before commits reach CI:
 
 ```bash
 # Enable pre-commit hooks
@@ -482,7 +482,7 @@ Pre-commit hooks catch issues early in your local workflow:
 
 ## CI and Supply Chain Requirements
 
-BitNet.rs enforces strict CI hygiene and supply chain security to prevent supply chain attacks and ensure reproducible builds:
+BitNet-rs enforces strict CI hygiene and supply chain security to prevent supply chain attacks and ensure reproducible builds:
 
 **GitHub Actions Supply Chain:**
 - **All workflow actions must be SHA-pinned** (not floating tags like `@v3`)
@@ -647,7 +647,7 @@ Before submitting a PR, ensure:
 
 ### CI Labels and Optional Workflows
 
-BitNet.rs uses a **label-gated CI system** to optimize CI resource usage. By default, only fast core checks run on every PR:
+BitNet-rs uses a **label-gated CI system** to optimize CI resource usage. By default, only fast core checks run on every PR:
 - **Build & Test** (ubuntu-latest, ~5 minutes)
 - **Clippy** (linting)
 - **Documentation** (doc generation)
@@ -729,7 +729,7 @@ gh pr edit 123 --remove-label quant,perf,crossval
 
 ## License
 
-By contributing to BitNet.rs, you agree that your contributions will be licensed under the same terms as the project (MIT OR Apache-2.0).
+By contributing to BitNet-rs, you agree that your contributions will be licensed under the same terms as the project (MIT OR Apache-2.0).
 
 ## Code of Conduct
 
@@ -737,4 +737,4 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ---
 
-Thank you for contributing to BitNet.rs! Your contributions help advance high-performance neural network inference in Rust.
+Thank you for contributing to BitNet-rs! Your contributions help advance high-performance neural network inference in Rust.

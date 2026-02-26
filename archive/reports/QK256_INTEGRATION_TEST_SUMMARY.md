@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implemented comprehensive end-to-end integration tests for QK256 support in BitNet.rs, validating the complete pipeline from GGUF tensor loading through forward pass computation.
+Implemented comprehensive end-to-end integration tests for QK256 support in BitNet-rs, validating the complete pipeline from GGUF tensor loading through forward pass computation.
 
 ## Test File Location
 

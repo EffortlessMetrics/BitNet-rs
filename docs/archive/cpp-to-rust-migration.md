@@ -1,6 +1,6 @@
 # C++ to Rust Migration Guide
 
-This comprehensive guide helps you migrate from the original BitNet C++ implementation to BitNet.rs, the production-ready Rust implementation.
+This comprehensive guide helps you migrate from the original BitNet C++ implementation to BitNet-rs, the production-ready Rust implementation.
 
 ## Table of Contents
 
@@ -17,9 +17,9 @@ This comprehensive guide helps you migrate from the original BitNet C++ implemen
 
 ## Migration Overview
 
-### Why Migrate to BitNet.rs?
+### Why Migrate to BitNet-rs?
 
-| Aspect | C++ Implementation | BitNet.rs | Improvement |
+| Aspect | C++ Implementation | BitNet-rs | Improvement |
 |--------|-------------------|-----------|-------------|
 | **Performance** | Baseline | Optimized design* | Performance benchmarking in development |
 | **Memory Usage** | 3.2 GB | 2.1 GB | 34% reduction |
@@ -86,7 +86,7 @@ find . -name "*.gguf" -o -name "*.bin" -o -name "*.safetensors"
 
 ## Quick Start Migration
 
-### 1. Install BitNet.rs
+### 1. Install BitNet-rs
 
 ```bash
 # Add to your Rust project
@@ -433,7 +433,7 @@ let buffer = vec![0u8; size];
 
 ### Cross-Validation Setup
 
-Verify that BitNet.rs produces identical results to the C++ implementation:
+Verify that BitNet-rs produces identical results to the C++ implementation:
 
 ```bash
 # Set up cross-validation environment
@@ -716,7 +716,7 @@ let model = BitNetModel::load("model.gguf", &Device::Cpu)?;
 
 #### Professional Services
 - **Migration consulting**: Expert guidance for complex migrations
-- **Performance optimization**: Maximize BitNet.rs benefits
+- **Performance optimization**: Maximize BitNet-rs benefits
 - **Training workshops**: Team education on Rust implementation
 - **Custom integration**: Tailored solutions for specific needs
 

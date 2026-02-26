@@ -180,7 +180,7 @@ mod tests {
 - Test failure scenarios and error handling
 - Test performance impact of validation overhead
 
-## BitNet.rs Integration Notes
+## BitNet-rs Integration Notes
 
 ### Feature Flag Considerations
 - Validation logic should respect `--features cpu|gpu` configuration

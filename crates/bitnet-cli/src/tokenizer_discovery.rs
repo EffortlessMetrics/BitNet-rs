@@ -1,4 +1,4 @@
-//! Tokenizer auto-discovery for BitNet.rs CLI
+//! Tokenizer auto-discovery for BitNet-rs CLI
 //!
 //! This module implements automatic tokenizer discovery with a fallback chain:
 //! 1. Explicit --tokenizer flag (highest priority)

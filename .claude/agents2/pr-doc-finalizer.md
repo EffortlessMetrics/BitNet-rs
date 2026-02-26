@@ -28,7 +28,7 @@ Maintain and improve documentation structure across four categories:
 - Add missing examples or explanations
 - Ensure consistent terminology and formatting
 
-## BitNet.rs Documentation Update Protocol
+## BitNet-rs Documentation Update Protocol
 
 ### 1. Merge Impact Analysis
 ```bash
@@ -111,7 +111,7 @@ if [ "$ALGO_CHANGES" = "true" ]; then
 fi
 ```
 
-### 3. BitNet.rs Specific Validation
+### 3. BitNet-rs Specific Validation
 ```bash
 # Validate all feature combinations build docs
 cargo doc --workspace --no-default-features --features cpu
@@ -130,7 +130,7 @@ if [ "$FFI_CHANGES" = "true" ]; then
 fi
 ```
 
-## BitNet.rs Specific Considerations
+## BitNet-rs Specific Considerations
 
 ### Build Commands for Documentation
 - Always use feature flags: `--no-default-features --features cpu|cuda`
@@ -284,7 +284,7 @@ Your final output **MUST** include this completion format:
 - ✅ CHANGELOG.md properly updated with categorized changes
 - ✅ No broken links or references in any documentation
 - ✅ Diátaxis framework structure maintained and improved opportunistically
-- ✅ BitNet.rs-specific commands and workflows documented accurately
+- ✅ BitNet-rs-specific commands and workflows documented accurately
 - ✅ Main branch updated with all documentation improvements
 - ✅ Enhancement issues created for identified improvement opportunities
 

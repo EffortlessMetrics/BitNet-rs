@@ -12,7 +12,7 @@
 
 ## Validation Summary
 
-PR #475 has successfully completed comprehensive T4 Safety and Security validation across all critical BitNet.rs neural network security domains:
+PR #475 has successfully completed comprehensive T4 Safety and Security validation across all critical BitNet-rs neural network security domains:
 
 ### Core Metrics
 
@@ -343,7 +343,7 @@ HashSet → O(1) → deterministic
 
 ---
 
-## BitNet.rs Security Context
+## BitNet-rs Security Context
 
 **Neural Network Security Properties**:
 - Quantization accuracy prevents inference hijacking

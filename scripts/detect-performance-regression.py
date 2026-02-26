@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Performance regression detection for BitNet.rs
+Performance regression detection for bitnet-rs
 
 This script compares current benchmark results against established baselines
 and detects performance regressions, improvements, or anomalies.
@@ -447,7 +447,7 @@ def format_alert_as_dict(alert: PerformanceAlert) -> Dict[str, Any]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Detect performance regressions in BitNet.rs benchmarks")
+    parser = argparse.ArgumentParser(description="Detect performance regressions in bitnet-rs benchmarks")
     parser.add_argument("results_file", help="Path to benchmark results JSON file")
     parser.add_argument("--platform", "-p", default="linux-x86_64",
                        help="Platform to compare against (default: linux-x86_64)")
@@ -482,7 +482,7 @@ def main():
             print(json.dumps(output_data, indent=2))
 
     else:  # human format
-        print("🔍 BitNet.rs Performance Regression Analysis")
+        print("🔍 bitnet-rs Performance Regression Analysis")
         print("=" * 50)
         print(f"Platform: {args.platform}")
         print(f"Status: {result.status.upper()}")

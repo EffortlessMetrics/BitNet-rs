@@ -119,7 +119,7 @@ validation."
 
 **Can Fix**:
 1. ✅ Review `impl-creator` implementations for quality
-2. ✅ Check formatting, clippy lints, BitNet.rs standards
+2. ✅ Check formatting, clippy lints, BitNet-rs standards
 3. ✅ Validate neural network implementation patterns
 
 **Usage**:
@@ -127,7 +127,7 @@ validation."
 # After impl-creator makes tests pass
 Task tool → generative-code-reviewer:
 "Review the quantized_matmul implementation for code quality, performance patterns,
-and BitNet.rs neural network standards compliance"
+and BitNet-rs neural network standards compliance"
 ```
 
 **Expected Outcome**:
@@ -154,7 +154,7 @@ and BitNet.rs neural network standards compliance"
 Task tool → impl-finalizer:
 "Perform comprehensive quality review of Issue #260 implementation. Validate that
 test_cpu_simd_kernel_integration and test_tl2_avx_optimization pass, quality gates green,
-and code meets BitNet.rs standards."
+and code meets BitNet-rs standards."
 ```
 
 **Expected Outcome**:

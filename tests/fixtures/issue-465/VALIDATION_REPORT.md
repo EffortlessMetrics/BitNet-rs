@@ -1,12 +1,12 @@
 # Issue #465 Fixture Validation Report
 
 **Date:** 2025-10-15
-**Validator:** BitNet.rs Test Fixture Architect
+**Validator:** BitNet-rs Test Fixture Architect
 **Status:** ✅ All fixtures validated and ready for use
 
 ## Summary
 
-Created comprehensive test fixtures for Issue #465: CPU Path Followup test infrastructure. All 12 acceptance criteria covered with realistic BitNet.rs neural network patterns.
+Created comprehensive test fixtures for Issue #465: CPU Path Followup test infrastructure. All 12 acceptance criteria covered with realistic BitNet-rs neural network patterns.
 
 **Fixtures Created:** 17 files
 **JSON Fixtures:** 9 (all valid)
@@ -59,7 +59,7 @@ All markdown and text files reviewed for:
 - ✅ Proper markdown syntax
 - ✅ Code block formatting
 - ✅ Table structure
-- ✅ Feature flag patterns match BitNet.rs standards
+- ✅ Feature flag patterns match BitNet-rs standards
 - ✅ Environment variable documentation complete
 - ✅ Receipt schema v1.0.0 examples
 
@@ -161,7 +161,7 @@ fn load_fixture(name: &str) -> String {
 | `issue_465_documentation_tests.rs` | README templates, audit files | ✅ Compiles |
 | `issue_465_release_qa_tests.rs` | GitHub API mocks | ✅ Compiles |
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Flag Patterns
 
@@ -185,7 +185,7 @@ Environment variables documented consistently:
 
 ### Workspace Awareness
 
-All paths follow BitNet.rs conventions:
+All paths follow BitNet-rs conventions:
 
 - ✅ `docs/baselines/YYYYMMDD-cpu.json` (baseline storage)
 - ✅ `ci/inference.json` (receipt output)

@@ -1,4 +1,4 @@
-# BitNet.rs Validation Infrastructure Exploration Report
+# BitNet-rs Validation Infrastructure Exploration Report
 
 **Date**: 2025-10-16
 **Repository**: /home/steven/code/Rust/BitNet-rs
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The BitNet.rs repository maintains a comprehensive validation infrastructure with multiple layers of testing, cross-validation against C++ reference implementations, and infrastructure for honest inference receipt verification. The codebase is currently in the middle of implementing comprehensive CLI/chat UX improvements (PR #467) while maintaining strict quality gates for quantization accuracy and performance verification.
+The BitNet-rs repository maintains a comprehensive validation infrastructure with multiple layers of testing, cross-validation against C++ reference implementations, and infrastructure for honest inference receipt verification. The codebase is currently in the middle of implementing comprehensive CLI/chat UX improvements (PR #467) while maintaining strict quality gates for quantization accuracy and performance verification.
 
 **Key Finding**: The validation infrastructure is sophisticated but partially mocked, particularly in the C++ wrapper layer and crossval integration. There is a clear separation between production test fixtures (for actual models) and scaffolding/placeholder implementations for development.
 
@@ -504,7 +504,7 @@ eb5ba4f7 - test: add comprehensive test scaffolding for chat/CLI UX improvements
 
 ## Conclusion
 
-The BitNet.rs validation infrastructure is **sophisticated and production-ready** for the Rust inference engine. Receipt verification gates are comprehensive and properly enforce honest compute (GPU kernel detection, CPU quantization validation). Test scaffolding is extensive with 100+ test files covering AC1-AC10 acceptance criteria.
+The BitNet-rs validation infrastructure is **sophisticated and production-ready** for the Rust inference engine. Receipt verification gates are comprehensive and properly enforce honest compute (GPU kernel detection, CPU quantization validation). Test scaffolding is extensive with 100+ test files covering AC1-AC10 acceptance criteria.
 
 **Current State**: PR #467 is merge-ready from a functionality standpoint. Receipt generation and verification infrastructure is stable. Test scaffolding is comprehensive.
 

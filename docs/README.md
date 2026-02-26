@@ -1,6 +1,6 @@
-# BitNet.rs Documentation
+# BitNet-rs Documentation
 
-BitNet.rs is a Rust implementation of BitNet — Microsoft's 1-bit weight neural network inference framework.
+BitNet-rs is a Rust implementation of BitNet — Microsoft's 1-bit weight neural network inference framework.
 
 Documentation is organized using the [Diátaxis](https://diataxis.fr/) framework.
 

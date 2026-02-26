@@ -247,7 +247,7 @@ fn test_cuda_quantization_still_works_after_cleanup() {
 
 - Security validation framework for quantization operations
 - CUDA kernel error handling and fallback mechanisms
-- BitNet.rs production security requirements
+- BitNet-rs production security requirements
 - Quantization API consistency across I2S, TL1, TL2
 
 ## Acceptance Criteria
@@ -268,6 +268,6 @@ fn test_cuda_quantization_still_works_after_cleanup() {
 
 ## Notes
 
-The presence of security validation logic suggests this method was intended for production use. Before removing, we should evaluate whether the security features provide value for BitNet.rs production deployments. The validation logic for numerical stability and tensor bounds could be beneficial even if the specific security limits API isn't used.
+The presence of security validation logic suggests this method was intended for production use. Before removing, we should evaluate whether the security features provide value for BitNet-rs production deployments. The validation logic for numerical stability and tensor bounds could be beneficial even if the specific security limits API isn't used.
 
 Consider also whether other quantizers (TL1, TL2) should have similar security validation capabilities for consistency across the quantization framework.

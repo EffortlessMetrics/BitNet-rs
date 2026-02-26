@@ -1,7 +1,7 @@
-# BitNet.rs Compilation Errors Research Report
+# BitNet-rs Compilation Errors Research Report
 **Research Date:** 2025-10-11
 **Subject:** Pre-existing compilation errors discovered during T1 validation of PR #445
-**Researcher:** BitNet.rs GitHub Research Specialist
+**Researcher:** BitNet-rs GitHub Research Specialist
 **Repository:** EffortlessMetrics/BitNet-rs
 
 ---
@@ -205,7 +205,7 @@ help: consider importing this module
 
 ```rust
 // Line 63: Missing use anyhow::Context;
-.context("Failed to load BitNet.rs model for cross-validation")?;
+.context("Failed to load BitNet-rs model for cross-validation")?;
 ```
 
 **Fix:** Add `use anyhow::Context;` to imports
@@ -394,7 +394,7 @@ error[E0609]: no field `fail_fast` on type `TestConfig`
 
 ### 5.1 Feature Flag Architecture
 
-**BitNet.rs Feature Strategy:**
+**BitNet-rs Feature Strategy:**
 - **Default features:** EMPTY (intentional design)
 - **Standard builds:** Always specify `--no-default-features --features cpu|gpu`
 - **Full feature testing:** `--all-features` enables ALL optional features simultaneously
@@ -700,6 +700,6 @@ grep -r "clippy" .github/workflows/
 ---
 
 **Research Completed:** 2025-10-11
-**Researcher:** BitNet.rs GitHub Research Specialist
+**Researcher:** BitNet-rs GitHub Research Specialist
 **Report Version:** 1.0
 **Next Review:** After OpenTelemetry resolution (Issue #359)

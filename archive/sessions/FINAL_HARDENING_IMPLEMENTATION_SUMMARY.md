@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Completed comprehensive analysis and fixes for the final 10% hardening phase of BitNet.rs.
+Completed comprehensive analysis and fixes for the final 10% hardening phase of BitNet-rs.
 **Key Finding**: Most items were already implemented! Only 3 items needed fixes:
 
 1. ✅ Pre-commit hook improvements (ripgrep preflight + proper ignore validation)

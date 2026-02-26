@@ -474,7 +474,7 @@ fn test_strict_mode_prevents_mock_inference() -> Result<()> {
 - Ensured Cargo parses setting correctly
 
 #### Commit 4e9c95df (October 19, 2025)
-**Message**: `feat: BitNet.rs v0.1.0-qna-mvp — Q&A Ready (#471)`
+**Message**: `feat: BitNet-rs v0.1.0-qna-mvp — Q&A Ready (#471)`
 
 **Change**: Setting persists in v0.1.0-qna-mvp release
 

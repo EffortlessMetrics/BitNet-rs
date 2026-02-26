@@ -1,6 +1,6 @@
-# BitNet.rs Testing Framework Documentation
+# BitNet-rs Testing Framework Documentation
 
-This directory contains comprehensive documentation for the BitNet.rs testing framework, covering everything from basic usage to advanced testing scenarios.
+This directory contains comprehensive documentation for the BitNet-rs testing framework, covering everything from basic usage to advanced testing scenarios.
 
 ## Documentation Structure
 

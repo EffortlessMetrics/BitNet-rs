@@ -1,10 +1,10 @@
-# BitNet.rs Benchmarking Infrastructure Setup
+# bitnet-rs Benchmarking Infrastructure Setup
 
-This document provides comprehensive guidance for setting up and using the BitNet.rs benchmarking infrastructure, addressing GitHub issue #155.
+This document provides comprehensive guidance for setting up and using the bitnet-rs benchmarking infrastructure, addressing GitHub issue #155.
 
 ## Overview
 
-The `scripts/setup-benchmarks.sh` script provides a one-stop solution for setting up a complete benchmarking environment for BitNet.rs. It addresses the "non-functional" benchmarking issues by:
+The `scripts/setup-benchmarks.sh` script provides a one-stop solution for setting up a complete benchmarking environment for bitnet-rs. It addresses the "non-functional" benchmarking issues by:
 
 1. **Downloading and verifying required models and tokenizers**
 2. **Setting up the C++ implementation for cross-validation**

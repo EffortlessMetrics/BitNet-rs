@@ -1,6 +1,6 @@
 name: Validation Gates
 
-# Comprehensive validation workflow for BitNet.rs quality assurance
+# Comprehensive validation workflow for bitnet-rs quality assurance
 # This workflow enforces validation standards across all model operations:
 # - Build validation tools (bitnet-cli with full-cli, st-tools)
 # - Run validation integration tests

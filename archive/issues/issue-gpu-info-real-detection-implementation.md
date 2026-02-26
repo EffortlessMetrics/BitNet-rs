@@ -529,7 +529,7 @@ mod tests {
 }
 ```
 
-## BitNet.rs Integration Notes
+## BitNet-rs Integration Notes
 
 ### Feature Flag Integration
 ```rust

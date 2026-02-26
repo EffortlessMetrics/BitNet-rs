@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The `GPUQuantizer::quantize_i2s` implementation currently falls back to CPU-based quantization despite being designed for GPU acceleration. This architectural gap prevents BitNet.rs from leveraging GPU compute capabilities for quantization operations, significantly limiting performance in GPU-accelerated inference scenarios.
+The `GPUQuantizer::quantize_i2s` implementation currently falls back to CPU-based quantization despite being designed for GPU acceleration. This architectural gap prevents BitNet-rs from leveraging GPU compute capabilities for quantization operations, significantly limiting performance in GPU-accelerated inference scenarios.
 
 ## Environment
 
@@ -617,4 +617,4 @@ mod benchmarks {
 
 ## Implementation Notes
 
-This implementation provides true GPU acceleration for I2S quantization, eliminating the CPU fallback and enabling the full potential of GPU-accelerated inference in BitNet.rs. The CUDA kernels are optimized for different GPU architectures and include proper memory management and error handling.
+This implementation provides true GPU acceleration for I2S quantization, eliminating the CPU fallback and enabling the full potential of GPU-accelerated inference in BitNet-rs. The CUDA kernels are optimized for different GPU architectures and include proper memory management and error handling.

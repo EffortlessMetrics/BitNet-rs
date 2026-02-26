@@ -1,6 +1,6 @@
-# BitNet.rs Git Hooks
+# bitnet-rs Git Hooks
 
-This directory contains Git hooks that enforce BitNet.rs quality standards locally before commits reach CI.
+This directory contains Git hooks that enforce bitnet-rs quality standards locally before commits reach CI.
 
 ## Quick Setup
 
@@ -56,7 +56,7 @@ git config core.hooksPath
 
 If the hook incorrectly flags valid code:
 1. Check the pattern documentation in the hook file
-2. Report issue to the BitNet.rs team
+2. Report issue to the bitnet-rs team
 3. Use `--no-verify` as a temporary workaround
 
 ## Documentation

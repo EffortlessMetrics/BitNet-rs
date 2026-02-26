@@ -570,5 +570,5 @@ lychee --config .lychee.toml --format markdown \
 ---
 
 **Report Generated**: 2025-10-23
-**Validator**: Claude Code (BitNet.rs Documentation Gate)
+**Validator**: Claude Code (BitNet-rs Documentation Gate)
 **Next Actions**: Apply immediate fixes (36 errors), create missing docs (18 errors), clean up stale references (25 errors)

@@ -16,7 +16,7 @@
 ---
 # Dual Format Support (SafeTensors + GGUF)
 
-BitNet.rs now supports **both SafeTensors and GGUF formats** with automatic detection, validation gates, and performance measurement.
+BitNet-rs now supports **both SafeTensors and GGUF formats** with automatic detection, validation gates, and performance measurement.
 
 ## ✅ What's Implemented
 

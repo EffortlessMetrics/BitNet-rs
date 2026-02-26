@@ -1,8 +1,8 @@
-# Backend Detection and Device Selection Patterns - BitNet.rs Analysis Report
+# Backend Detection and Device Selection Patterns - BitNet-rs Analysis Report
 
 ## Executive Summary
 
-BitNet.rs implements a comprehensive backend detection system with unified patterns for GPU/CPU selection, runtime detection, and environment overrides. This report documents the existing patterns and provides reusable templates for adding C++ backend detection similar to the GPU/CPU architecture.
+BitNet-rs implements a comprehensive backend detection system with unified patterns for GPU/CPU selection, runtime detection, and environment overrides. This report documents the existing patterns and provides reusable templates for adding C++ backend detection similar to the GPU/CPU architecture.
 
 ## Key Findings
 
@@ -651,7 +651,7 @@ fn test_cpp_backend_fake_override() {
 
 ## Key Takeaways
 
-1. **BitNet.rs uses unified patterns** for all backend detection:
+1. **BitNet-rs uses unified patterns** for all backend detection:
    - Compile-time checks via feature gates
    - Runtime checks via system commands or environment variables
    - Graceful fallback chains

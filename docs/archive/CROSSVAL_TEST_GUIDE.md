@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides a quick reference to BitNet.rs's comprehensive cross-validation test infrastructure. For detailed documentation, see `crossval-test-infrastructure.md`.
+This guide provides a quick reference to BitNet-rs's comprehensive cross-validation test infrastructure. For detailed documentation, see `crossval-test-infrastructure.md`.
 
 ## Quick Links
 

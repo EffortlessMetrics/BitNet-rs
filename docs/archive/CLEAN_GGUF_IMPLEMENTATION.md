@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This implementation provides a complete **Option 2 (Clean GGUF)** solution for BitNet.rs, enabling reproducible export of GGUF models with **float-preserved LayerNorm weights**. Models exported through this pipeline:
+This implementation provides a complete **Option 2 (Clean GGUF)** solution for BitNet-rs, enabling reproducible export of GGUF models with **float-preserved LayerNorm weights**. Models exported through this pipeline:
 
 - ✅ Pass `BITNET_STRICT_MODE=1` validation (no policy corrections needed)
 - ✅ Produce coherent CPU inference outputs

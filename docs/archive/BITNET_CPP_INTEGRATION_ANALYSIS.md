@@ -1,8 +1,8 @@
-# BitNet.rs to bitnet.cpp Integration Analysis
+# BitNet-rs to bitnet.cpp Integration Analysis
 
 ## Executive Summary
 
-BitNet.rs has a **well-established FFI bridge to Microsoft's BitNet C++ implementation** with infrastructure for layer-by-layer comparison. The integration is complete for single-token logits comparison but lacks explicit APIs for intermediate activation extraction. However, the underlying llama.cpp infrastructure supports position-wise logits retrieval, enabling activation analysis through custom FFI extensions.
+BitNet-rs has a **well-established FFI bridge to Microsoft's BitNet C++ implementation** with infrastructure for layer-by-layer comparison. The integration is complete for single-token logits comparison but lacks explicit APIs for intermediate activation extraction. However, the underlying llama.cpp infrastructure supports position-wise logits retrieval, enabling activation analysis through custom FFI extensions.
 
 ## 1. BITNET_CPP_DIR Environment Variable Usage
 

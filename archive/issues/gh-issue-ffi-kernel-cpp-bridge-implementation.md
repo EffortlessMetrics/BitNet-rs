@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The `FfiKernel` implementation in BitNet.rs currently uses direct C++ function calls through FFI for critical matrix operations (`matmul_i2s` and `quantize`), creating a dependency bottleneck and potential performance/portability concerns. This architectural decision forces reliance on external C++ implementations rather than leveraging Rust's native SIMD capabilities and memory safety guarantees.
+The `FfiKernel` implementation in BitNet-rs currently uses direct C++ function calls through FFI for critical matrix operations (`matmul_i2s` and `quantize`), creating a dependency bottleneck and potential performance/portability concerns. This architectural decision forces reliance on external C++ implementations rather than leveraging Rust's native SIMD capabilities and memory safety guarantees.
 
 ## Environment
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines comprehensive API contracts for quantization-aware GGUF weight loading in BitNet.rs. These contracts ensure type safety, accuracy preservation, and seamless integration with the BitNet quantization pipeline (I2_S, TL1, TL2) while maintaining ≥99% accuracy compared to FP32 reference implementation.
+This document defines comprehensive API contracts for quantization-aware GGUF weight loading in BitNet-rs. These contracts ensure type safety, accuracy preservation, and seamless integration with the BitNet quantization pipeline (I2_S, TL1, TL2) while maintaining ≥99% accuracy compared to FP32 reference implementation.
 
 ## Core Quantization API Contracts
 
@@ -642,4 +642,4 @@ This specification provides comprehensive API contracts for quantization-aware G
 5. **Performance Optimized**: SIMD vectorization and mixed precision support
 6. **Cross-Validation Ready**: Integration with C++ reference validation framework (AC5)
 
-The contracts align with BitNet.rs feature flag discipline and provide a solid foundation for implementing real GGUF weight loading with quantization accuracy preservation.
+The contracts align with BitNet-rs feature flag discipline and provide a solid foundation for implementing real GGUF weight loading with quantization accuracy preservation.

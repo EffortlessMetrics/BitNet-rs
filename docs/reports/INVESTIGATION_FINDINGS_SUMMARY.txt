@@ -1,5 +1,5 @@
 ================================================================================
-CRITICAL INVESTIGATION FINDINGS - BitNet.rs Inference Quality Analysis
+CRITICAL INVESTIGATION FINDINGS - BitNet-rs Inference Quality Analysis
 ================================================================================
 
 Investigation Date: 2025-10-24
@@ -54,7 +54,7 @@ QUESTION #2: Hidden Rescaling Investigation
   
   This explains:
   - Why bitnet.cpp produces coherent output (it expects this scaling)
-  - Why bitnet.rs produces garbled output (Candle may apply different semantics)
+  - Why bitnet-rs produces garbled output (Candle may apply different semantics)
 
 ================================================================================
 QUESTION #3: Normalization Axis & Dimensions
@@ -114,7 +114,7 @@ ROOT CAUSE CONCLUSION
 
 Problem Statement:
   bitnet.cpp + same_gguf.gguf → coherent output ✓
-  bitnet.rs + same_gguf.gguf → garbled output ✗
+  bitnet-rs + same_gguf.gguf → garbled output ✗
 
 Root Cause:
   SEMANTIC MISMATCH in RMSNorm implementation between Candle and bitnet.cpp
@@ -122,7 +122,7 @@ Root Cause:
   Specifically:
   - GGUF gamma has RMS ≈ 0.0198 (intentional, matches 1/√2560)
   - bitnet.cpp knows how to handle this (produces coherent output)
-  - bitnet.rs (via Candle) doesn't (produces garbled output)
+  - bitnet-rs (via Candle) doesn't (produces garbled output)
   
   The mismatch is in HOW RMSNorm normalizes and scales:
   - Where is √hidden_size applied? (load time? forward time? never?)

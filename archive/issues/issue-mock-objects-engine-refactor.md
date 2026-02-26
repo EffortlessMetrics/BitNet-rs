@@ -373,7 +373,7 @@ cargo test --package bitnet-inference --release -- --nocapture performance
 ## Related Issues
 
 - Mock improvements should consider future `Model` and `Tokenizer` trait evolution
-- Test utilities could be expanded for other BitNet.rs components
+- Test utilities could be expanded for other BitNet-rs components
 - Consider integration with existing `ConcreteTensor::mock()` patterns
 
 ---

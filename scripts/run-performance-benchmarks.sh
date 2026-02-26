@@ -261,7 +261,7 @@ EOF
 
     # Create detailed markdown report
     cat > "$RESULTS_DIR/performance-report.md" << EOF
-# 📊 BitNet.rs Performance Report
+# 📊 BitNet-rs Performance Report
 
 **Run ID**: $RUN_ID
 **Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
@@ -409,7 +409,7 @@ EOF
 # Print usage information
 usage() {
     cat << EOF
-BitNet.rs Performance Benchmarking Script
+BitNet-rs Performance Benchmarking Script
 
 Usage: $0 [OPTIONS]
 
@@ -490,7 +490,7 @@ parse_args() {
 
 # Main function
 main() {
-    log_info "BitNet.rs Performance Benchmarking"
+    log_info "BitNet-rs Performance Benchmarking"
     log_info "==================================="
 
     parse_args "$@"

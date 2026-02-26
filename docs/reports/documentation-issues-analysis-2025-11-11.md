@@ -1,14 +1,14 @@
-# BitNet.rs Documentation Issues Comprehensive Analysis
+# BitNet-rs Documentation Issues Comprehensive Analysis
 
 **Date**: 2025-11-11
-**Analyst**: BitNet.rs GitHub Research Specialist
+**Analyst**: BitNet-rs GitHub Research Specialist
 **Scope**: All open documentation-related issues (#459 and related)
 
 ---
 
 ## Executive Summary
 
-Comprehensive analysis of 13 open documentation-related issues in the BitNet.rs repository reveals significant progress from recent documentation work. The repository now includes extensive documentation covering CI/CD guardrails, QK256 quantization, tokenizer architecture, environment variables, and receipt-driven performance validation.
+Comprehensive analysis of 13 open documentation-related issues in the BitNet-rs repository reveals significant progress from recent documentation work. The repository now includes extensive documentation covering CI/CD guardrails, QK256 quantization, tokenizer architecture, environment variables, and receipt-driven performance validation.
 
 ### Key Findings
 
@@ -747,7 +747,7 @@ gh issue comment 192 --body "Valid request. Needs scope clarification. Deferring
 - **Report File**: `/home/steven/code/Rust/BitNet-rs/docs/reports/documentation-issues-analysis-2025-11-11.md`
 - **Executable Script**: `/tmp/bitnet_docs_issue_actions.sh`
 - **Issues Analyzed**: 13 open documentation-related issues
-- **Repository**: BitNet.rs (https://github.com/stellar-amenities/BitNet-rs)
+- **Repository**: BitNet-rs (https://github.com/stellar-amenities/BitNet-rs)
 - **Analysis Date**: 2025-11-11
 - **Current Release**: v0.1.0-qna-mvp
 - **Target Milestones**: v0.2.0 (performance), v0.3.0 (FFI/advanced)

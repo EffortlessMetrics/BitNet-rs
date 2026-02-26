@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs PR #246 - Final Integrative Merge Readiness Assessment
+# BitNet-rs PR #246 - Final Integrative Merge Readiness Assessment
 
 ## Executive Summary
 
@@ -71,7 +71,7 @@
 - **Cross-Validation**: C++ reference comparison cannot proceed
 - **Performance Benchmarking**: SLO validation impossible due to inference feature issues
 
-## BitNet.rs Specific Impact
+## BitNet-rs Specific Impact
 
 ### Neural Network Inference Readiness: **BLOCKED**
 - **I2S Quantization**: Model available but inference compilation fails
@@ -119,12 +119,12 @@
 
 ## Conclusion
 
-**BitNet.rs PR #246 is NOT ready for merge** due to widespread compilation regressions that prevent validation of core neural network inference functionality. While the security validation is comprehensive and hardware resources are available, the inability to build and test the inference features represents a critical blocker for a neural network inference library.
+**BitNet-rs PR #246 is NOT ready for merge** due to widespread compilation regressions that prevent validation of core neural network inference functionality. While the security validation is comprehensive and hardware resources are available, the inability to build and test the inference features represents a critical blocker for a neural network inference library.
 
 The 20% mutation detection rate also indicates significant test robustness issues that compound the compilation problems. **Immediate remediation by perf-fixer is required** to restore basic build functionality before neural network throughput validation can proceed.
 
 ---
 *Assessment Date*: 2025-09-24 13:40 UTC
-*Validator*: BitNet.rs Pre-Merge Readiness Validator
+*Validator*: BitNet-rs Pre-Merge Readiness Validator
 *Branch*: feature/issue-218-real-bitnet-model-integration @ 8ef0823
 *Hardware*: RTX 5070 Ti 16GB, CUDA 13.0, CPU inference validated

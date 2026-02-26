@@ -77,7 +77,7 @@ $ grep -r "// AC[1-8]:" */tests/*.rs | grep -oE "AC[1-8]:" | sort | uniq -c
 
 ---
 
-## BitNet.rs-Specific Validation
+## bitnet-rs-Specific Validation
 
 ### Neural Network Patterns ✅
 
@@ -334,11 +334,11 @@ red phase: proper failing patterns with descriptive panic! messages
 
 **Quality Gates Met:**
 - ✅ All 8 ACs have comprehensive test scaffolding
-- ✅ Tests compile cleanly with BitNet.rs feature patterns
+- ✅ Tests compile cleanly with bitnet-rs feature patterns
 - ✅ Tests fail correctly in TDD red phase (not compilation errors)
 - ✅ AC tags present for full traceability (151 total)
 - ✅ Neural network test patterns (quantization, GGUF, K/V cache)
-- ✅ Workspace structure matches BitNet.rs architecture
+- ✅ Workspace structure matches bitnet-rs architecture
 - ✅ Special handling for FFI (AC6) and CI (AC7) integration tests
 
 ---
@@ -375,9 +375,9 @@ red phase: proper failing patterns with descriptive panic! messages
 
 ### Production-Ready Test Suite
 
-The test scaffolding demonstrates BitNet.rs production standards:
+The test scaffolding demonstrates bitnet-rs production standards:
 
-1. **Feature-Gated Patterns**: Tests respect BitNet.rs architecture with explicit feature flags
+1. **Feature-Gated Patterns**: Tests respect bitnet-rs architecture with explicit feature flags
 2. **Neural Network Fixtures**: Tests prepared for quantization data, GGUF models, tokenizers
 3. **Device-Aware Testing**: Tests structured for CPU/GPU parity validation
 4. **TDD Compliance**: Proper red phase (failing tests) before green phase (implementation)

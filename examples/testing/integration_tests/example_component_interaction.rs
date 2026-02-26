@@ -1,6 +1,6 @@
 //! Example integration tests for component interactions
 //!
-//! Tests how different BitNet.rs components work together,
+//! Tests how different bitnet-rs components work together,
 //! including data flow, error propagation, and resource sharing
 
 use bitnet_common::{BitNetError, ModelConfig, QuantizationConfig};

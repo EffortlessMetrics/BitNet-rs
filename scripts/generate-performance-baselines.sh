@@ -360,7 +360,7 @@ if "baselines" not in baselines:
 baselines.update({
     "version": "1.0.0",
     "last_updated": "$TIMESTAMP",
-    "description": "Performance baselines for BitNet.rs generated from actual benchmark runs",
+    "description": "Performance baselines for bitnet-rs generated from actual benchmark runs",
     "methodology": {
         "hardware": "Native hardware (varies by platform)",
         "model": "Test fixtures and deterministic data",
@@ -557,7 +557,7 @@ EOF
 # Print usage information
 usage() {
     cat << EOF
-BitNet.rs Performance Baselines Generation
+bitnet-rs Performance Baselines Generation
 
 This script generates performance baselines by running comprehensive benchmarks
 on clean commits. The results are used to detect performance regressions in CI.
@@ -589,7 +589,7 @@ EXAMPLES:
 
 REQUIREMENTS:
     - Clean git working directory (for reproducible results)
-    - BitNet.rs project in working state
+    - bitnet-rs project in working state
     - Sufficient time for comprehensive benchmarking
     - sudo access for CPU governor control (optional)
 
@@ -648,7 +648,7 @@ parse_args() {
 
 # Main function
 main() {
-    log_info "BitNet.rs Performance Baselines Generation"
+    log_info "bitnet-rs Performance Baselines Generation"
     log_info "=========================================="
 
     parse_args "$@"

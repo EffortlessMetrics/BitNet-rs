@@ -135,7 +135,7 @@ Note: No perf deltas set (reserved for Review flow per policy)
 
 ---
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
 ### ✅ Quantization Accuracy
 **Status:** VALIDATED (TL LUT helper for TL1/TL2)
@@ -211,7 +211,7 @@ Documentation: Comprehensive module docs with examples
 
 ---
 
-## Quality Metrics (BitNet.rs Standards)
+## Quality Metrics (BitNet-rs Standards)
 
 ### ✅ Zero Warnings Policy
 - Clippy: 0 warnings ✅

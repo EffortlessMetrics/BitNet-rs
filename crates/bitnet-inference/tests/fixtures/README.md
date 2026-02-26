@@ -1,6 +1,6 @@
 # Test Fixtures for Issue #453: Strict Quantization Guards
 
-This directory contains comprehensive test fixtures for validating strict quantization guards in BitNet.rs neural network inference.
+This directory contains comprehensive test fixtures for validating strict quantization guards in BitNet-rs neural network inference.
 
 ## Fixture Organization
 
@@ -347,10 +347,10 @@ BITNET_STRICT_MODE=1 cargo test -p bitnet-inference -- test_strict_mode_rejectio
 - **Issue #453:** Strict Quantization Guards specification
 - **ADR-012:** Kernel ID naming conventions
 - **Schema v1.1.0:** Inference receipt schema with quantization section
-- **CLAUDE.md:** BitNet.rs development guide
+- **CLAUDE.md:** BitNet-rs development guide
 - **docs/explanation/strict-quantization-guards.md:** Full specification
 
 ---
 
 **Last Updated:** 2025-10-14
-**Maintainer:** BitNet.rs Test Fixture Architect
+**Maintainer:** BitNet-rs Test Fixture Architect

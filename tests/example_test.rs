@@ -199,7 +199,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     init_logging(&config)?;
 
-    tracing::info!("Starting BitNet.rs testing framework example");
+    tracing::info!("Starting BitNet-rs testing framework example");
 
     // Create test harness
     let mut harness = TestHarness::new(config).await?;
@@ -269,7 +269,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Total execution time: {:?}", stats.total_duration);
     println!("  Average per test: {:?}", stats.average_duration());
 
-    tracing::info!("BitNet.rs testing framework example completed");
+    tracing::info!("BitNet-rs testing framework example completed");
 
     Ok(())
 }

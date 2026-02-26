@@ -1,4 +1,4 @@
-# BitNet.rs TODO Analysis Reports - Index
+# BitNet-rs TODO Analysis Reports - Index
 
 **Generated:** 2025-10-19  
 **Analysis Scope:** Complete codebase TODO/FIXME/unimplemented audit  

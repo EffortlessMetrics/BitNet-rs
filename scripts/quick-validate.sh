@@ -2,7 +2,7 @@
 # Quick validation runner for local development
 set -euo pipefail
 
-echo "==> BitNet.rs Quick Validation"
+echo "==> BitNet-rs Quick Validation"
 echo "==============================="
 
 # Check for required tools

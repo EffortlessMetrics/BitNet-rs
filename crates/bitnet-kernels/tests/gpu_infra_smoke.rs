@@ -1,4 +1,4 @@
-//! GPU Infrastructure Smoke Tests for BitNet.rs
+//! GPU Infrastructure Smoke Tests for BitNet-rs
 //!
 //! This module contains mock-based tests for GPU infrastructure validation.
 //! These tests are NOT REQUIRED in PR CI and may use mocks for capability checks.

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Issue #260 has been **successfully resolved** as of 2025-10-21. This document captures the completion of SIMD throughput validation and AVX optimization testing for BitNet.rs quantization kernels.
+Issue #260 has been **successfully resolved** as of 2025-10-21. This document captures the completion of SIMD throughput validation and AVX optimization testing for BitNet-rs quantization kernels.
 
 **Status**: ✅ COMPLETE
 **Tests Resolved**: 2 previously-blocked tests now passing
@@ -216,14 +216,14 @@ BITNET_STRICT_MODE=1 cargo test --workspace --no-default-features --features cpu
 
 ## Conclusion
 
-Issue #260 resolution represents a significant milestone in BitNet.rs development:
+Issue #260 resolution represents a significant milestone in BitNet-rs development:
 
 1. **Real Computation Validated**: SIMD kernels thoroughly tested with quantized computation
 2. **Production Ready**: Honest performance metrics and computation paths established
 3. **Test Maturity**: Development moved 2 tests from blocked to working category
 4. **Quality Assurance**: Comprehensive validation infrastructure in place
 
-The successful resolution of Issue #260 enables confidence in BitNet.rs for production neural network inference with real quantization acceleration.
+The successful resolution of Issue #260 enables confidence in BitNet-rs for production neural network inference with real quantization acceleration.
 
 **Resolution Status**: ✅ COMPLETE
 **Quality Gates**: ✅ ALL PASSED

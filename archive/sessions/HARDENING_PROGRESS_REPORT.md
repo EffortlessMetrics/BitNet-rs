@@ -1,4 +1,4 @@
-# BitNet.rs Hardening Progress Report
+# BitNet-rs Hardening Progress Report
 
 **Date**: 2025-10-23
 **Session**: Comprehensive Integration QK256 EnvGuard Receipts Strict AVX2
@@ -328,7 +328,7 @@ msrv:
 
 ### Pre-Commit Hooks
 
-BitNet.rs uses local pre-commit hooks to catch issues before CI:
+BitNet-rs uses local pre-commit hooks to catch issues before CI:
 
 \`\`\`bash
 # Enable hooks (run once after cloning)

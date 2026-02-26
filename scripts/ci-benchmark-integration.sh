@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI/CD Integration Script for BitNet.rs Benchmarking
+# CI/CD Integration Script for BitNet-rs Benchmarking
 # This script demonstrates how to integrate the benchmarking setup with CI/CD pipelines
 # Compatible with GitHub Actions, GitLab CI, Jenkins, etc.
 
@@ -230,7 +230,7 @@ generate_ci_artifacts() {
     # Create summary report
     local report_file="${RESULTS_DIR}/ci_summary.md"
     cat > "${report_file}" << EOF
-# BitNet.rs CI Benchmark Report
+# BitNet-rs CI Benchmark Report
 
 **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 **Commit**: ${GITHUB_SHA:-${CI_COMMIT_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "unknown")}}
@@ -283,7 +283,7 @@ main() {
     local ci_env
     ci_env=$(detect_ci)
 
-    log_info "BitNet.rs CI Benchmark Integration"
+    log_info "BitNet-rs CI Benchmark Integration"
     log_info "CI Environment: ${ci_env}"
     log_info "Starting at: $(date)"
 

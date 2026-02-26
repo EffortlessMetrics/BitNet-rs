@@ -35,10 +35,10 @@ Specification gate **PASSED** with comprehensive validation. All 6 specification
 ### ✅ Documentation Structure
 - **Diátaxis Compliance**: Feature spec in `docs/explanation/`, API contracts in `docs/reference/`, ADRs in `docs/explanation/architecture/`
 - **Cross-Reference Integrity**: All internal links validated, related issues properly referenced (#453, #452, #439)
-- **Audience Targeting**: Clear guidance for BitNet.rs developers implementing quantization validation
+- **Audience Targeting**: Clear guidance for bitnet-rs developers implementing quantization validation
 
 ### ✅ API Contract Validity
-- **BitNet.rs Workspace**: `StrictModeConfig` extends `bitnet-common`, `BitNetError::StrictMode` aligns with error patterns
+- **bitnet-rs Workspace**: `StrictModeConfig` extends `bitnet-common`, `BitNetError::StrictMode` aligns with error patterns
 - **Neural Network Context**: Quantization types (I2S 99.8%, TL1 99.6%, TL2 99.6%), feature flags (`cpu|gpu`)
 - **Kernel Naming**: GPU kernels (`gemm_*`, `i2s_gpu_*`, `wmma_*`), CPU kernels (`i2s_gemv`, `tl1_neon_*`, `tl2_avx_*`)
 
@@ -107,7 +107,7 @@ Specification gate **PASSED** with comprehensive validation. All 6 specification
 
 ---
 
-## BitNet.rs Standards Compliance
+## bitnet-rs Standards Compliance
 
 **MSRV**: 1.90.0 (Rust 2024 edition) ✅
 **Feature Flags**: `--no-default-features --features cpu|gpu` ✅
@@ -140,7 +140,7 @@ spec: docs/explanation/strict-quantization-guards.md (916 lines),
 **Evidence Summary**:
 1. ✅ All 6 specification files validated and committed
 2. ✅ Documentation structure compliant with Diátaxis framework
-3. ✅ API contracts align with BitNet.rs workspace patterns
+3. ✅ API contracts align with bitnet-rs workspace patterns
 4. ✅ Scope minimal and specific to Issue #453 requirements
 5. ✅ TDD compliance verified with feature-gated test patterns
 6. ✅ Schema validation passed with zero conflicts

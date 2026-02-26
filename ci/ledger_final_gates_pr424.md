@@ -78,5 +78,5 @@
 
 ---
 **Generated**: 2025-09-30
-**Validation**: Comprehensive gate review with BitNet.rs quality standards
+**Validation**: Comprehensive gate review with BitNet-rs quality standards
 **Next Step**: Documentation completeness review

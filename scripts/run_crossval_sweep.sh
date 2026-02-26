@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_crossval_sweep.sh - Comprehensive cross-validation sweep between BitNet.rs and bitnet.cpp
+# run_crossval_sweep.sh - Comprehensive cross-validation sweep between BitNet-rs and bitnet.cpp
 #
 # This script orchestrates deterministic cross-validation across multiple test scenarios,
 # capturing traces, logits, and token outputs for systematic divergence analysis.
@@ -61,7 +61,7 @@ if [[ $# -lt 2 ]]; then
     cat <<EOF
 Usage: $0 <model.gguf> <tokenizer.json> [output_dir]
 
-Orchestrates full cross-validation between BitNet.rs and bitnet.cpp across
+Orchestrates full cross-validation between BitNet-rs and bitnet.cpp across
 multiple deterministic test scenarios.
 
 Arguments:
@@ -152,9 +152,9 @@ command -v timeout >/dev/null 2>&1 || warn "timeout not found - timeout protecti
 command -v cargo >/dev/null 2>&1 || error "cargo not found in PATH"
 
 # ============================================================================
-# Build BitNet.rs with crossval features (if needed)
+# Build BitNet-rs with crossval features (if needed)
 # ============================================================================
-section "Building BitNet.rs"
+section "Building BitNet-rs"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"

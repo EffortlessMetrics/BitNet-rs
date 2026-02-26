@@ -152,7 +152,7 @@ Models passing validation are guaranteed to:
 ### Successful Export
 
 ```
-INFO: Using BitNet.rs SafeTensors converter
+INFO: Using BitNet-rs SafeTensors converter
 INFO: Found 1 SafeTensors file(s), using: models/bitnet-2b-4t/model.safetensors
 INFO: Converting SafeTensors to GGUF (F16 output type)...
 [... conversion progress ...]

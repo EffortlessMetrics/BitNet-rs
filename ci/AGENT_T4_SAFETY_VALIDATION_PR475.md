@@ -9,7 +9,7 @@
 
 ## Execution Summary
 
-The Safety Scanner is executing comprehensive T4 (Safety) validation for PR #475 across the Integrative Flow, focusing on BitNet.rs neural network security patterns including GPU memory safety, FFI quantization bridge validation, GGUF model processing, and unsafe code auditing.
+The Safety Scanner is executing comprehensive T4 (Safety) validation for PR #475 across the Integrative Flow, focusing on BitNet-rs neural network security patterns including GPU memory safety, FFI quantization bridge validation, GGUF model processing, and unsafe code auditing.
 
 ### Flow Context
 
@@ -36,7 +36,7 @@ The Safety Scanner is executing comprehensive T4 (Safety) validation for PR #475
   - Used in: bitnet-cli, bitnet-models
   - Status: No CVEs in serde_yaml_ng
 - ✅ lazy_static still in transitive deps (via other crates)
-  - BitNet.rs code: No direct `lazy_static!` macro usage detected
+  - BitNet-rs code: No direct `lazy_static!` macro usage detected
   - OnceLock migration: Partial (MSRV 1.90.0 supports std::sync::OnceLock)
 - ✅ once_cell in Cargo.lock (transitive via dependencies)
   - Status: No security issues with once_cell versions
@@ -415,7 +415,7 @@ Full Workspace: Running (expected ~700+ tests total)
    - ✅ O(1) HashSet operations
    - ✅ 92% mutation test coverage (T3.5)
 
-## BitNet.rs-Specific Security Context
+## BitNet-rs-Specific Security Context
 
 **Neural Network Security Properties**:
 - Quantization accuracy is security (prevents inference hijacking)

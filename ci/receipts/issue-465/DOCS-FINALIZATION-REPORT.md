@@ -149,7 +149,7 @@
 
 **Result**: **PASS** (4/4 categories properly organized)
 
-### 7. BitNet.rs Standards Compliance ✅
+### 7. BitNet-rs Standards Compliance ✅
 
 **Feature Flags**:
 - All cargo commands include `--no-default-features --features cpu|gpu`
@@ -258,7 +258,7 @@
 - Architecture decisions: ✅ COMPLETE (4 ADRs, 930 lines)
 - Baseline documentation: ✅ COMPLETE (README + JSON)
 - Diátaxis structure: ✅ COMPLETE (4/4 categories)
-- BitNet.rs standards: ✅ COMPLETE (100% compliance)
+- BitNet-rs standards: ✅ COMPLETE (100% compliance)
 
 ---
 
@@ -327,7 +327,7 @@ receipts: compute_path="real", non-empty kernels, hygiene validation
 
 **Routing**: **FINALIZE → pr-preparer**
 
-**Rationale**: All Issue #465 documentation validated against Diátaxis framework and BitNet.rs standards. Documentation builds cleanly, doctests pass, feature flags compliant, neural network context complete, environment variables documented, cross-references validated. Ready for PR preparation.
+**Rationale**: All Issue #465 documentation validated against Diátaxis framework and BitNet-rs standards. Documentation builds cleanly, doctests pass, feature flags compliant, neural network context complete, environment variables documented, cross-references validated. Ready for PR preparation.
 
 **Next Steps for pr-preparer**:
 1. Create PR against main branch

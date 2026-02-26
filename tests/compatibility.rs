@@ -1,6 +1,6 @@
 #![cfg(feature = "integration-tests")]
 #![cfg(feature = "crossval")]
-//! Compatibility tests for BitNet.rs
+//! Compatibility tests for BitNet-rs
 //!
 //! These tests validate API compatibility, model format compatibility,
 //! and performance parity to ensure smooth migration from legacy implementations.
@@ -16,7 +16,7 @@ mod api_compatibility {
     #[test]
     fn test_model_loading_api() {
         // Test that model loading API is consistent
-        // This would test the actual BitNet.rs API once implemented
+        // This would test the actual BitNet-rs API once implemented
 
         // Placeholder test structure
         let model_path = "tests/fixtures/test_model.gguf";
@@ -751,7 +751,7 @@ top_p = 0.9
         println!("  Testing advanced API migration");
 
         // Test advanced API patterns like streaming, batching, etc.
-        // These are new features in BitNet.rs that don't have C++ equivalents
+        // These are new features in BitNet-rs that don't have C++ equivalents
 
         println!("    ✅ Advanced API migration successful");
     }

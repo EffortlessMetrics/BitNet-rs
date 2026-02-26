@@ -8,7 +8,7 @@
 
 ## Executive Overview
 
-This sprint delivered critical test infrastructure improvements and performance profiling capabilities for BitNet.rs:
+This sprint delivered critical test infrastructure improvements and performance profiling capabilities for BitNet-rs:
 
 1. **Test Fixtures**: Deterministic GGUF fixture generators for QK256 and BitNet32-F16 formats
 2. **Environment Guards**: Thread-safe environment variable management for deterministic testing

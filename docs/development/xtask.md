@@ -5,7 +5,7 @@ to be **idempotent**, **cache-aware**, and **CI-friendly**.
 
 ## GPU Detection Integration
 
-As of PR #166, xtask integrates with BitNet.rs GPU detection utilities to provide system-aware optimizations and better error reporting.
+As of PR #166, xtask integrates with BitNet-rs GPU detection utilities to provide system-aware optimizations and better error reporting.
 
 ### GPU Detection Features
 - **Automatic Backend Detection**: CUDA, Metal, ROCm, and WebGPU support
@@ -95,7 +95,7 @@ models/
 
 ## `preflight`
 
-Check system capabilities for BitNet.rs (GPU detection, features).
+Check system capabilities for BitNet-rs (GPU detection, features).
 
 ```bash
 cargo run -p xtask -- preflight

@@ -171,7 +171,7 @@ async fn test_performance_visualization_basic() {
 
     // Verify dashboard content
     let content = tokio::fs::read_to_string(&dashboard_path).await.unwrap();
-    assert!(content.contains("BitNet.rs Performance Dashboard"));
+    assert!(content.contains("BitNet-rs Performance Dashboard"));
     assert!(content.contains("Performance Comparison Charts"));
     assert!(content.contains("Trend Analysis"));
     assert!(content.contains("Regression Detection"));
@@ -243,7 +243,7 @@ async fn test_performance_dashboard_generator() {
     // Verify content of generated files
     let json_content = tokio::fs::read_to_string(&json_file).await.unwrap();
     assert!(json_content.contains("dashboard_config"));
-    assert!(json_content.contains("BitNet.rs"));
+    assert!(json_content.contains("BitNet-rs"));
 
     let csv_content = tokio::fs::read_to_string(&csv_file).await.unwrap();
     assert!(csv_content.contains("timestamp,rust_throughput"));
@@ -366,7 +366,7 @@ async fn test_comprehensive_performance_analysis() {
 
     // Create comprehensive dashboard with all features
     let config = DashboardConfig {
-        title: "Comprehensive BitNet.rs Performance Analysis".to_string(),
+        title: "Comprehensive BitNet-rs Performance Analysis".to_string(),
         include_test_results: true,
         include_regression_analysis: true,
         include_trend_analysis: true,
@@ -419,7 +419,7 @@ async fn test_comprehensive_performance_analysis() {
 
     // Verify dashboard content includes all scenarios
     let dashboard_content = tokio::fs::read_to_string(&output.dashboard_url).await.unwrap();
-    assert!(dashboard_content.contains("Comprehensive BitNet.rs Performance Analysis"));
+    assert!(dashboard_content.contains("Comprehensive BitNet-rs Performance Analysis"));
     assert!(dashboard_content.contains("Performance Comparison Charts"));
     assert!(dashboard_content.contains("Regression Detection"));
 

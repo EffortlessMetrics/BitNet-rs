@@ -6,7 +6,7 @@
 //!
 //! This test module provides comprehensive test scaffolding for all 10 acceptance criteria
 //! defined in Issue #260: Mock Inference Elimination. Tests are tagged with AC identifiers
-//! for traceability and use BitNet.rs TDD patterns with proper feature gating.
+//! for traceability and use BitNet-rs TDD patterns with proper feature gating.
 
 use anyhow::{Context, Result, anyhow};
 use bitnet_common::{BitNetTensor, Device, QuantizationType};

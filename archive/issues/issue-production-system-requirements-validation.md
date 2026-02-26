@@ -625,4 +625,4 @@ cudarc = { version = "0.10", optional = true }  # CUDA information (if not alrea
 - **Memory Patterns**: BitNet models have unique memory usage patterns due to 1-bit quantization
 - **Cross-Validation**: Validation should support comparison with C++ reference implementation
 
-This comprehensive system validation will significantly improve the production readiness and reliability of BitNet.rs inference deployments.
+This comprehensive system validation will significantly improve the production readiness and reliability of BitNet-rs inference deployments.

@@ -1,4 +1,4 @@
-# BitNet.rs CI Hardening Documentation Completeness Report
+# bitnet-rs CI Hardening Documentation Completeness Report
 
 **Date**: 2025-11-05  
 **Scope**: Verification of documentation alignment with CI hardening work (guards.yml, property-tests.yml updates)  

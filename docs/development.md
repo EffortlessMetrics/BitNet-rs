@@ -1,6 +1,6 @@
-# BitNet.rs Development Guide
+# BitNet-rs Development Guide
 
-This is the main development guide for BitNet.rs, providing an overview of development workflows, tools, and best practices for neural network quantization and inference.
+This is the main development guide for BitNet-rs, providing an overview of development workflows, tools, and best practices for neural network quantization and inference.
 
 ## Quick Start
 
@@ -75,7 +75,7 @@ cargo run -p xtask -- benchmark --model models/test.gguf --tokens 128
 
 ## Feature Flags
 
-BitNet.rs uses feature flags for conditional compilation. **Default features are EMPTY** - always specify explicitly:
+BitNet-rs uses feature flags for conditional compilation. **Default features are EMPTY** - always specify explicitly:
 
 ```bash
 # CPU inference with SIMD optimizations

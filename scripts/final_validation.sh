@@ -15,7 +15,7 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 echo -e "${BOLD}${BLUE}════════════════════════════════════════════════════════════════${NC}"
-echo -e "${BOLD}${BLUE}               BitNet.rs Final Release Validation                  ${NC}"
+echo -e "${BOLD}${BLUE}               bitnet-rs Final Release Validation                  ${NC}"
 echo -e "${BOLD}${BLUE}════════════════════════════════════════════════════════════════${NC}"
 echo
 

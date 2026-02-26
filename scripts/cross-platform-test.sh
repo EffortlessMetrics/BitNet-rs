@@ -1,5 +1,5 @@
 #!/bin/bash
-# Cross-platform compatibility testing for BitNet.rs
+# Cross-platform compatibility testing for BitNet-rs
 # Tests compilation and basic functionality across different targets
 
 set -euo pipefail

@@ -57,7 +57,7 @@ $ git log --oneline --merges origin/main..HEAD | wc -l
 - Zero merge commits detected in feature branch
 - Linear history maintained
 - Rebase workflow properly followed
-- BitNet.rs conventions upheld
+- BitNet-rs conventions upheld
 
 ### Branch Naming Validation
 
@@ -68,11 +68,11 @@ $ git log --oneline --merges origin/main..HEAD | wc -l
 - **Issue reference**: `issue-251` ✅ (valid issue tracking)
 - **Descriptor**: `part3-quantization` ✅ (clear, descriptive)
 
-**Compliance**: ✅ PASS - Follows BitNet.rs branch naming conventions
+**Compliance**: ✅ PASS - Follows BitNet-rs branch naming conventions
 
 ---
 
-## BitNet.rs Quality Integration
+## BitNet-rs Quality Integration
 
 ### TDD Compliance Assessment
 
@@ -299,7 +299,7 @@ Branch is fully current with base. All quality checks pass. Ready for hygiene va
 - ✅ Conflict assessment: NO CONFLICTS
 - ✅ Evidence generation: Standard format
 
-**BitNet.rs Integration**:
+**BitNet-rs Integration**:
 - ✅ Semantic commit validation: 100% compliance
 - ✅ Branch naming: Valid feat/ pattern
 - ✅ Rebase workflow: Maintained (0 merge commits)
@@ -307,7 +307,7 @@ Branch is fully current with base. All quality checks pass. Ready for hygiene va
 
 **GitHub-Native Workflow**:
 - ✅ Ledger document: Created and populated
-- ✅ Evidence format: BitNet.rs grammar compliance
+- ✅ Evidence format: BitNet-rs grammar compliance
 - ✅ Routing decision: Clear and justified
 - ✅ Progress context: Teaching and transparency
 
@@ -403,13 +403,13 @@ M  ci/ledger_mutation_gate.md
 
 **Routing**: ROUTE → hygiene-finalizer
 
-Branch is ready for hygiene validation and Draft→Ready promotion evaluation. All BitNet.rs quality standards met. Microloop advancement clear and justified.
+Branch is ready for hygiene validation and Draft→Ready promotion evaluation. All BitNet-rs quality standards met. Microloop advancement clear and justified.
 
 ---
 
 **Generated**: 2025-09-30
 **Agent**: review-freshness-checker
 **Validation Method**: GitHub-native git ancestry analysis
-**Evidence Format**: BitNet.rs standard gate grammar
+**Evidence Format**: BitNet-rs standard gate grammar
 **Ledger**: /home/steven/code/Rust/BitNet-rs/ci/ledger_freshness_gate.md
 **Next Agent**: hygiene-finalizer

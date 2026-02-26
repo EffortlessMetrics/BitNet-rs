@@ -1,4 +1,4 @@
-# BitNet.rs 5-Minute Quickstart
+# BitNet-rs 5-Minute Quickstart
 
 **Get BitNet neural network inference running in under 5 minutes.**
 
@@ -15,7 +15,7 @@ git clone https://github.com/EffortlessMetrics/BitNet-rs
 cd BitNet-rs
 ```
 
-## Step 1: Build BitNet.rs (1 minute)
+## Step 1: Build BitNet-rs (1 minute)
 
 ```bash
 # CPU inference (fastest setup)
@@ -32,11 +32,11 @@ cargo build --release --no-default-features --features gpu
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf
 ```
 
-**What is QK256?** This model uses GGML-compatible I2_S quantization with 256-element blocks and separate scale tensors. BitNet.rs automatically detects the quantization flavor and routes to the appropriate kernels.
+**What is QK256?** This model uses GGML-compatible I2_S quantization with 256-element blocks and separate scale tensors. BitNet-rs automatically detects the quantization flavor and routes to the appropriate kernels.
 
 ## Step 3: Automatic Tokenizer Discovery (30 seconds)
 
-BitNet.rs automatically discovers and loads tokenizers from GGUF files:
+BitNet-rs automatically discovers and loads tokenizers from GGUF files:
 
 ```bash
 # Verify GGUF model with automatic tokenizer discovery
@@ -47,7 +47,7 @@ cargo run -p xtask -- verify --model models/microsoft-bitnet-b1.58-2B-4T-gguf/gg
 ```
 
 **What Just Happened?**
-- BitNet.rs extracted tokenizer metadata from GGUF file
+- BitNet-rs extracted tokenizer metadata from GGUF file
 - Detected model architecture (BitNet, LLaMA, GPT-2, etc.)
 - Resolved vocabulary size (32K, 128K, or custom)
 - Applied model-specific tokenizer configuration
@@ -171,7 +171,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 
 ## Using QK256 Models (GGML I2_S)
 
-QK256 is a GGML-compatible I2_S quantization format with 256-element blocks and separate scale tensors. BitNet.rs provides automatic format detection and strict validation modes for production deployments.
+QK256 is a GGML-compatible I2_S quantization format with 256-element blocks and separate scale tensors. BitNet-rs provides automatic format detection and strict validation modes for production deployments.
 
 ### Automatic Format Detection
 
@@ -219,7 +219,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 
 ## Receipt Validation Workflow
 
-BitNet.rs generates receipts for every inference run, proving real computation with kernel IDs:
+BitNet-rs generates receipts for every inference run, proving real computation with kernel IDs:
 
 ```bash
 # 1. Run parity validation (generates receipt)
@@ -282,7 +282,7 @@ jq '.parity' docs/baselines/*/parity-bitnetcpp.json
 ## What Just Happened?
 
 You've successfully:
-1. **Built BitNet.rs** with device-aware quantization and complete transformer implementation
+1. **Built BitNet-rs** with device-aware quantization and complete transformer implementation
 2. **Downloaded a QK256 model** (Microsoft's 1.58-bit GGUF in GGML I2_S format) with automatic flavor detection
 3. **Automatic tokenizer discovery** extracted tokenizer from GGUF metadata, detected model architecture, and applied optimal configuration
 4. **Verified model compatibility** with enhanced GGUF loader, strict mode validation, and comprehensive tensor validation

@@ -18,7 +18,7 @@
 
 ## Overview
 
-Successfully implemented a fast feedback system for the BitNet.rs testing framework that provides rapid test execution with incremental testing capabilities. The system achieves the goal of providing developers with quick feedback on their changes while maintaining test quality and coverage.
+Successfully implemented a fast feedback system for the BitNet-rs testing framework that provides rapid test execution with incremental testing capabilities. The system achieves the goal of providing developers with quick feedback on their changes while maintaining test quality and coverage.
 
 ## Key Features Implemented
 

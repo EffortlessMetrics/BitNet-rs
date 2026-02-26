@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
             cat << 'EOF'
 Usage: build-with-fallbacks.sh [OPTIONS]
 
-Enhanced build script with graceful fallback mechanisms for BitNet.rs
+Enhanced build script with graceful fallback mechanisms for BitNet-rs
 
 OPTIONS:
     --fallback          Enable fallback mode (minimal dependencies)
@@ -382,7 +382,7 @@ generate_report() {
     log_section "Generating build report"
 
     cat > build-report.md << EOF
-# BitNet.rs Build Report
+# BitNet-rs Build Report
 
 **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 **Build Mode**: $BUILD_MODE
@@ -431,7 +431,7 @@ EOF
 
 # Main execution
 main() {
-    log_section "BitNet.rs Enhanced Build Script"
+    log_section "BitNet-rs Enhanced Build Script"
     log_info "Repository: $REPO_ROOT"
 
     cd "$REPO_ROOT"

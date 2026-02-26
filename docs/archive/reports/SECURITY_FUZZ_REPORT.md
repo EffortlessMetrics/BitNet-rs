@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Security Fuzz Testing Report
+# BitNet-rs Security Fuzz Testing Report
 
 **Issue:** #249 - Complete Tokenizer Integration and Automatic Discovery
 **Date:** 2025-09-25
@@ -171,7 +171,7 @@ cargo fuzz tmin quantization_i2s fuzz/artifacts/quantization_i2s/crash-1849515c7
 
 **Status: CRITICAL SECURITY ISSUES FOUND**
 
-The fuzz testing discovered **2 critical memory safety vulnerabilities** that could lead to production failures and security incidents in BitNet.rs neural network inference pipelines. These issues must be resolved before the Issue #249 implementation can be considered production-ready.
+The fuzz testing discovered **2 critical memory safety vulnerabilities** that could lead to production failures and security incidents in BitNet-rs neural network inference pipelines. These issues must be resolved before the Issue #249 implementation can be considered production-ready.
 
 **Recommended Next Steps:**
 1. **Route to code-refiner** for immediate security patches
@@ -179,4 +179,4 @@ The fuzz testing discovered **2 critical memory safety vulnerabilities** that co
 3. Add comprehensive memory allocation guards
 4. Re-run security fuzzing after fixes to validate remediation
 
-The kernel operations passed all security validation, demonstrating that the BitNet.rs matrix computation core is robust under adversarial conditions.
+The kernel operations passed all security validation, demonstrating that the BitNet-rs matrix computation core is robust under adversarial conditions.

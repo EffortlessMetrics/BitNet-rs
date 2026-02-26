@@ -5,7 +5,7 @@
 **Status**: ✅ PASS (additive)
 **Classification**: `additive` - Backward compatible inference receipt generation APIs
 **Evidence**: `cargo check: workspace ok; docs: 4/4 examples pass; api: additive (1 new module, 10 new types); gguf: I2S/TL1/TL2 compatible; quantization: 41/41 tests pass`
-**Validation**: COMPREHENSIVE - All BitNet.rs API contract requirements validated
+**Validation**: COMPREHENSIVE - All BitNet-rs API contract requirements validated
 
 ## review:gate:perf
 
@@ -452,7 +452,7 @@ evidence: 7 microloop reports + ledger + final sanity checks
 ---
 
 **Promotion Execution**: 2025-10-04
-**Validator**: review-ready-promoter (BitNet.rs)
+**Validator**: review-ready-promoter (BitNet-rs)
 **Actions Completed**:
 1. ✅ PR status flipped: `gh pr ready 431` (Draft → Ready for Review)
 2. ✅ Labels updated: `state:ready` applied (state:in-progress removed)
@@ -867,7 +867,7 @@ CUDA I2S Quantization:
 - Status: Requires model file (no model available in test environment)
 - Recommendation: Add memory profiling to integration tests
 
-**BitNet.rs Performance Criteria**:
+**BitNet-rs Performance Criteria**:
 - ✅ Quantization throughput: CPU baseline established (I2S/TL1/TL2)
 - ✅ GPU acceleration: I2S validated (42x speedup)
 - ✅ Performance regressions: None detected (+7.6% to +25.2% improvements)
@@ -933,7 +933,7 @@ TL1 Accuracy:  >99.6% (property-based tests, round-trip preservation)
 TL2 Accuracy:  >99.6% (mutation testing, numerical stability validated)
 ```
 
-**Regression Classification** (BitNet.rs thresholds):
+**Regression Classification** (BitNet-rs thresholds):
 ```
 Critical Regression (>15%): 0 detected ✅
 Major Regression (10-15%):  0 detected ✅
@@ -1092,7 +1092,7 @@ Receipt files referenced in documentation:
 Note: Minor filename variations are non-blocking - files exist and contain valid receipt data
 ```
 
-**BitNet.rs Documentation Link Patterns**
+**BitNet-rs Documentation Link Patterns**
 
 **1. Cross-Reference Integrity**: ✅ VALIDATED
 - Explanation → Reference links: All valid
@@ -1596,7 +1596,7 @@ Result: ⚠️  19 passed, 1 flaky test (streaming token position assertion)
 Note: Flaky test does not impact API contracts, relates to internal token tracking
 ```
 
-#### ✅ VALIDATED - BitNet.rs API Patterns
+#### ✅ VALIDATED - BitNet-rs API Patterns
 
 **1. Feature-Gated Architecture**
 ```toml
@@ -1674,7 +1674,7 @@ impl BatchRequest {
 
 **3. Architecture Documentation**
 - **Component design**: Documented in issue-251-api-contracts.md
-- **Neural network integration**: BitNet.rs patterns followed
+- **Neural network integration**: BitNet-rs patterns followed
 - **Performance contracts**: SLO targets documented
 
 ### API Change Classification: `additive`
@@ -1692,7 +1692,7 @@ impl BatchRequest {
 - ✅ Workspace integration is purely additive (new member)
 
 **3. Backward Compatibility**
-- ✅ Existing BitNet.rs users unaffected
+- ✅ Existing BitNet-rs users unaffected
 - ✅ CLI and library APIs remain stable
 - ✅ Python/WASM bindings untouched
 
@@ -1773,7 +1773,7 @@ API Pattern Compliance:
   ✅ Device-aware abstractions
   ✅ Builder patterns
   ✅ Result<T, Error> error handling
-  ✅ BitNet.rs neural network contracts
+  ✅ BitNet-rs neural network contracts
 ```
 
 ### Gate Routing Decision

@@ -1,4 +1,4 @@
-//! Response correctness validation tests for BitNet.rs
+//! Response correctness validation tests for BitNet-rs
 //!
 //! This module provides automated tests that feed known prompts and check
 //! the model's output for expected content. These "golden prompt" tests ensure

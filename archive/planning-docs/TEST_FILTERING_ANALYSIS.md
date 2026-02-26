@@ -1,4 +1,4 @@
-# BitNet.rs Test Filtering Analysis Report
+# BitNet-rs Test Filtering Analysis Report
 
 **Generated**: 2025-10-20
 **Command Analyzed**: `cargo test --workspace --no-default-features --features cpu --lib --tests`

@@ -6,7 +6,7 @@
 
 ## Overview
 
-Multi-head attention forms the core of transformer computation, enabling the model to attend to different parts of the input sequence simultaneously. This specification defines a production-ready quantized multi-head attention implementation that integrates with BitNet.rs quantization infrastructure, supports efficient KV-cache for autoregressive generation, and includes rotary positional embeddings for improved sequence modeling.
+Multi-head attention forms the core of transformer computation, enabling the model to attend to different parts of the input sequence simultaneously. This specification defines a production-ready quantized multi-head attention implementation that integrates with BitNet-rs quantization infrastructure, supports efficient KV-cache for autoregressive generation, and includes rotary positional embeddings for improved sequence modeling.
 
 ## Architecture Design
 
@@ -1095,4 +1095,4 @@ mod tests {
 }
 ```
 
-This comprehensive multi-head attention specification provides a production-ready implementation that integrates seamlessly with BitNet.rs quantization infrastructure while delivering high performance and accuracy for transformer-based neural network inference.
+This comprehensive multi-head attention specification provides a production-ready implementation that integrates seamlessly with BitNet-rs quantization infrastructure while delivering high performance and accuracy for transformer-based neural network inference.

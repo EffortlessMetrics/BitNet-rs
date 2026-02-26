@@ -1,12 +1,12 @@
 # Migration FAQ
 
-This document answers frequently asked questions about migrating from legacy BitNet implementations to BitNet.rs.
+This document answers frequently asked questions about migrating from legacy BitNet implementations to BitNet-rs.
 
 ## General Migration Questions
 
-### Q: Why should I migrate to BitNet.rs?
+### Q: Why should I migrate to BitNet-rs?
 
-**A:** BitNet.rs offers significant advantages over legacy implementations:
+**A:** BitNet-rs offers significant advantages over legacy implementations:
 
 - **Performance-focused design** with advanced optimizations (benchmarking in development)*
 - **Memory safety guarantees** - no segfaults or memory leaks
@@ -28,21 +28,21 @@ This document answers frequently asked questions about migrating from legacy Bit
 
 Most users can migrate in a few hours with our automated tools and guides.
 
-### Q: Is BitNet.rs compatible with my existing models?
+### Q: Is BitNet-rs compatible with my existing models?
 
-**A:** Yes! BitNet.rs supports all standard model formats:
+**A:** Yes! BitNet-rs supports all standard model formats:
 
 - ✅ **GGUF** - Full compatibility
 - ✅ **SafeTensors** - Full compatibility
 - ✅ **HuggingFace** - Direct loading from Hub
 - ✅ **Custom formats** - Via conversion tools
 
-### Q: Can I run BitNet.rs alongside my existing implementation?
+### Q: Can I run BitNet-rs alongside my existing implementation?
 
 **A:** Absolutely! We recommend a gradual migration approach:
 
 1. **Side-by-side deployment** - Run both implementations in parallel
-2. **Gradual traffic shifting** - Move traffic incrementally to BitNet.rs
+2. **Gradual traffic shifting** - Move traffic incrementally to BitNet-rs
 3. **Cross-validation** - Verify identical outputs during transition
 4. **Performance monitoring** - Compare metrics between implementations
 
@@ -53,7 +53,7 @@ Most users can migrate in a few hours with our automated tools and guides.
 **A:** We made a deliberate architectural decision not to vendor (include) the original C++ BitNet implementation in our repository for several important reasons:
 
 #### 🎯 **Clear Primary Implementation**
-- **Establishes BitNet.rs as primary**: Vendoring C++ would confuse which implementation is recommended
+- **Establishes BitNet-rs as primary**: Vendoring C++ would confuse which implementation is recommended
 - **Reduces maintenance burden**: We don't maintain or support the C++ codebase
 - **Focuses development effort**: All resources go toward improving the Rust implementation
 
@@ -98,12 +98,12 @@ Most users can migrate in a few hours with our automated tools and guides.
 
 - **Multiple mirrors**: Backup copies in different locations
 - **Version archives**: Historical versions preserved for testing
-- **Standalone operation**: BitNet.rs works independently without C++ validation
+- **Standalone operation**: BitNet-rs works independently without C++ validation
 - **Community forks**: Can adapt to community-maintained forks if needed
 
-The C++ implementation is only needed for cross-validation, not for production use of BitNet.rs.
+The C++ implementation is only needed for cross-validation, not for production use of BitNet-rs.
 
-### Q: How do I migrate from C++ BitNet to BitNet.rs?
+### Q: How do I migrate from C++ BitNet to BitNet-rs?
 
 **A:** Follow our comprehensive migration path:
 
@@ -150,7 +150,7 @@ cargo test --no-default-features --features crossval
 
 ### Q: What about Python bindings?
 
-**A:** BitNet.rs provides high-performance Python bindings:
+**A:** BitNet-rs provides high-performance Python bindings:
 
 ```python
 # Same API, better performance
@@ -177,10 +177,10 @@ cargo xtask validate-config rust_config.toml
 
 **A:** Several options for custom code:
 
-1. **Contribute upstream**: Add features to BitNet.rs directly
+1. **Contribute upstream**: Add features to BitNet-rs directly
 2. **Plugin system**: Use our extensible architecture
 3. **FFI integration**: Call your C++ code from Rust
-4. **Wrapper approach**: Wrap BitNet.rs in your custom layer
+4. **Wrapper approach**: Wrap BitNet-rs in your custom layer
 
 ### Q: How do I benchmark the migration?
 
@@ -201,19 +201,19 @@ cargo xtask performance-report --compare-cpp
 **A:** We recommend a **gradual migration** approach:
 
 #### Phase 1: Side-by-Side (1-2 weeks)
-- Deploy BitNet.rs alongside existing implementation
-- Route small percentage of traffic to BitNet.rs
+- Deploy BitNet-rs alongside existing implementation
+- Route small percentage of traffic to BitNet-rs
 - Monitor performance and correctness
 - Build confidence with team
 
 #### Phase 2: Gradual Shift (2-4 weeks)
-- Increase traffic to BitNet.rs incrementally
+- Increase traffic to BitNet-rs incrementally
 - Migrate non-critical workloads first
 - Keep legacy implementation as fallback
 - Train team on new tools and processes
 
 #### Phase 3: Full Migration (1-2 weeks)
-- Route majority of traffic to BitNet.rs
+- Route majority of traffic to BitNet-rs
 - Migrate critical workloads
 - Decommission legacy implementation
 - Clean up old code and infrastructure
@@ -271,9 +271,9 @@ cargo xtask performance-report --compare-cpp
 
 ## Production Questions
 
-### Q: Is BitNet.rs production-ready?
+### Q: Is BitNet-rs production-ready?
 
-**A:** Yes! BitNet.rs is designed for production use:
+**A:** Yes! BitNet-rs is designed for production use:
 
 - ✅ **Comprehensive testing**: Extensive test coverage including property-based testing
 - ✅ **Memory safety**: Guaranteed by Rust's type system
@@ -282,7 +282,7 @@ cargo xtask performance-report --compare-cpp
 - ✅ **Documentation**: Complete API documentation and guides
 - ✅ **Community support**: Active community and professional services
 
-### Q: How do I monitor BitNet.rs in production?
+### Q: How do I monitor BitNet-rs in production?
 
 **A:** Built-in monitoring and observability:
 
@@ -301,7 +301,7 @@ metrics.export_opentelemetry();
 
 ### Q: What about security considerations?
 
-**A:** BitNet.rs prioritizes security:
+**A:** BitNet-rs prioritizes security:
 
 - **Memory safety**: No buffer overflows or use-after-free bugs
 - **Input validation**: Comprehensive input sanitization
@@ -357,7 +357,7 @@ model_manager.route_traffic("model_v2", 0.1)?; // 10% traffic
 
 ### Q: What's the long-term roadmap?
 
-**A:** BitNet.rs is actively developed with regular releases:
+**A:** BitNet-rs is actively developed with regular releases:
 
 - **Monthly releases**: Bug fixes and minor improvements
 - **Quarterly releases**: New features and optimizations

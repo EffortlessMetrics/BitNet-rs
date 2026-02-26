@@ -1,4 +1,4 @@
-# Default values for BitNet.rs
+# Default values for bitnet-rs
 # This is a YAML-formatted file for the primary Rust implementation.
 # For legacy C++ deployment options, see the 'legacy' section below.
 

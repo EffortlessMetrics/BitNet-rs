@@ -1,5 +1,5 @@
 ================================================================================
-BitNet.rs Validation Policy Examples - Complete Summary
+bitnet-rs Validation Policy Examples - Complete Summary
 ================================================================================
 
 Created: 2025-10-13
@@ -330,6 +330,6 @@ License
 ================================================================================
 
 All policy files in this directory are provided under the same license as
-BitNet.rs: MIT OR Apache-2.0
+bitnet-rs: MIT OR Apache-2.0
 
 ================================================================================

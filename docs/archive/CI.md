@@ -1,6 +1,6 @@
 # CI Validation Framework
 
-BitNet.rs uses a strict, deterministic CI validation framework with no compromises. All gates must pass - no skips, no mocks, no excuses.
+BitNet-rs uses a strict, deterministic CI validation framework with no compromises. All gates must pass - no skips, no mocks, no excuses.
 
 ## Quick Start
 
@@ -195,7 +195,7 @@ find target -name bitnet -type f -executable
 
 ## Philosophy
 
-This CI framework embodies BitNet.rs's commitment to quality:
+This CI framework embodies BitNet-rs's commitment to quality:
 
 - **Strict** - No compromises, all gates must pass
 - **Deterministic** - Reproducible results every time

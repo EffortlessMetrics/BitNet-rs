@@ -235,7 +235,7 @@ cargo test -p xtask --test parity_both_tests --no-default-features --features cr
 
 - ✅ All tests compile successfully
 - ✅ No syntax errors or type mismatches
-- ✅ Follows BitNet.rs testing patterns (serial, feature gates, env helpers)
+- ✅ Follows BitNet-rs testing patterns (serial, feature gates, env helpers)
 - ✅ Comprehensive doc comments with specification references
 - ✅ Clear test names following `test_<component>_<behavior>` convention
 

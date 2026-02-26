@@ -1,4 +1,4 @@
-# BitNet.rs Server Configuration
+# bitnet-rs Server Configuration
 # Production-ready configuration for inference service
 
 [server]

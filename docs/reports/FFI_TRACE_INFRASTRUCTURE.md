@@ -1,4 +1,4 @@
-# BitNet.rs FFI and Tracing Infrastructure Exploration Report
+# BitNet-rs FFI and Tracing Infrastructure Exploration Report
 
 **Exploration Date**: 2025-10-24  
 **Thoroughness**: Medium  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-BitNet.rs has a well-structured FFI interface for C++ cross-validation and a comprehensive trace infrastructure for debugging layer-by-layer divergence. The system supports:
+BitNet-rs has a well-structured FFI interface for C++ cross-validation and a comprehensive trace infrastructure for debugging layer-by-layer divergence. The system supports:
 
 - **C++ FFI Bridge**: Optional FFI bindings to the Microsoft BitNet C++ reference implementation
 - **Trace Infrastructure**: Per-layer, per-token activation capture for root-cause analysis

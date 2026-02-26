@@ -520,7 +520,7 @@ async fn ac14_model_compatibility_ok() -> Result<()> {
     }
 
     // Test GGUF version compatibility
-    let supported_gguf_versions = vec!["v3", "v4"]; // BitNet.rs supported versions
+    let supported_gguf_versions = vec!["v3", "v4"]; // BitNet-rs supported versions
 
     for version in supported_gguf_versions {
         // TODO: Test models with different GGUF versions

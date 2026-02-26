@@ -372,7 +372,7 @@ All required test fixtures for Issue #439 GPU feature-gate hardening have been s
 5. Gitignore patterns (AC8)
 6. Environment variables (AC5)
 7. Device information (AC3)
-8. Neural network quantization patterns (BitNet.rs context)
+8. Neural network quantization patterns (BitNet-rs context)
 
 The test scaffolding (53 tests) is ready to consume these fixtures for comprehensive GPU feature-gate validation.
 

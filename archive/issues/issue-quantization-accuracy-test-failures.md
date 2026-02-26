@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The BitNet.rs quantization accuracy validation system is currently failing to build and execute due to multiple compilation errors, placeholder implementations, and missing functionality. This prevents comprehensive accuracy validation of quantization algorithms, which is critical for meeting the project's ≥99% accuracy requirement for I2S quantization and ≥98% accuracy requirement for TL1/TL2 quantization.
+The BitNet-rs quantization accuracy validation system is currently failing to build and execute due to multiple compilation errors, placeholder implementations, and missing functionality. This prevents comprehensive accuracy validation of quantization algorithms, which is critical for meeting the project's ≥99% accuracy requirement for I2S quantization and ≥98% accuracy requirement for TL1/TL2 quantization.
 
 ## Environment
 
@@ -116,7 +116,7 @@ warning: unexpected `cfg` condition value: `crossval`
 
 ## Proposed Solution
 
-Implement a comprehensive, production-ready quantization accuracy validation framework that ensures BitNet.rs meets its accuracy requirements and maintains compatibility with reference implementations.
+Implement a comprehensive, production-ready quantization accuracy validation framework that ensures BitNet-rs meets its accuracy requirements and maintains compatibility with reference implementations.
 
 ### Implementation Plan
 
@@ -456,7 +456,7 @@ mod production_accuracy_tests {
     /// Test that all quantization methods meet production accuracy requirements
     #[test]
     fn test_production_accuracy_requirements() -> Result<()> {
-        println!("=== BitNet.rs Production Accuracy Validation ===");
+        println!("=== BitNet-rs Production Accuracy Validation ===");
 
         let test_results = run_comprehensive_accuracy_tests()?;
 
@@ -861,7 +861,7 @@ criterion_main!(benches);
 - `technical-debt`
 
 ## Related Issues
-- BitNet.rs production accuracy requirements (#XXX)
+- BitNet-rs production accuracy requirements (#XXX)
 - Cross-validation framework implementation (#XXX)
 - Performance benchmarking infrastructure (#XXX)
 - Quantization algorithm optimization (#XXX)

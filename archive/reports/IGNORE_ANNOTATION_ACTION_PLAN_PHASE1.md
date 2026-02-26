@@ -35,7 +35,7 @@ This action plan provides step-by-step instructions for **Phase 1** of the #[ign
 Run the hygiene checker to establish the current baseline:
 
 ```bash
-# Navigate to BitNet.rs root
+# Navigate to BitNet-rs root
 cd /home/steven/code/Rust/BitNet-rs
 
 # Run full hygiene scan
@@ -697,7 +697,7 @@ git diff | grep -A2 '#\[ignore'
 
 ---
 
-**Author**: BitNet.rs Automation Framework
+**Author**: BitNet-rs Automation Framework
 **Last Updated**: October 23, 2025
 **Version**: 1.0.0
 **See Also**: `IGNORE_HYGIENE_STATUS_REPORT.md`, `SPEC-2025-006-ignore-annotation-automation.md`

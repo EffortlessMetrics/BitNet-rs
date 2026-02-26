@@ -6,7 +6,7 @@ The Microsoft BitNet 2B4T GGUF model uses the LLaMA-3 tokenizer (vocab size: 128
 
 This specification defines the architecture for implementing automatic tokenizer fetching and auto-discovery to enable zero-configuration inference for LLaMA-3 models.
 
-**Affected BitNet.rs Components:**
+**Affected BitNet-rs Components:**
 - `xtask`: New `tokenizer` subcommand for downloading and verification
 - `bitnet-cli`: Auto-discovery logic when `--tokenizer` flag not provided
 - `bitnet-tokenizers`: Tokenizer loading and validation utilities
@@ -21,14 +21,14 @@ This specification defines the architecture for implementing automatic tokenizer
 ## User Stories
 
 ### Story 1: Zero-Configuration Quick Start
-**As a** new BitNet.rs user
+**As a** new BitNet-rs user
 **I want** to run inference without manually downloading tokenizers
 **So that** I can follow README quick-start examples without additional setup steps
 
 **Business Value**: Reduces onboarding friction, improves first-run success rate, enables production-ready workflows
 
 ### Story 2: Reproducible CI Workflows
-**As a** BitNet.rs CI maintainer
+**As a** BitNet-rs CI maintainer
 **I want** automatic tokenizer provisioning in CI pipelines
 **So that** parity smoke tests pass without manual tokenizer management
 
@@ -195,11 +195,11 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 ```markdown
 ## Tokenizer Setup
 
-BitNet.rs requires a tokenizer for text-to-token encoding. The CLI supports automatic tokenizer discovery.
+BitNet-rs requires a tokenizer for text-to-token encoding. The CLI supports automatic tokenizer discovery.
 
 ### Automatic Discovery
 
-When `--tokenizer` flag is not provided, BitNet.rs searches for tokenizers in this order:
+When `--tokenizer` flag is not provided, BitNet-rs searches for tokenizers in this order:
 
 1. **GGUF embedded tokenizer** (some models include embedded tokenizers)
 2. **Sibling tokenizer.json** in model directory
@@ -326,7 +326,7 @@ impl TokenizerCommand {
 
 **Auto-Discovery API**:
 ```rust
-/// Tokenizer auto-discovery for BitNet.rs CLI
+/// Tokenizer auto-discovery for BitNet-rs CLI
 pub struct TokenizerDiscovery {
     model_path: PathBuf,
 }
@@ -912,9 +912,9 @@ fn resolve_tokenizer(model_path: &Path, explicit_path: Option<PathBuf>) -> Resul
 
 ## Conclusion
 
-This specification provides a production-ready solution for automatic LLaMA-3 tokenizer fetching and auto-discovery in BitNet.rs. The architecture balances user experience (zero-configuration quick start), flexibility (official vs mirror sources), and reliability (fail-fast with clear errors).
+This specification provides a production-ready solution for automatic LLaMA-3 tokenizer fetching and auto-discovery in BitNet-rs. The architecture balances user experience (zero-configuration quick start), flexibility (official vs mirror sources), and reliability (fail-fast with clear errors).
 
-The implementation maintains backward compatibility while enabling the "copy-paste works" README experience, reducing onboarding friction and improving production readiness for BitNet.rs neural network inference workflows.
+The implementation maintains backward compatibility while enabling the "copy-paste works" README experience, reducing onboarding friction and improving production readiness for BitNet-rs neural network inference workflows.
 
 ## Next Steps
 

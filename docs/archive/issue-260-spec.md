@@ -1,9 +1,9 @@
 # Issue #260: Mock Inference Performance Reporting
 
 ## Context
-BitNet.rs currently reports misleading inference performance of 200.0 tokens/sec through a mock inference path rather than actual quantized neural network computation. The real quantized inference pipeline is blocked by 21+ compilation errors, preventing accurate performance measurement and validation of the 1-bit neural network architecture. This creates false evidence for production readiness and blocks proper benchmarking against the C++ reference implementation.
+BitNet-rs currently reports misleading inference performance of 200.0 tokens/sec through a mock inference path rather than actual quantized neural network computation. The real quantized inference pipeline is blocked by 21+ compilation errors, preventing accurate performance measurement and validation of the 1-bit neural network architecture. This creates false evidence for production readiness and blocks proper benchmarking against the C++ reference implementation.
 
-The issue affects the core BitNet.rs inference pipeline stages:
+The issue affects the core BitNet-rs inference pipeline stages:
 - **Model Loading**: GGUF integration working but needs QLinear layer replacement
 - **Quantization**: I2S (2-bit signed), TL1/TL2 (table lookup) kernels not integrated
 - **Kernels**: SIMD/CUDA compute kernels bypassed by mock path
@@ -11,7 +11,7 @@ The issue affects the core BitNet.rs inference pipeline stages:
 - **Output**: Performance metrics based on mock rather than real computation
 
 ## User Story
-As a neural network researcher evaluating BitNet.rs for production deployment, I want accurate performance reporting from real quantized inference computation so that I can make informed decisions about model deployment, compare against baseline implementations, and validate the 1-bit quantization accuracy claims.
+As a neural network researcher evaluating BitNet-rs for production deployment, I want accurate performance reporting from real quantized inference computation so that I can make informed decisions about model deployment, compare against baseline implementations, and validate the 1-bit quantization accuracy claims.
 
 ## Acceptance Criteria
 AC1: Fix all compilation errors blocking real quantized inference execution with proper error context and anyhow::Result patterns

@@ -1,14 +1,14 @@
 # FFI Build Script Hygiene Audit Report
 
 **Date**: 2025-10-23  
-**Codebase**: BitNet.rs (feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2)  
+**Codebase**: BitNet-rs (feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2)  
 **Thorough Analysis**: Very thorough (all 8 build.rs files, vendor headers, CI configuration, xtask helpers)
 
 ---
 
 ## Executive Summary
 
-BitNet.rs implements **comprehensive FFI build hygiene** following industry best practices (MSVC/Unix compatibility, vendor header isolation, warning stratification). However, **MSVC compiler support requires hardening** to achieve zero-warning FFI builds. Current implementation uses `-Wno-*` patterns suitable for GCC/Clang but lacks MSVC equivalents.
+BitNet-rs implements **comprehensive FFI build hygiene** following industry best practices (MSVC/Unix compatibility, vendor header isolation, warning stratification). However, **MSVC compiler support requires hardening** to achieve zero-warning FFI builds. Current implementation uses `-Wno-*` patterns suitable for GCC/Clang but lacks MSVC equivalents.
 
 **Key Findings**:
 - ✅ **Vendor header isolation**: Uses `-isystem` correctly for third-party code
@@ -568,7 +568,7 @@ pub fn bitnet_cpp_system_includes() -> Result<Vec<PathBuf>, Box<dyn std::error::
 
 ## Conclusion
 
-BitNet.rs has implemented **exemplary FFI build hygiene for GCC/Clang** with proper vendor header isolation and selective warning suppression. The `xtask-build-helper` provides a centralized, maintainable approach.
+BitNet-rs has implemented **exemplary FFI build hygiene for GCC/Clang** with proper vendor header isolation and selective warning suppression. The `xtask-build-helper` provides a centralized, maintainable approach.
 
 **To achieve true cross-platform zero-warning FFI builds**, the project needs to:
 1. Add MSVC compiler support (Phase 2) - **Critical for Windows**

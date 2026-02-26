@@ -1,4 +1,4 @@
-# BitNet.rs CI Infrastructure Exploration - Complete Index
+# BitNet-rs CI Infrastructure Exploration - Complete Index
 
 **Date**: 2025-10-23
 **Status**: Complete & Comprehensive
@@ -8,7 +8,7 @@
 
 ## Overview
 
-This directory contains a comprehensive exploration of the BitNet.rs CI infrastructure, including:
+This directory contains a comprehensive exploration of the BitNet-rs CI infrastructure, including:
 - Link-check configuration analysis
 - Complete CI job dependency graph (DAG)
 - Feature matrix testing strategies

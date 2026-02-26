@@ -1,4 +1,4 @@
-# BitNet.rs PR #246: Draft → Ready Final Assessment
+# BitNet-rs PR #246: Draft → Ready Final Assessment
 
 ## Executive Summary
 **RECOMMENDATION: PROMOTE TO READY** - PR #246 successfully implements real BitNet model integration (Issue #218 AC1-AC2) with acceptable quality gates despite mutation testing gaps requiring future hardening.
@@ -6,7 +6,7 @@
 ## Quality Gates Assessment Matrix
 
 <!-- gates:start -->
-| Gate | Status | Evidence | BitNet.rs Impact |
+| Gate | Status | Evidence | BitNet-rs Impact |
 |------|--------|----------|------------------|
 | **freshness** | ✅ PASS | Branch current with main, no rebase needed | Compatible |
 | **format** | ✅ PASS | `cargo fmt --all --check`: all files formatted | Compatible |
@@ -66,7 +66,7 @@
 - **Auto-Fix**: Dependency update available when alternatives emerge
 - **Residual Risk**: **MINIMAL** - maintenance burden only, no security impact
 
-## BitNet.rs Neural Network Validation ✅
+## BitNet-rs Neural Network Validation ✅
 
 ### Quantization Accuracy Requirements
 - **I2S Quantization**: Operational with 49.5ms baseline performance ✅
@@ -118,7 +118,7 @@
 - Test quarantine acceptable with proper issue linking
 - Security concerns minimal and properly triaged
 
-### BitNet.rs Specific Validation ✅
+### BitNet-rs Specific Validation ✅
 - Real BitNet model integration successfully implemented
 - Quantization algorithms (I2S, TL1, TL2) operational
 - GGUF compatibility validated
@@ -134,7 +134,7 @@ This PR is ready for promotion from Draft to Ready status. The comprehensive val
 
 1. **Core Functionality**: Neural network inference pipeline operational
 2. **Quality Standards**: All required gates pass with acceptable mutation testing gap
-3. **BitNet.rs Compliance**: Quantization accuracy and performance requirements met
+3. **BitNet-rs Compliance**: Quantization accuracy and performance requirements met
 4. **Risk Assessment**: No critical blocking issues, manageable technical debt
 
 The mutation testing gap (35% vs ≥80% target) represents future hardening opportunity rather than blocking concern, as neural network functionality is validated through comprehensive integration testing.
@@ -147,7 +147,7 @@ The mutation testing gap (35% vs ≥80% target) represents future hardening oppo
 
 ---
 
-**Review Summarizer Agent - BitNet.rs Draft → Ready Pipeline**
+**Review Summarizer Agent - BitNet-rs Draft → Ready Pipeline**
 **Final Assessment**: ✅ PROMOTE TO READY
 **Timestamp**: 2025-09-24T07:30:00Z
 **Commit**: `8ef0823`

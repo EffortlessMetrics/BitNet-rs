@@ -275,7 +275,7 @@ async fn test_comprehensive_html_report() {
 
     // Verify HTML structure
     assert!(content.contains("<!DOCTYPE html>"));
-    assert!(content.contains("BitNet.rs Test Report"));
+    assert!(content.contains("BitNet-rs Test Report"));
 
     // Verify test suite content
     assert!(content.contains("bitnet_core_tests"));
@@ -322,7 +322,7 @@ async fn test_comprehensive_json_report() {
 
     // Verify metadata
     assert_eq!(parsed["metadata"]["total_suites"], 2);
-    assert_eq!(parsed["metadata"]["generator"], "BitNet.rs Test Framework");
+    assert_eq!(parsed["metadata"]["generator"], "BitNet-rs Test Framework");
 
     // Verify summary
     assert_eq!(parsed["summary"]["total_tests"], 7);
@@ -399,7 +399,7 @@ async fn test_comprehensive_markdown_report() {
     let content = fs::read_to_string(&output_path).await.unwrap();
 
     // Verify Markdown structure
-    assert!(content.contains("# BitNet.rs Test Report"));
+    assert!(content.contains("# BitNet-rs Test Report"));
     assert!(content.contains("## Summary"));
     assert!(content.contains("## Test Suites"));
 

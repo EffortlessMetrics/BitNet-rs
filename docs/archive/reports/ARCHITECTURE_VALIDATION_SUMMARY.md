@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs PR #246 - Architecture Validation Summary
+# BitNet-rs PR #246 - Architecture Validation Summary
 
 ## Executive Summary
 
@@ -40,7 +40,7 @@
 - **Proper Boundaries**: Model loading isolated from quantization, kernels isolated from inference
 - **Dependency Management**: No circular dependencies, clear dependency hierarchy
 
-### 2. **Feature-Gated Architecture (Critical BitNet.rs Requirement)**
+### 2. **Feature-Gated Architecture (Critical BitNet-rs Requirement)**
 - **Root Default**: `default = []` ✅ EMPTY features correctly enforced
 - **Explicit Requirements**: All features must be explicitly enabled (`--features cpu|gpu`)
 - **Conditional Compilation**: GPU code properly gated behind feature flags
@@ -135,14 +135,14 @@ KernelManager Priority:
 4. **Production Ready**: Error handling, performance tracking, resource management
 
 ### Next Phase: API Contract Validation
-The architecture is properly structured and aligned with BitNet.rs principles. Ready for:
+The architecture is properly structured and aligned with BitNet-rs principles. Ready for:
 1. **API Contract Review**: Public interface stability analysis
 2. **Schema Validation**: GGUF format compliance and tensor alignment
 3. **Performance Baseline**: Neural network throughput SLO validation
 
 ## Summary
 
-The Real BitNet Model Integration (PR #246) demonstrates **excellent architectural alignment** with BitNet.rs design principles:
+The Real BitNet Model Integration (PR #246) demonstrates **excellent architectural alignment** with BitNet-rs design principles:
 
 - ✅ **Feature-gated workspace** with empty defaults properly enforced
 - ✅ **Device-aware abstractions** with intelligent GPU/CPU selection
@@ -156,5 +156,5 @@ The Real BitNet Model Integration (PR #246) demonstrates **excellent architectur
 
 ---
 **Validation Date**: 2025-09-24
-**Validator**: architecture-reviewer (BitNet.rs)
+**Validator**: architecture-reviewer (BitNet-rs)
 **Scope**: Comprehensive neural network inference architecture validation

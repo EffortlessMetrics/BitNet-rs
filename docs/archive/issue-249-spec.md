@@ -2,7 +2,7 @@
 
 ## Context
 
-BitNet.rs currently has incomplete tokenizer integration that blocks real neural network model inference. The existing system requires manual tokenizer specification and lacks automatic discovery mechanisms, forcing users to rely on mock tokenizers for testing. This limitation prevents running production-ready neural network models and impacts the entire inference pipeline from Model Loading → Quantization → Kernels → Inference → Output.
+BitNet-rs currently has incomplete tokenizer integration that blocks real neural network model inference. The existing system requires manual tokenizer specification and lacks automatic discovery mechanisms, forcing users to rely on mock tokenizers for testing. This limitation prevents running production-ready neural network models and impacts the entire inference pipeline from Model Loading → Quantization → Kernels → Inference → Output.
 
 The current `bitnet-tokenizers` crate provides basic infrastructure with `UniversalTokenizer`, `HfTokenizer`, `SpmTokenizer` (feature-gated), and `MockTokenizer` implementations. However, it lacks:
 - Automatic tokenizer discovery from GGUF model metadata
@@ -11,11 +11,11 @@ The current `bitnet-tokenizers` crate provides basic infrastructure with `Univer
 - Seamless integration with the cargo xtask workflow
 - Production-ready tokenizer strategy implementations
 
-This affects BitNet.rs neural network inference performance as tokenizers are critical for proper text preprocessing in large language models (LLaMA-2: 32000 vocab, LLaMA-3: 128256 vocab, GPT-2: 50257 vocab).
+This affects BitNet-rs neural network inference performance as tokenizers are critical for proper text preprocessing in large language models (LLaMA-2: 32000 vocab, LLaMA-3: 128256 vocab, GPT-2: 50257 vocab).
 
 ## User Story
 
-As a BitNet.rs developer, I want automatic tokenizer discovery and smart downloading so that I can run real neural network model inference without manual tokenizer configuration or relying on mock implementations.
+As a BitNet-rs developer, I want automatic tokenizer discovery and smart downloading so that I can run real neural network model inference without manual tokenizer configuration or relying on mock implementations.
 
 ## Acceptance Criteria
 

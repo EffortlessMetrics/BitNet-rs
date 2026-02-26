@@ -19,7 +19,7 @@ The disabled test file contains sophisticated accuracy validation functions:
 
 ```rust
 impl AccuracyMetrics {
-    /// Check if metrics meet production quality thresholds for BitNet.rs
+    /// Check if metrics meet production quality thresholds for BitNet-rs
     fn meets_production_quality(&self) -> bool {
         self.snr_db >= 46.0 &&               // ≥99% accuracy requires ~46dB SNR
         self.pearson_correlation >= 0.99 &&   // ≥99% correlation for I2S
@@ -103,7 +103,7 @@ impl AccuracyMetrics {
         Self { mse, mae, max_error, snr_db, pearson_correlation, cosine_similarity }
     }
 
-    /// Check if metrics meet BitNet.rs production quality thresholds
+    /// Check if metrics meet BitNet-rs production quality thresholds
     pub fn meets_production_quality(&self, quantization_type: &QuantizationType) -> bool {
         match quantization_type {
             QuantizationType::I2S => self.meets_i2s_production_quality(),

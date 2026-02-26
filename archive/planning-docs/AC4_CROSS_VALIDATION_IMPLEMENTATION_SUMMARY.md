@@ -72,9 +72,9 @@ Test will run when:
 - `BITNET_CPP_DIR` points to valid C++ reference
 - `BITNET_GGUF` points to valid model file
 
-## Integration with BitNet.rs Patterns
+## Integration with BitNet-rs Patterns
 
-✅ **Follows BitNet.rs architectural patterns**:
+✅ **Follows BitNet-rs architectural patterns**:
 - Feature-gated design (`#[cfg(all(feature = "crossval", feature = "ffi"))]`)
 - Graceful degradation when features unavailable
 - Uses existing parity infrastructure (`bitnet_inference::parity`)
@@ -97,7 +97,7 @@ Test will run when:
 
 ## Next Steps
 
-The AC4 cross-validation test is **fully implemented** and ready for use with the `crossval` and `ffi` features enabled. The test follows BitNet.rs patterns and integrates with the existing cross-validation infrastructure.
+The AC4 cross-validation test is **fully implemented** and ready for use with the `crossval` and `ffi` features enabled. The test follows BitNet-rs patterns and integrates with the existing cross-validation infrastructure.
 
 To run with cross-validation:
 ```bash

@@ -11,7 +11,7 @@
 
 ## Summary
 
-Issue #453 strict quantization guards PR successfully passes all BitNet.rs neural network development security and governance validation requirements:
+Issue #453 strict quantization guards PR successfully passes all BitNet-rs neural network development security and governance validation requirements:
 
 - ✅ **0 vulnerabilities** detected (cargo audit: 727 dependencies scanned)
 - ✅ **0 unsafe blocks** in production code (memory-safe implementation)
@@ -46,7 +46,7 @@ cargo deny check licenses
 
 **Evidence:**
 - No banned dependencies (AGPL, proprietary CUDA)
-- All licenses approved for BitNet.rs
+- All licenses approved for BitNet-rs
 - Minor warnings for unused allowances (expected)
 
 ### Memory Safety
@@ -126,7 +126,7 @@ cargo clippy --workspace --all-targets --no-default-features --features cpu -- -
 
 ---
 
-## BitNet.rs-Specific Governance
+## BitNet-rs-Specific Governance
 
 ### Cargo Manifest Security
 **Command:** `git diff main...HEAD -- '**/Cargo.toml'`
@@ -243,7 +243,7 @@ quality:
 
 **Gate:** `generative:gate:security`
 **Status:** `pass`
-**Agent:** security-validator (BitNet.rs generative agent)
+**Agent:** security-validator (BitNet-rs generative agent)
 **Flow:** generative
 **Schema Version:** 1.0.0
 **Evidence File:** `ci/security-gate-evidence.md`

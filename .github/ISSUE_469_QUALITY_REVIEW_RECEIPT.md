@@ -89,7 +89,7 @@
 
 ## Code Quality Assessment
 
-### ✅ BitNet.rs Standards Compliance
+### ✅ bitnet-rs Standards Compliance
 
 **Feature Flags:**
 - ✅ Proper `--no-default-features` usage throughout
@@ -98,7 +98,7 @@
 
 **Neural Network Patterns:**
 - ✅ Quantization tolerance aligned with I2_S dual-flavor architecture
-- ✅ GGUF loader integration follows BitNet.rs conventions
+- ✅ GGUF loader integration follows bitnet-rs conventions
 - ✅ Device-aware quantization patterns maintained
 
 **Workspace Structure:**
@@ -184,7 +184,7 @@ tests: 508 workspace lib tests passing (AC1: 2/2, AC2: 4/4)
 4. **AC-specific tests validated**: 2/2 for AC1, 4/4 for AC2 (integration tests appropriately ignored pending fixtures)
 5. **No prohibited patterns** in AC1/AC2 implementation code
 6. **API contracts respected**: Backward compatibility, public exports, naming conventions
-7. **BitNet.rs standards compliance**: Feature flags, error handling, workspace structure
+7. **bitnet-rs standards compliance**: Feature flags, error handling, workspace structure
 8. **Neural network integration validated**: Quantization tolerance, GGUF loader, device-aware patterns
 
 **No issues requiring code-refiner intervention.**

@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This PR represents a comprehensive integration of all recent BitNet.rs development work, combining:
+This PR represents a comprehensive integration of all recent BitNet-rs development work, combining:
 
 1. **QK256 GGUF Fixtures & Dual-Flavor Tests** - Complete test infrastructure for I2_S quantization format validation
 2. **EnvGuard Environment Isolation** - Robust test isolation preventing race conditions
@@ -24,7 +24,7 @@ This PR represents a comprehensive integration of all recent BitNet.rs developme
 
 ## Quality Gates Status
 
-All BitNet.rs quality gates pass:
+All BitNet-rs quality gates pass:
 
 ### ✅ Compilation
 ```bash
@@ -373,7 +373,7 @@ feat: Comprehensive integration - QK256 fixtures, EnvGuard, receipts, strict mod
 
 ### Summary
 
-Comprehensive integration PR combining all recent BitNet.rs development work:
+Comprehensive integration PR combining all recent BitNet-rs development work:
 
 - ✅ QK256 GGUF fixture generation and dual-flavor testing infrastructure
 - ✅ EnvGuard environment isolation for robust parallel testing
@@ -581,5 +581,5 @@ This PR establishes solid foundations for:
 ---
 
 **Preparation Date**: 2025-10-22
-**Prepared By**: BitNet.rs Branch Preparation Agent
+**Prepared By**: BitNet-rs Branch Preparation Agent
 **Document Version**: 1.0

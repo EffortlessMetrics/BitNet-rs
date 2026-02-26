@@ -71,7 +71,7 @@ let cpp_logits = cpp_session.context.get_all_logits(cpp_tokens.len())?;
 
 ### US1: Early Detection of Tokenization Mismatches
 
-**As a** BitNet.rs developer running cross-validation
+**As a** BitNet-rs developer running cross-validation
 **I want** token parity validation before logits comparison
 **So that** I immediately know when tokenization differs between Rust and C++
 
@@ -87,7 +87,7 @@ let cpp_logits = cpp_session.context.get_all_logits(cpp_tokens.len())?;
 
 ### US2: Actionable Guidance for Token Mismatches
 
-**As a** BitNet.rs user encountering token parity errors
+**As a** BitNet-rs user encountering token parity errors
 **I want** clear fix-it suggestions in error messages
 **So that** I can resolve tokenization issues without consulting documentation
 
@@ -103,7 +103,7 @@ let cpp_logits = cpp_session.context.get_all_logits(cpp_tokens.len())?;
 
 ### US3: Clean Output When Tokens Match
 
-**As a** BitNet.rs developer with correctly matched tokens
+**As a** BitNet-rs developer with correctly matched tokens
 **I want** silent token validation (no noise)
 **So that** cross-validation output remains clean and focused on logits comparison
 
@@ -118,7 +118,7 @@ let cpp_logits = cpp_session.context.get_all_logits(cpp_tokens.len())?;
 
 ### US4: Template-Aware Tokenization Parity
 
-**As a** BitNet.rs developer using prompt templates
+**As a** BitNet-rs developer using prompt templates
 **I want** crossval-per-token to respect template settings
 **So that** tokenization matches production CLI behavior
 

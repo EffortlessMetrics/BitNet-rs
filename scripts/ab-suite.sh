@@ -29,7 +29,7 @@ for p in "${PROMPTS[@]}"; do
   rs_json="$tmp/rs_${idx}.json"
   cpp_json="$tmp/cpp_${idx}.json"
 
-  # BitNet.rs run
+  # bitnet-rs run
   if [[ -n "${TOKENIZER_PATH:-}" ]]; then
     "$BITNET_BIN" run --model "$MODEL_PATH" --tokenizer "$TOKENIZER_PATH" \
       --prompt "$p" --bos --max-new-tokens "$MAX_NEW" --temperature 0 \

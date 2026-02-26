@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document defines the public API contracts for Issue #469's 8 acceptance criteria. All contracts follow Rust API design guidelines and BitNet.rs workspace conventions.
+This document defines the public API contracts for Issue #469's 8 acceptance criteria. All contracts follow Rust API design guidelines and BitNet-rs workspace conventions.
 
 ---
 
@@ -613,6 +613,6 @@ All contracts specify thread safety:
 
 **Document Control:**
 - Review Status: API Reference (Ready for Implementation)
-- Owner: BitNet.rs Architecture Team
+- Owner: BitNet-rs Architecture Team
 - Issue: #469
 - Target: v0.1.0-mvp

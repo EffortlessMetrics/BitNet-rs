@@ -1,6 +1,6 @@
 # Test Coverage Analysis Report: PR #448
 
-**Agent**: BitNet.rs Test Coverage Analysis Specialist
+**Agent**: bitnet-rs Test Coverage Analysis Specialist
 **Date**: 2025-10-12
 **PR**: #448 - OpenTelemetry OTLP Migration & Inference API Exports
 **Status**: ⚠️ **BOUNDED - Coverage Metrics with Analysis Limitations**
@@ -391,6 +391,6 @@ gaps: OTLP impl pending (7 WIP tests), 15 property tests (CI nightly), no critic
 ---
 
 **Report Generated**: 2025-10-12
-**Agent**: BitNet.rs Test Coverage Analysis Specialist
+**Agent**: bitnet-rs Test Coverage Analysis Specialist
 **Authority**: Fix-forward within bounded retry limits
 **Scope**: Test distribution analysis, PR change validation, critical path coverage

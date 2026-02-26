@@ -1,6 +1,6 @@
-# BitNet.rs Cloud Deployment Examples
+# bitnet-rs Cloud Deployment Examples
 
-This directory contains comprehensive examples for deploying BitNet.rs on major cloud platforms.
+This directory contains comprehensive examples for deploying bitnet-rs on major cloud platforms.
 
 ## Directory Structure
 

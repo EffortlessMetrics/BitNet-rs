@@ -1,4 +1,4 @@
-# BitNet.rs Logits Extraction Analysis - Comprehensive Report
+# BitNet-rs Logits Extraction Analysis - Comprehensive Report
 
 **Status**: Complete exploration of logits extraction system for Sprint 1  
 **Date**: 2025-10-24  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The BitNet.rs codebase uses a **single-path logits extraction mechanism** that currently returns only the last token's logits. To enable per-position logits comparison (critical for Sprint 1), we need to:
+The BitNet-rs codebase uses a **single-path logits extraction mechanism** that currently returns only the last token's logits. To enable per-position logits comparison (critical for Sprint 1), we need to:
 
 1. **Modify `parity.rs`** to extract logits at all positions from the forward pass output
 2. **Leverage existing tensor operations** (no new computation needed - already computed)

@@ -1,8 +1,8 @@
-# BitNet.rs CLI Argument Parsing Patterns Report
+# BitNet-rs CLI Argument Parsing Patterns Report
 
 ## Executive Summary
 
-This report documents the CLI argument parsing patterns used in BitNet.rs, focusing on:
+This report documents the CLI argument parsing patterns used in BitNet-rs, focusing on:
 1. The **clap** derive macro patterns (both `#[derive(Parser)]` and `#[derive(Args)]`)
 2. How to add new flags and enums
 3. Validation patterns (both built-in and custom)
@@ -25,7 +25,7 @@ This report documents the CLI argument parsing patterns used in BitNet.rs, focus
 ```rust
 #[derive(Parser)]
 #[command(name = "bitnet")]
-#[command(about = "BitNet.rs — 1-bit neural network inference with strict receipts")]
+#[command(about = "BitNet-rs — 1-bit neural network inference with strict receipts")]
 #[command(long_about = r#"Long detailed help text..."#)]
 #[command(version = bitnet_version())]  // Dynamic version function
 #[command(author = "BitNet Contributors")]
@@ -608,7 +608,7 @@ pub prompt_template: String,
 ### Pattern 4: Long help at command level
 
 ```rust
-#[command(long_about = r#"BitNet.rs CLI — one-shot generation and chat with strict receipts
+#[command(long_about = r#"BitNet-rs CLI — one-shot generation and chat with strict receipts
 
 QUICK EXAMPLES:
 

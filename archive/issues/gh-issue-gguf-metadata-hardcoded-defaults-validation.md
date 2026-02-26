@@ -506,7 +506,7 @@ pub fn read_gguf_metadata(path: &Path) -> Result<GgufMetadata, GgufMetadataError
 
 ### Phase 3: Integration & Testing (Week 3)
 - [ ] Replace hardcoded defaults with validation-based extraction
-- [ ] Add comprehensive error handling throughout BitNet.rs
+- [ ] Add comprehensive error handling throughout BitNet-rs
 - [ ] Test with diverse GGUF model files
 - [ ] Validate error messages and debugging information
 
@@ -529,7 +529,7 @@ pub fn read_gguf_metadata(path: &Path) -> Result<GgufMetadata, GgufMetadataError
 
 - #XXX: Model loading validation comprehensive framework
 - #XXX: GGUF format support expansion
-- #XXX: Error handling standardization across BitNet.rs
+- #XXX: Error handling standardization across BitNet-rs
 - #XXX: Model compatibility testing automation
 
 ## Implementation Notes

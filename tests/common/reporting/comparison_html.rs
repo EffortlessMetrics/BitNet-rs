@@ -63,14 +63,14 @@ impl ComparisonHtmlReporter {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BitNet.rs Cross-Implementation Comparison Analysis</title>
+    <title>BitNet-rs Cross-Implementation Comparison Analysis</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>🔍 BitNet.rs Cross-Implementation Comparison Analysis</h1>
+            <h1>🔍 BitNet-rs Cross-Implementation Comparison Analysis</h1>
             <div class="status-badge status-{status_class}">
                 {overall_status}
             </div>

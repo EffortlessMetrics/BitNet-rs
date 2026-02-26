@@ -11,7 +11,7 @@
 
 ## Summary
 
-**Specification Validation Complete:** All 6 specification files validated and committed successfully to the BitNet.rs repository following Generative flow standards.
+**Specification Validation Complete:** All 6 specification files validated and committed successfully to the BitNet-rs repository following Generative flow standards.
 
 ### Committed Files (3,437 lines)
 
@@ -32,7 +32,7 @@
 - ✅ Feature spec in `docs/explanation/` (Explanation category)
 - ✅ API contracts in `docs/reference/` (Reference category)
 - ✅ ADRs in `docs/explanation/architecture/` (Architecture decisions)
-- ✅ Clear audience targeting (BitNet.rs developers)
+- ✅ Clear audience targeting (BitNet-rs developers)
 
 **Cross-Reference Integrity:**
 - ✅ Feature spec cross-links to API contracts
@@ -42,7 +42,7 @@
 
 ### ✅ API Contract Validity
 
-**BitNet.rs Workspace Integration:**
+**BitNet-rs Workspace Integration:**
 - ✅ `StrictModeConfig` extends existing `bitnet-common` types
 - ✅ `BitNetError::StrictMode` variant aligns with error patterns
 - ✅ Receipt schema v1.1.0 backward compatible with v1.0.0
@@ -56,7 +56,7 @@
 
 ### ✅ Scope Validation
 
-**BitNet.rs Crate Alignment:**
+**BitNet-rs Crate Alignment:**
 - ✅ `bitnet-inference`: Primary implementation (quantized_linear.rs, attention.rs)
 - ✅ `bitnet-common`: Strict mode configuration and error types
 - ✅ `bitnet-kernels`: Kernel availability queries
@@ -102,7 +102,7 @@ Breaking Changes: NONE
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 **MSRV:** 1.90.0 (Rust 2024 edition)
 **Feature Flags:** Always specify `--no-default-features --features cpu|gpu`
@@ -152,7 +152,7 @@ spec: docs/explanation/strict-quantization-guards.md (916 lines),
 **Evidence Summary:**
 - All 6 specification files validated and committed
 - Documentation structure compliant with Diátaxis framework
-- API contracts align with BitNet.rs workspace patterns
+- API contracts align with BitNet-rs workspace patterns
 - Scope minimal and specific to Issue #453 requirements
 - TDD compliance verified with feature-gated test patterns
 - Schema validation passed with zero conflicts

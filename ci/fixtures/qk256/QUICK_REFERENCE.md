@@ -1,6 +1,6 @@
 # QK256 Fixture Quick Reference
 
-Quick command reference for working with BitNet.rs QK256 test fixtures.
+Quick command reference for working with BitNet-rs QK256 test fixtures.
 
 ## Fixture Files
 

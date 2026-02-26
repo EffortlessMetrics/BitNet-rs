@@ -1,25 +1,25 @@
 # Strict Quantization Guards: Feature Specification
 
 **Document Version:** 1.0.0
-**Target BitNet.rs Version:** 0.1.0+
+**Target BitNet-rs Version:** 0.1.0+
 **Related Issue:** #453
 **Related PR:** (TBD)
 **Created:** 2025-10-14
 **Status:** Approved - Ready for Implementation
 **Type:** Explanation (Diátaxis)
-**Audience:** BitNet.rs developers implementing quantization validation
+**Audience:** BitNet-rs developers implementing quantization validation
 
 ---
 
 ## Executive Summary
 
-This specification defines strict quantization guards for BitNet.rs neural network inference, ensuring that receipts accurately reflect actual computation paths by preventing silent FP32 fallback in quantized layers. The feature implements three-tier validation (debug assertions, strict mode enforcement, receipt validation) to guarantee production-grade quantized inference with honest performance claims.
+This specification defines strict quantization guards for BitNet-rs neural network inference, ensuring that receipts accurately reflect actual computation paths by preventing silent FP32 fallback in quantized layers. The feature implements three-tier validation (debug assertions, strict mode enforcement, receipt validation) to guarantee production-grade quantized inference with honest performance claims.
 
 **Core Problem:** Receipts can claim "quantized computation" (`compute_path="real"`) while actual inference silently falls back to FP32 dequantization staging, undermining performance baselines and accuracy validation.
 
 **Solution:** Runtime guards that detect and reject FP32 fallback, ensuring receipts accurately reflect the actual computation path used during inference.
 
-**Neural Network Context:** BitNet.rs inference pipeline (Model Loading → Quantization → Inference → Output) requires honest compute paths for production deployment confidence and cross-validation accuracy.
+**Neural Network Context:** BitNet-rs inference pipeline (Model Loading → Quantization → Inference → Output) requires honest compute paths for production deployment confidence and cross-validation accuracy.
 
 ---
 
@@ -28,7 +28,7 @@ This specification defines strict quantization guards for BitNet.rs neural netwo
 1. [User Story and Motivation](#user-story-and-motivation)
 2. [Acceptance Criteria](#acceptance-criteria)
 3. [Technical Architecture](#technical-architecture)
-4. [BitNet.rs Quantization Integration](#bitnetrs-quantization-integration)
+4. [BitNet-rs Quantization Integration](#bitnetrs-quantization-integration)
 5. [Implementation Roadmap](#implementation-roadmap)
 6. [Testing Strategy](#testing-strategy)
 7. [Documentation Requirements](#documentation-requirements)
@@ -41,7 +41,7 @@ This specification defines strict quantization guards for BitNet.rs neural netwo
 
 ### Primary User Story
 
-**As a** BitNet.rs inference engineer,
+**As a** BitNet-rs inference engineer,
 **I want** runtime guards in strict mode that prevent silent FP32 fallback in quantized layers and attention projections,
 **So that** receipts accurately reflect the actual computation path and I can trust performance baselines for production deployments.
 
@@ -584,7 +584,7 @@ cargo test --doc -p bitnet-common strict_mode
 
 ---
 
-## BitNet.rs Quantization Integration
+## BitNet-rs Quantization Integration
 
 ### Quantization Types and Accuracy Targets
 

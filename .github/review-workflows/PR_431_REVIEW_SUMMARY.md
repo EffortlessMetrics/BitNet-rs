@@ -13,7 +13,7 @@
 
 **FINAL RECOMMENDATION: ROUTE A - READY FOR PROMOTION**
 
-PR #431 has successfully completed all 7 review microloops with comprehensive validation of BitNet.rs neural network inference capabilities. All **required gates PASS** (6/6), and all **optional hardening gates PASS** (4/4) with marginal scores on mutation testing mitigated by targeted fixes.
+PR #431 has successfully completed all 7 review microloops with comprehensive validation of bitnet-rs neural network inference capabilities. All **required gates PASS** (6/6), and all **optional hardening gates PASS** (4/4) with marginal scores on mutation testing mitigated by targeted fixes.
 
 **Key Achievement**: Successfully implements real neural network inference receipt generation system with **100% backward compatibility** (additive-only API changes), **575/575 tests passing**, **0 performance regressions**, and **>99% quantization accuracy** maintained across I2S, TL1, and TL2 algorithms.
 
@@ -357,7 +357,7 @@ CUDA TL1/TL2:        FAILED - "unspecified launch failure" (tracked in issue #43
 CPU Fallback:        72% coverage validated (non-blocking)
 ```
 
-**Regression Classification** (BitNet.rs thresholds):
+**Regression Classification** (bitnet-rs thresholds):
 ```
 Critical Regression (>15%): 0 detected ✅
 Major Regression (10-15%):  0 detected ✅
@@ -549,7 +549,7 @@ Result: 20 crates generated, 0 missing documentation warnings
 **Root Cause**: No Drop implementation for CudaKernel, Arc<CudaContext> cleanup timing
 
 **Auto-Fix Potential**: ⚠️ MANUAL - Requires CUDA context lifecycle management
-- Not fixable with BitNet.rs tooling alone
+- Not fixable with bitnet-rs tooling alone
 - Requires GPU hardware access for validation
 - `serial_test::serial` already applied but insufficient
 
@@ -956,6 +956,6 @@ freshness: 0 behind main, 22 ahead; hygiene: format ✅, clippy ✅; commits: 22
 ---
 
 **Review Complete**: 2025-10-04
-**Validator**: review-summarizer (BitNet.rs)
+**Validator**: review-summarizer (bitnet-rs)
 **Next Agent**: promotion-validator (final gate validation + GitHub status update)
 **Evidence**: This summary + 7 microloop reports in `.github/review-workflows/`

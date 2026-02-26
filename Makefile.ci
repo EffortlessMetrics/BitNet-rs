@@ -1,4 +1,4 @@
-# CI Acceptance targets for BitNet.rs
+# CI Acceptance targets for BitNet-rs
 
 .PHONY: accept accept-pr accept-nightly help
 

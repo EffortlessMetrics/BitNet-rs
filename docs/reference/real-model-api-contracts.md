@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the comprehensive API contracts for real BitNet model integration across the BitNet.rs neural network inference pipeline. These contracts ensure consistent interfaces for model loading, quantization, inference, and validation while maintaining backward compatibility and supporting device-aware execution.
+This document defines the comprehensive API contracts for real BitNet model integration across the BitNet-rs neural network inference pipeline. These contracts ensure consistent interfaces for model loading, quantization, inference, and validation while maintaining backward compatibility and supporting device-aware execution.
 
 ## Core API Contracts
 
@@ -878,7 +878,7 @@ pub trait RecoveryExecutor {
 #### Unit Test Contracts
 
 ```rust
-/// Standard test traits for BitNet.rs components
+/// Standard test traits for BitNet-rs components
 pub trait ComponentTestSuite {
     /// Test component with mock data (fast)
     fn test_with_mock_data(&self) -> Result<TestResult, TestError>;
@@ -982,4 +982,4 @@ impl BackwardCompatibility {
 }
 ```
 
-This comprehensive API contract reference ensures consistent interfaces across the BitNet.rs neural network inference pipeline while supporting real model integration, device-aware execution, and production-grade validation requirements.
+This comprehensive API contract reference ensures consistent interfaces across the BitNet-rs neural network inference pipeline while supporting real model integration, device-aware execution, and production-grade validation requirements.

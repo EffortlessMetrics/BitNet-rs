@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logger to see kernel selection details
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    println!("=== BitNet.rs Device-Aware Quantization with Memory Tracking ===\n");
+    println!("=== BitNet-rs Device-Aware Quantization with Memory Tracking ===\n");
 
     // Demonstrate auto-detection
     println!("🔍 Auto-detecting best device...");

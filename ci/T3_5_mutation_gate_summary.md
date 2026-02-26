@@ -1,4 +1,4 @@
-# T3.5 BitNet.rs Neural Network Mutation Testing Gate Summary
+# T3.5 BitNet-rs Neural Network Mutation Testing Gate Summary
 
 ## Executive Summary
 
@@ -51,7 +51,7 @@
 - Memory size calculation mutations (*, +)
 - Cache access counter mutations (+=, -=, *=)
 
-## BitNet.rs-Specific Neural Network Impact
+## BitNet-rs-Specific Neural Network Impact
 
 ### Accuracy-Critical Paths Compromised
 - **I2S/TL1/TL2 quantization** algorithms lack property-based validation
@@ -109,6 +109,6 @@
 - Establish comprehensive error path validation for all neural network operations
 
 ---
-*T3.5 BitNet.rs Neural Network Mutation Testing Validation Complete*
+*T3.5 BitNet-rs Neural Network Mutation Testing Validation Complete*
 *Generated: 2025-09-24 11:15 UTC*
 *Agent: mutation-tester (integrative flow)*

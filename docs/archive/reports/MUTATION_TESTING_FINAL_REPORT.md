@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Mutation Testing Final Validation Report
+# BitNet-rs Mutation Testing Final Validation Report
 
 ## Overview
 **Date**: 2025-09-24
@@ -96,7 +96,7 @@ ok       Unmutated baseline in 52.3s build + 2.1s test
 - Device-aware quantization: 1/1 ✅
 - Accuracy validation: 5/5 ✅
 
-## BitNet.rs Quality Assessment
+## BitNet-rs Quality Assessment
 
 ### Mutation Score Compliance
 - **Target**: ≥80% for neural network critical paths
@@ -148,4 +148,4 @@ ok       Unmutated baseline in 52.3s build + 2.1s test
 
 ---
 
-**Validation Complete**: BitNet.rs PR #246 mutation testing validation successful. All quality gates passed. Ready for security scanning phase.
+**Validation Complete**: BitNet-rs PR #246 mutation testing validation successful. All quality gates passed. Ready for security scanning phase.

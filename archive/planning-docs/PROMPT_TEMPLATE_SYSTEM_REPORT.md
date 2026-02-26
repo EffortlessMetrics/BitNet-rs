@@ -1,8 +1,8 @@
-# BitNet.rs Prompt Template System - Comprehensive Report
+# BitNet-rs Prompt Template System - Comprehensive Report
 
 ## Executive Summary
 
-BitNet.rs implements a multi-faceted prompt template system with three built-in templates (Raw, Instruct, Llama3-Chat), automatic detection from GGUF metadata and tokenizer hints, and complete integration throughout the inference pipeline. The system includes BOS/special token handling, stop sequence management, and planned Jinja template support.
+BitNet-rs implements a multi-faceted prompt template system with three built-in templates (Raw, Instruct, Llama3-Chat), automatic detection from GGUF metadata and tokenizer hints, and complete integration throughout the inference pipeline. The system includes BOS/special token handling, stop sequence management, and planned Jinja template support.
 
 ---
 
@@ -948,7 +948,7 @@ cargo run -p xtask -- crossval-per-token \
 
 ## 16. Conclusion
 
-The BitNet.rs prompt template system is **comprehensively implemented** for single-turn inference with three core templates (Raw, Instruct, LLaMA-3 Chat). Key strengths:
+The BitNet-rs prompt template system is **comprehensively implemented** for single-turn inference with three core templates (Raw, Instruct, LLaMA-3 Chat). Key strengths:
 
 ✓ Auto-detection from GGUF metadata and tokenizer hints  
 ✓ BOS/special token handling per template  

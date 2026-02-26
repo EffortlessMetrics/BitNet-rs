@@ -1,6 +1,6 @@
 # Dual-Backend Cross-Validation Documentation Summary
 
-This document summarizes the comprehensive documentation updates for BitNet.rs dual-backend cross-validation system (G4).
+This document summarizes the comprehensive documentation updates for BitNet-rs dual-backend cross-validation system (G4).
 
 ## Documentation Structure
 
@@ -64,8 +64,8 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 
 **Existing Complete Sections** (verified):
 - ✅ Overview of dual-backend architecture (lines 6-30)
-  - Lane A: BitNet.rs ↔ bitnet.cpp
-  - Lane B: BitNet.rs ↔ llama.cpp
+  - Lane A: BitNet-rs ↔ bitnet.cpp
+  - Lane B: BitNet-rs ↔ llama.cpp
   - Auto-detection heuristics
 
 - ✅ One-Command Setup (lines 42-72)

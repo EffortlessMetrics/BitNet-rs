@@ -38,7 +38,7 @@ $ cargo mutants -p bitnet-quantization --timeout 30
 Result: TIMEOUT after 180s (large mutation surface)
 ```
 
-**Root Cause:** BitNet.rs workspace complexity:
+**Root Cause:** BitNet-rs workspace complexity:
 - 22 member crates with feature-gated compilation
 - Large quantization/inference codebases
 - cargo-mutants compilation overhead exceeds bounded execution window

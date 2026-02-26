@@ -2,11 +2,11 @@
 
 **Component**: Cross-crate integration across bitnet-inference, bitnet-kernels, and bitnet-models
 **Location**: Workspace-wide integration patterns
-**Dependencies**: All BitNet.rs workspace crates
+**Dependencies**: All BitNet-rs workspace crates
 
 ## Overview
 
-This specification defines the comprehensive integration requirements across the BitNet.rs workspace to implement real neural network inference. The integration spans three primary crates (bitnet-inference, bitnet-kernels, bitnet-models) and several supporting crates, ensuring seamless quantization-aware transformer computation while maintaining clear architectural boundaries and optimal performance.
+This specification defines the comprehensive integration requirements across the BitNet-rs workspace to implement real neural network inference. The integration spans three primary crates (bitnet-inference, bitnet-kernels, bitnet-models) and several supporting crates, ensuring seamless quantization-aware transformer computation while maintaining clear architectural boundaries and optimal performance.
 
 ## Workspace Architecture
 
@@ -1028,4 +1028,4 @@ impl IntegrationError {
 }
 ```
 
-This comprehensive workspace integration specification ensures seamless collaboration between all BitNet.rs crates while implementing real neural network inference with quantized transformers, maintaining clear architectural boundaries, and enabling optimal performance across CPU and GPU devices.
+This comprehensive workspace integration specification ensures seamless collaboration between all BitNet-rs crates while implementing real neural network inference with quantized transformers, maintaining clear architectural boundaries, and enabling optimal performance across CPU and GPU devices.

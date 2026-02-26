@@ -1,5 +1,5 @@
 name: Bug Report
-description: File a bug report for BitNet.rs
+description: File a bug report for bitnet-rs
 labels: ["bug"]
 body:
   - type: markdown

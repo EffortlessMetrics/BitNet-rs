@@ -1,4 +1,4 @@
-# BitNet.rs Inference Engine - Comprehensive Layer-by-Layer Pipeline Analysis
+# BitNet-rs Inference Engine - Comprehensive Layer-by-Layer Pipeline Analysis
 
 **Date**: 2025-10-24
 **Status**: Complete Exploration
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The BitNet.rs inference engine implements a complete transformer-based neural network with the following key components:
+The BitNet-rs inference engine implements a complete transformer-based neural network with the following key components:
 
 1. **Embeddings & LM Head**: Supports tied weights with transposed storage optimization
 2. **Rotary Position Embeddings (RoPE)**: Implements 4D and 3D shapes, position-aware application
@@ -976,7 +976,7 @@ cargo run -p bitnet-cli -- compat-check --show-kv model.gguf
 
 ## CONCLUSION
 
-**The BitNet.rs inference engine is well-implemented and production-ready for MVP phase.** All layer-by-layer operations are correct with proper numerical stability and quantization support.
+**The BitNet-rs inference engine is well-implemented and production-ready for MVP phase.** All layer-by-layer operations are correct with proper numerical stability and quantization support.
 
 **Known Issue**: The GGUF model file contains corrupted LayerNorm weights (56.5× scale error). This is a data issue, not a code bug. The solution is to re-convert the GGUF from source with correct LayerNorm handling.
 

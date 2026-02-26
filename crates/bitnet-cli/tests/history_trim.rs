@@ -3,7 +3,7 @@
 //! Tests feature spec: chat-repl-ux-polish.md#AC3-history-management
 //!
 //! This test suite validates the conversation history management functionality
-//! for the BitNet.rs CLI chat mode. Tests ensure proper FIFO trimming when
+//! for the BitNet-rs CLI chat mode. Tests ensure proper FIFO trimming when
 //! history limits are enforced.
 //!
 //! **TDD Approach**: These tests compile successfully but fail because the

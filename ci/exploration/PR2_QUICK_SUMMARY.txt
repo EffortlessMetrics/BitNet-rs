@@ -1,7 +1,7 @@
 PR2 ENVGUARD VERIFICATION - QUICK SUMMARY
 ==========================================
 
-PROJECT: BitNet.rs Test Determinism Infrastructure
+PROJECT: BitNet-rs Test Determinism Infrastructure
 DATE: 2025-10-22
 ASSESSED BY: Code Analysis (medium depth)
 

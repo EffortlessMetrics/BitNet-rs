@@ -84,7 +84,7 @@ Successfully validated and committed AC1 (Strict Loader Mode) and AC2 (QK256 Tol
 - **Status:** Pre-existing issue, not introduced by AC1/AC2
 - **Verified:** Tested on clean HEAD (commit 3d971047) - same failure
 
-## Phase 2: BitNet.rs Build & Feature Validation
+## Phase 2: bitnet-rs Build & Feature Validation
 
 ### CPU Build
 **Command:** `cargo build --release --no-default-features --features cpu`
@@ -103,9 +103,9 @@ Successfully validated and committed AC1 (Strict Loader Mode) and AC2 (QK256 Tol
 **Result:** ✅ **COMPLIANT**
 - Default features are empty (no unwanted dependencies)
 - CPU and GPU features properly gated
-- Quantization feature organization follows BitNet.rs standards
+- Quantization feature organization follows bitnet-rs standards
 
-## Phase 3: BitNet.rs Code Hygiene & Quality Gates
+## Phase 3: bitnet-rs Code Hygiene & Quality Gates
 
 ### Formatting
 **Command:** `cargo fmt --all --check`
@@ -165,7 +165,7 @@ features: cpu/gpu validated; no default feature violations
 tdd: scaffolding tests follow TDD best practices (intentional panics pending fixtures)
 ```
 
-### BitNet.rs-Specific Validations
+### bitnet-rs-Specific Validations
 - ✅ **Error Patterns:** `anyhow::Result` usage validated
 - ✅ **Feature Gates:** CPU/GPU conditional compilation correct
 - ✅ **TDD Compliance:** Red-Green-Refactor pattern followed
@@ -302,7 +302,7 @@ let (config, tensors, qk256_weights) = (result.config, result.tensors, result.i2
 2. ✅ **All quality gates pass** - Clippy, format, build, tests all clean
 3. ✅ **TDD compliance** - Unit tests passing, integration tests scaffolded
 4. ✅ **Backward compatibility** - No breaking changes, smooth migration path
-5. ✅ **BitNet.rs standards** - Feature flags, error handling, workspace structure validated
+5. ✅ **bitnet-rs standards** - Feature flags, error handling, workspace structure validated
 6. ✅ **Pre-existing issues acknowledged** - CLI smoke test failure documented and verified
 7. ✅ **Commits created** - Two commits with comprehensive documentation
 
@@ -318,7 +318,7 @@ let (config, tensors, qk256_weights) = (result.config, result.tensors, result.i2
 
 ## Success Protocol Complete
 
-**Final Message:** ✅ **BitNet.rs implementation validation complete. All quality gates passed. AC1 (Strict Loader Mode) and AC2 (QK256 Tolerance) implementations validated and committed. Ready for refinement phase.**
+**Final Message:** ✅ **bitnet-rs implementation validation complete. All quality gates passed. AC1 (Strict Loader Mode) and AC2 (QK256 Tolerance) implementations validated and committed. Ready for refinement phase.**
 
 ---
 

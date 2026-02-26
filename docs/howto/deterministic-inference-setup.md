@@ -1,10 +1,10 @@
 # How-To: Deterministic Inference Setup
 
-This guide shows you how to configure BitNet.rs for reproducible, deterministic neural network inference. Deterministic inference is essential for testing, validation, cross-validation with reference implementations, and ensuring consistent behavior across different hardware.
+This guide shows you how to configure BitNet-rs for reproducible, deterministic neural network inference. Deterministic inference is essential for testing, validation, cross-validation with reference implementations, and ensuring consistent behavior across different hardware.
 
 ## Prerequisites
 
-- BitNet.rs installed with CPU features: `--no-default-features --features cpu`
+- BitNet-rs installed with CPU features: `--no-default-features --features cpu`
 - A valid GGUF model file
 - Basic familiarity with environment variables
 
@@ -410,7 +410,7 @@ cat ci/inference.json | jq '{
 
 ## Summary
 
-Deterministic inference in BitNet.rs requires:
+Deterministic inference in BitNet-rs requires:
 
 1. **Environment Configuration**: `BITNET_DETERMINISTIC=1`, `BITNET_SEED=42`, `RAYON_NUM_THREADS=1`
 2. **Generation Config**: `seed: Some(42)`, `do_sample: true`

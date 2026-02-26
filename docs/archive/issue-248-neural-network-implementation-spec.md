@@ -2,13 +2,13 @@
 
 ## Executive Summary
 
-This specification provides a comprehensive technical implementation approach for Issue #248: replacing BitNet.rs mock inference with real neural network computation. The analysis identifies optimal transformer architecture implementation strategies, quantization-aware development patterns, and cross-validation methodologies aligned with BitNet.rs architectural principles.
+This specification provides a comprehensive technical implementation approach for Issue #248: replacing BitNet-rs mock inference with real neural network computation. The analysis identifies optimal transformer architecture implementation strategies, quantization-aware development patterns, and cross-validation methodologies aligned with BitNet-rs architectural principles.
 
-**Key Finding**: The existing BitNet.rs infrastructure provides excellent foundation with GGUF loading, comprehensive quantization algorithms (I2S, TL1, TL2, IQ2_S), universal tokenizers, and device-aware backends. The critical gap is the missing transformer forward pass that utilizes these components for actual neural network computation.
+**Key Finding**: The existing BitNet-rs infrastructure provides excellent foundation with GGUF loading, comprehensive quantization algorithms (I2S, TL1, TL2, IQ2_S), universal tokenizers, and device-aware backends. The critical gap is the missing transformer forward pass that utilizes these components for actual neural network computation.
 
 ## Technical Implementation Approach
 
-### Architecture Assessment: Integration with Existing BitNet.rs Infrastructure
+### Architecture Assessment: Integration with Existing BitNet-rs Infrastructure
 
 **Current Foundation (Complete)**:
 - ✅ **GGUF Model Loading**: ProductionModelLoader handles BitNet models with proper validation
@@ -381,7 +381,7 @@ cargo test --no-default-features --features cpu -p bitnet-models --test transfor
 cargo run -p bitnet-cli -- compat-check models/bitnet/model.gguf --validate-transformer
 ```
 
-## BitNet.rs-Specific Considerations
+## BitNet-rs-Specific Considerations
 
 ### Workspace Integration: Crate Modifications Required
 
@@ -850,6 +850,6 @@ cargo run -p xtask -- benchmark-transformer --validate-all-targets
 
 ## Conclusion
 
-This specification provides a comprehensive roadmap for implementing real neural network inference in BitNet.rs while maintaining architectural principles and quantization-first design. The approach leverages existing infrastructure optimally, focuses on production-grade reliability, and includes extensive validation frameworks to ensure successful deployment.
+This specification provides a comprehensive roadmap for implementing real neural network inference in BitNet-rs while maintaining architectural principles and quantization-first design. The approach leverages existing infrastructure optimally, focuses on production-grade reliability, and includes extensive validation frameworks to ensure successful deployment.
 
-The implementation follows BitNet.rs patterns of feature-gated architecture, comprehensive testing, and device-aware optimization while introducing real transformer computation that replaces mock implementations throughout the codebase.
+The implementation follows BitNet-rs patterns of feature-gated architecture, comprehensive testing, and device-aware optimization while introducing real transformer computation that replaces mock implementations throughout the codebase.

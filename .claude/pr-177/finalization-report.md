@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-PR #177 successfully implements comprehensive memory statistics tracking and platform-specific kernel selection in the BitNet.rs kernels crate. The implementation addresses critical performance monitoring gaps and cross-platform compatibility requirements.
+PR #177 successfully implements comprehensive memory statistics tracking and platform-specific kernel selection in the BitNet-rs kernels crate. The implementation addresses critical performance monitoring gaps and cross-platform compatibility requirements.
 
 ## Key Achievements
 
@@ -77,7 +77,7 @@ PR #177 successfully implements comprehensive memory statistics tracking and pla
 - **Feature Detection**: Runtime feature detection validation
 - **Compilation**: Multi-feature configuration testing
 
-## BitNet.rs Compliance
+## BitNet-rs Compliance
 
 ### Documentation Standards
 - ✅ **Code Documentation**: Comprehensive inline documentation with examples
@@ -142,7 +142,7 @@ PR #177 successfully implements comprehensive memory statistics tracking and pla
 - **Isolated Validation**: Used git worktree for safe validation
 - **Comprehensive Testing**: Added extensive test coverage
 - **Proper Documentation**: Enhanced code documentation and comments
-- **BitNet.rs Standards**: Followed all repository conventions and standards
+- **BitNet-rs Standards**: Followed all repository conventions and standards
 
 ---
 

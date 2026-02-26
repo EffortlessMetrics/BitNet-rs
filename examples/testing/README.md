@@ -1,6 +1,6 @@
-# BitNet.rs Testing Framework Examples
+# bitnet-rs Testing Framework Examples
 
-This directory contains comprehensive examples demonstrating how to use the BitNet.rs testing framework across all testing categories. These examples serve as both documentation and practical templates for implementing tests in your own projects.
+This directory contains comprehensive examples demonstrating how to use the bitnet-rs testing framework across all testing categories. These examples serve as both documentation and practical templates for implementing tests in your own projects.
 
 ## 📁 Directory Structure
 
@@ -370,6 +370,6 @@ When adding new test examples:
 - [Testing Framework Design Document](../../.kiro/specs/testing-framework-implementation/design.md)
 - [Testing Framework Requirements](../../.kiro/specs/testing-framework-implementation/requirements.md)
 - [Testing Framework Tasks](../../.kiro/specs/testing-framework-implementation/tasks.md)
-- [BitNet.rs Documentation](../../docs/)
+- [bitnet-rs Documentation](../../docs/)
 
-These examples provide a complete foundation for implementing comprehensive testing in the BitNet.rs project and serve as templates for similar Rust projects requiring extensive testing frameworks.
+These examples provide a complete foundation for implementing comprehensive testing in the bitnet-rs project and serve as templates for similar Rust projects requiring extensive testing frameworks.

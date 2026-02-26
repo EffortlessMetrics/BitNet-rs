@@ -454,7 +454,7 @@ mod performance_tests {
 
 ## Related Issues and Cross-References
 
-### BitNet.rs Architecture Integration
+### BitNet-rs Architecture Integration
 
 - **Related Component**: `bitnet-models` crate trait definitions
 - **Related Component**: `bitnet-tokenizers` crate trait definitions
@@ -487,7 +487,7 @@ mod performance_tests {
 
 ## Implementation Notes
 
-### BitNet.rs Specific Considerations
+### BitNet-rs Specific Considerations
 
 1. **Feature Flags**: Test utilities should respect `--no-default-features` build pattern
 2. **MSRV Compliance**: All code must build on Rust 1.90.0
@@ -507,4 +507,4 @@ cargo test -p bitnet-inference mock_validation
 cargo test -p bitnet-inference --test utils
 ```
 
-This issue provides a comprehensive pathway to transform the extensive mock objects in `engine.rs` into a maintainable, reusable test infrastructure that aligns with BitNet.rs architecture principles and supports the project's testing strategy evolution.
+This issue provides a comprehensive pathway to transform the extensive mock objects in `engine.rs` into a maintainable, reusable test infrastructure that aligns with BitNet-rs architecture principles and supports the project's testing strategy evolution.

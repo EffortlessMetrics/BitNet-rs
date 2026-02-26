@@ -55,7 +55,7 @@ Current schema v1.0.0 provides adequate fields for honest compute verification:
 - ⏭️ `quantization_method`: Quantization type (e.g., "I2_S", "TL1", "TL2")
 - ⏭️ `model_hash`: SHA256 fingerprint of GGUF file
 - ⏭️ `rust_version`: Rust compiler version for reproducibility
-- ⏭️ `bitnet_version`: BitNet.rs crate version
+- ⏭️ `bitnet_version`: BitNet-rs crate version
 
 ### 3. Schema Evolution Strategy
 - **Backward Compatibility**: v1.1.0 can add optional fields without breaking v1.0.0 receipts
@@ -85,7 +85,7 @@ v1.1.0 schema can add optional fields without breaking changes:
   "quantization_method": "I2_S",            // Optional: Quantization type
   "model_hash": "sha256:abc123...",         // Optional: GGUF fingerprint
   "rust_version": "1.90.0",                 // Optional: Rust compiler version
-  "bitnet_version": "0.1.0",                // Optional: BitNet.rs version
+  "bitnet_version": "0.1.0",                // Optional: BitNet-rs version
   // EXISTING FIELDS (backward compatible)
   "performance": {...},
   "success": true
@@ -128,7 +128,7 @@ v1.1.0 schema can add optional fields without breaking changes:
 - `quantization_method`: Quantization type (e.g., "I2_S", "TL1", "TL2")
 - `model_hash`: SHA256 fingerprint of GGUF file
 - `rust_version`: Rust compiler version (reproducibility)
-- `bitnet_version`: BitNet.rs crate version
+- `bitnet_version`: BitNet-rs crate version
 
 ### Alternative 2: Schema v1.0.1 with Optional Fields
 **Deferred**: Patch version bump not needed for MVP. Optional fields can be added in v1.1.0 minor version.
@@ -199,7 +199,7 @@ cargo run -p xtask -- verify-receipt --path ci/inference.json
   "quantization_method": "I2_S",            // Quantization type
   "model_hash": "sha256:abc123...",         // GGUF fingerprint
   "rust_version": "1.90.0",                 // Rust compiler
-  "bitnet_version": "0.1.0",                // BitNet.rs version
+  "bitnet_version": "0.1.0",                // BitNet-rs version
   // ... existing fields unchanged
 }
 ```

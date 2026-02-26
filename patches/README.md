@@ -1,4 +1,4 @@
-# BitNet.rs Patch Policy
+# BitNet-rs Patch Policy
 
 This directory contains minimal patches applied to external dependencies, primarily BitNet.cpp for cross-validation purposes.
 
@@ -22,7 +22,7 @@ Every patch file must include the following metadata in its header:
 # Status: temporary
 # Created: 2024-01-15
 # Review-By: 2024-02-15
-# Author: BitNet.rs Team <team@bitnet.rs>
+# Author: BitNet-rs Team <team@bitnet.rs>
 
 --- a/src/example.cpp
 +++ b/src/example.cpp
@@ -84,7 +84,7 @@ cat > ../patches/001-fix-arm64-compilation.patch << 'EOF'
 # Status: temporary
 # Created: 2024-01-15
 # Review-By: 2024-02-15
-# Author: BitNet.rs Team <team@bitnet.rs>
+# Author: BitNet-rs Team <team@bitnet.rs>
 
 EOF
 
@@ -186,7 +186,7 @@ Our patch policy aims to:
 # Status: temporary
 # Created: 2024-01-15
 # Review-By: 2024-02-15
-# Author: BitNet.rs Team <team@bitnet.rs>
+# Author: BitNet-rs Team <team@bitnet.rs>
 
 --- a/src/tensor.cpp
 +++ b/src/tensor.cpp
@@ -207,7 +207,7 @@ Our patch policy aims to:
 --- a/src/tensor.cpp
 +++ b/src/tensor.cpp
 @@ -1,10 +1,15 @@
-+// BitNet.rs modifications
++// BitNet-rs modifications
 +// TODO: Fix this properly
 +
  #include "tensor.h"

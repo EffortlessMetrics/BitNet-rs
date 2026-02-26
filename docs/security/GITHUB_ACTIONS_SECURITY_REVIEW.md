@@ -1,4 +1,4 @@
-# BitNet.rs GitHub Actions & Branch Protection Security Review
+# BitNet-rs GitHub Actions & Branch Protection Security Review
 
 **Date**: 2025-11-05  
 **Repository**: EffortlessMetrics/BitNet-rs  
@@ -9,7 +9,7 @@
 
 ## EXECUTIVE SUMMARY
 
-The BitNet.rs repository demonstrates **strong security posture**:
+The BitNet-rs repository demonstrates **strong security posture**:
 
 ✅ **All GitHub Actions pinned to SHA commits** (40-char hashes) - prevents supply chain attacks  
 ✅ **Principle of Least Privilege enforced** - no workflow has unnecessary elevated permissions  
@@ -211,7 +211,7 @@ All workflows follow **Principle of Least Privilege**:
 
 ## CONCLUSION
 
-**BitNet.rs GitHub Actions & Branch Protection Security: PRODUCTION-READY**
+**BitNet-rs GitHub Actions & Branch Protection Security: PRODUCTION-READY**
 
 **Strengths**:
 - All actions SHA-pinned (supply chain hardened)

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the comprehensive restructuring of the BitNet repository to establish BitNet.rs as the primary implementation while preserving the original C++ implementation as a legacy benchmark target.
+This design document outlines the comprehensive restructuring of the BitNet repository to establish BitNet-rs as the primary implementation while preserving the original C++ implementation as a legacy benchmark target.
 
 ## Architecture
 

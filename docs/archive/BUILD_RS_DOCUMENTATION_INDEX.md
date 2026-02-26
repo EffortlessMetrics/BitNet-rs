@@ -1,6 +1,6 @@
 # Build.rs Documentation Index
 
-This index guides you to comprehensive documentation about BitNet.rs library discovery and linking patterns.
+This index guides you to comprehensive documentation about BitNet-rs library discovery and linking patterns.
 
 ## Documents
 
@@ -187,7 +187,7 @@ Add to build-related sections:
 ```
 ## Understanding build.rs
 
-BitNet.rs uses sophisticated build script patterns. See:
+BitNet-rs uses sophisticated build script patterns. See:
 - BUILD_RS_QUICK_REFERENCE.md for patterns
 - BUILD_RS_LIBRARY_DISCOVERY_AND_LINKING.md for algorithms
 ```
@@ -221,7 +221,7 @@ Reference when discussing:
 ## Version Information
 
 - **Report Date**: 2025-10-25
-- **Repository**: BitNet.rs (Rust/BitNet-rs)
+- **Repository**: BitNet-rs (Rust/BitNet-rs)
 - **Scope**: Comprehensive build.rs analysis
 - **Status**: Complete, ready for implementation
 
@@ -249,4 +249,4 @@ Reference when discussing:
 ---
 
 **Last Updated**: 2025-10-25  
-**Maintained By**: BitNet.rs Documentation Team
+**Maintained By**: BitNet-rs Documentation Team

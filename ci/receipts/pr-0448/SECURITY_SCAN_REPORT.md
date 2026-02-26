@@ -483,7 +483,7 @@ No issues requiring immediate remediation identified.
 
 ## 12. Quality Gate Integration
 
-### BitNet.rs Standards Alignment: ✅ VALIDATED
+### BitNet-rs Standards Alignment: ✅ VALIDATED
 
 **Security Standards:**
 - ✅ No critical/high severity vulnerabilities
@@ -574,7 +574,7 @@ env vars: OTEL_EXPORTER_OTLP_ENDPOINT (non-sensitive; localhost default)
 - **If performance not required:** → review-summarizer (Draft→Ready promotion)
 - **If security issues found:** Would route to → dep-fixer (not needed - clean scan)
 
-**BitNet.rs Neural Network Standards: ✅ MAINTAINED**
+**BitNet-rs Neural Network Standards: ✅ MAINTAINED**
 - Quantization integrity: I2S/TL1/TL2 >99% accuracy preserved
 - Model security: GGUF parsing and tensor validation unchanged
 - GPU security: CUDA memory management and device detection unchanged
@@ -644,7 +644,7 @@ cargo clippy --workspace --all-targets --no-default-features --features cpu -- -
 
 - **RustSec Advisory Database:** https://rustsec.org/
 - **OpenTelemetry Security:** https://opentelemetry.io/docs/specs/otel/security/
-- **BitNet.rs Security Policy:** (see deny.toml for license and advisory policies)
+- **BitNet-rs Security Policy:** (see deny.toml for license and advisory policies)
 - **OTLP Migration Spec:** `docs/explanation/specs/opentelemetry-otlp-migration-spec.md` (628 lines)
 
 ---

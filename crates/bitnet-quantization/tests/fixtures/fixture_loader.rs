@@ -229,7 +229,7 @@ pub fn get_fixture_stats() -> FixtureStats {
 /// Print fixture summary to stdout
 pub fn print_fixture_summary() {
     let stats = get_fixture_stats();
-    println!("BitNet.rs Issue #260 Test Fixture Summary");
+    println!("BitNet-rs Issue #260 Test Fixture Summary");
     println!("========================================");
     println!("I2S Quantization fixtures: {}", stats.i2s_count);
 

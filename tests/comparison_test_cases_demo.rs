@@ -933,7 +933,7 @@ mod tests {
 }
 
 fn main() {
-    println!("BitNet.rs Comparison Test Cases Demo");
+    println!("BitNet-rs Comparison Test Cases Demo");
     println!("=====================================");
 
     let registry = ComparisonTestCaseRegistry::new();

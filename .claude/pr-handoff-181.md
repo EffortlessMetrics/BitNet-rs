@@ -45,4 +45,4 @@ All validation gates passed. The tensor safety improvements provide:
 - Rust 2024 compliance
 - Consolidated device API
 
-This PR successfully improves the safety and reliability of the BitNet.rs tensor system without breaking existing functionality.
+This PR successfully improves the safety and reliability of the BitNet-rs tensor system without breaking existing functionality.

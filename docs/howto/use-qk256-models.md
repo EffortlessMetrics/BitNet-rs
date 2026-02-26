@@ -1,6 +1,6 @@
 # How to Use QK256 (GGML I2_S) Models
 
-**Overview:** BitNet.rs now supports GGML I2_S format (QK256) models in pure Rust without requiring FFI or C++ dependencies. This guide walks through using QK256 models for inference.
+**Overview:** BitNet-rs now supports GGML I2_S format (QK256) models in pure Rust without requiring FFI or C++ dependencies. This guide walks through using QK256 models for inference.
 
 ## What is QK256?
 
@@ -11,11 +11,11 @@ QK256 refers to GGML's I2_S quantization format with:
 - **2-bit mapping:** [-2, -1, +1, +2] for signed symmetric quantization
 - **Accuracy:** ≥99.8% vs FP32 baseline
 
-BitNet.rs includes pure-Rust kernel support for QK256, enabling fast inference on GGML-compatible models without external dependencies.
+BitNet-rs includes pure-Rust kernel support for QK256, enabling fast inference on GGML-compatible models without external dependencies.
 
 ## Quick Start
 
-### 1. Build BitNet.rs with CPU Feature
+### 1. Build BitNet-rs with CPU Feature
 
 The `cpu` feature includes QK256 support:
 
@@ -78,7 +78,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 
 ### 5. Interactive Chat
 
-BitNet.rs provides interactive chat mode with auto-detected templates:
+BitNet-rs provides interactive chat mode with auto-detected templates:
 
 ```bash
 # Interactive chat with QK256 model
@@ -336,7 +336,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,full-cli -- run \
 
 ### Model Loading: Enhanced vs Minimal Loader
 
-BitNet.rs has two GGUF loading paths:
+BitNet-rs has two GGUF loading paths:
 
 | Loader | Capabilities | When Used |
 |--------|-------------|-----------|
@@ -351,7 +351,7 @@ BitNet.rs has two GGUF loading paths:
 
 Some GGUF exporters emit K/V projections as **[hidden, hidden]** square matrices instead of the correct **[kv_dim, hidden]** shape for GQA (Grouped Query Attention) models.
 
-**Auto-fix:** BitNet.rs weight mapper automatically detects and slices these to the correct shape:
+**Auto-fix:** BitNet-rs weight mapper automatically detects and slices these to the correct shape:
 
 - **Input:** K weight as [hidden_size, hidden_size] (e.g., 2560×2560)
 - **Output:** K weight as [kv_dim, hidden_size] (e.g., 640×2560 for n_kv_heads=5, head_dim=128)
@@ -372,7 +372,7 @@ INFO  Slicing K projection to [640, 2560] by selecting first head of each group
 
 - **Reference:** [Quantization Support - QK256](../reference/quantization-support.md) - Technical specifications
 - **Explanation:** [Dual I2_S Flavor Architecture](../explanation/i2s-dual-flavor.md) - Deep dive on BitNet vs GGML formats
-- **Getting Started:** [BitNet.rs Quickstart](../quickstart.md) - 5-minute setup guide
+- **Getting Started:** [BitNet-rs Quickstart](../quickstart.md) - 5-minute setup guide
 - **How-To:** [Model Validation Guide](./validate-models.md) - Comprehensive validation workflow
 - **CLI Reference:** [Command-Line Reference](../reference/cli-reference.md) - Detailed CLI documentation
 

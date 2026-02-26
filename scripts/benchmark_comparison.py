@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Performance comparison between BitNet.rs and BitNet.cpp
+Performance comparison between BitNet-rs and BitNet.cpp
 """
 
 import subprocess
@@ -151,7 +151,7 @@ def run_rust_benchmark(args):
 
 def parse_args():
     """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description="Performance comparison between BitNet.rs and BitNet.cpp")
+    parser = argparse.ArgumentParser(description="Performance comparison between BitNet-rs and BitNet.cpp")
     parser.add_argument("--model", "-m", default=DEFAULT_MODEL_PATH,
                         help=f"Path to GGUF model file (default: {DEFAULT_MODEL_PATH})")
     parser.add_argument("--cpp-dir", default=DEFAULT_CPP_DIR,
@@ -178,7 +178,7 @@ def main():
     args = parse_args()
 
     print("=" * 60)
-    print("BitNet.rs vs BitNet.cpp Performance Comparison")
+    print("BitNet-rs vs BitNet.cpp Performance Comparison")
     print("=" * 60)
     print(f"Model: {Path(args.model).name}")
     print(f"Prompt: '{args.prompt}'")
@@ -211,7 +211,7 @@ def main():
         print(f"  Max time:    {cpp_results['max']:.3f}s")
 
     if rust_results:
-        print(f"\nRust Implementation (BitNet.rs):")
+        print(f"\nRust Implementation (BitNet-rs):")
         print(f"  Mean time:   {rust_results['mean']:.3f}s")
         print(f"  Std dev:     {rust_results['stdev']:.3f}s")
         print(f"  Min time:    {rust_results['min']:.3f}s")
@@ -244,7 +244,7 @@ def main():
         # Winner determination
         print(f"\n🏆 Winner: ", end="")
         if speedup > 1.05:
-            print("BitNet.rs (Rust)")
+            print("BitNet-rs (Rust)")
         elif speedup < 0.95:
             print("BitNet.cpp (C++)")
         else:

@@ -1398,7 +1398,7 @@ impl TokenizerProvider {
         model: &BitNetModel,
     ) -> Result<UniversalTokenizer, TokenizerError> {
         // Implement robust fallback chain for tokenizer loading
-        // This follows BitNet.rs fallback strategy patterns from fallback.rs
+        // This follows BitNet-rs fallback strategy patterns from fallback.rs
 
         // Strategy 1: Try to create tokenizer from model-specific configuration
         // This attempts to use any available model metadata to construct an appropriate tokenizer

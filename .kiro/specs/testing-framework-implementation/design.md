@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the design for implementing the foundational components of the comprehensive testing framework for BitNet.rs. The design focuses on creating a robust, extensible foundation that can support the full testing framework while providing immediate value through basic cross-implementation comparison and comprehensive unit testing.
+This document outlines the design for implementing the foundational components of the comprehensive testing framework for BitNet-rs. The design focuses on creating a robust, extensible foundation that can support the full testing framework while providing immediate value through basic cross-implementation comparison and comprehensive unit testing.
 
 ## Architecture
 
@@ -370,7 +370,7 @@ impl BitNetImplementation for RustImplementation {
     }
 
     fn implementation_name(&self) -> &str {
-        "BitNet.rs"
+        "BitNet-rs"
     }
 }
 

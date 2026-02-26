@@ -10,7 +10,7 @@
 
 ## Problem Statement
 
-BitNet.rs has **45+ tests** that mutate environment variables without proper synchronization, causing race conditions and flaky test failures when running with `cargo test --test-threads > 1`.
+BitNet-rs has **45+ tests** that mutate environment variables without proper synchronization, causing race conditions and flaky test failures when running with `cargo test --test-threads > 1`.
 
 **Critical Finding**: 14 of 16 tests in `device_features.rs` are unprotected, creating a **95% likelihood of intermittent CI failures** when tests run in parallel.
 
@@ -723,8 +723,8 @@ grep -q "serial(bitnet_env)" docs/development/test-suite.md
 
 ## Notes
 
-- This spec addresses the **#1 source of CI flakiness** in BitNet.rs
+- This spec addresses the **#1 source of CI flakiness** in BitNet-rs
 - EnvGuard pattern is already established in codebase (75 current uses)
 - `#[serial(bitnet_env)]` is a lightweight annotation (no runtime overhead)
 - Automated verification prevents regressions via `check-env-guards` xtask
-- Follows BitNet.rs TDD principles: tests are intentionally isolated for reliability
+- Follows BitNet-rs TDD principles: tests are intentionally isolated for reliability

@@ -1,6 +1,6 @@
 # Test Prompts
 
-This directory contains prompt files for manual smoke testing of BitNet.rs inference.
+This directory contains prompt files for manual smoke testing of BitNet-rs inference.
 
 ## Usage
 

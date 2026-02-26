@@ -1,4 +1,4 @@
-# BitNet.rs Release Process
+# BitNet-rs Release Process
 
 ## 🎯 Final Go/No-Go Checklist
 

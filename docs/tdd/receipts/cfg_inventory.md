@@ -1,4 +1,4 @@
-# BitNet.rs Configuration Pattern Inventory
+# BitNet-rs Configuration Pattern Inventory
 
 **Generated**: 2025-10-21
 **Analysis Scope**: Comprehensive cfg pattern scan across crates/ directory (1,672 total patterns)
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-This inventory documents all conditional compilation (`#[cfg(...)]`) patterns in the BitNet.rs codebase, enabling visibility into:
+This inventory documents all conditional compilation (`#[cfg(...)]`) patterns in the BitNet-rs codebase, enabling visibility into:
 - Which tests are gated by feature flags
 - Infrastructure-gated tests (GPU, environment variables, network)
 - Architecture-specific code paths

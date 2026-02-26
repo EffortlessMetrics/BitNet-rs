@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `validation.yml` workflow implements comprehensive validation gates for BitNet.rs model operations and validation tooling.
+The `validation.yml` workflow implements comprehensive validation gates for bitnet-rs model operations and validation tooling.
 
 ## Key Features
 

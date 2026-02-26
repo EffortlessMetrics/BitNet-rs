@@ -19,7 +19,7 @@
 **Review Date**: 2025-09-29
 **PR**: `feat: Production inference server core implementation (Part 1/4)`
 **Branch**: `feat/issue-251-part1-core-server`
-**Reviewer**: BitNet.rs Review Synthesizer
+**Reviewer**: BitNet-rs Review Synthesizer
 **Status**: ✅ **READY FOR REVIEW** (Promote Draft → Ready)
 
 ---
@@ -28,7 +28,7 @@
 
 **RECOMMENDATION: PROMOTE TO READY FOR REVIEW**
 
-PR #422 implements the core production inference server for BitNet.rs with comprehensive features including REST API endpoints, model management, batch processing, concurrency control, health monitoring, and security. All required gates pass successfully, with only pre-existing test failures in unrelated Issue #260 performance baseline tests.
+PR #422 implements the core production inference server for BitNet-rs with comprehensive features including REST API endpoints, model management, batch processing, concurrency control, health monitoring, and security. All required gates pass successfully, with only pre-existing test failures in unrelated Issue #260 performance baseline tests.
 
 **Evidence**: `review: 10/10 required gates PASS; api: additive (new crate); tests: 90/91 PR pass, 2 pre-existing quarantined; build: workspace ok; docs: 2922 lines (Diátaxis); security: clean audit; architecture: aligned`
 
@@ -51,7 +51,7 @@ PR #422 implements the core production inference server for BitNet.rs with compr
 
 | Gate | Status | Evidence |
 |------|--------|----------|
-| **architecture** | ✅ PASS | Aligned with BitNet.rs patterns, clean boundaries | Contract gate receipt |
+| **architecture** | ✅ PASS | Aligned with BitNet-rs patterns, clean boundaries | Contract gate receipt |
 | **contracts** | ✅ PASS | Additive API changes, no breaking changes | ci/ledger_contract_gate.md |
 | **security** | ✅ PASS | Zero vulnerabilities, production-grade security | Security validation |
 | **hygiene** | ✅ PASS | Code quality maintained throughout | Comprehensive validation |
@@ -82,7 +82,7 @@ PR #422 implements the core production inference server for BitNet.rs with compr
 ### 2. Clean API Contract (Additive)
 - **Classification**: `additive` - New crate only, zero breaking changes
 - **Workspace Integration**: Proper dependency management, no conflicts
-- **Feature Gates**: Consistent with BitNet.rs standards (cpu, gpu, cuda)
+- **Feature Gates**: Consistent with BitNet-rs standards (cpu, gpu, cuda)
 - **Neural Network Contracts**: Compatible with existing quantization APIs (I2S, TL1, TL2)
 
 ### 3. Build Validation Success
@@ -217,7 +217,7 @@ PR #422 implements the core production inference server for BitNet.rs with compr
 - ✅ Existing inference, quantization, and model APIs unchanged
 
 **3. Backward Compatibility**
-- ✅ Existing BitNet.rs users unaffected
+- ✅ Existing BitNet-rs users unaffected
 - ✅ CLI and library APIs remain stable
 - ✅ Python/WASM bindings untouched
 - ✅ Feature flags consistent with workspace conventions
@@ -260,11 +260,11 @@ PR #422 implements the core production inference server for BitNet.rs with compr
 - **Clippy Warnings**: 0 (after mechanical fixes)
 - **Rustfmt**: All files formatted
 - **Dependency Health**: No unused dependencies
-- **Feature Flag Discipline**: Consistent with BitNet.rs standards
+- **Feature Flag Discipline**: Consistent with BitNet-rs standards
 
 ---
 
-## BitNet.rs-Specific Validation
+## BitNet-rs-Specific Validation
 
 ### Quantization Architecture ✅
 - **I2S Integration**: Uses existing quantization interfaces without modification
@@ -279,7 +279,7 @@ PR #422 implements the core production inference server for BitNet.rs with compr
 - **Generation Config**: Uses existing `GenerationConfig` API
 
 ### Feature Flag Compliance ✅
-- **Default Features**: EMPTY (per BitNet.rs standards)
+- **Default Features**: EMPTY (per BitNet-rs standards)
 - **CPU Features**: `--no-default-features --features cpu` works correctly
 - **GPU Features**: `--no-default-features --features gpu` works with fallback
 - **Feature Consistency**: Validated across workspace
@@ -307,7 +307,7 @@ PR #422 implements the core production inference server for BitNet.rs with compr
 4. ✅ Test gate passed (98.9% pass rate, pre-existing failures tracked)
 5. ✅ Docs gate passed (comprehensive Diátaxis coverage)
 6. ✅ Contract gate passed (additive API classification)
-7. ✅ Architecture aligned with BitNet.rs patterns
+7. ✅ Architecture aligned with BitNet-rs patterns
 8. ✅ Security validated (clean audit)
 9. ✅ No blocking issues identified
 
@@ -349,7 +349,7 @@ PR #422 implements the core production inference server for BitNet.rs with compr
 4. API classification clear (`additive`, no breaking changes)
 5. Documentation comprehensive and Diátaxis-compliant
 6. Security validated with clean audit
-7. Architecture aligned with BitNet.rs neural network patterns
+7. Architecture aligned with BitNet-rs neural network patterns
 8. Code quality maintained throughout (0 warnings)
 9. No blocking issues or regressions introduced
 
@@ -412,7 +412,7 @@ required_gates:
   docs: PASS (2922 lines, Diátaxis)
 
 additional_gates:
-  architecture: PASS (aligned with BitNet.rs patterns)
+  architecture: PASS (aligned with BitNet-rs patterns)
   contracts: PASS (additive, 0 breaking changes)
   security: PASS (clean audit, 0 vulnerabilities)
   hygiene: PASS (code quality maintained)
@@ -471,7 +471,7 @@ routing:
 
 ---
 
-**Reviewer**: BitNet.rs Review Synthesizer (Generative Agent)
+**Reviewer**: BitNet-rs Review Synthesizer (Generative Agent)
 **Review Flow**: Comprehensive 10-gate validation with evidence gathering
 **Final Decision**: ✅ **PROMOTE DRAFT → READY FOR REVIEW**
 **GitHub PR**: https://github.com/BitNet-rs/pulls/422

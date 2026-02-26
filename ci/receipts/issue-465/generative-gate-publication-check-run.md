@@ -11,7 +11,7 @@
 
 ✅ **Publication Successful**
 
-Pull Request #466 created and published for Issue #465 (CPU Path Followup for v0.1.0-mvp release) with comprehensive BitNet.rs neural network evidence.
+Pull Request #466 created and published for Issue #465 (CPU Path Followup for v0.1.0-mvp release) with comprehensive BitNet-rs neural network evidence.
 
 **Key Achievements:**
 - PR created: https://github.com/EffortlessMetrics/BitNet-rs/pull/466
@@ -36,8 +36,8 @@ Pull Request #466 created and published for Issue #465 (CPU Path Followup for v0
 
 ### Labels Applied
 ✅ `documentation` - Improvements or additions to documentation
-✅ `flow:generative` - BitNet.rs generative workflow marker
-✅ `state:ready` - BitNet.rs ready for review
+✅ `flow:generative` - BitNet-rs generative workflow marker
+✅ `state:ready` - BitNet-rs ready for review
 
 ### Issue Linkage
 - **Issue**: #465 (CPU Path Followup)
@@ -103,7 +103,7 @@ Pull Request #466 created and published for Issue #465 (CPU Path Followup for v0
 - 1 pre-existing async test requires tokio runtime (not related to Issue #465)
 
 #### Doc Tests: 16/16 (100%)
-- All BitNet.rs API documentation examples passing
+- All BitNet-rs API documentation examples passing
 
 ### Acceptance Criteria (11/12 Complete)
 - [x] AC1: README Quickstart Block
@@ -154,7 +154,7 @@ migration: Issue #465 → PR #466 Ledger; gates table migrated; receipts verifie
 
 ---
 
-## BitNet.rs Standards Met
+## BitNet-rs Standards Met
 
 - ✅ **Quantization accuracy**: ≥99.8% (I2_S validated)
 - ✅ **Security posture**: 0 CVEs, 0 unsafe blocks in new code

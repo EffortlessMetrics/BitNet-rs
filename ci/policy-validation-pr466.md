@@ -10,7 +10,7 @@
 
 ✅ **ALL BITNET.RS NEURAL NETWORK SECURITY & COMPLIANCE POLICIES PASS**
 
-This documentation + test infrastructure PR (Issue #465 followup) demonstrates full compliance with BitNet.rs governance requirements. No compute path changes, no inference algorithm modifications, no GPU kernel updates.
+This documentation + test infrastructure PR (Issue #465 followup) demonstrates full compliance with BitNet-rs governance requirements. No compute path changes, no inference algorithm modifications, no GPU kernel updates.
 
 ## Validation Metrics
 
@@ -120,7 +120,7 @@ cargo test -p bitnet-tokenizers --features "spm,integration-tests"
 
 ## Merge-Ready Criteria
 
-This security gate validation confirms PR #466 meets all BitNet.rs neural network governance requirements:
+This security gate validation confirms PR #466 meets all BitNet-rs neural network governance requirements:
 
 - ✅ Zero high-severity security vulnerabilities in neural network dependencies
 - ✅ Quantization accuracy >99% for all implemented algorithms (I2S/TL1/TL2)
@@ -155,7 +155,7 @@ Decision: All critical neural network policies satisfied → route to throughput
 
 **Flow successful: full compliance** → NEXT → integrative:gate:throughput for inference performance validation
 
-This validation represents comprehensive BitNet.rs neural network project governance compliance with:
+This validation represents comprehensive BitNet-rs neural network project governance compliance with:
 - Memory safety validation for quantization operations
 - GPU memory safety verification and leak detection
 - Cross-validation against C++ reference implementation
@@ -167,4 +167,4 @@ This validation represents comprehensive BitNet.rs neural network project govern
 
 ---
 
-**Policy Gatekeeper Agent** | BitNet.rs Neural Network Governance | Integrative Flow
+**Policy Gatekeeper Agent** | BitNet-rs Neural Network Governance | Integrative Flow

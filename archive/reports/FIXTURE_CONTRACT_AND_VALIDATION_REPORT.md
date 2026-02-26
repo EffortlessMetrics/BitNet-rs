@@ -1,8 +1,8 @@
-# BitNet.rs Fixture Contract & Validation - Comprehensive Exploration Report
+# BitNet-rs Fixture Contract & Validation - Comprehensive Exploration Report
 
 ## Executive Summary
 
-The BitNet.rs project implements a comprehensive fixture contract and validation system for QK256 (GGML I2_S) quantization format testing. The system combines:
+The BitNet-rs project implements a comprehensive fixture contract and validation system for QK256 (GGML I2_S) quantization format testing. The system combines:
 
 1. **Deterministic fixture generation** via in-memory generators
 2. **Disk-based persistent fixtures** in `ci/fixtures/qk256/`
@@ -755,7 +755,7 @@ cargo test --features fixtures
 
 ## Summary
 
-BitNet.rs implements a **comprehensive fixture contract** that combines:
+BitNet-rs implements a **comprehensive fixture contract** that combines:
 
 1. **Persistent GGUF fixtures** (3 variants covering QK256 and BitNet32-F16)
 2. **SHA256 checksum verification** for integrity assurance

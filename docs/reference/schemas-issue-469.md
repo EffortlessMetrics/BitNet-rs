@@ -10,7 +10,7 @@
 
 ## Overview
 
-This document defines the data schemas for Issue #469's acceptance criteria. All schemas are JSON-serializable and follow BitNet.rs receipt conventions.
+This document defines the data schemas for Issue #469's acceptance criteria. All schemas are JSON-serializable and follow BitNet-rs receipt conventions.
 
 ---
 
@@ -612,6 +612,6 @@ validate_tokenizer_parity(&rust_tokenizer, cpp_vocab_size)?;
 
 **Document Control:**
 - Review Status: Schema Reference (Ready for Implementation)
-- Owner: BitNet.rs Architecture Team
+- Owner: BitNet-rs Architecture Team
 - Issue: #469
 - Target: v0.1.0-mvp

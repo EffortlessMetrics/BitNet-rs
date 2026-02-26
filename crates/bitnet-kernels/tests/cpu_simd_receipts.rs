@@ -1,4 +1,4 @@
-//! CPU SIMD Receipts and Validation for BitNet.rs Issue #260
+//! CPU SIMD Receipts and Validation for BitNet-rs Issue #260
 //!
 //! This module validates real CPU SIMD operations and emits receipts for CI validation.
 //! Tests use actual SIMD features when available and fall back gracefully.

@@ -264,7 +264,7 @@
 - ✅ **Documentation:** Comprehensive with code examples
 - ✅ **Reproducibility:** LUT generator provided for regeneration
 
-### BitNet.rs Standards Compliance
+### BitNet-rs Standards Compliance
 
 - ✅ **Feature-gated organization:** Fixtures support `#[cfg(feature = "cpu")]` usage
 - ✅ **Workspace-aware paths:** Fixtures use workspace-relative paths
@@ -372,4 +372,4 @@ cp ci/inference.json tests/fixtures/baselines/cpu-baseline-2025.json
 - Validation results: 100% pass rate
 - Documentation: 2 comprehensive README files
 - Test data coverage: All 5 acceptance criteria covered
-- BitNet.rs compliance: Follows workspace conventions and feature-gated patterns
+- BitNet-rs compliance: Follows workspace conventions and feature-gated patterns

@@ -46,7 +46,7 @@ mod ci_example {
         // Initialize logging
         tracing_subscriber::fmt::init();
 
-        println!("🚀 BitNet.rs CI Reporting Example");
+        println!("🚀 BitNet-rs CI Reporting Example");
         println!("==================================\n");
 
         // Create sample test results

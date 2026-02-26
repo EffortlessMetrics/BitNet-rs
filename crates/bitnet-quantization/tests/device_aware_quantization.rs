@@ -10,7 +10,7 @@ use std::env;
 #[allow(unused_imports)]
 use std::time::{Duration, Instant};
 
-// Updated imports for actual BitNet.rs API
+// Updated imports for actual BitNet-rs API
 #[cfg(feature = "inference")]
 use bitnet_quantization::{AccuracyValidator, DeviceAwareQuantizer, ToleranceConfig};
 
@@ -268,7 +268,7 @@ fn test_gpu_quantization_accuracy_validation() {
     println!("  Quantization time: {:?}", gpu_duration);
 
     // Note: Full GPU performance metrics would be available in complete implementation
-    println!("Note: GPU performance metrics available in full BitNet.rs GPU implementation");
+    println!("Note: GPU performance metrics available in full BitNet-rs GPU implementation");
 
     // GPU quantization should maintain accuracy
     assert!(gpu_accuracy.relative_error <= 1e-5, "GPU quantization should maintain accuracy");
@@ -315,16 +315,16 @@ fn test_cpu_quantization_accuracy_validation() {
     println!("  Quantization time: {:?}", cpu_duration);
 
     // Note: CPU performance characteristics would be available in full implementation
-    println!("Note: SIMD and CPU optimization metrics available in full BitNet.rs implementation");
+    println!("Note: SIMD and CPU optimization metrics available in full BitNet-rs implementation");
 
     // CPU quantization should maintain accuracy
     assert!(cpu_accuracy.relative_error <= 1e-5, "CPU quantization should maintain accuracy");
     // Note: correlation metric would be available in full implementation
     // For now, validate that accuracy passes tolerance requirements
-    println!("  Note: Correlation metrics available in full BitNet.rs implementation");
+    println!("  Note: Correlation metrics available in full BitNet-rs implementation");
 
     // Note: SIMD optimization metrics would be reported here in full implementation
-    println!("Note: SIMD vectorization metrics available in full BitNet.rs CPU kernels");
+    println!("Note: SIMD vectorization metrics available in full BitNet-rs CPU kernels");
 
     println!("✅ CPU quantization accuracy validation completed");
 }
@@ -470,7 +470,7 @@ fn test_quantization_cross_validation_cpp_reference() {
     assert!(tl1_accuracy.passed, "TL1 accuracy validation should pass");
 
     println!("✅ Quantization cross-validation accuracy testing completed");
-    println!("Note: Full C++ reference cross-validation available with BitNet.rs FFI integration");
+    println!("Note: Full C++ reference cross-validation available with BitNet-rs FFI integration");
 }
 
 // ==============================================================================
@@ -607,4 +607,4 @@ struct PerformanceBenchmark {
     device_used: Device,
 }
 
-// Note: Other type definitions and impls are available in the actual BitNet.rs crate modules
+// Note: Other type definitions and impls are available in the actual BitNet-rs crate modules

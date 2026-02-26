@@ -64,7 +64,7 @@ ln -sf ../../models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf tiny-
 
 ### Minimum Requirements
 
-- **Format:** GGUF (compatible with BitNet.rs)
+- **Format:** GGUF (compatible with BitNet-rs)
 - **Quantization:** I2S, TL1, or TL2 (quantized weights)
 - **LayerNorm:** F16 or F32 (not quantized)
 - **Size:** Any (tests should gracefully handle large models)

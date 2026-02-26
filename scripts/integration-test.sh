@@ -1,6 +1,6 @@
 #!/bin/bash
 # Integration testing with real-world applications
-# Tests BitNet.rs in realistic deployment scenarios
+# Tests BitNet-rs in realistic deployment scenarios
 
 set -euo pipefail
 
@@ -378,7 +378,7 @@ generate_integration_report() {
     local report_file="integration_test_report.md"
 
     cat > "$report_file" << EOF
-# BitNet.rs Integration Test Report
+# BitNet-rs Integration Test Report
 
 Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 

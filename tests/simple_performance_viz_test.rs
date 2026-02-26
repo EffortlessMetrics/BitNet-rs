@@ -662,7 +662,7 @@ impl SimplePerformanceDashboard {
 #[tokio::test]
 async fn test_simple_performance_visualization() {
     let temp_dir = TempDir::new().unwrap();
-    let mut dashboard = SimplePerformanceDashboard::new("BitNet.rs Performance Test".to_string());
+    let mut dashboard = SimplePerformanceDashboard::new("BitNet-rs Performance Test".to_string());
 
     // Create sample performance data
     let test_scenarios = vec![
@@ -703,7 +703,7 @@ async fn test_simple_performance_visualization() {
 
     // Verify dashboard content
     let content = tokio::fs::read_to_string(&dashboard_path).await.unwrap();
-    assert!(content.contains("BitNet.rs Performance Test"));
+    assert!(content.contains("BitNet-rs Performance Test"));
     assert!(content.contains("Performance Comparison Charts"));
     assert!(content.contains("Throughput Comparison"));
     assert!(content.contains("Memory Usage Comparison"));
@@ -884,7 +884,7 @@ async fn test_complete_performance_visualization_workflow() {
 
     // Step 1: Create dashboard
     let mut dashboard =
-        SimplePerformanceDashboard::new("BitNet.rs Complete Performance Analysis".to_string());
+        SimplePerformanceDashboard::new("BitNet-rs Complete Performance Analysis".to_string());
     println!("✅ Step 1: Dashboard created");
 
     // Step 2: Simulate benchmark runs over time
@@ -926,7 +926,7 @@ async fn test_complete_performance_visualization_workflow() {
     let content = tokio::fs::read_to_string(&dashboard_path).await.unwrap();
 
     // Verify main sections
-    assert!(content.contains("BitNet.rs Complete Performance Analysis"));
+    assert!(content.contains("BitNet-rs Complete Performance Analysis"));
     assert!(content.contains("Performance Comparison Charts"));
     assert!(content.contains("Performance Data"));
     println!("  ✅ Main sections verified");

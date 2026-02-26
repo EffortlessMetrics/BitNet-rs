@@ -1,13 +1,13 @@
 # I2_S Dual-Flavor Quantization Support
 
 **Status:** Draft Specification
-**Authors:** BitNet.rs Architecture Team
+**Authors:** BitNet-rs Architecture Team
 **Created:** 2025-10-17
 **Version:** 1.0
 
 ## Executive Summary
 
-This specification defines architectural support for two I2_S quantization flavors in BitNet.rs:
+This specification defines architectural support for two I2_S quantization flavors in BitNet-rs:
 
 1. **BitNet32F16** (existing): 32-element blocks with inline f16 scales (10 bytes/block)
 2. **GgmlQk256NoScale** (new): 256-element blocks with separate scale tensors (64 bytes/block)
@@ -20,7 +20,7 @@ validation to C++ when BITNET_CPP_DIR is set.
 
 ### Context
 
-BitNet.rs currently supports BitNet's native I2_S format (32-element blocks, 8B packed + 2B f16 scale).
+BitNet-rs currently supports BitNet's native I2_S format (32-element blocks, 8B packed + 2B f16 scale).
 GGML/llama.cpp uses a different I2_S format with 256-element blocks and separate scale tensors.
 We need to support both formats for model compatibility while maintaining production quality standards.
 
@@ -1128,7 +1128,7 @@ mod crossval_tests {
 - [BitNet.cpp repository](https://github.com/microsoft/BitNet) - C++ implementation
 - I2_S format with split scales (external tensor)
 
-### BitNet.rs Existing Patterns
+### BitNet-rs Existing Patterns
 
 - `bitnet-quantization/src/i2s.rs` - BitNet32F16 implementation
 - `bitnet-kernels/src/cpu/` - SIMD kernel patterns (AVX2, NEON)
@@ -1199,4 +1199,4 @@ Existing BitNet Kernels:
 
 - Review Status: Draft
 - Next Review Date: 2025-10-24
-- Owner: BitNet.rs Architecture Team
+- Owner: BitNet-rs Architecture Team

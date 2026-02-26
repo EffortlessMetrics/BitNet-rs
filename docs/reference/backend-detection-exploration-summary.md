@@ -2,12 +2,12 @@
 
 ## Exploration Completed: Medium Thoroughness
 
-This exploration documents the backend detection and device selection patterns used throughout BitNet.rs, with a focus on identifying reusable patterns for adding C++ backend support.
+This exploration documents the backend detection and device selection patterns used throughout BitNet-rs, with a focus on identifying reusable patterns for adding C++ backend support.
 
 ## Key Discoveries
 
 ### 1. **Two-Tier Architecture** (Foundation Pattern)
-BitNet.rs implements a universal two-tier backend detection approach:
+BitNet-rs implements a universal two-tier backend detection approach:
 - **Compile-time**: Feature gates (`--features gpu`, `--features cuda`)
 - **Runtime**: System checks + environment overrides
 
@@ -200,7 +200,7 @@ Contains:
 
 ## Conclusion
 
-BitNet.rs has a well-architected, proven backend detection system. The patterns are:
+BitNet-rs has a well-architected, proven backend detection system. The patterns are:
 - **Consistent** across GPU, CPU, FFI backends
 - **Extensible** for new backends (C++, etc.)
 - **Testable** with environment overrides

@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Created a complete technical specification for automating #[ignore] annotation hygiene in BitNet.rs test suite. The system addresses 135 bare annotations (69.6%) through automated detection, categorization, and CI enforcement.
+Created a complete technical specification for automating #[ignore] annotation hygiene in BitNet-rs test suite. The system addresses 135 bare annotations (69.6%) through automated detection, categorization, and CI enforcement.
 
 ## Key Deliverables
 
@@ -251,7 +251,7 @@ hyperfine --warmup 3 'MODE=full ./scripts/check-ignore-hygiene.sh'
 # Expected: Mean execution time <5 seconds
 ```
 
-## Alignment with BitNet.rs Principles
+## Alignment with BitNet-rs Principles
 
 ### TDD Practices
 - Detection script has comprehensive test coverage

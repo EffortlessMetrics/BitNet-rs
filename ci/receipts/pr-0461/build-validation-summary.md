@@ -176,7 +176,7 @@ cargo build --target wasm32-unknown-unknown -p bitnet-wasm --no-default-features
 - **Root Cause:** onig_sys dependency (tokenizer) cannot compile for WASM
 - **Specific Error:** Native C library (oniguruma) requires stdlib.h
 - **Impact:** WASM target requires tokenizer-free configuration
-- **PR Impact:** None - this is a BitNet.rs-wide limitation
+- **PR Impact:** None - this is a BitNet-rs-wide limitation
 - **Mitigation:** Document WASM limitation, not a blocker for PR #461
 
 **WASM Status:**
@@ -229,7 +229,7 @@ Finished `release` profile [optimized] target(s) in 1m 41s
 - Proper GPU feature gates
 
 **Feature Isolation:**
-- ✅ Default features EMPTY (BitNet.rs policy)
+- ✅ Default features EMPTY (BitNet-rs policy)
 - ✅ No feature flag conflicts detected
 - ✅ Proper `#[cfg(feature = "...")]` usage
 - ✅ CPU and GPU builds produce different artifacts
@@ -287,7 +287,7 @@ Finished `release` profile [optimized] target(s) in 1m 41s
 
 ---
 
-### 5. BitNet.rs Neural Network Infrastructure
+### 5. BitNet-rs Neural Network Infrastructure
 
 **Assessment:** ✅ COMPLETE
 
@@ -397,7 +397,7 @@ Finished `release` profile [optimized] target(s) in 1m 41s
 **Root Cause:**
 - Tokenizer depends on oniguruma (native C regex library)
 - WASM target lacks stdlib.h and native library support
-- Not specific to PR #461 - BitNet.rs-wide limitation
+- Not specific to PR #461 - BitNet-rs-wide limitation
 
 **Impact:**
 - WASM builds require tokenizer-free configuration

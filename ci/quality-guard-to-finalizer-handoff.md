@@ -43,7 +43,7 @@
 
 **Implementation Quality**: ✅ PASS
 - All 7 acceptance criteria properly implemented
-- BitNet.rs patterns followed throughout
+- BitNet-rs patterns followed throughout
 - Error handling with `anyhow::Result<T>` and `BitNetError::StrictMode`
 - Documentation quality high
 
@@ -71,7 +71,7 @@
 - ✅ Panic messages descriptive: qtype, device, layer dimensions, reason
 - ✅ `is_fallback_path()` detection logic correct (line 279-281)
 - ✅ No performance impact in release builds
-- ✅ Error format compliant with BitNet.rs standards
+- ✅ Error format compliant with BitNet-rs standards
 
 **Code Snippet**:
 ```rust
@@ -255,7 +255,7 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Gates ✅ COMPLIANT
 - ✅ Feature-gated tests: All tests use `#[cfg(feature = "cpu")]` or `#[cfg(feature = "gpu")]`
@@ -353,7 +353,7 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 - Average quality rating: ⭐⭐⭐⭐⭐ Excellent (4.8/5.0)
 - Test coverage: 18/18 tests (100%)
 - Documentation coverage: 100% public APIs documented
-- Error handling: 100% compliant with BitNet.rs patterns
+- Error handling: 100% compliant with BitNet-rs patterns
 
 ---
 
@@ -392,7 +392,7 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 **Rationale**:
 1. ✅ All quality gates pass (formatting, clippy CPU/GPU, tests, patterns)
 2. ✅ All 7 acceptance criteria properly implemented with excellent quality
-3. ✅ Implementation follows BitNet.rs neural network standards
+3. ✅ Implementation follows BitNet-rs neural network standards
 4. ✅ Test coverage comprehensive (18/18 tests, 100% pass rate)
 5. ✅ Documentation quality meets standards (100% public API coverage)
 6. ✅ No performance regressions (<1% overhead acceptable)
@@ -413,7 +413,7 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 - ✅ All 7 acceptance criteria implemented
 - ✅ All 18 tests passing (100%)
 - ✅ Code quality excellent (avg 4.8/5.0)
-- ✅ BitNet.rs standards compliant
+- ✅ BitNet-rs standards compliant
 
 ### Outstanding Tasks for Finalizer
 1. **Update ledger**: Mark generative:gate:clippy as PASS
@@ -457,7 +457,7 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 
 ### Comprehensive Quality Receipt
 
-**Evidence Grammar** (BitNet.rs format):
+**Evidence Grammar** (BitNet-rs format):
 - **format**: cargo fmt --check: clean (0 issues)
 - **clippy**: cargo clippy CPU: 0 warnings, GPU: 0 warnings, all-targets validated
 - **tests**: 18/18 pass (100%), all AC:ID tags present, feature gates correct
@@ -465,7 +465,7 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 - **implementation**: all 7 ACs implemented correctly, quality avg 4.8/5.0
 - **performance**: debug <0.1%, strict mode <1%, receipt 0% (offline)
 - **security**: 0 unsafe blocks, 0 secrets, safe env parsing, no release panics
-- **overall**: method: comprehensive-quality-review; result: all-gates-pass; reason: implementation meets BitNet.rs production standards, ready for finalization
+- **overall**: method: comprehensive-quality-review; result: all-gates-pass; reason: implementation meets BitNet-rs production standards, ready for finalization
 
 ---
 
@@ -473,7 +473,7 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 
 **Quality Gate**: ✅ PASS (all checkpoints satisfied)
 
-**BitNet.rs Compliance**: ✅ SATISFIED (all standards met)
+**BitNet-rs Compliance**: ✅ SATISFIED (all standards met)
 
 **Production Readiness**: ✅ CONFIRMED (ready for merge)
 
@@ -485,4 +485,4 @@ fn verify_quantization_claims(receipt: &serde_json::Value) -> Result<()> {
 
 **Quality Review Complete**: Issue #453 implementation validated ✅
 **Generative Flow Gate**: All checkpoints satisfied ✅
-**BitNet.rs Production Standards**: Implementation ready for finalization ✅
+**BitNet-rs Production Standards**: Implementation ready for finalization ✅

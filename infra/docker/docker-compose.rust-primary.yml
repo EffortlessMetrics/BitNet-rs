@@ -1,10 +1,10 @@
-# Primary Docker Compose for BitNet.rs Production Deployment
+# Primary Docker Compose for bitnet-rs Production Deployment
 # Focuses on Rust implementation with comprehensive monitoring
 
 version: '3.8'
 
 services:
-  # Primary BitNet.rs inference service
+  # Primary bitnet-rs inference service
   bitnet-server:
     build:
       context: ..
@@ -48,7 +48,7 @@ services:
       - prometheus
       - redis
 
-  # GPU-enabled BitNet.rs service (optional)
+  # GPU-enabled bitnet-rs service (optional)
   bitnet-gpu:
     build:
       context: ..
@@ -220,7 +220,7 @@ services:
       - logging
 
 volumes:
-  # BitNet.rs data
+  # bitnet-rs data
   bitnet-logs:
     driver: local
   bitnet-cache:

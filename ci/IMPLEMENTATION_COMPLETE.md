@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Successfully executed a comprehensive 2-phase orchestration to fix all blocking issues in BitNet.rs using 4 explore agents + 9 implementation agents working in parallel.
+Successfully executed a comprehensive 2-phase orchestration to fix all blocking issues in BitNet-rs using 4 explore agents + 9 implementation agents working in parallel.
 
 ### Outcome
 

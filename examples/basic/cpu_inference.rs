@@ -1,4 +1,4 @@
-//! Basic inference example using BitNet.rs
+//! Basic inference example using BitNet-rs
 //!
 //! This example demonstrates how to load a BitNet model and perform basic text generation.
 

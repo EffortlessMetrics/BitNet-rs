@@ -2,7 +2,7 @@
 //!
 //! This test suite validates numerical accuracy for I2S, TL1, TL2 quantization
 //! algorithms under strict mode enforcement to ensure quantized computation
-//! meets BitNet.rs quality thresholds (≥99% accuracy vs FP32).
+//! meets BitNet-rs quality thresholds (≥99% accuracy vs FP32).
 //!
 //! **Specification:** docs/reference/quantization-support.md
 //! **Related:** tests/strict_quantization_test.rs (behavioral tests)

@@ -4,7 +4,7 @@
 
 **STATUS: ✅ READY FOR MERGE**
 
-PR #174 "Clean up SIMD kernels in bitnet-quantization crate" has successfully passed comprehensive local validation. All core functionality works correctly, code quality standards are met, and the implementation follows BitNet.rs best practices.
+PR #174 "Clean up SIMD kernels in bitnet-quantization crate" has successfully passed comprehensive local validation. All core functionality works correctly, code quality standards are met, and the implementation follows BitNet-rs best practices.
 
 **PR Title**: Clean up SIMD kernels in bitnet-quantization crate
 **PR Branch**: `codex/analyze-bitnet-quantization-for-issues`

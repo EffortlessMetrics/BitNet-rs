@@ -8,7 +8,7 @@
 
 ## Specification Quality Checklist
 
-### ✅ Required Sections (BitNet.rs Standard)
+### ✅ Required Sections (BitNet-rs Standard)
 
 - [x] **Executive Summary**: Current state (194 annotations, 69.6% bare) → Target state (<5% bare)
 - [x] **Requirements Analysis**: 4 functional requirements, 4 non-functional requirements
@@ -16,7 +16,7 @@
 - [x] **Risk Mitigation**: 4 identified risks with specific mitigation strategies
 - [x] **Success Criteria**: 6 quantitative metrics + 3 qualitative metrics
 - [x] **Validation Commands**: Detection accuracy, CI enforcement, auto-annotation, performance
-- [x] **Alignment with BitNet.rs Principles**: TDD, feature-gated, workspace structure, cross-platform
+- [x] **Alignment with BitNet-rs Principles**: TDD, feature-gated, workspace structure, cross-platform
 
 ### ✅ Neural Network Context
 
@@ -24,7 +24,7 @@
 - Specification addresses **test maintenance debt** (not neural network inference)
 - Focuses on **CI/CD hygiene** and **developer tooling**
 - No quantization, GPU kernels, or GGUF format considerations (not applicable)
-- Aligns with BitNet.rs **TDD practices** and **workspace structure**
+- Aligns with BitNet-rs **TDD practices** and **workspace structure**
 
 ### ✅ Comprehensive Coverage
 
@@ -160,7 +160,7 @@ hyperfine --warmup 3 'MODE=full ./scripts/check-ignore-hygiene.sh'
 # Expected: Mean execution time <5 seconds
 ```
 
-### ✅ BitNet.rs Alignment
+### ✅ BitNet-rs Alignment
 
 **TDD Practices**:
 - Detection script has test coverage
@@ -371,13 +371,13 @@ MODE=full ./scripts/check-ignore-hygiene.sh
 
 ✅ **SPECIFICATION COMPLETE AND VALIDATED**
 
-The SPEC-2025-006 document provides a comprehensive, production-ready specification for automating #[ignore] annotation hygiene in BitNet.rs. The specification:
+The SPEC-2025-006 document provides a comprehensive, production-ready specification for automating #[ignore] annotation hygiene in BitNet-rs. The specification:
 
 1. **Addresses all 6 acceptance criteria** from the user story
 2. **Provides detailed implementation guidance** (3 scripts + CI job + taxonomy config)
 3. **Includes risk mitigation** for 4 identified risks
 4. **Defines clear success metrics** (6 quantitative + 3 qualitative)
-5. **Aligns with BitNet.rs principles** (TDD, feature-gated, workspace structure, cross-platform)
+5. **Aligns with BitNet-rs principles** (TDD, feature-gated, workspace structure, cross-platform)
 6. **Enables incremental migration** (5-week phased rollout from 69.6% → <5% bare ignores)
 
 The specification is ready for team review and implementation.

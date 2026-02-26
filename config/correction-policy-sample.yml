@@ -1,4 +1,4 @@
-# BitNet.rs Correction Policy - Sample Configuration
+# bitnet-rs Correction Policy - Sample Configuration
 # ==================================================
 #
 # This file demonstrates policy-driven corrections for known-bad GGUF models.

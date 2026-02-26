@@ -1,8 +1,8 @@
-# BitNet.rs Logging and Diagnostic Patterns Report
+# bitnet-rs Logging and Diagnostic Patterns Report
 
 ## Executive Summary
 
-BitNet.rs uses a multi-layered logging and diagnostic infrastructure combining `tracing` for structured logging, custom warn-once rate limiting, environment-based debug output, and CLI banner/status formatting via the `console` crate. The system supports multiple verbosity levels through `RUST_LOG`, specialized diagnostic modes via environment variables, and exit codes for error classification.
+bitnet-rs uses a multi-layered logging and diagnostic infrastructure combining `tracing` for structured logging, custom warn-once rate limiting, environment-based debug output, and CLI banner/status formatting via the `console` crate. The system supports multiple verbosity levels through `RUST_LOG`, specialized diagnostic modes via environment variables, and exit codes for error classification.
 
 ---
 
@@ -576,7 +576,7 @@ Quantization types:
 
 ### 9.1 Current State: No Global --verbose Flag
 
-BitNet.rs does **not** currently have a global `--verbose` flag. Instead, it uses:
+bitnet-rs does **not** currently have a global `--verbose` flag. Instead, it uses:
 
 1. **RUST_LOG environment variable** (standard Rust logging)
    ```bash
@@ -789,7 +789,7 @@ impl CustomCommand {
 
 ## Conclusion
 
-BitNet.rs implements a sophisticated, multi-layered logging and diagnostic system that:
+bitnet-rs implements a sophisticated, multi-layered logging and diagnostic system that:
 
 1. **Separates concerns**: Structured logging via tracing, unstructured debug output via eprintln!, banners via styled println!
 2. **Prevents log spam**: warn_once!() rate-limiting for hot paths

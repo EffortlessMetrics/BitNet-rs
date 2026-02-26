@@ -1,6 +1,6 @@
 # Library Discovery & Linking Investigation
 
-This directory contains comprehensive documentation of the BitNet.rs build system's approach to discovering, linking, and selecting compute backends.
+This directory contains comprehensive documentation of the BitNet-rs build system's approach to discovering, linking, and selecting compute backends.
 
 ## Documents in This Collection
 

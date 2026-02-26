@@ -21,7 +21,7 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo "=== BitNet.rs CI Core Checks (Local) ==="
+echo "=== BitNet-rs CI Core Checks (Local) ==="
 echo ""
 echo "This replicates the 4 required GitHub CI gates:"
 echo "  1. Format check"

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This meta-issue tracks the comprehensive production readiness initiative for BitNet.rs, which addresses 57 identified stub implementations, dead code, hardcoded values, and mock objects that need to be replaced with production-ready implementations.
+This meta-issue tracks the comprehensive production readiness initiative for BitNet-rs, which addresses 57 identified stub implementations, dead code, hardcoded values, and mock objects that need to be replaced with production-ready implementations.
 
 ## Problem Scope
 

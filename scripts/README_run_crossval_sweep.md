@@ -2,7 +2,7 @@
 
 ## Overview
 
-`run_crossval_sweep.sh` orchestrates comprehensive cross-validation between BitNet.rs (Rust implementation) and bitnet.cpp (C++ reference) across multiple deterministic test scenarios.
+`run_crossval_sweep.sh` orchestrates comprehensive cross-validation between BitNet-rs (Rust implementation) and bitnet.cpp (C++ reference) across multiple deterministic test scenarios.
 
 The script runs 3 predefined scenarios with increasing token counts, captures detailed execution traces, compares outputs with the C++ reference (if available), and generates actionable divergence reports.
 
@@ -275,4 +275,4 @@ cat /tmp/crossval/summary.md
 
 ## License
 
-MIT OR Apache-2.0 (same as BitNet.rs project)
+MIT OR Apache-2.0 (same as BitNet-rs project)

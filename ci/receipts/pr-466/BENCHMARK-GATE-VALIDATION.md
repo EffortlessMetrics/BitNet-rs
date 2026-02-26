@@ -341,7 +341,7 @@ PR #466 successfully passes the `integrative:gate:benchmarks` performance valida
 3. ✅ Zero neural network performance regressions
 4. ✅ Honest compute gates enforced (compute_path="real")
 5. ✅ Receipt schema stable (v1.0.0)
-6. ✅ All BitNet.rs neural network standards met
+6. ✅ All BitNet-rs neural network standards met
 
 **Status**: READY FOR MERGE (subject to final integrative validation)
 

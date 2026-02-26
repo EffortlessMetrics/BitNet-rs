@@ -1,6 +1,6 @@
 //! # Axum Web Server Integration Example
 //!
-//! This example demonstrates how to integrate BitNet.rs with the Axum web framework
+//! This example demonstrates how to integrate bitnet-rs with the Axum web framework
 //! to create a high-performance inference API server.
 
 use axum::{
@@ -190,7 +190,7 @@ fn create_router(state: AppState) -> Router {
 /// Root endpoint with API information
 async fn root_handler() -> impl IntoResponse {
     Json(serde_json::json!({
-        "name": "BitNet.rs Inference Server",
+        "name": "bitnet-rs Inference Server",
         "version": env!("CARGO_PKG_VERSION"),
         "endpoints": {
             "generate": "POST /generate - Generate text from prompt",
@@ -369,7 +369,7 @@ async fn model_info_handler(State(state): State<AppState>) -> impl IntoResponse 
 /// API documentation endpoint
 async fn docs_handler() -> impl IntoResponse {
     let docs = r#"
-# BitNet.rs Inference Server API
+# bitnet-rs Inference Server API
 
 ## Endpoints
 

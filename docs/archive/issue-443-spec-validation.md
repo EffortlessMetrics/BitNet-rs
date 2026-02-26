@@ -7,7 +7,7 @@
 **Routing Decision:** FINALIZE → schema-validator
 **Date:** 2025-10-11
 
-This report validates that the technical specifications for Issue #443 (CPU Validation - Test Harness Hygiene Fixes) meet BitNet.rs architectural standards and are ready for implementation.
+This report validates that the technical specifications for Issue #443 (CPU Validation - Test Harness Hygiene Fixes) meet BitNet-rs architectural standards and are ready for implementation.
 
 ---
 
@@ -39,7 +39,7 @@ This report validates that the technical specifications for Issue #443 (CPU Vali
 - ✅ Specification completeness analysis (lines 15-66)
 - ✅ Implementation approach evaluation (lines 70-208)
 - ✅ Technical feasibility and risk analysis (lines 210-259)
-- ✅ BitNet.rs standards alignment (lines 261-310)
+- ✅ BitNet-rs standards alignment (lines 261-310)
 - ✅ Implementation recommendations (lines 312-404)
 - ✅ Dependency analysis (lines 423-448)
 - ✅ Routing decision rationale (lines 452-496)
@@ -70,7 +70,7 @@ This report validates that the technical specifications for Issue #443 (CPU Vali
 
 ## 2. API Contracts and Neural Network Patterns Validation
 
-### 2.1 BitNet.rs Test Infrastructure Patterns
+### 2.1 BitNet-rs Test Infrastructure Patterns
 
 **Pattern Analysis:**
 
@@ -91,7 +91,7 @@ fn workspace_root() -> PathBuf {
 **Pattern Consistency:**
 - ✅ Matches `xtask/tests/preflight.rs` (file-scope, recommended pattern)
 - ✅ Matches `xtask/tests/documentation_audit.rs` (file-scope, already correct)
-- ✅ Aligns with BitNet.rs test infrastructure standards
+- ✅ Aligns with BitNet-rs test infrastructure standards
 - ✅ No shared module needed (self-contained xtask tests)
 
 ### 2.2 Device Import Usage Analysis
@@ -117,7 +117,7 @@ bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cuda(0));   // Line 1
 
 ### 2.3 API Contract Alignment
 
-**BitNet.rs Test Infrastructure Contracts:**
+**BitNet-rs Test Infrastructure Contracts:**
 
 | Contract | Requirement | Issue #443 Compliance |
 |----------|-------------|----------------------|
@@ -129,7 +129,7 @@ bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cuda(0));   // Line 1
 
 ---
 
-## 3. BitNet.rs Documentation Standards Compliance
+## 3. BitNet-rs Documentation Standards Compliance
 
 ### 3.1 Documentation Structure Validation
 
@@ -149,7 +149,7 @@ bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cuda(0));   // Line 1
 - ✅ Implementation approaches evaluated
 - ✅ Risk analysis and mitigation strategies
 - ✅ Validation commands for each AC
-- ✅ BitNet.rs standards alignment documented
+- ✅ BitNet-rs standards alignment documented
 
 ### 3.2 ADR Requirement Assessment
 
@@ -198,7 +198,7 @@ bitnet_models::gguf_simple::load_gguf(&model_path, Device::Cuda(0));   // Line 1
 | Edge cases | ✅ Complete | issue-443-spec.md lines 175-179 |
 | Success metrics | ✅ Complete | issue-443-spec.md lines 192-196 |
 | Risk analysis | ✅ Complete | issue-443-technical-assessment.md lines 210-259 |
-| BitNet.rs alignment | ✅ Complete | issue-443-technical-assessment.md lines 261-310 |
+| BitNet-rs alignment | ✅ Complete | issue-443-technical-assessment.md lines 261-310 |
 | Validation commands | ✅ Complete | issue-443-technical-assessment.md lines 512-534 |
 | Routing decision | ✅ Complete | issue-443-technical-assessment.md lines 452-496 |
 
@@ -330,11 +330,11 @@ $ cargo test --package bitnet-models --no-default-features --features cpu -- --l
 
 ---
 
-## 6. BitNet.rs Neural Network Alignment
+## 6. BitNet-rs Neural Network Alignment
 
 ### 6.1 Pipeline Impact Assessment
 
-**BitNet.rs Inference Pipeline:**
+**BitNet-rs Inference Pipeline:**
 
 | Stage | Impact | Rationale |
 |-------|--------|-----------|
@@ -392,11 +392,11 @@ cargo build --workspace --no-default-features --features cpu # Build gate
 |-----------|--------|----------|
 | Specifications complete | ✅ PASS | 2 comprehensive documents (44,478 bytes total) |
 | Acceptance criteria atomic | ✅ PASS | 7/7 ACs independently testable with unique validation commands |
-| API contracts validated | ✅ PASS | Test infrastructure patterns align with BitNet.rs standards |
+| API contracts validated | ✅ PASS | Test infrastructure patterns align with BitNet-rs standards |
 | Neural network patterns aligned | ✅ PASS | Zero impact on production inference pipeline |
 | Documentation standards met | ✅ PASS | Feature spec + technical assessment + GitHub Ledger complete |
 | ADR requirement assessed | ✅ PASS | ADR not required (test-only changes, no architectural decisions) |
-| BitNet.rs compliance verified | ✅ PASS | Matches CLAUDE.md patterns, feature flag compliant |
+| BitNet-rs compliance verified | ✅ PASS | Matches CLAUDE.md patterns, feature flag compliant |
 | Implementation approach validated | ✅ PASS | Option 1 (file-scope hoisting) approved as low-risk, minimal-diff |
 
 **Overall Gate Status:** ✅ **spec = PASS**
@@ -407,7 +407,7 @@ cargo build --workspace --no-default-features --features cpu # Build gate
 
 **Rationale:**
 1. **Specifications Complete:** No gaps identified, all required elements present
-2. **API Contracts Validated:** Test infrastructure patterns align with BitNet.rs standards
+2. **API Contracts Validated:** Test infrastructure patterns align with BitNet-rs standards
 3. **No ADR Required:** Test-only changes, no architectural decisions needed
 4. **Implementation Ready:** Option 1 approach validated as sound and low-risk
 5. **Quality Gates Defined:** Clear validation commands for each AC (AC5-AC7)
@@ -451,7 +451,7 @@ cargo build --workspace --no-default-features --features cpu # Build gate
 - ✅ Risk analysis complete (LOW risk)
 - ✅ Quality gates defined (AC5-AC7)
 - ✅ Validation commands documented
-- ✅ BitNet.rs standards alignment confirmed
+- ✅ BitNet-rs standards alignment confirmed
 - ✅ No architectural decisions required
 
 **Ready for Schema Validation:** ✅ YES
@@ -465,7 +465,7 @@ cargo build --workspace --no-default-features --features cpu # Build gate
 **Completeness Score:** 100% (12/12 required elements present)
 **Atomicity Score:** 100% (7/7 ACs independently testable)
 **Documentation Score:** 100% (feature spec + technical assessment + ledger)
-**BitNet.rs Alignment Score:** 100% (test patterns, feature flags, quality gates)
+**BitNet-rs Alignment Score:** 100% (test patterns, feature flags, quality gates)
 
 ### 8.2 Risk Profile
 
@@ -480,7 +480,7 @@ cargo build --workspace --no-default-features --features cpu # Build gate
 spec: comprehensive feature specification created in docs/explanation/issue-443-spec.md (8,916 bytes)
 assessment: detailed technical assessment in docs/explanation/issue-443-technical-assessment.md (35,562 bytes)
 validation: 7/7 atomic acceptance criteria with unique AC_IDs and validation commands
-api: test infrastructure patterns validated against BitNet.rs standards (file-scope helpers, import hygiene)
+api: test infrastructure patterns validated against BitNet-rs standards (file-scope helpers, import hygiene)
 compatibility: zero impact on neural network inference pipeline; GGUF compatibility maintained
 approach: Option 1 (file-scope hoisting) validated as low-risk, minimal-diff solution
 evidence: clippy warnings confirmed (2 unused imports); workspace_root scope issue verified
@@ -499,7 +499,7 @@ gates: AC5-AC7 integration gates defined for format/clippy/tests validation
 - All required specification artifacts present and comprehensive
 - 7 atomic acceptance criteria with clear validation commands
 - Implementation approach validated (Option 1: file-scope hoisting)
-- API contracts aligned with BitNet.rs test infrastructure patterns
+- API contracts aligned with BitNet-rs test infrastructure patterns
 - No ADR required (test-only changes, no architectural decisions)
 - Zero impact on production neural network inference pipeline
 
@@ -519,7 +519,7 @@ gates: AC5-AC7 integration gates defined for format/clippy/tests validation
 **FINALIZE → schema-validator**
 
 **Reason:**
-Specifications are complete, atomic, and aligned with BitNet.rs standards. Ready for domain schema validation and test planning before implementation.
+Specifications are complete, atomic, and aligned with BitNet-rs standards. Ready for domain schema validation and test planning before implementation.
 
 **Next Agent:** schema-validator
 **Expected Tasks:**
@@ -531,6 +531,6 @@ Specifications are complete, atomic, and aligned with BitNet.rs standards. Ready
 ---
 
 **Validation Date:** 2025-10-11
-**Validator:** BitNet.rs Spec Analyzer (Neural Network Systems Architect)
+**Validator:** BitNet-rs Spec Analyzer (Neural Network Systems Architect)
 **Review Status:** ✅ COMPLETE
 **Implementation Clearance:** ✅ APPROVED FOR SCHEMA VALIDATION

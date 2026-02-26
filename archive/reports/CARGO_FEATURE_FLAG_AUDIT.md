@@ -13,7 +13,7 @@
 - **Cargo test --workspace commands:** 14 instances missing `--no-default-features`
 - **Cargo run --example commands:** 9 instances missing feature specification
 
-**Critical Impact:** These commands will fail or behave unexpectedly because BitNet.rs has **EMPTY default features** and requires explicit `--no-default-features --features cpu|gpu` specification.
+**Critical Impact:** These commands will fail or behave unexpectedly because BitNet-rs has **EMPTY default features** and requires explicit `--no-default-features --features cpu|gpu` specification.
 
 ---
 

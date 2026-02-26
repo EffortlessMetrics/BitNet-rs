@@ -1,10 +1,10 @@
-# BitNet.rs Package Distribution
+# bitnet-rs Package Distribution
 
-This directory contains packaging configurations for distributing BitNet.rs through various package managers and distribution channels.
+This directory contains packaging configurations for distributing bitnet-rs through various package managers and distribution channels.
 
 ## 🦀 Primary Distribution: crates.io
 
-BitNet.rs is primarily distributed through [crates.io](https://crates.io), the official Rust package registry:
+bitnet-rs is primarily distributed through [crates.io](https://crates.io), the official Rust package registry:
 
 ```bash
 # Install CLI and server tools

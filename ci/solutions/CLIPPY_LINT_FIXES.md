@@ -8,13 +8,13 @@
 **Document**: Clippy Lint Resolution Strategy
 **Date**: 2025-10-23
 **Status**: Analysis Complete
-**Scope**: BitNet.rs codebase with focus on three primary lints
+**Scope**: BitNet-rs codebase with focus on three primary lints
 
 ---
 
 ## Executive Summary
 
-This document provides a comprehensive analysis of three clippy lints affecting the BitNet.rs codebase and proposes implementation strategies for each. All lints are in the test suite for the `bitnet-models` crate and are non-critical path issues that don't impact production code.
+This document provides a comprehensive analysis of three clippy lints affecting the BitNet-rs codebase and proposes implementation strategies for each. All lints are in the test suite for the `bitnet-models` crate and are non-critical path issues that don't impact production code.
 
 **Lints Identified**:
 1. **Unused import**: `BitNetError` in `gguf_weight_loading_tests.rs`
@@ -710,7 +710,7 @@ Verification: cargo clippy shows 0 warnings for bitnet-models test targets.
 - [Clippy lint: manual_is_multiple_of](https://rust-lang.github.io/rust-clippy/master/index.html#manual_is_multiple_of)
 - [Clippy lint: vec_init_then_push](https://rust-lang.github.io/rust-clippy/master/index.html#vec_init_then_push)
 
-### BitNet.rs Documentation
+### BitNet-rs Documentation
 - `CLAUDE.md`: Project guidelines and common workflows
 - `docs/development/code-quality.md`: Code quality standards
 

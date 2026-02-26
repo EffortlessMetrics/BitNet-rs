@@ -1,6 +1,6 @@
 # Policy System Quick Start
 
-Get started with BitNet.rs validation policies in 60 seconds.
+Get started with bitnet-rs validation policies in 60 seconds.
 
 ## TL;DR
 
@@ -341,4 +341,4 @@ examples/policies/
 
 ## License
 
-These policy files are provided under the same license as BitNet.rs (MIT OR Apache-2.0).
+These policy files are provided under the same license as bitnet-rs (MIT OR Apache-2.0).

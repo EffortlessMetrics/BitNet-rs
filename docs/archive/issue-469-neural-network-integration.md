@@ -9,7 +9,7 @@
 
 ## Overview
 
-This document describes how Issue #469's 8 acceptance criteria integrate with the BitNet.rs neural network inference pipeline. Each component aligns with specific pipeline stages (Model Loading → Quantization → Inference → Output) and respects workspace crate boundaries.
+This document describes how Issue #469's 8 acceptance criteria integrate with the BitNet-rs neural network inference pipeline. Each component aligns with specific pipeline stages (Model Loading → Quantization → Inference → Output) and respects workspace crate boundaries.
 
 ---
 
@@ -493,7 +493,7 @@ Unified FFI Compilation (xtask/src/ffi.rs):
       .flag("-O2")
       .flag("-fPIC");
 
-    // Regular includes (BitNet.rs code - show warnings)
+    // Regular includes (BitNet-rs code - show warnings)
     for dir in include_dirs {
       builder.include(dir);  // -I{dir}
     }
@@ -522,7 +522,7 @@ Unified FFI Compilation (xtask/src/ffi.rs):
 | 1200+ FFI build warnings | <200 warnings (>80% reduction) |
 | CUDA SDK deprecation warnings | Suppressed via -isystem |
 | llama.cpp pragma warnings | Suppressed via -isystem |
-| BitNet.rs code warnings | Still shown (desired) |
+| BitNet-rs code warnings | Still shown (desired) |
 
 **Dependencies:**
 - `xtask` added as build-dependency in affected crates
@@ -687,7 +687,7 @@ Cross-Links:
 
 ### Feature Flags
 
-All components respect BitNet.rs feature-gated builds:
+All components respect BitNet-rs feature-gated builds:
 
 ```toml
 # Cargo.toml (bitnet-cli)
@@ -810,7 +810,7 @@ fn test_gguf_tokenizer_real_vocab_size() { ... }
 
 ## Summary
 
-Issue #469's 8 acceptance criteria integrate seamlessly with the BitNet.rs neural network inference pipeline:
+Issue #469's 8 acceptance criteria integrate seamlessly with the BitNet-rs neural network inference pipeline:
 
 1. **AC1-AC2** enhance Model Loading with strict validation and centralized tolerance
 2. **AC3** adds runtime guardrails to Inference (K/V cache validation)
@@ -819,12 +819,12 @@ Issue #469's 8 acceptance criteria integrate seamlessly with the BitNet.rs neura
 5. **AC7** validates both I2_S flavors in CI
 6. **AC8** documents QK256 quick-start for users
 
-All components respect workspace boundaries, feature flags, and BitNet.rs design principles (zero-copy, device-aware, cross-validated, TDD-driven).
+All components respect workspace boundaries, feature flags, and BitNet-rs design principles (zero-copy, device-aware, cross-validated, TDD-driven).
 
 ---
 
 **Document Control:**
 - Review Status: Integration Guide (Ready for Implementation)
-- Owner: BitNet.rs Architecture Team
+- Owner: BitNet-rs Architecture Team
 - Issue: #469
 - Target: v0.1.0-mvp

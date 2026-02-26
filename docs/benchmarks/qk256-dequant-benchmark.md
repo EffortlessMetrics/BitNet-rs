@@ -150,4 +150,4 @@ If AVX2 performance degrades:
 
 - **Implementation**: `crates/bitnet-models/src/quant/i2s_qk256_avx2.rs`
 - **Scalar reference**: `crates/bitnet-models/src/quant/i2s.rs`
-- **CLAUDE.md**: Project documentation for BitNet.rs
+- **CLAUDE.md**: Project documentation for BitNet-rs

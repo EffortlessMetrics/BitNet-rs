@@ -2,7 +2,7 @@
 // GGML Constants Extraction - FFI Bridge
 // ============================================================================
 // llama.cpp API version: See VENDORED_GGML_COMMIT for exact commit hash
-// BitNet.rs integration: AC6 FFI build hygiene consolidation (Issue #469)
+// BitNet-rs integration: AC6 FFI build hygiene consolidation (Issue #469)
 // Compatible with: BitNet C++ v0.1.0-mvp and later
 // Build date: Generated at compile time from csrc/VENDORED_GGML_COMMIT
 //

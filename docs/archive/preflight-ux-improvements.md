@@ -3,7 +3,7 @@
 **Document ID**: SPEC-2025-PREFLIGHT-UX-001
 **Status**: Draft
 **Created**: 2025-10-25
-**Author**: BitNet.rs Neural Network Systems Architect
+**Author**: BitNet-rs Neural Network Systems Architect
 **Related Documents**:
 - `/tmp/xtask-crossval-exploration.md` (Analysis)
 - `docs/explanation/dual-backend-crossval.md` (Architecture)
@@ -1105,7 +1105,7 @@ fn test_preflight_invalid_backend_exit_2() {
 
 **SC-1: Error messages are actionable**
 - PASS: User can fix "libraries not found" error in < 5 minutes by following error message
-- MEASURE: Manual testing with 3 developers unfamiliar with BitNet.rs
+- MEASURE: Manual testing with 3 developers unfamiliar with BitNet-rs
 
 **SC-2: Exit codes are standardized**
 - PASS: All exit codes match specification (0=success, 1=unavailable, 2=invalid)
@@ -1298,7 +1298,7 @@ fi
 
 ---
 
-## 9. Alignment with BitNet.rs Principles
+## 9. Alignment with BitNet-rs Principles
 
 ### 9.1 TDD Practices
 
@@ -1380,7 +1380,7 @@ cargo build -p xtask --no-default-features
 - rpath documentation: https://en.wikipedia.org/wiki/Rpath
 - LD_LIBRARY_PATH: https://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html
 
-### 10.3 BitNet.rs Patterns
+### 10.3 BitNet-rs Patterns
 
 **Error Message Patterns** (existing examples):
 - `bitnet-cli/src/main.rs`: CLI error messages with recovery steps
@@ -1557,7 +1557,7 @@ This specification defines comprehensive UX improvements to the preflight diagno
 3. **Debuggability**: Verbose mode shows complete diagnostic information
 4. **CI/CD Integration**: Standardized exit codes enable automated workflows
 
-The implementation is low-risk (UX-only changes), low-effort (7-10 hours), and high-impact (eliminates common user confusion). All changes align with BitNet.rs principles of TDD practices, feature-gated architecture, and production-grade error handling.
+The implementation is low-risk (UX-only changes), low-effort (7-10 hours), and high-impact (eliminates common user confusion). All changes align with BitNet-rs principles of TDD practices, feature-gated architecture, and production-grade error handling.
 
 **Next Steps**:
 1. Review specification with maintainers

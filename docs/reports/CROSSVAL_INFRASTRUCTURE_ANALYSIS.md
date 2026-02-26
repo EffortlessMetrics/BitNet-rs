@@ -1,4 +1,4 @@
-# BitNet.rs Cross-Validation Infrastructure - Comprehensive Analysis
+# BitNet-rs Cross-Validation Infrastructure - Comprehensive Analysis
 
 **Generated**: 2025-10-24  
 **Scope**: Existing cross-validation framework for layer-by-layer comparison infrastructure  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-BitNet.rs has a **mature cross-validation framework** with comprehensive infrastructure for comparing Rust vs C++ implementations. The system includes:
+BitNet-rs has a **mature cross-validation framework** with comprehensive infrastructure for comparing Rust vs C++ implementations. The system includes:
 
 1. **Dedicated `crossval` crate** with parity harness, scoring, and comparison utilities
 2. **Receipt system** (Schema v1.0.0) for honest compute verification in CI/CD
@@ -866,7 +866,7 @@ cargo run -p xtask -- benchmark --model model.gguf --tokens 128
 
 ## Conclusion
 
-BitNet.rs has a **mature, well-designed cross-validation framework** ready for extension to layer-level comparison. The kernel recorder, receipt system, FFI bridge, and parity harness provide excellent foundations. Primary work is:
+BitNet-rs has a **mature, well-designed cross-validation framework** ready for extension to layer-level comparison. The kernel recorder, receipt system, FFI bridge, and parity harness provide excellent foundations. Primary work is:
 
 1. Extending infrastructure to capture intermediate tensors
 2. Adding layer-level instrumentation hooks

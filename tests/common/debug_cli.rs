@@ -146,7 +146,7 @@ impl DebugCli {
 
     /// Interactive debugging session
     pub async fn interactive_debug(&self) -> TestOpResult<()> {
-        println!("🔍 BitNet.rs Test Debugger - Interactive Mode");
+        println!("🔍 BitNet-rs Test Debugger - Interactive Mode");
         println!("Type 'help' for available commands, 'quit' to exit\n");
 
         loop {

@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Validation Framework Status
+# BitNet-rs Validation Framework Status
 
 ## 🎯 Current Status: **OPERATIONAL**
 
@@ -62,7 +62,7 @@ HF_MODEL_ID=1bitLLM/bitnet_b1_58-3B \
 
 ## 📈 Comparison with Industry Standards
 
-| Feature | BitNet.rs | Industry Standard | Status |
+| Feature | BitNet-rs | Industry Standard | Status |
 |---------|-----------|------------------|--------|
 | **Tokenizer Compatibility** | Full HF parity | Required | ✅ |
 | **Deterministic Execution** | Single-threaded + fixed seeds | Best practice | ✅ |
@@ -97,7 +97,7 @@ To fully validate with a real model:
 
 ## 🏆 Achievement Summary
 
-The BitNet.rs validation framework now provides:
+The BitNet-rs validation framework now provides:
 - **Industry-standard validation** practices
 - **Automated quality gates** for CI/CD
 - **Comprehensive debugging tools** for failures

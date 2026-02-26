@@ -2,7 +2,7 @@
 
 **Date:** 2025-10-16T00:30:00Z
 **Flow:** Generative
-**Validator:** merge-readiness (BitNet.rs Generative PR Readiness Validator)
+**Validator:** merge-readiness (BitNet-rs Generative PR Readiness Validator)
 **PR:** #466 (feat(docs): CPU path followup for v0.1.0-mvp release)
 **Issue:** #465 (CPU Path Followup)
 **Status:** ✅ READY FOR REVIEW
@@ -15,7 +15,7 @@
 
 **Routing Decision:** FINALIZE → pub-finalizer
 
-**Rationale:** PR #466 fully meets BitNet.rs neural network development standards and Generative flow requirements. All quality gates pass (100% score), comprehensive neural network evidence present, and GitHub-native receipts complete. CI validation pending but non-blocking for Review pickup.
+**Rationale:** PR #466 fully meets BitNet-rs neural network development standards and Generative flow requirements. All quality gates pass (100% score), comprehensive neural network evidence present, and GitHub-native receipts complete. CI validation pending but non-blocking for Review pickup.
 
 ---
 
@@ -149,7 +149,7 @@ adb8096 chore(receipts): complete PR #466 publication documentation
 
 ---
 
-## 4. BitNet.rs Neural Network Standards ✅
+## 4. BitNet-rs Neural Network Standards ✅
 
 ### I2_S Quantization Evidence
 - ✅ **Accuracy:** ≥99.8% (validated against FP32 reference)
@@ -184,7 +184,7 @@ adb8096 chore(receipts): complete PR #466 publication documentation
 
 ### Feature Flag Discipline
 - ✅ Pattern documented: `--no-default-features --features cpu|gpu`
-- ✅ Default features: EMPTY (BitNet.rs architecture requirement)
+- ✅ Default features: EMPTY (BitNet-rs architecture requirement)
 - ✅ README updated with explicit feature flags (AC9)
 - ✅ Test commands use correct feature patterns
 
@@ -298,7 +298,7 @@ adb8096 chore(receipts): complete PR #466 publication documentation
 
 ---
 
-## 8. BitNet.rs Standards Compliance ✅
+## 8. BitNet-rs Standards Compliance ✅
 
 ### Neural Network Evidence
 - ✅ **Quantization Accuracy:** ≥99.8% (I2_S validated)
@@ -317,7 +317,7 @@ adb8096 chore(receipts): complete PR #466 publication documentation
 - ✅ Baseline validation: Schema v1.0.0, kernel ID hygiene, performance bounds
 
 ### Rust Workspace Compliance
-- ✅ Changes follow BitNet.rs structure: `docs/`, `tests/`, `ci/receipts/`
+- ✅ Changes follow BitNet-rs structure: `docs/`, `tests/`, `ci/receipts/`
 - ✅ Feature flags correctly specified: Documentation patterns validated
 - ✅ Documentation stored correctly: `docs/explanation/`, `docs/baselines/`
 - ✅ Zero production code changes: Documentation and test infrastructure only
@@ -340,7 +340,7 @@ adb8096 chore(receipts): complete PR #466 publication documentation
 2. **Comprehensive Neural Network Evidence:** I2_S quantization validated, CPU baseline established, honest compute enforced
 3. **Complete GitHub-Native Receipts:** Ledger, gate receipts, trace table all documented
 4. **Excellent Test Coverage:** 54 Issue #465 tests (100% AC coverage), 1396/1397 workspace (99.9%)
-5. **BitNet.rs Standards Met:** Feature flags, documentation structure, TDD patterns all compliant
+5. **BitNet-rs Standards Met:** Feature flags, documentation structure, TDD patterns all compliant
 6. **Clear Documentation:** 3,416 spec lines, 4 ADRs, 16 doctests (100%)
 7. **Conventional Commits:** 15 commits with proper prefixes and neural network context
 
@@ -352,7 +352,7 @@ adb8096 chore(receipts): complete PR #466 publication documentation
 2. Verify v0.1.0-mvp tag creation workflow
 3. Monitor baseline receipt usage in CI/CD pipelines
 
-### Validation of BitNet.rs Neural Network Standards
+### Validation of BitNet-rs Neural Network Standards
 
 **I2_S Quantization:**
 - ✅ Accuracy: ≥99.8% validated
@@ -403,7 +403,7 @@ adb8096 chore(receipts): complete PR #466 publication documentation
 
 **Why:**
 - All Generative flow quality gates pass (100% score)
-- Comprehensive BitNet.rs neural network evidence present
+- Comprehensive BitNet-rs neural network evidence present
 - GitHub-native receipts complete and validated
 - CI failures non-blocking (documentation-only changes, likely infrastructure issue)
 - Clear path to resolution (rebase on main)
@@ -446,7 +446,7 @@ routing: FINALIZE → pub-finalizer; state: VALIDATED; ready_for_review: YES (pe
 
 ---
 
-**Assessed By:** merge-readiness (BitNet.rs Generative PR Readiness Validator)
+**Assessed By:** merge-readiness (BitNet-rs Generative PR Readiness Validator)
 **Date:** 2025-10-16T00:30:00Z
 **Gate:** `generative:gate:publication` ✅ PASS
 **Overall Status:** ✅ READY FOR REVIEW (pending CI rebase)

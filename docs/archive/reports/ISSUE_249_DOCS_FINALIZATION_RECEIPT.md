@@ -48,7 +48,7 @@
   - `docs/how-to/` - Task-oriented troubleshooting guide ✅
   - `docs/troubleshooting/` - Problem-solving resources ✅
 
-### ✅ BitNet.rs Command Accuracy
+### ✅ BitNet-rs Command Accuracy
 - **xtask Command Validation**: ✅ PASS
 - All `cargo run -p xtask --` commands verified against implementation
 - Correct usage of `clean-cache` (not `clear-cache`)
@@ -103,7 +103,7 @@
 - **AC9**: Performance Optimization - ✅ Documented
 - **AC10**: Cross-Validation Support - ✅ Documented
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### ✅ Neural Network Terminology Consistency
 - Quantization methods (I2S, TL1, TL2) used correctly
@@ -121,7 +121,7 @@
 - All Rust code examples compile with proper features
 - Command-line examples verified against implementation
 - Feature flag usage consistent with CLAUDE.md
-- Integration patterns follow BitNet.rs conventions
+- Integration patterns follow BitNet-rs conventions
 
 ## Evidence Summary
 
@@ -148,13 +148,13 @@ coverage: AC1-AC10 all documented with working examples
 - API documentation builds cleanly with CPU features
 - Documentation tests execute successfully
 - Diátaxis structure properly maintained
-- BitNet.rs command references accurate
+- BitNet-rs command references accurate
 - Implementation and documentation perfectly aligned
 - Comprehensive coverage of all acceptance criteria
 - Production-ready documentation quality achieved
 
 ### Next Steps
-The tokenizer integration documentation is complete and ready for publication. All acceptance criteria (AC1-AC10) have been documented with working examples, proper neural network terminology, and BitNet.rs standards compliance.
+The tokenizer integration documentation is complete and ready for publication. All acceptance criteria (AC1-AC10) have been documented with working examples, proper neural network terminology, and BitNet-rs standards compliance.
 
 **Ready for pub-finalizer microloop in Generative flow.**
 
@@ -163,4 +163,4 @@ The tokenizer integration documentation is complete and ready for publication. A
 **Finalization completed at**: 2025-09-25
 **Total validation time**: Comprehensive
 **Quality assessment**: Production-ready
-**BitNet.rs compliance**: Full adherence
+**BitNet-rs compliance**: Full adherence

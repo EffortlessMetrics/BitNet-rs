@@ -241,7 +241,7 @@ rg '#\[ignore = "[^"]*"[^]]' --type rust crates/ tests/ xtask/
 
 ## Document Metadata
 
-**Author**: BitNet.rs Automation Framework
+**Author**: BitNet-rs Automation Framework
 **Created**: October 23, 2025
 **Version**: 1.0.0
 **Phase**: 1 of 5

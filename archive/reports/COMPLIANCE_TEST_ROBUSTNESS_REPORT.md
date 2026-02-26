@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The `tests/env_guard_compliance.rs` test suite provides automated static analysis validation that all environment variable mutations in the BitNet.rs codebase follow safe, isolated patterns using either:
+The `tests/env_guard_compliance.rs` test suite provides automated static analysis validation that all environment variable mutations in the BitNet-rs codebase follow safe, isolated patterns using either:
 
 1. **EnvGuard RAII Pattern**: Automatic restoration via Drop trait
 2. **temp_env::with_var() Closure**: Scoped isolation via closure scope

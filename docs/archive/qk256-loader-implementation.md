@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document describes the implementation of QK256 (GGML I2_S with 256-element blocks) support in the BitNet.rs GGUF loader. The implementation enables loading QK256-quantized weights from GGUF files and storing them as U8 tensors for later use by the linear layer.
+This document describes the implementation of QK256 (GGML I2_S with 256-element blocks) support in the BitNet-rs GGUF loader. The implementation enables loading QK256-quantized weights from GGUF files and storing them as U8 tensors for later use by the linear layer.
 
 ## Implementation Details
 

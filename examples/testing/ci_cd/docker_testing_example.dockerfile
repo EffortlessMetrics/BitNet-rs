@@ -1,4 +1,4 @@
-# Example Dockerfile for BitNet.rs testing in containerized environments
+# Example Dockerfile for bitnet-rs testing in containerized environments
 # This demonstrates how to set up a complete testing environment in Docker
 
 # Multi-stage build for efficient testing container

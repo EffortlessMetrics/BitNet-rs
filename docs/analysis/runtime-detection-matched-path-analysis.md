@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Runtime detection in BitNet.rs currently returns only a boolean indicating whether libraries were found. To support enhanced diagnostics and CI-safe warning features, the detection functions must return **matched path information** along with availability status.
+Runtime detection in BitNet-rs currently returns only a boolean indicating whether libraries were found. To support enhanced diagnostics and CI-safe warning features, the detection functions must return **matched path information** along with availability status.
 
 **Current Return Type** (test helper):
 ```rust

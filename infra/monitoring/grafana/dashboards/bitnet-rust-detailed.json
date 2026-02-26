@@ -534,7 +534,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "BitNet.rs Detailed Rust Metrics",
+  "title": "bitnet-rs Detailed Rust Metrics",
   "uid": "bitnet-rust-detailed",
   "version": 1
 }

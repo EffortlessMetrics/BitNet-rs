@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the comprehensive fix plan for the 17 timeout tests and 1 failed test in the BitNet.rs test suite.
+This document outlines the comprehensive fix plan for the 17 timeout tests and 1 failed test in the BitNet-rs test suite.
 
 ## Test Categories
 

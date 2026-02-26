@@ -550,4 +550,4 @@ mod integration_tests {
 
 ## Additional Context
 
-This change is crucial for improving the reliability and debuggability of the BitNet.rs inference pipeline. By removing silent fallbacks and providing clear error messages, developers will be able to quickly identify and resolve model loading issues, leading to more robust applications and better user experiences.
+This change is crucial for improving the reliability and debuggability of the BitNet-rs inference pipeline. By removing silent fallbacks and providing clear error messages, developers will be able to quickly identify and resolve model loading issues, leading to more robust applications and better user experiences.

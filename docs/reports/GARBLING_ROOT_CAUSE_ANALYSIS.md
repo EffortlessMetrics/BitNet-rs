@@ -1,4 +1,4 @@
-# BitNet.rs Garbling Root Cause Analysis
+# BitNet-rs Garbling Root Cause Analysis
 
 **Date**: 2025-10-24
 **Status**: ROOT CAUSE IDENTIFIED
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-The garbling in BitNet.rs inference output has been **definitively identified** as LayerNorm weight corruption in the microsoft-bitnet-b1.58-2B-4T GGUF file. This is **not a bug in the inference engine**, but rather a data corruption issue during model conversion.
+The garbling in BitNet-rs inference output has been **definitively identified** as LayerNorm weight corruption in the microsoft-bitnet-b1.58-2B-4T GGUF file. This is **not a bug in the inference engine**, but rather a data corruption issue during model conversion.
 
 ## Symptoms
 

@@ -284,7 +284,7 @@ No migration required. New features are opt-in:
 
 ## Reviewer Notes
 
-This PR follows BitNet.rs TDD and generative flow practices:
+This PR follows BitNet-rs TDD and generative flow practices:
 1. **Spec-driven:** Issue #462 specified 4 clear acceptance criteria
 2. **Test-first:** TDD scaffolding established before implementation
 3. **Quality gates:** Comprehensive validation through generative flow microloop

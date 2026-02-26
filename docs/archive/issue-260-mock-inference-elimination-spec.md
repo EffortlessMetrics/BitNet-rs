@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This specification outlines the technical approach for eliminating mock inference paths in BitNet.rs and implementing real quantized computation. The current system reports misleading performance metrics (200.0 tokens/sec) through mock inference fallbacks, blocking accurate evaluation of 1-bit neural network capabilities.
+This specification outlines the technical approach for eliminating mock inference paths in BitNet-rs and implementing real quantized computation. The current system reports misleading performance metrics (200.0 tokens/sec) through mock inference fallbacks, blocking accurate evaluation of 1-bit neural network capabilities.
 
 **Classification**: Breaking (Architecture Change)
 **Migration Path**: [docs/explanation/migration/mock-elimination-migration.md] (to be created)
@@ -553,7 +553,7 @@ cargo build --no-default-features --workspace --no-default-features --features c
 
 ## Conclusion
 
-This specification provides a comprehensive roadmap for eliminating mock inference paths in BitNet.rs while implementing real quantized computation. The approach prioritizes numerical accuracy, performance transparency, and cross-validation against reference implementations.
+This specification provides a comprehensive roadmap for eliminating mock inference paths in BitNet-rs while implementing real quantized computation. The approach prioritizes numerical accuracy, performance transparency, and cross-validation against reference implementations.
 
 Key success factors:
 1. **Systematic Mock Elimination**: Remove all fallback paths that bypass real quantization
@@ -562,4 +562,4 @@ Key success factors:
 4. **Cross-Validation**: Maintain compatibility with Microsoft C++ reference implementation
 5. **Production Readiness**: Ensure reliability, determinism, and observability for deployment
 
-The implementation will transform BitNet.rs from a prototype with mock inference to a production-grade 1-bit neural network inference engine with accurate performance reporting and validated quantization accuracy.
+The implementation will transform BitNet-rs from a prototype with mock inference to a production-grade 1-bit neural network inference engine with accurate performance reporting and validated quantization accuracy.

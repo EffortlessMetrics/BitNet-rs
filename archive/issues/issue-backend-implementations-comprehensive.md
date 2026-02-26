@@ -17,7 +17,7 @@ Multiple backend functions in both CPU and GPU implementations are currently pla
 
 ## Reproduction Steps
 
-1. Build BitNet.rs with backend features:
+1. Build BitNet-rs with backend features:
    ```bash
    cargo build --no-default-features --features cpu
    cargo build --no-default-features --features gpu  # If CUDA available

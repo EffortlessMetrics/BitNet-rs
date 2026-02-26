@@ -14,7 +14,7 @@ The `GpuMemoryManager::new` function in `crates/bitnet-inference/src/gpu.rs` cur
 
 ## Reproduction Steps
 
-1. Build BitNet.rs with GPU support:
+1. Build BitNet-rs with GPU support:
    ```bash
    cargo build --no-default-features --features gpu
    ```

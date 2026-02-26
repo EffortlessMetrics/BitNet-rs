@@ -3,13 +3,13 @@
 **Status:** ✅ PASS
 **Conclusion:** success
 **Date:** 2025-10-16T00:30:00Z
-**Validator:** merge-readiness (BitNet.rs Generative PR Readiness Validator)
+**Validator:** merge-readiness (BitNet-rs Generative PR Readiness Validator)
 
 ---
 
 ## Summary
 
-PR #466 successfully validated for merge readiness. All BitNet.rs neural network standards met, comprehensive GitHub-native receipts complete, and quality gates passing at 100%. CI validation pending rebase on latest `main` (non-blocking for documentation PR).
+PR #466 successfully validated for merge readiness. All BitNet-rs neural network standards met, comprehensive GitHub-native receipts complete, and quality gates passing at 100%. CI validation pending rebase on latest `main` (non-blocking for documentation PR).
 
 **Overall Assessment:** ✅ READY FOR REVIEW
 
@@ -28,7 +28,7 @@ PR #466 successfully validated for merge readiness. All BitNet.rs neural network
 ✅ **Neural Network Standards:** I2_S quantization, CPU baseline, honest compute verified
 ✅ **Quality Gates:** 100% score (7/7 required + 2/2 hardening PASS)
 ✅ **Test Coverage:** 54/54 Issue #465, 1396/1397 workspace, 16/16 doctests
-✅ **BitNet.rs Compliance:** All 8 criteria met (quantization, security, docs, performance, tests, API contracts, transformer pipeline, honest compute)
+✅ **BitNet-rs Compliance:** All 8 criteria met (quantization, security, docs, performance, tests, API contracts, transformer pipeline, honest compute)
 
 ⚠️ **CI Status:** 100+ checks failing (likely branch sync issue, non-blocking for documentation-only PR)
 
@@ -42,7 +42,7 @@ PR #466 successfully validated for merge readiness. All BitNet.rs neural network
 ### Text
 
 ```
-Merge Readiness Validation - BitNet.rs Generative Flow
+Merge Readiness Validation - BitNet-rs Generative Flow
 
 Gate: generative:gate:publication
 Status: ✅ PASS
@@ -207,7 +207,7 @@ routing: FINALIZE → pub-finalizer; state: VALIDATED; ready_for_review: YES (pe
 
 ═══════════════════════════════════════════════════════════════
 
-Assessed By: merge-readiness (BitNet.rs Generative PR Readiness Validator)
+Assessed By: merge-readiness (BitNet-rs Generative PR Readiness Validator)
 Date: 2025-10-16T00:30:00Z
 Confidence: HIGH (100% quality score, comprehensive validation)
 ```
@@ -220,7 +220,7 @@ Confidence: HIGH (100% quality score, comprehensive validation)
 
 1. **PR Structure:**
    - Title: feat(docs): CPU path followup for v0.1.0-mvp release (#465)
-   - Description: Complete with all BitNet.rs template sections
+   - Description: Complete with all BitNet-rs template sections
    - Labels: documentation, flow:generative, state:ready
 
 2. **GitHub Receipts:**

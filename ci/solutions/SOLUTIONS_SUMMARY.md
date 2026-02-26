@@ -162,7 +162,7 @@ When updating documentation:
 
 1. **Always include feature flags** in cargo run examples
    - Use: `cargo run --no-default-features --features cpu,full-cli`
-   - Rationale: BitNet.rs has empty default features by design
+   - Rationale: BitNet-rs has empty default features by design
 
 2. **Keep examples consistent** across files
    - If you add a new example in README.md, it should match docs/quickstart.md style

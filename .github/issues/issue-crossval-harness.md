@@ -8,7 +8,7 @@
 
 ## Summary
 
-Create feature-gated cross-validation tests that compare BitNet.rs outputs with C++ reference implementation.
+Create feature-gated cross-validation tests that compare bitnet-rs outputs with C++ reference implementation.
 
 ## Problem
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-BitNet.rs uses **Nix as the canonical build and development spine**. The flake provides:
+BitNet-rs uses **Nix as the canonical build and development spine**. The flake provides:
 
 - ✅ **Reproducible dev environments** (pinned Rust + all deps)
 - ✅ **Buildable packages** (`bitnet-server`, `bitnet-cli`, `bitnet-st2gguf`)

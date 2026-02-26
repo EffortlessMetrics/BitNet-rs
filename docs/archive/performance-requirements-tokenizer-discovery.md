@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document defines comprehensive performance requirements for BitNet.rs tokenizer discovery system integration with neural network inference pipeline. The requirements ensure minimal overhead while supporting large-scale neural network models with vocabularies ranging from GPT-2 (50K tokens) to LLaMA-3 (128K tokens) across CPU/GPU quantization formats.
+This document defines comprehensive performance requirements for BitNet-rs tokenizer discovery system integration with neural network inference pipeline. The requirements ensure minimal overhead while supporting large-scale neural network models with vocabularies ranging from GPT-2 (50K tokens) to LLaMA-3 (128K tokens) across CPU/GPU quantization formats.
 
 ## Neural Network Scale Requirements
 
@@ -416,7 +416,7 @@ Cache Lookup Baseline:                <10μs for cached tokenizers
 
 ## Conclusion
 
-These performance requirements ensure BitNet.rs tokenizer discovery system delivers production-grade performance across the neural network inference pipeline. The specifications address:
+These performance requirements ensure BitNet-rs tokenizer discovery system delivers production-grade performance across the neural network inference pipeline. The specifications address:
 
 - **Neural Network Scale**: Optimized performance for large vocabulary models (128K+ tokens)
 - **Device Awareness**: Efficient GPU/CPU selection and optimization

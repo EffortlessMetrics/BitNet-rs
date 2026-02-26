@@ -1,6 +1,6 @@
 # Warn-Once Utility Infrastructure
 
-Thread-safe, rate-limited logging utility for BitNet.rs that eliminates log spam from repeated warning conditions.
+Thread-safe, rate-limited logging utility for BitNet-rs that eliminates log spam from repeated warning conditions.
 
 ## Quick Start
 

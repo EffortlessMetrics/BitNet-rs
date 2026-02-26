@@ -2,7 +2,7 @@
 
 ## Overview
 
-This exploration cataloged BitNet.rs test fixture patterns, GGUF loading mechanisms, and provided comprehensive guidance for creating three new test fixtures: `qk256_4x256.gguf`, `bitnet32_2x64.gguf`, and `qk256_3x300.gguf`.
+This exploration cataloged BitNet-rs test fixture patterns, GGUF loading mechanisms, and provided comprehensive guidance for creating three new test fixtures: `qk256_4x256.gguf`, `bitnet32_2x64.gguf`, and `qk256_3x300.gguf`.
 
 ## Key Findings
 
@@ -218,5 +218,5 @@ Add fixture documentation to `tests/fixtures/gguf/README.md`:
 ---
 
 **Generated**: 2025-10-22
-**Codebase**: BitNet.rs Neural Network Inference Library
+**Codebase**: BitNet-rs Neural Network Inference Library
 **Scope**: Test fixture patterns, GGUF loading, fixture creation guidance

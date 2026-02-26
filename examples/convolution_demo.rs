@@ -1,13 +1,13 @@
 //! Convolution Demo
 //!
-//! This example demonstrates the 2D convolution functionality in BitNet.rs,
+//! This example demonstrates the 2D convolution functionality in bitnet-rs,
 //! showing both full-precision and quantized convolution operations.
 
 use bitnet_common::{QuantizationType, Result};
 use bitnet_kernels::convolution::{Conv2DParams, conv2d, conv2d_quantized};
 
 fn main() -> Result<()> {
-    println!("🔬 BitNet.rs Convolution Demo");
+    println!("🔬 bitnet-rs Convolution Demo");
     println!("=============================\n");
 
     // Demo 1: Basic 2D Convolution

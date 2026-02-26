@@ -77,7 +77,7 @@
   - test_ac6_memory_efficiency_validation (fixture generation required)
   - test_ac6_cpu_device_tensor_placement (fixture generation required)
 
-### Performance Metrics (BitNet.rs Neural Network)
+### Performance Metrics (BitNet-rs Neural Network)
 
 - **Total Validation Time**: 1.2 minutes (well within 8-minute SLO ✅)
 - **Feature Combinations**: 4/4 successful (100% coverage of critical paths)

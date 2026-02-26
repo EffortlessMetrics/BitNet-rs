@@ -5,7 +5,7 @@
 **Status**: ✅ PASS (architecture fully aligned)
 **Classification**: `neural-network-feature` - Universal Tokenizer Discovery System
 **Evidence**: `spec: architecture: aligned; tokenizer discovery: strategy pattern validated; module boundaries: preserved; neural network integration: compliant`
-**Validation**: COMPREHENSIVE - BitNet.rs tokenizer architecture validated, all boundaries respected
+**Validation**: COMPREHENSIVE - BitNet-rs tokenizer architecture validated, all boundaries respected
 
 ---
 
@@ -13,7 +13,7 @@
 
 **Branch**: feat/336-universal-tokenizer-discovery
 **HEAD**: 5da0b5b
-**Status**: ✅ PASS - Architecture aligned with BitNet.rs specifications
+**Status**: ✅ PASS - Architecture aligned with BitNet-rs specifications
 
 ### Architecture Validation Summary
 
@@ -587,7 +587,7 @@ bitnet-quantization = { path = "../bitnet-quantization" }
 **Routing**: **NEXT → contract-reviewer**
 
 **Routing Rationale**:
-1. ✅ **Architecture**: Fully aligned with BitNet.rs tokenizer architecture
+1. ✅ **Architecture**: Fully aligned with BitNet-rs tokenizer architecture
 2. ✅ **Strategy Pattern**: Correctly implemented with model-specific wrappers
 3. ✅ **Module Boundaries**: Proper crate isolation, clean dependency flow
 4. ✅ **Neural Network Integration**: LLaMA/GPT-2/BitNet support validated

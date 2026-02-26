@@ -1,6 +1,6 @@
 //! # BitNet Python Bindings
 //!
-//! Python bindings for BitNet.rs providing a seamless migration path from
+//! Python bindings for BitNet-rs providing a seamless migration path from
 //! existing Python implementations with identical API compatibility.
 
 #![allow(clippy::missing_safety_doc)]
@@ -30,7 +30,7 @@ pub use utils::*;
 fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     // Add version information
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
-    m.add("__author__", "BitNet.rs Team")?;
+    m.add("__author__", "BitNet-rs Team")?;
     m.add("__description__", "High-performance BitNet inference in Rust with Python bindings")?;
 
     // Add main classes
@@ -68,7 +68,7 @@ fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     m.add(
         "__doc__",
         r#"
-BitNet.rs Python Bindings
+BitNet-rs Python Bindings
 
 High-performance BitNet inference library with Python bindings.
 

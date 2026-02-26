@@ -5,7 +5,7 @@
 **Status**: ✅ PASS (additive)
 **Classification**: `additive` - Backward compatible inference receipt generation APIs
 **Evidence**: `cargo check: workspace ok; docs: 4/4 examples pass; api: additive (1 new module, 10 new types); gguf: I2S/TL1/TL2 compatible; quantization: 41/41 tests pass`
-**Validation**: COMPREHENSIVE - All BitNet.rs neural network API contract requirements validated
+**Validation**: COMPREHENSIVE - All bitnet-rs neural network API contract requirements validated
 
 ---
 
@@ -201,4 +201,4 @@ receipt.save(Path::new("ci/inference.json"))?;
 
 **Timestamp**: 2025-10-04T03:36:00Z
 **Validator**: contract-reviewer agent
-**Schema**: BitNet.rs Contract Validation v1.0.0
+**Schema**: bitnet-rs Contract Validation v1.0.0

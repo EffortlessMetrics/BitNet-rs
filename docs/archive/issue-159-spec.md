@@ -2,13 +2,13 @@
 
 ## Context
 
-The current BitNet.rs implementation only loads token embeddings and output projections from GGUF files while mock-initializing all transformer layer weights with zeros and ones. This limitation prevents meaningful neural network inference as the model lacks trained parameters for attention and feedforward computations. The issue affects the core Model Loading → Quantization → Kernels → Inference → Output pipeline by providing non-functional weights for neural network computation.
+The current BitNet-rs implementation only loads token embeddings and output projections from GGUF files while mock-initializing all transformer layer weights with zeros and ones. This limitation prevents meaningful neural network inference as the model lacks trained parameters for attention and feedforward computations. The issue affects the core Model Loading → Quantization → Kernels → Inference → Output pipeline by providing non-functional weights for neural network computation.
 
 This specification defines the complete architecture to parse, validate, and load all quantized model weights from GGUF files, enabling real neural network inference with production-ready performance characteristics including memory optimization, GPU acceleration, and cross-validation with C++ reference implementation.
 
 ## User Story
 
-As a BitNet.rs developer, I want to load all transformer layer weights from GGUF files so that the neural network can perform meaningful inference with trained parameters instead of producing meaningless outputs from zero-initialized weights.
+As a BitNet-rs developer, I want to load all transformer layer weights from GGUF files so that the neural network can perform meaningful inference with trained parameters instead of producing meaningless outputs from zero-initialized weights.
 
 ## Acceptance Criteria
 

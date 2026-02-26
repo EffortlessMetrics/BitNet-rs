@@ -28,7 +28,7 @@ fn main() {
 
     let result = validator.validate();
 
-    println!("BitNet.rs Test Configuration Validation");
+    println!("BitNet-rs Test Configuration Validation");
     println!("========================================");
     println!();
 

@@ -10,7 +10,7 @@
 
 ## Summary
 
-Code quality refactoring completed successfully. All production and test code meets BitNet.rs coding standards with enhanced documentation and assertion messages.
+Code quality refactoring completed successfully. All production and test code meets BitNet-rs coding standards with enhanced documentation and assertion messages.
 
 **Result:** All clippy warnings resolved, format compliance verified, 20/20 tests passing.
 
@@ -111,7 +111,7 @@ assert!(
 
 ## Code Quality Metrics
 
-### BitNet.rs Idiom Compliance
+### BitNet-rs Idiom Compliance
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
@@ -157,7 +157,7 @@ assert!(
 **Route:** FINALIZE → test-hardener
 
 **Rationale:**
-- Code quality meets BitNet.rs production standards
+- Code quality meets BitNet-rs production standards
 - All format/clippy gates passing
 - Test suite regression-free
 - Production code already excellent (no refactoring needed)
@@ -192,6 +192,6 @@ test result: ok. 7 passed; 0 failed; 0 ignored
 ---
 
 **Gate Result:** ✅ pass
-**Quality Standard:** BitNet.rs production-grade code
+**Quality Standard:** BitNet-rs production-grade code
 **Semantic Equivalence:** Maintained (test behavior unchanged)
 **Ready for:** test-hardener (mutation testing and semantic validation)

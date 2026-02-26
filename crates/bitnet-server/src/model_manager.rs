@@ -256,7 +256,7 @@ impl ModelManager {
         let model: Arc<dyn Model> = model.into();
         let engine = InferenceEngine::new(model.clone(), tokenizer, *device)?;
 
-        // Create metadata with BitNet.rs model information
+        // Create metadata with BitNet-rs model information
         let metadata = Self::create_model_metadata(model_id, model_path, device, size_mb, &model);
 
         // Final validation if enabled
@@ -287,7 +287,7 @@ impl ModelManager {
         );
     }
 
-    /// Create model metadata with proper BitNet.rs information extraction
+    /// Create model metadata with proper BitNet-rs information extraction
     fn create_model_metadata(
         model_id: &str,
         model_path: &Path,

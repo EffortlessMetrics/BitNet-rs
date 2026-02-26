@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully created a comprehensive flamegraph generation script (`scripts/phase2_flamegraph.sh`) that follows BitNet.rs patterns and integrates with existing performance infrastructure. The script provides automated CPU profiling with dual workloads (1-token and 10-token), rich metadata generation, and comprehensive error handling.
+Successfully created a comprehensive flamegraph generation script (`scripts/phase2_flamegraph.sh`) that follows BitNet-rs patterns and integrates with existing performance infrastructure. The script provides automated CPU profiling with dual workloads (1-token and 10-token), rich metadata generation, and comprehensive error handling.
 
 **Key Achievement**: 26KB production-ready script with auto-discovery, tool detection, cross-platform support, and extensive documentation.
 
@@ -70,7 +70,7 @@ Successfully created a comprehensive flamegraph generation script (`scripts/phas
 - [x] Step-by-step execution with clear phases (1/7 → 7/7)
 - [x] Summary with next steps
 
-### ✅ BitNet.rs Integration
+### ✅ BitNet-rs Integration
 
 - [x] Matches `perf_phase2_timing.sh` pattern
 - [x] Uses same model auto-discovery logic
@@ -212,7 +212,7 @@ Comprehensive guide in `docs/baselines/perf/flamegraphs/README.md`:
 - Regeneration instructions
 - Viewing guide (browser, zoom, search)
 - Interpretation guide (width=time, height=depth, color=type)
-- Key functions to look for (BitNet.rs-specific hotspots)
+- Key functions to look for (BitNet-rs-specific hotspots)
 - Performance analysis workflow
 - Diff analysis instructions
 - Troubleshooting section
@@ -273,7 +273,7 @@ This ensures reproducible baselines across:
 
 ## Expected Flamegraph Hotspots
 
-Based on `phase2_timing_i2s.md` and BitNet.rs architecture:
+Based on `phase2_timing_i2s.md` and BitNet-rs architecture:
 
 ### 1. Forward Pass (~90-95% of total time)
 
@@ -485,7 +485,7 @@ None - this is a net-new addition to the codebase.
 
 - [x] Clean, readable bash code
 - [x] Comprehensive error handling
-- [x] Integration with BitNet.rs patterns
+- [x] Integration with BitNet-rs patterns
 - [x] Helpful documentation
 - [x] Graceful degradation
 - [x] Cross-platform support (Linux/macOS)
@@ -496,7 +496,7 @@ None - this is a net-new addition to the codebase.
 
 Successfully created a production-ready flamegraph generation script that:
 
-1. **Integrates seamlessly** with existing BitNet.rs performance infrastructure
+1. **Integrates seamlessly** with existing BitNet-rs performance infrastructure
 2. **Follows established patterns** from `perf_phase2_timing.sh`
 3. **Provides comprehensive automation** (auto-discovery, tool detection, validation)
 4. **Generates rich documentation** (metadata markdown, README, help messages)

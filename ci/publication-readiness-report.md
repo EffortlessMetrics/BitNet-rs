@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-✅ **PUBLICATION READY** - All BitNet.rs neural network quality standards met for Issue #453 (strict quantization guards).
+✅ **PUBLICATION READY** - All BitNet-rs neural network quality standards met for Issue #453 (strict quantization guards).
 
 The branch is clean, validated, documented, and ready for Pull Request creation through pub-finalizer with GitHub-native receipts.
 
@@ -48,7 +48,7 @@ The branch is clean, validated, documented, and ready for Pull Request creation 
 | AC8: Mock replacement validation | 1 | ✅ PASS | 100% |
 | **TOTAL** | **37** | **✅ PASS** | **100%** |
 
-### 🏗️ BitNet.rs Neural Network Validation
+### 🏗️ BitNet-rs Neural Network Validation
 
 | Aspect | Status | Evidence |
 |--------|--------|----------|
@@ -97,7 +97,7 @@ The branch is clean, validated, documented, and ready for Pull Request creation 
 ### Commit History (5 commits on feat/issue-453-strict-quantization-guards)
 
 1. **47eea54** - `docs(spec): add strict quantization guards specification for Issue #453`
-   - Semantic: ✅ PASS (follows BitNet.rs conventions)
+   - Semantic: ✅ PASS (follows BitNet-rs conventions)
    - Context: Neural network specification with quantization context
 
 2. **7b6896a** - `test: add comprehensive test scaffolding for Issue #453 (strict quantization guards)`
@@ -116,7 +116,7 @@ The branch is clean, validated, documented, and ready for Pull Request creation 
    - Semantic: ✅ PASS (docs prefix, CI context)
    - Context: Ledger update documenting validation completion
 
-**Commit Compliance:** 5/5 commits follow BitNet.rs semantic conventions with neural network context
+**Commit Compliance:** 5/5 commits follow BitNet-rs semantic conventions with neural network context
 
 ### Branch Tracking
 
@@ -163,7 +163,7 @@ The branch is clean, validated, documented, and ready for Pull Request creation 
 
 ### Rationale
 
-✅ **All BitNet.rs quality gates validated and passing**
+✅ **All BitNet-rs quality gates validated and passing**
 - Format: clean (0 formatting issues)
 - Clippy: 0 warnings for CPU and GPU builds (-D warnings enforced)
 - Build: Both CPU (20.25s) and GPU (21.85s) builds successful
@@ -181,7 +181,7 @@ The branch is clean, validated, documented, and ready for Pull Request creation 
 - cpu/gpu/none feature combinations all validated
 - Unified GPU predicate pattern maintained (28 files compliant)
 
-✅ **Commit history follows BitNet.rs conventions**
+✅ **Commit history follows BitNet-rs conventions**
 - 5/5 commits with proper semantic prefixes (docs:, fix:, test:)
 - Neural network context clear in all commit messages
 - Issue #453 properly referenced where applicable
@@ -233,7 +233,7 @@ The branch is clean, validated, documented, and ready for Pull Request creation 
   - Test coverage breakdown (37/37 tests, 100%)
   - Documentation updates (3 new + 4 updated)
   - Neural network context (quantization API contracts preserved)
-  - BitNet.rs feature flag compliance
+  - BitNet-rs feature flag compliance
 
 ### 3. Create Pull Request
 - Base branch: main
@@ -295,7 +295,7 @@ cargo build --no-default-features --features gpu
 - [x] Branch is synchronized with remote (origin/feat/issue-453-strict-quantization-guards)
 - [x] Commit history is clean and logical (5/5 commits follow semantic conventions)
 - [x] Documentation is complete and validated (Diátaxis structure, 11/11 doc tests pass)
-- [x] Feature flags follow BitNet.rs conventions (--no-default-features enforced)
+- [x] Feature flags follow BitNet-rs conventions (--no-default-features enforced)
 - [x] Neural network quantization standards met (I2S/TL1/TL2 API contracts preserved)
 - [x] Minor clippy fixes applied (unused imports in AC7/AC8 test files)
 - [x] Known non-blocking issues documented (1 test environment issue, out of scope)
@@ -306,7 +306,7 @@ cargo build --no-default-features --features gpu
 
 **RECOMMENDATION:** ✅ **PROCEED TO PR CREATION**
 
-Branch feat/issue-453-strict-quantization-guards is **PUBLICATION READY** for Pull Request creation through pub-finalizer with full GitHub-native receipts and BitNet.rs neural network quality assurance.
+Branch feat/issue-453-strict-quantization-guards is **PUBLICATION READY** for Pull Request creation through pub-finalizer with full GitHub-native receipts and BitNet-rs neural network quality assurance.
 
 ---
 

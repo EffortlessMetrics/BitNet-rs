@@ -124,7 +124,7 @@ cargo doc --workspace --no-default-features --features gpu --no-deps
 
 **StrictModeConfig (bitnet-common/src/strict_mode.rs)**
 ```rust
-/// Strict mode configuration for BitNet.rs inference
+/// Strict mode configuration for BitNet-rs inference
 ///
 /// This struct provides runtime guards to prevent silent FP32 fallback
 /// in quantized layers and attention projections.

@@ -1,4 +1,4 @@
-# Fast test execution configuration for BitNet.rs
+# Fast test execution configuration for BitNet-rs
 # This configuration is optimized to complete test execution in <15 minutes
 
 [execution]

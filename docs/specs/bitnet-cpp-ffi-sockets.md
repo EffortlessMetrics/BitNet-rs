@@ -1534,5 +1534,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ---
 
 **Status**: Draft for Review
-**Reviewers**: BitNet.rs maintainers, C++ integration team
+**Reviewers**: BitNet-rs maintainers, C++ integration team
 **Next Steps**: Review → Implement Socket 1 → Integrate Socket 2+3 → Add dlopen → GPU support

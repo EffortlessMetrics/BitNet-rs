@@ -194,7 +194,7 @@ See `I2S_POLICY_ACCEPTANCE.md` for comprehensive testing guide, including:
 
 ## Credits
 
-Implementation follows BitNet.rs standards:
+Implementation follows BitNet-rs standards:
 - GitHub-native receipts
 - Worktree-serial development
 - Test-first approach

@@ -1,16 +1,16 @@
 # API Compatibility Matrix
 
-This document provides detailed compatibility information between BitNet.rs and legacy implementations, helping you migrate from C++ or Python BitNet to the modern Rust implementation.
+This document provides detailed compatibility information between BitNet-rs and legacy implementations, helping you migrate from C++ or Python BitNet to the modern Rust implementation.
 
 ## Overview
 
-BitNet.rs is designed to be the **primary, production-ready implementation** with memory safety and design optimizations for performance. Legacy implementations are maintained only for compatibility testing and migration purposes.
+BitNet-rs is designed to be the **primary, production-ready implementation** with memory safety and design optimizations for performance. Legacy implementations are maintained only for compatibility testing and migration purposes.
 
 ⚠️ **Performance Claims**: As documented in [GOALS_VS_REALITY_ANALYSIS.md](../GOALS_VS_REALITY_ANALYSIS.md), performance claims require verification through proper benchmarking infrastructure.
 
 ## Implementation Comparison
 
-| Aspect | BitNet.rs (Primary) | BitNet C++ (Legacy) | BitNet Python (Legacy) |
+| Aspect | BitNet-rs (Primary) | BitNet C++ (Legacy) | BitNet Python (Legacy) |
 |--------|---------------------|---------------------|-------------------------|
 | **Status** | ✅ Production Ready | ⚠️ Legacy/Testing Only | ⚠️ Deprecated |
 | **Performance** | Designed for performance* | Baseline | Known slower |
@@ -92,7 +92,7 @@ model = bitnet_legacy.load_model("model.gguf")
 result = model.generate("Hello world", max_tokens=100)
 ```
 
-#### To BitNet.rs Python
+#### To BitNet-rs Python
 ```python
 # Modern Python bindings
 import bitnet
@@ -103,16 +103,16 @@ result = model.generate("Hello world", max_tokens=100)
 
 ## Feature Compatibility Matrix
 
-| Feature | BitNet.rs | C++ Legacy | Python Legacy | Migration Notes |
+| Feature | BitNet-rs | C++ Legacy | Python Legacy | Migration Notes |
 |---------|-----------|------------|---------------|-----------------|
 | **Model Loading** | ✅ | ✅ | ❌ | Direct API compatibility |
 | **GGUF Format** | ✅ | ✅ | ❌ | Full compatibility |
-| **SafeTensors** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
-| **Streaming Generation** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
-| **Batch Processing** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
-| **GPU Acceleration** | ✅ | ✅ | ❌ | Improved in BitNet.rs |
+| **SafeTensors** | ✅ | ❌ | ❌ | BitNet-rs exclusive |
+| **Streaming Generation** | ✅ | ❌ | ❌ | BitNet-rs exclusive |
+| **Batch Processing** | ✅ | ❌ | ❌ | BitNet-rs exclusive |
+| **GPU Acceleration** | ✅ | ✅ | ❌ | Improved in BitNet-rs |
 | **Quantization (I2S)** | ✅ | ✅ | ❌ | Enhanced algorithms |
-| **Quantization (TL1/TL2)** | ✅ | ❌ | ❌ | BitNet.rs exclusive |
+| **Quantization (TL1/TL2)** | ✅ | ❌ | ❌ | BitNet-rs exclusive |
 | **Cross-platform** | ✅ | ⚠️ | ❌ | Better Windows support |
 | **Memory Safety** | ✅ | ❌ | ❌ | Rust guarantees |
 | **Error Handling** | ✅ | ⚠️ | ❌ | Comprehensive error types |
@@ -123,7 +123,7 @@ result = model.generate("Hello world", max_tokens=100)
 
 ### 1. Direct Replacement (Recommended)
 
-Replace legacy implementations entirely with BitNet.rs:
+Replace legacy implementations entirely with BitNet-rs:
 
 **Benefits:**
 - Maximum performance improvement
@@ -132,14 +132,14 @@ Replace legacy implementations entirely with BitNet.rs:
 - Active maintenance and support
 
 **Migration Steps:**
-1. Install BitNet.rs
+1. Install BitNet-rs
 2. Update API calls (minimal changes needed)
 3. Test with cross-validation
 4. Deploy with confidence
 
 ### 2. Gradual Migration
 
-Use BitNet.rs C API as a drop-in replacement:
+Use BitNet-rs C API as a drop-in replacement:
 
 **Benefits:**
 - Minimal code changes
@@ -147,7 +147,7 @@ Use BitNet.rs C API as a drop-in replacement:
 - Gradual transition path
 
 **Migration Steps:**
-1. Replace C++ library with BitNet.rs C API
+1. Replace C++ library with BitNet-rs C API
 2. Test existing code paths
 3. Gradually adopt Rust-native features
 4. Eventually migrate to full Rust API
@@ -190,7 +190,7 @@ public:
 
 ### Inference Speed Improvements
 
-| Model Size | Legacy C++ | BitNet.rs (CPU) | BitNet.rs (GPU) | Notes |
+| Model Size | Legacy C++ | BitNet-rs (CPU) | BitNet-rs (GPU) | Notes |
 |------------|------------|------------------|------------------|-------|
 | **BitNet-1B** | ~15 tok/s | 10-20 tok/s | 50-100 tok/s | Real quantized computation |
 | **BitNet-3B** | ~8 tok/s | 8-15 tok/s | 40-80 tok/s | Device-aware I2S quantization |
@@ -199,7 +199,7 @@ public:
 
 ### Memory Usage Improvements
 
-| Model Size | Legacy C++ | BitNet.rs | Reduction |
+| Model Size | Legacy C++ | BitNet-rs | Reduction |
 |------------|------------|-----------|-----------|
 | **BitNet-1B** | 1.8 GB | 1.2 GB | 33% less |
 | **BitNet-3B** | 4.2 GB | 2.8 GB | 33% less |
@@ -208,7 +208,7 @@ public:
 
 ### Build and Deployment Improvements
 
-| Aspect | Legacy C++ | BitNet.rs | Improvement |
+| Aspect | Legacy C++ | BitNet-rs | Improvement |
 |--------|------------|-----------|-------------|
 | **Build Time** | 5-15 minutes | 30-60 seconds | 5-15x faster |
 | **Binary Size** | 45-120 MB | 12-25 MB | 60-80% smaller |
@@ -217,7 +217,7 @@ public:
 
 ## Cross-Validation
 
-BitNet.rs includes comprehensive cross-validation to ensure compatibility:
+BitNet-rs includes comprehensive cross-validation to ensure compatibility:
 
 ### Numerical Accuracy
 
@@ -256,7 +256,7 @@ cargo test --no-default-features --features crossval python_compatibility
 
 ### Migration Execution
 
-- [ ] **Install BitNet.rs** - Set up the new implementation
+- [ ] **Install BitNet-rs** - Set up the new implementation
 - [ ] **Update dependencies** - Replace legacy BitNet references
 - [ ] **API migration** - Update function calls and error handling
 - [ ] **Cross-validation** - Verify identical outputs with legacy implementation
@@ -277,7 +277,7 @@ cargo test --no-default-features --features crossval python_compatibility
 ### Issue: Compilation Errors
 
 **Problem:** C++ code doesn't compile with new headers
-**Solution:** Use BitNet.rs C API with same function signatures
+**Solution:** Use BitNet-rs C API with same function signatures
 
 ### Issue: Performance Regression
 
@@ -322,7 +322,7 @@ let config = ModelConfig {
 
 For complex migrations, consider professional support:
 - **Migration consulting** - Expert guidance for large codebases
-- **Performance optimization** - Maximize benefits of BitNet.rs
+- **Performance optimization** - Maximize benefits of BitNet-rs
 - **Training workshops** - Team education on new implementation
 - **Custom integration** - Tailored solutions for specific needs
 
@@ -332,15 +332,15 @@ Contact: migration-support@bitnet-rs.com
 
 ### Company A: 3x Performance Improvement
 
-"Migrating from C++ BitNet to BitNet.rs reduced our inference latency by 70% and eliminated memory leaks that were causing production issues."
+"Migrating from C++ BitNet to BitNet-rs reduced our inference latency by 70% and eliminated memory leaks that were causing production issues."
 
 ### Company B: Simplified Deployment
 
-"The single binary deployment of BitNet.rs eliminated our complex Docker builds and reduced our container size by 80%."
+"The single binary deployment of BitNet-rs eliminated our complex Docker builds and reduced our container size by 80%."
 
 ### Company C: Developer Productivity
 
-"The excellent error messages and documentation in BitNet.rs reduced our debugging time by 90% compared to the legacy C++ implementation."
+"The excellent error messages and documentation in BitNet-rs reduced our debugging time by 90% compared to the legacy C++ implementation."
 
 ---
 

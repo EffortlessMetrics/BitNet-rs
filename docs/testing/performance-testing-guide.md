@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This guide covers performance testing and benchmarking in the BitNet.rs testing framework. It includes techniques for measuring performance, establishing baselines, detecting regressions, and optimizing critical paths.
+This guide covers performance testing and benchmarking in the BitNet-rs testing framework. It includes techniques for measuring performance, establishing baselines, detecting regressions, and optimizing critical paths.
 
 ## Overview
 
-Performance testing in BitNet.rs focuses on:
+Performance testing in BitNet-rs focuses on:
 - **Throughput**: Tokens processed per second
 - **Latency**: Time to first token and total inference time
 - **Memory Usage**: Peak and average memory consumption
@@ -984,4 +984,4 @@ pub fn generate_performance_dashboard(results: &[PerformanceBaseline]) -> Result
 }
 ```
 
-This comprehensive performance testing guide provides the foundation for maintaining high performance standards in BitNet.rs through systematic benchmarking, profiling, and regression detection.
+This comprehensive performance testing guide provides the foundation for maintaining high performance standards in BitNet-rs through systematic benchmarking, profiling, and regression detection.

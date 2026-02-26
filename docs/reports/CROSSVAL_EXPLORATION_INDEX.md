@@ -6,7 +6,7 @@
 
 ## What This Exploration Covers
 
-A comprehensive examination of the BitNet.rs cross-validation infrastructure to understand token parity checking, identify gaps, and propose solutions.
+A comprehensive examination of the BitNet-rs cross-validation infrastructure to understand token parity checking, identify gaps, and propose solutions.
 
 ## Key Documents Generated
 
@@ -481,7 +481,7 @@ Tokens: 7 (prompt)
 
 ## Conclusion
 
-The BitNet.rs cross-validation infrastructure is production-ready except for one critical gap: missing token validation in the CLI command. This gap allows tokenization mismatches to be misdiagnosed as logits divergence.
+The BitNet-rs cross-validation infrastructure is production-ready except for one critical gap: missing token validation in the CLI command. This gap allows tokenization mismatches to be misdiagnosed as logits divergence.
 
 **Recommended action**: Implement Priority 1 (token pre-gate) immediately, then Priority 2 (harmonize special tokens) to fix the underlying issue.
 

@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: config
 data:
   bitnet.toml: |
-    # BitNet.rs Configuration - Primary Rust Implementation
+    # bitnet-rs Configuration - Primary Rust Implementation
 
     [model]
     path = "{{ .Values.config.model.path }}"

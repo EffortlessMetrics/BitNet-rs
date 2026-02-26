@@ -1,4 +1,4 @@
-# BitNet.rs Issue #419 Research Findings Summary
+# BitNet-rs Issue #419 Research Findings Summary
 
 ## Quick Facts
 

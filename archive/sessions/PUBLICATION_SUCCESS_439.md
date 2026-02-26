@@ -19,7 +19,7 @@
 - **Base Branch:** main
 - **Head Branch:** feat/439-gpu-feature-gate-hardening
 - **Labels Applied:**
-  - `flow:generative` - BitNet.rs generative workflow marker
+  - `flow:generative` - BitNet-rs generative workflow marker
   - `state:ready` - Ready for review
 - **Issue Reference:** Closes #439 ✅
 
@@ -53,7 +53,7 @@
 
 ---
 
-## 🧬 BitNet.rs Neural Network Impact
+## 🧬 BitNet-rs Neural Network Impact
 
 ### Unified GPU Predicates
 - **Pattern:** `#[cfg(any(feature = "gpu", feature = "cuda"))]`
@@ -179,7 +179,7 @@ commits: 15 total; all use proper prefixes; branch pushed to remote
 
 ---
 
-## 🔍 BitNet.rs-Specific Validation Commands
+## 🔍 BitNet-rs-Specific Validation Commands
 
 ### Feature Matrix Validation
 ```bash
@@ -244,7 +244,7 @@ cargo doc --workspace --no-deps --no-default-features --features cpu  # ✅ clea
 
 ## 📝 Migration Guide for Users
 
-### For BitNet.rs Library Users
+### For BitNet-rs Library Users
 
 1. **Prefer `gpu` feature** over deprecated `cuda` alias in new code
 2. **Use unified predicate** in conditional compilation:
@@ -263,7 +263,7 @@ cargo doc --workspace --no-deps --no-default-features --features cpu  # ✅ clea
    }
    ```
 
-### For BitNet.rs Contributors
+### For BitNet-rs Contributors
 
 See `docs/explanation/issue-439-spec.md` for comprehensive migration guide including:
 - Unified predicate patterns
@@ -287,7 +287,7 @@ See `docs/explanation/issue-439-spec.md` for comprehensive migration guide inclu
 - Comprehensive evidence bundle posted
 - GitHub-native labels applied
 - Issue linkage established
-- BitNet.rs-specific validation complete
+- BitNet-rs-specific validation complete
 - Ready for merge readiness assessment
 
 ---

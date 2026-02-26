@@ -438,4 +438,4 @@ The GPU implementation is cross-validated against the CPU reference:
 
 ---
 
-**Note**: This issue addresses dead code elimination while ensuring the CUDA quantization functionality is properly validated and integrated into the BitNet.rs ecosystem. The focus is on validation and testing rather than new implementation, as the core functionality already exists.
+**Note**: This issue addresses dead code elimination while ensuring the CUDA quantization functionality is properly validated and integrated into the BitNet-rs ecosystem. The focus is on validation and testing rather than new implementation, as the core functionality already exists.

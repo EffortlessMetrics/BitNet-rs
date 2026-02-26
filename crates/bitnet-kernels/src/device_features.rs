@@ -1,7 +1,7 @@
 //! Device feature detection and capability queries for Issue #439
 //!
 //! This module provides unified device capability checks for GPU/CPU selection
-//! across the BitNet.rs workspace. It consolidates compile-time feature gates
+//! across the BitNet-rs workspace. It consolidates compile-time feature gates
 //! with runtime hardware detection.
 //!
 //! # Architecture Decision

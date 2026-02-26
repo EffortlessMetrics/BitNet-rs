@@ -1,4 +1,4 @@
-/// Fuzz crash reproducers for BitNet.rs neural network components
+/// Fuzz crash reproducers for BitNet-rs neural network components
 /// These tests reproduce crashes found during fuzzing and serve as regression tests
 ///
 /// Based on mutation testing revealing 67% score with 1,949 mutations in GGUF parsing
@@ -62,7 +62,7 @@ fn test_gguf_parser_crash_2() {
 }
 
 /// Tests for I2S quantization crash reproducers
-/// These expose vulnerabilities in BitNet.rs's 1-bit quantization algorithms
+/// These expose vulnerabilities in BitNet-rs's 1-bit quantization algorithms
 mod quantization_crashes {
     use bitnet_common::{BitNetTensor, Device, QuantizationType};
     use bitnet_quantization::Quantize;

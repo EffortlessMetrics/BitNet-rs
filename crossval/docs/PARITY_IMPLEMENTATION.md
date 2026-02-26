@@ -1,6 +1,6 @@
 # Parity Harness Implementation Summary
 
-This document summarizes the implementation of the real parity harness for BitNet.rs cross-validation (PR #468).
+This document summarizes the implementation of the real parity harness for bitnet-rs cross-validation (PR #468).
 
 ## Overview
 
@@ -10,7 +10,7 @@ The parity harness validates that the Rust inference engine produces identical o
 
 ### 1. Rust-Side Helpers (`crossval/tests/parity_bitnetcpp.rs`)
 
-Implemented three core helper functions that use the **production** BitNet.rs inference engine:
+Implemented three core helper functions that use the **production** bitnet-rs inference engine:
 
 #### `rust_side_tokenize_and_meta(model_path, prompt)`
 - **Template Auto-Detection**: Mirrors CLI logic (llama3-chat, instruct, raw)

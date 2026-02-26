@@ -1,6 +1,6 @@
-# BitNet.rs Testing Framework Configuration
+# BitNet-rs Testing Framework Configuration
 
-This document describes the configuration system for the BitNet.rs testing framework.
+This document describes the configuration system for the BitNet-rs testing framework.
 
 ## Overview
 

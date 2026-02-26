@@ -6,7 +6,7 @@ use bitnet_tests::fast_feedback_simple::{FastFeedbackSystem, utils};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("BitNet.rs Fast Feedback Demo (Simplified)");
+    println!("BitNet-rs Fast Feedback Demo (Simplified)");
     println!("==========================================");
 
     // Parse command line arguments

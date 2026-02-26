@@ -1,4 +1,4 @@
-# BitNet.rs Performance Issues - Executive Summary
+# BitNet-rs Performance Issues - Executive Summary
 
 **Analysis Date**: November 11, 2025
 **Post**: PR #475 (GPU/CPU Feature Gate Unification)

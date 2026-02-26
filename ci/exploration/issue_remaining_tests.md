@@ -1,4 +1,4 @@
-# Remaining Test Issues Analysis - BitNet.rs
+# Remaining Test Issues Analysis - BitNet-rs
 
 **Date**: October 22, 2025
 **Status**: In Progress - Background Test Analysis
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-BitNet.rs has **465 test files** across the codebase with the following status:
+BitNet-rs has **465 test files** across the codebase with the following status:
 
 - **Library tests**: Mostly passing (validated 6 major crates)
 - **Integration/Feature tests**: Blocked by compilation and runtime issues

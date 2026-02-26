@@ -1,8 +1,8 @@
-# BitNet.rs Library Discovery & Linking Architecture
+# BitNet-rs Library Discovery & Linking Architecture
 
 ## Executive Summary
 
-The BitNet.rs build system implements a **flexible, multi-backend library discovery pattern** with support for:
+The BitNet-rs build system implements a **flexible, multi-backend library discovery pattern** with support for:
 - Optional FFI integration to Microsoft BitNet C++ reference
 - Automatic library detection from standard llama.cpp build locations
 - Environment variable overrides for custom paths

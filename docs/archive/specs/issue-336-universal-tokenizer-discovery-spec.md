@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This specification defines the technical implementation approach for fixing the Universal Tokenizer Discovery System in BitNet.rs neural network inference engine. The implementation addresses 5 critical deficiencies preventing automatic tokenizer resolution from GGUF files, HuggingFace Hub downloads, and production neural network inference.
+This specification defines the technical implementation approach for fixing the Universal Tokenizer Discovery System in BitNet-rs neural network inference engine. The implementation addresses 5 critical deficiencies preventing automatic tokenizer resolution from GGUF files, HuggingFace Hub downloads, and production neural network inference.
 
 **Issue**: [Tokenizers] Implement Universal Tokenizer Discovery System for Production Neural Network Inference
 **Labels**: enhancement, priority/high, area/developer-tools
@@ -26,7 +26,7 @@ This specification defines the technical implementation approach for fixing the 
 
 ## Neural Network Context Analysis
 
-### Current BitNet.rs Tokenizer Infrastructure
+### Current BitNet-rs Tokenizer Infrastructure
 
 **Existing Crates Structure**:
 ```
@@ -1676,7 +1676,7 @@ cargo run -p bitnet-cli --no-default-features --features cpu,downloads -- infer 
 # crates/bitnet-tokenizers/Cargo.toml
 
 [features]
-default = [] # Empty defaults per BitNet.rs standard
+default = [] # Empty defaults per BitNet-rs standard
 
 # Core backends
 cpu = ["bitnet-common/cpu"]
@@ -2218,7 +2218,7 @@ cargo run -p xtask --no-default-features --features crossval -- crossval \
 
 **Evidence**:
 - ✅ All 5 problem areas analyzed with technical approaches
-- ✅ Dependencies identified and mapped to existing BitNet.rs infrastructure
+- ✅ Dependencies identified and mapped to existing BitNet-rs infrastructure
 - ✅ Risk assessment completed with specific mitigation strategies
 - ✅ Validation commands provided for each problem area
 - ✅ Implementation roadmap created with timeline estimates
@@ -2228,7 +2228,7 @@ cargo run -p xtask --no-default-features --features crossval -- crossval \
 
 **Next Steps (for spec-finalizer)**:
 1. Review specification for completeness and accuracy
-2. Validate technical approaches align with BitNet.rs architecture
+2. Validate technical approaches align with BitNet-rs architecture
 3. Confirm feature flag strategy and build configurations
 4. Verify testing strategy covers all acceptance criteria
 5. Approve specification for implementation phase

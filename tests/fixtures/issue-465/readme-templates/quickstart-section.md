@@ -1,6 +1,6 @@
 ## 10-Line CPU Quickstart
 
-Get started with BitNet.rs CPU inference in under 10 lines:
+Get started with BitNet-rs CPU inference in under 10 lines:
 
 ```bash
 # 1. Build with explicit CPU features

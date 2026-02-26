@@ -19,7 +19,7 @@ fn compare_table_lookup_outputs(
 
 ### Current Status: MVP Scaffold
 
-This is an **intentional TDD placeholder** following BitNet.rs's test-scaffolding patterns:
+This is an **intentional TDD placeholder** following bitnet-rs's test-scaffolding patterns:
 
 - **Type Placeholders**: `ReferenceResult` and `ValidationComparison` are currently `type Alias = ()`
 - **Placeholder Return**: Returns `Ok(())` until proper types are defined
@@ -104,7 +104,7 @@ let comparison =
 The function is used in `test_ac4_table_lookup_quantization_cross_validation()`:
 
 1. Tests both TL1 and TL2 quantization methods
-2. Runs BitNet.rs inference with table lookup quantization
+2. Runs bitnet-rs inference with table lookup quantization
 3. Compares with C++ reference implementation
 4. Validates accuracy, correlation, and lookup performance
 5. Aggregates metrics across multiple test sequences
@@ -159,7 +159,7 @@ The test suite is **intentionally disabled** via `#![cfg(any())]` at line 10:
    - Runs inference with TL quantization
    - Feeds results to `compare_table_lookup_outputs()`
 
-## Alignment with BitNet.rs Patterns
+## Alignment with bitnet-rs Patterns
 
 ### TDD Scaffolding ✅
 
@@ -171,7 +171,7 @@ The test suite is **intentionally disabled** via `#![cfg(any())]` at line 10:
 ### Feature-Gated Architecture ✅
 
 - Part of `#[cfg(all(feature = "cpu", feature = "crossval"))]` tests
-- Respects BitNet.rs feature flag design
+- Respects bitnet-rs feature flag design
 - CPU-only validation (deterministic)
 
 ### Cross-Validation Framework ✅

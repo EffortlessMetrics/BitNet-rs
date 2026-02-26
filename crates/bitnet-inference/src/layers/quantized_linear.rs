@@ -16,7 +16,7 @@ use std::sync::Arc;
 // Import QK256 kernel from bitnet-models
 use bitnet_models::quant::i2s_qk256;
 
-/// SIMD-aligned block size for I2S quantization (BitNet.rs optimization)
+/// SIMD-aligned block size for I2S quantization (BitNet-rs optimization)
 const I2S_BLOCK_SIZE: usize = 82;
 /// Cache line size for optimal memory access patterns
 const CACHE_LINE_SIZE: usize = 64;

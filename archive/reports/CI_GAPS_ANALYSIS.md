@@ -1,4 +1,4 @@
-# BitNet.rs CI Configuration Gap Analysis Report
+# BitNet-rs CI Configuration Gap Analysis Report
 
 **Analysis Date**: 2025-10-23  
 **Branch**: feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The BitNet.rs CI pipeline is **mature and well-structured** with 63 workflow files managing comprehensive testing across CPU, GPU, cross-validation, and quality gates. However, several **critical gaps** exist around feature matrix testing, doctest coverage with multiple feature combinations, and formal guards for unannotated `#[ignore]` tests.
+The BitNet-rs CI pipeline is **mature and well-structured** with 63 workflow files managing comprehensive testing across CPU, GPU, cross-validation, and quality gates. However, several **critical gaps** exist around feature matrix testing, doctest coverage with multiple feature combinations, and formal guards for unannotated `#[ignore]` tests.
 
 ### Key Metrics
 - **Active CI Jobs** (ci.yml): 10 named jobs
@@ -451,7 +451,7 @@ scripts/check-feature-gates.sh            # Validate #[cfg] consistency
 
 ## Conclusion
 
-The BitNet.rs CI pipeline is **production-quality** for the current feature set but lacks systematic coverage for **feature combinations**, **fixture integrity**, and **test scaffolding validation**. The identified gaps represent **medium-priority technical debt** that compounds over time (feature gate bugs, orphaned tests, silent fixture corruption).
+The BitNet-rs CI pipeline is **production-quality** for the current feature set but lacks systematic coverage for **feature combinations**, **fixture integrity**, and **test scaffolding validation**. The identified gaps represent **medium-priority technical debt** that compounds over time (feature gate bugs, orphaned tests, silent fixture corruption).
 
 **Quick Win**: Implement Job 1 (feature matrix) + Job 2 (doctest matrix) + Job 4 (ignore detector) in ~5 hours to capture 80% of impact.
 

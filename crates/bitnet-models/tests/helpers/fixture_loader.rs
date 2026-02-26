@@ -1,4 +1,4 @@
-//! Disk-Based Fixture Loading for BitNet.rs QK256 Tests
+//! Disk-Based Fixture Loading for BitNet-rs QK256 Tests
 //!
 //! Provides utilities to load GGUF fixtures from `ci/fixtures/qk256/` directory.
 //! This complements the in-memory fixture generators in `qk256_fixtures.rs`.

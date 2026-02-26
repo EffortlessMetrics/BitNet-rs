@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The NEON kernel implementation for I2S matrix multiplication in BitNet.rs uses basic NEON intrinsics and may not be fully optimized for ARM64 architectures. The current implementation processes data in small blocks but lacks advanced optimization techniques available in modern NEON instruction sets.
+The NEON kernel implementation for I2S matrix multiplication in BitNet-rs uses basic NEON intrinsics and may not be fully optimized for ARM64 architectures. The current implementation processes data in small blocks but lacks advanced optimization techniques available in modern NEON instruction sets.
 
 ## Environment
 
@@ -101,5 +101,5 @@ unsafe fn matmul_i2s_neon_optimized(
 
 ## Related Issues
 
-- BitNet.rs #218: Device-aware quantization system
-- BitNet.rs #251: Production-ready inference server
+- BitNet-rs #218: Device-aware quantization system
+- BitNet-rs #251: Production-ready inference server

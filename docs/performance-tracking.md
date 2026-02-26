@@ -1,6 +1,6 @@
 # Performance Tracking Infrastructure
 
-This document describes the comprehensive performance tracking capabilities implemented in BitNet.rs, providing detailed insights into inference performance, resource usage, and optimization opportunities.
+This document describes the comprehensive performance tracking capabilities implemented in BitNet-rs, providing detailed insights into inference performance, resource usage, and optimization opportunities.
 
 ## Overview
 
@@ -103,7 +103,7 @@ engine.reset_performance_tracking()?;
 
 ### Device Memory Tracking
 
-BitNet.rs provides comprehensive device-aware memory tracking through the `DeviceAwareQuantizer`:
+BitNet-rs provides comprehensive device-aware memory tracking through the `DeviceAwareQuantizer`:
 
 ```rust
 use bitnet_kernels::device_aware::{DeviceAwareQuantizer, DeviceStats};
@@ -179,7 +179,7 @@ cargo run --example device_stats_demo --no-default-features --features gpu
 The example output includes:
 
 ```
-=== BitNet.rs Device-Aware Quantization with Memory Tracking ===
+=== BitNet-rs Device-Aware Quantization with Memory Tracking ===
 
 📊 Initial statistics:
    Memory used: 45.23 MB
@@ -205,7 +205,7 @@ This demonstrates how memory tracking integrates seamlessly with quantization op
 
 ### System Metrics Integration
 
-BitNet.rs now includes comprehensive system-level metrics collection through the server monitoring infrastructure. This integration provides full observability into both application-level and system-level performance.
+BitNet-rs now includes comprehensive system-level metrics collection through the server monitoring infrastructure. This integration provides full observability into both application-level and system-level performance.
 
 #### Available System Metrics
 
@@ -635,7 +635,7 @@ async fn monitor_resources(engine: &InferenceEngine) -> anyhow::Result<()> {
 
 ## Integration with Existing Systems
 
-The performance tracking infrastructure integrates seamlessly with existing BitNet.rs components:
+The performance tracking infrastructure integrates seamlessly with existing BitNet-rs components:
 
 - **Inference Engine**: Automatic tracking during generation
 - **Streaming API**: Performance metrics for streaming operations

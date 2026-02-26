@@ -48,7 +48,7 @@ Scanning Cargo.lock for vulnerabilities (727 crate dependencies)
 
 ### 2. Memory Safety Analysis
 
-**Tool:** `cargo-clippy` with BitNet.rs safety flags
+**Tool:** `cargo-clippy` with BitNet-rs safety flags
 **Result:** ✅ **PASS WITH NOTES**
 
 #### New Unsafe Code (Issue #465)
@@ -271,7 +271,7 @@ None required. Issue #465 passes security validation.
 5. **Documentation-only scope** (no production neural network code changes)
 
 **Final Assessment:**
-Issue #465 meets BitNet.rs security standards for production deployment. The changes are low-risk, well-tested, and introduce no new security vulnerabilities. Pre-existing clippy warnings in build scripts are documented technical debt not introduced by this issue.
+Issue #465 meets BitNet-rs security standards for production deployment. The changes are low-risk, well-tested, and introduce no new security vulnerabilities. Pre-existing clippy warnings in build scripts are documented technical debt not introduced by this issue.
 
 **Routing:** `NEXT → benchmark-runner` (continue quality gates microloop)
 
@@ -286,6 +286,6 @@ Issue #465 meets BitNet.rs security standards for production deployment. The cha
 
 ---
 
-**Security Validator:** Claude Code (BitNet.rs Security Agent)
-**Validation Framework:** BitNet.rs Quality Gates Microloop (Generative Flow)
-**Compliance:** Rust 1.90.0 MSRV, BitNet.rs Safety Standards v1.0
+**Security Validator:** Claude Code (BitNet-rs Security Agent)
+**Validation Framework:** BitNet-rs Quality Gates Microloop (Generative Flow)
+**Compliance:** Rust 1.90.0 MSRV, BitNet-rs Safety Standards v1.0

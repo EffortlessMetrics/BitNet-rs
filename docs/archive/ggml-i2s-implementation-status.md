@@ -5,7 +5,7 @@
 
 ## Overview
 
-This document tracks the implementation of pure-Rust GGML I2_S support for BitNet.rs. The goal is to eliminate the FFI dependency for GGML-format models while keeping C++ only in the parity harness.
+This document tracks the implementation of pure-Rust GGML I2_S support for BitNet-rs. The goal is to eliminate the FFI dependency for GGML-format models while keeping C++ only in the parity harness.
 
 ## What's Implemented ✅
 

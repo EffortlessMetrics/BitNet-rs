@@ -1,4 +1,4 @@
-BitNet.rs Mutation Testing Summary - Critical Gaps Detected (T3.6 Update)
+BitNet-rs Mutation Testing Summary - Critical Gaps Detected (T3.6 Update)
 
 OVERALL SCORE: 42.9% (FAILED - Target ≥80%)
 

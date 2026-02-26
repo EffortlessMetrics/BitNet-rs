@@ -1,8 +1,8 @@
-# BitNet.rs CLI Documentation Index
+# BitNet-rs CLI Documentation Index
 
 ## Overview
 
-This directory contains three comprehensive documents about CLI argument parsing patterns in BitNet.rs, generated from an exploration of the codebase on 2025-10-25.
+This directory contains three comprehensive documents about CLI argument parsing patterns in BitNet-rs, generated from an exploration of the codebase on 2025-10-25.
 
 ## Documents
 
@@ -19,7 +19,7 @@ Start here for a high-level overview. Contains:
 - Common clap attributes quick reference
 - Key takeaways for contributors
 
-**Best for:** Getting a quick understanding of how CLI works in BitNet.rs
+**Best for:** Getting a quick understanding of how CLI works in BitNet-rs
 
 ### 2. CLI_PATTERNS_QUICK_REFERENCE.md (Cheat Sheet)
 **Size:** 341 lines | **Read time:** 10-15 minutes
@@ -32,7 +32,7 @@ Quick lookup guide. Contains:
 - Help text patterns
 - Testing flags examples
 - Pro tips and best practices
-- Real examples from BitNet.rs codebase
+- Real examples from BitNet-rs codebase
 - Structure patterns to copy
 - Common mistakes to avoid
 - See also section with links
@@ -240,7 +240,7 @@ Before submitting a new flag:
 3. **For Deep Dives:** Reference FULL_REPORT.md sections
 4. **For Specific Patterns:** Use file locations table to jump directly
 5. **For Testing:** See Testing Patterns section above
-6. **For Examples:** All documents contain real BitNet.rs code
+6. **For Examples:** All documents contain real BitNet-rs code
 
 ## Additional Resources
 
@@ -254,7 +254,7 @@ Before submitting a new flag:
 
 ## Questions?
 
-If you have questions about CLI patterns in BitNet.rs:
+If you have questions about CLI patterns in BitNet-rs:
 
 1. Check the "Answering Your Questions" section above
 2. Search QUICK_REFERENCE.md for similar patterns

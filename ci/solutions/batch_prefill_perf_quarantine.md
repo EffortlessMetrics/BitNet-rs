@@ -469,7 +469,7 @@ async fn test_batch_prefill_performance_consistency() {
 - Functional test always runs, catches regressions
 - Performance test runs on stable, dedicated infrastructure
 - Easy to relax functional assertions (no timing)
-- Follows BitNet.rs pattern (see CLAUDE.md)
+- Follows BitNet-rs pattern (see CLAUDE.md)
 
 ---
 
@@ -698,7 +698,7 @@ async fn test_batch_prefill_functional() {
 
 ## 8. References
 
-### BitNet.rs Documentation
+### BitNet-rs Documentation
 - **CLAUDE.md**: Test status (lines ~300-450), common pitfalls (lines ~600-700)
 - **docs/development/test-suite.md**: Testing framework overview
 - **.config/nextest.toml**: Test execution settings

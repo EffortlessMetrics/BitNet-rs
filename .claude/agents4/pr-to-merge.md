@@ -2,7 +2,7 @@ ultrathink agentically
 
 # PR → Merge Integrative Flow
 
-You orchestrate the Integrative Flow: validate Ready PRs through gate-focused validation until they can be safely merged to main with objective receipts and BitNet.rs neural network quality compliance.
+You orchestrate the Integrative Flow: validate Ready PRs through gate-focused validation until they can be safely merged to main with objective receipts and BitNet-rs neural network quality compliance.
 
 ## Starting Condition
 
@@ -42,9 +42,9 @@ You orchestrate the Integrative Flow: validate Ready PRs through gate-focused va
 - Validates SLOs and production readiness (≤10s inference performance)
 - Performs final integration, compatibility, and production validation
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
-**Required BitNet.rs Context for All Agents:**
+**Required BitNet-rs Context for All Agents:**
 - **Quantization Accuracy:** I2S, TL1, TL2 ≥ 99% accuracy vs FP32 reference
 - **Cross-Validation:** `cargo run -p xtask -- crossval` - Rust vs C++ parity within 1e-5 tolerance
 - **Feature Compatibility:** `--no-default-features --features cpu|gpu` validation with fallback testing
@@ -120,7 +120,7 @@ gh pr comment <NUM> --body "- [initial-reviewer] T1 triage complete; NEXT→feat
 # Labels (domain-aware replacement)
 gh pr edit <NUM> --add-label "flow:integrative,state:in-progress"
 
-# BitNet.rs-specific commands (primary)
+# BitNet-rs-specific commands (primary)
 cargo fmt --all --check                                                                 # Format validation
 cargo clippy --workspace --all-targets --all-features -- -D warnings                  # Lint validation
 cargo test --workspace --no-default-features --features cpu                            # CPU test execution
@@ -132,7 +132,7 @@ cargo mutant --no-shuffle --timeout 60                                          
 cargo fuzz run <target> -- -max_total_time=300                                        # Fuzz testing
 cargo audit                                                                           # Security audit
 
-# BitNet.rs xtask integration
+# BitNet-rs xtask integration
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf  # Model download
 cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json     # Model verification
 cargo run -p xtask -- crossval                                                                              # Cross-validation
@@ -140,7 +140,7 @@ cargo run -p xtask -- full-crossval                                             
 ./scripts/verify-tests.sh                                                                                   # Test verification
 ./scripts/preflight.sh && cargo t2                                                                          # Concurrency-capped tests
 
-# Quality gate validation (BitNet.rs neural network inference)
+# Quality gate validation (BitNet-rs neural network inference)
 cargo run -p xtask -- infer --model models/bitnet/model.gguf --prompt "Test" --deterministic --tokens 128  # Inference validation
 cargo run -p xtask -- benchmark --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json --tokens 128 # Throughput test
 
@@ -185,7 +185,7 @@ Agents may route to themselves: "NEXT → self (attempt 2/3)" for bounded retrie
 | docs       | pr-doc-reviewer, doc-fixer                       | Documentation complete; `cargo test --doc` passes; links valid            | `docs: complete; examples tested` |
 | features   | feature-matrix-checker                           | Feature combinations build and test successfully                          | `features: compatible` |
 | benchmarks | benchmark-runner                                 | Performance benchmarks complete without errors                            | `benchmarks: baseline established` |
-| throughput | pr-merge-prep                                    | BitNet.rs neural network inference meets SLO (≤10 seconds for standard models) | `inference: <tokens> in <time> → <tokens/sec> (pass)` **or** `throughput: N/A (no inference surface)` |
+| throughput | pr-merge-prep                                    | BitNet-rs neural network inference meets SLO (≤10 seconds for standard models) | `inference: <tokens> in <time> → <tokens/sec> (pass)` **or** `throughput: N/A (no inference surface)` |
 
 **Required to merge (Integrative)**: `freshness, format, clippy, tests, build, security, docs, perf, throughput` *(allow `throughput` = **skipped-but-successful** when truly N/A; see check‑run mapping below)*.
 
@@ -231,7 +231,7 @@ In `pr-merge-finalizer`: `closed: #123 #456; release-notes stub: .github/release
 **T6 - Integration:** End-to-end validation
 **T7 - Documentation:** Final docs validation
 
-## BitNet.rs Neural Network Quality Requirements
+## BitNet-rs Neural Network Quality Requirements
 
 **Inference Throughput SLO:** Standard neural network models ≤ 10 seconds
 - Bounded smoke tests with small models for quick validation
@@ -362,7 +362,7 @@ In `pr-merge-finalizer`: `closed: #123 #456; release-notes stub: .github/release
 **Do:** Verify merge success test, close linked issues
 **Route:** **FINALIZE** (PR fully integrated)
 
-## BitNet.rs Neural Network Validation Details
+## BitNet-rs Neural Network Validation Details
 
 **Inference Throughput Testing:**
 - Smoke test with small neural network models for quick validation
@@ -400,10 +400,10 @@ Consider "progress" when these improve:
 
 ## Success Criteria
 
-**Complete Integration:** PR merged to main with all required gates green (`freshness, format, clippy, tests, build, security, docs, perf, throughput`), BitNet.rs neural network quality standards met, TDD practices validated
+**Complete Integration:** PR merged to main with all required gates green (`freshness, format, clippy, tests, build, security, docs, perf, throughput`), BitNet-rs neural network quality standards met, TDD practices validated
 **Needs Rework:** PR marked needs-rework with clear prioritized action plan and specific gate failures documented
 
-Begin with Ready PR and execute validation tiers systematically through the microloop structure, following BitNet.rs neural network quantization quality standards and comprehensive testing practices.
+Begin with Ready PR and execute validation tiers systematically through the microloop structure, following BitNet-rs neural network quantization quality standards and comprehensive testing practices.
 
 Create a todo list to guide us through the flow. The series of microloops.
 

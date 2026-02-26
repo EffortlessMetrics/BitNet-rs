@@ -1,4 +1,4 @@
-# BitNet.rs Roadmap
+# BitNet-rs Roadmap
 
 _Last updated: 2025-09-27_
 

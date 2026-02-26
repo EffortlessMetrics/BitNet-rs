@@ -2,16 +2,16 @@
 
 **Status**: PASS (with minor recommendations)
 **Validation Date**: 2025-10-10
-**Validator**: BitNet.rs Schema Validation Specialist (Generative Gate: spec)
+**Validator**: BitNet-rs Schema Validation Specialist (Generative Gate: spec)
 **Flow**: Generative (Issue → Draft PR)
 
 ---
 
 ## Executive Summary
 
-**Overall Assessment**: ✓ PASS - All specifications align with existing BitNet.rs API contracts
+**Overall Assessment**: ✓ PASS - All specifications align with existing BitNet-rs API contracts
 
-The Issue #439 specifications have been validated against existing BitNet.rs neural network API contracts in `docs/reference/`, quantization patterns, and feature gate infrastructure. The specifications introduce **additive** changes that maintain backward compatibility while addressing GPU feature-gate hardening requirements.
+The Issue #439 specifications have been validated against existing BitNet-rs neural network API contracts in `docs/reference/`, quantization patterns, and feature gate infrastructure. The specifications introduce **additive** changes that maintain backward compatibility while addressing GPU feature-gate hardening requirements.
 
 **Key Findings**:
 - ✓ Device Feature Detection API aligns with existing `gpu_utils.rs` patterns
@@ -633,7 +633,7 @@ impl InferenceEngine {
 use bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime, device_capability_summary};
 
 pub fn run_preflight() -> anyhow::Result<()> {
-    println!("BitNet.rs Preflight Check");
+    println!("BitNet-rs Preflight Check");
     println!("{}", device_capability_summary());
     if gpu_compiled() {
         if gpu_available_runtime() {
@@ -685,7 +685,7 @@ rg -n "pub backend:|pub kernels:" crates/bitnet-inference/src/receipts.rs
 
 ### Validation Status: ✓ PASS
 
-**Summary**: All Issue #439 specifications align with existing BitNet.rs API contracts. The proposed changes are **additive** and maintain backward compatibility while addressing GPU feature-gate hardening requirements.
+**Summary**: All Issue #439 specifications align with existing BitNet-rs API contracts. The proposed changes are **additive** and maintain backward compatibility while addressing GPU feature-gate hardening requirements.
 
 **Key Strengths**:
 1. ✓ Unified feature gate predicate consistent with PR #438
@@ -710,7 +710,7 @@ rg -n "pub backend:|pub kernels:" crates/bitnet-inference/src/receipts.rs
 
 **Next Agent**: `spec-finalizer`
 
-**Rationale**: All specifications validated against existing BitNet.rs API contracts with no conflicts detected. Specifications are ready for implementation.
+**Rationale**: All specifications validated against existing BitNet-rs API contracts with no conflicts detected. Specifications are ready for implementation.
 
 **Evidence Summary**:
 - spec: verified 3 files (issue-439-spec.md, device-feature-detection.md, receipt-validation.md)
@@ -720,6 +720,6 @@ rg -n "pub backend:|pub kernels:" crates/bitnet-inference/src/receipts.rs
 ---
 
 **Validation Complete**: 2025-10-10
-**Validator**: BitNet.rs Schema Validation Specialist
+**Validator**: BitNet-rs Schema Validation Specialist
 **Gate**: generative:gate:spec
 **Result**: ✓ PASS

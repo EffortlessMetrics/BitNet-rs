@@ -1,6 +1,6 @@
 //! # HuggingFace Tokenizers Integration Example
 //!
-//! This example demonstrates how to integrate BitNet.rs with the HuggingFace tokenizers
+//! This example demonstrates how to integrate BitNet-rs with the HuggingFace tokenizers
 //! crate for seamless tokenization and model compatibility.
 
 use anyhow::Result;

@@ -392,12 +392,12 @@ All tests requiring the model should:
 - **Issue #462:** https://github.com/EffortlessMetrics/BitNet-rs/issues/462
 - **Test Specifications:** `specs/issue_462_*_spec.md` (5 files, 3,821 lines)
 - **Test Scaffolding:** `tests/issue_462_*_tests.rs` (4 files, 1,296 lines)
-- **CLAUDE.md:** `/home/steven/code/Rust/BitNet-rs/CLAUDE.md` (BitNet.rs development guide)
+- **CLAUDE.md:** `/home/steven/code/Rust/BitNet-rs/CLAUDE.md` (BitNet-rs development guide)
 
 ## Questions?
 
 For questions about test fixtures or fixture generation:
 1. Review test specifications in `specs/` directory
 2. Check existing fixture usage in test files
-3. Consult `CLAUDE.md` for BitNet.rs conventions
+3. Consult `CLAUDE.md` for BitNet-rs conventions
 4. Review validation framework docs: `docs/development/validation-framework.md`

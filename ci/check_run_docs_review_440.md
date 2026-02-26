@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Documentation for PR #440 (GPU feature gate unification) is **complete, accurate, and aligned** with BitNet.rs Diátaxis framework standards. All public APIs have comprehensive rustdoc with working examples, feature flag documentation is current and includes backward compatibility guidance, and development guides reflect unified GPU predicates.
+Documentation for PR #440 (GPU feature gate unification) is **complete, accurate, and aligned** with bitnet-rs Diátaxis framework standards. All public APIs have comprehensive rustdoc with working examples, feature flag documentation is current and includes backward compatibility guidance, and development guides reflect unified GPU predicates.
 
 **Key Findings:**
 - ✅ Rustdoc completeness: 3/3 public APIs documented with doctests (100%)
@@ -485,7 +485,7 @@ Users can find GPU documentation through:
 
 ## 12. Neural Network Documentation Standards ✅ PASS
 
-### BitNet.rs Quality Standards:
+### bitnet-rs Quality Standards:
 
 | Standard | Target | Actual | Status |
 |----------|--------|--------|--------|
@@ -511,7 +511,7 @@ Users can find GPU documentation through:
 
 ---
 
-## Evidence Grammar (BitNet.rs Documentation)
+## Evidence Grammar (bitnet-rs Documentation)
 
 ```
 docs: cargo doc: clean (workspace); doctests: 2/2 pass; examples: xtask ok; diátaxis: complete
@@ -530,7 +530,7 @@ diátaxis: Explanation ✓, How-to ✓, Reference ✓, Tutorial ✓
 **Current Gate:** `review:gate:docs` (documentation quality validation)
 **Status:** ✅ **PASS**
 **Next Agent:** architecture-reviewer (proceed to architectural validation)
-**Rationale:** Documentation is complete, accurate, and aligned with BitNet.rs standards. All public APIs have comprehensive rustdoc with working doctests. Feature flag documentation includes backward compatibility guidance. Development guides reflect unified GPU predicates. Build examples are current. Diátaxis framework alignment is excellent. No blocking gaps identified. Ready for architectural review to validate design consistency across workspace.
+**Rationale:** Documentation is complete, accurate, and aligned with bitnet-rs standards. All public APIs have comprehensive rustdoc with working doctests. Feature flag documentation includes backward compatibility guidance. Development guides reflect unified GPU predicates. Build examples are current. Diátaxis framework alignment is excellent. No blocking gaps identified. Ready for architectural review to validate design consistency across workspace.
 
 ---
 

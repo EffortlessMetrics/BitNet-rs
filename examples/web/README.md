@@ -1,6 +1,6 @@
 # Web Integration Examples
 
-This directory contains examples for building web services and APIs with BitNet.rs.
+This directory contains examples for building web services and APIs with bitnet-rs.
 
 ## Examples
 

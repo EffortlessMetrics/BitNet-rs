@@ -1,6 +1,6 @@
 # Flamegraph Performance Baselines
 
-This directory contains flamegraph-based performance baselines for BitNet.rs inference operations. Flamegraphs provide detailed CPU time visualization to identify performance bottlenecks and validate optimization efforts.
+This directory contains flamegraph-based performance baselines for BitNet-rs inference operations. Flamegraphs provide detailed CPU time visualization to identify performance bottlenecks and validate optimization efforts.
 
 ## 📊 Overview
 
@@ -350,7 +350,7 @@ Modern flamegraph SVGs support:
 
 ## 🔥 Key Functions to Watch
 
-These are the expected performance hotspots in BitNet.rs inference. Monitor their CPU time percentages to detect regressions or validate optimizations.
+These are the expected performance hotspots in BitNet-rs inference. Monitor their CPU time percentages to detect regressions or validate optimizations.
 
 ### I2_S Quantization Hotspots
 
@@ -772,5 +772,5 @@ firefox before-optimization.svg after-optimization.svg
 ---
 
 **Last Updated**: 2025-10-22
-**Maintainer**: BitNet.rs Performance Team
+**Maintainer**: BitNet-rs Performance Team
 **Questions**: Open an issue with label `performance` or `documentation`

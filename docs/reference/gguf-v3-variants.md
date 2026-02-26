@@ -2,7 +2,7 @@
 
 ## Overview
 
-BitNet.rs supports two GGUF v3 format variants found in the wild:
+BitNet-rs supports two GGUF v3 format variants found in the wild:
 
 1. **Standard GGUF v3** - Specification-compliant format with explicit alignment and data_offset fields
 2. **Early v3 Variant** - Non-standard format used by some models (e.g., Microsoft BitNet models)
@@ -29,7 +29,7 @@ Offset | Size | Field
 - ✅ Explicit 32-byte alignment field
 - ✅ Explicit data_offset field pointing to tensor data start
 - ✅ Better for interoperability with other GGUF tools
-- ✅ Produced by BitNet.rs `st2gguf` export tool
+- ✅ Produced by BitNet-rs `st2gguf` export tool
 
 **Detection:**
 - `header.version >= 3`
@@ -62,7 +62,7 @@ Offset | Size | Field
 - `header.is_early_v3_variant() == true`
 
 **Handling:**
-BitNet.rs loader automatically detects early variant by checking if bytes at offset 24 look like a string length (start of KV pair) rather than alignment field. When detected:
+BitNet-rs loader automatically detects early variant by checking if bytes at offset 24 look like a string length (start of KV pair) rather than alignment field. When detected:
 - Sets `alignment = 32` (standard default)
 - Sets `data_offset = 0` (marker for early variant)
 - Computes actual data offset from `align_up(kv_end, 32)`
@@ -71,7 +71,7 @@ BitNet.rs loader automatically detects early variant by checking if bytes at off
 
 ### Loading Models
 
-BitNet.rs **automatically handles both variants** without user intervention:
+BitNet-rs **automatically handles both variants** without user intervention:
 
 ```bash
 # Works for both standard and early variant
@@ -87,7 +87,7 @@ cargo run -p bitnet-cli -- run \
 
 ### Exporting Models
 
-BitNet.rs `st2gguf` tool **always produces standard GGUF v3**:
+BitNet-rs `st2gguf` tool **always produces standard GGUF v3**:
 
 ```bash
 # Export SafeTensors to proper GGUF v3
@@ -179,7 +179,7 @@ println!("{}", reader.header.format_description());
 
 ### For Model Authors
 
-- **New models**: Use BitNet.rs `st2gguf` to produce standard GGUF v3
+- **New models**: Use BitNet-rs `st2gguf` to produce standard GGUF v3
 - **Existing early variant models**: Can be used as-is (loader handles transparently)
 - **Re-export when possible**: Convert early variant to standard v3 for better interoperability
 
@@ -191,12 +191,12 @@ println!("{}", reader.header.format_description());
 
 ### For Users
 
-- **Trust the loader**: BitNet.rs automatically detects and handles both variants
+- **Trust the loader**: BitNet-rs automatically detects and handles both variants
 - **Check logs**: `RUST_LOG=debug` shows which variant was detected
 - **Report issues**: If you encounter loading problems, check the format description in logs
 
 ## References
 
 - GGUF Specification: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
-- BitNet.rs GGUF Loader: `crates/bitnet-models/src/formats/gguf/`
+- BitNet-rs GGUF Loader: `crates/bitnet-models/src/formats/gguf/`
 - Export Tool: `crates/bitnet-st2gguf/`

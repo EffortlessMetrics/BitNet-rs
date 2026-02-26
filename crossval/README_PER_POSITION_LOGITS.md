@@ -4,7 +4,7 @@ This document describes the per-position logits comparison functionality in the 
 
 ## Overview
 
-The per-position logits comparison feature allows you to compare logits between BitNet.rs (Rust) and bitnet.cpp (C++) implementations at each token position during generation. This is useful for:
+The per-position logits comparison feature allows you to compare logits between bitnet-rs (Rust) and bitnet.cpp (C++) implementations at each token position during generation. This is useful for:
 
 1. **Debugging divergences**: Identifying the exact token position where outputs start to differ
 2. **Quality assurance**: Ensuring numerical parity across implementations

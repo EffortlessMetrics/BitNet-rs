@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# BitNet.rs #[ignore] Annotation Hygiene Checker
+# BitNet-rs #[ignore] Annotation Hygiene Checker
 # Detects bare #[ignore] annotations and suggests categorized reasons
 # Usage: MODE=full|diff|suggest|enforce ./scripts/check-ignore-hygiene.sh
 
@@ -180,7 +180,7 @@ suggest_annotation() {
 
 # Main workflow
 main() {
-    print_header "BitNet.rs #[ignore] Hygiene Check"
+    print_header "BitNet-rs #[ignore] Hygiene Check"
 
     # Gather statistics
     local total=$(count_total_ignores)

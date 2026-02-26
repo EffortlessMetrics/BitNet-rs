@@ -1,7 +1,7 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-//! Deployment Configuration Fixtures for BitNet.rs Inference Server
+//! Deployment Configuration Fixtures for BitNet-rs Inference Server
 //!
 //! This module provides comprehensive deployment fixtures for testing production
 //! scenarios including Docker, Kubernetes, environment configurations, and
@@ -85,7 +85,7 @@ FROM rust:1.90-slim as builder
 WORKDIR /app
 COPY . .
 
-# Install dependencies for BitNet.rs
+# Install dependencies for BitNet-rs
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \

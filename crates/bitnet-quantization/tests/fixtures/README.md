@@ -1,6 +1,6 @@
-# BitNet.rs Issue #260 Mock Elimination Test Fixtures
+# BitNet-rs Issue #260 Mock Elimination Test Fixtures
 
-Comprehensive neural network test fixtures for validating the mock elimination implementation in BitNet.rs quantization algorithms.
+Comprehensive neural network test fixtures for validating the mock elimination implementation in BitNet-rs quantization algorithms.
 
 ## Overview
 
@@ -132,10 +132,10 @@ match validate_fixtures() {
 - **TL2**: Blocked access patterns for large tables
 - **Memory Efficiency**: 4-5x compression vs FP32
 
-## Integration with BitNet.rs
+## Integration with BitNet-rs
 
 ### Workspace Compatibility
-- Follows BitNet.rs crate structure and naming conventions
+- Follows BitNet-rs crate structure and naming conventions
 - Uses workspace-aware imports and feature gating
 - Compatible with `cargo test --no-default-features --features cpu|gpu`
 
@@ -219,6 +219,6 @@ fn test_mock_elimination_validation() {
 ## References
 
 - **Issue #260**: Mock Inference Elimination Specification
-- **BitNet.rs Architecture**: `docs/architecture-overview.md`
+- **BitNet-rs Architecture**: `docs/architecture-overview.md`
 - **Quantization Algorithms**: `docs/reference/quantization-support.md`
 - **Testing Framework**: `docs/development/test-suite.md`

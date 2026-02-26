@@ -111,7 +111,7 @@ cargo clippy --workspace --all-targets --no-default-features --features cpu 2>&1
 
 ## Sprint Status Summary
 
-**Current State**: BitNet.rs is in **Week 1 of a focused 3-week sprint** to complete the final 8% of MVP work.
+**Current State**: BitNet-rs is in **Week 1 of a focused 3-week sprint** to complete the final 8% of MVP work.
 
 **Key Corrections Made**:
 

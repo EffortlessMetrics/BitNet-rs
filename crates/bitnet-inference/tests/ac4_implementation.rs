@@ -2,7 +2,7 @@
 //!
 //! Core implementation functions for cross-validation accuracy metrics
 use anyhow::{Context, Result};
-/// Result from BitNet.rs inference
+/// Result from BitNet-rs inference
 #[derive(Debug, Clone)]
 pub struct InferenceResult {
     pub tokens: Vec<u32>,

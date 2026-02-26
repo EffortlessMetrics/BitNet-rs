@@ -1,4 +1,4 @@
-# BitNet.rs Security Gate Validation - PR #475
+# BitNet-rs Security Gate Validation - PR #475
 
 ## Executive Summary
 
@@ -183,4 +183,4 @@ No blocking security issues detected in production code paths.
 **Gate**: generative:gate:security
 **Status**: pass (with minor non-blocking findings)
 **Timestamp**: 2025-10-23
-**Reviewer**: BitNet.rs Security Subagent
+**Reviewer**: BitNet-rs Security Subagent

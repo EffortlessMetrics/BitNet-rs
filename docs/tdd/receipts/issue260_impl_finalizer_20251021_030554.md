@@ -1,4 +1,4 @@
-## BitNet.rs Implementation Validation Receipt - Issue #260
+## BitNet-rs Implementation Validation Receipt - Issue #260
 
 **Agent:** impl-finalizer  
 **Timestamp:** 2025-10-21T07:05:48Z  
@@ -21,7 +21,7 @@
 - Passing: All non-ignored tests ✅
 - Ignored tests: Expected (infrastructure-gated, requires GPU/network/env vars)
 
-#### Phase 2: BitNet.rs Build & Feature Validation ✅ PASS
+#### Phase 2: BitNet-rs Build & Feature Validation ✅ PASS
 
 ```bash
 cargo build --release --no-default-features --features cpu
@@ -60,7 +60,7 @@ cargo clippy --workspace --all-targets --no-default-features --features cpu -- -
    - Fixed let-and-return patterns
    - Commit: `fix(workspace): apply clippy automatic fixes for code quality`
 
-### BitNet.rs Validations
+### BitNet-rs Validations
 
 - **Error patterns**: ✅ anyhow::Result usage validated
 - **Feature gates**: ✅ cpu/gpu conditional compilation verified
@@ -112,7 +112,7 @@ simd: AVX-512 integration: functional (adjusted threshold 0.08 GOPS)
 
 ### Conclusion
 
-✅ **BitNet.rs implementation validation COMPLETE**
+✅ **BitNet-rs implementation validation COMPLETE**
 
 All quality gates passed. Issue #260 implementation demonstrates:
 - ✅ Correct SIMD kernel integration

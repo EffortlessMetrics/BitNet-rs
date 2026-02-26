@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Cross-validation in BitNet.rs ensures that the Rust implementation produces results consistent with the reference C++ implementation. This guide covers setup, configuration, and usage of the cross-validation framework.
+Cross-validation in BitNet-rs ensures that the Rust implementation produces results consistent with the reference C++ implementation. This guide covers setup, configuration, and usage of the cross-validation framework.
 
 ## Overview
 

@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-We are implementing dual-backend cross-validation support for BitNet.rs, enabling true end-to-end parity testing between Rust and C++ implementations (bitnet.cpp and llama.cpp). The work is organized into 3 milestones (M1, M2, M3) following a detailed implementation roadmap.
+We are implementing dual-backend cross-validation support for BitNet-rs, enabling true end-to-end parity testing between Rust and C++ implementations (bitnet.cpp and llama.cpp). The work is organized into 3 milestones (M1, M2, M3) following a detailed implementation roadmap.
 
 **Progress:** ~40% complete (9/19 tasks done)
 
@@ -276,7 +276,7 @@ Divergence detection
 
 **Overall Feature Complete When:**
 - ✅ Can run Lane A (BitNet vs bitnet.cpp) end-to-end
-- ✅ Can run Lane B (BitNet.rs vs llama.cpp) end-to-end
+- ✅ Can run Lane B (BitNet-rs vs llama.cpp) end-to-end
 - ✅ Token parity pre-gate works for both lanes
 - ✅ Backend-specific error messages guide users
 - ✅ Documentation covers installation, usage, troubleshooting

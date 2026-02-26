@@ -4,7 +4,7 @@
 **Gate:** `integrative:gate:docs`
 **Status:** ✅ PASS
 **Timestamp:** 2025-10-16T05:30:00Z
-**Agent:** BitNet.rs Documentation Validation Agent
+**Agent:** BitNet-rs Documentation Validation Agent
 
 ---
 
@@ -294,7 +294,7 @@ Total: 102 files modified (72% of PR scope)
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Quantization Documentation
 - ✅ I2_S: Label corrected, ≥99.8% accuracy documented, real kernel IDs listed
@@ -328,7 +328,7 @@ Total: 102 files modified (72% of PR scope)
 
 **Gate Status:** ✅ **PASS**
 
-**Why:** PR #466 documentation validation confirms comprehensive, accurate documentation for BitNet.rs neural network inference system:
+**Why:** PR #466 documentation validation confirms comprehensive, accurate documentation for BitNet-rs neural network inference system:
 - ✅ All documentation builds cleanly (CPU/GPU, 0 compilation errors)
 - ✅ All doctests pass (35/35, 100% success rate)
 - ✅ All internal links valid (89+ links, 100% resolution)
@@ -359,7 +359,7 @@ Total: 102 files modified (72% of PR scope)
 | **Commit** | 710f067a (after clippy fixes) |
 | **Timestamp** | 2025-10-16T05:30:00Z |
 | **Duration** | ~15 minutes (cargo doc + doctests) |
-| **Agent** | BitNet.rs Documentation Validation Agent (Haiku 4.5) |
+| **Agent** | BitNet-rs Documentation Validation Agent (Haiku 4.5) |
 | **Evidence** | cargo doc clean; 35/35 doctests pass; 245 files; links ok |
 
 ---

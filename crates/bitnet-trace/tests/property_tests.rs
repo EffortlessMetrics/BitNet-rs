@@ -14,7 +14,7 @@ use proptest::prelude::*;
 // Strategies
 // ---------------------------------------------------------------------------
 
-/// Generate a valid dtype string (matches the subset BitNet.rs uses).
+/// Generate a valid dtype string (matches the subset BitNet-rs uses).
 fn arb_dtype() -> impl Strategy<Value = String> {
     prop::sample::select(vec!["F32", "F16", "BF16", "I8", "U8", "I32"])
         .prop_map(|s: &str| s.to_string())

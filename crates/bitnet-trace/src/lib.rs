@@ -1,4 +1,4 @@
-//! Tensor activation tracing for BitNet.rs cross-validation debugging.
+//! Tensor activation tracing for BitNet-rs cross-validation debugging.
 //!
 //! This crate provides utilities for capturing and hashing tensor activations
 //! during inference, enabling systematic cross-validation against reference

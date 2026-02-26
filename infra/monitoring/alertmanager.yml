@@ -51,7 +51,7 @@ receivers:
   - name: 'rust-critical'
     email_configs:
       - to: 'rust-team@example.com'
-        subject: '🚨 CRITICAL: BitNet.rs {{ .GroupLabels.alertname }}'
+        subject: '🚨 CRITICAL: bitnet-rs {{ .GroupLabels.alertname }}'
         body: |
           Alert: {{ .GroupLabels.alertname }}
           Implementation: Rust (Primary)
@@ -67,7 +67,7 @@ receivers:
     slack_configs:
       - api_url: 'YOUR_SLACK_WEBHOOK_URL'
         channel: '#bitnet-alerts'
-        title: '🚨 CRITICAL: BitNet.rs Alert'
+        title: '🚨 CRITICAL: bitnet-rs Alert'
         text: |
           *Alert:* {{ .GroupLabels.alertname }}
           *Implementation:* Rust (Primary)
@@ -81,7 +81,7 @@ receivers:
   - name: 'rust-warning'
     email_configs:
       - to: 'rust-team@example.com'
-        subject: '⚠️ WARNING: BitNet.rs {{ .GroupLabels.alertname }}'
+        subject: '⚠️ WARNING: bitnet-rs {{ .GroupLabels.alertname }}'
         body: |
           Alert: {{ .GroupLabels.alertname }}
           Implementation: Rust (Primary)
@@ -94,7 +94,7 @@ receivers:
     slack_configs:
       - api_url: 'YOUR_SLACK_WEBHOOK_URL'
         channel: '#bitnet-warnings'
-        title: '⚠️ WARNING: BitNet.rs Alert'
+        title: '⚠️ WARNING: bitnet-rs Alert'
         text: |
           *Alert:* {{ .GroupLabels.alertname }}
           *Implementation:* Rust (Primary)

@@ -1,6 +1,6 @@
 # Performance Baseline Validation Report: PR #448
 
-**Agent**: BitNet.rs Performance Baseline Specialist
+**Agent**: BitNet-rs Performance Baseline Specialist
 **Date**: 2025-10-12
 **Commit**: main (8a413dd)
 **PR**: #448 - OpenTelemetry OTLP Migration
@@ -302,6 +302,6 @@ baseline: stored in benchmarks/baselines/pr-448/ (criterion results + summary)
 ---
 
 **Report Generated**: 2025-10-12
-**Agent**: BitNet.rs Performance Baseline Specialist
+**Agent**: BitNet-rs Performance Baseline Specialist
 **Authority**: Fix-forward within bounded retry limits (benchmark execution, baseline storage)
 **Scope**: Feature-gated performance validation (cpu features, no GPU)

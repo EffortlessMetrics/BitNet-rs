@@ -48,7 +48,7 @@ The `cpu_optimizations::parallel_attention` function in `crates/bitnet-inference
 
 ## Reproduction Steps
 
-1. Build BitNet.rs with CPU features:
+1. Build BitNet-rs with CPU features:
    ```bash
    cargo build --no-default-features --features cpu
    ```

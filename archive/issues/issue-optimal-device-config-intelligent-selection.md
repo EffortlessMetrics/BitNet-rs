@@ -946,4 +946,4 @@ features = ["driver"]
 - **GPU Efficiency**: I2S quantization may have different GPU efficiency characteristics
 - **Context Length Impact**: Large context lengths significantly impact memory requirements and optimal batch sizes
 
-This intelligent device configuration system will dramatically improve out-of-the-box performance and reduce the manual configuration burden for BitNet.rs deployments across diverse hardware environments.
+This intelligent device configuration system will dramatically improve out-of-the-box performance and reduce the manual configuration burden for BitNet-rs deployments across diverse hardware environments.

@@ -2,7 +2,7 @@
 **Branch:** feat/issue-447-compilation-fixes
 **Commit:** c9fa87d (fix(crossval): resolve 43 FFI compilation errors)
 **Analysis Date:** 2025-10-12
-**Analyzer:** coverage-analyzer (BitNet.rs Test Coverage Specialist)
+**Analyzer:** coverage-analyzer (BitNet-rs Test Coverage Specialist)
 
 ## Executive Summary
 ✅ **ADEQUATE COVERAGE** - 85-90% estimated workspace coverage with manageable gaps
@@ -276,18 +276,18 @@ crossval: rust vs cpp: 19 files, 307 parity refs; GGUF compat: comprehensive
 ⚠️ **Fallback tool (cargo-llvm-cov):** Test failures in CI gates validation (expected on working branch)
 ✅ **Alternative analysis:** Test-to-code ratio analysis, critical path validation, AC coverage completeness
 
-**Evidence Quality:** HIGH - Test-to-code ratios, test file counts, and critical path analysis provide reliable coverage estimates. BitNet.rs's comprehensive test suite (72,933 test LOC) and high pass rate (99.85%) give strong confidence in coverage metrics.
+**Evidence Quality:** HIGH - Test-to-code ratios, test file counts, and critical path analysis provide reliable coverage estimates. BitNet-rs's comprehensive test suite (72,933 test LOC) and high pass rate (99.85%) give strong confidence in coverage metrics.
 
 ---
 
 ## Conclusion
 
-BitNet.rs demonstrates **STRONG test coverage** across all critical neural network components:
+BitNet-rs demonstrates **STRONG test coverage** across all critical neural network components:
 - **Quantization algorithms:** >95% coverage with property-based validation
 - **Neural network kernels:** ~90% coverage with comprehensive device testing
 - **Model loading:** ~85% coverage with format-specific validation
 - **Inference engine:** ~92% coverage with error handling focus
 
-**Two moderate gaps identified** (bitnet-kernels error handling, bitnet-ffi integration) are non-blocking and can be addressed in follow-up work. The current coverage is **ADEQUATE for Ready status** and meets BitNet.rs neural network reliability standards.
+**Two moderate gaps identified** (bitnet-kernels error handling, bitnet-ffi integration) are non-blocking and can be addressed in follow-up work. The current coverage is **ADEQUATE for Ready status** and meets BitNet-rs neural network reliability standards.
 
 **Recommendation:** Proceed to **mutation-tester** for robustness analysis.

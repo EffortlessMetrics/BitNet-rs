@@ -1,10 +1,10 @@
 # Architecture Overview
 
-This document provides a high-level overview of BitNet.rs architecture, design patterns, and key components.
+This document provides a high-level overview of BitNet-rs architecture, design patterns, and key components.
 
 ## Workspace Structure
 
-BitNet.rs is organized as a Rust workspace with specialized crates:
+BitNet-rs is organized as a Rust workspace with specialized crates:
 
 ### Core Library
 - **`bitnet`** (root): Main library with unified public API and production-ready GGUF weight loading
@@ -54,7 +54,7 @@ These small, single-responsibility crates reduce coupling in `bitnet-inference` 
 
 ## Production-Ready GGUF Weight Loading Architecture
 
-BitNet.rs implements a comprehensive GGUF weight loading system that replaces mock tensor initialization with real neural network model parsing. This system represents a major architectural advancement enabling meaningful neural network inference.
+BitNet-rs implements a comprehensive GGUF weight loading system that replaces mock tensor initialization with real neural network model parsing. This system represents a major architectural advancement enabling meaningful neural network inference.
 
 ### Core GGUF Loading Pipeline
 
@@ -200,7 +200,7 @@ fn validate_tensor_completeness(
 
 ### `bitnet-server` Crate Overview
 
-The `bitnet-server` crate provides a production-ready HTTP/REST inference server built on the BitNet.rs inference engine. It serves as the application layer for deploying BitNet models in production environments.
+The `bitnet-server` crate provides a production-ready HTTP/REST inference server built on the BitNet-rs inference engine. It serves as the application layer for deploying BitNet models in production environments.
 
 **Key Components:**
 - **Inference Engine Integration**: Direct integration with `bitnet-inference` for autoregressive generation
@@ -278,7 +278,7 @@ For detailed deployment guides, see:
 
 ## Enhanced Quality Assurance Framework
 
-BitNet.rs includes a comprehensive quality assurance system designed for production reliability:
+BitNet-rs includes a comprehensive quality assurance system designed for production reliability:
 
 ### System Metrics and Monitoring (Enhanced in PR #208)
 - **Real-Time System Monitoring**: Comprehensive system metrics collection using `sysinfo` crate

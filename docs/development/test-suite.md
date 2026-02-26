@@ -1,6 +1,6 @@
 # Test Suite Guide
 
-This document covers the comprehensive test suite for BitNet.rs, including running tests, configuration, and specialized testing strategies.
+This document covers the comprehensive test suite for BitNet-rs, including running tests, configuration, and specialized testing strategies.
 
 ## Test Status Summary
 
@@ -45,7 +45,7 @@ cargo test --workspace --no-default-features --features cpu -- --ignored --inclu
 
 ### Using cargo nextest (Recommended for CI)
 
-Nextest provides timeout protection, clean output, and better diagnostics for the BitNet.rs test suite.
+Nextest provides timeout protection, clean output, and better diagnostics for the BitNet-rs test suite.
 
 ```bash
 # Install nextest if needed
@@ -79,7 +79,7 @@ cargo nextest run --workspace --no-default-features --features cpu
 
 ### Fixture Management
 
-BitNet.rs uses a structured fixture management system for test data. GGUF fixtures are stored in `ci/fixtures/` and provide deterministic test inputs for quantization and model loading tests.
+BitNet-rs uses a structured fixture management system for test data. GGUF fixtures are stored in `ci/fixtures/` and provide deterministic test inputs for quantization and model loading tests.
 
 #### Available Fixtures
 
@@ -235,7 +235,7 @@ The test suite uses a feature-gated configuration system:
 
 ### Feature-Gated Tests and CI Configuration
 
-BitNet.rs uses feature-gated architecture where **default features are EMPTY**. This means tests that depend on device-specific functionality (CPU/GPU) must be run with explicit feature flags:
+BitNet-rs uses feature-gated architecture where **default features are EMPTY**. This means tests that depend on device-specific functionality (CPU/GPU) must be run with explicit feature flags:
 
 ```bash
 # Correct: Tests run with required features
@@ -290,7 +290,7 @@ For more details on feature flags and build configuration, see [CLAUDE.md](../..
 
 ## Test Categories
 
-BitNet.rs test suite is organized into distinct categories, each addressing specific aspects of the inference engine and quantization pipeline.
+BitNet-rs test suite is organized into distinct categories, each addressing specific aspects of the inference engine and quantization pipeline.
 
 ### Category Summary
 
@@ -564,7 +564,7 @@ cargo test -p bitnet-cli --no-default-features --features cpu metrics
 
 ### Mutation Testing
 
-BitNet.rs uses mutation testing to validate test suite effectiveness and ensure critical code paths are properly covered.
+BitNet-rs uses mutation testing to validate test suite effectiveness and ensure critical code paths are properly covered.
 
 #### Recent Achievements (Issue #462)
 
@@ -632,7 +632,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 
 ### Snapshot Tests (insta)
 
-BitNet.rs uses [insta](https://insta.rs) for snapshot testing across all crates. Snapshots pin the human-readable serialization of structs and public API outputs, making unintended behavioural changes visible as CI failures.
+BitNet-rs uses [insta](https://insta.rs) for snapshot testing across all crates. Snapshots pin the human-readable serialization of structs and public API outputs, making unintended behavioural changes visible as CI failures.
 
 **Running snapshot tests:**
 
@@ -657,7 +657,7 @@ cargo nextest run -p bitnet-receipts --no-default-features --features cpu snapsh
 
 ### Property Tests (proptest)
 
-BitNet.rs uses [proptest](https://proptest-rs.github.io/proptest/intro.html) to verify invariants across randomised inputs. Property tests complement snapshot tests by covering edge cases that fixed examples miss.
+BitNet-rs uses [proptest](https://proptest-rs.github.io/proptest/intro.html) to verify invariants across randomised inputs. Property tests complement snapshot tests by covering edge cases that fixed examples miss.
 
 **Running property tests:**
 
@@ -681,7 +681,7 @@ cargo nextest run -p bitnet-sampling --no-default-features --features cpu prop
 
 ### Fuzz Testing (cargo-fuzz)
 
-BitNet.rs has 13 fuzz targets covering parsers, kernels, and tokenizers. Fuzz targets run nightly via `.github/workflows/fuzz-ci.yml` (60 seconds per target, `01:00 UTC`).
+BitNet-rs has 13 fuzz targets covering parsers, kernels, and tokenizers. Fuzz targets run nightly via `.github/workflows/fuzz-ci.yml` (60 seconds per target, `01:00 UTC`).
 
 **Running fuzz tests manually:**
 
@@ -720,7 +720,7 @@ done
 
 ### Enhanced Mock Infrastructure and Tokenizer Testing
 
-BitNet.rs includes comprehensive mock infrastructure for robust testing without external dependencies:
+BitNet-rs includes comprehensive mock infrastructure for robust testing without external dependencies:
 
 #### Mock Model and Tokenizer Testing
 
@@ -926,7 +926,7 @@ For more streaming functionality and Server-Sent Events testing, see the [Stream
 
 ## Ignored and Skipped Tests
 
-BitNet.rs intentionally maintains a set of ignored tests (marked with `#[ignore]`) as part of the TDD development approach. This section categorizes why tests are skipped and how to interpret them.
+BitNet-rs intentionally maintains a set of ignored tests (marked with `#[ignore]`) as part of the TDD development approach. This section categorizes why tests are skipped and how to interpret them.
 
 ### Categorization Overview
 
@@ -1199,7 +1199,7 @@ cargo test --workspace --no-default-features --features cpu -- --ignored --inclu
 
 ## Environment Variable Testing
 
-Environment variables are critical for controlling test behavior, determinism, and feature flags. BitNet.rs provides **EnvGuard** - a thread-safe, RAII-based utility for safe environment variable manipulation in tests that prevents test pollution and data races.
+Environment variables are critical for controlling test behavior, determinism, and feature flags. BitNet-rs provides **EnvGuard** - a thread-safe, RAII-based utility for safe environment variable manipulation in tests that prevents test pollution and data races.
 
 ### When to Use EnvGuard
 
@@ -1494,7 +1494,7 @@ fn test_with_guarded_env() {
 
 ### CI Enforcement and Validation
 
-BitNet.rs includes automated checks to detect EnvGuard violations:
+BitNet-rs includes automated checks to detect EnvGuard violations:
 
 #### Checking for Missing #[serial(bitnet_env)]
 

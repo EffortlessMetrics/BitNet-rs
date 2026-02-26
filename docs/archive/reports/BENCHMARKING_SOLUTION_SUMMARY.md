@@ -14,11 +14,11 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Benchmarking Infrastructure Solution
+# BitNet-rs Benchmarking Infrastructure Solution
 
 ## Overview
 
-This document summarizes the comprehensive solution created to address **GitHub Issue #155: Non-functional benchmarking infrastructure**. The solution provides a complete, automated setup for BitNet.rs benchmarking with proper model fixtures, C++ cross-validation, and diagnostic checks.
+This document summarizes the comprehensive solution created to address **GitHub Issue #155: Non-functional benchmarking infrastructure**. The solution provides a complete, automated setup for BitNet-rs benchmarking with proper model fixtures, C++ cross-validation, and diagnostic checks.
 
 ## Problem Statement
 
@@ -371,6 +371,6 @@ This comprehensive solution fully addresses GitHub Issue #155 by providing:
 4. **Clear documentation** for all usage scenarios
 5. **CI/CD integration** for automated performance tracking
 
-The solution transforms the "non-functional" benchmarking infrastructure into a robust, automated system that enables reliable performance testing and regression detection for BitNet.rs.
+The solution transforms the "non-functional" benchmarking infrastructure into a robust, automated system that enables reliable performance testing and regression detection for BitNet-rs.
 
 **Ready to use**: Developers can now run `./scripts/setup-benchmarks.sh` and have a fully functional benchmarking environment within minutes, addressing all the issues identified in #155.

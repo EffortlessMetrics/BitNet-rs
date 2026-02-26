@@ -1,10 +1,10 @@
 #!/bin/bash
-# Manual release script for BitNet.rs
+# Manual release script for BitNet-rs
 # Handles version bumping, tagging, and release preparation
 
 set -euo pipefail
 
-echo "🚀 BitNet.rs Release Script"
+echo "🚀 BitNet-rs Release Script"
 echo "=========================="
 
 # Colors for output
@@ -47,7 +47,7 @@ show_usage() {
     cat << EOF
 Usage: $0 [OPTIONS] <VERSION|RELEASE_TYPE>
 
-Release BitNet.rs with proper version management and validation.
+Release BitNet-rs with proper version management and validation.
 
 Arguments:
   VERSION        Specific version to release (e.g., 1.0.0)

@@ -179,7 +179,7 @@ fn test_ffi_version_comments_present() {
         // These indicate the shim has proper version tracking
         let has_version_marker = content.contains("llama.cpp API version")
             || content.contains("VENDORED_GGML_COMMIT")
-            || content.contains("BitNet.rs integration");
+            || content.contains("bitnet-rs integration");
 
         let has_compatibility_info =
             content.contains("Compatible with") || content.contains("Build date");

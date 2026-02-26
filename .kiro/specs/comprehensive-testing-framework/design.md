@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the design for a comprehensive testing framework for BitNet.rs that provides extensive test coverage, cross-implementation comparison, end-to-end testing, and performance benchmarking. The framework is designed to ensure correctness, validate performance claims, and maintain compatibility between Rust and C++ implementations.
+This document outlines the design for a comprehensive testing framework for BitNet-rs that provides extensive test coverage, cross-implementation comparison, end-to-end testing, and performance benchmarking. The framework is designed to ensure correctness, validate performance claims, and maintain compatibility between Rust and C++ implementations.
 
 ## Architecture
 

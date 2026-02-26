@@ -23,7 +23,7 @@
 | features | pass | matrix: 4/5 ok (cpu/gpu/iq2s-ffi/spm); bounded: ffi (libclang); quantization: I2S ✅, TL1 ✅, TL2 ✅; gguf: enhanced weight loading ✅; time: 6.4min |
 | mutation | fail | score: 72.7% (<80%); survivors: 3 in quantization; compression_ratio arithmetic mutations survive; need test hardening |
 | fuzz | conditional_pass | method:property-based; crashes:0; tests:150+; time:8m42s; findings:1_test_logic_issue; coverage:gguf,quantization,tokenizers |
-| policy | pass | BitNet.rs governance ✅, dependency validation ✅; quantization: 22/23 tests (95.7% framework ready); gpu: infrastructure available; gguf: 8/8 validation; crossval: framework ready; perf: historical 200.0 tokens/sec; docs: PR #255 alignment ✅; features: 6/8 combinations (75% success) |
+| policy | pass | BitNet-rs governance ✅, dependency validation ✅; quantization: 22/23 tests (95.7% framework ready); gpu: infrastructure available; gguf: 8/8 validation; crossval: framework ready; perf: historical 200.0 tokens/sec; docs: PR #255 alignment ✅; features: 6/8 combinations (75% success) |
 
 <!-- gates:end -->
 
@@ -61,7 +61,7 @@
 ✅ **Device Selection**: GPU acceleration with automatic CPU fallback validated
 ✅ **GGUF Integration**: Enhanced weight loading preserves quantization accuracy invariants
 
-### Performance Metrics (BitNet.rs Neural Network)
+### Performance Metrics (BitNet-rs Neural Network)
 
 - **Total Validation Time**: 6.4 minutes (within 8-minute SLO ✅)
 - **Feature Combinations**: 4/5 successful (FFI bounded by libclang dependency)
@@ -150,7 +150,7 @@
 ✅ **Corpus Coverage**: Large existing fuzz corpus (50+ inputs per target) indicates historical thorough testing
 ✅ **Crash Safety**: 0 new crashes found, existing artifacts contained and non-critical
 
-### BitNet.rs Fuzz Testing Coverage
+### BitNet-rs Fuzz Testing Coverage
 
 - **Method**: Property-based testing (fallback from libfuzzer due to nightly toolchain requirements)
 - **Execution Time**: 8m42s (within ≤10 minute integrative flow SLO)
@@ -213,7 +213,7 @@
 **+36:00** - Security audit: 1 warning (paste crate unmaintained, acceptable)
 **+37:00** - Release build validation: 1m54s compilation successful
 **+38:00** - All required gates validated: freshness, format, clippy, tests, build, security, docs, perf, throughput ✅
-**+39:00** - BitNet.rs production readiness: inference SLO met, quantization accuracy validated, GPU fallback functional
+**+39:00** - BitNet-rs production readiness: inference SLO met, quantization accuracy validated, GPU fallback functional
 **+42:00** - T5 Policy governance validation initiated for PR #255 neural network inference enhancements
 **+43:00** - Security audit complete: 0 vulnerabilities in 712 crate dependencies, BitNet neural network libraries validated
 **+44:30** - Quantization accuracy assessment: 22/23 tests pass (95.7%), AC6 test scaffolding demonstrates policy framework
@@ -222,8 +222,8 @@
 **+48:00** - Documentation alignment verified: PR #255 KVCache/RotaryEmbedding optimizations properly documented
 **+49:00** - Feature matrix policy compliance: 6/8 combinations validated (CPU/GPU/SPM), default features EMPTY enforced
 **+50:00** - Performance SLO policy: Historical evidence 200.0 tokens/sec (well within ≤10s limit), current timeout resolved
-**+51:00** - T5 Policy validation complete: All BitNet.rs neural network governance policies satisfied
-**+52:00** - Gate status updated: policy → pass (BitNet.rs governance ✅, 95.7% quantization framework ready)
+**+51:00** - T5 Policy validation complete: All BitNet-rs neural network governance policies satisfied
+**+52:00** - Gate status updated: policy → pass (BitNet-rs governance ✅, 95.7% quantization framework ready)
 **+53:00** - Routing decision: NEXT → benchmark-runner (T5.5 performance benchmarking validation)
 **+55:00** - T2 PR #259 Enhanced GGUF Weight Loading validation initiated
 **+56:00** - Feature matrix validation: CPU (42.15s), GPU (22.99s), IQ2S-FFI (22.77s), SPM (12.43s) ✅
@@ -252,7 +252,7 @@
 **+81:00** - Documentation examples validation: GGUF model validation guide includes real weight loading examples
 **+82:00** - Feature flag documentation: proper --no-default-features --features cpu|gpu alignment in all guides
 **+83:00** - Gate status updated: docs → pass (examples tested: 0/0; links ok; doctests: 5 pass; cpu: ok, gpu: ok)
-**+84:00** - Documentation validation complete: comprehensive coverage for enhanced GGUF weight loading in BitNet.rs
+**+84:00** - Documentation validation complete: comprehensive coverage for enhanced GGUF weight loading in BitNet-rs
 **+85:00** - T7 integrative-throughput-validator: Enhanced GGUF weight loading production readiness validation initiated
 **+86:00** - Freshness re-check: HEAD @9b4b11e ahead by 2 commits, branch fresh for validation
 **+87:00** - Comprehensive CPU inference benchmark: quantization tests 22/22 pass, enhanced GGUF loading 51/51 pass
@@ -269,11 +269,11 @@
 
 <!-- decision:start -->
 **State:** ready
-**Why:** All required gates pass: freshness ✅, format ✅, clippy ✅, tests ✅, build ✅, security ✅, docs ✅, perf ✅, throughput ✅. Enhanced GGUF weight loading validated: neural network inference SLO met (200.0 tokens/sec ≪ 10s limit), quantization accuracy preserved (I2S/TL1/TL2 22/22 tests pass), GPU compatibility confirmed (47/48 tests), enhanced weight loading functional (51/51 GGUF tests pass). Production ready for BitNet.rs neural network inference.
+**Why:** All required gates pass: freshness ✅, format ✅, clippy ✅, tests ✅, build ✅, security ✅, docs ✅, perf ✅, throughput ✅. Enhanced GGUF weight loading validated: neural network inference SLO met (200.0 tokens/sec ≪ 10s limit), quantization accuracy preserved (I2S/TL1/TL2 22/22 tests pass), GPU compatibility confirmed (47/48 tests), enhanced weight loading functional (51/51 GGUF tests pass). Production ready for BitNet-rs neural network inference.
 **Next:** FINALIZE → pr-merger for production deployment
 <!-- decision:end -->
 
 ---
 **Agent**: integrative-throughput-validator
-**Mission**: Pre-merge readiness validation for BitNet.rs neural network inference and production deployment
+**Mission**: Pre-merge readiness validation for BitNet-rs neural network inference and production deployment
 **Status**: ✅ COMPLETE - All gates passing, ready for merge
