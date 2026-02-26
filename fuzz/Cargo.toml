@@ -10,6 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4.10"
+serde_json = "1.0.145"
 bitnet-quantization = { path = "../crates/bitnet-quantization" }
 bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-kernels = { path = "../crates/bitnet-kernels" }
@@ -103,5 +104,11 @@ doc = false
 [[bin]]
 name = "rope_table_gen"
 path = "fuzz_targets/rope_table_gen.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tokenizer_encode"
+path = "fuzz_targets/tokenizer_encode.rs"
 test = false
 doc = false
