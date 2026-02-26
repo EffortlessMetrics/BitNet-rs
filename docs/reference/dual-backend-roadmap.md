@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#741.
+> **Last updated**: reflects implementation state after PRs #608–#746.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -96,6 +96,10 @@
 | docs: update test counts and roadmap for PR #738; 3,464 tests; 32 proptest crates | `CLAUDE.md`, `docs/development/test-suite.md`, `CHANGELOG.md`, `docs/reference/dual-backend-roadmap.md` | #739 |
 | Add fuzz targets for `bitnet-logits` (6 functions) and `bitnet-generation` (`check_stop`); proptest for `bitnet-runtime-context-core` (+8 tests: Display→FromStr round-trips, env-var default precedence); fuzz: 11→13 targets; proptest: 32→33 crates; workspace: 3,464→3,472 tests | `fuzz/fuzz_targets/logits_transforms.rs`, `fuzz/fuzz_targets/generation_stop_check.rs`, `crates/bitnet-runtime-context-core/tests/property_tests.rs` | #740 |
 | chore: remove duplicate workspace members in Cargo.toml (bitnet-device-probe, -logits, -generation, -engine-core, -gguf listed twice) | `Cargo.toml` | #741 |
+| docs: update test counts and roadmap for PRs #739-#741; 3,472 tests; 33 proptest crates; 13 fuzz targets | `CLAUDE.md`, `docs/development/test-suite.md`, `CHANGELOG.md`, `docs/reference/dual-backend-roadmap.md` | #742 |
+| Proptest for `bitnet-runtime-profile-contract-core` (+7 properties: snapshot/violation coherence, feature-set completeness) and `bitnet-testing-policy-runtime` (+6 properties: GridCompatibility invariants); proptest: 33→35 crates; workspace: 3,472→3,485 tests | `crates/bitnet-runtime-profile-contract-core/tests/property_tests.rs`, `crates/bitnet-testing-policy-runtime/tests/property_tests.rs` | #743 |
+| test(proptest): add property tests for `bitnet-testing-policy-tests` (+8 properties: PolicyDiagnostics coherence, `is_grid_compatible()` invariant); proptest: 35→36 crates; workspace: 3,485→3,493 tests | `crates/bitnet-testing-policy-tests/tests/property_tests.rs` | #745 |
+| ci: add 19 BDD/policy/testing-infra crates to Build & Test matrix; these crates had test suites but were excluded from CI (run with `--features cpu` to satisfy profile snapshot requirements) | `.github/workflows/ci-core.yml` | #746 |
 
 ### 🔲 What's Planned
 
