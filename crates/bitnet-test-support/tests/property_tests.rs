@@ -95,7 +95,9 @@ proptest! {
 #[test]
 #[serial(bitnet_env)]
 fn model_path_absent_by_default() {
-    unsafe { std::env::remove_var("BITNET_MODEL_PATH"); }
+    unsafe {
+        std::env::remove_var("BITNET_MODEL_PATH");
+    }
     assert!(model_path().is_none());
 }
 
@@ -110,13 +112,17 @@ fn model_path_present_when_set() {
 #[test]
 #[serial(bitnet_env)]
 fn run_slow_tests_false_by_default() {
-    unsafe { std::env::remove_var("BITNET_RUN_SLOW_TESTS"); }
+    unsafe {
+        std::env::remove_var("BITNET_RUN_SLOW_TESTS");
+    }
     assert!(!run_slow_tests());
 }
 
 #[test]
 #[serial(bitnet_env)]
 fn run_e2e_false_by_default() {
-    unsafe { std::env::remove_var("BITNET_RUN_E2E"); }
+    unsafe {
+        std::env::remove_var("BITNET_RUN_E2E");
+    }
     assert!(!run_e2e());
 }
