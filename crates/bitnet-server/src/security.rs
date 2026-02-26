@@ -21,6 +21,7 @@ pub struct SecurityConfig {
     pub max_prompt_length: usize,
     pub max_tokens_per_request: u32,
     pub allowed_origins: Vec<String>,
+    pub allowed_model_directories: Vec<String>,
     pub blocked_ips: HashSet<IpAddr>,
     pub rate_limit_by_ip: bool,
     pub input_sanitization: bool,
@@ -35,6 +36,7 @@ impl Default for SecurityConfig {
             max_prompt_length: 8192, // 8KB max prompt
             max_tokens_per_request: 2048,
             allowed_origins: vec!["*".to_string()],
+            allowed_model_directories: Vec::new(),
             blocked_ips: HashSet::new(),
             rate_limit_by_ip: true,
             input_sanitization: true,
@@ -227,6 +229,24 @@ impl SecurityValidator {
             return Err(ValidationError::InvalidFieldValue(
                 "Only .gguf and .safetensors files are allowed".to_string(),
             ));
+        }
+
+        // Check allowed directories
+        if !self.config.allowed_model_directories.is_empty() {
+            let path = std::path::Path::new(model_path);
+            let mut allowed = false;
+            for dir in &self.config.allowed_model_directories {
+                if path.starts_with(dir) {
+                    allowed = true;
+                    break;
+                }
+            }
+
+            if !allowed {
+                return Err(ValidationError::InvalidFieldValue(
+                    "Model path not in allowed directories".to_string(),
+                ));
+            }
         }
 
         Ok(())
@@ -512,6 +532,46 @@ mod tests {
         assert!(matches!(
             validator.validate_inference_request(&request),
             Err(ValidationError::InvalidFieldValue(_))
+        ));
+    }
+
+    #[test]
+    fn test_model_path_restriction() {
+        // Case 1: No restriction (empty allowed directories)
+        let config = SecurityConfig::default();
+        let validator = SecurityValidator::new(config).unwrap();
+
+        assert!(validator.validate_model_request("/tmp/model.gguf").is_ok());
+        assert!(validator.validate_model_request("relative/model.gguf").is_ok());
+
+        // Case 2: Restricted directories
+        let mut config = SecurityConfig::default();
+        config.allowed_model_directories = vec!["/models".to_string(), "local_models".to_string()];
+        let validator = SecurityValidator::new(config).unwrap();
+
+        // Allowed paths
+        assert!(validator.validate_model_request("/models/llama.gguf").is_ok());
+        assert!(validator.validate_model_request("/models/subdir/llama.gguf").is_ok());
+        assert!(validator.validate_model_request("local_models/test.gguf").is_ok());
+
+        // Disallowed paths
+        assert!(matches!(
+            validator.validate_model_request("/tmp/model.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Model path not in allowed directories"
+        ));
+        assert!(matches!(
+            validator.validate_model_request("/models_fake/model.gguf"),
+            Err(ValidationError::InvalidFieldValue(_))
+        ));
+        assert!(matches!(
+            validator.validate_model_request("other_local/model.gguf"),
+            Err(ValidationError::InvalidFieldValue(_))
+        ));
+
+        // Path traversal attempts (already blocked, but verifying combined behavior)
+        assert!(matches!(
+            validator.validate_model_request("/models/../secret.gguf"),
+            Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
         ));
     }
 }
