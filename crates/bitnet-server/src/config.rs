@@ -269,6 +269,11 @@ impl ConfigBuilder {
                 origins.split(',').map(|s| s.trim().to_string()).collect();
         }
 
+        if let Ok(dirs) = env::var("BITNET_ALLOWED_MODEL_DIRECTORIES") {
+            self.config.security.allowed_model_directories =
+                dirs.split(',').map(|s| s.trim().to_string()).collect();
+        }
+
         if let Ok(blocked_ips) = env::var("BITNET_BLOCKED_IPS") {
             let mut ips = HashSet::new();
             for ip_str in blocked_ips.split(',') {
