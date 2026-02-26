@@ -930,68 +930,46 @@ BitNet-rs intentionally maintains a set of ignored tests (marked with `#[ignore]
 
 ### Categorization Overview
 
-**Total Skipped Tests**: 192
-- **Issue Blockers** (~70): Awaiting architectural fixes for active issues
+**Total Skipped Tests**: ~462
 - **Slow/Performance Tests** (~50): QK256 scalar kernels exceed timeout thresholds
 - **Feature Scaffolding** (~40): TDD placeholders for post-MVP features
 - **Fixtures/Integration** (~32): Integration tests requiring special setup
+- **CUDA/GPU Tests** (~30): Require CUDA hardware
+- **Model-gated Tests** (~310): Require a real GGUF model file (via `BITNET_GGUF`)
 
-### Issue Blockers (70+ tests)
+### Issue Blockers
 
-These tests are blocked by active issues and cannot run until root causes are fixed.
+These tests were blocked by active issues. The sections below document their resolution.
 
-#### Issue #254: Shape Mismatch in Layer-Norm
+#### Issue #254: Shape Mismatch in Layer-Norm (RESOLVED)
 
-**Status**: In analysis phase
-**Impact**: Blocks real inference tests for multiple architectures
-**Tests Affected**: ~15 inference end-to-end tests
+**Status**: ✅ **RESOLVED**
+**Fix**: Two bugs were identified and fixed:
 
-```rust
-#[test]
-#[ignore] // Blocked by Issue #254 - shape mismatch in layer-norm
-fn test_inference_with_shape_validation() { /* ... */ }
+1. **LayerNorm tensors classified as I2_S quantized**: GGUF loaders were treating
+   LayerNorm gamma/beta tensors as quantized (I2_S) instead of float-only. Fixed in
+   `crates/bitnet-models/src/formats/gguf/loader.rs` (LayerNorm tensors are now
+   explicitly rejected if they appear as I2_S quantized).
+2. **RMSNorm semantics instead of LayerNorm**: When bias tensors were missing, the
+   code used `rms_norm()` which skips mean subtraction. Fixed in
+   `crates/bitnet-transformer/src/lib.rs` to use `LayerNorm::new_no_bias()` which
+   performs full LayerNorm semantics (with mean subtraction).
+
+**Validation**: `crates/bitnet-models/tests/layernorm_fix_tests.rs` (8 tests) confirms
+the fix. Run with:
+```bash
+cargo nextest run -p bitnet-models --no-default-features --features cpu -E 'test(layernorm)'
 ```
 
-**Investigation Resources**:
-- GitHub issue #254 for detailed analysis and discussion
-- Shape handling during layer normalization
-- Device-specific tensor dimension mismatches
+#### Issue #260: Mock Elimination (RESOLVED)
 
-#### Issue #260: Mock Elimination Not Complete
+**Status**: ✅ **RESOLVED**
+**Unlock Status**: Real inference paths implemented; mock-only scaffolding removed.
 
-**Status**: Awaiting refactoring
-**Impact**: Prevents full transition to real inference paths
-**Tests Affected**: ~15 inference end-to-end tests
+#### Issue #469: Tokenizer Parity and FFI Build Hygiene (RESOLVED)
 
-```rust
-#[test]
-#[ignore] // Blocked by Issue #260 - mock elimination not complete
-fn test_real_inference_path() {
-    unimplemented!("Waiting for mock elimination refactoring")
-}
-```
-
-**Investigation Resources**:
-- GitHub issue #260 for refactoring plan
-- Mock vs real inference path differentiation
-- Integration test infrastructure updates
-
-#### Issue #469: Tokenizer Parity and FFI Build Hygiene
-
-**Status**: Active development
-**Impact**: Blocks cross-validation tests and FFI integration
-**Tests Affected**: ~20 cross-validation and tokenizer tests
-
-```rust
-#[test]
-#[ignore] // Blocked by Issue #469 - tokenizer parity not ready
-fn test_cpp_tokenizer_parity() { /* ... */ }
-```
-
-**Investigation Resources**:
-- GitHub issue #469 for FFI and tokenizer work
-- C++ vs Rust tokenizer behavior differences
-- FFI build system hygiene improvements
+**Status**: ✅ **RESOLVED**
+**Unlock Status**: Tokenizer parity validated; FFI build hygiene improved.
 
 #### Issue #439: Feature Gate Consistency (RESOLVED)
 
@@ -1094,15 +1072,11 @@ fn test_with_real_gguf_fixture() {
 
 ### Understanding Test Markers
 
-#### Pattern 1: Issue Blocker
+#### Pattern 1: Issue Blocker (all resolved)
 
-```rust
-#[test]
-#[ignore] // Blocked by Issue #254 - shape mismatch in layer-norm
-fn test_inference_validation() { /* ... */ }
-```
-
-**Action**: Check GitHub issue tracker for status and workarounds.
+All previously active issue blockers (#254, #260, #439, #469) are now resolved. If you
+see a test `#[ignore]` with an issue reference, check the issue tracker—the issue may
+be closed and the test can be re-enabled.
 
 #### Pattern 2: Slow Test
 
@@ -1138,14 +1112,14 @@ fn test_with_fixture() { /* ... */ }
 
 ### Working with Ignored Tests
 
-#### Check Status of Specific Blocker
+#### Check Status of Skipped Tests
 
 ```bash
-# Find all tests blocked by Issue #254
-grep -r "Issue #254" tests --include="*.rs"
+# Find all tests with ignore reasons
+grep -r "#\[ignore" crates --include="*.rs"
 
-# Count blocked tests
-grep -r "Blocked by Issue" tests --include="*.rs" | wc -l
+# Count ignored tests
+grep -r "#\[ignore" crates --include="*.rs" | wc -l
 ```
 
 #### Run Single Ignored Test (if needed)
@@ -1166,26 +1140,23 @@ grep -A 10 "#\[ignore\]" tests/test_file.rs
 
 # Check git history for when test was ignored
 git log --oneline -S "#[ignore]" -- tests/test_file.rs
-
-# Find issue references
-grep -r "#254\|#260\|#469" tests --include="*.rs"
 ```
 
 ### Expected Timeline for Unblocking Tests
 
 | Issue | Status | Expected Unlock | Test Count |
 |-------|--------|-----------------|-----------|
-| #254 | Analysis | Q4 2024 | ~15 tests |
-| #260 | Refactoring | Q4 2024 | ~15 tests |
+| #254 | ✅ Resolved | Fixed (LayerNorm shape) | ~15 tests (unlocked) |
+| #260 | ✅ Resolved | Fixed (mock elimination) | ~15 tests (unlocked) |
 | #439 | ✅ Resolved | PR #475 merged | ~12 tests (unlocked) |
-| #469 | Active Dev | Q1 2025 | ~20 tests |
-| QK256 Perf | SIMD Work | Q1 2025 | ~50 tests |
+| #469 | ✅ Resolved | Fixed (tokenizer parity + FFI) | ~20 tests (unlocked) |
+| QK256 Perf | SIMD Work | Post-MVP | ~50 tests |
 
 ### CI Behavior with Ignored Tests
 
-**In CI**: Only non-ignored tests run (3,359+ enabled tests)
+**In CI**: Only non-ignored tests run (3,520+ enabled tests)
 **Ignored tests**: Tracked separately, not blocking CI
-**Skipped tests**: 462 tests properly marked as skipped
+**Skipped tests**: ~462 tests properly marked as skipped
 **Exit code**: Success (0) even with 462+ skipped tests
 
 To run ignored tests locally:
@@ -1193,8 +1164,6 @@ To run ignored tests locally:
 ```bash
 # Opt-in to run ignored tests
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
-
-# This will encounter blocked tests and see failures for issues #254, #260, #469
 ```
 
 ## Environment Variable Testing
