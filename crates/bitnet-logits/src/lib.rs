@@ -25,6 +25,32 @@ use std::cmp::Ordering;
 ///
 /// * `temperature == 0.0` → no-op (handled externally via greedy path).
 /// * `temperature == 1.0` → no-op (identity scaling).
+/// * Values in `(0, 1)` sharpen the distribution (lower entropy).
+/// * Values `> 1` flatten it (higher entropy / more randomness).
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::apply_temperature;
+///
+/// let mut logits = vec![2.0f32, 4.0, 6.0];
+/// apply_temperature(&mut logits, 2.0);
+/// // Each logit is multiplied by 1/temperature = 0.5
+/// assert!((logits[0] - 1.0).abs() < 1e-6);
+/// assert!((logits[1] - 2.0).abs() < 1e-6);
+/// assert!((logits[2] - 3.0).abs() < 1e-6);
+/// ```
+///
+/// Temperature `1.0` is a no-op:
+///
+/// ```
+/// use bitnet_logits::apply_temperature;
+///
+/// let original = vec![1.0f32, 2.0, 3.0];
+/// let mut logits = original.clone();
+/// apply_temperature(&mut logits, 1.0);
+/// assert_eq!(logits, original);
+/// ```
 pub fn apply_temperature(logits: &mut [f32], temperature: f32) {
     if logits.is_empty() {
         return;
@@ -41,8 +67,29 @@ pub fn apply_temperature(logits: &mut [f32], temperature: f32) {
 
 /// Zero out all but the top-`top_k` logits (by value).
 ///
+/// Entries outside the top-k are set to `f32::NEG_INFINITY` so that a
+/// subsequent [`softmax_in_place`] maps them to probability `0.0`.
+///
 /// Returns the number of non-`NEG_INFINITY` entries remaining.
 /// If `top_k == 0` or `top_k >= logits.len()`, the slice is unchanged.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::{apply_top_k, softmax_in_place};
+///
+/// let mut logits = vec![1.0f32, 5.0, 3.0, 2.0, 4.0];
+/// let kept = apply_top_k(&mut logits, 2);
+/// assert_eq!(kept, 2);
+/// // Only the two highest values (5.0 at idx 1, 4.0 at idx 4) survive.
+/// assert!(logits[1].is_finite());
+/// assert!(logits[4].is_finite());
+/// assert!(logits[0].is_infinite());
+///
+/// // After softmax, NEG_INFINITY entries become probability 0.
+/// softmax_in_place(&mut logits);
+/// assert_eq!(logits[0], 0.0);
+/// ```
 pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
     if top_k == 0 || top_k >= logits.len() {
         return logits.len();
@@ -69,6 +116,23 @@ pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
 ///
 /// Tokens are ranked by probability (descending). The smallest set whose
 /// cumulative probability ≥ `top_p` is kept; all others are zeroed.
+///
+/// Call [`softmax_in_place`] before this function; call [`apply_top_k`] before
+/// softmax if both filters are desired.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::apply_top_p;
+///
+/// // Probs already sum to 1.0 (post-softmax).
+/// let mut probs = vec![0.5f32, 0.3, 0.2];
+/// apply_top_p(&mut probs, 0.8);
+/// // 0.5 + 0.3 = 0.8 ≥ top_p, so only the third token is zeroed.
+/// assert!(probs[0] > 0.0);
+/// assert!(probs[1] > 0.0);
+/// assert_eq!(probs[2], 0.0);
+/// ```
 pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
     if top_p >= 1.0 || probs.is_empty() {
         return;
@@ -92,7 +156,24 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
 
 /// Convert raw logits to a probability distribution in-place via softmax.
 ///
-/// Uses the numerically-stable "subtract max" form.
+/// Uses the numerically-stable "subtract max" form.  `f32::NEG_INFINITY`
+/// entries (from [`apply_top_k`]) become `0.0` after exponentiation.
+///
+/// Falls back to a uniform distribution when all exponentiated values underflow
+/// to zero (rare with finite logits).
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::softmax_in_place;
+///
+/// let mut logits = vec![1.0f32, 2.0, 3.0];
+/// softmax_in_place(&mut logits);
+/// let sum: f32 = logits.iter().sum();
+/// assert!((sum - 1.0).abs() < 1e-5);
+/// // Higher logit → higher probability.
+/// assert!(logits[2] > logits[1] && logits[1] > logits[0]);
+/// ```
 pub fn softmax_in_place(logits: &mut [f32]) {
     if logits.is_empty() {
         return;
@@ -124,6 +205,25 @@ pub fn softmax_in_place(logits: &mut [f32]) {
 /// * Positive logits are divided by `penalty` (reduced).
 /// * Negative logits are multiplied by `penalty` (made more negative).
 /// * `penalty == 1.0` → no-op.
+///
+/// This applies the same penalty regardless of how many times a token has
+/// appeared. For count-proportional penalties use
+/// `SamplingStrategy::sample()` from `bitnet-sampling`.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::apply_repetition_penalty;
+///
+/// let mut logits = vec![0.0f32, 2.0, -1.0];
+/// apply_repetition_penalty(&mut logits, &[1, 2], 2.0);
+/// // Positive logit divided: 2.0 / 2.0 = 1.0
+/// assert!((logits[1] - 1.0).abs() < 1e-6);
+/// // Negative logit multiplied: -1.0 * 2.0 = -2.0
+/// assert!((logits[2] - (-2.0)).abs() < 1e-6);
+/// // Unseen token unchanged
+/// assert_eq!(logits[0], 0.0);
+/// ```
 pub fn apply_repetition_penalty(logits: &mut [f32], token_ids: &[u32], penalty: f32) {
     #[allow(clippy::float_cmp)]
     if penalty <= 0.0 || !penalty.is_finite() || penalty == 1.0 || token_ids.is_empty() {
@@ -143,8 +243,21 @@ pub fn apply_repetition_penalty(logits: &mut [f32], token_ids: &[u32], penalty: 
 
 /// Return the index of the maximum value (argmax).
 ///
-/// Ties are broken by returning the first maximum found.
+/// Ties are broken by returning the **last** maximum found (standard
+/// [`Iterator::max_by`] semantics).
 /// Returns `0` on an empty slice.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::argmax;
+///
+/// let logits = vec![0.1f32, 0.5, 0.9, 0.2];
+/// assert_eq!(argmax(&logits), 2); // 0.9 is at index 2
+///
+/// // Empty slice returns 0.
+/// assert_eq!(argmax(&[]), 0);
+/// ```
 pub fn argmax(logits: &[f32]) -> usize {
     logits.iter().enumerate().max_by(|(_, a), (_, b)| f32_ascending(**a, **b)).map_or(0, |(i, _)| i)
 }

@@ -11,6 +11,24 @@ use serde::{Deserialize, Serialize};
 // ---------------------------------------------------------------------------
 
 /// Criteria used to decide when to stop token generation.
+///
+/// All fields are additive: any satisfied condition terminates generation.
+/// Build with struct-literal syntax or [`Default::default`] and then
+/// override the fields you need.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_generation::StopCriteria;
+///
+/// let criteria = StopCriteria {
+///     stop_token_ids: vec![128009],          // <|eot_id|> for LLaMA-3
+///     stop_strings: vec!["</s>".to_string()],
+///     max_tokens: 256,
+///     eos_token_id: Some(2),
+/// };
+/// assert_eq!(criteria.max_tokens, 256);
+/// ```
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct StopCriteria {
     /// Token IDs that immediately terminate generation when produced.
@@ -25,6 +43,17 @@ pub struct StopCriteria {
 }
 
 /// Reason why generation stopped.
+///
+/// Returned by [`check_stop`] when a stopping condition is met.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_generation::StopReason;
+///
+/// let reason = StopReason::StopTokenId(128009);
+/// assert_eq!(reason, StopReason::StopTokenId(128009));
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StopReason {
     /// Reached the maximum token budget.
@@ -47,6 +76,46 @@ pub enum StopReason {
 /// 4. Stop strings (substring search inside `decoded_tail`).
 ///
 /// Returns `None` if generation should continue.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_generation::{check_stop, StopCriteria, StopReason};
+///
+/// let criteria = StopCriteria {
+///     stop_token_ids: vec![128009],
+///     stop_strings: vec!["</s>".to_string()],
+///     max_tokens: 4,
+///     eos_token_id: Some(2),
+/// };
+///
+/// // 1. Explicit stop token ID has highest priority.
+/// assert_eq!(
+///     check_stop(&criteria, 128009, &[], ""),
+///     Some(StopReason::StopTokenId(128009))
+/// );
+///
+/// // 2. EOS token.
+/// assert_eq!(
+///     check_stop(&criteria, 2, &[], ""),
+///     Some(StopReason::EosToken)
+/// );
+///
+/// // 3. Token budget exhausted.
+/// assert_eq!(
+///     check_stop(&criteria, 5, &[0, 1, 2, 3], ""),
+///     Some(StopReason::MaxTokens)
+/// );
+///
+/// // 4. Stop string found in decoded tail.
+/// assert_eq!(
+///     check_stop(&criteria, 5, &[], "hello</s>"),
+///     Some(StopReason::StopString("</s>".to_string()))
+/// );
+///
+/// // No condition met → generation continues.
+/// assert!(check_stop(&criteria, 7, &[1], "hello world").is_none());
+/// ```
 pub fn check_stop(
     criteria: &StopCriteria,
     token_id: u32,
@@ -83,6 +152,23 @@ pub fn check_stop(
 /// Note: This is the *orchestration-level* config used by `bitnet-engine-core`
 /// traits.  The per-engine `GenerationConfig` in `bitnet-inference` carries
 /// additional implementation details.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_generation::{GenerationConfig, StopCriteria};
+///
+/// let config = GenerationConfig {
+///     max_new_tokens: 64,
+///     seed: Some(42),
+///     stop_criteria: StopCriteria {
+///         eos_token_id: Some(2),
+///         max_tokens: 64,
+///         ..Default::default()
+///     },
+/// };
+/// assert_eq!(config.max_new_tokens, 64);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {
     /// Maximum number of new tokens to generate.
@@ -104,6 +190,8 @@ impl Default for GenerationConfig {
 // ---------------------------------------------------------------------------
 
 /// A token produced during streaming generation.
+///
+/// Emitted as [`StreamEvent::Token`] during streaming generation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenEvent {
     /// Vocabulary index of the token.
@@ -113,6 +201,8 @@ pub struct TokenEvent {
 }
 
 /// Summary statistics after generation completes.
+///
+/// Carried by [`StreamEvent::Done`].
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct GenerationStats {
     /// Number of tokens generated.
@@ -122,6 +212,26 @@ pub struct GenerationStats {
 }
 
 /// Events emitted during streaming generation.
+///
+/// A complete generation run produces zero or more [`StreamEvent::Token`]
+/// events followed by exactly one [`StreamEvent::Done`].
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_generation::{StreamEvent, StopReason, GenerationStats, TokenEvent};
+///
+/// let events: Vec<StreamEvent> = vec![
+///     StreamEvent::Token(TokenEvent { id: 42, text: "Hello".to_string() }),
+///     StreamEvent::Done {
+///         reason: StopReason::MaxTokens,
+///         stats: GenerationStats { tokens_generated: 1, tokens_per_second: 10.0 },
+///     },
+/// ];
+///
+/// let done_count = events.iter().filter(|e| matches!(e, StreamEvent::Done { .. })).count();
+/// assert_eq!(done_count, 1);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StreamEvent {
     /// A single token was generated.
