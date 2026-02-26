@@ -879,20 +879,36 @@ impl QuantizedLinear {
     /// Native TL2 quantized matrix multiplication
     async fn forward_tl2_generic(&self, input: &BitNetTensor) -> Result<BitNetTensor> {
         let input_candle = input.to_candle()?;
-        let input_shape = input_candle.shape();
 
-        // Use native TL2 quantized kernels
-        let provider =
-            self.kernel_manager.select_best().context("Failed to select kernel provider")?;
+        // Dequantize TL2 weights to float32 using the correct TL2 dequantization path.
+        // The previous approach passed TL2 data through matmul_i2s (an I2S-format kernel)
+        // which caused mismatched unpacking and a hardcoded 0.9 correction factor.
+        let dequantized_weights = self.weights.dequantize().with_context(|| {
+            format!(
+                "Failed to dequantize TL2 weights for layer {}x{}",
+                self.in_features, self.out_features
+            )
+        })?;
+        let weight_candle = dequantized_weights.to_candle()?;
 
-        // Reshape to 2D for efficient matrix multiplication
-        let input_2d = self.prepare_input_for_matmul(&input_candle)?;
+        // Flatten all leading dimensions to 2D so candle's matmul can handle
+        // inputs with shape [batch, seq, in_features].
+        let input_dims = input_candle.dims().to_vec();
+        let n_rows: usize = input_dims[..input_dims.len() - 1].iter().product();
+        let k = input_dims[input_dims.len() - 1];
+        let input_2d =
+            input_candle.reshape(&[n_rows, k]).context("Failed to reshape TL2 input to 2D")?;
 
-        // Call native TL2 quantized matmul kernel
-        let output_2d = self.quantized_matmul_tl2(&input_2d, provider).await?;
+        // Weights stored as [in_features, out_features]; no transpose needed.
+        let output_2d = input_2d
+            .matmul(&weight_candle)
+            .context("Failed to perform TL2 matrix multiplication")?;
 
-        // Restore original tensor shape
-        self.restore_output_shape(output_2d, input_shape.dims())
+        // Restore the original leading dimensions.
+        let mut out_shape = input_dims[..input_dims.len() - 1].to_vec();
+        out_shape.push(self.out_features);
+        let output = output_2d.reshape(out_shape).context("Failed to restore TL2 output shape")?;
+        Ok(BitNetTensor::new(output))
     }
 
     /// Vectorized TL1 matrix multiplication using NEON
