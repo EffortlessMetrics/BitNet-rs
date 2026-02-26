@@ -1,5 +1,5 @@
 use bitnet_testing_scenarios_core::{
-    EnvironmentType, ReportFormat, ScenarioConfigManager, TestConfigProfile, TestingScenario,
+    EnvironmentType, ReportFormat, ScenarioConfigManager, TestingScenario,
 };
 use proptest::prelude::*;
 

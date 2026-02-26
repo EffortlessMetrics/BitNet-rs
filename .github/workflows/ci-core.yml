@@ -132,6 +132,28 @@ jobs:
             -p bitnet-device-probe \
             -p bitnet-engine-core \
             --no-default-features
+          # BDD/policy/testing-infrastructure crates (cpu feature required for profile tests)
+          cargo test --locked \
+            -p bitnet-bdd-grid-core \
+            -p bitnet-bdd-grid \
+            -p bitnet-feature-contract \
+            -p bitnet-testing-policy-core \
+            -p bitnet-testing-scenarios-core \
+            -p bitnet-runtime-feature-flags-core \
+            -p bitnet-runtime-feature-flags \
+            -p bitnet-startup-contract-core \
+            -p bitnet-startup-contract-diagnostics \
+            -p bitnet-startup-contract-guard \
+            -p bitnet-runtime-context-core \
+            -p bitnet-testing-scenarios-profile-core \
+            -p bitnet-runtime-profile-contract-core \
+            -p bitnet-testing-policy-runtime \
+            -p bitnet-testing-policy-tests \
+            -p bitnet-testing-policy-kit \
+            -p bitnet-testing-profile \
+            -p bitnet-testing-policy-contract \
+            -p bitnet-testing-policy-interop \
+            --no-default-features --features cpu
 
       - name: BDD Grid Check (CPU cells)
         run: cargo run --locked --no-default-features -p xtask -- grid-check --cpu-only

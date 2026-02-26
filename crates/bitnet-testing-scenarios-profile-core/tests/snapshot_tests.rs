@@ -53,5 +53,10 @@ fn report_format_variants_debug_stable() {
 #[test]
 fn test_config_profile_defaults() {
     let profile = TestConfigProfile::default();
-    insta::assert_debug_snapshot!(profile);
+    // max_parallel_tests is CPU/env-dependent — normalize it for a stable snapshot.
+    insta::with_settings!({
+        filters => vec![(r"max_parallel_tests: \d+", "max_parallel_tests: <CPU_DEPENDENT>")]
+    }, {
+        insta::assert_debug_snapshot!(profile);
+    });
 }
