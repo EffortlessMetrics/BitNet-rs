@@ -53,7 +53,7 @@ pub use strategy::{
 };
 
 /// Configuration for tokenizer initialization
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct TokenizerConfig {
     pub model_type: String,
     pub vocab_size: usize,
