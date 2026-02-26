@@ -154,7 +154,7 @@ pub const fn gpu_available_runtime() -> bool {
 
 /// Detect the best SIMD instruction-set level available at runtime.
 ///
-/// Detection order: AVX-512 > AVX2 > SSE4.2 (x86_64); NEON (AArch64);
+/// Detection order: AVX-512 > AVX2 > SSE4.2 (x86_64); NEON (`AArch64`);
 /// scalar fallback on all other targets.
 ///
 /// # Examples
