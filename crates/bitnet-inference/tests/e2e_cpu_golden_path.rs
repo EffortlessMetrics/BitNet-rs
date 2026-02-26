@@ -3,6 +3,12 @@
 //! * `test_e2e_mock_golden_path` — always runs; uses a minimal synthetic-weight model
 //!   (no download required) to prove the engine + receipt pipeline works end-to-end.
 //!
+//! * `test_e2e_golden_path_reproducible` — runs inference twice with the same seed and
+//!   asserts identical token output, proving full determinism of the pipeline.
+//!
+//! * `test_e2e_golden_path_pinned_output` — pins specific token IDs produced by greedy
+//!   decoding on the synthetic model (seed=42) as a regression guard.
+//!
 //! * `test_e2e_real_model_golden_path` — skipped in PR CI; run locally with a real model:
 //!   ```sh
 //!   BITNET_MODEL_PATH=models/model.gguf \
@@ -105,6 +111,61 @@ async fn test_e2e_mock_golden_path() -> Result<()> {
     assert!(!receipt.kernels.is_empty(), "receipt must carry kernel IDs");
     receipt.validate().map_err(|e| anyhow::anyhow!("receipt validation failed: {e}"))?;
 
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Reproducibility: same seed → same tokens
+// ---------------------------------------------------------------------------
+
+/// Two independent runs on the same synthetic model with seed=42 must produce
+/// identical token sequences, proving the full pipeline is deterministic.
+#[tokio::test]
+async fn test_e2e_golden_path_reproducible() -> Result<()> {
+    async fn run_once(n: u32) -> Result<Vec<u32>> {
+        let model = synthetic_model()?;
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+        let config = GenerationConfig::greedy().with_seed(42).with_max_tokens(n);
+        let prompt_ids = tokenizer.encode("2+2=", false, false)?;
+        engine.generate_tokens(&prompt_ids, &config).await
+    }
+
+    let tokens1 = run_once(4).await?;
+    let tokens2 = run_once(4).await?;
+    assert_eq!(tokens1, tokens2, "greedy inference must be reproducible across runs");
+    assert_eq!(tokens1.len(), 4, "should generate exactly 4 tokens each run");
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Pinned golden output: regression guard for specific token IDs
+// ---------------------------------------------------------------------------
+
+/// Greedy decoding on the fixed-weight synthetic model with seed=42 must produce
+/// a stable sequence.  If this test breaks, the inference pipeline regressed.
+///
+/// Token IDs were captured from the first correct run and are intentionally pinned
+/// here as a regression guard.  Update them only after a deliberate model/pipeline
+/// change and re-capture.
+#[tokio::test]
+async fn test_e2e_golden_path_pinned_output() -> Result<()> {
+    // Greedy argmax on the fixed sin/cos synthetic weights, prompt "2+2=".
+    // Captured from the first passing run; update only after an intentional change.
+    const GOLDEN_TOKENS: &[u32] = &[140, 459, 459, 459];
+
+    let model = synthetic_model()?;
+    let tokenizer = Arc::new(MockTokenizer::new());
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+    let config = GenerationConfig::greedy().with_seed(42).with_max_tokens(4);
+    let prompt_ids = tokenizer.encode("2+2=", false, false)?;
+    let tokens = engine.generate_tokens(&prompt_ids, &config).await?;
+
+    assert_eq!(
+        tokens.as_slice(),
+        GOLDEN_TOKENS,
+        "greedy output diverged from golden; inference pipeline may have regressed"
+    );
     Ok(())
 }
 
