@@ -678,6 +678,7 @@ dependencies = [
  "bitnet-engine-core",
  "bitnet-generation",
  "bitnet-kernels",
+ "bitnet-logits",
  "bitnet-models",
  "bitnet-prompt-templates",
  "bitnet-quantization",

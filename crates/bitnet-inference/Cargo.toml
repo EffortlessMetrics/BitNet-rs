@@ -23,6 +23,7 @@ bitnet-quantization = { path = "../bitnet-quantization", version = "0.1.0" }
 bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.1.0" }
 bitnet-receipts = { path = "../bitnet-receipts", version = "0.1.0" }
 bitnet-rope = { path = "../bitnet-rope", version = "0.1.0" }
+bitnet-logits = { path = "../bitnet-logits", version = "0.1.0" }
 bitnet-sampling = { path = "../bitnet-sampling", version = "0.1.0" }
 bitnet-generation = { path = "../bitnet-generation", version = "0.1.0" }
 bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.1.0" }
