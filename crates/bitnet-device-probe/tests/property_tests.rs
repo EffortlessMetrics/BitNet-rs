@@ -4,8 +4,8 @@
 //! capability detection without requiring real GPU hardware.
 
 use bitnet_device_probe::{
-    CpuCapabilities, DeviceCapabilities, GpuCapabilities, detect_simd_level,
-    gpu_available_runtime, gpu_compiled, probe_cpu, probe_gpu,
+    CpuCapabilities, DeviceCapabilities, GpuCapabilities, detect_simd_level, gpu_available_runtime,
+    gpu_compiled, probe_cpu, probe_gpu,
 };
 use proptest::prelude::*;
 use serial_test::serial;
