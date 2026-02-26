@@ -1250,6 +1250,7 @@ pub fn find_llama_lib_dirs(install_dir: &Path) -> Result<Vec<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::fs;
     use tempfile::TempDir;
 
@@ -1334,6 +1335,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(bitnet_env)]
     fn test_find_bitnet_lib_dirs_empty() {
         let temp_dir = TempDir::new().unwrap();
         let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
@@ -1342,6 +1344,7 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "linux")]
+    #[serial(bitnet_env)]
     fn test_find_bitnet_lib_dirs_tier1_bitnet() {
         let temp_dir = TempDir::new().unwrap();
         let build_bin = temp_dir.path().join("build/bin");
@@ -1355,6 +1358,7 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "linux")]
+    #[serial(bitnet_env)]
     fn test_find_bitnet_lib_dirs_tier2_llama() {
         let temp_dir = TempDir::new().unwrap();
         let llama_bin = temp_dir.path().join("build/3rdparty/llama.cpp/build/bin");
@@ -1368,6 +1372,7 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "linux")]
+    #[serial(bitnet_env)]
     fn test_find_bitnet_lib_dirs_both_tiers() {
         let temp_dir = TempDir::new().unwrap();
         let build_bin = temp_dir.path().join("build/bin");
@@ -1387,31 +1392,25 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "linux")]
+    #[serial(bitnet_env)]
     fn test_find_bitnet_lib_dirs_env_override() {
-        use serial_test::serial;
+        let temp_dir = TempDir::new().unwrap();
+        let override_dir = temp_dir.path().join("override");
+        fs::create_dir_all(&override_dir).unwrap();
+        fs::write(override_dir.join("libbitnet.so"), b"mock").unwrap();
 
-        #[serial(bitnet_env)]
-        fn run_test() {
-            let temp_dir = TempDir::new().unwrap();
-            let override_dir = temp_dir.path().join("override");
-            fs::create_dir_all(&override_dir).unwrap();
-            fs::write(override_dir.join("libbitnet.so"), b"mock").unwrap();
-
-            // Set BITNET_CROSSVAL_LIBDIR to override auto-discovery
-            unsafe {
-                env::set_var("BITNET_CROSSVAL_LIBDIR", override_dir.to_str().unwrap());
-            }
-
-            let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
-            assert_eq!(result.len(), 1);
-            assert_eq!(result[0], override_dir);
-
-            // Clean up
-            unsafe {
-                env::remove_var("BITNET_CROSSVAL_LIBDIR");
-            }
+        // Set BITNET_CROSSVAL_LIBDIR to override auto-discovery
+        unsafe {
+            env::set_var("BITNET_CROSSVAL_LIBDIR", override_dir.to_str().unwrap());
         }
 
-        run_test();
+        let result = find_bitnet_lib_dirs(temp_dir.path()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], override_dir);
+
+        // Clean up
+        unsafe {
+            env::remove_var("BITNET_CROSSVAL_LIBDIR");
+        }
     }
 }
