@@ -160,6 +160,9 @@ vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
 
 [dev-dependencies]
 async-trait = "0.1.89"
+bitnet-logits = { path = "crates/bitnet-logits", version = "0.1.0" }
+bitnet-rope = { path = "crates/bitnet-rope", version = "0.1.0" }
+bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.1.0" }
 bitnet-tests = { path = "tests", package = "bitnet-tests", default-features = false }
 candle-core = { version = "0.9.1", default-features = false }
 criterion = "0.7.0"
@@ -269,6 +272,11 @@ name = "simple_demo"
 [[example]]
 name = "ffi_threading_demo"
 required-features = ["cpu", "ffi"]
+
+[[bench]]
+name = "srp_ops"
+harness = false
+required-features = ["cpu"]
 
 [workspace.dependencies]
 # Core dependencies
