@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-gguf/tests/snapshot_tests.rs
+expression: msg
+---
+unsupported GGUF version 1 (supported: 2–3)

@@ -295,6 +295,49 @@ mod tests {
         assert!(GgufValueType::from_u32(99).is_none());
     }
 
+    #[test]
+    fn parse_header_rejects_version_1() {
+        let mut data = gguf_v2_header();
+        data[4..8].copy_from_slice(&1u32.to_le_bytes());
+        assert!(parse_header(&data).is_err(), "version 1 must be rejected");
+    }
+
+    #[test]
+    fn parse_header_rejects_version_0() {
+        let mut data = gguf_v2_header();
+        data[4..8].copy_from_slice(&0u32.to_le_bytes());
+        assert!(parse_header(&data).is_err(), "version 0 must be rejected");
+    }
+
+    #[test]
+    fn parse_header_rejects_version_4() {
+        let mut data = gguf_v2_header();
+        data[4..8].copy_from_slice(&4u32.to_le_bytes());
+        assert!(parse_header(&data).is_err(), "version 4 must be rejected");
+    }
+
+    #[test]
+    fn parse_header_v3_non_power_of_two_alignment_falls_back() {
+        // Build a v3 header with alignment = 7 (not a power of two).
+        let mut data = gguf_v2_header();
+        data[4..8].copy_from_slice(&3u32.to_le_bytes());
+        data.extend_from_slice(&7u32.to_le_bytes()); // non-power-of-two alignment
+        let info = parse_header(&data).unwrap();
+        assert_eq!(info.alignment, 32, "non-power-of-two alignment must fall back to 32");
+    }
+
+    #[test]
+    fn read_version_returns_none_for_too_short() {
+        assert_eq!(read_version(b"GGUF\x02\x00\x00"), None); // 7 bytes, one short
+        assert_eq!(read_version(b""), None);
+    }
+
+    #[test]
+    fn read_version_returns_none_for_bad_magic() {
+        // 8 bytes, valid length, but wrong magic
+        assert_eq!(read_version(b"LLMF\x02\x00\x00\x00"), None);
+    }
+
     // --- proptest -----------------------------------------------------------
 
     proptest::proptest! {
