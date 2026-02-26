@@ -129,6 +129,8 @@
 | docs(api): Examples/Errors/Panics sections added to bitnet-logits, bitnet-generation, bitnet-engine-core, bitnet-sampling, bitnet-device-probe public APIs | `crates/bitnet-{logits,generation,engine-core,sampling,device-probe}/src/lib.rs` | #786 |
 | bench: 6 criterion benchmark functions in `srp_ops.rs` — logits pipeline, top-k (k=5/50), repetition penalty, argmax, RoPE build_tables, KV cache append | `benches/srp_ops.rs` | #787 |
 | feat(fuzz): BPE tokenizer encode fuzz target — `tokenizer_encode.rs` with 4 exercise paths; fuzz total: 13→15 | `fuzz/fuzz_targets/tokenizer_encode.rs` | #788 |
+| E2E golden-path reproducibility + pinned-output tests (2 deterministic, seed=42; tokens [140,459,459,459] pinned) | `crates/bitnet-inference/tests/e2e_cpu_golden_path.rs` | #790 |
+| README modernization — Rust 2024 badge, Features list, architecture diagram, Feature flags table | `README.md` | #791 |
 
 ### 🔲 What's Planned
 
