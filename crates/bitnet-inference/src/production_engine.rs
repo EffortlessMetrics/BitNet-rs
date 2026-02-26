@@ -13,9 +13,9 @@
 
 use crate::engine::PerformanceMetrics;
 use crate::{GenerationConfig, InferenceEngine};
-use bitnet_common::{BackendStartupSummary, BitNetError, Device, InferenceError, Result};
 #[cfg(feature = "inference")]
 use bitnet_common::KernelCapabilities;
+use bitnet_common::{BackendStartupSummary, BitNetError, Device, InferenceError, Result};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use serde::{Deserialize, Serialize};
