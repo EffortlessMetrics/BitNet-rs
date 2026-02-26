@@ -19,4 +19,5 @@ bitnet-startup-contract-diagnostics = { path = "../bitnet-startup-contract-diagn
 tracing.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 insta.workspace = true

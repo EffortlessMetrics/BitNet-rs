@@ -64,4 +64,5 @@ runtime-profile-trend = ["bitnet-runtime-feature-flags/runtime-profile-trend", "
 runtime-profile-integration-tests = ["bitnet-runtime-feature-flags/runtime-profile-integration-tests", "bitnet-testing-policy-core/runtime-profile-integration-tests"]
 
 [dev-dependencies]
+proptest.workspace = true
 insta.workspace = true
