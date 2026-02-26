@@ -18,6 +18,7 @@ bitnet-gguf = { path = "../crates/bitnet-gguf" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 bitnet-logits = { path = "../crates/bitnet-logits" }
 bitnet-generation = { path = "../crates/bitnet-generation" }
+bitnet-rope = { path = "../crates/bitnet-rope" }
 candle-core = { workspace = true }
 arbitrary = { version = "1.4.2", features = ["derive"] }
 
@@ -96,5 +97,11 @@ doc = false
 [[bin]]
 name = "generation_stop_check"
 path = "fuzz_targets/generation_stop_check.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "rope_table_gen"
+path = "fuzz_targets/rope_table_gen.rs"
 test = false
 doc = false
