@@ -533,13 +533,11 @@ impl GPUQuantizer {
 #[derive(Debug, Clone)]
 pub struct AccuracyValidator {
     tolerance_config: ToleranceConfig,
-    #[allow(dead_code)]
-    reference_calculator: ReferenceCalculator,
 }
 
 impl AccuracyValidator {
     pub fn new(tolerance_config: ToleranceConfig) -> Self {
-        Self { tolerance_config, reference_calculator: ReferenceCalculator::new() }
+        Self { tolerance_config }
     }
 
     /// Validate I2S quantization accuracy with ±1e-5 relative error
