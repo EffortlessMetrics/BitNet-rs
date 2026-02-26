@@ -13,7 +13,9 @@
 
 use crate::engine::PerformanceMetrics;
 use crate::{GenerationConfig, InferenceEngine};
-use bitnet_common::{BitNetError, Device, InferenceError, Result};
+#[cfg(feature = "inference")]
+use bitnet_common::KernelCapabilities;
+use bitnet_common::{BackendStartupSummary, BitNetError, Device, InferenceError, Result};
 use bitnet_models::Model;
 use bitnet_tokenizers::Tokenizer;
 use serde::{Deserialize, Serialize};
@@ -301,6 +303,8 @@ pub struct ProductionInferenceEngine {
     /// Configuration
     #[allow(dead_code)]
     config: ProductionInferenceConfig,
+    /// Backend startup snapshot (requested / detected / selected).
+    pub backend_startup_summary: BackendStartupSummary,
 }
 
 /// Configuration for production inference
@@ -351,6 +355,19 @@ impl ProductionInferenceEngine {
     ) -> Result<Self> {
         info!("Creating production inference engine");
 
+        // Build backend startup snapshot.
+        let caps = KernelCapabilities::from_compile_time();
+        let requested = match device {
+            Device::Cpu => "cpu",
+            Device::Cuda(_) | Device::Metal => "gpu",
+        };
+        let detected: Vec<String> =
+            caps.compiled_backends().iter().map(|b| b.to_string()).collect();
+        let selected =
+            caps.best_available().map(|b| b.to_string()).unwrap_or_else(|| requested.to_string());
+        let backend_startup_summary = BackendStartupSummary::new(requested, detected, &selected);
+        info!("Backend: {}", backend_startup_summary.log_line());
+
         let engine =
             InferenceEngine::new(model.clone(), tokenizer.clone(), device).map_err(|e| {
                 BitNetError::Inference(InferenceError::GenerationFailed {
@@ -370,6 +387,7 @@ impl ProductionInferenceEngine {
             metrics_collector: Arc::new(RwLock::new(metrics_collector)),
             device_manager,
             config,
+            backend_startup_summary,
         })
     }
 

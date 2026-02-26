@@ -185,3 +185,67 @@ fn selection_result_debug_snapshot_cpu_auto() {
     // Snapshot the debug to pin the struct layout
     insta::assert_debug_snapshot!("backend_selection_result_cpu_auto", r);
 }
+
+// ---------------------------------------------------------------------------
+// BackendStartupSummary tests
+// ---------------------------------------------------------------------------
+
+use bitnet_common::backend_selection::BackendStartupSummary;
+
+#[test]
+fn test_backend_startup_summary_log_line() {
+    let summary = BackendStartupSummary::new("auto", vec!["cpu-rust".to_string()], "cpu-rust");
+    let line = summary.log_line();
+    assert!(line.contains("requested="), "missing requested=: {line}");
+    assert!(line.contains("detected=["), "missing detected=[: {line}");
+    assert!(line.contains("selected="), "missing selected=: {line}");
+    assert_eq!(line, "requested=auto detected=[cpu-rust] selected=cpu-rust");
+}
+
+#[test]
+fn test_backend_startup_summary_log_line_multiple_detected() {
+    let summary =
+        BackendStartupSummary::new("gpu", vec!["cuda".to_string(), "cpu-rust".to_string()], "cuda");
+    let line = summary.log_line();
+    assert_eq!(line, "requested=gpu detected=[cuda, cpu-rust] selected=cuda");
+}
+
+#[test]
+fn test_backend_startup_summary_log_line_empty_detected() {
+    let summary = BackendStartupSummary::new("cpu", vec![], "cpu");
+    let line = summary.log_line();
+    assert_eq!(line, "requested=cpu detected=[] selected=cpu");
+}
+
+#[test]
+fn test_backend_startup_summary_serde() {
+    let summary = BackendStartupSummary::new("auto", vec!["cpu-rust".to_string()], "cpu-rust");
+    let json = serde_json::to_string(&summary).expect("serialization failed");
+    let roundtrip: BackendStartupSummary =
+        serde_json::from_str(&json).expect("deserialization failed");
+    assert_eq!(summary, roundtrip);
+}
+
+#[test]
+fn test_backend_startup_summary_serde_preserves_fields() {
+    let summary =
+        BackendStartupSummary::new("gpu", vec!["cuda".to_string(), "cpu-rust".to_string()], "cuda");
+    let json = serde_json::to_string(&summary).unwrap();
+    assert!(json.contains("\"requested\":\"gpu\""), "json: {json}");
+    assert!(json.contains("\"selected\":\"cuda\""), "json: {json}");
+    assert!(json.contains("\"detected\""), "json: {json}");
+}
+
+proptest! {
+    #[test]
+    fn log_line_always_contains_all_three_tags(
+        requested in "[a-z]{1,8}",
+        selected in "[a-z]{1,8}",
+    ) {
+        let summary = BackendStartupSummary::new(&requested, vec![selected.clone()], &selected);
+        let line = summary.log_line();
+        prop_assert!(line.contains("requested="), "missing requested= in: {line}");
+        prop_assert!(line.contains("detected=["), "missing detected=[ in: {line}");
+        prop_assert!(line.contains("selected="), "missing selected= in: {line}");
+    }
+}
