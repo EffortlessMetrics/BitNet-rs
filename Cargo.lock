@@ -624,6 +624,7 @@ dependencies = [
  "bitnet-logits",
  "bitnet-models",
  "bitnet-quantization",
+ "bitnet-rope",
  "bitnet-tokenizers",
  "candle-core",
  "libfuzzer-sys",
