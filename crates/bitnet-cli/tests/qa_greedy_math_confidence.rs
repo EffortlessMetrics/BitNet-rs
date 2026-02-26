@@ -113,7 +113,6 @@ mod greedy_math_confidence {
     /// # Expected: Output should contain "4"
     /// ```
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_greedy_math_simple_2plus2() -> Result<()> {
         // Skip if no model available
         let model_path = match get_test_model_path() {
@@ -193,7 +192,6 @@ mod greedy_math_confidence {
     /// # Expected: Output should contain "4" or "four"
     /// ```
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_greedy_math_qa_format() -> Result<()> {
         // Skip if no model available
         let model_path = match get_test_model_path() {
@@ -377,7 +375,6 @@ mod greedy_stop_sequences {
     /// # Should NOT generate 100 tokens (stop early due to stop sequence)
     /// ```
     #[test]
-    #[ignore = "requires model file - run manually to verify stop sequence behavior"]
     fn test_greedy_respects_stop_sequences() -> Result<()> {
         // Skip if no model available
         let model_path = match get_test_model_path() {

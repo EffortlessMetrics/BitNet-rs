@@ -440,7 +440,6 @@ mod intelligibility_smoke_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file and CLI binary to execute
     #[test]
-    #[ignore = "requires model file and CLI binary - run manually or in CI with BITNET_GGUF set"]
     fn test_intelligibility_smoke_suite() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: intelligibility smoke suite");
@@ -517,7 +516,6 @@ mod intelligibility_smoke_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file and CLI binary to execute
     #[test]
-    #[ignore = "requires model file and CLI binary - run manually or in CI with BITNET_GGUF set"]
     fn test_simple_math_completion() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: simple math completion");
@@ -564,7 +562,6 @@ mod intelligibility_smoke_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file and CLI binary to execute
     #[test]
-    #[ignore = "requires model file and CLI binary - run manually or in CI with BITNET_GGUF set"]
     fn test_capital_city_qa() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: capital city Q&A");
@@ -611,7 +608,6 @@ mod intelligibility_smoke_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file and CLI binary to execute
     #[test]
-    #[ignore = "requires model file and CLI binary - run manually or in CI with BITNET_GGUF set"]
     fn test_coherent_continuation() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: coherent continuation");
