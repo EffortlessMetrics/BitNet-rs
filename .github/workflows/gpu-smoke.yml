@@ -92,7 +92,7 @@ jobs:
       - name: GPU kernel smoke (${{ matrix.test }})
         if: matrix.test == 'kernel-smoke'
         run: |
-          cargo test -p bitnet-kernels \
+          cargo test --locked -p bitnet-kernels \
             --no-default-features --features gpu \
             -- --nocapture 2>&1 | head -100
 
