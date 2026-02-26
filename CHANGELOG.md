@@ -12,6 +12,8 @@ All notable changes to bitnet-rs will be documented in this file.
 - Project renamed from BitNet.rs to BitNet-rs throughout (1,531 files, 6,281 occurrences) (#755)
 
 ### Added
+- **`bitnet-device-probe` microcrate — `CpuCapabilities`/`GpuCapabilities` with proptest coverage** (#765)
+- **CPU golden-path E2E test with receipt invariants** (#766)
 - **Property tests for 6 infrastructure crates** (PR #762): Extends proptest coverage to 6 additional crates. Proptest workspace total: **50 crates**.
 - Keyboard navigation (ArrowLeft/ArrowRight/Home/End) for WASM browser example tab list (#754)
 - **Property tests for `bitnet-test-support`** (PR #749): 10 new property + unit tests for `EnvGuard`/`EnvScope` API semantics — set/restore/remove round-trips, nested scope isolation, `model_path()`/`run_slow_tests()`/`run_e2e()` env helpers. Workspace total: **3,520 tests, all passing**. Proptest coverage spans **38 crates** (+2: `bitnet-test-support`, `bitnet-testing-scenarios-profile-core`).
