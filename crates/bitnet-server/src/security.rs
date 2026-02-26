@@ -234,9 +234,23 @@ impl SecurityValidator {
         // Check allowed directories
         if !self.config.allowed_model_directories.is_empty() {
             let path = std::path::Path::new(model_path);
+            // Symlink traversal protection: canonicalize resolves any symlinks so that a
+            // path like /allowed/link -> /etc still fails the starts_with check.
+            // Fall back to the literal path when the file doesn't exist yet (e.g. pre-creation
+            // validation in tests), preserving the lexical `..` / `~` guards above.
+            let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
             let mut allowed = false;
             for dir in &self.config.allowed_model_directories {
-                if path.starts_with(dir) {
+                // Skip empty entries: Path::starts_with("") is true for *every* path,
+                // which would silently disable the directory restriction.
+                if dir.is_empty() {
+                    continue;
+                }
+                let allowed_dir = std::path::Path::new(dir);
+                // Symlink traversal protection: canonicalize the allowed directory too.
+                let canonical_dir =
+                    allowed_dir.canonicalize().unwrap_or_else(|_| allowed_dir.to_path_buf());
+                if canonical_path.starts_with(&canonical_dir) {
                     allowed = true;
                     break;
                 }
@@ -573,5 +587,73 @@ mod tests {
             validator.validate_model_request("/models/../secret.gguf"),
             Err(ValidationError::InvalidFieldValue(msg)) if msg == "Invalid characters in model path"
         ));
+    }
+
+    /// An empty string in `allowed_model_directories` must NOT act as a wildcard.
+    /// `Path::starts_with("")` returns `true` for every path (empty path has no
+    /// components, which is trivially a prefix of anything), so we must skip empty entries.
+    #[test]
+    fn test_empty_allowed_dir_does_not_bypass_restriction() {
+        let config = SecurityConfig {
+            allowed_model_directories: vec!["".to_string()],
+            ..Default::default()
+        };
+        let validator = SecurityValidator::new(config).unwrap();
+
+        // Without the fix, starts_with("") matches every path and grants access to arbitrary files.
+        assert!(
+            matches!(
+                validator.validate_model_request("/etc/passwd.gguf"),
+                Err(ValidationError::InvalidFieldValue(msg)) if msg == "Model path not in allowed directories"
+            ),
+            "Empty allowed_model_directories entry must not grant access to arbitrary paths"
+        );
+    }
+
+    /// Symlinks that point outside an allowed directory must be rejected.
+    /// This test creates a real symlink on Unix and confirms canonicalize() catches it.
+    #[cfg(unix)]
+    #[test]
+    fn test_symlink_traversal_blocked() {
+        use std::os::unix::fs::symlink;
+        use tempfile::TempDir;
+
+        let tmp = TempDir::new().unwrap();
+        let allowed_dir = tmp.path().join("allowed");
+        let secret_dir = tmp.path().join("secret");
+        std::fs::create_dir_all(&allowed_dir).unwrap();
+        std::fs::create_dir_all(&secret_dir).unwrap();
+
+        // Model file that lives outside the allowed directory.
+        let secret_model = secret_dir.join("secret.gguf");
+        std::fs::write(&secret_model, b"fake gguf").unwrap();
+
+        // Symlink inside the allowed directory that points to the secret directory.
+        let link = allowed_dir.join("link");
+        symlink(&secret_dir, &link).unwrap();
+
+        let config = SecurityConfig {
+            allowed_model_directories: vec![allowed_dir.to_str().unwrap().to_string()],
+            ..Default::default()
+        };
+        let validator = SecurityValidator::new(config).unwrap();
+
+        // Path looks allowed lexically but resolves outside via the symlink.
+        let via_symlink = link.join("secret.gguf");
+        assert!(
+            matches!(
+                validator.validate_model_request(via_symlink.to_str().unwrap()),
+                Err(ValidationError::InvalidFieldValue(msg)) if msg == "Model path not in allowed directories"
+            ),
+            "Symlink traversal outside allowed directory must be rejected"
+        );
+
+        // A legitimate file directly inside the allowed directory is still accepted.
+        let legit = allowed_dir.join("legit.gguf");
+        std::fs::write(&legit, b"fake gguf").unwrap();
+        assert!(
+            validator.validate_model_request(legit.to_str().unwrap()).is_ok(),
+            "Legitimate path inside allowed directory must be accepted"
+        );
     }
 }
