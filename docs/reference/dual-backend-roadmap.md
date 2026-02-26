@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#738.
+> **Last updated**: reflects implementation state after PRs #608–#743.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -93,6 +93,8 @@
 | fix: config doctest called `with_max_new_tokens()` but method was renamed to `with_max_tokens()` | `crates/bitnet-inference/src/config.rs` | #736 |
 | docs: update test counts and roadmap for PRs #733-#736; update CHANGELOG; fix duplicate `--no-default-features` in getting-started.md | `CLAUDE.md`, `docs/development/test-suite.md`, `CHANGELOG.md`, `docs/getting-started.md` | #737 |
 | Proptest for `bitnet-sys` (+10 CompileTimeLibCapabilities invariants) and `bitnet-st-tools` (+8 is_ln_gamma properties); proptest: 30→32 crates; workspace: 3,446→3,464 tests | `crates/bitnet-sys/tests/property_tests.rs`, `crates/bitnet-st-tools/tests/property_tests.rs` | #738 |
+| docs: update test counts (3,464→3,472) and roadmap for PR #738; fuzz targets 11→13 (logits_transforms, generation_stop_check); proptest for `bitnet-runtime-context-core` (+8); crates 32→33 | `CLAUDE.md`, `docs/development/test-suite.md`, `docs/reference/dual-backend-roadmap.md`, `CHANGELOG.md`, `fuzz/fuzz_targets/`, `crates/bitnet-runtime-context-core/tests/` | #739, #740, #741, #742 |
+| Proptest for `bitnet-runtime-profile-contract-core` (+7: violations/missing/forbidden invariants) and `bitnet-testing-policy-runtime` (+6: RuntimePolicyState determinism); crates 33→35; workspace: 3,472→3,485 tests | `crates/bitnet-runtime-profile-contract-core/tests/property_tests.rs`, `crates/bitnet-testing-policy-runtime/tests/property_tests.rs` | #743 |
 
 ### 🔲 What's Planned
 
