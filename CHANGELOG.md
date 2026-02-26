@@ -12,6 +12,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - Project renamed from BitNet.rs to BitNet-rs throughout (1,531 files, 6,281 occurrences) (#755)
 
 ### Added
+- **Property tests for 6 infrastructure crates** (PR #762): Extends proptest coverage to 6 additional crates. Proptest workspace total: **50 crates**.
 - Keyboard navigation (ArrowLeft/ArrowRight/Home/End) for WASM browser example tab list (#754)
 - **Property tests for `bitnet-test-support`** (PR #749): 10 new property + unit tests for `EnvGuard`/`EnvScope` API semantics — set/restore/remove round-trips, nested scope isolation, `model_path()`/`run_slow_tests()`/`run_e2e()` env helpers. Workspace total: **3,520 tests, all passing**. Proptest coverage spans **38 crates** (+2: `bitnet-test-support`, `bitnet-testing-scenarios-profile-core`).
 - **Property tests for `bitnet-testing-scenarios-profile-core`** (PR #750): 17 new property + unit tests for Default value invariants across 5 structs — `FixtureProfile`, `CrossValidationProfile`, `ComparisonToleranceProfile`, `ReportingProfile`, `ResourceConstraints`. Includes fuzz-grade shape coverage for numeric fields, URL/path fields, and nested struct coherence.
@@ -20,6 +21,8 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Property tests for `bitnet-testing-policy-tests`** (PR #745): 8 new property/unit tests for `PolicyDiagnostics` invariants — `from_context_is_deterministic`, `is_grid_compatible_coherent_with_violations` (key: `is_grid_compatible() ↔ violations().is_some_and(|m,f| m.is_empty() && f.is_empty())`), `summary_never_panics_and_contains_scenario`, `feature_contract_consistent_does_not_panic`, `diagnostics_for_context_matches_from_context`, `profile_config_does_not_panic`, plus 2 unit tests (unit/local and e2e/ci). Workspace total: **3,493 tests, all passing**. Proptest coverage spans **36 crates**.
 
 ### Fixed
+- **TL2 kernel fix** (PR #761): Replaced `matmul_i2s` with a `dequantize+matmul` pipeline (same pattern as TL1 fix in #760), eliminating 3 compounding bugs that caused incorrect TL2 quantization results.
+- **TL1 kernel fix** (PR #760): Replaced `matmul_i2s` with a `dequantize+matmul` pipeline, fixing 3 compounding bugs that caused incorrect TL1 quantization results.
 - **xtask `find_bitnet_lib_dirs` race condition** (PR #748): `test_find_bitnet_lib_dirs_both_tiers` was failing intermittently because `test_find_bitnet_lib_dirs_env_override` used a nested-function anti-pattern for `#[serial(bitnet_env)]` — the inner function's attribute doesn't actually serialize the outer `#[test]`. Fixed by adding `#[serial(bitnet_env)]` directly to all 5 related tests and flattening the nested-function pattern.
 
 

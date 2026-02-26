@@ -956,7 +956,7 @@ These test suites pass reliably (3,520 tests run: 3,520 passed):
 - **model loading tests**: GGUF and SafeTensors parsing
 - **GGUF fixture tests**: QK256 dual-flavor detection, alignment validation (12/12 passing)
 - **snapshot tests**: Struct/output stability via insta (42 files, ~160 assertions, 192 snapshot files)
-- **property tests**: Randomised invariants via proptest (44 crates, 230+ properties)
+- **property tests**: Randomised invariants via proptest (50 crates, 230+ properties)
 - **tokenizer tests**: Universal tokenizer, auto-discovery
 - **cli tests**: Command-line parsing, flag validation
 - **device feature tests**: CPU/GPU compilation detection
