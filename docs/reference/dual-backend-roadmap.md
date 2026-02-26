@@ -107,6 +107,9 @@
 | Keyboard navigation (ArrowLeft/ArrowRight/Home/End) for WASM browser example tab list | `examples/wasm/` | #754 |
 | Project renamed from BitNet.rs to BitNet-rs throughout (1,531 files, 6,281 occurrences) | workspace-wide | #755 |
 | Harden model path validation: prevent symlink traversal and empty-string allowlist bypass | `crates/bitnet-models/src/`, `crates/bitnet-server/src/` | #756 |
+| TL1 kernel fix: replaced `matmul_i2s` with `dequantize+matmul` pipeline; fixed 3 compounding bugs | `crates/bitnet-quantization/`, `crates/bitnet-kernels/` | #760 |
+| TL2 kernel fix: replaced `matmul_i2s` with `dequantize+matmul` pipeline (same pattern as #760) | `crates/bitnet-quantization/`, `crates/bitnet-kernels/` | #761 |
+| Proptest added to 6 infrastructure crates; proptest total: 44→50 crates | `crates/*/tests/property_tests.rs` | #762 |
 
 ### 🔲 What's Planned
 
