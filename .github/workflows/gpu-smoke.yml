@@ -9,8 +9,8 @@ on:
         default: false
         type: boolean
   schedule:
-    # Run nightly at 3 AM UTC (after perf tracking)
-    - cron: '0 3 * * *'
+    # Run weekly on Monday at 4 AM UTC
+    - cron: '0 4 * * 1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -49,9 +49,8 @@ jobs:
 
       - name: Check GPU build (no CUDA runtime required)
         run: |
-          # gpu feature activates cuda feature (CUDA-first lattice)
-          # This compile check ensures GPU code compiles even without NVCC
-          cargo check --locked --no-default-features --features gpu
+          # Compile with both gpu and cpu features to validate full kernel matrix
+          cargo check --locked --no-default-features --features gpu,cpu
         env:
           # Stub out CUDA runtime detection at compile time
           BITNET_GPU_FAKE: none
@@ -59,7 +58,7 @@ jobs:
   # Runtime GPU tests — requires self-hosted GPU runner
   gpu-runtime:
     name: GPU Runtime Smoke (${{ matrix.test }})
-    runs-on: [self-hosted, gpu, cuda]
+    runs-on: [self-hosted, linux, gpu]
     timeout-minutes: 60
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
 
@@ -88,16 +87,14 @@ jobs:
           key: ${{ runner.os }}-gpu-runtime-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build GPU release
-        run: cargo build --release --no-default-features --features gpu --locked
+        run: cargo build --release --no-default-features --features gpu,cpu --locked
 
       - name: GPU kernel smoke (${{ matrix.test }})
         if: matrix.test == 'kernel-smoke'
         run: |
-          cargo nextest run -p bitnet-kernels \
+          cargo test -p bitnet-kernels \
             --no-default-features --features gpu \
-            --profile ci \
-            -E 'test(gpu)' \
-            2>&1 | tail -20
+            -- --nocapture 2>&1 | head -100
 
       - name: GPU inference smoke (${{ matrix.test }})
         if: matrix.test == 'inference-smoke'
@@ -113,9 +110,10 @@ jobs:
             --greedy 2>&1 | tail -10
 
       - name: Upload GPU receipts
-        if: github.event.inputs.run_parity == 'true' || github.event_name == 'schedule'
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
-          name: gpu-receipts-${{ matrix.test }}
-          path: ci/
+          name: gpu-smoke-receipts-${{ github.run_id }}-${{ matrix.test }}
+          path: ci/inference.json
+          if-no-files-found: warn
           retention-days: 30
