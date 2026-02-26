@@ -12,6 +12,8 @@ All notable changes to bitnet-rs will be documented in this file.
 - Project renamed from BitNet.rs to BitNet-rs throughout (1,531 files, 6,281 occurrences) (#755)
 
 ### Added
+- `test(srp-crates): expanded proptest coverage for bitnet-logits, bitnet-generation, bitnet-engine-core (#768)`
+- `test(gguf): expanded property tests, snapshot tests, and unit tests for bitnet-gguf — 33 → 49 tests (#767)`
 - **`bitnet-device-probe` microcrate — `CpuCapabilities`/`GpuCapabilities` with proptest coverage** (#765)
 - **CPU golden-path E2E test with receipt invariants** (#766)
 - **Property tests for 6 infrastructure crates** (PR #762): Extends proptest coverage to 6 additional crates. Proptest workspace total: **50 crates**.

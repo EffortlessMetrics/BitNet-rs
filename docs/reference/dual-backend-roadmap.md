@@ -112,6 +112,8 @@
 | Proptest added to 6 infrastructure crates; proptest total: 44→50 crates | `crates/*/tests/property_tests.rs` | #762 |
 | `bitnet-device-probe` microcrate: `CpuCapabilities`/`GpuCapabilities` types with proptest coverage | `crates/bitnet-device-probe/` | #765 |
 | CPU golden-path E2E test with receipt invariants | `crates/bitnet-inference/tests/cpu_golden_path.rs` | #766 |
+| test(gguf): expanded property tests, snapshot tests, and unit tests for bitnet-gguf — 33 → 49 tests | `crates/bitnet-gguf/` | #767 |
+| test(srp-crates): expand proptest coverage for bitnet-logits, bitnet-generation, bitnet-engine-core | `crates/bitnet-logits/`, `crates/bitnet-generation/`, `crates/bitnet-engine-core/` | #768 |
 
 ### 🔲 What's Planned
 
