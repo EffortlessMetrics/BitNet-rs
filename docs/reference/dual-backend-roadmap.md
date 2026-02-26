@@ -122,12 +122,13 @@
 | feat(inference): `bitnet-logits` wired as dependency of `bitnet-inference`; duplicate logits math in `generation/sampling.rs` replaced | `crates/bitnet-inference/`, `crates/bitnet-logits/` | #776 |
 | feat(ci): `gpu-smoke.yml` updated with weekly schedule and receipt artifact upload | `.github/workflows/gpu-smoke.yml` | #777 |
 | refactor(quantization): dead code cleanup — removed unused `KernelProvider` imports and unused fields | `crates/bitnet-quantization/` | #779 |
+| test(integration): 12 cross-crate SRP integration tests for logits/generation/prompt-templates/engine-core | `crates/bitnet-inference/tests/srp_integration_test.rs` | #781 |
 
 ### 🔲 What's Planned
 
-1. **Scheduled fuzz/crossval evidence expansion**
-   - Nightly timeboxed fuzz runs with artifact upload (partially done via `fuzz-ci.yml`)
-   - Real-model crossval producing receipts (gated on model download infrastructure)
+1. **Real-model crossval receipts** (gated on model download infrastructure)
+   - Full crossval lane with C++ reference producing JSON receipts on nightly
+   - Requires: `BITNET_CPP_DIR` provisioned on nightly runner
 
 ---
 
