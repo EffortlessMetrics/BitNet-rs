@@ -1,10 +1,10 @@
-# BitNet.rs Helm Chart
+# bitnet-rs Helm Chart
 
-This Helm chart deploys BitNet.rs, the high-performance Rust implementation of 1-bit LLM inference engine.
+This Helm chart deploys bitnet-rs, the high-performance Rust implementation of 1-bit LLM inference engine.
 
 ## Overview
 
-BitNet.rs is the **primary, production-ready implementation** of BitNet, offering:
+bitnet-rs is the **primary, production-ready implementation** of BitNet, offering:
 
 - **Memory Safety**: Rust's ownership system prevents memory leaks and buffer overflows
 - **High Performance**: Zero-cost abstractions and SIMD optimizations
@@ -75,7 +75,7 @@ legacy:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    BitNet.rs Deployment                     │
+│                    bitnet-rs Deployment                     │
 ├─────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
 │  │   CPU Pods  │  │   GPU Pods  │  │  Legacy (Optional)  │  │
@@ -193,4 +193,4 @@ The chart includes Prometheus metrics endpoints:
 
 ## License
 
-This chart is part of the BitNet.rs project and follows the same license terms.
+This chart is part of the bitnet-rs project and follows the same license terms.

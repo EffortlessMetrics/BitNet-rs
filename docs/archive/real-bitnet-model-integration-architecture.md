@@ -2,19 +2,19 @@
 
 ## Executive Summary
 
-This architectural blueprint transforms Issue #218 "MVP Requirement: Real BitNet Model Integration and Validation" into a production-ready implementation strategy for BitNet.rs neural network inference. The blueprint addresses the complete neural network pipeline: Model Loading → Quantization → Inference → Output, enabling end-to-end validation with actual BitNet model artifacts while maintaining production-grade performance and cross-validation accuracy.
+This architectural blueprint transforms Issue #218 "MVP Requirement: Real BitNet Model Integration and Validation" into a production-ready implementation strategy for BitNet-rs neural network inference. The blueprint addresses the complete neural network pipeline: Model Loading → Quantization → Inference → Output, enabling end-to-end validation with actual BitNet model artifacts while maintaining production-grade performance and cross-validation accuracy.
 
 ## Feature Scope Definition
 
 ### Primary Objective
-Replace mock model infrastructure with real BitNet model integration across the complete BitNet.rs inference pipeline, ensuring:
+Replace mock model infrastructure with real BitNet model integration across the complete BitNet-rs inference pipeline, ensuring:
 - **Production Quantization Accuracy**: I2S, TL1, TL2 validation with real weight tensors
 - **Device-Aware Execution**: GPU acceleration with transparent CPU fallback
 - **GGUF Format Compatibility**: Enhanced parsing with tensor alignment validation
 - **Cross-Validation Framework**: C++ parity testing with configurable numerical tolerance
 - **Performance Characteristics**: Acceptable inference latency with real model artifacts
 
-### Affected BitNet.rs Crates
+### Affected BitNet-rs Crates
 
 #### Core Library Crates
 - **`bitnet-models`**: Enhanced GGUF loading with real model validation
@@ -73,7 +73,7 @@ Replace mock model infrastructure with real BitNet model integration across the 
 ## User Stories with Business Value
 
 ### US1: Real Model Integration for Production Readiness
-**As a** BitNet.rs user deploying neural network inference in production
+**As a** BitNet-rs user deploying neural network inference in production
 **I want** to load and run real BitNet models with validated accuracy
 **So that** I can trust the inference outputs for production applications
 
@@ -85,7 +85,7 @@ Replace mock model infrastructure with real BitNet model integration across the 
 - **AC3**: Performance metrics collection provides detailed timing breakdown (prefill, decode, tokenization) // AC:3
 
 ### US2: Cross-Validation Against Reference Implementation
-**As a** BitNet.rs developer validating correctness
+**As a** BitNet-rs developer validating correctness
 **I want** to compare outputs with C++ reference implementation
 **So that** I can ensure numerical accuracy and catch regressions
 
@@ -97,7 +97,7 @@ Replace mock model infrastructure with real BitNet model integration across the 
 - **AC6**: Token generation accuracy ≥99% for deterministic inputs // AC:6
 
 ### US3: Enhanced GGUF Compatibility and Validation
-**As a** BitNet.rs user working with various model formats
+**As a** BitNet-rs user working with various model formats
 **I want** comprehensive GGUF format validation and error handling
 **So that** I can identify and resolve model compatibility issues quickly
 
@@ -108,7 +108,7 @@ Replace mock model infrastructure with real BitNet model integration across the 
 - **AC8**: Enhanced error messages provide actionable guidance for model issues // AC:8
 
 ### US4: CI Integration with Real Model Testing
-**As a** BitNet.rs maintainer ensuring quality
+**As a** BitNet-rs maintainer ensuring quality
 **I want** automated testing with real models in CI
 **So that** I can catch integration issues early and maintain quality standards
 
@@ -506,6 +506,6 @@ impl GPUBackend for MockGPUBackend {
 
 ## Conclusion
 
-This architectural blueprint provides comprehensive guidance for implementing real BitNet model integration in BitNet.rs. The design prioritizes production readiness, numerical accuracy, and robust validation while maintaining development velocity through intelligent testing strategies and automated quality assurance.
+This architectural blueprint provides comprehensive guidance for implementing real BitNet model integration in BitNet-rs. The design prioritizes production readiness, numerical accuracy, and robust validation while maintaining development velocity through intelligent testing strategies and automated quality assurance.
 
-The implementation will transform BitNet.rs from a promising neural network inference framework into a production-validated system capable of handling real-world BitNet model deployment with confidence in accuracy and performance characteristics.
+The implementation will transform BitNet-rs from a promising neural network inference framework into a production-validated system capable of handling real-world BitNet model deployment with confidence in accuracy and performance characteristics.

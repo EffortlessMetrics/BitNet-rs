@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'BitNet.rs ECS deployment with auto-scaling and load balancing'
+Description: 'bitnet-rs ECS deployment with auto-scaling and load balancing'
 
 Parameters:
   VpcId:
@@ -14,7 +14,7 @@ Parameters:
 
   ImageUri:
     Type: String
-    Description: ECR image URI for BitNet.rs
+    Description: ECR image URI for bitnet-rs
     Default: 123456789012.dkr.ecr.us-west-2.amazonaws.com/bitnet-rs:latest
 
   DesiredCount:
@@ -171,7 +171,7 @@ Resources:
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security group for BitNet.rs load balancer
+      GroupDescription: Security group for bitnet-rs load balancer
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -186,7 +186,7 @@ Resources:
   ServiceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Security group for BitNet.rs service
+      GroupDescription: Security group for bitnet-rs service
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp

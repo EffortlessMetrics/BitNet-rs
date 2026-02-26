@@ -2,7 +2,7 @@
 
 **Version**: 1.0
 **Status**: Draft
-**Author**: BitNet.rs Team
+**Author**: BitNet-rs Team
 **Date**: 2025-10-26
 **Target Release**: v0.2.0
 
@@ -12,7 +12,7 @@
 
 ### Current State: Manual Setup Burden
 
-BitNet.rs cross-validation currently requires **manual multi-step setup** when C++ backend libraries are not detected at build time:
+BitNet-rs cross-validation currently requires **manual multi-step setup** when C++ backend libraries are not detected at build time:
 
 ```bash
 # Current workflow (5+ commands)
@@ -2018,7 +2018,7 @@ cargo build -p xtask
 
 ## Summary
 
-This specification defines a comprehensive **end-to-end auto-repair workflow** for BitNet.rs cross-validation infrastructure:
+This specification defines a comprehensive **end-to-end auto-repair workflow** for BitNet-rs cross-validation infrastructure:
 
 **Key Innovations**:
 1. **One-Command Experience**: `--repair=auto` replaces 5-step manual workflow

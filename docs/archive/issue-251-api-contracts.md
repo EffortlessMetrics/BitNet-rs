@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the comprehensive API contracts for the BitNet.rs production inference server, including REST endpoints, request/response schemas, error handling, and streaming protocols. All APIs are designed with quantization awareness, device optimization, and production reliability requirements.
+This document defines the comprehensive API contracts for the BitNet-rs production inference server, including REST endpoints, request/response schemas, error handling, and streaming protocols. All APIs are designed with quantization awareness, device optimization, and production reliability requirements.
 
 ## API Version and Compatibility
 
@@ -1325,4 +1325,4 @@ cargo test --no-default-features --features cpu -p bitnet-server --test integrat
 cargo run -p bitnet-server-bench -- --test api-performance --duration 300s
 ```
 
-This comprehensive API contract specification ensures consistent, reliable, and production-ready interfaces for the BitNet.rs inference server with full quantization awareness and enterprise-grade capabilities.
+This comprehensive API contract specification ensures consistent, reliable, and production-ready interfaces for the BitNet-rs inference server with full quantization awareness and enterprise-grade capabilities.

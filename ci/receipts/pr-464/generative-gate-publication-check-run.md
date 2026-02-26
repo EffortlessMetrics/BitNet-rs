@@ -63,7 +63,7 @@ gh pr edit 464 --add-label "enhancement,documentation"
 
 ---
 
-## BitNet.rs Validation
+## BitNet-rs Validation
 
 ### Neural Network Features
 - **TL LUT Helper:** Safe table lookup index calculation with overflow protection

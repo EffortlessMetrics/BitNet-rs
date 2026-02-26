@@ -1,4 +1,4 @@
-# BitNet.rs Performance Regression Analysis - PR #431
+# bitnet-rs Performance Regression Analysis - PR #431
 
 ## Gate Decision: ✅ PASS
 **Evidence**: `method: cargo bench workspace; result: quantization +7.6-25.2%, GPU 42x speedup, 0 regressions; reason: all improvements within statistical significance, no performance degradation detected`
@@ -167,7 +167,7 @@ cargo bench -p bitnet-kernels --no-default-features --features gpu
 - **Device Compatibility**: Automatic CPU fallback preserved, GPU detection overhead <1ms
 
 ### Performance Regression Classification
-**BitNet.rs Thresholds**:
+**bitnet-rs Thresholds**:
 - Critical Regression: >15% degradation → **NONE DETECTED**
 - Major Regression: 10-15% degradation → **NONE DETECTED**
 - Minor Regression: 5-10% degradation → **NONE DETECTED**
@@ -217,7 +217,7 @@ cargo bench -p bitnet-kernels --no-default-features --features gpu
 
 ## SLO Compliance Assessment
 
-### BitNet.rs Neural Network SLO Requirements
+### bitnet-rs Neural Network SLO Requirements
 
 | SLO Requirement | Target | Current | Status |
 |-----------------|--------|---------|--------|

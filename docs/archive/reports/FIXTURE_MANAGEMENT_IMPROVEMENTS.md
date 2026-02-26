@@ -18,7 +18,7 @@
 
 ## Overview
 
-This document summarizes the improvements made to the fixture management system in the BitNet.rs testing framework to provide reliable test data with automatic cleanup capabilities.
+This document summarizes the improvements made to the fixture management system in the BitNet-rs testing framework to provide reliable test data with automatic cleanup capabilities.
 
 ## Key Improvements Implemented
 

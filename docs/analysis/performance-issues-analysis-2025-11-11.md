@@ -1,8 +1,8 @@
-# BitNet.rs Performance Issues Analysis - November 11, 2025
+# BitNet-rs Performance Issues Analysis - November 11, 2025
 
 ## Executive Summary
 
-This document analyzes all open performance-related issues in the BitNet.rs repository following the completion of PR #475 (GPU/CPU feature gate unification) and the recent guardrail wave. The analysis focuses on:
+This document analyzes all open performance-related issues in the BitNet-rs repository following the completion of PR #475 (GPU/CPU feature gate unification) and the recent guardrail wave. The analysis focuses on:
 
 1. Current status and relationship to recent work
 2. Whether issues are resolved, duplicated, or still actionable
@@ -612,7 +612,7 @@ Documentation (after optimizations):
 
 ## Conclusion
 
-The BitNet.rs performance landscape post-PR #475 shows:
+The BitNet-rs performance landscape post-PR #475 shows:
 
 1. **Three critical MVP blockers** identified:
    - #417 (QK256) - already recognized
@@ -635,5 +635,5 @@ The BitNet.rs performance landscape post-PR #475 shows:
 ---
 
 *Analysis Date: November 11, 2025*
-*Analyzed By: BitNet.rs Research Specialist*
+*Analyzed By: BitNet-rs Research Specialist*
 *Context: Post-PR #475 (GPU/CPU Feature Gate Unification)*

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Essential guidance for working with the BitNet.rs neural network inference codebase.
+Essential guidance for working with the bitnet-rs neural network inference codebase.
 
 ## Project Status
 
@@ -45,7 +45,7 @@ Essential guidance for working with the BitNet.rs neural network inference codeb
 
 ### Nix Flake (Recommended - Reproducible Builds)
 
-BitNet.rs uses **Nix as the canonical build and development spine**:
+bitnet-rs uses **Nix as the canonical build and development spine**:
 
 ```bash
 # Reproducible development environment (pinned Rust + all deps)
@@ -195,7 +195,7 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 
 ### Quantization Support
 
-BitNet.rs supports multiple I2_S quantization formats with automatic flavor detection:
+bitnet-rs supports multiple I2_S quantization formats with automatic flavor detection:
 
 - **I2_S BitNet32-F16**: Production 2-bit signed quantization (32-elem blocks, inline
   F16 scales) - ✅ CPU/GPU
@@ -236,7 +236,7 @@ BITNET_CPP_DIR=/path/to/bitnet.cpp cargo run -p xtask -- crossval
 
 ### QK256 AVX2 Fast Path (v0.2 Foundation)
 
-BitNet.rs implements AVX2-accelerated QK256 dequantization with runtime dispatch:
+bitnet-rs implements AVX2-accelerated QK256 dequantization with runtime dispatch:
 
 - **Runtime dispatch**: Scalar fallback if `avx2` is unavailable at runtime
 - **Correctness parity**: ≤ 1e-5 max absolute difference vs scalar on randomized shapes
@@ -290,7 +290,7 @@ BitNet.rs implements AVX2-accelerated QK256 dequantization with runtime dispatch
 
 ### Prompt Templates and Auto-Detection
 
-BitNet.rs supports multiple prompt templates for optimal model behavior. The CLI
+bitnet-rs supports multiple prompt templates for optimal model behavior. The CLI
 automatically detects the appropriate template using:
 
 1. **Priority 1**: GGUF `chat_template` metadata (detects LLaMA-3 special tokens and
@@ -397,7 +397,7 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 
 ### Flag Aliases
 
-BitNet.rs CLI supports convenient aliases for common flags to improve compatibility with other tools:
+bitnet-rs CLI supports convenient aliases for common flags to improve compatibility with other tools:
 
 ```bash
 # --max-tokens (primary) with backward-compatible aliases
@@ -492,7 +492,7 @@ The engine evaluates stops in this order for **all** generation paths:
 
 ### Interactive Chat
 
-BitNet.rs provides an interactive chat mode with REPL and built-in commands. The CLI
+bitnet-rs provides an interactive chat mode with REPL and built-in commands. The CLI
 auto-detects the appropriate chat template and displays streaming responses:
 
 ```bash
@@ -862,7 +862,7 @@ Both backends available. Dual-backend cross-validation supported.
 
 ### Overview
 
-BitNet.rs maintains a healthy test suite. All `#[ignore]` attributes include a
+bitnet-rs maintains a healthy test suite. All `#[ignore]` attributes include a
 justification string (enforced by pre-commit hooks):
 
 - **~462 tests skipped** in a full `--workspace` run — all with `#[ignore = "reason"]` justification
@@ -1114,7 +1114,7 @@ cargo build --no-default-features --features cpu
 cargo build --no-default-features --features gpu
 ```
 
-**Why**: BitNet.rs deliberately has **empty default features** to prevent surprise dependencies. Always be explicit.
+**Why**: bitnet-rs deliberately has **empty default features** to prevent surprise dependencies. Always be explicit.
 
 ### 5. Running Ignored Tests Expecting Success
 

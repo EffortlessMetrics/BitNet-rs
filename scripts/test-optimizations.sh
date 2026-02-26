@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Testing BitNet.rs Optimizations ==="
+echo "=== Testing BitNet-rs Optimizations ==="
 echo ""
 echo "This script demonstrates:"
 echo "1. Real tokenizer support (HuggingFace JSON)"

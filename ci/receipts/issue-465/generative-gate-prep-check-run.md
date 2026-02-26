@@ -8,7 +8,7 @@
 
 ## Summary
 
-Branch preparation complete. All BitNet.rs quality gates pass with comprehensive evidence.
+Branch preparation complete. All BitNet-rs quality gates pass with comprehensive evidence.
 
 **Ready for PR:** ✅ Yes
 **Next Step:** diff-reviewer (final diff validation)

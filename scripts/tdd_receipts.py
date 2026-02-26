@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TDD Receipt Generator for BitNet.rs
+TDD Receipt Generator for bitnet-rs
 
 Generates test status receipts from actual cargo nextest runs and updates
 README.md and CLAUDE.md with concrete, verifiable test counts.

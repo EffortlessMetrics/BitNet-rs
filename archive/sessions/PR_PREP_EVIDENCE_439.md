@@ -23,7 +23,7 @@ Feature branch successfully prepared for Draft PR creation. All quality gates pa
 - **Latest Commit:** `f8fabff` - docs(#439): Add doctests and fix command examples for unified GPU predicates
 - **All Changes Committed:** Yes
 - **Uncommitted Changes:** 0 (test cache excluded)
-- **Commit Message Compliance:** All commits use proper BitNet.rs prefixes (feat:, docs:, test:, fix:, chore:, governance:)
+- **Commit Message Compliance:** All commits use proper BitNet-rs prefixes (feat:, docs:, test:, fix:, chore:, governance:)
 
 **Total Commits:** 12
 **Files Changed:** 84 files (+10,112 insertions, -74 deletions)
@@ -372,7 +372,7 @@ To github.com:EffortlessMetrics/BitNet-rs.git
 **Routing Rationale:**
 - Branch preparation complete with all quality gates passing
 - Comprehensive evidence bundle assembled for PR description
-- All commits use proper BitNet.rs prefixes
+- All commits use proper BitNet-rs prefixes
 - Feature matrix fully validated
 - Documentation comprehensive with doctests
 - Ready for final diff review before PR creation

@@ -118,7 +118,7 @@ fn test_ac8_required_gates_commands_documented() {
     // 3. Test (CPU baseline):
     //    cargo test --workspace --no-default-features --features cpu
     //
-    // These gates ensure BitNet.rs compiles on all platforms without GPU dependencies
+    // These gates ensure BitNet-rs compiles on all platforms without GPU dependencies
 
     // Test passes by reaching this point
 }
@@ -146,7 +146,7 @@ fn test_ac8_exploratory_gates_commands_documented() {
 
 /// AC:8 - Verify feature flag discipline in CI commands
 ///
-/// This test validates that CI commands follow BitNet.rs feature flag discipline:
+/// This test validates that CI commands follow BitNet-rs feature flag discipline:
 /// - Required gates: --no-default-features --features cpu
 /// - Exploratory gates: --all-features
 /// - Default features: EMPTY (never implicitly used)
@@ -154,7 +154,7 @@ fn test_ac8_exploratory_gates_commands_documented() {
 /// Tests specification: ci-feature-aware-gates-spec.md#ac8-add-feature-aware-exploratory-ci-gates
 #[test]
 fn test_ac8_feature_flag_discipline() {
-    // BitNet.rs feature flag requirements:
+    // BitNet-rs feature flag requirements:
     //
     // 1. Always specify features explicitly
     // 2. Use --no-default-features to prevent unwanted dependencies

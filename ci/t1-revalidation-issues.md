@@ -164,7 +164,7 @@ All three gates must pass:
 
 ## Notes
 
-- **Library code is clean**: The core BitNet.rs library (bitnet, bitnet-inference, etc.) compiles without warnings
+- **Library code is clean**: The core BitNet-rs library (bitnet, bitnet-inference, etc.) compiles without warnings
 - **Auxiliary targets need fixes**: Examples, benchmarks, and test infrastructure have mechanical issues
 - **No functional changes required**: All fixes are mechanical (imports, type annotations, deprecations)
 - **Feature gates**: Verify `bitnet_server` is properly feature-gated in examples

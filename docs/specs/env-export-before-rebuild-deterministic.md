@@ -10,7 +10,7 @@
 
 ## Overview
 
-This specification addresses the **environment export propagation gap** in BitNet.rs auto-repair workflow. Currently, `setup-cpp-auto` successfully installs C++ libraries and outputs shell exports (e.g., `export BITNET_CPP_DIR="/path"`), but these environment variables are **never applied** to the subsequent `rebuild_xtask()` subprocess. This causes the rebuild to inherit stale environment variables, preventing build.rs from detecting the newly-installed libraries.
+This specification addresses the **environment export propagation gap** in BitNet-rs auto-repair workflow. Currently, `setup-cpp-auto` successfully installs C++ libraries and outputs shell exports (e.g., `export BITNET_CPP_DIR="/path"`), but these environment variables are **never applied** to the subsequent `rebuild_xtask()` subprocess. This causes the rebuild to inherit stale environment variables, preventing build.rs from detecting the newly-installed libraries.
 
 **Impact**: The auto-repair workflow appears to succeed but produces a binary with `HAS_BITNET=false` (BITNET_STUB mode), breaking deterministic repair and requiring manual intervention.
 
@@ -1088,4 +1088,4 @@ warning: crossval: Linked libraries: bitnet, llama, ggml
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0.0 | 2025-10-27 | BitNet.rs Spec Agent | Initial specification based on gap analysis |
+| 1.0.0 | 2025-10-27 | BitNet-rs Spec Agent | Initial specification based on gap analysis |

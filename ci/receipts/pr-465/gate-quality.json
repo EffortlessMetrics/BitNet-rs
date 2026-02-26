@@ -135,7 +135,7 @@
     "decision": "FINALIZE",
     "next_agent": "doc-updater",
     "next_microloop": "6/8 (Documentation)",
-    "rationale": "All required gates pass; all recommended gates pass or appropriate skip; BitNet.rs neural network standards met; production-ready quality achieved"
+    "rationale": "All required gates pass; all recommended gates pass or appropriate skip; BitNet-rs neural network standards met; production-ready quality achieved"
   },
   "metrics": {
     "total_gates": 10,

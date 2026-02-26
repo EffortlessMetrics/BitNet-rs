@@ -1,7 +1,7 @@
-# BitNet.rs Mutation Testing Enhancement Report
+# BitNet-rs Mutation Testing Enhancement Report
 
 ## Executive Summary
-Enhanced BitNet.rs neural network test coverage to address critical arithmetic mutation survivors. Successfully implemented targeted tests for compression ratio calculations and mathematical operations.
+Enhanced BitNet-rs neural network test coverage to address critical arithmetic mutation survivors. Successfully implemented targeted tests for compression ratio calculations and mathematical operations.
 
 ## Results Overview
 
@@ -103,7 +103,7 @@ proptest! {
 - `crates/bitnet-quantization/tests/compression_ratio_tests.rs` (NEW)
 - `crates/bitnet-quantization/tests/critical_mutation_killers.rs` (NEW)
 
-## BitNet.rs Compliance
+## BitNet-rs Compliance
 ✅ Maintains quantization accuracy requirements
 ✅ Preserves device-aware operations
 ✅ No production code modifications

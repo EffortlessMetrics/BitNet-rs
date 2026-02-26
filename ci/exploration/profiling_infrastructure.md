@@ -1,4 +1,4 @@
-# BitNet.rs Profiling Infrastructure
+# BitNet-rs Profiling Infrastructure
 
 **Status**: Exploration document for phase2_flamegraph integration
 **Date**: 2025-10-22
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-BitNet.rs has a well-established benchmarking infrastructure with multiple layers:
+BitNet-rs has a well-established benchmarking infrastructure with multiple layers:
 
 1. **Criterion.rs benchmarks** (crates/*/benches/) - Regression detection via statistical analysis
 2. **Receipt-based performance tracking** (xtask benchmark, ci/inference.json) - Production inference measurement
@@ -476,7 +476,7 @@ mkdir -p docs/baselines/perf/flamegraphs/archives/  # Historical
 
 # Create README for flamegraph directory
 cat > docs/baselines/perf/flamegraphs/README.md << 'EOF'
-# BitNet.rs Flamegraph Baselines
+# BitNet-rs Flamegraph Baselines
 
 This directory contains CPU flamegraphs for performance profiling.
 

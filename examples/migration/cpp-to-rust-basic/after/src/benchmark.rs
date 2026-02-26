@@ -1,7 +1,7 @@
 //! Performance benchmark comparing C++ and Rust implementations
 //!
 //! This benchmark demonstrates the performance improvements gained
-//! by migrating from C++ BitNet to BitNet.rs.
+//! by migrating from C++ BitNet to bitnet-rs.
 
 use anyhow::Result;
 use std::time::{Duration, Instant};

@@ -4,7 +4,7 @@
 
 Following the successful merge of QK256 (GGML I2_S) pure-Rust quantization support in PR #468, this polish sprint addresses UX improvements, logging consistency, and runtime guardrails to ensure production readiness. The QK256 implementation introduced dual-flavor I2_S quantization (BitNet32-F16 and QK256) with automatic format detection, but several developer experience and operational concerns require refinement before v0.1.0-mvp release.
 
-**Affected BitNet.rs Components:**
+**Affected BitNet-rs Components:**
 - `bitnet-models`: GGUF loader strict mode, K/V cache guardrails, QK256 tolerance handling
 - `bitnet-cli`: CLI flag for strict loader mode, diagnostic logging
 - `bitnet-quantization`: QK256 size tolerance centralization, K/V cache post-slice assertions
@@ -22,7 +22,7 @@ Following the successful merge of QK256 (GGML I2_S) pure-Rust quantization suppo
 
 ## User Story
 
-As a **BitNet.rs developer or production deployment engineer**, I want **polished UX, consistent logging, and runtime guardrails for the QK256 MVP** so that **I can confidently deploy QK256-quantized models with clear diagnostics, predictable error handling, and cross-validation parity with the C++ reference implementation**.
+As a **BitNet-rs developer or production deployment engineer**, I want **polished UX, consistent logging, and runtime guardrails for the QK256 MVP** so that **I can confidently deploy QK256-quantized models with clear diagnostics, predictable error handling, and cross-validation parity with the C++ reference implementation**.
 
 ## Acceptance Criteria
 
@@ -62,7 +62,7 @@ As a **BitNet.rs developer or production deployment engineer**, I want **polishe
 **AC6: FFI Build Hygiene**
 - Given FFI compilation generates verbose warnings, when `build.rs` compiles C++ shims, then it MUST use a single consolidated `compile_cpp_shim()` function (defined in `xtask/src/ffi.rs` and re-used in all FFI build scripts).
 - The `compile_cpp_shim()` MUST use `-isystem` for third-party includes (CUDA, BitNet C++) instead of `-I` to suppress warnings from external headers.
-- FFI build output MUST emit only BitNet.rs-specific warnings (suppressing CUDA SDK and C++ reference implementation warnings).
+- FFI build output MUST emit only BitNet-rs-specific warnings (suppressing CUDA SDK and C++ reference implementation warnings).
 - All `build.rs` files in `bitnet-kernels`, `bitnet-quantization`, and `crossval` MUST migrate to the unified `compile_cpp_shim()` helper.
 
 **AC7: CI/Parity Smoke Test**

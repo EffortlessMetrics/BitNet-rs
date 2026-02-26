@@ -203,7 +203,7 @@ During validation, two test files were fixed to resolve compilation errors:
 
 **✅ VALIDATION SUCCESSFUL - ALL CRITERIA MET**
 
-This comprehensive validation proves that the BitNet.rs inference engine:
+This comprehensive validation proves that the BitNet-rs inference engine:
 - Builds correctly with release optimizations
 - Loads models reliably (GGUF v3 support)
 - Executes inference correctly (AVX2 acceleration active)

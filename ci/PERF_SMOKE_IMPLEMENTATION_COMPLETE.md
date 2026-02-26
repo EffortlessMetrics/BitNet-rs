@@ -66,7 +66,7 @@ perf-smoke:
 - **YAML syntax**: Valid (Python YAML parser)
 - **Job dependencies**: Correct (`needs: [test]`)
 - **Job names**: No duplicates
-- **Feature flags**: Follows BitNet.rs conventions
+- **Feature flags**: Follows BitNet-rs conventions
 - **Model paths**: Consistent with existing jobs
 - **Non-gating config**: Properly implemented at step level
 - **Complementarity**: Doesn't conflict with existing workflows
@@ -251,7 +251,7 @@ The performance smoke test provides:
 
 ---
 
-**Implementation by**: Generative Adapter (BitNet.rs subagent)
+**Implementation by**: Generative Adapter (BitNet-rs subagent)
 **Date**: 2025-10-22
 **Flow**: generative
 **Gate**: impl

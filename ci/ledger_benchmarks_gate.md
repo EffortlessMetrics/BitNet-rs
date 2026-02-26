@@ -1,4 +1,4 @@
-# Benchmarks Gate - BitNet.rs Performance Validation Evidence
+# Benchmarks Gate - BitNet-rs Performance Validation Evidence
 
 ## review:gate:benchmarks
 

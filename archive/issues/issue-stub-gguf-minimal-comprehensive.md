@@ -7,7 +7,7 @@ The current `load_gguf_minimal` and `create_mock_tensor_layout` functions in `cr
 1. **Masks real validation failures**: Creates mock tensors for missing transformer layers instead of failing gracefully
 2. **Misleads developers**: Mock tensors appear as valid data, making debugging incomplete GGUF files difficult
 3. **Introduces test infrastructure leakage**: `create_mock_tensor_layout` is used in production code paths rather than being test-only
-4. **Violates BitNet.rs architecture principles**: Goes against the robust error handling and validation-first approach
+4. **Violates BitNet-rs architecture principles**: Goes against the robust error handling and validation-first approach
 
 ## Current Implementation Analysis
 
@@ -56,7 +56,7 @@ for layer in 0..num_layers {
    echo "mock_gguf_content" > incomplete_model.gguf
    ```
 
-2. **Load using BitNet.rs:**
+2. **Load using BitNet-rs:**
    ```rust
    use bitnet_models::load_gguf;
    use bitnet_common::Device;
@@ -81,7 +81,7 @@ for layer in 0..num_layers {
 
 ### Architecture Violation
 
-This pattern violates BitNet.rs core principles:
+This pattern violates BitNet-rs core principles:
 - **Validation-First**: Should fail fast on invalid inputs
 - **Robust Error Handling**: Should provide descriptive error messages
 - **Test Isolation**: Test helpers should not be in production paths
@@ -465,7 +465,7 @@ proptest! {
 ### Cross-References
 - **Related to**: Issue #251 - Production-Ready Inference Server (error handling improvements)
 - **Depends on**: GGUF format validation infrastructure in `bitnet-models`
-- **Blocks**: Complete BitNet.rs validation framework implementation
+- **Blocks**: Complete BitNet-rs validation framework implementation
 - **References**: `docs/explanation/issue-260-mock-elimination-spec.md`
 
 ### Affected Components
@@ -498,7 +498,7 @@ proptest! {
 ---
 
 **Implementation Notes:**
-- Follow BitNet.rs validation-first architecture principles
+- Follow BitNet-rs validation-first architecture principles
 - Maintain compatibility with existing enhanced GGUF parser
 - Ensure proper error propagation through the inference stack
 - Use `tracing` for debugging information in development builds

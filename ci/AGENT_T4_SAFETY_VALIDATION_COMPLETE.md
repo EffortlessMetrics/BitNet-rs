@@ -8,7 +8,7 @@
 
 ## Execution Summary
 
-The Safety Scanner executed comprehensive T4 (Safety) validation for PR #473 across the Integrative Flow, focusing on BitNet.rs neural network security patterns including GPU memory safety, FFI quantization bridge validation, GGUF model processing, and unsafe code auditing.
+The Safety Scanner executed comprehensive T4 (Safety) validation for PR #473 across the Integrative Flow, focusing on BitNet-rs neural network security patterns including GPU memory safety, FFI quantization bridge validation, GGUF model processing, and unsafe code auditing.
 
 ### Flow Context
 
@@ -297,7 +297,7 @@ HashSet operations → O(1) lookup → no unsafe needed
    - ✅ O(1) HashSet operations
    - ✅ 92% mutation test coverage
 
-## BitNet.rs-Specific Security Context
+## BitNet-rs-Specific Security Context
 
 **Neural Network Security Properties**:
 - Quantization accuracy is security (prevents inference hijacking)

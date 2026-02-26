@@ -199,7 +199,7 @@ RUN_PERF_TESTS=1 RAYON_NUM_THREADS=1 cargo test \
 - [ ] Local development docs work as written
 - [ ] No increase in CI failure rate
 
-## References in BitNet.rs Codebase
+## References in BitNet-rs Codebase
 
 ### Configuration Files
 - `.config/nextest.toml` - Test runner settings (profiles: default, ci)

@@ -10,11 +10,11 @@
 
 ## Executive Summary
 
-✅ **All BitNet.rs quality gates PASSED**
+✅ **All BitNet-rs quality gates PASSED**
 ✅ **9 of 10 Issue #465 acceptance criteria tests passing**
 ✅ **Implementation ready for refinement phase (code-refiner)**
 
-The implementation has been comprehensively validated against BitNet.rs neural network standards. All mechanical issues have been resolved through fix-forward corrections. One test (AC5 branch protection) requires manual GitHub API verification and is appropriately marked as ignored.
+The implementation has been comprehensively validated against BitNet-rs neural network standards. All mechanical issues have been resolved through fix-forward corrections. One test (AC5 branch protection) requires manual GitHub API verification and is appropriately marked as ignored.
 
 ---
 
@@ -80,7 +80,7 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in compilation succes
 
 ---
 
-## BitNet.rs-Specific Validations
+## BitNet-rs-Specific Validations
 
 ### Neural Network Context ✅
 - **I2_S Quantization**: CPU baseline demonstrates real I2_S compute
@@ -205,7 +205,7 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in compilation succes
 **Rationale**:
 1. All mechanical quality gates passed (format, clippy, tests, build)
 2. TDD compliance validated (Red-Green-Refactor patterns present)
-3. BitNet.rs neural network standards met (I2_S quantization, honest receipts, feature flags)
+3. BitNet-rs neural network standards met (I2_S quantization, honest receipts, feature flags)
 4. Fix-forward corrections applied successfully
 5. Implementation complete and production-ready
 
@@ -235,14 +235,14 @@ tdd: Red-Green-Refactor patterns validated, test-to-AC mapping complete
 - [x] Test execution passed (412/412 workspace, 11/12 Issue #465)
 - [x] Build validation passed (CPU + GPU features)
 - [x] CPU baseline receipt generated and validated
-- [x] BitNet.rs neural network standards validated
+- [x] BitNet-rs neural network standards validated
 - [x] Fix-forward corrections applied and committed
 - [x] Known limitations documented (AC5 GitHub API requirement)
 - [x] Routing decision documented (FINALIZE → code-refiner)
 
 ---
 
-**Validation Complete**: Implementation meets all BitNet.rs quality standards and is ready for refinement phase in Generative flow.
+**Validation Complete**: Implementation meets all BitNet-rs quality standards and is ready for refinement phase in Generative flow.
 
 **Agent Signature**: impl-finalizer
 **Timestamp**: 2025-10-15T20:00:00Z

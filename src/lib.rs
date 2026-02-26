@@ -1,6 +1,6 @@
-//! # BitNet.rs - High-Performance 1-bit LLM Inference
+//! # bitnet-rs - High-Performance 1-bit LLM Inference
 //!
-//! BitNet.rs is a high-performance Rust implementation of `BitNet` 1-bit Large Language Model inference,
+//! bitnet-rs is a high-performance Rust implementation of `BitNet` 1-bit Large Language Model inference,
 //! providing drop-in compatibility with the original Python/C++ implementation while achieving
 //! superior performance and safety.
 //!
@@ -35,7 +35,7 @@
 //!
 //! ## Feature Flags
 //!
-//! BitNet.rs uses feature flags to enable optional functionality:
+//! bitnet-rs uses feature flags to enable optional functionality:
 //!
 //! - `cpu` (default): CPU inference with optimized kernels
 //! - `gpu`: GPU acceleration via CUDA
@@ -58,7 +58,7 @@
 //!
 //! ## Performance
 //!
-//! BitNet.rs achieves significant performance improvements over the original Python implementation:
+//! bitnet-rs achieves significant performance improvements over the original Python implementation:
 //!
 //! - **2-5x faster inference** through zero-cost abstractions and SIMD optimization
 //! - **Reduced memory footprint** via zero-copy operations and efficient memory management

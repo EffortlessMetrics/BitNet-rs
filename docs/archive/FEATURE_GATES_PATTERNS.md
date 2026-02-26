@@ -1,8 +1,8 @@
-# BitNet.rs Feature Gate Patterns & Conditional Compilation Report
+# BitNet-rs Feature Gate Patterns & Conditional Compilation Report
 
 ## Executive Summary
 
-BitNet.rs uses an **intentional empty-default-features architecture** with carefully structured feature gates across 18+ crates and 151+ conditional compilation markers. Features are designed as composable components enabling different compile paths for CPU, GPU, cross-validation, and test scenarios.
+BitNet-rs uses an **intentional empty-default-features architecture** with carefully structured feature gates across 18+ crates and 151+ conditional compilation markers. Features are designed as composable components enabling different compile paths for CPU, GPU, cross-validation, and test scenarios.
 
 **Key Principle**: Default features are **EMPTY** - all capabilities must be explicitly enabled to prevent surprise dependencies.
 
@@ -652,7 +652,7 @@ myfeature = ["dep:my-crate", "my-crate/child-feature"]  # ✅
 
 ## Conclusion
 
-BitNet.rs uses sophisticated feature gating to enable:
+BitNet-rs uses sophisticated feature gating to enable:
 
 1. **Modular compilation** - Only compile what you need
 2. **Multiple backends** - CPU, GPU, or both with graceful fallback

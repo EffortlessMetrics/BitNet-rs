@@ -171,7 +171,7 @@
     "integrative_flow": "successfully completed",
     "next_action": "none (finalized)",
     "verified_by": "pr-merge-finalizer",
-    "certification": "All gates passed, workspace validated, artifacts archived, BitNet.rs standards met"
+    "certification": "All gates passed, workspace validated, artifacts archived, BitNet-rs standards met"
   },
 
   "evidence_summary": {

@@ -1,16 +1,16 @@
 # Strict Mode API Contracts
 
 **Document Version:** 1.0.0
-**Target BitNet.rs Version:** 0.1.0+
+**Target BitNet-rs Version:** 0.1.0+
 **Related Issue:** #453
 **Type:** Reference (Diátaxis)
-**Audience:** BitNet.rs developers implementing strict mode validation
+**Audience:** BitNet-rs developers implementing strict mode validation
 
 ---
 
 ## Overview
 
-This document defines the API contracts for strict mode quantization guards in BitNet.rs. It provides precise Rust type signatures, environment variable contracts, receipt schema extensions, and kernel ID naming conventions required for implementation.
+This document defines the API contracts for strict mode quantization guards in BitNet-rs. It provides precise Rust type signatures, environment variable contracts, receipt schema extensions, and kernel ID naming conventions required for implementation.
 
 ---
 
@@ -33,7 +33,7 @@ This document defines the API contracts for strict mode quantization guards in B
 **Location:** `crates/bitnet-common/src/strict_mode.rs`
 
 ```rust
-/// Strict mode configuration for BitNet.rs inference
+/// Strict mode configuration for BitNet-rs inference
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StrictModeConfig {
     /// Enable all strict mode checks
@@ -331,7 +331,7 @@ pub enum ComputationType {
 ```rust
 use thiserror::Error;
 
-/// BitNet.rs error types
+/// BitNet-rs error types
 #[derive(Debug, Error)]
 pub enum BitNetError {
     /// Strict mode validation failure (Issue #261, #453)

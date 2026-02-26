@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Comprehensive inference validation for BitNet.rs
+# Comprehensive inference validation for BitNet-rs
 # Tests accuracy, quality, and performance of actual text generation
 
 set -euo pipefail
@@ -21,7 +21,7 @@ REPORT_FILE="$OUTPUT_DIR/validation_${TIMESTAMP}.json"
 mkdir -p "$OUTPUT_DIR"
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}BitNet.rs Inference Validation Suite${NC}"
+echo -e "${BLUE}BitNet-rs Inference Validation Suite${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -218,7 +218,7 @@ generate_report() {
     "tests_run": $success_count,
     "avg_tokens_per_sec": "$avg_tokens_per_sec",
     "validation_status": "PASSED",
-    "notes": "BitNet.rs successfully performs inference with deterministic outputs"
+    "notes": "BitNet-rs successfully performs inference with deterministic outputs"
 }
 EOF
 

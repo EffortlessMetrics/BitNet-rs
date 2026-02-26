@@ -1,11 +1,11 @@
-# BitNet.rs Cross-Validation Infrastructure: Complete State Analysis
+# BitNet-rs Cross-Validation Infrastructure: Complete State Analysis
 
 **Date**: October 24, 2025  
 **Status**: Production-ready with recent enhancements (commit 8e26911)
 
 ## Executive Summary
 
-BitNet.rs has a **comprehensive, production-ready cross-validation infrastructure** enabling systematic comparison of Rust inference against the Microsoft BitNet C++ reference. Recent changes (commit `8e26911`) added per-token parity validation and extended tracing infrastructure.
+BitNet-rs has a **comprehensive, production-ready cross-validation infrastructure** enabling systematic comparison of Rust inference against the Microsoft BitNet C++ reference. Recent changes (commit `8e26911`) added per-token parity validation and extended tracing infrastructure.
 
 **Key Finding**: The infrastructure is **95%+ complete** with:
 - ✅ Per-token logits comparison (find first diverging token)
@@ -654,7 +654,7 @@ cargo run -p xtask -- trace-diff /tmp/rs /tmp/cpp
 
 ## Conclusion
 
-The cross-validation infrastructure in BitNet.rs is **production-ready** with:
+The cross-validation infrastructure in BitNet-rs is **production-ready** with:
 
 ✅ **Per-Token Comparison**: Identify first diverging token between Rust and C++  
 ✅ **92+ Tracepoints**: Comprehensive instrumentation across inference pipeline  

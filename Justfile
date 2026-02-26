@@ -1,4 +1,4 @@
-# BitNet.rs development commands
+# bitnet-rs development commands
 
 set dotenv-load := false
 

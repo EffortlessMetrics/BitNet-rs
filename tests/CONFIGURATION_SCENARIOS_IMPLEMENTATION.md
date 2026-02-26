@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the implementation of comprehensive configuration management that supports various testing scenarios for the BitNet.rs testing framework.
+This document summarizes the implementation of comprehensive configuration management that supports various testing scenarios for the BitNet-rs testing framework.
 
 ## Task Completed
 
@@ -299,6 +299,6 @@ The configuration management system successfully supports various testing scenar
 6. **Comprehensive validation** ensuring reliability
 7. **Easy-to-use APIs** for quick adoption
 
-This implementation enables the BitNet.rs testing framework to automatically adapt its behavior to match the specific requirements of different testing contexts, from fast unit tests to comprehensive cross-validation scenarios.
+This implementation enables the BitNet-rs testing framework to automatically adapt its behavior to match the specific requirements of different testing contexts, from fast unit tests to comprehensive cross-validation scenarios.
 
 **Task Status: ✅ COMPLETED**

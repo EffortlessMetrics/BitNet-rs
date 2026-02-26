@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-**Phase 1 Complete**: Rust-side tracing infrastructure is fully operational and validated. BitNet.rs can now capture Blake3 hashes and statistics for all intermediate activations during inference.
+**Phase 1 Complete**: Rust-side tracing infrastructure is fully operational and validated. BitNet-rs can now capture Blake3 hashes and statistics for all intermediate activations during inference.
 
 **Key Achievement**: Deployed production-ready layer-by-layer tracing with zero overhead when disabled, capturing **90 activation points across 30 transformer layers**.
 
@@ -467,7 +467,7 @@ cat /tmp/bitnet-traces/t0_blk0_attn_norm.trace | jq '.'
 
 **Phase 1 Status**: ✅ **OPERATIONAL**
 
-BitNet.rs now has production-ready layer-by-layer tracing infrastructure with:
+BitNet-rs now has production-ready layer-by-layer tracing infrastructure with:
 - 90 activation capture points
 - Blake3 cryptographic hashing
 - RMS statistical validation

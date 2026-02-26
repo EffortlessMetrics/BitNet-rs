@@ -1,4 +1,4 @@
-# BitNet.rs Test Suite Comprehensive Analysis
+# BitNet-rs Test Suite Comprehensive Analysis
 **Date**: 2025-10-20
 **Status**: Detailed Analysis Based on Code Inspection
 **Test Suite Status**: ✅ Tests Running (awaiting final counts)
@@ -255,7 +255,7 @@ Will update this document with:
 
 ### Conclusion
 
-The TDD scaffold situation is **much healthier than documented**. BitNet.rs has:
+The TDD scaffold situation is **much healthier than documented**. BitNet-rs has:
 - ✅ 1,469 total tests (comprehensive coverage)
 - ✅ Only 3 incomplete test implementations (known blockers - previously claimed 4 due to phantom test)
 - ✅ 52+ infrastructure-gated tests (fully implemented, need resources)

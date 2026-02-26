@@ -307,7 +307,7 @@ cargo test -p bitnet-ggml-ffi --features iq2s-ffi
 // GGML Quantization Shim - FFI Bridge
 // ============================================================================
 // llama.cpp API version: See VENDORED_GGML_COMMIT for exact commit hash
-// BitNet.rs integration: AC6 FFI build hygiene consolidation (Issue #469)
+// BitNet-rs integration: AC6 FFI build hygiene consolidation (Issue #469)
 // Compatible with: BitNet C++ v0.1.0-mvp and later
 // Build date: Generated at compile time from csrc/VENDORED_GGML_COMMIT
 // 
@@ -496,7 +496,7 @@ fn test_ffi_version_comments_present() {
         // These indicate the shim has proper version tracking
         let has_version_marker = content.contains("llama.cpp API version")
             || content.contains("VENDORED_GGML_COMMIT")
-            || content.contains("BitNet.rs integration");
+            || content.contains("BitNet-rs integration");
         
         let has_compatibility_info = content.contains("Compatible with")
             || content.contains("Build date");
@@ -806,8 +806,8 @@ Note: 3 tests remain ignored awaiting full fixture implementation (not bugs).
 
 ## References
 
-- **Issue #469**: FFI Build System Hygiene - https://github.com/microsoft/BitNet.rs/issues/469
-- **Issue #439**: GPU Feature Unification (RESOLVED) - https://github.com/microsoft/BitNet.rs/issues/439
+- **Issue #469**: FFI Build System Hygiene - https://github.com/microsoft/BitNet-rs/issues/469
+- **Issue #439**: GPU Feature Unification (RESOLVED) - https://github.com/microsoft/BitNet-rs/issues/439
 - **PR #475**: Feature gate unification merge - Commit `4ac8d2a2`
 - **CLAUDE.md**: Project guidance - `Feature Flags` section
 - **xtask-build-helper**: FFI build helper crate - `xtask-build-helper/src/lib.rs`

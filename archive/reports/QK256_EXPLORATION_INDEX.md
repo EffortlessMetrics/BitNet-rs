@@ -1,8 +1,8 @@
-# BitNet.rs QK256 Integration - Complete Exploration Index
+# BitNet-rs QK256 Integration - Complete Exploration Index
 
 ## Overview
 
-This directory contains comprehensive analysis of the BitNet.rs codebase for integrating QK256 (GGML I2_S with 256-element blocks) support. All documentation generated from thorough code exploration with absolute file paths and line numbers.
+This directory contains comprehensive analysis of the BitNet-rs codebase for integrating QK256 (GGML I2_S with 256-element blocks) support. All documentation generated from thorough code exploration with absolute file paths and line numbers.
 
 **Generated**: October 17, 2025
 **Total Lines**: ~1300

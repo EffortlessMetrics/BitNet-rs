@@ -39,7 +39,7 @@ Specifications finalized and committed for Issue #465 (CPU Path Followup - v0.1.
 
 ### ✅ Scope Validation
 - **Status**: PASS
-- **Evidence**: Feature scope aligned with BitNet.rs workspace structure
+- **Evidence**: Feature scope aligned with BitNet-rs workspace structure
 - **Details**:
   - Documentation updates: `README.md` quickstart and receipts sections
   - Baseline generation: CPU performance baseline with production 2B model
@@ -146,7 +146,7 @@ Specifications finalized and committed for Issue #465 (CPU Path Followup - v0.1.
 
 ---
 
-## BitNet.rs Alignment
+## BitNet-rs Alignment
 
 ### ✅ Feature Flags
 - **Pattern**: `--no-default-features --features cpu|gpu`
@@ -173,7 +173,7 @@ Specifications finalized and committed for Issue #465 (CPU Path Followup - v0.1.
 
 **Decision**: `FINALIZE → test-creator`
 
-**Rationale**: All specifications validated and committed with comprehensive neural network context, API contract alignment, and BitNet.rs architectural patterns. Ready for TDD implementation with feature-gated tests.
+**Rationale**: All specifications validated and committed with comprehensive neural network context, API contract alignment, and BitNet-rs architectural patterns. Ready for TDD implementation with feature-gated tests.
 
 **Evidence**:
 - ✅ 12 acceptance criteria with testable success metrics

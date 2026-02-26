@@ -1,4 +1,4 @@
-# BitNet.rs Issue #419 Research Documentation Index
+# bitnet-rs Issue #419 Research Documentation Index
 
 ## Quick Summary
 

@@ -1,4 +1,4 @@
-# Fast Feedback Demo Script for BitNet.rs (PowerShell)
+# Fast Feedback Demo Script for BitNet-rs (PowerShell)
 # This script demonstrates the fast feedback system capabilities
 
 param(
@@ -31,12 +31,12 @@ function Write-Error {
     Write-Host "[ERROR] $Message" -ForegroundColor $Red
 }
 
-Write-Host "🚀 BitNet.rs Fast Feedback System Demo" -ForegroundColor $Blue
+Write-Host "🚀 BitNet-rs Fast Feedback System Demo" -ForegroundColor $Blue
 Write-Host "======================================" -ForegroundColor $Blue
 
 # Check if we're in the right directory
 if (-not (Test-Path "Cargo.toml")) {
-    Write-Error "Please run this script from the BitNet.rs root directory"
+    Write-Error "Please run this script from the BitNet-rs root directory"
     exit 1
 }
 

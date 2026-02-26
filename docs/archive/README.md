@@ -1,6 +1,6 @@
-# BitNet.rs Documentation
+# BitNet-rs Documentation
 
-Welcome to the comprehensive documentation for BitNet.rs, the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.
+Welcome to the comprehensive documentation for BitNet-rs, the production-ready Rust implementation of BitNet 1-bit Large Language Model inference.
 
 ## Quick Navigation
 
@@ -31,7 +31,7 @@ Welcome to the comprehensive documentation for BitNet.rs, the production-ready R
 
 ### Core Concepts
 
-BitNet.rs is built around several key concepts:
+BitNet-rs is built around several key concepts:
 
 - **Models**: BitNet model implementations with 1-bit quantization support
 - **Inference Engines**: High-performance inference with CPU/GPU acceleration
@@ -128,9 +128,9 @@ bitnet-cli inference --model microsoft/bitnet-b1_58-large --prompt "Hello, world
 
 ## Performance
 
-BitNet.rs delivers significant performance improvements over existing implementations:
+BitNet-rs delivers significant performance improvements over existing implementations:
 
-| Metric | Original C++ | BitNet.rs | Improvement |
+| Metric | Original C++ | BitNet-rs | Improvement |
 |--------|--------------|-----------|-------------|
 | **Inference Speed** | 520 tok/s | 1,250 tok/s | **2.4x faster** |
 | **Memory Usage** | 3.2 GB | 2.1 GB | **34% less** |
@@ -214,7 +214,7 @@ char* output = bitnet_inference(model, "Hello, world!", 100, 0.7f);
 - **Development Setup**: [Set up development environment](development.md)
 
 ### Professional Support
-For commercial support and services related to BitNet.rs, please contact Microsoft through official channels.
+For commercial support and services related to BitNet-rs, please contact Microsoft through official channels.
 
 ## Roadmap
 

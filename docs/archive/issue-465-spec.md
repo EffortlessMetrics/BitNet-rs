@@ -2,7 +2,7 @@
 
 ## Context
 
-After PR #464 merged CPU forward pass implementation with TL LUT helper and receipt validation, the BitNet.rs project needs final polish for v0.1.0-mvp release. The core CPU inference pipeline is complete and validated, but gaps remain in documentation, baseline establishment, and CI enforcement of honest compute receipts.
+After PR #464 merged CPU forward pass implementation with TL LUT helper and receipt validation, the BitNet-rs project needs final polish for v0.1.0-mvp release. The core CPU inference pipeline is complete and validated, but gaps remain in documentation, baseline establishment, and CI enforcement of honest compute receipts.
 
 **Current State (post-#464):**
 - CPU forward pass, KV cache, CLI priming/greedy decode implemented and tested
@@ -25,7 +25,7 @@ After PR #464 merged CPU forward pass implementation with TL LUT helper and rece
 
 ## User Story
 
-As a BitNet.rs maintainer preparing for v0.1.0-mvp release, I want comprehensive post-merge polish including documentation updates, baseline establishment, and CI gate enforcement so that users have clear quickstart paths with deterministic inference verification and the repository enforces honest compute receipts automatically.
+As a BitNet-rs maintainer preparing for v0.1.0-mvp release, I want comprehensive post-merge polish including documentation updates, baseline establishment, and CI gate enforcement so that users have clear quickstart paths with deterministic inference verification and the repository enforces honest compute receipts automatically.
 
 ## Acceptance Criteria
 

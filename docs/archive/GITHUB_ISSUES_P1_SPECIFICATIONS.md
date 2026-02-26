@@ -359,7 +359,7 @@ grep "Quick Win" ci/solutions/IGNORED_TESTS_STATUS.md | grep -E "P[01]"
 
 **Template**:
 ```markdown
-# BitNet.rs Ignored Tests Status Table
+# BitNet-rs Ignored Tests Status Table
 
 **Last Updated**: 2025-10-23
 **Total Ignored Tests**: 135
@@ -871,7 +871,7 @@ grep -i "envguard\|environment.*test" .github/PULL_REQUEST_TEMPLATE.md
 ### AC3: Pattern Examples Clear
 - [ ] Correct pattern: `EnvGuard` + `#[serial(bitnet_env)]`
 - [ ] Anti-patterns: Missing #[serial], manual set_var, guard dropped early
-- [ ] Real-world examples from BitNet.rs codebase
+- [ ] Real-world examples from BitNet-rs codebase
 - [ ] Common pitfalls section
 
 **Validation**:
@@ -943,7 +943,7 @@ grep "grep.*set_var" docs/development/test-suite.md
 - Use cases
 - Don't use cases
 
-### BitNet.rs Environment Variables
+### BitNet-rs Environment Variables
 - List of common env vars requiring EnvGuard
 
 ### EnvGuard Implementation
@@ -1158,5 +1158,5 @@ grep -rn "std::env::set_var" crates/*/tests/ > /tmp/env-mutations.txt
 ---
 
 **Last Updated**: 2025-10-23
-**Created By**: BitNet.rs Spec Analyzer Agent
+**Created By**: BitNet-rs Spec Analyzer Agent
 **Status**: Ready for GitHub Issue Creation

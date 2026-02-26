@@ -1,6 +1,6 @@
-# BitNet.rs Monitoring and Observability
+# bitnet-rs Monitoring and Observability
 
-This directory contains the monitoring and observability stack for BitNet.rs, the primary Rust implementation of 1-bit LLM inference.
+This directory contains the monitoring and observability stack for bitnet-rs, the primary Rust implementation of 1-bit LLM inference.
 
 ## Overview
 
@@ -10,7 +10,7 @@ The monitoring stack is designed with a **Rust-first approach**, providing compr
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    BitNet.rs Monitoring Stack               │
+│                    bitnet-rs Monitoring Stack               │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
@@ -25,7 +25,7 @@ The monitoring stack is designed with a **Rust-first approach**, providing compr
 └─────────────────────────────────────────────────────────────┘
                               │
                     ┌─────────▼─────────┐
-                    │   BitNet.rs       │
+                    │   bitnet-rs       │
                     │ (Primary Rust)    │
                     └───────────────────┘
                               │
@@ -59,7 +59,7 @@ docker-compose --profile gpu up -d
 
 ### 3. Default Dashboards
 
-1. **BitNet.rs Overview** - Primary Rust implementation metrics
+1. **bitnet-rs Overview** - Primary Rust implementation metrics
 2. **Performance Comparison** - Rust vs C++ legacy comparison
 3. **Detailed Rust Metrics** - Rust-specific performance insights
 
@@ -85,7 +85,7 @@ docker-compose --profile gpu up -d
 
 ## Dashboards
 
-### 1. BitNet.rs Overview
+### 1. bitnet-rs Overview
 **Purpose**: Primary operational dashboard for Rust implementation
 **Metrics**:
 - Request rate and latency (Rust-focused)
@@ -210,7 +210,7 @@ kubectl apply -f k8s/alertmanager/
 
 ### Helm Chart (Recommended)
 ```bash
-# Add monitoring to BitNet.rs Helm chart
+# Add monitoring to bitnet-rs Helm chart
 helm install bitnet ./helm/bitnet --set monitoring.enabled=true
 ```
 
@@ -319,4 +319,4 @@ When adding new monitoring features:
 
 ## License
 
-This monitoring configuration is part of the BitNet.rs project and follows the same license terms.
+This monitoring configuration is part of the bitnet-rs project and follows the same license terms.

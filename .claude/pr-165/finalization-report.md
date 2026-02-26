@@ -37,7 +37,7 @@ System experienced resource limitations during build validation, but code struct
 **Strategy**: Squash merge recommended
 **Priority**: Low (infrastructure enhancement)
 
-This PR successfully establishes the foundation for convolution kernel development in BitNet.rs with proper test scaffolding for future implementation validation.
+This PR successfully establishes the foundation for convolution kernel development in BitNet-rs with proper test scaffolding for future implementation validation.
 
 ## Artifacts Location
 - Validation report: `.claude/pr-165/finalization-report.md`

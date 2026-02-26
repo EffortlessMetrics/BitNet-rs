@@ -172,7 +172,7 @@ impl CrossValidationEngine {
         let mut validation_results = Vec::new();
 
         for test_case in &self.test_cases {
-            // Run inference with BitNet.rs
+            // Run inference with BitNet-rs
             let rust_result = self.run_rust_inference(model_path, test_case).await?;
 
             // Run inference with C++ reference
@@ -202,7 +202,7 @@ impl CrossValidationEngine {
         })
     }
 
-    /// Run BitNet.rs inference for validation
+    /// Run BitNet-rs inference for validation
     async fn run_rust_inference(
         &self,
         model_path: &Path,

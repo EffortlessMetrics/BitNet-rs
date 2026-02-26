@@ -5,7 +5,7 @@
 **Status**: ⚠️ PARTIAL PASS (minor mutation testing artifact)
 **Classification**: `test-infrastructure` - Quantization testing enhancement with one cleanup needed
 **Evidence**: `spec: architecture: aligned; modules: proper boundaries; ADRs: compliant; mutation artifact: 1 line cleanup needed`
-**Validation**: COMPREHENSIVE - BitNet.rs quantization architecture validated with one minor fix required
+**Validation**: COMPREHENSIVE - bitnet-rs quantization architecture validated with one minor fix required
 
 ---
 
@@ -331,7 +331,7 @@ pub struct DeviceAwareQuantizer {
 - **ROUTE → tests-runner**: Spec validation PASSED - Architecture aligned, ADRs compliant, test infrastructure ready. One mechanical fix applied. Ready for comprehensive test validation.
 
 **Routing Rationale**:
-1. ✅ **Architecture**: Fully aligned with BitNet.rs quantization architecture
+1. ✅ **Architecture**: Fully aligned with bitnet-rs quantization architecture
 2. ✅ **ADR Compliance**: ADR-002 requirements fully implemented
 3. ✅ **Crate Boundaries**: Proper isolation to bitnet-quantization crate
 4. ✅ **Neural Network Contracts**: I2S/TL1/TL2 accuracy targets implemented

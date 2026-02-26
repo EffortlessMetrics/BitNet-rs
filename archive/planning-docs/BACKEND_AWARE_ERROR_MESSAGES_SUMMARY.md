@@ -288,7 +288,7 @@ This implementation integrates with:
 
 ## Conclusion
 
-The implementation successfully enhances token parity error messages to be backend-aware, providing users with actionable troubleshooting guidance. All acceptance criteria are met, comprehensive test coverage is in place, and the implementation follows BitNet.rs architectural patterns.
+The implementation successfully enhances token parity error messages to be backend-aware, providing users with actionable troubleshooting guidance. All acceptance criteria are met, comprehensive test coverage is in place, and the implementation follows BitNet-rs architectural patterns.
 
 **Status:** ✅ READY FOR CODE REVIEW
 

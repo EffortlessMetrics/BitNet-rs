@@ -1,4 +1,4 @@
-# BitNet.rs Security Advisory Configuration
+# bitnet-rs Security Advisory Configuration
 #
 # This file documents accepted security advisories that are not actionable
 # due to transitive dependencies or other constraints.
@@ -11,7 +11,7 @@ ignore = [
     # Rationale: The paste crate is a transitive dependency through tokenizers 0.22.1
     #           which is the latest version. The paste crate is used only as a
     #           procedural macro for compile-time token pasting and does not affect
-    #           runtime security in BitNet.rs neural network inference operations.
+    #           runtime security in bitnet-rs neural network inference operations.
     #
     # Dependencies: tokenizers 0.22.1 -> paste 1.0.15 (proc-macro)
     # Impact: Compile-time only, no runtime security implications
@@ -39,7 +39,7 @@ ignore = [
     # Status: Accepted Risk — No Fix Available
     # Rationale: The rsa crate vulnerability (timing side-channel in RSA decryption)
     #           has no upstream fix. It is a dependency of jsonwebtoken@10.2.0 used
-    #           in bitnet-server for JWT token verification. BitNet.rs is a local
+    #           in bitnet-server for JWT token verification. bitnet-rs is a local
     #           inference engine; JWT usage is for API authentication, not bulk RSA
     #           decryption operations susceptible to timing attacks.
     #
@@ -54,7 +54,7 @@ ignore = [
     # Status: Accepted Risk
     # Rationale: bincode 2.0.1 is a dependency of bitnet-tests (test-only crate).
     #           The vulnerability only affects runtime if deserializing untrusted data.
-    #           BitNet.rs only deserializes trusted test fixtures.
+    #           bitnet-rs only deserializes trusted test fixtures.
     #
     # Dependencies: bitnet-tests -> bincode (test-only)
     # Impact: Test infrastructure only; not in release builds

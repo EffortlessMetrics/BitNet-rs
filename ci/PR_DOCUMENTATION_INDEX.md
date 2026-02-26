@@ -1,9 +1,9 @@
-# PR Documentation Index - BitNet.rs MVP Finalization
+# PR Documentation Index - BitNet-rs MVP Finalization
 
 **Date**: 2025-10-22
 **Sprint Status**: ✅ COMPLETE - All 4 PRs Ready for Merge
 
-This index provides navigation to all documentation artifacts created during the BitNet.rs MVP finalization sprint.
+This index provides navigation to all documentation artifacts created during the BitNet-rs MVP finalization sprint.
 
 ---
 

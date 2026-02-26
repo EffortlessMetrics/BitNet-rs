@@ -36,7 +36,7 @@ impl GitHubReporter {
 
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
-            .user_agent("BitNet.rs-CI-Reporter/1.0")
+            .user_agent("BitNet-rs-CI-Reporter/1.0")
             .build()?;
 
         Ok(Self {
@@ -282,7 +282,7 @@ impl CINotificationManager {
         results: &[TestSuiteResult],
         summary: &TestSummary,
     ) -> Result<()> {
-        let marker = "<!-- BitNet.rs Test Results -->";
+        let marker = "<!-- BitNet-rs Test Results -->";
 
         // Check if comment already exists
         let existing_comment =

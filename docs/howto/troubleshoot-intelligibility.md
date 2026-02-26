@@ -1,6 +1,6 @@
 # Troubleshooting Inference Intelligibility
 
-**Target audience:** Users experiencing garbled or non-sensical output from BitNet.rs inference
+**Target audience:** Users experiencing garbled or non-sensical output from BitNet-rs inference
 
 **Related docs:**
 - [CLAUDE.md](../../CLAUDE.md) - Project overview and known issues
@@ -55,7 +55,7 @@ If you're seeing garbled output like `"jjjj kkkk llll mmmm..."` or nonsensical t
 **NOT a fix:**
 - ❌ Changing sampler parameters (won't fix bad weights)
 - ❌ Changing templates (helps, but can't fix fundamental model issues)
-- ❌ Updating BitNet.rs code (engine is mathematically correct)
+- ❌ Updating BitNet-rs code (engine is mathematically correct)
 
 ---
 
@@ -201,7 +201,7 @@ target/release/bitnet run --model model.gguf ...
 
 **Symptom:** Tokens are wrong, special tokens not handled, BOS/EOS missing
 
-**Root cause:** Tokenizer mismatch between model training and BitNet.rs tokenizer
+**Root cause:** Tokenizer mismatch between model training and BitNet-rs tokenizer
 
 **How to verify:**
 ```bash

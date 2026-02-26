@@ -373,7 +373,7 @@ All existing tests continue to pass without modification.
 - Mutation-resistant tests added (formula validation, boundary conditions)
 
 **Mutation Testing Expectation**:
-- Target mutation score: 80%+ (BitNet.rs threshold)
+- Target mutation score: 80%+ (BitNet-rs threshold)
 - Expected score: 88-92% (above threshold)
 - Expected survivors: 8-12 (down from 25-30)
 

@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-BitNet.rs attention system contains multiple critical implementation gaps that prevent efficient transformer inference and limit model compatibility. Five major components require comprehensive implementation:
+BitNet-rs attention system contains multiple critical implementation gaps that prevent efficient transformer inference and limit model compatibility. Five major components require comprehensive implementation:
 
 1. **Grouped Query Attention (GQA)**: `apply_gqa()` simply clones tensors instead of implementing proper key-value head grouping
 2. **Dynamic Rotary Embeddings**: `RotaryEmbedding::apply()` lacks dynamic growth for sequences exceeding `max_seq_len`
@@ -795,13 +795,13 @@ fn test_tokenizer_loading_fallback_chain() {
 
 ## Related Issues
 
-- BitNet.rs #251: Production-ready inference server (depends on efficient attention)
-- BitNet.rs #218: Device-aware quantization system (integrates with attention layers)
-- BitNet.rs #260: Mock elimination project (removes mock tokenizer fallbacks)
+- BitNet-rs #251: Production-ready inference server (depends on efficient attention)
+- BitNet-rs #218: Device-aware quantization system (integrates with attention layers)
+- BitNet-rs #260: Mock elimination project (removes mock tokenizer fallbacks)
 
 ## Implementation Notes
 
-### BitNet.rs Integration
+### BitNet-rs Integration
 - Use existing `BitNetTensor` type system for all tensor operations
 - Integrate with `bitnet-kernels` for SIMD-optimized tensor operations
 - Follow feature flag architecture (`--features inference` for advanced features)

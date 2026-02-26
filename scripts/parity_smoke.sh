@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# parity_smoke.sh - One-command parity validation demo for BitNet.rs QK256 MVP
+# parity_smoke.sh - One-command parity validation demo for BitNet-rs QK256 MVP
 # Usage: ./scripts/parity_smoke.sh <model.gguf> [tokenizer.json]
 
 # Colors for output

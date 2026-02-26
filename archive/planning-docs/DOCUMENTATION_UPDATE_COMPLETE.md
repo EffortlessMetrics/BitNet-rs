@@ -74,11 +74,11 @@ All documentation for the dual-backend cross-validation system (BitNet.cpp + lla
 - ✅ `preflight` - Backend availability verification
 
 ### Backends (Both Documented)
-- ✅ **Lane A**: BitNet.rs ↔ bitnet.cpp (for BitNet models)
+- ✅ **Lane A**: bitnet-rs ↔ bitnet.cpp (for BitNet models)
   - Auto-detection: Path contains "bitnet" or "microsoft/bitnet"
   - Required libraries: libbitnet.so, libggml.so
 
-- ✅ **Lane B**: BitNet.rs ↔ llama.cpp (for LLaMA/GGUF models)
+- ✅ **Lane B**: bitnet-rs ↔ llama.cpp (for LLaMA/GGUF models)
   - Auto-detection: Path contains "llama" or default fallback
   - Required libraries: libllama.so, libggml.so
 

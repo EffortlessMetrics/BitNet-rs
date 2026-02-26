@@ -127,7 +127,7 @@ Interpretation: All commits from main are present in feature branch
 
 ## Quality Gates Integration
 
-### BitNet.rs TDD Compliance
+### BitNet-rs TDD Compliance
 - ✅ Semantic commit validation: 12/12 commits follow conventions
 - ✅ Rebase workflow: No merge commits detected
 - ✅ Branch naming: feat/* convention enforced

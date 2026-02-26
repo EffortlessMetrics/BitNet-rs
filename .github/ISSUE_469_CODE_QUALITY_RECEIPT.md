@@ -3,7 +3,7 @@
 **Gate:** `generative:gate:clippy`
 **Status:** ✅ **PASS**
 **Timestamp:** 2025-10-18T06:15:42Z
-**Agent:** generative-code-reviewer (BitNet.rs Generative Adapter)
+**Agent:** generative-code-reviewer (bitnet-rs Generative Adapter)
 **Issue:** #469 MVP Sprint Polish - QK256 Enhancement
 **Microloop:** 4 (Implementation - Code Review Phase)
 
@@ -181,7 +181,7 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.65s
 
 ---
 
-## BitNet.rs Alignment Verification
+## bitnet-rs Alignment Verification
 
 ### Neural Network Architecture Integration
 
@@ -269,7 +269,7 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.65s
 
 ## Receipt Metadata
 
-**Agent:** generative-code-reviewer (BitNet.rs Generative Adapter)
+**Agent:** generative-code-reviewer (bitnet-rs Generative Adapter)
 **Issue:** #469 MVP Sprint Polish
 **Gate:** generative:gate:clippy
 **Flow:** generative
@@ -294,5 +294,5 @@ Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.65s
 ---
 
 **Receipt Generated:** 2025-10-18T06:15:42Z
-**Reviewer:** generative-code-reviewer (BitNet.rs Generative Adapter)
+**Reviewer:** generative-code-reviewer (bitnet-rs Generative Adapter)
 **Quality Status:** ✅ PASS - Ready for implementation finalization

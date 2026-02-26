@@ -507,6 +507,6 @@ This PR successfully implements comprehensive quantization accuracy validation i
 ---
 
 **Review Completed**: 2025-09-30
-**Reviewer**: architecture-reviewer (BitNet.rs CI)
+**Reviewer**: architecture-reviewer (BitNet-rs CI)
 **PR**: #424 - Enhanced quantization accuracy validation and testing (Part 3/4)
 **Commit**: cb9d36d92bed2208c90eb6111e4ab582bfba9069

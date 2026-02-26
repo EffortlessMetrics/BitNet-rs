@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully hardened receipt validation tests for Issue #462, achieving **88% mutation testing score** (exceeds 80% threshold) and demonstrating enterprise-grade reliability for BitNet.rs neural network inference workflows.
+Successfully hardened receipt validation tests for Issue #462, achieving **88% mutation testing score** (exceeds 80% threshold) and demonstrating enterprise-grade reliability for BitNet-rs neural network inference workflows.
 
 ### Key Achievements
 - ✅ Created 16 comprehensive hardened tests
@@ -286,7 +286,7 @@ fn test_cpu_no_quant_kernels_fails() {
 
 ---
 
-## BitNet.rs-Specific Validation
+## BitNet-rs-Specific Validation
 
 ### Quantization Backend Testing
 - ✅ CPU quantized kernels (i2s_*, tl1_*, tl2_*)
@@ -352,7 +352,7 @@ verify_receipt_hardened: 16/16 tests passing ✅
 
 ## Conclusion
 
-Test hardening for Issue #462 receipt validation successfully completed. The comprehensive hardened test suite demonstrates enterprise-grade reliability for BitNet.rs neural network inference workflows, with 88% mutation score exceeding the 80% threshold.
+Test hardening for Issue #462 receipt validation successfully completed. The comprehensive hardened test suite demonstrates enterprise-grade reliability for BitNet-rs neural network inference workflows, with 88% mutation score exceeding the 80% threshold.
 
 ### Achievement Summary
 - ✅ 16 new comprehensive tests implemented

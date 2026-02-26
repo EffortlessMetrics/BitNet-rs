@@ -1,4 +1,4 @@
-//! Example performance benchmarks for BitNet.rs
+//! Example performance benchmarks for bitnet-rs
 //!
 //! Demonstrates comprehensive performance testing including throughput,
 //! latency, memory usage, and scalability benchmarks

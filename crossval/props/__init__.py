@@ -1,1 +1,1 @@
-"""Property-based testing framework for BitNet.rs cross-system validation."""
+"""Property-based testing framework for bitnet-rs cross-system validation."""

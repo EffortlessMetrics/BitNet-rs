@@ -395,7 +395,7 @@ CLAUDE.md does not mention the 3 failing QK256 integration tests:
 ---
 
 **Assessment Date:** 2025-10-23T04:30:00Z
-**Assessor:** BitNet.rs Merge Validation Agent
+**Assessor:** BitNet-rs Merge Validation Agent
 **Decision:** ⚠️ **BLOCKED** - Pending QK256 test failure investigation
 **Confidence:** HIGH (comprehensive validation performed, clear blockers identified)
 

@@ -1,10 +1,10 @@
-# BitNet.rs Troubleshooting Guide
+# BitNet-rs Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with **BitNet.rs**, the primary, production-ready Rust implementation of BitNet inference.
+This guide helps you diagnose and resolve common issues with **BitNet-rs**, the primary, production-ready Rust implementation of BitNet inference.
 
-> **💡 Migration Tip**: If you're experiencing issues with the legacy C++ implementation, consider migrating to BitNet.rs for better reliability, performance, and support. See our [Migration Guide](../migration-guide.md).
+> **💡 Migration Tip**: If you're experiencing issues with the legacy C++ implementation, consider migrating to BitNet-rs for better reliability, performance, and support. See our [Migration Guide](../migration-guide.md).
 
-## Why Choose BitNet.rs for Troubleshooting
+## Why Choose BitNet-rs for Troubleshooting
 
 - **Better Error Messages**: Rust's type system provides clear, actionable error messages
 - **Memory Safety**: No segfaults, memory leaks, or undefined behavior
@@ -163,7 +163,7 @@ sha256sum model.gguf
 stat model.gguf  # Check file size and permissions
 ```
 
-**What BitNet.rs Validates (Enhanced in PR #210):**
+**What BitNet-rs Validates (Enhanced in PR #210):**
 - **Tensor Offset Alignment**: All tensor offsets must align to `general.alignment` (typically 32 bytes)
 - **Data Section Alignment**: The tensor data section must be properly aligned
 - **Metadata Consistency**: The n_dims field must match the actual dimensions array length
@@ -549,7 +549,7 @@ Generation stops unexpectedly with empty outputs
 
 **Solutions:**
 
-BitNet.rs automatically handles NaN logits with robust error recovery (PR #184):
+BitNet-rs automatically handles NaN logits with robust error recovery (PR #184):
 
 ```bash
 # Test NaN handling with deterministic generation
@@ -593,7 +593,7 @@ cargo test --no-default-features -p bitnet-cli --no-default-features --features 
 cargo test --no-default-features -p bitnet-cli --no-default-features --features cpu test_top_p_filter_with_nan
 ```
 
-**What BitNet.rs does automatically:**
+**What BitNet-rs does automatically:**
 - **NaN Sanitization**: Converts NaN logits to negative infinity for predictable behavior
 - **Safe Sorting**: Uses fallback ordering for NaN values in top-k/top-p filtering
 - **Graceful Degradation**: Maintains deterministic behavior with proper fallback logic
@@ -621,7 +621,7 @@ Async runtime panic: Cannot start a runtime from within a runtime
 
 **Solutions:**
 
-BitNet.rs now includes production-ready threading utilities with robust error handling:
+BitNet-rs now includes production-ready threading utilities with robust error handling:
 
 ```bash
 # Test thread pool robustness (validates PR #179 fixes)

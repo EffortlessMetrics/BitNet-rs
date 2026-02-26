@@ -381,6 +381,6 @@ Validation Tools:
 ---
 
 **Status**: ✅ **PASS** → Ready for next gate (T6)  
-**Validator**: benchmark-runner (BitNet.rs Integrative Flow T5)  
+**Validator**: benchmark-runner (BitNet-rs Integrative Flow T5)  
 **Timestamp**: 2025-10-30T08:30:00Z
 

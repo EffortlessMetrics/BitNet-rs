@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the comprehensive API contracts for GGUF model weight loading in BitNet.rs. These contracts ensure type safety, error handling, and device-aware operations for loading quantized neural network weights from GGUF files.
+This document defines the comprehensive API contracts for GGUF model weight loading in BitNet-rs. These contracts ensure type safety, error handling, and device-aware operations for loading quantized neural network weights from GGUF files.
 
 ## Core API Contracts
 
@@ -1015,4 +1015,4 @@ This comprehensive API contract specification provides:
 6. **Feature flag integration** for conditional compilation
 7. **Memory safety** with bounds checking and security validations
 
-The contracts align with all 10 acceptance criteria from Issue #159 and provide a solid foundation for implementing real GGUF weight loading in BitNet.rs.
+The contracts align with all 10 acceptance criteria from Issue #159 and provide a solid foundation for implementing real GGUF weight loading in BitNet-rs.

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The BitNet.rs testing framework is a comprehensive testing solution designed to ensure the correctness, performance, and reliability of the BitNet.rs implementation. It provides multiple layers of testing including unit tests, integration tests, cross-implementation validation, and performance benchmarking.
+The BitNet-rs testing framework is a comprehensive testing solution designed to ensure the correctness, performance, and reliability of the BitNet-rs implementation. It provides multiple layers of testing including unit tests, integration tests, cross-implementation validation, and performance benchmarking.
 
 ## Architecture Overview
 

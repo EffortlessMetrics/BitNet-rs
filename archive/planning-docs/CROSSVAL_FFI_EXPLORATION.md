@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The BitNet.rs codebase has a **mature, production-quality FFI infrastructure** with:
+The BitNet-rs codebase has a **mature, production-quality FFI infrastructure** with:
 - Two-tier FFI architecture: `bitnet-sys` (low-level) + `bitnet-crossval` (high-level)
 - Complete build.rs infrastructure with library discovery and linking
 - Safe wrapper patterns around C FFI with proper error handling

@@ -1,4 +1,4 @@
-# BitNet.rs Documentation Update Summary
+# BitNet-rs Documentation Update Summary
 ## Post-Merge Documentation Synchronization
 
 ### Merge Details
@@ -164,7 +164,7 @@ pr-initial → pr-test → pr-context → pr-cleanup → pr-finalize → pr-merg
 
 **🎉 Documentation Update Successfully Completed**
 
-The BitNet.rs documentation is now fully up-to-date with PR #177 changes, providing comprehensive coverage of the new memory tracking and platform-specific kernel selection features across all Diátaxis framework categories.
+The BitNet-rs documentation is now fully up-to-date with PR #177 changes, providing comprehensive coverage of the new memory tracking and platform-specific kernel selection features across all Diátaxis framework categories.
 
 ---
 *Documentation Finalizer Agent*

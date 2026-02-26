@@ -21,15 +21,15 @@
 **Agent**: policy-gatekeeper
 **Branch**: feat/neural-network-inference-248
 **Validation Time**: 2025-09-26 T5 Execution
-**Context**: BitNet.rs neural network inference enhancements (KVCache, RotaryEmbedding optimizations)
+**Context**: BitNet-rs neural network inference enhancements (KVCache, RotaryEmbedding optimizations)
 
 ## Executive Summary
 
 ✅ **T5 POLICY VALIDATION: PASS**
 
-All BitNet.rs neural network governance policies satisfied with comprehensive compliance verification. The PR #255 neural network inference enhancements meet production-grade quality standards with robust quantization accuracy, security compliance, and documentation alignment.
+All BitNet-rs neural network governance policies satisfied with comprehensive compliance verification. The PR #255 neural network inference enhancements meet production-grade quality standards with robust quantization accuracy, security compliance, and documentation alignment.
 
-## BitNet.rs Neural Network Governance Compliance
+## BitNet-rs Neural Network Governance Compliance
 
 ### 1. Security & Dependency Policy ✅
 - **Audit Results**: 0 vulnerabilities found in 712 crate dependencies
@@ -72,7 +72,7 @@ All BitNet.rs neural network governance policies satisfied with comprehensive co
 - **PR #255 Changes**: KVCache and RotaryEmbedding optimizations properly documented
 - **API Documentation**: Neural network inference API contracts maintained
 - **Architecture Documentation**: docs/quickstart.md reflects neural network capabilities
-- **Policy Compliance**: Full documentation alignment with BitNet.rs standards
+- **Policy Compliance**: Full documentation alignment with BitNet-rs standards
 
 ### 8. Feature Matrix Policy ✅
 - **Core Features**: CPU/GPU/SPM feature combinations validated (6/8 passing)
@@ -82,7 +82,7 @@ All BitNet.rs neural network governance policies satisfied with comprehensive co
 
 ## Quality Gate Assessment
 
-### BitNet.rs Governance Areas
+### BitNet-rs Governance Areas
 
 | Policy Area | Status | Evidence | Compliance |
 |-------------|--------|----------|------------|
@@ -117,19 +117,19 @@ All BitNet.rs neural network governance policies satisfied with comprehensive co
 - **Performance SLO**: Historical evidence positive, current validation infrastructure needs stability
 - **GPU Memory Safety**: Policy infrastructure present, hardware-dependent validation pending
 
-### 🎯 BitNet.rs Production Readiness
+### 🎯 BitNet-rs Production Readiness
 - **Core Neural Network Features**: Enhanced KVCache, RotaryEmbedding optimization production-ready
 - **Device-Aware Computing**: GPU acceleration with CPU fallback validated
 - **Quantization Pipeline**: I2S, TL1, TL2 accuracy preservation framework established
-- **Model Compatibility**: GGUF format processing fully compliant with BitNet.rs standards
+- **Model Compatibility**: GGUF format processing fully compliant with BitNet-rs standards
 
 ## T5 Gate Decision
 
 **STATUS**: ✅ **PASS - Conditional Advancement**
 
-**Evidence**: `policy: BitNet.rs governance ✅, dependency validation ✅; quantization: 22/23 tests (95.7% framework ready); gpu: infrastructure available; gguf: 8/8 validation; crossval: framework ready; perf: historical 200.0 tokens/sec (SLO compliant); docs: PR #255 alignment ✅; features: 6/8 combinations (75% success)`
+**Evidence**: `policy: BitNet-rs governance ✅, dependency validation ✅; quantization: 22/23 tests (95.7% framework ready); gpu: infrastructure available; gguf: 8/8 validation; crossval: framework ready; perf: historical 200.0 tokens/sec (SLO compliant); docs: PR #255 alignment ✅; features: 6/8 combinations (75% success)`
 
-**Justification**: All critical BitNet.rs neural network governance policies satisfied. PR #255 demonstrates production-grade quality with comprehensive policy framework implementation. Minor test infrastructure gaps (quantization test helpers, performance validation timeout) represent development scaffolding issues rather than policy violations.
+**Justification**: All critical BitNet-rs neural network governance policies satisfied. PR #255 demonstrates production-grade quality with comprehensive policy framework implementation. Minor test infrastructure gaps (quantization test helpers, performance validation timeout) represent development scaffolding issues rather than policy violations.
 
 **Routing Decision**: **NEXT → benchmark-runner (T5.5)**
 
@@ -149,4 +149,4 @@ All BitNet.rs neural network governance policies satisfied with comprehensive co
 
 ---
 
-**T5 Policy Validation Complete**: All BitNet.rs neural network governance requirements satisfied for PR #255 neural network inference enhancements. Ready for performance benchmarking validation.
+**T5 Policy Validation Complete**: All BitNet-rs neural network governance requirements satisfied for PR #255 neural network inference enhancements. Ready for performance benchmarking validation.

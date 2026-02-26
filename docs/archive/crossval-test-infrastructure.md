@@ -1,8 +1,8 @@
-# BitNet.rs Crossval Test Infrastructure Report
+# BitNet-rs Crossval Test Infrastructure Report
 
 ## Executive Summary
 
-BitNet.rs implements a comprehensive cross-validation framework for testing dual-backend (Rust vs C++) inference implementations. The test infrastructure spans **13 test suites** in `crossval/tests/`, integration helpers in `tests/common/`, and sophisticated CI workflows supporting parallel execution, environment isolation, and multi-scenario validation.
+BitNet-rs implements a comprehensive cross-validation framework for testing dual-backend (Rust vs C++) inference implementations. The test infrastructure spans **13 test suites** in `crossval/tests/`, integration helpers in `tests/common/`, and sophisticated CI workflows supporting parallel execution, environment isolation, and multi-scenario validation.
 
 ### Key Components
 
@@ -628,7 +628,7 @@ mod tests {
 }
 ```
 
-**Current Pattern in BitNet.rs:** Global `env_guard()` lock prevents race conditions
+**Current Pattern in BitNet-rs:** Global `env_guard()` lock prevents race conditions
 
 ```rust
 #[test]
@@ -1034,7 +1034,7 @@ cargo nextest run --profile ci --filter-expr 'not slow'
 
 ## Conclusion
 
-BitNet.rs's test infrastructure provides:
+BitNet-rs's test infrastructure provides:
 
 1. **Comprehensive Coverage**: 13 crossval test suites covering parity, performance, and edge cases
 2. **Robust Isolation**: EnvGuard + global locks prevent test interference

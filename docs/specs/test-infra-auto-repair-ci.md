@@ -5,7 +5,7 @@
 **Target Release**: v0.2.0
 **Created**: 2025-10-26
 **Updated**: 2025-10-26
-**Author**: BitNet.rs Development Team
+**Author**: bitnet-rs Development Team
 
 ---
 
@@ -13,7 +13,7 @@
 
 ### Problem Statement
 
-The current test infrastructure in BitNet.rs has **manual intervention requirements** for backend availability checks during cross-validation testing. Developers experience friction when C++ reference backends (BitNet.cpp, llama.cpp) are unavailable at test runtime, requiring:
+The current test infrastructure in bitnet-rs has **manual intervention requirements** for backend availability checks during cross-validation testing. Developers experience friction when C++ reference backends (BitNet.cpp, llama.cpp) are unavailable at test runtime, requiring:
 
 1. **Manual setup commands**: Developers must run `cargo run -p xtask -- setup-cpp-auto` separately
 2. **Rebuild cycles**: Post-setup requires manual rebuild of xtask to update build-time constants
@@ -23,7 +23,7 @@ The current test infrastructure in BitNet.rs has **manual intervention requireme
 
 ### Architectural Foundation
 
-BitNet.rs employs a **three-tier test infrastructure architecture** for managing conditional test execution, environment isolation, and automatic backend repair:
+bitnet-rs employs a **three-tier test infrastructure architecture** for managing conditional test execution, environment isolation, and automatic backend repair:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -1878,7 +1878,7 @@ done
 
 ## Summary
 
-This specification defines a comprehensive enhancement to the BitNet.rs test infrastructure, enabling:
+This specification defines a comprehensive enhancement to the bitnet-rs test infrastructure, enabling:
 
 1. **Zero-friction local development**: Auto-repair with rebuild eliminates manual setup
 2. **Deterministic CI behavior**: Explicit CI detection prevents network activity

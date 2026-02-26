@@ -1,7 +1,7 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-//! HTTP Response Fixtures for BitNet.rs Inference Server Testing
+//! HTTP Response Fixtures for BitNet-rs Inference Server Testing
 //!
 //! This module provides expected response fixtures for validating the production
 //! inference server REST API responses, streaming outputs, and error conditions.

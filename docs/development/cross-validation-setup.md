@@ -1,17 +1,17 @@
 # Cross-Validation Setup Guide
 
-This guide explains how to set up and use the cross-validation features in BitNet.rs to compare against the legacy C++ implementation.
+This guide explains how to set up and use the cross-validation features in BitNet-rs to compare against the legacy C++ implementation.
 
 ## Overview
 
 Cross-validation is **optional** and **feature-gated** to ensure zero overhead when not needed. It's primarily used for:
 
-- **Development testing** - Ensuring BitNet.rs maintains numerical accuracy
+- **Development testing** - Ensuring BitNet-rs maintains numerical accuracy
 - **Performance benchmarking** - Comparing speed and memory usage
 - **Migration validation** - Verifying compatibility during migration
 - **Research purposes** - Academic comparison studies
 
-> **Note**: Cross-validation is **not required** for production use of BitNet.rs. It's a development and testing tool only.
+> **Note**: Cross-validation is **not required** for production use of BitNet-rs. It's a development and testing tool only.
 
 ## Feature Gate System
 
@@ -314,7 +314,7 @@ fn main() {
 
 ### Daily Development
 
-For regular BitNet.rs development, cross-validation is **not needed**:
+For regular BitNet-rs development, cross-validation is **not needed**:
 
 ```bash
 # Normal development workflow (fast)

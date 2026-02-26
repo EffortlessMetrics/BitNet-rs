@@ -7,7 +7,7 @@
 
 ## Summary
 
-Validated strict quantization guards specifications against BitNet.rs reference documentation and API contracts. All specifications pass validation with zero conflicts detected.
+Validated strict quantization guards specifications against BitNet-rs reference documentation and API contracts. All specifications pass validation with zero conflicts detected.
 
 **Key Findings:**
 - ✅ API contracts consistent with existing `bitnet-common/src/strict_mode.rs`
@@ -15,7 +15,7 @@ Validated strict quantization guards specifications against BitNet.rs reference 
 - ✅ Environment variables follow `BITNET_STRICT_*` naming conventions
 - ✅ Receipt schema v1.1.0 maintains backward compatibility with v1.0.0
 - ✅ Kernel ID naming conventions match ADR-012
-- ✅ Feature flag usage follows BitNet.rs standards
+- ✅ Feature flag usage follows BitNet-rs standards
 - ✅ Cross-validation requirements achievable with 1e-5 tolerance
 
 **Validation Scope:**
@@ -151,12 +151,12 @@ cargo build --no-default-features --features gpu
 **0 Conflicts** ✅
 
 No conflicts detected between:
-- Spec API contracts ↔ Existing BitNet.rs APIs
+- Spec API contracts ↔ Existing BitNet-rs APIs
 - Spec quantization types ↔ Reference quantization support
 - Spec environment variables ↔ Existing conventions
 - Spec receipt schema ↔ v1.0.0 infrastructure
 - Spec kernel naming ↔ ADR-012 conventions
-- Spec feature flags ↔ BitNet.rs standards
+- Spec feature flags ↔ BitNet-rs standards
 
 ---
 
@@ -218,6 +218,6 @@ $ cargo run -p xtask -- verify-receipt --path ci/inference.json
 
 ---
 
-**Validator:** BitNet.rs Schema Validation Specialist
+**Validator:** BitNet-rs Schema Validation Specialist
 **Check Run:** generative:gate:spec
 **Timestamp:** 2025-10-14

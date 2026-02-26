@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-Classify 29 unclassified ignored tests across the BitNet.rs test suite, document ownership and resolution plans, and establish test hygiene standards. This addresses technical debt from TDD scaffolding during MVP phase and provides clear roadmap for test enablement.
+Classify 29 unclassified ignored tests across the BitNet-rs test suite, document ownership and resolution plans, and establish test hygiene standards. This addresses technical debt from TDD scaffolding during MVP phase and provides clear roadmap for test enablement.
 
 **Current State**: 135 `#[ignore]` markers across 46 files, with 29 tests lacking clear categorization or resolution plans.
 
@@ -345,7 +345,7 @@ grep "Quick Win" ci/solutions/IGNORED_TESTS_STATUS.md | grep "P0"
 
 **Template**:
 ```markdown
-# BitNet.rs Ignored Tests Status Table
+# BitNet-rs Ignored Tests Status Table
 
 **Last Updated**: 2025-10-23
 **Total Ignored Tests**: 135
@@ -424,7 +424,7 @@ fn test_qk256_full_inference() {
 
 ---
 
-## BitNet.rs Alignment
+## BitNet-rs Alignment
 
 ### TDD Practices
 
@@ -544,5 +544,5 @@ fn test_qk256_full_inference() {
 ---
 
 **Last Updated**: 2025-10-23
-**Spec Author**: BitNet.rs Spec Analyzer Agent
+**Spec Author**: BitNet-rs Spec Analyzer Agent
 **Review Status**: Pending

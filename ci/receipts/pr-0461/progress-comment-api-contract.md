@@ -214,6 +214,6 @@ Internal APIs: pub(crate) and private only
 
 ---
 
-**Contract Reviewer:** BitNet.rs API contract validation agent
+**Contract Reviewer:** BitNet-rs API contract validation agent
 **Timestamp:** 2025-10-14
 **Status:** ✅ PASS - Ready for test execution

@@ -73,7 +73,7 @@ The `issue_465_test_utils.rs` module demonstrates good engineering:
 
 ---
 
-## BitNet.rs Mutation Testing Standards
+## BitNet-rs Mutation Testing Standards
 
 For reference, if production code had been changed:
 
@@ -155,7 +155,7 @@ This would enable:
 - **Mutation Testing Report:** [MUTATION-TESTING-REPORT.md](MUTATION-TESTING-REPORT.md)
 - **Receipt:** [gate-mutation.json](gate-mutation.json)
 - **Issue #465 Ledger:** [LEDGER.md](LEDGER.md)
-- **BitNet.rs Standards:** `docs/development/test-suite.md`
+- **BitNet-rs Standards:** `docs/development/test-suite.md`
 
 ---
 

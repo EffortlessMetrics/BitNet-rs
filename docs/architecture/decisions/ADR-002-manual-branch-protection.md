@@ -61,7 +61,7 @@ Two implementation approaches exist for branch protection configuration:
 - **Not Blocking**: Manual configuration does not block v0.1.0-mvp release
 - **Future Enhancement**: Automated command can be added in v0.2.0 if needed
 - **Use Case**: Automation valuable for multi-repo organizations (not single-repo MVP)
-- **Incremental Value**: Manual process adequate for BitNet.rs current scale
+- **Incremental Value**: Manual process adequate for BitNet-rs current scale
 
 ---
 

@@ -1,4 +1,4 @@
-# BitNet.rs Inference Quality: Complete Investigation Summary
+# BitNet-rs Inference Quality: Complete Investigation Summary
 
 **Investigation Date:** 2025-10-22
 **Status:** ✅ COMPLETE - Root causes identified
@@ -785,7 +785,7 @@ cat docs/baselines/$(date +%Y-%m-%d)/parity-bitnetcpp.json
 
 **Bottom line:** This is **NOT** "model quality" - these are **real, fixable bugs**.
 
-With targeted fixes, BitNet.rs can be a working, fast, correct inference engine.
+With targeted fixes, BitNet-rs can be a working, fast, correct inference engine.
 
 ---
 

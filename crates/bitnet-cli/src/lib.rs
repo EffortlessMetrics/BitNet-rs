@@ -20,7 +20,7 @@ pub fn build_cli() -> clap::Command {
 
     #[derive(clap::Parser)]
     #[command(name = "bitnet")]
-    #[command(about = "BitNet.rs — 1-bit neural network inference with strict receipts")]
+    #[command(about = "BitNet-rs — 1-bit neural network inference with strict receipts")]
     #[command(version)]
     #[command(author = "BitNet Contributors")]
     #[command(

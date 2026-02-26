@@ -309,7 +309,7 @@ mod benchmarks {
 }
 ```
 
-## BitNet.rs Integration Notes
+## BitNet-rs Integration Notes
 
 ### Device Management Integration
 - Integrate with existing `DeviceManager` for device selection

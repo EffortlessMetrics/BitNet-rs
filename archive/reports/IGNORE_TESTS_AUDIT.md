@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This audit comprehensively catalogs all **240 #[ignore] tests** in the BitNet.rs codebase, categorizing them into:
+This audit comprehensively catalogs all **240 #[ignore] tests** in the BitNet-rs codebase, categorizing them into:
 
 1. **Properly Classified (56 tests, 23.3%)**: Tests with explicit issue references
 2. **Unclassified (184 tests, 76.7%)**: Tests without issue references - **Primary focus of this audit**

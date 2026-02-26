@@ -1,4 +1,4 @@
-# BitNet.rs Mutation Testing Analysis Report
+# BitNet-rs Mutation Testing Analysis Report
 **PR #246: Real BitNet Model Integration**
 **Branch:** feature/issue-218-real-bitnet-model-integration
 **Analysis Date:** 2025-09-24
@@ -8,7 +8,7 @@
 
 **🔴 CRITICAL FAILURE: Mutation Score 42.9% (Target: ≥80%)**
 
-The mutation testing analysis reveals significant gaps in test coverage effectiveness for critical neural network quantization pathways. With 309 surviving mutants out of 541 total (57.1% survival rate), the current test suite is insufficient to ensure production-grade reliability for BitNet.rs quantization algorithms.
+The mutation testing analysis reveals significant gaps in test coverage effectiveness for critical neural network quantization pathways. With 309 surviving mutants out of 541 total (57.1% survival rate), the current test suite is insufficient to ensure production-grade reliability for BitNet-rs quantization algorithms.
 
 ## Mutation Score Analysis
 

@@ -19,7 +19,7 @@
 
 ```rust
 #[derive(Parser)]
-#[command(name = "xtask", about = "Developer tasks for BitNet.rs")]
+#[command(name = "xtask", about = "Developer tasks for BitNet-rs")]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,

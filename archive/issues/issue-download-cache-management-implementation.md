@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The download cache management test in BitNet.rs tokenizer system is a placeholder that doesn't actually test cache functionality. The `test_download_cache_management()` function contains commented-out test logic and only verifies basic directory creation, missing critical cache validation.
+The download cache management test in BitNet-rs tokenizer system is a placeholder that doesn't actually test cache functionality. The `test_download_cache_management()` function contains commented-out test logic and only verifies basic directory creation, missing critical cache validation.
 
 ## Environment
 
@@ -108,5 +108,5 @@ async fn test_download_cache_management() {
 
 ## Related Issues
 
-- BitNet.rs #251: Production-ready inference server
-- BitNet.rs #260: Mock elimination project
+- BitNet-rs #251: Production-ready inference server
+- BitNet-rs #260: Mock elimination project

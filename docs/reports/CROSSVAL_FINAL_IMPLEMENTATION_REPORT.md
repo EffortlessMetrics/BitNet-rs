@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-**Mission Accomplished**: BitNet.rs now has **production-grade layer-by-layer cross-validation infrastructure** that captures all intermediate activations and enables systematic comparison with reference implementations.
+**Mission Accomplished**: BitNet-rs now has **production-grade layer-by-layer cross-validation infrastructure** that captures all intermediate activations and enables systematic comparison with reference implementations.
 
 **Key Achievement**: **92 activation traces** captured across the entire inference pipeline (embeddings → 30 layers × 3 traces → logits) with cryptographic hashing and statistical validation.
 
@@ -768,7 +768,7 @@ Based on divergence analysis:
 
 ## Conclusion
 
-**Phase 1 & 2 Complete**: BitNet.rs has **production-ready cross-validation infrastructure** with:
+**Phase 1 & 2 Complete**: BitNet-rs has **production-ready cross-validation infrastructure** with:
 - ✅ 92-point activation tracing
 - ✅ Blake3 cryptographic hashing
 - ✅ Per-position logits comparison

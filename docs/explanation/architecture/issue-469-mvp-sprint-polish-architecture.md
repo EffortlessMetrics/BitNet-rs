@@ -2,7 +2,7 @@
 
 **Document Status:** Architectural Specification (Ready for Implementation)
 **Created:** 2025-10-18
-**Author:** BitNet.rs Architecture Team (spec-architect)
+**Author:** BitNet-rs Architecture Team (spec-architect)
 **Issue:** #469
 **Targets:** v0.1.0-mvp release
 **Schema Version:** 1.0.0
@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This architectural blueprint provides comprehensive, implementation-ready specifications for Issue #469's 8 acceptance criteria (AC1-AC8). The specifications align with the BitNet.rs neural network inference pipeline (Model Loading → Quantization → Inference → Output) and follow workspace structure conventions.
+This architectural blueprint provides comprehensive, implementation-ready specifications for Issue #469's 8 acceptance criteria (AC1-AC8). The specifications align with the BitNet-rs neural network inference pipeline (Model Loading → Quantization → Inference → Output) and follow workspace structure conventions.
 
 **Architectural Scope:**
 - **AC1-AC2:** GGUF Loader enhancement (strict mode, centralized tolerance)
@@ -1405,7 +1405,7 @@ fn test_tokenizer_parity_would_fail_with_padded_size() {
 
 ## Summary and Next Steps
 
-This architectural blueprint provides comprehensive, implementation-ready specifications for all 8 acceptance criteria of Issue #469. The specifications align with BitNet.rs design principles (feature-gated, zero-copy, device-aware, cross-validated, TDD-driven) and follow workspace structure conventions.
+This architectural blueprint provides comprehensive, implementation-ready specifications for all 8 acceptance criteria of Issue #469. The specifications align with BitNet-rs design principles (feature-gated, zero-copy, device-aware, cross-validated, TDD-driven) and follow workspace structure conventions.
 
 **Implementation Priority:**
 1. AC6 (FFI hygiene) - reduces build noise
@@ -1424,6 +1424,6 @@ This architectural blueprint provides comprehensive, implementation-ready specif
 **Document Control:**
 - Review Status: Architectural Specification (Ready for Implementation)
 - Next Review: schema-validator (API contract validation)
-- Owner: BitNet.rs Architecture Team
+- Owner: BitNet-rs Architecture Team
 - Issue: #469
 - Target: v0.1.0-mvp

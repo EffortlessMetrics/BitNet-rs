@@ -13,7 +13,7 @@ Validate neural network security (GPU memory safety, FFI bridge integrity, depen
 ---
 
 ### Scope
-**Comprehensive BitNet.rs Security Audit:**
+**Comprehensive BitNet-rs Security Audit:**
 - 727 dependencies scanned (RustSec 821 advisories)
 - 45 GPU kernel tests (CUDA memory safety)
 - 41 CPU quantization tests (I2S/TL1/TL2 accuracy)

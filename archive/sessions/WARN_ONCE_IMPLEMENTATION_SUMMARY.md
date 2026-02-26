@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the implementation of the thread-safe warn-once utility infrastructure for BitNet.rs, which provides rate-limited logging to avoid log spam from repeated warning conditions.
+This document summarizes the implementation of the thread-safe warn-once utility infrastructure for BitNet-rs, which provides rate-limited logging to avoid log spam from repeated warning conditions.
 
 ## Implementation Details
 

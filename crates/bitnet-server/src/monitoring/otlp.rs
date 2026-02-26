@@ -1,4 +1,4 @@
-//! OTLP metrics initialization for BitNet.rs server observability
+//! OTLP metrics initialization for BitNet-rs server observability
 //!
 //! This module provides OpenTelemetry Protocol (OTLP) metrics export
 //! functionality with gRPC transport, replacing the deprecated Prometheus exporter.

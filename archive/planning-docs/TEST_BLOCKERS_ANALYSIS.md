@@ -1,4 +1,4 @@
-# BitNet.rs Test Blockers Analysis
+# bitnet-rs Test Blockers Analysis
 **Date**: 2025-10-20
 **Status**: Honest Assessment
 

@@ -6,7 +6,7 @@
 
 ## Context
 
-BitNet.rs uses inference receipts to verify honest compute and prevent silent fallbacks to mock/FP32 paths. The receipt verification system (`xtask/src/verify_receipt.rs`) currently validates GPU backend requirements but lacks CPU backend symmetry.
+BitNet-rs uses inference receipts to verify honest compute and prevent silent fallbacks to mock/FP32 paths. The receipt verification system (`xtask/src/verify_receipt.rs`) currently validates GPU backend requirements but lacks CPU backend symmetry.
 
 **Current State:**
 - Receipt schema v1.0.0 with compute_path, backend, kernels fields

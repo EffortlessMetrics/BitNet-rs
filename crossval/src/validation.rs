@@ -1,4 +1,4 @@
-//! Comprehensive validation framework for BitNet.rs
+//! Comprehensive validation framework for bitnet-rs
 //!
 //! This module provides validation gates for accuracy, performance, and compatibility.
 
@@ -124,7 +124,7 @@ impl ValidationSuite {
 
     /// Gate 2: Token ID A/B parity test
     pub fn validate_token_parity(&self, prompts: &[String]) -> Result<TokenParityResult> {
-        // This would compare BitNet.rs vs llama.cpp token generation
+        // This would compare bitnet-rs vs llama.cpp token generation
         // For now, return a placeholder
         Ok(TokenParityResult {
             total_prompts: prompts.len(),

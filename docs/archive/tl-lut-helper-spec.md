@@ -6,7 +6,7 @@
 
 ## Context
 
-BitNet.rs supports TL1/TL2 (Table Lookup) quantization for efficient 1-bit inference. TL quantization stores activation-weight products in lookup tables (LUTs) indexed by block indices and element positions. Current implementation in `quantized_linear.rs` performs inline LUT indexing without bounds checking, creating potential for index out-of-bounds errors.
+BitNet-rs supports TL1/TL2 (Table Lookup) quantization for efficient 1-bit inference. TL quantization stores activation-weight products in lookup tables (LUTs) indexed by block indices and element positions. Current implementation in `quantized_linear.rs` performs inline LUT indexing without bounds checking, creating potential for index out-of-bounds errors.
 
 **Current State:**
 - TL1/TL2 matmul paths exist in `quantized_linear.rs` (lines ~600-800)

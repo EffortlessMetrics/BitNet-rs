@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Issue #254 requires implementing real neural network inference to replace mock/fallback implementations that currently prevent actual quantized computation. This specification defines the comprehensive architecture for integrating I2_S/TL1/TL2 quantized kernels into the BitNet.rs inference pipeline to enable production-quality neural network inference with deterministic generation and cross-validation against C++ reference implementations.
+Issue #254 requires implementing real neural network inference to replace mock/fallback implementations that currently prevent actual quantized computation. This specification defines the comprehensive architecture for integrating I2_S/TL1/TL2 quantized kernels into the BitNet-rs inference pipeline to enable production-quality neural network inference with deterministic generation and cross-validation against C++ reference implementations.
 
 **Current State**: Model loading fails with "Failed to load model for inference", real inference gated behind optional `inference` feature flag, no receipt artifacts (`ci/inference.json` missing).
 
@@ -12,7 +12,7 @@ Issue #254 requires implementing real neural network inference to replace mock/f
 
 ## User Story
 
-**As a** BitNet.rs user deploying neural network inference in production
+**As a** BitNet-rs user deploying neural network inference in production
 **I want** real quantized neural network computation instead of mock implementations
 **So that** I can rely on accurate inference results, performance metrics, and cross-validation against reference implementations
 
@@ -758,7 +758,7 @@ ci/
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    BitNet.rs Inference Pipeline                 │
+│                    BitNet-rs Inference Pipeline                 │
 └─────────────────────────────────────────────────────────────────┘
                                   │
                   ┌───────────────▼───────────────┐
@@ -1316,7 +1316,7 @@ cargo run -p bitnet-cli -- compat-check model.gguf
 ### Risk 1: GGUF Quantization Type Mapping (Issue #393)
 **Impact**: High - Blocks I2_S kernel integration
 **Mitigation**: Prioritize Issue #393, implement fallback to IQ2_S if I2_S unavailable
-**Owner**: BitNet.rs quantization team
+**Owner**: BitNet-rs quantization team
 
 ### Risk 2: Kernel Accuracy Below Tolerance
 **Impact**: High - Fails AC5

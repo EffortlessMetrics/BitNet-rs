@@ -1,4 +1,4 @@
-# BitNet.rs CPU MVP: Validation System Implementation Summary
+# BitNet-rs CPU MVP: Validation System Implementation Summary
 
 **Date:** 2025-10-13
 **Status:** ✅ Complete
@@ -8,7 +8,7 @@
 
 ## 🎯 Executive Summary
 
-Successfully implemented a comprehensive, architecture-aware validation system for BitNet.rs neural network models. The system provides:
+Successfully implemented a comprehensive, architecture-aware validation system for BitNet-rs neural network models. The system provides:
 
 - **Architecture-aware validation** with auto-detection of BitNet b1.58, I2_S, and generic LLaMA models
 - **3-stage validation pipeline** covering LayerNorm statistics, projection weights, and linguistic sanity
@@ -584,7 +584,7 @@ cp my-policy.yml examples/policies/my-model-f16.yml
 
 ## 🎉 Conclusion
 
-The BitNet.rs CPU MVP validation system is **production-ready** and provides comprehensive, architecture-aware validation for neural network models. The implementation includes:
+The BitNet-rs CPU MVP validation system is **production-ready** and provides comprehensive, architecture-aware validation for neural network models. The implementation includes:
 
 - **Robust validation infrastructure** with auto-detection and policy-based customization
 - **Complete tooling ecosystem** for model conversion, inspection, and validation

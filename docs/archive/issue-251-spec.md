@@ -2,7 +2,7 @@
 
 ## Context
 
-The BitNet.rs project currently has foundational server infrastructure in the `bitnet-server` crate, but lacks production-ready capabilities for enterprise deployments. The existing implementation includes basic HTTP server functionality, health checks, monitoring framework, and streaming capabilities, but requires enhancement to support high-concurrency production workloads.
+The BitNet-rs project currently has foundational server infrastructure in the `bitnet-server` crate, but lacks production-ready capabilities for enterprise deployments. The existing implementation includes basic HTTP server functionality, health checks, monitoring framework, and streaming capabilities, but requires enhancement to support high-concurrency production workloads.
 
 Current server capabilities include:
 - Basic Axum-based REST API with `/inference` and `/stream` endpoints
@@ -19,11 +19,11 @@ Missing production capabilities include:
 - Container orchestration support with Kubernetes deployment configurations
 - Performance optimization for target metrics (100+ concurrent requests, <2s response time, <8GB memory usage)
 
-The production-ready server implementation will enable BitNet.rs deployment in enterprise environments where 1-bit neural network inference performance and reliability are critical for business operations.
+The production-ready server implementation will enable BitNet-rs deployment in enterprise environments where 1-bit neural network inference performance and reliability are critical for business operations.
 
 ## User Story
 
-As a **DevOps engineer deploying BitNet.rs neural network inference services**, I want **a production-ready HTTP server with comprehensive model management, concurrency handling, and monitoring capabilities** so that **I can deploy BitNet.rs in high-throughput enterprise environments with guaranteed SLA compliance, zero-downtime model updates, and comprehensive observability for 1-bit neural network inference workloads**.
+As a **DevOps engineer deploying BitNet-rs neural network inference services**, I want **a production-ready HTTP server with comprehensive model management, concurrency handling, and monitoring capabilities** so that **I can deploy BitNet-rs in high-throughput enterprise environments with guaranteed SLA compliance, zero-downtime model updates, and comprehensive observability for 1-bit neural network inference workloads**.
 
 ## Acceptance Criteria
 

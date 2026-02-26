@@ -548,4 +548,4 @@ fn bench_cpu_backend_forward(b: &mut Bencher) {
 **Duration**: 4-5 weeks
 **Team Size**: 2-3 developers (backend + GPU specialist)
 
-This comprehensive refactoring will transform the BitNet.rs inference system from a prototype using extensive mocks to a production-ready implementation with real backend functionality, setting the foundation for high-performance inference deployments.
+This comprehensive refactoring will transform the BitNet-rs inference system from a prototype using extensive mocks to a production-ready implementation with real backend functionality, setting the foundation for high-performance inference deployments.

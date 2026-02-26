@@ -1,6 +1,6 @@
 # Build Commands Reference
 
-This document provides comprehensive build and development commands for BitNet.rs.
+This document provides comprehensive build and development commands for BitNet-rs.
 
 ## Core Development Commands
 

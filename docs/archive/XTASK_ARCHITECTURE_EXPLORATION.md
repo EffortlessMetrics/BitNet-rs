@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The `xtask` crate is a comprehensive task automation and development infrastructure system for the BitNet.rs project. It serves as the bridge between user-facing CLI commands and the underlying libraries, with sophisticated feature gating to control FFI (Foreign Function Interface) dependencies. The architecture is designed to minimize FFI coupling while providing optional cross-validation capabilities.
+The `xtask` crate is a comprehensive task automation and development infrastructure system for the BitNet-rs project. It serves as the bridge between user-facing CLI commands and the underlying libraries, with sophisticated feature gating to control FFI (Foreign Function Interface) dependencies. The architecture is designed to minimize FFI coupling while providing optional cross-validation capabilities.
 
 **Key Finding**: FFI-dependent code (bitnet-crossval, bitnet-sys) is **lazily imported** and feature-gated, not eagerly loaded at xtask's top level. This prevents compilation failures when FFI is not available.
 

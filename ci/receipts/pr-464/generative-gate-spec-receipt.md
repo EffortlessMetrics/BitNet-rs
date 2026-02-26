@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-All Issue #465 specifications and ADRs have been validated against existing BitNet.rs API contracts and documentation in `docs/reference/`. **No blocking inconsistencies or contract violations found.** The specifications are implementation-ready with comprehensive neural network context, deterministic baseline requirements, and honest compute enforcement.
+All Issue #465 specifications and ADRs have been validated against existing BitNet-rs API contracts and documentation in `docs/reference/`. **No blocking inconsistencies or contract violations found.** The specifications are implementation-ready with comprehensive neural network context, deterministic baseline requirements, and honest compute enforcement.
 
 **Validation Scope:**
 - Implementation specification: `docs/explanation/issue-465-implementation-spec.md`
@@ -130,7 +130,7 @@ cargo build -p bitnet-cli --release --no-default-features --features cpu,full-cl
 
 **Contract Alignment:** ✅ **PASS**
 - Specification AC9 standardizes feature flags across documentation
-- Pattern matches existing BitNet.rs conventions
+- Pattern matches existing BitNet-rs conventions
 - No deviations from established practices
 
 ---
@@ -413,7 +413,7 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 - Mock detection: `compute_path: "real"` requirement blocks fallbacks
 - Kernel hygiene: Non-empty, bounded length (≤128 chars), bounded count (≤10K)
 
-### BitNet.rs Standards Compliance ✅
+### BitNet-rs Standards Compliance ✅
 
 **Development Practices:**
 - Feature-gated builds: Default features EMPTY, explicit `--features cpu|gpu`
@@ -471,7 +471,7 @@ Use `bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime}` for
 
 ## Contract Drift Summary
 
-**No breaking changes detected.** All specifications align with existing BitNet.rs API contracts, receipt schema v1.0.0, xtask command interfaces, and neural network quantization specifications.
+**No breaking changes detected.** All specifications align with existing BitNet-rs API contracts, receipt schema v1.0.0, xtask command interfaces, and neural network quantization specifications.
 
 **Additive Changes (Acceptable):**
 - CPU backend validation: New symmetry with GPU validation (adds `backend="cpu"` kernel requirement)
@@ -548,7 +548,7 @@ grep -rn "10.*20.*tok/s\|10-20\|15.*tok/s" docs/reference/*.md
 3. Architecture decisions well-justified (4 ADRs with clear rationale and consequences)
 4. No breaking changes or contract drift detected
 5. Minor enhancement opportunity identified but non-blocking (schema version field name)
-6. Specifications align with BitNet.rs standards (feature flags, device-aware ops, cross-validation)
+6. Specifications align with BitNet-rs standards (feature flags, device-aware ops, cross-validation)
 
 **Next Steps for spec-finalizer:**
 1. Address schema version field name consistency (optional enhancement)

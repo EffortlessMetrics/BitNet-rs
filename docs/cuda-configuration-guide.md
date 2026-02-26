@@ -1,6 +1,6 @@
 # CUDA Configuration and Memory Optimization Guide
 
-This guide provides detailed instructions for configuring CUDA and optimizing memory usage with BitNet.rs GPU kernels.
+This guide provides detailed instructions for configuring CUDA and optimizing memory usage with BitNet-rs GPU kernels.
 
 ## Table of Contents
 
@@ -614,4 +614,4 @@ let test_config = MemoryPoolConfig {
 };
 ```
 
-This comprehensive guide provides the foundation for optimal CUDA configuration and memory management in BitNet.rs GPU kernels.
+This comprehensive guide provides the foundation for optimal CUDA configuration and memory management in BitNet-rs GPU kernels.

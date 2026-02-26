@@ -1,4 +1,4 @@
-# BitNet.rs Performance Baseline: PR #448 (OpenTelemetry OTLP Migration)
+# bitnet-rs Performance Baseline: PR #448 (OpenTelemetry OTLP Migration)
 
 **Date**: 2025-10-12
 **Commit**: main (8a413dd)

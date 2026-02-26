@@ -1,6 +1,6 @@
 # Exploration Analysis - Complete Index
 
-**Repository**: BitNet.rs  
+**Repository**: BitNet-rs  
 **Analysis Date**: 2025-10-22  
 **Status**: Complete  
 
@@ -8,7 +8,7 @@
 
 ## Analysis Overview
 
-This exploration analyzed **environment variable testing patterns** across the BitNet.rs codebase with focus on:
+This exploration analyzed **environment variable testing patterns** across the BitNet-rs codebase with focus on:
 
 1. Current testing approaches (2 working patterns identified)
 2. Infrastructure for environment isolation (RAII vs scoped)

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides detailed information about all `#[cfg(...)]` patterns found in test files across the BitNet.rs workspace.
+This document provides detailed information about all `#[cfg(...)]` patterns found in test files across the BitNet-rs workspace.
 
 ## Summary Statistics
 

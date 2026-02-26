@@ -152,7 +152,7 @@ jobs:
           3. Deterministic configuration for reproducibility
           4. Complete environment metadata for traceability
 
-          This provides honest compute evidence for all BitNet.rs inference operations.
+          This provides honest compute evidence for all bitnet-rs inference operations.
           EOF
 
           cat cpu-receipt-gate-report.md

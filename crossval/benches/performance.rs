@@ -1,7 +1,7 @@
 //! Performance benchmarks comparing Rust and C++ implementations
 //!
 //! This benchmark suite provides comprehensive performance comparison between
-//! BitNet.rs and the legacy C++ implementation, with regression detection
+//! bitnet-rs and the legacy C++ implementation, with regression detection
 //! and detailed reporting.
 
 #![cfg(feature = "crossval")]

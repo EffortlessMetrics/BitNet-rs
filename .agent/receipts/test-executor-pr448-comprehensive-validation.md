@@ -180,7 +180,7 @@ cargo test --workspace --no-default-features --features cpu
 ✅ **AC8 Tests**: 10/10 PASS (CI workflow validation)
 ✅ **Config API Migration**: 8/8 PASS (TestConfig API refactoring)
 
-### BitNet.rs Core Coverage
+### bitnet-rs Core Coverage
 ✅ **Root Library**: 4/4 tests PASS (version, build info, MSRV, prelude)
 ✅ **Common Library**: 10/10 tests PASS (config, env, concurrency)
 ✅ **CLI Tests**: 7/7 PASS (smoke tests, help, version)
@@ -207,7 +207,7 @@ cargo test --workspace --no-default-features --features cpu
 ### Assessment
 
 - ✅ All PR-introduced tests PASS (13/13)
-- ✅ All core BitNet.rs tests PASS (268/268 excluding documented flaky)
+- ✅ All core bitnet-rs tests PASS (268/268 excluding documented flaky)
 - ✅ Neural network pipeline tests PASS (100%)
 - ✅ Quality gates satisfied (format, clippy, tests)
 - ⚠️ 1 pre-existing flaky test (documented, passes in isolation)

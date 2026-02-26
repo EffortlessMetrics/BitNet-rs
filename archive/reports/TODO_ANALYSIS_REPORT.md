@@ -1,4 +1,4 @@
-# BitNet.rs TODO Analysis Report
+# BitNet-rs TODO Analysis Report
 
 **Generated:** 2025-10-19  
 **Scope:** Comprehensive analysis of remaining TODOs, FIXMEs, and unimplemented areas  
@@ -12,7 +12,7 @@
 
 ## Executive Summary
 
-The BitNet.rs codebase has substantial infrastructure in place but faces systematic gaps in:
+The BitNet-rs codebase has substantial infrastructure in place but faces systematic gaps in:
 
 1. **Production Infrastructure** (~35% of TODOs)
    - Health check endpoints (114 TODO items in single file)

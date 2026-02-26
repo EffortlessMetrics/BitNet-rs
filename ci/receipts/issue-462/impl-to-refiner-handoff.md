@@ -54,7 +54,7 @@
 
 ---
 
-## BitNet.rs Compliance Verified
+## BitNet-rs Compliance Verified
 
 ### ✅ Error Handling Patterns
 - TL LUT helper uses `Result<usize>` with `BitNetError::Kernel`
@@ -121,7 +121,7 @@
 
 **Status:** ✅ **READY FOR REFINEMENT**
 **Route:** **FINALIZE → code-refiner**
-**Reason:** Implementation validated against BitNet.rs standards. All quality gates passed.
+**Reason:** Implementation validated against BitNet-rs standards. All quality gates passed.
 
 **Next Steps:**
 1. Code-refiner performs comprehensive refinement validation

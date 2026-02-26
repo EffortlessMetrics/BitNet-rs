@@ -4,7 +4,7 @@
 **Module**: `bitnet-tokenizers`
 **Feature Flags**: `cpu`, `gpu`, `spm` (SentencePiece support)
 
-This document provides the complete API reference for BitNet.rs universal tokenizer discovery system, enabling automatic tokenizer resolution for quantized neural network models.
+This document provides the complete API reference for BitNet-rs universal tokenizer discovery system, enabling automatic tokenizer resolution for quantized neural network models.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ This document provides the complete API reference for BitNet.rs universal tokeni
 
 ### `TokenizerDiscovery`
 
-Primary tokenizer discovery engine for BitNet.rs neural network models. Parses GGUF metadata, analyzes tensor patterns, and determines optimal tokenizer strategies.
+Primary tokenizer discovery engine for BitNet-rs neural network models. Parses GGUF metadata, analyzes tensor patterns, and determines optimal tokenizer strategies.
 
 #### Constructor
 
@@ -316,7 +316,7 @@ Resolve with automatic fallback chain.
 **Fallback Order**:
 1. **GGUF embedded tokenizer** - Extract from model metadata
 2. **Co-located files** - Search model directory
-3. **Standard cache** - Check BitNet.rs and HuggingFace caches
+3. **Standard cache** - Check BitNet-rs and HuggingFace caches
 4. **Smart download** - Download from HuggingFace Hub (if not offline)
 5. **Mock fallback** - Testing only (non-strict mode)
 

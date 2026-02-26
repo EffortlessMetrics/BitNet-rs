@@ -60,7 +60,7 @@ cargo run -p xtask -- verify-receipt --path docs/baselines/20251015-cpu.json
 
 ---
 
-## BitNet.rs Baseline Standards
+## BitNet-rs Baseline Standards
 
 | Standard | Status | Evidence |
 |----------|--------|----------|

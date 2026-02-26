@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This specification provides a complete architectural blueprint for Issue #465, which finalizes the v0.1.0-mvp release with comprehensive documentation updates, CPU baseline establishment, CI gate enforcement, and release quality assurance. All 12 acceptance criteria are organized into 4 parallelizable work streams with clear validation paths, neural network context, and BitNet.rs alignment.
+This specification provides a complete architectural blueprint for Issue #465, which finalizes the v0.1.0-mvp release with comprehensive documentation updates, CPU baseline establishment, CI gate enforcement, and release quality assurance. All 12 acceptance criteria are organized into 4 parallelizable work streams with clear validation paths, neural network context, and BitNet-rs alignment.
 
 **Architecture Overview:**
 ```
@@ -139,7 +139,7 @@ Add the following section to `README.md` after the quickstart:
 ```markdown
 ## Receipt Verification
 
-BitNet.rs uses **inference receipts** to prove honest compute with real neural network execution. Receipts contain measured performance metrics and kernel execution evidence.
+BitNet-rs uses **inference receipts** to prove honest compute with real neural network execution. Receipts contain measured performance metrics and kernel execution evidence.
 
 ### Commands
 
@@ -306,7 +306,7 @@ grep -rn "cargo build.*--features cpu" README.md docs/ | \
 **Evidence Tag**: `// AC9: Feature flags standardized across documentation`
 
 **Rationale**:
-- **Default Features are EMPTY**: BitNet.rs requires explicit feature selection to prevent unwanted dependencies
+- **Default Features are EMPTY**: BitNet-rs requires explicit feature selection to prevent unwanted dependencies
 - **Build Determinism**: Explicit flags ensure reproducible builds across environments
 - **User Clarity**: Clear CPU vs GPU distinction prevents silent fallback confusion
 - **CI Alignment**: Matches `.github/workflows/model-gates.yml` configuration
@@ -455,7 +455,7 @@ mkdir -p docs/baselines
 # Create baseline README (if not exists)
 if [[ ! -f "docs/baselines/README.md" ]]; then
   cat > docs/baselines/README.md << 'EOF'
-# BitNet.rs Baseline Receipts
+# BitNet-rs Baseline Receipts
 
 Pinned CPU/GPU baseline receipts for deterministic performance comparison.
 
@@ -908,7 +908,7 @@ Create `docs/ci/branch-protection.md`:
 
 ## Overview
 
-BitNet.rs enforces honest compute via branch protection rules that require Model Gates (CPU) status checks before merging to `main`.
+BitNet-rs enforces honest compute via branch protection rules that require Model Gates (CPU) status checks before merging to `main`.
 
 ## Required Status Checks
 
@@ -1280,7 +1280,7 @@ Create `scripts/pre-tag-verification.sh`:
 
 set -euo pipefail
 
-echo "🔍 BitNet.rs v0.1.0-mvp Pre-Tag Verification"
+echo "🔍 BitNet-rs v0.1.0-mvp Pre-Tag Verification"
 echo "============================================="
 echo ""
 
@@ -1492,7 +1492,7 @@ DATE=$(date +%Y%m%d)
 git tag -a v0.1.0-mvp -m "$(cat <<EOF
 Release v0.1.0-mvp: Production CPU Inference with Receipt Verification
 
-This is the first MVP release of BitNet.rs with production-ready CPU inference.
+This is the first MVP release of BitNet-rs with production-ready CPU inference.
 
 Key Features:
 - Real neural network inference with I2_S quantization (≥99.8% accuracy vs FP32)
@@ -1550,7 +1550,7 @@ DATE=$(date +%Y%m%d)
 gh release create v0.1.0-mvp \
   --title "v0.1.0-mvp: Production CPU Inference" \
   --notes "$(cat <<EOF
-## BitNet.rs v0.1.0-mvp
+## BitNet-rs v0.1.0-mvp
 
 Production-ready CPU inference with honest compute verification.
 
@@ -2000,7 +2000,7 @@ cargo run -p xtask -- verify-receipt --path ci/inference.json
 
 ## Overview
 
-The `xtask` crate provides developer tooling for BitNet.rs, including model operations, benchmarking, receipt verification, and cross-validation.
+The `xtask` crate provides developer tooling for BitNet-rs, including model operations, benchmarking, receipt verification, and cross-validation.
 
 ## Commands
 
@@ -2164,7 +2164,7 @@ cargo run -p xtask -- crossval \
 
 ## Overview
 
-BitNet.rs uses GitHub branch protection to enforce honest compute via Model Gates (CPU) status checks.
+BitNet-rs uses GitHub branch protection to enforce honest compute via Model Gates (CPU) status checks.
 
 ## GitHub API Schema
 
@@ -2473,7 +2473,7 @@ gh release view v0.1.0-mvp
 - ✅ 4 ADRs documenting architecture decisions
 - ✅ 3 API contracts (receipt schema, xtask commands, branch protection)
 - ✅ Validation commands and evidence tags for each AC
-- ✅ Neural network context aligned with BitNet.rs quantization patterns
+- ✅ Neural network context aligned with BitNet-rs quantization patterns
 - ✅ Risk mitigation strategies for admin-dependent operations
 - ✅ Work stream parallelization plan (5.75 hours total, 2.75 hours critical path)
 
@@ -2481,6 +2481,6 @@ gh release view v0.1.0-mvp
 
 ---
 
-**Specification Author**: Claude Code (BitNet.rs Neural Network Systems Architect)
+**Specification Author**: Claude Code (BitNet-rs Neural Network Systems Architect)
 **Date**: 2025-10-15
 **Status**: IMPLEMENTATION-READY ✅

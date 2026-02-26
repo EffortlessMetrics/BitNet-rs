@@ -1,4 +1,4 @@
-# BitNet.rs Test Suite Analysis & Documentation Update - Session Summary
+# BitNet-rs Test Suite Analysis & Documentation Update - Session Summary
 **Date**: 2025-10-20
 **Status**: ✅ COMPLETE
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Successfully completed comprehensive analysis of BitNet.rs test suite and updated documentation with accurate status information. The key finding: **only 4 out of 56 ignored tests are true TDD scaffolds** - the rest are fully implemented tests gated by infrastructure requirements.
+Successfully completed comprehensive analysis of BitNet-rs test suite and updated documentation with accurate status information. The key finding: **only 4 out of 56 ignored tests are true TDD scaffolds** - the rest are fully implemented tests gated by infrastructure requirements.
 
 ---
 
@@ -191,7 +191,7 @@ cargo test --workspace --features cpu test_ac4 -- --ignored
 
 ## Conclusion
 
-**The TDD scaffold situation is dramatically better than documented.** BitNet.rs has:
+**The TDD scaffold situation is dramatically better than documented.** BitNet-rs has:
 - ✅ 1,469 comprehensive tests with excellent coverage
 - ✅ All non-ignored tests passing (0 failures)
 - ✅ Only 4 tests with incomplete implementations

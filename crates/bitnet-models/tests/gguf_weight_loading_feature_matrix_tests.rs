@@ -4,7 +4,7 @@
 //! API contract: gguf-weight-loading-api-contracts.md
 //!
 //! Comprehensive feature flag testing matrix for GGUF weight loading across all
-//! BitNet.rs feature combinations: CPU, GPU, FFI, WASM, cross-validation, and
+//! BitNet-rs feature combinations: CPU, GPU, FFI, WASM, cross-validation, and
 //! quantization variants. Tests graceful fallbacks and device compatibility.
 
 #![allow(dead_code)] // Test utilities may be used by future tests

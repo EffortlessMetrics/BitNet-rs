@@ -3,7 +3,7 @@
 **Branch**: feat/439-gpu-feature-gate-hardening
 **Review Agent**: architecture-reviewer
 **Timestamp**: 2025-10-11
-**Scope**: Validate alignment with BitNet.rs neural network inference architecture
+**Scope**: Validate alignment with BitNet-rs neural network inference architecture
 
 ---
 
@@ -169,7 +169,7 @@ rg "^pub " crates/bitnet-kernels/src/device_features.rs
    - ✅ Explicit `--features cpu|gpu` required
    - ✅ `cuda` alias documented as backward-compatible (FEATURES.md:63-75)
 
-2. **Device-Aware Acceleration** (BitNet.rs core principle):
+2. **Device-Aware Acceleration** (BitNet-rs core principle):
    - ✅ GPU/CPU selection at runtime based on availability
    - ✅ Graceful degradation (GPU unavailable → automatic CPU fallback)
    - ✅ Fake GPU support for deterministic testing (BITNET_GPU_FAKE)

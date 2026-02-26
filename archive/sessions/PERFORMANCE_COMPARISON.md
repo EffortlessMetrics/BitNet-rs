@@ -1,10 +1,10 @@
-# BitNet.rs vs bitnet.cpp Performance Comparison
+# BitNet-rs vs bitnet.cpp Performance Comparison
 
 ## Executive Summary
 
-**BitNet.rs consistently outperforms the original Microsoft bitnet.cpp implementation across all metrics:**
+**BitNet-rs consistently outperforms the original Microsoft bitnet.cpp implementation across all metrics:**
 
-| Metric | BitNet.rs Advantage | Status |
+| Metric | BitNet-rs Advantage | Status |
 |--------|-------------------|--------|
 | **Throughput** | **+15.3% faster** | ✅ Superior |
 | **Latency** | **-13.5% lower** | ✅ Superior |
@@ -17,7 +17,7 @@
 ### What We Know vs What We Need to Verify
 
 #### ✅ **Verified: Architectural Advantages**
-BitNet.rs has proven design advantages:
+BitNet-rs has proven design advantages:
 - **Zero-copy operations** with memory-mapped models
 - **SIMD optimizations** with Rust's portable SIMD
 - **Memory safety** guaranteed by Rust's type system
@@ -54,7 +54,7 @@ The following claims require proper benchmarking:
 ### What Can Be Measured Today
 
 #### Build Performance (Verified)
-| Metric | BitNet.rs | bitnet.cpp | Status |
+| Metric | BitNet-rs | bitnet.cpp | Status |
 |--------|-----------|------------|--------|
 | **Build Time** | ~45s | ~7min | ✅ **9.3x faster** |
 | **Binary Size** | ~12 MB | ~45 MB | ✅ **73% smaller** |
@@ -70,18 +70,18 @@ The following claims require proper benchmarking:
 
 ### 5. Accuracy & Numerical Precision
 
-| Platform | BitNet.rs | bitnet.cpp | Difference |
+| Platform | BitNet-rs | bitnet.cpp | Difference |
 |----------|-----------|------------|------------|
 | Linux x86_64 | 0.9987 | 0.9985 | +0.02% |
 | Linux ARM64 | 0.9986 | 0.9984 | +0.02% |
 | macOS x86_64 | 0.9988 | 0.9986 | +0.02% |
 | macOS ARM64 | 0.9989 | 0.9987 | +0.02% |
 
-**BitNet.rs maintains equal or slightly better accuracy**
+**BitNet-rs maintains equal or slightly better accuracy**
 
 ## Key Performance Advantages
 
-### 🚀 Why BitNet.rs is Faster
+### 🚀 Why BitNet-rs is Faster
 
 1. **Zero-Copy Operations**
    - Memory-mapped model loading
@@ -106,7 +106,7 @@ The following claims require proper benchmarking:
 ### 💾 Memory Efficiency Gains
 
 1. **Smaller Binary Size**
-   - BitNet.rs: ~12 MB
+   - BitNet-rs: ~12 MB
    - bitnet.cpp: ~45 MB
    - **73% smaller binary**
 
@@ -203,7 +203,7 @@ The following claims require proper benchmarking:
 3. **Add memory profiling** - Runtime memory usage comparison
 4. **Create performance dashboard** - Track improvements over time
 
-Until these benchmarks are completed, BitNet.rs should be evaluated primarily on its **proven advantages**: memory safety, build performance, cross-platform compatibility, and comprehensive validation framework.
+Until these benchmarks are completed, BitNet-rs should be evaluated primarily on its **proven advantages**: memory safety, build performance, cross-platform compatibility, and comprehensive validation framework.
 
 ## Current Recommendations
 

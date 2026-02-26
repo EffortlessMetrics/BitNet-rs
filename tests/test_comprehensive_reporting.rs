@@ -310,8 +310,8 @@ async fn test_html_report_generation() {
 
     // Check HTML structure
     assert!(content.contains("<!DOCTYPE html>"));
-    assert!(content.contains("<title>BitNet.rs Test Report</title>"));
-    assert!(content.contains("BitNet.rs Test Report"));
+    assert!(content.contains("<title>BitNet-rs Test Report</title>"));
+    assert!(content.contains("BitNet-rs Test Report"));
 
     // Check test suite names
     assert!(content.contains("bitnet_core_tests"));
@@ -441,7 +441,7 @@ async fn test_markdown_report_generation() {
     let content = fs::read_to_string(&output_path).await.unwrap();
 
     // Check Markdown structure
-    assert!(content.contains("# BitNet.rs Test Report"));
+    assert!(content.contains("# BitNet-rs Test Report"));
     assert!(content.contains("## Summary"));
     assert!(content.contains("## Test Suites"));
 

@@ -44,7 +44,7 @@ Document environment variable testing standards with comprehensive EnvGuard usag
 2. **FR2: Pattern Examples**
    - Show correct usage: `EnvGuard` + `#[serial(bitnet_env)]`
    - Show incorrect usage: env mutation without guards (anti-pattern)
-   - Provide real-world examples from BitNet.rs test suite
+   - Provide real-world examples from BitNet-rs test suite
    - Document test execution modes (serial vs. parallel)
 
 3. **FR3: CI Integration**
@@ -85,7 +85,7 @@ Document environment variable testing standards with comprehensive EnvGuard usag
 
 ### Overview
 
-BitNet.rs uses environment variables for runtime configuration (e.g., `BITNET_DETERMINISTIC`, `BITNET_STRICT_MODE`, `BITNET_GPU_FAKE`). Tests that mutate environment variables must use the **EnvGuard pattern** to prevent race conditions in parallel test execution.
+BitNet-rs uses environment variables for runtime configuration (e.g., `BITNET_DETERMINISTIC`, `BITNET_STRICT_MODE`, `BITNET_GPU_FAKE`). Tests that mutate environment variables must use the **EnvGuard pattern** to prevent race conditions in parallel test execution.
 
 ### The Problem: Race Conditions
 
@@ -250,7 +250,7 @@ cargo test --workspace --no-default-features --features cpu -- --test-threads=1
 
 ### CI Configuration
 
-BitNet.rs CI uses nextest with fixed thread count for deterministic execution:
+BitNet-rs CI uses nextest with fixed thread count for deterministic execution:
 
 ```yaml
 # .github/workflows/ci.yml
@@ -279,7 +279,7 @@ fail-fast = true           # Stop on first failure
 - Testing with command-line flags (not env vars)
 - Using mocked configuration (no real env mutation)
 
-### BitNet.rs Environment Variables
+### BitNet-rs Environment Variables
 
 **Common Env Vars in Tests** (all require EnvGuard):
 - `BITNET_DETERMINISTIC`: Enable deterministic inference
@@ -620,7 +620,7 @@ grep -i "envguard\|environment.*test" .github/PULL_REQUEST_TEMPLATE.md
 **AC3: Pattern Examples Clear**
 - ✅ Correct pattern example with `EnvGuard` + `#[serial]`
 - ✅ Anti-pattern examples (what NOT to do)
-- ✅ Real-world examples from BitNet.rs codebase
+- ✅ Real-world examples from BitNet-rs codebase
 - ✅ Common pitfalls documented
 
 **Validation**:
@@ -717,7 +717,7 @@ fn test_bad_example() { /* ... */ }
 
 ---
 
-## BitNet.rs Alignment
+## BitNet-rs Alignment
 
 ### TDD Practices
 
@@ -765,7 +765,7 @@ fn test_bad_example() { /* ... */ }
 - [ ] Document common pitfalls (3+ examples)
 - [ ] Add running tests section (CI commands)
 - [ ] Include when to use / when NOT to use guidance
-- [ ] List BitNet.rs env vars requiring EnvGuard
+- [ ] List BitNet-rs env vars requiring EnvGuard
 - [ ] Add real-world examples (3+ from codebase)
 - [ ] Include validation checklist
 
@@ -823,5 +823,5 @@ fn test_bad_example() { /* ... */ }
 ---
 
 **Last Updated**: 2025-10-23
-**Spec Author**: BitNet.rs Spec Analyzer Agent
+**Spec Author**: BitNet-rs Spec Analyzer Agent
 **Review Status**: Pending

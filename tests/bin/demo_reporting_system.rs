@@ -26,7 +26,7 @@ fn generate_html_report(suites: &[SimpleTestSuite]) -> String {
     let mut html = String::new();
 
     html.push_str("<!DOCTYPE html>\n<html>\n<head>\n");
-    html.push_str("<title>BitNet.rs Test Report</title>\n");
+    html.push_str("<title>BitNet-rs Test Report</title>\n");
     html.push_str("<style>\n");
     html.push_str("body { font-family: Arial, sans-serif; margin: 20px; }\n");
     html.push_str(".passed { color: green; }\n");
@@ -36,7 +36,7 @@ fn generate_html_report(suites: &[SimpleTestSuite]) -> String {
     html.push_str("th { background-color: #f2f2f2; }\n");
     html.push_str("</style>\n</head>\n<body>\n");
 
-    html.push_str("<h1>BitNet.rs Test Report</h1>\n");
+    html.push_str("<h1>BitNet-rs Test Report</h1>\n");
     html.push_str(&format!(
         "<p>Generated on: {}</p>\n",
         chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
@@ -87,7 +87,7 @@ fn generate_json_report(suites: &[SimpleTestSuite]) -> Result<String, serde_json
     let report = serde_json::json!({
         "metadata": {
             "generated_at": chrono::Utc::now().to_rfc3339(),
-            "generator": "BitNet.rs Test Framework",
+            "generator": "BitNet-rs Test Framework",
             "version": "0.1.0"
         },
         "summary": {
@@ -120,7 +120,7 @@ fn generate_json_report(suites: &[SimpleTestSuite]) -> Result<String, serde_json
 fn generate_markdown_report(suites: &[SimpleTestSuite]) -> String {
     let mut md = String::new();
 
-    md.push_str("# BitNet.rs Test Report\n\n");
+    md.push_str("# BitNet-rs Test Report\n\n");
     md.push_str(&format!(
         "Generated on: {}\n\n",
         chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
@@ -210,7 +210,7 @@ fn create_sample_data() -> Vec<SimpleTestSuite> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 BitNet.rs Reporting System Demo");
+    println!("🚀 BitNet-rs Reporting System Demo");
     println!("===================================\n");
 
     // Create sample test data

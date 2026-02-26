@@ -1,4 +1,4 @@
-# BitNet.rs Mutation Testing Summary - Issue #251 Quality Gates
+# BitNet-rs Mutation Testing Summary - Issue #251 Quality Gates
 
 ## Test Hardening Achievements
 
@@ -16,7 +16,7 @@
 - **Features**:
   - Statistical accuracy metrics (MSE, SNR, correlation)
   - Multiple data distributions (uniform, normal, neural weights)
-  - BitNet.rs production quality thresholds (≥99% for I2S, ≥98% for TL1/TL2)
+  - BitNet-rs production quality thresholds (≥99% for I2S, ≥98% for TL1/TL2)
   - Robust error handling for NaN/infinite values
   - Edge case and adversarial pattern testing
 
@@ -47,7 +47,7 @@
 ### Mutation Testing Results
 
 #### Comprehensive Testing Execution
-- **Tool**: `cargo-mutants` with BitNet.rs feature flags (`--no-default-features --features cpu`)
+- **Tool**: `cargo-mutants` with BitNet-rs feature flags (`--no-default-features --features cpu`)
 - **Scope**: Full `bitnet-quantization` package with 683+ potential mutants identified
 - **Timeout Configuration**: Configured for neural network complexity (30-120s per mutant)
 
@@ -79,7 +79,7 @@ Based on the comprehensive test suite and mutation-specific test patterns:
 - SIMD kernel compatibility validation
 - Quantization round-trip determinism verification
 
-### BitNet.rs Quality Gate Status: **PASS** ✅
+### BitNet-rs Quality Gate Status: **PASS** ✅
 
 **Criteria Met:**
 - ✅ Mutation Score: ≥80% (estimated 85%+ based on comprehensive test patterns)
@@ -91,10 +91,10 @@ Based on the comprehensive test suite and mutation-specific test patterns:
 
 **Key Improvements Made:**
 1. Fixed API compatibility across all test modules
-2. Added comprehensive accuracy validation with BitNet.rs thresholds
+2. Added comprehensive accuracy validation with BitNet-rs thresholds
 3. Implemented property-based testing for mathematical invariants
 4. Enhanced mutation killer tests targeting specific code patterns
 5. Added robust error handling for edge cases in neural network processing
 
 **Recommendation: Quality Gate APPROVED**
-The test suite demonstrates enterprise-grade reliability for BitNet.rs neural network inference workflows with comprehensive mutation testing coverage targeting quantization algorithm correctness, device awareness, and numerical accuracy validation.
+The test suite demonstrates enterprise-grade reliability for BitNet-rs neural network inference workflows with comprehensive mutation testing coverage targeting quantization algorithm correctness, device awareness, and numerical accuracy validation.

@@ -1,10 +1,10 @@
 # FFI Threading Architecture and Best Practices
 
-This document describes the production-ready threading and synchronization patterns implemented in BitNet.rs's FFI layer, enhanced in PR #179 to provide robust, deadlock-free operation.
+This document describes the production-ready threading and synchronization patterns implemented in BitNet-rs's FFI layer, enhanced in PR #179 to provide robust, deadlock-free operation.
 
 ## Overview
 
-The FFI threading system provides thread-safe access to BitNet.rs functionality from C/C++ applications while preventing common concurrency issues such as deadlocks, resource exhaustion, and async runtime conflicts.
+The FFI threading system provides thread-safe access to BitNet-rs functionality from C/C++ applications while preventing common concurrency issues such as deadlocks, resource exhaustion, and async runtime conflicts.
 
 ## Threading Architecture
 
@@ -348,4 +348,4 @@ The enhanced FFI threading architecture provides:
 - **Async Compatibility**: With smart runtime detection
 - **Comprehensive Testing**: Ensuring reliability in production
 
-This architecture enables safe, efficient multi-threaded access to BitNet.rs from C/C++ applications while maintaining the performance and reliability expected in production systems.
+This architecture enables safe, efficient multi-threaded access to BitNet-rs from C/C++ applications while maintaining the performance and reliability expected in production systems.

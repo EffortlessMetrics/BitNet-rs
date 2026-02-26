@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document defines a comprehensive testing strategy for BitNet.rs tokenizer discovery system, ensuring production-grade reliability through systematic unit testing, integration testing, cross-validation with C++ reference implementations, and performance regression testing. The strategy emphasizes neural network model compatibility, quantization accuracy, and device-aware optimization validation.
+This document defines a comprehensive testing strategy for BitNet-rs tokenizer discovery system, ensuring production-grade reliability through systematic unit testing, integration testing, cross-validation with C++ reference implementations, and performance regression testing. The strategy emphasizes neural network model compatibility, quantization accuracy, and device-aware optimization validation.
 
 ## Testing Architecture Overview
 
@@ -1102,7 +1102,7 @@ mod error_recovery_tests {
 
 set -e
 
-echo "🧪 Running BitNet.rs Tokenizer Discovery Test Suite"
+echo "🧪 Running BitNet-rs Tokenizer Discovery Test Suite"
 
 # Environment setup
 export RUST_LOG=debug
@@ -1226,7 +1226,7 @@ jobs:
 
 ## Conclusion
 
-This comprehensive testing strategy ensures BitNet.rs tokenizer discovery system meets production-grade reliability standards through:
+This comprehensive testing strategy ensures BitNet-rs tokenizer discovery system meets production-grade reliability standards through:
 
 - **Systematic Unit Testing**: Individual component validation with neural network model-specific scenarios
 - **Integration Testing**: Real-world model compatibility and end-to-end workflow validation
@@ -1235,4 +1235,4 @@ This comprehensive testing strategy ensures BitNet.rs tokenizer discovery system
 - **Error Recovery Validation**: Comprehensive error handling and fallback strategy testing
 - **Continuous Integration**: Automated testing across feature flag combinations and platforms
 
-The testing framework validates all 10 acceptance criteria from Issue #249 while ensuring compatibility with BitNet.rs neural network inference pipeline, quantization formats (I2S/TL1/TL2), and production deployment requirements.
+The testing framework validates all 10 acceptance criteria from Issue #249 while ensuring compatibility with BitNet-rs neural network inference pipeline, quantization formats (I2S/TL1/TL2), and production deployment requirements.

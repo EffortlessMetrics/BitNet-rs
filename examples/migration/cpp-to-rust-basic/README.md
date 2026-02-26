@@ -1,6 +1,6 @@
 # Basic C++ to Rust Migration Example
 
-This example demonstrates a simple migration from C++ BitNet to BitNet.rs, showing the before and after code with performance comparisons.
+This example demonstrates a simple migration from C++ BitNet to bitnet-rs, showing the before and after code with performance comparisons.
 
 ## Overview
 

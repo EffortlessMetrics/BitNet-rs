@@ -299,5 +299,5 @@ AC_satisfied: 35/35 (AC1=3/3, AC2=3/3, AC3=3/3, AC4=2/2, AC5=2/2, AC6=7/7, AC7=1
 ---
 
 **Check Run Complete:** 2025-10-14
-**Validator:** tests-runner (BitNet.rs TDD Test Suite Orchestrator)
+**Validator:** tests-runner (BitNet-rs TDD Test Suite Orchestrator)
 **Conclusion:** ✅ SUCCESS - All critical tests passing, ready for build validation

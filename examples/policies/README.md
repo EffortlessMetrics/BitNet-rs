@@ -1,10 +1,10 @@
-# BitNet.rs Validation Policy Examples
+# BitNet-rs Validation Policy Examples
 
-This directory contains example validation policies for the BitNet.rs LayerNorm and projection weight validation system. These policies define acceptable RMS (Root Mean Square) ranges for model weights to detect quantization corruption, export issues, and architectural anomalies.
+This directory contains example validation policies for the BitNet-rs LayerNorm and projection weight validation system. These policies define acceptable RMS (Root Mean Square) ranges for model weights to detect quantization corruption, export issues, and architectural anomalies.
 
 ## Overview
 
-BitNet.rs includes a policy-driven validation system that checks model weights during loading and inference. Policies serve two purposes:
+BitNet-rs includes a policy-driven validation system that checks model weights during loading and inference. Policies serve two purposes:
 
 1. **Validation Rules**: Define acceptable RMS ranges for LayerNorm gamma and projection weights
 2. **Correction Policies**: Provide runtime fixes for known-bad models (temporary workarounds)
@@ -84,7 +84,7 @@ cargo run -p bitnet-cli -- inspect --ln-stats \
 
 ## Validation Gates
 
-BitNet.rs supports three validation gate modes:
+BitNet-rs supports three validation gate modes:
 
 ### 1. `none` - No Validation (Legacy Behavior)
 
@@ -700,4 +700,4 @@ If you encounter validation issues:
 
 ## License
 
-These policy files are provided under the same license as BitNet.rs (MIT OR Apache-2.0).
+These policy files are provided under the same license as BitNet-rs (MIT OR Apache-2.0).

@@ -68,8 +68,8 @@ use config::{CliConfig, ConfigBuilder};
 /// BitNet CLI - High-performance 1-bit LLM inference toolkit
 #[derive(Parser)]
 #[command(name = "bitnet")]
-#[command(about = "BitNet.rs — 1-bit neural network inference with strict receipts")]
-#[command(long_about = r#"BitNet.rs CLI — one-shot generation and chat with strict receipts
+#[command(about = "BitNet-rs — 1-bit neural network inference with strict receipts")]
+#[command(long_about = r#"BitNet-rs CLI — one-shot generation and chat with strict receipts
 
 QUICK EXAMPLES:
 

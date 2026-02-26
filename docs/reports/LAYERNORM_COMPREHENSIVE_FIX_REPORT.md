@@ -302,7 +302,7 @@ Compare activation norms at each layer to identify where values diverge.
   - LayerNorm source: `~/.cargo/registry/src/.../candle-nn-*/src/layer_norm.rs`
   - Formula: `y = ((x - mean) / sqrt(var + eps)) * gamma + beta`
 
-- **BitNet.rs Documentation**:
+- **BitNet-rs Documentation**:
   - `docs/environment-variables.md` - Gamma rescaling flags
   - `CLAUDE.md` - Known issues and workarounds
 

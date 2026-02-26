@@ -7,7 +7,7 @@ Comprehensive diagnostic tests have been implemented to understand RMSNorm behav
 ## Context
 
 - **Model Issue**: microsoft-bitnet-b1.58-2B-4T-gguf has LayerNorm gamma with RMS ≈ 0.018 (which equals 1/√2560, where 2560 is hidden_size)
-- **Comparison**: bitnet.cpp produces coherent output with same GGUF, while bitnet.rs produces garbled output
+- **Comparison**: bitnet.cpp produces coherent output with same GGUF, while bitnet-rs produces garbled output
 - **Investigation Goal**: Determine if RMSNorm implementation is causing the output quality difference
 
 ## Key Findings

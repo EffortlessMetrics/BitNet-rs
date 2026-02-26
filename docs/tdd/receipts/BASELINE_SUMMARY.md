@@ -1,4 +1,4 @@
-# BitNet.rs CPU Baseline Performance Receipt
+# BitNet-rs CPU Baseline Performance Receipt
 
 ## Execution Summary
 

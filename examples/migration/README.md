@@ -1,6 +1,6 @@
 # Migration Examples
 
-This directory contains practical examples showing how to migrate from legacy BitNet implementations to BitNet.rs.
+This directory contains practical examples showing how to migrate from legacy BitNet implementations to bitnet-rs.
 
 ## Examples Overview
 
@@ -53,7 +53,7 @@ Each example follows a consistent migration process:
 
 Typical improvements seen in these examples:
 
-| Metric | C++ Implementation | BitNet.rs | Improvement |
+| Metric | C++ Implementation | bitnet-rs | Improvement |
 |--------|-------------------|-----------|-------------|
 | **Inference Speed** | 520 tok/s | 1,250 tok/s | 2.4x faster |
 | **Memory Usage** | 3.2 GB | 2.1 GB | 34% reduction |

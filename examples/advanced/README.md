@@ -1,6 +1,6 @@
 # Advanced Examples
 
-This directory contains complex examples demonstrating advanced BitNet.rs features and integration patterns.
+This directory contains complex examples demonstrating advanced BitNet-rs features and integration patterns.
 
 ## Examples
 

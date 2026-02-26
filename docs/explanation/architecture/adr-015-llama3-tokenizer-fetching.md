@@ -418,9 +418,9 @@ fn resolve_tokenizer(model_path: &Path, explicit_path: Option<PathBuf>) -> Resul
 
 **Cons**:
 - Adds Python dependency (breaks Rust-native tooling)
-- Inconsistent with BitNet.rs architecture
+- Inconsistent with BitNet-rs architecture
 - Requires separate distribution and maintenance
-- Confusing for users ("Is BitNet.rs Rust or Python?")
+- Confusing for users ("Is BitNet-rs Rust or Python?")
 
 **Decision**: ❌ Rejected - Breaks Rust-native architecture, adds unnecessary dependency
 
@@ -443,7 +443,7 @@ fn resolve_tokenizer(model_path: &Path, explicit_path: Option<PathBuf>) -> Resul
 
 ## Conclusion
 
-This Architecture Decision Record establishes automatic LLaMA-3 tokenizer fetching and discovery as a foundational capability for BitNet.rs production readiness. The two-component approach (explicit provisioning + automatic discovery) balances user experience, reliability, and architectural consistency.
+This Architecture Decision Record establishes automatic LLaMA-3 tokenizer fetching and discovery as a foundational capability for BitNet-rs production readiness. The two-component approach (explicit provisioning + automatic discovery) balances user experience, reliability, and architectural consistency.
 
 **Key Architectural Principles**:
 1. **Explicit Provisioning**: One-time `xtask tokenizer` command for setup
@@ -452,7 +452,7 @@ This Architecture Decision Record establishes automatic LLaMA-3 tokenizer fetchi
 4. **Backward Compatible**: Explicit `--tokenizer` flag preserved
 5. **Enterprise-Ready**: Flexible sources (official/mirror), licensing clarity
 
-This architecture aligns with BitNet.rs values of developer experience, production reliability, and zero-configuration workflows while maintaining architectural consistency with existing patterns (xtask for setup, CLI for runtime).
+This architecture aligns with BitNet-rs values of developer experience, production reliability, and zero-configuration workflows while maintaining architectural consistency with existing patterns (xtask for setup, CLI for runtime).
 
 **Next Steps**:
 1. Implementation in phases: xtask subcommand → CLI discovery → CI integration

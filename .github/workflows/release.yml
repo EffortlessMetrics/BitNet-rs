@@ -372,14 +372,14 @@ jobs:
       - name: Generate release notes
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
-          echo "# BitNet.rs ${VERSION}" > release-notes.md
+          echo "# bitnet-rs ${VERSION}" > release-notes.md
           echo "" >> release-notes.md
 
           # Extract changelog for this version
           if [[ -f "CHANGELOG.md" ]]; then
             sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 >> release-notes.md
           else
-            echo "**BitNet.rs ${VERSION}** - Production-ready Rust implementation of BitNet 1-bit LLM inference." >> release-notes.md
+            echo "**bitnet-rs ${VERSION}** - Production-ready Rust implementation of BitNet 1-bit LLM inference." >> release-notes.md
             echo "" >> release-notes.md
             echo "This release focuses on the Rust implementation as the primary, actively maintained version." >> release-notes.md
           fi
@@ -408,7 +408,7 @@ jobs:
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844  # v1
         with:
           tag_name: ${{ needs.validate.outputs.tag }}
-          name: BitNet.rs ${{ needs.validate.outputs.version }}
+          name: bitnet-rs ${{ needs.validate.outputs.version }}
           body_path: release-notes.md
           files: release-assets/*
           draft: false

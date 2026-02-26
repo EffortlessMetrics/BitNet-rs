@@ -14,13 +14,13 @@
 > historical reference and audit purposes.
 
 ---
-# Launch Readiness Report: BitNet.rs
+# Launch Readiness Report: BitNet-rs
 
 ## 1. Executive Summary
 
-This report assesses the launch readiness of the `BitNet.rs` project based on a series of hands-on tests, as requested.
+This report assesses the launch readiness of the `BitNet-rs` project based on a series of hands-on tests, as requested.
 
-**Conclusion:** The core implementation of `BitNet.rs` appears to be of **very high quality, functionally correct, and likely ready for an initial launch**. This assessment is strongly supported by the eventual success of the cross-validation tests against the reference C++ implementation.
+**Conclusion:** The core implementation of `BitNet-rs` appears to be of **very high quality, functionally correct, and likely ready for an initial launch**. This assessment is strongly supported by the eventual success of the cross-validation tests against the reference C++ implementation.
 
 However, this readiness is undermined by a **critically fragile testing and validation pipeline**. The primary high-level testing commands were broken in multiple places, requiring significant debugging and patching to function. This indicates a severe lack of automated testing and a potential disconnect between the core developers and the project's operational health.
 
@@ -75,7 +75,7 @@ The analysis was conducted by attempting to follow the project's documented test
 
 **Final Recommendation:**
 
-The `BitNet.rs` project is in a paradoxical state of being **ready in principle, but not in practice**. The core product is solid, but the infrastructure required to maintain and validate it is not.
+The `BitNet-rs` project is in a paradoxical state of being **ready in principle, but not in practice**. The core product is solid, but the infrastructure required to maintain and validate it is not.
 
 1.  **Immediate Priority:** Fix the `full-crossval` command and the `cargo test` runner. All fixes discovered during this analysis should be applied.
 2.  **CI/CD Hardening:** The CI pipeline **must** be configured to run the `full-crossval` command and the full `cargo test` suite on every commit or pull request. This is non-negotiable for a project of this complexity.

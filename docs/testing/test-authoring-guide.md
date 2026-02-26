@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide provides comprehensive guidelines for writing effective tests in the BitNet.rs testing framework. Following these practices ensures consistent, maintainable, and reliable tests.
+This guide provides comprehensive guidelines for writing effective tests in the BitNet-rs testing framework. Following these practices ensures consistent, maintainable, and reliable tests.
 
 ## Test Structure and Organization
 

@@ -1,6 +1,6 @@
-# BitNet.rs CI Reporting and Notifications Guide
+# BitNet-rs CI Reporting and Notifications Guide
 
-This guide explains how to use the comprehensive CI reporting and notifications system implemented for BitNet.rs.
+This guide explains how to use the comprehensive CI reporting and notifications system implemented for BitNet-rs.
 
 ## Overview
 

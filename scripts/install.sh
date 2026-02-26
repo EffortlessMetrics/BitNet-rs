@@ -1,6 +1,6 @@
 #!/bin/bash
-# BitNet.rs Installation Script
-# This script installs the latest BitNet.rs binaries for Unix-like systems
+# BitNet-rs Installation Script
+# This script installs the latest BitNet-rs binaries for Unix-like systems
 
 set -e
 
@@ -43,7 +43,7 @@ trap cleanup EXIT
 # Help function
 show_help() {
     cat << EOF
-BitNet.rs Installation Script
+BitNet-rs Installation Script
 
 USAGE:
     $0 [OPTIONS]
@@ -200,7 +200,7 @@ download_and_install() {
         version="$VERSION"
     fi
 
-    log_info "Installing BitNet.rs $version for $platform"
+    log_info "Installing BitNet-rs $version for $platform"
 
     # Construct download URL
     filename="bitnet-${platform}.tar.gz"
@@ -308,7 +308,7 @@ verify_installation() {
 
 # Main installation process
 main() {
-    log_info "🦀 BitNet.rs Installation Script"
+    log_info "🦀 BitNet-rs Installation Script"
     log_info "Installing to: $INSTALL_DIR"
 
     # Check prerequisites
@@ -327,7 +327,7 @@ main() {
 
     # Verify installation
     if verify_installation; then
-        log_success "🎉 BitNet.rs installation completed successfully!"
+        log_success "🎉 BitNet-rs installation completed successfully!"
 
         # Show usage examples
         echo

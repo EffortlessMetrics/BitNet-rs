@@ -1,4 +1,4 @@
-# BitNet.rs Tracing Infrastructure - Complete Findings
+# BitNet-rs Tracing Infrastructure - Complete Findings
 
 ## What You Asked For
 

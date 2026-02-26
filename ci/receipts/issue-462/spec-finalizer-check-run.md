@@ -65,7 +65,7 @@ Specifications created and validated: 5 files, 3,821 lines, 25+ API signatures, 
 
 ### API Consistency (100%)
 
-All 25+ function signatures validated against existing BitNet.rs patterns:
+All 25+ function signatures validated against existing BitNet-rs patterns:
 - `bitnet_inference::InferenceEngine::new()`
 - `bitnet_inference::InferenceEngine::forward()`
 - `bitnet_quantization::i2s::quantize_weights()`
@@ -91,7 +91,7 @@ All file paths and line numbers verified:
 
 ### Standards Compliance (100%)
 
-All specifications follow BitNet.rs conventions:
+All specifications follow BitNet-rs conventions:
 - Feature flags: `--no-default-features --features cpu`
 - Error handling: `anyhow::Result<T>` patterns
 - Test patterns: `#[cfg(test)]` with feature gates
@@ -169,7 +169,7 @@ All 5 specifications follow proper Diátaxis structure:
 
 **FINALIZE → test-creator**
 
-Test-creator should scaffold 13 test cases following BitNet.rs TDD patterns:
+Test-creator should scaffold 13 test cases following BitNet-rs TDD patterns:
 - Feature-gated tests (`#[cfg(all(test, feature = "cpu"))]`)
 - Acceptance criteria traceability (AC1-AC5)
 - Validation commands from test plan

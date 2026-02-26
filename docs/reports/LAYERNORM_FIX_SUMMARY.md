@@ -8,11 +8,11 @@
 
 ## Executive Summary
 
-We have successfully identified and fixed the root cause of garbled inference output in BitNet.rs. The issue was **not a bug** but rather a **semantic mismatch** in how LayerNorm gamma weights with RMS ≈ 0.018 (= 1/√2560) are interpreted.
+We have successfully identified and fixed the root cause of garbled inference output in BitNet-rs. The issue was **not a bug** but rather a **semantic mismatch** in how LayerNorm gamma weights with RMS ≈ 0.018 (= 1/√2560) are interpreted.
 
 ### Key Findings
 
-1. **All BitNet.rs code is mathematically correct** ✅
+1. **All BitNet-rs code is mathematically correct** ✅
    - GGUF loader: Correct (no hidden rescaling)
    - RMSNorm implementation: Correct (verified via Candle source)
    - Shape handling: Correct (verified through forward pass)
@@ -21,11 +21,11 @@ We have successfully identified and fixed the root cause of garbled inference ou
    - Gamma RMS ≈ 0.018 = 1/√hidden_size (99.82% match)
    - This produces 50× smaller activations (mathematically correct for RMSNorm)
    - bitnet.cpp handles this correctly → coherent output
-   - bitnet.rs (before fix) applied weights as-is → garbled output
+   - bitnet-rs (before fix) applied weights as-is → garbled output
 
 3. **Root cause: Interpretation mismatch** ✅
    - bitnet.cpp likely rescales gamma by √hidden_size on load
-   - BitNet.rs was applying the pre-scaled values directly
+   - BitNet-rs was applying the pre-scaled values directly
    - Result: Activations 50× too small → numerical instability → garbled text
 
 ---

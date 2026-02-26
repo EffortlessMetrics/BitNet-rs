@@ -1,6 +1,6 @@
 # Performance Optimization Guide
 
-Comprehensive guide to optimizing BitNet.rs performance for different use cases and hardware configurations.
+Comprehensive guide to optimizing BitNet-rs performance for different use cases and hardware configurations.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ Comprehensive guide to optimizing BitNet.rs performance for different use cases 
 
 ## Performance Overview
 
-BitNet.rs is designed for high-performance inference with several optimization strategies:
+BitNet-rs is designed for high-performance inference with several optimization strategies:
 
 - **SIMD Kernels**: Vectorized operations for CPU (AVX2, NEON)
 - **GPU Acceleration**: CUDA kernels for parallel processing
@@ -48,7 +48,7 @@ RUSTFLAGS="-C target-feature=+avx2,+fma" cargo build --no-default-features --fea
 
 #### 2. SIMD Kernel Optimization
 
-BitNet.rs includes enhanced SIMD kernels with optimized memory access patterns:
+BitNet-rs includes enhanced SIMD kernels with optimized memory access patterns:
 
 ```bash
 # Test SIMD kernel compatibility and performance
@@ -791,4 +791,4 @@ powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 Start-Process -FilePath "bitnet-server.exe" -WindowStyle Hidden -Priority High
 ```
 
-This performance guide provides comprehensive optimization strategies for BitNet.rs across different hardware configurations and use cases. Regular profiling and monitoring will help identify bottlenecks specific to your deployment.
+This performance guide provides comprehensive optimization strategies for BitNet-rs across different hardware configurations and use cases. Regular profiling and monitoring will help identify bottlenecks specific to your deployment.

@@ -1,4 +1,4 @@
-# Benchmarks Gate - BitNet.rs Performance Validation Evidence (PR #430)
+# Benchmarks Gate - bitnet-rs Performance Validation Evidence (PR #430)
 
 ## review:gate:benchmarks
 
@@ -118,7 +118,7 @@
 - **Throughput**: 242K iterations/sec
 - **Extraction**: 1.35 µs (GGUF metadata)
 
-**BitNet.rs Performance Requirements**:
+**bitnet-rs Performance Requirements**:
 - ✅ Neural network inference: ≤10 seconds for standard models (N/A - tokenizer PR)
 - ✅ Tokenizer discovery: <100ms for cached lookups (**PASS**: 6-24µs << 100ms)
 - ✅ GGUF parsing: <500ms for typical model files (**PASS**: 1.35µs << 500ms)
@@ -128,7 +128,7 @@
 
 **No Regressions Detected**:
 - **Rationale**: New feature (Universal Tokenizer Discovery) has no prior baseline
-- **Comparison**: Performance validated against BitNet.rs requirements only
+- **Comparison**: Performance validated against bitnet-rs requirements only
 - **Result**: All performance targets met
 
 **Performance Characteristics**:
@@ -207,7 +207,7 @@ Note: GPU acceleration detection tested but GPU benchmarks not relevant for this
 **Recommendation**: ⚠️ NEUTRAL (benchmarks skipped, performance validated)
 - No criterion benchmarks available for PR #430 scope
 - Performance validated via comprehensive test suite
-- All BitNet.rs performance requirements met
+- All bitnet-rs performance requirements met
 - Future improvement: Add criterion benchmarks for continuous tracking
 
 ### Gate Validation Evidence
@@ -249,7 +249,7 @@ Embedded Extraction:
 
 ### Gate Routing Decision
 
-**ROUTE → docs-reviewer**: Performance validation NEUTRAL (benchmarks not applicable) but performance validated via comprehensive test suite. Tokenizer discovery performance: 6-24µs (well below 100ms requirement). Throughput: 242K iter/s. Extraction: 1.35µs. No performance regressions possible (new feature). All BitNet.rs performance requirements met. Ready for documentation review.
+**ROUTE → docs-reviewer**: Performance validation NEUTRAL (benchmarks not applicable) but performance validated via comprehensive test suite. Tokenizer discovery performance: 6-24µs (well below 100ms requirement). Throughput: 242K iter/s. Extraction: 1.35µs. No performance regressions possible (new feature). All bitnet-rs performance requirements met. Ready for documentation review.
 
 **Evidence**: `benchmarks: criterion not available; performance validated via tests; discovery: 6-24µs; throughput: 242K iter/s; extraction: 1.35µs; STATUS: test-based baseline established`
 
@@ -293,4 +293,4 @@ mkdir -p crates/bitnet-tokenizers/benches
 **Commit**: 5da0b5b
 **Benchmark Scope**: Tokenizer discovery performance validation (test-based)
 **Lines of Code**: Comprehensive tokenizer discovery implementation
-**Validation Method**: Release mode performance tests, BitNet.rs requirements validation
+**Validation Method**: Release mode performance tests, bitnet-rs requirements validation

@@ -1,6 +1,6 @@
 //! YAML Parsing Baseline Tests for serde_yaml → serde_yaml_ng Migration
 //!
-//! **Purpose**: Establish pre-migration baseline behavior for YAML parsing across BitNet.rs.
+//! **Purpose**: Establish pre-migration baseline behavior for YAML parsing across BitNet-rs.
 //! These tests validate that YAML deserialization, error handling, and Value types work
 //! correctly with the current serde_yaml 0.9 dependency BEFORE migrating to serde_yaml_ng 0.10.
 //!
@@ -13,7 +13,7 @@
 //! 1. Test YAML string deserialization with typed structs (from_str)
 //! 2. Test YAML Value type handling (untyped YAML)
 //! 3. Test error handling and error type behavior
-//! 4. Test with real BitNet.rs policy files (ln_rules, correction_policy)
+//! 4. Test with real BitNet-rs policy files (ln_rules, correction_policy)
 //! 5. Test edge cases: empty files, malformed YAML, nested structures
 //!
 //! **Post-Migration Validation**:
@@ -35,7 +35,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// Test struct for YAML deserialization - mirrors BitNet.rs policy structure
+/// Test struct for YAML deserialization - mirrors BitNet-rs policy structure
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 struct TestPolicy {
     version: u32,
@@ -128,7 +128,7 @@ database:
 
 #[test]
 fn test_yaml_string_deserialization_policy_structure() {
-    // Test deserialization of BitNet.rs policy-like structure
+    // Test deserialization of BitNet-rs policy-like structure
     let yaml = r#"
 version: 1
 rules:
@@ -305,13 +305,13 @@ fn test_yaml_error_conversion_to_string() {
 }
 
 // ==============================================================================
-// AC4: Test with Real BitNet.rs Policy Files
+// AC4: Test with Real BitNet-rs Policy Files
 // ==============================================================================
 
 #[test]
 #[cfg_attr(not(feature = "fixtures"), ignore)]
 fn test_real_policy_file_bitnet_f16_clean() {
-    // Test loading real BitNet.rs policy file: bitnet-b158-f16-clean.yml
+    // Test loading real BitNet-rs policy file: bitnet-b158-f16-clean.yml
     let policy_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../examples/policies/bitnet-b158-f16-clean.yml");
 
@@ -340,7 +340,7 @@ fn test_real_policy_file_bitnet_f16_clean() {
 #[test]
 #[cfg_attr(not(feature = "fixtures"), ignore)]
 fn test_real_policy_file_custom_model_example() {
-    // Test loading real BitNet.rs policy file: custom-model-example.yml
+    // Test loading real BitNet-rs policy file: custom-model-example.yml
     let policy_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../examples/policies/custom-model-example.yml");
 
@@ -524,12 +524,12 @@ negative: -99
 }
 
 // ==============================================================================
-// AC6: Test serde_yaml API Patterns Used in BitNet.rs
+// AC6: Test serde_yaml API Patterns Used in BitNet-rs
 // ==============================================================================
 
 #[test]
 fn test_serde_yaml_api_pattern_from_str_with_map_err() {
-    // Test the .map_err() pattern used in BitNet.rs for error conversion
+    // Test the .map_err() pattern used in BitNet-rs for error conversion
     // This pattern appears in ln_rules.rs and correction_policy.rs
     let yaml = r#"
 name: test
@@ -804,11 +804,11 @@ inactive: off
     eprintln!("enabled: {:?}", enabled);
     eprintln!("disabled: {:?}", disabled);
 
-    // Note: This test is ignored because BitNet.rs uses explicit true/false
+    // Note: This test is ignored because BitNet-rs uses explicit true/false
     // If you need YAML 1.1 compatibility, use explicit boolean values
 }
 
-/// Tests that BitNet.rs policy files use explicit booleans (YAML 1.2 safe)
+/// Tests that BitNet-rs policy files use explicit booleans (YAML 1.2 safe)
 ///
 /// Specification: phase2_serde_yaml_specification.md#yaml-1.1-vs-1.2 (section 6.2)
 #[test]

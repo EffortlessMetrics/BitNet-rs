@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Prometheus - Primary metrics collection for BitNet.rs
+  # Prometheus - Primary metrics collection for bitnet-rs
   prometheus:
     image: prom/prometheus:latest
     container_name: bitnet-prometheus
@@ -22,10 +22,10 @@ services:
     networks:
       - bitnet-monitoring
     labels:
-      - "monitoring.bitnet.rs/component=prometheus"
-      - "monitoring.bitnet.rs/implementation=rust"
+      - "monitoring.bitnet-rs/component=prometheus"
+      - "monitoring.bitnet-rs/implementation=rust"
 
-  # Grafana - Visualization for BitNet.rs metrics
+  # Grafana - Visualization for bitnet-rs metrics
   grafana:
     image: grafana/grafana:latest
     container_name: bitnet-grafana
@@ -45,10 +45,10 @@ services:
     depends_on:
       - prometheus
     labels:
-      - "monitoring.bitnet.rs/component=grafana"
-      - "monitoring.bitnet.rs/implementation=rust"
+      - "monitoring.bitnet-rs/component=grafana"
+      - "monitoring.bitnet-rs/implementation=rust"
 
-  # AlertManager - Alert handling for BitNet.rs
+  # AlertManager - Alert handling for bitnet-rs
   alertmanager:
     image: prom/alertmanager:latest
     container_name: bitnet-alertmanager
@@ -64,8 +64,8 @@ services:
     networks:
       - bitnet-monitoring
     labels:
-      - "monitoring.bitnet.rs/component=alertmanager"
-      - "monitoring.bitnet.rs/implementation=rust"
+      - "monitoring.bitnet-rs/component=alertmanager"
+      - "monitoring.bitnet-rs/implementation=rust"
 
   # Node Exporter - System metrics
   node-exporter:
@@ -85,7 +85,7 @@ services:
     networks:
       - bitnet-monitoring
     labels:
-      - "monitoring.bitnet.rs/component=node-exporter"
+      - "monitoring.bitnet-rs/component=node-exporter"
 
   # cAdvisor - Container metrics
   cadvisor:
@@ -105,7 +105,7 @@ services:
     networks:
       - bitnet-monitoring
     labels:
-      - "monitoring.bitnet.rs/component=cadvisor"
+      - "monitoring.bitnet-rs/component=cadvisor"
 
   # NVIDIA DCGM Exporter - GPU metrics (optional)
   nvidia-dcgm-exporter:
@@ -120,7 +120,7 @@ services:
     networks:
       - bitnet-monitoring
     labels:
-      - "monitoring.bitnet.rs/component=nvidia-dcgm-exporter"
+      - "monitoring.bitnet-rs/component=nvidia-dcgm-exporter"
     profiles:
       - gpu  # Only start with --profile gpu
 
@@ -128,18 +128,18 @@ volumes:
   prometheus_data:
     driver: local
     labels:
-      - "monitoring.bitnet.rs/data=prometheus"
+      - "monitoring.bitnet-rs/data=prometheus"
   grafana_data:
     driver: local
     labels:
-      - "monitoring.bitnet.rs/data=grafana"
+      - "monitoring.bitnet-rs/data=grafana"
   alertmanager_data:
     driver: local
     labels:
-      - "monitoring.bitnet.rs/data=alertmanager"
+      - "monitoring.bitnet-rs/data=alertmanager"
 
 networks:
   bitnet-monitoring:
     driver: bridge
     labels:
-      - "monitoring.bitnet.rs/network=primary"
+      - "monitoring.bitnet-rs/network=primary"

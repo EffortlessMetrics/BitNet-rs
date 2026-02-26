@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs T1 Validation Results - PR #246
+# BitNet-rs T1 Validation Results - PR #246
 
 ## Validation Summary
 **Timestamp**: 2025-09-24T14:52:07Z
@@ -59,7 +59,7 @@
 - **Evidence**: `audit: 1 warning (unmaintained paste dependency)`
 - **Details**: RUSTSEC-2024-0436 - unmaintained `paste` crate (transitive via tokenizers)
 
-## BitNet.rs Neural Network Quality Assessment
+## BitNet-rs Neural Network Quality Assessment
 
 ### Workspace Compilation
 - **Neural Network Crates**: ✅ All crates compile successfully
@@ -78,7 +78,7 @@
 
 **Next Agent**: feature-matrix-checker
 **Reason**: All T1 gates pass with acceptable security risk
-**Context**: BitNet.rs neural network codebase ready for T2 feature matrix validation
+**Context**: BitNet-rs neural network codebase ready for T2 feature matrix validation
 
 ## Evidence Summary
 - **format**: `rustfmt: all files formatted`
@@ -86,4 +86,4 @@
 - **build**: `build: workspace ok; CPU: ok, GPU: ok`
 - **security**: `audit: 1 warning (acceptable risk - unmaintained paste)`
 
-Neural network inference engine code quality meets BitNet.rs standards for T2 validation.
+Neural network inference engine code quality meets BitNet-rs standards for T2 validation.

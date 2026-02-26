@@ -1,4 +1,4 @@
-# BitNet.rs Validation Infrastructure Roadmap
+# BitNet-rs Validation Infrastructure Roadmap
 
 ## Status: ✅ Specification Complete, Ready for Implementation
 
@@ -510,6 +510,6 @@ ls ~/.cache/bitnet/models/
 
 **Last Updated:** 2025-10-16
 
-**Author:** BitNet.rs validation improvement initiative
+**Author:** BitNet-rs validation improvement initiative
 
 **Reviewers:** Pending (will be added as phases progress)

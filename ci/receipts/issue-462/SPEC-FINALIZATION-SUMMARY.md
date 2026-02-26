@@ -249,14 +249,14 @@ routing: FINALIZE → test-creator (zero blockers)
 
 ---
 
-## 7. BitNet.rs Git Conventions
+## 7. BitNet-rs Git Conventions
 
 ✅ **Commit Prefix:** `docs(spec):`
 ✅ **Issue Reference:** `#462`
 ✅ **AC Summary:** All 7 ACs covered in commit message
 ✅ **Validation Evidence:** API consistency, schemas, cross-refs, standards
 ✅ **HEREDOC Format:** Multi-line commit message properly formatted
-✅ **Conventional Commits:** Compliant with BitNet.rs standards
+✅ **Conventional Commits:** Compliant with BitNet-rs standards
 
 ---
 
@@ -271,7 +271,7 @@ routing: FINALIZE → test-creator (zero blockers)
 2. Map tests to acceptance criteria (AC1-AC5)
 3. Include validation commands from test plan
 4. Set up performance baselines for regression testing
-5. Follow BitNet.rs TDD patterns (Red-Green-Refactor)
+5. Follow BitNet-rs TDD patterns (Red-Green-Refactor)
 6. Use deterministic inference patterns (`BITNET_DETERMINISTIC=1`)
 
 **Test Execution Pattern:**

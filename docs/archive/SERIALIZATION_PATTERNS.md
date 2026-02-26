@@ -1,4 +1,4 @@
-# BitNet.rs Serialization and Deserialization Patterns Report
+# BitNet-rs Serialization and Deserialization Patterns Report
 
 **Generated**: October 25, 2025
 **Scope**: Quick exploration of serialization frameworks, patterns, and best practices
@@ -10,7 +10,7 @@
 
 ### 1.1 Core Derive Strategy
 
-BitNet.rs uses **Serde 1.0** for all serialization needs with consistent derive patterns:
+BitNet-rs uses **Serde 1.0** for all serialization needs with consistent derive patterns:
 
 ```rust
 // Standard pattern - most common
@@ -42,7 +42,7 @@ impl std::fmt::Debug for TypeName {
 
 ### 1.2 Optional Field Handling
 
-BitNet.rs uses `skip_serializing_if` to omit optional fields from JSON output:
+BitNet-rs uses `skip_serializing_if` to omit optional fields from JSON output:
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -827,7 +827,7 @@ toml = "0.8"            # For TOML configs (if needed)
 
 ## Conclusion
 
-BitNet.rs demonstrates **production-grade serialization patterns** with:
+BitNet-rs demonstrates **production-grade serialization patterns** with:
 
 1. **Consistent Serde usage** - All 91+ types use derive macros
 2. **Strong validation** - Pre and post-serialization validation with clear error messages

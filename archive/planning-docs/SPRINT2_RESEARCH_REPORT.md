@@ -1,15 +1,15 @@
-# BitNet.rs MVP Sprint 2 - Comprehensive Research & Implementation Plan
+# BitNet-rs MVP Sprint 2 - Comprehensive Research & Implementation Plan
 
 **Date**: 2025-11-11
 **Status**: Research Complete, Plan Posted to GitHub Issue #472
-**Target**: Transform BitNet.rs from 0.1 tok/s (unusable) to 10-100 tok/s (production-ready)
+**Target**: Transform BitNet-rs from 0.1 tok/s (unusable) to 10-100 tok/s (production-ready)
 
 ---
 
 ## Executive Summary
 
 ### Research Scope
-Analyzed GitHub issue #472 ("MVP Sprint 2") - a comprehensive 8,000+ word roadmap for transforming BitNet.rs from a functional but slow MVP into a production-ready 1-bit neural network inference engine.
+Analyzed GitHub issue #472 ("MVP Sprint 2") - a comprehensive 8,000+ word roadmap for transforming BitNet-rs from a functional but slow MVP into a production-ready 1-bit neural network inference engine.
 
 ### Key Findings
 
@@ -295,7 +295,7 @@ Minimal implementation skeleton provided in technical comment:
 
 **Why Phase 1 (SIMD) is Blocking**:
 
-The current 0.1 tok/s throughput makes BitNet.rs unsuitable for any practical use:
+The current 0.1 tok/s throughput makes BitNet-rs unsuitable for any practical use:
 - 100 token prompt takes 1,000 seconds (16+ minutes)
 - Even a 16-token response takes 160 seconds
 - This is a proof-of-concept, not a usable system
@@ -321,7 +321,7 @@ Without SIMD optimization, **all subsequent phases are blocked** because:
 
 ## Files & Resources
 
-### BitNet.rs Crate Structure Referenced
+### BitNet-rs Crate Structure Referenced
 
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/src/cpu/x86_qk256_avx2.rs` (new)
 - `/home/steven/code/Rust/BitNet-rs/crates/bitnet-kernels/src/cpu/mod.rs` (update)
@@ -354,7 +354,7 @@ This research and implementation plan successfully transforms the narrative road
 - **Comprehensive risk mitigation**: Contingency plans for 4 major risks
 - **Phased delivery**: CPU → GPU → Polish → Release
 
-**BitNet.rs can achieve production readiness (10-100 tok/s) in 3-4 months** with focused execution on this plan.
+**BitNet-rs can achieve production readiness (10-100 tok/s) in 3-4 months** with focused execution on this plan.
 
 Two comprehensive GitHub comments have been posted to issue #472 with actionable week-by-week checklists, code examples, and detailed technical guidance.
 
@@ -362,7 +362,7 @@ Two comprehensive GitHub comments have been posted to issue #472 with actionable
 
 ---
 
-**Research Completed By**: BitNet.rs GitHub Research Specialist
+**Research Completed By**: BitNet-rs GitHub Research Specialist
 **Date**: 2025-11-11
 **GitHub Issue**: https://github.com/EffortlessMetrics/BitNet-rs/issues/472
 **Comment 1**: https://github.com/EffortlessMetrics/BitNet-rs/issues/472#issuecomment-3515704769

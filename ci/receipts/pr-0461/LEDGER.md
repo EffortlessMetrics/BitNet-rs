@@ -56,7 +56,7 @@ intake → freshness-checker → hygiene-finalizer → architecture-reviewer →
 **Status:** ✅ PASS
 
 **Actions Completed:**
-1. Validated BitNet.rs toolchain requirements:
+1. Validated BitNet-rs toolchain requirements:
    - Rust 1.92.0-nightly (MSRV 1.90.0+) ✅
    - cargo 1.92.0-nightly ✅
    - git 2.43.0 ✅
@@ -145,7 +145,7 @@ d596c7f test(issue-453): add comprehensive test fixtures for strict quantization
 - **Type:** `feat/` (feature branch) ✅
 - **Issue Reference:** `issue-453` ✅ Valid
 - **Descriptor:** `strict-quantization-guards` ✅ Descriptive
-- **Compliance:** ✅ PASS - Follows BitNet.rs conventions
+- **Compliance:** ✅ PASS - Follows BitNet-rs conventions
 
 **Rebase Workflow Compliance:**
 - **Merge commits:** 0 (verified with `git log --oneline --merges`)
@@ -224,7 +224,7 @@ $ cargo clippy --workspace --all-targets --no-default-features --features gpu --
 - **CPU feature set:** 18 crates compiled successfully
 - **GPU feature set:** 10 crates compiled successfully
 - **Conditional compilation:** Proper `#[cfg(feature = "...")]` usage verified
-- **BitNet.rs specifics:** Neural network quantization modules validated with lint allowances
+- **BitNet-rs specifics:** Neural network quantization modules validated with lint allowances
 
 **Mechanical Fixes Applied:**
 None required - code is already compliant with all hygiene standards.
@@ -235,7 +235,7 @@ None required - code is already compliant with all hygiene standards.
 - `clippy-gpu`: ⏳ PENDING → ✅ PASS
 
 **Routing Decision:**
-Route to `tests-runner` for comprehensive test validation. All mechanical hygiene checks pass cleanly with zero formatting violations and zero clippy warnings across both CPU and GPU feature configurations. Code demonstrates proper feature-gated compilation and follows BitNet.rs neural network quantization standards.
+Route to `tests-runner` for comprehensive test validation. All mechanical hygiene checks pass cleanly with zero formatting violations and zero clippy warnings across both CPU and GPU feature configurations. Code demonstrates proper feature-gated compilation and follows BitNet-rs neural network quantization standards.
 
 **Routing Rationale:**
 1. **Format Compliance:** 100% - All workspace files properly formatted
@@ -284,7 +284,7 @@ Route to `tests-runner` for comprehensive test validation. All mechanical hygien
 - **NEXT:** Route to `tests-runner` for comprehensive test validation
 
 **Spec Decision (2025-10-14):**
-- ✅ Architecture aligned with BitNet.rs standards (ADRs 010/011/012/013)
+- ✅ Architecture aligned with BitNet-rs standards (ADRs 010/011/012/013)
 - ✅ Crate boundaries validated (bitnet-common, bitnet-inference, xtask)
 - ✅ Quantization pipeline integrity verified (I2S/TL1/TL2 patterns)
 - ✅ Feature gates compliant (default features EMPTY)
@@ -317,7 +317,7 @@ Route to `tests-runner` for comprehensive test validation. All mechanical hygien
 
 **Actions Completed:**
 1. Validated crate boundary integrity across bitnet-common, bitnet-inference, xtask
-2. Verified quantization pipeline alignment (I2S/TL1/TL2) with BitNet.rs architecture
+2. Verified quantization pipeline alignment (I2S/TL1/TL2) with BitNet-rs architecture
 3. Assessed GPU/CPU device-aware kernel selection patterns
 4. Validated feature gate compliance (default features EMPTY, proper `#[cfg]` usage)
 5. Verified ADR compliance (ADR-010, ADR-011, ADR-012, ADR-013)
@@ -353,7 +353,7 @@ xtask
 - ✅ Receipt quantization claims verification (lines 4045-4133 in xtask/main.rs)
 
 **Feature Gate Compliance:**
-- ✅ Default features EMPTY (BitNet.rs policy)
+- ✅ Default features EMPTY (BitNet-rs policy)
 - ✅ Proper `#[cfg(feature = "cpu")]` and `#[cfg(feature = "gpu")]` patterns
 - ✅ Tests feature-gated correctly (`#[cfg(all(debug_assertions, feature = "cpu"))]`)
 - ✅ No implicit default dependencies
@@ -413,7 +413,7 @@ cargo build --no-default-features --features gpu  # ✅ 10 crates
 1. Three-tier validation provides comprehensive coverage (development → production → verification)
 2. Device-aware kernel selection abstracts GPU/CPU differences cleanly
 3. Backward compatible schema evolution (v1.0.0 → v1.1.0)
-4. Feature-gated testing follows BitNet.rs patterns
+4. Feature-gated testing follows BitNet-rs patterns
 5. Four comprehensive ADRs document architectural decisions
 6. Test fixtures (2,561 lines) provide reusable infrastructure
 7. Zero breaking changes while adding strict mode capabilities
@@ -918,10 +918,10 @@ $ cargo build --target wasm32-unknown-unknown -p bitnet-wasm --no-default-featur
 Known Limitation:
 - Issue: onig_sys (tokenizer dependency) cannot compile for WASM targets
 - Root Cause: Native C library dependency (oniguruma) requires stdlib.h
-- Impact: WASM target not supported for full BitNet.rs with tokenizers
+- Impact: WASM target not supported for full BitNet-rs with tokenizers
 - Mitigation: WASM support requires tokenizer-free configuration
 - Status: Known limitation, not a blocker for PR #461
-- Note: This is a BitNet.rs-wide limitation, not specific to this PR
+- Note: This is a BitNet-rs-wide limitation, not specific to this PR
 ```
 
 **Build Quality Analysis:**
@@ -951,7 +951,7 @@ Known Limitation:
 - ✅ TL2 quantization kernels compiled
 - ✅ Device-aware kernel selection validated
 
-**5. BitNet.rs Neural Network Infrastructure:**
+**5. BitNet-rs Neural Network Infrastructure:**
 - ✅ Inference engine compiled successfully
 - ✅ Quantization pipeline intact
 - ✅ Model loading (GGUF/SafeTensors) functional
@@ -984,7 +984,7 @@ MSRV Compliance: ✅ (1.92.0 > 1.90.0)
 - **Root Cause:** onig_sys native C library incompatible with WASM
 - **Impact:** WASM requires tokenizer-free configuration
 - **Mitigation:** Document WASM limitation, not a PR blocker
-- **Status:** Known BitNet.rs-wide limitation
+- **Status:** Known BitNet-rs-wide limitation
 
 **Quality Gates Updated:**
 - `build-cpu`: ⏳ PENDING → ✅ PASS
@@ -1262,7 +1262,7 @@ Route to `review-summarizer` for final PR summary and merge recommendation. All 
 3. ⚠️ Cosmetic rustdoc warnings (2) - Unclosed HTML tags
    - Auto-fix: Add backticks to treat as inline code
    - Residual risk: None (cosmetic only)
-4. ⚠️ WASM build limitation - BitNet.rs-wide architectural constraint
+4. ⚠️ WASM build limitation - BitNet-rs-wide architectural constraint
    - Auto-fix: N/A (known limitation, not PR-specific)
    - Residual risk: None (CPU and GPU targets unaffected)
 
@@ -1313,7 +1313,7 @@ commits: 7 ahead @6268b7c, 0 behind main@393eecf; semantic compliance 7/7 (100%)
 **Routing Decision:**
 **READY FOR PROMOTION** → Route to `ready-promoter` for Draft→Ready status change.
 
-PR #461 demonstrates **exemplary BitNet.rs development practices** with:
+PR #461 demonstrates **exemplary BitNet-rs development practices** with:
 - ✅ Complete TDD Red-Green-Refactor cycle
 - ✅ Comprehensive Diátaxis documentation framework
 - ✅ Zero breaking changes (additive API only)
@@ -1386,7 +1386,7 @@ PR #461 demonstrates **exemplary BitNet.rs development practices** with:
 ✅ docs:        Diátaxis complete (9 docs), 5/5 doctests pass
 ```
 
-**BitNet.rs Promotion Criteria:**
+**BitNet-rs Promotion Criteria:**
 - ✅ Neural network validation: I2S/TL1/TL2 quantization >99% accuracy
 - ✅ Cross-validation: Rust vs C++ parity maintained (ADR compliance)
 - ✅ Quantization accuracy: I2S 99.8%, TL1 99.6%, TL2 99.7%
@@ -1432,7 +1432,7 @@ API classification: additive
 **Routing Decision:**
 Route to **integrative-workflow** for final merge validation and maintainer review assignment.
 
-PR #461 has successfully completed all BitNet.rs quality gates and promotion requirements. The PR demonstrates:
+PR #461 has successfully completed all BitNet-rs quality gates and promotion requirements. The PR demonstrates:
 - Complete TDD Red-Green-Refactor cycle with comprehensive AC coverage
 - Comprehensive Diátaxis documentation framework (9 files)
 - Zero breaking changes (additive API only)
@@ -1496,7 +1496,7 @@ PR #461 has successfully completed all BitNet.rs quality gates and promotion req
 - **NEXT:** Route to `tests-runner` for comprehensive test validation
 
 **Spec Decision (2025-10-14):**
-- ✅ Architecture aligned with BitNet.rs standards (ADRs 010/011/012/013)
+- ✅ Architecture aligned with BitNet-rs standards (ADRs 010/011/012/013)
 - ✅ Crate boundaries validated (bitnet-common, bitnet-inference, xtask)
 - ✅ Quantization pipeline integrity verified (I2S/TL1/TL2 patterns)
 - ✅ Feature gates compliant (default features EMPTY)
@@ -1541,7 +1541,7 @@ PR #461 has successfully completed all BitNet.rs quality gates and promotion req
 - ✅ Quantization kernels: I2S/TL1/TL2 compiled successfully (CPU + GPU)
 - ✅ CUDA infrastructure: Functional with mixed precision (FP16/BF16)
 - ✅ Neural network pipeline: Complete inference stack validated
-- ⚠️ WASM limitation: Known BitNet.rs-wide issue (tokenizer dependency)
+- ⚠️ WASM limitation: Known BitNet-rs-wide issue (tokenizer dependency)
 - ✅ GitHub check run: `review:gate:build` → SUCCESS
 - **NEXT:** Route to `docs-reviewer` for documentation validation
 
@@ -1581,7 +1581,7 @@ PR #461 has successfully completed all BitNet.rs quality gates and promotion req
 - ✅ Labels updated: removed `state:in-progress`, added `state:ready`
 - ✅ Promotion gate check run created: `review:gate:promotion` → SUCCESS
 - ✅ Ledger updated with promotion completion evidence
-- ✅ BitNet.rs criteria satisfied: neural network validation, quantization accuracy >99%, 0 breaking changes
+- ✅ BitNet-rs criteria satisfied: neural network validation, quantization accuracy >99%, 0 breaking changes
 - ✅ No unresolved quarantined tests (0)
 - ✅ API classification: additive (backward compatible)
 - ✅ TDD Red-Green-Refactor cycle: Complete
@@ -1795,7 +1795,7 @@ All PR #461 strict quantization guard tests pass successfully. The GPU test fix 
 ✅ docs:        Diátaxis complete (9 docs), 5/5 doctests pass
 ```
 
-**BitNet.rs Promotion Criteria: 10/10 PASS**
+**BitNet-rs Promotion Criteria: 10/10 PASS**
 - ✅ Neural network validation: I2S/TL1/TL2 quantization >99% accuracy
 - ✅ Cross-validation: Rust vs C++ parity maintained (ADR compliance)
 - ✅ Quantization accuracy: I2S 99.8%, TL1 99.6%, TL2 99.7%
@@ -1881,7 +1881,7 @@ commits: 8 ahead @fac80cc, 0 behind main@393eecf; semantic compliance 8/8 (100%)
 ```
 
 **Routing Decision:**
-**✅ READY FOR PROMOTION (Route A)** → PR #461 meets all BitNet.rs quality standards with 0 PR-specific test failures, 100% AC coverage, zero breaking changes, and comprehensive documentation.
+**✅ READY FOR PROMOTION (Route A)** → PR #461 meets all BitNet-rs quality standards with 0 PR-specific test failures, 100% AC coverage, zero breaking changes, and comprehensive documentation.
 
 **Success Path Classification:**
 **Flow successful: final review complete** → Ready for maintainer approval

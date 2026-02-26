@@ -80,7 +80,7 @@
 - Status: Not profiled (requires model file)
 - Recommendation: Add memory profiling to integration tests
 
-## BitNet.rs Performance Criteria
+## bitnet-rs Performance Criteria
 
 ✅ Quantization throughput: CPU baseline established
 ✅ GPU acceleration: I2S validated (42x speedup)

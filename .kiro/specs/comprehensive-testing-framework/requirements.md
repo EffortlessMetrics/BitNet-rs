@@ -2,13 +2,13 @@
 
 ## Introduction
 
-This specification defines the requirements for building a comprehensive testing framework for BitNet.rs that includes extensive test coverage, end-to-end testing, and cross-implementation comparison between the Rust and C++ versions. The framework will ensure correctness, performance validation, and compatibility across implementations.
+This specification defines the requirements for building a comprehensive testing framework for BitNet-rs that includes extensive test coverage, end-to-end testing, and cross-implementation comparison between the Rust and C++ versions. The framework will ensure correctness, performance validation, and compatibility across implementations.
 
 ## Requirements
 
 ### Requirement 1: Core Test Coverage
 
-**User Story:** As a developer, I want comprehensive test coverage across all BitNet.rs components, so that I can be confident in the correctness and reliability of the implementation.
+**User Story:** As a developer, I want comprehensive test coverage across all BitNet-rs components, so that I can be confident in the correctness and reliability of the implementation.
 
 #### Acceptance Criteria
 
@@ -86,7 +86,7 @@ This specification defines the requirements for building a comprehensive testing
 
 ### Requirement 7: Golden Path Real-World Testing
 
-**User Story:** As a user, I want confidence that BitNet.rs works correctly on real-world prompts and use cases, so that I can trust it for production workloads.
+**User Story:** As a user, I want confidence that BitNet-rs works correctly on real-world prompts and use cases, so that I can trust it for production workloads.
 
 #### Acceptance Criteria
 

@@ -2,7 +2,7 @@
 STRICT MODE TEST FAILURE ANALYSIS - DELIVERY COMPLETE
 ================================================================================
 
-PROJECT: BitNet.rs Strict Mode Test Analysis
+PROJECT: BitNet-rs Strict Mode Test Analysis
 DATE: 2025-10-22
 STATUS: COMPLETE
 ANALYSIS LEVEL: Medium Depth (as requested)

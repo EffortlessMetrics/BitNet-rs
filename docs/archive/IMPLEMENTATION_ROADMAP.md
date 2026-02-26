@@ -12,7 +12,7 @@
 
 ## Executive Summary
 
-This document provides a file-by-file implementation breakdown for dual-backend cross-validation support in BitNet.rs. All estimates are based on comprehensive codebase exploration and mapped integration points.
+This document provides a file-by-file implementation breakdown for dual-backend cross-validation support in BitNet-rs. All estimates are based on comprehensive codebase exploration and mapped integration points.
 
 ### Key Findings from Exploration
 
@@ -696,7 +696,7 @@ fn test_lane_a_bitnet_parity() {
     // Full pipeline test
 }
 
-// AC9: End-to-end Lane B (BitNet.rs vs llama.cpp)
+// AC9: End-to-end Lane B (BitNet-rs vs llama.cpp)
 #[test]
 #[ignore] // Requires llama.cpp + model
 #[serial(bitnet_env)]
@@ -846,7 +846,7 @@ Before marking each phase complete:
 
 ### Functional Success
 - ✅ Lane A (BitNet vs bitnet.cpp) passes end-to-end test
-- ✅ Lane B (BitNet.rs vs llama.cpp) passes end-to-end test
+- ✅ Lane B (BitNet-rs vs llama.cpp) passes end-to-end test
 - ✅ Auto-detection works for both model types
 - ✅ Token parity pre-gate catches mismatches
 - ✅ Error messages actionable and backend-specific

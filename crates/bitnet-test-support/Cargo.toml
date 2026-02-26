@@ -6,7 +6,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
-description = "Shared test infrastructure for BitNet.rs: EnvGuard/EnvScope, model-path gating, RNG seeds"
+description = "Shared test infrastructure for BitNet-rs: EnvGuard/EnvScope, model-path gating, RNG seeds"
 publish = false
 
 [dependencies]

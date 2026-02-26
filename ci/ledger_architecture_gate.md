@@ -3,8 +3,8 @@
 ## review:gate:architecture
 
 **Status**: ✅ PASS
-**Validation**: COMPREHENSIVE - All BitNet.rs architectural requirements aligned
-**Evidence**: `BitNet.rs Real Model Integration Architecture - 2025-09-24 T4 Validated`
+**Validation**: COMPREHENSIVE - All BitNet-rs architectural requirements aligned
+**Evidence**: `BitNet-rs Real Model Integration Architecture - 2025-09-24 T4 Validated`
 
 ### Architectural Compliance Summary
 

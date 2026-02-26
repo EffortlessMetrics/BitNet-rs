@@ -8,11 +8,11 @@
 
 ## Purpose
 
-This specification defines auto-repair-by-default functionality for the `preflight` command in BitNet.rs, enabling seamless C++ backend provisioning with intelligent error recovery, retry logic, and clear user messaging. The system automatically detects missing backends, provisions them via `setup-cpp-auto`, rebuilds `xtask` to detect libraries, and provides actionable status messages.
+This specification defines auto-repair-by-default functionality for the `preflight` command in bitnet-rs, enabling seamless C++ backend provisioning with intelligent error recovery, retry logic, and clear user messaging. The system automatically detects missing backends, provisions them via `setup-cpp-auto`, rebuilds `xtask` to detect libraries, and provides actionable status messages.
 
 ## Executive Summary
 
-The BitNet.rs cross-validation infrastructure requires C++ reference libraries (BitNet.cpp and/or llama.cpp) to be available at **build time** for the `xtask` binary. Currently, users must manually run `setup-cpp-auto`, rebuild `xtask`, and re-run `preflight` to verify detection—a 3-step process that creates friction for first-time users and CI/CD pipelines.
+The bitnet-rs cross-validation infrastructure requires C++ reference libraries (BitNet.cpp and/or llama.cpp) to be available at **build time** for the `xtask` binary. Currently, users must manually run `setup-cpp-auto`, rebuild `xtask`, and re-run `preflight` to verify detection—a 3-step process that creates friction for first-time users and CI/CD pipelines.
 
 This specification addresses the gap by:
 
@@ -103,7 +103,7 @@ This specification addresses the gap by:
 
 **Criteria**: `preflight` attempts auto-repair when backend not found at build time (unless explicitly disabled).
 
-**User Story**: As a first-time user, I want BitNet.rs to automatically provision C++ backends so I don't need to read setup documentation.
+**User Story**: As a first-time user, I want bitnet-rs to automatically provision C++ backends so I don't need to read setup documentation.
 
 **Behavior**:
 ```bash

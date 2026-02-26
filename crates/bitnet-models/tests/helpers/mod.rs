@@ -1,4 +1,4 @@
-//! Test Helper Modules for BitNet.rs Model Testing
+//! Test Helper Modules for BitNet-rs Model Testing
 //!
 //! This module provides shared test utilities for GGUF fixture generation,
 //! quantization testing, model loading validation, and tensor alignment validation.

@@ -53,7 +53,7 @@ Status: ✅ success
 
 ## Feature Flag Discipline
 
-BitNet.rs enforces strict feature flag discipline:
+bitnet-rs enforces strict feature flag discipline:
 
 1. **Default Features:** EMPTY - always specify `--no-default-features`
 2. **Explicit Backend Selection:** `--features cpu|gpu` required for inference

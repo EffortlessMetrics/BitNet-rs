@@ -3,7 +3,7 @@
 //! Tests specification: Request for comprehensive edge case and error handling scenarios
 //!
 //! This test suite validates boundary conditions, race conditions, error recovery paths,
-//! and resource exhaustion scenarios for BitNet.rs cross-validation infrastructure.
+//! and resource exhaustion scenarios for bitnet-rs cross-validation infrastructure.
 //!
 //! ## Test Categories
 //!
@@ -16,7 +16,7 @@
 //!
 //! ## Test Structure
 //!
-//! All tests follow BitNet.rs TDD patterns:
+//! All tests follow bitnet-rs TDD patterns:
 //! - Feature-gated: `#[cfg(feature = "crossval-all")]` for cross-validation tests
 //! - Environment isolation: `#[serial(bitnet_env)]` for env-mutating tests
 //! - Property-based: Validation of invariants (RPATH length, deduplication)

@@ -1,7 +1,7 @@
 # Tokenization Compatibility Issue Analysis
 
 ## Executive Summary
-The cross-validation between BitNet.rs and BitNet.cpp fails due to a fundamental tokenizer incompatibility. The GGUF model uses a GPT-2 BPE tokenizer, but llama.cpp expects its native tokenizer format, causing tokenization to fail with error code -3.
+The cross-validation between BitNet-rs and BitNet.cpp fails due to a fundamental tokenizer incompatibility. The GGUF model uses a GPT-2 BPE tokenizer, but llama.cpp expects its native tokenizer format, causing tokenization to fail with error code -3.
 
 ## Root Cause Analysis
 
@@ -111,7 +111,7 @@ Re-export the model with llama-compatible tokenizer:
 - Ensure tokenizer.ggml.model = "llama"
 - Include proper pre-tokenizer configuration
 
-### Option 4: Fix in BitNet.rs
+### Option 4: Fix in BitNet-rs
 Make the Rust implementation compatible:
 - Add metadata correction on model load
 - Implement tokenizer format conversion
@@ -142,12 +142,12 @@ To confirm this analysis:
 
 The tokenization failure is due to an incompatibility between the GPT-2 tokenizer format in the GGUF model and llama.cpp's tokenizer implementation expectations. The model lacks proper pre-tokenizer configuration metadata, causing llama.cpp to fail when attempting to tokenize text.
 
-This is **not a bug in BitNet.rs or BitNet.cpp**, but rather a model format compatibility issue that requires either:
+This is **not a bug in BitNet-rs or BitNet.cpp**, but rather a model format compatibility issue that requires either:
 1. Fixing the model's tokenizer metadata
 2. Using a different tokenizer implementation
 3. Converting the model to a fully compatible format
 
-The BitNet.rs implementation likely works because it either:
+The BitNet-rs implementation likely works because it either:
 - Uses a different tokenizer library that handles GPT-2 format
 - Has built-in compatibility for this tokenizer type
 - Bypasses the tokenizer issue through a different approach

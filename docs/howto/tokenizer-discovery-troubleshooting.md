@@ -1,6 +1,6 @@
 # How to Troubleshoot Tokenizer Discovery Issues
 
-This guide provides step-by-step solutions for common tokenizer discovery and download problems in BitNet.rs neural network inference.
+This guide provides step-by-step solutions for common tokenizer discovery and download problems in BitNet-rs neural network inference.
 
 ## Quick Diagnostic Commands
 
@@ -148,7 +148,7 @@ jq empty ~/.cache/bitnet/tokenizers/llama2-32k/tokenizer.json
 
 #### Resume Interrupted Downloads
 ```bash
-# BitNet.rs automatically resumes partial downloads
+# BitNet-rs automatically resumes partial downloads
 # If resume fails, clear the partial file:
 rm ~/.cache/bitnet/tokenizers/*/tokenizer.json.partial
 

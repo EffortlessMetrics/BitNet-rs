@@ -2,12 +2,12 @@
 
 **Status**: Draft
 **Related Issue**: #439 (GPU feature-gate hardening)
-**Audience**: BitNet.rs developers implementing device-aware operations
+**Audience**: BitNet-rs developers implementing device-aware operations
 **Type**: Explanation (Diátaxis)
 
 ## Overview
 
-The Device Feature Detection API provides unified device capability checks for GPU/CPU selection across the BitNet.rs workspace. It consolidates compile-time feature gates with runtime hardware detection to prevent "GPU on paper, CPU in reality" scenarios that cause silent performance degradation.
+The Device Feature Detection API provides unified device capability checks for GPU/CPU selection across the BitNet-rs workspace. It consolidates compile-time feature gates with runtime hardware detection to prevent "GPU on paper, CPU in reality" scenarios that cause silent performance degradation.
 
 ## Problem Statement
 
@@ -224,7 +224,7 @@ impl InferenceEngine {
 use bitnet_kernels::device_features::{gpu_compiled, gpu_available_runtime, device_capability_summary};
 
 pub fn run_preflight() -> anyhow::Result<()> {
-    println!("BitNet.rs Preflight Check");
+    println!("BitNet-rs Preflight Check");
     println!("========================");
     println!();
     println!("{}", device_capability_summary());

@@ -433,7 +433,7 @@ impl PerformanceBenchmarkSuite {
     ) -> TestResult<String> {
         let mut report = String::new();
 
-        report.push_str("# BitNet.rs Performance Benchmark Report\n\n");
+        report.push_str("# BitNet-rs Performance Benchmark Report\n\n");
         report.push_str(&format!(
             "**Generated:** {}\n",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
@@ -661,7 +661,7 @@ mod tests {
         let report = suite.generate_performance_report(&results).await.unwrap();
 
         // Verify report content
-        assert!(report.contains("BitNet.rs Performance Benchmark Report"));
+        assert!(report.contains("BitNet-rs Performance Benchmark Report"));
         assert!(report.contains("Average Speedup: 2.50x"));
         assert!(report.contains("EXCELLENT PERFORMANCE"));
         assert!(report.contains("✅ PASS"));

@@ -129,7 +129,7 @@ The implementation generates comprehensive performance reports including:
 
 Example report output:
 ```markdown
-# BitNet.rs Performance Benchmark Report
+# BitNet-rs Performance Benchmark Report
 
 **Generated:** 1733702400 (Unix timestamp)
 **Scenarios:** 6

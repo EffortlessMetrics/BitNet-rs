@@ -1,8 +1,8 @@
-# BitNet.rs Neural Network Mutation Testing Analysis
+# BitNet-rs Neural Network Mutation Testing Analysis
 
 ## Execution Summary
 
-**Mutation Testing Scope:** BitNet.rs neural network critical components
+**Mutation Testing Scope:** BitNet-rs neural network critical components
 - **bitnet-quantization**: 541 mutants identified
 - **bitnet-inference**: 963 mutants identified
 - **bitnet-kernels**: 1277 mutants identified

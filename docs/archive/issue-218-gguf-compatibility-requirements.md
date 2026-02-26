@@ -509,7 +509,7 @@ impl GGUFValidationError {
                 "Re-download the model file".to_string(),
             ],
             Self::UnsupportedQuantization { .. } => vec![
-                "Update BitNet.rs to support this quantization format".to_string(),
+                "Update BitNet-rs to support this quantization format".to_string(),
                 "Convert model to supported quantization format".to_string(),
             ],
             _ => vec!["Contact support with validation report".to_string()],
@@ -582,7 +582,7 @@ impl ValidationStream {
 }
 ```
 
-## Integration with BitNet.rs Ecosystem
+## Integration with BitNet-rs Ecosystem
 
 ### 1. bitnet-models Integration
 
@@ -719,4 +719,4 @@ mod gguf_validation_tests {
 }
 ```
 
-This comprehensive GGUF compatibility specification ensures robust real BitNet model integration with production-grade validation, cross-platform support, and seamless integration with the BitNet.rs neural network ecosystem.
+This comprehensive GGUF compatibility specification ensures robust real BitNet model integration with production-grade validation, cross-platform support, and seamless integration with the BitNet-rs neural network ecosystem.

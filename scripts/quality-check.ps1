@@ -1,4 +1,4 @@
-# Comprehensive code quality validation for BitNet.rs
+# Comprehensive code quality validation for BitNet-rs
 # This script runs all quality checks required for crates.io publication
 
 param(
@@ -9,7 +9,7 @@ param(
 # Set error action preference
 $ErrorActionPreference = "Stop"
 
-Write-Host "🔍 BitNet.rs Code Quality Validation" -ForegroundColor Blue
+Write-Host "🔍 BitNet-rs Code Quality Validation" -ForegroundColor Blue
 Write-Host "====================================" -ForegroundColor Blue
 
 # Function to print status
@@ -35,7 +35,7 @@ function Write-Error {
 
 # Check if we're in the right directory
 if (-not (Test-Path "Cargo.toml") -or -not (Test-Path "crates")) {
-    Write-Error "This script must be run from the BitNet.rs root directory"
+    Write-Error "This script must be run from the BitNet-rs root directory"
     exit 1
 }
 
@@ -291,7 +291,7 @@ Write-Success "README/CHANGELOG: ✓"
 Write-Success "Examples: ✓"
 
 Write-Host ""
-Write-Host "🚀 BitNet.rs is ready for crates.io publication!" -ForegroundColor Green
+Write-Host "🚀 BitNet-rs is ready for crates.io publication!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:"
 Write-Host "1. Update version numbers if needed"

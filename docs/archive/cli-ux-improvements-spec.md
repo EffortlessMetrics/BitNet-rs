@@ -2,7 +2,7 @@
 
 ## Context
 
-The BitNet.rs CLI currently provides functional inference capabilities but lacks the polish and familiarity expected from modern LLM tools. Users familiar with OpenAI, Anthropic, llama.cpp, and Ollama interfaces encounter unnecessary friction with non-standard flag names, missing subcommand aliases, and manual template selection. This specification defines comprehensive CLI UX improvements to transform the interface from "works" to "pleasant and familiar" while maintaining BitNet's strict receipts-first posture and neural network inference pipeline integrity.
+The BitNet-rs CLI currently provides functional inference capabilities but lacks the polish and familiarity expected from modern LLM tools. Users familiar with OpenAI, Anthropic, llama.cpp, and Ollama interfaces encounter unnecessary friction with non-standard flag names, missing subcommand aliases, and manual template selection. This specification defines comprehensive CLI UX improvements to transform the interface from "works" to "pleasant and familiar" while maintaining BitNet's strict receipts-first posture and neural network inference pipeline integrity.
 
 **Current State:**
 - Primary token limit flag is `--max-tokens` (correct but lacks backward-compatible aliases)
@@ -622,7 +622,7 @@ async fn load_model_and_tokenizer(&self) -> Result<(InferenceEngine, TemplateTyp
 - Integration: Chat mode uses existing streaming path
 - No new code: Reuse validated streaming implementation
 
-### BitNet.rs Workspace Architecture
+### BitNet-rs Workspace Architecture
 **Affected Crates:**
 - `bitnet-cli` (primary): Flag parsing, subcommand routing, REPL implementation
 - `bitnet-inference` (secondary): Template detection, prompt formatting
@@ -858,7 +858,7 @@ bitnet chat --model models/model.gguf --stream
 
 ### Automatic Template Detection
 
-BitNet.rs automatically detects prompt templates from model metadata:
+BitNet-rs automatically detects prompt templates from model metadata:
 
 ```bash
 # LLaMA-3 models: auto-detects llama3-chat from chat_template metadata
@@ -918,11 +918,11 @@ Override with `--prompt-template <type>` if needed.
 - Streaming inference progress bars with ETA
 - Token-by-token latency histograms for performance debugging
 
-**Rationale:** These enhancements require additional design decisions and user research. This specification focuses on high-impact UX improvements with clear implementation paths that align with existing BitNet.rs patterns.
+**Rationale:** These enhancements require additional design decisions and user research. This specification focuses on high-impact UX improvements with clear implementation paths that align with existing BitNet-rs patterns.
 
 ## Conclusion
 
-This specification defines comprehensive CLI UX improvements that transform BitNet.rs from a functional tool into a pleasant, familiar interface aligned with industry conventions (OpenAI, Anthropic, llama.cpp, Ollama). The changes maintain strict backward compatibility, preserve receipt-first validation, and integrate seamlessly with the existing neural network inference pipeline.
+This specification defines comprehensive CLI UX improvements that transform BitNet-rs from a functional tool into a pleasant, familiar interface aligned with industry conventions (OpenAI, Anthropic, llama.cpp, Ollama). The changes maintain strict backward compatibility, preserve receipt-first validation, and integrate seamlessly with the existing neural network inference pipeline.
 
 **Key Deliverables:**
 1. Flag aliases (`--max-tokens`, `--max-new-tokens`, `--n-predict`, `--stop-sequence`)

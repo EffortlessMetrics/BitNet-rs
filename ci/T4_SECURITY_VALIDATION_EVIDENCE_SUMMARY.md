@@ -293,7 +293,7 @@ HashSet → O(1) lookup → Deterministic
 
 ---
 
-## BitNet.rs-Specific Security Context
+## BitNet-rs-Specific Security Context
 
 **Neural Network Security = Accuracy Security**:
 - Quantization accuracy prevents inference hijacking

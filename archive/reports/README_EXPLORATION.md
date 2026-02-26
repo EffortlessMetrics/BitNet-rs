@@ -1,8 +1,8 @@
-# BitNet.rs Codebase Exploration - Executive Summary
+# BitNet-rs Codebase Exploration - Executive Summary
 
 ## Overview
 
-This exploration provides a comprehensive analysis of the BitNet.rs codebase implementation covering:
+This exploration provides a comprehensive analysis of the BitNet-rs codebase implementation covering:
 - Prompt template system architecture
 - Chat command implementation
 - Tokenizer integration patterns
@@ -283,7 +283,7 @@ Visual representations of:
 ## References
 
 All analysis based on:
-- BitNet.rs codebase snapshot (current branch: feat/cli-chat-repl-ux-polish)
+- BitNet-rs codebase snapshot (current branch: feat/cli-chat-repl-ux-polish)
 - CLAUDE.md project guidelines
 - Existing test suite
 

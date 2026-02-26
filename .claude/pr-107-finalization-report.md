@@ -100,7 +100,7 @@ Given the extensive conflicts, recommend:
 1. Update CHANGELOG.md with token ID streaming enhancement
 2. Consider API documentation updates for StreamResponse changes
 
-## BitNet.rs Specific Considerations
+## BitNet-rs Specific Considerations
 
 ### Feature Flag Compliance
 - ✅ Changes properly use `--no-default-features --features cpu` pattern

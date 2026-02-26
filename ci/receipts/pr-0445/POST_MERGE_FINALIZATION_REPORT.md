@@ -192,7 +192,7 @@ test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 ---
 
-## BitNet.rs Quality Standards Validation
+## BitNet-rs Quality Standards Validation
 
 ### Neural Network Pipeline Impact ✅
 

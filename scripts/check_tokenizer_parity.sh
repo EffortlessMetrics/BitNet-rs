@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check_tokenizer_parity.sh - Validate tokenizer parity between BitNet.rs and bitnet.cpp
+# check_tokenizer_parity.sh - Validate tokenizer parity between BitNet-rs and bitnet.cpp
 #
 # Purpose: Ensure both engines receive identical input token IDs (hard requirement for cross-validation)
 #
@@ -32,7 +32,7 @@ usage() {
     cat <<EOF
 Usage: $0 <model.gguf> <tokenizer.json> <prompt_text>
 
-Validate tokenizer parity between BitNet.rs and bitnet.cpp.
+Validate tokenizer parity between BitNet-rs and bitnet.cpp.
 
 Arguments:
   model.gguf      Path to GGUF model file
@@ -90,7 +90,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo -e "${CYAN}=== BitNet.rs Tokenizer Parity Check ===${NC}"
+echo -e "${CYAN}=== BitNet-rs Tokenizer Parity Check ===${NC}"
 echo -e "Model:     ${MODEL_PATH}"
 echo -e "Tokenizer: ${TOKENIZER_PATH}"
 echo -e "Prompt:    \"${PROMPT_TEXT}\""
@@ -99,7 +99,7 @@ echo ""
 # ============================================================================
 # Step 1: Rust tokenization via bitnet-cli
 # ============================================================================
-echo -e "${CYAN}[1/3] Tokenizing with BitNet.rs...${NC}"
+echo -e "${CYAN}[1/3] Tokenizing with BitNet-rs...${NC}"
 
 # Find bitnet binary (prefer release, fallback to debug)
 BITNET_BIN=""

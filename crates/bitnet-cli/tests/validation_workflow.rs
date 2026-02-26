@@ -1,4 +1,4 @@
-//! Integration tests for the BitNet.rs validation workflow
+//! Integration tests for the BitNet-rs validation workflow
 //!
 //! Tests feature spec: validation-workflow.md#comprehensive-inspection-testing
 //!

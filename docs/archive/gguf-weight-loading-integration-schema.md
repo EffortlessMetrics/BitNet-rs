@@ -2,14 +2,14 @@
 
 ## Overview
 
-This document defines the comprehensive integration schema for GGUF weight loading in BitNet.rs, providing the implementation roadmap that connects all architectural components, API contracts, and validation frameworks into a cohesive production-ready system.
+This document defines the comprehensive integration schema for GGUF weight loading in BitNet-rs, providing the implementation roadmap that connects all architectural components, API contracts, and validation frameworks into a cohesive production-ready system.
 
 ## Integration Architecture
 
 ### Component Hierarchy
 
 ```
-BitNet.rs Neural Network Pipeline
+BitNet-rs Neural Network Pipeline
 ├── Model Loading (bitnet-models)
 │   ├── GgufWeightLoader (Enhanced)
 │   ├── ProgressiveGgufLoader (New)
@@ -645,10 +645,10 @@ mod integration_tests {
 
 This integration schema provides the complete implementation framework for GGUF weight loading that:
 
-1. **Unifies Components**: Seamless integration across all BitNet.rs workspace crates
+1. **Unifies Components**: Seamless integration across all BitNet-rs workspace crates
 2. **Ensures Quality**: Comprehensive validation at every integration point
 3. **Maintains Performance**: Device-aware optimizations and memory efficiency
 4. **Preserves Compatibility**: Feature flag discipline and backward compatibility
 5. **Enables Production**: Real neural network inference with trained parameters
 
-The schema addresses all 10 acceptance criteria from Issue #159 while maintaining the architectural integrity of the BitNet.rs neural network inference pipeline.
+The schema addresses all 10 acceptance criteria from Issue #159 while maintaining the architectural integrity of the BitNet-rs neural network inference pipeline.

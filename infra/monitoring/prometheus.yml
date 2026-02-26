@@ -16,7 +16,7 @@ alerting:
           - alertmanager:9093
 
 scrape_configs:
-  # BitNet.rs application metrics - Primary Rust Implementation
+  # bitnet-rs application metrics - Primary Rust Implementation
   - job_name: 'bitnet-rust-cpu'
     static_configs:
       - targets: ['bitnet-cpu-service:9090']
@@ -158,7 +158,7 @@ scrape_configs:
         regex: 'nvidia-dcgm-exporter'
         action: keep
 
-  # Custom BitNet.rs metrics - Rust-specific performance metrics
+  # Custom bitnet-rs metrics - Rust-specific performance metrics
   - job_name: 'bitnet-rust-custom-metrics'
     static_configs:
       - targets: ['bitnet-service:9090']

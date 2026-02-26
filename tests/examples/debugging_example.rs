@@ -208,7 +208,7 @@ impl TestSuite for DebuggingExampleSuite {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🔍 BitNet.rs Debugging Example");
+    println!("🔍 BitNet-rs Debugging Example");
     println!("===============================\n");
 
     // Create test configuration

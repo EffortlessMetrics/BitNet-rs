@@ -27,6 +27,6 @@
   "routing": {
     "next": "pr-preparer",
     "action": "FINALIZE",
-    "rationale": "All Issue #465 documentation validated against Diátaxis framework and BitNet.rs standards"
+    "rationale": "All Issue #465 documentation validated against Diátaxis framework and BitNet-rs standards"
   }
 }

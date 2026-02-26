@@ -1,4 +1,4 @@
-# BitNet.rs Performance Finalization - PR #431
+# bitnet-rs Performance Finalization - PR #431
 
 ## Gate Decision: ✅ PASS
 
@@ -83,7 +83,7 @@ CUDA I2S Quantization: 6.66M to 286M elem/s (42x CPU speedup at 64K) ✅ VALIDAT
 CUDA TL1/TL2:        FAILED - CPU fallback validated (72% coverage) ⚠️ NON-BLOCKING
 ```
 
-**Regression Thresholds (BitNet.rs Standards)**:
+**Regression Thresholds (bitnet-rs Standards)**:
 - Critical Regression (>15%): **0 detected** ✅
 - Major Regression (10-15%): **0 detected** ✅
 - Minor Regression (5-10%): **0 detected** ✅
@@ -104,7 +104,7 @@ CUDA TL1/TL2:        FAILED - CPU fallback validated (72% coverage) ⚠️ NON-B
 | **TL1** | >99.6% | N/A | Property-based | ✅ PASS |
 | **TL2** | >99.6% | N/A | Property-based | ✅ PASS |
 
-**Evidence**: All quantization types maintain >99% accuracy requirement per BitNet.rs standards.
+**Evidence**: All quantization types maintain >99% accuracy requirement per bitnet-rs standards.
 
 ---
 
@@ -148,7 +148,7 @@ CUDA TL1/TL2:        FAILED - CPU fallback validated (72% coverage) ⚠️ NON-B
 
 ## SLO Compliance Assessment
 
-### BitNet.rs Neural Network SLO Requirements
+### bitnet-rs Neural Network SLO Requirements
 
 | SLO Requirement | Target | Current | Status |
 |-----------------|--------|---------|--------|
@@ -282,7 +282,7 @@ reason: comprehensive_validation_statistical_significance_confirmed
 
 ---
 
-## BitNet.rs Gate Decision Logic
+## bitnet-rs Gate Decision Logic
 
 ### Performance Gate Criteria (All Met)
 

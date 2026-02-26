@@ -6,7 +6,7 @@
 //!
 //! This test module provides comprehensive testing of strict mode environment variable
 //! behavior, cross-crate consistency, and mock prevention mechanisms across the entire
-//! BitNet.rs workspace with proper error handling and validation.
+//! BitNet-rs workspace with proper error handling and validation.
 
 #![allow(dead_code)]
 #![allow(unused_variables)]
@@ -294,7 +294,7 @@ mod strict_mode_config_tests {
 mod cross_crate_consistency_tests {
     use super::*;
 
-    /// Tests strict mode consistency across all BitNet.rs crates
+    /// Tests strict mode consistency across all BitNet-rs crates
     ///
     /// Uses EnvGuard for thread-safe environment variable management with automatic cleanup.
     /// The #[serial] attribute ensures this test runs exclusively to prevent environment

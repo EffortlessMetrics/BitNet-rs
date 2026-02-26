@@ -1,5 +1,5 @@
 [package]
-description = "Comprehensive testing framework for BitNet.rs"
+description = "Comprehensive testing framework for bitnet-rs"
 license = "MIT OR Apache-2.0"
 name = "bitnet-tests"
 version.workspace = true
@@ -346,7 +346,7 @@ cargo_metadata = "0.23.1"
 # File timestamp manipulation
 filetime = "0.2.26"
 
-# BitNet.rs crates for cross-validation
+# bitnet-rs crates for cross-validation
 bitnet-common = { path = "../crates/bitnet-common" }
 bitnet-inference = { path = "../crates/bitnet-inference", default-features = false, features = ["cpu", "rt-tokio"] }
 bitnet-models = { path = "../crates/bitnet-models" }

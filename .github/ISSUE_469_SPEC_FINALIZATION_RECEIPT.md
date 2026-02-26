@@ -3,7 +3,7 @@
 **Gate:** `generative:gate:spec`
 **Status:** ✅ **PASS**
 **Timestamp:** 2025-10-18T05:49:11Z
-**Agent:** spec-finalizer (BitNet.rs Generative Adapter)
+**Agent:** spec-finalizer (bitnet-rs Generative Adapter)
 **Issue:** #469 MVP Sprint Polish - QK256 Enhancement
 **Commit:** 3d971047e43821a8289203251fff42db8f23ec77
 
@@ -48,7 +48,7 @@
 
 ---
 
-## BitNet.rs Alignment Verification
+## bitnet-rs Alignment Verification
 
 ### Neural Network Architecture Integration
 
@@ -134,7 +134,7 @@
 **Validation Checks:**
 - ✅ All spec files exist in `docs/explanation/` following Diátaxis framework
 - ✅ API contracts align with existing patterns in `docs/reference/`
-- ✅ Scope appropriate for BitNet.rs workspace structure
+- ✅ Scope appropriate for bitnet-rs workspace structure
 - ✅ TDD compliance with Red-Green-Refactor methodology
 - ✅ Cross-references to `docs/reference/` for API contract integration
 
@@ -176,13 +176,13 @@ All pre-commit checks passed!
 
 **Rationale:**
 1. ✅ All 8 acceptance criteria fully specified and committed
-2. ✅ API contracts validated against existing BitNet.rs patterns
+2. ✅ API contracts validated against existing bitnet-rs patterns
 3. ✅ Specifications follow docs/explanation/ conventions
 4. ✅ TDD compliance verified with test scaffolding
 5. ✅ Backward compatibility confirmed (all changes additive)
 6. ✅ Neural network architecture integration documented
 7. ✅ Pre-commit checks passed (formatting, clippy, safety)
-8. ✅ Commit message follows BitNet.rs conventional commit patterns
+8. ✅ Commit message follows bitnet-rs conventional commit patterns
 
 **Next Agent:** test-creator (TDD implementation with feature-gated tests)
 
@@ -220,7 +220,7 @@ xtask/tests/ffi_build_tests.rs
 
 ✅ **Documentation Structure:** Files organized in `docs/explanation/` following Diátaxis
 ✅ **API Contract Validity:** All contracts align with existing patterns in `docs/reference/`
-✅ **Scope Validation:** Features appropriately scoped within BitNet.rs workspace crates
+✅ **Scope Validation:** Features appropriately scoped within bitnet-rs workspace crates
 ✅ **TDD Compliance:** Test scaffolding created with proper feature gates and `// AC:ID` tags
 ✅ **Cross-Reference Integrity:** Specifications cross-link to `docs/reference/` and existing guides
 
@@ -241,7 +241,7 @@ xtask/tests/ffi_build_tests.rs
 
 ## Receipt Metadata
 
-**Agent:** spec-finalizer (BitNet.rs Generative Adapter)
+**Agent:** spec-finalizer (bitnet-rs Generative Adapter)
 **Issue:** #469 MVP Sprint Polish
 **Gate:** generative:gate:spec
 **Flow:** generative
@@ -250,7 +250,7 @@ xtask/tests/ffi_build_tests.rs
 
 **Validation Scope:**
 - ✅ Specification completeness (8/8 ACs)
-- ✅ API contract alignment (BitNet.rs patterns)
+- ✅ API contract alignment (bitnet-rs patterns)
 - ✅ Neural network integration (Model → Quantization → Inference → Output)
 - ✅ TDD compliance (test scaffolding with feature gates)
 - ✅ Documentation structure (Diátaxis framework)
@@ -265,5 +265,5 @@ xtask/tests/ffi_build_tests.rs
 ---
 
 **Receipt Generated:** 2025-10-18T05:49:11Z
-**Finalizer:** spec-finalizer (BitNet.rs Generative Adapter)
+**Finalizer:** spec-finalizer (bitnet-rs Generative Adapter)
 **Commit:** 3d971047e43821a8289203251fff42db8f23ec77

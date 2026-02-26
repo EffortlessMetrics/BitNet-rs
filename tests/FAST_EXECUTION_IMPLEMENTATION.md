@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the implementation of the fast test execution system for BitNet.rs, designed to complete the full test suite in under 15 minutes while maintaining comprehensive test coverage.
+This document describes the implementation of the fast test execution system for BitNet-rs, designed to complete the full test suite in under 15 minutes while maintaining comprehensive test coverage.
 
 ## Implementation Summary
 

@@ -7,7 +7,7 @@
 
 ## Overview
 
-This directory contains a **comprehensive analysis and solution** for QK256 property test failures in the BitNet.rs project. The analysis covers numerical precision issues, tolerance strategies, and implementation guidance for fixing 4 failing tests.
+This directory contains a **comprehensive analysis and solution** for QK256 property test failures in the BitNet-rs project. The analysis covers numerical precision issues, tolerance strategies, and implementation guidance for fixing 4 failing tests.
 
 **Total Analysis**: 1,027 lines of detailed technical documentation  
 **Scope**: Numerical analysis, tolerance strategy, safety analysis, implementation plan  
@@ -280,7 +280,7 @@ Two-Level Check:
 
 ### Implementation References
 - **GGML**: ggml-quants.c:62 (code mapping verification)
-- **BitNet.rs**: Scalar reference in i2s_qk256.rs, AVX2 in i2s_qk256_avx2.rs
+- **BitNet-rs**: Scalar reference in i2s_qk256.rs, AVX2 in i2s_qk256_avx2.rs
 - **Property Test Suite**: crates/bitnet-models/tests/qk256_property_tests.rs
 
 ---

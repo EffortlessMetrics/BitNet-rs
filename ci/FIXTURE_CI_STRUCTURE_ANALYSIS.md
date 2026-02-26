@@ -1,8 +1,8 @@
-# BitNet.rs Fixture Tests and CI Workflow Structure - Comprehensive Analysis
+# BitNet-rs Fixture Tests and CI Workflow Structure - Comprehensive Analysis
 
 ## Executive Summary
 
-The BitNet.rs project implements a sophisticated CI workflow with:
+The BitNet-rs project implements a sophisticated CI workflow with:
 - **3 committed GGUF test fixtures** for QK256 and BitNet32 quantization format validation
 - **5 independent guard jobs** ensuring code quality and correctness
 - **18 named CI jobs** with complex dependency chains for comprehensive testing

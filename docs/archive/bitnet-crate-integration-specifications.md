@@ -1,8 +1,8 @@
-# BitNet.rs Crate Integration Specifications: Real Model Integration
+# BitNet-rs Crate Integration Specifications: Real Model Integration
 
 ## Overview
 
-This document provides comprehensive integration specifications for each BitNet.rs workspace crate to support real BitNet model integration. The specifications detail the required modifications, API enhancements, and implementation strategies for each crate while maintaining backward compatibility and ensuring seamless integration across the neural network inference pipeline.
+This document provides comprehensive integration specifications for each BitNet-rs workspace crate to support real BitNet model integration. The specifications detail the required modifications, API enhancements, and implementation strategies for each crate while maintaining backward compatibility and ensuring seamless integration across the neural network inference pipeline.
 
 ## Core Library Crate Specifications
 
@@ -1426,13 +1426,13 @@ pub mod integration_testing {
 ### Integration Success Metrics
 
 - **API Compatibility**: 100% backward compatibility with existing APIs
-- **Crate Integration**: Seamless integration across all BitNet.rs workspace crates
+- **Crate Integration**: Seamless integration across all BitNet-rs workspace crates
 - **Documentation Coverage**: 100% API coverage with comprehensive examples
 - **CI Integration**: <15 minute execution time for comprehensive test suite
 
 ## Conclusion
 
-These comprehensive BitNet.rs crate integration specifications provide detailed guidance for implementing real BitNet model integration across the entire workspace. The specifications ensure:
+These comprehensive BitNet-rs crate integration specifications provide detailed guidance for implementing real BitNet model integration across the entire workspace. The specifications ensure:
 
 1. **Production Readiness**: All crates enhanced for production-grade real model support
 2. **Seamless Integration**: Coordinated enhancements across the neural network inference pipeline
@@ -1440,8 +1440,8 @@ These comprehensive BitNet.rs crate integration specifications provide detailed 
 4. **Quality Assurance**: Extensive validation, cross-validation, and error handling
 5. **Developer Experience**: Enhanced CLI tools, automation, and comprehensive documentation
 
-The implementation will transform BitNet.rs from a development framework into a production-validated neural network inference system capable of handling real-world BitNet model deployment with confidence in accuracy, performance, and reliability.
+The implementation will transform BitNet-rs from a development framework into a production-validated neural network inference system capable of handling real-world BitNet model deployment with confidence in accuracy, performance, and reliability.
 
 <function_calls>
 <invoke name="TodoWrite">
-<parameter name="todos">[{"content": "Analyze Issue #218 and validate requirements for real BitNet model integration", "status": "completed", "activeForm": "Analyzing Issue #218 requirements for real BitNet model integration"}, {"content": "Create neural network feature specifications in docs/explanation/", "status": "completed", "activeForm": "Creating comprehensive neural network feature specifications"}, {"content": "Define API contracts for model loading and inference in docs/reference/", "status": "completed", "activeForm": "Defining comprehensive API contracts for model loading and inference"}, {"content": "Document architecture decision records for feature flag strategy", "status": "completed", "activeForm": "Documenting comprehensive architecture decision records"}, {"content": "Create implementation schemas for configuration and performance", "status": "completed", "activeForm": "Creating comprehensive implementation schemas"}, {"content": "Specify neural network operation requirements with quantization accuracy", "status": "completed", "activeForm": "Specifying detailed neural network operation requirements"}, {"content": "Detail GPU/CPU kernel implementation specifications", "status": "completed", "activeForm": "Detailing comprehensive GPU/CPU kernel implementation specifications"}, {"content": "Create BitNet.rs crate integration specifications", "status": "completed", "activeForm": "Creating comprehensive BitNet.rs crate integration specifications"}]
+<parameter name="todos">[{"content": "Analyze Issue #218 and validate requirements for real BitNet model integration", "status": "completed", "activeForm": "Analyzing Issue #218 requirements for real BitNet model integration"}, {"content": "Create neural network feature specifications in docs/explanation/", "status": "completed", "activeForm": "Creating comprehensive neural network feature specifications"}, {"content": "Define API contracts for model loading and inference in docs/reference/", "status": "completed", "activeForm": "Defining comprehensive API contracts for model loading and inference"}, {"content": "Document architecture decision records for feature flag strategy", "status": "completed", "activeForm": "Documenting comprehensive architecture decision records"}, {"content": "Create implementation schemas for configuration and performance", "status": "completed", "activeForm": "Creating comprehensive implementation schemas"}, {"content": "Specify neural network operation requirements with quantization accuracy", "status": "completed", "activeForm": "Specifying detailed neural network operation requirements"}, {"content": "Detail GPU/CPU kernel implementation specifications", "status": "completed", "activeForm": "Detailing comprehensive GPU/CPU kernel implementation specifications"}, {"content": "Create BitNet-rs crate integration specifications", "status": "completed", "activeForm": "Creating comprehensive BitNet-rs crate integration specifications"}]

@@ -2,14 +2,14 @@
 
 **Status**: Draft
 **Created**: 2025-10-23
-**Author**: BitNet.rs CI Engineering
+**Author**: BitNet-rs CI Engineering
 **Tracking Issue**: TBD (to be created after spec approval)
 
 ---
 
 ## Executive Summary
 
-BitNet.rs currently has **37 feature flags** but only tests `--features cpu` in CI gate. Feature gate bugs like Issue #439 required extensive manual analysis to resolve. This specification defines a comprehensive feature matrix testing system using cargo-hack, plus 4 new CI guard jobs to prevent feature gate regressions, unannotated ignored tests, and fixture integrity issues.
+BitNet-rs currently has **37 feature flags** but only tests `--features cpu` in CI gate. Feature gate bugs like Issue #439 required extensive manual analysis to resolve. This specification defines a comprehensive feature matrix testing system using cargo-hack, plus 4 new CI guard jobs to prevent feature gate regressions, unannotated ignored tests, and fixture integrity issues.
 
 **Key Goals**:
 1. Implement cargo-hack powerset testing for all feature combinations
@@ -71,7 +71,7 @@ BitNet.rs currently has **37 feature flags** but only tests `--features cpu` in 
 
 ### Workspace Integration
 
-BitNet.rs has **37 feature flags** across 24 workspace crates:
+BitNet-rs has **37 feature flags** across 24 workspace crates:
 
 **Core Inference Features**:
 - `cpu` → kernels + inference + tokenizers + CPU SIMD

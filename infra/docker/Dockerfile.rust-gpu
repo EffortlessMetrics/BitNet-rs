@@ -1,4 +1,4 @@
-# BitNet.rs GPU-enabled Dockerfile
+# bitnet-rs GPU-enabled Dockerfile
 # Optimized for NVIDIA GPU inference with CUDA support
 
 # Build stage with CUDA development environment
@@ -156,7 +156,7 @@ ENV CUDA_VISIBLE_DEVICES=0
 CMD ["bitnet-server", "--config", "/etc/bitnet/server.toml", "--device", "cuda"]
 
 # Metadata labels
-LABEL org.opencontainers.image.title="BitNet.rs GPU"
+LABEL org.opencontainers.image.title="bitnet-rs GPU"
 LABEL org.opencontainers.image.description="GPU-accelerated BitNet 1-bit LLM inference with CUDA support"
 LABEL org.opencontainers.image.vendor="BitNet Contributors"
 LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"

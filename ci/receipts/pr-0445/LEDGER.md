@@ -20,7 +20,7 @@
 | tests | ✅ pass | 1,336/1,336 pass (267 test suites, 0 failures) | pub-readiness-validator | 2025-10-11 |
 | build | ✅ pass | release build clean (--no-default-features --features cpu) | pub-readiness-validator | 2025-10-11 |
 | acceptance | ✅ pass | 7/7 criteria validated (AC1-AC7) | pub-readiness-validator | 2025-10-11 |
-| **publication** | ✅ **pass** | **All generative gates PASS; BitNet.rs template complete; feature flags validated; zero production impact; comprehensive documentation (1,300+ lines specs)** | **pub-readiness-validator** | **2025-10-11** |
+| **publication** | ✅ **pass** | **All generative gates PASS; BitNet-rs template complete; feature flags validated; zero production impact; comprehensive documentation (1,300+ lines specs)** | **pub-readiness-validator** | **2025-10-11** |
 | **merge-validation** | ✅ **pass** | **workspace: CPU+GPU build ok; security: clean; merge commit: 5639470; note: AC3 test flakiness detected (#441, #351)** | **pr-merge-finalizer** | **2025-10-12** |
 | **cleanup** | ✅ **pass** | **branch cleaned; workspace verified; receipts archived; issue #443 closed** | **pr-merge-finalizer** | **2025-10-12** |
 <!-- gates:end -->
@@ -53,7 +53,7 @@
 <!-- decision:start -->
 **State:** ✅ **MERGED** (Integration Complete - FINALIZE)
 
-**Why:** PR #445 successfully merged to main with all BitNet.rs quality criteria satisfied and post-merge validation complete:
+**Why:** PR #445 successfully merged to main with all BitNet-rs quality criteria satisfied and post-merge validation complete:
 
 **Required Gates (5/5 PASS ✅)**:
 
@@ -63,14 +63,14 @@
 - ✅ **build**: Clean release build (--no-default-features --features cpu)
 - ✅ **acceptance**: 7/7 criteria validated (AC1-AC7)
 
-**BitNet.rs Generative Standards (All PASS ✅)**:
+**BitNet-rs Generative Standards (All PASS ✅)**:
 
 - ✅ **Template Completeness**: Feature spec (203 lines), technical assessment (561 lines), spec validation (536 lines)
 - ✅ **Commit Patterns**: Conventional format (`fix:`, `feat:`, `docs:`, `chore:`)
 - ✅ **Neural Network Context**: Test infrastructure alignment, zero production impact validated
 - ✅ **Feature Flag Compliance**: Feature-gated Device imports (`#[cfg(any(feature = "cpu", feature = "gpu"))]`)
 - ✅ **TDD Compliance**: Spec → Test → Implementation cycle complete
-- ✅ **API Contracts**: Test infrastructure patterns validated against BitNet.rs standards
+- ✅ **API Contracts**: Test infrastructure patterns validated against BitNet-rs standards
 
 **Implementation Impact**: TEST INFRASTRUCTURE ONLY
 
@@ -101,11 +101,11 @@ feature-flags=validated✅ commit-patterns=conventional✅ template=complete✅
 merge=5639470✅ issue-443=closed✅ branch=deleted✅ workspace=verified✅
 ```
 
-**BitNet.rs Neural Network Standards**: PASS ✅
+**BitNet-rs Neural Network Standards**: PASS ✅
 
 - Test infrastructure hygiene: 100% compliance (0 clippy warnings)
 - Feature flag patterns: Correct (`#[cfg(any(feature = "cpu", feature = "gpu"))]`)
-- Workspace helper consistency: File-scope hoisting (matches BitNet.rs patterns)
+- Workspace helper consistency: File-scope hoisting (matches BitNet-rs patterns)
 - Zero production impact: Test harness only (no inference pipeline changes)
 - Documentation completeness: 1,300+ lines (spec, assessment, validation)
 - TDD compliance: Spec → Implementation → Validation cycle complete
@@ -249,12 +249,12 @@ test result: ok. 1336 passed; 0 failed; 0 ignored (267 test suites)
 - `docs/explanation/issue-443-technical-assessment.md` (+561/-0)
   - Comprehensive technical assessment (561 lines)
   - Implementation approach evaluation and risk analysis
-  - BitNet.rs standards alignment validation
+  - BitNet-rs standards alignment validation
 
 - `docs/explanation/issue-443-spec-validation.md` (+536/-0)
   - Specification validation report
   - API contracts and neural network patterns validation
-  - BitNet.rs quality standards assessment
+  - BitNet-rs quality standards assessment
 
 ---
 
@@ -267,7 +267,7 @@ test result: ok. 1336 passed; 0 failed; 0 ignored (267 test suites)
 
 **Device Import Pattern:**
 ```rust
-// Validated pattern matching BitNet.rs standards
+// Validated pattern matching BitNet-rs standards
 use bitnet_common::BitNetConfig;
 #[cfg(any(feature = "cpu", feature = "gpu"))]
 use bitnet_common::Device;
@@ -304,11 +304,11 @@ use bitnet_common::Device;
    - ✅ Conventional format (`chore:`)
    - ✅ Clear single-purpose commit
 
-**Pattern Compliance:** ✅ All commits follow BitNet.rs conventional format
+**Pattern Compliance:** ✅ All commits follow BitNet-rs conventional format
 
 ---
 
-## BitNet.rs Template Validation
+## BitNet-rs Template Validation
 
 ### Story
 ✅ **COMPLETE**: Neural network test infrastructure hygiene fixes for CPU validation lane. Addresses code quality issues in test harness preventing clean compilation under strict linting rules. Ensures developer workflow operates without false negatives from test infrastructure warnings.
@@ -321,7 +321,7 @@ use bitnet_common::Device;
 - Clear success metrics
 
 ### Scope
-✅ **COMPLETE**: Test infrastructure only (bitnet-models tests, xtask tests). Zero production code impact. API contracts validated against BitNet.rs test infrastructure patterns.
+✅ **COMPLETE**: Test infrastructure only (bitnet-models tests, xtask tests). Zero production code impact. API contracts validated against BitNet-rs test infrastructure patterns.
 
 ### Implementation
 ✅ **COMPLETE**:
@@ -364,7 +364,7 @@ $ cargo build --workspace --release --no-default-features --features cpu
 
 ## Neural Network Pipeline Impact Assessment
 
-**BitNet.rs Inference Pipeline:**
+**BitNet-rs Inference Pipeline:**
 - ❌ Model Loading: Test harness only (production code unchanged)
 - ❌ Quantization: Not affected (no quantization algorithm changes)
 - ❌ Kernels: Not affected (no GPU/CPU kernel changes)
@@ -394,14 +394,14 @@ $ cargo build --workspace --release --no-default-features --features cpu
    - 561 lines
    - Implementation approach evaluation
    - Risk analysis (LOW risk, TRIVIAL complexity)
-   - BitNet.rs standards alignment
+   - BitNet-rs standards alignment
    - Recommended approach (Option 1: file-scope hoisting)
 
 3. **Specification Validation** (`docs/explanation/issue-443-spec-validation.md`):
    - 536 lines
    - Specification completeness assessment
    - API contracts validation
-   - BitNet.rs quality standards assessment
+   - BitNet-rs quality standards assessment
    - Atomicity validation for all 7 ACs
 
 **Related Documentation:**

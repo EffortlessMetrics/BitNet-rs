@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs PR #259 Final Assessment - GGUF Weight Loading Implementation
+# BitNet-rs PR #259 Final Assessment - GGUF Weight Loading Implementation
 
 ## Executive Summary
 ✅ **READY FOR PROMOTION TO REVIEW** - Production-ready GGUF weight loading implementation with outstanding neural network inference capabilities.
@@ -35,7 +35,7 @@
 - **GGUF Integration**: Complete tensor validation, progressive loading, memory-mapped operations
 - **Security Hardening**: Comprehensive bounds checking, malicious model protection
 - **Memory Efficiency**: Zero-copy operations maintained throughout weight loading pipeline
-- **Architecture Quality**: Excellent BitNet.rs alignment with device-aware quantization design
+- **Architecture Quality**: Excellent BitNet-rs alignment with device-aware quantization design
 
 #### Quality Validation
 - **tests**: cargo test: 388/400 pass (97%); CPU: optimized, GPU: fallback validated
@@ -70,7 +70,7 @@
 |------|--------|----------|---------|
 | freshness | ✅ PASS | base up-to-date @83acbe6, 7 commits ahead | Ready for integration |
 | hygiene | ✅ PASS | format: clean, clippy: 0 warnings | Production quality |
-| architecture | ✅ PASS | excellent BitNet.rs alignment | Device-aware design |
+| architecture | ✅ PASS | excellent BitNet-rs alignment | Device-aware design |
 | tests | ✅ PASS | 388/400 success (97%) | Neural network validated |
 | hardening | ⚠️ CONDITIONAL | mutation: 42.9%, security: clean | Framework ready |
 | benchmarks | ❌ REGRESSION | quantization: 90-98% perf loss detected | Route to perf-fixer |
@@ -80,7 +80,7 @@
 **Hop Log:**
 - 2025-09-27T[current]: **docs-link-validator** → **docs-reviewer** (FAILURE: 47 broken links found - missing examples/, placeholder URLs, path inconsistencies)
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
 ### ✅ Critical Systems Validated
 - **Quantization Accuracy**: I2S: >99.8%, TL1: >99.6%, TL2: >99.7% (exceeds standards)
@@ -116,14 +116,14 @@ quantization: I2S: 297-396 Melem/s, TL1: 191-328 Melem/s, TL2: 254-482 Melem/s
 inference: matrix ops: 1.0-3.6 Gelem/s; neural network ready
 format: rustfmt: all files; clippy: 0 warnings
 build: workspace ok; CPU: ok, GPU: ok
-architecture: excellent BitNet.rs alignment; device-aware design
+architecture: excellent BitNet-rs alignment; device-aware design
 docs: Diátaxis complete; neural network API documented
 security: comprehensive validation; 1 low-risk unmaintained dependency
 ```
 
 ## Stakeholder Summary
 
-**Feature Delivered**: Real GGUF weight loading for BitNet.rs neural network inference
+**Feature Delivered**: Real GGUF weight loading for BitNet-rs neural network inference
 
 **Key Capabilities**:
 - Production-ready 1-bit quantization (I2S, TL1, TL2) with >99% accuracy
@@ -134,7 +134,7 @@ security: comprehensive validation; 1 low-risk unmaintained dependency
 
 **Quality Assurance**: 97% gate success rate with comprehensive validation
 
-**Production Impact**: Enables real neural network inference with BitNet.rs quantization algorithms
+**Production Impact**: Enables real neural network inference with BitNet-rs quantization algorithms
 
 ---
 

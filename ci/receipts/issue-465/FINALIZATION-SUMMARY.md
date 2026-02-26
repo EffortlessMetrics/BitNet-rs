@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Issue #465 has been successfully validated and finalized following BitNet.rs GitHub-native neural network development standards. All 12 acceptance criteria are testable, dependencies are satisfied, ambiguities have been resolved, and the Issue Ledger is complete with all required sections (Gates, Trace, Hoplog, Decision).
+Issue #465 has been successfully validated and finalized following BitNet-rs GitHub-native neural network development standards. All 12 acceptance criteria are testable, dependencies are satisfied, ambiguities have been resolved, and the Issue Ledger is complete with all required sections (Gates, Trace, Hoplog, Decision).
 
 **Routing Decision**: `FINALIZE → spec-creator` (proceed to Microloop 2: Spec Work)
 
@@ -77,7 +77,7 @@ Issue #465 has been successfully validated and finalized following BitNet.rs Git
 - ✅ scripts/pre-tag-verification.sh: QA checklist
 - ✅ Git Tag: v0.1.0-mvp with release notes
 
-### 4. BitNet.rs Neural Network Alignment ✅
+### 4. BitNet-rs Neural Network Alignment ✅
 
 **Workspace Crates**:
 - ✅ bitnet-inference: Receipt verification, kernel execution
@@ -225,17 +225,17 @@ Issue #465 has been successfully validated and finalized following BitNet.rs Git
 
 All criteria met:
 
-- ✅ All 12 ACs can be mapped to testable behavior in BitNet.rs workspace crates
-- ✅ Requirements align with BitNet.rs architectural patterns (I2_S quantization, receipt verification, feature flags)
+- ✅ All 12 ACs can be mapped to testable behavior in BitNet-rs workspace crates
+- ✅ Requirements align with BitNet-rs architectural patterns (I2_S quantization, receipt verification, feature flags)
 - ✅ Issue scope fits within generative flow microloop structure (8-microloop positioning)
-- ✅ Acceptance criteria address relevant BitNet.rs quality gates (CPU baseline, receipt validation, documentation standards)
+- ✅ Acceptance criteria address relevant BitNet-rs quality gates (CPU baseline, receipt validation, documentation standards)
 - ✅ Issue Ledger properly formatted with all required anchors and sections
 - ✅ Requirements consider CPU feature compatibility (`--no-default-features --features cpu`)
 - ✅ Story → Schema → Tests → Code traceability clear for neural network implementation
 
 ---
 
-## BitNet.rs-Specific Quality Standards
+## BitNet-rs-Specific Quality Standards
 
 ### Feature Flags ✅
 - All commands use `--no-default-features --features cpu` for CPU operations
@@ -279,7 +279,7 @@ All criteria met:
 4. **Ambiguities Resolved**: Model selection, branch protection, performance baselines clarified
 5. **Blockers Mitigated**: Admin access requirement documented with fallback process
 6. **Traceability Established**: Story → Schema → Tests → Code mapping clear for neural network requirements
-7. **BitNet.rs Alignment**: Feature flags, quantization validation, receipt verification standards met
+7. **BitNet-rs Alignment**: Feature flags, quantization validation, receipt verification standards met
 
 **Next Steps for spec-creator**:
 
@@ -303,7 +303,7 @@ All criteria met:
 
 ## Conclusion
 
-Issue #465 "CPU Path Followup" has been successfully finalized according to BitNet.rs GitHub-native neural network development standards. The Issue Ledger is complete, all acceptance criteria are testable, dependencies are satisfied, and ambiguities have been resolved with documented mitigation strategies.
+Issue #465 "CPU Path Followup" has been successfully finalized according to BitNet-rs GitHub-native neural network development standards. The Issue Ledger is complete, all acceptance criteria are testable, dependencies are satisfied, and ambiguities have been resolved with documented mitigation strategies.
 
 **Flow Status**: ✅ SUCCESSFUL
 **Routing**: `FINALIZE → spec-creator`
@@ -313,6 +313,6 @@ The issue is ready for detailed specification development in Microloop 2 (Spec W
 
 ---
 
-**Finalization Completed By**: Claude Code (BitNet.rs Issue Validation Specialist)
+**Finalization Completed By**: Claude Code (BitNet-rs Issue Validation Specialist)
 **Date**: 2025-10-15
 **Microloop**: 1.3/8 (Issue Work Finalizer - Generative Flow)

@@ -1,5 +1,5 @@
 # Legacy C++ BitNet Dockerfile for cross-validation purposes only
-# This is NOT the primary implementation - use BitNet.rs instead
+# This is NOT the primary implementation - use bitnet-rs instead
 # Only used for performance comparison and compatibility testing
 
 # Build stage

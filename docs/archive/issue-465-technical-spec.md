@@ -49,7 +49,7 @@ The specification defines 12 acceptance criteria organized into 4 logical work s
 
 ### 1.2 Quantization and Neural Network Context
 
-**BitNet.rs Quantization Specifications:**
+**BitNet-rs Quantization Specifications:**
 - **I2_S**: Production 2-bit signed quantization (≥99.8% accuracy vs FP32)
 - **TL1/TL2**: Table lookup quantization with device-aware selection (≥99.6% accuracy)
 - **Receipt Validation**: Ensures honest compute with real kernel execution evidence
@@ -106,7 +106,7 @@ The specification defines 12 acceptance criteria organized into 4 logical work s
 
 ### 3.1 Architecture Compatibility
 
-**BitNet.rs Workspace Structure:**
+**BitNet-rs Workspace Structure:**
 ```
 crates/
 ├── bitnet-inference/      # Inference engine (receipts, kernels)
@@ -266,7 +266,7 @@ cargo run -p xtask -- verify-receipt
 ```markdown
 ## Receipt Verification
 
-BitNet.rs uses **inference receipts** to prove honest compute with real neural network execution.
+BitNet-rs uses **inference receipts** to prove honest compute with real neural network execution.
 
 ### Commands
 
@@ -436,7 +436,7 @@ grep -rn "tok/s" docs/ README.md | \
 
 4. **Create baseline README**:
    ```markdown
-   # BitNet.rs Baseline Receipts
+   # BitNet-rs Baseline Receipts
 
    Pinned CPU/GPU baseline receipts for deterministic performance comparison.
 
@@ -730,7 +730,7 @@ gh pr view 435 --json state,mergedAt,title
 
 2. **Close issue with resolution comment**:
    ```bash
-   gh issue close <issue-number> --comment "Resolved by PR #435 (mock-elimination & baselines) and PR #464 (CPU forward pass with receipt validation). BitNet.rs now enforces honest compute with receipt verification in CI (Model Gates workflow). All inference must provide real kernel execution evidence."
+   gh issue close <issue-number> --comment "Resolved by PR #435 (mock-elimination & baselines) and PR #464 (CPU forward pass with receipt validation). BitNet-rs now enforces honest compute with receipt verification in CI (Model Gates workflow). All inference must provide real kernel execution evidence."
    ```
 
 3. **Verify closure**:
@@ -757,7 +757,7 @@ gh pr view 435 --json state,mergedAt,title
 
 set -euo pipefail
 
-echo "🔍 BitNet.rs v0.1.0-mvp Pre-Tag Verification"
+echo "🔍 BitNet-rs v0.1.0-mvp Pre-Tag Verification"
 echo "============================================="
 echo ""
 
@@ -875,7 +875,7 @@ chmod +x scripts/pre-tag-verification.sh
    git tag -a v0.1.0-mvp -m "$(cat <<'EOF'
    Release v0.1.0-mvp: Production CPU Inference with Receipt Verification
 
-   This is the first MVP release of BitNet.rs with production-ready CPU inference.
+   This is the first MVP release of BitNet-rs with production-ready CPU inference.
 
    Key Features:
    - Real neural network inference with I2_S quantization (≥99.8% accuracy vs FP32)
@@ -913,7 +913,7 @@ chmod +x scripts/pre-tag-verification.sh
    gh release create v0.1.0-mvp \
      --title "v0.1.0-mvp: Production CPU Inference" \
      --notes-file <(cat <<'EOF'
-   ## BitNet.rs v0.1.0-mvp
+   ## BitNet-rs v0.1.0-mvp
 
    Production-ready CPU inference with honest compute verification.
 
@@ -1138,7 +1138,7 @@ chmod +x scripts/pre-tag-verification.sh
 
 ---
 
-## 7. BitNet.rs-Specific Considerations
+## 7. BitNet-rs-Specific Considerations
 
 ### 7.1 Feature Flag Architecture
 
@@ -1439,7 +1439,7 @@ This technical specification provides a validated implementation approach for Is
 - ✅ **Clear Dependencies**: PR #435 merged, test model available, xtask commands functional
 - ✅ **Risk Mitigation**: Branch protection fallback, model adequacy addressed, determinism documented
 - ✅ **Parallelization Strategy**: 3-4 contributors can complete in 5.75 hours
-- ✅ **BitNet.rs Alignment**: Feature flags, quantization validation, receipt verification
+- ✅ **BitNet-rs Alignment**: Feature flags, quantization validation, receipt verification
 - ✅ **Neural Network Context**: I2_S accuracy, transformer pipeline, GGUF compatibility
 
 **Recommended Flow:**
@@ -1451,6 +1451,6 @@ FINALIZE → issue-finalizer
 
 ---
 
-**Specification Author**: Claude Code (BitNet.rs Neural Network Systems Architect)
+**Specification Author**: Claude Code (BitNet-rs Neural Network Systems Architect)
 **Date**: 2025-10-15
 **Status**: VALIDATED ✅

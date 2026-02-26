@@ -172,7 +172,7 @@ fn get_thread_manager() -> ThreadManager {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🧵 BitNet.rs FFI Threading Utilities Demo");
+    println!("🧵 bitnet-rs FFI Threading Utilities Demo");
     println!("Demonstrating enhancements from PR #179\n");
 
     // Demonstrate thread pool configuration

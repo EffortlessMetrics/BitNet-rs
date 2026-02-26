@@ -1,4 +1,4 @@
-# Clippy configuration for BitNet.rs
+# Clippy configuration for bitnet-rs
 # Ensures high code quality standards for crates.io publication
 
 # MSRV compatibility

@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The C++ FFI integration for BitNet.rs is **partially complete** with excellent infrastructure for per-position C++ logits extraction. The comparison framework exists in Rust (`logits_compare.rs`), and the C++ side supports `logits_all=true` for extracting logits at each token position. However, **no explicit C++ shim function** currently exists for bulk per-position logits extraction—each position's logits must be extracted individually via the C++ API.
+The C++ FFI integration for BitNet-rs is **partially complete** with excellent infrastructure for per-position C++ logits extraction. The comparison framework exists in Rust (`logits_compare.rs`), and the C++ side supports `logits_all=true` for extracting logits at each token position. However, **no explicit C++ shim function** currently exists for bulk per-position logits extraction—each position's logits must be extracted individually via the C++ API.
 
 **Sprint 1.3 Readiness**: The foundation is ready. Adding a C++ helper function for efficient per-position logits is optional (for performance), but not blocking—Rust can iterate over positions using existing functions.
 

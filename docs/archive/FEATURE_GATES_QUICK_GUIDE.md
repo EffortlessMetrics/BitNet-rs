@@ -2,7 +2,7 @@
 
 ## One-Minute Summary
 
-BitNet.rs **requires explicit feature specification** - defaults are empty. All builds must use `--no-default-features --features <list>`.
+BitNet-rs **requires explicit feature specification** - defaults are empty. All builds must use `--no-default-features --features <list>`.
 
 ```bash
 # Three most common commands:

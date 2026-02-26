@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The vectorized lookup table implementation in BitNet.rs lacks SIMD optimization, preventing the full utilization of modern CPU vector instructions for table lookup operations. This architectural gap significantly limits quantization performance for TL1 and TL2 methods that rely heavily on efficient table lookups.
+The vectorized lookup table implementation in BitNet-rs lacks SIMD optimization, preventing the full utilization of modern CPU vector instructions for table lookup operations. This architectural gap significantly limits quantization performance for TL1 and TL2 methods that rely heavily on efficient table lookups.
 
 ## Environment
 

@@ -1,10 +1,10 @@
 # How to Optimize Quantization and Performance
 
-This comprehensive guide shows you how to optimize BitNet.rs quantization performance for production workloads. You'll learn to configure device-aware quantization, enable strict mode to prevent mock fallbacks, tune performance parameters, and achieve realistic performance baselines with actual quantized computation.
+This comprehensive guide shows you how to optimize BitNet-rs quantization performance for production workloads. You'll learn to configure device-aware quantization, enable strict mode to prevent mock fallbacks, tune performance parameters, and achieve realistic performance baselines with actual quantized computation.
 
 ## Overview
 
-BitNet.rs provides advanced quantization optimization features:
+BitNet-rs provides advanced quantization optimization features:
 
 - **Device-Aware Quantization**: Automatic GPU acceleration with CPU fallback
 - **Multiple Quantization Formats**: I2_S, TL1, TL2 with accuracy ≥99% vs FP32
@@ -593,7 +593,7 @@ This guide covered:
 - ✅ **Testing and validation** for performance regression and accuracy
 - ✅ **Troubleshooting** common performance issues and solutions
 
-With these optimization techniques, you can achieve production-ready performance with BitNet.rs's real quantized computation:
+With these optimization techniques, you can achieve production-ready performance with BitNet-rs's real quantized computation:
 
 **Realistic Performance Targets:**
 - **CPU Performance**: 10-20 tokens/sec with I2S quantization

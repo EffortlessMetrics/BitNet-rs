@@ -1,4 +1,4 @@
-# BitNet.rs Issue #419: TL2 Dequantization Implementation Analysis
+# BitNet-rs Issue #419: TL2 Dequantization Implementation Analysis
 
 ## Executive Summary
 

@@ -812,7 +812,7 @@ cargo build -p xtask --features crossval-all
 
 ## 13. Summary
 
-This specification defines the `parity-both` command, enabling dual-lane cross-validation with auto-repair by default, unified receipts, and clear summary output. The implementation follows BitNet.rs architectural patterns and integrates seamlessly with existing `crossval-per-token` infrastructure.
+This specification defines the `parity-both` command, enabling dual-lane cross-validation with auto-repair by default, unified receipts, and clear summary output. The implementation follows BitNet-rs architectural patterns and integrates seamlessly with existing `crossval-per-token` infrastructure.
 
 **Key Benefits**:
 - **Developer experience**: "Two comparisons are one command away"

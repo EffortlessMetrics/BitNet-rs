@@ -20,7 +20,7 @@
 **Status**: ✅ **PASS** (with minor gaps)
 **Timestamp**: 2025-09-29
 **Branch**: `feat/issue-251-part1-core-server`
-**Reviewer**: BitNet.rs Documentation QA Specialist
+**Reviewer**: BitNet-rs Documentation QA Specialist
 
 ## Executive Summary
 
@@ -251,10 +251,10 @@ rustdoc: 24 files with /// comments; infrastructure: Dockerfile + Helm charts pr
 ## Approval Signature
 
 **Gate**: `review:gate:docs`
-**Approved By**: BitNet.rs Documentation QA Specialist
+**Approved By**: BitNet-rs Documentation QA Specialist
 **Timestamp**: 2025-09-29
 **Evidence**: See validation commands and quality gates summary above
 
 ---
 
-This documentation gate receipt validates that PR #422 meets BitNet.rs documentation standards following the Diátaxis framework with comprehensive coverage of neural network inference server capabilities, quantization accuracy, and production deployment requirements. Minor gaps are acceptable for Part 1/4 core implementation and should be addressed in subsequent parts of the production server rollout.
+This documentation gate receipt validates that PR #422 meets BitNet-rs documentation standards following the Diátaxis framework with comprehensive coverage of neural network inference server capabilities, quantization accuracy, and production deployment requirements. Minor gaps are acceptable for Part 1/4 core implementation and should be addressed in subsequent parts of the production server rollout.

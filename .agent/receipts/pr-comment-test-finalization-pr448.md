@@ -142,7 +142,7 @@ quarantine-compliance: 100% (all have documented reasons + issue links)
 
 ---
 
-## BitNet.rs Quality Standards: ✅ ALL MET
+## bitnet-rs Quality Standards: ✅ ALL MET
 
 ### ✅ Ready Promotion Requirements (Enforced)
 
@@ -199,7 +199,7 @@ quarantine-compliance: 100% (all have documented reasons + issue links)
 - **Test Foundation**: Solid (268 tests, 1.01:1 ratio)
 
 **Architecture Reviewer Objectives**:
-1. Validate PR #448 changes against BitNet.rs architecture principles
+1. Validate PR #448 changes against bitnet-rs architecture principles
 2. Confirm compilation fixes maintain system coherence
 3. Assess cross-cutting concerns (error propagation, feature gates)
 4. Validate FFI boundary changes for compatibility

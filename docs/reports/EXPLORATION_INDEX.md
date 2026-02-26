@@ -1,4 +1,4 @@
-# BitNet.rs Cross-Validation Infrastructure - Complete Exploration Index
+# BitNet-rs Cross-Validation Infrastructure - Complete Exploration Index
 
 **Date**: 2025-10-24  
 **Scope**: Comprehensive analysis of existing cross-validation infrastructure  

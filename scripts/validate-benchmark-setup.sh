@@ -20,7 +20,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." &> /dev/null && pwd)"
 BITNET_GGUF="${BITNET_GGUF:-${REPO_ROOT}/models/microsoft/bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf}"
 BITNET_CPP_DIR="${BITNET_CPP_DIR:-${HOME}/.cache/bitnet_cpp}"
 
-echo "🔍 BitNet.rs Benchmarking Setup Validation"
+echo "🔍 BitNet-rs Benchmarking Setup Validation"
 echo "=========================================="
 echo
 
@@ -31,7 +31,7 @@ log_info "Checking repository structure..."
 if [[ -f "Cargo.toml" ]] && grep -q "bitnet" "Cargo.toml"; then
     log_info "✅ Repository structure OK"
 else
-    log_error "❌ Not in BitNet.rs repository root"
+    log_error "❌ Not in BitNet-rs repository root"
     exit 1
 fi
 

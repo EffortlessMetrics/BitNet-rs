@@ -1,6 +1,6 @@
 # Test Caching and Optimization
 
-This document describes the advanced caching and optimization features implemented for the BitNet.rs testing framework. These features significantly improve test execution speed, resource utilization, and developer productivity.
+This document describes the advanced caching and optimization features implemented for the BitNet-rs testing framework. These features significantly improve test execution speed, resource utilization, and developer productivity.
 
 ## Overview
 
@@ -406,4 +406,4 @@ When contributing to the caching and optimization features:
 
 ## License
 
-This caching and optimization system is part of the BitNet.rs project and follows the same license terms.
+This caching and optimization system is part of the BitNet-rs project and follows the same license terms.

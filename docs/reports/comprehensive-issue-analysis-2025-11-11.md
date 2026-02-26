@@ -1,4 +1,4 @@
-# BitNet.rs Comprehensive Issue Analysis
+# BitNet-rs Comprehensive Issue Analysis
 **Date**: November 11, 2025
 **Context**: Post-PR #475 (Comprehensive Integration) and Guardrail Wave (PRs #486-#505)
 **Scope**: 97 open issues analyzed across 7 categories
@@ -9,7 +9,7 @@
 
 ### Analysis Overview
 
-7 specialized agents analyzed all open issues in BitNet.rs, resulting in:
+7 specialized agents analyzed all open issues in BitNet-rs, resulting in:
 
 - **44 issues ready to close** (45% reduction)
 - **23 issues to consolidate** into 4 epics

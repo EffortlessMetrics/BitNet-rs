@@ -1,4 +1,4 @@
-//! Platform-Specific Test Scaffolding for BitNet.rs Integration Tests
+//! Platform-Specific Test Scaffolding for BitNet-rs Integration Tests
 //!
 //! ## Specification Reference
 //!

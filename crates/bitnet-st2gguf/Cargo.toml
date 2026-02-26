@@ -19,7 +19,7 @@ name = "st2gguf"
 path = "src/main.rs"
 
 [dependencies]
-# BitNet.rs internal crates
+# BitNet-rs internal crates
 bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
 bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
 

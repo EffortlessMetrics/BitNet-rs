@@ -1,6 +1,6 @@
 # Getting Started with BitNet Rust
 
-This guide will help you get up and running with BitNet Rust, a production-ready implementation of 1-bit neural network inference with real quantized computation. BitNet.rs eliminates mock fallbacks and implements native I2S, TL1, and TL2 quantization kernels, enabling authentic neural network inference with realistic performance baselines.
+This guide will help you get up and running with BitNet Rust, a production-ready implementation of 1-bit neural network inference with real quantized computation. BitNet-rs eliminates mock fallbacks and implements native I2S, TL1, and TL2 quantization kernels, enabling authentic neural network inference with realistic performance baselines.
 
 ## Installation
 
@@ -35,7 +35,7 @@ BitNet Rust supports several feature flags for customization:
 
 **Important**: Default features are **empty** - always specify features explicitly.
 
-**Note on Model Support**: BitNet.rs now supports GGML I2_S format (QK256) models in pure Rust without requiring FFI or C++ dependencies. The `cpu` feature includes automatic detection and transparent kernel dispatch for both BitNet native (32-element) and GGML (256-element) I2_S quantization formats.
+**Note on Model Support**: BitNet-rs now supports GGML I2_S format (QK256) models in pure Rust without requiring FFI or C++ dependencies. The `cpu` feature includes automatic detection and transparent kernel dispatch for both BitNet native (32-element) and GGML (256-element) I2_S quantization formats.
 
 ```bash
 # Build with CPU support
@@ -267,7 +267,7 @@ BitNet Rust respects these environment variables:
 
 ### Performance Expectations (Issue #260 Completed)
 
-BitNet.rs provides realistic performance baselines based on real quantized computation without mock fallbacks:
+BitNet-rs provides realistic performance baselines based on real quantized computation without mock fallbacks:
 
 - **CPU Performance**: 10-20 tokens/sec with I2S quantization (real computation, not mock)
 - **GPU Performance**: 50-100 tokens/sec with mixed precision acceleration

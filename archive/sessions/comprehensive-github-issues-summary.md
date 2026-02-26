@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the comprehensive GitHub issues created for BitNet.rs production readiness, focusing on the most critical stubs, hardcoded values, and missing implementations that block production deployment.
+This document summarizes the comprehensive GitHub issues created for BitNet-rs production readiness, focusing on the most critical stubs, hardcoded values, and missing implementations that block production deployment.
 
 ## Successfully Created GitHub Issues
 
@@ -212,4 +212,4 @@ This document summarizes the comprehensive GitHub issues created for BitNet.rs p
 - [ ] <100ms startup time impact for hardware detection
 - [ ] Comprehensive error messages for all failure modes
 
-This comprehensive analysis provides a clear roadmap for completing BitNet.rs production readiness, with prioritized implementation guidance and measurable success criteria.
+This comprehensive analysis provides a clear roadmap for completing BitNet-rs production readiness, with prioritized implementation guidance and measurable success criteria.

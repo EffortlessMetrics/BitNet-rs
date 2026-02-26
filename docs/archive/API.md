@@ -1,8 +1,8 @@
-# BitNet.rs API Reference
+# BitNet-rs API Reference
 
 ## Version: 1.0.0
 
-This document defines the stable public API surface of BitNet.rs. All items listed here are covered by our semantic versioning guarantee.
+This document defines the stable public API surface of BitNet-rs. All items listed here are covered by our semantic versioning guarantee.
 
 ## Table of Contents
 
@@ -283,7 +283,7 @@ void bitnet_clear_error();
 
 ### Versioning
 
-BitNet.rs follows [Semantic Versioning 2.0.0](https://semver.org/):
+BitNet-rs follows [Semantic Versioning 2.0.0](https://semver.org/):
 
 - **MAJOR**: Breaking API changes
 - **MINOR**: New features, backward compatible

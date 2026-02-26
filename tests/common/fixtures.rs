@@ -437,7 +437,7 @@ impl FixtureManager {
         // Create HTTP client with timeout and retry logic
         let client = reqwest::Client::builder()
             .timeout(self.config.download_timeout)
-            .user_agent("BitNet.rs-TestFramework/0.1.0")
+            .user_agent("BitNet-rs-TestFramework/0.1.0")
             .build()
             .map_err(|e| FixtureError::download(&download_info.url, e.to_string()))?;
 

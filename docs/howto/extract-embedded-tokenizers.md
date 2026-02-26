@@ -2,7 +2,7 @@
 
 **Problem**: You want to manually extract and inspect tokenizers embedded in GGUF model files.
 
-**Solution**: Use BitNet.rs tokenizer discovery API to extract HuggingFace JSON, SentencePiece vocabularies, or binary models.
+**Solution**: Use BitNet-rs tokenizer discovery API to extract HuggingFace JSON, SentencePiece vocabularies, or binary models.
 
 **Time Required**: 10 minutes
 
@@ -10,7 +10,7 @@
 
 ## Prerequisites
 
-- BitNet.rs installed (`cargo build --no-default-features --features cpu`)
+- BitNet-rs installed (`cargo build --no-default-features --features cpu`)
 - GGUF model file with embedded tokenizer metadata
 
 ---
@@ -216,7 +216,7 @@ fn extract_minimal() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Step 6: Extraction Strategy Priority
 
-BitNet.rs tries extraction strategies in this order:
+BitNet-rs tries extraction strategies in this order:
 
 ```text
 1. HuggingFace JSON (`tokenizer.json` string metadata)

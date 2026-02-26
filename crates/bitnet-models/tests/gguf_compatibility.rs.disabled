@@ -94,7 +94,7 @@ fn test_microsoft_bitnet_model_fix() {
     ]);
 
     // Our fixer should handle this
-    // After fix, model should work with both BitNet.rs AND llama.cpp
+    // After fix, model should work with both BitNet-rs AND llama.cpp
 }
 
 /// Test that fixes are idempotent

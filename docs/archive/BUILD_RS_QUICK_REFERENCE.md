@@ -4,7 +4,7 @@
 
 ## One-Sentence Summary
 
-BitNet.rs uses a **priority-ordered directory scanner** with environment variable overrides to locate C++ libraries (libllama, libggml, libbitnet) across multiple possible CMake build output locations.
+BitNet-rs uses a **priority-ordered directory scanner** with environment variable overrides to locate C++ libraries (libllama, libggml, libbitnet) across multiple possible CMake build output locations.
 
 ## Library Search Chain
 

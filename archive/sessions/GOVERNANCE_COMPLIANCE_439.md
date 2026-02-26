@@ -1,4 +1,4 @@
-# BitNet.rs Governance Compliance Report: Issue #439 GPU Feature-Gate Hardening
+# BitNet-rs Governance Compliance Report: Issue #439 GPU Feature-Gate Hardening
 
 **Date**: 2025-10-11
 **Flow**: Generative (Issue → Draft PR)
@@ -11,9 +11,9 @@
 
 ## Executive Summary
 
-**Overall Compliance Status**: ✓ PASS - All BitNet.rs governance requirements met
+**Overall Compliance Status**: ✓ PASS - All BitNet-rs governance requirements met
 
-Issue #439 GPU feature-gate hardening implements **compile-time only changes** with **zero security vulnerabilities** and **full policy compliance**. All changes are additive, maintain backward compatibility, and follow BitNet.rs neural network development standards.
+Issue #439 GPU feature-gate hardening implements **compile-time only changes** with **zero security vulnerabilities** and **full policy compliance**. All changes are additive, maintain backward compatibility, and follow BitNet-rs neural network development standards.
 
 **Security Evidence**:
 - `cargo audit`: 0 vulnerabilities (821 advisories checked, 717 crate dependencies scanned)
@@ -29,7 +29,7 @@ Issue #439 GPU feature-gate hardening implements **compile-time only changes** w
 
 ## 1. Governance Checklist Results
 
-### 1.1 BitNet.rs Project Governance
+### 1.1 BitNet-rs Project Governance
 
 | Requirement | Status | Evidence |
 |------------|--------|----------|
@@ -189,7 +189,7 @@ licenses ok
 
 ---
 
-## 3. BitNet.rs-Specific Governance
+## 3. BitNet-rs-Specific Governance
 
 ### 3.1 Cargo Manifest Changes
 
@@ -431,7 +431,7 @@ cross-validation: not applicable (compile-time only)
 5. Documentation comprehensive and follows Diátaxis structure
 6. Test coverage extensive (1,691 new test lines)
 7. Backward compatibility maintained (no breaking changes)
-8. BitNet.rs governance requirements met
+8. BitNet-rs governance requirements met
 
 ### 7.2 Routing Path
 
@@ -483,7 +483,7 @@ cross-validation: not applicable (compile-time only)
 - [x] Commit history: Conventional commits, atomic changes
 - [x] Repository contracts: CLAUDE.md standards met
 
-### 8.3 BitNet.rs-Specific Checklist
+### 8.3 BitNet-rs-Specific Checklist
 
 - [x] Cargo manifest changes: Validated (predicates, serial_test)
 - [x] Quantization API: Not applicable (no changes)
@@ -523,7 +523,7 @@ cross-validation: not applicable (compile-time only)
 
 **Gate**: generative:gate:security
 **Status**: PASS ✓
-**Validator**: BitNet.rs Security & Governance Officer
+**Validator**: BitNet-rs Security & Governance Officer
 **Date**: 2025-10-11
 **Commit**: 86b2573d8925cde8a5a79798f26d135a954e32d9
 

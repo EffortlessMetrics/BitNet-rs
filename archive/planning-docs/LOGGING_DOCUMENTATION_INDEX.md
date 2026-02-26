@@ -1,6 +1,6 @@
 # Logging and Diagnostic Patterns - Documentation Index
 
-This directory contains comprehensive documentation about the logging, diagnostic, and error reporting patterns used throughout the BitNet.rs codebase.
+This directory contains comprehensive documentation about the logging, diagnostic, and error reporting patterns used throughout the BitNet-rs codebase.
 
 ## Quick Start
 

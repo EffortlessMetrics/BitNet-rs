@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Documentation Update Report - Post PR #66 Merge
+# BitNet-rs Documentation Update Report - Post PR #66 Merge
 
 **Date**: August 30, 2025
 **PR Merged**: #66 - Resource Management Integration Tests
@@ -23,7 +23,7 @@
 
 ## Executive Summary
 
-Following the successful merge of PR #66, which added comprehensive resource management integration tests to BitNet.rs, all documentation has been systematically reviewed and updated to reflect the new capabilities. The documentation now follows the Diátaxis framework and includes complete coverage of the new hybrid resource management testing approach and enhanced streaming capabilities.
+Following the successful merge of PR #66, which added comprehensive resource management integration tests to BitNet-rs, all documentation has been systematically reviewed and updated to reflect the new capabilities. The documentation now follows the Diátaxis framework and includes complete coverage of the new hybrid resource management testing approach and enhanced streaming capabilities.
 
 ## Documentation Updates Applied
 
@@ -242,4 +242,4 @@ docs/testing/
 - Quality gates: All passed
 - Documentation: Fully updated, enhanced, and ready for production use
 
-This completes the comprehensive documentation review and update process following the successful merge of PR #66. All resource management integration test capabilities are now fully documented and integrated into the BitNet.rs documentation ecosystem.
+This completes the comprehensive documentation review and update process following the successful merge of PR #66. All resource management integration test capabilities are now fully documented and integrated into the BitNet-rs documentation ecosystem.

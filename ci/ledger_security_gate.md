@@ -5,7 +5,7 @@
 **Status**: ✅ PASS (clean with recommendations)
 **Classification**: `clean` - No critical vulnerabilities detected in PR #431
 **Evidence**: `security: cargo audit: clean (0 vulnerabilities, 722 deps); unsafe: 426 blocks (FFI/SIMD justified); gpu-safety: validated; secrets: 0; overflow: 127 checked; model-security: hash-verified; gguf: bounds-checked; build-scripts: 3 unwrap/expect (low risk)`
-**Validation**: COMPREHENSIVE - All BitNet.rs neural network security requirements validated
+**Validation**: COMPREHENSIVE - All BitNet-rs neural network security requirements validated
 
 ---
 
@@ -100,7 +100,7 @@
 
 **Timing Side-Channel Analysis**: ⚠️ NOT CONSTANT-TIME
 - **Areas**: Quantization table lookups (TL1/TL2), model I/O, token lookups
-- **BitNet.rs Context**: Neural network inference is not security-critical
+- **BitNet-rs Context**: Neural network inference is not security-critical
 - **Recommendation**: Document performance-first design (no cryptographic operations)
 
 **Security Evidence Summary (HEAD: d239885)**:
@@ -152,7 +152,7 @@ timing: not constant-time (performance-optimized neural network inference)
    - Set up automated cargo audit in CI/CD pipeline
    - Establish dependency security update process
 
-**BitNet.rs Neural Network Security Standards Compliance**:
+**BitNet-rs Neural Network Security Standards Compliance**:
 - ✅ **Tensor Validation**: GGUF tensor offset validation, bounds checking
 - ✅ **GPU Memory Safety**: Validation framework with leak detection
 - ✅ **Model Parsing Security**: Safe GGUF parsing with hash verification
@@ -276,7 +276,7 @@ timing: not constant-time (performance-optimized neural network inference)
 - ✅ 37 files changed - 31 unsafe blocks validated (2 critical SAFE, 29 test-only)
 - ✅ Clippy warnings in test files: Non-blocking (mutation_killer_tests.rs - assert!(true), vec_init_then_push)
 
-**BitNet.rs Neural Network Security Standards Compliance**:
+**BitNet-rs Neural Network Security Standards Compliance**:
 - ✅ **Tensor Validation**: GGUF tensor alignment and vocabulary size validation (0 < size < 2M)
 - ✅ **Model Parsing Security**: Safe GGUF metadata extraction with pinned memory lifetime pattern
 - ✅ **Credential Management**: HuggingFace tokens via environment variables only (0 hardcoded)
@@ -372,7 +372,7 @@ performance: <1% overhead (≤10s inference SLO maintained)
 
 **Status**: ✅ PASS
 **Severity**: LOW (1 unmaintained dependency, comprehensive neural network security validated)
-**Evidence**: `BitNet.rs Neural Network Security Validation - 2025-09-24 T4 Complete`
+**Evidence**: `BitNet-rs Neural Network Security Validation - 2025-09-24 T4 Complete`
 
 ### Security Assessment Summary
 
@@ -567,7 +567,7 @@ secrets: clean (environment-based token handling, no hardcoded credentials)
 
 **Status**: ✅ PASS
 **Performance**: Mixed - Quantization significantly improved, kernels show regression
-**Evidence**: `BitNet.rs Neural Network Performance Baseline Established - 2025-09-24 T7 Complete`
+**Evidence**: `BitNet-rs Neural Network Performance Baseline Established - 2025-09-24 T7 Complete`
 
 ### Performance Benchmark Results
 
@@ -635,7 +635,7 @@ simd: kernel regression detected; memory: criterion results validated
 
 **Status**: ✅ PASS
 **Coverage**: Complete - All Diátaxis quadrants validated with neural network specialization
-**Evidence**: `BitNet.rs Documentation Validation Complete - 2025-09-24 T8 Complete`
+**Evidence**: `BitNet-rs Documentation Validation Complete - 2025-09-24 T8 Complete`
 
 ### Documentation Validation Results
 
@@ -687,7 +687,7 @@ gguf: tensor validation docs current; cli: 17 subcommands validated
 - **CLI Accuracy**: 100% - Documentation matches actual command-line interface
 
 ### Documentation Gate Status
-- **Framework Compliance**: ✅ COMPLETE - Diátaxis structure fully implemented for BitNet.rs
+- **Framework Compliance**: ✅ COMPLETE - Diátaxis structure fully implemented for BitNet-rs
 - **Technical Accuracy**: ✅ VALIDATED - All examples tested, quantization metrics verified
 - **Rust Standards**: ✅ COMPLIANT - Clean cargo doc compilation, doctests passing
 - **Neural Network Specialization**: ✅ COMPREHENSIVE - 1-bit quantization, GGUF, device-aware computing
@@ -698,4 +698,4 @@ gguf: tensor validation docs current; cli: 17 subcommands validated
 ---
 *Generated*: 2025-10-02
 *Commit*: `5da0b5b`
-*Documentation Coverage*: Diátaxis framework, neural network quantization, GGUF integration, BitNet.rs specialization
+*Documentation Coverage*: Diátaxis framework, neural network quantization, GGUF integration, BitNet-rs specialization

@@ -3,7 +3,7 @@
 //! Tests feature spec: chat-repl-ux-polish.md#AC1-typed-chat-rendering
 //!
 //! This test suite validates the multi-turn chat rendering functionality
-//! for the BitNet.rs prompt template system. Tests ensure proper formatting
+//! for the BitNet-rs prompt template system. Tests ensure proper formatting
 //! of conversation history with system prompts and multiple turns.
 //!
 //! **TDD Approach**: These tests compile successfully but fail because the

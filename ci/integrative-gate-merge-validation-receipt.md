@@ -1,4 +1,4 @@
-# BitNet.rs Neural Network Merge Validation - COMPLETE
+# BitNet-rs Neural Network Merge Validation - COMPLETE
 
 **Check Run**: `integrative:gate:merge`
 **PR #464**: feat(cpu): implement CPU forward pass with TL LUT helper and receipt validation (#462)

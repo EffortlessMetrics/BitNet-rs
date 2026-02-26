@@ -1,4 +1,4 @@
-# BitNet.rs Security Hardening Final Assessment - PR #259
+# BitNet-rs Security Hardening Final Assessment - PR #259
 
 ## Executive Summary
 
@@ -91,7 +91,7 @@
 4. **Memory Safety**: GPU/CPU parity with device-aware security controls
 5. **Error Handling**: Graceful degradation under attack conditions
 
-### ✅ BitNet.rs Neural Network Security Standards
+### ✅ BitNet-rs Neural Network Security Standards
 - **Cargo Audit**: Clean audit with zero security advisories
 - **GPU/CUDA Dependencies**: All neural network GPU libraries validated
 - **FFI Bridge Security**: 29 tests covering C++ interface security
@@ -125,7 +125,7 @@
 - `mutation-tester`: Could improve coverage but current security posture is adequate
 - `test-hardener`: Boundary testing could be enhanced but core security validated
 
-## BitNet.rs Neural Network Security Conclusion
+## BitNet-rs Neural Network Security Conclusion
 
 PR #259 GGUF weight loading implementation has achieved **comprehensive security hardening** with:
 
@@ -135,7 +135,7 @@ PR #259 GGUF weight loading implementation has achieved **comprehensive security
 - ✅ **Comprehensive neural network security validation**
 - ✅ **Memory safety and device-aware security controls**
 
-The implementation is **security-ready for performance benchmarking** with a significantly enhanced security posture for BitNet.rs neural network inference.
+The implementation is **security-ready for performance benchmarking** with a significantly enhanced security posture for BitNet-rs neural network inference.
 
 ---
 

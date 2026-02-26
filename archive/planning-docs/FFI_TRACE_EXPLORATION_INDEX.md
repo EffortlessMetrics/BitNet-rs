@@ -8,7 +8,7 @@
 
 ## Documentation Created
 
-This exploration generated comprehensive documentation about BitNet.rs's FFI and tracing capabilities:
+This exploration generated comprehensive documentation about BitNet-rs's FFI and tracing capabilities:
 
 ### 1. **Comprehensive Reference** (Primary Document)
 📄 **File**: `/docs/reports/FFI_TRACE_INFRASTRUCTURE.md` (21 KB, 400+ lines)
@@ -179,7 +179,7 @@ This exploration generated comprehensive documentation about BitNet.rs's FFI and
 
 ## Related Documentation
 
-Other BitNet.rs documentation that complements this exploration:
+Other BitNet-rs documentation that complements this exploration:
 
 - `docs/howto/cpp-setup.md` — C++ reference setup
 - `docs/howto/validate-models.md` — Model validation workflow

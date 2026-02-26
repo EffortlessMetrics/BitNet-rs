@@ -1,7 +1,7 @@
 # Strict Quantization Guards Specification Validation Report
 
 **Generated:** 2025-10-14
-**Validator:** BitNet.rs Spec Validator (generative:gate:spec)
+**Validator:** BitNet-rs Spec Validator (generative:gate:spec)
 **Flow:** Generative
 **Handoff:** t6 → t7
 **Status:** ✅ PASS
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-**Result:** All specifications validate successfully against BitNet.rs reference documentation and API contracts.
+**Result:** All specifications validate successfully against BitNet-rs reference documentation and API contracts.
 
 **Confidence Level:** HIGH - No conflicting API contracts, quantization specifications align with existing patterns, environment variables follow naming conventions, receipt schema extensions maintain backward compatibility.
 
@@ -141,7 +141,7 @@ pub struct StrictModeConfig {
 **Default Features Pattern:**
 - ✅ Spec mandates `--no-default-features --features cpu|gpu` (matches CLAUDE.md line 11)
 - ✅ All test commands use correct feature flags
-- ✅ No default features assumed (aligned with BitNet.rs policy)
+- ✅ No default features assumed (aligned with BitNet-rs policy)
 
 **Unified GPU Predicate:**
 - ✅ Spec uses: `#[cfg(any(feature = "gpu", feature = "cuda"))]` (matches CLAUDE.md line 46)
@@ -238,12 +238,12 @@ BITNET_GGUF="path/to/model.gguf" cargo run -p xtask -- crossval
 ### 0 Conflicts Found ✅
 
 **No conflicts detected between:**
-- Spec API contracts ↔ Existing BitNet.rs APIs
+- Spec API contracts ↔ Existing BitNet-rs APIs
 - Spec quantization types ↔ Reference quantization support
 - Spec environment variables ↔ Existing environment variable conventions
 - Spec receipt schema ↔ Existing v1.0.0 receipt infrastructure
 - Spec kernel naming ↔ ADR-012 kernel ID conventions
-- Spec feature flags ↔ BitNet.rs feature gate patterns
+- Spec feature flags ↔ BitNet-rs feature gate patterns
 
 ---
 
@@ -272,7 +272,7 @@ BITNET_GGUF="path/to/model.gguf" cargo run -p xtask -- crossval
    - Integration with existing validation system
    - CI/CD gate integration patterns
 
-5. ✅ **CLAUDE.md** (Core BitNet.rs patterns)
+5. ✅ **CLAUDE.md** (Core BitNet-rs patterns)
    - Feature flag usage: `--no-default-features --features cpu|gpu`
    - Cross-validation: `cargo run -p xtask -- crossval`
    - Receipt verification: `cargo run -p xtask -- verify-receipt`
@@ -313,7 +313,7 @@ BITNET_GGUF="path/to/model.gguf" cargo run -p xtask -- crossval
    - Fallback: `dequant_*`, `fp32_matmul`, `scalar_*`, `fallback_*`, `mock_*`
    - Pattern matching: Simple prefix/substring checks
 
-✅ **Feature flag usage follows BitNet.rs standards**
+✅ **Feature flag usage follows BitNet-rs standards**
    - Default features: EMPTY (always specify `--features cpu|gpu`)
    - Unified GPU predicate: `#[cfg(any(feature = "gpu", feature = "cuda"))]`
    - Runtime checks: `gpu_compiled()`, `gpu_available_runtime()`
@@ -332,7 +332,7 @@ BITNET_GGUF="path/to/model.gguf" cargo run -p xtask -- crossval
 **Why:**
 1. **Additive Changes:** All spec changes extend existing APIs without breaking
 2. **Backward Compatible:** Receipt schema v1.1.0 maintains v1.0.0 compatibility
-3. **Existing Patterns:** Follows established BitNet.rs conventions throughout
+3. **Existing Patterns:** Follows established BitNet-rs conventions throughout
 4. **Infrastructure Ready:** PR #452 provides receipt foundation, Issue #439 provides GPU detection
 5. **Well-Documented:** Comprehensive ADRs and reference docs support implementation
 
@@ -361,7 +361,7 @@ BITNET_GGUF="path/to/model.gguf" cargo run -p xtask -- crossval
 - `docs/environment-variables.md` - Document new strict mode variables
 - Create `docs/howto/troubleshooting-strict-mode.md` - Comprehensive guide
 
-**Rationale:** Maintains BitNet.rs documentation consistency and completeness.
+**Rationale:** Maintains BitNet-rs documentation consistency and completeness.
 
 ### 2. Test Coverage ✅
 
@@ -406,13 +406,13 @@ pub fn is_quantized_kernel(id: &str) -> bool {
 **Next Gate:** **FINALIZE → spec-finalizer**
 
 **Rationale:**
-1. All specifications validate successfully against BitNet.rs reference documentation
+1. All specifications validate successfully against BitNet-rs reference documentation
 2. No API contract conflicts detected
 3. Quantization specifications align with existing patterns
 4. Environment variables follow naming conventions
 5. Receipt schema extensions maintain backward compatibility
 6. Kernel ID naming consistent with ADR-012
-7. Feature flag usage follows BitNet.rs standards
+7. Feature flag usage follows BitNet-rs standards
 8. Cross-validation requirements achievable
 
 **Implementation Ready:** ✅ YES
@@ -451,6 +451,6 @@ pub fn is_quantized_kernel(id: &str) -> bool {
 
 ---
 
-**Validator:** BitNet.rs Spec Validator (generative:gate:spec)
+**Validator:** BitNet-rs Spec Validator (generative:gate:spec)
 **Generated:** 2025-10-14
 **Status:** ✅ PASS - Ready for Implementation

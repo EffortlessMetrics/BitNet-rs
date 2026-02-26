@@ -1,4 +1,4 @@
-# BitNet.rs Test Finalization Report - PR #246
+# BitNet-rs Test Finalization Report - PR #246
 
 ## Test Finalization Complete ✅
 
@@ -43,7 +43,7 @@
 
 **Next**: Ready for mutation testing hardening phase via route to `mutation-tester` for T4.5 validation
 
-## BitNet.rs Quality Standards Met
+## BitNet-rs Quality Standards Met
 
 **Ready Promotion Requirements** (enforced):
 - ✅ All CPU tests pass (87/87)

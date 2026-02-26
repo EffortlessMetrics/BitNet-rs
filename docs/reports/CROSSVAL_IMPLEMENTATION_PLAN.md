@@ -1,6 +1,6 @@
 # Cross-Validation Implementation Plan
 **Date**: 2025-10-24
-**Goal**: Pinpoint exact divergence between BitNet.rs and bitnet.cpp
+**Goal**: Pinpoint exact divergence between BitNet-rs and bitnet.cpp
 
 ---
 
@@ -48,7 +48,7 @@ Three comprehensive explorations completed:
 
 ### Phase 1: Rust-Side Tracing Infrastructure
 
-**Goal**: Instrument BitNet.rs to capture and hash all intermediate activations
+**Goal**: Instrument BitNet-rs to capture and hash all intermediate activations
 
 **Tasks**:
 1. Add `trace` feature flag to workspace
@@ -209,7 +209,7 @@ This will likely identify the issue because:
 - ✅ First diverging operation identified (attn_norm, q_proj, etc.)
 
 **Ultimate Success**:
-- ✅ Fix applied to BitNet.rs
+- ✅ Fix applied to BitNet-rs
 - ✅ Logits match bitnet.cpp within 1e-4 tolerance
 - ✅ Output tokens identical for deterministic prompts
 

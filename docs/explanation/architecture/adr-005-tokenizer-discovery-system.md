@@ -5,7 +5,7 @@
 
 ## Context
 
-BitNet.rs neural network inference currently requires manual tokenizer specification, creating friction for users and limiting production-ready model usage. The existing `auto.rs` provides basic co-location discovery, but lacks:
+BitNet-rs neural network inference currently requires manual tokenizer specification, creating friction for users and limiting production-ready model usage. The existing `auto.rs` provides basic co-location discovery, but lacks:
 
 - **Neural Network Scale**: Support for large vocabulary models (LLaMA-3: 128K tokens, LLaMA-2: 32K tokens)
 - **GGUF Integration**: Comprehensive metadata parsing for tokenizer discovery
@@ -32,7 +32,7 @@ pub struct TokenizerDiscovery {
 - Parse GGUF model metadata to extract tokenizer information
 - Determine vocab size, model architecture, and quantization requirements
 - Infer compatible tokenizer download sources based on neural network model patterns
-- Validate tokenizer compatibility with BitNet.rs quantization formats
+- Validate tokenizer compatibility with BitNet-rs quantization formats
 
 ### 2. SmartTokenizerDownload System
 ```rust
@@ -73,7 +73,7 @@ pub enum TokenizerStrategy {
 **Rationale**:
 - GGUF files contain authoritative model architecture information
 - Enables zero-configuration inference for supported models
-- Maintains compatibility with existing BitNet.rs GGUF infrastructure
+- Maintains compatibility with existing BitNet-rs GGUF infrastructure
 - Supports neural network-specific metadata (vocab size, special tokens)
 
 **Alternatives Considered**:
@@ -105,7 +105,7 @@ pub struct ModelCompatibilityMatrix {
 - Large tokenizer files (10MB+) require non-blocking downloads
 - Enables progress reporting in `cargo xtask infer` for better UX
 - Supports concurrent downloads for multi-file tokenizer packages
-- Compatible with BitNet.rs async inference pipeline
+- Compatible with BitNet-rs async inference pipeline
 
 ### Decision 4: Robust Fallback Chain
 **Choice**: Implement comprehensive fallback strategy with actionable error messages
@@ -182,6 +182,6 @@ BITNET_STRICT_TOKENIZERS=1 cargo run -p xtask -- infer --model model.gguf --prom
 
 ## Conclusion
 
-This tokenizer discovery system provides a production-grade solution for automatic tokenizer resolution in BitNet.rs neural network inference. The architecture balances user experience (zero-configuration), performance (neural network scale optimization), and reliability (comprehensive fallback strategies).
+This tokenizer discovery system provides a production-grade solution for automatic tokenizer resolution in BitNet-rs neural network inference. The architecture balances user experience (zero-configuration), performance (neural network scale optimization), and reliability (comprehensive fallback strategies).
 
-The system maintains backward compatibility while enabling advanced features like smart downloading, quantization-aware selection, and robust error handling. This foundation supports BitNet.rs evolution toward production-ready neural network inference with minimal user configuration overhead.
+The system maintains backward compatibility while enabling advanced features like smart downloading, quantization-aware selection, and robust error handling. This foundation supports BitNet-rs evolution toward production-ready neural network inference with minimal user configuration overhead.

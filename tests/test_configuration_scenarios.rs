@@ -1,7 +1,7 @@
 #![cfg(feature = "integration-tests")]
 #![cfg(feature = "crossval")]
 
-// Configuration scenarios testing for BitNet.rs testing framework
+// Configuration scenarios testing for BitNet-rs testing framework
 //
 // This module tests the comprehensive configuration management system
 // that supports various testing scenarios including unit, integration,

@@ -482,13 +482,13 @@ impl TrendReporter {
         let mut html = String::new();
 
         html.push_str("<!DOCTYPE html>\n<html>\n<head>\n");
-        html.push_str("<title>BitNet.rs Test Trend Report</title>\n");
+        html.push_str("<title>BitNet-rs Test Trend Report</title>\n");
         html.push_str("<style>\n");
         html.push_str(include_str!("../assets/trend_report.css"));
         html.push_str("</style>\n");
         html.push_str("</head>\n<body>\n");
 
-        html.push_str("<h1>BitNet.rs Test Trend Report</h1>\n");
+        html.push_str("<h1>BitNet-rs Test Trend Report</h1>\n");
         html.push_str(&format!(
             "<p>Generated: {}</p>\n",
             report.generated_at.format("%Y-%m-%d %H:%M:%S UTC")

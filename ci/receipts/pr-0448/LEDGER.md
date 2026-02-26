@@ -350,7 +350,7 @@ Full security analysis: `ci/receipts/pr-0448/SECURITY_SCAN_REPORT.md` (22KB)
 - TestConfig API matches actual structure ✅
 - GitHub Actions workflow valid YAML ✅
 
-#### BitNet.rs Neural Network Context
+#### BitNet-rs Neural Network Context
 
 ✅ **Quantization Accuracy:** I2S, TL1, TL2 ≥99% documented
 - README.md line 86: "≥99.8% accuracy vs FP32"
@@ -472,7 +472,7 @@ rustdoc: 0 errors, 1 harmless warning; clippy: 0 warnings (--workspace --feature
 - Neural network standards: All critical paths >85% coverage, quantization >99% accuracy
 - Security posture: 0 vulnerabilities, clean scan, secure OTLP implementation
 
-**BitNet.rs Neural Network Standards: PASS ✅**
+**BitNet-rs Neural Network Standards: PASS ✅**
 - Quantization algorithms: >95% coverage with property-based validation
 - Neural network kernels: ~90% coverage with comprehensive device testing
 - Model loading: ~85% coverage with format-specific validation
@@ -578,7 +578,7 @@ Key findings:
 
 ### C. References
 
-- **BitNet.rs Coverage Standards:** Critical paths ≥90%, workspace ≥70%, new code ≥80%
+- **BitNet-rs Coverage Standards:** Critical paths ≥90%, workspace ≥70%, new code ≥80%
 - **Test Pass Rate:** 99.85% (1,356/1,358) from tests-runner agent
 - **Neural Network Components:** All meet ≥85% coverage threshold
 - **Property-Based Testing:** 4 files for quantization accuracy validation

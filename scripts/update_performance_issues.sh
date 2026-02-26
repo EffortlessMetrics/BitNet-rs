@@ -1,5 +1,5 @@
 #!/bin/bash
-# BitNet.rs Performance Issues Update Script
+# BitNet-rs Performance Issues Update Script
 # Analysis Date: November 11, 2025
 # Post: PR #475 (GPU/CPU Feature Gate Unification)
 #
@@ -31,7 +31,7 @@ run_command() {
 }
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "BitNet.rs Performance Issues Update"
+echo "BitNet-rs Performance Issues Update"
 echo "Analysis Date: November 11, 2025"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

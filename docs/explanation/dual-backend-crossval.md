@@ -1,17 +1,17 @@
 # Dual-Backend Cross-Validation Architecture
 
-BitNet.rs supports systematic validation against two different C++ reference implementations: **bitnet.cpp** (for 1-bit models) and **llama.cpp** (for general GGUF models). This document explains the architecture, design decisions, and operational considerations.
+BitNet-rs supports systematic validation against two different C++ reference implementations: **bitnet.cpp** (for 1-bit models) and **llama.cpp** (for general GGUF models). This document explains the architecture, design decisions, and operational considerations.
 
 ## Overview
 
-Cross-validation is a critical quality assurance mechanism that compares BitNet.rs inference results against official C++ reference implementations to ensure numerical parity and correctness. BitNet.rs implements dual-backend support to validate different model families:
+Cross-validation is a critical quality assurance mechanism that compares BitNet-rs inference results against official C++ reference implementations to ensure numerical parity and correctness. BitNet-rs implements dual-backend support to validate different model families:
 
-- **Lane A**: BitNet.rs vs bitnet.cpp (1-bit quantization validation)
-- **Lane B**: BitNet.rs vs llama.cpp (general GGUF model validation)
+- **Lane A**: BitNet-rs vs bitnet.cpp (1-bit quantization validation)
+- **Lane B**: BitNet-rs vs llama.cpp (general GGUF model validation)
 
 ### Why Dual-Backend?
 
-BitNet.rs must support multiple model types with different C++ reference implementations:
+BitNet-rs must support multiple model types with different C++ reference implementations:
 
 1. **BitNet Models** (microsoft-bitnet-b1.58-2B-4T-gguf):
    - Use 1-bit quantization (I2_S)

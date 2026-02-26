@@ -1,4 +1,4 @@
-# Example configuration file for BitNet.rs testing framework
+# Example configuration file for BitNet-rs testing framework
 # Copy this to bitnet-test.toml or tests/config.toml to use
 
 # Core test execution settings

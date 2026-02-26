@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This specification defines the architecture for enabling GPU layer configuration in the BitNet.rs C++ FFI wrapper (`crossval/src/bitnet_cpp_wrapper.cc`). Currently, GPU layer offloading is disabled at lines 408-410, forcing all inference to run on CPU despite the infrastructure accepting an `n_gpu_layers` parameter. This represents a **MEDIUM-priority optimization opportunity** to unlock GPU acceleration for cross-validation workflows.
+This specification defines the architecture for enabling GPU layer configuration in the BitNet-rs C++ FFI wrapper (`crossval/src/bitnet_cpp_wrapper.cc`). Currently, GPU layer offloading is disabled at lines 408-410, forcing all inference to run on CPU despite the infrastructure accepting an `n_gpu_layers` parameter. This represents a **MEDIUM-priority optimization opportunity** to unlock GPU acceleration for cross-validation workflows.
 
 **Key Impact**:
 - **Performance**: Expected 5-50× speedup for GPU-accelerated inference (model-size dependent)
@@ -1098,7 +1098,7 @@ struct llama_model * llama_load_model_from_file(
 
 ---
 
-## Appendix C: BitNet.rs GPU Feature Matrix
+## Appendix C: BitNet-rs GPU Feature Matrix
 
 | Feature | v0.1 (MVP) | v0.2 (This Spec) | v0.3 (Future) |
 |---------|------------|------------------|---------------|

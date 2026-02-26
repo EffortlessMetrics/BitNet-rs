@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test Cache and Optimization Demo Script
-# This script demonstrates the caching and optimization features of the BitNet.rs testing framework
+# This script demonstrates the caching and optimization features of the BitNet-rs testing framework
 
 set -e
 
@@ -16,7 +16,7 @@ DEMO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CACHE_DIR="${DEMO_DIR}/tests/cache"
 CONFIG_FILE="${DEMO_DIR}/tests/cache-config.toml"
 
-echo -e "${BLUE}🚀 BitNet.rs Test Cache and Optimization Demo${NC}"
+echo -e "${BLUE}🚀 BitNet-rs Test Cache and Optimization Demo${NC}"
 echo "=================================================="
 echo
 
@@ -60,11 +60,11 @@ print_section "Prerequisites Check"
 
 # Check if we're in the right directory
 if [[ ! -f "Cargo.toml" ]] || [[ ! -d "tests" ]]; then
-    print_status "error" "Please run this script from the BitNet.rs root directory"
+    print_status "error" "Please run this script from the BitNet-rs root directory"
     exit 1
 fi
 
-print_status "success" "Found BitNet.rs project structure"
+print_status "success" "Found BitNet-rs project structure"
 
 # Check Rust installation
 if command -v cargo >/dev/null 2>&1; then

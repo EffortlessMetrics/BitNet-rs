@@ -7,13 +7,13 @@
 **Issue:** #465 (CPU Path Followup)
 **Branch:** feat/issue-465-cpu-path-followup
 **Timestamp:** 2025-10-16T05:30:00Z
-**Agent:** BitNet.rs Documentation Validation Agent
+**Agent:** BitNet-rs Documentation Validation Agent
 
 ---
 
 ## Executive Summary
 
-Comprehensive documentation validation for PR #466 confirms all BitNet.rs documentation standards are met. This PR delivers significant documentation improvements (102 files, 3,416 specification lines) with a focus on CPU inference path clarification and Issue #465 requirements fulfillment.
+Comprehensive documentation validation for PR #466 confirms all BitNet-rs documentation standards are met. This PR delivers significant documentation improvements (102 files, 3,416 specification lines) with a focus on CPU inference path clarification and Issue #465 requirements fulfillment.
 
 ### Gate Result: ✅ **PASS** (12/12 checks green)
 
@@ -242,7 +242,7 @@ $ cargo test --doc --workspace --no-default-features --features gpu
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Quantization Accuracy Documentation
 ✅ **I2_S (2-bit)**
@@ -372,7 +372,7 @@ Internal Links Validated: 89+ (100% pass)
 
 **Gate Status:** ✅ **PASS**
 
-**Why:** PR #466 documentation validation confirms comprehensive, production-ready documentation for BitNet.rs neural network inference system:
+**Why:** PR #466 documentation validation confirms comprehensive, production-ready documentation for BitNet-rs neural network inference system:
 - All documentation builds cleanly (CPU/GPU)
 - All doctests pass (35/35, 100%)
 - All internal links valid (89+, 0 broken)
@@ -437,7 +437,7 @@ cargo run -p xtask -- verify-receipt ci/baselines/20251015-cpu.json
 | **Commit** | 85c30912 (validation), 44b1d61d (receipt) |
 | **Timestamp** | 2025-10-16T05:30:00Z |
 | **Duration** | ~15 minutes (cargo doc + doctests) |
-| **Agent** | BitNet.rs Documentation Validation Agent (Haiku 4.5) |
+| **Agent** | BitNet-rs Documentation Validation Agent (Haiku 4.5) |
 | **Result** | ✅ PASS (12/12 checks) |
 | **Evidence** | Ledger, receipts, commits all available in ci/receipts/pr-466/ |
 

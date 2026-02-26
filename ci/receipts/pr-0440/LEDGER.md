@@ -69,7 +69,7 @@
 <!-- decision:start -->
 **State:** ✅ **READY FOR REVIEW** (Promotion Complete)
 
-**Why:** PR #440 successfully promoted from Draft → Ready for Review with all BitNet.rs quality criteria satisfied:
+**Why:** PR #440 successfully promoted from Draft → Ready for Review with all BitNet-rs quality criteria satisfied:
 
 **Required Gates (6/6 PASS ✅)**:
 
@@ -101,7 +101,7 @@ coverage=94.12%✅ mutation=50%📊 security=clean✅ perf=zero-overhead✅
 docs=100%✅ arch=aligned✅ api=ADDITIVE✅ promotion-comment=posted✅
 ```
 
-**BitNet.rs Neural Network Standards**: PASS ✅
+**BitNet-rs Neural Network Standards**: PASS ✅
 
 - Device detection coverage: 94.12% (exceeds ≥90% target)
 - Zero-cost abstraction: validated (1-16ns << 100ns SLO)
@@ -371,7 +371,7 @@ The test suite has excellent line coverage (94.12%) but weak mutation resistance
    - Tests rely on BITNET_GPU_FAKE mocking
    - Don't validate real hardware detection path
 
-### BitNet.rs Quality Standards Assessment
+### BitNet-rs Quality Standards Assessment
 
 **Device Detection Code Requirements:**
 

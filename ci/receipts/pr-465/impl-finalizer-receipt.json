@@ -146,7 +146,7 @@
   "next_route": {
     "action": "FINALIZE",
     "target": "code-refiner",
-    "reason": "Implementation validated against BitNet.rs standards. All quality gates passed. Ready for refinement phase.",
+    "reason": "Implementation validated against BitNet-rs standards. All quality gates passed. Ready for refinement phase.",
     "microloop": 5,
     "phase": "Quality Gates"
   },

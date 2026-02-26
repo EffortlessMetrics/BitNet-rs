@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The BitNet.rs inference crate has extensive code duplication in test mock objects, with `MockModel` and `MockTokenizer` structs independently defined across **17+ test files**. This creates a significant maintenance burden, inconsistent testing behavior, and violates the DRY (Don't Repeat Yourself) principle. The current scattered approach makes it difficult to maintain consistent mock behavior and update test utilities across the codebase.
+The BitNet-rs inference crate has extensive code duplication in test mock objects, with `MockModel` and `MockTokenizer` structs independently defined across **17+ test files**. This creates a significant maintenance burden, inconsistent testing behavior, and violates the DRY (Don't Repeat Yourself) principle. The current scattered approach makes it difficult to maintain consistent mock behavior and update test utilities across the codebase.
 
 ## Environment
 
@@ -378,4 +378,4 @@ cargo test -p bitnet-inference --release -- --ignored perf
 - Memory-efficient mock implementations
 - Zero-cost abstractions where possible
 
-This consolidation represents a significant improvement to the test infrastructure, reducing maintenance burden and improving developer productivity across the BitNet.rs inference codebase.
+This consolidation represents a significant improvement to the test infrastructure, reducing maintenance burden and improving developer productivity across the BitNet-rs inference codebase.

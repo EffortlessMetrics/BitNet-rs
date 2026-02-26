@@ -2,7 +2,7 @@
 
 **Gate:** `generative:gate:clippy`
 **Flow:** generative (Issue #469 MVP Sprint Polish)
-**Agent:** generative-code-reviewer (BitNet.rs Generative Adapter)
+**Agent:** generative-code-reviewer (bitnet-rs Generative Adapter)
 **Date:** 2025-10-18
 **Commit:** f217cbfd (fix: properly gate CLI smoke test for full-cli feature)
 
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-✅ **PASS** - AC4 implementation meets BitNet.rs quality standards and is ready for finalization.
+✅ **PASS** - AC4 implementation meets bitnet-rs quality standards and is ready for finalization.
 
 The parity receipt and timeout consistency implementation demonstrates excellent code quality with:
 - ✅ Complete schema v1.0.0 compliance with proper field validation
@@ -32,7 +32,7 @@ The parity receipt and timeout consistency implementation demonstrates excellent
 5. `/home/steven/code/Rust/BitNet-rs/crossval/tests/parity_receipts.rs` (516 lines)
 
 ### Standards Validated
-- ✅ BitNet.rs code quality standards (CLAUDE.md)
+- ✅ bitnet-rs code quality standards (CLAUDE.md)
 - ✅ Feature flag consistency (cpu/gpu/crossval)
 - ✅ Quantization accuracy standards (I2S/TL1/TL2)
 - ✅ GGUF compatibility and workspace structure
@@ -296,7 +296,7 @@ echo "Full receipt (absolute path): $ABSOLUTE_RECEIPT"
 | Kernel ID hygiene | ✅ PASS | Validation logic enforces non-empty, ≤128 chars |
 | Compute path enforcement | ✅ PASS | validate() rejects "mock", requires "real" |
 
-### BitNet.rs Standards Compliance
+### bitnet-rs Standards Compliance
 
 **Feature Gating:** ✅ PASS
 - Proper `--no-default-features --features cpu` usage
@@ -419,7 +419,7 @@ The following tests are scaffolded with `panic!` placeholders (expected TDD patt
 
 **Routing Decision:** **FINALIZE → impl-finalizer**
 
-The AC4 Parity Receipts & Timeout Consistency implementation demonstrates excellent code quality and meets all BitNet.rs neural network development standards. The implementation is:
+The AC4 Parity Receipts & Timeout Consistency implementation demonstrates excellent code quality and meets all bitnet-rs neural network development standards. The implementation is:
 
 1. **Correct:** Schema v1.0.0 compliance validated, timeout constants consistent
 2. **Complete:** All AC4 requirements implemented with proper tests
@@ -461,7 +461,7 @@ verification: 2025-10-18/parity-bitnetcpp.json exists ✅
 
 ---
 
-**Reviewer:** generative-code-reviewer (BitNet.rs Generative Adapter)
+**Reviewer:** generative-code-reviewer (bitnet-rs Generative Adapter)
 **Gate:** generative:gate:clippy
 **Flow:** generative
 **Date:** 2025-10-18

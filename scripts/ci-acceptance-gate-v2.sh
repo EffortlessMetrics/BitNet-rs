@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BitNet.rs CI Acceptance Gate v2 - Robust & Deterministic
+# BitNet-rs CI Acceptance Gate v2 - Robust & Deterministic
 # Binary discovery, JSON-driven assertions, no brittle greps
 # All gates must pass for CI acceptance - no skips, no exceptions
 
@@ -115,7 +115,7 @@ export BITNET_SEED=42
 export OMP_NUM_THREADS=1
 export GGML_NUM_THREADS=1
 
-echo "=== BitNet.rs CI Acceptance Gate v2 ==="
+echo "=== BitNet-rs CI Acceptance Gate v2 ==="
 echo "Environment: DETERMINISTIC=1, SEED=42, THREADS=1"
 echo ""
 

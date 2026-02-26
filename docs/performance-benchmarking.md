@@ -1,6 +1,6 @@
 # Performance Benchmarking and Regression Detection
 
-BitNet.rs includes a comprehensive performance benchmarking infrastructure designed to detect performance regressions, track improvements, and ensure consistent performance across platforms.
+BitNet-rs includes a comprehensive performance benchmarking infrastructure designed to detect performance regressions, track improvements, and ensure consistent performance across platforms.
 
 ## 🚀 Quick Start
 
@@ -615,7 +615,7 @@ These targets are automatically validated through the regression detection syste
 
 ### Overview
 
-BitNet.rs Issue #261 implemented comprehensive strict mode controls to eliminate mock inference paths and ensure accurate performance reporting. All performance benchmarks MUST use strict mode to prevent false positives from mock computation.
+BitNet-rs Issue #261 implemented comprehensive strict mode controls to eliminate mock inference paths and ensure accurate performance reporting. All performance benchmarks MUST use strict mode to prevent false positives from mock computation.
 
 ### Strict Mode Environment Variables
 

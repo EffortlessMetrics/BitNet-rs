@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(1);
         });
 
-    println!("🚀 BitNet.rs Prefill Performance Demo");
+    println!("🚀 BitNet-rs Prefill Performance Demo");
     println!("📁 Model: {}", model_path);
     println!();
 

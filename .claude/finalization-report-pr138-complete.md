@@ -105,6 +105,6 @@ Added comprehensive entry for PR #138 including:
 
 ## Final Status: MERGE_SUCCESSFUL ✅
 
-PR #138 has been successfully validated, finalized, and merged into main branch. The BPE tokenizer backend is now available for use with BitNet.rs models, providing enhanced tokenization capabilities for GPT-2, LLaMA, and other modern transformer models.
+PR #138 has been successfully validated, finalized, and merged into main branch. The BPE tokenizer backend is now available for use with BitNet-rs models, providing enhanced tokenization capabilities for GPT-2, LLaMA, and other modern transformer models.
 
 **Recommended Next Steps**: The merge is complete and no further action is required. The new BPE tokenizer capabilities are ready for use in production.

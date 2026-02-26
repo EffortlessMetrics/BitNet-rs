@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local quality gates script for BitNet.rs CPU MVP
+# Local quality gates script for bitnet-rs CPU MVP
 #
 # Runs a comprehensive suite of checks before committing code:
 # - Format check
@@ -20,7 +20,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 printf "%b\n" "${BLUE}╔════════════════════════════════════════════╗${NC}"
-printf "%b\n" "${BLUE}║     BitNet.rs Local Quality Gates         ║${NC}"
+printf "%b\n" "${BLUE}║     bitnet-rs Local Quality Gates         ║${NC}"
 printf "%b\n" "${BLUE}╚════════════════════════════════════════════╝${NC}"
 printf "\n"
 

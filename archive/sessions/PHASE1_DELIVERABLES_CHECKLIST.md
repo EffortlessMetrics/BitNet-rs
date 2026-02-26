@@ -228,7 +228,7 @@ cargo test --workspace --no-default-features --features cpu --lib
 
 ## Document Metadata
 
-**Author**: BitNet.rs Automation Framework  
+**Author**: BitNet-rs Automation Framework  
 **Date**: October 23, 2025  
 **Version**: 1.0.0  
 **Status**: Complete - Ready for Execution

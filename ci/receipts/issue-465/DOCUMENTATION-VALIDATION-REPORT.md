@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-✅ **Documentation Status**: COMPLETE - All Issue #465 documentation validated and confirmed compliant with Diátaxis framework and BitNet.rs standards.
+✅ **Documentation Status**: COMPLETE - All Issue #465 documentation validated and confirmed compliant with Diátaxis framework and BitNet-rs standards.
 
 ## Validation Results
 
@@ -243,7 +243,7 @@ cargo run -p xtask -- verify-receipt ci/inference.json ✅
 - ADRs → Issue #465 ✅
 - Baseline README → validation workflow ✅
 
-### 9. BitNet.rs Standards Compliance
+### 9. BitNet-rs Standards Compliance
 
 #### ✅ Feature-Gated Commands
 - All build commands specify `--no-default-features --features cpu|gpu` ✅
@@ -289,7 +289,7 @@ cargo run -p xtask -- verify-receipt ci/inference.json ✅
 
 ### No Critical Issues Found
 
-All documentation is complete, tested, and compliant with BitNet.rs standards.
+All documentation is complete, tested, and compliant with BitNet-rs standards.
 
 ### Optional Enhancements (Post-MVP)
 
@@ -325,7 +325,7 @@ All documentation is complete, tested, and compliant with BitNet.rs standards.
 - ✅ Receipt verification passed (schema v1.0.0, compute_path="real", 7 kernels)
 
 ### Summary
-Documentation for Issue #465 CPU Path Followup is **production-ready** and fully compliant with BitNet.rs documentation standards.
+Documentation for Issue #465 CPU Path Followup is **production-ready** and fully compliant with BitNet-rs documentation standards.
 
 ## Routing Decision
 

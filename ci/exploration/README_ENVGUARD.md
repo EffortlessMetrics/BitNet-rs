@@ -6,7 +6,7 @@
 
 ## Overview
 
-This directory contains comprehensive analysis and quick-fix guides for **three distinct compilation errors** affecting the BitNet.rs test suite through the `EnvGuard` utility in `tests/support/env_guard.rs`.
+This directory contains comprehensive analysis and quick-fix guides for **three distinct compilation errors** affecting the BitNet-rs test suite through the `EnvGuard` utility in `tests/support/env_guard.rs`.
 
 The issues prevent test compilation and must be resolved in this order:
 1. Add missing `once_cell` dependency

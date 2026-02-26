@@ -104,7 +104,7 @@ jobs:
         uses: dorny/test-reporter@d61b558e8df85cb60d09ca3e5b09653b4477cea7  # v1
         if: always()
         with:
-          name: BitNet.rs Test Results
+          name: bitnet-rs Test Results
           path: "test-results/*.xml"
           reporter: java-junit
           fail-on-error: false
@@ -131,7 +131,7 @@ jobs:
 
               const botComment = comments.data.find(comment =>
                 comment.user.type === 'Bot' &&
-                comment.body.includes('<!-- BitNet.rs Test Results -->')
+                comment.body.includes('<!-- bitnet-rs Test Results -->')
               );
 
               if (botComment) {
@@ -318,7 +318,7 @@ jobs:
           status: failure
           channel: "#bitnet-ci"
           text: |
-            🚨 BitNet.rs CI Failure
+            🚨 bitnet-rs CI Failure
 
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
@@ -335,7 +335,7 @@ jobs:
           status: success
           channel: "#bitnet-ci"
           text: |
-            ✅ BitNet.rs CI Success
+            ✅ bitnet-rs CI Success
 
             All tests passed on main branch!
             Commit: ${{ github.sha }}

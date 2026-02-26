@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Fast Feedback Demo Script for BitNet.rs
+# Fast Feedback Demo Script for BitNet-rs
 # This script demonstrates the fast feedback system capabilities
 
 set -e
 
-echo "🚀 BitNet.rs Fast Feedback System Demo"
+echo "🚀 BitNet-rs Fast Feedback System Demo"
 echo "======================================"
 
 # Colors for output
@@ -34,7 +34,7 @@ print_error() {
 
 # Check if we're in the right directory
 if [ ! -f "Cargo.toml" ]; then
-    print_error "Please run this script from the BitNet.rs root directory"
+    print_error "Please run this script from the BitNet-rs root directory"
     exit 1
 fi
 

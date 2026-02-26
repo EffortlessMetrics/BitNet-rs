@@ -1,12 +1,12 @@
 # Performance Requirements and Memory Optimization Specification
 
-**Component**: Performance targets, memory optimization, and resource management for BitNet.rs inference
+**Component**: Performance targets, memory optimization, and resource management for BitNet-rs inference
 **Location**: Cross-cutting performance optimization across all crates
-**Dependencies**: All BitNet.rs components (inference, kernels, models, quantization)
+**Dependencies**: All BitNet-rs components (inference, kernels, models, quantization)
 
 ## Overview
 
-This specification defines comprehensive performance requirements, memory optimization strategies, and resource management targets for BitNet.rs neural network inference. It establishes concrete performance benchmarks for different hardware configurations, memory usage constraints, and optimization techniques to achieve production-ready inference with quantized BitNet models.
+This specification defines comprehensive performance requirements, memory optimization strategies, and resource management targets for BitNet-rs neural network inference. It establishes concrete performance benchmarks for different hardware configurations, memory usage constraints, and optimization techniques to achieve production-ready inference with quantized BitNet models.
 
 ## Performance Requirements
 
@@ -1263,4 +1263,4 @@ mod performance_tests {
 }
 ```
 
-This comprehensive performance and memory optimization specification provides concrete targets, advanced optimization strategies, and thorough validation frameworks to ensure BitNet.rs achieves production-ready performance with quantized neural network inference.
+This comprehensive performance and memory optimization specification provides concrete targets, advanced optimization strategies, and thorough validation frameworks to ensure BitNet-rs achieves production-ready performance with quantized neural network inference.

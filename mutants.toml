@@ -1,4 +1,4 @@
-# Mutation testing configuration for BitNet.rs
+# Mutation testing configuration for bitnet-rs
 #
 # This file configures cargo-mutants to exclude files that cannot be effectively
 # tested through mutation testing due to tooling limitations or architectural constraints.

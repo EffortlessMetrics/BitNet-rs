@@ -1,5 +1,5 @@
 ================================================================================
-BITNET.RS LOGITS EXTRACTION - COMPREHENSIVE EXPLORATION COMPLETE
+bitnet-rs LOGITS EXTRACTION - COMPREHENSIVE EXPLORATION COMPLETE
 ================================================================================
 
 DELIVERABLES CREATED:

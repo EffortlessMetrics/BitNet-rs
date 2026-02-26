@@ -56,14 +56,14 @@ pause() {
 # Demo sections
 intro() {
     clear
-    header "BitNet.rs Dual-Format Validation Demo"
+    header "BitNet-rs Dual-Format Validation Demo"
 
     # Show platform info
     print_platform_banner
     detect_wsl2 || true
     echo
 
-    echo "Welcome to the BitNet.rs stakeholder demo!"
+    echo "Welcome to the BitNet-rs stakeholder demo!"
     echo
     echo "This 5-minute demonstration will showcase:"
     echo "  1. Automatic format detection for both SafeTensors and GGUF"
@@ -291,7 +291,7 @@ summary() {
     info "All results saved to: ${DEMO_DIR}/"
     echo
 
-    echo -e "${BOLD}${GREEN}BitNet.rs dual-format support is production-ready!${NC}"
+    echo -e "${BOLD}${GREEN}BitNet-rs dual-format support is production-ready!${NC}"
     echo
 
     # Generate final report

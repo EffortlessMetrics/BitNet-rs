@@ -1,5 +1,5 @@
 name: Feature Request
-description: Propose an enhancement or new feature for BitNet.rs
+description: Propose an enhancement or new feature for bitnet-rs
 labels: ["enhancement"]
 body:
   - type: markdown
@@ -14,7 +14,7 @@ body:
       description: |
         What problem would this feature solve? Or what capability is currently missing?
       placeholder: |
-        Currently, BitNet.rs doesn't support ...
+        Currently, bitnet-rs doesn't support ...
         This makes it difficult to ...
         Users would benefit from ...
     validations:

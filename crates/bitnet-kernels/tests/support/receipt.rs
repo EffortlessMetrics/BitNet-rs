@@ -1,4 +1,4 @@
-//! Compute receipts and validation for BitNet.rs tests
+//! Compute receipts and validation for BitNet-rs tests
 //!
 //! Provides structured receipts for CI validation and strict mode enforcement.
 

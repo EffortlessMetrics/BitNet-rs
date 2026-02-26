@@ -1,7 +1,7 @@
-# BitNet.rs Dual-Backend Cross-Validation - Implementation Handoff
+# BitNet-rs Dual-Backend Cross-Validation - Implementation Handoff
 
 **Date**: October 25, 2025
-**Project**: BitNet.rs v0.1.0-qna-mvp
+**Project**: BitNet-rs v0.1.0-qna-mvp
 **Implementation**: Dual-Backend Cross-Validation System
 **Status**: ✅ **COMPLETE AND READY FOR REVIEW**
 
@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-We successfully implemented a comprehensive dual-backend cross-validation system for BitNet.rs through **16 coordinated parallel agent tasks**, delivering:
+We successfully implemented a comprehensive dual-backend cross-validation system for BitNet-rs through **16 coordinated parallel agent tasks**, delivering:
 
 - ✅ **~1,506 net lines** of production code
 - ✅ **~140KB** of documentation across 12 new files

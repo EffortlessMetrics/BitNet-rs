@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This specification provides a complete architectural blueprint for eliminating mock inference paths and implementing real quantized computation in BitNet.rs. The transformation will replace the current mock fallback system that reports false 200 tok/s performance with authentic quantized neural network inference using I2S, TL1, and TL2 quantization kernels.
+This specification provides a complete architectural blueprint for eliminating mock inference paths and implementing real quantized computation in BitNet-rs. The transformation will replace the current mock fallback system that reports false 200 tok/s performance with authentic quantized neural network inference using I2S, TL1, and TL2 quantization kernels.
 
 ## Table of Contents
 1. [Context and Problem Statement](#context-and-problem-statement)
@@ -20,7 +20,7 @@ This specification provides a complete architectural blueprint for eliminating m
 
 ### Current State Analysis
 
-BitNet.rs currently exhibits a critical architectural flaw where mock inference paths dominate the execution flow, resulting in:
+BitNet-rs currently exhibits a critical architectural flaw where mock inference paths dominate the execution flow, resulting in:
 
 1. **False Performance Metrics**: Reports ~200 tok/s through `ConcreteTensor::mock()` fallbacks
 2. **Compilation Barriers**: 21+ compilation errors block real quantized computation
@@ -55,7 +55,7 @@ Output -> [FALSE] Performance metrics from mock rather than real computation
 
 ### Primary User Story - Neural Network Researcher
 
-**As a** neural network researcher evaluating BitNet.rs for production deployment,
+**As a** neural network researcher evaluating BitNet-rs for production deployment,
 **I want** accurate performance reporting from real quantized inference computation
 **So that** I can make informed decisions about model deployment, compare against baseline implementations, and validate the 1-bit quantization accuracy claims.
 
@@ -69,7 +69,7 @@ Output -> [FALSE] Performance metrics from mock rather than real computation
 **So that** I can optimize inference performance and establish regression prevention.
 
 #### Quality Assurance Team
-**As a** QA engineer validating BitNet.rs releases,
+**As a** QA engineer validating BitNet-rs releases,
 **I want** strict mode environment variables that prevent mock fallbacks
 **So that** I can ensure production builds use only real quantized computation.
 
@@ -144,11 +144,11 @@ Output -> [FALSE] Performance metrics from mock rather than real computation
 
 ### System Overview
 
-The mock elimination architecture transforms BitNet.rs from fallback-dependent to quantization-native:
+The mock elimination architecture transforms BitNet-rs from fallback-dependent to quantization-native:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    BitNet.rs Quantized Pipeline                 │
+│                    BitNet-rs Quantized Pipeline                 │
 ├─────────────────────────────────────────────────────────────────┤
 │  Model Loading (bitnet-models)                                 │
 │  ├── GGUF Parser: ✅ WORKING                                   │
@@ -725,7 +725,7 @@ mod ac_tests {
 
 ### Dependencies
 - **External**: CUDA toolkit for GPU features, C++ compiler for cross-validation
-- **Internal**: All BitNet.rs workspace crates must be compatible
+- **Internal**: All BitNet-rs workspace crates must be compatible
 - **Optional**: C++ reference implementation for cross-validation
 - **Runtime**: Environment variables for configuration (BITNET_STRICT_MODE, etc.)
 
@@ -766,7 +766,7 @@ mod ac_tests {
 
 ### Business Metrics
 - **Production Readiness**: Eliminating false performance claims
-- **Research Validation**: Enabling accurate BitNet.rs evaluation
+- **Research Validation**: Enabling accurate BitNet-rs evaluation
 - **Performance Predictability**: Realistic deployment planning capabilities
 - **Cross-Platform Compatibility**: Consistent behavior across target platforms
 
@@ -774,9 +774,9 @@ mod ac_tests {
 
 ## Conclusion
 
-This comprehensive specification provides the architectural blueprint needed to transform BitNet.rs from a mock-dependent system to a production-ready quantized neural network inference engine. The phased implementation approach minimizes risk while ensuring each component is thoroughly validated against accuracy and performance requirements.
+This comprehensive specification provides the architectural blueprint needed to transform BitNet-rs from a mock-dependent system to a production-ready quantized neural network inference engine. The phased implementation approach minimizes risk while ensuring each component is thoroughly validated against accuracy and performance requirements.
 
-The success of this implementation will establish BitNet.rs as a credible alternative to existing neural network inference frameworks, with demonstrable quantization accuracy and realistic performance characteristics that enable evidence-based adoption decisions.
+The success of this implementation will establish BitNet-rs as a credible alternative to existing neural network inference frameworks, with demonstrable quantization accuracy and realistic performance characteristics that enable evidence-based adoption decisions.
 
 **Specification Status**: Ready for implementation
 **Architecture Review**: Required before Phase 1 execution

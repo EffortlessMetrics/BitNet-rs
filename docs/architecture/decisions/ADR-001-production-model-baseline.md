@@ -76,7 +76,7 @@ Two model options exist for baseline generation:
 - **Mock Detection**: Test model may trigger mock fallbacks (insufficient for honest compute)
 - **Cross-Validation**: Production model aligns with Microsoft BitNet C++ reference (2B standard)
 
-### 4. Alignment with BitNet.rs Standards
+### 4. Alignment with BitNet-rs Standards
 - **CLAUDE.md Guidance**: Production models recommended for realistic inference
 - **Documentation Examples**: README, quickstart guide use production models
 - **User Workflows**: Download → inference → verification flow uses production models
@@ -163,7 +163,7 @@ cargo run -p xtask -- verify-receipt --path docs/baselines/${DATE}-cpu.json
 - **Issue #465**: CPU Path Followup (v0.1.0-mvp Release Polish)
 - **AC3**: Generate Pinned CPU Baseline Receipt
 - **Microsoft BitNet**: https://github.com/microsoft/BitNet
-- **CLAUDE.md**: BitNet.rs development guidance (production model recommendations)
+- **CLAUDE.md**: BitNet-rs development guidance (production model recommendations)
 
 ---
 

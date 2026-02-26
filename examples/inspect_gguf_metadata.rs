@@ -1,6 +1,6 @@
 //! # GGUF Metadata Inspection Example
 //!
-//! This example demonstrates how to use BitNet.rs's enhanced GGUF metadata
+//! This example demonstrates how to use BitNet-rs's enhanced GGUF metadata
 //! extraction capabilities to inspect model files without loading the full model.
 //!
 //! ## Key Features Demonstrated

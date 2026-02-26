@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the **actual implemented** API contracts for Issue #261: Mock Inference Performance Reporting Elimination. This is a document-as-built specification reflecting the real BitNet.rs codebase architecture.
+This document defines the **actual implemented** API contracts for Issue #261: Mock Inference Performance Reporting Elimination. This is a document-as-built specification reflecting the real BitNet-rs codebase architecture.
 
 **Specification**: `issue-261-mock-performance-reporting-elimination-spec.md`
 **ADR Reference**: `adr-004-mock-elimination-technical-decisions.md`
@@ -227,7 +227,7 @@ pub trait QuantizerTrait: Send + Sync {
 
 ### 4. Quantizer Implementations (Structs, Not Trait Providers)
 
-**Implementation Pattern**: BitNet.rs uses **struct-based quantizers** that implement `QuantizerTrait`, not separate trait providers.
+**Implementation Pattern**: BitNet-rs uses **struct-based quantizers** that implement `QuantizerTrait`, not separate trait providers.
 
 #### 4.1 I2SQuantizer Struct
 
@@ -739,7 +739,7 @@ BITNET_STRICT_MODE=1 BITNET_STRICT_VALIDATE_PERFORMANCE=1 cargo test --no-defaul
 
 ### Pattern 1: Synchronous Kernel Operations
 
-**Reality**: BitNet.rs uses **synchronous operations**, not async/await.
+**Reality**: BitNet-rs uses **synchronous operations**, not async/await.
 
 ```rust
 // CORRECT: Actual implementation
@@ -759,7 +759,7 @@ pub trait KernelProvider: Send + Sync {
 
 ### Pattern 2: Struct-Based Quantizers
 
-**Reality**: BitNet.rs uses **structs implementing traits**, not separate trait providers.
+**Reality**: BitNet-rs uses **structs implementing traits**, not separate trait providers.
 
 ```rust
 // CORRECT: Actual implementation
@@ -832,7 +832,7 @@ Performance metrics collection exists but not as a formal `PerformanceMetricsCol
 
 ## Summary
 
-This **document-as-built** API contracts specification accurately reflects the BitNet.rs implementation:
+This **document-as-built** API contracts specification accurately reflects the BitNet-rs implementation:
 
 **Key Findings**:
 1. **Kernel APIs**: `KernelProvider` trait with synchronous `matmul_i2s` and `quantize` methods

@@ -9,7 +9,7 @@
 
 ## Summary
 
-Successfully implemented the O(N²) → O(N) embedding optimization for incremental decoding in BitNet.rs. The generation loop now embeds only the last token at each step instead of re-embedding the entire sequence, providing expected ~50× speedup for 100-token generation.
+Successfully implemented the O(N²) → O(N) embedding optimization for incremental decoding in BitNet-rs. The generation loop now embeds only the last token at each step instead of re-embedding the entire sequence, providing expected ~50× speedup for 100-token generation.
 
 ---
 
@@ -116,7 +116,7 @@ test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ✅ Comprehensive inline documentation
 ✅ No clippy warnings
 ✅ Proper error handling (expect with clear message)
-✅ Follows BitNet.rs architectural patterns
+✅ Follows BitNet-rs architectural patterns
 
 ---
 

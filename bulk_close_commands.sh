@@ -1,5 +1,5 @@
 #!/bin/bash
-# BitNet.rs Tech Debt Cleanup: Issues #343-#420
+# bitnet-rs Tech Debt Cleanup: Issues #343-#420
 # Analysis Date: 2025-11-11
 # Total Issues to Close: 44 (56% of 78 issues analyzed)
 
@@ -15,7 +15,7 @@ close_issues() {
     done
 }
 
-echo "=== BitNet.rs Tech Debt Cleanup Script ==="
+echo "=== bitnet-rs Tech Debt Cleanup Script ==="
 echo "This script will close 44 resolved/duplicate issues from the TDD scaffolding phase"
 echo ""
 read -p "Continue with bulk close operations? (y/N) " -n 1 -r

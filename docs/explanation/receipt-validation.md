@@ -2,7 +2,7 @@
 
 **Status**: Implemented (PR #452)
 **Related Issue**: #439 (GPU feature-gate hardening)
-**Audience**: BitNet.rs developers implementing performance validation
+**Audience**: BitNet-rs developers implementing performance validation
 **Type**: Explanation (Diátaxis)
 
 ## Overview

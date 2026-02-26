@@ -1,4 +1,4 @@
-# BitNet.rs
+# BitNet-rs
 
 [![CI](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml/badge.svg?branch=main)](https://github.com/EffortlessMetrics/BitNet-rs/actions/workflows/ci-core.yml)
 [![MSRV](https://img.shields.io/badge/MSRV-1.92.0-blue.svg)](./rust-toolchain.toml)
@@ -142,11 +142,11 @@ Organised by [Diátaxis](https://diataxis.fr/):
 - [Quantization support](docs/reference/quantization-support.md)
 - [Validation gates](docs/reference/validation-gates.md)
 - [QK256 Usage Guide](docs/howto/use-qk256-models.md) — GGML I2_S QK256 Format with 256-element blocks and `--strict-loader` validation
-- [Dual I2_S Flavor Architecture](docs/explanation/i2s-dual-flavor.md) — how BitNet.rs differentiates between I2_S format variants
+- [Dual I2_S Flavor Architecture](docs/explanation/i2s-dual-flavor.md) — how bitnet-rs differentiates between I2_S format variants
 
 ## Receipt Verification
 
-BitNet.rs uses "honest-compute" receipts to verify real inference (no mock fallback).
+bitnet-rs uses "honest-compute" receipts to verify real inference (no mock fallback).
 
 ```bash
 # Run benchmark and write receipt

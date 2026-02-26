@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A/B comparison script for BitNet.rs vs bitnet.cpp
+# A/B comparison script for bitnet-rs vs bitnet.cpp
 # Tests token ID equality for validation
 set -euo pipefail
 
@@ -44,7 +44,7 @@ export RAYON_NUM_THREADS=1 BITNET_DETERMINISTIC=1 BITNET_SEED=42
 export OMP_NUM_THREADS=1 GGML_NUM_THREADS=1
 
 echo "========================================"
-echo "BitNet.rs vs bitnet.cpp Token ID A/B Test"
+echo "bitnet-rs vs bitnet.cpp Token ID A/B Test"
 echo "========================================"
 echo "Model: $MODEL"
 echo "Tokens to generate: $N_TOKENS"
@@ -60,7 +60,7 @@ for prompt in "${PROMPTS[@]}"; do
     echo "----------------------------------------"
 
     # Run Rust implementation with strict mode
-    echo -n "  Running BitNet.rs... "
+    echo -n "  Running bitnet-rs... "
     if $RS_BIN run \
         --model "$MODEL" $TOK_ARGS \
         --prompt "$prompt" \

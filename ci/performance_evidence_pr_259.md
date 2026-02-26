@@ -1,4 +1,4 @@
-# BitNet.rs Performance Baseline Evidence - PR #259 GGUF Weight Loading
+# BitNet-rs Performance Baseline Evidence - PR #259 GGUF Weight Loading
 
 ## Executive Summary
 ✅ **Performance baseline successfully established for Draft → Ready promotion**
@@ -83,7 +83,7 @@ Based on executed benchmarks:
 }
 ```
 
-### BitNet.rs SLO Compliance ✅
+### BitNet-rs SLO Compliance ✅
 - **Quantization throughput**: All algorithms exceed 66 Melem/s target ✅
 - **Memory bandwidth utilization**: 80% theoretical achieved ✅
 - **Neural network inference**: Matrix ops within 10s requirement ✅
@@ -91,7 +91,7 @@ Based on executed benchmarks:
 
 ## Performance Characteristics Validated
 
-### BitNet.rs Neural Network Requirements ✅
+### BitNet-rs Neural Network Requirements ✅
 - [x] Neural network inference ≤ 10 seconds for standard models
 - [x] Quantization accuracy preservation (≥99% vs FP32)
 - [x] No performance regressions vs baseline
@@ -181,7 +181,7 @@ cargo bench -p bitnet-kernels --bench mixed_precision_bench --no-default-feature
 
 ---
 
-**Performance Baseline Specialist - BitNet.rs Review Flow**
+**Performance Baseline Specialist - BitNet-rs Review Flow**
 **Timestamp**: 2025-09-26T20:15:00Z
 **Status**: ✅ PASSED - Ready for docs-reviewer stage
 **Feature**: GGUF Weight Loading for Neural Network Inference (PR #259)

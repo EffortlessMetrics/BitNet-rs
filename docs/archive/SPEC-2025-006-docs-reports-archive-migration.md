@@ -750,7 +750,7 @@ git branch -D test-archive-migration
 
 ---
 
-## BitNet.rs Alignment
+## BitNet-rs Alignment
 
 ### TDD Practices
 
@@ -768,7 +768,7 @@ git branch -D test-archive-migration
 
 ### Workspace Structure
 
-✅ **Alignment**: Archive follows BitNet.rs documentation organization principles
+✅ **Alignment**: Archive follows BitNet-rs documentation organization principles
 
 **Evidence**:
 - Separation of living docs (`docs/`) from historical archive (`docs/archive/`)
@@ -903,5 +903,5 @@ git branch -D test-archive-migration
 ---
 
 **Last Updated**: 2025-10-23
-**Spec Author**: BitNet.rs Spec Analyzer Agent
+**Spec Author**: BitNet-rs Spec Analyzer Agent
 **Review Status**: Pending

@@ -1,4 +1,4 @@
-# BitNet.rs TDD Scaffolding Index
+# BitNet-rs TDD Scaffolding Index
 
 ## Quick Reference
 

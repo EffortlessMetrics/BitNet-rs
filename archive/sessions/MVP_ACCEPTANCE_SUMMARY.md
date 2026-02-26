@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the implementation of the deterministic CPU acceptance script for MVP validation of BitNet.rs inference.
+This document summarizes the implementation of the deterministic CPU acceptance script for MVP validation of BitNet-rs inference.
 
 ## Deliverables
 

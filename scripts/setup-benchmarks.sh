@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BitNet.rs Benchmarking Infrastructure Setup Script
+# BitNet-rs Benchmarking Infrastructure Setup Script
 #
 # This script addresses GitHub issue #155 by setting up a comprehensive
 # benchmarking environment with proper model fixtures, C++ cross-validation,
@@ -80,7 +80,7 @@ EOF
 # Check if we're in the right directory
 check_repo_root() {
     if [[ ! -f "${REPO_ROOT}/Cargo.toml" ]] || ! grep -q "bitnet" "${REPO_ROOT}/Cargo.toml"; then
-        log_error "This script must be run from the BitNet.rs repository root"
+        log_error "This script must be run from the BitNet-rs repository root"
         log_error "Current directory: $(pwd)"
         log_error "Expected Cargo.toml with 'bitnet' at: ${REPO_ROOT}/Cargo.toml"
         exit 1
@@ -448,7 +448,7 @@ print_usage() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Set up BitNet.rs benchmarking infrastructure (addresses GitHub issue #155).
+Set up BitNet-rs benchmarking infrastructure (addresses GitHub issue #155).
 
 OPTIONS:
     --force              Force re-download of models and rebuild of C++
@@ -556,7 +556,7 @@ main() {
 
     print_banner
 
-    log_info "BitNet.rs Benchmarking Infrastructure Setup"
+    log_info "BitNet-rs Benchmarking Infrastructure Setup"
     log_info "Addressing GitHub issue #155: Non-functional benchmarking infrastructure"
     log_info "Starting setup at $(date)"
     echo

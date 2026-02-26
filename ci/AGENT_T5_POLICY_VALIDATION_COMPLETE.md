@@ -12,7 +12,7 @@
 
 **Policy validation for PR #473 is complete and PASSED.**
 
-All BitNet.rs governance requirements have been met:
+All BitNet-rs governance requirements have been met:
 - ✅ License compliance (100%): All permissive licenses (MIT/Apache-2.0)
 - ✅ Dependency security (99.9%): 1 medium CVE documented and mitigated
 - ✅ Neural network governance: Quantization >99%, cross-validation ≤1e-5, performance ≤10s
@@ -341,6 +341,6 @@ git diff main CLAUDE.md docs/
 
 ---
 
-**Validator**: policy-gatekeeper (BitNet.rs Integrative Flow T5)
+**Validator**: policy-gatekeeper (BitNet-rs Integrative Flow T5)
 **Last Updated**: 2025-10-22T02:00:05Z
 **Status**: ✅ PASS → NEXT (benchmark-runner)

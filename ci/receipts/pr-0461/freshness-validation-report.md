@@ -84,7 +84,7 @@ d596c7f test(issue-453): add comprehensive test fixtures for strict quantization
 - **Type:** `feat/` (feature branch) ✅
 - **Issue Reference:** `issue-453` ✅ Valid
 - **Descriptor:** `strict-quantization-guards` ✅ Descriptive and clear
-- **Compliance:** ✅ PASS - Follows BitNet.rs conventions
+- **Compliance:** ✅ PASS - Follows BitNet-rs conventions
 
 ---
 
@@ -120,7 +120,7 @@ ci/spec-validation-report.md:102: trailing whitespace.
 
 ---
 
-## BitNet.rs Quality Integration
+## BitNet-rs Quality Integration
 
 ### TDD Compliance
 - ✅ All commits include test coverage or documentation
@@ -222,7 +222,7 @@ freshness: base up-to-date @393eecf; branch ahead by 7 commits; no conflicts
 5. **Conflict Detection:** `git diff --check origin/main...HEAD`
 6. **Merge Commit Check:** `git log --oneline --merges`
 
-### BitNet.rs Integration Patterns
+### BitNet-rs Integration Patterns
 - ✅ Semantic commit validation
 - ✅ Branch naming convention verification
 - ✅ Rebase workflow compliance
@@ -275,5 +275,5 @@ PR #461 branch `feat/issue-453-strict-quantization-guards` has **successfully pa
 
 **Report Generated:** 2025-10-14
 **Agent:** `freshness-checker` (Git Branch Freshness Verification Specialist)
-**Validation Method:** GitHub-native git ancestry analysis with BitNet.rs quality integration
-**Evidence Format:** Standard BitNet.rs gate evidence grammar
+**Validation Method:** GitHub-native git ancestry analysis with BitNet-rs quality integration
+**Evidence Format:** Standard BitNet-rs gate evidence grammar

@@ -1,4 +1,4 @@
-# BitNet.rs Inference Quality Investigation - COMPLETE
+# BitNet-rs Inference Quality Investigation - COMPLETE
 
 **Date:** 2025-10-22
 **Status:** ✅ PHASE 0-2 CRITICAL FIXES COMPLETE
@@ -7,7 +7,7 @@
 
 ## Summary
 
-Successfully investigated and fixed critical BitNet.rs inference issues:
+Successfully investigated and fixed critical BitNet-rs inference issues:
 
 ✅ **Phase 0:** Instrumentation (parity, timing, quant tracing)
 ✅ **Phase 1 P0.1:** O(N²) → O(N) embedding (50× speedup expected)

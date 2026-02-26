@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-PR #475 represents a comprehensive integration of multiple foundational features for BitNet.rs:
+PR #475 represents a comprehensive integration of multiple foundational features for BitNet-rs:
 
 - **QK256 AVX2 Foundation**: AVX2-accelerated dequantization with ~1.2× uplift (targeting ≥3×)
 - **GGUF Fixtures**: 12/12 dual-flavor tests passing with automatic detection
@@ -159,7 +159,7 @@ feat: comprehensive integration - QK256 AVX2, fixtures, receipts, strict mode (#
 
 Resolves #439 (Feature Gate Consistency)
 
-This comprehensive integration establishes foundational features for BitNet.rs v0.2:
+This comprehensive integration establishes foundational features for BitNet-rs v0.2:
 
 **Core Features:**
 - QK256 AVX2 Foundation: AVX2-accelerated dequantization (~1.2× uplift, targeting ≥3×)
@@ -205,7 +205,7 @@ This comprehensive integration establishes foundational features for BitNet.rs v
 
 **Feature Flags:** Explicit `--no-default-features --features cpu|gpu` required
 
-Co-authored-by: BitNet.rs Contributors <contributors@bitnet-rs.dev>
+Co-authored-by: BitNet-rs Contributors <contributors@bitnet-rs.dev>
 ```
 
 ### 2.2 Alternative: Merge Commit (Not Recommended)
@@ -544,7 +544,7 @@ gh pr create --title "fix: resolve PR #475 regression - [description]" \
 - Active contributors (>5 PRs in last 3 months)
 - Stakeholders tracking v0.2.0 milestone
 
-**Subject:** `[BitNet.rs] PR #475 Merged: Comprehensive Integration (QK256 AVX2, Fixtures, Receipts)`
+**Subject:** `[BitNet-rs] PR #475 Merged: Comprehensive Integration (QK256 AVX2, Fixtures, Receipts)`
 
 **Body:** (Same content as post-merge notification above)
 
@@ -564,7 +564,7 @@ gh pr create --title "fix: resolve PR #475 regression - [description]" \
 
 ### Summary
 
-This comprehensive integration establishes foundational features for BitNet.rs v0.2:
+This comprehensive integration establishes foundational features for BitNet-rs v0.2:
 
 ✅ **QK256 AVX2 Foundation** (~1.2× uplift, targeting ≥3×)
 ✅ **GGUF Fixtures** (12/12 dual-flavor tests)
@@ -607,7 +607,7 @@ This comprehensive integration establishes foundational features for BitNet.rs v
 
 **Thank you to all contributors and reviewers!** 🚀
 
-This PR represents significant progress toward BitNet.rs v0.2.0.
+This PR represents significant progress toward BitNet-rs v0.2.0.
 ```
 
 ### 5.5 Documentation Site Update (If Applicable)

@@ -161,5 +161,5 @@ cargo check --package bitnet-kernels --no-default-features --features gpu
 ---
 
 **Reviewer:** architecture-reviewer agent
-**Validation Framework:** BitNet.rs Architecture Principles + TDD Standards
+**Validation Framework:** BitNet-rs Architecture Principles + TDD Standards
 **Timestamp:** 2025-10-11T07:30:00Z

@@ -256,7 +256,7 @@ def main():
         format_type = "GGUF"
 
     # Generate markdown
-    output = f"""# BitNet.rs Performance Report - {format_type}
+    output = f"""# BitNet-rs Performance Report - {format_type}
 
 {get_methods_environment_box(data)}
 

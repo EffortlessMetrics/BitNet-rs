@@ -13,7 +13,7 @@ Test infrastructure for Issue #465 has been validated and is **ready for impleme
 
 **Key Metrics**:
 - **Tests Created**: 12 tests across 4 test files
-- **Fixtures Created**: 18 fixtures with realistic BitNet.rs data
+- **Fixtures Created**: 18 fixtures with realistic BitNet-rs data
 - **AC Coverage**: 12/12 (100%)
 - **Compilation**: ✅ All tests compile (0 errors)
 - **TDD Red Phase**: ✅ All 12 tests fail with correct panic messages
@@ -38,12 +38,12 @@ Test infrastructure for Issue #465 has been validated and is **ready for impleme
 - AC1/AC2: Tests correctly identify missing README sections (implementation needed)
 - AC9: Feature flag audit passes after fix-forward (xtask/CLI exceptions added)
 - AC10: No unsupported performance claims found in documentation
-- All tests compile cleanly with proper BitNet.rs patterns
+- All tests compile cleanly with proper BitNet-rs patterns
 
 **Fix-Forward Applied**:
 - Added exception filtering for xtask, bitnet-st2gguf, and bitnet-cli commands
 - These tools handle features internally and don't require `--no-default-features`
-- Fix aligns with BitNet.rs architecture patterns (CLAUDE.md conventions)
+- Fix aligns with BitNet-rs architecture patterns (CLAUDE.md conventions)
 
 ---
 
@@ -235,7 +235,7 @@ struct Receipt {
 
 ---
 
-## BitNet.rs TDD Compliance
+## BitNet-rs TDD Compliance
 
 ### ✅ Red Phase Validation
 
@@ -245,7 +245,7 @@ struct Receipt {
    - Example: "AC3 implementation missing: CPU baseline not found in docs/baselines/"
    - Provides guidance for implementation phase
 
-2. **No Compilation Errors**: All tests compile cleanly with BitNet.rs patterns
+2. **No Compilation Errors**: All tests compile cleanly with BitNet-rs patterns
    - Feature-gated execution: Tests work without `--features cpu` flag
    - Proper error handling: `anyhow::Result<()>` patterns
    - Unsafe environment configuration: Documented for Rust 1.90+
@@ -356,7 +356,7 @@ if line.contains("-p bitnet-cli") || line.contains("--package bitnet-cli") {
 
 **Result**: AC9 test now passes (no legacy commands found)
 
-**Justification**: Fix aligns with BitNet.rs architecture conventions documented in CLAUDE.md:
+**Justification**: Fix aligns with BitNet-rs architecture conventions documented in CLAUDE.md:
 - xtask: Developer tooling with internal feature handling
 - bitnet-st2gguf: Standalone converter without cpu/gpu features
 - bitnet-cli: CLI tool with appropriate feature management
@@ -410,10 +410,10 @@ warning: unused variable: `workspace_root`
 **Rationale**:
 1. **All 12 tests properly structured** - TDD red phase validated
 2. **100% AC coverage** - All acceptance criteria have corresponding tests
-3. **18 fixtures ready** - Realistic BitNet.rs neural network data
+3. **18 fixtures ready** - Realistic BitNet-rs neural network data
 4. **Compilation clean** - No errors, only expected helper function warnings
 5. **Proper failure patterns** - All tests fail with descriptive messages
-6. **Fix-forward complete** - AC9 test refined for BitNet.rs patterns
+6. **Fix-forward complete** - AC9 test refined for BitNet-rs patterns
 7. **Neural network context validated** - I2_S quantization, transformer pipeline, honest compute
 
 **Evidence**:
@@ -435,12 +435,12 @@ warning: unused variable: `workspace_root`
 
 ## Conclusion
 
-Test infrastructure for Issue #465 is **production-ready** and follows BitNet.rs TDD standards. All quality gates pass:
+Test infrastructure for Issue #465 is **production-ready** and follows BitNet-rs TDD standards. All quality gates pass:
 
 - ✅ **TDD Red Phase**: All tests fail correctly with descriptive messages
 - ✅ **AC Coverage**: 12/12 acceptance criteria mapped to tests
 - ✅ **Fixture Quality**: 18 fixtures with realistic neural network data
-- ✅ **BitNet.rs Patterns**: Feature flags, deterministic config, receipt validation
+- ✅ **BitNet-rs Patterns**: Feature flags, deterministic config, receipt validation
 - ✅ **Compilation**: Clean build with expected warnings only
 - ✅ **Neural Network Context**: I2_S quantization, transformer pipeline, honest compute
 

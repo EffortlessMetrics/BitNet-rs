@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-BitNet.rs has completed the final hardening phase with **8/8 tasks completed**. All quality
+BitNet-rs has completed the final hardening phase with **8/8 tasks completed**. All quality
 gates are green, and the codebase is ready for PR submission. This report details the
 implementation, validation results, and next steps.
 
@@ -451,7 +451,7 @@ release_receipts:
 
 ## Conclusion
 
-BitNet.rs final hardening is **complete and validated**. All 8 tasks implemented, all gates green, ready for PR submission.
+BitNet-rs final hardening is **complete and validated**. All 8 tasks implemented, all gates green, ready for PR submission.
 
 **Next Action**: Commit changes and open PR.
 

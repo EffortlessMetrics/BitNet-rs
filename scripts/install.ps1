@@ -1,5 +1,5 @@
-# BitNet.rs Installation Script for Windows
-# This script installs the latest BitNet.rs binaries for Windows
+# BitNet-rs Installation Script for Windows
+# This script installs the latest BitNet-rs binaries for Windows
 
 param(
     [string]$InstallDir = "$env:USERPROFILE\.local\bin",
@@ -52,7 +52,7 @@ function Write-Error {
 # Help function
 function Show-Help {
     @"
-BitNet.rs Installation Script for Windows
+BitNet-rs Installation Script for Windows
 
 USAGE:
     .\install.ps1 [OPTIONS]
@@ -149,7 +149,7 @@ function Install-BitNet {
         $version = $Version
     }
 
-    Write-Info "Installing BitNet.rs $version for $platform"
+    Write-Info "Installing BitNet-rs $version for $platform"
 
     # Construct download URL
     $filename = "bitnet-$platform.zip"
@@ -301,7 +301,7 @@ function Test-Installation {
 
 # Main installation process
 function Main {
-    Write-Info "🦀 BitNet.rs Installation Script for Windows"
+    Write-Info "🦀 BitNet-rs Installation Script for Windows"
     Write-Info "Installing to: $InstallDir"
 
     # Check prerequisites
@@ -316,7 +316,7 @@ function Main {
 
         # Verify installation
         if (Test-Installation) {
-            Write-Success "🎉 BitNet.rs installation completed successfully!"
+            Write-Success "🎉 BitNet-rs installation completed successfully!"
 
             # Show usage examples
             Write-Host ""

@@ -5,7 +5,7 @@
 
 **Intent:** Execute comprehensive security validation for neural network inference codebase (dependency auditing, GPU memory safety, FFI bridge security, unsafe code hygiene, secrets scanning, quantization safety)
 
-**Scope:** BitNet.rs workspace (727 dependencies, 45 GPU tests, 41 quantization tests, 29 FFI tests), PR #461 strict quantization guards security impact analysis
+**Scope:** BitNet-rs workspace (727 dependencies, 45 GPU tests, 41 quantization tests, 29 FFI tests), PR #461 strict quantization guards security impact analysis
 
 **Observations:**
 - **Dependency Audit:** 0 vulnerabilities across 727 dependencies

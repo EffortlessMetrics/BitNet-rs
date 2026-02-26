@@ -1,7 +1,7 @@
 # Issue #453: Technical Specification for Strict Quantization Guards
 
 **Document Version:** 1.0.0
-**Target BitNet.rs Version:** 0.1.0+
+**Target BitNet-rs Version:** 0.1.0+
 **Related Issue:** #453
 **Created:** 2025-10-14
 **Author:** spec-creator (AI Agent)
@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This technical specification defines the implementation approach for strict quantization guards in BitNet.rs, ensuring that receipts accurately reflect actual computation paths by preventing silent FP32 fallback in quantized layers. The specification covers runtime guards (debug assertions + strict mode), receipt validation extensions, and comprehensive testing strategies to eliminate dishonest performance claims and guarantee production-grade quantized inference.
+This technical specification defines the implementation approach for strict quantization guards in BitNet-rs, ensuring that receipts accurately reflect actual computation paths by preventing silent FP32 fallback in quantized layers. The specification covers runtime guards (debug assertions + strict mode), receipt validation extensions, and comprehensive testing strategies to eliminate dishonest performance claims and guarantee production-grade quantized inference.
 
 **Core Problem:** Receipts can claim "quantized computation" (`compute_path="real"`) while actual inference silently falls back to FP32 dequantization staging, undermining performance baselines and accuracy validation.
 
@@ -216,7 +216,7 @@ xtask
 ```
 
 **Feature Flag Architecture:**
-- Default features: **EMPTY** (BitNet.rs policy)
+- Default features: **EMPTY** (BitNet-rs policy)
 - Feature combinations:
   - `--no-default-features --features cpu`: CPU-only inference
   - `--no-default-features --features gpu`: GPU-only inference
@@ -1442,7 +1442,7 @@ cargo test -p bitnet-models --no-default-features --features crossval
 **Rationale:**
 - Requirements fully analyzed with quantization constraints
 - Technical specification created with comprehensive validation commands
-- Architecture approach aligns with BitNet.rs workspace structure and feature flags
+- Architecture approach aligns with BitNet-rs workspace structure and feature flags
 - Risk assessment includes specific validation commands and mitigation strategies
 - Success criteria defined with measurable acceptance criteria validation
 - Implementation roadmap provides detailed week-by-week breakdown

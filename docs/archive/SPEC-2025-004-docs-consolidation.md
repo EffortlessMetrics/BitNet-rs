@@ -457,7 +457,7 @@ git diff ci/solutions/*.md | grep "INDEX.md"
 
 ---
 
-## BitNet.rs Alignment
+## BitNet-rs Alignment
 
 ### TDD Practices
 
@@ -559,5 +559,5 @@ git diff ci/solutions/*.md | grep "INDEX.md"
 ---
 
 **Last Updated**: 2025-10-23
-**Spec Author**: BitNet.rs Spec Analyzer Agent
+**Spec Author**: BitNet-rs Spec Analyzer Agent
 **Review Status**: Pending

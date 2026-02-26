@@ -2,7 +2,7 @@
 
 ## Quick Answer: Root Cause of Gibberish Output
 
-The non-sensical output from BitNet.rs inference appears to be caused by **incorrect K/V head slicing logic in the weight mapper** that causes a 75% parameter loss and produces degenerate attention patterns.
+The non-sensical output from BitNet-rs inference appears to be caused by **incorrect K/V head slicing logic in the weight mapper** that causes a 75% parameter loss and produces degenerate attention patterns.
 
 ### The Problem in 30 Seconds
 
@@ -113,14 +113,14 @@ fn test_gqa_slicing_preserves_uniqueness() {
 
 ## Comparison with llama.cpp
 
-| Aspect | llama.cpp | BitNet.rs |
+| Aspect | llama.cpp | BitNet-rs |
 |--------|-----------|----------|
 | **K/V weight format** | `[hidden, kv_dim]` (correct) | `[hidden, hidden]` (needs fixing) |
 | **Slicing strategy** | N/A (already correct) | Sparse selection (WRONG) |
 | **Expansion logic** | `repeat(group_size)` | `repeat(group_size)` ✓ |
 | **Result** | Correct attention | Degenerate attention |
 
-**Key insight**: llama.cpp never receives malformed weights. BitNet.rs attempts to "fix" them but does so incorrectly.
+**Key insight**: llama.cpp never receives malformed weights. BitNet-rs attempts to "fix" them but does so incorrectly.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains the approach, rationale, and limitations of the resource management testing framework implemented for BitNet.rs. The testing strategy addresses the challenges of testing resource management in a cross-platform, deterministic manner while providing meaningful validation of resource handling logic.
+This document explains the approach, rationale, and limitations of the resource management testing framework implemented for BitNet-rs. The testing strategy addresses the challenges of testing resource management in a cross-platform, deterministic manner while providing meaningful validation of resource handling logic.
 
 ## Testing Philosophy
 

@@ -500,4 +500,4 @@ async fn test_real_model_fallback_resolution() {
 
 ## Additional Context
 
-Implementing the fallback chain is crucial for making BitNet.rs robust across different model formats and deployment environments. The fallback system should provide multiple strategies for tokenizer resolution while maintaining performance and reliability.
+Implementing the fallback chain is crucial for making BitNet-rs robust across different model formats and deployment environments. The fallback system should provide multiple strategies for tokenizer resolution while maintaining performance and reliability.

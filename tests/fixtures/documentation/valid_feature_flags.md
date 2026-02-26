@@ -1,8 +1,8 @@
-# Building BitNet.rs (VALID Documentation Pattern)
+# Building BitNet-rs (VALID Documentation Pattern)
 
 ## Feature Flags
 
-BitNet.rs uses **empty default features**. Always specify features explicitly:
+BitNet-rs uses **empty default features**. Always specify features explicitly:
 
 ```bash
 # CPU build (SIMD-optimized)

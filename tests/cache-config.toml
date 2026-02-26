@@ -1,6 +1,6 @@
 # Test Caching and Optimization Configuration
 # This file configures the advanced caching and optimization features
-# for the BitNet.rs testing framework
+# for the BitNet-rs testing framework
 
 [cache]
 # Enable test result caching

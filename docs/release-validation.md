@@ -1,6 +1,6 @@
 # Release Validation Pipeline
 
-This document describes the comprehensive release validation pipeline for BitNet.rs, which ensures that release candidates meet all quality standards before being approved for release.
+This document describes the comprehensive release validation pipeline for BitNet-rs, which ensures that release candidates meet all quality standards before being approved for release.
 
 ## Overview
 

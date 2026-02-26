@@ -1,7 +1,7 @@
 FINAL VERIFICATION SUMMARY
 ==========================
 
-Task: Explore CLI argument parsing patterns in BitNet.rs xtask
+Task: Explore CLI argument parsing patterns in bitnet-rs xtask
 Scope: Medium thoroughness
 Status: COMPLETE
 
@@ -78,7 +78,7 @@ Requested Features:
   ✓ --dump-cpp-ids flag (example provided, Part 7)
 
 Code Examples:
-  ✓ 50+ production examples from BitNet.rs
+  ✓ 50+ production examples from bitnet-rs
   ✓ All copied from actual source files
   ✓ Line numbers verified
   ✓ Copy-paste ready

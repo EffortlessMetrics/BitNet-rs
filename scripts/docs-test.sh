@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test docs.rs compatibility for BitNet.rs
+# Test docs.rs compatibility for BitNet-rs
 # This script simulates the docs.rs build environment
 
 set -euo pipefail

@@ -1,4 +1,4 @@
-# Systematic Debugging Plan for BitNet.rs Garbling Issue
+# Systematic Debugging Plan for BitNet-rs Garbling Issue
 
 **Date**: 2025-10-24
 **Analysis Session**: Agent-based systematic exploration

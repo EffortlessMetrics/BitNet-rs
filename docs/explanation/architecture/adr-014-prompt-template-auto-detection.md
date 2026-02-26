@@ -5,7 +5,7 @@
 
 ## Context
 
-BitNet.rs neural network inference currently requires manual prompt template specification via `--prompt-template`, creating friction for users migrating from other LLM frameworks (OpenAI, Anthropic, llama.cpp, Ollama). Users must manually determine if a model needs `raw`, `instruct`, or `llama3-chat` formatting, leading to:
+BitNet-rs neural network inference currently requires manual prompt template specification via `--prompt-template`, creating friction for users migrating from other LLM frameworks (OpenAI, Anthropic, llama.cpp, Ollama). Users must manually determine if a model needs `raw`, `instruct`, or `llama3-chat` formatting, leading to:
 
 - **User Friction**: Manual template selection requires understanding model architecture
 - **Error-Prone**: Incorrect template selection results in poor generation quality

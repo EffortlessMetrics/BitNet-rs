@@ -119,7 +119,7 @@ cargo clippy --workspace --all-targets --no-default-features --features gpu -- -
 **Conditional Compilation:**
 - Proper `#[cfg(feature = "...")]` usage confirmed
 - No feature flag mismatches detected
-- BitNet.rs neural network quantization modules validated with appropriate lint allowances
+- BitNet-rs neural network quantization modules validated with appropriate lint allowances
 
 ---
 

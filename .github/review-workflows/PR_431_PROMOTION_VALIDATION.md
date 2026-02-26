@@ -47,7 +47,7 @@ cargo fmt --all --check
 Result: All files formatted correctly (0 violations)
 ```
 
-**Validation**: ✅ Code formatting complies with BitNet.rs standards
+**Validation**: ✅ Code formatting complies with bitnet-rs standards
 
 ---
 
@@ -454,6 +454,6 @@ evidence: 7 microloop reports + ledger + final sanity checks
 ---
 
 **Promotion Approval**: 2025-10-04
-**Validator**: promotion-validator (BitNet.rs)
+**Validator**: promotion-validator (bitnet-rs)
 **Next Agent**: ready-promoter (GitHub PR status update)
 **Evidence**: This report + review summary + 7 microloop reports

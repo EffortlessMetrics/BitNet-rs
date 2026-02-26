@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The BitNet.rs CI is **ready for integration** of 7 new jobs (feature matrix testing and guards).
+The BitNet-rs CI is **ready for integration** of 7 new jobs (feature matrix testing and guards).
 
 **Key Findings**:
 - ✅ All YAML fragments prepared and validated

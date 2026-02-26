@@ -1,12 +1,12 @@
 //! Basic BitNet Rust Example - AFTER Migration
 //!
 //! This is the migrated Rust implementation that replaces the C++ version.
-//! It demonstrates modern Rust patterns and BitNet.rs usage.
+//! It demonstrates modern Rust patterns and bitnet-rs usage.
 
 use anyhow::{Context, Result};
 use std::path::Path;
 
-// Placeholder BitNet.rs types - in real implementation these would come from the bitnet crate
+// Placeholder bitnet-rs types - in real implementation these would come from the bitnet crate
 #[derive(Debug)]
 pub struct BitNetModel {
     path: String,
@@ -43,7 +43,7 @@ pub enum Device {
     Gpu(usize),
 }
 
-// Placeholder implementations - in real code these would be actual BitNet.rs implementations
+// Placeholder implementations - in real code these would be actual bitnet-rs implementations
 impl BitNetModel {
     pub fn load<P: AsRef<Path>>(model_path: P, _device: &Device) -> Result<Self> {
         let path = model_path.as_ref().to_string_lossy().to_string();
@@ -68,7 +68,7 @@ impl InferenceEngine {
         println!("Generating with prompt: '{}'", prompt);
         println!("Max tokens: {}, Temperature: {}", config.max_tokens, config.temperature);
 
-        // Simulate generation - in real implementation this would call actual BitNet.rs
+        // Simulate generation - in real implementation this would call actual bitnet-rs
         let response = format!(
             "This is a generated response from the Rust implementation for prompt: '{}'",
             prompt

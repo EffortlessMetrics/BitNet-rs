@@ -1,4 +1,4 @@
-# BitNet.rs TDD Scaffold Implementation Sprint #3 - Completion Report
+# BitNet-rs TDD Scaffold Implementation Sprint #3 - Completion Report
 
 **Sprint Date**: 2025-10-20 (Sprint #3)
 **Sprint Goal**: Build out remaining TDD test scaffolds with focused, single-task implementation agents
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This sprint successfully completed **13 focused TDD scaffold implementations** across BitNet.rs neural network inference, GGUF weight loading, and quantization test suites. By launching **one agent per test scaffold** (not per file), we achieved high completion rates with each agent having a narrow, achievable scope.
+This sprint successfully completed **13 focused TDD scaffold implementations** across BitNet-rs neural network inference, GGUF weight loading, and quantization test suites. By launching **one agent per test scaffold** (not per file), we achieved high completion rates with each agent having a narrow, achievable scope.
 
 ### Key Metrics
 
@@ -132,7 +132,7 @@ This sprint successfully completed **13 focused TDD scaffold implementations** a
 - **Features**:
   - All three quantization types (I2S, TL1, TL2) validated
   - Accuracy >99% for all types
-  - Uses BitNet.rs quantization APIs
+  - Uses BitNet-rs quantization APIs
 - **Test Result**: `ok. 1 passed; 0 failed; 0 ignored; finished in 0.35s`
 
 #### 11. ✅ AC5: Performance Target Validation (Agent #11)
@@ -463,7 +463,7 @@ These tests are correctly revealing real limitations, not bugs:
 
 - ✅ 9 tests passing without #[ignore]
 - ✅ 2 tests in TDD Red phase (revealing real limitations)
-- ✅ 18 new helper functions following BitNet.rs patterns
+- ✅ 18 new helper functions following BitNet-rs patterns
 - ✅ Proper error handling (Result<_, Error>, not panics)
 - ✅ Feature-gated (CPU/GPU) architecture
 - ✅ Comprehensive error scenarios tested

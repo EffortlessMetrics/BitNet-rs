@@ -132,4 +132,4 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml'))"
 
 - **Exploration Plan**: `ci/exploration/PR3_perf_receipts_plan.md`
 - **CI Workflow**: `.github/workflows/ci.yml` (line 160-183)
-- **BitNet.rs CLAUDE.md**: Performance testing and CI integration sections
+- **BitNet-rs CLAUDE.md**: Performance testing and CI integration sections

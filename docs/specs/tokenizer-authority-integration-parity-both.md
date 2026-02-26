@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-This specification defines the integration of TokenizerAuthority metadata into parity-both dual-lane cross-validation receipts for BitNet.rs. TokenizerAuthority captures complete tokenizer provenance (source, file hash, config hash, token count) to ensure receipt reproducibility and enable systematic tokenizer parity validation across BitNet.cpp and llama.cpp backends.
+This specification defines the integration of TokenizerAuthority metadata into parity-both dual-lane cross-validation receipts for BitNet-rs. TokenizerAuthority captures complete tokenizer provenance (source, file hash, config hash, token count) to ensure receipt reproducibility and enable systematic tokenizer parity validation across BitNet.cpp and llama.cpp backends.
 
 ### 1.1 Problem Statement
 
@@ -779,4 +779,4 @@ Validate: validate_tokenizer_consistency(auth_a, auth_b)
 
 ---
 
-**Specification Complete**: This document provides comprehensive technical guidance for TokenizerAuthority integration in parity-both dual-lane cross-validation receipts, ensuring reproducibility, consistency validation, and backward-compatible schema evolution for BitNet.rs neural network inference engine.
+**Specification Complete**: This document provides comprehensive technical guidance for TokenizerAuthority integration in parity-both dual-lane cross-validation receipts, ensuring reproducibility, consistency validation, and backward-compatible schema evolution for BitNet-rs neural network inference engine.

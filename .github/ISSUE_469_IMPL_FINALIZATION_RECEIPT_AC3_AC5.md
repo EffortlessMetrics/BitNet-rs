@@ -58,7 +58,7 @@
 - **Status:** pass
 - **Build time:** 13.28s
 
-## BitNet.rs-Specific Validations
+## bitnet-rs-Specific Validations
 
 ### Error Handling Patterns
 - **Status:** validated
@@ -120,7 +120,7 @@ All pre-commit checks passed:
 **Route:** FINALIZE → impl-creator
 **Reason:** Implementation validation complete, continue with remaining ACs
 **State:** ready
-**Why:** AC3 and AC5 validated against BitNet.rs standards, all quality gates passed
+**Why:** AC3 and AC5 validated against bitnet-rs standards, all quality gates passed
 **Next:** Implement AC6 (Strict Loader Tests), AC4 (CI Smoke), AC7 (Documentation), AC8 (Parity Receipts)
 
 ## Ledger Update Requirements
@@ -134,4 +134,4 @@ All pre-commit checks passed:
 impl-finalizer validated AC3+AC5 implementation (TDD compliance, build success, quality gates)
 
 **Decision Entry:**
-State: ready, Why: AC3+AC5 validated against BitNet.rs standards, Next: FINALIZE → impl-creator (continue with AC6, AC4, AC7, AC8)
+State: ready, Why: AC3+AC5 validated against bitnet-rs standards, Next: FINALIZE → impl-creator (continue with AC6, AC4, AC7, AC8)

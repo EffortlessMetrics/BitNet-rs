@@ -1,6 +1,6 @@
-# BitNet.rs Compatibility
+# BitNet-rs Compatibility
 
-This document defines the compatibility contracts that BitNet.rs maintains. Any changes that break these contracts are considered breaking changes and will be avoided or require a major version bump.
+This document defines the compatibility contracts that BitNet-rs maintains. Any changes that break these contracts are considered breaking changes and will be avoided or require a major version bump.
 
 ## 🔒 API Stability
 
@@ -75,7 +75,7 @@ We guarantee to handle ALL of the following tokenizer types:
 We **explicitly guarantee** to handle some tokenizers that break llama.cpp:
 
 ```yaml
-# This configuration breaks llama.cpp but MUST work in BitNet.rs
+# This configuration breaks llama.cpp but MUST work in BitNet-rs
 tokenizer.ggml.model: gpt2
 tokenizer.ggml.pre: <missing>  # llama.cpp fails here
 ```
@@ -102,7 +102,7 @@ We guarantee to load:
 
 ### FFI Bridge Architecture (New in v1.x)
 
-BitNet.rs includes a comprehensive FFI bridge for gradual migration from C++ implementations:
+BitNet-rs includes a comprehensive FFI bridge for gradual migration from C++ implementations:
 
 - **Quantization Bridge**: Complete support for I2S, TL1, and TL2 quantization via C++ kernels
 - **Performance Validation**: Built-in tools for comparing FFI vs Rust quantization accuracy and performance
@@ -119,7 +119,7 @@ The FFI bridge ensures that:
 
 ### GGUF Format Support
 
-- **GGUF v2 and v3 headers**: BitNet.rs accepts both versions with enhanced validation and defensive parsing
+- **GGUF v2 and v3 headers**: BitNet-rs accepts both versions with enhanced validation and defensive parsing
   - **v2**: Full support with 32-byte default alignment and comprehensive tensor alignment validation
   - **v3 Standard**: Full support with alignment and data_offset fields plus enhanced metadata consistency checks
   - **v3 Early Variant**: ✅ **NEW** - Handles files missing alignment/data_offset fields (e.g., Microsoft BitNet models)
@@ -208,7 +208,7 @@ To be clear, we do NOT guarantee:
 
 ## 🔄 Migration Promise
 
-We promise that migrating from llama.cpp to BitNet.rs will always be:
+We promise that migrating from llama.cpp to BitNet-rs will always be:
 
 ### For C/C++ users:
 ```c
@@ -292,7 +292,7 @@ This guarantee ensures:
 
 ## 🏆 Compatibility Advantages
 
-BitNet.rs provides these advantages while maintaining compatibility:
+BitNet-rs provides these advantages while maintaining compatibility:
 
 1. **Memory safety** - No segfaults, guaranteed by Rust
 2. **Better error messages** - Clear, actionable error messages
@@ -305,7 +305,7 @@ BitNet.rs provides these advantages while maintaining compatibility:
 
 ### Drop-in Replacement Validation (2025-08-22)
 
-BitNet.rs has been **validated as a superior drop-in replacement** for bitnet.cpp:
+BitNet-rs has been **validated as a superior drop-in replacement** for bitnet.cpp:
 
 | Test | Result | Details |
 |------|--------|---------|
@@ -344,7 +344,7 @@ BitNet.rs has been **validated as a superior drop-in replacement** for bitnet.cp
 - **Deterministic replay** from artifacts
 
 **Key Achievements**:
-1. BitNet.rs successfully loads the Microsoft BitNet model (GGUF v3 early variant) that causes the C++ implementation to crash
+1. BitNet-rs successfully loads the Microsoft BitNet model (GGUF v3 early variant) that causes the C++ implementation to crash
 2. Complete validation framework with tokenizer → logit → NLL parity testing
 3. Robust handling of quantization effects without false positives
 4. **FFI Quantization Bridge**: Gradual migration support with C++ kernel integration ensuring functionality preservation during transition
@@ -376,4 +376,4 @@ If you find a compatibility issue:
 
 ---
 
-**The Bottom Line:** If your code works with llama.cpp or llama-cpp-python today, it will work with BitNet.rs tomorrow, next month, and next year. That's our promise.
+**The Bottom Line:** If your code works with llama.cpp or llama-cpp-python today, it will work with BitNet-rs tomorrow, next month, and next year. That's our promise.

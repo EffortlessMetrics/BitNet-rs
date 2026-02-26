@@ -135,13 +135,13 @@ cargo run -p xtask -- verify-receipt --path ci/inference.json
 - ✅ Documentation complete (13/13 doctests, 4/4 links valid, 95% coverage)
 - ✅ Test coverage adequate (449/450 tests, 99.8%)
 - ✅ Zero security vulnerabilities (cargo audit clean)
-- ✅ BitNet.rs neural network policies satisfied
+- ✅ BitNet-rs neural network policies satisfied
 - ✅ Throughput SLO maintained (overhead 0.02% of 10s SLO)
 - ✅ Branch fresh against origin/main (merge-base: d00bdca, 0 behind)
 - ✅ CI integration verified (model-gates.yml)
 - ✅ Receipt schema v1.0.0 validated
 
-### BitNet.rs Quality Standards ✅
+### BitNet-rs Quality Standards ✅
 
 **Inference SLO** ✅
 - Requirement: ≤10 seconds for standard models
@@ -179,7 +179,7 @@ cargo run -p xtask -- verify-receipt --path ci/inference.json
 5. ✅ Documentation comprehensive (13/13 doctests, 4/4 links valid)
 6. ✅ Security clean (0 vulnerabilities, 0 new unsafe blocks)
 7. ✅ CI integration verified (model-gates.yml workflow)
-8. ✅ BitNet.rs neural network policies satisfied
+8. ✅ BitNet-rs neural network policies satisfied
 9. ✅ No blocking issues identified
 
 **Alternative Routes Considered**:
@@ -258,7 +258,7 @@ Docs: 13/13 doctests pass (100%), 4/4 links valid
 
 ### Comprehensive Validation Receipt
 
-**Evidence Grammar** (BitNet.rs format):
+**Evidence Grammar** (BitNet-rs format):
 - **freshness**: base: origin/main @d00bdca, merge-base: d00bdca (fresh)
 - **tests**: cargo test: 449/450 pass (99.8%), xtask: 27/28 pass (96.4%)
 - **throughput**: infrastructure-only: kernel recording <1ms (15 inline calls), receipt: 436 bytes, verification: 0ms (offline), total overhead: <2ms (0.02% of 10s SLO)
@@ -302,7 +302,7 @@ Docs: 13/13 doctests pass (100%), 4/4 links valid
 
 **All Quality Gates**: ✅ PASS (9/9)
 
-**BitNet.rs Standards**: ✅ SATISFIED
+**BitNet-rs Standards**: ✅ SATISFIED
 
 **Blocking Issues**: None
 
@@ -312,4 +312,4 @@ Docs: 13/13 doctests pass (100%), 4/4 links valid
 
 **Validation Complete**: PR #452 ready for merge to main ✅
 **Integrative Flow Gate**: All checkpoints satisfied ✅
-**BitNet.rs Production Readiness**: Receipt verification infrastructure validated ✅
+**BitNet-rs Production Readiness**: Receipt verification infrastructure validated ✅

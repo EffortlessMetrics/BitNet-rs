@@ -1,6 +1,6 @@
 # Getting Started with Tokenizer Auto-Discovery
 
-This tutorial will guide you through using BitNet.rs's intelligent tokenizer discovery system with real GGUF neural network models. You'll learn how to automatically find, download, and integrate tokenizers for production-ready neural network inference with actual trained weights.
+This tutorial will guide you through using bitnet-rs's intelligent tokenizer discovery system with real GGUF neural network models. You'll learn how to automatically find, download, and integrate tokenizers for production-ready neural network inference with actual trained weights.
 
 ## What You'll Learn
 
@@ -12,7 +12,7 @@ This tutorial will guide you through using BitNet.rs's intelligent tokenizer dis
 
 ## Prerequisites
 
-- BitNet.rs workspace properly installed
+- bitnet-rs workspace properly installed
 - Basic familiarity with GGUF model format
 - Understanding of neural network tokenization concepts
 
@@ -33,7 +33,7 @@ cargo run -p xtask -- infer \
 
 **What happens behind the scenes:**
 
-1. BitNet.rs analyzes the GGUF model metadata
+1. bitnet-rs analyzes the GGUF model metadata
 2. Extracts vocabulary size (32,000 for LLaMA-2) and model type ("llama")
 3. Checks for co-located tokenizer files in the model directory
 4. If not found, automatically downloads the compatible tokenizer from HuggingFace Hub
@@ -41,7 +41,7 @@ cargo run -p xtask -- infer \
 
 ## Step 2: Understanding Tokenizer Strategies
 
-BitNet.rs uses different strategies based on what it finds:
+bitnet-rs uses different strategies based on what it finds:
 
 ### Strategy 1: Co-located Tokenizer (Preferred)
 
@@ -352,4 +352,4 @@ You've learned how to:
 - ✅ Troubleshoot common issues
 - ✅ Use advanced programmatic APIs
 
-The tokenizer discovery system makes BitNet.rs inference seamless across different neural network architectures while maintaining production-grade reliability and performance.
+The tokenizer discovery system makes bitnet-rs inference seamless across different neural network architectures while maintaining production-grade reliability and performance.

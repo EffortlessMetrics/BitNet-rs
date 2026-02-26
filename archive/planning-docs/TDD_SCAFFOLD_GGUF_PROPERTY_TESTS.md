@@ -232,7 +232,7 @@ RUST_LOG=proptest=debug cargo test -p bitnet-models --features cpu \
 **Crates needed**:
 - `proptest` (already in Cargo.toml)
 - `sysinfo` (for memory tracking)
-- BitNet.rs quantization APIs from `bitnet-quantization` crate
+- BitNet-rs quantization APIs from `bitnet-quantization` crate
 
 ## Success Metrics
 

@@ -1,6 +1,6 @@
 # BitNet.cpp Integration - Documentation Index
 
-This directory contains comprehensive documentation on how BitNet.rs integrates with Microsoft's BitNet C++ implementation via FFI (Foreign Function Interface).
+This directory contains comprehensive documentation on how BitNet-rs integrates with Microsoft's BitNet C++ implementation via FFI (Foreign Function Interface).
 
 ## Quick Start
 

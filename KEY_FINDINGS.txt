@@ -226,11 +226,11 @@ Category 2: Preflight Validation (⚠️ IGNORED - requires libs)
 - test_preflight_llama_available()
 - Status: Gracefully skip if libs missing
 
-Category 3: Lane A - BitNet.rs vs bitnet.cpp (⚠️ IGNORED - requires model)
+Category 3: Lane A - BitNet-rs vs bitnet.cpp (⚠️ IGNORED - requires model)
 - test_lane_a_bitnet_crossval()
 - Status: Scaffolding, TODO when BitNet.cpp wrapper ready
 
-Category 4: Lane B - BitNet.rs vs llama.cpp (⚠️ IGNORED - requires model)
+Category 4: Lane B - BitNet-rs vs llama.cpp (⚠️ IGNORED - requires model)
 - test_lane_b_llama_crossval()
 - Status: Scaffolding, TODO when session handling complete
 

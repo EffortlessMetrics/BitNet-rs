@@ -12,7 +12,7 @@
 
 ## Gate Summary
 
-Comprehensive documentation validation confirms PR #466 meets all BitNet.rs documentation standards for neural network inference system.
+Comprehensive documentation validation confirms PR #466 meets all BitNet-rs documentation standards for neural network inference system.
 
 **Overall Result:** ✅ PASS (All checks green)
 
@@ -226,7 +226,7 @@ cargo run -p xtask -- benchmark --model models/test.gguf --deterministic
 | Created | 2025-10-16T05:30:00Z |
 | Completed | 2025-10-16T05:30:00Z |
 | Duration | ~15 minutes |
-| Agent | BitNet.rs Documentation Validation Agent (Haiku 4.5) |
+| Agent | BitNet-rs Documentation Validation Agent (Haiku 4.5) |
 
 ---
 

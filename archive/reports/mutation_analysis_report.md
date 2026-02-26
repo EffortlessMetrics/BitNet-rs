@@ -1,4 +1,4 @@
-## BitNet.rs Mutation Testing Analysis Report
+## BitNet-rs Mutation Testing Analysis Report
 
 ### Executive Summary
 **Mutation Testing Status**: ⚠️ **NEEDS IMPROVEMENT** - Estimated Score: ~65-70%

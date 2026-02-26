@@ -586,4 +586,4 @@ mod integration_tests {
 
 ## Additional Context
 
-This enhancement is crucial for automatically optimizing BitNet.rs performance on tensor core capable hardware while maintaining compatibility with older GPU architectures. The implementation should provide detailed capability information for further optimization decisions throughout the inference pipeline.
+This enhancement is crucial for automatically optimizing BitNet-rs performance on tensor core capable hardware while maintaining compatibility with older GPU architectures. The implementation should provide detailed capability information for further optimization decisions throughout the inference pipeline.

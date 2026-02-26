@@ -3,7 +3,7 @@
 //! Tests feature spec: neural-network-operation-requirements.md#device-aware-optimization-requirements
 //! Tests API contract: real-model-api-contracts.md#quantization-format-support
 //!
-//! This module validates REAL mixed precision GPU kernels for BitNet.rs quantized neural network inference.
+//! This module validates REAL mixed precision GPU kernels for BitNet-rs quantized neural network inference.
 //! All tests use actual GPU providers when available and fail in strict mode if mocks are detected.
 
 mod support;
@@ -13,12 +13,12 @@ use std::env;
 #[allow(unused_imports)]
 use support::{ComputeReceipt, EnvVarGuard};
 
-// Real BitNet.rs kernel API imports
+// Real BitNet-rs kernel API imports
 #[cfg(feature = "gpu")]
 #[allow(unused_imports)]
 use bitnet_kernels::{KernelManager, KernelProvider};
 
-/// Real precision modes supported by BitNet.rs
+/// Real precision modes supported by BitNet-rs
 #[cfg(feature = "gpu")]
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum PrecisionMode {

@@ -4,7 +4,7 @@
 **PR**: #473 (feat/mvp-finalization)
 **Branch**: feat/mvp-finalization
 **Current HEAD**: ad2bb224 (fix(clippy): apply automatic lints to pass strict validation)
-**Validator**: BitNet.rs Pre-Merge Readiness Validator
+**Validator**: BitNet-rs Pre-Merge Readiness Validator
 **Flow**: integrative
 
 ---

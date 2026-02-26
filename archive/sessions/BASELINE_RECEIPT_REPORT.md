@@ -1,4 +1,4 @@
-# BitNet.rs CPU Inference Baseline Performance Receipt
+# BitNet-rs CPU Inference Baseline Performance Receipt
 
 **Generated**: 2025-10-23T00:38:00Z
 **Flow**: generative
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-A performance baseline has been successfully established for the BitNet.rs CPU inference engine using deterministic greedy sampling with fixed seed=42. The receipt validates all quantization formats, model loading, and deterministic reproducibility requirements.
+A performance baseline has been successfully established for the BitNet-rs CPU inference engine using deterministic greedy sampling with fixed seed=42. The receipt validates all quantization formats, model loading, and deterministic reproducibility requirements.
 
 **Key Metrics**:
 - **Throughput**: 0.016 tokens/sec (MVP scalar kernels)

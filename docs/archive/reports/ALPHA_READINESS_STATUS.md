@@ -14,14 +14,14 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Alpha Readiness Status Report
+# BitNet-rs Alpha Readiness Status Report
 
 **Date**: 2025-08-23
 **Assessment**: **NOT READY FOR ALPHA** ❌
 
 ## Executive Summary
 
-The BitNet.rs project has comprehensive validation infrastructure in place but critical functionality issues prevent achieving "working alpha" status as defined in the acceptance criteria.
+The BitNet-rs project has comprehensive validation infrastructure in place but critical functionality issues prevent achieving "working alpha" status as defined in the acceptance criteria.
 
 ## Infrastructure Status ✅
 

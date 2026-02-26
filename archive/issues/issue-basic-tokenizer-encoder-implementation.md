@@ -451,7 +451,7 @@ mod tests {
 }
 ```
 
-## BitNet.rs Integration Notes
+## BitNet-rs Integration Notes
 
 ### Tokenizer Discovery Integration
 - Integrate with existing tokenizer discovery system

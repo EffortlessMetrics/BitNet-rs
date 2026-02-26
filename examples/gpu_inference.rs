@@ -1,4 +1,4 @@
-//! GPU inference example using BitNet.rs with CUDA acceleration
+//! GPU inference example using bitnet-rs with CUDA acceleration
 //!
 //! This example demonstrates how to use GPU acceleration for faster inference.
 

@@ -47,7 +47,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 echo -e "${CYAN}╔══════════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║          BitNet.rs Release Preparation v$VERSION          ║${NC}"
+echo -e "${CYAN}║          BitNet-rs Release Preparation v$VERSION          ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════════╝${NC}"
 echo
 
@@ -256,13 +256,13 @@ git push origin v$VERSION
 ### 5. Create GitHub Release
 1. Go to: https://github.com/yourusername/BitNet-rs/releases/new
 2. Select tag: v$VERSION
-3. Title: BitNet.rs v$VERSION
+3. Title: BitNet-rs v$VERSION
 4. Attach: \`bitnet-rs-v${VERSION}-artifacts.tar.gz\`
 5. Copy release notes from this checklist
 
 ## Release Notes Template
 
-### 🎉 BitNet.rs v$VERSION
+### 🎉 BitNet-rs v$VERSION
 
 #### ✨ Highlights
 - Full dual-format support (SafeTensors + GGUF)

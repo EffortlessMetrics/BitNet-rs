@@ -1,4 +1,4 @@
-# BitNet.rs Cross-Validation Infrastructure Exploration Report
+# BitNet-rs Cross-Validation Infrastructure Exploration Report
 
 **Date**: 2025-10-24  
 **Thoroughness Level**: Medium  
@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-The BitNet.rs cross-validation infrastructure is **95% production-ready** with the following critical state:
+The BitNet-rs cross-validation infrastructure is **95% production-ready** with the following critical state:
 
 ### What's Already Implemented
 
@@ -534,7 +534,7 @@ assert_eq!(rust_embeddings, cpp_embeddings);
 
 ## Conclusion
 
-The BitNet.rs cross-validation infrastructure is **nearly complete and production-ready** for:
+The BitNet-rs cross-validation infrastructure is **nearly complete and production-ready** for:
 - ✅ Logits comparison at each token position
 - ✅ Divergence detection via cosine similarity
 - ✅ Per-token tracing and analysis

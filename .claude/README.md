@@ -1,8 +1,8 @@
-# BitNet.rs Claude Agent System
+# BitNet-rs Claude Agent System
 
 ## Overview
 
-This directory contains specialized Claude agents designed for BitNet.rs PR review workflow. The system provides comprehensive PR review automation with GitHub integration, local verification (since CI billing is disabled), and documentation maintenance.
+This directory contains specialized Claude agents designed for BitNet-rs PR review workflow. The system provides comprehensive PR review automation with GitHub integration, local verification (since CI billing is disabled), and documentation maintenance.
 
 ## Agent Architecture
 
@@ -27,7 +27,7 @@ Analysis   Validation Analysis   Resolution  Preparation              Finalizati
 | **pr-merge** | Merge execution | git, GitHub CLI | Successful merge & cleanup |
 | **pr-doc-finalize** | Documentation updates | editing, validation tools | Updated documentation following Diátaxis |
 
-## BitNet.rs Integration
+## BitNet-rs Integration
 
 ### Tooling Alignment
 - **Just**: Primary workflow automation (`just cpu`, `just ci`, `just crossval`)
@@ -104,7 +104,7 @@ Each agent ends with clear guidance for the orchestrator:
 
 ### Environment Variables
 ```bash
-# BitNet.rs specific
+# BitNet-rs specific
 export BITNET_DETERMINISTIC=1        # Deterministic testing
 export BITNET_SEED=42                # Reproducible results
 export RAYON_NUM_THREADS=1           # Single-threaded for determinism
@@ -166,7 +166,7 @@ Each agent can be customized by editing its markdown file:
 
 1. **Tools Available**: Modify tool permissions and capabilities
 2. **Responsibilities**: Adjust scope and focus areas
-3. **Commands**: Update BitNet.rs specific tooling commands
+3. **Commands**: Update BitNet-rs specific tooling commands
 4. **Decision Matrix**: Modify flow logic and criteria
 5. **Success Criteria**: Adjust quality gates and requirements
 

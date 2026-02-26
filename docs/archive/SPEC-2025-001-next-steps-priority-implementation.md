@@ -1,4 +1,4 @@
-# SPEC-2025-001: Priority Implementation Tasks for BitNet.rs Post-PR-475
+# SPEC-2025-001: Priority Implementation Tasks for BitNet-rs Post-PR-475
 
 **Created**: 2025-10-23
 **Status**: Draft
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This specification analyzes four high-priority user stories for BitNet.rs following the successful merge of PR #475 (comprehensive integration with QK256 AVX2, EnvGuard isolation, receipts, strict mode, and GGUF fixtures). These stories focus on **test infrastructure hardening**, **documentation consolidation**, and **build system hygiene** to establish a production-grade foundation for neural network inference.
+This specification analyzes four high-priority user stories for BitNet-rs following the successful merge of PR #475 (comprehensive integration with QK256 AVX2, EnvGuard isolation, receipts, strict mode, and GGUF fixtures). These stories focus on **test infrastructure hardening**, **documentation consolidation**, and **build system hygiene** to establish a production-grade foundation for neural network inference.
 
 **Key Priorities:**
 1. **Real GGUF fixtures** - Persistent disk-based fixtures for CI/CD stability
@@ -955,7 +955,7 @@ Story 4 (FFI)
 
 ---
 
-## BitNet.rs Alignment Verification
+## BitNet-rs Alignment Verification
 
 ### TDD Practices
 - ✅ **Story 1**: Fixtures enable faster test iteration (reduce generation overhead)

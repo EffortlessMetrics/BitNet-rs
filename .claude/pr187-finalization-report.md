@@ -4,7 +4,7 @@
 
 **STATUS: ✅ READY FOR MERGE**
 
-PR #187 "Call engine prefill during batch inference" has successfully passed comprehensive local validation. All core functionality works correctly, code quality standards are met, and the implementation follows BitNet.rs best practices.
+PR #187 "Call engine prefill during batch inference" has successfully passed comprehensive local validation. All core functionality works correctly, code quality standards are met, and the implementation follows BitNet-rs best practices.
 
 ## Validation Overview
 
@@ -160,6 +160,6 @@ unsafe {
 
 ## Conclusion
 
-PR #187 successfully implements explicit prefill functionality in batch inference with proper performance measurement and maintains all BitNet.rs quality standards. The implementation is safe, efficient, and follows established architectural patterns.
+PR #187 successfully implements explicit prefill functionality in batch inference with proper performance measurement and maintains all BitNet-rs quality standards. The implementation is safe, efficient, and follows established architectural patterns.
 
 **RECOMMENDATION: APPROVE AND MERGE**

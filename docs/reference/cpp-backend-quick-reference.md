@@ -1,7 +1,7 @@
 # C++ Backend Detection - Quick Reference Guide
 
 ## Overview
-This quick reference shows how to implement C++ backend detection following BitNet.rs patterns.
+This quick reference shows how to implement C++ backend detection following BitNet-rs patterns.
 
 ## Quick Pattern Reference
 

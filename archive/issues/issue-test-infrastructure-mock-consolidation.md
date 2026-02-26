@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-BitNet.rs test suite suffers from extensive code duplication and fragmented mock object implementations across multiple modules. Five critical test infrastructure issues require systematic resolution:
+BitNet-rs test suite suffers from extensive code duplication and fragmented mock object implementations across multiple modules. Five critical test infrastructure issues require systematic resolution:
 
 1. **Duplicate Mock Objects**: `MockModel` and `MockTokenizer` implementations duplicated across `engine.rs`, `production_engine.rs`, and `backends.rs`
 2. **Inconsistent Mock Implementations**: Mock objects have different capabilities and interfaces across modules
@@ -625,13 +625,13 @@ fn test_mock_discovery_error_scenarios() {
 
 ## Related Issues
 
-- BitNet.rs #260: Mock elimination project (complementary work)
-- BitNet.rs #251: Production-ready inference server (benefits from better testing)
-- BitNet.rs #218: Device-aware quantization system (requires proper testing)
+- BitNet-rs #260: Mock elimination project (complementary work)
+- BitNet-rs #251: Production-ready inference server (benefits from better testing)
+- BitNet-rs #218: Device-aware quantization system (requires proper testing)
 
 ## Implementation Notes
 
-### BitNet.rs Integration
+### BitNet-rs Integration
 - Maintain compatibility with existing feature flag architecture (`--features cpu,gpu`)
 - Integrate with `crossval` framework for reference implementation testing
 - Use existing error handling patterns with `anyhow`

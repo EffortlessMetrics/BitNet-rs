@@ -1,6 +1,6 @@
 # Server Migration Example
 
-This example demonstrates migrating from a C++ HTTP server to a high-performance Rust server using BitNet.rs.
+This example demonstrates migrating from a C++ HTTP server to a high-performance Rust server using bitnet-rs.
 
 ## Overview
 
@@ -495,7 +495,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# BitNet.rs core
+# bitnet-rs core
 bitnet-inference = { path = "../../crates/bitnet-inference" }
 
 # Async runtime and web framework

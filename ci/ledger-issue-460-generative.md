@@ -25,9 +25,9 @@
 <!-- hoplog:start -->
 ## Hop Log
 
-- **spec-finalizer (T7)**: 2025-10-14T08:07:49Z → Specification validation complete • All 6 files committed (3,437 lines) • Documentation structure compliant (Diátaxis) • API contracts verified (BitNet.rs workspace) • Scope minimal and specific (Issue #453) • TDD compliance verified (feature-gated tests) • Schema validation PASS (zero conflicts) • Commit: 47eea54 • FINALIZE: test-creator (ready for TDD implementation)
-- **quality-guard**: 2025-10-14T12:15:00Z → Comprehensive quality review complete • All gates PASS (format, clippy CPU/GPU, tests 18/18, patterns, implementation, performance, security) • All 7 ACs implemented correctly with quality avg 4.8/5.0 • BitNet.rs standards compliant • Commit: d596c7f • FINALIZE: impl-finalizer (ready for finalization)
-- **impl-finalizer**: 2025-10-14T14:22:00Z → Implementation validation complete • TDD compliance verified (18/18 tests pass, 100%) • Build validated (CPU+GPU success) • Format clean (cargo fmt compliant) • Lint clean (0 warnings CPU+GPU) • Fix-forward applied (clippy dead_code annotations, commit 0a460e0) • All 7 ACs satisfied • BitNet.rs standards compliant • Ready for refinement phase
+- **spec-finalizer (T7)**: 2025-10-14T08:07:49Z → Specification validation complete • All 6 files committed (3,437 lines) • Documentation structure compliant (Diátaxis) • API contracts verified (BitNet-rs workspace) • Scope minimal and specific (Issue #453) • TDD compliance verified (feature-gated tests) • Schema validation PASS (zero conflicts) • Commit: 47eea54 • FINALIZE: test-creator (ready for TDD implementation)
+- **quality-guard**: 2025-10-14T12:15:00Z → Comprehensive quality review complete • All gates PASS (format, clippy CPU/GPU, tests 18/18, patterns, implementation, performance, security) • All 7 ACs implemented correctly with quality avg 4.8/5.0 • BitNet-rs standards compliant • Commit: d596c7f • FINALIZE: impl-finalizer (ready for finalization)
+- **impl-finalizer**: 2025-10-14T14:22:00Z → Implementation validation complete • TDD compliance verified (18/18 tests pass, 100%) • Build validated (CPU+GPU success) • Format clean (cargo fmt compliant) • Lint clean (0 warnings CPU+GPU) • Fix-forward applied (clippy dead_code annotations, commit 0a460e0) • All 7 ACs satisfied • BitNet-rs standards compliant • Ready for refinement phase
 <!-- hoplog:end -->
 
 ---
@@ -37,7 +37,7 @@
 
 **State:** ready-for-refinement
 
-**Why:** Implementation validation complete with all quality gates passing. TDD compliance verified: 18/18 tests pass (100% pass rate) with proper // AC:ID tags and feature-gated execution (cpu/gpu). Build validation: CPU and GPU builds successful across entire BitNet.rs workspace. Code hygiene: cargo fmt compliant (0 formatting issues), clippy 0 warnings for both CPU and GPU feature combinations. Fix-forward applied: mechanical clippy fixes for AC7/AC8 test helper dead code annotations (commit 0a460e0). All 7 acceptance criteria fully satisfied with implementation quality avg 4.8/5.0. Performance overhead acceptable: debug <0.1%, strict mode <1%, receipt 0%. BitNet.rs standards: feature flags correct (--no-default-features), error handling compliant (anyhow::Result), quantization patterns preserved (I2S/TL1/TL2), device-aware logic maintained, MSRV 1.90.0 compatible. Modified files: 11 files total (1,450 lines) including implementation (6 files, 559 lines) + test fixtures (5 files, 891 lines). Ready for code refinement phase to enhance readability, optimize performance hot paths, and polish documentation.
+**Why:** Implementation validation complete with all quality gates passing. TDD compliance verified: 18/18 tests pass (100% pass rate) with proper // AC:ID tags and feature-gated execution (cpu/gpu). Build validation: CPU and GPU builds successful across entire BitNet-rs workspace. Code hygiene: cargo fmt compliant (0 formatting issues), clippy 0 warnings for both CPU and GPU feature combinations. Fix-forward applied: mechanical clippy fixes for AC7/AC8 test helper dead code annotations (commit 0a460e0). All 7 acceptance criteria fully satisfied with implementation quality avg 4.8/5.0. Performance overhead acceptable: debug <0.1%, strict mode <1%, receipt 0%. BitNet-rs standards: feature flags correct (--no-default-features), error handling compliant (anyhow::Result), quantization patterns preserved (I2S/TL1/TL2), device-aware logic maintained, MSRV 1.90.0 compatible. Modified files: 11 files total (1,450 lines) including implementation (6 files, 559 lines) + test fixtures (5 files, 891 lines). Ready for code refinement phase to enhance readability, optimize performance hot paths, and polish documentation.
 
 **Next:** FINALIZE → code-refiner (polish implementation for production quality)
 <!-- decision:end -->
@@ -49,13 +49,13 @@
 ### Feature Specification (916 lines)
 - **File**: `docs/explanation/strict-quantization-guards.md`
 - **Type**: Explanation (Diátaxis)
-- **Audience**: BitNet.rs developers implementing quantization validation
+- **Audience**: BitNet-rs developers implementing quantization validation
 - **Content**: 7 acceptance criteria, technical architecture, implementation roadmap, testing strategy
 
 ### API Contracts (1,150 lines)
 - **File**: `docs/reference/strict-mode-api.md`
 - **Type**: Reference (Diátaxis)
-- **Audience**: BitNet.rs developers implementing strict mode validation
+- **Audience**: BitNet-rs developers implementing strict mode validation
 - **Content**: Rust type signatures, environment variables, receipt schema v1.1.0, kernel ID naming conventions
 
 ### Architecture Decision Records (1,371 lines)
@@ -90,7 +90,7 @@
 - ✅ Feature spec in `docs/explanation/` (Explanation category)
 - ✅ API contracts in `docs/reference/` (Reference category)
 - ✅ ADRs in `docs/explanation/architecture/` (Architecture decisions)
-- ✅ Clear audience targeting (BitNet.rs developers)
+- ✅ Clear audience targeting (BitNet-rs developers)
 
 **Cross-Reference Integrity:**
 - ✅ Feature spec cross-links to API contracts
@@ -100,7 +100,7 @@
 
 ### API Contract Validity ✅
 
-**BitNet.rs Workspace Integration:**
+**BitNet-rs Workspace Integration:**
 - ✅ `StrictModeConfig` extends existing `bitnet-common` types
 - ✅ `BitNetError::StrictMode` variant aligns with error patterns
 - ✅ Receipt schema v1.1.0 backward compatible with v1.0.0
@@ -114,7 +114,7 @@
 
 ### Scope Validation ✅
 
-**BitNet.rs Crate Alignment:**
+**BitNet-rs Crate Alignment:**
 - ✅ `bitnet-inference`: Primary implementation (quantized_linear.rs, attention.rs)
 - ✅ `bitnet-common`: Strict mode configuration and error types
 - ✅ `bitnet-kernels`: Kernel availability queries
@@ -194,7 +194,7 @@ Architecture Decision Records (4 ADRs, 1,371 lines):
 - ADR-012: Kernel ID naming conventions (quantized vs fallback)
 - ADR-013: FP32 fallback detection mechanisms
 
-BitNet.rs Compliance:
+BitNet-rs Compliance:
 - Quantization: I2S (99.8%), TL1 (99.6%), TL2 (99.6%)
 - Feature flags: --no-default-features --features cpu|gpu
 - Cross-validation: C++ reference parity within 1e-5
@@ -265,7 +265,7 @@ Related: Issue #453, PR #452, Issue #439
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 **MSRV**: 1.90.0 (Rust 2024 edition)
 **Feature Flags**: Always specify `--no-default-features --features cpu|gpu`
@@ -295,7 +295,7 @@ Related: Issue #453, PR #452, Issue #439
 1. **Integration tests** with cross-validation
 2. **Receipt verification** with CI integration
 3. **Documentation updates** for troubleshooting guide
-4. **Final validation** against BitNet.rs quality standards
+4. **Final validation** against BitNet-rs quality standards
 
 ---
 
@@ -310,10 +310,10 @@ Related: Issue #453, PR #452, Issue #439
 
 **Check Run Summary**:
 ```
-Specification Validation Complete: All 6 specification files validated and committed successfully to the BitNet.rs repository following Generative flow standards.
+Specification Validation Complete: All 6 specification files validated and committed successfully to the BitNet-rs repository following Generative flow standards.
 
 ✅ Documentation Structure: Compliant with Diátaxis framework
-✅ API Contract Validity: Aligned with BitNet.rs workspace patterns
+✅ API Contract Validity: Aligned with BitNet-rs workspace patterns
 ✅ Scope Validation: Minimal and specific to Issue #453 requirements
 ✅ TDD Compliance: Feature-gated test patterns with // AC:ID tags
 ✅ Schema Validation: Zero conflicts detected (v1.0.0 → v1.1.0)
@@ -331,7 +331,7 @@ FINALIZE → test-creator (ready for TDD implementation)
 **Comprehensive Specification Receipt**:
 - **Documentation Structure**: Diátaxis compliant (Explanation + Reference + Architecture)
 - **API Contract Validity**: StrictModeConfig, BitNetError::StrictMode, Receipt v1.1.0 verified
-- **Scope Validation**: BitNet.rs crates (bitnet-inference, bitnet-common, bitnet-kernels, xtask)
+- **Scope Validation**: BitNet-rs crates (bitnet-inference, bitnet-common, bitnet-kernels, xtask)
 - **TDD Compliance**: 7 acceptance criteria with // AC:ID tags, feature-gated tests (cpu/gpu)
 - **Schema Validation**: v1.0.0 → v1.1.0 backward compatible, zero conflicts detected
 - **Commit**: 47eea54dcabae46899df99e2cd6694a70191fac8 (6 files, 3,437 lines)
@@ -341,5 +341,5 @@ FINALIZE → test-creator (ready for TDD implementation)
 ---
 
 **Generative Flow Status**: Spec gate complete ✅
-**BitNet.rs Compliance**: Neural network feature specification standards satisfied ✅
+**BitNet-rs Compliance**: Neural network feature specification standards satisfied ✅
 **Routing**: FINALIZE → test-creator (TDD implementation with // AC:ID tags) ✅

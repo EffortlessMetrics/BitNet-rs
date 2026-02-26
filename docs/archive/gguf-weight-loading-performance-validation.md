@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document specifies comprehensive performance benchmarks, validation criteria, and cross-validation requirements for GGUF model weight loading in BitNet.rs. These specifications ensure production-ready performance, numerical accuracy, and compatibility with C++ reference implementations.
+This document specifies comprehensive performance benchmarks, validation criteria, and cross-validation requirements for GGUF model weight loading in BitNet-rs. These specifications ensure production-ready performance, numerical accuracy, and compatibility with C++ reference implementations.
 
 ## Performance Requirements
 
@@ -942,4 +942,4 @@ This comprehensive performance and validation specification provides:
 6. **Automated benchmarking** for continuous performance assessment
 7. **Regression testing** for CI/CD integration
 
-All specifications align with the acceptance criteria from Issue #159 and provide measurable targets for production-ready GGUF weight loading in BitNet.rs.
+All specifications align with the acceptance criteria from Issue #159 and provide measurable targets for production-ready GGUF weight loading in BitNet-rs.

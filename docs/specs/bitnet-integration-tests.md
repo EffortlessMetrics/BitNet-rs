@@ -11,7 +11,7 @@ This specification defines comprehensive end-to-end integration tests for valida
 
 ## Executive Summary
 
-The BitNet.rs cross-validation infrastructure implements dual-backend support (BitNet.cpp + llama.cpp) with sophisticated auto-detection and configuration. However, the current test coverage focuses on unit-level detection logic without validating the complete integration flow. This specification addresses the gap by defining integration tests that validate:
+The BitNet-rs cross-validation infrastructure implements dual-backend support (BitNet.cpp + llama.cpp) with sophisticated auto-detection and configuration. However, the current test coverage focuses on unit-level detection logic without validating the complete integration flow. This specification addresses the gap by defining integration tests that validate:
 
 1. **Library detection** across multiple directory layouts
 2. **RPATH embedding** in built binaries (Linux/macOS)

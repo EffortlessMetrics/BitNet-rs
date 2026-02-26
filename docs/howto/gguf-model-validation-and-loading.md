@@ -1,10 +1,10 @@
 # How to Validate and Load GGUF Models
 
-This guide provides step-by-step instructions for validating GGUF model files and loading them with BitNet.rs's production-ready weight loading system. You'll learn how to ensure model compatibility, validate tensor completeness, and troubleshoot common issues.
+This guide provides step-by-step instructions for validating GGUF model files and loading them with BitNet-rs's production-ready weight loading system. You'll learn how to ensure model compatibility, validate tensor completeness, and troubleshoot common issues.
 
 ## Overview
 
-BitNet.rs provides comprehensive GGUF validation and loading capabilities:
+BitNet-rs provides comprehensive GGUF validation and loading capabilities:
 
 - **Pre-loading Validation**: Check GGUF compatibility before resource allocation
 - **Tensor Completeness**: Verify all required transformer weights are present
@@ -533,4 +533,4 @@ This guide covered:
 - ✅ **Performance optimization** with memory-efficient loading
 - ✅ **Testing strategies** for robust model validation
 
-With these techniques, you can reliably validate and load GGUF models with BitNet.rs's production-ready weight loading system, ensuring both correctness and security for neural network inference applications.
+With these techniques, you can reliably validate and load GGUF models with BitNet-rs's production-ready weight loading system, ensuring both correctness and security for neural network inference applications.

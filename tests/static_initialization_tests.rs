@@ -852,7 +852,7 @@ fn test_no_once_cell_dependencies() {
 #[test]
 fn test_no_lazy_static_dependencies() {
     // This test verifies that lazy_static was never introduced
-    // (BitNet.rs never used lazy_static directly)
+    // (BitNet-rs never used lazy_static directly)
 
     use std::fs;
     use std::path::Path;

@@ -1,7 +1,7 @@
 /**
- * BitNet.rs C Compatibility Demo
+ * BitNet-rs C Compatibility Demo
  *
- * This example shows that llama.cpp code works unchanged with BitNet.rs.
+ * This example shows that llama.cpp code works unchanged with BitNet-rs.
  * Compile with: gcc c_compatibility_demo.c -lbitnet_ffi -o demo
  */
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     const char* model_path = argv[1];
 
     printf("===========================================\n");
-    printf("BitNet.rs - llama.cpp Compatible C Demo\n");
+    printf("BitNet-rs - llama.cpp Compatible C Demo\n");
     printf("===========================================\n\n");
 
     // Initialize backend (compatible with llama.cpp)
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
 
     if (!model) {
         fprintf(stderr, "❌ Failed to load model\n");
-        fprintf(stderr, "   Note: BitNet.rs can load models that llama.cpp can't!\n");
+        fprintf(stderr, "   Note: BitNet-rs can load models that llama.cpp can't!\n");
         return 1;
     }
 
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     );
 
     if (n_tokens < 0) {
-        // BitNet.rs provides better error codes
+        // BitNet-rs provides better error codes
         switch (n_tokens) {
             case -1:
                 fprintf(stderr, "❌ Generic tokenization error\n");
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
                 break;
             case -3:
                 fprintf(stderr, "❌ Tokenization failed\n");
-                fprintf(stderr, "   Note: BitNet.rs handles GPT-2 tokenizers that break llama.cpp!\n");
+                fprintf(stderr, "   Note: BitNet-rs handles GPT-2 tokenizers that break llama.cpp!\n");
                 break;
             default:
                 if (n_tokens < -3) {
@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
 
     printf("\n===========================================\n");
     printf("✅ Demo completed successfully!\n");
-    printf("\nBitNet.rs advantages demonstrated:\n");
+    printf("\nBitNet-rs advantages demonstrated:\n");
     printf("  • 100% compatible with llama.cpp API\n");
     printf("  • Handles models that break llama.cpp\n");
     printf("  • Memory safe (no segfaults)\n");

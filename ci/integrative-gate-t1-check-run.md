@@ -100,7 +100,7 @@ cargo clippy --workspace --lib --all-features -- -D warnings
 
 ---
 
-## BitNet.rs Neural Network Context
+## BitNet-rs Neural Network Context
 
 ### Workspace Validation
 - **Neural Network Crates:** All production crates compile cleanly
@@ -205,7 +205,7 @@ audit: clean (0 advisories, 727 deps)
 
 ## Quality Assurance
 
-### BitNet.rs Cargo Commands
+### BitNet-rs Cargo Commands
 - ✅ Proper feature flags used (--no-default-features --features cpu)
 - ✅ Workspace-level validation executed
 - ✅ Neural network crate context verified

@@ -14,7 +14,7 @@
 
 ✅ **Final pre-publication validation COMPLETE**
 
-All BitNet.rs generative flow quality gates passing. Branch `feat/issue-465-cpu-path-followup` is publication-ready with comprehensive neural network validation.
+All BitNet-rs generative flow quality gates passing. Branch `feat/issue-465-cpu-path-followup` is publication-ready with comprehensive neural network validation.
 
 **Routing**: `FINALIZE → pr-publisher` (Microloop 8 - Publication)
 
@@ -45,7 +45,7 @@ All BitNet.rs generative flow quality gates passing. Branch `feat/issue-465-cpu-
 
 ---
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
 ### Quantization Evidence
 

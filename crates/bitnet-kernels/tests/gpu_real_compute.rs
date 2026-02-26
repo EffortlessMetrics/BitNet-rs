@@ -1,4 +1,4 @@
-//! Real GPU Compute Validation for BitNet.rs Issue #260
+//! Real GPU Compute Validation for BitNet-rs Issue #260
 //!
 //! This module validates REAL quantized neural network computation without mock fallbacks.
 //! Tests fail in strict mode if mock providers are returned.

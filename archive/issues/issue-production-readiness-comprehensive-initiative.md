@@ -2,11 +2,11 @@
 
 ## Problem Description
 
-BitNet.rs currently contains 57+ identified stub implementations, dead code, hardcoded values, and mock objects that prevent production deployment. This meta-issue tracks the comprehensive production readiness initiative required to transform BitNet.rs from a development prototype into a production-ready neural network inference system.
+BitNet-rs currently contains 57+ identified stub implementations, dead code, hardcoded values, and mock objects that prevent production deployment. This meta-issue tracks the comprehensive production readiness initiative required to transform BitNet-rs from a development prototype into a production-ready neural network inference system.
 
 ## Environment
 
-- **Repository**: BitNet.rs neural network inference codebase
+- **Repository**: BitNet-rs neural network inference codebase
 - **Language**: Rust 1.90.0+ (2024 edition)
 - **Features**: `cpu`, `gpu`, `ffi`, `crossval`
 - **Dependencies**: CUDA toolkit, OpenTelemetry ecosystem, candle-core

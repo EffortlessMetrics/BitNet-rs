@@ -1,9 +1,9 @@
 # Check Run: generative:gate:publication
 
-**Gate:** Publication Readiness Validation (BitNet.rs Generative Flow)
+**Gate:** Publication Readiness Validation (bitnet-rs Generative Flow)
 **Status:** ✅ **PASS**
 **Timestamp:** 2025-10-14T15:30:00Z
-**Validator:** publication-validator (BitNet.rs Generative PR Readiness Validator)
+**Validator:** publication-validator (bitnet-rs Generative PR Readiness Validator)
 **Branch:** feat/issue-453-strict-quantization-guards
 **PR:** #461
 **Issue:** #453
@@ -13,7 +13,7 @@
 
 ## Executive Summary
 
-PR #461 **PASSES** all BitNet.rs Generative flow publication requirements and is **READY FOR REVIEW**. All neural network quality standards met, commit patterns follow conventions, generative gate receipts complete, and BitNet.rs quantization API contracts validated.
+PR #461 **PASSES** all bitnet-rs Generative flow publication requirements and is **READY FOR REVIEW**. All neural network quality standards met, commit patterns follow conventions, generative gate receipts complete, and bitnet-rs quantization API contracts validated.
 
 **Merge Readiness:** ✅ **APPROVED**
 
@@ -22,18 +22,18 @@ PR #461 **PASSES** all BitNet.rs Generative flow publication requirements and is
 - ✅ **Neural Network Documentation:** Complete (3 new + 4 updated Diátaxis files)
 - ✅ **Rust Workspace:** 100% compliant (feature flags, Cargo hygiene)
 - ✅ **Generative Gate Receipts:** 3/3 present (prep, docs, security)
-- ✅ **BitNet.rs Standards:** Full compliance (quantization, GGUF, TDD)
+- ✅ **bitnet-rs Standards:** Full compliance (quantization, GGUF, TDD)
 - ✅ **Tests:** 44/44 passing (100% - 37 strict quantization + 7 accuracy)
 
 ---
 
-## 1. BitNet.rs Commit Patterns Validation
+## 1. bitnet-rs Commit Patterns Validation
 
 **Status:** ✅ **PASS**
 
 ### Semantic Commits with Neural Network Context
 
-All 6 commits follow BitNet.rs conventions with proper prefixes and neural network context:
+All 6 commits follow bitnet-rs conventions with proper prefixes and neural network context:
 
 ```
 47eea54 docs(spec): add strict quantization guards specification for Issue #453
@@ -54,7 +54,7 @@ a91c38f docs(ci): update Ledger with impl-finalizer validation complete
 - Quantization guards reference (I2S/TL1/TL2)
 - Strict mode enforcement mentions
 - Acceptance criteria traceability
-- BitNet.rs compliance notes
+- bitnet-rs compliance notes
 
 **Evidence:** All commit messages include:
 - Issue reference (#453)
@@ -236,7 +236,7 @@ All receipts follow standardized format:
 
 ---
 
-## 5. BitNet.rs Standards Validation
+## 5. bitnet-rs Standards Validation
 
 **Status:** ✅ **PASS**
 
@@ -421,7 +421,7 @@ quantization: I2S: 99.2%, TL1: 98.8%, TL2: 98.5% accuracy; CPU/GPU device-aware
 | **2. Neural Network Documentation** | ✅ PASS | 7/7 (3 new + 4 updated) | 0 |
 | **3. Rust Workspace** | ✅ PASS | 100% | 0 |
 | **4. Generative Gate Receipts** | ✅ PASS | 3/3 | 0 |
-| **5. BitNet.rs Standards** | ✅ PASS | 44/44 tests | 0 |
+| **5. bitnet-rs Standards** | ✅ PASS | 44/44 tests | 0 |
 
 ### Blocking Issues
 
@@ -493,7 +493,7 @@ All validation areas pass with zero blockers.
 
 ---
 
-## BitNet.rs Generative Flow Compliance
+## bitnet-rs Generative Flow Compliance
 
 ### Flow Requirements Met
 
@@ -510,7 +510,7 @@ All validation areas pass with zero blockers.
    - docs:, test:, fix:, chore: patterns followed
    - Neural network feature descriptions included
 
-4. ✅ **BitNet.rs template complete**
+4. ✅ **bitnet-rs template complete**
    - Story: Neural network feature with quantization impact
    - Acceptance Criteria: TDD-compliant, feature-gated
    - Scope: Rust workspace boundaries aligned
@@ -518,14 +518,14 @@ All validation areas pass with zero blockers.
 
 5. ✅ **Generative gate validation**
    - All microloop gates show `pass` status
-   - BitNet.rs-specific validations complete
+   - bitnet-rs-specific validations complete
    - GitHub-native status communication
 
 6. ✅ **Quality validation**
    - Neural network implementation follows TDD
    - Quantization types properly tested
    - GPU/CPU feature compatibility verified
-   - Documentation references BitNet.rs standards
+   - Documentation references bitnet-rs standards
 
 ---
 
@@ -540,11 +540,11 @@ All validation areas pass with zero blockers.
 ### Rationale
 
 1. **All validation areas pass** with zero blocking issues
-2. **Commit patterns** follow BitNet.rs conventions (6/6 semantic)
+2. **Commit patterns** follow bitnet-rs conventions (6/6 semantic)
 3. **Neural network documentation** complete (3 new + 4 updated Diátaxis)
 4. **Rust workspace** 100% compliant (feature flags, Cargo hygiene)
 5. **Generative gate receipts** complete (3/3 present with evidence)
-6. **BitNet.rs standards** fully met (quantization, GGUF, TDD)
+6. **bitnet-rs standards** fully met (quantization, GGUF, TDD)
 7. **Test coverage** exceptional (44/44 tests pass - 100%)
 8. **API contracts** additive only (non-breaking changes)
 9. **Quality gates** all pass (format, clippy, build, security)
@@ -567,7 +567,7 @@ Specification → Implementation → Testing → Documentation → Validation
 - 100% test pass rate (44/44 tests)
 - Complete documentation (Diátaxis compliant)
 - All generative gates pass
-- BitNet.rs standards fully met
+- bitnet-rs standards fully met
 - Neural network context thoroughly documented
 - API contracts validated and additive only
 
@@ -588,7 +588,7 @@ Specification → Implementation → Testing → Documentation → Validation
 **Status:** `pass`
 **Conclusion:** ready_for_review
 **Flow:** generative
-**Agent:** publication-validator (BitNet.rs Generative PR Readiness Validator)
+**Agent:** publication-validator (bitnet-rs Generative PR Readiness Validator)
 **Schema Version:** 1.0.0
 **Evidence Files:**
 - ci/generative-gate-prep-check-run.md

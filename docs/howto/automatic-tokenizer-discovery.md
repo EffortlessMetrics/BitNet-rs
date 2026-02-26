@@ -2,7 +2,7 @@
 
 **Problem**: You want to run neural network inference without manually specifying tokenizer files.
 
-**Solution**: Use BitNet.rs automatic tokenizer discovery to extract tokenizers from GGUF metadata.
+**Solution**: Use BitNet-rs automatic tokenizer discovery to extract tokenizers from GGUF metadata.
 
 **Time Required**: 5 minutes
 
@@ -10,14 +10,14 @@
 
 ## Prerequisites
 
-- BitNet.rs installed (`cargo build --no-default-features --features cpu`)
+- BitNet-rs installed (`cargo build --no-default-features --features cpu`)
 - GGUF model file (e.g., from HuggingFace Hub)
 
 ---
 
 ## Step 1: Basic Automatic Discovery
 
-The simplest approach lets BitNet.rs handle everything:
+The simplest approach lets BitNet-rs handle everything:
 
 ```bash
 # Download model with embedded tokenizer
@@ -28,7 +28,7 @@ cargo run -p xtask -- infer --model models/microsoft-bitnet-b1.58-2B-4T-gguf/ggm
 ```
 
 **What Happens**:
-1. BitNet.rs opens GGUF file with memory mapping
+1. BitNet-rs opens GGUF file with memory mapping
 2. Extracts tokenizer from `tokenizer.json` or `tokenizer.ggml.tokens` metadata
 3. Detects model architecture (BitNet, LLaMA, GPT-2, etc.)
 4. Applies model-specific tokenizer configuration
@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Step 3: Inspect Discovery Results
 
-See what BitNet.rs discovered:
+See what BitNet-rs discovered:
 
 ```bash
 # Verify model and show tokenizer metadata
@@ -93,13 +93,13 @@ fn inspect_discovery() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Step 4: Handle Fallback Scenarios
 
-If GGUF doesn't have embedded tokenizer, BitNet.rs uses fallback chain:
+If GGUF doesn't have embedded tokenizer, BitNet-rs uses fallback chain:
 
 ```bash
 # Place tokenizer.json in same directory as model.gguf
 cp tokenizer.json /path/to/models/
 
-# BitNet.rs automatically finds co-located tokenizer
+# BitNet-rs automatically finds co-located tokenizer
 cargo run -p xtask -- infer --model /path/to/models/model.gguf --prompt "Test"
 ```
 

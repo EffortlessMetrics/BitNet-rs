@@ -1,8 +1,8 @@
-# BitNet.rs Feature Flag Comprehensive Guide (VALID Pattern)
+# BitNet-rs Feature Flag Comprehensive Guide (VALID Pattern)
 
 ## Feature Flag Philosophy
 
-BitNet.rs uses **empty default features** to ensure explicit dependency control and prevent bloat. You must always specify features:
+BitNet-rs uses **empty default features** to ensure explicit dependency control and prevent bloat. You must always specify features:
 
 ```bash
 cargo build --no-default-features --features cpu|gpu

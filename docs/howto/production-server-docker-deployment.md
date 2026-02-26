@@ -1,6 +1,6 @@
-# Deploy BitNet.rs Production Inference Server with Docker
+# Deploy BitNet-rs Production Inference Server with Docker
 
-This guide shows how to deploy the BitNet.rs production inference server using Docker containers for both CPU and GPU environments.
+This guide shows how to deploy the BitNet-rs production inference server using Docker containers for both CPU and GPU environments.
 
 ## Prerequisites
 
@@ -119,7 +119,7 @@ docker build \
 
 ### Environment Variables
 
-BitNet.rs server supports extensive configuration through environment variables:
+BitNet-rs server supports extensive configuration through environment variables:
 
 #### Core Configuration
 
@@ -698,5 +698,5 @@ jobs:
 
 - **Docker Documentation**: https://docs.docker.com/
 - **NVIDIA Container Toolkit**: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/
-- **BitNet.rs Repository**: https://github.com/EffortlessMetrics/BitNet-rs
+- **BitNet-rs Repository**: https://github.com/EffortlessMetrics/BitNet-rs
 - **GGUF Format**: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md

@@ -1,8 +1,8 @@
 //! Dual-backend cross-validation integration tests
 //!
 //! This test suite validates the dual-backend cross-validation infrastructure:
-//! - Lane A: BitNet.rs vs bitnet.cpp (BitNet models)
-//! - Lane B: BitNet.rs vs llama.cpp (LLaMA models)
+//! - Lane A: bitnet-rs vs bitnet.cpp (BitNet models)
+//! - Lane B: bitnet-rs vs llama.cpp (LLaMA models)
 //!
 //! ## Test Coverage
 //!
@@ -209,7 +209,7 @@ fn test_preflight_env_var_reporting() {
 }
 
 // ============================================================================
-// CATEGORY 3: Lane A - BitNet.rs vs bitnet.cpp (Ignored - Requires Model)
+// CATEGORY 3: Lane A - bitnet-rs vs bitnet.cpp (Ignored - Requires Model)
 // ============================================================================
 
 /// Tests feature spec: dual-backend-crossval.md#lane-a-bitnet
@@ -276,7 +276,7 @@ fn test_lane_a_bitnet_crossval() {
         return;
     }
 
-    eprintln!("✓ Lane A: BitNet.rs vs bitnet.cpp");
+    eprintln!("✓ Lane A: bitnet-rs vs bitnet.cpp");
     eprintln!("  Model: {}", model_path);
     eprintln!("  Tokenizer: {}", tokenizer_path);
 
@@ -311,7 +311,7 @@ fn test_lane_a_bitnet_crossval() {
 }
 
 // ============================================================================
-// CATEGORY 4: Lane B - BitNet.rs vs llama.cpp (Ignored - Requires Model)
+// CATEGORY 4: Lane B - bitnet-rs vs llama.cpp (Ignored - Requires Model)
 // ============================================================================
 
 /// Tests feature spec: dual-backend-crossval.md#lane-b-llama
@@ -377,7 +377,7 @@ fn test_lane_b_llama_crossval() {
         return;
     }
 
-    eprintln!("✓ Lane B: BitNet.rs vs llama.cpp");
+    eprintln!("✓ Lane B: bitnet-rs vs llama.cpp");
     eprintln!("  Model: {}", model_path);
     eprintln!("  Tokenizer: {}", tokenizer_path);
 

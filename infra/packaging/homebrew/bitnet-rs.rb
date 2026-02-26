@@ -1,4 +1,4 @@
-# Homebrew Formula for BitNet.rs
+# Homebrew Formula for bitnet-rs
 # This formula will be submitted to homebrew-core once stable
 
 class BitnetRs < Formula

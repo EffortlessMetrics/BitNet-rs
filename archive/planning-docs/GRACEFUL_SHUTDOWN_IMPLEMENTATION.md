@@ -1,8 +1,8 @@
-# Graceful Shutdown Implementation for BitNet.rs Server
+# Graceful Shutdown Implementation for BitNet-rs Server
 
 ## Summary
 
-Implemented graceful shutdown mechanics for the BitNet.rs server that handles shutdown cleanly without dropping active requests.
+Implemented graceful shutdown mechanics for the BitNet-rs server that handles shutdown cleanly without dropping active requests.
 
 ## Implementation Overview
 

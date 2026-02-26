@@ -59,7 +59,7 @@ body:
         User story in standard format:
         As a **[role]**, I want **[feature]**, so that **[benefit]**.
       placeholder: |
-        As a **BitNet.rs developer**, I want **[feature description]**, so that **[benefit to users/developers]**.
+        As a **bitnet-rs developer**, I want **[feature description]**, so that **[benefit to users/developers]**.
     validations:
       required: true
 

@@ -311,7 +311,7 @@ mod tests {
 }
 ```
 
-## BitNet.rs Integration Notes
+## BitNet-rs Integration Notes
 
 ### CUDA Feature Flag Integration
 ```rust

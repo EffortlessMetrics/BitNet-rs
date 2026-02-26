@@ -124,7 +124,7 @@
 
 ### 11. `run_bitnet_inference()` ✅
 - **File**: `crates/bitnet-inference/tests/ac4_cross_validation_accuracy.rs:535-595`
-- **Purpose**: BitNet.rs inference for cross-validation
+- **Purpose**: BitNet-rs inference for cross-validation
 - **Features**:
   - Auto-discover tokenizer
   - KV cache setup
@@ -259,7 +259,7 @@
 ## Implementation Patterns
 
 ### 1. **TDD Scaffolding Pattern**
-All implementations follow the BitNet.rs TDD pattern:
+All implementations follow the BitNet-rs TDD pattern:
 - Start with `unimplemented!()` scaffolds
 - Implement minimal working version (MVP)
 - Add comprehensive TODOs for future enhancement
@@ -409,7 +409,7 @@ Every scaffold includes:
 
 ## Conclusion
 
-**All 21 TDD scaffolds have been successfully implemented** following BitNet.rs architectural patterns and code quality standards. The implementations provide:
+**All 21 TDD scaffolds have been successfully implemented** following BitNet-rs architectural patterns and code quality standards. The implementations provide:
 
 1. ✅ **Complete test infrastructure** for inference, cross-validation, and server testing
 2. ✅ **Production-quality code** with proper error handling and documentation

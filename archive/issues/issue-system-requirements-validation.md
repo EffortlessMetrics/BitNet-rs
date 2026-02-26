@@ -265,7 +265,7 @@ nvml-wrapper = { version = "0.10", optional = true }
 ## Related Issues
 
 - GPU memory management improvements
-- Error handling standardization across BitNet.rs
+- Error handling standardization across BitNet-rs
 - Performance monitoring and alerting integration
 - Production deployment best practices documentation
 

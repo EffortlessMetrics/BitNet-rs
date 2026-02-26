@@ -192,18 +192,18 @@ async fn ac4_download_retry_logic() {
     }
 }
 
-/// AC4: Test integration with existing BitNet.rs download infrastructure
+/// AC4: Test integration with existing BitNet-rs download infrastructure
 /// Tests feature spec: issue-336-universal-tokenizer-discovery-spec.md#ac4-smart-download-integration
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
 async fn ac4_bitnet_download_infrastructure_integration() {
-    // Test that SmartTokenizerDownload integrates with BitNet.rs infrastructure
+    // Test that SmartTokenizerDownload integrates with BitNet-rs infrastructure
     let downloader_result = SmartTokenizerDownload::new();
 
     match downloader_result {
         Ok(downloader) => {
-            println!("AC4: Downloader integrated with BitNet.rs infrastructure");
+            println!("AC4: Downloader integrated with BitNet-rs infrastructure");
 
             // Test infrastructure compatibility
             let _supports_downloads = cfg!(feature = "downloads");

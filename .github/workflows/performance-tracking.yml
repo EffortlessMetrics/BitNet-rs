@@ -415,7 +415,7 @@ jobs:
         echo "Generating comprehensive performance summary..."
 
         cat > performance-summary.md << 'EOF'
-        # 🚀 BitNet.rs Performance Summary
+        # 🚀 bitnet-rs Performance Summary
 
         **Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
         **Commit**: ${{ github.sha }}

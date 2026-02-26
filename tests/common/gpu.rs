@@ -1,4 +1,4 @@
-//! GPU test utilities for BitNet.rs
+//! GPU test utilities for BitNet-rs
 //!
 //! This module provides utilities for GPU tests to skip cleanly on CPU-only machines.
 

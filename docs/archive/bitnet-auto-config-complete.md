@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully orchestrated a comprehensive multi-agent workflow to achieve complete BitNet.cpp auto-configuration parity with llama.cpp in BitNet.rs. Delivered 5 architectural specifications, 7 test suites with 133+ tests, and 8 parallel implementations.
+Successfully orchestrated a comprehensive multi-agent workflow to achieve complete BitNet.cpp auto-configuration parity with llama.cpp in BitNet-rs. Delivered 5 architectural specifications, 7 test suites with 133+ tests, and 8 parallel implementations.
 
 ### Mission Accomplished (5 Phases Complete)
 
@@ -316,7 +316,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 
 ---
 
-## Specification Alignment with BitNet.rs Patterns
+## Specification Alignment with BitNet-rs Patterns
 
 ✅ **Feature-Gated**: All implementations respect `--no-default-features --features cpu|gpu|crossval-all`
 ✅ **Device-Aware**: Maintains existing CPU/GPU selection logic
@@ -344,7 +344,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 - **Code Quality**: Zero clippy warnings with `-D warnings`
 - **Documentation**: 15 exploration documents + 5 specs + this summary
 
-**BitNet.rs Compliance**:
+**BitNet-rs Compliance**:
 - **Storage**: ✅ Follows `docs/specs/` pattern
 - **TDD**: ✅ Specification-first approach
 - **Pipeline**: ✅ Detection → Build → Runtime validated

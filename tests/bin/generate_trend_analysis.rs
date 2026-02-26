@@ -108,7 +108,7 @@ async fn generate_summary_report(
 ) -> Result<()> {
     let mut summary = String::new();
 
-    summary.push_str("# BitNet.rs Test Trend Summary\n\n");
+    summary.push_str("# BitNet-rs Test Trend Summary\n\n");
     summary.push_str(&format!("**Analysis Period:** {} days\n", report.period_days));
     summary.push_str(&format!("**Total Entries:** {}\n", report.total_entries));
     summary.push_str(&format!(

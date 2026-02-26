@@ -71,7 +71,7 @@ The `issue_465_test_utils.rs` module provides reusable test infrastructure:
 - Comprehensive parameter validation
 - Unit tests for critical functions (3 tests)
 
-## Mutation Testing Standards (BitNet.rs)
+## Mutation Testing Standards (BitNet-rs)
 
 For reference, if production code had been changed, the following thresholds would apply:
 
@@ -139,7 +139,7 @@ alternative_validation: test structure analysis, edge case coverage verification
 
 ## References
 
-- **BitNet.rs Mutation Testing Standards:** `docs/development/test-suite.md`
+- **BitNet-rs Mutation Testing Standards:** `docs/development/test-suite.md`
 - **Issue #465 Specification:** `ci/receipts/issue-465/LEDGER.md`
 - **Test Suite Documentation:** `tests/README.md`
 - **Validation Gates:** `docs/reference/validation-gates.md`

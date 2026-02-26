@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-This specification defines the complete implementation of real neural network inference in BitNet.rs, replacing mock implementations with actual transformer computation using quantized weights. The implementation leverages existing infrastructure (GGUF loading, I2S/TL1/TL2 quantization, universal tokenizers) while introducing production-grade transformer blocks, attention mechanisms, and autoregressive generation.
+This specification defines the complete implementation of real neural network inference in BitNet-rs, replacing mock implementations with actual transformer computation using quantized weights. The implementation leverages existing infrastructure (GGUF loading, I2S/TL1/TL2 quantization, universal tokenizers) while introducing production-grade transformer blocks, attention mechanisms, and autoregressive generation.
 
 **Key Deliverables:**
 - Production-grade BitNetTransformer with quantized linear layers
@@ -840,4 +840,4 @@ jobs:
 5. **Integration**: xtask commands work with real models, no mock placeholders
 6. **Documentation**: API docs, examples, and troubleshooting guides complete
 
-This specification transforms BitNet.rs from a quantization infrastructure with mock inference into a production-grade neural network inference engine capable of real-time text generation with state-of-the-art 1-bit quantization.
+This specification transforms BitNet-rs from a quantization infrastructure with mock inference into a production-grade neural network inference engine capable of real-time text generation with state-of-the-art 1-bit quantization.

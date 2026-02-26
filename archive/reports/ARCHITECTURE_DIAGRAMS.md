@@ -1,4 +1,4 @@
-# BitNet.rs Architecture Diagrams
+# BitNet-rs Architecture Diagrams
 
 Visual representation of current architecture and data flows.
 

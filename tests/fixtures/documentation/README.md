@@ -33,7 +33,7 @@ Validate that documentation uses **standardized feature flag examples** and avoi
 4. **`invalid_bare_features.md`**
    - ✗ Uses `--features cpu` without `--no-default-features`
    - ✗ No explanation of empty default features
-   - ✗ Inconsistent with BitNet.rs standards
+   - ✗ Inconsistent with BitNet-rs standards
    - Tests: AC7 validation should detect bare features
 
 ## Testing Usage

@@ -1,7 +1,7 @@
 //! Enhanced Error Handling Demonstration
 //!
 //! This example demonstrates the enhanced error handling capabilities
-//! implemented for the BitNet.rs testing framework.
+//! implemented for the BitNet-rs testing framework.
 
 #![allow(dead_code, unused_imports, unused_mut)]
 
@@ -12,7 +12,7 @@ use bitnet::testing::errors::TestError;
 
 #[cfg(feature = "examples")]
 fn main() {
-    println!("🚀 BitNet.rs Enhanced Error Handling Demo");
+    println!("🚀 BitNet-rs Enhanced Error Handling Demo");
     println!("==========================================\n");
 
     // Demonstrate different error types with enhanced information

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Comprehensive security audit for BitNet.rs
+# Comprehensive security audit for BitNet-rs
 # Validates security practices and identifies potential vulnerabilities
 
 set -euo pipefail
 
-echo "🔒 Security Audit for BitNet.rs"
+echo "🔒 Security Audit for BitNet-rs"
 echo "==============================="
 
 # Colors for output
@@ -298,7 +298,7 @@ generate_security_report() {
     local report_file="security_audit_report.md"
 
     cat > "$report_file" << EOF
-# BitNet.rs Security Audit Report
+# BitNet-rs Security Audit Report
 
 Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 

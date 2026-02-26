@@ -1,6 +1,6 @@
 # Test Templates and Examples
 
-This document provides copy-paste templates for common testing scenarios in BitNet.rs.
+This document provides copy-paste templates for common testing scenarios in BitNet-rs.
 
 ## Unit Test Templates
 
@@ -536,4 +536,4 @@ fn create_large_test_data() -> Vec<u8> {
 - **Cleanup**: Use RAII patterns or testing utilities for automatic cleanup
 - **Documentation**: Add comments explaining complex test logic
 
-These templates provide a solid starting point for most testing scenarios in BitNet.rs. Customize them based on your specific needs and refer to the [Test Authoring Guide](test-authoring-guide.md) for more advanced patterns.
+These templates provide a solid starting point for most testing scenarios in BitNet-rs. Customize them based on your specific needs and refer to the [Test Authoring Guide](test-authoring-guide.md) for more advanced patterns.

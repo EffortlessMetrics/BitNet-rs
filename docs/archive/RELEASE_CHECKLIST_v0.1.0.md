@@ -194,7 +194,7 @@ Draft release notes with:
 ```markdown
 # v0.1.0 - Q&A-Ready MVP
 
-First public release of BitNet.rs, a high-performance Rust implementation of BitNet 1-bit LLM inference.
+First public release of BitNet-rs, a high-performance Rust implementation of BitNet 1-bit LLM inference.
 
 ## Highlights
 

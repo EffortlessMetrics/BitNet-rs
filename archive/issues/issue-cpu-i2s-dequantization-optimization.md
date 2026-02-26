@@ -240,7 +240,7 @@ fn test_dequantization_accuracy() {
 }
 ```
 
-## BitNet.rs Integration Notes
+## BitNet-rs Integration Notes
 
 ### Feature Flag Integration
 ```rust

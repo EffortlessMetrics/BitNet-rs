@@ -96,7 +96,7 @@
 **Error Types Defined:** 15+
 **Code Examples:** 100+
 
-## Alignment with BitNet.rs Patterns
+## Alignment with BitNet-rs Patterns
 
 ### ✅ Feature Flag Usage
 - All commands use `--no-default-features --features cpu`
@@ -205,7 +205,7 @@
 - ✅ Implementation sequence documented
 - ✅ Error handling patterns specified
 
-### BitNet.rs Alignment
+### BitNet-rs Alignment
 - ✅ Feature flag patterns (--no-default-features --features cpu)
 - ✅ Quantization architecture (I2S/TL1/TL2)
 - ✅ Neural network pipeline (Model → Quantization → Inference → Output)
@@ -234,10 +234,10 @@
 - Check cross-references are valid
 - Validate test coverage maps to all ACs
 - Ensure implementation sequence is feasible
-- Confirm BitNet.rs pattern alignment
+- Confirm BitNet-rs pattern alignment
 
 **Success Criteria:**
-- All 5 specifications validate against BitNet.rs patterns
+- All 5 specifications validate against BitNet-rs patterns
 - No conflicting API definitions
 - Test plan achieves 100% AC coverage
 - Implementation sequence has no circular dependencies
@@ -264,7 +264,7 @@
 - E2E tests (AC2: 1)
 - Manual validation (AC5: baseline + README)
 
-**compatibility: GGUF format and BitNet.rs patterns aligned**
+**compatibility: GGUF format and BitNet-rs patterns aligned**
 - Feature flags: `--no-default-features --features cpu`
 - Quantization: I2S/TL1/TL2 native paths, strict mode enforcement
 - Neural network pipeline: Model Loading → Quantization → Inference → Output

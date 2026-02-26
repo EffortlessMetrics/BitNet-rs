@@ -1,6 +1,6 @@
 //! # Warp Web Server Integration Example
 //!
-//! This example demonstrates how to integrate BitNet.rs with the Warp web framework
+//! This example demonstrates how to integrate bitnet-rs with the Warp web framework
 //! to create a lightweight, high-performance inference API server.
 
 use warp::{Filter, Reply, Rejection, reject};
@@ -192,7 +192,7 @@ fn create_api_routes(
         .and(warp::get())
         .map(|| {
             warp::reply::json(&serde_json::json!({
-                "name": "BitNet.rs Warp Server",
+                "name": "bitnet-rs Warp Server",
                 "version": env!("CARGO_PKG_VERSION"),
                 "endpoints": {
                     "generate": "POST /api/generate - Generate text from prompt",
@@ -452,7 +452,7 @@ async fn model_info_handler(state: AppState) -> Result<impl Reply, Rejection> {
 /// API documentation endpoint
 async fn docs_handler() -> Result<impl Reply, Rejection> {
     let docs = r#"
-# BitNet.rs Warp Server API
+# bitnet-rs Warp Server API
 
 ## Endpoints
 

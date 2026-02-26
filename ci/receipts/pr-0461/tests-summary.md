@@ -8,7 +8,7 @@
 
 ## Test Execution Strategy
 
-Per BitNet.rs TDD requirements, executed comprehensive test validation:
+Per BitNet-rs TDD requirements, executed comprehensive test validation:
 
 1. **CPU Feature Tests:** `cargo test --workspace --no-default-features --features cpu`
 2. **GPU Feature Tests:** `cargo test --workspace --no-default-features --features gpu`
@@ -328,5 +328,5 @@ AC_satisfied: 35/35 (AC1=3/3, AC2=3/3, AC3=3/3, AC4=2/2, AC5=2/2, AC6=7/7, AC7=1
 ---
 
 **Validation Complete:** 2025-10-14
-**Validator:** tests-runner (BitNet.rs TDD Test Suite Orchestrator)
+**Validator:** tests-runner (BitNet-rs TDD Test Suite Orchestrator)
 **Next Stage:** review-build-validator

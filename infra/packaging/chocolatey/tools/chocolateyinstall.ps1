@@ -1,4 +1,4 @@
-# Chocolatey install script for BitNet.rs
+# Chocolatey install script for bitnet-rs
 
 $ErrorActionPreference = 'Stop'
 
@@ -52,20 +52,20 @@ try {
     $cliPath = Join-Path $toolsDir 'bitnet-cli.exe'
     if (Test-Path $cliPath) {
         $version = & $cliPath --version 2>&1
-        Write-Host "BitNet.rs CLI installed successfully: $version" -ForegroundColor Green
+        Write-Host "bitnet-rs CLI installed successfully: $version" -ForegroundColor Green
     }
 
     $serverPath = Join-Path $toolsDir 'bitnet-server.exe'
     if (Test-Path $serverPath) {
         $version = & $serverPath --version 2>&1
-        Write-Host "BitNet.rs Server installed successfully: $version" -ForegroundColor Green
+        Write-Host "bitnet-rs Server installed successfully: $version" -ForegroundColor Green
     }
 } catch {
     Write-Warning "Could not verify installation: $_"
 }
 
 Write-Host ""
-Write-Host "BitNet.rs has been installed successfully!" -ForegroundColor Green
+Write-Host "bitnet-rs has been installed successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Quick start:" -ForegroundColor Yellow
 Write-Host "  bitnet-cli --help" -ForegroundColor White

@@ -1,4 +1,4 @@
-# BitNet.rs CI Infrastructure Exploration Summary
+# BitNet-rs CI Infrastructure Exploration Summary
 
 **Date**: 2025-10-23
 **Scope**: Link-check configuration, CI job dependencies, feature matrix testing

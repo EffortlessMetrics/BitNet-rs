@@ -50,7 +50,7 @@ impl JunitReporter {
         writer
             .write(
                 XmlEvent::start_element("testsuites")
-                    .attr("name", "BitNet.rs Test Suite")
+                    .attr("name", "BitNet-rs Test Suite")
                     .attr("tests", &total_tests.to_string())
                     .attr("failures", &total_failures.to_string())
                     .attr("errors", &total_errors.to_string())

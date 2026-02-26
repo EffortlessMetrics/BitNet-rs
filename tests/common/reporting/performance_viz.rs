@@ -173,7 +173,7 @@ impl PerformanceVisualizer {
         html.push_str(
             "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
         );
-        html.push_str("    <title>BitNet.rs Performance Dashboard</title>\n");
+        html.push_str("    <title>BitNet-rs Performance Dashboard</title>\n");
         html.push_str(&self.generate_dashboard_css());
 
         if self.config.include_interactive_charts {
@@ -496,7 +496,7 @@ impl PerformanceVisualizer {
             r#"
     <div class="container">
         <div class="dashboard-header">
-            <h1>BitNet.rs Performance Dashboard</h1>
+            <h1>BitNet-rs Performance Dashboard</h1>
             <div class="subtitle">
                 Real-time performance monitoring and regression detection | {} data points
                 {}
@@ -1324,7 +1324,7 @@ pub fn create_performance_comparison(
     regression_threshold: f64,
 ) -> PerformanceComparison {
     let rust_metrics = PerformanceMetrics {
-        implementation_name: "BitNet.rs".to_string(),
+        implementation_name: "BitNet-rs".to_string(),
         average_duration: rust_benchmark.summary.avg_duration,
         min_duration: rust_benchmark.summary.min_duration,
         max_duration: rust_benchmark.summary.max_duration,
@@ -1434,7 +1434,7 @@ mod tests {
 
         let comparison = create_performance_comparison(&rust_benchmark, &cpp_benchmark, 5.0);
 
-        assert_eq!(comparison.rust_metrics.implementation_name, "BitNet.rs");
+        assert_eq!(comparison.rust_metrics.implementation_name, "BitNet-rs");
         assert_eq!(comparison.cpp_metrics.implementation_name, "BitNet.cpp");
         assert!(comparison.comparison_results.throughput_ratio > 1.0);
         assert!(comparison.comparison_results.performance_improvement > 0.0);

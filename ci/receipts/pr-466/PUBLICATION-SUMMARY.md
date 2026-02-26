@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Successfully published PR #466 for Issue #465 with comprehensive BitNet.rs neural network evidence. All quality gates passing (7/7 required + 2/4 hardening = 100% score). Ready for CI validation and merge preparation for v0.1.0-mvp release.
+Successfully published PR #466 for Issue #465 with comprehensive BitNet-rs neural network evidence. All quality gates passing (7/7 required + 2/4 hardening = 100% score). Ready for CI validation and merge preparation for v0.1.0-mvp release.
 
 ---
 
@@ -138,7 +138,7 @@ Successfully published PR #466 for Issue #465 with comprehensive BitNet.rs neura
 - Zero regressions introduced
 
 ### Doc Tests: 16/16 (100%)
-- All BitNet.rs API documentation examples passing
+- All BitNet-rs API documentation examples passing
 - README examples validated
 - Code snippets verified
 
@@ -230,7 +230,7 @@ Successfully published PR #466 for Issue #465 with comprehensive BitNet.rs neura
 
 ---
 
-## BitNet.rs Standards Met
+## BitNet-rs Standards Met
 
 - ✅ **Quantization accuracy**: ≥99.8% (I2_S validated against FP32 reference)
 - ✅ **Security posture**: 0 CVEs, 0 unsafe blocks in new code, cargo audit clean

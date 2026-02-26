@@ -3,7 +3,7 @@
 **Specification Version**: 1.0
 **Target File**: `crossval/build.rs`
 **Status**: Draft
-**Author**: BitNet.rs Spec Generator
+**Author**: bitnet-rs Spec Generator
 **Date**: 2025-10-25
 
 ---

@@ -1,6 +1,6 @@
 //! Tokenizer discovery system for automatic tokenizer resolution
 //!
-//! This module provides comprehensive tokenizer discovery capabilities for BitNet.rs neural network models.
+//! This module provides comprehensive tokenizer discovery capabilities for BitNet-rs neural network models.
 //! Supports GGUF metadata parsing, smart downloading, and device-aware tokenization for production-scale models.
 
 use crate::{
@@ -108,7 +108,7 @@ impl TokenizerStrategy {
     }
 }
 
-/// Primary tokenizer discovery engine for BitNet.rs neural network models
+/// Primary tokenizer discovery engine for BitNet-rs neural network models
 pub struct TokenizerDiscovery {
     _mmap: memmap2::Mmap, // Keep mmap alive
     gguf_reader: GgufReader<'static>,

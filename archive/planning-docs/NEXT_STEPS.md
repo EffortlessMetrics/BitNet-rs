@@ -1,4 +1,4 @@
-# NEXT STEPS: Fixing BitNet.rs Garbling
+# NEXT STEPS: Fixing BitNet-rs Garbling
 
 **Date Updated**: 2025-10-24 (Session 2)
 **Status**: C++ tokenization blocked, duplicate BOS tokens found

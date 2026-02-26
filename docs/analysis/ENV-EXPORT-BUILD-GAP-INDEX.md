@@ -2,7 +2,7 @@
 
 ## Document Overview
 
-This directory contains a comprehensive analysis of the **environment propagation gap** in the BitNet.rs auto-repair workflow. The gap prevents environment variables from `setup-cpp-auto` being propagated to child cargo build processes, causing the build.rs detection to fail.
+This directory contains a comprehensive analysis of the **environment propagation gap** in the BitNet-rs auto-repair workflow. The gap prevents environment variables from `setup-cpp-auto` being propagated to child cargo build processes, causing the build.rs detection to fail.
 
 ### Documents in This Analysis
 

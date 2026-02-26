@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-✅ **Documentation PASS**: All doctests validated, documentation builds cleanly for both CPU and GPU features, comprehensive feature documentation coverage with proper examples, and all BitNet.rs documentation requirements met.
+✅ **Documentation PASS**: All doctests validated, documentation builds cleanly for both CPU and GPU features, comprehensive feature documentation coverage with proper examples, and all bitnet-rs documentation requirements met.
 
 **Evidence:**
 - ✅ Doctests: 88/88 passed, 0 failed
@@ -220,7 +220,7 @@ $ cargo doc --workspace --no-default-features --features gpu --document-private-
 
 ---
 
-## BitNet.rs-Specific Requirements
+## bitnet-rs-Specific Requirements
 
 ### Quantization Documentation
 - ✅ I2_S BitNet32-F16 documented with F16 scale format
@@ -362,7 +362,7 @@ Feature docs: 5 new features fully documented
 5. ✅ Comprehensive documentation hierarchy maintained
 6. ✅ All internal links validated and working
 7. ✅ API documentation complete with 88 working examples
-8. ✅ BitNet.rs-specific requirements met (quantization, CUDA, cross-validation, performance)
+8. ✅ bitnet-rs-specific requirements met (quantization, CUDA, cross-validation, performance)
 
 **Conclusion:**
 Documentation validation complete with excellent quality across all areas. All doctest failures fixed. Documentation builds cleanly for CPU and GPU features. New features (QK256 AVX2, EnvGuard, Receipts) thoroughly documented. Ready for merge.

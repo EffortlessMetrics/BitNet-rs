@@ -5,7 +5,7 @@
 **Status**: ⚠️ NEUTRAL (Compilation Issues Block Real Inference)
 **Evidence**: `/home/steven/code/Rust/BitNet-rs/ci/ledger_integrative_throughput.md`
 
-### T4 BitNet.rs Neural Network Throughput Assessment
+### T4 BitNet-rs Neural Network Throughput Assessment
 
 #### ✅ VALIDATED - Basic Functionality
 - **Branch Freshness**: Current HEAD 8ef0823 ahead of main by 27 commits, no rebase needed

@@ -17,7 +17,7 @@
 # Documentation Link Validation Report
 
 **Validation Date**: 2025-09-27
-**Repository**: BitNet.rs
+**Repository**: BitNet-rs
 **Context**: Post docs-reviewer validation for PR #259
 **Validation Method**: Manual validation + markdown-link-check + grep analysis
 
@@ -158,7 +158,7 @@ Several docs reference files with wrong paths that exist in different locations:
 - ✅ Feature flags properly documented: `--no-default-features --features cpu|gpu`
 - ✅ API structure matches crate organization
 
-## BitNet.rs Specific Validation
+## BitNet-rs Specific Validation
 
 ### Neural Network Documentation ✅
 - ✅ I2S quantization properly documented in `reference/quantization-support.md`

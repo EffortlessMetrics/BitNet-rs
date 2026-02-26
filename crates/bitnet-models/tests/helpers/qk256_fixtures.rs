@@ -1,4 +1,4 @@
-//! QK256 GGUF Fixture Generators for BitNet.rs Testing
+//! QK256 GGUF Fixture Generators for BitNet-rs Testing
 //!
 //! This module provides deterministic fixture generators for QK256 (GGML I2_S) and
 //! BitNet32F16 (I2_S with inline F16 scales) quantization formats. Each generator

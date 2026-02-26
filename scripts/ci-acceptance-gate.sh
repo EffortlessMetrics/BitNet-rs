@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BitNet.rs CI Acceptance Gate - Strict, Deterministic, No Compromises
+# BitNet-rs CI Acceptance Gate - Strict, Deterministic, No Compromises
 # Binary discovery, JSON-driven assertions, no brittle greps
 # All gates must pass - no skips, no mocks, no excuses
 set -euo pipefail
@@ -40,7 +40,7 @@ need() {
 need cargo
 need jq
 
-echo "=== BitNet.rs CI Acceptance Gate ==="
+echo "=== BitNet-rs CI Acceptance Gate ==="
 echo "Environment: DETERMINISTIC=1, SEED=42, THREADS=1"
 
 # ━━━ Gate 1: Build & Binary Discovery ━━━

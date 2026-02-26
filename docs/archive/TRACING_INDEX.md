@@ -1,4 +1,4 @@
-# BitNet.rs Tracing Infrastructure - Documentation Index
+# BitNet-rs Tracing Infrastructure - Documentation Index
 
 This directory contains comprehensive documentation of the tensor activation tracing system used for cross-validation debugging.
 

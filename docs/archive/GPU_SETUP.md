@@ -1,7 +1,7 @@
 # GPU Setup Guide
 
 > **Scope:** Linux (Ubuntu) only. CUDA steps/documentation assume a Linux host.
-> macOS/Windows are currently out-of-scope for BitNet.rs MVP.
+> macOS/Windows are currently out-of-scope for BitNet-rs MVP.
 
 This guide covers GPU setup for BitNet-rs on Linux, with special focus on WSL2 CUDA support.
 

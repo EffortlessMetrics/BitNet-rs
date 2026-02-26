@@ -1,4 +1,4 @@
-# BitNet.rs TDD Scaffold Implementation Sprint #4 - Completion Report
+# BitNet-rs TDD Scaffold Implementation Sprint #4 - Completion Report
 
 **Sprint Date**: 2025-10-20 (Sprint #4)
 **Sprint Goal**: Implement remaining GGUF property test scaffolds using focused single-task agents
@@ -22,7 +22,7 @@ Successfully completed Sprint #4 by launching 13 parallel implementation agents 
 | Architecture & Custom     | 2         | 2                       | 2             | ✅ 100%       |
 | **TOTAL**                 | **13**    | **13**                  | **8**         | ✅ **62%**    |
 
-**Key Achievement**: All 13 scaffolds now have real implementations instead of stubs, enabling comprehensive property-based testing of BitNet.rs quantization algorithms.
+**Key Achievement**: All 13 scaffolds now have real implementations instead of stubs, enabling comprehensive property-based testing of BitNet-rs quantization algorithms.
 
 ---
 
@@ -284,7 +284,7 @@ All scaffolds now use `proptest` framework with:
 
 ### 2. Real Quantization Infrastructure
 
-All implementations use production BitNet.rs APIs:
+All implementations use production BitNet-rs APIs:
 - `bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer}`
 - `bitnet_quantization::utils::{create_tensor_from_f32, extract_f32_data}`
 - `bitnet_quantization::Quantize` trait for quantize/dequantize operations
@@ -497,13 +497,13 @@ Sprint #4 successfully implemented all 13 remaining GGUF property test scaffolds
 
 ✅ **Comprehensive Test Coverage**: Property-based testing now validates quantization accuracy, numerical stability, memory efficiency, and edge case handling
 
-✅ **Real Production Infrastructure**: All implementations use BitNet.rs production APIs instead of mocks
+✅ **Real Production Infrastructure**: All implementations use BitNet-rs production APIs instead of mocks
 
 ✅ **Valuable Algorithm Insights**: Tests revealed TL1 quantization limitations and validated I2S robustness
 
 ✅ **Efficient Parallel Execution**: 13 agents working in parallel achieved 2x speedup over sequential implementation
 
-The TDD scaffolds have successfully transitioned from placeholder stubs to functional property-based tests, providing robust validation infrastructure for BitNet.rs quantization algorithms! 🎉
+The TDD scaffolds have successfully transitioned from placeholder stubs to functional property-based tests, providing robust validation infrastructure for BitNet-rs quantization algorithms! 🎉
 
 ---
 

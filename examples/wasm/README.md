@@ -1,6 +1,6 @@
 # WebAssembly Examples
 
-This directory contains examples for running BitNet.rs in web browsers and WebAssembly environments.
+This directory contains examples for running BitNet-rs in web browsers and WebAssembly environments.
 
 ## Examples
 

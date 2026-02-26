@@ -1,10 +1,10 @@
 # Validation CI Workflow
 
-Comprehensive documentation for the BitNet.rs validation CI workflow (`.github/workflows/validation.yml`).
+Comprehensive documentation for the BitNet-rs validation CI workflow (`.github/workflows/validation.yml`).
 
 ## Overview
 
-The validation workflow enforces quality standards for all model operations and validation tooling in BitNet.rs. It ensures that:
+The validation workflow enforces quality standards for all model operations and validation tooling in BitNet-rs. It ensures that:
 
 1. **Security**: No runtime correction flags are enabled in CI
 2. **Tooling**: All validation tools build and execute correctly across platforms

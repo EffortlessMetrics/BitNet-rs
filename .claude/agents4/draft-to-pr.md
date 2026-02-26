@@ -2,7 +2,7 @@ ultrathink agentically
 
 # Draft → Ready Review Flow
 
-You are the orchestrator for the Draft → Ready PR validation flow for BitNet.rs neural network inference. Your job: invoke specialized review agents that fix, assess, and route until the Draft PR can be promoted to Ready for review.
+You are the orchestrator for the Draft → Ready PR validation flow for BitNet-rs neural network inference. Your job: invoke specialized review agents that fix, assess, and route until the Draft PR can be promoted to Ready for review.
 
 ## Starting Condition
 
@@ -42,9 +42,9 @@ You are the orchestrator for the Draft → Ready PR validation flow for BitNet.r
 - Review validates performance deltas vs established baseline
 - Integrative inherits Review performance metrics for SLO validation
 
-## BitNet.rs Neural Network Validation
+## BitNet-rs Neural Network Validation
 
-**Required BitNet.rs Context for All Agents:**
+**Required BitNet-rs Context for All Agents:**
 - **Quantization Accuracy:** I2S, TL1, TL2 ≥ 99% accuracy vs FP32 reference
 - **Cross-Validation:** `cargo run -p xtask -- crossval` - Rust vs C++ parity within 1e-5 tolerance
 - **Feature Compatibility:** `--no-default-features --features cpu|gpu` validation with fallback testing
@@ -93,7 +93,7 @@ Single PR comment with anchored sections (created by first agent, updated by all
 
 <!-- hoplog:start -->
 ### Hop log
-**hygiene-finalizer** → Applied mechanical code hygiene fixes for BitNet.rs neural network codebase. Fixed GPU test mocks and missing method implementations in `crates/bitnet-kernels/tests/mixed_precision_gpu_kernels.rs` and `tests/fixtures/device_aware.rs`. Evidence: format ✅ cargo fmt --all --check (all files formatted), clippy ✅ CPU/GPU features (0 warnings after 25+ mechanical fixes). Ready for architecture validation. → **NEXT** → architecture-reviewer
+**hygiene-finalizer** → Applied mechanical code hygiene fixes for BitNet-rs neural network codebase. Fixed GPU test mocks and missing method implementations in `crates/bitnet-kernels/tests/mixed_precision_gpu_kernels.rs` and `tests/fixtures/device_aware.rs`. Evidence: format ✅ cargo fmt --all --check (all files formatted), clippy ✅ CPU/GPU features (0 warnings after 25+ mechanical fixes). Ready for architecture validation. → **NEXT** → architecture-reviewer
 <!-- hoplog:end -->
 
 <!-- decision:start -->
@@ -119,7 +119,7 @@ gh pr comment <NUM> --body "- [test-runner] all pass; NEXT→mutation-tester"
 # Labels (domain-aware replacement)
 gh pr edit <NUM> --add-label "flow:review,state:ready"
 
-# BitNet.rs-specific commands (primary)
+# BitNet-rs-specific commands (primary)
 cargo fmt --all --check                                                                 # Format validation
 cargo clippy --workspace --all-targets --all-features -- -D warnings                  # Lint validation
 cargo test --workspace --no-default-features --features cpu                            # CPU test execution
@@ -130,7 +130,7 @@ cargo bench --workspace --no-default-features --features cpu                    
 cargo mutant --no-shuffle --timeout 60                                                # Mutation testing
 cargo audit                                                                           # Security audit
 
-# BitNet.rs xtask integration
+# BitNet-rs xtask integration
 cargo run -p xtask -- download-model --id microsoft/bitnet-b1.58-2B-4T-gguf --file ggml-model-i2_s.gguf  # Model download
 cargo run -p xtask -- verify --model models/bitnet/model.gguf --tokenizer models/bitnet/tokenizer.json     # Model verification
 cargo run -p xtask -- crossval                                                                              # Cross-validation
@@ -245,7 +245,7 @@ Require link to migration doc & release-note stub: `migration: docs/adr/NNNN-bre
 **Route:** `NEXT → freshness-checker` | Clean → `hygiene-finalizer`
 
 ### hygiene-finalizer
-**Do:** Run `cargo fmt --all`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, organize imports for BitNet.rs neural network modules
+**Do:** Run `cargo fmt --all`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, organize imports for BitNet-rs neural network modules
 **Gates:** Update `format` and `clippy` status
 **Route:** All clean → `arch-reviewer` | Issues → retry with fixes
 
@@ -393,10 +393,10 @@ Consider "progress" when these improve:
 
 ## Success Criteria
 
-**Ready for Review:** All required gates pass (`freshness, format, clippy, tests, build, docs`), neural network architecture aligned, TDD practices followed, BitNet.rs feature compatibility validated (cpu/gpu)
+**Ready for Review:** All required gates pass (`freshness, format, clippy, tests, build, docs`), neural network architecture aligned, TDD practices followed, BitNet-rs feature compatibility validated (cpu/gpu)
 **Needs Rework:** Draft remains Draft with clear prioritized checklist and specific gate failures documented
 
-Begin with an open Draft PR and invoke agents proactively through the microloop structure, following BitNet.rs TDD-driven, neural network quantization development standards.
+Begin with an open Draft PR and invoke agents proactively through the microloop structure, following BitNet-rs TDD-driven, neural network quantization development standards.
 
 Create a todo list to guide us through the flow. The series of microloops.
 

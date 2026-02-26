@@ -66,7 +66,7 @@
 - ✅ Fast-forward merge successful
 
 ## Validation Approach
-This validation followed BitNet.rs best practices:
+This validation followed BitNet-rs best practices:
 1. **Isolated Validation**: Used git worktree to avoid modifying user's workspace
 2. **Comprehensive Testing**: Used `just` tasks and `cargo nextest` for deterministic testing
 3. **SIMD Validation**: Verified cross-platform compatibility

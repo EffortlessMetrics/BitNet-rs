@@ -1,6 +1,6 @@
 # CI Directory: Validation, Analysis & Automation
 
-**Purpose**: This directory contains CI/CD infrastructure, test analysis, validation reports, and implementation solutions for the BitNet.rs project.
+**Purpose**: This directory contains CI/CD infrastructure, test analysis, validation reports, and implementation solutions for the BitNet-rs project.
 
 ---
 

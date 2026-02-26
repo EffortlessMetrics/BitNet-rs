@@ -1,4 +1,4 @@
-//! Example demonstrating the BitNet.rs reporting system
+//! Example demonstrating the BitNet-rs reporting system
 //!
 //! This example shows how to use the comprehensive reporting system
 //! to generate HTML, JSON, JUnit XML, and Markdown reports.
@@ -132,7 +132,7 @@ mod reporting_example {
     }
 
     pub async fn run_example() -> Result<(), Box<dyn std::error::Error>> {
-        println!("BitNet.rs Reporting System Example");
+        println!("BitNet-rs Reporting System Example");
         println!("==================================\n");
 
         // Create output directory

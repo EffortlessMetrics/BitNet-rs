@@ -3,7 +3,7 @@ COMPREHENSIVE #[ignore] TEST PATTERN AUDIT - EXECUTIVE SUMMARY
 ================================================================================
 
 GENERATED: 2025-10-23
-CODEBASE: BitNet.rs (Rust neural network inference engine)
+CODEBASE: BitNet-rs (Rust neural network inference engine)
 SCOPE: All #[ignore] annotations across crates/, tests/, tests-new/, xtask/
 
 ================================================================================

@@ -969,7 +969,7 @@ readelf -d target/debug/xtask | grep RPATH
 
 ## 10. Approval and Sign-Off
 
-**Specification Author:** BitNet.rs Spec Generator (Subagent)
+**Specification Author:** BitNet-rs Spec Generator (Subagent)
 **Reviewers:** (To be assigned)
 **Status:** Draft - Awaiting Review
 **Next Steps:**
@@ -1172,7 +1172,7 @@ git clone https://github.com/microsoft/BitNet.cpp ~/bitnet
 cmake -S ~/bitnet -B ~/bitnet/build
 cmake --build ~/bitnet/build
 
-# Configure BitNet.rs
+# Configure BitNet-rs
 export CROSSVAL_RPATH_BITNET=~/bitnet/build/bin
 export CROSSVAL_RPATH_LLAMA=/usr/lib/x86_64-linux-gnu  # System location
 
@@ -1233,7 +1233,7 @@ RUN git clone https://github.com/ggerganov/llama.cpp /llama && \
     cmake -S /llama -B /llama/build && \
     cmake --build /llama/build
 
-# Stage 2: Build BitNet.rs with merged RPATH
+# Stage 2: Build BitNet-rs with merged RPATH
 ENV CROSSVAL_RPATH_BITNET=/bitnet/build/bin
 ENV CROSSVAL_RPATH_LLAMA=/llama/build/bin
 

@@ -26,7 +26,7 @@
 - **Tool**: `cargo deny check licenses/sources/bans`
 - **Result**: All checks PASS
 
-### BitNet.rs Neural Network Policies ✅
+### BitNet-rs Neural Network Policies ✅
 - **Honest Compute Validation**: Implemented with strict schema v1.0.0 validation
 - **Schema Versioning**: Proper v1.0.0 schema with extensibility design
 - **Kernel ID Hygiene**: Enforced (≤128 chars, ≤10K entries, no empty strings)
@@ -77,7 +77,7 @@
 
 **Reasoning**:
 1. ✅ All policy validations passed (licenses, sources, bans)
-2. ✅ BitNet.rs neural network policies satisfied
+2. ✅ BitNet-rs neural network policies satisfied
 3. ✅ Documentation comprehensive (API docs, usage examples, integration)
 4. ✅ Quantization accuracy preserved (no algorithm changes)
 5. ✅ Code quality standards met (test coverage, error handling)
@@ -151,11 +151,11 @@
 
 ✅ **Step 1: Flow Validation**: Confirmed integrative flow, extracted PR context
 ✅ **Step 2: Dependency Policy**: Executed cargo deny checks (licenses, sources, bans)
-✅ **Step 3: BitNet.rs Policies**: Validated neural network policies (honest compute, schema, GPU enforcement)
+✅ **Step 3: BitNet-rs Policies**: Validated neural network policies (honest compute, schema, GPU enforcement)
 ✅ **Step 4: Documentation**: Assessed API docs, usage examples, integration guides
 ✅ **Step 5: Quality**: Verified test coverage, error handling, breaking changes
 ✅ **Step 6: Evidence Collection**: Comprehensive metrics and validation results documented
-✅ **Communication**: Policy evidence formatted per BitNet.rs grammar
+✅ **Communication**: Policy evidence formatted per BitNet-rs grammar
 
 ---
 

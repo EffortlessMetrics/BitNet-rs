@@ -14,14 +14,14 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Alpha Readiness Status Report - UPDATED
+# BitNet-rs Alpha Readiness Status Report - UPDATED
 
 **Date**: 2025-08-23
 **Assessment**: **CODE READY, MODELS NEEDED** ⚠️
 
 ## Executive Summary
 
-BitNet.rs has successfully resolved the critical blockers preventing alpha status. The codebase now includes fail-fast for unsupported quantization, a working model inspection command, and updated validation scripts. **The only remaining requirement is models with supported quantization formats.**
+BitNet-rs has successfully resolved the critical blockers preventing alpha status. The codebase now includes fail-fast for unsupported quantization, a working model inspection command, and updated validation scripts. **The only remaining requirement is models with supported quantization formats.**
 
 ## ✅ Completed Fixes (Today's Work)
 
@@ -132,7 +132,7 @@ Once models are available, the pipeline will generate:
 
 ## 🎯 Final Assessment
 
-**The BitNet.rs codebase is ALPHA-READY.** All blocking code issues have been resolved:
+**The BitNet-rs codebase is ALPHA-READY.** All blocking code issues have been resolved:
 - ✅ No more hanging on model load
 - ✅ Proper error handling for unsupported formats
 - ✅ Working inspection and validation tools

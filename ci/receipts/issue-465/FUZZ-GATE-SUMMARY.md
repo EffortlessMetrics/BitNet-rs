@@ -37,7 +37,7 @@
 
 **Status:**
 - ✅ cargo-fuzz v0.13.1 installed
-- ✅ 10 existing fuzz targets covering all critical BitNet.rs components
+- ✅ 10 existing fuzz targets covering all critical BitNet-rs components
 - ✅ Corpus and artifacts present
 - ⚠️ 13 historical crashes detected (unrelated to Issue #465)
 
@@ -92,7 +92,7 @@ fuzz: skipped (not-applicable); production changes: 0; test changes: 37 files; d
 
 **Rationale:**
 1. ✅ No production code changes requiring fuzzing
-2. ✅ All critical BitNet.rs components already covered by 10 fuzz targets
+2. ✅ All critical BitNet-rs components already covered by 10 fuzz targets
 3. ✅ Test suite provides comprehensive edge case validation (43 tests)
 4. ✅ JSON parsing delegated to well-fuzzed `serde_json` library
 5. ✅ Fuzzing infrastructure healthy and operational

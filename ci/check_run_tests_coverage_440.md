@@ -149,7 +149,7 @@ Total: 57 tests executed (53 passed, 4 ignored)
 
 ---
 
-## BitNet.rs Neural Network Standards Validation
+## BitNet-rs Neural Network Standards Validation
 
 ### Quantization Coverage ✅ PASS
 - **I2S Quantization:** 72.01% coverage (fallback.rs) - core logic tested

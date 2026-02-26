@@ -1,6 +1,6 @@
 # bitnet-trace
 
-Tensor activation tracing for BitNet.rs cross-validation debugging.
+Tensor activation tracing for BitNet-rs cross-validation debugging.
 
 ## Overview
 

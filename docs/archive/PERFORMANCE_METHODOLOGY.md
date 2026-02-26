@@ -1,6 +1,6 @@
 # Performance Measurement Methodology
 
-This document describes how BitNet.rs measures and reports performance metrics.
+This document describes how BitNet-rs measures and reports performance metrics.
 
 ## Methods & Environment Box
 

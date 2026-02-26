@@ -1,5 +1,5 @@
 #!/bin/bash
-# BitNet.rs Cross-Validation Development Setup
+# BitNet-rs Cross-Validation Development Setup
 # One-liner script for easy cross-validation development setup
 
 set -e
@@ -30,7 +30,7 @@ log_error() {
 # Show help
 show_help() {
     cat << EOF
-BitNet.rs Cross-Validation Development Setup
+BitNet-rs Cross-Validation Development Setup
 
 This script sets up everything needed for cross-validation development in one command.
 
@@ -99,7 +99,7 @@ done
 
 # Main setup function
 main() {
-    log_info "🦀 BitNet.rs Cross-Validation Development Setup"
+    log_info "🦀 BitNet-rs Cross-Validation Development Setup"
     echo
 
     # Check prerequisites
@@ -117,7 +117,7 @@ main() {
 
     # Check if we're in the right directory
     if [[ ! -f "Cargo.toml" ]] || [[ ! -d "crates" ]]; then
-        log_error "This script must be run from the BitNet.rs repository root."
+        log_error "This script must be run from the BitNet-rs repository root."
         exit 1
     fi
 
@@ -342,7 +342,7 @@ EOF
     # Create .cargo/config.toml to disable crossval by default
     mkdir -p .cargo
     cat > .cargo/config.toml << 'EOF'
-# BitNet.rs Cargo Configuration
+# BitNet-rs Cargo Configuration
 # This ensures crossval feature is not accidentally enabled
 
 [build]

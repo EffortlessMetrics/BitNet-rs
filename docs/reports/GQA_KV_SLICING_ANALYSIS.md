@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The BitNet.rs codebase implements Grouped Query Attention (GQA) with sophisticated KV head slicing in the weight mapper and dynamic expansion during inference. Analysis reveals **CRITICAL SHAPE MISMATCH ISSUE** in the weight mapper's GQA handling that could cause attention corruption.
+The BitNet-rs codebase implements Grouped Query Attention (GQA) with sophisticated KV head slicing in the weight mapper and dynamic expansion during inference. Analysis reveals **CRITICAL SHAPE MISMATCH ISSUE** in the weight mapper's GQA handling that could cause attention corruption.
 
 ## Issue Overview
 
@@ -245,7 +245,7 @@ for (int q = 0; q < n_heads; q++) {
 ### Key Difference
 
 **llama.cpp**: K/V weights are correctly dimensioned `[hidden, kv_dim]` from the exporter
-**BitNet.rs**: Attempts to "fix" `[hidden, hidden]` weights via row slicing
+**BitNet-rs**: Attempts to "fix" `[hidden, hidden]` weights via row slicing
 
 ---
 
@@ -421,8 +421,8 @@ cargo run -p xtask -- crossval-per-token \
 
 ## References
 
-- **BitNet.rs Weight Mapper**: `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/weight_mapper.rs:607-670`
-- **BitNet.rs Transformer**: `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/transformer.rs:277-545`
+- **BitNet-rs Weight Mapper**: `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/weight_mapper.rs:607-670`
+- **BitNet-rs Transformer**: `/home/steven/code/Rust/BitNet-rs/crates/bitnet-models/src/transformer.rs:277-545`
 - **Test Case**: `weight_mapper.rs:1048-1153`
 - **GQA Expansion Diagnostic**: Set `BITNET_DEBUG_GQA=1` to log dimensions
 

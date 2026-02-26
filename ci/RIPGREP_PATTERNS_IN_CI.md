@@ -1,4 +1,4 @@
-# Ripgrep Patterns in BitNet.rs CI & Hooks
+# Ripgrep Patterns in BitNet-rs CI & Hooks
 
 Complete reference for all ripgrep (`rg`) usage in CI/CD pipeline and git hooks.
 
@@ -285,7 +285,7 @@ Blocked by Issue #[0-9]+|Slow:|TODO:
 
 ### Ripgrep Speed
 
-All patterns complete in **< 1 second** on typical BitNet.rs codebase:
+All patterns complete in **< 1 second** on typical BitNet-rs codebase:
 
 | Pattern | Time | Scope |
 |---------|------|-------|

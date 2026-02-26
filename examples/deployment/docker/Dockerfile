@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for BitNet.rs
+# Multi-stage Dockerfile for bitnet-rs
 # Optimized for production deployment with minimal image size
 
 # Build stage

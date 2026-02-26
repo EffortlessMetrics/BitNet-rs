@@ -146,7 +146,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out
 | Feature gating | ✅ Complete | `#[cfg(feature = "cpu")]` for CPU-specific tests |
 | Logging | ✅ Complete | Detailed performance metrics via `log::info!` |
 
-## BitNet.rs Integration
+## BitNet-rs Integration
 
 ### Follows Project Patterns
 - ✅ Feature-gated architecture (`--no-default-features --features cpu`)
@@ -241,6 +241,6 @@ The AC5 performance target validation test is fully implemented with:
 ---
 
 **Implementation Date**: 2025-10-20
-**BitNet.rs Version**: v0.1.0-qna-mvp
+**BitNet-rs Version**: v0.1.0-qna-mvp
 **Issue**: #248 AC5 Performance Target Validation
 **Status**: ✅ COMPLETE

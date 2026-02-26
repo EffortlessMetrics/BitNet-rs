@@ -1,6 +1,6 @@
 # API Changes and Migration Guide
 
-This document tracks all API changes in BitNet.rs and provides migration guidance for breaking changes.
+This document tracks all API changes in BitNet-rs and provides migration guidance for breaking changes.
 
 ## Version Policy
 

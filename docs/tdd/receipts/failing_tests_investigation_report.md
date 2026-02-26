@@ -1,7 +1,7 @@
 # Failing Tests Investigation Report
 
 **Date**: 2025-10-22
-**Investigation**: Analysis of 5 remaining test failures in BitNet.rs
+**Investigation**: Analysis of 5 remaining test failures in BitNet-rs
 **Status**: Root causes identified, fix plans documented
 
 ---
@@ -155,7 +155,7 @@ pub struct GgufHeader {
 
 #### Option B: Use Real GGUF Fixture Files ✅ IDEAL (but requires preparation)
 **Approach**:
-1. Create minimal real GGUF files using the BitNet.rs export tool or llama.cpp
+1. Create minimal real GGUF files using the BitNet-rs export tool or llama.cpp
 2. Store in `tests/fixtures/qk256_*.gguf`
 3. Update tests to load from fixture files instead of synthetic generation
 
@@ -471,7 +471,7 @@ All tests either **pass** or are **properly ignored with documentation**.
 1. Create `tests/fixtures/` directory
 2. Generate minimal GGUF files:
    ```bash
-   # Use BitNet.rs export tool or llama.cpp converter
+   # Use BitNet-rs export tool or llama.cpp converter
    # Create files for each test case:
    # - qk256_4x256.gguf (test 1)
    # - bitnet32_2x64.gguf (test 2)

@@ -599,4 +599,4 @@ mod performance_tests {
 
 ## Additional Context
 
-This implementation is critical for making BitNet.rs competitive with other inference frameworks on CPU hardware. The parallel execution should maintain numerical accuracy while maximizing utilization of available CPU resources, especially on modern multi-core processors commonly used for AI inference workloads.
+This implementation is critical for making BitNet-rs competitive with other inference frameworks on CPU hardware. The parallel execution should maintain numerical accuracy while maximizing utilization of available CPU resources, especially on modern multi-core processors commonly used for AI inference workloads.

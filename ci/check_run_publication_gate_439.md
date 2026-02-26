@@ -14,7 +14,7 @@ Draft PR #440 successfully passes all Generative Flow requirements and is ready 
 
 **Key Results:**
 - ✅ All 8 quality gates pass with local validation
-- ✅ BitNet.rs neural network standards met
+- ✅ bitnet-rs neural network standards met
 - ✅ Evidence bundle comprehensive (3,128 lines)
 - ✅ Commit patterns compliant (15 commits)
 - ✅ Feature flags unified (109 predicates)
@@ -52,7 +52,7 @@ publication_gate: PASS; PR #440 created; labels applied; issue #439 linked
 
 ---
 
-## BitNet.rs Compliance
+## bitnet-rs Compliance
 
 - ✅ Feature flags unified: `#[cfg(any(feature = "gpu", feature = "cuda"))]` (109 uses)
 - ✅ Device detection API exported: `gpu_compiled()`, `gpu_available_runtime()`, `device_capability_summary()`

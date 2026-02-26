@@ -1,11 +1,11 @@
-# BitNet.rs Mutation Testing Analysis - PR #246
+# BitNet-rs Mutation Testing Analysis - PR #246
 ## Draft → Ready Review Flow Assessment
 
 ### Executive Summary
 
 **Mutation Score: 72.7%** - ❌ **BELOW THRESHOLD**
 
-The BitNet.rs neural network codebase mutation testing reveals critical gaps in test coverage for quantization algorithms. With only 8 out of 11 viable mutations caught, the 72.7% score falls short of the required 80% threshold for neural network critical paths.
+The BitNet-rs neural network codebase mutation testing reveals critical gaps in test coverage for quantization algorithms. With only 8 out of 11 viable mutations caught, the 72.7% score falls short of the required 80% threshold for neural network critical paths.
 
 ### Detailed Results
 
@@ -80,7 +80,7 @@ let compressed_bytes = self.data.len() + self.scales.len() * 4;
 - **Impact Scope**: Neural network quantization performance measurement
 - **Localization**: Well-contained to single function, specific line ranges
 
-### BitNet.rs Neural Network Impact Assessment
+### BitNet-rs Neural Network Impact Assessment
 
 #### Quantization Accuracy Implications
 - **I2S Quantization**: Compression ratio miscalculations affect efficiency reporting

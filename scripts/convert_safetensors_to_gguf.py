@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Convert SafeTensors model to GGUF format for BitNet.rs
+Convert SafeTensors model to GGUF format for BitNet-rs
 
 This converter handles the BitNet specific quantization and metadata.
 """

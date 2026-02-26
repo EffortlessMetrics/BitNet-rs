@@ -306,4 +306,4 @@ mod infrastructure_tests {
 
 ## Additional Context
 
-Consolidating testing infrastructure will improve code quality, reduce maintenance overhead, and make it easier to write comprehensive tests across the BitNet.rs codebase. The centralized approach ensures consistency and reusability while maintaining the simplicity needed for effective testing.
+Consolidating testing infrastructure will improve code quality, reduce maintenance overhead, and make it easier to write comprehensive tests across the BitNet-rs codebase. The centralized approach ensures consistency and reusability while maintaining the simplicity needed for effective testing.

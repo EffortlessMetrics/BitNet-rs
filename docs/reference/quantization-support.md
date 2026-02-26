@@ -1,6 +1,6 @@
 # Quantization Support
 
-This document describes the quantization formats and device-aware acceleration supported by BitNet.rs.
+This document describes the quantization formats and device-aware acceleration supported by BitNet-rs.
 
 ## Supported Quantization Formats
 
@@ -154,7 +154,7 @@ The FFI bridge enables gradual migration from C++ to Rust while maintaining func
 
 ## Mixed Precision GPU Acceleration
 
-BitNet.rs provides native CUDA mixed precision support for enhanced GPU performance:
+BitNet-rs provides native CUDA mixed precision support for enhanced GPU performance:
 
 - ### Supported Precision Modes
 
@@ -248,7 +248,7 @@ cargo test -p bitnet-quantization --no-default-features --features cpu test_simd
 
 ## Strict Mode Enforcement (Issue #261 - AC2, AC6)
 
-BitNet.rs provides comprehensive strict mode controls to eliminate mock inference paths and ensure production-ready quantized computation:
+BitNet-rs provides comprehensive strict mode controls to eliminate mock inference paths and ensure production-ready quantized computation:
 
 ### Primary Strict Mode Configuration
 
@@ -329,7 +329,7 @@ Strict mode validates performance metrics against realistic baselines:
 
 ## Strict Quantization Guards (Issue #453)
 
-BitNet.rs provides comprehensive strict quantization guards to prevent silent FP32 fallback in quantized layers.
+BitNet-rs provides comprehensive strict quantization guards to prevent silent FP32 fallback in quantized layers.
 
 This three-tier validation strategy ensures production-grade quantized inference with honest performance claims.
 

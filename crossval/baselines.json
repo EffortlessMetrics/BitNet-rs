@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "last_updated": "2025-09-27T17:58:07Z",
-  "description": "Performance baselines for BitNet.rs generated from actual benchmark runs",
+  "description": "Performance baselines for bitnet-rs generated from actual benchmark runs",
   "methodology": {
     "hardware": "Native hardware (varies by platform)",
     "model": "Test fixtures and deterministic data",

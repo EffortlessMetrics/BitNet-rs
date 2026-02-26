@@ -28,13 +28,13 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if we're in the BitNet.rs root directory
+# Check if we're in the BitNet-rs root directory
 check_project_root() {
     if [[ ! -f "Cargo.toml" ]] || ! grep -q "bitnet" Cargo.toml; then
-        log_error "This script must be run from the BitNet.rs project root directory"
+        log_error "This script must be run from the BitNet-rs project root directory"
         exit 1
     fi
-    log_info "Running from BitNet.rs project root: $(pwd)"
+    log_info "Running from BitNet-rs project root: $(pwd)"
 }
 
 # Setup Rust toolchain and targets
@@ -252,7 +252,7 @@ verify_environment() {
 # Print usage information
 usage() {
     cat << EOF
-BitNet.rs Performance Environment Setup
+BitNet-rs Performance Environment Setup
 
 Usage: $0 [OPTIONS]
 
@@ -326,7 +326,7 @@ parse_args() {
 
 # Main function
 main() {
-    log_info "BitNet.rs Performance Environment Setup"
+    log_info "BitNet-rs Performance Environment Setup"
     log_info "======================================="
 
     parse_args "$@"

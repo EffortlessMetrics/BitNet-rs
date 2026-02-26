@@ -4,13 +4,13 @@
 **Issue:** #447 (Compilation fixes across workspace crates)
 **Branch:** `feat/issue-447-compilation-fixes`
 **Promotion Date:** 2025-10-12 11:40 UTC
-**Executor:** ready-promoter (BitNet.rs Review Ready Promoter)
+**Executor:** ready-promoter (BitNet-rs Review Ready Promoter)
 
 ---
 
 ## Promotion Status: ✅ COMPLETE
 
-**Verdict:** APPROVED FOR READY STATUS - All BitNet.rs promotion criteria met
+**Verdict:** APPROVED FOR READY STATUS - All BitNet-rs promotion criteria met
 
 **GitHub Actions:**
 
@@ -41,7 +41,7 @@
 | coverage | ✅ PASS | 85-90% workspace, >90% critical paths (test-to-code 1.17:1) |
 | security | ✅ PASS | 0 vulnerabilities in 725 dependencies, clean secret scan |
 | mutation | ⚠️ NEUTRAL | Tool bounded by workspace complexity, manual analysis complete (non-blocking) |
-| architecture | ✅ PASS | 100% compliance with BitNet.rs patterns |
+| architecture | ✅ PASS | 100% compliance with BitNet-rs patterns |
 
 ---
 
@@ -174,6 +174,6 @@
 
 ---
 
-**Promotion Executor:** ready-promoter (BitNet.rs Review Ready Promoter)
+**Promotion Executor:** ready-promoter (BitNet-rs Review Ready Promoter)
 **Timestamp:** 2025-10-12 11:40 UTC
 **Signature:** All promotion criteria met, route to Integrative workflow ✅

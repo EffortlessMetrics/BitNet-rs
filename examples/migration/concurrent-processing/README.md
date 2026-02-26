@@ -586,7 +586,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# BitNet.rs core
+# bitnet-rs core
 bitnet-inference = { path = "../../crates/bitnet-inference" }
 
 # Async runtime and utilities

@@ -1,6 +1,6 @@
-# BitNet.rs Examples
+# bitnet-rs Examples
 
-This directory contains comprehensive examples demonstrating how to integrate BitNet.rs with various Rust ecosystem components and deploy it in different environments.
+This directory contains comprehensive examples demonstrating how to integrate bitnet-rs with various Rust ecosystem components and deploy it in different environments.
 
 ## Directory Structure
 

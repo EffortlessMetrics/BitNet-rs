@@ -1,4 +1,4 @@
-# What's Disconnected in BitNet.rs Validation
+# What's Disconnected in BitNet-rs Validation
 
 ## ✅ What Actually EXISTS and WORKS
 

@@ -1,4 +1,4 @@
-# BitNet.rs xtask Crate - File Inventory & Code Locations
+# BitNet-rs xtask Crate - File Inventory & Code Locations
 
 ## Key Files
 

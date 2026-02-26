@@ -14,7 +14,7 @@
 
 **Overall Status:** ✅ **READY FOR REVIEW**
 
-PR #445 successfully validated against all BitNet.rs Generative flow publication requirements. All quality gates pass, template complete, feature flags validated, zero production impact confirmed. Ready for Review stage consumption.
+PR #445 successfully validated against all BitNet-rs Generative flow publication requirements. All quality gates pass, template complete, feature flags validated, zero production impact confirmed. Ready for Review stage consumption.
 
 **Key Findings:**
 - ✅ Format gate: Clean (cargo fmt --all --check)
@@ -71,7 +71,7 @@ cd4438d feat(spec): define test harness hygiene fixes specification for Issue #4
 - ✅ No temporary or WIP commits present
 - ✅ Commit sequence logical (spec → implementation → hygiene)
 
-### 3. BitNet.rs Template Compliance ✅
+### 3. BitNet-rs Template Compliance ✅
 
 **Story Section:**
 ✅ **COMPLETE** - Neural network test infrastructure hygiene fixes clearly described with:
@@ -113,7 +113,7 @@ cd4438d feat(spec): define test harness hygiene fixes specification for Issue #4
 
 **All Microloop Gates:** ✅ PASS (spec → implementation → validation cycle complete)
 
-### 5. BitNet.rs Quality Validation ✅
+### 5. BitNet-rs Quality Validation ✅
 
 **Neural Network Implementation Standards:**
 
@@ -124,7 +124,7 @@ cd4438d feat(spec): define test harness hygiene fixes specification for Issue #4
 - ✅ No quantization algorithm changes (test infrastructure only)
 
 **B. Cargo Workspace Compliance:**
-- ✅ Changes follow BitNet.rs crate organization (bitnet-models, xtask)
+- ✅ Changes follow BitNet-rs crate organization (bitnet-models, xtask)
 - ✅ Feature flags correctly specified: `--no-default-features --features cpu`
 - ✅ Cross-compilation compatibility preserved (no WASM impact)
 - ✅ Documentation stored in correct locations (docs/explanation/)
@@ -133,7 +133,7 @@ cd4438d feat(spec): define test harness hygiene fixes specification for Issue #4
 - ✅ Tests named by feature (gguf_weight_loading_*, receipt_validation_*)
 - ✅ Test coverage maintained (1,336 tests pass, 0 deletions)
 - ✅ Spec → Test → Implementation cycle complete
-- ✅ Test infrastructure patterns align with BitNet.rs standards
+- ✅ Test infrastructure patterns align with BitNet-rs standards
 
 **D. Feature Flag Validation:**
 - ✅ All commands use `--no-default-features --features cpu`
@@ -258,7 +258,7 @@ cargo build --workspace --release --no-default-features --features cpu
 **AC3: Fix workspace_root() Visibility (verify_receipt.rs):**
 - ✅ Implementation: Hoisted to file scope at lines 10-19
 - ✅ Verification: cargo test passes (14/14 tests)
-- ✅ Pattern: File-scope helper (matches BitNet.rs standards)
+- ✅ Pattern: File-scope helper (matches BitNet-rs standards)
 
 **AC4: Fix workspace_root() Visibility (documentation_audit.rs):**
 - ✅ Implementation: Already at file scope, added `use super::*;`
@@ -321,14 +321,14 @@ use bitnet_common::Device;
    - ✅ Specification completeness analysis
    - ✅ Implementation approach evaluation
    - ✅ Risk analysis (LOW risk, TRIVIAL complexity)
-   - ✅ BitNet.rs standards alignment
+   - ✅ BitNet-rs standards alignment
    - ✅ Recommended approach (Option 1: file-scope hoisting)
 
 3. **docs/explanation/issue-443-spec-validation.md** (536 lines)
    - ✅ Specification completeness assessment
    - ✅ API contracts and neural network patterns validation
    - ✅ Acceptance criteria atomicity validation
-   - ✅ BitNet.rs quality standards assessment
+   - ✅ BitNet-rs quality standards assessment
 
 **Documentation Quality:** ✅ EXCELLENT (comprehensive, clear, well-structured)
 
@@ -336,7 +336,7 @@ use bitnet_common::Device;
 
 ## Neural Network Pipeline Impact Assessment
 
-**BitNet.rs Inference Pipeline Analysis:**
+**BitNet-rs Inference Pipeline Analysis:**
 
 | Pipeline Stage | Impact | Evidence |
 |----------------|--------|----------|
@@ -362,9 +362,9 @@ use bitnet_common::Device;
 
 **Criteria Met:**
 - ✅ All generative gates pass (format, clippy, tests, build, acceptance)
-- ✅ BitNet.rs template complete (Story, Acceptance Criteria, Scope, Implementation)
+- ✅ BitNet-rs template complete (Story, Acceptance Criteria, Scope, Implementation)
 - ✅ Domain-aware labels applied (`flow:generative`, `state:ready`)
-- ✅ Commit patterns follow BitNet.rs standards (`fix:`, `feat:`, `docs:`, `chore:`)
+- ✅ Commit patterns follow BitNet-rs standards (`fix:`, `feat:`, `docs:`, `chore:`)
 - ✅ Comprehensive validation completed (1,336 tests pass)
 - ✅ Feature flags correctly specified (--no-default-features --features cpu)
 - ✅ Neural network documentation complete (test infrastructure alignment)
@@ -416,7 +416,7 @@ workflow: improved (clean linting, reliable CI/CD)
 **Next:** pub-finalizer (route complete, PR created)
 **Rationale:**
 
-PR #445 successfully validated against all BitNet.rs Generative flow publication requirements:
+PR #445 successfully validated against all BitNet-rs Generative flow publication requirements:
 
 1. **Quality Gates:** All pass (format ✅, clippy ✅, tests 1,336/1,336 ✅, build ✅)
 2. **Template Compliance:** Complete with comprehensive documentation (1,300+ lines)
@@ -426,7 +426,7 @@ PR #445 successfully validated against all BitNet.rs Generative flow publication
 6. **Neural Network Standards:** Test infrastructure alignment validated
 7. **Documentation:** Comprehensive (spec, assessment, validation)
 
-PR is ready for Review stage consumption. No blocking issues identified. All BitNet.rs quality standards met. Recommend FINALIZE → pub-finalizer for GitHub PR creation (already complete).
+PR is ready for Review stage consumption. No blocking issues identified. All BitNet-rs quality standards met. Recommend FINALIZE → pub-finalizer for GitHub PR creation (already complete).
 
 ---
 
@@ -434,7 +434,7 @@ PR is ready for Review stage consumption. No blocking issues identified. All Bit
 
 **Execution Details:**
 - **Agent:** pub-readiness-validator
-- **Environment:** BitNet.rs Generative PR Readiness Validator
+- **Environment:** BitNet-rs Generative PR Readiness Validator
 - **Date:** 2025-10-11 23:45:00 UTC
 - **Execution Time:** ~5 minutes (validation only)
 - **Exit Code:** 0 (success)

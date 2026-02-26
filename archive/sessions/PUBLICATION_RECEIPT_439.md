@@ -19,7 +19,7 @@
 - **Head Branch:** feat/439-gpu-feature-gate-hardening
 
 **Labels Applied:**
-- `flow:generative` - BitNet.rs generative workflow marker
+- `flow:generative` - BitNet-rs generative workflow marker
 - `state:ready` - Ready for review
 
 **Issue Linkage:**
@@ -57,7 +57,7 @@ commits: 15 total; all use proper prefixes; branch pushed to remote
 
 ---
 
-## BitNet.rs-Specific Validation
+## BitNet-rs-Specific Validation
 
 ### Unified GPU Predicates
 - **Pattern:** `#[cfg(any(feature = "gpu", feature = "cuda"))]`

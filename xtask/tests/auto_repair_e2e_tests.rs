@@ -719,7 +719,7 @@ mod cross_platform_linux_tests {
     }
 
     /// Tests E2E workflow on Linux: Snap/Flatpak sandboxing compatibility
-    /// **Scenario**: BitNet.rs running inside Snap/Flatpak
+    /// **Scenario**: bitnet-rs running inside Snap/Flatpak
     /// **Expected**: Install directory accessible within sandbox
     #[test]
     #[cfg(target_os = "linux")]

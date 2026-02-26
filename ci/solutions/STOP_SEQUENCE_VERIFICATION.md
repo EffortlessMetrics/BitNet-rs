@@ -12,7 +12,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive verification that the "one token late" stop-sequence bug has been correctly fixed across the BitNet.rs codebase. The fix ensures stop sequences are detected BEFORE a token is added to the output stream, not AFTER.
+This document provides a comprehensive verification that the "one token late" stop-sequence bug has been correctly fixed across the BitNet-rs codebase. The fix ensures stop sequences are detected BEFORE a token is added to the output stream, not AFTER.
 
 ### Key Finding: FIX VERIFIED ✓
 

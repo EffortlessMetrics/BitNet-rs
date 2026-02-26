@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This specification outlines the comprehensive technical approach for eliminating mock inference paths that report false 200.0 tokens/sec performance metrics in BitNet.rs. The implementation will transform the neural network inference pipeline from mock fallbacks to real quantized computation using I2S, TL1, and TL2 quantization kernels, enabling accurate performance evaluation and production deployment.
+This specification outlines the comprehensive technical approach for eliminating mock inference paths that report false 200.0 tokens/sec performance metrics in BitNet-rs. The implementation will transform the neural network inference pipeline from mock fallbacks to real quantized computation using I2S, TL1, and TL2 quantization kernels, enabling accurate performance evaluation and production deployment.
 
 **Classification**: Breaking (Architecture Change)
 **Risk Level**: High (Core inference pipeline transformation)
@@ -31,7 +31,7 @@ This specification outlines the comprehensive technical approach for eliminating
 
 ### Current State Analysis
 
-BitNet.rs currently exhibits critical architectural flaws in performance reporting:
+BitNet-rs currently exhibits critical architectural flaws in performance reporting:
 
 **Problem 1: False Performance Metrics**
 - Mock inference paths report ~200.0 tok/s through `ConcreteTensor::mock()` fallbacks
@@ -73,7 +73,7 @@ Output → [❌ FALSE] Performance metrics from mock rather than real computatio
 
 ### Primary User Story - Neural Network Performance Engineer
 
-**As a** neural network performance engineer evaluating BitNet.rs for production deployment,
+**As a** neural network performance engineer evaluating BitNet-rs for production deployment,
 **I want** accurate performance reporting from real quantized inference computation,
 **So that** I can make evidence-based decisions about model deployment, establish realistic performance baselines, and validate the 1-bit quantization accuracy claims against FP32 references.
 
@@ -91,7 +91,7 @@ Output → [❌ FALSE] Performance metrics from mock rather than real computatio
 **Acceptance Criteria Coverage**: AC9
 
 #### Quality Assurance Team
-**As a** QA engineer validating BitNet.rs releases,
+**As a** QA engineer validating BitNet-rs releases,
 **I want** BITNET_STRICT_MODE=1 environment variable that prevents all mock fallbacks,
 **So that** I can ensure production builds use only real quantized computation.
 
@@ -1717,7 +1717,7 @@ cargo test -p crossval test_cpp_reference_correlation
 
 ## Conclusion
 
-This specification provides a comprehensive roadmap for eliminating mock inference paths in BitNet.rs and implementing real quantized computation. The approach prioritizes:
+This specification provides a comprehensive roadmap for eliminating mock inference paths in BitNet-rs and implementing real quantized computation. The approach prioritizes:
 
 1. **Numerical Accuracy**: ≥99.8% correlation for I2S, ≥99.6% for TL1/TL2 vs FP32 reference
 2. **Performance Transparency**: Realistic baselines (10-20 tok/s CPU, 50-100 tok/s GPU)

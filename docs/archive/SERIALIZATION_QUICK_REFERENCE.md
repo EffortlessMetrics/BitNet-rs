@@ -1,6 +1,6 @@
 # Serialization Quick Reference Guide
 
-Fast lookup for common serialization patterns in BitNet.rs
+Fast lookup for common serialization patterns in BitNet-rs
 
 ## Quick Patterns
 

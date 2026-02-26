@@ -19,7 +19,7 @@ impl Default for Conv2DParams {
 
 /// Perform a naive 2D convolution.
 ///
-/// This implementation follows BitNet.rs patterns with proper error handling,
+/// This implementation follows BitNet-rs patterns with proper error handling,
 /// input validation, and efficient memory access patterns. It supports stride,
 /// padding, and dilation operations commonly used in neural networks.
 ///

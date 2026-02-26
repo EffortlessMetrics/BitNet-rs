@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The `PerformanceThresholds` struct in `crates/bitnet-inference/src/validation.rs` uses hardcoded default values that are inappropriate for the wide range of hardware configurations where BitNet.rs may be deployed. These fixed thresholds cause validation failures on lower-end hardware and don't fully utilize capabilities of high-end systems.
+The `PerformanceThresholds` struct in `crates/bitnet-inference/src/validation.rs` uses hardcoded default values that are inappropriate for the wide range of hardware configurations where BitNet-rs may be deployed. These fixed thresholds cause validation failures on lower-end hardware and don't fully utilize capabilities of high-end systems.
 
 ## Environment
 - **File**: `crates/bitnet-inference/src/validation.rs`

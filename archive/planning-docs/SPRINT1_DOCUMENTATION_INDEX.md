@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains comprehensive documentation for implementing all-positions logits extraction in BitNet.rs. Four documents are provided at different levels of detail for different audiences.
+This directory contains comprehensive documentation for implementing all-positions logits extraction in BitNet-rs. Four documents are provided at different levels of detail for different audiences.
 
 ---
 

@@ -2,11 +2,11 @@
 
 **Problem-oriented** | **Goal: Validate quantized inference in different deployment scenarios**
 
-This guide shows you how to run strict mode validation workflows for common BitNet.rs deployment scenarios. Each workflow ensures your inference uses real quantized computation without silent FP32 fallbacks.
+This guide shows you how to run strict mode validation workflows for common BitNet-rs deployment scenarios. Each workflow ensures your inference uses real quantized computation without silent FP32 fallbacks.
 
 ## Prerequisites
 
-- BitNet.rs installed with appropriate features (`cpu` or `gpu`)
+- BitNet-rs installed with appropriate features (`cpu` or `gpu`)
 - A valid GGUF model file
 - Understanding of strict mode basics (see [Tutorial](../tutorials/strict-mode-quantization-validation.md))
 

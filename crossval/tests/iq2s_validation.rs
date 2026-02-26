@@ -1,6 +1,6 @@
 //! Cross-validation tests specifically for IQ2_S quantization
 //!
-//! These tests validate that the IQ2_S quantization implementation in BitNet.rs
+//! These tests validate that the IQ2_S quantization implementation in bitnet-rs
 //! produces identical results to the C++ reference implementation.
 
 use anyhow::Result;

@@ -1,6 +1,6 @@
-# BitNet.rs Release Checklist
+# BitNet-rs Release Checklist
 
-This checklist ensures a comprehensive and reliable release process for BitNet.rs.
+This checklist ensures a comprehensive and reliable release process for BitNet-rs.
 
 ## Pre-Release Preparation
 

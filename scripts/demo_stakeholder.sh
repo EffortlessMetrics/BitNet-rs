@@ -16,7 +16,7 @@ MODEL_GGUF="${MODEL_GGUF:-models/bitnet_b1_58-3B/gguf/model.gguf}"
 
 echo ""
 echo "======================================================"
-echo "  BitNet.rs Stakeholder Demo - 5 Minute Tour"
+echo "  BitNet-rs Stakeholder Demo - 5 Minute Tour"
 echo "======================================================"
 echo ""
 

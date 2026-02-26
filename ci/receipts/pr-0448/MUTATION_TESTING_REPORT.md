@@ -46,7 +46,7 @@ $ cargo mutants -p bitnet-quantization --timeout 30
 Status: TIMEOUT after 180s (large mutation surface)
 ```
 
-**Root Cause:** BitNet.rs workspace contains:
+**Root Cause:** BitNet-rs workspace contains:
 - 22 member crates with complex dependencies
 - Feature-gated compilation (`--no-default-features --features cpu|gpu`)
 - Large quantization/inference codebases (bitnet-quantization: 41 unit tests, bitnet-inference: 62 unit tests)
@@ -278,7 +278,7 @@ prometheus_removal_test.rs:
 
 ---
 
-## Comparison with BitNet.rs Quality Standards
+## Comparison with BitNet-rs Quality Standards
 
 ### Quality Gate Thresholds
 
@@ -411,7 +411,7 @@ recommendation: proceed to security-scanner; defer OTLP test implementation to p
 - New OTLP module has ~20-30% estimated mutation score (tests not implemented)
 - 5 critical survivors identified (OTLP config, global provider, resource attributes)
 - Test scaffolding exists but marked "not yet implemented" (acceptable for TDD Red phase)
-- Mutation testing deferral is non-blocking per BitNet.rs hardening gate policy
+- Mutation testing deferral is non-blocking per BitNet-rs hardening gate policy
 
 **Strengths:**
 - Comprehensive test scaffolding with clear AC traceability

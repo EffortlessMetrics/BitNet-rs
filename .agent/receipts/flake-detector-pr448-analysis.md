@@ -271,7 +271,7 @@ fn test_strict_mode_environment_variable_parsing() {
 ### Promotion Readiness: ✅ READY
 
 - **All PR-introduced tests**: 13/13 PASS (100%)
-- **Core BitNet.rs tests**: 268/268 PASS (excluding documented flaky)
+- **Core bitnet-rs tests**: 268/268 PASS (excluding documented flaky)
 - **Quality gates**: Format, clippy, tests all PASS
 - **Neural network pipeline**: 100% PASS (quantization, inference, kernels)
 

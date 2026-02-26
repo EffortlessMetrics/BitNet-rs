@@ -1,5 +1,5 @@
 # Documentation Review Evidence for PR #431
-# BitNet.rs Neural Network Inference - Real Inference Implementation
+# bitnet-rs Neural Network Inference - Real Inference Implementation
 # Generated: 2025-10-04
 
 ## Diátaxis Framework Validation ✅

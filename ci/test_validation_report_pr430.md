@@ -405,5 +405,5 @@ cargo xtask checks upsert \
 **Generated**: 2025-10-02
 **Validator**: test-runner (re-validation agent)
 **Commit Range**: 5da0b5b (HEAD) after 8e4988c (impl-fixer fixture generation)
-**Test Environment**: BitNet.rs workspace with CPU features
+**Test Environment**: BitNet-rs workspace with CPU features
 **Validation Method**: Comprehensive test suite execution with GGUF fixture validation

@@ -125,7 +125,7 @@ mutation: tl_lut 100% (threshold 80%), receipt_validation 56.25% (threshold 80%)
 
 ---
 
-## BitNet.rs Quality Standards
+## BitNet-rs Quality Standards
 
 **Neural Network Correctness Critical Requirements:**
 - ✅ TL LUT helper: High mutation score (100%) validates quantization accuracy

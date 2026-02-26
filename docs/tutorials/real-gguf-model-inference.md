@@ -1,6 +1,6 @@
 # Getting Started with Real GGUF Model Inference
 
-This tutorial demonstrates BitNet.rs's production-ready GGUF weight loading capability, enabling meaningful neural network inference with actual trained model parameters. You'll learn how to load real GGUF models, perform quantized inference, and validate accuracy across different quantization formats.
+This tutorial demonstrates bitnet-rs's production-ready GGUF weight loading capability, enabling meaningful neural network inference with actual trained model parameters. You'll learn how to load real GGUF models, perform quantized inference, and validate accuracy across different quantization formats.
 
 ## What You'll Learn
 
@@ -13,7 +13,7 @@ This tutorial demonstrates BitNet.rs's production-ready GGUF weight loading capa
 
 ## Prerequisites
 
-- BitNet.rs workspace properly installed (MSRV: Rust 1.90.0)
+- bitnet-rs workspace properly installed (MSRV: Rust 1.90.0)
 - Basic understanding of neural network quantization concepts
 - CUDA Toolkit 11.0+ (optional, for GPU acceleration)
 - 2GB+ disk space for model downloads
@@ -111,7 +111,7 @@ cargo run -p xtask -- crossval
 
 ### Architecture Overview
 
-BitNet.rs implements comprehensive GGUF weight loading with these components:
+bitnet-rs implements comprehensive GGUF weight loading with these components:
 
 ```rust
 use bitnet_models::gguf_simple::load_gguf;
@@ -472,11 +472,11 @@ You've learned how to:
 - ✅ Test cross-validation against C++ reference implementation
 - ✅ Troubleshoot common issues with real model inference
 
-The GGUF weight loading system enables meaningful neural network inference with BitNet.rs, moving beyond mock tensors to production-ready AI applications with 1-bit quantized neural networks.
+The GGUF weight loading system enables meaningful neural network inference with bitnet-rs, moving beyond mock tensors to production-ready AI applications with 1-bit quantized neural networks.
 
 ## Performance Baselines
 
-With real GGUF weight loading, BitNet.rs achieves:
+With real GGUF weight loading, bitnet-rs achieves:
 
 - **Quantization Performance**: 66+ Melem/s (CPU), 200+ Melem/s (GPU)
 - **Inference Throughput**: 10-20 tok/s (CPU), 50-100 tok/s (GPU) with real quantized computation

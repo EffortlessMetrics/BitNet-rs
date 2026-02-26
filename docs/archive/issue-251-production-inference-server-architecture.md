@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This architectural blueprint defines the comprehensive design for transforming BitNet.rs into a production-ready neural network inference server. Building upon the existing `bitnet-server` infrastructure, this specification provides detailed architecture for enterprise-grade HTTP server capabilities with quantization-aware model management, device-aware execution routing, advanced concurrency control, and comprehensive monitoring for high-throughput neural network inference deployments.
+This architectural blueprint defines the comprehensive design for transforming BitNet-rs into a production-ready neural network inference server. Building upon the existing `bitnet-server` infrastructure, this specification provides detailed architecture for enterprise-grade HTTP server capabilities with quantization-aware model management, device-aware execution routing, advanced concurrency control, and comprehensive monitoring for high-throughput neural network inference deployments.
 
 ## Architecture Overview
 
@@ -89,7 +89,7 @@ graph TB
 
 ### Neural Network Pipeline Integration
 
-The production server integrates seamlessly with the BitNet.rs neural network inference pipeline:
+The production server integrates seamlessly with the BitNet-rs neural network inference pipeline:
 
 **Pipeline Flow: Model Loading → Quantization → Inference → Output**
 
@@ -646,7 +646,7 @@ metrics:
 ```json
 {
   "dashboard": {
-    "title": "BitNet.rs Production Inference Server",
+    "title": "BitNet-rs Production Inference Server",
     "panels": [
       {
         "title": "Inference Throughput",
@@ -688,7 +688,7 @@ metrics:
 - Health check integration with load balancers
 - Zero-downtime deployment support
 
-## BitNet.rs Integration Specifications
+## BitNet-rs Integration Specifications
 
 ### Feature Flag Integration
 
@@ -924,7 +924,7 @@ cargo run -p xtask -- test-matrix --features "cpu gpu none"
 
 ## Conclusion
 
-This architectural blueprint provides a comprehensive foundation for implementing a production-ready BitNet.rs inference server with enterprise-grade capabilities. The design emphasizes:
+This architectural blueprint provides a comprehensive foundation for implementing a production-ready BitNet-rs inference server with enterprise-grade capabilities. The design emphasizes:
 
 **Core Strengths**:
 - **Quantization Awareness**: Deep integration with I2S/TL1/TL2 quantization formats
@@ -933,7 +933,7 @@ This architectural blueprint provides a comprehensive foundation for implementin
 - **Scalability**: Support for 100+ concurrent requests with optimal resource utilization
 
 **Neural Network Integration**:
-- Seamless integration with BitNet.rs quantization pipeline
+- Seamless integration with BitNet-rs quantization pipeline
 - Cross-validation framework for accuracy assurance
 - GGUF compatibility with enhanced validation
 - Performance optimization for neural network inference workloads
@@ -944,6 +944,6 @@ This architectural blueprint provides a comprehensive foundation for implementin
 - Security hardening and reliability features
 - Zero-downtime deployment capabilities
 
-The specification ensures BitNet.rs can deliver production-grade neural network inference with validated accuracy, optimal performance, and enterprise reliability while maintaining compatibility with existing patterns and validation frameworks.
+The specification ensures BitNet-rs can deliver production-grade neural network inference with validated accuracy, optimal performance, and enterprise reliability while maintaining compatibility with existing patterns and validation frameworks.
 
-**Next Steps**: This architectural blueprint is ready for implementation with clear acceptance criteria, comprehensive validation frameworks, and detailed technical specifications that align with BitNet.rs patterns and enterprise requirements.
+**Next Steps**: This architectural blueprint is ready for implementation with clear acceptance criteria, comprehensive validation frameworks, and detailed technical specifications that align with BitNet-rs patterns and enterprise requirements.

@@ -1,6 +1,6 @@
 //! Example unit tests for bitnet-common crate
 //!
-//! This file demonstrates comprehensive unit testing patterns for the BitNet.rs project,
+//! This file demonstrates comprehensive unit testing patterns for the bitnet-rs project,
 //! including property-based testing, error handling validation, and performance testing.
 
 use bitnet_common::{BitNetError, ModelConfig, QuantizationConfig};

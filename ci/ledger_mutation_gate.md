@@ -70,7 +70,7 @@
 - **Comparison Operator Changes**: NEW - Device-aware quantizer comparison logic validation
 - **Bit Manipulation Changes**: NEW - I2S bit-shift and packing consistency tests
 
-### BitNet.rs Neural Network Test Coverage Enhancement
+### BitNet-rs Neural Network Test Coverage Enhancement
 
 - **I2S Accuracy Risk**: MITIGATED - Comprehensive bit-shift and round-trip accuracy validation added
 - **TL1/TL2 Integrity Risk**: MITIGATED - Lookup table scale calculation and arithmetic mutation killers implemented

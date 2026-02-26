@@ -12,7 +12,7 @@
 
 **Overall Assessment:** ✅ **ARCHITECTURE ALIGNED** with minor documentation needs
 
-PR #464 successfully implements CPU forward pass inference while maintaining strong alignment with BitNet.rs's established architectural patterns. The implementation demonstrates:
+PR #464 successfully implements CPU forward pass inference while maintaining strong alignment with BitNet-rs's established architectural patterns. The implementation demonstrates:
 
 - ✅ Proper crate boundary separation between inference, kernels, and quantization layers
 - ✅ Correct quantization contract implementation (TL1/TL2/I2S through QuantizedLinear)
@@ -68,7 +68,7 @@ bitnet-inference (inference engine)
 - ✅ **Feature-gated correctly**: CPU kernels behind `--features cpu`
 - ✅ **No leaky abstractions**: Kernel details properly encapsulated
 
-**Assessment:** **PASS** - Crate boundaries respected per BitNet.rs design principles.
+**Assessment:** **PASS** - Crate boundaries respected per BitNet-rs design principles.
 
 ---
 

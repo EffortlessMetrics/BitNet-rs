@@ -3,7 +3,7 @@
 //! Tests feature spec: chat-repl-ux-polish.md#AC2-template-auto-detection
 //!
 //! This test suite validates the prompt template auto-detection logic for the
-//! BitNet.rs CLI. Tests verify the priority order: GGUF metadata → tokenizer
+//! BitNet-rs CLI. Tests verify the priority order: GGUF metadata → tokenizer
 //! family name → subcommand defaults.
 //!
 //! **TDD Approach**: These tests compile successfully but fail because the

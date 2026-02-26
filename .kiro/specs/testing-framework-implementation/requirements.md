@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This specification defines the requirements for implementing the first phase of the comprehensive testing framework for BitNet.rs. This phase focuses on establishing the core testing infrastructure, basic cross-implementation comparison, and foundational components that will support the full testing framework.
+This specification defines the requirements for implementing the first phase of the comprehensive testing framework for BitNet-rs. This phase focuses on establishing the core testing infrastructure, basic cross-implementation comparison, and foundational components that will support the full testing framework.
 
 ## Requirements
 

@@ -1,6 +1,6 @@
 # Validation Framework
 
-This document describes BitNet.rs's comprehensive validation system for model evaluation, performance testing, and cross-validation.
+This document describes BitNet-rs's comprehensive validation system for model evaluation, performance testing, and cross-validation.
 
 ## Evaluation Commands
 
@@ -161,7 +161,7 @@ cargo run --example inspect_gguf_metadata --no-default-features --features cpu -
 
 ## Enhanced Inference Engine Architecture
 
-BitNet.rs features a production-ready inference engine with comprehensive performance monitoring:
+BitNet-rs features a production-ready inference engine with comprehensive performance monitoring:
 
 ### Core Inference Features
 - **Explicit Prefill Support**: Dedicated `engine.prefill()` method for cache warming and latency measurement

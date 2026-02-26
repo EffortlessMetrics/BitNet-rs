@@ -184,7 +184,7 @@ print_usage() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Enforce patch policy for BitNet.rs repository.
+Enforce patch policy for BitNet-rs repository.
 
 This script checks:
 1. Whether patches directory exists and contains patches

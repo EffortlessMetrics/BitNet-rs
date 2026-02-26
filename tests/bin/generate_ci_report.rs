@@ -246,7 +246,7 @@ async fn generate_pr_comment_file(
 ) -> Result<()> {
     let mut comment = String::new();
 
-    comment.push_str("<!-- BitNet.rs Test Results -->\n\n");
+    comment.push_str("<!-- BitNet-rs Test Results -->\n\n");
 
     // Calculate overall statistics
     let total_tests: usize = test_results.iter().map(|s| s.summary.total_tests).sum();

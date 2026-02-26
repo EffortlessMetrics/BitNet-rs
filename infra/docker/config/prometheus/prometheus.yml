@@ -1,4 +1,4 @@
-# Prometheus configuration for BitNet.rs monitoring
+# Prometheus configuration for bitnet-rs monitoring
 
 global:
   scrape_interval: 15s
@@ -26,7 +26,7 @@ scrape_configs:
       - targets: ['localhost:9090']
     scrape_interval: 30s
 
-  # BitNet.rs primary server
+  # bitnet-rs primary server
   - job_name: 'bitnet-server'
     static_configs:
       - targets: ['bitnet-server:9090']
@@ -43,7 +43,7 @@ scrape_configs:
       - target_label: implementation
         replacement: 'rust'
 
-  # BitNet.rs GPU server (if enabled)
+  # bitnet-rs GPU server (if enabled)
   - job_name: 'bitnet-gpu'
     static_configs:
       - targets: ['bitnet-gpu:9090']

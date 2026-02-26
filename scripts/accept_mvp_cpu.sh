@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CPU MVP Acceptance Script for BitNet.rs
+# CPU MVP Acceptance Script for BitNet-rs
 #
 # This script validates the Minimum Viable Product (MVP) for CPU inference
 # with deterministic outputs, quality checks, and receipt validation.
@@ -209,7 +209,7 @@ validate_receipt() {
 # Main Execution
 #
 
-section "BitNet.rs CPU MVP Acceptance Test Suite"
+section "BitNet-rs CPU MVP Acceptance Test Suite"
 
 log INFO "Configuration:"
 log INFO "  Timestamp:  $TIMESTAMP"

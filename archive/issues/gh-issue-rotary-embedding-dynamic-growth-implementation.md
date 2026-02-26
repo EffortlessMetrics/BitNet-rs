@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The `RotaryEmbedding::apply` implementation lacks dynamic growth capability, limiting BitNet.rs to sequences shorter than the pre-allocated `max_seq_len`. This architectural limitation prevents the model from processing long documents, conversations, or variable-length inputs that exceed the initial sequence length constraints.
+The `RotaryEmbedding::apply` implementation lacks dynamic growth capability, limiting BitNet-rs to sequences shorter than the pre-allocated `max_seq_len`. This architectural limitation prevents the model from processing long documents, conversations, or variable-length inputs that exceed the initial sequence length constraints.
 
 ## Environment
 
@@ -724,4 +724,4 @@ mod benchmarks {
 
 ## Implementation Notes
 
-This dynamic growth implementation enables BitNet.rs to handle arbitrary sequence lengths while maintaining optimal memory usage and performance characteristics. The thread-safe design allows concurrent inference while supporting automatic cache expansion as needed.
+This dynamic growth implementation enables BitNet-rs to handle arbitrary sequence lengths while maintaining optimal memory usage and performance characteristics. The thread-safe design allows concurrent inference while supporting automatic cache expansion as needed.

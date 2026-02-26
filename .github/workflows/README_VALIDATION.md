@@ -1,6 +1,6 @@
 # Validation Workflow Documentation
 
-This directory contains the comprehensive validation CI workflow for BitNet.rs.
+This directory contains the comprehensive validation CI workflow for bitnet-rs.
 
 ## Quick Links
 
@@ -12,7 +12,7 @@ This directory contains the comprehensive validation CI workflow for BitNet.rs.
 
 ## What This Workflow Does
 
-The validation workflow (`validation.yml`) enforces quality standards for BitNet.rs:
+The validation workflow (`validation.yml`) enforces quality standards for bitnet-rs:
 
 ### 🔒 Security Guard
 - Blocks correction flags in CI (BITNET_ALLOW_RUNTIME_CORRECTIONS, BITNET_CORRECTION_POLICY)
@@ -247,7 +247,7 @@ For issues with the validation workflow:
 
 Created: 2025-10-13
 Version: 1.0 (initial release)
-Part of: BitNet.rs validation infrastructure
+Part of: bitnet-rs validation infrastructure
 
 ---
 

@@ -5,7 +5,7 @@
 //!
 //! This test module provides comprehensive cross-validation test scaffolding for GGUF weight loading
 //! implementation, focusing on accuracy validation against C++ reference implementation and
-//! deterministic inference testing. Tests integrate with BitNet.rs crossval framework.
+//! deterministic inference testing. Tests integrate with BitNet-rs crossval framework.
 
 #![allow(dead_code, unused_variables, unused_imports)]
 

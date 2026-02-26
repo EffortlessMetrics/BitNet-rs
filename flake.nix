@@ -1,5 +1,5 @@
 {
-  description = "BitNet.rs – reproducible dev env & local CI (Nix flake)";
+  description = "BitNet-rs – reproducible dev env & local CI (Nix flake)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
@@ -62,7 +62,7 @@
               export LIBCLANG_PATH="${pkgs.libclang.lib}/lib"
 
               echo "╭─────────────────────────────────────────────╮"
-              echo "│ BitNet.rs development environment          │"
+              echo "│ BitNet-rs development environment          │"
               echo "├─────────────────────────────────────────────┤"
               echo "│ rustc:  $(rustc --version | cut -d' ' -f2) │"
               echo "│ cargo:  $(cargo --version | cut -d' ' -f2) │"

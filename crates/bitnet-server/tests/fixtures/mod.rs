@@ -1,12 +1,12 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-//! Test Fixtures for BitNet.rs Inference Server
+//! Test Fixtures for BitNet-rs Inference Server
 //!
 //! This module provides comprehensive test fixtures for the production inference
 //! server including models, quantization data, HTTP requests/responses, and
 //! deployment configurations. All fixtures support feature-gated compilation
-//! and BitNet.rs neural network testing patterns.
+//! and BitNet-rs neural network testing patterns.
 
 pub mod deployment;
 pub mod models;

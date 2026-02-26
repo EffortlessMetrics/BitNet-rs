@@ -270,7 +270,7 @@ impl IQ2SQuantizer {
         &self,
         input: &[f32]
     ) -> Result<CrossValidationResult, QuantizationError> {
-        // Quantize with BitNet.rs implementation
+        // Quantize with BitNet-rs implementation
         let bitnet_result = self.quantize_ggml_format(input)?;
 
         // Quantize with GGML FFI
@@ -743,4 +743,4 @@ impl InferenceCrossValidator {
 
 ## Conclusion
 
-These comprehensive neural network operation requirements provide the foundation for implementing production-grade real BitNet model integration with validated accuracy preservation and optimal performance characteristics. The requirements ensure that BitNet.rs can confidently handle real-world neural network inference workloads while maintaining the highest standards of numerical accuracy and computational efficiency.
+These comprehensive neural network operation requirements provide the foundation for implementing production-grade real BitNet model integration with validated accuracy preservation and optimal performance characteristics. The requirements ensure that BitNet-rs can confidently handle real-world neural network inference workloads while maintaining the highest standards of numerical accuracy and computational efficiency.

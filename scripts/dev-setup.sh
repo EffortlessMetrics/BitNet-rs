@@ -1,6 +1,6 @@
 #!/bin/bash
-# BitNet.rs Development Environment Setup
-# This script sets up a complete development environment for BitNet.rs
+# BitNet-rs Development Environment Setup
+# This script sets up a complete development environment for BitNet-rs
 
 set -euo pipefail
 
@@ -69,7 +69,7 @@ check_system() {
 
     # Check if we're in the right directory
     if [[ ! -f "Cargo.toml" ]] || ! grep -q "bitnet" Cargo.toml; then
-        log_error "This script must be run from the BitNet.rs repository root"
+        log_error "This script must be run from the BitNet-rs repository root"
         exit 1
     fi
 
@@ -219,7 +219,7 @@ setup_dev_config() {
         log_info "Creating .cargo/config.toml..."
         mkdir -p .cargo
         cat > .cargo/config.toml << 'EOF'
-# Cargo configuration for BitNet.rs development
+# Cargo configuration for BitNet-rs development
 
 [build]
 # Disable crossval feature by default for fast builds
@@ -275,7 +275,7 @@ EOF
         # Pre-commit hook
         cat > .git/hooks/pre-commit << 'EOF'
 #!/bin/bash
-# Pre-commit hook for BitNet.rs
+# Pre-commit hook for BitNet-rs
 
 set -e
 
@@ -465,7 +465,7 @@ print_usage() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Set up BitNet.rs development environment.
+Set up BitNet-rs development environment.
 
 OPTIONS:
     --skip-rust         Skip Rust installation
@@ -572,7 +572,7 @@ main() {
     fi
 
     log_info ""
-    log_info "🎉 BitNet.rs development environment setup complete!"
+    log_info "🎉 BitNet-rs development environment setup complete!"
     log_info ""
     log_info "Next steps:"
     log_info "  1. Run 'cargo test --workspace --features cpu' to run tests"

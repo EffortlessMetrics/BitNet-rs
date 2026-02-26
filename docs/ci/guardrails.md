@@ -1,10 +1,10 @@
 # CI Guardrails
 
-BitNet.rs implements a comprehensive guardrail system to ensure CI reproducibility, supply chain security, and honest compute validation. This document explains the philosophy, enforcement mechanisms, and developer workflows.
+BitNet-rs implements a comprehensive guardrail system to ensure CI reproducibility, supply chain security, and honest compute validation. This document explains the philosophy, enforcement mechanisms, and developer workflows.
 
 ## Philosophy
 
-BitNet.rs CI guardrails are designed around three core principles:
+BitNet-rs CI guardrails are designed around three core principles:
 
 1. **Reproducibility**: Same inputs → same outputs (deterministic builds, pinned dependencies)
 2. **Supply Chain Security**: No floating dependencies (SHA pins, locked cargo builds)
@@ -413,7 +413,7 @@ jq '.kernels' ci/inference.json
 
 ## Summary
 
-BitNet.rs guardrails ensure:
+BitNet-rs guardrails ensure:
 - ✅ No floating dependencies (SHA pins, `--locked`)
 - ✅ No MSRV drift (single-source from `rust-toolchain.toml`)
 - ✅ Honest compute (receipt verification)

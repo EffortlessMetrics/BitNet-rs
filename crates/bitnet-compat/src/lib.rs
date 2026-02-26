@@ -1,7 +1,7 @@
 //! BitNet GGUF compatibility layer
 //!
 //! This crate provides utilities to ensure GGUF model files are compatible with
-//! both BitNet.rs and llama.cpp. It can diagnose and fix common compatibility
+//! both BitNet-rs and llama.cpp. It can diagnose and fix common compatibility
 //! issues in GGUF files.
 //!
 //! # Main Features

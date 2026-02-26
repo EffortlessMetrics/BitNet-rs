@@ -1,6 +1,6 @@
 # Performance Benchmarks Migration Example
 
-This example demonstrates comprehensive performance comparison between legacy implementations and BitNet.rs.
+This example demonstrates comprehensive performance comparison between legacy implementations and bitnet-rs.
 
 ## Overview
 
@@ -183,7 +183,7 @@ int main() {
 }
 ```
 
-## After: BitNet.rs Performance Benchmarks
+## After: bitnet-rs Performance Benchmarks
 
 ### Rust Implementation Benchmarks
 ```rust
@@ -403,7 +403,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut benchmark = RustBenchmark::new("/models/bitnet_b1_58-3B.gguf").await?;
 
-    println!("\n=== BitNet.rs Benchmark Results ===");
+    println!("\n=== bitnet-rs Benchmark Results ===");
 
     let single_result = benchmark.benchmark_single_inference(&test_prompts).await;
     println!("Single Inference:");
@@ -561,7 +561,7 @@ async fn run_comprehensive_comparison() -> Result<ComparisonReport, Box<dyn std:
     };
 
     let recommendations = vec![
-        "Migrate to BitNet.rs for 2.4x faster inference".to_string(),
+        "Migrate to bitnet-rs for 2.4x faster inference".to_string(),
         "Use async batch processing for 8.2x throughput improvement".to_string(),
         "Implement streaming for real-time applications".to_string(),
         "Reduce memory usage by 34% with Rust implementation".to_string(),
@@ -583,7 +583,7 @@ fn generate_report(report: &ComparisonReport) -> String {
 
 ## Executive Summary
 
-The migration from C++ to BitNet.rs delivers significant performance improvements across all metrics:
+The migration from C++ to bitnet-rs delivers significant performance improvements across all metrics:
 
 - **{:.1}x faster inference** - Average latency reduced from {:.1}ms to {:.1}ms
 - **{:.1}x higher throughput** - From {:.0} to {:.0} tokens/second
@@ -594,7 +594,7 @@ The migration from C++ to BitNet.rs delivers significant performance improvement
 ## Detailed Performance Comparison
 
 ### Single Inference Performance
-| Metric | C++ Legacy | BitNet.rs | Improvement |
+| Metric | C++ Legacy | bitnet-rs | Improvement |
 |--------|------------|-----------|-------------|
 | Avg Latency | {:.1}ms | {:.1}ms | {:.1}x faster |
 | Throughput | {:.0} tok/s | {:.0} tok/s | {:.1}x higher |
@@ -602,13 +602,13 @@ The migration from C++ to BitNet.rs delivers significant performance improvement
 | CPU Usage | {:.1}% | {:.1}% | {:.1}% less |
 
 ### Batch Processing Performance
-| Metric | C++ Legacy | BitNet.rs | Improvement |
+| Metric | C++ Legacy | bitnet-rs | Improvement |
 |--------|------------|-----------|-------------|
 | Avg Latency | {:.1}ms | {:.1}ms | {:.1}x faster |
 | Throughput | {:.0} tok/s | {:.0} tok/s | {:.1}x higher |
 | Memory Usage | {}MB | {}MB | {:.1}% less |
 
-### New Capabilities in BitNet.rs
+### New Capabilities in bitnet-rs
 - **Streaming Inference**: {:.1}ms latency, {:.0} tok/s throughput
 - **P95/P99 Latency Tracking**: {:.1}ms / {:.1}ms
 - **Async Processing**: True concurrent request handling
@@ -620,7 +620,7 @@ The migration from C++ to BitNet.rs delivers significant performance improvement
 
 ## Conclusion
 
-The migration to BitNet.rs provides substantial performance improvements while adding modern features like streaming inference, better observability, and async processing capabilities.
+The migration to bitnet-rs provides substantial performance improvements while adding modern features like streaming inference, better observability, and async processing capabilities.
 "#,
         report.improvements.latency_improvement,
         report.cpp_results.single_inference.avg_latency_ms,
@@ -741,4 +741,4 @@ cargo run --release --bin comparison > migration_report.md
 
 ---
 
-**Performance validated!** BitNet.rs delivers measurable improvements across all performance metrics while providing modern development and deployment advantages.
+**Performance validated!** bitnet-rs delivers measurable improvements across all performance metrics while providing modern development and deployment advantages.

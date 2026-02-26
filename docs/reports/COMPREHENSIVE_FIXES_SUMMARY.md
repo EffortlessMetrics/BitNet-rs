@@ -1,4 +1,4 @@
-# BitNet.rs: Comprehensive Fixes & Improvements Summary
+# BitNet-rs: Comprehensive Fixes & Improvements Summary
 
 **Date:** 2025-10-24
 **Session Duration:** ~2 hours
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully deployed 12 specialized agents to investigate and fix critical issues blocking BitNet.rs inference. All identified blockers have been resolved, comprehensive validation completed, and the codebase is now in production-ready state for MVP release.
+Successfully deployed 12 specialized agents to investigate and fix critical issues blocking BitNet-rs inference. All identified blockers have been resolved, comprehensive validation completed, and the codebase is now in production-ready state for MVP release.
 
 ### Key Achievements
 
@@ -606,7 +606,7 @@ This comprehensive fix session was made possible by:
 
 **Status: ✅ ALL OBJECTIVES ACHIEVED**
 
-All 12 agents completed successfully, resolving critical blockers and establishing a solid foundation for BitNet.rs MVP release. The codebase is now in production-ready state with:
+All 12 agents completed successfully, resolving critical blockers and establishing a solid foundation for BitNet-rs MVP release. The codebase is now in production-ready state with:
 
 - ✅ Comprehensive test coverage (99.85%)
 - ✅ Working inference (validated end-to-end)
@@ -615,7 +615,7 @@ All 12 agents completed successfully, resolving critical blockers and establishi
 - ✅ Excellent documentation (30,000+ words)
 - ✅ User experience improvements (CLI warnings, guides)
 
-**The BitNet.rs project is ready for v0.1.0-qna-mvp release.** 🎉
+**The BitNet-rs project is ready for v0.1.0-qna-mvp release.** 🎉
 
 ---
 

@@ -1,14 +1,14 @@
 # Cross-Validation Tools
 
-This directory contains tools and documentation for cross-validating BitNet.rs against the legacy C++ implementation. These tools ensure numerical accuracy and performance parity during development and testing.
+This directory contains tools and documentation for cross-validating BitNet-rs against the legacy C++ implementation. These tools ensure numerical accuracy and performance parity during development and testing.
 
-> **Note**: Cross-validation is primarily used for development and testing. For production use, BitNet.rs is the recommended implementation due to its superior performance and safety guarantees.
+> **Note**: Cross-validation is primarily used for development and testing. For production use, BitNet-rs is the recommended implementation due to its superior performance and safety guarantees.
 
 ## Overview
 
 Cross-validation serves several purposes:
 
-- **Numerical Accuracy**: Verify that BitNet.rs produces identical outputs to the legacy implementation
+- **Numerical Accuracy**: Verify that BitNet-rs produces identical outputs to the legacy implementation
 - **Performance Benchmarking**: Compare speed and memory usage between implementations
 - **Regression Testing**: Detect when changes affect compatibility
 - **Migration Validation**: Ensure smooth migration from legacy implementations
@@ -222,7 +222,7 @@ Create custom test cases for your specific models:
 ```
 Benchmark Results:
 ┌─────────────────┬─────────────┬─────────────┬─────────────┐
-│ Test            │ BitNet.rs   │ BitNet C++  │ Improvement │
+│ Test            │ BitNet-rs   │ BitNet C++  │ Improvement │
 ├─────────────────┼─────────────┼─────────────┼─────────────┤
 │ Inference Speed │ 1,250 tok/s │ 520 tok/s   │ 2.4x faster │
 │ Memory Usage    │ 2.1 GB      │ 3.2 GB      │ 34% less    │
@@ -232,7 +232,7 @@ Benchmark Results:
 ```
 
 **Interpretation**:
-- **Green numbers**: BitNet.rs is faster/more efficient
+- **Green numbers**: BitNet-rs is faster/more efficient
 - **Red numbers**: Potential regression (investigate)
 - **Yellow numbers**: Within expected variance
 
@@ -241,7 +241,7 @@ Benchmark Results:
 ```
 Memory Usage Comparison:
 ┌─────────────────┬─────────────┬─────────────┐
-│ Component       │ BitNet.rs   │ BitNet C++  │
+│ Component       │ BitNet-rs   │ BitNet C++  │
 ├─────────────────┼─────────────┼─────────────┤
 │ Model Weights   │ 1.2 GB      │ 1.2 GB      │
 │ KV Cache        │ 512 MB      │ 768 MB      │

@@ -155,7 +155,7 @@ This is **correct behavior** - mutation testing with a failing baseline would pr
 3. **Test Effectiveness Validation**: Cannot verify if tests detect quantization bugs
 4. **Quality Gate**: Cannot assess if mutation score meets ≥80% threshold
 
-### Affected BitNet.rs Components
+### Affected bitnet-rs Components
 - **bitnet-quantization** package (primary target)
   - I2S quantization algorithms (`crates/bitnet-quantization/src/i2s.rs`)
   - TL1/TL2 quantization (not yet tested due to baseline failure)
@@ -236,7 +236,7 @@ Once baseline tests pass:
      --no-default-features --features cpu
    ```
 
-3. **Target Mutation Score**: ≥80% for production code (BitNet.rs standard)
+3. **Target Mutation Score**: ≥80% for production code (bitnet-rs standard)
 
 ---
 

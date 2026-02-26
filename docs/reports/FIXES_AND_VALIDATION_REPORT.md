@@ -1,4 +1,4 @@
-# BitNet.rs Fixes & Validation Report
+# BitNet-rs Fixes & Validation Report
 
 **Report Date:** 2025-10-24
 **Branch:** `feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2`
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This report documents the comprehensive fixes, optimizations, and validation infrastructure implemented for BitNet.rs between MVP (v0.1.0) and the current development state targeting v0.2.0. The work represents significant progress across multiple dimensions:
+This report documents the comprehensive fixes, optimizations, and validation infrastructure implemented for BitNet-rs between MVP (v0.1.0) and the current development state targeting v0.2.0. The work represents significant progress across multiple dimensions:
 
 ### Key Achievements
 
@@ -147,7 +147,7 @@ cargo build --tests --workspace --no-default-features --features cpu
 
 #### Implementation Details
 
-BitNet.rs now includes comprehensive GGUF fixture-based testing to validate dual I2_S flavor detection (BitNet32-F16 vs QK256) and prevent regressions.
+BitNet-rs now includes comprehensive GGUF fixture-based testing to validate dual I2_S flavor detection (BitNet32-F16 vs QK256) and prevent regressions.
 
 **Location:** `crates/bitnet-models/tests/`
 
@@ -1015,7 +1015,7 @@ RUST_LOG=warn cargo run -p bitnet-cli --features cpu -- run \
 
 ## Conclusion
 
-This validation report documents significant progress in BitNet.rs development:
+This validation report documents significant progress in BitNet-rs development:
 
 **Completed:**
 - ✅ QK256 AVX2 Phase 1 foundation (1.2× uplift, targeting ≥3×)
@@ -1041,5 +1041,5 @@ The codebase is in a healthy state with clear paths forward for remaining blocke
 ---
 
 **Report Generated:** 2025-10-24
-**Report Author:** BitNet.rs Development Team
+**Report Author:** BitNet-rs Development Team
 **Version:** v0.2.0-pre (development)

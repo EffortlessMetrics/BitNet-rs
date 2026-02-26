@@ -79,7 +79,7 @@
   - cargo fmt: CLEAN
   - cargo clippy: 0 warnings (bitnet-kernels scope)
   - Performance: Excellent metrics
-  - BitNet.rs standards: Compliant
+  - BitNet-rs standards: Compliant
 
 #### Agent: **impl-finalizer** - Comprehensive Quality Validation
 - **Task**: Final quality validation before refinement
@@ -207,7 +207,7 @@ test_cpu_simd_kernel_integration catches real bugs"
 ```bash
 # Update docs to reflect Issue #260 completion
 Task tool → doc-updater:
-"Update BitNet.rs documentation to reflect Issue #260 TDD scaffold
+"Update BitNet-rs documentation to reflect Issue #260 TDD scaffold
 completion. Both tests now passing with real implementations."
 ```
 

@@ -1,10 +1,10 @@
 # Production Inference Server Architecture
 
-Understanding the design principles and architectural decisions behind the BitNet.rs production inference server for enterprise neural network deployments.
+Understanding the design principles and architectural decisions behind the BitNet-rs production inference server for enterprise neural network deployments.
 
 ## Overview
 
-The BitNet.rs production inference server is designed as a comprehensive solution for deploying 1-bit neural network models in production environments. The architecture prioritizes **reliability, performance, and scalability** while maintaining **quantization accuracy** and **operational simplicity**.
+The BitNet-rs production inference server is designed as a comprehensive solution for deploying 1-bit neural network models in production environments. The architecture prioritizes **reliability, performance, and scalability** while maintaining **quantization accuracy** and **operational simplicity**.
 
 ## Core Design Principles
 
@@ -42,7 +42,7 @@ Request → Execution Router → Device Selection Matrix
 
 **Design Decision**: Quantization-aware batching with intelligent request grouping.
 
-Unlike traditional inference servers that batch by request arrival time, BitNet.rs groups requests by **compatible quantization formats** and **optimal batch sizes** for each format:
+Unlike traditional inference servers that batch by request arrival time, BitNet-rs groups requests by **compatible quantization formats** and **optimal batch sizes** for each format:
 
 ```rust
 // Conceptual batching logic
@@ -104,7 +104,7 @@ fn select_device(request: &InferenceRequest) -> ExecutionPlan {
 
 ### Concurrency Manager: Beyond Thread Pools
 
-Traditional web servers use thread pools. BitNet.rs uses **request-aware concurrency management**:
+Traditional web servers use thread pools. BitNet-rs uses **request-aware concurrency management**:
 
 **Design Innovation**: Different types of neural network requests have vastly different resource requirements:
 - Short prompts: Low memory, high CPU burst
@@ -138,7 +138,7 @@ pub struct ConcurrencyManager {
 
 **Problem**: Traditional neural network servers often experience memory fragmentation and unpredictable memory spikes.
 
-**BitNet.rs Solution**: Quantization-aware memory pools with predictable allocation patterns.
+**BitNet-rs Solution**: Quantization-aware memory pools with predictable allocation patterns.
 
 ```rust
 // Conceptual memory architecture
@@ -212,7 +212,7 @@ Health checks are not binary "up/down" indicators but **comprehensive system int
 
 ### Defense in Depth
 
-Rather than perimeter security, BitNet.rs implements security at every layer:
+Rather than perimeter security, BitNet-rs implements security at every layer:
 
 **Request Level**:
 - Input validation and sanitization
@@ -243,7 +243,7 @@ Rather than perimeter security, BitNet.rs implements security at every layer:
 
 **Problem**: How to scale neural network inference without losing efficiency?
 
-**BitNet.rs Approach**: **Stateless architecture with intelligent request routing**:
+**BitNet-rs Approach**: **Stateless architecture with intelligent request routing**:
 
 ```
 Load Balancer → [Server Instance 1: CPU-optimized]
@@ -267,7 +267,7 @@ Load Balancer → [Server Instance 1: CPU-optimized]
 
 ### Graceful Degradation Strategy
 
-When resources become constrained, BitNet.rs doesn't fail catastrophically—it degrades gracefully:
+When resources become constrained, BitNet-rs doesn't fail catastrophically—it degrades gracefully:
 
 1. **Device Fallback**: GPU failures automatically fall back to CPU
 2. **Quantization Fallback**: Unsupported formats fall back to supported ones
@@ -334,7 +334,7 @@ The architecture is designed to evolve with BitNet research:
 
 ## Conclusion
 
-The BitNet.rs production inference server architecture represents a fundamental shift from generic neural network serving to **quantization-native, device-aware, production-ready** neural network inference.
+The BitNet-rs production inference server architecture represents a fundamental shift from generic neural network serving to **quantization-native, device-aware, production-ready** neural network inference.
 
 **Key Architectural Strengths**:
 1. **Quantization Awareness**: Every component optimized for 1-bit neural networks

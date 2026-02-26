@@ -1008,6 +1008,6 @@ cargo build --release --no-default-features --features cpu
 ---
 
 **Report Generated:** 2025-10-17
-**Author:** BitNet.rs Validation Team
+**Author:** BitNet-rs Validation Team
 **Version:** 1.0.0
 **Status:** ✅ MVP COMPLETE - DEMO READY

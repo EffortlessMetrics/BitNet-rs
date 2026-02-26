@@ -2,7 +2,7 @@
 # Pre-tag verification script for v0.1.0-mvp release
 #
 # This script runs all quality gates before creating the v0.1.0-mvp tag.
-# Ensures the release meets BitNet.rs standards for honest compute.
+# Ensures the release meets BitNet-rs standards for honest compute.
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo "========================================="
-echo "BitNet.rs Pre-Tag Verification"
+echo "BitNet-rs Pre-Tag Verification"
 echo "Target: v0.1.0-mvp"
 echo "========================================="
 echo ""

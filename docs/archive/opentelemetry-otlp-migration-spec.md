@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Migrate `bitnet-server` from deprecated `opentelemetry-prometheus@0.29.1` to OTLP-based metrics using OpenTelemetry 0.31 SDK. This resolves compilation failures caused by incompatible dependency versions while maintaining observability capabilities for BitNet.rs neural network inference.
+Migrate `bitnet-server` from deprecated `opentelemetry-prometheus@0.29.1` to OTLP-based metrics using OpenTelemetry 0.31 SDK. This resolves compilation failures caused by incompatible dependency versions while maintaining observability capabilities for BitNet-rs neural network inference.
 
 **Key Changes**:
 - Remove deprecated Prometheus exporter dependency
@@ -487,7 +487,7 @@ cargo run -p bitnet-server --no-default-features --features opentelemetry --rele
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Flag Discipline
 ✅ All commands specify `--no-default-features --features opentelemetry`
@@ -600,7 +600,7 @@ mod tests {
 - [Rust SDK 0.31 Migration Guide](https://github.com/open-telemetry/opentelemetry-rust/blob/main/CHANGELOG.md#0310)
 - [Metrics API](https://docs.rs/opentelemetry_sdk/0.31.0/opentelemetry_sdk/metrics/)
 
-### BitNet.rs Documentation
+### BitNet-rs Documentation
 - `docs/environment-variables.md` - Runtime configuration
 - `docs/health-endpoints.md` - Monitoring and observability
 - `docs/architecture-overview.md` - System design and components
@@ -619,7 +619,7 @@ Before implementation:
 - [x] Rollback strategy documented
 - [x] Zero impact on neural network inference confirmed
 - [x] Environment variable defaults aligned with OTLP standards
-- [x] BitNet.rs feature flag discipline maintained
+- [x] BitNet-rs feature flag discipline maintained
 - [x] Test structure defined with AC tags
 - [x] API contract documentation complete
 

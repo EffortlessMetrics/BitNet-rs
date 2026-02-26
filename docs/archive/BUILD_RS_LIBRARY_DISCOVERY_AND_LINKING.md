@@ -1,12 +1,12 @@
 # Build.rs Library Discovery and Linking Analysis
 
 **Report Date**: 2025-10-25
-**Repository**: BitNet.rs (Rust/BitNet-rs)
+**Repository**: BitNet-rs (Rust/BitNet-rs)
 **Scope**: Comprehensive analysis of build.rs patterns for library discovery, linking, and backend selection
 
 ## Executive Summary
 
-BitNet.rs employs a **sophisticated but fragmented** library discovery pattern across multiple build.rs scripts. Key findings:
+BitNet-rs employs a **sophisticated but fragmented** library discovery pattern across multiple build.rs scripts. Key findings:
 
 1. **Current Discovery Algorithm**: Multi-tier path scanning with platform-aware search paths
 2. **Environment Variables**: BITNET_CPP_DIR, BITNET_CPP_PATH, BITNET_CROSSVAL_LIBDIR, BITNET_GPU_FAKE

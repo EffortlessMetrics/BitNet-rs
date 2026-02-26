@@ -1,4 +1,4 @@
-# BitNet.rs Performance Baseline Evidence - PR #246
+# BitNet-rs Performance Baseline Evidence - PR #246
 
 ## Executive Summary
 ✅ **Performance baseline successfully established for Draft → Ready promotion**
@@ -78,7 +78,7 @@
 
 ## Performance Characteristics Validated
 
-### BitNet.rs Neural Network Requirements ✅
+### BitNet-rs Neural Network Requirements ✅
 - [x] Neural network inference ≤ 10 seconds (actual: ~0.33s for 64 tokens)
 - [x] Quantization accuracy preservation (≥99% vs FP32)
 - [x] No performance regressions vs baseline
@@ -143,6 +143,6 @@ cargo run -p xtask -- bench-compare \
 
 ---
 
-**Performance Baseline Specialist - BitNet.rs Draft → Ready Pipeline**
+**Performance Baseline Specialist - BitNet-rs Draft → Ready Pipeline**
 **Timestamp**: 2025-09-24T04:52:00Z
 **Status**: ✅ PASSED - Ready for docs-reviewer stage

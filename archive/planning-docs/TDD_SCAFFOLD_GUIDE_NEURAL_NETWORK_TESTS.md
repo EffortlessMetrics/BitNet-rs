@@ -10,7 +10,7 @@
 
 ## Overview
 
-This file contains comprehensive test scaffolding for validating the neural network inference pipeline in BitNet.rs. As of the Issue #248 resolution (PR #431, merged 2025-10-03), **real neural network inference is fully implemented** with 290+ tests passing.
+This file contains comprehensive test scaffolding for validating the neural network inference pipeline in BitNet-rs. As of the Issue #248 resolution (PR #431, merged 2025-10-03), **real neural network inference is fully implemented** with 290+ tests passing.
 
 **Key Discovery**: Most of the scaffolded tests in this file already have **working implementations** in their helper functions. The `#[ignore]` markers and `panic!()` calls represent **intentional TDD placeholders** waiting for final integration, not missing functionality.
 
@@ -872,5 +872,5 @@ fn create_test_input_tensor(batch: usize, seq_len: usize, hidden_size: usize) ->
 ---
 
 **Generated**: 2025-10-20
-**Analyst**: BitNet.rs TDD Scaffold Specialist
+**Analyst**: BitNet-rs TDD Scaffold Specialist
 **Next Steps**: Implement Phase 1 scaffolds (AC1, AC8, AC10) to unblock MVP finalization

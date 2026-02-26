@@ -32,7 +32,7 @@ All required Ledger sections present and properly formatted:
 
 ### ✅ Acceptance Criteria Testability
 
-All 7 ACs are **atomic, observable, and testable** within BitNet.rs neural network workspace:
+All 7 ACs are **atomic, observable, and testable** within BitNet-rs neural network workspace:
 
 | AC | Description | Testability | Validation Command |
 |----|-------------|-------------|-------------------|
@@ -140,7 +140,7 @@ pub enum BitNetError {
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### ✅ Feature Flag Discipline
 
@@ -159,7 +159,7 @@ BITNET_STRICT_MODE=1 cargo test --no-default-features --features cpu,crossval -p
 
 ### ✅ TDD Practices
 
-All tests follow BitNet.rs TDD patterns:
+All tests follow BitNet-rs TDD patterns:
 
 - ✅ `// AC:ID` comment tags for traceability
 - ✅ Feature-gated tests: `#[cfg(feature = "cpu")]`, `#[cfg(feature = "gpu")]`
@@ -168,7 +168,7 @@ All tests follow BitNet.rs TDD patterns:
 
 ### ✅ Quantization Accuracy Requirements
 
-All ACs respect BitNet.rs quantization accuracy targets:
+All ACs respect BitNet-rs quantization accuracy targets:
 
 - ✅ **I2S**: ≥99.8% correlation with FP32 reference
 - ✅ **TL1**: ≥99.6% correlation (ARM NEON)
@@ -177,7 +177,7 @@ All ACs respect BitNet.rs quantization accuracy targets:
 
 ### ✅ Documentation Structure (Diátaxis)
 
-Documentation updates follow BitNet.rs storage conventions:
+Documentation updates follow BitNet-rs storage conventions:
 
 - ✅ **`docs/explanation/`**: Neural network architecture (Issue #453 specs)
 - ✅ **`docs/reference/`**: API contracts (`quantization-support.md`, `validation-framework.md`)
@@ -199,7 +199,7 @@ All ACs consider device-aware operations:
 
 ### ✅ User Story Mapping
 
-**User Story:** "As a BitNet.rs inference engineer, I want runtime guards in strict mode that prevent silent FP32 fallback in quantized layers and attention projections, so that receipts accurately reflect the actual computation path and I can trust performance baselines for production deployments."
+**User Story:** "As a BitNet-rs inference engineer, I want runtime guards in strict mode that prevent silent FP32 fallback in quantized layers and attention projections, so that receipts accurately reflect the actual computation path and I can trust performance baselines for production deployments."
 
 **Mapped to:**
 
@@ -222,7 +222,7 @@ All ACs consider device-aware operations:
 
 ### ✅ Neural Network Component Alignment
 
-Issue scope aligns with BitNet.rs workspace structure:
+Issue scope aligns with BitNet-rs workspace structure:
 
 - ✅ **`bitnet-quantization`**: I2S/TL1/TL2 quantization validation
 - ✅ **`bitnet-inference`**: Runtime guards in layers
@@ -357,11 +357,11 @@ No fix-forward corrections were required. Issue Ledger was already well-structur
 
 ## Validation Success Criteria
 
-All BitNet.rs quality standards met:
+All BitNet-rs quality standards met:
 
 - ✅ **Testability**: All 7 ACs have clear, executable validation commands
 - ✅ **Traceability**: Story → Schema → Tests → Code mapping established
-- ✅ **Architecture Alignment**: Requirements align with BitNet.rs workspace structure
+- ✅ **Architecture Alignment**: Requirements align with BitNet-rs workspace structure
 - ✅ **Feature Compatibility**: GPU/CPU feature flags addressed (`--no-default-features --features cpu|gpu`)
 - ✅ **Quantization Accuracy**: I2S/TL1/TL2 accuracy targets specified (≥99.8%/99.6%)
 - ✅ **Cross-Validation**: C++ reference alignment requirements included
@@ -379,7 +379,7 @@ All BitNet.rs quality standards met:
 1. ✅ **Ledger Completeness**: All required sections present and properly formatted
 2. ✅ **AC Testability**: All 7 ACs are atomic, observable, and testable with clear validation commands
 3. ✅ **Ambiguities Resolved**: Quantized kernel definitions, FP32 fallback detection, error types, and schema compatibility clarified
-4. ✅ **BitNet.rs Standards**: Feature flags, TDD practices, quantization accuracy, and documentation structure aligned
+4. ✅ **BitNet-rs Standards**: Feature flags, TDD practices, quantization accuracy, and documentation structure aligned
 5. ✅ **Traceability**: Story → Schema → Tests → Code mapping established
 6. ✅ **Neural Network Alignment**: Requirements address GPU/CPU device-aware operations, mixed precision, and quantization validation
 

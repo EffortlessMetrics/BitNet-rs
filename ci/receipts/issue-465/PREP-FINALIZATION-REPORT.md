@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Final pre-publication validation COMPLETE for Issue #465 CPU Path Followup. All required quality gates passing, branch is publication-ready with comprehensive BitNet.rs neural network validation.
+Final pre-publication validation COMPLETE for Issue #465 CPU Path Followup. All required quality gates passing, branch is publication-ready with comprehensive BitNet-rs neural network validation.
 
 **Routing Decision**: `FINALIZE → pr-publisher` (Microloop 8 - Publication)
 
@@ -41,7 +41,7 @@ Final pre-publication validation COMPLETE for Issue #465 CPU Path Followup. All 
 
 ---
 
-## BitNet.rs-Specific Validation
+## BitNet-rs-Specific Validation
 
 ### Feature-Aware Build Status
 
@@ -163,7 +163,7 @@ df7fe09 spec(issue-465): CPU path followup specifications for v0.1.0-mvp
 
 **Feature Flag Discipline**: ✅ PASS
 - All builds explicitly specify `--no-default-features --features cpu|gpu`
-- Default features are EMPTY (enforced by BitNet.rs architecture)
+- Default features are EMPTY (enforced by BitNet-rs architecture)
 - No feature gate violations detected
 
 **Platform Coverage**:
@@ -300,7 +300,7 @@ None - Documentation-only changes
 
 **Status**: ✅ FINALIZE → pr-publisher
 
-**Rationale**: All BitNet.rs generative flow quality gates passing. Branch is publication-ready with:
+**Rationale**: All BitNet-rs generative flow quality gates passing. Branch is publication-ready with:
 - 12 conventional commits with neural network context
 - 43/43 Issue #465 tests passing (100%)
 - 1396/1397 workspace tests passing (99.9%, 1 pre-existing async test)

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This specification defines the requirements for restructuring the BitNet repository to clearly establish BitNet.rs as the primary implementation, with the original C++ BitNet implementation serving as a legacy benchmark and cross-validation target.
+This specification defines the requirements for restructuring the BitNet repository to clearly establish BitNet-rs as the primary implementation, with the original C++ BitNet implementation serving as a legacy benchmark and cross-validation target.
 
 ## Current State Analysis
 
@@ -23,13 +23,13 @@ This creates confusion about:
 
 ### Requirement 1: Clear Primary Implementation
 
-**User Story:** As a developer discovering this project, I want to immediately understand that BitNet.rs is the primary, production-ready implementation.
+**User Story:** As a developer discovering this project, I want to immediately understand that BitNet-rs is the primary, production-ready implementation.
 
 #### Acceptance Criteria
 
 1. WHEN a developer visits the repository root THEN they SHALL see Rust-focused documentation and build instructions
 2. WHEN a developer examines the root directory THEN they SHALL find only Rust-related build files (Cargo.toml, build.rs)
-3. WHEN a developer reads the README THEN they SHALL understand BitNet.rs is the main implementation with superior performance and safety
+3. WHEN a developer reads the README THEN they SHALL understand BitNet-rs is the main implementation with superior performance and safety
 
 ### Requirement 2: External Legacy Reference
 
@@ -44,7 +44,7 @@ This creates confusion about:
 
 ### Requirement 3: Cross-Validation Infrastructure
 
-**User Story:** As a quality engineer, I want to validate that BitNet.rs maintains compatibility and performance parity with the original implementation.
+**User Story:** As a quality engineer, I want to validate that BitNet-rs maintains compatibility and performance parity with the original implementation.
 
 #### Acceptance Criteria
 
@@ -70,14 +70,14 @@ This creates confusion about:
 
 #### Acceptance Criteria
 
-1. WHEN reading the main README THEN users SHALL understand BitNet.rs is the recommended implementation
-2. WHEN accessing legacy documentation THEN users SHALL find clear migration guidance to BitNet.rs
+1. WHEN reading the main README THEN users SHALL understand BitNet-rs is the recommended implementation
+2. WHEN accessing legacy documentation THEN users SHALL find clear migration guidance to BitNet-rs
 3. WHEN following quick start guides THEN users SHALL be directed to Rust-based workflows
 4. WHEN seeking performance comparisons THEN users SHALL find benchmarks showing Rust advantages
 
 ### Requirement 6: Migration Path Preservation
 
-**User Story:** As an existing user of BitNet.cpp, I want a clear migration path to BitNet.rs with compatibility guarantees.
+**User Story:** As an existing user of BitNet.cpp, I want a clear migration path to BitNet-rs with compatibility guarantees.
 
 #### Acceptance Criteria
 

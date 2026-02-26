@@ -1,6 +1,6 @@
-# Deploy BitNet.rs Production Inference Server on Kubernetes
+# Deploy BitNet-rs Production Inference Server on Kubernetes
 
-This guide shows how to deploy the BitNet.rs production inference server on Kubernetes using Helm charts for scalable, production-ready deployments.
+This guide shows how to deploy the BitNet-rs production inference server on Kubernetes using Helm charts for scalable, production-ready deployments.
 
 ## Prerequisites
 
@@ -929,5 +929,5 @@ EOF
 - **Kubernetes Documentation**: https://kubernetes.io/docs/
 - **Helm Documentation**: https://helm.sh/docs/
 - **NVIDIA GPU Operator**: https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/
-- **BitNet.rs Repository**: https://github.com/EffortlessMetrics/BitNet-rs
+- **BitNet-rs Repository**: https://github.com/EffortlessMetrics/BitNet-rs
 - **Kubernetes Best Practices**: https://kubernetes.io/docs/concepts/configuration/overview/

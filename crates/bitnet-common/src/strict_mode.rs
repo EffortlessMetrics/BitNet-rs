@@ -1,4 +1,4 @@
-//! Strict mode enforcement for BitNet.rs
+//! Strict mode enforcement for BitNet-rs
 //!
 //! This module provides strict mode functionality to prevent mock fallbacks
 //! and ensure real quantized computation is used throughout the inference pipeline.

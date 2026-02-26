@@ -160,7 +160,7 @@ impl SimpleHtmlReporter {
 
         html.push_str("<!DOCTYPE html>\n");
         html.push_str("<html><head><title>Test Report</title></head><body>\n");
-        html.push_str("<h1>BitNet.rs Test Report</h1>\n");
+        html.push_str("<h1>BitNet-rs Test Report</h1>\n");
 
         for suite in results {
             html.push_str(&format!("<h2>{}</h2>\n", suite.suite_name));
@@ -200,7 +200,7 @@ impl SimpleJsonReporter {
         let report = serde_json::json!({
             "metadata": {
                 "generated_at": chrono::Utc::now().to_rfc3339(),
-                "generator": "BitNet.rs Test Framework",
+                "generator": "BitNet-rs Test Framework",
                 "total_suites": results.len()
             },
             "test_suites": results,
@@ -222,7 +222,7 @@ impl SimpleMarkdownReporter {
     fn generate_markdown(&self, results: &[TestSuiteResult]) -> String {
         let mut md = String::new();
 
-        md.push_str("# BitNet.rs Test Report\n\n");
+        md.push_str("# BitNet-rs Test Report\n\n");
         md.push_str(&format!(
             "Generated on: {}\n\n",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
@@ -280,7 +280,7 @@ async fn test_standalone_html_report() {
 
     // Verify HTML content
     assert!(html_content.contains("<!DOCTYPE html>"));
-    assert!(html_content.contains("BitNet.rs Test Report"));
+    assert!(html_content.contains("BitNet-rs Test Report"));
     assert!(html_content.contains("standalone_test_suite"));
     assert!(html_content.contains("test_standalone_pass"));
     assert!(html_content.contains("test_standalone_fail"));
@@ -333,7 +333,7 @@ async fn test_standalone_markdown_report() {
     assert!(md_content.len() > 100);
 
     // Verify Markdown content
-    assert!(md_content.contains("# BitNet.rs Test Report"));
+    assert!(md_content.contains("# BitNet-rs Test Report"));
     assert!(md_content.contains("## Summary"));
     assert!(md_content.contains("standalone_test_suite"));
     assert!(md_content.contains("test_standalone_pass"));

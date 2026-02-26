@@ -1,4 +1,4 @@
-# BitNet.rs Inference Diagnosis Report
+# BitNet-rs Inference Diagnosis Report
 
 **Date**: 2025-10-12
 **Issue**: Non-grammatical output from inference pipeline

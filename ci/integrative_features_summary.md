@@ -1,4 +1,4 @@
-# T2 Feature Matrix Validation Summary - BitNet.rs PR #246
+# T2 Feature Matrix Validation Summary - BitNet-rs PR #246
 
 ## 🎯 Mission Complete: Neural Network Feature Matrix Validation
 
@@ -9,7 +9,7 @@
 **Feature Matrix**: **8/8 combinations PASSED** ✅
 - Total validation time: **61 seconds** (well within 8-minute bound)
 - All critical neural network quantization features validated
-- BitNet.rs production inference compatibility confirmed
+- BitNet-rs production inference compatibility confirmed
 
 ### 🧪 Quantization Accuracy Evidence
 
@@ -64,4 +64,4 @@
 - **Check Runs**: `integrative:gate:build` and `integrative:gate:features` (attempted, requires GitHub App)
 
 ---
-**BitNet.rs Neural Network Feature Matrix**: ✅ **PRODUCTION READY**
+**BitNet-rs Neural Network Feature Matrix**: ✅ **PRODUCTION READY**

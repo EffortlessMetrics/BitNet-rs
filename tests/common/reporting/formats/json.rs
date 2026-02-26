@@ -75,7 +75,7 @@ impl TestReporter for JsonReporter {
         let report = JsonReport {
             metadata: ReportMetadata {
                 generated_at: chrono::Utc::now().to_rfc3339(),
-                generator: "BitNet.rs Test Framework".to_string(),
+                generator: "BitNet-rs Test Framework".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 total_suites: results.len(),
                 total_duration_ms,

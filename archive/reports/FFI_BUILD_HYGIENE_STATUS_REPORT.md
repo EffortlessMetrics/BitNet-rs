@@ -1,14 +1,14 @@
 # FFI Build Hygiene Status Report
 
 **Date**: 2025-10-23  
-**Codebase**: BitNet.rs (feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2)  
+**Codebase**: BitNet-rs (feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2)  
 **Thorough Analysis**: Medium depth (focus on build.rs audit and vendor strategy)
 
 ---
 
 ## Executive Summary
 
-BitNet.rs implements **exemplary FFI build hygiene** for Unix/Linux systems (GCC/Clang) using industry-standard patterns:
+BitNet-rs implements **exemplary FFI build hygiene** for Unix/Linux systems (GCC/Clang) using industry-standard patterns:
 
 - ✅ **-isystem vendor headers**: Third-party code (GGML, llama.cpp) isolated with warnings suppressed
 - ✅ **Local code visibility**: Shim code uses `-I`, all warnings visible
@@ -453,7 +453,7 @@ test:
 
 ## Conclusion
 
-BitNet.rs implements **mature, production-grade FFI build hygiene for Unix systems** with excellent vendor code isolation. The implementation follows industry best practices using `-isystem` for third-party code and `-I` for local code, ensuring vendor warnings don't interfere with strict CI policies.
+BitNet-rs implements **mature, production-grade FFI build hygiene for Unix systems** with excellent vendor code isolation. The implementation follows industry best practices using `-isystem` for third-party code and `-I` for local code, ensuring vendor warnings don't interfere with strict CI policies.
 
 **Current Limitations**:
 - MSVC Windows support incomplete (no `/external:I` equivalent)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# BitNet.rs Docker Deployment Script
+# bitnet-rs Docker Deployment Script
 # Provides easy deployment options for different environments
 
 set -e
@@ -37,12 +37,12 @@ log_error() {
 # Help function
 show_help() {
     cat << EOF
-BitNet.rs Docker Deployment Script
+bitnet-rs Docker Deployment Script
 
 Usage: $0 [COMMAND] [OPTIONS]
 
 Commands:
-    deploy          Deploy BitNet.rs production environment
+    deploy          Deploy bitnet-rs production environment
     deploy-gpu      Deploy with GPU support
     crossval        Deploy cross-validation environment
     stop            Stop all services
@@ -182,7 +182,7 @@ deploy_production() {
     local profile="${1:-}"
     local no_monitoring="${2:-false}"
 
-    log_info "Deploying BitNet.rs production environment..."
+    log_info "Deploying bitnet-rs production environment..."
 
     cd "$SCRIPT_DIR"
 
@@ -208,13 +208,13 @@ deploy_production() {
     # Check service health
     check_service_health
 
-    log_success "BitNet.rs production environment deployed successfully"
+    log_success "bitnet-rs production environment deployed successfully"
     show_service_urls
 }
 
 # Deploy GPU environment
 deploy_gpu() {
-    log_info "Deploying BitNet.rs with GPU support..."
+    log_info "Deploying bitnet-rs with GPU support..."
 
     # Check for NVIDIA Docker runtime
     if ! docker info | grep -q nvidia; then
@@ -226,7 +226,7 @@ deploy_gpu() {
 
     docker-compose -f "$DOCKER_COMPOSE_FILE" --profile gpu up -d
 
-    log_success "BitNet.rs GPU environment deployed successfully"
+    log_success "bitnet-rs GPU environment deployed successfully"
 }
 
 # Deploy cross-validation environment
@@ -296,7 +296,7 @@ show_logs() {
 
 # Stop services
 stop_services() {
-    log_info "Stopping BitNet.rs services..."
+    log_info "Stopping bitnet-rs services..."
     cd "$SCRIPT_DIR"
 
     docker-compose -f "$DOCKER_COMPOSE_FILE" down
@@ -307,7 +307,7 @@ stop_services() {
 
 # Restart services
 restart_services() {
-    log_info "Restarting BitNet.rs services..."
+    log_info "Restarting bitnet-rs services..."
     stop_services
     sleep 5
     deploy_production
@@ -319,7 +319,7 @@ cleanup() {
     read -r response
 
     if [[ "$response" =~ ^[Yy]$ ]]; then
-        log_info "Cleaning up BitNet.rs deployment..."
+        log_info "Cleaning up bitnet-rs deployment..."
         cd "$SCRIPT_DIR"
 
         docker-compose -f "$DOCKER_COMPOSE_FILE" down -v --remove-orphans
@@ -336,7 +336,7 @@ cleanup() {
 
 # Update services
 update_services() {
-    log_info "Updating BitNet.rs services..."
+    log_info "Updating bitnet-rs services..."
 
     # Pull latest images
     cd "$SCRIPT_DIR"

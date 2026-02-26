@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-PR #461 is **READY FOR PROMOTION** from Draft to Ready status. All 6 required quality gates pass cleanly with zero breaking changes, comprehensive test coverage (35/35 AC tests + 400+ core tests), and complete Diátaxis documentation (9 files). The implementation provides three-tier validation for BitNet.rs quantization accuracy without compromising GPU/CPU inference performance.
+PR #461 is **READY FOR PROMOTION** from Draft to Ready status. All 6 required quality gates pass cleanly with zero breaking changes, comprehensive test coverage (35/35 AC tests + 400+ core tests), and complete Diátaxis documentation (9 files). The implementation provides three-tier validation for BitNet-rs quantization accuracy without compromising GPU/CPU inference performance.
 
 ---
 
@@ -98,7 +98,7 @@ All required gates pass (6/6); API=additive; docs complete; 27 green facts; 4 re
 1. **Integration test timeouts (5 tests)** - Long-running GGUF I/O, core functionality validated
 2. **GPU performance baseline unimplemented** - Issue #260 (separate from PR #461)
 3. **Cosmetic rustdoc warnings (2)** - Unclosed HTML tags, no functional impact
-4. **WASM build limitation** - BitNet.rs-wide constraint, CPU/GPU unaffected
+4. **WASM build limitation** - BitNet-rs-wide constraint, CPU/GPU unaffected
 
 All 4 issues have mitigation strategies and zero residual risk.
 
@@ -167,7 +167,7 @@ commits: 7 ahead @6268b7c, 0 behind main@393eecf; semantic 7/7 (100%)
 
 ---
 
-## Exemplary BitNet.rs Practices
+## Exemplary BitNet-rs Practices
 
 This PR demonstrates:
 - ✅ Complete TDD Red-Green-Refactor cycle

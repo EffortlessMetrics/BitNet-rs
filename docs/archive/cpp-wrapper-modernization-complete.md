@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This report documents the comprehensive modernization of the BitNet.rs C++ FFI wrapper to achieve full end-to-end BitNet.cpp cross-validation parity. The effort involved systematic diagnosis, specification, test-driven development, and implementation across 6 major phases using 30+ specialized agents.
+This report documents the comprehensive modernization of the BitNet-rs C++ FFI wrapper to achieve full end-to-end BitNet.cpp cross-validation parity. The effort involved systematic diagnosis, specification, test-driven development, and implementation across 6 major phases using 30+ specialized agents.
 
 ### Mission Accomplished
 
@@ -52,7 +52,7 @@ This report documents the comprehensive modernization of the BitNet.rs C++ FFI w
 4. **Error Handling Spec** → `docs/specs/cpp-wrapper-error-handling.md` (2,491 lines, P1/P2/P3 priorities)
 
 **Specification Quality**:
-- ✅ Complete architectural blueprints following BitNet.rs Diátaxis structure
+- ✅ Complete architectural blueprints following BitNet-rs Diátaxis structure
 - ✅ Comprehensive acceptance criteria (44 unique AC/FR/AR/PR/TR identifiers)
 - ✅ Implementation-ready code examples and test scenarios
 - ✅ Risk analysis and mitigation strategies
@@ -446,7 +446,7 @@ pub fn get_position(&self) -> Result<i32> {
 
 ## Conclusion
 
-This comprehensive multi-agent workflow successfully modernized the BitNet.rs C++ FFI wrapper, addressing:
+This comprehensive multi-agent workflow successfully modernized the BitNet-rs C++ FFI wrapper, addressing:
 - **4 critical safety issues** (vocab NULL checks)
 - **1 important performance issue** (GPU configuration)
 - **1 breaking API change** (KV position tracking)

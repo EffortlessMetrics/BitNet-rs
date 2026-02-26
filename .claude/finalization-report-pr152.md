@@ -21,7 +21,7 @@
 ### Analysis Summary
 
 The PR adds a comprehensive 43-line analysis document that:
-- Provides goal-by-goal assessment of BitNet.rs project status
+- Provides goal-by-goal assessment of BitNet-rs project status
 - Identifies project strengths: validation framework, cross-platform support, correctness testing
 - Highlights critical weakness: unsubstantiated performance claims and broken benchmarking tools
 - Maintains professional tone with constructive criticism

@@ -16,7 +16,7 @@
 ---
 # Analysis: Project Goals vs. Reality (as of Sept 2025)
 
-This document provides an analysis of the BitNet.rs project, comparing its stated goals against its actual state as determined by an investigation of the codebase.
+This document provides an analysis of the BitNet-rs project, comparing its stated goals against its actual state as determined by an investigation of the codebase.
 
 **Related Documentation:**
 - [README.md](README.md) - Updated to reflect current status

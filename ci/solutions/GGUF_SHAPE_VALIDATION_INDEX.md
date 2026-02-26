@@ -7,7 +7,7 @@
 
 ## Overview
 
-This directory contains comprehensive analysis and solution documentation for the `test_ac3_tensor_shape_validation_cpu` test failure in BitNet.rs.
+This directory contains comprehensive analysis and solution documentation for the `test_ac3_tensor_shape_validation_cpu` test failure in BitNet-rs.
 
 **Status**: ANALYSIS COMPLETE
 **Main Issue**: Wrong tensor map access (`.tensors` vs `.i2s_qk256`)

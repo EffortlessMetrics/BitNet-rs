@@ -237,7 +237,7 @@ migration: Issue #465 → PR #466 Ledger; gates table migrated; receipts verifie
 - ✅ 100% quality score
 - ✅ Comprehensive neural network evidence included
 
-**BitNet.rs Standards Met:**
+**BitNet-rs Standards Met:**
 
 - Quantization accuracy: ≥99.8% (I2_S validated)
 - Security posture: 0 CVEs, 0 unsafe blocks in new code

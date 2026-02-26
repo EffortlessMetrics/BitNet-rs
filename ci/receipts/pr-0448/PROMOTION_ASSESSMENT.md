@@ -12,7 +12,7 @@
 
 **VERDICT:** ✅ **PROMOTE TO READY** - All required gates pass with non-blocking issues tracked
 
-PR #448 successfully addresses Issue #447 compilation failures across the BitNet.rs workspace through a comprehensive OpenTelemetry OTLP migration, inference API type exports, test infrastructure API updates, and CI feature-aware gates. All 6 required quality gates pass, with 2 additional gates at neutral status due to bounded execution (non-blocking per policy).
+PR #448 successfully addresses Issue #447 compilation failures across the BitNet-rs workspace through a comprehensive OpenTelemetry OTLP migration, inference API type exports, test infrastructure API updates, and CI feature-aware gates. All 6 required quality gates pass, with 2 additional gates at neutral status due to bounded execution (non-blocking per policy).
 
 **Promotion Decision:** **APPROVE DRAFT→READY**
 
@@ -265,7 +265,7 @@ recommendation: proceed to security-scanner; defer OTLP test implementation to p
 - Estimated mutation score: 0-20% for OTLP logic (tests pending)
 - Type exports: N/A (no mutable logic, compilation-only validation)
 
-**Assessment:** Tool execution bounded by workspace complexity. Manual analysis identifies gaps appropriate for post-merge hardening. Non-blocking per BitNet.rs policy (mutation testing is recommended, not required for Draft→Ready).
+**Assessment:** Tool execution bounded by workspace complexity. Manual analysis identifies gaps appropriate for post-merge hardening. Non-blocking per BitNet-rs policy (mutation testing is recommended, not required for Draft→Ready).
 
 **Post-Merge Recommendations:**
 - Implement 6 pending OTLP functionality tests
@@ -275,7 +275,7 @@ recommendation: proceed to security-scanner; defer OTLP test implementation to p
 ---
 
 #### ✅ Gate 10: Architecture Alignment (PASS)
-**Status:** 100% compliance with BitNet.rs architecture patterns
+**Status:** 100% compliance with BitNet-rs architecture patterns
 
 **Evidence:**
 - Feature flag discipline: `--no-default-features --features cpu|gpu` pattern maintained
@@ -661,7 +661,7 @@ $ cargo clippy --workspace --no-default-features --features gpu -- -D warnings
 **Promotion Criteria Met:**
 - All critical issues resolved or auto-fixable ✅
 - Major issues have clear resolution paths that don't block operations ✅
-- Test coverage meets BitNet.rs standards (>70% workspace, >90% critical paths) ✅
+- Test coverage meets BitNet-rs standards (>70% workspace, >90% critical paths) ✅
 - Documentation follows Diátaxis framework (95% coverage) ✅
 - Security and performance concerns addressed ✅
 - Quantization accuracy maintained (>99% for I2S, TL1, TL2) ✅

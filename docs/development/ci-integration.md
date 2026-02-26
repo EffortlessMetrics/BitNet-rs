@@ -1,10 +1,10 @@
 # CI Integration Guide
 
-This document describes the comprehensive CI integration setup for the BitNet.rs testing framework.
+This document describes the comprehensive CI integration setup for the BitNet-rs testing framework.
 
 ## Overview
 
-The BitNet.rs testing framework provides reliable automated testing through a coordinated set of GitHub Actions workflows that ensure code quality, performance, and compatibility across platforms.
+The BitNet-rs testing framework provides reliable automated testing through a coordinated set of GitHub Actions workflows that ensure code quality, performance, and compatibility across platforms.
 
 ## Architecture
 
@@ -299,4 +299,4 @@ The `ci_status_integration` tool provides:
 3. **Proactive Alerts**: Early warning for potential issues
 4. **Regular Reviews**: Weekly review of test results and trends
 
-This CI integration provides a robust, scalable, and maintainable testing infrastructure that ensures the quality and reliability of BitNet.rs across all supported platforms and use cases.
+This CI integration provides a robust, scalable, and maintainable testing infrastructure that ensures the quality and reliability of BitNet-rs across all supported platforms and use cases.

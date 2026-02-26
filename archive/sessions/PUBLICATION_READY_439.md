@@ -145,7 +145,7 @@ cargo check --workspace --no-default-features --features gpu # ✅ PASS
 
 ---
 
-## BitNet.rs Neural Network Standards ✅
+## BitNet-rs Neural Network Standards ✅
 
 ### Feature-Gated Architecture
 - ✅ Default features EMPTY (always specify `--features cpu|gpu`)
@@ -176,7 +176,7 @@ cross-compilation: validated with --no-default-features
 
 ### Commit History
 ```
-All commits follow BitNet.rs conventions:
+All commits follow BitNet-rs conventions:
 - governance(#439): Governance and quality gates
 - docs(#439): Documentation updates
 - feat: Feature implementations
@@ -248,7 +248,7 @@ backward_compatibility: fully maintained
 - Evidence bundle complete (2,299 lines + receipts)
 - Neural network standards preserved and enhanced
 - Backward compatibility fully maintained
-- BitNet.rs commit conventions followed throughout
+- BitNet-rs commit conventions followed throughout
 - No uncommitted changes
 - All smoke tests pass
 
@@ -274,7 +274,7 @@ feat(#439): Harden GPU feature gates with unified predicates
 **Body Template:** Use `PR_PREP_EVIDENCE_439.md` as PR description
 
 **Summary Preview:**
-> Unify GPU feature predicates to eliminate silent fallbacks and strengthen GPU feature detection across the BitNet.rs codebase. Introduces device detection API, maintains backward compatibility with `cuda` alias, and validates 104 unified predicate uses across 86 files.
+> Unify GPU feature predicates to eliminate silent fallbacks and strengthen GPU feature detection across the BitNet-rs codebase. Introduces device detection API, maintains backward compatibility with `cuda` alias, and validates 104 unified predicate uses across 86 files.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Investigation Overview
 
-This analysis explored the BitNet.rs build system's approach to discovering, linking, and selecting compute backends (CPU vs GPU, Rust vs C++).
+This analysis explored the BitNet-rs build system's approach to discovering, linking, and selecting compute backends (CPU vs GPU, Rust vs C++).
 
 **Duration**: Comprehensive source code review
 **Scope**: Build scripts, FFI integration, feature gates, environment configuration
@@ -14,7 +14,7 @@ This analysis explored the BitNet.rs build system's approach to discovering, lin
 
 ### 1. Discovery System Architecture
 
-The BitNet.rs build system uses a **staged discovery pattern**:
+The BitNet-rs build system uses a **staged discovery pattern**:
 
 1. **Stage 1 - Optional**: Feature gates determine if FFI linking is attempted
 2. **Stage 2 - Fallible**: Library search across standard CMake output locations
@@ -283,7 +283,7 @@ All documents saved to `/docs/reference/` for future reference.
 
 ## Conclusion
 
-BitNet.rs implements a **sophisticated, flexible library discovery system** that gracefully handles:
+BitNet-rs implements a **sophisticated, flexible library discovery system** that gracefully handles:
 - Optional FFI integration
 - Multiple library formats
 - Platform-specific linking

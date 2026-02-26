@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-PR #464 has been **successfully merged** and **finalized** with perfect execution across all validation gates. The integrative flow reached **GOOD COMPLETE** state with enterprise-grade quality metrics and full BitNet.rs standards compliance.
+PR #464 has been **successfully merged** and **finalized** with perfect execution across all validation gates. The integrative flow reached **GOOD COMPLETE** state with enterprise-grade quality metrics and full BitNet-rs standards compliance.
 
 ### Key Achievements
 - ✅ **16/16 gates PASS** (13 generative + 3 integrative)
@@ -141,7 +141,7 @@ Vulnerabilities:        0 ✅
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### ✅ Quantization Accuracy
 - **I2S (2-bit signed):** >99% accuracy vs FP32 reference
@@ -411,7 +411,7 @@ total 124K
 **Next Action:** None (finalized)
 
 ### Certification Statement
-This integration has been verified and certified by the pr-merge-finalizer agent. All quality gates passed, workspace validated, artifacts archived, and BitNet.rs neural network inference standards met.
+This integration has been verified and certified by the pr-merge-finalizer agent. All quality gates passed, workspace validated, artifacts archived, and BitNet-rs neural network inference standards met.
 
 ### Verification Checklist
 - [x] PR state verified as MERGED
@@ -423,7 +423,7 @@ This integration has been verified and certified by the pr-merge-finalizer agent
 - [x] 16/16 gates PASS (100% success)
 - [x] 91% mutation score (>80% threshold)
 - [x] 100% test pass rate (1043/1043 workspace, 43/43 Issue #462)
-- [x] BitNet.rs quantization standards met (>99% accuracy)
+- [x] BitNet-rs quantization standards met (>99% accuracy)
 - [x] Artifacts archived (12 files, 2,456 lines)
 - [x] Ledger updated (MERGED → FINALIZED)
 - [x] Check Runs created (merge-validation, baseline-update, cleanup)
@@ -454,7 +454,7 @@ This integration has been verified and certified by the pr-merge-finalizer agent
 - ✅ Strict receipt validation (AC3)
 - ✅ Safe TL LUT helper with bounds checking (AC4)
 - ✅ Enterprise-grade code quality
-- ✅ BitNet.rs neural network standards fully met
+- ✅ BitNet-rs neural network standards fully met
 - ✅ Production-ready implementation
 
 ### Impact Assessment
@@ -492,4 +492,4 @@ This integration has been verified and certified by the pr-merge-finalizer agent
 
 ---
 
-*This report represents the authoritative record of PR #464 merge finalization and integrative flow completion for BitNet.rs neural network inference engine.*
+*This report represents the authoritative record of PR #464 merge finalization and integrative flow completion for BitNet-rs neural network inference engine.*

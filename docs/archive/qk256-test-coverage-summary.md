@@ -450,4 +450,4 @@ jobs:
 
 **Document Version:** 1.0
 **Last Updated:** 2025-10-24
-**Author:** BitNet.rs Test Infrastructure Team
+**Author:** BitNet-rs Test Infrastructure Team

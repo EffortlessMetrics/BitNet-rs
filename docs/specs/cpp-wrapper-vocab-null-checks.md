@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This specification addresses a **critical safety issue** in the BitNet.rs C++ FFI wrapper: missing NULL checks after `llama_model_get_vocab()` calls. The vulnerability exists at 4 locations (lines 102, 261, 558, 710) where the code unconditionally uses the vocab pointer without validation, creating **high-severity crash risk** when model loading fails or incompatible GGUF formats are provided.
+This specification addresses a **critical safety issue** in the BitNet-rs C++ FFI wrapper: missing NULL checks after `llama_model_get_vocab()` calls. The vulnerability exists at 4 locations (lines 102, 261, 558, 710) where the code unconditionally uses the vocab pointer without validation, creating **high-severity crash risk** when model loading fails or incompatible GGUF formats are provided.
 
 **Risk Level**: ⚠️ **HIGH** - Unhandled NULL dereference leads to immediate segfault
 **Impact**: Cross-validation tests, FFI integration, production C++ inference
@@ -923,7 +923,7 @@ fn create_invalid_gguf(path: &str) -> std::io::Result<()> {
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2025-10-25 | BitNet.rs Spec Generator | Initial specification |
+| 1.0 | 2025-10-25 | BitNet-rs Spec Generator | Initial specification |
 
 ---
 

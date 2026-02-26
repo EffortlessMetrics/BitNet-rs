@@ -12,7 +12,7 @@
 
 ### Problem Statement
 
-BitNet.rs currently supports automatic setup of the BitNet.cpp C++ reference backend via the `setup-cpp-auto` command. However, the dual-backend cross-validation architecture requires **both** BitNet.cpp (for BitNet models) and llama.cpp (for LLaMA/Mistral models) to be available. Users must manually install llama.cpp, which creates friction and inconsistent environments.
+BitNet-rs currently supports automatic setup of the BitNet.cpp C++ reference backend via the `setup-cpp-auto` command. However, the dual-backend cross-validation architecture requires **both** BitNet.cpp (for BitNet models) and llama.cpp (for LLaMA/Mistral models) to be available. Users must manually install llama.cpp, which creates friction and inconsistent environments.
 
 **Current Pain Points**:
 1. **Manual llama.cpp Installation**: Users must clone, build, and configure llama.cpp separately

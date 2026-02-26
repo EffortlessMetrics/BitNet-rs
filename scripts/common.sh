@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Common utilities for BitNet.rs validation scripts
+# Common utilities for BitNet-rs validation scripts
 
 set -euo pipefail
 

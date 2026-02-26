@@ -1,7 +1,7 @@
 # Stop-Sequence Implementation Analysis: "One Token Late" Issue
 
 ## Overview
-This document provides a comprehensive analysis of the stop-sequence matching implementation in BitNet.rs, identifies the "one token late" issue, and proposes fixes with code examples.
+This document provides a comprehensive analysis of the stop-sequence matching implementation in BitNet-rs, identifies the "one token late" issue, and proposes fixes with code examples.
 
 ---
 

@@ -224,7 +224,7 @@ th end-to-end validation
 
 
 
-  - Create `RustImplementation` struct wrapping BitNet.rs
+  - Create `RustImplementation` struct wrapping BitNet-rs
   - Add model loading with error handling and metrics
   - Implement tokenization with performance tracking
   - Add inference execution with resource monitoring

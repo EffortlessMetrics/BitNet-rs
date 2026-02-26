@@ -1,4 +1,4 @@
-# Sprint-2 Kickoff - BitNet.rs MVP v0.1.0
+# Sprint-2 Kickoff - BitNet-rs MVP v0.1.0
 
 **Date**: November 11, 2025
 **Status**: Ready to Execute

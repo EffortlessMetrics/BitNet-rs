@@ -290,7 +290,7 @@ cargo test --workspace --all-features
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Flag Discipline
 - ✅ All commands specify `--no-default-features` where appropriate
@@ -395,15 +395,15 @@ cargo test --workspace --all-features
 **Reason**:
 - All 8 acceptance criteria validated and corrected
 - Story → Schema → Tests → Code traceability clear
-- Validation commands specified for each AC with BitNet.rs toolchain
+- Validation commands specified for each AC with BitNet-rs toolchain
 - Issue Ledger complete with proper anchors and sections
-- Requirements align with BitNet.rs neural network development standards
+- Requirements align with BitNet-rs neural network development standards
 - No fundamental AC issues requiring return to issue-creator
 
 **Quality Gates Passed**:
 - ✅ All required Ledger sections present (Gates, Hoplog, Decision)
 - ✅ All ACs atomic, observable, and testable
-- ✅ BitNet.rs workspace crates and feature flags correctly referenced
+- ✅ BitNet-rs workspace crates and feature flags correctly referenced
 - ✅ Compilation validation commands specified with proper feature discipline
 - ✅ No-default-features baseline preserved
 - ✅ TDD test tags assigned to all acceptance criteria

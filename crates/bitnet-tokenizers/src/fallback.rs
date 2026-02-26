@@ -1,7 +1,7 @@
 //! Robust fallback strategy system with proper error reporting
 //!
 //! This module provides a comprehensive fallback chain for tokenizer resolution,
-//! ensuring reliable tokenizer discovery with actionable error messages for BitNet.rs neural networks.
+//! ensuring reliable tokenizer discovery with actionable error messages for BitNet-rs neural networks.
 
 use crate::{MockTokenizer, Tokenizer, discovery::TokenizerDiscovery};
 #[allow(unused_imports)]

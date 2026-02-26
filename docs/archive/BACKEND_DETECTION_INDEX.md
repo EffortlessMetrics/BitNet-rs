@@ -1,6 +1,6 @@
 # Backend Detection Documentation Index
 
-This index provides a roadmap for understanding and implementing backend detection patterns in BitNet.rs.
+This index provides a roadmap for understanding and implementing backend detection patterns in BitNet-rs.
 
 ## Quick Navigation
 

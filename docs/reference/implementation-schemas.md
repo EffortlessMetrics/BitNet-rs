@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines comprehensive implementation schemas for real BitNet model integration, including configuration management, performance metrics, validation frameworks, and data structures. These schemas ensure consistent implementation across the BitNet.rs neural network inference pipeline.
+This document defines comprehensive implementation schemas for real BitNet model integration, including configuration management, performance metrics, validation frameworks, and data structures. These schemas ensure consistent implementation across the BitNet-rs neural network inference pipeline.
 
 ## Configuration Schemas
 
@@ -638,7 +638,7 @@ pub struct CrossValidationTest {
 pub struct NumericalComparison {
     /// Reference implementation output
     pub reference_output: Vec<f64>,
-    /// BitNet.rs implementation output
+    /// BitNet-rs implementation output
     pub bitnet_output: Vec<f64>,
     /// Absolute difference statistics
     pub absolute_difference: DifferenceStatistics,
@@ -818,7 +818,7 @@ pub struct SoftwareEnvironment {
     pub os: OsInfo,
     /// Rust toolchain information
     pub rust_toolchain: RustToolchainInfo,
-    /// BitNet.rs version and configuration
+    /// BitNet-rs version and configuration
     pub bitnet_config: BitNetConfiguration,
     /// Dependency versions
     pub dependencies: DependencyInfo,
@@ -834,7 +834,7 @@ pub struct SoftwareEnvironment {
 #### TOML Configuration Format
 
 ```toml
-# BitNet.rs model configuration
+# BitNet-rs model configuration
 [model]
 id = "microsoft/bitnet-b1.58-2B-4T-gguf"
 path = "./models/ggml-model-i2_s.gguf"
@@ -1074,6 +1074,6 @@ pub struct TestDataConfig {
 
 ## Conclusion
 
-These comprehensive implementation schemas provide a solid foundation for implementing real BitNet model integration across the BitNet.rs neural network inference pipeline. The schemas ensure consistency, maintainability, and comprehensive validation while supporting production-grade performance monitoring and error handling.
+These comprehensive implementation schemas provide a solid foundation for implementing real BitNet model integration across the BitNet-rs neural network inference pipeline. The schemas ensure consistency, maintainability, and comprehensive validation while supporting production-grade performance monitoring and error handling.
 
 The structured approach enables clear separation of concerns, comprehensive configuration management, and robust validation frameworks that support both development efficiency and production reliability.

@@ -1,10 +1,10 @@
-# BitNet.rs Repository Restructure - COMPLETE ✅
+# BitNet-rs Repository Restructure - COMPLETE ✅
 
 This document summarizes the successful completion of the BitNet repository restructure, transforming it from a C++-focused repository to a Rust-first implementation.
 
 ## 🎯 Mission Accomplished
 
-**BitNet.rs is now the primary, production-ready implementation of BitNet 1-bit Large Language Model inference.**
+**BitNet-rs is now the primary, production-ready implementation of BitNet 1-bit Large Language Model inference.**
 
 ## 📊 Transformation Summary
 
@@ -25,7 +25,7 @@ This document summarizes the successful completion of the BitNet repository rest
 ## 🏗️ Repository Structure
 
 ```
-BitNet.rs Repository (Rust-First)
+BitNet-rs Repository (Rust-First)
 ├── 🦀 Cargo.toml (Rust workspace)
 ├── 📚 README.md (Rust-focused)
 ├── 🔧 INSTALLATION.md (Multi-platform install guide)
@@ -85,7 +85,7 @@ BitNet.rs Repository (Rust-First)
 
 ## 📈 Performance Improvements
 
-| Metric | Original C++ | BitNet.rs | Improvement |
+| Metric | Original C++ | BitNet-rs | Improvement |
 |--------|--------------|-----------|-------------|
 | **Inference Speed** | 520 tok/s | 1,250 tok/s | **2.4x faster** |
 | **Memory Usage** | 3.2 GB | 2.1 GB | **34% less** |
@@ -170,7 +170,7 @@ BitNet.rs Repository (Rust-First)
 
 ## 🎊 Final Status
 
-**🦀 BitNet.rs Repository Restructure: COMPLETE SUCCESS 🦀**
+**🦀 BitNet-rs Repository Restructure: COMPLETE SUCCESS 🦀**
 
 The repository has been successfully transformed into a production-ready, Rust-first implementation that:
 
@@ -193,7 +193,7 @@ The repository is now ready for:
 
 ---
 
-**Welcome to the future of 1-bit LLM inference with BitNet.rs! 🦀**
+**Welcome to the future of 1-bit LLM inference with BitNet-rs! 🦀**
 
 *Repository restructure completed on: January 2025*
 *Total implementation time: 45 tasks across 10 phases*

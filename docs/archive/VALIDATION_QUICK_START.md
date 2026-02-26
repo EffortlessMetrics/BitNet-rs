@@ -1,4 +1,4 @@
-# BitNet.rs Validation Quick Start
+# BitNet-rs Validation Quick Start
 
 ## One-Button Validation
 

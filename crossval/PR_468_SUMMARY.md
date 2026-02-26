@@ -2,7 +2,7 @@
 
 ## Summary
 
-This PR completes the parity harness implementation for BitNet.rs cross-validation, moving from infrastructure stubs to **fully functional real validation** using the production inference engine.
+This PR completes the parity harness implementation for bitnet-rs cross-validation, moving from infrastructure stubs to **fully functional real validation** using the production inference engine.
 
 ## What Changed
 

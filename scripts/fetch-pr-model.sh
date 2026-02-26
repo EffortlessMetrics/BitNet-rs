@@ -11,7 +11,7 @@ MODEL_PATH="$MODEL_DIR/$MODEL_NAME"
 # This should be a model that:
 # - Has embedded SentencePiece tokenizer
 # - Is quantized to Q2_K for small size (~400MB)
-# - Works with BitNet.rs tensor mappings
+# - Works with BitNet-rs tensor mappings
 MODEL_URL="${TINYLLAMA_URL:-https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q2_K.gguf}"
 
 # SHA256 checksum for verification (update when model changes)

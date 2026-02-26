@@ -51,7 +51,7 @@ These keys are automatically extracted from `config.json` during conversion. If 
   - `safetensors`
   - `torch`
   - `numpy`
-- **BitNet.rs repository** cloned and built
+- **BitNet-rs repository** cloned and built
 
 ### Model Requirements
 
@@ -138,7 +138,7 @@ The export script automatically:
 **Output:**
 
 ```
-INFO: Using BitNet.rs SafeTensors converter
+INFO: Using BitNet-rs SafeTensors converter
 INFO: Found 1 SafeTensors file(s), using: models/bitnet-2b-4t/model.safetensors
 INFO: Converting SafeTensors to GGUF (F16 output type)...
 [conversion progress...]
@@ -289,7 +289,7 @@ ERROR: No converter found.
 
 **Solutions:**
 1. Set explicit converter: `CONVERTER=/path/to/convert.py ./scripts/export_clean_gguf.sh ...`
-2. Ensure `scripts/convert_safetensors_to_gguf.py` exists (BitNet.rs built-in)
+2. Ensure `scripts/convert_safetensors_to_gguf.py` exists (BitNet-rs built-in)
 3. Vendor llama.cpp: `git submodule add https://github.com/ggerganov/llama.cpp third_party/llama.cpp`
 
 ---
@@ -369,7 +369,7 @@ models/clean/
 ## References
 
 - **GGUF Format**: [ggml-org/gguf](https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
-- **BitNet.rs Quantization**: `docs/explanation/quantization-support.md`
+- **BitNet-rs Quantization**: `docs/explanation/quantization-support.md`
 - **Validation Framework**: `docs/development/validation-framework.md`
 - **Correction Policy** (for triage only): `docs/explanation/correction-policy.md`
 

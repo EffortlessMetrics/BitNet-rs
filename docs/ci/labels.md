@@ -1,6 +1,6 @@
 # CI Labels Reference
 
-BitNet.rs uses GitHub labels to selectively trigger heavy CI workflows. This keeps fast feedback for most PRs while ensuring comprehensive validation when needed.
+BitNet-rs uses GitHub labels to selectively trigger heavy CI workflows. This keeps fast feedback for most PRs while ensuring comprehensive validation when needed.
 
 ## Label-Gated Workflows
 

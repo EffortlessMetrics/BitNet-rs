@@ -1,7 +1,7 @@
-# BitNet.rs Test Results Report
+# BitNet-rs Test Results Report
 
 ## Executive Summary
-BitNet.rs has been validated as a production-ready drop-in replacement for bitnet.cpp with superior compatibility and reliability.
+BitNet-rs has been validated as a production-ready drop-in replacement for bitnet.cpp with superior compatibility and reliability.
 
 ## Test Results Overview
 
@@ -15,7 +15,7 @@ BitNet.rs has been validated as a production-ready drop-in replacement for bitne
   - MockTokenizer trait implementation alignment
 
 ### ✅ Cross-Validation Results
-- **BitNet.rs (Rust)**: ✅ Successfully loads and validates GGUF files
+- **BitNet-rs (Rust)**: ✅ Successfully loads and validates GGUF files
 - **bitnet.cpp (C++)**: ❌ Fails on minimal GGUF files (known limitation)
 - **Test Model**: 224-byte GGUF v3 with 0 tensors
 - **Report Location**: `target/crossval_report.json`
@@ -100,17 +100,17 @@ cargo bench --workspace --no-default-features --features cpu
 
 ## Recommendations
 
-1. **Immediate**: BitNet.rs can replace bitnet.cpp in production
+1. **Immediate**: BitNet-rs can replace bitnet.cpp in production
 2. **Testing**: Use CROSSVAL_ALLOW_CPP_FAIL=1 for CI pipelines
 3. **Migration**: Follow MIGRATION.md for seamless transition
 4. **Performance**: Enable native CPU optimizations with RUSTFLAGS="-C target-cpu=native"
 
 ## Conclusion
 
-BitNet.rs demonstrates **superior compatibility** compared to bitnet.cpp, successfully handling edge cases that cause the C++ implementation to fail. The Rust implementation is:
+BitNet-rs demonstrates **superior compatibility** compared to bitnet.cpp, successfully handling edge cases that cause the C++ implementation to fail. The Rust implementation is:
 - ✅ More robust
 - ✅ Safer (memory-safe)
 - ✅ More compatible (handles problematic GGUF files)
 - ✅ Production-ready
 
-The cross-validation results definitively show BitNet.rs as the better choice for production deployments.
+The cross-validation results definitively show BitNet-rs as the better choice for production deployments.

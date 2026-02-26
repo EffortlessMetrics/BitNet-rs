@@ -1,4 +1,4 @@
-# BitNet.rs Tech Debt Cleanup - Quick Start Guide
+# bitnet-rs Tech Debt Cleanup - Quick Start Guide
 
 **Target**: Issues #343-#420 (78 issues)
 **Outcome**: 17 tracking items (4 epics + 13 discrete issues)

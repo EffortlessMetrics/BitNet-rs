@@ -6,7 +6,7 @@
 
 ## Context
 
-BitNet.rs currently returns placeholder logits (zeros `[1, 32000]`) from the CPU forward path in `CpuInferenceEngine::forward_parallel()`. This blocks actual token generation and question-answering workflows, preventing the CPU MVP from performing real neural network inference.
+BitNet-rs currently returns placeholder logits (zeros `[1, 32000]`) from the CPU forward path in `CpuInferenceEngine::forward_parallel()`. This blocks actual token generation and question-answering workflows, preventing the CPU MVP from performing real neural network inference.
 
 **Current State:**
 - `CpuInferenceEngine::forward_parallel()` at line 263 returns zero-filled tensors
@@ -25,7 +25,7 @@ BitNet.rs currently returns placeholder logits (zeros `[1, 32000]`) from the CPU
 
 ### Neural Network Architecture
 
-BitNet.rs implements a standard transformer decoder architecture with 1-bit quantized weights:
+BitNet-rs implements a standard transformer decoder architecture with 1-bit quantized weights:
 
 ```
 Input Token (u32)

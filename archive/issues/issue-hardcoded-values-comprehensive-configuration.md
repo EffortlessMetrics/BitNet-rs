@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-Several critical components in BitNet.rs contain hardcoded values that should be configurable to support different models, hardware configurations, and deployment scenarios. This reduces system flexibility, makes it difficult to support new model architectures, and prevents optimization for different hardware environments.
+Several critical components in BitNet-rs contain hardcoded values that should be configurable to support different models, hardware configurations, and deployment scenarios. This reduces system flexibility, makes it difficult to support new model architectures, and prevents optimization for different hardware environments.
 
 ## Environment
 
@@ -676,4 +676,4 @@ fn test_end_to_end_configuration() {
 
 ## Additional Context
 
-This comprehensive configuration system is essential for making BitNet.rs truly flexible and maintainable. By replacing hardcoded values with intelligent, hardware-aware configuration, the system becomes more adaptable to different deployment scenarios and easier to extend with new model architectures. The multi-source configuration approach ensures that users can customize behavior at the appropriate level while maintaining sensible defaults.
+This comprehensive configuration system is essential for making BitNet-rs truly flexible and maintainable. By replacing hardcoded values with intelligent, hardware-aware configuration, the system becomes more adaptable to different deployment scenarios and easier to extend with new model architectures. The multi-source configuration approach ensures that users can customize behavior at the appropriate level while maintaining sensible defaults.

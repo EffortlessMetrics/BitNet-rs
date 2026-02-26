@@ -9,7 +9,7 @@
 
 ## Intent
 
-Refactor working code to meet BitNet.rs production-grade quality standards while maintaining semantic equivalence.
+Refactor working code to meet BitNet-rs production-grade quality standards while maintaining semantic equivalence.
 
 ---
 
@@ -28,7 +28,7 @@ Refactor working code to meet BitNet.rs production-grade quality standards while
 - Documentation completeness (module/function/parameter docs)
 - Safety annotations (unsafe set_var usage)
 - Code duplication analysis
-- BitNet.rs idiom compliance
+- BitNet-rs idiom compliance
 
 ---
 
@@ -194,7 +194,7 @@ cargo build --workspace --no-default-features --features cpu
 
 ## Code Quality Metrics
 
-### BitNet.rs Idiom Compliance
+### BitNet-rs Idiom Compliance
 
 | Dimension | Status | Evidence |
 |-----------|--------|----------|
@@ -223,7 +223,7 @@ cargo build --workspace --no-default-features --features cpu
 **Routing:** FINALIZE → test-hardener
 
 **Rationale:**
-1. **Code quality meets BitNet.rs standards:**
+1. **Code quality meets BitNet-rs standards:**
    - Production code already excellent (no refactoring needed)
    - Test code improved with descriptive assertions
    - Documentation complete at module/function/parameter level
@@ -266,6 +266,6 @@ cargo build --workspace --no-default-features --features cpu
 ---
 
 **Status:** ✅ Code quality refactoring complete
-**Quality Standard:** BitNet.rs production-grade code
+**Quality Standard:** BitNet-rs production-grade code
 **Semantic Equivalence:** Maintained (test behavior unchanged)
 **Ready for:** test-hardener (semantic validation + mutation testing)

@@ -1,6 +1,6 @@
-# BitNet.rs Test Debugging Guide
+# BitNet-rs Test Debugging Guide
 
-This guide explains how to use the comprehensive debugging support in the BitNet.rs testing framework to identify and resolve test issues quickly.
+This guide explains how to use the comprehensive debugging support in the BitNet-rs testing framework to identify and resolve test issues quickly.
 
 ## Overview
 

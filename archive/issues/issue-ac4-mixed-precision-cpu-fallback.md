@@ -463,13 +463,13 @@ async fn test_ac4_mixed_precision_cross_validation_with_fallback() -> Result<()>
         let mut scenario_results = Vec::new();
 
         for test_sequence in &config.test_sequences {
-            // Run BitNet.rs inference with mixed precision/fallback
+            // Run BitNet-rs inference with mixed precision/fallback
             let bitnet_result = run_bitnet_mixed_precision_inference(
                 &model,
                 test_sequence,
                 &precision_config
             ).await.context(format!(
-                "Failed BitNet.rs {} inference for: {}",
+                "Failed BitNet-rs {} inference for: {}",
                 scenario_name, test_sequence
             ))?;
 

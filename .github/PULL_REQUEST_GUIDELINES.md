@@ -1,4 +1,4 @@
-# BitNet.rs Pull Request Guidelines
+# bitnet-rs Pull Request Guidelines
 
 ## Overview
 
@@ -65,7 +65,7 @@ PR size is calculated as: `additions + deletions = total changes`
    ❌ Rebasing onto wrong base branch
    ```
 
-## BitNet.rs Specific Guidelines
+## bitnet-rs Specific Guidelines
 
 ### 🎯 Focused PR Examples
 

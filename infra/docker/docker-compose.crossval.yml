@@ -5,7 +5,7 @@
 version: '3.8'
 
 services:
-  # Primary BitNet.rs implementation
+  # Primary bitnet-rs implementation
   bitnet-rust:
     build:
       context: ..

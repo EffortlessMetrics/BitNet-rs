@@ -104,7 +104,7 @@ All panics properly gated with `#[cfg(debug_assertions)]`:
 - **Strict Mode Tests:** All passing ✅
 - **Quantization Tests:** All passing ✅
 
-## BitNet.rs Neural Network Security Assessment
+## BitNet-rs Neural Network Security Assessment
 
 ### Quantization Security
 - **I2_S/TL1/TL2:** No new quantization code introduced ✅
@@ -212,5 +212,5 @@ Strict quantization guards are security-validated and ready for benchmark valida
 ---
 
 **Validation Timestamp:** 2025-10-14T00:00:00Z
-**Validator:** BitNet.rs Security Gate (generative-security-validator)
+**Validator:** BitNet-rs Security Gate (generative-security-validator)
 **Report Version:** 1.0.0

@@ -513,7 +513,7 @@ impl<'a> GgufReader<'a> {
                 | GgufTensorType::Q8_K => {
                     tracing::warn!(
                         "Unsupported GGUF quantization type {:?} in tensor '{}'. \
-                        Only I2_S, IQ2_S, and FP32/FP16/FP64 are supported by BitNet.rs. \
+                        Only I2_S, IQ2_S, and FP32/FP16/FP64 are supported by BitNet-rs. \
                         Standard GGUF quantized models are not compatible.",
                         tensor_info.tensor_type,
                         tensor_info.name

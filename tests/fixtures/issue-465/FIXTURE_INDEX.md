@@ -4,7 +4,7 @@ Comprehensive test fixtures for Issue #465: CPU Path Followup test infrastructur
 
 ## Overview
 
-This directory contains realistic test data for validating Issue #465 acceptance criteria. All fixtures follow BitNet.rs neural network patterns with proper I2_S quantization context, receipt schema v1.0.0 compliance, and feature-gated organization.
+This directory contains realistic test data for validating Issue #465 acceptance criteria. All fixtures follow BitNet-rs neural network patterns with proper I2_S quantization context, receipt schema v1.0.0 compliance, and feature-gated organization.
 
 ## Fixture Groups
 
@@ -16,7 +16,7 @@ This directory contains realistic test data for validating Issue #465 acceptance
 
 **File:** `cpu-baseline-valid.json`
 - **Purpose:** Valid CPU baseline receipt with I2_S quantization
-- **Kernels:** 11 realistic BitNet.rs kernel IDs (`i2s_cpu_quantized_matmul`, `tl1_lut_dequant_forward`, etc.)
+- **Kernels:** 11 realistic BitNet-rs kernel IDs (`i2s_cpu_quantized_matmul`, `tl1_lut_dequant_forward`, etc.)
 - **Performance:** 15.3 tok/s (realistic for 2B I2_S model on AVX2 CPU)
 - **Schema:** v1.0.0 compliant with all required fields
 - **Usage:** AC3 (baseline generation), AC4 (baseline verification)
@@ -199,7 +199,7 @@ This directory contains realistic test data for validating Issue #465 acceptance
 - **Content:**
   - Tag: "v0.1.0-mvp"
   - Message: Comprehensive release notes with CPU baseline reference
-  - Tagger: BitNet.rs Maintainer
+  - Tagger: BitNet-rs Maintainer
   - Date: "2025-10-15T18:00:00Z"
   - Object: Commit SHA for main branch merge
   - Verification: PGP signature (verified: true)
@@ -255,7 +255,7 @@ let receipt: Receipt = serde_json::from_str(&valid_receipt)?;
 
 ## Neural Network Context
 
-All fixtures include realistic BitNet.rs neural network patterns:
+All fixtures include realistic BitNet-rs neural network patterns:
 
 ### I2_S Quantization
 
@@ -290,7 +290,7 @@ All receipt fixtures conform to schema requirements:
 
 ## Validation
 
-All fixtures validated against BitNet.rs standards:
+All fixtures validated against BitNet-rs standards:
 
 ```bash
 # Validate receipt fixtures
@@ -322,7 +322,7 @@ cargo test -p bitnet-tests --test issue_465_release_qa_tests
 
 When updating fixtures:
 
-1. **Preserve Neural Network Context:** Ensure kernel IDs match real BitNet.rs implementations
+1. **Preserve Neural Network Context:** Ensure kernel IDs match real BitNet-rs implementations
 2. **Maintain Receipt Schema:** Keep receipts v1.0.0 compliant
 3. **Update Documentation:** Reflect fixture changes in FIXTURE_INDEX.md
 4. **Validate Tests:** Run test suite to ensure fixtures integrate correctly

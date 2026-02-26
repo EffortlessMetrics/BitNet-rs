@@ -1,6 +1,6 @@
 # Cross-Validation Documentation
 
-This document describes how to run cross-validation tests between BitNet.rs and Microsoft's official BitNet C++ implementation to ensure drop-in compatibility and identical results.
+This document describes how to run cross-validation tests between BitNet-rs and Microsoft's official BitNet C++ implementation to ensure drop-in compatibility and identical results.
 
 ## Quick Start
 

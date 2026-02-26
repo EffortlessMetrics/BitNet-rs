@@ -1,4 +1,4 @@
-# Prometheus configuration for BitNet.rs monitoring
+# Prometheus configuration for bitnet-rs monitoring
 
 global:
   scrape_interval: 15s

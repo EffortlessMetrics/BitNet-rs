@@ -133,7 +133,7 @@ Performance microloop **FINALIZED** with comprehensive **PASS** status. All thre
 
 ---
 
-## BitNet.rs Performance Standards Met
+## bitnet-rs Performance Standards Met
 
 ### Neural Network Performance Metrics
 

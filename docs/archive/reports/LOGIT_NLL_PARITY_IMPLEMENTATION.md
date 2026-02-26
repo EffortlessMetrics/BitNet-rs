@@ -18,7 +18,7 @@
 
 ## Overview
 
-This document describes the comprehensive implementation of logit-parity testing and teacher-forcing NLL evaluation for BitNet.rs. These features provide bulletproof validation that goes beyond surface-level text comparison.
+This document describes the comprehensive implementation of logit-parity testing and teacher-forcing NLL evaluation for BitNet-rs. These features provide bulletproof validation that goes beyond surface-level text comparison.
 
 ## Implemented Features
 
@@ -223,4 +223,4 @@ target/release/bitnet eval \
 - Property test harnesses
 - CI scripts
 
-The framework is production-ready and provides strong guarantees that BitNet.rs produces correct, consistent outputs matching reference implementations.
+The framework is production-ready and provides strong guarantees that BitNet-rs produces correct, consistent outputs matching reference implementations.

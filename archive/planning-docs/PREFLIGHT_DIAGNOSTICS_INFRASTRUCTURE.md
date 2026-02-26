@@ -1,4 +1,4 @@
-# BitNet.rs Preflight & Diagnostics Infrastructure Report
+# BitNet-rs Preflight & Diagnostics Infrastructure Report
 
 ## Executive Summary
 

@@ -9,7 +9,7 @@
 
 ## Overview
 
-BitNet.rs documentation has been successfully updated to reflect the completion of Issue #260 (SIMD Kernel Integration & Optimization Testing). All references to Issue #260 as an active blocker have been removed and consolidated into a resolved issues section with comprehensive documentation.
+BitNet-rs documentation has been successfully updated to reflect the completion of Issue #260 (SIMD Kernel Integration & Optimization Testing). All references to Issue #260 as an active blocker have been removed and consolidated into a resolved issues section with comprehensive documentation.
 
 ---
 
@@ -197,9 +197,9 @@ cargo test --no-default-features -p bitnet-kernels --features cpu test_tl2_avx_o
 
 ## Conclusion
 
-Issue #260 documentation has been successfully updated across the BitNet.rs codebase. All active references to Issue #260 have been consolidated into a single resolved issues section, comprehensive narrative documentation has been created, and test counts have been updated to reflect the transition of 2 tests from blocked to working status.
+Issue #260 documentation has been successfully updated across the BitNet-rs codebase. All active references to Issue #260 have been consolidated into a single resolved issues section, comprehensive narrative documentation has been created, and test counts have been updated to reflect the transition of 2 tests from blocked to working status.
 
-The documentation now accurately reflects the completion of SIMD kernel integration and optimization testing, enabling users and developers to confidently use and extend the BitNet.rs quantization kernels.
+The documentation now accurately reflects the completion of SIMD kernel integration and optimization testing, enabling users and developers to confidently use and extend the BitNet-rs quantization kernels.
 
 **Status**: ✅ COMPLETE
 **Quality**: ✅ VERIFIED

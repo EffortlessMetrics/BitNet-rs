@@ -1,6 +1,6 @@
-# AWS Deployment Guide for BitNet.rs
+# AWS Deployment Guide for bitnet-rs
 
-This guide covers deploying BitNet.rs on Amazon Web Services using various services.
+This guide covers deploying bitnet-rs on Amazon Web Services using various services.
 
 ## Deployment Options
 

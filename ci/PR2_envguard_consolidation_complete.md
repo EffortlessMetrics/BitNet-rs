@@ -6,7 +6,7 @@
 
 ## Summary
 
-The consolidated EnvGuard helper requested in the migration plan is **already implemented and working** in the BitNet.rs codebase. No additional implementation is needed.
+The consolidated EnvGuard helper requested in the migration plan is **already implemented and working** in the BitNet-rs codebase. No additional implementation is needed.
 
 ## Implementation Details
 
@@ -89,7 +89,7 @@ test helpers::env_guard::env_guard_impl::tests::test_env_guard_set_and_restore .
 test result: ok. 7 passed; 0 failed; 0 ignored
 ```
 
-## Usage in BitNet.rs Tests
+## Usage in BitNet-rs Tests
 
 The EnvGuard is actively used in `crates/bitnet-common/tests/issue_260_strict_mode_tests.rs`:
 

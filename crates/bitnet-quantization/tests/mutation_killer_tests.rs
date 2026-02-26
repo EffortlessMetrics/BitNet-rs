@@ -1,4 +1,4 @@
-//! Targeted mutation killer tests for BitNet.rs quantization algorithms
+//! Targeted mutation killer tests for BitNet-rs quantization algorithms
 //!
 //! This module implements comprehensive tests designed to eliminate surviving mutants
 //! identified in mutation testing analysis. Focus areas:

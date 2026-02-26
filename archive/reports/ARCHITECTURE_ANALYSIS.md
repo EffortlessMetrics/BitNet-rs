@@ -1,8 +1,8 @@
-# BitNet.rs Current Architecture Analysis
+# BitNet-rs Current Architecture Analysis
 
 ## Executive Summary
 
-This document provides a comprehensive analysis of the BitNet.rs codebase implementation of prompt templates, chat functionality, tokenization, receipt generation, and streaming inference. It identifies the specific locations requiring changes for the proposed refactoring.
+This document provides a comprehensive analysis of the BitNet-rs codebase implementation of prompt templates, chat functionality, tokenization, receipt generation, and streaming inference. It identifies the specific locations requiring changes for the proposed refactoring.
 
 ---
 
@@ -541,7 +541,7 @@ copy_receipt_if_present(emit_receipt_dir)
 
 ## Conclusion
 
-The BitNet.rs codebase has a solid foundation with:
+The BitNet-rs codebase has a solid foundation with:
 - ✓ Complete template system with auto-detection
 - ✓ ChatTurn and ChatRole abstractions
 - ✓ Multi-turn rendering in `render_chat()`

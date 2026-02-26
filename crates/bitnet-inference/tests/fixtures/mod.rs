@@ -1,7 +1,7 @@
 //! Test Fixtures for Issue #453: Strict Quantization Guards
 //!
 //! Comprehensive test fixtures for validating strict mode quantization enforcement
-//! in BitNet.rs neural network inference.
+//! in BitNet-rs neural network inference.
 //!
 //! ## Module Organization
 //!

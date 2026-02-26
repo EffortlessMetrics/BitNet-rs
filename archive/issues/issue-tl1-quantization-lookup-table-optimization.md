@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The TL1 quantization system in BitNet.rs uses a simplified linear dequantization approach instead of the proper table lookup (TL1) method. This prevents optimal quantization accuracy and performance benefits that lookup tables provide for neural network inference.
+The TL1 quantization system in BitNet-rs uses a simplified linear dequantization approach instead of the proper table lookup (TL1) method. This prevents optimal quantization accuracy and performance benefits that lookup tables provide for neural network inference.
 
 ## Environment
 
@@ -288,13 +288,13 @@ fn bench_lookup_vs_linear_dequantization(b: &mut Bencher) {
 
 ## Related Issues
 
-- BitNet.rs #218: Device-aware quantization system
-- BitNet.rs #251: Production-ready inference server
-- BitNet.rs #260: Mock elimination project
+- BitNet-rs #218: Device-aware quantization system
+- BitNet-rs #251: Production-ready inference server
+- BitNet-rs #260: Mock elimination project
 
 ## Implementation Notes
 
-### BitNet.rs Integration
+### BitNet-rs Integration
 - Use existing quantization trait system for consistency
 - Integrate with `bitnet-kernels` for SIMD optimization
 - Follow feature flag architecture for optional optimizations

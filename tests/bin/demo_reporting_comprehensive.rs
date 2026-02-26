@@ -256,7 +256,7 @@ fn create_demo_test_data() -> Vec<TestSuiteResult> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 BitNet.rs Reporting System Comprehensive Demo");
+    println!("🚀 BitNet-rs Reporting System Comprehensive Demo");
     println!("================================================\n");
 
     let temp_dir = TempDir::new()?;

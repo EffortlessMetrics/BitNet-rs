@@ -1,4 +1,4 @@
-# BitNet.rs Cross-Validation Infrastructure - Quick Reference
+# BitNet-rs Cross-Validation Infrastructure - Quick Reference
 
 ## What Exists (Mature, Production-Ready)
 
@@ -193,7 +193,7 @@ cargo run -p xtask -- verify-receipt
 
 ## Conclusion
 
-BitNet.rs has **exceptional cross-validation infrastructure**. To add layer-level comparison:
+BitNet-rs has **exceptional cross-validation infrastructure**. To add layer-level comparison:
 
 1. Extend `KernelRecorder` → `LayerRecorder` (capture outputs)
 2. Add instrumentation hooks in inference engine

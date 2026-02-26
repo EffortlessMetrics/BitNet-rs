@@ -1,7 +1,7 @@
-# BitNet.rs Tech Debt Analysis: Issues #343-#420
+# BitNet-rs Tech Debt Analysis: Issues #343-#420
 
 **Analysis Date**: 2025-11-11
-**Analyst**: BitNet.rs GitHub Research Specialist
+**Analyst**: BitNet-rs GitHub Research Specialist
 **Scope**: 78 issues (#343-#420) from TDD scaffolding phase
 
 ## Executive Summary

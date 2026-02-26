@@ -1,4 +1,4 @@
-# Sprint-2 Lockdown Complete - BitNet.rs MVP v0.1.0
+# Sprint-2 Lockdown Complete - BitNet-rs MVP v0.1.0
 
 **Date**: November 11, 2025
 **Status**: ✅ All tasks complete, Sprint-2 ready to execute

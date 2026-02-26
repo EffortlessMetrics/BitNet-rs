@@ -28,4 +28,4 @@ All workspace files comply with Rust formatting standards (`rustfmt.toml`).
 
 ## Conclusion
 
-✅ Format gate PASS - All files formatted correctly according to BitNet.rs standards.
+✅ Format gate PASS - All files formatted correctly according to BitNet-rs standards.

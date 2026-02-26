@@ -11,7 +11,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    info!("BitNet.rs Fast Feedback Demo");
+    info!("BitNet-rs Fast Feedback Demo");
     info!("============================");
 
     // Parse command line arguments

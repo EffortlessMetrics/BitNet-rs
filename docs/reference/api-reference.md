@@ -4,7 +4,7 @@ This document provides comprehensive API reference for BitNet Rust library and p
 
 ## Production Inference Server API
 
-The BitNet.rs production inference server provides enterprise-grade HTTP API endpoints for neural network inference with comprehensive model management, monitoring, and security features.
+The BitNet-rs production inference server provides enterprise-grade HTTP API endpoints for neural network inference with comprehensive model management, monitoring, and security features.
 
 ### Base URL and Versioning
 
@@ -470,7 +470,7 @@ All API endpoints return standardized error responses:
 
 ## Real Neural Network Inference (Issue #254)
 
-BitNet.rs implements production-quality neural network inference with real quantized computation, replacing all mock implementations.
+BitNet-rs implements production-quality neural network inference with real quantized computation, replacing all mock implementations.
 
 ### Inference Modes
 
@@ -806,7 +806,7 @@ pub struct MemoryBreakdown {
 
 ### Performance Metrics
 
-BitNet.rs provides structured performance metrics for comprehensive monitoring:
+BitNet-rs provides structured performance metrics for comprehensive monitoring:
 
 #### TimingMetrics
 
@@ -1487,7 +1487,7 @@ pub struct InferenceConfig {
 
 ### Enhanced NaN-Safe Sampling
 
-BitNet.rs provides robust sampling with comprehensive NaN handling to prevent crashes from model output anomalies.
+BitNet-rs provides robust sampling with comprehensive NaN handling to prevent crashes from model output anomalies.
 
 ```rust
 use bitnet_cli::sampling::Sampler;
@@ -1558,7 +1558,7 @@ pub struct SamplingConfig {
 
 ### Tokenizer Discovery and Auto-Download (Issue #249)
 
-BitNet.rs provides intelligent tokenizer discovery and automatic downloading for seamless neural network model integration.
+BitNet-rs provides intelligent tokenizer discovery and automatic downloading for seamless neural network model integration.
 
 #### TokenizerDiscovery
 

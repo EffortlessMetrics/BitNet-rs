@@ -93,5 +93,5 @@ pub fn forward_full(&self, token_ids: &Tensor) -> Result<Tensor> {
 
 ## Related Issues
 
-- BitNet.rs #251: Production-ready inference server
-- BitNet.rs #218: Device-aware quantization system
+- BitNet-rs #251: Production-ready inference server
+- BitNet-rs #218: Device-aware quantization system

@@ -225,7 +225,7 @@ fn test_ac12_v0_1_0_mvp_tag_created() -> Result<()> {
         // Tag doesn't exist - that's OK, it will be created after tests pass
         println!("// AC12: Ready for tag creation - baseline exists");
         println!(
-            "// Create tag: git tag -a v0.1.0-mvp -m \"BitNet.rs v0.1.0 MVP Release - CPU baseline established\""
+            "// Create tag: git tag -a v0.1.0-mvp -m \"BitNet-rs v0.1.0 MVP Release - CPU baseline established\""
         );
     }
 

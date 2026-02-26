@@ -1,4 +1,4 @@
-# BitNet.rs Reporting System Implementation
+# BitNet-rs Reporting System Implementation
 
 ## Overview
 

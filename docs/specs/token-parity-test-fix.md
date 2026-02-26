@@ -3,7 +3,7 @@
 **Document Version**: 1.0.0
 **Date**: 2025-10-25
 **Status**: Draft
-**Author**: BitNet.rs Spec Analyzer
+**Author**: BitNet-rs Spec Analyzer
 
 ---
 
@@ -105,7 +105,7 @@ let error = TokenParityError {
 
 ### Architecture Alignment
 
-This fix aligns with BitNet.rs cross-validation architecture:
+This fix aligns with BitNet-rs cross-validation architecture:
 
 - **TDD Practices**: Test scaffolding follows production code updates
 - **Backend-Aware Diagnostics**: Tests validate backend-specific error messages

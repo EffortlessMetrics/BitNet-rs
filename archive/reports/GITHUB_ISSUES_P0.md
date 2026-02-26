@@ -1,10 +1,10 @@
-# GitHub Issues for P0 Tasks - BitNet.rs Post-PR-475
+# GitHub Issues for P0 Tasks - BitNet-rs Post-PR-475
 
 ## Issue 1: Real GGUF Fixtures for QK256 and BitNet-32 Testing
 
 ### Problem Statement
 
-BitNet.rs currently generates GGUF test fixtures in-memory during test execution, which adds ~50-100ms overhead per test run and creates potential for CI/CD instability. We need persistent, disk-based GGUF v3 fixtures stored in version control to ensure stable, reproducible testing of QK256 and BitNet32F16 quantization formats.
+BitNet-rs currently generates GGUF test fixtures in-memory during test execution, which adds ~50-100ms overhead per test run and creates potential for CI/CD instability. We need persistent, disk-based GGUF v3 fixtures stored in version control to ensure stable, reproducible testing of QK256 and BitNet32F16 quantization formats.
 
 The current approach in `qk256_dual_flavor_tests.rs` dynamically generates fixtures using helper functions, which:
 - Adds unnecessary runtime overhead (150ms across 3 key tests)
@@ -137,7 +137,7 @@ time cargo nextest run -p bitnet-models --features cpu,fixtures
 
 ### Problem Statement
 
-BitNet.rs test suite contains ~21 files with unsafe environment variable mutations that can cause race conditions during parallel test execution. These unsafe mutations use `unsafe { std::env::set_var() }` without proper cleanup, polluting the environment for other tests running in parallel.
+BitNet-rs test suite contains ~21 files with unsafe environment variable mutations that can cause race conditions during parallel test execution. These unsafe mutations use `unsafe { std::env::set_var() }` without proper cleanup, polluting the environment for other tests running in parallel.
 
 The existing `EnvGuard` pattern provides safe environment isolation with automatic restoration, but rollout is incomplete. Key tests for deterministic inference (`BITNET_DETERMINISTIC`, `BITNET_SEED`), strict mode validation (`BITNET_STRICT_MODE`), and GPU override (`BITNET_GPU_FAKE`) are at risk of flaky failures due to env races.
 
@@ -293,7 +293,7 @@ hyperfine --warmup 2 --runs 5 \
 
 ### Problem Statement
 
-The `bitnet-ggml-ffi` crate currently produces compiler warnings during build due to vendored GGML C++ code. These warnings pollute CI build output and make it difficult to detect regressions in BitNet.rs shim code. The vendored GGML headers should use `-isystem` flag (GCC/Clang) or `/external:I` (MSVC) to suppress third-party warnings while keeping warnings visible for local shim code.
+The `bitnet-ggml-ffi` crate currently produces compiler warnings during build due to vendored GGML C++ code. These warnings pollute CI build output and make it difficult to detect regressions in BitNet-rs shim code. The vendored GGML headers should use `-isystem` flag (GCC/Clang) or `/external:I` (MSVC) to suppress third-party warnings while keeping warnings visible for local shim code.
 
 Current state:
 - Vendored GGML code in `csrc/ggml/` produces warnings (sign-compare, unused-parameter, unused-function)
@@ -460,7 +460,7 @@ build
 ```
 
 **Shim Code (Warnings Visible):**
-- `csrc/ggml_quants_shim.c` - BitNet.rs IQ2_S FFI bridge
+- `csrc/ggml_quants_shim.c` - BitNet-rs IQ2_S FFI bridge
 - `csrc/ggml_consts.c` - GGML constant exports
 
 **Vendored Code (Warnings Suppressed):**
@@ -481,7 +481,7 @@ build
 
 ## Summary
 
-These three P0 issues establish production-grade infrastructure for BitNet.rs:
+These three P0 issues establish production-grade infrastructure for BitNet-rs:
 
 1. **Issue 1 (GGUF Fixtures)**: CI stability and test performance (~150ms speedup)
 2. **Issue 2 (EnvGuard)**: Parallel test safety and deterministic execution
@@ -494,4 +494,4 @@ These three P0 issues establish production-grade infrastructure for BitNet.rs:
 2. Issue 1 (GGUF Fixtures) - Foundation for CI stability (2-3h)
 3. Issue 2 (EnvGuard) - Parallel test safety (2h)
 
-All issues have clear acceptance criteria, verification steps, and measurable success metrics aligned with BitNet.rs TDD practices and cargo + xtask workflow automation.
+All issues have clear acceptance criteria, verification steps, and measurable success metrics aligned with BitNet-rs TDD practices and cargo + xtask workflow automation.

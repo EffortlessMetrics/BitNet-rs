@@ -1,6 +1,6 @@
 ## Receipt Verification
 
-BitNet.rs implements **honest compute** verification through production receipts. Every inference run generates a receipt with kernel IDs proving real computation.
+BitNet-rs implements **honest compute** verification through production receipts. Every inference run generates a receipt with kernel IDs proving real computation.
 
 ### Receipt Schema v1.0.0
 

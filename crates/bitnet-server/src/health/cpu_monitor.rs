@@ -1,4 +1,4 @@
-//! CPU health monitoring for BitNet.rs server
+//! CPU health monitoring for BitNet-rs server
 //!
 //! Provides CPU metrics collection including:
 //! - CPU utilization

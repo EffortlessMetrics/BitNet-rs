@@ -2,7 +2,7 @@
 //!
 //! Tests feature spec: docs/specs/docs-messaging-standards-cleanup.md
 //! Validates comprehensive documentation cleanup and messaging standards compliance
-//! across BitNet.rs codebase (AC1-AC10).
+//! across bitnet-rs codebase (AC1-AC10).
 //!
 //! Test Categories:
 //! - AC1: Zero "when available" phrasing verification

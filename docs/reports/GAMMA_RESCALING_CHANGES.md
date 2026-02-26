@@ -80,7 +80,7 @@ RMS' = 0.018 * 50.596 ≈ 0.911 (close to 1.0)
 ### Hypothesis
 bitnet.cpp may rescale pre-scaled gamma weights on load, which would explain:
 - Why identical GGUF works in bitnet.cpp
-- Why activations are 50× smaller in BitNet.rs
+- Why activations are 50× smaller in BitNet-rs
 - The exact match of gamma RMS to 1/√hidden_size
 
 ## Test Results

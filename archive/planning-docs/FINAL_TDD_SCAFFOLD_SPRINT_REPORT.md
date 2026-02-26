@@ -1,7 +1,7 @@
-# BitNet.rs TDD Scaffold Implementation - Final Sprint Report
+# BitNet-rs TDD Scaffold Implementation - Final Sprint Report
 
 **Sprint Date**: 2025-10-20
-**Sprint Goal**: Systematically build out all remaining TDD test scaffolds across BitNet.rs codebase
+**Sprint Goal**: Systematically build out all remaining TDD test scaffolds across BitNet-rs codebase
 **Methodology**: Explore agents create implementation guides → Impl-creator agents execute builds
 **Status**: ✅ **COMPLETE** (18/18 implementation agents successful)
 
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This sprint represents the most comprehensive TDD scaffold implementation effort in BitNet.rs history. By leveraging parallel agent execution with focused, single-task agents, we successfully implemented **18 test scaffolds** across 4 major categories in approximately 4-5 hours of parallel execution time.
+This sprint represents the most comprehensive TDD scaffold implementation effort in BitNet-rs history. By leveraging parallel agent execution with focused, single-task agents, we successfully implemented **18 test scaffolds** across 4 major categories in approximately 4-5 hours of parallel execution time.
 
 ### Key Metrics
 
@@ -484,7 +484,7 @@ cargo test -p bitnet-inference --no-default-features --features cpu,crossval,ffi
 
 ## Conclusion
 
-This sprint represents a **major milestone** in BitNet.rs TDD coverage and test infrastructure maturity:
+This sprint represents a **major milestone** in BitNet-rs TDD coverage and test infrastructure maturity:
 
 - **18 scaffolds implemented** across critical quantization, inference, and model loading paths
 - **83% pass rate** with remaining issues correctly identified (TDD Red phase)
@@ -494,7 +494,7 @@ This sprint represents a **major milestone** in BitNet.rs TDD coverage and test 
 
 The systematic approach using Explore agents for planning and focused Impl-creator agents for execution proved highly effective, achieving **~3x efficiency** compared to sequential implementation while maintaining high code quality.
 
-**All implementations follow BitNet.rs architectural patterns**, integrate with production APIs, and provide robust validation infrastructure for current and future neural network inference development.
+**All implementations follow BitNet-rs architectural patterns**, integrate with production APIs, and provide robust validation infrastructure for current and future neural network inference development.
 
 ---
 

@@ -1,5 +1,5 @@
 # LayerNorm Implementation Investigation Report
-## BitNet.rs - Issue #254: Shape Mismatch in Layer-Norm
+## BitNet-rs - Issue #254: Shape Mismatch in Layer-Norm
 
 **Investigation Date**: 2025-10-24  
 **Investigation Scope**: GGUF tensor loading, LayerNorm forward pass, transformer architecture  

@@ -6,7 +6,7 @@
 
 ## Context
 
-BitNet.rs implements receipt-based proof of computation (PR #452) but lacks runtime guarantees that quantized inference uses native quantized kernels instead of silently falling back to FP32 dequantization. This gap undermines performance baselines and correctness validation.
+BitNet-rs implements receipt-based proof of computation (PR #452) but lacks runtime guarantees that quantized inference uses native quantized kernels instead of silently falling back to FP32 dequantization. This gap undermines performance baselines and correctness validation.
 
 ### Current State
 

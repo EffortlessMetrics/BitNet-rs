@@ -12,7 +12,7 @@ Issue #159 requires implementing real GGUF model weight loading for production n
 2. **Progressive Loading**: Limited framework for models >4GB with memory efficiency
 3. **Quantization Integration**: Insufficient detail on I2_S, TL1, TL2 accuracy preservation
 4. **Cross-Validation**: Basic framework needs enhancement for C++ reference compatibility
-5. **Feature Flag Discipline**: Alignment with BitNet.rs `--no-default-features --features cpu|gpu`
+5. **Feature Flag Discipline**: Alignment with BitNet-rs `--no-default-features --features cpu|gpu`
 
 ## Decision
 
@@ -81,7 +81,7 @@ cargo build --no-default-features --features cpu
 ```
 
 **Rationale**:
-- Maintains BitNet.rs feature flag discipline
+- Maintains BitNet-rs feature flag discipline
 - Enables selective compilation for deployment environments
 - Reduces binary size and dependencies for specific use cases
 
@@ -189,7 +189,7 @@ The implementation will be considered successful when:
 - [GGUF Weight Loading Architecture](/docs/explanation/gguf-weight-loading.md)
 - [Enhanced Architecture Specification](/docs/explanation/gguf-weight-loading-enhanced-architecture.md)
 - [Quantization-Aware API Contracts](/docs/explanation/quantization-aware-weight-loading-contracts.md)
-- [BitNet.rs Feature Flag Discipline](/CLAUDE.md)
+- [BitNet-rs Feature Flag Discipline](/CLAUDE.md)
 
 ## Decision Date
 
@@ -197,5 +197,5 @@ The implementation will be considered successful when:
 
 ## Decision Makers
 
-- spec-creator (BitNet.rs Generative Flow)
+- spec-creator (BitNet-rs Generative Flow)
 - Architecture review pending

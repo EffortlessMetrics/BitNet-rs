@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-The BitNet.rs performance benchmarking infrastructure is experiencing systematic failures that prevent reliable performance testing and regression detection. These failures compromise our ability to validate performance requirements, detect regressions, and maintain quality standards for neural network inference operations.
+The BitNet-rs performance benchmarking infrastructure is experiencing systematic failures that prevent reliable performance testing and regression detection. These failures compromise our ability to validate performance requirements, detect regressions, and maintain quality standards for neural network inference operations.
 
 **Impact**: Critical - Performance validation is non-functional, affecting CI/CD reliability and preventing performance regression detection.
 
@@ -945,4 +945,4 @@ async fn test_concurrent_benchmark_execution() {
 
 ---
 
-*This issue addresses fundamental infrastructure reliability problems that are blocking effective performance validation and regression detection in the BitNet.rs neural network inference system.*
+*This issue addresses fundamental infrastructure reliability problems that are blocking effective performance validation and regression detection in the BitNet-rs neural network inference system.*

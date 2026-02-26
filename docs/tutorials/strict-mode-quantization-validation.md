@@ -1,8 +1,8 @@
 # Tutorial: Getting Started with Strict Mode Quantization Validation
 
-**Learning-oriented** | **Estimated time: 15 minutes** | **Prerequisites: Basic familiarity with BitNet.rs inference**
+**Learning-oriented** | **Estimated time: 15 minutes** | **Prerequisites: Basic familiarity with bitnet-rs inference**
 
-This tutorial will teach you how to use strict mode in BitNet.rs to ensure your neural network inference uses real quantized computation instead of silently falling back to FP32. By the end, you'll understand when and why to use strict mode, and how to interpret validation results.
+This tutorial will teach you how to use strict mode in bitnet-rs to ensure your neural network inference uses real quantized computation instead of silently falling back to FP32. By the end, you'll understand when and why to use strict mode, and how to interpret validation results.
 
 ## What You'll Learn
 
@@ -13,7 +13,7 @@ This tutorial will teach you how to use strict mode in BitNet.rs to ensure your 
 
 ## Why Strict Mode Matters
 
-When running 1-bit neural network inference with BitNet.rs, you expect quantized computation (I2S, TL1, TL2) to be used. However, if required kernels are unavailable, the system may silently fall back to FP32 dequantization. This produces correct results but with misleading performance metrics.
+When running 1-bit neural network inference with bitnet-rs, you expect quantized computation (I2S, TL1, TL2) to be used. However, if required kernels are unavailable, the system may silently fall back to FP32 dequantization. This produces correct results but with misleading performance metrics.
 
 **Problem scenario without strict mode:**
 ```bash
@@ -37,7 +37,7 @@ cargo run -p xtask -- benchmark --model model.gguf --tokens 128
 
 ## Step 1: Understanding the Three Validation Tiers
 
-BitNet.rs provides three layers of protection against silent fallbacks:
+bitnet-rs provides three layers of protection against silent fallbacks:
 
 ### Tier 1: Debug Assertions (Development Time)
 
@@ -91,7 +91,7 @@ cargo run -p xtask -- verify-receipt ci/inference.json
 
 ## Step 2: Enable Strict Mode for Your First Test
 
-Let's verify your BitNet.rs installation works with strict mode.
+Let's verify your bitnet-rs installation works with strict mode.
 
 ### 2.1 Download a Test Model
 

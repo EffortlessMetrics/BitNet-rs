@@ -1,4 +1,4 @@
-# BitNet.rs Tracing Infrastructure - Quick Reference
+# BitNet-rs Tracing Infrastructure - Quick Reference
 
 ## Current State at a Glance
 

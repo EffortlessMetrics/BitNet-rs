@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Successfully completed the **final missing piece** for BitNet.cpp autoconfiguration in BitNet.rs. The root cause was identified and fixed: **xtask/build.rs wasn't checking BitNet's third-party library paths**, causing runtime library loading failures even after successful builds.
+Successfully completed the **final missing piece** for BitNet.cpp autoconfiguration in BitNet-rs. The root cause was identified and fixed: **xtask/build.rs wasn't checking BitNet's third-party library paths**, causing runtime library loading failures even after successful builds.
 
 ### Problem Solved
 

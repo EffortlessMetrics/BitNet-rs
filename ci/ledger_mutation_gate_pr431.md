@@ -196,7 +196,7 @@ Score: 644/683 = 94.3% (EXCEEDS 80% threshold)
 
 ---
 
-## BitNet.rs Quality Gates
+## BitNet-rs Quality Gates
 
 | Component | Mutation Score | Threshold | Status |
 |-----------|---------------|-----------|--------|
@@ -291,7 +291,7 @@ Score: 644/683 = 94.3% (EXCEEDS 80% threshold)
 ✅ **Property-Based**: Round-trip validation passing
 ⚠️ **Mutation**: ~80% estimated score on receipts.rs (5 survivors)
 
-### BitNet.rs Quality
+### BitNet-rs Quality
 ✅ **Quantization Core**: 94.3% mutation score (previous PR #424)
 ⚠️ **New Receipt APIs**: ~80% estimated score (at threshold)
 ✅ **Neural Network Accuracy**: >99% maintained
@@ -320,5 +320,5 @@ Mutation testing for PR #431 identified **5 localizable survivors** in new recei
 
 **Timestamp**: 2025-10-04T04:30:00Z
 **Validator**: mutation-tester agent
-**Schema**: BitNet.rs Mutation Testing v1.0.0
+**Schema**: BitNet-rs Mutation Testing v1.0.0
 **Evidence**: `/home/steven/code/Rust/BitNet-rs/.github/review-workflows/PR_431_MUTATION_TESTING_REPORT.md`

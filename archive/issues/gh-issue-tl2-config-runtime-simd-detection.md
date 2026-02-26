@@ -431,4 +431,4 @@ impl TL2Config {
 
 ## Implementation Notes
 
-This runtime SIMD detection approach enables BitNet.rs to automatically adapt TL2 quantization performance to the actual deployment hardware while maintaining single-binary deployment simplicity. The architecture provides clear performance profiling and validation while supporting diverse CPU architectures.
+This runtime SIMD detection approach enables BitNet-rs to automatically adapt TL2 quantization performance to the actual deployment hardware while maintaining single-binary deployment simplicity. The architecture provides clear performance profiling and validation while supporting diverse CPU architectures.

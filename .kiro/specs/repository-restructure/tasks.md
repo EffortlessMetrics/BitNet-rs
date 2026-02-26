@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the detailed implementation tasks for restructuring the BitNet repository to establish BitNet.rs as the primary implementation with the C++ implementation as a legacy benchmark target.
+This document outlines the detailed implementation tasks for restructuring the BitNet repository to establish BitNet-rs as the primary implementation with the C++ implementation as a legacy benchmark target.
 
 ## Task Breakdown
 

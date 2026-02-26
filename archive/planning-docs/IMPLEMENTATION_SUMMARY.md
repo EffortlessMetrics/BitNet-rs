@@ -3,7 +3,7 @@
 **Date**: 2025-10-24
 **Status**: ✅ Sprint 1 & Sprint 2 Complete
 
-This document summarizes the implementation of the per-position logits parity system and layer-level tracing infrastructure for BitNet.rs, enabling precise divergence detection between Rust and C++ implementations.
+This document summarizes the implementation of the per-position logits parity system and layer-level tracing infrastructure for BitNet-rs, enabling precise divergence detection between Rust and C++ implementations.
 
 ---
 

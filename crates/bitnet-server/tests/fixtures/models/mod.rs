@@ -1,7 +1,7 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-//! GGUF Model Test Fixtures for BitNet.rs Inference Server
+//! GGUF Model Test Fixtures for BitNet-rs Inference Server
 //!
 //! This module provides realistic GGUF model fixtures for testing the production
 //! inference server. All fixtures support I2S, TL1, and TL2 quantization formats

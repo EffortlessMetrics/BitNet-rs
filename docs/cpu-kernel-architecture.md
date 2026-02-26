@@ -1,6 +1,6 @@
 # CPU Kernel Architecture and SIMD Optimizations
 
-This document explains the CPU kernel architecture in BitNet.rs, with a focus on the recent AVX-512 implementation and SIMD optimization strategies.
+This document explains the CPU kernel architecture in BitNet-rs, with a focus on the recent AVX-512 implementation and SIMD optimization strategies.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ This document explains the CPU kernel architecture in BitNet.rs, with a focus on
 
 ### Kernel Hierarchy
 
-BitNet.rs implements a hierarchical kernel selection system with automatic runtime detection:
+BitNet-rs implements a hierarchical kernel selection system with automatic runtime detection:
 
 ```
 CPU Kernels (Priority Order)
@@ -328,7 +328,7 @@ mod tests {
 
 ### 2D Convolution Implementation
 
-BitNet.rs includes comprehensive 2D convolution support integrated with the CPU kernel architecture. The convolution implementation supports both full-precision and quantized operations with configurable stride, padding, and dilation parameters.
+BitNet-rs includes comprehensive 2D convolution support integrated with the CPU kernel architecture. The convolution implementation supports both full-precision and quantized operations with configurable stride, padding, and dilation parameters.
 
 #### Core Features
 
@@ -360,7 +360,7 @@ pub fn conv2d_quantized(
 
 #### Quantization Support
 
-The convolution implementation supports BitNet.rs quantization schemes:
+The convolution implementation supports BitNet-rs quantization schemes:
 
 - **I2S Quantization**: 2-bit signed quantization with values [-2, -1, 1, 2], packed 4 values per byte
 - **TL1 Quantization**: Table lookup with linear mapping from [0, 255] to [-1, 1]
@@ -417,6 +417,6 @@ Planned improvements to the CPU kernel architecture:
 
 ## Conclusion
 
-The BitNet.rs CPU kernel architecture provides a robust, performance-optimized foundation for 1-bit LLM inference across diverse hardware platforms. The recent AVX-512 implementation represents a significant performance milestone while maintaining the safety and reliability guarantees that define the BitNet.rs project.
+The BitNet-rs CPU kernel architecture provides a robust, performance-optimized foundation for 1-bit LLM inference across diverse hardware platforms. The recent AVX-512 implementation represents a significant performance milestone while maintaining the safety and reliability guarantees that define the BitNet-rs project.
 
-The hierarchical fallback system ensures consistent functionality across hardware configurations while maximizing performance where advanced features are available. This approach aligns with BitNet.rs's core principles of progressive enhancement and graceful degradation.
+The hierarchical fallback system ensures consistent functionality across hardware configurations while maximizing performance where advanced features are available. This approach aligns with BitNet-rs's core principles of progressive enhancement and graceful degradation.

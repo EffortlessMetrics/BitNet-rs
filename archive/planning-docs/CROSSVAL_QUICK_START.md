@@ -1,4 +1,4 @@
-# BitNet.rs Cross-Validation Quick Start
+# BitNet-rs Cross-Validation Quick Start
 
 **Jump to**: [Setup](#setup) | [Commands](#essential-commands) | [Debugging](#debugging) | [CI](#ci-integration) | [Troubleshooting](#troubleshooting)
 
@@ -440,4 +440,4 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 ---
 
 **Last Updated**: October 25, 2025
-**BitNet.rs Version**: v0.1.0-qna-mvp (with dual-backend cross-validation)
+**BitNet-rs Version**: v0.1.0-qna-mvp (with dual-backend cross-validation)

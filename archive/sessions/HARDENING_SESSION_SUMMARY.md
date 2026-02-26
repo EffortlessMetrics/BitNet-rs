@@ -1,4 +1,4 @@
-# BitNet.rs Hardening Session - Final Summary
+# BitNet-rs Hardening Session - Final Summary
 
 **Date**: 2025-10-23
 **Branch**: `feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2`

@@ -451,7 +451,7 @@ fn test_production_engine_inference() {
 
 ---
 
-## BitNet.rs Standards Compliance
+## BitNet-rs Standards Compliance
 
 ### Feature Flag Discipline
 ✅ All test functions use `#[cfg(feature = "full-engine")]`
@@ -507,7 +507,7 @@ fn test_production_engine_inference() {
 
 ## References
 
-### BitNet.rs Documentation
+### BitNet-rs Documentation
 - `docs/development/test-suite.md` - Testing framework
 - `docs/architecture-overview.md` - Inference engine design
 - `docs/reference/real-model-api-contracts.md` - Production engine API
@@ -528,7 +528,7 @@ fn test_production_engine_inference() {
 
 ### Minimal Changes Philosophy
 
-This specification follows BitNet.rs principle of **minimal, incremental changes**:
+This specification follows BitNet-rs principle of **minimal, incremental changes**:
 
 1. **Export Only What's Needed**: Only add `ProductionInferenceConfig` and `PrefillStrategy`
 2. **Preserve Existing API**: No modifications to current exports

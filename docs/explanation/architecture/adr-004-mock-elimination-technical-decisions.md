@@ -1,11 +1,11 @@
-# ADR-004: Mock Elimination Technical Decisions for BitNet.rs Quantized Inference
+# ADR-004: Mock Elimination Technical Decisions for BitNet-rs Quantized Inference
 
 ## Status
 **IMPLEMENTED** - Issue #260 mock elimination completed, real quantized computation active
 
 ## Context
 
-BitNet.rs currently suffers from a critical architectural flaw where mock inference paths dominate execution, reporting false performance metrics (~200 tok/s) instead of real quantized neural network computation. This ADR documents the key technical decisions required to eliminate mock fallbacks and implement authentic quantized inference using I2S, TL1, and TL2 quantization algorithms.
+BitNet-rs currently suffers from a critical architectural flaw where mock inference paths dominate execution, reporting false performance metrics (~200 tok/s) instead of real quantized neural network computation. This ADR documents the key technical decisions required to eliminate mock fallbacks and implement authentic quantized inference using I2S, TL1, and TL2 quantization algorithms.
 
 ### Architecture Problems Resolved
 
@@ -103,7 +103,7 @@ impl QuantizedLinear {
 **Alternatives Considered**:
 - **Single kernel approach**: Rejected due to performance limitations
 - **Runtime compilation**: Rejected due to complexity and build system requirements
-- **External library dependencies**: Rejected to maintain BitNet.rs self-contained architecture
+- **External library dependencies**: Rejected to maintain BitNet-rs self-contained architecture
 
 ### Decision 3: Memory Layout Optimization Strategy
 
@@ -278,7 +278,7 @@ impl QuantizedLinear {
 
 **Alternatives Considered**:
 - **Big-bang compilation fix**: Rejected due to high risk of introducing new issues
-- **External dependencies**: Rejected to maintain BitNet.rs architectural principles
+- **External dependencies**: Rejected to maintain BitNet-rs architectural principles
 - **Type erasure patterns**: Rejected due to performance implications
 
 ### Decision 7: CI Pipeline Integration Strategy
@@ -319,7 +319,7 @@ impl QuantizedLinear {
 
 ### Positive Consequences
 
-1. **Production Readiness**: BitNet.rs will provide authentic quantized neural network inference
+1. **Production Readiness**: BitNet-rs will provide authentic quantized neural network inference
 2. **Performance Accuracy**: Realistic performance reporting enables informed deployment decisions
 3. **Research Validation**: Accurate cross-validation against C++ reference enables research publication
 4. **Quality Assurance**: Strict mode prevents accidental mock usage in production
@@ -381,7 +381,7 @@ impl QuantizedLinear {
 
 ## Related ADRs
 
-- **ADR-001**: BitNet.rs Architecture Principles
+- **ADR-001**: BitNet-rs Architecture Principles
 - **ADR-002**: Quantization Algorithm Selection
 - **ADR-003**: Device-Aware Execution Model
 - **ADR-005**: Performance Optimization Strategies (planned)
@@ -392,7 +392,7 @@ impl QuantizedLinear {
 - **Issue #261**: 10 Atomic Acceptance Criteria
 - **Microsoft BitNet C++ Reference**: Cross-validation baseline
 - **GGUF Specification**: Model format compatibility requirements
-- **BitNet.rs Documentation**: Architecture and development guidelines
+- **BitNet-rs Documentation**: Architecture and development guidelines
 
 ---
 

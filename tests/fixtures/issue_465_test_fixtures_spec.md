@@ -197,4 +197,4 @@ cargo test -p bitnet-tests --test issue_465_* --no-run
 
 - Issue #465 Specification: `docs/explanation/issue-465-implementation-spec.md`
 - Receipt Schema: `crates/bitnet-xtask/src/receipt.rs`
-- BitNet.rs Testing Patterns: `tests/lib.rs`
+- BitNet-rs Testing Patterns: `tests/lib.rs`

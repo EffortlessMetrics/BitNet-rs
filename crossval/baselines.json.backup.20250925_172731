@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "last_updated": "2024-01-15T10:00:00Z",
-  "description": "Performance baselines for BitNet.rs cross-validation",
+  "description": "Performance baselines for bitnet-rs cross-validation",
   "methodology": {
     "hardware": "GitHub Actions runners (2-core, 7GB RAM)",
     "model": "bitnet_b1_58-3B test fixture",

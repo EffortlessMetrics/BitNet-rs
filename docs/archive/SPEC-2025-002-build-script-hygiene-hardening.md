@@ -10,7 +10,7 @@
 
 ## Problem Statement
 
-BitNet.rs build scripts (`build.rs`) contain unhygienic patterns that can cause silent failures in minimal container environments and CI/CD pipelines:
+BitNet-rs build scripts (`build.rs`) contain unhygienic patterns that can cause silent failures in minimal container environments and CI/CD pipelines:
 
 1. **Missing `HOME` environment variable handling**: The `bitnet-ggml-ffi/build.rs` script reads `csrc/VENDORED_GGML_COMMIT` using `.unwrap_or_else()` with only `eprintln!()` warnings, not `cargo:warning=` directives
 2. **Silent CI failures**: When `VENDORED_GGML_COMMIT` is missing in CI, the build script panics instead of emitting visible warnings
@@ -281,7 +281,7 @@ Add new section:
 ```markdown
 ## Build Script Hygiene
 
-BitNet.rs build scripts follow strict hygiene rules to ensure reliable builds in all environments:
+BitNet-rs build scripts follow strict hygiene rules to ensure reliable builds in all environments:
 
 ### Cargo Warning Directives
 
@@ -417,7 +417,7 @@ env -u HOME cargo build --no-default-features --features cpu -p bitnet-kernels
 - **CLAUDE.md**: Section on build script hygiene
 - **Related Issue**: #439 (Feature gate consistency - similar hygiene improvements)
 - **Cargo Book**: [Build Scripts - Warning Directives](https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargo-warning)
-- **BitNet.rs Contracts**: "Never modify GGUF in-place", "Always specify features"
+- **BitNet-rs Contracts**: "Never modify GGUF in-place", "Always specify features"
 
 ---
 
@@ -435,6 +435,6 @@ env -u HOME cargo build --no-default-features --features cpu -p bitnet-kernels
 
 ## Notes
 
-- This spec follows BitNet.rs TDD practices: tests before implementation
+- This spec follows BitNet-rs TDD practices: tests before implementation
 - Warning directives are production-critical for container deployments
 - CI panic behavior prevents silent failures in automated pipelines

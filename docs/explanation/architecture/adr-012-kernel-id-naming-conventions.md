@@ -170,7 +170,7 @@ pub fn get_fallback_kernel_id(
 
 **Alternative 1: Suffix-Based**
 - **Rejected:** `matmul_i2s_gpu` - Harder to pattern match (requires parsing)
-- **Rejected:** Inconsistent with existing BitNet.rs conventions
+- **Rejected:** Inconsistent with existing BitNet-rs conventions
 
 **Alternative 2: Hierarchical**
 - **Rejected:** `gpu::i2s::matmul` - Requires splitting on `::` (parsing overhead)

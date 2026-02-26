@@ -2,7 +2,7 @@
 
 ## Problem Description
 
-BitNet.rs currently relies heavily on conditional compilation (`#[cfg(...)]`) for feature detection and capability selection, creating four critical architectural problems:
+BitNet-rs currently relies heavily on conditional compilation (`#[cfg(...)]`) for feature detection and capability selection, creating four critical architectural problems:
 
 1. **Download Functionality**: `download_file()` conditionally compiled with `#[cfg(feature = "downloads")]`
 2. **Tokenizer Support**: `load_tokenizer_from_gguf_reader()` conditionally compiled for SentencePiece (`spm` feature)
@@ -500,13 +500,13 @@ fn test_runtime_kernel_consistency() {
 
 ## Related Issues
 
-- BitNet.rs #218: Device-aware quantization system
-- BitNet.rs #251: Production-ready inference server
-- BitNet.rs #260: Mock elimination project
+- BitNet-rs #218: Device-aware quantization system
+- BitNet-rs #251: Production-ready inference server
+- BitNet-rs #260: Mock elimination project
 
 ## Implementation Notes
 
-### BitNet.rs Integration
+### BitNet-rs Integration
 - Maintain compatibility with existing feature flag architecture during transition
 - Leverage `crossval` framework for runtime detection validation
 - Use `tracing` for capability detection logging and debugging

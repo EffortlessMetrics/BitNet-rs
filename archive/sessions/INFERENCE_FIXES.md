@@ -1,6 +1,6 @@
 # Inference Quality Fixes - Closing the Gap
 
-This document describes the surgical fixes applied to resolve the remaining "gibberish" output issues in BitNet.rs inference, following the diagnostic path outlined in Issue #447.
+This document describes the surgical fixes applied to resolve the remaining "gibberish" output issues in BitNet-rs inference, following the diagnostic path outlined in Issue #447.
 
 ## Summary
 

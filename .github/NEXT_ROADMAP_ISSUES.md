@@ -1,4 +1,4 @@
-# Next Roadmap Issues for BitNet.rs Receipt Infrastructure
+# Next Roadmap Issues for bitnet-rs Receipt Infrastructure
 
 These issues should be created after PR #452 is merged.
 
@@ -139,7 +139,7 @@ GPU CI lanes need receipt verification, but non-GPU hosts should skip gracefully
 **Description:**
 
 ### Summary
-Create feature-gated cross-validation tests that compare BitNet.rs outputs with C++ reference implementation.
+Create feature-gated cross-validation tests that compare bitnet-rs outputs with C++ reference implementation.
 
 ### Problem
 Currently, cross-validation is manual and not integrated into the test suite. Need automated, opt-in tests that validate inference accuracy.

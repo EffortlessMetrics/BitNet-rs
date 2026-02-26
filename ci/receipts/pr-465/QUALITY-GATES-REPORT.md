@@ -70,7 +70,7 @@ Validation results:
 - Optional enhancements: 1 (schema version field name consistency)
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ All ACs mapped to testable specifications
 - ✅ Neural network requirements validated (I2_S quantization, CPU kernels, receipt honesty)
 - ✅ Cross-validation strategy documented
@@ -97,7 +97,7 @@ Files validated: ~200 (all workspace Rust files)
 Violations: 0
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Zero formatting violations allowed
 - ✅ All workspace files validated
 - ✅ Automated formatting applied
@@ -131,7 +131,7 @@ Warnings: 0
 Feature sets tested: cpu (primary), gpu (validated separately)
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Zero warnings policy enforced with `-D warnings`
 - ✅ Feature flag discipline: `--no-default-features --features cpu`
 - ✅ Test code quality maintained
@@ -190,7 +190,7 @@ Impact: None (pre-existing, unrelated to Issue #465 documentation changes)
 Validation: Tests pass when excluding xtask package (0 failures)
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Comprehensive CPU test coverage
 - ✅ GPU compatibility validated with CPU fallback
 - ✅ All Issue #465 ACs have passing tests
@@ -225,7 +225,7 @@ Build results:
 - Feature flag discipline: enforced (--no-default-features mandatory)
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Feature flag discipline: always `--no-default-features --features cpu|gpu`
 - ✅ Default features are empty (prevents unwanted dependencies)
 - ✅ Cross-platform compatibility validated
@@ -249,7 +249,7 @@ Features validated: smoke 3/3 ok
 Policy: ≤3-combo smoke validation for documentation changes
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Smoke policy: ≤3 combinations for non-kernel changes
 - ✅ Full feature matrix reserved for kernel/quantization changes
 - ✅ CPU/GPU compatibility validated
@@ -280,7 +280,7 @@ Existing mutation coverage:
 - Overall: 91% workspace mutation score maintained
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Mutation testing appropriate for production code changes
 - ✅ Documentation-only changes can skip mutation gate with justification
 - ✅ Existing mutation coverage maintained from previous PRs
@@ -310,7 +310,7 @@ New fuzzing surfaces from Issue #465: 0
 Fuzzing coverage: maintained at existing levels
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Fuzz testing required for new parsing/quantization/model loading code
 - ✅ Documentation-only changes can skip fuzz gate
 - ✅ Existing fuzz coverage maintained
@@ -339,7 +339,7 @@ Crate:     0 vulnerabilities found!
 - CVE count: 0
 - Advisory count: 0
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Zero vulnerabilities policy
 - ✅ Minimal unsafe code (only in test helpers with proper documentation)
 - ✅ Security gate optional for Generative flow but passed for completeness
@@ -374,7 +374,7 @@ Baseline status: ESTABLISHED ✅
 Performance deltas: NOT SET (reserved for Review flow)
 ```
 
-**BitNet.rs Standards:**
+**BitNet-rs Standards:**
 - ✅ Baseline establishment only (no performance deltas in Generative flow)
 - ✅ Schema validation passing
 - ✅ Honest compute receipts (compute_path:"real")
@@ -404,7 +404,7 @@ Performance deltas: NOT SET (reserved for Review flow)
 9. security ✅
 10. benchmarks ✅
 
-✅ **BitNet.rs neural network standards met:**
+✅ **BitNet-rs neural network standards met:**
 - I2_S quantization accuracy validated (baseline receipt)
 - CPU kernel IDs verified (honest compute)
 - Feature flag discipline enforced
@@ -426,7 +426,7 @@ Performance deltas: NOT SET (reserved for Review flow)
 
 ---
 
-## BitNet.rs Compliance Summary
+## BitNet-rs Compliance Summary
 
 | Standard | Status | Evidence |
 |----------|--------|----------|

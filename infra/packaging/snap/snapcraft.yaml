@@ -3,7 +3,7 @@ base: core22
 version: '1.0.0'
 summary: High-performance Rust implementation of BitNet 1-bit LLM inference
 description: |
-  BitNet.rs is the primary, production-ready implementation of BitNet 1-bit
+  bitnet-rs is the primary, production-ready implementation of BitNet 1-bit
   Large Language Model inference engine, written in Rust for maximum
   performance and safety.
 

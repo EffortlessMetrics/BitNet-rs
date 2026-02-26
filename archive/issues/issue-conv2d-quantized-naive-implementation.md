@@ -54,7 +54,7 @@ The `conv2d_quantized` function in `crates/bitnet-kernels/src/convolution.rs` im
 
 ## Reproduction Steps
 
-1. Build BitNet.rs with kernel features:
+1. Build BitNet-rs with kernel features:
    ```bash
    cargo build --no-default-features --features cpu
    ```

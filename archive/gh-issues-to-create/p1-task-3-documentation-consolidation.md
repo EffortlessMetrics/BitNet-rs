@@ -2,7 +2,7 @@
 
 ## Context
 
-BitNet.rs documentation has grown organically to 292 files across the workspace, with particularly fragmented structure in `ci/solutions/` (35 files, including ~8-10 redundant index/summary files). This creates navigation friction and maintenance overhead for developers seeking specific CI/test guidance.
+BitNet-rs documentation has grown organically to 292 files across the workspace, with particularly fragmented structure in `ci/solutions/` (35 files, including ~8-10 redundant index/summary files). This creates navigation friction and maintenance overhead for developers seeking specific CI/test guidance.
 
 Following PR #475 (comprehensive integration), we need to consolidate documentation into a streamlined, navigable structure with single sources of truth for each topic.
 

@@ -2,7 +2,7 @@
 
 **Status:** Draft Technical Specification
 **Created:** 2025-10-18
-**Author:** BitNet.rs spec-analyzer
+**Author:** BitNet-rs spec-analyzer
 **Issue:** #469
 **Targets:** v0.1.0-mvp release
 
@@ -32,7 +32,7 @@ This specification provides a comprehensive technical analysis and implementatio
 
 ### QK256 (GGML I2_S) Architecture
 
-BitNet.rs now supports dual-flavor I2_S quantization following PR #468:
+BitNet-rs now supports dual-flavor I2_S quantization following PR #468:
 
 1. **BitNet32-F16** (existing): 32-element blocks, inline F16 scales (10 bytes/block)
 2. **QK256** (new): 256-element blocks, separate scale tensors (64 bytes/block)
@@ -1016,7 +1016,7 @@ Consolidate `compile_cpp_shim()` function with `-isystem` for third-party includ
            .flag("-O2")
            .flag("-fPIC");
 
-       // Regular includes (BitNet.rs code - show warnings)
+       // Regular includes (BitNet-rs code - show warnings)
        for dir in include_dirs {
            builder.include(dir);
        }
@@ -1377,7 +1377,7 @@ Update `README.md` and `docs/quickstart.md` with QK256-specific quick-start sect
 
    ### Running Inference
 
-   BitNet.rs supports two I2_S quantization formats with automatic detection:
+   BitNet-rs supports two I2_S quantization formats with automatic detection:
 
    #### BitNet32-F16 Format (32-element blocks)
 
@@ -1431,7 +1431,7 @@ Update `README.md` and `docs/quickstart.md` with QK256-specific quick-start sect
 
 2. **docs/quickstart.md Update**
    ```markdown
-   # BitNet.rs Quick Start
+   # BitNet-rs Quick Start
 
    ## Prerequisites
 
@@ -1455,7 +1455,7 @@ Update `README.md` and `docs/quickstart.md` with QK256-specific quick-start sect
 
    ## Using QK256 Models (GGML I2_S)
 
-   BitNet.rs supports GGML's I2_S quantization format (QK256) with 256-element blocks.
+   BitNet-rs supports GGML's I2_S quantization format (QK256) with 256-element blocks.
 
    ### Automatic Format Detection
 
@@ -1793,4 +1793,4 @@ This specification provides a comprehensive technical roadmap for implementing I
 **Document Control:**
 - Review Status: Draft
 - Next Review: spec-finalizer validation
-- Owner: BitNet.rs Architecture Team
+- Owner: BitNet-rs Architecture Team

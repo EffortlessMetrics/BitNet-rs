@@ -1,8 +1,8 @@
-# BitNet.rs Test Fixture Patterns and Architecture
+# BitNet-rs Test Fixture Patterns and Architecture
 
 ## Executive Summary
 
-This document catalogs the current test fixture patterns, GGUF loading mechanisms, and helper utilities in the BitNet.rs codebase. It provides guidance for creating the three new test fixtures (`qk256_4x256.gguf`, `bitnet32_2x64.gguf`, `qk256_3x300.gguf`) with best practices derived from existing implementations.
+This document catalogs the current test fixture patterns, GGUF loading mechanisms, and helper utilities in the BitNet-rs codebase. It provides guidance for creating the three new test fixtures (`qk256_4x256.gguf`, `bitnet32_2x64.gguf`, `qk256_3x300.gguf`) with best practices derived from existing implementations.
 
 ## Table of Contents
 

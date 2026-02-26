@@ -17,7 +17,7 @@ Test infrastructure for Issue #465 has been successfully created and validated. 
 
 **Key Metrics**:
 - **Tests Created**: 12 tests across 4 test files
-- **Fixtures Created**: 18 fixtures with realistic BitNet.rs neural network data
+- **Fixtures Created**: 18 fixtures with realistic BitNet-rs neural network data
 - **AC Coverage**: 12/12 (100%)
 - **Compilation**: ✅ Clean (0 errors, expected warnings only)
 - **TDD Red Phase**: ✅ All tests fail correctly with descriptive messages
@@ -123,7 +123,7 @@ Test infrastructure for Issue #465 has been successfully created and validated. 
 
 ---
 
-## BitNet.rs TDD Compliance
+## BitNet-rs TDD Compliance
 
 ### ✅ Red Phase Validated
 
@@ -162,7 +162,7 @@ All 12 tests follow proper TDD red phase patterns:
 
 **Result**: AC9 test now passes (no legacy commands found)
 
-**Justification**: Aligns with BitNet.rs architecture conventions (CLAUDE.md)
+**Justification**: Aligns with BitNet-rs architecture conventions (CLAUDE.md)
 
 ---
 
@@ -219,7 +219,7 @@ cargo test -p bitnet-tests --test issue_465_release_qa_tests
 
 **Next**: `FINALIZE → impl-creator`
 
-**Rationale**: Test infrastructure ready for implementation with 100% AC coverage, realistic fixtures, and proper BitNet.rs TDD patterns.
+**Rationale**: Test infrastructure ready for implementation with 100% AC coverage, realistic fixtures, and proper BitNet-rs TDD patterns.
 
 ---
 

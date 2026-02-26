@@ -33,7 +33,7 @@ Issue Ledger validated; ACs: 7/7 testable; Story → Schema → Tests → Code: 
 - ✅ AC6 (P2): GPU Baseline - Atomic, observable, testable
 - ✅ AC7 (P2): CI Gate - Atomic, observable, testable
 
-### BitNet.rs Standards Alignment
+### BitNet-rs Standards Alignment
 - ✅ Affected crates identified
 - ✅ Feature flags specified
 - ✅ Quantization requirements documented
@@ -62,7 +62,7 @@ Issue Ledger validated; ACs: 7/7 testable; Story → Schema → Tests → Code: 
 ## Evidence Summary
 
 **Ledger Structure:** All required sections present (Gates, Hoplog, Decision)
-**AC Quality:** 7/7 atomic, observable, testable; mapped to BitNet.rs workspace crates
+**AC Quality:** 7/7 atomic, observable, testable; mapped to BitNet-rs workspace crates
 **Infrastructure:** CPU engine seam identified, QuantizedLinear operational, KV cache ready
 **Test Strategy:** 13 test cases with commands and expected outputs
 **Risk Management:** 10 risks with specific mitigation strategies

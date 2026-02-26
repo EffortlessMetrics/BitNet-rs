@@ -1,4 +1,4 @@
-# CRITICAL DISCOVERY: RMSNorm Semantic Mismatch Between bitnet.rs and bitnet.cpp
+# CRITICAL DISCOVERY: RMSNorm Semantic Mismatch Between bitnet-rs and bitnet.cpp
 
 **Date**: 2025-10-24  
 **Status**: HYPOTHESIS CONFIRMED WITH MATHEMATICAL EVIDENCE  
@@ -10,7 +10,7 @@
 
 ### The Problem
 - **bitnet.cpp**: Produces coherent output
-- **bitnet.rs**: Produces garbled output  
+- **bitnet-rs**: Produces garbled output  
 - **Same GGUF file**: Both process the same weights
 - **LayerNorm gamma RMS**: ~0.018 (≈ 1/√2560)
 
@@ -23,7 +23,7 @@
    ```
    Where `gamma` has RMS ≈ 0.018 as originally stored
 
-2. **bitnet.rs (Candle)** likely uses the formula:
+2. **bitnet-rs (Candle)** likely uses the formula:
    ```
    y = (x / sqrt(mean(x²) + eps)) * gamma
    But INTERNALLY applies sqrt(hidden_size) rescaling
@@ -31,7 +31,7 @@
 
 Or alternatively:
 
-3. **bitnet.rs** normalizes over hidden_size internally:
+3. **bitnet-rs** normalizes over hidden_size internally:
    ```
    y = (x / sqrt(sum(x²)/hidden_size + eps)) * gamma * scaling_factor
    ```
@@ -193,7 +193,7 @@ Given:
 ```
 - GGUF contains gamma with RMS ≈ 0.0198
 - bitnet.cpp + this GGUF → coherent output
-- bitnet.rs + this GGUF → garbled output
+- bitnet-rs + this GGUF → garbled output
 - Both use RMSNorm (no bias in model)
 ```
 
@@ -254,7 +254,7 @@ This two-tier gate structure suggests the I2_S model INTENTIONALLY has small gam
 
 ### Point 3: Both Implementations Have Correct Shape Handling
 ```
-- bitnet.rs shapes verified: [B, 1, H] through all layers
+- bitnet-rs shapes verified: [B, 1, H] through all layers
 - KV cache shapes correct
 - Attention QK256 shapes correct
 - Only remaining issue: numerical output
@@ -398,7 +398,7 @@ BITNET_CPP_DIR=~/bitnet.cpp cargo run -p xtask -- crossval
 
 ## 13. CONCLUSION
 
-The mystery of garbled output in bitnet.rs vs coherent output in bitnet.cpp is **almost certainly** due to a **semantic mismatch in the RMSNorm formula implementation**, not a shape or quantization bug.
+The mystery of garbled output in bitnet-rs vs coherent output in bitnet.cpp is **almost certainly** due to a **semantic mismatch in the RMSNorm formula implementation**, not a shape or quantization bug.
 
 The exact cause requires:
 1. **Inspecting Candle's LayerNorm::rms_norm() source code**

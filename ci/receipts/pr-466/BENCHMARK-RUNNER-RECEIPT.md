@@ -38,7 +38,7 @@ PR #466 successfully passes comprehensive performance validation. Zero neural ne
 - Quantization performance validation (I2S, TL1/TL2, accuracy)
 - Build & test results (compilation, benchmark, verification)
 - PR impact classification (scope analysis, compute path impact)
-- BitNet.rs neural network standards compliance matrix
+- BitNet-rs neural network standards compliance matrix
 - Root cause analysis (why zero impact)
 - Decision logic and routing
 
@@ -267,7 +267,7 @@ PR #466 successfully passes the `integrative:gate:benchmarks` performance valida
 ✅ **No Regressions**: Identical kernel path to baseline (0% delta)
 ✅ **Honest Compute Gates**: compute_path="real" enforced
 ✅ **Receipt Schema**: v1.0.0 stable
-✅ **Production Readiness**: All BitNet.rs neural network standards met
+✅ **Production Readiness**: All BitNet-rs neural network standards met
 
 **Status**: READY FOR MERGE (pending integrative-performance-finalizer final check)
 

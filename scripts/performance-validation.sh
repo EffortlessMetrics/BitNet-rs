@@ -1,6 +1,6 @@
 #!/bin/bash
 # Performance validation against baseline implementations
-# Ensures BitNet.rs meets or exceeds performance requirements
+# Ensures BitNet-rs meets or exceeds performance requirements
 
 set -euo pipefail
 
@@ -309,7 +309,7 @@ main() {
 
     if [[ $failed_tests -eq 0 ]]; then
         print_success "🎉 All performance validations passed!"
-        print_success "BitNet.rs meets or exceeds performance requirements"
+        print_success "BitNet-rs meets or exceeds performance requirements"
         return 0
     else
         print_error "❌ $failed_tests performance validations failed"

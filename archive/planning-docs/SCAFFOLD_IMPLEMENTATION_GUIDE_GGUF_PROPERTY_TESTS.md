@@ -363,7 +363,7 @@ fn test_custom_quantization_params(
 - Use `sysinfo` crate for memory tracking
 - Handle edge cases gracefully (NaN, Inf, extreme ranges)
 
-**BitNet.rs Standards**:
+**BitNet-rs Standards**:
 - Feature-gated: `#[cfg(feature = "cpu")]`
 - Error handling with `anyhow::Result`
 - Property-based testing with proptest

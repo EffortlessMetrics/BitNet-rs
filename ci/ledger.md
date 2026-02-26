@@ -22,7 +22,7 @@
 | fuzz | ⏭️ skipped | skipped (no fuzzer configured for Issue #453 scope) |
 | benchmarks | ⏭️ skipped | skipped (generative flow; baseline established in Review flow) |
 | prep | ✅ pass | format: clean (0 issues); clippy cpu/gpu: pass (0 warnings, -D warnings); build cpu/gpu: 20.25s/21.85s ok; tests: 37/37 Issue #453 (100%), 136 workspace suites pass; doc tests: cargo doc ok (1 pre-existing warning); features: cpu/gpu/none validated; branch: rebased, tracking origin; minor clippy fixes applied |
-| publication | ✅ pass | commits: 6/6 semantic; neural network docs: 3 new + 4 updated; workspace: compliant; generative gates: 3/3 present; BitNet.rs standards: full compliance; tests: 44/44 pass (100%); quality: all gates pass; quantization: I2S/TL1/TL2 validated; device-aware: GPU/CPU complete; 0 blocking issues |
+| publication | ✅ pass | commits: 6/6 semantic; neural network docs: 3 new + 4 updated; workspace: compliant; generative gates: 3/3 present; bitnet-rs standards: full compliance; tests: 44/44 pass (100%); quality: all gates pass; quantization: I2S/TL1/TL2 validated; device-aware: GPU/CPU complete; 0 blocking issues |
 <!-- gates:end -->
 
 <!-- hoplog:start -->
@@ -35,17 +35,17 @@
 - **t5-quality-finalizer**: Comprehensive quality validation complete - all gates pass (format, clippy CPU/GPU, tests 44/44, build CPU/GPU, features smoke 3/3)
 - **2025-10-14T11:03:11Z**: doc-updater completed Diátaxis documentation update (3 new, 3 updated, doctests validated)
 - **2025-10-14T12:45:00Z**: generative:gate:docs validated documentation (11/11 doc tests pass, 8/8 core links valid, 1 minor path correction identified)
-- **2025-10-14T13:15:00Z**: generative:gate:security validated BitNet.rs neural network development security and governance (cargo audit: 0/727 vulnerabilities, cargo deny: licenses ok, unsafe: 0 production blocks, api_contracts: additive only, gpu_feature_flags: 28 files compliant, governance: Diátaxis complete 3 new + 4 updated)
+- **2025-10-14T13:15:00Z**: generative:gate:security validated bitnet-rs neural network development security and governance (cargo audit: 0/727 vulnerabilities, cargo deny: licenses ok, unsafe: 0 production blocks, api_contracts: additive only, gpu_feature_flags: 28 files compliant, governance: Diátaxis complete 3 new + 4 updated)
 - **2025-10-14T14:30:00Z**: generative:gate:prep validated branch preparation (format: pass, clippy cpu/gpu: pass, build cpu/gpu: 0.19s, tests: 450+ pass, doc tests: 17/17 pass, features: cpu/gpu/none validated, branch pushed with tracking)
 - **2025-10-14T15:00:00Z**: branch-prepper completed final validation (format: clean, clippy cpu/gpu: 0 warnings, build: 20.25s/21.85s, tests: 37/37 Issue #453 + 136 workspace suites, docs: validated, minor clippy fixes applied, 1 non-blocking test environment issue documented)
-- **2025-10-14T15:30:00Z**: generative:gate:publication validated PR #461 merge readiness - PASS (commits: 6/6 semantic, neural network docs: 3 new + 4 updated, workspace: 100% compliant, generative gates: 3/3 present, BitNet.rs standards: full compliance, tests: 44/44 pass 100%, quantization: I2S/TL1/TL2 validated, device-aware: GPU/CPU complete, 0 blocking issues, ready for review)
+- **2025-10-14T15:30:00Z**: generative:gate:publication validated PR #461 merge readiness - PASS (commits: 6/6 semantic, neural network docs: 3 new + 4 updated, workspace: 100% compliant, generative gates: 3/3 present, bitnet-rs standards: full compliance, tests: 44/44 pass 100%, quantization: I2S/TL1/TL2 validated, device-aware: GPU/CPU complete, 0 blocking issues, ready for review)
 <!-- hoplog:end -->
 
 <!-- decision:start -->
 ## Decision
 
 **State:** ready_for_review
-**Why:** Publication gate validation complete - PR #461 APPROVED for review pickup (commits: 6/6 semantic with neural network context, documentation: 3 new + 4 updated Diátaxis complete, workspace: 100% compliant, generative gates: 3/3 present with evidence, BitNet.rs standards: full compliance, tests: 44/44 pass 100% - 37 strict quantization + 7 accuracy, quantization API: I2S/TL1/TL2 validated with device-aware GPU/CPU support, quality: all gates pass, 0 blocking issues)
+**Why:** Publication gate validation complete - PR #461 APPROVED for review pickup (commits: 6/6 semantic with neural network context, documentation: 3 new + 4 updated Diátaxis complete, workspace: 100% compliant, generative gates: 3/3 present with evidence, bitnet-rs standards: full compliance, tests: 44/44 pass 100% - 37 strict quantization + 7 accuracy, quantization API: I2S/TL1/TL2 validated with device-aware GPU/CPU support, quality: all gates pass, 0 blocking issues)
 **Next:** FINALIZE → review-stage (Review flow pickup)
 
 **Routing Context:**

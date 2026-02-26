@@ -1,4 +1,4 @@
-# BitNet.rs Inference Timeout Root Cause Analysis
+# BitNet-rs Inference Timeout Root Cause Analysis
 
 **Date:** 2025-10-24
 **Status:** COMPREHENSIVE ANALYSIS COMPLETE
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The 30-second timeout for generating 8 tokens with the BitNet.rs CLI is caused by **scalar-only QK256 dequantization kernels** operating at ~0.1 tokens/second. This is a **known MVP limitation**, not a bug. The AVX2 SIMD foundation provides only 1.2× speedup due to incomplete vectorization—scalar unpacking and LUT overhead consume 70% of compute time.
+The 30-second timeout for generating 8 tokens with the BitNet-rs CLI is caused by **scalar-only QK256 dequantization kernels** operating at ~0.1 tokens/second. This is a **known MVP limitation**, not a bug. The AVX2 SIMD foundation provides only 1.2× speedup due to incomplete vectorization—scalar unpacking and LUT overhead consume 70% of compute time.
 
 **Root Cause:** QK256 MVP uses scalar 2-bit extraction and array-based LUT lookups, preventing effective SIMD acceleration.
 

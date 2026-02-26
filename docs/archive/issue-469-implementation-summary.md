@@ -2,7 +2,7 @@
 
 **Document Status:** Deliverable Summary
 **Created:** 2025-10-18
-**Author:** BitNet.rs spec-architect (generative flow subagent)
+**Author:** BitNet-rs spec-architect (generative flow subagent)
 **Issue:** #469
 **Targets:** v0.1.0-mvp release
 
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This document summarizes the comprehensive architectural blueprint created for Issue #469 MVP Sprint polish items. All deliverables are implementation-ready and aligned with the BitNet.rs neural network inference pipeline (Model Loading → Quantization → Inference → Output).
+This document summarizes the comprehensive architectural blueprint created for Issue #469 MVP Sprint polish items. All deliverables are implementation-ready and aligned with the BitNet-rs neural network inference pipeline (Model Loading → Quantization → Inference → Output).
 
 **Deliverables Created:**
 1. ✅ Comprehensive Architectural Blueprint (`docs/explanation/architecture/`)
@@ -263,7 +263,7 @@ All schemas follow SemVer:
 
 **Location:** `/home/steven/code/Rust/BitNet-rs/docs/explanation/issue-469-neural-network-integration.md`
 
-**Scope:** Integration of AC1-AC8 with BitNet.rs neural network inference pipeline.
+**Scope:** Integration of AC1-AC8 with BitNet-rs neural network inference pipeline.
 
 ### Neural Network Pipeline Integration
 
@@ -362,7 +362,7 @@ User: cargo run -p xtask -- crossval
 - ✅ Performance characteristics
 - ✅ Cross-cutting concerns documented
 
-### Alignment with BitNet.rs Principles
+### Alignment with BitNet-rs Principles
 
 **Feature-Gated:** ✅ All components respect `--no-default-features --features cpu|gpu`
 
@@ -376,7 +376,7 @@ User: cargo run -p xtask -- crossval
 
 ### Documentation Standards
 
-**CLAUDE.md Alignment:** ✅ All specifications follow BitNet.rs workspace structure and conventions
+**CLAUDE.md Alignment:** ✅ All specifications follow BitNet-rs workspace structure and conventions
 
 **Storage Locations:**
 - ✅ Architectural blueprints: `docs/explanation/architecture/`
@@ -483,7 +483,7 @@ This comprehensive architectural blueprint provides everything needed to impleme
 
 **Document Control:**
 - Review Status: Deliverable Summary (Ready for Schema Validation)
-- Owner: BitNet.rs Architecture Team (spec-architect)
+- Owner: BitNet-rs Architecture Team (spec-architect)
 - Issue: #469
 - Target: v0.1.0-mvp
 - Flow: generative

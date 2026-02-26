@@ -40,7 +40,7 @@
     },
     "pr_requirements": {
       "status": "PASS",
-      "evidence": "All BitNet.rs PR requirements validated",
+      "evidence": "All BitNet-rs PR requirements validated",
       "conventional_commits": true,
       "issue_reference": "#254",
       "github_labels": [
@@ -187,7 +187,7 @@
   "final_routing": {
     "decision": "FINALIZE",
     "state": "ready",
-    "reason": "Generative flow microloop 8 complete. BitNet.rs neural network feature PR is ready for merge review.",
+    "reason": "Generative flow microloop 8 complete. BitNet-rs neural network feature PR is ready for merge review.",
     "evidence": "PR #431 published, all verification checks passed, publication gate = pass",
     "next_flow": "Review"
   }

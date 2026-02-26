@@ -1,4 +1,4 @@
-# PR Plan - BitNet.rs MVP Finalization
+# PR Plan - BitNet-rs MVP Finalization
 
 This document outlines the PR slicing strategy for the final MVP features. Each PR is focused on a single concern with clear acceptance criteria.
 

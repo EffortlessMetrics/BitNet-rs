@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="BitNet.rs Test Suite" tests="2" failures="1" errors="0" skipped="0" time="8.000" timestamp="2025-08-15T03:49:11.772091700+00:00">
+<testsuites name="BitNet-rs Test Suite" tests="2" failures="1" errors="0" skipped="0" time="8.000" timestamp="2025-08-15T03:49:11.772091700+00:00">
   <testsuite name="example_test_suite" tests="2" failures="1" errors="0" skipped="0" time="8.000" timestamp="2025-08-15T03:49:11.772107800+00:00">
     <properties>
       <property name="success_rate" value="50.00" />

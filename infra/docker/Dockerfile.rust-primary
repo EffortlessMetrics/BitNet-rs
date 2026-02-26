@@ -1,4 +1,4 @@
-# Primary BitNet.rs Dockerfile - Optimized for production deployment
+# Primary bitnet-rs Dockerfile - Optimized for production deployment
 # Multi-stage build for minimal image size and security
 
 # Build stage
@@ -145,7 +145,7 @@ ENV BITNET_CONFIG=/etc/bitnet/server.toml
 CMD ["bitnet-server", "--config", "/etc/bitnet/server.toml"]
 
 # Metadata labels
-LABEL org.opencontainers.image.title="BitNet.rs"
+LABEL org.opencontainers.image.title="bitnet-rs"
 LABEL org.opencontainers.image.description="High-performance Rust implementation of BitNet 1-bit LLM inference"
 LABEL org.opencontainers.image.vendor="BitNet Contributors"
 LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"

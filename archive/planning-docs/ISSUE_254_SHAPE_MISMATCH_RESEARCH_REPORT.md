@@ -1,7 +1,7 @@
 # Issue #254 — Layer-Norm Shape Mismatch Research Report
 
 **Generated:** 2025-10-19
-**Researcher:** BitNet.rs GitHub Research Specialist
+**Researcher:** bitnet-rs GitHub Research Specialist
 **Target:** Issue #254 blocking real inference tests due to layer-norm shape mismatch
 
 ---
@@ -262,7 +262,7 @@ impl LayerNorm {
 }
 ```
 
-### BitNet.rs Transformer Architecture
+### bitnet-rs Transformer Architecture
 
 **Expected Shape Flow:**
 
@@ -765,7 +765,7 @@ impl LayerNorm {
 }
 ```
 
-### BitNet.rs LayerNorm Wrapper
+### bitnet-rs LayerNorm Wrapper
 
 **File:** `crates/bitnet-models/src/transformer.rs:65-86`
 
@@ -850,7 +850,7 @@ cargo test --no-default-features --features cpu -p bitnet-inference \
 
 ## Conclusion
 
-Issue #254 is **NOT a bug** in the BitNet.rs inference implementation.
+Issue #254 is **NOT a bug** in the bitnet-rs inference implementation.
 The shape mismatch error **proves that real neural network inference is working correctly**
 by performing actual tensor validation.
 
@@ -868,6 +868,6 @@ Test fixture fix is low priority since real GGUF models work correctly.
 
 ---
 
-**Report Compiled By:** BitNet.rs GitHub Research Specialist
+**Report Compiled By:** bitnet-rs GitHub Research Specialist
 **Date:** 2025-10-19
 **Sources:** Issue #254, PR #431, codebase analysis, git history

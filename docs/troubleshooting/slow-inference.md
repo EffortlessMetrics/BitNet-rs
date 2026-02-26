@@ -1,6 +1,6 @@
 # Slow Inference Troubleshooting Guide
 
-**Having slow inference performance with BitNet.rs?** This guide helps you diagnose and resolve performance issues across different quantization formats.
+**Having slow inference performance with BitNet-rs?** This guide helps you diagnose and resolve performance issues across different quantization formats.
 
 ## Quick Diagnosis
 

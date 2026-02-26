@@ -1,4 +1,4 @@
-# BitNet.rs CI Infrastructure Analysis
+# BitNet-rs CI Infrastructure Analysis
 
 ## 1. Link-Check Configuration
 

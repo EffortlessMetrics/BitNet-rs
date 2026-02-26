@@ -1,8 +1,8 @@
-# Implementation Roadmap: BitNet.rs Tokenizer Discovery System
+# Implementation Roadmap: BitNet-rs Tokenizer Discovery System
 
 ## Executive Summary
 
-This implementation roadmap provides a comprehensive blueprint for implementing automatic tokenizer discovery and smart downloading in BitNet.rs neural network inference engine. The roadmap addresses all 10 acceptance criteria from Issue #249 while maintaining compatibility with the existing inference pipeline (Model Loading → Quantization → Kernels → Inference → Output).
+This implementation roadmap provides a comprehensive blueprint for implementing automatic tokenizer discovery and smart downloading in BitNet-rs neural network inference engine. The roadmap addresses all 10 acceptance criteria from Issue #249 while maintaining compatibility with the existing inference pipeline (Model Loading → Quantization → Kernels → Inference → Output).
 
 ## Current State Analysis
 
@@ -278,7 +278,7 @@ cargo test --no-default-features -p bitnet-tokenizers test_tokenization_performa
 - [ ] Comprehensive documentation with usage examples
 - [ ] Automated performance regression detection
 
-## Integration Points with BitNet.rs Architecture
+## Integration Points with BitNet-rs Architecture
 
 ### 1. Crate Dependencies and Interactions
 
@@ -406,7 +406,7 @@ BITNET_STRICT_TOKENIZERS=1 cargo test --no-default-features --features cpu
 
 ## Conclusion
 
-This implementation roadmap provides a comprehensive blueprint for delivering automatic tokenizer discovery and smart downloading in BitNet.rs neural network inference engine. The phased approach ensures:
+This implementation roadmap provides a comprehensive blueprint for delivering automatic tokenizer discovery and smart downloading in BitNet-rs neural network inference engine. The phased approach ensures:
 
 - **Production-Grade Reliability**: Comprehensive error handling, fallback strategies, and monitoring
 - **Neural Network Scale**: Optimized performance for large vocabulary models (128K+ tokens)
@@ -414,6 +414,6 @@ This implementation roadmap provides a comprehensive blueprint for delivering au
 - **Zero-Configuration UX**: Automatic tokenizer resolution for supported neural network models
 - **Cross-Validation**: 100% parity with existing UniversalTokenizer and C++ reference
 
-The roadmap addresses all 10 acceptance criteria from Issue #249 while maintaining compatibility with BitNet.rs inference pipeline, quantization formats (I2S/TL1/TL2), and production deployment requirements.
+The roadmap addresses all 10 acceptance criteria from Issue #249 while maintaining compatibility with BitNet-rs inference pipeline, quantization formats (I2S/TL1/TL2), and production deployment requirements.
 
 **Next Steps**: **FINALIZE → spec-finalizer** - Implementation roadmap complete, ready for development team execution.

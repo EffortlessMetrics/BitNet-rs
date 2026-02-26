@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# BitNet.rs Test Status Summary
+# BitNet-rs Test Status Summary
 
 *Last Updated: 2025-01-24*
 

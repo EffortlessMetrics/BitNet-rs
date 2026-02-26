@@ -1,6 +1,6 @@
 # Cross-Validation CI Setup Guide
 
-Step-by-step instructions for integrating the cross-validation workflow into your BitNet.rs repository.
+Step-by-step instructions for integrating the cross-validation workflow into your BitNet-rs repository.
 
 ## Prerequisites
 

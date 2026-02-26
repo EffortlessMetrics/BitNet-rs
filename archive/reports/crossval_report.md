@@ -1,10 +1,10 @@
-# BitNet.rs vs BitNet.cpp Cross-Validation Report
+# BitNet-rs vs BitNet.cpp Cross-Validation Report
 
 ## Executive Summary
 Date: 2025-08-20
 Model: BitNet b1.58 2B (GGUF format, I2_S quantization)
 
-We successfully set up and tested both BitNet.rs (Rust) and BitNet.cpp (C++) implementations. While full numerical parity testing encountered tokenization compatibility issues, we were able to validate key components and measure performance characteristics.
+We successfully set up and tested both BitNet-rs (Rust) and BitNet.cpp (C++) implementations. While full numerical parity testing encountered tokenization compatibility issues, we were able to validate key components and measure performance characteristics.
 
 ## Test Environment
 - **Platform**: Linux x86_64 (WSL2)
@@ -25,7 +25,7 @@ We successfully set up and tested both BitNet.rs (Rust) and BitNet.cpp (C++) imp
 - **Inference Time**: 2.4s for 32 tokens (single-threaded)
 - **Throughput**: ~13 tokens/sec
 
-### BitNet.rs (Rust Implementation)
+### BitNet-rs (Rust Implementation)
 - **Architecture**: Pure Rust with modular crate design
 - **Dependencies**: Minimal, mostly pure Rust
 - **Build System**: Cargo
@@ -38,7 +38,7 @@ We successfully set up and tested both BitNet.rs (Rust) and BitNet.cpp (C++) imp
 
 ## Performance Analysis
 
-### Quantization Performance (BitNet.rs)
+### Quantization Performance (BitNet-rs)
 Based on our SIMD kernel tests:
 - **Throughput**: ~4.9M elements/sec (AVX2)
 - **Accuracy**: Within 2-bit quantization bounds
@@ -46,12 +46,12 @@ Based on our SIMD kernel tests:
 
 ### Matrix Multiplication
 - Both implementations use optimized SIMD kernels
-- BitNet.rs provides runtime CPU feature detection
+- BitNet-rs provides runtime CPU feature detection
 - Comparable performance for core operations
 
 ### Model Loading
 - **BitNet.cpp**: Traditional file loading (~1.3s)
-- **BitNet.rs**: Memory-mapped loading (near-instant for repeated loads)
+- **BitNet-rs**: Memory-mapped loading (near-instant for repeated loads)
 
 ## Cross-Validation Results
 
@@ -69,7 +69,7 @@ The cross-validation framework successfully:
 - **Workaround**: Component-level testing shows correct behavior
 
 ### Integration Tests ✅
-BitNet.rs passed all internal tests:
+BitNet-rs passed all internal tests:
 - ✅ SIMD kernel selection
 - ✅ Model loading pipeline
 - ✅ Quantization consistency
@@ -78,7 +78,7 @@ BitNet.rs passed all internal tests:
 
 ## Key Advantages
 
-### BitNet.rs Advantages
+### BitNet-rs Advantages
 1. **Memory Safety**: Guaranteed by Rust's type system
 2. **Modern Architecture**: Async/await, streaming, modularity
 3. **Developer Experience**: Cargo, better error messages, integrated tooling
@@ -94,7 +94,7 @@ BitNet.rs passed all internal tests:
 ## Recommendations
 
 ### For Production Use
-**BitNet.rs** is recommended for new deployments due to:
+**BitNet-rs** is recommended for new deployments due to:
 - Memory safety guarantees
 - Better integration capabilities (HTTP server, streaming)
 - Modern async architecture
@@ -110,14 +110,14 @@ BitNet.rs passed all internal tests:
 
 1. **Tokenizer Compatibility**: Implement full llama.cpp tokenizer compatibility in Rust
 2. **Performance Optimization**: Further SIMD optimizations for specific workloads
-3. **GPU Support**: Complete CUDA implementation in BitNet.rs
+3. **GPU Support**: Complete CUDA implementation in BitNet-rs
 4. **Benchmarking**: Comprehensive multi-threaded performance comparison
 
 ## Conclusion
 
-BitNet.rs successfully demonstrates a production-ready Rust implementation of BitNet with several architectural improvements over the C++ version. While full numerical parity validation was blocked by tokenizer compatibility issues, the component-level testing and performance measurements show that BitNet.rs is a viable and often superior alternative to BitNet.cpp, especially for production deployments requiring memory safety and modern features.
+BitNet-rs successfully demonstrates a production-ready Rust implementation of BitNet with several architectural improvements over the C++ version. While full numerical parity validation was blocked by tokenizer compatibility issues, the component-level testing and performance measurements show that BitNet-rs is a viable and often superior alternative to BitNet.cpp, especially for production deployments requiring memory safety and modern features.
 
-The ~5-10x performance improvement in SIMD operations and the addition of production features (HTTP server, streaming) make BitNet.rs particularly attractive for deployment scenarios.
+The ~5-10x performance improvement in SIMD operations and the addition of production features (HTTP server, streaming) make BitNet-rs particularly attractive for deployment scenarios.
 
 ---
 *Generated: 2025-08-20*

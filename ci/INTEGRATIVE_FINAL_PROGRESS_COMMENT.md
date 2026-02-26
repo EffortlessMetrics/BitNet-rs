@@ -9,11 +9,11 @@
 
 ## Validation Intent
 
-Final pre-merge readiness checkpoint for PR #473 MVP finalization in BitNet.rs Integrative Flow. Comprehensive validation of all 9 required gates (freshness, format, clippy, tests, build, security, docs, perf, throughput) + neural network inference SLO verification.
+Final pre-merge readiness checkpoint for PR #473 MVP finalization in BitNet-rs Integrative Flow. Comprehensive validation of all 9 required gates (freshness, format, clippy, tests, build, security, docs, perf, throughput) + neural network inference SLO verification.
 
 ---
 
-## BitNet.rs Scope Summary
+## BitNet-rs Scope Summary
 
 This PR completes MVP with critical features:
 - AVX2 kernel optimization (QK256 dequantization)
@@ -308,5 +308,5 @@ let total_elements: usize = input.shape.iter().try_fold(1usize, |acc, &dim| {
 ---
 
 **Validation Complete**: 2025-10-22T02:45:00Z
-**Validator**: BitNet.rs Pre-Merge Readiness Validator
+**Validator**: BitNet-rs Pre-Merge Readiness Validator
 **Next Step**: FINALIZE → pr-merger agent for final merge to main

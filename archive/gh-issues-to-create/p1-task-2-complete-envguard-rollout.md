@@ -2,7 +2,7 @@
 
 ## Context
 
-BitNet.rs has extensive test infrastructure with ~1935+ tests, including many that mutate environment variables for deterministic testing (e.g., `BITNET_DETERMINISTIC`, `BITNET_STRICT_MODE`, `BITNET_GPU_FAKE`). Currently, ~21 test files still use unsafe `std::env::set_var`/`remove_var` operations without proper isolation, creating race conditions during parallel test execution.
+BitNet-rs has extensive test infrastructure with ~1935+ tests, including many that mutate environment variables for deterministic testing (e.g., `BITNET_DETERMINISTIC`, `BITNET_STRICT_MODE`, `BITNET_GPU_FAKE`). Currently, ~21 test files still use unsafe `std::env::set_var`/`remove_var` operations without proper isolation, creating race conditions during parallel test execution.
 
 Following PR #475, which established the EnvGuard pattern with 7 passing isolation tests, we need to complete the rollout to all env-mutating tests across the workspace.
 

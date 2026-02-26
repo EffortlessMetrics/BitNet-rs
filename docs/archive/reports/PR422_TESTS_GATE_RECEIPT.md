@@ -14,7 +14,7 @@
 > historical reference and audit purposes.
 
 ---
-# PR #422 T3 Tests Gate Receipt - BitNet.rs Neural Network Infrastructure
+# PR #422 T3 Tests Gate Receipt - BitNet-rs Neural Network Infrastructure
 
 **Gate**: `integrative:gate:tests`
 **PR**: #422 - Production Inference Server Core Implementation
@@ -118,7 +118,7 @@ The T3 comprehensive test suite execution for PR #422 reveals **98.2% test pass 
   - **Impact**: Medium (streaming functionality works, encoding needs fix)
   - **Tracked**: Issue noted for follow-up in Part 2/4
 
-### 3. Core BitNet.rs Test Suites
+### 3. Core BitNet-rs Test Suites
 
 **Status**: ✅ PASS (265/269 workspace tests)
 
@@ -406,7 +406,7 @@ All 15 acceptance criteria validated through dedicated test suites:
 ```rust
 fn analyze_metrics(&self, metrics: &PerformanceMetrics) -> MockDetectionResult {
     // Implement realistic performance analysis
-    // Check if metrics fall within expected BitNet.rs CPU performance bounds
+    // Check if metrics fall within expected BitNet-rs CPU performance bounds
     let is_realistic =
         metrics.tokens_per_second >= 10.0 && metrics.tokens_per_second <= 20.0 &&
         metrics.cpu_usage_percent >= 50.0;
@@ -523,6 +523,6 @@ bitnet-server AC: 28/28 pass (100%)
 ---
 
 **Report Generated**: 2025-09-29
-**Agent**: Integrative Test Runner for BitNet.rs
+**Agent**: Integrative Test Runner for BitNet-rs
 **Execution Time**: ~120 seconds (compilation + test execution)
 **Environment**: Linux WSL2, CPU-only, Rust 1.90.0

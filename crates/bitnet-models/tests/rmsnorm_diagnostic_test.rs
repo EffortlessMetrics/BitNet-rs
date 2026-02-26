@@ -9,7 +9,7 @@
 //! - Standard RMSNorm formula: output = (x / sqrt(mean(x²) + eps)) * gamma
 //! - Our model has gamma RMS ≈ 0.018 (which is 1/√2560, where 2560 is hidden_size)
 //! - bitnet.cpp produces coherent output with same GGUF
-//! - bitnet.rs produces garbled output
+//! - bitnet-rs produces garbled output
 //!
 //! These tests aim to:
 //! 1. Verify Candle's RMSNorm implementation matches expected formula

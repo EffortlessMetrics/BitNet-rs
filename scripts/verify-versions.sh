@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version Verification Script for BitNet.rs
+# Version Verification Script for BitNet-rs
 # Ensures all crates have consistent versions before publishing
 
 set -e
@@ -40,7 +40,7 @@ get_version() {
 
 # Main verification
 main() {
-    log_info "🔍 Verifying BitNet.rs crate versions..."
+    log_info "🔍 Verifying BitNet-rs crate versions..."
 
     # Get root version
     local root_version
@@ -161,7 +161,7 @@ main() {
 # Show help
 if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
     cat << EOF
-BitNet.rs Version Verification Script
+BitNet-rs Version Verification Script
 
 This script verifies that all crates in the workspace have consistent versions
 before publishing to crates.io.

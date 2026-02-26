@@ -122,7 +122,7 @@ fn extract_metadata(&self, path: &Path) -> Result<ModelMetadata> {
 
 ### 2.3 Metadata Lookup Patterns
 
-BitNet.rs uses **multi-key fallback patterns** for metadata extraction:
+BitNet-rs uses **multi-key fallback patterns** for metadata extraction:
 
 ```
 Priority chains (example):
@@ -207,7 +207,7 @@ impl MmapFile {
 
 ### 3.3 Tensor Type Handling
 
-BitNet.rs supports multiple quantization formats with **automatic flavor detection**:
+BitNet-rs supports multiple quantization formats with **automatic flavor detection**:
 
 **I2_S Flavor Detection**:
 - **BitNet32-F16**: 32-element blocks with inline F16 scales (production)
