@@ -631,6 +631,7 @@ dependencies = [
  "bitnet-tokenizers",
  "candle-core",
  "libfuzzer-sys",
+ "serde_json",
 ]
 
 [[package]]
