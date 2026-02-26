@@ -70,3 +70,34 @@ fn gguf_value_type_discriminants_snapshot() {
     let debug: Vec<String> = types.iter().map(|t| format!("{t:?}")).collect();
     insta::assert_debug_snapshot!("gguf_value_type_debug_subset", debug);
 }
+
+#[test]
+fn parse_header_error_unsupported_version_too_low() {
+    let mut data = vec![0u8; 24];
+    data[..4].copy_from_slice(b"GGUF");
+    data[4..8].copy_from_slice(&1u32.to_le_bytes()); // version 1 — too low
+    let err = parse_header(&data).unwrap_err();
+    let msg = err.to_string();
+    insta::assert_snapshot!("parse_header_version_too_low_error", msg);
+}
+
+#[test]
+fn parse_header_error_unsupported_version_too_high() {
+    let mut data = vec![0u8; 24];
+    data[..4].copy_from_slice(b"GGUF");
+    data[4..8].copy_from_slice(&99u32.to_le_bytes()); // version 99 — too high
+    let err = parse_header(&data).unwrap_err();
+    let msg = err.to_string();
+    insta::assert_snapshot!("parse_header_version_too_high_error", msg);
+}
+
+#[test]
+fn parse_header_v3_non_power_of_two_alignment_falls_back_to_32() {
+    // Build a v3 header with alignment = 7 (not a power of two).
+    let mut data = vec![0u8; 28];
+    data[..4].copy_from_slice(b"GGUF");
+    data[4..8].copy_from_slice(&3u32.to_le_bytes());
+    data[24..28].copy_from_slice(&7u32.to_le_bytes()); // non-power-of-two
+    let info = parse_header(&data).expect("v3 with bad alignment must still parse");
+    insta::assert_snapshot!("v3_bad_alignment_falls_back", format!("alignment={}", info.alignment));
+}
