@@ -92,3 +92,7 @@ required-features = ["cpu"]
 name = "e2e_cpu_golden_path"
 path = "tests/e2e_cpu_golden_path.rs"
 required-features = ["cpu"]
+
+[[test]]
+name = "srp_integration_test"
+path = "tests/srp_integration_test.rs"
