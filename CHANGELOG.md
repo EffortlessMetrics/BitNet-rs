@@ -4,8 +4,15 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+- **Model path restriction** (PR #753): Introduce `BITNET_ALLOWED_MODEL_DIRECTORIES` — a colon-separated allow-list that restricts which filesystem directories the engine may load models from. Requests for paths outside the allow-list are rejected with a clear error before any file I/O occurs. When the variable is unset all paths remain permitted (backward-compatible default).
+
+### Changed
+- **Project renamed BitNet.rs → BitNet-rs** (PR #755): 1,531 files and 6,281 occurrences updated across the entire repository — crate names, documentation, comments, CI configuration, and all metadata. The canonical project name is now `BitNet-rs` (hyphen, not dot).
+
 ### Added
-- **Property tests for `bitnet-test-support`** (PR #749): 10 new property + unit tests for `EnvGuard`/`EnvScope` API semantics — set/restore/remove round-trips, nested scope isolation, `model_path()`/`run_slow_tests()`/`run_e2e()` env helpers. Workspace total: **3,520 tests, all passing**. Proptest coverage spans **38 crates** (+2: `bitnet-test-support`, `bitnet-testing-scenarios-profile-core`).
+- **Keyboard navigation for WASM browser example** (PR #754): The WASM browser example tab bar now responds to arrow-key navigation, improving accessibility for keyboard-only users. Tab focus is managed with `tabindex` and `aria-selected` attributes so screen-readers announce the active panel correctly.
+- **Property tests for `bitnet-test-support`** (PR #749): 10 new property + unit tests for `EnvGuard`/`EnvScope` API semantics — set/restore/remove round-trips, nested scope isolation, `model_path()`/`run_slow_tests()`/`run_e2e()` env helpers. Workspace total: **3,550 tests**. Proptest coverage spans **38 crates** (+2: `bitnet-test-support`, `bitnet-testing-scenarios-profile-core`).
 - **Property tests for `bitnet-testing-scenarios-profile-core`** (PR #750): 17 new property + unit tests for Default value invariants across 5 structs — `FixtureProfile`, `CrossValidationProfile`, `ComparisonToleranceProfile`, `ReportingProfile`, `ResourceConstraints`. Includes fuzz-grade shape coverage for numeric fields, URL/path fields, and nested struct coherence.
 - **CI env isolation fixes for `bitnet-runtime-context-core` and `bitnet-runtime-profile-contract-core`** (in PR #746): Tests that check `from_env_with_defaults()` Local default now use `temp_env::with_vars` to clear the `CI` env var so they pass in GitHub Actions. Snapshot tests for `active_context_default_fields` also isolated. `test_config_profile_defaults` snapshot uses `insta::with_settings!` filter to normalize the CPU-dependent `max_parallel_tests` field. Added `filters` feature to workspace insta definition.
 - **CI coverage for BDD/policy/testing-infra crates** (PR #746): Added 19 BDD/policy/testing-infrastructure crates to the Build & Test matrix in `ci-core.yml`. These crates (including `bitnet-bdd-grid`, `bitnet-feature-contract`, `bitnet-testing-policy-core`, `bitnet-runtime-profile-contract-core`, etc.) had full test suites but were excluded from CI. All tests run with `--no-default-features --features cpu` to satisfy profile snapshot requirements.
