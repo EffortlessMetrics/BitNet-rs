@@ -86,3 +86,8 @@ required-features = ["full-engine"]
 name = "cpu_golden_path"
 path = "tests/cpu_golden_path.rs"
 required-features = ["cpu"]
+
+[[test]]
+name = "e2e_cpu_golden_path"
+path = "tests/e2e_cpu_golden_path.rs"
+required-features = ["cpu"]
