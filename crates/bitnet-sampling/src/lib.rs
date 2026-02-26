@@ -14,18 +14,36 @@ use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
 use tracing::debug;
 
-/// Configuration for sampling strategies
+/// Configuration for sampling strategies.
+///
+/// Create with [`Default`] for sensible starting values, then override
+/// individual fields.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_sampling::SamplingConfig;
+///
+/// // Default: temperature 0.7, top-k 50, top-p 0.9, no penalty, no seed.
+/// let config = SamplingConfig::default();
+/// assert_eq!(config.temperature, 0.7);
+/// assert_eq!(config.repetition_penalty, 1.0);
+///
+/// // Greedy / deterministic.
+/// let greedy = SamplingConfig { temperature: 0.0, seed: Some(42), ..Default::default() };
+/// assert_eq!(greedy.temperature, 0.0);
+/// ```
 #[derive(Debug, Clone)]
 pub struct SamplingConfig {
-    /// Temperature for sampling (0.0 = deterministic, higher = more random)
+    /// Temperature for sampling (0.0 = greedy, higher = more random).
     pub temperature: f32,
-    /// Top-k sampling limit (0 = disabled)
+    /// Top-k sampling limit (0 = disabled, keeps all tokens).
     pub top_k: u32,
-    /// Top-p (nucleus) sampling threshold (1.0 = disabled)
+    /// Top-p (nucleus) sampling threshold (1.0 = disabled).
     pub top_p: f32,
-    /// Repetition penalty (1.0 = no penalty, higher = less repetition)
+    /// Repetition penalty (1.0 = no penalty, > 1.0 = penalise repeated tokens).
     pub repetition_penalty: f32,
-    /// Random seed for reproducible generation
+    /// Random seed for reproducible generation (`None` = random).
     pub seed: Option<u64>,
 }
 
@@ -35,7 +53,11 @@ impl Default for SamplingConfig {
     }
 }
 
-/// Sampling strategy implementation
+/// Stateful sampling strategy that tracks token counts for repetition penalty.
+///
+/// Create with [`SamplingStrategy::new`], then call [`SamplingStrategy::sample`]
+/// for each step in the decode loop.  Call [`SamplingStrategy::reset`] when
+/// starting a new sequence to clear the internal token-count state.
 pub struct SamplingStrategy {
     config: SamplingConfig,
     rng: ChaCha8Rng,
@@ -43,7 +65,19 @@ pub struct SamplingStrategy {
 }
 
 impl SamplingStrategy {
-    /// Create a new sampling strategy
+    /// Create a new sampling strategy.
+    ///
+    /// Initialises the PRNG from `config.seed` if provided, otherwise seeds
+    /// it from the system entropy source.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+    ///
+    /// let config = SamplingConfig { temperature: 0.7, seed: Some(42), ..Default::default() };
+    /// let _strategy = SamplingStrategy::new(config);
+    /// ```
     pub fn new(config: SamplingConfig) -> Self {
         let rng = if let Some(seed) = config.seed {
             ChaCha8Rng::seed_from_u64(seed)
@@ -64,6 +98,40 @@ impl SamplingStrategy {
     /// Note: `apply_top_k` operates in the **logits domain** (writes `NEG_INFINITY`)
     /// and must run *before* `softmax_in_place`.  `apply_top_p` operates on
     /// probabilities and runs *after* softmax.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `logits` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+    ///
+    /// // Greedy (temperature = 0.0) always picks the argmax.
+    /// let config = SamplingConfig { temperature: 0.0, seed: Some(0), ..Default::default() };
+    /// let mut strategy = SamplingStrategy::new(config);
+    ///
+    /// let logits = vec![0.1f32, 0.9, 0.3];
+    /// let token = strategy.sample(&logits, &[]).unwrap();
+    /// assert_eq!(token, 1); // 0.9 is the highest logit
+    /// ```
+    ///
+    /// Stochastic sampling with a fixed seed is reproducible:
+    ///
+    /// ```
+    /// use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+    ///
+    /// let config = SamplingConfig { temperature: 0.8, seed: Some(42), ..Default::default() };
+    /// let mut s1 = SamplingStrategy::new(config.clone());
+    /// let mut s2 = SamplingStrategy::new(config);
+    ///
+    /// let logits = vec![0.2f32, 0.5, 0.3];
+    /// assert_eq!(
+    ///     s1.sample(&logits, &[]).unwrap(),
+    ///     s2.sample(&logits, &[]).unwrap()
+    /// );
+    /// ```
     pub fn sample(&mut self, logits: &[f32], context_tokens: &[u32]) -> Result<u32> {
         debug!("Sampling from {} logits", logits.len());
 
@@ -189,12 +257,15 @@ impl SamplingStrategy {
         Ok((vocab_size - 1) as u32)
     }
 
-    /// Reset token counts (useful for new sequences)
+    /// Reset token counts for a new sequence.
+    ///
+    /// Call this between independent generation requests to prevent counts from
+    /// a previous sequence affecting the repetition penalty.
     pub fn reset(&mut self) {
         self.token_counts.clear();
     }
 
-    /// Update configuration
+    /// Update configuration, re-seeding the PRNG if the seed changed.
     pub fn update_config(&mut self, config: SamplingConfig) {
         // If seed changed, recreate RNG
         if config.seed != self.config.seed {
@@ -209,10 +280,27 @@ impl SamplingStrategy {
     }
 }
 
-/// Greedy sampling (always pick most likely token)
+/// Greedy sampling — always pick the most likely token.
 ///
-/// On ties (equal logits), chooses the lowest token ID for deterministic behavior
-/// matching llama.cpp greedy decode.
+/// On ties (equal logits), chooses the **lowest** token ID for deterministic
+/// behaviour matching llama.cpp greedy decode.
+///
+/// # Errors
+///
+/// Returns an error if `logits` is empty.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_sampling::greedy_sample;
+///
+/// let logits = vec![0.1f32, 0.8, 0.3];
+/// assert_eq!(greedy_sample(&logits).unwrap(), 1); // 0.8 is the highest logit
+///
+/// // Ties are broken by lowest token ID.
+/// let tied = vec![1.0f32, 1.0, 0.5];
+/// assert_eq!(greedy_sample(&tied).unwrap(), 0);
+/// ```
 pub fn greedy_sample(logits: &[f32]) -> Result<u32> {
     logits
         .iter()
@@ -231,7 +319,17 @@ pub fn greedy_sample(logits: &[f32]) -> Result<u32> {
         .context("Empty logits for greedy sampling")
 }
 
-/// Multinomial sampling with temperature
+/// Convenience wrapper: multinomial sampling with temperature.
+///
+/// Delegates to [`greedy_sample`] when `temperature <= 0.0`, otherwise
+/// creates a one-shot [`SamplingStrategy`] with top-k and top-p disabled.
+///
+/// `_rng` is accepted for API compatibility but the strategy manages its own
+/// PRNG internally.
+///
+/// # Errors
+///
+/// Returns an error if `logits` is empty.
 pub fn temperature_sample(logits: &[f32], temperature: f32, _rng: &mut impl Rng) -> Result<u32> {
     if temperature <= 0.0 {
         return greedy_sample(logits);

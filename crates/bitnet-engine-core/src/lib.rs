@@ -19,12 +19,43 @@ use serde::{Deserialize, Serialize};
 ///
 /// Any backend (CPU, GPU, FFI) that can produce tokens from a text prompt
 /// should implement this trait.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_engine_core::{InferenceSession, GenerationConfig, StreamEvent, StopReason};
+/// use anyhow::Result;
+///
+/// struct EchoSession;
+///
+/// impl InferenceSession for EchoSession {
+///     fn generate(&self, prompt: &str, config: &GenerationConfig) -> Result<Vec<StreamEvent>> {
+///         use bitnet_engine_core::{TokenEvent, GenerationStats};
+///         Ok(vec![
+///             StreamEvent::Token(TokenEvent { id: 0, text: prompt.to_string() }),
+///             StreamEvent::Done {
+///                 reason: StopReason::MaxTokens,
+///                 stats: GenerationStats::default(),
+///             },
+///         ])
+///     }
+/// }
+///
+/// let session = EchoSession;
+/// let events = session.generate("hello", &GenerationConfig::default()).unwrap();
+/// assert!(matches!(events.last(), Some(StreamEvent::Done { .. })));
+/// ```
 pub trait InferenceSession: Send + Sync {
     /// Generate tokens for the given `prompt` using the supplied `config`.
     ///
     /// Returns a complete list of [`StreamEvent`]s in the order they would
     /// have been streamed.  The final event must always be
     /// [`StreamEvent::Done`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the model fails to load, tokenization fails, or
+    /// the inference backend encounters an unrecoverable error.
     fn generate(&self, prompt: &str, config: &GenerationConfig) -> Result<Vec<StreamEvent>>;
 }
 
@@ -33,6 +64,31 @@ pub trait InferenceSession: Send + Sync {
 // ---------------------------------------------------------------------------
 
 /// Top-level configuration for creating an inference session.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_engine_core::SessionConfig;
+///
+/// let config = SessionConfig {
+///     model_path: "models/model.gguf".to_string(),
+///     tokenizer_path: "models/tokenizer.json".to_string(),
+///     backend: "cpu".to_string(),
+///     max_context: 4096,
+///     seed: Some(42),
+/// };
+/// assert_eq!(config.backend, "cpu");
+/// ```
+///
+/// Use [`Default`] for sensible defaults (CPU backend, 2 048-token context):
+///
+/// ```
+/// use bitnet_engine_core::SessionConfig;
+///
+/// let config = SessionConfig::default();
+/// assert_eq!(config.backend, "cpu");
+/// assert_eq!(config.max_context, 2048);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionConfig {
     /// Filesystem path to the GGUF model file.
@@ -64,6 +120,8 @@ impl Default for SessionConfig {
 // ---------------------------------------------------------------------------
 
 /// Describes the backend driving a session.
+///
+/// Attached to inference receipts and logs to identify which kernels ran.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BackendInfo {
     /// Human-readable backend name (e.g. `"cpu-rust"`, `"cuda"`).
@@ -79,6 +137,9 @@ pub struct BackendInfo {
 // ---------------------------------------------------------------------------
 
 /// Runtime performance metrics for a completed session.
+///
+/// Populated by the inference engine after generation finishes and written
+/// to the inference receipt.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SessionMetrics {
     /// Average tokens generated per second.

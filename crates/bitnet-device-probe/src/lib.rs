@@ -8,6 +8,8 @@ pub use bitnet_common::kernel_registry::SimdLevel;
 // ── CPU capabilities ─────────────────────────────────────────────────────────
 
 /// CPU capabilities detected at runtime.
+///
+/// Obtained by calling [`probe_cpu`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CpuCapabilities {
     /// Number of logical CPU cores available to the process (always ≥ 1).
@@ -24,7 +26,26 @@ pub struct CpuCapabilities {
 ///
 /// `core_count` is derived from [`std::thread::available_parallelism`] and is
 /// guaranteed to be ≥ 1. SIMD flags are detected via `is_x86_feature_detected!`
-/// (`x86_64`) or compile-time cfg (aarch64).
+/// (`x86_64`) or compile-time cfg (`aarch64`).
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_device_probe::probe_cpu;
+///
+/// let caps = probe_cpu();
+/// // At least one logical core is always present.
+/// assert!(caps.core_count >= 1);
+///
+/// // NEON and AVX flags are mutually exclusive across architectures.
+/// assert!(!(caps.has_avx2 && caps.has_neon));
+/// assert!(!(caps.has_avx512 && caps.has_neon));
+///
+/// println!(
+///     "cores={} avx2={} avx512={} neon={}",
+///     caps.core_count, caps.has_avx2, caps.has_avx512, caps.has_neon
+/// );
+/// ```
 pub fn probe_cpu() -> CpuCapabilities {
     let core_count = std::thread::available_parallelism().map(std::num::NonZero::get).unwrap_or(1);
 
@@ -44,6 +65,8 @@ pub fn probe_cpu() -> CpuCapabilities {
 // ── GPU capabilities ─────────────────────────────────────────────────────────
 
 /// GPU capabilities detected at runtime.
+///
+/// Obtained by calling [`probe_gpu`].
 ///
 /// `BITNET_GPU_FAKE=cuda` makes both fields `true`; `BITNET_GPU_FAKE=none`
 /// makes both fields `false`. Strict mode (`BITNET_STRICT_MODE=1`) ignores
@@ -74,8 +97,19 @@ pub const fn probe_gpu() -> GpuCapabilities {
 
 /// Check if GPU support was compiled into this binary.
 ///
-/// Returns `true` if `feature="gpu"` or `feature="cuda"` was enabled at compile time.
-/// Does **not** check runtime GPU availability.
+/// Returns `true` if `feature="gpu"` or `feature="cuda"` was enabled at
+/// compile time. Does **not** check runtime GPU availability — use
+/// [`gpu_available_runtime`] for that.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_device_probe::gpu_compiled;
+///
+/// // When built with `--features cpu` only, this returns false.
+/// // When built with `--features gpu`, this returns true.
+/// let _compiled: bool = gpu_compiled();
+/// ```
 #[inline]
 pub const fn gpu_compiled() -> bool {
     cfg!(any(feature = "gpu", feature = "cuda"))
@@ -119,6 +153,19 @@ pub const fn gpu_available_runtime() -> bool {
 }
 
 /// Detect the best SIMD instruction-set level available at runtime.
+///
+/// Detection order: AVX-512 > AVX2 > SSE4.2 (`x86_64`); NEON (`AArch64`);
+/// scalar fallback on all other targets.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_device_probe::detect_simd_level;
+///
+/// let level = detect_simd_level();
+/// println!("SIMD level: {level:?}");
+/// // level is one of: Scalar, Sse42, Avx2, Avx512, Neon
+/// ```
 pub fn detect_simd_level() -> SimdLevel {
     #[cfg(target_arch = "x86_64")]
     {
@@ -141,6 +188,9 @@ pub fn detect_simd_level() -> SimdLevel {
 }
 
 /// Snapshot of compile-time and runtime device capabilities.
+///
+/// Build with [`DeviceCapabilities::detect`] to capture the current machine's
+/// capabilities.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeviceCapabilities {
     /// CPU-Rust backend is always available.
@@ -155,6 +205,17 @@ pub struct DeviceCapabilities {
 
 impl DeviceCapabilities {
     /// Build a snapshot using compile-time flags and runtime probing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_device_probe::{DeviceCapabilities, gpu_compiled};
+    ///
+    /// let caps = DeviceCapabilities::detect();
+    /// assert!(caps.cpu_rust, "CPU backend is always available");
+    /// assert_eq!(caps.cuda_compiled, gpu_compiled());
+    /// println!("SIMD: {:?}", caps.simd_level);
+    /// ```
     pub fn detect() -> Self {
         Self {
             cpu_rust: true,
