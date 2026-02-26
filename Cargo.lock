@@ -1119,6 +1119,7 @@ dependencies = [
 name = "bitnet-test-support"
 version = "0.1.0"
 dependencies = [
+ "proptest",
  "serial_test",
 ]
 
