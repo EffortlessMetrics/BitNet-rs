@@ -116,4 +116,94 @@ proptest! {
         // Default EOS is 50256 (GPT-2 style)
         prop_assert!(t.vocab_size() > 0);
     }
+
+    /// If add_bos=true and bos_token_id=Some(x), encoded IDs for non-empty input start with x.
+    #[test]
+    fn prop_bos_eos_prepend_append(
+        text in "[a-zA-Z]{1,50}",
+        bos_id in 0u32..1000u32,
+    ) {
+        let t = BasicTokenizer::with_config(50257, Some(bos_id), None, None);
+        let tokens = t.encode(&text, true, false).expect("encode should succeed");
+        prop_assert!(!tokens.is_empty(), "tokens must not be empty for non-empty input");
+        prop_assert_eq!(tokens[0], bos_id, "first token must be BOS id");
+    }
+
+    /// decode() never panics and always returns Ok for any sequence of in-range token IDs.
+    #[test]
+    fn prop_decode_never_panics(
+        ids in proptest::collection::vec(0u32..50257u32, 0..100),
+    ) {
+        let t = BasicTokenizer::new();
+        let result = t.decode(&ids);
+        prop_assert!(result.is_ok(), "decode must not fail for valid token IDs");
+    }
+
+    /// encode() of a single ASCII word always returns at least 1 token, one per byte.
+    #[test]
+    fn prop_tokenize_preserves_words(
+        word in "[a-z]{1,50}",
+    ) {
+        let t = BasicTokenizer::new();
+        let tokens = t.encode(&word, false, false).expect("encode should succeed");
+        prop_assert!(!tokens.is_empty(), "a non-empty word must produce at least 1 token");
+        prop_assert_eq!(tokens.len(), word.len(), "each byte of an ASCII word maps to one token");
+    }
+
+    /// TokenizerConfig serialized to JSON and deserialized back gives identical field values.
+    #[test]
+    fn prop_config_builder_round_trip(
+        vocab_size in 100usize..100_000usize,
+        add_bos in any::<bool>(),
+        add_eos in any::<bool>(),
+        add_space_prefix in any::<bool>(),
+        byte_fallback in any::<bool>(),
+        bos_id in proptest::option::of(0u32..1000u32),
+        eos_id in proptest::option::of(0u32..1000u32),
+        pad_id in proptest::option::of(0u32..1000u32),
+        model_type in "[a-z]{1,10}",
+    ) {
+        let cfg = TokenizerConfig {
+            model_type,
+            vocab_size,
+            add_bos,
+            add_eos,
+            add_space_prefix,
+            byte_fallback,
+            bos_token_id: bos_id,
+            eos_token_id: eos_id,
+            pad_token_id: pad_id,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&cfg).expect("serialize must succeed");
+        let restored: TokenizerConfig = serde_json::from_str(&json).expect("deserialize must succeed");
+        prop_assert_eq!(restored.model_type, cfg.model_type);
+        prop_assert_eq!(restored.vocab_size, cfg.vocab_size);
+        prop_assert_eq!(restored.add_bos, cfg.add_bos);
+        prop_assert_eq!(restored.add_eos, cfg.add_eos);
+        prop_assert_eq!(restored.add_space_prefix, cfg.add_space_prefix);
+        prop_assert_eq!(restored.byte_fallback, cfg.byte_fallback);
+        prop_assert_eq!(restored.bos_token_id, cfg.bos_token_id);
+        prop_assert_eq!(restored.eos_token_id, cfg.eos_token_id);
+        prop_assert_eq!(restored.pad_token_id, cfg.pad_token_id);
+    }
+
+    /// bos_token_id and eos_token_id, when set, must be within [0, vocab_size).
+    #[test]
+    fn prop_eos_id_bounds(
+        vocab_size in 300usize..100_000usize,
+        bos_id in 256u32..300u32,
+        eos_id in 256u32..300u32,
+    ) {
+        prop_assume!(bos_id != eos_id);
+        let t = BasicTokenizer::with_config(vocab_size, Some(bos_id), Some(eos_id), None);
+        prop_assert!(
+            t.bos_token_id().map_or(true, |id| (id as usize) < t.vocab_size()),
+            "bos_token_id must be < vocab_size"
+        );
+        prop_assert!(
+            t.eos_token_id().map_or(true, |id| (id as usize) < t.vocab_size()),
+            "eos_token_id must be < vocab_size"
+        );
+    }
 }
