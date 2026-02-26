@@ -946,6 +946,7 @@ dependencies = [
  "bitnet-runtime-context",
  "bitnet-runtime-feature-flags",
  "insta",
+ "proptest",
  "serial_test",
  "temp-env",
 ]
@@ -1172,6 +1173,7 @@ version = "0.1.0"
 dependencies = [
  "bitnet-testing-policy-interop",
  "insta",
+ "proptest",
 ]
 
 [[package]]
