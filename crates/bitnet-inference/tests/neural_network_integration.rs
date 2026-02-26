@@ -64,9 +64,7 @@ async fn test_i2s_quantized_linear_forward_real_inference() -> Result<()> {
 }
 /// Test TL1 quantized linear forward pass with table lookup
 /// Coverage target: quantized_linear.rs:forward_tl1()
-/// NOTE: Currently disabled due to kernel index bug (discovered by test hardening)
 #[tokio::test]
-#[ignore = "TL1 kernel produces insufficient output diversity (too few unique values); real bug, keep ignored"]
 async fn test_tl1_quantized_linear_forward_real_inference() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
