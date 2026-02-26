@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#756.
+> **Last updated**: reflects implementation state after PRs #608–#776.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -114,6 +114,12 @@
 | CPU golden-path E2E test with receipt invariants | `crates/bitnet-inference/tests/cpu_golden_path.rs` | #766 |
 | test(gguf): expanded property tests, snapshot tests, and unit tests for bitnet-gguf — 33 → 49 tests | `crates/bitnet-gguf/` | #767 |
 | test(srp-crates): expand proptest coverage for bitnet-logits, bitnet-generation, bitnet-engine-core | `crates/bitnet-logits/`, `crates/bitnet-generation/`, `crates/bitnet-engine-core/` | #768 |
+| feat(inference): `BackendStartupSummary` — startup logs `requested=X detected=[…] selected=Y` | `crates/bitnet-inference/`, `crates/bitnet-server/` | #771 |
+| ci: standalone `grid-check` job in `ci-core.yml` running `xtask grid-check --cpu-only` | `.github/workflows/ci-core.yml` | #772 |
+| chore: CHANGELOG and CLAUDE.md docs update for PRs #765–#771 | `CHANGELOG.md`, `CLAUDE.md` | #773 |
+| test(sampling): 7 new proptests for `bitnet-sampling` (top_k, repetition_penalty, temperature entropy, multi-step, reset) | `crates/bitnet-sampling/tests/property_tests.rs` | #774 |
+| feat(ci): nightly scheduled fuzz workflow with corpus caching — 7 targets × 60 s, crash artifact upload | `.github/workflows/nightly-fuzz.yml` | #775 |
+| feat(inference): `bitnet-logits` wired as dependency of `bitnet-inference`; duplicate logits math in `generation/sampling.rs` replaced | `crates/bitnet-inference/`, `crates/bitnet-logits/` | #776 |
 
 ### 🔲 What's Planned
 
