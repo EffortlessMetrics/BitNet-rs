@@ -19,7 +19,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **EnvGuard Environment Isolation** - Robust parallel test execution with `#[serial(bitnet_env)]`
 - **Receipt Verification** - Schema v1.0.0 with 8 validation gates (25/25 tests passing)
 - **Strict Mode Runtime Guards** - Production safety enforcement (12/12 tests passing)
-- **Runtime Backend Selection** - `BackendCapabilities` snapshot at startup with `requested=X detected=[…] selected=Y` logging
+- **Runtime Backend Selection** - `BackendStartupSummary` emits `requested=X detected=[…] selected=Y` at startup; `BackendCapabilities` snapshot captured in receipts (#771)
 - **CPU Golden Path E2E Tests** - 5 deterministic end-to-end tests always running in PR CI (no model download)
 - **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
