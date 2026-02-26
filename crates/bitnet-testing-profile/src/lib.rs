@@ -74,10 +74,13 @@ mod tests {
         assert!(
             validate_explicit_profile(TestingScenario::Unit, ExecutionEnvironment::Local).is_some()
         );
-        let context = ActiveContext::from_env_with_defaults(
-            TestingScenario::Unit,
-            ExecutionEnvironment::Local,
-        );
+        // Construct context directly to avoid reading CI env vars (which would
+        // change environment to Ci on GitHub Actions, and Unit/Ci is not a
+        // supported BDD grid cell).
+        let context = ActiveContext {
+            scenario: TestingScenario::Unit,
+            environment: ExecutionEnvironment::Local,
+        };
         assert!(validate_profile_for_context(context).is_some());
         assert!(
             validate_active_profile_for(TestingScenario::Unit, ExecutionEnvironment::Local)
