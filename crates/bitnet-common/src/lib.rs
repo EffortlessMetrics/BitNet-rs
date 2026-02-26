@@ -15,7 +15,8 @@ pub mod types;
 pub mod warn_once;
 
 pub use backend_selection::{
-    BackendRequest, BackendSelectionError, BackendSelectionResult, select_backend,
+    BackendRequest, BackendSelectionError, BackendSelectionResult, BackendStartupSummary,
+    select_backend,
 };
 pub use config::*;
 pub use error::*;

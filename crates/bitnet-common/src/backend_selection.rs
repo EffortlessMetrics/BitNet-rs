@@ -7,6 +7,38 @@
 use crate::kernel_registry::{KernelBackend, KernelCapabilities};
 use std::fmt;
 
+/// Startup summary of what backend was requested, detected, and selected.
+///
+/// Designed for inclusion in `InferenceReceipt` and startup log output.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct BackendStartupSummary {
+    /// The backend the user (or config) requested (e.g. `"auto"`, `"cpu"`, `"gpu"`).
+    pub requested: String,
+    /// Backends detected as available at runtime (e.g. `["cpu-rust"]`).
+    pub detected: Vec<String>,
+    /// The backend that was ultimately selected (e.g. `"cpu-rust"`).
+    pub selected: String,
+}
+
+impl BackendStartupSummary {
+    /// Construct a new summary from string slices.
+    pub fn new(requested: &str, detected: Vec<String>, selected: &str) -> Self {
+        Self { requested: requested.to_string(), detected, selected: selected.to_string() }
+    }
+
+    /// One-line format suitable for log output.
+    ///
+    /// Example: `"requested=auto detected=[cpu-rust] selected=cpu-rust"`
+    pub fn log_line(&self) -> String {
+        format!(
+            "requested={} detected=[{}] selected={}",
+            self.requested,
+            self.detected.join(", "),
+            self.selected,
+        )
+    }
+}
+
 /// A user's backend preference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackendRequest {
