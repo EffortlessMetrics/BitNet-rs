@@ -342,7 +342,7 @@ cudarc = "0.17.8"
 # Testing and benchmarking
 criterion = { version = "0.7.0", features = ["html_reports"] }
 proptest = "1.9.0"
-insta = { version = "1.43.2", features = ["yaml", "json", "redactions"] }
+insta = { version = "1.43.2", features = ["yaml", "json", "redactions", "filters"] }
 tempfile = "3.23.0"
 serial_test = "3.2.0"
 temp-env = "0.3.6"

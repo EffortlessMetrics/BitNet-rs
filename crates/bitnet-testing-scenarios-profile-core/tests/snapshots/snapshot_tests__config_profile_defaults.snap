@@ -3,7 +3,7 @@ source: crates/bitnet-testing-scenarios-profile-core/tests/snapshot_tests.rs
 expression: profile
 ---
 TestConfigProfile {
-    max_parallel_tests: 32,
+    max_parallel_tests: <CPU_DEPENDENT>,
     test_timeout: 300s,
     cache_dir: "tests/cache",
     log_level: "info",
