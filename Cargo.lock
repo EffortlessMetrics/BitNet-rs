@@ -1218,6 +1218,7 @@ dependencies = [
  "bitnet-testing-profile",
  "insta",
  "num_cpus",
+ "proptest",
 ]
 
 [[package]]
