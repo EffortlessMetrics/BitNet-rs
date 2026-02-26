@@ -25,6 +25,7 @@ on:
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
       - 'SECURITY.md'
+      - '.github/settings.yml'
   push:
     branches: [ main ]
     paths:
@@ -44,6 +45,7 @@ on:
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
       - 'SECURITY.md'
+      - '.github/settings.yml'
   workflow_dispatch:
 
 concurrency:
