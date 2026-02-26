@@ -103,9 +103,14 @@ mod tests {
     #[test]
     #[serial(bitnet_env)]
     fn from_env_with_defaults_uses_component_defaults() {
-        // Clear CI env var so the default (Local) is respected.
+        // Clear CI and GITHUB_ACTIONS so the default (Local) is respected.
         temp_env::with_vars(
-            [("CI", None::<&str>), ("BITNET_ENV", None), ("BITNET_TEST_ENV", None)],
+            [
+                ("CI", None::<&str>),
+                ("GITHUB_ACTIONS", None),
+                ("BITNET_ENV", None),
+                ("BITNET_TEST_ENV", None),
+            ],
             || {
                 let context = ActiveContext::from_env_with_defaults(
                     TestingScenario::Integration,

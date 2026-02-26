@@ -6,9 +6,14 @@ use serial_test::serial;
 #[serial(bitnet_env)]
 fn active_context_default_fields() {
     // Regression: default scenario/environment must stay stable.
-    // Clear CI env var so the Local default is respected.
+    // Clear CI and GITHUB_ACTIONS so the Local default is respected.
     temp_env::with_vars(
-        [("CI", None::<&str>), ("BITNET_ENV", None), ("BITNET_TEST_ENV", None)],
+        [
+            ("CI", None::<&str>),
+            ("GITHUB_ACTIONS", None),
+            ("BITNET_ENV", None),
+            ("BITNET_TEST_ENV", None),
+        ],
         || {
             let ctx = ActiveContext::from_env_with_defaults(
                 TestingScenario::Unit,
