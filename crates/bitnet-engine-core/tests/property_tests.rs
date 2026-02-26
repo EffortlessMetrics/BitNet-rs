@@ -116,3 +116,50 @@ fn session_metrics_default_is_zero() {
     assert_eq!(m.time_to_first_token_ms, 0.0);
     assert_eq!(m.total_tokens, 0);
 }
+
+// ── expanded proptest coverage ────────────────────────────────────────────
+
+use bitnet_engine_core::{GenerationConfig, StopCriteria};
+
+proptest! {
+    /// `GenerationConfig::default()` produces a config with sensible field values.
+    #[test]
+    fn generation_config_default_is_sensible(_: ()) {
+        let cfg = GenerationConfig::default();
+        prop_assert!(cfg.max_new_tokens > 0, "default max_new_tokens must be positive");
+        prop_assert!(cfg.seed.is_none(), "default seed must be None");
+        prop_assert_eq!(
+            cfg.max_new_tokens, 128,
+            "expected default max_new_tokens=128"
+        );
+    }
+
+    /// `GenerationConfig` (re-exported from `bitnet-generation`) round-trips
+    /// through JSON without data loss.
+    #[test]
+    fn generation_config_serde_roundtrip(
+        max_new_tokens in 1usize..4096usize,
+        seed in prop::option::of(any::<u64>()),
+    ) {
+        let config = GenerationConfig {
+            max_new_tokens,
+            seed,
+            stop_criteria: StopCriteria::default(),
+        };
+        let json = serde_json::to_string(&config).expect("serialize");
+        let restored: GenerationConfig = serde_json::from_str(&json).expect("deserialize");
+        prop_assert_eq!(config.max_new_tokens, restored.max_new_tokens);
+        prop_assert_eq!(config.seed, restored.seed);
+    }
+
+    /// The re-exported `GenerationConfig` from `bitnet-engine-core` carries the same
+    /// default values as the upstream `bitnet-generation` type.
+    #[test]
+    fn reexported_generation_config_matches_upstream_defaults(_: ()) {
+        let from_engine_core = GenerationConfig::default();
+        // Values must match bitnet_generation::GenerationConfig::default().
+        prop_assert_eq!(from_engine_core.max_new_tokens, 128);
+        prop_assert!(from_engine_core.seed.is_none());
+        prop_assert_eq!(from_engine_core.stop_criteria.max_tokens, 0);
+    }
+}

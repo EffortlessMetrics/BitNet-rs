@@ -199,3 +199,104 @@ proptest! {
         );
     }
 }
+
+// ── expanded proptest coverage ────────────────────────────────────────────
+
+use bitnet_logits::apply_top_p;
+
+proptest! {
+    /// After top_p filtering on a valid probability distribution, the surviving
+    /// (non-zero) tokens sum to at least `top_p` (within floating-point tolerance).
+    #[test]
+    fn top_p_surviving_tokens_sum_at_least_p(
+        logits in finite_logits(-10.0, 10.0, 2..100),
+        top_p in 0.01f32..0.99f32,
+    ) {
+        let mut probs = logits;
+        softmax_in_place(&mut probs);
+        apply_top_p(&mut probs, top_p);
+        let surviving_sum: f32 = probs.iter().sum();
+        prop_assert!(
+            surviving_sum >= top_p - 1e-4,
+            "surviving sum {surviving_sum} < top_p {top_p}"
+        );
+    }
+
+    /// top_p always keeps the argmax token (highest-probability token is never zeroed).
+    #[test]
+    fn top_p_preserves_argmax(
+        logits in finite_logits(-10.0, 10.0, 2..100),
+        top_p in 0.01f32..0.99f32,
+    ) {
+        let mut probs = logits;
+        softmax_in_place(&mut probs);
+        let best_before = argmax(&probs);
+        apply_top_p(&mut probs, top_p);
+        prop_assert!(
+            probs[best_before] > 0.0,
+            "top_p zeroed the argmax token at index {best_before}"
+        );
+    }
+
+    /// Applying temperature then softmax yields a valid probability distribution
+    /// (sum ≈ 1.0) for any positive temperature.
+    #[test]
+    fn temperature_then_softmax_sums_to_one(
+        logits in finite_logits(-10.0, 10.0, 1..50),
+        temp in 0.1f32..5.0f32,
+    ) {
+        let mut l = logits;
+        apply_temperature(&mut l, temp);
+        softmax_in_place(&mut l);
+        let sum: f32 = l.iter().sum();
+        prop_assert!((sum - 1.0).abs() < 1e-5, "temperature+softmax sum = {sum}");
+    }
+
+    /// Applying repetition penalty twice with factor f is equivalent to applying
+    /// once with f² (only for penalty > 1.0, where sign of logit is preserved).
+    #[test]
+    fn repetition_penalty_composition(
+        base_logit in prop_oneof![0.1f32..10.0f32, -10.0f32..-0.1f32],
+        penalty in 1.01f32..2.5f32,
+        vocab_size in 2usize..50usize,
+    ) {
+        let mut once_f_sq = vec![0.0f32; vocab_size];
+        let mut twice_f = vec![0.0f32; vocab_size];
+        once_f_sq[0] = base_logit;
+        twice_f[0] = base_logit;
+
+        apply_repetition_penalty(&mut once_f_sq, &[0u32], penalty * penalty);
+        apply_repetition_penalty(&mut twice_f, &[0u32], penalty);
+        apply_repetition_penalty(&mut twice_f, &[0u32], penalty);
+
+        prop_assert!(
+            (once_f_sq[0] - twice_f[0]).abs() < 1e-4,
+            "f²={} → {}, f+f={} → {}",
+            penalty * penalty,
+            once_f_sq[0],
+            penalty,
+            twice_f[0],
+        );
+    }
+
+    /// After top_k(1), the argmax of the original logits is the sole finite element.
+    #[test]
+    fn top_k_one_keeps_only_argmax(
+        logits in finite_logits(-10.0, 10.0, 2..50),
+    ) {
+        let max_val = logits.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+        let max_count = logits.iter().filter(|&&x| x == max_val).count();
+        prop_assume!(max_count == 1);
+
+        let best_before = argmax(&logits);
+        let mut l = logits;
+        apply_top_k(&mut l, 1);
+
+        prop_assert!(
+            l[best_before].is_finite(),
+            "top_k(1) did not keep the argmax at index {best_before}"
+        );
+        let finite_count = l.iter().filter(|&&x| x != f32::NEG_INFINITY).count();
+        prop_assert_eq!(finite_count, 1, "top_k(1) kept {} elements, expected 1", finite_count);
+    }
+}

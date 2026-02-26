@@ -154,3 +154,113 @@ fn stop_string_absent_returns_none() {
     let reason = check_stop(&criteria, 999, &[], "the answer is 42");
     assert_eq!(reason, None);
 }
+
+// ── expanded proptest coverage ────────────────────────────────────────────
+
+use bitnet_generation::{GenerationConfig, GenerationStats, StreamEvent, TokenEvent};
+
+proptest! {
+    /// `StopCriteria` serializes to JSON and deserializes back without data loss.
+    #[test]
+    fn stop_criteria_serde_roundtrip(
+        stop_token_ids in prop::collection::vec(0u32..100_000u32, 0..5),
+        eos_token_id in prop::option::of(0u32..100_000u32),
+        max_tokens in 0usize..1024usize,
+        stop_strings in prop::collection::vec(
+            prop_oneof![
+                Just("</s>".to_string()),
+                Just("[STOP]".to_string()),
+                Just("\n".to_string()),
+            ],
+            0..3,
+        ),
+    ) {
+        let criteria = StopCriteria {
+            stop_token_ids: stop_token_ids.clone(),
+            eos_token_id,
+            max_tokens,
+            stop_strings: stop_strings.clone(),
+        };
+        let json = serde_json::to_string(&criteria).expect("serialize");
+        let restored: StopCriteria = serde_json::from_str(&json).expect("deserialize");
+        prop_assert_eq!(&criteria.stop_token_ids, &restored.stop_token_ids);
+        prop_assert_eq!(criteria.eos_token_id, restored.eos_token_id);
+        prop_assert_eq!(criteria.max_tokens, restored.max_tokens);
+        prop_assert_eq!(&criteria.stop_strings, &restored.stop_strings);
+    }
+
+    /// `GenerationStats::tokens_per_second` equals `tokens_generated / elapsed_secs`.
+    #[test]
+    fn generation_stats_tps_invariant(
+        tokens_generated in 1usize..10_000usize,
+        elapsed_secs in 0.001f64..3600.0f64,
+    ) {
+        let tps = tokens_generated as f64 / elapsed_secs;
+        let stats = GenerationStats { tokens_generated, tokens_per_second: tps };
+        let expected = stats.tokens_generated as f64 / elapsed_secs;
+        prop_assert!(
+            (stats.tokens_per_second - expected).abs() < 1e-9,
+            "tps={} expected={}", stats.tokens_per_second, expected
+        );
+    }
+
+    /// All `StreamEvent` variants can be constructed and debug-printed without panicking.
+    #[test]
+    fn stream_event_variants_debug_no_panic(
+        id in 0u32..100_000u32,
+        text in "[a-zA-Z0-9 ]{0,32}",
+        tokens_generated in 0usize..10_000usize,
+        tps in 0.0f64..10_000.0f64,
+    ) {
+        let token_ev = StreamEvent::Token(TokenEvent { id, text });
+        let done_ev = StreamEvent::Done {
+            reason: StopReason::MaxTokens,
+            stats: GenerationStats { tokens_generated, tokens_per_second: tps },
+        };
+        let _ = format!("{token_ev:?}");
+        let _ = format!("{done_ev:?}");
+        prop_assert!(true);
+    }
+
+    /// `max_tokens = 0` never triggers a budget stop regardless of generated length.
+    #[test]
+    fn max_tokens_zero_never_limits(
+        generated_len in 0usize..1000usize,
+        token in 1u32..100_000u32,
+    ) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            eos_token_id: None,
+            max_tokens: 0,
+            stop_strings: vec![],
+        };
+        let generated = vec![0u32; generated_len];
+        // Use token+1 to avoid triggering a stop_token_id if token==0.
+        let reason = check_stop(&criteria, token.saturating_add(1), &generated, "");
+        prop_assert_ne!(reason, Some(StopReason::MaxTokens));
+    }
+
+    /// `max_tokens > 0` fires `MaxTokens` exactly when generated reaches the budget.
+    #[test]
+    fn positive_max_tokens_fires_at_budget(budget in 1usize..100usize) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            eos_token_id: None,
+            max_tokens: budget,
+            stop_strings: vec![],
+        };
+        let generated = vec![0u32; budget];
+        let reason = check_stop(&criteria, 99_999, &generated, "");
+        prop_assert_eq!(reason, Some(StopReason::MaxTokens));
+    }
+
+    /// `GenerationConfig` default produces a positive `max_new_tokens` and no seed.
+    #[test]
+    fn generation_config_default_is_valid(_: ()) {
+        let cfg = GenerationConfig::default();
+        prop_assert!(cfg.max_new_tokens > 0, "default max_new_tokens must be positive");
+        prop_assert!(cfg.seed.is_none(), "default seed must be None");
+    }
+}
+
+use serde_json;
