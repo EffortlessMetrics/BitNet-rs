@@ -10,6 +10,7 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ### Changed
 - Project renamed from BitNet.rs to BitNet-rs throughout (1,531 files, 6,281 occurrences) (#755)
+- `refactor(quantization): dead code cleanup` — Removed unused `KernelProvider` imports and unused fields from `bitnet-quantization` (#779)
 
 ### Added
 - `ci: add BDD grid-check job to CI Core workflow` — Standalone `grid-check` job in `ci-core.yml` runs `xtask grid-check --cpu-only` in parallel with the build matrix (#772)
@@ -17,6 +18,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test(sampling): expand proptest coverage for bitnet-sampling` — 7 new proptests covering top_k, repetition_penalty, temperature entropy, multi-step, and reset invariants (#774)
 - `feat(ci): nightly scheduled fuzz workflow with corpus caching` — New `.github/workflows/nightly-fuzz.yml`; runs 7 fuzz targets for 60 s nightly, caches corpus per-target, uploads crash artifacts (#775)
 - `feat(inference): wire bitnet-logits into bitnet-inference (SRP integration)` — Replaced duplicate logits math in `generation/sampling.rs` with `bitnet-logits` crate (#776)
+- `feat(ci): CUDA smoke lane weekly schedule with receipt upload` — `gpu-smoke.yml` updated with weekly schedule and receipt artifact upload (#777)
 - `feat(inference)`: BackendStartupSummary — startup logs `requested=X detected=[…] selected=Y` (#771)
 - `test(srp-crates): expanded proptest coverage for bitnet-logits, bitnet-generation, bitnet-engine-core (#768)`
 - `test(gguf): expanded property tests, snapshot tests, and unit tests for bitnet-gguf — 33 → 49 tests (#767)`

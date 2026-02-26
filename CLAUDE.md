@@ -24,6 +24,8 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
+- **Nightly Fuzz Workflow** — 7 fuzz targets × 60 s nightly with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775)
+- **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
 
 ### Current Limitations (MVP Phase)
 

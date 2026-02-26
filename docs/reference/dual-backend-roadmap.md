@@ -120,14 +120,12 @@
 | test(sampling): 7 new proptests for `bitnet-sampling` (top_k, repetition_penalty, temperature entropy, multi-step, reset) | `crates/bitnet-sampling/tests/property_tests.rs` | #774 |
 | feat(ci): nightly scheduled fuzz workflow with corpus caching — 7 targets × 60 s, crash artifact upload | `.github/workflows/nightly-fuzz.yml` | #775 |
 | feat(inference): `bitnet-logits` wired as dependency of `bitnet-inference`; duplicate logits math in `generation/sampling.rs` replaced | `crates/bitnet-inference/`, `crates/bitnet-logits/` | #776 |
+| feat(ci): `gpu-smoke.yml` updated with weekly schedule and receipt artifact upload | `.github/workflows/gpu-smoke.yml` | #777 |
+| refactor(quantization): dead code cleanup — removed unused `KernelProvider` imports and unused fields | `crates/bitnet-quantization/` | #779 |
 
 ### 🔲 What's Planned
 
-1. **CUDA smoke lane** (self-hosted runner, nightly/manual)
-   - Allocate device, run small inference, upload parity receipt
-   - Blocked on having a CUDA-capable self-hosted runner
-
-2. **Scheduled fuzz/crossval evidence expansion**
+1. **Scheduled fuzz/crossval evidence expansion**
    - Nightly timeboxed fuzz runs with artifact upload (partially done via `fuzz-ci.yml`)
    - Real-model crossval producing receipts (gated on model download infrastructure)
 
