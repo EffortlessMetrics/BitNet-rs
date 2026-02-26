@@ -67,10 +67,7 @@ fn synthetic_model() -> Result<Arc<BitNetModel>> {
             );
         }
     }
-    t.insert(
-        "final_norm.weight".into(),
-        CandleTensor::from_vec(vec![1.0f32; h], &[h], &dev)?,
-    );
+    t.insert("final_norm.weight".into(), CandleTensor::from_vec(vec![1.0f32; h], &[h], &dev)?);
 
     Ok(Arc::new(BitNetModel::from_gguf(cfg, t, HashMap::new(), Device::Cpu)?))
 }
