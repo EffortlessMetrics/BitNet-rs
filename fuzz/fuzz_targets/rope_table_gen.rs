@@ -31,10 +31,7 @@ fuzz_target!(|input: Input| {
             // Trig identity: sin² + cos² ≈ 1 for every pair.
             for (s, c) in tables.sin.iter().zip(&tables.cos) {
                 let norm = s * s + c * c;
-                assert!(
-                    (norm - 1.0).abs() < 1e-5,
-                    "sin²+cos²={norm} != 1.0 (sin={s}, cos={c})"
-                );
+                assert!((norm - 1.0).abs() < 1e-5, "sin²+cos²={norm} != 1.0 (sin={s}, cos={c})");
             }
         }
         // Errors are expected for invalid inputs; just ensure no panic occurred.
