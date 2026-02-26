@@ -3,8 +3,7 @@
 //! generation, and KV-cache append.
 
 use bitnet_logits::{
-    apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p, argmax,
-    softmax_in_place,
+    apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p, argmax, softmax_in_place,
 };
 use bitnet_rope::build_tables;
 use bitnet_transformer::LayerKVCache;
@@ -79,9 +78,7 @@ fn bench_argmax(c: &mut Criterion) {
 /// RoPE table generation: dim=128, max_seq_len=512, base=10000.0
 fn bench_rope_build_tables(c: &mut Criterion) {
     c.bench_function("build_rope_tables_128_512", |b| {
-        b.iter(|| {
-            black_box(build_tables(black_box(128), black_box(512), black_box(10_000.0)))
-        });
+        b.iter(|| black_box(build_tables(black_box(128), black_box(512), black_box(10_000.0))));
     });
 }
 
@@ -92,10 +89,8 @@ fn bench_kv_cache_append(c: &mut Criterion) {
     let head_dim = 64usize;
 
     // Single-token K/V tensors: [batch=1, n_kv_heads=8, seq=1, head_dim=64]
-    let k_tok =
-        Tensor::zeros(&[1usize, n_kv_heads, 1, head_dim], DType::F32, &device).unwrap();
-    let v_tok =
-        Tensor::zeros(&[1usize, n_kv_heads, 1, head_dim], DType::F32, &device).unwrap();
+    let k_tok = Tensor::zeros(&[1usize, n_kv_heads, 1, head_dim], DType::F32, &device).unwrap();
+    let v_tok = Tensor::zeros(&[1usize, n_kv_heads, 1, head_dim], DType::F32, &device).unwrap();
 
     c.bench_function("kv_cache_append_single_token", |b| {
         b.iter_batched(
