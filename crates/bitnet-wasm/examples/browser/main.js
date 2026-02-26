@@ -21,6 +21,9 @@ let benchmarkSuite = null;
 // Initialize the application
 async function initApp() {
     try {
+        // Setup keyboard navigation for tabs
+        setupTabNavigation();
+
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
 
@@ -549,6 +552,44 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+// Setup keyboard navigation for tabs
+function setupTabNavigation() {
+    const tabsContainer = document.querySelector('.tabs');
+    if (!tabsContainer) return;
+
+    tabsContainer.addEventListener('keydown', (e) => {
+        const tabs = Array.from(document.querySelectorAll('.tab'));
+        const activeTab = document.activeElement;
+        const index = tabs.indexOf(activeTab);
+
+        if (index === -1) return; // Focus not on a tab
+
+        let nextIndex = index;
+        let handled = false;
+
+        if (e.key === 'ArrowRight') {
+            nextIndex = (index + 1) % tabs.length;
+            handled = true;
+        } else if (e.key === 'ArrowLeft') {
+            nextIndex = (index - 1 + tabs.length) % tabs.length;
+            handled = true;
+        } else if (e.key === 'Home') {
+            nextIndex = 0;
+            handled = true;
+        } else if (e.key === 'End') {
+            nextIndex = tabs.length - 1;
+            handled = true;
+        }
+
+        if (handled) {
+            e.preventDefault();
+            const nextTab = tabs[nextIndex];
+            nextTab.focus();
+            nextTab.click(); // Activate the tab
+        }
+    });
+}
 
 // Make functions globally available
 window.loadModel = loadModel;
