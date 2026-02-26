@@ -13,6 +13,12 @@ All notable changes to bitnet-rs will be documented in this file.
 - `refactor(quantization): dead code cleanup` — Removed unused `KernelProvider` imports and unused fields from `bitnet-quantization` (#779)
 
 ### Added
+- `feat(fuzz): RoPE table generation fuzz target` — `fuzz/fuzz_targets/rope_table_gen.rs` using `arbitrary::Arbitrary`; verifies sin²+cos²≈1 (Pythagorean) invariant across arbitrary dimensions and base values (#783)
+- `test(transformer): 5 new KVCache/config property tests` — shape invariants after N appends, layer independence, layer count validation, head divisibility check, seq_len monotonicity (#784)
+- `test(tokenizers): 5 new property tests for encode/decode` — BOS/EOS prepend behaviour, decode never panics, tokenize preserves words, config serde round-trip, EOS ID bounds (#785)
+- `docs(api): Examples/Errors/Panics sections for SRP crate APIs` — documentation improvements across `bitnet-logits`, `bitnet-generation`, `bitnet-engine-core`, `bitnet-sampling`, `bitnet-device-probe` (#786)
+- `bench: criterion benchmarks for SRP ops (srp_ops.rs)` — 6 benchmark functions: logits pipeline, top-k at k=5/k=50, repetition penalty, argmax, RoPE build_tables, KV cache append (#787)
+- `feat(fuzz): BPE tokenizer encode fuzz target` — `fuzz/fuzz_targets/tokenizer_encode.rs` with 4 exercise paths (empty, ASCII, Unicode, max-length boundary); fuzz total: 13→15 (#788)
 - `ci: add BDD grid-check job to CI Core workflow` — Standalone `grid-check` job in `ci-core.yml` runs `xtask grid-check --cpu-only` in parallel with the build matrix (#772)
 - `chore: docs update for PRs #765–#771` — CHANGELOG and CLAUDE.md updated to reflect merged PRs (#773)
 - `test(sampling): expand proptest coverage for bitnet-sampling` — 7 new proptests covering top_k, repetition_penalty, temperature entropy, multi-step, and reset invariants (#774)

@@ -24,7 +24,8 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
-- **Nightly Fuzz Workflow** — 7 fuzz targets × 60 s nightly with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775)
+- **Nightly Fuzz Workflow** — 7 fuzz targets × 60 s nightly with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); **15 fuzz targets total** (added `rope_table_gen` (#783) and `tokenizer_encode` (#788))
+- **Criterion Benchmarks** — `benches/srp_ops.rs` with 6 functions: logits pipeline, top-k (k=5/k=50), repetition penalty, argmax, RoPE build_tables, KV cache append (#787)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
 
 ### Current Limitations (MVP Phase)
@@ -968,6 +969,8 @@ These test suites pass reliably (3,520 tests run: 3,520 passed):
 - **environment isolation tests**: EnvGuard parallel safety (serial + temp_env)
 - **CPU golden path E2E tests**: Deterministic inference with receipt invariants (5/5 passing)
 - **SRP microcrate tests**: bitnet-logits (15), bitnet-gguf (8), bitnet-generation (11), bitnet-device-probe (5), bitnet-engine-core (4)
+- **KVCache property tests**: 5 new shape-invariant properties (after N appends, layer independence, layer count, head divisibility, seq_len monotonicity) (#784)
+- **tokenizer property tests**: 5 new encode/decode properties (BOS/EOS prepend, decode never panics, word preservation, config serde round-trip, EOS ID bounds) (#785)
 
 ### Test Dependencies
 

@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#776.
+> **Last updated**: reflects implementation state after PRs #608–#788.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -123,6 +123,12 @@
 | feat(ci): `gpu-smoke.yml` updated with weekly schedule and receipt artifact upload | `.github/workflows/gpu-smoke.yml` | #777 |
 | refactor(quantization): dead code cleanup — removed unused `KernelProvider` imports and unused fields | `crates/bitnet-quantization/` | #779 |
 | test(integration): 12 cross-crate SRP integration tests for logits/generation/prompt-templates/engine-core | `crates/bitnet-inference/tests/srp_integration_test.rs` | #781 |
+| feat(fuzz): RoPE table generation fuzz target — `rope_table_gen.rs` using `arbitrary::Arbitrary`; verifies sin²+cos²≈1 invariant | `fuzz/fuzz_targets/rope_table_gen.rs` | #783 |
+| test(transformer): 5 new KVCache/config property tests — shape invariants after N appends, layer independence, layer count, head divisibility, seq_len monotonicity | `crates/bitnet-transformer/tests/property_tests.rs` | #784 |
+| test(tokenizers): 5 new property tests — BOS/EOS prepend, decode never panics, tokenize preserves words, config serde round-trip, EOS ID bounds | `crates/bitnet-tokenizers/tests/property_tests.rs` | #785 |
+| docs(api): Examples/Errors/Panics sections added to bitnet-logits, bitnet-generation, bitnet-engine-core, bitnet-sampling, bitnet-device-probe public APIs | `crates/bitnet-{logits,generation,engine-core,sampling,device-probe}/src/lib.rs` | #786 |
+| bench: 6 criterion benchmark functions in `srp_ops.rs` — logits pipeline, top-k (k=5/50), repetition penalty, argmax, RoPE build_tables, KV cache append | `benches/srp_ops.rs` | #787 |
+| feat(fuzz): BPE tokenizer encode fuzz target — `tokenizer_encode.rs` with 4 exercise paths; fuzz total: 13→15 | `fuzz/fuzz_targets/tokenizer_encode.rs` | #788 |
 
 ### 🔲 What's Planned
 
