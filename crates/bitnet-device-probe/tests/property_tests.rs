@@ -4,7 +4,8 @@
 //! capability detection without requiring real GPU hardware.
 
 use bitnet_device_probe::{
-    DeviceCapabilities, detect_simd_level, gpu_available_runtime, gpu_compiled,
+    DeviceCapabilities, detect_simd_level, gpu_available_runtime, gpu_compiled, probe_cpu,
+    probe_gpu,
 };
 use proptest::prelude::*;
 use serial_test::serial;
@@ -136,4 +137,90 @@ fn strict_mode_ignores_gpu_fake() {
             let _ = result;
         },
     );
+}
+
+// ── probe_cpu() invariants ────────────────────────────────────────────────────
+
+proptest! {
+    #[test]
+    fn probe_cpu_core_count_at_least_one(_dummy in 0u8..4) {
+        let caps = probe_cpu();
+        prop_assert!(caps.core_count >= 1, "core_count must always be >= 1, got {}", caps.core_count);
+    }
+}
+
+proptest! {
+    #[test]
+    fn probe_cpu_is_consistent_across_calls(_dummy in 0u8..4) {
+        let a = probe_cpu();
+        let b = probe_cpu();
+        prop_assert_eq!(a.has_avx2, b.has_avx2, "has_avx2 must be consistent");
+        prop_assert_eq!(a.has_avx512, b.has_avx512, "has_avx512 must be consistent");
+        prop_assert_eq!(a.has_neon, b.has_neon, "has_neon must be consistent");
+    }
+}
+
+#[test]
+fn probe_cpu_capability_flags_are_booleans() {
+    let caps = probe_cpu();
+    // Flags are Rust bools — just confirm they are accessible without panicking.
+    let _ = caps.has_avx2;
+    let _ = caps.has_avx512;
+    let _ = caps.has_neon;
+}
+
+// AVX2 and AVX-512 are x86_64-only; NEON is aarch64-only.
+#[cfg(target_arch = "aarch64")]
+#[test]
+fn probe_cpu_neon_true_on_aarch64() {
+    assert!(probe_cpu().has_neon, "NEON is mandatory on AArch64");
+}
+
+#[cfg(not(target_arch = "aarch64"))]
+#[test]
+fn probe_cpu_neon_false_on_non_aarch64() {
+    assert!(!probe_cpu().has_neon, "NEON should be false on non-AArch64");
+}
+
+// ── probe_gpu() invariants ────────────────────────────────────────────────────
+
+proptest! {
+    #[test]
+    fn probe_gpu_available_consistent_with_cuda_available(_dummy in 0u8..4) {
+        let caps = probe_gpu();
+        // For our current implementation, available == cuda_available.
+        prop_assert_eq!(caps.available, caps.cuda_available);
+    }
+}
+
+#[test]
+#[serial(bitnet_env)]
+fn probe_gpu_respects_gpu_fake_cuda() {
+    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    temp_env::with_vars(
+        [("BITNET_STRICT_MODE", None::<&str>), ("BITNET_GPU_FAKE", Some("cuda"))],
+        || {
+            let caps = probe_gpu();
+            assert!(caps.cuda_available, "BITNET_GPU_FAKE=cuda should report cuda_available=true");
+            assert!(caps.available, "BITNET_GPU_FAKE=cuda should report available=true");
+        },
+    );
+
+    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+    {
+        // Without GPU feature, probe_gpu() always returns false regardless of env.
+        let caps = probe_gpu();
+        assert!(!caps.cuda_available);
+        assert!(!caps.available);
+    }
+}
+
+#[test]
+#[serial(bitnet_env)]
+fn probe_gpu_respects_gpu_fake_none() {
+    temp_env::with_var("BITNET_GPU_FAKE", Some("none"), || {
+        let caps = probe_gpu();
+        assert!(!caps.cuda_available, "BITNET_GPU_FAKE=none should report cuda_available=false");
+        assert!(!caps.available, "BITNET_GPU_FAKE=none should report available=false");
+    });
 }
