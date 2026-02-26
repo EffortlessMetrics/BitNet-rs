@@ -4,7 +4,15 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+- Restrict model loading to configured directories via `BITNET_ALLOWED_MODEL_DIRECTORIES` (#753)
+- Harden model path validation: prevent symlink traversal and empty-string allowlist bypass (#756)
+
+### Changed
+- Project renamed from BitNet.rs to BitNet-rs throughout (1,531 files, 6,281 occurrences) (#755)
+
 ### Added
+- Keyboard navigation (ArrowLeft/ArrowRight/Home/End) for WASM browser example tab list (#754)
 - **Property tests for `bitnet-test-support`** (PR #749): 10 new property + unit tests for `EnvGuard`/`EnvScope` API semantics — set/restore/remove round-trips, nested scope isolation, `model_path()`/`run_slow_tests()`/`run_e2e()` env helpers. Workspace total: **3,520 tests, all passing**. Proptest coverage spans **38 crates** (+2: `bitnet-test-support`, `bitnet-testing-scenarios-profile-core`).
 - **Property tests for `bitnet-testing-scenarios-profile-core`** (PR #750): 17 new property + unit tests for Default value invariants across 5 structs — `FixtureProfile`, `CrossValidationProfile`, `ComparisonToleranceProfile`, `ReportingProfile`, `ResourceConstraints`. Includes fuzz-grade shape coverage for numeric fields, URL/path fields, and nested struct coherence.
 - **CI env isolation fixes for `bitnet-runtime-context-core` and `bitnet-runtime-profile-contract-core`** (in PR #746): Tests that check `from_env_with_defaults()` Local default now use `temp_env::with_vars` to clear the `CI` env var so they pass in GitHub Actions. Snapshot tests for `active_context_default_fields` also isolated. `test_config_profile_defaults` snapshot uses `insta::with_settings!` filter to normalize the CPU-dependent `max_parallel_tests` field. Added `filters` feature to workspace insta definition.

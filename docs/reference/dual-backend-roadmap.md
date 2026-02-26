@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#750.
+> **Last updated**: reflects implementation state after PRs #608–#756.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -103,6 +103,10 @@
 | fix: serialize `find_bitnet_lib_dirs` tests with `#[serial(bitnet_env)]` to prevent `BITNET_CROSSVAL_LIBDIR` race condition in xtask | `xtask/src/cpp_setup_auto.rs` | #748 |
 | test(proptest): add 10 property + unit tests for `bitnet-test-support` (EnvGuard/EnvScope API semantics) | `crates/bitnet-test-support/tests/property_tests.rs` | #749 |
 | test(proptest): add 17 property + unit tests for `bitnet-testing-scenarios-profile-core` (Default value invariants, fuzz-grade shape coverage across 5 structs) | `crates/bitnet-testing-scenarios-profile-core/tests/property_tests.rs` | #750 |
+| Restrict model loading to configured directories via `BITNET_ALLOWED_MODEL_DIRECTORIES`; path canonicalization and directory containment check | `crates/bitnet-models/src/`, `crates/bitnet-server/src/` | #753 |
+| Keyboard navigation (ArrowLeft/ArrowRight/Home/End) for WASM browser example tab list | `examples/wasm/` | #754 |
+| Project renamed from BitNet.rs to BitNet-rs throughout (1,531 files, 6,281 occurrences) | workspace-wide | #755 |
+| Harden model path validation: prevent symlink traversal and empty-string allowlist bypass | `crates/bitnet-models/src/`, `crates/bitnet-server/src/` | #756 |
 
 ### 🔲 What's Planned
 
