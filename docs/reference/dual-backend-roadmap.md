@@ -110,6 +110,8 @@
 | TL1 kernel fix: replaced `matmul_i2s` with `dequantize+matmul` pipeline; fixed 3 compounding bugs | `crates/bitnet-quantization/`, `crates/bitnet-kernels/` | #760 |
 | TL2 kernel fix: replaced `matmul_i2s` with `dequantize+matmul` pipeline (same pattern as #760) | `crates/bitnet-quantization/`, `crates/bitnet-kernels/` | #761 |
 | Proptest added to 6 infrastructure crates; proptest total: 44→50 crates | `crates/*/tests/property_tests.rs` | #762 |
+| `bitnet-device-probe` microcrate: `CpuCapabilities`/`GpuCapabilities` types with proptest coverage | `crates/bitnet-device-probe/` | #765 |
+| CPU golden-path E2E test with receipt invariants | `crates/bitnet-inference/tests/cpu_golden_path.rs` | #766 |
 
 ### 🔲 What's Planned
 
