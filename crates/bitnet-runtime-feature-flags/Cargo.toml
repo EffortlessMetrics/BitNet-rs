@@ -63,4 +63,5 @@ runtime-profile-trend = ["trend"]
 runtime-profile-integration-tests = ["integration-tests"]
 
 [dev-dependencies]
+proptest.workspace = true
 insta.workspace = true

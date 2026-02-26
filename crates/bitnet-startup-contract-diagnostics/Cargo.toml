@@ -17,4 +17,5 @@ anyhow.workspace = true
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.1.0" }
 
 [dev-dependencies]
+proptest.workspace = true
 insta.workspace = true
