@@ -13,6 +13,7 @@ publish = false
 # No runtime deps — this crate is intentionally minimal
 
 [dev-dependencies]
+proptest.workspace = true
 serial_test.workspace = true
 
 [features]
