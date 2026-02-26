@@ -45,10 +45,8 @@ fuzz_target!(|data: &[u8]| {
     {
         let tok = BasicTokenizer::new();
         // Reinterpret raw bytes as little-endian u32 token IDs.
-        let token_ids: Vec<u32> = data
-            .chunks_exact(4)
-            .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-            .collect();
+        let token_ids: Vec<u32> =
+            data.chunks_exact(4).map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
         // Must not panic regardless of what IDs are passed.
         let _ = tok.decode(&token_ids);
     }
@@ -60,15 +58,11 @@ fuzz_target!(|data: &[u8]| {
         let mut u = Unstructured::new(data);
         if let Ok(bpe) = BpeInput::arbitrary(&mut u) {
             // Cap sizes to keep individual runs bounded.
-            let vocab: Vec<(String, f32)> =
-                bpe.vocab.into_iter().take(256).collect();
-            let merges: Vec<String> =
-                bpe.merges.into_iter().take(256).collect();
+            let vocab: Vec<(String, f32)> = bpe.vocab.into_iter().take(256).collect();
+            let merges: Vec<String> = bpe.merges.into_iter().take(256).collect();
 
             if !vocab.is_empty() {
-                if let Ok(hf_tok) =
-                    HfTokenizer::from_vocab_and_merges(&vocab, &merges)
-                {
+                if let Ok(hf_tok) = HfTokenizer::from_vocab_and_merges(&vocab, &merges) {
                     // Exercise BPE encode on the raw bytes interpreted as text.
                     if let Ok(text) = std::str::from_utf8(data) {
                         let _ = hf_tok.encode(text, bpe.add_bos, bpe.add_special);
@@ -108,9 +102,7 @@ fuzz_target!(|data: &[u8]| {
                     .and_then(|v| v.as_object())
                     .map(|m| {
                         m.iter()
-                            .filter_map(|(k, v)| {
-                                v.as_f64().map(|score| (k.clone(), score as f32))
-                            })
+                            .filter_map(|(k, v)| v.as_f64().map(|score| (k.clone(), score as f32)))
                             .take(256)
                             .collect()
                     })
@@ -120,18 +112,12 @@ fuzz_target!(|data: &[u8]| {
                     .get("merges")
                     .and_then(|v| v.as_array())
                     .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_str().map(String::from))
-                            .take(256)
-                            .collect()
+                        arr.iter().filter_map(|v| v.as_str().map(String::from)).take(256).collect()
                     })
                     .unwrap_or_default();
 
                 if !vocab_from_obj.is_empty() {
-                    let _ = HfTokenizer::from_vocab_and_merges(
-                        &vocab_from_obj,
-                        &merges_from_obj,
-                    );
+                    let _ = HfTokenizer::from_vocab_and_merges(&vocab_from_obj, &merges_from_obj);
                 }
             }
         }
