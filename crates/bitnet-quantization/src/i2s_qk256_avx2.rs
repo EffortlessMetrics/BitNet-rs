@@ -48,44 +48,27 @@ use std::arch::x86_64::*;
 use crate::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES};
 use anyhow::Result;
 
-/// AVX2-accelerated unpacking of one QK256 block (64 bytes → 256 codes)
-///
-/// Uses LUT-based unpacking with VPSHUFB to extract 2-bit codes in parallel.
-///
-/// # Arguments
-///
-/// * `qs64` - Input packed block (64 bytes)
-/// * `out_codes256` - Output codes array (256 elements)
-///
-/// # Safety
-///
-/// This function requires AVX2 support. Caller must ensure CPU has AVX2 capability.
-///
-/// # Performance
-///
-/// Expected speedup: ~4× over scalar unpacking due to 32-byte SIMD processing.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
-unsafe fn unpack_qk256_block_avx2(
-    qs64: &[u8; QK256_PACKED_BYTES],
-    out_codes256: &mut [u8; QK256_BLOCK],
-) {
-    // SAFETY: All intrinsics are safe to call because:
-    // - Function is marked with #[target_feature(enable = "avx2")]
-    // - Caller must ensure AVX2 is available via runtime dispatch
-    // - All pointer operations are properly aligned and bounded
+unsafe fn decode_8_weights_avx2(byte0: u8, byte1: u8) -> __m256 {
+    let codes = _mm256_setr_epi32(
+        (byte0 & 0x03) as i32,
+        ((byte0 >> 2) & 0x03) as i32,
+        ((byte0 >> 4) & 0x03) as i32,
+        ((byte0 >> 6) & 0x03) as i32,
+        (byte1 & 0x03) as i32,
+        ((byte1 >> 2) & 0x03) as i32,
+        ((byte1 >> 4) & 0x03) as i32,
+        ((byte1 >> 6) & 0x03) as i32,
+    );
 
-    // For MVP, use scalar unpacking which is correct and simple
-    // TODO: Optimize with proper AVX2 byte-level shifts or shuffle-based LUT
-    // The complexity of interleaving 2-bit codes with AVX2 makes it error-prone
-    // and potentially slower than scalar for small block sizes
-    for (i, &b) in qs64.iter().enumerate() {
-        let base = i * 4;
-        out_codes256[base] = b & 0x03;
-        out_codes256[base + 1] = (b >> 2) & 0x03;
-        out_codes256[base + 2] = (b >> 4) & 0x03;
-        out_codes256[base + 3] = (b >> 6) & 0x03;
-    }
+    // Convert codes in [0, 3] to weights [-2, -1, 1, 2] without scalar LUT lookups.
+    let two = _mm256_set1_epi32(2);
+    let one = _mm256_set1_epi32(1);
+    let shifted = _mm256_sub_epi32(codes, two);
+    let correction = _mm256_and_si256(_mm256_srli_epi32::<1>(codes), one);
+    let corrected = _mm256_add_epi32(shifted, correction);
+    _mm256_cvtepi32_ps(corrected)
 }
 
 /// AVX2-accelerated dot product for one QK256 row
@@ -131,71 +114,62 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
     // - Caller must ensure AVX2 is available via runtime dispatch
     // - All pointer operations are properly aligned and bounded
     unsafe {
-        // SIMD accumulator (8 f32 lanes)
-        let mut acc_vec = _mm256_setzero_ps();
+        // SIMD accumulators (8 f32 lanes each). Two accumulators reduce dependency chain pressure.
+        let mut acc_vec0 = _mm256_setzero_ps();
+        let mut acc_vec1 = _mm256_setzero_ps();
 
         // Scalar accumulator for tail elements
         let mut scalar_acc = 0.0f32;
 
-        // Scratch buffer for unpacking codes (stack-allocated)
-        let mut codes = [0u8; QK256_BLOCK];
-
         let mut col = 0usize;
         for blk in qs_row.chunks_exact(QK256_PACKED_BYTES) {
-            // Unpack 64B → 256 2-bit codes using AVX2
-            let blk_arr: &[u8; QK256_PACKED_BYTES] =
-                blk.try_into().expect("QK256: block must be 64 bytes");
-            unpack_qk256_block_avx2(blk_arr, &mut codes);
-
             // Number of valid columns left in this block
             let take = QK256_BLOCK.min(cols - col);
 
-            // AVX2 FMA loop: process 8 elements at a time
-            // We need to convert codes (u8 in 0..=3) → i8 → i32 → f32, then apply LUT scaling
+            let mut j = 0usize;
+            // Process 16 elements at a time (4 packed bytes).
+            while j + 16 <= take {
+                let packed_idx = j / 4;
+                let b0 = *blk.get_unchecked(packed_idx);
+                let b1 = *blk.get_unchecked(packed_idx + 1);
+                let b2 = *blk.get_unchecked(packed_idx + 2);
+                let b3 = *blk.get_unchecked(packed_idx + 3);
 
-            // Code-to-float LUT as f32 array
-            const LUT: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
+                let w_vec0 = decode_8_weights_avx2(b0, b1);
+                let w_vec1 = decode_8_weights_avx2(b2, b3);
 
-            let mut j = 0;
-            // Process 8 elements at a time using AVX2
+                let x_vec0 = _mm256_loadu_ps(x.as_ptr().add(col + j));
+                let x_vec1 = _mm256_loadu_ps(x.as_ptr().add(col + j + 8));
+
+                acc_vec0 = _mm256_fmadd_ps(w_vec0, x_vec0, acc_vec0);
+                acc_vec1 = _mm256_fmadd_ps(w_vec1, x_vec1, acc_vec1);
+
+                j += 16;
+            }
+
             while j + 8 <= take {
-                // Load 8 codes (u8)
-                let codes_u8 = [
-                    codes[j],
-                    codes[j + 1],
-                    codes[j + 2],
-                    codes[j + 3],
-                    codes[j + 4],
-                    codes[j + 5],
-                    codes[j + 6],
-                    codes[j + 7],
-                ];
+                let packed_idx = j / 4;
+                let b0 = *blk.get_unchecked(packed_idx);
+                let b1 = *blk.get_unchecked(packed_idx + 1);
 
-                // Convert codes to weights using LUT
-                let weights = [
-                    LUT[codes_u8[0] as usize],
-                    LUT[codes_u8[1] as usize],
-                    LUT[codes_u8[2] as usize],
-                    LUT[codes_u8[3] as usize],
-                    LUT[codes_u8[4] as usize],
-                    LUT[codes_u8[5] as usize],
-                    LUT[codes_u8[6] as usize],
-                    LUT[codes_u8[7] as usize],
-                ];
-
-                // Load weights and input as AVX2 vectors
-                let w_vec = _mm256_loadu_ps(weights.as_ptr());
+                let w_vec = decode_8_weights_avx2(b0, b1);
                 let x_vec = _mm256_loadu_ps(x.as_ptr().add(col + j));
-
-                // FMA: acc += w * x
-                acc_vec = _mm256_fmadd_ps(w_vec, x_vec, acc_vec);
+                acc_vec0 = _mm256_fmadd_ps(w_vec, x_vec, acc_vec0);
 
                 j += 8;
             }
 
             // Handle tail elements (fewer than 8 remaining) with scalar accumulation
             while j < take {
-                let w = LUT[codes[j] as usize];
+                let packed_byte = blk[j / 4];
+                let shift = (j % 4) * 2;
+                let code = (packed_byte >> shift) & 0x03;
+                let w = match code {
+                    0 => -2.0,
+                    1 => -1.0,
+                    2 => 1.0,
+                    _ => 2.0,
+                };
                 let xi = x[col + j];
                 scalar_acc += w * xi;
                 j += 1;
@@ -207,7 +181,9 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
             }
         }
 
-        // Horizontal sum reduction: sum all 8 lanes of acc_vec
+        let acc_vec = _mm256_add_ps(acc_vec0, acc_vec1);
+
+        // Horizontal sum reduction: sum all 8 lanes of SIMD accumulators
         // Extract two 128-bit halves and add them
         let hi = _mm256_extractf128_ps(acc_vec, 1);
         let lo = _mm256_castps256_ps128(acc_vec);
