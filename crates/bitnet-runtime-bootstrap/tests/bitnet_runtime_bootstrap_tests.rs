@@ -3,9 +3,7 @@
 //! The crate is a façade over `bitnet-startup-contract`, so these tests verify
 //! that the re-exported types are accessible and behave correctly.
 
-use bitnet_runtime_bootstrap::{
-    ContractPolicy, ContractState, ProfileContract, RuntimeComponent,
-};
+use bitnet_runtime_bootstrap::{ContractPolicy, ContractState, ProfileContract, RuntimeComponent};
 use proptest::prelude::*;
 
 // ── smoke tests ─────────────────────────────────────────────────────────────

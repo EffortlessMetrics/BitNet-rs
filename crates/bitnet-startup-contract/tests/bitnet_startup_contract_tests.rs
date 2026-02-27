@@ -29,10 +29,8 @@ fn evaluate_returns_valid_contract_for_every_component() {
 
 #[test]
 fn with_context_accepts_explicit_scenario_environment() {
-    let context = ActiveContext {
-        scenario: TestingScenario::Unit,
-        environment: ExecutionEnvironment::Local,
-    };
+    let context =
+        ActiveContext { scenario: TestingScenario::Unit, environment: ExecutionEnvironment::Local };
     let contract =
         ProfileContract::with_context(RuntimeComponent::Custom, context, ContractPolicy::Observe);
     assert_eq!(contract.context().scenario, TestingScenario::Unit);
