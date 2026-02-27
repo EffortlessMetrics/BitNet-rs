@@ -69,16 +69,16 @@ pub fn probe_cpu() -> CpuCapabilities {
 /// Obtained by calling [`probe_gpu`].
 ///
 /// `BITNET_GPU_FAKE` supports comma-separated backends (`cuda`, `rocm`, `gpu`).
-/// For example `BITNET_GPU_FAKE=rocm` forces ROCm runtime availability for tests.
+/// For example `BITNET_GPU_FAKE=rocm` forces `ROCm` runtime availability for tests.
 /// `BITNET_GPU_FAKE=none` makes all GPU flags `false`.
 /// Strict mode (`BITNET_STRICT_MODE=1`) ignores `BITNET_GPU_FAKE` and probes real hardware.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GpuCapabilities {
-    /// Any GPU backend is available (CUDA and/or ROCm).
+    /// Any GPU backend is available (CUDA and/or `ROCm`).
     pub available: bool,
     /// CUDA runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub cuda_available: bool,
-    /// ROCm runtime was detected (or faked via `BITNET_GPU_FAKE`).
+    /// `ROCm` runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub rocm_available: bool,
 }
 
@@ -199,13 +199,13 @@ fn rocm_available_runtime() -> bool {
 
 #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
 #[inline]
-fn cuda_available_runtime() -> bool {
+const fn cuda_available_runtime() -> bool {
     false
 }
 
 #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
 #[inline]
-fn rocm_available_runtime() -> bool {
+const fn rocm_available_runtime() -> bool {
     false
 }
 
@@ -249,16 +249,17 @@ pub fn detect_simd_level() -> SimdLevel {
 /// Build with [`DeviceCapabilities::detect`] to capture the current machine's
 /// capabilities.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct DeviceCapabilities {
     /// CPU-Rust backend is always available.
     pub cpu_rust: bool,
     /// CUDA backend was compiled in.
     pub cuda_compiled: bool,
-    /// ROCm backend was compiled in.
+    /// `ROCm` backend was compiled in.
     pub rocm_compiled: bool,
     /// CUDA runtime was detected at call time.
     pub cuda_runtime: bool,
-    /// ROCm runtime was detected at call time.
+    /// `ROCm` runtime was detected at call time.
     pub rocm_runtime: bool,
     /// Best SIMD level detected at call time.
     pub simd_level: SimdLevel,
