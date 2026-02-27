@@ -171,6 +171,85 @@ fn sanitize_filename(name: &str) -> String {
     name.replace(['/', '\\'], "_")
 }
 
+/// Result of comparing two [`TraceRecord`]s for cross-validation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TraceComparison {
+    /// Whether the tensor shapes are identical.
+    pub shapes_match: bool,
+    /// Whether the dtype strings are identical.
+    pub dtypes_match: bool,
+    /// Whether the Blake3 hashes are identical (bit-exact match).
+    pub hashes_match: bool,
+    /// Absolute difference between the two RMS values.
+    pub rms_diff: f64,
+    /// `true` if `rms_diff <= rms_tolerance` supplied to [`compare_records`].
+    pub rms_within_tolerance: bool,
+}
+
+impl TraceComparison {
+    /// `true` if shapes, dtypes, and RMS are all within tolerance.
+    pub fn is_ok(&self) -> bool {
+        self.shapes_match && self.dtypes_match && self.rms_within_tolerance
+    }
+}
+
+/// Compare two [`TraceRecord`]s with a caller-supplied RMS tolerance.
+pub fn compare_records(a: &TraceRecord, b: &TraceRecord, rms_tolerance: f64) -> TraceComparison {
+    let rms_diff = (a.rms - b.rms).abs();
+    TraceComparison {
+        shapes_match: a.shape == b.shape,
+        dtypes_match: a.dtype == b.dtype,
+        hashes_match: a.blake3 == b.blake3,
+        rms_diff,
+        rms_within_tolerance: rms_diff <= rms_tolerance,
+    }
+}
+
+/// In-memory sink that collects [`TraceRecord`]s in insertion order.
+///
+/// Useful for unit-testing inference pipelines without writing files to disk.
+#[derive(Debug, Default)]
+pub struct TraceSink {
+    records: Vec<TraceRecord>,
+}
+
+impl TraceSink {
+    /// Create a new, empty sink.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Append a record to the sink.
+    pub fn append(&mut self, record: TraceRecord) {
+        self.records.push(record);
+    }
+
+    /// Number of records currently held by the sink.
+    pub fn len(&self) -> usize {
+        self.records.len()
+    }
+
+    /// `true` if the sink holds no records.
+    pub fn is_empty(&self) -> bool {
+        self.records.is_empty()
+    }
+
+    /// Iterate over records in insertion order.
+    pub fn iter(&self) -> impl Iterator<Item = &TraceRecord> {
+        self.records.iter()
+    }
+
+    /// Return all records whose `name` contains `substr`.
+    pub fn filter_by_name(&self, substr: &str) -> Vec<&TraceRecord> {
+        self.records.iter().filter(|r| r.name.contains(substr)).collect()
+    }
+
+    /// Remove all records from the sink.
+    pub fn clear(&mut self) {
+        self.records.clear();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
