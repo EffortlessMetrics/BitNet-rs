@@ -18,7 +18,7 @@ pub mod receipts; // AC4: Inference receipt generation
 
 // Re-export GGUF types for easy access
 pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_kv_pairs};
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 pub mod ffi_session; // FFI session wrapper for validation-only parity checking
 pub mod parity;
 pub mod rt;
