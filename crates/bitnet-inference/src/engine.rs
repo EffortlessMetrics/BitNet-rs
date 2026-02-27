@@ -56,7 +56,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, instrument, warn};
 
 use crate::{
-    backends::{Backend, CpuBackend, GpuBackend},
+    backends::{Backend, CpuBackend, GpuBackend, NpuBackend},
     cache::{CacheConfig, KVCache},
     config::{GenerationConfig, InferenceConfig},
     gguf,
@@ -748,8 +748,13 @@ impl InferenceEngine {
                 Box::new(GpuBackend::new(model.clone(), device)?)
             }
             Device::Metal => {
-                debug!("Using GPU backend (Metal)");
-                Box::new(GpuBackend::new(model.clone(), device)?)
+                if NpuBackend::is_available() {
+                    debug!("Using NPU backend (Metal)");
+                    Box::new(NpuBackend::new(model.clone(), device)?)
+                } else {
+                    debug!("Using GPU backend (Metal fallback)");
+                    Box::new(GpuBackend::new(model.clone(), device)?)
+                }
             }
         };
 
