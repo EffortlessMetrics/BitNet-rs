@@ -109,12 +109,6 @@ test = false
 doc = false
 
 [[bin]]
-name = "generation_stop_checker"
-path = "fuzz_targets/generation_stop_checker.rs"
-test = false
-doc = false
-
-[[bin]]
 name = "rope_table_gen"
 path = "fuzz_targets/rope_table_gen.rs"
 test = false
