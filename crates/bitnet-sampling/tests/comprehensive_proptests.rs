@@ -15,8 +15,8 @@
 //!  12.  `apply_repetition_penalty` with penalty = 1.0 is a no-op
 
 use bitnet_sampling::{
-    apply_repetition_penalty, apply_temperature, apply_top_p, greedy_sample,
-    softmax_in_place, SamplingConfig, SamplingStrategy,
+    SamplingConfig, SamplingStrategy, apply_repetition_penalty, apply_temperature, apply_top_p,
+    greedy_sample, softmax_in_place,
 };
 use proptest::prelude::*;
 
@@ -33,8 +33,7 @@ fn empty_logits_greedy_returns_error() {
 /// `SamplingStrategy::sample(&[], &[])` must return `Err`, not panic.
 #[test]
 fn empty_logits_strategy_returns_error() {
-    let config =
-        SamplingConfig { temperature: 0.7, seed: Some(0), ..Default::default() };
+    let config = SamplingConfig { temperature: 0.7, seed: Some(0), ..Default::default() };
     let mut strategy = SamplingStrategy::new(config);
     assert!(
         strategy.sample(&[], &[]).is_err(),
