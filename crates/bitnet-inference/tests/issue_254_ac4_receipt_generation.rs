@@ -67,7 +67,6 @@ async fn test_ac4_save_receipt_to_file() -> Result<()> {
 /// Validates environment section in receipt
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow integration path (~300s); run with --ignored for full validation"]
 async fn test_ac4_receipt_environment_variables_long() -> Result<()> {
     if std::env::var("RUN_SLOW_RECEIPT_TESTS").ok().as_deref() != Some("1") {
         eprintln!("Skipping slow receipt test; set RUN_SLOW_RECEIPT_TESTS=1 to enable");

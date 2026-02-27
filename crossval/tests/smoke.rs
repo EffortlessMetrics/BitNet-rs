@@ -32,7 +32,6 @@ fn smoke_env_preflight() {
 
 // Name starts with `smoke_` so we can select via `cargo test smoke -- --ignored` if desired.
 #[test]
-#[ignore = "requires CROSSVAL_GGUF and C++ libraries"]
 fn smoke_first_token_logits_parity() {
     // Keep this tiny (short prompt, 1 step) so the smoke job finishes quickly.
     let Ok(model_path) = env::var("CROSSVAL_GGUF") else {
@@ -56,7 +55,6 @@ fn smoke_first_token_logits_parity() {
 }
 
 #[test]
-#[ignore = "requires model lock file"]
 fn smoke_vocab_lock_validation() {
     // Check that the model vocab matches the lock file
     if !Path::new("crossval-models.lock.json").exists() {

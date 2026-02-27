@@ -206,7 +206,6 @@ async fn test_batch_prefill_timing() {
 /// - Prefill time: 10-15ms (10ms sleep + overhead)
 /// - If timings exceed these by 50%+ on stable hardware, investigate system load
 #[tokio::test]
-#[ignore = "flaky in CI; run with RUN_PERF_TESTS=1 for performance validation"]
 async fn test_batch_prefill_performance_consistency() {
     if std::env::var("RUN_PERF_TESTS").is_err() {
         eprintln!("⏭️  Skipping performance test; set RUN_PERF_TESTS=1 to enable");
