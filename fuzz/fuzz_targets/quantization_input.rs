@@ -56,10 +56,7 @@ fuzz_target!(|input: FuzzInput| {
                 let block_size = (input.block_size as usize).max(1).min(256);
                 let qt = QuantizedTensor::new_with_params(
                     input.i2s_data.clone(),
-                    input.i2s_scales
-                        .iter()
-                        .map(|&s| if s.is_finite() { s } else { 1.0 })
-                        .collect(),
+                    input.i2s_scales.iter().map(|&s| if s.is_finite() { s } else { 1.0 }).collect(),
                     None,
                     input.shape.clone(),
                     QuantizationType::I2S,
