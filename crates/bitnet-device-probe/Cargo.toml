@@ -24,8 +24,9 @@ proptest.workspace = true
 [features]
 default = []
 cpu = []
-gpu = ["cuda"]
+gpu = ["cuda", "rocm"]
 cuda = []
+rocm = []
 
 [lints]
 workspace = true
