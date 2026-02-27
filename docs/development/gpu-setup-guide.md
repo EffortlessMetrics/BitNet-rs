@@ -67,19 +67,19 @@ Device 0: NVIDIA GeForce RTX 4080
 ### Basic CUDA Build
 ```bash
 # Build with CUDA support
-cargo build --no-default-features --release --no-default-features --features gpu
+cargo build --release --no-default-features --features gpu
 
 # Run tests to verify GPU functionality
-cargo test --no-default-features --workspace --no-default-features --features gpu
+cargo test --workspace --no-default-features --features gpu
 ```
 
 ### Advanced GPU Features
 ```bash
 # Build with all GPU optimizations
-cargo build --no-default-features --release --no-default-features --features "cuda,mixed-precision"
+cargo build --release --no-default-features --features "cuda,mixed-precision"
 
 # Build with validation framework for debugging
-cargo build --no-default-features --release --no-default-features --features "cuda,gpu-validation"
+cargo build --release --no-default-features --features "cuda,gpu-validation"
 ```
 
 ## Usage Examples
@@ -359,7 +359,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Copy source and build with GPU support
 COPY . /app
 WORKDIR /app
-RUN cargo build --no-default-features --release --no-default-features --features gpu
+RUN cargo build --release --no-default-features --features gpu
 
 # Run with GPU access
 CMD ["./target/release/bitnet-server", "--gpu", "0"]
