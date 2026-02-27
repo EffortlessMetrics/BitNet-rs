@@ -8,8 +8,11 @@ All notable changes to bitnet-rs will be documented in this file.
 - `chore: fix stale MSRV cache key in compatibility workflow (1.89 → 1.92)` — prevents incorrect CI cache hits from cached 1.89 toolchain artifacts (#805)
 
 ### Added
+- `test: expand proptest coverage for thin-coverage crates` — 15 new property tests across bitnet-bdd-grid, bitnet-honest-compute, bitnet-rope, and bitnet-trace (#834)
+- `test: add snapshot tests for sampling, gguf, and receipts` — 5 new insta snapshots pinning GgufFileInfo display output and receipt schema version string for regression detection (#833)
 - `test: audit and reduce ignored tests` — reduced ignored test count from 91 → 77 by enabling tests that are no longer blocked (#831)
 - `test: expand server and CLI integration tests` — 18 new integration tests covering health endpoint, CORS, security validation, and CLI template parsing (#830)
+- `feat(fuzz): add transformer_config and gguf_kv_read fuzz targets` — 2 new fuzz targets covering TransformerConfig deserialization and GGUF KV key/value read paths (#829)
 - `test(bdd): expand BDD grid with new scenario cells` — 5 new BDD cells (18 total, was 13) in `crates/bitnet-bdd-grid/src/lib.rs` (#828)
 - `test: proptest coverage for bitnet-common` — 9 new property tests in `crates/bitnet-common/tests/property_tests.rs` (MockTensor shapes, QuantizationType round-trips, error types, device consistency, KernelCapabilities ordering, warn_once deduplication) (#826)
 - `test: expand proptest coverage for bitnet-sampling` — 7 new property tests in `crates/bitnet-sampling/tests/property_tests.rs` (temperature scaling, top-k/p filtering, repetition penalty, seed reproducibility, empty context, greedy determinism) (#825)
