@@ -18,6 +18,44 @@ use bitnet_common::Device;
 use bitnet_inference::{GenerationConfig, InferenceEngine};
 use bitnet_tokenizers::TokenizerBuilder;
 
+fn build_generation_config(
+    max_tokens: Option<u32>,
+    temperature: Option<f32>,
+    top_p: Option<f32>,
+    top_k: Option<u32>,
+) -> PyResult<GenerationConfig> {
+    let max_tokens = max_tokens.unwrap_or(100);
+    let temperature = temperature.unwrap_or(0.7);
+    let top_p = top_p.unwrap_or(0.9);
+    let top_k = top_k.unwrap_or(50);
+
+    if max_tokens == 0 {
+        return Err(pyo3::exceptions::PyValueError::new_err("max_tokens must be greater than 0"));
+    }
+
+    if !temperature.is_finite() || temperature < 0.0 {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "temperature must be a finite value >= 0",
+        ));
+    }
+
+    if !top_p.is_finite() || top_p <= 0.0 || top_p > 1.0 {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "top_p must be a finite value in the range (0, 1]",
+        ));
+    }
+
+    if top_k == 0 {
+        return Err(pyo3::exceptions::PyValueError::new_err("top_k must be greater than 0"));
+    }
+
+    Ok(GenerationConfig::default()
+        .with_max_tokens(max_tokens)
+        .with_temperature(temperature)
+        .with_top_p(top_p)
+        .with_top_k(top_k))
+}
+
 /// Python wrapper for the inference engine
 #[pyclass(name = "InferenceEngine")]
 pub struct PyInferenceEngine {
@@ -101,11 +139,7 @@ impl PyInferenceEngine {
                 .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
             rt.block_on(async {
-                let config = GenerationConfig::default()
-                    .with_max_tokens(max_tokens.unwrap_or(100))
-                    .with_temperature(temperature.unwrap_or(0.7))
-                    .with_top_p(top_p.unwrap_or(0.9))
-                    .with_top_k(top_k.unwrap_or(50));
+                let config = build_generation_config(max_tokens, temperature, top_p, top_k)?;
 
                 info!("Starting synchronous generation with prompt length: {}", prompt.len());
                 debug!(
@@ -160,11 +194,7 @@ impl PyInferenceEngine {
     ) -> PyResult<PyStreamingGenerator> {
         info!("Starting streaming generation with prompt length: {}", prompt.len());
 
-        let config = GenerationConfig::default()
-            .with_max_tokens(max_tokens.unwrap_or(100))
-            .with_temperature(temperature.unwrap_or(0.7))
-            .with_top_p(top_p.unwrap_or(0.9))
-            .with_top_k(top_k.unwrap_or(50));
+        let config = build_generation_config(max_tokens, temperature, top_p, top_k)?;
 
         debug!(
             "Generation config: max_tokens={}, temp={:.2}, top_p={:.2}, top_k={}",

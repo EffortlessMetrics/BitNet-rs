@@ -46,6 +46,7 @@ fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(list_available_models, m)?)?;
     m.add_function(wrap_pyfunction!(get_device_info, m)?)?;
     m.add_function(wrap_pyfunction!(set_num_threads, m)?)?;
+    m.add_function(wrap_pyfunction!(batch_generate, m)?)?;
 
     // Add constants
     m.add("CPU", "cpu")?;
