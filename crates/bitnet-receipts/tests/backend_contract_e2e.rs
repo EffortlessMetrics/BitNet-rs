@@ -16,6 +16,8 @@ fn cpu_only_caps() -> KernelCapabilities {
         cpu_rust: true,
         cuda_compiled: false,
         cuda_runtime: false,
+        oneapi_compiled: false,
+        oneapi_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Scalar,
     }
@@ -26,6 +28,8 @@ fn cpu_avx2_caps() -> KernelCapabilities {
         cpu_rust: true,
         cuda_compiled: false,
         cuda_runtime: false,
+        oneapi_compiled: false,
+        oneapi_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }

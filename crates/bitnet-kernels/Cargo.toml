@@ -72,6 +72,7 @@ neon = []
 cuda = ["dep:cudarc", "dep:half", "bitnet-device-probe/cuda"]
 gpu = ["cuda", "vulkan", "bitnet-device-probe/gpu"]  # GPU umbrella
 vulkan = ["bitnet-device-probe/vulkan"]
+oneapi = ["bitnet-common/oneapi", "bitnet-device-probe/oneapi"]
 ffi = ["dep:cc", "dep:bindgen"]
 inference = []
 strict = []  # Strict mode for mock elimination validation

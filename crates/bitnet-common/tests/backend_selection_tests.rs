@@ -16,6 +16,8 @@ fn cpu_only() -> KernelCapabilities {
         cpu_rust: true,
         cuda_compiled: false,
         cuda_runtime: false,
+        oneapi_compiled: false,
+        oneapi_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -26,6 +28,8 @@ fn cuda_full() -> KernelCapabilities {
         cpu_rust: true,
         cuda_compiled: true,
         cuda_runtime: true,
+        oneapi_compiled: false,
+        oneapi_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -36,6 +40,8 @@ fn cuda_compiled_no_runtime() -> KernelCapabilities {
         cpu_rust: true,
         cuda_compiled: true,
         cuda_runtime: false,
+        oneapi_compiled: false,
+        oneapi_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -46,6 +52,8 @@ fn empty_caps() -> KernelCapabilities {
         cpu_rust: false,
         cuda_compiled: false,
         cuda_runtime: false,
+        oneapi_compiled: false,
+        oneapi_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Scalar,
     }
@@ -62,6 +70,7 @@ proptest! {
         BackendRequest::Cpu,
         BackendRequest::Gpu,
         BackendRequest::Cuda,
+        BackendRequest::OneApi,
     ])) {
         let s = variant.to_string();
         prop_assert!(!s.is_empty());
@@ -76,10 +85,11 @@ proptest! {
         BackendRequest::Cpu,
         BackendRequest::Gpu,
         BackendRequest::Cuda,
+        BackendRequest::OneApi,
     ])) {
         // Display must produce one of the known strings
         let s = variant.to_string();
-        let known = ["auto", "cpu", "gpu", "cuda"];
+        let known = ["auto", "cpu", "gpu", "cuda", "oneapi"];
         prop_assert!(known.contains(&s.as_str()), "unexpected display: {s}");
     }
 }
@@ -171,6 +181,27 @@ fn gpu_request_with_cuda_compiled_no_runtime_falls_back_to_cpu() {
     let r = select_backend(BackendRequest::Gpu, &cuda_compiled_no_runtime()).unwrap();
     assert_eq!(r.selected, KernelBackend::CpuRust);
     assert!(r.rationale.contains("falling back to CPU"), "rationale: {}", r.rationale);
+}
+
+#[test]
+fn oneapi_request_strict_fails_cpu_only() {
+    let err = select_backend(BackendRequest::OneApi, &cpu_only()).unwrap_err();
+    assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+}
+
+#[test]
+fn gpu_request_prefers_oneapi_when_cuda_unavailable() {
+    let caps = KernelCapabilities {
+        cpu_rust: true,
+        cuda_compiled: false,
+        cuda_runtime: false,
+        oneapi_compiled: true,
+        oneapi_runtime: true,
+        cpp_ffi: false,
+        simd_level: SimdLevel::Avx2,
+    };
+    let r = select_backend(BackendRequest::Gpu, &caps).unwrap();
+    assert_eq!(r.selected, KernelBackend::OneApi);
 }
 
 #[test]
