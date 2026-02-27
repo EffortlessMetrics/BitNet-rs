@@ -106,6 +106,7 @@ fn test_error_handling() {
     let error_msg = error_str.to_str().expect("Invalid UTF-8 in error message");
     assert!(!error_msg.is_empty());
     assert!(error_msg.contains("null"), "Error should mention null pointer");
+    assert_eq!(error_msg, "Invalid argument: path cannot be null");
 
     // Test error clearing
     bitnet_clear_last_error();
