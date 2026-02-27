@@ -312,12 +312,12 @@ impl Default for EngineStateTracker {
 
 impl EngineStateTracker {
     /// Create a new tracker in the [`EngineState::Idle`] state.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { state: EngineState::Idle }
     }
 
     /// Return a reference to the current state.
-    pub fn state(&self) -> &EngineState {
+    pub const fn state(&self) -> &EngineState {
         &self.state
     }
 
@@ -383,7 +383,7 @@ impl ConcurrencyConfig {
     /// assert!(cfg.allows(3));
     /// assert!(!cfg.allows(4));
     /// ```
-    pub fn allows(&self, active: usize) -> bool {
+    pub const fn allows(&self, active: usize) -> bool {
         active < self.max_concurrent
     }
 }
