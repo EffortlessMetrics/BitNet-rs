@@ -37,8 +37,11 @@ pub async fn collect_cpu_info() -> Result<CpuInfo, String> {
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     sys.refresh_cpu_all();
 
-    let cores = num_cpus::get_physical();
-    let threads = num_cpus::get();
+    let threads = num_cpus::get().max(1);
+    // In constrained/containerized environments, physical core detection can report
+    // a host-wide value while logical CPUs are cgroup-limited. Clamp to the
+    // visible logical thread count so health data remains internally consistent.
+    let cores = num_cpus::get_physical().max(1).min(threads);
     let utilization = sys.global_cpu_usage() as f64 / 100.0; // Normalize to 0.0-1.0
 
     let simd_capabilities = detect_simd_capabilities();
