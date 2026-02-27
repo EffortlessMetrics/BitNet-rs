@@ -97,8 +97,8 @@ impl LookupTable {
 
     /// Quantize a value using the lookup table
     pub fn quantize(&self, value: f32) -> i8 {
-        let index = ((value / self.scale + 128.0).round() as usize).clamp(0, 255);
-        self.forward[index]
+        let index = (value / self.scale + 128.0).round() as i32;
+        self.forward[index.clamp(0, 255) as usize]
     }
 
     /// Dequantize a value using the lookup table
@@ -457,10 +457,10 @@ impl TL1Quantizer {
 
                 // Use lookup table for each element
                 let mut result = [0i8; 4];
-                for j in 0..4 {
-                    let idx = vgetq_lane_u32::<0>(indices).min(255) as usize;
-                    result[j] = lookup_table.forward[idx];
-                }
+                result[0] = lookup_table.forward[vgetq_lane_u32::<0>(indices).min(255) as usize];
+                result[1] = lookup_table.forward[vgetq_lane_u32::<1>(indices).min(255) as usize];
+                result[2] = lookup_table.forward[vgetq_lane_u32::<2>(indices).min(255) as usize];
+                result[3] = lookup_table.forward[vgetq_lane_u32::<3>(indices).min(255) as usize];
 
                 // Store results
                 std::ptr::copy_nonoverlapping(result.as_ptr(), output.as_mut_ptr().add(i * 4), 4);
