@@ -13,13 +13,30 @@ export interface InitOutput {
 }
 
 /**
+ * Node/browser-friendly module initialization input.
+ *
+ * In Node.js this supports file paths and Buffer/typed array payloads.
+ * In browsers this supports Request/Response/URL-based loading.
+ */
+export type InitInput =
+  | string
+  | URL
+  | BufferSource
+  | WebAssembly.Module
+  | Response
+  | Request;
+
+/**
+ * Runtime-neutral readable stream type for browser and Node.js.
+ */
+export type BitNetReadableStream = ReadableStream<Uint8Array>;
+
+/**
  * Initialize the WebAssembly module
  * @param module_or_path - WebAssembly module or path to .wasm file
  * @returns Promise that resolves to the initialized module
  */
 export default function init(module_or_path?: InitInput | Promise<InitInput>): Promise<InitOutput>;
-
-export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 /**
  * Configuration for WASM model loading
@@ -254,7 +271,7 @@ export class WasmGenerationStream {
    * Convert to ReadableStream
    * @returns ReadableStream for use with Streams API
    */
-  to_readable_stream(): ReadableStream<Uint8Array>;
+  to_readable_stream(): BitNetReadableStream;
 }
 
 /**
