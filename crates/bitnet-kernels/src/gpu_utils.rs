@@ -5,10 +5,12 @@
 
 use std::env;
 use std::process::Command;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 const PROBE_POLL_INTERVAL: Duration = Duration::from_millis(50);
+static REAL_GPU_INFO_CACHE: OnceLock<GpuInfo> = OnceLock::new();
 
 /// Run a shell command with a hard-kill timeout. Returns `false` on timeout or failure.
 ///
@@ -106,6 +108,16 @@ pub fn get_gpu_info() -> GpuInfo {
         };
     }
 
+    // Fake GPU selection is intentionally not cached, so tests and tooling can
+    // change BITNET_GPU_FAKE across calls and get deterministic responses.
+    if env::var("BITNET_GPU_CACHE").as_deref() == Ok("0") {
+        return detect_real_gpu_info();
+    }
+
+    REAL_GPU_INFO_CACHE.get_or_init(detect_real_gpu_info).clone()
+}
+
+fn detect_real_gpu_info() -> GpuInfo {
     let metal = cfg!(target_os = "macos");
 
     let cuda = probe_command("nvidia-smi", &["--query-gpu=gpu_name", "--format=csv,noheader"]);
