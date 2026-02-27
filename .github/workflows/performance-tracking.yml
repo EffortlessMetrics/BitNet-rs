@@ -62,7 +62,7 @@ jobs:
 
       - name: Run workspace tests
         run: |
-          cargo test --workspace --no-default-features --features cpu -- --test-threads 4 2>&1 | tail -20
+          cargo test --locked --workspace --no-default-features --features cpu -- --test-threads 4 2>&1 | tail -20
 
   performance-benchmark:
     name: Performance Benchmark (${{ matrix.platform }})
