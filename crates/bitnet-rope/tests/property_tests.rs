@@ -22,7 +22,7 @@ fn arb_seq_len() -> impl Strategy<Value = usize> {
 
 /// A valid RoPE base in (0, 1_000_000].
 fn arb_valid_base() -> impl Strategy<Value = f32> {
-    (1.0f32..=1_000_000.0f32)
+    1.0f32..=1_000_000.0f32
 }
 
 // ── Property tests ───────────────────────────────────────────────────────────
@@ -102,6 +102,71 @@ proptest! {
     #[test]
     fn resolve_base_some_returns_value(base in arb_valid_base()) {
         prop_assert_eq!(resolve_base(Some(base)), base);
+    }
+
+    /// Every entry in the generated sin/cos tables is a finite f32 (no NaN or Inf).
+    #[test]
+    fn all_table_values_are_finite(
+        dim     in arb_even_dim(),
+        seq_len in arb_seq_len(),
+        base    in arb_valid_base(),
+    ) {
+        let tables = build_tables(dim, seq_len, base).expect("valid inputs must succeed");
+        for (i, &v) in tables.sin.iter().enumerate() {
+            prop_assert!(v.is_finite(), "sin[{i}] is not finite: {v}");
+        }
+        for (i, &v) in tables.cos.iter().enumerate() {
+            prop_assert!(v.is_finite(), "cos[{i}] is not finite: {v}");
+        }
+    }
+
+    /// At sequence position 0 the entire row is the identity: sin ≈ 0, cos ≈ 1.
+    ///
+    /// This holds because every angle at position 0 is `0 * inv_freq[i] = 0`.
+    #[test]
+    fn position_zero_row_is_always_identity(
+        dim     in arb_even_dim(),
+        seq_len in arb_seq_len(),
+        base    in arb_valid_base(),
+    ) {
+        let tables = build_tables(dim, seq_len, base).expect("valid inputs must succeed");
+        let half = tables.half_dim;
+        for i in 0..half {
+            prop_assert!(
+                tables.sin[i].abs() < 1e-6,
+                "sin[{i}] at pos=0 should be ~0, got {}",
+                tables.sin[i]
+            );
+            prop_assert!(
+                (tables.cos[i] - 1.0_f32).abs() < 1e-6,
+                "cos[{i}] at pos=0 should be ~1, got {}",
+                tables.cos[i]
+            );
+        }
+    }
+
+    /// The first inv_freq component is always 1.0 (base^0 = 1), so at position 1
+    /// the first sin/cos entry equals sin(1.0)/cos(1.0) regardless of base or dim.
+    #[test]
+    fn first_freq_component_at_position_one_is_unit(
+        dim  in arb_even_dim(),
+        base in arb_valid_base(),
+    ) {
+        // Need seq_len >= 2 to have a position-1 row.
+        let tables = build_tables(dim, 2, base).expect("valid inputs must succeed");
+        let half = tables.half_dim;
+        let expected_sin = 1.0_f32.sin();
+        let expected_cos = 1.0_f32.cos();
+        prop_assert!(
+            (tables.sin[half] - expected_sin).abs() < 1e-5,
+            "sin at pos=1, freq=0 should be sin(1)={expected_sin}, got {}",
+            tables.sin[half]
+        );
+        prop_assert!(
+            (tables.cos[half] - expected_cos).abs() < 1e-5,
+            "cos at pos=1, freq=0 should be cos(1)={expected_cos}, got {}",
+            tables.cos[half]
+        );
     }
 }
 

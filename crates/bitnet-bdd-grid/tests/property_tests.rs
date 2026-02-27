@@ -6,8 +6,14 @@
 //! - find() is consistent with rows()
 //! - supports() and violations() are inverses
 //! - Cell intent strings are non-empty
+//! - All (scenario, environment) pairs in curated() are unique
+//! - Every feature label string is non-empty
+//! - feature_set_from_names with empty input produces empty set
+//! - supports() returns false when required features are absent
 
-use bitnet_bdd_grid::{ExecutionEnvironment, TestingScenario, curated};
+use bitnet_bdd_grid::{
+    ExecutionEnvironment, FeatureSet, TestingScenario, curated, feature_set_from_names,
+};
 use proptest::prelude::*;
 
 proptest! {
@@ -74,6 +80,63 @@ proptest! {
     fn all_intents_non_empty(_seed in 0u64..1000) {
         for cell in curated().rows() {
             prop_assert!(!cell.intent.is_empty(), "Cell {:?}/{:?} has empty intent", cell.scenario, cell.environment);
+        }
+    }
+
+    /// Every (scenario, environment) pair in curated() is unique — no two cells share a key.
+    #[test]
+    fn all_scenario_env_pairs_are_unique(_seed in 0u64..1000) {
+        let rows = curated();
+        let cells = rows.rows();
+        for (i, a) in cells.iter().enumerate() {
+            for b in cells.iter().skip(i + 1) {
+                prop_assert!(
+                    !(a.scenario == b.scenario && a.environment == b.environment),
+                    "Duplicate cell for {:?}/{:?}",
+                    a.scenario,
+                    a.environment,
+                );
+            }
+        }
+    }
+
+    /// Every required-feature label returned by labels() is a non-empty string.
+    #[test]
+    fn every_required_feature_label_is_non_empty(_seed in 0u64..1000) {
+        for cell in curated().rows() {
+            for label in cell.required_features.labels() {
+                prop_assert!(
+                    !label.is_empty(),
+                    "Empty feature label in required_features for {:?}/{:?}",
+                    cell.scenario,
+                    cell.environment
+                );
+            }
+        }
+    }
+
+    /// `feature_set_from_names` with an empty slice always produces an empty FeatureSet.
+    #[test]
+    fn feature_set_from_names_empty_input_is_empty(_seed in 0u64..1000) {
+        let set = feature_set_from_names(&[]);
+        prop_assert!(set.is_empty(), "feature_set_from_names(&[]) must return an empty set");
+    }
+
+    /// `supports()` returns false when the active feature set is empty but required_features
+    /// is non-empty — absent required features always block support.
+    #[test]
+    fn supports_false_when_required_features_absent(_seed in 0u64..1000) {
+        let empty = FeatureSet::new();
+        for cell in curated().rows() {
+            if !cell.required_features.is_empty() {
+                prop_assert!(
+                    !cell.supports(&empty),
+                    "Cell {:?}/{:?}: supports() must be false when active set is empty \
+                     but required_features is non-empty",
+                    cell.scenario,
+                    cell.environment,
+                );
+            }
         }
     }
 }
