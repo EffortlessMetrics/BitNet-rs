@@ -88,11 +88,7 @@ impl Backend for CpuBackend {
         Box::new(Self { model: self.model.clone(), num_threads: self.num_threads })
     }
 
-    async fn forward(
-        &self,
-        input: &ConcreteTensor,
-        cache: &mut KVCache,
-    ) -> Result<ConcreteTensor> {
+    async fn forward(&self, input: &ConcreteTensor, cache: &mut KVCache) -> Result<ConcreteTensor> {
         debug!("CPU forward pass with input shape: {:?}", input.shape());
 
         // Set thread count for this operation
@@ -199,11 +195,7 @@ impl Backend for GpuBackend {
         })
     }
 
-    async fn forward(
-        &self,
-        input: &ConcreteTensor,
-        cache: &mut KVCache,
-    ) -> Result<ConcreteTensor> {
+    async fn forward(&self, input: &ConcreteTensor, cache: &mut KVCache) -> Result<ConcreteTensor> {
         debug!("GPU forward pass with input shape: {:?}", input.shape());
 
         // Ensure input is on the correct device
