@@ -322,7 +322,8 @@ impl BitNetServer {
             let mut interval = tokio::time::interval(Duration::from_secs(300)); // 5 minutes
             loop {
                 interval.tick().await;
-                concurrency_manager.cleanup_rate_limiters().await;
+                // Cleanup rate limiters inactive for 1 hour
+                concurrency_manager.cleanup_rate_limiters(Duration::from_secs(3600)).await;
             }
         });
 

@@ -393,6 +393,11 @@ impl ConcurrencyManager {
             active.len()
         };
 
+        let per_ip_limiter_count = {
+            let limiters = self.per_ip_rate_limiters.read().await;
+            limiters.len()
+        };
+
         let current_load = self.get_current_load().await;
         let circuit_breaker_state = self.circuit_breaker.get_state().await;
 
@@ -405,6 +410,7 @@ impl ConcurrencyManager {
             backpressure_activations: self.backpressure_active.load(Ordering::Relaxed),
             circuit_breaker_state: format!("{:?}", circuit_breaker_state),
             available_permits: self.request_semaphore.available_permits(),
+            per_ip_limiter_count,
         }
     }
 
@@ -436,11 +442,28 @@ impl ConcurrencyManager {
     }
 
     /// Cleanup old rate limiters (should be called periodically)
-    pub async fn cleanup_rate_limiters(&self) {
+    pub async fn cleanup_rate_limiters(&self, max_idle: Duration) {
         let mut limiters = self.per_ip_rate_limiters.write().await;
-        // TODO: Remove old rate limiters based on last access time
-        // For now, we keep all limiters (memory leak potential)
-        let _ = &mut limiters;
+        let now = Instant::now();
+        let mut keys_to_remove = Vec::new();
+
+        for (ip, bucket) in limiters.iter() {
+            // Check if bucket is idle
+            // We use try_lock to avoid blocking if the bucket is currently in use
+            if let Ok(last_refill) = bucket.last_refill.try_lock() {
+                if now.duration_since(*last_refill) > max_idle {
+                    keys_to_remove.push(*ip);
+                }
+            }
+        }
+
+        if !keys_to_remove.is_empty() {
+            let count = keys_to_remove.len();
+            for ip in keys_to_remove {
+                limiters.remove(&ip);
+            }
+            debug!(removed = count, "Cleaned up stale rate limiters");
+        }
     }
 }
 
@@ -501,6 +524,7 @@ pub struct ConcurrencyStats {
     pub backpressure_activations: u64,
     pub circuit_breaker_state: String,
     pub available_permits: usize,
+    pub per_ip_limiter_count: usize,
 }
 
 /// Concurrency health status
@@ -510,4 +534,56 @@ pub struct ConcurrencyHealth {
     pub current_load: f64,
     pub circuit_breaker_state: CircuitBreakerState,
     pub issues: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_rate_limiter_cleanup() {
+        // Create configuration with per-IP rate limiting enabled
+        let mut config = ConcurrencyConfig::default();
+        config.per_ip_rate_limit = Some(10);
+
+        let manager = ConcurrencyManager::new(config);
+
+        // Initial state should be empty (but per_ip_limiter_count isn't exposed yet via get_stats for newly created manager until acquire is called)
+        let stats = manager.get_stats().await;
+        assert_eq!(stats.per_ip_limiter_count, 0);
+
+        // Create a request metadata for a specific IP
+        let metadata = RequestMetadata {
+            id: "test-req".to_string(),
+            client_ip: "127.0.0.1".parse().unwrap(),
+            user_agent: None,
+            start_time: Instant::now(),
+            priority: crate::batch_engine::RequestPriority::Normal,
+        };
+
+        // Acquire a slot, which should create a rate limiter for the IP
+        let _slot = manager.acquire_request_slot(metadata.clone()).await.unwrap();
+
+        // Check that rate limiter was created
+        let stats = manager.get_stats().await;
+        assert_eq!(stats.per_ip_limiter_count, 1);
+
+        // Cleanup with very long duration - should NOT remove it (it was just used)
+        manager.cleanup_rate_limiters(Duration::from_secs(3600)).await;
+        let stats = manager.get_stats().await;
+        assert_eq!(stats.per_ip_limiter_count, 1);
+
+        // Wait a tiny bit to ensure time advances
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        // Cleanup with very short duration - SHOULD remove it
+        // The last_refill is updated when acquire_request_slot calls try_consume -> refill
+        // So it's effectively "now"
+        // But since we slept for 10ms, the last_refill (from acquire) is > 1ns old.
+        manager.cleanup_rate_limiters(Duration::from_nanos(1)).await;
+
+        let stats = manager.get_stats().await;
+        assert_eq!(stats.per_ip_limiter_count, 0);
+    }
 }
