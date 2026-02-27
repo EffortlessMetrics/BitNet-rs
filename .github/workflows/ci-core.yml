@@ -59,6 +59,7 @@ env:
   RUSTFLAGS: "-Dwarnings"
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  BITNET_SKIP_SLOW_TESTS: "1"
 
 jobs:
   # Job 1: Build and test on Linux

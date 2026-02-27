@@ -177,7 +177,6 @@ async fn test_e2e_golden_path_pinned_output() -> Result<()> {
 ///
 /// Skipped unless `BITNET_MODEL_PATH` (or `BITNET_GGUF`) is set.
 #[tokio::test]
-#[ignore = "requires real model: set BITNET_MODEL_PATH env var"]
 async fn test_e2e_real_model_golden_path() -> Result<()> {
     let model_path = match std::env::var("BITNET_MODEL_PATH").or(std::env::var("BITNET_GGUF")) {
         Ok(p) => p,

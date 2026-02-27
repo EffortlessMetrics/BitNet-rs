@@ -107,7 +107,6 @@ mod round_trip_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_roundtrip_ascii_text() -> Result<()> {
         // Skip if BITNET_SKIP_SLOW_TESTS is set
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
@@ -154,7 +153,6 @@ mod round_trip_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_roundtrip_special_characters() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: special characters roundtrip");
@@ -202,7 +200,6 @@ mod round_trip_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_roundtrip_edge_cases() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: edge cases roundtrip");
@@ -255,7 +252,6 @@ mod special_token_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_bos_eos_token_resolution() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: BOS/EOS token resolution");
@@ -321,7 +317,6 @@ mod special_token_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_eot_token_resolution() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: EOT token resolution");
@@ -412,7 +407,6 @@ mod determinism_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_deterministic_encoding() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: deterministic encoding");
@@ -453,7 +447,6 @@ mod determinism_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_deterministic_decoding() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: deterministic decoding");
@@ -498,7 +491,6 @@ mod vocab_size_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     fn test_vocab_size_consistency() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: vocab size consistency");
