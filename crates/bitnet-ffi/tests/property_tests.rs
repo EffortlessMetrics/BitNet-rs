@@ -8,8 +8,8 @@
 //! - Thread-local error-state consistency
 
 use bitnet_ffi::{
-    clear_last_error, get_last_error, set_last_error, BitNetCConfig, BitNetCError,
-    BitNetCInferenceConfig, MemoryStats,
+    BitNetCConfig, BitNetCError, BitNetCInferenceConfig, MemoryStats, clear_last_error,
+    get_last_error, set_last_error,
 };
 use proptest::prelude::*;
 
