@@ -8,6 +8,11 @@ All notable changes to bitnet-rs will be documented in this file.
 - `chore: fix stale MSRV cache key in compatibility workflow (1.89 → 1.92)` — prevents incorrect CI cache hits from cached 1.89 toolchain artifacts (#805)
 
 ### Added
+- `test: proptest coverage for bitnet-receipts` — 14 new proptests in `crates/bitnet-receipts/tests/property_tests.rs` (schema version, builder, JSON round-trips, kernel ID validation, honest compute gates, token counts) (#823)
+- `test: proptest coverage for bitnet-validation` — 8 new proptests in `crates/bitnet-validation/tests/property_tests.rs` (LayerNorm bounds, error messages, policy keys, gate modes) (#822)
+- `test: proptest coverage for bitnet-models` — 13 new proptests in `crates/bitnet-models/tests/property_tests.rs` (ModelConfig validation, GgufTensorType element sizes, GGUF magic bytes, path safety) (#821)
+- `feat(fuzz): add quantization_input fuzz target` — new `fuzz/fuzz_targets/quantization_input.rs` covering I2S/TL1/TL2 dequantize, QK256 parsing, gemv_qk256_row, unpack/code_to_f32 (#820)
+- `test: expand property test coverage for bitnet-tokenizers` — 8 new proptests in `crates/bitnet-tokenizers/tests/property_tests.rs` (token encoding bounds, special tokens, vocab size, encode-decode consistency, config validation, round-trip determinism) (#819)
 - `feat(fuzz): add safetensors parser fuzz targets` — `fuzz/fuzz_targets/safetensors_metadata.rs` targets `SafeTensors::read_metadata()` header path; `fuzz/fuzz_targets/safetensors_parser.rs` replaced original stub; `fuzz/Cargo.toml` updated (#813)
 - `test(bdd): expand BDD grid coverage` — 5 new BDD grid cells added in `crates/bitnet-bdd-grid/src/lib.rs` (Unit/Ci, Integration/Ci, Performance/Local, Development/Local, Smoke/Ci); grid snapshot count updated from 8 to 13 (#814)
 - `test: add proptest coverage for bitnet-ffi` — `crates/bitnet-ffi/tests/property_tests.rs` with 31 tests (25 proptest + 6 unit): BitNetCConfig/BitNetCInferenceConfig round-trips, BitNetCError display invariants, MemoryStats arithmetic, thread-local error state (#815)
