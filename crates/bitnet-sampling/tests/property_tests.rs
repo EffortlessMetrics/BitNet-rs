@@ -11,7 +11,8 @@
 //! - Multi-step sampling always stays within vocab bounds
 
 use bitnet_sampling::{
-    SamplingConfig, SamplingStrategy, apply_temperature, greedy_sample, softmax_in_place,
+    apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p, greedy_sample,
+    softmax_in_place, SamplingConfig, SamplingStrategy,
 };
 use proptest::prelude::*;
 
@@ -281,4 +282,194 @@ fn reset_leaves_strategy_functional() {
 fn snapshot_default_config() {
     let config = SamplingConfig::default();
     insta::assert_debug_snapshot!("sampling_config_default", config);
+}
+
+// ── New proptest coverage (v2) ────────────────────────────────────────────────
+//  Focus areas:
+//  1. temperature > 0 → softmax normalization after scaling
+//  2. top-k filtering → at most K non-zero probabilities
+//  3. top-p nucleus → non-zero probs cover ≥ P cumulative mass
+//  4. repetition penalty lowers the penalized token's logit
+//  5. seed reproducibility over multiple generation steps
+//  6. empty context is always valid (no panic / error)
+//  7. temperature=0 result is independent of the RNG seed
+
+proptest! {
+    /// After `apply_temperature` (temp > 0) followed by `softmax_in_place` the
+    /// probabilities are non-negative and sum to ~1.0.
+    #[test]
+    fn temperature_scaling_then_softmax_sums_to_one(
+        logits in prop::collection::vec(-30.0f32..30.0f32, 1..=128),
+        temperature in 0.01f32..5.0f32,
+    ) {
+        let mut buf = logits.clone();
+        apply_temperature(&mut buf, temperature);
+        softmax_in_place(&mut buf);
+        for &p in &buf {
+            prop_assert!(p >= 0.0 && p.is_finite(), "probability {} is not valid", p);
+        }
+        let sum: f32 = buf.iter().sum();
+        prop_assert!(
+            (sum - 1.0).abs() < 1e-4,
+            "softmax sum after temperature={} is {}, expected ~1.0",
+            temperature,
+            sum
+        );
+    }
+
+    /// After `apply_top_k(k)` and `softmax_in_place`, at most `k` entries are
+    /// non-zero — temperature scaling preserves ordering so top-k is stable.
+    #[test]
+    fn top_k_filtering_limits_nonzero_count(
+        logits in prop::collection::vec(-10.0f32..10.0f32, 2..=64),
+        k in 1usize..=32,
+        temperature in 0.1f32..3.0f32,
+    ) {
+        let effective_k = k.min(logits.len());
+        let mut buf = logits.clone();
+        apply_temperature(&mut buf, temperature);
+        apply_top_k(&mut buf, effective_k);
+        softmax_in_place(&mut buf);
+        let nonzero = buf.iter().filter(|&&p| p > 0.0).count();
+        prop_assert!(
+            nonzero <= effective_k,
+            "nonzero={} > top_k={} after top-k filtering",
+            nonzero,
+            effective_k
+        );
+    }
+
+    /// After `softmax_in_place` + `apply_top_p(p)`, the remaining non-zero
+    /// probabilities represent the nucleus and their sum is ≥ top_p (the
+    /// nucleus contains at least `top_p` probability mass).
+    #[test]
+    fn top_p_nucleus_covers_at_least_p(
+        logits in prop::collection::vec(-10.0f32..10.0f32, 2..=64),
+        top_p in 0.1f32..0.99f32,
+    ) {
+        let mut probs = logits.clone();
+        softmax_in_place(&mut probs);
+        apply_top_p(&mut probs, top_p);
+        let nucleus_mass: f32 = probs.iter().filter(|&&p| p > 0.0).sum();
+        prop_assert!(
+            nucleus_mass >= top_p - 1e-5,
+            "nucleus mass {} < top_p={} — nucleus does not cover required probability",
+            nucleus_mass,
+            top_p
+        );
+    }
+
+    /// `apply_repetition_penalty` with penalty > 1.0 must reduce the logit of
+    /// every token present in the context relative to its unpenalized value.
+    ///
+    /// Positive logit → divided by penalty (smaller positive).
+    /// Negative logit → multiplied by penalty (more negative).
+    #[test]
+    fn repetition_penalty_lowers_penalized_token_logit(
+        logits in prop::collection::vec(-20.0f32..20.0f32, 2..=64),
+        token_idx in 0usize..62,
+        penalty in 1.01f32..4.0f32,
+    ) {
+        let token_idx = token_idx % logits.len();
+        let original = logits[token_idx];
+        let mut penalized = logits.clone();
+        let token_id = token_idx as u32;
+        apply_repetition_penalty(&mut penalized, &[token_id], penalty);
+        let after = penalized[token_idx];
+        if original > 0.0 {
+            prop_assert!(
+                after < original,
+                "positive logit {} was not reduced by penalty {}; got {}",
+                original, penalty, after
+            );
+        } else if original < 0.0 {
+            prop_assert!(
+                after < original,
+                "negative logit {} was not pushed further negative by penalty {}; got {}",
+                original, penalty, after
+            );
+        }
+        // logit == 0.0 is unaffected; no assertion needed.
+    }
+
+    /// Two `SamplingStrategy` instances built with the **same seed** must
+    /// produce the **same sequence** of tokens over multiple steps.
+    #[test]
+    fn seed_reproducibility_multi_step(
+        logits in prop::collection::vec(-3.0f32..3.0f32, 2..=30),
+        seed in any::<u64>(),
+        steps in 2usize..8,
+        temperature in 0.5f32..2.0f32,
+    ) {
+        let make_strategy = || SamplingStrategy::new(SamplingConfig {
+            temperature,
+            top_k: 0,
+            top_p: 1.0,
+            repetition_penalty: 1.0,
+            seed: Some(seed),
+        });
+        let mut s1 = make_strategy();
+        let mut s2 = make_strategy();
+        let mut ctx1: Vec<u32> = Vec::new();
+        let mut ctx2: Vec<u32> = Vec::new();
+        for step in 0..steps {
+            let t1 = s1.sample(&logits, &ctx1).unwrap();
+            let t2 = s2.sample(&logits, &ctx2).unwrap();
+            prop_assert_eq!(
+                t1, t2,
+                "step {}: same seed={} produced different tokens ({} vs {})",
+                step, seed, t1, t2
+            );
+            ctx1.push(t1);
+            ctx2.push(t2);
+        }
+    }
+
+    /// `SamplingStrategy::sample` with an **empty context** always succeeds and
+    /// returns a valid token index — regardless of config or logit values.
+    #[test]
+    fn empty_context_sampling_always_succeeds(
+        logits in prop::collection::vec(-10.0f32..10.0f32, 1..=64),
+        temperature in 0.0f32..2.0f32,
+        top_k in 0u32..=16,
+        top_p in 0.5f32..1.0f32,
+        penalty in 1.0f32..3.0f32,
+        seed in any::<u64>(),
+    ) {
+        let config = SamplingConfig { temperature, top_k, top_p, repetition_penalty: penalty, seed: Some(seed) };
+        let mut strategy = SamplingStrategy::new(config);
+        let result = strategy.sample(&logits, &[]);
+        prop_assert!(result.is_ok(), "sample with empty context returned Err: {:?}", result.err());
+        let token = result.unwrap();
+        prop_assert!(
+            (token as usize) < logits.len(),
+            "empty-context token {} out of range {}",
+            token,
+            logits.len()
+        );
+    }
+
+    /// With `temperature=0.0` (greedy), the sampled token is the same regardless
+    /// of the RNG seed — greedy is deterministic by construction.
+    #[test]
+    fn temperature_zero_result_independent_of_seed(
+        logits in prop::collection::vec(-10.0f32..10.0f32, 2..=64),
+        seed1 in any::<u64>(),
+        seed2 in any::<u64>(),
+    ) {
+        let make = |seed| SamplingStrategy::new(SamplingConfig {
+            temperature: 0.0,
+            top_k: 0,
+            top_p: 1.0,
+            repetition_penalty: 1.0,
+            seed: Some(seed),
+        });
+        let t1 = make(seed1).sample(&logits, &[]).unwrap();
+        let t2 = make(seed2).sample(&logits, &[]).unwrap();
+        prop_assert_eq!(
+            t1, t2,
+            "temperature=0 gave different tokens for seed1={} ({}) and seed2={} ({})",
+            seed1, t1, seed2, t2
+        );
+    }
 }
