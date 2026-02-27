@@ -436,23 +436,18 @@ impl KernelProvider for CudaKernel {
 
 /// Check if CUDA is available on the system
 pub fn is_cuda_available() -> bool {
-    // Try to create a CUDA context
-    CudaContext::new(0).is_ok()
+    cuda_device_count() > 0
 }
 
 /// Get the number of available CUDA devices
 pub fn cuda_device_count() -> usize {
-    // Try to create contexts for different device IDs to count devices
-    let mut count = 0;
-    for device_id in 0..16 {
-        // Check up to 16 devices
-        if CudaContext::new(device_id).is_ok() {
-            count += 1;
-        } else {
-            break; // Stop at first failure
+    match CudaContext::device_count() {
+        Ok(count) => count.max(0) as usize,
+        Err(e) => {
+            log::debug!("CUDA device count query failed: {:?}", e);
+            0
         }
     }
-    count
 }
 
 /// List all available CUDA devices with their information
