@@ -1,9 +1,10 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#929.
+> **Last updated**: reflects implementation state after PRs #608–#932.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
-> **Recent wave (PRs #926–#929)**: 1200+ tests milestone reached; ~200 new tests added across 6 crates
-> (bitnet-cli, bitnet-gguf, bitnet-generation, bitnet-engine-core, bitnet-device-probe, bitnet-logits).
+> **Recent wave (PRs #926–#932)**: 1400+ tests milestone reached; ~200 new tests added across 6 crates
+> (bitnet-cli, bitnet-gguf, bitnet-generation, bitnet-engine-core, bitnet-device-probe, bitnet-logits)
+> plus 69 multi-crate integration tests (#931) and 80 unit tests for runtime-feature-flags and kernels (#932).
 
 ---
 
@@ -175,10 +176,10 @@
 | 29 tests for `bitnet-transformer` (RoPE invariants, KVCache shape/seq-len properties) and 37 tests for `bitnet-honest-compute` (ComputeMode gating, receipt validation, honest-compute enforcement) | `crates/bitnet-transformer/tests/`, `crates/bitnet-honest-compute/tests/` | #921 |
 | 26 extended tests for `bitnet-st2gguf` (conversion pipeline, quantization type handling, error variants) and 20 tests for `bitnet-server` (batch engine config, CORS, security middleware) | `crates/bitnet-st2gguf/tests/`, `crates/bitnet-server/tests/` | #922 |
 
-### ✅ Phase 7: Test Coverage (DONE — 1200+ tests)
+### ✅ Phase 7: Test Coverage (DONE — 1400+ tests)
 
 All Phase 7 test coverage targets have been met:
-- **1200+ total tests** across workspace (snapshot, property, integration, fuzz, E2E); ~200 new tests added across 6 crates in PRs #926–#929
+- **1400+ total tests** across workspace (snapshot, property, integration, fuzz, E2E); ~200 new tests added across 6 crates in PRs #926–#929, plus 69 multi-crate integration tests (#931) and 80 unit tests for runtime-feature-flags and kernels (#932)
 - **Ignored-test reduction**: wave 3 (#925) added justification strings to all remaining `#[ignore]` markers and env-var guards for environment-sensitive tests
 - **Phase 6 SRP microcrates**: bitnet-device-probe, bitnet-logits, bitnet-generation,
   bitnet-sampling, bitnet-transformer, bitnet-engine-core, bitnet-gguf — all ✅ DONE
