@@ -5,6 +5,16 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `feat(kernels): implement AVX-512 kernels for TL2 quantization` — New AVX-512 optimised matrix-kernel for TL2 2-bit quantization; runtime-dispatched alongside existing AVX2 and scalar paths (#997)
+- `feat(vulkan): add initial Vulkan runtime probing and feature wiring` — Initial Vulkan backend probe and feature gate wiring; detects Vulkan ICD at runtime and exposes capability via `DeviceProbe` (#993)
+- `feat(metal): enable and wire Metal backend support across workspace` — Metal GPU backend enabled and wired across workspace feature flags; capability detection, kernel dispatch, and device-probe integration (#992)
+- `feat(kernels): enable AVX-512 kernel selection and harden TL2 quantization buffers` — AVX-512 kernel selected at runtime when `avx512f` is available; TL2 buffer bounds hardened to prevent overflows (#989)
+- `feat(kernels): improve NEON kernel implementation and configuration safety` — NEON kernel path improved with safer configuration; alignment guarantees and bounds validated on AArch64 (#988)
+- `feat(oneapi): add initial Intel oneAPI backend support and runtime detection` — New Intel oneAPI backend skeleton with runtime detection for Intel GPGPU; `oneapi` feature gate wired in workspace (#986)
+- `feat(cli): accept OpenCL/Vulkan device aliases and map to GPU backend` — CLI now accepts `opencl` and `vulkan` device strings, mapping them to the GPU backend for device selection (#985)
+- `feat(device-probe): add OpenGL probing and capability wiring for GPU backend detection` — OpenGL capability probing added to `DeviceProbe`; detected OpenGL level exposed as GPU backend capability (#984)
+- `test: add CPU golden path E2E test infrastructure` — New E2E golden path test infrastructure for CPU inference running deterministic scenarios end-to-end without a real model download (#949)
+- `test: reduce ignored test count (wave 4) — enable unblocked tests` — Wave 4 reduction of `#[ignore]` tests; newly unblocked tests converted to active following resolution of blockers #254 and #260; remaining `#[ignore]` markers carry justification strings (#947)
 - `feat: improve C# FFI bindings with modern P/Invoke` — Modern P/Invoke bindings and safe wrappers for C# consumers; replaces legacy `DllImport` patterns with `LibraryImport`-based source-generated P/Invoke for reduced marshalling overhead (#942)
 - test(bitnet-bdd-grid,sampling,receipts,generation): expand BDD scenario coverage with 80+ scenario tests across four microcrates (#945)
 - test(bitnet-sys,bitnet-compat): add targeted unit tests for capability invariants and export path validation (#946)
@@ -17,9 +27,13 @@ All notable changes to bitnet-rs will be documented in this file.
 - `chore: bump version to 0.2.0` — All crates and workspace version bumped from `0.1.x` to `0.2.0`; `CHANGELOG.md` `[Unreleased]` section promoted to `[0.2.0]` with release date (#933)
 
 ### Fixed
+- `fix(device-probe): add rocm_available field to DeviceProbe` — `DeviceProbe` now includes a `rocm_available` boolean field populated by ROCm runtime detection (#995)
+- `fix(tests): gracefully skip model-dependent tests; fix AC2 attention timeout` — Model-dependent tests now gracefully skip when no GGUF is present; AC2 attention test timeout resolved (blockers #254 #260) (#981)
+- `fix(quantization): fix TL2 input quantization to stay in 2-bit domain` — TL2 input quantization clamped to valid 2-bit range; previously could produce out-of-range values corrupting matmul results (#978)
 - `ffi: preserve exact C last-error messages` — FFI layer now captures and preserves exact error strings returned by C `last_error` callbacks rather than truncating or reformatting them; improves debuggability for C/C++ consumer integrations (#941)
 
 ### Documentation
+- `docs: modernize docs.rs configuration and add mdbook` — Updated `[package.metadata.docs.rs]` across crates; added mdbook setup for rendered API and user documentation (#994)
 - `docs: update changelog for PRs #931-#932` — Updated CHANGELOG.md and roadmap with 1400+ tests milestone (#935)
 
 ## [0.2.0] - 2026-02-27
