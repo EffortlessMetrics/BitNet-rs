@@ -1,9 +1,12 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#907.
+> **Last updated**: reflects implementation state after PRs #608–#922.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
-> **Recent wave (PRs #886–#907)**: ~200+ new tests added across server security, tokenizers,
-> logits, E2E golden path, fuzz targets, and active test unblocking.
+> **Recent wave (PRs #908–#922)**: 1000+ tests milestone reached; Phase 6 SRP microcrate extractions
+> complete (bitnet-device-probe, bitnet-logits, bitnet-generation, bitnet-sampling, bitnet-transformer,
+> bitnet-engine-core, bitnet-gguf); wave 3 fuzz targets added; comprehensive tests for
+> bitnet-validation, bitnet-kernel-registry, bitnet-trace, bitnet-bdd-grid, bitnet-testing-policy,
+> bitnet-transformer, bitnet-honest-compute, bitnet-st2gguf, and bitnet-server.
 
 ---
 
@@ -23,6 +26,8 @@
 | `bitnet-generation` SRP microcrate | `crates/bitnet-generation/` | #629 |
 | `bitnet-engine-core` SRP microcrate | `crates/bitnet-engine-core/` | #629 |
 | `bitnet-gguf` SRP microcrate | `crates/bitnet-gguf/` | #629 |
+| `bitnet-sampling` SRP microcrate: Phase 6 extraction ✅ DONE | `crates/bitnet-sampling/` | #629 |
+| `bitnet-transformer` SRP microcrate: Phase 6 extraction ✅ DONE | `crates/bitnet-transformer/` | #629 |
 | `KernelBackend`, `KernelCapabilities`, `SimdLevel` types | `crates/bitnet-common/src/kernel_registry.rs` | #611 |
 | CodeRabbit path exclusions (archive, reports) | `.coderabbit.yaml` | #611 |
 | GPU smoke workflow (compile-only PR lane) | `.github/workflows/gpu-smoke.yml` | #611 |
@@ -158,6 +163,28 @@
 | `xtask grid-check [--dry-run]` BDD compile-coverage gate: 18 cells including cpu, cpu+full-cli, cpu+crossval, cpu+gpu | `xtask/src/grid_check.rs` | #905 |
 | 45 comprehensive tokenizer property-based tests: 40 proptest + 5 integration covering encode/decode round-trips, vocab consistency, Unicode safety, config JSON round-trip, auto-discovery, batch encoding | `crates/bitnet-tokenizers/tests/` | #906 |
 | 43 server security & middleware tests: 7 CORS, 5 security header, 9 request validation, 4 model path, 3 config/auth, 4 IP extraction, 8 property, 1 health endpoint; uses `tower::ServiceExt::oneshot` | `crates/bitnet-server/tests/` | #907 |
+| 72 comprehensive tests for `bitnet-compat` (diagnose/export/verify/stamp paths) and `bitnet-sys` (CompileTimeLibCapabilities, disabled-feature stubs) | `crates/bitnet-compat/tests/`, `crates/bitnet-sys/tests/` | #909 |
+| 13 fewer ignored tests: `tokenization_smoke` converted to `CROSSVAL_GGUF` opt-in; AC3/AC6 acceptance tests gated on `BITNET_RUN_SLOW_TESTS` (1043→1030 ignored) | workspace | #910 |
+| Comprehensive tests for `bitnet-runtime-feature-flags` (RuntimeFeatureFlags snapshots, CPU-always-true invariant, CUDA/GPU orthogonality, JSON round-trips) and `bitnet-feature-contract` | `crates/bitnet-runtime-feature-flags/tests/`, `crates/bitnet-feature-contract/tests/` | #911 |
+| 25+ comprehensive tests for `bitnet-device-probe`: SIMD level detection ordering, GPU probe validation, DeviceCapabilities construction/equality, probe determinism and capability invariants | `crates/bitnet-device-probe/tests/` | #912 |
+| 25+ extended integration and property tests for `bitnet-quantization`: I2_S, TL1, TL2, QK256 roundtrip accuracy, block-size invariants, edge-case inputs | `crates/bitnet-quantization/tests/` | #914 |
+| 65 tests for `bitnet-validation` (LayerNorm bounds, policy keys, gate modes, RMS validation) and 56 tests for `bitnet-kernel-registry` (kernel dispatch, capability registry, SIMD selection) | `crates/bitnet-validation/tests/`, `crates/bitnet-kernel-registry/tests/` | #915 |
+| 20+ comprehensive tests for `bitnet-trace`: TraceSink and TraceComparison APIs, JSON round-trips, hash invariants, decode-step tracing | `crates/bitnet-trace/tests/` | #916 |
+| 36 tests for `bitnet-bdd-grid` (grid rows/columns, cell lookup, scenario validation) and 28 tests for `bitnet-testing-policy` (PolicyDiagnostics, GridCompatibility invariants) | `crates/bitnet-bdd-grid/tests/`, `crates/bitnet-testing-policy/tests/` | #917 |
+| Wave 3 fuzz targets: `gguf_writer_roundtrip`, `tokenizer_encode_no_panic`, `validation_no_panic` | `fuzz/fuzz_targets/` | #919 |
+| **1000+ tests milestone** ✅: comprehensive README rewrite, updated `docs/development/test-suite.md` with current counts and xtask grid-check docs | `README.md`, `docs/development/test-suite.md` | #920 |
+| 29 tests for `bitnet-transformer` (RoPE invariants, KVCache shape/seq-len properties) and 37 tests for `bitnet-honest-compute` (ComputeMode gating, receipt validation, honest-compute enforcement) | `crates/bitnet-transformer/tests/`, `crates/bitnet-honest-compute/tests/` | #921 |
+| 26 extended tests for `bitnet-st2gguf` (conversion pipeline, quantization type handling, error variants) and 20 tests for `bitnet-server` (batch engine config, CORS, security middleware) | `crates/bitnet-st2gguf/tests/`, `crates/bitnet-server/tests/` | #922 |
+
+### ✅ Phase 7: Test Coverage (DONE — 1000+ tests)
+
+All Phase 7 test coverage targets have been met:
+- **1000+ total tests** across workspace (snapshot, property, integration, fuzz, E2E)
+- **Phase 6 SRP microcrates**: bitnet-device-probe, bitnet-logits, bitnet-generation,
+  bitnet-sampling, bitnet-transformer, bitnet-engine-core, bitnet-gguf — all ✅ DONE
+- **Fuzz coverage**: 18+ fuzz targets across GGUF, tokenizer, quantization, generation,
+  validation, receipts, and transformer paths
+- **Wave 3 fuzz targets**: gguf_writer_roundtrip, tokenizer_encode_no_panic, validation_no_panic
 
 ### 🔲 What's Planned
 
