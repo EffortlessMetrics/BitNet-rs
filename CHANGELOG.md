@@ -5,6 +5,12 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(bitnet-receipts): add property-based tests for receipt validation` — 5 new property tests (20 total) covering validation gate invariants in `crates/bitnet-receipts/tests/`; raises receipt proptest coverage (#891)
+- `test(bitnet-sampling): add comprehensive property-based tests` — 14 new property tests for sampling invariants in `crates/bitnet-sampling/tests/`; covers temperature, top-k/p, repetition penalty, and greedy determinism (#890)
+- `feat(fuzz): add gguf_header_parse fuzz target` — new `fuzz/fuzz_targets/gguf_header_parse.rs` fuzz target exercising GGUF header parsing paths for robustness (#889)
+- `test(bitnet-kernels): add BDD-style kernel tests` — 30 new tests across 7 sections in `crates/bitnet-kernels/tests/`; validates kernel dispatch, capability registry, and SIMD selection behaviour (#888)
+- `test(bitnet-common): add property-based tests` — 39 property tests across Device, Config, errors, and math invariants in `crates/bitnet-common/tests/`; broadens foundational crate proptest coverage (#887)
+- `test(bitnet-gguf): add property-based tests` — 20 new property tests in `crates/bitnet-gguf/tests/extended_proptests.rs`; brings total gguf proptest count to 103 (#886)
 - `test(server,ffi): add property-based tests to bitnet-server and bitnet-ffi` — additional property tests for `bitnet-server` (batch/concurrency/security config invariants) and `bitnet-ffi` (C API round-trips); further raises proptest coverage across both crates (#880)
 - `test(tokenizers): expand tokenizer_proptests.rs to 18 property tests` — expanded from 7 to 18 property tests covering edge cases in encode/decode round-trips, special-token handling, vocab-size bounds, and determinism invariants in `crates/bitnet-tokenizers/tests/tokenizer_proptests.rs` (#874)
 - `test(device-probe,logits): add integration tests` — integration tests for `bitnet-device-probe` (SimdLevel ordering, `probe_device` smoke test) and `bitnet-logits` (softmax, top-k, temperature, argmax invariants) (#876)
@@ -33,6 +39,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test: expand proptest coverage for compat, templates, and feature-flag crates` — 18 new proptests across bitnet-compat, bitnet-templates, and bitnet-runtime-feature-flags (#841)
 
 ### Fixed
+- `fix(ci): pass PR branch refs through env to prevent script injection` — security hardening in `.github/workflows/pr-size-guard.yml`: PR branch refs are now passed via environment variables instead of being interpolated directly into shell commands, eliminating a potential script-injection vector (#885)
 - `fix(ci): fix property-tests and performance-tracking workflows` — added push/PR triggers and a `cargo-tests` smoke job to the property-tests and performance-tracking CI workflows so they gate correctly on PRs (#879)
 - `fix(ci): add --force to cargo install cargo-fuzz` — prevents fuzz CI failures when the `cargo-fuzz` binary is already present in the runner cache (#872)
 - `fix(server): implement rate limiter cleanup to prevent memory leak` — `ConcurrencyManager::cleanup_rate_limiters` now properly cleans up idle entries to prevent unbounded memory growth (#810)
