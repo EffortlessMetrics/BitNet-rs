@@ -112,7 +112,7 @@ pub fn get_gpu_info() -> GpuInfo {
 
     let cuda_version = if cuda { get_cuda_version() } else { None };
 
-    let rocm = probe_command("rocm-smi", &["--showid"]);
+    let rocm = probe_command("rocm-smi", &["--showid"]) || probe_command("rocminfo", &[]);
 
     let rocm_version = if rocm { get_rocm_version() } else { None };
 
@@ -188,11 +188,46 @@ fn get_cuda_version() -> Option<String> {
 
 /// Get ROCm version if available
 fn get_rocm_version() -> Option<String> {
-    probe_command_output("rocm-smi", &["--version"]).and_then(|output| {
-        output
-            .lines()
-            .find(|line| line.contains("Version"))
-            .and_then(|line| line.split(':').nth(1).map(|s| s.trim().to_string()))
+    probe_command_output("rocm-smi", &["--version"])
+        .and_then(|output| parse_rocm_smi_version(&output))
+        .or_else(|| {
+            probe_command_output("hipcc", &["--version"])
+                .and_then(|output| parse_hipcc_version(&output))
+        })
+}
+
+fn parse_rocm_smi_version(output: &str) -> Option<String> {
+    output.lines().find_map(|line| {
+        let lower = line.to_ascii_lowercase();
+        if !lower.contains("version") {
+            return None;
+        }
+
+        line.split_once(':')
+            .map(|(_, version)| version.trim().to_string())
+            .filter(|version| !version.is_empty())
+    })
+}
+
+fn parse_hipcc_version(output: &str) -> Option<String> {
+    output.lines().find_map(|line| {
+        let lower = line.to_ascii_lowercase();
+
+        if lower.contains("hip version") {
+            return line
+                .split_once(':')
+                .map(|(_, version)| version.trim().to_string())
+                .filter(|version| !version.is_empty());
+        }
+
+        if lower.contains("rocm") && lower.contains("version") {
+            return line
+                .split_once("version")
+                .map(|(_, version)| version.trim().trim_start_matches(':').trim().to_string())
+                .filter(|version| !version.is_empty());
+        }
+
+        None
     })
 }
 
@@ -253,5 +288,17 @@ mod tests {
 
         assert!(!info.any_available());
         assert_eq!(info.summary(), "No GPU backends available");
+    }
+
+    #[test]
+    fn test_parse_rocm_smi_version() {
+        let output = "ROCm System Management Interface\nDriver version: 6.2.1\n";
+        assert_eq!(parse_rocm_smi_version(output).as_deref(), Some("6.2.1"));
+    }
+
+    #[test]
+    fn test_parse_hipcc_version() {
+        let output = "HIP version: 6.1.0\nclang version 17.0.0\n";
+        assert_eq!(parse_hipcc_version(output).as_deref(), Some("6.1.0"));
     }
 }
