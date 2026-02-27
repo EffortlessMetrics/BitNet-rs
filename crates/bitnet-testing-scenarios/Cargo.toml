@@ -21,3 +21,6 @@ bitnet-testing-scenarios-core = { path = "../bitnet-testing-scenarios-core", ver
 [features]
 default = []
 fixtures = ["bitnet-testing-scenarios-core/fixtures"]
+
+[dev-dependencies]
+proptest.workspace = true

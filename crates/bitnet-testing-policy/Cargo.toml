@@ -57,3 +57,6 @@ runtime-profile-fixtures = ["bitnet-testing-policy-core/runtime-profile-fixtures
 runtime-profile-reporting = ["bitnet-testing-policy-core/runtime-profile-reporting"]
 runtime-profile-trend = ["bitnet-testing-policy-core/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-testing-policy-core/runtime-profile-integration-tests"]
+
+[dev-dependencies]
+proptest.workspace = true

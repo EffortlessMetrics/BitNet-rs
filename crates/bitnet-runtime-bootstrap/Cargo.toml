@@ -60,3 +60,6 @@ runtime-profile-fixtures = ["bitnet-startup-contract/runtime-profile-fixtures"]
 runtime-profile-reporting = ["bitnet-startup-contract/runtime-profile-reporting"]
 runtime-profile-trend = ["bitnet-startup-contract/runtime-profile-trend"]
 runtime-profile-integration-tests = ["bitnet-startup-contract/runtime-profile-integration-tests"]
+
+[dev-dependencies]
+proptest.workspace = true
