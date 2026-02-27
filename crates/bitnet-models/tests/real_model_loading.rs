@@ -61,7 +61,6 @@ impl ModelLoadingTestConfig {
 /// Tests the complete model loading pipeline with production-grade validation
 #[test]
 #[cfg(feature = "inference")]
-#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_real_gguf_model_loading_with_validation() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
@@ -152,7 +151,6 @@ fn test_device_aware_model_optimization() {
 /// Validates comprehensive metadata extraction from GGUF headers
 #[test]
 #[cfg(feature = "inference")]
-#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_model_metadata_extraction_validation() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();
@@ -187,7 +185,6 @@ fn test_model_metadata_extraction_validation() {
 /// Validates GGUF format compliance and version compatibility
 #[test]
 #[cfg(feature = "inference")]
-#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_model_format_validation_compatibility() {
     // AC:6
     let config = ModelLoadingTestConfig::from_env();
@@ -251,7 +248,6 @@ fn test_memory_mapped_model_loading() {
 /// Validates that models load consistently across different platforms
 #[test]
 #[cfg(feature = "inference")]
-#[ignore = "Requires BITNET_GGUF environment variable"]
 fn test_cross_platform_model_loading_consistency() {
     // AC:1
     let config = ModelLoadingTestConfig::from_env();

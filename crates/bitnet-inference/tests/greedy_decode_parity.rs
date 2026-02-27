@@ -171,7 +171,6 @@ mod deterministic_inference_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_deterministic_multi_step_greedy() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: deterministic multi-step greedy");
@@ -220,7 +219,6 @@ mod deterministic_inference_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_temperature_zero_equivalence() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: temperature=0 equivalence");
@@ -270,7 +268,6 @@ mod deterministic_inference_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_reproducibility_with_seed() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: reproducibility with seed");
@@ -328,7 +325,6 @@ mod logits_validation_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_logits_shape_validation() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: logits shape validation");
@@ -372,7 +368,6 @@ mod logits_validation_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_logits_argmax_consistency() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: logits argmax consistency");

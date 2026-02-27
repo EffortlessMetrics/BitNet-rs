@@ -198,7 +198,6 @@ mod template_comparison_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_template_comparison_capital_city() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: template comparison");
@@ -270,7 +269,6 @@ mod template_comparison_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_template_stop_sequence_behavior() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: template stop sequence behavior");
@@ -317,7 +315,6 @@ mod template_comparison_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_raw_vs_instruct_qa() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: raw vs instruct comparison");
@@ -391,7 +388,6 @@ mod template_comparison_tests {
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
     #[tokio::test]
-    #[ignore = "requires model file - run manually or in CI with BITNET_GGUF set"]
     async fn test_llama3_chat_system_prompt() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: LLaMA-3 chat system prompt");
