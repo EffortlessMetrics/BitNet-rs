@@ -854,12 +854,7 @@ mod tests {
 
         let fallback_kernel = crate::cpu::fallback::FallbackKernel;
 
-        let test_cases = vec![
-            (3, 5, 7),
-            (9, 13, 15),
-            (17, 19, 33),
-            (31, 27, 65),
-        ];
+        let test_cases = vec![(3, 5, 7), (9, 13, 15), (17, 19, 33), (31, 27, 65)];
 
         for (m, n, k) in test_cases {
             let mut a = vec![0i8; m * k];
