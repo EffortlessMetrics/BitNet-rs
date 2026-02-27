@@ -139,4 +139,91 @@ proptest! {
         prop_assert!(!json.contains("\"stage\""),
             "json must not contain 'stage' key when stage=None: {json}");
     }
+
+    /// JSON output includes `seq`, `layer`, `stage` keys when they are Some (inverse of omit test).
+    #[test]
+    fn prop_optional_fields_present_when_some(
+        name  in "[a-z][a-z0-9_./-]{0,16}",
+        shape in arb_shape(),
+        seq   in 0usize..64,
+        layer in -1isize..32,
+        stage in prop::sample::select(vec!["embeddings", "q_proj", "attn_out", "logits"]),
+    ) {
+        let num_elements = shape.iter().product();
+        let record = TraceRecord {
+            name,
+            num_elements,
+            shape,
+            dtype: "F32".to_string(),
+            blake3: "a".repeat(64),
+            rms: 1.0,
+            seq: Some(seq),
+            layer: Some(layer),
+            stage: Some(stage.to_string()),
+        };
+        let json = serde_json::to_string(&record).unwrap();
+        prop_assert!(json.contains("\"seq\""),
+            "json must contain 'seq' key when seq=Some: {json}");
+        prop_assert!(json.contains("\"layer\""),
+            "json must contain 'layer' key when layer=Some: {json}");
+        prop_assert!(json.contains("\"stage\""),
+            "json must contain 'stage' key when stage=Some: {json}");
+    }
+
+    /// RMS is always finite (not NaN or Inf) — guards against accidental f64 overflow.
+    #[test]
+    fn prop_rms_is_finite(record in arb_trace_record()) {
+        prop_assert!(record.rms.is_finite(),
+            "rms must be finite, got {}", record.rms);
+    }
+
+    /// Layer value is preserved exactly through a JSON round-trip when Some.
+    #[test]
+    fn prop_layer_preserved_through_roundtrip(
+        name  in "[a-z][a-z0-9_./-]{0,16}",
+        shape in arb_shape(),
+        layer in -1isize..64,
+    ) {
+        let num_elements = shape.iter().product();
+        let record = TraceRecord {
+            name,
+            num_elements,
+            shape,
+            dtype: "F32".to_string(),
+            blake3: "b".repeat(64),
+            rms: 0.5,
+            seq: None,
+            layer: Some(layer),
+            stage: None,
+        };
+        let json = serde_json::to_string(&record).unwrap();
+        let recovered: TraceRecord = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(recovered.layer, Some(layer),
+            "layer must survive JSON round-trip");
+    }
+
+    /// Seq value is preserved exactly through a JSON round-trip when Some.
+    #[test]
+    fn prop_seq_preserved_through_roundtrip(
+        name  in "[a-z][a-z0-9_./-]{0,16}",
+        shape in arb_shape(),
+        seq   in 0usize..1024,
+    ) {
+        let num_elements = shape.iter().product();
+        let record = TraceRecord {
+            name,
+            num_elements,
+            shape,
+            dtype: "F32".to_string(),
+            blake3: "c".repeat(64),
+            rms: 0.5,
+            seq: Some(seq),
+            layer: None,
+            stage: None,
+        };
+        let json = serde_json::to_string(&record).unwrap();
+        let recovered: TraceRecord = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(recovered.seq, Some(seq),
+            "seq must survive JSON round-trip");
+    }
 }

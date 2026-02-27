@@ -89,6 +89,51 @@ proptest! {
     ) {
         prop_assert!(validate_kernel_ids(ids.iter().map(String::as_str)).is_ok());
     }
+
+    /// An empty kernel ID injected at any position causes `validate_kernel_ids` to fail.
+    #[test]
+    fn empty_kernel_id_at_any_position_fails(
+        pre  in prop::collection::vec(arb_real_kernel_id(), 0..5),
+        post in prop::collection::vec(arb_real_kernel_id(), 0..5),
+    ) {
+        let mut ids: Vec<&str> = pre.iter().map(String::as_str).collect();
+        ids.push("");
+        ids.extend(post.iter().map(String::as_str));
+        prop_assert!(validate_kernel_ids(ids).is_err(), "empty ID in list must fail");
+    }
+
+    /// A whitespace-only kernel ID injected at any position causes validation to fail.
+    #[test]
+    fn whitespace_kernel_id_at_any_position_fails(
+        pre  in prop::collection::vec(arb_real_kernel_id(), 0..5),
+        post in prop::collection::vec(arb_real_kernel_id(), 0..5),
+    ) {
+        let mut ids: Vec<&str> = pre.iter().map(String::as_str).collect();
+        ids.push("   ");
+        ids.extend(post.iter().map(String::as_str));
+        prop_assert!(validate_kernel_ids(ids).is_err(), "whitespace-only ID in list must fail");
+    }
+
+    /// `validate_compute_path` rejects the empty string (only "real" is valid).
+    #[test]
+    fn validate_compute_path_rejects_empty_string(_seed in 0u64..1000) {
+        prop_assert!(validate_compute_path("").is_err(), "empty string must not pass compute_path validation");
+    }
+
+    /// `classify_compute_path` and `is_mock_kernel_id` agree: classify returns "mock"
+    /// iff at least one element in the list satisfies is_mock_kernel_id.
+    #[test]
+    fn classify_and_is_mock_are_consistent(
+        ids in prop::collection::vec("[a-zA-Z0-9_]{1,32}", 1..10),
+    ) {
+        let any_mock = ids.iter().any(|id| is_mock_kernel_id(id));
+        let path = classify_compute_path(ids.iter().map(String::as_str));
+        if any_mock {
+            prop_assert_eq!(path, "mock", "expected 'mock' because at least one ID is mock");
+        } else {
+            prop_assert_eq!(path, "real", "expected 'real' because no ID is mock");
+        }
+    }
 }
 
 // ── Unit tests ───────────────────────────────────────────────────────────────
