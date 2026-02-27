@@ -95,10 +95,7 @@ fn synthetic_model() -> Result<Arc<BitNetModel>> {
             );
         }
     }
-    t.insert(
-        "final_norm.weight".into(),
-        CandleTensor::from_vec(vec![1.0f32; h], &[h], &dev)?,
-    );
+    t.insert("final_norm.weight".into(), CandleTensor::from_vec(vec![1.0f32; h], &[h], &dev)?);
 
     Ok(Arc::new(BitNetModel::from_gguf(cfg, t, HashMap::new(), Device::Cpu)?))
 }
@@ -193,10 +190,8 @@ async fn test_golden_path_e2e_stop_token_halts_early() -> Result<()> {
     let model = synthetic_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
     let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
-    let config = GenerationConfig::greedy()
-        .with_seed(42)
-        .with_max_tokens(10)
-        .with_stop_token_id(459);
+    let config =
+        GenerationConfig::greedy().with_seed(42).with_max_tokens(10).with_stop_token_id(459);
 
     let prompt_ids = tokenizer.encode("2+2=", false, false)?;
     let tokens = engine.generate_tokens(&prompt_ids, &config).await?;
