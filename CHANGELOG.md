@@ -5,6 +5,10 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(bitnet-device-probe): add 25+ comprehensive tests` — SIMD level detection ordering, GPU probe validation, DeviceCapabilities construction/equality, and property tests for probe determinism and capability invariants (#912)
+- `test(bitnet-runtime-feature-flags,bitnet-feature-contract): add comprehensive tests` — RuntimeFeatureFlags snapshot tests, CPU-always-true invariant, CUDA/GPU orthogonality, and JSON round-trips for feature-flag and feature-contract crates (#911)
+- `test: reduce ignored test count by converting to env-var guards (wave 2)` — 13 fewer ignored tests (1043→1030); `tokenization_smoke` converted to `CROSSVAL_GGUF` opt-in; AC3/AC6 acceptance tests gated on `BITNET_RUN_SLOW_TESTS` env-var (#910)
+- `test(bitnet-compat,bitnet-sys): add 72 comprehensive tests` — bitnet-compat: `diagnose`, `export_fixed`, `verify_idempotent`, `stamp` paths; bitnet-sys: `CompileTimeLibCapabilities` and disabled-feature stubs (#909)
 - `test(bitnet-server): add 43 server security and middleware tests` — 7 CORS, 5 security header, 9 request validation, 4 model path, 3 config/auth, 4 IP extraction, 8 property tests, 1 health endpoint tests; uses `tower::ServiceExt::oneshot` (no real server needed) (#907)
 - `test(bitnet-tokenizers): add 45 comprehensive property-based tests` — 40 proptest + 5 integration tests covering encode/decode round-trips, vocab consistency, special tokens bounds, Unicode safety, config JSON round-trip, auto-discovery, batch encoding (#906)
 - `feat(xtask): add grid-check command for BDD grid compile verification` — `xtask grid-check [--dry-run]` checks all supported feature cells compile; 18 cells including cpu, cpu+full-cli, cpu+crossval, cpu+gpu (#905)
