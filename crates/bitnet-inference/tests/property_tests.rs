@@ -1,9 +1,12 @@
 //! Property-based tests for bitnet-inference configuration invariants.
 //!
-//! Tests key invariants of GenerationConfig and InferenceConfig that must hold
-//! across all possible inputs — validation rules, stop-token semantics, and builder methods.
+//! Tests key invariants of GenerationConfig, InferenceConfig, SamplingConfig,
+//! and StopCriteria that must hold across all possible inputs — validation rules,
+//! stop-token semantics, builder methods, and round-trip correctness.
 
+use bitnet_generation::StopCriteria;
 use bitnet_inference::config::{GenerationConfig, InferenceConfig};
+use bitnet_inference::sampling::SamplingConfig;
 use proptest::prelude::*;
 
 // ── GenerationConfig builders ─────────────────────────────────────────────────
@@ -157,5 +160,185 @@ proptest! {
     fn prop_inference_config_with_batch_size(batch in 1usize..64) {
         let cfg = InferenceConfig::default().with_batch_size(batch);
         prop_assert_eq!(cfg.batch_size, batch);
+    }
+}
+
+// ── InferenceConfig validation — zero fields must fail ───────────────────────
+
+proptest! {
+    /// InferenceConfig with max_context_length=0 fails validate().
+    #[test]
+    fn prop_inference_config_zero_context_fails(_dummy in 0u8..1) {
+        let cfg = InferenceConfig { max_context_length: 0, ..InferenceConfig::default() };
+        prop_assert!(cfg.validate().is_err());
+    }
+
+    /// InferenceConfig with num_threads=0 fails validate().
+    #[test]
+    fn prop_inference_config_zero_threads_fails(_dummy in 0u8..1) {
+        let cfg = InferenceConfig { num_threads: 0, ..InferenceConfig::default() };
+        prop_assert!(cfg.validate().is_err());
+    }
+
+    /// InferenceConfig with batch_size=0 fails validate().
+    #[test]
+    fn prop_inference_config_zero_batch_fails(_dummy in 0u8..1) {
+        let cfg = InferenceConfig { batch_size: 0, ..InferenceConfig::default() };
+        prop_assert!(cfg.validate().is_err());
+    }
+
+    /// InferenceConfig with memory_pool_size=0 fails validate().
+    #[test]
+    fn prop_inference_config_zero_memory_fails(_dummy in 0u8..1) {
+        let cfg = InferenceConfig { memory_pool_size: 0, ..InferenceConfig::default() };
+        prop_assert!(cfg.validate().is_err());
+    }
+
+    /// InferenceConfig with all positive fields passes validate().
+    #[test]
+    fn prop_inference_config_positive_fields_pass(
+        ctx in 1usize..65536,
+        threads in 1usize..64,
+        batch in 1usize..32,
+        pool in 1usize..usize::MAX,
+    ) {
+        let cfg = InferenceConfig {
+            max_context_length: ctx,
+            num_threads: threads,
+            batch_size: batch,
+            memory_pool_size: pool,
+            ..InferenceConfig::default()
+        };
+        prop_assert!(cfg.validate().is_ok(), "expected Ok, got {:?}", cfg.validate());
+    }
+}
+
+// ── SamplingConfig invariants ─────────────────────────────────────────────────
+
+proptest! {
+    /// SamplingConfig defaults satisfy expected field-range invariants.
+    #[test]
+    fn prop_sampling_config_defaults_in_range(_dummy in 0u8..1) {
+        let cfg = SamplingConfig::default();
+        prop_assert!(cfg.temperature >= 0.0);
+        prop_assert!(cfg.top_p > 0.0 && cfg.top_p <= 1.0);
+        prop_assert!(cfg.repetition_penalty >= 0.0);
+    }
+
+    /// Any temperature ≥ 0.0 is stored unchanged.
+    #[test]
+    fn prop_sampling_config_temperature_preserved(temp in 0.0f32..10.0) {
+        let cfg = SamplingConfig { temperature: temp, ..SamplingConfig::default() };
+        prop_assert!((cfg.temperature - temp).abs() < f32::EPSILON);
+    }
+
+    /// top_p stored unchanged for values in (0, 1].
+    #[test]
+    fn prop_sampling_config_top_p_preserved(top_p in 0.001f32..=1.0) {
+        let cfg = SamplingConfig { top_p, ..SamplingConfig::default() };
+        prop_assert!((cfg.top_p - top_p).abs() < f32::EPSILON);
+    }
+
+    /// repetition_penalty stored unchanged.
+    #[test]
+    fn prop_sampling_config_repetition_penalty_preserved(penalty in 0.5f32..3.0) {
+        let cfg = SamplingConfig { repetition_penalty: penalty, ..SamplingConfig::default() };
+        prop_assert!((cfg.repetition_penalty - penalty).abs() < f32::EPSILON);
+    }
+
+    /// seed is round-tripped without modification.
+    #[test]
+    fn prop_sampling_config_seed_roundtrip(seed in any::<u64>()) {
+        let cfg = SamplingConfig { seed: Some(seed), ..SamplingConfig::default() };
+        prop_assert_eq!(cfg.seed, Some(seed));
+    }
+}
+
+// ── Token ID round-trips ──────────────────────────────────────────────────────
+
+proptest! {
+    /// Any u32 token ID pushed into stop_token_ids is retrievable unchanged.
+    #[test]
+    fn prop_token_id_roundtrip(id in any::<u32>()) {
+        let cfg = GenerationConfig::default().with_stop_token_id(id);
+        prop_assert!(cfg.stop_token_ids.contains(&id));
+        prop_assert_eq!(cfg.stop_token_ids.iter().filter(|&&x| x == id).count(), 1);
+    }
+
+    /// A batch of arbitrary token IDs survives with_stop_token_ids unchanged.
+    #[test]
+    fn prop_token_id_batch_roundtrip(ids in proptest::collection::vec(any::<u32>(), 1..20)) {
+        let cfg = GenerationConfig::default().with_stop_token_ids(ids.clone());
+        prop_assert_eq!(cfg.stop_token_ids, ids);
+    }
+}
+
+// ── GenerationConfig defaults are self-consistent ────────────────────────────
+
+proptest! {
+    /// The default GenerationConfig always passes validate().
+    #[test]
+    fn prop_generation_config_default_passes_validation(_dummy in 0u8..1) {
+        prop_assert!(GenerationConfig::default().validate().is_ok());
+    }
+
+    /// negative temperature always fails validate().
+    #[test]
+    fn prop_negative_temperature_fails_validation(temp in f32::MIN..-f32::EPSILON) {
+        let cfg = GenerationConfig::default().with_temperature(temp);
+        prop_assert!(cfg.validate().is_err());
+    }
+
+    /// top_p > 1.0 always fails validate().
+    #[test]
+    fn prop_top_p_above_one_fails_validation(top_p in 1.001f32..=2.0) {
+        let cfg = GenerationConfig::default().with_top_p(top_p);
+        prop_assert!(cfg.validate().is_err());
+    }
+}
+
+// ── StopCriteria — no panics, empty strings are valid ────────────────────────
+
+proptest! {
+    /// StopCriteria with stop strings up to 256 bytes never panics.
+    #[test]
+    fn prop_stop_criteria_strings_no_panic(
+        s in proptest::string::string_regex(".{0,256}").unwrap(),
+    ) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            stop_strings: vec![s],
+            max_tokens: 64,
+            eos_token_id: None,
+        };
+        // Access fields to ensure no lazy-init panics.
+        let _ = criteria.stop_strings.len();
+        let _ = criteria.max_tokens;
+    }
+
+    /// StopCriteria with an empty stop_strings vec is valid (no panic).
+    #[test]
+    fn prop_stop_criteria_empty_strings_valid(max in 0usize..4096) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            stop_strings: vec![],
+            max_tokens: max,
+            eos_token_id: None,
+        };
+        prop_assert_eq!(criteria.stop_strings.len(), 0);
+    }
+
+    /// StopCriteria stop_token_ids are stored without modification.
+    #[test]
+    fn prop_stop_criteria_token_ids_roundtrip(
+        ids in proptest::collection::vec(any::<u32>(), 0..16),
+    ) {
+        let criteria = StopCriteria {
+            stop_token_ids: ids.clone(),
+            stop_strings: vec![],
+            max_tokens: 1,
+            eos_token_id: None,
+        };
+        prop_assert_eq!(criteria.stop_token_ids, ids);
     }
 }
