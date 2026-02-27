@@ -15,6 +15,12 @@ All notable changes to bitnet-rs will be documented in this file.
 - `refactor(quantization): dead code cleanup` — Removed unused `KernelProvider` imports and unused fields from `bitnet-quantization` (#779)
 
 ### Added
+- `ci: add fuzz/** to ci-core.yml path triggers` — Added `fuzz/**` glob to the `paths` filter in `ci-core.yml` so fuzz PRs get required CI checks (#803)
+- `test(integration): expand SRP cross-crate integration tests` — Expanded `srp_integration_test.rs` to 22 tests (10 new), covering bitnet-logits→bitnet-sampling pipeline, bitnet-generation stop criteria, RoPE tables, bitnet-device-probe determinism, bitnet-engine-core session config (#802)
+- `test: add InferenceReceipt::to_json_string() convenience method + snapshot test` — Added `to_json_string()` on `InferenceReceipt`; snapshot test pins receipt JSON output for regression detection (#801)
+- `test: add 21 proptest cases for bitnet-gguf and 7 for bitnet-sys` — `bitnet-gguf`: 21 properties covering `GgufValue`, `TensorInfo`, `GgufMetadataKv` round-trips and invariants; `bitnet-sys`: 7 properties for `CompileTimeLibCapabilities` summary logic (#800)
+- `feat(fuzz): add gguf_metadata_values fuzz target` — New `fuzz/fuzz_targets/gguf_metadata_values.rs` for GGUF parser panic safety; exercises arbitrary metadata value sequences (#799)
+- `chore: release v0.1.1` — Version bump 0.1.0 → 0.1.1 across workspace; `Cargo.lock` regenerated (#798)
 - `chore: GitHub repo settings update` — Updated `.github/settings.yml` description and topics; added `.github/settings.yml` to `ci-core.yml` path triggers (#794)
 - `chore: docs update batch #790-#791` — Updated `CHANGELOG.md` and `CLAUDE.md` for PRs #790 (E2E golden-path tests) and #791 (README modernization) (#793)
 - `feat(fuzz): BPE tokenizer encode fuzz target (re-create)` — Recreated `fuzz/fuzz_targets/tokenizer_encode.rs` for BPE encode/decode paths with 4 exercise paths; fuzz total remains 15 (#792)

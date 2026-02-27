@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#794.
+> **Last updated**: reflects implementation state after PRs #608–#803.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -134,6 +134,12 @@
 | feat(fuzz): BPE tokenizer encode fuzz target (re-create) — `fuzz/fuzz_targets/tokenizer_encode.rs` with 4 exercise paths; fuzz total remains 15 | `fuzz/fuzz_targets/tokenizer_encode.rs` | #792 |
 | chore: docs update batch #790-#791 — Updated `CHANGELOG.md` and `CLAUDE.md` for PRs #790 and #791 | `CHANGELOG.md`, `CLAUDE.md` | #793 |
 | chore: GitHub repo settings update — Updated `.github/settings.yml` description/topics; added `.github/settings.yml` to `ci-core.yml` path triggers | `.github/settings.yml`, `.github/workflows/ci-core.yml` | #794 |
+| chore: release v0.1.1 — version bump 0.1.0 → 0.1.1 across workspace; `Cargo.lock` regenerated | `Cargo.toml` workspace members, `Cargo.lock` | #798 |
+| feat(fuzz): add gguf_metadata_values fuzz target — new `fuzz/fuzz_targets/gguf_metadata_values.rs`; exercises arbitrary GGUF metadata value sequences for parser panic safety | `fuzz/fuzz_targets/gguf_metadata_values.rs` | #799 |
+| test: add 21 proptest cases for bitnet-gguf (GgufValue, TensorInfo, GgufMetadataKv) and 7 for bitnet-sys (CompileTimeLibCapabilities summary) | `crates/bitnet-gguf/tests/property_tests.rs`, `crates/bitnet-sys/tests/property_tests.rs` | #800 |
+| test: add `InferenceReceipt::to_json_string()` convenience method + snapshot test pinning receipt JSON output | `crates/bitnet-receipts/src/lib.rs`, `crates/bitnet-receipts/tests/snapshot_tests.rs` | #801 |
+| test(integration): expand SRP cross-crate integration tests to 22 tests (10 new) — bitnet-logits→bitnet-sampling pipeline, bitnet-generation stop criteria, RoPE tables, bitnet-device-probe determinism, bitnet-engine-core session config | `crates/bitnet-inference/tests/srp_integration_test.rs` | #802 |
+| ci: add `fuzz/**` to `ci-core.yml` path triggers so fuzz PRs receive required CI checks | `.github/workflows/ci-core.yml` | #803 |
 
 ### 🔲 What's Planned
 
