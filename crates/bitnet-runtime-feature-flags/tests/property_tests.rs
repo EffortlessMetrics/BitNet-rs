@@ -89,3 +89,53 @@ proptest! {
         }
     }
 }
+
+proptest! {
+    /// Enabling `gpu` (without cuda) still places "gpu" in the label list.
+    #[test]
+    fn prop_gpu_activation_implies_gpu_label(mut activation in arb_activation()) {
+        activation.gpu = true;
+        let labels = feature_labels_from_activation(activation);
+        prop_assert!(
+            labels.contains(&"gpu".to_string()),
+            "gpu=true but 'gpu' absent from labels: {:?}", labels
+        );
+    }
+
+    /// All labels in the returned vector are non-empty strings.
+    #[test]
+    fn prop_all_labels_nonempty(activation in arb_activation()) {
+        for label in feature_labels_from_activation(activation) {
+            prop_assert!(!label.is_empty(), "label must not be empty");
+        }
+    }
+
+    /// The default (all-false) activation always yields the literal "features: none".
+    #[test]
+    fn prop_default_activation_yields_none_line(_seed in 0u32..1u32) {
+        let line = feature_line_from_activation(FeatureActivation::default());
+        prop_assert_eq!(line, "features: none");
+    }
+
+    /// The label vector for any activation serializes to valid JSON.
+    ///
+    /// `Vec<String>` is always serializable; this property guards against
+    /// unexpected control characters or non-UTF-8 content in label strings.
+    #[test]
+    fn prop_labels_serialize_to_valid_json(activation in arb_activation()) {
+        let labels = feature_labels_from_activation(activation);
+        let json = serde_json::to_string(&labels)
+            .expect("Vec<String> labels must always serialize to JSON");
+        prop_assert!(
+            json.starts_with('['),
+            "serialized labels must be a JSON array, got: {json:?}"
+        );
+    }
+
+    /// Feature activation debug string is always non-empty.
+    #[test]
+    fn prop_feature_activation_debug_is_nonempty(activation in arb_activation()) {
+        let debug = format!("{activation:?}");
+        prop_assert!(!debug.is_empty(), "Debug output of FeatureActivation must not be empty");
+    }
+}

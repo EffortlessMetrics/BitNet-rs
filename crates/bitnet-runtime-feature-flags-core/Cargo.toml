@@ -21,6 +21,7 @@ bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.1.0" }
 [dev-dependencies]
 proptest.workspace = true
 insta.workspace = true
+serde_json.workspace = true
 
 [features]
 default = []

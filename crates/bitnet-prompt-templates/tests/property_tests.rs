@@ -5,6 +5,10 @@
 //! - Adding history does not erase the current user message
 //! - Template types produce structurally different output
 //! - Round-trip: clear_history restores empty state
+//! - System prompt appears in non-Raw formatted output
+//! - TemplateType::Raw is an identity transform (no system prompt)
+//! - TemplateType::Instruct wraps content with Q/A formatting
+//! - TemplateType display/parse round-trips correctly
 
 use bitnet_prompt_templates::{PromptTemplate, TemplateType};
 use proptest::prelude::*;
@@ -71,6 +75,68 @@ proptest! {
         dirty.clear_history();
         let cleared = dirty.format(&query);
         prop_assert_eq!(fresh, cleared);
+    }
+}
+
+proptest! {
+    /// System prompt text appears in the Instruct-formatted output.
+    #[test]
+    fn prop_system_prompt_appears_in_instruct_output(
+        system in "[a-zA-Z0-9]{1,40}",
+        user in "[a-zA-Z0-9 ]{1,60}",
+    ) {
+        let out = TemplateType::Instruct.apply(&user, Some(&system));
+        prop_assert!(
+            out.contains(&system),
+            "system prompt {system:?} missing from instruct output: {out:?}"
+        );
+    }
+
+    /// TemplateType::Raw.apply() with no system prompt is the identity transform.
+    #[test]
+    fn prop_raw_type_apply_is_identity(user in "[a-zA-Z0-9 .,?!]{1,80}") {
+        let out = TemplateType::Raw.apply(&user, None);
+        prop_assert_eq!(&out, &user, "Raw.apply() must return input unchanged");
+    }
+
+    /// TemplateType::Instruct output always ends with the answer marker "\nA:".
+    #[test]
+    fn prop_instruct_output_ends_with_answer_marker(
+        user in "[a-zA-Z0-9 .,?!]{1,80}",
+    ) {
+        let out = TemplateType::Instruct.apply(&user, None);
+        prop_assert!(
+            out.ends_with("\nA:"),
+            "Instruct output must end with '\\nA:', got: {out:?}"
+        );
+    }
+
+    /// TemplateType::Display round-trips through FromStr.
+    #[test]
+    fn prop_template_type_display_roundtrip(
+        template in prop_oneof![
+            Just(TemplateType::Raw),
+            Just(TemplateType::Instruct),
+            Just(TemplateType::Llama3Chat),
+        ],
+    ) {
+        let s = template.to_string();
+        let parsed: TemplateType = s.parse().expect("display output must be parseable");
+        prop_assert_eq!(template, parsed, "display→parse round-trip failed for {:?}", s);
+    }
+
+    /// Non-empty user input always produces non-empty output for every template.
+    #[test]
+    fn prop_nonempty_input_produces_nonempty_output(
+        template in prop_oneof![
+            Just(TemplateType::Raw),
+            Just(TemplateType::Instruct),
+            Just(TemplateType::Llama3Chat),
+        ],
+        user in "[a-zA-Z0-9]{1,50}",
+    ) {
+        let out = template.apply(&user, None);
+        prop_assert!(!out.is_empty(), "template {template:?} produced empty output");
     }
 }
 

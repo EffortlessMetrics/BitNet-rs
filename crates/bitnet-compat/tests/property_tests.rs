@@ -5,6 +5,9 @@
 //! - All issue strings returned by `diagnose()` are non-empty
 //! - A minimal GGUF (header only, no metadata) always produces issues
 //! - `export_fixed()` produces a file that passes `verify_idempotent()`
+//! - Non-existent `.gguf` paths are rejected with an error (not a panic)
+//! - Empty and null-byte-containing paths are always rejected
+//! - The crate version string follows semantic versioning (X.Y.Z)
 
 use bitnet_compat::gguf_fixer::GgufCompatibilityFixer;
 use proptest::prelude::*;
@@ -113,5 +116,53 @@ proptest! {
             after <= before,
             "export_fixed must not add issues: before={before}, after={after}"
         );
+    }
+}
+
+proptest! {
+    /// Non-existent paths with a `.gguf` extension return an `Err`, never panic.
+    ///
+    /// The fixer must not crash on valid-looking paths that don't exist on disk.
+    #[test]
+    fn prop_nonexistent_gguf_path_returns_err(name in "[a-z]{1,20}") {
+        let path = format!("/nonexistent/tmp/bitnet_prop_test_{name}.gguf");
+        let result = GgufCompatibilityFixer::diagnose(&path);
+        prop_assert!(result.is_err(), "non-existent .gguf path must return Err, got Ok");
+    }
+
+    /// An empty path string is always rejected with an `Err`.
+    #[test]
+    fn prop_empty_path_is_rejected(_seed in 0u32..10u32) {
+        let result = GgufCompatibilityFixer::diagnose("");
+        prop_assert!(result.is_err(), "empty path must be rejected with Err");
+    }
+
+    /// Paths containing a null byte are always rejected (OS-level invalid path).
+    #[test]
+    fn prop_null_byte_path_is_rejected(prefix in "[a-z]{1,10}") {
+        let path = format!("{prefix}\0.gguf");
+        let result = GgufCompatibilityFixer::diagnose(&path);
+        prop_assert!(result.is_err(), "path with null byte must be rejected");
+    }
+
+    /// The crate version string follows the semver X.Y.Z pattern.
+    ///
+    /// Each of the first three dot-separated components must be purely numeric.
+    #[test]
+    fn prop_crate_version_is_semver(_seed in 0u32..10u32) {
+        let version = env!("CARGO_PKG_VERSION");
+        let parts: Vec<&str> = version.split('.').collect();
+        prop_assert!(
+            parts.len() >= 3,
+            "semver must have at least 3 dot-separated parts, got: {version:?}"
+        );
+        for part in &parts[..3] {
+            // Strip any pre-release suffix (e.g. "0-alpha") before checking digits.
+            let numeric = part.split('-').next().unwrap_or(part);
+            prop_assert!(
+                numeric.chars().all(|c| c.is_ascii_digit()),
+                "semver component {numeric:?} is not numeric in version {version:?}"
+            );
+        }
     }
 }
