@@ -1029,6 +1029,9 @@ enum Cmd {
         /// Print verbose cargo check output on failure.
         #[arg(long, default_value_t = false)]
         verbose: bool,
+        /// Print the cargo check commands that would run without executing them.
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
     },
 }
 
@@ -1330,7 +1333,9 @@ fn real_main() -> Result<()> {
         }
         Cmd::FetchModels { lock } => fetch_models_cmd(&lock),
         Cmd::AnalyzeLibrary { path } => analyze_library(&path),
-        Cmd::GridCheck { cpu_only, verbose } => grid_check::run(cpu_only, verbose),
+        Cmd::GridCheck { cpu_only, verbose, dry_run } => {
+            grid_check::run(cpu_only, verbose, dry_run)
+        }
     }
 }
 
