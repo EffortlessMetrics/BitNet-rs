@@ -293,7 +293,7 @@ pub fn probe_device() -> DeviceProbe {
 ///
 /// Note: NEON and SSE/AVX are mutually exclusive instruction sets; the rank is
 /// only meaningful when comparing levels on the same architecture.
-pub fn simd_level_rank(level: &SimdLevel) -> u32 {
+pub const fn simd_level_rank(level: &SimdLevel) -> u32 {
     match level {
         SimdLevel::Scalar => 0,
         SimdLevel::Sse42 => 1,
