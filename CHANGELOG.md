@@ -5,6 +5,10 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(inference): add property-based tests for inference invariants` — 20 property tests in `crates/bitnet-inference/tests/inference_proptests.rs` covering SamplingConfig, GenerationConfig, stop tokens, and receipt schema invariants (#861)
+- `feat(device-probe): extract bitnet-device-probe SRP microcrate` — new `crates/bitnet-device-probe/` SRP microcrate exporting SimdLevel, CpuProbe, DeviceProbe, probe_device(); 5 property tests (#862)
+- `feat(logits): extract bitnet-logits SRP microcrate` — named unit tests in `crates/bitnet-logits/tests/logits_tests.rs` for softmax, top-k, temperature, and argmax invariants (#863)
+- `test(e2e): add CPU golden path integration test` — extended CPU E2E golden path tests with 2 new always-on tests (#864)
 - `test: add property tests for bitnet-models` — 10 property tests in `crates/bitnet-models/tests/model_load_proptests.rs` covering config roundtrip, shape invariants, quantization type parsing, and flavor detection (#859)
 - `fix(ci): increase grid-check timeout to 20min; deduplicate cargo check calls` — BDD Grid Check timeout raised to 20 minutes; duplicate `cargo check` calls removed to speed up CI (#859)
 - `test: add property tests for runtime microcrates` — 51+ property tests across 6 thin façade crates: bitnet-feature-matrix, bitnet-runtime-bootstrap, bitnet-runtime-context, bitnet-startup-contract, bitnet-testing-policy, bitnet-testing-scenarios; plus sampling and tokenizer proptests (#857)
