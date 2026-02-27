@@ -3,7 +3,10 @@
 //! Uses proptest to verify parser invariants across the full range of
 //! syntactically-valid and invalid input shapes.
 
-use bitnet_gguf::{GGUF_MAGIC, GgufValueType, check_magic, parse_header, read_version};
+use bitnet_gguf::{
+    GGUF_MAGIC, GgufMetadataKv, GgufValue, GgufValueType, TensorInfo, check_magic, parse_header,
+    read_version,
+};
 use proptest::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -234,5 +237,177 @@ proptest! {
         data.extend(extra);
         let info = parse_header(&data).expect("valid v2 header must parse");
         prop_assert_eq!(info.alignment, 32, "v2 alignment must always be 32");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Properties: GgufValue variant round-trips
+// ---------------------------------------------------------------------------
+
+proptest! {
+    /// GgufValue::Uint8 stores the provided byte verbatim.
+    #[test]
+    fn prop_gguf_value_uint8_round_trip(v in any::<u8>()) {
+        let GgufValue::Uint8(stored) = GgufValue::Uint8(v) else {
+            prop_assert!(false, "unexpected variant"); return Ok(());
+        };
+        prop_assert_eq!(stored, v);
+    }
+
+    /// GgufValue::Uint32 stores the provided value verbatim.
+    #[test]
+    fn prop_gguf_value_uint32_round_trip(v in any::<u32>()) {
+        let GgufValue::Uint32(stored) = GgufValue::Uint32(v) else {
+            prop_assert!(false, "unexpected variant"); return Ok(());
+        };
+        prop_assert_eq!(stored, v);
+    }
+
+    /// GgufValue::Bool stores the provided value verbatim.
+    #[test]
+    fn prop_gguf_value_bool_round_trip(b in any::<bool>()) {
+        let GgufValue::Bool(stored) = GgufValue::Bool(b) else {
+            prop_assert!(false, "unexpected variant"); return Ok(());
+        };
+        prop_assert_eq!(stored, b);
+    }
+
+    /// GgufValue::String stores arbitrary string content including null characters.
+    #[test]
+    fn prop_gguf_value_string_preserves_arbitrary_content(s in any::<String>()) {
+        let GgufValue::String(stored) = GgufValue::String(s.clone()) else {
+            prop_assert!(false, "unexpected variant"); return Ok(());
+        };
+        prop_assert_eq!(
+            stored, s,
+            "GgufValue::String must preserve string content verbatim"
+        );
+    }
+
+    /// GgufValue::String can hold long strings up to 512 characters.
+    #[test]
+    fn prop_gguf_value_string_long_strings(
+        chars in prop::collection::vec(any::<char>(), 0..=512_usize),
+    ) {
+        let s: String = chars.into_iter().collect();
+        let byte_len = s.len();
+        let GgufValue::String(stored) = GgufValue::String(s) else {
+            prop_assert!(false, "unexpected variant"); return Ok(());
+        };
+        prop_assert_eq!(stored.len(), byte_len, "long string length must be preserved");
+    }
+
+    /// GgufValue::String can hold strings that contain the null character U+0000.
+    #[test]
+    fn prop_gguf_value_string_with_null_chars(
+        prefix in prop::collection::vec(prop::char::range('a', 'z'), 0..=16),
+        suffix in prop::collection::vec(prop::char::range('a', 'z'), 0..=16),
+        null_count in 1usize..=8,
+    ) {
+        let mut s: String = prefix.into_iter().collect();
+        for _ in 0..null_count {
+            s.push('\x00');
+        }
+        let tail: String = suffix.into_iter().collect();
+        s.push_str(&tail);
+        let expected = s.clone();
+        let GgufValue::String(stored) = GgufValue::String(s) else {
+            prop_assert!(false, "unexpected variant"); return Ok(());
+        };
+        prop_assert_eq!(stored, expected, "null characters must be preserved in GgufValue::String");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Properties: TensorInfo invariants
+// ---------------------------------------------------------------------------
+
+proptest! {
+    /// A TensorInfo constructed with n_dims == dims.len() is self-consistent.
+    #[test]
+    fn prop_tensor_info_n_dims_matches_dims_len(
+        dims in prop::collection::vec(1u64..=1_048_576, 0..=8),
+        dtype in 0u32..=30u32,
+        offset in any::<u64>(),
+        name in "[a-z][a-z0-9_]{0,15}",
+    ) {
+        let n_dims = dims.len() as u32;
+        let info = TensorInfo { name, n_dims, dims: dims.clone(), dtype, offset };
+        prop_assert_eq!(
+            info.n_dims as usize,
+            info.dims.len(),
+            "n_dims must equal dims.len() in a consistent TensorInfo"
+        );
+    }
+
+    /// Cloning a TensorInfo yields an identical struct (field-by-field).
+    #[test]
+    fn prop_tensor_info_clone_is_identical(
+        dims in prop::collection::vec(1u64..=65536u64, 0..=4),
+        dtype in 0u32..=30u32,
+        offset in any::<u64>(),
+        name in "[a-z][a-z0-9_]{0,15}",
+    ) {
+        let info = TensorInfo { name, n_dims: dims.len() as u32, dims, dtype, offset };
+        let cloned = info.clone();
+        prop_assert_eq!(info.n_dims, cloned.n_dims);
+        prop_assert_eq!(info.dims, cloned.dims);
+        prop_assert_eq!(info.dtype, cloned.dtype);
+        prop_assert_eq!(info.offset, cloned.offset);
+        prop_assert_eq!(info.name, cloned.name);
+    }
+
+    /// Non-zero dimension values are preserved exactly in TensorInfo.
+    #[test]
+    fn prop_tensor_info_nonzero_dims_preserved(
+        dims in prop::collection::vec(1u64..=u64::MAX, 1..=8),
+    ) {
+        let info = TensorInfo {
+            name: "t".to_string(),
+            n_dims: dims.len() as u32,
+            dims: dims.clone(),
+            dtype: 0,
+            offset: 0,
+        };
+        for (i, &d) in info.dims.iter().enumerate() {
+            prop_assert!(d > 0, "dim[{i}] must remain non-zero; got {d}");
+        }
+        prop_assert_eq!(info.dims, dims);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Properties: GgufMetadataKv invariants
+// ---------------------------------------------------------------------------
+
+proptest! {
+    /// GgufMetadataKv key is preserved verbatim after construction.
+    #[test]
+    fn prop_metadata_kv_key_preserved(
+        key in "[a-z][a-z0-9_.]{0,63}",
+        v in any::<u32>(),
+    ) {
+        let kv = GgufMetadataKv { key: key.clone(), value: GgufValue::Uint32(v) };
+        prop_assert_eq!(&kv.key, &key);
+        let GgufValue::Uint32(stored) = kv.value else {
+            prop_assert!(false, "unexpected variant"); return Ok(());
+        };
+        prop_assert_eq!(stored, v);
+    }
+
+    /// Cloning GgufMetadataKv preserves both key and value.
+    #[test]
+    fn prop_metadata_kv_clone_consistency(
+        key in "[a-z][a-z0-9_.]{0,63}",
+        v in any::<u64>(),
+    ) {
+        let kv = GgufMetadataKv { key: key.clone(), value: GgufValue::Uint64(v) };
+        let cloned = kv.clone();
+        prop_assert_eq!(&kv.key, &cloned.key);
+        if let (GgufValue::Uint64(orig), GgufValue::Uint64(copy)) = (&kv.value, &cloned.value) {
+            prop_assert_eq!(orig, copy);
+        } else {
+            prop_assert!(false, "clone changed GgufValue variant");
+        }
     }
 }

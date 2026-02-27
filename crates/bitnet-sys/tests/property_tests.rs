@@ -139,3 +139,73 @@ fn summary_cuda_yes_only_when_available() {
         assert!(caps.available);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Properties: exact summary token values and additional invariants
+// ---------------------------------------------------------------------------
+
+proptest! {
+    /// The cuda token is exactly "cuda=yes" or "cuda=no" — never any other value.
+    #[test]
+    fn prop_summary_cuda_token_is_exactly_yes_or_no(caps in any_caps_strategy()) {
+        let s = caps.summary();
+        let is_yes = s.contains("cuda=yes");
+        let is_no  = s.contains("cuda=no");
+        prop_assert!(is_yes ^ is_no, "cuda token must be 'yes' or 'no': {s}");
+    }
+
+    /// The shim token is exactly "shim=yes" or "shim=no".
+    #[test]
+    fn prop_summary_shim_token_is_exactly_yes_or_no(caps in any_caps_strategy()) {
+        let s = caps.summary();
+        let is_yes = s.contains("shim=yes");
+        let is_no  = s.contains("shim=no");
+        prop_assert!(is_yes ^ is_no, "shim token must be 'yes' or 'no': {s}");
+    }
+
+    /// Two structurally equal capabilities produce identical summaries.
+    #[test]
+    fn prop_equal_caps_have_equal_summaries(caps in any_caps_strategy()) {
+        let copy = caps.clone();
+        prop_assert_eq!(caps.clone(), copy.clone(), "clone must equal original via PartialEq");
+        prop_assert_eq!(caps.summary(), copy.summary(), "equal caps must have equal summaries");
+    }
+
+    /// `Debug` output is non-empty and does not panic.
+    #[test]
+    fn prop_debug_format_is_non_empty(caps in any_caps_strategy()) {
+        let debug = format!("{caps:?}");
+        prop_assert!(!debug.is_empty(), "Debug output must not be empty");
+    }
+
+    /// `summary()` length is bounded — a sanity guard against runaway output.
+    #[test]
+    fn prop_summary_length_is_bounded(caps in any_caps_strategy()) {
+        let s = caps.summary();
+        prop_assert!(s.len() < 128, "summary must be short; got len={}: {s}", s.len());
+    }
+
+    /// `has_cuda` field is reflected exactly in the summary cuda token.
+    #[test]
+    fn prop_summary_cuda_token_consistent_with_field(caps in any_caps_strategy()) {
+        if caps.has_cuda {
+            prop_assert!(caps.summary().contains("cuda=yes"),
+                "has_cuda=true must produce cuda=yes");
+        } else {
+            prop_assert!(caps.summary().contains("cuda=no"),
+                "has_cuda=false must produce cuda=no");
+        }
+    }
+
+    /// `has_bitnet_shim` field is reflected exactly in the summary shim token.
+    #[test]
+    fn prop_summary_shim_token_consistent_with_field(caps in any_caps_strategy()) {
+        if caps.has_bitnet_shim {
+            prop_assert!(caps.summary().contains("shim=yes"),
+                "has_bitnet_shim=true must produce shim=yes");
+        } else {
+            prop_assert!(caps.summary().contains("shim=no"),
+                "has_bitnet_shim=false must produce shim=no");
+        }
+    }
+}
