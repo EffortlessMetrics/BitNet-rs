@@ -8,6 +8,9 @@ All notable changes to bitnet-rs will be documented in this file.
 - `chore: fix stale MSRV cache key in compatibility workflow (1.89 → 1.92)` — prevents incorrect CI cache hits from cached 1.89 toolchain artifacts (#805)
 
 ### Added
+- `feat(fuzz): add safetensors parser fuzz targets` — `fuzz/fuzz_targets/safetensors_metadata.rs` targets `SafeTensors::read_metadata()` header path; `fuzz/fuzz_targets/safetensors_parser.rs` replaced original stub; `fuzz/Cargo.toml` updated (#813)
+- `test(bdd): expand BDD grid coverage` — 5 new BDD grid cells added in `crates/bitnet-bdd-grid/src/lib.rs` (Unit/Ci, Integration/Ci, Performance/Local, Development/Local, Smoke/Ci); grid snapshot count updated from 8 to 13 (#814)
+- `test: add proptest coverage for bitnet-ffi` — `crates/bitnet-ffi/tests/property_tests.rs` with 31 tests (25 proptest + 6 unit): BitNetCConfig/BitNetCInferenceConfig round-trips, BitNetCError display invariants, MemoryStats arithmetic, thread-local error state (#815)
 - `test: add proptest coverage for bitnet-logits and bitnet-generation` — temperature scaling, softmax invariants, top-k filtering, repetition penalty (bitnet-logits); stop criteria, token accumulation, streaming order (bitnet-generation) (#806)
 - `feat(fuzz): add tokenizer_encode_decode fuzz target` — covers BasicTokenizer, UniversalTokenizer, wrapper tokenizers, and HfTokenizer BPE round-trips (#807)
 - `test: add 22 proptest cases for bitnet-quantization` — TL1/TL2/I2_S round-trip bounded error, scale positivity, block alignment, and edge cases (all-zeros, alternating signs) (#808)
