@@ -9,7 +9,7 @@
 //!   (trivially guaranteed by the type, but the encoding must round-trip non-trivially).
 
 use bitnet_common::QuantizationType;
-use bitnet_kernels::{tl_lut::lut_index, FallbackKernel, KernelProvider};
+use bitnet_kernels::{FallbackKernel, KernelProvider, tl_lut::lut_index};
 use proptest::prelude::*;
 
 // ---------------------------------------------------------------------------
