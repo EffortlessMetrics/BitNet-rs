@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use bitnet_common::Device;
+use bitnet_kernels::gpu_utils::get_gpu_info;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -196,7 +197,10 @@ impl DeviceMonitor {
                     false
                 }
             }
-            Device::Metal => false, // TODO: Implement Metal device support
+            Device::Metal => {
+                let gpu_info = get_gpu_info();
+                gpu_info.metal
+            }
         }
     }
 
@@ -228,10 +232,7 @@ impl DeviceMonitor {
                     0
                 }
             }
-            Device::Metal => {
-                // TODO: Get Metal device memory
-                8192 // Default 8GB for now
-            }
+            Device::Metal => Self::get_metal_memory_budget_mb(system),
         }
     }
 
@@ -281,7 +282,10 @@ impl DeviceMonitor {
                     0
                 }
             }
-            Device::Metal => 4096, // TODO: Get Metal device free memory
+            Device::Metal => {
+                let available_mb = system.available_memory() / 1024;
+                available_mb.min(Self::get_metal_memory_budget_mb(system))
+            }
         }
     }
 
@@ -315,8 +319,25 @@ impl DeviceMonitor {
                     None
                 }
             }
-            Device::Metal => Some("Metal 3".to_string()), // TODO: Get actual Metal version
+            Device::Metal => {
+                #[cfg(target_os = "macos")]
+                {
+                    let os_version = System::long_os_version().unwrap_or_else(|| "macOS".into());
+                    Some(format!("{} (Metal)", os_version))
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    None
+                }
+            }
         }
+    }
+
+    /// Get a conservative memory budget for Metal (unified memory on macOS).
+    fn get_metal_memory_budget_mb(system: &System) -> u64 {
+        let total_mb = system.total_memory() / 1024;
+        // Keep headroom for the OS and CPU workloads.
+        (total_mb * 7) / 10
     }
 
     /// Get SIMD support optimized for BitNet quantization operations
@@ -521,7 +542,7 @@ impl ExecutionRouter {
     async fn select_device_prefer_gpu(&self) -> Option<Device> {
         // First try GPU devices
         for monitor in &self.device_monitors {
-            if matches!(monitor.device, Device::Cuda(_)) {
+            if matches!(monitor.device, Device::Cuda(_) | Device::Metal) {
                 let health = monitor.health.read().await;
                 if matches!(*health, DeviceHealth::Healthy) {
                     return Some(monitor.device);
@@ -679,6 +700,39 @@ impl ExecutionRouter {
             fallback_enabled: self.config.fallback_enabled,
             strategy: format!("{:?}", self.config.strategy),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    #[tokio::test]
+    #[serial]
+    async fn prefer_gpu_strategy_can_select_metal_when_available() {
+        unsafe {
+            std::env::set_var("BITNET_GPU_FAKE", "metal");
+        }
+
+        let router = ExecutionRouter::new(
+            ExecutionRouterConfig {
+                strategy: DeviceSelectionStrategy::PreferGpu,
+                benchmark_on_startup: false,
+                ..ExecutionRouterConfig::default()
+            },
+            vec![Device::Cpu, Device::Metal],
+        )
+        .await
+        .expect("router should initialize");
+
+        let selected = router.select_device().await;
+
+        unsafe {
+            std::env::remove_var("BITNET_GPU_FAKE");
+        }
+
+        assert_eq!(selected, Some(Device::Metal));
     }
 }
 
