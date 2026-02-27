@@ -471,7 +471,7 @@ mod config_builder {
     /// ConfigBuilder with invalid device fails at build.
     #[test]
     fn test_config_builder_invalid_device_fails() {
-        let result = ConfigBuilder::new().device(Some("npu".to_string())).build();
+        let result = ConfigBuilder::new().device(Some("invalid-device".to_string())).build();
         assert!(result.is_err(), "ConfigBuilder with invalid device must fail to build");
     }
 }
