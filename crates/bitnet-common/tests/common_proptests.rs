@@ -14,6 +14,7 @@
 //! - `QuantizationConfig` power-of-two block-size validation
 
 use bitnet_common::{
+    BitNetConfig,
     backend_selection::{BackendRequest, BackendSelectionError, BackendStartupSummary},
     error::{
         BitNetError, InferenceError, KernelError, ModelError, QuantizationError, SecurityError,
@@ -23,7 +24,6 @@ use bitnet_common::{
     math::ceil_div,
     tensor::{ConcreteTensor, Tensor},
     types::{Device, GenerationConfig, QuantizationType},
-    BitNetConfig,
 };
 use proptest::prelude::*;
 
