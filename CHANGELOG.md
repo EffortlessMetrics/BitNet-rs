@@ -5,6 +5,8 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(bitnet-runtime-feature-flags,bitnet-kernels): add comprehensive unit tests` — 33 tests for `bitnet-runtime-feature-flags` (feature snapshot determinism, CPU/GPU independence, JSON roundtrips, lattice implications) and 47 tests for `bitnet-kernels` (KernelManager construction, provider listing, FallbackKernel numeric correctness, dimension validation, device features API) (#932)
+- `test(integration): add multi-crate integration tests` — 69 integration tests in `tests/integration/multi_crate_tests.rs` spanning 8 microcrates (sampling, logits, device-probe, prompt-templates, generation, engine-core, GGUF, honest-compute); added 8 new path dependencies to `tests/Cargo.toml` (#931)
 - `test(bitnet-device-probe,bitnet-logits): add comprehensive unit tests` — 15 tests for `bitnet-device-probe` (SIMD level ordering, probe consistency, cross-probe invariants) and 26 tests for `bitnet-logits` (top-p, repetition penalty, argmax, temperature, softmax, top-k, property tests) (#929)
 - `test(bitnet-generation,bitnet-engine-core): add comprehensive unit tests` — 24 tests for `bitnet-generation` (stop criteria, streaming events, serde roundtrips, property tests) and 36 tests for `bitnet-engine-core` (session lifecycle, backend info, concurrency config, engine state, error variants, session ID uniqueness) (#928)
 - `test(bitnet-cli,bitnet-gguf): add comprehensive unit tests` — 55 tests for `bitnet-cli` (InferenceCommand defaults, PromptTemplate parsing, TemplateType detection, CliConfig validation, ConfigBuilder, property tests) and 40 tests for `bitnet-gguf` (GGUF value types, metadata, header parsing, constants, property tests) (#926)
