@@ -182,7 +182,7 @@ While not breaking compatibility, we guarantee:
 
 **Supported Platforms:**
 - Linux (x86_64, ARM64): Full support with SIMD optimizations
-- macOS (Intel, Apple Silicon): Full support with Metal backend planning
+- macOS (Intel, Apple Silicon): Full support with CPU path; Apple GPU backend tracked in roadmap (`docs/reference/macos-26-apple-silicon-roadmap.md`)
 - Windows (x86_64): Full support with MSVC or GNU toolchains
 
 **Verified Configurations:**
