@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#803.
+> **Last updated**: reflects implementation state after PRs #608–#808.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -140,6 +140,10 @@
 | test: add `InferenceReceipt::to_json_string()` convenience method + snapshot test pinning receipt JSON output | `crates/bitnet-receipts/src/lib.rs`, `crates/bitnet-receipts/tests/snapshot_tests.rs` | #801 |
 | test(integration): expand SRP cross-crate integration tests to 22 tests (10 new) — bitnet-logits→bitnet-sampling pipeline, bitnet-generation stop criteria, RoPE tables, bitnet-device-probe determinism, bitnet-engine-core session config | `crates/bitnet-inference/tests/srp_integration_test.rs` | #802 |
 | ci: add `fuzz/**` to `ci-core.yml` path triggers so fuzz PRs receive required CI checks | `.github/workflows/ci-core.yml` | #803 |
+| chore: fix stale MSRV cache key in compatibility workflow (1.89 → 1.92) — prevents incorrect CI cache hits | `.github/workflows/compatibility.yml` | #805 |
+| test: add proptest coverage for bitnet-logits (temperature scaling, softmax invariants, top-k filtering, repetition penalty) and bitnet-generation (stop criteria, token accumulation, streaming order) | `crates/bitnet-logits/tests/property_tests.rs`, `crates/bitnet-generation/tests/property_tests.rs` | #806 |
+| feat(fuzz): add tokenizer_encode_decode fuzz target covering BasicTokenizer, UniversalTokenizer, wrapper tokenizers, and HfTokenizer BPE round-trips | `fuzz/fuzz_targets/tokenizer_encode_decode.rs` | #807 |
+| test: add 22 proptest cases for bitnet-quantization — TL1/TL2/I2_S round-trip bounded error, scale positivity, block alignment, and edge cases (all-zeros, alternating signs) | `crates/bitnet-quantization/tests/property_tests.rs` | #808 |
 
 ### 🔲 What's Planned
 
