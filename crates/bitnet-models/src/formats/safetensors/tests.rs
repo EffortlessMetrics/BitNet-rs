@@ -91,10 +91,34 @@ fn test_safetensors_metadata_extraction() {
     temp_file.flush().unwrap();
 
     let metadata = loader.extract_metadata(temp_file.path()).unwrap();
-    // Since we can't access SafeTensors metadata directly with the current crate version,
-    // the name will be derived from the file name
-    assert!(metadata.name.starts_with(".tmp")); // Temporary file name
-    assert_eq!(metadata.version, "unknown");
+    assert_eq!(metadata.name, "test_model");
+    assert_eq!(metadata.version, "1.0");
     assert_eq!(metadata.architecture, "bitnet");
-    // Note: vocab_size extraction from metadata would require proper SafeTensors parsing
+}
+
+#[test]
+fn test_parse_header_metadata_from_bytes() {
+    let header = r#"{
+        "__metadata__": {
+            "name": "meta_model",
+            "vocab_size": "64000",
+            "num_layers": 30
+        },
+        "test_tensor": {
+            "dtype": "F32",
+            "shape": [2, 2],
+            "data_offsets": [0, 16]
+        }
+    }"#;
+    let header_len = header.len() as u64;
+
+    let mut data = Vec::new();
+    data.extend_from_slice(&header_len.to_le_bytes());
+    data.extend_from_slice(header.as_bytes());
+    data.extend_from_slice(&[0u8; 16]);
+
+    let metadata = SafeTensorsLoader::parse_header_metadata_from_bytes(&data);
+    assert_eq!(metadata.get("name").map(String::as_str), Some("meta_model"));
+    assert_eq!(metadata.get("vocab_size").map(String::as_str), Some("64000"));
+    assert_eq!(metadata.get("num_layers").map(String::as_str), Some("30"));
 }
