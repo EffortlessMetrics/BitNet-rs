@@ -33,10 +33,11 @@ jobs:
 
     - name: Get PR Size Information
       id: pr-size
+      env:
+        BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
       run: |
-        # Get the base branch (usually main)
-        BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
-        HEAD_BRANCH="${{ github.event.pull_request.head.ref }}"
+        # Get the base branch (usually main) from env to avoid script injection
 
         # Get diff statistics
         ADDITIONS=$(git diff --numstat origin/$BASE_BRANCH...HEAD | awk '{sum += $1} END {print sum}')
