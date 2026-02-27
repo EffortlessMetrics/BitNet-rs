@@ -8,6 +8,8 @@ All notable changes to bitnet-rs will be documented in this file.
 - `chore: fix stale MSRV cache key in compatibility workflow (1.89 → 1.92)` — prevents incorrect CI cache hits from cached 1.89 toolchain artifacts (#805)
 
 ### Added
+- `test: proptest coverage for bitnet-common` — 9 new property tests in `crates/bitnet-common/tests/property_tests.rs` (MockTensor shapes, QuantizationType round-trips, error types, device consistency, KernelCapabilities ordering, warn_once deduplication) (#826)
+- `test: expand proptest coverage for bitnet-sampling` — 7 new property tests in `crates/bitnet-sampling/tests/property_tests.rs` (temperature scaling, top-k/p filtering, repetition penalty, seed reproducibility, empty context, greedy determinism) (#825)
 - `test: proptest coverage for bitnet-receipts` — 14 new proptests in `crates/bitnet-receipts/tests/property_tests.rs` (schema version, builder, JSON round-trips, kernel ID validation, honest compute gates, token counts) (#823)
 - `test: proptest coverage for bitnet-validation` — 8 new proptests in `crates/bitnet-validation/tests/property_tests.rs` (LayerNorm bounds, error messages, policy keys, gate modes) (#822)
 - `test: proptest coverage for bitnet-models` — 13 new proptests in `crates/bitnet-models/tests/property_tests.rs` (ModelConfig validation, GgufTensorType element sizes, GGUF magic bytes, path safety) (#821)
