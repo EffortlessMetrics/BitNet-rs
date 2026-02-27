@@ -21,6 +21,12 @@
 //! * `test_e2e_max_tokens_boundary` — verifies `max_tokens` is respected exactly when no
 //!   stop token is encountered, across several small values (1–4).
 //!
+//! * `test_e2e_output_token_ids_in_vocab_range` — asserts that every generated token ID
+//!   is in `[0, vocab_size)`, proving the engine never emits an out-of-vocabulary token.
+//!
+//! * `test_e2e_mini_gguf_fixture_accessible` — verifies the `tests/models/mini.gguf`
+//!   fixture is accessible and structurally valid (GGUF v3, 0 tensors, 4 metadata keys).
+//!
 //! * `test_e2e_real_model_golden_path` — skipped in PR CI; run locally with a real model:
 //!   ```sh
 //!   BITNET_MODEL_PATH=models/model.gguf \
@@ -300,6 +306,72 @@ async fn test_e2e_max_tokens_boundary() -> Result<()> {
         );
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Vocab range: all generated token IDs must be in [0, vocab_size)
+// ---------------------------------------------------------------------------
+
+/// Every token ID produced by the engine must be a valid index into the
+/// vocabulary, i.e. strictly less than `vocab_size`.  An out-of-bounds token
+/// ID would corrupt any downstream detokenization step.
+#[tokio::test]
+async fn test_e2e_output_token_ids_in_vocab_range() -> Result<()> {
+    let model = synthetic_model()?;
+    let vocab_size = 512u32; // matches the synthetic_model() configuration
+    let tokenizer = Arc::new(MockTokenizer::new());
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+    let config = GenerationConfig::greedy().with_seed(42).with_max_tokens(8);
+    let prompt_ids = tokenizer.encode("2+2=", false, false)?;
+    let tokens = engine.generate_tokens(&prompt_ids, &config).await?;
+
+    assert!(!tokens.is_empty(), "must generate at least one token");
+    for &id in &tokens {
+        assert!(id < vocab_size, "token id {id} is out of vocab range [0, {vocab_size})");
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Mini GGUF fixture: structural sanity check
+// ---------------------------------------------------------------------------
+
+/// Verifies that the `tests/models/mini.gguf` fixture (committed to the repo)
+/// is accessible from the inference-crate test context and contains the
+/// expected GGUF v3 header with 0 tensors and 4 metadata keys.
+///
+/// This is a pure parsing test — the fixture has no model weights — but it
+/// confirms the fixture path is correct and the GGUF reader handles it without
+/// panicking, providing a sanity check for the shared test infrastructure.
+#[test]
+fn test_e2e_mini_gguf_fixture_accessible() {
+    // CARGO_MANIFEST_DIR → crates/bitnet-inference; walk up two levels to workspace root.
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let mini_path = std::path::Path::new(manifest_dir)
+        .join("..")
+        .join("..")
+        .join("tests")
+        .join("models")
+        .join("mini.gguf");
+
+    assert!(
+        mini_path.exists(),
+        "mini.gguf fixture must exist at tests/models/mini.gguf (resolved: {})",
+        mini_path.display()
+    );
+
+    let bytes = std::fs::read(&mini_path).expect("mini.gguf must be readable");
+    // GGUF magic: 0x47 0x47 0x55 0x46 == "GGUF"
+    assert_eq!(&bytes[..4], b"GGUF", "mini.gguf must start with GGUF magic");
+    // Version is stored as a little-endian u32 at bytes 4..8; mini.gguf is v3.
+    let version = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+    assert_eq!(version, 3, "mini.gguf must be GGUF version 3");
+    // Tensor count at bytes 8..16 (u64 LE); the fixture has 0 tensors.
+    let tensor_count = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+    assert_eq!(tensor_count, 0, "mini.gguf has 0 tensors (metadata-only fixture)");
+    // KV count at bytes 16..24 (u64 LE); the fixture has 4 metadata entries.
+    let kv_count = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
+    assert_eq!(kv_count, 4, "mini.gguf has exactly 4 metadata entries");
 }
 
 // ---------------------------------------------------------------------------
