@@ -41,7 +41,7 @@ impl From<&candle_core::Device> for Device {
             candle_core::Device::Cpu => Device::Cpu,
             #[cfg(any(feature = "gpu", feature = "cuda"))]
             candle_core::Device::Cuda(_) => Device::Cuda(usize::MAX), // unknown ordinal
-            #[cfg(feature = "metal")]
+            #[cfg(all(feature = "metal", target_os = "macos"))]
             candle_core::Device::Metal(_) => Device::Metal,
             #[allow(unreachable_patterns)]
             _ => Device::Cpu,

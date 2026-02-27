@@ -64,6 +64,7 @@ bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.0" }
 default = []
 cpu = ["bitnet-kernels/cpu-optimized"]
 cuda = ["bitnet-kernels/cuda"]
+metal = ["bitnet-common/metal", "bitnet-models/metal"]
 gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]

@@ -72,7 +72,7 @@ impl SafeTensorsLoader {
                 }
             }
             // Compile this arm only on macOS with the 'gpu' feature.
-            #[cfg(all(target_os = "macos", feature = "gpu"))]
+            #[cfg(all(target_os = "macos", any(feature = "gpu", feature = "metal")))]
             Device::Metal => {
                 use candle_core::backend::BackendDevice; // provides `new`
                 let metal = candle_core::MetalDevice::new(0)
@@ -80,9 +80,10 @@ impl SafeTensorsLoader {
                 Ok(candle_core::Device::Metal(metal))
             }
             // Everywhere else, emit a clear error without referencing Metal symbols.
-            #[cfg(not(all(target_os = "macos", feature = "gpu")))]
+            #[cfg(not(all(target_os = "macos", any(feature = "gpu", feature = "metal"))))]
             Device::Metal => Err(BitNetError::Validation(
-                "Metal support not enabled; rebuild with --features gpu on macOS".to_string(),
+                "Metal support not enabled; rebuild with --features metal (or gpu) on macOS"
+                    .to_string(),
             )),
         }
     }

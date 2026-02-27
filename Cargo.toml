@@ -209,6 +209,7 @@ cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bi
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
+metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
@@ -246,7 +247,7 @@ reporting = ["bitnet-tests/reporting"]
 trend = ["bitnet-tests/trend"]
 
 # Convenience features
-full = ["cpu", "cuda", "avx2", "avx512", "neon"]
+full = ["cpu", "cuda", "metal", "avx2", "avx512", "neon"]
 minimal = []                                     # Only core crates, no inference
 
 [package.metadata.docs.rs]
