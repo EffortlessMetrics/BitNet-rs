@@ -17,7 +17,8 @@ This document covers the comprehensive test suite for BitNet-rs, including runni
 - ✅ **GGUF Fixtures**: 12/12 tests passing (QK256 dual-flavor detection)
 - ✅ **Snapshot Tests**: 42 test files across the workspace (insta)
 - ✅ **Property Tests**: 38 test files across all 38 proptest crates (proptest)
-- ✅ **Fuzz Targets**: 13 targets, nightly scheduled (cargo-fuzz)
+- ✅ **BDD Grid Check**: 18 cells, compile-coverage for all feature combinations (`xtask grid-check`)
+- ✅ **Fuzz Targets**: 27 targets, nightly scheduled (cargo-fuzz)
 - ✅ **CPU Golden Path E2E**: deterministic end-to-end inference test
 
 ## Running Tests
@@ -38,6 +39,9 @@ cargo test --workspace --no-default-features --features gpu
 
 # Skip slow tests (QK256 scalar kernels)
 BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
+
+# Opt in to slow acceptance tests (mock-generation, determinism checks)
+BITNET_RUN_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
 
 # Run including ignored tests (will encounter blocked tests)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
@@ -62,6 +66,9 @@ cargo nextest run -p bitnet-inference --no-default-features --features cpu
 
 # Skip slow tests
 BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --no-default-features --features cpu
+
+# Opt in to slow acceptance tests (mock-generation, determinism checks)
+BITNET_RUN_SLOW_TESTS=1 cargo nextest run --workspace --no-default-features --features cpu
 
 # Generate JUnit XML report (available at target/nextest/junit.xml)
 cargo nextest run --workspace --no-default-features --features cpu
@@ -301,6 +308,7 @@ BitNet-rs test suite is organized into distinct categories, each addressing spec
 | **Fixture Tests** | 12 | ✅ Passing | QK256 dual-flavor detection, alignment validation |
 | **Snapshot Tests** | 200+ | ✅ Passing | Struct/output stability (insta, 42 test files) |
 | **Property Tests** | 221+ | ✅ Passing | Randomised invariants (proptest, 38 test files) |
+| **BDD Grid Check** | 18 cells | ✅ Passing | Compile-coverage for all feature combinations |
 | **Tokenizer Tests** | 110+ | ✅ Passing | Universal tokenizer, auto-discovery |
 | **CLI Tests** | 140+ | ✅ Passing | Command-line parsing, flag validation |
 | **Device Feature Tests** | 65+ | ✅ Passing | CPU/GPU compilation, feature guards |
@@ -625,7 +633,8 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 - **Integration tests**: Cross-crate tests in `tests/`
 - **Snapshot tests**: Struct/output stability assertions (insta, 42 test files, ~160 assertions, 192 snapshot files)
 - **Property-based tests**: Randomised invariant checks (proptest, 38 test files, 230+ properties)
-- **Fuzz Targets**: Parser and kernel robustness (cargo-fuzz, 13 targets, nightly scheduled)
+- **BDD grid check**: Compile-coverage for all feature combinations (`xtask grid-check`, 18 cells)
+- **Fuzz Targets**: Parser and kernel robustness (cargo-fuzz, 27 targets in `fuzz/fuzz_targets/`, nightly scheduled)
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
 - **SIMD Kernel Tests** ✅: Real quantization computation validation (Issue #260 resolved)
@@ -679,11 +688,35 @@ cargo nextest run -p bitnet-sampling --no-default-features --features cpu prop
 - Tokenizer encoding round-trips
 - GGUF header field ordering invariants
 
+### BDD Grid Check (`xtask grid-check`)
+
+The BDD grid provides compile-coverage enforcement: it runs `cargo check --workspace` for every cell in the curated compatibility matrix, catching feature-gate regressions before they reach CI.
+
+**Implementation:** `crates/bitnet-bdd-grid/` (curated cells) + `crates/bitnet-bdd-grid-core/` (types) + `xtask/src/grid_check.rs` (runner).
+
+**Running the grid check:**
+
+```bash
+# Check all cells (CPU + GPU)
+cargo run -p xtask -- grid-check
+
+# Check CPU-only cells — fast, suitable for PR CI
+cargo run -p xtask -- grid-check --cpu-only
+
+# Preview the cargo check commands without running them
+cargo run -p xtask -- grid-check --dry-run
+
+# CPU-only dry run (see what the CI job would do)
+cargo run -p xtask -- grid-check --cpu-only --dry-run
+```
+
+**Grid cells (18 total):** Each cell is a `(TestingScenario, ExecutionEnvironment)` pair with a required feature set. Examples include `Unit/Local` (cpu), `Integration/Local` (cpu + fixtures), `E2E/CI` (cpu + full-cli), and GPU cells that require the `gpu` feature. A standalone `grid-check` CI job in `.github/workflows/ci-core.yml` runs `--cpu-only` on every PR.
+
 ### Fuzz Testing (cargo-fuzz)
 
-BitNet-rs has 13 fuzz targets covering parsers, kernels, and tokenizers. Two CI workflows handle fuzz testing:
+BitNet-rs has 27 fuzz targets covering parsers, kernels, tokenizers, and quantization. Targets live in `fuzz/fuzz_targets/`. Two CI workflows handle fuzz testing:
 
-- **`.github/workflows/fuzz-ci.yml`** — runs on every push/PR (build check) and nightly (short run, all 13 targets).
+- **`.github/workflows/fuzz-ci.yml`** — runs on every push/PR (build check) and nightly (short run, all targets).
 - **`.github/workflows/nightly-fuzz.yml`** — dedicated nightly scheduled run (02:00 UTC daily) or manual trigger via `workflow_dispatch`. Runs 7 core targets for 60 seconds each with `-rss_limit_mb=4096`, **caches the corpus** between runs (`fuzz-corpus-<target>` cache key), and uploads crash artifacts on failure.
 
 **Running fuzz tests manually:**
@@ -995,6 +1028,9 @@ These tests are intentionally skipped due to performance characteristics that ex
 ```bash
 # Skip slow tests and run faster suite
 BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
+
+# Opt in to slow acceptance tests (mock-generation, determinism checks)
+BITNET_RUN_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
 
 # Run slow tests separately with extended timeout (not recommended)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored

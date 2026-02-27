@@ -96,6 +96,10 @@ cargo test --workspace --no-default-features --features cpu
 cargo nextest run --workspace --no-default-features --features cpu
 cargo nextest run --profile ci  # Use CI profile with fixed 4 threads
 
+# BDD grid compile-coverage check (all feature combinations)
+cargo run -p xtask -- grid-check --cpu-only  # fast, suitable for PR CI
+cargo run -p xtask -- grid-check --dry-run   # preview commands without running
+
 # Quality
 cargo fmt --all && cargo clippy --all-targets --all-features -- -D warnings
 
@@ -883,6 +887,10 @@ cargo test --workspace --no-default-features --features cpu
 cargo nextest run --workspace --no-default-features --features cpu
 cargo nextest run --profile ci  # CI profile: 4 threads, no retries
 
+# BDD grid compile-coverage check (all feature combinations)
+cargo run -p xtask -- grid-check --cpu-only  # fast, suitable for PR CI
+cargo run -p xtask -- grid-check --dry-run   # preview commands without running
+
 # Run fixture-based integration tests
 cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features --features fixtures
 
@@ -897,6 +905,9 @@ cargo nextest run -p bitnet-inference --no-default-features --features cpu
 # Skip slow tests (QK256 scalar kernels)
 BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
 BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --no-default-features --features cpu
+
+# Opt in to slow acceptance tests (mock-generation, determinism checks)
+BITNET_RUN_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
 ```
 
 **Nextest Benefits:**

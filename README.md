@@ -110,9 +110,28 @@ cargo nextest run --profile ci                                        # CI profi
 BITNET_SKIP_SLOW_TESTS=1 cargo nextest run \
   --workspace --no-default-features --features cpu                    # skip slow QK256 scalar tests
 
+# BDD grid compile-coverage check (runs cargo check for every grid cell)
+cargo run -p xtask -- grid-check --cpu-only   # fast, suitable for PR CI
+cargo run -p xtask -- grid-check --dry-run    # preview commands without running them
+
 # Lint
 cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
 ```
+
+### Testing
+
+The test suite has 3,520 passing tests (100% pass rate) across six complementary strategies:
+
+| Strategy | Tooling | Purpose |
+|----------|---------|---------|
+| Unit / integration | `cargo nextest` | Per-crate correctness |
+| Property-based | `proptest` — 230+ properties, 38 crates | Randomised invariants (quantisation round-trips, sampling reproducibility) |
+| Snapshot | `insta` — 192 snapshots, 42 test files | Struct/API stability (breaks on unintended output changes) |
+| BDD grid | `xtask grid-check` — 18 cells | Compile-coverage across all feature combinations |
+| Fuzz | `cargo-fuzz` — 27 targets, nightly CI | Parser/kernel robustness against arbitrary inputs |
+| E2E golden path | pinned token regression | Deterministic CPU inference (seed 42, token sequence `[140,459,459,459]`) |
+
+See [docs/development/test-suite.md](docs/development/test-suite.md) for the full guide.
 
 ### Feature flags
 
