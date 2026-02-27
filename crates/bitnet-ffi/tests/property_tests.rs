@@ -8,8 +8,8 @@
 //! - Thread-local error-state consistency
 
 use bitnet_ffi::{
-    BitNetCConfig, BitNetCError, BitNetCInferenceConfig, MemoryStats, clear_last_error,
-    get_last_error, set_last_error,
+    BitNetCConfig, BitNetCError, BitNetCInferenceConfig, BitNetCPerformanceMetrics, MemoryStats,
+    ThreadPoolConfig, clear_last_error, get_last_error, set_last_error,
 };
 use proptest::prelude::*;
 
@@ -427,4 +427,105 @@ fn test_num_threads_zero_becomes_none() {
     let c_cfg = BitNetCConfig { num_threads: 0, ..BitNetCConfig::default() };
     let rust_cfg = c_cfg.to_bitnet_config().unwrap();
     assert!(rust_cfg.performance.num_threads.is_none());
+}
+
+// ── BitNetCPerformanceMetrics conversion invariants ───────────────────────────
+
+proptest! {
+    /// tokens_per_second, latency_ms and memory_usage_mb round-trip through
+    /// `from_performance_metrics` (within f32 precision).
+    #[test]
+    fn prop_perf_metrics_scalar_fields_preserved(
+        tps    in 0.0f64..100_000.0f64,
+        lat    in 0.0f64..100_000.0f64,
+        mem_mb in 0.0f64..100_000.0f64,
+    ) {
+        let rust = bitnet_common::PerformanceMetrics {
+            tokens_per_second: tps,
+            latency_ms: lat,
+            memory_usage_mb: mem_mb,
+            gpu_utilization: None,
+            computation_type: bitnet_common::ComputationType::Real,
+        };
+        let c = BitNetCPerformanceMetrics::from_performance_metrics(&rust);
+        // f64 → f32 cast: allow generous epsilon to avoid spurious failures near f32 max
+        let eps = |v: f64| (v.abs() as f32) * 1e-5 + 1e-5;
+        prop_assert!(
+            (c.tokens_per_second - tps as f32).abs() <= eps(tps),
+            "tokens_per_second mismatch: C={}, Rust={tps}", c.tokens_per_second
+        );
+        prop_assert!(
+            (c.latency_ms - lat as f32).abs() <= eps(lat),
+            "latency_ms mismatch: C={}, Rust={lat}", c.latency_ms
+        );
+        prop_assert!(
+            (c.memory_usage_mb - mem_mb as f32).abs() <= eps(mem_mb),
+            "memory_usage_mb mismatch: C={}, Rust={mem_mb}", c.memory_usage_mb
+        );
+    }
+
+    /// When gpu_utilization is `None` the C field must be exactly -1.0 (sentinel).
+    #[test]
+    fn prop_perf_metrics_no_gpu_yields_sentinel(tps in 0.0f64..1.0f64) {
+        let rust = bitnet_common::PerformanceMetrics {
+            tokens_per_second: tps,
+            latency_ms: 1.0,
+            memory_usage_mb: 1.0,
+            gpu_utilization: None,
+            computation_type: bitnet_common::ComputationType::Real,
+        };
+        let c = BitNetCPerformanceMetrics::from_performance_metrics(&rust);
+        prop_assert_eq!(
+            c.gpu_utilization, -1.0_f32,
+            "None GPU utilization must map to -1.0 sentinel"
+        );
+    }
+
+    /// When gpu_utilization is `Some(x)` the C field is not -1.0 and preserves the value.
+    #[test]
+    fn prop_perf_metrics_gpu_some_preserved(pct in 0.0f64..100.0f64) {
+        let rust = bitnet_common::PerformanceMetrics {
+            tokens_per_second: 1.0,
+            latency_ms: 1.0,
+            memory_usage_mb: 1.0,
+            gpu_utilization: Some(pct),
+            computation_type: bitnet_common::ComputationType::Real,
+        };
+        let c = BitNetCPerformanceMetrics::from_performance_metrics(&rust);
+        prop_assert_ne!(c.gpu_utilization, -1.0_f32,
+            "Some GPU utilization must not produce the -1.0 sentinel");
+        let eps = (pct.abs() as f32) * 1e-5 + 1e-5;
+        prop_assert!(
+            (c.gpu_utilization - pct as f32).abs() <= eps,
+            "gpu_utilization mismatch: C={}, Rust={pct}", c.gpu_utilization
+        );
+    }
+}
+
+// ── ThreadPoolConfig field preservation ──────────────────────────────────────
+
+proptest! {
+    /// Any positive num_threads is preserved in the config struct.
+    #[test]
+    fn prop_thread_pool_config_num_threads_preserved(n in 1usize..=256usize) {
+        let cfg = ThreadPoolConfig { num_threads: n, ..ThreadPoolConfig::default() };
+        prop_assert_eq!(cfg.num_threads, n);
+        prop_assert!(cfg.num_threads > 0);
+    }
+
+    /// Any positive max_queue_size is preserved in the config struct.
+    #[test]
+    fn prop_thread_pool_config_queue_size_preserved(q in 1usize..=100_000usize) {
+        let cfg = ThreadPoolConfig { max_queue_size: q, ..ThreadPoolConfig::default() };
+        prop_assert_eq!(cfg.max_queue_size, q);
+        prop_assert!(cfg.max_queue_size > 0);
+    }
+}
+
+/// Default ThreadPoolConfig must have at least one worker thread.
+#[test]
+fn test_thread_pool_default_positive_threads() {
+    let cfg = ThreadPoolConfig::default();
+    assert!(cfg.num_threads > 0, "default num_threads must be > 0");
+    assert!(cfg.max_queue_size > 0, "default max_queue_size must be > 0");
 }
