@@ -50,10 +50,8 @@ fuzz_target!(|data: &[u8]| {
                     let _ = tok2.decode(&tokens2);
                 }
                 // arbitrary token IDs must not panic on decode
-                let arb_ids: Vec<u32> = data
-                    .chunks_exact(2)
-                    .map(|c| u16::from_le_bytes([c[0], c[1]]) as u32)
-                    .collect();
+                let arb_ids: Vec<u32> =
+                    data.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]]) as u32).collect();
                 let _ = tok2.decode(&arb_ids);
             }
         }
@@ -74,8 +72,10 @@ fuzz_target!(|data: &[u8]| {
                     }
                 }
                 // arbitrary decode
-                let ids: Vec<u32> =
-                    data.chunks_exact(4).map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+                let ids: Vec<u32> = data
+                    .chunks_exact(4)
+                    .map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                    .collect();
                 let _ = tok.decode(&ids);
             }
         }
@@ -121,8 +121,7 @@ fuzz_target!(|data: &[u8]| {
         if let Ok(bpe) = BpeRoundTripInput::arbitrary(&mut u) {
             let vocab: Vec<(String, f32)> = bpe.vocab.into_iter().take(128).collect();
             let merges: Vec<String> = bpe.merges.into_iter().take(128).collect();
-            let token_ids: Vec<u32> =
-                bpe.token_ids.into_iter().map(|id| id as u32).collect();
+            let token_ids: Vec<u32> = bpe.token_ids.into_iter().map(|id| id as u32).collect();
 
             if !vocab.is_empty() {
                 if let Ok(hf) = HfTokenizer::from_vocab_and_merges(&vocab, &merges) {
