@@ -5,6 +5,9 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(tokenizers): expand tokenizer_proptests.rs to 18 property tests` — expanded from 7 to 18 property tests covering edge cases in encode/decode round-trips, special-token handling, vocab-size bounds, and determinism invariants in `crates/bitnet-tokenizers/tests/tokenizer_proptests.rs` (#874)
+- `test(device-probe,logits): add integration tests` — integration tests for `bitnet-device-probe` (SimdLevel ordering, `probe_device` smoke test) and `bitnet-logits` (softmax, top-k, temperature, argmax invariants) (#876)
+- `test(snapshot): add snapshot tests wave 2 for generation and engine-core` — insta snapshot tests pinning `StopReason` display variants, `GenerationStats` fields, and receipt schema version string for regression detection (#877)
 - `feat(fuzz): add generation_stop_checker fuzz target` — new fuzz target exercising `check_stop` from `bitnet-generation`; covers stop-token, stop-sequence, max-tokens, and combined stopping criteria (#870)
 - `test(bitnet-transformer): add 8 property-based tests` — 8 property tests for RoPE and KV cache invariants in `crates/bitnet-transformer/tests/transformer_proptests.rs` (#871)
 - `test(quantization): add integration tests for quantization roundtrip` — 10 integration tests for I2S, TL1, and TL2 quantization roundtrip accuracy in `crates/bitnet-quantization/tests/quant_integration_tests.rs` (#873)
