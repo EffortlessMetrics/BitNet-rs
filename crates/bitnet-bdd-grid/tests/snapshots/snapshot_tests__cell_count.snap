@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
+assertion_line: 67
 expression: count.to_string()
 ---
-18
+22

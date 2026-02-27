@@ -1,22 +1,27 @@
 ---
 source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
+assertion_line: 28
 expression: "summary.join(\"\\n\")"
 ---
 CrossValidation/Ci: required=[inference,kernels,tokenizers,crossval] intent=Reference parity / regression surface with controlled fixtures
 CrossValidation/Local: required=[inference,tokenizers] intent=Tokenizer encode/decode round-trip preserves original token sequence
+CrossValidation/PreProduction: required=[inference,kernels] intent=Engine-core session contracts match C++ reference for all decode-step invariants
 Debug/Ci: required=[inference,reporting] intent=Receipt JSON validates against schema v1.0.0 with all required gates
 Debug/Local: required=[inference] intent=Detailed behavior introspection and diagnostics
+Debug/PreProduction: required=[inference] intent=Generation stopping criteria (max-tokens, stop-id, stop-string) fire deterministically
 Development/Ci: required=[inference,tokenizers,cli] intent=Prompt-template auto-detection selects instruct for base models
 Development/Local: required=[inference,kernels,tokenizers] intent=Sampling strategy development and greedy/top-p/top-k path exercising
 EndToEnd/Ci: required=[inference,kernels,tokenizers,crossval,reporting] intent=Full stack workflow checks spanning startup through response path
 EndToEnd/PreProduction: required=[inference,server,reporting] intent=Server health-check path (/health endpoint returns 200)
 Integration/Ci: required=[inference,kernels,tokenizers,quantization] intent=GGUF model loading and quantization format integration (I2_S, QK256, TL1/TL2)
 Integration/Local: required=[inference,kernels,tokenizers] intent=Component and module interaction in local build
+Integration/PreProduction: required=[cpu,inference,kernels] intent=Pure logits transforms (temperature, top-k, top-p) pass numerical precision checks
 Minimal/Ci: required=[inference,kernels] intent=Deterministic seed produces identical output across repeated runs
 Minimal/Local: required=[inference] intent=Fastest-path execution with hard constraints
 Performance/Ci: required=[inference,kernels] intent=Throughput and latency-sensitive checks
 Performance/Local: required=[inference,kernels] intent=Local backend selection and kernel dispatch benchmarks
 Smoke/Ci: required=[inference,reporting] intent=Smoke path for receipt generation and schema v1.0.0 validation
+Smoke/Local: required=[cpu,inference] intent=Device probe detects CPU features and reports available SIMD capabilities
 Smoke/PreProduction: required=[inference] intent=Minimum viable run for deployment safety
 Unit/Ci: required=[cpu,inference,kernels] intent=Deterministic CPU-only unit path with explicit kernel feature
 Unit/Local: required=[inference,kernels,tokenizers] intent=Fast, isolated unit execution with core inference path
