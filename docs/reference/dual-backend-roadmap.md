@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#877.
+> **Last updated**: reflects implementation state after PRs #608–#880.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -147,6 +147,8 @@
 | feat(fuzz): safetensors parser fuzz targets — `safetensors_metadata.rs` (header path) and `safetensors_parser.rs` (full parse); `fuzz/Cargo.toml` updated | `fuzz/fuzz_targets/safetensors_metadata.rs`, `fuzz/fuzz_targets/safetensors_parser.rs` | #813 |
 | test(bdd): 5 new BDD grid cells (Unit/Ci, Integration/Ci, Performance/Local, Development/Local, Smoke/Ci); snapshot count 8→13 | `crates/bitnet-bdd-grid/src/lib.rs` | #814 |
 | test(proptest): 31 property + unit tests for `bitnet-ffi` — BitNetCConfig/BitNetCInferenceConfig round-trips, BitNetCError display, MemoryStats arithmetic, thread-local error state | `crates/bitnet-ffi/tests/property_tests.rs` | #815 |
+| CI workflow fixes: push/PR triggers and `cargo-tests` smoke job added to property-tests and performance-tracking workflows | `.github/workflows/property-tests.yml`, `.github/workflows/performance-tracking.yml` | #879 |
+| Additional property tests for `bitnet-server` (batch/concurrency/security config invariants) and `bitnet-ffi` (C API round-trips) | `crates/bitnet-server/tests/`, `crates/bitnet-ffi/tests/` | #880 |
 
 ### 🔲 What's Planned
 
