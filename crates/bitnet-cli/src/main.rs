@@ -975,7 +975,7 @@ async fn run_simple_generation(
                     packed.resize(expected_bytes, 0);
                 }
 
-                let raw_tensor = Tensor::from_raw_buffer(
+                let raw_tensor = candle_core::Tensor::from_raw_buffer(
                     &packed,
                     DType::U8,
                     &[qk256.rows, qk256.row_stride_bytes],
