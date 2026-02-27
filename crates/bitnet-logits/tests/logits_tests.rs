@@ -7,9 +7,7 @@
 //! - [`bitnet_logits::apply_temperature`]
 //! - [`bitnet_logits::argmax`]
 
-use bitnet_logits::{
-    apply_repetition_penalty, apply_temperature, apply_top_k, argmax, softmax_in_place,
-};
+use bitnet_logits::{apply_temperature, apply_top_k, argmax, softmax_in_place};
 use proptest::prelude::*;
 
 // ── Spec-required named unit tests ────────────────────────────────────────
