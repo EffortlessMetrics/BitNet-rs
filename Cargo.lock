@@ -924,6 +924,7 @@ dependencies = [
  "bitnet-runtime-feature-flags-core",
  "insta",
  "proptest",
+ "serde_json",
 ]
 
 [[package]]
@@ -933,6 +934,7 @@ dependencies = [
  "bitnet-bdd-grid-core",
  "insta",
  "proptest",
+ "serde_json",
 ]
 
 [[package]]
