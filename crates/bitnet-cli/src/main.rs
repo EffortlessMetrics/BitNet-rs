@@ -1678,9 +1678,17 @@ async fn handle_inspect_command(model_path: std::path::PathBuf, json: bool) -> R
             let architecture = reader
                 .get_string_metadata("general.architecture")
                 .unwrap_or_else(|| "unknown".to_string());
+            fn canonicalize_quantization_name(name: &str) -> Option<&'static str> {
+                match bitnet_models::formats::gguf::GgufTensorType::from_quant_string(name) {
+                    Some(bitnet_models::formats::gguf::GgufTensorType::I2_S) => Some("I2_S"),
+                    Some(bitnet_models::formats::gguf::GgufTensorType::IQ2_S) => Some("IQ2_S"),
+                    _ => None,
+                }
+            }
+
             fn get_quantization(reader: &GgufReader) -> String {
                 if let Some(q) = reader.get_string_metadata("general.quantization_type") {
-                    q
+                    canonicalize_quantization_name(&q).map(str::to_string).unwrap_or(q)
                 } else if let Some(q) = reader.get_quantization_type() {
                     format!("{:?}", q)
                 } else {
