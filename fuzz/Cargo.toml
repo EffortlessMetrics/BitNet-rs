@@ -118,3 +118,9 @@ name = "gguf_metadata_values"
 path = "fuzz_targets/gguf_metadata_values.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "tokenizer_encode_decode"
+path = "fuzz_targets/tokenizer_encode_decode.rs"
+test = false
+doc = false
