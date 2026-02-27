@@ -1286,6 +1286,7 @@ dependencies = [
  "bitnet-testing-policy-tests",
  "bitnet-tokenizers",
  "byteorder",
+ "candle-core",
  "cargo_metadata",
  "chrono",
  "clap",
