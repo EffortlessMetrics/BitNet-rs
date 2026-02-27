@@ -1,10 +1,12 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#942.
+> **Last updated**: reflects implementation state after PRs #608–#997.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
-> **Recent wave (PRs #933–#942)**: 1500+ tests milestone reached; wave 4 fuzz targets, C# FFI modern
-> P/Invoke bindings, FFI error preservation, insta snapshot tests, extended tokenizer and validation
-> tests, and crates.io readiness improvements.
+> **Recent wave (PRs #978–#997)**: Metal backend (#992), Vulkan runtime probing (#993), Intel oneAPI
+> backend (#986), AVX-512 kernel selection and hardening (#989), NEON kernel improvements (#988),
+> OpenGL probing (#984), OpenCL/Vulkan CLI aliases (#985), ROCm availability field (#995),
+> AVX-512 TL2 quantization kernels (#997), TL2 2-bit domain fix (#978), CPU golden path E2E
+> infrastructure (#949).
 
 ---
 
@@ -187,22 +189,47 @@ All Phase 7 test coverage targets have been met:
   validation, receipts, and transformer paths
 - **Wave 3 fuzz targets**: gguf_writer_roundtrip, tokenizer_encode_no_panic, validation_no_panic
 
+### ✅ Phase 8: Multi-Backend GPU Support (DONE — PRs #978–#997)
+
+All Phase 8 multi-backend targets have been completed:
+
+| Capability | Location | PR |
+|---|---|---|
+| TL2 input quantization fix — stays in 2-bit domain | `crates/bitnet-quantization/` | #978 |
+| CPU golden path E2E test infrastructure (5 deterministic tests, synthetic GGUF) | `crates/bitnet-inference/tests/cpu_golden_path.rs` | #949 |
+| OpenGL probing in `DeviceProbe` | `crates/bitnet-device-probe/` | #984 |
+| OpenCL/Vulkan CLI aliases (`--backend opencl`, `--backend vulkan`) | `crates/bitnet-cli/` | #985 |
+| Intel oneAPI backend (`feature = "oneapi"`) — Intel CPU/GPU acceleration | `crates/bitnet-kernels/`, `crates/bitnet-device-probe/` | #986 |
+| NEON kernel improvements — ARM NEON throughput and accuracy | `crates/bitnet-kernels/` | #988 |
+| AVX-512 kernel selection and hardening | `crates/bitnet-kernels/` | #989 |
+| Metal backend (`feature = "metal"`) — macOS/iOS GPU acceleration | `crates/bitnet-kernels/`, workspace | #992 |
+| Vulkan runtime probing (`feature = "vulkan"`) — cross-platform GPU compute | `crates/bitnet-device-probe/`, `crates/bitnet-kernels/` | #993 |
+| ROCm availability field in `DeviceProbe` | `crates/bitnet-device-probe/src/lib.rs` | #995 |
+| AVX-512 TL2 quantization kernels | `crates/bitnet-kernels/` | #997 |
+
 ### 🔲 What's Planned
 
 1. **Real-model crossval receipts** (gated on model download infrastructure)
    - Full crossval lane with C++ reference producing JSON receipts on nightly
    - Requires: `BITNET_CPP_DIR` provisioned on nightly runner
 
+2. **Metal kernel implementations** — compute-shader BitNet GEMV for Apple Silicon
+3. **Vulkan kernel implementations** — SPIR-V BitNet GEMV for cross-platform GPU
+4. **ROCm/HIP kernel implementations** — AMD GPU acceleration
+
 ---
 
 ## Feature Lattice Design
 
-### Current (CUDA-first, non-CUDA-ready)
+### Current (multi-backend, `gpu` umbrella)
 
 ```toml
 [features]
-gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", ...]
-cuda = ["gpu"]      # backward-compat alias — CUDA is the only GPU backend today
+gpu    = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", ...]
+cuda   = ["gpu"]     # backward-compat alias — CUDA backend
+metal  = ["gpu"]     # macOS/iOS Metal backend
+vulkan = ["gpu"]     # cross-platform Vulkan compute backend
+oneapi = ["gpu"]     # Intel oneAPI backend
 ```
 
 ### Code Gating Rules
@@ -212,18 +239,30 @@ cuda = ["gpu"]      # backward-compat alias — CUDA is the only GPU backend tod
 #[cfg(feature = "cuda")]
 use cudarc::...;
 
-// Generic "any GPU compiled":
+// Metal-specific code (macOS/iOS):
+#[cfg(feature = "metal")]
+pub fn metal_dispatch() { ... }
+
+// Vulkan-specific code:
+#[cfg(feature = "vulkan")]
+pub fn vulkan_dispatch() { ... }
+
+// Intel oneAPI:
+#[cfg(feature = "oneapi")]
+pub fn oneapi_dispatch() { ... }
+
+// Generic "any GPU compiled" — works for all backends:
 #[cfg(feature = "gpu")]
 pub fn gpu_dispatch() { ... }
 
 use bitnet_device_probe::{gpu_compiled, gpu_available_runtime};
 ```
 
-### Adding ROCm / Metal (future, additive only)
+### Additive backend model
 
 Adding a new GPU backend only requires new feature entries and new
 backend-specific modules. Existing `#[cfg(feature = "gpu")]` code
-continues to work without modification.
+continues to work without modification across all backends.
 
 ---
 

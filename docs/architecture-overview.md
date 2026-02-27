@@ -11,7 +11,7 @@ BitNet-rs is organized as a Rust workspace with specialized crates:
 - **`bitnet-common`**: Shared types, traits, utilities, and enhanced error types for GGUF operations
 - **`bitnet-models`**: **Enhanced model loading with real GGUF weight parsing** - replaces mock tensor initialization with comprehensive transformer layer weight loading (AC1), supporting all quantization formats with device-aware placement
 - **`bitnet-quantization`**: Real quantized computation with I2S (≥99.8%), TL1/TL2 (≥99.6%) accuracy validation vs FP32 baselines - **STRICT MODE ENFORCED** to prevent mock fallbacks
-- **`bitnet-kernels`**: **Device-aware quantization kernels** with SIMD/CUDA acceleration, mixed precision support (FP16/BF16), automatic CPU/GPU selection, FFI bridge for C++ cross-validation, plus comprehensive GPU detection utilities supporting CUDA, Metal, ROCm, and WebGPU backends
+- **`bitnet-kernels`**: **Device-aware quantization kernels** with SIMD/CUDA acceleration, mixed precision support (FP16/BF16), automatic CPU/GPU selection, FFI bridge for C++ cross-validation, plus comprehensive GPU detection utilities supporting CUDA, Metal (#992), Vulkan (#993), ROCm (#995), Intel oneAPI (#986), and OpenGL/OpenCL probing
 - **`bitnet-inference`**: **Real neural network inference engine** ([Issue #254](explanation/issue-254-real-inference-spec.md)) with autoregressive generation, multi-head attention, quantized linear layers (I2S/TL1/TL2 GEMV), RoPE positional embeddings, GQA support, KV-cache optimization, deterministic generation, and receipt-backed performance validation - **compute_path="real"** enforced
 - **`bitnet-tokenizers`**: Universal tokenizer with GGUF integration, automatic discovery, and graceful fallback system
 
@@ -271,7 +271,7 @@ For detailed deployment guides, see:
 7. **Enhanced Validation Framework**: Comprehensive GPU/CPU validation with performance metrics and error tolerance
 8. **Security-First Design**: Input validation, bounds checking, and resource limits for production deployment
 9. **FFI Bridge Architecture**: Safe C++ kernel integration for gradual migration with comprehensive testing and error handling
-10. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal, ROCm, and WebGPU with mock testing capabilities
+10. **Multi-Backend GPU Detection**: System-aware GPU detection with automatic fallback, supporting CUDA, Metal (#992), Vulkan (#993), ROCm (#995), Intel oneAPI (#986), and OpenGL/OpenCL probing (#984/#985)
 11. **GPU Infrastructure Access**: Low-level CUDA context and module access for advanced GPU programming (PR #199), enabling custom kernel loading and device-specific optimization
 12. **Mixed Precision Computing**: Native CUDA kernels for FP16/BF16 operations with device-aware precision selection and automatic fallback (PR #202)
 13. **Production-Ready Server Architecture**: Scalable HTTP/REST inference server with comprehensive health monitoring, system metrics, and deployment automation (PR #422)
