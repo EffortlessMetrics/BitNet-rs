@@ -145,6 +145,63 @@ fn build_curated_rows() -> Box<[BddCell]> {
             forbidden_features: FeatureSet::new(),
             intent: "Smoke path for receipt generation and schema v1.0.0 validation",
         },
+        // Feature: health — Scenario: "server returns 200 on /health"
+        // Reason: Pre-production health-check validates that the server crate starts and
+        // responds correctly before promotion; `server` and `reporting` must both be
+        // present so the health endpoint and its receipt are exercised together.
+        BddCell {
+            scenario: TestingScenario::EndToEnd,
+            environment: ExecutionEnvironment::PreProduction,
+            required_features: feature_set_from_names(&["inference", "server", "reporting"]),
+            optional_features: feature_set_from_names(&["kernels", "tokenizers"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Server health-check path (/health endpoint returns 200)",
+        },
+        // Feature: prompt-templates — Scenario: "auto template picks instruct for base models"
+        // Reason: Template auto-detection logic in the CLI must be exercised in CI so that
+        // regressions to the `cli`+`tokenizers` dispatch path are caught early.
+        BddCell {
+            scenario: TestingScenario::Development,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&["inference", "tokenizers", "cli"]),
+            optional_features: feature_set_from_names(&["kernels", "reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Prompt-template auto-detection selects instruct for base models",
+        },
+        // Feature: tokenizer — Scenario: "encode then decode returns original tokens"
+        // Reason: Local cross-validation round-trips catch tokenizer parity regressions
+        // (Issue #469) without requiring the full CI cross-validation fixture set.
+        BddCell {
+            scenario: TestingScenario::CrossValidation,
+            environment: ExecutionEnvironment::Local,
+            required_features: feature_set_from_names(&["inference", "tokenizers"]),
+            optional_features: feature_set_from_names(&["fixtures", "reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Tokenizer encode/decode round-trip preserves original token sequence",
+        },
+        // Feature: receipts — Scenario: "receipt JSON validates against schema v1.0.0"
+        // Reason: A dedicated Debug/CI cell for receipt schema validation lets developers
+        // iterate on the schema in CI debug mode without the full smoke-path overhead.
+        BddCell {
+            scenario: TestingScenario::Debug,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&["inference", "reporting"]),
+            optional_features: feature_set_from_names(&["kernels", "tokenizers"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Receipt JSON validates against schema v1.0.0 with all required gates",
+        },
+        // Feature: sampling — Scenario: "same seed produces identical output"
+        // Reason: A Minimal/CI cell verifies that the deterministic seed path in
+        // `SamplingStrategy` produces bit-identical output; minimal feature set keeps
+        // the check fast and independent of tokenizer or reporting state.
+        BddCell {
+            scenario: TestingScenario::Minimal,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&["inference", "kernels"]),
+            optional_features: FeatureSet::new(),
+            forbidden_features: FeatureSet::new(),
+            intent: "Deterministic seed produces identical output across repeated runs",
+        },
     ]
     .into_boxed_slice()
 }
