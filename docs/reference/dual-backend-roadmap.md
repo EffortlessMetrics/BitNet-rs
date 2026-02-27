@@ -1,7 +1,9 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#899.
+> **Last updated**: reflects implementation state after PRs #608–#907.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
+> **Recent wave (PRs #886–#907)**: ~200+ new tests added across server security, tokenizers,
+> logits, E2E golden path, fuzz targets, and active test unblocking.
 
 ---
 
@@ -149,6 +151,13 @@
 | test(proptest): 31 property + unit tests for `bitnet-ffi` — BitNetCConfig/BitNetCInferenceConfig round-trips, BitNetCError display, MemoryStats arithmetic, thread-local error state | `crates/bitnet-ffi/tests/property_tests.rs` | #815 |
 | CI workflow fixes: push/PR triggers and `cargo-tests` smoke job added to property-tests and performance-tracking workflows | `.github/workflows/property-tests.yml`, `.github/workflows/performance-tracking.yml` | #879 |
 | Additional property tests for `bitnet-server` (batch/concurrency/security config invariants) and `bitnet-ffi` (C API round-trips) | `crates/bitnet-server/tests/`, `crates/bitnet-ffi/tests/` | #880 |
+| 10 previously-ignored tests activated: env-var guards converted from `#[ignore]` to active tests | workspace | #901 |
+| 24 `bitnet-logits` property-based tests (softmax, log-softmax, repetition penalty, temperature, top-k, top-p, numerical stability) | `crates/bitnet-logits/tests/` | #902 |
+| Fuzz targets: `sampling_no_panic`, `receipt_json_roundtrip`, `prompt_template_no_panic` (3 new targets; total grows to 18) | `fuzz/fuzz_targets/` | #903 |
+| E2E golden-path tests: synthetic GGUF fixture (< 2 KB, no model download), 5 deterministic tests covering header parsing, metadata round-trip, full load, receipt invariants | `crates/bitnet-inference/tests/` | #904 |
+| `xtask grid-check [--dry-run]` BDD compile-coverage gate: 18 cells including cpu, cpu+full-cli, cpu+crossval, cpu+gpu | `xtask/src/grid_check.rs` | #905 |
+| 45 comprehensive tokenizer property-based tests: 40 proptest + 5 integration covering encode/decode round-trips, vocab consistency, Unicode safety, config JSON round-trip, auto-discovery, batch encoding | `crates/bitnet-tokenizers/tests/` | #906 |
+| 43 server security & middleware tests: 7 CORS, 5 security header, 9 request validation, 4 model path, 3 config/auth, 4 IP extraction, 8 property, 1 health endpoint; uses `tower::ServiceExt::oneshot` | `crates/bitnet-server/tests/` | #907 |
 
 ### 🔲 What's Planned
 
