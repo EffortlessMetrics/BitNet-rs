@@ -454,7 +454,9 @@ pub unsafe extern "C" fn bitnet_inference_with_config(
 pub extern "C" fn bitnet_get_last_error() -> *const c_char {
     match get_last_error() {
         Some(error) => {
-            let error_msg = format!("{}\0", error);
+            // CString adds the trailing null terminator; keep the payload free of '\0'
+            // so callers receive the original error message instead of a fallback string.
+            let error_msg = error.to_string().replace('\0', "\\0");
             // Store in thread-local storage to ensure lifetime
             thread_local! {
                 static ERROR_MSG: std::cell::RefCell<Option<CString>> = const { std::cell::RefCell::new(None) };
