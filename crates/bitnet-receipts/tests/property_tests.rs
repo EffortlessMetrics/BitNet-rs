@@ -8,8 +8,8 @@
 //! - validate() passes for correctly generated receipts
 
 use bitnet_receipts::{
-    InferenceReceipt, ModelInfo, ParityMetadata, PerformanceBaseline, TestResults,
-    RECEIPT_SCHEMA_VERSION,
+    InferenceReceipt, ModelInfo, ParityMetadata, PerformanceBaseline, RECEIPT_SCHEMA_VERSION,
+    TestResults,
 };
 use proptest::prelude::*;
 
