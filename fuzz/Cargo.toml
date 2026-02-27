@@ -149,3 +149,9 @@ name = "gguf_kv_read"
 path = "fuzz_targets/gguf_kv_read.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "gguf_header_roundtrip"
+path = "fuzz_targets/gguf_header_roundtrip.rs"
+test = false
+doc = false
