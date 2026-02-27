@@ -9,7 +9,7 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 
 ## Features
 
-- **SIMD/CUDA kernels** — AVX2/AVX-512/NEON on CPU; CUDA acceleration via the `gpu` feature (CUDA 12.x)
+- **SIMD/CUDA/Metal/Vulkan kernels** — AVX2/AVX-512/NEON on CPU; CUDA (`gpu`), Metal (`metal`, macOS), Vulkan (`vulkan`), Intel oneAPI (`oneapi`) GPU backends
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
@@ -45,6 +45,10 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 | CPU inference — I2_S BitNet32 | ✅    | Production path; 10–20× faster than QK256 scalar |
 | CPU inference — I2_S QK256    | ✅    | Scalar kernels (~0.1 tok/s on 2B); AVX2 foundation merged |
 | GPU inference — CUDA          | ⚠️   | Implemented; receipt validation pending |
+| GPU inference — Metal         | ✅    | macOS/iOS via `--features metal` (#992) |
+| GPU inference — Vulkan        | ✅    | Runtime probing via `--features vulkan` (#993) |
+| GPU inference — Intel oneAPI  | ✅    | Intel CPU/GPU via `--features oneapi` (#986) |
+| AMD ROCm detection            | ✅    | `rocm_available` field in `DeviceProbe` (#995) |
 | Interactive chat (REPL)       | ✅    | `/help`, `/clear`, `/metrics`, auto-template detection |
 | Cross-validation vs C++       | ✅    | Cosine similarity > 0.99, per-token comparison |
 | Honest-compute receipts       | ✅    | Schema v1.0.0, 8 validation gates |
@@ -106,8 +110,11 @@ nix develop && nix build .#bitnet-cli && nix flake check
 | Flag | Purpose |
 |------|---------|
 | `cpu` | SIMD-optimised CPU inference (AVX2 / AVX-512 / NEON) |
-| `gpu` | CUDA acceleration (preferred; requires CUDA 12.x) |
-| `cuda` | Backward-compatible alias for `gpu` — prefer `gpu` in new code |
+| `gpu` | Umbrella GPU feature — enables all compiled GPU backends |
+| `cuda` | CUDA acceleration (preferred; requires CUDA 12.x); backward-compat alias for `gpu` |
+| `metal` | Metal GPU backend (macOS/iOS Apple Silicon) |
+| `vulkan` | Vulkan compute backend (cross-platform) |
+| `oneapi` | Intel oneAPI backend (Intel CPU/GPU) |
 | `ffi` | C++ FFI bridge for cross-validation |
 | `fixtures` | GGUF fixture-based integration tests (test-only) |
 | `full-cli` | Enable all CLI subcommands |

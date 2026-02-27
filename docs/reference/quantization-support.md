@@ -22,6 +22,7 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - Table lookup quantization optimized for ARM NEON architecture (4-bit, 2 elements per byte with nibble packing)
 - **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
 - **Performance** (receipt-driven): Typical range 12-18 tok/s on ARM NEON. Verify with receipts and baselines.
+- **NEON Improvements**: ARM NEON kernel throughput and accuracy improvements added in #988
 - **Device-Aware Selection**: Automatic ARM NEON vectorization with scalar fallback
 - Memory-efficient lookup tables (16-256 entries, cache-friendly)
 - Parallel processing with configurable block sizes
@@ -34,9 +35,11 @@ BitNet-rs supports multiple quantization formats with advanced device-aware acce
 - **Accuracy**: ≥99.6% correlation with FP32 reference (validated in AC3)
 - **Performance** (receipt-driven): Typical range 10-15 tok/s on x86 AVX. Verify with receipts and baselines.
 - **SIMD Optimization**: AVX2 (32-byte) and AVX-512 (64-byte) vectorization
+- **AVX-512 Kernels**: Dedicated AVX-512 TL2 kernels added in #997 for 64-byte wide SIMD lanes
 - Enhanced vectorized operations (256-4096 entry tables) for large tensor processing
 - CPU feature detection with graceful fallback to scalar implementation
 - **Real Computation**: Direct table lookup matmul without FP32 staging (Issue #261)
+- **2-bit Domain**: Input quantization stays in the 2-bit domain throughout (fixed in #978)
 - **Safe LUT Index Calculation**: Uses `bitnet_kernels::tl_lut::lut_index()` with checked arithmetic and overflow protection
 
 ### I2S (QK256/GGML) - Pure Rust (Production Ready)
@@ -135,6 +138,10 @@ cargo test -p bitnet-kernels --no-default-features --features cpu test_lut_index
 All quantizers support device-aware operations with:
 
 - **Automatic GPU acceleration**: CUDA kernels with performance monitoring (50-100 tok/s)
+- **Metal acceleration**: macOS/iOS GPU via `feature = "metal"` (#992)
+- **Vulkan compute**: Cross-platform GPU via `feature = "vulkan"` (#993)
+- **Intel oneAPI**: Intel CPU/GPU acceleration via `feature = "oneapi"` (#986)
+- **ROCm support**: AMD GPU detection via `rocm_available` field in `DeviceProbe` (#995)
 - **Transparent CPU fallback**: Graceful degradation with maintained accuracy (10-20 tok/s)
 - **Memory optimization**: GPU memory leak detection and efficient allocation
 - **Feature gating**: Proper `#[cfg(feature = "gpu")]` guards for CPU-only builds
