@@ -20,7 +20,7 @@ use support::EnvGuard;
 #[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.1: Deterministic Generation - SLOW INTEGRATION TEST
 ///
-/// **This test runs 50-token generation (100+ forward passes) and is marked #[ignore].**
+/// **This test runs 50-token generation (100+ forward passes) — use `--ignored` to run manually.**
 ///
 /// For fast unit testing of determinism, see:
 /// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
@@ -95,7 +95,7 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
 #[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.3: Top-k Seeded Sampling - SLOW INTEGRATION TEST
 ///
-/// **This test runs 30-token generation (60+ forward passes) and is marked #[ignore].**
+/// **This test runs 30-token generation (60+ forward passes) — use `--ignored` to run manually.**
 ///
 /// For fast unit testing of top-k determinism, see:
 /// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
@@ -134,7 +134,7 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
 #[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.4: Top-p Nucleus Sampling - SLOW INTEGRATION TEST
 ///
-/// **This test runs 25-token generation (50+ forward passes) and is marked #[ignore].**
+/// **This test runs 25-token generation (50+ forward passes) — use `--ignored` to run manually.**
 ///
 /// For fast unit testing of nucleus sampling determinism, see:
 /// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
@@ -173,7 +173,7 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
 #[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.5: Different Seeds Produce Different Outputs - SLOW INTEGRATION TEST
 ///
-/// **This test runs 20-token generation (40+ forward passes) and is marked #[ignore].**
+/// **This test runs 20-token generation (40+ forward passes) — use `--ignored` to run manually.**
 ///
 /// For fast unit testing of seed variance, see:
 /// - `tests/deterministic_sampling_unit.rs::test_different_seeds_different_samples()` (<5ms)
@@ -220,7 +220,7 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
 #[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.6: Rayon Single-Thread Determinism - SLOW INTEGRATION TEST
 ///
-/// **This test runs 15-token generation 3 times (90+ forward passes) and is marked #[ignore].**
+/// **This test runs 15-token generation 3 times (90+ forward passes) — use `--ignored` to run manually.**
 ///
 /// For fast unit testing of single-threaded determinism, see:
 /// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
