@@ -151,10 +151,7 @@ fn logits_integration_preprod_intent_mentions_logits_or_transforms() {
 #[test]
 fn generation_debug_preprod_cell_exists() {
     let cell = curated().find(TestingScenario::Debug, ExecutionEnvironment::PreProduction);
-    assert!(
-        cell.is_some(),
-        "Debug/PreProduction cell for generation must be in the curated grid"
-    );
+    assert!(cell.is_some(), "Debug/PreProduction cell for generation must be in the curated grid");
 }
 
 #[test]

@@ -25,10 +25,7 @@ use bitnet_receipts::{InferenceReceipt, RECEIPT_SCHEMA_VERSION};
 /// Then: equals "1.0.0"
 #[test]
 fn given_schema_version_constant_when_checked_then_equals_one_zero_zero() {
-    assert_eq!(
-        RECEIPT_SCHEMA_VERSION, "1.0.0",
-        "RECEIPT_SCHEMA_VERSION must equal \"1.0.0\""
-    );
+    assert_eq!(RECEIPT_SCHEMA_VERSION, "1.0.0", "RECEIPT_SCHEMA_VERSION must equal \"1.0.0\"");
 }
 
 /// Given: a freshly generated receipt
@@ -36,8 +33,7 @@ fn given_schema_version_constant_when_checked_then_equals_one_zero_zero() {
 /// Then: equals "1.0.0"
 #[test]
 fn given_fresh_receipt_when_schema_version_read_then_is_one_zero_zero() {
-    let receipt =
-        InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
+    let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     assert_eq!(
         receipt.schema_version, "1.0.0",
         "generated receipt must carry schema_version = \"1.0.0\""
@@ -67,8 +63,7 @@ fn given_wrong_schema_version_when_validate_schema_then_returns_error() {
 /// Then: returns Ok
 #[test]
 fn given_compute_path_real_when_validate_compute_path_then_passes() {
-    let receipt =
-        InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
+    let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     assert_eq!(receipt.compute_path, "real");
     assert!(
         receipt.validate_compute_path().is_ok(),
@@ -125,10 +120,7 @@ fn given_all_real_kernel_ids_when_generate_then_compute_path_is_real() {
 fn given_uppercase_mock_kernel_id_when_generate_then_compute_path_is_mock() {
     let kernels = vec!["MOCK_COMPUTE".to_string()];
     let receipt = InferenceReceipt::generate("cpu", kernels, None).unwrap();
-    assert_eq!(
-        receipt.compute_path, "mock",
-        "mock kernel detection must be case-insensitive"
-    );
+    assert_eq!(receipt.compute_path, "mock", "mock kernel detection must be case-insensitive");
 }
 
 // ── Kernel ID validation ──────────────────────────────────────────────────────
@@ -143,10 +135,7 @@ fn given_empty_kernels_when_validate_kernel_ids_then_returns_error() {
     receipt.kernels.clear();
 
     let result = receipt.validate_kernel_ids();
-    assert!(
-        result.is_err(),
-        "validate_kernel_ids() must return Err when the kernel list is empty"
-    );
+    assert!(result.is_err(), "validate_kernel_ids() must return Err when the kernel list is empty");
 }
 
 /// Given: a kernel ID that exceeds 128 characters
@@ -173,8 +162,7 @@ fn given_oversized_kernel_id_when_validate_kernel_ids_then_returns_error() {
 fn given_kernel_id_at_max_length_when_validate_kernel_ids_then_length_check_passes() {
     // 128 lowercase letters — valid identifier, not "mock".
     let max_len_id = "a".repeat(128);
-    let receipt =
-        InferenceReceipt::generate("cpu", vec![max_len_id.clone()], None).unwrap();
+    let receipt = InferenceReceipt::generate("cpu", vec![max_len_id.clone()], None).unwrap();
     // The 128-char ID itself should not trigger the length-exceeded error.
     // Note: it may still fail on "mock" check, but that won't apply here.
     // The important assertion is that the max-length boundary is not rejected.
@@ -203,10 +191,7 @@ fn given_empty_string_kernel_id_when_validate_kernel_ids_then_returns_error() {
     receipt.kernels.push(String::new());
 
     let result = receipt.validate_kernel_ids();
-    assert!(
-        result.is_err(),
-        "validate_kernel_ids() must return Err for an empty kernel ID string"
-    );
+    assert!(result.is_err(), "validate_kernel_ids() must return Err for an empty kernel ID string");
 }
 
 // ── Backend recording ─────────────────────────────────────────────────────────
@@ -216,8 +201,7 @@ fn given_empty_string_kernel_id_when_validate_kernel_ids_then_returns_error() {
 /// Then: the receipt's backend field is "cpu"
 #[test]
 fn given_backend_cpu_when_generate_then_receipt_backend_is_cpu() {
-    let receipt =
-        InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
+    let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
     assert_eq!(receipt.backend, "cpu", "receipt must record the backend passed to generate()");
 }
 
@@ -227,8 +211,7 @@ fn given_backend_cpu_when_generate_then_receipt_backend_is_cpu() {
 #[test]
 fn given_backend_cuda_when_generate_then_receipt_backend_is_cuda() {
     // Generating with a "cuda" backend and real kernel IDs should produce a "real" cuda receipt.
-    let receipt =
-        InferenceReceipt::generate("cuda", vec!["gemm_bf16".to_string()], None).unwrap();
+    let receipt = InferenceReceipt::generate("cuda", vec!["gemm_bf16".to_string()], None).unwrap();
     assert_eq!(receipt.backend, "cuda", "receipt must record 'cuda' as the backend");
     assert_eq!(
         receipt.compute_path, "real",
@@ -276,10 +259,7 @@ fn given_compute_path_mock_when_full_validate_then_returns_error() {
     receipt.compute_path = "mock".to_string();
 
     let result = receipt.validate();
-    assert!(
-        result.is_err(),
-        "full validate() must reject receipts with compute_path = \"mock\""
-    );
+    assert!(result.is_err(), "full validate() must reject receipts with compute_path = \"mock\"");
     // The error message should mention the invalid path.
     let msg = result.unwrap_err().to_string().to_ascii_lowercase();
     assert!(

@@ -47,10 +47,7 @@ fn given_temperature_zero_when_sampling_repeatedly_then_always_same_token() {
 
     for _ in 0..9 {
         let token = strategy.sample(&logits, &[]).unwrap();
-        assert_eq!(
-            token, first,
-            "temperature=0.0 must return the same token on every call"
-        );
+        assert_eq!(token, first, "temperature=0.0 must return the same token on every call");
     }
 }
 
