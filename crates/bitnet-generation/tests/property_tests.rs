@@ -349,3 +349,117 @@ proptest! {
 }
 
 use serde_json;
+
+// ── new invariants ────────────────────────────────────────────────────────
+
+proptest! {
+    /// When generated.len() < budget, MaxTokens must never fire.
+    #[test]
+    fn below_budget_never_fires_max_tokens(
+        budget in 2usize..128usize,
+        under in 0usize..1usize, // generated.len() = budget - 1 - under, always < budget
+        token in 1u32..50_000u32,
+    ) {
+        // generated has budget-1 entries (strictly below budget)
+        let len = budget.saturating_sub(1 + under).min(budget - 1);
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            eos_token_id: None,
+            max_tokens: budget,
+            stop_strings: vec![],
+        };
+        let generated = vec![0u32; len];
+        let reason = check_stop(&criteria, token, &generated, "");
+        prop_assert_ne!(
+            reason,
+            Some(StopReason::MaxTokens),
+            "MaxTokens fired with len={} < budget={}",
+            len,
+            budget
+        );
+    }
+
+    /// When both max_tokens is exceeded AND a stop string appears, MaxTokens wins
+    /// (max_tokens check runs before stop-string scan in check_stop).
+    #[test]
+    fn max_tokens_beats_stop_string(budget in 1usize..64usize) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            eos_token_id: None,
+            max_tokens: budget,
+            stop_strings: vec!["</s>".to_string()],
+        };
+        let generated = vec![0u32; budget]; // exactly at budget
+        // Tail contains the stop string — budget check still wins.
+        let reason = check_stop(&criteria, 99_999, &generated, "hello</s>");
+        prop_assert_eq!(reason, Some(StopReason::MaxTokens));
+    }
+
+    /// When a token ID is in a list of multiple stop IDs, it always triggers StopTokenId.
+    #[test]
+    fn multiple_stop_ids_any_match(
+        ids in prop::collection::vec(1u32..50_000u32, 2..8),
+        idx in 0usize..8usize,
+    ) {
+        let idx = idx % ids.len();
+        let token = ids[idx];
+        let criteria = StopCriteria {
+            stop_token_ids: ids,
+            eos_token_id: None,
+            max_tokens: 0,
+            stop_strings: vec![],
+        };
+        let reason = check_stop(&criteria, token, &[], "");
+        prop_assert_eq!(reason, Some(StopReason::StopTokenId(token)));
+    }
+
+    /// StopReason variants survive a JSON serde round-trip without data loss.
+    #[test]
+    fn stop_reason_serde_roundtrip(token_id in 0u32..100_000u32, text in "[a-z]{1,16}") {
+        let reasons = [
+            StopReason::MaxTokens,
+            StopReason::EosToken,
+            StopReason::StopTokenId(token_id),
+            StopReason::StopString(text.clone()),
+        ];
+        for original in &reasons {
+            let json = serde_json::to_string(original).expect("serialize StopReason");
+            let restored: StopReason = serde_json::from_str(&json).expect("deserialize StopReason");
+            prop_assert_eq!(original, &restored, "serde round-trip failed for {:?}", original);
+        }
+    }
+
+    /// A stop string that exactly equals the tail (no surrounding text) still triggers.
+    #[test]
+    fn stop_string_exact_boundary_triggers(stop in prop_oneof![
+        Just("</s>".to_string()),
+        Just("[STOP]".to_string()),
+        Just("\n".to_string()),
+    ]) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            eos_token_id: None,
+            max_tokens: 0,
+            stop_strings: vec![stop.clone()],
+        };
+        // Tail is exactly the stop string with no extra chars.
+        let reason = check_stop(&criteria, 1, &[], &stop);
+        prop_assert_eq!(reason, Some(StopReason::StopString(stop)));
+    }
+
+    /// A token that equals eos_token_id but is NOT in stop_token_ids yields EosToken.
+    #[test]
+    fn eos_not_in_stop_ids_gives_eos_token(
+        eos in 1u32..50_000u32,
+        other in 50_001u32..100_000u32,
+    ) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![other], // different from eos
+            eos_token_id: Some(eos),
+            max_tokens: 0,
+            stop_strings: vec![],
+        };
+        let reason = check_stop(&criteria, eos, &[], "");
+        prop_assert_eq!(reason, Some(StopReason::EosToken));
+    }
+}
