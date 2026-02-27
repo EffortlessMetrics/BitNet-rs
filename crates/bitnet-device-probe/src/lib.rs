@@ -477,3 +477,5 @@ mod property_tests {
         assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
     }
 }
+
+// retrigger-ci-placeholder: remove if needed
