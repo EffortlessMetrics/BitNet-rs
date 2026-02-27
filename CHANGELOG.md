@@ -5,6 +5,9 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(bitnet-device-probe,bitnet-logits): add comprehensive unit tests` — 15 tests for `bitnet-device-probe` (SIMD level ordering, probe consistency, cross-probe invariants) and 26 tests for `bitnet-logits` (top-p, repetition penalty, argmax, temperature, softmax, top-k, property tests) (#929)
+- `test(bitnet-generation,bitnet-engine-core): add comprehensive unit tests` — 24 tests for `bitnet-generation` (stop criteria, streaming events, serde roundtrips, property tests) and 36 tests for `bitnet-engine-core` (session lifecycle, backend info, concurrency config, engine state, error variants, session ID uniqueness) (#928)
+- `test(bitnet-cli,bitnet-gguf): add comprehensive unit tests` — 55 tests for `bitnet-cli` (InferenceCommand defaults, PromptTemplate parsing, TemplateType detection, CliConfig validation, ConfigBuilder, property tests) and 40 tests for `bitnet-gguf` (GGUF value types, metadata, header parsing, constants, property tests) (#926)
 - `test(bitnet-inference,bitnet-models): add extended engine and model tests` — 43 tests for `bitnet-inference` (SamplingConfig, SamplingStrategy, GenerationConfig, InferenceReceipt, ModelInfo, ProductionInferenceEngine, streaming, error handling) and 43 tests for `bitnet-models` (ModelMetadata, QuantizationType, BitNetConfig, LoadConfig, ProductionModelLoader, tensor operations) (#924)
 - `test: reduce ignored test count (wave 3)` — reduced ignored test count; added justification strings to all remaining `#[ignore]` markers; added env-var guards for environment-sensitive tests (#925)
 - `test(bitnet-st2gguf,bitnet-server): add extended tests` — 26 extended tests for bitnet-st2gguf (conversion pipeline, quantization type handling, error variants) and 20 tests for bitnet-server (batch engine config, CORS, security middleware) (#922)
