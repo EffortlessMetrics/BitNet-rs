@@ -421,3 +421,163 @@ proptest! {
         );
     }
 }
+
+// ── Cross-consistency tests ───────────────────────────────────────────────────
+
+/// `probe_cpu().has_avx2` must agree with `detect_simd_level() >= Avx2`.
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn probe_cpu_has_avx2_consistent_with_simd_level() {
+    let caps = probe_cpu();
+    let level = detect_simd_level();
+    // If has_avx2 is true, simd_level must be at least Avx2.
+    if caps.has_avx2 {
+        assert!(
+            simd_level_rank(&level) >= simd_level_rank(&SimdLevel::Avx2),
+            "has_avx2=true requires simd_level rank >= Avx2 rank"
+        );
+    }
+}
+
+/// `probe_cpu().has_avx512` must agree with `detect_simd_level() >= Avx512`.
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn probe_cpu_has_avx512_consistent_with_simd_level() {
+    let caps = probe_cpu();
+    let level = detect_simd_level();
+    if caps.has_avx512 {
+        assert!(
+            simd_level_rank(&level) >= simd_level_rank(&SimdLevel::Avx512),
+            "has_avx512=true requires simd_level rank >= Avx512 rank"
+        );
+    }
+}
+
+/// `probe_device().cpu.cores` must equal `probe_device().cpu.threads`
+/// (the implementation uses available_parallelism for both).
+#[test]
+fn probe_device_cores_equal_threads() {
+    let probe = probe_device();
+    assert_eq!(
+        probe.cpu.cores, probe.cpu.threads,
+        "cores and threads must be equal (both derived from available_parallelism)"
+    );
+}
+
+/// `probe_cpu().core_count` must match `probe_device().cpu.threads`.
+#[test]
+fn probe_cpu_core_count_matches_probe_device_threads() {
+    let cpu = probe_cpu();
+    let device = probe_device();
+    assert_eq!(
+        cpu.core_count, device.cpu.threads,
+        "probe_cpu().core_count must match probe_device().cpu.threads"
+    );
+}
+
+/// `DeviceCapabilities.cuda_runtime` must match `probe_device().cuda_available`.
+#[test]
+fn device_capabilities_cuda_runtime_matches_probe_device() {
+    let caps = DeviceCapabilities::detect();
+    let probe = probe_device();
+    assert_eq!(
+        caps.cuda_runtime, probe.cuda_available,
+        "DeviceCapabilities.cuda_runtime must match probe_device().cuda_available"
+    );
+}
+
+/// `DeviceCapabilities.simd_level` rank must be >= Scalar rank (always some SIMD level).
+#[test]
+fn device_capabilities_simd_rank_at_least_scalar() {
+    let caps = DeviceCapabilities::detect();
+    assert!(
+        simd_level_rank(&caps.simd_level) >= simd_level_rank(&SimdLevel::Scalar),
+        "simd_level rank must be >= Scalar rank"
+    );
+}
+
+/// `GpuCapabilities` has a non-empty Debug representation.
+#[test]
+fn gpu_capabilities_debug_non_empty() {
+    let caps = probe_gpu();
+    assert!(!format!("{caps:?}").is_empty(), "GpuCapabilities Debug must be non-empty");
+}
+
+/// `CpuCapabilities` has a non-empty Debug representation.
+#[test]
+fn cpu_capabilities_debug_non_empty() {
+    let caps = probe_cpu();
+    assert!(!format!("{caps:?}").is_empty(), "CpuCapabilities Debug must be non-empty");
+}
+
+/// `DeviceProbe` and `CpuProbe` both have non-empty Debug representations.
+#[test]
+fn device_probe_and_cpu_probe_debug_non_empty() {
+    let probe = probe_device();
+    assert!(!format!("{probe:?}").is_empty(), "DeviceProbe Debug must be non-empty");
+    assert!(!format!("{:?}", probe.cpu).is_empty(), "CpuProbe Debug must be non-empty");
+}
+
+/// `simd_level_rank` ordering: Avx512 must strictly outrank Avx2.
+#[test]
+fn simd_level_rank_avx512_greater_than_avx2() {
+    assert!(
+        simd_level_rank(&SimdLevel::Avx512) > simd_level_rank(&SimdLevel::Avx2),
+        "Avx512 rank must exceed Avx2 rank"
+    );
+}
+
+/// `simd_level_rank` ordering: Avx2 must strictly outrank Sse42.
+#[test]
+fn simd_level_rank_avx2_greater_than_sse42() {
+    assert!(
+        simd_level_rank(&SimdLevel::Avx2) > simd_level_rank(&SimdLevel::Sse42),
+        "Avx2 rank must exceed Sse42 rank"
+    );
+}
+
+/// `simd_level_rank` ordering: Sse42 must strictly outrank Scalar.
+#[test]
+fn simd_level_rank_sse42_greater_than_scalar() {
+    assert!(
+        simd_level_rank(&SimdLevel::Sse42) > simd_level_rank(&SimdLevel::Scalar),
+        "Sse42 rank must exceed Scalar rank"
+    );
+}
+
+/// All five named SIMD level ranks must be pairwise distinct.
+#[test]
+fn simd_level_ranks_are_pairwise_distinct() {
+    let all =
+        [SimdLevel::Scalar, SimdLevel::Sse42, SimdLevel::Avx2, SimdLevel::Avx512, SimdLevel::Neon];
+    let ranks: Vec<u32> = all.iter().map(|l| simd_level_rank(l)).collect();
+    let unique: std::collections::HashSet<u32> = ranks.iter().copied().collect();
+    assert_eq!(
+        unique.len(),
+        all.len(),
+        "all SimdLevel ranks must be pairwise distinct, got: {ranks:?}"
+    );
+}
+
+/// `probe_device()` returns a `DeviceProbe` that can be round-tripped through Debug.
+#[test]
+fn probe_device_debug_roundtrip_contains_simd() {
+    let probe = probe_device();
+    let debug_str = format!("{probe:?}");
+    // The Debug output must mention "simd_level" (derived Debug includes field names).
+    assert!(
+        debug_str.contains("simd_level"),
+        "DeviceProbe Debug must contain 'simd_level', got: {debug_str}"
+    );
+}
+
+/// `DeviceCapabilities::detect()` round-trips through Debug and mentions `cpu_rust`.
+#[test]
+fn device_capabilities_debug_mentions_cpu_rust() {
+    let caps = DeviceCapabilities::detect();
+    let debug_str = format!("{caps:?}");
+    assert!(
+        debug_str.contains("cpu_rust"),
+        "DeviceCapabilities Debug must mention 'cpu_rust', got: {debug_str}"
+    );
+}
