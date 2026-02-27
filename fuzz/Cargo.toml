@@ -137,3 +137,15 @@ name = "quantization_input"
 path = "fuzz_targets/quantization_input.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "transformer_config"
+path = "fuzz_targets/transformer_config.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gguf_kv_read"
+path = "fuzz_targets/gguf_kv_read.rs"
+test = false
+doc = false
