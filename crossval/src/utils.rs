@@ -8,15 +8,21 @@ pub fn compare_tokens(
     cpp_tokens: &[u32],
     config: &CrossvalConfig,
 ) -> Result<bool> {
-    if rust_tokens.len() != cpp_tokens.len() {
+    let max_compare = config.max_tokens.min(rust_tokens.len()).min(cpp_tokens.len());
+
+    if max_compare == 0 {
+        return Ok(rust_tokens.is_empty() && cpp_tokens.is_empty());
+    }
+
+    if rust_tokens.len() != cpp_tokens.len()
+        && max_compare == rust_tokens.len().min(cpp_tokens.len())
+    {
         return Err(CrossvalError::ComparisonError(format!(
             "Token sequence length mismatch: Rust={}, C++={}",
             rust_tokens.len(),
             cpp_tokens.len()
         )));
     }
-
-    let max_compare = config.max_tokens.min(rust_tokens.len());
 
     for i in 0..max_compare {
         if rust_tokens[i] != cpp_tokens[i] {
@@ -28,6 +34,31 @@ pub fn compare_tokens(
     }
 
     Ok(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compare_tokens_obeys_max_token_window() {
+        let cfg = CrossvalConfig { tolerance: 0.0, max_tokens: 3, benchmark: false };
+        let rust = vec![1, 2, 3, 4, 5];
+        let cpp = vec![1, 2, 3, 9, 9];
+
+        let result = compare_tokens(&rust, &cpp, &cfg).expect("comparison should succeed");
+        assert!(result);
+    }
+
+    #[test]
+    fn compare_tokens_rejects_length_mismatch_when_comparing_full_sequences() {
+        let cfg = CrossvalConfig { tolerance: 0.0, max_tokens: 10, benchmark: false };
+        let rust = vec![1, 2, 3];
+        let cpp = vec![1, 2, 3, 4];
+
+        let err = compare_tokens(&rust, &cpp, &cfg).expect_err("comparison should fail");
+        assert!(err.to_string().contains("length mismatch"));
+    }
 }
 
 /// Compare two sequences of floating-point values with tolerance
