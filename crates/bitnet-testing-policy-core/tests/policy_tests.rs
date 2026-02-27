@@ -4,9 +4,9 @@
 //! properties, public helper functions, and the validate/active_context API.
 
 use bitnet_testing_policy_core::{
-    ActiveContext, ConfigurationContext, EnvironmentType, ExecutionEnvironment, FeatureSet,
-    PolicySnapshot, ReportFormat, ScenarioConfigManager, TestingScenario, active_context,
-    resolve_context_profile, snapshot_from_env, validate_context, validate_explicit_profile,
+    ActiveContext, ConfigurationContext, EnvironmentType, ExecutionEnvironment, PolicySnapshot,
+    ReportFormat, ScenarioConfigManager, TestingScenario, active_context, resolve_context_profile,
+    snapshot_from_env, validate_context, validate_explicit_profile,
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
