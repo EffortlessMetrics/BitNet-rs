@@ -256,7 +256,7 @@ fn eval_logits_via_ffi(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
         .map_err(|e| anyhow::anyhow!("C++ FFI eval failed: {:?}", e))?;
 
     // Paranoia: ensure non-zero last-step logits (catches KV/logits wiring issues)
-    let sum_abs: f32 = logits.iter().map(|x| x.abs()).sum();
+    let sum_abs: f32 = logits.iter().map(|x: &f32| x.abs()).sum();
     anyhow::ensure!(
         sum_abs > 1e-6,
         "C++ last-step logits near zero (sum_abs={:.2e}); KV/logits wiring off or weights not loaded",
