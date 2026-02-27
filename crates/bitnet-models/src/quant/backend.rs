@@ -172,6 +172,14 @@ pub enum Iq2sBackend {
 }
 
 impl Iq2sBackend {
+    #[inline]
+    fn checked_total_elements(dims: &[usize]) -> anyhow::Result<usize> {
+        dims.iter().try_fold(1usize, |acc, &dim| {
+            acc.checked_mul(dim)
+                .ok_or_else(|| anyhow::anyhow!("IQ2_S element count overflow for dims {dims:?}"))
+        })
+    }
+
     /// Select the appropriate backend based on environment and features
     pub fn selected() -> Self {
         match std::env::var("BITNET_IQ2S_IMPL").ok().as_deref() {
@@ -237,7 +245,21 @@ impl Iq2sBackend {
         match self {
             Self::Rust => {
                 // Use the native Rust implementation
-                let total_elements: usize = dims.iter().product();
+                let total_elements = Self::checked_total_elements(dims)?;
+                let blocks = total_elements.div_ceil(self.qk());
+                let required_bytes = blocks.checked_mul(self.block_bytes()).ok_or_else(|| {
+                    anyhow::anyhow!("IQ2_S byte length overflow for dims {dims:?}")
+                })?;
+
+                anyhow::ensure!(
+                    src_bytes.len() == required_bytes,
+                    "IQ2_S byte length mismatch: got {} expected {} (dims={dims:?}, qk={}, block_bytes={})",
+                    src_bytes.len(),
+                    required_bytes,
+                    self.qk(),
+                    self.block_bytes()
+                );
+
                 let mut output = vec![0.0f32; total_elements];
 
                 unsafe {
@@ -384,6 +406,18 @@ mod tests {
                 out[i]
             );
         }
+    }
+
+    #[test]
+    fn iq2s_rust_dequant_rejects_invalid_byte_length() {
+        let dims = [257usize];
+        let src = vec![0u8; 82]; // Needs 2 blocks for 257 elems
+
+        let err = Iq2sBackend::Rust
+            .dequantize(&src, &dims)
+            .expect_err("expected length validation to fail");
+
+        assert!(err.to_string().contains("byte length mismatch"), "unexpected error: {err}");
     }
 
     #[cfg(all(test, feature = "iq2s-ffi"))]
