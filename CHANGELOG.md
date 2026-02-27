@@ -4,6 +4,15 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `test(bitnet-engine-core): add 20 tests for state transitions, config validation, and session IDs` — 20 new tests covering `EngineState` transitions, `EngineConfig` validation invariants, and session ID uniqueness/format in `crates/bitnet-engine-core/tests/`; raises engine-core test coverage (#899)
+- `test(bitnet-prompt-templates): add 9 property-based tests` — 9 new proptests covering template rendering determinism, format invariants, and stop-sequence emission in `crates/bitnet-templates/tests/prompt_template_proptests.rs` (#898)
+- `test(bitnet-generation): add 10 property tests for Unicode safety and long context` — 10 new property tests validating UTF-8 safety of generated output and correct behaviour under long-context (>2 048 token) inputs in `crates/bitnet-generation/tests/unicode_and_long_context_proptests.rs` (#897)
+- `chore: prepare v0.1.3 release notes and changelog` — consolidated release notes for v0.1.3 into `CHANGELOG.md`; updated `Cargo.toml` workspace version to `0.1.3` and pinned dependency versions for the release (#896)
+- `test(bitnet-models): add 15 property-based tests for model loading` — 15 new proptests in `crates/bitnet-models/tests/model_load_proptests.rs` covering `ModelConfig` round-trips, tensor-shape invariants, quantization-type parsing edge cases, and QK256 vs BitNet32-F16 flavor disambiguation (#895)
+- `test(bitnet-inference): add 77 integration tests that run without a real model` — 77 new no-model integration tests in `crates/bitnet-inference/tests/` exercising `ProductionInferenceEngine` construction, `SamplingStrategy` configuration paths, `GenerationStream` lifecycle, and error-handling branches without requiring a GGUF file (#894)
+- `test(bitnet-cli): add snapshot tests for CLI help output` — 8 new insta snapshot tests in `crates/bitnet-cli/tests/snapshot_tests.rs` pinning `--help` and `--version` output for all top-level subcommands; uses `assert_cmd` + `insta` for regression detection (#893)
+
 ## [v0.1.3] - 2026-02-27
 
 Test coverage expansion wave 2: property tests across 10+ crates, new fuzz targets, BDD-style kernel tests, CLI snapshot tests, CI hardening, and integration tests for quantization, device-probe, logits, transformer, and tokenizer.
