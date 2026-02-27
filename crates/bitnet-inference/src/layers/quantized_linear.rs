@@ -1774,11 +1774,12 @@ mod utils {
     /// Quantize input data to TL2 format
     #[allow(dead_code)]
     pub fn quantize_input_tl2(input: &[f32], _features: usize) -> Result<Vec<i8>> {
-        // Simple quantization to TL2 range (8-bit signed)
+        // TL2 uses the same packed 2-bit value domain as I2S/TL1 in this path.
+        // The larger TL2 table improves lookup quality, not raw value bit width.
         let quantized: Vec<i8> = input
             .iter()
             .map(|&x| {
-                let clamped = x.clamp(-128.0, 127.0);
+                let clamped = x.clamp(-2.0, 1.0);
                 clamped.round() as i8
             })
             .collect();
@@ -1802,5 +1803,28 @@ mod utils {
         // TL2 uses the same 2-bit packing format as I2S
         // The "8-bit" in TL2 refers to the lookup table size (256 entries), not the bit width
         unpack_2bit_values(packed, count)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::{quantize_input_tl2, unpack_tl2_values};
+
+        #[test]
+        fn tl2_quantization_matches_2bit_domain() {
+            let input = [-9.0, -2.2, -1.6, -0.2, 0.49, 1.49, 100.0];
+            let quantized =
+                quantize_input_tl2(&input, input.len()).expect("TL2 quantization failed");
+
+            assert_eq!(quantized, vec![-2, -2, -2, 0, 0, 1, 1]);
+            assert!(quantized.iter().all(|v| (-2..=1).contains(v)));
+        }
+
+        #[test]
+        fn unpacked_tl2_values_stay_in_2bit_domain() {
+            let packed = [0b11100100u8];
+            let unpacked = unpack_tl2_values(&packed, 4);
+
+            assert_eq!(unpacked, vec![-2, -1, 0, 1]);
+        }
     }
 }
