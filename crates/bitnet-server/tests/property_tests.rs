@@ -1,15 +1,34 @@
-use bitnet_server::InferenceRequest;
-/// Property-based tests for bitnet-server using proptest.
+/// Property-based and unit tests for bitnet-server.
 ///
 /// Tests cover:
 /// - BatchEngineConfig invariants (valid ranges for all fields)
 /// - RequestPriority ordering properties
 /// - BatchRequest builder pattern invariants
 /// - SecurityConfig field bounds (prompt length, token limits, temperature)
-/// - SecurityValidator input validation properties
+/// - SecurityValidator input validation properties (valid and invalid ranges)
+/// - validate_json_payload: valid JSON parses; oversized payloads rejected
+/// - ConcurrencyConfig invariants
+/// - Health endpoint HTTP 200 response
+/// - CORS reflected-origin behaviour
+use std::sync::Arc;
+
+use axum::{
+    Router,
+    body::Body,
+    http::{Method, Request, StatusCode},
+    routing::get,
+};
+use bitnet_server::InferenceRequest;
 use bitnet_server::batch_engine::{BatchEngineConfig, BatchRequest, RequestPriority};
-use bitnet_server::security::{SecurityConfig, SecurityValidator};
+use bitnet_server::concurrency::ConcurrencyConfig;
+use bitnet_server::monitoring::{
+    MonitoringConfig,
+    health::{HealthChecker, create_health_routes},
+    metrics::MetricsCollector,
+};
+use bitnet_server::security::{self, SecurityConfig, SecurityValidator, validate_json_payload};
 use proptest::prelude::*;
+use tower::ServiceExt;
 
 proptest! {
     /// BatchEngineConfig: max_batch_size > 0 is always valid
@@ -214,4 +233,195 @@ proptest! {
             "top_p {top_p} in (0.0, 1.0] should pass validation"
         );
     }
+
+    /// SecurityValidator: temperature above 2.0 always fails
+    #[test]
+    fn prop_security_validator_temperature_above_2_fails(
+        excess in 1u32..=200u32  // represents 0.01..=2.0 excess above 2.0
+    ) {
+        let temperature = 2.0 + excess as f32 / 100.0;
+        let config = SecurityConfig {
+            input_sanitization: false,
+            content_filtering: false,
+            ..Default::default()
+        };
+        let validator = SecurityValidator::new(config).expect("validator creation should succeed");
+        let request = InferenceRequest {
+            prompt: "hello".to_string(),
+            max_tokens: Some(32),
+            model: None,
+            temperature: Some(temperature),
+            top_p: None,
+            top_k: None,
+            repetition_penalty: None,
+        };
+        prop_assert!(
+            validator.validate_inference_request(&request).is_err(),
+            "temperature {temperature} above 2.0 should fail validation"
+        );
+    }
+
+    /// SecurityValidator: top_p above 1.0 always fails
+    #[test]
+    fn prop_security_validator_top_p_above_1_fails(
+        excess in 1u32..=100u32  // represents 0.01..=1.0 excess above 1.0
+    ) {
+        let top_p = 1.0 + excess as f32 / 100.0;
+        let config = SecurityConfig {
+            input_sanitization: false,
+            content_filtering: false,
+            ..Default::default()
+        };
+        let validator = SecurityValidator::new(config).expect("validator creation should succeed");
+        let request = InferenceRequest {
+            prompt: "hello".to_string(),
+            max_tokens: Some(32),
+            model: None,
+            temperature: None,
+            top_p: Some(top_p),
+            top_k: None,
+            repetition_penalty: None,
+        };
+        prop_assert!(
+            validator.validate_inference_request(&request).is_err(),
+            "top_p {top_p} above 1.0 should fail validation"
+        );
+    }
+
+    /// validate_json_payload: valid JSON within size limit always parses
+    #[test]
+    fn prop_validate_json_payload_valid_json_parses(
+        prompt in "[a-z ]{1,50}",
+        max_tokens in 1u32..=512u32,
+    ) {
+        let json = format!(
+            r#"{{"prompt": "{}", "max_tokens": {}}}"#,
+            prompt, max_tokens
+        );
+        let max_size = json.len() + 1024;
+        let result: Result<InferenceRequest, _> = validate_json_payload(&json, max_size);
+        prop_assert!(
+            result.is_ok(),
+            "valid JSON within size limit should parse successfully"
+        );
+    }
+
+    /// validate_json_payload: payload exceeding size limit is always rejected
+    #[test]
+    fn prop_validate_json_payload_rejects_oversized(
+        extra in 1usize..=64usize
+    ) {
+        let json = r#"{"prompt": "hello", "max_tokens": 32}"#;
+        let max_size = json.len() - extra.min(json.len() - 1);
+        let result: Result<InferenceRequest, _> = validate_json_payload(json, max_size);
+        prop_assert!(
+            result.is_err(),
+            "payload exceeding max_size should be rejected"
+        );
+    }
+
+    /// ConcurrencyConfig: max_concurrent_requests is always the value set
+    #[test]
+    fn prop_concurrency_config_max_concurrent_requests_preserved(
+        n in 1usize..=1024usize
+    ) {
+        let config = ConcurrencyConfig {
+            max_concurrent_requests: n,
+            ..Default::default()
+        };
+        prop_assert_eq!(config.max_concurrent_requests, n);
+        prop_assert!(config.max_concurrent_requests > 0);
+    }
+
+    /// ConcurrencyConfig: backpressure_threshold in (0.0, 1.0] is preserved
+    #[test]
+    fn prop_concurrency_config_backpressure_threshold_preserved(
+        threshold_int in 1u32..=100u32
+    ) {
+        let threshold = threshold_int as f64 / 100.0;
+        let config = ConcurrencyConfig {
+            backpressure_threshold: threshold,
+            ..Default::default()
+        };
+        prop_assert!(
+            (0.0..=1.0).contains(&config.backpressure_threshold),
+            "backpressure_threshold {threshold} should remain in range"
+        );
+    }
+}
+
+// ── Deterministic HTTP/integration tests ────────────────────────────────────
+
+/// Health endpoint returns HTTP 200 with no model loaded.
+#[tokio::test]
+async fn test_health_endpoint_returns_200() {
+    let config = MonitoringConfig::default();
+    let metrics = Arc::new(MetricsCollector::new(&config).expect("metrics"));
+    let checker = Arc::new(HealthChecker::new(metrics));
+    let app = create_health_routes(checker);
+
+    let req = Request::builder().uri("/health").body(Body::empty()).unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK, "health endpoint must return 200");
+}
+
+/// CORS: a request from an allowed origin gets the origin reflected back.
+#[tokio::test]
+async fn test_cors_reflects_allowed_origin() {
+    let config = SecurityConfig {
+        allowed_origins: vec!["http://trusted.example.com".to_string()],
+        ..Default::default()
+    };
+    let app =
+        Router::new().route("/", get(|| async { "ok" })).layer(security::configure_cors(&config));
+
+    let req = Request::builder()
+        .method(Method::OPTIONS)
+        .uri("/")
+        .header("Origin", "http://trusted.example.com")
+        .header("Access-Control-Request-Method", "GET")
+        .body(Body::empty())
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let acao = resp
+        .headers()
+        .get("access-control-allow-origin")
+        .expect("ACAO header must be present for allowed origin");
+    assert_eq!(acao, "http://trusted.example.com");
+}
+
+/// CORS: a request from a disallowed origin gets no ACAO header.
+#[tokio::test]
+async fn test_cors_blocks_disallowed_origin() {
+    let config = SecurityConfig {
+        allowed_origins: vec!["http://trusted.example.com".to_string()],
+        ..Default::default()
+    };
+    let app =
+        Router::new().route("/", get(|| async { "ok" })).layer(security::configure_cors(&config));
+
+    let req = Request::builder()
+        .method(Method::OPTIONS)
+        .uri("/")
+        .header("Origin", "http://evil.example.com")
+        .header("Access-Control-Request-Method", "GET")
+        .body(Body::empty())
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert!(
+        resp.headers().get("access-control-allow-origin").is_none(),
+        "ACAO header must not be present for disallowed origin"
+    );
+}
+
+/// validate_json_payload: syntactically invalid JSON returns an error.
+#[test]
+fn test_validate_json_invalid_syntax_returns_error() {
+    let bad_json = r#"{"prompt": "hello", "max_tokens": }"#; // broken JSON
+    let result: Result<InferenceRequest, _> = validate_json_payload(bad_json, 1024);
+    assert!(result.is_err(), "invalid JSON syntax should return an error");
 }
