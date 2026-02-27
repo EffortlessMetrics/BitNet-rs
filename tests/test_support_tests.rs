@@ -424,19 +424,14 @@ fn test_ac2_ci_mode_detection_via_ci_flag() {
 ///
 /// Validates: Interactive mode (no CI/NO_REPAIR flags) allows repair
 #[test]
-#[ignore = "deadlock: creates two EnvGuard instances in same scope (non-reentrant mutex); needs EnvScope refactor"]
 #[serial(bitnet_env)]
 fn test_ac2_interactive_mode_allows_repair() {
-    let _guard_no_repair = EnvGuard::new("BITNET_TEST_NO_REPAIR");
-    let _guard_ci = EnvGuard::new("CI");
-
-    // Remove both flags to simulate interactive session
-    _guard_no_repair.remove();
-    _guard_ci.remove();
-
-    // Verify: Both environment variables are unset
-    assert!(std::env::var("BITNET_TEST_NO_REPAIR").is_err());
-    assert!(std::env::var("CI").is_err());
+    use temp_env::with_vars_unset;
+    with_vars_unset(["BITNET_TEST_NO_REPAIR", "CI"], || {
+        // Verify: Both environment variables are unset
+        assert!(std::env::var("BITNET_TEST_NO_REPAIR").is_err());
+        assert!(std::env::var("CI").is_err());
+    });
 }
 
 // ============================================================================

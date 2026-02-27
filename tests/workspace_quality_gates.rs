@@ -188,7 +188,7 @@ fn test_workspace_builds_with_gpu_features() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#cross-validation-gates (line 529)
 #[test]
-#[ignore = "Post-migration test - requires crossval-all feature implementation"]
+#[ignore = "Slow: builds entire workspace with crossval-all features; requires FFI dependencies and C++ toolchain"]
 fn test_workspace_builds_with_crossval_features() {
     let (success, stdout, stderr) = run_cargo_command(&[
         "build",
@@ -694,7 +694,7 @@ fn test_feature_flags_dont_conflict() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#cross-validation-gates (line 529)
 #[test]
-#[ignore = "Post-migration test - requires crossval infrastructure"]
+#[ignore = "Slow: builds xtask with crossval-all features; requires FFI dependencies and C++ toolchain"]
 fn test_crossval_feature_build() {
     let (success, stdout, stderr) =
         run_cargo_command(&["build", "-p", "xtask", "--features", "crossval-all"])
@@ -717,8 +717,11 @@ fn test_crossval_feature_build() {
 ///
 /// Specification: phase2_upgrade_orchestration_spec.md#build-gates (line 516)
 #[test]
-#[ignore = "Slow test - run explicitly in CI"]
 fn test_workspace_clippy_clean() {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow test (cargo clippy); set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return;
+    }
     let (success, stdout, stderr) =
         run_cargo_command(&["clippy", "--all-targets", "--all-features", "--", "-D", "warnings"])
             .expect("Failed to run cargo clippy");
@@ -1113,8 +1116,13 @@ fn test_no_version_conflicts() {
 ///
 /// Ensures workspace builds with minimal versions to verify version constraints
 #[test]
-#[ignore = "Slow test - requires cargo clean and full rebuild"]
 fn test_minimal_dependency_versions() {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!(
+            "⏭️  Skipping slow test (cargo check with -Z minimal-versions); set BITNET_RUN_SLOW_TESTS=1 to enable"
+        );
+        return;
+    }
     // This test validates that version constraints in Cargo.toml are correct
     // by attempting to build with --minimal-versions
     let (success, stdout, stderr) =

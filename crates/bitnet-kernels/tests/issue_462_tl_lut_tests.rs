@@ -425,7 +425,7 @@ fn test_ac4_lut_index_formula_exact_values() -> Result<()> {
 /// Validates that bounds checking overhead is negligible (<5%)
 #[test]
 #[cfg(feature = "cpu")]
-#[ignore = "Benchmark test - run with --ignored flag"]
+#[ignore = "TDD scaffold: performance benchmark not yet implemented; body returns Err via anyhow::bail!"]
 fn test_ac4_lut_index_performance() -> Result<()> {
     // TODO: Benchmark lut_index vs inline calculation
     // use std::time::Instant;

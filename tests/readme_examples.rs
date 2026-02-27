@@ -17,8 +17,13 @@ use std::process::Command;
 ///
 /// Tests feature spec: llama3-tokenizer-fetching-spec.md#ac4-documentation
 #[test]
-#[ignore = "Requires cargo to be available"]
 fn test_readme_quickstart_works() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!(
+            "⏭️  Skipping slow test (invokes cargo build/run); set BITNET_RUN_SLOW_TESTS=1 to enable"
+        );
+        return Ok(());
+    }
     // Test example 1: Download model and tokenizer (from README)
     // cargo run -p xtask -- download-model
     let download_result = Command::new("cargo")
