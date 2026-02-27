@@ -5,6 +5,8 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(bitnet-inference,bitnet-models): add extended engine and model tests` — 43 tests for `bitnet-inference` (SamplingConfig, SamplingStrategy, GenerationConfig, InferenceReceipt, ModelInfo, ProductionInferenceEngine, streaming, error handling) and 43 tests for `bitnet-models` (ModelMetadata, QuantizationType, BitNetConfig, LoadConfig, ProductionModelLoader, tensor operations) (#924)
+- `test: reduce ignored test count (wave 3)` — reduced ignored test count; added justification strings to all remaining `#[ignore]` markers; added env-var guards for environment-sensitive tests (#925)
 - `test(bitnet-st2gguf,bitnet-server): add extended tests` — 26 extended tests for bitnet-st2gguf (conversion pipeline, quantization type handling, error variants) and 20 tests for bitnet-server (batch engine config, CORS, security middleware) (#922)
 - `test(bitnet-transformer,bitnet-honest-compute): add comprehensive tests` — 29 tests for bitnet-transformer (RoPE invariants, KVCache shape/seq-len properties) and 37 tests for bitnet-honest-compute (ComputeMode gating, receipt validation, honest-compute enforcement) (#921)
 - `test(bitnet-bdd-grid,bitnet-testing-policy): add comprehensive grid and policy tests` — 36 tests for bitnet-bdd-grid (grid rows/columns, cell lookup, scenario validation) and 28 tests for bitnet-testing-policy (PolicyDiagnostics coherence, GridCompatibility invariants) (#917)
