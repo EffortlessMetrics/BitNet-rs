@@ -136,7 +136,6 @@ fn test_i2s_quantization_small_input() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Only run with --ignored flag when CUDA is available"]
 fn test_gpu_i2s_quantization() -> Result<()> {
     if !is_cuda_available() {
         println!("Skipping GPU quantization test - CUDA not available");
@@ -176,7 +175,6 @@ fn test_gpu_i2s_quantization() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Only run with --ignored flag when CUDA is available"]
 fn test_gpu_vs_cpu_quantization_accuracy() -> Result<()> {
     if !is_cuda_available() {
         println!("Skipping GPU vs CPU comparison - CUDA not available");
@@ -262,7 +260,6 @@ fn test_quantization_types_support() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Only run with --ignored flag when CUDA is available"]
 fn test_gpu_quantization_fallback() -> Result<()> {
     if !is_cuda_available() {
         println!("Skipping GPU fallback test - CUDA not available");
@@ -314,7 +311,6 @@ fn test_empty_input_handling() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Only run with --ignored flag when CUDA is available"]
 fn test_gpu_memory_management() -> Result<()> {
     if !is_cuda_available() {
         println!("Skipping GPU memory test - CUDA not available");
@@ -346,7 +342,6 @@ fn test_gpu_memory_management() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Only run with --ignored flag when CUDA is available"]
 fn test_concurrent_gpu_operations() -> Result<()> {
     if !is_cuda_available() {
         println!("Skipping concurrent GPU test - CUDA not available");

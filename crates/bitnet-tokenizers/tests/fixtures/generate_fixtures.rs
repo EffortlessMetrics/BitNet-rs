@@ -9,8 +9,11 @@ use super::gguf_fixtures::generate_all_gguf_fixtures;
 use super::tokenizer_fixtures::generate_all_tokenizer_fixtures;
 
 #[test]
-#[ignore = "Only run when explicitly requested"]
 fn generate_all_test_fixtures() {
+    if std::env::var("BITNET_GENERATE_FIXTURES").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping fixture generation; set BITNET_GENERATE_FIXTURES=1 to regenerate");
+        return;
+    }
     println!("Generating GGUF test fixtures...");
     generate_all_gguf_fixtures().expect("Failed to generate GGUF fixtures");
     println!("✓ GGUF fixtures generated");

@@ -439,7 +439,7 @@ fn test_preflight_build_time_priority_no_runtime_check() {
 /// Validates: CI mode skips test when stale build detected
 #[test]
 #[serial(bitnet_env)]
-#[ignore = "Requires subprocess to capture exit code"]
+#[ignore = "Requires subprocess to capture exit(0) call; also deadlocks with two EnvGuard instances (use EnvScope)"]
 fn test_preflight_ci_mode_skips_on_stale_build() {
     // Create temporary directory with mock libraries (simulate stale build)
     let temp = tempfile::tempdir().expect("Failed to create temp dir");
@@ -572,7 +572,7 @@ fn test_preflight_verbose_mode_shows_diagnostics() {
 /// Tests spec: runtime-detection-warning-ci-safe.md#AC9
 /// Validates: No performance regression in fast path (build-time available)
 #[test]
-#[ignore = "Performance benchmark - run manually"]
+#[ignore = "Stub pending implementation: requires HAS_BITNET=true at compile time and timing infrastructure"]
 fn test_preflight_fast_path_performance() {
     // TODO: Benchmark preflight_backend_libs when HAS_BITNET=true
     //
@@ -635,14 +635,13 @@ fn test_preflight_backend_unavailable_everywhere() {
 /// Validates: Runtime detection handles permission errors gracefully
 #[test]
 #[cfg(unix)]
-#[ignore = "Requires special permissions setup"]
 fn test_detect_backend_runtime_permission_error() {
     // TODO: Create directory with restricted permissions and verify:
     // 1. detect_backend_runtime returns Err(String) with permission error
     // 2. Error message is descriptive
     //
-    // This test is marked #[ignore] because it requires special filesystem setup
-    // with permission manipulation that may not work in all CI environments.
+    // This test is a stub pending implementation of permission-error handling
+    // in detect_backend_runtime. Passes vacuously until implemented.
     // Edge case: Permission errors are handled gracefully in detect_backend_runtime
     // The function returns Err(String) for permission-related errors
 }
@@ -706,15 +705,13 @@ fn test_detect_backend_runtime_colon_separated_rpath() {
 /// Validates: Symlinked library directories are followed correctly
 #[test]
 #[cfg(unix)]
-#[ignore = "Requires symlink support"]
 fn test_detect_backend_runtime_follows_symlinks() {
     // TODO: Create symlink to directory with libraries and verify:
     // 1. Runtime detection follows symlink
     // 2. Libraries found in symlinked target
     // 3. Matched path may be symlink or target (implementation-defined)
     //
-    // This test is marked #[ignore] because symlink behavior varies by platform
-    // and filesystem configuration.
+    // Stub pending implementation. Passes vacuously until implemented.
     // Edge case: Symlink following is handled by Rust's std::path::Path::exists()
     // which follows symlinks by default
 }

@@ -122,8 +122,11 @@ fn select_gpu_kernel_returns_err_when_not_compiled() {
 
 #[test]
 #[cfg(any(feature = "gpu", feature = "cuda"))]
-#[ignore = "requires CUDA runtime"]
 fn select_gpu_kernel_returns_ok_with_gpu_runtime() {
+    if !device_features::gpu_available_runtime() {
+        eprintln!("⏭️  Skipping: no CUDA GPU available at runtime");
+        return;
+    }
     let result = select_gpu_kernel(0);
     assert!(result.is_ok(), "select_gpu_kernel must return Ok when CUDA GPU is present");
 }

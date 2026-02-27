@@ -780,7 +780,6 @@ debug: true
 /// Specification: phase2_serde_yaml_specification.md#yaml-1.1-vs-1.2 (section 6.2)
 /// Note: This documents the difference, not recommended usage
 #[test]
-#[ignore = "Documents YAML 1.1 vs 1.2 difference - not production usage"]
 fn test_yaml_1_1_vs_1_2_boolean_keywords() {
     // YAML 1.1 accepts yes/no/on/off as booleans
     // YAML 1.2 treats these as strings (serde_yaml_ng uses YAML 1.2)
