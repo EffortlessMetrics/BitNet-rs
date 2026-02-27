@@ -49,3 +49,19 @@ fn session_metrics_default_json_snapshot() {
     let json = serde_json::to_string_pretty(&metrics).unwrap();
     insta::assert_snapshot!("session_metrics_default_json", json);
 }
+
+#[test]
+fn generation_stats_default_json_snapshot() {
+    use bitnet_engine_core::GenerationStats;
+    let stats = GenerationStats::default();
+    let json = serde_json::to_string_pretty(&stats).unwrap();
+    insta::assert_snapshot!("generation_stats_default_json", json);
+}
+
+#[test]
+fn generation_stats_with_values_json_snapshot() {
+    use bitnet_engine_core::GenerationStats;
+    let stats = GenerationStats { tokens_generated: 64, tokens_per_second: 12.3 };
+    let json = serde_json::to_string_pretty(&stats).unwrap();
+    insta::assert_snapshot!("generation_stats_with_values_json", json);
+}

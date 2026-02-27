@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-engine-core/tests/snapshot_tests.rs
+expression: json
+---
+{
+  "tokens_generated": 64,
+  "tokens_per_second": 12.3
+}
