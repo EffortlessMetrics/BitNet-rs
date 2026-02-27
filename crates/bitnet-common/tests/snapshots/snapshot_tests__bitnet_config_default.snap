@@ -1,0 +1,49 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: cfg
+---
+{
+  "model": {
+    "path": null,
+    "format": "Gguf",
+    "vocab_size": 32000,
+    "hidden_size": 4096,
+    "num_layers": 32,
+    "num_heads": 32,
+    "num_key_value_heads": 0,
+    "intermediate_size": 11008,
+    "max_position_embeddings": 2048,
+    "rope_theta": null,
+    "rope_scaling": null,
+    "rms_norm_eps": null,
+    "tokenizer": {
+      "bos_id": null,
+      "eos_id": null,
+      "unk_id": null,
+      "pad_id": null
+    }
+  },
+  "inference": {
+    "max_length": 2048,
+    "max_new_tokens": 512,
+    "temperature": 1.0,
+    "top_k": 50,
+    "top_p": 0.9,
+    "repetition_penalty": 1.1,
+    "seed": null,
+    "add_bos": true,
+    "append_eos": false,
+    "mask_pad": true
+  },
+  "quantization": {
+    "quantization_type": "I2S",
+    "block_size": 64,
+    "precision": 0.0001
+  },
+  "performance": {
+    "num_threads": null,
+    "use_gpu": false,
+    "batch_size": 1,
+    "memory_limit": null
+  }
+}
