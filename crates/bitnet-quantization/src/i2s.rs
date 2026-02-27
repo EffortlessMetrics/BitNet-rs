@@ -240,7 +240,7 @@ impl I2SQuantizer {
         tensor: &BitNetTensor,
         limits: &SecurityLimits,
     ) -> Result<QuantizedTensor> {
-        use bitnet_kernels::gpu::cuda::CudaKernel;
+        use bitnet_kernels::{gpu::cuda::CudaKernel, KernelProvider};
 
         // Security: Validate input before GPU processing
         validate_tensor_input(tensor, limits)?;

@@ -353,7 +353,7 @@ impl TL2Quantizer {
 
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     fn quantize_cuda(&self, tensor: &BitNetTensor) -> Result<QuantizedTensor> {
-        use bitnet_kernels::gpu::cuda::CudaKernel;
+        use bitnet_kernels::{gpu::cuda::CudaKernel, KernelProvider};
         let data = extract_f32_data(tensor)?;
         let shape = tensor.shape().to_vec();
         let num_blocks = data.len().div_ceil(self.config.block_size);
