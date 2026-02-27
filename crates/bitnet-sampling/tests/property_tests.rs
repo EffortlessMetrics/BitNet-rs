@@ -11,8 +11,8 @@
 //! - Multi-step sampling always stays within vocab bounds
 
 use bitnet_sampling::{
-    apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p, greedy_sample,
-    softmax_in_place, SamplingConfig, SamplingStrategy,
+    SamplingConfig, SamplingStrategy, apply_repetition_penalty, apply_temperature, apply_top_k,
+    apply_top_p, greedy_sample, softmax_in_place,
 };
 use proptest::prelude::*;
 
