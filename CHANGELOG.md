@@ -4,6 +4,14 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- `chore: fix stale MSRV cache key in compatibility workflow (1.89 → 1.92)` — prevents incorrect CI cache hits from cached 1.89 toolchain artifacts (#805)
+
+### Added
+- `test: add proptest coverage for bitnet-logits and bitnet-generation` — temperature scaling, softmax invariants, top-k filtering, repetition penalty (bitnet-logits); stop criteria, token accumulation, streaming order (bitnet-generation) (#806)
+- `feat(fuzz): add tokenizer_encode_decode fuzz target` — covers BasicTokenizer, UniversalTokenizer, wrapper tokenizers, and HfTokenizer BPE round-trips (#807)
+- `test: add 22 proptest cases for bitnet-quantization` — TL1/TL2/I2_S round-trip bounded error, scale positivity, block alignment, and edge cases (all-zeros, alternating signs) (#808)
+
 ## [v0.1.1] - 2026-02-26
 
 ### Security
