@@ -631,6 +631,7 @@ dependencies = [
  "bitnet-tokenizers",
  "candle-core",
  "libfuzzer-sys",
+ "safetensors 0.6.2",
  "serde_json",
 ]
 
