@@ -735,7 +735,7 @@ impl InferenceCommand {
                 info!("Using CPU device");
                 Ok(Device::Cpu)
             }
-            "cuda" => {
+            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => {
                 #[cfg(feature = "gpu")]
                 {
                     if candle_core::utils::cuda_is_available() {
@@ -767,7 +767,7 @@ impl InferenceCommand {
                     Ok(Device::Cpu)
                 }
             }
-            _ => anyhow::bail!("Invalid device: {}. Must be one of: cpu, cuda, auto", device_str),
+            _ => anyhow::bail!("Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto", device_str),
         }
     }
 

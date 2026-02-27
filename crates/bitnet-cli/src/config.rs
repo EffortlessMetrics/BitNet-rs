@@ -135,9 +135,9 @@ impl CliConfig {
     pub fn validate(&self) -> Result<()> {
         // Validate device
         match self.default_device.as_str() {
-            "cpu" | "cuda" | "auto" => {}
+            "cpu" | "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" | "auto" => {}
             _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
                 self.default_device
             ),
         }
