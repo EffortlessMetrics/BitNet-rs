@@ -10,6 +10,11 @@ use bitnet_common::{BitNetError, KernelError, QuantizationType, Result};
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64::*;
 
+#[inline]
+fn packed_2bit_bytes(len: usize) -> usize {
+    len.div_ceil(4)
+}
+
 /// NEON optimized kernel for ARM64 architectures
 ///
 /// This kernel leverages ARM NEON SIMD instructions for vectorized operations,
@@ -206,12 +211,13 @@ impl NeonKernel {
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 64;
         let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let required_output_bytes = packed_2bit_bytes(input.len());
 
-        if output.len() < input.len() / 4 {
+        if output.len() < required_output_bytes {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
                 reason: format!(
                     "Output buffer too small for TL1: expected {}, got {}",
-                    input.len() / 4,
+                    required_output_bytes,
                     output.len()
                 ),
             }));
@@ -227,9 +233,10 @@ impl NeonKernel {
             }));
         }
 
+        output[..required_output_bytes].fill(0);
+
         // TL1 lookup table optimized for ARM
         let lut = [-1.0f32, -0.33, 0.33, 1.0];
-        let lut_vec = vld1q_f32(lut.as_ptr());
 
         for block_idx in 0..num_blocks {
             let start = block_idx * BLOCK_SIZE;
@@ -262,7 +269,6 @@ impl NeonKernel {
             let scale_vec = vdupq_n_f32(scale);
 
             // Quantize block using vectorized lookup
-            let mut out_idx = 0;
             i = 0;
 
             while i + 4 <= block.len() {
@@ -297,7 +303,6 @@ impl NeonKernel {
                 }
 
                 i += 4;
-                out_idx += 1;
             }
 
             // Handle remaining elements
@@ -336,12 +341,13 @@ impl NeonKernel {
     ) -> Result<()> {
         const BLOCK_SIZE: usize = 32;
         let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let required_output_bytes = packed_2bit_bytes(input.len());
 
-        if output.len() < input.len() / 4 {
+        if output.len() < required_output_bytes {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
                 reason: format!(
                     "Output buffer too small for I2_S: expected {}, got {}",
-                    input.len() / 4,
+                    required_output_bytes,
                     output.len()
                 ),
             }));
@@ -359,6 +365,7 @@ impl NeonKernel {
 
         let threshold_pos = vdupq_n_f32(0.5);
         let threshold_neg = vdupq_n_f32(-0.5);
+        output[..required_output_bytes].fill(0);
 
         for block_idx in 0..num_blocks {
             let start = block_idx * BLOCK_SIZE;
@@ -395,9 +402,6 @@ impl NeonKernel {
                 let normalized = vdivq_f32(vals, scale_vec);
 
                 // Vectorized quantization to {-1, 0, 1}
-                let gt_pos = vcgtq_f32(normalized, threshold_pos);
-                let lt_neg = vcltq_f32(normalized, threshold_neg);
-
                 let mut quantized = [0u8; 4];
                 for j in 0..4 {
                     let val = vgetq_lane_f32(normalized, j);
@@ -455,12 +459,13 @@ impl NeonKernel {
         // Use the same implementation as fallback kernel for TL2
         const BLOCK_SIZE: usize = 128;
         let num_blocks = (input.len() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        let required_output_bytes = packed_2bit_bytes(input.len());
 
-        if output.len() < input.len() / 4 {
+        if output.len() < required_output_bytes {
             return Err(BitNetError::Kernel(KernelError::ExecutionFailed {
                 reason: format!(
                     "Output buffer too small for TL2: expected {}, got {}",
-                    input.len() / 4,
+                    required_output_bytes,
                     output.len()
                 ),
             }));
@@ -477,6 +482,7 @@ impl NeonKernel {
         }
 
         let lut = [-1.2f32, -0.4, 0.4, 1.2];
+        output[..required_output_bytes].fill(0);
 
         for block_idx in 0..num_blocks {
             let start = block_idx * BLOCK_SIZE;
