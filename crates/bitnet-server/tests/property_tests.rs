@@ -18,9 +18,12 @@ use axum::{
     http::{Method, Request, StatusCode},
     routing::get,
 };
+use std::str::FromStr;
+
 use bitnet_server::InferenceRequest;
 use bitnet_server::batch_engine::{BatchEngineConfig, BatchRequest, RequestPriority};
 use bitnet_server::concurrency::ConcurrencyConfig;
+use bitnet_server::config::{ConfigBuilder, DeviceConfig};
 use bitnet_server::monitoring::{
     MonitoringConfig,
     health::{HealthChecker, create_health_routes},
@@ -424,4 +427,98 @@ fn test_validate_json_invalid_syntax_returns_error() {
     let bad_json = r#"{"prompt": "hello", "max_tokens": }"#; // broken JSON
     let result: Result<InferenceRequest, _> = validate_json_payload(bad_json, 1024);
     assert!(result.is_err(), "invalid JSON syntax should return an error");
+}
+
+// ── DeviceConfig::from_str parsing invariants ────────────────────────────────
+
+proptest! {
+    /// "auto", "cpu", "gpu" literal strings always parse to the correct variant.
+    #[test]
+    fn prop_device_config_known_literals_parse(
+        raw in prop::sample::select(vec!["auto", "cpu", "gpu", "AUTO", "CPU", "GPU"])
+    ) {
+        let result = DeviceConfig::from_str(raw);
+        prop_assert!(result.is_ok(), "known device literal '{raw}' should parse");
+    }
+
+    /// "gpu:N" and "cuda:N" with a numeric suffix always parse to Gpu(N).
+    #[test]
+    fn prop_device_config_gpu_with_id_parses(id in 0usize..=255usize) {
+        let gpu_str  = format!("gpu:{id}");
+        let cuda_str = format!("cuda:{id}");
+        let r1 = DeviceConfig::from_str(&gpu_str);
+        let r2 = DeviceConfig::from_str(&cuda_str);
+        prop_assert!(r1.is_ok(), "'{gpu_str}' should parse");
+        prop_assert!(r2.is_ok(), "'{cuda_str}' should parse");
+        prop_assert_eq!(r1.unwrap(), DeviceConfig::Gpu(id));
+        prop_assert_eq!(r2.unwrap(), DeviceConfig::Gpu(id));
+    }
+
+    /// Strings with a leading digit (not a recognised prefix) always produce an error.
+    #[test]
+    fn prop_device_config_numeric_prefix_errors(n in 0u32..=999u32) {
+        let raw = format!("{n}xyz");
+        let result = DeviceConfig::from_str(&raw);
+        prop_assert!(result.is_err(), "numeric-prefix string '{raw}' should fail to parse");
+    }
+}
+
+// ── ConfigBuilder::validate field boundary enforcement ───────────────────────
+
+proptest! {
+    /// Validate succeeds for any valid port (1..=65535).
+    #[test]
+    fn prop_config_builder_valid_port_passes(port in 1u16..=65535u16) {
+        use bitnet_server::config::ServerSettings;
+        let result = ConfigBuilder::new()
+            .with_server_settings(ServerSettings { port, ..ServerSettings::default() })
+            .validate();
+        prop_assert!(result.is_ok(), "valid port {port} should pass validate()");
+    }
+
+    /// max_batch_size > 0 combined with otherwise-default settings must pass.
+    #[test]
+    fn prop_config_builder_positive_batch_size_passes(n in 1usize..=256usize) {
+        let result = ConfigBuilder::new()
+            .with_batch_engine(BatchEngineConfig { max_batch_size: n, ..Default::default() })
+            .validate();
+        prop_assert!(result.is_ok(), "max_batch_size={n} should pass validate()");
+    }
+}
+
+/// Port 0 must always be rejected by ConfigBuilder::validate.
+#[test]
+fn test_config_builder_port_zero_rejected() {
+    use bitnet_server::config::ServerSettings;
+    let result = ConfigBuilder::new()
+        .with_server_settings(ServerSettings { port: 0, ..ServerSettings::default() })
+        .validate();
+    assert!(result.is_err(), "port=0 must be rejected");
+}
+
+/// max_batch_size=0 must always be rejected by ConfigBuilder::validate.
+#[test]
+fn test_config_builder_zero_batch_size_rejected() {
+    let result = ConfigBuilder::new()
+        .with_batch_engine(BatchEngineConfig { max_batch_size: 0, ..Default::default() })
+        .validate();
+    assert!(result.is_err(), "max_batch_size=0 must be rejected");
+}
+
+/// max_concurrent_requests=0 must always be rejected by ConfigBuilder::validate.
+#[test]
+fn test_config_builder_zero_concurrent_requests_rejected() {
+    let result = ConfigBuilder::new()
+        .with_concurrency(ConcurrencyConfig { max_concurrent_requests: 0, ..Default::default() })
+        .validate();
+    assert!(result.is_err(), "max_concurrent_requests=0 must be rejected");
+}
+
+/// max_prompt_length=0 must always be rejected by ConfigBuilder::validate.
+#[test]
+fn test_config_builder_zero_prompt_length_rejected() {
+    let result = ConfigBuilder::new()
+        .with_security(SecurityConfig { max_prompt_length: 0, ..Default::default() })
+        .validate();
+    assert!(result.is_err(), "max_prompt_length=0 must be rejected");
 }
