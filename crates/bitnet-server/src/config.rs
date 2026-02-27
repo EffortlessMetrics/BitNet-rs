@@ -36,7 +36,7 @@ impl FromStr for DeviceConfig {
         match s.to_lowercase().as_str() {
             "auto" => Ok(DeviceConfig::Auto),
             "cpu" => Ok(DeviceConfig::Cpu),
-            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(DeviceConfig::Gpu(0)),
+            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" | "npu" => Ok(DeviceConfig::Gpu(0)),
             s if s.starts_with("gpu:") => {
                 let id_str = &s[4..];
                 let id = id_str.parse::<usize>()?;
