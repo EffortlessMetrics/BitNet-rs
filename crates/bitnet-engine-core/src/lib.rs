@@ -10,6 +10,7 @@ pub use bitnet_generation::{
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 // ---------------------------------------------------------------------------
 // Session trait
@@ -148,6 +149,243 @@ pub struct SessionMetrics {
     pub time_to_first_token_ms: f64,
     /// Total number of tokens generated in the session.
     pub total_tokens: usize,
+}
+
+// ---------------------------------------------------------------------------
+// Config validation
+// ---------------------------------------------------------------------------
+
+/// Accepted backend identifiers for [`SessionConfig`].
+pub const VALID_BACKENDS: &[&str] = &["cpu", "cuda", "gpu", "ffi"];
+
+/// Error returned by [`SessionConfig::validate`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConfigError {
+    /// `model_path` field is empty.
+    EmptyModelPath,
+    /// `tokenizer_path` field is empty.
+    EmptyTokenizerPath,
+    /// `backend` is not one of the recognised identifiers.
+    UnsupportedBackend(String),
+    /// `max_context` is zero; at least one token of context is required.
+    ZeroContextWindow,
+}
+
+impl std::fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EmptyModelPath => write!(f, "model_path must not be empty"),
+            Self::EmptyTokenizerPath => write!(f, "tokenizer_path must not be empty"),
+            Self::UnsupportedBackend(b) => write!(f, "unsupported backend: {b:?}"),
+            Self::ZeroContextWindow => write!(f, "max_context must be greater than zero"),
+        }
+    }
+}
+
+impl std::error::Error for ConfigError {}
+
+impl SessionConfig {
+    /// Validate the configuration, returning the first error found.
+    ///
+    /// A config is valid when:
+    /// - `model_path` is non-empty
+    /// - `tokenizer_path` is non-empty
+    /// - `backend` is one of `"cpu"`, `"cuda"`, `"gpu"`, or `"ffi"`
+    /// - `max_context > 0`
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConfigError`] describing the first invalid field.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_engine_core::{SessionConfig, ConfigError};
+    ///
+    /// let ok = SessionConfig {
+    ///     model_path: "m.gguf".into(),
+    ///     tokenizer_path: "t.json".into(),
+    ///     backend: "cpu".into(),
+    ///     max_context: 512,
+    ///     seed: None,
+    /// };
+    /// assert!(ok.validate().is_ok());
+    ///
+    /// let bad = SessionConfig { model_path: String::new(), ..ok.clone() };
+    /// assert_eq!(bad.validate(), Err(ConfigError::EmptyModelPath));
+    /// ```
+    pub fn validate(&self) -> std::result::Result<(), ConfigError> {
+        if self.model_path.is_empty() {
+            return Err(ConfigError::EmptyModelPath);
+        }
+        if self.tokenizer_path.is_empty() {
+            return Err(ConfigError::EmptyTokenizerPath);
+        }
+        if !VALID_BACKENDS.contains(&self.backend.as_str()) {
+            return Err(ConfigError::UnsupportedBackend(self.backend.clone()));
+        }
+        if self.max_context == 0 {
+            return Err(ConfigError::ZeroContextWindow);
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Session ID
+// ---------------------------------------------------------------------------
+
+static SESSION_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+/// A unique, non-empty identifier for an inference session.
+///
+/// IDs are generated monotonically within a process using an atomic counter.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_engine_core::SessionId;
+///
+/// let id = SessionId::generate();
+/// assert!(!id.as_str().is_empty());
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SessionId(String);
+
+impl SessionId {
+    /// Generate a new, unique [`SessionId`].
+    pub fn generate() -> Self {
+        let n = SESSION_COUNTER.fetch_add(1, Ordering::Relaxed);
+        Self(format!("session-{n}"))
+    }
+
+    /// Return the string representation of this session ID.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Engine state machine
+// ---------------------------------------------------------------------------
+
+/// States an inference engine can be in.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EngineState {
+    /// Engine is initialised and waiting for work.
+    Idle,
+    /// Engine is actively generating tokens.
+    Running,
+    /// Engine has finished generating and is ready to be discarded.
+    Done,
+}
+
+/// Error produced by invalid [`EngineStateTracker`] transitions.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EngineStateError(pub String);
+
+impl std::fmt::Display for EngineStateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for EngineStateError {}
+
+/// Tracks and enforces valid state transitions for an inference engine.
+///
+/// Valid transitions:
+/// - [`EngineState::Idle`] → [`EngineState::Running`]  via [`start`](Self::start)
+/// - [`EngineState::Running`] → [`EngineState::Done`]  via [`finish`](Self::finish)
+///
+/// All other transitions return [`EngineStateError`].
+#[derive(Debug)]
+pub struct EngineStateTracker {
+    state: EngineState,
+}
+
+impl Default for EngineStateTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl EngineStateTracker {
+    /// Create a new tracker in the [`EngineState::Idle`] state.
+    pub fn new() -> Self {
+        Self { state: EngineState::Idle }
+    }
+
+    /// Return a reference to the current state.
+    pub fn state(&self) -> &EngineState {
+        &self.state
+    }
+
+    /// Transition `Idle → Running`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineStateError`] if the current state is not [`EngineState::Idle`].
+    pub fn start(&mut self) -> std::result::Result<(), EngineStateError> {
+        if self.state == EngineState::Idle {
+            self.state = EngineState::Running;
+            Ok(())
+        } else {
+            Err(EngineStateError(format!("cannot transition to Running from {:?}", self.state)))
+        }
+    }
+
+    /// Transition `Running → Done`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineStateError`] if the current state is not [`EngineState::Running`].
+    pub fn finish(&mut self) -> std::result::Result<(), EngineStateError> {
+        if self.state == EngineState::Running {
+            self.state = EngineState::Done;
+            Ok(())
+        } else {
+            Err(EngineStateError(format!("cannot transition to Done from {:?}", self.state)))
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Concurrency configuration
+// ---------------------------------------------------------------------------
+
+/// Limits on how many inference sessions may run concurrently.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConcurrencyConfig {
+    /// Maximum number of sessions allowed to run at the same time.
+    ///
+    /// Must be at least 1.  The runtime enforces this limit and queues
+    /// requests that exceed it.
+    pub max_concurrent: usize,
+}
+
+impl Default for ConcurrencyConfig {
+    fn default() -> Self {
+        Self { max_concurrent: 4 }
+    }
+}
+
+impl ConcurrencyConfig {
+    /// Returns `true` if `active` is within the configured limit.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_engine_core::ConcurrencyConfig;
+    ///
+    /// let cfg = ConcurrencyConfig { max_concurrent: 4 };
+    /// assert!(cfg.allows(0));
+    /// assert!(cfg.allows(3));
+    /// assert!(!cfg.allows(4));
+    /// ```
+    pub fn allows(&self, active: usize) -> bool {
+        active < self.max_concurrent
+    }
 }
 
 // ---------------------------------------------------------------------------
