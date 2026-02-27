@@ -421,7 +421,7 @@ mod cli_config_validation {
     /// Valid device strings all pass.
     #[test]
     fn test_cli_config_all_valid_devices() {
-        for device in &["cpu", "cuda", "auto"] {
+        for device in &["cpu", "cuda", "gpu", "vulkan", "opencl", "ocl", "auto"] {
             let mut cfg = CliConfig::default();
             cfg.default_device = device.to_string();
             assert!(cfg.validate().is_ok(), "device={device} must be valid");
