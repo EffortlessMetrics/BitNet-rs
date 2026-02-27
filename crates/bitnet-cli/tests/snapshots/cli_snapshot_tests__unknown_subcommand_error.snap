@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: err
+---
+error: unrecognized subcommand 'this-does-not-exist'
+
+Usage: bitnet [OPTIONS] [COMMAND]
+
+For more information, try '--help'.

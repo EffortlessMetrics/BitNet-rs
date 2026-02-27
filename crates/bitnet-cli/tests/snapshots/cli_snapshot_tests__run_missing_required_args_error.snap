@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: err
+---
+error: the following required arguments were not provided:
+  --model <MODEL>
+  --prompt <PROMPT>
+
+Usage: bitnet run --model <MODEL> --prompt <PROMPT>
+
+For more information, try '--help'.
