@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-gguf/tests/snapshot_tests.rs
+expression: info
+---
+GgufFileInfo {
+    version: 2,
+    tensor_count: 5,
+    metadata_count: 3,
+    alignment: 32,
+}

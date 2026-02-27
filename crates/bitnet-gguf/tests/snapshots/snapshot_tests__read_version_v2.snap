@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-gguf/tests/snapshot_tests.rs
+expression: version
+---
+Some(
+    2,
+)

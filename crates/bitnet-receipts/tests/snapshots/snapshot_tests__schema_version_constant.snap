@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-receipts/tests/snapshot_tests.rs
+expression: RECEIPT_SCHEMA_VERSION
+---
+1.0.0
