@@ -4,6 +4,15 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-27
+
+### Highlights
+- 1200+ comprehensive tests across all microcrates (BDD, unit, property, integration, fuzz)
+- Complete microcrate SRP extraction (bitnet-sampling, bitnet-transformer, bitnet-receipts, bitnet-prompt-templates, bitnet-device-probe, bitnet-logits, bitnet-generation, bitnet-engine-core)
+- Feature lattice normalized: gpu/cuda correctly orthogonal
+- Kernel registry with capability detection
+- Modern Diataxis documentation structure
+
 ### Added
 - `test(bitnet-device-probe,bitnet-logits): add comprehensive unit tests` — 15 tests for `bitnet-device-probe` (SIMD level ordering, probe consistency, cross-probe invariants) and 26 tests for `bitnet-logits` (top-p, repetition penalty, argmax, temperature, softmax, top-k, property tests) (#929)
 - `test(bitnet-generation,bitnet-engine-core): add comprehensive unit tests` — 24 tests for `bitnet-generation` (stop criteria, streaming events, serde roundtrips, property tests) and 36 tests for `bitnet-engine-core` (session lifecycle, backend info, concurrency config, engine state, error variants, session ID uniqueness) (#928)

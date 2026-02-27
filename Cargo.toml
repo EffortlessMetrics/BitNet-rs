@@ -115,7 +115,7 @@ name = "bitnet"
 readme = "README.md"
 repository = "https://github.com/microsoft/BitNet"
 rust-version.workspace = true
-version = "0.1.2"
+version = "0.2.0"
 # Disable automatic discovery of tests, benches, and examples
 # Many of these use outdated APIs and need updating
 # Note: The tests/ directory is a separate bitnet-tests workspace crate
@@ -139,19 +139,19 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/microsoft/BitNet"
 rust-version = "1.92.0"
-version = "0.1.2"
+version = "0.2.0"
 
 [dependencies]
 # Core crates - always included
-bitnet-common = { path = "crates/bitnet-common", version = "0.1.0" }
-bitnet-models = { path = "crates/bitnet-models", version = "0.1.0" }
-bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.1.0", default-features = false }
-bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.1.0", optional = true }
+bitnet-common = { path = "crates/bitnet-common", version = "0.2.0" }
+bitnet-models = { path = "crates/bitnet-models", version = "0.2.0" }
+bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.0", default-features = false }
+bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.0", optional = true }
 
 # Optional crates based on features
-bitnet-inference = { path = "crates/bitnet-inference", version = "0.1.0", optional = true }
-bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.1.0", optional = true }
-bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.1.0", optional = true }
+bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.0", optional = true }
+bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.0", optional = true }
+bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.0", optional = true }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -160,9 +160,9 @@ vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
 
 [dev-dependencies]
 async-trait = "0.1.89"
-bitnet-logits = { path = "crates/bitnet-logits", version = "0.1.0" }
-bitnet-rope = { path = "crates/bitnet-rope", version = "0.1.0" }
-bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.1.0" }
+bitnet-logits = { path = "crates/bitnet-logits", version = "0.2.0" }
+bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.0" }
+bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.0" }
 bitnet-tests = { path = "tests", package = "bitnet-tests", default-features = false }
 candle-core = { version = "0.9.1", default-features = false }
 criterion = "0.7.0"

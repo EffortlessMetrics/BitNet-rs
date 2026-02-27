@@ -17,7 +17,7 @@ include = [
 
 [dependencies]
 anyhow.workspace = true
-bitnet-runtime-profile = { path = "../bitnet-runtime-profile", version = "0.1.0" }
+bitnet-runtime-profile = { path = "../bitnet-runtime-profile", version = "0.2.0" }
 
 [features]
 default = []

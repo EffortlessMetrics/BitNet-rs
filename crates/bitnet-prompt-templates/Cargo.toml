@@ -15,7 +15,7 @@ rust-version.workspace = true
 anyhow = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
-bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.1.0" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.0" }
 
 [dev-dependencies]
 proptest = { workspace = true }

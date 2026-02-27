@@ -12,8 +12,8 @@ description = "Orchestration contracts and session types for BitNet inference en
 rust-version.workspace = true
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
-bitnet-generation = { path = "../bitnet-generation", version = "0.1.0" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0" }
+bitnet-generation = { path = "../bitnet-generation", version = "0.2.0" }
 anyhow.workspace = true
 serde.workspace = true
 

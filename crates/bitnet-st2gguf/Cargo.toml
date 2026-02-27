@@ -20,8 +20,8 @@ path = "src/main.rs"
 
 [dependencies]
 # BitNet-rs internal crates
-bitnet-common = { path = "../bitnet-common", version = "0.1.0" }
-bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.0" }
 
 # Core dependencies
 anyhow.workspace = true
@@ -42,7 +42,7 @@ bytemuck.workspace = true
 half = "2.6.0"
 
 [dev-dependencies]
-bitnet-models = { path = "../bitnet-models", version = "0.1.0" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.0" }
 tempfile.workspace = true
 memmap2.workspace = true
 insta.workspace = true

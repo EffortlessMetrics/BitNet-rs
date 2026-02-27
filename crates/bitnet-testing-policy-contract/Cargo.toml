@@ -16,9 +16,9 @@ include = [
 ]
 
 [dependencies]
-bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.1.0" }
-bitnet-feature-contract = { path = "../bitnet-feature-contract", version = "0.1.0" }
-bitnet-testing-policy-core = { path = "../bitnet-testing-policy-core", version = "0.1.0" }
+bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.2.0" }
+bitnet-feature-contract = { path = "../bitnet-feature-contract", version = "0.2.0" }
+bitnet-testing-policy-core = { path = "../bitnet-testing-policy-core", version = "0.2.0" }
 
 [features]
 default = []
