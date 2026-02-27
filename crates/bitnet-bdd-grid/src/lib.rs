@@ -90,6 +90,61 @@ fn build_curated_rows() -> Box<[BddCell]> {
             forbidden_features: FeatureSet::new(),
             intent: "Full stack workflow checks spanning startup through response path",
         },
+        // Reason: CPU-only unit path validates the explicit `cpu` kernel feature gate and
+        // ensures deterministic scalar execution without GPU dependency in CI.
+        BddCell {
+            scenario: TestingScenario::Unit,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&["cpu", "inference", "kernels"]),
+            optional_features: feature_set_from_names(&["tokenizers", "reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Deterministic CPU-only unit path with explicit kernel feature",
+        },
+        // Reason: GGUF loading and multi-format quantization (I2_S BitNet32, QK256, TL1/TL2)
+        // integration tests require the `quantization` feature gate to be exercised in CI.
+        BddCell {
+            scenario: TestingScenario::Integration,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&[
+                "inference",
+                "kernels",
+                "tokenizers",
+                "quantization",
+            ]),
+            optional_features: feature_set_from_names(&["fixtures", "reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "GGUF model loading and quantization format integration (I2_S, QK256, TL1/TL2)",
+        },
+        // Reason: Local backend selection benchmarks exercise CPU-auto and GPU-explicit
+        // dispatch paths; GPU path is compile-only until CUDA runtime is present.
+        BddCell {
+            scenario: TestingScenario::Performance,
+            environment: ExecutionEnvironment::Local,
+            required_features: feature_set_from_names(&["inference", "kernels"]),
+            optional_features: feature_set_from_names(&["cpu", "gpu", "cuda", "reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Local backend selection and kernel dispatch benchmarks",
+        },
+        // Reason: Sampling strategy development cells (greedy, top-p, top-k) exercise the
+        // `SamplingStrategy` variants; not yet covered by a dedicated CI scenario.
+        BddCell {
+            scenario: TestingScenario::Development,
+            environment: ExecutionEnvironment::Local,
+            required_features: feature_set_from_names(&["inference", "kernels", "tokenizers"]),
+            optional_features: feature_set_from_names(&["reporting", "trace"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Sampling strategy development and greedy/top-p/top-k path exercising",
+        },
+        // Reason: Receipt generation and schema v1.0.0 validation smoke path; the
+        // `reporting` feature gate must be present to write and verify inference receipts.
+        BddCell {
+            scenario: TestingScenario::Smoke,
+            environment: ExecutionEnvironment::Ci,
+            required_features: feature_set_from_names(&["inference", "reporting"]),
+            optional_features: feature_set_from_names(&["kernels", "tokenizers"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Smoke path for receipt generation and schema v1.0.0 validation",
+        },
     ]
     .into_boxed_slice()
 }
