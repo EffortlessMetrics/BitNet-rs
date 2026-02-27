@@ -125,10 +125,7 @@ fn given_current_hardware_when_probing_simd_then_level_is_at_least_scalar() {
 fn given_cpu_feature_flag_when_querying_capabilities_then_cpu_rust_matches_feature() {
     let caps = device_features::current_kernel_capabilities();
     let expected_cpu_rust = cfg!(feature = "cpu");
-    assert_eq!(
-        caps.cpu_rust, expected_cpu_rust,
-        "cpu_rust must match the 'cpu' feature flag"
-    );
+    assert_eq!(caps.cpu_rust, expected_cpu_rust, "cpu_rust must match the 'cpu' feature flag");
 }
 
 /// Without GPU compiled in, `gpu_compiled()` must return `false`.
@@ -215,8 +212,8 @@ fn given_identity_matrix_when_matmul_i2s_then_output_equals_input() {
 fn given_zero_weight_matrix_when_matmul_i2s_then_output_is_all_zeros() {
     let kernel = FallbackKernel;
 
-    let a: Vec<i8> = vec![1, -1, 2, -3, 5, 7];  // 2×3
-    let b: Vec<u8> = vec![0; 3 * 4];             // zero 3×4
+    let a: Vec<i8> = vec![1, -1, 2, -3, 5, 7]; // 2×3
+    let b: Vec<u8> = vec![0; 3 * 4]; // zero 3×4
     let mut c = vec![99.0f32; 2 * 4];
 
     kernel.matmul_i2s(&a, &b, &mut c, 2, 4, 3).expect("matmul_i2s must succeed");
@@ -415,6 +412,9 @@ mod gpu_specs {
     /// When GPU features are compiled in, `gpu_compiled()` must return `true`.
     #[test]
     fn given_gpu_feature_when_checking_gpu_compiled_then_returns_true() {
-        assert!(device_features::gpu_compiled(), "gpu_compiled must be true when GPU feature enabled");
+        assert!(
+            device_features::gpu_compiled(),
+            "gpu_compiled must be true when GPU feature enabled"
+        );
     }
 }
