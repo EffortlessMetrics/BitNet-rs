@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#808.
+> **Last updated**: reflects implementation state after PRs #608–#815.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -144,6 +144,9 @@
 | test: add proptest coverage for bitnet-logits (temperature scaling, softmax invariants, top-k filtering, repetition penalty) and bitnet-generation (stop criteria, token accumulation, streaming order) | `crates/bitnet-logits/tests/property_tests.rs`, `crates/bitnet-generation/tests/property_tests.rs` | #806 |
 | feat(fuzz): add tokenizer_encode_decode fuzz target covering BasicTokenizer, UniversalTokenizer, wrapper tokenizers, and HfTokenizer BPE round-trips | `fuzz/fuzz_targets/tokenizer_encode_decode.rs` | #807 |
 | test: add 22 proptest cases for bitnet-quantization — TL1/TL2/I2_S round-trip bounded error, scale positivity, block alignment, and edge cases (all-zeros, alternating signs) | `crates/bitnet-quantization/tests/property_tests.rs` | #808 |
+| feat(fuzz): safetensors parser fuzz targets — `safetensors_metadata.rs` (header path) and `safetensors_parser.rs` (full parse); `fuzz/Cargo.toml` updated | `fuzz/fuzz_targets/safetensors_metadata.rs`, `fuzz/fuzz_targets/safetensors_parser.rs` | #813 |
+| test(bdd): 5 new BDD grid cells (Unit/Ci, Integration/Ci, Performance/Local, Development/Local, Smoke/Ci); snapshot count 8→13 | `crates/bitnet-bdd-grid/src/lib.rs` | #814 |
+| test(proptest): 31 property + unit tests for `bitnet-ffi` — BitNetCConfig/BitNetCInferenceConfig round-trips, BitNetCError display, MemoryStats arithmetic, thread-local error state | `crates/bitnet-ffi/tests/property_tests.rs` | #815 |
 
 ### 🔲 What's Planned
 
