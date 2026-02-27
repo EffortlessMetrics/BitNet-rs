@@ -19,13 +19,14 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
 
 jobs:
   # Always-on: build all fuzz targets (catches compilation regressions on every PR)
   fuzz-build:
     name: Fuzz targets build
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
@@ -35,10 +36,17 @@ jobs:
         with:
           toolchain: nightly
 
+      - name: Cache cargo-fuzz binary
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4
+        with:
+          path: ~/.cargo/bin/cargo-fuzz
+          key: cargo-fuzz-${{ runner.os }}-${{ hashFiles('fuzz/Cargo.lock') }}
+
       - name: Rust cache
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
-          key: fuzz-build
+          key: fuzz-build-${{ hashFiles('fuzz/Cargo.lock') }}
+          workspaces: fuzz -> target
 
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz --locked
@@ -49,6 +57,7 @@ jobs:
           cargo fuzz build 2>&1
         env:
           RUSTUP_TOOLCHAIN: nightly
+          RUSTFLAGS: -C debuginfo=0
 
   # Scheduled only: run each fuzz target for a short time to catch new crashes
   fuzz-run:
