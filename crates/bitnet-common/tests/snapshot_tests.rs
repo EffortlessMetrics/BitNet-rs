@@ -3,8 +3,8 @@
 //! These tests pin the Display / Debug formats of key types so that
 //! unintentional changes are caught at review time.
 
-use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 use bitnet_common::BitNetConfig;
+use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 
 // ---------------------------------------------------------------------------
 // BitNetConfig
