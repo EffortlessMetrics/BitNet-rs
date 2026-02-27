@@ -103,17 +103,17 @@ default-members = [
 ]
 
 [package]
-authors = ["BitNet Contributors <bitnet@microsoft.com>"]
+authors = ["BitNet Contributors <bitnet@EffortlessMetrics.com>"]
 categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
 description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
 documentation = "https://docs.rs/bitnet"
 edition = "2024"
-homepage = "https://github.com/microsoft/BitNet"
+homepage = "https://github.com/EffortlessMetrics/BitNet"
 keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 license = "MIT OR Apache-2.0"
 name = "bitnet"
 readme = "README.md"
-repository = "https://github.com/microsoft/BitNet"
+repository = "https://github.com/EffortlessMetrics/BitNet"
 rust-version.workspace = true
 version = "0.2.0"
 # Disable automatic discovery of tests, benches, and examples
@@ -128,16 +128,16 @@ autobenches = false
 
 
 [workspace.package]
-authors = ["BitNet Contributors <bitnet@microsoft.com>"]
+authors = ["BitNet Contributors <bitnet@EffortlessMetrics.com>"]
 categories = ["science", "algorithms", "mathematics", "wasm", "api-bindings"]
 description = "High-performance Rust implementation of BitNet 1-bit LLM inference with cross-platform support"
 documentation = "https://docs.rs/bitnet"
 edition = "2024"
-homepage = "https://github.com/microsoft/BitNet"
+homepage = "https://github.com/EffortlessMetrics/BitNet"
 keywords = ["machine-learning", "llm", "quantization", "inference", "bitnet"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/microsoft/BitNet"
+repository = "https://github.com/EffortlessMetrics/BitNet"
 rust-version = "1.92.0"
 version = "0.2.0"
 

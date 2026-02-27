@@ -1,5 +1,5 @@
 [book]
-authors = ["BitNet Contributors <bitnet@microsoft.com>"]
+authors = ["BitNet Contributors <bitnet@EffortlessMetrics.com>"]
 language = "en"
 multilingual = false
 src = "."
