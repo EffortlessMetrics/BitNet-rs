@@ -4,6 +4,8 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.1] - 2026-02-26
+
 ### Security
 - Restrict model loading to configured directories via `BITNET_ALLOWED_MODEL_DIRECTORIES` (#753)
 - Harden model path validation: prevent symlink traversal and empty-string allowlist bypass (#756)
