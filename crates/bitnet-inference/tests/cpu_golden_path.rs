@@ -1,7 +1,7 @@
 //! Phase 5: CPU Golden Path End-to-End Test
 //!
 //! Always-on, no-model-download E2E test that proves:
-//! 1. `InferenceEngine` generates tokens deterministically with temperature=0 (greedy)
+//! 1.  generates tokens deterministically with temperature=0 (greedy)
 //! 2. Receipt invariants hold: compute_path="real", kernel IDs valid, honest-compute passes
 //! 3. Backend selection startup contract works
 //!

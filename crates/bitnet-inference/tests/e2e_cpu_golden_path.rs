@@ -102,7 +102,7 @@ fn synthetic_model() -> Result<Arc<BitNetModel>> {
 
 /// Deterministic CPU inference using a synthetic-weight model.
 /// Verifies output shape and receipt invariants without any file download.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_mock_golden_path() -> Result<()> {
     let model = synthetic_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -138,7 +138,7 @@ async fn test_e2e_mock_golden_path() -> Result<()> {
 
 /// Two independent runs on the same synthetic model with seed=42 must produce
 /// identical token sequences, proving the full pipeline is deterministic.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_golden_path_reproducible() -> Result<()> {
     async fn run_once(n: u32) -> Result<Vec<u32>> {
         let model = synthetic_model()?;
@@ -166,7 +166,7 @@ async fn test_e2e_golden_path_reproducible() -> Result<()> {
 /// Token IDs were captured from the first correct run and are intentionally pinned
 /// here as a regression guard.  Update them only after a deliberate model/pipeline
 /// change and re-capture.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_golden_path_pinned_output() -> Result<()> {
     // Greedy argmax on the fixed sin/cos synthetic weights, prompt "2+2=".
     // Captured from the first passing run; update only after an intentional change.
@@ -197,7 +197,7 @@ async fn test_e2e_golden_path_pinned_output() -> Result<()> {
 /// The pinned golden sequence with seed=42 is `[140, 459, 459, 459]`.
 /// Setting stop_token_id=459 must cause the engine to stop after emitting 140,
 /// because 459 is checked *before* it is appended to the output.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_stop_token_id_halts_generation_early() -> Result<()> {
     let model = synthetic_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -225,7 +225,7 @@ async fn test_e2e_stop_token_id_halts_generation_early() -> Result<()> {
 /// All kernel IDs recorded during a real inference pass must satisfy the schema
 /// constraints required for honest-compute receipts: non-empty strings, at most
 /// 128 characters each, and a total count ≤ 10 000.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_receipt_kernel_ids_schema_constraints() -> Result<()> {
     let model = synthetic_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -261,7 +261,7 @@ async fn test_e2e_receipt_kernel_ids_schema_constraints() -> Result<()> {
 
 /// The receipt schema version must always be the pinned literal "1.0.0" and
 /// must match the `RECEIPT_SCHEMA_VERSION` constant exported by `bitnet_receipts`.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_receipt_schema_version_is_1_0_0() -> Result<()> {
     let model = synthetic_model()?;
     let tokenizer = Arc::new(MockTokenizer::new());
@@ -289,7 +289,7 @@ async fn test_e2e_receipt_schema_version_is_1_0_0() -> Result<()> {
 
 /// `max_tokens` must be respected exactly across small values when no stop token
 /// is encountered, validating the generation loop termination condition.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_max_tokens_boundary() -> Result<()> {
     for &n in &[1u32, 2, 3, 4] {
         let model = synthetic_model()?;
@@ -315,7 +315,7 @@ async fn test_e2e_max_tokens_boundary() -> Result<()> {
 /// Every token ID produced by the engine must be a valid index into the
 /// vocabulary, i.e. strictly less than `vocab_size`.  An out-of-bounds token
 /// ID would corrupt any downstream detokenization step.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_output_token_ids_in_vocab_range() -> Result<()> {
     let model = synthetic_model()?;
     let vocab_size = 512u32; // matches the synthetic_model() configuration
@@ -381,7 +381,7 @@ fn test_e2e_mini_gguf_fixture_accessible() {
 /// Deterministic CPU inference with a real GGUF model.
 ///
 /// Skipped unless `BITNET_MODEL_PATH` (or `BITNET_GGUF`) is set.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test]
 async fn test_e2e_real_model_golden_path() -> Result<()> {
     let model_path = match std::env::var("BITNET_MODEL_PATH").or(std::env::var("BITNET_GGUF")) {
         Ok(p) => p,
