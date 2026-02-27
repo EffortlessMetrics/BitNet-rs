@@ -92,13 +92,7 @@ impl BitNetModel {
         };
 
         // Create a VarBuilder that uses our loaded tensors
-        let device = match device {
-            Device::Cpu => candle_core::Device::Cpu,
-            Device::Cuda(id) => candle_core::Device::new_cuda(*id)?,
-            Device::Metal => {
-                return Err(BitNetError::Validation("Metal not yet supported".to_string()));
-            }
-        };
+        let device = device.to_candle().map_err(|e| BitNetError::Validation(e.to_string()))?;
 
         if tensors.is_empty() {
             return Err(BitNetError::Validation("No model tensors provided".to_string()));
@@ -156,13 +150,8 @@ impl BitNetModel {
             ConcreteTensor::Mock(mock) => {
                 // Create a dummy tensor for mock
                 let shape = mock.shape();
-                let device = match self.device {
-                    Device::Cpu => candle_core::Device::Cpu,
-                    Device::Cuda(id) => candle_core::Device::new_cuda(id)?,
-                    Device::Metal => {
-                        return Err(BitNetError::Validation("Metal not yet supported".to_string()));
-                    }
-                };
+                let device =
+                    self.device.to_candle().map_err(|e| BitNetError::Validation(e.to_string()))?;
                 Ok(CandleTensor::zeros(shape, DType::F32, &device)?)
             }
         }

@@ -30,5 +30,6 @@ insta.workspace = true
 default = []
 cpu = ["bitnet-quantization/cpu"]
 cuda = ["bitnet-common/cuda", "candle-core/cuda", "bitnet-quantization/cuda"]
-gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+metal = ["bitnet-common/metal"]
+gpu = ["cuda", "metal"]
 trace = []

@@ -265,16 +265,17 @@ impl HuggingFaceLoader {
                     ))
                 }
             }
-            #[cfg(all(target_os = "macos", feature = "gpu"))]
+            #[cfg(all(target_os = "macos", any(feature = "gpu", feature = "metal")))]
             Device::Metal => {
                 use candle_core::backend::BackendDevice;
                 let metal = candle_core::MetalDevice::new(0)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
                 Ok(candle_core::Device::Metal(metal))
             }
-            #[cfg(not(all(target_os = "macos", feature = "gpu")))]
+            #[cfg(not(all(target_os = "macos", any(feature = "gpu", feature = "metal"))))]
             Device::Metal => Err(BitNetError::Validation(
-                "Metal support not enabled; rebuild with --features gpu on macOS".to_string(),
+                "Metal support not enabled; rebuild with --features metal (or gpu) on macOS"
+                    .to_string(),
             )),
         }
     }
