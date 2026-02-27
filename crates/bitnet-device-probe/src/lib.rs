@@ -209,6 +209,48 @@ const fn rocm_available_runtime() -> bool {
     false
 }
 
+/// Check if Vulkan support was compiled into this binary.
+#[inline]
+pub const fn vulkan_compiled() -> bool {
+    cfg!(feature = "vulkan")
+}
+
+/// Check if a Vulkan-capable device is available at runtime.
+#[cfg(feature = "vulkan")]
+pub fn vulkan_available_runtime() -> bool {
+    // SAFETY: Loads the Vulkan loader via dynamic linking; we only inspect presence and enumerate devices.
+    let entry = unsafe { ash::Entry::load() };
+    let Ok(entry) = entry else {
+        return false;
+    };
+
+    let app_info =
+        ash::vk::ApplicationInfo::default().api_version(ash::vk::make_api_version(0, 1, 0, 0));
+    let create_info = ash::vk::InstanceCreateInfo::default().application_info(&app_info);
+
+    // SAFETY: create_info points to stack-local immutable data for the duration of call.
+    let instance = unsafe { entry.create_instance(&create_info, None) };
+    let Ok(instance) = instance else {
+        return false;
+    };
+
+    // SAFETY: valid Vulkan instance handle.
+    let has_devices = unsafe { instance.enumerate_physical_devices() }
+        .map(|devices| !devices.is_empty())
+        .unwrap_or(false);
+
+    // SAFETY: valid instance, no further use after destroy.
+    unsafe { instance.destroy_instance(None) };
+    has_devices
+}
+
+/// Stub: Vulkan never available when not compiled.
+#[cfg(not(feature = "vulkan"))]
+#[inline]
+pub const fn vulkan_available_runtime() -> bool {
+    false
+}
+
 /// Detect the best SIMD instruction-set level available at runtime.
 ///
 /// Detection order: AVX-512 > AVX2 > SSE4.2 (`x86_64`); NEON (`AArch64`);

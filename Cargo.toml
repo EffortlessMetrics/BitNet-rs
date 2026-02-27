@@ -208,6 +208,7 @@ spm = []                                                                        
 cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
+vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
