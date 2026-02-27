@@ -1,24 +1,21 @@
 //! Property-based tests for `bitnet-sampling` – new invariant coverage.
 //!
-//! Each test exercises a distinct invariant not fully covered by the
-//! existing `property_tests.rs`:
+//! Each test exercises a distinct invariant:
 //!
 //!   1. `apply_temperature(1.0)` is an identity transform.
 //!   2. Top-K: at most K non-zero probabilities after filtering + softmax.
-//!   3. Top-P: retained nucleus cumulative mass is ≥ p.
+//!   3. Top-P: retained nucleus cumulative mass is >= p.
 //!   4. Repetition penalty lowers the effective logit of penalised tokens.
-//!   5. Same seed + same logits → same sampled token (reproducibility).
-//!   6. All-NEG_INFINITY-except-one → that single token is always chosen.
+//!   5. Same seed + same logits -> same sampled token (reproducibility).
+//!   6. All-NEG_INFINITY-except-one -> that single token is always chosen.
 
 use bitnet_sampling::{
-    apply_repetition_penalty, apply_temperature, apply_top_k, apply_top_p, softmax_in_place,
-    SamplingConfig, SamplingStrategy,
+    SamplingConfig, SamplingStrategy, apply_repetition_penalty, apply_temperature, apply_top_k,
+    apply_top_p, softmax_in_place,
 };
 use proptest::prelude::*;
 
 proptest! {
-    /// `apply_temperature(1.0)` must be a mathematical no-op: logits are unchanged,
-    /// and the resulting probability ordering after softmax is identical.
     #[test]
     fn temperature_one_is_identity(
         logits in prop::collection::vec(-20.0f32..20.0f32, 2..=64),
@@ -27,7 +24,6 @@ proptest! {
         apply_temperature(&mut scaled, 1.0);
         prop_assert_eq!(&scaled, &logits, "apply_temperature(1.0) must leave logits unchanged");
 
-        // Confirm softmax output is also unchanged.
         let mut probs_orig = logits.clone();
         let mut probs_scaled = scaled.clone();
         softmax_in_place(&mut probs_orig);
@@ -40,8 +36,6 @@ proptest! {
         }
     }
 
-    /// After `apply_top_k(k)` + `softmax_in_place`, the number of non-zero
-    /// probability entries must be **at most k**.
     #[test]
     fn top_k_at_most_k_nonzero_probs(
         logits in prop::collection::vec(-10.0f32..10.0f32, 2..=64),
@@ -60,9 +54,6 @@ proptest! {
         );
     }
 
-    /// After `softmax_in_place` + `apply_top_p(p)`, the cumulative mass of all
-    /// retained (non-zero) probabilities must be ≥ p — the nucleus is large
-    /// enough to cover the requested probability threshold.
     #[test]
     fn top_p_nucleus_covers_at_least_p_mass(
         logits in prop::collection::vec(-10.0f32..10.0f32, 2..=64),
@@ -74,47 +65,33 @@ proptest! {
         let nucleus_mass: f32 = probs.iter().filter(|&&x| x > 0.0).sum();
         prop_assert!(
             nucleus_mass >= p - 1e-4,
-            "nucleus mass {} < top_p={}; nucleus does not cover required probability mass",
-            nucleus_mass,
-            p
+            "nucleus mass {} < top_p={}", nucleus_mass, p
         );
     }
 
-    /// `apply_repetition_penalty` with penalty > 1.0 must **reduce** the logit
-    /// of every penalised token:
-    ///   * positive logit → divided by penalty (result < original).
-    ///   * negative logit → multiplied by penalty (result more negative than original).
     #[test]
     fn repetition_penalty_lowers_penalised_token_logit(
         pos_logit in 0.01f32..20.0f32,
         neg_logit in -20.0f32..-0.01f32,
         penalty in 1.01f32..5.0f32,
     ) {
-        // Positive logit decreases.
         let mut buf_pos = vec![pos_logit, 0.5f32];
         apply_repetition_penalty(&mut buf_pos, &[0u32], penalty);
         prop_assert!(
             buf_pos[0] < pos_logit,
             "positive logit {} should decrease after penalty {}; got {}",
-            pos_logit,
-            penalty,
-            buf_pos[0]
+            pos_logit, penalty, buf_pos[0]
         );
 
-        // Negative logit becomes more negative.
         let mut buf_neg = vec![neg_logit, 0.5f32];
         apply_repetition_penalty(&mut buf_neg, &[0u32], penalty);
         prop_assert!(
             buf_neg[0] < neg_logit,
             "negative logit {} should become more negative after penalty {}; got {}",
-            neg_logit,
-            penalty,
-            buf_neg[0]
+            neg_logit, penalty, buf_neg[0]
         );
     }
 
-    /// Two `SamplingStrategy` instances built with the **same seed** must
-    /// produce the **same token** from the same logits (single-step).
     #[test]
     fn same_seed_and_logits_give_same_token(
         logits in prop::collection::vec(-5.0f32..5.0f32, 2..=64),
@@ -133,17 +110,12 @@ proptest! {
         let t1 = make().sample(&logits, &[]).unwrap();
         let t2 = make().sample(&logits, &[]).unwrap();
         prop_assert_eq!(
-            t1,
-            t2,
+            t1, t2,
             "seed={} must yield identical tokens; got {} vs {}",
-            seed,
-            t1,
-            t2
+            seed, t1, t2
         );
     }
 
-    /// When all logits are `NEG_INFINITY` except exactly one finite entry, the
-    /// sampler **must** select that entry — regardless of temperature or seed.
     #[test]
     fn single_finite_logit_always_selected(
         n_tokens in 2usize..=64,
@@ -166,12 +138,9 @@ proptest! {
         let mut strategy = SamplingStrategy::new(config);
         let token = strategy.sample(&logits, &[]).unwrap();
         prop_assert_eq!(
-            token,
-            hot as u32,
+            token, hot as u32,
             "with only token {} finite (logit={}), sampler must select it; got {}",
-            hot,
-            hot_logit,
-            token
+            hot, hot_logit, token
         );
     }
 }
