@@ -20,6 +20,7 @@ fn test_gpu_info_mocked_scenarios() {
         let mut scope = EnvScope::new();
         scope.set("PATH", dir.path().to_str().unwrap());
         scope.remove("BITNET_GPU_FAKE");
+        scope.set("BITNET_GPU_CACHE", "0");
 
         let info = get_gpu_info();
         assert!(!info.any_available());
@@ -40,6 +41,7 @@ fn test_gpu_info_mocked_scenarios() {
         let mut scope = EnvScope::new();
         scope.set("PATH", &format!("{}:{}", dir.path().display(), original_path));
         scope.remove("BITNET_GPU_FAKE");
+        scope.set("BITNET_GPU_CACHE", "0");
 
         let info = get_gpu_info();
         assert!(info.cuda);
