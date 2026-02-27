@@ -633,11 +633,14 @@ dependencies = [
  "bitnet-receipts",
  "bitnet-rope",
  "bitnet-sampling",
+ "bitnet-st2gguf",
  "bitnet-tokenizers",
+ "bitnet-validation",
  "candle-core",
  "libfuzzer-sys",
  "safetensors 0.6.2",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
