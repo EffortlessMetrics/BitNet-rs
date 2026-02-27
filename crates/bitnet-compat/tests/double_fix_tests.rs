@@ -30,8 +30,7 @@ fn make_fixed_gguf(dir: &TempDir) -> std::path::PathBuf {
     let src = dir.path().join("_src.gguf");
     let fixed = dir.path().join("fixed.gguf");
     fs::write(&src, minimal_gguf_v3()).unwrap();
-    GgufCompatibilityFixer::export_fixed(&src, &fixed)
-        .expect("first export_fixed must succeed");
+    GgufCompatibilityFixer::export_fixed(&src, &fixed).expect("first export_fixed must succeed");
     fixed
 }
 
@@ -180,7 +179,10 @@ fn double_fix_stamp_has_version_field() {
     let stamp = dst.with_extension("gguf.compat.json");
     let content = fs::read_to_string(&stamp).unwrap();
     let json: serde_json::Value = serde_json::from_str(&content).unwrap();
-    assert!(json.get("version").and_then(|v| v.as_str()).is_some(), "stamp must have 'version' string field");
+    assert!(
+        json.get("version").and_then(|v| v.as_str()).is_some(),
+        "stamp must have 'version' string field"
+    );
 }
 
 #[test]

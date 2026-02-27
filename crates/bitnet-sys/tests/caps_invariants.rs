@@ -117,9 +117,13 @@ fn partial_eq_differs_on_has_bitnet_shim() {
 
 #[test]
 fn debug_output_contains_struct_name() {
-    let caps = CompileTimeLibCapabilities { available: true, has_cuda: true, has_bitnet_shim: true };
+    let caps =
+        CompileTimeLibCapabilities { available: true, has_cuda: true, has_bitnet_shim: true };
     let debug = format!("{caps:?}");
-    assert!(debug.contains("CompileTimeLibCapabilities"), "Debug output must contain the struct name; got: {debug}");
+    assert!(
+        debug.contains("CompileTimeLibCapabilities"),
+        "Debug output must contain the struct name; got: {debug}"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +145,10 @@ mod disabled_error_tests {
     fn disabled_error_debug_contains_type_name() {
         let err = DisabledError;
         let debug = format!("{err:?}");
-        assert!(debug.contains("DisabledError"), "Debug output must contain 'DisabledError'; got: {debug}");
+        assert!(
+            debug.contains("DisabledError"),
+            "Debug output must contain 'DisabledError'; got: {debug}"
+        );
     }
 
     #[test]
