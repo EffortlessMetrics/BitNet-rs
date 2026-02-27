@@ -20,3 +20,8 @@ bitnet-runtime-context-core = { path = "../bitnet-runtime-context-core", version
 
 [features]
 default = []
+
+[dev-dependencies]
+proptest.workspace = true
+serial_test.workspace = true
+temp-env.workspace = true
