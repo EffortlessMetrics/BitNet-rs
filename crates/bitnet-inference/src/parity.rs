@@ -229,7 +229,7 @@ pub fn eval_logits_all_positions(model_path: &str, tokens: &[i32]) -> Result<Vec
 /// crashes when called repeatedly in tests.
 #[deprecated(since = "0.10.0", note = "Use eval_logits_via_ffi_session instead")]
 #[allow(dead_code)]
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 fn eval_logits_via_ffi(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     use bitnet_sys::{
         BitnetContext, BitnetModel, bitnet_eval_tokens, bitnet_prefill, cpp_vocab_size,
@@ -274,7 +274,7 @@ fn eval_logits_via_ffi(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
 /// allocation that causes munmap_chunk() crashes. The session is shared globally
 /// and thread-safe via Mutex.
 #[allow(dead_code)]
-#[cfg(feature = "ffi")]
+#[cfg(all(feature = "ffi", not(bitnet_sys_stub)))]
 fn eval_logits_via_ffi_session(model_path: &str, tokens: &[i32]) -> Result<Vec<f32>> {
     use crate::ffi_session::parity_cpp_session;
 
