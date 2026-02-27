@@ -2,4 +2,4 @@
 source: crates/bitnet-runtime-profile-contract-core/tests/snapshot_tests.rs
 expression: grid.rows().len().to_string()
 ---
-13
+18

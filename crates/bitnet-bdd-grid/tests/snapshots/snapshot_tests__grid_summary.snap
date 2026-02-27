@@ -3,11 +3,16 @@ source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
 expression: "summary.join(\"\\n\")"
 ---
 CrossValidation/Ci: required=[inference,kernels,tokenizers,crossval] intent=Reference parity / regression surface with controlled fixtures
+CrossValidation/Local: required=[inference,tokenizers] intent=Tokenizer encode/decode round-trip preserves original token sequence
+Debug/Ci: required=[inference,reporting] intent=Receipt JSON validates against schema v1.0.0 with all required gates
 Debug/Local: required=[inference] intent=Detailed behavior introspection and diagnostics
+Development/Ci: required=[inference,tokenizers,cli] intent=Prompt-template auto-detection selects instruct for base models
 Development/Local: required=[inference,kernels,tokenizers] intent=Sampling strategy development and greedy/top-p/top-k path exercising
 EndToEnd/Ci: required=[inference,kernels,tokenizers,crossval,reporting] intent=Full stack workflow checks spanning startup through response path
+EndToEnd/PreProduction: required=[inference,server,reporting] intent=Server health-check path (/health endpoint returns 200)
 Integration/Ci: required=[inference,kernels,tokenizers,quantization] intent=GGUF model loading and quantization format integration (I2_S, QK256, TL1/TL2)
 Integration/Local: required=[inference,kernels,tokenizers] intent=Component and module interaction in local build
+Minimal/Ci: required=[inference,kernels] intent=Deterministic seed produces identical output across repeated runs
 Minimal/Local: required=[inference] intent=Fastest-path execution with hard constraints
 Performance/Ci: required=[inference,kernels] intent=Throughput and latency-sensitive checks
 Performance/Local: required=[inference,kernels] intent=Local backend selection and kernel dispatch benchmarks
