@@ -261,6 +261,91 @@ proptest! {
         prop_assert!(cfg.max_new_tokens > 0, "default max_new_tokens must be positive");
         prop_assert!(cfg.seed.is_none(), "default seed must be None");
     }
+
+    /// Token accumulation invariant: simulating a generation loop up to `budget` tokens
+    /// accumulates exactly `budget` token IDs when MaxTokens fires.
+    #[test]
+    fn token_accumulation_matches_budget(
+        budget in 1usize..64usize,
+        start_token in 1u32..50_000u32,
+    ) {
+        let criteria = StopCriteria {
+            stop_token_ids: vec![],
+            eos_token_id: None,
+            max_tokens: budget,
+            stop_strings: vec![],
+        };
+        let mut accumulated: Vec<u32> = Vec::new();
+        let mut stopped = false;
+        for step in 0..budget + 1 {
+            let token = start_token.wrapping_add(step as u32);
+            if let Some(reason) = check_stop(&criteria, token, &accumulated, "") {
+                prop_assert_eq!(
+                    reason,
+                    StopReason::MaxTokens,
+                    "unexpected stop reason at step {}",
+                    step
+                );
+                prop_assert_eq!(
+                    accumulated.len(),
+                    budget,
+                    "accumulated {} tokens, expected {}",
+                    accumulated.len(),
+                    budget
+                );
+                stopped = true;
+                break;
+            }
+            accumulated.push(token);
+        }
+        prop_assert!(stopped, "generation never stopped within budget+1 steps");
+    }
+
+    /// Streaming invariant: a sequence of StreamEvents has all Token events before Done,
+    /// and token IDs appear in the order they were inserted.
+    #[test]
+    fn streaming_tokens_in_order(
+        token_ids in prop::collection::vec(0u32..100_000u32, 1..32),
+    ) {
+        // Build a stream: Token events followed by a Done event.
+        let mut events: Vec<StreamEvent> = token_ids
+            .iter()
+            .enumerate()
+            .map(|(i, &id)| {
+                StreamEvent::Token(TokenEvent {
+                    id,
+                    text: format!("t{i}"),
+                })
+            })
+            .collect();
+        events.push(StreamEvent::Done {
+            reason: StopReason::MaxTokens,
+            stats: GenerationStats {
+                tokens_generated: token_ids.len(),
+                tokens_per_second: 1.0,
+            },
+        });
+
+        // All Token events must come before the Done event.
+        let done_pos = events
+            .iter()
+            .position(|e| matches!(e, StreamEvent::Done { .. }))
+            .expect("Done event must be present");
+        prop_assert_eq!(done_pos, token_ids.len(), "Done is not last");
+
+        // Token IDs must appear in insertion order.
+        let observed_ids: Vec<u32> = events
+            .iter()
+            .filter_map(|e| {
+                if let StreamEvent::Token(t) = e {
+                    Some(t.id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        prop_assert_eq!(&observed_ids, &token_ids, "Token IDs out of order");
+    }
 }
 
 use serde_json;
