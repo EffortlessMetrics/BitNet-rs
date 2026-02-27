@@ -614,7 +614,6 @@ impl TL2Quantizer {
         }
     }
 
-
     /// AVX-512 kernel for quantizing a single block
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx512f", enable = "avx512bw", enable = "avx512vl")]
@@ -701,7 +700,6 @@ impl TL2Quantizer {
             output[idx] = dequantize_value_with_offset(value, scale, shift);
         }
     }
-
 
     /// Pack TL2 quantized values (unsigned 2-bit LUT codes in [0, num_levels-1])
     fn pack_tl2_values(&self, values: &[i8]) -> Vec<u8> {
