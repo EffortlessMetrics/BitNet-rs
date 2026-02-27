@@ -13,6 +13,9 @@ All notable changes to bitnet-rs will be documented in this file.
 - `refactor(quantization): dead code cleanup` — Removed unused `KernelProvider` imports and unused fields from `bitnet-quantization` (#779)
 
 ### Added
+- `chore: GitHub repo settings update` — Updated `.github/settings.yml` description and topics; added `.github/settings.yml` to `ci-core.yml` path triggers (#794)
+- `chore: docs update batch #790-#791` — Updated `CHANGELOG.md` and `CLAUDE.md` for PRs #790 (E2E golden-path tests) and #791 (README modernization) (#793)
+- `feat(fuzz): BPE tokenizer encode fuzz target (re-create)` — Recreated `fuzz/fuzz_targets/tokenizer_encode.rs` for BPE encode/decode paths with 4 exercise paths; fuzz total remains 15 (#792)
 - `feat(fuzz): RoPE table generation fuzz target` — `fuzz/fuzz_targets/rope_table_gen.rs` using `arbitrary::Arbitrary`; verifies sin²+cos²≈1 (Pythagorean) invariant across arbitrary dimensions and base values (#783)
 - `test(transformer): 5 new KVCache/config property tests` — shape invariants after N appends, layer independence, layer count validation, head divisibility check, seq_len monotonicity (#784)
 - `test(tokenizers): 5 new property tests for encode/decode` — BOS/EOS prepend behaviour, decode never panics, tokenize preserves words, config serde round-trip, EOS ID bounds (#785)

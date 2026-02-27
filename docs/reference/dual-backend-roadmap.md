@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#788.
+> **Last updated**: reflects implementation state after PRs #608–#794.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---
@@ -131,6 +131,9 @@
 | feat(fuzz): BPE tokenizer encode fuzz target — `tokenizer_encode.rs` with 4 exercise paths; fuzz total: 13→15 | `fuzz/fuzz_targets/tokenizer_encode.rs` | #788 |
 | E2E golden-path reproducibility + pinned-output tests (2 deterministic, seed=42; tokens [140,459,459,459] pinned) | `crates/bitnet-inference/tests/e2e_cpu_golden_path.rs` | #790 |
 | README modernization — Rust 2024 badge, Features list, architecture diagram, Feature flags table | `README.md` | #791 |
+| feat(fuzz): BPE tokenizer encode fuzz target (re-create) — `fuzz/fuzz_targets/tokenizer_encode.rs` with 4 exercise paths; fuzz total remains 15 | `fuzz/fuzz_targets/tokenizer_encode.rs` | #792 |
+| chore: docs update batch #790-#791 — Updated `CHANGELOG.md` and `CLAUDE.md` for PRs #790 and #791 | `CHANGELOG.md`, `CLAUDE.md` | #793 |
+| chore: GitHub repo settings update — Updated `.github/settings.yml` description/topics; added `.github/settings.yml` to `ci-core.yml` path triggers | `.github/settings.yml`, `.github/workflows/ci-core.yml` | #794 |
 
 ### 🔲 What's Planned
 
