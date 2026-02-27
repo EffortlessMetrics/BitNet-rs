@@ -4,6 +4,10 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `test: add numerical accuracy integration tests for bitnet-quantization` — 6 new integration tests (I2S dequantize, TL1 LUT, TL2 symmetry, round-trip accuracy, QK256 block size, zero vector) (#838)
+- `test: add CPU golden path E2E validation tests` — 4 new E2E tests (stop token, receipt kernel IDs, schema version, max_tokens boundary) (#837)
+
 ## [v0.1.2] - 2026-02-27
 
 Test coverage expansion wave (proptests, fuzz targets, BDD grid), reduced ignored tests to 77.
