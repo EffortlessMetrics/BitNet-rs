@@ -19,7 +19,7 @@ use support::EnvGuard;
 #[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for determinism validation"]
 /// AC6.1: Deterministic Inference - SLOW INTEGRATION TEST
 ///
-/// **This test runs 50-token generation (100+ forward passes) and is marked #[ignore].**
+/// **This test runs 50-token generation (100+ forward passes) — use `--ignored` to run manually.**
 ///
 /// For fast unit testing of determinism, see:
 /// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)
@@ -61,7 +61,7 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 #[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for determinism validation"]
 /// AC6.2: Determinism Multiple Runs - SLOW INTEGRATION TEST
 ///
-/// **This test runs 20-token generation 5 times (200+ forward passes) and is marked #[ignore].**
+/// **This test runs 20-token generation 5 times (200+ forward passes) — use `--ignored` to run manually.**
 ///
 /// For fast unit testing of multi-run determinism, see:
 /// - `tests/deterministic_sampling_unit.rs::test_same_seed_identical_samples()` (<5ms)

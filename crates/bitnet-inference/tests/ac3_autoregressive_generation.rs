@@ -151,7 +151,7 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
 }
 /// AC3.2: Temperature Sampling Validation Test - SLOW INTEGRATION TEST
 ///
-/// **This test is marked #[ignore] because it runs 25+ full model generations.**
+/// **This test runs 25+ full model generations — use `--ignored` to run manually.**
 ///
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates temperature scaling affects sampling diversity correctly across 5 temperature
@@ -218,7 +218,7 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
 }
 /// AC3.3: Top-K Sampling Validation Test - SLOW INTEGRATION TEST
 ///
-/// **This test is marked #[ignore] because it runs 52+ full model generations.**
+/// **This test runs 52+ full model generations — use `--ignored` to run manually.**
 ///
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates top-k sampling restricts vocabulary to k most likely tokens across 5 top-k
@@ -282,7 +282,7 @@ async fn test_ac3_top_k_sampling_validation() -> Result<()> {
 }
 /// AC3.4: Nucleus (Top-P) Sampling Validation Test - SLOW INTEGRATION TEST
 ///
-/// **This test is marked #[ignore] because it runs 76+ full model generations.**
+/// **This test runs 76+ full model generations — use `--ignored` to run manually.**
 ///
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates nucleus sampling maintains cumulative probability threshold across 5 top-p
