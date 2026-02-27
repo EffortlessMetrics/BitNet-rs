@@ -85,6 +85,19 @@ fn discover_test_model() -> Result<PathBuf> {
         })?;
     Ok(model_file.path())
 }
+/// Try to discover test model; returns `None` and prints a skip message when no model is found.
+///
+/// Use this instead of `discover_test_model()?` to gracefully skip (rather than fail)
+/// integration tests in environments without a downloaded model file.
+fn try_discover_test_model() -> Option<PathBuf> {
+    match discover_test_model() {
+        Ok(p) => Some(p),
+        Err(e) => {
+            eprintln!("⏭️  Skipping test (no model available): {e}");
+            None
+        }
+    }
+}
 /// Template configuration for comparison testing
 #[derive(Debug, Clone)]
 struct TemplateConfig {
@@ -203,7 +216,7 @@ mod template_comparison_tests {
             eprintln!("Skipping slow test: template comparison");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let prompt = "What is the capital of France?";
         let templates = vec![
             TemplateConfig::raw(),
@@ -274,7 +287,7 @@ mod template_comparison_tests {
             eprintln!("Skipping slow test: template stop sequence behavior");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let prompt = "Q: What is 2+2?\nA: 4\n\nQ: What is 5+5?\nA:";
         let template_config = TemplateConfig::instruct();
         eprintln!("\n=== Stop Sequence Behavior Test ===");
@@ -320,7 +333,7 @@ mod template_comparison_tests {
             eprintln!("Skipping slow test: raw vs instruct comparison");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let prompt = "What is the capital of France?";
         eprintln!("\n=== Raw vs Instruct Comparison ===");
         eprintln!("Prompt: '{}'", prompt);
@@ -393,7 +406,7 @@ mod template_comparison_tests {
             eprintln!("Skipping slow test: LLaMA-3 chat system prompt");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let prompt = "What is photosynthesis?";
         let system_prompt = "You are a helpful assistant";
         eprintln!("\n=== LLaMA-3 Chat Template Test ===");

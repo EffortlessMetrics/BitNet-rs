@@ -83,6 +83,19 @@ fn discover_test_model() -> Result<PathBuf> {
         })?;
     Ok(model_file.path())
 }
+/// Try to discover test model; returns `None` and prints a skip message when no model is found.
+///
+/// Use this instead of `discover_test_model()?` to gracefully skip (rather than fail)
+/// integration tests in environments without a downloaded model file.
+fn try_discover_test_model() -> Option<PathBuf> {
+    match discover_test_model() {
+        Ok(p) => Some(p),
+        Err(e) => {
+            eprintln!("⏭️  Skipping test (no model available): {e}");
+            None
+        }
+    }
+}
 /// Helper to perform greedy argmax with deterministic tie-breaking
 /// (lower index wins on ties)
 fn greedy_argmax(logits: &[f32]) -> usize {
@@ -176,7 +189,7 @@ mod deterministic_inference_tests {
             eprintln!("Skipping slow test: deterministic multi-step greedy");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let loader = ModelLoader::new(BNDevice::Cpu);
         let model = loader.load::<&Path>(model_path.as_ref())?;
         let tokenizer = auto::load_auto(&model_path, None)?;
@@ -224,7 +237,7 @@ mod deterministic_inference_tests {
             eprintln!("Skipping slow test: temperature=0 equivalence");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let loader = ModelLoader::new(BNDevice::Cpu);
         let model = loader.load::<&Path>(model_path.as_ref())?;
         let tokenizer = auto::load_auto(&model_path, None)?;
@@ -273,7 +286,7 @@ mod deterministic_inference_tests {
             eprintln!("Skipping slow test: reproducibility with seed");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let prompt = "What is the capital of France?";
         let add_bos = true;
         let config = GenerationConfig::greedy()
@@ -330,7 +343,7 @@ mod logits_validation_tests {
             eprintln!("Skipping slow test: logits shape validation");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let loader = ModelLoader::new(BNDevice::Cpu);
         let model = loader.load::<&Path>(model_path.as_ref())?;
         let tokenizer = auto::load_auto(&model_path, None)?;
@@ -373,7 +386,7 @@ mod logits_validation_tests {
             eprintln!("Skipping slow test: logits argmax consistency");
             return Ok(());
         }
-        let model_path = discover_test_model()?;
+        let Some(model_path) = try_discover_test_model() else { return Ok(()) };
         let loader = ModelLoader::new(BNDevice::Cpu);
         let model = loader.load::<&Path>(model_path.as_ref())?;
         let tokenizer = auto::load_auto(&model_path, None)?;
