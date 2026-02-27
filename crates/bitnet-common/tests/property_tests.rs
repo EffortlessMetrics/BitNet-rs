@@ -5,8 +5,11 @@
 
 use bitnet_common::{
     backend_selection::{BackendRequest, select_backend},
+    error::BitNetError,
     kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel},
+    tensor::{MockTensor, Tensor},
     types::{Device, GenerationConfig, ModelMetadata, PerformanceMetrics, QuantizationType},
+    warn_once_fn,
 };
 use proptest::prelude::*;
 
@@ -247,5 +250,146 @@ proptest! {
         };
         let result = select_backend(BackendRequest::Cuda, &caps);
         prop_assert!(result.is_err());
+    }
+}
+
+// ── MockTensor shape invariants ───────────────────────────────────────────────
+
+proptest! {
+    /// Element count equals the product of all dimensions for positive-dimension shapes.
+    #[test]
+    fn prop_mock_tensor_element_count_is_product(
+        dims in proptest::collection::vec(1usize..32, 1..=4),
+    ) {
+        let expected: usize = dims.iter().product();
+        let t = MockTensor::new(dims.clone());
+        prop_assert_eq!(t.shape(), dims.as_slice());
+        let count: usize = t.shape().iter().product();
+        prop_assert_eq!(count, expected);
+    }
+
+    /// A shape containing a zero dimension has zero total elements.
+    #[test]
+    fn prop_mock_tensor_zero_dim_means_zero_elements(
+        pre  in proptest::collection::vec(1usize..32, 0..=3),
+        post in proptest::collection::vec(1usize..32, 0..=3),
+    ) {
+        let mut dims = pre;
+        dims.push(0);
+        dims.extend(post);
+        let t = MockTensor::new(dims);
+        let count: usize = t.shape().iter().product();
+        prop_assert_eq!(count, 0usize);
+    }
+}
+
+// ── QuantizationType round-trips ──────────────────────────────────────────────
+
+proptest! {
+    /// Every QuantizationType survives a JSON serialize → deserialize round-trip.
+    #[test]
+    fn prop_quantization_type_serde_roundtrip(
+        qt in prop_oneof![
+            Just(QuantizationType::I2S),
+            Just(QuantizationType::TL1),
+            Just(QuantizationType::TL2),
+        ]
+    ) {
+        let json = serde_json::to_string(&qt).expect("serialize");
+        let back: QuantizationType = serde_json::from_str(&json).expect("deserialize");
+        prop_assert_eq!(qt, back);
+    }
+}
+
+// ── BitNetError message invariants ────────────────────────────────────────────
+
+proptest! {
+    /// BitNetError::Config display is non-empty and echoes the original message.
+    #[test]
+    fn prop_bitnet_error_config_display_non_empty(
+        msg in "[a-zA-Z0-9 _-]{1,64}",
+    ) {
+        let err = BitNetError::Config(msg.clone());
+        let s = err.to_string();
+        prop_assert!(!s.is_empty());
+        prop_assert!(s.contains(&msg));
+    }
+
+    /// BitNetError::Validation display and Debug are always non-empty.
+    #[test]
+    fn prop_bitnet_error_validation_non_empty(
+        msg in "[a-zA-Z0-9 _-]{1,64}",
+    ) {
+        let err = BitNetError::Validation(msg);
+        prop_assert!(!err.to_string().is_empty());
+        let dbg = format!("{err:?}");
+        prop_assert!(!dbg.is_empty());
+    }
+
+    /// BitNetError::StrictMode display and Debug are always non-empty.
+    #[test]
+    fn prop_bitnet_error_strict_mode_non_empty(
+        msg in "[a-zA-Z0-9 _-]{1,64}",
+    ) {
+        let err = BitNetError::StrictMode(msg);
+        prop_assert!(!err.to_string().is_empty());
+        let dbg = format!("{err:?}");
+        prop_assert!(!dbg.is_empty());
+    }
+}
+
+// ── Device debug invariants ───────────────────────────────────────────────────
+
+proptest! {
+    /// Debug output for every Device variant is non-empty.
+    #[test]
+    fn prop_device_debug_non_empty(idx in 0usize..256) {
+        let cpu_dbg = format!("{:?}", Device::Cpu);
+        let cuda_dbg = format!("{:?}", Device::Cuda(idx));
+        let metal_dbg = format!("{:?}", Device::Metal);
+        prop_assert!(!cpu_dbg.is_empty());
+        prop_assert!(!cuda_dbg.is_empty());
+        prop_assert!(!metal_dbg.is_empty());
+    }
+}
+
+// ── KernelCapabilities: cpu_rust implies CpuRust reachable ───────────────────
+
+proptest! {
+    /// When cpu_rust is true, CpuRust appears in compiled_backends and best_available is Some.
+    #[test]
+    fn prop_caps_cpu_rust_implies_cpu_reachable(
+        cuda_compiled in any::<bool>(),
+        cpp_ffi      in any::<bool>(),
+    ) {
+        let caps = KernelCapabilities {
+            cpu_rust: true,
+            cuda_compiled,
+            cuda_runtime: false, // no GPU at runtime; CPU must still be reachable
+            cpp_ffi,
+            simd_level: SimdLevel::Scalar,
+        };
+        let backends = caps.compiled_backends();
+        prop_assert!(
+            backends.contains(&KernelBackend::CpuRust),
+            "cpu_rust=true but CpuRust absent from {:?}", backends
+        );
+        prop_assert!(caps.best_available().is_some());
+    }
+}
+
+// ── warn_once! macro — key-based deduplication ───────────────────────────────
+
+proptest! {
+    /// warn_once_fn never panics for arbitrary valid string keys and messages.
+    /// Calling twice with the same key must also be safe (second call is rate-limited).
+    #[test]
+    fn prop_warn_once_fn_no_panic(
+        key in "[a-z][a-z0-9_]{0,31}",
+        msg in "[a-zA-Z0-9 ]{1,64}",
+    ) {
+        warn_once_fn(&key, &msg);
+        // Second call with same key: rate-limited to DEBUG, must not panic.
+        warn_once_fn(&key, &msg);
     }
 }
