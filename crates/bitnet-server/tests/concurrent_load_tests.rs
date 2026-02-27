@@ -310,8 +310,7 @@ async fn test_device_fallback_under_load() -> Result<()> {
 
 /// Test batch processing efficiency under concurrent load
 #[tokio::test]
-#[ignore = "Performance test: timing-sensitive, causes non-deterministic CI failures"]
-// Run locally with: cargo test --ignored test_batch_processing_efficiency
+// Run locally with: RUN_PERF_TESTS=1 cargo test test_batch_processing_efficiency
 // Blocked by: environment-dependent timing issues (CPU load, scheduler, concurrent execution)
 async fn test_batch_processing_efficiency() -> Result<()> {
     // Guard: Only run if explicitly requested via environment variable
