@@ -5,6 +5,8 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test: add property tests for bitnet-models` — 10 property tests in `crates/bitnet-models/tests/model_load_proptests.rs` covering config roundtrip, shape invariants, quantization type parsing, and flavor detection (#859)
+- `fix(ci): increase grid-check timeout to 20min; deduplicate cargo check calls` — BDD Grid Check timeout raised to 20 minutes; duplicate `cargo check` calls removed to speed up CI (#859)
 - `test: add property tests for runtime microcrates` — 51+ property tests across 6 thin façade crates: bitnet-feature-matrix, bitnet-runtime-bootstrap, bitnet-runtime-context, bitnet-startup-contract, bitnet-testing-policy, bitnet-testing-scenarios; plus sampling and tokenizer proptests (#857)
 - `test: add property tests for bitnet-compat and bitnet-kernels` — 14 new proptests: 8 in `crates/bitnet-compat/tests/compat_proptests.rs` and 6 in `crates/bitnet-kernels/tests/kernel_proptests.rs` (#856)
 - `test: add insta snapshot tests for receipts and prompt templates` — added `crates/bitnet-common/tests/snapshot_tests.rs` with insta snapshot test pinning `BitNetConfig::default()` for regression detection (#855)
