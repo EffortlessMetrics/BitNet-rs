@@ -453,18 +453,47 @@ impl TL2Quantizer {
         Ok(dequantized)
     }
 
-    /// AVX-512 optimized quantization for x86_64 (fallback to AVX2 for now)
+    /// AVX-512 optimized quantization for x86_64
     #[cfg(target_arch = "x86_64")]
     fn quantize_avx512(&self, data: &[f32], scales: &[f32]) -> Result<Vec<i8>> {
-        // AVX-512 is unstable, fallback to AVX2
-        self.quantize_avx2(data, scales)
+        if !is_x86_feature_detected!("avx512f") {
+            return self.quantize_avx2(data, scales);
+        }
+
+        let mut quantized = vec![0i8; data.len()];
+
+        quantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(data.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((quant_block, data_block), &scale)| {
+                let table = self.get_lookup_table(scale);
+                unsafe {
+                    self.quantize_avx512_block(data_block, quant_block, &table, scale);
+                }
+            });
+
+        Ok(quantized)
     }
 
-    /// AVX-512 optimized dequantization for x86_64 (fallback to AVX2 for now)
+    /// AVX-512 optimized dequantization for x86_64
     #[cfg(target_arch = "x86_64")]
     fn dequantize_avx512(&self, quantized: &[i8], scales: &[f32]) -> Result<Vec<f32>> {
-        // AVX-512 is unstable, fallback to AVX2
-        self.dequantize_avx2(quantized, scales)
+        if !is_x86_feature_detected!("avx512f") {
+            return self.dequantize_avx2(quantized, scales);
+        }
+
+        let mut dequantized = vec![0.0f32; quantized.len()];
+
+        dequantized
+            .par_chunks_mut(self.config.block_size)
+            .zip(quantized.par_chunks(self.config.block_size))
+            .zip(scales.par_iter())
+            .for_each(|((dequant_block, quant_block), &scale)| unsafe {
+                self.dequantize_avx512_block(quant_block, dequant_block, scale);
+            });
+
+        Ok(dequantized)
     }
 
     /// Fallback to scalar for non-x86 architectures
@@ -585,8 +614,94 @@ impl TL2Quantizer {
         }
     }
 
-    // AVX-512 kernels removed due to unstable features
-    // Will be re-added when AVX-512 support is stabilized
+
+    /// AVX-512 kernel for quantizing a single block
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx512f", enable = "avx512bw", enable = "avx512vl")]
+    unsafe fn quantize_avx512_block(
+        &self,
+        data: &[f32],
+        output: &mut [i8],
+        lookup_table: &VectorizedLookupTable,
+        scale: f32,
+    ) {
+        #[allow(clippy::wildcard_imports)]
+        use std::arch::x86_64::*;
+
+        // Must match the scalar path: index = (value / scale * 128.0 + 128.0).round()
+        let scale_factor = 128.0 / scale;
+        let scale_factor_vec = _mm512_set1_ps(scale_factor);
+        let offset_vec = _mm512_set1_ps(128.0);
+
+        let chunks = data.chunks_exact(16);
+        let remainder = chunks.remainder();
+
+        for (i, chunk) in chunks.enumerate() {
+            unsafe {
+                let data_vec = _mm512_loadu_ps(chunk.as_ptr());
+                let scaled = _mm512_mul_ps(data_vec, scale_factor_vec);
+                let offset = _mm512_add_ps(scaled, offset_vec);
+                let indices = _mm512_cvtps_epi32(offset);
+
+                // _mm512_extract_epi32 is not directly available, so we align and store first
+                let mut indices_arr = [0i32; 16];
+                _mm512_storeu_si512(indices_arr.as_mut_ptr() as *mut _, indices);
+
+                let mut result = [0i8; 16];
+                for j in 0..16 {
+                    result[j] = lookup_table.forward[(indices_arr[j].clamp(0, 255)) as usize];
+                }
+
+                // Store results
+                std::ptr::copy_nonoverlapping(result.as_ptr(), output.as_mut_ptr().add(i * 16), 16);
+            }
+        }
+
+        // Handle remainder with scalar code
+        for (i, &value) in remainder.iter().enumerate() {
+            let idx = data.len() - remainder.len() + i;
+            output[idx] = lookup_table.quantize(value);
+        }
+    }
+
+    /// AVX-512 kernel for dequantizing a single block
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx512f", enable = "avx512bw", enable = "avx512vl")]
+    unsafe fn dequantize_avx512_block(&self, quantized: &[i8], output: &mut [f32], scale: f32) {
+        #[allow(clippy::wildcard_imports)]
+        use std::arch::x86_64::*;
+
+        let scale_vec = _mm512_set1_ps(scale);
+        // Subtract num_levels/2 to center codes around 0 (symmetric quantization).
+        let shift = (1i32 << self.config.precision_bits) / 2;
+        let shift_vec = _mm512_set1_epi32(shift);
+
+        let chunks = quantized.chunks_exact(16);
+        let remainder = chunks.remainder();
+
+        for (i, chunk) in chunks.enumerate() {
+            unsafe {
+                // Load 16 i8 values
+                let i8_data = _mm_loadu_si128(chunk.as_ptr() as *const __m128i);
+                let i32_vec = _mm512_cvtepi8_epi32(i8_data);
+
+                // Subtract shift and convert to float and scale
+                let shifted = _mm512_sub_epi32(i32_vec, shift_vec);
+                let f32_vec = _mm512_cvtepi32_ps(shifted);
+                let result = _mm512_mul_ps(f32_vec, scale_vec);
+
+                _mm512_storeu_ps(output.as_mut_ptr().add(i * 16), result);
+            }
+        }
+
+        // Handle remainder with scalar code
+        for (i, &value) in remainder.iter().enumerate() {
+            let idx = quantized.len() - remainder.len() + i;
+            use crate::utils::dequantize_value_with_offset;
+            output[idx] = dequantize_value_with_offset(value, scale, shift);
+        }
+    }
+
 
     /// Pack TL2 quantized values (unsigned 2-bit LUT codes in [0, num_levels-1])
     fn pack_tl2_values(&self, values: &[i8]) -> Vec<u8> {
