@@ -225,6 +225,19 @@ impl KernelProvider for Avx512Kernel {
 
 #[cfg(target_arch = "x86_64")]
 impl Avx512Kernel {
+    #[inline]
+    fn tl2_bucket(normalized: f32) -> u8 {
+        if normalized < -0.8 {
+            0
+        } else if normalized < 0.0 {
+            1
+        } else if normalized < 0.8 {
+            2
+        } else {
+            3
+        }
+    }
+
     /// AVX-512 optimized matrix multiplication for i8 x u8 -> f32
     ///
     /// Processes 16x16 blocks and operates on 64 elements of the K dimension
@@ -339,7 +352,12 @@ impl Avx512Kernel {
             }));
         }
 
-        let lut = [-1.2f32, -0.4, 0.4, 1.2];
+        // Quantization writes packed 2-bit codes with OR operations.
+        // Clear the touched output range to avoid stale bits from previous calls.
+        let packed_len = input.len().div_ceil(4);
+        output[..packed_len].fill(0);
+
+        let sign_mask = _mm512_set1_ps(-0.0);
 
         for (block_idx, scale_slot) in scales.iter_mut().enumerate().take(num_blocks) {
             let start = block_idx * BLOCK_SIZE;
@@ -355,7 +373,7 @@ impl Avx512Kernel {
                     temp[..block.len() - i].copy_from_slice(&block[i..]);
                     _mm512_loadu_ps(temp.as_ptr())
                 };
-                let abs_vals = _mm512_max_ps(vals, _mm512_sub_ps(_mm512_setzero_ps(), vals));
+                let abs_vals = _mm512_andnot_ps(sign_mask, vals);
                 max_abs_vec = _mm512_max_ps(max_abs_vec, abs_vals);
             }
 
@@ -364,21 +382,12 @@ impl Avx512Kernel {
 
             for (i, &val) in block.iter().enumerate() {
                 let normalized = val / *scale_slot;
-                let mut best_idx = 0;
-                let mut best_dist = (normalized - lut[0]).abs();
-
-                for (idx, &lut_val) in lut.iter().enumerate().skip(1) {
-                    let dist = (normalized - lut_val).abs();
-                    if dist < best_dist {
-                        best_dist = dist;
-                        best_idx = idx;
-                    }
-                }
+                let best_idx = Self::tl2_bucket(normalized);
 
                 let byte_idx = (start + i) / 4;
                 let bit_offset = ((start + i) % 4) * 2;
                 if byte_idx < output.len() {
-                    output[byte_idx] |= (best_idx as u8) << bit_offset;
+                    output[byte_idx] |= best_idx << bit_offset;
                 }
             }
         }
