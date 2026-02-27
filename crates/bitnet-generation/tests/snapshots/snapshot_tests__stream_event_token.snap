@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-generation/tests/snapshot_tests.rs
+expression: event
+---
+Token(
+    TokenEvent {
+        id: 1234,
+        text: "hello",
+    },
+)

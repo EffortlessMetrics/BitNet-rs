@@ -1,0 +1,11 @@
+---
+source: crates/bitnet-generation/tests/snapshot_tests.rs
+expression: event
+---
+Done {
+    reason: EosToken,
+    stats: GenerationStats {
+        tokens_generated: 10,
+        tokens_per_second: 5.0,
+    },
+}
