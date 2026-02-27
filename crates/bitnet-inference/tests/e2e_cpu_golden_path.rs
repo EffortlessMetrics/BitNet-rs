@@ -9,6 +9,18 @@
 //! * `test_e2e_golden_path_pinned_output` — pins specific token IDs produced by greedy
 //!   decoding on the synthetic model (seed=42) as a regression guard.
 //!
+//! * `test_e2e_stop_token_id_halts_generation_early` — verifies that a configured stop
+//!   token ID terminates generation before `max_tokens` is reached.
+//!
+//! * `test_e2e_receipt_kernel_ids_schema_constraints` — verifies all recorded kernel IDs
+//!   satisfy the receipt schema constraints (non-empty, ≤ 128 chars, count ≤ 10 000).
+//!
+//! * `test_e2e_receipt_schema_version_is_1_0_0` — verifies the receipt schema version
+//!   is the pinned constant "1.0.0".
+//!
+//! * `test_e2e_max_tokens_boundary` — verifies `max_tokens` is respected exactly when no
+//!   stop token is encountered, across several small values (1–4).
+//!
 //! * `test_e2e_real_model_golden_path` — skipped in PR CI; run locally with a real model:
 //!   ```sh
 //!   BITNET_MODEL_PATH=models/model.gguf \
@@ -166,6 +178,127 @@ async fn test_e2e_golden_path_pinned_output() -> Result<()> {
         GOLDEN_TOKENS,
         "greedy output diverged from golden; inference pipeline may have regressed"
     );
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Stop token ID: early termination
+// ---------------------------------------------------------------------------
+
+/// A configured stop token ID must terminate generation before `max_tokens` is reached,
+/// proving the stop-token logic is correctly wired into the E2E pipeline.
+///
+/// The pinned golden sequence with seed=42 is `[140, 459, 459, 459]`.
+/// Setting stop_token_id=459 must cause the engine to stop after emitting 140,
+/// because 459 is checked *before* it is appended to the output.
+#[tokio::test]
+async fn test_e2e_stop_token_id_halts_generation_early() -> Result<()> {
+    let model = synthetic_model()?;
+    let tokenizer = Arc::new(MockTokenizer::new());
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+    let config = GenerationConfig::greedy()
+        .with_seed(42)
+        .with_max_tokens(10) // generous budget; stop token should fire first
+        .with_stop_token_id(459); // second generated token in the pinned golden sequence
+
+    let prompt_ids = tokenizer.encode("2+2=", false, false)?;
+    let tokens = engine.generate_tokens(&prompt_ids, &config).await?;
+
+    assert_eq!(
+        tokens,
+        vec![140],
+        "stop_token_id=459 must halt generation before emitting 459; got {tokens:?}"
+    );
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Receipt kernel ID schema constraints
+// ---------------------------------------------------------------------------
+
+/// All kernel IDs recorded during a real inference pass must satisfy the schema
+/// constraints required for honest-compute receipts: non-empty strings, at most
+/// 128 characters each, and a total count ≤ 10 000.
+#[tokio::test]
+async fn test_e2e_receipt_kernel_ids_schema_constraints() -> Result<()> {
+    let model = synthetic_model()?;
+    let tokenizer = Arc::new(MockTokenizer::new());
+    let recorder = KernelRecorder::new();
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?
+        .with_recorder(recorder.clone());
+
+    let config = GenerationConfig::greedy().with_seed(42).with_max_tokens(4);
+    let prompt_ids = tokenizer.encode("2+2=", false, false)?;
+    engine.generate_tokens(&prompt_ids, &config).await?;
+
+    let kernel_ids = recorder.snapshot();
+    assert!(!kernel_ids.is_empty(), "at least one kernel ID must be recorded");
+    assert!(
+        kernel_ids.len() <= 10_000,
+        "kernel count {} exceeds schema limit of 10 000",
+        kernel_ids.len()
+    );
+    for id in &kernel_ids {
+        assert!(!id.is_empty(), "kernel ID must not be an empty string");
+        assert!(
+            id.len() <= 128,
+            "kernel ID '{id}' length {} exceeds schema limit of 128",
+            id.len()
+        );
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Receipt schema version
+// ---------------------------------------------------------------------------
+
+/// The receipt schema version must always be the pinned literal "1.0.0" and
+/// must match the `RECEIPT_SCHEMA_VERSION` constant exported by `bitnet_receipts`.
+#[tokio::test]
+async fn test_e2e_receipt_schema_version_is_1_0_0() -> Result<()> {
+    let model = synthetic_model()?;
+    let tokenizer = Arc::new(MockTokenizer::new());
+    let recorder = KernelRecorder::new();
+    let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?
+        .with_recorder(recorder.clone());
+
+    let config = GenerationConfig::greedy().with_seed(42).with_max_tokens(2);
+    let prompt_ids = tokenizer.encode("2+2=", false, false)?;
+    engine.generate_tokens(&prompt_ids, &config).await?;
+
+    let receipt = InferenceReceipt::generate("cpu-rust", recorder.snapshot(), None)?;
+    assert_eq!(receipt.schema_version, "1.0.0", "receipt schema version must be fixed at '1.0.0'");
+    assert_eq!(
+        receipt.schema_version,
+        bitnet_receipts::RECEIPT_SCHEMA_VERSION,
+        "receipt schema version must match the RECEIPT_SCHEMA_VERSION constant"
+    );
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Max-tokens boundary: exact token count
+// ---------------------------------------------------------------------------
+
+/// `max_tokens` must be respected exactly across small values when no stop token
+/// is encountered, validating the generation loop termination condition.
+#[tokio::test]
+async fn test_e2e_max_tokens_boundary() -> Result<()> {
+    for &n in &[1u32, 2, 3, 4] {
+        let model = synthetic_model()?;
+        let tokenizer = Arc::new(MockTokenizer::new());
+        let engine = InferenceEngine::new(model, tokenizer.clone(), Device::Cpu)?;
+        let config = GenerationConfig::greedy().with_seed(42).with_max_tokens(n);
+        let prompt_ids = tokenizer.encode("2+2=", false, false)?;
+        let tokens = engine.generate_tokens(&prompt_ids, &config).await?;
+        assert_eq!(
+            tokens.len(),
+            n as usize,
+            "max_tokens={n}: expected {n} tokens but got {}",
+            tokens.len()
+        );
+    }
     Ok(())
 }
 
