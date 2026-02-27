@@ -101,10 +101,13 @@ pub fn get_gpu_info() -> GpuInfo {
             metal: lower.contains("metal"),
             rocm: lower.contains("rocm"),
             rocm_version: None,
+            opengl: lower.contains("opengl") || lower.contains("gl"),
             wgpu: lower.contains("wgpu")
                 || lower.contains("cuda")
                 || lower.contains("rocm")
-                || lower.contains("metal"),
+                || lower.contains("metal")
+                || lower.contains("opengl")
+                || lower.contains("gl"),
         };
     }
 
@@ -128,9 +131,37 @@ fn detect_real_gpu_info() -> GpuInfo {
 
     let rocm_version = if rocm { get_rocm_version() } else { None };
 
-    let wgpu = cuda || rocm || metal;
+    let opengl = probe_opengl();
 
-    GpuInfo { cuda, cuda_version, metal, rocm, rocm_version, wgpu }
+    let wgpu = cuda || rocm || metal || opengl;
+
+    GpuInfo { cuda, cuda_version, metal, rocm, rocm_version, opengl, wgpu }
+}
+
+fn probe_opengl() -> bool {
+    // Linux/BSD
+    if probe_command("glxinfo", &["-B"]) {
+        return true;
+    }
+
+    // EGL userspace fallback (headless/container deployments)
+    if probe_command("eglinfo", &["--version"]) {
+        return true;
+    }
+
+    // macOS (OpenGL framework still exposes renderer metadata)
+    if cfg!(target_os = "macos")
+        && probe_command("system_profiler", &["SPDisplaysDataType", "-json"])
+    {
+        return true;
+    }
+
+    // Windows: OpenGL installable client driver presence via legacy utility.
+    if cfg!(target_os = "windows") && probe_command("where", &["opengl32.dll"]) {
+        return true;
+    }
+
+    false
 }
 
 /// Information about available GPU backends
@@ -141,13 +172,14 @@ pub struct GpuInfo {
     pub metal: bool,
     pub rocm: bool,
     pub rocm_version: Option<String>,
+    pub opengl: bool,
     pub wgpu: bool,
 }
 
 impl GpuInfo {
     /// Check if any GPU backend is available
     pub fn any_available(&self) -> bool {
-        self.cuda || self.metal || self.rocm || self.wgpu
+        self.cuda || self.metal || self.rocm || self.opengl || self.wgpu
     }
 
     /// Get a human-readable summary of available backends
@@ -172,6 +204,10 @@ impl GpuInfo {
             } else {
                 backends.push("ROCm".to_string());
             }
+        }
+
+        if self.opengl {
+            backends.push("OpenGL".to_string());
         }
 
         if self.wgpu {
@@ -262,6 +298,7 @@ fn preflight_help_message() -> &'static str {
     - NVIDIA GPUs: Install CUDA toolkit from https://developer.nvidia.com/cuda-downloads
     - AMD GPUs: Install ROCm from https://rocm.docs.amd.com
     - Apple Silicon: Metal support is built-in on macOS
+    - OpenGL: install vendor graphics drivers (Mesa/NVIDIA/AMD/Intel)
     - Other GPUs: WebGPU backend provides compatibility
 
     Set CUDA_HOME or ROCM_PATH environment variables after installation."
@@ -279,11 +316,13 @@ mod tests {
             metal: false,
             rocm: false,
             rocm_version: None,
+            opengl: true,
             wgpu: true,
         };
 
         assert!(info.any_available());
         assert!(info.summary().contains("CUDA 12.0"));
+        assert!(info.summary().contains("OpenGL"));
         assert!(info.summary().contains("WebGPU"));
     }
 
@@ -295,6 +334,7 @@ mod tests {
             metal: false,
             rocm: false,
             rocm_version: None,
+            opengl: false,
             wgpu: false,
         };
 
