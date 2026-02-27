@@ -71,7 +71,15 @@ async fn test_ac1_quantized_linear_layer_forward_pass() -> Result<()> {
 #[cfg(feature = "cpu")]
 #[tokio::test]
 async fn test_ac2_multi_head_attention_mechanism() -> Result<()> {
-    let config = NeuralNetworkTestConfig::default();
+    // Use a small config: the default (hidden=2048, seq=512) requires ~10B scalar FLOPs
+    // which exceeds the 5-minute CI timeout on unoptimized MVP kernels.
+    let config = NeuralNetworkTestConfig {
+        batch_size: 1,
+        sequence_length: 8,
+        hidden_size: 64,
+        num_heads: 4,
+        vocab_size: 256,
+    };
     let input_data =
         create_mock_tensor_data(config.batch_size, config.sequence_length, config.hidden_size)?;
     let attention_result = test_multi_head_attention(&input_data, &config)
