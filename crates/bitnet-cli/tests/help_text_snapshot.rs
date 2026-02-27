@@ -149,9 +149,8 @@ fn test_help_footer_has_docs_and_issues_links() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Manual inspection: Run with --ignored to see current help text"]
 fn test_print_current_help_text() -> Result<()> {
-    // This test is ignored by default but can be run manually to inspect help text
+    // Prints current help text; useful during development for manual review.
     let mut cmd = TestCli::command();
     let help = format!("{}", cmd.render_help());
 
