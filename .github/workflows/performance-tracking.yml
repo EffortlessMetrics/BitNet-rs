@@ -86,15 +86,8 @@ jobs:
             os: macos-latest  # M1 Mac
             target: aarch64-apple-darwin
 
-    # Skip platforms based on filter; only run on schedule or manual dispatch
-    if: |
-      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && (
-        github.event.inputs.platform_filter == 'all' ||
-        github.event.inputs.platform_filter == '' ||
-        github.event.inputs.platform_filter == null ||
-        (github.event.inputs.platform_filter == 'linux' && startsWith(matrix.platform, 'linux')) ||
-        (github.event.inputs.platform_filter == 'macos' && startsWith(matrix.platform, 'macos'))
-      )
+    # Only run on schedule or manual dispatch
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
     steps:
     - name: Checkout repository
