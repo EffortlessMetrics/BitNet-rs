@@ -5,6 +5,9 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `feat(fuzz): add generation_stop_checker fuzz target` — new fuzz target exercising `check_stop` from `bitnet-generation`; covers stop-token, stop-sequence, max-tokens, and combined stopping criteria (#870)
+- `test(bitnet-transformer): add 8 property-based tests` — 8 property tests for RoPE and KV cache invariants in `crates/bitnet-transformer/tests/transformer_proptests.rs` (#871)
+- `test(quantization): add integration tests for quantization roundtrip` — 10 integration tests for I2S, TL1, and TL2 quantization roundtrip accuracy in `crates/bitnet-quantization/tests/quant_integration_tests.rs` (#873)
 - `test(inference): add property-based tests for inference invariants` — 20 property tests in `crates/bitnet-inference/tests/inference_proptests.rs` covering SamplingConfig, GenerationConfig, stop tokens, and receipt schema invariants (#861)
 - `feat(device-probe): extract bitnet-device-probe SRP microcrate` — new `crates/bitnet-device-probe/` SRP microcrate exporting SimdLevel, CpuProbe, DeviceProbe, probe_device(); 5 property tests (#862)
 - `feat(logits): extract bitnet-logits SRP microcrate` — named unit tests in `crates/bitnet-logits/tests/logits_tests.rs` for softmax, top-k, temperature, and argmax invariants (#863)
@@ -26,6 +29,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test: expand proptest coverage for compat, templates, and feature-flag crates` — 18 new proptests across bitnet-compat, bitnet-templates, and bitnet-runtime-feature-flags (#841)
 
 ### Fixed
+- `fix(ci): add --force to cargo install cargo-fuzz` — prevents fuzz CI failures when the `cargo-fuzz` binary is already present in the runner cache (#872)
 - `fix(server): implement rate limiter cleanup to prevent memory leak` — `ConcurrencyManager::cleanup_rate_limiters` now properly cleans up idle entries to prevent unbounded memory growth (#810)
 
 ### Performance
