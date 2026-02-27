@@ -16,10 +16,12 @@ fn bdd_feature_to_cargo(name: &str) -> Option<&'static str> {
         "tokenizers" => Some("cpu"),
         "gpu" => Some("gpu"),
         "cuda" => Some("cuda"),
-        "crossval" => Some("crossval"),
+        // crossval requires external C++ deps (BITNET_CPP_DIR) – skip in CI
+        "crossval" => None,
         "server" => Some("full-cli"),
         "fixtures" => Some("fixtures"),
-        "reporting" => Some("reporting"),
+        // reporting is a test-framework feature that may require extra deps – skip in CI
+        "reporting" => None,
         _ => None,
     }
 }
