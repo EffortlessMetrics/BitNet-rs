@@ -609,6 +609,7 @@ dependencies = [
  "futures",
  "log",
  "num_cpus",
+ "proptest",
  "serde",
  "serde_json",
  "tempfile",
