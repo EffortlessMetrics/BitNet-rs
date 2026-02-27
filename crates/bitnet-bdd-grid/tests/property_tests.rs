@@ -80,8 +80,8 @@ proptest! {
 
 #[test]
 fn curated_grid_has_expected_cell_count() {
-    // Structural invariant: curated grid has exactly 8 cells
-    assert_eq!(curated().rows().len(), 8, "curated grid should have 8 cells");
+    // Structural invariant: curated grid has exactly 13 cells
+    assert_eq!(curated().rows().len(), 13, "curated grid should have 13 cells");
 }
 
 #[test]

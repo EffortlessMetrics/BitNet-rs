@@ -2,4 +2,4 @@
 source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
 expression: count.to_string()
 ---
-8
+13

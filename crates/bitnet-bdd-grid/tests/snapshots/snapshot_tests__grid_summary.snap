@@ -4,9 +4,14 @@ expression: "summary.join(\"\\n\")"
 ---
 CrossValidation/Ci: required=[inference,kernels,tokenizers,crossval] intent=Reference parity / regression surface with controlled fixtures
 Debug/Local: required=[inference] intent=Detailed behavior introspection and diagnostics
+Development/Local: required=[inference,kernels,tokenizers] intent=Sampling strategy development and greedy/top-p/top-k path exercising
 EndToEnd/Ci: required=[inference,kernels,tokenizers,crossval,reporting] intent=Full stack workflow checks spanning startup through response path
+Integration/Ci: required=[inference,kernels,tokenizers,quantization] intent=GGUF model loading and quantization format integration (I2_S, QK256, TL1/TL2)
 Integration/Local: required=[inference,kernels,tokenizers] intent=Component and module interaction in local build
 Minimal/Local: required=[inference] intent=Fastest-path execution with hard constraints
 Performance/Ci: required=[inference,kernels] intent=Throughput and latency-sensitive checks
+Performance/Local: required=[inference,kernels] intent=Local backend selection and kernel dispatch benchmarks
+Smoke/Ci: required=[inference,reporting] intent=Smoke path for receipt generation and schema v1.0.0 validation
 Smoke/PreProduction: required=[inference] intent=Minimum viable run for deployment safety
+Unit/Ci: required=[cpu,inference,kernels] intent=Deterministic CPU-only unit path with explicit kernel feature
 Unit/Local: required=[inference,kernels,tokenizers] intent=Fast, isolated unit execution with core inference path
