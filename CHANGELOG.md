@@ -5,6 +5,8 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test: expand proptest coverage for compat, templates, and feature-flag crates` — 18 new proptests across bitnet-compat, bitnet-templates, and bitnet-runtime-feature-flags (#841)
+- `ci: increase fuzz build timeout to 60 minutes` — fuzz CI job timeout raised to 60 min, improved caching, added `RUSTFLAGS=-C debuginfo=0` to speed up fuzz builds (#840)
 - `test: add numerical accuracy integration tests for bitnet-quantization` — 6 new integration tests (I2S dequantize, TL1 LUT, TL2 symmetry, round-trip accuracy, QK256 block size, zero vector) (#838)
 - `test: add CPU golden path E2E validation tests` — 4 new E2E tests (stop token, receipt kernel IDs, schema version, max_tokens boundary) (#837)
 
