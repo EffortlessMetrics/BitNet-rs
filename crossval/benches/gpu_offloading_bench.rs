@@ -20,6 +20,7 @@
 // **TDD Status**: Benchmark compiles but fails due to missing GPU layer configuration
 
 use criterion::{Criterion, criterion_group, criterion_main};
+use std::path::Path;
 
 #[allow(unused_imports)] // TDD scaffolding - used in commented implementation
 use std::hint::black_box;
@@ -73,7 +74,6 @@ fn bench_gpu_speedup(c: &mut Criterion) {
     let mut group = c.benchmark_group("gpu_offloading");
 
     // Generate test token sequence (simple sequence for reproducibility)
-    #[allow(unused_variables)] // TDD scaffolding - used in commented implementation
     let test_tokens: Vec<i32> = (1..=TEST_SEQUENCE_LENGTH as i32).collect();
 
     // Benchmark each GPU layer configuration
@@ -92,21 +92,15 @@ fn bench_gpu_speedup(c: &mut Criterion) {
 
         group.bench_function(config_name, |b| {
             // Create session once per benchmark iteration
-            let session = BitnetSession::create(model_path, TEST_CONTEXT_SIZE, n_gpu_layers)
+            let mut session = BitnetSession::create(model_path, TEST_CONTEXT_SIZE, n_gpu_layers)
                 .expect("Failed to create BitnetSession for benchmark");
 
             b.iter(|| {
-                // NOTE: This requires implementing eval_and_get_logits() method
-                // For now, this is a placeholder showing the expected API
-                unimplemented!(
-                    "eval_and_get_logits() not yet implemented - blocked by Socket 1 inference API"
-                );
+                let logits = session
+                    .evaluate(&test_tokens)
+                    .expect("Failed to evaluate tokens during benchmark");
 
-                // Expected implementation:
-                // let logits = session.eval_and_get_logits(&test_tokens, 0)
-                //     .expect("Failed to get logits during benchmark");
-                //
-                // black_box(logits); // Prevent compiler optimization
+                black_box(logits); // Prevent compiler optimization
             });
         });
     }
@@ -165,20 +159,19 @@ fn bench_gpu_config_overhead(c: &mut Criterion) {
     }
 
     c.bench_function("gpu_config_overhead", |b| {
+        let tokens = vec![1, 2];
+
         b.iter(|| {
             // Measure time from BitnetSession::create call to first inference
-            let session = BitnetSession::create(model_path, TEST_CONTEXT_SIZE, 24)
+            let mut session = BitnetSession::create(model_path, TEST_CONTEXT_SIZE, 24)
                 .expect("Failed to create session for overhead benchmark");
 
-            // NOTE: First inference includes configuration overhead
-            unimplemented!("First inference timing not yet implemented");
+            // First inference includes configuration overhead.
+            let logits = session
+                .evaluate(&tokens)
+                .expect("Failed first inference during overhead benchmark");
 
-            // Expected implementation:
-            // let tokens = vec![1, 2];
-            // let logits = session.eval_and_get_logits(&tokens, 0)
-            //     .expect("Failed first inference");
-            //
-            // black_box(logits);
+            black_box(logits);
         });
     });
 }
