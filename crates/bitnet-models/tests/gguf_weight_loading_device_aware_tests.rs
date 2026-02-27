@@ -87,8 +87,11 @@ pub struct DeviceTestResult {
 /// with proper memory management and SIMD optimization utilization.
 #[cfg(feature = "cpu")]
 #[test]
-#[ignore = "Slow: builds a large in-memory mock model — exceeds 5min nextest timeout on CI"]
 fn test_ac6_cpu_device_tensor_placement() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     // Use smaller tensor sizes for testing to avoid excessive memory usage
     let config = DeviceAwareTestConfig {
         test_tensor_sizes: vec![
@@ -392,8 +395,11 @@ async fn test_ac6_cross_device_consistency_validation() -> Result<()> {
 /// Tests feature spec: gguf-weight-loading.md#p5-gpu-memory-management
 #[cfg(feature = "cpu")]
 #[test]
-#[ignore = "Slow: creates large temp GGUF files — exceeds 5min nextest timeout on CI"]
 fn test_ac6_4_device_aware_memory_efficiency_validation() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     use std::fs;
 
     // Create temp directory with proper lifetime management

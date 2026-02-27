@@ -438,9 +438,12 @@ mod tests {
     /// cargo test --release -p bitnet-models bench_avx2 -- --nocapture --ignored
     /// ```
     #[test]
-    #[ignore = "Marked as ignored because it's a benchmark, not a unit test"]
     #[cfg(target_arch = "x86_64")]
     fn bench_avx2_speedup() {
+        if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+            eprintln!("⏭️  Skipping benchmark test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+            return;
+        }
         use crate::i2s_qk256::gemv_qk256_row;
         use rand::{Rng, SeedableRng};
         use rand_chacha::ChaCha8Rng;

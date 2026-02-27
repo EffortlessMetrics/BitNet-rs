@@ -17,11 +17,17 @@ use std::sync::Arc;
 /// Validates complete transformer pipeline from tokenization to detokenization
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore = "requires fixture GGUF at tests-new/fixtures/fixtures/gguf/valid/small_bitnet_test.gguf"]
 async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
     let workspace_root = find_workspace_root().unwrap();
     let model_path =
         workspace_root.join("tests-new/fixtures/fixtures/gguf/valid/small_bitnet_test.gguf");
+    if !model_path.exists() {
+        eprintln!(
+            "⏭️  Skipping test: fixture not found at {}; provide the fixture to enable",
+            model_path.display()
+        );
+        return Ok(());
+    }
     let model = load_complete_bitnet_model(model_path.to_str().unwrap())
         .context("Failed to load complete BitNet model for integration testing")?;
     let tokenizer = UniversalTokenizer::new(Default::default())
