@@ -47,7 +47,6 @@ oneapi = []
 # Do NOT enable Candle's Metal feature on non-Apple hosts.
 # We keep a local "metal" feature for code cfgs, but wire Candle's "metal"
 # only on macOS via a target-specific dependency (see below).
-metal = []
 test-util = []  # Exposes test-only APIs for integration tests
 
 [target.'cfg(target_os = "macos")'.dependencies.candle-core]
