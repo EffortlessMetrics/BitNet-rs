@@ -5,6 +5,9 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test: add property tests for runtime microcrates` — 51+ property tests across 6 thin façade crates: bitnet-feature-matrix, bitnet-runtime-bootstrap, bitnet-runtime-context, bitnet-startup-contract, bitnet-testing-policy, bitnet-testing-scenarios; plus sampling and tokenizer proptests (#857)
+- `test: add property tests for bitnet-compat and bitnet-kernels` — 14 new proptests: 8 in `crates/bitnet-compat/tests/compat_proptests.rs` and 6 in `crates/bitnet-kernels/tests/kernel_proptests.rs` (#856)
+- `test: add insta snapshot tests for receipts and prompt templates` — added `crates/bitnet-common/tests/snapshot_tests.rs` with insta snapshot test pinning `BitNetConfig::default()` for regression detection (#855)
 - `test(receipts): add kernel ID hygiene property tests` — 7 property tests in `crates/bitnet-receipts/tests/receipt_validation_tests.rs` covering kernel ID hygiene invariants (#852)
 - `feat(fuzz): add gguf_header_roundtrip structured fuzz target` — new `fuzz/fuzz_targets/gguf_header_roundtrip.rs` structured round-trip fuzz target (#853)
 - `feat(xtask): add grid-check command` — new `cargo xtask grid-check` command providing a BDD compile-coverage gate with 18 cells and `cpu_only` mode; verifies grid contract at compile time (#850)
