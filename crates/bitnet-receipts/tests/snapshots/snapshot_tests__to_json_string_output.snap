@@ -1,0 +1,25 @@
+---
+source: crates/bitnet-receipts/tests/snapshot_tests.rs
+expression: reparsed
+---
+{
+  "backend": "cpu",
+  "backend_summary": "requested=cpu detected=[cpu] selected=cpu",
+  "compute_path": "real",
+  "corrections": [],
+  "deterministic": false,
+  "environment": {},
+  "kernels": [
+    "i2s_gemv",
+    "rope_apply"
+  ],
+  "model_info": {},
+  "performance_baseline": {},
+  "schema_version": "1.0.0",
+  "test_results": {
+    "failed": 0,
+    "passed": 0,
+    "total_tests": 0
+  },
+  "timestamp": "[timestamp]"
+}

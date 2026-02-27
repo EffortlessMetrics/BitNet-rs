@@ -339,6 +339,22 @@ impl InferenceReceipt {
         Ok(receipt)
     }
 
+    /// Serialize this receipt to a pretty-printed JSON string.
+    ///
+    /// Useful for display, logging, or snapshot testing without writing to disk.
+    ///
+    /// # Example
+    /// ```
+    /// use bitnet_receipts::InferenceReceipt;
+    ///
+    /// let receipt = InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
+    /// let json = receipt.to_json_string().unwrap();
+    /// assert!(json.contains("\"schema_version\""));
+    /// ```
+    pub fn to_json_string(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(self)?)
+    }
+
     /// Save receipt to JSON file
     ///
     /// # AC4 Contract
