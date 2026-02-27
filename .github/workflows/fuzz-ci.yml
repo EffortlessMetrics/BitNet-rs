@@ -49,7 +49,7 @@ jobs:
           workspaces: fuzz -> target
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked
+        run: cargo install cargo-fuzz --locked --force
 
       - name: Build all fuzz targets
         run: |
@@ -96,7 +96,7 @@ jobs:
           key: fuzz-run-${{ matrix.target }}
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked
+        run: cargo install cargo-fuzz --locked --force
 
       - name: Run fuzz target (60 seconds)
         run: |
