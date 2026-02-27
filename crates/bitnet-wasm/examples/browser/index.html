@@ -285,7 +285,10 @@
             </div>
 
             <div class="input-group">
-                <label>Output:</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <label style="margin-bottom: 0;">Output:</label>
+                    <button id="copy-output" onclick="copyToClipboard()" disabled style="padding: 4px 12px; font-size: 12px; background-color: #6c757d;" aria-label="Copy output to clipboard">Copy</button>
+                </div>
                 <div id="output" class="output">Generated text will appear here...</div>
             </div>
         </div>
