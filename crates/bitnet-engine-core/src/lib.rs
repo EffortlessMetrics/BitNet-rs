@@ -299,6 +299,25 @@ impl std::error::Error for EngineStateError {}
 /// - [`EngineState::Running`] → [`EngineState::Done`]  via [`finish`](Self::finish)
 ///
 /// All other transitions return [`EngineStateError`].
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_engine_core::{EngineStateTracker, EngineState};
+///
+/// let mut tracker = EngineStateTracker::new();
+/// assert_eq!(tracker.state(), &EngineState::Idle);
+///
+/// tracker.start().unwrap();
+/// assert_eq!(tracker.state(), &EngineState::Running);
+///
+/// tracker.finish().unwrap();
+/// assert_eq!(tracker.state(), &EngineState::Done);
+///
+/// // Invalid transition returns an error.
+/// let err = tracker.finish().unwrap_err();
+/// assert!(!err.to_string().is_empty());
+/// ```
 #[derive(Debug)]
 pub struct EngineStateTracker {
     state: EngineState,

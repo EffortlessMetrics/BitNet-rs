@@ -261,6 +261,22 @@ impl SamplingStrategy {
     ///
     /// Call this between independent generation requests to prevent counts from
     /// a previous sequence affecting the repetition penalty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_sampling::{SamplingConfig, SamplingStrategy};
+    ///
+    /// let config = SamplingConfig { temperature: 0.0, seed: Some(1), ..Default::default() };
+    /// let mut strategy = SamplingStrategy::new(config);
+    ///
+    /// // Generate a token so internal counts are non-empty.
+    /// let logits = vec![0.1f32, 0.9, 0.3];
+    /// let _ = strategy.sample(&logits, &[]).unwrap();
+    ///
+    /// // reset() clears those counts so the next request is independent.
+    /// strategy.reset();
+    /// ```
     pub fn reset(&mut self) {
         self.token_counts.clear();
     }
