@@ -17,7 +17,6 @@ use serial_test::serial;
 use support::EnvGuard;
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.1: Deterministic Generation - SLOW INTEGRATION TEST
 ///
 /// **This test runs 50-token generation (100+ forward passes) — use `--ignored` to run manually.**
@@ -29,6 +28,10 @@ use support::EnvGuard;
 ///
 /// Run manually: `cargo test test_ac3_deterministic_generation_identical_sequences -- --ignored`
 async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
     let _g2 = EnvGuard::new("BITNET_SEED");
@@ -92,7 +95,6 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.3: Top-k Seeded Sampling - SLOW INTEGRATION TEST
 ///
 /// **This test runs 30-token generation (60+ forward passes) — use `--ignored` to run manually.**
@@ -104,6 +106,10 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
 ///
 /// Run manually: `cargo test test_ac3_top_k_sampling_seeded -- --ignored`
 async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
     let _g2 = EnvGuard::new("RAYON_NUM_THREADS");
@@ -131,7 +137,6 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.4: Top-p Nucleus Sampling - SLOW INTEGRATION TEST
 ///
 /// **This test runs 25-token generation (50+ forward passes) — use `--ignored` to run manually.**
@@ -143,6 +148,10 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
 ///
 /// Run manually: `cargo test test_ac3_top_p_nucleus_sampling_seeded -- --ignored`
 async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
     let _g2 = EnvGuard::new("RAYON_NUM_THREADS");
@@ -170,7 +179,6 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.5: Different Seeds Produce Different Outputs - SLOW INTEGRATION TEST
 ///
 /// **This test runs 20-token generation (40+ forward passes) — use `--ignored` to run manually.**
@@ -182,6 +190,10 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
 ///
 /// Run manually: `cargo test test_ac3_different_seeds_different_outputs -- --ignored`
 async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
     let _g2 = EnvGuard::new("RAYON_NUM_THREADS");
@@ -217,7 +229,6 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for integration validation"]
 /// AC3.6: Rayon Single-Thread Determinism - SLOW INTEGRATION TEST
 ///
 /// **This test runs 15-token generation 3 times (90+ forward passes) — use `--ignored` to run manually.**
@@ -229,6 +240,10 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
 ///
 /// Run manually: `cargo test test_ac3_rayon_single_thread_determinism -- --ignored`
 async fn test_ac3_rayon_single_thread_determinism() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
     let _g2 = EnvGuard::new("BITNET_SEED");

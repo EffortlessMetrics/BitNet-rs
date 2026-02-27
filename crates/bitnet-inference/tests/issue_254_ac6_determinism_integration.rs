@@ -16,7 +16,6 @@ use serial_test::serial;
 use support::EnvGuard;
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for determinism validation"]
 /// AC6.1: Deterministic Inference - SLOW INTEGRATION TEST
 ///
 /// **This test runs 50-token generation (100+ forward passes) — use `--ignored` to run manually.**
@@ -28,6 +27,10 @@ use support::EnvGuard;
 ///
 /// Run manually: `cargo test test_ac6_deterministic_inference_identical_runs -- --ignored`
 async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
     let _g2 = EnvGuard::new("BITNET_SEED");
@@ -58,7 +61,6 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 }
 #[tokio::test]
 #[serial(bitnet_env)]
-#[ignore = "Slow: runs 100+ mock forward passes; run manually with --ignored for determinism validation"]
 /// AC6.2: Determinism Multiple Runs - SLOW INTEGRATION TEST
 ///
 /// **This test runs 20-token generation 5 times (200+ forward passes) — use `--ignored` to run manually.**
@@ -70,6 +72,10 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
 ///
 /// Run manually: `cargo test test_ac6_determinism_multiple_runs -- --ignored`
 async fn test_ac6_determinism_multiple_runs() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let _g1 = EnvGuard::new("BITNET_DETERMINISTIC");
     _g1.set("1");
     let _g2 = EnvGuard::new("BITNET_SEED");
