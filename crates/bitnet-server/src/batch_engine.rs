@@ -194,6 +194,7 @@ pub struct BatchEngine {
     config: BatchEngineConfig,
     request_queue: Arc<Mutex<VecDeque<PendingRequest>>>,
     processing_batches: Arc<RwLock<HashMap<String, ProcessingBatch>>>,
+    batch_responses: Arc<Mutex<HashMap<String, Vec<PendingRequest>>>>,
     batch_semaphore: Arc<Semaphore>,
     stats: Arc<BatchEngineStats>,
     request_counter: AtomicU64,
@@ -210,6 +211,7 @@ impl BatchEngine {
             config,
             request_queue: Arc::new(Mutex::new(VecDeque::new())),
             processing_batches: Arc::new(RwLock::new(HashMap::new())),
+            batch_responses: Arc::new(Mutex::new(HashMap::new())),
             stats: Arc::new(BatchEngineStats {
                 total_requests_processed: 0,
                 total_batches_processed: 0,
@@ -335,20 +337,40 @@ impl BatchEngine {
         let mut batch = ProcessingBatch::new(device);
 
         // Add requests to batch (optimize order if needed)
-        if let Some(optimization) = optimized {
-            for &index in &optimization.batch_compatible_requests {
-                if index < candidates.len() {
-                    batch.add_request(candidates[index].request.clone());
+        let selected_candidates = if let Some(optimization) = optimized {
+            let selected_indexes: std::collections::HashSet<usize> =
+                optimization.batch_compatible_requests.into_iter().collect();
+
+            let mut selected = Vec::new();
+            let mut unselected = Vec::new();
+
+            for (index, pending) in candidates.into_iter().enumerate() {
+                if selected_indexes.contains(&index) {
+                    selected.push(pending);
+                } else {
+                    unselected.push(pending);
                 }
             }
-        } else {
-            for pending in &candidates {
-                batch.add_request(pending.request.clone());
+
+            // Return non-selected requests to the front of the queue.
+            if !unselected.is_empty() {
+                let mut queue = self.request_queue.lock().await;
+                for pending in unselected.into_iter().rev() {
+                    queue.push_front(pending);
+                }
             }
+
+            selected
+        } else {
+            candidates
+        };
+
+        for pending in &selected_candidates {
+            batch.add_request(pending.request.clone());
         }
 
         // Store response channels for this batch
-        self.store_batch_responses(batch.id.clone(), candidates).await;
+        self.store_batch_responses(batch.id.clone(), selected_candidates).await;
 
         info!(
             batch_id = %batch.id,
@@ -363,9 +385,8 @@ impl BatchEngine {
 
     /// Store response channels for batch
     async fn store_batch_responses(&self, batch_id: String, candidates: Vec<PendingRequest>) {
-        // TODO: Store response channels mapped to batch ID
-        // For now, we'll handle responses directly in execute_batch
-        let _ = (batch_id, candidates); // Suppress unused warning
+        let mut responses = self.batch_responses.lock().await;
+        responses.insert(batch_id, candidates);
     }
 
     /// Optimize batch for quantization compatibility
@@ -531,6 +552,11 @@ impl BatchEngine {
         // Store batch ID for tracking
         let batch_id = batch.id.clone();
 
+        {
+            let mut processing = self.processing_batches.write().await;
+            processing.insert(batch_id.clone(), batch.clone());
+        }
+
         // TODO: Execute batch with actual inference engine
         // For now, simulate execution
         let execution_duration = self.simulate_batch_execution(&batch).await?;
@@ -539,6 +565,38 @@ impl BatchEngine {
         self.batch_counter.fetch_add(1, Ordering::Relaxed);
         self.total_processing_time
             .fetch_add(execution_duration.as_millis() as u64, Ordering::Relaxed);
+
+        // Deliver responses to all requests in this batch.
+        let pending_requests = {
+            let mut responses = self.batch_responses.lock().await;
+            responses.remove(&batch_id).unwrap_or_default()
+        };
+
+        for pending in pending_requests {
+            let simulated_tokens = pending.request.max_tokens.clamp(1, 64) as u64;
+            let simulated_text = format!(
+                "Simulated response for prompt: {}",
+                pending.request.prompt.chars().take(200).collect::<String>()
+            );
+
+            let result = BatchResult {
+                request_id: pending.request.id,
+                generated_text: simulated_text,
+                tokens_generated: simulated_tokens,
+                execution_time: execution_duration,
+                device_used: batch.device,
+                quantization_type: pending
+                    .request
+                    .quantization_hint
+                    .unwrap_or_else(|| "I2S".to_string()),
+                batch_id: batch_id.clone(),
+                batch_size: batch.size(),
+            };
+
+            if pending.response_tx.send(Ok(result)).is_err() {
+                debug!(batch_id = %batch_id, "Dropped response for cancelled request");
+            }
+        }
 
         // Remove from processing map
         {
@@ -658,6 +716,7 @@ impl Clone for BatchEngine {
             config: self.config.clone(),
             request_queue: Arc::clone(&self.request_queue),
             processing_batches: Arc::clone(&self.processing_batches),
+            batch_responses: Arc::clone(&self.batch_responses),
             batch_semaphore: Arc::clone(&self.batch_semaphore),
             stats: Arc::clone(&self.stats),
             request_counter: AtomicU64::new(self.request_counter.load(Ordering::Relaxed)),
