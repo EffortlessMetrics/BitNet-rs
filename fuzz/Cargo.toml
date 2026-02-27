@@ -11,6 +11,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4.10"
 serde_json = "1.0.145"
+safetensors = "0.6.2"
 bitnet-quantization = { path = "../crates/bitnet-quantization" }
 bitnet-models = { path = "../crates/bitnet-models" }
 bitnet-kernels = { path = "../crates/bitnet-kernels" }
@@ -56,6 +57,12 @@ doc = false
 [[bin]]
 name = "safetensors_parser"
 path = "fuzz_targets/safetensors_parser.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "safetensors_metadata"
+path = "fuzz_targets/safetensors_metadata.rs"
 test = false
 doc = false
 
