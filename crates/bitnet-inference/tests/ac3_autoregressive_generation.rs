@@ -166,8 +166,11 @@ async fn test_ac3_basic_autoregressive_generation() -> Result<()> {
 /// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore = "Slow: runs 50+ mock forward passes; run manually with --ignored for generation validation"]
 async fn test_ac3_temperature_sampling_validation() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;
     let tokenizer = create_mock_tokenizer(config.vocab_size)?;
@@ -233,8 +236,11 @@ async fn test_ac3_temperature_sampling_validation() -> Result<()> {
 /// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore = "Slow: runs 50+ mock forward passes; run manually with --ignored for generation validation"]
 async fn test_ac3_top_k_sampling_validation() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;
     let tokenizer = create_mock_tokenizer(config.vocab_size)?;
@@ -297,8 +303,11 @@ async fn test_ac3_top_k_sampling_validation() -> Result<()> {
 /// ```
 #[cfg(feature = "cpu")]
 #[tokio::test]
-#[ignore = "Slow: runs 50+ mock forward passes; run manually with --ignored for generation validation"]
 async fn test_ac3_nucleus_sampling_validation() -> Result<()> {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow mock-generation test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return Ok(());
+    }
     let config = AC3TestConfig::default();
     let model = create_mock_bitnet_model(config.vocab_size, 2048)?;
     let tokenizer = create_mock_tokenizer(config.vocab_size)?;

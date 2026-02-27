@@ -76,8 +76,11 @@ fn test_qk256_dequant_correctness() {
 /// Validates that AVX2 fast path provides measurable speedup over scalar
 /// reference (≥1.2× baseline established in MVP).
 #[test]
-#[ignore = "Slow: performance test requiring release build for meaningful speedup measurement (≥1.2× AVX2 vs scalar)"]
 fn test_qk256_dequant_performance_baseline() {
+    if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
+        eprintln!("⏭️  Skipping slow performance test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+        return;
+    }
     use bitnet_kernels::KernelProvider;
     use bitnet_kernels::cpu::x86::Avx2Kernel;
     use std::time::Instant;
