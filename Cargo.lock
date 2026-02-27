@@ -366,7 +366,7 @@ checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
 
 [[package]]
 name = "bitnet"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -411,7 +411,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-bdd-grid"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "bitnet-runtime-feature-flags",
@@ -421,7 +421,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-bdd-grid-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "insta",
  "proptest",
@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -480,7 +480,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-common"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-test-support",
@@ -502,7 +502,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-compat"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -521,7 +521,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-crossval"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -553,7 +553,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-device-probe"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-common",
  "insta",
@@ -565,7 +565,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-engine-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-feature-contract"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-bdd-grid",
  "bitnet-feature-matrix",
@@ -588,14 +588,14 @@ dependencies = [
 
 [[package]]
 name = "bitnet-feature-matrix"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-runtime-profile-core",
 ]
 
 [[package]]
 name = "bitnet-ffi"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -636,7 +636,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-generation"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-common",
  "insta",
@@ -647,7 +647,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-ggml-ffi"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cc",
  "libc",
@@ -655,7 +655,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-gguf"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "insta",
@@ -666,7 +666,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-honest-compute"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "insta",
  "proptest",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-inference"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -720,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-kernels"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -754,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-logits"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "insta",
  "proptest",
@@ -762,7 +762,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-models"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -804,7 +804,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-prompt-templates"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-tokenizers",
@@ -818,7 +818,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-py"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -842,7 +842,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-quantization"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -865,7 +865,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-receipts"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -882,7 +882,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-rope"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "insta",
  "proptest",
@@ -890,21 +890,21 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-bootstrap"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-startup-contract",
 ]
 
 [[package]]
 name = "bitnet-runtime-context"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-runtime-context-core",
 ]
 
 [[package]]
 name = "bitnet-runtime-context-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "insta",
@@ -915,7 +915,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-feature-flags"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "bitnet-runtime-feature-flags-core",
@@ -925,7 +925,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-feature-flags-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "insta",
@@ -934,21 +934,21 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-profile"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-feature-matrix",
 ]
 
 [[package]]
 name = "bitnet-runtime-profile-contract"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-runtime-profile-contract-core",
 ]
 
 [[package]]
 name = "bitnet-runtime-profile-contract-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-bdd-grid",
  "bitnet-runtime-context",
@@ -961,14 +961,14 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-profile-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-runtime-profile-contract",
 ]
 
 [[package]]
 name = "bitnet-sampling"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-logits",
@@ -981,7 +981,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-server"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1035,7 +1035,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-st-tools"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-validation",
@@ -1051,7 +1051,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-st2gguf"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -1075,14 +1075,14 @@ dependencies = [
 
 [[package]]
 name = "bitnet-startup-contract"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-startup-contract-core",
 ]
 
 [[package]]
 name = "bitnet-startup-contract-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-runtime-profile",
@@ -1094,7 +1094,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-startup-contract-diagnostics"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-runtime-bootstrap",
@@ -1104,7 +1104,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-startup-contract-guard"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-runtime-bootstrap",
@@ -1116,7 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-sys"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bindgen",
  "cc",
@@ -1127,7 +1127,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-test-support"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proptest",
  "serial_test",
@@ -1135,14 +1135,14 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-policy-core",
 ]
 
 [[package]]
 name = "bitnet-testing-policy-contract"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-feature-contract",
  "bitnet-runtime-feature-flags",
@@ -1153,7 +1153,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-profile",
  "bitnet-testing-scenarios-core",
@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-interop"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-runtime-feature-flags",
  "bitnet-testing-policy-contract",
@@ -1173,7 +1173,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-kit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-policy",
  "insta",
@@ -1182,7 +1182,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-runtime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-policy-interop",
  "insta",
@@ -1191,7 +1191,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-tests"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-policy-runtime",
  "insta",
@@ -1200,7 +1200,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-profile"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-runtime-profile",
  "insta",
@@ -1209,14 +1209,14 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-scenarios"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-scenarios-core",
 ]
 
 [[package]]
 name = "bitnet-testing-scenarios-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-scenarios-profile-core",
  "insta",
@@ -1226,7 +1226,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-scenarios-profile-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitnet-testing-profile",
  "insta",
@@ -1236,7 +1236,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-tests"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1291,7 +1291,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-tokenizers"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1337,7 +1337,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-transformer"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -1354,7 +1354,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-validation"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "insta",
@@ -1367,7 +1367,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -4822,7 +4822,7 @@ dependencies = [
 
 [[package]]
 name = "migrate-gen-config"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -8590,7 +8590,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -8636,7 +8636,7 @@ dependencies = [
 
 [[package]]
 name = "xtask-build-helper"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cc",
 ]
@@ -8690,18 +8690,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.39"
+version = "0.8.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db6d35d663eadb6c932438e763b262fe1a70987f9ae936e60158176d710cae4a"
+checksum = "a789c6e490b576db9f7e6b6d661bcc9799f7c0ac8352f56ea20193b2681532e5"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.39"
+version = "0.8.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4122cd3169e94605190e77839c9a40d40ed048d305bfdc146e7df40ab0f3e517"
+checksum = "f65c489a7071a749c849713807783f70672b28094011623e200cb86dcb835953"
 dependencies = [
  "proc-macro2",
  "quote",
