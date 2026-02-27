@@ -13,6 +13,44 @@ use tracing::{debug, info};
 pub struct SafeTensorsLoader;
 
 impl SafeTensorsLoader {
+    pub(crate) fn parse_header_metadata_from_bytes(data: &[u8]) -> HashMap<String, String> {
+        if data.len() < 8 {
+            return HashMap::new();
+        }
+
+        let mut header_len_bytes = [0_u8; 8];
+        header_len_bytes.copy_from_slice(&data[0..8]);
+        let header_len = u64::from_le_bytes(header_len_bytes) as usize;
+        if header_len == 0 || data.len() < 8 + header_len {
+            return HashMap::new();
+        }
+
+        let Ok(header) = serde_json::from_slice::<serde_json::Value>(&data[8..8 + header_len])
+        else {
+            return HashMap::new();
+        };
+
+        header
+            .get("__metadata__")
+            .and_then(serde_json::Value::as_object)
+            .map(|meta| {
+                meta.iter()
+                    .map(|(k, v)| {
+                        let normalized = v
+                            .as_str()
+                            .map_or_else(|| v.to_string(), std::string::ToString::to_string);
+                        (k.clone(), normalized)
+                    })
+                    .collect::<HashMap<String, String>>()
+            })
+            .unwrap_or_default()
+    }
+
+    fn parse_header_metadata(path: &Path) -> Result<HashMap<String, String>> {
+        let mmap = MmapFile::open(path)?;
+        Ok(Self::parse_header_metadata_from_bytes(mmap.as_slice()))
+    }
+
     /// Convert our Device to candle Device
     fn device_to_candle(device: &Device) -> Result<candle_core::Device> {
         match device {
@@ -115,11 +153,8 @@ impl FormatLoader for SafeTensorsLoader {
             })
         })?;
 
-        // Extract metadata from SafeTensors header
-        // Note: SafeTensors crate doesn't expose metadata directly
-        // We'll need to parse it from the raw header or use tensor names for inference
-        let header_metadata: std::collections::HashMap<String, String> =
-            std::collections::HashMap::new();
+        // SafeTensors crate does not expose __metadata__, so parse the header directly.
+        let header_metadata = Self::parse_header_metadata(path)?;
 
         let name = header_metadata
             .get("name")
@@ -163,12 +198,16 @@ impl FormatLoader for SafeTensorsLoader {
         info!("Loading SafeTensors model from: {}", path.display());
 
         let mmap = if config.use_mmap { Some(MmapFile::open(path)?) } else { None };
+        let owned_data = if config.use_mmap {
+            None
+        } else {
+            Some(std::fs::read(path).map_err(BitNetError::Io)?)
+        };
 
         let data = if let Some(ref mmap) = mmap {
             mmap.as_slice()
         } else {
-            // Read entire file into memory
-            &std::fs::read(path).map_err(BitNetError::Io)?
+            owned_data.as_deref().unwrap_or_default()
         };
 
         let safetensors = SafeTensors::deserialize(data).map_err(|e| {
@@ -183,7 +222,8 @@ impl FormatLoader for SafeTensorsLoader {
         }
 
         // Extract model configuration
-        let model_config = self.extract_config(&safetensors)?;
+        let header_metadata = Self::parse_header_metadata_from_bytes(data);
+        let model_config = self.extract_config(&safetensors, &header_metadata)?;
 
         if let Some(callback) = &config.progress_callback {
             callback(0.5, "Loading tensors...");
@@ -206,12 +246,12 @@ impl FormatLoader for SafeTensorsLoader {
 }
 
 impl SafeTensorsLoader {
-    fn extract_config(&self, safetensors: &SafeTensors) -> Result<BitNetConfig> {
+    fn extract_config(
+        &self,
+        safetensors: &SafeTensors,
+        metadata: &HashMap<String, String>,
+    ) -> Result<BitNetConfig> {
         let mut config = BitNetConfig::default();
-
-        // Extract configuration from metadata
-        // Note: SafeTensors crate doesn't expose metadata directly
-        let metadata: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
         if let Some(vocab_size_str) = metadata.get("vocab_size")
             && let Ok(vocab_size) = vocab_size_str.parse::<usize>()
@@ -314,33 +354,73 @@ impl SafeTensorsLoader {
 
         let candle_tensor = match tensor_view.dtype() {
             SafeDtype::F32 => {
-                let float_data = bytemuck::cast_slice::<u8, f32>(data);
+                let float_data = bytemuck::try_cast_slice::<u8, f32>(data).map_err(|_| {
+                    BitNetError::Model(ModelError::InvalidFormat {
+                        format: format!(
+                            "Tensor data length {} is not valid for F32 tensor {:?}",
+                            data.len(),
+                            shape
+                        ),
+                    })
+                })?;
                 Tensor::from_slice(float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::F16 => {
-                let half_data = bytemuck::cast_slice::<u8, u16>(data);
+                let half_data = bytemuck::try_cast_slice::<u8, u16>(data).map_err(|_| {
+                    BitNetError::Model(ModelError::InvalidFormat {
+                        format: format!(
+                            "Tensor data length {} is not valid for F16 tensor {:?}",
+                            data.len(),
+                            shape
+                        ),
+                    })
+                })?;
                 let float_data: Vec<f32> =
                     half_data.iter().map(|&h| half::f16::from_bits(h).to_f32()).collect();
                 Tensor::from_slice(&float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::BF16 => {
-                let bf16_data = bytemuck::cast_slice::<u8, u16>(data);
+                let bf16_data = bytemuck::try_cast_slice::<u8, u16>(data).map_err(|_| {
+                    BitNetError::Model(ModelError::InvalidFormat {
+                        format: format!(
+                            "Tensor data length {} is not valid for BF16 tensor {:?}",
+                            data.len(),
+                            shape
+                        ),
+                    })
+                })?;
                 let float_data: Vec<f32> =
                     bf16_data.iter().map(|&h| half::bf16::from_bits(h).to_f32()).collect();
                 Tensor::from_slice(&float_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::I32 => {
-                let int_data = bytemuck::cast_slice::<u8, i32>(data);
+                let int_data = bytemuck::try_cast_slice::<u8, i32>(data).map_err(|_| {
+                    BitNetError::Model(ModelError::InvalidFormat {
+                        format: format!(
+                            "Tensor data length {} is not valid for I32 tensor {:?}",
+                            data.len(),
+                            shape
+                        ),
+                    })
+                })?;
                 // Convert i32 to u32 for Candle compatibility
                 let uint_data: Vec<u32> = int_data.iter().map(|&x| x as u32).collect();
                 Tensor::from_slice(&uint_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
             SafeDtype::I64 => {
-                let int_data = bytemuck::cast_slice::<u8, i64>(data);
+                let int_data = bytemuck::try_cast_slice::<u8, i64>(data).map_err(|_| {
+                    BitNetError::Model(ModelError::InvalidFormat {
+                        format: format!(
+                            "Tensor data length {} is not valid for I64 tensor {:?}",
+                            data.len(),
+                            shape
+                        ),
+                    })
+                })?;
                 Tensor::from_slice(int_data, shape, &candle_device)
                     .map_err(|e| BitNetError::Validation(e.to_string()))?
             }
