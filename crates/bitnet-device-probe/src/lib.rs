@@ -226,6 +226,86 @@ impl DeviceCapabilities {
     }
 }
 
+// ── CpuProbe / DeviceProbe / probe_device ────────────────────────────────────
+
+/// CPU probe result combining SIMD level, core count, and thread count.
+///
+/// Obtained via [`probe_device`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CpuProbe {
+    /// Best SIMD instruction-set level available at runtime.
+    pub simd_level: SimdLevel,
+    /// Number of physical CPU cores (≥ 1).
+    pub cores: usize,
+    /// Number of logical threads (≥ 1).
+    pub threads: usize,
+}
+
+/// Full device probe result.
+///
+/// Obtained via [`probe_device`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceProbe {
+    /// CPU capability snapshot.
+    pub cpu: CpuProbe,
+    /// Whether a CUDA-capable GPU was found at runtime.
+    pub cuda_available: bool,
+}
+
+/// Run a full device probe and return the result.
+///
+/// This function never panics. On unusual platforms `cores` and `threads`
+/// fall back to `1`.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_device_probe::probe_device;
+///
+/// let result = probe_device();
+/// assert!(result.cpu.cores >= 1);
+/// assert!(result.cpu.threads >= 1);
+/// println!("SIMD: {:?}, CUDA: {}", result.cpu.simd_level, result.cuda_available);
+/// ```
+pub fn probe_device() -> DeviceProbe {
+    let threads = std::thread::available_parallelism().map(std::num::NonZero::get).unwrap_or(1);
+    // Physical core count is not reliably available in stable std; use
+    // logical thread count as a conservative approximation.
+    let cores = threads.max(1);
+    let simd_level = detect_simd_level();
+    DeviceProbe {
+        cpu: CpuProbe { simd_level, cores, threads },
+        cuda_available: gpu_available_runtime(),
+    }
+}
+
+/// Return a numeric rank for a [`SimdLevel`] so callers can compare levels.
+///
+/// Higher values represent wider/more capable SIMD.
+///
+/// | Level | Rank |
+/// |-------|------|
+/// | `Scalar` | 0 |
+/// | `Sse42`  | 1 |
+/// | `Avx2`   | 2 |
+/// | `Avx512` | 3 |
+/// | `Neon`   | 4 |
+///
+/// Note: NEON and SSE/AVX are mutually exclusive instruction sets; the rank is
+/// only meaningful when comparing levels on the same architecture.
+pub fn simd_level_rank(level: &SimdLevel) -> u32 {
+    match level {
+        SimdLevel::Scalar => 0,
+        SimdLevel::Sse42 => 1,
+        SimdLevel::Avx2 => 2,
+        SimdLevel::Avx512 => 3,
+        SimdLevel::Neon => 4,
+        // Future variants default to a high rank so they don't compare lower than
+        // known levels when SimdLevel gains new entries.
+        _ => u32::MAX,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
