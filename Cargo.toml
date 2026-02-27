@@ -115,7 +115,7 @@ name = "bitnet"
 readme = "README.md"
 repository = "https://github.com/microsoft/BitNet"
 rust-version.workspace = true
-version = "0.1.1"
+version = "0.1.2"
 # Disable automatic discovery of tests, benches, and examples
 # Many of these use outdated APIs and need updating
 # Note: The tests/ directory is a separate bitnet-tests workspace crate
@@ -139,7 +139,7 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/microsoft/BitNet"
 rust-version = "1.92.0"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies]
 # Core crates - always included

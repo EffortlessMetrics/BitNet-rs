@@ -4,6 +4,10 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.2] - 2026-02-27
+
+Test coverage expansion wave (proptests, fuzz targets, BDD grid), reduced ignored tests to 77.
+
 ### Fixed
 - `chore: fix stale MSRV cache key in compatibility workflow (1.89 → 1.92)` — prevents incorrect CI cache hits from cached 1.89 toolchain artifacts (#805)
 
