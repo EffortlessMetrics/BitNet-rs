@@ -10,7 +10,7 @@
 //! - TemplateType::Instruct wraps content with Q/A formatting
 //! - TemplateType display/parse round-trips correctly
 
-use bitnet_prompt_templates::{PromptTemplate, TemplateType};
+use bitnet_prompt_templates::{ChatRole, ChatTurn, PromptTemplate, TemplateType};
 use proptest::prelude::*;
 
 proptest! {
@@ -170,4 +170,149 @@ fn snapshot_raw_output() {
     let tmpl = PromptTemplate::new(TemplateType::Raw);
     let out = tmpl.format("Tell me a story");
     insta::assert_snapshot!("raw_passthrough", out);
+}
+
+proptest! {
+    /// TemplateType::detect() never panics with arbitrary optional string inputs
+    /// and always returns a valid template variant.
+    #[test]
+    fn prop_detect_never_panics(
+        name in proptest::option::of("[a-zA-Z0-9 _-]{0,50}"),
+        jinja in proptest::option::of("[a-zA-Z0-9 _<>|{}%\n]{0,100}"),
+    ) {
+        let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
+        prop_assert!(
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat),
+            "detect() returned an unexpected variant"
+        );
+    }
+
+    /// LLaMA-3 chat template always includes <|start_header_id|> and <|end_header_id|>
+    /// in its output regardless of user or system prompt content.
+    #[test]
+    fn prop_llama3_contains_header_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::Llama3Chat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|start_header_id|>"),
+            "LLaMA-3 output missing <|start_header_id|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|end_header_id|>"),
+            "LLaMA-3 output missing <|end_header_id|>: {out:?}"
+        );
+    }
+
+    /// Empty user input does not cause a panic for any template type.
+    #[test]
+    fn prop_empty_input_does_not_panic(
+        template in prop_oneof![
+            Just(TemplateType::Raw),
+            Just(TemplateType::Instruct),
+            Just(TemplateType::Llama3Chat),
+        ],
+    ) {
+        let out = template.apply("", None);
+        // Verify the call completed without panicking and returned a String.
+        let _ = out.len();
+    }
+
+    /// Unicode characters (Latin Extended-A) are preserved in template output.
+    #[test]
+    fn prop_unicode_in_prompts_preserved(
+        template in prop_oneof![
+            Just(TemplateType::Raw),
+            Just(TemplateType::Instruct),
+            Just(TemplateType::Llama3Chat),
+        ],
+        user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
+    ) {
+        let out = template.apply(&user, None);
+        prop_assert!(
+            out.contains(user.as_str()),
+            "Unicode input not preserved for {template:?}: user={user:?}"
+        );
+    }
+
+    /// Very long prompts (≥1 000 characters) do not cause a panic.
+    #[test]
+    fn prop_very_long_prompt_no_panic(
+        template in prop_oneof![
+            Just(TemplateType::Raw),
+            Just(TemplateType::Instruct),
+            Just(TemplateType::Llama3Chat),
+        ],
+        base in "[a-z]{5,10}",
+        repeats in 200usize..=250usize,
+    ) {
+        let long = base.repeat(repeats); // 1 000 – 2 500 characters
+        let out = template.apply(&long, None);
+        prop_assert!(
+            !out.is_empty(),
+            "template {template:?} produced empty output for long input ({} chars)",
+            long.len()
+        );
+    }
+
+    /// Instruct template wraps user text with "Q: " prefix and "A:" suffix.
+    #[test]
+    fn prop_instruct_wraps_with_qa_markers(
+        user in "[a-zA-Z0-9 .,?!]{1,80}",
+    ) {
+        let out = TemplateType::Instruct.apply(&user, None);
+        prop_assert!(out.contains("Q: "), "Instruct output missing 'Q: ' marker");
+        prop_assert!(out.contains("A:"), "Instruct output missing 'A:' marker");
+    }
+
+    /// In Instruct format the "System: " section appears before the "Q: " section.
+    #[test]
+    fn prop_system_header_before_user_in_instruct(
+        system in "[a-zA-Z0-9]{3,20}",
+        user in "[a-zA-Z0-9 ]{3,20}",
+    ) {
+        let out = TemplateType::Instruct.apply(&user, Some(&system));
+        let sys_pos = out.find("System: ").expect("'System: ' marker must be present");
+        let user_pos = out.find("Q: ").expect("'Q: ' marker must be present");
+        prop_assert!(
+            sys_pos < user_pos,
+            "system section must precede user section (sys={sys_pos}, user={user_pos})"
+        );
+    }
+
+    /// In LLaMA-3 format the system role header appears before the user role header.
+    #[test]
+    fn prop_system_header_before_user_in_llama3(
+        system in "[a-zA-Z0-9]{3,20}",
+        user in "[a-zA-Z0-9 ]{3,20}",
+    ) {
+        let out = TemplateType::Llama3Chat.apply(&user, Some(&system));
+        let sys_pos = out
+            .find("<|start_header_id|>system<|end_header_id|>")
+            .expect("system role header must be present");
+        let user_pos = out
+            .find("<|start_header_id|>user<|end_header_id|>")
+            .expect("user role header must be present");
+        prop_assert!(
+            sys_pos < user_pos,
+            "system role header must precede user role header (sys={sys_pos}, user={user_pos})"
+        );
+    }
+
+    /// render_chat with identical inputs always produces identical output (deterministic).
+    #[test]
+    fn prop_render_chat_is_deterministic(
+        template in prop_oneof![
+            Just(TemplateType::Raw),
+            Just(TemplateType::Instruct),
+            Just(TemplateType::Llama3Chat),
+        ],
+        user_text in "[a-zA-Z0-9 ]{1,60}",
+    ) {
+        let turns = vec![ChatTurn::new(ChatRole::User, user_text.as_str())];
+        let out1 = template.render_chat(&turns, None).unwrap();
+        let out2 = template.render_chat(&turns, None).unwrap();
+        prop_assert_eq!(out1, out2, "render_chat must be deterministic for {:?}", template);
+    }
 }
