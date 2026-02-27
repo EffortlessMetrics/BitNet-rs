@@ -816,7 +816,6 @@ fn test_backend_env_override() {
 /// Uses `#[serial(bitnet_env)]` to prevent concurrent environment mutation
 #[test]
 #[serial(bitnet_env)]
-#[ignore = "TODO: Implement debug logging infrastructure"]
 fn test_debug_logging_env_var() {
     // TODO: Implement debug logging via BITNET_CROSSVAL_VERBOSE
     // This is test scaffolding for future feature
