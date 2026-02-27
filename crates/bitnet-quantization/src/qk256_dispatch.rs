@@ -29,6 +29,9 @@
 //! AVX2 code paths use `#[target_feature(enable = "avx2")]` and are only
 //! called after runtime detection confirms AVX2 availability.
 
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+
 /// QK256 block size (256 elements per quantized block)
 pub const QK256: usize = 256;
 
@@ -78,13 +81,16 @@ pub fn qk256_gemv(
     scales: &[f32],
     activations: &[f32],
 ) {
-    // PR1: Only scalar path available
-    // PR3 will add:
-    // if is_x86_feature_detected!("avx2") {
-    //     unsafe { qk256_gemv_avx2(output, rows, cols, packed, scales, activations) }
-    // } else {
-    //     qk256_gemv_scalar(output, rows, cols, packed, scales, activations)
-    // }
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_x86_feature_detected!("avx2") {
+            // SAFETY: AVX2 availability is verified above via runtime dispatch.
+            unsafe {
+                qk256_gemv_avx2(output, rows, cols, packed, scales, activations);
+                return;
+            }
+        }
+    }
 
     qk256_gemv_scalar(output, rows, cols, packed, scales, activations);
 }
@@ -165,19 +171,69 @@ pub fn qk256_gemv_scalar(
     }
 }
 
-// PR3 will add this function:
-// #[target_feature(enable = "avx2")]
-// unsafe fn qk256_gemv_avx2(
-//     output: &mut [f32],
-//     rows: usize,
-//     cols: usize,
-//     packed: &[u8],
-//     scales: &[f32],
-//     activations: &[f32],
-// ) {
-//     // AVX2 implementation with FMA tiling
-//     unimplemented!("PR3: AVX2 kernel not yet implemented");
-// }
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn qk256_gemv_avx2(
+    output: &mut [f32],
+    rows: usize,
+    cols: usize,
+    packed: &[u8],
+    scales: &[f32],
+    activations: &[f32],
+) {
+    assert_eq!(output.len(), rows, "Output length mismatch");
+    assert_eq!(activations.len(), cols, "Activation length mismatch");
+    assert_eq!(cols % QK256, 0, "Cols must be multiple of QK256={}", QK256);
+
+    let blocks_per_row = cols / QK256;
+    let expected_packed_len = rows * cols / 4;
+    let expected_scales_len = rows * blocks_per_row;
+    assert_eq!(packed.len(), expected_packed_len, "Packed weight size mismatch");
+    assert_eq!(scales.len(), expected_scales_len, "Scales length mismatch");
+
+    const WEIGHT_LUT: [f32; 4] = [-1.0, 0.0, 1.0, -1.0];
+
+    for (row_idx, output_elem) in output.iter_mut().enumerate().take(rows) {
+        let mut row_sum = 0.0f32;
+
+        for block_idx in 0..blocks_per_row {
+            let global_block = row_idx * blocks_per_row + block_idx;
+            let scale = scales[global_block];
+
+            let packed_start = global_block * QK256 / 4;
+            let packed_end = packed_start + QK256 / 4;
+            let block_packed = &packed[packed_start..packed_end];
+            let act_offset = block_idx * QK256;
+
+            let mut weights = [0.0f32; QK256];
+            for (byte_idx, &byte) in block_packed.iter().enumerate() {
+                let base = byte_idx * 4;
+                weights[base] = WEIGHT_LUT[(byte & 0b11) as usize];
+                weights[base + 1] = WEIGHT_LUT[((byte >> 2) & 0b11) as usize];
+                weights[base + 2] = WEIGHT_LUT[((byte >> 4) & 0b11) as usize];
+                weights[base + 3] = WEIGHT_LUT[((byte >> 6) & 0b11) as usize];
+            }
+
+            let mut acc = _mm256_setzero_ps();
+            for j in (0..QK256).step_by(8) {
+                let w = unsafe { _mm256_loadu_ps(weights.as_ptr().add(j)) };
+                let x = unsafe { _mm256_loadu_ps(activations.as_ptr().add(act_offset + j)) };
+                let wx = _mm256_mul_ps(w, x);
+                acc = _mm256_add_ps(acc, wx);
+            }
+
+            // Horizontal sum of 8 lanes.
+            let hi = _mm256_extractf128_ps(acc, 1);
+            let lo = _mm256_castps256_ps128(acc);
+            let sum128 = _mm_add_ps(hi, lo);
+            let sum64 = _mm_hadd_ps(sum128, sum128);
+            let sum32 = _mm_hadd_ps(sum64, sum64);
+            row_sum += _mm_cvtss_f32(sum32) * scale;
+        }
+
+        *output_elem = row_sum;
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -215,10 +271,36 @@ mod tests {
 
     #[test]
     fn test_qk256_gemv_parity_placeholder() {
-        // PR3 will add:
-        // - Property-based tests (randomized inputs)
-        // - Parity tests (scalar vs AVX2, cosine ≥ .99999)
-        // - Edge case tests (aligned/unaligned, odd sizes)
+        let rows = 8;
+        let cols = QK256 * 2;
+
+        let mut packed = vec![0u8; rows * cols / 4];
+        for (i, b) in packed.iter_mut().enumerate() {
+            *b = [0x00, 0x55, 0xAA, 0xFF][i % 4];
+        }
+
+        let mut scales = vec![0.0f32; rows * (cols / QK256)];
+        for (i, s) in scales.iter_mut().enumerate() {
+            *s = 0.5 + (i as f32) * 0.01;
+        }
+
+        let mut activations = vec![0.0f32; cols];
+        for (i, a) in activations.iter_mut().enumerate() {
+            *a = (i as f32 * 0.003) - 0.5;
+        }
+
+        let mut scalar_out = vec![0.0f32; rows];
+        qk256_gemv_scalar(&mut scalar_out, rows, cols, &packed, &scales, &activations);
+
+        let mut dispatch_out = vec![0.0f32; rows];
+        qk256_gemv(&mut dispatch_out, rows, cols, &packed, &scales, &activations);
+
+        for (idx, (lhs, rhs)) in scalar_out.iter().zip(dispatch_out.iter()).enumerate() {
+            assert!(
+                (lhs - rhs).abs() < 1e-4,
+                "scalar and dispatch differ at row {idx}: {lhs} vs {rhs}"
+            );
+        }
     }
 }
 
@@ -226,19 +308,19 @@ mod tests {
 // PR1 Acceptance Criteria
 // ============================================================================
 // [x] Dispatch scaffolding complete (scalar path only)
-// [ ] CPU feature detection compiles on x86_64 and ARM
+// [x] CPU feature detection compiles on x86_64 and ARM
 // [ ] Benchmarks record scalar baseline performance
 // [ ] Documentation updated (architecture diagram, usage example)
-// [ ] Tests pass: `cargo test -p bitnet-quantization --features cpu`
+// [x] Tests pass: `cargo test -p bitnet-quantization --features cpu`
 //
 // PR2 will add:
 // - Unpack path (nibble LUT expansion)
 // - Unpack benches + correctness tests
 //
-// PR3 will add:
-// - AVX2 kernel (FMA tiling)
+// PR3 landed:
+// - AVX2 kernel (8-wide SIMD dot products)
 // - Runtime dispatch (is_x86_feature_detected)
-// - Parity tests (scalar vs AVX2)
+// - Scalar-vs-dispatch parity test
 //
 // PR4 will add:
 // - Rayon row-parallel
