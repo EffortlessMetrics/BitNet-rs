@@ -80,6 +80,10 @@ impl KernelProvider for NeonKernel {
         scales: &mut [f32],
         qtype: QuantizationType,
     ) -> Result<()> {
+        // Quantization writes bit-packed values using `|=` in several paths.
+        // Always clear the destination first so callers do not need to.
+        output.fill(0);
+
         match qtype {
             QuantizationType::TL1 => unsafe { self.quantize_tl1_neon(input, output, scales) },
             QuantizationType::I2S => unsafe { self.quantize_i2s_neon(input, output, scales) },
@@ -104,97 +108,48 @@ impl NeonKernel {
         n: usize,
         k: usize,
     ) -> Result<()> {
-        // Initialize output to zero
         c.fill(0.0);
 
-        // Process in blocks optimized for NEON
-        const BLOCK_M: usize = 4;
-        const BLOCK_N: usize = 4;
-        const BLOCK_K: usize = 16;
+        for i in 0..m {
+            for j in 0..n {
+                let mut l = 0usize;
+                let mut acc0 = vdupq_n_s32(0);
+                let mut acc1 = vdupq_n_s32(0);
+                let mut acc2 = vdupq_n_s32(0);
+                let mut acc3 = vdupq_n_s32(0);
 
-        for i in (0..m).step_by(BLOCK_M) {
-            for j in (0..n).step_by(BLOCK_N) {
-                // Accumulator for 4x4 block
-                let mut acc = [vdupq_n_f32(0.0); 4];
+                while l + 16 <= k {
+                    let a_vec = vld1q_s8(a.as_ptr().add(i * k + l));
 
-                for l in (0..k).step_by(BLOCK_K) {
-                    let k_end = (l + BLOCK_K).min(k);
-                    let k_len = k_end - l;
-
-                    // Load and process A matrix block
-                    for ii in 0..(BLOCK_M.min(m - i)) {
-                        if i + ii >= m {
-                            break;
-                        }
-
-                        // Load A row (i8 values)
-                        let a_row = &a[(i + ii) * k + l..];
-                        let a_vec = if k_len >= 16 {
-                            vld1q_s8(a_row.as_ptr())
-                        } else {
-                            // Handle partial loads
-                            let mut temp = [0i8; 16];
-                            temp[..k_len].copy_from_slice(&a_row[..k_len]);
-                            vld1q_s8(temp.as_ptr())
-                        };
-
-                        // Process B matrix columns
-                        for jj in 0..(BLOCK_N.min(n - j)) {
-                            if j + jj >= n {
-                                break;
-                            }
-
-                            // Load B column (u8 values)
-                            let mut b_col = [0u8; 16];
-                            for kk in 0..k_len {
-                                if l + kk < k {
-                                    b_col[kk] = b[(l + kk) * n + (j + jj)];
-                                }
-                            }
-                            let b_vec = vld1q_u8(b_col.as_ptr());
-
-                            // Convert to i16 for multiplication
-                            let a_lo = vmovl_s8(vget_low_s8(a_vec));
-                            let a_hi = vmovl_s8(vget_high_s8(a_vec));
-                            let b_lo = vmovl_u8(vget_low_u8(b_vec));
-                            let b_hi = vmovl_u8(vget_high_u8(b_vec));
-
-                            // Multiply and accumulate (low part)
-                            let prod_lo = vmull_s16(
-                                vget_low_s16(a_lo),
-                                vget_low_s16(vreinterpretq_s16_u16(b_lo)),
-                            );
-                            let prod_hi_lo = vmull_high_s16(a_lo, vreinterpretq_s16_u16(b_lo));
-
-                            // Multiply and accumulate (high part)
-                            let prod_lo_hi = vmull_s16(
-                                vget_low_s16(a_hi),
-                                vget_low_s16(vreinterpretq_s16_u16(b_hi)),
-                            );
-                            let prod_hi_hi = vmull_high_s16(a_hi, vreinterpretq_s16_u16(b_hi));
-
-                            // Sum all products
-                            let sum1 = vaddq_s32(prod_lo, prod_hi_lo);
-                            let sum2 = vaddq_s32(prod_lo_hi, prod_hi_hi);
-                            let total_sum = vaddq_s32(sum1, sum2);
-
-                            // Convert to float and add to accumulator
-                            let sum_f32 = vcvtq_f32_s32(total_sum);
-                            acc[jj] = vaddq_f32(acc[jj], sum_f32);
-                        }
+                    let mut b_col = [0u8; 16];
+                    for kk in 0..16 {
+                        b_col[kk] = b[(l + kk) * n + j];
                     }
+                    let b_vec = vld1q_u8(b_col.as_ptr());
+
+                    let a_lo = vmovl_s8(vget_low_s8(a_vec));
+                    let a_hi = vmovl_s8(vget_high_s8(a_vec));
+                    let b_lo = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(b_vec)));
+                    let b_hi = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(b_vec)));
+
+                    acc0 = vaddq_s32(acc0, vmull_s16(vget_low_s16(a_lo), vget_low_s16(b_lo)));
+                    acc1 = vaddq_s32(acc1, vmull_s16(vget_high_s16(a_lo), vget_high_s16(b_lo)));
+                    acc2 = vaddq_s32(acc2, vmull_s16(vget_low_s16(a_hi), vget_low_s16(b_hi)));
+                    acc3 = vaddq_s32(acc3, vmull_s16(vget_high_s16(a_hi), vget_high_s16(b_hi)));
+
+                    l += 16;
                 }
 
-                // Store results
-                for ii in 0..(BLOCK_M.min(m - i)) {
-                    for jj in 0..(BLOCK_N.min(n - j)) {
-                        if i + ii < m && j + jj < n {
-                            // Sum the vector elements
-                            let sum = vaddvq_f32(acc[jj]);
-                            c[(i + ii) * n + (j + jj)] += sum;
-                        }
-                    }
+                let mut sum =
+                    (vaddvq_s32(acc0) + vaddvq_s32(acc1) + vaddvq_s32(acc2) + vaddvq_s32(acc3))
+                        as f32;
+
+                while l < k {
+                    sum += (a[i * k + l] as f32) * (b[l * n + j] as f32);
+                    l += 1;
                 }
+
+                c[i * n + j] = sum;
             }
         }
 
