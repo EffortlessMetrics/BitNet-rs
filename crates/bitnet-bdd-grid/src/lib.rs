@@ -202,6 +202,55 @@ fn build_curated_rows() -> Box<[BddCell]> {
             forbidden_features: FeatureSet::new(),
             intent: "Deterministic seed produces identical output across repeated runs",
         },
+        // Feature: device-probe — Scenario: "CPU feature detection reports SIMD capabilities"
+        // Reason: A Smoke/Local cell verifies that `bitnet-device-probe` correctly detects
+        // the active CPU feature flags (AVX2, AVX-512, NEON) without requiring GPU runtime.
+        // This is the fastest sanity check for the device-detection path.
+        BddCell {
+            scenario: TestingScenario::Smoke,
+            environment: ExecutionEnvironment::Local,
+            required_features: feature_set_from_names(&["cpu", "inference"]),
+            optional_features: feature_set_from_names(&["reporting"]),
+            forbidden_features: feature_set_from_names(&["gpu", "cuda"]),
+            intent: "Device probe detects CPU features and reports available SIMD capabilities",
+        },
+        // Feature: logits — Scenario: "pure logits transforms pass numerical precision checks"
+        // Reason: An Integration/PreProduction cell exercises `bitnet-logits` temperature
+        // scaling, top-k, and top-p transforms at staging quality gates before promotion.
+        // The `cpu` + `kernels` pair ensures SIMD paths are exercised end-to-end.
+        BddCell {
+            scenario: TestingScenario::Integration,
+            environment: ExecutionEnvironment::PreProduction,
+            required_features: feature_set_from_names(&["cpu", "inference", "kernels"]),
+            optional_features: feature_set_from_names(&["reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Pure logits transforms (temperature, top-k, top-p) pass numerical precision checks",
+        },
+        // Feature: generation — Scenario: "stopping criteria fire deterministically"
+        // Reason: A Debug/PreProduction cell provides detailed introspection for
+        // `bitnet-generation` stopping-criteria logic (max-tokens, stop-id, stop-string)
+        // in a pre-production staging environment without the overhead of full fixtures.
+        BddCell {
+            scenario: TestingScenario::Debug,
+            environment: ExecutionEnvironment::PreProduction,
+            required_features: feature_set_from_names(&["inference"]),
+            optional_features: feature_set_from_names(&["trace", "reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Generation stopping criteria (max-tokens, stop-id, stop-string) fire deterministically",
+        },
+        // Feature: engine-core — Scenario: "session contracts match C++ reference"
+        // Reason: A CrossValidation/PreProduction cell validates that `bitnet-engine-core`
+        // session invariants align with the C++ reference implementation at each decode
+        // step before production promotion.  `crossval` + `fixtures` are optional so the
+        // cell also serves as a lightweight staging gate when the C++ reference is absent.
+        BddCell {
+            scenario: TestingScenario::CrossValidation,
+            environment: ExecutionEnvironment::PreProduction,
+            required_features: feature_set_from_names(&["inference", "kernels"]),
+            optional_features: feature_set_from_names(&["crossval", "fixtures", "reporting"]),
+            forbidden_features: FeatureSet::new(),
+            intent: "Engine-core session contracts match C++ reference for all decode-step invariants",
+        },
     ]
     .into_boxed_slice()
 }
