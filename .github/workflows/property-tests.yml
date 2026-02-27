@@ -208,7 +208,7 @@ jobs:
             // Add performance metrics if available
             comment += '### Performance\n';
             comment += 'Model: ${{ matrix.model.name }}\n';
-            comment += 'Examples tested: ${{ github.event.inputs.num_examples || "10" }}\n';
+            comment += `Examples tested: ${{ github.event.inputs.num_examples || '10' }}\n`;
 
             // Post comment
             github.rest.issues.createComment({
