@@ -3,7 +3,7 @@
 //! CPU and GPU backend implementations for BitNet inference with
 //! automatic backend selection and fallback support.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use bitnet_common::{ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
@@ -88,29 +88,23 @@ impl Backend for CpuBackend {
         Box::new(Self { model: self.model.clone(), num_threads: self.num_threads })
     }
 
-    async fn forward(
-        &self,
-        input: &ConcreteTensor,
-        _cache: &mut KVCache,
-    ) -> Result<ConcreteTensor> {
+    async fn forward(&self, input: &ConcreteTensor, cache: &mut KVCache) -> Result<ConcreteTensor> {
         debug!("CPU forward pass with input shape: {:?}", input.shape());
 
         // Set thread count for this operation
         // Ignore errors if the global thread pool has already been initialized
         let _ = rayon::ThreadPoolBuilder::new().num_threads(self.num_threads).build_global();
 
-        // Forward pass through model
-        let output = tokio::task::spawn_blocking({
-            let model = self.model.clone();
-            let input_tensor = input.clone();
-            move || {
-                // Convert cache to Any for the model interface
-                let mut cache_any: Box<dyn std::any::Any> = Box::new(());
-                model.forward(&input_tensor, &mut *cache_any)
-            }
-        })
-        .await
-        .context("CPU forward pass task failed")??;
+        let model = self.model.clone();
+        let input_tensor = input.clone();
+
+        // Use block_in_place to allow blocking the current thread with computation
+        // while properly passing the mutable cache reference.
+        // This avoids the 'static lifetime requirement of spawn_blocking.
+        let output = tokio::task::block_in_place(move || {
+            let cache_any: &mut dyn std::any::Any = cache;
+            model.forward(&input_tensor, cache_any)
+        })?;
 
         debug!("CPU forward pass completed");
         Ok(output)
@@ -201,27 +195,20 @@ impl Backend for GpuBackend {
         })
     }
 
-    async fn forward(
-        &self,
-        input: &ConcreteTensor,
-        _cache: &mut KVCache,
-    ) -> Result<ConcreteTensor> {
+    async fn forward(&self, input: &ConcreteTensor, cache: &mut KVCache) -> Result<ConcreteTensor> {
         debug!("GPU forward pass with input shape: {:?}", input.shape());
 
         // Ensure input is on the correct device
         let gpu_input = self.ensure_gpu_tensor(input)?;
 
-        // Forward pass through model
-        let output = tokio::task::spawn_blocking({
-            let model = self.model.clone();
-            let input_tensor = gpu_input;
-            move || {
-                let mut cache_any: Box<dyn std::any::Any> = Box::new(());
-                model.forward(&input_tensor, &mut *cache_any)
-            }
-        })
-        .await
-        .context("GPU forward pass task failed")??;
+        let model = self.model.clone();
+        let input_tensor = gpu_input;
+
+        // Use block_in_place for GPU backend as well to properly handle cache
+        let output = tokio::task::block_in_place(move || {
+            let cache_any: &mut dyn std::any::Any = cache;
+            model.forward(&input_tensor, cache_any)
+        })?;
 
         debug!("GPU forward pass completed");
         Ok(output)
@@ -337,7 +324,7 @@ mod tests {
     }
 
     // Forward pass test using MockModel (no real weights needed).
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_cpu_backend_forward() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
@@ -404,7 +391,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_backend_warmup() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
