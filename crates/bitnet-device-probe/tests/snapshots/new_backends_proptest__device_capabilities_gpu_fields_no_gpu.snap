@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/new_backends_proptest.rs
+expression: fields
+---
+cuda_compiled=false rocm_compiled=false cuda_runtime=false rocm_runtime=false

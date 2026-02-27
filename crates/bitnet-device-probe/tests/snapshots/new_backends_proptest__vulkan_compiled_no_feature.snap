@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-device-probe/tests/new_backends_proptest.rs
+expression: vulkan_compiled().to_string()
+---
+false
