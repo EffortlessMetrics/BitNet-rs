@@ -36,8 +36,10 @@ xtask-build-helper = { path = "../../xtask-build-helper" }
 proptest.workspace = true
 
 [package.metadata.docs.rs]
-features = ["ffi"]
-rustdoc-args = ["--cfg", "docsrs"]
+all-features = true
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
+rustdoc-args = ["--cfg", "docsrs", "-Zunstable-options", "--generate-link-to-compiler-builtins"]
+targets = ["x86_64-unknown-linux-gnu"]
 
 [lib]
 name = "bitnet_sys"
