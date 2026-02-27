@@ -4,6 +4,10 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.3] - 2026-02-27
+
+Test coverage expansion wave 2: property tests across 10+ crates, new fuzz targets, BDD-style kernel tests, CLI snapshot tests, CI hardening, and integration tests for quantization, device-probe, logits, transformer, and tokenizer.
+
 ### Added
 - `test(bitnet-receipts): add property-based tests for receipt validation` — 5 new property tests (20 total) covering validation gate invariants in `crates/bitnet-receipts/tests/`; raises receipt proptest coverage (#891)
 - `test(bitnet-sampling): add comprehensive property-based tests` — 14 new property tests for sampling invariants in `crates/bitnet-sampling/tests/`; covers temperature, top-k/p, repetition penalty, and greedy determinism (#890)
