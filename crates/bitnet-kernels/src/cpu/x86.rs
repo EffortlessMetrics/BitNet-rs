@@ -855,6 +855,45 @@ mod tests {
 
     #[cfg(target_arch = "x86_64")]
     #[test]
+    fn test_avx512_matmul_matches_fallback_non_aligned_shapes() {
+        let avx512_kernel = Avx512Kernel;
+        if !avx512_kernel.is_available() {
+            return;
+        }
+
+        let fallback_kernel = crate::cpu::fallback::FallbackKernel;
+
+        let test_cases = vec![(3, 5, 7), (9, 13, 15), (17, 19, 33), (31, 27, 65)];
+
+        for (m, n, k) in test_cases {
+            let mut a = vec![0i8; m * k];
+            let mut b = vec![0u8; k * n];
+
+            for (idx, item) in a.iter_mut().enumerate() {
+                *item = ((idx % 11) as i8) - 5;
+            }
+            for (idx, item) in b.iter_mut().enumerate() {
+                *item = ((idx * 3 + 7) % 251) as u8;
+            }
+
+            let mut c_avx512 = vec![0.0f32; m * n];
+            let mut c_fallback = vec![0.0f32; m * n];
+
+            avx512_kernel.matmul_i2s(&a, &b, &mut c_avx512, m, n, k).unwrap();
+            fallback_kernel.matmul_i2s(&a, &b, &mut c_fallback, m, n, k).unwrap();
+
+            for idx in 0..(m * n) {
+                assert_eq!(
+                    c_avx512[idx], c_fallback[idx],
+                    "Mismatch for (m={m}, n={n}, k={k}) at index {idx}: avx512={}, fallback={}",
+                    c_avx512[idx], c_fallback[idx]
+                );
+            }
+        }
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
     fn test_avx512_quantize_tl2() {
         let kernel = Avx512Kernel;
 
