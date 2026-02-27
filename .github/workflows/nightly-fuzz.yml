@@ -55,7 +55,7 @@ jobs:
             fuzz-corpus-${{ matrix.target }}-
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked
+        run: cargo install cargo-fuzz --locked --force
 
       - name: Run fuzz target (60 seconds)
         run: |
