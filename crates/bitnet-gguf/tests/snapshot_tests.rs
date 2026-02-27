@@ -2,9 +2,11 @@
 //!
 //! Pins the magic constant, version range, and error messages for malformed
 //! GGUF data so that specification-level constants don't silently change.
+//! Also pins the `GgufFileInfo` debug output for successful v2 and v3 parses.
 
 use bitnet_gguf::{
     GGUF_MAGIC, GGUF_VERSION_MAX, GGUF_VERSION_MIN, GgufValueType, check_magic, parse_header,
+    read_version,
 };
 
 #[test]
@@ -100,4 +102,49 @@ fn parse_header_v3_non_power_of_two_alignment_falls_back_to_32() {
     data[24..28].copy_from_slice(&7u32.to_le_bytes()); // non-power-of-two
     let info = parse_header(&data).expect("v3 with bad alignment must still parse");
     insta::assert_snapshot!("v3_bad_alignment_falls_back", format!("alignment={}", info.alignment));
+}
+
+#[test]
+fn parse_header_v2_success_snapshot() {
+    // Minimal valid v2 header: magic(4) + version(4) + tensor_count(8) + metadata_count(8) = 24 bytes.
+    // v2 does not store an alignment field; the parser defaults alignment to 32.
+    let mut data = vec![0u8; 24];
+    data[..4].copy_from_slice(b"GGUF");
+    data[4..8].copy_from_slice(&2u32.to_le_bytes());
+    data[8..16].copy_from_slice(&5u64.to_le_bytes()); // tensor_count = 5
+    data[16..24].copy_from_slice(&3u64.to_le_bytes()); // metadata_count = 3
+    let info = parse_header(&data).expect("valid v2 header must parse");
+    insta::assert_debug_snapshot!("parse_header_v2_success", info);
+}
+
+#[test]
+fn parse_header_v3_success_snapshot() {
+    // Minimal valid v3 header: magic(4) + version(4) + tensor_count(8) + metadata_count(8)
+    // + alignment(4) = 28 bytes.  alignment must be a power of two.
+    let mut data = vec![0u8; 28];
+    data[..4].copy_from_slice(b"GGUF");
+    data[4..8].copy_from_slice(&3u32.to_le_bytes());
+    data[8..16].copy_from_slice(&10u64.to_le_bytes()); // tensor_count = 10
+    data[16..24].copy_from_slice(&7u64.to_le_bytes()); // metadata_count = 7
+    data[24..28].copy_from_slice(&64u32.to_le_bytes()); // alignment = 64
+    let info = parse_header(&data).expect("valid v3 header must parse");
+    insta::assert_debug_snapshot!("parse_header_v3_success", info);
+}
+
+#[test]
+fn read_version_v2_snapshot() {
+    let mut data = vec![0u8; 8];
+    data[..4].copy_from_slice(b"GGUF");
+    data[4..8].copy_from_slice(&2u32.to_le_bytes());
+    let version = read_version(&data);
+    insta::assert_debug_snapshot!("read_version_v2", version);
+}
+
+#[test]
+fn read_version_v3_snapshot() {
+    let mut data = vec![0u8; 8];
+    data[..4].copy_from_slice(b"GGUF");
+    data[4..8].copy_from_slice(&3u32.to_le_bytes());
+    let version = read_version(&data);
+    insta::assert_debug_snapshot!("read_version_v3", version);
 }

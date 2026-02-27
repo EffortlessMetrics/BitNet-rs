@@ -9,7 +9,9 @@
 //! - Backend summary field in receipt
 //! - `to_json_string()` output for round-trip fidelity
 
-use bitnet_receipts::{InferenceReceipt, ModelInfo, PerformanceBaseline, TestResults};
+use bitnet_receipts::{
+    InferenceReceipt, ModelInfo, PerformanceBaseline, RECEIPT_SCHEMA_VERSION, TestResults,
+};
 
 /// Normalize non-deterministic fields for stable snapshots.
 fn normalize(mut r: InferenceReceipt) -> InferenceReceipt {
@@ -142,4 +144,10 @@ fn snapshot_to_json_string_output() {
     insta::assert_json_snapshot!("to_json_string_output", reparsed, {
         ".timestamp" => "[timestamp]",
     });
+}
+
+#[test]
+fn snapshot_schema_version_constant() {
+    // Pin the schema version string so any spec-level bump is immediately visible.
+    insta::assert_snapshot!("schema_version_constant", RECEIPT_SCHEMA_VERSION);
 }
