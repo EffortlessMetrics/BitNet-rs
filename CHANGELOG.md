@@ -5,6 +5,9 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `feat(xtask): add grid-check command` — new `cargo xtask grid-check` command providing a BDD compile-coverage gate with 18 cells and `cpu_only` mode; verifies grid contract at compile time (#850)
+- `test(bitnet-engine-core): add 6 property tests for clone, field, and seed invariants` — 6 new proptests covering clone/field/seed invariants in `crates/bitnet-engine-core/tests/property_tests.rs` (#849)
+- `test: audit and reduce ignored tests` — reduced ignored test count from 433 → 423 (−10) by enabling tests no longer blocked (#847)
 - `ci: add nightly fuzz run workflow` — scheduled fuzz job running at 2am UTC, 60s per target across all 10 fuzz targets, with crash artifact upload on failure (#844)
 - `test(bitnet-generation): add 6 new property tests for stopping invariants` — 6 new proptests covering stop-token, stop-sequence, max-tokens, and combined stopping criteria in `crates/bitnet-generation/tests/property_tests.rs` (#846)
 - `feat: add bitnet-logits property tests` — 4 new proptests for logits invariants in `crates/bitnet-logits/tests/logits_tests.rs` (#843)
