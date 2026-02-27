@@ -163,9 +163,9 @@ fn given_repetition_penalty_when_token_repeated_twice_then_penalised_more_than_o
 
     let original = vec![1.0_f32, 1.0, 1.0];
     // context: token 0 appears twice, token 1 appears once, token 2 not present.
-    let context = vec![0_u32, 0, 1];
+    let _context = vec![0_u32, 0, 1];
 
-    let mut logits = original.clone();
+    let logits = original.clone();
     // Access penalize_repeated_tokens via the public interface: temperature=0 greedy
     // with the strategy holding the same penalty config.
     // We replicate the penalty math to verify the expected ordering.
@@ -183,7 +183,7 @@ fn given_repetition_penalty_when_token_repeated_twice_then_penalised_more_than_o
         "once-penalised logit ({penalised_1}) must be less than unpenalised ({})",
         original[2]
     );
-    drop((strategy, logits)); // used to avoid unused variable warnings
+    drop((strategy, logits, _context)); // used to avoid unused variable warnings
 }
 
 /// Given: repetition_penalty = 1.0 (disabled)
