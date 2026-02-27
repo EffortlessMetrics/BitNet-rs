@@ -116,7 +116,7 @@ async fn run_golden_path(max_new_tokens: usize) -> Result<(Vec<u32>, Vec<String>
 }
 
 /// Golden path: greedy generation on uniform logits always produces token 0.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_cpu_golden_path_deterministic_output() -> Result<()> {
     let (tokens, _) = run_golden_path(5).await?;
     assert_eq!(tokens.len(), 5, "should generate exactly 5 tokens");
@@ -130,7 +130,7 @@ async fn test_cpu_golden_path_deterministic_output() -> Result<()> {
 }
 
 /// Golden path: two greedy runs produce identical output.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_cpu_golden_path_reproducible() -> Result<()> {
     let (tokens1, _) = run_golden_path(4).await?;
     let (tokens2, _) = run_golden_path(4).await?;
@@ -139,7 +139,7 @@ async fn test_cpu_golden_path_reproducible() -> Result<()> {
 }
 
 /// Golden path: kernel recorder captures the expected real kernel IDs.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_cpu_golden_path_kernel_ids_recorded() -> Result<()> {
     let (_, kernel_ids) = run_golden_path(2).await?;
     // These kernel IDs are recorded by InferenceEngine::forward_pass for every step.
@@ -151,7 +151,7 @@ async fn test_cpu_golden_path_kernel_ids_recorded() -> Result<()> {
 }
 
 /// Golden path: receipt passes honest-compute validation (compute_path = "real").
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_cpu_golden_path_receipt_honest_compute() -> Result<()> {
     let (_, kernel_ids) = run_golden_path(3).await?;
 
@@ -166,7 +166,7 @@ async fn test_cpu_golden_path_receipt_honest_compute() -> Result<()> {
 }
 
 /// Golden path: receipt contains schema version and non-empty kernel list.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_cpu_golden_path_receipt_invariants() -> Result<()> {
     let (_, kernel_ids) = run_golden_path(2).await?;
     assert!(!kernel_ids.is_empty(), "kernel_ids must not be empty after generation");
