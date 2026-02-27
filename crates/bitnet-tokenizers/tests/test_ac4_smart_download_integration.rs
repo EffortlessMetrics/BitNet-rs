@@ -24,7 +24,6 @@ use std::path::Path;
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_download_tokenizer_from_huggingface() {
     let download_info = TokenizerDownloadInfo {
         repo: "meta-llama/Llama-2-7b-hf".to_string(),
@@ -57,7 +56,6 @@ async fn ac4_download_tokenizer_from_huggingface() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_tokenizer_download_caching() {
     use std::time::Instant;
 
@@ -99,7 +97,6 @@ async fn ac4_tokenizer_download_caching() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_download_verification() {
     let download_info = TokenizerDownloadInfo {
         repo: "meta-llama/Llama-2-7b-hf".to_string(),
@@ -162,7 +159,6 @@ async fn ac4_network_failure_handling() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test with retry simulation"]
 async fn ac4_download_retry_logic() {
     let download_info = TokenizerDownloadInfo {
         repo: "meta-llama/Llama-2-7b-hf".to_string(),
@@ -230,7 +226,6 @@ async fn ac4_bitnet_download_infrastructure_integration() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_download_multiple_tokenizer_files() {
     let download_info = TokenizerDownloadInfo {
         repo: "1bitLLM/bitnet_b1_58-large".to_string(),
@@ -261,7 +256,6 @@ async fn ac4_download_multiple_tokenizer_files() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_download_progress_monitoring() {
     use std::time::Duration;
     use tokio::time::timeout;
@@ -329,7 +323,6 @@ async fn ac4_offline_mode_handling() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_concurrent_downloads() {
     use tokio::task;
 
@@ -380,7 +373,6 @@ async fn ac4_concurrent_downloads() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_download_with_vocab_validation() {
     let download_info = TokenizerDownloadInfo {
         repo: "meta-llama/Llama-2-7b-hf".to_string(),
@@ -461,7 +453,6 @@ async fn ac4_discovery_download_integration() {
 // AC:ID AC4
 #[tokio::test]
 #[cfg(feature = "cpu")]
-#[ignore = "Network-dependent test"]
 async fn ac4_download_error_recovery() {
     let problematic_downloads = [
         ("nonexistent/repo", "Repository not found"),
