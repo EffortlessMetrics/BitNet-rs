@@ -266,7 +266,10 @@ impl BenchmarkCommand {
                 warn!("CUDA support not yet implemented, falling back to CPU");
                 Ok(Device::Cpu)
             }
-            _ => anyhow::bail!("Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto", device_str),
+            _ => anyhow::bail!(
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
+                device_str
+            ),
         }
     }
 

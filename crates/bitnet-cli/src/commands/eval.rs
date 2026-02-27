@@ -377,7 +377,8 @@ impl EvalCommand {
 
         match self.device.as_str() {
             "cpu" => Ok(Device::Cpu),
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0).context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)"),
+            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0)
+                .context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)"),
             "metal" => Device::new_metal(0).context("Metal not available"),
             "auto" => {
                 if let Ok(device) = Device::cuda_if_available(0) {

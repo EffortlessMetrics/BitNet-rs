@@ -62,7 +62,8 @@ pub async fn run_score(args: &ScoreArgs) -> Result<()> {
     // Determine device
     let device = match args.device.as_str() {
         "cpu" => Device::Cpu,
-        "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0).context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)")?,
+        "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0)
+            .context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)")?,
         "metal" => anyhow::bail!("Metal not supported in this build"),
         "auto" => Device::cuda_if_available(0).unwrap_or(Device::Cpu),
         other => anyhow::bail!("invalid device: {other}"),
