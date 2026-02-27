@@ -27,6 +27,10 @@ bitnet-sampling = { path = "../crates/bitnet-sampling" }
 bitnet-receipts = { path = "../crates/bitnet-receipts" }
 bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates" }
 bitnet-validation = { path = "../crates/bitnet-validation" }
+bitnet-engine-core = { path = "../crates/bitnet-engine-core" }
+bitnet-honest-compute = { path = "../crates/bitnet-honest-compute" }
+bitnet-bdd-grid-core = { path = "../crates/bitnet-bdd-grid-core" }
+bitnet-runtime-feature-flags-core = { path = "../crates/bitnet-runtime-feature-flags-core" }
 candle-core = { workspace = true }
 arbitrary = { version = "1.4.2", features = ["derive"] }
 
@@ -207,5 +211,29 @@ doc = false
 [[bin]]
 name = "validation_no_panic"
 path = "fuzz_targets/validation_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "engine_core_no_panic"
+path = "fuzz_targets/engine_core_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "honest_compute_no_panic"
+path = "fuzz_targets/honest_compute_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "runtime_context_parse_no_panic"
+path = "fuzz_targets/runtime_context_parse_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "feature_activation_no_panic"
+path = "fuzz_targets/feature_activation_no_panic.rs"
 test = false
 doc = false
