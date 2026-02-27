@@ -24,7 +24,8 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **SRP Microcrate Ecosystem** - `bitnet-logits`, `bitnet-gguf`, `bitnet-generation`, `bitnet-device-probe`, `bitnet-engine-core` wired into CI
 - **Feature Lattice** - `gpu` umbrella + `cuda` backend; orthogonal runtime reporting; CUDA-first but non-CUDA-ready
 - **Kernel Registry** - Centralized `KernelBackend`/`KernelCapabilities`/`SimdLevel` in `bitnet-common`
-- **Nightly Fuzz Workflow** — 7 fuzz targets × 60 s nightly with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); **15 fuzz targets total** (added `rope_table_gen` (#783) and `tokenizer_encode` (#788))
+- **Nightly Fuzz Workflow** — 7 fuzz targets × 60 s nightly with per-target corpus caching and crash artifact upload (`nightly-fuzz.yml`) (#775); **15 fuzz targets total** (added `rope_table_gen` (#783) and `tokenizer_encode` (#788, re-created #792))
+- **GitHub Repo Settings** — `.github/settings.yml` description/topics updated; `ci-core.yml` path triggers include `.github/settings.yml` (#794)
 - **Criterion Benchmarks** — `benches/srp_ops.rs` with 6 functions: logits pipeline, top-k (k=5/k=50), repetition penalty, argmax, RoPE build_tables, KV cache append (#787)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
 
