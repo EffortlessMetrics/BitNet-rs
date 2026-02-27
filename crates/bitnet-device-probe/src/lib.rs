@@ -68,31 +68,36 @@ pub fn probe_cpu() -> CpuCapabilities {
 ///
 /// Obtained by calling [`probe_gpu`].
 ///
-/// `BITNET_GPU_FAKE=cuda` makes both fields `true`; `BITNET_GPU_FAKE=none`
-/// makes both fields `false`. Strict mode (`BITNET_STRICT_MODE=1`) ignores
-/// `BITNET_GPU_FAKE` and probes real hardware.
+/// `BITNET_GPU_FAKE` supports comma-separated backends (`cuda`, `rocm`, `gpu`).
+/// For example `BITNET_GPU_FAKE=rocm` forces `ROCm` runtime availability for tests.
+/// `BITNET_GPU_FAKE=none` makes all GPU flags `false`.
+/// Strict mode (`BITNET_STRICT_MODE=1`) ignores `BITNET_GPU_FAKE` and probes real hardware.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GpuCapabilities {
-    /// Any GPU backend is available (currently CUDA only).
+    /// Any GPU backend is available (CUDA and/or `ROCm`).
     pub available: bool,
     /// CUDA runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub cuda_available: bool,
+    /// `ROCm` runtime was detected (or faked via `BITNET_GPU_FAKE`).
+    pub rocm_available: bool,
 }
 
 /// Probe GPU availability and return its capabilities.
 ///
 /// Honours `BITNET_GPU_FAKE` for deterministic testing unless
 /// `BITNET_STRICT_MODE=1` is set.
-#[cfg(any(feature = "gpu", feature = "cuda"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
 pub fn probe_gpu() -> GpuCapabilities {
-    let cuda_available = gpu_available_runtime();
-    GpuCapabilities { available: cuda_available, cuda_available }
+    let cuda_available = cuda_available_runtime();
+    let rocm_available = rocm_available_runtime();
+    let available = cuda_available || rocm_available;
+    GpuCapabilities { available, cuda_available, rocm_available }
 }
 
 /// Probe GPU availability; always returns `false` when GPU not compiled.
-#[cfg(not(any(feature = "gpu", feature = "cuda")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
 pub const fn probe_gpu() -> GpuCapabilities {
-    GpuCapabilities { available: false, cuda_available: false }
+    GpuCapabilities { available: false, cuda_available: false, rocm_available: false }
 }
 
 /// Check if GPU support was compiled into this binary.
@@ -112,32 +117,61 @@ pub const fn probe_gpu() -> GpuCapabilities {
 /// ```
 #[inline]
 pub const fn gpu_compiled() -> bool {
-    cfg!(any(feature = "gpu", feature = "cuda"))
+    cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm"))
 }
 
 /// Check if a GPU is available at runtime.
 ///
 /// - Returns `false` when GPU is not compiled or CUDA runtime is unavailable.
-/// - Respects `BITNET_GPU_FAKE=cuda` (returns `true`) / `BITNET_GPU_FAKE=none`
-///   (returns `false`) for deterministic testing, unless `BITNET_STRICT_MODE=1`.
+/// - Respects `BITNET_GPU_FAKE=cuda|rocm|gpu` (returns `true`) /
+///   `BITNET_GPU_FAKE=none` (returns `false`) for deterministic testing, unless
+///   `BITNET_STRICT_MODE=1`.
 /// - In strict mode only real hardware detection is used.
-#[cfg(any(feature = "gpu", feature = "cuda"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
 pub fn gpu_available_runtime() -> bool {
-    use std::env;
-    use std::process::Command;
+    cuda_available_runtime() || rocm_available_runtime()
+}
 
-    let strict = env::var("BITNET_STRICT_MODE")
+/// Stub: GPU never available when not compiled.
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[inline]
+pub const fn gpu_available_runtime() -> bool {
+    false
+}
+
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+fn strict_mode_enabled() -> bool {
+    std::env::var("BITNET_STRICT_MODE")
         .map(|v| v == "1" || v.to_lowercase() == "true")
-        .unwrap_or(false);
+        .unwrap_or(false)
+}
 
-    if !strict {
-        if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
-            return fake.eq_ignore_ascii_case("cuda") || fake.eq_ignore_ascii_case("gpu");
-        }
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+fn fake_gpu_backends() -> Option<std::collections::HashSet<String>> {
+    if strict_mode_enabled() {
+        return None;
     }
 
-    // Probe nvidia-smi (best-effort; may block briefly if the driver hangs).
-    Command::new("nvidia-smi")
+    let fake = std::env::var("BITNET_GPU_FAKE").ok()?;
+    let normalized = fake.trim().to_ascii_lowercase();
+
+    if normalized == "none" {
+        return Some(std::collections::HashSet::new());
+    }
+
+    let set = normalized
+        .split([',', ';', '|', ' '])
+        .filter(|part| !part.is_empty())
+        .map(ToOwned::to_owned)
+        .collect();
+
+    Some(set)
+}
+
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+fn command_ok(cmd: &str, args: &[&str]) -> bool {
+    std::process::Command::new(cmd)
+        .args(args)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
@@ -145,10 +179,33 @@ pub fn gpu_available_runtime() -> bool {
         .unwrap_or(false)
 }
 
-/// Stub: GPU never available when not compiled.
-#[cfg(not(any(feature = "gpu", feature = "cuda")))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+fn cuda_available_runtime() -> bool {
+    if let Some(fake) = fake_gpu_backends() {
+        return fake.contains("cuda") || fake.contains("gpu");
+    }
+
+    command_ok("nvidia-smi", &[])
+}
+
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+fn rocm_available_runtime() -> bool {
+    if let Some(fake) = fake_gpu_backends() {
+        return fake.contains("rocm") || fake.contains("gpu");
+    }
+
+    command_ok("rocm-smi", &["--showid"])
+}
+
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
 #[inline]
-pub const fn gpu_available_runtime() -> bool {
+const fn cuda_available_runtime() -> bool {
+    false
+}
+
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[inline]
+const fn rocm_available_runtime() -> bool {
     false
 }
 
@@ -192,13 +249,18 @@ pub fn detect_simd_level() -> SimdLevel {
 /// Build with [`DeviceCapabilities::detect`] to capture the current machine's
 /// capabilities.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct DeviceCapabilities {
     /// CPU-Rust backend is always available.
     pub cpu_rust: bool,
     /// CUDA backend was compiled in.
     pub cuda_compiled: bool,
+    /// `ROCm` backend was compiled in.
+    pub rocm_compiled: bool,
     /// CUDA runtime was detected at call time.
     pub cuda_runtime: bool,
+    /// `ROCm` runtime was detected at call time.
+    pub rocm_runtime: bool,
     /// Best SIMD level detected at call time.
     pub simd_level: SimdLevel,
 }
@@ -213,14 +275,16 @@ impl DeviceCapabilities {
     ///
     /// let caps = DeviceCapabilities::detect();
     /// assert!(caps.cpu_rust, "CPU backend is always available");
-    /// assert_eq!(caps.cuda_compiled, gpu_compiled());
+    /// assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
     /// println!("SIMD: {:?}", caps.simd_level);
     /// ```
     pub fn detect() -> Self {
         Self {
             cpu_rust: true,
-            cuda_compiled: gpu_compiled(),
-            cuda_runtime: gpu_available_runtime(),
+            cuda_compiled: cfg!(any(feature = "gpu", feature = "cuda")),
+            rocm_compiled: cfg!(any(feature = "gpu", feature = "rocm")),
+            cuda_runtime: cuda_available_runtime(),
+            rocm_runtime: rocm_available_runtime(),
             simd_level: detect_simd_level(),
         }
     }
@@ -275,7 +339,7 @@ pub fn probe_device() -> DeviceProbe {
     let simd_level = detect_simd_level();
     DeviceProbe {
         cpu: CpuProbe { simd_level, cores, threads },
-        cuda_available: gpu_available_runtime(),
+        cuda_available: cuda_available_runtime() || rocm_available_runtime(),
     }
 }
 
@@ -334,7 +398,7 @@ mod tests {
 
     #[test]
     fn gpu_not_available_without_feature() {
-        #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
         assert!(!gpu_available_runtime());
     }
 
@@ -349,11 +413,13 @@ mod tests {
     fn device_capabilities_detect_runs() {
         let caps = DeviceCapabilities::detect();
         assert!(caps.cpu_rust);
-        // cuda_compiled reflects the feature flag.
-        assert_eq!(caps.cuda_compiled, gpu_compiled());
+        // compiled flags reflect their feature flags.
+        assert_eq!(caps.cuda_compiled, cfg!(any(feature = "gpu", feature = "cuda")));
+        assert_eq!(caps.rocm_compiled, cfg!(any(feature = "gpu", feature = "rocm")));
+        assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
     }
 
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
     #[test]
     #[serial_test::serial(bitnet_env)]
     fn gpu_fake_env_overrides_detection() {
@@ -367,7 +433,7 @@ mod tests {
         });
     }
 
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
     #[test]
     #[serial_test::serial(bitnet_env)]
     fn strict_mode_ignores_gpu_fake() {
@@ -402,10 +468,12 @@ mod property_tests {
         assert!(DeviceCapabilities::detect().cpu_rust, "cpu_rust must always be true");
     }
 
-    // `cuda_compiled` in the capabilities snapshot matches `gpu_compiled()`.
+    // compile-time GPU flags in the capabilities snapshot match `gpu_compiled()`.
     #[test]
-    fn device_caps_cuda_consistent_with_gpu_compiled() {
+    fn device_caps_compiled_flags_consistent_with_gpu_compiled() {
         let caps = DeviceCapabilities::detect();
-        assert_eq!(caps.cuda_compiled, gpu_compiled());
+        assert_eq!(caps.cuda_compiled, cfg!(any(feature = "gpu", feature = "cuda")));
+        assert_eq!(caps.rocm_compiled, cfg!(any(feature = "gpu", feature = "rocm")));
+        assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
     }
 }

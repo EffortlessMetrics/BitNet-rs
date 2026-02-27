@@ -55,24 +55,24 @@ proptest! {
 
 proptest! {
     #[test]
-    fn device_capabilities_cuda_compiled_matches_gpu_compiled(_dummy in 0u8..4) {
+    fn device_capabilities_compiled_flags_match_gpu_compiled(_dummy in 0u8..4) {
         let caps = DeviceCapabilities::detect();
-        prop_assert_eq!(caps.cuda_compiled, gpu_compiled());
+        prop_assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
     }
 }
 
 // ── BITNET_GPU_FAKE environment overrides ────────────────────────────────────
 
 /// Allowed BITNET_GPU_FAKE values that mean "GPU present".
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-const GPU_FAKE_PRESENT: &[&str] = &["cuda", "CUDA", "gpu", "GPU"];
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+const GPU_FAKE_PRESENT: &[&str] = &["cuda", "CUDA", "rocm", "ROCM", "gpu", "GPU"];
 /// Values that mean "GPU absent" or unrecognised.
-#[cfg(any(feature = "gpu", feature = "cuda"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
 const GPU_FAKE_ABSENT: &[&str] = &["none", "NONE", "0", "", "no", "false"];
 
 #[test]
 #[serial(bitnet_env)]
-#[cfg(not(any(feature = "gpu", feature = "cuda")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
 fn gpu_available_runtime_false_without_gpu_feature() {
     // Without GPU feature, gpu_available_runtime() is const false regardless of env.
     temp_env::with_var("BITNET_GPU_FAKE", Some("cuda"), || {
@@ -83,28 +83,30 @@ fn gpu_available_runtime_false_without_gpu_feature() {
 proptest! {
     #[test]
     #[serial(bitnet_env)]
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
     fn gpu_fake_cuda_returns_true(idx in 0..GPU_FAKE_PRESENT.len()) {
         let fake_val = GPU_FAKE_PRESENT[idx];
         temp_env::with_var("BITNET_GPU_FAKE", Some(fake_val), || {
             prop_assert!(gpu_available_runtime(),
                 "BITNET_GPU_FAKE={fake_val} should make gpu_available_runtime() return true");
-        });
+            Ok(())
+        })?;
     }
 }
 
 proptest! {
     #[test]
     #[serial(bitnet_env)]
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
     fn gpu_fake_none_returns_false(idx in 0..GPU_FAKE_ABSENT.len()) {
         let fake_val = GPU_FAKE_ABSENT[idx];
         temp_env::with_var("BITNET_GPU_FAKE", Some(fake_val), || {
-            // Only values equal to "cuda" or "gpu" (case-insensitive) return true.
+            // Values except cuda/rocm/gpu (case-insensitive) should return false.
             // All others (including empty string) return false.
             prop_assert!(!gpu_available_runtime(),
                 "BITNET_GPU_FAKE={fake_val} should make gpu_available_runtime() return false");
-        });
+            Ok(())
+        })?;
     }
 }
 
@@ -112,7 +114,7 @@ proptest! {
 
 #[test]
 #[serial(bitnet_env)]
-#[cfg(not(any(feature = "gpu", feature = "cuda")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
 fn strict_mode_with_no_gpu_feature_still_returns_false() {
     temp_env::with_vars(
         [("BITNET_STRICT_MODE", Some("1")), ("BITNET_GPU_FAKE", Some("cuda"))],
@@ -125,7 +127,7 @@ fn strict_mode_with_no_gpu_feature_still_returns_false() {
 
 #[test]
 #[serial(bitnet_env)]
-#[cfg(any(feature = "gpu", feature = "cuda"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
 fn strict_mode_ignores_gpu_fake() {
     temp_env::with_vars(
         [("BITNET_STRICT_MODE", Some("1")), ("BITNET_GPU_FAKE", Some("cuda"))],
@@ -196,7 +198,7 @@ proptest! {
 #[test]
 #[serial(bitnet_env)]
 fn probe_gpu_respects_gpu_fake_cuda() {
-    #[cfg(any(feature = "gpu", feature = "cuda"))]
+    #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
     temp_env::with_vars(
         [("BITNET_STRICT_MODE", None::<&str>), ("BITNET_GPU_FAKE", Some("cuda"))],
         || {
@@ -206,7 +208,7 @@ fn probe_gpu_respects_gpu_fake_cuda() {
         },
     );
 
-    #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+    #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
     {
         // Without GPU feature, probe_gpu() always returns false regardless of env.
         let caps = probe_gpu();

@@ -7,8 +7,8 @@ use bitnet_device_probe::{DeviceCapabilities, SimdLevel, detect_simd_level, gpu_
 
 #[test]
 fn gpu_compiled_is_bool() {
-    // Snapshot the bool so that accidental feature-flag changes are visible.
-    insta::assert_snapshot!("gpu_compiled_value", gpu_compiled().to_string());
+    // gpu_compiled reflects whether any GPU backend feature is compiled.
+    assert_eq!(gpu_compiled(), cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm")));
 }
 
 #[test]
