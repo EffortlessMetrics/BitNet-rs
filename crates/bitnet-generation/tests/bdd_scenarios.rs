@@ -315,11 +315,11 @@ fn given_custom_generation_config_when_constructed_then_fields_are_correct() {
 /// Then: carries the expected TokenEvent data
 #[test]
 fn given_stream_event_token_when_constructed_then_carries_token_data() {
-    let event = StreamEvent::Token(TokenEvent { token_id: 42, token_str: "hello".to_string() });
+    let event = StreamEvent::Token(TokenEvent { id: 42, text: "hello".to_string() });
     match event {
         StreamEvent::Token(t) => {
-            assert_eq!(t.token_id, 42);
-            assert_eq!(t.token_str, "hello");
+            assert_eq!(t.id, 42);
+            assert_eq!(t.text, "hello");
         }
         StreamEvent::Done { .. } => panic!("expected Token, got Done"),
     }
