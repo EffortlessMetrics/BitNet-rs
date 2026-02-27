@@ -6,6 +6,10 @@
 //! - JSON round-trip is lossless
 //! - Schema version is always "1.0.0"
 //! - validate() passes for correctly generated receipts
+//! - Kernel count ≤ 10,000 is required; exceeding it produces a specific error
+//! - tokens_per_second positive values survive JSON round-trip
+//! - cuda backend with GPU kernels passes all validation gates
+//! - Invalid schema_version is rejected with a specific error message
 
 use bitnet_receipts::{
     InferenceReceipt, ModelInfo, ParityMetadata, PerformanceBaseline, RECEIPT_SCHEMA_VERSION,
@@ -289,6 +293,119 @@ proptest! {
         let restored: InferenceReceipt = serde_json::from_str(&json).unwrap();
         prop_assert_eq!(restored.performance_baseline.tokens_generated, tokens_generated);
         prop_assert_eq!(restored.performance_baseline.total_time_ms, total_time_ms);
+    }
+
+    /// A positive `tokens_per_second` value survives JSON round-trip faithfully.
+    ///
+    /// `tokens_per_second > 0.0` is the invariant for a meaningful performance
+    /// baseline; this property encodes that such values are never lost in transit.
+    #[test]
+    fn tokens_per_second_positive_round_trips(
+        tps in (1e-3_f64..1e6_f64),
+        kernels in prop::collection::vec(real_kernel(), 1..3)
+    ) {
+        let kernels: Vec<String> = kernels
+            .into_iter()
+            .filter(|k| !k.to_lowercase().contains("mock"))
+            .collect();
+        if kernels.is_empty() { return Ok(()); }
+
+        let pb = PerformanceBaseline {
+            tokens_per_second: Some(tps),
+            ..Default::default()
+        };
+        let receipt = InferenceReceipt::generate("cpu", kernels, None)
+            .unwrap()
+            .with_performance_baseline(pb);
+
+        let json = serde_json::to_string(&receipt).unwrap();
+        let restored: InferenceReceipt = serde_json::from_str(&json).unwrap();
+        let restored_tps = restored.performance_baseline.tokens_per_second
+            .expect("tokens_per_second must survive round-trip");
+        prop_assert!(restored_tps > 0.0, "tokens_per_second must be positive after round-trip");
+        prop_assert!((restored_tps - tps).abs() < tps * 1e-9,
+            "tokens_per_second changed after round-trip: {} -> {}", tps, restored_tps);
+    }
+
+    /// Kernel counts within [1, 10 000] always pass `validate_kernel_ids()`.
+    #[test]
+    fn kernel_count_within_10k_passes_validation(
+        count in 1_usize..=10_000_usize
+    ) {
+        let kernels = vec!["i2s_gemv".to_string(); count];
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
+        receipt.kernels = kernels;
+        prop_assert!(
+            receipt.validate_kernel_ids().is_ok(),
+            "count={} should be within the 10,000 limit",
+            count
+        );
+    }
+
+    /// Kernel counts exceeding 10 000 always fail `validate_kernel_ids()` with
+    /// an error message that mentions "10,000".
+    #[test]
+    fn kernel_count_exceeding_10k_fails_validation(
+        extra in 1_usize..=1_000_usize
+    ) {
+        let count = 10_000 + extra;
+        let kernels = vec!["i2s_gemv".to_string(); count];
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
+        receipt.kernels = kernels;
+        let err = receipt.validate_kernel_ids();
+        prop_assert!(err.is_err(), "count={} should exceed the 10,000 limit", count);
+        prop_assert!(
+            err.unwrap_err().to_string().contains("10,000"),
+            "error for count={} must mention '10,000'",
+            count
+        );
+    }
+
+    /// A receipt with `backend = "cuda"` and GPU-style kernel IDs passes all
+    /// validation gates.  This encodes the contract that GPU receipts are valid
+    /// as long as the kernel IDs satisfy the hygiene rules.
+    #[test]
+    fn cuda_backend_with_gpu_kernels_passes_validation(
+        suffix in "[a-z0-9]{1,12}"
+    ) {
+        let kernels = vec![
+            format!("gemm_gpu_{suffix}"),
+            format!("cuda_i2s_{suffix}"),
+        ];
+        let receipt = InferenceReceipt::generate("cuda", kernels, None).unwrap();
+        prop_assert_eq!(&receipt.backend, "cuda");
+        prop_assert!(
+            receipt.validate().is_ok(),
+            "cuda receipt with GPU-style kernels must pass all validation gates"
+        );
+    }
+
+    /// An `InferenceReceipt` whose `schema_version` has been mutated away from
+    /// "1.0.0" fails `validate_schema()` with an error mentioning the bad value.
+    #[test]
+    fn invalid_schema_version_rejected_with_specific_error(
+        bad_version in "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}",
+        kernels in prop::collection::vec(real_kernel(), 1..3)
+    ) {
+        // Only test versions that actually differ from the canonical one.
+        prop_assume!(bad_version != "1.0.0");
+        let kernels: Vec<String> = kernels
+            .into_iter()
+            .filter(|k| !k.to_lowercase().contains("mock"))
+            .collect();
+        if kernels.is_empty() { return Ok(()); }
+
+        let mut receipt = InferenceReceipt::generate("cpu", kernels, None).unwrap();
+        receipt.schema_version = bad_version.clone();
+        let err = receipt.validate_schema();
+        prop_assert!(err.is_err(), "schema_version '{}' should fail validate_schema()", bad_version);
+        let msg = err.unwrap_err().to_string();
+        prop_assert!(
+            msg.contains(&bad_version) || msg.contains("1.0.0"),
+            "error must reference the invalid version or the expected version, got: {}", msg
+        );
     }
 }
 
