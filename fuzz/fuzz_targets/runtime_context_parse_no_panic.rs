@@ -1,7 +1,7 @@
 #![no_main]
 
 use arbitrary::Arbitrary;
-use bitnet_bdd_grid_core::{BitnetFeature, ExecutionEnvironment, TestingScenario, FeatureSet};
+use bitnet_bdd_grid_core::{BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario};
 use libfuzzer_sys::fuzz_target;
 
 #[derive(Arbitrary, Debug)]
@@ -27,11 +27,7 @@ fuzz_target!(|input: ContextParseInput| {
     let _: Result<BitnetFeature, _> = feature_str.parse();
 
     // feature_set_from_names must not panic for any collection of arbitrary strings.
-    let names: Vec<&str> = input
-        .names_bytes
-        .chunks(16)
-        .filter_map(|b| std::str::from_utf8(b).ok())
-        .take(32)
-        .collect();
+    let names: Vec<&str> =
+        input.names_bytes.chunks(16).filter_map(|b| std::str::from_utf8(b).ok()).take(32).collect();
     let _: FeatureSet = bitnet_bdd_grid_core::feature_set_from_names(&names);
 });
