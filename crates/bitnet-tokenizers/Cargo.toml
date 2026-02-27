@@ -43,6 +43,7 @@ downloads = ["reqwest", "futures-util"]
 cpu = []
 gpu = []
 cuda = ["gpu"]  # Backward compatibility alias for gpu
+oneapi = []
 crossval = []
 ffi_tokenizer = []
 # Debug feature: emit verbose diagnostics for tokenization (first 8 tokens, piece→ID mapping)

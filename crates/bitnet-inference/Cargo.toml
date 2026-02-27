@@ -65,6 +65,7 @@ default = []
 cpu = ["bitnet-kernels/cpu-optimized"]
 cuda = ["bitnet-kernels/cuda"]
 gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
 # Runtime selection

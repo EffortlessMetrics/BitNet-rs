@@ -159,6 +159,8 @@ fn arb_caps() -> impl Strategy<Value = KernelCapabilities> {
             cuda_runtime,
             cpp_ffi,
             simd_level,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
         },
     )
 }
@@ -231,6 +233,8 @@ proptest! {
             cuda_runtime: false,
             cpp_ffi,
             simd_level: SimdLevel::Scalar,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
         };
         let backends = caps.compiled_backends();
         prop_assert!(backends.contains(&KernelBackend::CpuRust),

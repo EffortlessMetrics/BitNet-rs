@@ -41,6 +41,8 @@ pub enum KernelBackend {
     CpuRust,
     /// CUDA GPU kernels via `cudarc`.
     Cuda,
+    /// Intel oneAPI GPU kernels via SYCL/Level Zero runtime.
+    OneApi,
     /// C++ FFI bridge to bitnet.cpp / llama.cpp.
     CppFfi,
 }
@@ -50,6 +52,7 @@ impl fmt::Display for KernelBackend {
         match self {
             KernelBackend::CpuRust => write!(f, "cpu-rust"),
             KernelBackend::Cuda => write!(f, "cuda"),
+            KernelBackend::OneApi => write!(f, "oneapi"),
             KernelBackend::CppFfi => write!(f, "cpp-ffi"),
         }
     }
@@ -58,7 +61,7 @@ impl fmt::Display for KernelBackend {
 impl KernelBackend {
     /// Returns true if this backend requires a GPU at runtime.
     pub fn requires_gpu(self) -> bool {
-        matches!(self, KernelBackend::Cuda)
+        matches!(self, KernelBackend::Cuda | KernelBackend::OneApi)
     }
 
     /// Returns true if this backend is compiled in the current build.
@@ -66,6 +69,7 @@ impl KernelBackend {
         match self {
             KernelBackend::CpuRust => cfg!(feature = "cpu"),
             KernelBackend::Cuda => cfg!(feature = "cuda"),
+            KernelBackend::OneApi => cfg!(feature = "oneapi"),
             // FFI availability is determined by the consumer crate's feature flags
             KernelBackend::CppFfi => false,
         }
@@ -84,6 +88,10 @@ pub struct KernelCapabilities {
     pub cuda_compiled: bool,
     /// CUDA runtime detected (GPU present and accessible).
     pub cuda_runtime: bool,
+    /// oneAPI backend is compiled (may still require runtime GPU/driver stack).
+    pub oneapi_compiled: bool,
+    /// oneAPI runtime detected (e.g. `sycl-ls` sees a GPU device).
+    pub oneapi_runtime: bool,
     /// C++ FFI bridge is compiled.
     pub cpp_ffi: bool,
     /// Best SIMD level available at compile time.
@@ -99,7 +107,9 @@ impl KernelCapabilities {
             cpu_rust: cfg!(feature = "cpu"),
             cuda_compiled: cfg!(feature = "cuda"),
             cuda_runtime: false, // requires runtime check
-            cpp_ffi: false,      // bitnet-common has no ffi feature; FFI detection is crate-local
+            oneapi_compiled: cfg!(feature = "oneapi"),
+            oneapi_runtime: false,
+            cpp_ffi: false, // bitnet-common has no ffi feature; FFI detection is crate-local
             simd_level: compile_time_simd_level(),
         }
     }
@@ -112,6 +122,13 @@ impl KernelCapabilities {
     #[must_use]
     pub fn with_cuda_runtime(mut self, available: bool) -> Self {
         self.cuda_runtime = available;
+        self
+    }
+
+    /// Fill in the `oneapi_runtime` field from a live probe result.
+    #[must_use]
+    pub fn with_oneapi_runtime(mut self, available: bool) -> Self {
+        self.oneapi_runtime = available;
         self
     }
 
@@ -128,6 +145,9 @@ impl KernelCapabilities {
         if self.cuda_compiled {
             backends.push(KernelBackend::Cuda);
         }
+        if self.oneapi_compiled {
+            backends.push(KernelBackend::OneApi);
+        }
         if self.cpp_ffi {
             backends.push(KernelBackend::CppFfi);
         }
@@ -141,6 +161,9 @@ impl KernelCapabilities {
     pub fn best_available(&self) -> Option<KernelBackend> {
         if self.cuda_compiled && self.cuda_runtime {
             return Some(KernelBackend::Cuda);
+        }
+        if self.oneapi_compiled && self.oneapi_runtime {
+            return Some(KernelBackend::OneApi);
         }
         if self.cpp_ffi {
             return Some(KernelBackend::CppFfi);
@@ -200,6 +223,7 @@ mod tests {
     fn kernel_backend_display() {
         assert_eq!(KernelBackend::CpuRust.to_string(), "cpu-rust");
         assert_eq!(KernelBackend::Cuda.to_string(), "cuda");
+        assert_eq!(KernelBackend::OneApi.to_string(), "oneapi");
         assert_eq!(KernelBackend::CppFfi.to_string(), "cpp-ffi");
     }
 
@@ -207,6 +231,7 @@ mod tests {
     fn kernel_backend_gpu_requirement() {
         assert!(!KernelBackend::CpuRust.requires_gpu());
         assert!(KernelBackend::Cuda.requires_gpu());
+        assert!(KernelBackend::OneApi.requires_gpu());
         assert!(!KernelBackend::CppFfi.requires_gpu());
     }
 
@@ -227,6 +252,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: true,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -239,6 +266,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: false,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -251,6 +280,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: true,
             simd_level: SimdLevel::Avx2,
         };
@@ -266,6 +297,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: false,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -280,6 +313,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -301,6 +336,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: false, // compiled but no runtime
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -319,6 +356,8 @@ mod property_tests {
                 cpu_rust,
                 cuda_compiled,
                 cuda_runtime: cuda_compiled && cuda_runtime,
+                oneapi_compiled: false,
+                oneapi_runtime: false,
                 cpp_ffi,
                 simd_level: SimdLevel::Scalar,
             },
@@ -341,6 +380,7 @@ mod property_tests {
         fn best_available_iff_any_backend_reachable(caps in arb_caps()) {
             let reachable = caps.cpu_rust
                 || (caps.cuda_compiled && caps.cuda_runtime)
+                || (caps.oneapi_compiled && caps.oneapi_runtime)
                 || caps.cpp_ffi;
             let best = caps.best_available();
             prop_assert_eq!(
@@ -361,6 +401,8 @@ mod property_tests {
                 cuda_compiled: true,
                 cuda_runtime: true,
                 cpp_ffi: any_ffi,
+                oneapi_compiled: false,
+                oneapi_runtime: false,
                 simd_level: SimdLevel::Scalar,
             };
             prop_assert_eq!(caps.best_available(), Some(KernelBackend::Cuda));
@@ -374,11 +416,15 @@ mod property_tests {
             backend in prop_oneof![
                 Just(KernelBackend::CpuRust),
                 Just(KernelBackend::Cuda),
+                Just(KernelBackend::OneApi),
                 Just(KernelBackend::CppFfi),
             ],
         ) {
             let requires = backend.requires_gpu();
-            prop_assert_eq!(requires, backend == KernelBackend::Cuda);
+            prop_assert_eq!(
+                requires,
+                backend == KernelBackend::Cuda || backend == KernelBackend::OneApi
+            );
         }
     }
 }

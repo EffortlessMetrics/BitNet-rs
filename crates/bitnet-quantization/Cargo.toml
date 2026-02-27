@@ -42,6 +42,7 @@ simd = []
 integration-tests = []
 cuda = ["bitnet-kernels/cuda"]
 gpu = ["cuda"]  # GPU umbrella — CUDA is the current implementation
+oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi"]
 inference = []
 
 [[bench]]

@@ -101,6 +101,46 @@ pub fn gpu_available_runtime() -> bool {
     crate::gpu_utils::get_gpu_info().cuda
 }
 
+/// Check if Intel oneAPI GPU runtime is available.
+///
+/// Detection is best-effort via `sycl-ls`. Tests can force deterministic
+/// outcomes with `BITNET_GPU_FAKE=oneapi` / `BITNET_GPU_FAKE=none` unless
+/// strict mode is enabled.
+#[cfg(feature = "oneapi")]
+#[inline]
+pub fn oneapi_available_runtime() -> bool {
+    use std::env;
+    use std::process::{Command, Stdio};
+
+    let strict_mode = env::var("BITNET_STRICT_MODE")
+        .map(|v| v == "1" || v.to_lowercase() == "true")
+        .unwrap_or(false);
+
+    if !strict_mode {
+        if let Ok(fake) = env::var("BITNET_GPU_FAKE") {
+            if fake.eq_ignore_ascii_case("oneapi") {
+                return true;
+            }
+            if fake.eq_ignore_ascii_case("none") {
+                return false;
+            }
+        }
+    }
+
+    Command::new("sycl-ls")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+#[cfg(not(feature = "oneapi"))]
+#[inline]
+pub fn oneapi_available_runtime() -> bool {
+    false
+}
+
 /// Stub implementation when GPU not compiled
 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
 #[inline]
@@ -189,6 +229,8 @@ pub fn current_kernel_capabilities() -> bitnet_common::kernel_registry::KernelCa
         cpu_rust: cfg!(feature = "cpu"),
         cuda_compiled: cfg!(any(feature = "gpu", feature = "cuda")),
         cuda_runtime: gpu_available_runtime(),
+        oneapi_compiled: cfg!(feature = "oneapi"),
+        oneapi_runtime: oneapi_available_runtime(),
         cpp_ffi: false,
         simd_level: detect_simd_level(),
     }

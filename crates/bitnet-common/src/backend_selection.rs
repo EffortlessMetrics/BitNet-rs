@@ -50,6 +50,8 @@ pub enum BackendRequest {
     Gpu,
     /// Require CUDA specifically.
     Cuda,
+    /// Require Intel oneAPI specifically.
+    OneApi,
 }
 
 impl fmt::Display for BackendRequest {
@@ -59,6 +61,7 @@ impl fmt::Display for BackendRequest {
             BackendRequest::Cpu => write!(f, "cpu"),
             BackendRequest::Gpu => write!(f, "gpu"),
             BackendRequest::Cuda => write!(f, "cuda"),
+            BackendRequest::OneApi => write!(f, "oneapi"),
         }
     }
 }
@@ -117,6 +120,8 @@ pub fn select_backend(
         BackendRequest::Gpu => {
             if caps.cuda_compiled && caps.cuda_runtime {
                 (KernelBackend::Cuda, "CUDA GPU available and requested".to_string())
+            } else if caps.oneapi_compiled && caps.oneapi_runtime {
+                (KernelBackend::OneApi, "Intel oneAPI GPU available and requested".to_string())
             } else if caps.cuda_compiled && !caps.cuda_runtime {
                 // GPU requested but no runtime — fall back to CPU with warning
                 if caps.cpu_rust {
@@ -142,6 +147,16 @@ pub fn select_backend(
             // Cuda is a strict requirement — no silent fallback to CPU.
             if caps.cuda_compiled && caps.cuda_runtime {
                 (KernelBackend::Cuda, "CUDA GPU available and requested".to_string())
+            } else {
+                return Err(BackendSelectionError::RequestedUnavailable {
+                    requested: request,
+                    available: detected.clone(),
+                });
+            }
+        }
+        BackendRequest::OneApi => {
+            if caps.oneapi_compiled && caps.oneapi_runtime {
+                (KernelBackend::OneApi, "Intel oneAPI GPU available and requested".to_string())
             } else {
                 return Err(BackendSelectionError::RequestedUnavailable {
                     requested: request,
@@ -197,6 +212,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: false,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         }
@@ -207,6 +224,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: true,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         }
@@ -217,6 +236,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         }
@@ -282,6 +303,8 @@ mod tests {
             cpu_rust: false,
             cuda_compiled: false,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };

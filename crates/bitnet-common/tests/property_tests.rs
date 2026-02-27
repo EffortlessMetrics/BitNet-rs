@@ -211,6 +211,8 @@ proptest! {
             cpu_rust: true,
             cuda_compiled: false,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -229,6 +231,8 @@ proptest! {
             cpu_rust: true,
             cuda_compiled: false,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
@@ -245,6 +249,8 @@ proptest! {
             cpu_rust: true,
             cuda_compiled: false,
             cuda_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
@@ -366,6 +372,8 @@ proptest! {
             cpu_rust: true,
             cuda_compiled,
             cuda_runtime: false, // no GPU at runtime; CPU must still be reachable
+            oneapi_compiled: false,
+            oneapi_runtime: false,
             cpp_ffi,
             simd_level: SimdLevel::Scalar,
         };

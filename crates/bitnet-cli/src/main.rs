@@ -117,7 +117,7 @@ struct Cli {
     #[arg(short, long, value_name = "PATH", global = true)]
     config: Option<std::path::PathBuf>,
 
-    /// Device to use (cpu, cuda, auto)
+    /// Device to use (cpu, cuda, oneapi, gpu, auto)
     #[arg(short, long, value_name = "DEVICE", global = true)]
     device: Option<String>,
 
@@ -474,6 +474,7 @@ async fn main() -> Result<()> {
         let request = match cli.device.as_deref() {
             Some("cuda") => BackendRequest::Cuda,
             Some("gpu") => BackendRequest::Gpu,
+            Some("oneapi") => BackendRequest::OneApi,
             Some("cpu") => BackendRequest::Cpu,
             _ => BackendRequest::Auto,
         };
