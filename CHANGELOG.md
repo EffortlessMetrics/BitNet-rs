@@ -5,6 +5,7 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(server,ffi): add property-based tests to bitnet-server and bitnet-ffi` — additional property tests for `bitnet-server` (batch/concurrency/security config invariants) and `bitnet-ffi` (C API round-trips); further raises proptest coverage across both crates (#880)
 - `test(tokenizers): expand tokenizer_proptests.rs to 18 property tests` — expanded from 7 to 18 property tests covering edge cases in encode/decode round-trips, special-token handling, vocab-size bounds, and determinism invariants in `crates/bitnet-tokenizers/tests/tokenizer_proptests.rs` (#874)
 - `test(device-probe,logits): add integration tests` — integration tests for `bitnet-device-probe` (SimdLevel ordering, `probe_device` smoke test) and `bitnet-logits` (softmax, top-k, temperature, argmax invariants) (#876)
 - `test(snapshot): add snapshot tests wave 2 for generation and engine-core` — insta snapshot tests pinning `StopReason` display variants, `GenerationStats` fields, and receipt schema version string for regression detection (#877)
@@ -32,6 +33,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test: expand proptest coverage for compat, templates, and feature-flag crates` — 18 new proptests across bitnet-compat, bitnet-templates, and bitnet-runtime-feature-flags (#841)
 
 ### Fixed
+- `fix(ci): fix property-tests and performance-tracking workflows` — added push/PR triggers and a `cargo-tests` smoke job to the property-tests and performance-tracking CI workflows so they gate correctly on PRs (#879)
 - `fix(ci): add --force to cargo install cargo-fuzz` — prevents fuzz CI failures when the `cargo-fuzz` binary is already present in the runner cache (#872)
 - `fix(server): implement rate limiter cleanup to prevent memory leak` — `ConcurrencyManager::cleanup_rate_limiters` now properly cleans up idle entries to prevent unbounded memory growth (#810)
 
