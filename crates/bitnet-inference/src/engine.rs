@@ -20,48 +20,27 @@
 //!
 //! ### Key Performance Metrics
 //!
-//! The [`PerformanceMetrics`] struct provides detailed insights:
-//! - `total_latency_ms`: End-to-end inference time
-//! - `tokens_per_second`: Throughput measurement
-//! - `first_token_latency_ms`: Time to generate first token (critical for streaming)
-//! - `average_token_latency_ms`: Per-token generation time
-//! - `cache_hit_rate`: KV-cache efficiency (0.0 to 1.0)
-//! - `memory_usage_bytes`: Current memory consumption
+//! The [] struct provides detailed insights:
+//! - : End-to-end inference time
+//! - : Throughput measurement
+//! - : Time to generate first token (critical for streaming)
+//! - : Per-token generation time
+//! - : KV-cache efficiency (0.0 to 1.0)
+//! - : Current memory consumption
 //! - Component timing breakdown (tokenization, forward pass, sampling)
 //!
 //! ### Environment Variables
 //!
 //! Performance behavior can be controlled via environment variables:
-//! - `BITNET_DETERMINISTIC=1`: Enable deterministic execution mode
-//! - `BITNET_SEED=<number>`: Set random seed for reproducible results
-//! - `RAYON_NUM_THREADS=<number>`: Limit CPU thread parallelism
-//! - `BITNET_BATCH_SIZE=<number>`: Configure inference batch size
-//! - `BITNET_MEMORY_LIMIT=<size>`: Set memory usage limits
+//! - : Enable deterministic execution mode
+//! - : Set random seed for reproducible results
+//! - : Limit CPU thread parallelism
+//! - : Configure inference batch size
+//! - : Set memory usage limits
 //!
 //! ### Usage Examples
 //!
-//! ```rust,no_run
-//! use bitnet_inference::engine::InferenceEngine;
-//! use bitnet_common::Device;
 //!
-//! # async fn example() -> anyhow::Result<()> {
-//! # let model = todo!(); // Mock model for documentation example
-//! # let tokenizer = todo!(); // Mock tokenizer for documentation example
-//! let engine = InferenceEngine::new(model, tokenizer, Device::Cpu)?;
-//!
-//! // Generate with performance tracking
-//! let result = engine.generate("Hello, world!").await?;
-//!
-//! // Get detailed performance metrics
-//! let metrics = engine.get_performance_metrics().await?;
-//! println!("Throughput: {:.2} tokens/sec", metrics.tokens_per_second);
-//! println!("Cache hit rate: {:.2}", metrics.cache_hit_rate.unwrap_or(0.0));
-//!
-//! // Reset tracking for benchmarking
-//! engine.reset_performance_tracking()?;
-//! # Ok(())
-//! # }
-//! ```
 
 use anyhow::{Context, Result};
 use bitnet_common::{BitNetConfig, ConcreteTensor, Device, Tensor};
@@ -1016,7 +995,7 @@ impl InferenceEngine {
     /// the model and measuring latency.
     ///
     /// # Arguments
-    /// * `tokens` - The prompt tokens to prefill with. Can be empty.
+    /// *  - The prompt tokens to prefill with. Can be empty.
     ///
     /// # Errors
     /// Returns an error if:
@@ -1928,7 +1907,7 @@ mod tests {
         assert!(engine.is_ok());
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_prefill_functionality() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
@@ -1942,7 +1921,7 @@ mod tests {
         assert!(result.is_ok(), "Prefill should execute successfully");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_prefill_with_empty_tokens() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
@@ -1956,7 +1935,7 @@ mod tests {
         assert!(result.is_ok(), "Prefill should handle empty input gracefully");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_prefill_with_large_sequence() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
@@ -1970,7 +1949,7 @@ mod tests {
         assert!(result.is_ok(), "Prefill should handle large sequences");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_prefill_multiple_calls() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
@@ -1988,7 +1967,7 @@ mod tests {
         assert!(result2.is_ok(), "Second prefill should succeed");
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_prefill_timing_measurable() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
@@ -2052,7 +2031,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_prefill_edge_case_single_token() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
@@ -2155,7 +2134,7 @@ mod tests {
     }
 
     // Test using MockModel and MockTokenizer (no real weights needed).
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_text_generation() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer);
