@@ -153,10 +153,18 @@ pub fn select_cpu_kernel() -> Result<Box<dyn KernelProvider>> {
     #[allow(unused_mut)]
     let mut providers: Vec<Box<dyn KernelProvider>> = vec![Box::new(cpu::FallbackKernel)];
 
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    {
+        if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx512bw") {
+            providers.insert(0, Box::new(cpu::Avx512Kernel));
+        }
+    }
+
     #[cfg(all(target_arch = "x86_64", feature = "avx2"))]
     {
         if is_x86_feature_detected!("avx2") {
-            providers.insert(0, Box::new(cpu::Avx2Kernel));
+            let insert_pos = if providers.is_empty() { 0 } else { providers.len() - 1 };
+            providers.insert(insert_pos, Box::new(cpu::Avx2Kernel));
         }
     }
 
@@ -197,7 +205,7 @@ pub use cpu::FallbackKernel;
 
 // Platform-specific kernel re-exports with stubs
 #[cfg(target_arch = "x86_64")]
-pub use cpu::Avx2Kernel;
+pub use cpu::{Avx2Kernel, Avx512Kernel};
 
 #[cfg(target_arch = "aarch64")]
 pub use cpu::NeonKernel;
