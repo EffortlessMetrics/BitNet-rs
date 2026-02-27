@@ -5,7 +5,17 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `feat: improve C# FFI bindings with modern P/Invoke` — Modern P/Invoke bindings and safe wrappers for C# consumers; replaces legacy `DllImport` patterns with `LibraryImport`-based source-generated P/Invoke for reduced marshalling overhead (#942)
+- `feat: improve crates.io readiness validation script` — Enhanced `scripts/check-crates-io-readiness.sh` with stricter metadata validation, license/description/repository field checks, and actionable error messages (#940)
+- `test: add insta snapshot tests for key serializable types` — 2 snapshot tests using `insta` crate pinning `RuntimeFeatureFlags` and related serializable types; added `INSTA_UPDATE: unseen` to CI workflow to prevent unreviewed snapshot acceptance (#938)
+- `feat(fuzz): add wave 4 fuzz targets` — 4 new fuzz targets: `engine_core_no_panic` (engine-core API panic safety), `honest_compute_no_panic` (honest-compute pipeline panic safety), `runtime_context_parse_no_panic` (runtime context parsing panic safety), `feature_activation_no_panic` (feature activation logic panic safety) (#937)
 - `test(bitnet-tokenizers,bitnet-validation): add comprehensive unit tests` — 45 tests for `bitnet-tokenizers` (TokenizerConfig defaults, BasicTokenizer construction, BOS/EOS/PAD semantics, family detection, builder profiles, property tests) and 37 tests for `bitnet-validation` (Ruleset defaults, projection RMS bounds, architecture detection, policy loading edge cases, property tests) (#934)
+
+### Changed
+- `chore: bump version to 0.2.0` — All crates and workspace version bumped from `0.1.x` to `0.2.0`; `CHANGELOG.md` `[Unreleased]` section promoted to `[0.2.0]` with release date (#933)
+
+### Fixed
+- `ffi: preserve exact C last-error messages` — FFI layer now captures and preserves exact error strings returned by C `last_error` callbacks rather than truncating or reformatting them; improves debuggability for C/C++ consumer integrations (#941)
 
 ### Documentation
 - `docs: update changelog for PRs #931-#932` — Updated CHANGELOG.md and roadmap with 1400+ tests milestone (#935)
