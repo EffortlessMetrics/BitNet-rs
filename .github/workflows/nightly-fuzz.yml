@@ -27,10 +27,37 @@ jobs:
           - quantization_i2s
           - quantization_tl1
           - quantization_tl2
+          - quantization_input
           - gguf_parser
+          - gguf_header
+          - gguf_header_parse
+          - gguf_header_roundtrip
+          - gguf_kv_read
+          - gguf_metadata_values
+          - gguf_writer_roundtrip
           - safetensors_parser
+          - safetensors_metadata
           - kernel_matmul
           - tokenizer_discovery
+          - tokenizer_encode
+          - tokenizer_encode_decode
+          - tokenizer_encode_no_panic
+          - transformer_config
+          - logits_transforms
+          - sampling_no_panic
+          - prompt_template_no_panic
+          - generation_stop_check
+          - generation_stop_checker
+          - receipt_json_roundtrip
+          - rope_table_gen
+          - tl_lut_helper
+          - architecture_detection
+          - feature_activation_no_panic
+          - honest_compute_no_panic
+          - engine_core_no_panic
+          - runtime_context_parse_no_panic
+          - validation_no_panic
+          - vocab_size_extraction
 
     steps:
       - name: Checkout
