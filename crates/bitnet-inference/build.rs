@@ -22,20 +22,14 @@ fn main() {
     let explicit_dir = std::env::var("BITNET_CPP_DIR")
         .ok()
         .filter(|s| !s.is_empty())
-        .or_else(|| {
-            std::env::var("BITNET_CPP_PATH")
-                .ok()
-                .filter(|s| !s.is_empty())
-        });
+        .or_else(|| std::env::var("BITNET_CPP_PATH").ok().filter(|s| !s.is_empty()));
 
-    let cpp_dir = explicit_dir
-        .map(std::path::PathBuf::from)
-        .or_else(|| {
-            std::env::var("HOME")
-                .ok()
-                .map(|h| std::path::PathBuf::from(format!("{}/.cache/bitnet_cpp", h)))
-                .filter(|d| d.exists())
-        });
+    let cpp_dir = explicit_dir.map(std::path::PathBuf::from).or_else(|| {
+        std::env::var("HOME")
+            .ok()
+            .map(|h| std::path::PathBuf::from(format!("{}/.cache/bitnet_cpp", h)))
+            .filter(|d| d.exists())
+    });
 
     let in_stub_mode = !matches!(cpp_dir, Some(d) if d.exists());
 
