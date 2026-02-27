@@ -207,8 +207,6 @@ pub use cpu::FallbackKernel;
 #[cfg(target_arch = "x86_64")]
 pub use cpu::{Avx2Kernel, Avx512Kernel};
 
-#[cfg(target_arch = "x86_64")]
-pub use cpu::Avx512Kernel;
 
 #[cfg(target_arch = "aarch64")]
 pub use cpu::NeonKernel;
