@@ -34,16 +34,17 @@ use bitnet_models::{GgufReader, loader::MmapFile};
 use bitnet_tokenizers::{RustGgufTokenizer, Tokenizer};
 use std::path::Path;
 
-/// Helper to get GGUF path from environment variable
-fn get_gguf_path() -> Result<String> {
-    std::env::var("CROSSVAL_GGUF")
-        .context("CROSSVAL_GGUF not set - set it to a valid GGUF model path")
+/// Helper to get GGUF path from environment variable, returning None when unset.
+fn get_gguf_path() -> Option<String> {
+    std::env::var("CROSSVAL_GGUF").ok()
 }
 
 #[test]
-#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn pure_rust_tokenizer_from_gguf_smoke() -> Result<()> {
-    let gguf_path = get_gguf_path()?;
+    let Some(gguf_path) = get_gguf_path() else {
+        eprintln!("⏭️  Skipping: CROSSVAL_GGUF not set - set it to a valid GGUF model path");
+        return Ok(());
+    };
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
     let reader = GgufReader::new(mmap.as_slice()).context("Failed to parse GGUF file")?;
 
@@ -87,9 +88,11 @@ fn pure_rust_tokenizer_from_gguf_smoke() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn bos_token_handling() -> Result<()> {
-    let gguf_path = get_gguf_path()?;
+    let Some(gguf_path) = get_gguf_path() else {
+        eprintln!("⏭️  Skipping: CROSSVAL_GGUF not set - set it to a valid GGUF model path");
+        return Ok(());
+    };
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
     let reader = GgufReader::new(mmap.as_slice()).context("Failed to parse GGUF file")?;
 
@@ -153,9 +156,11 @@ fn bos_token_handling() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn special_token_lookup() -> Result<()> {
-    let gguf_path = get_gguf_path()?;
+    let Some(gguf_path) = get_gguf_path() else {
+        eprintln!("⏭️  Skipping: CROSSVAL_GGUF not set - set it to a valid GGUF model path");
+        return Ok(());
+    };
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
     let reader = GgufReader::new(mmap.as_slice()).context("Failed to parse GGUF file")?;
 
@@ -222,9 +227,11 @@ fn special_token_lookup() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn parse_special_eot_handling() -> Result<()> {
-    let gguf_path = get_gguf_path()?;
+    let Some(gguf_path) = get_gguf_path() else {
+        eprintln!("⏭️  Skipping: CROSSVAL_GGUF not set - set it to a valid GGUF model path");
+        return Ok(());
+    };
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
     let reader = GgufReader::new(mmap.as_slice()).context("Failed to parse GGUF file")?;
 
@@ -282,9 +289,11 @@ fn parse_special_eot_handling() -> Result<()> {
 }
 
 #[test]
-#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn tokenizer_kind_detection() -> Result<()> {
-    let gguf_path = get_gguf_path()?;
+    let Some(gguf_path) = get_gguf_path() else {
+        eprintln!("⏭️  Skipping: CROSSVAL_GGUF not set - set it to a valid GGUF model path");
+        return Ok(());
+    };
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
     let reader = GgufReader::new(mmap.as_slice()).context("Failed to parse GGUF file")?;
 
@@ -344,9 +353,11 @@ fn tokenizer_kind_detection() -> Result<()> {
 //   - crossval: Cross-validation against C++ reference implementation
 
 #[test]
-#[ignore = "Requires CROSSVAL_GGUF environment variable"]
 fn vocab_size_sanity() -> Result<()> {
-    let gguf_path = get_gguf_path()?;
+    let Some(gguf_path) = get_gguf_path() else {
+        eprintln!("⏭️  Skipping: CROSSVAL_GGUF not set - set it to a valid GGUF model path");
+        return Ok(());
+    };
     let mmap = MmapFile::open(Path::new(&gguf_path)).context("Failed to memory-map GGUF file")?;
     let reader = GgufReader::new(mmap.as_slice()).context("Failed to parse GGUF file")?;
 
