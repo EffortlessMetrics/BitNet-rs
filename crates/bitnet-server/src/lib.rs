@@ -724,11 +724,27 @@ fn parse_priority(priority: Option<&str>) -> RequestPriority {
 
 /// Parse device from string
 fn parse_device(device: &str) -> Result<Device> {
-    match device.to_lowercase().as_str() {
+    let normalized = device.to_lowercase();
+    match normalized.as_str() {
         "cpu" => Ok(Device::Cpu),
-        "gpu" | "cuda" => Ok(Device::Cuda(0)),
-        _ if device.starts_with("cuda:") => {
-            let id_str = &device[5..];
+        "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(Device::Cuda(0)),
+        _ if normalized.starts_with("cuda:") => {
+            let id_str = &normalized[5..];
+            let id = id_str.parse::<usize>()?;
+            Ok(Device::Cuda(id))
+        }
+        _ if normalized.starts_with("vulkan:") => {
+            let id_str = &normalized[7..];
+            let id = id_str.parse::<usize>()?;
+            Ok(Device::Cuda(id))
+        }
+        _ if normalized.starts_with("opencl:") => {
+            let id_str = &normalized[7..];
+            let id = id_str.parse::<usize>()?;
+            Ok(Device::Cuda(id))
+        }
+        _ if normalized.starts_with("ocl:") => {
+            let id_str = &normalized[4..];
             let id = id_str.parse::<usize>()?;
             Ok(Device::Cuda(id))
         }
@@ -739,4 +755,24 @@ fn parse_device(device: &str) -> Result<Device> {
 /// Extract client IP from headers using security module's implementation
 fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
     security::extract_client_ip_from_headers(headers)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_device;
+    use bitnet_common::Device;
+
+    #[test]
+    fn parse_device_supports_vulkan_and_opencl_aliases() {
+        assert_eq!(parse_device("vulkan").unwrap(), Device::Cuda(0));
+        assert_eq!(parse_device("opencl").unwrap(), Device::Cuda(0));
+        assert_eq!(parse_device("ocl").unwrap(), Device::Cuda(0));
+    }
+
+    #[test]
+    fn parse_device_supports_indexed_vulkan_and_opencl_aliases() {
+        assert_eq!(parse_device("vulkan:2").unwrap(), Device::Cuda(2));
+        assert_eq!(parse_device("opencl:3").unwrap(), Device::Cuda(3));
+        assert_eq!(parse_device("ocl:4").unwrap(), Device::Cuda(4));
+    }
 }
