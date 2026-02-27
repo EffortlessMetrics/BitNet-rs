@@ -31,7 +31,8 @@ fn bdd_feature_to_cargo(name: &str) -> Option<&'static str> {
 /// # Arguments
 /// * `cpu_only` – skip cells that require GPU/CUDA features (suitable for PR CI).
 /// * `verbose`  – print the full `cargo check` stderr on failure.
-pub fn run(cpu_only: bool, verbose: bool) -> Result<()> {
+/// * `dry_run`  – print the commands that would run without executing them.
+pub fn run(cpu_only: bool, verbose: bool, dry_run: bool) -> Result<()> {
     let grid = curated();
     let rows = grid.rows();
 
@@ -81,6 +82,20 @@ pub fn run(cpu_only: bool, verbose: bool) -> Result<()> {
 
         let features_str = cargo_features.join(",");
 
+        if dry_run {
+            println!(
+                "  [DRY-RUN] cargo check --workspace --locked --no-default-features --features {}",
+                features_str
+            );
+            results.push(CellResult {
+                label,
+                features: cargo_features,
+                status: "DRY-RUN",
+                success: true,
+            });
+            continue;
+        }
+
         // Skip if we already ran cargo check for this exact feature set.
         if checked_feature_sets.contains(&features_str) {
             results.push(CellResult {
@@ -126,7 +141,10 @@ pub fn run(cpu_only: bool, verbose: bool) -> Result<()> {
         });
     }
 
-    let passed = results.iter().filter(|r| r.success && r.status != "SKIP (GPU)").count();
+    let passed = results
+        .iter()
+        .filter(|r| r.success && r.status != "SKIP (GPU)" && r.status != "DRY-RUN")
+        .count();
 
     println!("BDD Grid Check Results:");
     println!("{}", "─".repeat(58));
@@ -140,13 +158,20 @@ pub fn run(cpu_only: bool, verbose: bool) -> Result<()> {
                 format!("✓ {}", r.status)
             } else if r.status.starts_with("SKIP") {
                 format!("- {}", r.status)
+            } else if r.status == "DRY-RUN" {
+                format!("~ {}", r.status)
             } else {
                 format!("✗ {}", r.status)
             }
         );
     }
     println!("{}", "─".repeat(58));
-    println!("Grid check: {passed} passed, {failed} failed, {skipped} skipped");
+    if dry_run {
+        let total = results.len();
+        println!("Grid check: {total} cells would be checked (dry-run, none executed)");
+    } else {
+        println!("Grid check: {passed} passed, {failed} failed, {skipped} skipped");
+    }
 
     if failed > 0 {
         bail!("{failed} grid cell(s) failed cargo check");
