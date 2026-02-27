@@ -5,6 +5,13 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(bitnet-st2gguf,bitnet-server): add extended tests` — 26 extended tests for bitnet-st2gguf (conversion pipeline, quantization type handling, error variants) and 20 tests for bitnet-server (batch engine config, CORS, security middleware) (#922)
+- `test(bitnet-transformer,bitnet-honest-compute): add comprehensive tests` — 29 tests for bitnet-transformer (RoPE invariants, KVCache shape/seq-len properties) and 37 tests for bitnet-honest-compute (ComputeMode gating, receipt validation, honest-compute enforcement) (#921)
+- `test(bitnet-bdd-grid,bitnet-testing-policy): add comprehensive grid and policy tests` — 36 tests for bitnet-bdd-grid (grid rows/columns, cell lookup, scenario validation) and 28 tests for bitnet-testing-policy (PolicyDiagnostics coherence, GridCompatibility invariants) (#917)
+- `feat(fuzz): add wave 3 fuzz targets` — 3 new fuzz targets: `gguf_writer_roundtrip` (GGUF writer round-trip safety), `tokenizer_encode_no_panic` (tokenizer encode panic safety), `validation_no_panic` (validation pipeline panic safety) (#919)
+- `test(bitnet-trace): add 20+ comprehensive tests` — 20+ tests covering TraceSink and TraceComparison APIs, JSON round-trips, hash invariants, rms calculations, and decode-step tracing (#916)
+- `test(bitnet-validation,bitnet-kernel-registry): add comprehensive tests` — 65 tests for bitnet-validation (LayerNorm bounds, error messages, policy keys, gate modes, RMS validation) and 56 tests for bitnet-kernel-registry (kernel dispatch, capability registry, SIMD selection behaviour) (#915)
+- `test(bitnet-quantization): add 25+ extended integration and property tests` — 25+ extended integration and property tests covering I2_S, TL1, TL2, and QK256 roundtrip accuracy, block-size invariants, and edge-case inputs (#914)
 - `test(bitnet-device-probe): add 25+ comprehensive tests` — SIMD level detection ordering, GPU probe validation, DeviceCapabilities construction/equality, and property tests for probe determinism and capability invariants (#912)
 - `test(bitnet-runtime-feature-flags,bitnet-feature-contract): add comprehensive tests` — RuntimeFeatureFlags snapshot tests, CPU-always-true invariant, CUDA/GPU orthogonality, and JSON round-trips for feature-flag and feature-contract crates (#911)
 - `test: reduce ignored test count by converting to env-var guards (wave 2)` — 13 fewer ignored tests (1043→1030); `tokenization_smoke` converted to `CROSSVAL_GGUF` opt-in; AC3/AC6 acceptance tests gated on `BITNET_RUN_SLOW_TESTS` env-var (#910)
@@ -23,6 +30,10 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test(bitnet-models): add 15 property-based tests for model loading` — 15 new proptests in `crates/bitnet-models/tests/model_load_proptests.rs` covering `ModelConfig` round-trips, tensor-shape invariants, quantization-type parsing edge cases, and QK256 vs BitNet32-F16 flavor disambiguation (#895)
 - `test(bitnet-inference): add 77 integration tests that run without a real model` — 77 new no-model integration tests in `crates/bitnet-inference/tests/` exercising `ProductionInferenceEngine` construction, `SamplingStrategy` configuration paths, `GenerationStream` lifecycle, and error-handling branches without requiring a GGUF file (#894)
 - `test(bitnet-cli): add snapshot tests for CLI help output` — 8 new insta snapshot tests in `crates/bitnet-cli/tests/snapshot_tests.rs` pinning `--help` and `--version` output for all top-level subcommands; uses `assert_cmd` + `insta` for regression detection (#893)
+
+### Documentation
+- `docs: comprehensive README rewrite and test-suite docs update` — README rewrite highlighting 1000+ test milestone, updated feature flag table, xtask grid-check documentation, and revised `docs/development/test-suite.md` with current test counts (#920)
+- `docs: update changelog for PRs #905-#912` — Changelog entries for server security tests, tokenizer property tests, xtask grid-check feature, E2E golden path tests, fuzz targets (sampling/receipt/template), logits property tests, and device-probe tests (#913)
 
 ## [v0.1.3] - 2026-02-27
 
