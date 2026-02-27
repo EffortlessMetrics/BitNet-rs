@@ -131,3 +131,9 @@ name = "tokenizer_encode_decode"
 path = "fuzz_targets/tokenizer_encode_decode.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "quantization_input"
+path = "fuzz_targets/quantization_input.rs"
+test = false
+doc = false
