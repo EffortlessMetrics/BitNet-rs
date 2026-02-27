@@ -96,6 +96,10 @@ name = "comprehensive_kernel_unit_tests"
 path = "tests/comprehensive_kernel_unit_tests.rs"
 
 [[test]]
+name = "kernel_bdd_tests"
+path = "tests/kernel_bdd_tests.rs"
+
+[[test]]
 name = "gpu_integration"
 path = "tests/gpu_integration.rs"
 required-features = ["gpu"]
