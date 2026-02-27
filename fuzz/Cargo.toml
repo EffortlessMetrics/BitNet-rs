@@ -21,6 +21,9 @@ bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 bitnet-logits = { path = "../crates/bitnet-logits" }
 bitnet-generation = { path = "../crates/bitnet-generation" }
 bitnet-rope = { path = "../crates/bitnet-rope" }
+bitnet-sampling = { path = "../crates/bitnet-sampling" }
+bitnet-receipts = { path = "../crates/bitnet-receipts" }
+bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates" }
 candle-core = { workspace = true }
 arbitrary = { version = "1.4.2", features = ["derive"] }
 
@@ -165,5 +168,23 @@ doc = false
 [[bin]]
 name = "gguf_header_parse"
 path = "fuzz_targets/gguf_header_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "sampling_no_panic"
+path = "fuzz_targets/sampling_no_panic.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "receipt_json_roundtrip"
+path = "fuzz_targets/receipt_json_roundtrip.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "prompt_template_no_panic"
+path = "fuzz_targets/prompt_template_no_panic.rs"
 test = false
 doc = false
