@@ -81,7 +81,6 @@ pub struct GpuCapabilities {
     /// `ROCm` runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub rocm_available: bool,
 }
-
 /// Probe GPU availability and return its capabilities.
 ///
 /// Honours `BITNET_GPU_FAKE` for deterministic testing unless
@@ -314,6 +313,7 @@ pub struct DeviceProbe {
     pub cpu: CpuProbe,
     /// Whether a CUDA-capable GPU was found at runtime.
     pub cuda_available: bool,
+    pub rocm_available: bool,
 }
 
 /// Run a full device probe and return the result.
@@ -339,7 +339,8 @@ pub fn probe_device() -> DeviceProbe {
     let simd_level = detect_simd_level();
     DeviceProbe {
         cpu: CpuProbe { simd_level, cores, threads },
-        cuda_available: cuda_available_runtime() || rocm_available_runtime(),
+        cuda_available: cuda_available_runtime(),
+        rocm_available: rocm_available_runtime(),
     }
 }
 
