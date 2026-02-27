@@ -1,0 +1,166 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Interactive chat mode (streaming)
+
+# Examples
+
+Auto-detect chat template: bitnet chat --model model.gguf --tokenizer tokenizer.json
+
+LLaMA-3 chat with system prompt: bitnet chat --model model.gguf --prompt-template llama3-chat \ --system-prompt "You are a helpful coding assistant"
+
+Creative chat with nucleus sampling: bitnet chat --model model.gguf --temperature 0.8 --top-p 0.95
+
+Usage: bitnet chat [OPTIONS]
+
+Options:
+  -c, --config <PATH>
+          Configuration file path
+
+  -m, --model <PATH>
+          Path to the model file
+
+      --model-format <FORMAT>
+          Model format (auto, gguf, safetensors)
+          
+          [default: auto]
+
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
+
+  -p, --prompt <TEXT>
+          Input prompt (if not provided, interactive mode is used)
+
+      --input-file <PATH>
+          Input file containing prompts (one per line)
+
+  -o, --output <PATH>
+          Output file for results
+
+  -d, --device <DEVICE>
+          Device to use for inference (cpu, cuda, auto)
+
+  -q, --quantization <TYPE>
+          Quantization type (i2s, tl1, tl2, auto)
+
+      --max-tokens <N>
+          Maximum number of tokens to generate (aliases: --max-new-tokens, --n-predict)
+          
+          [default: 512]
+          [aliases: --max-new-tokens, --n-predict]
+
+      --temperature <TEMP>
+          Temperature for sampling (0.0 = greedy, higher = more random)
+          
+          [default: 0.7]
+
+      --top-k <K>
+          Top-k sampling parameter
+
+      --top-p <P>
+          Top-p (nucleus) sampling parameter
+
+      --repetition-penalty <PENALTY>
+          Repetition penalty
+          
+          [default: 1.1]
+
+      --seed <SEED>
+          Random seed for reproducible generation
+
+      --greedy
+          Enable greedy decoding (temperature=0, top_p=1, top_k=0)
+
+      --deterministic
+          Force deterministic execution (single-threaded, deterministic ops)
+
+      --threads <N>
+          Number of threads to use (default: all cores)
+
+      --stream
+          Enable streaming output
+
+      --batch-size <SIZE>
+          Batch size for processing multiple prompts
+          
+          [default: 1]
+
+      --workers <N>
+          Number of parallel workers for batch processing
+
+  -i, --interactive
+          Enable interactive mode
+
+      --metrics
+          Show performance metrics
+
+  -v, --verbose
+          Enable verbose output
+
+      --format <FORMAT>
+          Output format (text, json, jsonl)
+          
+          [default: text]
+
+      --system-prompt <TEXT>
+          System prompt for chat models
+
+      --chat-template <TEMPLATE>
+          Chat template to use (deprecated - use --prompt-template)
+
+      --prompt-template <TEMPLATE>
+          Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+          
+          [default: auto]
+
+      --tokenizer <PATH>
+          Path to tokenizer.json (HF) or tokenizer.model (SPM)
+
+      --no-bos
+          Disable BOS insertion
+
+      --no-eos
+          Disable EOS insertion
+
+      --stop <SEQ>
+          Stop sequences (aliases: --stop-sequence, --stop_sequences)
+          
+          [aliases: --stop-sequence, --stop_sequences]
+
+      --stop-id <ID>
+          Stop token IDs (numeric token IDs to stop generation)
+
+      --stop-string-window <N>
+          Window size for tail-based stop string matching (default: 64) Only decode the last N tokens when checking stop sequences
+          
+          [default: 64]
+
+      --timeout <SECONDS>
+          Timeout for inference (in seconds)
+
+      --dump-logits <N>
+          Dump top-k logits for first N decode steps (for testing)
+
+      --logits-topk <K>
+          Number of top logits to dump per step
+          
+          [default: 10]
+
+      --chat-history-limit <N>
+          Chat history limit (number of turns to keep in context)
+
+      --emit-receipt-dir <DIR>
+          Directory to emit per-turn receipts in chat mode
+
+      --receipt-path <PATH>
+          Path for the primary inference receipt (default: ci/inference.json)
+
+      --qa
+          Q&A mode: bundle Q&A-friendly defaults (auto template, temp=0.7, top-p=0.95, top-k=50) Individual parameters can still be overridden (e.g., --qa --temperature 0.5)
+
+      --strict-loader
+          Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1) Preferred for CI/parity testing. Unset to allow minimal loader fallback (reduced features)
+
+  -h, --help
+          Print help (see a summary with '-h')

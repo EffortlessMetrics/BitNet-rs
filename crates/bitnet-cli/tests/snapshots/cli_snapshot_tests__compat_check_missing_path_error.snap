@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: err
+---
+error: the following required arguments were not provided:
+  <PATH>
+
+Usage: bitnet compat-check <PATH>
+
+For more information, try '--help'.

@@ -1,0 +1,95 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+BitNet-rs CLI — one-shot generation and chat with strict receipts
+
+QUICK EXAMPLES:
+
+  # Deterministic math sanity check (validates model correctness)
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "Answer with a single digit: 2+2=" --max-tokens 1 --temperature 0.0 --greedy
+
+  # General Q&A with instruct template
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "What is 2+2?" --max-tokens 16 --temperature 0.0 --greedy
+
+  # Creative completion (nucleus sampling)
+  RUST_LOG=warn bitnet run --model model.gguf --tokenizer tokenizer.json \
+    --prompt "Explain photosynthesis" --max-tokens 128 --temperature 0.7 --top-p 0.95
+
+  # Interactive chat (auto-detects template, clean output)
+  RUST_LOG=warn bitnet chat --model model.gguf --tokenizer tokenizer.json
+
+LOGGING:
+  Set RUST_LOG=warn (default: info) to reduce log noise and focus on generated text.
+  Options: error, warn, info, debug, trace
+
+PERFORMANCE:
+  For best CPU throughput, build with:
+    RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
+      cargo build --release --features cpu
+
+  Run with:
+    RAYON_NUM_THREADS=$(nproc) RUST_LOG=warn bitnet run ...
+
+  QK256 Models (I2_S quantization):
+    - Without AVX2: ~0.1 tok/s (scalar kernels, ~10s per token)
+    - With AVX2: ~1.2× faster (optimized kernels)
+    - For quick validation: use --max-tokens 4-16
+    - SIMD optimizations (≥3× faster) coming in v0.2.0
+
+
+Usage: bitnet [OPTIONS] [COMMAND]
+
+Commands:
+  run           Run simple text generation
+  tokenize      Tokenize text and output token IDs as JSON
+  score         Calculate perplexity score for a model
+  inference     Run inference on a model
+  chat          Interactive chat mode (streaming)
+  convert       Convert between model formats
+  benchmark     Benchmark model performance
+  serve         Start inference server
+  config        Manage configuration
+  info          Show system information
+  inspect       Inspect model metadata and diagnostics
+  compat-check  Check GGUF file compatibility using header validation
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -c, --config <PATH>
+          Configuration file path
+
+  -d, --device <DEVICE>
+          Device to use (cpu, cuda, auto)
+
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
+
+      --threads <N>
+          Number of CPU threads
+
+      --batch-size <SIZE>
+          Batch size for processing
+
+      --completions <SHELL>
+          Generate shell completions
+          
+          [possible values: bash, elvish, fish, powershell, zsh]
+
+      --save-config <PATH>
+          Write the effective configuration to a file and exit
+
+      --interface-version
+          Print CLI interface version and exit
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+
+CLI Interface Version: 1.0.0
+Docs: https://docs.rs/bitnet
+Issues: https://github.com/EffortlessMetrics/BitNet-rs/issues

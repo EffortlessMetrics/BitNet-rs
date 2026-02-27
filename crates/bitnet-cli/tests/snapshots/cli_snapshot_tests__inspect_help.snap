@@ -1,0 +1,23 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Inspect model metadata and diagnostics
+
+Usage: bitnet inspect [OPTIONS] <MODEL>
+
+Arguments:
+  <MODEL>  Model file path
+
+Options:
+  -c, --config <PATH>            Configuration file path
+      --ln-stats                 Compute and display LayerNorm gamma statistics
+  -d, --device <DEVICE>          Device to use (cpu, cuda, auto)
+      --gate <GATE>              Gate behavior: none|auto|policy [default: auto]
+      --log-level <LEVEL>        Log level (trace, debug, info, warn, error)
+      --policy <POLICY>          Policy file (YAML) for custom validation rules
+      --policy-key <POLICY_KEY>  Policy key (architecture ID) for rules lookup
+      --threads <N>              Number of CPU threads
+      --batch-size <SIZE>        Batch size for processing
+      --json                     Output format as JSON
+  -h, --help                     Print help

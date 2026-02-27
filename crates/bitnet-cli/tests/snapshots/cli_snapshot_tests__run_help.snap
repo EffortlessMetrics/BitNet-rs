@@ -1,0 +1,135 @@
+---
+source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+expression: help
+---
+Run simple text generation
+
+# Examples
+
+Auto-detect template for Q&A (recommended): bitnet run --model model.gguf --prompt "Who wrote Pride and Prejudice?"
+
+Instruct template (explicit Q&A format): bitnet run --model model.gguf --prompt-template instruct \ --prompt "What is 2+2?" --max-tokens 16
+
+LLaMA-3 chat format with system prompt: bitnet run --model model.gguf --prompt-template llama3-chat \ --system-prompt "You are a helpful assistant" \ --prompt "Explain photosynthesis" --max-tokens 128
+
+Deterministic Q&A with greedy decoding: bitnet run --model model.gguf --prompt "Test question" \ --temperature 0.0 --greedy --seed 42
+
+Raw completion (no Q&A formatting): bitnet run --model model.gguf --prompt-template raw \ --prompt "2+2=" --max-tokens 16
+
+Usage: bitnet run [OPTIONS] --model <MODEL> --prompt <PROMPT>
+
+Options:
+  -c, --config <PATH>
+          Configuration file path
+
+  -m, --model <MODEL>
+          Model file path
+
+  -d, --device <DEVICE>
+          Device to use (cpu, cuda, auto)
+
+      --tokenizer <TOKENIZER>
+          Tokenizer file path (optional, will look for sibling file if not provided)
+
+      --log-level <LEVEL>
+          Log level (trace, debug, info, warn, error)
+
+  -p, --prompt <PROMPT>
+          Input prompt
+
+      --max-new-tokens <MAX_NEW_TOKENS>
+          Maximum new tokens to generate (aliases: --max-tokens, --n-predict)
+          
+          [default: 32]
+          [aliases: --max-tokens, --n-predict]
+
+      --batch-size <SIZE>
+          Batch size for processing
+
+      --temperature <TEMPERATURE>
+          Temperature for sampling (0 = greedy)
+          
+          [default: 1]
+
+      --top-k <TOP_K>
+          Top-k sampling (0 = disabled)
+          
+          [default: 0]
+
+      --top-p <TOP_P>
+          Top-p (nucleus) sampling
+          
+          [default: 1]
+
+      --repetition-penalty <REPETITION_PENALTY>
+          Repetition penalty
+          
+          [default: 1.1]
+
+      --seed <SEED>
+          Random seed for reproducibility
+
+      --allow-mock
+          Allow falling back to mock loader if real loader fails Also toggled by env BITNET_ALLOW_MOCK=1
+          
+          [env: BITNET_ALLOW_MOCK=]
+
+      --strict-mapping
+          Strict mapping mode: fail if any tensors are unmapped
+
+      --strict-tokenizer
+          Strict tokenizer mode: fail if no real tokenizer available
+
+      --strict-loader
+          Strict loader mode: fail-fast with enhanced loader (sets BITNET_DISABLE_MINIMAL_LOADER=1, BITNET_STRICT_MODE=1)
+
+      --json-out <JSON_OUT>
+          Output JSON results to file
+
+      --dump-ids
+          Dump token IDs to stdout
+
+      --bos
+          Insert BOS token at start of prompt
+
+      --greedy
+          Use greedy decoding (overrides temperature)
+
+      --deterministic
+          Enable deterministic mode (single-threaded)
+
+      --threads <THREADS>
+          Number of threads to use (0 = all cores)
+          
+          [default: 0]
+
+      --prompt-template <TEMPLATE>
+          Prompt template: auto (detect), raw (no formatting), instruct (Q&A format), llama3-chat (LLaMA-3 format)
+          
+          [default: auto]
+
+      --system-prompt <TEXT>
+          System prompt for chat models
+
+      --stop <SEQ>
+          Stop sequences (can be repeated for multiple sequences)
+
+      --stop-id <ID>
+          Stop token IDs (numeric token IDs, can be repeated)
+
+      --dump-logit-steps <DUMP_LOGIT_STEPS>
+          Dump logit steps during generation (max steps)
+
+      --logits-topk <K>
+          Top-k tokens to include in logit dump
+          
+          [default: 10]
+
+      --assert-greedy
+          Assert greedy argmax invariant when dumping logits
+
+      --no-warnings
+          Suppress performance warnings
+
+  -h, --help
+          Print help (see a summary with '-h')
