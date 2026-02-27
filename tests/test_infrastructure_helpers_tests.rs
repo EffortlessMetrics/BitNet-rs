@@ -39,6 +39,8 @@
 #![cfg(test)]
 
 use bitnet_crossval::backend::CppBackend;
+use bitnet_tests::support::backend_helpers::detect_backend_runtime;
+use bitnet_tests::support::env_guard::EnvScope;
 use bitnet_tests::support::platform::{
     create_mock_backend_libs, format_lib_name, get_loader_path_var,
 };
@@ -529,58 +531,81 @@ fn test_ac5_append_to_loader_path_windows() {
 // AC6: Runtime Detection Fallback (5 tests)
 // ============================================================================
 
-/// AC6: Test detect_backend_runtime finds backend via BITNET_CPP_DIR
+/// AC6: Test detect_backend_runtime finds backend via CROSSVAL_RPATH_BITNET
 #[test]
-#[ignore = "TDD scaffold: Test runtime detection via BITNET_CPP_DIR environment variable"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_backend_runtime_via_env_var() {
-    // AC:AC6
-    // Setup: Create mock libraries, set BITNET_CPP_DIR
-    // Expected: detect_backend_runtime returns Ok(true)
-    unimplemented!("Test runtime detection via BITNET_CPP_DIR environment variable");
+    let temp = tempfile::tempdir().unwrap();
+    create_mock_backend_libs(temp.path(), CppBackend::BitNet).unwrap();
+
+    let mut scope = EnvScope::new();
+    // Use Priority-2 env var (no subdir lookup needed).
+    scope.set("CROSSVAL_RPATH_BITNET", temp.path().to_str().unwrap());
+    // Clear higher-priority vars to avoid interference.
+    scope.remove("BITNET_CROSSVAL_LIBDIR");
+
+    let (found, matched_path) = detect_backend_runtime(CppBackend::BitNet).unwrap();
+    assert!(found, "detect_backend_runtime should return true when mock libs are present");
+    assert!(matched_path.is_some(), "Should return the matched directory path");
 }
 
 /// AC6: Test detect_backend_runtime returns false when backend missing
 #[test]
-#[ignore = "TDD scaffold: Test runtime detection when backend unavailable"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_backend_runtime_missing() {
-    // AC:AC6
-    // Setup: Ensure BITNET_CPP_DIR not set or invalid
-    // Expected: detect_backend_runtime returns Ok(false)
-    unimplemented!("Test runtime detection when backend unavailable");
+    let mut scope = EnvScope::new();
+    // Remove all env vars that could point to a real backend.
+    scope.remove("BITNET_CROSSVAL_LIBDIR");
+    scope.remove("CROSSVAL_RPATH_BITNET");
+    scope.remove("BITNET_CPP_DIR");
+
+    let (found, matched_path) = detect_backend_runtime(CppBackend::BitNet).unwrap();
+    assert!(!found, "detect_backend_runtime should return false when no backend is configured");
+    assert!(matched_path.is_none(), "No path should be returned when backend is absent");
 }
 
 /// AC6: Test detect_backend_runtime checks library file existence
 #[test]
-#[ignore = "TDD scaffold: Test runtime detection verifies library file existence"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_backend_runtime_checks_lib_files() {
-    // AC:AC6
-    // Setup: Set BITNET_CPP_DIR but no library files
-    // Expected: detect_backend_runtime returns Ok(false)
-    unimplemented!("Test runtime detection verifies library file existence");
+    // Directory exists but contains no library files.
+    let temp = tempfile::tempdir().unwrap();
+
+    let mut scope = EnvScope::new();
+    scope.set("CROSSVAL_RPATH_BITNET", temp.path().to_str().unwrap());
+    scope.remove("BITNET_CROSSVAL_LIBDIR");
+
+    let (found, _) = detect_backend_runtime(CppBackend::BitNet).unwrap();
+    assert!(
+        !found,
+        "detect_backend_runtime should return false when dir exists but contains no libs"
+    );
 }
 
 /// AC6: Test print_rebuild_warning displays correct message
 #[test]
-#[ignore = "TDD scaffold: Test rebuild warning message format"]
+#[ignore = "Requires stderr capture infrastructure; warning is emitted via eprintln! and hard to assert in unit tests"]
 fn test_ac6_print_rebuild_warning_format() {
-    // AC:AC6
-    // Setup: Capture stderr output
-    // Expected: Warning includes "Backend available at runtime but not at build time"
+    // The rebuild warning is an internal eprintln! function.
+    // Testing it here would require capturing stderr, which is not straightforward
+    // in Rust unit tests without additional infrastructure.
     unimplemented!("Test rebuild warning message format");
 }
 
 /// AC6: Test runtime detection for llama.cpp backend
 #[test]
-#[ignore = "TDD scaffold: Test runtime detection for llama.cpp backend"]
 #[serial(bitnet_env)]
 fn test_ac6_detect_llama_backend_runtime() {
-    // AC:AC6
-    // Setup: Create mock llama libraries, set LLAMA_CPP_DIR
-    // Expected: detect_backend_runtime(CppBackend::Llama) returns Ok(true)
-    unimplemented!("Test runtime detection for llama.cpp backend");
+    let temp = tempfile::tempdir().unwrap();
+    create_mock_backend_libs(temp.path(), CppBackend::Llama).unwrap();
+
+    let mut scope = EnvScope::new();
+    scope.set("CROSSVAL_RPATH_LLAMA", temp.path().to_str().unwrap());
+    scope.remove("BITNET_CROSSVAL_LIBDIR");
+
+    let (found, matched_path) = detect_backend_runtime(CppBackend::Llama).unwrap();
+    assert!(found, "detect_backend_runtime should detect llama backend with mock libs");
+    assert!(matched_path.is_some(), "Should return the matched directory path for llama");
 }
 
 // ============================================================================

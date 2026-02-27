@@ -1301,63 +1301,175 @@ pub const MOCK_LLAMA_LIB_SIZE: u64 = 2048;
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use bitnet_test_support::env_guard::{EnvGuard, EnvScope};
+    use serial_test::serial;
+
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive environment tests"]
+    #[serial(bitnet_env)]
     fn test_is_ci_or_no_repair_with_no_repair_flag() {
-        unimplemented!("See test_support_tests.rs for comprehensive environment tests");
+        let guard = EnvGuard::new("BITNET_TEST_NO_REPAIR");
+        guard.set("1");
+        assert!(
+            is_ci_or_no_repair(),
+            "Expected is_ci_or_no_repair() to return true when BITNET_TEST_NO_REPAIR=1"
+        );
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive environment tests"]
+    #[serial(bitnet_env)]
     fn test_is_ci_or_no_repair_with_ci_flag() {
-        unimplemented!("See test_support_tests.rs for comprehensive environment tests");
+        let guard = EnvGuard::new("CI");
+        guard.set("1");
+        assert!(is_ci_or_no_repair(), "Expected is_ci_or_no_repair() to return true when CI=1");
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive environment tests"]
+    #[serial(bitnet_env)]
     fn test_is_ci_or_no_repair_interactive() {
-        unimplemented!("See test_support_tests.rs for comprehensive environment tests");
+        let mut scope = EnvScope::new();
+        scope.remove("CI");
+        scope.remove("BITNET_TEST_NO_REPAIR");
+        assert!(
+            !is_ci_or_no_repair(),
+            "Expected is_ci_or_no_repair() to return false when neither CI nor BITNET_TEST_NO_REPAIR is set"
+        );
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive backend tests"]
     fn test_ensure_backend_or_skip_backend_available() {
-        unimplemented!("See test_support_tests.rs for comprehensive backend tests");
+        use bitnet_crossval::{HAS_BITNET, HAS_LLAMA};
+        // When the backend is available at build time, ensure_backend_or_skip returns immediately.
+        if HAS_BITNET {
+            ensure_backend_or_skip(CppBackend::BitNet);
+        }
+        if HAS_LLAMA {
+            ensure_backend_or_skip(CppBackend::Llama);
+        }
+        // If neither backend is available in this build, the test is a no-op (still passes).
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive backend tests"]
+    #[serial(bitnet_env)]
     fn test_ensure_backend_or_skip_backend_unavailable_ci() {
-        unimplemented!("See test_support_tests.rs for comprehensive backend tests");
+        use bitnet_crossval::HAS_BITNET;
+        if HAS_BITNET {
+            // Backend is available at build time - no skip diagnostic is produced.
+            return;
+        }
+        let mut scope = EnvScope::new();
+        scope.set("CI", "1");
+        scope.set("BITNET_TEST_NO_REPAIR", "1");
+        // Clear runtime-detection env vars so no stale-build path is taken.
+        scope.remove("BITNET_CROSSVAL_LIBDIR");
+        scope.remove("CROSSVAL_RPATH_BITNET");
+        scope.remove("BITNET_CPP_DIR");
+
+        let result = std::panic::catch_unwind(|| {
+            ensure_backend_or_skip(CppBackend::BitNet);
+        });
+        assert!(result.is_err(), "Should panic with SKIPPED when backend unavailable in CI");
+        let err = result.unwrap_err();
+        let msg = err
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| err.downcast_ref::<&str>().copied())
+            .unwrap_or("");
+        assert!(msg.contains("SKIPPED"), "Panic message should contain 'SKIPPED', got: {msg}");
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive backend tests"]
+    #[ignore = "Requires mocking cargo command execution; dev-mode repair attempts 'cargo run -p xtask -- setup-cpp-auto'"]
+    #[serial(bitnet_env)]
     fn test_ensure_backend_or_skip_backend_unavailable_repair() {
-        unimplemented!("See test_support_tests.rs for comprehensive backend tests");
+        unimplemented!("Requires mocking cargo command execution for attempt_auto_repair");
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive wrapper tests"]
+    #[serial(bitnet_env)]
     fn test_convenience_wrappers() {
-        unimplemented!("See test_support_tests.rs for comprehensive wrapper tests");
+        use bitnet_crossval::{HAS_BITNET, HAS_LLAMA};
+        let mut scope = EnvScope::new();
+        scope.set("CI", "1");
+        scope.set("BITNET_TEST_NO_REPAIR", "1");
+        scope.remove("BITNET_CROSSVAL_LIBDIR");
+        scope.remove("CROSSVAL_RPATH_BITNET");
+        scope.remove("BITNET_CPP_DIR");
+        scope.remove("CROSSVAL_RPATH_LLAMA");
+        scope.remove("LLAMA_CPP_DIR");
+
+        let bitnet_result = std::panic::catch_unwind(ensure_bitnet_or_skip);
+        if HAS_BITNET {
+            assert!(
+                bitnet_result.is_ok(),
+                "ensure_bitnet_or_skip should not panic when HAS_BITNET=true"
+            );
+        } else {
+            assert!(
+                bitnet_result.is_err(),
+                "ensure_bitnet_or_skip should panic (SKIPPED) in CI with no backend"
+            );
+        }
+
+        let llama_result = std::panic::catch_unwind(ensure_llama_or_skip);
+        if HAS_LLAMA {
+            assert!(
+                llama_result.is_ok(),
+                "ensure_llama_or_skip should not panic when HAS_LLAMA=true"
+            );
+        } else {
+            assert!(
+                llama_result.is_err(),
+                "ensure_llama_or_skip should panic (SKIPPED) in CI with no backend"
+            );
+        }
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive repair tests"]
+    #[ignore = "Requires mocking cargo command execution; attempt_auto_repair runs 'cargo run -p xtask -- setup-cpp-auto'"]
     fn test_attempt_auto_repair_success() {
-        unimplemented!("See test_support_tests.rs for comprehensive repair tests");
+        unimplemented!("Requires mocking cargo command execution for attempt_auto_repair");
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive repair tests"]
+    #[ignore = "Requires mocking cargo command execution; attempt_auto_repair runs 'cargo run -p xtask -- setup-cpp-auto'"]
     fn test_attempt_auto_repair_failure() {
-        unimplemented!("See test_support_tests.rs for comprehensive repair tests");
+        unimplemented!("Requires mocking cargo command execution for attempt_auto_repair");
     }
 
     #[test]
-    #[ignore = "TDD scaffold: see test_support_tests.rs for comprehensive diagnostic tests"]
     fn test_print_skip_diagnostic_format() {
-        unimplemented!("See test_support_tests.rs for comprehensive diagnostic tests");
+        // format_skip_diagnostic is accessible here (same module).
+        let diag = format_skip_diagnostic(CppBackend::BitNet, None);
+        assert!(
+            diag.contains("bitnet.cpp"),
+            "Diagnostic should mention 'bitnet.cpp', got:\n{diag}"
+        );
+        assert!(
+            diag.contains("Option A: Auto-setup"),
+            "Diagnostic should include auto-setup option, got:\n{diag}"
+        );
+        assert!(
+            diag.contains("Option B: Manual setup"),
+            "Diagnostic should include manual setup option, got:\n{diag}"
+        );
+        assert!(
+            diag.contains("docs/howto/cpp-setup.md"),
+            "Diagnostic should reference docs, got:\n{diag}"
+        );
+
+        // With error context, context appears in the message.
+        let diag_ctx = format_skip_diagnostic(CppBackend::BitNet, Some("test error reason"));
+        assert!(
+            diag_ctx.contains("test error reason"),
+            "Diagnostic with context should contain context, got:\n{diag_ctx}"
+        );
+
+        // Llama variant should reference llama.cpp.
+        let diag_llama = format_skip_diagnostic(CppBackend::Llama, None);
+        assert!(
+            diag_llama.contains("llama.cpp"),
+            "Llama diagnostic should mention 'llama.cpp', got:\n{diag_llama}"
+        );
     }
 }
