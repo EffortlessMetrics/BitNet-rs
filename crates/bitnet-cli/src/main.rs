@@ -961,8 +961,30 @@ async fn run_simple_generation(
                 bitnet_models::GGUFLoaderConfig::default(),
             )
             .context("Mock loader also failed")?;
-            // TODO: Wire up load_result.i2s_qk256 to raw_tensors once GGUF loader is updated
-            let raw_tensors = std::collections::HashMap::new();
+            let mut raw_tensors = std::collections::HashMap::new();
+            for (name, qk256) in load_result.i2s_qk256 {
+                let expected_bytes = qk256.rows * qk256.row_stride_bytes;
+                let mut packed = qk256.qs;
+                if packed.len() != expected_bytes {
+                    tracing::warn!(
+                        "QK256 '{}' byte length {} differs from expected {}; normalizing for runtime tensor",
+                        name,
+                        packed.len(),
+                        expected_bytes
+                    );
+                    packed.resize(expected_bytes, 0);
+                }
+
+                let raw_tensor = candle_core::Tensor::from_raw_buffer(
+                    &packed,
+                    DType::U8,
+                    &[qk256.rows, qk256.row_stride_bytes],
+                    &candle_core::Device::Cpu,
+                )
+                .with_context(|| format!("Failed to build QK256 raw tensor for {name}"))?;
+
+                raw_tensors.insert(format!("{}.qk256_qs", name), raw_tensor);
+            }
             let m = bitnet_models::BitNetModel::from_gguf(
                 load_result.config.clone(),
                 load_result.tensors,
