@@ -161,6 +161,15 @@ fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> u64 {
         .unwrap_or(5) // Default to 5 seconds if parsing fails
 }
 
+fn validate_downloaded_len(downloaded: u64, expected_total: Option<u64>) -> Result<()> {
+    if let Some(total) = expected_total {
+        if downloaded != total {
+            bail!("download truncated: got {} bytes, expected {}", downloaded, total);
+        }
+    }
+    Ok(())
+}
+
 // Atomic write helper for metadata files
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     let tmp = path.with_extension("tmp");
@@ -1988,6 +1997,13 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
         }
     }
 
+    // If we preallocated, trim file to actual bytes read before durability checks.
+    // This ensures short reads are detected from `downloaded` instead of masked by file length.
+    file_out.get_ref().set_len(downloaded)?;
+
+    // Validate transfer completeness before rename.
+    validate_downloaded_len(downloaded, size)?;
+
     // Durability: flush buffer and fsync before rename
     file_out.flush()?;
     file_out.get_ref().sync_all()?;
@@ -2021,12 +2037,8 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
     }
 
     // Verify final size if known
-    if let Some(total) = size {
-        let actual = fs::metadata(&dest)?.len();
-        if actual != total {
-            bail!("download truncated: got {} bytes, expected {}", actual, total);
-        }
-    }
+    let actual = fs::metadata(&dest)?.len();
+    validate_downloaded_len(actual, size)?;
 
     // Verify SHA256 using streamed hash
     if let Some(want) = sha256_hex
@@ -6677,6 +6689,18 @@ mod tests {
         assert_eq!(exp_backoff_ms(2), 400 + 74); // 400 + 74 = 474
         assert_eq!(exp_backoff_ms(3), 800 + 111); // 800 + 111 = 911
         assert_eq!(exp_backoff_ms(10), 10_000 + 170); // Capped at 10s + jitter
+    }
+
+    #[test]
+    fn test_validate_downloaded_len_ok() {
+        assert!(validate_downloaded_len(1024, Some(1024)).is_ok());
+        assert!(validate_downloaded_len(1024, None).is_ok());
+    }
+
+    #[test]
+    fn test_validate_downloaded_len_mismatch() {
+        let err = validate_downloaded_len(512, Some(1024)).unwrap_err();
+        assert!(err.to_string().contains("download truncated"));
     }
 
     // Happy-path test: aligned 206 response
