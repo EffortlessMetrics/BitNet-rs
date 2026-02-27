@@ -28,6 +28,7 @@ cpu = []
 gpu = ["cuda", "rocm"]
 cuda = []
 rocm = []
+vulkan = ["dep:ash"]
 
 [lints]
 workspace = true
