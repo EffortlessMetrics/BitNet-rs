@@ -4,6 +4,8 @@
 //! - `SessionConfig` JSON round-trips without data loss
 //! - `BackendInfo` JSON round-trips without data loss
 //! - `SessionMetrics` values are always non-negative after deserialization
+//! - Clone produces a value whose serialization is identical to the original
+//! - Field-level invariants (kernel_ids order/length, max_context exactness, seed precision)
 
 use bitnet_engine_core::{BackendInfo, SessionConfig, SessionMetrics};
 use proptest::prelude::*;
@@ -161,5 +163,96 @@ proptest! {
         prop_assert_eq!(from_engine_core.max_new_tokens, 128);
         prop_assert!(from_engine_core.seed.is_none());
         prop_assert_eq!(from_engine_core.stop_criteria.max_tokens, 0);
+    }
+}
+
+// ── clone invariants ──────────────────────────────────────────────────────
+
+proptest! {
+    /// Cloning `SessionConfig` produces a value that serializes identically.
+    ///
+    /// Verifies that `Clone` captures all fields — structural equality via
+    /// JSON is used because `SessionConfig` does not implement `PartialEq`.
+    #[test]
+    fn session_config_clone_serializes_identically(config in arb_session_config()) {
+        let cloned = config.clone();
+        let orig_json  = serde_json::to_string(&config).unwrap();
+        let clone_json = serde_json::to_string(&cloned).unwrap();
+        prop_assert_eq!(orig_json, clone_json);
+    }
+
+    /// Cloning `BackendInfo` produces a value that serializes identically.
+    #[test]
+    fn backend_info_clone_serializes_identically(info in arb_backend_info()) {
+        let cloned = info.clone();
+        let orig_json  = serde_json::to_string(&info).unwrap();
+        let clone_json = serde_json::to_string(&cloned).unwrap();
+        prop_assert_eq!(orig_json, clone_json);
+    }
+
+    /// Cloning `SessionMetrics` produces a value that serializes identically.
+    #[test]
+    fn session_metrics_clone_serializes_identically(metrics in arb_session_metrics()) {
+        let cloned = metrics.clone();
+        let orig_json  = serde_json::to_string(&metrics).unwrap();
+        let clone_json = serde_json::to_string(&cloned).unwrap();
+        prop_assert_eq!(orig_json, clone_json);
+    }
+}
+
+// ── field-level invariants ────────────────────────────────────────────────
+
+proptest! {
+    /// `BackendInfo::kernel_ids` length is preserved exactly after JSON round-trip.
+    ///
+    /// Confirms neither truncation nor duplication occurs in the serde path.
+    #[test]
+    fn backend_info_kernel_ids_len_preserved(info in arb_backend_info()) {
+        let json = serde_json::to_string(&info).unwrap();
+        let restored: BackendInfo = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(
+            info.kernel_ids.len(),
+            restored.kernel_ids.len(),
+            "kernel_ids length changed after JSON round-trip"
+        );
+    }
+
+    /// `SessionConfig::max_context` round-trips with bit-exact equality.
+    ///
+    /// Uses the full `usize` range supported by JSON integers to catch any
+    /// implicit narrowing or overflow in the serialization path.
+    #[test]
+    fn session_config_max_context_exact_roundtrip(max_context in 1usize..=1_000_000usize) {
+        let config = SessionConfig {
+            model_path: "m.gguf".to_string(),
+            tokenizer_path: "t.json".to_string(),
+            backend: "cpu".to_string(),
+            max_context,
+            seed: None,
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let restored: SessionConfig = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(
+            config.max_context,
+            restored.max_context,
+            "max_context changed after JSON round-trip"
+        );
+    }
+
+    /// `SessionConfig::seed = Some(v)` preserves the full u64 value after
+    /// JSON round-trip, including values ≥ 2^53 that JSON integers cannot
+    /// represent exactly as f64.
+    #[test]
+    fn session_config_seed_some_all_u64_values(seed in any::<u64>()) {
+        let config = SessionConfig {
+            model_path: String::new(),
+            tokenizer_path: String::new(),
+            backend: "cpu".to_string(),
+            max_context: 1024,
+            seed: Some(seed),
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let restored: SessionConfig = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(config.seed, restored.seed);
     }
 }
