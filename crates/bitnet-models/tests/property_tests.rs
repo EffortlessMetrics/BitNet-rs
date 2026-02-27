@@ -8,6 +8,9 @@
 
 #![cfg(all(test, feature = "cpu"))]
 
+use bitnet_common::BitNetConfig;
+use bitnet_gguf::{GGUF_MAGIC, check_magic, read_version};
+use bitnet_models::formats::gguf::GgufTensorType;
 use bitnet_models::names::{is_layernorm_weight, is_projection_weight};
 use bitnet_models::{QK256_SIZE_TOLERANCE_PERCENT, qk256_tolerance_bytes};
 use proptest::prelude::*;
@@ -122,5 +125,203 @@ proptest! {
     fn reexport_tolerance_fn_matches_source(n in 0usize..1_000_000_000usize) {
         use bitnet_quantization::qk256_tolerance_bytes as src;
         prop_assert_eq!(qk256_tolerance_bytes(n), src(n));
+    }
+}
+
+// ── ModelConfig / BitNetConfig validation ────────────────────────────────────
+
+proptest! {
+    /// A config whose key architecture fields are all valid positive values passes
+    /// `validate()`.  `hidden_size` is always an exact multiple of `num_heads`
+    /// so the divisibility constraint is satisfied.
+    #[test]
+    fn valid_model_config_passes_validation(
+        num_heads   in 1usize..=8usize,
+        head_dim    in 1usize..=64usize,
+        vocab_size  in 1usize..=32000usize,
+        num_layers  in 1usize..=16usize,
+    ) {
+        let hidden_size = num_heads * head_dim;
+        let mut cfg = BitNetConfig::default();
+        cfg.model.hidden_size = hidden_size;
+        cfg.model.num_heads   = num_heads;
+        cfg.model.num_key_value_heads = 0; // 0 ⇒ treated as equal to num_heads
+        cfg.model.vocab_size  = vocab_size;
+        cfg.model.num_layers  = num_layers;
+        prop_assert!(
+            cfg.validate().is_ok(),
+            "hidden_size={hidden_size}, num_heads={num_heads}, vocab_size={vocab_size}, \
+             num_layers={num_layers} should all be valid"
+        );
+    }
+
+    /// Setting `hidden_size` to zero must always fail validation regardless of
+    /// the other architecture hyper-parameters.
+    #[test]
+    fn zero_hidden_size_always_fails_validation(
+        vocab_size in 1usize..=32000usize,
+        num_layers in 1usize..=16usize,
+    ) {
+        let mut cfg = BitNetConfig::default();
+        cfg.model.hidden_size = 0;
+        cfg.model.vocab_size  = vocab_size;
+        cfg.model.num_layers  = num_layers;
+        prop_assert!(cfg.validate().is_err(), "hidden_size=0 must be rejected");
+    }
+
+    /// Setting `vocab_size` to zero must always fail validation.
+    #[test]
+    fn zero_vocab_size_always_fails_validation(
+        num_heads  in 1usize..=8usize,
+        head_dim   in 1usize..=64usize,
+        num_layers in 1usize..=16usize,
+    ) {
+        let mut cfg = BitNetConfig::default();
+        cfg.model.hidden_size = num_heads * head_dim;
+        cfg.model.num_heads   = num_heads;
+        cfg.model.vocab_size  = 0;
+        cfg.model.num_layers  = num_layers;
+        prop_assert!(cfg.validate().is_err(), "vocab_size=0 must be rejected");
+    }
+
+    /// Setting `num_layers` to zero must always fail validation.
+    #[test]
+    fn zero_num_layers_always_fails_validation(
+        num_heads  in 1usize..=8usize,
+        head_dim   in 1usize..=64usize,
+        vocab_size in 1usize..=32000usize,
+    ) {
+        let mut cfg = BitNetConfig::default();
+        cfg.model.hidden_size = num_heads * head_dim;
+        cfg.model.num_heads   = num_heads;
+        cfg.model.vocab_size  = vocab_size;
+        cfg.model.num_layers  = 0;
+        prop_assert!(cfg.validate().is_err(), "num_layers=0 must be rejected");
+    }
+
+    /// A `hidden_size` that is NOT a multiple of `num_heads` must fail
+    /// validation.  We construct `hidden_size = base * num_heads + 1`, which
+    /// always leaves remainder 1.
+    #[test]
+    fn non_divisible_hidden_by_heads_fails_validation(
+        num_heads in 2usize..=16usize,
+        base      in 1usize..=64usize,
+    ) {
+        let hidden_size = base * num_heads + 1; // remainder 1 ⇒ never divisible
+        let mut cfg = BitNetConfig::default();
+        cfg.model.hidden_size = hidden_size;
+        cfg.model.num_heads   = num_heads;
+        cfg.model.num_key_value_heads = 0;
+        prop_assert!(
+            cfg.validate().is_err(),
+            "hidden_size={hidden_size} (not divisible by num_heads={num_heads}) must be rejected"
+        );
+    }
+}
+
+// ── GgufTensorType element-size / classification invariants ──────────────────
+
+proptest! {
+    /// For any number of elements, the byte count of an F32 tensor equals
+    /// `n_elems * 4` — the element size must always be 4.
+    #[test]
+    fn f32_tensor_byte_count_is_four_per_element(n_elems in 0usize..=10_000usize) {
+        let bytes = n_elems.saturating_mul(GgufTensorType::F32.element_size());
+        prop_assert_eq!(
+            bytes, n_elems * 4,
+            "{} F32 elements should occupy {} bytes", n_elems, n_elems * 4
+        );
+    }
+
+    /// For any number of elements, the byte count of an F16 tensor equals
+    /// `n_elems * 2` — the element size must always be 2.
+    #[test]
+    fn f16_tensor_byte_count_is_two_per_element(n_elems in 0usize..=10_000usize) {
+        let bytes = n_elems.saturating_mul(GgufTensorType::F16.element_size());
+        prop_assert_eq!(
+            bytes, n_elems * 2,
+            "{} F16 elements should occupy {} bytes", n_elems, n_elems * 2
+        );
+    }
+
+    /// F32, F16 and F64 must never be flagged as quantized types.
+    #[test]
+    fn unquantized_types_not_classified_as_quantized(
+        dtype in prop_oneof![
+            Just(GgufTensorType::F32),
+            Just(GgufTensorType::F16),
+            Just(GgufTensorType::F64),
+        ],
+    ) {
+        prop_assert!(
+            !dtype.is_quantized(),
+            "{dtype:?} must not be classified as a quantized type"
+        );
+    }
+}
+
+// ── GGUF header invariants ───────────────────────────────────────────────────
+
+proptest! {
+    /// Any byte slice whose first four bytes are the GGUF magic must be
+    /// accepted by `check_magic`.
+    #[test]
+    fn gguf_check_magic_accepts_valid_prefix(
+        suffix in proptest::collection::vec(any::<u8>(), 0..=64usize),
+    ) {
+        let mut data = Vec::from(GGUF_MAGIC);
+        data.extend_from_slice(&suffix);
+        prop_assert!(check_magic(&data), "check_magic must accept data starting with GGUF magic");
+    }
+
+    /// Any four-byte header that differs from the GGUF magic must be rejected
+    /// by `check_magic`.  The probability of a random 4-tuple equalling
+    /// [G,G,U,F] is ~2.3 × 10⁻¹⁰, so `prop_assume!` almost never discards.
+    #[test]
+    fn gguf_check_magic_rejects_wrong_bytes(
+        b0 in any::<u8>(),
+        b1 in any::<u8>(),
+        b2 in any::<u8>(),
+        b3 in any::<u8>(),
+    ) {
+        prop_assume!([b0, b1, b2, b3] != [b'G', b'G', b'U', b'F']);
+        let data = [b0, b1, b2, b3];
+        prop_assert!(!check_magic(&data), "check_magic must reject non-GGUF magic bytes");
+    }
+
+    /// `read_version` must return the version embedded in the header for both
+    /// supported GGUF versions (2 and 3).
+    #[test]
+    fn gguf_read_version_roundtrips_supported_versions(
+        version in prop_oneof![Just(2u32), Just(3u32)],
+        padding in proptest::collection::vec(any::<u8>(), 0..=16usize),
+    ) {
+        // Build a minimal valid-looking header: magic + version LE + padding
+        let mut data = Vec::from(b"GGUF");
+        data.extend_from_slice(&version.to_le_bytes());
+        data.extend_from_slice(&padding);
+        prop_assert_eq!(
+            read_version(&data),
+            Some(version),
+            "read_version must return Some({}) for a header with that version", version
+        );
+    }
+}
+
+// ── Model loading path safety ────────────────────────────────────────────────
+
+proptest! {
+    /// Constructing a `std::path::Path` from any valid UTF-8 string must never
+    /// panic or cause undefined behaviour.
+    #[test]
+    fn path_construction_from_valid_string_never_panics(
+        s in "[a-zA-Z0-9/_.-]{0,128}",
+    ) {
+        let path = std::path::Path::new(&s);
+        // These accessors must also not panic.
+        let _ = path.to_str();
+        let _ = path.extension();
+        let _ = path.file_name();
+        let _ = path.parent();
     }
 }
