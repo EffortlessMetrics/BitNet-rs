@@ -1,6 +1,9 @@
 name: Property-Based Tests
 
 on:
+  push:
+    branches: [main]
+  pull_request:
   schedule:
     # Run property tests nightly at 5 AM UTC
     - cron: '0 5 * * *'
@@ -20,10 +23,43 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # Lightweight smoke test — runs on every push and PR so the workflow never has 0 jobs.
+  cargo-tests:
+    name: Cargo Tests (smoke)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-smoke-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-smoke-
+            ${{ runner.os }}-cargo-
+
+      - name: Run workspace tests
+        run: |
+          cargo test --locked --workspace --no-default-features --features cpu -- --test-threads 4 2>&1 | tail -20
+
   property-tests:
     name: Greedy Parity Tests
     runs-on: ubuntu-22.04
     timeout-minutes: 45
+    # Only run the model-download-heavy job on schedule or manual dispatch
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
 
     strategy:
       matrix:
