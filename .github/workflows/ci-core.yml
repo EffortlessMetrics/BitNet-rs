@@ -2,7 +2,7 @@ name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh
-# Note: This workflow triggers on changes to crates/**, crossval/**, tests/**, xtask/**, Cargo.{toml,lock}, .github/workflows/**, .github/pull_request_template.md, .github/ISSUE_TEMPLATE/**, README.md, docs/**, SECURITY.md
+# Note: This workflow triggers on changes to crates/**, crossval/**, tests/**, xtask/**, fuzz/**, Cargo.{toml,lock}, .github/workflows/**, .github/pull_request_template.md, .github/ISSUE_TEMPLATE/**, README.md, docs/**, SECURITY.md
 # Workflow hardening: concurrency + timeouts applied across all workflows in #485
 
 on:
@@ -26,6 +26,7 @@ on:
       - 'CONTRIBUTING.md'
       - 'SECURITY.md'
       - '.github/settings.yml'
+      - 'fuzz/**'
   push:
     branches: [ main ]
     paths:
@@ -46,6 +47,7 @@ on:
       - 'CONTRIBUTING.md'
       - 'SECURITY.md'
       - '.github/settings.yml'
+      - 'fuzz/**'
   workflow_dispatch:
 
 concurrency:
