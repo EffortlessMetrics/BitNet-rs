@@ -293,6 +293,20 @@ pub fn probe_device() -> DeviceProbe {
 ///
 /// Note: NEON and SSE/AVX are mutually exclusive instruction sets; the rank is
 /// only meaningful when comparing levels on the same architecture.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_device_probe::{simd_level_rank, SimdLevel};
+///
+/// // Wider SIMD has a strictly higher rank.
+/// assert!(simd_level_rank(&SimdLevel::Avx512) > simd_level_rank(&SimdLevel::Avx2));
+/// assert!(simd_level_rank(&SimdLevel::Avx2)   > simd_level_rank(&SimdLevel::Sse42));
+/// assert!(simd_level_rank(&SimdLevel::Sse42)  > simd_level_rank(&SimdLevel::Scalar));
+///
+/// // Scalar is always the lowest rank.
+/// assert_eq!(simd_level_rank(&SimdLevel::Scalar), 0);
+/// ```
 pub const fn simd_level_rank(level: &SimdLevel) -> u32 {
     match level {
         SimdLevel::Scalar => 0,
