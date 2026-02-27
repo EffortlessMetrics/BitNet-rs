@@ -7,6 +7,7 @@
 //! - Receipt with test results
 //! - Mock receipt (compute_path = "mock")
 //! - Backend summary field in receipt
+//! - `to_json_string()` output for round-trip fidelity
 
 use bitnet_receipts::{InferenceReceipt, ModelInfo, PerformanceBaseline, TestResults};
 
@@ -120,6 +121,25 @@ fn snapshot_receipt_with_test_results() {
             .with_test_results(test_results),
     );
     insta::assert_json_snapshot!("receipt_with_test_results", receipt, {
+        ".timestamp" => "[timestamp]",
+    });
+}
+
+#[test]
+fn snapshot_to_json_string_output() {
+    // Verify that to_json_string() produces stable, pretty-printed JSON.
+    let receipt = normalize(
+        InferenceReceipt::generate(
+            "cpu",
+            vec!["i2s_gemv".to_string(), "rope_apply".to_string()],
+            Some("requested=cpu detected=[cpu] selected=cpu".to_string()),
+        )
+        .unwrap(),
+    );
+    let json = receipt.to_json_string().unwrap();
+    // Parse back to confirm round-trip fidelity, then snapshot the string.
+    let reparsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+    insta::assert_json_snapshot!("to_json_string_output", reparsed, {
         ".timestamp" => "[timestamp]",
     });
 }
