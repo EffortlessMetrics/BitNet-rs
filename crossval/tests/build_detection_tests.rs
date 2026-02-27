@@ -566,7 +566,6 @@ fn test_ac6_rpath_special_characters() {
 /// Note: This is a smoke test. Full integration test requires running build.rs
 /// in a controlled environment (see test_ac7_env_var_emission_integration).
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac7_env_var_emission_all_variables() {
     // This test requires running build.rs and checking emitted environment variables
     // Implementation: Mock build.rs execution and capture output
@@ -593,7 +592,6 @@ fn test_ac7_env_var_emission_all_variables() {
 ///
 /// Validates that CROSSVAL_BACKEND_STATE emits correct values for each state.
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac7_backend_state_env_var_values() {
     // Full BitNet scenario: CROSSVAL_BACKEND_STATE=full
     // Llama fallback scenario: CROSSVAL_BACKEND_STATE=llama
@@ -614,7 +612,6 @@ fn test_ac7_backend_state_env_var_values() {
 /// - Contains all library directories
 /// - Is only emitted when libraries found
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac7_rpath_env_var_format() {
     // Mock validation: would parse build output for "cargo:rustc-env=CROSSVAL_RPATH_BITNET=/path1:/path2"
     println!("cargo:warning=TODO: Verify CROSSVAL_RPATH_BITNET colon-separated format");
@@ -627,7 +624,6 @@ fn test_ac7_rpath_env_var_format() {
 /// - cfg(have_cpp) emitted when backend != Unavailable
 /// - cfg(have_bitnet_full) emitted only when backend == FullBitNet (NEW)
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac7_cfg_emission_logic() {
     // Full BitNet: emit both cfg(have_cpp) and cfg(have_bitnet_full)
     // Llama fallback: emit cfg(have_cpp) only
@@ -649,7 +645,6 @@ fn test_ac7_cfg_emission_logic() {
 /// - "Linked libraries: bitnet, llama, ggml"
 /// - "Headers found in: {path}"
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac8_diagnostics_full_bitnet() {
     // Mock validation: would parse build output for diagnostic warnings
     let expected_messages = vec![
@@ -675,7 +670,6 @@ fn test_ac8_diagnostics_full_bitnet() {
 ///
 /// Critical: This validates Gap 3 fix - clear messaging that BitNet is NOT available
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac8_diagnostics_llama_fallback() {
     // Mock validation: would parse build output for diagnostic warnings
     let expected_messages = vec![
@@ -699,7 +693,6 @@ fn test_ac8_diagnostics_llama_fallback() {
 /// - "Set BITNET_CPP_DIR to enable C++ backend integration"
 /// - "Or run: eval \"$(cargo run -p xtask -- setup-cpp-auto --emit=sh)\""
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac8_diagnostics_unavailable() {
     // Mock validation: would parse build output for diagnostic warnings
     let expected_messages = vec![
@@ -722,7 +715,6 @@ fn test_ac8_diagnostics_unavailable() {
 ///
 /// This is a negative test: ensure old misleading messages are replaced.
 #[test]
-#[ignore = "Integration test - requires build.rs execution"]
 fn test_ac8_diagnostics_no_false_bitnet_available() {
     // When only llama.cpp found (not BitNet), diagnostic should NOT contain:
     // - "✓ BITNET_AVAILABLE" (old misleading message)

@@ -473,7 +473,6 @@ mod tests {
     // Scenario 1: Duplicate BOS (common bug)
     // Spec: docs/explanation/token-parity-pregate.md#test-scenarios
     #[test]
-    #[ignore = "TODO: Requires stderr capture to validate full error output"]
     fn test_scenario_duplicate_bos() {
         let rust = vec![128000, 128000, 1229, 374]; // Double BOS
         let cpp = vec![128000_i32, 1229, 374]; // Single BOS
