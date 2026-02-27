@@ -5,21 +5,18 @@
 [![Rust 2024](https://img.shields.io/badge/edition-2024-orange.svg)](./rust-toolchain.toml)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](./LICENSE)
 
-Rust inference engine for [BitNet](https://github.com/microsoft/BitNet) 1-bit large language models, with SIMD/CUDA acceleration and cross-validation against the C++ reference.
+BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 
 ## Features
 
-- **CPU inference** — AVX2/AVX-512/NEON SIMD kernels; I2_S BitNet32-F16 format at 10–20× QK256 scalar speed
-- **GPU inference** — CUDA acceleration via the `gpu` feature (CUDA 12.x required)
-- **Quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
-- **Cross-validation** — per-token cosine similarity comparison against Microsoft's C++ reference (>0.99)
+- **SIMD/CUDA kernels** — AVX2/AVX-512/NEON on CPU; CUDA acceleration via the `gpu` feature (CUDA 12.x)
+- **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
+- **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
-- **Strict mode** — `BITNET_STRICT_MODE=1` rejects mock paths and suspicious LayerNorm weights (exit 8)
-- **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata
+- **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
-- **SRP microcrate architecture** — small, focused crates (`bitnet-logits`, `bitnet-sampling`, `bitnet-generation`, …) with zero breaking changes to existing public API
 
-> **Current state (v0.1.0-qna-mvp):** QK256 uses scalar kernels (~0.1 tok/s on 2B models). For validation use `--max-tokens 4–16`. AVX2 dequantization foundation is merged; full ≥3× uplift is planned for v0.2.
+> **v0.1.0-qna-mvp:** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned for v0.2.
 
 ## Quick Start
 
@@ -92,10 +89,9 @@ Organised by [Diátaxis](https://diataxis.fr/):
 
 Key guides: [Quickstart](docs/quickstart.md) · [Environment variables](docs/environment-variables.md) · [GPU setup](docs/GPU_SETUP.md) · [C++ cross-validation](docs/howto/cpp-setup.md) · [Quantization support](docs/reference/quantization-support.md) · [Validation gates](docs/reference/validation-gates.md) · [Honest-compute receipts](docs/howto/receipt-verification.md) · [QK256 usage](docs/howto/use-qk256-models.md)
 
-## Development
+## Building
 
 ```bash
-# Build
 cargo build --no-default-features --features cpu           # CPU (development)
 cargo build --no-default-features --features gpu           # GPU (requires CUDA 12.x)
 RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
@@ -103,15 +99,6 @@ RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
 
 # Nix (reproducible, identical to CI)
 nix develop && nix build .#bitnet-cli && nix flake check
-
-# Test
-cargo nextest run --workspace --no-default-features --features cpu   # recommended (5 min timeout)
-cargo nextest run --profile ci                                        # CI profile: 4 threads
-BITNET_SKIP_SLOW_TESTS=1 cargo nextest run \
-  --workspace --no-default-features --features cpu                    # skip slow QK256 scalar tests
-
-# Lint
-cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
 ```
 
 ### Feature flags
@@ -129,6 +116,32 @@ Always use the unified GPU predicate in Rust code:
 ```rust
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 ```
+
+## Testing
+
+```bash
+# Run all enabled tests (recommended — 5-minute timeout)
+cargo nextest run --workspace --no-default-features --features cpu
+
+# CI profile (4 threads, no retries)
+cargo nextest run --profile ci
+
+# Skip slow QK256 scalar-kernel tests
+BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --no-default-features --features cpu
+
+# BDD compile-coverage check
+cargo run -p xtask -- grid-check
+
+# Fixture-based integration tests
+cargo test -p bitnet-models --test qk256_dual_flavor_tests --no-default-features --features fixtures
+
+# Lint before pushing
+cargo fmt --all && cargo clippy --all-targets --no-default-features --features cpu -- -D warnings
+```
+
+The suite has 1000+ enabled tests spanning unit, property-based (proptest), snapshot (insta), fixture, fuzz (13 targets), and BDD grid categories. ~70 tests are intentionally `#[ignore]`-d (TDD scaffolding for issues #254, #260, #469 — not failures to fix).
+
+See [docs/development/test-suite.md](docs/development/test-suite.md) for full details.
 
 ## Contributing
 
