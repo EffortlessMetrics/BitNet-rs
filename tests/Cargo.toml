@@ -267,6 +267,10 @@ required-features = ["fixtures"]
 name = "static_initialization_tests"
 path = "static_initialization_tests.rs"
 
+[[test]]
+name = "multi_crate_tests"
+path = "integration/multi_crate_tests.rs"
+
 [[example]]
 name = "reporting_example"
 path = "examples/reporting_example.rs"
@@ -355,6 +359,14 @@ bitnet-kernels = { path = "../crates/bitnet-kernels" }
 bitnet-tokenizers = { path = "../crates/bitnet-tokenizers" }
 bitnet-compat = { path = "../crates/bitnet-compat" }
 bitnet-honest-compute = { path = "../crates/bitnet-honest-compute" }
+bitnet-sampling = { path = "../crates/bitnet-sampling" }
+bitnet-device-probe = { path = "../crates/bitnet-device-probe" }
+bitnet-logits = { path = "../crates/bitnet-logits" }
+bitnet-generation = { path = "../crates/bitnet-generation" }
+bitnet-engine-core = { path = "../crates/bitnet-engine-core" }
+bitnet-gguf = { path = "../crates/bitnet-gguf" }
+bitnet-prompt-templates = { path = "../crates/bitnet-prompt-templates" }
+bitnet-receipts = { path = "../crates/bitnet-receipts" }
 bitnet = { path = "../", default-features = false, features = ["cpu"] }
 bitnet-crossval = { path = "../crossval", package = "bitnet-crossval" }
 
