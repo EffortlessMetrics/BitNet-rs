@@ -4,6 +4,18 @@
 //! unintentional changes are caught at review time.
 
 use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
+use bitnet_common::BitNetConfig;
+
+// ---------------------------------------------------------------------------
+// BitNetConfig
+// ---------------------------------------------------------------------------
+
+#[test]
+fn bitnet_config_default_json_snapshot() {
+    // Pin the serialized default config so that any schema change is visible at review time.
+    let cfg = BitNetConfig::default();
+    insta::assert_json_snapshot!("bitnet_config_default", cfg);
+}
 
 // ---------------------------------------------------------------------------
 // SimdLevel
