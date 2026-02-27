@@ -5,6 +5,8 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `ci: add nightly fuzz run workflow` — scheduled fuzz job running at 2am UTC, 60s per target across all 10 fuzz targets, with crash artifact upload on failure (#844)
+- `test(bitnet-generation): add 6 new property tests for stopping invariants` — 6 new proptests covering stop-token, stop-sequence, max-tokens, and combined stopping criteria in `crates/bitnet-generation/tests/property_tests.rs` (#846)
 - `feat: add bitnet-logits property tests` — 4 new proptests for logits invariants in `crates/bitnet-logits/tests/logits_tests.rs` (#843)
 - `feat(wasm): add copy-to-clipboard button for generated text in browser example` — clipboard UX improvement in WASM browser example (#809)
 - `test: expand proptest coverage for compat, templates, and feature-flag crates` — 18 new proptests across bitnet-compat, bitnet-templates, and bitnet-runtime-feature-flags (#841)
