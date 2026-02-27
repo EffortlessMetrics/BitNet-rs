@@ -680,6 +680,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "bitnet-common",
+ "bitnet-device-probe",
  "bitnet-engine-core",
  "bitnet-generation",
  "bitnet-kernels",
