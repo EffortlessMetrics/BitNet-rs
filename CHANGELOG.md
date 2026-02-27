@@ -4,6 +4,12 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `test(bitnet-tokenizers,bitnet-validation): add comprehensive unit tests` — 45 tests for `bitnet-tokenizers` (TokenizerConfig defaults, BasicTokenizer construction, BOS/EOS/PAD semantics, family detection, builder profiles, property tests) and 37 tests for `bitnet-validation` (Ruleset defaults, projection RMS bounds, architecture detection, policy loading edge cases, property tests) (#934)
+
+### Documentation
+- `docs: update changelog for PRs #931-#932` — Updated CHANGELOG.md and roadmap with 1400+ tests milestone (#935)
+
 ## [0.2.0] - 2026-02-27
 
 ### Highlights
