@@ -46,7 +46,8 @@ pub fn run(cpu_only: bool, verbose: bool) -> Result<()> {
     let mut failed = 0usize;
     let mut skipped = 0usize;
     // Track which feature sets we've already checked to avoid redundant cargo invocations.
-    let mut checked_feature_sets: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut checked_feature_sets: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
 
     for cell in rows {
         let label = format!("{}/{}", cell.scenario, cell.environment);
