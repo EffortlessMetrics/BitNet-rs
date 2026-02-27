@@ -84,3 +84,5 @@ mod tests {
         // For now, just test that the module compiles
     }
 }
+
+// retrigger-ci-placeholder: remove if needed
