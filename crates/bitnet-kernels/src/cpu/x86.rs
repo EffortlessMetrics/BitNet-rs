@@ -332,11 +332,11 @@ impl Avx512Kernel {
         const BLOCK_SIZE: usize = 128;
         let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
-        if output.len() < input.len() / 4 {
+        if output.len() < input.len().div_ceil(4) {
             return Err(BitNetError::Kernel(KernelError::InvalidArguments {
                 reason: format!(
                     "Output buffer too small for TL2: expected {}, got {}",
-                    input.len() / 4,
+                    input.len().div_ceil(4),
                     output.len()
                 ),
             }));
@@ -661,11 +661,11 @@ impl Avx2Kernel {
         const BLOCK_SIZE: usize = 128;
         let num_blocks = input.len().div_ceil(BLOCK_SIZE);
 
-        if output.len() < input.len() / 4 {
+        if output.len() < input.len().div_ceil(4) {
             return Err(BitNetError::Kernel(KernelError::InvalidArguments {
                 reason: format!(
                     "Output buffer too small for TL2: expected {}, got {}",
-                    input.len() / 4,
+                    input.len().div_ceil(4),
                     output.len()
                 ),
             }));
@@ -682,6 +682,8 @@ impl Avx2Kernel {
         }
 
         // Lookup table for x86 TL2 (same as fallback)
+        output.fill(0);
+
         let lut = [-1.2f32, -0.4, 0.4, 1.2];
 
         for (block_idx, scale_slot) in scales.iter_mut().enumerate().take(num_blocks) {
