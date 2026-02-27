@@ -1,6 +1,6 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#850.
+> **Last updated**: reflects implementation state after PRs #608–#853.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
 
 ---

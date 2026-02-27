@@ -5,6 +5,8 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(receipts): add kernel ID hygiene property tests` — 7 property tests in `crates/bitnet-receipts/tests/receipt_validation_tests.rs` covering kernel ID hygiene invariants (#852)
+- `feat(fuzz): add gguf_header_roundtrip structured fuzz target` — new `fuzz/fuzz_targets/gguf_header_roundtrip.rs` structured round-trip fuzz target (#853)
 - `feat(xtask): add grid-check command` — new `cargo xtask grid-check` command providing a BDD compile-coverage gate with 18 cells and `cpu_only` mode; verifies grid contract at compile time (#850)
 - `test(bitnet-engine-core): add 6 property tests for clone, field, and seed invariants` — 6 new proptests covering clone/field/seed invariants in `crates/bitnet-engine-core/tests/property_tests.rs` (#849)
 - `test: audit and reduce ignored tests` — reduced ignored test count from 433 → 423 (−10) by enabling tests no longer blocked (#847)
