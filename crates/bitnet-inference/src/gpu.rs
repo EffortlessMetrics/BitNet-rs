@@ -8,8 +8,7 @@ use bitnet_common::{
 use bitnet_kernels::KernelProvider;
 use bitnet_models::Model;
 use candle_core::Device;
-use std::sync::{Arc, Mutex};
-use tokio::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 
 /// GPU backend for inference with CUDA acceleration
@@ -409,11 +408,13 @@ impl GpuInferenceEngine {
     fn forward_gpu(&self, input: &BitNetTensor, _step: usize) -> Result<BitNetTensor> {
         let compute_start = Instant::now();
 
-        // This is a simplified synchronous version
-        // In a full async implementation, we would use model.read().await
+        // Lock the model for reading
+        // Using unwrap is safe here as we don't expect poisoning in normal operation
+        let model = self.model.read().map_err(|_| BitNetError::Validation("Model lock poisoned".to_string()))?;
 
-        // For now, create a placeholder result
-        let result = BitNetTensor::zeros(&[1, 32000], candle_core::DType::F32, &self.backend.device)?;
+        // Perform forward pass
+        // Input tensor is already on the correct device thanks to generate_tokens_gpu
+        let result = model.forward(input)?;
 
         // Update compute time metrics
         {
