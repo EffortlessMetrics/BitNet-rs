@@ -127,6 +127,12 @@ async function loadModel() {
         document.getElementById('generate').disabled = false;
         document.getElementById('start-streaming').disabled = false;
 
+        // Reset copy button
+        const copyBtn = document.getElementById('copy-output');
+        copyBtn.disabled = true;
+        copyBtn.style.backgroundColor = '#6c757d';
+        copyBtn.style.cursor = 'not-allowed';
+
         updateStatus('Model loaded successfully!', 'success');
         Logger.info('Model loaded and inference engine initialized');
 
@@ -173,6 +179,12 @@ async function generateText() {
         const estimatedTokens = result.split(' ').length;
         const tokensPerSec = (estimatedTokens / (generationTime / 1000)).toFixed(1);
         document.getElementById('tokens-per-sec').textContent = tokensPerSec;
+
+        // Enable copy button
+        const copyBtn = document.getElementById('copy-output');
+        copyBtn.disabled = false;
+        copyBtn.style.backgroundColor = '#007bff';
+        copyBtn.style.cursor = 'pointer';
 
         updateStatus('Text generated successfully!', 'success');
         Logger.info(`Generated ${estimatedTokens} tokens in ${generationTime.toFixed(0)}ms`);
@@ -542,6 +554,35 @@ function clearOutput() {
     document.getElementById('output').textContent = 'Generated text will appear here...';
     document.getElementById('generation-time').textContent = '-';
     document.getElementById('tokens-per-sec').textContent = '-';
+
+    // Reset copy button
+    const copyBtn = document.getElementById('copy-output');
+    copyBtn.disabled = true;
+    copyBtn.style.backgroundColor = '#6c757d';
+    copyBtn.style.cursor = 'not-allowed';
+}
+
+async function copyToClipboard() {
+    const outputText = document.getElementById('output').textContent;
+    const copyBtn = document.getElementById('copy-output');
+
+    try {
+        await navigator.clipboard.writeText(outputText);
+
+        // Visual feedback
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        copyBtn.style.backgroundColor = '#28a745';
+
+        setTimeout(() => {
+            copyBtn.textContent = originalText;
+            copyBtn.style.backgroundColor = '#007bff';
+        }, 2000);
+
+    } catch (err) {
+        Logger.error('Failed to copy: ' + err);
+        updateStatus('Failed to copy to clipboard', 'error');
+    }
 }
 
 // Event listeners for range inputs
@@ -598,6 +639,7 @@ window.startStreaming = startStreaming;
 window.stopStreaming = stopStreaming;
 window.clearStreaming = clearStreaming;
 window.clearOutput = clearOutput;
+window.copyToClipboard = copyToClipboard;
 window.initWorker = initWorker;
 window.workerGenerate = workerGenerate;
 window.terminateWorker = terminateWorker;
