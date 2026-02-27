@@ -5,6 +5,13 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `test(bitnet-server): add 43 server security and middleware tests` — 7 CORS, 5 security header, 9 request validation, 4 model path, 3 config/auth, 4 IP extraction, 8 property tests, 1 health endpoint tests; uses `tower::ServiceExt::oneshot` (no real server needed) (#907)
+- `test(bitnet-tokenizers): add 45 comprehensive property-based tests` — 40 proptest + 5 integration tests covering encode/decode round-trips, vocab consistency, special tokens bounds, Unicode safety, config JSON round-trip, auto-discovery, batch encoding (#906)
+- `feat(xtask): add grid-check command for BDD grid compile verification` — `xtask grid-check [--dry-run]` checks all supported feature cells compile; 18 cells including cpu, cpu+full-cli, cpu+crossval, cpu+gpu (#905)
+- `test: add E2E golden path test with synthetic GGUF fixture` — 5 deterministic tests using in-memory `GgufWriter` fixture (< 2 KB, no model download); tests header parsing, metadata round-trip, full load result, receipt invariants (#904)
+- `feat(fuzz): add sampling, receipt, and prompt-template fuzz targets` — 3 new fuzz targets: `sampling_no_panic`, `receipt_json_roundtrip`, `prompt_template_no_panic` (#903)
+- `test(bitnet-logits): add 24 comprehensive property-based tests` — softmax, log-softmax, repetition penalty, temperature, top-k, top-p, numerical stability tests (#902)
+- `test: remove #[ignore] from 10 self-skipping tests` — 10 tests with env-var guards converted from `#[ignore]` to active tests (#901)
 - `test(bitnet-engine-core): add 20 tests for state transitions, config validation, and session IDs` — 20 new tests covering `EngineState` transitions, `EngineConfig` validation invariants, and session ID uniqueness/format in `crates/bitnet-engine-core/tests/`; raises engine-core test coverage (#899)
 - `test(bitnet-prompt-templates): add 9 property-based tests` — 9 new proptests covering template rendering determinism, format invariants, and stop-sequence emission in `crates/bitnet-templates/tests/prompt_template_proptests.rs` (#898)
 - `test(bitnet-generation): add 10 property tests for Unicode safety and long context` — 10 new property tests validating UTF-8 safety of generated output and correct behaviour under long-context (>2 048 token) inputs in `crates/bitnet-generation/tests/unicode_and_long_context_proptests.rs` (#897)
