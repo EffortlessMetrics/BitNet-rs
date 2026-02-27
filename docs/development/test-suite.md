@@ -39,6 +39,10 @@ cargo test --workspace --no-default-features --features gpu
 # Skip slow tests (QK256 scalar kernels)
 BITNET_SKIP_SLOW_TESTS=1 cargo test --workspace --no-default-features --features cpu
 
+# BDD compile-coverage check (feature-matrix grid)
+cargo run -p xtask -- grid-check
+cargo run -p xtask -- grid-check --dry-run   # show what would be checked
+
 # Run including ignored tests (will encounter blocked tests)
 cargo test --workspace --no-default-features --features cpu -- --ignored --include-ignored
 ```
@@ -311,10 +315,11 @@ BitNet-rs test suite is organized into distinct categories, each addressing spec
 | **Performance Tests** | 95+ | ✅ Passing | Benchmarking, memory tracking |
 | **Integration Tests** | 110+ | 🟡 Partial | End-to-end workflows (some blocked by issues) |
 | **Slow/Ignored Tests** | 70+ | ⏸️ Skipped | QK256 scalar kernels, architecture blockers |
+| **BDD Grid Tests** | 50+ | ✅ Passing | Feature-matrix compile coverage (bitnet-bdd-grid) |
+| **Trace Tests** | 20+ | ✅ Passing | Tensor activation tracing and cross-validation (bitnet-trace) |
 
-**Total Enabled**: 3,520 tests
-**Total Skipped**: 462 tests (intentional)
-**Pass Rate**: 100%
+**Total Enabled**: 1000+ tests
+**Total Skipped**: 70+ tests (intentional `#[ignore]` scaffolding)
 
 ### Quantization Tests
 

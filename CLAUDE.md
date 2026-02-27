@@ -149,6 +149,10 @@ cargo run -p xtask -- setup-cpp-auto --emit=pwsh | Invoke-Expression  # PowerShe
 
 # Trace comparison (debug cross-validation divergence)
 cargo run -p xtask -- trace-diff /tmp/rs_traces /tmp/cpp_traces
+
+# BDD grid compile coverage check
+cargo run -p xtask -- grid-check
+cargo run -p xtask -- grid-check --dry-run  # show what would be checked
 ```
 
 ## Core Architecture
