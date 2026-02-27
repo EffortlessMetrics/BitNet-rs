@@ -3,7 +3,7 @@
 //! CPU and GPU backend implementations for BitNet inference with
 //! automatic backend selection and fallback support.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use bitnet_common::{ConcreteTensor, Device, Tensor};
 use bitnet_models::Model;
