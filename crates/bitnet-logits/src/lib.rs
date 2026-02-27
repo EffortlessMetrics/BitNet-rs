@@ -137,7 +137,10 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
     if top_p >= 1.0 || probs.is_empty() {
         return;
     }
-    let mut indexed: Vec<(usize, f32)> = probs.iter().copied().enumerate().collect();
+    // Optimization: Filter out zero probabilities (e.g. from prior top-k)
+    // to avoid sorting the entire vocabulary.
+    let mut indexed: Vec<(usize, f32)> =
+        probs.iter().copied().enumerate().filter(|&(_, p)| p > 0.0).collect();
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
 
     let mut cumsum = 0.0f32;
