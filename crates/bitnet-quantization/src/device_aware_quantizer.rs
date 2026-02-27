@@ -15,10 +15,10 @@
 use bitnet_common::{Device, QuantizationError, Result};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 use bitnet_kernels::{CudaKernel, KernelProvider};
-#[cfg(any(feature = "gpu", feature = "cuda"))]
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
+use std::sync::Arc;
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
@@ -499,8 +499,7 @@ pub struct GPUQuantizer {
 impl std::fmt::Debug for GPUQuantizer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut d = f.debug_struct("GPUQuantizer");
-        d.field("tolerance_config", &self.tolerance_config)
-            .field("device_id", &self.device_id);
+        d.field("tolerance_config", &self.tolerance_config).field("device_id", &self.device_id);
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         if self.kernel.is_some() {
             let _ = d.field("kernel", &"Some(CudaKernel)");
@@ -518,7 +517,10 @@ impl GPUQuantizer {
             let kernel = match CudaKernel::new_with_device(device_id) {
                 Ok(k) => Some(Arc::new(k)),
                 Err(e) => {
-                    warn!("Failed to initialize CUDA kernel for device {}: {:?}, GPU quantization will fallback to CPU", device_id, e);
+                    warn!(
+                        "Failed to initialize CUDA kernel for device {}: {:?}, GPU quantization will fallback to CPU",
+                        device_id, e
+                    );
                     None
                 }
             };
@@ -543,7 +545,12 @@ impl GPUQuantizer {
             let mut output = vec![0u8; len.div_ceil(4)]; // 2 bits per element = 4 elements per byte
             let mut scales = vec![0.0f32; num_blocks];
 
-            match kernel.quantize(data, &mut output, &mut scales, bitnet_common::QuantizationType::I2S) {
+            match kernel.quantize(
+                data,
+                &mut output,
+                &mut scales,
+                bitnet_common::QuantizationType::I2S,
+            ) {
                 Ok(_) => {
                     return Ok(QuantizedTensor::new(
                         output,
