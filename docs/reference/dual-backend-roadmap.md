@@ -2,7 +2,7 @@
 
 > **Last updated**: reflects implementation state after PRs #608–#922.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
-> **Recent wave (PRs #908–#922)**: 1000+ tests milestone reached; Phase 6 SRP microcrate extractions
+> **Recent wave (PRs #908–#925)**: 1100+ tests milestone reached; Phase 6 SRP microcrate extractions; ignored-test reduction wave 3
 > complete (bitnet-device-probe, bitnet-logits, bitnet-generation, bitnet-sampling, bitnet-transformer,
 > bitnet-engine-core, bitnet-gguf); wave 3 fuzz targets added; comprehensive tests for
 > bitnet-validation, bitnet-kernel-registry, bitnet-trace, bitnet-bdd-grid, bitnet-testing-policy,
@@ -172,14 +172,17 @@
 | 20+ comprehensive tests for `bitnet-trace`: TraceSink and TraceComparison APIs, JSON round-trips, hash invariants, decode-step tracing | `crates/bitnet-trace/tests/` | #916 |
 | 36 tests for `bitnet-bdd-grid` (grid rows/columns, cell lookup, scenario validation) and 28 tests for `bitnet-testing-policy` (PolicyDiagnostics, GridCompatibility invariants) | `crates/bitnet-bdd-grid/tests/`, `crates/bitnet-testing-policy/tests/` | #917 |
 | Wave 3 fuzz targets: `gguf_writer_roundtrip`, `tokenizer_encode_no_panic`, `validation_no_panic` | `fuzz/fuzz_targets/` | #919 |
+| 43 tests for `bitnet-inference` (SamplingConfig, SamplingStrategy, GenerationConfig, InferenceReceipt, ModelInfo, ProductionInferenceEngine, streaming, error handling) and 43 tests for `bitnet-models` (ModelMetadata, QuantizationType, BitNetConfig, LoadConfig, ProductionModelLoader, tensor operations) | `crates/bitnet-inference/tests/`, `crates/bitnet-models/tests/` | #924 |
+| **Ignored-test reduction wave 3**: justification strings added to all remaining `#[ignore]` markers; env-var guards for environment-sensitive tests | workspace-wide | #925 |
 | **1000+ tests milestone** ✅: comprehensive README rewrite, updated `docs/development/test-suite.md` with current counts and xtask grid-check docs | `README.md`, `docs/development/test-suite.md` | #920 |
 | 29 tests for `bitnet-transformer` (RoPE invariants, KVCache shape/seq-len properties) and 37 tests for `bitnet-honest-compute` (ComputeMode gating, receipt validation, honest-compute enforcement) | `crates/bitnet-transformer/tests/`, `crates/bitnet-honest-compute/tests/` | #921 |
 | 26 extended tests for `bitnet-st2gguf` (conversion pipeline, quantization type handling, error variants) and 20 tests for `bitnet-server` (batch engine config, CORS, security middleware) | `crates/bitnet-st2gguf/tests/`, `crates/bitnet-server/tests/` | #922 |
 
-### ✅ Phase 7: Test Coverage (DONE — 1000+ tests)
+### ✅ Phase 7: Test Coverage (DONE — 1100+ tests)
 
 All Phase 7 test coverage targets have been met:
-- **1000+ total tests** across workspace (snapshot, property, integration, fuzz, E2E)
+- **1100+ total tests** across workspace (snapshot, property, integration, fuzz, E2E)
+- **Ignored-test reduction**: wave 3 (#925) added justification strings to all remaining `#[ignore]` markers and env-var guards for environment-sensitive tests
 - **Phase 6 SRP microcrates**: bitnet-device-probe, bitnet-logits, bitnet-generation,
   bitnet-sampling, bitnet-transformer, bitnet-engine-core, bitnet-gguf — all ✅ DONE
 - **Fuzz coverage**: 18+ fuzz targets across GGUF, tokenizer, quantization, generation,
