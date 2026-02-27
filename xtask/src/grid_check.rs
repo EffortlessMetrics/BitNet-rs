@@ -45,6 +45,9 @@ pub fn run(cpu_only: bool, verbose: bool) -> Result<()> {
     let mut results: Vec<CellResult> = Vec::new();
     let mut failed = 0usize;
     let mut skipped = 0usize;
+    // Track which feature sets we've already checked to avoid redundant cargo invocations.
+    let mut checked_feature_sets: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
 
     for cell in rows {
         let label = format!("{}/{}", cell.scenario, cell.environment);
@@ -77,6 +80,19 @@ pub fn run(cpu_only: bool, verbose: bool) -> Result<()> {
         }
 
         let features_str = cargo_features.join(",");
+
+        // Skip if we already ran cargo check for this exact feature set.
+        if checked_feature_sets.contains(&features_str) {
+            results.push(CellResult {
+                label,
+                features: cargo_features,
+                status: "PASS (cached)",
+                success: true,
+            });
+            continue;
+        }
+        checked_feature_sets.insert(features_str.clone());
+
         let output = Command::new("cargo")
             .args([
                 "check",
