@@ -16,7 +16,7 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
 
-> **v0.1.0-qna-mvp:** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned for v0.2.
+> **v0.2.0:** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned for v0.2.
 
 ## Quick Start
 
