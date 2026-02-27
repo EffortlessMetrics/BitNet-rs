@@ -33,12 +33,11 @@ use std::{
 };
 use walkdir::WalkDir;
 
-use bitnet_bdd_grid::curated;
-
 mod cpp_setup_auto;
 mod crossval;
 pub mod ffi;
 mod gates;
+mod grid_check;
 mod tokenizers;
 mod trace_diff;
 
@@ -1331,7 +1330,7 @@ fn real_main() -> Result<()> {
         }
         Cmd::FetchModels { lock } => fetch_models_cmd(&lock),
         Cmd::AnalyzeLibrary { path } => analyze_library(&path),
-        Cmd::GridCheck { cpu_only, verbose } => grid_check(cpu_only, verbose),
+        Cmd::GridCheck { cpu_only, verbose } => grid_check::run(cpu_only, verbose),
     }
 }
 
@@ -5732,122 +5731,6 @@ fn analyze_library(path: &Path) -> Result<()> {
         if backends.is_empty() { "none".to_string() } else { backends.join(", ") }
     );
 
-    Ok(())
-}
-
-fn bdd_feature_to_cargo(name: &str) -> Option<&'static str> {
-    match name {
-        "inference" => Some("cpu"),
-        "kernels" => Some("cpu"),
-        "tokenizers" => Some("cpu"),
-        "gpu" => Some("gpu"),
-        "cuda" => Some("cuda"),
-        "crossval" => Some("crossval"),
-        "server" => Some("full-cli"),
-        "fixtures" => Some("fixtures"),
-        "reporting" => Some("reporting"),
-        _ => None,
-    }
-}
-
-fn grid_check(cpu_only: bool, verbose: bool) -> Result<()> {
-    let grid = curated();
-    let rows = grid.rows();
-
-    struct CellResult {
-        label: String,
-        features: Vec<String>,
-        status: &'static str,
-        success: bool,
-    }
-
-    let mut results: Vec<CellResult> = Vec::new();
-    let mut failed = 0usize;
-    let mut skipped = 0usize;
-
-    for cell in rows {
-        let label = format!("{}/{}", cell.scenario, cell.environment);
-
-        // Map required BDD features → cargo features
-        let mut cargo_features: Vec<String> = cell
-            .required_features
-            .iter()
-            .filter_map(|f| bdd_feature_to_cargo(&f.to_string()))
-            .map(str::to_owned)
-            .collect();
-        // Sort then deduplicate (order in feature sets is not meaningful).
-        cargo_features.sort();
-        cargo_features.dedup();
-
-        let has_gpu = cargo_features.iter().any(|f| f == "gpu" || f == "cuda");
-        if cpu_only && has_gpu {
-            results.push(CellResult {
-                label,
-                features: cargo_features,
-                status: "SKIP (GPU)",
-                success: true,
-            });
-            skipped += 1;
-            continue;
-        }
-
-        // If no features mapped, default to cpu
-        if cargo_features.is_empty() {
-            cargo_features.push("cpu".to_owned());
-        }
-
-        let features_str = cargo_features.join(",");
-        let mut cmd = Command::new("cargo");
-        cmd.args(["check", "--locked", "--no-default-features", "--features", &features_str]);
-
-        let output = cmd.output().with_context(|| "Failed to run cargo check")?;
-        let success = output.status.success();
-
-        if !success {
-            failed += 1;
-            if verbose {
-                eprintln!(
-                    "FAIL [{}] features=[{}]:\n{}",
-                    label,
-                    features_str,
-                    String::from_utf8_lossy(&output.stderr)
-                );
-            }
-        }
-
-        results.push(CellResult {
-            label,
-            features: cargo_features,
-            status: if success { "PASS" } else { "FAIL" },
-            success,
-        });
-    }
-
-    let passed = results.iter().filter(|r| r.success && r.status != "SKIP (GPU)").count();
-
-    println!("BDD Grid Check Results:");
-    println!("{}", "─".repeat(58));
-    for r in &results {
-        let features_display = format!("[{}]", r.features.join(","));
-        println!(
-            "{:<24} {:<22} {}",
-            r.label,
-            features_display,
-            if r.status == "PASS" {
-                format!("✓ {}", r.status)
-            } else if r.status.starts_with("SKIP") {
-                format!("- {}", r.status)
-            } else {
-                format!("✗ {}", r.status)
-            }
-        );
-    }
-    println!("{}", "─".repeat(58));
-    println!("Grid check: {passed} passed, {failed} failed, {skipped} skipped");
-
-    if failed > 0 {
-        bail!("{failed} grid cell(s) failed cargo check");
-    }
     Ok(())
 }
 
