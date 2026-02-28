@@ -389,10 +389,7 @@ mod cli_config_validation {
     /// Invalid device string fails validate().
     #[test]
     fn test_cli_config_invalid_device_fails() {
-        let cfg = CliConfig {
-            default_device: "invalid-device".to_string(),
-            ..Default::default()
-        };
+        let cfg = CliConfig { default_device: "invalid-device".to_string(), ..Default::default() };
         assert!(cfg.validate().is_err(), "invalid device must fail validate()");
     }
 
@@ -424,10 +421,7 @@ mod cli_config_validation {
     #[test]
     fn test_cli_config_all_valid_devices() {
         for device in &["cpu", "cuda", "gpu", "vulkan", "opencl", "ocl", "auto"] {
-            let cfg = CliConfig {
-                default_device: device.to_string(),
-                ..Default::default()
-            };
+            let cfg = CliConfig { default_device: device.to_string(), ..Default::default() };
             assert!(cfg.validate().is_ok(), "device={device} must be valid");
         }
     }

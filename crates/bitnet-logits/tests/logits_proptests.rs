@@ -84,7 +84,7 @@ proptest! {
     ) {
         let mut logits = vec![val; n];
         softmax_in_place(&mut logits);
-        let expected = 1.0 / n as f32;
+        let expected = 1.0 / n as f64 as f32;
         for &p in &logits {
             prop_assert!(
                 (p - expected).abs() < 1e-4,

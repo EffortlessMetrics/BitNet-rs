@@ -15,7 +15,7 @@
 //! - Property tests: BOS/EOS opt-in, token_to_piece consistency
 
 use bitnet_tokenizers::{
-    BasicTokenizer, MockTokenizer, Tokenizer, TokenizerBuilder, TokenizerConfig, TokenizerFileKind,
+    BasicTokenizer, MockTokenizer, Tokenizer, TokenizerBuilder, TokenizerConfig,
     from_path,
 };
 use proptest::prelude::*;

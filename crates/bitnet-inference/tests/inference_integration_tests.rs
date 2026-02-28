@@ -308,30 +308,21 @@ mod inference_integration {
 
     #[test]
     fn inference_config_rejects_zero_context_length() {
-        let cfg = InferenceConfig {
-            max_context_length: 0,
-            ..Default::default()
-        };
+        let cfg = InferenceConfig { max_context_length: 0, ..Default::default() };
         let err = cfg.validate().unwrap_err();
         assert!(err.contains("max_context_length"), "error must name the offending field");
     }
 
     #[test]
     fn inference_config_rejects_zero_threads() {
-        let cfg = InferenceConfig {
-            num_threads: 0,
-            ..Default::default()
-        };
+        let cfg = InferenceConfig { num_threads: 0, ..Default::default() };
         let err = cfg.validate().unwrap_err();
         assert!(err.contains("num_threads"));
     }
 
     #[test]
     fn inference_config_rejects_zero_batch_size() {
-        let cfg = InferenceConfig {
-            batch_size: 0,
-            ..Default::default()
-        };
+        let cfg = InferenceConfig { batch_size: 0, ..Default::default() };
         let err = cfg.validate().unwrap_err();
         assert!(err.contains("batch_size"));
     }

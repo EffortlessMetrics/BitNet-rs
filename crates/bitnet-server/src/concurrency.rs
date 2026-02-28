@@ -545,10 +545,7 @@ mod tests {
     #[tokio::test]
     async fn test_rate_limiter_cleanup() {
         // Create configuration with per-IP rate limiting enabled
-        let config = ConcurrencyConfig {
-            per_ip_rate_limit: Some(10),
-            ..Default::default()
-        };
+        let config = ConcurrencyConfig { per_ip_rate_limit: Some(10), ..Default::default() };
 
         let manager = ConcurrencyManager::new(config);
 

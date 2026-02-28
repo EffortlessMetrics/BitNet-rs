@@ -12,7 +12,6 @@
 
 #![cfg(feature = "cpu")]
 
-
 use bitnet_quantization::utils::{
     calculate_scale, dequantize_value, pack_2bit_values, quantize_value, unpack_2bit_values,
 };
