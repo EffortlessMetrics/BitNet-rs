@@ -80,6 +80,12 @@ pub struct ModelCompatibilityMatrix {
     pub nemotron_32k: TokenizerDownloadInfo,
     /// Saiga with 32K vocabulary - SentencePiece tokenizer
     pub saiga_32k: TokenizerDownloadInfo,
+    /// Llama-2 Chat with 32K vocabulary - SentencePiece tokenizer
+    pub llama2_chat_32k: TokenizerDownloadInfo,
+    /// Gemma 2 with 256K vocabulary - SentencePiece tokenizer
+    pub gemma2_256k: TokenizerDownloadInfo,
+    /// Phi-3 with 32K vocabulary - BPE tokenizer
+    pub phi3_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -276,6 +282,24 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "saiga-32k".to_string(),
                 expected_vocab: Some(32000),
+            },
+            llama2_chat_32k: TokenizerDownloadInfo {
+                repo: "meta-llama/Llama-2-7b-chat-hf".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "llama2-chat-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            gemma2_256k: TokenizerDownloadInfo {
+                repo: "google/gemma-2-9b-it".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "gemma2-256k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            phi3_32k: TokenizerDownloadInfo {
+                repo: "microsoft/Phi-3-mini-4k-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "phi3-32k".to_string(),
+                expected_vocab: Some(32064),
             },
         }
     }

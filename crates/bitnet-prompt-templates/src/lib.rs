@@ -106,6 +106,12 @@ pub enum TemplateType {
     NemotronChat,
     /// Russian Saiga/YandexGPT ChatML variant with Cyrillic system prompt
     SaigaChat,
+    /// Meta Llama-2 chat format with [INST]<<SYS>>/<</SYS>> markers
+    Llama2Chat,
+    /// Google Gemma 2 chat format (same turn tokens as Gemma, version-specific detection)
+    Gemma2Chat,
+    /// Microsoft Phi-3 instruct format with <|system|>/<|user|>/<|assistant|>/<|end|> markers
+    Phi3Instruct,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -147,6 +153,9 @@ impl std::str::FromStr for TemplateType {
             "granite-chat" | "granite" => Ok(Self::GraniteChat),
             "nemotron-chat" | "nemotron" => Ok(Self::NemotronChat),
             "saiga-chat" | "saiga" => Ok(Self::SaigaChat),
+            "llama2-chat" | "llama-2-chat" | "llama2" => Ok(Self::Llama2Chat),
+            "gemma2-chat" | "gemma-2-chat" | "gemma2" => Ok(Self::Gemma2Chat),
+            "phi3-instruct" | "phi-3-instruct" | "phi3" => Ok(Self::Phi3Instruct),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -157,7 +166,7 @@ impl std::str::FromStr for TemplateType {
                  zephyr-chat, vicuna-chat, orca-chat, solar-instruct, \
                  alpaca-instruct, command-r-plus, nous-hermes, \
                  wizard-lm, openchat, granite-chat, nemotron-chat, \
-                 saiga-chat",
+                 saiga-chat, llama2-chat, gemma2-chat, phi3-instruct",
                 s
             ),
         }
@@ -199,6 +208,9 @@ impl std::fmt::Display for TemplateType {
             Self::GraniteChat => write!(f, "granite-chat"),
             Self::NemotronChat => write!(f, "nemotron-chat"),
             Self::SaigaChat => write!(f, "saiga-chat"),
+            Self::Llama2Chat => write!(f, "llama2-chat"),
+            Self::Gemma2Chat => write!(f, "gemma2-chat"),
+            Self::Phi3Instruct => write!(f, "phi3-instruct"),
         }
     }
 }
@@ -258,6 +270,18 @@ impl TemplateType {
                 );
                 return Self::NemotronChat;
             }
+            // Phi-3 signature (must be before ChatML check; uses <|system|>/<|end|>/<|user|>)
+            if jinja.contains("<|system|>")
+                && jinja.contains("<|end|>")
+                && jinja.contains("<|user|>")
+            {
+                tracing::debug!(
+                    template = "Phi3Instruct",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::Phi3Instruct;
+            }
             // ChatML / Phi-4 signature
             if jinja.contains("<|im_start|>") && jinja.contains("<|im_end|>") {
                 tracing::debug!(
@@ -276,7 +300,19 @@ impl TemplateType {
                 );
                 return Self::GemmaChat;
             }
-            // Mistral [INST] signature
+            // [INST] with <<SYS>>/<</SYS>> → Llama2Chat (CodeLlama handled by tokenizer name)
+            if jinja.contains("[INST]")
+                && jinja.contains("<<SYS>>")
+                && jinja.contains("<</SYS>>")
+            {
+                tracing::debug!(
+                    template = "Llama2Chat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::Llama2Chat;
+            }
+            // Mistral [INST] signature (no <<SYS>>)
             if jinja.contains("[INST]") && jinja.contains("[/INST]") {
                 tracing::debug!(
                     template = "MistralChat",
@@ -409,6 +445,15 @@ impl TemplateType {
                 );
                 return Self::Llama3Chat;
             }
+            if lower.contains("llama2") || lower.contains("llama-2") {
+                tracing::debug!(
+                    template = "Llama2Chat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::Llama2Chat;
+            }
             if lower.contains("qwen") {
                 tracing::debug!(
                     template = "QwenChat",
@@ -418,6 +463,15 @@ impl TemplateType {
                 );
                 return Self::QwenChat;
             }
+            if lower.contains("phi3") || lower.contains("phi-3") {
+                tracing::debug!(
+                    template = "Phi3Instruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::Phi3Instruct;
+            }
             if lower.contains("phi") {
                 tracing::debug!(
                     template = "Phi4Chat",
@@ -426,6 +480,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Phi4Chat;
+            }
+            if lower.contains("gemma2") || lower.contains("gemma-2-") {
+                tracing::debug!(
+                    template = "Gemma2Chat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::Gemma2Chat;
             }
             if lower.contains("gemma") {
                 tracing::debug!(
@@ -712,6 +775,9 @@ impl TemplateType {
             Self::GraniteChat => Self::apply_granite_chat(user_text, system_prompt),
             Self::NemotronChat => Self::apply_nemotron_chat(user_text, system_prompt),
             Self::SaigaChat => Self::apply_saiga_chat(user_text, system_prompt),
+            Self::Llama2Chat => Self::apply_llama2_chat(user_text, system_prompt),
+            Self::Gemma2Chat => Self::apply_gemma2_chat(user_text, system_prompt),
+            Self::Phi3Instruct => Self::apply_phi3_instruct(user_text, system_prompt),
         }
     }
 
@@ -1323,6 +1389,39 @@ impl TemplateType {
         result
     }
 
+    /// Apply Meta Llama-2 chat format with [INST]<<SYS>>/<</SYS>> markers
+    fn apply_llama2_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::from("[INST] ");
+        let system = system_prompt
+            .unwrap_or("You are a helpful, respectful and honest assistant.");
+        result.push_str("<<SYS>>\n");
+        result.push_str(system);
+        result.push_str("\n<</SYS>>\n\n");
+        result.push_str(user_text);
+        result.push_str(" [/INST] ");
+        result
+    }
+
+    /// Apply Google Gemma 2 chat format (same format as Gemma)
+    fn apply_gemma2_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        // Gemma 2 uses the same format as Gemma
+        Self::apply_gemma_chat(user_text, system_prompt)
+    }
+
+    /// Apply Microsoft Phi-3 instruct format
+    fn apply_phi3_instruct(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        let system = system_prompt.unwrap_or("You are a helpful AI assistant.");
+        result.push_str("<|system|>\n");
+        result.push_str(system);
+        result.push_str("<|end|>\n");
+        result.push_str("<|user|>\n");
+        result.push_str(user_text);
+        result.push_str("<|end|>\n");
+        result.push_str("<|assistant|>\n");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1413,6 +1512,15 @@ impl TemplateType {
             Self::SaigaChat => {
                 vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
             }
+            Self::Llama2Chat => {
+                vec!["</s>".to_string()]
+            }
+            Self::Gemma2Chat => {
+                vec!["<end_of_turn>".to_string(), "<start_of_turn>".to_string()]
+            }
+            Self::Phi3Instruct => {
+                vec!["<|end|>".to_string(), "<|endoftext|>".to_string()]
+            }
         }
     }
 
@@ -1485,6 +1593,9 @@ impl TemplateType {
             Self::GraniteChat => false,   // Uses start_of_role tokens
             Self::NemotronChat => false,  // Uses extra_id tokens
             Self::SaigaChat => false,     // ChatML uses im_start/im_end tokens
+            Self::Llama2Chat => true,     // Llama-2 benefits from BOS
+            Self::Gemma2Chat => true,     // Like Gemma, benefits from BOS
+            Self::Phi3Instruct => false,  // Uses <|system|>/<|user|> tokens
         }
     }
 
@@ -1516,6 +1627,8 @@ impl TemplateType {
                 | Self::GraniteChat
                 | Self::NemotronChat
                 | Self::SaigaChat
+                | Self::Gemma2Chat
+                | Self::Phi3Instruct
         )
     }
 
@@ -2108,6 +2221,82 @@ impl TemplateType {
                     writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
                 }
                 writeln!(out, "<|im_start|>assistant")?;
+            }
+            TemplateType::Llama2Chat => {
+                // Llama-2 [INST]<<SYS>>/<</SYS>> format
+                let sys = system
+                    .unwrap_or("You are a helpful, respectful and honest assistant.");
+                let mut first_user = true;
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            if first_user {
+                                write!(
+                                    out,
+                                    "[INST] <<SYS>>\n{}\n<</SYS>>\n\n{} [/INST] ",
+                                    sys, turn.text
+                                )?;
+                                first_user = false;
+                            } else {
+                                write!(out, "<s>[INST] {} [/INST] ", turn.text)?;
+                            }
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "{} </s>", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                if first_user {
+                    write!(
+                        out,
+                        "[INST] <<SYS>>\n{}\n<</SYS>>\n\n [/INST] ",
+                        sys
+                    )?;
+                }
+            }
+            TemplateType::Gemma2Chat => {
+                // Gemma 2 format (identical to GemmaChat)
+                let mut system_prepended = false;
+
+                for turn in history {
+                    let role = match turn.role {
+                        ChatRole::User => "user",
+                        ChatRole::Assistant => "model",
+                        ChatRole::System => continue,
+                    };
+                    writeln!(out, "<start_of_turn>{}", role)?;
+                    if role == "user" && !system_prepended {
+                        if let Some(sys) = system {
+                            writeln!(out, "{}\n", sys)?;
+                        }
+                        system_prepended = true;
+                    }
+                    writeln!(out, "{}<end_of_turn>", turn.text)?;
+                }
+
+                if !system_prepended && let Some(sys) = system {
+                    writeln!(out, "<start_of_turn>user\n{}<end_of_turn>", sys)?;
+                }
+
+                writeln!(out, "<start_of_turn>model")?;
+            }
+            TemplateType::Phi3Instruct => {
+                // Phi-3 <|system|>/<|user|>/<|assistant|>/<|end|> format
+                let sys = system.unwrap_or("You are a helpful AI assistant.");
+                write!(out, "<|system|>\n{}<|end|>\n", sys)?;
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "<|user|>\n{}<|end|>\n", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "<|assistant|>\n{}<|end|>\n", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                writeln!(out, "<|assistant|>")?;
             }
         }
 
@@ -3523,7 +3712,7 @@ mod detect_logging_tests {
     fn test_detect_mixed_case_tokenizer_names() {
         assert_eq!(TemplateType::detect(Some("QWEN2-72B-CHAT"), None), TemplateType::QwenChat);
         assert_eq!(TemplateType::detect(Some("Phi-4-Mini"), None), TemplateType::Phi4Chat);
-        assert_eq!(TemplateType::detect(Some("GEMMA-2-9B"), None), TemplateType::GemmaChat);
+        assert_eq!(TemplateType::detect(Some("GEMMA-2-9B"), None), TemplateType::Gemma2Chat);
         assert_eq!(
             TemplateType::detect(Some("DeepSeek-V2-Lite"), None),
             TemplateType::DeepSeekChat
@@ -3577,6 +3766,9 @@ mod detect_logging_tests {
             ("fim-coder", TemplateType::FillInMiddle),
             ("zephyr-7b-beta", TemplateType::ZephyrChat),
             ("vicuna-13b-v1.5", TemplateType::VicunaChat),
+            ("llama-2-7b-chat-hf", TemplateType::Llama2Chat),
+            ("gemma-2-9b-it", TemplateType::Gemma2Chat),
+            ("phi-3-mini-4k", TemplateType::Phi3Instruct),
         ];
         for (name, expected) in cases {
             let detected = TemplateType::detect(Some(name), None);

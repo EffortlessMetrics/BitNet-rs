@@ -20,25 +20,40 @@ impl ArchitectureRegistry {
     /// Returns `None` for unknown architectures.
     pub fn lookup(architecture: &str) -> Option<ArchDefaults> {
         match architecture.to_lowercase().as_str() {
-            "phi" | "phi-4" | "phi-3" => Some(ArchDefaults {
+            "phi" | "phi-4" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(16384),
+            }),
+            "phi-3" | "phi3" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
             }),
             "llama" | "mistral" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
             }),
+            "llama2" | "llama-2" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
             "qwen" | "qwen2" | "qwen2.5" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
             }),
-            "gemma" | "gemma2" => Some(ArchDefaults {
+            "gemma" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
                 activation_type: ActivationType::Gelu,
                 default_context_length: None,
+            }),
+            "gemma2" | "gemma-2" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Gelu,
+                default_context_length: Some(8192),
             }),
             "bitnet" | "bitnet-b1.58" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
@@ -180,13 +195,17 @@ impl ArchitectureRegistry {
             "phi",
             "phi-4",
             "phi-3",
+            "phi3",
             "llama",
+            "llama2",
+            "llama-2",
             "mistral",
             "qwen",
             "qwen2",
             "qwen2.5",
             "gemma",
             "gemma2",
+            "gemma-2",
             "deepseek",
             "deepseek2",
             "starcoder",

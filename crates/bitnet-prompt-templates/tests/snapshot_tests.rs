@@ -825,3 +825,81 @@ fn snapshot_saiga_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("saiga_multi_turn", out);
 }
+
+// ── Llama2Chat ──────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_llama2_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::Llama2Chat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("llama2_single_turn", out);
+}
+
+#[test]
+fn snapshot_llama2_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::Llama2Chat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("llama2_with_system", out);
+}
+
+#[test]
+fn snapshot_llama2_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::Llama2Chat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("llama2_multi_turn", out);
+}
+
+// ── Gemma2Chat ──────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_gemma2_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::Gemma2Chat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("gemma2_single_turn", out);
+}
+
+#[test]
+fn snapshot_gemma2_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::Gemma2Chat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("gemma2_with_system", out);
+}
+
+#[test]
+fn snapshot_gemma2_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::Gemma2Chat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("gemma2_multi_turn", out);
+}
+
+// ── Phi3Instruct ────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_phi3_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::Phi3Instruct);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("phi3_single_turn", out);
+}
+
+#[test]
+fn snapshot_phi3_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::Phi3Instruct)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("phi3_with_system", out);
+}
+
+#[test]
+fn snapshot_phi3_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::Phi3Instruct)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("phi3_multi_turn", out);
+}
