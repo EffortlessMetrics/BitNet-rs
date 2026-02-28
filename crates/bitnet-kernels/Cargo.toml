@@ -63,6 +63,7 @@ bitnet-test-support.workspace = true
 [features]
 integration-tests = []
 default = []
+npu-backend = []
 cpu = ["cpu-fallback"]
 cpu-fallback = []
 cpu-optimized = ["avx512", "avx2", "neon"]

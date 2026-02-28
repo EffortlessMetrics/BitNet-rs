@@ -377,9 +377,9 @@ impl EvalCommand {
 
         match self.device.as_str() {
             "cpu" => Ok(Device::Cpu),
+            "npu" | "metal" => Device::new_metal(0).context("NPU/Metal requested but unavailable"),
             "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0)
                 .context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)"),
-            "metal" => Device::new_metal(0).context("Metal not available"),
             "auto" => {
                 if let Ok(device) = Device::cuda_if_available(0) {
                     Ok(device)
@@ -390,7 +390,7 @@ impl EvalCommand {
                 }
             }
             _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, metal, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, metal, npu, auto",
                 self.device
             ),
         }
