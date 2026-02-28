@@ -34,6 +34,11 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Multi-model serving** (#1398): `MultiModelServer` with slot management, 4 routing strategies, model swapping — 68 tests
 - **Structured output** (#1399): Schema-constrained generation with JSON Schema, context-free grammar, regex constraints — 74 tests
 - **CHANGELOG wave 55** (#1395): 5 entries documenting PRs #1390–#1394
+- **Vision model support** (#1403): `VisionEncoder` with patch embedding, 4 multimodal fusion strategies — 77 tests
+- **Prompt caching** (#1402): `PromptCache` with prefix trie, KV state caching, partial matching, compression — 69 tests
+- **Logging & observability** (#1401): `StructuredLogger`, `MetricsCollector`, Prometheus export, `AlertManager` — 75 tests
+- **Sampling strategies** (#1226): 12 composable samplers (temperature/top-k/top-p/min-p/typical/Mirostat/beam search) — 82 tests
+- **CHANGELOG wave 56** (#1400): 5 entries documenting PRs #1395–#1399
 
 ## [v0.2.0] - 2026-02-28
 
