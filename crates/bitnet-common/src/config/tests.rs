@@ -479,8 +479,10 @@ fn test_apply_architecture_defaults_deepseek() {
 
 #[test]
 fn test_apply_defaults_preserves_non_2048_max_position() {
-    let mut config = ModelConfig::default();
-    config.max_position_embeddings = 4096;
+    let mut config = ModelConfig {
+        max_position_embeddings: 4096,
+        ..ModelConfig::default()
+    };
     config.apply_architecture_defaults("phi");
     // Phi wants 16384, but we only override when the value is still 2048
     assert_eq!(config.max_position_embeddings, 4096);

@@ -1260,7 +1260,7 @@ impl TemplateType {
                         ChatRole::System => {}
                     }
                 }
-                write!(out, "<|assistant|>\n")?;
+                writeln!(out, "<|assistant|>")?;
             }
             TemplateType::MptInstruct => {
                 // MPT ### marker format
@@ -1314,7 +1314,7 @@ impl TemplateType {
                         ChatRole::System => {}
                     }
                 }
-                write!(out, "<|assistant|>\n")?;
+                writeln!(out, "<|assistant|>")?;
             }
         }
 

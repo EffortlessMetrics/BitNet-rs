@@ -15,12 +15,12 @@
 
 use bitnet_common::{
     BitNetConfig,
-    backend_selection::{BackendRequest, BackendSelectionError, BackendStartupSummary},
+    backend_selection::{BackendRequest, BackendStartupSummary},
     error::{
         BitNetError, InferenceError, KernelError, ModelError, QuantizationError, SecurityError,
         SecurityLimits,
     },
-    kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel},
+    kernel_registry::{KernelBackend, SimdLevel},
     math::ceil_div,
     tensor::{ConcreteTensor, Tensor},
     types::{Device, GenerationConfig, QuantizationType},
@@ -107,11 +107,11 @@ proptest! {
             .build();
 
         // If top_p is out of (0, 1], validation should reject it.
-        if let Some(p) = top_p {
-            if p <= 0.0 || p > 1.0 {
-                prop_assert!(config.is_err());
-                return Ok(());
-            }
+        if let Some(p) = top_p
+            && (p <= 0.0 || p > 1.0)
+        {
+            prop_assert!(config.is_err());
+            return Ok(());
         }
         prop_assert!(
             config.is_ok(),

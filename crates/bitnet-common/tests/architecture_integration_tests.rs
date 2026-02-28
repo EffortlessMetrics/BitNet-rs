@@ -74,8 +74,7 @@ fn test_template_and_tokenizer_coverage_alignment() {
     // Every architecture family that has a tokenizer entry should
     // also have an architecture registry entry. This is a coherence
     // check across the codebase subsystems.
-    let known: Vec<&str> =
-        ArchitectureRegistry::known_architectures().iter().copied().collect();
+    let known: Vec<&str> = ArchitectureRegistry::known_architectures().to_vec();
 
     // At minimum, these key families must be in the registry
     let expected_families = [
