@@ -6,26 +6,26 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
-description = "WASM-compatible OpenCL kernel validation shim for BitNet"
-
-[dependencies]
-log.workspace = true
-
-[dev-dependencies]
-temp-env = "0.3.6"
 keywords.workspace = true
 categories.workspace = true
 description = "OpenCL 3.0 backend with Unified Shared Memory (USM) support for BitNet inference"
 rust-version.workspace = true
+
+[dependencies]
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-serial_test.workspace = true
-[features]
-default = []
-[lints]
-workspace = true
-description = "OpenCL backend utilities for BitNet inference"
+log.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+
+[dev-dependencies]
+temp-env = "0.3.6"
+serial_test.workspace = true
+
+[features]
+default = []
+
+[lints]
+workspace = true

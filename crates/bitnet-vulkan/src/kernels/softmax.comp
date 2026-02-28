@@ -1,0 +1,63 @@
+#version 450
+
+// Row-wise softmax compute shader.
+// Each workgroup processes one row of length N.
+// Three-phase: find max, compute exp+sum, normalize.
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0) readonly buffer Input { float data_in[]; };
+layout(set = 0, binding = 1) writeonly buffer Output { float data_out[]; };
+
+layout(push_constant) uniform Params {
+    uint N;
+};
+
+shared float shared_max[256];
+shared float shared_sum[256];
+
+void main() {
+    uint tid = gl_LocalInvocationID.x;
+    uint row = gl_WorkGroupID.x;
+    uint row_start = row * N;
+
+    // Phase 1: find row max
+    float local_max = -3.402823e+38;
+    for (uint i = tid; i < N; i += 256u) {
+        float val = data_in[row_start + i];
+        local_max = max(local_max, val);
+    }
+    shared_max[tid] = local_max;
+    barrier();
+
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_max[tid] = max(shared_max[tid], shared_max[tid + s]);
+        }
+        barrier();
+    }
+    float row_max = shared_max[0];
+
+    // Phase 2: compute exp and sum
+    float local_sum = 0.0;
+    for (uint i = tid; i < N; i += 256u) {
+        float e = exp(data_in[row_start + i] - row_max);
+        data_out[row_start + i] = e;
+        local_sum += e;
+    }
+    shared_sum[tid] = local_sum;
+    barrier();
+
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_sum[tid] += shared_sum[tid + s];
+        }
+        barrier();
+    }
+    float total = shared_sum[0];
+
+    // Phase 3: normalize
+    for (uint i = tid; i < N; i += 256u) {
+        data_out[row_start + i] /= total;
+    }
+}

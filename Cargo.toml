@@ -62,9 +62,8 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-"crates/bitnet-vulkan",        # Vulkan compute backend
-"crates/bitnet-vulkan",        # Vulkan compute backend for GPU inference
-"crates/bitnet-level-zero",    # Intel Level-Zero backend (dynamic loading)
+  "crates/bitnet-vulkan",        # Vulkan compute backend for GPU inference
+  "crates/bitnet-level-zero",    # Intel Level-Zero backend (dynamic loading)
   "crossval",
   "tests",
   "xtask",
@@ -220,7 +219,6 @@ cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bi
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu", "dep:bitnet-vulkan"]
-vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 webgpu = [] # Handled by bitnet-webgpu crate
 level-zero = ["kernels", "inference", "tokenizers"]  # Intel Level-Zero backend
 rocm = [] # Handled by bitnet-rocm crate
