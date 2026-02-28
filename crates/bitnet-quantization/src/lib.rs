@@ -21,7 +21,7 @@ pub mod i2s_qk256; // GGML I2_S (QK=256) scalar reference kernels
 pub mod i2s_qk256_avx2; // GGML I2_S (QK=256) AVX2 SIMD kernels
 pub mod property_based_tests;
 #[cfg(feature = "cpu")]
-pub mod qk256_dispatch; // Sprint-2 Track A PR1: QK256 SIMD dispatch scaffolding
+pub mod qk256_dispatch;
 // pub mod robustness_tests; // Keep disabled until needed
 pub mod simd_ops;
 pub mod tl1;
