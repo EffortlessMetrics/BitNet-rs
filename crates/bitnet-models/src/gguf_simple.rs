@@ -222,13 +222,7 @@ fn load_gguf_enhanced(
             tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
             CDevice::Cpu
         }
-        Device::Hip(_) | Device::Npu => {
-            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
-            CDevice::Cpu
-        }
     };
-
-    // Extract configuration from GGUF metadata
     let config = extract_config_from_gguf(gguf_reader)?;
 
     // Collect all tensor information for validation
@@ -566,6 +560,10 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
         },
         Device::Metal => {
             tracing::warn!("Metal device requested but not supported, falling back to CPU");
+            CDevice::Cpu
+        }
+        Device::Hip(_) | Device::Npu => {
+            tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
             CDevice::Cpu
         }
     };
