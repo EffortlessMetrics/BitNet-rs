@@ -444,11 +444,7 @@ fn test_ac4_lut_index_performance() -> Result<()> {
     let duration = start.elapsed();
 
     // 16_000 calls should complete well within 1 second on any CI machine.
-    assert!(
-        duration.as_secs() < 1,
-        "16 000 lut_index calls took too long: {:?}",
-        duration
-    );
+    assert!(duration.as_secs() < 1, "16 000 lut_index calls took too long: {:?}", duration);
 
     Ok(())
 }
