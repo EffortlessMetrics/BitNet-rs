@@ -2,8 +2,8 @@
 
 pub mod fallback;
 pub mod fusion;
-pub mod simd_math;
 pub mod quantized_matmul;
+pub mod simd_math;
 
 #[cfg(target_arch = "x86_64")]
 pub mod x86;
