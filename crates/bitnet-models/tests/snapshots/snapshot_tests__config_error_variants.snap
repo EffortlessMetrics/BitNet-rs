@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: displays
+---
+[
+    "missing required metadata key: llama.vocab_size",
+    "invalid metadata value for key 'llama.block_count': expected u32, got string",
+    "configuration validation failed: hidden_size must be > 0",
+]

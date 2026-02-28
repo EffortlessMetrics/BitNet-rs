@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: "format!(\"{err}\")"
+---
+broadcast incompatible: dimension 0 has sizes 3 and 4

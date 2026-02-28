@@ -1,0 +1,6 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: "format!(\"weight_bytes={} kv_cache_bytes={} total_bytes={}\\nsummary: {}\",\nest.weight_bytes, est.kv_cache_bytes, est.total_bytes, est.summary,)"
+---
+weight_bytes=1882193920 kv_cache_bytes=2147483648 total_bytes=4029677568
+summary: weights: 1795.0 MiB, kv_cache: 2048.0 MiB, total: 3843.0 MiB

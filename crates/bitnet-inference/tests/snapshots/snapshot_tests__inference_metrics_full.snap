@@ -1,0 +1,13 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: metrics
+---
+InferenceMetrics {
+    prompt_tokens: 128,
+    generated_tokens: 64,
+    time_to_first_token_ms: 15.5,
+    total_generation_time_ms: 3200.0,
+    tokens_per_second: 20.0,
+    peak_memory_bytes: 1073741824,
+    cache_hit_rate: 0.85,
+}

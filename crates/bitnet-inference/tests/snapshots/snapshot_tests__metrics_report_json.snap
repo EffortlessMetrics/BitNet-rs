@@ -1,0 +1,28 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: report
+---
+{
+  "inference": {
+    "prompt_tokens": 64,
+    "generated_tokens": 32,
+    "time_to_first_token_ms": 10.0,
+    "total_generation_time_ms": 2000.0,
+    "tokens_per_second": 16.0,
+    "peak_memory_bytes": 536870912,
+    "cache_hit_rate": 1.0
+  },
+  "latency_p50_ms": 30.0,
+  "latency_p90_ms": 50.0,
+  "latency_p95_ms": 50.0,
+  "latency_p99_ms": 50.0,
+  "latency_mean_ms": 30.0,
+  "latency_min_ms": 10.0,
+  "latency_max_ms": 50.0,
+  "latency_samples": 5,
+  "throughput_tps": 16.0,
+  "memory_current_bytes": 536870912,
+  "memory_peak_bytes": 536870912,
+  "memory_allocation_count": 1,
+  "memory_deallocation_count": 0
+}

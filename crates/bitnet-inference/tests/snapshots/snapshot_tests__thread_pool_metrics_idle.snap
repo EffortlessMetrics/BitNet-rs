@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-inference/tests/snapshot_tests.rs
+expression: "format!(\"active={} queue={} completed={} utilization={:.4}\",\nmetrics.active_threads, metrics.queue_depth, metrics.tasks_completed,\nmetrics.utilization,)"
+---
+active=0 queue=0 completed=0 utilization=0.0000

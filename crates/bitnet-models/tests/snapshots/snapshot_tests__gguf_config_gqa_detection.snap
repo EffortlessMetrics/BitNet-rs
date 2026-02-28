@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: "format!(\"is_gqa={} gqa_group_size={} num_heads={} num_kv_heads={}\",\ncfg.is_gqa(), cfg.gqa_group_size(), cfg.num_heads, cfg.num_kv_heads,)"
+---
+is_gqa=true gqa_group_size=4 num_heads=16 num_kv_heads=4

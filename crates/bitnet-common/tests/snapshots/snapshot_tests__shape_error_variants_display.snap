@@ -1,0 +1,12 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: displays
+---
+[
+    "matmul shape mismatch: a has 3 columns but b has 4 rows",
+    "matmul requires at least 1-D tensors, got a=0-D and b=2-D",
+    "broadcast incompatible: dimension 1 has sizes 3 and 4",
+    "reshape element count mismatch: source has 6 elements but target shape [4, 4] requires 16",
+    "transpose axis 5 out of range for 3-D tensor",
+    "empty shape is not valid for this operation",
+]
