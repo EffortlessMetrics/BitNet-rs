@@ -126,14 +126,45 @@ cargo run -p bitnet-cli --no-default-features --features oneapi,full-cli -- run 
 
 ## Profiling
 
-### intel_gpu_top
+### Environment Variable
+
+Set `BITNET_OPENCL_PROFILE=1` to enable per-kernel event timing.  Timing
+uses OpenCL's `cl_event` profiling counters (QUEUED → SUBMIT → START → END)
+so there is near-zero overhead when disabled.
+
 ```bash
-# Monitor GPU utilization during inference
+BITNET_OPENCL_PROFILE=1 RUST_LOG=info \
+  cargo run -p bitnet-cli --no-default-features --features oneapi,full-cli -- run \
+    --model models/model.gguf --tokenizer models/tokenizer.json \
+    --prompt "Hello" --max-tokens 8
+```
+
+A summary is printed at the end of inference:
+
+```
+=== OpenCL Profiling Report ===
+Kernel                       Queue        Submit          Exec         Total
+--------------------------------------------------------------------------------
+matmul_i2s               0.012ms       0.003ms       1.234ms       1.249ms
+softmax                  0.008ms       0.002ms       0.456ms       0.466ms
+--------------------------------------------------------------------------------
+Kernels launched: 2  Total exec: 1.690ms  Total wall: 1.715ms
+```
+
+The report includes GFLOPS and memory bandwidth when the kernel dimensions
+are known (e.g. matmul M×N×K).
+
+### intel_gpu_top
+
+```bash
+# Real-time GPU utilisation while inference is running
 sudo intel_gpu_top
 ```
 
 ### OpenCL Event Timing
-BitNet-rs uses OpenCL event profiling internally when `RUST_LOG=debug` is set.
+
+BitNet-rs uses OpenCL event profiling internally when `BITNET_OPENCL_PROFILE=1`
+is set.  Lower-level per-event logs are also emitted at `RUST_LOG=debug`.
 
 ## Troubleshooting
 
