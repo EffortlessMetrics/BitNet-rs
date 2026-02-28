@@ -37,6 +37,7 @@ temp-env.workspace = true
 tracing-subscriber.workspace = true
 insta = { workspace = true }
 bitnet-test-support.workspace = true
+bitnet-test-support = { path = "../bitnet-test-support", version = "0.2.1-dev" }
 
 [features]
 integration-tests = []
