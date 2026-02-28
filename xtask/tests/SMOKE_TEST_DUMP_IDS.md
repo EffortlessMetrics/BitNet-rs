@@ -30,17 +30,14 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --max-tokens 1 \
   --dump-ids
 
-```
-
+```text
 **Expected Output (stderr):**
 
-```
-
+```text
 🦀 Rust tokens (N total):
   [token1, token2, token3, ...]
 
-```
-
+```text
 **Verification:**
 
 - [ ] Output appears on stderr (not stdout)
@@ -63,17 +60,14 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --max-tokens 1 \
   --dump-cpp-ids
 
-```
-
+```text
 **Expected Output (stderr):**
 
-```
-
+```text
 🔧 C++ tokens (N total, backend: bitnet|llama):
   [token1, token2, token3, ...]
 
-```
-
+```text
 **Verification:**
 
 - [ ] Output appears on stderr (not stdout)
@@ -98,20 +92,17 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-ids \
   --dump-cpp-ids
 
-```
-
+```text
 **Expected Output (stderr):**
 
-```
-
+```text
 🦀 Rust tokens (N total):
   [token1, token2, ...]
 
 🔧 C++ tokens (N total, backend: bitnet|llama):
   [token1, token2, ...]
 
-```
-
+```text
 **Verification:**
 
 - [ ] Both outputs appear on stderr
@@ -135,8 +126,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-ids \
   --dump-cpp-ids 2>/dev/null
 
-```
-
+```text
 **Expected Output (stdout only):**
 
 ```json
@@ -149,8 +139,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   }
 }
 
-```
-
+```text
 **Verification:**
 
 - [ ] stdout contains only valid JSON (no emoji or debug output)
@@ -176,8 +165,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
 
 cat /tmp/output.txt | grep -v "🦀" | grep -v "🔧" | jq .
 
-```
-
+```text
 ---
 
 ### Test 5: Backend Auto-Detection
@@ -193,8 +181,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-cpp-ids \
   --verbose
 
-```
-
+```text
 **Expected:**
 
 - [ ] C++ tokens show `backend: bitnet` (auto-detected from path)
@@ -211,8 +198,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-cpp-ids \
   --verbose
 
-```
-
+```text
 **Expected:**
 
 - [ ] C++ tokens show `backend: llama` (auto-detected or fallback)
@@ -233,8 +219,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-ids \
   --dump-cpp-ids
 
-```
-
+```text
 **Verification:**
 
 - [ ] Rust and C++ token sequences match (raw template)
@@ -252,8 +237,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-ids \
   --dump-cpp-ids
 
-```
-
+```text
 **Verification:**
 
 - [ ] Rust tokens include instruct formatting (e.g., "Q: ... A:")
@@ -277,8 +261,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --dump-cpp-ids \
   --verbose 2>&1 | tee /tmp/debug.log
 
-```
-
+```text
 **Look for:**
 
 - Different token counts between Rust and C++
@@ -307,8 +290,7 @@ cargo run -p xtask --features crossval-all -- crossval-per-token \
   --no-bos \
   --dump-ids
 
-```
-
+```text
 Compare first token in output to verify BOS handling.
 
 ---
@@ -340,8 +322,7 @@ Compare first token in output to verify BOS handling.
 ```bash
 eval "$(cargo run -p xtask --features crossval-all -- setup-cpp-auto --emit=sh)"
 
-```
-
+```text
 ### "error while loading shared libraries"
 
 **Solution:** Ensure library paths are set:
@@ -349,8 +330,7 @@ eval "$(cargo run -p xtask --features crossval-all -- setup-cpp-auto --emit=sh)"
 ```bash
 export LD_LIBRARY_PATH="$BITNET_CPP_DIR/build:$LD_LIBRARY_PATH"
 
-```
-
+```text
 ### No output on stderr
 
 **Check:**
