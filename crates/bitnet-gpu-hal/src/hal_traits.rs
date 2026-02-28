@@ -31,6 +31,10 @@ pub enum HalError {
     Unsupported(String),
     /// Generic backend-specific error.
     BackendError { backend: String, message: String },
+    /// Tensor shape mismatch.
+    ShapeMismatch { expected: usize, actual: usize },
+    /// Input tensor is empty.
+    EmptyInput,
 }
 
 impl fmt::Display for HalError {
@@ -54,6 +58,10 @@ impl fmt::Display for HalError {
             Self::BackendError { backend, message } => {
                 write!(f, "[{backend}] {message}")
             }
+            Self::ShapeMismatch { expected, actual } => {
+                write!(f, "shape mismatch: expected {expected}, got {actual}")
+            }
+            Self::EmptyInput => write!(f, "empty input"),
         }
     }
 }
