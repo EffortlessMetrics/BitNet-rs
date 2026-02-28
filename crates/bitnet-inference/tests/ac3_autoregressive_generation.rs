@@ -489,6 +489,8 @@ fn create_mock_bitnet_model(vocab_size: usize, hidden_size: usize) -> Result<Bit
         rope_theta: Some(10000.0),
         rope_scaling: None,
         rms_norm_eps: None,
+        norm_type: bitnet_common::config::NormType::default(),
+        activation_type: bitnet_common::config::ActivationType::default(),
         tokenizer: bitnet_common::config::TokenizerConfig::default(),
     };
     let config = BitNetConfig { model: model_config, ..Default::default() };
