@@ -132,3 +132,7 @@ required-features = ["gpu"]
 name = "opencl_stub_tests"
 path = "tests/opencl_stub_tests.rs"
 required-features = ["oneapi"]
+
+[[test]]
+name = "opencl_bdd_tests"
+path = "tests/opencl_bdd_tests.rs"
