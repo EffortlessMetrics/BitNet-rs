@@ -78,3 +78,49 @@ clean:
 # Generate TDD receipts and update documentation
 tdd-receipts:
     python3 scripts/tdd_receipts.py
+
+# ── GPU Backend Commands ──────────────────────────────────────
+
+# Build with OpenCL/Intel GPU support
+build-opencl:
+    cargo build --no-default-features --features oneapi
+
+# Build with all GPU backends
+build-gpu-all:
+    cargo build --no-default-features --features cpu,gpu
+
+# Test OpenCL microcrate
+test-opencl:
+    cargo test -p bitnet-opencl --no-default-features --features cpu
+
+# Test all GPU microcrates
+test-gpu:
+    cargo test -p bitnet-opencl -p bitnet-vulkan -p bitnet-webgpu --no-default-features --features cpu
+
+# Run GPU stress tests
+test-gpu-stress:
+    cargo test -p bitnet-opencl --no-default-features --features cpu -- --ignored stress
+
+# Lint GPU code
+lint-gpu:
+    cargo clippy -p bitnet-opencl -p bitnet-vulkan -p bitnet-webgpu -p bitnet-gpu-hal --no-default-features --features cpu -- -D warnings
+
+# Run GPU benchmarks
+bench-gpu:
+    cargo bench --no-default-features --features cpu,bench -- gpu
+
+# Check all GPU feature combinations compile
+check-gpu-features:
+    cargo check --no-default-features --features cpu
+    cargo check --no-default-features --features oneapi
+    cargo check --no-default-features --features cpu,oneapi
+
+# GPU device info (if hardware available)
+gpu-info:
+    @echo "Checking GPU hardware..."
+    -clinfo --list 2>/dev/null || echo "clinfo not found"
+    -vulkaninfo --summary 2>/dev/null || echo "vulkaninfo not found"
+
+# Full GPU CI check (runs locally)
+ci-gpu: lint-gpu test-opencl check-gpu-features
+    @echo "GPU CI checks passed!"
