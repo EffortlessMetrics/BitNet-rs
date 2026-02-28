@@ -29,7 +29,7 @@ Essential guidance for working with the bitnet-rs neural network inference codeb
 - **Criterion Benchmarks** — `benches/srp_ops.rs` with 6 functions: logits pipeline, top-k (k=5/k=50), repetition penalty, argmax, RoPE build_tables, KV cache append (#787)
 - **CUDA Smoke Lane** — `gpu-smoke.yml` runs on weekly schedule, uploads receipt artifacts (#777)
 - **Phi-4 Architecture Support** - Configurable normalization (RMSNorm/LayerNorm), activation dispatch (SiLU/ReLU²/GeLU), ChatML prompt template, 100K tokenizer compatibility, architecture auto-detection
-- **Multi-SLM Architecture Registry** — 36 architecture strings across 16 model families (Phi, LLaMA, Mistral, Qwen, Gemma, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command, InternLM, Yi, Baichuan, ChatGLM, MPT, BitNet). 17 prompt templates, 18 tokenizer entries. One-liner to add new models.
+- **Multi-SLM Architecture Registry** — 41 architecture strings across 21 model families (Phi, LLaMA, Mistral, Qwen, Gemma, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command, InternLM, Yi, Baichuan, ChatGLM, MPT, RWKV, OLMo, BitNet). 19 prompt templates, 20 tokenizer entries. One-liner to add new models.
 
 ### Current Limitations (MVP Phase)
 

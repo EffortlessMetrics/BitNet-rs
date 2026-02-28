@@ -35,6 +35,11 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Architecture integration tests**: Add 8 integration tests verifying end-to-end architecture defaults flow (Phi-4, LLaMA, GPT, BitNet, idempotency, family coverage).
 - **Snapshot test completeness**: Add 5 missing snapshot tests (Raw with_system/multi_turn, StarCoder single_turn/with_system/multi_turn) — now 51 total covering all 17 variants × 3 scenarios.
 - **Tokenizer discovery validation tests**: Add 7 tests verifying all 18 tokenizer entries have valid repos, vocab sizes, cache keys, and family coverage.
+- **RWKV World prompt template**: Add `RwkvWorld` template with `User:`/`Assistant:` format, `rwkv_65k` tokenizer entry (65K vocab), and rwkv/rwkv5/rwkv6 architecture registry entries.
+- **OLMo Instruct prompt template**: Add `OlmoInstruct` template with `<|user|>`/`<|assistant|>` format, `olmo_50k` tokenizer entry (50K vocab), and olmo/olmo2 architecture registry entries.
+- **Template validation utilities**: Add `TemplateType::validate_output()` for checking output quality (non-empty, contains user text, stop sequence placement) and `TemplateType::info()` for retrieving template metadata.
+- **Architecture registry property tests**: Add 5 proptest-based property tests (lookup never panics, known archs always found, case-insensitive lookup, punctuation never matches, lookup/is_known agreement).
+- **Dense model inference guide**: Add `docs/guides/dense-model-inference.md` documenting how FP16/BF16 dense models flow through the pipeline.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
