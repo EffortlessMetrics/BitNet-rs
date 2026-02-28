@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-/// HIP runtime error codes (subset).
+/// HIP runtime error codes (subset matching hipError_t enum values).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum HipErrorCode {
@@ -10,9 +10,18 @@ pub enum HipErrorCode {
     InvalidValue = 1,
     OutOfMemory = 2,
     NotInitialized = 3,
+    Deinitialized = 4,
     InvalidDevice = 101,
+    InvalidImage = 200,
+    InvalidContext = 201,
     FileNotFound = 301,
+    NotFound = 500,
     NotReady = 600,
+    NoBinaryForGpu = 702,
+    InsufficientDriver = 804,
+    PeerAccessNotEnabled = 704,
+    LaunchFailure = 719,
+    CooperativeLaunchTooLarge = 720,
     Unknown = 999,
 }
 
@@ -23,11 +32,48 @@ impl HipErrorCode {
             1 => Self::InvalidValue,
             2 => Self::OutOfMemory,
             3 => Self::NotInitialized,
+            4 => Self::Deinitialized,
             101 => Self::InvalidDevice,
+            200 => Self::InvalidImage,
+            201 => Self::InvalidContext,
             301 => Self::FileNotFound,
+            500 => Self::NotFound,
             600 => Self::NotReady,
+            702 => Self::NoBinaryForGpu,
+            719 => Self::LaunchFailure,
+            720 => Self::CooperativeLaunchTooLarge,
+            804 => Self::InsufficientDriver,
             _ => Self::Unknown,
         }
+    }
+
+    /// Human-readable description of the error code.
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::Success => "success",
+            Self::InvalidValue => "invalid value",
+            Self::OutOfMemory => "out of memory",
+            Self::NotInitialized => "not initialized",
+            Self::Deinitialized => "deinitialized",
+            Self::InvalidDevice => "invalid device",
+            Self::InvalidImage => "invalid image",
+            Self::InvalidContext => "invalid context",
+            Self::FileNotFound => "file not found",
+            Self::NotFound => "not found",
+            Self::NotReady => "not ready",
+            Self::NoBinaryForGpu => "no binary for GPU",
+            Self::LaunchFailure => "launch failure",
+            Self::CooperativeLaunchTooLarge => "cooperative launch too large",
+            Self::PeerAccessNotEnabled => "peer access not enabled",
+            Self::InsufficientDriver => "insufficient driver",
+            Self::Unknown => "unknown error",
+        }
+    }
+}
+
+impl std::fmt::Display for HipErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} ({})", self.description(), *self as u32)
     }
 }
 
@@ -57,6 +103,32 @@ pub enum RocmError {
 
     #[error("library loading failed: {0}")]
     LibraryLoad(String),
+
+    #[error("kernel compilation failed: {0}")]
+    KernelCompilation(String),
+}
+
+/// Generic GPU error type for cross-backend compatibility.
+#[derive(Debug, Error)]
+#[error("GPU error: {message} (backend: rocm)")]
+pub struct GpuError {
+    pub message: String,
+    pub code: Option<u32>,
+}
+
+impl From<RocmError> for GpuError {
+    fn from(err: RocmError) -> Self {
+        match &err {
+            RocmError::Hip { code, .. } => GpuError {
+                message: err.to_string(),
+                code: Some(*code as u32),
+            },
+            _ => GpuError {
+                message: err.to_string(),
+                code: None,
+            },
+        }
+    }
 }
 
 /// Convenience result alias.
