@@ -57,7 +57,10 @@ proptest! {
     #[test]
     fn device_capabilities_compiled_flags_match_gpu_compiled(_dummy in 0u8..4) {
         let caps = DeviceCapabilities::detect();
-        prop_assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
+        prop_assert_eq!(
+            caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled,
+            gpu_compiled(),
+        );
     }
 }
 
@@ -188,10 +191,12 @@ fn probe_cpu_neon_false_on_non_aarch64() {
 
 proptest! {
     #[test]
-    fn probe_gpu_available_consistent_with_cuda_available(_dummy in 0u8..4) {
+    fn probe_gpu_available_consistent_with_backend_flags(_dummy in 0u8..4) {
         let caps = probe_gpu();
-        // For our current implementation, available == cuda_available.
-        prop_assert_eq!(caps.available, caps.cuda_available);
+        prop_assert_eq!(
+            caps.available,
+            caps.cuda_available || caps.rocm_available || caps.oneapi_available,
+        );
     }
 }
 

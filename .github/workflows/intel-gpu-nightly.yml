@@ -1,0 +1,51 @@
+name: Intel GPU Nightly
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'  # Weekly on Monday at 4am UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  intel-gpu-smoke:
+    name: Intel GPU Weekly Smoke
+    runs-on: [self-hosted, intel-gpu]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: System info
+        run: |
+          clinfo 2>/dev/null | head -30 || echo "clinfo not available"
+          intel_gpu_top -l 2>/dev/null | head -5 || echo "intel_gpu_top not available"
+
+      - name: Build
+        run: cargo build --release --locked --no-default-features --features oneapi,cpu
+
+      - name: Test suite
+        run: cargo test --locked --no-default-features --features oneapi -p bitnet-kernels
+        env:
+          RUST_LOG: info
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: intel-gpu-smoke-${{ github.sha }}
+          path: ci/
+          if-no-files-found: warn
+          retention-days: 30

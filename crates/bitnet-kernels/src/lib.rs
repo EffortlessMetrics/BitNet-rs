@@ -14,6 +14,7 @@ pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod gpu;
 pub mod gpu_utils;
+pub mod kernels;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
 #[cfg(feature = "rocm")]

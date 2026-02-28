@@ -34,6 +34,7 @@ pub enum Device {
     Hip(usize),
     Npu,
     Metal,
+    OpenCL(usize),
 }
 
 // Conservative conversion from Candle device - avoids assuming CUDA ordinal
@@ -67,6 +68,16 @@ impl Device {
         matches!(self, Device::Cuda(_))
     }
 
+    /// Create a new OpenCL device with the specified index
+    pub fn new_opencl(index: usize) -> anyhow::Result<Self> {
+        Ok(Device::OpenCL(index))
+    }
+
+    /// Check if this device is OpenCL
+    pub fn is_opencl(&self) -> bool {
+        matches!(self, Device::OpenCL(_))
+    }
+
     /// Check if this device is HIP (ROCm)
     pub fn is_hip(&self) -> bool {
         matches!(self, Device::Hip(_))
@@ -93,6 +104,7 @@ impl Device {
             }
             #[cfg(any(not(feature = "metal"), not(target_os = "macos")))]
             Device::Metal => candle_core::Device::Cpu,
+            Device::OpenCL(_) => candle_core::Device::Cpu, // OpenCL uses its own buffer management
         })
     }
 
@@ -185,4 +197,46 @@ pub struct PerformanceMetrics {
     pub latency_ms: f64,
     pub memory_usage_mb: f64,
     pub gpu_utilization: Option<f64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn device_opencl_variant_basic() {
+        let dev = Device::OpenCL(0);
+        assert!(dev.is_opencl());
+        assert!(!dev.is_cpu());
+        assert!(!dev.is_cuda());
+    }
+
+    #[test]
+    fn device_opencl_new() {
+        let dev = Device::new_opencl(0).unwrap();
+        assert_eq!(dev, Device::OpenCL(0));
+    }
+
+    #[test]
+    fn device_opencl_to_candle_falls_back_to_cpu() {
+        let dev = Device::OpenCL(0);
+        let candle_dev = dev.to_candle().unwrap();
+        assert!(matches!(candle_dev, candle_core::Device::Cpu));
+    }
+
+    #[test]
+    fn device_opencl_debug_format() {
+        let dev = Device::OpenCL(2);
+        let debug = format!("{:?}", dev);
+        assert!(debug.contains("OpenCL"));
+        assert!(debug.contains("2"));
+    }
+
+    #[test]
+    fn device_opencl_serialization_roundtrip() {
+        let dev = Device::OpenCL(1);
+        let json = serde_json::to_string(&dev).unwrap();
+        let deserialized: Device = serde_json::from_str(&json).unwrap();
+        assert_eq!(dev, deserialized);
+    }
 }

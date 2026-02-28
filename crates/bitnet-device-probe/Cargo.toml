@@ -15,6 +15,7 @@ rust-version.workspace = true
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 log.workspace = true
 ash = { version = "0.38.0", optional = true }
+opencl3 = { version = "0.9", optional = true }
 
 [dev-dependencies]
 temp-env.workspace = true
@@ -30,7 +31,11 @@ cuda = []
 rocm = []
 vulkan = ["dep:ash"]
 npu = ["oneapi"]
-oneapi = []
+oneapi = ["dep:opencl3"]
+
+[[test]]
+name = "oneapi_detection_bdd"
+path = "tests/oneapi_detection_bdd.rs"
 
 [lints]
 workspace = true

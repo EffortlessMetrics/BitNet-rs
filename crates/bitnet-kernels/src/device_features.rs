@@ -47,6 +47,12 @@ pub fn hip_compiled() -> bool {
     cfg!(feature = "hip")
 }
 
+/// Check if Intel oneAPI/`OpenCL` support was compiled into this binary.
+#[inline]
+pub fn oneapi_compiled() -> bool {
+    cfg!(feature = "oneapi")
+}
+
 /// Check if GPU is available at runtime
 ///
 /// Returns `false` if:

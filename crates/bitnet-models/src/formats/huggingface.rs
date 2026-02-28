@@ -280,6 +280,7 @@ impl HuggingFaceLoader {
             Device::Hip(_) | Device::Npu => Err(BitNetError::Validation(
                 "HIP/NPU devices are not yet supported for model loading".to_string(),
             )),
+            Device::OpenCL(_) => Ok(candle_core::Device::Cpu), // OpenCL uses its own buffer management
         }
     }
 }

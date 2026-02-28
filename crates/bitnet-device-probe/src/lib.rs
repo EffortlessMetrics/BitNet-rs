@@ -68,18 +68,21 @@ pub fn probe_cpu() -> CpuCapabilities {
 ///
 /// Obtained by calling [`probe_gpu`].
 ///
-/// `BITNET_GPU_FAKE` supports comma-separated backends (`cuda`, `rocm`, `gpu`).
+/// `BITNET_GPU_FAKE` supports comma-separated backends (`cuda`, `rocm`, `oneapi`, `gpu`).
 /// For example `BITNET_GPU_FAKE=rocm` forces `ROCm` runtime availability for tests.
 /// `BITNET_GPU_FAKE=none` makes all GPU flags `false`.
 /// Strict mode (`BITNET_STRICT_MODE=1`) ignores `BITNET_GPU_FAKE` and probes real hardware.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GpuCapabilities {
-    /// Any GPU backend is available (CUDA and/or `ROCm`).
+    /// Any GPU backend is available (CUDA, `ROCm`, and/or oneAPI).
     pub available: bool,
     /// CUDA runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub cuda_available: bool,
     /// `ROCm` runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub rocm_available: bool,
+    /// Intel oneAPI/`OpenCL` runtime was detected (or faked via `BITNET_GPU_FAKE`).
+    pub oneapi_available: bool,
 }
 
 /// NPU capabilities detected at runtime.
@@ -96,25 +99,31 @@ pub struct NpuCapabilities {
 ///
 /// Honours `BITNET_GPU_FAKE` for deterministic testing unless
 /// `BITNET_STRICT_MODE=1` is set.
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
 pub fn probe_gpu() -> GpuCapabilities {
     let cuda_available = cuda_available_runtime();
     let rocm_available = rocm_available_runtime();
-    let available = cuda_available || rocm_available;
-    GpuCapabilities { available, cuda_available, rocm_available }
+    let oneapi_available = oneapi_available_runtime();
+    let available = cuda_available || rocm_available || oneapi_available;
+    GpuCapabilities { available, cuda_available, rocm_available, oneapi_available }
 }
 
 /// Probe GPU availability; always returns `false` when GPU not compiled.
-#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 pub const fn probe_gpu() -> GpuCapabilities {
-    GpuCapabilities { available: false, cuda_available: false, rocm_available: false }
+    GpuCapabilities {
+        available: false,
+        cuda_available: false,
+        rocm_available: false,
+        oneapi_available: false,
+    }
 }
 
 /// Check if GPU support was compiled into this binary.
 ///
-/// Returns `true` if `feature="gpu"` or `feature="cuda"` was enabled at
-/// compile time. Does **not** check runtime GPU availability — use
-/// [`gpu_available_runtime`] for that.
+/// Returns `true` if `feature="gpu"`, `feature="cuda"`, `feature="rocm"`,
+/// or `feature="oneapi"` was enabled at compile time. Does **not** check
+/// runtime GPU availability — use [`gpu_available_runtime`] for that.
 ///
 /// # Examples
 ///
@@ -122,41 +131,41 @@ pub const fn probe_gpu() -> GpuCapabilities {
 /// use bitnet_device_probe::gpu_compiled;
 ///
 /// // When built with `--features cpu` only, this returns false.
-/// // When built with `--features gpu`, this returns true.
+/// // When built with `--features gpu` or `--features oneapi`, this returns true.
 /// let _compiled: bool = gpu_compiled();
 /// ```
 #[inline]
 pub const fn gpu_compiled() -> bool {
-    cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm"))
+    cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))
 }
 
 /// Check if a GPU is available at runtime.
 ///
 /// - Returns `false` when GPU is not compiled or CUDA runtime is unavailable.
-/// - Respects `BITNET_GPU_FAKE=cuda|rocm|gpu` (returns `true`) /
+/// - Respects `BITNET_GPU_FAKE=cuda|rocm|oneapi|gpu` (returns `true`) /
 ///   `BITNET_GPU_FAKE=none` (returns `false`) for deterministic testing, unless
 ///   `BITNET_STRICT_MODE=1`.
 /// - In strict mode only real hardware detection is used.
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
 pub fn gpu_available_runtime() -> bool {
-    cuda_available_runtime() || rocm_available_runtime()
+    cuda_available_runtime() || rocm_available_runtime() || oneapi_available_runtime()
 }
 
 /// Stub: GPU never available when not compiled.
-#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 #[inline]
 pub const fn gpu_available_runtime() -> bool {
     false
 }
 
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
 fn strict_mode_enabled() -> bool {
     std::env::var("BITNET_STRICT_MODE")
         .map(|v| v == "1" || v.to_lowercase() == "true")
         .unwrap_or(false)
 }
 
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
 fn fake_gpu_backends() -> Option<std::collections::HashSet<String>> {
     if strict_mode_enabled() {
         return None;
@@ -178,7 +187,7 @@ fn fake_gpu_backends() -> Option<std::collections::HashSet<String>> {
     Some(set)
 }
 
-#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"))]
 fn command_ok(cmd: &str, args: &[&str]) -> bool {
     std::process::Command::new(cmd)
         .args(args)
@@ -243,6 +252,53 @@ fn accel_device_exists() -> bool {
     std::fs::read_dir("/dev/accel")
         .map(|entries| {
             entries.flatten().any(|entry| entry.file_name().to_string_lossy().starts_with("accel"))
+        })
+        .unwrap_or(false)
+}
+
+/// Check if Intel oneAPI/`OpenCL` support was compiled.
+#[inline]
+pub const fn oneapi_compiled() -> bool {
+    cfg!(feature = "oneapi")
+}
+
+/// Check if an Intel GPU is available at runtime via `OpenCL`.
+///
+/// Detection strategy:
+/// 1. Check `BITNET_GPU_FAKE` env var (respects strict mode)
+/// 2. Try running `clinfo` and look for Intel vendor
+/// 3. Try running `sycl-ls` as fallback
+#[cfg(feature = "oneapi")]
+pub fn oneapi_available_runtime() -> bool {
+    if let Some(fake) = fake_gpu_backends() {
+        return fake.contains("oneapi") || fake.contains("gpu");
+    }
+
+    // Try clinfo first — most reliable
+    if clinfo_has_intel_gpu() {
+        return true;
+    }
+
+    // Fallback: try sycl-ls
+    command_ok("sycl-ls", &[])
+}
+
+#[cfg(not(feature = "oneapi"))]
+#[inline]
+pub const fn oneapi_available_runtime() -> bool {
+    false
+}
+
+#[cfg(feature = "oneapi")]
+fn clinfo_has_intel_gpu() -> bool {
+    std::process::Command::new("clinfo")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .map(|output| {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            stdout.contains("Intel")
+                && (stdout.contains("GPU") || stdout.contains("Arc") || stdout.contains("Graphics"))
         })
         .unwrap_or(false)
 }
@@ -337,6 +393,8 @@ pub struct DeviceCapabilities {
     pub cuda_compiled: bool,
     /// `ROCm` backend was compiled in.
     pub rocm_compiled: bool,
+    /// Intel oneAPI backend was compiled in.
+    pub oneapi_compiled: bool,
     /// CUDA runtime was detected at call time.
     pub cuda_runtime: bool,
     /// `ROCm` runtime was detected at call time.
@@ -345,6 +403,8 @@ pub struct DeviceCapabilities {
     pub npu_compiled: bool,
     /// Intel NPU runtime was detected at call time.
     pub npu_runtime: bool,
+    /// Intel oneAPI runtime was detected at call time.
+    pub oneapi_runtime: bool,
     /// Best SIMD level detected at call time.
     pub simd_level: SimdLevel,
 }
@@ -359,7 +419,10 @@ impl DeviceCapabilities {
     ///
     /// let caps = DeviceCapabilities::detect();
     /// assert!(caps.cpu_rust, "CPU backend is always available");
-    /// assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
+    /// assert_eq!(
+    ///     caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled,
+    ///     gpu_compiled(),
+    /// );
     /// println!("SIMD: {:?}", caps.simd_level);
     /// ```
     pub fn detect() -> Self {
@@ -367,10 +430,12 @@ impl DeviceCapabilities {
             cpu_rust: true,
             cuda_compiled: cfg!(any(feature = "gpu", feature = "cuda")),
             rocm_compiled: cfg!(any(feature = "gpu", feature = "rocm")),
+            oneapi_compiled: cfg!(feature = "oneapi"),
             cuda_runtime: cuda_available_runtime(),
             rocm_runtime: rocm_available_runtime(),
             npu_compiled: npu_compiled(),
             npu_runtime: probe_npu().available,
+            oneapi_runtime: oneapi_available_runtime(),
             simd_level: detect_simd_level(),
         }
     }
@@ -395,6 +460,7 @@ pub struct CpuProbe {
 ///
 /// Obtained via [`probe_device`].
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct DeviceProbe {
     /// CPU capability snapshot.
     pub cpu: CpuProbe,
@@ -403,6 +469,8 @@ pub struct DeviceProbe {
     pub rocm_available: bool,
     /// Whether an Intel NPU was found at runtime.
     pub npu_available: bool,
+    /// Whether an Intel GPU was found at runtime via `OpenCL`.
+    pub oneapi_available: bool,
 }
 
 /// Run a full device probe and return the result.
@@ -431,6 +499,7 @@ pub fn probe_device() -> DeviceProbe {
         cuda_available: cuda_available_runtime(),
         rocm_available: rocm_available_runtime(),
         npu_available: probe_npu().available,
+        oneapi_available: oneapi_available_runtime(),
     }
 }
 
@@ -489,7 +558,7 @@ mod tests {
 
     #[test]
     fn gpu_not_available_without_feature() {
-        #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+        #[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
         assert!(!gpu_available_runtime());
     }
 
@@ -509,6 +578,11 @@ mod tests {
         assert_eq!(caps.rocm_compiled, cfg!(any(feature = "gpu", feature = "rocm")));
         assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
         assert_eq!(caps.npu_compiled, npu_compiled());
+        assert_eq!(caps.oneapi_compiled, cfg!(feature = "oneapi"));
+        assert_eq!(
+            caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled,
+            gpu_compiled(),
+        );
     }
 
     #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
@@ -533,6 +607,26 @@ mod tests {
             temp_env::with_var("BITNET_GPU_FAKE", Some("cuda"), || {
                 // In strict mode the env var is ignored; result is real detection.
                 let _ = gpu_available_runtime();
+            });
+        });
+    }
+
+    #[test]
+    fn oneapi_compiled_reflects_feature_flags() {
+        let compiled = oneapi_compiled();
+        assert_eq!(compiled, cfg!(feature = "oneapi"));
+    }
+
+    #[cfg(feature = "oneapi")]
+    #[test]
+    #[serial_test::serial(bitnet_env)]
+    fn oneapi_fake_env_detection() {
+        temp_env::with_var("BITNET_STRICT_MODE", None::<&str>, || {
+            temp_env::with_var("BITNET_GPU_FAKE", Some("oneapi"), || {
+                assert!(oneapi_available_runtime());
+            });
+            temp_env::with_var("BITNET_GPU_FAKE", Some("none"), || {
+                assert!(!oneapi_available_runtime());
             });
         });
     }
@@ -566,7 +660,11 @@ mod property_tests {
         let caps = DeviceCapabilities::detect();
         assert_eq!(caps.cuda_compiled, cfg!(any(feature = "gpu", feature = "cuda")));
         assert_eq!(caps.rocm_compiled, cfg!(any(feature = "gpu", feature = "rocm")));
-        assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
+        assert_eq!(caps.oneapi_compiled, cfg!(feature = "oneapi"));
+        assert_eq!(
+            caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled,
+            gpu_compiled(),
+        );
     }
 }
 
