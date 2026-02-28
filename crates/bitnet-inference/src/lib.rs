@@ -16,6 +16,7 @@ pub mod kernel_recorder;
 pub mod layers;
 pub mod multi_device;
 pub mod batch_gpu;
+pub mod multi_model;
 pub mod npu;
 pub mod onnx_export;
 pub mod production_engine; // always available (sync parser)
