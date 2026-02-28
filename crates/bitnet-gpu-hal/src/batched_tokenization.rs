@@ -3,14 +3,11 @@
 //! Provides configurable batch encoding/decoding with padding strategies,
 //! truncation policies, streaming decode, and throughput metrics.
 
-#![allow(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation
-)]
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 // ── Configuration ────────────────────────────────────────────────────────────
@@ -177,12 +174,7 @@ impl MockTokenizer {
         specials.insert("PAD".to_string(), 0);
         specials.insert("UNK".to_string(), 1);
 
-        Self {
-            word_to_id,
-            id_to_word,
-            specials,
-            next_id,
-        }
+        Self { word_to_id, id_to_word, specials, next_id }
     }
 
     /// Number of distinct tokens (including specials).
@@ -207,17 +199,11 @@ impl TokenizerHandle for MockTokenizer {
         if text.is_empty() {
             return Vec::new();
         }
-        text.split_whitespace()
-            .map(|w| *self.word_to_id.get(w).unwrap_or(&1))
-            .collect()
+        text.split_whitespace().map(|w| *self.word_to_id.get(w).unwrap_or(&1)).collect()
     }
 
     fn decode(&self, ids: &[u32]) -> String {
-        ids.iter()
-            .filter_map(|id| self.id_to_word.get(id))
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(" ")
+        ids.iter().filter_map(|id| self.id_to_word.get(id)).cloned().collect::<Vec<_>>().join(" ")
     }
 
     fn special_tokens(&self) -> &HashMap<String, u32> {
@@ -331,11 +317,9 @@ impl<T: TokenizerHandle + 'static> BatchEncoder<T> {
         let lengths: Vec<usize> = encoded.iter().map(Vec::len).collect();
 
         // Pad
-        let attention_masks = if let Some(target_len) = compute_pad_length(
-            &lengths,
-            self.config.padding_strategy,
-            self.config.max_seq_length,
-        ) {
+        let attention_masks = if let Some(target_len) =
+            compute_pad_length(&lengths, self.config.padding_strategy, self.config.max_seq_length)
+        {
             encoded
                 .iter_mut()
                 .map(|seq| pad_sequence(seq, target_len, self.config.padding_token_id))
@@ -355,8 +339,7 @@ impl<T: TokenizerHandle + 'static> BatchEncoder<T> {
     /// Parallel encoding using std threads.
     fn encode_parallel(&self, texts: &[&str]) -> Vec<Vec<u32>> {
         let chunk_size = texts.len().div_ceil(self.config.num_threads);
-        let owned_texts: Vec<String> =
-            texts.iter().map(|s| (*s).to_string()).collect();
+        let owned_texts: Vec<String> = texts.iter().map(|s| (*s).to_string()).collect();
 
         let handles: Vec<_> = owned_texts
             .chunks(chunk_size)
@@ -417,10 +400,7 @@ impl<T: TokenizerHandle + 'static> BatchDecoder<T> {
                 let chunk_owned: Vec<Vec<u32>> = chunk.to_vec();
                 let tok = Arc::clone(&self.tokenizer);
                 std::thread::spawn(move || {
-                    chunk_owned
-                        .iter()
-                        .map(|s| tok.decode(s))
-                        .collect::<Vec<_>>()
+                    chunk_owned.iter().map(|s| tok.decode(s)).collect::<Vec<_>>()
                 })
             })
             .collect();
@@ -451,11 +431,7 @@ impl<T: TokenizerHandle> StreamingTokenizer<T> {
     /// Create a new streaming tokenizer.
     #[must_use]
     pub const fn new(tokenizer: Arc<T>) -> Self {
-        Self {
-            tokenizer,
-            token_buffer: Vec::new(),
-            prev_decoded_len: 0,
-        }
+        Self { tokenizer, token_buffer: Vec::new(), prev_decoded_len: 0 }
     }
 
     /// Feed a single token and return the new text fragment produced.
@@ -542,16 +518,14 @@ impl TokenizationMetrics {
     pub fn record_encode(&self, num_strings: u64, num_tokens: u64, duration: Duration) {
         self.total_strings.fetch_add(num_strings, Ordering::Relaxed);
         self.total_tokens.fetch_add(num_tokens, Ordering::Relaxed);
-        self.total_encode_ns
-            .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+        self.total_encode_ns.fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
         self.batch_count.fetch_add(1, Ordering::Relaxed);
     }
 
     /// Record a decoding operation.
     pub fn record_decode(&self, num_tokens: u64, duration: Duration) {
         self.total_tokens.fetch_add(num_tokens, Ordering::Relaxed);
-        self.total_decode_ns
-            .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+        self.total_decode_ns.fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
     }
 
     /// Strings encoded per second (0.0 if no time recorded).
@@ -652,8 +626,8 @@ mod tests {
 
     fn make_tokenizer() -> Arc<MockTokenizer> {
         Arc::new(MockTokenizer::new(&[
-            "hello", "world", "foo", "bar", "baz", "the", "quick", "brown", "fox",
-            "jumps", "over", "lazy", "dog", "a", "b", "c", "d", "e",
+            "hello", "world", "foo", "bar", "baz", "the", "quick", "brown", "fox", "jumps", "over",
+            "lazy", "dog", "a", "b", "c", "d", "e",
         ]))
     }
 
@@ -881,10 +855,7 @@ mod tests {
     #[test]
     fn pad_empty_lengths() {
         let lengths: Vec<usize> = vec![];
-        assert_eq!(
-            compute_pad_length(&lengths, PaddingStrategy::PadToLongest, 10),
-            Some(0)
-        );
+        assert_eq!(compute_pad_length(&lengths, PaddingStrategy::PadToLongest, 10), Some(0));
     }
 
     // ── BatchEncoder tests ───────────────────────────────────────────────
@@ -1085,11 +1056,7 @@ mod tests {
         let mut config = default_config();
         config.max_batch_size = 2;
         let decoder = BatchDecoder::new(tok.clone(), config);
-        let seqs: Vec<Vec<u32>> = vec![
-            tok.encode("hello"),
-            tok.encode("world"),
-            tok.encode("foo"),
-        ];
+        let seqs: Vec<Vec<u32>> = vec![tok.encode("hello"), tok.encode("world"), tok.encode("foo")];
         let results = decoder.decode(&seqs);
         assert_eq!(results.len(), 2);
     }
@@ -1155,7 +1122,7 @@ mod tests {
     }
 
     #[test]
-    fn tokenized_batch_utilization(){
+    fn tokenized_batch_utilization() {
         let batch = TokenizedBatch {
             input_ids: vec![vec![1, 2, 0, 0], vec![3, 4, 5, 0]],
             attention_masks: vec![vec![1, 1, 0, 0], vec![1, 1, 1, 0]],
@@ -1186,7 +1153,7 @@ mod tests {
         let ids = tok.encode("hello world foo");
         let mut streamer = StreamingTokenizer::new(tok);
 
-        let mut accumulated= String::new();
+        let mut accumulated = String::new();
         for &id in &ids {
             accumulated.push_str(&streamer.feed(id));
         }
@@ -1369,12 +1336,7 @@ mod tests {
         let mut config = default_config();
         config.padding_strategy = PaddingStrategy::PadToLongest;
         let encoder = BatchEncoder::new(tok, config);
-        let texts = [
-            "hello",
-            "hello world",
-            "hello world foo",
-            "a b c d",
-        ];
+        let texts = ["hello", "hello world", "hello world foo", "a b c d"];
         let batch = encoder.encode(&texts);
         assert!(batch.is_uniform_length());
         let expected_len = batch.padded_length();
@@ -1461,33 +1423,21 @@ mod tests {
         assert_eq!(config.max_seq_length, 512);
         assert_eq!(config.num_threads, 4);
         assert_eq!(config.padding_strategy, PaddingStrategy::PadToLongest);
-        assert_eq!(
-            config.truncation_strategy,
-            TruncationStrategy::TruncateRight
-        );
+        assert_eq!(config.truncation_strategy, TruncationStrategy::TruncateRight);
         assert_eq!(config.padding_token_id, 0);
     }
 
     #[test]
     fn padding_strategy_equality() {
         assert_eq!(PaddingStrategy::NoPadding, PaddingStrategy::NoPadding);
-        assert_eq!(
-            PaddingStrategy::PadToMultipleOf(8),
-            PaddingStrategy::PadToMultipleOf(8)
-        );
-        assert_ne!(
-            PaddingStrategy::PadToMultipleOf(8),
-            PaddingStrategy::PadToMultipleOf(16)
-        );
+        assert_eq!(PaddingStrategy::PadToMultipleOf(8), PaddingStrategy::PadToMultipleOf(8));
+        assert_ne!(PaddingStrategy::PadToMultipleOf(8), PaddingStrategy::PadToMultipleOf(16));
     }
 
     #[test]
     fn truncation_strategy_equality() {
         assert_eq!(TruncationStrategy::None, TruncationStrategy::None);
-        assert_ne!(
-            TruncationStrategy::TruncateLeft,
-            TruncationStrategy::TruncateRight
-        );
+        assert_ne!(TruncationStrategy::TruncateLeft, TruncationStrategy::TruncateRight);
     }
 
     #[test]
