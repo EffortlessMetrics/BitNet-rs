@@ -58,14 +58,16 @@ members = [
   "crates/bitnet-startup-contract-diagnostics",
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
+  "crates/bitnet-opencl",        # OpenCL runtime binding layer
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
+  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer with profiling
   "crossval",
   "tests",
   "xtask",
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
+  "crates/bitnet-gpu-hal",
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -116,7 +118,7 @@ name = "bitnet"
 readme = "README.md"
 repository = "https://github.com/EffortlessMetrics/BitNet"
 rust-version.workspace = true
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 # Disable automatic discovery of tests, benches, and examples
 # Many of these use outdated APIs and need updating
 # Note: The tests/ directory is a separate bitnet-tests workspace crate
@@ -140,20 +142,20 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/EffortlessMetrics/BitNet"
 rust-version = "1.92.0"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 
 [dependencies]
 # Core crates - always included
-bitnet-common = { path = "crates/bitnet-common", version = "0.2.1-dev" }
-bitnet-models = { path = "crates/bitnet-models", version = "0.2.1-dev" }
-bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.1-dev", default-features = false }
-bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.1-dev", optional = true }
+bitnet-common = { path = "crates/bitnet-common", version = "0.2.0-alpha.1" }
+bitnet-models = { path = "crates/bitnet-models", version = "0.2.0-alpha.1" }
+bitnet-quantization = { path = "crates/bitnet-quantization", version = "0.2.0-alpha.1", default-features = false }
+bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi", version = "0.2.0-alpha.1", optional = true }
 
 # Optional crates based on features
-bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.1-dev", optional = true }
-bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.1-dev", optional = true }
-bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev", optional = true }
-bitnet-device-probe = { path = "crates/bitnet-device-probe", version = "0.2.1-dev", optional = true }
+bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.0-alpha.1", optional = true }
+bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.0-alpha.1", optional = true }
+bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.0-alpha.1", optional = true }
+bitnet-device-probe = { path = "crates/bitnet-device-probe", version = "0.2.0-alpha.1", optional = true }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -162,10 +164,10 @@ vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
 
 [dev-dependencies]
 async-trait = "0.1.89"
-bitnet-logits = { path = "crates/bitnet-logits", version = "0.2.1-dev" }
-bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.1-dev" }
-bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.1-dev" }
-bitnet-tests = { path = "tests", version = "0.2.1-dev", package = "bitnet-tests", default-features = false }
+bitnet-logits = { path = "crates/bitnet-logits", version = "0.2.0-alpha.1" }
+bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.0-alpha.1" }
+bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.0-alpha.1" }
+bitnet-tests = { path = "tests", version = "0.2.0-alpha.1", package = "bitnet-tests", default-features = false }
 candle-core = { version = "0.9.1", default-features = false }
 candle-nn = { version = "0.9.1", default-features = false }
 criterion = "0.7.0"
@@ -375,7 +377,7 @@ serial_test = "3.2.0"
 temp-env = "0.3.6"
 tracing-test = "0.2.6"
 rand = "0.9.2"
-bitnet-test-support = { path = "crates/bitnet-test-support", version = "0.2.1-dev" }
+bitnet-test-support = { path = "crates/bitnet-test-support", version = "0.2.0-alpha.1" }
 
 # HTTP client for examples
 reqwest = { version = "0.12.24", features = ["json"] }

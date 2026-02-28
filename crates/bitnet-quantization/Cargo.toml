@@ -15,7 +15,7 @@ include = [
 ]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
 anyhow.workspace = true
 thiserror.workspace = true
 bytemuck.workspace = true
@@ -23,7 +23,7 @@ candle-core.workspace = true
 rayon.workspace = true
 serde.workspace = true
 tracing.workspace = true
-bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.0-alpha.1", optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
@@ -33,7 +33,7 @@ serial_test = "3.1"
 rand.workspace = true
 rand_chacha = "0.9"
 insta = { workspace = true, features = ["json"] }
-bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev", features = ["cpu"] }  # AC2: For testing re-exports
+bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1", features = ["cpu"] }  # AC2: For testing re-exports
 
 [features]
 default = []
