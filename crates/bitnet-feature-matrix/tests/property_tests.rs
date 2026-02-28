@@ -7,8 +7,7 @@
 //! - `BddGrid::canonical_grid()`: non-empty, lookup stability
 
 use bitnet_feature_matrix::{
-    BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario,
-    canonical_grid,
+    BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario, canonical_grid,
 };
 use proptest::prelude::*;
 

@@ -25,10 +25,7 @@ fn arb_component() -> impl Strategy<Value = RuntimeComponent> {
 }
 
 fn arb_policy() -> impl Strategy<Value = ContractPolicy> {
-    prop_oneof![
-        Just(ContractPolicy::Observe),
-        Just(ContractPolicy::Enforce),
-    ]
+    prop_oneof![Just(ContractPolicy::Observe), Just(ContractPolicy::Enforce),]
 }
 
 fn arb_scenario() -> impl Strategy<Value = TestingScenario> {
