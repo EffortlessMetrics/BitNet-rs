@@ -64,10 +64,7 @@ mod tests {
     #[test]
     fn embedding_kernels_have_expected_functions() {
         assert!(EMBEDDING_SRC.contains("embedding_lookup"), "missing embedding_lookup kernel");
-        assert!(
-            EMBEDDING_SRC.contains("output_projection"),
-            "missing output_projection kernel"
-        );
+        assert!(EMBEDDING_SRC.contains("output_projection"), "missing output_projection kernel");
         assert!(EMBEDDING_SRC.contains("embedding_rms_norm"), "missing embedding_rms_norm kernel");
         assert!(
             EMBEDDING_SRC.contains("add_position_embedding"),
