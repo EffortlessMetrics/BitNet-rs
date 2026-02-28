@@ -154,6 +154,9 @@ pub mod generation;
 // Provides memory layout computation, stride optimization,
 // tensor views, coalescing, alignment, and pinned memory management.
 pub mod memory_layout;
-// OpenAI-compatible API server with SSE streaming, auth, health checks,
-// and Prometheus metrics for GPU-accelerated inference.
-pub mod api_server;
+//! GPU hardware abstraction layer for `BitNet` LLM inference.
+//!
+//! Provides rate limiting, generation orchestration, and test harness
+//! utilities for GPU-accelerated inference workloads.
+
+pub mod rate_limiter;

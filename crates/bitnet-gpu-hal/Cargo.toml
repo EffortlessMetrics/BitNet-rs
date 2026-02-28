@@ -22,6 +22,8 @@ proptest.workspace = true
 serde = { workspace = true }
 serde_json.workspace = true
 tempfile.workspace = true
+description = "GPU hardware abstraction layer for BitNet LLM inference"
+rust-version.workspace = true
 
 [features]
 default = []
