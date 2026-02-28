@@ -19,6 +19,12 @@ pub const MATMUL_I2S_TILED_SRC: &str = include_str!("matmul_i2s_tiled.cl");
 /// KV cache management kernels source.
 pub const KV_CACHE_SRC: &str = include_str!("kv_cache.cl");
 
+/// FP16 matrix multiplication kernel source (cl_khr_fp16).
+pub const MATMUL_FP16_SRC: &str = include_str!("matmul_fp16.cl");
+
+/// INT8 matrix multiplication kernel source.
+pub const MATMUL_INT8_SRC: &str = include_str!("matmul_int8.cl");
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -28,10 +34,12 @@ mod tests {
         assert!(!MATMUL_I2S_SRC.is_empty(), "matmul_i2s.cl should not be empty");
         assert!(!QUANTIZE_I2S_SRC.is_empty(), "quantize_i2s.cl should not be empty");
         assert!(!ELEMENTWISE_SRC.is_empty(), "elementwise.cl should not be empty");
-        assert!(
+assert!(
             !MATMUL_I2S_TILED_SRC.is_empty(),
             "matmul_i2s_tiled.cl should not be empty"
         );
+assert!(!MATMUL_FP16_SRC.is_empty(), "matmul_fp16.cl should not be empty");
+        assert!(!MATMUL_INT8_SRC.is_empty(), "matmul_int8.cl should not be empty");
     }
 
     #[test]
@@ -39,10 +47,12 @@ mod tests {
         assert!(MATMUL_I2S_SRC.contains("__kernel"), "matmul_i2s.cl missing __kernel");
         assert!(QUANTIZE_I2S_SRC.contains("__kernel"), "quantize_i2s.cl missing __kernel");
         assert!(ELEMENTWISE_SRC.contains("__kernel"), "elementwise.cl missing __kernel");
-        assert!(
+assert!(
             MATMUL_I2S_TILED_SRC.contains("__kernel"),
             "matmul_i2s_tiled.cl missing __kernel"
         );
+assert!(MATMUL_FP16_SRC.contains("__kernel"), "matmul_fp16.cl missing __kernel");
+        assert!(MATMUL_INT8_SRC.contains("__kernel"), "matmul_int8.cl missing __kernel");
     }
 
     #[test]
