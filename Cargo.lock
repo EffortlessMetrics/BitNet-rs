@@ -884,6 +884,11 @@ dependencies = [
  "temp-env",
  "tempfile",
  "thiserror 2.0.18",
+ "insta",
+ "proptest",
+ "serial_test",
+ "temp-env",
+ "tracing",
 ]
 
 [[package]]
