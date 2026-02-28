@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-prompt-templates/src/lib.rs
+assertion_line: 957
+expression: result
+---
+<|im_start|>system
+You are a Haskell tutor.<|im_end|>
+<|im_start|>user
+Explain monads<|im_end|>
+<|im_start|>assistant
