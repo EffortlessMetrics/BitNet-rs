@@ -75,7 +75,7 @@ fn create_fallback_layer(
     }
 }
 /// AC1: Test that strict mode blocks FP32 fallback in QuantizedLinear::forward()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_strict_blocks_fp32_fallback_i2s() -> Result<()> {
     let layer = create_fallback_layer(128, 256, QuantizationType::I2S)?;
     let input = create_mock_tensor(1, 10, 128)?;
@@ -84,7 +84,7 @@ async fn test_strict_blocks_fp32_fallback_i2s() -> Result<()> {
     Ok(())
 }
 /// AC1: Test strict mode with TL1 quantization (may not have native kernels)
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_strict_mode_tl1_quantization() -> Result<()> {
     let layer = create_fallback_layer(64, 128, QuantizationType::TL1)?;
     let input = create_mock_tensor(1, 5, 64)?;
@@ -105,7 +105,7 @@ async fn test_strict_mode_tl1_quantization() -> Result<()> {
     }
 }
 /// AC1: Test strict mode with TL2 quantization
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_strict_mode_tl2_quantization() -> Result<()> {
     let layer = create_fallback_layer(64, 128, QuantizationType::TL2)?;
     let input = create_mock_tensor(1, 5, 64)?;
@@ -126,7 +126,7 @@ async fn test_strict_mode_tl2_quantization() -> Result<()> {
     }
 }
 /// Test that non-strict mode allows fallback (when kernels unavailable)
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_non_strict_allows_fallback() -> Result<()> {
     let layer = create_fallback_layer(64, 128, QuantizationType::I2S)?;
     let input = create_mock_tensor(1, 5, 64)?;
@@ -135,7 +135,7 @@ async fn test_non_strict_allows_fallback() -> Result<()> {
     Ok(())
 }
 /// Test error message format includes layer information
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_error_message_includes_layer_info() -> Result<()> {
     let layer = create_fallback_layer(256, 512, QuantizationType::I2S)?;
     if layer.is_fallback_path() {
@@ -158,7 +158,7 @@ async fn test_error_message_includes_layer_info() -> Result<()> {
     Ok(())
 }
 /// AC4: Test that attention projection validation works in strict mode
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_attention_projection_validation() -> Result<()> {
     Ok(())
 }
@@ -234,7 +234,7 @@ fn test_non_strict_mode_skips_validation() {
     assert!(result.is_ok(), "validate_quantization_fallback should return Ok in non-strict mode");
 }
 /// Integration test: Verify end-to-end strict mode behavior
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_strict_mode_end_to_end() -> Result<()> {
     let layer = create_fallback_layer(100, 200, QuantizationType::I2S)?;
     let input = create_mock_tensor(2, 8, 100)?;

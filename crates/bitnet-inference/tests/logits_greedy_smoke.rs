@@ -7,7 +7,7 @@ use bitnet_inference::{GenerationConfig, InferenceEngine};
 use bitnet_models::ModelLoader;
 use bitnet_tokenizers::auto;
 use std::env;
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn logits_and_greedy_smoke() {
     let model_path = match env::var("CROSSVAL_GGUF") {
         Ok(p) => p,

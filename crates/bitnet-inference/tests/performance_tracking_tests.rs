@@ -106,7 +106,7 @@ async fn create_test_engine_with_delays(
     InferenceEngine::new(model, tokenizer, device).unwrap()
 }
 mod performance_metrics_tests {
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_metrics_default() {
         use super::*;
         let metrics = PerformanceMetrics::default();
@@ -116,7 +116,7 @@ mod performance_metrics_tests {
         assert_eq!(metrics.backend_type, "unknown");
         assert!(metrics.validate().is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_metrics_validation() {
         use super::*;
         let mut metrics = PerformanceMetrics {
@@ -137,7 +137,7 @@ mod performance_metrics_tests {
         metrics.average_token_latency_ms = Some(-10.0);
         assert!(metrics.validate().is_err());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_metrics_efficiency_ratio() {
         use super::*;
         let mut metrics =
@@ -150,7 +150,7 @@ mod performance_metrics_tests {
         metrics.tokens_generated = 200;
         assert_eq!(metrics.efficiency_ratio(), 2.0);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_metrics_computation_accuracy() {
         use super::*;
         let metrics = PerformanceMetrics {
@@ -182,7 +182,7 @@ mod performance_metrics_tests {
     }
 }
 mod performance_tracker_tests {
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_tracker_creation() {
         use super::*;
         let tracker = PerformanceTracker::new();
@@ -194,7 +194,7 @@ mod performance_tracker_tests {
         assert_eq!(tracker.memory_peak_bytes, 0);
         assert!(tracker.start_time.is_some());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_tracker_recording() {
         use super::*;
         let mut tracker = PerformanceTracker::new();
@@ -219,7 +219,7 @@ mod performance_tracker_tests {
         tracker.update_memory_peak(2048);
         assert_eq!(tracker.memory_peak_bytes, 2048);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_tracker_metrics_computation() {
         use super::*;
         let mut tracker = PerformanceTracker::new();
@@ -234,7 +234,7 @@ mod performance_tracker_tests {
         tracker.record_cache_miss();
         assert_eq!(tracker.get_cache_hit_rate(), Some(0.75));
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_performance_tracker_uptime() {
         use super::*;
         let tracker = PerformanceTracker::new();
@@ -246,7 +246,7 @@ mod performance_tracker_tests {
 }
 mod engine_integration_tests {
     use super::*;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_engine_performance_tracking_integration() {
         let engine = create_test_engine().await;
         let initial_metrics = engine.get_performance_metrics().await.unwrap();
@@ -256,7 +256,7 @@ mod engine_integration_tests {
         assert!(initial_metrics.validate().is_ok());
         assert_eq!(initial_metrics.backend_type, "cpu");
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_engine_performance_metrics_accuracy() {
         let model_delay = Duration::from_millis(50);
         let tokenizer_delay = Duration::from_millis(10);
@@ -268,7 +268,7 @@ mod engine_integration_tests {
         let reset_result = engine.reset_performance_tracking();
         assert!(reset_result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_engine_performance_tracking_reset() {
         let engine = create_test_engine().await;
         let initial_metrics = engine.get_performance_metrics().await.unwrap();
@@ -285,7 +285,7 @@ mod engine_integration_tests {
 mod environment_variable_tests {
     use super::*;
     use std::env;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_deterministic_environment_variables() {
         unsafe {
             env::remove_var("BITNET_DETERMINISTIC");
@@ -306,7 +306,7 @@ mod environment_variable_tests {
             env::remove_var("RAYON_NUM_THREADS");
         }
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_batch_size_environment_variable() {
         unsafe {
             env::remove_var("BITNET_BATCH_SIZE");
@@ -326,7 +326,7 @@ mod environment_variable_tests {
             env::remove_var("BITNET_BATCH_SIZE");
         }
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_memory_limit_environment_variable() {
         unsafe {
             env::remove_var("BITNET_MEMORY_LIMIT");
@@ -343,7 +343,7 @@ mod environment_variable_tests {
             env::remove_var("BITNET_MEMORY_LIMIT");
         }
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_invalid_environment_variables() {
         let result = "invalid_seed".parse::<u64>();
         assert!(result.is_err(), "String parsing should fail for invalid seed");
@@ -355,7 +355,7 @@ mod environment_variable_tests {
 }
 mod stress_tests {
     use super::*;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_high_volume_performance_tracking() {
         let mut tracker = PerformanceTracker::new();
         let num_simulated_inferences = 100;

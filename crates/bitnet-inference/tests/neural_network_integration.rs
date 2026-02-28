@@ -18,7 +18,7 @@ use bitnet_inference::layers::quantized_linear::{LookupTable, QuantizedLinear};
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
 /// Test I2S quantized linear forward pass with real tensor operations
 /// Coverage target: quantized_linear.rs:forward_i2s()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_i2s_quantized_linear_forward_real_inference() -> Result<()> {
     let batch_size = 2;
     let seq_len = 16;
@@ -64,7 +64,7 @@ async fn test_i2s_quantized_linear_forward_real_inference() -> Result<()> {
 }
 /// Test TL1 quantized linear forward pass with table lookup
 /// Coverage target: quantized_linear.rs:forward_tl1()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_tl1_quantized_linear_forward_real_inference() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
@@ -99,7 +99,7 @@ async fn test_tl1_quantized_linear_forward_real_inference() -> Result<()> {
 }
 /// Test TL2 quantized linear forward pass with 2-level table lookup
 /// Coverage target: quantized_linear.rs:forward_tl2()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_tl2_quantized_linear_forward_real_inference() -> Result<()> {
     let batch_size = 1;
     let seq_len = 4;
@@ -138,7 +138,7 @@ async fn test_tl2_quantized_linear_forward_real_inference() -> Result<()> {
 }
 /// Test quantized linear with bias addition
 /// Coverage target: quantized_linear.rs:apply_bias_if_present()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_quantized_linear_with_bias() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
@@ -168,7 +168,7 @@ async fn test_quantized_linear_with_bias() -> Result<()> {
 }
 /// Test quantized linear input validation and error handling
 /// Coverage target: quantized_linear.rs:validate_input(), validate_input_dimensions()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_quantized_linear_input_validation() -> Result<()> {
     let hidden_size = 128;
     let out_features = 256;
@@ -193,7 +193,7 @@ async fn test_quantized_linear_input_validation() -> Result<()> {
 }
 /// Test KV-cache creation and initialization
 /// Coverage target: attention.rs:KVCache::new()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_kv_cache_initialization() -> Result<()> {
     let max_seq_len = 128;
     let num_layers = 12;
@@ -220,7 +220,7 @@ async fn test_kv_cache_initialization() -> Result<()> {
 }
 /// Test KV-cache update and retrieval
 /// Coverage target: attention.rs:KVCache::update(), get()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_kv_cache_update_and_retrieval() -> Result<()> {
     let max_seq_len = 64;
     let num_layers = 4;
@@ -257,7 +257,7 @@ async fn test_kv_cache_update_and_retrieval() -> Result<()> {
 }
 /// Test KV-cache clearing
 /// Coverage target: attention.rs:KVCache::clear()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_kv_cache_clear() -> Result<()> {
     let max_seq_len = 32;
     let num_layers = 2;
@@ -289,7 +289,7 @@ async fn test_kv_cache_clear() -> Result<()> {
 }
 /// Test KV-cache error handling for invalid layer indices
 /// Coverage target: attention.rs:KVCache::validate_layer_index()
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_kv_cache_error_handling() -> Result<()> {
     let cache = KVCache::new(64, 4, 4, 32, &Device::Cpu)?;
     let result = cache.get(10);
@@ -301,7 +301,7 @@ async fn test_kv_cache_error_handling() -> Result<()> {
 }
 /// Test multi-layer quantized forward pass simulating transformer block
 /// Coverage target: Combined quantized_linear.rs + attention.rs integration
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_multi_layer_quantized_transformer_block() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
@@ -334,7 +334,7 @@ async fn test_multi_layer_quantized_transformer_block() -> Result<()> {
 }
 /// Test quantized linear with extreme input values
 /// Coverage target: quantized_linear.rs numerical stability
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_quantized_linear_extreme_values() -> Result<()> {
     let hidden_size = 64;
     let out_features = 64;

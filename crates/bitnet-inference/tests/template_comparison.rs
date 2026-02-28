@@ -210,7 +210,7 @@ mod template_comparison_tests {
     /// Compare output across all three templates (raw, instruct, llama3-chat)
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_template_comparison_capital_city() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: template comparison");
@@ -281,7 +281,7 @@ mod template_comparison_tests {
     /// Verify stop sequence behavior is template-specific
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_template_stop_sequence_behavior() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: template stop sequence behavior");
@@ -327,7 +327,7 @@ mod template_comparison_tests {
     /// Compare raw template vs instruct template for Q&A
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_raw_vs_instruct_qa() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: raw vs instruct comparison");
@@ -400,7 +400,7 @@ mod template_comparison_tests {
     /// Verify LLaMA-3 chat template with system prompts
     ///
     /// **TDD Scaffolding**: Test compiles but requires model file to execute
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_llama3_chat_system_prompt() -> Result<()> {
         if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
             eprintln!("Skipping slow test: LLaMA-3 chat system prompt");

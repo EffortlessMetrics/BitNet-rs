@@ -16,7 +16,7 @@ use bitnet_common::{BitNetTensor, Device, Tensor};
 use bitnet_quantization::I2SQuantizer;
 /// AC:2.1 - Real attention with quantized Q/K/V/O projections
 /// Validates attention computation uses QuantizedLinear for all projections
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_real_attention_quantized_qkvo_projections() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
@@ -36,7 +36,7 @@ async fn test_ac2_real_attention_quantized_qkvo_projections() -> Result<()> {
 }
 /// AC:2.2 - RoPE (Rotary Position Embeddings) application to Q/K
 /// Validates RoPE is applied before attention score computation
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_rope_positional_embeddings() -> Result<()> {
     let batch_size = 1;
     let seq_len = 16;
@@ -53,7 +53,7 @@ async fn test_ac2_rope_positional_embeddings() -> Result<()> {
 }
 /// AC:2.3 - GQA (Grouped Query Attention) expansion
 /// Validates GQA expands K/V when num_key_value_heads < num_attention_heads
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_gqa_grouped_query_attention() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
@@ -71,7 +71,7 @@ async fn test_ac2_gqa_grouped_query_attention() -> Result<()> {
 }
 /// AC:2.4 - Causal masking for autoregressive generation
 /// Validates causal attention mask prevents attending to future tokens
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_causal_masking() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;
@@ -86,7 +86,7 @@ async fn test_ac2_causal_masking() -> Result<()> {
 }
 /// AC:2.5 - KV-cache update during forward pass
 /// Validates KV-cache is updated with new key/value states
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_kv_cache_update() -> Result<()> {
     let batch_size = 1;
     let seq_len = 4;
@@ -106,7 +106,7 @@ async fn test_ac2_kv_cache_update() -> Result<()> {
 }
 /// AC:2.6 - Full attention pipeline integration test
 /// Validates complete attention computation with all components
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_full_attention_pipeline() -> Result<()> {
     let batch_size = 1;
     let seq_len = 8;

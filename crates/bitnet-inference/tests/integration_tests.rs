@@ -117,7 +117,7 @@ impl Tokenizer for MockTokenizer {
 }
 mod engine_tests {
     use super::*;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_engine_creation_cpu() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -128,7 +128,7 @@ mod engine_tests {
         let stats = engine.get_stats().await;
         assert_eq!(stats.backend_type, "cpu");
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_engine_creation_with_config() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -140,7 +140,7 @@ mod engine_tests {
         let engine = InferenceEngine::with_config(model, tokenizer, device, config);
         assert!(engine.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_engine_creation_gpu_fallback() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -148,7 +148,7 @@ mod engine_tests {
         let engine = InferenceEngine::new(model, tokenizer, device);
         assert!(engine.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_basic_text_generation() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -160,7 +160,7 @@ mod engine_tests {
         assert!(!generated_text.is_empty());
         assert!(generated_text.starts_with("decoded_"));
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_text_generation_with_config() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -174,7 +174,7 @@ mod engine_tests {
         let result = engine.generate_with_config("Test prompt", &config).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_generation_with_stop_sequences() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -185,7 +185,7 @@ mod engine_tests {
         let result = engine.generate_with_config("Test prompt", &config).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_model_config_access() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -194,7 +194,7 @@ mod engine_tests {
         let model_config = engine.model_config();
         assert!(model_config.model.vocab_size > 0);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_cache_management() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -206,7 +206,7 @@ mod engine_tests {
         let stats_after = engine.get_stats().await;
         assert!(stats_after.cache_size <= stats_before.cache_size);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_engine_error_handling() {
         let model = Arc::new(MockModel::new().with_failure());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -215,7 +215,7 @@ mod engine_tests {
         let result = engine.generate("Test prompt").await;
         assert!(result.is_err());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_tokenizer_error_handling() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new().with_failure());
@@ -227,7 +227,7 @@ mod engine_tests {
 }
 mod streaming_tests {
     use super::*;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_streaming_generation() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -254,7 +254,7 @@ mod streaming_tests {
         assert!(token_count > 0);
         assert!(!total_text.is_empty());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_streaming_with_config() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -276,7 +276,7 @@ mod streaming_tests {
         }
         assert!(received_tokens > 0);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_streaming_early_termination() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -287,7 +287,7 @@ mod streaming_tests {
         assert!(first_result.is_ok());
         drop(stream);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_streaming_config_validation() {
         let config = StreamingConfig {
             buffer_size: 5,
@@ -423,7 +423,7 @@ mod config_tests {
 mod performance_tests {
     use super::*;
     use std::time::Instant;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_inference_performance_metrics() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -443,7 +443,7 @@ mod performance_tests {
         );
         assert!(!stats.backend_type.is_empty(), "backend_type should be specified");
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_concurrent_inference() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -468,7 +468,7 @@ mod performance_tests {
         }
         assert!(success_count > 0);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_memory_usage_monitoring() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -480,7 +480,7 @@ mod performance_tests {
         assert!(stats_after.cache_usage >= 0.0);
         assert!(stats_after.cache_usage <= 100.0);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_resource_cleanup() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -492,7 +492,7 @@ mod performance_tests {
         let stats_after = engine.get_stats().await;
         assert!(stats_after.cache_size <= stats_before.cache_size);
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_throughput_measurement() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -526,7 +526,7 @@ mod performance_tests {
 }
 mod error_handling_tests {
     use super::*;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_model_failure_handling() {
         let model = Arc::new(MockModel::new().with_failure());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -537,7 +537,7 @@ mod error_handling_tests {
         let error = result.unwrap_err();
         assert!(error.to_string().contains("Mock model failure"));
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_tokenizer_failure_handling() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new().with_failure());
@@ -548,7 +548,7 @@ mod error_handling_tests {
         let error = result.unwrap_err();
         assert!(error.to_string().contains("Mock tokenizer failure"));
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_empty_prompt_handling() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -557,7 +557,7 @@ mod error_handling_tests {
         let result = engine.generate("").await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_very_long_prompt_handling() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -567,7 +567,7 @@ mod error_handling_tests {
         let result = engine.generate(&long_prompt).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_invalid_generation_config() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -576,7 +576,7 @@ mod error_handling_tests {
         let invalid_config = GenerationConfig::default().with_max_tokens(0);
         assert!(invalid_config.validate().is_err());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_streaming_error_propagation() {
         let model = Arc::new(MockModel::new().with_failure());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -594,7 +594,7 @@ mod error_handling_tests {
 }
 mod edge_case_tests {
     use super::*;
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_unicode_prompt_handling() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -604,7 +604,7 @@ mod edge_case_tests {
         let result = engine.generate(unicode_prompt).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_special_characters_prompt() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -614,7 +614,7 @@ mod edge_case_tests {
         let result = engine.generate(special_prompt).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_zero_temperature_generation() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -624,7 +624,7 @@ mod edge_case_tests {
         let result = engine.generate_with_config("Test prompt", &config).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_high_temperature_generation() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -634,7 +634,7 @@ mod edge_case_tests {
         let result = engine.generate_with_config("Test prompt", &config).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_single_token_generation() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -644,7 +644,7 @@ mod edge_case_tests {
         let result = engine.generate_with_config("Test prompt", &config).await;
         assert!(result.is_ok());
     }
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_max_context_length_handling() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());

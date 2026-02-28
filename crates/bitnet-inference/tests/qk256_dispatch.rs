@@ -8,7 +8,7 @@ use anyhow::Result;
 use bitnet_common::{BitNetTensor, Device, Tensor};
 use bitnet_inference::layers::quantized_linear::QuantizedLinear;
 use bitnet_quantization::I2SQuantizer;
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_qk256_dispatch_basic() -> Result<()> {
     let in_features = 256;
     let out_features = 64;
@@ -52,7 +52,7 @@ async fn test_qk256_dispatch_basic() -> Result<()> {
     println!("✓ QK256 dispatch test passed: output shape and numerical correctness verified");
     Ok(())
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_qk256_with_non_aligned_dims() -> Result<()> {
     let in_features = 300;
     let out_features = 32;
@@ -89,7 +89,7 @@ async fn test_qk256_with_non_aligned_dims() -> Result<()> {
     println!("✓ QK256 non-aligned dimensions test passed");
     Ok(())
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_qk256_dimension_validation() -> Result<()> {
     let in_features = 256;
     let out_features = 64;

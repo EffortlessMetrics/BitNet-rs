@@ -12,7 +12,6 @@ categories.workspace = true
 description = "Low-level FFI bindings to BitNet C++ implementation for cross-validation"
 readme = "README.md"
 rust-version.workspace = true
-publish = false                                                                          # Internal crate, not published
 
 [features]
 default = []
