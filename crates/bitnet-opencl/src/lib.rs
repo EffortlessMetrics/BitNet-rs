@@ -9,10 +9,11 @@ pub mod wasm_shim;
 pub use wasm_shim::{
     ArgQualifier, KernelArg, KernelSignature, MockOpenClContext, parse_kernel_signatures,
 };
-//! OpenCL 3.0 backend for BitNet inference.
-//! Provides Unified Shared Memory (USM) support for zero-copy host-device
-//! data access, with automatic fallback to explicit buffer copies when USM
-//! is unavailable.
+/// OpenCL 3.0 backend for BitNet inference.
+/// Provides Unified Shared Memory (USM) support for zero-copy host-device
+/// data access, with automatic fallback to explicit buffer copies when USM
+/// is unavailable.
 pub mod usm;
-//! OpenCL backend utilities for BitNet inference.
+/// OpenCL backend utilities for BitNet inference.
 pub mod p2p;
+pub mod leak_detector;
