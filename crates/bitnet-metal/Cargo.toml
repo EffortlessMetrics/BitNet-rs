@@ -1,0 +1,26 @@
+[package]
+name = "bitnet-metal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Metal Shading Language compute kernels for Apple Silicon GPU inference"
+rust-version.workspace = true
+
+[dependencies]
+# Pure embedded shader sources – no runtime deps required.
+
+[dev-dependencies]
+
+[features]
+default = []
+cpu = []
+gpu = ["cuda"]
+cuda = []
+
+[lints]
+workspace = true
