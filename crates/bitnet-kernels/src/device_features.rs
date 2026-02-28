@@ -215,6 +215,8 @@ pub fn current_kernel_capabilities() -> bitnet_common::kernel_registry::KernelCa
         vulkan_compiled: cfg!(feature = "vulkan"),
         vulkan_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: detect_simd_level(),
     }
 }

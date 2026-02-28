@@ -6,4 +6,5 @@ expression: displays
     "cpu-rust",
     "cuda",
     "cpp-ffi",
+    "vulkan",
 ]

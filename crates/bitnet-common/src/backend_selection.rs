@@ -215,6 +215,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         }
     }
@@ -227,6 +229,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         }
     }
@@ -239,6 +243,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         }
     }
@@ -336,6 +342,8 @@ mod tests {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Scalar,
         };
         let err = select_backend(BackendRequest::Auto, &empty_caps).unwrap_err();

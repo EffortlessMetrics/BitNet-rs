@@ -6,6 +6,10 @@ KernelCapabilities {
     cpu_rust: true,
     cuda_compiled: false,
     cuda_runtime: false,
+    oneapi_compiled: false,
+    oneapi_runtime: false,
     cpp_ffi: false,
+    vulkan_compiled: false,
+    vulkan_runtime: false,
     simd_level: Avx2,
 }

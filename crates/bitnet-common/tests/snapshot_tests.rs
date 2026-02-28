@@ -52,7 +52,7 @@ fn simd_level_ordering_is_ascending() {
 
 #[test]
 fn kernel_backend_display_all_variants() {
-    let backends = [KernelBackend::CpuRust, KernelBackend::Cuda, KernelBackend::CppFfi];
+    let backends = [KernelBackend::CpuRust, KernelBackend::Cuda, KernelBackend::CppFfi, KernelBackend::Vulkan];
     let displays: Vec<String> = backends.iter().map(|b| b.to_string()).collect();
     insta::assert_debug_snapshot!("kernel_backend_display_variants", displays);
 }
@@ -70,6 +70,8 @@ fn kernel_capabilities_cpu_only_snapshot() {
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     };
     insta::assert_debug_snapshot!("kernel_capabilities_cpu_avx2", caps);
