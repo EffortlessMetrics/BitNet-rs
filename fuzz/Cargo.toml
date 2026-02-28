@@ -267,3 +267,33 @@ name = "tensor_shape_validate"
 path = "fuzz_targets/tensor_shape_validate.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "gguf_tensor_info"
+path = "fuzz_targets/gguf_tensor_info.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "prompt_template"
+path = "fuzz_targets/prompt_template.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "stop_sequence"
+path = "fuzz_targets/stop_sequence.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "model_config_validation"
+path = "fuzz_targets/model_config_validation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "token_id_bounds"
+path = "fuzz_targets/token_id_bounds.rs"
+test = false
+doc = false
