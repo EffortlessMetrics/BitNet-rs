@@ -201,10 +201,6 @@ async fn ac4_bitnet_download_infrastructure_integration() {
         Ok(downloader) => {
             println!("AC4: Downloader integrated with BitNet-rs infrastructure");
 
-            // Test infrastructure compatibility
-            let _supports_downloads = cfg!(feature = "downloads");
-            println!("AC4: Downloads feature enabled: {}", _supports_downloads);
-
             // Downloader should be ready to use
             drop(downloader);
         }

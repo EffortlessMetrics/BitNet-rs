@@ -188,16 +188,16 @@ impl PrefixCache {
             }
         }
 
-        if let Some((matched_len, id)) = best {
-            if let Some(entry) = self.entries.get_mut(&id) {
-                entry.hits += 1;
-                entry.last_access = Instant::now();
-                let snapshot = entry.clone();
-                self.total_hits += 1;
-                self.total_prefix_match_len += matched_len as u64;
-                debug!("prefix cache hit: matched {matched_len} tokens (entry {id})");
-                return Some((matched_len, snapshot));
-            }
+        if let Some((matched_len, id)) = best
+            && let Some(entry) = self.entries.get_mut(&id)
+        {
+            entry.hits += 1;
+            entry.last_access = Instant::now();
+            let snapshot = entry.clone();
+            self.total_hits += 1;
+            self.total_prefix_match_len += matched_len as u64;
+            debug!("prefix cache hit: matched {matched_len} tokens (entry {id})");
+            return Some((matched_len, snapshot));
         }
 
         debug!("prefix cache miss");
