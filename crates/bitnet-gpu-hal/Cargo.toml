@@ -31,3 +31,8 @@ cuda = []
 
 [lints]
 workspace = true
+description = "GPU hardware abstraction layer error types for BitNet inference"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
