@@ -9,7 +9,7 @@ pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
-#[cfg(any(feature = "gpu", feature = "cuda"))]
+#[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
 #[cfg(feature = "npu-backend")]
@@ -60,6 +60,18 @@ impl KernelManager {
                 }
             } else {
                 log::debug!("CUDA kernel not available");
+            }
+        }
+
+        #[cfg(feature = "oneapi")]
+        {
+            if let Ok(opencl_kernel) = gpu::opencl::OpenClKernel::new() {
+                if opencl_kernel.is_available() {
+                    log::info!("OpenCL kernel available, adding to providers");
+                    providers.insert(0, Box::new(opencl_kernel));
+                }
+            } else {
+                log::debug!("OpenCL kernel not available");
             }
         }
 
@@ -245,6 +257,8 @@ pub use stubs::Avx2Kernel;
 pub use device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub use gpu::CudaKernel;
+#[cfg(feature = "oneapi")]
+pub use gpu::opencl::OpenClKernel;
 #[cfg(feature = "npu-backend")]
 pub use npu::NpuKernel;
 #[cfg(not(target_arch = "aarch64"))]
