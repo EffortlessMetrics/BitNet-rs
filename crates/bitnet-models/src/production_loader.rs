@@ -324,7 +324,16 @@ impl ProductionModelLoader {
     fn is_supported_architecture(&self, architecture: &str) -> bool {
         matches!(
             architecture.to_lowercase().as_str(),
-            "bitnet" | "bitnet-b1.58" | "llama" | "mistral" | "qwen" | "gpt" | "bert" | "phi"
+            "bitnet"
+                | "bitnet-b1.58"
+                | "llama"
+                | "mistral"
+                | "qwen"
+                | "gpt"
+                | "bert"
+                | "phi"
+                | "gemma"
+                | "gemma2"
         )
     }
 
@@ -624,6 +633,9 @@ mod tests {
         assert!(loader.is_supported_architecture("BitNet-B1.58"));
         assert!(loader.is_supported_architecture("llama"));
         assert!(loader.is_supported_architecture("phi"));
+        assert!(loader.is_supported_architecture("gemma"));
+        assert!(loader.is_supported_architecture("gemma2"));
+        assert!(loader.is_supported_architecture("Gemma"));
         assert!(!loader.is_supported_architecture("unknown"));
     }
 

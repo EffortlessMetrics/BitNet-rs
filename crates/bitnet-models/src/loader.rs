@@ -231,9 +231,11 @@ impl ModelLoader {
                 | "llama"
                 | "mistral"
                 | "qwen"
+                | "phi"
+                | "gemma"
+                | "gemma2"
                 | "gpt"
                 | "bert"
-                | "phi"
         )
     }
 

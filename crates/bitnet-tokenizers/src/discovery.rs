@@ -28,6 +28,8 @@ pub struct ModelCompatibilityMatrix {
     pub phi4_100k: TokenizerDownloadInfo,
     /// Qwen2 with 151K vocabulary - BPE tokenizer
     pub qwen2_150k: TokenizerDownloadInfo,
+    /// Gemma with 256K vocabulary - SentencePiece tokenizer
+    pub gemma_256k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -68,6 +70,12 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "qwen2-150k".to_string(),
                 expected_vocab: Some(151936),
+            },
+            gemma_256k: TokenizerDownloadInfo {
+                repo: "google/gemma-2b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "gemma-256k".to_string(),
+                expected_vocab: Some(256000),
             },
         }
     }

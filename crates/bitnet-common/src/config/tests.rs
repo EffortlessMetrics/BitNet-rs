@@ -424,6 +424,22 @@ fn test_apply_architecture_defaults_bitnet() {
 }
 
 #[test]
+fn test_apply_architecture_defaults_gemma() {
+    let mut config = ModelConfig::default();
+    config.apply_architecture_defaults("gemma");
+    assert_eq!(config.norm_type, NormType::RmsNorm);
+    assert_eq!(config.activation_type, ActivationType::Gelu);
+}
+
+#[test]
+fn test_apply_architecture_defaults_gemma2() {
+    let mut config = ModelConfig::default();
+    config.apply_architecture_defaults("gemma2");
+    assert_eq!(config.norm_type, NormType::RmsNorm);
+    assert_eq!(config.activation_type, ActivationType::Gelu);
+}
+
+#[test]
 fn test_apply_architecture_defaults_gpt() {
     let mut config = ModelConfig::default();
     config.apply_architecture_defaults("gpt");
