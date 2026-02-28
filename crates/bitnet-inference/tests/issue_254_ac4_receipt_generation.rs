@@ -15,7 +15,7 @@ use std::path::Path;
 use support::EnvGuard;
 /// AC:4.1 - Generate inference receipt with compute_path="real"
 /// Validates receipt schema and required fields
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 async fn test_ac4_receipt_generation_real_path() -> Result<()> {
     let receipt =
@@ -37,7 +37,7 @@ async fn test_ac4_receipt_generation_real_path() -> Result<()> {
 }
 /// AC:4.2 - Receipt fails if compute_path="mock"
 /// Validates strict enforcement of real inference path
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_receipt_rejects_mock_path() -> Result<()> {
     let mock_receipt = create_mock_receipt("cpu", vec!["mock_gemv".to_string()])?;
     assert_eq!(
@@ -49,7 +49,7 @@ async fn test_ac4_receipt_rejects_mock_path() -> Result<()> {
 }
 /// AC:4.3 - Save receipt to ci/inference.json
 /// Validates receipt file creation
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_save_receipt_to_file() -> Result<()> {
     let temp_dir = tempfile::tempdir()?;
     let receipt_path = temp_dir.path().join("inference.json");
@@ -65,7 +65,7 @@ async fn test_ac4_save_receipt_to_file() -> Result<()> {
 }
 /// AC:4.4 - Receipt includes environment variables
 /// Validates environment section in receipt
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 async fn test_ac4_receipt_environment_variables_long() -> Result<()> {
     if std::env::var("RUN_SLOW_RECEIPT_TESTS").ok().as_deref() != Some("1") {
@@ -94,7 +94,7 @@ async fn test_ac4_receipt_environment_variables_long() -> Result<()> {
 }
 /// AC:4.5 - Receipt includes performance baseline
 /// Validates performance metrics in receipt
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_receipt_performance_baseline() -> Result<()> {
     let receipt = create_mock_receipt("cpu", vec!["i2s_gemv".to_string()])?;
     assert!(

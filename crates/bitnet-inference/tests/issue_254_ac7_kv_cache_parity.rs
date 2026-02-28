@@ -12,7 +12,7 @@ use bitnet_common::{BitNetTensor, Device};
 use bitnet_inference::KVCache;
 /// AC:7.1 - KV-cache prefill + decode parity with full recompute
 /// Validates that cached attention matches full attention computation
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac7_kv_cache_parity_prefill_decode() -> Result<()> {
     let batch_size = 1;
     let max_seq_len = 128;
@@ -33,7 +33,7 @@ async fn test_ac7_kv_cache_parity_prefill_decode() -> Result<()> {
 }
 /// AC:7.2 - Multi-step KV-cache decode parity
 /// Validates cached decode over multiple steps
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac7_kv_cache_multi_step_parity() -> Result<()> {
     let max_seq_len = 128;
     let num_layers = 2;
@@ -45,7 +45,7 @@ async fn test_ac7_kv_cache_multi_step_parity() -> Result<()> {
 }
 /// AC:7.3 - KV-cache correctness with GQA
 /// Validates KV-cache works correctly with Grouped Query Attention
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac7_kv_cache_gqa_correctness() -> Result<()> {
     let max_seq_len = 128;
     let num_layers = 2;
@@ -57,7 +57,7 @@ async fn test_ac7_kv_cache_gqa_correctness() -> Result<()> {
 }
 /// AC:7.4 - KV-cache update validation
 /// Validates KV-cache accumulates states correctly
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac7_kv_cache_update_validation() -> Result<()> {
     let max_seq_len = 128;
     let num_layers = 2;

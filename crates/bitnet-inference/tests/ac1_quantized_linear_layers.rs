@@ -35,7 +35,7 @@ impl Default for AC1TestConfig {
 /// Tests feature spec: issue-248-spec.md#ac1
 /// Validates I2S quantization maintains >99% accuracy in linear transformations
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac1_i2s_quantized_linear_forward_pass_cpu() -> Result<()> {
     let config = AC1TestConfig::default();
     let input = create_mock_tensor(config.batch_size, config.sequence_length, config.hidden_size)?;
@@ -78,7 +78,7 @@ async fn test_ac1_i2s_quantized_linear_forward_pass_cpu() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac1
 /// Validates GPU acceleration maintains accuracy parity with CPU implementation
 #[cfg(feature = "gpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac1_i2s_quantized_linear_forward_pass_gpu() -> Result<()> {
     let config = AC1TestConfig::default();
     if !is_gpu_available() {
@@ -96,7 +96,7 @@ async fn test_ac1_i2s_quantized_linear_forward_pass_gpu() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac1
 /// Validates TL1 table lookup quantization eliminates FP32 dequantization in hot path
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac1_tl1_quantized_linear_forward_pass() -> Result<()> {
     use bitnet_inference::layers::LookupTable;
     let config = AC1TestConfig {
@@ -185,7 +185,7 @@ async fn test_ac1_tl1_quantized_linear_forward_pass() -> Result<()> {
 /// - 256-entry lookup table fits in L2 cache (≤1KB)
 /// - Numerical stability: no NaN/Inf in outputs
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac1_tl2_quantized_linear_forward_pass() -> Result<()> {
     use bitnet_inference::layers::LookupTable;
     let config = AC1TestConfig {
@@ -296,7 +296,7 @@ async fn test_ac1_tl2_quantized_linear_forward_pass() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac1
 /// Validates consistent results across CPU/GPU/FFI implementations
 #[cfg(all(feature = "cpu", feature = "gpu"))]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac1_cross_platform_quantized_linear_consistency() -> Result<()> {
     let config = AC1TestConfig::default();
     if !is_gpu_available() || !is_ffi_available() {

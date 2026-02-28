@@ -40,7 +40,7 @@ impl Default for NeuralNetworkTestConfig {
 /// Tests feature spec: issue-248-spec.md#ac1
 /// Validates I2S, TL1, TL2 quantization maintains >99% accuracy
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac1_quantized_linear_layer_forward_pass() -> Result<()> {
     let config = NeuralNetworkTestConfig::default();
     let input = create_mock_tensor(config.batch_size, config.sequence_length, config.hidden_size)
@@ -69,7 +69,7 @@ async fn test_ac1_quantized_linear_layer_forward_pass() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates attention with quantized Q, K, V projections
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_multi_head_attention_mechanism() -> Result<()> {
     // Use a small config: the default (hidden=2048, seq=512) requires ~10B scalar FLOPs
     // which exceeds the 5-minute CI timeout on unoptimized MVP kernels.
@@ -103,7 +103,7 @@ async fn test_ac2_multi_head_attention_mechanism() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac3
 /// Validates temperature, top-k, nucleus sampling with deterministic seeding
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_autoregressive_token_generation() -> Result<()> {
     let config = NeuralNetworkTestConfig::default();
     let prompt = "The future of artificial intelligence";
@@ -128,7 +128,7 @@ async fn test_ac3_autoregressive_token_generation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac4
 /// Validates >99% accuracy vs C++ reference using xtask crossval
 #[cfg(all(feature = "cpu", feature = "crossval"))]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_cross_validation_accuracy_preservation() -> Result<()> {
     if std::env::var("BITNET_CROSSVAL_ENABLED").is_err() {
         log::warn!("Skipping cross-validation test: BITNET_CROSSVAL_ENABLED not set");
@@ -156,7 +156,7 @@ async fn test_ac4_cross_validation_accuracy_preservation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac5
 /// Validates 5-15 tok/sec CPU, 2-5x GPU speedup
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac5_performance_targets_validation() -> Result<()> {
     let config = NeuralNetworkTestConfig::default();
     let test_prompt = "Performance test sequence";
@@ -241,7 +241,7 @@ fn test_ac6_quantization_format_compatibility() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac7
 /// Validates reproducible outputs with BITNET_DETERMINISTIC=1, BITNET_SEED=42
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac7_deterministic_inference_behavior() -> Result<()> {
     unsafe {
         std::env::set_var("BITNET_DETERMINISTIC", "1");
@@ -274,7 +274,7 @@ async fn test_ac7_deterministic_inference_behavior() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac8
 /// Validates real implementations replace mock placeholders
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac8_mock_implementation_replacement_validation() -> Result<()> {
     let test_prompt = "Mock detection test";
     let mock_detection_result = test_mock_replacement_validation(test_prompt)
@@ -316,7 +316,7 @@ async fn test_ac8_mock_implementation_replacement_validation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac9
 /// Validates end-to-end transformer pipeline integration
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac9_comprehensive_integration_testing() -> Result<()> {
     let test_prompts =
         vec!["Integration test prompt 1", "Integration test prompt 2", "Integration test prompt 3"];
@@ -342,7 +342,7 @@ async fn test_ac9_comprehensive_integration_testing() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac10
 /// Validates anyhow::Result<T> patterns for error conditions
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac10_error_handling_robustness() -> Result<()> {
     let nan_data = vec![f32::NAN; 100];
     let nan_result = test_quantization_error_handling(&nan_data);

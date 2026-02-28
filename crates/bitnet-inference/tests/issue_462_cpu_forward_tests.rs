@@ -111,7 +111,7 @@ mod test_utils {
 /// - All logits finite (no NaN/Inf)
 /// - At least 50% of logits are non-zero
 /// - KV cache updated at position 0
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[cfg(feature = "cpu")]
 async fn test_ac1_cpu_forward_bos_nonzero_logits() -> Result<()> {
     use bitnet_inference::InferenceEngine;
@@ -179,7 +179,7 @@ async fn test_ac1_cpu_forward_bos_nonzero_logits() -> Result<()> {
 /// - Deterministic output (same seed → same tokens)
 /// - All token IDs within vocab range
 /// - KV cache length increments correctly: 1, 2, 3, ..., 17
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[cfg(feature = "cpu")]
 async fn test_ac1_greedy_decode_16_tokens() -> Result<()> {
     use bitnet_inference::InferenceEngine;
@@ -260,7 +260,7 @@ async fn test_ac1_greedy_decode_16_tokens() -> Result<()> {
 /// - No FP32 staging kernels allowed
 /// - Receipt contains ≥1 quantized kernel (i2s_*, tl1_*, tl2_*)
 /// - No fallback kernels (fp32_*, fallback_*, dequant*)
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[cfg(feature = "cpu")]
 async fn test_ac1_quantized_linear_strict_mode() -> Result<()> {
     use bitnet_inference::InferenceEngine;
@@ -328,7 +328,7 @@ async fn test_ac1_quantized_linear_strict_mode() -> Result<()> {
 /// - K,V shapes: [current_len, num_heads, head_dim]
 /// - Cache contains non-zero values (not all zeros)
 /// - Cache accessible for all layers
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[cfg(feature = "cpu")]
 async fn test_ac1_kv_cache_update_retrieval() -> Result<()> {
     use bitnet_inference::InferenceEngine;

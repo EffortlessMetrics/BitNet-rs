@@ -98,7 +98,7 @@ impl Default for AC2TestConfig {
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates attention mechanism with I2S quantized Q, K, V projections
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_quantized_multi_head_attention_forward_pass() -> Result<()> {
     log::warn!("AC2.1: Quantized multi-head attention not yet fully implemented - skipping test");
     return Ok(());
@@ -179,7 +179,7 @@ async fn test_ac2_quantized_multi_head_attention_forward_pass() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates proper attention masking for causal (autoregressive) attention
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_attention_mask_handling() -> Result<()> {
     log::warn!("AC2.2: Attention mask handling not yet fully implemented - skipping test");
     return Ok(());
@@ -218,7 +218,7 @@ async fn test_ac2_attention_mask_handling() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates GPU acceleration for attention computation with mixed precision
 #[cfg(feature = "gpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_gpu_multi_head_attention_performance() -> Result<()> {
     log::warn!("AC2.3: GPU multi-head attention not yet fully implemented - skipping test");
     return Ok(());
@@ -273,7 +273,7 @@ async fn test_ac2_gpu_multi_head_attention_performance() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates attention patterns maintain linguistic coherence after quantization
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_attention_pattern_analysis() -> Result<()> {
     log::warn!("AC2.4: Attention pattern analysis not yet fully implemented - skipping test");
     return Ok(());
@@ -320,7 +320,7 @@ async fn test_ac2_attention_pattern_analysis() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac2
 /// Validates proper gradient flow through quantized attention layers
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac2_attention_gradient_flow() -> Result<()> {
     log::warn!("AC2.5: Attention gradient flow not yet fully implemented - skipping test");
     return Ok(());

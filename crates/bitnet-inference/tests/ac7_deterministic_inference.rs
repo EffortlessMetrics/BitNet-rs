@@ -18,7 +18,7 @@ use std::sync::Arc;
 /// Tests feature spec: issue-248-spec.md#ac7
 /// Validates reproducible outputs with BITNET_DETERMINISTIC=1 and BITNET_SEED=42
 #[cfg(feature = "cpu")]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac7_deterministic_inference_with_fixed_seed() -> Result<()> {
     unsafe {
         std::env::set_var("BITNET_DETERMINISTIC", "1");

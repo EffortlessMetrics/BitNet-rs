@@ -14,7 +14,7 @@ use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 use serial_test::serial;
 use support::EnvGuard;
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 /// AC6.1: Deterministic Inference - SLOW INTEGRATION TEST
 ///
@@ -59,7 +59,7 @@ async fn test_ac6_deterministic_inference_identical_runs() -> Result<()> {
     println!("AC6.1: Deterministic inference test - PENDING IMPLEMENTATION");
     Ok(())
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 /// AC6.2: Determinism Multiple Runs - SLOW INTEGRATION TEST
 ///

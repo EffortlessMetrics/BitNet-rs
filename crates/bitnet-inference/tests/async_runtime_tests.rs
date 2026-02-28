@@ -4,7 +4,7 @@
 //! and prevent "no reactor running" errors.
 use bitnet_common::Result;
 use bitnet_inference::runtime_utils::{block_on_with_runtime, spawn_blocking_with_fallback};
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_spawn_blocking_with_runtime_context() {
     let result = spawn_blocking_with_fallback(|| Ok("async context test")).await;
     assert!(result.is_ok());
@@ -27,7 +27,7 @@ fn test_spawn_blocking_fallback_to_sync() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "fallback test");
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_complex_async_operation() {
     let result = spawn_blocking_with_fallback(|| {
         std::thread::sleep(std::time::Duration::from_millis(10));
@@ -48,7 +48,7 @@ fn test_block_on_with_runtime() {
     assert_eq!(nested_result.unwrap(), "nested async test");
 }
 /// Test that models the backend forward pass behavior
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_backend_forward_simulation() {
     use std::sync::Arc;
     let model_data = Arc::new(vec![1.0f32, 2.0, 3.0, 4.0]);
@@ -73,7 +73,7 @@ async fn test_backend_forward_simulation() {
     assert_eq!(output[1], 3.0);
     assert_eq!(output[2], 7.5);
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_concurrent_spawn_blocking_operations() {
     use futures_util::{FutureExt, future::join_all};
     let futures: Vec<_> = (0..5)
@@ -92,7 +92,7 @@ async fn test_concurrent_spawn_blocking_operations() {
     }
 }
 /// Test error handling in spawn_blocking_with_fallback
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_error_handling() {
     let result = spawn_blocking_with_fallback(|| -> Result<()> {
         Err(bitnet_common::BitNetError::Validation("test error".to_string()))

@@ -45,7 +45,7 @@ impl Default for AC4TestConfig {
 /// Tests feature spec: issue-248-spec.md#ac4
 /// Validates I2S quantization maintains >99% accuracy vs C++ reference
 #[cfg(all(feature = "cpu", feature = "crossval"))]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_i2s_quantization_cross_validation() -> Result<()> {
     let config = AC4TestConfig::default();
     if !is_crossval_environment_ready() {
@@ -115,7 +115,7 @@ async fn test_ac4_i2s_quantization_cross_validation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac4
 /// Validates TL1/TL2 quantization accuracy vs reference implementation
 #[cfg(all(feature = "cpu", feature = "crossval"))]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_table_lookup_quantization_cross_validation() -> Result<()> {
     let config = AC4TestConfig::default();
     if !is_crossval_environment_ready() {
@@ -193,7 +193,7 @@ async fn test_ac4_table_lookup_quantization_cross_validation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac4
 /// Validates IQ2_S format maintains bit-exact compatibility with GGML
 #[cfg(all(feature = "cpu", feature = "crossval"))]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_iq2s_ggml_compatibility_cross_validation() -> Result<()> {
     let config = AC4TestConfig::default();
     if !is_crossval_environment_ready() || !is_ggml_ffi_available() {
@@ -262,7 +262,7 @@ async fn test_ac4_iq2s_ggml_compatibility_cross_validation() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac4
 /// Runs complete cross-validation suite using xtask crossval command
 #[cfg(all(feature = "cpu", feature = "crossval"))]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac4_comprehensive_cross_validation_suite() -> Result<()> {
     let config = AC4TestConfig::default();
     if !is_crossval_environment_ready() {

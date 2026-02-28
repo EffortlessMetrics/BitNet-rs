@@ -15,7 +15,7 @@ use bitnet_models::BitNetModel;
 use bitnet_tokenizers::{Tokenizer, UniversalTokenizer};
 use serial_test::serial;
 use support::EnvGuard;
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 /// AC3.1: Deterministic Generation - SLOW INTEGRATION TEST
 ///
@@ -66,7 +66,7 @@ async fn test_ac3_deterministic_generation_identical_sequences() -> Result<()> {
 }
 /// AC:3.2 - Greedy sampling (temperature=0 or top_k=1) is deterministic
 /// Validates greedy decoding produces same result without seed
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
     let config = GenConfig {
         max_new_tokens: 20,
@@ -93,7 +93,7 @@ async fn test_ac3_greedy_sampling_deterministic() -> Result<()> {
     println!("AC3.2: Greedy sampling determinism test - PENDING IMPLEMENTATION");
     Ok(())
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 /// AC3.3: Top-k Seeded Sampling - SLOW INTEGRATION TEST
 ///
@@ -135,7 +135,7 @@ async fn test_ac3_top_k_sampling_seeded() -> Result<()> {
     println!("AC3.3: Top-k seeded sampling test - PENDING IMPLEMENTATION");
     Ok(())
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 /// AC3.4: Top-p Nucleus Sampling - SLOW INTEGRATION TEST
 ///
@@ -177,7 +177,7 @@ async fn test_ac3_top_p_nucleus_sampling_seeded() -> Result<()> {
     println!("AC3.4: Nucleus seeded sampling test - PENDING IMPLEMENTATION");
     Ok(())
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 /// AC3.5: Different Seeds Produce Different Outputs - SLOW INTEGRATION TEST
 ///
@@ -227,7 +227,7 @@ async fn test_ac3_different_seeds_different_outputs() -> Result<()> {
     println!("AC3.5: Different seeds test - PENDING IMPLEMENTATION");
     Ok(())
 }
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial(bitnet_env)]
 /// AC3.6: Rayon Single-Thread Determinism - SLOW INTEGRATION TEST
 ///
