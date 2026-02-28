@@ -5,6 +5,17 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **`opencl3` dependency** (#1032): add OpenCL 3.0 bindings under `oneapi` feature gate for Intel Arc GPU support
+- **`Device::OpenCL` variant** (#1033): extend device enum with Intel GPU support, fall-back to CPU for Candle ops
+- **OpenCL kernel sources** (#1034): add `matmul_i2s`, `quantize_i2s`, `elementwise` `.cl` kernels embedded via `include_str!`
+- **Intel GPU setup guide** (#1035): comprehensive `docs/INTEL_GPU_SETUP.md` with driver install, build, and usage instructions
+- **Intel GPU CI workflows** (#1036): `intel-gpu-ci.yml` and `intel-gpu-nightly.yml` for oneapi compilation and smoke tests
+- **Intel GPU device detection** (#1037): extend `bitnet-device-probe` with `oneapi_available_runtime()` and clinfo parsing
+- **OpenCL KernelProvider** (#1038): full `OpenClKernel` with platform enumeration, context/queue, runtime kernel compilation
+- **OpenCL inference integration** (#1039): wire OneAPI backend into inference engine with device token mappings
+- **OpenCL kernel tests** (#1040): 32 kernel correctness and property tests (no GPU required)
+- **OpenCL BDD scenarios** (#1041): 22 BDD scenarios for device selection and backend priority
+- **OpenCL fuzz targets** (#1042): ternary packing round-trip and device construction fuzz targets
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
@@ -15,6 +26,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - `fix(config): accept 'npu' as valid device identifier in CLI and server` — NPU device identifier (`npu`) now accepted as a valid device string in CLI and server config (#1002)
 
 ### Documentation
+- `docs: add Intel Arc GPU setup guide` — Comprehensive Intel GPU setup guide with driver installation, build instructions, and usage for Intel Arc GPUs (#1035)
 - `docs: add canonical CUDA GPU setup guide` — Comprehensive CUDA GPU setup guide with corrected build command examples and environment configuration (#998)
 
 ## [0.2.0] - 2026-02-27
