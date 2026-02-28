@@ -29,6 +29,7 @@ gpu = ["cuda", "rocm"]
 cuda = []
 rocm = []
 vulkan = ["dep:ash"]
+npu = ["oneapi"]
 oneapi = []
 
 [lints]

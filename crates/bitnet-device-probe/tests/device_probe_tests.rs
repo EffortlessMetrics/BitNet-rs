@@ -5,8 +5,8 @@
 //! for determinism invariants using `proptest`.
 
 use bitnet_device_probe::{
-    DeviceCapabilities, SimdLevel, detect_simd_level, gpu_compiled, probe_cpu, probe_device,
-    probe_gpu, simd_level_rank,
+    DeviceCapabilities, SimdLevel, detect_simd_level, gpu_compiled, npu_compiled, probe_cpu,
+    probe_device, probe_gpu, probe_npu, simd_level_rank,
 };
 use proptest::prelude::*;
 
@@ -247,6 +247,15 @@ fn detect_simd_level_not_neon_on_x86_64() {
 #[test]
 fn detect_simd_level_is_neon_on_aarch64() {
     assert_eq!(detect_simd_level(), SimdLevel::Neon, "SIMD level must be Neon on AArch64");
+}
+
+/// `probe_npu()` must never panic and aligns with `npu_compiled()` when disabled.
+#[test]
+fn probe_npu_never_panics() {
+    let caps = probe_npu();
+    if !npu_compiled() {
+        assert!(!caps.available);
+    }
 }
 
 // ── probe_gpu tests ───────────────────────────────────────────────────────────

@@ -81,6 +81,17 @@ pub struct GpuCapabilities {
     /// `ROCm` runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub rocm_available: bool,
 }
+
+/// NPU capabilities detected at runtime.
+///
+/// Obtained by calling [`probe_npu`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NpuCapabilities {
+    /// Intel NPU runtime is available.
+    pub available: bool,
+    /// A `/dev/accel/*` character device appears to be present.
+    pub accel_device_present: bool,
+}
 /// Probe GPU availability and return its capabilities.
 ///
 /// Honours `BITNET_GPU_FAKE` for deterministic testing unless
@@ -208,6 +219,34 @@ const fn rocm_available_runtime() -> bool {
     false
 }
 
+/// Check if NPU support was compiled into this binary.
+#[inline]
+pub const fn npu_compiled() -> bool {
+    cfg!(feature = "npu")
+}
+
+/// Probe Intel NPU availability and return capabilities.
+#[cfg(feature = "npu")]
+pub fn probe_npu() -> NpuCapabilities {
+    let accel_device_present = accel_device_exists();
+    NpuCapabilities { available: accel_device_present, accel_device_present }
+}
+
+/// Probe Intel NPU availability; always returns `false` when NPU support is not compiled.
+#[cfg(not(feature = "npu"))]
+pub const fn probe_npu() -> NpuCapabilities {
+    NpuCapabilities { available: false, accel_device_present: false }
+}
+
+#[cfg(feature = "npu")]
+fn accel_device_exists() -> bool {
+    std::fs::read_dir("/dev/accel")
+        .map(|entries| {
+            entries.flatten().any(|entry| entry.file_name().to_string_lossy().starts_with("accel"))
+        })
+        .unwrap_or(false)
+}
+
 /// Check if Vulkan support was compiled into this binary.
 #[inline]
 pub const fn vulkan_compiled() -> bool {
@@ -302,6 +341,10 @@ pub struct DeviceCapabilities {
     pub cuda_runtime: bool,
     /// `ROCm` runtime was detected at call time.
     pub rocm_runtime: bool,
+    /// Intel NPU backend was compiled in.
+    pub npu_compiled: bool,
+    /// Intel NPU runtime was detected at call time.
+    pub npu_runtime: bool,
     /// Best SIMD level detected at call time.
     pub simd_level: SimdLevel,
 }
@@ -326,6 +369,8 @@ impl DeviceCapabilities {
             rocm_compiled: cfg!(any(feature = "gpu", feature = "rocm")),
             cuda_runtime: cuda_available_runtime(),
             rocm_runtime: rocm_available_runtime(),
+            npu_compiled: npu_compiled(),
+            npu_runtime: probe_npu().available,
             simd_level: detect_simd_level(),
         }
     }
@@ -356,6 +401,8 @@ pub struct DeviceProbe {
     /// Whether a CUDA-capable GPU was found at runtime.
     pub cuda_available: bool,
     pub rocm_available: bool,
+    /// Whether an Intel NPU was found at runtime.
+    pub npu_available: bool,
 }
 
 /// Run a full device probe and return the result.
@@ -383,6 +430,7 @@ pub fn probe_device() -> DeviceProbe {
         cpu: CpuProbe { simd_level, cores, threads },
         cuda_available: cuda_available_runtime(),
         rocm_available: rocm_available_runtime(),
+        npu_available: probe_npu().available,
     }
 }
 
@@ -460,6 +508,7 @@ mod tests {
         assert_eq!(caps.cuda_compiled, cfg!(any(feature = "gpu", feature = "cuda")));
         assert_eq!(caps.rocm_compiled, cfg!(any(feature = "gpu", feature = "rocm")));
         assert_eq!(caps.cuda_compiled || caps.rocm_compiled, gpu_compiled());
+        assert_eq!(caps.npu_compiled, npu_compiled());
     }
 
     #[cfg(any(feature = "gpu", feature = "cuda", feature = "rocm"))]
