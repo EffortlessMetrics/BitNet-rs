@@ -29,7 +29,6 @@ opencl3 = { version = "0.9", optional = true }
 cc = { version = "1.2.46", optional = true }
 bindgen = { version = "0.72.1", optional = true }
 half = { version = "2.7.1", optional = true }
-bitnet-opencl = { path = "../bitnet-opencl", version = "0.2.1-dev", optional = true }
 sysinfo = "0.37.2"
 memory-stats = "1.2.0"
 
@@ -75,7 +74,7 @@ neon = []
 cuda = ["dep:cudarc", "dep:half", "bitnet-device-probe/cuda"]
 gpu = ["cuda", "vulkan", "bitnet-device-probe/gpu"]  # GPU umbrella
 vulkan = ["bitnet-device-probe/vulkan"]
-oneapi = ["dep:bitnet-opencl", "dep:opencl3", "bitnet-common/oneapi", "bitnet-device-probe/oneapi"]
+oneapi = ["dep:opencl3", "bitnet-common/oneapi", "bitnet-device-probe/oneapi"]
 ffi = ["dep:cc", "dep:bindgen"]
 inference = []
 strict = []  # Strict mode for mock elimination validation
@@ -133,19 +132,3 @@ required-features = ["gpu"]
 name = "opencl_stub_tests"
 path = "tests/opencl_stub_tests.rs"
 required-features = ["oneapi"]
-
-[[test]]
-name = "opencl_kernel_correctness"
-path = "tests/opencl_kernel_correctness.rs"
-
-[[test]]
-name = "opencl_property_tests"
-path = "tests/opencl_property_tests.rs"
-
-[[test]]
-name = "opencl_bdd_tests"
-path = "tests/opencl_bdd_tests.rs"
-
-[[test]]
-name = "opencl_snapshot_tests"
-path = "tests/opencl_snapshot_tests.rs"
