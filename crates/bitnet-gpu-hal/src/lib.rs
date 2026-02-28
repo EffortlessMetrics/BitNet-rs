@@ -4,6 +4,7 @@
 //! attention, embedding, `RoPE`, transformer blocks, generation control,
 //! and memory management.
 
+pub mod generation;
 pub mod profiling;
 pub mod speculative;
 pub mod streaming;

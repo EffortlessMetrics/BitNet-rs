@@ -994,7 +994,9 @@ fn cast_scales_to_f32(
         candle_core::DType::F64 => {
             let mut out = Vec::with_capacity(n);
             for chunk in bytes.chunks_exact(8).take(n) {
-                out.push(f64::from_le_bytes(chunk.try_into().unwrap()) as f32);
+                out.push(f64::from_le_bytes(
+                    chunk.try_into().map_err(|_| anyhow::anyhow!("f64 chunk size mismatch"))?,
+                ) as f32);
             }
             Ok(out)
         }

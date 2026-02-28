@@ -38,6 +38,89 @@ export type BitNetReadableStream = ReadableStream<Uint8Array>;
  */
 export default function init(module_or_path?: InitInput | Promise<InitInput>): Promise<InitOutput>;
 
+// ── Platform-agnostic types (also usable from plain JS) ─────────────
+
+/**
+ * Generation configuration (mirrors `core_types::GenerationConfig`).
+ */
+export interface GenerationConfig {
+  max_new_tokens: number;
+  temperature: number;
+  top_k?: number;
+  top_p?: number;
+  repetition_penalty: number;
+  seed?: number;
+  stop_sequences: string[];
+}
+
+/**
+ * A single token emitted during streaming generation.
+ */
+export interface TokenEvent {
+  text: string;
+  position: number;
+  is_final: boolean;
+}
+
+/**
+ * Summary statistics for a generation run.
+ */
+export interface GenerationStats {
+  tokens_generated: number;
+  time_ms: number;
+  tokens_per_second: number;
+  prompt_tokens: number;
+}
+
+/**
+ * Metadata about a loaded model.
+ */
+export interface ModelMetadata {
+  format: string;
+  size_bytes: number;
+  quantization?: string;
+  num_parameters?: number;
+}
+
+// ── Callback-based streaming ─────────────────────────────────────────
+
+/**
+ * Callback invoked for each generated token.
+ *
+ * @param token    - decoded text of the token
+ * @param position - zero-based position in the generated sequence
+ * @param isFinal  - `true` when this is the last token
+ */
+export type OnTokenCallback = (token: string, position: number, isFinal: boolean) => void;
+
+/**
+ * Generate tokens with a JS callback invoked for each token.
+ *
+ * Yields to the event loop between tokens so the UI stays responsive.
+ *
+ * @param prompt      - input text
+ * @param on_token    - callback invoked per token
+ * @param max_tokens  - maximum tokens to generate (default 100)
+ * @param temperature - sampling temperature (default 0.7)
+ * @returns full generated text
+ */
+export function generate_with_callback(
+  prompt: string,
+  on_token: OnTokenCallback,
+  max_tokens?: number,
+  temperature?: number,
+): Promise<string>;
+
+/**
+ * Load model bytes from an ArrayBuffer and return metadata.
+ *
+ * @param buffer - ArrayBuffer containing the model file
+ * @returns model metadata (format, size, quantization info)
+ */
+export function load_model_from_arraybuffer(buffer: ArrayBuffer): Promise<ModelMetadata>;
+
+// ── Existing WASM bindings ───────────────────────────────────────────
+
 /**
  * Configuration for WASM model loading
  */

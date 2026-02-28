@@ -64,6 +64,10 @@ impl HealthProbe for AlwaysHealthy {
     async fn check_readiness(&self) -> HealthStatus {
         HealthStatus::Healthy
     }
+
+    async fn check_startup(&self) -> HealthStatus {
+        HealthStatus::Healthy
+    }
 }
 
 // ── ErrorResponse serialization ──────────────────────────────────────────────

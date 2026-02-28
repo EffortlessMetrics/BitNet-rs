@@ -11,9 +11,11 @@ pub mod concurrency;
 pub mod config;
 pub mod execution_router;
 pub mod health;
+pub mod middleware;
 pub mod model_manager;
 pub mod monitoring;
 pub mod security;
+pub mod shutdown;
 pub mod streaming;
 
 use anyhow::Result;
@@ -21,7 +23,7 @@ use axum::{
     Router,
     extract::{Request, State},
     http::{HeaderMap, StatusCode},
-    middleware::{self, Next},
+    middleware::Next,
     response::{Json, Response},
     routing::{get, post},
 };
@@ -30,16 +32,21 @@ use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use batch_engine::{BatchEngine, BatchRequest, RequestPriority};
 use concurrency::{ConcurrencyManager, RequestMetadata};
 pub use config::{DeviceConfig, ServerConfig};
 use execution_router::ExecutionRouter;
+use middleware::{
+    connection_limit_middleware, correlation_id_middleware, metrics_recording_middleware,
+};
 use model_manager::ModelManager;
 use security::{SecurityValidator, configure_cors, security_headers_middleware};
+use shutdown::ShutdownCoordinator;
 
 #[cfg(feature = "prometheus")]
 use monitoring::prometheus::{PrometheusExporter, create_prometheus_routes};
@@ -139,6 +146,7 @@ pub struct BitNetServer {
     security_validator: Arc<SecurityValidator>,
     monitoring: Arc<MonitoringSystem>,
     health_checker: Arc<HealthChecker>,
+    shutdown_coordinator: Arc<ShutdownCoordinator>,
     #[cfg(feature = "prometheus")]
     prometheus_exporter: Option<Arc<PrometheusExporter>>,
     start_time: Instant,
@@ -214,6 +222,7 @@ impl BitNetServer {
             security_validator,
             monitoring,
             health_checker,
+            shutdown_coordinator: Arc::new(ShutdownCoordinator::new()),
             #[cfg(feature = "prometheus")]
             prometheus_exporter,
             start_time,
@@ -284,19 +293,44 @@ impl BitNetServer {
         }
 
         // Add comprehensive middleware stack
+        // (outer layers listed first; requests flow top → bottom, responses bottom → top)
+        let connection_semaphore =
+            Arc::new(tokio::sync::Semaphore::new(self.config.server.max_connections));
+
         app = app
-            .layer(middleware::from_fn(security_headers_middleware))
-            .layer(middleware::from_fn_with_state(
+            .layer(axum::middleware::from_fn(security_headers_middleware))
+            .layer(axum::middleware::from_fn_with_state(
                 self.security_validator.clone(),
                 request_validation_middleware,
             ))
-            .layer(middleware::from_fn_with_state(
+            .layer(axum::middleware::from_fn_with_state(
                 self.config.security.clone(),
                 security::ip_blocking_middleware,
             ))
-            .layer(middleware::from_fn(enhanced_metrics_middleware))
+            // Metrics recording (records to MetricsCollector)
+            .layer(axum::middleware::from_fn_with_state(
+                self.monitoring.metrics(),
+                metrics_recording_middleware,
+            ))
+            // Correlation ID (generates/propagates X-Request-ID)
+            .layer(axum::middleware::from_fn(correlation_id_middleware))
+            // Shutdown check (reject new requests during drain)
+            .layer(axum::middleware::from_fn_with_state(
+                self.shutdown_coordinator.flag(),
+                shutdown::shutdown_check_middleware,
+            ))
+            // Request timeout
+            .layer(TimeoutLayer::with_status_code(
+                StatusCode::REQUEST_TIMEOUT,
+                self.config.server.request_timeout,
+            ))
             .layer(TraceLayer::new_for_http())
-            .layer(configure_cors(&self.config.security));
+            .layer(configure_cors(&self.config.security))
+            // Connection limit
+            .layer(axum::middleware::from_fn_with_state(
+                connection_semaphore,
+                connection_limit_middleware,
+            ));
 
         app
     }
@@ -337,25 +371,46 @@ impl BitNetServer {
             prometheus_enabled = self.config.monitoring.prometheus_enabled,
             opentelemetry_enabled = self.config.monitoring.opentelemetry_enabled,
             authentication_enabled = self.config.security.require_authentication,
+            request_timeout_secs = self.config.server.request_timeout.as_secs(),
+            drain_timeout_secs = self.config.server.graceful_shutdown_timeout.as_secs(),
             "Starting BitNet production server"
         );
 
+        // Mark startup complete so the /health/startup probe returns 200
+        self.health_checker.mark_ready();
+
         let listener = tokio::net::TcpListener::bind(&addr).await?;
-        axum::serve(listener, app).await?;
+
+        // Wire graceful shutdown: on SIGTERM/SIGINT set the drain flag,
+        // wait for in-flight requests (up to the configured timeout), then exit.
+        let shutdown_coordinator = Arc::clone(&self.shutdown_coordinator);
+        let concurrency_mgr = Arc::clone(&self.concurrency_manager);
+        let drain_timeout = self.config.server.graceful_shutdown_timeout;
+
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                shutdown_signal().await;
+                info!("Shutdown signal received – draining requests");
+                shutdown_coordinator.initiate_shutdown();
+                shutdown_coordinator.drain_requests(&concurrency_mgr, drain_timeout).await;
+            })
+            .await?;
+
+        // Clean shutdown of subsystems
+        self.monitoring.shutdown().await?;
+        info!("BitNet production server shutdown complete");
 
         Ok(())
     }
 
-    /// Shutdown the server gracefully
+    /// Shutdown the server gracefully (for programmatic use)
     pub async fn shutdown(&self) -> Result<()> {
         info!("Starting graceful shutdown of BitNet production server");
-
-        // TODO: Stop accepting new requests
-        // TODO: Wait for active requests to complete (with timeout)
-        // TODO: Shutdown subsystems in order
-
+        self.shutdown_coordinator.initiate_shutdown();
+        self.shutdown_coordinator
+            .drain_requests(&self.concurrency_manager, self.config.server.graceful_shutdown_timeout)
+            .await;
         self.monitoring.shutdown().await?;
-
         info!("BitNet production server shutdown complete");
         Ok(())
     }
@@ -594,52 +649,29 @@ async fn device_status_handler(
     Json(statuses)
 }
 
-/// Enhanced middleware for comprehensive request metrics collection
-async fn enhanced_metrics_middleware(request: Request, next: Next) -> Response {
-    let start = Instant::now();
-    let method = request.method().clone();
-    let path = request.uri().path().to_string();
-    let user_agent = request
-        .headers()
-        .get("user-agent")
-        .and_then(|h| h.to_str().ok())
-        .unwrap_or("unknown")
-        .to_string();
+/// Wait for SIGINT or SIGTERM (Unix) to initiate graceful shutdown.
+async fn shutdown_signal() {
+    use tokio::signal;
 
-    let response = next.run(request).await;
+    let ctrl_c = async {
+        signal::ctrl_c().await.expect("failed to listen for ctrl+c");
+    };
 
-    let duration = start.elapsed();
-    let status = response.status();
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to listen for SIGTERM")
+            .recv()
+            .await;
+    };
 
-    // Enhanced logging with more context
-    if status.is_server_error() {
-        error!(
-            method = %method,
-            path = %path,
-            status = %status,
-            duration_ms = duration.as_millis(),
-            user_agent = %user_agent,
-            "Request failed with server error"
-        );
-    } else if status.is_client_error() {
-        warn!(
-            method = %method,
-            path = %path,
-            status = %status,
-            duration_ms = duration.as_millis(),
-            "Request failed with client error"
-        );
-    } else {
-        debug!(
-            method = %method,
-            path = %path,
-            status = %status,
-            duration_ms = duration.as_millis(),
-            "Request completed successfully"
-        );
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
     }
-
-    response
 }
 
 /// Request validation middleware

@@ -60,7 +60,7 @@ members = [
   "crates/bitnet-test-support",
   "crates/bitnet-opencl",        # OpenCL runtime binding layer
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer with profiling
+  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer with CPU reference kernels
   "crossval",
   "tests",
   "xtask",
@@ -103,6 +103,7 @@ default-members = [
   "crates/bitnet-engine-core",
   "crates/bitnet-gguf",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-gpu-hal",       # GPU hardware abstraction layer
 ]
 
 [package]
@@ -343,7 +344,7 @@ sysinfo = "0.37.2"
 # Web server
 axum = "0.8.7"
 tower = "0.5.2"
-tower-http = { version = "0.6.6", features = ["cors", "trace"] }
+tower-http = { version = "0.6.6", features = ["cors", "timeout", "trace"] }
 
 # Monitoring and observability
 chrono = { version = "0.4.42", features = ["serde"] }
