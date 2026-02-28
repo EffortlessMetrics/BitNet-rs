@@ -141,3 +141,4 @@ pub mod deployment_manager;
 // recovery strategies, and structured reporting.
 pub mod generation;
 pub mod model_warmup;
+// GPU hardware abstraction layer for `BitNet` inference.
