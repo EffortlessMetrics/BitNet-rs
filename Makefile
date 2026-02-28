@@ -16,7 +16,7 @@ NC := $(shell tput sgr0 2>/dev/null || echo "")
 .PHONY: help all quick install dev test bench clean gpu docker run serve repl release deploy update fmt lint check fix docs ci setup \
         build test-quick test-gpu test-integration gpu-smoke download-model crossval tree loc size \
         watch flame audit outdated bloat docker-run docker-gpu profile valgrind heaptrack wasm python list verbose \
-        guards preflight \
+        guards preflight docs-check \
         b t r c f l d g bt bf cf cb ct fr ft q a i
 
 # Detect OS and features
@@ -178,6 +178,11 @@ fix:
 docs:
 	@echo "$(GREEN)Generating documentation...$(NC)"
 	@$(CARGO) doc --workspace --no-deps --open
+
+## docs-check: Run automated documentation checks
+docs-check:
+	@echo "$(GREEN)Running documentation automation checks...$(NC)"
+	@scripts/docs_automation.sh
 
 #############################################################################
 # GPU TARGETS
