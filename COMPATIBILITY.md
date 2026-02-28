@@ -177,6 +177,7 @@ While not breaking compatibility, we guarantee:
 - NVIDIA GPUs with compute capability 6.0+ (Pascal architecture, GTX 10 series and newer)
 - CUDA 11.0+ toolkit for compilation
 - Minimum 4GB VRAM for inference
+- Intel Arc A-series GPUs (A770, A750, A580) via OpenCL (`--features oneapi`); see [Intel GPU Setup](docs/INTEL_GPU_SETUP.md)
 
 ### Operating System Support
 
