@@ -16,6 +16,7 @@ pub mod npu;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
 pub mod receipts; // AC4: Inference receipt generation
+pub mod thread_pool;
 
 // Re-export GGUF types for easy access
 pub use gguf::{GGUF_HEADER_LEN, GgufError, GgufHeader, GgufKv, GgufValue, read_kv_pairs};
@@ -61,6 +62,7 @@ pub use receipts::{
 pub use bitnet_common::CorrectionRecord;
 pub use sampling::{SamplingConfig, SamplingStrategy};
 pub use streaming::{GenerationStream, StreamingConfig};
+pub use thread_pool::{InferenceThreadPool, ThreadPoolConfig, ThreadPoolMetrics};
 
 // Re-export SRP-extracted orchestration contracts from bitnet-engine-core.
 pub use bitnet_engine_core::{BackendInfo, InferenceSession, SessionConfig, SessionMetrics};
