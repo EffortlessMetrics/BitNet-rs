@@ -1,0 +1,214 @@
+name: Benchmark Regression Detection
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "benches/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/benchmark-regression.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Regression threshold percentage — fail if any benchmark regresses beyond this
+  BENCH_THRESHOLD: "10"
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: bench-${{ github.sha }}
+
+      - name: Install critcmp
+        run: |
+          cargo install critcmp --locked 2>/dev/null || true
+
+      # ---------------------------------------------------------------
+      # Run benchmarks on the current (PR) code
+      # ---------------------------------------------------------------
+      - name: Run benchmarks (current)
+        run: |
+          cargo bench --workspace --no-default-features --features cpu,bench \
+            --locked -- --output-format=bencher \
+            | tee bench-current.txt
+
+      - name: Export Criterion results (current)
+        run: |
+          # Criterion stores detailed JSON under target/criterion/
+          if [ -d target/criterion ]; then
+            cp -r target/criterion bench-current-criterion
+          fi
+
+      # ---------------------------------------------------------------
+      # Checkout base branch and run benchmarks for comparison
+      # ---------------------------------------------------------------
+      - name: Checkout base branch
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          clean: false
+
+      - name: Run benchmarks (baseline)
+        if: github.event_name == 'pull_request'
+        run: |
+          cargo bench --workspace --no-default-features --features cpu,bench \
+            --locked -- --output-format=bencher \
+            | tee bench-baseline.txt
+
+      - name: Export Criterion results (baseline)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -d target/criterion ]; then
+            cp -r target/criterion bench-baseline-criterion
+          fi
+
+      # ---------------------------------------------------------------
+      # Re-checkout PR head for comparison tools
+      # ---------------------------------------------------------------
+      - name: Re-checkout PR head
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        with:
+          clean: false
+
+      # ---------------------------------------------------------------
+      # Compare results
+      # ---------------------------------------------------------------
+      - name: Compare with critcmp
+        if: github.event_name == 'pull_request'
+        id: critcmp
+        continue-on-error: true
+        run: |
+          if command -v critcmp &>/dev/null; then
+            critcmp bench-baseline.txt bench-current.txt \
+              --threshold ${{ env.BENCH_THRESHOLD }} \
+              | tee critcmp-output.txt
+          else
+            echo "critcmp not available, using custom comparison"
+          fi
+
+      - name: Compare with custom script
+        if: github.event_name == 'pull_request'
+        id: custom_compare
+        run: |
+          python3 scripts/bench-compare.py \
+            bench-baseline-criterion bench-current-criterion \
+            --threshold ${{ env.BENCH_THRESHOLD }} \
+            --output bench-comparison.md \
+            || echo "REGRESSION_DETECTED=true" >> "$GITHUB_ENV"
+
+      - name: Comment PR with benchmark results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let body = '';
+
+            // Try custom comparison output first
+            if (fs.existsSync('bench-comparison.md')) {
+              body = fs.readFileSync('bench-comparison.md', 'utf8');
+            }
+
+            // Append critcmp output if available
+            if (fs.existsSync('critcmp-output.txt')) {
+              const critcmp = fs.readFileSync('critcmp-output.txt', 'utf8');
+              if (critcmp.trim()) {
+                body += '\n\n<details>\n<summary>critcmp raw output</summary>\n\n```\n' + critcmp + '\n```\n</details>\n';
+              }
+            }
+
+            if (!body) {
+              body = '## Benchmark Results\n\nNo comparison data available (first run on this base).';
+            }
+
+            // Find and update existing comment or create new one
+            const marker = '<!-- benchmark-regression-bot -->';
+            body = marker + '\n' + body;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      # ---------------------------------------------------------------
+      # Fail on regression
+      # ---------------------------------------------------------------
+      - name: Fail on regression
+        if: github.event_name == 'pull_request' && env.REGRESSION_DETECTED == 'true'
+        run: |
+          echo "::error::Benchmark regression detected exceeding ${BENCH_THRESHOLD}% threshold"
+          exit 1
+
+      # ---------------------------------------------------------------
+      # Artifact upload (always — enables future comparisons)
+      # ---------------------------------------------------------------
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: benchmark-results-${{ github.sha }}
+          path: |
+            bench-current.txt
+            bench-baseline.txt
+            bench-comparison.md
+            critcmp-output.txt
+            bench-current-criterion/
+          retention-days: 30
+
+      - name: Upload baseline for main branch
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: benchmark-baseline-main
+          path: |
+            bench-current.txt
+            bench-current-criterion/
+          retention-days: 90
