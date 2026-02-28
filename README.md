@@ -13,9 +13,9 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
-- **Chat templates** — 22 prompt templates covering 20+ model families: LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command, InternLM, Yi, Baichuan, ChatGLM/GLM-4, MPT, RWKV, OLMo, Zephyr, Vicuna; plus FillInMiddle for code infilling; auto-detected from GGUF metadata or tokenizer path
+- **Chat templates** — 35 prompt templates covering 30+ model families: LLaMA-2/3, Phi-3/4, Qwen, Gemma/Gemma2, Mistral, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command/Command-R+, InternLM, Yi, Baichuan, ChatGLM/GLM-4, MPT, RWKV, OLMo, Zephyr, Vicuna, Orca, Solar, Alpaca, Nous Hermes, WizardLM, OpenChat, Granite, Nemotron, Saiga; plus FillInMiddle for code infilling; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
-- **Multi-SLM architecture registry** — 43 architecture strings across 23 model families with auto-detected normalization, activation, and context defaults
+- **Multi-SLM architecture registry** — 55+ architecture strings across 30+ model families with auto-detected normalization, activation, and context defaults
 
 <details>
 <summary><strong>Supported Model Architectures</strong> (click to expand)</summary>
@@ -42,6 +42,19 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 | OLMo | olmo, olmo2 | LayerNorm/RmsNorm | SiLU | OlmoInstruct | olmo_50k |
 | Zephyr | zephyr | RmsNorm | SiLU | ZephyrChat | zephyr_32k |
 | Vicuna | vicuna | RmsNorm | SiLU | VicunaChat | vicuna_32k |
+| Orca | orca | RmsNorm | SiLU | OrcaChat | orca_32k |
+| Solar | solar | RmsNorm | SiLU | SolarInstruct | solar_32k |
+| Alpaca | alpaca | RmsNorm | SiLU | AlpacaInstruct | alpaca_32k |
+| Command-R+ | command-r, command-r-plus | RmsNorm | SiLU | CommandRPlus | commandr_128k |
+| Nous Hermes | nous-hermes, hermes | RmsNorm | SiLU | NousHermes | nous_32k |
+| WizardLM | wizardlm, wizard | RmsNorm | SiLU | WizardLM | wizard_32k |
+| OpenChat | openchat | RmsNorm | SiLU | OpenChat | openchat_32k |
+| Granite | granite | RmsNorm | SiLU | GraniteChat | granite_128k |
+| Nemotron | nemotron | RmsNorm | SiLU | NemotronChat | nemotron_32k |
+| Saiga | saiga | RmsNorm | SiLU | SaigaChat | saiga_32k |
+| Llama-2 | llama2, llama-2 | RmsNorm | SiLU | Llama2Chat | llama2_32k |
+| Gemma 2 | gemma2, gemma-2 | RmsNorm | GeLU | Gemma2Chat | gemma2_256k |
+| Phi-3 | phi3, phi-3 | RmsNorm | SiLU | Phi3Instruct | phi3_32k |
 | GPT | gpt | LayerNorm | GeLU | — | gpt2_50k |
 | BERT | bert | LayerNorm | GeLU | — | — |
 

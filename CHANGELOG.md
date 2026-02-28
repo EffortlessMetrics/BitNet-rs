@@ -44,6 +44,19 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Zephyr chat template**: Add `ZephyrChat` template with `<|user|>`/`<|assistant|>` and `</s>` delimiters, `zephyr_32k` tokenizer entry, and `zephyr` arch registry entry.
 - **Vicuna chat template**: Add `VicunaChat` template with `USER:`/`ASSISTANT:` ShareGPT format, `vicuna_32k` tokenizer entry, and `vicuna` arch registry entry.
 - **Architecture count regression test**: Guard against accidental deletion with minimum count assertion (40+ entries) and core family presence check.
+- **Orca chat template**: Add `OrcaChat` ChatML variant with Microsoft Orca system prompt, `orca_32k` tokenizer entry, and `orca` arch registry entry.
+- **Solar instruct template**: Add `SolarInstruct` template with `### User:`/`### Assistant:` format, `solar_32k` tokenizer entry, and `solar` arch registry entry.
+- **Alpaca instruct template**: Add `AlpacaInstruct` template with `### Instruction:`/`### Response:` Stanford Alpaca format, `alpaca_32k` tokenizer entry, and `alpaca` arch registry entry.
+- **Command-R+ template**: Add `CommandRPlus` template with `<|START_OF_TURN_TOKEN|>`/`<|CHATBOT_TOKEN|>` Cohere turn-token format, `commandr_128k` tokenizer entry, and `command-r`/`command-r-plus` arch entries.
+- **Nous Hermes template**: Add `NousHermes` ChatML variant with safety-focused default system prompt, `nous_32k` tokenizer entry, and `nous-hermes`/`hermes` arch entries.
+- **WizardLM template**: Add `WizardLM` template with Vicuna-derived `USER:`/`ASSISTANT:` format and descriptive preamble, `wizard_32k` tokenizer entry, and `wizardlm`/`wizard` arch entries.
+- **OpenChat template**: Add `OpenChat` template with `GPT4 Correct User`/`GPT4 Correct Assistant` format, `openchat_32k` tokenizer entry, and `openchat` arch entry.
+- **Granite chat template**: Add `GraniteChat` template with IBM `<|start_of_role|>`/`<|end_of_role|>` format, `granite_128k` tokenizer entry, and `granite` arch entry.
+- **Nemotron chat template**: Add `NemotronChat` template with NVIDIA `<extra_id_0>`/`<extra_id_1>` format, `nemotron_32k` tokenizer entry, and `nemotron` arch entry.
+- **Saiga chat template**: Add `SaigaChat` ChatML variant with Cyrillic Russian system prompt, `saiga_32k` tokenizer entry, and `saiga` arch entry.
+- **Llama-2 chat template**: Add `Llama2Chat` template with `[INST]<<SYS>>`/`<</SYS>>` format (distinct from Llama-3), `llama2_32k` tokenizer entry, and `llama2`/`llama-2` arch entries.
+- **Gemma 2 chat template**: Add `Gemma2Chat` template (same format as GemmaChat, separate version detection), `gemma2_256k` tokenizer entry, and `gemma2`/`gemma-2` arch entries.
+- **Phi-3 instruct template**: Add `Phi3Instruct` template with `<|system|>`/`<|user|>`/`<|assistant|>`/`<|end|>` markers (distinct from Phi-4 ChatML), `phi3_32k` tokenizer entry, and `phi3`/`phi-3` arch entries.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
