@@ -25,10 +25,7 @@ fn env_guard_original_value_when_absent() {
         std::env::remove_var("BITNET_SNAP_ABSENT");
     }
     let guard = EnvGuard::new("BITNET_SNAP_ABSENT");
-    insta::assert_snapshot!(
-        "env_guard_original_absent",
-        format!("{:?}", guard.original_value())
-    );
+    insta::assert_snapshot!("env_guard_original_absent", format!("{:?}", guard.original_value()));
 }
 
 #[test]
@@ -39,10 +36,7 @@ fn env_guard_original_value_when_present() {
         std::env::set_var("BITNET_SNAP_PRESENT", "hello");
     }
     let guard = EnvGuard::new("BITNET_SNAP_PRESENT");
-    insta::assert_snapshot!(
-        "env_guard_original_present",
-        format!("{:?}", guard.original_value())
-    );
+    insta::assert_snapshot!("env_guard_original_present", format!("{:?}", guard.original_value()));
     drop(guard);
     unsafe {
         std::env::remove_var("BITNET_SNAP_PRESENT");

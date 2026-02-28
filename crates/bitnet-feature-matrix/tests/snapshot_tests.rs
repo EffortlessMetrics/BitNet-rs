@@ -4,8 +4,7 @@
 //! grid structure so that changes are visible in code review.
 
 use bitnet_feature_matrix::{
-    BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario, canonical_grid,
-    feature_line,
+    BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario, canonical_grid, feature_line,
 };
 
 // ---------------------------------------------------------------------------
@@ -121,10 +120,8 @@ fn canonical_grid_scenario_row_counts() {
         TestingScenario::Debug,
         TestingScenario::Minimal,
     ];
-    let counts: Vec<String> = scenarios
-        .iter()
-        .map(|s| format!("{}={}", s, grid.rows_for_scenario(*s).len()))
-        .collect();
+    let counts: Vec<String> =
+        scenarios.iter().map(|s| format!("{}={}", s, grid.rows_for_scenario(*s).len())).collect();
     insta::assert_debug_snapshot!("canonical_grid_scenario_row_counts", counts);
 }
 
@@ -139,6 +136,10 @@ fn feature_line_is_non_empty_and_prefixed() {
     // structural invariant: it starts with "features:" and is non-empty.
     insta::assert_snapshot!(
         "feature_line_invariant",
-        format!("starts_with_features={} non_empty={}", line.starts_with("features:"), !line.is_empty())
+        format!(
+            "starts_with_features={} non_empty={}",
+            line.starts_with("features:"),
+            !line.is_empty()
+        )
     );
 }
