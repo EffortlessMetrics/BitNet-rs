@@ -1137,3 +1137,81 @@ fn snapshot_xverse_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("xverse_multi_turn", out);
 }
+
+// ── Qwen25Chat ──────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_qwen25_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::Qwen25Chat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("qwen25_single_turn", out);
+}
+
+#[test]
+fn snapshot_qwen25_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::Qwen25Chat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("qwen25_with_system", out);
+}
+
+#[test]
+fn snapshot_qwen25_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::Qwen25Chat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("qwen25_multi_turn", out);
+}
+
+// ── MistralNemoChat ─────────────────────────────────────────────────
+
+#[test]
+fn snapshot_mistral_nemo_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::MistralNemoChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("mistral_nemo_single_turn", out);
+}
+
+#[test]
+fn snapshot_mistral_nemo_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::MistralNemoChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("mistral_nemo_with_system", out);
+}
+
+#[test]
+fn snapshot_mistral_nemo_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::MistralNemoChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("mistral_nemo_multi_turn", out);
+}
+
+// ── ArcticInstruct ──────────────────────────────────────────────────
+
+#[test]
+fn snapshot_arctic_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::ArcticInstruct);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("arctic_single_turn", out);
+}
+
+#[test]
+fn snapshot_arctic_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::ArcticInstruct)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("arctic_with_system", out);
+}
+
+#[test]
+fn snapshot_arctic_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::ArcticInstruct)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("arctic_multi_turn", out);
+}

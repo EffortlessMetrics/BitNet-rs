@@ -35,15 +35,25 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
             }),
+            "mistral-nemo" | "nemo" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(128000),
+            }),
             "llama2" | "llama-2" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(4096),
             }),
-            "qwen" | "qwen2" | "qwen2.5" => Some(ArchDefaults {
+            "qwen" | "qwen2" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
                 activation_type: ActivationType::Silu,
                 default_context_length: None,
+            }),
+            "qwen2.5" | "qwen-2.5" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(32768),
             }),
             "gemma" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
@@ -230,6 +240,11 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(8192),
             }),
+            "arctic" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
             _ => None,
         }
     }
@@ -245,9 +260,12 @@ impl ArchitectureRegistry {
             "llama2",
             "llama-2",
             "mistral",
+            "mistral-nemo",
+            "nemo",
             "qwen",
             "qwen2",
             "qwen2.5",
+            "qwen-2.5",
             "gemma",
             "gemma2",
             "gemma-2",
@@ -310,6 +328,7 @@ impl ArchitectureRegistry {
             "persimmon",
             "adept",
             "xverse",
+            "arctic",
         ]
     }
 

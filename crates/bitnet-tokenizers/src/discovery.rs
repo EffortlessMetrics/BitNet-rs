@@ -104,6 +104,12 @@ pub struct ModelCompatibilityMatrix {
     pub persimmon_262k: TokenizerDownloadInfo,
     /// XVERSE with 32K vocabulary - SentencePiece tokenizer
     pub xverse_32k: TokenizerDownloadInfo,
+    /// Qwen 2.5 with 152K vocabulary - BPE tokenizer
+    pub qwen25_152k: TokenizerDownloadInfo,
+    /// Mistral Nemo with 128K vocabulary - SentencePiece tokenizer
+    pub mistral_nemo_128k: TokenizerDownloadInfo,
+    /// Snowflake Arctic with 32K vocabulary - BPE tokenizer
+    pub arctic_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -371,6 +377,24 @@ impl Default for ModelCompatibilityMatrix {
                 repo: "xverse/XVERSE-13B-Chat".to_string(),
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "xverse-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            qwen25_152k: TokenizerDownloadInfo {
+                repo: "Qwen/Qwen2.5-7B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "qwen25-152k".to_string(),
+                expected_vocab: Some(152064),
+            },
+            mistral_nemo_128k: TokenizerDownloadInfo {
+                repo: "mistralai/Mistral-Nemo-Instruct-2407".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mistral-nemo-128k".to_string(),
+                expected_vocab: Some(131072),
+            },
+            arctic_32k: TokenizerDownloadInfo {
+                repo: "Snowflake/snowflake-arctic-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "arctic-32k".to_string(),
                 expected_vocab: Some(32000),
             },
         }

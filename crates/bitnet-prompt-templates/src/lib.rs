@@ -163,6 +163,12 @@ pub enum TemplateType {
     PersimmonChat,
     /// XVERSE Chinese LLM chat format (Human:/Assistant: roles)
     XverseChat,
+    /// Alibaba Qwen 2.5 ChatML format (version-specific detection)
+    Qwen25Chat,
+    /// Mistral Nemo 12B [INST] format (128K context)
+    MistralNemoChat,
+    /// Snowflake Arctic ChatML variant
+    ArcticInstruct,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -216,6 +222,9 @@ impl std::str::FromStr for TemplateType {
             "jamba-chat" | "jamba" => Ok(Self::JambaChat),
             "persimmon-chat" | "persimmon" => Ok(Self::PersimmonChat),
             "xverse-chat" | "xverse" => Ok(Self::XverseChat),
+            "qwen25-chat" | "qwen2.5-chat" | "qwen2.5" => Ok(Self::Qwen25Chat),
+            "mistral-nemo-chat" | "mistral-nemo" | "nemo" => Ok(Self::MistralNemoChat),
+            "arctic-instruct" | "arctic" => Ok(Self::ArcticInstruct),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -229,7 +238,8 @@ impl std::str::FromStr for TemplateType {
                  saiga-chat, llama2-chat, gemma2-chat, phi3-instruct, \
                  tinyllama-chat, dolphin-chat, chatgpt-chat, \
                  mixtral-instruct, stablelm-chat, bloom-chat, \
-                 jamba-chat, persimmon-chat, xverse-chat",
+                 jamba-chat, persimmon-chat, xverse-chat, \
+                 qwen25-chat, mistral-nemo-chat, arctic-instruct",
                 s
             ),
         }
@@ -283,6 +293,9 @@ impl std::fmt::Display for TemplateType {
             Self::JambaChat => write!(f, "jamba-chat"),
             Self::PersimmonChat => write!(f, "persimmon-chat"),
             Self::XverseChat => write!(f, "xverse-chat"),
+            Self::Qwen25Chat => write!(f, "qwen25-chat"),
+            Self::MistralNemoChat => write!(f, "mistral-nemo-chat"),
+            Self::ArcticInstruct => write!(f, "arctic-instruct"),
         }
     }
 }
@@ -536,6 +549,15 @@ impl TemplateType {
                 );
                 return Self::Llama2Chat;
             }
+            if lower.contains("qwen2.5") || lower.contains("qwen-2.5") {
+                tracing::debug!(
+                    template = "Qwen25Chat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::Qwen25Chat;
+            }
             if lower.contains("qwen") {
                 tracing::debug!(
                     template = "QwenChat",
@@ -599,6 +621,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::MixtralInstruct;
+            }
+            if lower.contains("mistral-nemo") || lower.contains("nemo") {
+                tracing::debug!(
+                    template = "MistralNemoChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::MistralNemoChat;
             }
             if lower.contains("mistral") {
                 tracing::debug!(
@@ -887,6 +918,15 @@ impl TemplateType {
                 );
                 return Self::XverseChat;
             }
+            if lower.contains("arctic") {
+                tracing::debug!(
+                    template = "ArcticInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::ArcticInstruct;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -950,6 +990,9 @@ impl TemplateType {
             Self::JambaChat => Self::apply_jamba_chat(user_text, system_prompt),
             Self::PersimmonChat => Self::apply_persimmon_chat(user_text, system_prompt),
             Self::XverseChat => Self::apply_xverse_chat(user_text, system_prompt),
+            Self::Qwen25Chat => Self::apply_qwen25_chat(user_text, system_prompt),
+            Self::MistralNemoChat => Self::apply_mistral_nemo_chat(user_text, system_prompt),
+            Self::ArcticInstruct => Self::apply_arctic_instruct(user_text, system_prompt),
         }
     }
 
@@ -1588,6 +1631,34 @@ impl TemplateType {
         result
     }
 
+    /// Apply Qwen 2.5 ChatML format
+    fn apply_qwen25_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt
+            .unwrap_or("You are Qwen, created by Alibaba Cloud. You are a helpful assistant.");
+        apply_chatml(system, user_text)
+    }
+
+    /// Apply Mistral Nemo [INST] format (same structure as Mistral, no <s> prefix)
+    fn apply_mistral_nemo_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::from("[INST] ");
+
+        if let Some(system) = system_prompt {
+            result.push_str(system);
+            result.push_str("\n\n");
+        }
+
+        result.push_str(user_text);
+        result.push_str(" [/INST] ");
+
+        result
+    }
+
+    /// Apply Snowflake Arctic ChatML format
+    fn apply_arctic_instruct(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt.unwrap_or("You are a helpful AI assistant.");
+        apply_chatml(system, user_text)
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1714,6 +1785,15 @@ impl TemplateType {
             Self::XverseChat => {
                 vec!["Human:".to_string(), "</s>".to_string()]
             }
+            Self::Qwen25Chat => {
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
+            }
+            Self::MistralNemoChat => {
+                vec!["</s>".to_string()]
+            }
+            Self::ArcticInstruct => {
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
+            }
         }
     }
 
@@ -1798,6 +1878,9 @@ impl TemplateType {
             Self::JambaChat => false,      // ChatML uses im_start/im_end tokens
             Self::PersimmonChat => false,  // Simple human:/adept: format
             Self::XverseChat => false,     // Simple Human:/Assistant: format
+            Self::Qwen25Chat => false,     // ChatML uses im_start/im_end tokens
+            Self::MistralNemoChat => true,  // Nemo benefits from BOS
+            Self::ArcticInstruct => false,  // ChatML uses im_start/im_end tokens
         }
     }
 
@@ -1836,6 +1919,8 @@ impl TemplateType {
                 | Self::ChatGptChat
                 | Self::StableLMChat
                 | Self::JambaChat
+                | Self::Qwen25Chat
+                | Self::ArcticInstruct
         )
     }
 
@@ -2551,6 +2636,36 @@ impl TemplateType {
                     }
                 }
                 write!(out, "Assistant: ")?;
+            }
+            TemplateType::Qwen25Chat => {
+                let sys = system.unwrap_or(
+                    "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.",
+                );
+                out = render_chatml(sys, history);
+            }
+            TemplateType::MistralNemoChat => {
+                // Mistral Nemo uses same [INST] format as Mistral
+                out.push_str("<s>");
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "[INST] {} [/INST]", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "{}</s>", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                if let Some(sys) = system {
+                    write!(out, "[INST] {}\n\n", sys)?;
+                } else {
+                    write!(out, "[INST] ")?;
+                }
+            }
+            TemplateType::ArcticInstruct => {
+                let sys = system.unwrap_or("You are a helpful AI assistant.");
+                out = render_chatml(sys, history);
             }
         }
 
@@ -3410,6 +3525,9 @@ mod property_tests {
             Just(TemplateType::JambaChat),
             Just(TemplateType::PersimmonChat),
             Just(TemplateType::XverseChat),
+            Just(TemplateType::Qwen25Chat),
+            Just(TemplateType::MistralNemoChat),
+            Just(TemplateType::ArcticInstruct),
         ]
     }
 
@@ -3492,6 +3610,9 @@ mod property_tests {
                 Just(TemplateType::JambaChat),
                 Just(TemplateType::PersimmonChat),
                 Just(TemplateType::XverseChat),
+                Just(TemplateType::Qwen25Chat),
+                Just(TemplateType::MistralNemoChat),
+                Just(TemplateType::ArcticInstruct),
             ],
         ) {
             let stops = template.default_stop_sequences();

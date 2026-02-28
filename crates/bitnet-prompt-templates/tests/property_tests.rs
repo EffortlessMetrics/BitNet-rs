@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat, TemplateType::YiChat, TemplateType::BaichuanChat, TemplateType::ChatGLMChat, TemplateType::MptInstruct, TemplateType::RwkvWorld, TemplateType::OlmoInstruct, TemplateType::FillInMiddle, TemplateType::ZephyrChat, TemplateType::VicunaChat, TemplateType::OrcaChat, TemplateType::SolarInstruct, TemplateType::AlpacaInstruct, TemplateType::CommandRPlus, TemplateType::NousHermes, TemplateType::WizardLM, TemplateType::OpenChat, TemplateType::GraniteChat, TemplateType::NemotronChat, TemplateType::SaigaChat, TemplateType::Llama2Chat, TemplateType::Gemma2Chat, TemplateType::Phi3Instruct, TemplateType::TinyLlamaChat, TemplateType::DolphinChat, TemplateType::ChatGptChat, TemplateType::MixtralInstruct, TemplateType::StableLMChat, TemplateType::BloomChat, TemplateType::JambaChat, TemplateType::PersimmonChat, TemplateType::XverseChat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat, TemplateType::YiChat, TemplateType::BaichuanChat, TemplateType::ChatGLMChat, TemplateType::MptInstruct, TemplateType::RwkvWorld, TemplateType::OlmoInstruct, TemplateType::FillInMiddle, TemplateType::ZephyrChat, TemplateType::VicunaChat, TemplateType::OrcaChat, TemplateType::SolarInstruct, TemplateType::AlpacaInstruct, TemplateType::CommandRPlus, TemplateType::NousHermes, TemplateType::WizardLM, TemplateType::OpenChat, TemplateType::GraniteChat, TemplateType::NemotronChat, TemplateType::SaigaChat, TemplateType::Llama2Chat, TemplateType::Gemma2Chat, TemplateType::Phi3Instruct, TemplateType::TinyLlamaChat, TemplateType::DolphinChat, TemplateType::ChatGptChat, TemplateType::MixtralInstruct, TemplateType::StableLMChat, TemplateType::BloomChat, TemplateType::JambaChat, TemplateType::PersimmonChat, TemplateType::XverseChat, TemplateType::Qwen25Chat, TemplateType::MistralNemoChat, TemplateType::ArcticInstruct] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -153,6 +153,15 @@ proptest! {
         Just(TemplateType::TinyLlamaChat),
         Just(TemplateType::DolphinChat),
         Just(TemplateType::ChatGptChat),
+        Just(TemplateType::MixtralInstruct),
+        Just(TemplateType::StableLMChat),
+        Just(TemplateType::BloomChat),
+        Just(TemplateType::JambaChat),
+        Just(TemplateType::PersimmonChat),
+        Just(TemplateType::XverseChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
         ],
     ) {
         let s = template.to_string();
@@ -202,6 +211,15 @@ proptest! {
         Just(TemplateType::TinyLlamaChat),
         Just(TemplateType::DolphinChat),
         Just(TemplateType::ChatGptChat),
+        Just(TemplateType::MixtralInstruct),
+        Just(TemplateType::StableLMChat),
+        Just(TemplateType::BloomChat),
+        Just(TemplateType::JambaChat),
+        Just(TemplateType::PersimmonChat),
+        Just(TemplateType::XverseChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -252,7 +270,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder | TemplateType::FalconChat | TemplateType::CodeLlamaInstruct | TemplateType::CohereCommand | TemplateType::InternLMChat | TemplateType::YiChat | TemplateType::BaichuanChat | TemplateType::ChatGLMChat | TemplateType::MptInstruct | TemplateType::RwkvWorld | TemplateType::OlmoInstruct | TemplateType::FillInMiddle | TemplateType::ZephyrChat | TemplateType::VicunaChat | TemplateType::TinyLlamaChat | TemplateType::DolphinChat | TemplateType::ChatGptChat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder | TemplateType::FalconChat | TemplateType::CodeLlamaInstruct | TemplateType::CohereCommand | TemplateType::InternLMChat | TemplateType::YiChat | TemplateType::BaichuanChat | TemplateType::ChatGLMChat | TemplateType::MptInstruct | TemplateType::RwkvWorld | TemplateType::OlmoInstruct | TemplateType::FillInMiddle | TemplateType::ZephyrChat | TemplateType::VicunaChat | TemplateType::TinyLlamaChat | TemplateType::DolphinChat | TemplateType::ChatGptChat | TemplateType::Qwen25Chat | TemplateType::MistralNemoChat | TemplateType::ArcticInstruct),
             "detect() returned an unexpected variant"
         );
     }
@@ -304,6 +322,9 @@ proptest! {
         Just(TemplateType::TinyLlamaChat),
         Just(TemplateType::DolphinChat),
         Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
         ],
     ) {
         let out = template.apply("", None);
@@ -340,6 +361,9 @@ proptest! {
         Just(TemplateType::TinyLlamaChat),
         Just(TemplateType::DolphinChat),
         Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -379,6 +403,9 @@ proptest! {
         Just(TemplateType::TinyLlamaChat),
         Just(TemplateType::DolphinChat),
         Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -465,6 +492,9 @@ proptest! {
         Just(TemplateType::TinyLlamaChat),
         Just(TemplateType::DolphinChat),
         Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
