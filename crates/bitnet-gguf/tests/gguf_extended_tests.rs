@@ -101,7 +101,7 @@ fn gguf_value_float32_pi_stored() {
 #[test]
 fn gguf_value_float32_zero_stored() {
     let GgufValue::Float32(v) = GgufValue::Float32(0.0f32) else { panic!("wrong variant") };
-    assert_eq!(v, 0.0f32);
+    assert!((v - 0.0f32).abs() < f32::EPSILON);
 }
 
 // ---------------------------------------------------------------------------
@@ -244,7 +244,7 @@ fn tensor_info_dims_order_preserved() {
     let dims = vec![32u64, 128, 256, 4096];
     let info = TensorInfo {
         name: "hidden".to_string(),
-        n_dims: dims.len() as u32,
+        n_dims: u32::try_from(dims.len()).unwrap(),
         dims: dims.clone(),
         dtype: 0,
         offset: 0,
@@ -405,7 +405,7 @@ proptest! {
         values in prop::collection::vec(any::<u32>(), 0..=32),
     ) {
         let elems: Vec<GgufValue> = values.iter().map(|&v| GgufValue::Uint32(v)).collect();
-        let expected = values.clone();
+        let expected = values;
         let arr = GgufValue::Array(GgufValueType::Uint32, elems);
         let GgufValue::Array(_, stored) = arr else { panic!("expected Array") };
         prop_assert_eq!(stored.len(), expected.len());
