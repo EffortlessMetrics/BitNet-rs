@@ -173,6 +173,7 @@ impl I2SQuantizer {
             bitnet_common::Device::Cuda(_) => cfg!(any(feature = "gpu", feature = "cuda")),
             bitnet_common::Device::Metal => false, // Metal support not yet implemented
             bitnet_common::Device::Hip(_) | bitnet_common::Device::Npu => false,
+            bitnet_common::Device::OpenCL(_) => false, // OpenCL support not yet implemented
         }
     }
 

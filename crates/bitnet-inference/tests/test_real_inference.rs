@@ -234,7 +234,7 @@ fn _create_test_tensor(shape: Vec<usize>, device: &Device) -> Result<bitnet_comm
             use candle_core::backend::BackendDevice;
             candle_core::Device::Metal(candle_core::MetalDevice::new(0)?)
         }
-        Device::Hip(_) | Device::Npu => candle_core::Device::Cpu, // HIP/NPU: fallback to CPU
+        Device::Hip(_) | Device::Npu | Device::OpenCL(_) => candle_core::Device::Cpu, // HIP/NPU/OpenCL: fallback to CPU
     };
     let tensor = CandleTensor::from_vec(data, shape.as_slice(), &candle_device)?;
     Ok(bitnet_common::BitNetTensor::new(tensor))

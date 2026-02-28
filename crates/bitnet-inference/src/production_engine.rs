@@ -96,6 +96,7 @@ impl PerformanceMetricsCollector {
             Device::Hip(id) => format!("HIP:{}", id),
             Device::Npu => "NPU".to_string(),
             Device::Metal => "Metal".to_string(),
+            Device::OpenCL(id) => format!("OpenCL:{}", id),
         };
     }
 
@@ -216,7 +217,17 @@ impl DeviceManager {
             if bitnet_kernels::device_features::gpu_available_runtime() {
                 return self.primary_device;
             }
-            // GPU compiled but not available at runtime — fall back gracefully.
+        }
+
+        // Check OneAPI/OpenCL for Intel GPU devices.
+        if matches!(self.primary_device, Device::OpenCL(_))
+            && bitnet_kernels::device_features::oneapi_available_runtime()
+        {
+            return self.primary_device;
+        }
+
+        // Requested GPU not available at runtime — fall back gracefully.
+        if self.primary_device != self.fallback_device {
             log::warn!(
                 "Primary device {:?} unavailable at runtime; falling back to {:?}",
                 self.primary_device,
@@ -362,6 +373,7 @@ impl ProductionInferenceEngine {
         let requested = match device {
             Device::Cpu => "cpu",
             Device::Cuda(_) | Device::Metal | Device::Hip(_) | Device::Npu => "gpu",
+            Device::Cuda(_) | Device::Metal | Device::OpenCL(_) => "gpu",
         };
         let detected: Vec<String> =
             caps.compiled_backends().iter().map(|b| b.to_string()).collect();

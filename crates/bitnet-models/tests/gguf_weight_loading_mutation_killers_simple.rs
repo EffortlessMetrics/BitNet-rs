@@ -298,6 +298,7 @@ fn test_device_selection_mutations() {
                 assert!(!is_cpu, "HIP/NPU device should not report as CPU");
                 assert!(!is_cuda, "HIP/NPU device should not report as CUDA");
             }
+            _ => {} // Other device variants (e.g., OpenCL)
         }
 
         // Test device enumeration
@@ -306,6 +307,7 @@ fn test_device_selection_mutations() {
             Device::Cuda(id) => Some(id),
             Device::Metal => None,
             Device::Hip(_) | Device::Npu => None,
+            _ => None, // Other device variants
         };
 
         if let Some(_id) = device_id {

@@ -422,6 +422,18 @@ pub fn select_backend(
                 Ok(Box::new(CpuBackend::new(model)?))
             }
         }
+        Device::OpenCL(_) => {
+            if bitnet_kernels::device_features::oneapi_available_runtime() {
+                info!(
+                    "OpenCL selected; compute kernels dispatched via KernelManager, tensor ops on CPU"
+                );
+            } else {
+                warn!("OpenCL requested but oneapi runtime not available, falling back to CPU");
+            }
+            // OpenCL compute kernels are dispatched via KernelManager inside
+            // quantized linear layers; the high-level backend uses CPU tensors.
+            Ok(Box::new(CpuBackend::new(model)?))
+        }
     }
 }
 

@@ -760,6 +760,14 @@ impl InferenceEngine {
                 debug!("Using GPU backend (HIP/NPU)");
                 Box::new(GpuBackend::new(model.clone(), device)?)
             }
+            Device::OpenCL(_) => {
+                if bitnet_kernels::device_features::oneapi_available_runtime() {
+                    debug!("Using OpenCL backend (CPU fallback for compute)");
+                }
+                // OpenCL kernels are dispatched via KernelManager; the inference
+                // backend still runs through the CPU path for tensor ops.
+                Box::new(CpuBackend::new(model.clone())?)
+            }
         };
 
         let engine = Self {
