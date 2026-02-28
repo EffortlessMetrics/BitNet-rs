@@ -7,6 +7,7 @@ pub mod convolution;
 pub mod cpu;
 pub mod device_aware;
 pub mod device_features;
+pub mod kernels;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]

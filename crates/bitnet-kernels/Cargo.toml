@@ -134,5 +134,9 @@ path = "tests/opencl_stub_tests.rs"
 required-features = ["oneapi"]
 
 [[test]]
-name = "opencl_bdd_tests"
-path = "tests/opencl_bdd_tests.rs"
+name = "opencl_kernel_correctness"
+path = "tests/opencl_kernel_correctness.rs"
+
+[[test]]
+name = "opencl_property_tests"
+path = "tests/opencl_property_tests.rs"
