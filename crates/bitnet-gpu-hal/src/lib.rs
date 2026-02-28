@@ -153,4 +153,5 @@ pub mod generation;
 
 // Provides memory layout computation, stride optimization,
 // tensor views, coalescing, alignment, and pinned memory management.
+pub mod config_validator;
 pub mod memory_layout;
