@@ -35,8 +35,8 @@ fn probe_gpu_rocm_available_false_without_gpu_feature() {
     assert!(!probe_gpu().rocm_available, "rocm_available must be false without GPU feature");
 }
 
-/// `GpuCapabilities.available` must equal `cuda_available || rocm_available`.
-///
+// `GpuCapabilities.available` must equal `cuda_available || rocm_available`.
+//
 // This invariant must hold regardless of the GPU feature set.
 proptest! {
     #[test]
