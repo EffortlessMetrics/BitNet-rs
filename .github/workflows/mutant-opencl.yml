@@ -1,0 +1,78 @@
+name: Mutant Testing — OpenCL
+
+on:
+  schedule:
+    # Run weekly on Saturday at 3 AM UTC
+    - cron: "0 3 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutant-opencl-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  mutants-opencl:
+    name: Mutation Test — OpenCL modules
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    # Informational only — don't block PRs
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: |
+            ~/.cargo/registry/
+            ~/.cargo/git/
+            target/
+          key: ${{ runner.os }}-mutants-opencl-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-mutants-opencl-
+
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants --locked
+
+      - name: Run mutations — bitnet-kernels (OpenCL + device_features)
+        run: |
+          cargo mutants \
+            --no-default-features --features oneapi,cpu \
+            -p bitnet-kernels \
+            --file "src/gpu/opencl.rs" \
+            --file "src/device_features.rs" \
+            --timeout 600 \
+            -- --test-threads=1
+        env:
+          BITNET_GPU_FAKE: oneapi
+
+      - name: Run mutations — bitnet-device-probe (oneAPI detection)
+        run: |
+          cargo mutants \
+            --no-default-features --features oneapi,cpu \
+            -p bitnet-device-probe \
+            --timeout 600 \
+            -- --test-threads=1
+        env:
+          BITNET_GPU_FAKE: oneapi
+
+      - name: Upload mutation results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: mutants-opencl-${{ github.run_id }}
+          path: mutants.out/
+          if-no-files-found: warn
+          retention-days: 30
