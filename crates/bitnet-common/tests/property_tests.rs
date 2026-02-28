@@ -214,6 +214,8 @@ proptest! {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Scalar,
         };
         let result = select_backend(BackendRequest::Cpu, &caps);
@@ -234,6 +236,8 @@ proptest! {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Avx2,
         };
         let result = select_backend(BackendRequest::Auto, &caps);
@@ -252,6 +256,8 @@ proptest! {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Scalar,
         };
         let result = select_backend(BackendRequest::Cuda, &caps);
@@ -375,6 +381,8 @@ proptest! {
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi,
+            vulkan_compiled: false,
+            vulkan_runtime: false,
             simd_level: SimdLevel::Scalar,
         };
         let backends = caps.compiled_backends();

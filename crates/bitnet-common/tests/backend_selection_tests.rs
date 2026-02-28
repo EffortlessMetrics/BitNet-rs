@@ -19,6 +19,8 @@ fn cpu_only() -> KernelCapabilities {
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     }
 }
@@ -31,6 +33,8 @@ fn cuda_full() -> KernelCapabilities {
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     }
 }
@@ -43,6 +47,8 @@ fn cuda_compiled_no_runtime() -> KernelCapabilities {
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     }
 }
@@ -55,6 +61,8 @@ fn empty_caps() -> KernelCapabilities {
         oneapi_compiled: false,
         oneapi_runtime: false,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Scalar,
     }
 }
@@ -198,6 +206,8 @@ fn gpu_request_prefers_oneapi_when_cuda_unavailable() {
         oneapi_compiled: true,
         oneapi_runtime: true,
         cpp_ffi: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         simd_level: SimdLevel::Avx2,
     };
     let r = select_backend(BackendRequest::Gpu, &caps).unwrap();
