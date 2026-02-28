@@ -64,6 +64,8 @@ use commands::BenchmarkCommand;
 #[cfg(feature = "cli-bench")]
 use commands::KernelBenchCommand;
 #[cfg(feature = "full-cli")]
+use commands::GpuInfoCommand;
+#[cfg(feature = "full-cli")]
 use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
 
@@ -373,6 +375,11 @@ enum Commands {
     KernelBench(KernelBenchCommand),
 
     #[cfg(feature = "full-cli")]
+    /// List available GPU devices and capabilities
+    #[command(alias = "gpuinfo")]
+    GpuInfo(GpuInfoCommand),
+
+    #[cfg(feature = "full-cli")]
     /// Start inference server
     #[command(alias = "server")]
     Serve(ServeCommand),
@@ -563,6 +570,8 @@ async fn main() -> Result<()> {
         Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
         Some(Commands::KernelBench(cmd)) => cmd.execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::GpuInfo(cmd)) => cmd.execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
         Some(Commands::Tokenize { model, tokenizer, text, file, bos, json_out }) => {
