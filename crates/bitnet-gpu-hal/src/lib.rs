@@ -6,6 +6,7 @@
 
 pub mod profiling;
 pub mod streaming;
+pub mod test_harness;
 use std::fmt;
 
 // ── Errors ────────────────────────────────────────────────────────────────

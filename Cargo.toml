@@ -67,6 +67,7 @@ members = [
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
+  "crates/bitnet-gpu-hal",
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
