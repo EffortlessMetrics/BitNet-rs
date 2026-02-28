@@ -1,18 +1,15 @@
-//! WASM-compatible OpenCL kernel validation shim.
+//! OpenCL backend for BitNet GPU inference.
 //!
-//! Provides compile-time kernel source validation and a mock OpenCL context
-//! that works on all targets, including wasm32. Real OpenCL FFI calls are
-//! gated behind `#[cfg(not(target_arch = "wasm32"))]`.
+//! Provides asynchronous kernel execution, event-based synchronization,
+//! and double-buffered compute/transfer overlap for Intel and other
+//! OpenCL-capable GPUs.
 
 pub mod wasm_shim;
 
 pub use wasm_shim::{
     ArgQualifier, KernelArg, KernelSignature, MockOpenClContext, parse_kernel_signatures,
 };
-//! OpenCL 3.0 backend for BitNet inference.
-//! Provides Unified Shared Memory (USM) support for zero-copy host-device
-//! data access, with automatic fallback to explicit buffer copies when USM
-//! is unavailable.
+
 pub mod usm;
-//! OpenCL backend utilities for BitNet inference.
 pub mod p2p;
+pub mod async_exec;

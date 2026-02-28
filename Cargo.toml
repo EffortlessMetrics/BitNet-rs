@@ -2,6 +2,7 @@
 members = [
   ".",                          # Main library crate
   "crates/bitnet-common",
+  "crates/bitnet-opencl",       # OpenCL GPU backend
   "crates/bitnet-runtime-context",
   "crates/bitnet-runtime-context-core",
   "crates/bitnet-bdd-grid",

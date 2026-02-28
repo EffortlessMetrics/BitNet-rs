@@ -10,6 +10,7 @@ keywords.workspace = true
 categories.workspace = true
 rust-version.workspace = true
 description = "OpenCL backend for BitNet GPU inference"
+include = ["src/**", "Cargo.toml"]
 
 [dependencies]
 log.workspace = true
