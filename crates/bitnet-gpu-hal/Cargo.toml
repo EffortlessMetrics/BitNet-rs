@@ -22,6 +22,8 @@ proptest.workspace = true
 serde = { workspace = true }
 serde_json.workspace = true
 tempfile.workspace = true
+proptest = "1"
+tempfile = "3"
 
 [features]
 default = []
