@@ -32,7 +32,6 @@ members = [
   "crates/bitnet-st2gguf",      # SafeTensors to GGUF converter
   "crates/bitnet-st-tools",     # SafeTensors inspection & merge utilities
   "crates/bitnet-trace",        # Tensor activation tracing for cross-validation
-  "crates/bitnet-opencl",       # OpenCL backend utilities (P2P transfer, etc.)
   "crates/bitnet-ffi",
   "crates/bitnet-py",
   "crates/bitnet-runtime-bootstrap",
@@ -60,6 +59,7 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-level-zero",    # Intel Level-Zero backend (dynamic loading)
   "crossval",
   "tests",
   "xtask",
@@ -210,7 +210,7 @@ cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bi
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
-oneapi = ["kernels", "bitnet-kernels/oneapi"]
+level-zero = ["kernels", "inference", "tokenizers"]  # Intel Level-Zero backend
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
 
 # Component features
@@ -278,10 +278,6 @@ name = "simple_demo"
 [[example]]
 name = "ffi_threading_demo"
 required-features = ["cpu", "ffi"]
-
-[[example]]
-name = "intel_gpu_inference"
-required-features = ["oneapi"]
 
 [[bench]]
 name = "srp_ops"

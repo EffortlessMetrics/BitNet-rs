@@ -1,0 +1,28 @@
+[package]
+name = "bitnet-level-zero"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Intel Level-Zero backend for BitNet GPU inference via dynamic loading"
+include = [
+  "src/**",
+  "Cargo.toml",
+]
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+thiserror.workspace = true
+tracing.workspace = true
+libloading = "0.8"
+
+[dev-dependencies]
+tempfile.workspace = true
+bitnet-test-support.workspace = true
+
+[features]
+default = []
