@@ -61,6 +61,8 @@ fn bitnet_version() -> &'static str {
 
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
+#[cfg(feature = "cli-bench")]
+use commands::KernelBenchCommand;
 #[cfg(feature = "full-cli")]
 use commands::GpuInfoCommand;
 #[cfg(feature = "full-cli")]
@@ -367,6 +369,11 @@ enum Commands {
     #[command(alias = "bench")]
     Benchmark(BenchmarkCommand),
 
+    #[cfg(feature = "cli-bench")]
+    /// Run kernel-level micro-benchmarks (matmul, quantise, softmax)
+    #[command(alias = "kbench")]
+    KernelBench(KernelBenchCommand),
+
     #[cfg(feature = "full-cli")]
     /// List available GPU devices and capabilities
     #[command(alias = "gpuinfo")]
@@ -561,6 +568,8 @@ async fn main() -> Result<()> {
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
         Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
+        #[cfg(feature = "cli-bench")]
+        Some(Commands::KernelBench(cmd)) => cmd.execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::GpuInfo(cmd)) => cmd.execute().await,
         #[cfg(feature = "full-cli")]
