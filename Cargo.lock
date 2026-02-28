@@ -827,6 +827,9 @@ dependencies = [
 [[package]]
 name = "bitnet-metal"
 version = "0.2.1-dev"
+dependencies = [
+ "tracing",
+]
 
 [[package]]
 name = "bitnet-models"

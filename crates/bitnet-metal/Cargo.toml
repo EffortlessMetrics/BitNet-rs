@@ -12,6 +12,7 @@ description = "Metal Shading Language compute kernels for Apple Silicon GPU infe
 rust-version.workspace = true
 
 [dependencies]
+tracing.workspace = true
 # Pure embedded shader sources – no runtime deps required.
 
 [dev-dependencies]
