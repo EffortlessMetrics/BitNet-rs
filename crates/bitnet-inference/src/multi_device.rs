@@ -43,7 +43,8 @@ impl MultiDeviceScheduler {
     /// Auto-configure scheduling based on available devices.
     ///
     /// - Single device → `SingleDevice` strategy
-    /// - Multiple devices → `LayerParallel` with round-robin
+/// - Multiple devices → `LayerParallel` with round-robin
+/// - Multiple devices → `LayerParallel` with an even split
     pub fn auto_configure(available_devices: &[Device]) -> Self {
         let slots: Vec<DeviceSlot> = available_devices
             .iter()
@@ -76,9 +77,12 @@ impl MultiDeviceScheduler {
             }
             SchedulingStrategy::LayerParallel { split_points } => {
                 if split_points.is_empty() {
-                    let dev_count = self.devices.len().max(1);
+let dev_count = self.devices.len().max(1);
                     self.devices[layer_idx % dev_count].device
                 } else {
+// Even round-robin across all devices
+                    let dev_count = self.devices.len().max(1);
+                    // Find which segment the layer belongs to
                     let segment = split_points
                         .iter()
                         .position(|&sp| layer_idx < sp)
