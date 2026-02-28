@@ -623,7 +623,7 @@ impl BatchEngine {
             Device::Cpu => 100,
             Device::Cuda(_) => 50,
             Device::Metal => 60, // TODO: Adjust for Metal performance
-            Device::OpenCL(_) => 55, // TODO: Adjust for OpenCL performance
+            Device::OpenCL(_) | Device::Vulkan(_) => 55,
         };
 
         let processing_time = Duration::from_millis(base_time_ms * batch.size() as u64);

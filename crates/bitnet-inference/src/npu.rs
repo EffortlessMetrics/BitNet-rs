@@ -23,6 +23,7 @@ pub fn map_device_token(token: &str) -> Option<Device> {
         "cuda" | "gpu" => Some(Device::Cuda(0)),
         "metal" | "npu" => Some(Device::Metal),
         "oneapi" | "opencl" | "intel-gpu" => Some(Device::OpenCL(0)),
+        "vulkan" => Some(Device::Vulkan(0)),
         _ => None,
     }
 }

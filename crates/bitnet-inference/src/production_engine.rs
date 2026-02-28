@@ -95,6 +95,7 @@ impl PerformanceMetricsCollector {
             Device::Cuda(id) => format!("CUDA:{}", id),
             Device::Metal => "Metal".to_string(),
             Device::OpenCL(id) => format!("OpenCL:{}", id),
+            Device::Vulkan(id) => format!("Vulkan:{}", id),
         };
     }
 
@@ -218,7 +219,7 @@ impl DeviceManager {
         }
 
         // Check OneAPI/OpenCL for Intel GPU devices.
-        if matches!(self.primary_device, Device::OpenCL(_))
+        if matches!(self.primary_device, Device::OpenCL(_) | Device::Vulkan(_))
             && bitnet_kernels::device_features::oneapi_available_runtime()
         {
             return self.primary_device;
@@ -370,7 +371,7 @@ impl ProductionInferenceEngine {
         let caps = KernelCapabilities::from_compile_time();
         let requested = match device {
             Device::Cpu => "cpu",
-            Device::Cuda(_) | Device::Metal | Device::OpenCL(_) => "gpu",
+            Device::Cuda(_) | Device::Metal | Device::OpenCL(_) | Device::Vulkan(_) => "gpu",
         };
         let detected: Vec<String> =
             caps.compiled_backends().iter().map(|b| b.to_string()).collect();
