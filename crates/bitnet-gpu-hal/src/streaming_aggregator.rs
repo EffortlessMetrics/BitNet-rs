@@ -87,12 +87,7 @@ pub struct ChunkBuffer {
 
 impl ChunkBuffer {
     pub fn new(capacity: usize) -> Self {
-        Self {
-            pending: BTreeMap::new(),
-            next_drain_index: 0,
-            seen_final: false,
-            capacity,
-        }
+        Self { pending: BTreeMap::new(), next_drain_index: 0, seen_final: false, capacity }
     }
 
     /// Insert a chunk.  Returns `Err` if the buffer is full (capacity > 0).
@@ -148,20 +143,15 @@ pub struct StreamAggregator {
 
 impl StreamAggregator {
     pub fn new(config: StreamConfig) -> Self {
-        Self {
-            buffers: HashMap::new(),
-            config,
-        }
+        Self { buffers: HashMap::new(), config }
     }
 
     /// Push a chunk into the aggregator.  Creates a buffer for new sequences
     /// automatically.
     pub fn push(&mut self, chunk: StreamChunk) -> Result<(), StreamChunk> {
         let seq = chunk.sequence_id;
-        let buf = self
-            .buffers
-            .entry(seq)
-            .or_insert_with(|| ChunkBuffer::new(self.config.buffer_size));
+        let buf =
+            self.buffers.entry(seq).or_insert_with(|| ChunkBuffer::new(self.config.buffer_size));
         buf.insert(chunk)
     }
 
@@ -179,17 +169,12 @@ impl StreamAggregator {
 
     /// Drain ordered chunks for a single sequence.
     pub fn drain_sequence(&mut self, sequence_id: u64) -> Vec<StreamChunk> {
-        self.buffers
-            .get_mut(&sequence_id)
-            .map(|b| b.drain_ordered())
-            .unwrap_or_default()
+        self.buffers.get_mut(&sequence_id).map(|b| b.drain_ordered()).unwrap_or_default()
     }
 
     /// Returns `true` when the given sequence has been fully consumed.
     pub fn is_sequence_complete(&self, sequence_id: u64) -> bool {
-        self.buffers
-            .get(&sequence_id)
-            .is_some_and(|b| b.is_complete())
+        self.buffers.get(&sequence_id).is_some_and(|b| b.is_complete())
     }
 
     /// Number of active (non-complete) sequences.
@@ -232,9 +217,7 @@ impl TokenAccumulator {
 
     /// Flush up to the last sentence-ending punctuation (`.`, `!`, `?`).
     pub fn flush_sentence(&mut self) -> Option<String> {
-        let end = self
-            .buffer
-            .rfind(|c: char| c == '.' || c == '!' || c == '?');
+        let end = self.buffer.rfind(|c: char| c == '.' || c == '!' || c == '?');
         if let Some(pos) = end {
             let flushed = self.buffer[..=pos].to_string();
             self.buffer = self.buffer[pos + 1..].to_string();
@@ -274,10 +257,7 @@ pub struct StreamSplitter {
 
 impl StreamSplitter {
     pub fn new(consumer_count: usize) -> Self {
-        Self {
-            consumer_count,
-            outboxes: (0..consumer_count).map(|_| VecDeque::new()).collect(),
-        }
+        Self { consumer_count, outboxes: (0..consumer_count).map(|_| VecDeque::new()).collect() }
     }
 
     /// Broadcast a chunk to every consumer.
@@ -289,10 +269,7 @@ impl StreamSplitter {
 
     /// Drain pending chunks for a specific consumer.
     pub fn drain_consumer(&mut self, index: usize) -> Vec<StreamChunk> {
-        self.outboxes
-            .get_mut(index)
-            .map(|q| q.drain(..).collect())
-            .unwrap_or_default()
+        self.outboxes.get_mut(index).map(|q| q.drain(..).collect()).unwrap_or_default()
     }
 
     /// Number of consumers.
@@ -325,8 +302,7 @@ impl StreamMerger {
 
     /// Drain all buffered chunks in `(sequence_id, chunk_index)` order.
     pub fn drain_ordered(&mut self) -> Vec<StreamChunk> {
-        self.buffer
-            .sort_by_key(|c| (c.sequence_id, c.chunk_index));
+        self.buffer.sort_by_key(|c| (c.sequence_id, c.chunk_index));
         std::mem::take(&mut self.buffer)
     }
 
@@ -369,12 +345,7 @@ pub struct BackpressureHandler {
 
 impl BackpressureHandler {
     pub fn new(strategy: BackpressureStrategy, capacity: usize) -> Self {
-        Self {
-            strategy,
-            queue: VecDeque::new(),
-            capacity,
-            dropped_count: 0,
-        }
+        Self { strategy, queue: VecDeque::new(), capacity, dropped_count: 0 }
     }
 
     /// Offer a chunk to the handler.
@@ -576,10 +547,7 @@ mod tests {
 
     #[test]
     fn config_custom_delimiter() {
-        let cfg = StreamConfig {
-            chunk_delimiter: "|".into(),
-            ..Default::default()
-        };
+        let cfg = StreamConfig { chunk_delimiter: "|".into(), ..Default::default() };
         assert_eq!(cfg.chunk_delimiter, "|");
     }
 
