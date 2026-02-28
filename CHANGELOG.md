@@ -278,20 +278,13 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Embedding layer** (#1273): token embedding with batch lookup and tied output projection, 45 tests
 - **Quantization runtime** (#1272): I2S/QK256 dequantization, ternary matmul, compression ratios, 78 tests
 - **CHANGELOG waves 29-32** (#1271): 17 entries covering GPU HAL infrastructure PRs
-- **Prefix cache (RadixAttention)** (#1435): Radix tree for shared prefix lookup, LRU/LFU/ARC eviction, KV cache handle with refcounting — 78 tests
-- **Speculative sampling** (#1437): Draft→verify→accept loop with rejection sampling (Leviathan et al.), adaptive K, acceptance tracking — 76 tests
-- **Workspace integration v10** (#1438): 24 module stubs for waves 59-63 organized into 6 sections
-- **Token healing** (#1440): VocabTrie prefix matching, partial token detection, constrained first-token sampling — 68 tests
-- **Attention sink (StreamingLLM)** (#1445): Sink token retention, sliding window, H2O/SnapKV eviction, position remapping — 62 tests
-- **Quantization calibration** (#1446): MinMax/Percentile/MSE/Entropy calibrators, activation observer, per-channel support — 74 tests
-- **MQA/GQA attention** (#1447): Multi-Query and Grouped-Query projections, KV head expansion, cache size estimation — 72 tests
-- **CHANGELOG waves 61-62** (#1448): Documents PRs #1421-#1434
-- **Beam search decoder** (#1449): Diverse beam search with n-gram blocking, length penalty, beam merging — 76 tests
-- **Tokenizer/detokenizer pipeline** (#1450): BPE encode/decode, incremental detokenizer, special token handling, Unicode normalization — 76 tests
-- **Guided generation** (#1451): Grammar-based constrained decoding, JSON schema→grammar, regex→grammar, grammar cache — 91 tests
-- **Mmap model loader** (#1452): Memory-mapped lazy tensor loading, prefetch scheduler, budget enforcement — 76 tests
-- **RoPE variants** (#1453): Standard/Linear/NTK/YaRN/Dynamic NTK scaling, ALiBi position bias — 66 tests
-- **Sliding window attention** (#1454): Standard/dilated/Longformer patterns, windowed KV cache, position bias — 66 tests
+- **GPU HAL traits** (#1201): `GpuDevice`, `Buffer`, `Kernel`, `Queue`, and `Program` hardware abstraction layer traits with 52 tests for backend-agnostic GPU programming
+- **GPU quantization pipeline** (#1199): GPU-accelerated quantization pipeline for I2_S, QK256, TL1, and TL2 formats with 16 tests
+- **GPU inference pipeline orchestrator** (#1202): End-to-end GPU inference pipeline orchestrator coordinating model load, quantization, and generation with 27 tests
+- **WebSocket streaming for GPU inference** (#1204): WebSocket-based streaming interface for GPU inference enabling real-time token delivery with 18 tests
+- **GGUF GPU loader** (#1205): GGUF-to-GPU model loader with memory estimation for informed device placement with 26 tests
+- **OpenCL kernel optimization** (#1208): Vectorized matrix multiplication and numerically stable softmax OpenCL kernels with 27 tests
+- **GPU test harness** (#1196): Mock GPU backend test harness enabling comprehensive GPU code testing without hardware with 44 tests
 - **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
 - **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
 - **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
@@ -340,6 +333,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
+- **Version 0.2.0-alpha.1 prep** (#1200): Version bump and release preparation across 57 files for the first GPU-enabled alpha milestone
 - **Nix flake OpenCL deps** (#1066): OpenCL development dependencies added to Nix flake for reproducible GPU development environments
 - `chore: prepare the workspace for crates.io release` — Workspace metadata, manifests, and dependency versions updated for crates.io publishing readiness (#1028)
 - `chore: prepare v0.2.0 release` — Version bumped to 0.2.0; release notes consolidated (#1006)
@@ -360,6 +354,7 @@ All notable changes to bitnet-rs will be documented in this file.
 - `perf: optimize softmax_in_place for sparse distributions` — Faster softmax computation for sparse logit distributions by skipping negligible values (#1031)
 
 ### Testing
+- **GPU integration test suite** (#1206): Comprehensive GPU integration test suite with 39 tests across 5 modules covering end-to-end GPU workflows
 - **GPU vs CPU cross-validation** (#1120): GPU vs CPU cross-validation test suite verifies numerical equivalence across backends
 - **Numerical stability tests** (#1123): 40-test numerical stability suite covering edge cases in kernels (NaN, Inf, denormals, large tensors)
 - **GPU stress tests** (#1107): GPU stress tests for reliability validation under sustained load and memory pressure
@@ -379,12 +374,17 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test(bitnet-device-probe): add property tests for new backend capabilities` — Property tests covering ROCm, Metal, Vulkan, NPU, and oneAPI backend capability invariants (#1003)
 
 ### CI
+- **Feature flag compile matrix** (#1198): CI compile matrix testing 10 feature flag combinations with 12 validation tests for correct cross-feature compilation
+- **Nix GPU integration** (#1203): Nix GPU overlay and GPU dev shell for reproducible GPU development environments with 16 tests
 - **ROCm/HIP smoke workflow** (#1130): CI smoke workflow for ROCm/HIP compilation validates AMD GPU backend builds
 - **Fuzz target matrix completion** (#1099): Fuzz-nightly and fuzz-ci workflow matrices updated to include all fuzz targets
 - **Mutation testing: OpenCL** (#1056): Mutation testing configuration added for OpenCL modules via `cargo-mutants`
 - **Intel GPU Docker image** (#1065): Docker image with Intel compute runtime for GPU CI jobs
 
 ### Documentation
+- **GPU safety audit** (#1207): GPU safety audit documentation covering unsafe usage, memory management, and error handling patterns with 12 tests
+- **README + roadmap update** (#1197): README and roadmap updated with GPU backend support table and Intel GPU integration status
+- **CHANGELOG waves 11-13** (#1195): CHANGELOG entries added for PRs from waves 11-13
 - **GPU ADRs** (#1109): Architecture Decision Records documenting GPU backend selection rationale and trade-offs
 - **GPU contributor guide** (#1110): GPU development contributor guide covering kernel authoring, testing, and review workflow
 - **Intel GPU tuning guide** (#1068): Intel GPU performance tuning guide with Arc-specific optimization recommendations
