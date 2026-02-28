@@ -13,6 +13,7 @@ pub mod gguf;
 pub mod kernel_recorder;
 pub mod layers;
 pub mod npu;
+pub mod onnx_export;
 pub mod production_engine; // always available (sync parser)
 pub mod prompt_template; // Chat and instruct format templates
 pub mod receipts; // AC4: Inference receipt generation
