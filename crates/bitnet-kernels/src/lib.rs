@@ -16,19 +16,19 @@ pub mod kernels;
 #[path = "gpu/kernel_cache.rs"]
 pub mod kernel_cache;
 // OpenCL mixed-precision selection (no GPU deps)
-#[path = "gpu/opencl_mixed_precision.rs"]
-pub mod opencl_mixed_precision;
+pub mod activation_gpu;
+pub mod embedding_gpu;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
 pub mod kv_cache_gpu;
+pub mod linear_gpu;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
+#[path = "gpu/opencl_mixed_precision.rs"]
+pub mod opencl_mixed_precision;
 mod stubs;
 pub mod tl_lut;
-pub mod embedding_gpu;
-pub mod linear_gpu;
-pub mod activation_gpu;
 pub mod transformer_layer_gpu;
 
 /// Kernel provider trait

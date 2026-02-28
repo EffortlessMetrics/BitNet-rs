@@ -149,10 +149,7 @@ pub fn build_report() -> GpuInfoReport {
 }
 
 /// Pick the best device for inference (GPU backends take priority over CPU).
-fn recommend_device(
-    devices: &[DeviceEntry],
-    runtime: &[String],
-) -> Option<String> {
+fn recommend_device(devices: &[DeviceEntry], runtime: &[String]) -> Option<String> {
     let priority = ["cuda", "oneapi", "rocm", "metal"];
     for backend in &priority {
         if runtime.contains(&(*backend).to_string()) {
@@ -173,12 +170,7 @@ fn print_table(report: &GpuInfoReport) {
         println!("  (none)");
     } else {
         for dev in &report.devices {
-            println!(
-                "  #{} {} ({})",
-                dev.index,
-                style(&dev.name).bold(),
-                dev.backend
-            );
+            println!("  #{} {} ({})", dev.index, style(&dev.name).bold(), dev.backend);
             if let Some(ref drv) = dev.driver_version {
                 println!("     Driver: {}", drv);
             }
@@ -192,16 +184,8 @@ fn print_table(report: &GpuInfoReport) {
     }
 
     println!();
-    println!(
-        "{} {}",
-        style("Compiled Backends:").bold(),
-        report.compiled_backends.join(", ")
-    );
-    println!(
-        "{} {}",
-        style("Runtime Available:").bold(),
-        report.runtime_backends.join(", ")
-    );
+    println!("{} {}", style("Compiled Backends:").bold(), report.compiled_backends.join(", "));
+    println!("{} {}", style("Runtime Available:").bold(), report.runtime_backends.join(", "));
 
     if let Some(ref rec) = report.recommended {
         println!("{} {}", style("Recommended:").bold(), rec);
@@ -257,11 +241,7 @@ mod tests {
                 compute_units: None,
             },
         ];
-        let runtime = vec![
-            "cpu".to_string(),
-            "cuda".to_string(),
-            "oneapi".to_string(),
-        ];
+        let runtime = vec!["cpu".to_string(), "cuda".to_string(), "oneapi".to_string()];
         let rec = recommend_device(&devices, &runtime);
         assert_eq!(rec, Some("cuda (NVIDIA GPU)".to_string()));
     }
@@ -286,11 +266,7 @@ mod tests {
                 compute_units: None,
             },
         ];
-        let runtime = vec![
-            "cpu".to_string(),
-            "rocm".to_string(),
-            "oneapi".to_string(),
-        ];
+        let runtime = vec!["cpu".to_string(), "rocm".to_string(), "oneapi".to_string()];
         let rec = recommend_device(&devices, &runtime);
         assert_eq!(rec, Some("oneapi (Intel GPU)".to_string()));
     }
@@ -300,8 +276,7 @@ mod tests {
         let report = build_report();
         let json = serde_json::to_string(&report);
         assert!(json.is_ok(), "report must be JSON-serialisable");
-        let parsed: serde_json::Value =
-            serde_json::from_str(&json.unwrap()).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
         assert!(parsed["compiled_backends"].is_array());
         assert!(parsed["cpu_cores"].is_number());
     }

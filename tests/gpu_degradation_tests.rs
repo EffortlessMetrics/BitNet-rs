@@ -19,25 +19,15 @@ enum GpuFailure {
 impl std::fmt::Display for GpuFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::OutOfMemory {
-                requested,
-                available,
-            } => {
-                write!(
-                    f,
-                    "GPU OOM: requested {} bytes but only {} available",
-                    requested, available
-                )
+            Self::OutOfMemory { requested, available } => {
+                write!(f, "GPU OOM: requested {} bytes but only {} available", requested, available)
             }
             Self::DeviceLost { reason } => write!(f, "GPU device lost: {reason}"),
             Self::KernelCompilationFailed { kernel, error } => {
                 write!(f, "Kernel '{kernel}' compilation failed: {error}")
             }
             Self::InvalidDeviceIndex { index, max } => {
-                write!(
-                    f,
-                    "Invalid GPU device index {index} (max: {max})"
-                )
+                write!(f, "Invalid GPU device index {index} (max: {max})")
             }
             Self::Timeout { operation } => write!(f, "GPU timeout during: {operation}"),
         }
@@ -90,18 +80,13 @@ fn matmul_with_fallback(
 }
 
 /// Mock kernel compilation with fallback to scalar.
-fn compile_kernel_with_fallback(
-    source: &str,
-    allow_scalar: bool,
-) -> ComputeResult {
+fn compile_kernel_with_fallback(source: &str, allow_scalar: bool) -> ComputeResult {
     // Simulate compilation failure
     if source.contains("INVALID_SYNTAX") {
         if allow_scalar {
             return ComputeResult::ScalarFallback(vec![1.0]);
         }
-        return ComputeResult::Error(
-            "Kernel compilation failed and no fallback available".into(),
-        );
+        return ComputeResult::Error("Kernel compilation failed and no fallback available".into());
     }
     ComputeResult::GpuSuccess(vec![1.0])
 }
@@ -146,9 +131,7 @@ impl MockGpuContext {
     fn simulate_device_lost(&self, reason: &str) {
         self.device_lost.store(true, Ordering::SeqCst);
         let mut errors = self.errors.lock().unwrap();
-        errors.push(GpuFailure::DeviceLost {
-            reason: reason.to_string(),
-        });
+        errors.push(GpuFailure::DeviceLost { reason: reason.to_string() });
     }
 
     fn is_device_available(&self) -> bool {
@@ -157,16 +140,11 @@ impl MockGpuContext {
 
     fn try_allocate(&self, bytes: usize) -> Result<(), GpuFailure> {
         if !self.is_device_available() {
-            return Err(GpuFailure::DeviceLost {
-                reason: "device previously lost".into(),
-            });
+            return Err(GpuFailure::DeviceLost { reason: "device previously lost".into() });
         }
         let mut mem = self.available_memory.lock().unwrap();
         if bytes > *mem {
-            let err = GpuFailure::OutOfMemory {
-                requested: bytes,
-                available: *mem,
-            };
+            let err = GpuFailure::OutOfMemory { requested: bytes, available: *mem };
             let mut errors = self.errors.lock().unwrap();
             errors.push(err.clone());
             return Err(err);
@@ -263,19 +241,13 @@ fn test_device_lost_during_inference_clean_recovery() {
 
 #[test]
 fn test_kernel_compilation_failure_fallback_to_scalar() {
-    let result = compile_kernel_with_fallback(
-        "__kernel void bad() { INVALID_SYNTAX }",
-        true,
-    );
+    let result = compile_kernel_with_fallback("__kernel void bad() { INVALID_SYNTAX }", true);
     assert!(matches!(result, ComputeResult::ScalarFallback(_)));
 }
 
 #[test]
 fn test_kernel_compilation_failure_no_fallback_gives_error() {
-    let result = compile_kernel_with_fallback(
-        "__kernel void bad() { INVALID_SYNTAX }",
-        false,
-    );
+    let result = compile_kernel_with_fallback("__kernel void bad() { INVALID_SYNTAX }", false);
     match result {
         ComputeResult::Error(msg) => {
             assert!(msg.contains("compilation failed"));
@@ -287,10 +259,8 @@ fn test_kernel_compilation_failure_no_fallback_gives_error() {
 
 #[test]
 fn test_valid_kernel_compilation_succeeds() {
-    let result = compile_kernel_with_fallback(
-        "__kernel void good(global float* x) { x[0] = 1.0f; }",
-        true,
-    );
+    let result =
+        compile_kernel_with_fallback("__kernel void good(global float* x) { x[0] = 1.0f; }", true);
     assert!(matches!(result, ComputeResult::GpuSuccess(_)));
 }
 
@@ -312,10 +282,7 @@ fn test_invalid_device_index_meaningful_error() {
 #[test]
 fn test_invalid_device_index_zero_devices() {
     let err = MockGpuContext::new(0, 0, 0).unwrap_err();
-    assert!(matches!(
-        err,
-        GpuFailure::InvalidDeviceIndex { index: 0, .. }
-    ));
+    assert!(matches!(err, GpuFailure::InvalidDeviceIndex { index: 0, .. }));
 }
 
 #[test]

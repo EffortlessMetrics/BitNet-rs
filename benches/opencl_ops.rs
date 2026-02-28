@@ -9,9 +9,7 @@
 //! normal builds.
 #![cfg(feature = "bench")]
 
-use criterion::{
-    BenchmarkId, Criterion, criterion_group, criterion_main,
-};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -20,9 +18,7 @@ const SIZES: [usize; 5] = [128, 256, 512, 1024, 2048];
 
 /// Create a deterministic f32 vector of length `n`.
 fn make_vec(n: usize) -> Vec<f32> {
-    (0..n)
-        .map(|i| ((i as f32) * 0.001).sin())
-        .collect()
+    (0..n).map(|i| ((i as f32) * 0.001).sin()).collect()
 }
 
 /// Create a deterministic i8 ternary weight vector of length `n` (-1, 0, +1).
@@ -97,20 +93,9 @@ fn bench_matmul_i2s_cpu_ref(c: &mut Criterion) {
     for &n in &SIZES {
         let weights = make_ternary_weights(n * n);
         let input = make_vec(n);
-        group.bench_with_input(
-            BenchmarkId::new("MxK", format!("{n}x{n}")),
-            &n,
-            |b, _| {
-                b.iter(|| {
-                    black_box(matmul_i2s_cpu(
-                        black_box(&weights),
-                        black_box(&input),
-                        n,
-                        n,
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("MxK", format!("{n}x{n}")), &n, |b, _| {
+            b.iter(|| black_box(matmul_i2s_cpu(black_box(&weights), black_box(&input), n, n)));
+        });
     }
     group.finish();
 }
@@ -122,11 +107,7 @@ fn rmsnorm_cpu(input: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
     let n = input.len();
     let mean_sq: f32 = input.iter().map(|&x| x * x).sum::<f32>() / n as f32;
     let inv_rms = 1.0 / (mean_sq + eps).sqrt();
-    input
-        .iter()
-        .zip(weight.iter())
-        .map(|(&x, &w)| x * w * inv_rms)
-        .collect()
+    input.iter().zip(weight.iter()).map(|(&x, &w)| x * w * inv_rms).collect()
 }
 
 fn bench_rmsnorm_cpu_ref(c: &mut Criterion) {
@@ -134,19 +115,9 @@ fn bench_rmsnorm_cpu_ref(c: &mut Criterion) {
     for &n in &SIZES {
         let input = make_vec(n);
         let weight = make_vec(n);
-        group.bench_with_input(
-            BenchmarkId::new("dim", n),
-            &n,
-            |b, _| {
-                b.iter(|| {
-                    black_box(rmsnorm_cpu(
-                        black_box(&input),
-                        black_box(&weight),
-                        1e-6,
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("dim", n), &n, |b, _| {
+            b.iter(|| black_box(rmsnorm_cpu(black_box(&input), black_box(&weight), 1e-6)));
+        });
     }
     group.finish();
 }
@@ -175,20 +146,9 @@ fn bench_rope_cpu_ref(c: &mut Criterion) {
     let mut group = c.benchmark_group("rope_cpu");
     for &n in &SIZES {
         let input = make_vec(n);
-        group.bench_with_input(
-            BenchmarkId::new("dim", n),
-            &n,
-            |b, _| {
-                b.iter(|| {
-                    black_box(rope_cpu(
-                        black_box(&input),
-                        42,
-                        n,
-                        10000.0,
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("dim", n), &n, |b, _| {
+            b.iter(|| black_box(rope_cpu(black_box(&input), 42, n, 10000.0)));
+        });
     }
     group.finish();
 }
@@ -207,13 +167,9 @@ fn bench_softmax_cpu_ref(c: &mut Criterion) {
     let mut group = c.benchmark_group("softmax_cpu");
     for &n in &SIZES {
         let input = make_vec(n);
-        group.bench_with_input(
-            BenchmarkId::new("len", n),
-            &n,
-            |b, _| {
-                b.iter(|| black_box(softmax_cpu(black_box(&input))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("len", n), &n, |b, _| {
+            b.iter(|| black_box(softmax_cpu(black_box(&input))));
+        });
     }
     group.finish();
 }
@@ -264,21 +220,17 @@ fn bench_attention_cpu_ref(c: &mut Criterion) {
         let query = make_vec(head_dim);
         let keys = make_vec(seq_len * head_dim);
         let values = make_vec(seq_len * head_dim);
-        group.bench_with_input(
-            BenchmarkId::new("seq_len", seq_len),
-            &seq_len,
-            |b, _| {
-                b.iter(|| {
-                    black_box(attention_cpu(
-                        black_box(&query),
-                        black_box(&keys),
-                        black_box(&values),
-                        seq_len,
-                        head_dim,
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("seq_len", seq_len), &seq_len, |b, _| {
+            b.iter(|| {
+                black_box(attention_cpu(
+                    black_box(&query),
+                    black_box(&keys),
+                    black_box(&values),
+                    seq_len,
+                    head_dim,
+                ))
+            });
+        });
     }
     group.finish();
 }
@@ -289,27 +241,14 @@ fn bench_ternary_pack_unpack(c: &mut Criterion) {
     let mut group = c.benchmark_group("ternary_pack_unpack");
     for &n in &SIZES {
         let weights = make_ternary_weights(n * n);
-        group.bench_with_input(
-            BenchmarkId::new("pack", format!("{n}x{n}")),
-            &n,
-            |b, _| {
-                b.iter(|| black_box(ternary_pack(black_box(&weights))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("pack", format!("{n}x{n}")), &n, |b, _| {
+            b.iter(|| black_box(ternary_pack(black_box(&weights))));
+        });
         let packed = ternary_pack(&weights);
         let count = n * n;
-        group.bench_with_input(
-            BenchmarkId::new("unpack", format!("{n}x{n}")),
-            &n,
-            |b, _| {
-                b.iter(|| {
-                    black_box(ternary_unpack(
-                        black_box(&packed),
-                        count,
-                    ))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("unpack", format!("{n}x{n}")), &n, |b, _| {
+            b.iter(|| black_box(ternary_unpack(black_box(&packed), count)));
+        });
     }
     group.finish();
 }

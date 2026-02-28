@@ -43,14 +43,11 @@ impl VulkanInstance {
     pub fn new(config: &InstanceConfig) -> Result<Self> {
         let entry = unsafe {
             ash::Entry::load().map_err(|e| {
-                VulkanError::InstanceCreation(format!(
-                    "failed to load Vulkan loader: {e}"
-                ))
+                VulkanError::InstanceCreation(format!("failed to load Vulkan loader: {e}"))
             })?
         };
 
-        let app_name =
-            std::ffi::CString::new(config.app_name.as_str()).unwrap_or_default();
+        let app_name = std::ffi::CString::new(config.app_name.as_str()).unwrap_or_default();
         let engine_name = std::ffi::CString::new("bitnet-rs").unwrap_or_default();
 
         let app_info = vk::ApplicationInfo::default()
@@ -64,11 +61,8 @@ impl VulkanInstance {
         let validation_layer = c"VK_LAYER_KHRONOS_validation";
 
         let validation_enabled = if config.enable_validation {
-            let available = unsafe {
-                entry
-                    .enumerate_instance_layer_properties()
-                    .unwrap_or_default()
-            };
+            let available =
+                unsafe { entry.enumerate_instance_layer_properties().unwrap_or_default() };
             let found = available.iter().any(|layer| {
                 let name = unsafe { CStr::from_ptr(layer.layer_name.as_ptr()) };
                 name == validation_layer
@@ -91,22 +85,13 @@ impl VulkanInstance {
 
         let instance = unsafe {
             entry.create_instance(&create_info, None).map_err(|e| {
-                VulkanError::InstanceCreation(format!(
-                    "vkCreateInstance failed: {e}"
-                ))
+                VulkanError::InstanceCreation(format!("vkCreateInstance failed: {e}"))
             })?
         };
 
-        info!(
-            "Vulkan instance created (validation={})",
-            validation_enabled
-        );
+        info!("Vulkan instance created (validation={})", validation_enabled);
 
-        Ok(Self {
-            entry,
-            instance,
-            validation_enabled,
-        })
+        Ok(Self { entry, instance, validation_enabled })
     }
 
     /// Whether validation layers are active on this instance.

@@ -8,7 +8,7 @@ pub mod capabilities;
 pub mod error;
 pub mod shader;
 
-pub use capabilities::{query_device, MetalDeviceInfo};
+pub use capabilities::{MetalDeviceInfo, query_device};
 pub use error::MetalError;
 
 use crate::error::Result;
@@ -38,10 +38,7 @@ impl MetalBackend {
             "Metal backend initialised"
         );
 
-        Ok(Self {
-            device_info,
-            _device: device,
-        })
+        Ok(Self { device_info, _device: device })
     }
 
     #[cfg(not(target_os = "macos"))]

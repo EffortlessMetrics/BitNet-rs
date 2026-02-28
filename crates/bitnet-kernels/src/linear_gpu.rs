@@ -26,8 +26,11 @@ impl GpuLinearProj {
     pub fn new(config: LinearConfig, weights: Vec<f32>, bias: Option<Vec<f32>>) -> Self {
         let expected_w = config.out_features * config.in_features;
         assert_eq!(
-            weights.len(), expected_w,
-            "weight length {} != out*in {}", weights.len(), expected_w,
+            weights.len(),
+            expected_w,
+            "weight length {} != out*in {}",
+            weights.len(),
+            expected_w,
         );
         if let Some(ref b) = bias {
             assert_eq!(b.len(), config.out_features, "bias length mismatch");
@@ -70,8 +73,12 @@ impl GpuLinearProj {
         output
     }
 
-    pub fn in_features(&self) -> usize { self.config.in_features }
-    pub fn out_features(&self) -> usize { self.config.out_features }
+    pub fn in_features(&self) -> usize {
+        self.config.in_features
+    }
+    pub fn out_features(&self) -> usize {
+        self.config.out_features
+    }
 }
 
 #[cfg(test)]
@@ -81,7 +88,9 @@ mod tests {
     fn identity_proj(n: usize) -> GpuLinearProj {
         // Identity matrix weights, zero bias
         let mut weights = vec![0.0f32; n * n];
-        for i in 0..n { weights[i * n + i] = 1.0; }
+        for i in 0..n {
+            weights[i * n + i] = 1.0;
+        }
         GpuLinearProj::new(
             LinearConfig { in_features: n, out_features: n, has_bias: true },
             weights,
@@ -153,7 +162,8 @@ mod tests {
     fn wrong_weight_dims() {
         GpuLinearProj::new(
             LinearConfig { in_features: 3, out_features: 2, has_bias: false },
-            vec![0.0; 5], None,
+            vec![0.0; 5],
+            None,
         );
     }
 
@@ -168,7 +178,8 @@ mod tests {
     fn accessors() {
         let proj = GpuLinearProj::new(
             LinearConfig { in_features: 64, out_features: 128, has_bias: false },
-            vec![0.0; 64 * 128], None,
+            vec![0.0; 64 * 128],
+            None,
         );
         assert_eq!(proj.in_features(), 64);
         assert_eq!(proj.out_features(), 128);
@@ -179,7 +190,8 @@ mod tests {
         // All-ones weight (4x8) times [1..=8] should give [36.0; 4]
         let proj = GpuLinearProj::new(
             LinearConfig { in_features: 8, out_features: 4, has_bias: false },
-            vec![1.0; 32], None,
+            vec![1.0; 32],
+            None,
         );
         let input: Vec<f32> = (1..=8).map(|x| x as f32).collect();
         let out = proj.forward(&input);

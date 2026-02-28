@@ -51,10 +51,7 @@ impl GpuKvCache {
     /// Append a key-value pair at the current position.
     pub fn append(&mut self, key: &[f32], value: &[f32]) -> Result<()> {
         if self.len >= self.capacity {
-            return Err(KernelError::ExecutionFailed {
-                reason: "KV cache full".to_string(),
-            }
-            .into());
+            return Err(KernelError::ExecutionFailed { reason: "KV cache full".to_string() }.into());
         }
         let offset = self.len * self.kv_dim;
         self.keys[offset..offset + self.kv_dim].copy_from_slice(key);
@@ -184,8 +181,7 @@ impl GpuTransformerLayer {
         kv_cache.append(&k, &v)?;
 
         // 5. Multi-head attention
-        let attn_out =
-            multi_head_attention(&q, kv_cache, &self.config);
+        let attn_out = multi_head_attention(&q, kv_cache, &self.config);
 
         // 6. Output projection
         let attn_proj = matmul_mv(&self.weights.wo, &attn_out, kv_dim, hidden);
@@ -198,25 +194,12 @@ impl GpuTransformerLayer {
 
         // === FFN sub-layer ===
         // 8. RMSNorm
-        let normed_ffn = rms_norm(
-            &hidden_state,
-            &self.weights.ffn_norm,
-            self.config.rms_norm_eps,
-        );
+        let normed_ffn = rms_norm(&hidden_state, &self.weights.ffn_norm, self.config.rms_norm_eps);
 
         // 9. Gate + Up projections
-        let gate = matmul_mv(
-            &self.weights.w_gate,
-            &normed_ffn,
-            hidden,
-            self.config.intermediate_size,
-        );
-        let up = matmul_mv(
-            &self.weights.w_up,
-            &normed_ffn,
-            hidden,
-            self.config.intermediate_size,
-        );
+        let gate =
+            matmul_mv(&self.weights.w_gate, &normed_ffn, hidden, self.config.intermediate_size);
+        let up = matmul_mv(&self.weights.w_up, &normed_ffn, hidden, self.config.intermediate_size);
 
         // 10. SiLU(gate) * up
         let mut ffn_hidden = vec![0.0f32; self.config.intermediate_size];
@@ -226,12 +209,8 @@ impl GpuTransformerLayer {
         }
 
         // 11. Down projection
-        let ffn_out = matmul_mv(
-            &self.weights.w_down,
-            &ffn_hidden,
-            self.config.intermediate_size,
-            hidden,
-        );
+        let ffn_out =
+            matmul_mv(&self.weights.w_down, &ffn_hidden, self.config.intermediate_size, hidden);
 
         // 12. Residual connection
         let mut output = vec![0.0f32; hidden];
@@ -250,10 +229,7 @@ fn rms_norm(x: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
     let n = x.len();
     let mean_sq: f32 = x.iter().map(|&v| v * v).sum::<f32>() / n as f32;
     let inv_rms = 1.0 / (mean_sq + eps).sqrt();
-    x.iter()
-        .zip(weight.iter())
-        .map(|(&xi, &wi)| xi * inv_rms * wi)
-        .collect()
+    x.iter().zip(weight.iter()).map(|(&xi, &wi)| xi * inv_rms * wi).collect()
 }
 
 /// Matrix-vector multiply: y = W * x, where W is [in_dim, out_dim] row-major.
@@ -299,11 +275,7 @@ fn apply_rope(x: &[f32], pos: usize, head_dim: usize) -> Vec<f32> {
 }
 
 /// Multi-head attention: Q @ K^T / sqrt(d) → softmax → @ V.
-fn multi_head_attention(
-    q: &[f32],
-    kv_cache: &GpuKvCache,
-    config: &LayerConfig,
-) -> Vec<f32> {
+fn multi_head_attention(q: &[f32], kv_cache: &GpuKvCache, config: &LayerConfig) -> Vec<f32> {
     let num_heads = config.num_heads;
     let head_dim = config.head_dim;
     let seq_len = kv_cache.len;
@@ -384,9 +356,7 @@ mod tests {
 
         // Use small random-ish deterministic values
         let make_weight = |rows: usize, cols: usize| -> Vec<f32> {
-            (0..rows * cols)
-                .map(|i| (i as f32 * 0.1).sin() * 0.5)
-                .collect()
+            (0..rows * cols).map(|i| (i as f32 * 0.1).sin() * 0.5).collect()
         };
 
         LayerWeights {
@@ -411,10 +381,7 @@ mod tests {
         let rms = (7.5f32).sqrt();
         for (i, &v) in out.iter().enumerate() {
             let expected = x[i] / rms;
-            assert!(
-                (v - expected).abs() < 1e-5,
-                "rms_norm[{i}]: got {v}, expected {expected}"
-            );
+            assert!((v - expected).abs() < 1e-5, "rms_norm[{i}]: got {v}, expected {expected}");
         }
     }
 
@@ -486,11 +453,7 @@ mod tests {
         let mut kv_cache = GpuKvCache::new(16, kv_dim);
 
         let output = layer.forward(&input, &mut kv_cache, 0).unwrap();
-        assert_eq!(
-            output.len(),
-            config.hidden_size,
-            "output should match hidden_size"
-        );
+        assert_eq!(output.len(), config.hidden_size, "output should match hidden_size");
     }
 
     #[test]

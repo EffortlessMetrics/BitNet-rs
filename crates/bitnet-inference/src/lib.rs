@@ -4,6 +4,7 @@
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
 pub mod backends;
+pub mod batch_gpu;
 pub mod cache;
 pub mod config;
 pub mod cpu_opt;
@@ -15,7 +16,6 @@ pub mod gpu_telemetry;
 pub mod kernel_recorder;
 pub mod layers;
 pub mod multi_device;
-pub mod batch_gpu;
 pub mod multi_model;
 pub mod npu;
 pub mod onnx_export;

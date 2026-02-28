@@ -29,10 +29,7 @@ pub struct ContextBuilder {
 impl ContextBuilder {
     /// Create a new context builder targeting the given driver index.
     pub fn new(driver_index: usize) -> Self {
-        Self {
-            config: ContextConfig::default(),
-            driver_index,
-        }
+        Self { config: ContextConfig::default(), driver_index }
     }
 
     /// Set context flags.

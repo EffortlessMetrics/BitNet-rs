@@ -24,13 +24,7 @@ fn ref_softmax(input: &[f32]) -> Vec<f32> {
     }
 }
 
-fn ref_attention(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    seq_len: usize,
-    head_dim: usize,
-) -> Vec<f32> {
+fn ref_attention(q: &[f32], k: &[f32], v: &[f32], seq_len: usize, head_dim: usize) -> Vec<f32> {
     let scale = 1.0 / (head_dim as f32).sqrt();
     let mut output = vec![0.0f32; seq_len * head_dim];
 

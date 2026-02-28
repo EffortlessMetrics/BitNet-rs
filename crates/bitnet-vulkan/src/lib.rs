@@ -20,14 +20,9 @@ pub mod error;
 pub mod instance;
 pub mod pipeline;
 
-pub use buffer::{
-    BufferDescriptor, BufferUsage, GpuBuffer, allocate_buffer,
-};
+pub use buffer::{BufferDescriptor, BufferUsage, GpuBuffer, allocate_buffer};
 pub use command::{CommandPool, record_and_submit_compute};
-pub use device::{
-    DeviceSelector, SelectedDevice, create_logical_device,
-    select_physical_device,
-};
+pub use device::{DeviceSelector, SelectedDevice, create_logical_device, select_physical_device};
 pub use error::{Result, VulkanError};
 pub use instance::{InstanceConfig, VulkanInstance};
 pub use pipeline::{ComputePipeline, ComputePipelineBuilder};
@@ -54,15 +49,8 @@ impl VulkanBackend {
     }
 
     /// Create a backend with custom instance and device configuration.
-    pub fn with_config(
-        config: InstanceConfig,
-        selector: DeviceSelector,
-    ) -> Self {
-        Self {
-            config,
-            device_selector: selector,
-            initialised: false,
-        }
+    pub fn with_config(config: InstanceConfig, selector: DeviceSelector) -> Self {
+        Self { config, device_selector: selector, initialised: false }
     }
 
     /// Returns the instance configuration.
@@ -86,10 +74,8 @@ impl VulkanBackend {
     /// a logical device with a compute queue.
     pub fn initialise(&mut self) -> error::Result<()> {
         let instance = VulkanInstance::new(&self.config)?;
-        let selected =
-            select_physical_device(instance.raw(), &self.device_selector)?;
-        let (_device, _queue) =
-            create_logical_device(instance.raw(), &selected)?;
+        let selected = select_physical_device(instance.raw(), &self.device_selector)?;
+        let (_device, _queue) = create_logical_device(instance.raw(), &selected)?;
 
         self.initialised = true;
         Ok(())
@@ -126,16 +112,13 @@ mod tests {
             app_version: 1,
             enable_validation: false,
         };
-        let selector = DeviceSelector {
-            prefer_discrete: false,
-            require_compute_queue: true,
-        };
+        let selector = DeviceSelector { prefer_discrete: false, require_compute_queue: true };
         let backend = VulkanBackend::with_config(config, selector);
         assert_eq!(backend.config().app_name, "test-app");
         assert!(backend.device_selector().require_compute_queue);
     }
 }
-//! Provides Vulkan compute shaders (GLSL 450) for GPU-accelerated operations.
-//! Shaders are embedded at compile time; optional pre-compiled SPIR-V is
-//! available with the `precompiled-spirv` feature when `glslc` is installed.
+/// Provides Vulkan compute shaders (GLSL 450) for GPU-accelerated operations.
+/// Shaders are embedded at compile time; optional pre-compiled SPIR-V is
+/// available with the `precompiled-spirv` feature when `glslc` is installed.
 pub mod kernels;

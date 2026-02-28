@@ -39,7 +39,11 @@ impl GpuEmbeddingTable {
     /// Panics if 	oken_id >= vocab_size.
     pub fn lookup(&self, token_id: u32) -> Vec<f32> {
         let tid = token_id as usize;
-        assert!(tid < self.config.vocab_size, "token_id {tid} >= vocab_size {}", self.config.vocab_size);
+        assert!(
+            tid < self.config.vocab_size,
+            "token_id {tid} >= vocab_size {}",
+            self.config.vocab_size
+        );
         let start = tid * self.config.embed_dim;
         self.weights[start..start + self.config.embed_dim].to_vec()
     }
@@ -57,8 +61,12 @@ impl GpuEmbeddingTable {
         out
     }
 
-    pub fn vocab_size(&self) -> usize { self.config.vocab_size }
-    pub fn embed_dim(&self) -> usize { self.config.embed_dim }
+    pub fn vocab_size(&self) -> usize {
+        self.config.vocab_size
+    }
+    pub fn embed_dim(&self) -> usize {
+        self.config.embed_dim
+    }
 }
 
 #[cfg(test)]
@@ -67,9 +75,8 @@ mod tests {
 
     fn make_table(vocab: usize, dim: usize) -> GpuEmbeddingTable {
         // Fill weights so that table[token][d] = token * 100 + d
-        let weights: Vec<f32> = (0..vocab)
-            .flat_map(|t| (0..dim).map(move |d| (t * 100 + d) as f32))
-            .collect();
+        let weights: Vec<f32> =
+            (0..vocab).flat_map(|t| (0..dim).map(move |d| (t * 100 + d) as f32)).collect();
         GpuEmbeddingTable::new(EmbeddingConfig { vocab_size: vocab, embed_dim: dim }, weights)
     }
 
@@ -113,10 +120,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "weight length")]
     fn wrong_weight_length() {
-        GpuEmbeddingTable::new(
-            EmbeddingConfig { vocab_size: 2, embed_dim: 3 },
-            vec![0.0; 5],
-        );
+        GpuEmbeddingTable::new(EmbeddingConfig { vocab_size: 2, embed_dim: 3 }, vec![0.0; 5]);
     }
 
     #[test]

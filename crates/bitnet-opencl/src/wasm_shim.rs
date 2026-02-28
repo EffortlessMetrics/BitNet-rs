@@ -234,13 +234,7 @@ fn strip_block_comments(s: &str) -> String {
 
 fn strip_line_comments(s: &str) -> String {
     s.lines()
-        .map(|line| {
-            if let Some(pos) = line.find("//") {
-                &line[..pos]
-            } else {
-                line
-            }
-        })
+        .map(|line| if let Some(pos) = line.find("//") { &line[..pos] } else { line })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -272,10 +266,7 @@ impl std::fmt::Display for KernelValidationError {
                 write!(f, "kernel \'{kernel_name}\' has no arguments")
             }
             KernelValidationError::ArgCountMismatch { kernel_name, expected, actual } => {
-                write!(
-                    f,
-                    "kernel \'{kernel_name}\': expected {expected} args, found {actual}"
-                )
+                write!(f, "kernel \'{kernel_name}\': expected {expected} args, found {actual}")
             }
             KernelValidationError::DuplicateKernelName { name } => {
                 write!(f, "duplicate kernel name: \'{name}\'")
@@ -357,18 +348,13 @@ impl MockOpenClContext {
     }
 
     /// "Compile" an OpenCL program from source, parsing kernel signatures.
-    pub fn compile_program(
-        &mut self,
-        program_name: &str,
-        source: &str,
-    ) -> Result<(), MockError> {
-        let sigs = validate_kernel_source(source)
-            .map_err(|e| MockError::CompileError(e.to_string()))?;
+    pub fn compile_program(&mut self, program_name: &str, source: &str) -> Result<(), MockError> {
+        let sigs =
+            validate_kernel_source(source).map_err(|e| MockError::CompileError(e.to_string()))?;
 
         for sig in &sigs {
             let n_args = sig.args.len();
-            self.kernel_args
-                .insert(sig.name.clone(), vec![None; n_args]);
+            self.kernel_args.insert(sig.name.clone(), vec![None; n_args]);
         }
 
         self.programs.insert(program_name.to_string(), sigs);
@@ -679,14 +665,10 @@ mod tests {
 
         assert!(!ctx.all_args_set("vector_add").unwrap());
 
-        ctx.set_kernel_arg("vector_add", 0, MockArgValue::Buffer { size: 1024 })
-            .unwrap();
-        ctx.set_kernel_arg("vector_add", 1, MockArgValue::Buffer { size: 1024 })
-            .unwrap();
-        ctx.set_kernel_arg("vector_add", 2, MockArgValue::Buffer { size: 1024 })
-            .unwrap();
-        ctx.set_kernel_arg("vector_add", 3, MockArgValue::Int(256))
-            .unwrap();
+        ctx.set_kernel_arg("vector_add", 0, MockArgValue::Buffer { size: 1024 }).unwrap();
+        ctx.set_kernel_arg("vector_add", 1, MockArgValue::Buffer { size: 1024 }).unwrap();
+        ctx.set_kernel_arg("vector_add", 2, MockArgValue::Buffer { size: 1024 }).unwrap();
+        ctx.set_kernel_arg("vector_add", 3, MockArgValue::Int(256)).unwrap();
 
         assert!(ctx.all_args_set("vector_add").unwrap());
     }
@@ -696,8 +678,7 @@ mod tests {
         let mut ctx = MockOpenClContext::new();
         ctx.compile_program("prog", SAMPLE_KERNEL).unwrap();
 
-        let result =
-            ctx.set_kernel_arg("vector_add", 99, MockArgValue::Int(0));
+        let result = ctx.set_kernel_arg("vector_add", 99, MockArgValue::Int(0));
         assert!(matches!(result, Err(MockError::ArgIndexOutOfRange { .. })));
     }
 
@@ -764,11 +745,7 @@ mod tests {
         let err = MockError::KernelNotFound("foo".into());
         assert!(err.to_string().contains("foo"));
 
-        let err = MockError::ArgIndexOutOfRange {
-            kernel: "bar".into(),
-            index: 5,
-            max: 3,
-        };
+        let err = MockError::ArgIndexOutOfRange { kernel: "bar".into(), index: 5, max: 3 };
         assert!(err.to_string().contains("5"));
     }
 }

@@ -16,11 +16,7 @@ fn ref_rms_norm(input: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
     }
     let sum_sq: f32 = input.iter().map(|x| x * x).sum();
     let rms = 1.0 / (sum_sq / n as f32 + eps).sqrt();
-    input
-        .iter()
-        .zip(weight.iter())
-        .map(|(&x, &w)| x * rms * w)
-        .collect()
+    input.iter().zip(weight.iter()).map(|(&x, &w)| x * rms * w).collect()
 }
 
 fuzz_target!(|input: RmsNormInput| {
@@ -53,31 +49,18 @@ fuzz_target!(|input: RmsNormInput| {
 
     // Verify no NaN/Inf in output
     for (i, &val) in output.iter().enumerate() {
-        assert!(
-            val.is_finite(),
-            "NaN/Inf in rmsnorm output at index {} (input len {})",
-            i,
-            n
-        );
+        assert!(val.is_finite(), "NaN/Inf in rmsnorm output at index {} (input len {})", i, n);
     }
 
     // Verify output has finite norm
     let norm: f32 = output.iter().map(|x| x * x).sum::<f32>().sqrt();
-    assert!(
-        norm.is_finite(),
-        "rmsnorm output norm is not finite: {}",
-        norm
-    );
+    assert!(norm.is_finite(), "rmsnorm output norm is not finite: {}", norm);
 
     // Test near-zero input: should not produce NaN due to eps
     let near_zero: Vec<f32> = vec![1e-20; n];
     let near_zero_out = ref_rms_norm(&near_zero, &weights, eps);
     for (i, &val) in near_zero_out.iter().enumerate() {
-        assert!(
-            val.is_finite(),
-            "near-zero input produced non-finite at index {}",
-            i
-        );
+        assert!(val.is_finite(), "near-zero input produced non-finite at index {}", i);
     }
 
     // Test all-zero input: should produce all zeros (0 * rms * w = 0)
@@ -96,10 +79,6 @@ fuzz_target!(|input: RmsNormInput| {
     let large: Vec<f32> = vec![1e6; n];
     let large_out = ref_rms_norm(&large, &weights, eps);
     for (i, &val) in large_out.iter().enumerate() {
-        assert!(
-            val.is_finite(),
-            "large input produced non-finite at index {}",
-            i
-        );
+        assert!(val.is_finite(), "large input produced non-finite at index {}", i);
     }
 });

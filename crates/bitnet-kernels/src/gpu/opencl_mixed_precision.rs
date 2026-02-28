@@ -102,19 +102,11 @@ mod tests {
     use serial_test::serial;
 
     fn arc_caps() -> OpenClDeviceCaps {
-        OpenClDeviceCaps {
-            has_fp16: true,
-            has_int8: true,
-            device_name: "Intel Arc A770".into(),
-        }
+        OpenClDeviceCaps { has_fp16: true, has_int8: true, device_name: "Intel Arc A770".into() }
     }
 
     fn basic_caps() -> OpenClDeviceCaps {
-        OpenClDeviceCaps {
-            has_fp16: false,
-            has_int8: false,
-            device_name: "Basic GPU".into(),
-        }
+        OpenClDeviceCaps { has_fp16: false, has_int8: false, device_name: "Basic GPU".into() }
     }
 
     #[test]

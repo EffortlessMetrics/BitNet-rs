@@ -63,10 +63,7 @@ impl KernelBenchCommand {
             results.push(bench_softmax(sz, self.warmup, self.iterations));
         }
 
-        let report = BenchReport {
-            provider: provider_name,
-            results,
-        };
+        let report = BenchReport { provider: provider_name, results };
 
         if self.json {
             println!("{}", serde_json::to_string_pretty(&report)?);
@@ -82,12 +79,7 @@ impl KernelBenchCommand {
 // Individual benchmarks
 // ---------------------------------------------------------------------------
 
-fn bench_matmul(
-    kernel: &dyn KernelProvider,
-    n: usize,
-    warmup: usize,
-    iters: usize,
-) -> BenchResult {
+fn bench_matmul(kernel: &dyn KernelProvider, n: usize, warmup: usize, iters: usize) -> BenchResult {
     let m = n;
     let k = n;
     let a: Vec<i8> = (0..m * k).map(|i| ((i % 3) as i8) - 1).collect();
@@ -202,11 +194,7 @@ fn to_result(
 }
 
 fn print_table(report: &BenchReport) {
-    println!(
-        "{} {}",
-        style("Kernel Provider:").bold(),
-        report.provider
-    );
+    println!("{} {}", style("Kernel Provider:").bold(), report.provider);
     println!();
     println!(
         "  {:<16} {:>6} {:>12} {:>12} {:>12} {:>10}",
@@ -214,10 +202,7 @@ fn print_table(report: &BenchReport) {
     );
     println!("  {}", "-".repeat(72));
     for r in &report.results {
-        let gf = r
-            .throughput_gflops
-            .map(|g| format!("{g:.2}"))
-            .unwrap_or_else(|| "-".to_string());
+        let gf = r.throughput_gflops.map(|g| format!("{g:.2}")).unwrap_or_else(|| "-".to_string());
         println!(
             "  {:<16} {:>6} {:>12.1} {:>12.1} {:>12.1} {:>10}",
             r.operation, r.size, r.mean_us, r.min_us, r.max_us, gf

@@ -117,11 +117,7 @@ pub struct GpuModelLoader {
 impl GpuModelLoader {
     /// Create a new GPU model loader with the given configuration.
     pub fn new(config: GpuLoadConfig) -> Self {
-        Self {
-            tensors: HashMap::new(),
-            num_layers: 0,
-            config,
-        }
+        Self { tensors: HashMap::new(), num_layers: 0, config }
     }
 
     /// Create a loader with default configuration.
@@ -171,14 +167,7 @@ impl GpuModelLoader {
             layer_index,
         };
 
-        self.tensors.insert(
-            name,
-            GpuTensor {
-                descriptor,
-                data,
-                uploaded: false,
-            },
-        );
+        self.tensors.insert(name, GpuTensor { descriptor, data, uploaded: false });
     }
 
     /// Check if a layer's tensors should be loaded given the config.
@@ -210,12 +199,8 @@ impl GpuModelLoader {
         }
 
         // Staging buffer = largest single tensor (for streaming uploads)
-        let staging_buffer_bytes = self
-            .tensors
-            .values()
-            .map(|t| t.descriptor.gpu_bytes)
-            .max()
-            .unwrap_or(0);
+        let staging_buffer_bytes =
+            self.tensors.values().map(|t| t.descriptor.gpu_bytes).max().unwrap_or(0);
 
         let layers_in_budget = self.config.max_gpu_memory.map(|budget| {
             let mut cumulative = non_layer_bytes;
@@ -265,10 +250,7 @@ impl GpuModelLoader {
 
     /// List tensors for a specific layer.
     pub fn tensors_for_layer(&self, layer_idx: usize) -> Vec<&GpuTensor> {
-        self.tensors
-            .values()
-            .filter(|t| t.descriptor.layer_index == Some(layer_idx))
-            .collect()
+        self.tensors.values().filter(|t| t.descriptor.layer_index == Some(layer_idx)).collect()
     }
 
     /// Count how many tensors have been uploaded.
@@ -403,10 +385,7 @@ mod tests {
 
     #[test]
     fn test_layer_range_filtering() {
-        let config = GpuLoadConfig {
-            layer_range: Some(2..5),
-            ..Default::default()
-        };
+        let config = GpuLoadConfig { layer_range: Some(2..5), ..Default::default() };
         let loader = GpuModelLoader::new(config);
         assert!(!loader.should_load_layer(0));
         assert!(!loader.should_load_layer(1));
@@ -460,10 +439,7 @@ mod tests {
 
     #[test]
     fn test_memory_budget_layers() {
-        let config = GpuLoadConfig {
-            max_gpu_memory: Some(50000),
-            ..Default::default()
-        };
+        let config = GpuLoadConfig { max_gpu_memory: Some(50000), ..Default::default() };
         let mut loader = GpuModelLoader::new(config);
 
         // Non-layer tensor

@@ -24,25 +24,18 @@ mod tests {
 
     #[test]
     fn glsl_source_is_non_empty() {
-        assert!(
-            !MATMUL_GLSL.is_empty(),
-            "matmul GLSL source should be embedded"
-        );
+        assert!(!MATMUL_GLSL.is_empty(), "matmul GLSL source should be embedded");
     }
 
     #[test]
     fn glsl_source_is_valid_glsl450() {
-        assert!(
-            MATMUL_GLSL.contains("#version 450"),
-            "shader must target GLSL 450"
-        );
+        assert!(MATMUL_GLSL.contains("#version 450"), "shader must target GLSL 450");
     }
 
     #[test]
     fn glsl_contains_workgroup_layout() {
         assert!(
-            MATMUL_GLSL.contains("local_size_x = 16")
-                && MATMUL_GLSL.contains("local_size_y = 16"),
+            MATMUL_GLSL.contains("local_size_x = 16") && MATMUL_GLSL.contains("local_size_y = 16"),
             "shader must declare 16x16 workgroup size"
         );
     }
@@ -66,10 +59,7 @@ mod tests {
 
     #[test]
     fn glsl_contains_barrier_sync() {
-        assert!(
-            MATMUL_GLSL.contains("barrier()"),
-            "shader must synchronize with barrier()"
-        );
+        assert!(MATMUL_GLSL.contains("barrier()"), "shader must synchronize with barrier()");
     }
 
     #[test]

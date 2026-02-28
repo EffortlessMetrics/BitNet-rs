@@ -15,17 +15,12 @@ impl Stream {
     pub fn new() -> Result<Self> {
         debug!("hipStreamCreateWithFlags (stub)");
         // Stub: would call hipStreamCreateWithFlags via dlsym.
-        Err(RocmError::RuntimeNotFound(
-            "HIP runtime not linked — stub only".into(),
-        ))
+        Err(RocmError::RuntimeNotFound("HIP runtime not linked — stub only".into()))
     }
 
     /// Wrap the default (null) stream.
     pub fn default_stream() -> Self {
-        Self {
-            handle: crate::ffi::HIP_STREAM_DEFAULT,
-            is_default: true,
-        }
+        Self { handle: crate::ffi::HIP_STREAM_DEFAULT, is_default: true }
     }
 
     /// Synchronise the stream (wait for all queued work).
@@ -34,9 +29,7 @@ impl Stream {
         if self.is_default {
             return Ok(());
         }
-        Err(RocmError::RuntimeNotFound(
-            "HIP runtime not linked — stub only".into(),
-        ))
+        Err(RocmError::RuntimeNotFound("HIP runtime not linked — stub only".into()))
     }
 
     /// Raw handle for kernel launch configs.

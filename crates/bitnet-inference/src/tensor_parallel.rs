@@ -156,10 +156,7 @@ pub fn shard_weights(
     device_ids: &[usize],
 ) -> Result<Vec<WeightShard>, String> {
     if data.len() != rows * cols {
-        return Err(format!(
-            "data length {} != rows({rows}) × cols({cols})",
-            data.len()
-        ));
+        return Err(format!("data length {} != rows({rows}) × cols({cols})", data.len()));
     }
     if device_ids.is_empty() {
         return Err("device_ids must not be empty".into());
@@ -284,10 +281,7 @@ pub struct TensorParallelContext {
 impl TensorParallelContext {
     pub fn new(config: TensorParallelConfig, reduce_op: ReduceOp) -> Result<Self, String> {
         config.validate()?;
-        Ok(Self {
-            config: Arc::new(config),
-            all_reduce: AllReduce::new(reduce_op),
-        })
+        Ok(Self { config: Arc::new(config), all_reduce: AllReduce::new(reduce_op) })
     }
 
     /// Convenience: number of participating devices.

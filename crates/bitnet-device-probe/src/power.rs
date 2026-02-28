@@ -37,13 +37,9 @@ impl fmt::Display for PowerError {
             Self::SysfsWriteFailed { path, reason } => {
                 write!(f, "sysfs write failed: {}: {reason}", path.display())
             }
-            Self::PowerCapOutOfRange {
-                requested_mw,
-                max_mw,
-            } => write!(
-                f,
-                "power cap {requested_mw} mW exceeds hardware max {max_mw} mW"
-            ),
+            Self::PowerCapOutOfRange { requested_mw, max_mw } => {
+                write!(f, "power cap {requested_mw} mW exceeds hardware max {max_mw} mW")
+            }
             Self::ParseError { raw } => write!(f, "failed to parse value: {raw:?}"),
         }
     }
@@ -180,12 +176,9 @@ pub struct RealSysfsReader;
 
 impl SysfsReader for RealSysfsReader {
     fn read_str(&self, path: &Path) -> Result<String, PowerError> {
-        std::fs::read_to_string(path)
-            .map(|s| s.trim().to_string())
-            .map_err(|e| PowerError::SysfsReadFailed {
-                path: path.to_path_buf(),
-                reason: e.to_string(),
-            })
+        std::fs::read_to_string(path).map(|s| s.trim().to_string()).map_err(|e| {
+            PowerError::SysfsReadFailed { path: path.to_path_buf(), reason: e.to_string() }
+        })
     }
 
     fn write_str(&self, path: &Path, value: &str) -> Result<(), PowerError> {
@@ -204,9 +197,7 @@ pub struct MockSysfsReader {
 
 impl MockSysfsReader {
     pub fn new() -> Self {
-        Self {
-            entries: std::collections::HashMap::new(),
-        }
+        Self { entries: std::collections::HashMap::new() }
     }
 
     pub fn set(&mut self, path: impl Into<PathBuf>, value: impl Into<String>) {
@@ -222,13 +213,10 @@ impl Default for MockSysfsReader {
 
 impl SysfsReader for MockSysfsReader {
     fn read_str(&self, path: &Path) -> Result<String, PowerError> {
-        self.entries
-            .get(path)
-            .cloned()
-            .ok_or_else(|| PowerError::SysfsReadFailed {
-                path: path.to_path_buf(),
-                reason: "not found in mock".into(),
-            })
+        self.entries.get(path).cloned().ok_or_else(|| PowerError::SysfsReadFailed {
+            path: path.to_path_buf(),
+            reason: "not found in mock".into(),
+        })
     }
 
     fn write_str(&self, _path: &Path, _value: &str) -> Result<(), PowerError> {
@@ -250,11 +238,7 @@ pub struct ThermalThresholds {
 
 impl Default for ThermalThresholds {
     fn default() -> Self {
-        Self {
-            warn_c: 75,
-            throttle_c: 90,
-            critical_c: 100,
-        }
+        Self { warn_c: 75, throttle_c: 90, critical_c: 100 }
     }
 }
 
@@ -282,11 +266,7 @@ impl GpuPowerManager<RealSysfsReader> {
 
 impl<R: SysfsReader> GpuPowerManager<R> {
     /// Create a power manager with a custom sysfs reader.
-    pub fn with_reader(
-        reader: R,
-        sysfs_base: impl Into<PathBuf>,
-        hw_max_power_mw: u64,
-    ) -> Self {
+    pub fn with_reader(reader: R, sysfs_base: impl Into<PathBuf>, hw_max_power_mw: u64) -> Self {
         Self {
             reader,
             sysfs_base: sysfs_base.into(),
@@ -308,11 +288,7 @@ impl<R: SysfsReader> GpuPowerManager<R> {
     // -- queries ----------------------------------------------------------
 
     fn parse_u64(raw: &str) -> Result<u64, PowerError> {
-        raw.trim()
-            .parse::<u64>()
-            .map_err(|_| PowerError::ParseError {
-                raw: raw.to_string(),
-            })
+        raw.trim().parse::<u64>().map_err(|_| PowerError::ParseError { raw: raw.to_string() })
     }
 
     /// Query the current GPU core frequency in MHz.
@@ -364,13 +340,7 @@ impl<R: SysfsReader> GpuPowerManager<R> {
             self.thresholds.throttle_c,
             self.thresholds.critical_c,
         );
-        GpuPowerSnapshot {
-            state,
-            frequency_mhz,
-            temperature_c,
-            power_draw_mw,
-            thermal,
-        }
+        GpuPowerSnapshot { state, frequency_mhz, temperature_c, power_draw_mw, thermal }
     }
 
     // -- power capping ----------------------------------------------------
@@ -389,18 +359,15 @@ impl<R: SysfsReader> GpuPowerManager<R> {
         let path = self.sysfs_base.join("hwmon/power1_cap");
         // hwmon expects microwatts
         let microwatts = cap_mw * 1000;
-        self.reader
-            .write_str(&path, &microwatts.to_string())
+        self.reader.write_str(&path, &microwatts.to_string())
     }
 
     // -- frequency hints --------------------------------------------------
 
     /// Apply a frequency scaling hint.
     pub fn set_frequency_mode(&self, mode: FrequencyMode) -> Result<(), PowerError> {
-        let (min_path, max_path) = (
-            self.sysfs_base.join("gt_min_freq_mhz"),
-            self.sysfs_base.join("gt_max_freq_mhz"),
-        );
+        let (min_path, max_path) =
+            (self.sysfs_base.join("gt_min_freq_mhz"), self.sysfs_base.join("gt_max_freq_mhz"));
         // Read the device's supported range from RP0 (max) and RPn (min).
         let rp0 = self
             .reader
@@ -418,10 +385,8 @@ impl<R: SysfsReader> GpuPowerManager<R> {
             FrequencyMode::Balanced => (rpn, rp0),
             FrequencyMode::Efficiency => (rpn, rpn),
         };
-        self.reader
-            .write_str(&min_path, &min_mhz.to_string())?;
-        self.reader
-            .write_str(&max_path, &max_mhz.to_string())
+        self.reader.write_str(&min_path, &min_mhz.to_string())?;
+        self.reader.write_str(&max_path, &max_mhz.to_string())
     }
 
     // -- thermal detection ------------------------------------------------
@@ -495,22 +460,10 @@ mod tests {
 
     #[test]
     fn test_thermal_state_classification() {
-        assert_eq!(
-            ThermalState::from_temperature_c(60, 75, 90, 100),
-            ThermalState::Normal
-        );
-        assert_eq!(
-            ThermalState::from_temperature_c(80, 75, 90, 100),
-            ThermalState::Warm
-        );
-        assert_eq!(
-            ThermalState::from_temperature_c(95, 75, 90, 100),
-            ThermalState::Throttled
-        );
-        assert_eq!(
-            ThermalState::from_temperature_c(105, 75, 90, 100),
-            ThermalState::Critical
-        );
+        assert_eq!(ThermalState::from_temperature_c(60, 75, 90, 100), ThermalState::Normal);
+        assert_eq!(ThermalState::from_temperature_c(80, 75, 90, 100), ThermalState::Warm);
+        assert_eq!(ThermalState::from_temperature_c(95, 75, 90, 100), ThermalState::Throttled);
+        assert_eq!(ThermalState::from_temperature_c(105, 75, 90, 100), ThermalState::Critical);
     }
 
     #[test]
@@ -524,10 +477,7 @@ mod tests {
         let mgr = mock_manager();
         assert!(matches!(
             mgr.set_power_cap_mw(200_000),
-            Err(PowerError::PowerCapOutOfRange {
-                requested_mw: 200_000,
-                max_mw: 120_000,
-            })
+            Err(PowerError::PowerCapOutOfRange { requested_mw: 200_000, max_mw: 120_000 })
         ));
     }
 
@@ -572,9 +522,6 @@ mod tests {
         let base = PathBuf::from("/sys/class/drm/card0");
         reader.set(base.join("gt_cur_freq_mhz"), "not_a_number");
         let mgr = GpuPowerManager::with_reader(reader, &base, 100_000);
-        assert!(matches!(
-            mgr.query_frequency_mhz(),
-            Err(PowerError::ParseError { .. })
-        ));
+        assert!(matches!(mgr.query_frequency_mhz(), Err(PowerError::ParseError { .. })));
     }
 }

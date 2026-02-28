@@ -7,13 +7,12 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use axum::Router;
 use axum::extract::State;
 use axum::response::Json;
 use axum::routing::get;
-use axum::Router;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -66,10 +65,7 @@ pub struct GpuHealthThresholds {
 
 impl Default for GpuHealthThresholds {
     fn default() -> Self {
-        Self {
-            memory_percent: 90.0,
-            temperature_c: 85.0,
-        }
+        Self { memory_percent: 90.0, temperature_c: 85.0 }
     }
 }
 
@@ -84,10 +80,7 @@ pub struct GpuHealthPollerConfig {
 
 impl Default for GpuHealthPollerConfig {
     fn default() -> Self {
-        Self {
-            poll_interval: Duration::from_secs(10),
-            thresholds: GpuHealthThresholds::default(),
-        }
+        Self { poll_interval: Duration::from_secs(10), thresholds: GpuHealthThresholds::default() }
     }
 }
 
@@ -166,11 +159,7 @@ impl<C: GpuMetricsCollector> GpuHealthState<C> {
     pub async fn snapshot(&self) -> GpuHealthResponse {
         let guard = self.inner.read().await;
         let alerts = evaluate_alerts(&guard.devices, &self.thresholds);
-        let status = if alerts.is_empty() {
-            "healthy".to_string()
-        } else {
-            "warning".to_string()
-        };
+        let status = if alerts.is_empty() { "healthy".to_string() } else { "warning".to_string() };
         GpuHealthResponse {
             status,
             devices: guard.devices.clone(),
@@ -229,12 +218,8 @@ async fn gpu_health_handler<C: GpuMetricsCollector>(
 }
 
 /// Create the `/api/v1/health/gpu` route.
-pub fn create_gpu_health_route<C: GpuMetricsCollector>(
-    state: Arc<GpuHealthState<C>>,
-) -> Router {
-    Router::new()
-        .route("/api/v1/health/gpu", get(gpu_health_handler::<C>))
-        .with_state(state)
+pub fn create_gpu_health_route<C: GpuMetricsCollector>(state: Arc<GpuHealthState<C>>) -> Router {
+    Router::new().route("/api/v1/health/gpu", get(gpu_health_handler::<C>)).with_state(state)
 }
 
 /// Spawn the background poller task. Returns a `JoinHandle` the caller can
@@ -336,10 +321,7 @@ mod tests {
     #[test]
     fn test_custom_thresholds() {
         let devices = vec![sample_device("gpu-0", 8_000, 10_000, 80.0)];
-        let thresholds = GpuHealthThresholds {
-            memory_percent: 75.0,
-            temperature_c: 75.0,
-        };
+        let thresholds = GpuHealthThresholds { memory_percent: 75.0, temperature_c: 75.0 };
         let alerts = evaluate_alerts(&devices, &thresholds);
         assert_eq!(alerts.len(), 2);
     }
@@ -347,10 +329,8 @@ mod tests {
     #[tokio::test]
     async fn test_snapshot_healthy() {
         let devices = vec![sample_device("gpu-0", 4_000, 10_000, 60.0)];
-        let state = Arc::new(GpuHealthState::new(
-            GpuHealthThresholds::default(),
-            FakeCollector(devices),
-        ));
+        let state =
+            Arc::new(GpuHealthState::new(GpuHealthThresholds::default(), FakeCollector(devices)));
         state.poll().await;
         let resp = state.snapshot().await;
         assert_eq!(resp.status, "healthy");
@@ -361,10 +341,8 @@ mod tests {
     #[tokio::test]
     async fn test_snapshot_warning() {
         let devices = vec![sample_device("gpu-0", 9_500, 10_000, 60.0)];
-        let state = Arc::new(GpuHealthState::new(
-            GpuHealthThresholds::default(),
-            FakeCollector(devices),
-        ));
+        let state =
+            Arc::new(GpuHealthState::new(GpuHealthThresholds::default(), FakeCollector(devices)));
         state.poll().await;
         let resp = state.snapshot().await;
         assert_eq!(resp.status, "warning");
@@ -374,16 +352,11 @@ mod tests {
     #[tokio::test]
     async fn test_endpoint_returns_200() {
         let devices = vec![sample_device("gpu-0", 2_000, 10_000, 55.0)];
-        let state = Arc::new(GpuHealthState::new(
-            GpuHealthThresholds::default(),
-            FakeCollector(devices),
-        ));
+        let state =
+            Arc::new(GpuHealthState::new(GpuHealthThresholds::default(), FakeCollector(devices)));
         state.poll().await;
         let app = create_gpu_health_route(state);
-        let req = Request::builder()
-            .uri("/api/v1/health/gpu")
-            .body(Body::empty())
-            .unwrap();
+        let req = Request::builder().uri("/api/v1/health/gpu").body(Body::empty()).unwrap();
         let resp = app.oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
 

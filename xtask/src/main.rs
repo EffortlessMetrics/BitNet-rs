@@ -5597,11 +5597,7 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
     if let Some(bt) = receipt.get("backend_type").and_then(|v| v.as_str()) {
         let valid_types = ["cuda", "opencl", "cpu", "vulkan", "metal"];
         if !valid_types.contains(&bt) {
-            bail!(
-                "Invalid backend_type '{}' (expected one of: {})",
-                bt,
-                valid_types.join(", ")
-            );
+            bail!("Invalid backend_type '{}' (expected one of: {})", bt, valid_types.join(", "));
         }
     }
 

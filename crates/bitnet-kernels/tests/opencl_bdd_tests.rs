@@ -6,8 +6,8 @@
 //! - Fallback behavior when backends are unavailable
 //! - Environment variable overrides
 
-use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 use bitnet_common::Device;
+use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 
 // === Scenario: Device::OpenCL variant behavior ===
 
@@ -88,10 +88,7 @@ mod backend_gpu_requirement {
 
     #[test]
     fn given_oneapi_backend_when_checked_then_requires_gpu() {
-        assert!(
-            KernelBackend::OneApi.requires_gpu(),
-            "OneAPI backend should require GPU"
-        );
+        assert!(KernelBackend::OneApi.requires_gpu(), "OneAPI backend should require GPU");
     }
 
     #[test]
@@ -128,10 +125,7 @@ mod backend_priority {
             backends.iter().position(|b| *b == KernelBackend::Cuda),
             backends.iter().position(|b| *b == KernelBackend::OneApi),
         ) {
-            assert!(
-                cuda_pos < oneapi_pos,
-                "CUDA should have higher priority than OneAPI"
-            );
+            assert!(cuda_pos < oneapi_pos, "CUDA should have higher priority than OneAPI");
         }
     }
 

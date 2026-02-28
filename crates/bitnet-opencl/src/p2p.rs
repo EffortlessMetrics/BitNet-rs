@@ -109,19 +109,8 @@ impl BandwidthReport {
         dst: DeviceId,
     ) -> Self {
         let secs = duration.as_secs_f64();
-        let gbps = if secs > 0.0 {
-            (bytes as f64 * 8.0) / (secs * 1e9)
-        } else {
-            0.0
-        };
-        Self {
-            bytes_transferred: bytes,
-            duration,
-            bandwidth_gbps: gbps,
-            path,
-            src,
-            dst,
-        }
+        let gbps = if secs > 0.0 { (bytes as f64 * 8.0) / (secs * 1e9) } else { 0.0 };
+        Self { bytes_transferred: bytes, duration, bandwidth_gbps: gbps, path, src, dst }
     }
 }
 
@@ -147,9 +136,7 @@ pub struct TransferEngine<P: P2PProbe = FallbackProbe> {
 impl TransferEngine<FallbackProbe> {
     /// Create an engine with the default (fallback) probe.
     pub fn new() -> Self {
-        Self {
-            probe: FallbackProbe,
-        }
+        Self { probe: FallbackProbe }
     }
 }
 
@@ -182,11 +169,8 @@ impl<P: P2PProbe> TransferEngine<P> {
         data: &[u8],
     ) -> Result<BandwidthReport, P2PError> {
         let cap = self.probe.probe(src, dst);
-        let path = if cap.direct_supported {
-            TransferPath::Direct
-        } else {
-            TransferPath::HostStaged
-        };
+        let path =
+            if cap.direct_supported { TransferPath::Direct } else { TransferPath::HostStaged };
 
         let start = Instant::now();
         match path {
@@ -198,22 +182,11 @@ impl<P: P2PProbe> TransferEngine<P> {
             }
         }
         let elapsed = start.elapsed();
-        Ok(BandwidthReport::new(
-            data.len() as u64,
-            elapsed,
-            path,
-            src.clone(),
-            dst.clone(),
-        ))
+        Ok(BandwidthReport::new(data.len() as u64, elapsed, path, src.clone(), dst.clone()))
     }
 
     /// Simulate a direct GPU-GPU DMA copy.
-    fn direct_copy(
-        &self,
-        _src: &DeviceId,
-        _dst: &DeviceId,
-        _data: &[u8],
-    ) -> Result<(), P2PError> {
+    fn direct_copy(&self, _src: &DeviceId, _dst: &DeviceId, _data: &[u8]) -> Result<(), P2PError> {
         // In production this would issue a P2P DMA via CUDA or OpenCL SVM.
         Ok(())
     }
@@ -241,17 +214,11 @@ mod tests {
     use super::*;
 
     fn cuda_dev(idx: usize) -> DeviceId {
-        DeviceId {
-            index: idx,
-            backend: BackendKind::Cuda,
-        }
+        DeviceId { index: idx, backend: BackendKind::Cuda }
     }
 
     fn ocl_dev(idx: usize) -> DeviceId {
-        DeviceId {
-            index: idx,
-            backend: BackendKind::OpenCl,
-        }
+        DeviceId { index: idx, backend: BackendKind::OpenCl }
     }
 
     // Probe that says P2P is supported for same-backend, different device.
@@ -298,9 +265,7 @@ mod tests {
     fn test_transfer_uses_direct_path() {
         let engine = TransferEngine::with_probe(TestProbe);
         let data = vec![0u8; 1024];
-        let report = engine
-            .transfer(&cuda_dev(0), &cuda_dev(1), &data)
-            .expect("transfer ok");
+        let report = engine.transfer(&cuda_dev(0), &cuda_dev(1), &data).expect("transfer ok");
         assert_eq!(report.path, TransferPath::Direct);
         assert_eq!(report.bytes_transferred, 1024);
     }
@@ -309,9 +274,7 @@ mod tests {
     fn test_transfer_falls_back_to_host_staged() {
         let engine = TransferEngine::new(); // FallbackProbe → always host-staged
         let data = vec![0u8; 2048];
-        let report = engine
-            .transfer(&cuda_dev(0), &cuda_dev(1), &data)
-            .expect("transfer ok");
+        let report = engine.transfer(&cuda_dev(0), &cuda_dev(1), &data).expect("transfer ok");
         assert_eq!(report.path, TransferPath::HostStaged);
         assert_eq!(report.bytes_transferred, 2048);
     }

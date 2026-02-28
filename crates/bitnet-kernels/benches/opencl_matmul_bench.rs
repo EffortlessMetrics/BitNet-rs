@@ -64,11 +64,7 @@ fn matmul_tiled(a: &[i8], b: &[u8], c: &mut [f32], m: usize, n: usize, k: usize)
                     for lc in 0..TILE {
                         let gr = tile_row + lr;
                         let ac = t * TILE + lc;
-                        tile_a[lr][lc] = if gr < m && ac < k {
-                            a[gr * k + ac] as f32
-                        } else {
-                            0.0
-                        };
+                        tile_a[lr][lc] = if gr < m && ac < k { a[gr * k + ac] as f32 } else { 0.0 };
 
                         let br = t * TILE + lr;
                         let gc = tile_col + lc;

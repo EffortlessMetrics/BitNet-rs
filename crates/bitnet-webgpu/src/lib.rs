@@ -72,67 +72,34 @@ impl WebGpuBackend {
             ComputePipeline::new(&gpu.device, shader::MATMUL_WGSL, "matmul", "main")?;
         let softmax_pipeline =
             ComputePipeline::new(&gpu.device, shader::SOFTMAX_WGSL, "softmax", "main")?;
-        let elementwise_pipeline = ComputePipeline::new(
-            &gpu.device,
-            shader::ELEMENTWISE_WGSL,
-            "elementwise",
-            "main",
-        )?;
+        let elementwise_pipeline =
+            ComputePipeline::new(&gpu.device, shader::ELEMENTWISE_WGSL, "elementwise", "main")?;
 
         info!(adapter = %gpu.adapter_name(), "WebGPU backend ready");
 
-        Ok(Self {
-            gpu,
-            matmul_pipeline,
-            softmax_pipeline,
-            elementwise_pipeline,
-        })
+        Ok(Self { gpu, matmul_pipeline, softmax_pipeline, elementwise_pipeline })
     }
 
     /// Run matrix multiplication: `C = A × B`.
     ///
     /// `a` is M×K row-major, `b` is K×N row-major, returns M×N.
-    pub async fn matmul(
-        &self,
-        a: &[f32],
-        b: &[f32],
-        m: u32,
-        n: u32,
-        k: u32,
-    ) -> Result<Vec<f32>> {
+    pub async fn matmul(&self, a: &[f32], b: &[f32], m: u32, n: u32, k: u32) -> Result<Vec<f32>> {
         let device = &self.gpu.device;
         let queue = &self.gpu.queue;
 
         let buf_a = GpuBuffer::from_slice(device, queue, a, "a");
         let buf_b = GpuBuffer::from_slice(device, queue, b, "b");
         let buf_c = GpuBuffer::new_uninit::<f32>(device, (m * n) as usize, "c");
-        let params = MatmulParams {
-            m,
-            n,
-            k,
-            _pad: 0,
-        };
+        let params = MatmulParams { m, n, k, _pad: 0 };
         let buf_params = GpuBuffer::new_uniform(device, queue, &params, "matmul-params");
 
         let bind_group = self.matmul_pipeline.bind_group(
             device,
             &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buf_a.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: buf_b.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: buf_c.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: buf_params.as_entire_binding(),
-                },
+                wgpu::BindGroupEntry { binding: 0, resource: buf_a.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_b.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_c.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: buf_params.as_entire_binding() },
             ],
         );
 
@@ -164,18 +131,9 @@ impl WebGpuBackend {
         let bind_group = self.softmax_pipeline.bind_group(
             device,
             &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buf_in.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: buf_out.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: buf_params.as_entire_binding(),
-                },
+                wgpu::BindGroupEntry { binding: 0, resource: buf_in.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_out.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_params.as_entire_binding() },
             ],
         );
 
@@ -192,12 +150,7 @@ impl WebGpuBackend {
     }
 
     /// Run an element-wise binary/unary operation.
-    pub async fn elementwise(
-        &self,
-        a: &[f32],
-        b: &[f32],
-        op: ElementwiseOp,
-    ) -> Result<Vec<f32>> {
+    pub async fn elementwise(&self, a: &[f32], b: &[f32], op: ElementwiseOp) -> Result<Vec<f32>> {
         let len = a.len() as u32;
         let device = &self.gpu.device;
         let queue = &self.gpu.queue;
@@ -205,31 +158,16 @@ impl WebGpuBackend {
         let buf_a = GpuBuffer::from_slice(device, queue, a, "ew-a");
         let buf_b = GpuBuffer::from_slice(device, queue, b, "ew-b");
         let buf_c = GpuBuffer::new_uninit::<f32>(device, a.len(), "ew-c");
-        let params = ElementwiseParams {
-            len,
-            op: op as u32,
-        };
+        let params = ElementwiseParams { len, op: op as u32 };
         let buf_params = GpuBuffer::new_uniform(device, queue, &params, "ew-params");
 
         let bind_group = self.elementwise_pipeline.bind_group(
             device,
             &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buf_a.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: buf_b.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: buf_c.storage.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: buf_params.as_entire_binding(),
-                },
+                wgpu::BindGroupEntry { binding: 0, resource: buf_a.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: buf_b.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: buf_c.storage.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: buf_params.as_entire_binding() },
             ],
         );
 

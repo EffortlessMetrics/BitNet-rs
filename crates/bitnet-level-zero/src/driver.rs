@@ -76,10 +76,7 @@ pub fn enumerate_gpu_devices() -> Result<Vec<DeviceEntry>> {
 
     let gpus = Vec::new();
     for driver in &drivers {
-        debug!(
-            "Driver {} reports {} device(s)",
-            driver.index, driver.device_count
-        );
+        debug!("Driver {} reports {} device(s)", driver.index, driver.device_count);
     }
     Ok(gpus)
 }

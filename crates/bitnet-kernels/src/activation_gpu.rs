@@ -3,10 +3,13 @@
 
 /// Apply SiLU (Sigmoid Linear Unit) element-wise: x * sigmoid(x).
 pub fn silu(input: &[f32]) -> Vec<f32> {
-    input.iter().map(|&x| {
-        let sig = 1.0 / (1.0 + (-x).exp());
-        x * sig
-    }).collect()
+    input
+        .iter()
+        .map(|&x| {
+            let sig = 1.0 / (1.0 + (-x).exp());
+            x * sig
+        })
+        .collect()
 }
 
 /// Fused SiLU-gate: silu(gate) * value.
@@ -16,19 +19,25 @@ pub fn silu(input: &[f32]) -> Vec<f32> {
 /// Panics if gate and value have different lengths.
 pub fn silu_gate_fused(gate: &[f32], value: &[f32]) -> Vec<f32> {
     assert_eq!(gate.len(), value.len(), "gate/value length mismatch");
-    gate.iter().zip(value.iter()).map(|(&g, &v)| {
-        let sig = 1.0 / (1.0 + (-g).exp());
-        (g * sig) * v
-    }).collect()
+    gate.iter()
+        .zip(value.iter())
+        .map(|(&g, &v)| {
+            let sig = 1.0 / (1.0 + (-g).exp());
+            (g * sig) * v
+        })
+        .collect()
 }
 
 /// GELU (Gaussian Error Linear Unit) with tanh approximation.
 pub fn gelu(input: &[f32]) -> Vec<f32> {
     let c: f32 = (2.0f32 / std::f32::consts::PI).sqrt(); // sqrt(2/pi)
-    input.iter().map(|&x| {
-        let inner = c * (x + 0.044715 * x * x * x);
-        0.5 * x * (1.0 + inner.tanh())
-    }).collect()
+    input
+        .iter()
+        .map(|&x| {
+            let inner = c * (x + 0.044715 * x * x * x);
+            0.5 * x * (1.0 + inner.tanh())
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -67,8 +76,8 @@ mod tests {
         let out = silu(&[-2.0, -1.0, 0.0, 1.0, 2.0]);
         assert_eq!(out.len(), 5);
         assert!(out[2] == 0.0); // silu(0) = 0
-        assert!(out[3] > 0.0);  // silu(1) > 0
-        assert!(out[0] < 0.0);  // silu(-2) < 0
+        assert!(out[3] > 0.0); // silu(1) > 0
+        assert!(out[0] < 0.0); // silu(-2) < 0
     }
 
     #[test]

@@ -1183,26 +1183,22 @@ mod property_tests {
 
     #[test]
     fn test_receipt_with_opencl_device() {
-        let receipt = InferenceReceipt::generate(
-            "opencl",
-            vec!["ocl_matmul".to_string()],
-            None,
-        )
-        .unwrap()
-        .with_backend_type("opencl")
-        .with_opencl_device(OpenClDeviceInfo {
-            name: "Intel(R) Arc(TM) A770 Graphics".to_string(),
-            vendor: "Intel(R) Corporation".to_string(),
-            driver_version: "23.43.27642.40".to_string(),
-            opencl_version: Some("OpenCL 3.0".to_string()),
-            global_memory_bytes: Some(16 * 1024 * 1024 * 1024),
-        })
-        .with_opencl_timing(OpenClTiming {
-            kernel_exec_ms: 12.5,
-            transfer_h2d_ms: 2.1,
-            transfer_d2h_ms: 1.8,
-            kernel_invocations: Some(64),
-        });
+        let receipt = InferenceReceipt::generate("opencl", vec!["ocl_matmul".to_string()], None)
+            .unwrap()
+            .with_backend_type("opencl")
+            .with_opencl_device(OpenClDeviceInfo {
+                name: "Intel(R) Arc(TM) A770 Graphics".to_string(),
+                vendor: "Intel(R) Corporation".to_string(),
+                driver_version: "23.43.27642.40".to_string(),
+                opencl_version: Some("OpenCL 3.0".to_string()),
+                global_memory_bytes: Some(16 * 1024 * 1024 * 1024),
+            })
+            .with_opencl_timing(OpenClTiming {
+                kernel_exec_ms: 12.5,
+                transfer_h2d_ms: 2.1,
+                transfer_d2h_ms: 1.8,
+                kernel_invocations: Some(64),
+            });
 
         assert_eq!(receipt.backend, "opencl");
         assert_eq!(receipt.backend_type.as_deref(), Some("opencl"));
@@ -1220,20 +1216,16 @@ mod property_tests {
 
     #[test]
     fn test_receipt_opencl_serialization_roundtrip() {
-        let receipt = InferenceReceipt::generate(
-            "opencl",
-            vec!["ocl_matmul".to_string()],
-            None,
-        )
-        .unwrap()
-        .with_backend_type("opencl")
-        .with_opencl_device(OpenClDeviceInfo {
-            name: "Intel Arc A770".to_string(),
-            vendor: "Intel".to_string(),
-            driver_version: "1.0.0".to_string(),
-            opencl_version: None,
-            global_memory_bytes: None,
-        });
+        let receipt = InferenceReceipt::generate("opencl", vec!["ocl_matmul".to_string()], None)
+            .unwrap()
+            .with_backend_type("opencl")
+            .with_opencl_device(OpenClDeviceInfo {
+                name: "Intel Arc A770".to_string(),
+                vendor: "Intel".to_string(),
+                driver_version: "1.0.0".to_string(),
+                opencl_version: None,
+                global_memory_bytes: None,
+            });
 
         let json = serde_json::to_string_pretty(&receipt).unwrap();
         assert!(json.contains("opencl_device"));
@@ -1249,54 +1241,38 @@ mod property_tests {
 
     #[test]
     fn test_receipt_validation_invalid_backend_type() {
-        let mut receipt = InferenceReceipt::generate(
-            "cpu",
-            vec!["i2s_gemv".to_string()],
-            None,
-        )
-        .unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         receipt.backend_type = Some("invalid_backend".to_string());
         assert!(receipt.validate().is_err());
     }
 
     #[test]
     fn test_receipt_validation_opencl_requires_real() {
-        let mut receipt = InferenceReceipt::generate(
-            "opencl",
-            vec!["ocl_matmul".to_string()],
-            None,
-        )
-        .unwrap();
+        let mut receipt =
+            InferenceReceipt::generate("opencl", vec!["ocl_matmul".to_string()], None).unwrap();
         receipt.compute_path = "mock".to_string();
         assert!(receipt.validate().is_err());
     }
 
     #[test]
     fn test_receipt_validation_opencl_empty_device_name() {
-        let receipt = InferenceReceipt::generate(
-            "opencl",
-            vec!["ocl_matmul".to_string()],
-            None,
-        )
-        .unwrap()
-        .with_opencl_device(OpenClDeviceInfo {
-            name: String::new(),
-            vendor: "Intel".to_string(),
-            driver_version: "1.0".to_string(),
-            opencl_version: None,
-            global_memory_bytes: None,
-        });
+        let receipt = InferenceReceipt::generate("opencl", vec!["ocl_matmul".to_string()], None)
+            .unwrap()
+            .with_opencl_device(OpenClDeviceInfo {
+                name: String::new(),
+                vendor: "Intel".to_string(),
+                driver_version: "1.0".to_string(),
+                opencl_version: None,
+                global_memory_bytes: None,
+            });
         assert!(receipt.validate().is_err());
     }
 
     #[test]
     fn test_receipt_no_opencl_fields_by_default() {
-        let receipt = InferenceReceipt::generate(
-            "cpu",
-            vec!["i2s_gemv".to_string()],
-            None,
-        )
-        .unwrap();
+        let receipt =
+            InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
         assert!(receipt.opencl_device.is_none());
         assert!(receipt.opencl_timing.is_none());
         assert!(receipt.backend_type.is_none());
@@ -1305,18 +1281,10 @@ mod property_tests {
     #[test]
     fn test_receipt_valid_backend_types() {
         for bt in &["cuda", "opencl", "cpu", "vulkan", "metal"] {
-            let mut receipt = InferenceReceipt::generate(
-                "cpu",
-                vec!["i2s_gemv".to_string()],
-                None,
-            )
-            .unwrap();
+            let mut receipt =
+                InferenceReceipt::generate("cpu", vec!["i2s_gemv".to_string()], None).unwrap();
             receipt.backend_type = Some(bt.to_string());
-            assert!(
-                receipt.validate().is_ok(),
-                "backend_type '{}' should be valid",
-                bt
-            );
+            assert!(receipt.validate().is_ok(), "backend_type '{}' should be valid", bt);
         }
     }
 }

@@ -27,10 +27,7 @@ impl GpuBuffer {
             mapped_at_creation: false,
         });
         queue.write_buffer(&storage, 0, bytes);
-        Self {
-            storage,
-            size: bytes.len() as u64,
-        }
+        Self { storage, size: bytes.len() as u64 }
     }
 
     /// Create an uninitialised storage buffer of `len` elements.

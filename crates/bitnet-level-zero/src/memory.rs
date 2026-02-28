@@ -17,29 +17,17 @@ pub struct MemoryAllocBuilder {
 impl MemoryAllocBuilder {
     /// Allocate device-local memory.
     pub fn device(size: usize) -> Self {
-        Self {
-            memory_type: ZeMemoryType::Device,
-            size,
-            alignment: 0,
-        }
+        Self { memory_type: ZeMemoryType::Device, size, alignment: 0 }
     }
 
     /// Allocate host-visible memory.
     pub fn host(size: usize) -> Self {
-        Self {
-            memory_type: ZeMemoryType::Host,
-            size,
-            alignment: 0,
-        }
+        Self { memory_type: ZeMemoryType::Host, size, alignment: 0 }
     }
 
     /// Allocate shared (unified) memory.
     pub fn shared(size: usize) -> Self {
-        Self {
-            memory_type: ZeMemoryType::Shared,
-            size,
-            alignment: 0,
-        }
+        Self { memory_type: ZeMemoryType::Shared, size, alignment: 0 }
     }
 
     /// Set alignment requirement.
@@ -123,12 +111,6 @@ pub fn estimate_total_memory(tensor_sizes: &[usize]) -> usize {
 pub fn estimate_aligned_memory(tensor_sizes: &[usize], alignment: usize) -> usize {
     tensor_sizes
         .iter()
-        .map(|&s| {
-            if alignment == 0 {
-                s
-            } else {
-                (s + alignment - 1) / alignment * alignment
-            }
-        })
+        .map(|&s| if alignment == 0 { s } else { (s + alignment - 1) / alignment * alignment })
         .sum()
 }

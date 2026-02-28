@@ -35,10 +35,7 @@ impl HipErrorCode {
 #[derive(Debug, Error)]
 pub enum RocmError {
     #[error("HIP runtime error: {code:?} ({message})")]
-    Hip {
-        code: HipErrorCode,
-        message: String,
-    },
+    Hip { code: HipErrorCode, message: String },
 
     #[error("ROCm runtime not found: {0}")]
     RuntimeNotFound(String),
@@ -67,9 +64,6 @@ pub fn check_hip(status: u32, context: &str) -> Result<()> {
     if status == 0 {
         Ok(())
     } else {
-        Err(RocmError::Hip {
-            code: HipErrorCode::from_raw(status),
-            message: context.to_string(),
-        })
+        Err(RocmError::Hip { code: HipErrorCode::from_raw(status), message: context.to_string() })
     }
 }

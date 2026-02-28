@@ -14,27 +14,15 @@ pub struct DispatchDimensions {
 
 impl DispatchDimensions {
     pub fn new_1d(groups: u32) -> Self {
-        Self {
-            group_count_x: groups,
-            group_count_y: 1,
-            group_count_z: 1,
-        }
+        Self { group_count_x: groups, group_count_y: 1, group_count_z: 1 }
     }
 
     pub fn new_2d(x: u32, y: u32) -> Self {
-        Self {
-            group_count_x: x,
-            group_count_y: y,
-            group_count_z: 1,
-        }
+        Self { group_count_x: x, group_count_y: y, group_count_z: 1 }
     }
 
     pub fn new_3d(x: u32, y: u32, z: u32) -> Self {
-        Self {
-            group_count_x: x,
-            group_count_y: y,
-            group_count_z: z,
-        }
+        Self { group_count_x: x, group_count_y: y, group_count_z: z }
     }
 
     /// Total number of work-groups.
@@ -53,11 +41,7 @@ pub struct GroupSize {
 
 impl GroupSize {
     pub fn new_1d(size: u32) -> Self {
-        Self {
-            x: size,
-            y: 1,
-            z: 1,
-        }
+        Self { x: size, y: 1, z: 1 }
     }
 
     pub fn total_threads(&self) -> u32 {
@@ -81,10 +65,7 @@ pub struct KernelBuilder {
 impl KernelBuilder {
     /// Create a kernel builder for the given kernel name.
     pub fn new(name: impl Into<String>) -> Self {
-        Self {
-            name: name.into(),
-            group_size: GroupSize::default(),
-        }
+        Self { name: name.into(), group_size: GroupSize::default() }
     }
 
     /// Set the work-group size.
@@ -103,16 +84,10 @@ impl KernelBuilder {
     /// Placeholder: real implementation calls `zeKernelCreate`.
     pub fn build(self, _module: &LevelZeroModule) -> Result<LevelZeroKernel> {
         if self.name.is_empty() {
-            return Err(LevelZeroError::InvalidArgument {
-                message: "kernel name is empty".into(),
-            });
+            return Err(LevelZeroError::InvalidArgument { message: "kernel name is empty".into() });
         }
         tracing::debug!(kernel_name = %self.name, "Creating kernel (placeholder)");
-        Ok(LevelZeroKernel {
-            name: self.name,
-            group_size: self.group_size,
-            _handle: None,
-        })
+        Ok(LevelZeroKernel { name: self.name, group_size: self.group_size, _handle: None })
     }
 }
 

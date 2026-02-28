@@ -51,9 +51,7 @@ pub struct KernelCache {
 
 impl fmt::Debug for KernelCache {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("KernelCache")
-            .field("cache_dir", &self.cache_dir)
-            .finish()
+        f.debug_struct("KernelCache").field("cache_dir", &self.cache_dir).finish()
     }
 }
 
@@ -84,9 +82,7 @@ impl KernelCache {
 
     /// Returns `true` if caching is disabled via `BITNET_OPENCL_NO_CACHE=1`.
     pub fn is_disabled() -> bool {
-        std::env::var("BITNET_OPENCL_NO_CACHE")
-            .map(|v| v == "1")
-            .unwrap_or(false)
+        std::env::var("BITNET_OPENCL_NO_CACHE").map(|v| v == "1").unwrap_or(false)
     }
 
     /// Compute a cache key from kernel source, device name, driver version,
@@ -177,14 +173,9 @@ impl KernelCache {
             }
         }
 
-        let oldest_entry_age =
-            oldest.and_then(|t| SystemTime::now().duration_since(t).ok());
+        let oldest_entry_age = oldest.and_then(|t| SystemTime::now().duration_since(t).ok());
 
-        CacheStats {
-            entry_count: count,
-            total_size_bytes: total_size,
-            oldest_entry_age,
-        }
+        CacheStats { entry_count: count, total_size_bytes: total_size, oldest_entry_age }
     }
 
     /// Return the path to the cache directory.
@@ -222,20 +213,13 @@ impl KernelCache {
             return Ok(PathBuf::from(dir));
         }
         if let Ok(xdg) = std::env::var("XDG_CACHE_HOME") {
-            return Ok(
-                PathBuf::from(xdg).join("bitnet").join("opencl_kernels")
-            );
+            return Ok(PathBuf::from(xdg).join("bitnet").join("opencl_kernels"));
         }
         if let Ok(local) = std::env::var("LOCALAPPDATA") {
-            return Ok(
-                PathBuf::from(local).join("bitnet").join("opencl_kernels")
-            );
+            return Ok(PathBuf::from(local).join("bitnet").join("opencl_kernels"));
         }
         if let Ok(home) = std::env::var("HOME") {
-            return Ok(PathBuf::from(home)
-                .join(".cache")
-                .join("bitnet")
-                .join("opencl_kernels"));
+            return Ok(PathBuf::from(home).join(".cache").join("bitnet").join("opencl_kernels"));
         }
         Err(io::Error::new(
             io::ErrorKind::NotFound,
@@ -340,8 +324,7 @@ mod tests {
 
     #[test]
     fn test_cache_key_varies_with_build_options() {
-        let k1 =
-            KernelCache::cache_key("src", "dev", "1.0", "-cl-fast-relaxed-math");
+        let k1 = KernelCache::cache_key("src", "dev", "1.0", "-cl-fast-relaxed-math");
         let k2 = KernelCache::cache_key("src", "dev", "1.0", "");
         assert_ne!(k1, k2);
     }
@@ -382,23 +365,12 @@ mod tests {
     fn test_env_override_cache_dir() {
         let dir = TempDir::new().unwrap();
         let custom_path = dir.path().join("custom_cache");
-        temp_env::with_var(
-            "BITNET_OPENCL_CACHE_DIR",
-            Some(custom_path.to_str().unwrap()),
-            || {
-                temp_env::with_var(
-                    "BITNET_OPENCL_NO_CACHE",
-                    None::<&str>,
-                    || {
-                        let cache = KernelCache::new().unwrap();
-                        assert_eq!(
-                            cache.cache_dir(),
-                            custom_path.as_path()
-                        );
-                    },
-                );
-            },
-        );
+        temp_env::with_var("BITNET_OPENCL_CACHE_DIR", Some(custom_path.to_str().unwrap()), || {
+            temp_env::with_var("BITNET_OPENCL_NO_CACHE", None::<&str>, || {
+                let cache = KernelCache::new().unwrap();
+                assert_eq!(cache.cache_dir(), custom_path.as_path());
+            });
+        });
     }
 
     #[test]
@@ -406,8 +378,7 @@ mod tests {
     fn test_no_cache_env_disables_store_and_load() {
         temp_env::with_var("BITNET_OPENCL_NO_CACHE", Some("1"), || {
             let dir = TempDir::new().unwrap();
-            let cache =
-                KernelCache::with_dir(dir.path().to_path_buf()).unwrap();
+            let cache = KernelCache::with_dir(dir.path().to_path_buf()).unwrap();
             cache.store("key", &[1, 2, 3]).unwrap();
             assert!(cache.load("key").is_none());
         });

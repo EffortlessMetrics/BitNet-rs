@@ -15,10 +15,7 @@ pub struct DeviceSelector {
 
 impl Default for DeviceSelector {
     fn default() -> Self {
-        Self {
-            prefer_discrete: true,
-            require_compute_queue: false,
-        }
+        Self { prefer_discrete: true, require_compute_queue: false }
     }
 }
 
@@ -42,16 +39,11 @@ fn score_device(
     selector: &DeviceSelector,
 ) -> Option<(u32, u32)> {
     let props = unsafe { instance.get_physical_device_properties(device) };
-    let queue_families =
-        unsafe { instance.get_physical_device_queue_family_properties(device) };
+    let queue_families = unsafe { instance.get_physical_device_queue_family_properties(device) };
 
     // Find a queue family that supports compute.
     let compute_family = queue_families.iter().enumerate().find_map(|(i, qf)| {
-        if qf.queue_flags.contains(vk::QueueFlags::COMPUTE) {
-            Some(i as u32)
-        } else {
-            None
-        }
+        if qf.queue_flags.contains(vk::QueueFlags::COMPUTE) { Some(i as u32) } else { None }
     });
 
     let compute_family = compute_family?;
@@ -67,9 +59,7 @@ fn score_device(
     }
 
     let mut score: u32 = 0;
-    if selector.prefer_discrete
-        && props.device_type == vk::PhysicalDeviceType::DISCRETE_GPU
-    {
+    if selector.prefer_discrete && props.device_type == vk::PhysicalDeviceType::DISCRETE_GPU {
         score += 1000;
     }
     if has_dedicated_compute {
@@ -105,9 +95,7 @@ pub fn select_physical_device(
     };
 
     if devices.is_empty() {
-        return Err(VulkanError::NoSuitableDevice(
-            "no Vulkan physical devices found".into(),
-        ));
+        return Err(VulkanError::NoSuitableDevice("no Vulkan physical devices found".into()));
     }
 
     let best = devices
@@ -120,12 +108,9 @@ pub fn select_physical_device(
 
     match best {
         Some((device, _score, family)) => {
-            let props =
-                unsafe { instance.get_physical_device_properties(device) };
+            let props = unsafe { instance.get_physical_device_properties(device) };
             let name = unsafe {
-                std::ffi::CStr::from_ptr(props.device_name.as_ptr())
-                    .to_string_lossy()
-                    .into_owned()
+                std::ffi::CStr::from_ptr(props.device_name.as_ptr()).to_string_lossy().into_owned()
             };
             info!(
                 "Selected Vulkan device: {} (type={:?}, compute_family={})",
@@ -138,9 +123,7 @@ pub fn select_physical_device(
                 device_type: props.device_type,
             })
         }
-        None => Err(VulkanError::NoSuitableDevice(
-            "no device meets selection criteria".into(),
-        )),
+        None => Err(VulkanError::NoSuitableDevice("no device meets selection criteria".into())),
     }
 }
 
@@ -160,16 +143,11 @@ pub fn create_logical_device(
 
     let device = unsafe {
         instance
-            .create_device(
-                selected.physical_device,
-                &device_create_info,
-                None,
-            )
+            .create_device(selected.physical_device, &device_create_info, None)
             .map_err(|e| VulkanError::DeviceCreation(format!("{e}")))?
     };
 
-    let queue =
-        unsafe { device.get_device_queue(selected.compute_queue_family, 0) };
+    let queue = unsafe { device.get_device_queue(selected.compute_queue_family, 0) };
     debug!("Logical device created with compute queue");
 
     Ok((device, queue))

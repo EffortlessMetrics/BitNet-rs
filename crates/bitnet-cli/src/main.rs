@@ -61,10 +61,10 @@ fn bitnet_version() -> &'static str {
 
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
-#[cfg(feature = "cli-bench")]
-use commands::KernelBenchCommand;
 #[cfg(feature = "full-cli")]
 use commands::GpuInfoCommand;
+#[cfg(feature = "cli-bench")]
+use commands::KernelBenchCommand;
 #[cfg(feature = "full-cli")]
 use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};

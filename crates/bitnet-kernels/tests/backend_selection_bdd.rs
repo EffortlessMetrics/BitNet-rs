@@ -8,9 +8,7 @@
 //!
 //! Environment-mutating tests use `#[serial(bitnet_env)]` + `temp_env`.
 
-use bitnet_common::backend_selection::{
-    BackendRequest, BackendSelectionError, select_backend,
-};
+use bitnet_common::backend_selection::{BackendRequest, BackendSelectionError, select_backend};
 use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 use serial_test::serial;
 use temp_env::with_vars;
@@ -226,8 +224,7 @@ fn given_every_backend_when_cpu_forced_then_cpu_used() {
 
 #[test]
 fn given_cuda_and_oneapi_when_oneapi_forced_then_uses_oneapi() {
-    let result =
-        select_backend(BackendRequest::OneApi, &caps_cuda_oneapi_and_cpu()).unwrap();
+    let result = select_backend(BackendRequest::OneApi, &caps_cuda_oneapi_and_cpu()).unwrap();
     assert_eq!(result.selected, KernelBackend::OneApi);
 }
 
@@ -255,8 +252,7 @@ fn given_only_cpu_when_oneapi_forced_then_error() {
 
 #[test]
 fn given_cuda_compiled_no_runtime_when_gpu_requested_then_falls_back_to_cpu() {
-    let result =
-        select_backend(BackendRequest::Gpu, &caps_cuda_compiled_no_runtime()).unwrap();
+    let result = select_backend(BackendRequest::Gpu, &caps_cuda_compiled_no_runtime()).unwrap();
     assert_eq!(result.selected, KernelBackend::CpuRust);
     assert!(
         result.rationale.contains("falling back"),
@@ -267,8 +263,7 @@ fn given_cuda_compiled_no_runtime_when_gpu_requested_then_falls_back_to_cpu() {
 
 #[test]
 fn given_cuda_compiled_no_runtime_when_cuda_forced_then_error() {
-    let err =
-        select_backend(BackendRequest::Cuda, &caps_cuda_compiled_no_runtime()).unwrap_err();
+    let err = select_backend(BackendRequest::Cuda, &caps_cuda_compiled_no_runtime()).unwrap_err();
     assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
 }
 
@@ -281,10 +276,7 @@ fn given_cuda_compiled_no_runtime_when_cuda_forced_then_error() {
 #[serial(bitnet_env)]
 fn given_gpu_fake_oneapi_when_probing_then_oneapi_detected() {
     with_vars(
-        [
-            ("BITNET_GPU_FAKE", Some("oneapi")),
-            ("BITNET_STRICT_NO_FAKE_GPU", None::<&str>),
-        ],
+        [("BITNET_GPU_FAKE", Some("oneapi")), ("BITNET_STRICT_NO_FAKE_GPU", None::<&str>)],
         || {
             let info = bitnet_kernels::gpu_utils::get_gpu_info();
             // GPU_FAKE for oneapi doesn't directly set info.cuda,
@@ -299,10 +291,7 @@ fn given_gpu_fake_oneapi_when_probing_then_oneapi_detected() {
 #[serial(bitnet_env)]
 fn given_gpu_fake_cuda_when_probing_then_cuda_detected() {
     with_vars(
-        [
-            ("BITNET_GPU_FAKE", Some("cuda")),
-            ("BITNET_STRICT_NO_FAKE_GPU", None::<&str>),
-        ],
+        [("BITNET_GPU_FAKE", Some("cuda")), ("BITNET_STRICT_NO_FAKE_GPU", None::<&str>)],
         || {
             let info = bitnet_kernels::gpu_utils::get_gpu_info();
             assert!(info.cuda, "BITNET_GPU_FAKE=cuda should fake CUDA detection");
@@ -319,10 +308,7 @@ fn given_gpu_fake_cuda_when_probing_then_cuda_detected() {
 #[should_panic(expected = "BITNET_GPU_FAKE is set but strict mode forbids fake GPU")]
 fn given_strict_mode_when_fake_gpu_then_panics() {
     with_vars(
-        [
-            ("BITNET_GPU_FAKE", Some("cuda")),
-            ("BITNET_STRICT_NO_FAKE_GPU", Some("1")),
-        ],
+        [("BITNET_GPU_FAKE", Some("cuda")), ("BITNET_STRICT_NO_FAKE_GPU", Some("1"))],
         || {
             bitnet_kernels::gpu_utils::get_gpu_info();
         },
@@ -333,10 +319,7 @@ fn given_strict_mode_when_fake_gpu_then_panics() {
 #[serial(bitnet_env)]
 fn given_strict_mode_no_fake_when_probing_then_ok() {
     with_vars(
-        [
-            ("BITNET_GPU_FAKE", None::<&str>),
-            ("BITNET_STRICT_NO_FAKE_GPU", Some("1")),
-        ],
+        [("BITNET_GPU_FAKE", None::<&str>), ("BITNET_STRICT_NO_FAKE_GPU", Some("1"))],
         || {
             // Should not panic — no fake GPU set
             let _info = bitnet_kernels::gpu_utils::get_gpu_info();
@@ -353,10 +336,7 @@ fn given_no_backends_when_auto_then_no_backend_error() {
     let err = select_backend(BackendRequest::Auto, &caps_none()).unwrap_err();
     assert!(matches!(err, BackendSelectionError::NoBackendAvailable));
     let msg = err.to_string();
-    assert!(
-        msg.contains("no kernel backend"),
-        "error should mention no backend: {msg}"
-    );
+    assert!(msg.contains("no kernel backend"), "error should mention no backend: {msg}");
 }
 
 #[test]
@@ -391,15 +371,14 @@ fn given_cuda_ffi_cpu_when_auto_then_cuda_wins_over_ffi() {
 
 #[test]
 fn given_oneapi_compiled_no_runtime_when_auto_then_cpu() {
-    let result =
-        select_backend(BackendRequest::Auto, &caps_oneapi_compiled_no_runtime()).unwrap();
+    let result = select_backend(BackendRequest::Auto, &caps_oneapi_compiled_no_runtime()).unwrap();
     assert_eq!(result.selected, KernelBackend::CpuRust);
 }
 
 #[test]
 fn given_oneapi_compiled_no_runtime_when_oneapi_forced_then_error() {
-    let err = select_backend(BackendRequest::OneApi, &caps_oneapi_compiled_no_runtime())
-        .unwrap_err();
+    let err =
+        select_backend(BackendRequest::OneApi, &caps_oneapi_compiled_no_runtime()).unwrap_err();
     assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
 }
 
@@ -571,16 +550,10 @@ fn given_kernel_backends_then_requires_gpu_is_correct() {
 #[test]
 #[serial(bitnet_env)]
 fn given_gpu_fake_empty_when_probing_then_no_fake() {
-    with_vars(
-        [
-            ("BITNET_GPU_FAKE", Some("")),
-            ("BITNET_STRICT_NO_FAKE_GPU", None::<&str>),
-        ],
-        || {
-            // Should not fake any GPU — just real detection
-            let _info = bitnet_kernels::gpu_utils::get_gpu_info();
-        },
-    );
+    with_vars([("BITNET_GPU_FAKE", Some("")), ("BITNET_STRICT_NO_FAKE_GPU", None::<&str>)], || {
+        // Should not fake any GPU — just real detection
+        let _info = bitnet_kernels::gpu_utils::get_gpu_info();
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -631,11 +604,7 @@ fn given_oneapi_only_gpu_when_gpu_requested_then_oneapi() {
 #[test]
 fn given_auto_cpu_only_then_rationale_mentions_auto() {
     let result = select_backend(BackendRequest::Auto, &caps_cpu_only()).unwrap();
-    assert!(
-        result.rationale.contains("auto"),
-        "rationale: {}",
-        result.rationale
-    );
+    assert!(result.rationale.contains("auto"), "rationale: {}", result.rationale);
 }
 
 #[test]
