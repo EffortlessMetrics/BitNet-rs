@@ -467,15 +467,7 @@ fn test_fish_export_format() {
     let _g3 = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
 
     let output = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "xtask",
-            "--no-default-features",
-            "--",
-            "setup-cpp-auto",
-            "--emit=fish",
-        ])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=fish"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -522,15 +514,7 @@ fn test_pwsh_export_format() {
     let _g3 = EnvGuard::clear("BITNET_CROSSVAL_LIBDIR");
 
     let output = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "xtask",
-            "--no-default-features",
-            "--",
-            "setup-cpp-auto",
-            "--emit=pwsh",
-        ])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=pwsh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");
@@ -677,15 +661,7 @@ fn test_windows_pwsh_path() {
     let _g2 = EnvGuard::clear("BITNET_CPP_PATH");
 
     let output = Command::new("cargo")
-        .args([
-            "run",
-            "-p",
-            "xtask",
-            "--no-default-features",
-            "--",
-            "setup-cpp-auto",
-            "--emit=pwsh",
-        ])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "setup-cpp-auto", "--emit=pwsh"])
         .current_dir(workspace_root())
         .output()
         .expect("Failed to run setup-cpp-auto");

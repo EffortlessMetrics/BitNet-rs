@@ -671,10 +671,7 @@ fn find_lib_dir(build: &Path) -> Result<PathBuf> {
         let path = entry.path();
         if let Some(name) = path.file_name().and_then(|s| s.to_str())
             && (name.contains("llama") || name.contains("bitnet"))
-            && (name.ends_with(".so")
-                || name.ends_with(".dylib")
-                || name.ends_with(".dll")
-                || name.ends_with(".a"))
+            && (name.ends_with(".so") || name.ends_with(".dylib") || name.ends_with(".dll") || name.ends_with(".a"))
             && let Some(parent) = path.parent()
         {
             return Ok(parent.to_path_buf());
@@ -718,6 +715,7 @@ pub fn run(emit: Emit) -> Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|_| home.join(".cache/bitnet_cpp"));
 
+
     // 1) Fetch/build C++ reference if not present
     if !repo.exists() {
         eprintln!("[bitnet] C++ reference not found at {}", repo.display());
@@ -731,6 +729,7 @@ pub fn run(emit: Emit) -> Result<()> {
         if !output.status.success() {
             // Capture stderr for detailed error diagnostics
             let stderr = String::from_utf8_lossy(&output.stderr);
+
 
             // Preserve full error context for upstream error classification
             bail!(
