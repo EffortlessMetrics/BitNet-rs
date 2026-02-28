@@ -366,6 +366,7 @@ pub fn rope_forward(input: &[f32], output: &mut [f32], config: &RopeConfig) -> R
         {
             return Ok(());
         }
+        // GPU launch failed — fall through to CPU path
     }
     rope_forward_cpu(input, output, config)
 }
