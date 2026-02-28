@@ -3,17 +3,18 @@
 //! Covers:
 //! - ROCm availability field in [`GpuCapabilities`] and [`DeviceProbe`]
 //! - Vulkan compile-time and runtime probes (`vulkan_compiled`, `vulkan_available_runtime`)
-//! - oneAPI feature flag (compile-time gate; no runtime function yet)
-//! - GPU feature flag interactions (`gpu` implies `cuda` OR `rocm`)
+//! - oneAPI compile-time and runtime probes (`oneapi_compiled`, `oneapi_available_runtime`)
+//! - GPU feature flag interactions (`gpu` implies `cuda` OR `rocm` OR `oneapi`)
 //! - [`DeviceProbe`] struct clone/roundtrip validation
 //! - Cross-consistency between [`probe_gpu`] and [`probe_device`]
 //!
 //! Tests run under `--no-default-features --features cpu` unless gated with
 //! `#[cfg(any(feature = "gpu", ...))]`.
 
+#[allow(unused_imports)]
 use bitnet_device_probe::{
-    DeviceCapabilities, gpu_available_runtime, gpu_compiled, probe_device, probe_gpu,
-    vulkan_available_runtime, vulkan_compiled,
+    DeviceCapabilities, gpu_available_runtime, gpu_compiled, oneapi_available_runtime,
+    oneapi_compiled, probe_device, probe_gpu, vulkan_available_runtime, vulkan_compiled,
 };
 use proptest::prelude::*;
 
@@ -35,18 +36,18 @@ fn probe_gpu_rocm_available_false_without_gpu_feature() {
     assert!(!probe_gpu().rocm_available, "rocm_available must be false without GPU feature");
 }
 
-// `GpuCapabilities.available` must equal `cuda_available || rocm_available`.
+// `GpuCapabilities.available` must equal `cuda_available || rocm_available || oneapi_available`.
 //
 // This invariant must hold regardless of the GPU feature set.
 proptest! {
     #[test]
-    fn probe_gpu_available_equals_cuda_or_rocm(_n in 0u8..=8) {
+    fn probe_gpu_available_equals_cuda_or_rocm_or_oneapi(_n in 0u8..=8) {
         let caps = probe_gpu();
         prop_assert_eq!(
             caps.available,
-            caps.cuda_available || caps.rocm_available,
-            "available must equal cuda_available || rocm_available, got: available={}, cuda={}, rocm={}",
-            caps.available, caps.cuda_available, caps.rocm_available
+            caps.cuda_available || caps.rocm_available || caps.oneapi_available,
+            "available must equal cuda_available || rocm_available || oneapi_available, got: available={}, cuda={}, rocm={}, oneapi={}",
+            caps.available, caps.cuda_available, caps.rocm_available, caps.oneapi_available
         );
     }
 }
@@ -240,13 +241,14 @@ fn device_probe_clone_roundtrip() {
     assert_eq!(probe.clone(), probe, "DeviceProbe clone must equal original");
 }
 
-/// `DeviceProbe` Debug output must contain both availability field names.
+/// `DeviceProbe` Debug output must contain all availability field names.
 #[test]
 fn device_probe_debug_contains_rocm_and_cuda_fields() {
     let probe = probe_device();
     let debug_str = format!("{probe:?}");
     assert!(debug_str.contains("rocm_available"), "Debug must contain 'rocm_available'");
     assert!(debug_str.contains("cuda_available"), "Debug must contain 'cuda_available'");
+    assert!(debug_str.contains("oneapi_available"), "Debug must contain 'oneapi_available'");
 }
 
 // `DeviceProbe` fields are all consistent: the probe never panics.
@@ -326,26 +328,57 @@ fn vulkan_compiled_is_false_with_cpu_only_features() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// oneAPI feature flag (compile-time gate only; no runtime function yet)
+// oneAPI backend: oneapi_compiled / oneapi_available_runtime
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// The `oneapi` feature flag can be queried at compile time without panicking.
-///
-/// This test documents that the feature exists in `Cargo.toml` as a future
-/// extension point. When a `oneapi_compiled()` function is added to the public
-/// API, this test should be updated to call it.
+/// `oneapi_compiled()` must equal `cfg!(feature = "oneapi")` at compile time.
 #[test]
-fn oneapi_feature_flag_is_accessible() {
-    // oneAPI feature exists as a Cargo gate but has no runtime function yet.
-    // Verify the feature flag can be evaluated and produces a bool.
-    let _oneapi_enabled: bool = cfg!(feature = "oneapi");
+fn oneapi_compiled_reflects_feature_flag() {
+    assert_eq!(oneapi_compiled(), cfg!(feature = "oneapi"));
 }
 
-/// Without the `oneapi` feature, it must evaluate to `false`.
+/// Without the `oneapi` feature, `oneapi_compiled()` must return `false`.
 #[cfg(not(feature = "oneapi"))]
 #[test]
-fn oneapi_feature_disabled_in_cpu_build() {
-    assert!(!cfg!(feature = "oneapi"), "oneapi feature must be false in cpu-only builds");
+fn oneapi_compiled_false_without_oneapi_feature() {
+    assert!(!oneapi_compiled(), "oneapi_compiled() must be false without 'oneapi' feature");
+}
+
+// `oneapi_compiled()` is a compile-time constant; repeated calls must agree.
+proptest! {
+    #[test]
+    fn oneapi_compiled_is_stable_across_calls(_n in 0u8..=8) {
+        prop_assert_eq!(oneapi_compiled(), oneapi_compiled());
+    }
+}
+
+/// Without the `oneapi` feature, `oneapi_available_runtime()` must return `false`.
+#[cfg(not(feature = "oneapi"))]
+#[test]
+fn oneapi_available_runtime_false_without_oneapi_feature() {
+    assert!(
+        !oneapi_available_runtime(),
+        "oneapi_available_runtime() must be false without 'oneapi' feature"
+    );
+}
+
+// `oneapi_available_runtime()` is deterministic across consecutive calls.
+proptest! {
+    #[test]
+    fn oneapi_available_runtime_is_deterministic(_n in 0u8..=8) {
+        prop_assert_eq!(oneapi_available_runtime(), oneapi_available_runtime());
+    }
+}
+
+/// When oneAPI is not compiled, `oneapi_available_runtime()` must be `false`.
+#[test]
+fn oneapi_available_implies_oneapi_compiled() {
+    if oneapi_available_runtime() {
+        assert!(
+            oneapi_compiled(),
+            "oneapi_available_runtime()=true requires oneapi_compiled()=true"
+        );
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -354,23 +387,28 @@ fn oneapi_feature_disabled_in_cpu_build() {
 
 /// `gpu_compiled()` must reflect whether ANY GPU backend was compiled.
 ///
-/// `gpu_compiled()` returns `true` iff `feature="gpu"`, `feature="cuda"`, or
-/// `feature="rocm"` is active.
+/// `gpu_compiled()` returns `true` iff `feature="gpu"`, `feature="cuda"`,
+/// `feature="rocm"`, or `feature="oneapi"` is active.
 #[test]
 fn gpu_compiled_reflects_any_gpu_backend() {
-    let expected = cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm"));
-    assert_eq!(gpu_compiled(), expected, "gpu_compiled() must reflect gpu/cuda/rocm features");
+    let expected =
+        cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi"));
+    assert_eq!(
+        gpu_compiled(),
+        expected,
+        "gpu_compiled() must reflect gpu/cuda/rocm/oneapi features"
+    );
 }
 
-/// When `gpu_compiled()` is `true`, at least one of `cuda_compiled` or
-/// `rocm_compiled` in `DeviceCapabilities` must also be `true`.
+/// When `gpu_compiled()` is `true`, at least one of `cuda_compiled`,
+/// `rocm_compiled`, or `oneapi_compiled` in `DeviceCapabilities` must also be `true`.
 #[test]
-fn gpu_compiled_implies_cuda_or_rocm_compiled_in_device_caps() {
+fn gpu_compiled_implies_cuda_or_rocm_or_oneapi_compiled_in_device_caps() {
     if gpu_compiled() {
         let caps = DeviceCapabilities::detect();
         assert!(
-            caps.cuda_compiled || caps.rocm_compiled,
-            "gpu_compiled()=true must imply cuda_compiled || rocm_compiled in DeviceCapabilities"
+            caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled,
+            "gpu_compiled()=true must imply cuda_compiled || rocm_compiled || oneapi_compiled in DeviceCapabilities"
         );
     }
 }
@@ -397,7 +435,7 @@ fn device_caps_cuda_compiled_reflects_feature_flag() {
     );
 }
 
-/// `cuda_compiled || rocm_compiled` must equal `gpu_compiled()`.
+/// `cuda_compiled || rocm_compiled || oneapi_compiled` must equal `gpu_compiled()`.
 ///
 /// This is the core invariant: the combined compiled-backend flags must agree
 /// with the unified `gpu_compiled()` predicate.
@@ -405,25 +443,26 @@ fn device_caps_cuda_compiled_reflects_feature_flag() {
 fn device_caps_or_of_backends_equals_gpu_compiled() {
     let caps = DeviceCapabilities::detect();
     assert_eq!(
-        caps.cuda_compiled || caps.rocm_compiled,
+        caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled,
         gpu_compiled(),
-        "(cuda_compiled || rocm_compiled) must equal gpu_compiled()"
+        "(cuda_compiled || rocm_compiled || oneapi_compiled) must equal gpu_compiled()"
     );
 }
 
 /// Without GPU feature, both runtime availability flags must be `false` and
 /// `gpu_available_runtime()` must be `false`.
-#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 #[test]
 fn no_gpu_feature_means_no_runtime_availability() {
     assert!(!gpu_available_runtime(), "gpu_available_runtime() must be false without GPU feature");
     let caps = DeviceCapabilities::detect();
     assert!(!caps.cuda_runtime, "cuda_runtime must be false without GPU feature");
     assert!(!caps.rocm_runtime, "rocm_runtime must be false without GPU feature");
+    assert!(!caps.oneapi_runtime, "oneapi_runtime must be false without GPU feature");
 }
 
 /// Without GPU feature, `probe_gpu().available` must be `false`.
-#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm")))]
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 #[test]
 fn probe_gpu_available_false_without_gpu_feature() {
     assert!(!probe_gpu().available, "available must be false without GPU feature");
@@ -462,21 +501,24 @@ proptest! {
 // DeviceCapabilities: Debug output mentions new fields
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// `DeviceCapabilities` Debug output must mention `rocm_compiled` and `rocm_runtime`.
+/// `DeviceCapabilities` Debug output must mention `rocm_compiled`, `rocm_runtime`, and oneapi fields.
 #[test]
 fn device_capabilities_debug_mentions_rocm_fields() {
     let caps = DeviceCapabilities::detect();
     let debug_str = format!("{caps:?}");
     assert!(debug_str.contains("rocm_compiled"), "Debug must contain 'rocm_compiled'");
     assert!(debug_str.contains("rocm_runtime"), "Debug must contain 'rocm_runtime'");
+    assert!(debug_str.contains("oneapi_compiled"), "Debug must contain 'oneapi_compiled'");
+    assert!(debug_str.contains("oneapi_runtime"), "Debug must contain 'oneapi_runtime'");
 }
 
-/// `GpuCapabilities` Debug output must mention `rocm_available`.
+/// `GpuCapabilities` Debug output must mention `rocm_available` and `oneapi_available`.
 #[test]
 fn gpu_capabilities_debug_mentions_rocm_available() {
     let caps = probe_gpu();
     let debug_str = format!("{caps:?}");
     assert!(debug_str.contains("rocm_available"), "Debug must contain 'rocm_available'");
+    assert!(debug_str.contains("oneapi_available"), "Debug must contain 'oneapi_available'");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -491,12 +533,18 @@ fn snapshot_gpu_capabilities_debug_no_gpu_feature() {
 }
 
 /// Snapshot: `DeviceCapabilities` GPU-related fields with cpu-only feature.
+#[cfg(not(any(feature = "gpu", feature = "cuda", feature = "rocm", feature = "oneapi")))]
 #[test]
 fn snapshot_device_capabilities_gpu_fields_no_gpu() {
     let caps = DeviceCapabilities::detect();
     let fields = format!(
-        "cuda_compiled={} rocm_compiled={} cuda_runtime={} rocm_runtime={}",
-        caps.cuda_compiled, caps.rocm_compiled, caps.cuda_runtime, caps.rocm_runtime
+        "cuda_compiled={} rocm_compiled={} oneapi_compiled={} cuda_runtime={} rocm_runtime={} oneapi_runtime={}",
+        caps.cuda_compiled,
+        caps.rocm_compiled,
+        caps.oneapi_compiled,
+        caps.cuda_runtime,
+        caps.rocm_runtime,
+        caps.oneapi_runtime
     );
     insta::assert_snapshot!("device_capabilities_gpu_fields_no_gpu", fields);
 }
@@ -511,7 +559,9 @@ fn snapshot_vulkan_compiled_no_vulkan_feature() {
 #[test]
 fn snapshot_device_probe_availability_no_gpu() {
     let probe = probe_device();
-    let fields =
-        format!("cuda_available={} rocm_available={}", probe.cuda_available, probe.rocm_available);
+    let fields = format!(
+        "cuda_available={} rocm_available={} oneapi_available={}",
+        probe.cuda_available, probe.rocm_available, probe.oneapi_available
+    );
     insta::assert_snapshot!("device_probe_availability_no_gpu", fields);
 }
