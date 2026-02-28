@@ -17,6 +17,7 @@ pub mod qk256_utils;
 pub mod quant;
 pub mod security;
 pub mod transformer;
+pub mod validator;
 pub mod weight_loader;
 pub mod weight_mapper;
 
