@@ -4,6 +4,7 @@
 //! CPU/GPU backends, and comprehensive sampling strategies.
 
 pub mod backends;
+pub mod batch;
 pub mod cache;
 pub mod config;
 pub mod cpu_opt;
@@ -35,6 +36,7 @@ mod tensor_ext;
 pub(crate) use tensor_ext::TensorDeviceExt;
 
 pub use backends::{Backend, CpuBackend, GpuBackend};
+pub use batch::{BatchConfig, BatchRequest, BatchResult, BatchScheduler, SingleResult};
 pub use cache::{CacheConfig, KVCache};
 pub use config::{GenerationConfig, InferenceConfig};
 pub use engine::{InferenceEngine, InferenceResult};
