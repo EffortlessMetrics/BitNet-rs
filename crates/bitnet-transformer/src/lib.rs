@@ -61,8 +61,11 @@ fn linear_with_optional_bias(
     Ok(Linear::new(weight, bias))
 }
 
-/// Helper to create layer norm with optional bias.
-/// If `bias` is missing we fall back to RMSNorm (no bias).
+/// Helper to create layer norm.
+///
+/// BitNet checkpoints are expected to provide both layer norm `weight` and `bias`.
+/// Missing bias is treated as a model loading/configuration error instead of silently
+/// changing normalization behavior.
 fn layer_norm_with_optional_bias(
     normalized_shape: usize,
     eps: f64,
@@ -76,15 +79,11 @@ fn layer_norm_with_optional_bias(
             Ok(LayerNorm::new(weight, bias, eps))
         }
         Err(_) => {
-            // No bias → LayerNorm without bias (but WITH mean subtraction)
-            // IMPORTANT: Use LayerNorm::new_no_bias (remove_mean=true) NOT rms_norm (remove_mean=false)
-            // because the gamma weights in GGUF are calibrated for LayerNorm semantics (mean subtraction).
-            // bitnet.cpp uses full LayerNorm even when bias is absent.
-            tracing::debug!(
-                "Bias tensor missing for norm layer; using LayerNorm without bias (mean subtraction enabled) [{}]",
+            let _ = weight;
+            candle_core::bail!(
+                "Missing required LayerNorm bias tensor for shape [{}]",
                 normalized_shape
-            );
-            Ok(LayerNorm::new_no_bias(weight, eps))
+            )
         }
     }
 }
@@ -1850,8 +1849,8 @@ mod tests {
     }
 
     #[test]
-    fn test_layer_norm_with_optional_bias() -> candle_core::Result<()> {
-        // Test layer_norm_with_optional_bias helper with RMSNorm (no bias)
+    fn test_layer_norm_with_optional_bias_requires_bias() -> candle_core::Result<()> {
+        // Missing bias should be a hard error to avoid silent behavior changes.
         let device = Device::Cpu;
         let hidden_size = 128;
         let eps = 1e-5;
@@ -1865,25 +1864,11 @@ mod tests {
 
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
 
-        // Create LayerNorm (should use RMSNorm path due to missing bias)
-        let layer_norm = layer_norm_with_optional_bias(hidden_size, eps, vb)?;
-
-        // Test forward pass
-        let input_data: Vec<f32> =
-            (0..hidden_size).map(|i| (i as f32 / hidden_size as f32).sin()).collect();
-        let input = Tensor::from_slice(&input_data, (1, hidden_size), &device)?;
-
-        let output = layer_norm.forward(&input)?;
-
-        // Verify output shape
-        assert_eq!(output.shape(), input.shape());
-
-        // Verify no NaN/Inf
-        let vec_data: Vec<f32> = output.flatten_all()?.to_vec1()?;
-        let has_nan = vec_data.iter().any(|x| x.is_nan());
-        let has_inf = vec_data.iter().any(|x| x.is_infinite());
-        assert!(!has_nan, "Output should not contain NaN");
-        assert!(!has_inf, "Output should not contain Inf");
+        let err = layer_norm_with_optional_bias(hidden_size, eps, vb).unwrap_err();
+        assert!(
+            err.to_string().contains("Missing required LayerNorm bias tensor"),
+            "unexpected error: {err}"
+        );
 
         Ok(())
     }
