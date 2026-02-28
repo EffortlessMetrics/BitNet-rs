@@ -1,0 +1,17 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelSnapshot\n{ kernel: \"softmax\", size_class: \"small\", shape: vec![4], output: out, }"
+---
+KernelSnapshot {
+    kernel: "softmax",
+    size_class: "small",
+    shape: [
+        4,
+    ],
+    output: [
+        0.131531,
+        0.346937,
+        0.233524,
+        0.288008,
+    ],
+}

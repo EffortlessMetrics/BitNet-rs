@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelConfig\n{\n    kernel: \"silu\", work_group_size: 256, precision: \"f32\",\n    vectorisation_width: 8,\n}"
+---
+KernelConfig {
+    kernel: "silu",
+    work_group_size: 256,
+    precision: "f32",
+    vectorisation_width: 8,
+}

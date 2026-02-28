@@ -1,0 +1,18 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelSnapshot\n{ kernel: \"matmul\", size_class: \"small\", shape: vec![m, n], output: out, }"
+---
+KernelSnapshot {
+    kernel: "matmul",
+    size_class: "small",
+    shape: [
+        2,
+        2,
+    ],
+    output: [
+        1.875694,
+        1.660951,
+        0.791125,
+        0.784363,
+    ],
+}
