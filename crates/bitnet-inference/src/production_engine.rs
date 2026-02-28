@@ -376,7 +376,8 @@ impl ProductionInferenceEngine {
             caps.compiled_backends().iter().map(|b| b.to_string()).collect();
         let selected =
             caps.best_available().map(|b| b.to_string()).unwrap_or_else(|| requested.to_string());
-        let backend_startup_summary = BackendStartupSummary::new(requested, detected, &selected);
+        let backend_startup_summary =
+            BackendStartupSummary::from_caps(requested, detected, &selected, &caps);
         info!("Backend: {}", backend_startup_summary.log_line());
 
         let engine =
