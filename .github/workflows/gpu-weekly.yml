@@ -1,0 +1,250 @@
+name: GPU Weekly Comprehensive
+
+on:
+  schedule:
+    - cron: '0 5 * * 0'  # 5 AM UTC every Sunday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpu-weekly-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  full-feature-matrix:
+    name: "Full Matrix (${{ matrix.label }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: no-features
+            flags: "--no-default-features"
+          - label: cpu
+            flags: "--no-default-features --features cpu"
+          - label: gpu
+            flags: "--no-default-features --features gpu"
+            allow_failure: true
+          - label: cpu+gpu
+            flags: "--no-default-features --features cpu,gpu"
+            allow_failure: true
+          - label: cpu+avx2
+            flags: "--no-default-features --features cpu,avx2"
+            env:
+              RUSTFLAGS: "-C target-feature=+avx2"
+          - label: cpu+full-cli
+            flags: "--no-default-features --features cpu,full-cli"
+          - label: cpu+fixtures
+            flags: "--no-default-features --features cpu,fixtures"
+          - label: rocm (compile only)
+            flags: "--no-default-features --features rocm"
+            allow_failure: true
+            check_only: true
+          - label: vulkan (compile only)
+            flags: "--no-default-features --features vulkan"
+            allow_failure: true
+            check_only: true
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-weekly-${{ matrix.label }}
+
+      - name: Compile check
+        if: ${{ matrix.check_only == true }}
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        env:
+          RUSTFLAGS: ${{ matrix.env.RUSTFLAGS || '' }}
+        run: cargo check --workspace --locked ${{ matrix.flags }}
+
+      - name: Build
+        if: ${{ matrix.check_only != true }}
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        env:
+          RUSTFLAGS: ${{ matrix.env.RUSTFLAGS || '' }}
+        run: cargo build --workspace --locked ${{ matrix.flags }}
+
+      - name: Test
+        if: ${{ matrix.check_only != true }}
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        env:
+          RUSTFLAGS: ${{ matrix.env.RUSTFLAGS || '' }}
+        run: cargo test --workspace --locked ${{ matrix.flags }} -- --include-ignored
+
+  extended-fuzz:
+    name: "Extended Fuzz (${{ matrix.target }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - kernel_matmul
+          - kernel_dispatch
+          - tensor_shape_validate
+          - kv_cache_ops
+          - quantization_i2s
+          - quantization_tl1
+          - quantization_tl2
+          - gguf_parser
+          - gguf_header
+          - safetensors_parser
+          - logits_transforms
+          - sampling_no_panic
+          - tokenizer_encode
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install nightly Rust (required by cargo-fuzz)
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: nightly
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-weekly-fuzz-${{ matrix.target }}
+
+      - name: Restore fuzz corpus
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked --force
+
+      - name: Run fuzz target (1800 seconds)
+        run: |
+          cd fuzz
+          cargo fuzz run ${{ matrix.target }} -- \
+            -max_total_time=1800 -rss_limit_mb=4096 -timeout=10 2>&1
+        env:
+          RUSTUP_TOOLCHAIN: nightly
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}-${{ github.run_id }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          retention-days: 30
+
+  msrv-check:
+    name: MSRV Check
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - id: msrv
+        name: Read MSRV from rust-toolchain.toml
+        shell: bash
+        run: |
+          MSRV=$(grep -Eo 'channel\s*=\s*"[0-9.]+"' rust-toolchain.toml | sed -E 's/.*"([0-9.]+)".*/\1/')
+          if [ -z "$MSRV" ]; then
+            echo "Could not parse channel from rust-toolchain.toml"; exit 1
+          fi
+          echo "msrv=$MSRV" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust (${{ steps.msrv.outputs.msrv }})
+        uses: dtolnay/rust-toolchain@6d653acede28d24f02e3cd41383119e8b1b35921  # master
+        with:
+          toolchain: ${{ steps.msrv.outputs.msrv }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: weekly-msrv
+
+      - name: MSRV check (cpu)
+        run: cargo check --workspace --all-targets --locked --no-default-features --features cpu
+
+      - name: MSRV check (gpu compile)
+        continue-on-error: true
+        run: cargo check --workspace --all-targets --locked --no-default-features --features gpu
+
+  clippy-all-features:
+    name: Clippy (All Features)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+          components: clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-weekly-clippy
+
+      - name: Clippy (cpu)
+        run: cargo clippy --workspace --all-targets --locked --no-default-features --features cpu -- -D warnings
+
+      - name: Clippy (gpu)
+        continue-on-error: true
+        run: cargo clippy --workspace --all-targets --locked --no-default-features --features gpu -- -D warnings
+
+  dependency-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+
+      - name: Run cargo audit
+        run: cargo audit
+
+      - name: Run cargo deny
+        run: cargo deny check
+
+      - name: Check for yanked dependencies
+        run: cargo audit --deny yanked
+
+      - name: Upload audit report
+        if: always()
+        run: |
+          cargo audit --format json > audit-results.json || true
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4
+        with:
+          name: audit-results-${{ github.run_id }}
+          path: audit-results.json
+          retention-days: 30

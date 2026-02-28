@@ -1,0 +1,200 @@
+name: GPU Nightly Tests
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 3 AM UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpu-nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  feature-matrix:
+    name: "Feature Matrix (${{ matrix.label }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: cpu
+            features: "cpu"
+          - label: gpu
+            features: "gpu"
+            allow_failure: true
+          - label: cpu+gpu
+            features: "cpu,gpu"
+            allow_failure: true
+          - label: cpu+avx2
+            features: "cpu,avx2"
+            env:
+              RUSTFLAGS: "-C target-feature=+avx2"
+
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-nightly-${{ matrix.label }}
+
+      - name: Build
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        env:
+          RUSTFLAGS: ${{ matrix.env.RUSTFLAGS || '' }}
+        run: cargo build --workspace --locked --no-default-features --features ${{ matrix.features }}
+
+      - name: Test
+        continue-on-error: ${{ matrix.allow_failure == true }}
+        env:
+          RUSTFLAGS: ${{ matrix.env.RUSTFLAGS || '' }}
+        run: cargo test --workspace --locked --no-default-features --features ${{ matrix.features }} -- --include-ignored
+
+  stress-tests:
+    name: Stress Tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-nightly-stress
+
+      - name: Run kernel stress tests
+        run: |
+          cargo test -p bitnet-kernels --locked --no-default-features --features cpu \
+            -- --ignored --nocapture 2>&1 | tail -50
+
+      - name: Run quantization stress tests
+        run: |
+          cargo test -p bitnet-quantization --locked --no-default-features --features cpu \
+            -- --ignored --nocapture 2>&1 | tail -50
+
+  benchmark-regression:
+    name: Benchmark Regression
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-nightly-bench
+
+      - name: Run benchmarks
+        run: |
+          cargo bench --no-default-features --features cpu -- --output-format bencher \
+            | tee bench-output.txt
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: bench-output.txt
+          retention-days: 30
+
+  fuzz-extended:
+    name: "Fuzz (${{ matrix.target }})"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - kernel_matmul
+          - kernel_dispatch
+          - tensor_shape_validate
+          - kv_cache_ops
+          - quantization_i2s
+          - quantization_tl1
+          - quantization_tl2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install nightly Rust (required by cargo-fuzz)
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: nightly
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-nightly-fuzz-${{ matrix.target }}
+
+      - name: Restore fuzz corpus
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked --force
+
+      - name: Run fuzz target (300 seconds)
+        run: |
+          cd fuzz
+          cargo fuzz run ${{ matrix.target }} -- \
+            -max_total_time=300 -rss_limit_mb=4096 -timeout=10 2>&1
+        env:
+          RUSTUP_TOOLCHAIN: nightly
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}-${{ github.run_id }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          retention-days: 30
+
+  docs-build:
+    name: Documentation Build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.92.0"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: gpu-nightly-docs
+
+      - name: Build documentation
+        run: cargo doc --workspace --no-deps --locked --no-default-features --features cpu
+        env:
+          RUSTDOCFLAGS: "-D warnings"
