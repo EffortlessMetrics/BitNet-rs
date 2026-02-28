@@ -1,6 +1,6 @@
 # BitNet.cpp API Discovery - Documentation Index
 
-**Discovery Date**: October 25, 2025  
+**Discovery Date**: October 25, 2025
 **Status**: COMPLETE - All APIs identified and documented
 
 ## Overview
@@ -9,9 +9,22 @@ This directory contains comprehensive documentation of the BitNet.cpp API discov
 
 ## Files in This Directory
 
+### 0. apple-silicon-backend-roadmap.md (New)
+**Purpose**: Phased implementation plan for Apple GPU/NPU support in BitNet-rs
+**Audience**: Runtime/kernel/inference contributors planning Apple backend work
+
+**Contents**:
+- Current-state backend audit
+- Device abstraction and probing changes
+- Metal-first backend plan
+- Optional Core ML/MLCompute (ANE) integration path
+- Feature-flag strategy, roadmap, risks, and success criteria
+
+**When to use**: Planning and sequencing Apple Silicon acceleration work
+
 ### 1. bitnet-cpp-api-requirements.md (Full Reference)
-**Purpose**: Complete API documentation with implementation examples  
-**Audience**: Developers implementing the wrapper  
+**Purpose**: Complete API documentation with implementation examples
+**Audience**: Developers implementing the wrapper
 **Length**: 371 lines
 
 **Contents**:
@@ -29,8 +42,8 @@ This directory contains comprehensive documentation of the BitNet.cpp API discov
 **When to use**: For detailed implementation, full API reference, build setup
 
 ### 2. bitnet-cpp-api-quick-reference.md (Cheat Sheet)
-**Purpose**: Quick lookup of functions and patterns  
-**Audience**: All developers  
+**Purpose**: Quick lookup of functions and patterns
+**Audience**: All developers
 **Length**: 161 lines
 
 **Contents**:
@@ -48,8 +61,8 @@ This directory contains comprehensive documentation of the BitNet.cpp API discov
 **When to use**: Quick lookup, code patterns, parameter reference
 
 ### 3. bitnet-cpp-wrapper-implementation-guide.md (Step-by-Step)
-**Purpose**: Implementation roadmap with specific steps  
-**Audience**: Developer implementing `bitnet_cpp_wrapper.cc`  
+**Purpose**: Implementation roadmap with specific steps
+**Audience**: Developer implementing `bitnet_cpp_wrapper.cc`
 **Length**: 241 lines
 
 **Contents**:
@@ -344,7 +357,7 @@ All items should be checked before implementation is complete:
 
 ---
 
-**Last Updated**: October 25, 2025  
+**Last Updated**: October 25, 2025
 **Next Update**: After Phase 1 implementation complete
 
 
