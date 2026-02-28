@@ -21,6 +21,11 @@ All notable changes to bitnet-rs will be documented in this file.
 - **StarCoder architecture support**: Add `starcoder`/`starcoder2` to architecture registry, `StarCoder` code-completion prompt template, `starcoder_49k` tokenizer entry (49K vocab).
 - **Falcon architecture support**: Add `falcon` to architecture registry (LayerNorm, GeLU defaults).
 - **HuggingFace config.json GQA parsing**: Parse `num_key_value_heads` from config.json for grouped-query attention; call `apply_architecture_defaults()` during HF model loading.
+- **Falcon prompt template**: Add `FalconChat` template with `User:`/`Falcon:` role format, `falcon_65k` tokenizer entry (65K vocab), and auto-detection from model name.
+- **CodeLlama instruct template**: Add `CodeLlamaInstruct` template with `[INST]`/`<<SYS>>` format, `codellama_32k` tokenizer entry (32K vocab), and auto-detection from model name.
+- **Cohere Command template**: Add `CohereCommand` template with `<|START_OF_TURN_TOKEN|>`/`<|CHATBOT_TOKEN|>` format, `command_256k` tokenizer entry (255K vocab), and auto-detection from GGUF and model name.
+- **InternLM chat template**: Add `InternLMChat` template (ChatML format), `internlm_103k` tokenizer entry (103K vocab), and auto-detection from model name.
+- **Architecture registry expansion**: Add CodeLlama, Cohere Command/Command-R, InternLM/InternLM2, Yi/Yi-1.5, Baichuan/Baichuan2, ChatGLM/GLM-4, and MPT to the architecture registry (36 total architecture strings).
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
