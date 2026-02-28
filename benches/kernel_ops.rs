@@ -40,11 +40,11 @@ fn bench_matmul(c: &mut Criterion) {
 
     // (M, N, K) – representative of transformer layer shapes
     let sizes: &[(usize, usize, usize)] = &[
-        (16, 16, 16),     // small
-        (64, 64, 64),     // medium
-        (128, 128, 128),  // large
-        (256, 256, 256),  // very large
-        (1, 256, 4096),   // GEMV-like (single token)
+        (16, 16, 16),    // small
+        (64, 64, 64),    // medium
+        (128, 128, 128), // large
+        (256, 256, 256), // very large
+        (1, 256, 4096),  // GEMV-like (single token)
     ];
 
     for &(m, n, k) in sizes {
@@ -87,9 +87,7 @@ fn bench_kernel_quantize(c: &mut Criterion) {
     let mut group = c.benchmark_group("kernel_quantize_i2s");
 
     for &size in &[256usize, 1024, 4096] {
-        let input: Vec<f32> = (0..size)
-            .map(|i| (i as f32 / size as f32) * 2.0 - 1.0)
-            .collect();
+        let input: Vec<f32> = (0..size).map(|i| (i as f32 / size as f32) * 2.0 - 1.0).collect();
         let mut output = vec![0u8; size / 4]; // 2 bits per element
         let mut scales = vec![0.0f32; size / 32]; // one scale per 32-element block
 
@@ -121,19 +119,17 @@ fn bench_attention_scores(c: &mut Criterion) {
 
     // (batch, heads, seq_len, head_dim)
     let configs: &[(usize, usize, usize)] = &[
-        (4, 32, 64),   // short context
-        (4, 128, 64),  // medium context
-        (4, 512, 64),  // long context
+        (4, 32, 64),  // short context
+        (4, 128, 64), // medium context
+        (4, 512, 64), // long context
     ];
 
     for &(n_heads, seq_len, head_dim) in configs {
         let elems = n_heads * seq_len * head_dim;
         group.throughput(Throughput::Elements(elems as u64));
 
-        let q = Tensor::randn(0.0f32, 1.0, &[1, n_heads, seq_len, head_dim], &device)
-            .unwrap();
-        let k = Tensor::randn(0.0f32, 1.0, &[1, n_heads, seq_len, head_dim], &device)
-            .unwrap();
+        let q = Tensor::randn(0.0f32, 1.0, &[1, n_heads, seq_len, head_dim], &device).unwrap();
+        let k = Tensor::randn(0.0f32, 1.0, &[1, n_heads, seq_len, head_dim], &device).unwrap();
         let k_t = k.transpose(2, 3).unwrap();
         let scale = (head_dim as f64).sqrt().recip();
 
@@ -169,13 +165,9 @@ fn bench_rmsnorm(c: &mut Criterion) {
         // Simulate a single-token hidden state [1, hidden_dim]
         let input = Tensor::randn(0.0f32, 1.0, &[1, hidden_dim], &device).unwrap();
 
-        group.bench_with_input(
-            BenchmarkId::new("forward", hidden_dim),
-            &hidden_dim,
-            |b, _| {
-                b.iter(|| black_box(norm.forward(black_box(&input)).unwrap()));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("forward", hidden_dim), &hidden_dim, |b, _| {
+            b.iter(|| black_box(norm.forward(black_box(&input)).unwrap()));
+        });
     }
 
     group.finish();

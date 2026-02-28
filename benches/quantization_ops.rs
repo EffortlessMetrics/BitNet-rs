@@ -19,9 +19,7 @@ fn candle_cpu() -> candle_core::Device {
 }
 
 fn generate_data(size: usize) -> Vec<f32> {
-    (0..size)
-        .map(|i| ((i as f32 / size as f32) * 2.0 - 1.0) * 0.95)
-        .collect()
+    (0..size).map(|i| ((i as f32 / size as f32) * 2.0 - 1.0) * 0.95).collect()
 }
 
 /// Pack random 2-bit codes into QK256 byte layout for benchmarking.
@@ -88,19 +86,15 @@ fn bench_qk256_unpack(c: &mut Criterion) {
             })
             .collect();
 
-        group.bench_with_input(
-            BenchmarkId::new("blocks", num_blocks),
-            &num_blocks,
-            |b, _| {
-                b.iter(|| {
-                    let mut out = [0u8; QK256_BLOCK];
-                    for blk in &packed {
-                        unpack_qk256_block(blk, &mut out);
-                    }
-                    black_box(out)
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("blocks", num_blocks), &num_blocks, |b, _| {
+            b.iter(|| {
+                let mut out = [0u8; QK256_BLOCK];
+                for blk in &packed {
+                    unpack_qk256_block(blk, &mut out);
+                }
+                black_box(out)
+            });
+        });
     }
 
     group.finish();
@@ -118,15 +112,9 @@ fn bench_qk256_gemv(c: &mut Criterion) {
 
         if rows == 1 {
             // Single-row variant
-            group.bench_with_input(
-                BenchmarkId::new("single_row", cols),
-                &cols,
-                |b, _| {
-                    b.iter(|| {
-                        black_box(gemv_qk256_row(&packed[..row_stride], &activations, cols))
-                    });
-                },
-            );
+            group.bench_with_input(BenchmarkId::new("single_row", cols), &cols, |b, _| {
+                b.iter(|| black_box(gemv_qk256_row(&packed[..row_stride], &activations, cols)));
+            });
         }
 
         group.bench_with_input(
@@ -135,8 +123,7 @@ fn bench_qk256_gemv(c: &mut Criterion) {
             |b, _| {
                 b.iter(|| {
                     let mut out = vec![0.0f32; rows];
-                    gemv_qk256(&packed, &activations, &mut out, rows, cols, row_stride)
-                        .unwrap();
+                    gemv_qk256(&packed, &activations, &mut out, rows, cols, row_stride).unwrap();
                     black_box(out)
                 });
             },
@@ -160,16 +147,12 @@ fn bench_tl1_lookup(c: &mut Criterion) {
         group.throughput(Throughput::Elements(size as u64));
 
         group.bench_with_input(BenchmarkId::new("quantize", size), &size, |b, _| {
-            b.iter(|| {
-                black_box(quantizer.quantize(&tensor, &dev).unwrap())
-            });
+            b.iter(|| black_box(quantizer.quantize(&tensor, &dev).unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("roundtrip", size), &size, |b, _| {
             let quantized = quantizer.quantize(&tensor, &dev).unwrap();
-            b.iter(|| {
-                black_box(quantizer.dequantize(&quantized, &dev).unwrap())
-            });
+            b.iter(|| black_box(quantizer.dequantize(&quantized, &dev).unwrap()));
         });
     }
 
@@ -188,16 +171,12 @@ fn bench_tl2_lookup(c: &mut Criterion) {
         group.throughput(Throughput::Elements(size as u64));
 
         group.bench_with_input(BenchmarkId::new("quantize", size), &size, |b, _| {
-            b.iter(|| {
-                black_box(quantizer.quantize(&tensor, &dev).unwrap())
-            });
+            b.iter(|| black_box(quantizer.quantize(&tensor, &dev).unwrap()));
         });
 
         group.bench_with_input(BenchmarkId::new("roundtrip", size), &size, |b, _| {
             let quantized = quantizer.quantize(&tensor, &dev).unwrap();
-            b.iter(|| {
-                black_box(quantizer.dequantize(&quantized, &dev).unwrap())
-            });
+            b.iter(|| black_box(quantizer.dequantize(&quantized, &dev).unwrap()));
         });
     }
 
