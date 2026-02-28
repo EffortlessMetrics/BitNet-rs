@@ -28,11 +28,8 @@ temp-env.workspace = true
 [features]
 default = []
 oneapi = ["dep:opencl3"]
-cpu = []
-gpu = ["cuda"]
-cuda = []
-opencl = []
-vulkan = []
+description = "GPU tensor operations library for BitNet inference with CPU fallback"
+rust-version.workspace = true
 
 [lints]
 workspace = true
