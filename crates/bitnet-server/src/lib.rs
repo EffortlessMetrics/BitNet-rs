@@ -15,7 +15,9 @@ pub mod health;
 pub mod model_manager;
 pub mod monitoring;
 pub mod security;
+pub mod sse;
 pub mod streaming;
+pub mod websocket;
 
 use anyhow::Result;
 use axum::{
