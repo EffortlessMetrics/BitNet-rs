@@ -141,6 +141,9 @@ impl CudaKernel {
         let compute_capability = (major, minor);
 
         // Memory and resource limits
+        // SAFETY: `ctx.cu_device()` returns a valid `CUdevice` obtained from
+        // `CudaContext::new` above; the driver handle is live for the
+        // duration of this call.
         let total_memory = unsafe { cu_device::total_mem(ctx.cu_device()) }.map_err(|e| {
             KernelError::GpuError { reason: format!("Failed to get total memory: {:?}", e) }
         })?;
@@ -243,6 +246,9 @@ impl CudaKernel {
         let n_arg = input.len() as i32;
         builder.arg(&n_arg);
 
+        // SAFETY: Kernel arguments (`input_dev`, `output_dev`, `scales_dev`,
+        // `n_arg`) are set via cudarc's typed `PushKernelArg` builder,
+        // ensuring correct types and counts. Grid/block dims are non-zero.
         unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch quantization kernel: {:?}", e),
         })?;
@@ -319,6 +325,9 @@ impl CudaKernel {
         builder.arg(&n_arg);
         builder.arg(&k_arg);
 
+        // SAFETY: Kernel arguments (`a_dev`, `b_dev`, `c_dev`, m/n/k) match
+        // the CUDA kernel signature. Device buffers are allocated with
+        // correct sizes. Grid/block dims computed from matrix dimensions.
         unsafe { builder.launch(cfg) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch kernel: {:?}", e),
         })?;

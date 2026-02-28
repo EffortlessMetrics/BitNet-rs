@@ -128,3 +128,7 @@ required-features = ["gpu"]
 name = "gpu_quantization"
 path = "tests/gpu_quantization.rs"
 required-features = ["gpu"]
+
+[[test]]
+name = "gpu_safety_tests"
+path = "tests/gpu_safety_tests.rs"

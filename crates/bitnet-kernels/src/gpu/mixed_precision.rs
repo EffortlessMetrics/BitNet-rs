@@ -468,6 +468,7 @@ impl MixedPrecisionKernel {
         builder_a.arg(&mut a_fp16_dev);
         let n_a = a_fp16_size as i32;
         builder_a.arg(&n_a);
+        // SAFETY: Kernel args set via typed builder; device buffers valid.
         unsafe { builder_a.launch(cfg_convert) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch FP32 to FP16 conversion for A: {:?}", e),
         })?;
@@ -485,6 +486,7 @@ impl MixedPrecisionKernel {
         builder_b.arg(&mut b_fp16_dev);
         let n_b = b_fp16_size as i32;
         builder_b.arg(&n_b);
+        // SAFETY: Kernel args set via typed builder; device buffers valid.
         unsafe { builder_b.launch(cfg_convert_b) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch FP32 to FP16 conversion for B: {:?}", e),
         })?;
@@ -512,6 +514,8 @@ impl MixedPrecisionKernel {
         builder_matmul.arg(&n_arg);
         builder_matmul.arg(&k_arg);
 
+        // SAFETY: Kernel args (a_fp16, b_fp16, c_fp16, m, n, k) match CUDA
+        // kernel signature; all device buffers allocated with correct sizes.
         unsafe { builder_matmul.launch(cfg_matmul) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch FP16 matmul kernel: {:?}", e),
         })?;
@@ -530,6 +534,7 @@ impl MixedPrecisionKernel {
         builder_c.arg(&mut c_dev);
         let n_c = c_size as i32;
         builder_c.arg(&n_c);
+        // SAFETY: Kernel args set via typed builder; device buffers valid.
         unsafe { builder_c.launch(cfg_convert_c) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch FP16 to FP32 conversion for C: {:?}", e),
         })?;
@@ -666,6 +671,7 @@ impl MixedPrecisionKernel {
         builder_a.arg(&mut a_bf16_dev);
         let n_a = a_bf16_size as i32;
         builder_a.arg(&n_a);
+        // SAFETY: Kernel args set via typed builder; device buffers valid.
         unsafe { builder_a.launch(cfg_convert) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch FP32 to BF16 conversion for A: {:?}", e),
         })?;
@@ -683,6 +689,7 @@ impl MixedPrecisionKernel {
         builder_b.arg(&mut b_bf16_dev);
         let n_b = b_bf16_size as i32;
         builder_b.arg(&n_b);
+        // SAFETY: Kernel args set via typed builder; device buffers valid.
         unsafe { builder_b.launch(cfg_convert_b) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch FP32 to BF16 conversion for B: {:?}", e),
         })?;
@@ -710,6 +717,8 @@ impl MixedPrecisionKernel {
         builder_matmul.arg(&n_arg);
         builder_matmul.arg(&k_arg);
 
+        // SAFETY: Kernel args (a_bf16, b_bf16, c_bf16, m, n, k) match CUDA
+        // kernel signature; all device buffers allocated with correct sizes.
         unsafe { builder_matmul.launch(cfg_matmul) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch BF16 matmul kernel: {:?}", e),
         })?;
@@ -728,6 +737,7 @@ impl MixedPrecisionKernel {
         builder_c.arg(&mut c_dev);
         let n_c = c_size as i32;
         builder_c.arg(&n_c);
+        // SAFETY: Kernel args set via typed builder; device buffers valid.
         unsafe { builder_c.launch(cfg_convert_c) }.map_err(|e| KernelError::GpuError {
             reason: format!("Failed to launch BF16 to FP32 conversion for C: {:?}", e),
         })?;

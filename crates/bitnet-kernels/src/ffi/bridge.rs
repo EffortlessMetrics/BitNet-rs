@@ -39,12 +39,15 @@ pub mod cpp {
         }
 
         pub fn init() -> i32 {
+            // SAFETY: FFI call with no preconditions; idempotent.
             unsafe { bitnet_cpp_init() }
         }
         pub fn cleanup() {
+            // SAFETY: FFI cleanup; idempotent, no-op if not initialized.
             unsafe { bitnet_cpp_cleanup() }
         }
         pub fn is_available() -> bool {
+            // SAFETY: Pure query with no side effects.
             unsafe { bitnet_cpp_is_available() != 0 }
         }
 
@@ -56,6 +59,9 @@ pub mod cpp {
             n: usize,
             k: usize,
         ) -> Result<(), &'static str> {
+            // SAFETY: Pointers derived from valid slices; lengths passed
+            // as dimension args. C++ function reads exactly m*k from `a`,
+            // k*n from `b`, and writes m*n to `c`.
             let rc = unsafe {
                 bitnet_cpp_matmul_i2s(
                     a.as_ptr(),
@@ -75,6 +81,8 @@ pub mod cpp {
             scales: &mut [f32],
             qtype: i32,
         ) -> Result<(), &'static str> {
+            // SAFETY: Pointers from valid slices; lengths passed as
+            // explicit size arguments for bounds enforcement in C++.
             let rc = unsafe {
                 bitnet_cpp_quantize(
                     input.as_ptr() as *const c_float,
@@ -90,6 +98,8 @@ pub mod cpp {
         }
 
         pub fn get_last_error() -> &'static str {
+            // SAFETY: Returns a pointer to a static C string owned by the
+            // C++ library. Null-checked before `CStr::from_ptr`.
             unsafe {
                 let ptr = bitnet_cpp_get_last_error();
                 if ptr.is_null() {

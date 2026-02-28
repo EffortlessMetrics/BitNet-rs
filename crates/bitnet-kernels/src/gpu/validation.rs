@@ -351,6 +351,10 @@ impl GpuValidator {
 
         log::debug!("Testing memory usage and leak detection");
 
+        // SAFETY: Raw CUDA driver API calls (`cuMemAlloc_v2`, `cuMemFree_v2`,
+        // `cuMemGetInfo_v2`) require a live CUDA context, created on the first
+        // line of the block. All allocated pointers are tracked in
+        // `allocated_ptrs` and freed on both success and error paths.
         unsafe {
             // Create context to ensure CUDA API availability
             let _ctx = CudaContext::new(0).map_err(|e| KernelError::GpuError {
