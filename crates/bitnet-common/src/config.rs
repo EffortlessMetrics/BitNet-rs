@@ -77,6 +77,7 @@ pub enum NormType {
     RmsNorm,
 }
 
+
 /// Activation function type used in feed-forward layers
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ActivationType {
@@ -88,7 +89,6 @@ pub enum ActivationType {
     /// GELU activation (GPT-2/BERT)
     Gelu,
 }
-
 
 /// Supported model formats
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
