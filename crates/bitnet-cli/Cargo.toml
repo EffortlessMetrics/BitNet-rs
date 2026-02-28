@@ -95,6 +95,12 @@ metal = [
   "runtime-profile-core",
 ]
 gpu = ["cuda", "metal", "bitnet-runtime-bootstrap/runtime-profile-gpu"]
+oneapi = [
+  "bitnet-common/oneapi",
+  "bitnet-kernels/oneapi",
+  "bitnet-inference/oneapi",
+  "runtime-profile-core",
+]
 # IQ2_S support via GGML FFI
 iq2s-ffi = [
     "bitnet-models/iq2s-ffi",

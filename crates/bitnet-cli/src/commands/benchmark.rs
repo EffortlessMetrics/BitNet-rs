@@ -262,12 +262,26 @@ impl BenchmarkCommand {
                 info!("Using CPU device for benchmarking");
                 Ok(Device::Cpu)
             }
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => {
+            "cuda" | "gpu" | "vulkan" => {
                 warn!("CUDA support not yet implemented, falling back to CPU");
                 Ok(Device::Cpu)
             }
+            "opencl" | "ocl" | "oneapi" | "intel-gpu" => {
+                #[cfg(feature = "oneapi")]
+                {
+                    info!("Using Intel GPU via OpenCL/oneAPI kernel backend for benchmarking");
+                    Ok(Device::Cpu)
+                }
+                #[cfg(not(feature = "oneapi"))]
+                {
+                    anyhow::bail!(
+                        "OpenCL/oneAPI requested but binary not built with oneapi feature. \
+                         Rebuild with: cargo build --features oneapi"
+                    );
+                }
+            }
             _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, oneapi, intel-gpu, auto",
                 device_str
             ),
         }
