@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: "format!(\"{:?}\", Device::OpenCL(0))"
+---
+OpenCL(0)
