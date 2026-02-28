@@ -28,11 +28,8 @@ temp-env.workspace = true
 [features]
 default = []
 oneapi = ["dep:opencl3"]
-cpu = []
-gpu = ["cuda"]
-cuda = []
-opencl = []
-vulkan = []
+description = "OpenCL backend with unified model format support for BitNet inference"
+rust-version.workspace = true
 
 [lints]
 workspace = true
