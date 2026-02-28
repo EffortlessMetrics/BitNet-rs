@@ -375,7 +375,7 @@ checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
 
 [[package]]
 name = "bitnet"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -422,7 +422,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-bdd-grid"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "bitnet-runtime-feature-flags",
@@ -432,7 +432,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-bdd-grid-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "insta",
  "proptest",
@@ -442,7 +442,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-cli"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -491,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-common"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-test-support",
@@ -513,7 +513,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-compat"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -532,7 +532,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-crossval"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-device-probe"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "ash",
  "bitnet-common",
@@ -577,7 +577,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-engine-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -590,7 +590,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-feature-contract"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-bdd-grid",
  "bitnet-feature-matrix",
@@ -600,7 +600,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-feature-matrix"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-runtime-profile-core",
  "insta",
@@ -609,7 +609,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-ffi"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-generation"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-common",
  "insta",
@@ -673,7 +673,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-ggml-ffi"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "cc",
  "libc",
@@ -681,7 +681,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-gguf"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "insta",
@@ -692,14 +692,16 @@ dependencies = [
 
 [[package]]
 name = "bitnet-gpu-hal"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "proptest",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "bitnet-honest-compute"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "insta",
  "proptest",
@@ -707,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-inference"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -754,7 +756,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-kernels"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -788,7 +790,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-logits"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "insta",
  "proptest",
@@ -796,7 +798,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-models"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -837,8 +839,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-opencl"
+version = "0.2.0-alpha.1"
+dependencies = [
+ "insta",
+ "log",
+ "opencl3",
+]
+
+[[package]]
 name = "bitnet-prompt-templates"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-tokenizers",
@@ -852,7 +863,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-py"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -876,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-quantization"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -899,7 +910,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-receipts"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -916,7 +927,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-rope"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "insta",
  "proptest",
@@ -924,7 +935,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-bootstrap"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-startup-contract",
  "proptest",
@@ -932,7 +943,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-context"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-runtime-context-core",
  "proptest",
@@ -942,7 +953,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-context-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "insta",
@@ -953,7 +964,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-feature-flags"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "bitnet-runtime-feature-flags-core",
@@ -964,7 +975,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-feature-flags-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-bdd-grid-core",
  "insta",
@@ -974,21 +985,21 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-profile"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-feature-matrix",
 ]
 
 [[package]]
 name = "bitnet-runtime-profile-contract"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-runtime-profile-contract-core",
 ]
 
 [[package]]
 name = "bitnet-runtime-profile-contract-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-bdd-grid",
  "bitnet-runtime-context",
@@ -1001,14 +1012,14 @@ dependencies = [
 
 [[package]]
 name = "bitnet-runtime-profile-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-runtime-profile-contract",
 ]
 
 [[package]]
 name = "bitnet-sampling"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-logits",
@@ -1021,7 +1032,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-server"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1075,7 +1086,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-st-tools"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-validation",
@@ -1091,7 +1102,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-st2gguf"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -1115,7 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-startup-contract"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-startup-contract-core",
  "proptest",
@@ -1123,7 +1134,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-startup-contract-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-runtime-profile",
@@ -1135,7 +1146,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-startup-contract-diagnostics"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-runtime-bootstrap",
@@ -1145,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-startup-contract-guard"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-runtime-bootstrap",
@@ -1157,7 +1168,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-sys"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bindgen",
  "cc",
@@ -1168,7 +1179,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-test-support"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "insta",
  "proptest",
@@ -1177,7 +1188,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-policy-core",
  "proptest",
@@ -1185,7 +1196,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-contract"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-feature-contract",
  "bitnet-runtime-feature-flags",
@@ -1196,7 +1207,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-profile",
  "bitnet-testing-scenarios-core",
@@ -1206,7 +1217,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-interop"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-runtime-feature-flags",
  "bitnet-testing-policy-contract",
@@ -1216,7 +1227,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-kit"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-policy",
  "insta",
@@ -1225,7 +1236,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-runtime"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-policy-interop",
  "insta",
@@ -1234,7 +1245,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-policy-tests"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-policy-runtime",
  "insta",
@@ -1243,7 +1254,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-profile"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-runtime-profile",
  "insta",
@@ -1252,7 +1263,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-scenarios"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-scenarios-core",
  "proptest",
@@ -1260,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-scenarios-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-scenarios-profile-core",
  "insta",
@@ -1270,7 +1281,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-testing-scenarios-profile-core"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "bitnet-testing-profile",
  "insta",
@@ -1280,7 +1291,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-tests"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1345,7 +1356,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-tokenizers"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1376,7 +1387,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-trace"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "blake3",
  "candle-core",
@@ -1391,7 +1402,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-transformer"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -1409,7 +1420,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-validation"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "insta",
@@ -1422,7 +1433,7 @@ dependencies = [
 
 [[package]]
 name = "bitnet-wasm"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "bitnet-common",
@@ -1761,6 +1772,17 @@ checksum = "57663b653d948a338bfb3eeba9bb2fd5fcfaecb9e199e87e1eda4d9e8b240fd9"
 dependencies = [
  "ciborium-io",
  "half",
+]
+
+[[package]]
+name = "cl3"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b823f24e72fa0c68aa14a250ae1c0848e68d4ae188b71c3972343e45b46f8644"
+dependencies = [
+ "libc",
+ "opencl-sys",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -4580,9 +4602,9 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 
 [[package]]
 name = "libc"
-version = "0.2.180"
+version = "0.2.182"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
+checksum = "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
 
 [[package]]
 name = "libfuzzer-sys"
@@ -4622,20 +4644,21 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "libredox"
-version = "0.1.12"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d0b95e02c851351f877147b7deea7b1afb1df71b63aa5f8270716e0c5720616"
+checksum = "1744e39d1d6a9948f4f388969627434e31128196de472883b39f148769bfe30a"
 dependencies = [
  "bitflags 2.11.0",
  "libc",
+ "plain",
  "redox_syscall 0.7.3",
 ]
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.11.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df1d3c3b53da64cf5760482273a98e575c651a67eec7f77df96b5b642de8f039"
+checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "litemap"
@@ -4877,7 +4900,7 @@ dependencies = [
 
 [[package]]
 name = "migrate-gen-config"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -4992,9 +5015,9 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.31.1"
+version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225e7cfe711e0ba79a68baeddb2982723e4235247aefce1482f2f16c27865b66"
+checksum = "5d6d0705320c1e6ba1d912b5e37cf18071b6c2e9b7fa8215a1e8a7651966f5d3"
 dependencies = [
  "bitflags 2.11.0",
  "cfg-if",
@@ -5314,6 +5337,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
+name = "opencl-sys"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de15dd01496ae90c5799f5266184ab020082b4065800ff0b732f489371d0e5cf"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "opencl3"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26ab4a90cb496f787d3934deb0c54fa9d65e7bed710c10071234aab0196fba04"
+dependencies = [
+ "cl3",
+ "libc",
+]
+
+[[package]]
 name = "openssl"
 version = "0.10.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5623,6 +5665,12 @@ name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
+
+[[package]]
+name = "plain"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
 name = "plotters"
@@ -6439,9 +6487,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "1.1.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "146c9e247ccc180c1f61615433868c99f3de3ae256a30a43b49f67c2d9171f34"
+checksum = "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
 dependencies = [
  "bitflags 2.11.0",
  "errno",
@@ -7111,9 +7159,9 @@ dependencies = [
 
 [[package]]
 name = "tempfile"
-version = "3.25.0"
+version = "3.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0136791f7c95b1f6dd99f9cc786b91bb81c3800b639b3478e561ddb7be95e5f1"
+checksum = "82a72c767771b47409d2345987fda8628641887d5466101319899796367354a0"
 dependencies = [
  "fastrand",
  "getrandom 0.4.1",
@@ -8645,7 +8693,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -8691,7 +8739,7 @@ dependencies = [
 
 [[package]]
 name = "xtask-build-helper"
-version = "0.2.1-dev"
+version = "0.2.0-alpha.1"
 dependencies = [
  "cc",
 ]
