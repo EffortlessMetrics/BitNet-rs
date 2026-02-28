@@ -393,6 +393,7 @@ dependencies = [
  "bitnet-transformer",
  "byteorder",
  "candle-core",
+ "candle-nn",
  "chrono",
  "criterion",
  "ctor",
