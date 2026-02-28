@@ -92,6 +92,12 @@ pub struct ModelCompatibilityMatrix {
     pub dolphin_32k: TokenizerDownloadInfo,
     /// ChatGPT/GPT-4 with ~100K vocabulary - BPE tokenizer
     pub chatgpt_100k: TokenizerDownloadInfo,
+    /// Mixtral with 32K vocabulary - SentencePiece tokenizer
+    pub mixtral_32k: TokenizerDownloadInfo,
+    /// StableLM with 32K vocabulary - BPE tokenizer
+    pub stablelm_32k: TokenizerDownloadInfo,
+    /// BLOOM with 250K vocabulary - BPE tokenizer
+    pub bloom_250k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -324,6 +330,24 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "chatgpt-100k".to_string(),
                 expected_vocab: Some(100000),
+            },
+            mixtral_32k: TokenizerDownloadInfo {
+                repo: "mistralai/Mixtral-8x7B-Instruct-v0.1".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mixtral-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            stablelm_32k: TokenizerDownloadInfo {
+                repo: "stabilityai/stablelm-zephyr-3b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "stablelm-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            bloom_250k: TokenizerDownloadInfo {
+                repo: "bigscience/bloom".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "bloom-250k".to_string(),
+                expected_vocab: Some(250680),
             },
         }
     }

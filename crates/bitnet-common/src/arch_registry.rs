@@ -200,6 +200,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Gelu,
                 default_context_length: Some(8192),
             }),
+            "mixtral" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(32768),
+            }),
+            "stablelm" | "stable-lm" | "stablecode" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "bloom" | "bloomz" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Gelu,
+                default_context_length: Some(2048),
+            }),
             _ => None,
         }
     }
@@ -270,6 +285,12 @@ impl ArchitectureRegistry {
             "granite",
             "nemotron",
             "saiga",
+            "mixtral",
+            "stablelm",
+            "stable-lm",
+            "stablecode",
+            "bloom",
+            "bloomz",
         ]
     }
 

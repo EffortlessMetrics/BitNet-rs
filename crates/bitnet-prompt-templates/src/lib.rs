@@ -151,6 +151,12 @@ pub enum TemplateType {
     DolphinChat,
     /// OpenAI ChatGPT/GPT-4 ChatML format for GGUF exports
     ChatGptChat,
+    /// Mixtral (Mixture of Experts) instruct format — same [INST] format as Mistral
+    MixtralInstruct,
+    /// Stability AI StableLM ChatML format
+    StableLMChat,
+    /// BigScience BLOOM chat format (User:/Assistant: roles)
+    BloomChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -198,6 +204,9 @@ impl std::str::FromStr for TemplateType {
             "tinyllama-chat" | "tinyllama" | "tiny-llama" => Ok(Self::TinyLlamaChat),
             "dolphin-chat" | "dolphin" => Ok(Self::DolphinChat),
             "chatgpt-chat" | "chatgpt" | "gpt4-chat" => Ok(Self::ChatGptChat),
+            "mixtral-instruct" | "mixtral" => Ok(Self::MixtralInstruct),
+            "stablelm-chat" | "stablelm" | "stable-lm" => Ok(Self::StableLMChat),
+            "bloom-chat" | "bloom" | "bloomz" => Ok(Self::BloomChat),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -209,7 +218,8 @@ impl std::str::FromStr for TemplateType {
                  alpaca-instruct, command-r-plus, nous-hermes, \
                  wizard-lm, openchat, granite-chat, nemotron-chat, \
                  saiga-chat, llama2-chat, gemma2-chat, phi3-instruct, \
-                 tinyllama-chat, dolphin-chat, chatgpt-chat",
+                 tinyllama-chat, dolphin-chat, chatgpt-chat, \
+                 mixtral-instruct, stablelm-chat, bloom-chat",
                 s
             ),
         }
@@ -257,6 +267,9 @@ impl std::fmt::Display for TemplateType {
             Self::TinyLlamaChat => write!(f, "tinyllama-chat"),
             Self::DolphinChat => write!(f, "dolphin-chat"),
             Self::ChatGptChat => write!(f, "chatgpt-chat"),
+            Self::MixtralInstruct => write!(f, "mixtral-instruct"),
+            Self::StableLMChat => write!(f, "stablelm-chat"),
+            Self::BloomChat => write!(f, "bloom-chat"),
         }
     }
 }
@@ -565,6 +578,15 @@ impl TemplateType {
                 );
                 return Self::GemmaChat;
             }
+            if lower.contains("mixtral") {
+                tracing::debug!(
+                    template = "MixtralInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::MixtralInstruct;
+            }
             if lower.contains("mistral") {
                 tracing::debug!(
                     template = "MistralChat",
@@ -804,6 +826,27 @@ impl TemplateType {
                 );
                 return Self::ChatGptChat;
             }
+            if lower.contains("stablelm")
+                || lower.contains("stable-lm")
+                || lower.contains("stablecode")
+            {
+                tracing::debug!(
+                    template = "StableLMChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::StableLMChat;
+            }
+            if lower.contains("bloom") || lower.contains("bloomz") {
+                tracing::debug!(
+                    template = "BloomChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::BloomChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -861,6 +904,9 @@ impl TemplateType {
             Self::TinyLlamaChat => Self::apply_tinyllama_chat(user_text, system_prompt),
             Self::DolphinChat => Self::apply_dolphin_chat(user_text, system_prompt),
             Self::ChatGptChat => Self::apply_chatgpt_chat(user_text, system_prompt),
+            Self::MixtralInstruct => Self::apply_mixtral_instruct(user_text, system_prompt),
+            Self::StableLMChat => Self::apply_stablelm_chat(user_text, system_prompt),
+            Self::BloomChat => Self::apply_bloom_chat(user_text, system_prompt),
         }
     }
 
@@ -1441,6 +1487,31 @@ impl TemplateType {
         apply_chatml(system, user_text)
     }
 
+    /// Apply Mixtral instruct format (same as Mistral [INST] format)
+    fn apply_mixtral_instruct(user_text: &str, system_prompt: Option<&str>) -> String {
+        Self::apply_mistral_chat(user_text, system_prompt)
+    }
+
+    /// Apply StableLM ChatML format
+    fn apply_stablelm_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system =
+            system_prompt.unwrap_or("You are a helpful, respectful and honest assistant.");
+        apply_chatml(system, user_text)
+    }
+
+    /// Apply BLOOM chat format (User:/Assistant: roles)
+    fn apply_bloom_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+        if let Some(sys) = system_prompt {
+            result.push_str(sys);
+            result.push_str("\n\n");
+        }
+        result.push_str("User: ");
+        result.push_str(user_text);
+        result.push_str("\nAssistant: ");
+        result
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1549,6 +1620,15 @@ impl TemplateType {
             Self::ChatGptChat => {
                 CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
+            Self::MixtralInstruct => {
+                vec!["</s>".to_string()]
+            }
+            Self::StableLMChat => {
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
+            }
+            Self::BloomChat => {
+                vec!["User:".to_string(), "</s>".to_string()]
+            }
         }
     }
 
@@ -1627,6 +1707,9 @@ impl TemplateType {
             Self::TinyLlamaChat => true,  // TinyLlama typically needs BOS
             Self::DolphinChat => false,   // ChatML uses im_start/im_end tokens
             Self::ChatGptChat => false,   // ChatML uses im_start/im_end tokens
+            Self::MixtralInstruct => true, // Same as Mistral, uses <s>
+            Self::StableLMChat => false,   // ChatML uses im_start/im_end tokens
+            Self::BloomChat => false,      // Simple User:/Assistant: format
         }
     }
 
@@ -1663,6 +1746,7 @@ impl TemplateType {
                 | Self::TinyLlamaChat
                 | Self::DolphinChat
                 | Self::ChatGptChat
+                | Self::StableLMChat
         )
     }
 
@@ -2295,6 +2379,49 @@ impl TemplateType {
             TemplateType::ChatGptChat => {
                 let sys = system.unwrap_or("You are a helpful assistant.");
                 out = render_chatml(sys, history);
+            }
+            TemplateType::MixtralInstruct => {
+                // Mixtral uses same [INST] format as Mistral
+                out.push_str("<s>");
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "[INST] {} [/INST]", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, "{}</s>", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                if let Some(sys) = system {
+                    write!(out, "[INST] {}\n\n", sys)?;
+                } else {
+                    write!(out, "[INST] ")?;
+                }
+            }
+            TemplateType::StableLMChat => {
+                let sys = system.unwrap_or(
+                    "You are a helpful, respectful and honest assistant.",
+                );
+                out = render_chatml(sys, history);
+            }
+            TemplateType::BloomChat => {
+                if let Some(sys) = system {
+                    write!(out, "{}\n\n", sys)?;
+                }
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            writeln!(out, "User: {}", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            writeln!(out, "Assistant: {}", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+                write!(out, "Assistant: ")?;
             }
         }
 
@@ -3148,6 +3275,9 @@ mod property_tests {
             Just(TemplateType::FillInMiddle),
             Just(TemplateType::ZephyrChat),
             Just(TemplateType::VicunaChat),
+            Just(TemplateType::MixtralInstruct),
+            Just(TemplateType::StableLMChat),
+            Just(TemplateType::BloomChat),
         ]
     }
 
@@ -3224,6 +3354,9 @@ mod property_tests {
                 Just(TemplateType::FillInMiddle),
                 Just(TemplateType::ZephyrChat),
                 Just(TemplateType::VicunaChat),
+                Just(TemplateType::MixtralInstruct),
+                Just(TemplateType::StableLMChat),
+                Just(TemplateType::BloomChat),
             ],
         ) {
             let stops = template.default_stop_sequences();
