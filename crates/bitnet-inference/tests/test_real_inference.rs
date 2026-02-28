@@ -101,6 +101,7 @@ fn create_test_bitnet_config() -> BitNetConfig {
             rope_scaling: None,
             rms_norm_eps: None,
             tokenizer: bitnet_common::TokenizerConfig::default(),
+            ..Default::default()
         },
         quantization: Default::default(),
         inference: Default::default(),

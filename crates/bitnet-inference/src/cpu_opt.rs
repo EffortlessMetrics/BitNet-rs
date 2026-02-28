@@ -1,14 +1,15 @@
 //! CPU-specific optimised kernels for inference.
 //!
-//! Provides pure-Rust implementations of dense model ops:
-//! - `parallel_matmul` — Rayon-parallel row-partitioned matrix multiply
-//! - `parallel_attention` — scaled dot-product attention with stable softmax
-//! - `rmsnorm` / `layernorm` / `layernorm_no_bias` — normalization layers
-//! - `silu` / `gelu` — activation functions (with in-place variants)
+//! Provides:
+//! - **Activations**: `silu`, `gelu`, `relu2` (+ in-place variants) and
+//!   `apply_activation` dispatch.
+//! - **Normalisations**: `rmsnorm`, `layernorm`, `layernorm_no_bias` and
+//!   `apply_norm` dispatch.
+//! - **Linear algebra**: `parallel_matmul`, `parallel_attention`.
 //!
 //! These are thin utilities; the primary compute path lives in `bitnet-kernels`.
 
-use bitnet_common::{BitNetError, Result};
+use bitnet_common::{ActivationType, BitNetError, NormType, Result};
 use rayon::prelude::*;
 
 /// Parallel matrix-multiplication (row-partitioned, Rayon).
@@ -135,6 +136,27 @@ pub fn gelu_in_place(data: &mut [f32]) {
     }
 }
 
+/// Squared ReLU: `relu2(x) = max(0, x)²`.
+///
+/// Used by BitNet-specific architectures.
+pub fn relu2(input: &[f32]) -> Vec<f32> {
+    input
+        .iter()
+        .map(|&x| {
+            let r = x.max(0.0);
+            r * r
+        })
+        .collect()
+}
+
+/// Squared ReLU applied element-wise in-place.
+pub fn relu2_in_place(data: &mut [f32]) {
+    for v in data.iter_mut() {
+        let r = v.max(0.0);
+        *v = r * r;
+    }
+}
+
 /// Layer normalization.
 ///
 /// For each row of length `dim`:
@@ -212,6 +234,35 @@ pub fn layernorm_no_bias(
     }
 
     Ok(())
+}
+
+/// Apply the activation function indicated by `activation` to `data` in-place.
+pub fn apply_activation(activation: ActivationType, data: &mut [f32]) {
+    match activation {
+        ActivationType::Silu => silu_in_place(data),
+        ActivationType::Gelu => gelu_in_place(data),
+        ActivationType::Relu2 => relu2_in_place(data),
+    }
+}
+
+/// Apply the normalisation indicated by `norm` to the input tensor.
+///
+/// Both `LayerNorm` and `RmsNorm` are supported. For `LayerNorm` the
+/// `bias` slice is required (pass a zero-filled slice if not applicable).
+pub fn apply_norm(
+    norm: NormType,
+    input: &[f32],
+    weight: &[f32],
+    bias: &[f32],
+    output: &mut [f32],
+    rows: usize,
+    dim: usize,
+    eps: f32,
+) -> Result<()> {
+    match norm {
+        NormType::RmsNorm => rmsnorm(input, weight, output, rows, dim, eps),
+        NormType::LayerNorm => layernorm(input, weight, bias, output, rows, dim, eps),
+    }
 }
 
 /// Parallel scaled dot-product attention with numerically-stable softmax.
@@ -295,6 +346,8 @@ pub fn parallel_attention(
 mod tests {
     use super::*;
 
+    // -- Matmul -----------------------------------------------------------
+
     /// Identity matrix: A × I = A.
     #[test]
     fn test_parallel_matmul_identity() {
@@ -304,6 +357,17 @@ mod tests {
         parallel_matmul(&a, &b, &mut c, 2, 2, 2, 2).unwrap();
         assert_eq!(c, vec![1.0, 2.0, 3.0, 4.0]);
     }
+
+    /// Dimension mismatch must return an error, not panic.
+    #[test]
+    fn test_matmul_dimension_mismatch_returns_error() {
+        let a = vec![1.0f32; 4]; // 2×2
+        let b = vec![1.0f32; 9]; // 3×3 (mismatched)
+        let mut c = vec![0.0f32; 4];
+        assert!(parallel_matmul(&a, &b, &mut c, 2, 2, 2, 2).is_err());
+    }
+
+    // -- Attention --------------------------------------------------------
 
     /// When V is all-ones, output must be all-ones regardless of attention weights.
     /// This verifies that softmax weights sum to 1.0.
@@ -341,14 +405,7 @@ mod tests {
         }
     }
 
-    /// Dimension mismatch must return an error, not panic.
-    #[test]
-    fn test_matmul_dimension_mismatch_returns_error() {
-        let a = vec![1.0f32; 4]; // 2×2
-        let b = vec![1.0f32; 9]; // 3×3 (mismatched)
-        let mut c = vec![0.0f32; 4];
-        assert!(parallel_matmul(&a, &b, &mut c, 2, 2, 2, 2).is_err());
-    }
+    // -- RMSNorm ----------------------------------------------------------
 
     /// RMSNorm with uniform weight should rescale by 1/rms.
     #[test]
@@ -360,8 +417,6 @@ mod tests {
 
         rmsnorm(&input, &weight, &mut output, 1, dim, 1e-5).unwrap();
 
-        // rms = sqrt(mean([4,0,0,0]) + eps) = sqrt(1 + eps) ≈ 1.0
-        // output[0] = 2.0 / 1.0 ≈ 2.0
         assert!((output[0] - 2.0).abs() < 0.01);
         assert!(output[1].abs() < 1e-5);
     }
@@ -373,6 +428,8 @@ mod tests {
         let mut output = vec![0.0f32; 3]; // wrong size
         assert!(rmsnorm(&[1.0; 4], &weight, &mut output, 1, 4, 1e-5).is_err());
     }
+
+    // -- SiLU -------------------------------------------------------------
 
     /// SiLU(0) = 0 and SiLU is monotonically increasing for x > 0.
     #[test]
@@ -395,7 +452,7 @@ mod tests {
         }
     }
 
-    // -- GELU tests -------------------------------------------------------
+    // -- GELU -------------------------------------------------------------
 
     /// GELU(0) = 0 and GELU is monotonically increasing for x > ~-0.17.
     #[test]
@@ -412,7 +469,6 @@ mod tests {
         let inputs = [0.0, 1.0, -1.0, 2.0, -2.0, 0.5];
         let result = gelu(&inputs);
 
-        // Reference: gelu(x) = x * Phi(x) (Gaussian CDF)
         let expected = [
             0.0,     // gelu(0) = 0
             0.8412,  // gelu(1) ~ 0.8412
@@ -442,20 +498,49 @@ mod tests {
         }
     }
 
-    // -- LayerNorm tests --------------------------------------------------
+    // -- Squared ReLU -----------------------------------------------------
+
+    #[test]
+    fn test_relu2_basic() {
+        let out = relu2(&[-2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(out[0], 0.0); // negative → 0
+        assert_eq!(out[1], 0.0);
+        assert_eq!(out[2], 0.0); // zero → 0
+        assert_eq!(out[3], 1.0); // 1² = 1
+        assert_eq!(out[4], 4.0); // 2² = 4
+        assert_eq!(out[5], 9.0); // 3² = 9
+    }
+
+    #[test]
+    fn test_relu2_in_place_matches() {
+        let input = vec![-1.0f32, 0.0, 0.5, 2.0];
+        let expected = relu2(&input);
+        let mut data = input;
+        relu2_in_place(&mut data);
+        assert_eq!(data, expected);
+    }
+
+    #[test]
+    fn test_relu2_all_negative() {
+        let out = relu2(&[-5.0, -3.0, -0.001]);
+        for &v in &out {
+            assert_eq!(v, 0.0);
+        }
+    }
+
+    // -- LayerNorm --------------------------------------------------------
 
     /// LayerNorm with uniform input should produce zero output (mean-subtracted).
     #[test]
     fn test_layernorm_uniform_input() {
         let dim = 4;
-        let input = vec![5.0f32; dim]; // all same value
+        let input = vec![5.0f32; dim];
         let weight = vec![1.0f32; dim];
         let bias = vec![0.0f32; dim];
         let mut output = vec![0.0f32; dim];
 
         layernorm(&input, &weight, &bias, &mut output, 1, dim, 1e-5).unwrap();
 
-        // All inputs are the same → after mean-subtraction all are 0
         for (i, &v) in output.iter().enumerate() {
             assert!(v.abs() < 1e-4, "output[{i}] = {v}, expected ~0");
         }
@@ -472,7 +557,6 @@ mod tests {
 
         layernorm(&input, &weight, &bias, &mut output, 1, dim, 1e-5).unwrap();
 
-        // mean = 2.5, var = 1.25, std = 1.118
         let mean = 2.5f32;
         let var = 1.25f32;
         let inv_std = 1.0 / (var + 1e-5_f32).sqrt();
@@ -498,9 +582,6 @@ mod tests {
 
         layernorm(&input, &weight, &bias, &mut output, 1, dim, 1e-5).unwrap();
 
-        // After norm: [-1/sqrt(1+eps), 1/sqrt(1+eps)] + 10
-        // output[0] ~ -1.0 + 10 = 9.0
-        // output[1] ~ 1.0 + 10 = 11.0
         assert!((output[0] - 9.0).abs() < 0.01);
         assert!((output[1] - 11.0).abs() < 0.01);
     }
@@ -535,11 +616,8 @@ mod tests {
 
         layernorm(&input, &weight, &bias, &mut output, rows, dim, 1e-5).unwrap();
 
-        // Row 0: mean=2, var=4, output = [-1, 1]
         assert!((output[0] - (-1.0)).abs() < 0.01);
         assert!((output[1] - 1.0).abs() < 0.01);
-
-        // Row 1: all same → output = [0, 0]
         assert!(output[2].abs() < 1e-4);
         assert!(output[3].abs() < 1e-4);
     }
@@ -551,5 +629,98 @@ mod tests {
         let bias = vec![0.0f32; 4];
         let mut output = vec![0.0f32; 3]; // wrong size
         assert!(layernorm(&[1.0; 4], &weight, &bias, &mut output, 1, 4, 1e-5).is_err());
+    }
+
+    // -- Dispatch: apply_activation ---------------------------------------
+
+    #[test]
+    fn test_dispatch_silu() {
+        let mut data = vec![0.0f32, 1.0, -1.0];
+        let expected = silu(&data);
+        apply_activation(ActivationType::Silu, &mut data);
+        for (a, b) in data.iter().zip(expected.iter()) {
+            assert!((a - b).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_dispatch_gelu() {
+        let mut data = vec![0.0f32, 1.0, -1.0];
+        let expected = gelu(&data);
+        apply_activation(ActivationType::Gelu, &mut data);
+        for (a, b) in data.iter().zip(expected.iter()) {
+            assert!((a - b).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_dispatch_relu2() {
+        let mut data = vec![-1.0f32, 0.0, 1.0, 2.0];
+        let expected = relu2(&data);
+        apply_activation(ActivationType::Relu2, &mut data);
+        assert_eq!(data, expected);
+    }
+
+    // -- Dispatch: apply_norm ---------------------------------------------
+
+    #[test]
+    fn test_dispatch_rmsnorm() {
+        let dim = 4;
+        let input = vec![2.0f32, 0.0, 0.0, 0.0];
+        let weight = vec![1.0f32; dim];
+        let bias = vec![0.0f32; dim];
+        let mut out_dispatch = vec![0.0f32; dim];
+        let mut out_direct = vec![0.0f32; dim];
+
+        apply_norm(NormType::RmsNorm, &input, &weight, &bias, &mut out_dispatch, 1, dim, 1e-5)
+            .unwrap();
+        rmsnorm(&input, &weight, &mut out_direct, 1, dim, 1e-5).unwrap();
+
+        for (a, b) in out_dispatch.iter().zip(out_direct.iter()) {
+            assert!((a - b).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn test_dispatch_layernorm() {
+        let dim = 4;
+        let input = vec![1.0f32, 2.0, 3.0, 4.0];
+        let weight = vec![1.0f32; dim];
+        let bias = vec![0.5f32; dim];
+        let mut out_dispatch = vec![0.0f32; dim];
+        let mut out_direct = vec![0.0f32; dim];
+
+        apply_norm(NormType::LayerNorm, &input, &weight, &bias, &mut out_dispatch, 1, dim, 1e-5)
+            .unwrap();
+        layernorm(&input, &weight, &bias, &mut out_direct, 1, dim, 1e-5).unwrap();
+
+        for (a, b) in out_dispatch.iter().zip(out_direct.iter()) {
+            assert!((a - b).abs() < 1e-6);
+        }
+    }
+
+    /// Verify every ActivationType variant is handled (exhaustive match).
+    #[test]
+    fn test_dispatch_activation_all_variants() {
+        let variants = [ActivationType::Silu, ActivationType::Gelu, ActivationType::Relu2];
+        for variant in &variants {
+            let mut data = vec![1.0f32, -1.0];
+            apply_activation(*variant, &mut data);
+        }
+    }
+
+    /// Verify every NormType variant is handled (exhaustive match).
+    #[test]
+    fn test_dispatch_norm_all_variants() {
+        let dim = 4;
+        let input = vec![1.0f32; dim];
+        let weight = vec![1.0f32; dim];
+        let bias = vec![0.0f32; dim];
+        let mut output = vec![0.0f32; dim];
+
+        let variants = [NormType::LayerNorm, NormType::RmsNorm];
+        for variant in &variants {
+            apply_norm(*variant, &input, &weight, &bias, &mut output, 1, dim, 1e-5).unwrap();
+        }
     }
 }
