@@ -1,0 +1,30 @@
+[package]
+name = "bitnet-gpu-hal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "GPU hardware abstraction layer with CPU reference implementations for BitNet inference"
+rust-version.workspace = true
+autobenches = false
+
+[dependencies]
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[features]
+default = []
+bench = []
+
+[[bench]]
+name = "gpu_hal_bench"
+harness = false
+required-features = ["bench"]
+
+[lints]
+workspace = true

@@ -691,6 +691,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-gpu-hal"
+version = "0.2.1-dev"
+dependencies = [
+ "criterion",
+]
+
+[[package]]
 name = "bitnet-honest-compute"
 version = "0.2.1-dev"
 dependencies = [
