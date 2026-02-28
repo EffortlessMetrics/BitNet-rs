@@ -89,6 +89,7 @@ pub enum ActivationType {
     Gelu,
 }
 
+
 /// Supported model formats
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ModelFormat {
