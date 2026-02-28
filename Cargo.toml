@@ -60,7 +60,8 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-vulkan",        # Vulkan compute backend
+"crates/bitnet-vulkan",        # Vulkan compute backend
+"crates/bitnet-vulkan",        # Vulkan compute backend for GPU inference
   "crossval",
   "tests",
   "xtask",
