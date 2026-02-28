@@ -1,6 +1,5 @@
 ---
 source: crates/bitnet-bdd-grid/tests/snapshot_tests.rs
-assertion_line: 28
 expression: "summary.join(\"\\n\")"
 ---
 CrossValidation/Ci: required=[inference,kernels,tokenizers,crossval] intent=Reference parity / regression surface with controlled fixtures
@@ -11,13 +10,16 @@ Debug/Local: required=[inference] intent=Detailed behavior introspection and dia
 Debug/PreProduction: required=[inference] intent=Generation stopping criteria (max-tokens, stop-id, stop-string) fire deterministically
 Development/Ci: required=[inference,tokenizers,cli] intent=Prompt-template auto-detection selects instruct for base models
 Development/Local: required=[inference,kernels,tokenizers] intent=Sampling strategy development and greedy/top-p/top-k path exercising
+Development/PreProduction: required=[cpu,oneapi] intent=Intel oneAPI backend feature gate compiles without errors (compile-only check)
 EndToEnd/Ci: required=[inference,kernels,tokenizers,crossval,reporting] intent=Full stack workflow checks spanning startup through response path
+EndToEnd/Local: required=[cpu,metal] intent=Metal backend feature gate compiles without errors (compile-only check)
 EndToEnd/PreProduction: required=[inference,server,reporting] intent=Server health-check path (/health endpoint returns 200)
 Integration/Ci: required=[inference,kernels,tokenizers,quantization] intent=GGUF model loading and quantization format integration (I2_S, QK256, TL1/TL2)
 Integration/Local: required=[inference,kernels,tokenizers] intent=Component and module interaction in local build
 Integration/PreProduction: required=[cpu,inference,kernels] intent=Pure logits transforms (temperature, top-k, top-p) pass numerical precision checks
 Minimal/Ci: required=[inference,kernels] intent=Deterministic seed produces identical output across repeated runs
 Minimal/Local: required=[inference] intent=Fastest-path execution with hard constraints
+Minimal/PreProduction: required=[cpu,vulkan] intent=Vulkan backend feature gate compiles and probe reports compiled=true
 Performance/Ci: required=[inference,kernels] intent=Throughput and latency-sensitive checks
 Performance/Local: required=[inference,kernels] intent=Local backend selection and kernel dispatch benchmarks
 Smoke/Ci: required=[inference,reporting] intent=Smoke path for receipt generation and schema v1.0.0 validation
