@@ -165,6 +165,7 @@ bitnet-rope = { path = "crates/bitnet-rope", version = "0.2.1-dev" }
 bitnet-transformer = { path = "crates/bitnet-transformer", version = "0.2.1-dev" }
 bitnet-tests = { path = "tests", version = "0.2.1-dev", package = "bitnet-tests", default-features = false }
 candle-core = { version = "0.9.1", default-features = false }
+candle-nn = { version = "0.9.1", default-features = false }
 criterion = "0.7.0"
 ctor = "0.6.1"
 env_logger = "0.11.8"
@@ -282,6 +283,16 @@ required-features = ["cpu", "ffi"]
 name = "srp_ops"
 harness = false
 required-features = ["cpu"]
+
+[[bench]]
+name = "quantization_ops"
+harness = false
+required-features = ["cpu", "bench"]
+
+[[bench]]
+name = "kernel_ops"
+harness = false
+required-features = ["cpu", "bench"]
 
 [workspace.dependencies]
 # Core dependencies
