@@ -788,6 +788,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-metal"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "bytemuck",
+ "metal 0.31.0",
+ "objc",
+ "proptest",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
 name = "bitnet-models"
 version = "0.2.1-dev"
 dependencies = [
@@ -4818,6 +4831,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "metal"
+version = "0.31.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f569fb946490b5743ad69813cb19629130ce9374034abe31614a36402d18f99e"
+dependencies = [
+ "bitflags 2.11.0",
+ "block",
+ "core-graphics-types",
+ "foreign-types 0.5.0",
+ "log",
+ "objc",
+ "paste",
+]
+
+[[package]]
 name = "metrics"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7726,7 +7754,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7adf545a99a086d362efc739e7cf4317c18cbeda22706000fd434d70ea3d95"
 dependencies = [
  "half",
- "metal",
+ "metal 0.29.0",
  "objc",
  "serde",
  "thiserror 1.0.69",
