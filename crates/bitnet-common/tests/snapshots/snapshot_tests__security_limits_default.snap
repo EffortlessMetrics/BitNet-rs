@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: "format!(\"max_tensor_elements={} max_memory_allocation={} max_metadata_size={} max_string_length={} max_array_length={}\",\nlimits.max_tensor_elements, limits.max_memory_allocation,\nlimits.max_metadata_size, limits.max_string_length, limits.max_array_length,)"
+---
+max_tensor_elements=1000000000 max_memory_allocation=4294967296 max_metadata_size=104857600 max_string_length=1048576 max_array_length=1000000

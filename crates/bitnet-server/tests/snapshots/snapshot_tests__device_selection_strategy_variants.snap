@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_tests.rs
+expression: debug
+---
+[
+    "PreferGpu",
+    "CpuOnly",
+    "PerformanceBased",
+    "LoadBalance",
+]

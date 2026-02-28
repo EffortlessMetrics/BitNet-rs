@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: result
+---
+ValidationResult {
+    passed: false,
+    warnings: [],
+    errors: [
+        "Missing required tensor: token_embd.weight",
+    ],
+    alignment_issues: [],
+    recommendations: [
+        "Consider re-exporting with F16 LayerNorm",
+    ],
+}
