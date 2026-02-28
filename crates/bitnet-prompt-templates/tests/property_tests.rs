@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -121,6 +121,7 @@ proptest! {
             Just(TemplateType::Phi4Chat),
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
         ],
     ) {
         let s = template.to_string();
@@ -138,6 +139,7 @@ proptest! {
             Just(TemplateType::Phi4Chat),
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -188,7 +190,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat),
             "detect() returned an unexpected variant"
         );
     }
@@ -221,6 +223,7 @@ proptest! {
             Just(TemplateType::Phi4Chat),
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
         ],
     ) {
         let out = template.apply("", None);
@@ -238,6 +241,7 @@ proptest! {
             Just(TemplateType::Phi4Chat),
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -258,6 +262,7 @@ proptest! {
             Just(TemplateType::Phi4Chat),
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -325,6 +330,7 @@ proptest! {
             Just(TemplateType::Phi4Chat),
             Just(TemplateType::QwenChat),
             Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -415,6 +421,34 @@ proptest! {
         let t = TemplateType::GemmaChat;
         let s = t.to_string();
         let parsed: TemplateType = s.parse().expect("gemma-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// MistralChat template always includes [INST] and [/INST] in its output.
+    #[test]
+    fn prop_mistral_contains_inst_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::MistralChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("[INST]"),
+            "MistralChat output missing [INST]: {out:?}"
+        );
+        prop_assert!(
+            out.contains("[/INST]"),
+            "MistralChat output missing [/INST]: {out:?}"
+        );
+    }
+
+    /// MistralChat display/parse round-trips correctly.
+    #[test]
+    fn prop_mistral_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::MistralChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("mistral-chat must parse");
         prop_assert_eq!(t, parsed);
     }
 }

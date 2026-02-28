@@ -30,6 +30,8 @@ pub struct ModelCompatibilityMatrix {
     pub qwen2_150k: TokenizerDownloadInfo,
     /// Gemma with 256K vocabulary - SentencePiece tokenizer
     pub gemma_256k: TokenizerDownloadInfo,
+    /// Mistral with 32K vocabulary - SentencePiece tokenizer
+    pub mistral_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -76,6 +78,12 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "gemma-256k".to_string(),
                 expected_vocab: Some(256000),
+            },
+            mistral_32k: TokenizerDownloadInfo {
+                repo: "mistralai/Mistral-7B-v0.1".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mistral-32k".to_string(),
+                expected_vocab: Some(32000),
             },
         }
     }
