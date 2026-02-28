@@ -12,7 +12,7 @@ use bitnet_inference::{LookupTable, QuantizedLinear};
 use bitnet_quantization::{I2SQuantizer, TL1Quantizer, TL2Quantizer};
 /// AC:1.1 - I2S quantized linear forward pass with NO FP32 staging
 /// Validates that I2S GEMV kernel is used directly without dequantization
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac1_i2s_quantized_linear_no_fp32_staging() -> Result<()> {
     let input_shape = vec![1, 16, 128];
     let input = BitNetTensor::zeros(&input_shape, candle_core::DType::F32, &Device::Cpu)
@@ -38,7 +38,7 @@ async fn test_ac1_i2s_quantized_linear_no_fp32_staging() -> Result<()> {
 }
 /// AC:1.2 - TL1 quantized linear forward pass with NO FP32 staging
 /// Validates that TL1 table lookup matmul kernel is used directly
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac1_tl1_quantized_linear_no_fp32_staging() -> Result<()> {
     let input_shape = vec![1, 8, 64];
     let input = BitNetTensor::zeros(&input_shape, candle_core::DType::F32, &Device::Cpu)?;
@@ -58,7 +58,7 @@ async fn test_ac1_tl1_quantized_linear_no_fp32_staging() -> Result<()> {
 }
 /// AC:1.3 - TL2 quantized linear forward pass with NO FP32 staging
 /// Validates that TL2 table lookup matmul kernel is used directly
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac1_tl2_quantized_linear_no_fp32_staging() -> Result<()> {
     let input_shape = vec![1, 4, 32];
     let input = BitNetTensor::zeros(&input_shape, candle_core::DType::F32, &Device::Cpu)?;
@@ -78,7 +78,7 @@ async fn test_ac1_tl2_quantized_linear_no_fp32_staging() -> Result<()> {
 }
 /// AC:1.4 - Verify NO FP32 dequantization in hot path (instrumentation test)
 /// This test validates that quantized kernels are used without FP32 fallback
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac1_verify_no_fp32_dequant_in_hot_path() -> Result<()> {
     {
         let input_shape = vec![1, 16, 128];

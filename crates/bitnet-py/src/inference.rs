@@ -1,12 +1,15 @@
 //! # Python Inference Engine Bindings
 //!
-//! Python bindings for the BitNet inference engine with streaming support,
-//! batch inference, numpy logits access, and performance metrics.
+//! Python bindings for the BitNet inference engine with streaming support
+//! and async/await compatibility.
 
 use pyo3::exceptions::{PyRuntimeError, PyStopIteration};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
+use pyo3::types::PyDict;
+// use pyo3_asyncio_0_21::tokio::future_into_py;
+// use futures_util::StreamExt;
 use std::sync::Arc;
+// use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
@@ -283,6 +286,17 @@ impl PyInferenceEngine {
     }
 
     /// Clear the key-value cache to free memory and reset model state.
+    ///
+    /// This method clears the attention cache, which can be useful for:
+    /// - Freeing memory when processing many different conversations
+    /// - Resetting model state between unrelated generations
+    /// - Debugging cache-related issues
+    ///
+    /// # Returns
+    /// `Ok(())` on successful cache clearing
+    ///
+    /// # Errors
+    /// Returns `PyRuntimeError` if cache clearing fails
     fn clear_cache(&self, py: Python<'_>) -> PyResult<()> {
         py.detach(|| {
             let rt = tokio::runtime::Runtime::new()
@@ -292,94 +306,6 @@ impl PyInferenceEngine {
                 let engine = self.inner.read().await;
                 engine.clear_cache().await;
                 Ok(())
-            })
-        })
-    }
-
-    /// Generate text and return a dict with text, token count, and perf metrics.
-    ///
-    /// Unlike `generate()` which returns only the text, this method returns a
-    /// dictionary containing the generated text together with timing and
-    /// throughput information useful for benchmarking.
-    #[pyo3(signature = (prompt, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50, seed = None))]
-    fn generate_with_metrics(
-        &self,
-        py: Python<'_>,
-        prompt: &str,
-        max_tokens: Option<u32>,
-        temperature: Option<f32>,
-        top_p: Option<f32>,
-        top_k: Option<u32>,
-        seed: Option<u64>,
-    ) -> PyResult<Py<PyAny>> {
-        let prompt = prompt.to_string();
-        py.detach(|| {
-            let rt = tokio::runtime::Runtime::new()
-                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {e}")))?;
-
-            rt.block_on(async {
-                let mut config = build_generation_config(max_tokens, temperature, top_p, top_k)?;
-                if let Some(s) = seed {
-                    config = config.with_seed(s);
-                }
-
-                let start = std::time::Instant::now();
-                let engine = self.inner.write().await;
-                let text = engine
-                    .generate_with_config(&prompt, &config)
-                    .await
-                    .map_err(|e| PyRuntimeError::new_err(format!("Generation failed: {e}")))?;
-                let elapsed_ms = start.elapsed().as_millis() as u64;
-
-                let stats = engine.get_stats().await;
-
-                Python::attach(|py2| {
-                    let dict = PyDict::new(py2);
-                    dict.set_item("text", &text)?;
-                    dict.set_item("latency_ms", elapsed_ms)?;
-                    let token_count = text.split_whitespace().count();
-                    dict.set_item("token_count", token_count)?;
-                    let tps = if elapsed_ms > 0 {
-                        token_count as f64 / (elapsed_ms as f64 / 1000.0)
-                    } else {
-                        0.0
-                    };
-                    dict.set_item("tokens_per_second", tps)?;
-                    dict.set_item("cache_size", stats.cache_size)?;
-                    dict.set_item("backend_type", &stats.backend_type)?;
-                    Ok(dict.into())
-                })
-            })
-        })
-    }
-
-    /// Evaluate a list of token IDs and return logits as a Python list of floats.
-    ///
-    /// This gives direct access to the model's output logits for a given token
-    /// sequence, which is useful for perplexity evaluation, custom sampling,
-    /// or cross-validation workflows.
-    #[pyo3(signature = (token_ids,))]
-    fn get_logits(&self, py: Python<'_>, token_ids: Vec<u32>) -> PyResult<Py<PyAny>> {
-        if token_ids.is_empty() {
-            return Err(pyo3::exceptions::PyValueError::new_err("token_ids must not be empty"));
-        }
-
-        py.detach(|| {
-            let rt = tokio::runtime::Runtime::new()
-                .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {e}")))?;
-
-            rt.block_on(async {
-                let mut engine = self.inner.write().await;
-                let logits = engine
-                    .eval_ids(&token_ids)
-                    .await
-                    .map_err(|e| PyRuntimeError::new_err(format!("eval_ids failed: {e}")))?;
-
-                Python::attach(|py2| {
-                    let py_list = PyList::new(py2, &logits)
-                        .map_err(|e| PyRuntimeError::new_err(format!("{e}")))?;
-                    Ok(py_list.into())
-                })
             })
         })
     }
@@ -690,38 +616,55 @@ impl PyStreamingGenerator {
     }
 }
 
-/// Batch inference for multiple prompts.
+/// Batch inference for multiple prompts with comprehensive error handling.
 ///
-/// Returns a list of dicts, each containing `text` and `latency_ms`.
-/// Generation parameters are applied uniformly to all prompts.
+/// This function processes multiple prompts sequentially using the same inference
+/// engine. It's designed for scenarios where you need to generate responses for
+/// multiple inputs efficiently.
+///
+/// # Arguments
+/// * `engine` - The inference engine to use for generation
+/// * `prompts` - Vector of input prompts to process
+/// * `_kwargs` - Additional keyword arguments (reserved for future use)
+///
+/// # Returns
+/// Vector of generated text responses, one per input prompt
+///
+/// # Errors
+/// Returns `PyRuntimeError` if any generation fails. The function stops on first error
+/// and does not process remaining prompts.
+///
+/// # Performance Notes
+/// This function processes prompts sequentially. For better performance with many
+/// prompts, consider using concurrent generation patterns in your Python code.
 #[pyfunction]
-#[pyo3(signature = (engine, prompts, max_tokens = 100, temperature = 0.7, top_p = 0.9, top_k = 50))]
+#[pyo3(signature = (engine, prompts, **_kwargs))]
 pub fn batch_generate(
     py: Python<'_>,
     engine: &PyInferenceEngine,
     prompts: Vec<String>,
-    max_tokens: Option<u32>,
-    temperature: Option<f32>,
-    top_p: Option<f32>,
-    top_k: Option<u32>,
-) -> PyResult<Vec<Py<PyAny>>> {
+    _kwargs: Option<&pyo3::Bound<'_, PyDict>>,
+) -> PyResult<Vec<String>> {
     py.detach(|| {
         let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {e}")))?;
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create runtime: {}", e)))?;
 
         rt.block_on(async {
-            let config = build_generation_config(max_tokens, temperature, top_p, top_k)?;
-            let mut results = Vec::with_capacity(prompts.len());
+            let mut results = Vec::new();
+            let config = GenerationConfig::default();
 
             info!("Starting batch generation for {} prompts", prompts.len());
 
-            for (i, prompt) in prompts.iter().enumerate() {
-                debug!("Processing batch prompt {}/{}", i + 1, prompts.len());
+            for (i, prompt) in prompts.into_iter().enumerate() {
+                debug!(
+                    "Processing batch prompt {}: '{}...'",
+                    i + 1,
+                    &prompt[..20.min(prompt.len())]
+                );
 
-                let start = std::time::Instant::now();
                 let engine_guard = engine.inner.write().await;
-                let text =
-                    engine_guard.generate_with_config(prompt, &config).await.map_err(|e| {
+                let result =
+                    engine_guard.generate_with_config(&prompt, &config).await.map_err(|e| {
                         error!("Batch generation failed for prompt {}: {}", i + 1, e);
                         PyRuntimeError::new_err(format!(
                             "Generation failed for prompt {}: {}",
@@ -729,19 +672,16 @@ pub fn batch_generate(
                             e
                         ))
                     })?;
-                let elapsed_ms = start.elapsed().as_millis() as u64;
 
-                Python::attach(|py2| {
-                    let dict = PyDict::new(py2);
-                    dict.set_item("text", &text)?;
-                    dict.set_item("latency_ms", elapsed_ms)?;
-                    dict.set_item("prompt_index", i)?;
-                    results.push(dict.into());
-                    Ok::<(), PyErr>(())
-                })?;
+                debug!(
+                    "Completed batch prompt {}: '{}...'",
+                    i + 1,
+                    &result[..20.min(result.len())]
+                );
+                results.push(result);
             }
 
-            info!("Batch generation completed for {} prompts", results.len());
+            info!("Batch generation completed successfully for {} prompts", results.len());
             Ok(results)
         })
     })

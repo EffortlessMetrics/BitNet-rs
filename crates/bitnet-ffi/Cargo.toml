@@ -16,11 +16,11 @@ name = "bitnet_ffi"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
-bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1" }
-bitnet-inference = { path = "../bitnet-inference", version = "0.2.0-alpha.1" }
-bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.0-alpha.1" }
-bitnet-compat = { path = "../bitnet-compat", version = "0.2.0-alpha.1" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
+bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
+bitnet-compat = { path = "../bitnet-compat", version = "0.2.1-dev" }
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
@@ -37,7 +37,7 @@ cudarc = { workspace = true, optional = true }
 cbindgen = "0.29.0"
 
 [dev-dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 tempfile.workspace = true
 proptest = { workspace = true }
 

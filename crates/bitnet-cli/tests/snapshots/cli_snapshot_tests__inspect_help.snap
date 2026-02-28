@@ -7,70 +7,17 @@ Inspect model metadata and diagnostics
 Usage: bitnet inspect [OPTIONS] <MODEL>
 
 Arguments:
-  <MODEL>
-          Model file path
+  <MODEL>  Model file path
 
 Options:
-  -c, --config <PATH>
-          Configuration file path
-
-      --ln-stats
-          Compute and display LayerNorm gamma statistics
-
-  -d, --device <DEVICE>
-          Device to use (cpu, cuda, oneapi, gpu, npu, auto)
-
-      --gate <GATE>
-          Gate behavior: none|auto|policy
-          
-          [default: auto]
-
-      --backend <BACKEND>
-          GPU backend to use
-
-          Possible values:
-          - auto:   Automatically detect best available backend
-          - cpu:    CPU only (no GPU)
-          - cuda:   NVIDIA CUDA
-          - opencl: Intel OpenCL (Arc, Xe)
-          - vulkan: Vulkan compute
-          - metal:  Apple Metal
-          - rocm:   AMD ROCm/HIP
-          - webgpu: WebGPU (experimental)
-          
-          [default: auto]
-
-      --policy <POLICY>
-          Policy file (YAML) for custom validation rules
-
-      --log-level <LEVEL>
-          Log level (trace, debug, info, warn, error)
-
-      --policy-key <POLICY_KEY>
-          Policy key (architecture ID) for rules lookup
-
-      --json
-          Output format as JSON
-
-      --threads <N>
-          Number of CPU threads
-
-      --batch-size <SIZE>
-          Batch size for processing
-
-      --output-format <FORMAT>
-          Output format (text, json)
-          
-          [default: text]
-
-      --quiet
-          Suppress all non-essential output
-
-      --verbose
-          Enable verbose/debug-level output
-
-      --no-color
-          Disable colored output
-
-  -h, --help
-          Print help (see a summary with '-h')
+  -c, --config <PATH>            Configuration file path
+      --ln-stats                 Compute and display LayerNorm gamma statistics
+  -d, --device <DEVICE>          Device to use (cpu, cuda, auto)
+      --gate <GATE>              Gate behavior: none|auto|policy [default: auto]
+      --log-level <LEVEL>        Log level (trace, debug, info, warn, error)
+      --policy <POLICY>          Policy file (YAML) for custom validation rules
+      --policy-key <POLICY_KEY>  Policy key (architecture ID) for rules lookup
+      --threads <N>              Number of CPU threads
+      --batch-size <SIZE>        Batch size for processing
+      --json                     Output format as JSON
+  -h, --help                     Print help

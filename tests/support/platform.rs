@@ -154,67 +154,6 @@ pub fn create_mock_backend_libs(dir: &Path, backend: CppBackend) -> anyhow::Resu
     Ok(())
 }
 
-/// Returns the platform-specific PATH separator character (AC5)
-///
-/// - Unix (Linux/macOS): `":"`
-/// - Windows: `";"`
-pub fn path_separator() -> &'static str {
-    #[cfg(target_os = "windows")]
-    return ";";
-    #[cfg(not(target_os = "windows"))]
-    return ":";
-}
-
-/// Splits a PATH-like string by the platform-specific separator (AC5)
-///
-/// Returns an empty `Vec` for empty input.
-pub fn split_loader_path(path: &str) -> Vec<String> {
-    if path.is_empty() {
-        return Vec::new();
-    }
-    path.split(path_separator()).map(|s| s.to_string()).collect()
-}
-
-/// Joins path components with the platform-specific separator (AC5)
-pub fn join_loader_path(paths: &[&str]) -> String {
-    paths.join(path_separator())
-}
-
-/// Prepends `new_path` to the platform-specific loader path env var (AC5)
-///
-/// If the loader path variable is empty or unset, returns `new_path` alone.
-pub fn append_to_loader_path(new_path: &str) -> String {
-    let loader_var = get_loader_path_var();
-    let current = std::env::var(loader_var).unwrap_or_default();
-    if current.is_empty() {
-        new_path.to_string()
-    } else {
-        format!("{}{}{}", new_path, path_separator(), current)
-    }
-}
-
-/// Creates a temp directory with mock libraries and returns env var mappings (AC10)
-///
-/// Returns `(TempDir, Vec<(key, value)>)` where the env pairs configure
-/// the backend directory and loader path for the given `CppBackend`.
-pub fn create_temp_cpp_env(
-    backend: CppBackend,
-) -> anyhow::Result<(tempfile::TempDir, Vec<(String, String)>)> {
-    let temp = tempfile::tempdir()?;
-    create_mock_backend_libs(temp.path(), backend)?;
-
-    let dir_var = match backend {
-        CppBackend::BitNet => "BITNET_CPP_DIR",
-        CppBackend::Llama => "LLAMA_CPP_DIR",
-    };
-    let loader_var = get_loader_path_var();
-    let dir_str = temp.path().to_string_lossy().to_string();
-
-    let env_pairs = vec![(dir_var.to_string(), dir_str.clone()), (loader_var.to_string(), dir_str)];
-
-    Ok((temp, env_pairs))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

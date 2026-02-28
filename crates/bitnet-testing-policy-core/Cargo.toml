@@ -13,8 +13,8 @@ description = "Core policy and BDD compatibility orchestration for BitNet runtim
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.2.0-alpha.1" }
-bitnet-testing-scenarios-core = { path = "../bitnet-testing-scenarios-core", version = "0.2.0-alpha.1" }
+bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.2.1-dev" }
+bitnet-testing-scenarios-core = { path = "../bitnet-testing-scenarios-core", version = "0.2.1-dev" }
 
 [features]
 default = []

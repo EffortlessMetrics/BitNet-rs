@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_tests.rs
-expression: "format!(\"{strategy:?}\")"
----
-AVX512

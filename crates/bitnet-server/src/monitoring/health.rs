@@ -11,7 +11,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
@@ -99,8 +98,6 @@ pub struct HealthChecker {
     /// GPU memory leak detector (used only when gpu features are enabled)
     #[cfg_attr(not(feature = "gpu"), allow(dead_code))]
     gpu_leak_detector: Arc<crate::health::GpuMemoryLeakDetector>,
-    /// Set to `true` once the server has finished initialization.
-    startup_complete: Arc<AtomicBool>,
 }
 
 impl HealthChecker {
@@ -117,27 +114,12 @@ impl HealthChecker {
             component_checks: Arc::new(RwLock::new(HashMap::new())),
             performance: Arc::new(PerformanceMetrics::new()),
             gpu_leak_detector,
-            startup_complete: Arc::new(AtomicBool::new(false)),
         }
     }
 
     /// Get the performance metrics collector
     pub fn performance(&self) -> Arc<PerformanceMetrics> {
         self.performance.clone()
-    }
-
-    /// Mark the server as fully started (enables the startup probe).
-    pub fn mark_ready(&self) {
-        self.startup_complete.store(true, Ordering::SeqCst);
-    }
-
-    /// Startup probe: returns `Healthy` only after `mark_ready()` has been called.
-    pub async fn check_startup(&self) -> HealthStatus {
-        if self.startup_complete.load(Ordering::SeqCst) {
-            HealthStatus::Healthy
-        } else {
-            HealthStatus::Unhealthy
-        }
     }
 
     /// Perform comprehensive health check
@@ -469,7 +451,6 @@ pub trait HealthProbe: Send + Sync + 'static {
     async fn check_health(&self) -> HealthResponse;
     async fn check_liveness(&self) -> HealthStatus;
     async fn check_readiness(&self) -> HealthStatus;
-    async fn check_startup(&self) -> HealthStatus;
 }
 
 #[async_trait]
@@ -485,10 +466,6 @@ impl HealthProbe for HealthChecker {
     async fn check_readiness(&self) -> HealthStatus {
         HealthChecker::check_readiness(self).await
     }
-
-    async fn check_startup(&self) -> HealthStatus {
-        HealthChecker::check_startup(self).await
-    }
 }
 
 /// Production constructor keeps the same API
@@ -502,7 +479,6 @@ pub fn create_health_routes_with_probe<T: HealthProbe>(probe: Arc<T>) -> Router 
         .route("/health", get(health_handler::<T>))
         .route("/health/live", get(liveness_handler::<T>))
         .route("/health/ready", get(readiness_handler::<T>))
-        .route("/health/startup", get(startup_handler::<T>))
         .with_state(probe)
 }
 
@@ -536,16 +512,6 @@ async fn liveness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Respon
 async fn readiness_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Response {
     // Readiness always uses strict fail-fast (degraded = not ready)
     match probe.check_readiness().await {
-        HealthStatus::Healthy => with_no_store_headers(StatusCode::OK.into_response()),
-        HealthStatus::Degraded | HealthStatus::Unhealthy => {
-            with_no_store_headers(StatusCode::SERVICE_UNAVAILABLE.into_response())
-        }
-    }
-}
-
-/// Startup probe endpoint (Kubernetes)
-async fn startup_handler<T: HealthProbe>(State(probe): State<Arc<T>>) -> Response {
-    match probe.check_startup().await {
         HealthStatus::Healthy => with_no_store_headers(StatusCode::OK.into_response()),
         HealthStatus::Degraded | HealthStatus::Unhealthy => {
             with_no_store_headers(StatusCode::SERVICE_UNAVAILABLE.into_response())
@@ -605,7 +571,6 @@ mod tests {
         overall: HealthStatus,
         live: HealthStatus,
         ready: HealthStatus,
-        startup: HealthStatus,
     }
 
     #[async_trait]
@@ -638,10 +603,6 @@ mod tests {
         async fn check_readiness(&self) -> HealthStatus {
             self.ready
         }
-
-        async fn check_startup(&self) -> HealthStatus {
-            self.startup
-        }
     }
 
     #[cfg(not(feature = "degraded-ok"))]
@@ -652,7 +613,6 @@ mod tests {
             overall: HealthStatus::Degraded,
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
         }));
         let resp = app.oneshot(Request::get("/health").body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
@@ -670,7 +630,6 @@ mod tests {
             overall: HealthStatus::Degraded,
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
         }));
         let resp = app.oneshot(Request::get("/health").body(Body::empty()).unwrap()).await.unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
@@ -687,7 +646,6 @@ mod tests {
             overall: HealthStatus::Healthy,
             live: HealthStatus::Healthy,
             ready: HealthStatus::Degraded,
-            startup: HealthStatus::Healthy,
         }));
         let resp =
             app.oneshot(Request::get("/health/ready").body(Body::empty()).unwrap()).await.unwrap();
@@ -705,7 +663,6 @@ mod tests {
             overall: HealthStatus::Healthy,
             live: HealthStatus::Degraded,
             ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
         }));
         let resp =
             app.oneshot(Request::get("/health/live").body(Body::empty()).unwrap()).await.unwrap();
@@ -723,7 +680,6 @@ mod tests {
             overall: HealthStatus::Healthy,
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
         }));
 
         // Test /health endpoint
@@ -763,7 +719,6 @@ mod tests {
             overall: HealthStatus::Healthy,
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
         }));
 
         for path in ["/health", "/health/live", "/health/ready"] {
@@ -784,7 +739,6 @@ mod tests {
             overall: HealthStatus::Degraded,
             live: HealthStatus::Healthy,
             ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
         }));
         let req = Request::builder().method("HEAD").uri("/health").body(Body::empty()).unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();
@@ -806,7 +760,6 @@ mod tests {
             overall: HealthStatus::Healthy,
             live: HealthStatus::Healthy,
             ready: HealthStatus::Degraded,
-            startup: HealthStatus::Healthy,
         }));
         let req =
             Request::builder().method("HEAD").uri("/health/ready").body(Body::empty()).unwrap();
@@ -825,7 +778,6 @@ mod tests {
             overall: HealthStatus::Healthy,
             live: HealthStatus::Degraded,
             ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
         }));
         let req =
             Request::builder().method("HEAD").uri("/health/live").body(Body::empty()).unwrap();
@@ -839,35 +791,5 @@ mod tests {
             resp.headers().get(header::CACHE_CONTROL),
             Some(&HeaderValue::from_static("no-store"))
         );
-    }
-
-    #[tokio::test]
-    async fn startup_probe_returns_503_before_ready() {
-        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
-            overall: HealthStatus::Healthy,
-            live: HealthStatus::Healthy,
-            ready: HealthStatus::Healthy,
-            startup: HealthStatus::Unhealthy,
-        }));
-        let resp = app
-            .oneshot(Request::get("/health/startup").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
-    }
-
-    #[tokio::test]
-    async fn startup_probe_returns_200_after_ready() {
-        let app: Router = create_health_routes_with_probe(Arc::new(StubProbe {
-            overall: HealthStatus::Healthy,
-            live: HealthStatus::Healthy,
-            ready: HealthStatus::Healthy,
-            startup: HealthStatus::Healthy,
-        }));
-        let resp = app
-            .oneshot(Request::get("/health/startup").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
     }
 }

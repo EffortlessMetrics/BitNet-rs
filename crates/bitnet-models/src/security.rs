@@ -141,19 +141,17 @@ pub struct SecureModelDownloader {
 
 impl SecureModelDownloader {
     /// Create a new secure model downloader
-    pub fn new(config: ModelSecurity) -> Result<Self> {
+    pub fn new(config: ModelSecurity) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(300)) // 5 minute timeout
             .build()
-            .map_err(|e| anyhow!("Failed to create HTTP client: {e}"))?;
+            .expect("Failed to create HTTP client");
 
         #[cfg(target_arch = "wasm32")]
-        let client = reqwest::Client::builder()
-            .build()
-            .map_err(|e| anyhow!("Failed to create HTTP client: {e}"))?;
+        let client = reqwest::Client::builder().build().expect("Failed to create HTTP client");
 
-        Ok(Self { verifier: ModelVerifier::new(config), client })
+        Self { verifier: ModelVerifier::new(config), client }
     }
 
     /// Download a model with integrity verification

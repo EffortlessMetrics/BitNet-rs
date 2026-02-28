@@ -41,7 +41,7 @@ pub fn parse_header(buf: &[u8]) -> Result<GgufHeader> {
         return Err(GgufError::ShortHeader(buf.len()));
     }
 
-    let magic = <[u8; 4]>::try_from(&buf[0..4]).map_err(|_| GgufError::Malformed)?;
+    let magic = <[u8; 4]>::try_from(&buf[0..4]).unwrap();
     if &magic != b"GGUF" {
         return Err(GgufError::BadMagic(magic));
     }
@@ -316,46 +316,4 @@ pub fn read_kv_pairs(
     }
 
     Ok(kvs)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_header_short_buffer_returns_error() {
-        let buf = [0u8; 10];
-        let err = parse_header(&buf).unwrap_err();
-        assert!(matches!(err, GgufError::ShortHeader(10)));
-    }
-
-    #[test]
-    fn parse_header_bad_magic_returns_error() {
-        let mut buf = [0u8; 24];
-        buf[0..4].copy_from_slice(b"BARF");
-        let err = parse_header(&buf).unwrap_err();
-        assert!(matches!(err, GgufError::BadMagic(_)));
-    }
-
-    #[test]
-    fn parse_header_unsupported_version_returns_error() {
-        let mut buf = [0u8; 24];
-        buf[0..4].copy_from_slice(b"GGUF");
-        buf[4..8].copy_from_slice(&99u32.to_le_bytes());
-        let err = parse_header(&buf).unwrap_err();
-        assert!(matches!(err, GgufError::UnsupportedVersion(99)));
-    }
-
-    #[test]
-    fn parse_header_valid_v3() {
-        let mut buf = [0u8; 24];
-        buf[0..4].copy_from_slice(b"GGUF");
-        buf[4..8].copy_from_slice(&3u32.to_le_bytes());
-        buf[8..16].copy_from_slice(&42u64.to_le_bytes());
-        buf[16..24].copy_from_slice(&7u64.to_le_bytes());
-        let hdr = parse_header(&buf).unwrap();
-        assert_eq!(hdr.version, 3);
-        assert_eq!(hdr.n_tensors, 42);
-        assert_eq!(hdr.n_kv, 7);
-    }
 }

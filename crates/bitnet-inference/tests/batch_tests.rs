@@ -314,14 +314,14 @@ mod batch_processing_tests {
         let device = Device::Cpu;
         Arc::new(InferenceEngine::new(model, tokenizer, device).unwrap())
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_processor_creation() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();
         let processor = MockBatchProcessor::new(engine, config);
         assert!(processor.is_ok());
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_single_batch_processing() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();
@@ -338,7 +338,7 @@ mod batch_processing_tests {
         assert!(responses[0].result.is_ok());
         assert!(responses[0].processing_time > Duration::from_millis(0));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_multiple_batch_processing() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();
@@ -374,7 +374,7 @@ mod batch_processing_tests {
         assert!(response_ids.contains(&"req-2".to_string()));
         assert!(response_ids.contains(&"req-3".to_string()));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_concurrent_processing_limits() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig { max_concurrent_requests: 2, ..Default::default() };
@@ -394,7 +394,7 @@ mod batch_processing_tests {
         assert!(total_time > Duration::from_millis(10));
         assert!(total_time < Duration::from_millis(500));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_processing_with_different_configs() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();
@@ -425,7 +425,7 @@ mod batch_processing_tests {
             assert!(response.result.is_ok());
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_processing_performance() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig { max_concurrent_requests: 4, ..Default::default() };
@@ -449,7 +449,7 @@ mod batch_processing_tests {
         let successful_requests = responses.iter().filter(|r| r.result.is_ok()).count();
         assert_eq!(successful_requests, num_requests);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_processing_with_timeouts() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();
@@ -466,7 +466,7 @@ mod batch_processing_tests {
         assert_eq!(responses.len(), 1);
         assert!(responses[0].result.is_ok());
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_empty_batch_processing() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();
@@ -475,7 +475,7 @@ mod batch_processing_tests {
         let responses = processor.process_batch(requests).await;
         assert_eq!(responses.len(), 0);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_large_batch_processing() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig {
@@ -504,7 +504,7 @@ mod batch_processing_tests {
 }
 mod batch_error_handling_tests {
     use super::*;
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_processor_invalid_config() {
         let engine = create_test_engine().await;
         let invalid_config = BatchProcessorConfig { max_batch_size: 0, ..Default::default() };
@@ -517,7 +517,7 @@ mod batch_error_handling_tests {
         let device = Device::Cpu;
         Arc::new(InferenceEngine::new(model, tokenizer, device).unwrap())
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_processing_with_mixed_results() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();
@@ -548,7 +548,7 @@ mod batch_error_handling_tests {
             assert!(response.result.is_ok());
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_processing_resource_limits() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig {
@@ -580,7 +580,7 @@ mod batch_performance_tests {
         let device = Device::Cpu;
         Arc::new(InferenceEngine::new(model, tokenizer, device).unwrap())
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_vs_sequential_performance() {
         let engine = create_test_engine().await;
         let start_time = std::time::Instant::now();
@@ -606,7 +606,7 @@ mod batch_performance_tests {
         println!("Sequential time: {:?}, Batch time: {:?}", sequential_time, batch_time);
         assert!(batch_time <= sequential_time + Duration::from_millis(100));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_throughput_scaling() {
         let engine = create_test_engine().await;
         for concurrency in [1, 2, 4, 8] {
@@ -631,7 +631,7 @@ mod batch_performance_tests {
             assert!(throughput > 0.0);
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_batch_memory_usage() {
         let engine = create_test_engine().await;
         let config = BatchProcessorConfig::default();

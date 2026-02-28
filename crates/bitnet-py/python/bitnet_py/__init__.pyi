@@ -1,242 +1,322 @@
 """
-Type stubs for bitnet_py — accurate to the Rust (PyO3) module surface.
+Type stubs for bitnet_py - BitNet.cpp Python bindings
 
-Provides IDE autocompletion and type checking for all exported classes,
-functions, constants, and exception types.
+This file provides comprehensive type hints for all classes and functions
+in the bitnet_py module, ensuring proper IDE support and type checking.
 """
 
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union, AsyncIterator, Iterator
+from typing_extensions import Self
+import numpy as np
+from numpy.typing import NDArray
 
-# ── version / constants ──────────────────────────────────────────────
 __version__: str
-__author__: str
-__description__: str
 
-CPU: str
-CUDA: str
-METAL: str
+class BitNetError(Exception):
+    """Base exception class for BitNet errors."""
+    message: str
+    error_type: str
 
-QuantizationType: Dict[str, str]
+    def __init__(self, message: str, error_type: Optional[str] = None) -> None: ...
 
-# ── exception hierarchy ──────────────────────────────────────────────
-class BitNetBaseError(Exception):
-    """Base exception for all BitNet errors."""
-    ...
-
-class ModelError(BitNetBaseError):
-    """Model loading / format errors."""
-    ...
-
-class QuantizationError(BitNetBaseError):
-    """Quantization-related errors."""
-    ...
-
-class InferenceError(BitNetBaseError):
-    """Inference runtime errors."""
-    ...
-
-class KernelError(BitNetBaseError):
-    """Compute kernel errors."""
-    ...
-
-class ConfigError(BitNetBaseError):
-    """Configuration errors."""
-    ...
-
-class ValidationError(BitNetBaseError):
-    """Model validation errors."""
-    ...
-
-
-# ── configuration ────────────────────────────────────────────────────
-class BitNetConfig:
-    """Wrapper around the Rust ``BitNetConfig``."""
-
-    def __init__(self) -> None: ...
-    def __repr__(self) -> str: ...
-
-
-class GenerationConfig:
-    """Sampling / generation parameters."""
-
-    max_tokens: int
-    temperature: float
+class ModelArgs:
+    """Model configuration parameters."""
+    dim: int
+    n_layers: int
+    n_heads: int
+    n_kv_heads: Optional[int]
+    vocab_size: int
+    ffn_dim: int
+    norm_eps: float
+    rope_theta: float
+    use_kernel: bool
 
     def __init__(
         self,
-        max_tokens: int = 100,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        top_k: int = 50,
+        dim: int = 2560,
+        n_layers: int = 30,
+        n_heads: int = 20,
+        n_kv_heads: Optional[int] = None,
+        vocab_size: int = 128256,
+        ffn_dim: int = 6912,
+        norm_eps: float = 1e-5,
+        rope_theta: float = 500000.0,
+        use_kernel: bool = False,
     ) -> None: ...
-    def __repr__(self) -> str: ...
 
-
-# ── tokenizer ────────────────────────────────────────────────────────
-class Tokenizer:
-    """HuggingFace / SentencePiece tokenizer loaded from a pretrained name."""
-
-    vocab_size: int
-
-    def __init__(self, name: str) -> None: ...
-    def encode(
-        self, text: str, add_special_tokens: Optional[bool] = True
-    ) -> List[int]: ...
-    def decode(
-        self, tokens: List[int], skip_special_tokens: Optional[bool] = None
-    ) -> str: ...
-    def __repr__(self) -> str: ...
-
-
-# ── model ────────────────────────────────────────────────────────────
-class BitNetModel:
-    """A loaded BitNet model (GGUF / SafeTensors)."""
-
-    config: Dict[str, Any]
-    device: str
-    parameter_count: int
-    memory_usage: int
-    architecture: str
-    quantization: str
-    supports_streaming: bool
-
-    def __init__(
-        self,
-        path: str,
-        device: str = "cpu",
-        **kwargs: Any,
-    ) -> None: ...
-    def info(self) -> Dict[str, Any]: ...
-    def __repr__(self) -> str: ...
-    def __str__(self) -> str: ...
-
-
-class ModelLoader:
-    """Loader that can open models and extract metadata."""
-
-    device: str
-
-    def __init__(self, device: str = "cpu") -> None: ...
-    def load(self, path: str, **kwargs: Any) -> BitNetModel: ...
-    def extract_metadata(self, path: str) -> Dict[str, Any]: ...
-    def available_formats(self) -> List[str]: ...
-    def __repr__(self) -> str: ...
-
-
-class ModelInfo:
-    """Lightweight model metadata snapshot (read-only properties)."""
-
-    name: str
-    version: str
-    architecture: str
-    vocab_size: int
-    context_length: int
-    quantization: Optional[str]
-    fingerprint: Optional[str]
+    @classmethod
+    def from_dict(cls, dict: Dict[str, Any]) -> Self: ...
 
     def to_dict(self) -> Dict[str, Any]: ...
-    def __repr__(self) -> str: ...
 
+class GenArgs:
+    """Generation configuration parameters."""
+    gen_length: int
+    gen_bsz: int
+    prompt_length: int
+    use_sampling: bool
+    temperature: float
+    top_p: float
+    top_k: Optional[int]
+    repetition_penalty: float
 
-# ── inference engine ─────────────────────────────────────────────────
-class InferenceEngine:
-    """High-level inference engine wrapping a model and tokenizer."""
+    def __init__(
+        self,
+        gen_length: int = 32,
+        gen_bsz: int = 1,
+        prompt_length: int = 64,
+        use_sampling: bool = False,
+        temperature: float = 0.8,
+        top_p: float = 0.9,
+        top_k: Optional[int] = None,
+        repetition_penalty: float = 1.0,
+    ) -> None: ...
 
-    model_config: Dict[str, Any]
+class InferenceConfig:
+    """Inference configuration for the Rust engine."""
+    max_length: int
+    max_new_tokens: int
+    temperature: float
+    top_p: float
+    top_k: Optional[int]
+    repetition_penalty: float
+    do_sample: bool
+    seed: Optional[int]
+    pad_token_id: Optional[int]
+    eos_token_id: Optional[int]
+
+    def __init__(
+        self,
+        max_length: int = 2048,
+        max_new_tokens: int = 128,
+        temperature: float = 0.8,
+        top_p: float = 0.9,
+        top_k: Optional[int] = None,
+        repetition_penalty: float = 1.0,
+        do_sample: bool = True,
+        seed: Optional[int] = None,
+        pad_token_id: Optional[int] = None,
+        eos_token_id: Optional[int] = None,
+    ) -> None: ...
+
+class Message:
+    """Message for chat formatting."""
+    role: str
+    content: str
+
+    def __init__(self, role: str, content: str) -> None: ...
+
+class Stats:
+    """Statistics for inference performance."""
+    total_tokens: int
+    total_time: float
+    tokens_per_second: float
+    prefill_time: float
+    decode_time: float
+    memory_used: float
+
+    def __init__(self) -> None: ...
+    def show(self) -> str: ...
+
+class Tokenizer:
+    """Tokenizer for encoding and decoding text."""
+    n_words: int
+    bos_id: int
+    eos_id: int
+    eot_id: int
+    pad_id: int
+    special_tokens: Dict[str, int]
+
+    def __init__(self, model_path: str) -> None: ...
+
+    def encode(
+        self,
+        text: str,
+        bos: bool = True,
+        eos: bool = False,
+        allowed_special: Optional[Any] = None,
+        disallowed_special: Optional[Any] = None,
+    ) -> List[int]: ...
+
+    def decode(self, tokens: List[int]) -> str: ...
+
+class ChatFormat:
+    """Chat format wrapper for dialog-based interactions."""
+    eot_id: int
+
+    def __init__(self, tokenizer: Tokenizer) -> None: ...
+
+    def decode(self, tokens: List[int]) -> str: ...
+    def encode_header(self, message: Message) -> List[int]: ...
+    def encode_message(
+        self, message: Message, return_target: bool = False
+    ) -> Union[List[int], Tuple[List[int], List[int]]]: ...
+    def encode_dialog_prompt(
+        self,
+        dialog: List[Message],
+        completion: bool = False,
+        return_target: bool = False,
+    ) -> Union[List[int], Tuple[List[int], List[int]]]: ...
+
+class BitNetModel:
+    """BitNet model wrapper."""
+    config: ModelArgs
     device: str
+    dtype: str
+    model_path: str
+
+    def __init__(
+        self,
+        model_args: ModelArgs,
+        device: str = "cpu",
+        dtype: str = "bfloat16",
+    ) -> None: ...
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        ckpt_dir: str,
+        model_args: Optional[ModelArgs] = None,
+        device: str = "cpu",
+        dtype: str = "bfloat16",
+    ) -> Self: ...
+
+    @classmethod
+    def from_gguf(cls, model_path: str, device: Optional[str] = None) -> Self: ...
+
+    @classmethod
+    def from_safetensors(cls, model_path: str, device: Optional[str] = None) -> Self: ...
+
+    def forward(
+        self,
+        token_values: NDArray[np.int32],
+        token_lengths: Optional[NDArray[np.int32]] = None,
+        start_pos: Optional[NDArray[np.int32]] = None,
+        cache: Optional[List[Any]] = None,
+        kv_padding: Optional[int] = None,
+    ) -> NDArray[np.float32]: ...
+
+    def forward_with_attn_bias(
+        self,
+        token_values: NDArray[np.int32],
+        attn_bias: Any,
+        cache: List[Any],
+    ) -> NDArray[np.float32]: ...
+
+    def to(self, device: str) -> None: ...
+    def eval(self) -> None: ...
+    def train(self, mode: Optional[bool] = None) -> None: ...
+    def num_parameters(self) -> int: ...
+
+class InferenceEngine:
+    """Inference engine for text generation."""
+    gen_args: GenArgs
+    device: str
+    tokenizer: Tokenizer
+
+    def __init__(
+        self,
+        prefill_model: BitNetModel,
+        decode_model: BitNetModel,
+        tokenizer: Tokenizer,
+        gen_args: GenArgs,
+        device: Optional[str] = None,
+    ) -> None: ...
+
+    @classmethod
+    def build(
+        cls,
+        ckpt_dir: str,
+        gen_args: GenArgs,
+        device: str,
+        tokenizer_path: Optional[str] = None,
+        num_layers: int = 13,
+        use_full_vocab: bool = False,
+    ) -> Self: ...
+
+    def generate_all(
+        self,
+        prompts: List[List[int]],
+        use_cuda_graphs: bool = True,
+        use_sampling: Optional[bool] = None,
+    ) -> Tuple[Stats, List[List[int]]]: ...
+
+    def generate(self, prompt: str) -> str: ...
+
+    async def generate_stream(self, prompt: str) -> str: ...
+
+    def compile_prefill(self) -> None: ...
+    def compile_generate(self) -> None: ...
+
+class SimpleInference:
+    """Simple inference engine for basic use cases."""
+    config: InferenceConfig
 
     def __init__(
         self,
         model: BitNetModel,
-        tokenizer: Optional[str] = None,
-        device: str = "cpu",
-        **kwargs: Any,
+        tokenizer: Tokenizer,
+        config: Optional[InferenceConfig] = None,
     ) -> None: ...
 
-    def generate(
-        self,
-        prompt: str,
-        max_tokens: int = 100,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        top_k: int = 50,
-        **kwargs: Any,
-    ) -> str: ...
+    def generate(self, prompt: str) -> str: ...
+    async def generate_stream(self, prompt: str) -> str: ...
 
-    def generate_with_metrics(
-        self,
-        prompt: str,
-        max_tokens: int = 100,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        top_k: int = 50,
-        seed: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        """Returns ``{"text", "latency_ms", "token_count", "tokens_per_second", ...}``."""
-        ...
-
-    def generate_stream(
-        self,
-        prompt: str,
-        max_tokens: int = 100,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        top_k: int = 50,
-        **kwargs: Any,
-    ) -> "StreamingGenerator": ...
-
-    def get_logits(self, token_ids: List[int]) -> List[float]:
-        """Run a forward pass on *token_ids* and return the raw logit vector."""
-        ...
-
-    def get_stats(self) -> Dict[str, Any]: ...
-    def clear_cache(self) -> None: ...
-    def __repr__(self) -> str: ...
-
-
-class StreamingGenerator(Iterator[str]):
-    """Token-by-token streaming iterator returned by ``InferenceEngine.generate_stream``."""
-
-    def __iter__(self) -> "StreamingGenerator": ...
-    def __next__(self) -> str: ...
-    def cancel(self) -> None: ...
-    def is_active(self) -> bool: ...
-    def get_stream_stats(self) -> Dict[str, Any]: ...
-    def __repr__(self) -> str: ...
-
-
-# ── module-level functions ───────────────────────────────────────────
+# Utility functions
 def load_model(
-    path: str,
-    device: str = "cpu",
+    model_path: str,
+    model_format: Optional[str] = None,
+    device: Optional[str] = None,
     **kwargs: Any,
 ) -> BitNetModel: ...
 
+def create_tokenizer(
+    tokenizer_path: str,
+    chat_format: bool = False,
+) -> Union[Tokenizer, ChatFormat]: ...
 
-def list_available_models(path: str) -> List[str]: ...
-
-
-def get_device_info() -> Dict[str, Any]: ...
-
-
-def set_num_threads(num_threads: int) -> None: ...
-
-
-def batch_generate(
-    engine: InferenceEngine,
+def benchmark_inference(
+    model: BitNetModel,
+    tokenizer: Tokenizer,
     prompts: List[str],
-    max_tokens: int = 100,
-    temperature: float = 0.7,
-    top_p: float = 0.9,
-    top_k: int = 50,
-) -> List[Dict[str, Any]]:
-    """Returns a list of ``{"text", "latency_ms", "prompt_index"}`` dicts."""
-    ...
+    gen_args: Optional[GenArgs] = None,
+    num_runs: int = 1,
+    warmup_runs: int = 1,
+) -> Dict[str, Any]: ...
 
+def compare_performance(
+    rust_model: BitNetModel,
+    python_model: Any,
+    tokenizer: Tokenizer,
+    prompts: List[str],
+    **kwargs: Any,
+) -> Dict[str, Any]: ...
 
-def get_model_info(path: str, device: str = "cpu") -> ModelInfo: ...
+def validate_outputs(
+    rust_model: BitNetModel,
+    python_model: Any,
+    tokenizer: Tokenizer,
+    prompts: List[str],
+    tolerance: float = 1e-6,
+) -> Dict[str, Any]: ...
 
+def get_system_info() -> Dict[str, Any]: ...
 
-def is_cuda_available() -> bool: ...
-def is_metal_available() -> bool: ...
-def get_cuda_device_count() -> int: ...
+def make_cache(
+    model_args: ModelArgs,
+    length: int,
+    device: Optional[str] = None,
+    n_layers: Optional[int] = None,
+    dtype: Optional[str] = None,
+) -> List[Any]: ...
+
+def cache_prefix(cache: List[Any], length: int) -> List[Any]: ...
+
+# Convenience functions
+def quick_inference(model_path: str, prompt: str, **kwargs: Any) -> str: ...
+
+def benchmark_model(model_path: str, prompts: List[str], **kwargs: Any) -> Dict[str, Any]: ...
+
+# Aliases for backward compatibility
+FastGen = InferenceEngine
+Transformer = BitNetModel

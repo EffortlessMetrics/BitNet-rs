@@ -110,7 +110,6 @@ pub struct ServerSettings {
     pub keep_alive: Duration,
     pub request_timeout: Duration,
     pub graceful_shutdown_timeout: Duration,
-    pub max_connections: usize,
     pub default_model_path: Option<String>,
     pub default_tokenizer_path: Option<String>,
     pub default_device: DeviceConfig,
@@ -125,7 +124,6 @@ impl Default for ServerSettings {
             keep_alive: Duration::from_secs(60),
             request_timeout: Duration::from_secs(300), // 5 minutes
             graceful_shutdown_timeout: Duration::from_secs(30),
-            max_connections: 1024,
             default_model_path: None,
             default_tokenizer_path: None,
             default_device: DeviceConfig::Auto,

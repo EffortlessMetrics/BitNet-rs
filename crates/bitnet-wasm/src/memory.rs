@@ -337,7 +337,11 @@ impl ProgressiveLoader {
     /// Check if loading is complete
     #[wasm_bindgen]
     pub fn is_complete(&self) -> bool {
-        if let Some(total) = self.total_size { self.loaded_size >= total } else { false }
+        if let Some(total) = self.total_size {
+            self.loaded_size >= total
+        } else {
+            false
+        }
     }
 
     /// Get loaded data

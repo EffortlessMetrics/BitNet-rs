@@ -13,7 +13,7 @@ description = "Testing-focused façade over BDD grid and feature-flag profile co
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-runtime-profile = { path = "../bitnet-runtime-profile", version = "0.2.0-alpha.1" }
+bitnet-runtime-profile = { path = "../bitnet-runtime-profile", version = "0.2.1-dev" }
 
 [features]
 default = []

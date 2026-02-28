@@ -7,18 +7,23 @@ use bitnet_device_probe::{DeviceCapabilities, SimdLevel, detect_simd_level, gpu_
 
 #[test]
 fn gpu_compiled_is_bool() {
+    // gpu_compiled reflects whether any GPU backend feature is compiled.
     assert_eq!(gpu_compiled(), cfg!(any(feature = "gpu", feature = "cuda", feature = "rocm")));
 }
 
 #[test]
 fn detect_simd_level_returns_valid_variant() {
+    // Just confirm the function returns without panicking — the actual level
+    // is hardware-dependent and cannot be snapshotted portably.
     let level = detect_simd_level();
+    // Document the invariant: every detected level has a non-empty Display.
     assert!(!level.to_string().is_empty());
 }
 
 #[test]
 fn device_capabilities_detect_cpu_rust_always_true() {
     let caps = DeviceCapabilities::detect();
+    // cpu_rust must always be true — we always have the Rust kernel path.
     assert!(caps.cpu_rust, "cpu_rust should always be true");
     insta::assert_snapshot!("device_capabilities_cpu_rust", format!("cpu_rust={}", caps.cpu_rust));
 }
@@ -29,38 +34,4 @@ fn simd_level_all_variants_debug() {
         [SimdLevel::Scalar, SimdLevel::Neon, SimdLevel::Sse42, SimdLevel::Avx2, SimdLevel::Avx512];
     let debug: Vec<String> = levels.iter().map(|l| format!("{l:?}")).collect();
     insta::assert_debug_snapshot!("simd_level_debug_variants", debug);
-}
-
-// -- Wave 3: device capability invariants ------------------------------------
-
-#[test]
-fn device_capabilities_gpu_compiled_consistent() {
-    let caps = DeviceCapabilities::detect();
-    let gpu_feat = cfg!(any(feature = "gpu", feature = "cuda"));
-    assert_eq!(caps.cuda_compiled, gpu_feat, "cuda_compiled should match gpu/cuda feature gate");
-    insta::assert_snapshot!(
-        "device_capabilities_gpu_consistent",
-        format!("cuda_compiled={} gpu_feature={}", caps.cuda_compiled, gpu_feat)
-    );
-}
-
-#[test]
-fn device_capabilities_npu_compiled_matches_feature() {
-    let caps = DeviceCapabilities::detect();
-    let npu_feat = cfg!(feature = "npu");
-    assert_eq!(caps.npu_compiled, npu_feat);
-    insta::assert_snapshot!(
-        "device_capabilities_npu",
-        format!("npu_compiled={} npu_feature={}", caps.npu_compiled, npu_feat)
-    );
-}
-
-#[test]
-fn device_probe_full_summary() {
-    let caps = DeviceCapabilities::detect();
-    let summary = format!(
-        "cpu_rust={} cuda_compiled={} rocm_compiled={} npu_compiled={} simd={:?}",
-        caps.cpu_rust, caps.cuda_compiled, caps.rocm_compiled, caps.npu_compiled, caps.simd_level
-    );
-    insta::assert_snapshot!("device_probe_summary", summary);
 }

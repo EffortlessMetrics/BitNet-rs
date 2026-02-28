@@ -13,7 +13,7 @@ description = "Shared feature flag and BDD profile matrix contracts"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-runtime-profile-core = { path = "../bitnet-runtime-profile-core", version = "0.2.0-alpha.1" }
+bitnet-runtime-profile-core = { path = "../bitnet-runtime-profile-core", version = "0.2.1-dev" }
 
 [features]
 default = []

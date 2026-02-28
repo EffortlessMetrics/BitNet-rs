@@ -13,7 +13,6 @@ use pyo3::types::PyDict;
 
 mod async_runtime;
 mod config;
-mod error;
 mod inference;
 mod model;
 mod tokenizer;
@@ -34,9 +33,6 @@ fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__author__", "BitNet-rs Team")?;
     m.add("__description__", "High-performance BitNet inference in Rust with Python bindings")?;
 
-    // Register exception hierarchy
-    error::register_exceptions(py, m)?;
-
     // Add main classes
     m.add_class::<PyBitNetModel>()?;
     m.add_class::<PyInferenceEngine>()?;
@@ -44,8 +40,6 @@ fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyBitNetConfig>()?;
     m.add_class::<PyGenerationConfig>()?;
     m.add_class::<PyModelLoader>()?;
-    m.add_class::<model::PyModelInfo>()?;
-    m.add_class::<inference::PyStreamingGenerator>()?;
 
     // Add utility functions
     m.add_function(wrap_pyfunction!(load_model, m)?)?;
@@ -53,7 +47,6 @@ fn bitnet_py(py: Python<'_>, m: &pyo3::Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_device_info, m)?)?;
     m.add_function(wrap_pyfunction!(set_num_threads, m)?)?;
     m.add_function(wrap_pyfunction!(batch_generate, m)?)?;
-    m.add_function(wrap_pyfunction!(model::get_model_info, m)?)?;
 
     // Add constants
     m.add("CPU", "cpu")?;

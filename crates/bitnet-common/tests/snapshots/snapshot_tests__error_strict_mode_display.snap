@@ -1,5 +1,0 @@
----
-source: crates/bitnet-common/tests/snapshot_tests.rs
-expression: "format!(\"{err}\")"
----
-Strict mode violation: mock inference rejected

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-device-probe/tests/snapshot_tests.rs
-expression: summary
----
-cpu_rust=true cuda_compiled=false rocm_compiled=false npu_compiled=false simd=Avx512

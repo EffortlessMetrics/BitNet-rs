@@ -7,67 +7,16 @@ Check GGUF file compatibility using header validation
 Usage: bitnet compat-check [OPTIONS] <PATH>
 
 Arguments:
-  <PATH>
-          Path to .gguf file
+  <PATH>  Path to .gguf file
 
 Options:
-  -c, --config <PATH>
-          Configuration file path
-
-      --json
-          Output JSON
-
-  -d, --device <DEVICE>
-          Device to use (cpu, cuda, oneapi, gpu, npu, auto)
-
-      --strict
-          Fail on unsupported version or suspicious counts
-
-      --backend <BACKEND>
-          GPU backend to use
-
-          Possible values:
-          - auto:   Automatically detect best available backend
-          - cpu:    CPU only (no GPU)
-          - cuda:   NVIDIA CUDA
-          - opencl: Intel OpenCL (Arc, Xe)
-          - vulkan: Vulkan compute
-          - metal:  Apple Metal
-          - rocm:   AMD ROCm/HIP
-          - webgpu: WebGPU (experimental)
-          
-          [default: auto]
-
-      --show-kv
-          Show key-value metadata (limit with --kv-limit)
-
-      --kv-limit <KV_LIMIT>
-          Limit number of KV pairs to show (default: 20)
-          
-          [default: 20]
-
-      --log-level <LEVEL>
-          Log level (trace, debug, info, warn, error)
-
-      --threads <N>
-          Number of CPU threads
-
-      --batch-size <SIZE>
-          Batch size for processing
-
-      --output-format <FORMAT>
-          Output format (text, json)
-          
-          [default: text]
-
-      --quiet
-          Suppress all non-essential output
-
-      --verbose
-          Enable verbose/debug-level output
-
-      --no-color
-          Disable colored output
-
-  -h, --help
-          Print help (see a summary with '-h')
+  -c, --config <PATH>        Configuration file path
+      --json                 Output JSON
+  -d, --device <DEVICE>      Device to use (cpu, cuda, auto)
+      --strict               Fail on unsupported version or suspicious counts
+      --log-level <LEVEL>    Log level (trace, debug, info, warn, error)
+      --show-kv              Show key-value metadata (limit with --kv-limit)
+      --kv-limit <KV_LIMIT>  Limit number of KV pairs to show (default: 20) [default: 20]
+      --threads <N>          Number of CPU threads
+      --batch-size <SIZE>    Batch size for processing
+  -h, --help                 Print help
