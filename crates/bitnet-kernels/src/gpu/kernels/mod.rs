@@ -30,10 +30,7 @@ mod tests {
     #[test]
     fn kernel_sources_contain_kernel_keyword() {
         assert!(MATMUL_I2S_SRC.contains("__kernel"), "matmul_i2s.cl missing __kernel");
-        assert!(
-            MATMUL_I2S_TILED_SRC.contains("__kernel"),
-            "matmul_i2s_tiled.cl missing __kernel"
-        );
+        assert!(MATMUL_I2S_TILED_SRC.contains("__kernel"), "matmul_i2s_tiled.cl missing __kernel");
         assert!(QUANTIZE_I2S_SRC.contains("__kernel"), "quantize_i2s.cl missing __kernel");
         assert!(ELEMENTWISE_SRC.contains("__kernel"), "elementwise.cl missing __kernel");
     }
@@ -77,10 +74,7 @@ mod tests {
 
     #[test]
     fn tiled_matmul_kernel_uses_local_memory() {
-        assert!(
-            MATMUL_I2S_TILED_SRC.contains("__local"),
-            "tiled kernel should use __local memory"
-        );
+        assert!(MATMUL_I2S_TILED_SRC.contains("__local"), "tiled kernel should use __local memory");
         assert!(
             MATMUL_I2S_TILED_SRC.contains("barrier(CLK_LOCAL_MEM_FENCE)"),
             "tiled kernel should have local memory barriers"

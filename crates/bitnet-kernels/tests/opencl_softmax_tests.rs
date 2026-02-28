@@ -73,12 +73,7 @@ fn cpu_softmax_multiple_rows() {
     let output = cpu_softmax(&input, 2, 4);
     for r in 0..2 {
         let row_sum: f32 = output[r * 4..(r + 1) * 4].iter().sum();
-        assert!(
-            (row_sum - 1.0).abs() < 1e-6,
-            "row {} sum = {} ≠ 1.0",
-            r,
-            row_sum
-        );
+        assert!((row_sum - 1.0).abs() < 1e-6, "row {} sum = {} ≠ 1.0", r, row_sum);
     }
 }
 
@@ -97,10 +92,7 @@ fn cpu_softmax_numerical_stability_large_values() {
     let output = cpu_softmax(&input, 1, 4);
     let sum: f32 = output.iter().sum();
     assert!((sum - 1.0).abs() < 1e-5, "sum = {} for large inputs", sum);
-    assert!(
-        output.iter().all(|&v| v.is_finite()),
-        "should not produce inf/nan"
-    );
+    assert!(output.iter().all(|&v| v.is_finite()), "should not produce inf/nan");
 }
 
 #[test]
@@ -108,11 +100,7 @@ fn cpu_softmax_numerical_stability_negative_large() {
     let input = vec![-1000.0, -999.0, -998.0, -997.0];
     let output = cpu_softmax(&input, 1, 4);
     let sum: f32 = output.iter().sum();
-    assert!(
-        (sum - 1.0).abs() < 1e-5,
-        "sum = {} for large negative inputs",
-        sum
-    );
+    assert!((sum - 1.0).abs() < 1e-5, "sum = {} for large negative inputs", sum);
 }
 
 #[test]
@@ -121,13 +109,7 @@ fn cpu_softmax_uniform_input_produces_uniform_output() {
     let output = cpu_softmax(&input, 1, 8);
     let expected = 1.0 / 8.0;
     for (i, &v) in output.iter().enumerate() {
-        assert!(
-            (v - expected).abs() < 1e-6,
-            "output[{}] = {} ≠ expected {}",
-            i,
-            v,
-            expected
-        );
+        assert!((v - expected).abs() < 1e-6, "output[{}] = {} ≠ expected {}", i, v, expected);
     }
 }
 
@@ -141,11 +123,7 @@ mod proptests {
     fn arb_softmax_input() -> impl Strategy<Value = (Vec<f32>, usize, usize)> {
         (1usize..=4, 1usize..=128).prop_flat_map(|(rows, cols)| {
             let len = rows * cols;
-            (
-                proptest::collection::vec(-100.0f32..100.0, len),
-                Just(rows),
-                Just(cols),
-            )
+            (proptest::collection::vec(-100.0f32..100.0, len), Just(rows), Just(cols))
         })
     }
 

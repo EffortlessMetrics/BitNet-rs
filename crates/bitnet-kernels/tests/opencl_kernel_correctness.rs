@@ -40,10 +40,7 @@ fn matmul_i2s_kernel_has_bounds_check() {
 fn matmul_i2s_kernel_unpacks_2bit_values() {
     let src = kernels::MATMUL_I2S_SRC;
     // Should unpack 4 values per byte (2 bits each)
-    assert!(
-        src.contains("& 0x03") || src.contains("& 3"),
-        "should mask to 2 bits"
-    );
+    assert!(src.contains("& 0x03") || src.contains("& 3"), "should mask to 2 bits");
     assert!(
         src.contains(">> (sub * 2)") || src.contains(">> (sub*2)"),
         "should shift by 2 bits per sub-element"
@@ -62,14 +59,8 @@ fn quantize_i2s_kernel_has_correct_signature() {
 #[test]
 fn quantize_i2s_kernel_computes_absmax() {
     let src = kernels::QUANTIZE_I2S_SRC;
-    assert!(
-        src.contains("fabs(") || src.contains("fabs ("),
-        "should compute absolute value"
-    );
-    assert!(
-        src.contains("fmax(") || src.contains("fmax ("),
-        "should find max via fmax"
-    );
+    assert!(src.contains("fabs(") || src.contains("fabs ("), "should compute absolute value");
+    assert!(src.contains("fmax(") || src.contains("fmax ("), "should find max via fmax");
 }
 
 #[test]
@@ -110,14 +101,8 @@ fn matmul_i2s_encoding_contract() {
     // Verify the 2-bit encoding used in the kernel matches our CPU implementation:
     // 0b00 = 0, 0b01 = +1, 0b11 = -1, 0b10 = unused (treated as 0)
     let src = kernels::MATMUL_I2S_SRC;
-    assert!(
-        src.contains("0x01") && src.contains("w = 1"),
-        "0b01 should map to +1"
-    );
-    assert!(
-        src.contains("0x03") && src.contains("w = -1"),
-        "0b11 should map to -1"
-    );
+    assert!(src.contains("0x01") && src.contains("w = 1"), "0b01 should map to +1");
+    assert!(src.contains("0x03") && src.contains("w = -1"), "0b11 should map to -1");
 }
 
 #[test]
@@ -143,28 +128,17 @@ fn quantize_ternary_encoding_contract() {
 #[test]
 fn no_kernel_uses_printf() {
     assert!(!kernels::MATMUL_I2S_SRC.contains("printf"), "matmul should not use printf");
-    assert!(
-        !kernels::QUANTIZE_I2S_SRC.contains("printf"),
-        "quantize should not use printf"
-    );
-    assert!(
-        !kernels::ELEMENTWISE_SRC.contains("printf"),
-        "elementwise should not use printf"
-    );
+    assert!(!kernels::QUANTIZE_I2S_SRC.contains("printf"), "quantize should not use printf");
+    assert!(!kernels::ELEMENTWISE_SRC.contains("printf"), "elementwise should not use printf");
 }
 
 #[test]
 fn no_kernel_uses_barrier_incorrectly() {
     // These are single-workitem kernels - barrier() would deadlock
-    for (name, src) in [
-        ("matmul", kernels::MATMUL_I2S_SRC),
-        ("quantize", kernels::QUANTIZE_I2S_SRC),
-    ] {
-        assert!(
-            !src.contains("barrier("),
-            "{} should not use barrier in per-item kernel",
-            name
-        );
+    for (name, src) in
+        [("matmul", kernels::MATMUL_I2S_SRC), ("quantize", kernels::QUANTIZE_I2S_SRC)]
+    {
+        assert!(!src.contains("barrier("), "{} should not use barrier in per-item kernel", name);
     }
 }
 
@@ -192,37 +166,25 @@ fn kernel_sources_are_valid_c99_ish() {
 #[test]
 fn elementwise_src_contains_vec_add() {
     let src = kernels::ELEMENTWISE_SRC;
-    assert!(
-        src.contains("__kernel void vec_add"),
-        "should contain vec_add kernel"
-    );
+    assert!(src.contains("__kernel void vec_add"), "should contain vec_add kernel");
 }
 
 #[test]
 fn elementwise_src_contains_silu() {
     let src = kernels::ELEMENTWISE_SRC;
-    assert!(
-        src.contains("__kernel void silu"),
-        "should contain silu kernel"
-    );
+    assert!(src.contains("__kernel void silu"), "should contain silu kernel");
 }
 
 #[test]
 fn elementwise_src_contains_rms_norm() {
     let src = kernels::ELEMENTWISE_SRC;
-    assert!(
-        src.contains("__kernel void rms_norm"),
-        "should contain rms_norm kernel"
-    );
+    assert!(src.contains("__kernel void rms_norm"), "should contain rms_norm kernel");
 }
 
 #[test]
 fn softmax_kernel_has_correct_signature() {
     let src = kernels::SOFTMAX_SRC;
-    assert!(
-        src.contains("__kernel void softmax"),
-        "should contain softmax kernel"
-    );
+    assert!(src.contains("__kernel void softmax"), "should contain softmax kernel");
 }
 
 #[test]
@@ -251,10 +213,7 @@ fn quantize_and_matmul_use_same_packing_layout() {
     );
 
     // Both should mask with 0x03 or shift-and-mask equivalently
-    assert!(
-        matmul_src.contains("0x03"),
-        "matmul must mask to 2 bits"
-    );
+    assert!(matmul_src.contains("0x03"), "matmul must mask to 2 bits");
 }
 
 #[test]
@@ -271,11 +230,7 @@ fn all_kernels_use_opencl_qualifiers() {
             "{} should use __kernel qualifier",
             name
         );
-        assert!(
-            !src.contains("__global__"),
-            "{} should not use CUDA __global__ qualifier",
-            name
-        );
+        assert!(!src.contains("__global__"), "{} should not use CUDA __global__ qualifier", name);
         assert!(
             !src.contains("threadIdx") && !src.contains("blockIdx"),
             "{} should not use CUDA thread indexing",

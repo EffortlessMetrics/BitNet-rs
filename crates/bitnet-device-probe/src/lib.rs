@@ -73,6 +73,7 @@ pub fn probe_cpu() -> CpuCapabilities {
 /// `BITNET_GPU_FAKE=none` makes all GPU flags `false`.
 /// Strict mode (`BITNET_STRICT_MODE=1`) ignores `BITNET_GPU_FAKE` and probes real hardware.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GpuCapabilities {
     /// Any GPU backend is available (CUDA, `ROCm`, and/or oneAPI).
     pub available: bool,
