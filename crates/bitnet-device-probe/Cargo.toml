@@ -32,5 +32,9 @@ rocm = []
 vulkan = ["dep:ash"]
 oneapi = ["dep:opencl3"]
 
+[[test]]
+name = "oneapi_detection_bdd"
+path = "tests/oneapi_detection_bdd.rs"
+
 [lints]
 workspace = true
