@@ -14,6 +14,11 @@ use opencl3::platform::get_platforms;
 use opencl3::program::Program;
 use opencl3::types::{cl_device_id, CL_BLOCKING};
 
+/// Runtime env var lookup (unlike `option_env!` which is compile-time).
+fn option_env_dynamic(key: &str) -> Option<String> {
+    std::env::var(key).ok()
+}
+
 /// OpenCL kernel provider for Intel Arc GPUs.
 ///
 /// Manages an OpenCL context, command queue, and compiled programs
@@ -174,13 +179,69 @@ impl OpenClKernel {
         source: &str,
         name: &str,
     ) -> Option<Program> {
+        // Check BITNET_OPENCL_FORCE_SOURCE to skip SPIR-V
+        let force_source = std::env::var("BITNET_OPENCL_FORCE_SOURCE")
+            .map(|v| v == "1")
+            .unwrap_or(false);
+
+        // Try SPIR-V first (if pre-compiled and not forced to source)
+        if !force_source {
+            if let Some(program) = Self::try_spirv_program(context, name) {
+                return Some(program);
+            }
+        }
+
+        // Fallback: runtime source compilation
         match Program::create_and_build_from_source(context, source, "") {
             Ok(program) => {
-                info!("Compiled OpenCL program: {}", name);
+                info!("Compiled OpenCL program from source: {}", name);
                 Some(program)
             }
             Err(e) => {
                 warn!("Failed to compile OpenCL program '{}': {}", name, e);
+                None
+            }
+        }
+    }
+
+    /// Attempt to load a pre-compiled SPIR-V program for the given kernel name.
+    ///
+    /// Looks for `BITNET_SPV_<NAME>` env var set by build.rs pointing to the
+    /// `.spv` file.  Uses `clCreateProgramWithIL` when available.
+    fn try_spirv_program(context: &Context, name: &str) -> Option<Program> {
+        let env_key = format!("BITNET_SPV_{}", name.to_uppercase());
+        let spv_path = match option_env_dynamic(&env_key) {
+            Some(p) => std::path::PathBuf::from(p),
+            None => return None,
+        };
+
+        if !spv_path.exists() {
+            debug!("SPIR-V file not found at {}", spv_path.display());
+            return None;
+        }
+
+        let spv_bytes = match std::fs::read(&spv_path) {
+            Ok(b) => b,
+            Err(e) => {
+                warn!("Failed to read SPIR-V file {}: {}", spv_path.display(), e);
+                return None;
+            }
+        };
+
+        match Program::create_and_build_from_il(context, &spv_bytes, "") {
+            Ok(program) => {
+                info!(
+                    "Loaded SPIR-V program for '{}' from {}",
+                    name,
+                    spv_path.display()
+                );
+                Some(program)
+            }
+            Err(e) => {
+                debug!(
+                    "SPIR-V load failed for '{}' (falling back to source): {}",
+                    name, e
+                );
                 None
             }
         }
