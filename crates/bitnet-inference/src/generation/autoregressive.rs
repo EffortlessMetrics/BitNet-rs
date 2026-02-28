@@ -185,7 +185,7 @@ impl AutoregressiveGenerator {
     pub fn new(config: GenerationConfig, device: Device) -> Result<Self> {
         let seed = config.seed.unwrap_or_else(|| {
             use std::time::{SystemTime, UNIX_EPOCH};
-            SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos() as u64
         });
 
         let rng = ChaCha8Rng::seed_from_u64(seed);
