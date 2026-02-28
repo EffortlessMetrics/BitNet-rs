@@ -184,3 +184,107 @@ fn snapshot_deepseek_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("deepseek_multi_turn", out);
 }
+
+// ── Falcon Chat ──────────────────────────────────────────────────
+
+#[test]
+fn snapshot_falcon_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::FalconChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("falcon_single_turn", out);
+}
+
+#[test]
+fn snapshot_falcon_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::FalconChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("falcon_with_system", out);
+}
+
+#[test]
+fn snapshot_falcon_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::FalconChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("falcon_multi_turn", out);
+}
+
+// ── CodeLlama Instruct ─────────────────────────────────────────
+
+#[test]
+fn snapshot_codellama_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::CodeLlamaInstruct);
+    let out = tmpl.format("Write a fibonacci function in Python.");
+    insta::assert_snapshot!("codellama_single_turn", out);
+}
+
+#[test]
+fn snapshot_codellama_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::CodeLlamaInstruct)
+        .with_system_prompt("You are a Python expert.");
+    let out = tmpl.format("Write a sort function.");
+    insta::assert_snapshot!("codellama_with_system", out);
+}
+
+#[test]
+fn snapshot_codellama_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::CodeLlamaInstruct)
+        .with_system_prompt("You are a code assistant.");
+    tmpl.add_turn("Write hello world", "print('Hello, world!')");
+    let out = tmpl.format("Now write a loop.");
+    insta::assert_snapshot!("codellama_multi_turn", out);
+}
+
+// ── Cohere Command ─────────────────────────────────────────────
+
+#[test]
+fn snapshot_cohere_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::CohereCommand);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("cohere_single_turn", out);
+}
+
+#[test]
+fn snapshot_cohere_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::CohereCommand)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("cohere_with_system", out);
+}
+
+#[test]
+fn snapshot_cohere_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::CohereCommand)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("cohere_multi_turn", out);
+}
+
+// ── InternLM Chat ──────────────────────────────────────────────
+
+#[test]
+fn snapshot_internlm_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::InternLMChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("internlm_single_turn", out);
+}
+
+#[test]
+fn snapshot_internlm_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::InternLMChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("internlm_with_system", out);
+}
+
+#[test]
+fn snapshot_internlm_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::InternLMChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("internlm_multi_turn", out);
+}

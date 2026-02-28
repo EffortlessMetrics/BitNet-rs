@@ -60,6 +60,14 @@ pub enum TemplateType {
     DeepSeekChat,
     /// StarCoder code completion format (prefix/suffix/middle FIM tokens)
     StarCoder,
+    /// Falcon chat format (User:/Assistant: roles)
+    FalconChat,
+    /// CodeLlama instruct format (LLaMA-style [INST] for code)
+    CodeLlamaInstruct,
+    /// Cohere Command format with special turn tokens
+    CohereCommand,
+    /// InternLM ChatML format with im_start/im_end tokens
+    InternLMChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -80,10 +88,23 @@ impl std::str::FromStr for TemplateType {
             "starcoder" | "star_coder" | "code-completion" => {
                 Ok(Self::StarCoder)
             }
+            "falcon-chat" | "falcon_chat" | "falcon" => {
+                Ok(Self::FalconChat)
+            }
+            "codellama-instruct" | "codellama_instruct" | "codellama" => {
+                Ok(Self::CodeLlamaInstruct)
+            }
+            "cohere-command" | "cohere_command" | "cohere" | "command-r" => {
+                Ok(Self::CohereCommand)
+            }
+            "internlm-chat" | "internlm_chat" | "internlm" => {
+                Ok(Self::InternLMChat)
+            }
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
-                 mistral-chat, deepseek-chat, starcoder",
+                 mistral-chat, deepseek-chat, starcoder, falcon-chat, \
+                 codellama-instruct, cohere-command, internlm-chat",
                 s
             ),
         }
@@ -102,6 +123,10 @@ impl std::fmt::Display for TemplateType {
             Self::MistralChat => write!(f, "mistral-chat"),
             Self::DeepSeekChat => write!(f, "deepseek-chat"),
             Self::StarCoder => write!(f, "starcoder"),
+            Self::FalconChat => write!(f, "falcon-chat"),
+            Self::CodeLlamaInstruct => write!(f, "codellama-instruct"),
+            Self::CohereCommand => write!(f, "cohere-command"),
+            Self::InternLMChat => write!(f, "internlm-chat"),
         }
     }
 }
@@ -151,6 +176,17 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::MistralChat;
+            }
+            // Cohere Command signature
+            if jinja.contains("<|START_OF_TURN_TOKEN|>")
+                && jinja.contains("<|END_OF_TURN_TOKEN|>")
+            {
+                tracing::debug!(
+                    template = "CohereCommand",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::CohereCommand;
             }
             // Generic instruct template
             if jinja.contains("{% for message in messages %}") {
@@ -229,6 +265,42 @@ impl TemplateType {
                 );
                 return Self::StarCoder;
             }
+            if lower.contains("falcon") {
+                tracing::debug!(
+                    template = "FalconChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::FalconChat;
+            }
+            if lower.contains("codellama") || lower.contains("code-llama") {
+                tracing::debug!(
+                    template = "CodeLlamaInstruct",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::CodeLlamaInstruct;
+            }
+            if lower.contains("cohere") || lower.contains("command-r") {
+                tracing::debug!(
+                    template = "CohereCommand",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::CohereCommand;
+            }
+            if lower.contains("internlm") {
+                tracing::debug!(
+                    template = "InternLMChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::InternLMChat;
+            }
             if lower.contains("instruct") {
                 tracing::debug!(
                     template = "Instruct",
@@ -257,6 +329,16 @@ impl TemplateType {
             Self::MistralChat => Self::apply_mistral_chat(user_text, system_prompt),
             Self::DeepSeekChat => Self::apply_deepseek_chat(user_text, system_prompt),
             Self::StarCoder => Self::apply_starcoder(user_text, system_prompt),
+            Self::FalconChat => Self::apply_falcon_chat(user_text, system_prompt),
+            Self::CodeLlamaInstruct => {
+                Self::apply_codellama_instruct(user_text, system_prompt)
+            }
+            Self::CohereCommand => {
+                Self::apply_cohere_command(user_text, system_prompt)
+            }
+            Self::InternLMChat => {
+                Self::apply_internlm_chat(user_text, system_prompt)
+            }
         }
     }
 
@@ -472,7 +554,117 @@ impl TemplateType {
         result
     }
 
-    /// Get the default stop sequences for this template
+    /// Apply Falcon chat template with User:/Falcon: roles
+    ///
+    /// Format:
+    /// ```text
+    /// User: {user_text}
+    /// Falcon:
+    /// ```
+    fn apply_falcon_chat(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::new();
+
+        if let Some(system) = system_prompt {
+            result.push_str("System: ");
+            result.push_str(system);
+            result.push_str("\n\n");
+        }
+
+        result.push_str("User: ");
+        result.push_str(user_text);
+        result.push_str("\nFalcon:");
+
+        result
+    }
+
+    /// Apply CodeLlama instruct template (LLaMA-style [INST] for code)
+    ///
+    /// Format:
+    /// ```text
+    /// [INST] {user_text} [/INST]
+    /// ```
+    fn apply_codellama_instruct(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::from("[INST] ");
+
+        if let Some(system) = system_prompt {
+            result.push_str("<<SYS>>\n");
+            result.push_str(system);
+            result.push_str("\n<</SYS>>\n\n");
+        }
+
+        result.push_str(user_text);
+        result.push_str(" [/INST]");
+
+        result
+    }
+
+    /// Apply Cohere Command format with START_OF_TURN/END_OF_TURN tokens
+    ///
+    /// Format:
+    /// ```text
+    /// <|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{system}<|END_OF_TURN_TOKEN|>
+    /// <|START_OF_TURN_TOKEN|><|USER_TOKEN|>{user}<|END_OF_TURN_TOKEN|>
+    /// <|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>
+    /// ```
+    fn apply_cohere_command(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::new();
+
+        if let Some(system) = system_prompt {
+            result.push_str(
+                "<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>",
+            );
+            result.push_str(system);
+            result.push_str("<|END_OF_TURN_TOKEN|>");
+        }
+
+        result.push_str("<|START_OF_TURN_TOKEN|><|USER_TOKEN|>");
+        result.push_str(user_text);
+        result.push_str("<|END_OF_TURN_TOKEN|>");
+
+        result
+            .push_str("<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>");
+
+        result
+    }
+
+    /// Apply InternLM ChatML format (same structure as Phi-4 ChatML)
+    ///
+    /// ```text
+    /// <|im_start|>system
+    /// You are a helpful assistant.<|im_end|>
+    /// <|im_start|>user
+    /// {user_text}<|im_end|>
+    /// <|im_start|>assistant
+    /// ```
+    fn apply_internlm_chat(
+        user_text: &str,
+        system_prompt: Option<&str>,
+    ) -> String {
+        let mut result = String::new();
+
+        let system =
+            system_prompt.unwrap_or("You are a helpful assistant.");
+        result.push_str("<|im_start|>system\n");
+        result.push_str(system);
+        result.push_str("<|im_end|>\n");
+
+        result.push_str("<|im_start|>user\n");
+        result.push_str(user_text);
+        result.push_str("<|im_end|>\n");
+
+        result.push_str("<|im_start|>assistant\n");
+
+        result
+    }
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -492,6 +684,21 @@ impl TemplateType {
             }
             Self::StarCoder => {
                 vec!["<|endoftext|>".to_string()]
+            }
+            Self::FalconChat => {
+                vec!["\nUser:".to_string(), "<|endoftext|>".to_string()]
+            }
+            Self::CodeLlamaInstruct => {
+                vec!["</s>".to_string()]
+            }
+            Self::CohereCommand => {
+                vec!["<|END_OF_TURN_TOKEN|>".to_string()]
+            }
+            Self::InternLMChat => {
+                vec![
+                    "<|im_end|>".to_string(),
+                    "<eoa>".to_string(),
+                ]
             }
         }
     }
@@ -542,6 +749,10 @@ impl TemplateType {
             Self::MistralChat => false, // Template includes <s>
             Self::DeepSeekChat => false, // ChatML uses im_start/im_end tokens
             Self::StarCoder => true,    // Simple completion, BOS helpful
+            Self::FalconChat => true,   // Simple User:/Falcon: format
+            Self::CodeLlamaInstruct => false, // [INST] format with own markers
+            Self::CohereCommand => false, // Uses START_OF_TURN tokens
+            Self::InternLMChat => false, // ChatML uses im_start/im_end tokens
         }
     }
 
@@ -557,6 +768,9 @@ impl TemplateType {
                 | Self::MistralChat
                 | Self::DeepSeekChat
                 | Self::StarCoder
+                | Self::CodeLlamaInstruct
+                | Self::CohereCommand
+                | Self::InternLMChat
         )
     }
 
@@ -733,6 +947,109 @@ impl TemplateType {
                 for turn in history {
                     write!(out, "{}", turn.text)?;
                 }
+            }
+            TemplateType::FalconChat => {
+                // Falcon User:/Falcon: format
+                if let Some(sys) = system {
+                    writeln!(out, "System: {}\n", sys)?;
+                }
+
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            writeln!(out, "User: {}", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            writeln!(out, "Falcon: {}", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+
+                write!(out, "Falcon:")?;
+            }
+            TemplateType::CodeLlamaInstruct => {
+                // CodeLlama [INST]...[/INST] with <<SYS>>
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(out, "[INST] ")?;
+                            if let Some(sys) = system {
+                                write!(
+                                    out,
+                                    "<<SYS>>\n{}\n<</SYS>>\n\n",
+                                    sys
+                                )?;
+                            }
+                            write!(out, "{} [/INST]", turn.text)?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(out, " {} ", turn.text)?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+            }
+            TemplateType::CohereCommand => {
+                // Cohere Command format
+                if let Some(sys) = system {
+                    write!(
+                        out,
+                        "<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>\
+                         {}<|END_OF_TURN_TOKEN|>",
+                        sys
+                    )?;
+                }
+
+                for turn in history {
+                    match turn.role {
+                        ChatRole::User => {
+                            write!(
+                                out,
+                                "<|START_OF_TURN_TOKEN|>\
+                                 <|USER_TOKEN|>{}\
+                                 <|END_OF_TURN_TOKEN|>",
+                                turn.text
+                            )?;
+                        }
+                        ChatRole::Assistant => {
+                            write!(
+                                out,
+                                "<|START_OF_TURN_TOKEN|>\
+                                 <|CHATBOT_TOKEN|>{}\
+                                 <|END_OF_TURN_TOKEN|>",
+                                turn.text
+                            )?;
+                        }
+                        ChatRole::System => {}
+                    }
+                }
+
+                write!(
+                    out,
+                    "<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>"
+                )?;
+            }
+            TemplateType::InternLMChat => {
+                // ChatML format with im_start/im_end tokens
+                let sys = system
+                    .unwrap_or("You are a helpful assistant.");
+                write!(
+                    out,
+                    "<|im_start|>system\n{}<|im_end|>\n",
+                    sys
+                )?;
+
+                for turn in history {
+                    let role = turn.role.as_str();
+                    write!(
+                        out,
+                        "<|im_start|>{}\n{}<|im_end|>\n",
+                        role, turn.text
+                    )?;
+                }
+
+                write!(out, "<|im_start|>assistant\n")?;
             }
         }
 
@@ -1121,6 +1438,42 @@ mod tests {
             "code-completion".parse::<TemplateType>().unwrap(),
             TemplateType::StarCoder
         );
+        assert_eq!(
+            "falcon-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::FalconChat
+        );
+        assert_eq!(
+            "falcon".parse::<TemplateType>().unwrap(),
+            TemplateType::FalconChat
+        );
+        assert_eq!(
+            "codellama-instruct".parse::<TemplateType>().unwrap(),
+            TemplateType::CodeLlamaInstruct
+        );
+        assert_eq!(
+            "codellama".parse::<TemplateType>().unwrap(),
+            TemplateType::CodeLlamaInstruct
+        );
+        assert_eq!(
+            "cohere-command".parse::<TemplateType>().unwrap(),
+            TemplateType::CohereCommand
+        );
+        assert_eq!(
+            "cohere".parse::<TemplateType>().unwrap(),
+            TemplateType::CohereCommand
+        );
+        assert_eq!(
+            "command-r".parse::<TemplateType>().unwrap(),
+            TemplateType::CohereCommand
+        );
+        assert_eq!(
+            "internlm-chat".parse::<TemplateType>().unwrap(),
+            TemplateType::InternLMChat
+        );
+        assert_eq!(
+            "internlm".parse::<TemplateType>().unwrap(),
+            TemplateType::InternLMChat
+        );
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -1136,6 +1489,10 @@ mod tests {
         assert!(!TemplateType::MistralChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::DeepSeekChat.default_stop_sequences().is_empty());
         assert!(!TemplateType::StarCoder.default_stop_sequences().is_empty());
+        assert!(!TemplateType::FalconChat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::CodeLlamaInstruct.default_stop_sequences().is_empty());
+        assert!(!TemplateType::CohereCommand.default_stop_sequences().is_empty());
+        assert!(!TemplateType::InternLMChat.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -1222,6 +1579,10 @@ mod tests {
         assert!(!TemplateType::MistralChat.should_add_bos()); // Template includes <s>
         assert!(!TemplateType::DeepSeekChat.should_add_bos()); // ChatML tokens
         assert!(TemplateType::StarCoder.should_add_bos()); // Simple completion
+        assert!(TemplateType::FalconChat.should_add_bos()); // User:/Falcon: format
+        assert!(!TemplateType::CodeLlamaInstruct.should_add_bos()); // [INST] markers
+        assert!(!TemplateType::CohereCommand.should_add_bos()); // Turn tokens
+        assert!(!TemplateType::InternLMChat.should_add_bos()); // ChatML tokens
     }
 
     #[test]
@@ -1235,6 +1596,10 @@ mod tests {
         assert!(TemplateType::MistralChat.parse_special()); // Mistral has special tokens
         assert!(TemplateType::DeepSeekChat.parse_special()); // DeepSeek has special tokens
         assert!(TemplateType::StarCoder.parse_special()); // StarCoder has endoftext
+        assert!(!TemplateType::FalconChat.parse_special()); // Simple text format
+        assert!(TemplateType::CodeLlamaInstruct.parse_special()); // Has special tokens
+        assert!(TemplateType::CohereCommand.parse_special()); // Has turn tokens
+        assert!(TemplateType::InternLMChat.parse_special()); // Has im_start/im_end
     }
 
     #[test]
@@ -1478,5 +1843,163 @@ mod detect_logging_tests {
             logs_contain("falling back to Raw") || logs_contain("Raw"),
             "detect() must emit a warn log when falling back to Raw"
         );
+    }
+
+    // ── Falcon Chat ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_falcon_chat_template() {
+        let template = TemplateType::FalconChat;
+
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("User: Hello!"));
+        assert!(result.ends_with("\nFalcon:"));
+
+        let result = template.apply("Hello!", Some("Be concise."));
+        assert!(result.contains("System: Be concise."));
+        assert!(result.contains("User: Hello!"));
+    }
+
+    #[test]
+    fn test_detect_falcon_from_name() {
+        let t = TemplateType::detect(Some("tiiuae-falcon-7b"), None);
+        assert_eq!(t, TemplateType::FalconChat);
+    }
+
+    #[test]
+    fn test_render_chat_falcon() {
+        let t = TemplateType::FalconChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi there!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+
+        assert!(s.contains("System: Be helpful."));
+        assert!(s.contains("User: Hello"));
+        assert!(s.contains("Falcon: Hi there!"));
+        assert!(s.contains("User: How are you?"));
+        assert!(s.ends_with("Falcon:"));
+    }
+
+    // ── CodeLlama Instruct ─────────────────────────────────────────────
+
+    #[test]
+    fn test_codellama_instruct_template() {
+        let template = TemplateType::CodeLlamaInstruct;
+
+        let result = template.apply("Write a hello world", None);
+        assert!(result.starts_with("[INST] "));
+        assert!(result.contains("Write a hello world"));
+        assert!(result.ends_with(" [/INST]"));
+
+        let result =
+            template.apply("Write a sort", Some("You are a Python expert."));
+        assert!(result.contains("<<SYS>>"));
+        assert!(result.contains("You are a Python expert."));
+        assert!(result.contains("<</SYS>>"));
+        assert!(result.contains("Write a sort"));
+    }
+
+    #[test]
+    fn test_detect_codellama_from_name() {
+        let t = TemplateType::detect(Some("codellama-7b-instruct"), None);
+        assert_eq!(t, TemplateType::CodeLlamaInstruct);
+    }
+
+    // ── Cohere Command ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_cohere_command_template() {
+        let template = TemplateType::CohereCommand;
+
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|START_OF_TURN_TOKEN|><|USER_TOKEN|>"));
+        assert!(result.contains("Hello!"));
+        assert!(result.contains("<|END_OF_TURN_TOKEN|>"));
+        assert!(result.contains("<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>"));
+
+        let result = template.apply("Hello!", Some("Be concise."));
+        assert!(result.contains("<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>"));
+        assert!(result.contains("Be concise."));
+    }
+
+    #[test]
+    fn test_detect_cohere_from_name() {
+        let t = TemplateType::detect(Some("cohere-command-r-plus"), None);
+        assert_eq!(t, TemplateType::CohereCommand);
+    }
+
+    #[test]
+    fn test_detect_cohere_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("<|START_OF_TURN_TOKEN|><|USER_TOKEN|>{user}<|END_OF_TURN_TOKEN|>"),
+        );
+        assert_eq!(t, TemplateType::CohereCommand);
+    }
+
+    #[test]
+    fn test_render_chat_cohere() {
+        let t = TemplateType::CohereCommand;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let s = t.render_chat(&hist, Some("Be helpful.")).unwrap();
+
+        assert!(s.contains("<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>Be helpful."));
+        assert!(s.contains("<|START_OF_TURN_TOKEN|><|USER_TOKEN|>Hello"));
+        assert!(s.contains("<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>Hi!"));
+        assert!(s.ends_with("<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>"));
+    }
+
+    // ── InternLM Chat ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_internlm_chat_template() {
+        let template = TemplateType::InternLMChat;
+
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<|im_start|>system\n"));
+        assert!(result.contains("You are a helpful assistant."));
+        assert!(result.contains("<|im_end|>"));
+        assert!(result.contains("<|im_start|>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
+
+        let result =
+            template.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(!result.contains("You are a helpful assistant."));
+    }
+
+    #[test]
+    fn test_detect_internlm_from_name() {
+        let t = TemplateType::detect(Some("internlm2-chat-7b"), None);
+        assert_eq!(t, TemplateType::InternLMChat);
+    }
+
+    #[test]
+    fn test_render_chat_internlm() {
+        let t = TemplateType::InternLMChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi there!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let s = t.render_chat(&hist, Some("You are helpful.")).unwrap();
+
+        assert!(s.contains("<|im_start|>system\n"));
+        assert!(s.contains("You are helpful."));
+        assert!(s.contains("<|im_start|>user\n"));
+        assert!(s.contains("Hello"));
+        assert!(s.contains("<|im_start|>assistant\n"));
+        assert!(s.contains("Hi there!"));
+        assert!(s.contains("How are you?"));
+        assert!(s.contains("<|im_end|>"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
     }
 }

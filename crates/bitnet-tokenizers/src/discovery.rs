@@ -36,6 +36,14 @@ pub struct ModelCompatibilityMatrix {
     pub deepseek_100k: TokenizerDownloadInfo,
     /// StarCoder with 49K vocabulary - BPE tokenizer
     pub starcoder_49k: TokenizerDownloadInfo,
+    /// Falcon with 65K vocabulary - BPE tokenizer
+    pub falcon_65k: TokenizerDownloadInfo,
+    /// CodeLlama with 32K vocabulary - SentencePiece tokenizer
+    pub codellama_32k: TokenizerDownloadInfo,
+    /// Cohere Command with 256K vocabulary - BPE tokenizer
+    pub command_256k: TokenizerDownloadInfo,
+    /// InternLM with 103K vocabulary - BPE tokenizer
+    pub internlm_103k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -100,6 +108,30 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "starcoder-49k".to_string(),
                 expected_vocab: Some(49152),
+            },
+            falcon_65k: TokenizerDownloadInfo {
+                repo: "tiiuae/falcon-7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "falcon-65k".to_string(),
+                expected_vocab: Some(65024),
+            },
+            codellama_32k: TokenizerDownloadInfo {
+                repo: "codellama/CodeLlama-7b-Instruct-hf".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "codellama-32k".to_string(),
+                expected_vocab: Some(32016),
+            },
+            command_256k: TokenizerDownloadInfo {
+                repo: "CohereForAI/c4ai-command-r-plus".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "command-256k".to_string(),
+                expected_vocab: Some(255029),
+            },
+            internlm_103k: TokenizerDownloadInfo {
+                repo: "internlm/internlm2-chat-7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "internlm-103k".to_string(),
+                expected_vocab: Some(103168),
             },
         }
     }

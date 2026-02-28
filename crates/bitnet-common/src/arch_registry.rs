@@ -60,6 +60,45 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Gelu,
                 default_context_length: None,
             }),
+            "codellama" | "code-llama" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: None,
+            }),
+            "command" | "command-r" | "command-r-plus" | "cohere" => {
+                Some(ArchDefaults {
+                    norm_type: NormType::LayerNorm,
+                    activation_type: ActivationType::Silu,
+                    default_context_length: None,
+                })
+            }
+            "internlm" | "internlm2" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: None,
+            }),
+            "yi" | "yi-1.5" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: None,
+            }),
+            "baichuan" | "baichuan2" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: None,
+            }),
+            "chatglm" | "chatglm2" | "chatglm3" | "glm-4" => {
+                Some(ArchDefaults {
+                    norm_type: NormType::RmsNorm,
+                    activation_type: ActivationType::Silu,
+                    default_context_length: None,
+                })
+            }
+            "mpt" => Some(ArchDefaults {
+                norm_type: NormType::LayerNorm,
+                activation_type: ActivationType::Gelu,
+                default_context_length: None,
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -87,6 +126,23 @@ impl ArchitectureRegistry {
             "starcoder",
             "starcoder2",
             "falcon",
+            "codellama",
+            "code-llama",
+            "command",
+            "command-r",
+            "command-r-plus",
+            "cohere",
+            "internlm",
+            "internlm2",
+            "yi",
+            "yi-1.5",
+            "baichuan",
+            "baichuan2",
+            "chatglm",
+            "chatglm2",
+            "chatglm3",
+            "glm-4",
+            "mpt",
             "bitnet",
             "bitnet-b1.58",
             "gpt",
@@ -179,6 +235,55 @@ mod tests {
         assert!(ArchitectureRegistry::is_known("starcoder"));
         assert!(ArchitectureRegistry::is_known("falcon"));
         assert!(ArchitectureRegistry::is_known("deepseek"));
+        assert!(ArchitectureRegistry::is_known("codellama"));
+        assert!(ArchitectureRegistry::is_known("command-r"));
+        assert!(ArchitectureRegistry::is_known("internlm"));
+        assert!(ArchitectureRegistry::is_known("yi"));
+        assert!(ArchitectureRegistry::is_known("baichuan"));
+        assert!(ArchitectureRegistry::is_known("chatglm"));
+        assert!(ArchitectureRegistry::is_known("mpt"));
         assert!(!ArchitectureRegistry::is_known("unknown"));
+    }
+
+    #[test]
+    fn test_codellama_defaults() {
+        let defaults = ArchitectureRegistry::lookup("codellama").unwrap();
+        assert_eq!(defaults.norm_type, NormType::RmsNorm);
+        assert_eq!(defaults.activation_type, ActivationType::Silu);
+    }
+
+    #[test]
+    fn test_cohere_defaults() {
+        let defaults = ArchitectureRegistry::lookup("command-r").unwrap();
+        assert_eq!(defaults.norm_type, NormType::LayerNorm);
+        assert_eq!(defaults.activation_type, ActivationType::Silu);
+    }
+
+    #[test]
+    fn test_internlm_defaults() {
+        let defaults = ArchitectureRegistry::lookup("internlm2").unwrap();
+        assert_eq!(defaults.norm_type, NormType::RmsNorm);
+        assert_eq!(defaults.activation_type, ActivationType::Silu);
+    }
+
+    #[test]
+    fn test_yi_defaults() {
+        let defaults = ArchitectureRegistry::lookup("yi").unwrap();
+        assert_eq!(defaults.norm_type, NormType::RmsNorm);
+        assert_eq!(defaults.activation_type, ActivationType::Silu);
+    }
+
+    #[test]
+    fn test_chatglm_defaults() {
+        let defaults = ArchitectureRegistry::lookup("chatglm3").unwrap();
+        assert_eq!(defaults.norm_type, NormType::RmsNorm);
+        assert_eq!(defaults.activation_type, ActivationType::Silu);
+    }
+
+    #[test]
+    fn test_mpt_defaults() {
+        let defaults = ArchitectureRegistry::lookup("mpt").unwrap();
+        assert_eq!(defaults.norm_type, NormType::LayerNorm);
+        assert_eq!(defaults.activation_type, ActivationType::Gelu);
     }
 }

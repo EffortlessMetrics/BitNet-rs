@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -124,6 +124,10 @@ proptest! {
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
             Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
         ],
     ) {
         let s = template.to_string();
@@ -144,6 +148,10 @@ proptest! {
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
             Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -194,7 +202,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder | TemplateType::FalconChat | TemplateType::CodeLlamaInstruct | TemplateType::CohereCommand | TemplateType::InternLMChat),
             "detect() returned an unexpected variant"
         );
     }
@@ -230,6 +238,10 @@ proptest! {
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
             Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
         ],
     ) {
         let out = template.apply("", None);
@@ -250,6 +262,10 @@ proptest! {
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
             Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -273,6 +289,10 @@ proptest! {
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
             Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
@@ -343,6 +363,10 @@ proptest! {
             Just(TemplateType::MistralChat),
             Just(TemplateType::DeepSeekChat),
             Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -509,6 +533,132 @@ proptest! {
         let t = TemplateType::StarCoder;
         let s = t.to_string();
         let parsed: TemplateType = s.parse().expect("starcoder must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// FalconChat output contains "User:" and ends with "Falcon:".
+    #[test]
+    fn prop_falcon_contains_role_markers(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+    ) {
+        let out = TemplateType::FalconChat.apply(&user, None);
+        prop_assert!(
+            out.contains("User:"),
+            "FalconChat output missing 'User:': {out:?}"
+        );
+        prop_assert!(
+            out.contains("Falcon:"),
+            "FalconChat output missing 'Falcon:': {out:?}"
+        );
+    }
+
+    /// FalconChat display/parse round-trips correctly.
+    #[test]
+    fn prop_falcon_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::FalconChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("falcon-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// CodeLlamaInstruct output contains [INST] and [/INST].
+    #[test]
+    fn prop_codellama_contains_inst_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+    ) {
+        let out = TemplateType::CodeLlamaInstruct.apply(&user, None);
+        prop_assert!(
+            out.contains("[INST]"),
+            "CodeLlamaInstruct output missing [INST]: {out:?}"
+        );
+        prop_assert!(
+            out.contains("[/INST]"),
+            "CodeLlamaInstruct output missing [/INST]: {out:?}"
+        );
+    }
+
+    /// CodeLlamaInstruct with system prompt contains <<SYS>>.
+    #[test]
+    fn prop_codellama_sys_contains_markers(
+        user in "[a-zA-Z0-9 ]{1,40}",
+        system in "[a-zA-Z0-9 ]{1,40}",
+    ) {
+        let out = TemplateType::CodeLlamaInstruct.apply(&user, Some(&system));
+        prop_assert!(
+            out.contains("<<SYS>>"),
+            "CodeLlamaInstruct with system missing <<SYS>>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<</SYS>>"),
+            "CodeLlamaInstruct with system missing <</SYS>>: {out:?}"
+        );
+    }
+
+    /// CodeLlamaInstruct display/parse round-trips correctly.
+    #[test]
+    fn prop_codellama_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::CodeLlamaInstruct;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("codellama-instruct must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// CohereCommand output contains turn tokens.
+    #[test]
+    fn prop_cohere_contains_turn_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+    ) {
+        let out = TemplateType::CohereCommand.apply(&user, None);
+        prop_assert!(
+            out.contains("<|START_OF_TURN_TOKEN|>"),
+            "CohereCommand output missing turn token: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|END_OF_TURN_TOKEN|>"),
+            "CohereCommand output missing end turn token: {out:?}"
+        );
+    }
+
+    /// CohereCommand display/parse round-trips correctly.
+    #[test]
+    fn prop_cohere_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::CohereCommand;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("cohere-command must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// InternLMChat template always includes ChatML tokens.
+    #[test]
+    fn prop_internlm_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,50}"),
+    ) {
+        let out = TemplateType::InternLMChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "InternLMChat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "InternLMChat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// InternLMChat display/parse round-trips correctly.
+    #[test]
+    fn prop_internlm_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::InternLMChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("internlm-chat must parse");
         prop_assert_eq!(t, parsed);
     }
 }

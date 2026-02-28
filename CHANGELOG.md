@@ -16,6 +16,11 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Gemma architecture support**: Add `gemma`/`gemma2` to loader recognition, config defaults (RmsNorm, GeLU), `gemma_256k` tokenizer entry (256K vocab), and `GemmaChat` prompt template (`<start_of_turn>`/`<end_of_turn>` format).
 - **Mistral prompt template**: Add `MistralChat` template with `[INST]...[/INST]` format, auto-detection from GGUF metadata and model name, and `mistral_32k` tokenizer entry (32K vocab).
 - **Loader architecture sync**: Add `"gpt"` and `"bert"` to basic loader's `is_supported_architecture()`, matching production loader.
+- **Architecture registry**: Centralize all architecture defaults in `ArchitectureRegistry` with `ArchDefaults` struct. Loaders now use `ArchitectureRegistry::is_known()`, config uses `ArchitectureRegistry::lookup()`. Adding new architectures is a one-liner.
+- **DeepSeek architecture support**: Add `deepseek`/`deepseek2` to architecture registry, `DeepSeekChat` ChatML prompt template, `deepseek_100k` tokenizer entry (100K vocab, DeepSeek-V2-Lite).
+- **StarCoder architecture support**: Add `starcoder`/`starcoder2` to architecture registry, `StarCoder` code-completion prompt template, `starcoder_49k` tokenizer entry (49K vocab).
+- **Falcon architecture support**: Add `falcon` to architecture registry (LayerNorm, GeLU defaults).
+- **HuggingFace config.json GQA parsing**: Parse `num_key_value_heads` from config.json for grouped-query attention; call `apply_architecture_defaults()` during HF model loading.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
