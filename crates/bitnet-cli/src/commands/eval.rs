@@ -384,7 +384,7 @@ impl EvalCommand {
                 #[cfg(feature = "oneapi")]
                 {
                     tracing::info!(
-                        "OpenCL/oneAPI requested - candle device is CPU; kernel dispatch via OneApi backend"
+                        "OpenCL/oneAPI requested — candle device is CPU; kernel dispatch via OneApi backend"
                     );
                     Ok(Device::Cpu)
                 }

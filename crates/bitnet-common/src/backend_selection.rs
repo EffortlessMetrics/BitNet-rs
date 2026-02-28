@@ -341,4 +341,34 @@ mod tests {
         let err = select_backend(BackendRequest::Auto, &empty_caps).unwrap_err();
         assert!(matches!(err, BackendSelectionError::NoBackendAvailable));
     }
+
+    fn oneapi_caps() -> KernelCapabilities {
+        KernelCapabilities {
+            cpu_rust: true,
+            cuda_compiled: false,
+            cuda_runtime: false,
+            oneapi_compiled: true,
+            oneapi_runtime: true,
+            cpp_ffi: false,
+            simd_level: SimdLevel::Avx2,
+        }
+    }
+
+    #[test]
+    fn oneapi_request_selects_oneapi_when_available() {
+        let result = select_backend(BackendRequest::OneApi, &oneapi_caps()).unwrap();
+        assert_eq!(result.selected, KernelBackend::OneApi);
+    }
+
+    #[test]
+    fn oneapi_request_fails_without_runtime() {
+        let err = select_backend(BackendRequest::OneApi, &cpu_only_caps()).unwrap_err();
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+    }
+
+    #[test]
+    fn gpu_request_prefers_oneapi_when_no_cuda() {
+        let result = select_backend(BackendRequest::Gpu, &oneapi_caps()).unwrap();
+        assert_eq!(result.selected, KernelBackend::OneApi);
+    }
 }

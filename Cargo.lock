@@ -753,6 +753,7 @@ dependencies = [
  "bitnet-common",
  "bitnet-device-probe",
  "bitnet-ggml-ffi",
+ "bitnet-opencl",
  "bitnet-quantization",
  "bitnet-test-support",
  "bitnet-tests",
@@ -840,6 +841,18 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "bitnet-opencl"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "insta",
+ "opencl3",
+ "proptest",
+ "thiserror 2.0.18",
+ "tracing",
 ]
 
 [[package]]

@@ -438,7 +438,7 @@ mod cli_config_validation {
             cfg.default_device = alias.to_string();
             assert!(
                 cfg.validate().is_ok(),
-                "device alias '{}' must pass validation", alias
+                "device alias '{alias}' must pass validation"
             );
         }
     }

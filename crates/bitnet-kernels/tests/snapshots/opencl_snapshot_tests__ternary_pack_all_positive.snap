@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-kernels/tests/opencl_snapshot_tests.rs
+expression: packed
+---
+[
+    85,
+]

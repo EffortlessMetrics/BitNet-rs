@@ -8,13 +8,17 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "OpenCL backend utilities for BitNet inference"
+description = "OpenCL abstraction layer for BitNet GPU inference on Intel Arc"
 
 [dependencies]
-serde = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
-tracing = { workspace = true }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+opencl3 = "0.9"
+thiserror.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+proptest.workspace = true
+insta.workspace = true
+
+[features]
+default = []
