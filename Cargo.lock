@@ -829,6 +829,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitnet-opencl"
+version = "0.2.1-dev"
+dependencies = [
+ "thiserror 2.0.18",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "bitnet-prompt-templates"
 version = "0.2.1-dev"
 dependencies = [
