@@ -13,8 +13,35 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
-- **Chat templates** — raw, instruct, llama3-chat; auto-detected from GGUF metadata or tokenizer path
+- **Chat templates** — 17 prompt templates covering 20+ model families: LLaMA-3, Phi-4, Qwen, Gemma, Mistral, DeepSeek, StarCoder, Falcon, CodeLlama, Cohere Command, InternLM, Yi, Baichuan, ChatGLM/GLM-4, MPT; auto-detected from GGUF metadata or tokenizer path
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
+- **Multi-SLM architecture registry** — 36 architecture strings across 20 model families with auto-detected normalization, activation, and context defaults
+
+<details>
+<summary><strong>Supported Model Architectures</strong> (click to expand)</summary>
+
+| Family | Architectures | Norm | Activation | Template | Tokenizer |
+|--------|--------------|------|------------|----------|-----------|
+| BitNet | bitnet, bitnet-b1.58 | LayerNorm | ReLU² | Instruct | bitnet_custom |
+| LLaMA | llama | RmsNorm | SiLU | Llama3Chat | llama3_128k |
+| Phi | phi, phi-3, phi-4 | RmsNorm | SiLU | Phi4Chat | phi4_100k |
+| Qwen | qwen, qwen2, qwen2.5 | RmsNorm | SiLU | QwenChat | qwen2_150k |
+| Gemma | gemma, gemma2 | RmsNorm | GeLU | GemmaChat | gemma_256k |
+| Mistral | mistral | RmsNorm | SiLU | MistralChat | mistral_32k |
+| DeepSeek | deepseek, deepseek2 | RmsNorm | SiLU | DeepSeekChat | deepseek_100k |
+| StarCoder | starcoder, starcoder2 | LayerNorm | GeLU | StarCoder | starcoder_49k |
+| Falcon | falcon | LayerNorm | GeLU | FalconChat | falcon_65k |
+| CodeLlama | codellama, code-llama | RmsNorm | SiLU | CodeLlamaInstruct | codellama_32k |
+| Cohere | command, command-r, cohere | RmsNorm | SiLU | CohereCommand | command_256k |
+| InternLM | internlm, internlm2 | RmsNorm | SiLU | InternLMChat | internlm_103k |
+| Yi | yi, yi-1.5 | RmsNorm | SiLU | YiChat | yi_64k |
+| Baichuan | baichuan, baichuan2 | RmsNorm | SiLU | BaichuanChat | baichuan_64k |
+| ChatGLM | chatglm, chatglm2, chatglm3, glm-4 | RmsNorm | SiLU | ChatGLMChat | chatglm_65k |
+| MPT | mpt | LayerNorm | GeLU | MptInstruct | mpt_50k |
+| GPT | gpt | LayerNorm | GeLU | — | gpt2_50k |
+| BERT | bert | LayerNorm | GeLU | — | — |
+
+</details>
 
 > **v0.2.0:** QK256 uses scalar kernels (~0.1 tok/s on 2B models); use `--max-tokens 4–16` for validation. AVX2 dequantization is merged; ≥3× uplift planned for v0.2.
 
