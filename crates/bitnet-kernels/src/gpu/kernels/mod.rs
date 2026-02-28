@@ -12,8 +12,8 @@ pub const QUANTIZE_I2S_SRC: &str = include_str!("quantize_i2s.cl");
 /// Element-wise operation kernels source.
 pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
 
-/// Optimized RMSNorm kernel source (parallel reduction).
-pub const RMSNORM_SRC: &str = include_str!("rmsnorm.cl");
+/// Rotary Position Embedding (RoPE) kernel source.
+pub const ROPE_SRC: &str = include_str!("rope.cl");
 
 #[cfg(test)]
 mod tests {
@@ -24,7 +24,7 @@ mod tests {
         assert!(!MATMUL_I2S_SRC.is_empty(), "matmul_i2s.cl should not be empty");
         assert!(!QUANTIZE_I2S_SRC.is_empty(), "quantize_i2s.cl should not be empty");
         assert!(!ELEMENTWISE_SRC.is_empty(), "elementwise.cl should not be empty");
-        assert!(!RMSNORM_SRC.is_empty(), "rmsnorm.cl should not be empty");
+        assert!(!ROPE_SRC.is_empty(), "rope.cl should not be empty");
     }
 
     #[test]
@@ -32,7 +32,7 @@ mod tests {
         assert!(MATMUL_I2S_SRC.contains("__kernel"), "matmul_i2s.cl missing __kernel");
         assert!(QUANTIZE_I2S_SRC.contains("__kernel"), "quantize_i2s.cl missing __kernel");
         assert!(ELEMENTWISE_SRC.contains("__kernel"), "elementwise.cl missing __kernel");
-        assert!(RMSNORM_SRC.contains("__kernel"), "rmsnorm.cl missing __kernel");
+        assert!(ROPE_SRC.contains("__kernel"), "rope.cl missing __kernel");
     }
 
     #[test]
@@ -54,30 +54,23 @@ mod tests {
     }
 
     #[test]
-    fn rmsnorm_kernel_has_parallel_function() {
+    fn rope_kernel_has_apply_function() {
+        assert!(ROPE_SRC.contains("rope_apply"), "missing rope_apply kernel");
+    }
+
+    #[test]
+    fn rope_kernel_has_fused_qk_function() {
         assert!(
-            RMSNORM_SRC.contains("rms_norm_parallel"),
-            "missing rms_norm_parallel kernel"
+            ROPE_SRC.contains("rope_apply_qk"),
+            "missing rope_apply_qk kernel"
         );
     }
 
     #[test]
-    fn rmsnorm_kernel_has_residual_fused_function() {
-        assert!(
-            RMSNORM_SRC.contains("rms_norm_residual"),
-            "missing rms_norm_residual kernel"
-        );
-    }
-
-    #[test]
-    fn rmsnorm_kernel_uses_local_memory_reduction() {
-        assert!(
-            RMSNORM_SRC.contains("__local"),
-            "rmsnorm kernel should use local memory"
-        );
-        assert!(
-            RMSNORM_SRC.contains("barrier"),
-            "rmsnorm kernel should use barriers for reduction"
-        );
+    fn rope_kernel_uses_trig_functions() {
+        // The kernel uses pre-computed cos/sin tables, not native trig,
+        // but references freq_cos/freq_sin parameters
+        assert!(ROPE_SRC.contains("freq_cos"), "missing freq_cos parameter");
+        assert!(ROPE_SRC.contains("freq_sin"), "missing freq_sin parameter");
     }
 }

@@ -36,7 +36,7 @@ struct OpenClContext {
     context: Context,
     queue: CommandQueue,
     matmul_program: Option<Program>,
-    rmsnorm_program: Option<Program>,
+    rope_program: Option<Program>,
     _quantize_program: Option<Program>,
     _elementwise_program: Option<Program>,
 }
@@ -133,10 +133,10 @@ impl OpenClKernel {
                         crate::kernels::MATMUL_I2S_SRC,
                         "matmul_i2s",
                     );
-                    let rmsnorm_program = Self::compile_program(
+                    let rope_program = Self::compile_program(
                         &context,
-                        crate::kernels::RMSNORM_SRC,
-                        "rmsnorm",
+                        crate::kernels::ROPE_SRC,
+                        "rope",
                     );
                     let quantize_program = Self::compile_program(
                         &context,
@@ -155,7 +155,7 @@ impl OpenClKernel {
                         context,
                         queue,
                         matmul_program,
-                        rmsnorm_program,
+                        rope_program,
                         _quantize_program: quantize_program,
                         _elementwise_program: elementwise_program,
                     };
@@ -338,100 +338,107 @@ impl KernelProvider for OpenClKernel {
 }
 
 impl OpenClKernel {
-    /// Run optimized parallel RMSNorm on the GPU.
+    /// Apply Rotary Position Embedding (RoPE) to a tensor on the GPU.
     ///
-    /// Each work-group processes one row using tree reduction for the
-    /// sum-of-squares, then normalises and scales in parallel.
-    ///
-    /// `input`  — `[rows × hidden_dim]` flattened row-major
-    /// `weight` — `[hidden_dim]` per-element learnable scale
-    /// `output` — `[rows × hidden_dim]`
+    /// `x`         — `[seq_len × num_heads × head_dim]` row-major (modified in-place)
+    /// `freq_cos`  — `[max_seq_len × half_head_dim]` pre-computed cosine table
+    /// `freq_sin`  — `[max_seq_len × half_head_dim]` pre-computed sine table
+    /// `pos_offset`— starting position index (for KV-cache continuation)
     #[allow(dead_code)]
-    pub fn rms_norm(
+    pub fn rope_apply(
         &self,
-        input: &[f32],
-        weight: &[f32],
-        output: &mut [f32],
-        rows: usize,
-        hidden_dim: usize,
-        eps: f32,
+        x: &mut [f32],
+        freq_cos: &[f32],
+        freq_sin: &[f32],
+        seq_len: usize,
+        num_heads: usize,
+        head_dim: usize,
+        pos_offset: u32,
     ) -> Result<()> {
         let ctx = self.context.as_ref().ok_or_else(|| KernelError::GpuError {
             reason: "OpenCL context not initialized".into(),
         })?;
 
-        let program = ctx.rmsnorm_program.as_ref().ok_or_else(|| KernelError::GpuError {
-            reason: "rmsnorm program not compiled".into(),
+        let program = ctx.rope_program.as_ref().ok_or_else(|| KernelError::GpuError {
+            reason: "rope program not compiled".into(),
         })?;
 
         use opencl3::kernel::{ExecuteKernel, Kernel};
 
-        let mut buf_input = unsafe {
+        let half_dim = head_dim / 2;
+
+        let mut buf_x = unsafe {
+            Buffer::<f32>::create(
+                &ctx.context,
+                CL_MEM_READ_ONLY | CL_MEM_WRITE_ONLY,
+                x.len(),
+                std::ptr::null_mut(),
+            )
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Buffer x create: {}", e),
+            })?
+        };
+        let mut buf_cos = unsafe {
             Buffer::<f32>::create(
                 &ctx.context,
                 CL_MEM_READ_ONLY,
-                input.len(),
+                freq_cos.len(),
                 std::ptr::null_mut(),
             )
             .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer input create: {}", e),
+                reason: format!("Buffer freq_cos create: {}", e),
             })?
         };
-        let mut buf_weight = unsafe {
+        let mut buf_sin = unsafe {
             Buffer::<f32>::create(
                 &ctx.context,
                 CL_MEM_READ_ONLY,
-                weight.len(),
+                freq_sin.len(),
                 std::ptr::null_mut(),
             )
             .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer weight create: {}", e),
-            })?
-        };
-        let buf_output = unsafe {
-            Buffer::<f32>::create(
-                &ctx.context,
-                CL_MEM_WRITE_ONLY,
-                output.len(),
-                std::ptr::null_mut(),
-            )
-            .map_err(|e| KernelError::GpuError {
-                reason: format!("Buffer output create: {}", e),
+                reason: format!("Buffer freq_sin create: {}", e),
             })?
         };
 
         unsafe {
             ctx.queue
-                .enqueue_write_buffer(&mut buf_input, CL_BLOCKING, 0, input, &[])
+                .enqueue_write_buffer(&mut buf_x, CL_BLOCKING, 0, x, &[])
                 .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write input: {}", e),
+                    reason: format!("Write x: {}", e),
                 })?;
             ctx.queue
-                .enqueue_write_buffer(&mut buf_weight, CL_BLOCKING, 0, weight, &[])
+                .enqueue_write_buffer(&mut buf_cos, CL_BLOCKING, 0, freq_cos, &[])
                 .map_err(|e| KernelError::GpuError {
-                    reason: format!("Write weight: {}", e),
+                    reason: format!("Write freq_cos: {}", e),
+                })?;
+            ctx.queue
+                .enqueue_write_buffer(&mut buf_sin, CL_BLOCKING, 0, freq_sin, &[])
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Write freq_sin: {}", e),
                 })?;
         }
 
-        let kernel = Kernel::create(program, "rms_norm_parallel").map_err(|e| {
+        let kernel = Kernel::create(program, "rope_apply").map_err(|e| {
             KernelError::GpuError {
                 reason: format!("Kernel create: {}", e),
             }
         })?;
 
-        let n_u32 = hidden_dim as u32;
-        let local_size = 256usize;
-        let global_size = rows * local_size;
+        let seq_u32 = seq_len as u32;
+        let heads_u32 = num_heads as u32;
+        let dim_u32 = head_dim as u32;
 
         let event = unsafe {
             ExecuteKernel::new(&kernel)
-                .set_arg(&buf_input.get())
-                .set_arg(&buf_weight.get())
-                .set_arg(&buf_output.get())
-                .set_arg(&n_u32)
-                .set_arg(&eps)
-                .set_global_work_sizes(&[global_size])
-                .set_local_work_sizes(&[local_size])
+                .set_arg(&buf_x.get())
+                .set_arg(&buf_cos.get())
+                .set_arg(&buf_sin.get())
+                .set_arg(&seq_u32)
+                .set_arg(&heads_u32)
+                .set_arg(&dim_u32)
+                .set_arg(&pos_offset)
+                .set_global_work_sizes(&[half_dim, seq_len * num_heads])
                 .enqueue_nd_range(&ctx.queue)
                 .map_err(|e| KernelError::GpuError {
                     reason: format!("Enqueue: {}", e),
@@ -444,9 +451,9 @@ impl OpenClKernel {
 
         unsafe {
             ctx.queue
-                .enqueue_read_buffer(&buf_output, CL_BLOCKING, 0, output, &[])
+                .enqueue_read_buffer(&buf_x, CL_BLOCKING, 0, x, &[])
                 .map_err(|e| KernelError::GpuError {
-                    reason: format!("Read output: {}", e),
+                    reason: format!("Read x: {}", e),
                 })?;
         }
 
