@@ -3205,6 +3205,106 @@ impl TemplateType {
             Self::Phi2Instruct,
         ]
     }
+
+    /// Suggest a prompt template for the given architecture string.
+    ///
+    /// Maps architecture identifiers (as used in `ArchitectureRegistry`) to the
+    /// most appropriate prompt template.  Returns `None` for architectures that
+    /// have no natural chat/instruct template (e.g. `"bert"`, `"bitnet"`).
+    ///
+    /// The match is **case-insensitive**.
+    pub fn suggest_for_arch(architecture: &str) -> Option<Self> {
+        match architecture.to_lowercase().as_str() {
+            // Phi family
+            "phi" | "phi-4" => Some(Self::Phi4Chat),
+            "phi-3" | "phi3" => Some(Self::Phi3Instruct),
+            "phi-2" | "phi2" => Some(Self::Phi2Instruct),
+
+            // LLaMA family
+            "llama-3.2" | "llama3.2" | "llama32" => Some(Self::Llama32Chat),
+            "llama-3.1" | "llama3.1" | "llama31" => Some(Self::Llama31Chat),
+            "llama" => Some(Self::Llama3Chat),
+            "llama2" | "llama-2" => Some(Self::Llama2Chat),
+
+            // Mistral family
+            "mistral-nemo" | "nemo" => Some(Self::MistralNemoChat),
+            "mistral" => Some(Self::MistralChat),
+            "mixtral" => Some(Self::MixtralInstruct),
+
+            // Qwen family
+            "qwen2.5" | "qwen-2.5" => Some(Self::Qwen25Chat),
+            "qwen" | "qwen2" => Some(Self::QwenChat),
+
+            // Gemma family
+            "gemma2" | "gemma-2" => Some(Self::Gemma2Chat),
+            "gemma" => Some(Self::GemmaChat),
+            "codegemma" | "code-gemma" => Some(Self::CodeGemma),
+
+            // DeepSeek family
+            "deepseek-v3" | "deepseekv3" | "deepseek3" => Some(Self::DeepSeekV3Chat),
+            "deepseek" | "deepseek2" => Some(Self::DeepSeekChat),
+
+            // Code models
+            "starcoder" | "starcoder2" => Some(Self::StarCoder),
+            "codellama" | "code-llama" => Some(Self::CodeLlamaInstruct),
+
+            // Falcon family
+            "falcon-2" | "falcon2" => Some(Self::Falcon2Chat),
+            "falcon" => Some(Self::FalconChat),
+
+            // Cohere family
+            "command-r-plus" => Some(Self::CommandRPlus),
+            "command" | "command-r" | "cohere" => Some(Self::CohereCommand),
+            "aya" => Some(Self::CohereAya),
+
+            // OLMo family
+            "olmo2" | "olmo-2" => Some(Self::OLMo2Chat),
+            "olmo" => Some(Self::OlmoInstruct),
+
+            // Chinese models
+            "internlm" | "internlm2" => Some(Self::InternLMChat),
+            "yi" | "yi-1.5" => Some(Self::YiChat),
+            "baichuan" | "baichuan2" => Some(Self::BaichuanChat),
+            "chatglm" | "chatglm2" | "chatglm3" | "glm-4" => Some(Self::ChatGLMChat),
+            "xverse" => Some(Self::XverseChat),
+            "minicpm" => Some(Self::MiniCPMChat),
+
+            // Community / fine-tune families
+            "zephyr" => Some(Self::ZephyrChat),
+            "vicuna" => Some(Self::VicunaChat),
+            "orca" => Some(Self::OrcaChat),
+            "solar" => Some(Self::SolarInstruct),
+            "alpaca" => Some(Self::AlpacaInstruct),
+            "nous-hermes" | "hermes" => Some(Self::NousHermes),
+            "wizardlm" | "wizard" => Some(Self::WizardLM),
+            "openchat" => Some(Self::OpenChat),
+            "granite" => Some(Self::GraniteChat),
+            "nemotron" => Some(Self::NemotronChat),
+            "saiga" => Some(Self::SaigaChat),
+            "tinyllama" => Some(Self::TinyLlamaChat),
+            "dolphin" => Some(Self::DolphinChat),
+            "stablelm" | "stable-lm" | "stablecode" => Some(Self::StableLMChat),
+            "bloom" | "bloomz" => Some(Self::BloomChat),
+            "jamba" => Some(Self::JambaChat),
+            "persimmon" | "adept" => Some(Self::PersimmonChat),
+            "arctic" => Some(Self::ArcticInstruct),
+            "dbrx" => Some(Self::DbrxInstruct),
+            "exaone" => Some(Self::ExaoneChat),
+            "smollm" | "smol-lm" => Some(Self::SmolLMChat),
+
+            // GPT/ChatGPT (GGUF exports)
+            "chatgpt" | "gpt4" | "gpt-4" => Some(Self::ChatGptChat),
+
+            // MPT / RWKV
+            "mpt" => Some(Self::MptInstruct),
+            "rwkv" | "rwkv5" | "rwkv6" => Some(Self::RwkvWorld),
+
+            // Architectures without a natural chat template
+            "gpt" | "bert" | "bitnet" | "bitnet-b1.58" => None,
+
+            _ => None,
+        }
+    }
 }
 
 /// Validation result for template output.
@@ -3980,6 +4080,70 @@ mod tests {
             let v = template.validate_output(&output, "Test input");
             assert!(v.is_valid, "Template {:?} failed self-validation: {:?}", template, v.warnings);
         }
+    }
+
+    #[test]
+    fn suggest_for_arch_covers_major_families() {
+        let expected = &[
+            ("phi-4", TemplateType::Phi4Chat),
+            ("phi-3", TemplateType::Phi3Instruct),
+            ("phi-2", TemplateType::Phi2Instruct),
+            ("llama", TemplateType::Llama3Chat),
+            ("llama2", TemplateType::Llama2Chat),
+            ("llama-3.1", TemplateType::Llama31Chat),
+            ("llama-3.2", TemplateType::Llama32Chat),
+            ("mistral", TemplateType::MistralChat),
+            ("mistral-nemo", TemplateType::MistralNemoChat),
+            ("mixtral", TemplateType::MixtralInstruct),
+            ("qwen", TemplateType::QwenChat),
+            ("qwen2.5", TemplateType::Qwen25Chat),
+            ("gemma", TemplateType::GemmaChat),
+            ("gemma2", TemplateType::Gemma2Chat),
+            ("codegemma", TemplateType::CodeGemma),
+            ("deepseek", TemplateType::DeepSeekChat),
+            ("deepseek-v3", TemplateType::DeepSeekV3Chat),
+            ("falcon", TemplateType::FalconChat),
+            ("falcon-2", TemplateType::Falcon2Chat),
+            ("command", TemplateType::CohereCommand),
+            ("command-r-plus", TemplateType::CommandRPlus),
+            ("aya", TemplateType::CohereAya),
+            ("starcoder", TemplateType::StarCoder),
+            ("codellama", TemplateType::CodeLlamaInstruct),
+            ("olmo", TemplateType::OlmoInstruct),
+            ("olmo2", TemplateType::OLMo2Chat),
+            ("smollm", TemplateType::SmolLMChat),
+            ("granite", TemplateType::GraniteChat),
+            ("rwkv", TemplateType::RwkvWorld),
+            ("mpt", TemplateType::MptInstruct),
+        ];
+        for (arch, expected_template) in expected {
+            assert_eq!(
+                TemplateType::suggest_for_arch(arch),
+                Some(*expected_template),
+                "arch '{}' should suggest {:?}",
+                arch,
+                expected_template,
+            );
+        }
+    }
+
+    #[test]
+    fn suggest_for_arch_returns_none_for_non_chat() {
+        for arch in &["gpt", "bert", "bitnet", "bitnet-b1.58", "unknown-model"] {
+            assert_eq!(
+                TemplateType::suggest_for_arch(arch),
+                None,
+                "arch '{}' should return None",
+                arch,
+            );
+        }
+    }
+
+    #[test]
+    fn suggest_for_arch_case_insensitive() {
+        // Uses to_lowercase internally
+        assert_eq!(TemplateType::suggest_for_arch("Phi-4"), Some(TemplateType::Phi4Chat),);
+        assert_eq!(TemplateType::suggest_for_arch("LLAMA"), Some(TemplateType::Llama3Chat),);
     }
 }
 
