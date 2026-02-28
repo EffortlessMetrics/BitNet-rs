@@ -1293,3 +1293,81 @@ fn snapshot_arctic_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("arctic_multi_turn", out);
 }
+
+// ── CodeGemma ───────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_codegemma_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::CodeGemma);
+    let out = tmpl.format("Write a fibonacci function in Python.");
+    insta::assert_snapshot!("codegemma_single_turn", out);
+}
+
+#[test]
+fn snapshot_codegemma_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::CodeGemma)
+        .with_system_prompt("You are a Python expert.");
+    let out = tmpl.format("Write a sort function.");
+    insta::assert_snapshot!("codegemma_with_system", out);
+}
+
+#[test]
+fn snapshot_codegemma_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::CodeGemma)
+        .with_system_prompt("You are a code assistant.");
+    tmpl.add_turn("Write hello world", "print('Hello, world!')");
+    let out = tmpl.format("Now write a loop.");
+    insta::assert_snapshot!("codegemma_multi_turn", out);
+}
+
+// ── Llama31Chat ─────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_llama31_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::Llama31Chat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("llama31_single_turn", out);
+}
+
+#[test]
+fn snapshot_llama31_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::Llama31Chat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("llama31_with_system", out);
+}
+
+#[test]
+fn snapshot_llama31_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::Llama31Chat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("llama31_multi_turn", out);
+}
+
+// ── DeepSeekV3Chat ──────────────────────────────────────────────────
+
+#[test]
+fn snapshot_deepseekv3_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::DeepSeekV3Chat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("deepseekv3_single_turn", out);
+}
+
+#[test]
+fn snapshot_deepseekv3_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::DeepSeekV3Chat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("deepseekv3_with_system", out);
+}
+
+#[test]
+fn snapshot_deepseekv3_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::DeepSeekV3Chat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("deepseekv3_multi_turn", out);
+}

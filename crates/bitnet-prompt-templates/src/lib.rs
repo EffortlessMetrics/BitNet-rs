@@ -175,6 +175,12 @@ pub enum TemplateType {
     ExaoneChat,
     /// OpenBMB MiniCPM ChatML format
     MiniCPMChat,
+    /// Google CodeGemma chat format (Gemma-format for code models)
+    CodeGemma,
+    /// Meta Llama 3.1 chat format (128K context, same header format as Llama 3)
+    Llama31Chat,
+    /// DeepSeek V3 ChatML format (enhanced ChatML for DeepSeek V3 models)
+    DeepSeekV3Chat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -234,6 +240,9 @@ impl std::str::FromStr for TemplateType {
             "dbrx-instruct" | "dbrx" => Ok(Self::DbrxInstruct),
             "exaone-chat" | "exaone" => Ok(Self::ExaoneChat),
             "minicpm-chat" | "minicpm" => Ok(Self::MiniCPMChat),
+            "codegemma" | "code-gemma" => Ok(Self::CodeGemma),
+            "llama31-chat" | "llama-3.1-chat" | "llama3.1" => Ok(Self::Llama31Chat),
+            "deepseekv3-chat" | "deepseek-v3-chat" | "deepseekv3" => Ok(Self::DeepSeekV3Chat),
             _ => bail!(
                 "Unknown template type: {}. Supported: raw, instruct, \
                  llama3-chat, phi4-chat, qwen-chat, gemma-chat, \
@@ -249,7 +258,8 @@ impl std::str::FromStr for TemplateType {
                  mixtral-instruct, stablelm-chat, bloom-chat, \
                  jamba-chat, persimmon-chat, xverse-chat, \
                  qwen25-chat, mistral-nemo-chat, arctic-instruct, \
-                 dbrx-instruct, exaone-chat, minicpm-chat",
+                 dbrx-instruct, exaone-chat, minicpm-chat, \
+                 codegemma, llama31-chat, deepseekv3-chat",
                 s
             ),
         }
@@ -309,6 +319,9 @@ impl std::fmt::Display for TemplateType {
             Self::DbrxInstruct => write!(f, "dbrx-instruct"),
             Self::ExaoneChat => write!(f, "exaone-chat"),
             Self::MiniCPMChat => write!(f, "minicpm-chat"),
+            Self::CodeGemma => write!(f, "codegemma"),
+            Self::Llama31Chat => write!(f, "llama31-chat"),
+            Self::DeepSeekV3Chat => write!(f, "deepseekv3-chat"),
         }
     }
 }
@@ -553,6 +566,15 @@ impl TemplateType {
                 );
                 return Self::TinyLlamaChat;
             }
+            if lower.contains("llama-3.1") || lower.contains("llama3.1") || lower.contains("llama-31") {
+                tracing::debug!(
+                    template = "Llama31Chat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::Llama31Chat;
+            }
             if lower.contains("llama3") || lower.contains("llama-3") {
                 tracing::debug!(
                     template = "Llama3Chat",
@@ -617,6 +639,15 @@ impl TemplateType {
                 );
                 return Self::Phi4Chat;
             }
+            if lower.contains("codegemma") || lower.contains("code-gemma") {
+                tracing::debug!(
+                    template = "CodeGemma",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::CodeGemma;
+            }
             if lower.contains("gemma2") || lower.contains("gemma-2-") {
                 tracing::debug!(
                     template = "Gemma2Chat",
@@ -661,6 +692,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::MistralChat;
+            }
+            if lower.contains("deepseek-v3") || lower.contains("deepseekv3") || lower.contains("deepseek3") {
+                tracing::debug!(
+                    template = "DeepSeekV3Chat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::DeepSeekV3Chat;
             }
             if lower.contains("deepseek") {
                 tracing::debug!(
@@ -1045,6 +1085,9 @@ impl TemplateType {
             Self::DbrxInstruct => Self::apply_dbrx_instruct(user_text, system_prompt),
             Self::ExaoneChat => Self::apply_exaone_chat(user_text, system_prompt),
             Self::MiniCPMChat => Self::apply_minicpm_chat(user_text, system_prompt),
+            Self::CodeGemma => Self::apply_codegemma(user_text, system_prompt),
+            Self::Llama31Chat => Self::apply_llama31_chat(user_text, system_prompt),
+            Self::DeepSeekV3Chat => Self::apply_deepseekv3_chat(user_text, system_prompt),
         }
     }
 
@@ -1739,6 +1782,33 @@ impl TemplateType {
         apply_chatml(system, user_text)
     }
 
+    /// Apply Google CodeGemma chat format (same as Gemma for instruct)
+    fn apply_codegemma(user_text: &str, system_prompt: Option<&str>) -> String {
+        Self::apply_gemma_chat(user_text, system_prompt)
+    }
+
+    /// Apply Meta Llama 3.1 chat format (same header format as Llama 3, always includes system)
+    fn apply_llama31_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt
+            .unwrap_or("You are a helpful, harmless, and honest AI assistant.");
+        let mut result = String::from("<|begin_of_text|>");
+        result.push_str("<|start_header_id|>system<|end_header_id|>\n\n");
+        result.push_str(system);
+        result.push_str("<|eot_id|>");
+        result.push_str("<|start_header_id|>user<|end_header_id|>\n\n");
+        result.push_str(user_text);
+        result.push_str("<|eot_id|>");
+        result.push_str("<|start_header_id|>assistant<|end_header_id|>\n\n");
+        result
+    }
+
+    /// Apply DeepSeek V3 ChatML format
+    fn apply_deepseekv3_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let system = system_prompt
+            .unwrap_or("You are DeepSeek Chat, a helpful and harmless AI assistant.");
+        apply_chatml(system, user_text)
+    }
+
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
             Self::Raw => vec![],
@@ -1883,6 +1953,15 @@ impl TemplateType {
             Self::MiniCPMChat => {
                 CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
+            Self::CodeGemma => {
+                vec!["<end_of_turn>".to_string(), "<start_of_turn>".to_string()]
+            }
+            Self::Llama31Chat => {
+                vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()]
+            }
+            Self::DeepSeekV3Chat => {
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
+            }
         }
     }
 
@@ -1973,6 +2052,9 @@ impl TemplateType {
             Self::DbrxInstruct => false,   // ChatML uses im_start/im_end tokens
             Self::ExaoneChat => false,     // Uses [|system|]/[|endofturn|] tokens
             Self::MiniCPMChat => false,    // ChatML uses im_start/im_end tokens
+            Self::CodeGemma => true,       // Like Gemma, benefits from BOS
+            Self::Llama31Chat => false,    // Template includes <|begin_of_text|>
+            Self::DeepSeekV3Chat => false, // ChatML uses im_start/im_end tokens
         }
     }
 
@@ -2016,6 +2098,9 @@ impl TemplateType {
                 | Self::DbrxInstruct
                 | Self::ExaoneChat
                 | Self::MiniCPMChat
+                | Self::CodeGemma
+                | Self::Llama31Chat
+                | Self::DeepSeekV3Chat
         )
     }
 
@@ -2790,6 +2875,60 @@ impl TemplateType {
                 let sys = system.unwrap_or("You are a helpful assistant.");
                 out = render_chatml(sys, history);
             }
+            TemplateType::CodeGemma => {
+                // CodeGemma uses same format as Gemma
+                let mut system_prepended = false;
+
+                for turn in history {
+                    let role = match turn.role {
+                        ChatRole::User => "user",
+                        ChatRole::Assistant => "model",
+                        ChatRole::System => continue,
+                    };
+                    writeln!(out, "<start_of_turn>{}", role)?;
+                    if role == "user" && !system_prepended {
+                        if let Some(sys) = system {
+                            writeln!(out, "{}\n", sys)?;
+                        }
+                        system_prepended = true;
+                    }
+                    writeln!(out, "{}<end_of_turn>", turn.text)?;
+                }
+
+                if !system_prepended && let Some(sys) = system {
+                    writeln!(out, "<start_of_turn>user\n{}<end_of_turn>", sys)?;
+                }
+
+                writeln!(out, "<start_of_turn>model")?;
+            }
+            TemplateType::Llama31Chat => {
+                // Llama 3.1 format with <|begin_of_text|> prefix
+                out.push_str("<|begin_of_text|>");
+
+                let sys = system
+                    .unwrap_or("You are a helpful, harmless, and honest AI assistant.");
+                write!(
+                    out,
+                    "<|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|>",
+                    sys
+                )?;
+
+                for turn in history {
+                    let role = turn.role.as_str();
+                    write!(
+                        out,
+                        "<|start_header_id|>{}<|end_header_id|>\n\n{}<|eot_id|>",
+                        role, turn.text
+                    )?;
+                }
+
+                write!(out, "<|start_header_id|>assistant<|end_header_id|>\n\n")?;
+            }
+            TemplateType::DeepSeekV3Chat => {
+                let sys = system
+                    .unwrap_or("You are DeepSeek Chat, a helpful and harmless AI assistant.");
+                out = render_chatml(sys, history);
+            }
         }
 
         Ok(out)
@@ -2897,6 +3036,9 @@ impl TemplateType {
             Self::DbrxInstruct,
             Self::ExaoneChat,
             Self::MiniCPMChat,
+            Self::CodeGemma,
+            Self::Llama31Chat,
+            Self::DeepSeekV3Chat,
         ]
     }
 }
@@ -4988,7 +5130,7 @@ mod detect_logging_tests {
     #[test]
     fn test_all_variants_complete() {
         let variants = TemplateType::all_variants();
-        assert_eq!(variants.len(), 50);
+        assert_eq!(variants.len(), 53);
         // Verify no duplicates
         let mut seen = std::collections::HashSet::new();
         for v in variants {

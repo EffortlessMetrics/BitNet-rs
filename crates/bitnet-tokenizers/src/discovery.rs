@@ -116,6 +116,12 @@ pub struct ModelCompatibilityMatrix {
     pub exaone_32k: TokenizerDownloadInfo,
     /// MiniCPM with 122K vocabulary - BPE tokenizer
     pub minicpm_122k: TokenizerDownloadInfo,
+    /// CodeGemma with 256K vocabulary - SentencePiece tokenizer
+    pub codegemma_256k: TokenizerDownloadInfo,
+    /// Llama 3.1 with 128K vocabulary - BPE tokenizer
+    pub llama31_128k: TokenizerDownloadInfo,
+    /// DeepSeek V3 with 100K vocabulary - BPE tokenizer
+    pub deepseekv3_100k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -420,6 +426,24 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "minicpm-122k".to_string(),
                 expected_vocab: Some(122753),
+            },
+            codegemma_256k: TokenizerDownloadInfo {
+                repo: "google/codegemma-7b-it".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "codegemma-256k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            llama31_128k: TokenizerDownloadInfo {
+                repo: "meta-llama/Llama-3.1-8B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "llama31-128k".to_string(),
+                expected_vocab: Some(128256),
+            },
+            deepseekv3_100k: TokenizerDownloadInfo {
+                repo: "deepseek-ai/DeepSeek-V3".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "deepseekv3-100k".to_string(),
+                expected_vocab: Some(102400),
             },
         }
     }
