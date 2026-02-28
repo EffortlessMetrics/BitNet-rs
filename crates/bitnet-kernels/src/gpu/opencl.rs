@@ -36,6 +36,7 @@ struct OpenClContext {
     context: Context,
     queue: CommandQueue,
     matmul_program: Option<Program>,
+    rmsnorm_program: Option<Program>,
     _quantize_program: Option<Program>,
     _elementwise_program: Option<Program>,
 }
@@ -132,6 +133,11 @@ impl OpenClKernel {
                         crate::kernels::MATMUL_I2S_SRC,
                         "matmul_i2s",
                     );
+                    let rmsnorm_program = Self::compile_program(
+                        &context,
+                        crate::kernels::RMSNORM_SRC,
+                        "rmsnorm",
+                    );
                     let quantize_program = Self::compile_program(
                         &context,
                         crate::kernels::QUANTIZE_I2S_SRC,
@@ -149,6 +155,7 @@ impl OpenClKernel {
                         context,
                         queue,
                         matmul_program,
+                        rmsnorm_program,
                         _quantize_program: quantize_program,
                         _elementwise_program: elementwise_program,
                     };
@@ -327,5 +334,122 @@ impl KernelProvider for OpenClKernel {
         // GPU quantization will be optimized in a follow-up PR.
         warn!("OpenCL quantize: falling back to CPU for correctness validation");
         crate::cpu::FallbackKernel.quantize(input, output, scales, qtype)
+    }
+}
+
+impl OpenClKernel {
+    /// Run optimized parallel RMSNorm on the GPU.
+    ///
+    /// Each work-group processes one row using tree reduction for the
+    /// sum-of-squares, then normalises and scales in parallel.
+    ///
+    /// `input`  — `[rows × hidden_dim]` flattened row-major
+    /// `weight` — `[hidden_dim]` per-element learnable scale
+    /// `output` — `[rows × hidden_dim]`
+    #[allow(dead_code)]
+    pub fn rms_norm(
+        &self,
+        input: &[f32],
+        weight: &[f32],
+        output: &mut [f32],
+        rows: usize,
+        hidden_dim: usize,
+        eps: f32,
+    ) -> Result<()> {
+        let ctx = self.context.as_ref().ok_or_else(|| KernelError::GpuError {
+            reason: "OpenCL context not initialized".into(),
+        })?;
+
+        let program = ctx.rmsnorm_program.as_ref().ok_or_else(|| KernelError::GpuError {
+            reason: "rmsnorm program not compiled".into(),
+        })?;
+
+        use opencl3::kernel::{ExecuteKernel, Kernel};
+
+        let mut buf_input = unsafe {
+            Buffer::<f32>::create(
+                &ctx.context,
+                CL_MEM_READ_ONLY,
+                input.len(),
+                std::ptr::null_mut(),
+            )
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Buffer input create: {}", e),
+            })?
+        };
+        let mut buf_weight = unsafe {
+            Buffer::<f32>::create(
+                &ctx.context,
+                CL_MEM_READ_ONLY,
+                weight.len(),
+                std::ptr::null_mut(),
+            )
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Buffer weight create: {}", e),
+            })?
+        };
+        let buf_output = unsafe {
+            Buffer::<f32>::create(
+                &ctx.context,
+                CL_MEM_WRITE_ONLY,
+                output.len(),
+                std::ptr::null_mut(),
+            )
+            .map_err(|e| KernelError::GpuError {
+                reason: format!("Buffer output create: {}", e),
+            })?
+        };
+
+        unsafe {
+            ctx.queue
+                .enqueue_write_buffer(&mut buf_input, CL_BLOCKING, 0, input, &[])
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Write input: {}", e),
+                })?;
+            ctx.queue
+                .enqueue_write_buffer(&mut buf_weight, CL_BLOCKING, 0, weight, &[])
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Write weight: {}", e),
+                })?;
+        }
+
+        let kernel = Kernel::create(program, "rms_norm_parallel").map_err(|e| {
+            KernelError::GpuError {
+                reason: format!("Kernel create: {}", e),
+            }
+        })?;
+
+        let n_u32 = hidden_dim as u32;
+        let local_size = 256usize;
+        let global_size = rows * local_size;
+
+        let event = unsafe {
+            ExecuteKernel::new(&kernel)
+                .set_arg(&buf_input.get())
+                .set_arg(&buf_weight.get())
+                .set_arg(&buf_output.get())
+                .set_arg(&n_u32)
+                .set_arg(&eps)
+                .set_global_work_sizes(&[global_size])
+                .set_local_work_sizes(&[local_size])
+                .enqueue_nd_range(&ctx.queue)
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Enqueue: {}", e),
+                })?
+        };
+
+        event.wait().map_err(|e| KernelError::GpuError {
+            reason: format!("Kernel wait: {}", e),
+        })?;
+
+        unsafe {
+            ctx.queue
+                .enqueue_read_buffer(&buf_output, CL_BLOCKING, 0, output, &[])
+                .map_err(|e| KernelError::GpuError {
+                    reason: format!("Read output: {}", e),
+                })?;
+        }
+
+        Ok(())
     }
 }

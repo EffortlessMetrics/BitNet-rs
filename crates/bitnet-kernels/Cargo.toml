@@ -100,6 +100,10 @@ name = "comprehensive_kernel_unit_tests"
 path = "tests/comprehensive_kernel_unit_tests.rs"
 
 [[test]]
+name = "rmsnorm_reference_tests"
+path = "tests/rmsnorm_reference_tests.rs"
+
+[[test]]
 name = "kernel_bdd_tests"
 path = "tests/kernel_bdd_tests.rs"
 
