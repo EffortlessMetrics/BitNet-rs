@@ -76,6 +76,10 @@ impl DeviceAwareQuantizer {
                 let cpu_provider = Self::create_best_cpu_provider()?;
                 (None, cpu_provider)
             }
+            Device::Vulkan(_) => {
+                let cpu_provider = Self::create_best_cpu_provider()?;
+                (None, cpu_provider)
+            }
         };
 
         Ok(Self {

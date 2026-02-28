@@ -265,7 +265,7 @@ pub fn select_backend(
             info!("Selected CPU backend");
             Ok(Box::new(CpuBackend::new(model)?))
         }
-        Device::Cuda(_) | Device::Metal => {
+        Device::Cuda(_) | Device::Vulkan(_) | Device::Metal => {
             if GpuBackend::is_available() {
                 info!("Selected GPU backend");
                 Ok(Box::new(GpuBackend::new(model, device)?))

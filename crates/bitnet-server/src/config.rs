@@ -27,6 +27,7 @@ pub enum DeviceConfig {
     Cpu,
     /// Force GPU execution on specific device ID
     Gpu(usize),
+    Vulkan(usize),
 }
 
 impl FromStr for DeviceConfig {
@@ -36,7 +37,8 @@ impl FromStr for DeviceConfig {
         match s.to_lowercase().as_str() {
             "auto" => Ok(DeviceConfig::Auto),
             "cpu" => Ok(DeviceConfig::Cpu),
-            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(DeviceConfig::Gpu(0)),
+            "gpu" | "cuda" | "opencl" | "ocl" => Ok(DeviceConfig::Gpu(0)),
+            "vulkan" => Ok(DeviceConfig::Vulkan(0)),
             s if s.starts_with("gpu:") => {
                 let id_str = &s[4..];
                 let id = id_str.parse::<usize>()?;
@@ -50,7 +52,7 @@ impl FromStr for DeviceConfig {
             s if s.starts_with("vulkan:") => {
                 let id_str = &s[7..];
                 let id = id_str.parse::<usize>()?;
-                Ok(DeviceConfig::Gpu(id))
+                Ok(DeviceConfig::Vulkan(id))
             }
             s if s.starts_with("opencl:") => {
                 let id_str = &s[7..];
@@ -85,6 +87,7 @@ impl DeviceConfig {
             }
             DeviceConfig::Cpu => Device::Cpu,
             DeviceConfig::Gpu(id) => Device::Cuda(*id),
+            DeviceConfig::Vulkan(id) => Device::Vulkan(*id),
         }
     }
 }
@@ -515,11 +518,11 @@ mod tests {
         assert_eq!("auto".parse::<DeviceConfig>().unwrap(), DeviceConfig::Auto);
         assert_eq!("cpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Cpu);
         assert_eq!("gpu".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
-        assert_eq!("vulkan".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
+        assert_eq!("vulkan".parse::<DeviceConfig>().unwrap(), DeviceConfig::Vulkan(0));
         assert_eq!("opencl".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(0));
         assert_eq!("gpu:1".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(1));
         assert_eq!("cuda:2".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(2));
-        assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(3));
+        assert_eq!("vulkan:3".parse::<DeviceConfig>().unwrap(), DeviceConfig::Vulkan(3));
         assert_eq!("opencl:4".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(4));
         assert_eq!("ocl:5".parse::<DeviceConfig>().unwrap(), DeviceConfig::Gpu(5));
         assert!("invalid".parse::<DeviceConfig>().is_err());

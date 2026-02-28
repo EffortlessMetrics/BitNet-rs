@@ -450,10 +450,10 @@ impl ConcurrencyManager {
         for (ip, bucket) in limiters.iter() {
             // Check if bucket is idle
             // We use try_lock to avoid blocking if the bucket is currently in use
-            if let Ok(last_refill) = bucket.last_refill.try_lock() {
-                if now.duration_since(*last_refill) > max_idle {
-                    keys_to_remove.push(*ip);
-                }
+            if let Ok(last_refill) = bucket.last_refill.try_lock()
+                && now.duration_since(*last_refill) > max_idle
+            {
+                keys_to_remove.push(*ip);
             }
         }
 

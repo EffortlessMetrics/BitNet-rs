@@ -95,6 +95,9 @@ impl BitNetModel {
         let device = match device {
             Device::Cpu => candle_core::Device::Cpu,
             Device::Cuda(id) => candle_core::Device::new_cuda(*id)?,
+            Device::Vulkan(_) => {
+                return Err(BitNetError::Validation("Vulkan not yet supported".to_string()));
+            }
             Device::Metal => {
                 return Err(BitNetError::Validation("Metal not yet supported".to_string()));
             }
@@ -159,6 +162,11 @@ impl BitNetModel {
                 let device = match self.device {
                     Device::Cpu => candle_core::Device::Cpu,
                     Device::Cuda(id) => candle_core::Device::new_cuda(id)?,
+                    Device::Vulkan(_) => {
+                        return Err(BitNetError::Validation(
+                            "Vulkan not yet supported".to_string(),
+                        ));
+                    }
                     Device::Metal => {
                         return Err(BitNetError::Validation("Metal not yet supported".to_string()));
                     }

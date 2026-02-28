@@ -16,7 +16,7 @@ struct HeaderInput {
 
 fuzz_target!(|input: HeaderInput| {
     // Restrict to the two versions parse_header accepts (2 and 3).
-    let version: u32 = if input.version_raw % 2 == 0 { 2 } else { 3 };
+    let version: u32 = if input.version_raw.is_multiple_of(2) { 2 } else { 3 };
 
     // --- Serialize -----------------------------------------------------------
     let mut buf: Vec<u8> = Vec::with_capacity(32);

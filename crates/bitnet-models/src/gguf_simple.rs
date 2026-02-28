@@ -214,6 +214,12 @@ fn load_gguf_enhanced(
                 CDevice::Cpu
             }
         },
+        Device::Vulkan(_) => {
+            tracing::warn!(
+                "Vulkan device requested but not supported natively, falling back to CPU"
+            );
+            CDevice::Cpu
+        }
         Device::Metal => {
             tracing::warn!("Metal device requested but not supported, falling back to CPU");
             CDevice::Cpu
@@ -556,6 +562,12 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
                 CDevice::Cpu
             }
         },
+        Device::Vulkan(_) => {
+            tracing::warn!(
+                "Vulkan device requested but not supported natively, falling back to CPU"
+            );
+            CDevice::Cpu
+        }
         Device::Metal => {
             tracing::warn!("Metal device requested but not supported, falling back to CPU");
             CDevice::Cpu
@@ -1662,6 +1674,10 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
                 CDevice::Cpu
             }
         },
+        Device::Vulkan(_) => {
+            tracing::warn!("Vulkan device requested but not supported natively, fallback to CPU");
+            CDevice::Cpu
+        }
         Device::Metal => {
             tracing::warn!("Metal device requested but not supported, fallback to CPU");
             CDevice::Cpu

@@ -51,41 +51,42 @@ fuzz_target!(|input: FuzzInput| {
         // Validate shape so it doesn't overflow usize.
         let total: Option<usize> =
             input.shape.iter().try_fold(1usize, |acc, &d| acc.checked_mul(d));
-        if let Some(numel) = total {
-            if numel > 0 && numel <= 65_536 {
-                let block_size = (input.block_size as usize).max(1).min(256);
-                let qt = QuantizedTensor::new_with_params(
-                    input.i2s_data.clone(),
-                    input.i2s_scales.iter().map(|&s| if s.is_finite() { s } else { 1.0 }).collect(),
-                    None,
-                    input.shape.clone(),
-                    QuantizationType::I2S,
-                    block_size,
-                );
-                // Must not panic; an Err return is acceptable.
-                let _ = qt.dequantize();
+        if let Some(numel) = total
+            && numel > 0
+            && numel <= 65_536
+        {
+            let block_size = (input.block_size as usize).max(1).min(256);
+            let qt = QuantizedTensor::new_with_params(
+                input.i2s_data.clone(),
+                input.i2s_scales.iter().map(|&s| if s.is_finite() { s } else { 1.0 }).collect(),
+                None,
+                input.shape.clone(),
+                QuantizationType::I2S,
+                block_size,
+            );
+            // Must not panic; an Err return is acceptable.
+            let _ = qt.dequantize();
 
-                // Also exercise TL1 and TL2 paths on the same raw bytes.
-                let qt_tl1 = QuantizedTensor::new_with_params(
-                    input.i2s_data.clone(),
-                    qt.scales.clone(),
-                    None,
-                    input.shape.clone(),
-                    QuantizationType::TL1,
-                    block_size,
-                );
-                let _ = qt_tl1.dequantize();
+            // Also exercise TL1 and TL2 paths on the same raw bytes.
+            let qt_tl1 = QuantizedTensor::new_with_params(
+                input.i2s_data.clone(),
+                qt.scales.clone(),
+                None,
+                input.shape.clone(),
+                QuantizationType::TL1,
+                block_size,
+            );
+            let _ = qt_tl1.dequantize();
 
-                let qt_tl2 = QuantizedTensor::new_with_params(
-                    input.i2s_data.clone(),
-                    qt.scales.clone(),
-                    None,
-                    input.shape.clone(),
-                    QuantizationType::TL2,
-                    block_size,
-                );
-                let _ = qt_tl2.dequantize();
-            }
+            let qt_tl2 = QuantizedTensor::new_with_params(
+                input.i2s_data.clone(),
+                qt.scales.clone(),
+                None,
+                input.shape.clone(),
+                QuantizationType::TL2,
+                block_size,
+            );
+            let _ = qt_tl2.dequantize();
         }
     }
 

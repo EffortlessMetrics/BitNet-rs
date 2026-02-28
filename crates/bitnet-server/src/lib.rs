@@ -727,7 +727,8 @@ fn parse_device(device: &str) -> Result<Device> {
     let normalized = device.to_lowercase();
     match normalized.as_str() {
         "cpu" => Ok(Device::Cpu),
-        "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(Device::Cuda(0)),
+        "gpu" | "cuda" | "opencl" | "ocl" => Ok(Device::Cuda(0)),
+        "vulkan" => Ok(Device::Vulkan(0)),
         _ if normalized.starts_with("cuda:") => {
             let id_str = &normalized[5..];
             let id = id_str.parse::<usize>()?;
@@ -736,7 +737,7 @@ fn parse_device(device: &str) -> Result<Device> {
         _ if normalized.starts_with("vulkan:") => {
             let id_str = &normalized[7..];
             let id = id_str.parse::<usize>()?;
-            Ok(Device::Cuda(id))
+            Ok(Device::Vulkan(id))
         }
         _ if normalized.starts_with("opencl:") => {
             let id_str = &normalized[7..];
@@ -764,14 +765,14 @@ mod tests {
 
     #[test]
     fn parse_device_supports_vulkan_and_opencl_aliases() {
-        assert_eq!(parse_device("vulkan").unwrap(), Device::Cuda(0));
+        assert_eq!(parse_device("vulkan").unwrap(), Device::Vulkan(0));
         assert_eq!(parse_device("opencl").unwrap(), Device::Cuda(0));
         assert_eq!(parse_device("ocl").unwrap(), Device::Cuda(0));
     }
 
     #[test]
     fn parse_device_supports_indexed_vulkan_and_opencl_aliases() {
-        assert_eq!(parse_device("vulkan:2").unwrap(), Device::Cuda(2));
+        assert_eq!(parse_device("vulkan:2").unwrap(), Device::Vulkan(2));
         assert_eq!(parse_device("opencl:3").unwrap(), Device::Cuda(3));
         assert_eq!(parse_device("ocl:4").unwrap(), Device::Cuda(4));
     }

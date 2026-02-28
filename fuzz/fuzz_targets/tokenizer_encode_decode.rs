@@ -66,10 +66,10 @@ fuzz_target!(|data: &[u8]| {
                 ..TokenizerConfig::default()
             };
             if let Ok(tok) = UniversalTokenizer::new(config) {
-                if let Ok(text) = std::str::from_utf8(data) {
-                    if let Ok(tokens) = tok.encode(text, false, false) {
-                        let _ = tok.decode(&tokens);
-                    }
+                if let Ok(text) = std::str::from_utf8(data)
+                    && let Ok(tokens) = tok.encode(text, false, false)
+                {
+                    let _ = tok.decode(&tokens);
                 }
                 // arbitrary decode
                 let ids: Vec<u32> = data
@@ -86,31 +86,28 @@ fuzz_target!(|data: &[u8]| {
         let inner: Arc<dyn Tokenizer> = Arc::new(BasicTokenizer::new());
 
         // Gpt2TokenizerWrapper
-        if let Ok(gpt2) = Gpt2TokenizerWrapper::new(Arc::clone(&inner)) {
-            if let Ok(text) = std::str::from_utf8(data) {
-                if let Ok(tokens) = gpt2.encode(text, false, false) {
-                    let _ = gpt2.decode(&tokens);
-                }
-            }
+        if let Ok(gpt2) = Gpt2TokenizerWrapper::new(Arc::clone(&inner))
+            && let Ok(text) = std::str::from_utf8(data)
+            && let Ok(tokens) = gpt2.encode(text, false, false)
+        {
+            let _ = gpt2.decode(&tokens);
         }
 
         // LlamaTokenizerWrapper (vocab_size must be >= 1)
-        if let Ok(llama) = LlamaTokenizerWrapper::new(Arc::clone(&inner), 32000) {
-            if let Ok(text) = std::str::from_utf8(data) {
-                if let Ok(tokens) = llama.encode(text, false, false) {
-                    let _ = llama.decode(&tokens);
-                }
-            }
+        if let Ok(llama) = LlamaTokenizerWrapper::new(Arc::clone(&inner), 32000)
+            && let Ok(text) = std::str::from_utf8(data)
+            && let Ok(tokens) = llama.encode(text, false, false)
+        {
+            let _ = llama.decode(&tokens);
         }
 
         // BitNetTokenizerWrapper
         for qt in &[QuantizationType::I2S, QuantizationType::TL1, QuantizationType::TL2] {
-            if let Ok(bn) = BitNetTokenizerWrapper::new(Arc::clone(&inner), *qt) {
-                if let Ok(text) = std::str::from_utf8(data) {
-                    if let Ok(tokens) = bn.encode(text, false, false) {
-                        let _ = bn.decode(&tokens);
-                    }
-                }
+            if let Ok(bn) = BitNetTokenizerWrapper::new(Arc::clone(&inner), *qt)
+                && let Ok(text) = std::str::from_utf8(data)
+                && let Ok(tokens) = bn.encode(text, false, false)
+            {
+                let _ = bn.decode(&tokens);
             }
         }
     }
@@ -123,16 +120,16 @@ fuzz_target!(|data: &[u8]| {
             let merges: Vec<String> = bpe.merges.into_iter().take(128).collect();
             let token_ids: Vec<u32> = bpe.token_ids.into_iter().map(|id| id as u32).collect();
 
-            if !vocab.is_empty() {
-                if let Ok(hf) = HfTokenizer::from_vocab_and_merges(&vocab, &merges) {
-                    if let Ok(text) = std::str::from_utf8(data) {
-                        if let Ok(tokens) = hf.encode(text, false, false) {
-                            let _ = hf.decode(&tokens);
-                        }
-                    }
-                    // decode arbitrary token ids must not panic
-                    let _ = hf.decode(&token_ids);
+            if !vocab.is_empty()
+                && let Ok(hf) = HfTokenizer::from_vocab_and_merges(&vocab, &merges)
+            {
+                if let Ok(text) = std::str::from_utf8(data)
+                    && let Ok(tokens) = hf.encode(text, false, false)
+                {
+                    let _ = hf.decode(&tokens);
                 }
+                // decode arbitrary token ids must not panic
+                let _ = hf.decode(&token_ids);
             }
         }
     }

@@ -1282,6 +1282,11 @@ impl QuantizedLinear {
                 };
                 total_ops * simd_efficiency
             }
+            Device::Vulkan(_) => match self.qtype {
+                QuantizationType::I2S => total_ops * 0.75,
+                QuantizationType::TL1 => total_ops * 0.65,
+                QuantizationType::TL2 => total_ops * 0.6,
+            },
             Device::Metal => {
                 // Metal GPU throughput (similar to CUDA but potentially different)
                 match self.qtype {

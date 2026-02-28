@@ -61,17 +61,17 @@ fuzz_target!(|data: &[u8]| {
             let vocab: Vec<(String, f32)> = bpe.vocab.into_iter().take(256).collect();
             let merges: Vec<String> = bpe.merges.into_iter().take(256).collect();
 
-            if !vocab.is_empty() {
-                if let Ok(hf_tok) = HfTokenizer::from_vocab_and_merges(&vocab, &merges) {
-                    // Exercise BPE encode on the raw bytes interpreted as text.
-                    if let Ok(text) = std::str::from_utf8(data) {
-                        let _ = hf_tok.encode(text, bpe.add_bos, bpe.add_special);
-                    }
-                    // Always exercise a few fixed strings to stress merge rules.
-                    let _ = hf_tok.encode("hello world", false, false);
-                    let _ = hf_tok.encode("", false, false);
-                    let _ = hf_tok.encode("BitNet 1.58", true, true);
+            if !vocab.is_empty()
+                && let Ok(hf_tok) = HfTokenizer::from_vocab_and_merges(&vocab, &merges)
+            {
+                // Exercise BPE encode on the raw bytes interpreted as text.
+                if let Ok(text) = std::str::from_utf8(data) {
+                    let _ = hf_tok.encode(text, bpe.add_bos, bpe.add_special);
                 }
+                // Always exercise a few fixed strings to stress merge rules.
+                let _ = hf_tok.encode("hello world", false, false);
+                let _ = hf_tok.encode("", false, false);
+                let _ = hf_tok.encode("BitNet 1.58", true, true);
             }
         }
     }
@@ -80,45 +80,45 @@ fuzz_target!(|data: &[u8]| {
     // `TokenizerConfig` does not implement `serde::Deserialize`, so we parse
     // the bytes as a `serde_json::Value` and attempt to construct a BPE
     // tokenizer from any array-shaped vocab it contains.
-    if let Ok(text) = std::str::from_utf8(data) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(text) {
-            // If the JSON is a flat array of strings, treat it as a vocabulary.
-            if let Some(arr) = json.as_array() {
-                let vocab_from_json: Vec<(String, f32)> = arr
-                    .iter()
-                    .filter_map(|v| v.as_str().map(|s| (s.to_string(), 0.0_f32)))
-                    .take(256)
-                    .collect();
-                if !vocab_from_json.is_empty() {
-                    let _ = HfTokenizer::from_vocab_and_merges(&vocab_from_json, &[]);
-                }
+    if let Ok(text) = std::str::from_utf8(data)
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(text)
+    {
+        // If the JSON is a flat array of strings, treat it as a vocabulary.
+        if let Some(arr) = json.as_array() {
+            let vocab_from_json: Vec<(String, f32)> = arr
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| (s.to_string(), 0.0_f32)))
+                .take(256)
+                .collect();
+            if !vocab_from_json.is_empty() {
+                let _ = HfTokenizer::from_vocab_and_merges(&vocab_from_json, &[]);
             }
+        }
 
-            // If the JSON is an object, look for "vocab" / "merges" keys that
-            // mirror a tokenizers.json layout and exercise construction.
-            if let Some(obj) = json.as_object() {
-                let vocab_from_obj: Vec<(String, f32)> = obj
-                    .get("vocab")
-                    .and_then(|v| v.as_object())
-                    .map(|m| {
-                        m.iter()
-                            .filter_map(|(k, v)| v.as_f64().map(|score| (k.clone(), score as f32)))
-                            .take(256)
-                            .collect()
-                    })
-                    .unwrap_or_default();
+        // If the JSON is an object, look for "vocab" / "merges" keys that
+        // mirror a tokenizers.json layout and exercise construction.
+        if let Some(obj) = json.as_object() {
+            let vocab_from_obj: Vec<(String, f32)> = obj
+                .get("vocab")
+                .and_then(|v| v.as_object())
+                .map(|m| {
+                    m.iter()
+                        .filter_map(|(k, v)| v.as_f64().map(|score| (k.clone(), score as f32)))
+                        .take(256)
+                        .collect()
+                })
+                .unwrap_or_default();
 
-                let merges_from_obj: Vec<String> = obj
-                    .get("merges")
-                    .and_then(|v| v.as_array())
-                    .map(|arr| {
-                        arr.iter().filter_map(|v| v.as_str().map(String::from)).take(256).collect()
-                    })
-                    .unwrap_or_default();
+            let merges_from_obj: Vec<String> = obj
+                .get("merges")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter().filter_map(|v| v.as_str().map(String::from)).take(256).collect()
+                })
+                .unwrap_or_default();
 
-                if !vocab_from_obj.is_empty() {
-                    let _ = HfTokenizer::from_vocab_and_merges(&vocab_from_obj, &merges_from_obj);
-                }
+            if !vocab_from_obj.is_empty() {
+                let _ = HfTokenizer::from_vocab_and_merges(&vocab_from_obj, &merges_from_obj);
             }
         }
     }

@@ -31,6 +31,7 @@ pub enum Device {
     #[default]
     Cpu,
     Cuda(usize),
+    Vulkan(usize),
     Metal,
 }
 
@@ -65,6 +66,11 @@ impl Device {
         matches!(self, Device::Cuda(_))
     }
 
+    /// Check if this device is Vulkan
+    pub fn is_vulkan(&self) -> bool {
+        matches!(self, Device::Vulkan(_))
+    }
+
     /// Convert our device preference to Candle's device.
     #[cfg(any(feature = "gpu", feature = "cuda"))]
     pub fn to_candle(&self) -> anyhow::Result<candle_core::Device> {
@@ -72,6 +78,7 @@ impl Device {
             Device::Cpu => candle_core::Device::Cpu,
             Device::Cuda(i) if i != usize::MAX => candle_core::Device::new_cuda(i)?,
             Device::Cuda(_) => candle_core::Device::Cpu, // fallback for unknown
+            Device::Vulkan(_) => candle_core::Device::Cpu,
             #[cfg(all(feature = "metal", target_os = "macos"))]
             Device::Metal => {
                 use candle_core::backend::BackendDevice;

@@ -272,6 +272,9 @@ impl HuggingFaceLoader {
                     .map_err(|e| BitNetError::Validation(e.to_string()))?;
                 Ok(candle_core::Device::Metal(metal))
             }
+            Device::Vulkan(_) => Err(BitNetError::Validation(
+                "Vulkan device currently mapped to CPU fallback".to_string(),
+            )),
             #[cfg(not(all(target_os = "macos", feature = "gpu")))]
             Device::Metal => Err(BitNetError::Validation(
                 "Metal support not enabled; rebuild with --features gpu on macOS".to_string(),

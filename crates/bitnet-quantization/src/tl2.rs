@@ -316,6 +316,7 @@ impl TL2Quantizer {
         match device {
             bitnet_common::Device::Cpu => true,
             bitnet_common::Device::Cuda(_) => cfg!(any(feature = "gpu", feature = "cuda")),
+            bitnet_common::Device::Vulkan(_) => false,
             bitnet_common::Device::Metal => false, // Metal support not yet implemented
         }
     }

@@ -152,6 +152,7 @@ impl BitNetTensor {
                     Err(BitNetError::Validation("CUDA not available".to_string()))
                 }
             }
+            Device::Vulkan(_) => Ok(candle_core::Device::Cpu),
             Device::Metal => {
                 #[cfg(all(target_os = "macos", feature = "gpu"))]
                 {
@@ -259,6 +260,7 @@ impl Tensor for MockTensor {
                     return Err(BitNetError::Validation("CUDA not available".to_string()));
                 }
             }
+            Device::Vulkan(_) => candle_core::Device::Cpu,
             Device::Metal => {
                 #[cfg(all(target_os = "macos", feature = "gpu"))]
                 {

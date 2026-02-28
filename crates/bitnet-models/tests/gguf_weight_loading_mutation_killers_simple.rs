@@ -289,6 +289,7 @@ fn test_device_selection_mutations() {
                 // Note: u32 device ID is always >= 0, testing bound logic
                 assert!(id < 16, "CUDA device ID should be reasonable");
             }
+            Device::Vulkan(_) => {}
             Device::Metal => {
                 assert!(!is_cpu, "Metal device should not report as CPU");
                 assert!(!is_cuda, "Metal device should not report as CUDA");
@@ -300,6 +301,7 @@ fn test_device_selection_mutations() {
         let device_id = match device {
             Device::Cpu => None,
             Device::Cuda(id) => Some(id),
+            Device::Vulkan(id) => Some(id),
             Device::Metal => None,
         };
 

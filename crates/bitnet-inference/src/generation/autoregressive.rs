@@ -279,6 +279,7 @@ impl AutoregressiveGenerator {
                     PerformanceMode::Conservative
                 }
             }
+            Device::Vulkan(_) => PerformanceMode::Balanced,
             Device::Metal => PerformanceMode::Balanced,
         }
     }
@@ -291,6 +292,7 @@ impl AutoregressiveGenerator {
             (Device::Cuda(_), _) => 8,
             (Device::Cpu, PerformanceMode::Conservative) => 1,
             (Device::Cpu, _) => 2,
+            (Device::Vulkan(_), _) => 4,
             (Device::Metal, _) => 4,
         }
     }

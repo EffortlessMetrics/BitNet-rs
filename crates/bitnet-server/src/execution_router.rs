@@ -197,6 +197,7 @@ impl DeviceMonitor {
                     false
                 }
             }
+            Device::Vulkan(_) => false,
             Device::Metal => {
                 let gpu_info = get_gpu_info();
                 gpu_info.metal
@@ -232,6 +233,7 @@ impl DeviceMonitor {
                     0
                 }
             }
+            Device::Vulkan(_) => 4096,
             Device::Metal => Self::get_metal_memory_budget_mb(system),
         }
     }
@@ -282,6 +284,7 @@ impl DeviceMonitor {
                     0
                 }
             }
+            Device::Vulkan(_) => 0,
             Device::Metal => {
                 let available_mb = system.available_memory() / 1024;
                 available_mb.min(Self::get_metal_memory_budget_mb(system))
@@ -319,6 +322,7 @@ impl DeviceMonitor {
                     None
                 }
             }
+            Device::Vulkan(_) => None,
             Device::Metal => {
                 #[cfg(target_os = "macos")]
                 {
@@ -344,7 +348,7 @@ impl DeviceMonitor {
     fn get_simd_support(device: &Device) -> Vec<String> {
         match device {
             Device::Cpu => Self::detect_cpu_simd_features(),
-            Device::Cuda(_) | Device::Metal => Vec::new(), // GPU devices don't use CPU SIMD
+            Device::Cuda(_) | Device::Vulkan(_) | Device::Metal => Vec::new(), // GPU devices don't use CPU SIMD
         }
     }
 
@@ -435,6 +439,7 @@ impl DeviceMonitor {
                 #[cfg(not(any(feature = "gpu", feature = "cuda")))]
                 0.0
             }
+            Device::Vulkan(_) => 0.0,
             Device::Metal => {
                 #[cfg(target_os = "macos")]
                 {

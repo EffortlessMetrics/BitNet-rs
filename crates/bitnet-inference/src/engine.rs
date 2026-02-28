@@ -747,6 +747,10 @@ impl InferenceEngine {
                 debug!("Using GPU backend");
                 Box::new(GpuBackend::new(model.clone(), device)?)
             }
+            Device::Vulkan(_) => {
+                debug!("Using CPU backend for Vulkan fallback");
+                Box::new(CpuBackend::new(model.clone())?)
+            }
             Device::Metal => {
                 debug!("Using GPU backend (Metal)");
                 Box::new(GpuBackend::new(model.clone(), device)?)

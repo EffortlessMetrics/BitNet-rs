@@ -162,10 +162,10 @@ fn retry_after_secs(headers: &reqwest::header::HeaderMap) -> u64 {
 }
 
 fn validate_downloaded_len(downloaded: u64, expected_total: Option<u64>) -> Result<()> {
-    if let Some(total) = expected_total {
-        if downloaded != total {
-            bail!("download truncated: got {} bytes, expected {}", downloaded, total);
-        }
+    if let Some(total) = expected_total
+        && downloaded != total
+    {
+        bail!("download truncated: got {} bytes, expected {}", downloaded, total);
     }
     Ok(())
 }

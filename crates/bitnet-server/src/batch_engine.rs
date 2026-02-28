@@ -622,6 +622,7 @@ impl BatchEngine {
         let base_time_ms = match batch.device {
             Device::Cpu => 100,
             Device::Cuda(_) => 50,
+            Device::Vulkan(_) => 60,
             Device::Metal => 60, // TODO: Adjust for Metal performance
         };
 

@@ -80,6 +80,9 @@ impl SafeTensorsLoader {
                 Ok(candle_core::Device::Metal(metal))
             }
             // Everywhere else, emit a clear error without referencing Metal symbols.
+            Device::Vulkan(_) => Err(BitNetError::Validation(
+                "Vulkan device currently mapped to CPU fallback".to_string(),
+            )),
             #[cfg(not(all(target_os = "macos", feature = "gpu")))]
             Device::Metal => Err(BitNetError::Validation(
                 "Metal support not enabled; rebuild with --features gpu on macOS".to_string(),
