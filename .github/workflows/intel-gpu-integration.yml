@@ -1,0 +1,57 @@
+name: Intel GPU Integration Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to test'
+        required: false
+        default: 'intel-gpu/full-integration'
+
+permissions:
+  contents: read
+
+jobs:
+  integration-test:
+    name: Intel GPU full integration test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.92.0'
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-intel-gpu-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-intel-gpu-
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (oneapi feature)
+        run: cargo clippy --all-targets --no-default-features --features oneapi -- -D warnings
+
+      - name: Build (oneapi feature)
+        run: cargo build --no-default-features --features oneapi
+
+      - name: Test (oneapi feature)
+        run: cargo test --no-default-features --features oneapi --lib -- --skip ignore
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Intel GPU Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.event.inputs.branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
