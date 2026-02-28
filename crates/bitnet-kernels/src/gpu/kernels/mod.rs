@@ -11,6 +11,7 @@ pub const QUANTIZE_I2S_SRC: &str = include_str!("quantize_i2s.cl");
 
 /// Element-wise operation kernels source.
 pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
+pub const EMBEDDING_SRC: &str = include_str!("embedding.cl");
 
 /// Scaled dot-product attention kernel source.
 pub const ATTENTION_SRC: &str = include_str!("attention.cl");
