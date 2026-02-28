@@ -259,6 +259,71 @@ impl PyModelLoader {
     }
 }
 
+/// Lightweight model information snapshot returned by `get_model_info()`.
+///
+/// All fields are read-only properties.
+#[pyclass(name = "ModelInfo", frozen)]
+#[derive(Clone)]
+pub struct PyModelInfo {
+    #[pyo3(get)]
+    pub name: String,
+    #[pyo3(get)]
+    pub version: String,
+    #[pyo3(get)]
+    pub architecture: String,
+    #[pyo3(get)]
+    pub vocab_size: usize,
+    #[pyo3(get)]
+    pub context_length: usize,
+    #[pyo3(get)]
+    pub quantization: Option<String>,
+    #[pyo3(get)]
+    pub fingerprint: Option<String>,
+}
+
+#[pymethods]
+impl PyModelInfo {
+    fn __repr__(&self) -> String {
+        format!(
+            "ModelInfo(name='{}', arch='{}', vocab={}, ctx={})",
+            self.name, self.architecture, self.vocab_size, self.context_length
+        )
+    }
+
+    /// Return all fields as a Python dictionary.
+    fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let d = pyo3::types::PyDict::new(py);
+        d.set_item("name", &self.name)?;
+        d.set_item("version", &self.version)?;
+        d.set_item("architecture", &self.architecture)?;
+        d.set_item("vocab_size", self.vocab_size)?;
+        d.set_item("context_length", self.context_length)?;
+        d.set_item("quantization", &self.quantization)?;
+        d.set_item("fingerprint", &self.fingerprint)?;
+        Ok(d.into())
+    }
+}
+
+/// Extract model info without fully loading the model.
+#[pyfunction]
+#[pyo3(signature = (path, device = "cpu"))]
+pub fn get_model_info(path: &str, device: &str) -> PyResult<PyModelInfo> {
+    let device = parse_device(device)?;
+    let loader = ModelLoader::new(device);
+    let meta = loader
+        .extract_metadata(path)
+        .map_err(|e| PyRuntimeError::new_err(format!("Failed to extract metadata: {e}")))?;
+    Ok(PyModelInfo {
+        name: meta.name,
+        version: meta.version,
+        architecture: meta.architecture,
+        vocab_size: meta.vocab_size,
+        context_length: meta.context_length,
+        quantization: meta.quantization.map(|q| format!("{q:?}")),
+        fingerprint: meta.fingerprint,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
