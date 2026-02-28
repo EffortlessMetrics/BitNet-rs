@@ -43,17 +43,12 @@ fn rmsnorm_host(x: &[f32], weight: &[f32]) -> Vec<f32> {
     let n = x.len() as f32;
     let ss: f32 = x.iter().map(|v| v * v).sum::<f32>() / n;
     let rms = (ss + 1e-6).sqrt();
-    x.iter()
-        .zip(weight.iter())
-        .map(|(&xi, &wi)| xi / rms * wi)
-        .collect()
+    x.iter().zip(weight.iter()).map(|(&xi, &wi)| xi / rms * wi).collect()
 }
 
 /// SiLU activation: x * sigmoid(x).
 fn silu_host(x: &[f32]) -> Vec<f32> {
-    x.iter()
-        .map(|&v| v * (1.0 / (1.0 + (-v).exp())))
-        .collect()
+    x.iter().map(|&v| v * (1.0 / (1.0 + (-v).exp()))).collect()
 }
 
 /// Softmax reference.

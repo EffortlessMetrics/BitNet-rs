@@ -29,21 +29,13 @@ impl LaunchConfig {
     /// Create a 1-D launch config with `n` total threads.
     pub fn linear(n: u32, block_size: u32) -> Self {
         let grid_x = (n + block_size - 1) / block_size;
-        Self {
-            grid: (grid_x, 1, 1),
-            block: (block_size, 1, 1),
-            ..Default::default()
-        }
+        Self { grid: (grid_x, 1, 1), block: (block_size, 1, 1), ..Default::default() }
     }
 
     /// Create a 2-D launch config (e.g. for matrix ops).
     pub fn grid_2d(rows: u32, cols: u32, block_x: u32, block_y: u32) -> Self {
         Self {
-            grid: (
-                (cols + block_x - 1) / block_x,
-                (rows + block_y - 1) / block_y,
-                1,
-            ),
+            grid: ((cols + block_x - 1) / block_x, (rows + block_y - 1) / block_y, 1),
             block: (block_x, block_y, 1),
             ..Default::default()
         }
@@ -70,7 +62,5 @@ pub unsafe fn launch_kernel(
     );
     // Stub: actual hipLaunchKernel call would go here via dlsym.
     let _ = args;
-    Err(RocmError::KernelLaunch(
-        "HIP runtime not linked — stub only".into(),
-    ))
+    Err(RocmError::KernelLaunch("HIP runtime not linked — stub only".into()))
 }

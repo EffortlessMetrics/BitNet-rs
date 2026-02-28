@@ -15,7 +15,7 @@ include = [
 ]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
 thiserror.workspace = true
 tracing.workspace = true
 libloading = "0.8"

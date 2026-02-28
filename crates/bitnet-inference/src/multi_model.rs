@@ -17,16 +17,9 @@ pub enum MultiModelError {
     /// Model with this ID is not loaded.
     NotLoaded { model_id: String },
     /// Not enough GPU memory to load the model.
-    OutOfMemory {
-        requested_bytes: usize,
-        available_bytes: usize,
-    },
+    OutOfMemory { requested_bytes: usize, available_bytes: usize },
     /// Memory partition exceeds the total pool.
-    InvalidPartition {
-        model_id: String,
-        requested_bytes: usize,
-        pool_bytes: usize,
-    },
+    InvalidPartition { model_id: String, requested_bytes: usize, pool_bytes: usize },
     /// Eviction failed to free enough memory.
     EvictionFailed { needed_bytes: usize },
 }
@@ -38,18 +31,10 @@ impl fmt::Display for MultiModelError {
                 write!(f, "model {model_id:?} is already loaded")
             }
             Self::NotLoaded { model_id } => write!(f, "model {model_id:?} is not loaded"),
-            Self::OutOfMemory {
-                requested_bytes,
-                available_bytes,
-            } => write!(
-                f,
-                "out of GPU memory: need {requested_bytes} B, have {available_bytes} B"
-            ),
-            Self::InvalidPartition {
-                model_id,
-                requested_bytes,
-                pool_bytes,
-            } => write!(
+            Self::OutOfMemory { requested_bytes, available_bytes } => {
+                write!(f, "out of GPU memory: need {requested_bytes} B, have {available_bytes} B")
+            }
+            Self::InvalidPartition { model_id, requested_bytes, pool_bytes } => write!(
                 f,
                 "partition for {model_id:?} ({requested_bytes} B) exceeds pool ({pool_bytes} B)"
             ),
@@ -92,10 +77,7 @@ pub struct GpuMemoryPool {
 
 impl GpuMemoryPool {
     pub fn new(total_bytes: usize) -> Self {
-        Self {
-            total_bytes,
-            used_bytes: 0,
-        }
+        Self { total_bytes, used_bytes: 0 }
     }
 
     /// Total pool capacity in bytes.
@@ -149,10 +131,7 @@ pub struct MultiModelManager {
 impl MultiModelManager {
     /// Create a new manager with a GPU memory pool of `total_gpu_bytes`.
     pub fn new(total_gpu_bytes: usize) -> Self {
-        Self {
-            pool: GpuMemoryPool::new(total_gpu_bytes),
-            slots: HashMap::new(),
-        }
+        Self { pool: GpuMemoryPool::new(total_gpu_bytes), slots: HashMap::new() }
     }
 
     /// Number of models currently loaded.
@@ -192,9 +171,7 @@ impl MultiModelManager {
     ) -> Result<(), MultiModelError> {
         let model_id = model_id.into();
         if self.slots.contains_key(&model_id) {
-            return Err(MultiModelError::AlreadyLoaded {
-                model_id: model_id.clone(),
-            });
+            return Err(MultiModelError::AlreadyLoaded { model_id: model_id.clone() });
         }
         if memory_bytes > self.pool.total_bytes() {
             return Err(MultiModelError::InvalidPartition {
@@ -207,12 +184,7 @@ impl MultiModelManager {
         let now = Instant::now();
         self.slots.insert(
             model_id.clone(),
-            ModelSlot {
-                model_id,
-                memory_bytes,
-                loaded_at: now,
-                last_used: now,
-            },
+            ModelSlot { model_id, memory_bytes, loaded_at: now, last_used: now },
         );
         Ok(())
     }
@@ -222,9 +194,7 @@ impl MultiModelManager {
         let slot = self
             .slots
             .remove(model_id)
-            .ok_or_else(|| MultiModelError::NotLoaded {
-                model_id: model_id.to_string(),
-            })?;
+            .ok_or_else(|| MultiModelError::NotLoaded { model_id: model_id.to_string() })?;
         self.pool.release(slot.memory_bytes);
         Ok(slot)
     }
@@ -245,9 +215,7 @@ impl MultiModelManager {
             Err(e) => {
                 // Roll back: re-load the old model.
                 let now = Instant::now();
-                self.pool
-                    .reserve(freed.memory_bytes)
-                    .expect("rollback reserve should never fail");
+                self.pool.reserve(freed.memory_bytes).expect("rollback reserve should never fail");
                 self.slots.insert(
                     freed.model_id.clone(),
                     ModelSlot {
@@ -269,26 +237,20 @@ impl MultiModelManager {
         let slot = self
             .slots
             .get_mut(model_id)
-            .ok_or_else(|| MultiModelError::NotLoaded {
-                model_id: model_id.to_string(),
-            })?;
+            .ok_or_else(|| MultiModelError::NotLoaded { model_id: model_id.to_string() })?;
         slot.last_used = Instant::now();
         Ok(())
     }
 
     /// Return the model ID of the least-recently-used model, if any.
     pub fn lru_model_id(&self) -> Option<String> {
-        self.slots
-            .values()
-            .min_by_key(|s| s.last_used)
-            .map(|s| s.model_id.clone())
+        self.slots.values().min_by_key(|s| s.last_used).map(|s| s.model_id.clone())
     }
 
     /// Evict the LRU model to free memory.  Returns the evicted slot.
     pub fn evict_lru(&mut self) -> Result<ModelSlot, MultiModelError> {
-        let lru_id = self.lru_model_id().ok_or(MultiModelError::EvictionFailed {
-            needed_bytes: 0,
-        })?;
+        let lru_id =
+            self.lru_model_id().ok_or(MultiModelError::EvictionFailed { needed_bytes: 0 })?;
         self.unload_model(&lru_id)
     }
 
@@ -318,9 +280,7 @@ impl MultiModelManager {
     ) -> Result<Vec<String>, MultiModelError> {
         let model_id = model_id.into();
         if self.slots.contains_key(&model_id) {
-            return Err(MultiModelError::AlreadyLoaded {
-                model_id: model_id.clone(),
-            });
+            return Err(MultiModelError::AlreadyLoaded { model_id: model_id.clone() });
         }
         if memory_bytes > self.pool.total_bytes() {
             return Err(MultiModelError::InvalidPartition {
@@ -481,10 +441,7 @@ mod tests {
     #[test]
     fn test_unload_nonexistent_model() {
         let mut mgr = MultiModelManager::new(4 * GB);
-        assert!(matches!(
-            mgr.unload_model("ghost"),
-            Err(MultiModelError::NotLoaded { .. })
-        ));
+        assert!(matches!(mgr.unload_model("ghost"), Err(MultiModelError::NotLoaded { .. })));
     }
 
     #[test]

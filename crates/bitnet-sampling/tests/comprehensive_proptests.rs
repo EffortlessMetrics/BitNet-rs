@@ -347,7 +347,7 @@ proptest! {
     ) {
         // n_ties tokens at max_val, `extra` tokens at max_val - 1 (strictly lower).
         let mut logits = vec![max_val; n_ties];
-        logits.extend(std::iter::repeat(max_val - 1.0).take(extra));
+        logits.extend(std::iter::repeat_n(max_val - 1.0, extra));
 
         let result = greedy_sample(&logits).unwrap();
         prop_assert_eq!(

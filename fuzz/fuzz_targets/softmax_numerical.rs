@@ -29,13 +29,7 @@ fuzz_target!(|input: SoftmaxInput| {
         .data
         .iter()
         .take(256)
-        .map(|&x| {
-            if x.is_finite() {
-                x.clamp(-1e38, 1e38)
-            } else {
-                0.0
-            }
-        })
+        .map(|&x| if x.is_finite() { x.clamp(-1e38, 1e38) } else { 0.0 })
         .collect();
 
     let output = ref_softmax(&clamped);
@@ -61,12 +55,7 @@ fuzz_target!(|input: SoftmaxInput| {
 
     // Verify all values in [0, 1]
     for (i, &val) in output.iter().enumerate() {
-        assert!(
-            val >= 0.0 && val <= 1.0,
-            "softmax[{}] = {} not in [0,1]",
-            i,
-            val
-        );
+        assert!(val >= 0.0 && val <= 1.0, "softmax[{}] = {} not in [0,1]", i, val);
     }
 
     // Test with extreme inputs: all same value
@@ -75,10 +64,7 @@ fuzz_target!(|input: SoftmaxInput| {
         let uniform_out = ref_softmax(&uniform);
         let expected = 1.0 / uniform.len() as f32;
         for &val in &uniform_out {
-            assert!(
-                (val - expected).abs() < 1e-5,
-                "uniform input should give uniform output"
-            );
+            assert!((val - expected).abs() < 1e-5, "uniform input should give uniform output");
         }
     }
 

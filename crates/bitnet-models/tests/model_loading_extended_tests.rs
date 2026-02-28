@@ -430,8 +430,10 @@ mod model_proptests_ext {
         fn production_load_config_max_size_survives_clone(
             size_gib in 1u64..=128,
         ) {
-            let mut cfg = ProductionLoadConfig::default();
-            cfg.max_model_size_bytes = Some(size_gib * 1024 * 1024 * 1024);
+            let cfg = ProductionLoadConfig {
+                max_model_size_bytes: Some(size_gib * 1024 * 1024 * 1024),
+                ..Default::default()
+            };
             let cloned = cfg.clone();
             prop_assert_eq!(cloned.max_model_size_bytes, Some(size_gib * 1024 * 1024 * 1024));
         }

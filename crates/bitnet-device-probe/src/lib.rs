@@ -85,6 +85,17 @@ pub struct GpuCapabilities {
     /// Intel oneAPI/OpenCL runtime was detected (or faked via `BITNET_GPU_FAKE`).
     pub oneapi_available: bool,
 }
+
+/// NPU capabilities detected at runtime.
+///
+/// Obtained by calling [`probe_npu`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NpuCapabilities {
+    /// Intel NPU runtime is available.
+    pub available: bool,
+    /// A `/dev/accel/*` character device appears to be present.
+    pub accel_device_present: bool,
+}
 /// Probe GPU availability and return its capabilities.
 ///
 /// Honours `BITNET_GPU_FAKE` for deterministic testing unless

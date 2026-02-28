@@ -43,8 +43,16 @@ pub fn load_auto(
     }
 
     // Do not silently use BasicTokenizer; better to fail and instruct user
+    let searched_dir = model_path
+        .parent()
+        .map(|d| d.display().to_string())
+        .unwrap_or_else(|| "<unknown>".to_string());
     bail!(
-        "No tokenizer found. Provide --tokenizer or include tokenizer.json/.model next to the GGUF."
+        "No tokenizer found for model '{}'. Searched directory: {}. \
+         Provide --tokenizer <path> or place tokenizer.json / tokenizer.model \
+         next to the GGUF file.",
+        model_path.display(),
+        searched_dir
     );
 }
 

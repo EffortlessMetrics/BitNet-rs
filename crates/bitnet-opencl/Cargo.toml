@@ -13,7 +13,7 @@ rust-version.workspace = true
 
 [dependencies]
 log.workspace = true
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

@@ -331,8 +331,8 @@ proptest! {
         offset in any::<u64>(),
         name in "[a-z][a-z0-9_]{0,15}",
     ) {
-        let n_dims = dims.len() as u32;
-        let info = TensorInfo { name, n_dims, dims: dims.clone(), dtype, offset };
+        let n_dims = u32::try_from(dims.len()).unwrap();
+        let info = TensorInfo { name, n_dims, dims, dtype, offset };
         prop_assert_eq!(
             info.n_dims as usize,
             info.dims.len(),
@@ -348,7 +348,7 @@ proptest! {
         offset in any::<u64>(),
         name in "[a-z][a-z0-9_]{0,15}",
     ) {
-        let info = TensorInfo { name, n_dims: dims.len() as u32, dims, dtype, offset };
+        let info = TensorInfo { name, n_dims: u32::try_from(dims.len()).unwrap(), dims, dtype, offset };
         let cloned = info.clone();
         prop_assert_eq!(info.n_dims, cloned.n_dims);
         prop_assert_eq!(info.dims, cloned.dims);
@@ -364,7 +364,7 @@ proptest! {
     ) {
         let info = TensorInfo {
             name: "t".to_string(),
-            n_dims: dims.len() as u32,
+            n_dims: u32::try_from(dims.len()).unwrap(),
             dims: dims.clone(),
             dtype: 0,
             offset: 0,
@@ -401,7 +401,7 @@ proptest! {
         key in "[a-z][a-z0-9_.]{0,63}",
         v in any::<u64>(),
     ) {
-        let kv = GgufMetadataKv { key: key.clone(), value: GgufValue::Uint64(v) };
+        let kv = GgufMetadataKv { key, value: GgufValue::Uint64(v) };
         let cloned = kv.clone();
         prop_assert_eq!(&kv.key, &cloned.key);
         if let (GgufValue::Uint64(orig), GgufValue::Uint64(copy)) = (&kv.value, &cloned.value) {

@@ -46,10 +46,7 @@ impl ComputePipeline {
 
         debug!(label, entry_point, "compiled compute pipeline");
 
-        Ok(Self {
-            pipeline,
-            bind_group_layout,
-        })
+        Ok(Self { pipeline, bind_group_layout })
     }
 
     /// Create a bind group for this pipeline.

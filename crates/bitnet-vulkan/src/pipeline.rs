@@ -62,15 +62,10 @@ impl ComputePipelineBuilder {
         let shader_module = unsafe {
             device
                 .create_shader_module(&shader_module_create_info, None)
-                .map_err(|e| {
-                    VulkanError::ShaderLoad(format!(
-                        "vkCreateShaderModule failed: {e}"
-                    ))
-                })?
+                .map_err(|e| VulkanError::ShaderLoad(format!("vkCreateShaderModule failed: {e}")))?
         };
 
-        let entry_name =
-            std::ffi::CString::new(self.entry_point.as_str()).unwrap_or_default();
+        let entry_name = std::ffi::CString::new(self.entry_point.as_str()).unwrap_or_default();
 
         let stage_info = vk::PipelineShaderStageCreateInfo::default()
             .stage(vk::ShaderStageFlags::COMPUTE)
@@ -88,34 +83,23 @@ impl ComputePipelineBuilder {
             );
         }
 
-        let layout_create_info = vk::PipelineLayoutCreateInfo::default()
-            .push_constant_ranges(&push_constant_ranges);
+        let layout_create_info =
+            vk::PipelineLayoutCreateInfo::default().push_constant_ranges(&push_constant_ranges);
 
         let pipeline_layout = unsafe {
-            device
-                .create_pipeline_layout(&layout_create_info, None)
-                .map_err(|e| {
-                    VulkanError::PipelineCreation(format!(
-                        "vkCreatePipelineLayout failed: {e}"
-                    ))
-                })?
+            device.create_pipeline_layout(&layout_create_info, None).map_err(|e| {
+                VulkanError::PipelineCreation(format!("vkCreatePipelineLayout failed: {e}"))
+            })?
         };
 
-        let pipeline_create_info = vk::ComputePipelineCreateInfo::default()
-            .stage(stage_info)
-            .layout(pipeline_layout);
+        let pipeline_create_info =
+            vk::ComputePipelineCreateInfo::default().stage(stage_info).layout(pipeline_layout);
 
         let pipelines = unsafe {
             device
-                .create_compute_pipelines(
-                    vk::PipelineCache::null(),
-                    &[pipeline_create_info],
-                    None,
-                )
+                .create_compute_pipelines(vk::PipelineCache::null(), &[pipeline_create_info], None)
                 .map_err(|(_, e)| {
-                    VulkanError::PipelineCreation(format!(
-                        "vkCreateComputePipelines failed: {e}"
-                    ))
+                    VulkanError::PipelineCreation(format!("vkCreateComputePipelines failed: {e}"))
                 })?
         };
 
@@ -124,11 +108,7 @@ impl ComputePipelineBuilder {
             self.entry_point, self.push_constant_size
         );
 
-        Ok(ComputePipeline {
-            pipeline: pipelines[0],
-            layout: pipeline_layout,
-            shader_module,
-        })
+        Ok(ComputePipeline { pipeline: pipelines[0], layout: pipeline_layout, shader_module })
     }
 }
 

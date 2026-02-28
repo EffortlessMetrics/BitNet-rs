@@ -17,10 +17,7 @@ pub struct ModuleConfig {
 
 impl Default for ModuleConfig {
     fn default() -> Self {
-        Self {
-            format: ZeModuleFormat::IlSpirv,
-            build_flags: None,
-        }
+        Self { format: ZeModuleFormat::IlSpirv, build_flags: None }
     }
 }
 
@@ -34,10 +31,7 @@ pub struct ModuleBuilder {
 impl ModuleBuilder {
     /// Create a builder from raw SPIR-V bytes.
     pub fn from_spirv(spirv: &[u8]) -> Self {
-        Self {
-            config: ModuleConfig::default(),
-            spirv_data: spirv.to_vec(),
-        }
+        Self { config: ModuleConfig::default(), spirv_data: spirv.to_vec() }
     }
 
     /// Set the module format.
@@ -62,14 +56,9 @@ impl ModuleBuilder {
     /// Placeholder: real implementation calls `zeModuleCreate`.
     pub fn build(self, _ctx: &LevelZeroContext) -> Result<LevelZeroModule> {
         if self.spirv_data.is_empty() {
-            return Err(LevelZeroError::InvalidArgument {
-                message: "SPIR-V data is empty".into(),
-            });
+            return Err(LevelZeroError::InvalidArgument { message: "SPIR-V data is empty".into() });
         }
-        tracing::debug!(
-            spirv_bytes = self.spirv_data.len(),
-            "Loading SPIR-V module (placeholder)"
-        );
+        tracing::debug!(spirv_bytes = self.spirv_data.len(), "Loading SPIR-V module (placeholder)");
         Ok(LevelZeroModule {
             config: self.config,
             spirv_size: self.spirv_data.len(),

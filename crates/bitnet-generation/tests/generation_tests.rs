@@ -129,7 +129,7 @@ fn generation_stats_fields_accessible() {
 fn generation_stats_default_is_zero() {
     let stats = GenerationStats::default();
     assert_eq!(stats.tokens_generated, 0);
-    assert_eq!(stats.tokens_per_second, 0.0);
+    assert!((stats.tokens_per_second - 0.0).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -239,7 +239,7 @@ fn stop_criteria_clone_is_independent() {
 #[test]
 fn stop_criteria_serde_roundtrip_unit() {
     let criteria = StopCriteria {
-        stop_token_ids: vec![128009, 2],
+        stop_token_ids: vec![128_009, 2],
         stop_strings: vec!["</s>".to_string(), "[STOP]".to_string()],
         max_tokens: 64,
         eos_token_id: Some(2),
@@ -258,7 +258,7 @@ fn generation_config_serde_roundtrip() {
         max_new_tokens: 256,
         seed: Some(42),
         stop_criteria: StopCriteria {
-            stop_token_ids: vec![128009],
+            stop_token_ids: vec![128_009],
             stop_strings: vec!["</s>".to_string()],
             max_tokens: 256,
             eos_token_id: Some(2),

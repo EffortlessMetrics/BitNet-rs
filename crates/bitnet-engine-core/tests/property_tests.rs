@@ -5,7 +5,7 @@
 //! - `BackendInfo` JSON round-trips without data loss
 //! - `SessionMetrics` values are always non-negative after deserialization
 //! - Clone produces a value whose serialization is identical to the original
-//! - Field-level invariants (kernel_ids order/length, max_context exactness, seed precision)
+//! - Field-level invariants (`kernel_ids` order/length, `max_context` exactness, seed precision)
 
 use bitnet_engine_core::{BackendInfo, SessionConfig, SessionMetrics};
 use proptest::prelude::*;
@@ -114,8 +114,8 @@ fn session_config_default_backend_is_cpu() {
 #[test]
 fn session_metrics_default_is_zero() {
     let m = SessionMetrics::default();
-    assert_eq!(m.tokens_per_second, 0.0);
-    assert_eq!(m.time_to_first_token_ms, 0.0);
+    assert!((m.tokens_per_second - 0.0).abs() < f64::EPSILON);
+    assert!((m.time_to_first_token_ms - 0.0).abs() < f64::EPSILON);
     assert_eq!(m.total_tokens, 0);
 }
 

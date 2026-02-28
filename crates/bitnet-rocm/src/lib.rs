@@ -12,7 +12,7 @@ pub mod kernel;
 pub mod memory;
 pub mod stream;
 
-pub use device::{enumerate_devices, RocmDeviceInfo};
+pub use device::{RocmDeviceInfo, enumerate_devices};
 pub use error::{RocmError, check_hip};
 pub use ffi::HipMemcpyKind;
 pub use kernel::LaunchConfig;
@@ -30,10 +30,7 @@ impl RocmBackend {
     pub fn new(device_index: usize) -> error::Result<Self> {
         let devices = enumerate_devices()?;
         let info = devices.into_iter().find(|d| d.index == device_index);
-        Ok(Self {
-            device_index,
-            device_info: info,
-        })
+        Ok(Self { device_index, device_info: info })
     }
 
     /// Backend name for logging / registry.
@@ -123,14 +120,8 @@ mod tests {
 
     #[test]
     fn memcpy_kind_values() {
-        assert_eq!(
-            memory::memcpy_kind_for(false, true),
-            HipMemcpyKind::HostToDevice
-        );
-        assert_eq!(
-            memory::memcpy_kind_for(true, false),
-            HipMemcpyKind::DeviceToHost
-        );
+        assert_eq!(memory::memcpy_kind_for(false, true), HipMemcpyKind::HostToDevice);
+        assert_eq!(memory::memcpy_kind_for(true, false), HipMemcpyKind::DeviceToHost);
     }
 
     #[test]

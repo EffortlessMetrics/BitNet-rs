@@ -4,9 +4,9 @@
 //! grid, feature-label, and profile APIs maintain expected invariants.
 
 use bitnet_feature_matrix::{
-    ActiveProfile, BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario,
-    active_features, active_profile, active_profile_for, canonical_grid, feature_labels,
-    feature_line, validate_active_profile_for,
+    BitnetFeature, ExecutionEnvironment, FeatureSet, TestingScenario, active_features,
+    active_profile, active_profile_for, canonical_grid, feature_labels, feature_line,
+    validate_active_profile_for,
 };
 use proptest::prelude::*;
 

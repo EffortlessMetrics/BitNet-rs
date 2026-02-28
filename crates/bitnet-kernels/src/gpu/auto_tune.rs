@@ -49,14 +49,8 @@ impl Default for WorkGroupConfig {
 
 /// Candidate configurations to benchmark during auto-tuning.
 pub const DEFAULT_1D_CANDIDATES: &[u32] = &[32, 64, 128, 256, 512];
-pub const DEFAULT_2D_CANDIDATES: &[(u32, u32)] = &[
-    (8, 8),
-    (16, 8),
-    (8, 16),
-    (16, 16),
-    (32, 8),
-    (8, 32),
-];
+pub const DEFAULT_2D_CANDIDATES: &[(u32, u32)] =
+    &[(8, 8), (16, 8), (8, 16), (16, 16), (32, 8), (8, 32)];
 
 /// Key for cache lookups: (device_id, kernel_name).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -86,9 +80,7 @@ impl Default for TuningCache {
 
 impl TuningCache {
     pub fn new() -> Self {
-        Self {
-            entries: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self { entries: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     /// Look up a cached config.
@@ -168,10 +160,7 @@ pub fn auto_tune_kernel<F>(
 where
     F: Fn(&WorkGroupConfig) -> Duration,
 {
-    let key = TuningKey {
-        device_id: device_id.to_string(),
-        kernel_name: kernel_name.to_string(),
-    };
+    let key = TuningKey { device_id: device_id.to_string(), kernel_name: kernel_name.to_string() };
 
     // Check env override first.
     if let Some(env_config) = parse_local_size_env() {
@@ -255,10 +244,7 @@ mod tests {
         let cache = TuningCache::new();
         assert!(cache.is_empty());
 
-        let key = TuningKey {
-            device_id: "dev0".to_string(),
-            kernel_name: "matmul".to_string(),
-        };
+        let key = TuningKey { device_id: "dev0".to_string(), kernel_name: "matmul".to_string() };
         let config = WorkGroupConfig::new_1d(256);
 
         cache.insert(key.clone(), config);
@@ -269,10 +255,7 @@ mod tests {
     #[test]
     fn cache_clear() {
         let cache = TuningCache::new();
-        let key = TuningKey {
-            device_id: "dev0".to_string(),
-            kernel_name: "kern".to_string(),
-        };
+        let key = TuningKey { device_id: "dev0".to_string(), kernel_name: "kern".to_string() };
         cache.insert(key, WorkGroupConfig::default());
         assert!(!cache.is_empty());
         cache.clear();
@@ -289,50 +272,36 @@ mod tests {
         ];
 
         // Simulate: 64 is the fastest.
-        let best = auto_tune_kernel(
-            "test_dev",
-            "test_kern",
-            &candidates,
-            &cache,
-            |config| match config.local_x {
+        let best = auto_tune_kernel("test_dev", "test_kern", &candidates, &cache, |config| {
+            match config.local_x {
                 32 => Duration::from_millis(10),
                 64 => Duration::from_millis(5),
                 128 => Duration::from_millis(8),
                 _ => Duration::from_millis(100),
-            },
-        );
+            }
+        });
 
         assert_eq!(best.local_x, 64);
 
         // Verify it was cached.
-        let key = TuningKey {
-            device_id: "test_dev".to_string(),
-            kernel_name: "test_kern".to_string(),
-        };
+        let key =
+            TuningKey { device_id: "test_dev".to_string(), kernel_name: "test_kern".to_string() };
         assert_eq!(cache.get(&key), Some(best));
     }
 
     #[test]
     fn auto_tune_uses_cache() {
         let cache = TuningCache::new();
-        let key = TuningKey {
-            device_id: "dev".to_string(),
-            kernel_name: "kern".to_string(),
-        };
+        let key = TuningKey { device_id: "dev".to_string(), kernel_name: "kern".to_string() };
         let preset = WorkGroupConfig::new_1d(256);
         cache.insert(key, preset);
 
         let mut called = false;
-        let result = auto_tune_kernel(
-            "dev",
-            "kern",
-            &[WorkGroupConfig::new_1d(64)],
-            &cache,
-            |_| {
+        let result =
+            auto_tune_kernel("dev", "kern", &[WorkGroupConfig::new_1d(64)], &cache, |_| {
                 called = true;
                 Duration::from_millis(1)
-            },
-        );
+            });
 
         assert_eq!(result, preset);
         assert!(!called, "benchmark_fn should not be called when cache hit");
@@ -359,23 +328,15 @@ mod tests {
             config: WorkGroupConfig::new_1d(32),
             elapsed: Duration::from_millis(10),
         };
-        let b = TuningResult {
-            config: WorkGroupConfig::new_1d(64),
-            elapsed: Duration::from_millis(5),
-        };
+        let b =
+            TuningResult { config: WorkGroupConfig::new_1d(64), elapsed: Duration::from_millis(5) };
         assert!(b.elapsed < a.elapsed);
     }
 
     #[test]
     fn auto_tune_fallback_on_empty_candidates() {
         let cache = TuningCache::new();
-        let result = auto_tune_kernel(
-            "dev",
-            "kern",
-            &[],
-            &cache,
-            |_| Duration::from_millis(1),
-        );
+        let result = auto_tune_kernel("dev", "kern", &[], &cache, |_| Duration::from_millis(1));
         // Falls back to default
         assert_eq!(result, WorkGroupConfig::default());
     }

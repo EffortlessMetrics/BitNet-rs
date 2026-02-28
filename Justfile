@@ -53,6 +53,10 @@ docs:
     cargo doc --workspace --no-default-features --features cpu --no-deps
     cargo test --doc --workspace --no-default-features --features cpu
 
+# Run docs automation checks (markdownlint, link check, rustdoc)
+docs-automation:
+    scripts/docs_automation.sh
+
 # Format and lint code
 fmt:
     cargo fmt --all

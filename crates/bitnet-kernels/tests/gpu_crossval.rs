@@ -42,10 +42,7 @@ fn gen_f32(len: usize, seed: u64) -> Vec<f32> {
 }
 
 fn max_abs_diff(a: &[f32], b: &[f32]) -> f32 {
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y).abs())
-        .fold(0.0f32, f32::max)
+    a.iter().zip(b.iter()).map(|(x, y)| (x - y).abs()).fold(0.0f32, f32::max)
 }
 
 fn cosine_similarity(a: &[f32], b: &[f32]) -> f64 {
@@ -80,17 +77,11 @@ fn crossval_matmul(m: usize, n: usize, k: usize, seed: u64) {
     test_kernel.matmul_i2s(&a, &b, &mut test_out, m, n, k).unwrap();
 
     let diff = max_abs_diff(&ref_out, &test_out);
-    assert!(
-        diff < 1e-4,
-        "matmul {m}x{n}x{k}: max abs diff = {diff} (> 1e-4)"
-    );
+    assert!(diff < 1e-4, "matmul {m}x{n}x{k}: max abs diff = {diff} (> 1e-4)");
 
     if ref_out.iter().any(|v| *v != 0.0) {
         let cos = cosine_similarity(&ref_out, &test_out);
-        assert!(
-            cos > 0.9999,
-            "matmul {m}x{n}x{k}: cosine = {cos} (< 0.9999)"
-        );
+        assert!(cos > 0.9999, "matmul {m}x{n}x{k}: cosine = {cos} (< 0.9999)");
     }
 }
 
@@ -134,27 +125,17 @@ fn crossval_quantize(len: usize, seed: u64) {
     let ref_kernel = FallbackKernel;
     let mut ref_out = vec![0u8; len / 4];
     let mut ref_scales = vec![0.0f32; num_blocks];
-    ref_kernel
-        .quantize(&input, &mut ref_out, &mut ref_scales, QuantizationType::I2S)
-        .unwrap();
+    ref_kernel.quantize(&input, &mut ref_out, &mut ref_scales, QuantizationType::I2S).unwrap();
 
     let test_kernel = best_kernel();
     let mut test_out = vec![0u8; len / 4];
     let mut test_scales = vec![0.0f32; num_blocks];
-    test_kernel
-        .quantize(&input, &mut test_out, &mut test_scales, QuantizationType::I2S)
-        .unwrap();
+    test_kernel.quantize(&input, &mut test_out, &mut test_scales, QuantizationType::I2S).unwrap();
 
-    assert_eq!(
-        ref_out, test_out,
-        "quantize len={len}: packed bytes differ"
-    );
+    assert_eq!(ref_out, test_out, "quantize len={len}: packed bytes differ");
 
     let scale_diff = max_abs_diff(&ref_scales, &test_scales);
-    assert!(
-        scale_diff < 1e-5,
-        "quantize len={len}: scale diff = {scale_diff}"
-    );
+    assert!(scale_diff < 1e-5, "quantize len={len}: scale diff = {scale_diff}");
 }
 
 #[test]

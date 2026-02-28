@@ -44,6 +44,60 @@ pub fn parallel_matmul(
     Ok(())
 }
 
+/// Scalar RMS normalisation.
+///
+/// For each row of length `dim`:
+/// ```text
+/// rms  = sqrt(mean(x²) + eps)
+/// out[i] = (x[i] / rms) * weight[i]
+/// ```
+///
+/// `input` and `output` are `[rows, dim]`; `weight` is `[dim]`.
+pub fn rmsnorm(
+    input: &[f32],
+    weight: &[f32],
+    output: &mut [f32],
+    rows: usize,
+    dim: usize,
+    eps: f32,
+) -> Result<()> {
+    if input.len() != rows * dim || output.len() != rows * dim {
+        return Err(BitNetError::Config("rmsnorm: input/output size mismatch".to_string()));
+    }
+    if weight.len() != dim {
+        return Err(BitNetError::Config("rmsnorm: weight size mismatch".to_string()));
+    }
+
+    for row in 0..rows {
+        let base = row * dim;
+        let slice = &input[base..base + dim];
+
+        let mean_sq: f32 = slice.iter().map(|&v| v * v).sum::<f32>() / dim as f32;
+        let rms = (mean_sq + eps).sqrt();
+
+        for d in 0..dim {
+            output[base + d] = (slice[d] / rms) * weight[d];
+        }
+    }
+
+    Ok(())
+}
+
+/// SiLU (Sigmoid Linear Unit) activation: `x * σ(x)`.
+///
+/// Applied element-wise in-place.
+pub fn silu_in_place(data: &mut [f32]) {
+    for v in data.iter_mut() {
+        let sigma = 1.0 / (1.0 + (-*v).exp());
+        *v *= sigma;
+    }
+}
+
+/// Element-wise SiLU returning a new vector.
+pub fn silu(input: &[f32]) -> Vec<f32> {
+    input.iter().map(|&x| x / (1.0 + (-x).exp())).collect()
+}
+
 /// Parallel scaled dot-product attention with numerically-stable softmax.
 ///
 /// Implements:
@@ -178,5 +232,50 @@ mod tests {
         let b = vec![1.0f32; 9]; // 3×3 (mismatched)
         let mut c = vec![0.0f32; 4];
         assert!(parallel_matmul(&a, &b, &mut c, 2, 2, 2, 2).is_err());
+    }
+
+    /// RMSNorm with uniform weight should rescale by 1/rms.
+    #[test]
+    fn test_rmsnorm_unit_weight() {
+        let dim = 4;
+        let input = vec![2.0f32, 0.0, 0.0, 0.0];
+        let weight = vec![1.0f32; dim];
+        let mut output = vec![0.0f32; dim];
+
+        rmsnorm(&input, &weight, &mut output, 1, dim, 1e-5).unwrap();
+
+        // rms = sqrt(mean([4,0,0,0]) + eps) = sqrt(1 + eps) ≈ 1.0
+        // output[0] = 2.0 / 1.0 ≈ 2.0
+        assert!((output[0] - 2.0).abs() < 0.01);
+        assert!(output[1].abs() < 1e-5);
+    }
+
+    /// RMSNorm dimension mismatch returns error.
+    #[test]
+    fn test_rmsnorm_dimension_mismatch() {
+        let weight = vec![1.0f32; 4];
+        let mut output = vec![0.0f32; 3]; // wrong size
+        assert!(rmsnorm(&[1.0; 4], &weight, &mut output, 1, 4, 1e-5).is_err());
+    }
+
+    /// SiLU(0) = 0 and SiLU is monotonically increasing for x > 0.
+    #[test]
+    fn test_silu_basic() {
+        let out = silu(&[0.0, 1.0, -1.0]);
+        assert!(out[0].abs() < 1e-6, "silu(0) should be ~0");
+        assert!(out[1] > 0.0, "silu(1) should be positive");
+        assert!(out[2] < 0.0, "silu(-1) should be negative");
+    }
+
+    /// In-place SiLU matches allocating version.
+    #[test]
+    fn test_silu_in_place_matches() {
+        let input = vec![0.5f32, -0.5, 2.0, -2.0];
+        let expected = silu(&input);
+        let mut data = input;
+        silu_in_place(&mut data);
+        for (a, b) in data.iter().zip(expected.iter()) {
+            assert!((a - b).abs() < 1e-6);
+        }
     }
 }

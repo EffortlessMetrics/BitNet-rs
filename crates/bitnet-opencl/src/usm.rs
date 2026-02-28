@@ -99,11 +99,7 @@ pub enum TransferMode {
 impl TransferMode {
     /// Select the best transfer mode for the given capabilities.
     pub fn select(caps: SvmCapabilities) -> Self {
-        if caps.supports_zero_copy() {
-            Self::ZeroCopy
-        } else {
-            Self::ExplicitCopy
-        }
+        if caps.supports_zero_copy() { Self::ZeroCopy } else { Self::ExplicitCopy }
     }
 }
 
@@ -117,10 +113,7 @@ pub enum UsmError {
     /// The device does not support SVM / USM at all.
     UsmNotSupported,
     /// `clSVMAlloc` returned null (out of memory or invalid alignment).
-    AllocationFailed {
-        requested_bytes: usize,
-        alignment: usize,
-    },
+    AllocationFailed { requested_bytes: usize, alignment: usize },
     /// Attempted to free a null pointer.
     FreeNull,
     /// The provided layout has zero size.
@@ -131,14 +124,8 @@ impl fmt::Display for UsmError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UsmNotSupported => write!(f, "device does not support SVM/USM"),
-            Self::AllocationFailed {
-                requested_bytes,
-                alignment,
-            } => {
-                write!(
-                    f,
-                    "USM allocation failed: {requested_bytes} bytes, alignment {alignment}"
-                )
+            Self::AllocationFailed { requested_bytes, alignment } => {
+                write!(f, "USM allocation failed: {requested_bytes} bytes, alignment {alignment}")
             }
             Self::FreeNull => write!(f, "attempted to free a null USM pointer"),
             Self::ZeroSizedAllocation => write!(f, "zero-sized USM allocation requested"),
@@ -196,9 +183,7 @@ impl UsmAllocator {
     /// Create a new allocator for a device with the given SVM capabilities.
     pub fn new(capabilities: SvmCapabilities) -> Self {
         let transfer_mode = TransferMode::select(capabilities);
-        log::info!(
-            "USM allocator initialised: caps={capabilities:?}, mode={transfer_mode:?}"
-        );
+        log::info!("USM allocator initialised: caps={capabilities:?}, mode={transfer_mode:?}");
         Self {
             capabilities,
             transfer_mode,
@@ -221,8 +206,7 @@ impl UsmAllocator {
     /// Total bytes currently allocated through this allocator.
     #[inline]
     pub fn allocated_bytes(&self) -> usize {
-        self.allocated_bytes
-            .load(std::sync::atomic::Ordering::Relaxed)
+        self.allocated_bytes.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Allocate `layout.size()` bytes of shared memory.
@@ -246,8 +230,7 @@ impl UsmAllocator {
             alignment: layout.align(),
         })?;
 
-        self.allocated_bytes
-            .fetch_add(layout.size(), std::sync::atomic::Ordering::Relaxed);
+        self.allocated_bytes.fetch_add(layout.size(), std::sync::atomic::Ordering::Relaxed);
 
         Ok(UsmAllocation { ptr, layout })
     }
@@ -286,9 +269,7 @@ pub struct ExplicitBuffer {
 impl ExplicitBuffer {
     /// Create a device-side buffer of `size` bytes (zero-initialised).
     pub fn new(size: usize) -> Self {
-        Self {
-            data: vec![0u8; size],
-        }
+        Self { data: vec![0u8; size] }
     }
 
     /// Number of bytes in the buffer.
@@ -324,9 +305,7 @@ impl ExplicitBuffer {
 #[derive(Debug)]
 pub enum DataPath {
     /// Zero-copy path backed by USM shared allocation.
-    ZeroCopy {
-        allocator: std::sync::Arc<UsmAllocator>,
-    },
+    ZeroCopy { allocator: std::sync::Arc<UsmAllocator> },
     /// Fallback path using explicit buffer copies.
     ExplicitCopy,
 }
@@ -335,9 +314,7 @@ impl DataPath {
     /// Create the best data path for the given capabilities.
     pub fn new(caps: SvmCapabilities) -> Self {
         if caps.supports_zero_copy() {
-            Self::ZeroCopy {
-                allocator: std::sync::Arc::new(UsmAllocator::new(caps)),
-            }
+            Self::ZeroCopy { allocator: std::sync::Arc::new(UsmAllocator::new(caps)) }
         } else {
             Self::ExplicitCopy
         }
@@ -358,13 +335,9 @@ impl DataPath {
     pub fn upload(&self, host_data: &[u8]) -> Result<Vec<u8>, UsmError> {
         match self {
             Self::ZeroCopy { allocator } => {
-                let layout =
-                    Layout::from_size_align(host_data.len(), 64).map_err(|_| {
-                        UsmError::AllocationFailed {
-                            requested_bytes: host_data.len(),
-                            alignment: 64,
-                        }
-                    })?;
+                let layout = Layout::from_size_align(host_data.len(), 64).map_err(|_| {
+                    UsmError::AllocationFailed { requested_bytes: host_data.len(), alignment: 64 }
+                })?;
                 let alloc = allocator.alloc(layout)?;
                 // Copy data into USM region (accessible on both sides).
                 unsafe {
@@ -374,9 +347,8 @@ impl DataPath {
                         host_data.len(),
                     );
                 }
-                let result = unsafe {
-                    std::slice::from_raw_parts(alloc.as_ptr(), host_data.len()).to_vec()
-                };
+                let result =
+                    unsafe { std::slice::from_raw_parts(alloc.as_ptr(), host_data.len()).to_vec() };
                 unsafe { allocator.free(alloc)? };
                 Ok(result)
             }
@@ -432,8 +404,7 @@ mod tests {
     #[test]
     fn test_svm_capabilities_fine_grain_enables_zero_copy() {
         let caps = SvmCapabilities::from_raw(
-            SvmCapabilities::FINE_GRAIN_BUFFER.bits()
-                | SvmCapabilities::COARSE_GRAIN_BUFFER.bits(),
+            SvmCapabilities::FINE_GRAIN_BUFFER.bits() | SvmCapabilities::COARSE_GRAIN_BUFFER.bits(),
         );
         assert!(caps.supports_usm());
         assert!(caps.supports_zero_copy());
@@ -447,10 +418,7 @@ mod tests {
 
     #[test]
     fn test_transfer_mode_selection() {
-        assert_eq!(
-            TransferMode::select(SvmCapabilities::NONE),
-            TransferMode::ExplicitCopy
-        );
+        assert_eq!(TransferMode::select(SvmCapabilities::NONE), TransferMode::ExplicitCopy);
         assert_eq!(
             TransferMode::select(SvmCapabilities::COARSE_GRAIN_BUFFER),
             TransferMode::ExplicitCopy
@@ -484,20 +452,14 @@ mod tests {
     fn test_usm_allocator_rejects_unsupported_device() {
         let allocator = UsmAllocator::new(SvmCapabilities::NONE);
         let layout = Layout::from_size_align(256, 8).unwrap();
-        assert!(matches!(
-            allocator.alloc(layout),
-            Err(UsmError::UsmNotSupported)
-        ));
+        assert!(matches!(allocator.alloc(layout), Err(UsmError::UsmNotSupported)));
     }
 
     #[test]
     fn test_usm_allocator_rejects_zero_size() {
         let allocator = UsmAllocator::new(SvmCapabilities::FINE_GRAIN_BUFFER);
         let layout = Layout::from_size_align(0, 1).unwrap();
-        assert!(matches!(
-            allocator.alloc(layout),
-            Err(UsmError::ZeroSizedAllocation)
-        ));
+        assert!(matches!(allocator.alloc(layout), Err(UsmError::ZeroSizedAllocation)));
     }
 
     #[test]

@@ -13,7 +13,7 @@ rust-version.workspace = true
 
 [dependencies]
 ash = "0.38"
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
 thiserror = "2"
 tracing = "0.1"
 

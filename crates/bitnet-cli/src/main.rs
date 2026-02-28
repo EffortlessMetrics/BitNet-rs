@@ -19,6 +19,7 @@ use console::style;
 use std::io;
 use tracing::{debug, error, info, warn};
 
+mod backend;
 #[cfg(feature = "full-cli")]
 mod commands;
 mod config;
@@ -29,6 +30,7 @@ mod sampling;
 mod score;
 pub mod tokenizer_discovery;
 
+use backend::BackendArg;
 use exit::*;
 
 /// Build the CLI command for external use (e.g., in tests)
@@ -61,10 +63,10 @@ fn bitnet_version() -> &'static str {
 
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
-#[cfg(feature = "cli-bench")]
-use commands::KernelBenchCommand;
 #[cfg(feature = "full-cli")]
 use commands::GpuInfoCommand;
+#[cfg(feature = "cli-bench")]
+use commands::KernelBenchCommand;
 #[cfg(feature = "full-cli")]
 use commands::{ConvertCommand, InferenceCommand, InspectCommand, ServeCommand};
 use config::{CliConfig, ConfigBuilder};
@@ -124,6 +126,10 @@ struct Cli {
     /// Device to use (cpu, cuda, oneapi, gpu, npu, auto)
     #[arg(short, long, value_name = "DEVICE", global = true)]
     device: Option<String>,
+
+    /// GPU backend to use
+    #[arg(long, default_value = "auto", global = true)]
+    backend: BackendArg,
 
     /// Log level (trace, debug, info, warn, error)
     #[arg(long, value_name = "LEVEL", global = true)]
@@ -418,6 +424,9 @@ enum Commands {
         #[arg(long, default_value_t = 20)]
         kv_limit: usize,
     },
+
+    /// List available GPU backends and their detection status
+    ListBackends,
 }
 
 #[derive(Subcommand)]
@@ -480,19 +489,25 @@ async fn main() -> Result<()> {
     }
 
     // Report backend selection at startup so logs and receipts are deterministic.
+    // The --backend flag takes precedence; fall back to --device for compat.
     {
-        use bitnet_common::{BackendRequest, select_backend};
+        use bitnet_common::select_backend;
         use bitnet_kernels::device_features::current_kernel_capabilities;
 
         let caps = current_kernel_capabilities();
-        let request = match cli.device.as_deref() {
-            Some("cuda") => BackendRequest::Cuda,
-            Some("gpu") => BackendRequest::Gpu,
-            Some("oneapi") => BackendRequest::OneApi,
-            Some("cpu") => BackendRequest::Cpu,
-            Some("npu") => BackendRequest::Auto,
-            _ => BackendRequest::Auto,
+        let request = if cli.backend != BackendArg::Auto {
+            cli.backend.to_backend_request()
+        } else {
+            match cli.device.as_deref() {
+                Some("cuda") => bitnet_common::BackendRequest::Cuda,
+                Some("gpu") => bitnet_common::BackendRequest::Gpu,
+                Some("oneapi") => bitnet_common::BackendRequest::OneApi,
+                Some("cpu") => bitnet_common::BackendRequest::Cpu,
+                Some("npu") => bitnet_common::BackendRequest::Auto,
+                _ => bitnet_common::BackendRequest::Auto,
+            }
         };
+        info!(backend_flag = %cli.backend, "backend requested via --backend");
         match select_backend(request, &caps) {
             Ok(result) => info!(backend_selection = %result.summary(), "backend selected"),
             Err(e) => warn!(error = %e, "backend selection warning"),
@@ -584,6 +599,10 @@ async fn main() -> Result<()> {
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
             handle_compat_check_command(path, json, strict, show_kv, kv_limit).await
+        }
+        Some(Commands::ListBackends) => {
+            backend::print_backends();
+            Ok(())
         }
         None => {
             // No command provided, show help

@@ -35,7 +35,7 @@ fn simd_level_rank_is_monotonic() {
     );
 }
 
-/// The SIMD level of the probed CPU must be a recognised variant (rank < u32::MAX).
+/// The SIMD level of the probed CPU must be a recognised variant (rank < `u32::MAX`).
 ///
 /// `u32::MAX` is the catch-all for unknown future variants; every named variant
 /// must map to a concrete rank.

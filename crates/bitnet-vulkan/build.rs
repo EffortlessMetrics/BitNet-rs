@@ -19,12 +19,7 @@ fn compile_spirv() {
     let spv_path = format!("{out_dir}/matmul.spv");
 
     match Command::new("glslc")
-        .args([
-            "-fshader-stage=compute",
-            glsl_path,
-            "-o",
-            &spv_path,
-        ])
+        .args(["-fshader-stage=compute", glsl_path, "-o", &spv_path])
         .status()
     {
         Ok(status) if status.success() => {

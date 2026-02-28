@@ -25,18 +25,14 @@ impl DeviceBuffer {
     pub fn copy_from_host(&self, src: &[u8]) -> Result<()> {
         let _ = src;
         debug!(size = self.size, "hipMemcpy H2D (stub)");
-        Err(RocmError::KernelLaunch(
-            "HIP runtime not linked — stub only".into(),
-        ))
+        Err(RocmError::KernelLaunch("HIP runtime not linked — stub only".into()))
     }
 
     /// Copy device data back to host (stub).
     pub fn copy_to_host(&self, dst: &mut [u8]) -> Result<()> {
         let _ = dst;
         debug!(size = self.size, "hipMemcpy D2H (stub)");
-        Err(RocmError::KernelLaunch(
-            "HIP runtime not linked — stub only".into(),
-        ))
+        Err(RocmError::KernelLaunch("HIP runtime not linked — stub only".into()))
     }
 
     /// Raw pointer for kernel arguments.

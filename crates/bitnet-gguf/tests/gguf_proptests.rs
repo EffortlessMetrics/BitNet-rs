@@ -260,7 +260,7 @@ proptest! {
         key in "[a-zA-Z][a-zA-Z0-9_.]{0,31}",
         v in any::<bool>(),
     ) {
-        let kv = GgufMetadataKv { key: key.clone(), value: GgufValue::Bool(v) };
+        let kv = GgufMetadataKv { key, value: GgufValue::Bool(v) };
         let cloned = kv.clone();
         prop_assert_eq!(&kv.key, &cloned.key);
         match (&kv.value, &cloned.value) {
@@ -275,7 +275,7 @@ proptest! {
         key in "[a-z][a-z0-9_.]{0,31}",
         val in any::<String>(),
     ) {
-        let kv = GgufMetadataKv { key: key.clone(), value: GgufValue::String(val.clone()) };
+        let kv = GgufMetadataKv { key, value: GgufValue::String(val) };
         let cloned = kv.clone();
         prop_assert_eq!(&kv.key, &cloned.key);
         match (&kv.value, &cloned.value) {

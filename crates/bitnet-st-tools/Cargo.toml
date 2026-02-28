@@ -7,12 +7,11 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 description = "SafeTensors utilities for BitNet: LN inspection and LN-preserving merge"
-publish = false
 
 [dependencies]
 anyhow = "1.0.100"
 clap = { workspace = true, features = ["derive"] }
-bitnet-validation = { path = "../bitnet-validation", version = "0.2.1-dev" }
+bitnet-validation = { path = "../bitnet-validation", version = "0.2.0-alpha.1" }
 walkdir = "2.5.0"
 safetensors = "0.6.2"
 half = "2.7.1"

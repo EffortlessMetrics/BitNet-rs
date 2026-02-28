@@ -158,24 +158,18 @@ impl GpuError {
             Self::ClInvalidWorkGroupSize => {
                 "Work-group size exceeds device limit. Query CL_DEVICE_MAX_WORK_GROUP_SIZE."
             }
-            Self::ClInvalidCommandQueue => {
-                "Command queue is invalid. It may have been released."
-            }
+            Self::ClInvalidCommandQueue => "Command queue is invalid. It may have been released.",
             Self::ClInvalidContext => "OpenCL context is invalid or was released.",
 
             Self::VkOutOfHostMemory => "Vulkan host memory exhausted. Free system memory.",
-            Self::VkOutOfDeviceMemory => {
-                "Vulkan device memory exhausted. Reduce allocation sizes."
-            }
+            Self::VkOutOfDeviceMemory => "Vulkan device memory exhausted. Reduce allocation sizes.",
             Self::VkInitializationFailed => {
                 "Vulkan initialization failed. Check driver and loader installation."
             }
             Self::VkDeviceLost => {
                 "Vulkan device lost. The GPU may have hung — reset or restart required."
             }
-            Self::VkMemoryMapFailed => {
-                "Vulkan memory mapping failed. Check memory type flags."
-            }
+            Self::VkMemoryMapFailed => "Vulkan memory mapping failed. Check memory type flags.",
             Self::VkLayerNotPresent => {
                 "Requested Vulkan layer is not available. Remove it from enabled layers."
             }
@@ -248,10 +242,7 @@ impl GpuError {
             -36 => Self::ClInvalidCommandQueue,
             -48 => Self::ClInvalidKernel,
             -54 => Self::ClInvalidWorkGroupSize,
-            _ => Self::Unknown {
-                backend: "OpenCL".into(),
-                code: code as i64,
-            },
+            _ => Self::Unknown { backend: "OpenCL".into(), code: code as i64 },
         }
     }
 
@@ -265,10 +256,7 @@ impl GpuError {
             -5 => Self::VkMemoryMapFailed,
             -6 => Self::VkLayerNotPresent,
             -10 => Self::VkTooManyObjects,
-            _ => Self::Unknown {
-                backend: "Vulkan".into(),
-                code: code as i64,
-            },
+            _ => Self::Unknown { backend: "Vulkan".into(), code: code as i64 },
         }
     }
 
@@ -281,10 +269,7 @@ impl GpuError {
             100 => Self::CudaNoDevice,
             700 => Self::CudaIllegalAddress,
             719 => Self::CudaLaunchFailed,
-            _ => Self::Unknown {
-                backend: "CUDA".into(),
-                code: code as i64,
-            },
+            _ => Self::Unknown { backend: "CUDA".into(), code: code as i64 },
         }
     }
 
@@ -430,13 +415,7 @@ mod tests {
     #[test]
     fn test_opencl_unknown_code() {
         let err = GpuError::from_opencl(-999);
-        assert_eq!(
-            err,
-            GpuError::Unknown {
-                backend: "OpenCL".into(),
-                code: -999,
-            }
-        );
+        assert_eq!(err, GpuError::Unknown { backend: "OpenCL".into(), code: -999 });
     }
 
     #[test]
@@ -460,30 +439,15 @@ mod tests {
 
     #[test]
     fn test_severity_transient() {
-        assert_eq!(
-            GpuError::ClOutOfResources.severity(),
-            ErrorSeverity::Transient
-        );
-        assert_eq!(
-            GpuError::CudaOutOfMemory.severity(),
-            ErrorSeverity::Transient
-        );
-        assert_eq!(
-            GpuError::VkOutOfDeviceMemory.severity(),
-            ErrorSeverity::Transient
-        );
+        assert_eq!(GpuError::ClOutOfResources.severity(), ErrorSeverity::Transient);
+        assert_eq!(GpuError::CudaOutOfMemory.severity(), ErrorSeverity::Transient);
+        assert_eq!(GpuError::VkOutOfDeviceMemory.severity(), ErrorSeverity::Transient);
     }
 
     #[test]
     fn test_severity_recoverable() {
-        assert_eq!(
-            GpuError::ClBuildProgramFailure.severity(),
-            ErrorSeverity::Recoverable
-        );
-        assert_eq!(
-            GpuError::CudaLaunchFailed.severity(),
-            ErrorSeverity::Recoverable
-        );
+        assert_eq!(GpuError::ClBuildProgramFailure.severity(), ErrorSeverity::Recoverable);
+        assert_eq!(GpuError::CudaLaunchFailed.severity(), ErrorSeverity::Recoverable);
     }
 
     #[test]
@@ -492,10 +456,7 @@ mod tests {
             GpuError::ClDeviceNotFound,
             GpuError::VkDeviceLost,
             GpuError::CudaOutOfMemory,
-            GpuError::Unknown {
-                backend: "test".into(),
-                code: 0,
-            },
+            GpuError::Unknown { backend: "test".into(), code: 0 },
         ];
         for err in &errors {
             assert!(!err.recovery_hint().is_empty(), "{err:?} has empty hint");

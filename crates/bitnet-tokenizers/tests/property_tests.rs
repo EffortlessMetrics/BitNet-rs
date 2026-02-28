@@ -198,11 +198,11 @@ proptest! {
         prop_assume!(bos_id != eos_id);
         let t = BasicTokenizer::with_config(vocab_size, Some(bos_id), Some(eos_id), None);
         prop_assert!(
-            t.bos_token_id().map_or(true, |id| (id as usize) < t.vocab_size()),
+            t.bos_token_id().is_none_or(|id| (id as usize) < t.vocab_size()),
             "bos_token_id must be < vocab_size"
         );
         prop_assert!(
-            t.eos_token_id().map_or(true, |id| (id as usize) < t.vocab_size()),
+            t.eos_token_id().is_none_or(|id| (id as usize) < t.vocab_size()),
             "eos_token_id must be < vocab_size"
         );
     }

@@ -1,0 +1,15 @@
+---
+source: crates/bitnet-feature-matrix/tests/snapshot_tests.rs
+expression: counts
+---
+[
+    "unit=2",
+    "integration=3",
+    "e2e=3",
+    "performance=2",
+    "crossval=3",
+    "smoke=3",
+    "development=3",
+    "debug=3",
+    "minimal=3",
+]

@@ -32,22 +32,14 @@ impl SubgroupCapabilities {
                 preferred_size: 16,
             }
         } else {
-            Self {
-                intel_subgroups_supported: false,
-                supported_sizes: vec![],
-                preferred_size: 0,
-            }
+            Self { intel_subgroups_supported: false, supported_sizes: vec![], preferred_size: 0 }
         }
     }
 
     /// Detect from a list of supported subgroup sizes (e.g., from
     /// `CL_DEVICE_SUB_GROUP_SIZES_INTEL`).
     pub fn from_sizes(sizes: Vec<u32>, has_extension: bool) -> Self {
-        let preferred = if sizes.contains(&16) {
-            16
-        } else {
-            sizes.first().copied().unwrap_or(0)
-        };
+        let preferred = if sizes.contains(&16) { 16 } else { sizes.first().copied().unwrap_or(0) };
         Self {
             intel_subgroups_supported: has_extension && !sizes.is_empty(),
             supported_sizes: sizes,

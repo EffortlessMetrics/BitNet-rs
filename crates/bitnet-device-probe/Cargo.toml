@@ -12,7 +12,7 @@ description = "Device detection and capability probing for BitNet inference"
 rust-version.workspace = true
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
 log.workspace = true
 ash = { version = "0.38.0", optional = true }
 opencl3 = { version = "0.9", optional = true }

@@ -176,10 +176,10 @@ proptest! {
         ),
     ) {
         let criteria = StopCriteria {
-            stop_token_ids: stop_token_ids.clone(),
+            stop_token_ids,
             eos_token_id,
             max_tokens,
-            stop_strings: stop_strings.clone(),
+            stop_strings,
         };
         let json = serde_json::to_string(&criteria).expect("serialize");
         let restored: StopCriteria = serde_json::from_str(&json).expect("deserialize");
@@ -195,8 +195,10 @@ proptest! {
         tokens_generated in 1usize..10_000usize,
         elapsed_secs in 0.001f64..3600.0f64,
     ) {
+        #[allow(clippy::cast_precision_loss)]
         let tps = tokens_generated as f64 / elapsed_secs;
         let stats = GenerationStats { tokens_generated, tokens_per_second: tps };
+        #[allow(clippy::cast_precision_loss)]
         let expected = stats.tokens_generated as f64 / elapsed_secs;
         prop_assert!(
             (stats.tokens_per_second - expected).abs() < 1e-9,
@@ -277,7 +279,8 @@ proptest! {
         };
         let mut accumulated: Vec<u32> = Vec::new();
         let mut stopped = false;
-        for step in 0..budget + 1 {
+        for step in 0..=budget {
+            #[allow(clippy::cast_possible_truncation)]
             let token = start_token.wrapping_add(step as u32);
             if let Some(reason) = check_stop(&criteria, token, &accumulated, "") {
                 prop_assert_eq!(
@@ -347,8 +350,6 @@ proptest! {
         prop_assert_eq!(&observed_ids, &token_ids, "Token IDs out of order");
     }
 }
-
-use serde_json;
 
 // ── new invariants ────────────────────────────────────────────────────────
 
@@ -420,7 +421,7 @@ proptest! {
             StopReason::MaxTokens,
             StopReason::EosToken,
             StopReason::StopTokenId(token_id),
-            StopReason::StopString(text.clone()),
+            StopReason::StopString(text),
         ];
         for original in &reasons {
             let json = serde_json::to_string(original).expect("serialize StopReason");

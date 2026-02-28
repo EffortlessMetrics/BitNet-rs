@@ -43,11 +43,7 @@ fn ref_rms_norm(input: &[f32], weight: &[f32], eps: f32) -> Vec<f32> {
     let n = input.len();
     let sum_sq: f32 = input.iter().map(|x| x * x).sum();
     let rms = 1.0 / (sum_sq / n as f32 + eps).sqrt();
-    input
-        .iter()
-        .zip(weight.iter())
-        .map(|(&x, &w)| x * rms * w)
-        .collect()
+    input.iter().zip(weight.iter()).map(|(&x, &w)| x * rms * w).collect()
 }
 
 /// CPU reference RoPE (Rotary Position Embedding).

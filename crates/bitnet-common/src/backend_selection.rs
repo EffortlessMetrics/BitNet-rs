@@ -50,6 +50,8 @@ pub enum BackendRequest {
     Gpu,
     /// Require CUDA specifically.
     Cuda,
+    /// Require AMD HIP specifically.
+    Hip,
     /// Require Intel oneAPI specifically.
     OneApi,
 }
@@ -61,6 +63,7 @@ impl fmt::Display for BackendRequest {
             BackendRequest::Cpu => write!(f, "cpu"),
             BackendRequest::Gpu => write!(f, "gpu"),
             BackendRequest::Cuda => write!(f, "cuda"),
+            BackendRequest::Hip => write!(f, "hip"),
             BackendRequest::OneApi => write!(f, "oneapi"),
         }
     }
@@ -120,6 +123,8 @@ pub fn select_backend(
         BackendRequest::Gpu => {
             if caps.cuda_compiled && caps.cuda_runtime {
                 (KernelBackend::Cuda, "CUDA GPU available and requested".to_string())
+            } else if caps.hip_compiled && caps.hip_runtime {
+                (KernelBackend::Hip, "AMD HIP GPU available and requested".to_string())
             } else if caps.oneapi_compiled && caps.oneapi_runtime {
                 (KernelBackend::OneApi, "Intel oneAPI GPU available and requested".to_string())
             } else if caps.cuda_compiled && !caps.cuda_runtime {
@@ -147,6 +152,16 @@ pub fn select_backend(
             // Cuda is a strict requirement — no silent fallback to CPU.
             if caps.cuda_compiled && caps.cuda_runtime {
                 (KernelBackend::Cuda, "CUDA GPU available and requested".to_string())
+            } else {
+                return Err(BackendSelectionError::RequestedUnavailable {
+                    requested: request,
+                    available: detected.clone(),
+                });
+            }
+        }
+        BackendRequest::Hip => {
+            if caps.hip_compiled && caps.hip_runtime {
+                (KernelBackend::Hip, "AMD HIP GPU available and requested".to_string())
             } else {
                 return Err(BackendSelectionError::RequestedUnavailable {
                     requested: request,
@@ -212,6 +227,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: false,
             cuda_runtime: false,
+            hip_compiled: false,
+            hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
@@ -224,6 +241,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: true,
+            hip_compiled: false,
+            hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
@@ -236,6 +255,8 @@ mod tests {
             cpu_rust: true,
             cuda_compiled: true,
             cuda_runtime: false,
+            hip_compiled: false,
+            hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,
@@ -303,6 +324,8 @@ mod tests {
             cpu_rust: false,
             cuda_compiled: false,
             cuda_runtime: false,
+            hip_compiled: false,
+            hip_runtime: false,
             oneapi_compiled: false,
             oneapi_runtime: false,
             cpp_ffi: false,

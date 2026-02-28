@@ -49,9 +49,5 @@ pub type Result<T> = std::result::Result<T, LevelZeroError>;
 
 /// Check a `ze_result_t` and convert to `Result<()>`.
 pub fn check(result: ZeResult) -> Result<()> {
-    if result.is_success() {
-        Ok(())
-    } else {
-        Err(LevelZeroError::ApiError { result })
-    }
+    if result.is_success() { Ok(()) } else { Err(LevelZeroError::ApiError { result }) }
 }

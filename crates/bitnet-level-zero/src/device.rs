@@ -48,11 +48,7 @@ pub struct DeviceQuery {
 impl DeviceQuery {
     /// Create a new device query builder.
     pub fn new() -> Self {
-        Self {
-            filter_type: None,
-            min_memory_bytes: None,
-            min_eus: None,
-        }
+        Self { filter_type: None, min_memory_bytes: None, min_eus: None }
     }
 
     /// Filter by device type.

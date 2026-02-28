@@ -52,10 +52,7 @@ fn features_gpu_only() {
 fn features_cpu_and_oneapi() {
     // CPU fallback and OpenCL must coexist without symbol conflicts.
     let diag = bitnet_testing_policy_tests::PolicyDiagnostics::current();
-    assert!(
-        diag.profile().cell.is_some(),
-        "cpu + oneapi must produce a valid diagnostics cell"
-    );
+    assert!(diag.profile().cell.is_some(), "cpu + oneapi must produce a valid diagnostics cell");
 }
 
 // --------------------------------------------------------------------------
@@ -105,10 +102,7 @@ fn features_cpu_with_fixtures() {
 fn features_gpu_and_cpu_together() {
     // Explicitly test the cpu+gpu pair (common CI combination).
     let diag = bitnet_testing_policy_tests::PolicyDiagnostics::current();
-    assert!(
-        diag.profile().cell.is_some(),
-        "cpu + gpu must coexist without conflicts"
-    );
+    assert!(diag.profile().cell.is_some(), "cpu + gpu must coexist without conflicts");
 }
 
 #[test]

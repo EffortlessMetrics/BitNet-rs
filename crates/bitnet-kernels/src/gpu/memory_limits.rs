@@ -4,8 +4,8 @@
 //! tracking allocations and preventing OOM, and an environment variable
 //! override (`BITNET_GPU_MEM_LIMIT_MB`) to cap GPU memory usage.
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Information about GPU device memory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,11 +55,7 @@ impl MemoryTelemetry {
     pub fn fragmentation_estimate(&self) -> f64 {
         let peak = self.peak_bytes.load(Ordering::Relaxed);
         let cumulative = self.cumulative_allocated.load(Ordering::Relaxed);
-        if peak == 0 {
-            0.0
-        } else {
-            cumulative as f64 / peak as f64
-        }
+        if peak == 0 { 0.0 } else { cumulative as f64 / peak as f64 }
     }
 
     /// Snapshot of telemetry values.
@@ -86,35 +82,21 @@ pub struct TelemetrySnapshot {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemoryLimitError {
     /// The allocation would exceed the configured memory limit.
-    ExceedsLimit {
-        requested: u64,
-        available: u64,
-        limit: u64,
-    },
+    ExceedsLimit { requested: u64, available: u64, limit: u64 },
     /// The allocation exceeds the device's max single allocation size.
-    ExceedsMaxAlloc {
-        requested: u64,
-        max_alloc: u64,
-    },
+    ExceedsMaxAlloc { requested: u64, max_alloc: u64 },
 }
 
 impl std::fmt::Display for MemoryLimitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MemoryLimitError::ExceedsLimit {
-                requested,
-                available,
-                limit,
-            } => write!(
+            MemoryLimitError::ExceedsLimit { requested, available, limit } => write!(
                 f,
                 "GPU allocation of {} bytes exceeds limit \
                  (available={}, limit={})",
                 requested, available, limit
             ),
-            MemoryLimitError::ExceedsMaxAlloc {
-                requested,
-                max_alloc,
-            } => write!(
+            MemoryLimitError::ExceedsMaxAlloc { requested, max_alloc } => write!(
                 f,
                 "GPU allocation of {} bytes exceeds device max \
                  single allocation size ({})",
@@ -176,11 +158,7 @@ impl MemoryGuard {
     }
 
     /// Create a guard with an explicit memory cap (ignoring env var).
-    pub fn with_limit(
-        total_bytes: u64,
-        max_alloc_bytes: u64,
-        limit_bytes: u64,
-    ) -> Self {
+    pub fn with_limit(total_bytes: u64, max_alloc_bytes: u64, limit_bytes: u64) -> Self {
         Self {
             total_bytes,
             max_alloc_bytes,
@@ -225,9 +203,7 @@ impl MemoryGuard {
                     if actual.saturating_add(size) > self.effective_limit {
                         return Err(MemoryLimitError::ExceedsLimit {
                             requested: size,
-                            available: self
-                                .effective_limit
-                                .saturating_sub(actual),
+                            available: self.effective_limit.saturating_sub(actual),
                             limit: self.effective_limit,
                         });
                     }
@@ -237,28 +213,19 @@ impl MemoryGuard {
         }
 
         // Update telemetry.
-        self.telemetry
-            .allocation_count
-            .fetch_add(1, Ordering::Relaxed);
-        self.telemetry
-            .cumulative_allocated
-            .fetch_add(size, Ordering::Relaxed);
+        self.telemetry.allocation_count.fetch_add(1, Ordering::Relaxed);
+        self.telemetry.cumulative_allocated.fetch_add(size, Ordering::Relaxed);
 
         let after = self.current_allocated.load(Ordering::Relaxed);
-        self.telemetry
-            .peak_bytes
-            .fetch_max(after, Ordering::Relaxed);
+        self.telemetry.peak_bytes.fetch_max(after, Ordering::Relaxed);
 
         Ok(())
     }
 
     /// Release `size` bytes of previously allocated memory.
     pub fn release(&self, size: u64) {
-        self.current_allocated
-            .fetch_sub(size.min(self.current()), Ordering::AcqRel);
-        self.telemetry
-            .deallocation_count
-            .fetch_add(1, Ordering::Relaxed);
+        self.current_allocated.fetch_sub(size.min(self.current()), Ordering::AcqRel);
+        self.telemetry.deallocation_count.fetch_add(1, Ordering::Relaxed);
     }
 
     /// Current tracked allocation in bytes.
@@ -292,21 +259,13 @@ mod tests {
 
     #[test]
     fn memory_info_available() {
-        let info = GpuMemoryInfo {
-            total_bytes: 1000,
-            max_alloc_bytes: 500,
-            allocated_bytes: 300,
-        };
+        let info = GpuMemoryInfo { total_bytes: 1000, max_alloc_bytes: 500, allocated_bytes: 300 };
         assert_eq!(info.available_bytes(), 700);
     }
 
     #[test]
     fn memory_info_available_overflow() {
-        let info = GpuMemoryInfo {
-            total_bytes: 100,
-            max_alloc_bytes: 50,
-            allocated_bytes: 200,
-        };
+        let info = GpuMemoryInfo { total_bytes: 100, max_alloc_bytes: 50, allocated_bytes: 200 };
         assert_eq!(info.available_bytes(), 0);
     }
 
@@ -332,11 +291,7 @@ mod tests {
 
         let err = guard.try_allocate(300).unwrap_err();
         match err {
-            MemoryLimitError::ExceedsLimit {
-                requested,
-                available,
-                limit,
-            } => {
+            MemoryLimitError::ExceedsLimit { requested, available, limit } => {
                 assert_eq!(requested, 300);
                 assert_eq!(available, 256);
                 assert_eq!(limit, 512);
@@ -350,10 +305,7 @@ mod tests {
         let guard = MemoryGuard::with_limit(4096, 512, 4096);
         let err = guard.try_allocate(1024).unwrap_err();
         match err {
-            MemoryLimitError::ExceedsMaxAlloc {
-                requested,
-                max_alloc,
-            } => {
+            MemoryLimitError::ExceedsMaxAlloc { requested, max_alloc } => {
                 assert_eq!(requested, 1024);
                 assert_eq!(max_alloc, 512);
             }
@@ -415,20 +367,13 @@ mod tests {
 
     #[test]
     fn error_display_formatting() {
-        let err = MemoryLimitError::ExceedsLimit {
-            requested: 1000,
-            available: 500,
-            limit: 2000,
-        };
+        let err = MemoryLimitError::ExceedsLimit { requested: 1000, available: 500, limit: 2000 };
         let msg = err.to_string();
         assert!(msg.contains("1000"));
         assert!(msg.contains("500"));
         assert!(msg.contains("2000"));
 
-        let err2 = MemoryLimitError::ExceedsMaxAlloc {
-            requested: 1024,
-            max_alloc: 512,
-        };
+        let err2 = MemoryLimitError::ExceedsMaxAlloc { requested: 1024, max_alloc: 512 };
         let msg2 = err2.to_string();
         assert!(msg2.contains("1024"));
         assert!(msg2.contains("512"));

@@ -20,9 +20,7 @@ pub fn query_device() -> Option<MetalDeviceInfo> {
     Some(MetalDeviceInfo {
         name: device.name().to_string(),
         registry_id: device.registry_id(),
-        max_threads_per_threadgroup: device
-            .max_threads_per_threadgroup()
-            .width,
+        max_threads_per_threadgroup: device.max_threads_per_threadgroup().width,
         max_buffer_length: device.max_buffer_length(),
         has_unified_memory: device.has_unified_memory(),
         recommended_max_working_set_size: device.recommended_max_working_set_size(),

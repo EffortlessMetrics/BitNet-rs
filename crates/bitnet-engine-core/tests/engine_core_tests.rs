@@ -5,17 +5,17 @@
 //! 1.  `InferenceSession` trait – implement, call, inspect events
 //! 2.  `BackendInfo` – construction, field access, kernel list, clone
 //! 3.  `SessionMetrics` – non-default values, JSON roundtrip
-//! 4.  `EngineState` – all variants, Clone, PartialEq
+//! 4.  `EngineState` – all variants, Clone, `PartialEq`
 //! 5.  `EngineStateError` – Display message content
 //! 6.  `ConfigError` Display messages embed the invalid value
 //! 7.  `ConcurrencyConfig` – boundary (max-1 allows, max disallows), max=1
-//! 8.  `SessionId` – clone equals original, as_str prefix, 50 unique IDs
+//! 8.  `SessionId` – clone equals original, `as_str` prefix, 50 unique IDs
 //! 9.  `EngineStateTracker` – full cycle, all illegal transitions
 //! 10. `VALID_BACKENDS` – contains all four documented identifiers
 //! 11. `SessionConfig::validate` – backend is third priority field
-//! 12. `SessionConfig::validate` – max_context=1 is minimum valid
+//! 12. `SessionConfig::validate` – `max_context=1` is minimum valid
 //! 13. JSON roundtrip for `SessionMetrics`
-//! 14. `BackendInfo` kernel_ids order preserved after clone
+//! 14. `BackendInfo` `kernel_ids` order preserved after clone
 
 use anyhow::Result;
 use bitnet_engine_core::{
@@ -84,7 +84,7 @@ fn backend_info_clone_kernel_ids_order_preserved() {
         kernel_ids: vec!["k3".to_string(), "k1".to_string(), "k2".to_string()],
         backend_summary: String::new(),
     };
-    let cloned = info.clone();
+    let cloned = info;
     assert_eq!(cloned.kernel_ids, vec!["k3", "k1", "k2"]);
 }
 

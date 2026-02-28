@@ -40,7 +40,12 @@ pub struct GpuKvCache {
 impl GpuKvCache {
     pub fn new(config: KvCacheConfig) -> Self {
         let total = config.total_elements();
-        Self { positions: vec![0; config.num_heads], k_cache: vec![0.0; total], v_cache: vec![0.0; total], config }
+        Self {
+            positions: vec![0; config.num_heads],
+            k_cache: vec![0.0; total],
+            v_cache: vec![0.0; total],
+            config,
+        }
     }
 
     pub fn append(&mut self, new_keys: &[f32], new_values: &[f32]) {
@@ -59,8 +64,12 @@ impl GpuKvCache {
         }
     }
 
-    pub fn read_keys(&self, positions: &[usize]) -> Vec<f32> { self.read_cache(&self.k_cache, positions) }
-    pub fn read_values(&self, positions: &[usize]) -> Vec<f32> { self.read_cache(&self.v_cache, positions) }
+    pub fn read_keys(&self, positions: &[usize]) -> Vec<f32> {
+        self.read_cache(&self.k_cache, positions)
+    }
+    pub fn read_values(&self, positions: &[usize]) -> Vec<f32> {
+        self.read_cache(&self.v_cache, positions)
+    }
 
     fn read_cache(&self, cache: &[f32], positions: &[usize]) -> Vec<f32> {
         let (nh, hd, sl) = (self.config.num_heads, self.config.head_dim, positions.len());
@@ -77,45 +86,103 @@ impl GpuKvCache {
         output
     }
 
-    pub fn position(&self, head: usize) -> usize { self.positions[head] }
-    pub fn config(&self) -> &KvCacheConfig { &self.config }
+    pub fn position(&self, head: usize) -> usize {
+        self.positions[head]
+    }
+    pub fn config(&self) -> &KvCacheConfig {
+        &self.config
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn mk(nh: usize, hd: usize, ps: usize) -> KvCacheConfig { KvCacheConfig::new(nh, hd, ps, 256) }
+    fn mk(nh: usize, hd: usize, ps: usize) -> KvCacheConfig {
+        KvCacheConfig::new(nh, hd, ps, 256)
+    }
 
     #[test]
-    fn append_and_read_single_head() { let mut c = GpuKvCache::new(mk(1,4,16)); c.append(&[1.0,2.0,3.0,4.0],&[5.0,6.0,7.0,8.0]); assert_eq!(c.read_keys(&[0]),vec![1.0,2.0,3.0,4.0]); assert_eq!(c.read_values(&[0]),vec![5.0,6.0,7.0,8.0]); }
+    fn append_and_read_single_head() {
+        let mut c = GpuKvCache::new(mk(1, 4, 16));
+        c.append(&[1.0, 2.0, 3.0, 4.0], &[5.0, 6.0, 7.0, 8.0]);
+        assert_eq!(c.read_keys(&[0]), vec![1.0, 2.0, 3.0, 4.0]);
+        assert_eq!(c.read_values(&[0]), vec![5.0, 6.0, 7.0, 8.0]);
+    }
 
     #[test]
-    fn append_multiple_positions() { let mut c = GpuKvCache::new(mk(1,2,4)); c.append(&[1.0,2.0],&[10.0,20.0]); c.append(&[3.0,4.0],&[30.0,40.0]); c.append(&[5.0,6.0],&[50.0,60.0]); assert_eq!(c.position(0),3); assert_eq!(c.read_keys(&[0,1,2]),vec![1.0,2.0,3.0,4.0,5.0,6.0]); }
+    fn append_multiple_positions() {
+        let mut c = GpuKvCache::new(mk(1, 2, 4));
+        c.append(&[1.0, 2.0], &[10.0, 20.0]);
+        c.append(&[3.0, 4.0], &[30.0, 40.0]);
+        c.append(&[5.0, 6.0], &[50.0, 60.0]);
+        assert_eq!(c.position(0), 3);
+        assert_eq!(c.read_keys(&[0, 1, 2]), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
 
     #[test]
-    fn multi_head_append_and_read() { let mut c = GpuKvCache::new(mk(2,3,8)); c.append(&[1.0,2.0,3.0,4.0,5.0,6.0],&[10.0,20.0,30.0,40.0,50.0,60.0]); assert_eq!(c.read_keys(&[0]),vec![1.0,2.0,3.0,4.0,5.0,6.0]); }
+    fn multi_head_append_and_read() {
+        let mut c = GpuKvCache::new(mk(2, 3, 8));
+        c.append(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], &[10.0, 20.0, 30.0, 40.0, 50.0, 60.0]);
+        assert_eq!(c.read_keys(&[0]), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
 
     #[test]
-    fn page_boundary_crossing() { let mut c = GpuKvCache::new(mk(1,2,2)); c.append(&[1.0,2.0],&[10.0,20.0]); c.append(&[3.0,4.0],&[30.0,40.0]); c.append(&[5.0,6.0],&[50.0,60.0]); assert_eq!(c.read_keys(&[0,1,2]),vec![1.0,2.0,3.0,4.0,5.0,6.0]); }
+    fn page_boundary_crossing() {
+        let mut c = GpuKvCache::new(mk(1, 2, 2));
+        c.append(&[1.0, 2.0], &[10.0, 20.0]);
+        c.append(&[3.0, 4.0], &[30.0, 40.0]);
+        c.append(&[5.0, 6.0], &[50.0, 60.0]);
+        assert_eq!(c.read_keys(&[0, 1, 2]), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    }
 
     #[test]
-    fn config_max_pages() { assert_eq!(KvCacheConfig::new(1,64,16,100).max_pages(),7); assert_eq!(KvCacheConfig::new(1,64,16,128).max_pages(),8); }
+    fn config_max_pages() {
+        assert_eq!(KvCacheConfig::new(1, 64, 16, 100).max_pages(), 7);
+        assert_eq!(KvCacheConfig::new(1, 64, 16, 128).max_pages(), 8);
+    }
 
     #[test]
-    fn total_elements() { let c = KvCacheConfig::new(4,64,16,256); assert_eq!(c.total_elements(),4*16*16*64); }
+    fn total_elements() {
+        let c = KvCacheConfig::new(4, 64, 16, 256);
+        assert_eq!(c.total_elements(), 4 * 16 * 16 * 64);
+    }
 
     #[test]
-    fn read_non_sequential() { let mut c = GpuKvCache::new(mk(1,2,4)); for i in 0..6 { let v = (i as f32)*10.0; c.append(&[v,v+1.0],&[v+100.0,v+101.0]); } assert_eq!(c.read_keys(&[4,1,5]),vec![40.0,41.0,10.0,11.0,50.0,51.0]); }
+    fn read_non_sequential() {
+        let mut c = GpuKvCache::new(mk(1, 2, 4));
+        for i in 0..6 {
+            let v = (i as f32) * 10.0;
+            c.append(&[v, v + 1.0], &[v + 100.0, v + 101.0]);
+        }
+        assert_eq!(c.read_keys(&[4, 1, 5]), vec![40.0, 41.0, 10.0, 11.0, 50.0, 51.0]);
+    }
 
     #[test]
-    fn large_head_dim() { let hd=128; let mut c = GpuKvCache::new(mk(2,hd,32)); let k: Vec<f32>=(0..2*hd).map(|i| i as f32).collect(); let v: Vec<f32>=(0..2*hd).map(|i| (i as f32)+1000.0).collect(); c.append(&k,&v); let r=c.read_keys(&[0]); assert_eq!(r.len(),2*hd); assert_eq!(r[0],0.0); assert_eq!(r[hd],hd as f32); }
+    fn large_head_dim() {
+        let hd = 128;
+        let mut c = GpuKvCache::new(mk(2, hd, 32));
+        let k: Vec<f32> = (0..2 * hd).map(|i| i as f32).collect();
+        let v: Vec<f32> = (0..2 * hd).map(|i| (i as f32) + 1000.0).collect();
+        c.append(&k, &v);
+        let r = c.read_keys(&[0]);
+        assert_eq!(r.len(), 2 * hd);
+        assert_eq!(r[0], 0.0);
+        assert_eq!(r[hd], hd as f32);
+    }
 
     #[test]
     #[should_panic(expected = "KV cache full")]
-    fn append_beyond_capacity() { let mut c = GpuKvCache::new(KvCacheConfig::new(1,2,2,4)); for _ in 0..5 { c.append(&[1.0,1.0],&[1.0,1.0]); } }
+    fn append_beyond_capacity() {
+        let mut c = GpuKvCache::new(KvCacheConfig::new(1, 2, 2, 4));
+        for _ in 0..5 {
+            c.append(&[1.0, 1.0], &[1.0, 1.0]);
+        }
+    }
 
     #[test]
     #[should_panic(expected = "max_seq_len exceeds")]
-    fn config_rejects_excessive_seq_len() { KvCacheConfig::new(1,64,16,MAX_SEQ_LEN+1); }
+    fn config_rejects_excessive_seq_len() {
+        KvCacheConfig::new(1, 64, 16, MAX_SEQ_LEN + 1);
+    }
 }

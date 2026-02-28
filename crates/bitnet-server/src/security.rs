@@ -186,8 +186,8 @@ impl SecurityValidator {
 
     /// Sanitize input text
     fn sanitize_input(&self, input: &str) -> Result<(), ValidationError> {
-        // Check for null bytes and control characters (except newline and tab)
-        if input.chars().any(|c| c.is_control() && c != '\n' && c != '\t') {
+        // Check for null bytes and control characters (except newline, carriage return, and tab)
+        if input.chars().any(|c| c.is_control() && c != '\n' && c != '\r' && c != '\t') {
             return Err(ValidationError::InvalidCharacters);
         }
 
@@ -559,8 +559,10 @@ mod tests {
         assert!(validator.validate_model_request("relative/model.gguf").is_ok());
 
         // Case 2: Restricted directories
-        let mut config = SecurityConfig::default();
-        config.allowed_model_directories = vec!["/models".to_string(), "local_models".to_string()];
+        let config = SecurityConfig {
+            allowed_model_directories: vec!["/models".to_string(), "local_models".to_string()],
+            ..Default::default()
+        };
         let validator = SecurityValidator::new(config).unwrap();
 
         // Allowed paths

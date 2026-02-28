@@ -10,7 +10,7 @@ use std::path::Path;
 use bitnet_gguf::open;
 
 /// Resolve the mini.gguf path relative to the workspace root (Cargo sets
-/// CARGO_MANIFEST_DIR at compile time).
+/// `CARGO_MANIFEST_DIR` at compile time).
 fn mini_gguf_path() -> std::path::PathBuf {
     // CARGO_MANIFEST_DIR is the crate root.  We need to walk up two levels to
     // reach the workspace root, then descend into tests/models.

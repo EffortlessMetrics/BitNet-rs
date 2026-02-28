@@ -622,8 +622,8 @@ impl BatchEngine {
         let base_time_ms = match batch.device {
             Device::Cpu => 100,
             Device::Cuda(_) => 50,
-            Device::Metal => 60, // TODO: Adjust for Metal performance
-            Device::OpenCL(_) => 55, // TODO: Adjust for OpenCL performance
+            Device::Metal => 60,     // TODO: Adjust for Metal performance
+            Device::OpenCL(_) | Device::Hip(_) | Device::Npu => 55, // TODO: Adjust for OpenCL performance
         };
 
         let processing_time = Duration::from_millis(base_time_ms * batch.size() as u64);

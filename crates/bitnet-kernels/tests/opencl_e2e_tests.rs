@@ -8,8 +8,8 @@
 
 use bitnet_common::kernel_registry::{KernelBackend, KernelCapabilities, SimdLevel};
 use bitnet_device_probe::{
-    detect_simd_level, gpu_compiled, oneapi_compiled, probe_cpu, probe_device, probe_gpu,
-    DeviceCapabilities,
+    DeviceCapabilities, detect_simd_level, gpu_compiled, oneapi_compiled, probe_cpu, probe_device,
+    probe_gpu,
 };
 use serial_test::serial;
 
@@ -35,10 +35,7 @@ fn e2e_device_detection_consistency() {
     assert_eq!(detect_simd_level(), detect_simd_level());
 
     // Compiled flags must be self-consistent.
-    assert_eq!(
-        caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled,
-        gpu_compiled(),
-    );
+    assert_eq!(caps.cuda_compiled || caps.rocm_compiled || caps.oneapi_compiled, gpu_compiled(),);
 }
 
 /// Calling probe_gpu() and probe_device() must agree on GPU availability.
@@ -125,27 +122,17 @@ fn e2e_backend_priority_order() {
     );
 
     // Without CUDA runtime, OneApi takes over.
-    let caps_no_cuda = KernelCapabilities {
-        cuda_runtime: false,
-        ..caps.clone()
-    };
+    let caps_no_cuda = KernelCapabilities { cuda_runtime: false, ..caps.clone() };
     assert_eq!(caps_no_cuda.best_available(), Some(KernelBackend::OneApi));
 
     // Without any GPU runtime, CppFfi is next.
-    let caps_no_gpu = KernelCapabilities {
-        cuda_runtime: false,
-        oneapi_runtime: false,
-        ..caps.clone()
-    };
+    let caps_no_gpu =
+        KernelCapabilities { cuda_runtime: false, oneapi_runtime: false, ..caps.clone() };
     assert_eq!(caps_no_gpu.best_available(), Some(KernelBackend::CppFfi));
 
     // Without CppFfi, CPU is the fallback.
-    let caps_cpu_only = KernelCapabilities {
-        cuda_runtime: false,
-        oneapi_runtime: false,
-        cpp_ffi: false,
-        ..caps
-    };
+    let caps_cpu_only =
+        KernelCapabilities { cuda_runtime: false, oneapi_runtime: false, cpp_ffi: false, ..caps };
     assert_eq!(caps_cpu_only.best_available(), Some(KernelBackend::CpuRust));
 }
 
@@ -188,18 +175,9 @@ fn e2e_kernel_compilation_real_device() {
     {
         let kernel = bitnet_kernels::OpenClKernel::new()
             .expect("OpenCL kernel should initialise on real Intel GPU");
-        assert!(
-            kernel.is_available(),
-            "Kernel must report available after successful init"
-        );
-        assert!(
-            !kernel.device_name().is_empty(),
-            "Device name must be populated"
-        );
-        assert!(
-            !kernel.platform_name().is_empty(),
-            "Platform name must be populated"
-        );
+        assert!(kernel.is_available(), "Kernel must report available after successful init");
+        assert!(!kernel.device_name().is_empty(), "Device name must be populated");
+        assert!(!kernel.platform_name().is_empty(), "Platform name must be populated");
     }
 }
 
@@ -242,9 +220,7 @@ fn e2e_matmul_cpu_reference() {
 
     let mut c = vec![0.0f32; m * n];
 
-    FallbackKernel
-        .matmul_i2s(&a, &b, &mut c, m, n, k)
-        .expect("CPU matmul must succeed");
+    FallbackKernel.matmul_i2s(&a, &b, &mut c, m, n, k).expect("CPU matmul must succeed");
 
     assert_eq!(c[0], 0.0, "C[0,0]");
     assert_eq!(c[1], 4.0, "C[0,1]");
@@ -268,14 +244,11 @@ fn e2e_matmul_gpu_vs_cpu_roundtrip() {
         let b: Vec<u8> = vec![1, 5, 2, 6, 3, 7, 4, 8];
 
         let mut c_cpu = vec![0.0f32; m * n];
-        FallbackKernel
-            .matmul_i2s(&a, &b, &mut c_cpu, m, n, k)
-            .expect("CPU matmul");
+        FallbackKernel.matmul_i2s(&a, &b, &mut c_cpu, m, n, k).expect("CPU matmul");
 
         let gpu = OpenClKernel::new().expect("OpenCL init");
         let mut c_gpu = vec![0.0f32; m * n];
-        gpu.matmul_i2s(&a, &b, &mut c_gpu, m, n, k)
-            .expect("GPU matmul");
+        gpu.matmul_i2s(&a, &b, &mut c_gpu, m, n, k).expect("GPU matmul");
 
         for i in 0..c_cpu.len() {
             assert!(
@@ -309,12 +282,7 @@ fn e2e_quantize_cpu_roundtrip() {
     let mut scales = vec![0.0f32; num_blocks];
 
     FallbackKernel
-        .quantize(
-            &input,
-            &mut output,
-            &mut scales,
-            QuantizationType::I2S,
-        )
+        .quantize(&input, &mut output, &mut scales, QuantizationType::I2S)
         .expect("CPU quantize must succeed");
 
     // Scale should be positive (absmax / 1.5).
@@ -358,9 +326,7 @@ fn e2e_full_pipeline_mock() {
     let b: Vec<u8> = vec![42];
     let mut c = vec![0.0f32; 1];
 
-    provider
-        .matmul_i2s(&a, &b, &mut c, 1, 1, 1)
-        .expect("pipeline matmul");
+    provider.matmul_i2s(&a, &b, &mut c, 1, 1, 1).expect("pipeline matmul");
 
     assert_eq!(c[0], 42.0, "1×1 (+1) * 42 should = 42");
 }
@@ -496,9 +462,7 @@ fn e2e_multi_kernel_sequence() {
 
     // Step 1: matmul → hidden
     let mut hidden = vec![0.0f32; m * n];
-    FallbackKernel
-        .matmul_i2s(&a, &b, &mut hidden, m, n, k)
-        .expect("matmul step");
+    FallbackKernel.matmul_i2s(&a, &b, &mut hidden, m, n, k).expect("matmul step");
 
     // hidden should be the raw weights: [+1, +1, -1, +1]
     assert_eq!(hidden[0], 1.0);
@@ -552,8 +516,7 @@ fn e2e_multi_kernel_sequence_real_gpu() {
         let b: Vec<u8> = vec![1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
         let mut hidden = vec![0.0f32; m * n];
 
-        gpu.matmul_i2s(&a, &b, &mut hidden, m, n, k)
-            .expect("GPU matmul");
+        gpu.matmul_i2s(&a, &b, &mut hidden, m, n, k).expect("GPU matmul");
 
         assert_eq!(hidden[0], 1.0);
         assert_eq!(hidden[1], 1.0);

@@ -362,37 +362,23 @@ mod special_token_tests {
     /// Tests feature spec: tokenizer-architecture.md#AC6-special-token-lookup
     /// Verify token-to-ID resolution for special tokens
     ///
-    /// **TDD Scaffolding**: Test compiles but requires implementation of token_to_id()
+    /// **token_to_id()** resolves a token string to its integer ID using `MockTokenizer`.
     #[test]
-    #[ignore = "requires model file and token_to_id() implementation"]
     fn test_token_to_id_special_tokens() -> Result<()> {
-        if std::env::var("BITNET_SKIP_SLOW_TESTS").is_ok() {
-            eprintln!("Skipping slow test: token-to-ID lookup");
-            return Ok(());
-        }
+        use bitnet_tokenizers::MockTokenizer;
 
-        let model_path = discover_test_model()?;
-        let _tokenizer = load_tokenizer_from_gguf(&model_path)?;
+        let tokenizer = MockTokenizer::with_special_tokens(&[
+            ("<|eot_id|>", 128009),
+            ("</s>", 2),
+            ("<|endoftext|>", 50256),
+            ("<s>", 1),
+        ]);
 
-        // Test common special token strings
-        let special_tokens = vec![
-            "<|eot_id|>",    // LLaMA-3 EOT
-            "</s>",          // EOS marker
-            "<|endoftext|>", // GPT-style EOS
-            "<s>",           // BOS marker
-        ];
-
-        for token_str in special_tokens {
-            // TODO: Implement token_to_id() method on Tokenizer trait
-            // This test is scaffolded for future implementation
-            eprintln!("TODO: Test token_to_id('{}') when implemented", token_str);
-
-            // Placeholder assertion - will be replaced with actual implementation
-            // let token_id = tokenizer.token_to_id(token_str);
-            // assert!(token_id.is_some(), "Expected token ID for '{}'", token_str);
-        }
-
-        eprintln!("⚠ token_to_id() implementation pending - test scaffolded");
+        assert_eq!(tokenizer.token_to_id("<|eot_id|>"), Some(128009), "LLaMA-3 EOT token");
+        assert_eq!(tokenizer.token_to_id("</s>"), Some(2), "EOS marker");
+        assert_eq!(tokenizer.token_to_id("<|endoftext|>"), Some(50256), "GPT-style EOS");
+        assert_eq!(tokenizer.token_to_id("<s>"), Some(1), "BOS marker");
+        assert_eq!(tokenizer.token_to_id("<unknown>"), None, "Unknown token returns None");
 
         Ok(())
     }

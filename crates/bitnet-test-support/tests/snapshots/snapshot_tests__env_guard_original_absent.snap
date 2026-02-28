@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-test-support/tests/snapshot_tests.rs
+expression: "format!(\"{:?}\", guard.original_value())"
+---
+None

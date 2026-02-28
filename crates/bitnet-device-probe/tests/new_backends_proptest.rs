@@ -1,7 +1,7 @@
 //! Property and unit tests for recently-added backend capabilities.
 //!
 //! Covers:
-//! - ROCm availability field in [`GpuCapabilities`] and [`DeviceProbe`]
+//! - `ROCm` availability field in [`GpuCapabilities`] and [`DeviceProbe`]
 //! - Vulkan compile-time and runtime probes (`vulkan_compiled`, `vulkan_available_runtime`)
 //! - oneAPI compile-time and runtime probes (`oneapi_compiled`, `oneapi_available_runtime`)
 //! - GPU feature flag interactions (`gpu` implies `cuda` OR `rocm` OR `oneapi`)

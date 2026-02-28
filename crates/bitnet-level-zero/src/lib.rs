@@ -46,21 +46,13 @@ impl LevelZeroBackend {
         }
 
         let ctx = ContextBuilder::new(0).build()?;
-        Ok(Self {
-            context: ctx,
-            driver_index: 0,
-            device_index: 0,
-        })
+        Ok(Self { context: ctx, driver_index: 0, device_index: 0 })
     }
 
     /// Create a backend targeting a specific driver and device.
     pub fn with_device(driver_index: usize, device_index: usize) -> Result<Self> {
         let ctx = ContextBuilder::new(driver_index).build()?;
-        Ok(Self {
-            context: ctx,
-            driver_index,
-            device_index,
-        })
+        Ok(Self { context: ctx, driver_index, device_index })
     }
 
     /// The driver index.
@@ -141,26 +133,11 @@ mod tests {
 
     #[test]
     fn handle_types_are_pointer_sized() {
-        assert_eq!(
-            std::mem::size_of::<ZeDriverHandle>(),
-            std::mem::size_of::<*mut ()>()
-        );
-        assert_eq!(
-            std::mem::size_of::<ZeDeviceHandle>(),
-            std::mem::size_of::<*mut ()>()
-        );
-        assert_eq!(
-            std::mem::size_of::<ZeContextHandle>(),
-            std::mem::size_of::<*mut ()>()
-        );
-        assert_eq!(
-            std::mem::size_of::<ZeModuleHandle>(),
-            std::mem::size_of::<*mut ()>()
-        );
-        assert_eq!(
-            std::mem::size_of::<ZeKernelHandle>(),
-            std::mem::size_of::<*mut ()>()
-        );
+        assert_eq!(std::mem::size_of::<ZeDriverHandle>(), std::mem::size_of::<*mut ()>());
+        assert_eq!(std::mem::size_of::<ZeDeviceHandle>(), std::mem::size_of::<*mut ()>());
+        assert_eq!(std::mem::size_of::<ZeContextHandle>(), std::mem::size_of::<*mut ()>());
+        assert_eq!(std::mem::size_of::<ZeModuleHandle>(), std::mem::size_of::<*mut ()>());
+        assert_eq!(std::mem::size_of::<ZeKernelHandle>(), std::mem::size_of::<*mut ()>());
     }
 
     #[test]
@@ -238,10 +215,7 @@ mod tests {
     #[test]
     fn memory_alloc_creates_buffer() {
         let ctx = ContextBuilder::new(0).build().unwrap();
-        let buf = MemoryAllocBuilder::device(4096)
-            .alignment(256)
-            .allocate(&ctx)
-            .unwrap();
+        let buf = MemoryAllocBuilder::device(4096).alignment(256).allocate(&ctx).unwrap();
         assert_eq!(buf.size(), 4096);
         assert_eq!(buf.memory_type(), ZeMemoryType::Device);
     }
@@ -273,9 +247,7 @@ mod tests {
             }],
         };
 
-        let query = DeviceQuery::new()
-            .device_type(ZeDeviceType::Gpu)
-            .min_eus(100);
+        let query = DeviceQuery::new().device_type(ZeDeviceType::Gpu).min_eus(100);
         assert!(query.matches(&caps));
 
         let query_cpu = DeviceQuery::new().device_type(ZeDeviceType::Cpu);

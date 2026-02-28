@@ -98,8 +98,7 @@ impl GpuTelemetry {
         global_work_size: [usize; 3],
         local_work_size: Option<[usize; 3]>,
     ) {
-        self.total_kernel_time_ns
-            .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+        self.total_kernel_time_ns.fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
         self.kernel_launches.push(KernelLaunchRecord {
             kernel_name: name.into(),
             duration,
@@ -109,21 +108,10 @@ impl GpuTelemetry {
     }
 
     /// Record a memory transfer.
-    pub fn record_transfer(
-        &mut self,
-        direction: TransferDir,
-        bytes: u64,
-        duration: Duration,
-    ) {
-        self.total_transfer_time_ns
-            .fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
-        self.total_bytes_transferred
-            .fetch_add(bytes, Ordering::Relaxed);
-        self.transfers.push(TransferRecord {
-            direction,
-            bytes,
-            duration,
-        });
+    pub fn record_transfer(&mut self, direction: TransferDir, bytes: u64, duration: Duration) {
+        self.total_transfer_time_ns.fetch_add(duration.as_nanos() as u64, Ordering::Relaxed);
+        self.total_bytes_transferred.fetch_add(bytes, Ordering::Relaxed);
+        self.transfers.push(TransferRecord { direction, bytes, duration });
     }
 
     /// Track memory allocation.
@@ -191,11 +179,7 @@ impl GpuTelemetry {
     /// Compute throughput in tokens/sec given token count.
     pub fn throughput(&self, tokens: u64) -> f64 {
         let secs = self.elapsed().as_secs_f64();
-        if secs > 0.0 {
-            tokens as f64 / secs
-        } else {
-            0.0
-        }
+        if secs > 0.0 { tokens as f64 / secs } else { 0.0 }
     }
 
     /// GPU utilization: ratio of kernel time to wall-clock time.
@@ -212,11 +196,7 @@ impl GpuTelemetry {
     /// Memory utilization: current / peak ratio.
     pub fn memory_utilization(&self) -> f64 {
         let peak = self.peak_allocated() as f64;
-        if peak > 0.0 {
-            self.current_allocated() as f64 / peak
-        } else {
-            0.0
-        }
+        if peak > 0.0 { self.current_allocated() as f64 / peak } else { 0.0 }
     }
 
     /// Human-readable summary string.

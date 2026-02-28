@@ -6,8 +6,8 @@
 //! are served before bulk workloads.
 
 use std::collections::BinaryHeap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use tokio::sync::{Mutex, Notify, oneshot};
@@ -229,11 +229,7 @@ impl GpuBatchScheduler {
         }
         let (tx, rx) = oneshot::channel();
         let seq = self.sequence.fetch_add(1, Ordering::Relaxed);
-        queue.push(PendingRequest {
-            request,
-            response_tx: tx,
-            sequence: seq,
-        });
+        queue.push(PendingRequest { request, response_tx: tx, sequence: seq });
         drop(queue);
         self.stats_submitted.fetch_add(1, Ordering::Relaxed);
         self.notify.notify_one();
@@ -241,7 +237,10 @@ impl GpuBatchScheduler {
     }
 
     /// Drain up to `max_count` highest-priority requests from the queue.
-    pub async fn drain_batch(&self, max_count: usize) -> Vec<(GpuBatchRequest, oneshot::Sender<GpuBatchResponse>)> {
+    pub async fn drain_batch(
+        &self,
+        max_count: usize,
+    ) -> Vec<(GpuBatchRequest, oneshot::Sender<GpuBatchResponse>)> {
         let mut queue = self.queue.lock().await;
         let n = max_count.min(queue.len());
         let mut batch = Vec::with_capacity(n);
@@ -289,8 +288,7 @@ impl GpuBatchScheduler {
             }
 
             self.stats_batches.fetch_add(1, Ordering::Relaxed);
-            self.stats_completed
-                .fetch_add(count as u64, Ordering::Relaxed);
+            self.stats_completed.fetch_add(count as u64, Ordering::Relaxed);
         }
     }
 
@@ -383,10 +381,7 @@ mod tests {
 
     #[test]
     fn test_memory_snapshot_zero_per_request() {
-        let snap = GpuMemorySnapshot {
-            total_bytes: 8_000_000_000,
-            free_bytes: 4_000_000_000,
-        };
+        let snap = GpuMemorySnapshot { total_bytes: 8_000_000_000, free_bytes: 4_000_000_000 };
         assert_eq!(snap.estimate_capacity(0), 0);
     }
 
@@ -417,10 +412,7 @@ mod tests {
             ..Default::default()
         };
         let sched = GpuBatchScheduler::new(cfg).unwrap();
-        let mem = GpuMemorySnapshot {
-            total_bytes: 8_000_000_000,
-            free_bytes: 8_000_000_000,
-        };
+        let mem = GpuMemorySnapshot { total_bytes: 8_000_000_000, free_bytes: 8_000_000_000 };
         assert_eq!(sched.effective_batch_size(&mem), 4);
     }
 
@@ -444,7 +436,10 @@ mod tests {
     async fn test_priority_ordering() {
         let sched = GpuBatchScheduler::new(GpuBatchConfig::default()).unwrap();
         let _rx1 = sched.submit(make_request("batch", GpuRequestPriority::Batch)).await.unwrap();
-        let _rx2 = sched.submit(make_request("interactive", GpuRequestPriority::Interactive)).await.unwrap();
+        let _rx2 = sched
+            .submit(make_request("interactive", GpuRequestPriority::Interactive))
+            .await
+            .unwrap();
         let _rx3 = sched.submit(make_request("normal", GpuRequestPriority::Normal)).await.unwrap();
 
         let batch = sched.drain_batch(10).await;
@@ -455,10 +450,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_queue_full_rejected() {
-        let cfg = GpuBatchConfig {
-            max_queue_depth: 2,
-            ..Default::default()
-        };
+        let cfg = GpuBatchConfig { max_queue_depth: 2, ..Default::default() };
         let sched = GpuBatchScheduler::new(cfg).unwrap();
         let _ = sched.submit(make_request("1", GpuRequestPriority::Normal)).await.unwrap();
         let _ = sched.submit(make_request("2", GpuRequestPriority::Normal)).await.unwrap();

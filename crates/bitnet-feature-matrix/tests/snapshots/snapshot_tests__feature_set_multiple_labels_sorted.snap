@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-feature-matrix/tests/snapshot_tests.rs
+expression: fs.labels()
+---
+[
+    "cpu",
+    "inference",
+    "wasm",
+]

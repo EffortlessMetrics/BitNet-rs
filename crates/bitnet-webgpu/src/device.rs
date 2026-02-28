@@ -47,12 +47,7 @@ impl WebGpuDevice {
             )
             .await?;
 
-        Ok(Self {
-            instance,
-            adapter,
-            device,
-            queue,
-        })
+        Ok(Self { instance, adapter, device, queue })
     }
 
     /// Return the adapter name.

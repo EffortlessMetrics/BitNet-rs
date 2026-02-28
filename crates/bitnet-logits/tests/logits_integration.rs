@@ -14,7 +14,7 @@ use bitnet_logits::{
 /// Verify exact scaling for a variety of temperature values.
 #[test]
 fn temperature_variety_of_inputs() {
-    let input = vec![1.0f32, 2.0, 4.0];
+    let input = [1.0f32, 2.0, 4.0].to_vec();
 
     // temp = 0.5 → multiply each logit by 2.0
     let mut logits = input.clone();
@@ -24,7 +24,7 @@ fn temperature_variety_of_inputs() {
     assert!((logits[2] - 8.0).abs() < 1e-5, "temp 0.5: 4.0 → 8.0, got {}", logits[2]);
 
     // temp = 2.0 → multiply each logit by 0.5
-    let mut logits = input.clone();
+    let mut logits = input;
     apply_temperature(&mut logits, 2.0);
     assert!((logits[0] - 0.5).abs() < 1e-5, "temp 2.0: 1.0 → 0.5, got {}", logits[0]);
     assert!((logits[1] - 1.0).abs() < 1e-5, "temp 2.0: 2.0 → 1.0, got {}", logits[1]);
@@ -97,7 +97,8 @@ fn softmax_preserves_relative_order() {
 fn top_k_reduces_to_at_most_k_elements() {
     let cases = [(10usize, 3usize), (5, 1), (8, 8), (4, 2)];
     for (n, k) in cases {
-        let logits: Vec<f32> = (0..n).map(|i| i as f32).collect();
+        #[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+        let logits: Vec<f32> = (0..n).map(|i| (i as u32) as f32).collect();
         let mut v = logits;
         apply_top_k(&mut v, k);
         let kept = v.iter().filter(|&&x| x != f32::NEG_INFINITY).count();
@@ -168,7 +169,7 @@ fn repetition_penalty_ignores_out_of_bounds_ids() {
 // ── full pipeline ─────────────────────────────────────────────────────────────
 
 /// Exercise the full sampling pipeline in sequence:
-/// repetition_penalty → temperature → top_k → softmax → top_p.
+/// `repetition_penalty` → `temperature` → `top_k` → `softmax` → `top_p`.
 ///
 /// The output must be a valid probability distribution (all values ≥ 0, sum ≈ 1.0).
 #[test]

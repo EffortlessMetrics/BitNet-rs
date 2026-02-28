@@ -20,7 +20,14 @@ fn assert_finite(data: &[f32], label: &str) {
     }
 }
 
-fn run_matmul(kernel: &dyn KernelProvider, a: &[i8], b: &[u8], m: usize, n: usize, k: usize) -> Vec<f32> {
+fn run_matmul(
+    kernel: &dyn KernelProvider,
+    a: &[i8],
+    b: &[u8],
+    m: usize,
+    n: usize,
+    k: usize,
+) -> Vec<f32> {
     let mut c = vec![0.0f32; m * n];
     kernel.matmul_i2s(a, b, &mut c, m, n, k).unwrap();
     c
@@ -280,9 +287,7 @@ fn quantize_large_negative() {
 #[test]
 fn quantize_mixed_large() {
     let kern = best_kernel();
-    let input: Vec<f32> = (0..128)
-        .map(|i| if i % 2 == 0 { 1e6 } else { -1e6 })
-        .collect();
+    let input: Vec<f32> = (0..128).map(|i| if i % 2 == 0 { 1e6 } else { -1e6 }).collect();
     let (_, scales) = run_quantize(kern.as_ref(), &input);
     assert_finite(&scales, "mixed_large_scales");
 }
@@ -321,9 +326,7 @@ fn quantize_subnormals() {
 fn quantize_mixed_subnormal_normal() {
     let kern = best_kernel();
     let subnormal = f32::MIN_POSITIVE / 2.0;
-    let input: Vec<f32> = (0..128)
-        .map(|i| if i % 2 == 0 { subnormal } else { 1.0 })
-        .collect();
+    let input: Vec<f32> = (0..128).map(|i| if i % 2 == 0 { subnormal } else { 1.0 }).collect();
     let (_, scales) = run_quantize(kern.as_ref(), &input);
     assert_finite(&scales, "mixed_sub_scales");
 }
@@ -445,11 +448,7 @@ fn adversarial_matmul_fallback_vs_best() {
     assert_finite(&c_fb, "adv_fb");
     assert_finite(&c_best, "adv_best");
 
-    let diff: f32 = c_fb
-        .iter()
-        .zip(&c_best)
-        .map(|(a, b)| (a - b).abs())
-        .fold(0.0f32, f32::max);
+    let diff: f32 = c_fb.iter().zip(&c_best).map(|(a, b)| (a - b).abs()).fold(0.0f32, f32::max);
     assert!(diff < 1e-3, "adversarial matmul diff = {diff}");
 }
 

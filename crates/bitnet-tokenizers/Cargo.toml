@@ -17,9 +17,9 @@ include = [
 ]
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
-bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
-bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
+bitnet-models = { path = "../bitnet-models", version = "0.2.0-alpha.1" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.0-alpha.1" }
 anyhow.workspace = true
 tracing.workspace = true
 serde = { workspace = true, features = ["derive"] }
@@ -28,8 +28,8 @@ tokenizers = { version = "0.22.1", default-features = false, features = ["onig",
 tempfile = "3.23.0"
 base64 = "0.22.1"
 ahash = "0.8.12"
-reqwest = { version = "0.12.24", default-features = false, features = ["json", "stream"], optional = true }
-futures-util = { version = "0.3.31", optional = true }
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "stream"] }
+futures-util = { version = "0.3.31" }
 dirs = "6.0.0"
 memmap2 = "0.9.9"
 thiserror.workspace = true
@@ -39,7 +39,6 @@ integration-tests = []
 default = []
 spm = ["sentencepiece", "sentencepiece-model"]
 inference = []
-downloads = ["reqwest", "futures-util"]
 cpu = []
 gpu = []
 cuda = ["gpu"]  # Backward compatibility alias for gpu
@@ -62,7 +61,7 @@ tokio = { workspace = true, features = ["full"] }
 tempfile = "3.23.0"
 temp-env = "0.3.6"
 serial_test.workspace = true
-bitnet-tests = { path = "../../tests" }
+bitnet-tests = { path = "../../tests", version = "0.2.0-alpha.1" }
 bitnet-test-support.workspace = true
 proptest = { workspace = true }
 insta = { workspace = true }
