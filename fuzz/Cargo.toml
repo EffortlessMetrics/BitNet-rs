@@ -237,3 +237,33 @@ name = "feature_activation_no_panic"
 path = "fuzz_targets/feature_activation_no_panic.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "kernel_dispatch"
+path = "fuzz_targets/kernel_dispatch.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "kv_cache_ops"
+path = "fuzz_targets/kv_cache_ops.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "model_config_parse"
+path = "fuzz_targets/model_config_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "sampling_temperature"
+path = "fuzz_targets/sampling_temperature.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "tensor_shape_validate"
+path = "fuzz_targets/tensor_shape_validate.rs"
+test = false
+doc = false
