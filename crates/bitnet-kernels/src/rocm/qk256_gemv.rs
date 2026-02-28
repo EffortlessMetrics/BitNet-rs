@@ -40,10 +40,7 @@ pub struct Qk256GemvConfig {
 
 impl Default for Qk256GemvConfig {
     fn default() -> Self {
-        Self {
-            workgroup_size: 256,
-            shared_mem_bytes: 1024,
-        }
+        Self { workgroup_size: 256, shared_mem_bytes: 1024 }
     }
 }
 
@@ -62,11 +59,9 @@ pub fn qk256_gemv_hip(
     _k: usize,
     _config: &Qk256GemvConfig,
 ) -> Result<()> {
-    Err(bitnet_common::BitNetError::Kernel(
-        KernelError::ExecutionFailed {
-            reason: "ROCm/HIP QK256 GEMV kernel is not yet implemented".into(),
-        },
-    ))
+    Err(bitnet_common::BitNetError::Kernel(KernelError::ExecutionFailed {
+        reason: "ROCm/HIP QK256 GEMV kernel is not yet implemented".into(),
+    }))
 }
 
 /// A single batch GEMV item: (weights, scales, input, output, M, N, K).
@@ -81,11 +76,9 @@ pub fn qk256_gemv_hip_batch(
     _batches: &[GemvBatchItem<'_>],
     _config: &Qk256GemvConfig,
 ) -> Result<()> {
-    Err(bitnet_common::BitNetError::Kernel(
-        KernelError::ExecutionFailed {
-            reason: "ROCm/HIP QK256 batch GEMV kernel is not yet implemented".into(),
-        },
-    ))
+    Err(bitnet_common::BitNetError::Kernel(KernelError::ExecutionFailed {
+        reason: "ROCm/HIP QK256 batch GEMV kernel is not yet implemented".into(),
+    }))
 }
 
 #[cfg(test)]

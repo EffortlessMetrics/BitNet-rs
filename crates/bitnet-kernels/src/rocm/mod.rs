@@ -82,9 +82,7 @@ impl RocmKernel {
 
     fn unavailable_err(&self, op: &str) -> BitNetError {
         BitNetError::Kernel(KernelError::ExecutionFailed {
-            reason: format!(
-                "ROCm/HIP operation '{op}' is not yet wired to the AMD HIP runtime"
-            ),
+            reason: format!("ROCm/HIP operation '{op}' is not yet wired to the AMD HIP runtime"),
         })
     }
 }
@@ -169,11 +167,7 @@ mod tests {
         let input = vec![1.0f32; 32];
         let mut output = vec![0u8; 8];
         let mut scales = vec![0.0f32; 1];
-        assert!(
-            kernel
-                .quantize(&input, &mut output, &mut scales, QuantizationType::I2S)
-                .is_err()
-        );
+        assert!(kernel.quantize(&input, &mut output, &mut scales, QuantizationType::I2S).is_err());
     }
 
     #[test]

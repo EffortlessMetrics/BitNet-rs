@@ -54,11 +54,9 @@ pub fn rmsnorm_hip(
     _num_rows: usize,
     _config: &HipRmsNormConfig,
 ) -> Result<()> {
-    Err(bitnet_common::BitNetError::Kernel(
-        KernelError::ExecutionFailed {
-            reason: "ROCm/HIP RMSNorm kernel is not yet implemented".into(),
-        },
-    ))
+    Err(bitnet_common::BitNetError::Kernel(KernelError::ExecutionFailed {
+        reason: "ROCm/HIP RMSNorm kernel is not yet implemented".into(),
+    }))
 }
 
 #[cfg(test)]

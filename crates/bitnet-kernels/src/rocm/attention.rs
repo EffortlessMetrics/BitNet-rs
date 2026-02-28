@@ -35,12 +35,7 @@ pub struct HipAttentionConfig {
 impl HipAttentionConfig {
     /// Create a config with sensible defaults for a given `head_dim`.
     pub fn new(num_heads: usize, head_dim: usize) -> Self {
-        Self {
-            num_heads,
-            head_dim,
-            causal: true,
-            scale: 1.0 / (head_dim as f32).sqrt(),
-        }
+        Self { num_heads, head_dim, causal: true, scale: 1.0 / (head_dim as f32).sqrt() }
     }
 }
 
@@ -64,11 +59,9 @@ pub fn fused_attention_hip(
     _seq_len: usize,
     _config: &HipAttentionConfig,
 ) -> Result<()> {
-    Err(bitnet_common::BitNetError::Kernel(
-        KernelError::ExecutionFailed {
-            reason: "ROCm/HIP fused attention kernel is not yet implemented".into(),
-        },
-    ))
+    Err(bitnet_common::BitNetError::Kernel(KernelError::ExecutionFailed {
+        reason: "ROCm/HIP fused attention kernel is not yet implemented".into(),
+    }))
 }
 
 #[cfg(test)]
