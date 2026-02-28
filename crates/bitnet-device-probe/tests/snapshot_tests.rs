@@ -63,10 +63,16 @@ fn device_capabilities_npu_compiled_matches_feature() {
 #[test]
 fn device_probe_full_summary() {
     let caps = DeviceCapabilities::detect();
+    // cpu_rust is always true in a Rust build
+    assert!(caps.cpu_rust);
+    // SIMD level is machine-dependent (Avx512 vs Avx2 vs Scalar), so redact it
+    // to keep the snapshot stable across CI runners and developer machines.
     let summary = format!(
         "cpu_rust={} cuda_compiled={} rocm_compiled={} npu_compiled={} simd={:?}",
         caps.cpu_rust, caps.cuda_compiled, caps.rocm_compiled, caps.npu_compiled, caps.simd_level
     );
+    assert!(summary.contains("cpu_rust=true"));
+    assert!(summary.contains("simd="));
     insta::with_settings!({
         filters => vec![(r"simd=\w+", "simd=[SIMD]")]
     }, {

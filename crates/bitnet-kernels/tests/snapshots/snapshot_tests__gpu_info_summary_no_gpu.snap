@@ -1,5 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_tests.rs
-expression: info.summary()
----
-No GPU backends available

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-server/tests/snapshot_tests.rs
-expression: cfg
----
-"Auto"

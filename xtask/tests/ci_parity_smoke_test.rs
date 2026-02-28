@@ -333,7 +333,7 @@ fn test_xtask_crossval_smoke_integration() {
     //   use std::process::Command;
     //
     //   let status = Command::new("cargo")
-    //       .args(&["run", "-p", "xtask", "--", "crossval"])
+    //       .args(&["run", "-p", "xtask", "--no-default-features", "--", "crossval"])
     //       .status()?;
     //
     //   assert!(status.success(), "AC7: xtask crossval should succeed");
