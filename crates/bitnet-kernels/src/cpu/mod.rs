@@ -4,6 +4,7 @@ pub mod embedding;
 pub mod fallback;
 pub mod fusion;
 pub mod quantized_matmul;
+pub mod rope;
 pub mod simd_math;
 
 #[cfg(target_arch = "x86_64")]
