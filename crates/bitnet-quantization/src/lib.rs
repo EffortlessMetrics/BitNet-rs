@@ -16,12 +16,15 @@ pub mod accuracy_validation_tests;
 pub mod device_aware_quantizer;
 // pub mod edge_case_tests; // Temporarily disabled - needs API fixes
 // pub mod error_handling_tests; // Temporarily disabled - needs API fixes
+pub mod format_detection;
 pub mod i2s;
 pub mod i2s_qk256; // GGML I2_S (QK=256) scalar reference kernels
 pub mod i2s_qk256_avx2; // GGML I2_S (QK=256) AVX2 SIMD kernels
+pub mod mixed_precision;
 pub mod property_based_tests;
 #[cfg(feature = "cpu")]
 pub mod qk256_dispatch;
+pub mod quant_metrics;
 // pub mod robustness_tests; // Keep disabled until needed
 pub mod simd_ops;
 pub mod tl1;
@@ -33,7 +36,10 @@ pub use device_aware_quantizer::{
     AccuracyValidator, DeviceAwareQuantizer, QuantizationType as DeviceQuantizationType,
     ToleranceConfig,
 };
+pub use format_detection::{detect_best_format, detect_format, explain_detection};
 pub use i2s::{I2SLayout, I2SQuantizer};
+pub use mixed_precision::{LayerQuantConfig, MixedPrecisionPolicy, MixedPrecisionSummary};
+pub use quant_metrics::QuantizationMetrics;
 pub use tl1::TL1Quantizer;
 pub use tl2::TL2Quantizer;
 
@@ -280,4 +286,19 @@ pub fn validate_round_trip(
         .fold(0.0f32, f32::max);
 
     Ok(max_abs_err <= tolerance)
+}
+
+/// Validate quantization round-trip accuracy with detailed metrics.
+///
+/// Returns `Ok(metrics)` so the caller can inspect MSE, SNR, cosine
+/// similarity, etc.
+pub fn validate_round_trip_with_metrics(
+    original: &BitNetTensor,
+    qtype: QuantizationType,
+) -> Result<QuantizationMetrics> {
+    let quantized = original.quantize(qtype)?;
+    let dequantized = quantized.dequantize()?;
+    let original_data = original.to_vec()?;
+    let deq_data = dequantized.to_vec()?;
+    QuantizationMetrics::compute(&original_data, &deq_data)
 }
