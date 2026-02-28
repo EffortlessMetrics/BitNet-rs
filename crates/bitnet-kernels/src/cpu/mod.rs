@@ -1,6 +1,7 @@
 //! CPU kernel implementations
 
 pub mod fallback;
+pub mod simd_math;
 
 #[cfg(target_arch = "x86_64")]
 pub mod x86;
@@ -9,6 +10,7 @@ pub mod x86;
 pub mod arm;
 
 pub use fallback::*;
+pub use simd_math::*;
 
 #[cfg(target_arch = "x86_64")]
 pub use x86::*;
