@@ -249,3 +249,21 @@ name = "device_opencl_construct"
 path = "fuzz_targets/device_opencl_construct.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "attention_dimensions"
+path = "fuzz_targets/attention_dimensions.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "softmax_numerical"
+path = "fuzz_targets/softmax_numerical.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "rmsnorm_stability"
+path = "fuzz_targets/rmsnorm_stability.rs"
+test = false
+doc = false
