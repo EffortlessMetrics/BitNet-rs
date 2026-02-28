@@ -1,12 +1,13 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#997.
+> **Last updated**: reflects implementation state after PRs #608–#1320+.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
-> **Recent wave (PRs #978–#997)**: Metal backend (#992), Vulkan runtime probing (#993), Intel oneAPI
-> backend (#986), AVX-512 kernel selection and hardening (#989), NEON kernel improvements (#988),
-> OpenGL probing (#984), OpenCL/Vulkan CLI aliases (#985), ROCm availability field (#995),
-> AVX-512 TL2 quantization kernels (#997), TL2 2-bit domain fix (#978), CPU golden path E2E
-> infrastructure (#949).
+> **Recent wave (PRs #1032–#1320+)**: GPU HAL core (#1264+), OpenCL backend (#1032–#1038),
+> tensor operations (#1294), memory pool (#1295), computation graph (#1297),
+> multi-device scheduler (#1293), model sharding (#1290), speculative decoding (#1305),
+> batch inference (#1303), streaming generation (#1301), profiling (#1300),
+> autotuner (#1296), SPIR-V pipeline (#1298), KV cache (#1312), power management (#1304),
+> health monitor (#1306), error catalog (#1212).
 
 ---
 
@@ -207,6 +208,51 @@ All Phase 8 multi-backend targets have been completed:
 | ROCm availability field in `DeviceProbe` | `crates/bitnet-device-probe/src/lib.rs` | #995 |
 | AVX-512 TL2 quantization kernels | `crates/bitnet-kernels/` | #997 |
 
+### ✅ Phase 10: Multi-GPU Backend Expansion (IN PROGRESS — PRs #1032–#1320+)
+
+**Goal:** Extend BitNet-rs to support Intel Arc (OpenCL), Vulkan, Metal, ROCm, WebGPU, and Level-Zero backends alongside existing CUDA support.
+
+#### Architecture
+
+The GPU HAL (`bitnet-gpu-hal`) provides a unified abstraction layer:
+- **Backend Abstraction**: 8 backends (CPU, CUDA, OpenCL, Vulkan, Metal, ROCm, WebGPU, Level-Zero)
+- **Kernel Dispatch**: Unified `KernelDispatcher` routes operations to appropriate backend
+- **Memory Management**: Backend-agnostic memory pools with FirstFit/BestFit/BuddySystem/Slab allocators
+- **Device Scheduling**: Multi-device scheduler with 5 policies
+- **Model Sharding**: Tensor-parallel and pipeline-parallel distribution
+
+#### Implemented Modules (PRs #1032–#1320+)
+
+| Module | PR | Tests | Description |
+|--------|----|-------|-------------|
+| OpenCL dependencies | #1032 | — | `opencl3` crate integration |
+| Device::OpenCL variant | #1033 | — | Device enum extension |
+| OpenCL kernels | #1034 | — | 30+ .cl kernel files |
+| Device probe | #1037 | — | Intel GPU detection |
+| OpenCL provider | #1038 | — | KernelProvider implementation |
+| GPU HAL core | #1264+ | 50+ | Backend traits, mock impl |
+| Tensor operations | #1294 | 81 | TensorOps with CPU reference |
+| Memory pool | #1295 | 76 | 4 allocation strategies |
+| Computation graph | #1297 | 89 | Kernel fusion, DCE, execution planning |
+| Multi-device scheduler | #1293 | 69 | 5 scheduling policies |
+| Model sharding | #1290 | 64 | 4 sharding strategies |
+| Speculative decoding | #1305 | 65 | 4 acceptance methods |
+| Batch inference | #1303 | 73 | Dynamic batching, 4 padding strategies |
+| Streaming generation | #1301 | 75 | SSE/JSON token streaming |
+| Profiling | #1300 | 67 | Chrome trace export |
+| Autotuner | #1296 | 60 | 4 search strategies |
+| SPIR-V pipeline | #1298 | 65 | Compilation, caching, validation |
+| KV cache | #1312 | 56 | 4 eviction strategies |
+| Power management | #1304 | 53 | Thermal monitoring |
+| Health monitor | #1306 | 71 | 9 check types |
+| Error catalog | #1212 | 63 | 32 error codes, 7 categories |
+
+#### Status
+- **~200 PRs** created covering all aspects of multi-GPU support
+- **~3000+ tests** across all GPU HAL modules
+- CPU mock/reference implementations for all modules
+- No real GPU hardware testing yet (CPU-only validation)
+
 ### 🔲 What's Planned
 
 1. **Real-model crossval receipts** (gated on model download infrastructure)
@@ -216,6 +262,7 @@ All Phase 8 multi-backend targets have been completed:
 2. **Metal kernel implementations** — compute-shader BitNet GEMV for Apple Silicon
 3. **Vulkan kernel implementations** — SPIR-V BitNet GEMV for cross-platform GPU
 4. **ROCm/HIP kernel implementations** — AMD GPU acceleration
+5. **Real GPU hardware validation** — end-to-end testing on Intel Arc, NVIDIA, AMD hardware
 
 ---
 
