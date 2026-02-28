@@ -13,7 +13,7 @@ description = "Stable orchestration layer for test policy/profile resolution"
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-testing-policy-core = { path = "../bitnet-testing-policy-core", version = "0.2.0-alpha.1" }
+bitnet-testing-policy-core = { path = "../bitnet-testing-policy-core", version = "0.2.1-dev" }
 
 [features]
 default = []

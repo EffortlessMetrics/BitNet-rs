@@ -10,80 +10,6 @@ use crate::i2s_qk256;
 /// QK256 block size (256 elements per quantized block)
 pub const QK256: usize = 256;
 
-/// Enum describing which QK256 back-end is active at runtime.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Qk256Backend {
-    /// AVX2 SIMD implementation.
-    Avx2,
-    /// Portable scalar fallback.
-    Scalar,
-}
-
-/// Returns the back-end that `qk256_gemv` / `i2s_qk256::gemv_qk256` would use.
-pub fn active_backend() -> Qk256Backend {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if is_x86_feature_detected!("avx2") {
-            return Qk256Backend::Avx2;
-        }
-    }
-    Qk256Backend::Scalar
-}
-
-/// Validate QK256 GEMV inputs without running the kernel.
-///
-/// Returns `Ok(())` if the inputs are consistent, or a descriptive error string.
-pub fn validate_qk256_inputs(
-    output_len: usize,
-    rows: usize,
-    cols: usize,
-    packed_len: usize,
-    scales_len: usize,
-    activations_len: usize,
-) -> std::result::Result<(), String> {
-    if output_len != rows {
-        return Err(format!("Output length {output_len} != rows {rows}"));
-    }
-    if activations_len != cols {
-        return Err(format!("Activations length {activations_len} != cols {cols}"));
-    }
-    if !cols.is_multiple_of(QK256) {
-        return Err(format!("Cols {cols} is not a multiple of QK256={QK256}"));
-    }
-    let blocks_per_row = cols / QK256;
-    let expected_packed = rows * cols / 4;
-    let expected_scales = rows * blocks_per_row;
-    if packed_len != expected_packed {
-        return Err(format!(
-            "Packed weight size {packed_len} != expected {expected_packed} (rows={rows}, cols={cols})"
-        ));
-    }
-    if scales_len != expected_scales {
-        return Err(format!(
-            "Scales length {scales_len} != expected {expected_scales} (rows={rows}, blocks_per_row={blocks_per_row})"
-        ));
-    }
-    Ok(())
-}
-
-/// Non-panicking variant of [`qk256_gemv`].
-///
-/// Returns `Err(String)` on dimension mismatches instead of panicking.
-pub fn qk256_gemv_checked(
-    output: &mut [f32],
-    rows: usize,
-    cols: usize,
-    packed: &[u8],
-    scales: &[f32],
-    activations: &[f32],
-) -> std::result::Result<(), String> {
-    validate_qk256_inputs(output.len(), rows, cols, packed.len(), scales.len(), activations.len())?;
-    let blocks_per_row = cols / QK256;
-    let row_stride_bytes = blocks_per_row * i2s_qk256::QK256_PACKED_BYTES;
-    i2s_qk256::gemv_qk256(packed, activations, output, rows, cols, row_stride_bytes)
-        .map_err(|e| e.to_string())
-}
-
 /// Legacy QK256 GEMV entry-point.
 ///
 /// The legacy signature exposes an explicit `scales` tensor, but the current
@@ -113,7 +39,7 @@ pub fn qk256_gemv(
     let row_stride_bytes = blocks_per_row * i2s_qk256::QK256_PACKED_BYTES;
 
     i2s_qk256::gemv_qk256(packed, activations, output, rows, cols, row_stride_bytes)
-        .expect("qk256_gemv: internal dispatch failed after input validation (this is a bug)");
+        .expect("qk256_gemv dispatch should succeed for validated inputs");
 }
 
 /// Scalar legacy QK256 GEMV (kept for benchmark compatibility).
@@ -203,44 +129,5 @@ mod tests {
         let activations = vec![0.5f32; cols];
 
         qk256_gemv(&mut output, rows, cols, &packed, &scales, &activations);
-    }
-
-    #[test]
-    fn test_active_backend_returns_known_variant() {
-        let backend = active_backend();
-        assert!(backend == Qk256Backend::Avx2 || backend == Qk256Backend::Scalar);
-    }
-
-    #[test]
-    fn test_validate_qk256_inputs_ok() {
-        let rows = 256;
-        let cols = 256;
-        assert!(validate_qk256_inputs(rows, rows, cols, rows * cols / 4, rows, cols).is_ok());
-    }
-
-    #[test]
-    fn test_validate_qk256_inputs_bad_cols() {
-        let result = validate_qk256_inputs(1, 1, 255, 0, 0, 255);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not a multiple"));
-    }
-
-    #[test]
-    fn test_qk256_gemv_checked_ok() {
-        let rows = 256;
-        let cols = 256;
-        let mut output = vec![0.0f32; rows];
-        let packed = vec![0x55u8; rows * cols / 4];
-        let scales = vec![1.0f32; rows * cols / QK256];
-        let activations = vec![0.5f32; cols];
-        let result = qk256_gemv_checked(&mut output, rows, cols, &packed, &scales, &activations);
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_qk256_gemv_checked_err() {
-        let mut output = vec![0.0f32; 1];
-        let result = qk256_gemv_checked(&mut output, 1, 255, &[], &[], &[0.0; 255]);
-        assert!(result.is_err());
     }
 }

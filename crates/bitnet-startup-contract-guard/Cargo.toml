@@ -14,8 +14,8 @@ include = ["src/**", "Cargo.toml"]
 
 [dependencies]
 anyhow.workspace = true
-bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.0-alpha.1" }
-bitnet-startup-contract-diagnostics = { path = "../bitnet-startup-contract-diagnostics", version = "0.2.0-alpha.1" }
+bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
+bitnet-startup-contract-diagnostics = { path = "../bitnet-startup-contract-diagnostics", version = "0.2.1-dev" }
 tracing.workspace = true
 
 [dev-dependencies]

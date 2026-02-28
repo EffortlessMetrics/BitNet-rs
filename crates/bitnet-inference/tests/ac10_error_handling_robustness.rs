@@ -18,7 +18,7 @@ use std::sync::Arc;
 /// Tests feature spec: issue-248-spec.md#ac10
 /// Validates proper handling of quantization failures with anyhow::Result patterns
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac10_quantization_error_handling() -> Result<()> {
     let invalid_data = vec![f32::NAN, f32::INFINITY, -f32::INFINITY];
     let quantizer = create_test_quantizer()?;
@@ -35,7 +35,7 @@ async fn test_ac10_quantization_error_handling() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac10
 /// Validates graceful handling of out-of-memory conditions
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac10_memory_error_recovery() -> Result<()> {
     let _oversized_config = ModelConfig { vocab_size: usize::MAX, hidden_size: usize::MAX };
     let error = anyhow::anyhow!("Mock OutOfMemory error for testing");
@@ -47,7 +47,7 @@ async fn test_ac10_memory_error_recovery() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac10
 /// Validates proper handling of invalid token IDs with detailed context
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac10_invalid_token_error_handling() {
     let model = create_test_model().unwrap();
     let tokenizer = create_test_tokenizer().unwrap();
@@ -68,7 +68,7 @@ async fn test_ac10_invalid_token_error_handling() {
 /// Tests feature spec: issue-248-spec.md#ac10
 /// Validates graceful fallback when device selection fails
 #[cfg(all(feature = "cpu", feature = "gpu"))]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac10_device_selection_error_recovery() -> Result<()> {
     let model: Arc<dyn Model> = Arc::new(create_test_model()?);
     let tokenizer: Arc<dyn Tokenizer> = Arc::new(create_test_tokenizer()?);

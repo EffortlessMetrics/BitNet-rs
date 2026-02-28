@@ -73,7 +73,6 @@ pub mod cpp_bindings;
 pub mod comparison;
 
 pub mod backend;
-pub mod expanded;
 pub mod fixtures;
 pub mod logits_compare;
 pub mod metrics;

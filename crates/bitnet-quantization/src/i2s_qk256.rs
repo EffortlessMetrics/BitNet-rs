@@ -92,27 +92,13 @@ impl I2SQk256NoScale {
         let size_diff = qs.len().abs_diff(expected_bytes);
 
         if size_diff > TOLERANCE {
-            let per_row = if rows > 0 { qs.len() / rows } else { 0 };
-            let pct_diff = if expected_bytes > 0 {
-                (size_diff as f64 / expected_bytes as f64) * 100.0
-            } else {
-                0.0
-            };
             bail!(
-                "I2SQk256NoScale: data size mismatch: got {} bytes ({}B/row), \
-                 expected {} bytes ({}B/row) for {}×{} matrix \
-                 ({} blocks/row × {} bytes/block). Diff={} bytes ({:.2}%). \
+                "I2SQk256NoScale: data size mismatch: got {} bytes, expected {} for {}×{} matrix. \
                  Check tensor orientation: QK256 requires [out_dim, in_dim] layout.",
                 qs.len(),
-                per_row,
                 expected_bytes,
-                row_stride_bytes,
                 rows,
-                cols,
-                blocks_per_row,
-                QK256_PACKED_BYTES,
-                size_diff,
-                pct_diff,
+                cols
             );
         }
 

@@ -16,7 +16,7 @@ use std::sync::Arc;
 /// Tests feature spec: issue-248-spec.md#ac8
 /// Validates real implementations replace mock placeholders
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac8_mock_vs_real_inference_detection() {
     let model = create_test_model();
     let tokenizer = create_test_tokenizer();

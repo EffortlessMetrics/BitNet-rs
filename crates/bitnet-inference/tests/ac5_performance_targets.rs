@@ -41,7 +41,7 @@ impl Default for AC5TestConfig {
 /// Tests feature spec: issue-248-spec.md#ac5
 /// Validates 5-15 tokens/sec performance target for BitNet 2B model on CPU
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac5_cpu_performance_targets() -> Result<()> {
     let config = AC5TestConfig::default();
     let model = load_bitnet_2b_model_for_performance_testing()
@@ -107,7 +107,7 @@ async fn test_ac5_cpu_performance_targets() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac5
 /// Validates 2-5x GPU speedup over CPU with mixed precision support
 #[cfg(all(feature = "cpu", feature = "gpu"))]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac5_gpu_performance_speedup() -> Result<()> {
     let config = AC5TestConfig::default();
     if !is_gpu_available() {
@@ -169,7 +169,7 @@ async fn test_ac5_gpu_performance_speedup() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac5
 /// Validates efficient KV-cache utilization improves generation performance
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac5_kv_cache_utilization_performance() -> Result<()> {
     let _config = AC5TestConfig::default();
     let model = load_bitnet_2b_model_for_performance_testing()?;
@@ -211,7 +211,7 @@ async fn test_ac5_kv_cache_utilization_performance() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac5
 /// Validates efficient batch processing scales performance linearly
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac5_batch_processing_performance() -> Result<()> {
     let config = AC5TestConfig::default();
     let model = load_bitnet_2b_model_for_performance_testing()?;

@@ -16,7 +16,7 @@ include = [
 ]
 
 [dependencies]
-bitnet-startup-contract = { path = "../bitnet-startup-contract", version = "0.2.0-alpha.1" }
+bitnet-startup-contract = { path = "../bitnet-startup-contract", version = "0.2.1-dev" }
 
 [features]
 default = []

@@ -1,5 +1,0 @@
----
-source: crates/bitnet-quantization/tests/snapshot_tests.rs
-expression: "format!(\"type={:?} shape={:?} data_len={}\", tensor.qtype, tensor.shape,\ntensor.data.len())"
----
-type=TL1 shape=[64, 512] data_len=128

@@ -16,7 +16,7 @@ use std::sync::Arc;
 /// Tests feature spec: issue-248-spec.md#ac9
 /// Validates complete transformer pipeline from tokenization to detokenization
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
     let workspace_root = find_workspace_root().unwrap();
     let model_path =
@@ -53,7 +53,7 @@ async fn test_ac9_end_to_end_transformer_pipeline() -> Result<()> {
 /// Tests feature spec: issue-248-spec.md#ac9
 /// Validates individual transformer blocks work correctly in isolation
 #[cfg(feature = "cpu")]
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_ac9_individual_transformer_components() -> Result<()> {
     let workspace_root = find_workspace_root().unwrap();
     let model_path =

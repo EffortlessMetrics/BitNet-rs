@@ -16,9 +16,9 @@ anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
-bitnet-common = { path = "../bitnet-common", version = "0.2.0-alpha.1" }
-bitnet-honest-compute = { path = "../bitnet-honest-compute", version = "0.2.0-alpha.1" }
-bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.0-alpha.1", optional = true }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-honest-compute = { path = "../bitnet-honest-compute", version = "0.2.1-dev" }
+bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev", optional = true }
 rustc_version_runtime = "0.3.0"
 
 [features]

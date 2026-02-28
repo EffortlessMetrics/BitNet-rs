@@ -427,7 +427,7 @@ mod backend_unit_tests {
     use bitnet_inference::backends::{
         Backend, BackendCapabilities, CpuBackend, GpuBackend, select_backend,
     };
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cpu_backend_creation() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model);
@@ -435,7 +435,7 @@ mod backend_unit_tests {
         let backend = backend.unwrap();
         assert_eq!(backend.backend_type(), "cpu");
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cpu_backend_with_threads() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::with_threads(model, 4);
@@ -443,7 +443,7 @@ mod backend_unit_tests {
         let backend = backend.unwrap();
         assert_eq!(backend.backend_type(), "cpu");
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cpu_backend_capabilities() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
@@ -453,7 +453,7 @@ mod backend_unit_tests {
         assert!(capabilities.max_batch_size > 0);
         assert!(capabilities.memory_efficient);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cpu_backend_forward() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
@@ -464,14 +464,14 @@ mod backend_unit_tests {
         let output_tensor = output.unwrap();
         assert_eq!(output_tensor.shape(), &[1, 50257]);
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cpu_backend_warmup() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
         let result = backend.warmup().await;
         assert!(result.is_ok());
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cpu_backend_clone() {
         let model = Arc::new(MockModel::new());
         let backend = CpuBackend::new(model).unwrap();
@@ -482,7 +482,7 @@ mod backend_unit_tests {
     fn test_gpu_backend_availability() {
         let _is_available = GpuBackend::is_available();
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_gpu_backend_creation() {
         let model = Arc::new(MockModel::new());
         let device = Device::Cuda(0);
@@ -495,7 +495,7 @@ mod backend_unit_tests {
             assert!(backend.is_err());
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_gpu_backend_with_mixed_precision() {
         let model = Arc::new(MockModel::new());
         let device = Device::Cuda(0);
@@ -506,7 +506,7 @@ mod backend_unit_tests {
             assert!(backend.is_err());
         }
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_gpu_backend_capabilities() {
         if !GpuBackend::is_available() {
             return;
@@ -639,7 +639,7 @@ mod error_handling_unit_tests {
         let error = config.validate().unwrap_err();
         assert!(error.contains("repetition_penalty"));
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_backend_error_handling() {
         let model = Arc::new(MockModel::new());
         let invalid_device = Device::Cpu;
@@ -658,7 +658,7 @@ mod error_handling_unit_tests {
 }
 mod integration_unit_tests {
     use super::*;
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_engine_with_different_configs() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -678,7 +678,7 @@ mod integration_unit_tests {
         let engine = InferenceEngine::with_config(model, tokenizer, Device::Cuda(0), gpu_config);
         assert!(engine.is_ok());
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_generation_with_different_configs() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());
@@ -694,7 +694,7 @@ mod integration_unit_tests {
         let result = engine.generate_with_config("Test", &balanced_config).await;
         assert!(result.is_ok());
     }
-    #[tokio::test(flavor = "multi_thread")]
+    #[tokio::test]
     async fn test_cache_integration() {
         let model = Arc::new(MockModel::new());
         let tokenizer = Arc::new(MockTokenizer::new());

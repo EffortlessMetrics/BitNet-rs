@@ -187,8 +187,7 @@ impl ModelInfo {
         if self.categorized_metadata.is_none() {
             self.categorized_metadata = Some(self.compute_categorized_metadata());
         }
-        // SAFETY: `is_none()` guard above guarantees `Some`
-        self.categorized_metadata.as_ref().expect("categorized_metadata was just set above")
+        self.categorized_metadata.as_ref().unwrap()
     }
 
     /// Get tensor statistics, computing them if not already available
@@ -196,8 +195,7 @@ impl ModelInfo {
         if self.tensor_statistics.is_none() {
             self.tensor_statistics = Some(self.compute_tensor_statistics());
         }
-        // SAFETY: `is_none()` guard above guarantees `Some`
-        self.tensor_statistics.as_ref().expect("tensor_statistics was just set above")
+        self.tensor_statistics.as_ref().unwrap()
     }
 
     /// Compute categorized metadata from raw KV pairs
