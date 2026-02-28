@@ -35,6 +35,7 @@ This directory contains implementation reports, investigation summaries, and ana
 - `GAMMA_RESCALING_CHANGES.md` - Gamma rescaling changes
 
 ### General Reports
+- `GENERAL_LLM_PRODUCTION_READINESS_PLAN.md` - Implementation blueprint for extending BitNet-rs to general LLM production workloads
 - `COMPREHENSIVE_FIXES_SUMMARY.md` - Comprehensive fixes summary
 - `COMPREHENSIVE_VALIDATION_REPORT.md` - Comprehensive validation report
 - `FIXES_AND_VALIDATION_REPORT.md` - Fixes and validation report
