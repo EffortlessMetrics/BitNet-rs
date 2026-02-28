@@ -5,6 +5,7 @@
 //! and memory management.
 
 pub mod profiling;
+pub mod streaming;
 use std::fmt;
 
 // ── Errors ────────────────────────────────────────────────────────────────
