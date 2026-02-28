@@ -81,7 +81,7 @@ fn test_v2_requested_tag() {
 
     // Generate with --version 2 (should create v3 with tag)
     std::process::Command::new("cargo")
-        .args(["run", "-p", "xtask", "--", "gen-mini-gguf"])
+        .args(["run", "-p", "xtask", "--no-default-features", "--", "gen-mini-gguf"])
         .arg("--output")
         .arg(&path)
         .arg("--version")
