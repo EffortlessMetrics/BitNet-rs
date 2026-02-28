@@ -13,9 +13,9 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 - **Multiple quantization formats** — I2_S BitNet32-F16, I2_S QK256 (GGML 256-element blocks), TL1, TL2, IQ2_S via FFI
 - **Cross-validation** — per-token cosine-similarity comparison against Microsoft's C++ reference (>0.99)
 - **Honest-compute receipts** — schema v1.0.0 with 8 validation gates; `compute_path` must be `"real"`
-- **Chat templates** — 50 prompt templates covering 45+ model families with auto-detection from GGUF metadata or tokenizer path; shared ChatML helpers reduce duplication; `PromptTemplate::all_variants()` enumerates all templates
+- **Chat templates** — 53 prompt templates covering 48+ model families with auto-detection from GGUF metadata or tokenizer path; shared ChatML helpers reduce duplication; `PromptTemplate::all_variants()` enumerates all templates
 - **SafeTensors → GGUF export** — `bitnet-st2gguf` preserves F16 LayerNorm weights
-- **Multi-SLM architecture registry** — 75+ architecture strings across 45+ model families with auto-detected normalization, activation, and context defaults
+- **Multi-SLM architecture registry** — 80+ architecture strings across 48+ model families with auto-detected normalization, activation, and context defaults
 
 <details>
 <summary><strong>Supported Model Architectures</strong> (click to expand)</summary>
@@ -72,6 +72,9 @@ BitNet-rs is a high-performance Rust inference engine for 1-bit BitNet LLMs.
 | DBRX | dbrx | RmsNorm | SiLU | DbrxInstruct | dbrx_32k |
 | EXAONE | exaone | RmsNorm | SiLU | ExaoneChat | exaone_32k |
 | MiniCPM | minicpm | RmsNorm | SiLU | MiniCPMChat | minicpm_122k |
+| CodeGemma | codegemma, code-gemma | RmsNorm | GeLU | CodeGemma | codegemma_256k |
+| Llama 3.1 | llama-3.1, llama3.1, llama31 | RmsNorm | SiLU | Llama31Chat | llama31_128k |
+| DeepSeek V3 | deepseek-v3, deepseekv3, deepseek3 | RmsNorm | SiLU | DeepSeekV3Chat | deepseekv3_100k |
 | GPT | gpt | LayerNorm | GeLU | — | gpt2_50k |
 | BERT | bert | LayerNorm | GeLU | — | — |
 

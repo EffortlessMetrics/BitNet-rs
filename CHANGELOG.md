@@ -73,6 +73,9 @@ All notable changes to bitnet-rs will be documented in this file.
 - **DBRX instruct template**: Add `DbrxInstruct` ChatML variant for Databricks DBRX, `dbrx_32k` tokenizer entry, and `dbrx` arch entry.
 - **EXAONE chat template**: Add `ExaoneChat` with `[|system|]`/`[|endofturn|]` format for LG AI Research EXAONE, `exaone_32k` tokenizer entry, and `exaone` arch entry.
 - **MiniCPM chat template**: Add `MiniCPMChat` ChatML variant for OpenBMB MiniCPM, `minicpm_122k` tokenizer entry, and `minicpm` arch entry.
+- **CodeGemma template**: Add `CodeGemma` Gemma-format template for Google CodeGemma code models, `codegemma_256k` tokenizer entry, and `codegemma`/`code-gemma` arch entries.
+- **Llama 3.1 chat template**: Add `Llama31Chat` header-format template for Meta Llama 3.1 (128K context), `llama31_128k` tokenizer entry, and `llama-3.1`/`llama3.1`/`llama31` arch entries.
+- **DeepSeek V3 chat template**: Add `DeepSeekV3Chat` ChatML variant for DeepSeek V3 (65K context), `deepseekv3_100k` tokenizer entry, and `deepseek-v3`/`deepseekv3`/`deepseek3` arch entries.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
