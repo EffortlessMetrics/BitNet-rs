@@ -12,7 +12,7 @@ publish = false
 [dependencies]
 anyhow = "1.0.100"
 clap = { workspace = true, features = ["derive"] }
-bitnet-validation = { path = "../bitnet-validation", version = "0.2.0" }
+bitnet-validation = { path = "../bitnet-validation", version = "0.2.1-dev" }
 walkdir = "2.5.0"
 safetensors = "0.6.2"
 half = "2.7.1"

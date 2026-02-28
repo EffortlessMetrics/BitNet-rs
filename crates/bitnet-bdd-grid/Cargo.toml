@@ -16,9 +16,9 @@ name = "bitnet_bdd_grid"
 path = "src/lib.rs"
 
 [dependencies]
-bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.2.0" }
+bitnet-bdd-grid-core = { path = "../bitnet-bdd-grid-core", version = "0.2.1-dev" }
 
 [dev-dependencies]
-bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.2.0" }
+bitnet-runtime-feature-flags = { path = "../bitnet-runtime-feature-flags", version = "0.2.1-dev" }
 proptest = { workspace = true }
 insta = { workspace = true }

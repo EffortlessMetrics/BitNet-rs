@@ -12,9 +12,9 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.0" }
-bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.0" }
-bitnet-rope = { path = "../bitnet-rope", version = "0.2.0" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
+bitnet-rope = { path = "../bitnet-rope", version = "0.2.1-dev" }
 candle-core = { workspace = true }
 candle-nn = { workspace = true }
 anyhow.workspace = true

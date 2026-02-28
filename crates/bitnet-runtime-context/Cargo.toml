@@ -16,7 +16,7 @@ include = [
 ]
 
 [dependencies]
-bitnet-runtime-context-core = { path = "../bitnet-runtime-context-core", version = "0.2.0" }
+bitnet-runtime-context-core = { path = "../bitnet-runtime-context-core", version = "0.2.1-dev" }
 
 [features]
 default = []

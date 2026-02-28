@@ -5,6 +5,28 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
+
+### Changed
+- `ci: expand nightly fuzz schedule to all 34 fuzz targets` — Nightly CI fuzz schedule now covers all available fuzz targets (up from 7); timeboxed 5-minute runs per target (#1004)
+- `docs: update backend roadmap and architecture docs for v0.2` — Updated dual-backend roadmap and architecture documentation for post-v0.2 state (#1001)
+
+### Fixed
+- `fix(config): accept 'npu' as valid device identifier in CLI and server` — NPU device identifier (`npu`) now accepted as a valid device string in CLI and server config (#1002)
+
+### Documentation
+- `docs: add canonical CUDA GPU setup guide` — Comprehensive CUDA GPU setup guide with corrected build command examples and environment configuration (#998)
+
+## [0.2.0] - 2026-02-27
+
+### Highlights
+- 1200+ comprehensive tests across all microcrates (BDD, unit, property, integration, fuzz)
+- Complete microcrate SRP extraction (bitnet-sampling, bitnet-transformer, bitnet-receipts, bitnet-prompt-templates, bitnet-device-probe, bitnet-logits, bitnet-generation, bitnet-engine-core)
+- Feature lattice normalized: gpu/cuda correctly orthogonal
+- Kernel registry with capability detection
+- Modern Diataxis documentation structure
+
+### Added
 - `feat(kernels): implement AVX-512 kernels for TL2 quantization` — New AVX-512 optimised matrix-kernel for TL2 2-bit quantization; runtime-dispatched alongside existing AVX2 and scalar paths (#997)
 - `feat(vulkan): add initial Vulkan runtime probing and feature wiring` — Initial Vulkan backend probe and feature gate wiring; detects Vulkan ICD at runtime and exposes capability via `DeviceProbe` (#993)
 - `feat(metal): enable and wire Metal backend support across workspace` — Metal GPU backend enabled and wired across workspace feature flags; capability detection, kernel dispatch, and device-probe integration (#992)
@@ -21,31 +43,6 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test: add insta snapshot tests for key serializable types` — 2 snapshot tests using `insta` crate pinning `RuntimeFeatureFlags` and related serializable types; added `INSTA_UPDATE: unseen` to CI workflow to prevent unreviewed snapshot acceptance (#938)
 - `feat(fuzz): add wave 4 fuzz targets` — 4 new fuzz targets: `engine_core_no_panic` (engine-core API panic safety), `honest_compute_no_panic` (honest-compute pipeline panic safety), `runtime_context_parse_no_panic` (runtime context parsing panic safety), `feature_activation_no_panic` (feature activation logic panic safety) (#937)
 - `test(bitnet-tokenizers,bitnet-validation): add comprehensive unit tests` — 45 tests for `bitnet-tokenizers` (TokenizerConfig defaults, BasicTokenizer construction, BOS/EOS/PAD semantics, family detection, builder profiles, property tests) and 37 tests for `bitnet-validation` (Ruleset defaults, projection RMS bounds, architecture detection, policy loading edge cases, property tests) (#934)
-
-### Changed
-- scripts: improve crates.io readiness validation with comprehensive checks (#940)
-- `chore: bump version to 0.2.0` — All crates and workspace version bumped from `0.1.x` to `0.2.0`; `CHANGELOG.md` `[Unreleased]` section promoted to `[0.2.0]` with release date (#933)
-
-### Fixed
-- `fix(device-probe): add rocm_available field to DeviceProbe` — `DeviceProbe` now includes a `rocm_available` boolean field populated by ROCm runtime detection (#995)
-- `fix(tests): gracefully skip model-dependent tests; fix AC2 attention timeout` — Model-dependent tests now gracefully skip when no GGUF is present; AC2 attention test timeout resolved (blockers #254 #260) (#981)
-- `fix(quantization): fix TL2 input quantization to stay in 2-bit domain` — TL2 input quantization clamped to valid 2-bit range; previously could produce out-of-range values corrupting matmul results (#978)
-- `ffi: preserve exact C last-error messages` — FFI layer now captures and preserves exact error strings returned by C `last_error` callbacks rather than truncating or reformatting them; improves debuggability for C/C++ consumer integrations (#941)
-
-### Documentation
-- `docs: modernize docs.rs configuration and add mdbook` — Updated `[package.metadata.docs.rs]` across crates; added mdbook setup for rendered API and user documentation (#994)
-- `docs: update changelog for PRs #931-#932` — Updated CHANGELOG.md and roadmap with 1400+ tests milestone (#935)
-
-## [0.2.0] - 2026-02-27
-
-### Highlights
-- 1200+ comprehensive tests across all microcrates (BDD, unit, property, integration, fuzz)
-- Complete microcrate SRP extraction (bitnet-sampling, bitnet-transformer, bitnet-receipts, bitnet-prompt-templates, bitnet-device-probe, bitnet-logits, bitnet-generation, bitnet-engine-core)
-- Feature lattice normalized: gpu/cuda correctly orthogonal
-- Kernel registry with capability detection
-- Modern Diataxis documentation structure
-
-### Added
 - `test(bitnet-runtime-feature-flags,bitnet-kernels): add comprehensive unit tests` — 33 tests for `bitnet-runtime-feature-flags` (feature snapshot determinism, CPU/GPU independence, JSON roundtrips, lattice implications) and 47 tests for `bitnet-kernels` (KernelManager construction, provider listing, FallbackKernel numeric correctness, dimension validation, device features API) (#932)
 - `test(integration): add multi-crate integration tests` — 69 integration tests in `tests/integration/multi_crate_tests.rs` spanning 8 microcrates (sampling, logits, device-probe, prompt-templates, generation, engine-core, GGUF, honest-compute); added 8 new path dependencies to `tests/Cargo.toml` (#931)
 - `test(bitnet-device-probe,bitnet-logits): add comprehensive unit tests` — 15 tests for `bitnet-device-probe` (SIMD level ordering, probe consistency, cross-probe invariants) and 26 tests for `bitnet-logits` (top-p, repetition penalty, argmax, temperature, softmax, top-k, property tests) (#929)
@@ -80,8 +77,16 @@ All notable changes to bitnet-rs will be documented in this file.
 - `test(bitnet-cli): add snapshot tests for CLI help output` — 8 new insta snapshot tests in `crates/bitnet-cli/tests/snapshot_tests.rs` pinning `--help` and `--version` output for all top-level subcommands; uses `assert_cmd` + `insta` for regression detection (#893)
 
 ### Documentation
+- `docs: update changelog for PRs #931-#932` — Updated CHANGELOG.md and roadmap with 1400+ tests milestone (#935)
 - `docs: comprehensive README rewrite and test-suite docs update` — README rewrite highlighting 1000+ test milestone, updated feature flag table, xtask grid-check documentation, and revised `docs/development/test-suite.md` with current test counts (#920)
 - `docs: update changelog for PRs #905-#912` — Changelog entries for server security tests, tokenizer property tests, xtask grid-check feature, E2E golden path tests, fuzz targets (sampling/receipt/template), logits property tests, and device-probe tests (#913)
+
+### Changed
+- scripts: improve crates.io readiness validation with comprehensive checks (#940)
+- `chore: bump version to 0.2.0` — All crates and workspace version bumped from `0.1.x` to `0.2.0`; `CHANGELOG.md` `[Unreleased]` section promoted to `[0.2.0]` with release date (#933)
+
+### Fixed
+- `ffi: preserve exact C last-error messages` — FFI layer now captures and preserves exact error strings returned by C `last_error` callbacks rather than truncating or reformatting them; improves debuggability for C/C++ consumer integrations (#941)
 
 ## [v0.1.3] - 2026-02-27
 

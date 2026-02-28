@@ -13,7 +13,7 @@ description = "Startup contract primitives powered by BDD grid and runtime featu
 include = ["src/**", "Cargo.toml"]
 
 [dependencies]
-bitnet-startup-contract-core = { path = "../bitnet-startup-contract-core", version = "0.2.0" }
+bitnet-startup-contract-core = { path = "../bitnet-startup-contract-core", version = "0.2.1-dev" }
 
 [features]
 default = []

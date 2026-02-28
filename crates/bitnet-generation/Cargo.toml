@@ -12,7 +12,7 @@ description = "Decode-loop stopping logic and generation event types for BitNet 
 rust-version.workspace = true
 
 [dependencies]
-bitnet-common = { path = "../bitnet-common", version = "0.2.0" }
+bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
 serde.workspace = true
 
 [dev-dependencies]
