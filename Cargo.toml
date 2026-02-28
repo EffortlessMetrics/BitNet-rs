@@ -67,6 +67,7 @@ members = [
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
+  "crates/bitnet-metal",        # Metal compute backend (Apple Silicon)
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -213,6 +214,7 @@ cuda = ["gpu"]                                                                  
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu", "dep:bitnet-vulkan"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
+metal-compute = [] # Handled by bitnet-metal crate
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]

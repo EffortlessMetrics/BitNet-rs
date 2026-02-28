@@ -1,0 +1,24 @@
+[package]
+name = "bitnet-metal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Metal compute backend with MSL kernels for Apple Silicon GPU inference"
+
+[dependencies]
+bitnet-common = { path = "../bitnet-common" }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+bytemuck = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+metal = "0.31"
+objc = "0.2"
+
+[dev-dependencies]
+proptest = { workspace = true }
