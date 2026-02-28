@@ -95,6 +95,50 @@ pub mod e2e_integration;
 pub mod model_validator;
 pub mod test_harness;
 
+// === Activation & Compute ===
+pub mod activation_kernels;
+
+// === Precision & Quantization ===
+
+// === Distribution & Parallelism ===
+pub mod data_parallel;
+pub mod distributed;
+
+// === Memory Management ===
+pub mod memory_defrag;
+pub mod model_cache;
+
+// === Execution Pipeline ===
+pub mod inference_session;
+pub mod kernel_jit;
+
+// === Model Formats ===
+pub mod onnx_support;
+
+// === Hardware Discovery ===
+pub mod gpu_topology;
+pub mod npu_support;
+
+// === Streaming & Protocol ===
+pub mod token_streaming;
+
+// === Build & Platform ===
+pub mod cross_compile;
+
+// === Optimization ===
+pub mod model_pruning;
+
+// === Observability ===
+pub mod benchmark_suite;
+
+// === API ===
+pub mod api_versioning;
+
+// === FFI ===
+pub mod ffi_safety;
+
+use std::fmt;
+
 // === Infrastructure ===
 pub mod arch_registry;
 pub mod logging;
@@ -116,7 +160,6 @@ pub mod serving_runtime;
 pub mod gradient_checkpoint;
 pub mod instruction_tuning;
 pub mod model_hub;
-pub mod model_pruning;
 
 // === SPIR-V ===
 pub mod perf_comparison;

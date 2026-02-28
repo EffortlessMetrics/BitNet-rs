@@ -1,4 +1,5 @@
 //! Module stub - implementation pending merge from feature branch
+<<<<<<< HEAD
 //! Dynamic request batching with efficiency-aware scheduling.
 //!
 //! Groups incoming inference requests into efficient batches using
@@ -1556,3 +1557,6 @@ mod tests {
         }
     }
 }
+=======
+// Module will be populated when corresponding PR is merged.
+>>>>>>> 5d6c1831 (feat(gpu-hal): workspace integration v7 — register waves 48-51 modules)
