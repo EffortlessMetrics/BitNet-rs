@@ -25,6 +25,7 @@ pub const MATMUL_FP16_SRC: &str = include_str!("matmul_fp16.cl");
 
 /// INT8 matrix multiplication kernel source.
 pub const MATMUL_INT8_SRC: &str = include_str!("matmul_int8.cl");
+pub const SILU_GATE_SRC: &str = include_str!("silu_gate.cl");
 
 #[cfg(test)]
 mod tests {
