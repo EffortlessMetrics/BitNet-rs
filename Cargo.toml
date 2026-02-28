@@ -211,6 +211,7 @@ cuda = ["gpu"]                                                                  
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
+oneapi = ["kernels", "bitnet-kernels/oneapi", "bitnet-common/oneapi"]
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
@@ -277,6 +278,10 @@ name = "simple_demo"
 [[example]]
 name = "ffi_threading_demo"
 required-features = ["cpu", "ffi"]
+
+[[example]]
+name = "opencl_smoke"
+required-features = ["oneapi"]
 
 [[bench]]
 name = "srp_ops"
