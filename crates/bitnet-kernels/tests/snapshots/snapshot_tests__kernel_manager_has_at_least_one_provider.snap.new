@@ -1,6 +1,0 @@
----
-source: crates/bitnet-kernels/tests/snapshot_tests.rs
-assertion_line: 10
-expression: "format!(\"count={} has_providers={}\", providers.len(), !providers.is_empty())"
----
-count=3 has_providers=true

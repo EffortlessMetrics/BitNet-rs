@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-models/tests/snapshot_tests.rs
+expression: meta
+---
+GgufMetadata {
+    vocab_size: 32000,
+    hidden_size: 2048,
+    num_layers: 24,
+    num_heads: 16,
+    tokenizer_type: Some(
+        "BPE",
+    ),
+    model_type: "llama",
+}

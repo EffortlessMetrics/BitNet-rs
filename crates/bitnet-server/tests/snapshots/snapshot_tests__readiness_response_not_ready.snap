@@ -1,0 +1,14 @@
+---
+source: crates/bitnet-server/tests/snapshot_tests.rs
+expression: resp
+---
+{
+  "status": "not_ready",
+  "timestamp": "2025-01-01T00:00:00Z",
+  "checks": {
+    "model_loaded": false,
+    "inference_engine_ready": false,
+    "device_available": true,
+    "resources_available": true
+  }
+}

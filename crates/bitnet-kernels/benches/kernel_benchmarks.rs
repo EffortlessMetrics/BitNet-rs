@@ -428,6 +428,63 @@ fn bench_qk256_dequant(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark flash attention vs naive attention
+fn bench_flash_attention(c: &mut Criterion) {
+    use bitnet_kernels::cpu::flash_attention::{
+        FlashAttentionConfig, flash_attention, naive_attention,
+    };
+
+    let mut group = c.benchmark_group("flash_attention");
+
+    // (num_heads, num_kv_heads, head_dim, seq_len, label)
+    let configs = vec![
+        (8, 8, 64, 64, "mha_small"),
+        (8, 8, 64, 256, "mha_medium"),
+        (8, 8, 64, 512, "mha_large"),
+        (32, 8, 64, 128, "gqa_4x"),
+        (32, 1, 64, 128, "mqa"),
+        (8, 8, 128, 256, "mha_d128"),
+    ];
+
+    for (num_heads, num_kv_heads, head_dim, seq_len, label) in &configs {
+        let cfg = FlashAttentionConfig {
+            num_heads: *num_heads,
+            num_kv_heads: *num_kv_heads,
+            head_dim: *head_dim,
+            causal: true,
+            block_q: 32,
+            block_kv: 32,
+        };
+        let batch = 1;
+        let q_len = batch * seq_len * num_heads * head_dim;
+        let kv_len = batch * seq_len * num_kv_heads * head_dim;
+
+        let q: Vec<f32> = (0..q_len).map(|i| ((i % 97) as f32 - 48.0) / 48.0).collect();
+        let k: Vec<f32> = (0..kv_len).map(|i| ((i % 89) as f32 - 44.0) / 44.0).collect();
+        let v: Vec<f32> = (0..kv_len).map(|i| ((i % 83) as f32 - 41.0) / 41.0).collect();
+
+        group.throughput(Throughput::Elements(*seq_len as u64));
+
+        group.bench_with_input(BenchmarkId::new("flash", label), seq_len, |b, _| {
+            let mut out = vec![0.0f32; q_len];
+            b.iter(|| {
+                flash_attention(&cfg, &q, &k, &v, &mut out, batch, *seq_len, *seq_len).unwrap();
+                black_box(&out);
+            });
+        });
+
+        group.bench_with_input(BenchmarkId::new("naive", label), seq_len, |b, _| {
+            let mut out = vec![0.0f32; q_len];
+            b.iter(|| {
+                naive_attention(&cfg, &q, &k, &v, &mut out, batch, *seq_len, *seq_len).unwrap();
+                black_box(&out);
+            });
+        });
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_matmul,
@@ -437,7 +494,8 @@ criterion_group!(
     bench_kernel_comparison,
     bench_quantization_accuracy,
     bench_cache_performance,
-    bench_qk256_dequant
+    bench_qk256_dequant,
+    bench_flash_attention
 );
 
 criterion_main!(benches);

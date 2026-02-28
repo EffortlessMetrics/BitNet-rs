@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-server/tests/snapshot_tests.rs
+expression: perf
+---
+{
+  "avg_response_time_ms": 0.0,
+  "requests_per_second": 0.0,
+  "error_rate": 0.0,
+  "sla_compliance": 0.0
+}

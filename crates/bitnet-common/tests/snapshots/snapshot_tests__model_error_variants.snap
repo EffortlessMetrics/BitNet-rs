@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-common/tests/snapshot_tests.rs
+expression: displays
+---
+[
+    "Model not found: missing.gguf",
+    "Invalid model format: corrupt header",
+    "Unsupported model version: 99",
+    "Model loading failed: mmap failed",
+]

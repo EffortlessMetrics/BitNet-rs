@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-quantization/tests/snapshot_tests.rs
+expression: "format!(\"has_sse4_1={}\", caps.has_sse4_1)"
+---
+has_sse4_1=true
