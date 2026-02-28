@@ -38,6 +38,39 @@ impl ChatTurn {
     }
 }
 
+/// Build a ChatML-formatted prompt with system message and user text.
+fn apply_chatml(system: &str, user_text: &str) -> String {
+    let mut result = String::new();
+    result.push_str("<|im_start|>system\n");
+    result.push_str(system);
+    result.push_str("<|im_end|>\n");
+    result.push_str("<|im_start|>user\n");
+    result.push_str(user_text);
+    result.push_str("<|im_end|>\n");
+    result.push_str("<|im_start|>assistant\n");
+    result
+}
+
+/// Render a multi-turn chat conversation in ChatML format.
+fn render_chatml(sys: &str, history: &[ChatTurn]) -> String {
+    let mut out = String::new();
+    out.push_str("<|im_start|>system\n");
+    out.push_str(sys);
+    out.push_str("<|im_end|>\n");
+    for turn in history {
+        out.push_str("<|im_start|>");
+        out.push_str(turn.role.as_str());
+        out.push('\n');
+        out.push_str(&turn.text);
+        out.push_str("<|im_end|>\n");
+    }
+    out.push_str("<|im_start|>assistant\n");
+    out
+}
+
+/// Common stop sequences for ChatML variants using `<|im_end|>` / `<|im_start|>` tokens.
+const CHATML_STOP_SEQUENCES: &[&str] = &["<|im_end|>", "<|im_start|>"];
+
 /// Supported prompt template types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -891,23 +924,8 @@ impl TemplateType {
     /// <|im_start|>assistant
     /// ```
     fn apply_phi4_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
-
-        // Add system prompt (default if not provided)
         let system = system_prompt.unwrap_or("You are a helpful assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-
-        // Add user message
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-
-        // Start assistant response
-        result.push_str("<|im_start|>assistant\n");
-
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply Qwen ChatML format (same structure as Phi-4 ChatML)
@@ -920,20 +938,8 @@ impl TemplateType {
     /// <|im_start|>assistant
     /// ```
     fn apply_qwen_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
-
         let system = system_prompt.unwrap_or("You are a helpful assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-
-        result.push_str("<|im_start|>assistant\n");
-
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply Gemma chat template with start_of_turn/end_of_turn tokens
@@ -1001,20 +1007,8 @@ impl TemplateType {
     /// <|im_start|>assistant
     /// ```
     fn apply_deepseek_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
-
         let system = system_prompt.unwrap_or("You are a helpful assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-
-        result.push_str("<|im_start|>assistant\n");
-
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply StarCoder code completion format
@@ -1114,34 +1108,14 @@ impl TemplateType {
     /// <|im_start|>assistant
     /// ```
     fn apply_internlm_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
-
         let system = system_prompt.unwrap_or("You are a helpful assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-
-        result.push_str("<|im_start|>assistant\n");
-
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply Yi chat template (ChatML format)
     fn apply_yi_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
         let system = system_prompt.unwrap_or("You are a helpful assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>assistant\n");
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply Baichuan chat template
@@ -1285,19 +1259,11 @@ impl TemplateType {
 
     /// Apply Orca ChatML template (ChatML variant with Orca default system prompt)
     fn apply_orca_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
         let system = system_prompt.unwrap_or(
             "You are Orca, an AI language model created by Microsoft. You are \
              a cautious assistant. You carefully follow instructions.",
         );
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>assistant\n");
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply SOLAR instruct template
@@ -1351,17 +1317,9 @@ impl TemplateType {
 
     /// Apply NousHermes ChatML variant
     fn apply_nous_hermes(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
         let system =
             system_prompt.unwrap_or("You are a helpful, honest and harmless AI assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>assistant\n");
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply WizardLM Vicuna-derived format
@@ -1424,19 +1382,11 @@ impl TemplateType {
 
     /// Apply Saiga/YandexGPT ChatML variant with Russian default system prompt
     fn apply_saiga_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
         let system = system_prompt.unwrap_or(
             "Ты — Сайга, русскоязычный автоматический ассистент. \
              Ты разговариваешь с людьми и помогаешь им.",
         );
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>assistant\n");
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply Meta Llama-2 chat format with [INST]<<SYS>>/<</SYS>> markers
@@ -1474,45 +1424,21 @@ impl TemplateType {
 
     /// Apply TinyLlama ChatML format
     fn apply_tinyllama_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
         let system = system_prompt
             .unwrap_or("You are a friendly chatbot who always responds in a helpful manner.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>assistant\n");
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply Dolphin ChatML format
     fn apply_dolphin_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
         let system = system_prompt.unwrap_or("You are Dolphin, a helpful AI assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>assistant\n");
-        result
+        apply_chatml(system, user_text)
     }
 
     /// Apply ChatGPT/GPT-4 ChatML format
     fn apply_chatgpt_chat(user_text: &str, system_prompt: Option<&str>) -> String {
-        let mut result = String::new();
         let system = system_prompt.unwrap_or("You are a helpful assistant.");
-        result.push_str("<|im_start|>system\n");
-        result.push_str(system);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>user\n");
-        result.push_str(user_text);
-        result.push_str("<|im_end|>\n");
-        result.push_str("<|im_start|>assistant\n");
-        result
+        apply_chatml(system, user_text)
     }
 
     pub fn default_stop_sequences(&self) -> Vec<String> {
@@ -1576,7 +1502,7 @@ impl TemplateType {
                 vec!["USER:".to_string(), "</s>".to_string()]
             }
             Self::OrcaChat => {
-                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
             Self::SolarInstruct => {
                 vec!["### User:".to_string(), "</s>".to_string()]
@@ -1588,7 +1514,7 @@ impl TemplateType {
                 vec!["<|END_OF_TURN_TOKEN|>".to_string()]
             }
             Self::NousHermes => {
-                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
             Self::WizardLM => {
                 vec!["USER:".to_string(), "</s>".to_string()]
@@ -1603,7 +1529,7 @@ impl TemplateType {
                 vec!["<extra_id_1>".to_string(), "</s>".to_string()]
             }
             Self::SaigaChat => {
-                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
             Self::Llama2Chat => {
                 vec!["</s>".to_string()]
@@ -1615,13 +1541,13 @@ impl TemplateType {
                 vec!["<|end|>".to_string(), "<|endoftext|>".to_string()]
             }
             Self::TinyLlamaChat => {
-                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
             Self::DolphinChat => {
-                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
             Self::ChatGptChat => {
-                vec!["<|im_end|>".to_string(), "<|im_start|>".to_string()]
+                CHATML_STOP_SEQUENCES.iter().map(|s| s.to_string()).collect()
             }
         }
     }
@@ -1772,28 +1698,12 @@ impl TemplateType {
             TemplateType::Phi4Chat => {
                 // ChatML format with im_start/im_end tokens
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-
-                // Render conversation history
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-
-                // Start assistant response
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::QwenChat => {
                 // ChatML format with im_start/im_end tokens
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::GemmaChat => {
                 // Gemma format with start_of_turn/end_of_turn tokens
@@ -1851,14 +1761,7 @@ impl TemplateType {
             TemplateType::DeepSeekChat => {
                 // ChatML format with im_start/im_end tokens
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::Instruct => {
                 // Simple Q&A format
@@ -1985,24 +1888,12 @@ impl TemplateType {
             TemplateType::InternLMChat => {
                 // ChatML format with im_start/im_end tokens
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::YiChat => {
                 // Yi ChatML format (same as Phi4/Qwen)
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::BaichuanChat => {
                 // Baichuan reserved token format
@@ -2153,12 +2044,7 @@ impl TemplateType {
                     "You are Orca, an AI language model created by Microsoft. You are \
                      a cautious assistant. You carefully follow instructions.",
                 );
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::SolarInstruct => {
                 // Solar ### User:/### Assistant: format
@@ -2237,12 +2123,7 @@ impl TemplateType {
                 // NousHermes ChatML variant
                 let sys = system
                     .unwrap_or("You are a helpful, honest and harmless AI assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::WizardLM => {
                 // WizardLM USER:/ASSISTANT: format
@@ -2323,12 +2204,7 @@ impl TemplateType {
                     "Ты — Сайга, русскоязычный автоматический ассистент. \
                      Ты разговариваешь с людьми и помогаешь им.",
                 );
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::Llama2Chat => {
                 // Llama-2 [INST]<<SYS>>/<</SYS>> format
@@ -2410,30 +2286,15 @@ impl TemplateType {
                 let sys = system.unwrap_or(
                     "You are a friendly chatbot who always responds in a helpful manner.",
                 );
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::DolphinChat => {
                 let sys = system.unwrap_or("You are Dolphin, a helpful AI assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
             TemplateType::ChatGptChat => {
                 let sys = system.unwrap_or("You are a helpful assistant.");
-                writeln!(out, "<|im_start|>system\n{}<|im_end|>", sys)?;
-                for turn in history {
-                    let role = turn.role.as_str();
-                    writeln!(out, "<|im_start|>{}\n{}<|im_end|>", role, turn.text)?;
-                }
-                writeln!(out, "<|im_start|>assistant")?;
+                out = render_chatml(sys, history);
             }
         }
 
