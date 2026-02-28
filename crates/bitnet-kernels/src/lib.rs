@@ -15,6 +15,9 @@ pub mod kernels;
 // Persistent OpenCL kernel cache (filesystem only — no GPU deps)
 #[path = "gpu/kernel_cache.rs"]
 pub mod kernel_cache;
+// OpenCL mixed-precision selection (no GPU deps)
+#[path = "gpu/opencl_mixed_precision.rs"]
+pub mod opencl_mixed_precision;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
