@@ -16,6 +16,8 @@ expression: cfg
     "rope_theta": null,
     "rope_scaling": null,
     "rms_norm_eps": null,
+    "norm_type": "LayerNorm",
+    "activation_type": "Silu",
     "tokenizer": {
       "bos_id": null,
       "eos_id": null,

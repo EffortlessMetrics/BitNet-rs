@@ -2,8 +2,7 @@
 source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
 expression: out
 ---
-<|system|>
-You are a science tutor.<|end|>
-<|user|>
-What is ATP?<|end|>
-<|assistant|>
+You are a Rust expert.
+
+Instruct: How does borrowing work?
+Output:

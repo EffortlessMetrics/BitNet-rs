@@ -3,7 +3,7 @@ source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
 expression: out
 ---
 <|im_start|>system
-You are a friendly chatbot who always responds in a helpful manner.<|im_end|>
+You are Aya, a multilingual AI assistant created by Cohere.<|im_end|>
 <|im_start|>user
 Explain photosynthesis briefly.<|im_end|>
 <|im_start|>assistant
