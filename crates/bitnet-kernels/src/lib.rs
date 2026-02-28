@@ -10,6 +10,8 @@ pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 #[cfg(any(feature = "gpu", feature = "cuda"))]
+pub mod cuda;
+#[cfg(any(feature = "gpu", feature = "cuda"))]
 pub mod gpu;
 pub mod gpu_utils;
 #[cfg(feature = "npu-backend")]
