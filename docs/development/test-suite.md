@@ -603,6 +603,25 @@ cat ci/receipts/pr-0462/generative-gate-mutation-check-run.md
 
 **See also:** `ci/receipts/pr-0462/` for detailed mutation testing reports and analysis.
 
+#### OpenCL / oneAPI Mutation Testing
+
+Mutation testing for OpenCL-related modules runs weekly via `.github/workflows/mutant-opencl.yml`
+and can be triggered locally with `scripts/mutant_opencl.sh`.
+
+**Scope:**
+- `bitnet-kernels` — `src/gpu/opencl.rs` (OpenCL provider) and `src/device_features.rs`
+- `bitnet-device-probe` — oneAPI runtime detection functions
+
+**Configuration:** `mutants.toml` includes `examine_re` / `exclude_re` patterns that
+focus mutations on orchestration logic and skip embedded `.cl` kernel strings, `Debug`/`Display`
+impls, and auto-derived traits.
+
+```bash
+# Run focused OpenCL mutation tests locally
+./scripts/mutant_opencl.sh          # bitnet-kernels only
+./scripts/mutant_opencl.sh --all    # + bitnet-device-probe
+```
+
 ### Resolved Issues: Issue #260 - SIMD Kernel Integration ✅
 
 Issue #260 has been successfully resolved with comprehensive SIMD kernel testing:
