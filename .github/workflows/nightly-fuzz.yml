@@ -58,6 +58,14 @@ jobs:
           - runtime_context_parse_no_panic
           - validation_no_panic
           - vocab_size_extraction
+          # Wave 4
+          - gpu_hal_types
+          - server_request_parse
+          - cli_config_parse
+          - gguf_metadata_validate
+          - quantization_config_validate
+          - attention_mask_gen
+          - kv_cache_eviction
 
     steps:
       - name: Checkout

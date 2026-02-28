@@ -124,6 +124,14 @@ jobs:
           # Token & model boundary testing
           - tensor_shape_validate
           - token_id_bounds
+          # Wave 4: GPU HAL, server, CLI, metadata, quantization, attention, cache
+          - gpu_hal_types
+          - server_request_parse
+          - cli_config_parse
+          - gguf_metadata_validate
+          - quantization_config_validate
+          - attention_mask_gen
+          - kv_cache_eviction
     steps:
       - name: Checkout
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
