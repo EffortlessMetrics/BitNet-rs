@@ -31,6 +31,8 @@ pub enum HalError {
     Unsupported(String),
     /// Generic backend-specific error.
     BackendError { backend: String, message: String },
+    /// Shape mismatch between expected and actual dimensions.
+    ShapeMismatch { expected: usize, actual: usize },
 }
 
 impl fmt::Display for HalError {
@@ -53,6 +55,9 @@ impl fmt::Display for HalError {
             Self::Unsupported(msg) => write!(f, "unsupported: {msg}"),
             Self::BackendError { backend, message } => {
                 write!(f, "[{backend}] {message}")
+            }
+            Self::ShapeMismatch { expected, actual } => {
+                write!(f, "shape mismatch: expected {expected}, got {actual}")
             }
         }
     }
