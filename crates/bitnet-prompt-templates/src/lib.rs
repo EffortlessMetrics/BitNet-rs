@@ -50,6 +50,8 @@ pub enum TemplateType {
     Llama3Chat,
     /// Phi-4 ChatML format with im_start/im_end tokens
     Phi4Chat,
+    /// Gemma chat format with start_of_turn/end_of_turn tokens
+    GemmaChat,
 }
 
 impl std::str::FromStr for TemplateType {
@@ -61,7 +63,8 @@ impl std::str::FromStr for TemplateType {
             "instruct" => Ok(Self::Instruct),
             "llama3-chat" | "llama3_chat" => Ok(Self::Llama3Chat),
             "phi4-chat" | "phi4_chat" | "phi4" | "chatml" => Ok(Self::Phi4Chat),
-            _ => bail!("Unknown template type: {}. Supported: raw, instruct, llama3-chat, phi4-chat", s),
+            "gemma-chat" | "gemma_chat" | "gemma" => Ok(Self::GemmaChat),
+            _ => bail!("Unknown template type: {}. Supported: raw, instruct, llama3-chat, phi4-chat, gemma-chat", s),
         }
     }
 }
@@ -73,6 +76,7 @@ impl std::fmt::Display for TemplateType {
             Self::Instruct => write!(f, "instruct"),
             Self::Llama3Chat => write!(f, "llama3-chat"),
             Self::Phi4Chat => write!(f, "phi4-chat"),
+            Self::GemmaChat => write!(f, "gemma-chat"),
         }
     }
 }
@@ -104,6 +108,15 @@ impl TemplateType {
                     "auto-detected prompt template"
                 );
                 return Self::Phi4Chat;
+            }
+            // Gemma signature
+            if jinja.contains("<start_of_turn>") && jinja.contains("<end_of_turn>") {
+                tracing::debug!(
+                    template = "GemmaChat",
+                    source = "gguf_chat_template",
+                    "auto-detected prompt template"
+                );
+                return Self::GemmaChat;
             }
             // Generic instruct template
             if jinja.contains("{% for message in messages %}") {
@@ -137,6 +150,15 @@ impl TemplateType {
                 );
                 return Self::Phi4Chat;
             }
+            if lower.contains("gemma") {
+                tracing::debug!(
+                    template = "GemmaChat",
+                    source = "tokenizer_name",
+                    hint = name,
+                    "auto-detected prompt template"
+                );
+                return Self::GemmaChat;
+            }
             if lower.contains("instruct") || lower.contains("mistral") {
                 tracing::debug!(
                     template = "Instruct",
@@ -160,6 +182,7 @@ impl TemplateType {
             Self::Instruct => Self::apply_instruct(user_text, system_prompt),
             Self::Llama3Chat => Self::apply_llama3_chat(user_text, system_prompt),
             Self::Phi4Chat => Self::apply_phi4_chat(user_text, system_prompt),
+            Self::GemmaChat => Self::apply_gemma_chat(user_text, system_prompt),
         }
     }
 
@@ -242,6 +265,35 @@ impl TemplateType {
         result
     }
 
+    /// Apply Gemma chat template with start_of_turn/end_of_turn tokens
+    ///
+    /// Format:
+    /// ```text
+    /// <start_of_turn>user
+    /// {user_text}<end_of_turn>
+    /// <start_of_turn>model
+    /// ```
+    ///
+    /// Gemma doesn't have a native system role; system messages are
+    /// prepended to the user message.
+    fn apply_gemma_chat(user_text: &str, system_prompt: Option<&str>) -> String {
+        let mut result = String::new();
+
+        // Gemma has no system role — prepend system text to user message
+        result.push_str("<start_of_turn>user\n");
+        if let Some(system) = system_prompt {
+            result.push_str(system);
+            result.push_str("\n\n");
+        }
+        result.push_str(user_text);
+        result.push_str("<end_of_turn>\n");
+
+        // Start model response
+        result.push_str("<start_of_turn>model\n");
+
+        result
+    }
+
     /// Get the default stop sequences for this template
     pub fn default_stop_sequences(&self) -> Vec<String> {
         match self {
@@ -249,6 +301,7 @@ impl TemplateType {
             Self::Instruct => vec!["\n\nQ:".to_string(), "\n\nHuman:".to_string()],
             Self::Llama3Chat => vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
             Self::Phi4Chat => vec!["<|im_end|>".to_string(), "<|endoftext|>".to_string()],
+            Self::GemmaChat => vec!["<end_of_turn>".to_string()],
         }
     }
 
@@ -293,13 +346,14 @@ impl TemplateType {
             Self::Raw | Self::Instruct => true,
             Self::Llama3Chat => false, // Template includes <|begin_of_text|>
             Self::Phi4Chat => false,   // ChatML uses im_start/im_end tokens
+            Self::GemmaChat => false,  // Uses start_of_turn/end_of_turn tokens
         }
     }
 
     /// Check if special tokens should be parsed during encoding
     /// LLaMA-3 chat templates contain special tokens that need to be parsed
     pub fn parse_special(&self) -> bool {
-        matches!(self, Self::Llama3Chat | Self::Phi4Chat)
+        matches!(self, Self::Llama3Chat | Self::Phi4Chat | Self::GemmaChat)
     }
 
     /// Render a chat history (system + turns) into a single prompt string.
@@ -344,6 +398,37 @@ impl TemplateType {
 
                 // Start assistant response
                 write!(out, "<|im_start|>assistant\n")?;
+            }
+            TemplateType::GemmaChat => {
+                // Gemma format with start_of_turn/end_of_turn tokens
+                // Gemma has no system role — prepend to first user turn
+                let mut system_prepended = false;
+
+                for turn in history {
+                    let role = match turn.role {
+                        ChatRole::User => "user",
+                        ChatRole::Assistant => "model",
+                        ChatRole::System => continue,
+                    };
+                    write!(out, "<start_of_turn>{}\n", role)?;
+                    if role == "user" && !system_prepended {
+                        if let Some(sys) = system {
+                            write!(out, "{}\n\n", sys)?;
+                        }
+                        system_prepended = true;
+                    }
+                    write!(out, "{}<end_of_turn>\n", turn.text)?;
+                }
+
+                // If no user turn was seen, still emit system prompt
+                if !system_prepended {
+                    if let Some(sys) = system {
+                        write!(out, "<start_of_turn>user\n{}<end_of_turn>\n", sys)?;
+                    }
+                }
+
+                // Start model response
+                write!(out, "<start_of_turn>model\n")?;
             }
             TemplateType::Instruct => {
                 // Simple Q&A format
@@ -501,6 +586,60 @@ mod tests {
     }
 
     #[test]
+    fn test_gemma_chat_template() {
+        let template = TemplateType::GemmaChat;
+
+        // Without system prompt
+        let result = template.apply("Hello!", None);
+        assert!(result.contains("<start_of_turn>user\n"));
+        assert!(result.contains("Hello!"));
+        assert!(result.contains("<end_of_turn>"));
+        assert!(result.ends_with("<start_of_turn>model\n"));
+
+        // With system prompt (prepended to user message)
+        let result = template.apply("Hello!", Some("You are a math tutor."));
+        assert!(result.contains("You are a math tutor."));
+        assert!(result.contains("Hello!"));
+        assert!(result.contains("<start_of_turn>user\n"));
+        assert!(result.ends_with("<start_of_turn>model\n"));
+    }
+
+    #[test]
+    fn test_render_chat_gemma() {
+        let t = TemplateType::GemmaChat;
+        let hist = vec![
+            ChatTurn::new(ChatRole::User, "Hello"),
+            ChatTurn::new(ChatRole::Assistant, "Hi there!"),
+            ChatTurn::new(ChatRole::User, "How are you?"),
+        ];
+        let s = t.render_chat(&hist, Some("You are helpful.")).unwrap();
+
+        assert!(s.contains("<start_of_turn>user\n"));
+        assert!(s.contains("You are helpful."));
+        assert!(s.contains("Hello"));
+        assert!(s.contains("<start_of_turn>model\n"));
+        assert!(s.contains("Hi there!"));
+        assert!(s.contains("How are you?"));
+        assert!(s.contains("<end_of_turn>"));
+        assert!(s.ends_with("<start_of_turn>model\n"));
+    }
+
+    #[test]
+    fn test_detect_gemma_from_jinja() {
+        let t = TemplateType::detect(
+            None,
+            Some("<start_of_turn>user\n{user}<end_of_turn>\n<start_of_turn>model\n"),
+        );
+        assert_eq!(t, TemplateType::GemmaChat);
+    }
+
+    #[test]
+    fn test_detect_gemma_from_name() {
+        let t = TemplateType::detect(Some("gemma-2b"), None);
+        assert_eq!(t, TemplateType::GemmaChat);
+    }
+
+    #[test]
     fn test_raw_template() {
         let template = TemplateType::Raw;
         let result = template.apply("Hello, world!", None);
@@ -553,6 +692,9 @@ mod tests {
         assert_eq!("phi4_chat".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
         assert_eq!("phi4".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
         assert_eq!("chatml".parse::<TemplateType>().unwrap(), TemplateType::Phi4Chat);
+        assert_eq!("gemma-chat".parse::<TemplateType>().unwrap(), TemplateType::GemmaChat);
+        assert_eq!("gemma_chat".parse::<TemplateType>().unwrap(), TemplateType::GemmaChat);
+        assert_eq!("gemma".parse::<TemplateType>().unwrap(), TemplateType::GemmaChat);
 
         assert!("invalid".parse::<TemplateType>().is_err());
     }
@@ -563,6 +705,7 @@ mod tests {
         assert!(!TemplateType::Instruct.default_stop_sequences().is_empty());
         assert!(!TemplateType::Llama3Chat.default_stop_sequences().is_empty());
         assert!(!TemplateType::Phi4Chat.default_stop_sequences().is_empty());
+        assert!(!TemplateType::GemmaChat.default_stop_sequences().is_empty());
 
         // Check llama3-chat has the expected stop tokens
         let llama3_stops = TemplateType::Llama3Chat.default_stop_sequences();
@@ -571,6 +714,10 @@ mod tests {
         // Check phi4-chat has the expected stop tokens
         let phi4_stops = TemplateType::Phi4Chat.default_stop_sequences();
         assert!(phi4_stops.contains(&"<|im_end|>".to_string()));
+
+        // Check gemma-chat has the expected stop tokens
+        let gemma_stops = TemplateType::GemmaChat.default_stop_sequences();
+        assert!(gemma_stops.contains(&"<end_of_turn>".to_string()));
     }
 
     #[test]
@@ -636,6 +783,7 @@ mod tests {
         assert!(TemplateType::Instruct.should_add_bos());
         assert!(!TemplateType::Llama3Chat.should_add_bos()); // Has its own BOS
         assert!(!TemplateType::Phi4Chat.should_add_bos()); // Uses im_start/im_end
+        assert!(!TemplateType::GemmaChat.should_add_bos()); // Uses start_of_turn
     }
 
     #[test]
@@ -644,6 +792,7 @@ mod tests {
         assert!(!TemplateType::Instruct.parse_special());
         assert!(TemplateType::Llama3Chat.parse_special()); // LLaMA-3 has special tokens
         assert!(TemplateType::Phi4Chat.parse_special()); // Phi-4 has special tokens
+        assert!(TemplateType::GemmaChat.parse_special()); // Gemma has special tokens
     }
 
     #[test]
@@ -779,6 +928,7 @@ mod property_tests {
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
             Just(TemplateType::Phi4Chat),
+            Just(TemplateType::GemmaChat),
         ]
     }
 
@@ -833,7 +983,7 @@ mod property_tests {
     proptest! {
         #[test]
         fn non_raw_templates_have_stop_sequences(
-            template in prop_oneof![Just(TemplateType::Instruct), Just(TemplateType::Llama3Chat), Just(TemplateType::Phi4Chat)],
+            template in prop_oneof![Just(TemplateType::Instruct), Just(TemplateType::Llama3Chat), Just(TemplateType::Phi4Chat), Just(TemplateType::GemmaChat)],
         ) {
             let stops = template.default_stop_sequences();
             prop_assert!(

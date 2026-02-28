@@ -226,7 +226,14 @@ impl ModelLoader {
     fn is_supported_architecture(&self, architecture: &str) -> bool {
         matches!(
             architecture.to_lowercase().as_str(),
-            "bitnet" | "bitnet-b1.58" | "llama" | "mistral" | "qwen" | "phi"
+            "bitnet"
+                | "bitnet-b1.58"
+                | "llama"
+                | "mistral"
+                | "qwen"
+                | "phi"
+                | "gemma"
+                | "gemma2"
         )
     }
 

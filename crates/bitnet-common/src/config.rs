@@ -69,6 +69,10 @@ impl ModelConfig {
                 self.norm_type = NormType::LayerNorm;
                 self.activation_type = ActivationType::Silu;
             }
+            "gemma" | "gemma2" => {
+                self.norm_type = NormType::RmsNorm;
+                self.activation_type = ActivationType::Gelu;
+            }
             "gpt" | "bert" => {
                 self.norm_type = NormType::LayerNorm;
                 self.activation_type = ActivationType::Gelu;

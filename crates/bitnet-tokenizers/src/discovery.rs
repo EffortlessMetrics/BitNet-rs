@@ -26,6 +26,8 @@ pub struct ModelCompatibilityMatrix {
     pub bitnet_custom: TokenizerDownloadInfo,
     /// Phi-4 with 100K vocabulary - TikToken BPE tokenizer
     pub phi4_100k: TokenizerDownloadInfo,
+    /// Gemma with 256K vocabulary - SentencePiece tokenizer
+    pub gemma_256k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -60,6 +62,12 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "phi4-100k".to_string(),
                 expected_vocab: Some(100352),
+            },
+            gemma_256k: TokenizerDownloadInfo {
+                repo: "google/gemma-2b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "gemma-256k".to_string(),
+                expected_vocab: Some(256000),
             },
         }
     }
