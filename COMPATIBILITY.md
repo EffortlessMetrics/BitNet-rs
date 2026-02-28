@@ -175,9 +175,11 @@ While not breaking compatibility, we guarantee:
 
 **GPU Support:**
 - NVIDIA GPUs with compute capability 6.0+ (Pascal architecture, GTX 10 series and newer)
-- CUDA 11.0+ toolkit for compilation
-- Minimum 4GB VRAM for inference
+- CUDA 12.0+ toolkit for compilation (via `cudarc 0.17.8`); CUDA 11.x supported for runtime
+- Minimum 4GB VRAM for inference (8 GB+ recommended for 2B models)
 - Intel Arc A-series GPUs (A770, A750, A580) via OpenCL (`--features oneapi`); see [Intel GPU Setup](docs/INTEL_GPU_SETUP.md)
+- For the full hardware compatibility matrix, feature support per backend, and driver links see [GPU Compatibility Matrix](docs/GPU_COMPATIBILITY_MATRIX.md)
+- For throughput targets and memory requirements see [GPU Performance Expectations](docs/GPU_PERFORMANCE_EXPECTATIONS.md)
 
 ### Operating System Support
 
@@ -191,6 +193,22 @@ While not breaking compatibility, we guarantee:
 - CentOS/RHEL 8+ with GCC 8.0+
 - macOS 11+ (Big Sur) with Xcode 12+
 - Windows 10/11 with Visual Studio 2019+ or MinGW-w64
+
+### GPU Backend Summary
+
+| Backend | Feature Flag | Status | Hardware |
+|---------|-------------|--------|----------|
+| **CUDA** | `gpu` / `cuda` | ✅ Production | NVIDIA Pascal+ (CC 6.0+) |
+| **OpenCL** | `oneapi` | 🔄 Early | Intel Arc A-series |
+| **ROCm** | `rocm` | 🔮 Planned (v0.3) | AMD RDNA 3 / CDNA |
+| **Vulkan** | `vulkan` | 🔮 Planned | Cross-vendor |
+| **Metal** | — | 🔮 Planned (v0.3) | Apple Silicon |
+
+For detailed hardware tables, feature support per backend, precision mode
+compatibility, and driver links see the
+[GPU Compatibility Matrix](docs/GPU_COMPATIBILITY_MATRIX.md).
+For throughput targets and memory requirements see
+[GPU Performance Expectations](docs/GPU_PERFORMANCE_EXPECTATIONS.md).
 
 ## 🚫 What We DON'T Guarantee
 
