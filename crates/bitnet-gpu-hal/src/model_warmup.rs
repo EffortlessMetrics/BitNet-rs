@@ -102,9 +102,7 @@ impl WarmupSchedule {
     /// Generate a schedule with a single stage.
     #[must_use]
     pub fn single(stage: WarmupStage) -> Self {
-        Self {
-            stages: vec![stage],
-        }
+        Self { stages: vec![stage] }
     }
 
     /// Return the ordered stages.
@@ -149,10 +147,7 @@ pub struct KernelWarmup {
 impl KernelWarmup {
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            compiled_kernels: Vec::new(),
-            compilation_time: Duration::ZERO,
-        }
+        Self { compiled_kernels: Vec::new(), compilation_time: Duration::ZERO }
     }
 
     /// Trigger compilation of the given kernel names.
@@ -170,10 +165,7 @@ impl KernelWarmup {
             stage: WarmupStage::KernelCompilation,
             duration: self.compilation_time,
             success: true,
-            message: format!(
-                "Compiled {} kernel(s)",
-                self.compiled_kernels.len()
-            ),
+            message: format!("Compiled {} kernel(s)", self.compiled_kernels.len()),
         }
     }
 
@@ -209,22 +201,14 @@ pub struct MemoryWarmup {
 impl MemoryWarmup {
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            allocated_bytes: 0,
-            peak_bytes: 0,
-            oom_detected: false,
-        }
+        Self { allocated_bytes: 0, peak_bytes: 0, oom_detected: false }
     }
 
     /// Attempt to allocate `requested_bytes`.
     ///
     /// `available_bytes` simulates the device memory limit. If the request
     /// exceeds the limit, OOM is flagged and the allocation is skipped.
-    pub fn allocate(
-        &mut self,
-        requested_bytes: u64,
-        available_bytes: u64,
-    ) -> StageResult {
+    pub fn allocate(&mut self, requested_bytes: u64, available_bytes: u64) -> StageResult {
         let start = Instant::now();
 
         if requested_bytes > available_bytes {
@@ -249,10 +233,7 @@ impl MemoryWarmup {
             stage: WarmupStage::MemoryAllocation,
             duration: start.elapsed(),
             success: true,
-            message: format!(
-                "Allocated {requested_bytes} bytes (total {})",
-                self.allocated_bytes
-            ),
+            message: format!("Allocated {requested_bytes} bytes (total {})", self.allocated_bytes),
         }
     }
 
@@ -295,9 +276,7 @@ pub struct CacheWarmup {
 impl CacheWarmup {
     #[must_use]
     pub const fn new() -> Self {
-        Self {
-            allocations: Vec::new(),
-        }
+        Self { allocations: Vec::new() }
     }
 
     /// Pre-allocate a KV cache for the given batch size and sequence length.
@@ -311,10 +290,8 @@ impl CacheWarmup {
         bytes_per_token: u64,
     ) -> StageResult {
         let start = Instant::now();
-        let total_bytes =
-            batch_size as u64 * seq_length as u64 * bytes_per_token;
-        self.allocations
-            .push((batch_size, seq_length, total_bytes));
+        let total_bytes = batch_size as u64 * seq_length as u64 * bytes_per_token;
+        self.allocations.push((batch_size, seq_length, total_bytes));
 
         StageResult {
             stage: WarmupStage::KVCachePreallocation,
@@ -509,48 +486,39 @@ pub struct ValidationCheck {
 impl WarmupValidator {
     /// Validate warm-up results against the given criteria.
     #[must_use]
-    pub fn validate(
-        criteria: &ValidationCriteria,
-        metrics: &WarmupMetrics,
-    ) -> ValidationResult {
+    pub fn validate(criteria: &ValidationCriteria, metrics: &WarmupMetrics) -> ValidationResult {
         let mut checks = Vec::new();
 
         // Kernel compilation check
         if criteria.require_all_kernels_compiled {
-            let passed = metrics.kernels_compiled
-                >= criteria.expected_kernel_count;
+            let passed = metrics.kernels_compiled >= criteria.expected_kernel_count;
             checks.push(ValidationCheck {
                 name: "kernels_compiled".to_string(),
                 passed,
                 detail: format!(
                     "compiled={} expected={}",
-                    metrics.kernels_compiled,
-                    criteria.expected_kernel_count
+                    metrics.kernels_compiled, criteria.expected_kernel_count
                 ),
             });
         }
 
         // Memory allocation check
         if criteria.require_memory_allocated {
-            let passed = metrics.memory_allocated_bytes
-                >= criteria.minimum_memory_bytes;
+            let passed = metrics.memory_allocated_bytes >= criteria.minimum_memory_bytes;
             checks.push(ValidationCheck {
                 name: "memory_allocated".to_string(),
                 passed,
                 detail: format!(
                     "allocated={} minimum={}",
-                    metrics.memory_allocated_bytes,
-                    criteria.minimum_memory_bytes
+                    metrics.memory_allocated_bytes, criteria.minimum_memory_bytes
                 ),
             });
         }
 
         // Inference output check
         if criteria.require_inference_output {
-            let has_output = metrics
-                .per_stage_times
-                .iter()
-                .any(|(s, _)| *s == WarmupStage::InferenceRun);
+            let has_output =
+                metrics.per_stage_times.iter().any(|(s, _)| *s == WarmupStage::InferenceRun);
             checks.push(ValidationCheck {
                 name: "inference_output".to_string(),
                 passed: has_output,
@@ -581,12 +549,7 @@ pub struct ProgressReporter {
 impl ProgressReporter {
     #[must_use]
     pub const fn new(total_stages: usize) -> Self {
-        Self {
-            total_stages,
-            completed_stages: 0,
-            stage_times: Vec::new(),
-            start_time: None,
-        }
+        Self { total_stages, completed_stages: 0, stage_times: Vec::new(), start_time: None }
     }
 
     /// Mark the beginning of the warm-up.
@@ -595,11 +558,7 @@ impl ProgressReporter {
     }
 
     /// Record that a stage has completed.
-    pub fn report_stage_complete(
-        &mut self,
-        stage: WarmupStage,
-        duration: Duration,
-    ) {
+    pub fn report_stage_complete(&mut self, stage: WarmupStage, duration: Duration) {
         self.completed_stages += 1;
         self.stage_times.push((stage, duration));
         log::info!(
@@ -630,8 +589,7 @@ impl ProgressReporter {
     /// Elapsed time since [`start`](Self::start) was called.
     #[must_use]
     pub fn elapsed(&self) -> Duration {
-        self.start_time
-            .map_or(Duration::ZERO, |t| t.elapsed())
+        self.start_time.map_or(Duration::ZERO, |t| t.elapsed())
     }
 
     /// Per-stage timing records.
@@ -712,16 +670,10 @@ pub fn run_warmup(config: &WarmupConfig) -> (WarmupMetrics, ValidationResult) {
         match stage {
             WarmupStage::KernelCompilation => {
                 let mut kw = KernelWarmup::new();
-                let default_kernels = [
-                    "matmul_i2s",
-                    "layernorm",
-                    "softmax",
-                    "rope",
-                ];
+                let default_kernels = ["matmul_i2s", "layernorm", "softmax", "rope"];
                 let result = kw.compile_kernels(&default_kernels);
                 kernels_compiled = kw.compiled_kernels().len();
-                reporter
-                    .report_stage_complete(stage, result.duration);
+                reporter.report_stage_complete(stage, result.duration);
                 stage_times.push((stage, result.duration));
             }
             WarmupStage::MemoryAllocation => {
@@ -730,26 +682,21 @@ pub fn run_warmup(config: &WarmupConfig) -> (WarmupMetrics, ValidationResult) {
                 let result = mw.allocate(alloc_bytes, u64::MAX);
                 memory_allocated = mw.allocated_bytes();
                 peak_memory = mw.peak_bytes();
-                reporter
-                    .report_stage_complete(stage, result.duration);
+                reporter.report_stage_complete(stage, result.duration);
                 stage_times.push((stage, result.duration));
             }
             WarmupStage::KVCachePreallocation => {
                 let mut cw = CacheWarmup::new();
-                let results =
-                    cw.preallocate_from_config(config, 128);
-                let dur: Duration =
-                    results.iter().map(|r| r.duration).sum();
+                let results = cw.preallocate_from_config(config, 128);
+                let dur: Duration = results.iter().map(|r| r.duration).sum();
                 memory_allocated += cw.total_allocated_bytes();
                 reporter.report_stage_complete(stage, dur);
                 stage_times.push((stage, dur));
             }
             WarmupStage::InferenceRun => {
                 let mut iw = InferenceWarmup::new();
-                let results =
-                    iw.run_from_config(config, |_bs, _sl| 1);
-                let dur: Duration =
-                    results.iter().map(|r| r.duration).sum();
+                let results = iw.run_from_config(config, |_bs, _sl| 1);
+                let dur: Duration = results.iter().map(|r| r.duration).sum();
                 reporter.report_stage_complete(stage, dur);
                 stage_times.push((stage, dur));
             }
@@ -819,38 +766,17 @@ mod tests {
 
     #[test]
     fn stage_display() {
-        assert_eq!(
-            WarmupStage::KernelCompilation.to_string(),
-            "KernelCompilation"
-        );
-        assert_eq!(
-            WarmupStage::MemoryAllocation.to_string(),
-            "MemoryAllocation"
-        );
-        assert_eq!(
-            WarmupStage::KVCachePreallocation.to_string(),
-            "KVCachePreallocation"
-        );
-        assert_eq!(
-            WarmupStage::InferenceRun.to_string(),
-            "InferenceRun"
-        );
-        assert_eq!(
-            WarmupStage::CUDAGraphCapture.to_string(),
-            "CUDAGraphCapture"
-        );
+        assert_eq!(WarmupStage::KernelCompilation.to_string(), "KernelCompilation");
+        assert_eq!(WarmupStage::MemoryAllocation.to_string(), "MemoryAllocation");
+        assert_eq!(WarmupStage::KVCachePreallocation.to_string(), "KVCachePreallocation");
+        assert_eq!(WarmupStage::InferenceRun.to_string(), "InferenceRun");
+        assert_eq!(WarmupStage::CUDAGraphCapture.to_string(), "CUDAGraphCapture");
     }
 
     #[test]
     fn stage_equality() {
-        assert_eq!(
-            WarmupStage::KernelCompilation,
-            WarmupStage::KernelCompilation
-        );
-        assert_ne!(
-            WarmupStage::KernelCompilation,
-            WarmupStage::InferenceRun
-        );
+        assert_eq!(WarmupStage::KernelCompilation, WarmupStage::KernelCompilation);
+        assert_ne!(WarmupStage::KernelCompilation, WarmupStage::InferenceRun);
     }
 
     #[test]
@@ -872,16 +798,10 @@ mod tests {
 
     #[test]
     fn schedule_with_cuda_has_five_stages() {
-        let cfg = WarmupConfig {
-            include_cuda_graph_capture: true,
-            ..Default::default()
-        };
+        let cfg = WarmupConfig { include_cuda_graph_capture: true, ..Default::default() };
         let schedule = WarmupSchedule::generate(&cfg);
         assert_eq!(schedule.len(), 5);
-        assert_eq!(
-            schedule.stages().last().copied(),
-            Some(WarmupStage::CUDAGraphCapture)
-        );
+        assert_eq!(schedule.stages().last().copied(), Some(WarmupStage::CUDAGraphCapture));
     }
 
     #[test]
@@ -1155,9 +1075,7 @@ mod tests {
     fn validator_passes_when_all_met() {
         let metrics = WarmupMetrics {
             total_warmup_time_ms: 100,
-            per_stage_times: vec![
-                (WarmupStage::InferenceRun, Duration::from_millis(50)),
-            ],
+            per_stage_times: vec![(WarmupStage::InferenceRun, Duration::from_millis(50))],
             kernels_compiled: 4,
             memory_allocated_bytes: 1024,
             peak_memory_during_warmup: 1024,
@@ -1176,17 +1094,12 @@ mod tests {
     fn validator_fails_insufficient_kernels() {
         let metrics = WarmupMetrics {
             total_warmup_time_ms: 100,
-            per_stage_times: vec![
-                (WarmupStage::InferenceRun, Duration::from_millis(50)),
-            ],
+            per_stage_times: vec![(WarmupStage::InferenceRun, Duration::from_millis(50))],
             kernels_compiled: 2,
             memory_allocated_bytes: 1024,
             peak_memory_during_warmup: 1024,
         };
-        let criteria = ValidationCriteria {
-            expected_kernel_count: 4,
-            ..Default::default()
-        };
+        let criteria = ValidationCriteria { expected_kernel_count: 4, ..Default::default() };
         let result = WarmupValidator::validate(&criteria, &metrics);
         assert!(!result.passed);
     }
@@ -1195,9 +1108,7 @@ mod tests {
     fn validator_fails_insufficient_memory() {
         let metrics = WarmupMetrics {
             total_warmup_time_ms: 100,
-            per_stage_times: vec![
-                (WarmupStage::InferenceRun, Duration::from_millis(50)),
-            ],
+            per_stage_times: vec![(WarmupStage::InferenceRun, Duration::from_millis(50))],
             kernels_compiled: 4,
             memory_allocated_bytes: 100,
             peak_memory_during_warmup: 100,
@@ -1220,10 +1131,7 @@ mod tests {
             memory_allocated_bytes: 1024,
             peak_memory_during_warmup: 1024,
         };
-        let criteria = ValidationCriteria {
-            expected_kernel_count: 4,
-            ..Default::default()
-        };
+        let criteria = ValidationCriteria { expected_kernel_count: 4, ..Default::default() };
         let result = WarmupValidator::validate(&criteria, &metrics);
         assert!(!result.passed);
     }
@@ -1276,15 +1184,9 @@ mod tests {
     fn progress_reports_percentage() {
         let mut pr = ProgressReporter::new(4);
         pr.start();
-        pr.report_stage_complete(
-            WarmupStage::KernelCompilation,
-            Duration::from_millis(10),
-        );
+        pr.report_stage_complete(WarmupStage::KernelCompilation, Duration::from_millis(10));
         assert!((pr.progress_percent() - 25.0).abs() < f64::EPSILON);
-        pr.report_stage_complete(
-            WarmupStage::MemoryAllocation,
-            Duration::from_millis(10),
-        );
+        pr.report_stage_complete(WarmupStage::MemoryAllocation, Duration::from_millis(10));
         assert!((pr.progress_percent() - 50.0).abs() < f64::EPSILON);
     }
 
@@ -1292,14 +1194,8 @@ mod tests {
     fn progress_100_when_all_done() {
         let mut pr = ProgressReporter::new(2);
         pr.start();
-        pr.report_stage_complete(
-            WarmupStage::KernelCompilation,
-            Duration::from_millis(5),
-        );
-        pr.report_stage_complete(
-            WarmupStage::InferenceRun,
-            Duration::from_millis(5),
-        );
+        pr.report_stage_complete(WarmupStage::KernelCompilation, Duration::from_millis(5));
+        pr.report_stage_complete(WarmupStage::InferenceRun, Duration::from_millis(5));
         assert!((pr.progress_percent() - 100.0).abs() < f64::EPSILON);
     }
 
@@ -1327,19 +1223,10 @@ mod tests {
     fn progress_stage_times_recorded() {
         let mut pr = ProgressReporter::new(2);
         pr.start();
-        pr.report_stage_complete(
-            WarmupStage::KernelCompilation,
-            Duration::from_millis(42),
-        );
+        pr.report_stage_complete(WarmupStage::KernelCompilation, Duration::from_millis(42));
         assert_eq!(pr.stage_times().len(), 1);
-        assert_eq!(
-            pr.stage_times()[0].0,
-            WarmupStage::KernelCompilation
-        );
-        assert_eq!(
-            pr.stage_times()[0].1,
-            Duration::from_millis(42)
-        );
+        assert_eq!(pr.stage_times()[0].0, WarmupStage::KernelCompilation);
+        assert_eq!(pr.stage_times()[0].1, Duration::from_millis(42));
     }
 
     // ── WarmupMetrics tests ─────────────────────────────────────────────
@@ -1384,10 +1271,7 @@ mod tests {
 
     #[test]
     fn run_warmup_with_cuda_graph() {
-        let cfg = WarmupConfig {
-            include_cuda_graph_capture: true,
-            ..Default::default()
-        };
+        let cfg = WarmupConfig { include_cuda_graph_capture: true, ..Default::default() };
         let (metrics, validation) = run_warmup(&cfg);
         assert!(validation.passed);
         assert_eq!(metrics.per_stage_times.len(), 5);
@@ -1473,16 +1357,8 @@ mod tests {
         let vr = ValidationResult {
             passed: true,
             checks: vec![
-                ValidationCheck {
-                    name: "a".to_string(),
-                    passed: true,
-                    detail: "ok".to_string(),
-                },
-                ValidationCheck {
-                    name: "b".to_string(),
-                    passed: true,
-                    detail: "ok".to_string(),
-                },
+                ValidationCheck { name: "a".to_string(), passed: true, detail: "ok".to_string() },
+                ValidationCheck { name: "b".to_string(), passed: true, detail: "ok".to_string() },
             ],
         };
         assert!(vr.passed);
@@ -1493,10 +1369,7 @@ mod tests {
     fn cache_warmup_large_batch_seq_product() {
         let mut cw = CacheWarmup::new();
         cw.preallocate(16, 2048, 256);
-        assert_eq!(
-            cw.total_allocated_bytes(),
-            16_u64 * 2048 * 256
-        );
+        assert_eq!(cw.total_allocated_bytes(), 16_u64 * 2048 * 256);
     }
 
     #[test]
