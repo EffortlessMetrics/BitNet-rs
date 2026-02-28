@@ -109,7 +109,7 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          cargo bench --no-default-features --features cpu -- --output-format bencher \
+          cargo bench --locked --no-default-features --features cpu -- --output-format bencher \
             | tee bench-output.txt
 
       - name: Upload benchmark results
