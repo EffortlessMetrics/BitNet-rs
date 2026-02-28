@@ -735,7 +735,7 @@ impl InferenceCommand {
                 info!("Using CPU device");
                 Ok(Device::Cpu)
             }
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => {
+            "cuda" | "gpu" | "vulkan" => {
                 #[cfg(feature = "gpu")]
                 {
                     if candle_core::utils::cuda_is_available() {
@@ -748,6 +748,20 @@ impl InferenceCommand {
                 #[cfg(not(feature = "gpu"))]
                 {
                     anyhow::bail!("Binary not built with GPU support");
+                }
+            }
+            "opencl" | "ocl" | "oneapi" | "intel-gpu" => {
+                #[cfg(feature = "oneapi")]
+                {
+                    info!("Using Intel GPU via OpenCL/oneAPI kernel backend");
+                    Ok(Device::Cpu)
+                }
+                #[cfg(not(feature = "oneapi"))]
+                {
+                    anyhow::bail!(
+                        "OpenCL/oneAPI requested but binary not built with oneapi feature. \
+                         Rebuild with: cargo build --features oneapi"
+                    );
                 }
             }
             "auto" => {
@@ -768,7 +782,7 @@ impl InferenceCommand {
                 }
             }
             _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, oneapi, intel-gpu, auto",
                 device_str
             ),
         }

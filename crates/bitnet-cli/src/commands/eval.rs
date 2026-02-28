@@ -378,8 +378,24 @@ impl EvalCommand {
         match self.device.as_str() {
             "cpu" => Ok(Device::Cpu),
             "npu" | "metal" => Device::new_metal(0).context("NPU/Metal requested but unavailable"),
-            "cuda" | "gpu" | "vulkan" | "opencl" | "ocl" => Device::cuda_if_available(0)
-                .context("GPU backend not available (OpenCL/Vulkan aliases currently map to CUDA)"),
+            "cuda" | "gpu" | "vulkan" => Device::cuda_if_available(0)
+                .context("GPU backend not available (Vulkan alias currently maps to CUDA)"),
+            "opencl" | "ocl" | "oneapi" | "intel-gpu" => {
+                #[cfg(feature = "oneapi")]
+                {
+                    tracing::info!(
+                        "OpenCL/oneAPI requested — candle device is CPU; kernel dispatch via OneApi backend"
+                    );
+                    Ok(Device::Cpu)
+                }
+                #[cfg(not(feature = "oneapi"))]
+                {
+                    anyhow::bail!(
+                        "OpenCL/oneAPI requested but binary not built with oneapi feature. \
+                         Rebuild with: cargo build --features oneapi"
+                    );
+                }
+            }
             "auto" => {
                 if let Ok(device) = Device::cuda_if_available(0) {
                     Ok(device)
@@ -390,7 +406,7 @@ impl EvalCommand {
                 }
             }
             _ => anyhow::bail!(
-                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, metal, npu, auto",
+                "Invalid device: {}. Must be one of: cpu, cuda, gpu, vulkan, opencl, ocl, oneapi, intel-gpu, metal, npu, auto",
                 self.device
             ),
         }

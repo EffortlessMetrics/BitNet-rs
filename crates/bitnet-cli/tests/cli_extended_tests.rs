@@ -421,10 +421,25 @@ mod cli_config_validation {
     /// Valid device strings all pass.
     #[test]
     fn test_cli_config_all_valid_devices() {
-        for device in &["cpu", "cuda", "gpu", "vulkan", "opencl", "ocl", "auto"] {
+        for device in &[
+            "cpu", "cuda", "gpu", "vulkan", "opencl", "ocl", "oneapi", "intel-gpu", "auto",
+        ] {
             let mut cfg = CliConfig::default();
             cfg.default_device = device.to_string();
             assert!(cfg.validate().is_ok(), "device={device} must be valid");
+        }
+    }
+
+    /// OpenCL / oneAPI / intel-gpu aliases all pass config validation.
+    #[test]
+    fn test_cli_config_opencl_aliases_valid() {
+        for alias in &["opencl", "oneapi", "intel-gpu"] {
+            let mut cfg = CliConfig::default();
+            cfg.default_device = alias.to_string();
+            assert!(
+                cfg.validate().is_ok(),
+                "device alias '{alias}' must pass validation"
+            );
         }
     }
 
