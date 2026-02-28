@@ -12,6 +12,9 @@ pub const QUANTIZE_I2S_SRC: &str = include_str!("quantize_i2s.cl");
 /// Element-wise operation kernels source.
 pub const ELEMENTWISE_SRC: &str = include_str!("elementwise.cl");
 
+/// Tiled I2S matrix multiplication kernel source (local-memory + float4).
+pub const MATMUL_I2S_TILED_SRC: &str = include_str!("matmul_i2s_tiled.cl");
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -21,6 +24,10 @@ mod tests {
         assert!(!MATMUL_I2S_SRC.is_empty(), "matmul_i2s.cl should not be empty");
         assert!(!QUANTIZE_I2S_SRC.is_empty(), "quantize_i2s.cl should not be empty");
         assert!(!ELEMENTWISE_SRC.is_empty(), "elementwise.cl should not be empty");
+        assert!(
+            !MATMUL_I2S_TILED_SRC.is_empty(),
+            "matmul_i2s_tiled.cl should not be empty"
+        );
     }
 
     #[test]
@@ -28,6 +35,10 @@ mod tests {
         assert!(MATMUL_I2S_SRC.contains("__kernel"), "matmul_i2s.cl missing __kernel");
         assert!(QUANTIZE_I2S_SRC.contains("__kernel"), "quantize_i2s.cl missing __kernel");
         assert!(ELEMENTWISE_SRC.contains("__kernel"), "elementwise.cl missing __kernel");
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("__kernel"),
+            "matmul_i2s_tiled.cl missing __kernel"
+        );
     }
 
     #[test]
@@ -46,5 +57,33 @@ mod tests {
         assert!(ELEMENTWISE_SRC.contains("rms_norm"), "missing rms_norm kernel");
         assert!(ELEMENTWISE_SRC.contains("silu"), "missing silu kernel");
         assert!(ELEMENTWISE_SRC.contains("scale"), "missing scale kernel");
+    }
+
+    #[test]
+    fn tiled_matmul_has_correct_function_names() {
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("matmul_i2s_tiled"),
+            "missing matmul_i2s_tiled kernel"
+        );
+    }
+
+    #[test]
+    fn tiled_matmul_uses_local_memory() {
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("__local"),
+            "tiled kernel should use local memory"
+        );
+    }
+
+    #[test]
+    fn tiled_matmul_uses_work_groups() {
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("get_local_id"),
+            "tiled kernel should use work-group local IDs"
+        );
+        assert!(
+            MATMUL_I2S_TILED_SRC.contains("get_group_id"),
+            "tiled kernel should use group IDs"
+        );
     }
 }

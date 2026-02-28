@@ -83,6 +83,10 @@ strict = []  # Strict mode for mock elimination validation
 name = "kernel_benchmarks"
 harness = false
 
+[[bench]]
+name = "opencl_matmul_bench"
+harness = false
+
 [[test]]
 name = "kernel_tests"
 path = "tests/kernel_tests.rs"
