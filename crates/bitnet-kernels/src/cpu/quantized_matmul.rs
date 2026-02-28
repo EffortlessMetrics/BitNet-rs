@@ -80,12 +80,13 @@ pub fn i2s_matmul_f32(
                 let blk_end = (blk_start + block_size).min(k);
                 let scale = scales[col * num_blocks_k + blk];
 
-                for idx in blk_start..blk_end {
+                for (rel_idx, &a_val) in a_row[blk_start..blk_end].iter().enumerate() {
+                    let idx = blk_start + rel_idx;
                     let byte_idx = col * packed_k + idx / 4;
                     let bit_off = (idx % 4) * 2;
                     let bits = (weights_packed[byte_idx] >> bit_off) & 0x03;
                     let w = decode_i2s(bits) as f32 * scale;
-                    acc += a_row[idx] * w;
+                    acc += a_val * w;
                 }
             }
             out[row * n + col] = acc;
