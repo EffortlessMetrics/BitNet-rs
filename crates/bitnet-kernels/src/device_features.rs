@@ -212,6 +212,8 @@ pub fn current_kernel_capabilities() -> bitnet_common::kernel_registry::KernelCa
         cuda_runtime: gpu_available_runtime(),
         oneapi_compiled: cfg!(feature = "oneapi"),
         oneapi_runtime: oneapi_available_runtime(),
+        vulkan_compiled: cfg!(feature = "vulkan"),
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: detect_simd_level(),
     }
