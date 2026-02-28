@@ -13,7 +13,9 @@ pub mod webgpu_backend;
 pub mod async_runtime;
 pub mod backend_selector;
 pub mod bench_harness;
+pub mod deployment_manager;
 pub mod device_abstraction;
+pub mod embedding_layer;
 pub mod error_taxonomy;
 pub mod hal_traits;
 
@@ -43,7 +45,6 @@ pub mod tensor_serde;
 pub mod attention_mechanism;
 pub mod attention_patterns;
 pub mod cross_attention;
-pub mod embedding_layer;
 pub mod ffn_block;
 pub mod rope_kernels;
 pub mod transformer_block;
@@ -136,7 +137,6 @@ pub mod streaming_aggregator;
 // Parallel communication primitives for distributed GPU inference:
 // all-reduce, all-gather, reduce-scatter, broadcast, ring/tree
 // topologies, double-buffered comm, and profiling.
-pub mod deployment_manager;
 // Structured error taxonomy for GPU HAL with rich context,
 // recovery strategies, and structured reporting.
 pub mod generation;
