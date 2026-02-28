@@ -154,6 +154,7 @@ impl TemplateConfig {
                     sys, user_prompt
                 )
             }
+            _ => user_prompt.to_string(),
         }
     }
 }
