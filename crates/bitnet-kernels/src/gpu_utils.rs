@@ -121,9 +121,10 @@ pub fn get_gpu_info() -> GpuInfo {
 }
 
 fn detect_real_gpu_info() -> GpuInfo {
-let metal = cfg!(target_os = "macos") && probe_command_output("system_profiler", &["SPDisplaysDataType", "-json"])
-        .map(|out| out.contains("Metal") || out.contains("Apple"))
-        .unwrap_or(false);
+    let metal = cfg!(target_os = "macos")
+        && probe_command_output("system_profiler", &["SPDisplaysDataType", "-json"])
+            .map(|out| out.contains("Metal") || out.contains("Apple"))
+            .unwrap_or(false);
 
     let cuda = probe_command("nvidia-smi", &["--query-gpu=gpu_name", "--format=csv,noheader"]);
 
