@@ -22,7 +22,7 @@ proptest = "1"
 
 [lints]
 workspace = true
-description = "Vulkan compute kernels for BitNet-rs inference"
+
 [features]
 default = []
 precompiled-spirv = []

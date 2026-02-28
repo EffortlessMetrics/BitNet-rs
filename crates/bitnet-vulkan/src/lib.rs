@@ -11,6 +11,7 @@
 //! - [`pipeline`] - Compute pipeline creation from SPIR-V
 //! - [`buffer`] - GPU buffer management (staging + device-local)
 //! - [`command`] - Command buffer recording and submission
+//! - [`kernels`] - Embedded GLSL 450 compute shader sources
 //! - [`error`] - Error types
 
 pub mod buffer;
@@ -18,6 +19,7 @@ pub mod command;
 pub mod device;
 pub mod error;
 pub mod instance;
+pub mod kernels;
 pub mod pipeline;
 
 pub use buffer::{
@@ -45,6 +47,16 @@ pub struct VulkanBackend {
 
 impl VulkanBackend {
     /// Create a new backend with default configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use bitnet_vulkan::VulkanBackend;
+    ///
+    /// let mut backend = VulkanBackend::new();
+    /// assert!(!backend.is_initialised());
+    /// // backend.initialise() requires a Vulkan-capable GPU.
+    /// ```
     pub fn new() -> Self {
         Self {
             config: InstanceConfig::default(),
@@ -135,7 +147,3 @@ mod tests {
         assert!(backend.device_selector().require_compute_queue);
     }
 }
-//! Provides Vulkan compute shaders (GLSL 450) for GPU-accelerated operations.
-//! Shaders are embedded at compile time; optional pre-compiled SPIR-V is
-//! available with the `precompiled-spirv` feature when `glslc` is installed.
-pub mod kernels;

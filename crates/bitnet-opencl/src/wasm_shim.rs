@@ -60,6 +60,18 @@ pub struct KernelSignature {
 ///
 /// This is a lightweight heuristic parser — not a full C99 front-end. It
 /// handles the common patterns emitted by bitnet-rs kernel generators.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_opencl::parse_kernel_signatures;
+///
+/// let source = "__kernel void add(__global float* a, __global float* b) {}";
+/// let sigs = parse_kernel_signatures(source);
+/// assert_eq!(sigs.len(), 1);
+/// assert_eq!(sigs[0].name, "add");
+/// assert_eq!(sigs[0].args.len(), 2);
+/// ```
 pub fn parse_kernel_signatures(source: &str) -> Vec<KernelSignature> {
     let mut signatures = Vec::new();
 
@@ -287,6 +299,19 @@ impl std::fmt::Display for KernelValidationError {
 impl std::error::Error for KernelValidationError {}
 
 /// Validate kernel source: checks for common issues.
+///
+/// Returns the parsed signatures on success, or a [`KernelValidationError`]
+/// if the source has no kernels or contains duplicate kernel names.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_opencl::wasm_shim::validate_kernel_source;
+///
+/// let source = "__kernel void relu(__global float* data, const int n) {}";
+/// let sigs = validate_kernel_source(source).unwrap();
+/// assert_eq!(sigs[0].name, "relu");
+/// ```
 pub fn validate_kernel_source(source: &str) -> Result<Vec<KernelSignature>, KernelValidationError> {
     let sigs = parse_kernel_signatures(source);
     if sigs.is_empty() {
@@ -352,6 +377,17 @@ impl std::error::Error for MockError {}
 
 impl MockOpenClContext {
     /// Create a new empty mock context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_opencl::MockOpenClContext;
+    ///
+    /// let mut ctx = MockOpenClContext::new();
+    /// let source = "__kernel void scale(__global float* data, const float factor) {}";
+    /// ctx.compile_program("math", source).unwrap();
+    /// assert_eq!(ctx.kernel_names("math").unwrap(), vec!["scale"]);
+    /// ```
     pub fn new() -> Self {
         Self { programs: HashMap::new(), kernel_args: HashMap::new() }
     }

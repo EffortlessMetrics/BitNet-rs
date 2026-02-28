@@ -13,6 +13,23 @@ use std::ptr::NonNull;
 // ---------------------------------------------------------------------------
 
 /// Lightweight bitflags implementation (no external dependency needed).
+///
+/// Represents OpenCL `CL_DEVICE_SVM_CAPABILITIES` bitfield values.
+/// Use the associated constants to test individual capabilities.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_opencl::usm::SvmCapabilities;
+///
+/// let caps = SvmCapabilities::from_raw(
+///     SvmCapabilities::COARSE_GRAIN_BUFFER.bits()
+///         | SvmCapabilities::FINE_GRAIN_BUFFER.bits(),
+/// );
+/// assert!(caps.supports_usm());
+/// assert!(caps.supports_zero_copy());
+/// assert!(!caps.contains(SvmCapabilities::ATOMICS));
+/// ```
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct SvmCapabilities(u64);
 
