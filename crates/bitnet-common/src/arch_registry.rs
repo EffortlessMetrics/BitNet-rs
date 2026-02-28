@@ -368,3 +368,82 @@ mod tests {
         assert!(ArchitectureRegistry::lookup("phi4").is_none()); // no dash
     }
 }
+
+#[cfg(test)]
+mod property_tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    // Arbitrary strings never panic on lookup
+    proptest! {
+        #[test]
+        fn lookup_never_panics(s in "\\PC{0,200}") {
+            let _ = ArchitectureRegistry::lookup(&s);
+            let _ = ArchitectureRegistry::is_known(&s);
+        }
+    }
+
+    // All known architectures always return Some on lookup
+    proptest! {
+        #[test]
+        fn known_archs_always_found(
+            idx in 0usize..ArchitectureRegistry::known_architectures().len()
+        ) {
+            let arch = ArchitectureRegistry::known_architectures()[idx];
+            prop_assert!(
+                ArchitectureRegistry::lookup(arch).is_some(),
+                "known arch '{}' returned None on lookup",
+                arch
+            );
+            prop_assert!(
+                ArchitectureRegistry::is_known(arch),
+                "known arch '{}' returned false on is_known",
+                arch
+            );
+        }
+    }
+
+    // Case-insensitive: uppercase version of a known arch should also match
+    proptest! {
+        #[test]
+        fn case_insensitive_lookup(
+            idx in 0usize..ArchitectureRegistry::known_architectures().len()
+        ) {
+            let arch = ArchitectureRegistry::known_architectures()[idx];
+            let upper = arch.to_uppercase();
+            prop_assert!(
+                ArchitectureRegistry::lookup(&upper).is_some(),
+                "uppercase '{}' of arch '{}' not found",
+                upper,
+                arch
+            );
+        }
+    }
+
+    // Random ASCII strings that don't match any known prefix should return None
+    proptest! {
+        #[test]
+        fn random_ascii_mostly_none(s in "[!-/:-@\\[-`{-~]{1,50}") {
+            // Strings of only punctuation should never match an architecture
+            prop_assert!(
+                ArchitectureRegistry::lookup(&s).is_none(),
+                "punctuation-only '{}' should not match",
+                s
+            );
+        }
+    }
+
+    // lookup and is_known must agree
+    proptest! {
+        #[test]
+        fn lookup_and_is_known_agree(s in "\\PC{0,100}") {
+            let found = ArchitectureRegistry::lookup(&s).is_some();
+            let known = ArchitectureRegistry::is_known(&s);
+            prop_assert_eq!(
+                found, known,
+                "lookup().is_some() and is_known() disagree for '{}'",
+                s
+            );
+        }
+    }
+}

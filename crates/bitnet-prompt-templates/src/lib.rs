@@ -1207,6 +1207,76 @@ impl TemplateType {
 
         Ok(out)
     }
+
+    /// Validate that template output meets basic quality constraints.
+    ///
+    /// Checks:
+    /// - Output is non-empty
+    /// - Output contains the user text (unless Raw with empty input)
+    /// - Stop sequences don't appear in the middle of the output
+    pub fn validate_output(&self, output: &str, user_text: &str) -> TemplateValidation {
+        let mut warnings = Vec::new();
+
+        if output.is_empty() {
+            warnings.push("Template produced empty output".to_string());
+        }
+
+        if !user_text.is_empty() && !output.contains(user_text) {
+            warnings.push(format!(
+                "Output does not contain user text: {:?}",
+                &user_text[..user_text.len().min(50)]
+            ));
+        }
+
+        // Check if any stop sequence appears in the middle (not at the end)
+        for stop in self.default_stop_sequences() {
+            if let Some(pos) = output.find(&stop) {
+                if pos + stop.len() < output.len() {
+                    warnings.push(format!(
+                        "Stop sequence {:?} found at position {} (not at end)",
+                        stop, pos
+                    ));
+                }
+            }
+        }
+
+        TemplateValidation {
+            is_valid: warnings.is_empty(),
+            warnings,
+        }
+    }
+
+    /// Returns a human-readable summary of this template type's configuration.
+    pub fn info(&self) -> TemplateInfo {
+        TemplateInfo {
+            name: self.to_string(),
+            stop_sequences: self.default_stop_sequences(),
+            adds_bos: self.should_add_bos(),
+            parses_special: self.parse_special(),
+        }
+    }
+}
+
+/// Validation result for template output.
+#[derive(Debug, Clone)]
+pub struct TemplateValidation {
+    /// Whether the output passes all checks.
+    pub is_valid: bool,
+    /// List of warnings (empty if valid).
+    pub warnings: Vec<String>,
+}
+
+/// Summary information about a template type.
+#[derive(Debug, Clone)]
+pub struct TemplateInfo {
+    /// Display name of the template.
+    pub name: String,
+    /// Default stop sequences.
+    pub stop_sequences: Vec<String>,
+    /// Whether BOS token should be added.
+    pub adds_bos: bool,
+    /// Whether special tokens should be parsed.
+    pub parses_special: bool,
 }
 
 /// Prompt template builder with history support
