@@ -5,16 +5,37 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- `feat(gpu): add initial ROCm feature wiring and build/link support` — ROCm (AMD GPU) backend skeleton with feature gate, build-system integration, and link support for HIP runtime (#1014)
+- `feat(gpu): add initial support for Metal backend and detection` — Metal GPU backend with runtime detection for macOS/Apple Silicon; capability wired into DeviceProbe (#1021)
+- `feat(kernels): wire QK256 dispatch to canonical AVX2/scalar path` — QK256 GEMV dispatch now routes through the canonical AVX2/scalar runtime path; AVX2 CI coverage added (#1018)
+- `feat(transformer): add strict LayerNorm bias enforcement toggle` — New toggle to enforce or reject LayerNorm bias tensors during model load for stricter validation (#1013)
+- `feat(npu): add initial NPU backend scaffolding for kernels, inference, and CLI` — NPU backend skeleton wired across kernels, inference engine, and CLI device selection (#1008)
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
+- `chore: prepare the workspace for crates.io release` — Workspace metadata, manifests, and dependency versions updated for crates.io publishing readiness (#1028)
+- `chore: prepare v0.2.0 release` — Version bumped to 0.2.0; release notes consolidated (#1006)
 - `ci: expand nightly fuzz schedule to all 34 fuzz targets` — Nightly CI fuzz schedule now covers all available fuzz targets (up from 7); timeboxed 5-minute runs per target (#1004)
 - `docs: update backend roadmap and architecture docs for v0.2` — Updated dual-backend roadmap and architecture documentation for post-v0.2 state (#1001)
 
 ### Fixed
+- `fix: handle .contiguous() panics on block-quantized tensors during transpose` — Prevents panics when calling `.contiguous()` on block-quantized tensors that require transpose (#1048)
+- `fix: input validation falsely rejecting CRLF sequences` — Input validation no longer rejects valid payloads containing CRLF (`\r\n`) line endings (#1030)
+- `fix: improve Model Download System` — Model download reliability improvements including better error handling, retry logic, and progress reporting (#1027)
 - `fix(config): accept 'npu' as valid device identifier in CLI and server` — NPU device identifier (`npu`) now accepted as a valid device string in CLI and server config (#1002)
 
+### Performance
+- `perf: optimize softmax_in_place for sparse distributions` — Faster softmax computation for sparse logit distributions by skipping negligible values (#1031)
+
+### Testing
+- `test: reduce ignored test count (wave 7) — enable unblocked tests` — Wave 7 reduction of `#[ignore]` tests; newly unblocked tests converted to active (#1025)
+- `test(bitnet-device-probe): add property tests for new backend capabilities` — Property tests covering ROCm, Metal, Vulkan, NPU, and oneAPI backend capability invariants (#1003)
+
 ### Documentation
+- `docs: clarify BitNet.cpp vs llama.cpp cross-validation relationship` — Clarified the distinct roles of BitNet.cpp and llama.cpp in the dual-backend cross-validation architecture (#1026)
+- `docs: add general LLM production readiness plan for BitNet-rs` — Production readiness roadmap covering reliability, scalability, and deployment considerations (#1012)
+- `docs: add macOS 26 Apple Silicon integration roadmap` — Roadmap for macOS 26 integration with Apple Silicon GPU/NPU acceleration (#1007)
+- `docs: add Apple Silicon GPU/NPU backend roadmap` — Detailed backend roadmap for Metal GPU and Core ML NPU acceleration on Apple Silicon (#1005)
 - `docs: add canonical CUDA GPU setup guide` — Comprehensive CUDA GPU setup guide with corrected build command examples and environment configuration (#998)
 
 ## [0.2.0] - 2026-02-27
