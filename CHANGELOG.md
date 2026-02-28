@@ -5,6 +5,17 @@ All notable changes to bitnet-rs will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **CHANGELOG wave 59** (#1421): Documents PRs #1409–#1413
+- **Sequence parallelism** (#1422): `SequenceDistributor` with boundary handling, all-gather/reduce-scatter, transformer block simulation — 71 tests
+- **Communication overlap scheduler** (#1423): `OverlapPlanner` with pipeline bubble analysis, bandwidth estimation (PCIe/NVLink/IB/Ethernet), stream management — 80 tests
+- **Watermarking** (#1424): Kirchenbauer-style green/red partitioning, logit biasing, z-score detection, distortion-free variant — 62 tests
+- **Gradient accumulation** (#1428): `GradientBuffer` with mixed-precision accumulation, norm/value clipping, distributed all-reduce, variable scheduling — 66 tests
+- **Pipeline parallelism** (#1429): GPipe/1F1B/Interleaved schedules, bubble fraction analysis, balanced stage partitioning — 93 tests
+- **NUMA allocator** (#1430): `NumaTopology` with GPU affinity, pinned memory pools, locality-aware allocation, transfer optimization — 73 tests
+- **Model migration** (#1431): `MigrationPlanner` with BFS path finding, weight transforms (rename/reshape/cast), rollback support — 76 tests
+- **Activation recomputation** (#1432): `CheckpointPlanner` with DP knapsack, selective storage, dependency-aware recomputation — 70 tests
+- **CHANGELOG wave 60** (#1433): Documents PRs #1416–#1425
+- **Expert parallelism** (#1434): All-to-all dispatch/combine, token permutation, capacity management, load balance loss — 73 tests
 - **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
 - **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
 - **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
