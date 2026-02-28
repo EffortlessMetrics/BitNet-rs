@@ -3,6 +3,7 @@
 | ADR | Title | Status |
 |-----|-------|--------|
 | [0001](./0001-configuration-layering.md) | Configuration layering and clamp location | Accepted |
+| [0002](./0002-gpu-backend-strategy.md) | GPU Backend Strategy | Accepted |
 | [001](./ADR-001-opencl-initial-backend.md) | Use OpenCL as initial Intel GPU backend | Accepted |
 | [002](./ADR-002-microcrate-per-backend.md) | One microcrate per GPU backend | Accepted |
 | [003](./ADR-003-gpu-hal-abstraction.md) | GPU Hardware Abstraction Layer (HAL) traits | Accepted |
