@@ -406,6 +406,7 @@ mod tests {
                 .unwrap(),
             ),
             start_time: std::time::Instant::now(),
+            gpu_device_config: None,
         };
 
         let request = StreamingRequest {
