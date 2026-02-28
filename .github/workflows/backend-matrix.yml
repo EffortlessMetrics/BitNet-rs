@@ -1,0 +1,206 @@
+name: Backend Feature Matrix
+
+on:
+  pull_request:
+    paths:
+      - "crates/bitnet-kernels/**"
+      - "crates/bitnet-device-probe/**"
+      - "crates/bitnet-vulkan/**"
+      - "crates/bitnet-opencl/**"
+      - "crates/bitnet-webgpu/**"
+      - "crates/bitnet-rocm/**"
+      - "crates/bitnet-level-zero/**"
+      - "crates/bitnet-common/**"
+      - "crates/bitnet-inference/**"
+      - "crates/bitnet-quantization/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/backend-matrix.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend × profile compile matrix
+  # GPU features are compile-only (no hardware in CI).
+  # ---------------------------------------------------------------------------
+  backend-matrix:
+    name: "${{ matrix.backend }} / ${{ matrix.profile }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        backend:
+          - cpu
+          - oneapi
+          - vulkan
+        profile:
+          - debug
+          - release
+        include:
+          # cpu — fully testable on CI runners
+          - backend: cpu
+            features: "cpu"
+            allow_failure: false
+          # oneapi — compile-only (no OpenCL runtime in CI)
+          - backend: oneapi
+            features: "oneapi"
+            allow_failure: true
+          # vulkan — compile-only (no Vulkan driver in CI)
+          - backend: vulkan
+            features: "vulkan"
+            allow_failure: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: backend-${{ matrix.backend }}-${{ matrix.profile }}
+
+      - name: "Compile check: ${{ matrix.backend }} (${{ matrix.profile }})"
+        continue-on-error: ${{ matrix.allow_failure }}
+        run: |
+          FLAGS="--no-default-features --features ${{ matrix.features }}"
+          if [ "${{ matrix.profile }}" = "release" ]; then
+            FLAGS="$FLAGS --release"
+          fi
+          cargo check --workspace --locked $FLAGS
+
+  # ---------------------------------------------------------------------------
+  # Feature-flag conflict detection
+  # Verify that mutually-exclusive or problematic feature combos are caught.
+  # ---------------------------------------------------------------------------
+  conflict-detection:
+    name: "conflict: ${{ matrix.label }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # cpu + each GPU backend should compile cleanly
+          - label: "cpu+oneapi"
+            features: "cpu,oneapi"
+            expect: success
+          - label: "cpu+vulkan"
+            features: "cpu,vulkan"
+            expect: success
+          # dual GPU backends — compile-only, verify no link conflicts
+          - label: "oneapi+vulkan"
+            features: "oneapi,vulkan"
+            expect: success
+          # triple combo
+          - label: "cpu+oneapi+vulkan"
+            features: "cpu,oneapi,vulkan"
+            expect: success
+          # bare (no features) must still compile
+          - label: "no-features"
+            features: ""
+            expect: success
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: conflict-${{ matrix.label }}
+
+      - name: "Check: ${{ matrix.label }}"
+        run: |
+          if [ -z "${{ matrix.features }}" ]; then
+            FLAGS="--no-default-features"
+          else
+            FLAGS="--no-default-features --features ${{ matrix.features }}"
+          fi
+
+          if [ "${{ matrix.expect }}" = "success" ]; then
+            cargo check --workspace --locked $FLAGS
+          else
+            # Expect compilation failure — invert exit code
+            if cargo check --workspace --locked $FLAGS 2>&1; then
+              echo "::error::Expected compilation failure but succeeded"
+              exit 1
+            else
+              echo "Compilation failed as expected"
+            fi
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Per-crate backend checks for GPU-adjacent crates
+  # ---------------------------------------------------------------------------
+  crate-backend-check:
+    name: "crate: ${{ matrix.crate }} / ${{ matrix.backend }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - crate: bitnet-kernels
+            backend: cpu
+            features: "cpu"
+          - crate: bitnet-kernels
+            backend: oneapi
+            features: "oneapi"
+          - crate: bitnet-kernels
+            backend: vulkan
+            features: "vulkan"
+          - crate: bitnet-device-probe
+            backend: oneapi
+            features: "oneapi"
+          - crate: bitnet-device-probe
+            backend: vulkan
+            features: "vulkan"
+          - crate: bitnet-inference
+            backend: cpu
+            features: "cpu"
+          - crate: bitnet-quantization
+            backend: cpu
+            features: "cpu"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          key: crate-${{ matrix.crate }}-${{ matrix.backend }}
+
+      - name: "cargo check -p ${{ matrix.crate }} (${{ matrix.backend }})"
+        run: |
+          cargo check -p ${{ matrix.crate }} --locked \
+            --no-default-features --features ${{ matrix.features }}
