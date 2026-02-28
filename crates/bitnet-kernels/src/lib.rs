@@ -7,6 +7,7 @@ pub mod convolution;
 pub mod cpu;
 pub mod device_aware;
 pub mod device_features;
+pub mod kernels;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 // OpenCL kernel sources (always compiled — just embedded string constants)
