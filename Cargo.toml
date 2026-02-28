@@ -68,7 +68,8 @@ members = [
   "xtask-build-helper",
   "fuzz",
   "tools/migrate-gen-config",   # AST migration tool for GenerationConfig
-  "crates/bitnet-metal",        # Metal compute backend (Apple Silicon)
+"crates/bitnet-metal",        # Metal compute backend (Apple Silicon)
+"crates/bitnet-webgpu",       # WebGPU compute backend (wgpu)
 ]
 resolver = "2"
 # Build & test these by default. Others (root `bitnet`, `tests`, `xtask`,
@@ -214,6 +215,8 @@ cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bi
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu", "dep:bitnet-vulkan"]
+vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
+webgpu = [] # Handled by bitnet-webgpu crate
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
 metal-compute = [] # Handled by bitnet-metal crate
 
