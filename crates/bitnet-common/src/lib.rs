@@ -12,6 +12,7 @@ pub mod math;
 pub mod memory_pool;
 pub mod strict_mode;
 pub mod tensor;
+pub mod tensor_validation;
 pub mod types;
 pub mod warn_once;
 
