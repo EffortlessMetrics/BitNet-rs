@@ -18,6 +18,7 @@ pub const MATMUL_I2S_TILED_SRC: &str = include_str!("matmul_i2s_tiled.cl");
 
 /// KV cache management kernels source.
 pub const KV_CACHE_SRC: &str = include_str!("kv_cache.cl");
+pub const LINEAR_SRC: &str = include_str!("linear.cl");
 
 #[cfg(test)]
 mod tests {
