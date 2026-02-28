@@ -8,14 +8,17 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Vulkan compute kernels for BitNet-rs inference"
+description = "Vulkan compute backend for BitNet-rs inference"
 rust-version.workspace = true
 
 [dependencies]
+ash = "0.38"
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+thiserror = "2"
+tracing = "0.1"
 
 [dev-dependencies]
+proptest = "1"
 
-[features]
-default = []
-precompiled-spirv = []
+[lints]
+workspace = true

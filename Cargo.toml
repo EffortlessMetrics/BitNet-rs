@@ -59,7 +59,7 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
-  "crates/bitnet-vulkan",        # Vulkan compute backend for GPU inference
+  "crates/bitnet-vulkan",        # Vulkan compute backend
   "crossval",
   "tests",
   "xtask",
@@ -153,6 +153,7 @@ bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi"
 bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.1-dev", optional = true }
 bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.1-dev", optional = true }
 bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev", optional = true }
+bitnet-vulkan = { path = "crates/bitnet-vulkan", version = "0.2.1-dev", optional = true }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -209,7 +210,7 @@ spm = []                                                                        
 cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bitnet-inference/cpu", "bitnet-quantization/cpu"]
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
-vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
+vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu", "dep:bitnet-vulkan"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
 
 # Component features
