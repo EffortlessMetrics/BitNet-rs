@@ -136,9 +136,9 @@ pub mod parallel_communication;
 // === Server & Serving ===
 pub mod cache_system;
 pub mod inference_scheduler;
+pub mod multi_model;
 pub mod server_protocol;
 pub mod serving_runtime;
-pub mod multi_model;
 
 // === ML Operations ===
 pub mod gradient_checkpoint;

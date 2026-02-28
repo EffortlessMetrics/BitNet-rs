@@ -99,26 +99,18 @@ impl ModelSlotConfig {
     /// violated.
     pub fn validate(&self) -> Result<(), MultiModelError> {
         if self.max_slots == 0 {
-            return Err(MultiModelError::InvalidConfig(
-                "max_slots must be > 0".into(),
-            ));
+            return Err(MultiModelError::InvalidConfig("max_slots must be > 0".into()));
         }
         if self.memory_budget == 0 {
-            return Err(MultiModelError::InvalidConfig(
-                "memory_budget must be > 0".into(),
-            ));
+            return Err(MultiModelError::InvalidConfig("memory_budget must be > 0".into()));
         }
         if self.preload_models.len() > self.max_slots {
-            return Err(MultiModelError::InvalidConfig(
-                "preload list exceeds max_slots".into(),
-            ));
+            return Err(MultiModelError::InvalidConfig("preload list exceeds max_slots".into()));
         }
         let mut seen = std::collections::HashSet::new();
         for entry in &self.preload_models {
             if !seen.insert(&entry.name) {
-                return Err(MultiModelError::DuplicateModel(
-                    entry.name.clone(),
-                ));
+                return Err(MultiModelError::DuplicateModel(entry.name.clone()));
             }
         }
         Ok(())
@@ -161,11 +153,7 @@ pub struct ModelSlot {
 
 impl ModelSlot {
     /// Create a new slot in GPU residence.
-    pub fn new(
-        name: impl Into<String>,
-        path: impl Into<String>,
-        memory_usage: u64,
-    ) -> Self {
+    pub fn new(name: impl Into<String>, path: impl Into<String>, memory_usage: u64) -> Self {
         Self {
             name: name.into(),
             path: path.into(),
@@ -215,12 +203,8 @@ impl SlotManager {
     /// Returns an error if configuration validation fails.
     pub fn new(config: ModelSlotConfig) -> Result<Self, MultiModelError> {
         config.validate()?;
-        let mut mgr = Self {
-            config,
-            slots: HashMap::new(),
-            lru_order: VecDeque::new(),
-            memory_used: 0,
-        };
+        let mut mgr =
+            Self { config, slots: HashMap::new(), lru_order: VecDeque::new(), memory_used: 0 };
         let preloads: Vec<_> = mgr.config.preload_models.clone();
         for entry in preloads {
             mgr.allocate(entry.name, entry.path, entry.estimated_memory)?;
@@ -333,11 +317,7 @@ impl SlotManager {
         let victim = self
             .lru_order
             .iter()
-            .find(|n| {
-                self.slots
-                    .get(n.as_str())
-                    .is_some_and(|s| !s.pinned)
-            })
+            .find(|n| self.slots.get(n.as_str()).is_some_and(|s| !s.pinned))
             .cloned();
         if let Some(name) = victim {
             self.free(&name);
@@ -427,20 +407,11 @@ impl ModelRouter {
         }
         match &self.strategy {
             RoutingStrategy::ByModelName => {
-                let name = request
-                    .model_name
-                    .as_deref()
-                    .or(self.default_model.as_deref());
+                let name = request.model_name.as_deref().or(self.default_model.as_deref());
                 match name {
-                    Some(n) if available.contains(&n.to_string()) => {
-                        Ok(n.to_string())
-                    }
-                    Some(n) => {
-                        Err(MultiModelError::ModelNotFound(n.to_string()))
-                    }
-                    None => Err(MultiModelError::ModelNotFound(
-                        "<no model specified>".into(),
-                    )),
+                    Some(n) if available.contains(&n.to_string()) => Ok(n.to_string()),
+                    Some(n) => Err(MultiModelError::ModelNotFound(n.to_string())),
+                    None => Err(MultiModelError::ModelNotFound("<no model specified>".into())),
                 }
             }
             RoutingStrategy::ByRequestType(mapping) => {
@@ -451,12 +422,8 @@ impl ModelRouter {
                     .or(self.default_model.as_ref());
                 match target {
                     Some(n) if available.contains(n) => Ok(n.clone()),
-                    Some(n) => {
-                        Err(MultiModelError::ModelNotFound(n.clone()))
-                    }
-                    None => Err(MultiModelError::ModelNotFound(
-                        "<unmapped request type>".into(),
-                    )),
+                    Some(n) => Err(MultiModelError::ModelNotFound(n.clone())),
+                    None => Err(MultiModelError::ModelNotFound("<unmapped request type>".into())),
                 }
             }
             RoutingStrategy::RoundRobin => {
@@ -540,20 +507,13 @@ impl ModelSwapper {
             .ok_or_else(|| MultiModelError::ModelNotFound(model_name.into()))?;
         let from = slot.residence;
         slot.residence = target;
-        self.swap_history.push(SwapEvent {
-            model_name: model_name.to_string(),
-            from,
-            to: target,
-        });
+        self.swap_history.push(SwapEvent { model_name: model_name.to_string(), from, to: target });
         Ok(())
     }
 
     /// Choose an eviction candidate from the slot manager using the
     /// configured policy, ignoring pinned models.
-    pub fn pick_eviction_candidate(
-        &self,
-        slots: &SlotManager,
-    ) -> Option<String> {
+    pub fn pick_eviction_candidate(&self, slots: &SlotManager) -> Option<String> {
         let candidates: Vec<_> = slots
             .slots
             .values()
@@ -563,20 +523,15 @@ impl ModelSwapper {
             return None;
         }
         match self.policy {
-            SwapPolicy::LRU => candidates
-                .iter()
-                .min_by_key(|s| s.last_access)
-                .map(|s| s.name.clone()),
-            SwapPolicy::LFU => candidates
-                .iter()
-                .min_by_key(|s| s.request_count)
-                .map(|s| s.name.clone()),
+            SwapPolicy::LRU => {
+                candidates.iter().min_by_key(|s| s.last_access).map(|s| s.name.clone())
+            }
+            SwapPolicy::LFU => {
+                candidates.iter().min_by_key(|s| s.request_count).map(|s| s.name.clone())
+            }
             SwapPolicy::Priority => {
                 // Lowest request_count used as proxy for priority.
-                candidates
-                    .iter()
-                    .min_by_key(|s| s.request_count)
-                    .map(|s| s.name.clone())
+                candidates.iter().min_by_key(|s| s.request_count).map(|s| s.name.clone())
             }
             SwapPolicy::Manual => None,
         }
@@ -610,19 +565,11 @@ pub struct ModelLoadBalancer {
 impl ModelLoadBalancer {
     /// Create a new, empty load balancer.
     pub fn new() -> Self {
-        Self {
-            replicas: HashMap::new(),
-            in_flight: HashMap::new(),
-            rr_counters: HashMap::new(),
-        }
+        Self { replicas: HashMap::new(), in_flight: HashMap::new(), rr_counters: HashMap::new() }
     }
 
     /// Register a replica for `model_name`.
-    pub fn add_replica(
-        &mut self,
-        model_name: impl Into<String>,
-        replica_id: impl Into<String>,
-    ) {
+    pub fn add_replica(&mut self, model_name: impl Into<String>, replica_id: impl Into<String>) {
         let model = model_name.into();
         let replica = replica_id.into();
         self.replicas.entry(model).or_default().push(replica.clone());
@@ -630,22 +577,14 @@ impl ModelLoadBalancer {
     }
 
     /// Pick the replica with the fewest in-flight requests.
-    pub fn pick_least_loaded(
-        &self,
-        model_name: &str,
-    ) -> Option<String> {
+    pub fn pick_least_loaded(&self, model_name: &str) -> Option<String> {
         self.replicas.get(model_name).and_then(|reps| {
-            reps.iter()
-                .min_by_key(|r| self.in_flight.get(*r).copied().unwrap_or(0))
-                .cloned()
+            reps.iter().min_by_key(|r| self.in_flight.get(*r).copied().unwrap_or(0)).cloned()
         })
     }
 
     /// Pick a replica using round-robin.
-    pub fn pick_round_robin(
-        &mut self,
-        model_name: &str,
-    ) -> Option<String> {
+    pub fn pick_round_robin(&mut self, model_name: &str) -> Option<String> {
         let reps = self.replicas.get(model_name)?;
         if reps.is_empty() {
             return None;
@@ -670,9 +609,7 @@ impl ModelLoadBalancer {
 
     /// Number of replicas for a model.
     pub fn replica_count(&self, model_name: &str) -> usize {
-        self.replicas
-            .get(model_name)
-            .map_or(0, |r| r.len())
+        self.replicas.get(model_name).map_or(0, |r| r.len())
     }
 }
 
@@ -713,35 +650,23 @@ impl MultiModelMetrics {
     }
 
     /// Record a completed request for `model_name`.
-    pub fn record_request(
-        &mut self,
-        model_name: &str,
-        tokens: u64,
-        latency_ms: f64,
-    ) {
+    pub fn record_request(&mut self, model_name: &str, tokens: u64, latency_ms: f64) {
         let entry = self.per_model.entry(model_name.into()).or_default();
         entry.total_requests += 1;
         entry.total_tokens += tokens;
         // Running average.
         let n = entry.total_requests as f64;
-        entry.avg_latency_ms =
-            entry.avg_latency_ms * ((n - 1.0) / n) + latency_ms / n;
+        entry.avg_latency_ms = entry.avg_latency_ms * ((n - 1.0) / n) + latency_ms / n;
     }
 
     /// Record a swap event for `model_name`.
     pub fn record_swap(&mut self, model_name: &str) {
-        self.per_model
-            .entry(model_name.into())
-            .or_default()
-            .swap_count += 1;
+        self.per_model.entry(model_name.into()).or_default().swap_count += 1;
     }
 
     /// Update memory usage for `model_name`.
     pub fn set_memory(&mut self, model_name: &str, bytes: u64) {
-        self.per_model
-            .entry(model_name.into())
-            .or_default()
-            .memory_bytes = bytes;
+        self.per_model.entry(model_name.into()).or_default().memory_bytes = bytes;
     }
 
     /// Get metrics for a specific model.
@@ -824,18 +749,12 @@ impl MultiModelServer {
     }
 
     /// Pin a model to prevent eviction.
-    pub fn pin_model(
-        &mut self,
-        name: &str,
-    ) -> Result<(), MultiModelError> {
+    pub fn pin_model(&mut self, name: &str) -> Result<(), MultiModelError> {
         self.slots.pin(name)
     }
 
     /// Unpin a previously pinned model.
-    pub fn unpin_model(
-        &mut self,
-        name: &str,
-    ) -> Result<(), MultiModelError> {
+    pub fn unpin_model(&mut self, name: &str) -> Result<(), MultiModelError> {
         self.slots.unpin(name)
     }
 
@@ -844,10 +763,7 @@ impl MultiModelServer {
     /// # Errors
     ///
     /// Returns an error if routing fails.
-    pub fn route_request(
-        &mut self,
-        request: &InferenceRequest,
-    ) -> Result<String, MultiModelError> {
+    pub fn route_request(&mut self, request: &InferenceRequest) -> Result<String, MultiModelError> {
         let available = self.slots.loaded_models();
         let target = self.router.route(request, &available)?;
         if let Some(slot) = self.slots.get_mut(&target) {
@@ -872,12 +788,7 @@ impl MultiModelServer {
     }
 
     /// Record completion of an inference request in metrics.
-    pub fn record_completion(
-        &mut self,
-        model_name: &str,
-        tokens: u64,
-        latency_ms: f64,
-    ) {
+    pub fn record_completion(&mut self, model_name: &str, tokens: u64, latency_ms: f64) {
         self.metrics.record_request(model_name, tokens, latency_ms);
     }
 
@@ -937,20 +848,13 @@ mod tests {
     #[test]
     fn config_zero_slots_invalid() {
         let cfg = ModelSlotConfig { max_slots: 0, ..Default::default() };
-        assert!(matches!(
-            cfg.validate(),
-            Err(MultiModelError::InvalidConfig(_))
-        ));
+        assert!(matches!(cfg.validate(), Err(MultiModelError::InvalidConfig(_))));
     }
 
     #[test]
     fn config_zero_budget_invalid() {
-        let cfg =
-            ModelSlotConfig { memory_budget: 0, ..Default::default() };
-        assert!(matches!(
-            cfg.validate(),
-            Err(MultiModelError::InvalidConfig(_))
-        ));
+        let cfg = ModelSlotConfig { memory_budget: 0, ..Default::default() };
+        assert!(matches!(cfg.validate(), Err(MultiModelError::InvalidConfig(_))));
     }
 
     #[test]
@@ -958,23 +862,12 @@ mod tests {
         let cfg = ModelSlotConfig {
             max_slots: 1,
             preload_models: vec![
-                PreloadEntry {
-                    name: "a".into(),
-                    path: "a.gguf".into(),
-                    estimated_memory: 100,
-                },
-                PreloadEntry {
-                    name: "b".into(),
-                    path: "b.gguf".into(),
-                    estimated_memory: 100,
-                },
+                PreloadEntry { name: "a".into(), path: "a.gguf".into(), estimated_memory: 100 },
+                PreloadEntry { name: "b".into(), path: "b.gguf".into(), estimated_memory: 100 },
             ],
             ..Default::default()
         };
-        assert!(matches!(
-            cfg.validate(),
-            Err(MultiModelError::InvalidConfig(_))
-        ));
+        assert!(matches!(cfg.validate(), Err(MultiModelError::InvalidConfig(_))));
     }
 
     #[test]
@@ -982,23 +875,12 @@ mod tests {
         let cfg = ModelSlotConfig {
             max_slots: 4,
             preload_models: vec![
-                PreloadEntry {
-                    name: "m".into(),
-                    path: "m.gguf".into(),
-                    estimated_memory: 100,
-                },
-                PreloadEntry {
-                    name: "m".into(),
-                    path: "m2.gguf".into(),
-                    estimated_memory: 100,
-                },
+                PreloadEntry { name: "m".into(), path: "m.gguf".into(), estimated_memory: 100 },
+                PreloadEntry { name: "m".into(), path: "m2.gguf".into(), estimated_memory: 100 },
             ],
             ..Default::default()
         };
-        assert!(matches!(
-            cfg.validate(),
-            Err(MultiModelError::DuplicateModel(_))
-        ));
+        assert!(matches!(cfg.validate(), Err(MultiModelError::DuplicateModel(_))));
     }
 
     #[test]
@@ -1043,11 +925,7 @@ mod tests {
 
     #[test]
     fn slot_manager_allocate_and_get() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 2048,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 2048, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 512).unwrap();
         assert_eq!(mgr.active_slots(), 1);
@@ -1057,11 +935,7 @@ mod tests {
 
     #[test]
     fn slot_manager_duplicate_allocate_is_noop() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 512).unwrap();
         mgr.allocate("a", "a.gguf", 512).unwrap();
@@ -1070,11 +944,7 @@ mod tests {
 
     #[test]
     fn slot_manager_free_releases_memory() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 2048,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 2048, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 512).unwrap();
         let freed = mgr.free("a");
@@ -1085,22 +955,14 @@ mod tests {
 
     #[test]
     fn slot_manager_free_nonexistent_returns_none() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 2048,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 2048, preload_models: vec![] };
         let mgr = SlotManager::new(cfg).unwrap();
         assert!(mgr.slots.get("nope").is_none());
     }
 
     #[test]
     fn slot_manager_lru_eviction() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 100).unwrap();
         mgr.allocate("b", "b.gguf", 100).unwrap();
@@ -1114,11 +976,7 @@ mod tests {
 
     #[test]
     fn slot_manager_pinned_model_not_evicted() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 100).unwrap();
         mgr.pin("a").unwrap();
@@ -1132,11 +990,7 @@ mod tests {
 
     #[test]
     fn slot_manager_all_pinned_returns_error() {
-        let cfg = ModelSlotConfig {
-            max_slots: 1,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 1, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 100).unwrap();
         mgr.pin("a").unwrap();
@@ -1146,19 +1000,12 @@ mod tests {
 
     #[test]
     fn slot_manager_memory_budget_exceeded() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 500,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 500, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 400).unwrap();
         mgr.pin("a").unwrap();
         let err = mgr.allocate("b", "b.gguf", 400).unwrap_err();
-        assert!(matches!(
-            err,
-            MultiModelError::MemoryBudgetExceeded { .. }
-        ));
+        assert!(matches!(err, MultiModelError::MemoryBudgetExceeded { .. }));
     }
 
     #[test]
@@ -1179,11 +1026,7 @@ mod tests {
 
     #[test]
     fn slot_manager_loaded_models_list() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("x", "x.gguf", 100).unwrap();
         mgr.allocate("y", "y.gguf", 100).unwrap();
@@ -1194,11 +1037,7 @@ mod tests {
 
     #[test]
     fn slot_manager_unpin() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 100).unwrap();
         mgr.pin("a").unwrap();
@@ -1209,25 +1048,14 @@ mod tests {
 
     #[test]
     fn slot_manager_pin_nonexistent_errors() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
-        assert!(matches!(
-            mgr.pin("nope"),
-            Err(MultiModelError::ModelNotFound(_))
-        ));
+        assert!(matches!(mgr.pin("nope"), Err(MultiModelError::ModelNotFound(_))));
     }
 
     #[test]
     fn slot_manager_memory_available() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 1000,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 1000, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         assert_eq!(mgr.memory_available(), 1000);
         mgr.allocate("a", "a.gguf", 400).unwrap();
@@ -1257,21 +1085,14 @@ mod tests {
             prompt: "hi".into(),
         };
         let avail = vec!["alpha".into()];
-        assert!(matches!(
-            router.route(&req, &avail),
-            Err(MultiModelError::ModelNotFound(_))
-        ));
+        assert!(matches!(router.route(&req, &avail), Err(MultiModelError::ModelNotFound(_))));
     }
 
     #[test]
     fn route_by_model_name_default() {
         let mut router = ModelRouter::new(RoutingStrategy::ByModelName);
         router.set_default_model("beta");
-        let req = InferenceRequest {
-            model_name: None,
-            request_type: None,
-            prompt: "hi".into(),
-        };
+        let req = InferenceRequest { model_name: None, request_type: None, prompt: "hi".into() };
         let avail = vec!["alpha".into(), "beta".into()];
         assert_eq!(router.route(&req, &avail).unwrap(), "beta");
     }
@@ -1279,11 +1100,7 @@ mod tests {
     #[test]
     fn route_by_model_name_no_model_no_default() {
         let mut router = ModelRouter::new(RoutingStrategy::ByModelName);
-        let req = InferenceRequest {
-            model_name: None,
-            request_type: None,
-            prompt: "hi".into(),
-        };
+        let req = InferenceRequest { model_name: None, request_type: None, prompt: "hi".into() };
         let avail = vec!["a".into()];
         assert!(router.route(&req, &avail).is_err());
     }
@@ -1292,11 +1109,7 @@ mod tests {
     fn route_round_robin() {
         let mut router = ModelRouter::new(RoutingStrategy::RoundRobin);
         let avail = vec!["a".into(), "b".into(), "c".into()];
-        let req = InferenceRequest {
-            model_name: None,
-            request_type: None,
-            prompt: "hi".into(),
-        };
+        let req = InferenceRequest { model_name: None, request_type: None, prompt: "hi".into() };
         let r0 = router.route(&req, &avail).unwrap();
         let r1 = router.route(&req, &avail).unwrap();
         let r2 = router.route(&req, &avail).unwrap();
@@ -1312,8 +1125,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert("chat".into(), "chat-model".into());
         map.insert("completion".into(), "comp-model".into());
-        let mut router =
-            ModelRouter::new(RoutingStrategy::ByRequestType(map));
+        let mut router = ModelRouter::new(RoutingStrategy::ByRequestType(map));
         let avail = vec!["chat-model".into(), "comp-model".into()];
         let req = InferenceRequest {
             model_name: None,
@@ -1326,8 +1138,7 @@ mod tests {
     #[test]
     fn route_by_request_type_unmapped() {
         let map = HashMap::new();
-        let mut router =
-            ModelRouter::new(RoutingStrategy::ByRequestType(map));
+        let mut router = ModelRouter::new(RoutingStrategy::ByRequestType(map));
         let req = InferenceRequest {
             model_name: None,
             request_type: Some("unknown".into()),
@@ -1339,29 +1150,17 @@ mod tests {
 
     #[test]
     fn route_least_loaded_returns_first() {
-        let mut router =
-            ModelRouter::new(RoutingStrategy::LeastLoaded);
+        let mut router = ModelRouter::new(RoutingStrategy::LeastLoaded);
         let avail = vec!["a".into(), "b".into()];
-        let req = InferenceRequest {
-            model_name: None,
-            request_type: None,
-            prompt: "hi".into(),
-        };
+        let req = InferenceRequest { model_name: None, request_type: None, prompt: "hi".into() };
         assert_eq!(router.route(&req, &avail).unwrap(), "a");
     }
 
     #[test]
     fn route_empty_available_errors() {
         let mut router = ModelRouter::new(RoutingStrategy::RoundRobin);
-        let req = InferenceRequest {
-            model_name: None,
-            request_type: None,
-            prompt: "hi".into(),
-        };
-        assert!(matches!(
-            router.route(&req, &[]),
-            Err(MultiModelError::NoSlotsAvailable)
-        ));
+        let req = InferenceRequest { model_name: None, request_type: None, prompt: "hi".into() };
+        assert!(matches!(router.route(&req, &[]), Err(MultiModelError::NoSlotsAvailable)));
     }
 
     #[test]
@@ -1374,31 +1173,18 @@ mod tests {
 
     #[test]
     fn swap_model_changes_residence() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 100).unwrap();
         let mut swapper = ModelSwapper::new(SwapPolicy::LRU);
-        swapper
-            .swap(&mut mgr, "a", ModelResidence::Cpu)
-            .unwrap();
-        assert_eq!(
-            mgr.get("a").unwrap().residence,
-            ModelResidence::Cpu
-        );
+        swapper.swap(&mut mgr, "a", ModelResidence::Cpu).unwrap();
+        assert_eq!(mgr.get("a").unwrap().residence, ModelResidence::Cpu);
         assert_eq!(swapper.swap_count(), 1);
     }
 
     #[test]
     fn swap_nonexistent_model_errors() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         let mut swapper = ModelSwapper::new(SwapPolicy::LRU);
         assert!(matches!(
@@ -1409,20 +1195,12 @@ mod tests {
 
     #[test]
     fn swap_history_records_events() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 100).unwrap();
         let mut swapper = ModelSwapper::new(SwapPolicy::LRU);
-        swapper
-            .swap(&mut mgr, "a", ModelResidence::Cpu)
-            .unwrap();
-        swapper
-            .swap(&mut mgr, "a", ModelResidence::Disk)
-            .unwrap();
+        swapper.swap(&mut mgr, "a", ModelResidence::Cpu).unwrap();
+        swapper.swap(&mut mgr, "a", ModelResidence::Disk).unwrap();
         let hist = swapper.history();
         assert_eq!(hist.len(), 2);
         assert_eq!(hist[0].from, ModelResidence::Gpu);
@@ -1438,11 +1216,7 @@ mod tests {
 
     #[test]
     fn swap_pick_eviction_lru() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("old", "old.gguf", 100).unwrap();
         std::thread::sleep(std::time::Duration::from_millis(10));
@@ -1454,11 +1228,7 @@ mod tests {
 
     #[test]
     fn swap_pick_eviction_lfu() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("hot", "h.gguf", 100).unwrap();
         mgr.allocate("cold", "c.gguf", 100).unwrap();
@@ -1473,11 +1243,7 @@ mod tests {
 
     #[test]
     fn swap_pick_eviction_manual_returns_none() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("a", "a.gguf", 100).unwrap();
         let swapper = ModelSwapper::new(SwapPolicy::Manual);
@@ -1486,29 +1252,18 @@ mod tests {
 
     #[test]
     fn swap_pick_eviction_skips_pinned() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("pinned", "p.gguf", 100).unwrap();
         mgr.pin("pinned").unwrap();
         mgr.allocate("free", "f.gguf", 100).unwrap();
         let swapper = ModelSwapper::new(SwapPolicy::LRU);
-        assert_eq!(
-            swapper.pick_eviction_candidate(&mgr),
-            Some("free".into())
-        );
+        assert_eq!(swapper.pick_eviction_candidate(&mgr), Some("free".into()));
     }
 
     #[test]
     fn swap_pick_eviction_skips_non_gpu() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
         let mut mgr = SlotManager::new(cfg).unwrap();
         mgr.allocate("cpu_model", "c.gguf", 100).unwrap();
         mgr.get_mut("cpu_model").unwrap().residence = ModelResidence::Cpu;
@@ -1632,8 +1387,7 @@ mod tests {
             swap_count: 3,
         };
         let json = serde_json::to_string(&entry).unwrap();
-        let back: ModelMetricsEntry =
-            serde_json::from_str(&json).unwrap();
+        let back: ModelMetricsEntry = serde_json::from_str(&json).unwrap();
         assert_eq!(back.total_requests, 42);
         assert_eq!(back.total_tokens, 1000);
     }
@@ -1642,17 +1396,9 @@ mod tests {
 
     #[test]
     fn server_load_and_unload() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
-        let mut srv = MultiModelServer::new(
-            cfg,
-            RoutingStrategy::ByModelName,
-            SwapPolicy::LRU,
-        )
-        .unwrap();
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
+        let mut srv =
+            MultiModelServer::new(cfg, RoutingStrategy::ByModelName, SwapPolicy::LRU).unwrap();
         srv.load_model("a", "a.gguf", 512).unwrap();
         assert_eq!(srv.active_slots(), 1);
         assert!(srv.loaded_models().contains(&"a".into()));
@@ -1662,17 +1408,9 @@ mod tests {
 
     #[test]
     fn server_route_and_record() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
-        let mut srv = MultiModelServer::new(
-            cfg,
-            RoutingStrategy::ByModelName,
-            SwapPolicy::LRU,
-        )
-        .unwrap();
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
+        let mut srv =
+            MultiModelServer::new(cfg, RoutingStrategy::ByModelName, SwapPolicy::LRU).unwrap();
         srv.load_model("alpha", "a.gguf", 256).unwrap();
         srv.set_default_model("alpha");
         let req = InferenceRequest {
@@ -1688,38 +1426,19 @@ mod tests {
 
     #[test]
     fn server_swap_model() {
-        let cfg = ModelSlotConfig {
-            max_slots: 4,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
-        let mut srv = MultiModelServer::new(
-            cfg,
-            RoutingStrategy::ByModelName,
-            SwapPolicy::LRU,
-        )
-        .unwrap();
+        let cfg = ModelSlotConfig { max_slots: 4, memory_budget: 4096, preload_models: vec![] };
+        let mut srv =
+            MultiModelServer::new(cfg, RoutingStrategy::ByModelName, SwapPolicy::LRU).unwrap();
         srv.load_model("a", "a.gguf", 256).unwrap();
         srv.swap_model("a", ModelResidence::Cpu).unwrap();
-        assert_eq!(
-            srv.slot_manager().get("a").unwrap().residence,
-            ModelResidence::Cpu
-        );
+        assert_eq!(srv.slot_manager().get("a").unwrap().residence, ModelResidence::Cpu);
     }
 
     #[test]
     fn server_pin_and_unpin() {
-        let cfg = ModelSlotConfig {
-            max_slots: 2,
-            memory_budget: 4096,
-            preload_models: vec![],
-        };
-        let mut srv = MultiModelServer::new(
-            cfg,
-            RoutingStrategy::ByModelName,
-            SwapPolicy::LRU,
-        )
-        .unwrap();
+        let cfg = ModelSlotConfig { max_slots: 2, memory_budget: 4096, preload_models: vec![] };
+        let mut srv =
+            MultiModelServer::new(cfg, RoutingStrategy::ByModelName, SwapPolicy::LRU).unwrap();
         srv.load_model("a", "a.gguf", 100).unwrap();
         srv.pin_model("a").unwrap();
         assert!(srv.slot_manager().get("a").unwrap().pinned);
@@ -1732,20 +1451,14 @@ mod tests {
         let cfg = ModelSlotConfig {
             max_slots: 4,
             memory_budget: 4096,
-            preload_models: vec![
-                PreloadEntry {
-                    name: "hot".into(),
-                    path: "hot.gguf".into(),
-                    estimated_memory: 256,
-                },
-            ],
+            preload_models: vec![PreloadEntry {
+                name: "hot".into(),
+                path: "hot.gguf".into(),
+                estimated_memory: 256,
+            }],
         };
-        let srv = MultiModelServer::new(
-            cfg,
-            RoutingStrategy::ByModelName,
-            SwapPolicy::LRU,
-        )
-        .unwrap();
+        let srv =
+            MultiModelServer::new(cfg, RoutingStrategy::ByModelName, SwapPolicy::LRU).unwrap();
         assert_eq!(srv.active_slots(), 1);
         assert!(srv.slot_manager().get("hot").is_some());
     }
@@ -1753,12 +1466,8 @@ mod tests {
     #[test]
     fn server_load_balancer_access() {
         let cfg = ModelSlotConfig::default();
-        let mut srv = MultiModelServer::new(
-            cfg,
-            RoutingStrategy::ByModelName,
-            SwapPolicy::LRU,
-        )
-        .unwrap();
+        let mut srv =
+            MultiModelServer::new(cfg, RoutingStrategy::ByModelName, SwapPolicy::LRU).unwrap();
         srv.load_balancer_mut().add_replica("m", "r1");
         assert_eq!(srv.load_balancer().replica_count("m"), 1);
     }
@@ -1779,10 +1488,7 @@ mod tests {
 
     #[test]
     fn error_display_memory_budget() {
-        let e = MultiModelError::MemoryBudgetExceeded {
-            required: 100,
-            available: 50,
-        };
+        let e = MultiModelError::MemoryBudgetExceeded { required: 100, available: 50 };
         let s = e.to_string();
         assert!(s.contains("100"));
         assert!(s.contains("50"));
@@ -1810,10 +1516,7 @@ mod tests {
 
     #[test]
     fn routing_strategy_default_is_by_model_name() {
-        assert_eq!(
-            RoutingStrategy::default(),
-            RoutingStrategy::ByModelName
-        );
+        assert_eq!(RoutingStrategy::default(), RoutingStrategy::ByModelName);
     }
 
     #[test]
@@ -1828,14 +1531,9 @@ mod tests {
 
     #[test]
     fn residence_serialization_roundtrip() {
-        for r in [
-            ModelResidence::Gpu,
-            ModelResidence::Cpu,
-            ModelResidence::Disk,
-        ] {
+        for r in [ModelResidence::Gpu, ModelResidence::Cpu, ModelResidence::Disk] {
             let json = serde_json::to_string(&r).unwrap();
-            let back: ModelResidence =
-                serde_json::from_str(&json).unwrap();
+            let back: ModelResidence = serde_json::from_str(&json).unwrap();
             assert_eq!(back, r);
         }
     }
