@@ -1,0 +1,8 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+[|system|]You are EXAONE model from LG AI Research, a helpful assistant.[|endofturn|]
+[|user|]Explain photosynthesis briefly.
+[|endofturn|]
+[|assistant|]

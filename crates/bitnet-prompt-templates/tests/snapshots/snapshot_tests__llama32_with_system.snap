@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+You are a science tutor.<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+What is ATP?<|eot_id|><|start_header_id|>assistant<|end_header_id|>

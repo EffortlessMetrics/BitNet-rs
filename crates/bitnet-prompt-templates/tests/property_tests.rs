@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat, TemplateType::YiChat, TemplateType::BaichuanChat, TemplateType::ChatGLMChat, TemplateType::MptInstruct, TemplateType::RwkvWorld, TemplateType::OlmoInstruct, TemplateType::FillInMiddle, TemplateType::ZephyrChat, TemplateType::VicunaChat, TemplateType::OrcaChat, TemplateType::SolarInstruct, TemplateType::AlpacaInstruct, TemplateType::CommandRPlus, TemplateType::NousHermes, TemplateType::WizardLM, TemplateType::OpenChat, TemplateType::GraniteChat, TemplateType::NemotronChat, TemplateType::SaigaChat, TemplateType::Llama2Chat, TemplateType::Gemma2Chat, TemplateType::Phi3Instruct, TemplateType::TinyLlamaChat, TemplateType::DolphinChat, TemplateType::ChatGptChat, TemplateType::MixtralInstruct, TemplateType::StableLMChat, TemplateType::BloomChat, TemplateType::JambaChat, TemplateType::PersimmonChat, TemplateType::XverseChat, TemplateType::Qwen25Chat, TemplateType::MistralNemoChat, TemplateType::ArcticInstruct, TemplateType::DbrxInstruct, TemplateType::ExaoneChat, TemplateType::MiniCPMChat, TemplateType::CodeGemma, TemplateType::Llama31Chat, TemplateType::DeepSeekV3Chat, TemplateType::CohereAya, TemplateType::SmolLMChat, TemplateType::Phi2Instruct, TemplateType::Falcon2Chat, TemplateType::OLMo2Chat, TemplateType::Llama32Chat] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -46,7 +46,7 @@ proptest! {
         );
     }
 
-    /// Greedy (temperature=0) is idempotent: same input → same formatted output.
+    /// Greedy (temperature=0) is idempotent: same input ΓåÆ same formatted output.
     #[test]
     fn format_is_deterministic(
         user_text in "[a-zA-Z0-9 ]{1,100}",
@@ -118,11 +118,67 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
+            Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
+        Just(TemplateType::RwkvWorld),
+        Just(TemplateType::OlmoInstruct),
+        Just(TemplateType::FillInMiddle),
+        Just(TemplateType::ZephyrChat),
+        Just(TemplateType::VicunaChat),
+        Just(TemplateType::OrcaChat),
+        Just(TemplateType::SolarInstruct),
+        Just(TemplateType::AlpacaInstruct),
+        Just(TemplateType::CommandRPlus),
+        Just(TemplateType::NousHermes),
+        Just(TemplateType::WizardLM),
+        Just(TemplateType::OpenChat),
+        Just(TemplateType::GraniteChat),
+        Just(TemplateType::NemotronChat),
+        Just(TemplateType::SaigaChat),
+        Just(TemplateType::Llama2Chat),
+        Just(TemplateType::Gemma2Chat),
+        Just(TemplateType::Phi3Instruct),
+        Just(TemplateType::TinyLlamaChat),
+        Just(TemplateType::DolphinChat),
+        Just(TemplateType::ChatGptChat),
+        Just(TemplateType::MixtralInstruct),
+        Just(TemplateType::StableLMChat),
+        Just(TemplateType::BloomChat),
+        Just(TemplateType::JambaChat),
+        Just(TemplateType::PersimmonChat),
+        Just(TemplateType::XverseChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
+        Just(TemplateType::DbrxInstruct),
+        Just(TemplateType::ExaoneChat),
+        Just(TemplateType::MiniCPMChat),
+        Just(TemplateType::CodeGemma),
+        Just(TemplateType::Llama31Chat),
+        Just(TemplateType::DeepSeekV3Chat),
+        Just(TemplateType::CohereAya),
+        Just(TemplateType::SmolLMChat),
+        Just(TemplateType::Phi2Instruct),
+        Just(TemplateType::Falcon2Chat),
+        Just(TemplateType::OLMo2Chat),
+        Just(TemplateType::Llama32Chat),
         ],
     ) {
         let s = template.to_string();
         let parsed: TemplateType = s.parse().expect("display output must be parseable");
-        prop_assert_eq!(template, parsed, "display→parse round-trip failed for {:?}", s);
+        prop_assert_eq!(template, parsed, "displayΓåÆparse round-trip failed for {:?}", s);
     }
 
     /// Non-empty user input always produces non-empty output for every template.
@@ -132,6 +188,62 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
+            Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
+        Just(TemplateType::RwkvWorld),
+        Just(TemplateType::OlmoInstruct),
+        Just(TemplateType::FillInMiddle),
+        Just(TemplateType::ZephyrChat),
+        Just(TemplateType::VicunaChat),
+        Just(TemplateType::OrcaChat),
+        Just(TemplateType::SolarInstruct),
+        Just(TemplateType::AlpacaInstruct),
+        Just(TemplateType::CommandRPlus),
+        Just(TemplateType::NousHermes),
+        Just(TemplateType::WizardLM),
+        Just(TemplateType::OpenChat),
+        Just(TemplateType::GraniteChat),
+        Just(TemplateType::NemotronChat),
+        Just(TemplateType::SaigaChat),
+        Just(TemplateType::Llama2Chat),
+        Just(TemplateType::Gemma2Chat),
+        Just(TemplateType::Phi3Instruct),
+        Just(TemplateType::TinyLlamaChat),
+        Just(TemplateType::DolphinChat),
+        Just(TemplateType::ChatGptChat),
+        Just(TemplateType::MixtralInstruct),
+        Just(TemplateType::StableLMChat),
+        Just(TemplateType::BloomChat),
+        Just(TemplateType::JambaChat),
+        Just(TemplateType::PersimmonChat),
+        Just(TemplateType::XverseChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
+        Just(TemplateType::DbrxInstruct),
+        Just(TemplateType::ExaoneChat),
+        Just(TemplateType::MiniCPMChat),
+        Just(TemplateType::CodeGemma),
+        Just(TemplateType::Llama31Chat),
+        Just(TemplateType::DeepSeekV3Chat),
+        Just(TemplateType::CohereAya),
+        Just(TemplateType::SmolLMChat),
+        Just(TemplateType::Phi2Instruct),
+        Just(TemplateType::Falcon2Chat),
+        Just(TemplateType::OLMo2Chat),
+        Just(TemplateType::Llama32Chat),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {
@@ -182,7 +294,7 @@ proptest! {
     ) {
         let t = TemplateType::detect(name.as_deref(), jinja.as_deref());
         prop_assert!(
-            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat),
+            matches!(t, TemplateType::Raw | TemplateType::Instruct | TemplateType::Llama3Chat | TemplateType::Phi4Chat | TemplateType::QwenChat | TemplateType::GemmaChat | TemplateType::MistralChat | TemplateType::DeepSeekChat | TemplateType::StarCoder | TemplateType::FalconChat | TemplateType::CodeLlamaInstruct | TemplateType::CohereCommand | TemplateType::InternLMChat | TemplateType::YiChat | TemplateType::BaichuanChat | TemplateType::ChatGLMChat | TemplateType::MptInstruct | TemplateType::RwkvWorld | TemplateType::OlmoInstruct | TemplateType::FillInMiddle | TemplateType::ZephyrChat | TemplateType::VicunaChat | TemplateType::TinyLlamaChat | TemplateType::DolphinChat | TemplateType::ChatGptChat | TemplateType::Qwen25Chat | TemplateType::MistralNemoChat | TemplateType::ArcticInstruct | TemplateType::DbrxInstruct | TemplateType::ExaoneChat | TemplateType::MiniCPMChat | TemplateType::CodeGemma | TemplateType::Llama31Chat | TemplateType::DeepSeekV3Chat | TemplateType::CohereAya | TemplateType::SmolLMChat | TemplateType::Phi2Instruct | TemplateType::Falcon2Chat | TemplateType::OLMo2Chat | TemplateType::Llama32Chat),
             "detect() returned an unexpected variant"
         );
     }
@@ -212,6 +324,43 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
+            Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
+        Just(TemplateType::RwkvWorld),
+        Just(TemplateType::OlmoInstruct),
+        Just(TemplateType::FillInMiddle),
+        Just(TemplateType::ZephyrChat),
+        Just(TemplateType::VicunaChat),
+        Just(TemplateType::TinyLlamaChat),
+        Just(TemplateType::DolphinChat),
+        Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
+        Just(TemplateType::DbrxInstruct),
+        Just(TemplateType::ExaoneChat),
+        Just(TemplateType::MiniCPMChat),
+        Just(TemplateType::CodeGemma),
+        Just(TemplateType::Llama31Chat),
+        Just(TemplateType::DeepSeekV3Chat),
+        Just(TemplateType::CohereAya),
+        Just(TemplateType::SmolLMChat),
+        Just(TemplateType::Phi2Instruct),
+        Just(TemplateType::Falcon2Chat),
+        Just(TemplateType::OLMo2Chat),
+        Just(TemplateType::Llama32Chat),
         ],
     ) {
         let out = template.apply("", None);
@@ -226,6 +375,43 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
+            Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
+        Just(TemplateType::RwkvWorld),
+        Just(TemplateType::OlmoInstruct),
+        Just(TemplateType::FillInMiddle),
+        Just(TemplateType::ZephyrChat),
+        Just(TemplateType::VicunaChat),
+        Just(TemplateType::TinyLlamaChat),
+        Just(TemplateType::DolphinChat),
+        Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
+        Just(TemplateType::DbrxInstruct),
+        Just(TemplateType::ExaoneChat),
+        Just(TemplateType::MiniCPMChat),
+        Just(TemplateType::CodeGemma),
+        Just(TemplateType::Llama31Chat),
+        Just(TemplateType::DeepSeekV3Chat),
+        Just(TemplateType::CohereAya),
+        Just(TemplateType::SmolLMChat),
+        Just(TemplateType::Phi2Instruct),
+        Just(TemplateType::Falcon2Chat),
+        Just(TemplateType::OLMo2Chat),
+        Just(TemplateType::Llama32Chat),
         ],
         user in "[a-z\u{00E0}-\u{00FF}]{1,30}",
     ) {
@@ -236,18 +422,55 @@ proptest! {
         );
     }
 
-    /// Very long prompts (≥1 000 characters) do not cause a panic.
+    /// Very long prompts (ΓëÑ1 000 characters) do not cause a panic.
     #[test]
     fn prop_very_long_prompt_no_panic(
         template in prop_oneof![
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
+            Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
+        Just(TemplateType::RwkvWorld),
+        Just(TemplateType::OlmoInstruct),
+        Just(TemplateType::FillInMiddle),
+        Just(TemplateType::ZephyrChat),
+        Just(TemplateType::VicunaChat),
+        Just(TemplateType::TinyLlamaChat),
+        Just(TemplateType::DolphinChat),
+        Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
+        Just(TemplateType::DbrxInstruct),
+        Just(TemplateType::ExaoneChat),
+        Just(TemplateType::MiniCPMChat),
+        Just(TemplateType::CodeGemma),
+        Just(TemplateType::Llama31Chat),
+        Just(TemplateType::DeepSeekV3Chat),
+        Just(TemplateType::CohereAya),
+        Just(TemplateType::SmolLMChat),
+        Just(TemplateType::Phi2Instruct),
+        Just(TemplateType::Falcon2Chat),
+        Just(TemplateType::OLMo2Chat),
+        Just(TemplateType::Llama32Chat),
         ],
         base in "[a-z]{5,10}",
         repeats in 200usize..=250usize,
     ) {
-        let long = base.repeat(repeats); // 1 000 – 2 500 characters
+        let long = base.repeat(repeats); // 1 000 ΓÇô 2 500 characters
         let out = template.apply(&long, None);
         prop_assert!(
             !out.is_empty(),
@@ -307,6 +530,43 @@ proptest! {
             Just(TemplateType::Raw),
             Just(TemplateType::Instruct),
             Just(TemplateType::Llama3Chat),
+            Just(TemplateType::Phi4Chat),
+            Just(TemplateType::QwenChat),
+            Just(TemplateType::GemmaChat),
+            Just(TemplateType::MistralChat),
+            Just(TemplateType::DeepSeekChat),
+            Just(TemplateType::StarCoder),
+            Just(TemplateType::FalconChat),
+            Just(TemplateType::CodeLlamaInstruct),
+            Just(TemplateType::CohereCommand),
+            Just(TemplateType::InternLMChat),
+            Just(TemplateType::YiChat),
+            Just(TemplateType::BaichuanChat),
+            Just(TemplateType::ChatGLMChat),
+            Just(TemplateType::MptInstruct),
+        Just(TemplateType::RwkvWorld),
+        Just(TemplateType::OlmoInstruct),
+        Just(TemplateType::FillInMiddle),
+        Just(TemplateType::ZephyrChat),
+        Just(TemplateType::VicunaChat),
+        Just(TemplateType::TinyLlamaChat),
+        Just(TemplateType::DolphinChat),
+        Just(TemplateType::ChatGptChat),
+        Just(TemplateType::Qwen25Chat),
+        Just(TemplateType::MistralNemoChat),
+        Just(TemplateType::ArcticInstruct),
+        Just(TemplateType::DbrxInstruct),
+        Just(TemplateType::ExaoneChat),
+        Just(TemplateType::MiniCPMChat),
+        Just(TemplateType::CodeGemma),
+        Just(TemplateType::Llama31Chat),
+        Just(TemplateType::DeepSeekV3Chat),
+        Just(TemplateType::CohereAya),
+        Just(TemplateType::SmolLMChat),
+        Just(TemplateType::Phi2Instruct),
+        Just(TemplateType::Falcon2Chat),
+        Just(TemplateType::OLMo2Chat),
+        Just(TemplateType::Llama32Chat),
         ],
         user_text in "[a-zA-Z0-9 ]{1,60}",
     ) {
@@ -314,5 +574,377 @@ proptest! {
         let out1 = template.render_chat(&turns, None).unwrap();
         let out2 = template.render_chat(&turns, None).unwrap();
         prop_assert_eq!(out1, out2, "render_chat must be deterministic for {:?}", template);
+    }
+
+    /// Phi4Chat template always includes <|im_start|> and <|im_end|> in its output.
+    #[test]
+    fn prop_phi4_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::Phi4Chat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "Phi4Chat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "Phi4Chat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// Phi4Chat display/parse round-trips correctly.
+    #[test]
+    fn prop_phi4_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::Phi4Chat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("phi4-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// QwenChat template always includes <|im_start|> and <|im_end|> in its output.
+    #[test]
+    fn prop_qwen_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::QwenChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "QwenChat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "QwenChat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// QwenChat display/parse round-trips correctly.
+    #[test]
+    fn prop_qwen_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::QwenChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("qwen-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// GemmaChat template always includes <start_of_turn> and <end_of_turn>.
+    #[test]
+    fn prop_gemma_contains_turn_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::GemmaChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<start_of_turn>"),
+            "GemmaChat output missing <start_of_turn>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<end_of_turn>"),
+            "GemmaChat output missing <end_of_turn>: {out:?}"
+        );
+    }
+
+    /// GemmaChat display/parse round-trips correctly.
+    #[test]
+    fn prop_gemma_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::GemmaChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("gemma-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// MistralChat template always includes [INST] and [/INST] in its output.
+    #[test]
+    fn prop_mistral_contains_inst_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,40}"),
+    ) {
+        let out = TemplateType::MistralChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("[INST]"),
+            "MistralChat output missing [INST]: {out:?}"
+        );
+        prop_assert!(
+            out.contains("[/INST]"),
+            "MistralChat output missing [/INST]: {out:?}"
+        );
+    }
+
+    /// MistralChat display/parse round-trips correctly.
+    #[test]
+    fn prop_mistral_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::MistralChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("mistral-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// DeepSeekChat template always includes ChatML tokens.
+    #[test]
+    fn prop_deepseek_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,50}"),
+    ) {
+        let out = TemplateType::DeepSeekChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "DeepSeekChat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "DeepSeekChat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// DeepSeekChat display/parse round-trips correctly.
+    #[test]
+    fn prop_deepseek_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::DeepSeekChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("deepseek-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// StarCoder output preserves user text verbatim.
+    #[test]
+    fn prop_starcoder_preserves_code(
+        code in "[a-zA-Z0-9_ (){}:;]{1,100}",
+    ) {
+        let out = TemplateType::StarCoder.apply(&code, None);
+        prop_assert_eq!(out, code);
+    }
+
+    /// StarCoder display/parse round-trips correctly.
+    #[test]
+    fn prop_starcoder_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::StarCoder;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("starcoder must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// FalconChat output contains "User:" and ends with "Falcon:".
+    #[test]
+    fn prop_falcon_contains_role_markers(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+    ) {
+        let out = TemplateType::FalconChat.apply(&user, None);
+        prop_assert!(
+            out.contains("User:"),
+            "FalconChat output missing 'User:': {out:?}"
+        );
+        prop_assert!(
+            out.contains("Falcon:"),
+            "FalconChat output missing 'Falcon:': {out:?}"
+        );
+    }
+
+    /// FalconChat display/parse round-trips correctly.
+    #[test]
+    fn prop_falcon_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::FalconChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("falcon-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// CodeLlamaInstruct output contains [INST] and [/INST].
+    #[test]
+    fn prop_codellama_contains_inst_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+    ) {
+        let out = TemplateType::CodeLlamaInstruct.apply(&user, None);
+        prop_assert!(
+            out.contains("[INST]"),
+            "CodeLlamaInstruct output missing [INST]: {out:?}"
+        );
+        prop_assert!(
+            out.contains("[/INST]"),
+            "CodeLlamaInstruct output missing [/INST]: {out:?}"
+        );
+    }
+
+    /// CodeLlamaInstruct with system prompt contains <<SYS>>.
+    #[test]
+    fn prop_codellama_sys_contains_markers(
+        user in "[a-zA-Z0-9 ]{1,40}",
+        system in "[a-zA-Z0-9 ]{1,40}",
+    ) {
+        let out = TemplateType::CodeLlamaInstruct.apply(&user, Some(&system));
+        prop_assert!(
+            out.contains("<<SYS>>"),
+            "CodeLlamaInstruct with system missing <<SYS>>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<</SYS>>"),
+            "CodeLlamaInstruct with system missing <</SYS>>: {out:?}"
+        );
+    }
+
+    /// CodeLlamaInstruct display/parse round-trips correctly.
+    #[test]
+    fn prop_codellama_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::CodeLlamaInstruct;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("codellama-instruct must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// CohereCommand output contains turn tokens.
+    #[test]
+    fn prop_cohere_contains_turn_tokens(
+        user in "[a-zA-Z0-9 .,!?]{1,80}",
+    ) {
+        let out = TemplateType::CohereCommand.apply(&user, None);
+        prop_assert!(
+            out.contains("<|START_OF_TURN_TOKEN|>"),
+            "CohereCommand output missing turn token: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|END_OF_TURN_TOKEN|>"),
+            "CohereCommand output missing end turn token: {out:?}"
+        );
+    }
+
+    /// CohereCommand display/parse round-trips correctly.
+    #[test]
+    fn prop_cohere_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::CohereCommand;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("cohere-command must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    /// InternLMChat template always includes ChatML tokens.
+    #[test]
+    fn prop_internlm_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,50}"),
+    ) {
+        let out = TemplateType::InternLMChat.apply(&user, system.as_deref());
+        prop_assert!(
+            out.contains("<|im_start|>"),
+            "InternLMChat output missing <|im_start|>: {out:?}"
+        );
+        prop_assert!(
+            out.contains("<|im_end|>"),
+            "InternLMChat output missing <|im_end|>: {out:?}"
+        );
+    }
+
+    /// InternLMChat display/parse round-trips correctly.
+    #[test]
+    fn prop_internlm_display_roundtrip(
+        _dummy in Just(()),
+    ) {
+        let t = TemplateType::InternLMChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("internlm-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ΓöÇΓöÇ Yi Chat ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// YiChat template always includes ChatML tokens.
+    #[test]
+    fn prop_yi_contains_chatml_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+        system in proptest::option::of("[a-zA-Z0-9 ]{1,50}"),
+    ) {
+        let out = TemplateType::YiChat.apply(&user, system.as_deref());
+        prop_assert!(out.contains("<|im_start|>"), "YiChat missing <|im_start|>: {out:?}");
+        prop_assert!(out.contains("<|im_end|>"), "YiChat missing <|im_end|>: {out:?}");
+    }
+
+    /// YiChat display/parse round-trips correctly.
+    #[test]
+    fn prop_yi_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::YiChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("yi-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ΓöÇΓöÇ Baichuan Chat ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// BaichuanChat template always includes reserved tokens.
+    #[test]
+    fn prop_baichuan_contains_reserved_tokens(
+        user in "[a-zA-Z0-9 ]{1,100}",
+    ) {
+        let out = TemplateType::BaichuanChat.apply(&user, None);
+        prop_assert!(out.contains("<reserved_106>"), "BaichuanChat missing <reserved_106>: {out:?}");
+        prop_assert!(out.contains("<reserved_107>"), "BaichuanChat missing <reserved_107>: {out:?}");
+    }
+
+    /// BaichuanChat display/parse round-trips correctly.
+    #[test]
+    fn prop_baichuan_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::BaichuanChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("baichuan-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ΓöÇΓöÇ ChatGLM Chat ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// ChatGLMChat template always starts with [gMASK]<sop>.
+    #[test]
+    fn prop_chatglm_starts_with_gmask(
+        user in "[a-zA-Z0-9 ]{1,100}",
+    ) {
+        let out = TemplateType::ChatGLMChat.apply(&user, None);
+        prop_assert!(out.starts_with("[gMASK]<sop>"), "ChatGLMChat missing [gMASK]<sop>: {out:?}");
+        prop_assert!(out.contains("<|user|>"), "ChatGLMChat missing <|user|>: {out:?}");
+        prop_assert!(out.contains("<|assistant|>"), "ChatGLMChat missing <|assistant|>: {out:?}");
+    }
+
+    /// ChatGLMChat display/parse round-trips correctly.
+    #[test]
+    fn prop_chatglm_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::ChatGLMChat;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("chatglm-chat must parse");
+        prop_assert_eq!(t, parsed);
+    }
+
+    // ΓöÇΓöÇ MPT Instruct ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    /// MptInstruct template always includes ### markers.
+    #[test]
+    fn prop_mpt_contains_hash_markers(
+        user in "[a-zA-Z0-9 ]{1,100}",
+    ) {
+        let out = TemplateType::MptInstruct.apply(&user, None);
+        prop_assert!(out.contains("### Instruction"), "MptInstruct missing ### Instruction: {out:?}");
+        prop_assert!(out.contains("### Response"), "MptInstruct missing ### Response: {out:?}");
+    }
+
+    /// MptInstruct display/parse round-trips correctly.
+    #[test]
+    fn prop_mpt_display_roundtrip(_dummy in Just(())) {
+        let t = TemplateType::MptInstruct;
+        let s = t.to_string();
+        let parsed: TemplateType = s.parse().expect("mpt-instruct must parse");
+        prop_assert_eq!(t, parsed);
     }
 }

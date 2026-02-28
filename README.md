@@ -165,3 +165,10 @@ Note: ~70 tests are intentionally `#[ignore]`-d (TDD scaffolding for tracked iss
 ## License
 
 Dual-licensed under [MIT](LICENSE) and [Apache 2.0](LICENSE).
+
+## QK256 Format
+We support the QK256 Format for models.
+
+For more details, see the [Dual I2_S Flavor Architecture](docs/explanation/i2s-dual-flavor.md).
+
+Use `--strict-loader` for strict loading.

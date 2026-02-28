@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
+### Instruction:
+Explain photosynthesis briefly.
+
+### Response:

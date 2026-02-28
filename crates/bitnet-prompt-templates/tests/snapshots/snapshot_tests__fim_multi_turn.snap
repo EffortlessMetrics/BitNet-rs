@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<fim_prefix>def sort(arr):<fim_suffix>return result<fim_middle>
