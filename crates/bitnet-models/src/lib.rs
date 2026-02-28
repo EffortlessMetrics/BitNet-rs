@@ -7,6 +7,7 @@ pub mod formats;
 pub mod gguf_min;
 pub mod gguf_parity;
 pub mod gguf_simple;
+pub mod gpu_loader;
 pub mod loader;
 pub mod minimal;
 pub mod names;
