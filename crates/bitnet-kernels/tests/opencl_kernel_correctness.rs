@@ -175,6 +175,7 @@ fn kernel_sources_are_valid_c99_ish() {
         ("matmul", kernels::MATMUL_I2S_SRC),
         ("quantize", kernels::QUANTIZE_I2S_SRC),
         ("elementwise", kernels::ELEMENTWISE_SRC),
+        ("softmax", kernels::SOFTMAX_SRC),
     ] {
         let opens = src.matches('{').count();
         let closes = src.matches('}').count();
@@ -216,8 +217,8 @@ fn elementwise_src_contains_rms_norm() {
 }
 
 #[test]
-fn elementwise_src_contains_softmax() {
-    let src = kernels::ELEMENTWISE_SRC;
+fn softmax_kernel_has_correct_signature() {
+    let src = kernels::SOFTMAX_SRC;
     assert!(
         src.contains("__kernel void softmax"),
         "should contain softmax kernel"
@@ -226,10 +227,10 @@ fn elementwise_src_contains_softmax() {
 
 #[test]
 fn softmax_has_numerical_stability() {
-    let src = kernels::ELEMENTWISE_SRC;
+    let src = kernels::SOFTMAX_SRC;
     // Softmax should subtract max for numerical stability
     assert!(
-        src.contains("max_val") || src.contains("max_v"),
+        src.contains("row_max") || src.contains("local_max"),
         "softmax should find max for numerical stability"
     );
 }
@@ -263,6 +264,7 @@ fn all_kernels_use_opencl_qualifiers() {
         ("matmul", kernels::MATMUL_I2S_SRC),
         ("quantize", kernels::QUANTIZE_I2S_SRC),
         ("elementwise", kernels::ELEMENTWISE_SRC),
+        ("softmax", kernels::SOFTMAX_SRC),
     ] {
         assert!(
             src.contains("__kernel") || src.contains("kernel"),
