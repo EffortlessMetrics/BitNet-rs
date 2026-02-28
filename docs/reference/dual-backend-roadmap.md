@@ -1,8 +1,11 @@
 # Dual-Backend Support Implementation Roadmap
 
-> **Last updated**: reflects implementation state after PRs #608–#997.
+> **Last updated**: reflects implementation state after PRs #608–#1052.
 > Items marked ✅ are **done**; items marked 🔲 are **planned**.
-> **Recent wave (PRs #978–#997)**: Metal backend (#992), Vulkan runtime probing (#993), Intel oneAPI
+> **Recent wave (PRs #1032–#1052)**: Intel GPU / OpenCL backend — foundation (#1032–#1034),
+> infrastructure (#1035–#1036), core implementation (#1037–#1039), testing (#1040–#1042),
+> and wave 2 enhancements (#1043–#1052).
+> **Previous wave (PRs #978–#997)**: Metal backend (#992), Vulkan runtime probing (#993), Intel oneAPI
 > backend (#986), AVX-512 kernel selection and hardening (#989), NEON kernel improvements (#988),
 > OpenGL probing (#984), OpenCL/Vulkan CLI aliases (#985), ROCm availability field (#995),
 > AVX-512 TL2 quantization kernels (#997), TL2 2-bit domain fix (#978), CPU golden path E2E
@@ -207,6 +210,57 @@ All Phase 8 multi-backend targets have been completed:
 | ROCm availability field in `DeviceProbe` | `crates/bitnet-device-probe/src/lib.rs` | #995 |
 | AVX-512 TL2 quantization kernels | `crates/bitnet-kernels/` | #997 |
 
+### ✅ Phase 9: Intel GPU / OpenCL Backend (DONE — PRs #1032–#1052)
+
+Full Intel GPU support via OpenCL, from dependency setup through optimized kernels,
+inference integration, and comprehensive testing.
+
+#### Foundation (PRs #1032–#1034)
+
+| Capability | Location | PR |
+|---|---|---|
+| OpenCL dependency setup (`opencl3` crate, `oneapi` feature gate) | `crates/bitnet-kernels/Cargo.toml`, workspace `Cargo.toml` | #1032 |
+| `Device::OpenCl(usize)` variant in Device enum | `crates/bitnet-common/src/types.rs` | #1033 |
+| OpenCL device probe — Intel GPU detection via `clGetDeviceInfo` | `crates/bitnet-device-probe/src/lib.rs` | #1034 |
+
+#### Infrastructure (PRs #1035–#1036)
+
+| Capability | Location | PR |
+|---|---|---|
+| Intel GPU CI workflows (`oneapi` feature builds, OpenCL device checks) | `.github/workflows/ci-core.yml`, `.github/workflows/gpu-smoke.yml` | #1035 |
+| Intel Arc GPU setup guide and README updates | `docs/gpu/intel-arc-setup.md`, `README.md` | #1036 |
+
+#### Core Implementation (PRs #1037–#1039)
+
+| Capability | Location | PR |
+|---|---|---|
+| `OpenClKernelProvider` — `KernelProvider` impl with OpenCL matmul_i2s and quantize | `crates/bitnet-kernels/src/gpu/opencl.rs` | #1037 |
+| OpenCL kernel sources — `matmul_i2s.cl`, `quantize.cl` (ternary packing, I2_S dequant) | `crates/bitnet-kernels/src/gpu/kernels/` | #1038 |
+| Inference engine integration — OpenCL backend wired into `ProductionInferenceEngine` | `crates/bitnet-inference/src/`, `crates/bitnet-kernels/src/lib.rs` | #1039 |
+
+#### Testing (PRs #1040–#1042)
+
+| Capability | Location | PR |
+|---|---|---|
+| OpenCL kernel unit tests — matmul correctness, quantize round-trips, error handling | `crates/bitnet-kernels/tests/opencl_tests.rs` | #1040 |
+| BDD scenarios for OpenCL device selection and backend coexistence | `crates/bitnet-bdd-grid/`, `crates/bitnet-device-probe/tests/` | #1041 |
+| Fuzz targets — OpenCL ternary packing and device construction | `fuzz/fuzz_targets/opencl_ternary_pack.rs`, `fuzz/fuzz_targets/opencl_device_construction.rs` | #1042 |
+
+#### Wave 2: Optimization & Hardening (PRs #1043–#1052)
+
+| Capability | Location | PR |
+|---|---|---|
+| Feature contract updates — `oneapi` feature gate validation and BDD grid cells | `crates/bitnet-feature-contract/`, `crates/bitnet-bdd-grid/` | #1043 |
+| OpenCL matmul tiled kernel — local memory tiling for higher throughput | `crates/bitnet-kernels/src/gpu/kernels/matmul_i2s_tiled.cl` | #1044 |
+| OpenCL softmax kernel — fused softmax for GPU-resident attention | `crates/bitnet-kernels/src/gpu/kernels/softmax.cl` | #1045 |
+| Snapshot tests for OpenCL kernel provider and device probe | `crates/bitnet-kernels/tests/snapshot_tests.rs`, `crates/bitnet-device-probe/tests/snapshot_tests.rs` | #1046 |
+| Property tests for OpenCL kernel correctness and numerical stability | `crates/bitnet-kernels/tests/property_tests.rs` | #1047 |
+| E2E Intel GPU inference test with synthetic GGUF fixture | `crates/bitnet-inference/tests/e2e_opencl_golden_path.rs` | #1048 |
+| OpenCL error handling hardening — `CL_OUT_OF_RESOURCES`, device-lost recovery | `crates/bitnet-kernels/src/gpu/opencl.rs` | #1049 |
+| Receipt integration — OpenCL backend captured in `BackendCapabilities` snapshot | `crates/bitnet-receipts/`, `crates/bitnet-kernels/src/device_features.rs` | #1050 |
+| Multi-GPU backend architecture documentation | `docs/architecture/multi-gpu-backend.md` | #1053 |
+| Dual-backend roadmap update with Intel GPU work | `docs/reference/dual-backend-roadmap.md` | #1054 |
+
 ### 🔲 What's Planned
 
 1. **Real-model crossval receipts** (gated on model download infrastructure)
@@ -216,6 +270,34 @@ All Phase 8 multi-backend targets have been completed:
 2. **Metal kernel implementations** — compute-shader BitNet GEMV for Apple Silicon
 3. **Vulkan kernel implementations** — SPIR-V BitNet GEMV for cross-platform GPU
 4. **ROCm/HIP kernel implementations** — AMD GPU acceleration
+
+### 🔲 Intel GPU / OpenCL Next Steps
+
+1. **Performance optimization**
+   - Tiled matmul with local memory and work-group tuning for Intel Arc
+   - SPIR-V pre-compilation for faster kernel startup
+   - Persistent GPU weight caching to eliminate repeated H2D transfers
+
+2. **Additional GPU kernels**
+   - Attention kernel (fused QKV projection + scaled dot-product)
+   - Softmax kernel (numerically stable, fused with attention)
+   - RoPE kernel (rotary position embedding on GPU)
+   - RMSNorm kernel (root-mean-square layer normalization)
+
+3. **Level-Zero backend**
+   - Intel's low-level GPU API for maximum performance on Arc / Data Center Max
+   - Direct hardware queue submission, lower overhead than OpenCL
+   - Shared memory model with OpenCL for gradual migration
+
+4. **Vulkan compute path**
+   - Cross-vendor alternative (Intel, AMD, NVIDIA via single backend)
+   - SPIR-V shader modules for BitNet GEMV and attention
+   - Descriptor set management for weight/activation buffers
+
+5. **Multi-device inference**
+   - Split model layers across CUDA + OpenCL devices
+   - Pipeline parallelism — overlap compute on device N with transfer for N+1
+   - Unified memory where supported (CUDA UVM, OpenCL SVM)
 
 ---
 
