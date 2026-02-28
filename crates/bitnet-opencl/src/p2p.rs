@@ -146,6 +146,22 @@ pub struct TransferEngine<P: P2PProbe = FallbackProbe> {
 
 impl TransferEngine<FallbackProbe> {
     /// Create an engine with the default (fallback) probe.
+    ///
+    /// The default probe always reports P2P as unavailable, so all transfers
+    /// use the host-staged path. Supply a custom [`P2PProbe`] via
+    /// [`TransferEngine::with_probe`] for real hardware detection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bitnet_opencl::p2p::{TransferEngine, DeviceId, BackendKind, TransferPath};
+    ///
+    /// let engine = TransferEngine::new();
+    /// let src = DeviceId { index: 0, backend: BackendKind::Cuda };
+    /// let dst = DeviceId { index: 1, backend: BackendKind::Cuda };
+    /// let report = engine.transfer(&src, &dst, &[0u8; 64]).unwrap();
+    /// assert_eq!(report.path, TransferPath::HostStaged);
+    /// ```
     pub fn new() -> Self {
         Self {
             probe: FallbackProbe,
