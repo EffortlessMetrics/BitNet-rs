@@ -390,7 +390,6 @@ dependencies = [
  "bitnet-tests",
  "bitnet-tokenizers",
  "bitnet-transformer",
- "bitnet-vulkan",
  "byteorder",
  "candle-core",
  "chrono",
@@ -833,9 +832,8 @@ dependencies = [
 name = "bitnet-opencl"
 version = "0.2.1-dev"
 dependencies = [
- "bitnet-common",
  "log",
- "serial_test",
+ "temp-env",
 ]
 
 [[package]]
@@ -914,18 +912,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
-]
-
-[[package]]
-name = "bitnet-rocm"
-version = "0.2.1-dev"
-dependencies = [
- "bitnet-common",
- "bytemuck",
- "libloading 0.8.9",
- "proptest",
- "thiserror 2.0.18",
- "tracing",
 ]
 
 [[package]]
@@ -1431,17 +1417,6 @@ dependencies = [
  "serde",
  "serde_yaml_ng",
  "tempfile",
-]
-
-[[package]]
-name = "bitnet-vulkan"
-version = "0.2.1-dev"
-dependencies = [
- "ash",
- "bitnet-common",
- "proptest",
- "thiserror 2.0.18",
- "tracing",
 ]
 
 [[package]]
