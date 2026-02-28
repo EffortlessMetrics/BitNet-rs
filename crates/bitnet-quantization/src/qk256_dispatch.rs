@@ -39,7 +39,7 @@ pub fn qk256_gemv(
     let row_stride_bytes = blocks_per_row * i2s_qk256::QK256_PACKED_BYTES;
 
     i2s_qk256::gemv_qk256(packed, activations, output, rows, cols, row_stride_bytes)
-        .expect("qk256_gemv dispatch should succeed for validated inputs");
+        .expect("qk256_gemv: internal dispatch failed after input validation (this is a bug)");
 }
 
 /// Scalar legacy QK256 GEMV (kept for benchmark compatibility).

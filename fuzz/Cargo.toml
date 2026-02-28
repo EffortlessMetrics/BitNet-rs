@@ -269,6 +269,30 @@ test = false
 doc = false
 
 [[bin]]
+name = "gpu_sampling"
+path = "fuzz_targets/gpu_sampling.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gpu_quantization"
+path = "fuzz_targets/gpu_quantization.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gpu_attention_shapes"
+path = "fuzz_targets/gpu_attention_shapes.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "gpu_rope_values"
+path = "fuzz_targets/gpu_rope_values.rs"
+test = false
+doc = false
+
+[[bin]]
 name = "gguf_tensor_info"
 path = "fuzz_targets/gguf_tensor_info.rs"
 test = false

@@ -4,218 +4,195 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
-### Added
-- **GPU health monitor** (#1306): 9 check types, DiagnosticReport, trend detection, and recommendations for proactive GPU health management, 71 tests
-- **Speculative decoding** (#1305): 4 acceptance methods (greedy, sample, typical, top-k), adaptive draft length, and speedup tracking, 65 tests
-- **GPU power management** (#1304): PowerManager with 4 modes (Performance, Balanced, PowerSaver, Adaptive), ThermalPolicy, and energy efficiency tracking, 53 tests
-- **Batch inference engine** (#1303): BatchEngine with 4 padding strategies, priority scheduling, and dynamic batching for throughput optimization, 73 tests
-- **Cross-backend test harness** (#1302): 4 tolerance modes (Exact, UlpBased, Relative, Statistical), TestSuite/TestRunner, and built-in validation suites, 68 tests
-- **GPU streaming generation** (#1301): StreamingGenerator with SSE/JSON formatters and full stream lifecycle management for real-time token output, 75 tests
-- **GPU profiling framework** (#1300): GpuProfiler with ChromeTraceExporter, CsvExporter, and ProfileReport for kernel-level performance analysis, 67 tests
-- **Async GPU execution** (#1299): AsyncEngine with priority queue, dependency tracking, and Pipeline stages for non-blocking GPU dispatch, 60 tests
-- **SPIR-V compilation pipeline** (#1298): SpirVCompiler, SpirVCache with LRU eviction, and SpirVValidator for Vulkan shader management, 65 tests
-- **Computation graph executor** (#1297): GraphOptimizer with operator fusion, dead-code elimination, constant folding, and ExecutionPlan scheduling, 89 tests
-- **Kernel autotuner** (#1296): 4 search strategies (Exhaustive, Random, Grid, Bayesian) with persistent cache for optimal kernel configuration, 60 tests
-- **GPU memory pool** (#1295): FirstFit, BestFit, BuddySystem, and SlabAllocator strategies with defragmentation support, 76 tests
-- **GPU tensor operations** (#1294): TensorOps trait with CpuTensorOps reference impl covering matmul, softmax, rms_norm, rope, silu, and gelu, 81 tests
-- **Multi-device scheduler** (#1293): 5 scheduling policies with device blacklisting and utilization reporting for heterogeneous GPU fleets, 69 tests
-- **Backend capability matrix** (#1292): 8 backends with FeatureFlags and feature negotiation scoring for optimal backend selection, 71 tests
-- **Vulkan runtime layer** (#1291): VulkanInstance, VulkanPhysicalDevice, VulkanBuffer, and VulkanComputePipeline abstractions, 36 tests
-- **Model sharding** (#1290): 4 sharding strategies (LayerWise, TensorParallel, Replicated, Custom) for multi-device model distribution, 64 tests
-- **wgpu runtime integration** (#1289): WgpuDevice, WgpuBuffer, WgpuComputePipeline, and WgpuKernelLauncher for cross-platform GPU compute, 32 tests
-- **Linear algebra primitives** (#1288): dot, norm, matmul, matvec, transpose, outer, and batched operations for GPU backend foundations, 83 tests
-- **GPU error recovery** (#1287): RecoveryEngine with retry, fallback, and blacklisting strategies for resilient GPU execution, 60 tests
-- **GPU config system** (#1286): GpuConfig with from_env(), validate(), 8 environment variable constants for runtime GPU configuration, 69 tests
-- **CHANGELOG waves 33-35** (#1285): 14 entries covering quantization, embeddings, RoPE, server, CLI, and E2E improvements
-- **E2E mock inference** (#1284): MockModel with forward pass, full generation loop, deterministic seeding, 56 tests
-- **CLI --backend flag** (#1283): BackendArg with 8 options, list-backends subcommand, 32 tests
-- **GPU HAL fuzz targets** (#1282): 4 fuzz targets for sampling, quantization, attention shapes, RoPE values
-- **GPU HAL benchmarks** (#1281): Criterion benchmarks for softmax, rms_norm, matmul, rope, sampling
-- **OpenCL runtime binding** (#1280): platform/device enumeration with dynamic loading, mock devices, 46 tests
-- **GPU compile check CI** (#1279): 7-crate compile matrix workflow, doc check workflow
-- **GPU HAL property tests** (#1278): 35 proptest-based tests for sampling, quantization, attention, RoPE, memory
-- **GPU architecture documentation** (#1277): architecture guide, testing guide, compatibility matrix
-- **Full inference engine** (#1276): EngineConfig with 8 backend types, lifecycle state machine, capabilities, 64 tests
-- **GPU server integration** (#1275): OpenAI-compatible chat completion API types, health checks, 57 tests
-- **Rotary position embeddings** (#1274): RoPE with NTK/YaRN/Linear scaling, pre-computed tables, 50 tests
-- **Embedding layer** (#1273): token embedding with batch lookup and tied output projection, 45 tests
-- **Quantization runtime** (#1272): I2S/QK256 dequantization, ternary matmul, compression ratios, 78 tests
-- **CHANGELOG waves 29-32** (#1271): 17 entries covering GPU HAL infrastructure PRs
-- **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
-- **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
-- **GPU error code mapping** (#1132): Comprehensive GPU error code mapping in `bitnet-common` provides unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal backends
-- **Tokenizer error handling** (#1131): Improved error handling and edge case coverage in `bitnet-tokenizers` for more robust tokenization
-- **GPU telemetry and monitoring** (#1124): GPU telemetry system tracks utilization, memory, temperature, and kernel timing for observability
-- **Tensor parallelism** (#1125): Multi-device tensor parallelism splits layers across GPU devices for large-model inference
-- **GPU-to-GPU peer transfer** (#1126): OpenCL peer-to-peer memory transfer between GPU devices eliminates host-side round-trips
-- **ONNX export with GPU metadata** (#1122): ONNX export path now embeds GPU acceleration metadata for interop with external inference runtimes
-- **GPU power management** (#1121): GPU power management integration in `bitnet-device-probe` for thermal throttling awareness and power-state queries
-- **GpuBatchScheduler** (#1119): Multi-request GPU batching scheduler coalesces inference requests for higher throughput
-- **OpenCL USM support** (#1117): OpenCL 3.0 Unified Shared Memory (USM) support eliminates explicit buffer copies on supported devices
-- **GPU health endpoint** (#1116): GPU health check REST endpoint in `bitnet-server` reports device status, memory, and thermal state
-- **gpu-info subcommand** (#1115): New `gpu-info` CLI subcommand for device discovery and capability reporting
-- **kernel-bench subcommand** (#1118): New `kernel-bench` CLI subcommand for micro-benchmarking individual kernel implementations
-- **FP16/INT8 mixed-precision kernels** (#1114): OpenCL FP16/INT8 mixed-precision kernel variants for reduced memory bandwidth on supported hardware
-- **Persistent kernel cache** (#1113): OpenCL persistent kernel compilation cache avoids recompilation across runs
-- **bitnet-metal microcrate** (#1112): Metal compute backend microcrate with MSL shaders for macOS/Apple Silicon GPU inference
-- **bitnet-rocm microcrate** (#1111): AMD ROCm GPU backend microcrate with HIP runtime integration
-- **bitnet-webgpu microcrate** (#1108): Cross-platform GPU backend via `wgpu` for WebGPU and native Vulkan/Metal/DX12 targets
-- **bitnet-level-zero microcrate** (#1085): Intel Level-Zero backend microcrate for low-level Intel GPU access
-- **bitnet-vulkan microcrate** (#1071): Vulkan compute backend microcrate with SPIR-V shader pipeline
-- **GPU server integration** (#1128): GPU backends wired into the axum HTTP server for accelerated inference serving
-- **Intel subgroup kernels** (#1087): Intel subgroup-optimized OpenCL kernels tuned for Arc GPU EU architecture
-- **WASM kernel validation shim** (#1084): OpenCL WASM-compatible kernel validation shim enables browser-side correctness checks
-- **Multi-device work scheduler** (#1083): Inference work scheduler distributes computation across heterogeneous GPU devices
-- **Vulkan tiled matmul** (#1082): Tiled matrix multiplication compute shader for Vulkan backend with shared-memory optimization
-- **GPU transformer orchestration** (#1081): Complete GPU transformer layer orchestration in OpenCL — attention, FFN, and LayerNorm fused pipeline
-- **GPU activation kernels** (#1080): OpenCL SiLU and GELU activation function kernels for GPU-resident forward passes
-- **GPU linear projection** (#1079): OpenCL GPU linear projection kernels for attention Q/K/V and FFN layers
-- **GPU embedding lookup** (#1078): OpenCL GPU embedding lookup kernels for token-to-vector conversion on device
-- **Work-group auto-tuning** (#1077): OpenCL work-group size auto-tuning profiles device limits for optimal occupancy
-- **GPU memory enforcement** (#1076): OpenCL GPU memory limit enforcement and telemetry prevents OOM and tracks allocation watermarks
-- **GPU KV cache kernels** (#1075): OpenCL GPU KV cache management kernels for on-device cache append and retrieval
-- **OpenCL kernel profiling** (#1058): Event-based kernel profiling in OpenCL captures per-kernel timing for performance analysis
-- **Receipt schema extension** (#1090): Receipt schema extended with OpenCL device info, kernel timing, and backend metadata
-- **CUDA kernel scaffolding** (#1092): CUDA kernel scaffolding for QK256 GEMV, attention, and RMSNorm operations
-- **HIP kernel stubs** (#1102): ROCm HIP kernel stubs for QK256 GEMV, attention, and RMSNorm mirroring CUDA scaffolding
-- **CPU kernel gap fill** (#1095): CPU kernel gaps filled and dead orphan source files removed for cleaner kernel registry
-- **GGUF-to-GPU tensor loader** (#1096): GGUF-to-GPU tensor loader for Intel Arc enables direct model loading to GPU memory
-- **Production-ready general LLMs** (#1049): Extended bitnet-rs infrastructure for production-ready general LLM support beyond BitNet models
-- `feat(gpu): add initial ROCm feature wiring and build/link support` — ROCm (AMD GPU) backend skeleton with feature gate, build-system integration, and link support for HIP runtime (#1014)
-- `feat(gpu): add initial support for Metal backend and detection` — Metal GPU backend with runtime detection for macOS/Apple Silicon; capability wired into DeviceProbe (#1021)
-- `feat(kernels): wire QK256 dispatch to canonical AVX2/scalar path` — QK256 GEMV dispatch now routes through the canonical AVX2/scalar runtime path; AVX2 CI coverage added (#1018)
-- `feat(transformer): add strict LayerNorm bias enforcement toggle` — New toggle to enforce or reject LayerNorm bias tensors during model load for stricter validation (#1013)
-- `feat(npu): add initial NPU backend scaffolding for kernels, inference, and CLI` — NPU backend skeleton wired across kernels, inference engine, and CLI device selection (#1008)
-- `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
-
-### Changed
-- **Nix flake OpenCL deps** (#1066): OpenCL development dependencies added to Nix flake for reproducible GPU development environments
-- `chore: prepare the workspace for crates.io release` — Workspace metadata, manifests, and dependency versions updated for crates.io publishing readiness (#1028)
-- `chore: prepare v0.2.0 release` — Version bumped to 0.2.0; release notes consolidated (#1006)
-- `ci: expand nightly fuzz schedule to all 34 fuzz targets` — Nightly CI fuzz schedule now covers all available fuzz targets (up from 7); timeboxed 5-minute runs per target (#1004)
-- `docs: update backend roadmap and architecture docs for v0.2` — Updated dual-backend roadmap and architecture documentation for post-v0.2 state (#1001)
-
-### Fixed
-- **Snapshot kernel provider count** (#1089): Updated kernel provider count 2→3 in snapshots after Metal backend addition
-- `fix: handle .contiguous() panics on block-quantized tensors during transpose` — Prevents panics when calling `.contiguous()` on block-quantized tensors that require transpose (#1048)
-- `fix: input validation falsely rejecting CRLF sequences` — Input validation no longer rejects valid payloads containing CRLF (`\r\n`) line endings (#1030)
-- `fix: improve Model Download System` — Model download reliability improvements including better error handling, retry logic, and progress reporting (#1027)
-- `fix(config): accept 'npu' as valid device identifier in CLI and server` — NPU device identifier (`npu`) now accepted as a valid device string in CLI and server config (#1002)
-
-### Performance
-- **AVX2 QK256 GEMV optimization** (#1105): SIMD unpack and 4-wide FMA tiling on QK256 GEMV hot paths for improved throughput on x86-64
-- **NEON kernel enhancements** (#1103): Enhanced ARM64 NEON kernel implementations for improved performance on Apple Silicon and ARM servers
-- **OpenCL tiled matmul** (#1060): Tiled matrix multiplication kernel with local memory optimization for OpenCL GPU backends
-- `perf: optimize softmax_in_place for sparse distributions` — Faster softmax computation for sparse logit distributions by skipping negligible values (#1031)
-
-### Testing
-- **GPU vs CPU cross-validation** (#1120): GPU vs CPU cross-validation test suite verifies numerical equivalence across backends
-- **Numerical stability tests** (#1123): 40-test numerical stability suite covering edge cases in kernels (NaN, Inf, denormals, large tensors)
-- **GPU stress tests** (#1107): GPU stress tests for reliability validation under sustained load and memory pressure
-- **GPU snapshot regression** (#1106): Comprehensive GPU kernel output regression snapshots via insta for deterministic output tracking
-- **GPU feature flag matrix** (#1104): GPU feature flag compatibility matrix tests verify correct compilation across feature combinations
-- **TDD scaffold enablement** (#1097): TDD scaffolds enabled and ignored test count further reduced
-- **Snapshot tests expansion** (#1094): Insta snapshot tests added for `bitnet-feature-matrix` and `bitnet-test-support` crates
-- **Property tests expansion** (#1091): Property tests added for additional crates strengthening invariant coverage
-- **BDD multi-backend scenarios** (#1086): Comprehensive BDD scenarios for multi-backend device selection and fallback behavior
-- **Fuzz targets: kernel/KV/config/sampling/tensors** (#1088): Five new fuzz targets covering kernel dispatch, KV cache ops, config parsing, sampling strategies, and tensor operations
-- **Fuzz targets: attention/softmax/rmsnorm** (#1070): Three new fuzz targets for attention, softmax, and RMSNorm numerical stability
-- **OpenCL property tests** (#1069): Extended property tests for OpenCL kernel CPU reference implementations
-- **OpenCL e2e pipeline tests** (#1055): End-to-end OpenCL inference pipeline tests validate full forward pass on GPU
-- **Criterion benchmarks: OpenCL** (#1073): Criterion benchmarks for OpenCL kernel CPU reference implementations
-- **Criterion benchmarks: quantization/kernels** (#1101): Expanded Criterion benchmarks covering quantization algorithms and kernel operations
-- `test: reduce ignored test count (wave 7) — enable unblocked tests` — Wave 7 reduction of `#[ignore]` tests; newly unblocked tests converted to active (#1025)
-- `test(bitnet-device-probe): add property tests for new backend capabilities` — Property tests covering ROCm, Metal, Vulkan, NPU, and oneAPI backend capability invariants (#1003)
-
-### CI
-- **ROCm/HIP smoke workflow** (#1130): CI smoke workflow for ROCm/HIP compilation validates AMD GPU backend builds
-- **Fuzz target matrix completion** (#1099): Fuzz-nightly and fuzz-ci workflow matrices updated to include all fuzz targets
-- **Mutation testing: OpenCL** (#1056): Mutation testing configuration added for OpenCL modules via `cargo-mutants`
-- **Intel GPU Docker image** (#1065): Docker image with Intel compute runtime for GPU CI jobs
-
-### Documentation
-- **GPU ADRs** (#1109): Architecture Decision Records documenting GPU backend selection rationale and trade-offs
-- **GPU contributor guide** (#1110): GPU development contributor guide covering kernel authoring, testing, and review workflow
-- **Intel GPU tuning guide** (#1068): Intel GPU performance tuning guide with Arc-specific optimization recommendations
-- **Multi-GPU architecture docs** (#1053): Multi-GPU backend architecture documentation covering device management and scheduling
-- **Dual-backend roadmap update** (#1054): Dual-backend roadmap updated with Intel GPU work and OpenCL integration milestones
-- **CHANGELOG update wave** (#1098): CHANGELOG entries added for PRs #1003–#1048
-- `docs: clarify BitNet.cpp vs llama.cpp cross-validation relationship` — Clarified the distinct roles of BitNet.cpp and llama.cpp in the dual-backend cross-validation architecture (#1026)
-- `docs: add general LLM production readiness plan for BitNet-rs` — Production readiness roadmap covering reliability, scalability, and deployment considerations (#1012)
-- `docs: add macOS 26 Apple Silicon integration roadmap` — Roadmap for macOS 26 integration with Apple Silicon GPU/NPU acceleration (#1007)
-- `docs: add Apple Silicon GPU/NPU backend roadmap` — Detailed backend roadmap for Metal GPU and Core ML NPU acceleration on Apple Silicon (#1005)
-- `docs: add canonical CUDA GPU setup guide` — Comprehensive CUDA GPU setup guide with corrected build command examples and environment configuration (#998)
-
-## [0.2.0] - 2026-02-27
+## [v0.2.0] - 2026-02-28
 
 ### Highlights
-- 1200+ comprehensive tests across all microcrates (BDD, unit, property, integration, fuzz)
-- Complete microcrate SRP extraction (bitnet-sampling, bitnet-transformer, bitnet-receipts, bitnet-prompt-templates, bitnet-device-probe, bitnet-logits, bitnet-generation, bitnet-engine-core)
-- Feature lattice normalized: gpu/cuda correctly orthogonal
-- Kernel registry with capability detection
-- Modern Diataxis documentation structure
+
+- **7,000+ tests** across the workspace (unit, property, snapshot, BDD, integration, fuzz, E2E)
+- **GPU Hardware Abstraction Layer** — CUDA, Metal, Vulkan, OpenCL, Intel oneAPI, ROCm, and WebGPU backends with unified dispatch
+- **Speculative decoding** engine with 4 acceptance methods and adaptive draft length
+- **Batch inference engine** with priority scheduling and dynamic batching
+- **Multi-device scheduling** across heterogeneous GPU fleets with 5 policies
+- **AVX2 QK256 GEMV optimization** — SIMD unpack + 4-wide FMA tiling for x86-64 throughput
+- **AVX-512 TL2 kernels** — runtime-dispatched alongside AVX2 and scalar paths
+- **Computation graph executor** — operator fusion, dead-code elimination, constant folding
+- **44 fuzz targets** covering kernels, inference, model loading, sampling, and generation
+- **Complete SRP microcrate ecosystem** — bitnet-sampling, bitnet-transformer, bitnet-receipts, bitnet-prompt-templates, bitnet-device-probe, bitnet-logits, bitnet-generation, bitnet-engine-core
+- **Feature lattice** normalized — `gpu`/`cuda` correctly orthogonal; kernel registry with capability detection
+- **Modern Diátaxis documentation** structure
 
 ### Added
-- `feat(kernels): implement AVX-512 kernels for TL2 quantization` — New AVX-512 optimised matrix-kernel for TL2 2-bit quantization; runtime-dispatched alongside existing AVX2 and scalar paths (#997)
-- `feat(vulkan): add initial Vulkan runtime probing and feature wiring` — Initial Vulkan backend probe and feature gate wiring; detects Vulkan ICD at runtime and exposes capability via `DeviceProbe` (#993)
-- `feat(metal): enable and wire Metal backend support across workspace` — Metal GPU backend enabled and wired across workspace feature flags; capability detection, kernel dispatch, and device-probe integration (#992)
-- `feat(kernels): enable AVX-512 kernel selection and harden TL2 quantization buffers` — AVX-512 kernel selected at runtime when `avx512f` is available; TL2 buffer bounds hardened to prevent overflows (#989)
-- `feat(kernels): improve NEON kernel implementation and configuration safety` — NEON kernel path improved with safer configuration; alignment guarantees and bounds validated on AArch64 (#988)
-- `feat(oneapi): add initial Intel oneAPI backend support and runtime detection` — New Intel oneAPI backend skeleton with runtime detection for Intel GPGPU; `oneapi` feature gate wired in workspace (#986)
-- `feat(cli): accept OpenCL/Vulkan device aliases and map to GPU backend` — CLI now accepts `opencl` and `vulkan` device strings, mapping them to the GPU backend for device selection (#985)
-- `feat(device-probe): add OpenGL probing and capability wiring for GPU backend detection` — OpenGL capability probing added to `DeviceProbe`; detected OpenGL level exposed as GPU backend capability (#984)
-- `test: add CPU golden path E2E test infrastructure` — New E2E golden path test infrastructure for CPU inference running deterministic scenarios end-to-end without a real model download (#949)
-- `test: reduce ignored test count (wave 4) — enable unblocked tests` — Wave 4 reduction of `#[ignore]` tests; newly unblocked tests converted to active following resolution of blockers #254 and #260; remaining `#[ignore]` markers carry justification strings (#947)
-- `feat: improve C# FFI bindings with modern P/Invoke` — Modern P/Invoke bindings and safe wrappers for C# consumers; replaces legacy `DllImport` patterns with `LibraryImport`-based source-generated P/Invoke for reduced marshalling overhead (#942)
-- test(bitnet-bdd-grid,sampling,receipts,generation): expand BDD scenario coverage with 80+ scenario tests across four microcrates (#945)
-- test(bitnet-sys,bitnet-compat): add targeted unit tests for capability invariants and export path validation (#946)
-- `test: add insta snapshot tests for key serializable types` — 2 snapshot tests using `insta` crate pinning `RuntimeFeatureFlags` and related serializable types; added `INSTA_UPDATE: unseen` to CI workflow to prevent unreviewed snapshot acceptance (#938)
-- `feat(fuzz): add wave 4 fuzz targets` — 4 new fuzz targets: `engine_core_no_panic` (engine-core API panic safety), `honest_compute_no_panic` (honest-compute pipeline panic safety), `runtime_context_parse_no_panic` (runtime context parsing panic safety), `feature_activation_no_panic` (feature activation logic panic safety) (#937)
-- `test(bitnet-tokenizers,bitnet-validation): add comprehensive unit tests` — 45 tests for `bitnet-tokenizers` (TokenizerConfig defaults, BasicTokenizer construction, BOS/EOS/PAD semantics, family detection, builder profiles, property tests) and 37 tests for `bitnet-validation` (Ruleset defaults, projection RMS bounds, architecture detection, policy loading edge cases, property tests) (#934)
-- `test(bitnet-runtime-feature-flags,bitnet-kernels): add comprehensive unit tests` — 33 tests for `bitnet-runtime-feature-flags` (feature snapshot determinism, CPU/GPU independence, JSON roundtrips, lattice implications) and 47 tests for `bitnet-kernels` (KernelManager construction, provider listing, FallbackKernel numeric correctness, dimension validation, device features API) (#932)
-- `test(integration): add multi-crate integration tests` — 69 integration tests in `tests/integration/multi_crate_tests.rs` spanning 8 microcrates (sampling, logits, device-probe, prompt-templates, generation, engine-core, GGUF, honest-compute); added 8 new path dependencies to `tests/Cargo.toml` (#931)
-- `test(bitnet-device-probe,bitnet-logits): add comprehensive unit tests` — 15 tests for `bitnet-device-probe` (SIMD level ordering, probe consistency, cross-probe invariants) and 26 tests for `bitnet-logits` (top-p, repetition penalty, argmax, temperature, softmax, top-k, property tests) (#929)
-- `test(bitnet-generation,bitnet-engine-core): add comprehensive unit tests` — 24 tests for `bitnet-generation` (stop criteria, streaming events, serde roundtrips, property tests) and 36 tests for `bitnet-engine-core` (session lifecycle, backend info, concurrency config, engine state, error variants, session ID uniqueness) (#928)
-- `test(bitnet-cli,bitnet-gguf): add comprehensive unit tests` — 55 tests for `bitnet-cli` (InferenceCommand defaults, PromptTemplate parsing, TemplateType detection, CliConfig validation, ConfigBuilder, property tests) and 40 tests for `bitnet-gguf` (GGUF value types, metadata, header parsing, constants, property tests) (#926)
-- `test(bitnet-inference,bitnet-models): add extended engine and model tests` — 43 tests for `bitnet-inference` (SamplingConfig, SamplingStrategy, GenerationConfig, InferenceReceipt, ModelInfo, ProductionInferenceEngine, streaming, error handling) and 43 tests for `bitnet-models` (ModelMetadata, QuantizationType, BitNetConfig, LoadConfig, ProductionModelLoader, tensor operations) (#924)
-- `test: reduce ignored test count (wave 3)` — reduced ignored test count; added justification strings to all remaining `#[ignore]` markers; added env-var guards for environment-sensitive tests (#925)
-- `test(bitnet-st2gguf,bitnet-server): add extended tests` — 26 extended tests for bitnet-st2gguf (conversion pipeline, quantization type handling, error variants) and 20 tests for bitnet-server (batch engine config, CORS, security middleware) (#922)
-- `test(bitnet-transformer,bitnet-honest-compute): add comprehensive tests` — 29 tests for bitnet-transformer (RoPE invariants, KVCache shape/seq-len properties) and 37 tests for bitnet-honest-compute (ComputeMode gating, receipt validation, honest-compute enforcement) (#921)
-- `test(bitnet-bdd-grid,bitnet-testing-policy): add comprehensive grid and policy tests` — 36 tests for bitnet-bdd-grid (grid rows/columns, cell lookup, scenario validation) and 28 tests for bitnet-testing-policy (PolicyDiagnostics coherence, GridCompatibility invariants) (#917)
-- `feat(fuzz): add wave 3 fuzz targets` — 3 new fuzz targets: `gguf_writer_roundtrip` (GGUF writer round-trip safety), `tokenizer_encode_no_panic` (tokenizer encode panic safety), `validation_no_panic` (validation pipeline panic safety) (#919)
-- `test(bitnet-trace): add 20+ comprehensive tests` — 20+ tests covering TraceSink and TraceComparison APIs, JSON round-trips, hash invariants, rms calculations, and decode-step tracing (#916)
-- `test(bitnet-validation,bitnet-kernel-registry): add comprehensive tests` — 65 tests for bitnet-validation (LayerNorm bounds, error messages, policy keys, gate modes, RMS validation) and 56 tests for bitnet-kernel-registry (kernel dispatch, capability registry, SIMD selection behaviour) (#915)
-- `test(bitnet-quantization): add 25+ extended integration and property tests` — 25+ extended integration and property tests covering I2_S, TL1, TL2, and QK256 roundtrip accuracy, block-size invariants, and edge-case inputs (#914)
-- `test(bitnet-device-probe): add 25+ comprehensive tests` — SIMD level detection ordering, GPU probe validation, DeviceCapabilities construction/equality, and property tests for probe determinism and capability invariants (#912)
-- `test(bitnet-runtime-feature-flags,bitnet-feature-contract): add comprehensive tests` — RuntimeFeatureFlags snapshot tests, CPU-always-true invariant, CUDA/GPU orthogonality, and JSON round-trips for feature-flag and feature-contract crates (#911)
-- `test: reduce ignored test count by converting to env-var guards (wave 2)` — 13 fewer ignored tests (1043→1030); `tokenization_smoke` converted to `CROSSVAL_GGUF` opt-in; AC3/AC6 acceptance tests gated on `BITNET_RUN_SLOW_TESTS` env-var (#910)
-- `test(bitnet-compat,bitnet-sys): add 72 comprehensive tests` — bitnet-compat: `diagnose`, `export_fixed`, `verify_idempotent`, `stamp` paths; bitnet-sys: `CompileTimeLibCapabilities` and disabled-feature stubs (#909)
-- `test(bitnet-server): add 43 server security and middleware tests` — 7 CORS, 5 security header, 9 request validation, 4 model path, 3 config/auth, 4 IP extraction, 8 property tests, 1 health endpoint tests; uses `tower::ServiceExt::oneshot` (no real server needed) (#907)
-- `test(bitnet-tokenizers): add 45 comprehensive property-based tests` — 40 proptest + 5 integration tests covering encode/decode round-trips, vocab consistency, special tokens bounds, Unicode safety, config JSON round-trip, auto-discovery, batch encoding (#906)
-- `feat(xtask): add grid-check command for BDD grid compile verification` — `xtask grid-check [--dry-run]` checks all supported feature cells compile; 18 cells including cpu, cpu+full-cli, cpu+crossval, cpu+gpu (#905)
-- `test: add E2E golden path test with synthetic GGUF fixture` — 5 deterministic tests using in-memory `GgufWriter` fixture (< 2 KB, no model download); tests header parsing, metadata round-trip, full load result, receipt invariants (#904)
-- `feat(fuzz): add sampling, receipt, and prompt-template fuzz targets` — 3 new fuzz targets: `sampling_no_panic`, `receipt_json_roundtrip`, `prompt_template_no_panic` (#903)
-- `test(bitnet-logits): add 24 comprehensive property-based tests` — softmax, log-softmax, repetition penalty, temperature, top-k, top-p, numerical stability tests (#902)
-- `test: remove #[ignore] from 10 self-skipping tests` — 10 tests with env-var guards converted from `#[ignore]` to active tests (#901)
-- `test(bitnet-engine-core): add 20 tests for state transitions, config validation, and session IDs` — 20 new tests covering `EngineState` transitions, `EngineConfig` validation invariants, and session ID uniqueness/format in `crates/bitnet-engine-core/tests/`; raises engine-core test coverage (#899)
-- `test(bitnet-prompt-templates): add 9 property-based tests` — 9 new proptests covering template rendering determinism, format invariants, and stop-sequence emission in `crates/bitnet-templates/tests/prompt_template_proptests.rs` (#898)
-- `test(bitnet-generation): add 10 property tests for Unicode safety and long context` — 10 new property tests validating UTF-8 safety of generated output and correct behaviour under long-context (>2 048 token) inputs in `crates/bitnet-generation/tests/unicode_and_long_context_proptests.rs` (#897)
-- `chore: prepare v0.1.3 release notes and changelog` — consolidated release notes for v0.1.3 into `CHANGELOG.md`; updated `Cargo.toml` workspace version to `0.1.3` and pinned dependency versions for the release (#896)
-- `test(bitnet-models): add 15 property-based tests for model loading` — 15 new proptests in `crates/bitnet-models/tests/model_load_proptests.rs` covering `ModelConfig` round-trips, tensor-shape invariants, quantization-type parsing edge cases, and QK256 vs BitNet32-F16 flavor disambiguation (#895)
-- `test(bitnet-inference): add 77 integration tests that run without a real model` — 77 new no-model integration tests in `crates/bitnet-inference/tests/` exercising `ProductionInferenceEngine` construction, `SamplingStrategy` configuration paths, `GenerationStream` lifecycle, and error-handling branches without requiring a GGUF file (#894)
-- `test(bitnet-cli): add snapshot tests for CLI help output` — 8 new insta snapshot tests in `crates/bitnet-cli/tests/snapshot_tests.rs` pinning `--help` and `--version` output for all top-level subcommands; uses `assert_cmd` + `insta` for regression detection (#893)
 
-### Documentation
-- `docs: update changelog for PRs #931-#932` — Updated CHANGELOG.md and roadmap with 1400+ tests milestone (#935)
-- `docs: comprehensive README rewrite and test-suite docs update` — README rewrite highlighting 1000+ test milestone, updated feature flag table, xtask grid-check documentation, and revised `docs/development/test-suite.md` with current test counts (#920)
-- `docs: update changelog for PRs #905-#912` — Changelog entries for server security tests, tokenizer property tests, xtask grid-check feature, E2E golden path tests, fuzz targets (sampling/receipt/template), logits property tests, and device-probe tests (#913)
+#### GPU Backends & HAL
+
+- **CUDA kernel scaffolding** (#1092): QK256 GEMV, attention, and RMSNorm operations
+- **Multi-head attention kernel dispatch** (#1318): CUDA multi-head attention kernel routing
+- **Metal backend** (#992, #1021, #1112): Metal compute with MSL shaders for macOS/Apple Silicon GPU inference
+- **Vulkan backend** (#993, #1071, #1082, #1291): Vulkan compute with SPIR-V pipeline, tiled matmul, and runtime probing
+- **OpenCL runtime binding** (#1280): Platform/device enumeration with dynamic loading and mock devices
+- **Intel oneAPI backend** (#986): Intel GPGPU runtime detection with `oneapi` feature gate
+- **Intel Level-Zero backend** (#1085): Low-level Intel GPU access via Level-Zero API
+- **ROCm/HIP backend** (#1014, #1102, #1111): AMD GPU skeleton with HIP runtime, kernel stubs for QK256 GEMV
+- **WebGPU backend** (#1108, #1289): Cross-platform GPU via `wgpu` for Vulkan/Metal/DX12 targets
+- **NPU backend scaffolding** (#1008): NPU skeleton wired across kernels, inference, and CLI
+
+#### GPU Infrastructure
+
+- **GPU memory pool** (#1295): FirstFit, BestFit, BuddySystem, and SlabAllocator with defragmentation
+- **GPU profiling framework** (#1300): GpuProfiler with ChromeTrace/CSV exporters for kernel-level analysis
+- **Async GPU execution** (#1299): AsyncEngine with priority queue, dependency tracking, and Pipeline stages
+- **SPIR-V compilation pipeline** (#1298): SpirVCompiler, LRU cache, and SpirVValidator for Vulkan shaders
+- **Computation graph executor** (#1297): GraphOptimizer with operator fusion, dead-code elimination, constant folding
+- **Kernel autotuner** (#1296): Exhaustive, Random, Grid, and Bayesian search with persistent cache
+- **GPU tensor operations** (#1294): TensorOps trait with CpuTensorOps for matmul, softmax, rms_norm, rope, silu, gelu
+- **Multi-device scheduler** (#1293): 5 scheduling policies with device blacklisting and utilization reporting
+- **Backend capability matrix** (#1292): 8 backends with FeatureFlags and feature negotiation scoring
+- **Model sharding** (#1290): LayerWise, TensorParallel, Replicated, and Custom strategies
+- **Linear algebra primitives** (#1288): dot, norm, matmul, matvec, transpose, outer, and batched ops
+- **GPU error recovery** (#1287): RecoveryEngine with retry, fallback, and blacklisting strategies
+- **GPU config system** (#1286): GpuConfig with `from_env()`, `validate()`, and 8 environment variables
+- **GPU error code mapping** (#1132): Unified error types across CUDA, OpenCL, Vulkan, ROCm, and Metal
+- **GPU-to-GPU peer transfer** (#1126): OpenCL P2P memory transfer eliminating host-side round-trips
+- **OpenCL USM support** (#1117): OpenCL 3.0 Unified Shared Memory eliminating explicit buffer copies
+- **GPU memory enforcement** (#1076): OOM prevention and allocation watermark telemetry
+- **Work-group auto-tuning** (#1077): Optimal occupancy profiling per device
+- **Persistent kernel cache** (#1113): Compilation cache avoiding cross-run recompilation
+- **GGUF-to-GPU tensor loader** (#1096): Direct model loading to Intel Arc GPU memory
+
+#### GPU Serving & Monitoring
+
+- **GPU streaming generation** (#1301): StreamingGenerator with SSE/JSON formatters for real-time token output
+- **GPU server integration** (#1128, #1275): GPU backends wired into axum HTTP server; OpenAI-compatible API types
+- **Multi-model GPU serving** (#1127): LRU eviction policy for concurrent model hosting
+- **GpuBatchScheduler** (#1119): Multi-request batching for higher throughput
+- **GPU health monitor** (#1306): 9 check types, DiagnosticReport, trend detection, recommendations
+- **GPU health endpoint** (#1116): REST endpoint reporting device status, memory, and thermal state
+- **GPU telemetry and monitoring** (#1124): Utilization, memory, temperature, and kernel timing tracking
+- **GPU power management** (#1121, #1304): 4 power modes, ThermalPolicy, energy efficiency tracking
+
+#### Inference Engine
+
+- **Speculative decoding** (#1305): 4 acceptance methods (greedy, sample, typical, top-k) with adaptive draft length
+- **Batch inference engine** (#1303): 4 padding strategies, priority scheduling, dynamic batching
+- **Full inference engine** (#1276): EngineConfig with 8 backend types, lifecycle state machine, capabilities
+- **E2E mock inference** (#1284): MockModel with forward pass, generation loop, deterministic seeding
+- **Tensor parallelism** (#1125): Multi-device layer splitting for large-model inference
+- **Production-ready general LLMs** (#1049): Infrastructure extended beyond BitNet models
+
+#### Kernels & Quantization
+
+- **AVX-512 TL2 kernels** (#989, #997): Runtime-dispatched alongside AVX2 and scalar paths; buffer bounds hardened
+- **QK256 AVX2/scalar dispatch** (#1018): Canonical runtime path with AVX2 CI coverage
+- **NEON kernel safety** (#988): Alignment guarantees and bounds validation on AArch64
+- **CPU kernel gap fill** (#1095): Dead orphan source files removed for cleaner kernel registry
+- **Quantization runtime** (#1272): I2S/QK256 dequantization, ternary matmul, compression ratios
+- **Rotary position embeddings** (#1274): NTK/YaRN/Linear scaling with pre-computed tables
+- **Embedding layer** (#1273): Token embedding with batch lookup and tied output projection
+- **GPU activation kernels** (#1080): OpenCL SiLU and GELU for GPU-resident forward passes
+- **GPU linear projection** (#1079): OpenCL Q/K/V and FFN kernels
+- **GPU embedding lookup** (#1078): OpenCL token-to-vector conversion on device
+- **GPU KV cache kernels** (#1075): On-device cache append and retrieval
+- **GPU transformer orchestration** (#1081): Attention, FFN, and LayerNorm fused pipeline in OpenCL
+- **FP16/INT8 mixed-precision kernels** (#1114): Reduced memory bandwidth on supported hardware
+- **Intel subgroup kernels** (#1087): Optimized OpenCL kernels for Arc GPU EU architecture
+- **HIP kernel stubs** (#1102): ROCm stubs mirroring CUDA scaffolding
+
+#### CLI & Configuration
+
+- **CLI --backend flag** (#1283): BackendArg with 8 options, `list-backends` subcommand
+- **gpu-info subcommand** (#1115): Device discovery and capability reporting
+- **kernel-bench subcommand** (#1118): Micro-benchmarking individual kernel implementations
+- **OpenCL/Vulkan CLI aliases** (#985): `opencl` and `vulkan` device strings mapped to GPU backend
+- **NPU device identifier** (#1002): `npu` accepted in CLI and server config
+- **Strict LayerNorm bias toggle** (#1013): Enforce or reject bias tensors during model load
+- **BDD grid cells** (#1010): Metal, Vulkan, oneAPI backend cells added
+
+#### Cross-Validation & Validation
+
+- **Cross-backend test harness** (#1302): 4 tolerance modes (Exact, UlpBased, Relative, Statistical)
+- **Model validation expansion** (#1138): Shape and distribution checks for load-time correctness
+- **Receipt schema extension** (#1090): OpenCL device info, kernel timing, and backend metadata
+
+#### FFI & Interop
+
+- **C# FFI bindings** (#942): Modern P/Invoke with `LibraryImport`-based source generation
+- **ONNX export with GPU metadata** (#1122): GPU acceleration metadata for external runtimes
+- **WASM kernel validation shim** (#1084): Browser-side kernel correctness checks
+
+#### Fuzz Targets (44 total)
+
+- **GPU HAL fuzz targets** (#1282): Sampling, quantization, attention shapes, RoPE values
+- **Wave 4 fuzz targets** (#937): engine-core, honest-compute, runtime-context, feature-activation
+- **Wave 3 fuzz targets** (#919): GGUF writer round-trip, tokenizer encode, validation pipeline
+- **Kernel/KV/config/sampling/tensor targets** (#1088): 5 targets for dispatch, cache, config, sampling, tensors
+- **Attention/softmax/rmsnorm targets** (#1070): 3 targets for numerical stability
+- **Sampling/receipt/prompt targets** (#903): 3 targets for pipeline safety
+- **Inference/model/generation targets** (#1144): 7 targets for end-to-end paths
+
+#### Testing Infrastructure
+
+- **CPU golden path E2E tests** (#949): Deterministic scenarios without model download
+- **E2E golden path with GGUF fixture** (#904): 5 tests using in-memory GgufWriter (< 2 KB)
+- **Insta snapshot tests** (#938, #1094): Serializable types, feature-matrix, test-support
+- **BDD scenario expansion** (#945): 80+ scenarios across sampling, receipts, generation
+- **Multi-crate integration tests** (#931): 69 tests spanning 8 microcrates
+- **Ignored test reduction** (waves 2–7): Systematic conversion to env-var guards; all `#[ignore]` carry justifications
+- **Comprehensive test suites** for all SRP microcrates (#906–#934): 1,200+ tests across tokenizers, validation, kernels, logits, generation, engine-core, CLI, GGUF, inference, models, server, quantization, trace, and more
 
 ### Changed
-- scripts: improve crates.io readiness validation with comprehensive checks (#940)
-- `chore: bump version to 0.2.0` — All crates and workspace version bumped from `0.1.x` to `0.2.0`; `CHANGELOG.md` `[Unreleased]` section promoted to `[0.2.0]` with release date (#933)
+
+- **Nix flake OpenCL deps** (#1066): OpenCL dependencies added for reproducible GPU environments
+- **crates.io release prep** (#940, #1028): Workspace metadata, manifests, and dependency versions updated
+- **Nightly fuzz schedule** (#1004): All 34+ fuzz targets covered; 5-minute runs per target
+- **Backend roadmap docs** (#1001): Updated for post-v0.2 state
 
 ### Fixed
-- `ffi: preserve exact C last-error messages` — FFI layer now captures and preserves exact error strings returned by C `last_error` callbacks rather than truncating or reformatting them; improves debuggability for C/C++ consumer integrations (#941)
+
+- **Snapshot kernel provider count** (#1089): Updated 2→3 after Metal backend addition
+- **Block-quantized tensor transpose** (#1048): `.contiguous()` no longer panics on block-quantized tensors
+- **CRLF input validation** (#1030): Payloads with `\r\n` line endings no longer falsely rejected
+- **Model download reliability** (#1027): Better error handling, retry logic, and progress reporting
+- **FFI error preservation** (#941): Exact C `last_error` messages preserved instead of truncated
+
+### Performance
+
+- **AVX2 QK256 GEMV optimization** (#1105): SIMD unpack and 4-wide FMA tiling for x86-64 throughput
+- **NEON kernel enhancements** (#1103): Improved ARM64 performance on Apple Silicon and ARM servers
+- **OpenCL tiled matmul** (#1060): Local memory optimization for GPU backends
+- **Sparse softmax optimization** (#1031): Skips negligible values in sparse logit distributions
+
+### Testing
+
+- **GPU vs CPU cross-validation** (#1120): Numerical equivalence verified across backends
+- **Numerical stability suite** (#1123): 40 tests for NaN, Inf, denormals, large tensors
+- **GPU stress tests** (#1107): Reliability under sustained load and memory pressure
+- **GPU snapshot regression** (#1106): Kernel output regression via insta snapshots
+- **GPU feature flag matrix** (#1104): Compilation verified across feature combinations
+- **GPU HAL property tests** (#1278): 35 proptest-based tests for sampling, quantization, attention, RoPE
+- **BDD multi-backend scenarios** (#1086): Device selection and fallback behavior
+- **OpenCL e2e pipeline tests** (#1055): Full forward pass on GPU
+- **OpenCL property tests** (#1069): CPU reference implementation validation
+- **Criterion benchmarks** (#1073, #1101, #1281): OpenCL, quantization, kernels, GPU HAL ops
+
+### CI
+
+- **ROCm/HIP smoke workflow** (#1130): AMD GPU backend build validation
+- **GPU compile check CI** (#1279): 7-crate compile matrix with doc check
+- **Fuzz target matrix** (#1099): All fuzz targets in nightly and CI workflows
+- **Mutation testing: OpenCL** (#1056): `cargo-mutants` configuration for OpenCL modules
+- **Intel GPU Docker image** (#1065): Compute runtime for GPU CI jobs
+
+### Documentation
+
+- **GPU ADRs** (#1109): Backend selection rationale and trade-offs
+- **GPU contributor guide** (#1110): Kernel authoring, testing, and review workflow
+- **GPU architecture guide** (#1277): Architecture, testing, and compatibility matrix
+- **Intel GPU tuning guide** (#1068): Arc-specific optimization recommendations
+- **Multi-GPU architecture docs** (#1053): Device management and scheduling
+- **CUDA GPU setup guide** (#998): Build commands and environment configuration
+- **Apple Silicon roadmaps** (#1005, #1007): Metal GPU and Core ML NPU acceleration
+- **General LLM production plan** (#1012): Reliability, scalability, deployment considerations
+- **BitNet.cpp vs llama.cpp clarification** (#1026): Dual-backend cross-validation roles
 
 ## [v0.1.3] - 2026-02-27
 

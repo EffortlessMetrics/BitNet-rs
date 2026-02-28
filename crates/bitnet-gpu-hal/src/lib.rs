@@ -5,6 +5,7 @@
 //! and memory management.
 
 pub mod activations;
+pub mod generation;
 pub mod profiling;
 pub mod speculative;
 pub mod streaming;
