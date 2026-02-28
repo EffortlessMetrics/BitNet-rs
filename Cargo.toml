@@ -59,6 +59,7 @@ members = [
   "crates/bitnet-startup-contract-guard",
   "crates/bitnet-test-support",
   "crates/bitnet-validation",    # SRP: LayerNorm/projection validation rules (shared)
+  "crates/bitnet-level-zero",    # Intel Level-Zero backend (dynamic loading)
   "crossval",
   "tests",
   "xtask",
@@ -209,6 +210,7 @@ cpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/cpu-optimized", "bi
 cuda = ["gpu"]                                                                                       # Alias for backward compatibility
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
+level-zero = ["kernels", "inference", "tokenizers"]  # Intel Level-Zero backend
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
 
 # Component features
