@@ -1831,7 +1831,7 @@ fn download_model_cmd(config: DownloadConfig) -> Result<()> {
                             resp.status(),
                             backoff
                         );
-                        ev!(json, "retry", { wait_secs: (backoff / 1000), msg: "5xx" });
+                        ev!(json, "retry", { wait_secs: backoff / 1000, msg: "5xx" });
                         thread::sleep(Duration::from_millis(backoff));
                         continue;
                     }
