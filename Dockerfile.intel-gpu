@@ -1,0 +1,30 @@
+FROM ubuntu:22.04 AS base
+
+# Install Intel compute runtime
+RUN apt-get update && apt-get install -y wget gnupg2 software-properties-common && \
+    wget -qO - https://repositories.intel.com/gpu/intel-graphics.key | \
+    gpg --dearmor -o /usr/share/keyrings/intel-graphics.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/intel-graphics.gpg] \
+    https://repositories.intel.com/gpu/ubuntu jammy unified" \
+    | tee /etc/apt/sources.list.d/intel-gpu-jammy.list && \
+    apt-get update && apt-get install -y \
+    libze-intel-gpu1 libze1 intel-opencl-icd clinfo \
+    build-essential pkg-config libssl-dev curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --default-toolchain 1.92.0
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+COPY . .
+RUN cargo build --no-default-features --features oneapi --release
+
+# Test stage
+FROM base AS tester
+WORKDIR /app
+COPY . .
+RUN cargo test --no-default-features --features oneapi --lib -- --skip ignore
