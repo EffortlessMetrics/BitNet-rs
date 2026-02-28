@@ -1,0 +1,10 @@
+---
+source: crates/bitnet-kernels/tests/gpu_snapshot_regression.rs
+expression: "KernelConfig\n{\n    kernel: \"softmax\", work_group_size: 128, precision: \"f32\",\n    vectorisation_width: 4,\n}"
+---
+KernelConfig {
+    kernel: "softmax",
+    work_group_size: 128,
+    precision: "f32",
+    vectorisation_width: 4,
+}
