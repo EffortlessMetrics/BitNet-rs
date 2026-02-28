@@ -7,6 +7,7 @@
 pub mod backend_selection;
 pub mod config;
 pub mod error;
+pub mod gpu_error;
 pub mod kernel_registry;
 pub mod math;
 pub mod strict_mode;
