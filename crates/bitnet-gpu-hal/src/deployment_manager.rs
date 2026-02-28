@@ -142,12 +142,7 @@ pub struct HealthCheck {
 
 impl Default for HealthCheck {
     fn default() -> Self {
-        Self {
-            is_healthy: true,
-            latency_ms: 0.0,
-            error_count: 0,
-            last_check_at: None,
-        }
+        Self { is_healthy: true, latency_ms: 0.0, error_count: 0, last_check_at: None }
     }
 }
 
@@ -215,11 +210,7 @@ pub struct RollbackPolicy {
 
 impl Default for RollbackPolicy {
     fn default() -> Self {
-        Self {
-            max_errors: 3,
-            max_latency_ms: 1000.0,
-            auto_rollback: true,
-        }
+        Self { max_errors: 3, max_latency_ms: 1000.0, auto_rollback: true }
     }
 }
 
@@ -350,12 +341,7 @@ impl DeploymentManager {
             RolloutStrategy::Immediate => self.plan_immediate(&target),
         };
 
-        Ok(DeploymentPlan {
-            source_version: source,
-            target_version: target,
-            strategy,
-            steps,
-        })
+        Ok(DeploymentPlan { source_version: source, target_version: target, strategy, steps })
     }
 
     fn plan_blue_green(&self, _target: &ModelVersion) -> Vec<DeploymentStep> {
@@ -483,10 +469,7 @@ impl DeploymentManager {
     }
 
     fn plan_immediate(&self, _target: &ModelVersion) -> Vec<DeploymentStep> {
-        let slot_id = self
-            .get_active_slot()
-            .map(|s| s.slot_id)
-            .unwrap_or(0);
+        let slot_id = self.get_active_slot().map(|s| s.slot_id).unwrap_or(0);
         vec![
             DeploymentStep {
                 action: DeploymentAction::LoadModel,
@@ -592,11 +575,8 @@ impl DeploymentManager {
                     .collect();
                 let count = other_serving.len();
                 for idx in other_serving {
-                    self.slots[idx].traffic_weight = if count > 0 {
-                        remaining / count as f32
-                    } else {
-                        0.0
-                    };
+                    self.slots[idx].traffic_weight =
+                        if count > 0 { remaining / count as f32 } else { 0.0 };
                 }
             }
             DeploymentAction::Validate => {
@@ -627,10 +607,7 @@ impl DeploymentManager {
 
     /// Rollback to the previous model version.
     pub fn rollback(&mut self) -> Result<ModelVersion, String> {
-        let prev = self
-            .version_history
-            .pop()
-            .ok_or("no previous version to rollback to")?;
+        let prev = self.version_history.pop().ok_or("no previous version to rollback to")?;
 
         // Cancel any in-flight plan.
         self.active_plan = None;
@@ -672,9 +649,7 @@ impl DeploymentManager {
             .iter()
             .enumerate()
             .filter(|(i, s)| {
-                *i != slot_id
-                    && s.traffic_weight > 0.0
-                    && s.status == DeploymentStatus::Active
+                *i != slot_id && s.traffic_weight > 0.0 && s.status == DeploymentStatus::Active
             })
             .map(|(i, _)| i)
             .collect();
@@ -692,11 +667,14 @@ impl DeploymentManager {
     // -- Health checks ------------------------------------------------------
 
     /// Run a health check on the specified slot.
-    pub fn health_check(&mut self, slot_id: usize, healthy: bool, latency_ms: f64) -> Result<(), String> {
-        let slot = self
-            .slots
-            .get_mut(slot_id)
-            .ok_or_else(|| format!("slot {} not found", slot_id))?;
+    pub fn health_check(
+        &mut self,
+        slot_id: usize,
+        healthy: bool,
+        latency_ms: f64,
+    ) -> Result<(), String> {
+        let slot =
+            self.slots.get_mut(slot_id).ok_or_else(|| format!("slot {} not found", slot_id))?;
 
         slot.health.is_healthy = healthy;
         slot.health.latency_ms = latency_ms;
@@ -719,10 +697,7 @@ impl DeploymentManager {
     }
 
     /// Run health checks on all non-pending slots with the given results.
-    pub fn health_check_all(
-        &mut self,
-        results: &[(usize, bool, f64)],
-    ) -> Result<(), String> {
+    pub fn health_check_all(&mut self, results: &[(usize, bool, f64)]) -> Result<(), String> {
         for &(slot_id, healthy, latency_ms) in results {
             self.health_check(slot_id, healthy, latency_ms)?;
         }
@@ -742,10 +717,8 @@ impl DeploymentManager {
 
     /// Mark a slot's deployment as failed.
     pub fn mark_failed(&mut self, slot_id: usize) -> Result<(), String> {
-        let slot = self
-            .slots
-            .get_mut(slot_id)
-            .ok_or_else(|| format!("slot {} not found", slot_id))?;
+        let slot =
+            self.slots.get_mut(slot_id).ok_or_else(|| format!("slot {} not found", slot_id))?;
         slot.status = DeploymentStatus::Failed;
         slot.traffic_weight = 0.0;
         Ok(())
@@ -948,18 +921,14 @@ mod tests {
     #[test]
     fn test_blue_green_plan_has_five_steps() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::BlueGreen)
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::BlueGreen).unwrap();
         assert_eq!(plan.steps.len(), 5);
     }
 
     #[test]
     fn test_blue_green_plan_steps_order() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::BlueGreen)
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::BlueGreen).unwrap();
         let actions: Vec<_> = plan.steps.iter().map(|s| s.action.clone()).collect();
         assert_eq!(
             actions,
@@ -1016,9 +985,7 @@ mod tests {
     #[test]
     fn test_canary_plan_has_gradual_steps() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Canary(10.0))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Canary(10.0)).unwrap();
         // Load + warmup + multiple shifts + drain
         assert!(plan.steps.len() >= 5);
     }
@@ -1026,23 +993,16 @@ mod tests {
     #[test]
     fn test_canary_plan_ends_at_100_percent() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Canary(10.0))
-            .unwrap();
-        let last_shift = plan
-            .steps
-            .iter()
-            .rfind(|s| s.action == DeploymentAction::ShiftTraffic)
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Canary(10.0)).unwrap();
+        let last_shift =
+            plan.steps.iter().rfind(|s| s.action == DeploymentAction::ShiftTraffic).unwrap();
         assert_eq!(last_shift.traffic_shift, 100.0);
     }
 
     #[test]
     fn test_canary_plan_traffic_monotonically_increases() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Canary(5.0))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Canary(5.0)).unwrap();
         let shifts: Vec<f32> = plan
             .steps
             .iter()
@@ -1066,9 +1026,7 @@ mod tests {
     #[test]
     fn test_canary_shifts_require_validation() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Canary(10.0))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Canary(10.0)).unwrap();
         for step in &plan.steps {
             if step.action == DeploymentAction::ShiftTraffic {
                 assert!(step.validation_required);
@@ -1083,9 +1041,7 @@ mod tests {
     #[test]
     fn test_rolling_plan_covers_all_slots() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(1))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(1)).unwrap();
         let slot_ids: Vec<usize> = plan.steps.iter().map(|s| s.slot_id).collect();
         for i in 0..mgr.slots().len() {
             assert!(slot_ids.contains(&i), "slot {} not in plan", i);
@@ -1096,9 +1052,7 @@ mod tests {
     fn test_rolling_plan_batch_size_two() {
         let config = DeploymentConfig { max_models: 4, ..default_config() };
         let mgr = DeploymentManager::new(config).unwrap();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(2))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(2)).unwrap();
         // 4 slots / batch 2 = 2 batches; each slot gets 3 steps
         assert_eq!(plan.steps.len(), 12);
     }
@@ -1106,9 +1060,7 @@ mod tests {
     #[test]
     fn test_rolling_plan_batch_size_larger_than_slots() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(10))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(10)).unwrap();
         // All slots in one batch.
         assert_eq!(plan.steps.len(), 4 * 3); // 3 steps per slot
     }
@@ -1272,9 +1224,8 @@ mod tests {
     #[test]
     fn test_should_auto_rollback_disabled() {
         let policy = RollbackPolicy { auto_rollback: false, ..Default::default() };
-        let mut mgr = DeploymentManager::new(default_config())
-            .unwrap()
-            .with_rollback_policy(policy);
+        let mut mgr =
+            DeploymentManager::new(default_config()).unwrap().with_rollback_policy(policy);
         deploy_active(&mut mgr, &make_model("a", 1));
         mgr.mark_failed(0).unwrap();
         assert!(!mgr.should_auto_rollback());
@@ -1283,9 +1234,8 @@ mod tests {
     #[test]
     fn test_health_failure_does_not_trigger_rollback_when_disabled() {
         let policy = RollbackPolicy { auto_rollback: false, ..Default::default() };
-        let mut mgr = DeploymentManager::new(default_config())
-            .unwrap()
-            .with_rollback_policy(policy);
+        let mut mgr =
+            DeploymentManager::new(default_config()).unwrap().with_rollback_policy(policy);
         deploy_active(&mut mgr, &make_model("a", 1));
         for _ in 0..5 {
             mgr.health_check(0, false, 5.0).unwrap();
@@ -1371,14 +1321,8 @@ mod tests {
         metrics.add_uptime("v1", Duration::from_secs(60));
         metrics.add_uptime("v1", Duration::from_secs(40));
         metrics.add_uptime("v2", Duration::from_secs(30));
-        assert_eq!(
-            *metrics.uptime_per_version.get("v1").unwrap(),
-            Duration::from_secs(100)
-        );
-        assert_eq!(
-            *metrics.uptime_per_version.get("v2").unwrap(),
-            Duration::from_secs(30)
-        );
+        assert_eq!(*metrics.uptime_per_version.get("v1").unwrap(), Duration::from_secs(100));
+        assert_eq!(*metrics.uptime_per_version.get("v2").unwrap(), Duration::from_secs(30));
     }
 
     // -----------------------------------------------------------------------
@@ -1480,14 +1424,8 @@ mod tests {
 
     #[test]
     fn test_rollback_policy_builder() {
-        let policy = RollbackPolicy {
-            max_errors: 10,
-            max_latency_ms: 500.0,
-            auto_rollback: true,
-        };
-        let mgr = DeploymentManager::new(default_config())
-            .unwrap()
-            .with_rollback_policy(policy);
+        let policy = RollbackPolicy { max_errors: 10, max_latency_ms: 500.0, auto_rollback: true };
+        let mgr = DeploymentManager::new(default_config()).unwrap().with_rollback_policy(policy);
         assert!(!mgr.should_auto_rollback());
     }
 
@@ -1514,27 +1452,21 @@ mod tests {
     fn test_plan_records_source_version() {
         let mut mgr = manager();
         deploy_active(&mut mgr, &make_model("a", 1));
-        let plan = mgr
-            .plan_deployment(make_model("a", 2), RolloutStrategy::BlueGreen)
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 2), RolloutStrategy::BlueGreen).unwrap();
         assert_eq!(plan.source_version.as_ref().unwrap().version, 1);
     }
 
     #[test]
     fn test_plan_records_target_version() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 3), RolloutStrategy::Immediate)
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 3), RolloutStrategy::Immediate).unwrap();
         assert_eq!(plan.target_version.version, 3);
     }
 
     #[test]
     fn test_plan_strategy_stored() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Canary(15.0))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Canary(15.0)).unwrap();
         assert_eq!(plan.strategy, RolloutStrategy::Canary(15.0));
     }
 
@@ -1582,10 +1514,7 @@ mod tests {
         mgr.rollback().unwrap();
         // Should be able to deploy again.
         deploy_active(&mut mgr, &make_model("a", 3));
-        assert_eq!(
-            mgr.get_active_slot().unwrap().model_version.as_ref().unwrap().version,
-            3
-        );
+        assert_eq!(mgr.get_active_slot().unwrap().model_version.as_ref().unwrap().version, 3);
     }
 
     #[test]
@@ -1609,9 +1538,7 @@ mod tests {
     #[test]
     fn test_canary_with_50_percent() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Canary(50.0))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Canary(50.0)).unwrap();
         let shifts: Vec<f32> = plan
             .steps
             .iter()
@@ -1625,18 +1552,14 @@ mod tests {
     #[test]
     fn test_immediate_plan_length() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Immediate)
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Immediate).unwrap();
         assert_eq!(plan.steps.len(), 2);
     }
 
     #[test]
     fn test_rolling_batch_zero_treated_as_one() {
         let mgr = manager();
-        let plan = mgr
-            .plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(0))
-            .unwrap();
+        let plan = mgr.plan_deployment(make_model("a", 1), RolloutStrategy::Rolling(0)).unwrap();
         // batch_size.max(1) should prevent panic.
         assert!(!plan.steps.is_empty());
     }
