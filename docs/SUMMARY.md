@@ -28,6 +28,7 @@
 - [CPU Kernel Architecture](cpu-kernel-architecture.md)
 - [GPU Kernel Architecture](gpu-kernel-architecture.md)
 - [CUDA Configuration Guide](cuda-configuration-guide.md)
+- [Intel Arc GPU Setup](INTEL_GPU_SETUP.md)
 
 ## Miscellaneous
 - [GGUF Inspection](gguf-inspection.md)

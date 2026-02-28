@@ -91,7 +91,7 @@ Organised by [Diátaxis](https://diataxis.fr/):
 | [**Explanation**](docs/explanation/) | Architecture, quantization formats, dual-backend cross-val, feature flags |
 | [**Reference**](docs/reference/) | CLI flags, environment variables, API, quantization support |
 
-Key guides: [Quickstart](docs/quickstart.md) · [Environment variables](docs/environment-variables.md) · [GPU setup](docs/GPU_SETUP.md) · [C++ cross-validation](docs/howto/cpp-setup.md) · [Quantization support](docs/reference/quantization-support.md) · [Validation gates](docs/reference/validation-gates.md) · [Honest-compute receipts](docs/howto/receipt-verification.md) · [QK256 usage](docs/howto/use-qk256-models.md) · [macOS 26 Apple Silicon roadmap](docs/reference/macos-26-apple-silicon-roadmap.md)
+Key guides: [Quickstart](docs/quickstart.md) · [Environment variables](docs/environment-variables.md) · [GPU setup](docs/GPU_SETUP.md) · [Intel GPU setup](docs/INTEL_GPU_SETUP.md) · [C++ cross-validation](docs/howto/cpp-setup.md) · [Quantization support](docs/reference/quantization-support.md) · [Validation gates](docs/reference/validation-gates.md) · [Honest-compute receipts](docs/howto/receipt-verification.md) · [QK256 usage](docs/howto/use-qk256-models.md) · [macOS 26 Apple Silicon roadmap](docs/reference/macos-26-apple-silicon-roadmap.md)
 
 ## Building
 
