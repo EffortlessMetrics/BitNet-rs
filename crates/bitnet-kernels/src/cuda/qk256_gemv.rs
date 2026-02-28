@@ -58,7 +58,7 @@ impl Qk256GemvConfig {
     ///
     /// `k` must be a multiple of 256 (the QK256 block size).
     pub fn for_shape(seq_len: usize, n_out: usize, k: usize) -> Result<Self> {
-        if k == 0 || k % 256 != 0 {
+        if k == 0 || !k.is_multiple_of(256) {
             return Err(KernelError::InvalidArguments {
                 reason: format!(
                     "QK256 GEMV inner dimension k={k} must be a positive multiple of 256"
