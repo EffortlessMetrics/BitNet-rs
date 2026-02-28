@@ -380,6 +380,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bitnet-common",
+ "bitnet-device-probe",
  "bitnet-ggml-ffi",
  "bitnet-inference",
  "bitnet-kernels",

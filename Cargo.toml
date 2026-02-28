@@ -152,6 +152,7 @@ bitnet_ggml_ffi = { package = "bitnet-ggml-ffi", path = "crates/bitnet-ggml-ffi"
 bitnet-inference = { path = "crates/bitnet-inference", version = "0.2.1-dev", optional = true }
 bitnet-kernels = { path = "crates/bitnet-kernels", version = "0.2.1-dev", optional = true }
 bitnet-tokenizers = { path = "crates/bitnet-tokenizers", version = "0.2.1-dev", optional = true }
+bitnet-device-probe = { path = "crates/bitnet-device-probe", version = "0.2.1-dev", optional = true }
 
 [build-dependencies]
 vergen = { version = "9.0.6", features = ["build", "rustc", "cargo"] }
@@ -210,6 +211,7 @@ cuda = ["gpu"]                                                                  
 gpu = ["kernels", "inference", "tokenizers", "bitnet-kernels/gpu", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 vulkan = ["kernels", "inference", "tokenizers", "bitnet-kernels/vulkan", "bitnet-inference/gpu", "bitnet-quantization/gpu"]
 metal = ["kernels", "inference", "tokenizers", "bitnet-common/metal", "bitnet-inference/metal"]
+npu = ["dep:bitnet-device-probe", "bitnet-device-probe/npu"]
 
 # Component features
 inference = ["dep:bitnet-inference", "kernels"]
