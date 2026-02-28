@@ -25,6 +25,7 @@ pub mod download;
 pub mod error_handling;
 pub mod fallback;
 pub mod strategy;
+pub mod utils;
 
 use bitnet_common::{BitNetError, ModelError, Result};
 use std::path::Path;
