@@ -264,12 +264,6 @@ fn accel_device_exists() -> bool {
         .unwrap_or(false)
 }
 
-/// Check if Intel oneAPI/`OpenCL` support was compiled.
-#[inline]
-pub const fn oneapi_compiled() -> bool {
-    cfg!(feature = "oneapi")
-}
-
 /// Check if an Intel GPU is available at runtime via `OpenCL`.
 ///
 /// Detection strategy:
@@ -281,18 +275,15 @@ pub fn oneapi_available_runtime() -> bool {
     if let Some(fake) = fake_gpu_backends() {
         return fake.contains("oneapi") || fake.contains("gpu");
     }
-
     // Try clinfo first — most reliable
     if clinfo_has_intel_gpu() {
         return true;
     }
-
     // Fallback: try sycl-ls
     command_ok("sycl-ls", &[])
 }
 
 #[cfg(not(feature = "oneapi"))]
-#[inline]
 pub const fn oneapi_available_runtime() -> bool {
     false
 }
@@ -309,6 +300,12 @@ fn clinfo_has_intel_gpu() -> bool {
                 && (stdout.contains("GPU") || stdout.contains("Arc") || stdout.contains("Graphics"))
         })
         .unwrap_or(false)
+}
+
+/// Check if Intel oneAPI/`OpenCL` support was compiled.
+#[inline]
+pub const fn oneapi_compiled() -> bool {
+    cfg!(feature = "oneapi")
 }
 
 /// Check if Vulkan support was compiled into this binary.
@@ -470,8 +467,8 @@ pub struct CpuProbe {
 /// Full device probe result.
 ///
 /// Obtained via [`probe_device`].
-#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeviceProbe {
     /// CPU capability snapshot.
     pub cpu: CpuProbe,

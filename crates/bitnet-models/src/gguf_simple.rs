@@ -224,6 +224,10 @@ fn load_gguf_enhanced(
         }
         Device::Hip(_) | Device::Npu => {
             tracing::warn!("HIP/NPU device requested but not supported, falling back to CPU");
+        Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+            tracing::warn!(
+                "HIP/NPU/OpenCL device requested but not supported, falling back to CPU"
+            );
             CDevice::Cpu
         }
     };
@@ -572,6 +576,10 @@ fn load_gguf_minimal(path: &Path, device: Device) -> Result<GgufLoadResult> {
         }
         Device::OpenCL(_) => {
             tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
+        Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+            tracing::warn!(
+                "HIP/NPU/OpenCL device requested but not supported, falling back to CPU"
+            );
             CDevice::Cpu
         }
     };
@@ -1686,6 +1694,8 @@ fn create_mock_tensor_layout(device: Device) -> Result<GgufLoadResult> {
         }
         Device::OpenCL(_) => {
             tracing::warn!("OpenCL device requested, falling back to CPU for GGUF loading");
+        Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+            tracing::warn!("HIP/NPU/OpenCL device requested but not supported, fallback to CPU");
             CDevice::Cpu
         }
     };

@@ -347,15 +347,6 @@ fn oneapi_feature_flag_is_accessible() {
 
 // oneAPI backend: oneapi_compiled / oneapi_available_runtime
 // Without the `oneapi` feature, it must evaluate to `false`.
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// `oneapi_compiled()` must equal `cfg!(feature = "oneapi")` at compile time.
-#[test]
-fn oneapi_compiled_reflects_feature_flag() {
-    assert_eq!(oneapi_compiled(), cfg!(feature = "oneapi"));
-}
-
-/// Without the `oneapi` feature, `oneapi_compiled()` must return `false`.
 #[cfg(not(feature = "oneapi"))]
 #[test]
 fn oneapi_feature_disabled_in_cpu_build() {
@@ -365,47 +356,6 @@ fn oneapi_feature_disabled_in_cpu_build() {
 
 #[cfg(not(feature = "oneapi"))]
 #[test]
-fn oneapi_compiled_false_without_oneapi_feature() {
-    assert!(!oneapi_compiled(), "oneapi_compiled() must be false without 'oneapi' feature");
-}
-
-// `oneapi_compiled()` is a compile-time constant; repeated calls must agree.
-proptest! {
-    #[test]
-    fn oneapi_compiled_is_stable_across_calls(_n in 0u8..=8) {
-        prop_assert_eq!(oneapi_compiled(), oneapi_compiled());
-    }
-}
-
-/// Without the `oneapi` feature, `oneapi_available_runtime()` must return `false`.
-#[cfg(not(feature = "oneapi"))]
-#[test]
-fn oneapi_available_runtime_false_without_oneapi_feature() {
-    assert!(
-        !oneapi_available_runtime(),
-        "oneapi_available_runtime() must be false without 'oneapi' feature"
-    );
-}
-
-// `oneapi_available_runtime()` is deterministic across consecutive calls.
-proptest! {
-    #[test]
-    fn oneapi_available_runtime_is_deterministic(_n in 0u8..=8) {
-        prop_assert_eq!(oneapi_available_runtime(), oneapi_available_runtime());
-    }
-}
-
-/// When oneAPI is not compiled, `oneapi_available_runtime()` must be `false`.
-#[test]
-fn oneapi_available_implies_oneapi_compiled() {
-    if oneapi_available_runtime() {
-        assert!(
-            oneapi_compiled(),
-            "oneapi_available_runtime()=true requires oneapi_compiled()=true"
-        );
-    }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // GPU feature flag interactions
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1300,6 +1300,8 @@ impl QuantizedLinear {
             }
             Device::OpenCL(_) => {
                 // OpenCL GPU throughput (conservative estimate)
+            Device::Hip(_) | Device::Npu | Device::OpenCL(_) => {
+                // HIP/NPU/OpenCL throughput (conservative estimate)
                 match self.qtype {
                     QuantizationType::I2S => total_ops * 0.7,
                     QuantizationType::TL1 => total_ops * 0.6,
