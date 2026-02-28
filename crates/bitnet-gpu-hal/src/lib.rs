@@ -92,6 +92,7 @@ pub mod model_debugger;
 // === Testing & Validation ===
 pub mod compatibility_checker;
 pub mod e2e_integration;
+pub mod kernel_jit;
 pub mod model_validator;
 pub mod test_harness;
 
