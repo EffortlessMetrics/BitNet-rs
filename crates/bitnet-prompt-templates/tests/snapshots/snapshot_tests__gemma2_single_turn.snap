@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<start_of_turn>user
+Explain photosynthesis briefly.<end_of_turn>
+<start_of_turn>model

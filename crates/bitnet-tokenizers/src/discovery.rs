@@ -24,6 +24,116 @@ pub struct ModelCompatibilityMatrix {
     pub gpt2_50k: TokenizerDownloadInfo,
     /// BitNet-specific tokenizers for neural network optimization
     pub bitnet_custom: TokenizerDownloadInfo,
+    /// Phi-4 with 100K vocabulary - TikToken BPE tokenizer
+    pub phi4_100k: TokenizerDownloadInfo,
+    /// Qwen2 with 151K vocabulary - BPE tokenizer
+    pub qwen2_150k: TokenizerDownloadInfo,
+    /// Gemma with 256K vocabulary - SentencePiece tokenizer
+    pub gemma_256k: TokenizerDownloadInfo,
+    /// Mistral with 32K vocabulary - SentencePiece tokenizer
+    pub mistral_32k: TokenizerDownloadInfo,
+    /// DeepSeek with 100K vocabulary - BPE tokenizer
+    pub deepseek_100k: TokenizerDownloadInfo,
+    /// StarCoder with 49K vocabulary - BPE tokenizer
+    pub starcoder_49k: TokenizerDownloadInfo,
+    /// Falcon with 65K vocabulary - BPE tokenizer
+    pub falcon_65k: TokenizerDownloadInfo,
+    /// CodeLlama with 32K vocabulary - SentencePiece tokenizer
+    pub codellama_32k: TokenizerDownloadInfo,
+    /// Cohere Command with 256K vocabulary - BPE tokenizer
+    pub command_256k: TokenizerDownloadInfo,
+    /// InternLM with 103K vocabulary - BPE tokenizer
+    pub internlm_103k: TokenizerDownloadInfo,
+    /// Yi with 64K vocabulary - BPE tokenizer
+    pub yi_64k: TokenizerDownloadInfo,
+    /// Baichuan with 64K vocabulary - BPE tokenizer
+    pub baichuan_64k: TokenizerDownloadInfo,
+    /// ChatGLM/GLM-4 with 65K vocabulary - BPE tokenizer
+    pub chatglm_65k: TokenizerDownloadInfo,
+    /// MPT with 50K vocabulary - BPE tokenizer (GPT-NeoX based)
+    pub mpt_50k: TokenizerDownloadInfo,
+    /// RWKV World with 65K vocabulary - custom tokenizer
+    pub rwkv_65k: TokenizerDownloadInfo,
+    /// OLMo with 50K vocabulary - BPE tokenizer
+    pub olmo_50k: TokenizerDownloadInfo,
+    /// Zephyr with 32K vocabulary - BPE tokenizer (Mistral-based)
+    pub zephyr_32k: TokenizerDownloadInfo,
+    /// Vicuna with 32K vocabulary - SentencePiece tokenizer (LLaMA-based)
+    pub vicuna_32k: TokenizerDownloadInfo,
+    /// Orca with 32K vocabulary - SentencePiece tokenizer
+    pub orca_32k: TokenizerDownloadInfo,
+    /// SOLAR with 32K vocabulary - SentencePiece tokenizer
+    pub solar_32k: TokenizerDownloadInfo,
+    /// Alpaca with 32K vocabulary - SentencePiece tokenizer
+    pub alpaca_32k: TokenizerDownloadInfo,
+    /// Command-R+ with 256K vocabulary - BPE tokenizer
+    pub commandr_128k: TokenizerDownloadInfo,
+    /// NousResearch Hermes with 32K vocabulary - BPE tokenizer
+    pub nous_32k: TokenizerDownloadInfo,
+    /// WizardLM with 32K vocabulary - SentencePiece tokenizer
+    pub wizard_32k: TokenizerDownloadInfo,
+    /// OpenChat with 32K vocabulary - BPE tokenizer
+    pub openchat_32k: TokenizerDownloadInfo,
+    /// Granite with 128K vocabulary - BPE tokenizer
+    pub granite_128k: TokenizerDownloadInfo,
+    /// Nemotron with 32K vocabulary - BPE tokenizer
+    pub nemotron_32k: TokenizerDownloadInfo,
+    /// Saiga with 32K vocabulary - SentencePiece tokenizer
+    pub saiga_32k: TokenizerDownloadInfo,
+    /// Llama-2 Chat with 32K vocabulary - SentencePiece tokenizer
+    pub llama2_chat_32k: TokenizerDownloadInfo,
+    /// Gemma 2 with 256K vocabulary - SentencePiece tokenizer
+    pub gemma2_256k: TokenizerDownloadInfo,
+    /// Phi-3 with 32K vocabulary - BPE tokenizer
+    pub phi3_32k: TokenizerDownloadInfo,
+    /// TinyLlama with 32K vocabulary - SentencePiece tokenizer
+    pub tinyllama_32k: TokenizerDownloadInfo,
+    /// Dolphin (Mistral finetune) with 32K vocabulary - BPE tokenizer
+    pub dolphin_32k: TokenizerDownloadInfo,
+    /// ChatGPT/GPT-4 with ~100K vocabulary - BPE tokenizer
+    pub chatgpt_100k: TokenizerDownloadInfo,
+    /// Mixtral with 32K vocabulary - SentencePiece tokenizer
+    pub mixtral_32k: TokenizerDownloadInfo,
+    /// StableLM with 32K vocabulary - BPE tokenizer
+    pub stablelm_32k: TokenizerDownloadInfo,
+    /// BLOOM with 250K vocabulary - BPE tokenizer
+    pub bloom_250k: TokenizerDownloadInfo,
+    /// Jamba with 256K vocabulary - BPE tokenizer
+    pub jamba_256k: TokenizerDownloadInfo,
+    /// Persimmon with 262K vocabulary - BPE tokenizer
+    pub persimmon_262k: TokenizerDownloadInfo,
+    /// XVERSE with 32K vocabulary - SentencePiece tokenizer
+    pub xverse_32k: TokenizerDownloadInfo,
+    /// Qwen 2.5 with 152K vocabulary - BPE tokenizer
+    pub qwen25_152k: TokenizerDownloadInfo,
+    /// Mistral Nemo with 128K vocabulary - SentencePiece tokenizer
+    pub mistral_nemo_128k: TokenizerDownloadInfo,
+    /// Snowflake Arctic with 32K vocabulary - BPE tokenizer
+    pub arctic_32k: TokenizerDownloadInfo,
+    /// DBRX with 32K vocabulary - BPE tokenizer
+    pub dbrx_32k: TokenizerDownloadInfo,
+    /// EXAONE with 32K vocabulary - BPE tokenizer
+    pub exaone_32k: TokenizerDownloadInfo,
+    /// MiniCPM with 122K vocabulary - BPE tokenizer
+    pub minicpm_122k: TokenizerDownloadInfo,
+    /// CodeGemma with 256K vocabulary - SentencePiece tokenizer
+    pub codegemma_256k: TokenizerDownloadInfo,
+    /// Llama 3.1 with 128K vocabulary - BPE tokenizer
+    pub llama31_128k: TokenizerDownloadInfo,
+    /// DeepSeek V3 with 100K vocabulary - BPE tokenizer
+    pub deepseekv3_100k: TokenizerDownloadInfo,
+    /// Cohere Aya with 256K vocabulary - BPE tokenizer
+    pub aya_256k: TokenizerDownloadInfo,
+    /// SmolLM with 49K vocabulary - BPE tokenizer
+    pub smollm_49k: TokenizerDownloadInfo,
+    /// Phi-2 with 51K vocabulary - BPE tokenizer
+    pub phi2_51k: TokenizerDownloadInfo,
+    /// Falcon-2 with 32K vocabulary - BPE tokenizer
+    pub falcon2_32k: TokenizerDownloadInfo,
+    /// OLMo-2 with 100K vocabulary - BPE tokenizer
+    pub olmo2_100k: TokenizerDownloadInfo,
+    /// Llama 3.2 with 128K vocabulary - BPE tokenizer
+    pub llama32_128k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -52,6 +162,336 @@ impl Default for ModelCompatibilityMatrix {
                 files: vec!["tokenizer.json".to_string(), "tokenizer.model".to_string()],
                 cache_key: "bitnet-custom".to_string(),
                 expected_vocab: None,
+            },
+            phi4_100k: TokenizerDownloadInfo {
+                repo: "microsoft/phi-4".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "phi4-100k".to_string(),
+                expected_vocab: Some(100352),
+            },
+            qwen2_150k: TokenizerDownloadInfo {
+                repo: "Qwen/Qwen2-7B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "qwen2-150k".to_string(),
+                expected_vocab: Some(151936),
+            },
+            gemma_256k: TokenizerDownloadInfo {
+                repo: "google/gemma-2b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "gemma-256k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            mistral_32k: TokenizerDownloadInfo {
+                repo: "mistralai/Mistral-7B-v0.1".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mistral-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            deepseek_100k: TokenizerDownloadInfo {
+                repo: "deepseek-ai/DeepSeek-V2-Lite".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "deepseek-100k".to_string(),
+                expected_vocab: Some(100015),
+            },
+            starcoder_49k: TokenizerDownloadInfo {
+                repo: "bigcode/starcoder".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "starcoder-49k".to_string(),
+                expected_vocab: Some(49152),
+            },
+            falcon_65k: TokenizerDownloadInfo {
+                repo: "tiiuae/falcon-7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "falcon-65k".to_string(),
+                expected_vocab: Some(65024),
+            },
+            codellama_32k: TokenizerDownloadInfo {
+                repo: "codellama/CodeLlama-7b-Instruct-hf".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "codellama-32k".to_string(),
+                expected_vocab: Some(32016),
+            },
+            command_256k: TokenizerDownloadInfo {
+                repo: "CohereForAI/c4ai-command-r-plus".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "command-256k".to_string(),
+                expected_vocab: Some(255029),
+            },
+            internlm_103k: TokenizerDownloadInfo {
+                repo: "internlm/internlm2-chat-7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "internlm-103k".to_string(),
+                expected_vocab: Some(103168),
+            },
+            yi_64k: TokenizerDownloadInfo {
+                repo: "01-ai/Yi-34B-Chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "yi-64k".to_string(),
+                expected_vocab: Some(64000),
+            },
+            baichuan_64k: TokenizerDownloadInfo {
+                repo: "baichuan-inc/Baichuan2-13B-Chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "baichuan-64k".to_string(),
+                expected_vocab: Some(125696),
+            },
+            chatglm_65k: TokenizerDownloadInfo {
+                repo: "THUDM/chatglm3-6b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "chatglm-65k".to_string(),
+                expected_vocab: Some(64798),
+            },
+            mpt_50k: TokenizerDownloadInfo {
+                repo: "mosaicml/mpt-7b-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mpt-50k".to_string(),
+                expected_vocab: Some(50432),
+            },
+            rwkv_65k: TokenizerDownloadInfo {
+                repo: "RWKV/rwkv-5-world-3b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "rwkv-65k".to_string(),
+                expected_vocab: Some(65536),
+            },
+            olmo_50k: TokenizerDownloadInfo {
+                repo: "allenai/OLMo-7B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "olmo-50k".to_string(),
+                expected_vocab: Some(50280),
+            },
+            zephyr_32k: TokenizerDownloadInfo {
+                repo: "HuggingFaceH4/zephyr-7b-beta".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "zephyr-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            vicuna_32k: TokenizerDownloadInfo {
+                repo: "lmsys/vicuna-7b-v1.5".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "vicuna-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            orca_32k: TokenizerDownloadInfo {
+                repo: "Open-Orca/OpenOrca-Platypus2-13B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "orca-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            solar_32k: TokenizerDownloadInfo {
+                repo: "upstage/SOLAR-10.7B-Instruct-v1.0".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "solar-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            alpaca_32k: TokenizerDownloadInfo {
+                repo: "tatsu-lab/alpaca-7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "alpaca-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            commandr_128k: TokenizerDownloadInfo {
+                repo: "CohereForAI/c4ai-command-r-plus".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "commandr-128k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            nous_32k: TokenizerDownloadInfo {
+                repo: "NousResearch/Nous-Hermes-2-Mistral-7B-DPO".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "nous-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            wizard_32k: TokenizerDownloadInfo {
+                repo: "WizardLMTeam/WizardLM-13B-V1.2".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "wizard-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            openchat_32k: TokenizerDownloadInfo {
+                repo: "openchat/openchat_3.5".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "openchat-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            granite_128k: TokenizerDownloadInfo {
+                repo: "ibm-granite/granite-3.0-8b-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "granite-128k".to_string(),
+                expected_vocab: Some(128000),
+            },
+            nemotron_32k: TokenizerDownloadInfo {
+                repo: "nvidia/Nemotron-4-340B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "nemotron-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            saiga_32k: TokenizerDownloadInfo {
+                repo: "IlyaGusev/saiga_mistral_7b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "saiga-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            llama2_chat_32k: TokenizerDownloadInfo {
+                repo: "meta-llama/Llama-2-7b-chat-hf".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "llama2-chat-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            gemma2_256k: TokenizerDownloadInfo {
+                repo: "google/gemma-2-9b-it".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "gemma2-256k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            phi3_32k: TokenizerDownloadInfo {
+                repo: "microsoft/Phi-3-mini-4k-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "phi3-32k".to_string(),
+                expected_vocab: Some(32064),
+            },
+            tinyllama_32k: TokenizerDownloadInfo {
+                repo: "TinyLlama/TinyLlama-1.1B-Chat-v1.0".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "tinyllama-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            dolphin_32k: TokenizerDownloadInfo {
+                repo: "cognitivecomputations/dolphin-2.6-mistral-7b-dpo".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "dolphin-32k".to_string(),
+                expected_vocab: Some(32768),
+            },
+            chatgpt_100k: TokenizerDownloadInfo {
+                repo: "openai/gpt-4".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "chatgpt-100k".to_string(),
+                expected_vocab: Some(100000),
+            },
+            mixtral_32k: TokenizerDownloadInfo {
+                repo: "mistralai/Mixtral-8x7B-Instruct-v0.1".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mixtral-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            stablelm_32k: TokenizerDownloadInfo {
+                repo: "stabilityai/stablelm-zephyr-3b".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "stablelm-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            bloom_250k: TokenizerDownloadInfo {
+                repo: "bigscience/bloom".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "bloom-250k".to_string(),
+                expected_vocab: Some(250680),
+            },
+            jamba_256k: TokenizerDownloadInfo {
+                repo: "ai21labs/Jamba-v0.1".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "jamba-256k".to_string(),
+                expected_vocab: Some(65536),
+            },
+            persimmon_262k: TokenizerDownloadInfo {
+                repo: "adept/persimmon-8b-chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "persimmon-262k".to_string(),
+                expected_vocab: Some(262144),
+            },
+            xverse_32k: TokenizerDownloadInfo {
+                repo: "xverse/XVERSE-13B-Chat".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "xverse-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            qwen25_152k: TokenizerDownloadInfo {
+                repo: "Qwen/Qwen2.5-7B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "qwen25-152k".to_string(),
+                expected_vocab: Some(152064),
+            },
+            mistral_nemo_128k: TokenizerDownloadInfo {
+                repo: "mistralai/Mistral-Nemo-Instruct-2407".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "mistral-nemo-128k".to_string(),
+                expected_vocab: Some(131072),
+            },
+            arctic_32k: TokenizerDownloadInfo {
+                repo: "Snowflake/snowflake-arctic-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "arctic-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            dbrx_32k: TokenizerDownloadInfo {
+                repo: "databricks/dbrx-instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "dbrx-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            exaone_32k: TokenizerDownloadInfo {
+                repo: "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "exaone-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            minicpm_122k: TokenizerDownloadInfo {
+                repo: "openbmb/MiniCPM-2B-sft-bf16".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "minicpm-122k".to_string(),
+                expected_vocab: Some(122753),
+            },
+            codegemma_256k: TokenizerDownloadInfo {
+                repo: "google/codegemma-7b-it".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "codegemma-256k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            llama31_128k: TokenizerDownloadInfo {
+                repo: "meta-llama/Llama-3.1-8B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "llama31-128k".to_string(),
+                expected_vocab: Some(128256),
+            },
+            deepseekv3_100k: TokenizerDownloadInfo {
+                repo: "deepseek-ai/DeepSeek-V3".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "deepseekv3-100k".to_string(),
+                expected_vocab: Some(102400),
+            },
+            aya_256k: TokenizerDownloadInfo {
+                repo: "CohereForAI/aya-23-8B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "aya-256k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            smollm_49k: TokenizerDownloadInfo {
+                repo: "HuggingFaceTB/SmolLM-1.7B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "smollm-49k".to_string(),
+                expected_vocab: Some(49152),
+            },
+            phi2_51k: TokenizerDownloadInfo {
+                repo: "microsoft/phi-2".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "phi2-51k".to_string(),
+                expected_vocab: Some(51200),
+            },
+            falcon2_32k: TokenizerDownloadInfo {
+                repo: "tiiuae/falcon-11B".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "falcon2-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            olmo2_100k: TokenizerDownloadInfo {
+                repo: "allenai/OLMo-2-1124-7B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "olmo2-100k".to_string(),
+                expected_vocab: Some(100278),
+            },
+            llama32_128k: TokenizerDownloadInfo {
+                repo: "meta-llama/Llama-3.2-3B-Instruct".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "llama32-128k".to_string(),
+                expected_vocab: Some(128256),
             },
         }
     }
@@ -598,6 +1038,9 @@ impl TokenizerDiscovery {
             ("llama", 128256) => Ok(Some(self.compatibility_matrix.llama3_128k.clone())),
             ("llama", 32000) => Ok(Some(self.compatibility_matrix.llama2_32k.clone())),
             ("gpt2", 50257) => Ok(Some(self.compatibility_matrix.gpt2_50k.clone())),
+            ("qwen" | "qwen2" | "qwen2.5", 151936) => {
+                Ok(Some(self.compatibility_matrix.qwen2_150k.clone()))
+            }
             _ => Ok(None), // Unknown combination
         }
     }
@@ -832,7 +1275,7 @@ mod tests {
         // - TokenizerStrategy::Mock for fallback (non-strict mode)
 
         // Test scaffolding placeholder - requires TokenizerDiscovery implementation
-        println!("✅ AC1: Tokenizer discovery test scaffolding completed");
+        println!("Γ£à AC1: Tokenizer discovery test scaffolding completed");
     }
 
     /// AC1: Tests large vocabulary optimization detection for GPU acceleration
@@ -1402,6 +1845,139 @@ mod tests {
 
             // Just verify we got an error - error content validation would require actual implementation
             // Error should exist and be meaningful (avoid unwrap_err due to missing Debug trait)
+        }
+    }
+
+    // ================================
+    // MATRIX COMPLETENESS VALIDATION
+    // ================================
+
+    /// Helper: returns all 18 matrix entries as (name, &TokenizerDownloadInfo) pairs
+    #[cfg(feature = "cpu")]
+    fn all_matrix_entries(
+        m: &ModelCompatibilityMatrix,
+    ) -> Vec<(&'static str, &TokenizerDownloadInfo)> {
+        vec![
+            ("llama3_128k", &m.llama3_128k),
+            ("llama2_32k", &m.llama2_32k),
+            ("gpt2_50k", &m.gpt2_50k),
+            ("bitnet_custom", &m.bitnet_custom),
+            ("phi4_100k", &m.phi4_100k),
+            ("qwen2_150k", &m.qwen2_150k),
+            ("gemma_256k", &m.gemma_256k),
+            ("mistral_32k", &m.mistral_32k),
+            ("deepseek_100k", &m.deepseek_100k),
+            ("starcoder_49k", &m.starcoder_49k),
+            ("falcon_65k", &m.falcon_65k),
+            ("codellama_32k", &m.codellama_32k),
+            ("command_256k", &m.command_256k),
+            ("internlm_103k", &m.internlm_103k),
+            ("yi_64k", &m.yi_64k),
+            ("baichuan_64k", &m.baichuan_64k),
+            ("chatglm_65k", &m.chatglm_65k),
+            ("mpt_50k", &m.mpt_50k),
+        ]
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_entry_count_is_18() {
+        let matrix = ModelCompatibilityMatrix::default();
+        let entries = all_matrix_entries(&matrix);
+        assert_eq!(entries.len(), 18, "Expected 18 tokenizer entries, got {}", entries.len());
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_non_empty_repo() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            assert!(!entry.repo.is_empty(), "Entry '{}' has empty repo", name);
+            assert!(
+                entry.repo.contains('/'),
+                "Entry '{}' repo '{}' should be owner/repo format",
+                name,
+                entry.repo
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_non_empty_files() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            assert!(!entry.files.is_empty(), "Entry '{}' has no files listed", name);
+            for f in &entry.files {
+                assert!(!f.is_empty(), "Entry '{}' has empty filename", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_non_empty_cache_key() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            assert!(!entry.cache_key.is_empty(), "Entry '{}' has empty cache_key", name);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_positive_vocab_size() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            if let Some(vocab) = entry.expected_vocab {
+                assert!(vocab > 0, "Entry '{}' has non-positive vocab_size: {}", name, vocab);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_key_families_present() {
+        let matrix = ModelCompatibilityMatrix::default();
+        let entries = all_matrix_entries(&matrix);
+        let expected_families = [
+            "llama3",
+            "llama2",
+            "phi4",
+            "qwen2",
+            "gemma",
+            "mistral",
+            "deepseek",
+            "starcoder",
+            "falcon",
+            "gpt2",
+            "bitnet",
+            "yi",
+            "baichuan",
+            "chatglm",
+            "mpt",
+        ];
+        for family in &expected_families {
+            assert!(
+                entries.iter().any(|(name, _)| name.starts_with(family)),
+                "Expected family '{}' not found in tokenizer matrix",
+                family
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_no_duplicate_cache_keys() {
+        let matrix = ModelCompatibilityMatrix::default();
+        let entries = all_matrix_entries(&matrix);
+        let mut seen = std::collections::HashSet::new();
+        for (name, entry) in &entries {
+            assert!(
+                seen.insert(&entry.cache_key),
+                "Entry '{}' has duplicate cache_key '{}'",
+                name,
+                entry.cache_key
+            );
         }
     }
 

@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|im_start|>system
+You are Orca, an AI language model created by Microsoft. You are a cautious assistant. You carefully follow instructions.<|im_end|>
+<|im_start|>user
+Explain photosynthesis briefly.<|im_end|>
+<|im_start|>assistant

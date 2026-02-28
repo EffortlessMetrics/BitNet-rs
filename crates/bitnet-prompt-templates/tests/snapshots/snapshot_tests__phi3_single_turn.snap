@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|system|>
+You are a helpful AI assistant.<|end|>
+<|user|>
+Explain photosynthesis briefly.<|end|>
+<|assistant|>

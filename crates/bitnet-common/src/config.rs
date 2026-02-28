@@ -37,8 +37,31 @@ pub struct ModelConfig {
     pub rope_scaling: Option<RopeScaling>,
     /// RMSNorm epsilon for numerical stability
     pub rms_norm_eps: Option<f32>,
+    /// Normalization layer type
+    pub norm_type: NormType,
+    /// Activation function type for FFN
+    pub activation_type: ActivationType,
     /// Tokenizer configuration
     pub tokenizer: TokenizerConfig,
+}
+
+impl ModelConfig {
+    /// Set model config defaults based on detected architecture.
+    ///
+    /// Call this after extracting the architecture string from model metadata
+    /// (e.g. GGUF `general.architecture`) so that norm/activation/context defaults
+    /// match what the architecture actually expects.
+    pub fn apply_architecture_defaults(&mut self, architecture: &str) {
+        if let Some(defaults) = crate::ArchitectureRegistry::lookup(architecture) {
+            self.norm_type = defaults.norm_type;
+            self.activation_type = defaults.activation_type;
+            if let Some(ctx) = defaults.default_context_length
+                && self.max_position_embeddings == 2048
+            {
+                self.max_position_embeddings = ctx;
+            }
+        }
+    }
 }
 
 impl Default for ModelConfig {
@@ -56,9 +79,33 @@ impl Default for ModelConfig {
             rope_theta: None,
             rope_scaling: None,
             rms_norm_eps: None,
+            norm_type: NormType::LayerNorm,
+            activation_type: ActivationType::Silu,
             tokenizer: TokenizerConfig::default(),
         }
     }
+}
+
+/// Normalization type used by the model architecture
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum NormType {
+    /// Standard LayerNorm with mean subtraction (BitNet default)
+    #[default]
+    LayerNorm,
+    /// RMSNorm without mean subtraction (LLaMA/Phi/Mistral)
+    RmsNorm,
+}
+
+/// Activation function type used in feed-forward layers
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ActivationType {
+    /// SiLU/Swish activation (default for LLaMA/Phi/Mistral)
+    #[default]
+    Silu,
+    /// Squared ReLU (BitNet-specific)
+    Relu2,
+    /// GELU activation (GPT-2/BERT)
+    Gelu,
 }
 
 /// Supported model formats

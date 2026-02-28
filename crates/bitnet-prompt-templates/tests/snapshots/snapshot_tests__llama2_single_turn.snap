@@ -1,0 +1,9 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+[INST] <<SYS>>
+You are a helpful, respectful and honest assistant.
+<</SYS>>
+
+Explain photosynthesis briefly. [/INST]

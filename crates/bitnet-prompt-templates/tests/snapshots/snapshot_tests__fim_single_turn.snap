@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<fim_prefix>def fibonacci(n):<fim_suffix><fim_middle>
