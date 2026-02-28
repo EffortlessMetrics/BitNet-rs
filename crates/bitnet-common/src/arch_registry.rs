@@ -387,6 +387,34 @@ mod tests {
         assert!(ArchitectureRegistry::lookup("3.5").is_none());
         assert!(ArchitectureRegistry::lookup("phi4").is_none()); // no dash
     }
+
+    #[test]
+    fn test_minimum_architecture_count() {
+        // Regression guard: ensure nobody accidentally removes architectures
+        let count = ArchitectureRegistry::known_architectures().len();
+        assert!(
+            count >= 40,
+            "Architecture count dropped to {}! Expected at least 40. \
+             Did you accidentally remove entries from the ARCHS array?",
+            count
+        );
+    }
+
+    #[test]
+    fn test_core_families_always_present() {
+        // These are the core families that must never be removed
+        let required = [
+            "bitnet", "llama", "phi", "qwen", "gemma", "mistral",
+            "deepseek", "starcoder", "falcon", "gpt", "mpt",
+        ];
+        for family in &required {
+            assert!(
+                ArchitectureRegistry::is_known(family),
+                "Core family '{}' is missing from architecture registry!",
+                family
+            );
+        }
+    }
 }
 
 #[cfg(test)]
