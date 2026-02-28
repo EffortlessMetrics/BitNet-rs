@@ -884,6 +884,16 @@ dependencies = [
  "temp-env",
  "tempfile",
  "thiserror 2.0.18",
+ "anyhow",
+ "bitnet-common",
+ "bitnet-device-probe",
+ "bitnet-engine-core",
+ "bitnet-generation",
+ "insta",
+ "log",
+ "proptest",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

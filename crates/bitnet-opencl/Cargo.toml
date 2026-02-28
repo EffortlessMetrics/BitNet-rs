@@ -9,6 +9,7 @@ authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "OpenCL backend for BitNet GPU inference on Intel Arc GPUs"
+description = "OpenCL backend for BitNet inference (Intel GPU support)"
 rust-version.workspace = true
 
 [dependencies]
@@ -28,11 +29,12 @@ temp-env.workspace = true
 [features]
 default = []
 oneapi = ["dep:opencl3"]
-cpu = []
-gpu = ["cuda"]
-cuda = []
-opencl = []
-vulkan = []
+bitnet-engine-core = { path = "../bitnet-engine-core", version = "0.2.1-dev" }
+bitnet-generation = { path = "../bitnet-generation", version = "0.2.1-dev" }
+bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
+anyhow.workspace = true
+log.workspace = true
+serde.workspace = true
 
 [lints]
 workspace = true
