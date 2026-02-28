@@ -16,7 +16,7 @@ include = [
 ]
 
 [dependencies]
-bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.2.1-dev" }
+bitnet-testing-profile = { path = "../bitnet-testing-profile", version = "0.2.0-alpha.1" }
 num_cpus = "1.17.0"
 
 [features]
