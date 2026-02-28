@@ -119,9 +119,7 @@ mod backend_priority {
             cuda_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: false,
-                        cpp_ffi: false,
-            vulkan_compiled: false,
-            vulkan_runtime: false,
+            cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
 
@@ -145,9 +143,7 @@ mod backend_priority {
             cuda_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: false,
-                        cpp_ffi: false,
-            vulkan_compiled: false,
-            vulkan_runtime: false,
+            cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
 
@@ -164,9 +160,7 @@ mod backend_priority {
             cuda_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: true,
-                        cpp_ffi: false,
-            vulkan_compiled: false,
-            vulkan_runtime: false,
+            cpp_ffi: false,
             simd_level: SimdLevel::Scalar,
         };
 
@@ -181,9 +175,7 @@ mod backend_priority {
             cuda_runtime: true,
             oneapi_compiled: true,
             oneapi_runtime: true,
-                        cpp_ffi: false,
-            vulkan_compiled: false,
-            vulkan_runtime: false,
+            cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
 
@@ -202,9 +194,7 @@ mod backend_priority {
             cuda_runtime: false,
             oneapi_compiled: true,
             oneapi_runtime: false,
-                        cpp_ffi: false,
-            vulkan_compiled: false,
-            vulkan_runtime: false,
+            cpp_ffi: false,
             simd_level: SimdLevel::Avx2,
         };
 
