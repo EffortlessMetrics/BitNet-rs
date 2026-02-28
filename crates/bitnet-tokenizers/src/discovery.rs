@@ -66,6 +66,14 @@ pub struct ModelCompatibilityMatrix {
     pub solar_32k: TokenizerDownloadInfo,
     /// Alpaca with 32K vocabulary - SentencePiece tokenizer
     pub alpaca_32k: TokenizerDownloadInfo,
+    /// Command-R+ with 256K vocabulary - BPE tokenizer
+    pub commandr_128k: TokenizerDownloadInfo,
+    /// NousResearch Hermes with 32K vocabulary - BPE tokenizer
+    pub nous_32k: TokenizerDownloadInfo,
+    /// WizardLM with 32K vocabulary - SentencePiece tokenizer
+    pub wizard_32k: TokenizerDownloadInfo,
+    /// OpenChat with 32K vocabulary - BPE tokenizer
+    pub openchat_32k: TokenizerDownloadInfo,
 }
 
 impl Default for ModelCompatibilityMatrix {
@@ -219,6 +227,30 @@ impl Default for ModelCompatibilityMatrix {
                 repo: "tatsu-lab/alpaca-7b".to_string(),
                 files: vec!["tokenizer.json".to_string()],
                 cache_key: "alpaca-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            commandr_128k: TokenizerDownloadInfo {
+                repo: "CohereForAI/c4ai-command-r-plus".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "commandr-128k".to_string(),
+                expected_vocab: Some(256000),
+            },
+            nous_32k: TokenizerDownloadInfo {
+                repo: "NousResearch/Nous-Hermes-2-Mistral-7B-DPO".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "nous-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            wizard_32k: TokenizerDownloadInfo {
+                repo: "WizardLMTeam/WizardLM-13B-V1.2".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "wizard-32k".to_string(),
+                expected_vocab: Some(32000),
+            },
+            openchat_32k: TokenizerDownloadInfo {
+                repo: "openchat/openchat_3.5".to_string(),
+                files: vec!["tokenizer.json".to_string()],
+                cache_key: "openchat-32k".to_string(),
                 expected_vocab: Some(32000),
             },
         }

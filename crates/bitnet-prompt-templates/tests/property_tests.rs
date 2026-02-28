@@ -17,7 +17,7 @@ proptest! {
     /// The formatted output always contains the original user text.
     #[test]
     fn user_text_preserved(user_text in "[a-zA-Z0-9 .,!?]{1,200}") {
-        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat, TemplateType::YiChat, TemplateType::BaichuanChat, TemplateType::ChatGLMChat, TemplateType::MptInstruct, TemplateType::RwkvWorld, TemplateType::OlmoInstruct, TemplateType::FillInMiddle, TemplateType::ZephyrChat, TemplateType::VicunaChat, TemplateType::OrcaChat, TemplateType::SolarInstruct, TemplateType::AlpacaInstruct] {
+        for ttype in [TemplateType::Raw, TemplateType::Instruct, TemplateType::Llama3Chat, TemplateType::Phi4Chat, TemplateType::QwenChat, TemplateType::GemmaChat, TemplateType::MistralChat, TemplateType::DeepSeekChat, TemplateType::StarCoder, TemplateType::FalconChat, TemplateType::CodeLlamaInstruct, TemplateType::CohereCommand, TemplateType::InternLMChat, TemplateType::YiChat, TemplateType::BaichuanChat, TemplateType::ChatGLMChat, TemplateType::MptInstruct, TemplateType::RwkvWorld, TemplateType::OlmoInstruct, TemplateType::FillInMiddle, TemplateType::ZephyrChat, TemplateType::VicunaChat, TemplateType::OrcaChat, TemplateType::SolarInstruct, TemplateType::AlpacaInstruct, TemplateType::CommandRPlus, TemplateType::NousHermes, TemplateType::WizardLM, TemplateType::OpenChat] {
             let tmpl = PromptTemplate::new(ttype);
             let formatted = tmpl.format(&user_text);
             prop_assert!(
@@ -140,6 +140,10 @@ proptest! {
         Just(TemplateType::OrcaChat),
         Just(TemplateType::SolarInstruct),
         Just(TemplateType::AlpacaInstruct),
+        Just(TemplateType::CommandRPlus),
+        Just(TemplateType::NousHermes),
+        Just(TemplateType::WizardLM),
+        Just(TemplateType::OpenChat),
         ],
     ) {
         let s = template.to_string();
@@ -176,6 +180,10 @@ proptest! {
         Just(TemplateType::OrcaChat),
         Just(TemplateType::SolarInstruct),
         Just(TemplateType::AlpacaInstruct),
+        Just(TemplateType::CommandRPlus),
+        Just(TemplateType::NousHermes),
+        Just(TemplateType::WizardLM),
+        Just(TemplateType::OpenChat),
         ],
         user in "[a-zA-Z0-9]{1,50}",
     ) {

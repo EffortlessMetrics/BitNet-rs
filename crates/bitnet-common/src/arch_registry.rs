@@ -68,7 +68,7 @@ impl ArchitectureRegistry {
             "command" | "command-r" | "command-r-plus" | "cohere" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Silu,
-                default_context_length: None,
+                default_context_length: Some(128000),
             }),
             "internlm" | "internlm2" => Some(ArchDefaults {
                 norm_type: NormType::RmsNorm,
@@ -135,6 +135,21 @@ impl ArchitectureRegistry {
                 activation_type: ActivationType::Silu,
                 default_context_length: Some(2048),
             }),
+            "nous-hermes" | "hermes" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "wizardlm" | "wizard" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(4096),
+            }),
+            "openchat" => Some(ArchDefaults {
+                norm_type: NormType::RmsNorm,
+                activation_type: ActivationType::Silu,
+                default_context_length: Some(8192),
+            }),
             "gpt" | "bert" => Some(ArchDefaults {
                 norm_type: NormType::LayerNorm,
                 activation_type: ActivationType::Gelu,
@@ -193,6 +208,11 @@ impl ArchitectureRegistry {
             "orca",
             "solar",
             "alpaca",
+            "nous-hermes",
+            "hermes",
+            "wizardlm",
+            "wizard",
+            "openchat",
         ]
     }
 

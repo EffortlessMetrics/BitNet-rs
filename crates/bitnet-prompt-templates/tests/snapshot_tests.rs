@@ -643,3 +643,107 @@ fn snapshot_alpaca_multi_turn() {
     let out = tmpl.format("How does borrowing work?");
     insta::assert_snapshot!("alpaca_multi_turn", out);
 }
+
+// ── Command-R+ ──────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_commandrplus_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::CommandRPlus);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("commandrplus_single_turn", out);
+}
+
+#[test]
+fn snapshot_commandrplus_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::CommandRPlus)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("commandrplus_with_system", out);
+}
+
+#[test]
+fn snapshot_commandrplus_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::CommandRPlus)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("commandrplus_multi_turn", out);
+}
+
+// ── NousHermes ──────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_noushermes_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::NousHermes);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("noushermes_single_turn", out);
+}
+
+#[test]
+fn snapshot_noushermes_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::NousHermes)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("noushermes_with_system", out);
+}
+
+#[test]
+fn snapshot_noushermes_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::NousHermes)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("noushermes_multi_turn", out);
+}
+
+// ── WizardLM ────────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_wizardlm_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::WizardLM);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("wizardlm_single_turn", out);
+}
+
+#[test]
+fn snapshot_wizardlm_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::WizardLM)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("wizardlm_with_system", out);
+}
+
+#[test]
+fn snapshot_wizardlm_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::WizardLM)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("wizardlm_multi_turn", out);
+}
+
+// ── OpenChat ────────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_openchat_single_turn() {
+    let tmpl = PromptTemplate::new(TemplateType::OpenChat);
+    let out = tmpl.format("Explain photosynthesis briefly.");
+    insta::assert_snapshot!("openchat_single_turn", out);
+}
+
+#[test]
+fn snapshot_openchat_with_system() {
+    let tmpl = PromptTemplate::new(TemplateType::OpenChat)
+        .with_system_prompt("You are a science tutor.");
+    let out = tmpl.format("What is ATP?");
+    insta::assert_snapshot!("openchat_with_system", out);
+}
+
+#[test]
+fn snapshot_openchat_multi_turn() {
+    let mut tmpl = PromptTemplate::new(TemplateType::OpenChat)
+        .with_system_prompt("You are a Rust expert.");
+    tmpl.add_turn("What is ownership?", "Ownership is Rust's memory management system.");
+    let out = tmpl.format("How does borrowing work?");
+    insta::assert_snapshot!("openchat_multi_turn", out);
+}

@@ -1,0 +1,7 @@
+---
+source: crates/bitnet-prompt-templates/tests/snapshot_tests.rs
+expression: out
+---
+<|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>You are Command-R+, a large language model trained to have polite, helpful, inclusive conversations with people.<|END_OF_TURN_TOKEN|>
+<|START_OF_TURN_TOKEN|><|USER_TOKEN|>Explain photosynthesis briefly.<|END_OF_TURN_TOKEN|>
+<|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>
