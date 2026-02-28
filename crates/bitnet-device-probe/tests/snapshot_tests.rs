@@ -63,15 +63,13 @@ fn device_capabilities_npu_compiled_matches_feature() {
 #[test]
 fn device_probe_full_summary() {
     let caps = DeviceCapabilities::detect();
-    // SIMD level is machine-dependent (Avx512 vs Avx2 vs Scalar), so redact it
-    // to keep the snapshot stable across CI runners and developer machines.
     let summary = format!(
         "cpu_rust={} cuda_compiled={} rocm_compiled={} npu_compiled={} simd={:?}",
         caps.cpu_rust, caps.cuda_compiled, caps.rocm_compiled, caps.npu_compiled, caps.simd_level
     );
-    insta::with_settings!({filters => vec![
-        (r"simd=\w+", "simd=[SIMD]"),
-    ]}, {
+    insta::with_settings!({
+        filters => vec![(r"simd=\w+", "simd=[SIMD]")]
+    }, {
         insta::assert_snapshot!("device_probe_summary", summary);
     });
 }
