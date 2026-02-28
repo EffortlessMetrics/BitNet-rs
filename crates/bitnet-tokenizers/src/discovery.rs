@@ -1520,6 +1520,131 @@ mod tests {
         }
     }
 
+    // ================================
+    // MATRIX COMPLETENESS VALIDATION
+    // ================================
+
+    /// Helper: returns all 18 matrix entries as (name, &TokenizerDownloadInfo) pairs
+    #[cfg(feature = "cpu")]
+    fn all_matrix_entries(
+        m: &ModelCompatibilityMatrix,
+    ) -> Vec<(&'static str, &TokenizerDownloadInfo)> {
+        vec![
+            ("llama3_128k", &m.llama3_128k),
+            ("llama2_32k", &m.llama2_32k),
+            ("gpt2_50k", &m.gpt2_50k),
+            ("bitnet_custom", &m.bitnet_custom),
+            ("phi4_100k", &m.phi4_100k),
+            ("qwen2_150k", &m.qwen2_150k),
+            ("gemma_256k", &m.gemma_256k),
+            ("mistral_32k", &m.mistral_32k),
+            ("deepseek_100k", &m.deepseek_100k),
+            ("starcoder_49k", &m.starcoder_49k),
+            ("falcon_65k", &m.falcon_65k),
+            ("codellama_32k", &m.codellama_32k),
+            ("command_256k", &m.command_256k),
+            ("internlm_103k", &m.internlm_103k),
+            ("yi_64k", &m.yi_64k),
+            ("baichuan_64k", &m.baichuan_64k),
+            ("chatglm_65k", &m.chatglm_65k),
+            ("mpt_50k", &m.mpt_50k),
+        ]
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_entry_count_is_18() {
+        let matrix = ModelCompatibilityMatrix::default();
+        let entries = all_matrix_entries(&matrix);
+        assert_eq!(entries.len(), 18, "Expected 18 tokenizer entries, got {}", entries.len());
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_non_empty_repo() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            assert!(!entry.repo.is_empty(), "Entry '{}' has empty repo", name);
+            assert!(
+                entry.repo.contains('/'),
+                "Entry '{}' repo '{}' should be owner/repo format",
+                name,
+                entry.repo
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_non_empty_files() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            assert!(!entry.files.is_empty(), "Entry '{}' has no files listed", name);
+            for f in &entry.files {
+                assert!(!f.is_empty(), "Entry '{}' has empty filename", name);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_non_empty_cache_key() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            assert!(!entry.cache_key.is_empty(), "Entry '{}' has empty cache_key", name);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_all_entries_have_positive_vocab_size() {
+        let matrix = ModelCompatibilityMatrix::default();
+        for (name, entry) in all_matrix_entries(&matrix) {
+            if let Some(vocab) = entry.expected_vocab {
+                assert!(
+                    vocab > 0,
+                    "Entry '{}' has non-positive vocab_size: {}",
+                    name,
+                    vocab
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_key_families_present() {
+        let matrix = ModelCompatibilityMatrix::default();
+        let entries = all_matrix_entries(&matrix);
+        let expected_families = [
+            "llama3", "llama2", "phi4", "qwen2", "gemma", "mistral", "deepseek", "starcoder",
+            "falcon", "gpt2", "bitnet", "yi", "baichuan", "chatglm", "mpt",
+        ];
+        for family in &expected_families {
+            assert!(
+                entries.iter().any(|(name, _)| name.starts_with(family)),
+                "Expected family '{}' not found in tokenizer matrix",
+                family
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "cpu")]
+    fn test_no_duplicate_cache_keys() {
+        let matrix = ModelCompatibilityMatrix::default();
+        let entries = all_matrix_entries(&matrix);
+        let mut seen = std::collections::HashSet::new();
+        for (name, entry) in &entries {
+            assert!(
+                seen.insert(&entry.cache_key),
+                "Entry '{}' has duplicate cache_key '{}'",
+                name,
+                entry.cache_key
+            );
+        }
+    }
+
     /// Test performance boundaries for neural network inference
     #[test]
     #[cfg(feature = "cpu")]

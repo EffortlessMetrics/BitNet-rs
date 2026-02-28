@@ -404,6 +404,13 @@ enum Commands {
         #[arg(long, default_value_t = 20)]
         kv_limit: usize,
     },
+
+    /// List all supported model architectures
+    ListArchitectures {
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -566,6 +573,46 @@ async fn main() -> Result<()> {
         Some(Commands::Inspect(cmd)) => cmd.execute().await,
         Some(Commands::CompatCheck { path, json, strict, show_kv, kv_limit }) => {
             handle_compat_check_command(path, json, strict, show_kv, kv_limit).await
+        }
+        Some(Commands::ListArchitectures { json }) => {
+            use bitnet_common::ArchitectureRegistry;
+
+            if json {
+                let archs: Vec<_> = ArchitectureRegistry::known_architectures()
+                    .iter()
+                    .filter_map(|arch| {
+                        ArchitectureRegistry::lookup(arch).map(|defaults| {
+                            serde_json::json!({
+                                "architecture": arch,
+                                "norm_type": format!("{:?}", defaults.norm_type),
+                                "activation_type": format!("{:?}", defaults.activation_type),
+                                "default_context_length": defaults.default_context_length,
+                            })
+                        })
+                    })
+                    .collect();
+                println!("{}", serde_json::to_string_pretty(&archs).unwrap());
+            } else {
+                println!(
+                    "{:<30} {:<12} {:<12} {}",
+                    "Architecture", "Norm", "Activation", "Context"
+                );
+                println!("{}", "-".repeat(70));
+                for arch in ArchitectureRegistry::known_architectures() {
+                    if let Some(defaults) = ArchitectureRegistry::lookup(arch) {
+                        println!(
+                            "{:<30} {:<12} {:<12} {}",
+                            arch,
+                            format!("{:?}", defaults.norm_type),
+                            format!("{:?}", defaults.activation_type),
+                            defaults
+                                .default_context_length
+                                .map_or("default".to_string(), |v| v.to_string()),
+                        );
+                    }
+                }
+            }
+            Ok(())
         }
         None => {
             // No command provided, show help
