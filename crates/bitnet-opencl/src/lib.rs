@@ -22,23 +22,17 @@
 //!     .expect("buffer allocation");
 //! ```
 
-pub mod async_transfer;
 pub mod buffer;
-pub mod buffer_pool;
 pub mod context;
 pub mod device;
 pub mod error;
-pub mod pinned;
 pub mod program;
 pub mod queue;
 
 // Re-export primary API types at crate root.
-pub use async_transfer::{async_read, async_write, wait_all, TransferEvent};
 pub use buffer::{AccessMode, OpenClBuffer};
-pub use buffer_pool::{BufferPool, BufferPoolConfig, PoolStats};
 pub use context::OpenClContext;
 pub use device::OpenClDevice;
 pub use error::OpenClError;
-pub use pinned::PinnedBuffer;
 pub use program::{OpenClProgram, ProgramCache};
 pub use queue::OpenClQueue;

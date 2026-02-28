@@ -8,7 +8,7 @@ use tracing::debug;
 /// Wrapper around an OpenCL command queue with profiling support.
 pub struct OpenClQueue {
     /// The underlying opencl3 command queue.
-    pub inner: CommandQueue,
+    pub(crate) inner: CommandQueue,
 }
 
 impl std::fmt::Debug for OpenClQueue {
