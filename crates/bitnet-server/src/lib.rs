@@ -11,6 +11,7 @@ pub mod concurrency;
 pub mod config;
 pub mod execution_router;
 pub mod health;
+pub mod metrics;
 pub mod model_manager;
 pub mod monitoring;
 pub mod security;
