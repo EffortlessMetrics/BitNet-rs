@@ -9,6 +9,9 @@ pub mod device_aware;
 pub mod device_features;
 #[cfg(feature = "ffi")]
 pub mod ffi;
+// OpenCL kernel sources (always compiled — just embedded string constants)
+#[path = "gpu/kernels/mod.rs"]
+pub mod kernels;
 #[cfg(any(feature = "gpu", feature = "cuda", feature = "oneapi"))]
 pub mod gpu;
 pub mod gpu_utils;
@@ -16,7 +19,7 @@ pub mod gpu_utils;
 pub mod npu;
 mod stubs;
 pub mod tl_lut;
-pub mod embedding_gpu;
+pub mod transformer_layer_gpu;
 
 /// Kernel provider trait
 pub trait KernelProvider: Send + Sync {
