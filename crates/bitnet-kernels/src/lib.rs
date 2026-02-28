@@ -16,6 +16,8 @@ pub mod gpu;
 pub mod gpu_utils;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
+#[cfg(feature = "rocm")]
+pub mod rocm;
 mod stubs;
 pub mod tl_lut;
 
@@ -73,6 +75,17 @@ impl KernelManager {
                 providers.insert(0, Box::new(npu_kernel));
             } else {
                 log::debug!("NPU kernel not available");
+            }
+        }
+
+        #[cfg(feature = "rocm")]
+        {
+            let rocm_kernel = rocm::RocmKernel::new();
+            if rocm_kernel.is_available() {
+                log::info!("ROCm/HIP kernel available, adding to providers");
+                providers.insert(0, Box::new(rocm_kernel));
+            } else {
+                log::debug!("ROCm/HIP kernel not available");
             }
         }
 
@@ -230,6 +243,22 @@ pub fn select_npu_kernel() -> Result<Box<dyn KernelProvider>> {
     Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
 }
 
+/// Select the ROCm/HIP kernel provider.
+#[cfg(feature = "rocm")]
+pub fn select_rocm_kernel() -> Result<Box<dyn KernelProvider>> {
+    let rocm_kernel = rocm::RocmKernel::new();
+    if rocm_kernel.is_available() {
+        Ok(Box::new(rocm_kernel))
+    } else {
+        Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
+    }
+}
+
+#[cfg(not(feature = "rocm"))]
+pub fn select_rocm_kernel() -> Result<Box<dyn KernelProvider>> {
+    Err(bitnet_common::BitNetError::Kernel(bitnet_common::KernelError::NoProvider))
+}
+
 // Re-export commonly used types
 pub use cpu::FallbackKernel;
 
@@ -249,5 +278,7 @@ pub use device_aware::{DeviceAwareQuantizer, DeviceAwareQuantizerFactory};
 pub use gpu::CudaKernel;
 #[cfg(feature = "npu-backend")]
 pub use npu::NpuKernel;
+#[cfg(feature = "rocm")]
+pub use rocm::RocmKernel;
 #[cfg(not(target_arch = "aarch64"))]
 pub use stubs::NeonKernel;
