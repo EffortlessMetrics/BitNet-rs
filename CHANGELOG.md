@@ -69,6 +69,10 @@ All notable changes to bitnet-rs will be documented in this file.
 - **Qwen 2.5 chat template**: Add `Qwen25Chat` ChatML variant with version-specific detection, `qwen25_152k` tokenizer entry, and `qwen2.5`/`qwen-2.5` arch entries.
 - **Mistral Nemo chat template**: Add `MistralNemoChat` [INST] format for Mistral Nemo 12B (128K context), `mistral_nemo_128k` tokenizer entry, and `mistral-nemo`/`nemo` arch entries.
 - **Arctic instruct template**: Add `ArcticInstruct` ChatML variant for Snowflake Arctic, `arctic_32k` tokenizer entry, and `arctic` arch entry.
+- **Template enumeration API**: Add `PromptTemplate::all_variants()` method returning all 50 template variants; used for CLI listing and exhaustive testing.
+- **DBRX instruct template**: Add `DbrxInstruct` ChatML variant for Databricks DBRX, `dbrx_32k` tokenizer entry, and `dbrx` arch entry.
+- **EXAONE chat template**: Add `ExaoneChat` with `[|system|]`/`[|endofturn|]` format for LG AI Research EXAONE, `exaone_32k` tokenizer entry, and `exaone` arch entry.
+- **MiniCPM chat template**: Add `MiniCPMChat` ChatML variant for OpenBMB MiniCPM, `minicpm_122k` tokenizer entry, and `minicpm` arch entry.
 - `feat(bdd-grid): add Metal, Vulkan, oneAPI backend cells to BDD grid` — Three new BDD grid cells covering Metal (EndToEnd/Local), Vulkan (Minimal/PreProduction), and Intel oneAPI (Development/PreProduction) backends (#1010)
 
 ### Changed
