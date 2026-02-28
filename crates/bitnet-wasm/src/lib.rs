@@ -1,77 +1,91 @@
-//! WebAssembly bindings for BitNet 1-bit LLM inference
+//! WebAssembly bindings for BitNet 1-bit LLM inference.
 //!
 //! This crate provides WebAssembly bindings for the BitNet inference engine,
 //! enabling 1-bit LLM inference in browsers and edge environments with
 //! optimized memory usage and JavaScript async/await support.
+//!
+//! ## Cross-platform modules
+//!
+//! [`core_types`] and [`error`] compile on **all** targets so that shared
+//! logic (config validation, serialization) can be unit-tested with plain
+//! `cargo test` on the host.
+//!
+//! ## Wasm-only modules
+//!
+//! The remaining modules (`callback`, `utils`, `inference`, `model`, etc.)
+//! are gated behind `#[cfg(target_arch = "wasm32")]` and require
+//! `wasm-pack build` or `cargo build --target wasm32-unknown-unknown`.
 
-#![cfg(target_arch = "wasm32")]
+// ── Platform-agnostic modules (always compiled) ──────────────────────
+pub mod core_types;
+pub mod error;
 
+// ── Wasm32-only modules ──────────────────────────────────────────────
+
+#[cfg(target_arch = "wasm32")]
+pub mod callback;
+
+#[cfg(all(target_arch = "wasm32", feature = "wasm-utils"))]
+pub mod utils;
+
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub mod inference;
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub mod memory;
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub mod model;
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub mod progressive;
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub mod streaming;
+
+// Re-exports for convenience
+#[cfg(all(target_arch = "wasm32", feature = "wasm-utils"))]
+pub use utils::*;
+
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub use inference::*;
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub use model::*;
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub use progressive::*;
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
+pub use streaming::*;
+
+// ── Wasm32 entry points ─────────────────────────────────────────────
+
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-// Import the `console.log` function from the `console` module
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
 
-// Define a macro to provide `println!(..)`-style syntax for `console.log` logging
+#[cfg(target_arch = "wasm32")]
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-// Set up panic hook for better error messages in development
-#[cfg(feature = "debug")]
+#[cfg(all(target_arch = "wasm32", feature = "debug"))]
 pub fn set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-// Initialize wasm-logger for logging support
+#[cfg(target_arch = "wasm32")]
 pub fn init_logger() {
     wasm_logger::init(wasm_logger::Config::default());
 }
 
-// Memory allocator optimization for WebAssembly - using dlmalloc as maintained alternative
-#[cfg(feature = "browser")]
+// Only use dlmalloc on actual wasm32 targets to avoid replacing the host allocator.
+#[cfg(all(target_arch = "wasm32", feature = "browser"))]
 #[global_allocator]
 static ALLOC: dlmalloc::GlobalDlmalloc = dlmalloc::GlobalDlmalloc;
 
-// For now, comment out modules that have compilation issues on wasm32
-// These will need to be fixed properly in a future PR
-
-// Re-export main components
-// pub mod benchmark;
-// pub mod kernels;
-// pub mod memory;
-#[cfg(feature = "wasm-utils")]
-pub mod utils;
-
-// These modules depend on bitnet-inference, so only include them when the feature is enabled
-#[cfg(feature = "inference")]
-pub mod inference;
-#[cfg(feature = "inference")]
-pub mod model;
-#[cfg(feature = "inference")]
-pub mod progressive;
-#[cfg(feature = "inference")]
-pub mod streaming;
-
-// pub use benchmark::*;
-// pub use kernels::*;
-// pub use memory::*;
-#[cfg(feature = "wasm-utils")]
-pub use utils::*;
-
-#[cfg(feature = "inference")]
-pub use inference::*;
-#[cfg(feature = "inference")]
-pub use model::*;
-#[cfg(feature = "inference")]
-pub use progressive::*;
-#[cfg(feature = "inference")]
-pub use streaming::*;
-
-// Initialize the WASM module
+/// Initialize the WASM module (called automatically by wasm-bindgen).
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen(start)]
 pub fn init() {
     #[cfg(feature = "debug")]
@@ -82,19 +96,19 @@ pub fn init() {
 }
 
 /// Minimal async entry that compiles on wasm even when the Rust engine is not enabled.
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub async fn generate(prompt: String) -> Result<String, JsValue> {
     generate_impl(prompt).await.map_err(|e| JsValue::from_str(&e))
 }
 
-#[cfg(feature = "inference")]
+#[cfg(all(target_arch = "wasm32", feature = "inference"))]
 async fn generate_impl(prompt: String) -> Result<String, String> {
-    // When inference is enabled, use the real implementation
-    // This would use bitnet_inference components
+    let _ = prompt;
     Err("Inference implementation not yet ready for WASM".to_string())
 }
 
-#[cfg(not(feature = "inference"))]
+#[cfg(all(target_arch = "wasm32", not(feature = "inference")))]
 async fn generate_impl(_prompt: String) -> Result<String, String> {
     Ok("bitnet-wasm built without `inference` feature. Enable it with --features inference".into())
 }
