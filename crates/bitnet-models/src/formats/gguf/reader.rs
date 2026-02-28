@@ -633,6 +633,235 @@ impl<'a> GgufReader<'a> {
         Ok(())
     }
 
+    /// Validate tensor shapes against architecture metadata.
+    ///
+    /// Checks that embedding tensors have rank 2 with dimensions matching
+    /// the vocabulary size and embedding length from GGUF metadata. Attention
+    /// projection tensors are also checked to ensure their inner dimension
+    /// equals the embedding length.
+    pub fn validate_tensor_shapes(&self) -> std::result::Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+
+        let arch = self.get_string_metadata("general.architecture").unwrap_or_default();
+        let embed_len = self
+            .get_u32_metadata(&format!("{arch}.embedding_length"))
+            .or_else(|| self.get_u32_metadata("llama.embedding_length"));
+        let vocab_size = self
+            .get_u32_metadata(&format!("{arch}.vocab_size"))
+            .or_else(|| self.get_u32_metadata("llama.vocab_size"))
+            .or_else(|| self.get_u32_metadata("tokenizer.ggml.vocab_size"));
+
+        for info in &self.tensor_infos {
+            // All tensors must have at least 1 dimension
+            if info.shape.is_empty() {
+                errors.push(format!("Tensor '{}': has no dimensions (scalar)", info.name));
+                continue;
+            }
+
+            // Embedding tensors should be rank 2: [vocab_size, embed_dim]
+            let is_embed = (info.name.contains("embed") || info.name.contains("embd"))
+                && info.name.contains("weight");
+            if is_embed {
+                if info.shape.len() != 2 {
+                    errors.push(format!(
+                        "Tensor '{}': expected rank 2 for embedding, got rank {}",
+                        info.name,
+                        info.shape.len()
+                    ));
+                } else {
+                    if let Some(vs) = vocab_size
+                        && info.shape[0] != vs as usize
+                    {
+                        errors.push(format!(
+                            "Tensor '{}': expected dim[0]={} (vocab_size), got {}",
+                            info.name, vs, info.shape[0]
+                        ));
+                    }
+                    if let Some(el) = embed_len
+                        && info.shape[1] != el as usize
+                    {
+                        errors.push(format!(
+                            "Tensor '{}': expected dim[1]={} (embedding_length), got {}",
+                            info.name, el, info.shape[1]
+                        ));
+                    }
+                }
+            }
+
+            // Attention projection tensors should be rank 2 with embedding_length
+            let is_attn_proj = (info.name.contains("q_proj")
+                || info.name.contains("k_proj")
+                || info.name.contains("v_proj")
+                || info.name.contains("o_proj")
+                || info.name.contains("attn_q")
+                || info.name.contains("attn_k")
+                || info.name.contains("attn_v")
+                || info.name.contains("attn_output"))
+                && info.name.contains("weight");
+            if is_attn_proj
+                && info.shape.len() == 2
+                && let Some(el) = embed_len
+            {
+                // At least one dimension must match embedding_length
+                if info.shape[0] != el as usize && info.shape[1] != el as usize {
+                    errors.push(format!(
+                        "Tensor '{}': no dimension matches embedding_length={}, got shape {:?}",
+                        info.name, el, info.shape
+                    ));
+                }
+            }
+        }
+
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
+
+    /// Validate that weight data for float tensors has reasonable statistical properties.
+    ///
+    /// For each F32/F16 tensor, computes the mean and variance and rejects
+    /// tensors where all values are identical (zero variance) or the mean is
+    /// extreme. Returns per-tensor diagnostics on failure.
+    pub fn validate_weight_distributions(&self) -> std::result::Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+
+        for info in &self.tensor_infos {
+            // Only check float tensors where we can read raw values
+            if info.tensor_type != GgufTensorType::F32 && info.tensor_type != GgufTensorType::F16 {
+                continue;
+            }
+
+            let raw = match self.get_tensor_data_by_info(info) {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
+
+            let values: Vec<f32> = match info.tensor_type {
+                GgufTensorType::F32 => raw
+                    .chunks_exact(4)
+                    .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+                    .collect(),
+                GgufTensorType::F16 => raw
+                    .chunks_exact(2)
+                    .map(|c| half::f16::from_le_bytes([c[0], c[1]]).to_f32())
+                    .collect(),
+                _ => continue,
+            };
+
+            if values.is_empty() {
+                continue;
+            }
+
+            let n = values.len() as f64;
+            let mean = values.iter().map(|&v| v as f64).sum::<f64>() / n;
+            let variance = values
+                .iter()
+                .map(|&v| {
+                    let d = v as f64 - mean;
+                    d * d
+                })
+                .sum::<f64>()
+                / n;
+
+            // All-identical weights are suspicious (zero variance for >=64 elements)
+            if variance == 0.0 && values.len() >= 64 {
+                errors.push(format!(
+                    "Tensor '{}': zero variance ({} elements, all value={:.4})",
+                    info.name,
+                    values.len(),
+                    mean
+                ));
+            }
+
+            // Extreme mean may indicate corrupt or mis-loaded weights
+            if mean.abs() > 1e4 {
+                errors.push(format!(
+                    "Tensor '{}': extreme mean={:.4} (likely corrupt weights)",
+                    info.name, mean
+                ));
+            }
+
+            let nan_count = values.iter().filter(|v| v.is_nan()).count();
+            let inf_count = values.iter().filter(|v| v.is_infinite()).count();
+            if nan_count > 0 {
+                errors.push(format!("Tensor '{}': contains {} NaN values", info.name, nan_count));
+            }
+            if inf_count > 0 {
+                errors.push(format!("Tensor '{}': contains {} Inf values", info.name, inf_count));
+            }
+        }
+
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
+
+    /// Validate quantization format consistency across tensors.
+    ///
+    /// Ensures that quantized weight tensors (excluding embeddings and
+    /// layer-norm) use the same quantization type and that layer-norm /
+    /// normalization tensors are stored in a float format.
+    pub fn validate_quantization_consistency(&self) -> std::result::Result<(), Vec<String>> {
+        let mut errors = Vec::new();
+
+        // Collect quantization types used by weight tensors (skip norms & embeds)
+        let mut weight_quant_types: Vec<(String, GgufTensorType)> = Vec::new();
+
+        for info in &self.tensor_infos {
+            let n = &info.name;
+            let is_norm = n.contains("norm") || n.contains("ln_") || n.contains("layernorm");
+            let is_embed = n.contains("embed") || n.contains("embd");
+
+            if is_norm {
+                // Layer-norm weights should be float, not quantized
+                if info.tensor_type.is_quantized() {
+                    errors.push(format!(
+                        "Tensor '{}': layer-norm weight should be float, got {:?}",
+                        info.name, info.tensor_type
+                    ));
+                }
+            } else if !is_embed && info.name.contains("weight") {
+                weight_quant_types.push((info.name.clone(), info.tensor_type));
+            }
+        }
+
+        // All non-norm/embed weight tensors should share the same quant type
+        if weight_quant_types.len() >= 2 {
+            let first_type = weight_quant_types[0].1;
+            for (name, qt) in &weight_quant_types[1..] {
+                if *qt != first_type {
+                    errors.push(format!(
+                        "Tensor '{}': quantization type {:?} differs from '{}' ({:?})",
+                        name, qt, weight_quant_types[0].0, first_type
+                    ));
+                }
+            }
+        }
+
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
+    }
+
+    /// Run all extended validation checks and return a combined report.
+    ///
+    /// Collects errors from shape, distribution, and quantization consistency
+    /// validation and returns them as a single `BitNetError::Validation` when
+    /// any check fails.
+    pub fn validate_extended(&self) -> Result<()> {
+        let mut all_errors = Vec::new();
+
+        if let Err(mut e) = self.validate_tensor_shapes() {
+            all_errors.append(&mut e);
+        }
+        if let Err(mut e) = self.validate_weight_distributions() {
+            all_errors.append(&mut e);
+        }
+        if let Err(mut e) = self.validate_quantization_consistency() {
+            all_errors.append(&mut e);
+        }
+
+        if all_errors.is_empty() {
+            Ok(())
+        } else {
+            Err(BitNetError::Validation(all_errors.join("; ")))
+        }
+    }
+
     /// Get file size
     pub fn file_size(&self) -> usize {
         self.data.len()
