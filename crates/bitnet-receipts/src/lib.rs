@@ -170,6 +170,37 @@ pub struct ParityMetadata {
     pub status: String,
 }
 
+/// OpenCL device information captured in a receipt.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenClDeviceInfo {
+    /// Device name (e.g., "Intel(R) Arc(TM) A770 Graphics")
+    pub name: String,
+    /// Device vendor (e.g., "Intel(R) Corporation")
+    pub vendor: String,
+    /// Driver version string
+    pub driver_version: String,
+    /// OpenCL version string (e.g., "OpenCL 3.0")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opencl_version: Option<String>,
+    /// Device global memory in bytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub global_memory_bytes: Option<u64>,
+}
+
+/// OpenCL timing information captured in a receipt.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenClTiming {
+    /// Total kernel execution time in milliseconds
+    pub kernel_exec_ms: f64,
+    /// Total host-to-device transfer time in milliseconds
+    pub transfer_h2d_ms: f64,
+    /// Total device-to-host transfer time in milliseconds
+    pub transfer_d2h_ms: f64,
+    /// Number of kernel invocations
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kernel_invocations: Option<usize>,
+}
+
 /// Main inference receipt structure (AC4)
 ///
 /// # Schema Version: 1.0.0
@@ -193,6 +224,10 @@ pub struct InferenceReceipt {
 
     /// Backend used: "cpu" | "cuda" | "metal"
     pub backend: String,
+
+    /// Structured backend type: "cuda" | "opencl" | "cpu" | "vulkan" | "metal"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backend_type: Option<String>,
 
     /// Backend selection summary: "requested=X detected=[Y] selected=Z"
     /// Populated from BackendSelectionResult::summary() at receipt generation time.
@@ -229,6 +264,14 @@ pub struct InferenceReceipt {
     /// Model corrections applied (LayerNorm rescaling, etc.)
     /// Empty if no corrections applied
     pub corrections: Vec<CorrectionRecord>,
+
+    /// OpenCL device information (present when backend is "opencl")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opencl_device: Option<OpenClDeviceInfo>,
+
+    /// OpenCL kernel and transfer timing (present when backend is "opencl")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opencl_timing: Option<OpenClTiming>,
 }
 
 impl InferenceReceipt {
@@ -265,6 +308,7 @@ impl InferenceReceipt {
             timestamp: Utc::now().to_rfc3339(),
             compute_path: compute_path.to_string(),
             backend: backend.to_string(),
+            backend_type: None,
             backend_summary: backend_summary.unwrap_or_default(),
             kernels,
             deterministic: std::env::var("BITNET_DETERMINISTIC").is_ok(),
@@ -275,6 +319,8 @@ impl InferenceReceipt {
             cross_validation: None,
             parity: None,
             corrections: Vec::new(),
+            opencl_device: None,
+            opencl_timing: None,
         })
     }
 
@@ -467,6 +513,38 @@ impl InferenceReceipt {
             ));
         }
 
+        // Validate backend_type if present
+        if let Some(ref bt) = self.backend_type {
+            let valid_types = ["cuda", "opencl", "cpu", "vulkan", "metal"];
+            if !valid_types.contains(&bt.as_str()) {
+                return Err(anyhow!(
+                    "Invalid backend_type '{}' (expected one of: {})",
+                    bt,
+                    valid_types.join(", ")
+                ));
+            }
+        }
+
+        // Validate OpenCL fields: if backend is "opencl", compute_path must be "real"
+        if self.backend == "opencl" || self.backend_type.as_deref() == Some("opencl") {
+            if self.compute_path != "real" {
+                return Err(anyhow!(
+                    "OpenCL backend requires compute_path=\"real\", got \"{}\"",
+                    self.compute_path
+                ));
+            }
+        }
+
+        // If opencl_device is present, validate required fields
+        if let Some(ref dev) = self.opencl_device {
+            if dev.name.is_empty() {
+                return Err(anyhow!("opencl_device.name must not be empty"));
+            }
+            if dev.vendor.is_empty() {
+                return Err(anyhow!("opencl_device.vendor must not be empty"));
+            }
+        }
+
         Ok(())
     }
 
@@ -562,6 +640,24 @@ impl InferenceReceipt {
     /// Builder for corrections
     pub fn with_corrections(mut self, corrections: Vec<CorrectionRecord>) -> Self {
         self.corrections = corrections;
+        self
+    }
+
+    /// Builder for OpenCL device info
+    pub fn with_opencl_device(mut self, device: OpenClDeviceInfo) -> Self {
+        self.opencl_device = Some(device);
+        self
+    }
+
+    /// Builder for OpenCL timing
+    pub fn with_opencl_timing(mut self, timing: OpenClTiming) -> Self {
+        self.opencl_timing = Some(timing);
+        self
+    }
+
+    /// Builder for backend type
+    pub fn with_backend_type(mut self, backend_type: &str) -> Self {
+        self.backend_type = Some(backend_type.to_string());
         self
     }
 
@@ -1081,6 +1177,145 @@ mod property_tests {
             prop_assert!(
                 receipt.validate_kernel_ids().is_err(),
                 "expected Err when empty kernel ID present"
+            );
+        }
+    }
+
+    #[test]
+    fn test_receipt_with_opencl_device() {
+        let receipt = InferenceReceipt::generate(
+            "opencl",
+            vec!["ocl_matmul".to_string()],
+            None,
+        )
+        .unwrap()
+        .with_backend_type("opencl")
+        .with_opencl_device(OpenClDeviceInfo {
+            name: "Intel(R) Arc(TM) A770 Graphics".to_string(),
+            vendor: "Intel(R) Corporation".to_string(),
+            driver_version: "23.43.27642.40".to_string(),
+            opencl_version: Some("OpenCL 3.0".to_string()),
+            global_memory_bytes: Some(16 * 1024 * 1024 * 1024),
+        })
+        .with_opencl_timing(OpenClTiming {
+            kernel_exec_ms: 12.5,
+            transfer_h2d_ms: 2.1,
+            transfer_d2h_ms: 1.8,
+            kernel_invocations: Some(64),
+        });
+
+        assert_eq!(receipt.backend, "opencl");
+        assert_eq!(receipt.backend_type.as_deref(), Some("opencl"));
+        assert!(receipt.opencl_device.is_some());
+        assert!(receipt.opencl_timing.is_some());
+
+        let dev = receipt.opencl_device.as_ref().unwrap();
+        assert!(dev.name.contains("Arc"));
+        assert_eq!(dev.vendor, "Intel(R) Corporation");
+
+        let timing = receipt.opencl_timing.as_ref().unwrap();
+        assert_eq!(timing.kernel_exec_ms, 12.5);
+        assert_eq!(timing.kernel_invocations, Some(64));
+    }
+
+    #[test]
+    fn test_receipt_opencl_serialization_roundtrip() {
+        let receipt = InferenceReceipt::generate(
+            "opencl",
+            vec!["ocl_matmul".to_string()],
+            None,
+        )
+        .unwrap()
+        .with_backend_type("opencl")
+        .with_opencl_device(OpenClDeviceInfo {
+            name: "Intel Arc A770".to_string(),
+            vendor: "Intel".to_string(),
+            driver_version: "1.0.0".to_string(),
+            opencl_version: None,
+            global_memory_bytes: None,
+        });
+
+        let json = serde_json::to_string_pretty(&receipt).unwrap();
+        assert!(json.contains("opencl_device"));
+        assert!(json.contains("Intel Arc A770"));
+        assert!(json.contains("\"backend_type\": \"opencl\""));
+
+        let deserialized: InferenceReceipt = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.backend, "opencl");
+        assert_eq!(deserialized.backend_type.as_deref(), Some("opencl"));
+        let dev = deserialized.opencl_device.unwrap();
+        assert_eq!(dev.name, "Intel Arc A770");
+    }
+
+    #[test]
+    fn test_receipt_validation_invalid_backend_type() {
+        let mut receipt = InferenceReceipt::generate(
+            "cpu",
+            vec!["i2s_gemv".to_string()],
+            None,
+        )
+        .unwrap();
+        receipt.backend_type = Some("invalid_backend".to_string());
+        assert!(receipt.validate().is_err());
+    }
+
+    #[test]
+    fn test_receipt_validation_opencl_requires_real() {
+        let mut receipt = InferenceReceipt::generate(
+            "opencl",
+            vec!["ocl_matmul".to_string()],
+            None,
+        )
+        .unwrap();
+        receipt.compute_path = "mock".to_string();
+        assert!(receipt.validate().is_err());
+    }
+
+    #[test]
+    fn test_receipt_validation_opencl_empty_device_name() {
+        let receipt = InferenceReceipt::generate(
+            "opencl",
+            vec!["ocl_matmul".to_string()],
+            None,
+        )
+        .unwrap()
+        .with_opencl_device(OpenClDeviceInfo {
+            name: String::new(),
+            vendor: "Intel".to_string(),
+            driver_version: "1.0".to_string(),
+            opencl_version: None,
+            global_memory_bytes: None,
+        });
+        assert!(receipt.validate().is_err());
+    }
+
+    #[test]
+    fn test_receipt_no_opencl_fields_by_default() {
+        let receipt = InferenceReceipt::generate(
+            "cpu",
+            vec!["i2s_gemv".to_string()],
+            None,
+        )
+        .unwrap();
+        assert!(receipt.opencl_device.is_none());
+        assert!(receipt.opencl_timing.is_none());
+        assert!(receipt.backend_type.is_none());
+    }
+
+    #[test]
+    fn test_receipt_valid_backend_types() {
+        for bt in &["cuda", "opencl", "cpu", "vulkan", "metal"] {
+            let mut receipt = InferenceReceipt::generate(
+                "cpu",
+                vec!["i2s_gemv".to_string()],
+                None,
+            )
+            .unwrap();
+            receipt.backend_type = Some(bt.to_string());
+            assert!(
+                receipt.validate().is_ok(),
+                "backend_type '{}' should be valid",
+                bt
             );
         }
     }

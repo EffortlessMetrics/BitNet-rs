@@ -5593,6 +5593,36 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
     let backend = receipt.get("backend").and_then(|v| v.as_str()).unwrap_or("cpu");
     let must_require_gpu = backend.eq_ignore_ascii_case("cuda");
 
+    // Validate backend_type if present
+    if let Some(bt) = receipt.get("backend_type").and_then(|v| v.as_str()) {
+        let valid_types = ["cuda", "opencl", "cpu", "vulkan", "metal"];
+        if !valid_types.contains(&bt) {
+            bail!(
+                "Invalid backend_type '{}' (expected one of: {})",
+                bt,
+                valid_types.join(", ")
+            );
+        }
+    }
+
+    // OpenCL backend validation
+    let is_opencl = backend.eq_ignore_ascii_case("opencl")
+        || receipt
+            .get("backend_type")
+            .and_then(|v| v.as_str())
+            .map(|bt| bt.eq_ignore_ascii_case("opencl"))
+            .unwrap_or(false);
+    if is_opencl {
+        // Validate opencl_device if present
+        if let Some(dev) = receipt.get("opencl_device").and_then(|v| v.as_object()) {
+            let name = dev.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let vendor = dev.get("vendor").and_then(|v| v.as_str()).unwrap_or("");
+            if name.is_empty() || vendor.is_empty() {
+                bail!("OpenCL receipt: opencl_device.name and .vendor must not be empty");
+            }
+        }
+    }
+
     // Check kernels array
     let kernels = receipt
         .get("kernels")
@@ -5672,6 +5702,15 @@ fn verify_receipt_cmd(path: &Path, require_gpu_kernels: bool) -> Result<()> {
     println!("   Compute path: {}", compute_path);
     println!("   Kernels: {} executed", kernels.len());
     println!("   Backend: {}", backend);
+
+    if let Some(bt) = receipt.get("backend_type").and_then(|v| v.as_str()) {
+        println!("   Backend type: {}", bt);
+    }
+    if let Some(dev) = receipt.get("opencl_device").and_then(|v| v.as_object()) {
+        if let Some(name) = dev.get("name").and_then(|v| v.as_str()) {
+            println!("   OpenCL device: {}", name);
+        }
+    }
 
     if let Some(env) = receipt.get("environment").and_then(|v| v.as_object()) {
         if let Some(bitnet_ver) = env.get("BITNET_VERSION").and_then(|v| v.as_str()) {
