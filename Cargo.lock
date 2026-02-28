@@ -573,6 +573,7 @@ dependencies = [
  "bitnet-common",
  "insta",
  "log",
+ "opencl3",
  "proptest",
  "serial_test",
  "temp-env",
@@ -768,6 +769,7 @@ dependencies = [
  "insta",
  "log",
  "memory-stats",
+ "opencl3",
  "proptest",
  "rand 0.9.2",
  "rand_chacha 0.9.0",
@@ -779,6 +781,18 @@ dependencies = [
  "temp-env",
  "tempfile",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "bitnet-level-zero"
+version = "0.2.1-dev"
+dependencies = [
+ "bitnet-common",
+ "bitnet-test-support",
+ "libloading 0.8.9",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tracing",
 ]
 
 [[package]]
@@ -848,11 +862,16 @@ dependencies = [
 name = "bitnet-opencl"
 version = "0.2.1-dev"
 dependencies = [
-"log",
- "temp-env",
-"bitnet-common",
+ "bitnet-common",
  "log",
+ "serde",
+ "serde_json",
  "serial_test",
+ "temp-env",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1815,6 +1834,17 @@ checksum = "57663b653d948a338bfb3eeba9bb2fd5fcfaecb9e199e87e1eda4d9e8b240fd9"
 dependencies = [
  "ciborium-io",
  "half",
+]
+
+[[package]]
+name = "cl3"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b823f24e72fa0c68aa14a250ae1c0848e68d4ae188b71c3972343e45b46f8644"
+dependencies = [
+ "libc",
+ "opencl-sys",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -5534,6 +5564,25 @@ name = "oorandom"
 version = "11.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
+
+[[package]]
+name = "opencl-sys"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de15dd01496ae90c5799f5266184ab020082b4065800ff0b732f489371d0e5cf"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "opencl3"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26ab4a90cb496f787d3934deb0c54fa9d65e7bed710c10071234aab0196fba04"
+dependencies = [
+ "cl3",
+ "libc",
+]
 
 [[package]]
 name = "openssl"
