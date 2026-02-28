@@ -14,6 +14,7 @@ pub mod gpu_backend;
 pub mod health;
 pub mod model_manager;
 pub mod monitoring;
+pub mod request_queue;
 pub mod security;
 pub mod streaming;
 
