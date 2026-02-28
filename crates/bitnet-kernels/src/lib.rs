@@ -17,6 +17,7 @@ pub mod gpu;
 pub mod gpu_utils;
 #[cfg(feature = "npu-backend")]
 pub mod npu;
+pub mod quantized_gpu;
 mod stubs;
 pub mod tl_lut;
 

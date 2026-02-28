@@ -26,6 +26,8 @@ fn caps_cpu_only() -> KernelCapabilities {
         cuda_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -38,6 +40,8 @@ fn caps_cuda_and_cpu() -> KernelCapabilities {
         cuda_runtime: true,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -50,6 +54,8 @@ fn caps_oneapi_and_cpu() -> KernelCapabilities {
         cuda_runtime: false,
         oneapi_compiled: true,
         oneapi_runtime: true,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -62,6 +68,8 @@ fn caps_cuda_oneapi_and_cpu() -> KernelCapabilities {
         cuda_runtime: true,
         oneapi_compiled: true,
         oneapi_runtime: true,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -74,6 +82,8 @@ fn caps_cuda_compiled_no_runtime() -> KernelCapabilities {
         cuda_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -86,6 +96,8 @@ fn caps_oneapi_compiled_no_runtime() -> KernelCapabilities {
         cuda_runtime: false,
         oneapi_compiled: true,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -98,6 +110,8 @@ fn caps_none() -> KernelCapabilities {
         cuda_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Scalar,
     }
@@ -110,6 +124,8 @@ fn caps_cpp_ffi_only() -> KernelCapabilities {
         cuda_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Scalar,
     }
@@ -122,6 +138,8 @@ fn caps_all_backends() -> KernelCapabilities {
         cuda_runtime: true,
         oneapi_compiled: true,
         oneapi_runtime: true,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Avx512,
     }
@@ -134,6 +152,8 @@ fn caps_cuda_and_ffi() -> KernelCapabilities {
         cuda_runtime: true,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: true,
         simd_level: SimdLevel::Avx2,
     }
@@ -493,6 +513,8 @@ fn given_compile_time_caps_when_with_cuda_runtime_then_cuda_becomes_best() {
         cuda_runtime: false,
         oneapi_compiled: false,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -510,6 +532,8 @@ fn given_compile_time_caps_when_with_oneapi_runtime_then_oneapi_becomes_best() {
         cuda_runtime: false,
         oneapi_compiled: true,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     }
@@ -608,6 +632,8 @@ fn given_no_cpu_no_runtime_when_best_available_then_none() {
         cuda_runtime: false,
         oneapi_compiled: true,
         oneapi_runtime: false,
+        vulkan_compiled: false,
+        vulkan_runtime: false,
         cpp_ffi: false,
         simd_level: SimdLevel::Avx2,
     };
