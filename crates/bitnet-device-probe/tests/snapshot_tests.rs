@@ -64,6 +64,7 @@ fn device_capabilities_npu_compiled_matches_feature() {
 fn device_probe_full_summary() {
     let caps = DeviceCapabilities::detect();
     let summary = format!(
+<<<<<<< HEAD
         "cpu_rust={} cuda_compiled={} rocm_compiled={} npu_compiled={} simd={:?}",
         caps.cpu_rust, caps.cuda_compiled, caps.rocm_compiled, caps.npu_compiled, caps.simd_level
     );
@@ -72,4 +73,13 @@ fn device_probe_full_summary() {
     }, {
         insta::assert_snapshot!("device_probe_summary", summary);
     });
+=======
+        "cpu_rust={} cuda_compiled={} rocm_compiled={} npu_compiled={} simd_level=[REDACTED]",
+        caps.cpu_rust, caps.cuda_compiled, caps.rocm_compiled, caps.npu_compiled
+    );
+    // simd_level is runtime-detected (varies by host: Avx2 vs Avx512 etc.) —
+    // assert it separately so the snapshot is host-independent.
+    assert!(!format!("{:?}", caps.simd_level).is_empty());
+    insta::assert_snapshot!("device_probe_summary", summary);
+>>>>>>> c500a5f4 (feat(rocm): implement real HIP kernel dispatch with CPU fallbacks)
 }
