@@ -1,0 +1,5 @@
+---
+source: crates/bitnet-test-support/tests/snapshot_tests.rs
+expression: guard.key()
+---
+BITNET_SNAP_TEST_KEY
