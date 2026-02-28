@@ -879,6 +879,7 @@ dependencies = [
  "opencl3",
  "rand 0.9.2",
  "serial_test",
+ "tempfile",
  "thiserror 2.0.18",
 ]
 

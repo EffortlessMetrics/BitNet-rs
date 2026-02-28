@@ -7,6 +7,7 @@
 //! pipelines, KV cache, paged attention, and CPU reference implementations
 //! with OpenCL kernel sources for I2_S dequantization, QK256 block
 //! dequantization, and ternary matrix multiply.
+//! pipelines, KV cache, paged attention, SPIR-V compilation, and kernel registry.
 
 pub mod backend_dispatcher;
 pub mod backend_registry;
@@ -21,3 +22,12 @@ pub use backend_dispatcher::{
 pub use backend_registry::{BackendInfo, BackendProvider, BackendRegistry};
 pub mod quantized_kernels;
 pub mod quantized_ops;
+pub mod spirv;
+pub mod spirv_kernels;
+
+// Re-exports for convenience.
+pub use spirv::{
+    CompileOptions, CompilerBackend, OptimizationLevel, SPIRV_MAGIC, SpirVCache, SpirVCompiler,
+    SpirVError, SpirVModule, SpirVValidator,
+};
+pub use spirv_kernels::{KernelSource, SpirvKernelRegistry};
