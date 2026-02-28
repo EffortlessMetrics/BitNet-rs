@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 /// AC1: Test real transformer forward pass with quantized weights
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_real_transformer_forward_pass() -> Result<()> {
     let config = create_test_bitnet_config();
     let model = create_real_model_with_weights(&config)?;
@@ -37,13 +37,13 @@ async fn test_real_transformer_forward_pass() -> Result<()> {
     Ok(())
 }
 /// AC2: Test multi-head attention with quantized projections
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_multi_head_attention() -> Result<()> {
     println!("✅ AC2: Multi-head attention module available");
     Ok(())
 }
 /// AC3: Test autoregressive generation with sampling
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_autoregressive_generation() -> Result<()> {
     let config = create_test_bitnet_config();
     let model = create_real_model_with_weights(&config)?;
@@ -64,7 +64,7 @@ async fn test_autoregressive_generation() -> Result<()> {
     Ok(())
 }
 /// AC5: Test performance targets (5-15 tok/sec on CPU)
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_performance_targets() -> Result<()> {
     let config = create_test_bitnet_config();
     let model = create_real_model_with_weights(&config)?;

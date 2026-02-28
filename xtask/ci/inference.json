@@ -3,7 +3,7 @@
   "compute_path": "real",
   "deterministic": true,
   "environment": {
-    "BITNET_VERSION": "0.1.0",
+    "BITNET_VERSION": "0.2.1-dev",
     "OS": "linux-x86_64",
     "RUST_VERSION": "rustc 1.92.0 (ded5c06cf 2025-12-08)"
   },
@@ -11,10 +11,10 @@
     "mock_inference"
   ],
   "model": {
-    "path": "/home/steven/code/Rust/BitNet-rs/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
+    "path": "/app/models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf"
   },
   "schema_version": "1.0.0",
-  "timestamp": "2026-02-26T02:38:40.400371164+00:00",
+  "timestamp": "2026-02-28T21:06:14.117425779+00:00",
   "tokens_generated": 4,
   "tokens_per_second": 200.0,
   "tokens_requested": 4
