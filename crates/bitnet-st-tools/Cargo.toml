@@ -25,7 +25,3 @@ tempfile = "3.23.0"
 [[bin]]
 name = "st-ln-inspect"
 path = "src/bin/st-ln-inspect.rs"
-
-[[bin]]
-name = "st-merge-ln-f16"
-path = "src/bin/st-merge-ln-f16.rs"
