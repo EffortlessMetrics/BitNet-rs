@@ -10,6 +10,8 @@ pub mod cpu_opt;
 pub mod engine;
 pub mod generation;
 pub mod gguf;
+/// GPU telemetry and monitoring (no GPU deps).
+pub mod gpu_telemetry;
 pub mod kernel_recorder;
 pub mod layers;
 pub mod multi_device;
