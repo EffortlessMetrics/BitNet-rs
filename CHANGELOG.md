@@ -4,6 +4,31 @@ All notable changes to bitnet-rs will be documented in this file.
 
 ## [Unreleased]
 
+### Wave 66-69: Advanced Inference Pipeline & Production Features
+
+- **Inference profiler** (#1455): GPU-HAL inference profiling with layer-level timing, bottleneck detection, and optimization suggestions
+- **Shard planner** (#1456): Model sharding planner with balanced partitioning, communication cost estimation, and pipeline schedules
+- **CHANGELOG waves 63-65** (#1457): Documentation update for waves 63-65
+- **KV compression** (#1458): KV cache compression with quantization, eviction policies, and memory savings tracking
+- **Mixture of depths** (#1459): Dynamic depth routing with token-level skip decisions and auxiliary loss
+- **Token budget** (#1460): Token budget manager with per-request allocation, borrowing, and throttling
+- **Conversation manager** (#1461): Multi-turn conversation management with history, context windows, and summarization
+- **Model warmup** (#1462): Model warmup engine with progressive layer warming and JIT compilation cache
+- **Safety guardrails** (#1463): Content safety guardrails with toxicity, PII, and prompt injection detection
+- **Embedding retrieval** (#1464): Embedding retrieval engine with similarity search, HNSW index, and batch retrieval
+- **Workspace integration v11** (#1465): Consolidated 44 module declarations across 8 organized sections
+- **RAG engine** (#1466): Retrieval-augmented generation with document chunking, BM25, hybrid retrieval, and reranking
+- **Tool use framework** (#1467): Tool use framework with registry, parser, validator, executor, and prompt formatter
+- **Priority queue** (#1469): Multi-level priority queue with fair scheduling, deadline-aware ordering, and backpressure
+- **Model card generator** (#1470): Model card generator with GGUF metadata extraction, markdown/JSON/HuggingFace renderers
+- **Adaptive compute** (#1472): Adaptive computation engine with dynamic precision, early exit, layer skipping, and compute budgets
+- **A/B testing** (#1475): A/B testing framework with deterministic traffic splitting and statistical significance testing
+- **Checkpoint manager** (#1476): Inference checkpoint manager with incremental diffs, compression, and auto-scheduling
+- **Batched tokenization** (#1477): Batched tokenization with parallel encoding, configurable padding/truncation strategies
+- **Multi-modal fusion** (#1478): Multi-modal fusion system for text/image/audio with 5 fusion strategies
+- **Feature store** (#1479): Feature store with LRU/LFU/FIFO/TTL eviction, memory limits, and versioning
+- **Streaming aggregator** (#1480): Streaming output aggregator with chunk ordering, backpressure, and fan-out/fan-in
+
 ### Added
 - **Model validation expansion** (#1138): Shape and distribution checks added to model validation pipeline for stronger load-time correctness guarantees
 - **Multi-model GPU serving** (#1127): LRU eviction policy for multi-model GPU serving enables concurrent model hosting with automatic memory management
