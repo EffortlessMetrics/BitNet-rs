@@ -412,7 +412,10 @@ fn test_ac2_rebuild_warning_on_detection_mismatch() {
         let result = std::panic::catch_unwind(|| {
             ensure_backend_or_skip(CppBackend::BitNet);
         });
-        assert!(result.is_ok(), "Should continue (with warning) when runtime finds libs in dev mode");
+        assert!(
+            result.is_ok(),
+            "Should continue (with warning) when runtime finds libs in dev mode"
+        );
     }
     // If HAS_BITNET is true, the build-time/runtime mismatch doesn't apply.
 }
@@ -1369,11 +1372,7 @@ fn test_integration_env_guard_restoration() {
         );
     }
     // After scope drops, value should be restored
-    assert_eq!(
-        std::env::var(test_key).ok(),
-        original,
-        "Value should be restored after scope exit"
-    );
+    assert_eq!(std::env::var(test_key).ok(), original, "Value should be restored after scope exit");
 }
 
 /// Tests: Integration with serial test execution
@@ -1406,9 +1405,9 @@ fn test_property_environment_variable_combinations() {
     // Test all combinations of CI and NO_REPAIR flags
     let combos: &[(&str, &str, bool)] = &[
         // (CI value, NO_REPAIR value, expected_ci_or_no_repair)
-        ("1", "1", true),  // Both set → no repair
-        ("1", "", true),   // CI only → no repair
-        ("", "1", true),   // NO_REPAIR only → no repair
+        ("1", "1", true), // Both set → no repair
+        ("1", "", true),  // CI only → no repair
+        ("", "1", true),  // NO_REPAIR only → no repair
     ];
 
     for &(ci_val, no_repair_val, _expected) in combos {
@@ -1673,10 +1672,7 @@ fn verify_backend_detection(backend: CppBackend, expected: bool) -> Result<(), S
     if actual == expected {
         Ok(())
     } else {
-        Err(format!(
-            "Backend {:?}: expected={}, actual={}",
-            backend, expected, actual
-        ))
+        Err(format!("Backend {:?}: expected={}, actual={}", backend, expected, actual))
     }
 }
 

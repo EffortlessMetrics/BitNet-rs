@@ -979,10 +979,7 @@ fn test_ac10_temp_cpp_env_sets_dir_var() {
     let mut scope = EnvScope::new();
     scope.set("BITNET_CPP_DIR", temp.path().to_str().unwrap());
 
-    assert_eq!(
-        std::env::var("BITNET_CPP_DIR").unwrap(),
-        temp.path().to_str().unwrap()
-    );
+    assert_eq!(std::env::var("BITNET_CPP_DIR").unwrap(), temp.path().to_str().unwrap());
 }
 
 /// AC10: Test create_temp_cpp_env sets loader path variable
