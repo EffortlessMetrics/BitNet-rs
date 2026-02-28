@@ -10,6 +10,7 @@ mod caching;
 pub mod concurrency;
 pub mod config;
 pub mod execution_router;
+pub mod gpu_streaming;
 pub mod health;
 pub mod model_manager;
 pub mod monitoring;
@@ -270,6 +271,8 @@ impl BitNetServer {
             // Server statistics and management
             .route("/v1/stats", get(server_stats_handler))
             .route("/v1/devices", get(device_status_handler))
+            // GPU streaming endpoint
+            .route("/api/v1/generate/stream", post(gpu_streaming::gpu_stream_handler))
             // Root endpoint
             .route("/", get(root_handler))
             .with_state(app_state);
