@@ -92,6 +92,10 @@ pub struct KernelCapabilities {
     pub oneapi_compiled: bool,
     /// oneAPI runtime detected (e.g. `sycl-ls` sees a GPU device).
     pub oneapi_runtime: bool,
+    /// Vulkan backend is compiled.
+    pub vulkan_compiled: bool,
+    /// Vulkan runtime detected (driver present and accessible).
+    pub vulkan_runtime: bool,
     /// C++ FFI bridge is compiled.
     pub cpp_ffi: bool,
     /// Best SIMD level available at compile time.
@@ -109,6 +113,8 @@ impl KernelCapabilities {
             cuda_runtime: false, // requires runtime check
             oneapi_compiled: cfg!(feature = "oneapi"),
             oneapi_runtime: false,
+            vulkan_compiled: cfg!(feature = "vulkan"),
+            vulkan_runtime: false,
             cpp_ffi: false, // bitnet-common has no ffi feature; FFI detection is crate-local
             simd_level: compile_time_simd_level(),
         }
