@@ -274,6 +274,109 @@ pub fn argmax(logits: &[f32]) -> usize {
     logits.iter().enumerate().max_by(|(_, a), (_, b)| f32_ascending(**a, **b)).map_or(0, |(i, _)| i)
 }
 
+/// Min-p filtering on a **probability** slice (post-softmax).
+///
+/// Zeroes out all tokens whose probability is below `min_p * max_probability`.
+/// This adapts the threshold dynamically based on the most likely token,
+/// keeping more tokens when the model is uncertain and fewer when confident.
+///
+/// `min_p` should be in `[0.0, 1.0]`. Values ≤ 0.0 are no-ops.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::apply_min_p;
+///
+/// let mut probs = vec![0.5f32, 0.3, 0.1, 0.05, 0.05];
+/// apply_min_p(&mut probs, 0.2);
+/// // Threshold = 0.2 * 0.5 = 0.1. Tokens with prob < 0.1 are zeroed.
+/// assert!(probs[0] > 0.0); // 0.5 >= 0.1
+/// assert!(probs[1] > 0.0); // 0.3 >= 0.1
+/// assert!(probs[2] > 0.0); // 0.1 >= 0.1
+/// assert_eq!(probs[3], 0.0); // 0.05 < 0.1
+/// assert_eq!(probs[4], 0.0); // 0.05 < 0.1
+/// ```
+pub fn apply_min_p(probs: &mut [f32], min_p: f32) {
+    if min_p <= 0.0 || probs.is_empty() {
+        return;
+    }
+    let max_prob = probs.iter().copied().fold(0.0f32, f32::max);
+    let threshold = min_p * max_prob;
+    for p in probs.iter_mut() {
+        if *p < threshold {
+            *p = 0.0;
+        }
+    }
+}
+
+/// Locally typical sampling filter on a **probability** slice (post-softmax).
+///
+/// Keeps tokens whose "surprise" (negative log probability) is closest to
+/// the expected surprise (entropy), until the cumulative probability of
+/// kept tokens reaches `typical_p`. This prefers tokens that are
+/// information-theoretically "typical" of the distribution.
+///
+/// `typical_p` should be in `(0.0, 1.0]`. Values ≥ 1.0 are no-ops.
+///
+/// # Examples
+///
+/// ```
+/// use bitnet_logits::{softmax_in_place, apply_typical};
+///
+/// let mut probs = vec![0.0f32; 5];
+/// probs[0] = 0.5;
+/// probs[1] = 0.25;
+/// probs[2] = 0.15;
+/// probs[3] = 0.07;
+/// probs[4] = 0.03;
+/// apply_typical(&mut probs, 0.8);
+/// // Tokens closest to the entropy are kept first.
+/// let non_zero = probs.iter().filter(|&&p| p > 0.0).count();
+/// assert!(non_zero >= 1);
+/// ```
+pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
+    if typical_p >= 1.0 || probs.is_empty() {
+        return;
+    }
+
+    // Compute entropy H = -Σ p * ln(p)
+    let entropy: f32 = probs.iter().filter(|&&p| p > 0.0).map(|&p| -p * p.ln()).sum();
+
+    // For each token, compute |surprise - entropy| = |(-ln(p)) - H|
+    let mut indexed: Vec<(usize, f32, f32)> = probs
+        .iter()
+        .copied()
+        .enumerate()
+        .filter(|&(_, p)| p > 0.0)
+        .map(|(i, p)| {
+            let surprise = -p.ln();
+            let deviation = (surprise - entropy).abs();
+            (i, p, deviation)
+        })
+        .collect();
+
+    // Sort by deviation ascending (most typical first)
+    indexed.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
+
+    // Keep tokens until cumulative probability reaches typical_p
+    let mut cumsum = 0.0f32;
+    let mut keep = std::collections::HashSet::new();
+    for &(idx, p, _) in &indexed {
+        keep.insert(idx);
+        cumsum += p;
+        if cumsum >= typical_p {
+            break;
+        }
+    }
+
+    // Zero out tokens not in the keep set
+    for (i, p) in probs.iter_mut().enumerate() {
+        if !keep.contains(&i) {
+            *p = 0.0;
+        }
+    }
+}
+
 // --- helpers ---------------------------------------------------------------
 
 #[inline]
@@ -401,6 +504,70 @@ mod tests {
         assert_eq!(logits, original);
     }
 
+    #[test]
+    fn min_p_filters_below_threshold() {
+        let mut probs = vec![0.5f32, 0.3, 0.1, 0.05, 0.05];
+        apply_min_p(&mut probs, 0.2);
+        // Threshold = 0.2 * 0.5 = 0.1
+        assert!(probs[0] > 0.0);
+        assert!(probs[1] > 0.0);
+        assert!(probs[2] > 0.0); // 0.1 >= 0.1
+        #[allow(clippy::float_cmp)]
+        {
+            assert_eq!(probs[3], 0.0);
+            assert_eq!(probs[4], 0.0);
+        }
+    }
+
+    #[test]
+    fn min_p_zero_is_noop() {
+        let original = vec![0.5f32, 0.3, 0.2];
+        let mut probs = original.clone();
+        apply_min_p(&mut probs, 0.0);
+        assert_eq!(probs, original);
+    }
+
+    #[test]
+    fn min_p_one_keeps_only_max() {
+        let mut probs = vec![0.5f32, 0.3, 0.2];
+        apply_min_p(&mut probs, 1.0);
+        // Threshold = 1.0 * 0.5 = 0.5. Only token with prob >= 0.5 survives.
+        assert!(probs[0] > 0.0);
+        #[allow(clippy::float_cmp)]
+        {
+            assert_eq!(probs[1], 0.0);
+            assert_eq!(probs[2], 0.0);
+        }
+    }
+
+    #[test]
+    fn typical_filters_atypical_tokens() {
+        let mut probs = vec![0.5f32, 0.25, 0.15, 0.07, 0.03];
+        apply_typical(&mut probs, 0.5);
+        // At least one token must survive
+        let non_zero = probs.iter().filter(|&&p| p > 0.0).count();
+        assert!(non_zero >= 1);
+        // Not all tokens should survive with typical_p = 0.5
+        assert!(non_zero < 5);
+    }
+
+    #[test]
+    fn typical_one_is_noop() {
+        let original = vec![0.5f32, 0.3, 0.2];
+        let mut probs = original.clone();
+        apply_typical(&mut probs, 1.0);
+        assert_eq!(probs, original);
+    }
+
+    #[test]
+    fn typical_preserves_sum_bound() {
+        let mut probs = vec![0.4f32, 0.3, 0.2, 0.1];
+        apply_typical(&mut probs, 0.8);
+        let sum: f32 = probs.iter().sum();
+        // Remaining sum must be > 0
+        assert!(sum > 0.0);
+    }
+
     // --- proptest -----------------------------------------------------------
 
     proptest::proptest! {
@@ -423,6 +590,33 @@ mod tests {
             apply_temperature(&mut logits, temp);
             let best_after = argmax(&logits);
             proptest::prop_assert_eq!(best_before, best_after);
+        }
+
+        #[test]
+        fn min_p_never_removes_max_token(
+            probs in proptest::collection::vec(0.01f32..1.0f32, 2..32),
+            min_p in 0.0f32..1.0f32,
+        ) {
+            let max_idx = probs.iter().enumerate()
+                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+                .map(|(i, _)| i).unwrap();
+            let mut filtered = probs;
+            apply_min_p(&mut filtered, min_p);
+            proptest::prop_assert!(filtered[max_idx] > 0.0,
+                "min-p should never remove the highest-probability token");
+        }
+
+        #[test]
+        fn typical_keeps_at_least_one_token(
+            vals in proptest::collection::vec(0.01f32..1.0f32, 2..32),
+            typical_p in 0.01f32..0.99f32,
+        ) {
+            // Normalize to valid distribution
+            let sum: f32 = vals.iter().sum();
+            let mut probs: Vec<f32> = vals.iter().map(|&v| v / sum).collect();
+            apply_typical(&mut probs, typical_p);
+            let non_zero = probs.iter().filter(|&&p| p > 0.0).count();
+            proptest::prop_assert!(non_zero >= 1, "typical sampling must keep at least one token");
         }
     }
 }
