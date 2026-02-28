@@ -234,6 +234,8 @@ impl ModelLoader {
                 | "phi"
                 | "gemma"
                 | "gemma2"
+                | "deepseek"
+                | "deepseek2"
                 | "gpt"
                 | "bert"
         )

@@ -69,6 +69,10 @@ impl ModelConfig {
                 self.norm_type = NormType::RmsNorm;
                 self.activation_type = ActivationType::Silu;
             }
+            "deepseek" | "deepseek2" => {
+                self.norm_type = NormType::RmsNorm;
+                self.activation_type = ActivationType::Silu;
+            }
             "bitnet" | "bitnet-b1.58" => {
                 self.norm_type = NormType::LayerNorm;
                 self.activation_type = ActivationType::Silu;

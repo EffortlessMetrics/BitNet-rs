@@ -334,6 +334,8 @@ impl ProductionModelLoader {
                 | "phi"
                 | "gemma"
                 | "gemma2"
+                | "deepseek"
+                | "deepseek2"
         )
     }
 
@@ -636,6 +638,8 @@ mod tests {
         assert!(loader.is_supported_architecture("gemma"));
         assert!(loader.is_supported_architecture("gemma2"));
         assert!(loader.is_supported_architecture("Gemma"));
+        assert!(loader.is_supported_architecture("deepseek"));
+        assert!(loader.is_supported_architecture("deepseek2"));
         assert!(!loader.is_supported_architecture("unknown"));
     }
 
