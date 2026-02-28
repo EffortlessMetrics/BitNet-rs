@@ -16,18 +16,18 @@ jobs:
     name: Intel GPU full integration test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
         with:
           ref: ${{ github.event.inputs.branch }}
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: '1.92.0'
           components: clippy, rustfmt
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4
         with:
           path: |
             ~/.cargo/registry
