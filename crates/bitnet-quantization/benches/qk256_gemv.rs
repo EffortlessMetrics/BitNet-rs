@@ -145,9 +145,86 @@ fn bench_qk256_memory_access(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark: AVX2 QK256 GEMV (uses the no-scale row kernel directly)
+///
+/// Compares scalar `gemv_qk256_row` vs AVX2 `gemv_qk256_avx2` across sizes.
+#[cfg(target_arch = "x86_64")]
+fn bench_qk256_avx2_gemv(c: &mut Criterion) {
+    use bitnet_quantization::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES, gemv_qk256_row};
+    use bitnet_quantization::i2s_qk256_avx2::gemv_qk256_avx2;
+
+    if !is_x86_feature_detected!("avx2") {
+        eprintln!("Skipping AVX2 bench: not available");
+        return;
+    }
+
+    let mut group = c.benchmark_group("qk256_gemv_avx2_vs_scalar");
+
+    let test_sizes: Vec<(&str, usize, usize)> = vec![
+        ("256x256", 256, 256),
+        ("512x2048", 512, 2048),
+        ("2Kx2K", TYPICAL_2B_ROWS, TYPICAL_2B_COLS),
+    ];
+
+    for (name, rows, cols) in test_sizes {
+        let blocks_per_row = cols.div_ceil(QK256_BLOCK);
+        let row_stride = blocks_per_row * QK256_PACKED_BYTES;
+        let qs: Vec<u8> = (0..rows * row_stride).map(|i| (i * 0x55) as u8).collect();
+        let x: Vec<f32> = (0..cols)
+            .map(|i| ((i as f32) - (cols as f32) / 2.0) * 0.001)
+            .collect();
+        let mut y = vec![0.0f32; rows];
+
+        group.throughput(Throughput::Elements((rows * cols) as u64));
+
+        group.bench_with_input(
+            BenchmarkId::new("scalar", name),
+            &name,
+            |b, _| {
+                b.iter(|| {
+                    for (row, out) in y.iter_mut().enumerate() {
+                        let s = row * row_stride;
+                        *out = gemv_qk256_row(
+                            black_box(&qs[s..s + row_stride]),
+                            black_box(&x),
+                            cols,
+                        );
+                    }
+                    black_box(&y);
+                });
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("avx2", name),
+            &name,
+            |b, _| {
+                b.iter(|| {
+                    gemv_qk256_avx2(
+                        black_box(&qs),
+                        black_box(&x),
+                        black_box(&mut y),
+                        rows,
+                        cols,
+                        row_stride,
+                    )
+                    .unwrap();
+                    black_box(&y);
+                });
+            },
+        );
+    }
+
+    group.finish();
+}
+
+#[cfg(not(target_arch = "x86_64"))]
+fn bench_qk256_avx2_gemv(_c: &mut Criterion) {}
+
 criterion_group!(
     benches,
     bench_qk256_scalar,
+    bench_qk256_avx2_gemv,
     bench_qk256_dispatch_overhead,
     bench_qk256_memory_access
 );
