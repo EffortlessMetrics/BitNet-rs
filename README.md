@@ -61,6 +61,46 @@ RUST_LOG=warn cargo run -p bitnet-cli --no-default-features --features cpu,full-
 | SafeTensors → GGUF export     | ✅    | `bitnet-st2gguf` with F16 LayerNorm preservation |
 | Server / HTTP API             | 🚧    | Health endpoints wired; inference endpoints have TODOs |
 
+## GPU Multi-Backend Support
+
+BitNet-rs supports inference on multiple GPU platforms:
+
+| Backend | Feature Flag | Status | Hardware |
+|---------|-------------|--------|----------|
+| NVIDIA CUDA | `--features gpu` | ✅ Production | GeForce/Tesla/A100+ |
+| Intel Arc (OpenCL) | `--features oneapi` | 🔶 Alpha | Arc A770/A750 |
+| AMD ROCm | `--features rocm` | 🧪 Experimental | RX 7900 XT+ |
+| Vulkan | `--features vulkan` | 🧪 Experimental | Any Vulkan 1.3 GPU |
+| Apple Metal | `--features metal` | 🧪 Experimental | M1/M2/M3+ |
+| WebGPU | `--features webgpu` | 🧪 Experimental | Browser/wgpu |
+| CPU (SIMD) | `--features cpu` | ✅ Production | x86-64/ARM64 |
+
+### Quick Start (Intel Arc)
+
+```bash
+# Install Intel compute runtime (Ubuntu)
+sudo apt install intel-opencl-icd clinfo
+
+# Build with Intel GPU support
+cargo build --release --no-default-features --features oneapi,full-cli
+
+# Run inference
+cargo run -p bitnet-cli --no-default-features --features oneapi,full-cli -- run \
+  --model models/model.gguf --device opencl --prompt "Hello" --max-tokens 32
+```
+
+See [docs/INTEL_GPU_SETUP.md](docs/INTEL_GPU_SETUP.md) for detailed setup instructions.
+
+### Device Selection
+
+```bash
+--device auto     # Auto-detect best available (default)
+--device cpu      # Force CPU
+--device cuda     # Force NVIDIA CUDA
+--device opencl   # Force Intel OpenCL
+--device vulkan   # Force Vulkan
+```
+
 ## Architecture
 
 Data flows top-to-bottom through the workspace:
@@ -84,6 +124,16 @@ bitnet-models  (GGUF loader, dual I2_S flavor detection) │
 ```
 
 **SRP microcrates** (`bitnet-logits`, `bitnet-sampling`, `bitnet-generation`, `bitnet-engine-core`, `bitnet-device-probe`, `bitnet-gguf`, `bitnet-prompt-templates`, `bitnet-receipts`) keep coupling low and are re-exported from their original locations for zero breaking changes.
+
+### GPU Backend Crates
+
+- `bitnet-opencl` — Intel GPU compute via OpenCL 3.0
+- `bitnet-vulkan` — Cross-vendor Vulkan compute
+- `bitnet-level-zero` — Intel Level Zero (low-level)
+- `bitnet-webgpu` — WebGPU/WGSL compute shaders
+- `bitnet-rocm` — AMD ROCm/HIP backend
+- `bitnet-metal` — Apple Metal compute
+- `bitnet-gpu-hal` — Unified Hardware Abstraction Layer
 
 ## Documentation
 
