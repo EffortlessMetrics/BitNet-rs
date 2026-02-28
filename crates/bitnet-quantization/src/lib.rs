@@ -28,6 +28,7 @@ pub mod tl1;
 pub mod tl2;
 pub mod utils;
 pub mod validation;
+pub mod gpu_pipeline;
 
 pub use device_aware_quantizer::{
     AccuracyValidator, DeviceAwareQuantizer, QuantizationType as DeviceQuantizationType,
