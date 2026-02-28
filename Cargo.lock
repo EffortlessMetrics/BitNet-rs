@@ -731,6 +731,7 @@ dependencies = [
  "candle-core",
  "candle-nn",
  "chrono",
+ "criterion 0.5.1",
  "futures",
  "futures-util",
  "gloo-timers",

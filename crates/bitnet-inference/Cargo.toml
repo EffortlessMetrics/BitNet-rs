@@ -62,6 +62,11 @@ serial_test = "3.2.0"
 bitnet-test-support.workspace = true
 insta.workspace = true
 bitnet-device-probe = { path = "../bitnet-device-probe", version = "0.2.1-dev" }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "dense_ops"
+harness = false
 
 [features]
 default = []
@@ -74,6 +79,7 @@ gpu = ["cuda", "rocm"]  # GPU umbrella — CUDA and ROCm implementations
 oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
+bench = []  # Enable Criterion benchmarks
 # Runtime selection
 rt-tokio = ["tokio/rt-multi-thread", "tokio/fs", "tokio/io-util", "tokio/macros"]
 rt-wasm = ["dep:wasm-bindgen-futures", "dep:gloo-timers"]
