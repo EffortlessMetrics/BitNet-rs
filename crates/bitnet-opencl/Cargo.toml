@@ -8,14 +8,12 @@ homepage.workspace = true
 authors.workspace = true
 keywords.workspace = true
 categories.workspace = true
+description = "OpenCL 3.0 backend with Unified Shared Memory (USM) support for BitNet inference"
 rust-version.workspace = true
-description = "OpenCL backend for BitNet GPU inference"
-include = ["src/**", "Cargo.toml"]
-publish = false
 
 [dependencies]
-log.workspace = true
 bitnet-common = { path = "../bitnet-common", version = "0.2.1-dev" }
+log.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -25,8 +23,6 @@ tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
 [dev-dependencies]
 temp-env = "0.3.6"
 serial_test.workspace = true
-tracing-subscriber.workspace = true
-proptest = { workspace = true }
 
 [features]
 default = []

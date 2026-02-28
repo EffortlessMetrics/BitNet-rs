@@ -1,0 +1,48 @@
+#version 450
+
+// RMS normalization compute shader.
+// output[i] = (input[i] / rms) * weight[i]
+// where rms = sqrt(mean(input^2) + eps)
+// Each workgroup processes one row of length N.
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0) readonly buffer Input { float data_in[]; };
+layout(set = 0, binding = 1) readonly buffer Weight { float weight[]; };
+layout(set = 0, binding = 2) writeonly buffer Output { float data_out[]; };
+
+layout(push_constant) uniform Params {
+    uint N;
+    float eps;
+};
+
+shared float shared_sq_sum[256];
+
+void main() {
+    uint tid = gl_LocalInvocationID.x;
+    uint row = gl_WorkGroupID.x;
+    uint row_start = row * N;
+
+    // Phase 1: sum of squares
+    float local_sq = 0.0;
+    for (uint i = tid; i < N; i += 256u) {
+        float val = data_in[row_start + i];
+        local_sq += val * val;
+    }
+    shared_sq_sum[tid] = local_sq;
+    barrier();
+
+    for (uint s = 128u; s > 0u; s >>= 1u) {
+        if (tid < s) {
+            shared_sq_sum[tid] += shared_sq_sum[tid + s];
+        }
+        barrier();
+    }
+
+    float rms = sqrt(shared_sq_sum[0] / float(N) + eps);
+
+    // Phase 2: normalize and scale
+    for (uint i = tid; i < N; i += 256u) {
+        data_out[row_start + i] = (data_in[row_start + i] / rms) * weight[i];
+    }
+}
