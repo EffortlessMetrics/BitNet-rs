@@ -72,7 +72,7 @@ impl KernelBackend {
             KernelBackend::Cuda
                 | KernelBackend::Hip
                 | KernelBackend::OneApi
-                | KernelBackend::OpenCL
+                | KernelBackend::Vulkan
         )
     }
 
